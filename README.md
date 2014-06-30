@@ -1,5 +1,5 @@
-Embedded TCP / HTTP / HTML5 Websocket server with Javascript interface
-======================================================================
+Embedded TCP/HTTP/Websocket server with Javascript API
+======================================================
 
 Websocket.js is an embeddable C/C++ engine that allows to write plain TCP,
 Web, or Websocket services entirely in Javascript. It is specifically suited
