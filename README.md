@@ -14,9 +14,9 @@ extremely fast and effortless. Websocket.js features include:
 - Familiar Javascript interface makes development fast and available to a
   large group of engineers who already know Javascript,
   one of the [most popular](http://langpop.com) languages on the planet
-- Simple and powerful [V7 C/C++ API](https://github.com/cesanta/v7/v7.h)
-  allows to
-  interface with any other technology
+- Simple and powerful
+  [V7 C/C++ API](https://github.com/cesanta/v7/blob/master/v7.h)
+  allows to interface with any other technology
   and delegate mission-critical tasks to the optimized compiled code
 - Reference echo server applications let anybody with Javascript experience
   start developing in minutes
