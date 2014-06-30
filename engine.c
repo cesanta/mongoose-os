@@ -65,54 +65,67 @@ static void ws_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
   (void) nc, (void) ev, (void) p;
 }
 
-static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
+static void make_js_conn(struct v7_val *obj, struct ns_connection *nc) {
+  v7_set_num(s_v7, obj, "nc", (unsigned long) nc);
+  v7_set_func(s_v7, obj, "discard", js_discard);
+  v7_set_func(s_v7, obj, "close", js_close);
+  v7_set_func(s_v7, obj, "send", js_send);
+  v7_set_str(s_v7, obj, "data", nc->recv_iobuf.buf, nc->recv_iobuf.len);
+}
+
+static void call_handler(struct ns_connection *nc, const char *name) {
   struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
   struct v7_val *v, *options = v7_lookup(js_srv, "options");
+  if ((v = v7_lookup(options, name)) != NULL) {
+    v7_push(s_v7, v);
+    v7_make_and_push(s_v7, V7_OBJ);
+    make_js_conn(v7_top(s_v7)[-1], nc);
+    v7_call(s_v7, 1);
+  }
+}
 
+static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
   (void) p;
   switch (ev) {
-    case NS_ACCEPT:
-      if ((v = v7_lookup(options, "onaccept")) != NULL) {
-        v7_push(s_v7, v);
-        v7_make_and_push(s_v7, V7_OBJ);
-        v7_call(s_v7, 1);
-      }
-      break;
-    case NS_RECV:
-      if ((v = v7_lookup(options, "onmessage")) != NULL) {
-        v7_push(s_v7, v);
-        v7_make_and_push(s_v7, V7_OBJ);
-        v7_set_num(s_v7, v7_top(s_v7)[-1], "nc", (unsigned long) nc);
-        v7_set_num(s_v7, v7_top(s_v7)[-1], "num_bytes", * (int *) p);
-        v7_set_func(s_v7, v7_top(s_v7)[-1], "discard", js_discard);
-        v7_set_func(s_v7, v7_top(s_v7)[-1], "close", js_close);
-        v7_set_func(s_v7, v7_top(s_v7)[-1], "send", js_send);
-        v7_set_str(s_v7, v7_top(s_v7)[-1], "data",
-                   nc->recv_iobuf.buf, nc->recv_iobuf.len);
-        v7_call(s_v7, 1);
-      }
-      break;
-    default:
-      break;
+    case NS_ACCEPT: call_handler(nc, "onaccept"); break;
+    case NS_RECV: call_handler(nc, "onmessage"); break;
+    case NS_POLL: call_handler(nc, "onpoll"); break;
+    case NS_CLOSE: call_handler(nc, "onclose"); break;
+    default: break;
   }
 }
 
 static void js_srv(struct v7 *v7, struct v7_val *result, ns_callback_t cb,
                    struct v7_val **args, int num_args) {
-  struct v7_val *v;
+  struct v7_val *listening_port;
   struct ns_server *srv;
 
   if (num_args < 1 || args[0]->type != V7_OBJ ||
-      (v = v7_lookup(args[0], "listening_port")) == NULL) return;
+      (listening_port = v7_lookup(args[0], "listening_port")) == NULL) return;
 
   result->type = V7_OBJ;
   srv = (struct ns_server *) calloc(1, sizeof(*srv));
   ns_server_init(srv, result, cb);
   //v7_set_num(v7, result, "_priv", (unsigned long) srv);
   v7_set_obj(v7, result, "options", args[0]);
-  ns_bind(srv, v->v.str.buf);
 
-  while (s_received_signal == 0) {
+  switch (listening_port->type) {
+    case V7_NUM:
+      {
+        char buf[100];
+        snprintf(buf, sizeof(buf), "%d", (int) listening_port->v.num);
+        ns_bind(srv, buf);
+      }
+      break;
+    case V7_STR:
+      ns_bind(srv, listening_port->v.str.buf);
+      break;
+    default:
+      fprintf(stderr, "%s\n", "Invalid listening_port");
+      break;
+  }
+
+  while (srv->listening_sock != INVALID_SOCKET && s_received_signal == 0) {
     ns_server_poll(srv, 1000);
   }
   ns_server_free(srv);

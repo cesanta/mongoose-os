@@ -2,25 +2,22 @@
 // This server implements echo service: any websocket message that arrives is
 // echoed back to the client.
 
-var options = {
-  listening_port: '8000',
-  onaccept: function(conn) {
-    print('Accepted new connection: ', conn, '\n');
-  },
+var tcp_echo_server_options = {
+  listening_port: 8000,
   onmessage: function(conn) {
-    print('Received message: ', conn, '\n');
     conn.send(conn.data);
     conn.discard(conn.num_bytes);
   },
-  onclose: function(conn) {
-    print('Received message: ', conn, '\n');
-  },
+  onaccept: function(conn) { print('accept: ', conn, '\n') },
+  onpoll: function(conn) { print('poll: ', conn, '\n') },
+  onclose: function(conn) { print('close: ', conn, '\n') },
   // enable_ssl_with_certificate: 'cert.pem',
   // debug_hexdump_file: '/dev/stdout',
 };
 
-print('Starting websocket echo server on port ', options.listening_port, '\n');
-RunTcpServer(options);
+print('TCP echo server, port ', tcp_echo_server_options.listening_port, '\n');
+RunTcpServer(tcp_echo_server_options);
+//RunTcpServer({ listening_port: 8000 });
 
-//var websocket_server = WebsocketServer(options);
-//websocket_server.run();
+//print('Starting Websocket echo server on port ', options.listening_port, '\n');
+//RunWebsocketServer(options);
