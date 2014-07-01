@@ -4,7 +4,7 @@ Embedded TCP/HTTP/Websocket server with Javascript API
 Websocket.js is an embeddable C/C++ engine that allows to write plain TCP,
 Web, or Websocket services entirely in Javascript. It is specifically suited
 embedded environments with constrained resources, like smart devices,
-telemetry probes, et cetera. Javascript interface makes development
+telemetry probes, etс. Javascript interface makes development
 extremely fast and effortless. Websocket.js features include:
 
 - Tiny footpint of
@@ -20,6 +20,9 @@ extremely fast and effortless. Websocket.js features include:
   and delegate mission-critical tasks to the optimized compiled code
 - Reference echo server applications let anybody with Javascript experience
   start developing in minutes
+- Industry-standard security: native SSL/TLS support
+- Websocket.js is cross-platform and works on Windows, MacOS, iOS, UNIX/Linux,
+  Android, QNX, eCos and many other platforms
 
 ## How to build and test websocket.js
 
