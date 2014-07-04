@@ -74,13 +74,17 @@ static void make_js_conn(struct v7_val *obj, struct ns_connection *nc) {
 }
 
 static void call_handler(struct ns_connection *nc, const char *name) {
+  enum v7_err err_code;
   struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
   struct v7_val *v, *options = v7_lookup(js_srv, "options");
   if ((v = v7_lookup(options, name)) != NULL) {
     v7_push(s_v7, v);
     v7_make_and_push(s_v7, V7_OBJ);
     make_js_conn(v7_top(s_v7)[-1], nc);
-    v7_call(s_v7, v7_get_root_namespace(s_v7), 1);
+    if ((err_code = v7_call(s_v7, v7_get_root_namespace(s_v7), 1)) != V7_OK) {
+      fprintf(stderr, "Error executing %s handler, line %d: %s\n",
+              name, s_v7->line_no, v7_strerror(err_code));
+    }
   }
 }
 
@@ -156,7 +160,7 @@ int main(int argc, char *argv[]) {
   for (i = 1; i < argc; i++) {
     if ((error_code = v7_exec_file(s_v7, argv[i])) != V7_OK) {
       fprintf(stderr, "Error executing %s line %d: %s\n", argv[i],
-                       s_v7->line_no, v7_err_to_str(error_code));
+                       s_v7->line_no, v7_strerror(error_code));
       exit(EXIT_FAILURE);
     }
   }
