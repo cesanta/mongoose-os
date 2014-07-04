@@ -80,7 +80,7 @@ static void call_handler(struct ns_connection *nc, const char *name) {
     v7_push(s_v7, v);
     v7_make_and_push(s_v7, V7_OBJ);
     make_js_conn(v7_top(s_v7)[-1], nc);
-    v7_call(s_v7, 1);
+    v7_call(s_v7, v7_get_root_namespace(s_v7), 1);
   }
 }
 
@@ -150,7 +150,6 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, signal_handler);
 
   s_v7 = v7_create();
-  v7_init_stdlib(s_v7);
   v7_set_func(s_v7, v7_get_root_namespace(s_v7), "WebsocketServer", js_ws);
   v7_set_func(s_v7, v7_get_root_namespace(s_v7), "RunTcpServer", js_tcp);
 
