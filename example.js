@@ -5,18 +5,18 @@
 var options = {
   listening_port: 8000,
   onmessage: function(conn) {
-    if (conn.data == 'qqq\n') { std.exit(2); }
+    if (conn.data == 'qqq\n') { exit(2); }
     conn.send(conn.data);
     conn.discard(conn.data.length);
   },
-  onaccept: function(conn) { std.print(conn.nc, ' connected\n') },
-  onclose: function(conn) { std.print(conn.nc, ' disconnected\n') },
+  onaccept: function(conn) { print(conn.nc, ' connected\n') },
+  onclose: function(conn) { print(conn.nc, ' disconnected\n') },
   // onpoll: function(conn) { print('poll: ', conn, '\n') },
   // enable_ssl_with_certificate: 'cert.pem',
   // debug_hexdump_file: '/dev/stdout',
 };
 
-std.print('TCP echo server, port ', options.listening_port, '\n');
+print('TCP echo server, port ', options.listening_port, '\n');
 RunTcpServer(options);
 //RunTcpServer({ listening_port: 8000 });
 
