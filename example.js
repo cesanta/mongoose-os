@@ -5,9 +5,9 @@
 var options = {
   listening_port: 8000,
   onmessage: function(conn) {
-    if (conn.data == 'qqq\n') { exit(2); }
-    conn.send(conn.data);
-    conn.discard(conn.data.length);
+    conn.send(conn.data);   // Echo incoming message back to the client
+    if (conn.data.indexOf('qqq') >= 0) exit(0);
+    //conn.data = '';  // Discard all data from the incoming buffer
   },
   onaccept: function(conn) { print(conn.nc, ' connected\n') },
   onclose: function(conn) { print(conn.nc, ' disconnected\n') },

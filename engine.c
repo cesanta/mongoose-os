@@ -43,16 +43,6 @@ static void js_send(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-static void js_discard(struct v7 *v7, struct v7_val *this_obj,
-                       struct v7_val *result,
-                       struct v7_val **args, int num_args) {
-  struct ns_connection *nc = get_nc(this_obj);
-  (void) v7; (void) result;
-  if (num_args == 1 && args[0]->type == V7_NUM) {
-    iobuf_remove(&nc->recv_iobuf, args[0]->v.num);
-  }
-}
-
 static void js_close(struct v7 *v7, struct v7_val *this_obj,
                      struct v7_val *result,
                      struct v7_val **args, int num_args) {
@@ -65,36 +55,76 @@ static void ws_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
   (void) nc, (void) ev, (void) p;
 }
 
-static void make_js_conn(struct v7_val *obj, struct ns_connection *nc) {
-  v7_set_num(s_v7, obj, "nc", (unsigned long) nc);
-  v7_set_func(s_v7, obj, "discard", js_discard);
-  v7_set_func(s_v7, obj, "close", js_close);
-  v7_set_func(s_v7, obj, "send", js_send);
-  v7_set_str(s_v7, obj, "data", nc->recv_iobuf.buf, nc->recv_iobuf.len);
+static void init_js_conn(struct ns_connection *nc) {
+  struct v7_val *js_conn = v7_mkval(s_v7, V7_OBJ);
+  if (js_conn != NULL) {
+    v7_set_num(s_v7, js_conn, "nc", (unsigned long) nc);
+    v7_set_func(s_v7, js_conn, "close", js_close);
+    v7_set_func(s_v7, js_conn, "send", js_send);
+    v7_set_str(s_v7, js_conn, "data", "", 0, 0);
+    js_conn->ref_count++;
+    nc->connection_data = js_conn;
+  } else {
+    // Failed to create JS connection object, close
+    nc->flags |= NSF_CLOSE_IMMEDIATELY;
+  }
+}
+
+static void free_js_conn(struct ns_connection *nc) {
+  if (nc->connection_data != NULL) {
+    v7_freeval(s_v7, (struct v7_val *) nc->connection_data);
+    nc->connection_data = NULL;
+  }
 }
 
 static void call_handler(struct ns_connection *nc, const char *name) {
   enum v7_err err_code;
   struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
-  struct v7_val *v, *options = v7_lookup(js_srv, "options");
-  if ((v = v7_lookup(options, name)) != NULL) {
-    v7_push(s_v7, v);
-    v7_make_and_push(s_v7, V7_OBJ);
-    make_js_conn(v7_top(s_v7)[-1], nc);
+  struct v7_val *v, *js_handler, *options = v7_lookup(js_srv, "options");
+  struct v7_val *js_conn = (struct v7_val *) nc->connection_data;
+  if (js_conn != NULL && (js_handler = v7_lookup(options, name)) != NULL) {
+    // Push JS event handler and it's argument, JS connection, on stack
+    v7_push(s_v7, js_handler);
+    v7_push(s_v7, js_conn);
+
+    // Adjust "data" attribute to point to the received data buffer
+    if ((v = v7_lookup(js_conn, "data")) != NULL) {
+      v->v.str.len = nc->recv_iobuf.len;
+      v->v.str.buf = nc->recv_iobuf.buf;
+    }
+
+    // Call the handler
     if ((err_code = v7_call(s_v7, v7_get_root_namespace(s_v7), 1)) != V7_OK) {
       fprintf(stderr, "Error executing %s handler, line %d: %s\n",
               name, s_v7->line_no, v7_strerror(err_code));
     }
+
+    // Handler might have changed "data" attribute, adjust it accordingly.
+    if ((v = v7_lookup(js_conn, "data")) != NULL &&
+        v->v.str.buf != nc->recv_iobuf.buf) {
+      iobuf_remove(&nc->recv_iobuf, nc->recv_iobuf.len);          // Clean
+      iobuf_append(&nc->recv_iobuf, v->v.str.buf, v->v.str.len);  // Re-init
+    }
+
+    // If handler returns false, then close the connection
+    if (v7_top(s_v7)[-1]->type == V7_BOOL && v7_top(s_v7)[-1]->v.num == 0.0) {
+      nc->flags |= NSF_CLOSE_IMMEDIATELY;
+    }
+
+    // Clean up return value from stack
+    { char x[100]; printf("==> sp: %d [%s]\n", v7_sp(s_v7),
+       v7_to_string(v7_top(s_v7)[-1], x, sizeof(x))); }
+    v7_pop(s_v7, 1);
   }
 }
 
 static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
   (void) p;
   switch (ev) {
-    case NS_ACCEPT: call_handler(nc, "onaccept"); break;
+    case NS_ACCEPT: init_js_conn(nc); call_handler(nc, "onaccept"); break;
     case NS_RECV: call_handler(nc, "onmessage"); break;
     case NS_POLL: call_handler(nc, "onpoll"); break;
-    case NS_CLOSE: call_handler(nc, "onclose"); break;
+    case NS_CLOSE: call_handler(nc, "onclose"); free_js_conn(nc); break;
     default: break;
   }
 }
