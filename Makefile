@@ -11,7 +11,7 @@ CFLAGS = -I$(NS) -I$(V7) $(CFLAGS_EXTRA)
 all: $(BINARY)
 
 $(BINARY): $(SOURCES)
-	$(CC) $(SOURCES) -o $@ -W -Wall -Weverything -g $(CFLAGS)
+	$(CC) $(SOURCES) -o $@ -W -Wall -g $(CFLAGS)
 
 w:
 	wine cl /MD /TC /nologo /DNDEBUG /O1 $(CFLAGS) $(SOURCES)
