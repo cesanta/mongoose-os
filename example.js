@@ -12,7 +12,6 @@ var srv = TcpServer(options);
 
 srv.onstart = function() {
   print('Starting on port ', srv.options.listening_port, '\n');
-  //print(this, '\n');
 };
 
 srv.onmessage = function(conn) {

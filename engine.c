@@ -74,8 +74,7 @@ static void free_js_conn(struct ns_connection *nc) {
   if (nc->connection_data != NULL && js_conns != NULL) {
     struct v7_val key;
     key.type = V7_NUM;
-    key.v.num = (unsigned long) nc->connection_data;
-    printf("%s %p %d\n", __func__, nc, ((struct v7_val *) nc->connection_data)->ref_count);
+    key.v.num = (double) (unsigned long) nc->connection_data;
     v7_del(s_v7, js_conns, &key);
     nc->connection_data = NULL;
   }
