@@ -62,17 +62,6 @@ static void init_js_conn(struct ns_connection *nc) {
     // will remain 0 and v7 will wipe it out at next callback
     v7_setv(s_v7, js_conns, V7_NUM, V7_OBJ,
             (double) (unsigned long) nc, js_conn);
-#if 0
-    // Append this connection to the JS connections list
-    {
-      struct v7_val *key = v7_mkval(s_v7, V7_NUM);
-      key->v.num = (unsigned long) nc;
-      key->ref_count++;
-      v7_set(s_v7, js_conns, key, js_conn);
-      v7_freeval(s_v7, key);
-    }
-    //v7_set_(s_v7, js_conns, js_conn);   // Append to the JS connection list
-#endif
   } else {
     // Failed to create JS connection object, close
     nc->flags |= NSF_CLOSE_IMMEDIATELY;
