@@ -3,10 +3,12 @@
 
 NS = ../net_skeleton
 V7 = ../v7
-SOURCES = engine.c $(NS)/net_skeleton.c $(V7)/v7.c
+SLRE = ../slre
+
+SOURCES = engine.c $(NS)/net_skeleton.c $(V7)/v7.c $(SLRE)/slre.c
 BINARY = engine
 
-CFLAGS = -I$(NS) -I$(V7) $(CFLAGS_EXTRA)
+CFLAGS = -I$(NS) -I$(V7) -I$(SLRE) $(CFLAGS_EXTRA)
 
 all: $(BINARY)
 
@@ -22,5 +24,8 @@ $(NS)/net_skeleton.c:
 $(V7)/v7.c:
 	cd .. && git clone https://github.com/cesanta/v7
 
+$(SLRE)/slre.c:
+	cd .. && git clone https://github.com/cesanta/slre
+
 clean:
-	rm -rf $(BINARY) $(BINARY).exe
+	rm -rf $(BINARY) *.exe *.obj *.o
