@@ -1,5 +1,5 @@
-// This is an example websocket server for websocket.js embeddable C/C++ engine.
-// This server implements echo service: any websocket message that arrives is
+// This is an example TCP server for websocket.js embeddable C/C++ engine.
+// This server implements TCP echo service: any message that arrives is
 // echoed back to the client.
 
 var options = {
@@ -15,10 +15,10 @@ srv.onstart = function() {
 };
 
 srv.onmessage = function(conn) {
-  conn.send(conn.data);   // Echo incoming message back to the client
-  if (conn.data.indexOf('quit') >= 0) exit(0);  // terminate the whole program
-  if (conn.data == '\n') return false;          // close this connection
-  conn.data = '';  // Discard all data from the incoming buffer
+  //conn.send(conn.data);   // Echo incoming message back to the client
+  //conn.data = '';         // Discard all data from the incoming buffer
+  var len = conn.data.indexOf('\r\n\r\n');
+  print(conn.data, 'len :', len, '\n');
 };
 
 //srv.onaccept = function(conn) { print(conn.nc, ' connected\n') };

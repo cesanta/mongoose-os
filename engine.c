@@ -14,6 +14,7 @@
 // Alternatively, you can license this software under a commercial
 // license, as set out in <http://cesanta.com/>.
 
+#include <ctype.h>
 #include "net_skeleton.h"
 #include "v7.h"
 
@@ -43,15 +44,10 @@ static void js_send(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-
-static void ws_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
-  (void) nc, (void) ev, (void) p;
-}
-
 static void init_js_conn(struct ns_connection *nc) {
   struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
   struct v7_val *js_conns = v7_lookup(js_srv, "connections");
-  struct v7_val *js_conn = v7_mkval(s_v7, V7_OBJ);
+  struct v7_val *js_conn = v7_mkv(s_v7, V7_OBJ);
   if (js_conn != NULL && js_conns != NULL) {
     v7_setv(s_v7, js_conn, V7_STR, V7_NUM, "nc", 2, 0,
             (double) (unsigned long) nc);
@@ -96,7 +92,6 @@ static void call_handler(struct ns_connection *nc, const char *name) {
     v7_push(s_v7, js_conn);
 
     // Call the handler
-    printf("%s %p %p\n", __func__, js_conn, js_handler);
     if ((err_code = v7_call(s_v7, js_conn, 1)) != V7_OK) {
       fprintf(stderr, "Error executing %s handler, line %d: %s\n",
               name, s_v7->line_no, v7_strerror(err_code));
@@ -115,6 +110,56 @@ static void call_handler(struct ns_connection *nc, const char *name) {
 
     // Clean up return value from stack
     v7_pop(s_v7, v7_sp(s_v7) - old_sp);
+  }
+}
+
+// Check whether full request is buffered. Return:
+//   -1  if request is malformed
+//    0  if request is not yet fully buffered
+//   >0  actual request length, including last \r\n\r\n
+static int get_request_len(const char *s, int buf_len) {
+  const unsigned char *buf = (unsigned char *) s;
+  int i;
+
+  for (i = 0; i < buf_len; i++) {
+    // Control characters are not allowed but >=128 are.
+    // Abort scan as soon as one malformed character is found.
+    if (!isprint(buf[i]) && buf[i] != '\r' && buf[i] != '\n' && buf[i] < 128) {
+      return -1;
+    } else if (buf[i] == '\n' && i + 1 < buf_len && buf[i + 1] == '\n') {
+      return i + 2;
+    } else if (buf[i] == '\n' && i + 2 < buf_len && buf[i + 1] == '\r' &&
+               buf[i + 2] == '\n') {
+      return i + 3;
+    }
+  }
+
+  return 0;
+}
+
+static void on_recv(struct ns_connection *nc) {
+  struct iobuf *io = &nc->recv_iobuf;
+  int request_len = get_request_len(io->buf, io->len);
+
+  // Check whether we've got entire HTTP request buffered
+  if (request_len == 0) {
+    // Request is not yet fully buffered
+  } else if (request_len < 0) {
+    // Invalid request, close the connection
+    nc->flags |= NSF_CLOSE_IMMEDIATELY;
+  } else {
+
+  }
+}
+
+static void web_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
+  (void) p;
+  switch (ev) {
+    case NS_ACCEPT: break;
+    case NS_RECV: on_recv(nc); break;
+    //case NS_POLL: on_poll(nc); break;
+    //case NS_CLOSE: on_close(nc); break;
+    default: break;
   }
 }
 
@@ -158,7 +203,7 @@ static void js_run(struct v7 *v7, struct v7_val *this_obj,
 
 static void js_srv(struct v7 *v7, struct v7_val *result, ns_callback_t cb,
                    struct v7_val **args, int num_args) {
-  struct v7_val *listening_port, *conns = v7_mkval(v7, V7_OBJ);
+  struct v7_val *listening_port, *conns = v7_mkv(v7, V7_OBJ);
   struct ns_server *srv;
 
   if (num_args < 1 || args[0]->type != V7_OBJ ||
@@ -190,10 +235,10 @@ static void js_srv(struct v7 *v7, struct v7_val *result, ns_callback_t cb,
   }
 }
 
-static void js_ws(struct v7 *v7, struct v7_val *this_obj, struct v7_val *result,
-                  struct v7_val **args, int num_args) {
+static void js_web(struct v7 *v7, struct v7_val *this_obj,
+                   struct v7_val *result, struct v7_val **args, int num_args) {
   (void) this_obj;
-  js_srv(v7, result, ws_handler, args, num_args);
+  js_srv(v7, result, web_handler, args, num_args);
 }
 
 static void js_tcp(struct v7 *v7, struct v7_val *obj, struct v7_val *result,
@@ -215,8 +260,7 @@ int main(int argc, char *argv[]) {
   atexit(cleanup);
 
   s_v7 = v7_create();
-  v7_setv(s_v7, v7_rootns(s_v7), V7_STR, V7_C_FUNC,
-          "WebsocketServer", 15, 0, js_ws);
+  v7_setv(s_v7, v7_rootns(s_v7), V7_STR, V7_C_FUNC, "WebServer", 9, 0, js_web);
   v7_setv(s_v7, v7_rootns(s_v7), V7_STR, V7_C_FUNC, "TcpServer", 9, 0, js_tcp);
 
   if (argc != 2) {
