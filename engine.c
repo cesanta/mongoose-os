@@ -105,7 +105,7 @@ static void call_handler(struct ns_connection *nc, const char *name) {
 
     // If handler returns false, then close the connection
     if (v7_top(s_v7)[-1]->type == V7_BOOL && v7_top(s_v7)[-1]->v.num == 0.0) {
-      nc->flags |= NSF_CLOSE_IMMEDIATELY;
+      nc->flags |= NSF_FINISHED_SENDING_DATA;
     }
 
     // Clean up return value from stack
