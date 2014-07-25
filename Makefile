@@ -28,4 +28,4 @@ $(SLRE)/slre.c:
 	cd .. && git clone https://github.com/cesanta/slre
 
 clean:
-	rm -rf $(BINARY) *.exe *.obj *.o
+	rm -rf $(BINARY) *.exe *.obj *.o *.dSYM
