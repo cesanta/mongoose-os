@@ -15,15 +15,26 @@ srv.onstart = function() {
 };
 
 srv.onmessage = function(conn) {
-  //conn.send(conn.data);   // Echo incoming message back to the client
-  //conn.data = '';         // Discard all data from the incoming buffer
-  var len = conn.data.indexOf('\r\n\r\n');
-  print(conn.data, 'len :', len, '\n');
+  // Search for the end of HTTP request
+  var ind = conn.data.indexOf('\r\n\r\n');
+
+  // If request is too big, close the connection
+  if (ind < 0 && conn.data.length > 8192) return false;
+  if (ind < 15 && ind > 0) return false;
+
+  // If request is fully buffered, parse it, and send the reply
+  if (ind > 0) {
+    var request = conn.data.substr(0, ind + 1);
+    var lines = request.split('\r\n');
+    conn.send('HTTP/1.0 200 OK\r\n\r\n', 'Received request:\n\n', request);
+    return false;   // close the connection
+  }
+
+  // Otherwise, return nothing (keep connection open) and buffer more data
 };
 
 //srv.onaccept = function(conn) { print(conn.nc, ' connected\n') };
 //srv.onclose = function(conn) { print(conn.nc, ' disconnected\n') };
-//srv.onpoll = function(conn) { print('poll: ', conn, '\n') };
 //srv.onpoll = function(conn) { print('poll, conns: ', srv.connections, '\n') };
 
 srv.run();

@@ -14,6 +14,7 @@ all: $(BINARY)
 
 $(BINARY): $(SOURCES)
 	$(CC) $(SOURCES) -o $@ -W -Wall -g $(CFLAGS)
+	./$(BINARY) example.js
 
 w:
 	wine cl /MD /TC /nologo /DNDEBUG /O1 $(CFLAGS) $(SOURCES)
