@@ -15,12 +15,9 @@ srv.onstart = function() {
 };
 
 srv.onmessage = function(conn) {
-  // Search for the end of HTTP request
-  var ind = conn.data.indexOf('\r\n\r\n');
-
-  // If request is too big, close the connection
-  if (ind < 0 && conn.data.length > 8192) return false;
-  if (ind < 15 && ind > 0) return false;
+  var ind = conn.data.indexOf('\r\n\r\n');  // Find the end of HTTP request
+  if (ind < 0 && conn.data.length > 8192) return false;   // Request too big
+  if (ind < 15 && ind > 0) return false;                  // Request too small
 
   // If request is fully buffered, parse it, and send the reply
   if (ind > 0) {
