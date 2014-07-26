@@ -1,6 +1,4 @@
-// This is an example TCP server for websocket.js embeddable C/C++ engine.
-// This server implements TCP echo service: any message that arrives is
-// echoed back to the client.
+// This is an example HTTP/Websocket server
 
 var options = {
   listening_port: 8000,
