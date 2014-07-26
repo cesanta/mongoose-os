@@ -8,7 +8,7 @@ var options = {
   // debug_hexdump_file: '/dev/stdout',
 };
 
-var srv = TcpServer(options);
+var srv = NetEventManager(options);
 
 srv.onstart = function() {
   print('Starting on port ', srv.options.listening_port, '\n');
@@ -23,7 +23,9 @@ srv.onmessage = function(conn) {
   if (ind > 0) {
     var request = conn.data.substr(0, ind + 1);
     var lines = request.split('\r\n');
-    conn.send('HTTP/1.0 200 OK\r\n\r\n', 'Received request:\n\n', request);
+    var ar = lines[0].split(' ');
+    conn.send('HTTP/1.0 200 OK\r\n\r\n',
+              'URI: ', ar[1], '\nReceived request:\n\n', request);
     return false;   // close the connection
   }
 
