@@ -1,5 +1,7 @@
 # Copyright (c) 2014 Cesanta Software
 # All rights reserved
+#
+# Makefile for the Smart.js engine
 
 NS = ../net_skeleton
 V7 = ../v7
@@ -14,7 +16,6 @@ all: $(BINARY)
 
 $(BINARY): $(SOURCES)
 	$(CC) $(SOURCES) -o $@ -W -Wall -g $(CFLAGS)
-	./$(BINARY) example.js
 
 w:
 	wine cl /MD /TC /nologo /DNDEBUG /O1 $(CFLAGS) $(SOURCES)

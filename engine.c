@@ -32,15 +32,12 @@ static struct ns_connection *get_nc(struct v7_val *obj) {
     (struct ns_connection *) (unsigned long) p->v.num;
 }
 
-static void js_send(struct v7 *v7, struct v7_val *this_obj,
-                    struct v7_val *result,
-                    struct v7_val **args, int num_args) {
-  struct ns_connection *nc = get_nc(this_obj);
+static void js_send(struct v7_c_func_arg *cfa) {
+  struct ns_connection *nc = get_nc(cfa->this_obj);
   int i;
-  (void) v7; (void) result;
-  for (i = 0; i < num_args; i++) {
-    if (args[i]->type != V7_STR) continue;
-    ns_send(nc, args[i]->v.str.buf, args[i]->v.str.len);
+  for (i = 0; i < cfa->num_args; i++) {
+    if (cfa->args[i]->type != V7_STR) continue;
+    ns_send(nc, cfa->args[i]->v.str.buf, cfa->args[i]->v.str.len);
   }
 }
 
@@ -124,23 +121,19 @@ static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
   }
 }
 
-static void js_run(struct v7 *v7, struct v7_val *this_obj,
-                   struct v7_val *result,
-                   struct v7_val **args, int num_args) {
-  struct v7_val *js_srv = v7_lookup(this_obj, "srv");
-  struct v7_val *onstart = v7_lookup(this_obj, "onstart");
-
-  (void) v7; (void) result; (void) args; (void) num_args;
+static void js_run(struct v7_c_func_arg *cfa) {
+  struct v7_val *js_srv = v7_lookup(cfa->this_obj, "srv");
+  struct v7_val *onstart = v7_lookup(cfa->this_obj, "onstart");
 
   if (js_srv != NULL) {
     struct ns_server *srv = (struct ns_server *) (unsigned long) js_srv->v.num;
 
     // Call "onstart" handler if it is defined
     if (onstart != NULL) {
-      int old_sp = v7_sp(s_v7);
-      v7_push(s_v7, onstart);
-      v7_call(s_v7, this_obj, 0);
-      v7_pop(s_v7, v7_sp(s_v7) - old_sp);
+      int old_sp = v7_sp(cfa->v7);
+      v7_push(cfa->v7, onstart);
+      v7_call(cfa->v7, cfa->this_obj, 0);
+      v7_pop(cfa->v7, v7_sp(cfa->v7) - old_sp);
     }
 
     // Enter listening loop
@@ -151,30 +144,30 @@ static void js_run(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-static void js_srv(struct v7 *v7, struct v7_val *result, ns_callback_t cb,
-                   struct v7_val **args, int num_args) {
-  struct v7_val *listening_port, *conns = v7_mkv(v7, V7_OBJ);
+static void js_net(struct v7_c_func_arg *cfa) {
+  struct v7_val *listening_port, *conns = v7_mkv(cfa->v7, V7_OBJ);
   struct ns_server *srv;
+  char buf[100];
 
-  if (num_args < 1 || args[0]->type != V7_OBJ ||
-      (listening_port = v7_lookup(args[0], "listening_port")) == NULL) return;
+  if (cfa->num_args < 1 || cfa->args[0]->type != V7_OBJ ||
+      (listening_port = v7_lookup(cfa->args[0], "listening_port")) == NULL)
+        return;
 
-  result->type = V7_OBJ;
+  cfa->result->type = V7_OBJ;
   srv = (struct ns_server *) calloc(1, sizeof(*srv));
-  ns_server_init(srv, result, cb);
-  v7_setv(v7, result, V7_STR, V7_NUM, "srv", 3, 0,
+  ns_server_init(srv, cfa->result, tcp_handler);
+
+  v7_copy(cfa->v7, cfa->args[0], cfa->result);
+  v7_setv(cfa->v7, cfa->result, V7_STR, V7_NUM, "srv", 3, 0,
           (double) (unsigned long) srv);
-  v7_setv(v7, result, V7_STR, V7_OBJ, "options", 7, 0, args[0]);
-  v7_setv(v7, result, V7_STR, V7_OBJ, "connections", 11, 0, conns);
-  v7_setv(v7, result, V7_STR, V7_C_FUNC, "run", 3, 0, js_run);
+  //v7_setv(v7, result, V7_STR, V7_OBJ, "options", 7, 0, args[0]);
+  v7_setv(cfa->v7, cfa->result, V7_STR, V7_OBJ, "connections", 11, 0, conns);
+  v7_setv(cfa->v7, cfa->result, V7_STR, V7_C_FUNC, "run", 3, 0, js_run);
 
   switch (listening_port->type) {
     case V7_NUM:
-      {
-        char buf[100];
-        snprintf(buf, sizeof(buf), "%d", (int) listening_port->v.num);
-        ns_bind(srv, buf);
-      }
+      snprintf(buf, sizeof(buf), "%d", (int) listening_port->v.num);
+      ns_bind(srv, buf);
       break;
     case V7_STR:
       ns_bind(srv, listening_port->v.str.buf);
@@ -183,12 +176,6 @@ static void js_srv(struct v7 *v7, struct v7_val *result, ns_callback_t cb,
       fprintf(stderr, "%s\n", "Invalid listening_port");
       break;
   }
-}
-
-static void js_tcp(struct v7 *v7, struct v7_val *obj, struct v7_val *result,
-                  struct v7_val **args, int num_args) {
-  (void) obj;
-  js_srv(v7, result, tcp_handler, args, num_args);
 }
 
 static void cleanup(void) {
@@ -204,11 +191,11 @@ int main(int argc, char *argv[]) {
   atexit(cleanup);
 
   s_v7 = v7_create();
-  v7_setv(s_v7, v7_rootns(s_v7), V7_STR, V7_C_FUNC,
-          "NetEventManager", 15, 0, js_tcp);
+  v7_setv(s_v7, &s_v7->root_scope, V7_STR, V7_C_FUNC,
+          "NetEventManager", 15, 0, js_net);
 
   if (argc != 2) {
-    fprintf(stderr, "Usage: %s <websocket_js_script_file>\n", argv[0]);
+    fprintf(stderr, "Usage: %s <js_script_file>\n", argv[0]);
     return EXIT_FAILURE;
   }
 
