@@ -18,9 +18,10 @@ var srv = NetEventManager({
   onmessage: function(conn) {
     var req = parseHttpRequest(conn.data);
     if (!req) return false;   // Bad request, close the connection
-    if (req.uri) {  
+    if (req.uri) {
+      var numConns = srv.connections.keys().length;
       conn.send('HTTP/1.0 200 OK\r\n\r\n',
-                'URI: ', req.uri, '\nReceived request:\n\n', req.request);
+                'URI: ', req.uri, '\nReceived request: ', numConns);
       return false;   // Close connection
     }
     // Return nothing (keep connection open) and buffer more conn.data

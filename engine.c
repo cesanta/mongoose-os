@@ -34,10 +34,12 @@ static struct ns_connection *get_nc(struct v7_val *obj) {
 
 static void js_send(struct v7_c_func_arg *cfa) {
   struct ns_connection *nc = get_nc(cfa->this_obj);
+  char buf[20 * 1024];  // TODO(lsm): fix possible truncation
   int i;
+
   for (i = 0; i < cfa->num_args; i++) {
-    if (cfa->args[i]->type != V7_STR) continue;
-    ns_send(nc, cfa->args[i]->v.str.buf, cfa->args[i]->v.str.len);
+    v7_to_string(cfa->args[i], buf, sizeof(buf));
+    ns_send(nc, buf, strlen(buf));
   }
 }
 
@@ -89,7 +91,7 @@ static void call_handler(struct ns_connection *nc, const char *name) {
     v7_push(s_v7, js_conn);
 
     // Call the handler
-    if ((err_code = v7_call(s_v7, js_conn, 1)) != V7_OK) {
+    if ((err_code = v7_call(s_v7, js_conn, 1, 0)) != V7_OK) {
       fprintf(stderr, "Error executing %s handler, line %d: %s\n",
               name, s_v7->line_no, v7_strerror(err_code));
     }
@@ -132,7 +134,7 @@ static void js_run(struct v7_c_func_arg *cfa) {
     if (onstart != NULL) {
       int old_sp = v7_sp(cfa->v7);
       v7_push(cfa->v7, onstart);
-      v7_call(cfa->v7, cfa->this_obj, 0);
+      v7_call(cfa->v7, cfa->this_obj, 0, 0);
       v7_pop(cfa->v7, v7_sp(cfa->v7) - old_sp);
     }
 
