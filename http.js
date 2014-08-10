@@ -9,7 +9,7 @@ function parseHttpRequest(str) {
     var request = str.substr(0, ind + 1);
     var lines = request.split('\r\n');
     var firstLine = lines[0].split(' ');
-    return { request: request, method: firstLine[0], uri: firstLine[1] };
+    return { method: firstLine[0], uri: firstLine[1] };
   }
   return {};
 };
