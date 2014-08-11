@@ -169,6 +169,7 @@ static void js_net(struct v7_c_func_arg *cfa) {
   v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
           "srv", 3, 0, (double) (unsigned long) srv);
   //v7_setv(v7, result, V7_STR, V7_OBJ, "options", 7, 0, args[0]);
+  v7_set_class(conns, V7_CLASS_OBJECT);
   v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_OBJ,
           "connections", 11, 0, conns);
   v7_init_func(&run_obj, js_run);
