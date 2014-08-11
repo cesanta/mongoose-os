@@ -72,7 +72,7 @@ static void free_js_conn(struct ns_connection *nc) {
   struct v7_val *js_conns = v7_lookup(js_srv, "connections");
   if (nc->connection_data != NULL && js_conns != NULL) {
     struct v7_val key;
-    v7_init_num(&key, (double) (unsigned long) nc->connection_data);
+    v7_init_num(&key, (double) (unsigned long) nc);
     v7_del(s_v7, js_conns, &key);
     nc->connection_data = NULL;
   }
