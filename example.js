@@ -5,7 +5,7 @@ load('http.js');
 //print(JSON.stringify(parseHttpRequest('GET / HTTP/1.0\r\n\r\n')));
 // NetEventManager = { run: function() {} }
 
-var srv = NetEventManager({
+var options = {
   listening_port: 8000,
   // enable_ssl_with_certificate: 'cert.pem',
   // debug_hexdump_file: '/dev/stdout',
@@ -19,7 +19,7 @@ var srv = NetEventManager({
     var req = parseHttpRequest(conn.data);
     if (!req) return false;   // Bad request, close the connection
     if (req.uri) {
-      var numConns = srv.connections.keys().length;
+      var numConns = conn.server.connections;
       conn.send('HTTP/1.0 200 OK\r\n\r\n',
                 'URI: ', req.uri, '\nReceived request: ', numConns);
       return false;   // Close connection
@@ -30,6 +30,7 @@ var srv = NetEventManager({
   onclose: function(conn) {
     print(conn.nc, ' disconnected');
   }
-});
+};
 
+var srv = NetEventManager(options);
 srv.run();
