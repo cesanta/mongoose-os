@@ -32,7 +32,7 @@ static struct ns_connection *get_nc(struct v7_val *obj) {
     (struct ns_connection *) (unsigned long) p->v.num;
 }
 
-static void js_send(struct v7_c_func_arg *cfa) {
+static enum v7_err js_send(struct v7_c_func_arg *cfa) {
   struct ns_connection *nc = get_nc(cfa->this_obj);
   char buf[20 * 1024];  // TODO(lsm): fix possible truncation
   int i;
@@ -41,6 +41,7 @@ static void js_send(struct v7_c_func_arg *cfa) {
     v7_to_string(cfa->args[i], buf, sizeof(buf));
     ns_send(nc, buf, strlen(buf));
   }
+  return V7_OK;
 }
 
 static void init_js_conn(struct ns_connection *nc) {
@@ -97,7 +98,7 @@ static void call_handler(struct ns_connection *nc, const char *name) {
     // Call the handler
     if ((err_code = v7_call(s_v7, js_conn, 1, 0)) != V7_OK) {
       fprintf(stderr, "Error executing %s handler, line %d: %s\n",
-              name, s_v7->line_no, v7_strerror(err_code));
+              name, s_v7->pstate.line_no, v7_strerror(err_code));
     }
 
     // Handler might have changed "data" attribute, adjust it accordingly.
@@ -128,7 +129,7 @@ static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
   }
 }
 
-static void js_run(struct v7_c_func_arg *cfa) {
+static enum v7_err js_run(struct v7_c_func_arg *cfa) {
   struct v7_val *js_srv = v7_lookup(cfa->this_obj, "srv");
   struct v7_val *onstart = v7_lookup(cfa->this_obj, "onstart");
 
@@ -149,17 +150,18 @@ static void js_run(struct v7_c_func_arg *cfa) {
     }
     ns_server_free(srv);
   }
+
+  return V7_OK;
 }
 
-static void js_net(struct v7_c_func_arg *cfa) {
-  static struct v7_val run_obj;
+static enum v7_err js_net(struct v7_c_func_arg *cfa) {
   struct v7_val *listening_port, *conns = v7_mkv(cfa->v7, V7_TYPE_OBJ);
   struct ns_server *srv;
   char buf[100];
 
   if (cfa->num_args < 1 || cfa->args[0]->type != V7_TYPE_OBJ ||
       (listening_port = v7_lookup(cfa->args[0], "listening_port")) == NULL)
-        return;
+        return V7_ERROR;
 
   v7_set_class(cfa->result, V7_CLASS_OBJECT);
   srv = (struct ns_server *) calloc(1, sizeof(*srv));
@@ -172,9 +174,7 @@ static void js_net(struct v7_c_func_arg *cfa) {
   v7_set_class(conns, V7_CLASS_OBJECT);
   v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_OBJ,
           "connections", 11, 0, conns);
-  v7_init_func(&run_obj, js_run);
-  v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_OBJ,
-          "run", 3, 0, &run_obj);
+  v7_set_func(cfa->v7, cfa->result, "run", js_run);
 
   switch (listening_port->type) {
     case V7_TYPE_NUM:
@@ -188,6 +188,8 @@ static void js_net(struct v7_c_func_arg *cfa) {
       fprintf(stderr, "%s\n", "Invalid listening_port");
       break;
   }
+
+  return V7_OK;
 }
 
 static void cleanup(void) {
@@ -216,7 +218,7 @@ int main(int argc, char *argv[]) {
   for (i = 1; i < argc; i++) {
     if ((error_code = v7_exec_file(s_v7, argv[i])) != V7_OK) {
       fprintf(stderr, "Error executing %s line %d: %s\n", argv[i],
-                       s_v7->line_no, v7_strerror(error_code));
+                       s_v7->pstate.line_no, v7_strerror(error_code));
       return EXIT_FAILURE;
     }
   }
