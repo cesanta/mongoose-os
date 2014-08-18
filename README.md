@@ -1,15 +1,15 @@
 Embedded TCP/HTTP/Websocket server with Javascript API
 ======================================================
 
-Websocket.js is an embeddable C/C++ engine that allows to write plain TCP,
+Smart.js is an embeddable C/C++ engine that allows to write plain TCP,
 Web, or Websocket services entirely in Javascript. It is specifically suited
 embedded environments with constrained resources, like smart devices,
 telemetry probes, etс. Javascript interface makes development
-extremely fast and effortless. Websocket.js features include:
+extremely fast and effortless. Smart.js features include:
 
 - Tiny footpint of
   [V7 Embedded Javascript Engine](http://github.com/cesanta/v7) and
-  [Net Skeleton](http://github.com/cesanta/net_skeleton) makes websocket.js
+  [Net Skeleton](http://github.com/cesanta/net_skeleton) makes Smart.js
   fit the most constrained environments
 - Familiar Javascript interface makes development fast and available to a
   large group of engineers who already know Javascript,
@@ -21,15 +21,15 @@ extremely fast and effortless. Websocket.js features include:
 - Reference echo server applications let anybody with Javascript experience
   start developing in minutes
 - Industry-standard security: native SSL/TLS support
-- Websocket.js is cross-platform and works on Windows, MacOS, iOS, UNIX/Linux,
+- Smart.js is cross-platform and works on Windows, MacOS, iOS, UNIX/Linux,
   Android, QNX, eCos and many other platforms
 
-## How to build and test websocket.js
+## How to build and test Smart.js
 
 On MacOS or UNIX/Linux, start terminal and execute the following commands:
 
-    $ git clone https://github.com/cesanta/websocket.js.git
-    $ cd websocket.js
+    $ git clone https://github.com/cesanta/Smart.js.git
+    $ cd Smart.js
     $ make CFLAGS_EXTRA="-DNS_ENABLE_SSL -lssl"
     $ ./engine
 
