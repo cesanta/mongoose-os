@@ -19,6 +19,7 @@
 #include "v7.h"
 
 static int s_received_signal = 0;
+static const char *s_script_file_name = NULL;
 static struct v7 *s_v7 = NULL;
 
 static void signal_handler(int sig_num) {
@@ -39,7 +40,7 @@ static enum v7_err js_send(struct v7_c_func_arg *cfa) {
 
   for (i = 0; i < cfa->num_args; i++) {
     v7_to_string(cfa->args[i], buf, sizeof(buf));
-    ns_send(nc, buf, strlen(buf));
+    ns_send(nc, buf, (int) strlen(buf));
   }
   return V7_OK;
 }
@@ -72,8 +73,7 @@ static void free_js_conn(struct ns_connection *nc) {
   struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
   struct v7_val *js_conns = v7_lookup(js_srv, "connections");
   if (nc->connection_data != NULL && js_conns != NULL) {
-    struct v7_val key;
-    v7_init_num(&key, (double) (unsigned long) nc);
+    struct v7_val key = V7_MKNUM(nc);
     v7_del(s_v7, js_conns, &key);
     nc->connection_data = NULL;
   }
@@ -132,6 +132,8 @@ static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
 static enum v7_err js_run(struct v7_c_func_arg *cfa) {
   struct v7_val *js_srv = v7_lookup(cfa->this_obj, "srv");
   struct v7_val *onstart = v7_lookup(cfa->this_obj, "onstart");
+  time_t mtime = 0, cur_time, prev_time = 0;
+  struct stat st;
 
   if (js_srv != NULL) {
     struct ns_server *srv = (struct ns_server *) (unsigned long) js_srv->v.num;
@@ -146,7 +148,13 @@ static enum v7_err js_run(struct v7_c_func_arg *cfa) {
 
     // Enter listening loop
     while (srv->listening_sock != INVALID_SOCKET && s_received_signal == 0) {
-        ns_server_poll(srv, 1000);
+      ns_server_poll(srv, 200);
+      if ((cur_time = time(NULL)) > prev_time) {
+        prev_time = cur_time;
+        if (stat(s_script_file_name, &st) == 0 && mtime != 0 &&
+            mtime != st.st_mtime) break;
+        mtime = st.st_mtime;
+      }
     }
     ns_server_free(srv);
   }
@@ -163,18 +171,20 @@ static enum v7_err js_net(struct v7_c_func_arg *cfa) {
       (listening_port = v7_lookup(cfa->args[0], "listening_port")) == NULL)
         return V7_ERROR;
 
+  // Set up javascript object that represents a server
   v7_set_class(cfa->result, V7_CLASS_OBJECT);
-  srv = (struct ns_server *) calloc(1, sizeof(*srv));
-  ns_server_init(srv, cfa->result, tcp_handler);
-
   v7_copy(cfa->v7, cfa->args[0], cfa->result);
-  v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
-          "srv", 3, 0, (double) (unsigned long) srv);
-  //v7_setv(v7, result, V7_STR, V7_OBJ, "options", 7, 0, args[0]);
   v7_set_class(conns, V7_CLASS_OBJECT);
   v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_OBJ,
           "connections", 11, 0, conns);
   v7_set_func(cfa->v7, cfa->result, "run", js_run);
+
+  // Initialize net skeleton TCP server and bind it to the JS object
+  // by setting 'srv' property, which is a "struct ns_server *"
+  srv = (struct ns_server *) calloc(1, sizeof(*srv));
+  ns_server_init(srv, cfa->result, tcp_handler);
+  v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
+          "srv", 3, 0, (double) (unsigned long) srv);
 
   switch (listening_port->type) {
     case V7_TYPE_NUM:
@@ -197,30 +207,42 @@ static void cleanup(void) {
   v7_destroy(&s_v7);
 }
 
-int main(int argc, char *argv[]) {
+static void run_script(const char *file_name) {
   static struct v7_val func_obj;
-  int i, error_code;
-
-  signal(SIGTERM, signal_handler);
-  signal(SIGINT, signal_handler);
-  atexit(cleanup);
+  int error_code;
 
   s_v7 = v7_create();
   v7_init_func(&func_obj, js_net);
   v7_setv(s_v7, &s_v7->root_scope, V7_TYPE_STR, V7_TYPE_OBJ,
           "NetEventManager", 15, 0, &func_obj);
 
+  if ((error_code = v7_exec_file(s_v7, file_name)) != V7_OK) {
+    fprintf(stderr, "Error executing %s line %d: %s\n", file_name,
+            s_v7->pstate.line_no, v7_strerror(error_code));
+  }
+  if (s_received_signal == 0) {
+    sleep(1);
+  }
+  v7_destroy(&s_v7);
+}
+
+int main(int argc, char *argv[]) {
+  static struct v7_val func_obj;
+
   if (argc != 2) {
     fprintf(stderr, "Usage: %s <js_script_file>\n", argv[0]);
     return EXIT_FAILURE;
   }
+  s_script_file_name = argv[1];
 
-  for (i = 1; i < argc; i++) {
-    if ((error_code = v7_exec_file(s_v7, argv[i])) != V7_OK) {
-      fprintf(stderr, "Error executing %s line %d: %s\n", argv[i],
-                       s_v7->pstate.line_no, v7_strerror(error_code));
-      return EXIT_FAILURE;
-    }
+  signal(SIGTERM, signal_handler);
+  signal(SIGINT, signal_handler);
+  atexit(cleanup);
+
+  v7_init_func(&func_obj, js_net);
+
+  while (s_received_signal == 0) {
+    run_script(s_script_file_name);
   }
 
   return EXIT_SUCCESS;
