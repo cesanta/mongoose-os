@@ -27,16 +27,20 @@ var handleWebsocketData = function(conn) {
 };
 
 var handleHttpRequest = function(conn) {
-  var data, request;
+  var data, request, path, f;
 
+  print(conn.data);
   if (conn.is_websocket) return handleWebsocketData(conn);
 
   request = parseHttpRequest(conn.data);
-  if (!request) return false;   // Bad request, close the connection
+  if (!request) return true;   // Bad request, close the connection
 
   if (request.uri) {
-    var path = httpServerConfig.document_root + request.uri;
-    var f = open(path, 'r');
+    var uri = request.uri;
+    if (request.uri.match(/\/$/)) request.uri += 'index.html';
+    path = httpServerConfig.document_root + request.uri;
+    print('Serving [', uri, ']');
+    f = open(path, 'r');
     if (f) {
       conn.send('HTTP/1.0 200 OK\r\nConnection: close\r\n\r\n');
       while (data = f.read()) conn.send(data);
@@ -47,7 +51,7 @@ var handleHttpRequest = function(conn) {
     //var numConns = conn.server.connections.keys().length;
     //conn.send('HTTP/1.0 200 OK\r\n\r\n',
     //          'URI: ', req.uri, '\nNum connections: ', req, '\n');
-    return false;   // Close connection
+    return true;   // Close connection
   }
   // Return nothing (keep connection open) and buffer more conn.data
 };
