@@ -23,6 +23,9 @@ w:
 $(NS)/net_skeleton.c:
 	-@cd .. && git clone https://github.com/cesanta/net_skeleton
 
+run: $(BINARY)
+	$(BINARY) example.js
+
 $(V7)/v7.c: $(V7)/v7.h
 	test -d $(V7) || ( cd .. && git clone https://github.com/cesanta/v7 )
 

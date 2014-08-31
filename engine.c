@@ -13,6 +13,8 @@
 //
 // Alternatively, you can license this software under a commercial
 // license, as set out in <http://cesanta.com/>.
+//
+// $Date$
 
 #include <ctype.h>
 #include "net_skeleton.h"
@@ -61,13 +63,13 @@ static enum v7_err js_discard(struct v7_c_func_arg *cfa) {
 }
 
 static void init_js_conn(struct ns_connection *nc) {
-  struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
-  struct v7_val *js_conns = v7_get(js_srv, "connections");
+  struct v7_val *js_mgr = (struct v7_val *) nc->mgr->user_data;
+  struct v7_val *js_conns = v7_get(js_mgr, "connections");
   struct v7_val *js_conn = v7_push_new_object(s_v7);
   char key[40];
 
   if (js_conn != NULL && js_conns != NULL) {
-    v7_set(s_v7, js_conn, "server", js_srv);
+    v7_set(s_v7, js_conn, "server", js_mgr);
     v7_set(s_v7, js_conn, "nc", v7_push_number(s_v7, (unsigned long) nc));
     v7_set(s_v7, js_conn, "send", v7_push_func(s_v7, js_send));
     v7_set(s_v7, js_conn, "discard", v7_push_func(s_v7, js_discard));
@@ -84,8 +86,8 @@ static void init_js_conn(struct ns_connection *nc) {
 }
 
 static void free_js_conn(struct ns_connection *nc) {
-  struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
-  struct v7_val *js_conns = v7_get(js_srv, "connections");
+  struct v7_val *js_mgr = (struct v7_val *) nc->mgr->user_data;
+  struct v7_val *js_conns = v7_get(js_mgr, "connections");
   struct v7_val *js_conn = (struct v7_val *) nc->connection_data;
   char key[40];
 
@@ -98,11 +100,11 @@ static void free_js_conn(struct ns_connection *nc) {
 
 static void call_handler(struct ns_connection *nc, const char *name) {
   struct iobuf *io = &nc->recv_iobuf;
-  struct v7_val *js_srv = (struct v7_val *) nc->server->server_data;
+  struct v7_val *js_mgr = (struct v7_val *) nc->mgr->user_data;
   struct v7_val *js_conn = (struct v7_val *) nc->connection_data;
   struct v7_val *js_handler, *data, *res;
 
-  if (js_conn != NULL && (js_handler = v7_get(js_srv, name)) != NULL) {
+  if (js_conn != NULL && (js_handler = v7_get(js_mgr, name)) != NULL) {
     data = v7_push_string(s_v7, io->buf, io->len, 0);
     v7_set(s_v7, js_conn, "data", data);
 
@@ -111,7 +113,7 @@ static void call_handler(struct ns_connection *nc, const char *name) {
     v7_push_val(s_v7, js_conn);
 
     // Call the handler
-    if ((res = v7_call(s_v7, js_srv, 1)) == NULL) {
+    if ((res = v7_call(s_v7, js_mgr, 1)) == NULL) {
       fprintf(stderr, "Error executing %s handler: %s\n",
               name, v7_get_error_string(s_v7));
     } else {
@@ -135,14 +137,13 @@ static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
 }
 
 static enum v7_err js_run(struct v7_c_func_arg *cfa) {
-  struct v7_val *js_srv = v7_get(cfa->this_obj, "srv");
+  struct v7_val *js_mgr = v7_get(cfa->this_obj, "mgr");
   struct v7_val *onstart = v7_get(cfa->this_obj, "onstart");
   time_t mtime = 0, cur_time, prev_time = 0;
   struct stat st;
 
-  if (js_srv != NULL) {
-    struct ns_server *srv = (struct ns_server *)
-      (unsigned long) v7_number(js_srv);
+  if (js_mgr != NULL) {
+    struct ns_mgr *mgr = (struct ns_mgr *) (unsigned long) v7_number(js_mgr);
 
     // Call "onstart" handler if it is defined
     if (onstart != NULL) {
@@ -153,8 +154,8 @@ static enum v7_err js_run(struct v7_c_func_arg *cfa) {
     }
 
     // Enter listening loop
-    while (srv->listening_sock != INVALID_SOCKET && s_received_signal == 0) {
-      ns_server_poll(srv, 200);
+    while (s_received_signal == 0) {
+      ns_mgr_poll(mgr, 200);
       if ((cur_time = time(NULL)) > prev_time) {
         prev_time = cur_time;
         if (stat(s_script_file_name, &st) == 0 && mtime != 0 &&
@@ -162,15 +163,15 @@ static enum v7_err js_run(struct v7_c_func_arg *cfa) {
         mtime = st.st_mtime;
       }
     }
-    ns_server_free(srv);
+    ns_mgr_free(mgr);
   }
 
   return V7_OK;
 }
 
 static enum v7_err js_net(struct v7_c_func_arg *cfa) {
-  struct v7_val *listening_port, *v, *js_srv;
-  struct ns_server *srv;
+  struct v7_val *listening_port, *v, *js_mgr;
+  struct ns_mgr *mgr;
   char *s, buf[100];
 
   if (cfa->num_args < 1 || v7_type(cfa->args[0]) != V7_TYPE_OBJ ||
@@ -178,25 +179,25 @@ static enum v7_err js_net(struct v7_c_func_arg *cfa) {
         return V7_ERROR;
 
   // Set up javascript object that represents a server
-  js_srv = v7_push_new_object(cfa->v7);
-  v7_copy(cfa->v7, cfa->args[0], js_srv);
+  js_mgr = v7_push_new_object(cfa->v7);
+  v7_copy(cfa->v7, cfa->args[0], js_mgr);
   v = v7_push_new_object(cfa->v7);
-  v7_set(cfa->v7, js_srv, "connections", v);
-  v7_set(cfa->v7, js_srv, "run", v7_push_func(cfa->v7, js_run));
+  v7_set(cfa->v7, js_mgr, "connections", v);
+  v7_set(cfa->v7, js_mgr, "run", v7_push_func(cfa->v7, js_run));
 
   // Initialize net skeleton TCP server and bind it to the JS object
-  // by setting 'srv' property, which is a "struct ns_server *"
-  srv = (struct ns_server *) calloc(1, sizeof(*srv));
-  ns_server_init(srv, js_srv, tcp_handler);
-  v = v7_push_number(cfa->v7, (unsigned long) srv);
-  v7_set(cfa->v7, js_srv, "srv", v);
+  // by setting 'mgr' property, which is a "struct ns_mgr *"
+  mgr = (struct ns_mgr *) calloc(1, sizeof(*mgr));
+  ns_mgr_init(mgr, js_mgr, tcp_handler);
+  v = v7_push_number(cfa->v7, (unsigned long) mgr);
+  v7_set(cfa->v7, js_mgr, "mgr", v);
 
   s = v7_stringify(listening_port, buf, sizeof(buf));
-  ns_bind(srv, s);
+  ns_bind(mgr, s, NULL);
   if (s != buf) free(s);
 
   // Push result on stack
-  v7_push_val(cfa->v7, js_srv);
+  v7_push_val(cfa->v7, js_mgr);
 
   return V7_OK;
 }
@@ -207,12 +208,10 @@ static void cleanup(void) {
 }
 
 static void run_script(const char *file_name) {
-  int error_code;
-
   s_v7 = v7_create();
   v7_set(s_v7, v7_rootns(s_v7), "NetEventManager", v7_push_func(s_v7, js_net));
 
-  if ((error_code = v7_exec_file(s_v7, file_name)) != V7_OK) {
+  if (v7_exec_file(s_v7, file_name) == NULL) {
     fprintf(stderr, "%s\n", v7_get_error_string(s_v7));
   }
   if (s_received_signal == 0) {

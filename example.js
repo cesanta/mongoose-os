@@ -1,4 +1,5 @@
 // This is an example HTTP/Websocket server
+// $Date$
 
 function parseHttpRequest(str) {
   var ind = str.indexOf('\r\n\r\n');              // Where HTTP headers end
