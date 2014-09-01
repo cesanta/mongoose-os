@@ -3,31 +3,23 @@
 #
 # Makefile for the Smart.js engine
 
-NS = ../net_skeleton
-V7 = ../v7
-
-SOURCES = engine.c $(NS)/net_skeleton.c $(V7)/v7.c
-BINARY = engine
-
-CFLAGS = -I$(NS) -I$(V7) $(CFLAGS_EXTRA) -W -Wall
+SOURCES = engine/smart.c engine/net_skeleton.c engine/v7.c
+BINARY = smart
 
 all: $(BINARY)
 
 $(BINARY): $(SOURCES)
-	cd $(V7) && make v7.c
-	$(CC) $(SOURCES) -o $@ -W -Wall -g $(CFLAGS)
+	$(CC) $(SOURCES) -o $@ -W -Wall -g $(CFLAGS_EXTRA)
+
+run: $(BINARY) sync
+	./$(BINARY) examples/example.js
+
+sync:
+	cd ../v7 && make v7.c
+	cp ../net_skeleton/net_skeleton.[ch] ../v7/v7.[ch] engine/
 
 w:
-	wine cl /MD /TC /nologo /DNDEBUG /O1 $(CFLAGS) $(SOURCES)
-
-$(NS)/net_skeleton.c:
-	-@cd .. && git clone https://github.com/cesanta/net_skeleton
-
-run: $(BINARY)
-	$(BINARY) example.js
-
-$(V7)/v7.c: $(V7)/v7.h
-	test -d $(V7) || ( cd .. && git clone https://github.com/cesanta/v7 )
+	wine cl /MD /TC /nologo /DNDEBUG /O1 $(CFLAGS_EXTRA) $(SOURCES)
 
 clean:
 	rm -rf $(BINARY) *.exe *.obj *.o *.dSYM

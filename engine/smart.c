@@ -125,7 +125,7 @@ static void call_handler(struct ns_connection *nc, const char *name) {
   }
 }
 
-static void tcp_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
+static void ev_handler(struct ns_connection *nc, enum ns_event ev, void *p) {
   (void) p;
   switch (ev) {
     case NS_ACCEPT: init_js_conn(nc); call_handler(nc, "onaccept"); break;
@@ -170,17 +170,21 @@ static enum v7_err js_run(struct v7_c_func_arg *cfa) {
 }
 
 static enum v7_err js_net(struct v7_c_func_arg *cfa) {
-  struct v7_val *listening_port, *v, *js_mgr;
+  struct v7_val *v = NULL, *js_mgr = NULL;
   struct ns_mgr *mgr;
-  char *s, buf[100];
+  //char *s, buf[100];
 
+#if 0
   if (cfa->num_args < 1 || v7_type(cfa->args[0]) != V7_TYPE_OBJ ||
       (listening_port = v7_get(cfa->args[0], "listening_port")) == NULL)
         return V7_ERROR;
+#endif
 
   // Set up javascript object that represents a server
-  js_mgr = v7_push_new_object(cfa->v7);
-  v7_copy(cfa->v7, cfa->args[0], js_mgr);
+  js_mgr = cfa->called_as_constructor ?
+  cfa->this_obj : v7_push_new_object(cfa->v7);
+
+  //v7_copy(cfa->v7, cfa->args[0], js_mgr);
   v = v7_push_new_object(cfa->v7);
   v7_set(cfa->v7, js_mgr, "connections", v);
   v7_set(cfa->v7, js_mgr, "run", v7_push_func(cfa->v7, js_run));
@@ -188,13 +192,15 @@ static enum v7_err js_net(struct v7_c_func_arg *cfa) {
   // Initialize net skeleton TCP server and bind it to the JS object
   // by setting 'mgr' property, which is a "struct ns_mgr *"
   mgr = (struct ns_mgr *) calloc(1, sizeof(*mgr));
-  ns_mgr_init(mgr, js_mgr, tcp_handler);
+  ns_mgr_init(mgr, js_mgr, ev_handler);
   v = v7_push_number(cfa->v7, (unsigned long) mgr);
   v7_set(cfa->v7, js_mgr, "mgr", v);
 
+#if 0
   s = v7_stringify(listening_port, buf, sizeof(buf));
   ns_bind(mgr, s, NULL);
   if (s != buf) free(s);
+#endif
 
   // Push result on stack
   v7_push_val(cfa->v7, js_mgr);
@@ -209,14 +215,16 @@ static void cleanup(void) {
 
 static void run_script(const char *file_name) {
   s_v7 = v7_create();
-  v7_set(s_v7, v7_rootns(s_v7), "NetEventManager", v7_push_func(s_v7, js_net));
+  v7_set(s_v7, v7_global(s_v7), "EventManager", v7_push_func(s_v7, js_net));
 
   if (v7_exec_file(s_v7, file_name) == NULL) {
     fprintf(stderr, "%s\n", v7_get_error_string(s_v7));
   }
+
   if (s_received_signal == 0) {
     sleep(1);
   }
+
   v7_destroy(&s_v7);
 }
 
