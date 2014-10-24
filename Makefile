@@ -10,7 +10,7 @@ BINARY = smartjs
 all: $(BINARY)
 
 $(BINARY): $(SOURCES)
-	$(CC) $(SOURCES) -o $@ -W -Wall -g -lssl -lm $(CFLAGS)
+	$(CC) $(SOURCES) -o $@ -W -Wall -g -lssl -lm -pthread $(CFLAGS)
 
 run: $(BINARY)
 	cd ../cesanta.com && make
