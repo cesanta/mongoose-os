@@ -169,25 +169,34 @@ static enum v7_err js_run(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
+static enum v7_err js_bind(struct v7_c_func_arg *cfa) {
+  struct v7_val *v = NULL, *ptr = v7_get(cfa->this_obj, "mgr");
+  struct ns_mgr *mgr = (struct ns_mgr *) (unsigned long) v7_number(ptr);
+  char *s, buf[100];
+
+  if (cfa->num_args != 2 || v7_type(cfa->args[1]) != V7_TYPE_OBJ) {
+    return V7_ERROR;
+  }
+
+  s = v7_stringify(cfa->args[0], buf, sizeof(buf));
+  ns_bind(mgr, s, cfa->args[1]);
+  if (s != buf) free(s);
+
+  return V7_OK;
+}
+
 static enum v7_err js_net(struct v7_c_func_arg *cfa) {
   struct v7_val *v = NULL, *js_mgr = NULL;
   struct ns_mgr *mgr;
-  //char *s, buf[100];
-
-#if 0
-  if (cfa->num_args < 1 || v7_type(cfa->args[0]) != V7_TYPE_OBJ ||
-      (listening_port = v7_get(cfa->args[0], "listening_port")) == NULL)
-        return V7_ERROR;
-#endif
 
   // Set up javascript object that represents a server
   js_mgr = cfa->called_as_constructor ?
   cfa->this_obj : v7_push_new_object(cfa->v7);
 
-  //v7_copy(cfa->v7, cfa->args[0], js_mgr);
   v = v7_push_new_object(cfa->v7);
   v7_set(cfa->v7, js_mgr, "connections", v);
   v7_set(cfa->v7, js_mgr, "run", v7_push_func(cfa->v7, js_run));
+  v7_set(cfa->v7, js_mgr, "bind", v7_push_func(cfa->v7, js_bind));
 
   // Initialize net skeleton TCP server and bind it to the JS object
   // by setting 'mgr' property, which is a "struct ns_mgr *"
@@ -195,12 +204,6 @@ static enum v7_err js_net(struct v7_c_func_arg *cfa) {
   ns_mgr_init(mgr, js_mgr, ev_handler);
   v = v7_push_number(cfa->v7, (unsigned long) mgr);
   v7_set(cfa->v7, js_mgr, "mgr", v);
-
-#if 0
-  s = v7_stringify(listening_port, buf, sizeof(buf));
-  ns_bind(mgr, s, NULL);
-  if (s != buf) free(s);
-#endif
 
   // Push result on stack
   v7_push_val(cfa->v7, js_mgr);

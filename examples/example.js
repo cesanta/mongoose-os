@@ -18,9 +18,14 @@ var httpServer = new HttpServer(em, { listen: 8000, root: '.' });
 */
 
 var http = load('modules/http.js');
-print(http);
+
 
 var em = new EventManager();
-//var s = new HttpServer();
-//em.bind(8000, new HttpServer({ root: '.' }));
+//var web_server = new http.HttpServer({ root: '.' });
+var web_server = new http.HttpServer();
+/*
+print(em);
+
+em.bind(8000, web_server);
 em.run();
+*/

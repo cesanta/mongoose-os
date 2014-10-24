@@ -30,30 +30,39 @@ On MacOS or UNIX/Linux, start terminal and execute following commands:
 ## Example: send periodic measurements to the cloud
 
     while (true) {
-      var data = measure();  // Do some measurement
-      var sock = Net.connect('ssl://mysite.com:443');
-      Net.send('POST /api/data HTTP/1.0\n\ndata=' + data);
-      Net.close(sock);
+      var val = MyApp.getTemperature();  // Do some measurement
+      var msg = JSON.stringify({ temperature: val }); // Wrap it to JSON
+      Net.connect_and_send('ssl://mysite.com:443',
+                           'POST /api/data HTTP/1.0\n\n', msg);  // Send it
       Std.sleep(10);  // Sleep 10 seconds before the next cycle
     }
 
-## Example: run HTTP/Websocket server
+## Example: push measurements to Websocket clients
 
-    var em = Net.EventManager()
-    var web_server = Net.HttpServer({
-      on_http_request: function(request, response) {
-        response.send('URI was: ', request.uri);
-      },
-      on_websocket_message: function(message, response) {
-        response.send(message);  // Echo websocket message back
-      }
-    });
-
-    var sock = Net.bind('tcp://80')
-    Net.ns_add(sock, web_server)
+    var em = Net.EventManager();  // Start async event manager
+    var ws = Net.HttpServer();    // Create web server instance
+    var sock = Net.bind('ssl://443:cert.pem');  // Create SSL listening socket
+    Net.ns_add(em, sock, ws);     // Attach web server to the listening socket
 
     while (true) {
-      em.poll(1)  // Poll interval is 1 second
+      Net.ns_poll(em, 10);  // Event loop. Poll interval is 10 seconds
+
+      // Iterate over all websocket connections, push measurement to each
+      var temperature = MyApp.getTemperature();
+      Net.ns_broadcast(em, ws, function(conn) {
+        if (conn.is_websocket) conn.send_websocket(temperature);
+      });
+    }
+
+## Example: run HTTP server for the web UI
+
+    var em = Net.EventManager()
+    var ws = Net.HttpServer({ document_root: '/var/www' });
+    var sock = Net.bind('tcp://80')
+    Net.ns_add(em, sock, ws)
+
+    while (true) {
+      Net.ns_poll(em, 10)
     }
 
 ## JavaScript API reference
@@ -82,8 +91,12 @@ On MacOS or UNIX/Linux, start terminal and execute following commands:
 
 <dl>
   <dt>Sqlite3.exec(sql, param1, ..., callback) -> (number) last_insert_id</dt>
-  <dd>Executes SQL statement with given parameters,
-    calling callback function for each row. Return: last insert ID</dd>
+  <dd>
+    Executes SQL statement with given parameters,
+    calling callback function for each row. Return: last insert ID  
+
+    Example: `var id = Sqlite3.exec('INSERT INTO log (msg) VALUES(?);', msg)`
+  </dd>
 
 <!-- ### File API -->
 
@@ -158,13 +171,21 @@ On MacOS or UNIX/Linux, start terminal and execute following commands:
   <dd>Reads not more then `num_bytes` bytes of data data from a socket.
   Return: a string, an empty string on error.</dd>
 
+  <dt>Net.connect_and_send(address, data) -> (number) num_bytes</dt>
+  <dd>Wrapper around `Net.connect()` + `Net.send()` and `Net.close()`.
+  Connects to `address` and sends `data` there. This function blocks until
+  all requested data is sent to the `address` or error occurs.
+  Return: either total number of bytes sent, or negative OS error.</dd>
+
   <dt>Net.close(sock)</dt>
   <dd>Closes opened socket.</dd>
 
   <dt>Net.EventManager() -> (object) event_manager</dt>
   <dd>Creates an asyncronous non-blocking event manager.</dd>
 
-
+  <dt>Net.ns_poll(em, poll_timeout) -> (number) current_timestamp</dt>
+  <dd>Performs one iteration of the EventManager event loop, calling
+  IO functions when necessary. Return: current timestamp.</dd>
 
 </dl>
 
