@@ -14,6 +14,13 @@ SOURCES = src/main.c \
 					src/dependencies/krypton.c
 BINARY = sj
 
+CLANG_FORMAT:=clang-format
+
+# installable with: `brew install llvm36 --with-clang`
+ifneq ("$(wildcard /usr/local/bin/clang-format-3.6)","")
+	CLANG_FORMAT:=/usr/local/bin/clang-format-3.6
+endif
+
 # TODO(lsm): reuse established test infrastructure as we move to a dev repo
 all: $(BINARY) unit_test
 	./unit_test
@@ -32,3 +39,6 @@ w:
 
 clean:
 	rm -rf $(BINARY) *.exe *.obj *.o *.dSYM unit_test
+
+format:
+	/usr/bin/find src test -name "*.[ch]" | grep -v 'src/dependencies' | xargs $(CLANG_FORMAT) -i

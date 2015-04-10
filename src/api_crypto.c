@@ -57,7 +57,6 @@ static unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-
 static void base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
@@ -97,12 +96,12 @@ static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
 }
 
 static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
-                                  v7_val_t args) {
+                                     v7_val_t args) {
   return b64_transform(v7, this_obj, args, base64_decode, 0.75);
 }
 
 static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
-                                  v7_val_t args) {
+                                     v7_val_t args) {
   return b64_transform(v7, this_obj, args, base64_encode, 1.5);
 }
 
