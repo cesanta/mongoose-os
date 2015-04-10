@@ -379,7 +379,8 @@ static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * JS: Socket.connect(addr, port)
  * Ex: var x = new Socket(); x.connect("www.hello.com",80);
  */
-static v7_val_t Socket_connect(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Socket_connect(struct v7 *v7, v7_val_t this_obj,
+                               v7_val_t args) {
   struct socket_internal *si = Socket_get_si(v7, this_obj);
   char addr[ADDRESS_BUF_SIZE] = {0};
   union socket_address sa;
@@ -495,7 +496,7 @@ static int Socket_get_recvtype(struct socket_internal *si, struct v7 *v7,
 }
 
 static v7_val_t Socket_get_retdata(struct v7 *v7, int recvtype, char *buf,
-                                size_t buf_size) {
+                                   size_t buf_size) {
   if (recvtype == RECVTYPE_STRING) {
     return v7_create_string(v7, buf, buf_size, 1);
   } else if (recvtype == RECVTYPE_RAW) {
@@ -581,7 +582,8 @@ static int Socket_sa_split(union socket_address *sa, int *family, char *addr,
  * Object.src.port: originator’s port
  * Object.src.family : address family
  */
-static v7_val_t Socket_recvfrom(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Socket_recvfrom(struct v7 *v7, v7_val_t this_obj,
+                                v7_val_t args) {
   struct socket_internal *si = Socket_get_si(v7, this_obj);
   char recv_buf[RECV_BUF_SIZE] = {0};
   long bytes_received;
@@ -668,7 +670,8 @@ static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 #define SOCKET_DEF_PROP(name, func, retval, error)                            \
-  static v7_val_t Socket_##name(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {  \
+  static v7_val_t Socket_##name(struct v7 *v7, v7_val_t this_obj,             \
+                                v7_val_t args) {                              \
     struct socket_internal *si = Socket_get_si(v7, this_obj);                 \
     union socket_address sa;                                                  \
     unsigned int sa_len = sizeof(sa);                                         \
