@@ -7,6 +7,4 @@ extern struct v7 *v7;
 
 void init_v7();
 
-void set_gpio(int g, int v);
-
 #endif /* V7_ESP_INCLUDED */

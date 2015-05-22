@@ -10,7 +10,10 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "v7_esp.h"
+#include "dht11.h"
 #include "util.h"
+#include "v7_esp_features.h"
 
 struct v7 *v7;
 os_timer_t js_timeout_timer;
@@ -222,9 +225,34 @@ ICACHE_FLASH_ATTR static v7_val_t GC_collect(struct v7 *v7, v7_val_t this_obj,
   return v7_create_undefined();
 }
 
+#if V7_ESP_ENABLE__DHT11
+ICACHE_FLASH_ATTR
+static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  int pin, temp, rh;
+  v7_val_t pinv = v7_array_get(v7, args, 0), result;
+
+  if (!v7_is_double(pinv)) {
+    printf("non-numeric pin\n");
+    return v7_create_undefined();
+  }
+  pin = v7_to_double(pinv);
+
+  if (!dht11_read(pin, &temp, &rh)) {
+    return v7_create_null();
+  }
+
+  result = v7_create_object(v7);
+  v7_set(v7, result, "temp", 4, 0, v7_create_number(temp));
+  v7_set(v7, result, "rh", 2, 0, v7_create_number(rh));
+  /* prevent the object from being potentially GCed */
+  v7_set(v7, args, "_tmp", 4, 0, result);
+  return result;
+}
+#endif /* V7_ESP_ENABLE__DHT11 */
+
 ICACHE_FLASH_ATTR void init_v7() {
   struct v7_create_opts opts;
-  v7_val_t wifi, gpio, gc;
+  v7_val_t wifi, gpio, dht11, gc;
 
   opts.object_arena_size = 94;
   opts.function_arena_size = 17;
@@ -249,6 +277,12 @@ ICACHE_FLASH_ATTR void init_v7() {
   v7_set_method(v7, wifi, "ip", Wifi_ip);
   v7_set(v7, wifi, "STATION", 7, 0, v7_create_number(0));
   v7_set(v7, wifi, "SOFTAP", 6, 0, v7_create_number(1));
+
+#if V7_ESP_ENABLE__DHT11
+  dht11 = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "DHT11", 5, 0, dht11);
+  v7_set_method(v7, dht11, "read", DHT11_read);
+#endif /* V7_ESP_ENABLE__DHT11 */
 
   gc = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "GC", 2, 0, gc);

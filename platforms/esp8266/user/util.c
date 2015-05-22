@@ -26,6 +26,19 @@ ICACHE_FLASH_ATTR int read_gpio_pin(int g) {
   return (gpio_input_get() & (1 << g)) != 0;
 }
 
+ICACHE_FLASH_ATTR
+int await_change(int gpio, int *max_cycles) {
+  int v1, v2, n;
+  v1 = read_gpio_pin(gpio);
+  for (n = *max_cycles; (*max_cycles)-- > 0;) {
+    v2 = read_gpio_pin(gpio);
+    if (v2 != v1) {
+      return (n - *max_cycles);
+    }
+  }
+  return 0;
+}
+
 ICACHE_FLASH_ATTR void v7_run_startup() {
   v7_val_t v;
   /*
