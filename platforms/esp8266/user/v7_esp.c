@@ -6,7 +6,9 @@
 #include "user_interface.h"
 #include "v7.h"
 #include "mem.h"
+#include "espconn.h"
 #include <math.h>
+#include <stdlib.h>
 
 #include "util.h"
 
@@ -80,7 +82,7 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_out(struct v7 *v7, v7_val_t this_obj,
 }
 
 ICACHE_FLASH_ATTR static v7_val_t GPIO_in(struct v7 *v7, v7_val_t this_obj,
-                                           v7_val_t args) {
+                                          v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   int pin;
 
@@ -224,7 +226,7 @@ ICACHE_FLASH_ATTR void init_v7() {
   struct v7_create_opts opts;
   v7_val_t wifi, gpio, gc;
 
-  opts.object_arena_size = 80;
+  opts.object_arena_size = 94;
   opts.function_arena_size = 17;
   opts.property_arena_size = 340;
 
@@ -252,4 +254,6 @@ ICACHE_FLASH_ATTR void init_v7() {
   v7_set(v7, v7_get_global_object(v7), "GC", 2, 0, gc);
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "collect", GC_collect);
+
+  v7_init_http_client(v7);
 }

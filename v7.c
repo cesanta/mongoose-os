@@ -7618,6 +7618,10 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
       fprintf(stderr, "TODO arena grow\n");
       abort();
 #else
+      printf("TODO arena grow (arena %p)\n", a);
+      printf("v7->object arena: %p\n", &v7->object_arena);
+      printf("v7->property arena: %p\n", &v7->property_arena);
+      printf("v7->function arena: %p\n", &v7->function_arena);
       *(int *) 1 = 1;
 #endif
 #else

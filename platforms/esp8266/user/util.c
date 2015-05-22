@@ -7,6 +7,7 @@
 #include "v7.h"
 #include "mem.h"
 #include <math.h>
+#include <stdlib.h>
 #include "v7_esp.h"
 #include "util.h"
 
