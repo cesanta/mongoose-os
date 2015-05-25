@@ -5,7 +5,6 @@
 #include "user_config.h"
 #include "user_interface.h"
 #include "mem.h"
-
 #include "v7_esp.h"
 #include "v7_http_eval.h"
 #include "util.h"
@@ -16,10 +15,21 @@ os_timer_t startcmd_timer;
 
 ICACHE_FLASH_ATTR void start_cmd() {
   init_v7();
-  fs_init();
   uart_init(0);
+
+#ifndef V7_NO_FS
+  fs_init();
+
+#ifndef NO_EXEC_INITJS
   v7_run_startup();
+#endif
+
+#endif
+
+#ifndef NO_HTTP_EVAL
   start_http_eval_server();
+#endif
+
   v7_serial_prompt_init(0);
 }
 

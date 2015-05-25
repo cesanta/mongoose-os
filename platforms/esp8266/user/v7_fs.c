@@ -10,9 +10,12 @@
 #include "user_config.h"
 #include "user_interface.h"
 #include "mem.h"
-#include "./../spiffs/spiffs.h"
 #include <errno.h>
 #include "v7.h"
+
+#ifndef V7_NO_FS
+
+#include "./../spiffs/spiffs.h"
 
 spiffs fs;
 
@@ -233,3 +236,5 @@ ICACHE_FLASH_ATTR void spiffs_rewind(int fd) {
 ICACHE_FLASH_ATTR int spiffs_ferror(int fd) {
   return SPIFFS_errno(&fs);
 }
+
+#endif

@@ -4235,7 +4235,7 @@ ON_FLASH int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
  */
 
 
-#ifdef V7_ENABLE_FILE
+#if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
 
 static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
@@ -5886,7 +5886,7 @@ ON_FLASH V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos,
   *val = strtod(buf, NULL);
 }
 
-#ifndef V7_NO_FS
+#ifndef NO_LIBC
 ON_FLASH static void comment_at_depth(FILE *fp, const char *fmt, int depth,
                                       ...) {
   int i;
@@ -5923,7 +5923,7 @@ ON_FLASH V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
   }
 }
 
-#ifndef V7_NO_FS
+#ifndef NO_LIBC
 ON_FLASH static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
                                    int depth) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
@@ -5991,7 +5991,7 @@ ON_FLASH V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
 }
 
-#ifndef V7_NO_FS
+#ifndef NO_LIBC
 /*
  * Generate Abstract Syntax Tree (AST) for the given JavaScript source code.
  * If `binary` is 0, then generated AST is in text format, otherwise it is
@@ -10474,6 +10474,7 @@ ON_FLASH static int v7_get_file_size(c_file_t fp) {
 }
 #endif
 
+#ifndef V7_NO_FS
 ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   c_file_t fp;
   char *p;
@@ -10507,6 +10508,7 @@ ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
 
   return err;
 }
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved

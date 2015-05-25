@@ -14,6 +14,8 @@
 #include "v7_http_eval.h"
 #include "v7_fs.h"
 
+#ifndef NO_HTTP_EVAL
+
 struct espconn server;
 esp_tcp server_tcp;
 
@@ -171,3 +173,5 @@ ICACHE_FLASH_ATTR void start_http_eval_server() {
   espconn_regist_connectcb(&server, server_connect_cb);
   espconn_accept(&server);
 }
+
+#endif
