@@ -20,7 +20,7 @@ BUILD_BASE	= build
 FW_BASE		= firmware
 
 # base directory for the V7 sources
-V7_DIR = ../../
+V7_DIR = ../../src
 
 # base directory for the compiler
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
