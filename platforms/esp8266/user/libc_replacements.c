@@ -39,6 +39,20 @@
 
 #include "v7.h"
 
+/* 
+ * strerror provided by libc consumes 2kb RAM
+ * Moreover, V7 uses strerror mostly for
+ * file operation, so returns of strerror
+ * are undefined, because spiffs uses its own
+ * error codes and doesn't provide
+ * error descriptions
+ */
+char ICACHE_FLASH_ATTR* strerror(int errnum) {
+  static char buf[50];
+  snprintf(buf, sizeof(buf), "err: %d", errnum);
+  return buf;
+}
+
 void* malloc(size_t size) {
   return (void*) pvPortMalloc(size);
 }
@@ -425,7 +439,7 @@ ICACHE_FLASH_ATTR static double flash_pow10int(int n) {
   } else if (n > 0) {
     return round(exp(n * log(10)));
   } else {
-    return 1/round(exp(-n * log(10)));  
+    return 1 / round(exp(-n * log(10)));
   }
 }
 

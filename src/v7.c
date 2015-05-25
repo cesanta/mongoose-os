@@ -7994,12 +7994,12 @@ ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
-  if (v7->cur_tok == TOK_IDENTIFIER &&
+  if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
     next_tok(v7);
     ast_add_node(a, AST_GETTER);
     parse_funcdecl(v7, a, 1, 1);
-  } else if (v7->cur_tok == TOK_IDENTIFIER &&
+  } else if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
     next_tok(v7);
@@ -8088,7 +8088,7 @@ ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
       next_tok(v7);
       break;
     case TOK_IDENTIFIER:
-      if (strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
+      if (v7->tok_len == 9 && strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
         ast_add_node(a, AST_UNDEFINED);
         next_tok(v7);
         break;

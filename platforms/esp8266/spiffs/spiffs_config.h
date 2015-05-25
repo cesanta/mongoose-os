@@ -72,7 +72,7 @@ typedef uint8_t u8_t;
 
 // Enable/disable statistics on caching. Debug/test purpose only.
 #ifndef SPIFFS_CACHE_STATS
-#define SPIFFS_CACHE_STATS 1
+#define SPIFFS_CACHE_STATS 0
 #endif
 #endif
 
@@ -89,7 +89,7 @@ typedef uint8_t u8_t;
 
 // Enable/disable statistics on gc. Debug/test purpose only.
 #ifndef SPIFFS_GC_STATS
-#define SPIFFS_GC_STATS 1
+#define SPIFFS_GC_STATS 0
 #endif
 
 // Garbage collecting examines all pages in a block which and sums up
@@ -157,19 +157,19 @@ typedef uint8_t u8_t;
 // Instead of giving parameters in config struct, singleton build must
 // give parameters in defines below.
 #ifndef SPIFFS_CFG_PHYS_SZ
-#define SPIFFS_CFG_PHYS_SZ(ignore) (1024 * 1024 * 2)
+#define SPIFFS_CFG_PHYS_SZ(ignore) (FS_SIZE)
 #endif
 #ifndef SPIFFS_CFG_PHYS_ERASE_SZ
-#define SPIFFS_CFG_PHYS_ERASE_SZ(ignore) (65536)
+#define SPIFFS_CFG_PHYS_ERASE_SZ(ignore) (4096)
 #endif
 #ifndef SPIFFS_CFG_PHYS_ADDR
-#define SPIFFS_CFG_PHYS_ADDR(ignore) (0)
+#define SPIFFS_CFG_PHYS_ADDR(ignore) (FS_ADDR)
 #endif
 #ifndef SPIFFS_CFG_LOG_PAGE_SZ
 #define SPIFFS_CFG_LOG_PAGE_SZ(ignore) (256)
 #endif
 #ifndef SPIFFS_CFG_LOG_BLOCK_SZ
-#define SPIFFS_CFG_LOG_BLOCK_SZ(ignore) (65536)
+#define SPIFFS_CFG_LOG_BLOCK_SZ(ignore) (4096)
 #endif
 #endif
 
@@ -182,7 +182,7 @@ typedef uint8_t u8_t;
 // in the api. This function will visualize all filesystem using given printf
 // function.
 #ifndef SPIFFS_TEST_VISUALISATION
-#define SPIFFS_TEST_VISUALISATION 1
+#define SPIFFS_TEST_VISUALISATION 0
 #endif
 #if SPIFFS_TEST_VISUALISATION
 #ifndef spiffs_printf

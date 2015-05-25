@@ -113,6 +113,7 @@ ICACHE_FLASH_ATTR static s32_t esp_spiffs_erase(u32_t addr, u32_t size) {
 ICACHE_FLASH_ATTR int fs_init() {
   spiffs_config cfg;
 
+#if !SPIFFS_SINGLETON
   /* FS_SIZE & FS_ADDR are provided via Makefile */
   cfg.phys_size = FS_SIZE;
   cfg.phys_addr = FS_ADDR;
@@ -120,6 +121,7 @@ ICACHE_FLASH_ATTR int fs_init() {
   cfg.phys_erase_block = FLASH_BLOCK_SIZE;
   cfg.log_block_size = FLASH_BLOCK_SIZE;
   cfg.log_page_size = LOG_PAGE_SIZE;
+#endif
 
   cfg.hal_read_f = esp_spiffs_read;
   cfg.hal_write_f = esp_spiffs_write;
