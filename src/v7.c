@@ -1909,6 +1909,8 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
                                                const char *name, size_t);
+V7_PRIVATE v7_val_t v7_get_v(struct v7 *, v7_val_t, v7_val_t);
+
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
 V7_PRIVATE int v7_set_v(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
@@ -1941,7 +1943,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json);
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
-V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
+V7_PRIVATE val_t _std_eval(struct v7 *v7, val_t args, char before, char after);
 
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
@@ -6703,6 +6705,20 @@ v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
 }
 
+ON_FLASH V7_PRIVATE v7_val_t
+v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
+  const char *s;
+  size_t name_len;
+  if (v7_is_string(name)) {
+    s = v7_to_string(v7, &name, &name_len);
+  } else {
+    char buf[512];
+    name_len = v7_stringify_value(v7, name, buf, sizeof(buf));
+    s = buf;
+  }
+  return v7_get(v7, obj, s, name_len);
+}
+
 ON_FLASH V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
@@ -9298,8 +9314,7 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_INDEX:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      v7_stringify_value(v7, v2, buf, sizeof(buf));
-      res = v7_get(v7, v1, buf, -1);
+      res = v7_get_v(v7, v1, v2);
       break;
     case AST_MEMBER:
       name = ast_get_inlined_data(a, *pos, &name_len);
@@ -10541,26 +10556,29 @@ Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 ON_FLASH V7_PRIVATE v7_val_t
-Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
+_std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
+  enum v7_err err;
   v7_val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
-  (void) t;
+
   if (arg != V7_UNDEFINED) {
     char buf[100], *p;
     p = v7_to_json(v7, arg, buf, sizeof(buf));
     if (p[0] == '"') {
-      p[0] = p[strlen(p) - 1] = ' ';
+      p[0] = before;
+      p[strlen(p) - 1] = after;
     }
-    if (v7_exec(v7, &res, p) != V7_OK) {
-      if (p != buf) {
-        free(p);
-      }
-      throw_value(v7, res);
-    }
-    if (p != buf) {
-      free(p);
-    }
+    err = v7_exec(v7, &res, p);
+
+    if (p != buf) free(p);
+    if (err != V7_OK) throw_value(v7, res);
   }
   return res;
+}
+
+ON_FLASH V7_PRIVATE v7_val_t
+Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  (void) t;
+  return _std_eval(v7, args, ' ', ' ');
 }
 
 ON_FLASH V7_PRIVATE v7_val_t
@@ -12976,10 +12994,16 @@ ON_FLASH static val_t Json_stringify(struct v7 *v7, val_t this_obj,
   return res;
 }
 
+ON_FLASH V7_PRIVATE v7_val_t
+Json_parse(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  (void) t;
+  return _std_eval(v7, args, '(', ')');
+}
+
 ON_FLASH V7_PRIVATE void init_json(struct v7 *v7) {
   val_t o = v7_create_object(v7);
   set_method(v7, o, "stringify", Json_stringify, 1);
-  set_method(v7, o, "parse", Std_eval, 1);
+  set_method(v7, o, "parse", Json_parse, 1);
   v7_set_property(v7, v7->global_object, "JSON", 4, V7_PROPERTY_DONT_ENUM, o);
 }
 /*
