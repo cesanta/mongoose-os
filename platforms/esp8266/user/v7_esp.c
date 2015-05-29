@@ -14,6 +14,7 @@
 #include "dht11.h"
 #include "util.h"
 #include "v7_esp_features.h"
+#include "v7_uart.h"
 
 struct v7 *v7;
 os_timer_t js_timeout_timer;
@@ -250,9 +251,63 @@ static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 #endif /* V7_ESP_ENABLE__DHT11 */
 
+/*
+ * Sets output for debug messages.
+ * Available modes are:
+ * 0 - no debug output
+ * 1 - print debug output to UART0 (V7's console)
+ * 2 - print debug output to UART1
+ */
+ICACHE_FLASH_ATTR static v7_val_t Debug_set_output(struct v7 *v7,
+                                                   v7_val_t this_obj,
+                                                   v7_val_t args) {
+  int mode, res;
+  v7_val_t output_val = v7_array_get(v7, args, 0);
+
+  if (!v7_is_double(output_val)) {
+    printf("Output is not a number\n");
+    return v7_create_undefined();
+  }
+
+  mode = v7_to_double(output_val);
+
+  uart_debug_init(0, 0);
+  res = uart_redirect_debug(mode);
+
+  return v7_create_number(res < 0 ? res : mode);
+}
+
+/*
+ * Prints message to current debug output
+ */
+ICACHE_FLASH_ATTR v7_val_t
+Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  char *p, buf[512];
+  int i, num_args = v7_array_length(v7, args);
+
+  (void) this_obj;
+  for (i = 0; i < num_args; i++) {
+    v7_val_t arg = v7_array_get(v7, args, i);
+    if (v7_is_string(arg)) {
+      size_t n;
+      const char *s = v7_to_string(v7, &arg, &n);
+      os_printf("%s", s);
+    } else {
+      p = v7_to_json(v7, arg, buf, sizeof(buf));
+      os_printf("%s", p);
+      if (p != buf) {
+        free(p);
+      }
+    }
+  }
+  os_printf("\n");
+
+  return v7_create_null();
+}
+
 ICACHE_FLASH_ATTR void init_v7() {
   struct v7_create_opts opts;
-  v7_val_t wifi, gpio, dht11, gc;
+  v7_val_t wifi, gpio, dht11, gc, debug;
 
   opts.object_arena_size = 94;
   opts.function_arena_size = 17;
@@ -288,6 +343,11 @@ ICACHE_FLASH_ATTR void init_v7() {
   v7_set(v7, v7_get_global_object(v7), "GC", 2, 0, gc);
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "collect", GC_collect);
+
+  debug = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "Debug", 5, 0, debug);
+  v7_set_method(v7, debug, "setOutput", Debug_set_output);
+  v7_set_method(v7, debug, "print", Debug_print);
 
   v7_init_http_client(v7);
 }

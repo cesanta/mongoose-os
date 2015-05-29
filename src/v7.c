@@ -1975,7 +1975,10 @@ V7_PRIVATE val_t n_to_str(struct v7 *, val_t, val_t, const char *);
 #define GC_H_INCLUDED
 
 
-/* Disable GC on 32-bit platform for now */
+/*
+ * Disable GC on 32-bit platform for now
+ * It does work but it's less stable than the 64-bit GC.
+ */
 #if ULONG_MAX == 4294967295 && !defined(V7_ENABLE_GC)
 #define V7_DISABLE_GC
 #endif
