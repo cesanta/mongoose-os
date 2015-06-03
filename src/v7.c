@@ -1002,7 +1002,9 @@ typedef struct {
 void SHA1Init(SHA1_CTX *);
 void SHA1Update(SHA1_CTX *, const unsigned char *data, uint32_t len);
 void SHA1Final(unsigned char digest[20], SHA1_CTX *);
-
+void hmac_sha1(const unsigned char *key, size_t key_len,
+               const unsigned char *text, size_t text_len,
+               unsigned char out[20]);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -4055,6 +4057,41 @@ ON_FLASH void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
   }
   memset(context, '\0', sizeof(*context));
   memset(&finalcount, '\0', sizeof(finalcount));
+}
+
+ON_FLASH void hmac_sha1(const unsigned char *key, size_t keylen,
+                        const unsigned char *data, size_t datalen,
+                        unsigned char out[20]) {
+  SHA1_CTX ctx;
+  unsigned char buf1[64], buf2[64], tmp_key[20], i;
+
+  if (keylen > sizeof(buf1)) {
+    SHA1Init(&ctx);
+    SHA1Update(&ctx, key, keylen);
+    SHA1Final(tmp_key, &ctx);
+    key = tmp_key;
+    keylen = sizeof(tmp_key);
+  }
+
+  memset(buf1, 0, sizeof(buf1));
+  memset(buf2, 0, sizeof(buf2));
+  memcpy(buf1, key, keylen);
+  memcpy(buf2, key, keylen);
+
+  for (i = 0; i < sizeof(buf1); i++) {
+    buf1[i] ^= 0x36;
+    buf2[i] ^= 0x5c;
+  }
+
+  SHA1Init(&ctx);
+  SHA1Update(&ctx, buf1, sizeof(buf1));
+  SHA1Update(&ctx, data, datalen);
+  SHA1Final(out, &ctx);
+
+  SHA1Init(&ctx);
+  SHA1Update(&ctx, buf2, sizeof(buf2));
+  SHA1Update(&ctx, out, 20);
+  SHA1Final(out, &ctx);
 }
 #endif
 /*
@@ -9822,12 +9859,45 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (v7_is_cfunction(cfunc)) {
-    args = v7_create_dense_array(v7);
+    /*
+     * C functions cannot be closures, hence it's
+     * safe to pass a C stack allocated dense array.
+     *
+     * The stack frame layout will be reorganized with the
+     * bytecode interpreter but C calls will likely
+     * always be special.
+     */
+    struct mbuf *abuf;
+    struct v7_object sargs;
+    struct v7_property prop;
+    /*
+     * cannot use args since it's used as GC root and thus
+     * the GC would mark this C stack object but never unmark it
+     */
+    val_t cargs;
+
+    sargs.prototype = v7_to_object(v7->array_prototype);
+    sargs.attributes = V7_OBJ_DENSE_ARRAY;
+    sargs.properties = &prop;
+    prop.next = NULL;
+    prop.name = v7_create_string(v7, "", 0, 1);
+    prop.value = V7_NULL;
+    prop.attributes = V7_PROPERTY_HIDDEN;
+
+    cargs = v7_object_to_value(&sargs);
+
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
-      v7_array_set(v7, args, i, res);
+      v7_array_set(v7, cargs, i, res);
     }
-    res = v7_to_cfunction(cfunc)(v7, this_object, args);
+    res = v7_to_cfunction(cfunc)(v7, this_object, cargs);
+
+    abuf = (struct mbuf *) v7_to_foreign(prop.value);
+    if (abuf) {
+      mbuf_free(abuf);
+      free(abuf);
+    }
+
     goto cleanup;
   }
   if (!v7_is_function(v1)) {
@@ -10484,7 +10554,7 @@ ON_FLASH enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
  */
 ON_FLASH static int v7_get_file_size(c_file_t fp) {
   int res = -1;
-  if (c_fseek(fp, 0, SEEK_END) != 0) {
+  if (c_fseek(fp, 0, SEEK_END) == 0) {
     res = c_ftell(fp);
   }
 
