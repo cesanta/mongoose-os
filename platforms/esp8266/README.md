@@ -1,56 +1,65 @@
 Overview
 ========
 
-This document describes Smartjs firmware for ESP8266 chip.
+This demo shows how to run V7 on an ESP8266.
 
-Smartjs firmware allows to manipulate hardware over GPIO/I2C/SPI interfaces,
-set up WiFi, and communicate over the network - all using simple JavaScript
-commands described below.
+It contains a simple JavasScript REPL over ESP8266 serial port.
+The environment exports two example C functions to the JS environment:
 
-ESP8266 board can be accessed through a serial port, or directly via browser if WiFi is configured.
+- setGPIO(pin, enable)
+- usleep(usecs)
 
-Smartjs firmware can be easily extended by adding custom commands - refer to
-http://cesanta.com/docs/v7/ to learn how to export custom functions, and look
-at the examples at `user/v7_cmd.c`.
+Read http://cesanta.com/docs/v7/ to learn how to add your own C functions.
 
-## Build the firmware
+Build
+=====
 
-Smartjs release provides pre-built firmare, so you might just download
-it from the
-[Smartjs release page](https://github.com/cesanta/smart.js/releases) and
-skip to the next step. For those who want to build/customize the firmware,
-make sure you have docker installed and running. Then,
+This demo requires the https://github.com/pfalcon/esp-open-sdk in order to build.
 
-    sh make.sh
+In order to build, just issue:
+
+    make
 
 This will produce three binary images under the firmware/ subdirectory.
 
-## Flash the firmware
-To flash the firmware to the ESP8266 board,
+    make flash ESPPORT=/dev/<your_esp_serial_device>
 
-1. Get `esptool` utility, available at https://github.com/themadinventor/esptool)
-2.  Make sure ESP8266 is connected to the serial port
-3. `esptool --baud 115200 --port /dev/YOUR_ESP_SERIAL_DEVICE write_flash 0x00000 firmware/0x00000.bin 0x20000 firmware/0x20000.bin 0x30000 firmware/0x30000.bin`
+The firmware/0x20000.bin file is a SPIFFS filesystem image containing the initial
+set of files you likely want to have on your device. It's important that the memory area
+allocated to the file system is preloaded with that image file or in alternative to be
+completely erased.
 
+After the first time you flash your device, you have the option to either reflash only the filesystem:
 
-## Communication over the serial port
+    make flash_fs ESPPORT=/dev/<your_esp_serial_device>
 
-On Mac or UNIX/Linux system, `cu` or `picocom` tools can be used:
+or flash the system while preserving the filesystem:
 
-    picocom -b 115200 --omap crcrlf /dev/YOUR_ESP_SERIAL_DEVICE
-    cu -s 115200 -l /dev/YOUR_ESP_SERIAL_DEVICE
+    make flash_no_fs ESPPORT=/dev/<your_esp_serial_device>
 
-For example `cu` tool on Linux:
-    cu -s 115200 -l /dev/ttyUSB0
+If you're building on OSX or otherwise don't want to install the SDK locally, we provide
+a docker image with the whole toolchain and SDK preinstalled. You can use it with:
 
-## Wifi module
+    ./make.sh
 
-By default, Wifi module enables access point mode, and acts as a
-DHCP server for it. To connect to local Wifi network:
+You still need esptool locally (available at https://github.com/themadinventor/esptool) in order
+to flash the device with `make flash ...`. The tool is cross platform and it only requires Python.
+
+Communication
+=============
+
+The default baud rate of the demo is 115200.
+
+For example you can connect to the device with:
+
+    picocom -b 115200 --omap crcrlf /dev/<your_esp_serial_device>
+
+Wifi setup
+==========
 
     Wifi.setup("yourssid", "youpassword")
 
-To check current WiFi status:
+To check your wifi status:
 
     Wifi.status()
 
@@ -58,14 +67,14 @@ To see your ip address:
 
     Wifi.ip()
 
-NOTE: `Wifi.ip(1)` shows the IP of the access point interface.
-
-## Web UI
+Web UI
+======
 
 Point your browser to: http://<YOUR_ESP8266_IP_ADDRESS>/
 
-## Example: blink sketch
+Example
+=======
 
-Connect LED to GPIO pin number 2. Then type this at the prompt and press enter:
+Type this at the prompt:
 
     led = true; function blink() { GPIO.out(2, led); led = !led; setTimeout(blink, 1000); }; blink()
