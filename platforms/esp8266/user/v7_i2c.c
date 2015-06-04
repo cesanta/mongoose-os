@@ -91,33 +91,6 @@ ICACHE_FLASH_ATTR static void i2c_wire_init(uint32_t periph, uint8_t gpio_no,
                  GPIO_REG_READ(GPIO_ENABLE_ADDRESS) | (1 << gpio_no));
 }
 
-ICACHE_FLASH_ATTR void i2c_init(struct i2c_connection *conn) {
-  uint8_t i;
-
-  conn->sda_last_value = 0;
-  conn->scl_last_value = 0;
-
-  ETS_GPIO_INTR_DISABLE();
-
-  i2c_wire_init(conn->sda_periph, conn->sda_gpio, conn->sda_func);
-  i2c_wire_init(conn->scl_periph, conn->scl_gpio, conn->scl_func);
-
-  i2c_set_wires_value(conn, i2c_high, i2c_high);
-
-  ETS_GPIO_INTR_ENABLE();
-
-  i2c_set_wires_value(conn, i2c_high, i2c_low);
-  i2c_set_wires_value(conn, i2c_low, i2c_low);
-  i2c_set_wires_value(conn, i2c_high, i2c_low);
-
-  for (i = 0; i < I2C_INIT_CNT; i++) {
-    i2c_set_wires_value(conn, i2c_high, i2c_low);
-    i2c_set_wires_value(conn, i2c_high, i2c_high);
-  }
-
-  i2c_stop(conn);
-}
-
 ICACHE_FLASH_ATTR uint8_t i2c_read_byte(struct i2c_connection *conn) {
   uint8_t i, ret_val = 0;
 
@@ -139,6 +112,16 @@ ICACHE_FLASH_ATTR uint8_t i2c_read_byte(struct i2c_connection *conn) {
   i2c_set_wires_value(conn, i2c_high, i2c_low);
 
   return ret_val;
+}
+
+ICACHE_FLASH_ATTR void i2c_read_bytes(struct i2c_connection *conn, uint8_t *buf,
+                                      size_t buf_size) {
+  size_t i;
+
+  for (i = 0; i < buf_size; i++) {
+    *buf++ = i2c_read_byte(conn);
+    i2c_send_ack(conn, i2c_ack);
+  }
 }
 
 ICACHE_FLASH_ATTR void i2c_write_byte(struct i2c_connection *conn,
@@ -168,8 +151,119 @@ ICACHE_FLASH_ATTR enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn,
   return i2c_get_ack(conn);
 }
 
+ICACHE_FLASH_ATTR enum i2c_ack_type i2c_send_uint16(struct i2c_connection *conn,
+                                                    uint16_t data) {
+  uint8_t tmp;
+
+  tmp = (data & 0xFF00) >> 8;
+  if (i2c_send_byte(conn, tmp) == i2c_nack) {
+    return i2c_nack;
+  }
+
+  tmp = (data & 0x00FF);
+  return i2c_send_byte(conn, tmp);
+}
+
+ICACHE_FLASH_ATTR enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn,
+                                                   uint8_t *buf,
+                                                   size_t buf_size) {
+  size_t i;
+
+  for (i = 0; i < buf_size; i++) {
+    if (i2c_send_byte(conn, *buf++) != i2c_ack) {
+      return i2c_nack;
+    }
+  }
+
+  return i2c_ack;
+}
+
 /*
- * Usage example (write & read "HELLO" from EEPROM
+ * Map gpio -> { mux reg, func }
+ * SDK doesn't provide information
+ * about several gpio
+ * TODO(alashkin): find missed info
+ */
+struct gpio_info {
+  uint8_t gpio_no;
+  uint32_t periph;
+  uint32_t func;
+} gpio_map[] = {{0, PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0},
+                {1, PERIPHS_IO_MUX_U0TXD_U, FUNC_GPIO1},
+                {2, PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2},
+                {3, PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3},
+                {4, PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4},
+                {5, PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5},
+                {6, 0, 0},
+                {7, 0, 0},
+                {8, 0, 0},
+                {9, PERIPHS_IO_MUX_SD_DATA2_U, FUNC_GPIO9},
+                {10, PERIPHS_IO_MUX_SD_DATA3_U, FUNC_GPIO10},
+                {11, 0, 0},
+                {12, PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12},
+                {13, PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13},
+                {14, PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14},
+                {15, PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15}};
+
+ICACHE_FLASH_ATTR static struct gpio_info *i2c_find_gpio(uint8_t gpio_no) {
+  struct gpio_info *ret_val;
+
+  if (gpio_no > sizeof(gpio_map) / sizeof(gpio_map[0])) {
+    return NULL;
+  }
+
+  ret_val = &gpio_map[gpio_no];
+
+  if (ret_val->periph == 0) {
+    /* missed gpio */
+    return NULL;
+  }
+
+  return ret_val;
+}
+
+ICACHE_FLASH_ATTR int i2c_init(uint8_t sda_gpio, uint8_t scl_gpio,
+                               struct i2c_connection *conn) {
+  uint8_t i;
+  struct gpio_info *sda_info, *scl_info;
+
+  sda_info = i2c_find_gpio(sda_gpio);
+  scl_info = i2c_find_gpio(scl_gpio);
+
+  if (sda_info == NULL || scl_info == NULL) {
+    return -1;
+  }
+
+  conn->sda_last_value = 0;
+  conn->scl_last_value = 0;
+  conn->sda_gpio = sda_gpio;
+  conn->scl_gpio = scl_gpio;
+
+  ETS_GPIO_INTR_DISABLE();
+
+  i2c_wire_init(sda_info->periph, conn->sda_gpio, sda_info->func);
+  i2c_wire_init(scl_info->periph, conn->scl_gpio, scl_info->func);
+
+  i2c_set_wires_value(conn, i2c_high, i2c_high);
+
+  ETS_GPIO_INTR_ENABLE();
+
+  i2c_set_wires_value(conn, i2c_high, i2c_low);
+  i2c_set_wires_value(conn, i2c_low, i2c_low);
+  i2c_set_wires_value(conn, i2c_high, i2c_low);
+
+  for (i = 0; i < I2C_INIT_CNT; i++) {
+    i2c_set_wires_value(conn, i2c_high, i2c_low);
+    i2c_set_wires_value(conn, i2c_high, i2c_high);
+  }
+
+  i2c_stop(conn);
+
+  return 0;
+}
+
+/*
+ * Low-level API usage example (write & read "Hello, world!" from EEPROM
  * Tested on MICROCHIP 24FC1025-I/P
  */
 
@@ -186,68 +280,48 @@ ICACHE_FLASH_ATTR enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn,
 #define READ_CTRL_BYTE 0xA1
 
 ICACHE_FLASH_ATTR void i2c_eeprom_test() {
-  char str[] = "HELLO";
+  char str[] = "Hello, world!";
+  char read_buf[sizeof(str)] = {0};
+
   struct i2c_connection conn;
   int res, i;
 
-  os_printf("Starting i2c test\n");
+  os_printf("\nStarting i2c test\n");
 
-  conn.sda_periph = PERIPHS_IO_MUX_MTDI_U;
-  conn.sda_gpio = 12;
-  conn.sda_func = FUNC_GPIO12;
-  conn.scl_periph = PERIPHS_IO_MUX_MTMS_U;
-  conn.scl_gpio = 14;
-  conn.scl_func = FUNC_GPIO14;
-
-  i2c_init(&conn);
+  i2c_init(12, 14, &conn);
   i2c_start(&conn);
 
   CHECK_ACK(i2c_send_byte(&conn, WRITE_CTRL_BYTE),
             "Cannot send write control byte");
-  CHECK_ACK(i2c_send_byte(&conn, 0), "Cannot send addr(1)");
-  CHECK_ACK(i2c_send_byte(&conn, 0), "Cannot send addr(2)");
+  CHECK_ACK(i2c_send_uint16(&conn, 0), "Cannot send addr");
 
-  os_printf("Write: ");
+  os_printf("Write: %s\n", str);
 
-  for (i = 0; i < sizeof(str) - 1; i++) {
-    CHECK_ACK(i2c_send_byte(&conn, str[i]), "Cannot write byte");
-    os_printf("%c", str[i]);
-  }
+  CHECK_ACK(i2c_send_bytes(&conn, str, sizeof(str) - 1), "Cannot write");
 
   i2c_stop(&conn);
 
-  for (i = 0; i < 100; i++) {
+  res = i2c_nack;
+  for (i = 0; i < 100 && res == i2c_nack; i++) {
     i2c_start(&conn);
     res = i2c_send_byte(&conn, WRITE_CTRL_BYTE);
-    if (res == i2c_ack) {
-      break;
-    }
   }
 
   CHECK_ACK(res, "Cannot flush buffer");
 
-  os_printf("\n");
-
   i2c_start(&conn);
 
   CHECK_ACK(i2c_send_byte(&conn, WRITE_CTRL_BYTE),
             "Cannot send write control byte");
-  CHECK_ACK(i2c_send_byte(&conn, 0), "Cannot send addr(1)");
-  CHECK_ACK(i2c_send_byte(&conn, 0), "Cannot send addr(2)");
+  CHECK_ACK(i2c_send_uint16(&conn, 0), "Cannot send addr");
 
   i2c_start(&conn);
   CHECK_ACK(i2c_send_byte(&conn, READ_CTRL_BYTE),
             "Cannot send read control byte");
 
-  os_printf("Read: ");
+  i2c_read_bytes(&conn, read_buf, sizeof(read_buf) - 1);
 
-  for (i = 0; i < sizeof(str) - 1; i++) {
-    uint8_t ch = i2c_read_byte(&conn);
-    os_printf("%c", ch);
-    i2c_send_ack(&conn, i2c_ack);
-  }
-
-  os_printf("\n");
+  os_printf("Read: %s\n", str);
 
   i2c_stop(&conn);
 
