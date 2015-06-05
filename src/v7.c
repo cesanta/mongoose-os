@@ -7281,10 +7281,12 @@ ON_FLASH V7_PRIVATE void embed_string(struct mbuf *m, size_t offset,
   }
   encode_varint(n, (unsigned char *) m->buf + offset); /* Write length */
   /* Write string */
-  if (unesc) {
-    unescape(p, len, m->buf + offset + k);
-  } else {
-    memcpy(m->buf + offset + k, p, len);
+  if (p != 0) {
+    if (unesc) {
+      unescape(p, len, m->buf + offset + k);
+    } else {
+      memcpy(m->buf + offset + k, p, len);
+    }
   }
   if (zero_term) {
     m->buf[offset + tot_len - 1] = '\0';
@@ -7300,13 +7302,17 @@ v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   if (len <= 4) {
     char *s = GET_VAL_NAN_PAYLOAD(offset) + 1;
     offset = 0;
-    memcpy(s, p, len);
+    if (p != 0) {
+      memcpy(s, p, len);
+    }
     s[-1] = len;
     tag = V7_TAG_STRING_I;
   } else if (len == 5) {
     char *s = GET_VAL_NAN_PAYLOAD(offset);
     offset = 0;
-    memcpy(s, p, len);
+    if (p != 0) {
+      memcpy(s, p, len);
+    }
     tag = V7_TAG_STRING_5;
   } else if (own) {
 #ifdef V7_ENABLE_COMPACTING_GC

@@ -15,6 +15,7 @@
 #include "util.h"
 #include "v7_esp_features.h"
 #include "v7_uart.h"
+#include "v7_i2c_js.h"
 
 struct v7 *v7;
 os_timer_t js_timeout_timer;
@@ -361,9 +362,9 @@ ICACHE_FLASH_ATTR void init_v7() {
   struct v7_create_opts opts;
   v7_val_t wifi, gpio, dht11, gc, debug;
 
-  opts.object_arena_size = 94;
-  opts.function_arena_size = 17;
-  opts.property_arena_size = 340;
+  opts.object_arena_size = 120;
+  opts.function_arena_size = 25;
+  opts.property_arena_size = 350;
 
   v7 = v7_create_opt(opts);
 
@@ -405,4 +406,6 @@ ICACHE_FLASH_ATTR void init_v7() {
   v7_set_method(v7, debug, "print", Debug_print);
 
   v7_init_http_client(v7);
+
+  init_i2cjs(v7);
 }

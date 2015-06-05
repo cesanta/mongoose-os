@@ -120,7 +120,7 @@ ICACHE_FLASH_ATTR void i2c_read_bytes(struct i2c_connection *conn, uint8_t *buf,
 
   for (i = 0; i < buf_size; i++) {
     *buf++ = i2c_read_byte(conn);
-    i2c_send_ack(conn, i2c_ack);
+    i2c_send_ack(conn, i != buf_size - 1? i2c_ack : i2c_nack);
   }
 }
 
