@@ -305,6 +305,31 @@ Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_null();
 }
 
+/*
+ * dsleep(time_us[, option])
+ *
+ * time_us - time in microseconds.
+ * option - it specified, system_deep_sleep_set_option is called prior to doing to sleep.
+ * The most useful seems to be 4 (keep RF off on wake up, reduces power consumption).
+ * 
+ */
+ICACHE_FLASH_ATTR
+static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t time_v = v7_array_get(v7, args, 0);
+  uint32 time = v7_to_double(time_v);
+  v7_val_t flags_v = v7_array_get(v7, args, 1);
+  uint8 flags = v7_to_double(flags_v);
+
+  if (!v7_is_double(time_v) || time < 0) return v7_create_boolean(false);
+  if (v7_is_double(flags_v)) {
+    if (!system_deep_sleep_set_option(flags)) return v7_create_boolean(false);
+  }
+
+  system_deep_sleep(time);
+
+  return v7_create_boolean(true);
+}
+
 ICACHE_FLASH_ATTR void init_v7() {
   struct v7_create_opts opts;
   v7_val_t wifi, gpio, dht11, gc, debug;
@@ -315,6 +340,7 @@ ICACHE_FLASH_ATTR void init_v7() {
 
   v7 = v7_create_opt(opts);
 
+  v7_set_method(v7, v7_get_global_object(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global_object(v7), "usleep", usleep);
   v7_set_method(v7, v7_get_global_object(v7), "setTimeout", set_timeout);
 

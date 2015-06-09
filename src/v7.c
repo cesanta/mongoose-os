@@ -1617,6 +1617,11 @@ struct v7 {
    */
   val_t call_stack;
 
+#ifdef V7_ENABLE_BCODE
+  val_t stack[512]; /* value stack for bcode interpreter */
+  int sp;           /* current stack pointer, stack grow upwards */
+#endif
+
   struct mbuf owned_strings;   /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings; /* Sequence of (varint len, char *data) */
 
@@ -1968,6 +1973,75 @@ V7_PRIVATE val_t n_to_str(struct v7 *, val_t, val_t, const char *);
 #endif /* __cplusplus */
 
 #endif /* VM_H_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef COMPILER_H_INCLUDED
+#define COMPILER_H_INCLUDED
+
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+enum opcode {
+  OP_PUSH_ZERO,
+  OP_PUSH_ONE,
+  OP_PUSH_LIT,
+
+  OP_ADD,
+  OP_SUB,
+  OP_REM,
+  OP_MUL,
+  OP_DIV,
+  OP_LSHIFT,
+  OP_RSHIFT,
+  OP_URSHIFT,
+  OP_OR,
+  OP_XOR,
+  OP_AND,
+
+  OP_EQ_EQ,
+  OP_EQ,
+  OP_NE,
+  OP_NE_NE,
+  OP_LT,
+  OP_LE,
+  OP_GT,
+  OP_GE,
+
+  OP_GET,
+  OP_SET,
+  OP_SET_VAR,
+  OP_GET_VAR /* takes index of var name */
+};
+
+/*
+ * Each JS function will have one bcode structure
+ * containing the instruction stream and a literal table.
+ * Instructions contain references to literals (strings, constants, etc)
+ * relative to their
+ *
+ * TODO(mkm): turn lit into a heap allocated structure,
+ * or make the whole bytecode structure a dynamically sized structure
+ * and combine the literal table with the bytecode list.
+ */
+struct bcode {
+  uint8_t *ops;   /* pointer to first instruction opcode */
+  size_t ops_len; /* length of the instruction stream */
+  val_t lit[32];  /* literal table */
+  size_t lit_len; /* length of literal table */
+};
+
+V7_PRIVATE void eval_bcode(struct v7 *, struct bcode *);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* COMPILER_H_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -10597,6 +10671,200 @@ ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   return err;
 }
 #endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+#ifdef V7_ENABLE_BCODE
+
+#define PUSH(v) (v7->stack[v7->sp++] = (v))
+#define POP() (v7->stack[--v7->sp])
+#define TOS() (v7->stack[v7->sp - 1])
+
+ON_FLASH static double b_int_bin_op(struct v7 *v7, enum opcode op, double a,
+                                    double b) {
+  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
+  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
+
+  switch (op) {
+    case OP_LSHIFT:
+      return (int32_t)((uint32_t) ia << ((uint32_t) ib & 31));
+    case OP_RSHIFT:
+      return ia >> ((uint32_t) ib & 31);
+    case OP_URSHIFT:
+      return (uint32_t) ia >> ((uint32_t) ib & 31);
+    case OP_OR:
+      return ia | ib;
+    case OP_XOR:
+      return ia ^ ib;
+    case OP_AND:
+      return ia & ib;
+    default:
+      throw_exception(v7, INTERNAL_ERROR, "%s", __func__); /* LCOV_EXCL_LINE */
+      return 0;                                            /* LCOV_EXCL_LINE */
+  }
+}
+
+ON_FLASH static double b_num_bin_op(struct v7 *v7, enum opcode op, double a,
+                                    double b) {
+  switch (op) {
+    case OP_ADD: /* simple fixed width nodes with no payload */
+      return a + b;
+    case OP_SUB:
+      return a - b;
+    case OP_REM:
+      if (b == 0 || isnan(b) || isnan(a) || isinf(b) || isinf(a)) {
+        return NAN;
+      }
+      return (int) a % (int) b;
+    case OP_MUL:
+      return a * b;
+    case OP_DIV:
+      if (b == 0) {
+        if (a == 0) return NAN;
+        return (!signbit(a) == !signbit(b)) ? INFINITY : -INFINITY;
+      }
+      return a / b;
+    case OP_LSHIFT:
+    case OP_RSHIFT:
+    case OP_URSHIFT:
+    case OP_OR:
+    case OP_XOR:
+    case OP_AND:
+      return b_int_bin_op(v7, op, a, b);
+    default:
+      throw_exception(v7, INTERNAL_ERROR, "%s", __func__); /* LCOV_EXCL_LINE */
+      return 0;                                            /* LCOV_EXCL_LINE */
+  }
+}
+
+ON_FLASH static int b_bool_bin_op(struct v7 *v7, enum opcode op, double a,
+                                  double b) {
+#ifdef V7_BROKEN_NAN
+  if (isnan(a) || isnan(b)) return op == OP_NE || op == OP_NE_NE;
+#endif
+
+  switch (op) {
+    case OP_EQ:
+    case OP_EQ_EQ:
+      return a == b;
+    case OP_NE:
+    case OP_NE_NE:
+      return a != b;
+    case OP_LT:
+      return a < b;
+    case OP_LE:
+      return a <= b;
+    case OP_GT:
+      return a > b;
+    case OP_GE:
+      return a >= b;
+    default:
+      throw_exception(v7, INTERNAL_ERROR, "%s", __func__); /* LCOV_EXCL_LINE */
+      return 0;                                            /* LCOV_EXCL_LINE */
+  }
+}
+
+V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
+  uint8_t *ops = bcode->ops;
+  uint8_t *end = ops + bcode->ops_len;
+
+  char buf[512];
+
+  val_t res, v1, v2, v3;
+  (void) res;
+
+  while (ops != end) {
+    enum opcode op = (enum opcode) * ops;
+    switch (op) {
+      case OP_PUSH_ZERO:
+        PUSH(v7_create_number(0));
+        break;
+      case OP_PUSH_ONE:
+        PUSH(v7_create_number(1));
+        break;
+      case OP_PUSH_LIT: {
+        int arg = (int) *(++ops);
+        PUSH(bcode->lit[arg]);
+        break;
+      }
+      case OP_ADD: /* TODO: JS add is different! */
+      case OP_SUB:
+      case OP_REM:
+      case OP_MUL:
+      case OP_DIV:
+      case OP_LSHIFT:
+      case OP_RSHIFT:
+      case OP_URSHIFT:
+      case OP_OR:
+      case OP_XOR:
+      case OP_AND: {
+        double d1, d2;
+        v2 = POP();
+        v1 = POP();
+        d1 = i_as_num(v7, v1);
+        d2 = i_as_num(v7, v2);
+        PUSH(v7_create_number(b_num_bin_op(v7, op, d1, d2)));
+        break;
+      }
+      case OP_EQ_EQ:
+      case OP_EQ:
+      case OP_NE:
+      case OP_NE_NE:
+      case OP_LT:
+      case OP_LE:
+      case OP_GT:
+      case OP_GE: {
+        double d1, d2;
+        v2 = POP();
+        v1 = POP();
+        d1 = i_as_num(v7, v1);
+        d2 = i_as_num(v7, v2);
+        PUSH(v7_create_boolean(b_bool_bin_op(v7, op, d1, d2)));
+        break;
+      }
+      case OP_GET:
+        v2 = POP();
+        v1 = POP();
+        PUSH(v7_get_v(v7, v1, v2));
+        break;
+      case OP_SET:
+        v3 = POP();
+        v2 = POP();
+        v1 = POP();
+        v7_set_v(v7, v1, v2, v3);
+        PUSH(v3);
+        break;
+      case OP_GET_VAR: {
+        int arg = (int) *(++ops);
+        PUSH(v7_get_v(v7, v7->call_stack, bcode->lit[arg]));
+        break;
+      }
+      case OP_SET_VAR: {
+        struct v7_property *prop;
+        int arg = (int) *(++ops);
+        v3 = POP();
+        v2 = bcode->lit[arg];
+        v1 = v7->call_stack;
+
+        v7_stringify_value(v7, v2, buf, sizeof(buf));
+        prop = v7_get_property(v7, v1, buf, strlen(buf));
+        if (prop != NULL) {
+          prop->value = v3;
+        } else {
+          v7_set_v(v7, v7_get_global_object(v7), v2, v3);
+        }
+        PUSH(v3);
+        break;
+      }
+    }
+    ops++;
+  }
+}
+
+#endif /* V7_ENABLE_BCODE */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
