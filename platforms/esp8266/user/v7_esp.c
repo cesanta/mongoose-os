@@ -115,6 +115,22 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_disconnect(struct v7 *v7,
   return v7_create_boolean(wifi_station_disconnect());
 }
 
+/*
+ * Set the wifi mode.
+ *
+ * Valid modes are Wifi.STATION, Wifi.SOFTAP or Wifi.STATIONAP
+ */
+ICACHE_FLASH_ATTR static v7_val_t Wifi_setmode(struct v7 *v7, v7_val_t this_obj,
+                                               v7_val_t args) {
+  v7_val_t mode = v7_array_get(v7, args, 0);
+  if (!v7_is_double(mode)) {
+    printf("bad mode\n");
+    return v7_create_undefined();
+  }
+
+  return v7_create_boolean(wifi_set_opmode(v7_to_double(mode)));
+}
+
 ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
                                              v7_val_t args) {
   struct station_config stationConf;
@@ -129,6 +145,13 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
     return v7_create_undefined();
   }
 
+  /*
+   * Switch to station mode if not already
+   * in a mode that supports connecting to stations.
+   */
+  if (wifi_get_opmode() == 0x2) {
+    wifi_set_opmode(0x1);
+  }
   wifi_station_disconnect();
 
   ssid = v7_to_string(v7, &ssidv, &ssid_len);
@@ -182,7 +205,8 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj,
  * Returns the IP address of an interface.
  *
  * Pass either Wifi.STATION or Wifi.SOFTAP
- * Defaults to Wifi.STATION if called without argument.
+ * When called without an argument, it defaults to Wifi.SOFTAP
+ * if that's it's current mode and Wifi.STATION otherwise.
  */
 ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
                                           v7_val_t args) {
@@ -194,7 +218,8 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
   (void) this_obj;
   (void) args;
 
-  err = wifi_get_ip_info(v7_is_double(arg) ? v7_to_double(arg) : 0, &info);
+  err = wifi_get_ip_info(
+      (v7_is_double(arg) ? v7_to_double(arg) : wifi_get_opmode()) - 1, &info);
   if (err == 0) {
     v7_throw(v7, "cannot get ip info");
   }
@@ -309,9 +334,11 @@ Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * dsleep(time_us[, option])
  *
  * time_us - time in microseconds.
- * option - it specified, system_deep_sleep_set_option is called prior to doing to sleep.
- * The most useful seems to be 4 (keep RF off on wake up, reduces power consumption).
- * 
+ * option - it specified, system_deep_sleep_set_option is called prior to doing
+ *to sleep.
+ * The most useful seems to be 4 (keep RF off on wake up, reduces power
+ *consumption).
+ *
  */
 ICACHE_FLASH_ATTR
 static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -351,13 +378,15 @@ ICACHE_FLASH_ATTR void init_v7() {
 
   wifi = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Wifi", 4, 0, wifi);
+  v7_set_method(v7, wifi, "setmode", Wifi_setmode);
   v7_set_method(v7, wifi, "setup", Wifi_setup);
   v7_set_method(v7, wifi, "disconnect", Wifi_disconnect);
   v7_set_method(v7, wifi, "connect", Wifi_connect);
   v7_set_method(v7, wifi, "status", Wifi_status);
   v7_set_method(v7, wifi, "ip", Wifi_ip);
-  v7_set(v7, wifi, "STATION", 7, 0, v7_create_number(0));
-  v7_set(v7, wifi, "SOFTAP", 6, 0, v7_create_number(1));
+  v7_set(v7, wifi, "STATION", 7, 0, v7_create_number(1));
+  v7_set(v7, wifi, "SOFTAP", 6, 0, v7_create_number(2));
+  v7_set(v7, wifi, "STATIONAP", 9, 0, v7_create_number(3));
 
 #if V7_ESP_ENABLE__DHT11
   dht11 = v7_create_object(v7);
