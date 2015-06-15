@@ -23,7 +23,7 @@ extern struct v7 *v7;
 ICACHE_FLASH_ATTR void process_js(char *cmd);
 
 ICACHE_FLASH_ATTR static void show_prompt(void) {
-  printf("%s", "smartjs-esp$ ");
+  printf("smartjs %u$ ", system_get_free_heap_size());
 }
 
 static uart_process_char_t here_old;
