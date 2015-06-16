@@ -6,3 +6,6 @@ var x;
 function testHttp(url) {
     Http.get(url || "http://api.cesanta.com:80", function(d, e) { x=d; print("http gave data: ", d, " err: ", e); });
 }
+
+/* uncomment this to try out the GDB server */
+/* crash(); */

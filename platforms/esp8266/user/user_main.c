@@ -9,6 +9,7 @@
 #include "v7_http_eval.h"
 #include "util.h"
 #include "v7_uart.h"
+#include "v7_gdb.h"
 
 extern void ets_wdt_disable(void);
 os_timer_t tick_timer;
@@ -16,7 +17,9 @@ os_timer_t startcmd_timer;
 
 ICACHE_FLASH_ATTR void start_cmd() {
   init_v7();
+#if !defined(NO_PROMPT)
   uart_main_init(0);
+#endif
 
 #ifndef V7_NO_FS
   fs_init();
@@ -31,7 +34,9 @@ ICACHE_FLASH_ATTR void start_cmd() {
   start_http_eval_server();
 #endif
 
+#if !defined(NO_PROMPT)
   v7_serial_prompt_init(0);
+#endif
 }
 
 // Init function
@@ -41,6 +46,11 @@ ICACHE_FLASH_ATTR void user_init() {
 
 #ifndef ESP_ENABLE_WATCHDOG
   ets_wdt_disable();
+#endif
+
+#ifdef V7_ESP_GDB_SERVER
+  /* registers exception handlers so that you can hook in gdb on crashes */
+  gdb_init();
 #endif
 
   gpio_init();

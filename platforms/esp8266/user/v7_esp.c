@@ -358,6 +358,20 @@ static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_boolean(true);
 }
 
+/*
+ * Crashes the process/CPU. Useful to attach a debugger until we have
+ * breakpoints.
+ */
+ICACHE_FLASH_ATTR
+static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  (void) v7;
+  (void) this_obj;
+  (void) args;
+
+  *(int *) 1 = 1;
+  return v7_create_undefined();
+}
+
 ICACHE_FLASH_ATTR void init_v7() {
   struct v7_create_opts opts;
   v7_val_t wifi, gpio, dht11, gc, debug;
@@ -371,6 +385,8 @@ ICACHE_FLASH_ATTR void init_v7() {
   v7_set_method(v7, v7_get_global_object(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global_object(v7), "usleep", usleep);
   v7_set_method(v7, v7_get_global_object(v7), "setTimeout", set_timeout);
+
+  v7_set_method(v7, v7_get_global_object(v7), "crash", crash);
 
   gpio = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "GPIO", 4, 0, gpio);

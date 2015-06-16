@@ -69,3 +69,39 @@ Point your browser to: http://<YOUR_ESP8266_IP_ADDRESS>/
 Connect LED to GPIO pin number 2. Then type this at the prompt and press enter:
 
     led = true; function blink() { GPIO.out(2, led); led = !led; setTimeout(blink, 1000); }; blink()
+
+
+## Advanced
+
+### Build options
+
+- NO_PROMPT: disables serial javascript prompt
+- NO_EXEC_INITJS: disables running initjs at boot
+- NO_HTTP_EVAL: disables http eval server
+- V7_ESP_GDB_SERVER: enables GDB server
+- ESP_ENABLE_WATCHDOG: enables watchdog (the watchdog is not fed nor we provide yet a way to feed it from JS, the ESP will be reset if you execute time consuming operations!)
+
+### GDB
+
+This build also includes an optional GDB server, enabled with the -DV7_GDB compiler flag.
+When enabled, each illegal instruction or memory access will trap into the GDB server.
+
+This can be very useful both to debug your custom C code, and to provide us with stack traces
+for debugging issues in the JS VM and other parts of the SmartJS SDK.
+
+The user can attach with a gdb build supporting the lx106 framework. We offer such a binary
+in our cesanta/esp8266-build-oss docker image. Please make sure you use at least version 1.1.0
+(if 1.1.0 is not yet the default, you can fetch it as cesanta/esp8266-build-oss:1.1.0).
+
+The docker image cannot access the device serial port so you should create a proxy. You can use
+either socat or our http://github.com/cesanta/gopro tool.
+
+    ./gopro -s :1234 -d /dev/tty.SLAB_USBtoUART -b 115200
+
+Then you invoke the gdb inside the docker image:
+
+    xt-gdb /cesanta/smartjs/platforms/esp8266/build/app.out
+    remote target <yourhost>:1234
+
+The GDB server is incomplete but should be good enough to print a stack trace
+and inspect the state of your application. Breakpoints and resuming are not yet supported.
