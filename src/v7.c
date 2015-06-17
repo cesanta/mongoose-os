@@ -1411,6 +1411,10 @@ struct gc_arena {
 #define ON_FLASH
 #endif
 
+#ifndef STATIC
+#define STATIC
+#endif
+
 #ifndef ENDL
 #define ENDL "\n"
 #endif
@@ -5990,7 +5994,7 @@ ON_FLASH V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
 
 ON_FLASH V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos,
                                      double *val) {
-  char buf[512];
+  STATIC char buf[512];
   char *str;
   size_t str_len;
   str = ast_get_inlined_data(a, pos, &str_len);
@@ -6006,7 +6010,7 @@ ON_FLASH V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos,
 ON_FLASH static void comment_at_depth(FILE *fp, const char *fmt, int depth,
                                       ...) {
   int i;
-  char buf[265];
+  STATIC char buf[256];
   va_list ap;
   va_start(ap, depth);
 
@@ -6826,7 +6830,7 @@ v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
   if (v7_is_string(name)) {
     s = v7_to_string(v7, &name, &name_len);
   } else {
-    char buf[512];
+    STATIC char buf[512];
     name_len = v7_stringify_value(v7, name, buf, sizeof(buf));
     s = buf;
   }
@@ -9140,7 +9144,7 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
    * TODO(mkm): put this temporary somewhere in the evaluation context
    * or use alloca.
    */
-  char buf[512];
+  STATIC char buf[512];
   char *name;
   size_t name_len;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -13267,7 +13271,7 @@ ON_FLASH static val_t Number_valueOf(struct v7 *v7, val_t this_obj,
 
 ON_FLASH static val_t Number_toString(struct v7 *v7, val_t this_obj,
                                       val_t args) {
-  char buf[512];
+  char buf[50];
   (void) args;
 
   if (this_obj == v7->number_prototype) {
@@ -13860,7 +13864,7 @@ ON_FLASH static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj,
 
 ON_FLASH static val_t Boolean_toString(struct v7 *v7, val_t this_obj,
                                        val_t args) {
-  char buf[512];
+  char buf[50];
   (void) args;
 
   if (this_obj == v7->boolean_prototype) {

@@ -42,6 +42,7 @@ int await_change(int gpio, int *max_cycles) {
 #if !defined(V7_NO_FS) && !defined(NO_EXEC_INITJS)
 ICACHE_FLASH_ATTR void v7_run_startup() {
   v7_val_t v;
+  static char buf[256];
   /*
    * It is a question - should we print "Executing
    * and print message if init.js is not found
@@ -51,7 +52,7 @@ ICACHE_FLASH_ATTR void v7_run_startup() {
   printf("\n\rExecuting init.js\n\r");
   int res = v7_exec_file(v7, &v, "init.js");
   if (res != V7_OK) {
-    char *p, buf[256];
+    char *p;
     p = v7_to_json(v7, v, buf, sizeof(buf));
     printf("init.js execution: %s\n\r", p);
     if (p != buf) {
