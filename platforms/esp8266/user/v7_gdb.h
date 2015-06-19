@@ -25,28 +25,17 @@
  * Constructed by xtos.
  *
  * Moslty reverse engineered by trial and error and luck.
+ *
+ * There is a UserFrame structure in
+ * ./esp_iot_rtos_sdk/extra_include/xtensa/xtruntime-frames.h
+ * but it doesn't match what we actually see on the ESP8266EX.
  */
 struct xtos_saved_regs {
-  uint32_t pc;      /* instruction causing the trap */
-  uint32_t unknown; /* no idea what this is */
+  uint32_t pc; /* instruction causing the trap */
   uint32_t ps;
-  uint32_t a0;
-  uint32_t a1; /* this register is clobbered by xtos, contains junk */
-  uint32_t a2;
-  uint32_t a3;
-  uint32_t a4;
-  uint32_t a5;
-  uint32_t a6;
-  uint32_t a7;
-  uint32_t a8;
-  uint32_t a9;
-  uint32_t a10;
-  uint32_t a11;
-  uint32_t a12;
-  uint32_t a13;
-  uint32_t a14;
-  uint32_t a15;
   uint32_t sar;
+  uint32_t a[16]; /* a1 register is clobbered by xtos, contains junk */
+  uint32_t exccause;
 };
 
 /*
@@ -56,22 +45,7 @@ struct xtos_saved_regs {
  * https://github.com/jcmvbkbc/crosstool-NG/blob/lx106-g%2B%2B/overlays/xtensa_lx106.tar
  */
 struct regfile {
-  uint32_t a0;
-  uint32_t a1;
-  uint32_t a2;
-  uint32_t a3;
-  uint32_t a4;
-  uint32_t a5;
-  uint32_t a6;
-  uint32_t a7;
-  uint32_t a8;
-  uint32_t a9;
-  uint32_t a10;
-  uint32_t a11;
-  uint32_t a12;
-  uint32_t a13;
-  uint32_t a14;
-  uint32_t a15;
+  uint32_t a[16];
   uint32_t pc;
   uint32_t sar;
   uint32_t litbase;

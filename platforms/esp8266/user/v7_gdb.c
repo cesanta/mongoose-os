@@ -234,9 +234,9 @@ void gdb_exception_handler(struct xtos_saved_regs *frame) {
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
   printf("\nTrap %d: pc=%p va=%p\n", cause, frame->pc, vaddr);
-  memcpy(&regs.a0, &frame->a0, sizeof(uint32_t) * 16);
+  memcpy(regs.a, frame->a, sizeof(regs.a));
 
-  regs.a1 = (uint32_t) frame + V7_GDB_SP_OFFSET;
+  regs.a[1] = (uint32_t) frame + V7_GDB_SP_OFFSET;
   regs.pc = frame->pc;
   regs.sar = frame->sar;
   regs.ps = frame->ps;
