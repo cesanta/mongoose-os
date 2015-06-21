@@ -24,18 +24,16 @@
 /*
  * Constructed by xtos.
  *
- * Moslty reverse engineered by trial and error and luck.
- *
  * There is a UserFrame structure in
  * ./esp_iot_rtos_sdk/extra_include/xtensa/xtruntime-frames.h
- * but it doesn't match what we actually see on the ESP8266EX.
  */
 struct xtos_saved_regs {
   uint32_t pc; /* instruction causing the trap */
   uint32_t ps;
   uint32_t sar;
-  uint32_t a[16]; /* a1 register is clobbered by xtos, contains junk */
-  uint32_t exccause;
+  uint32_t vpri;  /* current xtos virtual priority */
+  uint32_t a0;    /* when __XTENSA_CALL0_ABI__ is true */
+  uint32_t a[16]; /* a2 - a15 */
 };
 
 /*
