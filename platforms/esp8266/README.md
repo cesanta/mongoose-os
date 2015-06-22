@@ -1,5 +1,4 @@
-Overview
-========
+# Overview
 
 This document describes Smartjs firmware for ESP8266 chip.
 
@@ -13,7 +12,7 @@ Smartjs firmware can be easily extended by adding custom commands - refer to
 http://cesanta.com/docs/v7/ to learn how to export custom functions, and look
 at the examples at `user/v7_cmd.c`.
 
-## Build the firmware
+# Build the firmware
 
 Smartjs release provides pre-built firmare, so you might just download
 it from the
@@ -25,7 +24,7 @@ make sure you have docker installed and running. Then,
 
 This will produce three binary images under the firmware/ subdirectory.
 
-## Flash the firmware
+# Flash the firmware
 To flash the firmware to the ESP8266 board,
 
 1. Get `esptool` utility, available at https://github.com/themadinventor/esptool)
@@ -33,7 +32,7 @@ To flash the firmware to the ESP8266 board,
 3. `esptool --baud 115200 --port /dev/YOUR_ESP_SERIAL_DEVICE write_flash 0x00000 firmware/0x00000.bin 0x20000 firmware/0x20000.bin 0x30000 firmware/0x30000.bin`
 
 
-## Communication over the serial port
+# Communication over the serial port
 
 On Mac or UNIX/Linux system, `cu` or `picocom` tools can be used:
 
@@ -43,37 +42,51 @@ On Mac or UNIX/Linux system, `cu` or `picocom` tools can be used:
 For example `cu` tool on Linux:
     cu -s 115200 -l /dev/ttyUSB0
 
-## Wifi module
+# JavaScript API reference
+
+## GPIO
+
+- `GPIO.out(pin_num, 0_or_1)` - set a given pin to 0 or 1
+
+## I2C
+
+## HTTP
+
+
+## Wifi
 
 By default, Wifi module enables access point mode, and acts as a
-DHCP server for it. To connect to local Wifi network:
+DHCP server for it.
 
-    Wifi.setup("yourssid", "youpassword")
+- `Wifi.setup("yourssid", "youpassword")` - connect ot the local Wifi network
+- `Wifi.status()` - check current Wifi status
+- `Wifi.ip()` - see assigned IP address. `Wifi.ip(1)` shows the IP of
+    the access point interface.
 
-To check current WiFi status:
+## Built-in functions
 
-    Wifi.status()
+- `setTimeout(callback, num_milliseconds)` - execute a function after some time
+- `print(arg1, ...)` - stringify and print arguments to the command prompt
+- `GC.stat()` - show current memory usage
 
-To see your ip address:
+Also, Smart.js has support for a flat filesystem. File API is described
+at [V7 API Reference](http://cesanta.com/docs/v7/#_builtin_api).
 
-    Wifi.ip()
+# Web UI
 
-NOTE: `Wifi.ip(1)` shows the IP of the access point interface.
+Smart.js has a built-in web server which shows a web-based UI.
+Point your browser to: http://YOUR_ESP8266_IP_ADDRESS/ to access it.
 
-## Web UI
-
-Point your browser to: http://<YOUR_ESP8266_IP_ADDRESS>/
-
-## Example: blink sketch
+# Example: blink sketch
 
 Connect LED to GPIO pin number 2. Then type this at the prompt and press enter:
 
     led = true; function blink() { GPIO.out(2, led); led = !led; setTimeout(blink, 1000); }; blink()
 
 
-## Advanced
+# Advanced
 
-### Build options
+## Build options
 
 - NO_PROMPT: disables serial javascript prompt
 - NO_EXEC_INITJS: disables running initjs at boot
@@ -81,7 +94,7 @@ Connect LED to GPIO pin number 2. Then type this at the prompt and press enter:
 - V7_ESP_GDB_SERVER: enables GDB server
 - ESP_ENABLE_WATCHDOG: enables watchdog (the watchdog is not fed nor we provide yet a way to feed it from JS, the ESP will be reset if you execute time consuming operations!)
 
-### GDB
+## GDB
 
 This build also includes an optional GDB server, enabled with the -DV7_GDB compiler flag.
 When enabled, each illegal instruction or memory access will trap into the GDB server.
