@@ -45,8 +45,27 @@ LIBS		= m cirom gcc hal pp phy net80211 lwip wpa main
 FW_FS_ADDR = 0x20000
 FW_FS_SIZE = 32768
 
+# some of these flags works around for gdb 7.5.x stacktrace issue
+# while still allowing -Os to remove padding between data in .rodata
+# section, allowing us to gain about 1k of ram.
+# text section is 4k bigger, but we care more about ram at the moment.
+# TODO(mkm): figure out which flag(s).
+NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
+             -fno-align-functions -fno-align-jumps \
+             -fno-align-loops -fno-align-labels -fno-caller-saves \
+             -fno-crossjumping -fno-cse-follow-jumps -fno-cse-skip-blocks \
+             -fno-delete-null-pointer-checks -fno-devirtualize  \
+             -fno-gcse -fno-gcse-lm -fno-hoist-adjacent-loads \
+             -fno-inline-small-functions -fno-indirect-inlining -fno-partial-inlining \
+             -fno-ipa-cp -fno-ipa-sra -fno-peephole2 -fno-optimize-sibling-calls -fno-optimize-strlen \
+             -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-reorder-functions \
+             -fno-sched-interblock -fno-sched-spec -fno-rerun-cse-after-loop \
+             -fno-schedule-insns -fno-schedule-insns2 -fno-strict-aliasing -fno-strict-overflow \
+             -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
+             -fno-tree-pre -fno-tree-vrp
+
 # compiler flags using during compilation of source files
-CFLAGS		= -Og -fno-omit-frame-pointer -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static -DICACHE_FLASH -DV7_BUILD_PROFILE=1 -DNO_LIBC -DON_FLASH='__attribute__((section(".irom0.text")))' -DRODATA='__attribute__((section(".irom.text")))' -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF -DV7_ENABLE_GC -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DDISABLE_SHA1X -DENDL='"\n\r"' -Dprintf=c_printf $(CFLAGS_EXTRA) -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) -DV7_ENABLE_FILE -Dc_fread=spiffs_fread -Dc_fwrite=spiffs_fwrite -Dc_fclose=spiffs_fclose -Dc_fopen=spiffs_fopen -Dc_rename=spiffs_rename -Dc_remove=spiffs_remove -Dc_file_t=int -DINVALID_FILE=-1 -Dc_fseek=spiffs_fseek -Dc_ftell=spiffs_ftell -Dc_rewind=spiffs_rewind -Dc_ferror=spiffs_ferror -DV7_ESP_GDB_SERVER -DMBUF_SIZE_MULTIPLIER=1
+CFLAGS		= -Os $(NO_Os_FLAGS) -fno-omit-frame-pointer -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static -DICACHE_FLASH -DV7_BUILD_PROFILE=1 -DNO_LIBC -DON_FLASH='__attribute__((section(".irom0.text")))' -DRODATA='__attribute__((section(".irom.text")))' -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF -DV7_ENABLE_GC -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DDISABLE_SHA1X -DENDL='"\n\r"' -Dprintf=c_printf $(CFLAGS_EXTRA) -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) -DV7_ENABLE_FILE -Dc_fread=spiffs_fread -Dc_fwrite=spiffs_fwrite -Dc_fclose=spiffs_fclose -Dc_fopen=spiffs_fopen -Dc_rename=spiffs_rename -Dc_remove=spiffs_remove -Dc_file_t=int -DINVALID_FILE=-1 -Dc_fseek=spiffs_fseek -Dc_ftell=spiffs_ftell -Dc_rewind=spiffs_rewind -Dc_ferror=spiffs_ferror -DV7_ESP_GDB_SERVER -DMBUF_SIZE_MULTIPLIER=1
 
 #CFLAGS		= -Os -g -O2 -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH
 # linker flags used to generate the main object file

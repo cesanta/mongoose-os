@@ -1280,10 +1280,11 @@ struct ast_node_def {
 #ifndef V7_DISABLE_AST_TAG_NAMES
   const char *name; /* tag name, for debugging and serialization */
 #endif
-  unsigned char has_varint : 1;   /* has a varint body */
-  unsigned char has_inlined : 1;  /* inlined data whose size is in varint fld */
-  unsigned char num_skips : 3;    /* number of skips */
-  unsigned char num_subtrees : 3; /* number of fixed subtrees */
+  /* int because some archs cannot address flash with byte instructions */
+  unsigned int has_varint : 1;   /* has a varint body */
+  unsigned int has_inlined : 1;  /* inlined data whose size is in varint fld */
+  unsigned int num_skips : 3;    /* number of skips */
+  unsigned int num_subtrees : 3; /* number of fixed subtrees */
 };
 extern const struct ast_node_def ast_node_defs[];
 #ifdef __GNUC__
@@ -1409,6 +1410,10 @@ struct gc_arena {
 
 #ifndef ON_FLASH
 #define ON_FLASH
+#endif
+
+#ifndef RODATA
+#define RODATA
 #endif
 
 #ifndef STATIC
@@ -4988,7 +4993,8 @@ struct v7_vec {
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
  * for function get_tok() for rationale for that.
  */
-static struct v7_vec s_keywords[] = {
+RODATA
+static const struct v7_vec s_keywords[] = {
     V7_VEC("break"),      V7_VEC("case"),     V7_VEC("catch"),
     V7_VEC("continue"),   V7_VEC("debugger"), V7_VEC("default"),
     V7_VEC("delete"),     V7_VEC("do"),       V7_VEC("else"),
@@ -5483,8 +5489,7 @@ typedef unsigned short ast_skip_t;
  *
  * Sequences of subtrees (i.e. `child []`) have to be terminated by a skip:
  * they don't have a termination tag; all nodes whose position is before the
- *skip
- * are part of the sequence.
+ * skip are part of the sequence.
  *
  * Skips are encoded as network-byte-order 16-bit offsets counted from the
  * first byte of the node body (i.e. not counting the tag itself).
@@ -5503,6 +5508,7 @@ typedef unsigned short ast_skip_t;
  * and label` is part of our domain model (i.e. JS has a label AST node type).
  *
  */
+RODATA
 const struct ast_node_def ast_node_defs[] = {
     AST_ENTRY("NOP", 0, 0, 0, 0), /* struct {} */
 
@@ -8412,7 +8418,8 @@ ON_FLASH enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
 #define NONE \
   { (enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0 }
 
-static struct {
+RODATA
+static const struct {
   int len, left_to_right;
   struct {
     enum v7_tok start_tok, end_tok;
@@ -8936,7 +8943,8 @@ ON_FLASH const char *v7_get_parser_error(struct v7 *v7) {
 #define sigsetjmp(buf, mask) setjmp(buf)
 #endif
 
-static enum ast_tag assign_op_map[] = {
+RODATA
+static const enum ast_tag assign_op_map[] = {
     AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
     AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
 
@@ -13194,9 +13202,10 @@ ON_FLASH static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static const char *error_names[] = {"TypeError", "SyntaxError",
-                                    "ReferenceError", "InternalError",
-                                    "RangeError"};
+RODATA
+static const char *const error_names[] = {"TypeError", "SyntaxError",
+                                          "ReferenceError", "InternalError",
+                                          "RangeError"};
 V7_STATIC_ASSERT(ARRAY_SIZE(error_names) == ERROR_CTOR_MAX,
                  error_name_count_mismatch);
 
