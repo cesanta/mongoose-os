@@ -67,6 +67,8 @@ ICACHE_FLASH_ATTR void process_js(char *cmd) {
 
   if (res == V7_SYNTAX_ERROR) {
     printf("Syntax error: %s\n", v7_get_parser_error(v7));
+  } else if (res == V7_STACK_OVERFLOW) {
+    printf("Stack overflow: %s\n", v7_get_parser_error(v7));
   } else {
     char *p;
     p = v7_to_json(v7, v, result_str, sizeof(result_str));

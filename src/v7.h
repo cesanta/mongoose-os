@@ -72,13 +72,16 @@ struct v7_create_opts {
   size_t object_arena_size;
   size_t function_arena_size;
   size_t property_arena_size;
+#ifdef V7_STACK_SIZE
+  void *c_stack_base;
+#endif
 };
 struct v7 *v7_create_opt(struct v7_create_opts);
 
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *);
 
-enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION };
+enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION, V7_STACK_OVERFLOW };
 
 /*
  * Execute JavaScript `js_code`, store result in `result` variable.

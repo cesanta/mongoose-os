@@ -372,13 +372,14 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR void init_v7() {
+ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t wifi, gpio, dht11, gc, debug;
 
   opts.object_arena_size = 120;
   opts.function_arena_size = 25;
   opts.property_arena_size = 350;
+  opts.c_stack_base = stack_base;
 
   v7 = v7_create_opt(opts);
 

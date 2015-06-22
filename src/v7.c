@@ -72,13 +72,16 @@ struct v7_create_opts {
   size_t object_arena_size;
   size_t function_arena_size;
   size_t property_arena_size;
+#ifdef V7_STACK_SIZE
+  void *c_stack_base;
+#endif
 };
 struct v7 *v7_create_opt(struct v7_create_opts);
 
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *);
 
-enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION };
+enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION, V7_STACK_OVERFLOW };
 
 /*
  * Execute JavaScript `js_code`, store result in `result` variable.
@@ -1675,7 +1678,9 @@ struct v7 {
   struct v7_property *cur_dense_prop;
 
   volatile int interrupt;
+#ifdef V7_STACK_SIZE
   void *sp_limit;
+#endif
 };
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
@@ -7576,6 +7581,10 @@ ON_FLASH struct v7 *v7_create_opt(struct v7_create_opts opts) {
   if (opts.property_arena_size == 0) opts.property_arena_size = GC_SIZE * 3;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+#ifdef V7_STACK_SIZE
+    v7->sp_limit = (void *) ((uintptr_t) opts.c_stack_base - (V7_STACK_SIZE));
+#endif
+
     v7->cur_dense_prop =
         (struct v7_property *) calloc(1, sizeof(struct v7_property));
     gc_arena_init(v7, &v7->object_arena, sizeof(struct v7_object),
@@ -8090,6 +8099,14 @@ ON_FLASH void v7_gc(struct v7 *v7) {
     next_tok(v7);                                     \
   } while (0)
 
+/* check for stack overflow on embedded devices */
+#ifdef V7_STACK_SIZE
+#define CHECK_STACK() \
+  if ((void *) &v7 <= v7->sp_limit) THROW(V7_STACK_OVERFLOW)
+#else
+#define CHECK_STACK() (void) 0
+#endif
+
 static enum v7_err parse_expression(struct v7 *, struct ast *);
 static enum v7_err parse_statement(struct v7 *, struct ast *);
 static enum v7_err parse_terminal(struct v7 *, struct ast *);
@@ -8108,6 +8125,7 @@ ON_FLASH static enum v7_tok lookahead(const struct v7 *v7) {
 
 ON_FLASH static enum v7_tok next_tok(struct v7 *v7) {
   int prev_line_no = v7->pstate.prev_line_no;
+  CHECK_STACK();
   v7->pstate.prev_line_no = v7->pstate.line_no;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
   v7->after_newline = prev_line_no != v7->pstate.line_no;
@@ -8119,6 +8137,7 @@ ON_FLASH static enum v7_tok next_tok(struct v7 *v7) {
 }
 
 ON_FLASH static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   if (v7->cur_tok == TOK_IDENTIFIER) {
     ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
@@ -8129,6 +8148,7 @@ ON_FLASH static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
                                                              struct ast *a) {
+  CHECK_STACK();
   /* Allow reserved words as property names. */
   if (is_reserved_word_token(v7->cur_tok)) {
     ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
@@ -8140,6 +8160,7 @@ ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
     next_tok(v7);
@@ -8170,6 +8191,7 @@ ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
   ast_off_t start;
+  CHECK_STACK();
   switch (v7->cur_tok) {
     case TOK_OPEN_PAREN:
       next_tok(v7);
@@ -8247,6 +8269,7 @@ ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
 }
 
 ON_FLASH static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   if (v7->cur_tok != TOK_CLOSE_PAREN) {
     do {
       PARSE(assign);
@@ -8257,6 +8280,7 @@ ON_FLASH static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
   ast_off_t start;
+  CHECK_STACK();
   switch (v7->cur_tok) {
     case TOK_NEW:
       next_tok(v7);
@@ -8281,6 +8305,7 @@ ON_FLASH static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static enum v7_err parse_member(struct v7 *v7, struct ast *a,
                                          ast_off_t pos) {
+  CHECK_STACK();
   switch (v7->cur_tok) {
     case TOK_DOT:
       next_tok(v7);
@@ -8307,6 +8332,7 @@ ON_FLASH static enum v7_err parse_member(struct v7 *v7, struct ast *a,
 
 ON_FLASH static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
+  CHECK_STACK();
   PARSE(newexpr);
 
   for (;;) {
@@ -8323,6 +8349,7 @@ ON_FLASH static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
+  CHECK_STACK();
   PARSE(newexpr);
 
   for (;;) {
@@ -8345,6 +8372,7 @@ ON_FLASH static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
+  CHECK_STACK();
   PARSE(callexpr);
 
   if (v7->after_newline) {
@@ -8366,6 +8394,7 @@ ON_FLASH static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
 }
 
 ON_FLASH enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   for (;;) {
     switch (v7->cur_tok) {
       case TOK_PLUS:
@@ -8444,6 +8473,7 @@ ON_FLASH static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
   int i;
   enum v7_tok tok;
   enum ast_tag ast;
+  CHECK_STACK();
 
   if (level == (int) ARRAY_SIZE(levels) - 1) {
     PARSE(prefix);
@@ -8489,12 +8519,14 @@ ON_FLASH static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
 }
 
 ON_FLASH static enum v7_err parse_assign(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   return parse_binary(v7, a, 0, a->mbuf.len);
 }
 
 ON_FLASH static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   int group = 0;
+  CHECK_STACK();
   do {
     PARSE(assign);
   } while (ACCEPT(TOK_COMMA) && (group = 1));
@@ -8505,6 +8537,7 @@ ON_FLASH static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
 }
 
 ON_FLASH static enum v7_err end_of_statement(struct v7 *v7) {
+  CHECK_STACK();
   if (v7->cur_tok == TOK_SEMICOLON || v7->cur_tok == TOK_END_OF_INPUT ||
       v7->cur_tok == TOK_CLOSE_CURLY || v7->after_newline) {
     return V7_OK;
@@ -8513,7 +8546,9 @@ ON_FLASH static enum v7_err end_of_statement(struct v7 *v7) {
 }
 
 ON_FLASH static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_VAR);
+  ast_off_t start;
+  CHECK_STACK();
+  start = ast_add_node(a, AST_VAR);
   ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
   /* zero out var node pointer */
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
@@ -8533,6 +8568,7 @@ ON_FLASH static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static int parse_optional(struct v7 *v7, struct ast *a,
                                    enum v7_tok terminator) {
+  CHECK_STACK();
   if (v7->cur_tok != terminator) {
     return 1;
   }
@@ -8541,7 +8577,9 @@ ON_FLASH static int parse_optional(struct v7 *v7, struct ast *a,
 }
 
 ON_FLASH static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_IF);
+  ast_off_t start;
+  CHECK_STACK();
+  start = ast_add_node(a, AST_IF);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -8555,8 +8593,11 @@ ON_FLASH static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
 }
 
 ON_FLASH static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_WHILE);
-  int saved_in_loop = v7->pstate.in_loop;
+  ast_off_t start;
+  int saved_in_loop;
+  CHECK_STACK();
+  start = ast_add_node(a, AST_WHILE);
+  saved_in_loop = v7->pstate.in_loop;
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -8568,8 +8609,13 @@ ON_FLASH static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
 }
 
 ON_FLASH static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_DOWHILE);
-  int saved_in_loop = v7->pstate.in_loop;
+  ast_off_t start;
+  int saved_in_loop;
+  CHECK_STACK();
+
+  start = ast_add_node(a, AST_DOWHILE);
+  saved_in_loop = v7->pstate.in_loop;
+
   v7->pstate.in_loop = 1;
   PARSE(statement);
   v7->pstate.in_loop = saved_in_loop;
@@ -8584,8 +8630,12 @@ ON_FLASH static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
 
 ON_FLASH static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
-  ast_off_t start = ast_add_node(a, AST_FOR);
-  int saved_in_loop = v7->pstate.in_loop;
+  ast_off_t start;
+  int saved_in_loop;
+
+  CHECK_STACK();
+  start = ast_add_node(a, AST_FOR);
+  saved_in_loop = v7->pstate.in_loop;
 
   EXPECT(TOK_OPEN_PAREN);
 
@@ -8635,8 +8685,13 @@ body:
 }
 
 ON_FLASH static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_SWITCH);
-  int saved_in_switch = v7->pstate.in_switch;
+  ast_off_t start;
+  int saved_in_switch;
+
+  CHECK_STACK();
+  start = ast_add_node(a, AST_SWITCH);
+  saved_in_switch = v7->pstate.in_switch;
+
   ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
@@ -8679,7 +8734,9 @@ ON_FLASH static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
 }
 
 ON_FLASH static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_TRY);
+  ast_off_t start;
+  CHECK_STACK();
+  start = ast_add_node(a, AST_TRY);
   PARSE(block);
   ast_set_skip(a, start, AST_TRY_CATCH_SKIP);
   if (ACCEPT(TOK_CATCH)) {
@@ -8697,7 +8754,9 @@ ON_FLASH static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
 }
 
 ON_FLASH static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_WITH);
+  ast_off_t start;
+  CHECK_STACK();
+  start = ast_add_node(a, AST_WITH);
   if (v7->pstate.in_strict) {
     return V7_SYNTAX_ERROR;
   }
@@ -8720,6 +8779,7 @@ ON_FLASH static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
   } while (0)
 
 ON_FLASH static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   switch (v7->cur_tok) {
     case TOK_SEMICOLON:
       next_tok(v7);
@@ -8803,10 +8863,17 @@ ON_FLASH static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
 ON_FLASH static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
                                            int require_named,
                                            int reserved_name) {
-  ast_off_t start = ast_add_node(a, AST_FUNC);
-  ast_off_t outer_last_var_node = v7->last_var_node;
-  int saved_in_function = v7->pstate.in_function;
-  int saved_in_strict = v7->pstate.in_strict;
+  ast_off_t start;
+  ast_off_t outer_last_var_node;
+  int saved_in_function;
+  int saved_in_strict;
+
+  CHECK_STACK();
+  start = ast_add_node(a, AST_FUNC);
+  outer_last_var_node = v7->last_var_node;
+  saved_in_function = v7->pstate.in_function;
+  saved_in_strict = v7->pstate.in_strict;
+
   v7->last_var_node = start;
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
   if ((reserved_name ? parse_ident_allow_reserved_words : parse_ident)(v7, a) ==
@@ -8835,6 +8902,7 @@ ON_FLASH static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
 }
 
 ON_FLASH static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   EXPECT(TOK_OPEN_CURLY);
   PARSE_ARG(body, TOK_CLOSE_CURLY);
   EXPECT(TOK_CLOSE_CURLY);
@@ -8844,6 +8912,7 @@ ON_FLASH static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
 ON_FLASH static enum v7_err parse_body(struct v7 *v7, struct ast *a,
                                        enum v7_tok end) {
   ast_off_t start;
+  CHECK_STACK();
   while (v7->cur_tok != end) {
     if (ACCEPT(TOK_FUNCTION)) {
       if (v7->cur_tok != TOK_IDENTIFIER) {
@@ -8866,6 +8935,7 @@ ON_FLASH static enum v7_err parse_body(struct v7 *v7, struct ast *a,
 }
 
 ON_FLASH static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
+  CHECK_STACK();
   if (v7->cur_tok == TOK_STRING_LITERAL &&
       (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
        strncmp(v7->tok, "'use strict'", v7->tok_len) == 0)) {
@@ -10604,9 +10674,13 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
-  if (parse(v7, a, src, 1) != V7_OK) {
+  if ((err = parse(v7, a, src, 1)) != V7_OK) {
+    /*
+     * The actual error might not be syntax error but there is no need to
+     * add more overhead to the runtime by creating a specific exception for
+     * other parse errors.
+     */
     r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-    err = V7_SYNTAX_ERROR;
     goto cleanup;
   }
   ast_optimize(a);
@@ -11095,27 +11169,24 @@ ON_FLASH V7_PRIVATE void init_stdlib(struct v7 *v7) {
 
 #define STRINGIFY(x) #x
 
-ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
-  val_t res;
-
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_indexOf[] = STRINGIFY(
     Array.prototype.indexOf = function(a, x) {
       var i; var r = -1; var b = +x;
       if (!b || b < 0) b = 0;
       for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = +i;
       return r;
-    };));
+    };);
 
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_lastIndexOf[] = STRINGIFY(
     Array.prototype.lastIndexOf = function(a, x) {
       var i; var r = -1; var b = +x;
       if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
       for (i in this) if (i <= b && (r < 0 || i > r) && this[i] === a) r = +i;
       return r;
-    };));
+    };);
 
 #if V7_ENABLE__Array__reduce
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_reduce[] = STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
       if (typeof(a) != "function") {
@@ -11130,27 +11201,52 @@ ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
         }
       }
       return b;
-    };));
+    };);
 #endif
 
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_pop[] = STRINGIFY(
     Array.prototype.pop = function() {
       var i = this.length - 1;
       return this.splice(i, 1)[0];
-    };));
+    };);
 
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_shift[] = STRINGIFY(
     Array.prototype.shift = function() {
       return this.splice(0, 1)[0];
-    };));
+    };);
 
 #if V7_ENABLE__Function__call
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_function_call[] = STRINGIFY(
     Function.prototype.call = function() {
       var t = arguments.splice(0, 1)[0];
       return this.apply(t, arguments);
-    };));
+    };);
 #endif
+
+RODATA static const char * const js_functions[] = {
+#if V7_ENABLE__Function__call
+  js_function_call,
+#endif
+#if V7_ENABLE__Array__reduce
+  js_array_reduce,
+#endif
+  js_array_indexOf,
+  js_array_lastIndexOf,
+  js_array_pop,
+  js_array_shift
+};
+
+ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
+  val_t res;
+  char *body;
+  int i;
+
+  for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
+    body = (char *) malloc(strlen(js_functions[i]) + 1);
+    strcpy(body, js_functions[i]);
+    v7_exec(v7, &res, body);
+    free(body);
+  }
 
   /* TODO(lsm): re-enable in a separate PR */
 #if 0

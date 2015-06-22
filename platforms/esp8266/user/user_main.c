@@ -15,8 +15,8 @@ extern void ets_wdt_disable(void);
 os_timer_t tick_timer;
 os_timer_t startcmd_timer;
 
-ICACHE_FLASH_ATTR void start_cmd() {
-  init_v7();
+ICACHE_FLASH_ATTR void start_cmd(int dummy) {
+  init_v7(&dummy);
 #if !defined(NO_PROMPT)
   uart_main_init(0);
 #endif
