@@ -1,52 +1,47 @@
-/*
- * MCF24FC EEPROM i2c JS wrapper sample
- * Usage: x = new MC24FC(12,14,1);
- *        x.write(0x100, "Hello, word!);
- *        print(x.read(0x100, 12))
- */
-function MC24FC(sda,scl,chip_no) {
-  var i2c_conn = i2c.init(sda, scl);
-  var chip_no = chip_no;
+/* http://cesanta.com/docs/smartjs/drivers/mcf24fc */
+function MC24FC(sda,scl,chn) {
+  var c = i2c.init(sda,scl);
+  var chn = chn;
 
-  function read_s(addr, size) {
-    var a0_15 = addr & 65535;
-    var a16 = (addr & 65536) >> 16
-    var cb = 10 << 4 | a16 << 3 | chip_no << 1;
+  function read_s(a,sz) {
+    var a0_15 = a & 65535;
+    var a16 = (a & 65536) >> 16
+    var cb = 10 << 4 | a16 << 3 | chn << 1;
 
-    i2c_conn.start();
-    i2c_conn.sendByte(cb);
-    i2c_conn.sendWord(a0_15);
-    i2c_conn.start();
-    i2c_conn.sendByte(cb | 1);
+    c.start();
+    c.sendByte(cb);
+    c.sendWord(a0_15);
+    c.start();
+    c.sendByte(cb | 1);
 
-    var ret = i2c_conn.readString(size);
+    var ret = c.readString(sz);
 
-    i2c_conn.stop();
+    c.stop();
 
     return ret;
   }
 
-  function write_b(cb, a0_15, a16, str, pos, size) {
-    i2c_conn.start();
+  function write_b(cb,a0_15,a16,str,pos,sz) {
+    c.start();
 
-    if(i2c_conn.sendByte(cb) != 0) {
+    if(c.sendByte(cb) != 0) {
       return 0;
     }
 
-    if(i2c_conn.sendWord(a0_15) != 0) {
+    if(c.sendWord(a0_15) != 0) {
       return 0;
     }
 
-    if(i2c_conn.sendString(str.slice(pos, pos + size)) != 0) {
+    if(c.sendString(str.slice(pos, pos + sz)) != 0) {
       return 0;
     }
 
-    i2c_conn.stop();
+    c.stop();
 
     var i;
     for (i = 0; i <= 100; i++) {
-      i2c_conn.start();
-      if(i2c_conn.sendByte(cb) == 0) {
+      c.start();
+      if(c.sendByte(cb) == 0) {
         break;
       }
     }
@@ -54,77 +49,77 @@ function MC24FC(sda,scl,chip_no) {
     return i != 100;
   }
 
-  function write_s(addr, str, pos, size) {
-    var a0_15 = addr & 65535;
-    var a16 = (addr & 65536) >> 16
-    var cb = 10 << 4 | a16 << 3 | chip_no << 1
+  function write_s(a,str,pos,sz) {
+    var a0_15 = a & 65535;
+    var a16 = (a & 65536) >> 16
+    var cb = 10 << 4 | a16 << 3 | chn << 1
 
-    var data_size, to_write;
-    data_size = to_write = size;
+    var s, n;
+    s = n = sz;
 
-    var page_addr = a0_15 & -128;
-    var page_space = page_addr + 128 - a0_15;
-    if (page_space < to_write) {
-      to_write = page_space;
+    var page_a = a0_15 & -128;
+    var page_space = page_a + 128 - a0_15;
+    if (page_space < n) {
+      n = page_space;
     }
 
-    if (write_b(cb, a0_15, a16, str, pos, to_write) == 0) {
+    if (write_b(cb,a0_15,a16,str,pos,n) == 0) {
       return 0;
     }
 
-    data_size -= to_write;
-    pos += to_write;
-    a0_15 += to_write;
+    s -= n;
+    pos += n;
+    a0_15 += n;
 
-    while (data_size > 0) {
-      to_write = data_size;
-      if (to_write > 128) {
-        to_write = 128;
+    while (s > 0) {
+      n = s;
+      if (n > 128) {
+        n = 128;
       }
 
-      if (write_b(cb, a0_15, a16, str, pos, to_write) == 0) {
+      if (write_b(cb,a0_15,a16,str,pos,n) == 0) {
         return 0;
       }
 
-      data_size -= to_write;
-      pos += to_write;
-      a0_15 += to_write;
+      s -= n;
+      pos += n;
+      a0_15 += n;
     }
 
-    return size;
+    return sz;
   }
 
-  this.read = function(addr,size) {
-    var to_read;
+  this.read = function(a,sz) {
+    var r;
 
-    if (addr + size > 131071 ) {
+    if (a + sz > 131071 ) {
       return -1;
     }
 
-    if (addr <= 65535 &&
-      addr + size > 65536) {
-      to_read = 65535 - addr + 1;
-      return read_s(addr, to_read) +
-             read_s(addr + to_read, size - to_read);
+    if (a <= 65535 &&
+      a + sz > 65536) {
+      r = 65535 - a + 1;
+      return read_s(a, r) +
+             read_s(a + r, sz - r);
     } else {
-      return read_s(addr, size);
+      return read_s(a, sz);
     }
   }
 
-  this.write = function (addr,str) {
-    var to_write, data_size = str.length;
+  this.write = function (a,str) {
+    var n, s = str.length;
 
-    if (addr + data_size > 131071) {
+    if (a + s > 131071) {
       return -1;
     }
 
-    if (addr <= 65535 &&
-        addr + data_size > 65536) {
-      to_write = 65535 - addr + 1;
-      return write_s(addr, str, 0, to_write) +
-       write_s(addr + to_write, str, to_write, data_size - to_write);
+    if (a <= 65535 &&
+        a + s > 65536) {
+      n = 65535 - a + 1;
+      return write_s(a, str, 0, n) +
+       write_s(a + n, str, n, s - n);
     } else {
-      return write_s(addr, str, 0, data_size);
+      return write_s(a, str, 0, s);
     }
 
     return 0;
