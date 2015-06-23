@@ -1685,6 +1685,14 @@ struct v7 {
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
 
+/* Vector, describes some memory location pointed by 'p' with length 'len' */
+struct v7_vec {
+  const char *p;
+  int len;
+};
+#define V7_VEC(str) \
+  { (str), sizeof(str) - 1 }
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
@@ -4307,7 +4315,7 @@ ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
         const char *s = va_arg(ap, const char *); /* Always fetch parameter */
         int j;
         /* Ignore negative and 0 precisions */
-        for (j = 0; s[j] != '\0' && (precision <= 0 || j < precision); j++) {
+        for (j = 0; (precision <= 0 || j < precision) && s[j] != '\0'; j++) {
           C_SNPRINTF_APPEND_CHAR(s[j]);
         }
       } else if (ch == 'c') {
@@ -4985,14 +4993,6 @@ ON_FLASH V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
  * All rights reserved
  */
 
-
-/* Vector, describes some memory location pointed by 'p' with length 'len' */
-struct v7_vec {
-  const char *p;
-  int len;
-};
-#define V7_VEC(str) \
-  { (str), sizeof(str) - 1 }
 
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
@@ -9975,6 +9975,7 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   val_t frame = v7_create_undefined(), res = v7_create_undefined();
   val_t v1 = v7_create_undefined(), args = v7_create_undefined();
   val_t cfunc = v7_create_undefined(), old_this = v7->this_object;
+  val_t fun_proto = v7_create_undefined();
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -9987,6 +9988,7 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   tmp_stack_push(&tf, &v1);
   tmp_stack_push(&tf, &args);
   tmp_stack_push(&tf, &old_this);
+  tmp_stack_push(&tf, &fun_proto);
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
@@ -10002,8 +10004,7 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   if (is_constructor) {
     if (!v7_is_cfunction(v1)) {
-      val_t fun_proto = v7_get(v7, v1, "prototype", 9);
-      tmp_stack_push(&tf, &fun_proto);
+      fun_proto = v7_get(v7, v1, "prototype", 9);
       if (!v7_is_object(fun_proto)) {
         /* TODO(mkm): box primitive value */
         throw_exception(v7, TYPE_ERROR,
@@ -10477,6 +10478,9 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       size_t name_len;
       size_t saved_tmp_stack_pos = v7->tmp_stack.len;
       volatile enum jmp_type j;
+      val_t catch_scope = v7_create_undefined();
+
+      tmp_stack_push(&tf, &catch_scope);
       memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
       end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -10486,10 +10490,8 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
-        val_t catch_scope;
         v7->tmp_stack.len = saved_tmp_stack_pos;
         catch_scope = create_object(v7, scope);
-        tmp_stack_push(&tf, &catch_scope);
         tag = ast_fetch_tag(a, &acatch);
         V7_CHECK(v7, tag == AST_IDENT);
         name = ast_get_inlined_data(a, acatch, &name_len);
@@ -11223,18 +11225,20 @@ RODATA static const char js_function_call[] = STRINGIFY(
     };);
 #endif
 
-RODATA static const char * const js_functions[] = {
+RODATA static const struct v7_vec js_functions[] = {
 #if V7_ENABLE__Function__call
-  js_function_call,
+  V7_VEC(js_function_call),
 #endif
 #if V7_ENABLE__Array__reduce
-  js_array_reduce,
+  V7_VEC(js_array_reduce),
 #endif
-  js_array_indexOf,
-  js_array_lastIndexOf,
-  js_array_pop,
-  js_array_shift
+  V7_VEC(js_array_indexOf),
+  V7_VEC(js_array_lastIndexOf),
+  V7_VEC(js_array_pop),
+  V7_VEC(js_array_shift)
 };
+
+#define CEIL(x, y) ((x) / (y) + ((x) % (y) > 0))
 
 ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   val_t res;
@@ -11242,8 +11246,14 @@ ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   int i;
 
   for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
-    body = (char *) malloc(strlen(js_functions[i]) + 1);
-    strcpy(body, js_functions[i]);
+#ifdef __ets__
+    int size = CEIL(js_functions[i].len + 1, 4) * 4;
+    body = (char *) malloc(size);
+    memcpy(body, js_functions[i].p, size);
+#else
+    body = (char *) malloc(js_functions[i].len + 1);
+    strcpy(body, js_functions[i].p);
+#endif
     v7_exec(v7, &res, body);
     free(body);
   }

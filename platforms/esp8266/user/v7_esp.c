@@ -68,8 +68,8 @@ ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR static v7_val_t GPIO_out(struct v7 *v7, v7_val_t this_obj,
-                                           v7_val_t args) {
+ICACHE_FLASH_ATTR static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj,
+                                             v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   v7_val_t valv = v7_array_get(v7, args, 1);
   int pin, val;
@@ -86,8 +86,8 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_out(struct v7 *v7, v7_val_t this_obj,
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR static v7_val_t GPIO_in(struct v7 *v7, v7_val_t this_obj,
-                                          v7_val_t args) {
+ICACHE_FLASH_ATTR static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj,
+                                            v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   int pin;
 
@@ -391,8 +391,8 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
 
   gpio = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "GPIO", 4, 0, gpio);
-  v7_set_method(v7, gpio, "in", GPIO_in);
-  v7_set_method(v7, gpio, "out", GPIO_out);
+  v7_set_method(v7, gpio, "read", GPIO_read);
+  v7_set_method(v7, gpio, "write", GPIO_write);
 
   wifi = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Wifi", 4, 0, wifi);
