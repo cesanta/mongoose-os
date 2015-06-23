@@ -42,7 +42,7 @@ EXTRA_INCDIR    = include
 LIBS		= m cirom gcc hal pp phy net80211 lwip wpa main
 
 # spiffs parameters
-FW_FS_ADDR = 0x20000
+FW_FS_ADDR = 0x1d000
 FW_FS_SIZE = 32768
 
 # some of these flags works around for gdb 7.5.x stacktrace issue
