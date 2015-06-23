@@ -129,7 +129,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_setmode(struct v7 *v7, v7_val_t this_obj,
     return v7_create_undefined();
   }
 
-  return v7_create_boolean(wifi_set_opmode(v7_to_double(mode)));
+  return v7_create_boolean(wifi_set_opmode_current(v7_to_double(mode)));
 }
 
 ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
@@ -151,7 +151,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
    * in a mode that supports connecting to stations.
    */
   if (wifi_get_opmode() == 0x2) {
-    wifi_set_opmode(0x1);
+    wifi_set_opmode_current(0x1);
   }
   wifi_station_disconnect();
 
@@ -162,7 +162,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
   strncpy((char *) &stationConf.ssid, ssid, 32);
   strncpy((char *) &stationConf.password, pass, 64);
 
-  res = v7_create_boolean(wifi_station_set_config(&stationConf));
+  res = v7_create_boolean(wifi_station_set_config_current(&stationConf));
   if (!res) {
     printf("Failed to set station config\n");
     return v7_create_boolean(0);
