@@ -83,6 +83,7 @@ DHCP server for it.
 - `setTimeout(callback, num_milliseconds)` - execute a function after some time
 - `print(arg1, ...)` - stringify and print arguments to the command prompt
 - `GC.stat()` - show current memory usage
+- `Debug.setOutput(dev)` - set redirection for system and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
 
 Also, Smart.js has support for a flat filesystem. File API is described
 at [V7 API Reference](http://cesanta.com/docs/v7/#_builtin_api).

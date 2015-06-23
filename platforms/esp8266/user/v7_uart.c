@@ -36,6 +36,8 @@ uart_process_char_t uart_process_char;
 volatile uart_process_char_t uart_interrupt_cb = NULL;
 static os_event_t rx_task_queue[RXTASK_QUEUE_LEN];
 static char rx_buf[RX_BUFFER_SIZE];
+static unsigned s_system_uartno = UART_MAIN;
+static unsigned debug_enabled = 0;
 
 static void rx_isr(void *param) {
   /* TODO(alashkin): add errors checking */
@@ -116,13 +118,12 @@ ICACHE_FLASH_ATTR static void uart_tx_char(unsigned uartno, char ch) {
   WRITE_PERI_REG(UART_BUF(uartno), ch);
 }
 
-ICACHE_FLASH_ATTR int c_printf(const char *format, ...) {
+ICACHE_FLASH_ATTR
+static int c_uvprintf(int uart, const char *format, va_list args) {
   static char buf[512];
   int size, i;
-  va_list arglist;
-  va_start(arglist, format);
   /* TODO(mkm): add a callback to some c_xxxprintf */
-  size = c_vsnprintf(buf, sizeof(buf), format, arglist);
+  size = c_vsnprintf(buf, sizeof(buf), format, args);
   if (size <= 0) {
     return size;
   }
@@ -130,10 +131,35 @@ ICACHE_FLASH_ATTR int c_printf(const char *format, ...) {
     size = sizeof(buf) - 1;
   }
   for (i = 0; i < size; i++) {
-    if (buf[i] == '\n') uart_tx_char(UART_MAIN, '\r');
-    uart_tx_char(UART_MAIN, buf[i]);
+    if (buf[i] == '\n') uart_tx_char(uart, '\r');
+    uart_tx_char(uart, buf[i]);
   }
 
+  return size;
+}
+
+ICACHE_FLASH_ATTR int c_printf(const char *format, ...) {
+  int size;
+  va_list arglist;
+  va_start(arglist, format);
+  size = c_uvprintf(UART_MAIN, format, arglist);
+  va_end(arglist);
+  return size;
+}
+
+/* shim for fprintf. Handles only (pseudo) stderr */
+ICACHE_FLASH_ATTR int c_ufprintf(FILE *fp, const char *format, ...) {
+  int size = -1;
+  va_list arglist;
+  va_start(arglist, format);
+
+  if (fp == stderr) {
+    if (debug_enabled) {
+      size = c_uvprintf(s_system_uartno, format, arglist);
+    } else {
+      size = 0;
+    }
+  }
   va_end(arglist);
   return size;
 }
@@ -164,8 +190,6 @@ ICACHE_FLASH_ATTR void uart_main_init(int baud_rate) {
   ETS_UART_INTR_ENABLE();
 }
 
-static unsigned s_system_uartno = UART_MAIN;
-
 ICACHE_FLASH_ATTR static void uart_system_tx_char(char ch) {
   if (ch == '\n') {
     uart_tx_char(s_system_uartno, '\r');
@@ -178,16 +202,17 @@ ICACHE_FLASH_ATTR static void uart_system_tx_char(char ch) {
 ICACHE_FLASH_ATTR int uart_redirect_debug(int mode) {
   switch (mode) {
     case 0:
-      system_set_os_print(0);
+      debug_enabled = 0;
       break;
     case 1:
     case 2:
-      system_set_os_print(1);
+      debug_enabled = 1;
       s_system_uartno = mode - 1;
       break;
     default:
       return -1;
   }
+  system_set_os_print(debug_enabled);
 
   return 0;
 }

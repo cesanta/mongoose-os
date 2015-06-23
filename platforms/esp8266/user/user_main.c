@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "ets_sys.h"
 #include "osapi.h"
 #include "gpio.h"
@@ -27,6 +28,8 @@ ICACHE_FLASH_ATTR void start_cmd(int dummy) {
 #ifndef NO_EXEC_INITJS
   v7_run_startup();
 #endif
+  /* Example debug message, enable by calling Debug.setOutput(1) in init.js */
+  fprintf(stderr, "init.js called\n");
 
 #endif
 
