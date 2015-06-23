@@ -50,6 +50,21 @@ For example `cu` tool on Linux:
 
 ## I2C
 
+- `i2c.init(sda_pin_no,scl_pin_no)` - initialize i2c connection through given pin numbers, return I2C object for further communication
+- `I2C.start()` - send "start" signal to a slave
+- `I2C.stop()` - send "stop" signal to a slave
+- `I2C.sendAck()` - send "ack" to a slave
+- `I2C.sendNack()` - send "nack" to a slave
+- `I2C.getAck()` - read ack/nack from a slave, return 0 for "ack" and "1" for nack
+- `I2C.readByte()` - read one byte from a slave
+- `I2C.sendByte(byte)` - send given byte to a slave, return 0 if slave acked byte or 1 otherwise
+- `I2C.sendWord(word)` - send two bytes in network order, return 0 if slave acked both bytes or 1 otherwise
+- `I2C.sendString(string)` - send string to a slave, return 0 if slave acked all bytes or 1 otherwise
+- `I2C.readString(len)` - read `len` bytes to string, send ack for all bytes except last, which is nacked.
+- `I2C.close()` - close i2c connection and close connection
+
+See [temperature sensor driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MCP9808.js) and [eeprom driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MC24FC.js) for usage example.
+
 ## HTTP
 
 
