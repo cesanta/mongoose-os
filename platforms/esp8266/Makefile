@@ -152,9 +152,9 @@ $1/%.o: %.c
 	$(Q) $(CC) $(INCDIR) $(MODULE_INCDIR) $(EXTRA_INCDIR) $(SDK_INCDIR) $(CFLAGS) -c $$< -o $$@
 endef
 
-.PHONY: all checkdirs flash clean
+.PHONY: all checkdirs flash clean user/v7_version.c
 
-v7: user/v7.c user/v7.h
+v7: user/v7.c user/v7.h user/v7_version.c
 	@$(MAKE) all
 
 all: checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2) $(FW_FILE_FS)
@@ -195,12 +195,18 @@ flash_fs: $(FW_FILE_FS)
 	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FS_ADDR) $(FW_FILE_FS)
 
 clean:
-	$(Q) rm -rf $(FW_BASE) $(BUILD_BASE) $(MKSPIFFS) user/v7.c user/v7.h
+	$(Q) rm -rf $(FW_BASE) $(BUILD_BASE) $(MKSPIFFS) user/v7.c user/v7.h user/v7_version.c
 
 user/v7.c: $(V7_DIR)/v7.c
 	cp $(V7_DIR)/v7.c user/v7.c
 
 user/v7.h: $(V7_DIR)/v7.h
 	cp $(V7_DIR)/v7.h user/v7.h
+
+user/v7_version.c:
+	REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
+	SHA=$$(git rev-parse HEAD | head -c 8); \
+  DATE=$$(date +"%Y%M%d"); \
+  echo "const char *v7_version = \"$$REF/$$DATE/$$SHA\";" > user/v7_version.c
 
 $(foreach bdir,$(BUILD_DIR),$(eval $(call compile-objects,$(bdir))))
