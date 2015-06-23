@@ -94,7 +94,7 @@ SDK_LDDIR	= ld
 # we create two different files for uploading into the flash
 # these are the names and options to generate them
 FW_FILE_1_ADDR	= 0x00000
-FW_FILE_2_ADDR	= 0x30000
+FW_FILE_2_ADDR	= 0x28000
 
 # select which tools to use as compiler, librarian and linker
 CC:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
