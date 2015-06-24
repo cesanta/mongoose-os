@@ -48,8 +48,9 @@
  * error descriptions
  */
 char ICACHE_FLASH_ATTR* strerror(int errnum) {
-  static char buf[50];
+  static char buf[15];
   snprintf(buf, sizeof(buf), "err: %d", errnum);
+  buf[sizeof(buf) - 1] = 0;
   return buf;
 }
 

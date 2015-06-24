@@ -61,7 +61,7 @@ ICACHE_FLASH_ATTR static void interrupt_cb(char ch) {
 ICACHE_FLASH_ATTR void process_js(char *cmd) {
   uart_process_char_t old_int = uart_interrupt_cb;
   uart_interrupt_cb = interrupt_cb;
-  static char result_str[100];
+  static char result_str[10];
   v7_val_t v;
   int res = v7_exec(v7, &v, cmd);
 
