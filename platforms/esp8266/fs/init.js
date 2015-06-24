@@ -9,3 +9,14 @@ function testHttp(url) {
 
 /* uncomment this to try out the GDB server */
 /* crash(); */
+
+var conf = {};
+var cfile = File.open('config.json');
+if (cfile != null) {
+    conf = JSON.parse(cfile.readAll());
+    if (conf.wifi) {
+        Wifi.setup(conf.wifi.ssid, conf.wifi.pass);
+    }
+    cfile.close();
+}
+delete cfile;
