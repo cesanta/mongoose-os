@@ -1,29 +1,50 @@
-V7: Embedded JavaScript engine
-==============================
+# Smart.JS platform
 
-[![Circle CI](https://circleci.com/gh/cesanta/v7.svg?style=shield)](https://circleci.com/gh/cesanta/v7)
-[![License](https://img.shields.io/badge/license-GPL_2-green.svg)](https://github.com/cesanta/v7/blob/master/LICENSE)
+Smart.JS is a generic, hardware independent, full-stack
+Internet of Things software platform.
+Smart.JS solves problems of reliability, scalability, security
+and remote management which are common to all verticals, being it industrial
+automation, healthcare, automotive, home automation, or other.
 
-V7 is a JavaScript engine written in C.
-It makes it possible to program Internet of Things (IoT) devices
-in JavaScript. V7 features are:
+# Overview
 
-- Cross-platform: works on anything, starting from Arduino to MS Windows
-- Small size. Compiled core is in 40 KB - 200 KB range
-- Simple and intuitive C/C++ API. It is easy to export existing C/C++
-  functions into JavaScript environment
-- Standard: V7 aims to implement JavaScript 5.1 and pass standard ECMA tests
-- Performance: V7 aims to be the fastest non-JIT engine available
-- Usable out-of-the-box: V7 provides an auxiliary library with
-  Hardware (SPI, UART, etc), File, Crypto, Network API
-- Source code is both ISO C and ISO C++ compliant
-- Very easy to integrate: simply copy two files: [v7.h](v7.h)
-   and [v7.c](v7.c) into your project
+Technically, Smart.JS has a device part and a cloud part.
 
-## Examples & Documentation
+![](http://cesanta.com/images/smartjs_diagram.png)
 
-- [User Guide](http://cesanta.com/docs/v7) - Detailed User Guide and API reference
-- [examples](examples) - Collection of well-commented examples
+Smart.JS firmware on a device side:
+
+- allows scripting for fast and safe development & firmware update.
+  We do that by developing world's smallest JavaScript scripting engine.
+- provides hardware and networking API that guarantees reliability,
+  scalability and security out-of-the-box.
+- Devices with our software can be managed remotely and update software
+  remotely, in a fully automatic or semi-automatic way.
+
+Smart.JS software on a cloud side has three main components:
+
+- device management database that keeps information about all devices,
+  e.g. unique device ID, device address, software version, et cetera.
+- telemetry database with analytics. It can, for example, store information
+  from remote sensors, like electricity and water meters, and able to answer
+  questions like "show me a cumulative power consumption profile for plants
+  A and B from 3 AM to 5 AM last night."
+- remote software update manager. Schedules and drives software updates
+  in a reliable way. Understands policies like "start remote update with
+  device ID 1234 always. Check success in 5 minutes. If failed, roll back
+  to previous version and alert. If successful, proceed with 5 more random
+  devices of the same class. If successful, proceed with the rest of devices.
+  Never keep more than 5% of devices in flight. If more then 0.1% updates
+  fail, stop the update globally, do not roll back, and alert."
+
+
+# Supported device architectures
+
+- Texas Instruments CC3200
+- Espressif ESP8266
+
+For burning Smart.JS firmware to devices, we provide a `stool` utility.
+Click on [releases](releases) link to download it.
 
 # Contributions
 
@@ -33,9 +54,9 @@ can make contributions. Note that the CLA isn't a copyright
 _assigment_ but rather a copyright _license_.
 You retain the copyright on your contributions.
 
-## Licensing
+# Licensing
 
-V7 is released under commercial and
+Mongoose is released under commercial and
 [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open
 source licenses. The GPLv2 open source License does not generally permit
 incorporating this software into non-open source programs.
