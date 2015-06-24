@@ -6005,16 +6005,14 @@ ON_FLASH V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
 
 ON_FLASH V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos,
                                      double *val) {
-  STATIC char buf[512];
+  char tmp;
   char *str;
   size_t str_len;
   str = ast_get_inlined_data(a, pos, &str_len);
-  if (str_len >= sizeof(buf)) {
-    str_len = sizeof(buf) - 1;
-  }
-  memcpy(buf, str, str_len);
-  buf[str_len] = '\0';
-  *val = strtod(buf, NULL);
+  tmp = str[str_len];
+  str[str_len] = '\0';
+  *val = strtod(str, NULL);
+  str[str_len] = tmp;
 }
 
 #ifndef NO_LIBC
@@ -6115,7 +6113,11 @@ ON_FLASH V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
 }
 
 ON_FLASH V7_PRIVATE void ast_optimize(struct ast *ast) {
-  mbuf_trim(&ast->mbuf);
+  /*
+   * leave one trailing byte so that literals can be
+   * null terminated on the fly.
+   */
+  mbuf_resize(&ast->mbuf, ast->mbuf.len + 1);
 }
 
 ON_FLASH V7_PRIVATE void ast_free(struct ast *ast) {
@@ -6710,7 +6712,8 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
 ON_FLASH char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   int len = to_str(v7, v, buf, size, 1);
 
-  if (len > (int) size) {
+  /* fit null terminating byte */
+  if (len >= (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
     char *p = (char *) malloc(len + 1);
     to_str(v7, v, p, len + 1, 1);
@@ -6834,18 +6837,23 @@ v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
+ON_FLASH
+V7_PRIVATE v7_val_t v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
+  val_t res;
   const char *s;
   size_t name_len;
+  STATIC char buf[8];
+  int fr = 0;
   if (v7_is_string(name)) {
     s = v7_to_string(v7, &name, &name_len);
   } else {
-    STATIC char buf[512];
-    name_len = v7_stringify_value(v7, name, buf, sizeof(buf));
-    s = buf;
+    s = v7_to_json(v7, name, buf, sizeof(buf));
+    name_len = strlen(s);
+    fr = (s != buf);
   }
-  return v7_get(v7, obj, s, name_len);
+  res = v7_get(v7, obj, s, name_len);
+  if (fr) free((void *) s);
+  return res;
 }
 
 ON_FLASH V7_PRIVATE void v7_destroy_property(struct v7_property **p) {

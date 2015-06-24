@@ -46,7 +46,8 @@ For example `cu` tool on Linux:
 
 ## GPIO
 
-- `GPIO.out(pin_num, 0_or_1)` - set a given pin to 0 or 1
+- `GPIO.read(pin_num)` - return GPIO pin status, `true` or `false`
+- `GPIO.write(pin_num, true_or_false)` - set a given pin to `true` or `false`
 
 ## I2C
 
