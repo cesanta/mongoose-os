@@ -122,8 +122,8 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_disconnect(struct v7 *v7,
  *
  * Valid modes are Wifi.STATION, Wifi.SOFTAP or Wifi.STATIONAP
  */
-ICACHE_FLASH_ATTR static v7_val_t Wifi_setmode(struct v7 *v7, v7_val_t this_obj,
-                                               v7_val_t args) {
+ICACHE_FLASH_ATTR static v7_val_t Wifi_mode(struct v7 *v7, v7_val_t this_obj,
+                                            v7_val_t args) {
   v7_val_t mode = v7_array_get(v7, args, 0);
   if (!v7_is_double(mode)) {
     printf("bad mode\n");
@@ -285,9 +285,8 @@ static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * 1 - print debug output to UART0 (V7's console)
  * 2 - print debug output to UART1
  */
-ICACHE_FLASH_ATTR static v7_val_t Debug_set_output(struct v7 *v7,
-                                                   v7_val_t this_obj,
-                                                   v7_val_t args) {
+ICACHE_FLASH_ATTR static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj,
+                                             v7_val_t args) {
   int mode, res;
   v7_val_t output_val = v7_array_get(v7, args, 0);
 
@@ -400,15 +399,12 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
 
   wifi = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Wifi", 4, 0, wifi);
-  v7_set_method(v7, wifi, "setmode", Wifi_setmode);
+  v7_set_method(v7, wifi, "mode", Wifi_mode);
   v7_set_method(v7, wifi, "setup", Wifi_setup);
   v7_set_method(v7, wifi, "disconnect", Wifi_disconnect);
   v7_set_method(v7, wifi, "connect", Wifi_connect);
   v7_set_method(v7, wifi, "status", Wifi_status);
   v7_set_method(v7, wifi, "ip", Wifi_ip);
-  v7_set(v7, wifi, "STATION", 7, 0, v7_create_number(1));
-  v7_set(v7, wifi, "SOFTAP", 6, 0, v7_create_number(2));
-  v7_set(v7, wifi, "STATIONAP", 9, 0, v7_create_number(3));
 
 #if V7_ESP_ENABLE__DHT11
   dht11 = v7_create_object(v7);
@@ -423,7 +419,7 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
 
   debug = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Debug", 5, 0, debug);
-  v7_set_method(v7, debug, "setOutput", Debug_set_output);
+  v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);
 
   v7_init_http_client(v7);

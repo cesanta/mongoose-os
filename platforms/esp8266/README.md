@@ -46,12 +46,14 @@ For example `cu` tool on Linux:
 
 ## GPIO
 
-- `GPIO.read(pin_num)` - return GPIO pin status, `true` or `false`
-- `GPIO.write(pin_num, true_or_false)` - set a given pin to `true` or `false`
+- `GPIO.read(pin_num) -> true or false` return GPIO pin status
+- `GPIO.write(pin_num, true_or_false) -> undefined` set a given pin
+  to `true` or `false`
 
 ## I2C
 
-- `i2c.init(sda_pin_no,scl_pin_no)` - initialize i2c connection through given pin numbers, return I2C object for further communication
+- `i2c.init(sda_pin_no,scl_pin_no)` - initialize i2c connection
+  through given pin numbers, return I2C object for further communication
 - `I2C.start()` - send "start" signal to a slave
 - `I2C.stop()` - send "stop" signal to a slave
 - `I2C.sendAck()` - send "ack" to a slave
@@ -74,17 +76,29 @@ See [temperature sensor driver](https://github.com/cesanta/smart.js/blob/master/
 By default, Wifi module enables access point mode, and acts as a
 DHCP server for it.
 
-- `Wifi.setup("yourssid", "youpassword")` - connect ot the local Wifi network
-- `Wifi.status()` - check current Wifi status
-- `Wifi.ip()` - see assigned IP address. `Wifi.ip(1)` shows the IP of
-    the access point interface.
+- `Wifi.setup("yourssid", "youpassword") -> true or false` - connect
+  to the local Wifi network
+- `Wifi.status() -> status_string` - check current Wifi status
+- `Wifi.ip() -> ip_address_string` - get assigned IP address.
+  `Wifi.ip(1)` returns IP address of the access point interface.
+- `Wifi.mode(mode) -> true or false` - set Wifi mode. `mode` is a number,
+  1 is station, 2 is soft-AP, 3 is station + soft-AP
 
 ## Built-in functions
 
-- `setTimeout(callback, num_milliseconds)` - execute a function after some time
-- `print(arg1, ...)` - stringify and print arguments to the command prompt
-- `GC.stat()` - show current memory usage
-- `Debug.setOutput(dev)` - set redirection for system and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
+- `usleep(num_microseconds) -> undefined` - sleep for `num_microseconds`
+- `dsleep(num_microseconds [, dsleep_option]) -> undefined` - deep sleep for
+  `num_microseconds`. If `dsleep_option` is specified, ESP's
+  `system_deep_sleep_set_option(dsleep_option)` is called prior to going to
+  sleep. The most useful seems to be 4 (keep RF off on wake up,
+  reduces power consumption).
+- `setTimeout(callback, num_milliseconds) -> undefined` - schedule
+  function call after `num_milliseconds`.
+- `print(arg1, ...) -> undefined` - stringify and print
+  arguments to the command prompt
+- `GC.stat() -> stats_object` - return current memory usage
+- `Debug.mode(mode) -> status_number` - set redirection for system
+  and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
 
 Also, Smart.js has support for a flat filesystem. File API is described
 at [V7 API Reference](http://cesanta.com/docs/v7/#_builtin_api).
