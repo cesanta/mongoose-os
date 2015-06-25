@@ -209,22 +209,26 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj,
 /*
  * Returns the IP address of an interface.
  *
- * Pass either Wifi.STATION or Wifi.SOFTAP
- * When called without an argument, it defaults to Wifi.SOFTAP
- * if that's it's current mode and Wifi.STATION otherwise.
+ * Optionally pass the interface number:
+ *
+ *  0: station interface
+ *  1: access point interface
+ *
+ * The default value depends on the current wifi mode:
+ * if in station mode or station+soft-AP mode: 0
+ * if in soft-AP mode: 1
  */
 ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
                                           v7_val_t args) {
   v7_val_t arg = v7_array_get(v7, args, 0);
-  int err;
+  int err, def = wifi_get_opmode() == 2 ? 1 : 0;
   struct ip_info info;
   char ip[17];
 
   (void) this_obj;
   (void) args;
 
-  err = wifi_get_ip_info(
-      (v7_is_double(arg) ? v7_to_double(arg) : wifi_get_opmode()) - 1, &info);
+  err = wifi_get_ip_info((v7_is_double(arg) ? v7_to_double(arg) : def), &info);
   if (err == 0) {
     v7_throw(v7, "cannot get ip info");
   }
