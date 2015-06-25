@@ -120,7 +120,10 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_disconnect(struct v7 *v7,
 /*
  * Set the wifi mode.
  *
- * Valid modes are Wifi.STATION, Wifi.SOFTAP or Wifi.STATIONAP
+ * Valid modes are:
+ *    1: station mode
+ *    2: soft-AP mode
+ *    3: station+soft-AP
  */
 ICACHE_FLASH_ATTR static v7_val_t Wifi_mode(struct v7 *v7, v7_val_t this_obj,
                                             v7_val_t args) {
