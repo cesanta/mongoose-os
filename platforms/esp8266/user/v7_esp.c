@@ -36,8 +36,12 @@ ICACHE_FLASH_ATTR static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj,
 
 ICACHE_FLASH_ATTR static void js_timeout() {
   v7_val_t cb = v7_get(v7, v7_get_global_object(v7), "_js_timeout_handler", 19);
-  v7_val_t undef = v7_create_undefined();
-  v7_apply(v7, cb, undef, undef);
+  v7_val_t res;
+  if (v7_exec_with(v7, &res, "this()", cb) != V7_OK) {
+    char *s = v7_to_json(v7, res, NULL, 0);
+    fprintf(stderr, "exc calling cb: %s\n", s);
+    free(s);
+  }
 }
 
 /* Currently can only handle one timer */
@@ -383,9 +387,9 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t wifi, gpio, dht11, gc, debug;
 
-  opts.object_arena_size = 120;
-  opts.function_arena_size = 25;
-  opts.property_arena_size = 350;
+  opts.object_arena_size = 140;
+  opts.function_arena_size = 26;
+  opts.property_arena_size = 380;
   opts.c_stack_base = stack_base;
 
   v7 = v7_create_opt(opts);

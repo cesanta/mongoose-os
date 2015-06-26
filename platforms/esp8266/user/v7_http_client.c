@@ -26,6 +26,7 @@
 struct http_ctx {
   esp_tcp tcp;
   v7_val_t cb;
+  const char *method;
   char host[256];
   int port;
   char path[256];
@@ -64,8 +65,21 @@ ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
 
-  snprintf(buf, sizeof(buf), "GET %s HTTP/1.1\r\nhost: %s:%d\r\n\r\n",
-           ctx->path, ctx->host, ctx->port);
+  if (strcmp(ctx->method, "GET") == 0) {
+    snprintf(buf, sizeof(buf), "GET %s HTTP/1.0\r\n\r\n", ctx->path);
+  } else {
+    v7_val_t bodyv = v7_get(v7, v7_get_global_object(v7), "_tmp_b", 6);
+    if (v7_is_string(bodyv)) {
+      size_t len;
+      const char *body = v7_to_string(v7, &bodyv, &len);
+      snprintf(buf, sizeof(buf),
+               "POST %s HTTP/1.0\r\ncontent-length: %d\r\n\r\n%s", ctx->path,
+               (int) len, body);
+      v7_set(v7, v7_get_global_object(v7), "_tmp_b", 6, 0, v7_create_undefined);
+    } else {
+      fprintf(stderr, "body not a string\n");
+    }
+  }
 
   espconn_regist_recvcb(conn, http_recv_cb);
   espconn_regist_sentcb(conn, http_sent_cb);
@@ -80,6 +94,7 @@ ICACHE_FLASH_ATTR static void http_disconnect_cb(void *arg) {
   v7_val_t data, cb_args;
   char *body;
   int i;
+  v7_val_t res;
 
   body = ctx->resp;
   for (i = 0; i + 3 < ctx->resp_pos; i++) {
@@ -94,8 +109,14 @@ ICACHE_FLASH_ATTR static void http_disconnect_cb(void *arg) {
 
   data = v7_create_string(v7, body, ctx->resp_pos - (body - ctx->resp), 1);
   http_free(conn);
-  v7_array_set(v7, cb_args, 0, data);
-  v7_apply(v7, ctx->cb, v7_create_undefined(), cb_args);
+
+  v7_array_set(v7, cb_args, 0, ctx->cb);
+  v7_array_set(v7, cb_args, 1, data);
+  if (v7_exec_with(v7, &res, "this[0](this[1])", cb_args) != V7_OK) {
+    char *s = v7_to_json(v7, res, NULL, 0);
+    fprintf(stderr, "exc calling cb: %s\n", s);
+    free(s);
+  }
 }
 
 /* Invoke user callback as cb(undefined, err_msg) */
@@ -145,17 +166,14 @@ ICACHE_FLASH_ATTR static void http_get_dns_cb(const char *name,
   }
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Http_get(struct v7 *v7, v7_val_t this_obj,
-                                           v7_val_t args) {
-  v7_val_t urlv = v7_array_get(v7, args, 0);
-  v7_val_t cb = v7_array_get(v7, args, 1);
+ICACHE_FLASH_ATTR static v7_val_t Http_call(struct v7 *v7, v7_val_t urlv,
+                                            v7_val_t body, v7_val_t cb,
+                                            const char *method) {
   const char *url, *sep;
   char *psep;
   size_t url_len;
   struct espconn *client;
   struct http_ctx *ctx;
-
-  (void) this_obj;
 
   if (!v7_is_string(urlv)) {
     v7_throw(v7, "url is not a string");
@@ -201,15 +219,38 @@ ICACHE_FLASH_ATTR static v7_val_t Http_get(struct v7 *v7, v7_val_t this_obj,
     ctx->port = atoi(psep);
   }
 
+  ctx->method = method;
   ctx->cb = cb;
   /*
    * TODO(mkm): implement handles, we need a better way to prevent
    * values being held by C being GCed.
    */
   v7_set(v7, v7_get_global_object(v7), "_tmp_d", 6, 0, cb);
+  /*
+   * body is a string and thus can be relocated by compacting GC
+   * It has either to stay in the tmpstack or in a property.
+   * TODO(mkm): make this hack at least reentrant ASAP.
+   */
+  v7_set(v7, v7_get_global_object(v7), "_tmp_b", 6, 0, body);
   espconn_gethostbyname(client, ctx->host, &probably_dns_ip, http_get_dns_cb);
 
   return v7_create_undefined();
+}
+
+ICACHE_FLASH_ATTR static v7_val_t Http_get(struct v7 *v7, v7_val_t this_obj,
+                                           v7_val_t args) {
+  v7_val_t urlv = v7_array_get(v7, args, 0);
+  v7_val_t cb = v7_array_get(v7, args, 1);
+  return Http_call(v7, urlv, v7_create_undefined(), cb, "GET");
+}
+
+ICACHE_FLASH_ATTR static v7_val_t Http_post(struct v7 *v7, v7_val_t this_obj,
+                                            v7_val_t args) {
+  v7_val_t urlv = v7_array_get(v7, args, 0);
+  v7_val_t body = v7_array_get(v7, args, 1);
+  v7_val_t cb = v7_array_get(v7, args, 2);
+  (void) this_obj;
+  return Http_call(v7, urlv, body, cb, "POST");
 }
 
 ICACHE_FLASH_ATTR void v7_init_http_client(struct v7 *v7) {
@@ -218,4 +259,5 @@ ICACHE_FLASH_ATTR void v7_init_http_client(struct v7 *v7) {
   http = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Http", 4, 0, http);
   v7_set_method(v7, http, "get", Http_get);
+  v7_set_method(v7, http, "post", Http_post);
 }
