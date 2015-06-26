@@ -299,6 +299,26 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
 
+enum v7_heap_stat_what {
+  V7_HEAP_STAT_HEAP_SIZE,
+  V7_HEAP_STAT_HEAP_USED,
+  V7_HEAP_STAT_STRING_HEAP_SIZE,
+  V7_HEAP_STAT_OBJ_HEAP_MAX,
+  V7_HEAP_STAT_OBJ_HEAP_FREE,
+  V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_FUNC_HEAP_MAX,
+  V7_HEAP_STAT_FUNC_HEAP_FREE,
+  V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_PROP_HEAP_MAX,
+  V7_HEAP_STAT_PROP_HEAP_FREE,
+  V7_HEAP_STAT_PROP_HEAP_CELL_SIZE
+};
+
+#if V7_ENABLE__Memory__stats
+/* Returns a given heap statistics */
+int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
+#endif
+
 /*
  * Set an optional C stack limit.
  *

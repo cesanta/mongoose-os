@@ -299,6 +299,26 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
 
+enum v7_heap_stat_what {
+  V7_HEAP_STAT_HEAP_SIZE,
+  V7_HEAP_STAT_HEAP_USED,
+  V7_HEAP_STAT_STRING_HEAP_SIZE,
+  V7_HEAP_STAT_OBJ_HEAP_MAX,
+  V7_HEAP_STAT_OBJ_HEAP_FREE,
+  V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_FUNC_HEAP_MAX,
+  V7_HEAP_STAT_FUNC_HEAP_FREE,
+  V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_PROP_HEAP_MAX,
+  V7_HEAP_STAT_PROP_HEAP_FREE,
+  V7_HEAP_STAT_PROP_HEAP_CELL_SIZE
+};
+
+#if V7_ENABLE__Memory__stats
+/* Returns a given heap statistics */
+int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
+#endif
+
 /*
  * Set an optional C stack limit.
  *
@@ -1805,9 +1825,9 @@ typedef uint64_t val_t;
 
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
-  val_t name;               /* Property name (a string) */
-  val_t value;              /* Property value */
   unsigned int attributes;
+  val_t name;  /* Property name (a string) */
+  val_t value; /* Property value */
 };
 
 /*
@@ -7781,10 +7801,15 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
       fprintf(stderr, "TODO arena grow\n");
       abort();
 #else
-      printf("TODO arena grow (arena %p)\n", a);
-      printf("v7->object arena: %p\n", &v7->object_arena);
-      printf("v7->property arena: %p\n", &v7->property_arena);
-      printf("v7->function arena: %p\n", &v7->function_arena);
+      printf("%s arena exhausted\n",
+             a == &v7->object_arena
+                 ? "object"
+                 : (a == &v7->property_arena ? "property" : "function"));
+
+      printf("objnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE));
+      printf("propnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE));
+      printf("funcnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE));
+
       *(int *) 1 = 1;
 #endif
 #else
@@ -7875,6 +7900,41 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   /* function scope pointer is aliased to the object's prototype pointer */
   gc_mark(v7, v7_object_to_value(obj->prototype));
 }
+
+#if V7_ENABLE__Memory__stats
+ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
+  switch (what) {
+    case V7_HEAP_STAT_HEAP_SIZE:
+      return v7->object_arena.size * v7->object_arena.cell_size +
+             v7->function_arena.size * v7->function_arena.cell_size +
+             v7->property_arena.size * v7->property_arena.cell_size;
+    case V7_HEAP_STAT_HEAP_USED:
+      return v7->object_arena.alive * v7->object_arena.cell_size +
+             v7->function_arena.alive * v7->function_arena.cell_size +
+             v7->property_arena.alive * v7->property_arena.cell_size;
+    case V7_HEAP_STAT_STRING_HEAP_SIZE:
+      return v7->owned_strings.size;
+    case V7_HEAP_STAT_OBJ_HEAP_MAX:
+      return v7->object_arena.size;
+    case V7_HEAP_STAT_OBJ_HEAP_FREE:
+      return v7->object_arena.size - v7->object_arena.alive;
+    case V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE:
+      return v7->object_arena.cell_size;
+    case V7_HEAP_STAT_FUNC_HEAP_MAX:
+      return v7->function_arena.size;
+    case V7_HEAP_STAT_FUNC_HEAP_FREE:
+      return v7->function_arena.size - v7->function_arena.alive;
+    case V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE:
+      return v7->function_arena.cell_size;
+    case V7_HEAP_STAT_PROP_HEAP_MAX:
+      return v7->property_arena.size;
+    case V7_HEAP_STAT_PROP_HEAP_FREE:
+      return v7->property_arena.size - v7->property_arena.alive;
+    case V7_HEAP_STAT_PROP_HEAP_CELL_SIZE:
+      return v7->property_arena.cell_size;
+  }
+}
+#endif
 
 ON_FLASH static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   (void) msg;
