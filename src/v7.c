@@ -6309,7 +6309,7 @@ ON_FLASH v7_cfunction_t v7_to_cfunction(val_t v) {
   /* Implementation is identical to v7_to_pointer but is separate since
    * object pointers are not directly convertible to function pointers
    * according to ISO C and generates a warning in -Wpedantic mode. */
-  return (v7_cfunction_t)(v & 0xFFFFFFFFFFFFUL);
+  return (v7_cfunction_t)(uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
 ON_FLASH val_t v7_object_to_value(struct v7_object *o) {
@@ -7952,7 +7952,7 @@ ON_FLASH static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 #ifdef V7_ENABLE_COMPACTING_GC
 
 ON_FLASH uint64_t gc_string_val_to_offset(val_t v) {
-  return ((uint64_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
+  return ((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
 }
 
 ON_FLASH val_t gc_string_val_from_offset(uint64_t s) {
@@ -7999,7 +7999,7 @@ ON_FLASH void gc_mark_string(struct v7 *v7, val_t *v) {
     tmp |= V7_TAG_FOREIGN;
   }
 
-  h = (val_t) v;
+  h = (val_t)(uintptr_t) v;
   s[-1] = 1;
   memcpy(s, &h, sizeof(h) - 2);
   memcpy(v, &tmp, sizeof(tmp));
@@ -8023,9 +8023,9 @@ ON_FLASH void gc_compact_strings(struct v7 *v7) {
        */
       for (; (h & V7_TAG_MASK) != V7_TAG_STRING_C; h = next) {
         h &= ~V7_TAG_MASK;
-        memcpy(&next, (char *) h, sizeof(h));
+        memcpy(&next, (char *) (uintptr_t) h, sizeof(h));
 
-        *(val_t *) h = gc_string_val_from_offset(head);
+        *(val_t *) (uintptr_t) h = gc_string_val_from_offset(head);
       }
       h &= ~V7_TAG_MASK;
 

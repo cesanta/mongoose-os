@@ -205,7 +205,7 @@ user/v7.h: $(V7_DIR)/v7.h
 	cp $(V7_DIR)/v7.h user/v7.h
 
 user/v7_version.c:
-	REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
+	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
 	SHA=$$(git rev-parse HEAD | head -c 8); \
   DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
   echo "const char *v7_version = \"$$REF/$$DATE/$$SHA\";" > user/v7_version.c
