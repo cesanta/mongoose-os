@@ -318,7 +318,8 @@ enum v7_heap_stat_what {
   V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE,
   V7_HEAP_STAT_PROP_HEAP_MAX,
   V7_HEAP_STAT_PROP_HEAP_FREE,
-  V7_HEAP_STAT_PROP_HEAP_CELL_SIZE
+  V7_HEAP_STAT_PROP_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_FUNC_AST_SIZE
 };
 
 #if V7_ENABLE__Memory__stats
@@ -1670,6 +1671,9 @@ struct v7 {
   struct gc_arena object_arena;
   struct gc_arena function_arena;
   struct gc_arena property_arena;
+#if V7_ENABLE__Memory__stats
+  size_t function_arena_ast_size;
+#endif
 
   int strict_mode; /* true if currently in strict mode */
 
@@ -2016,6 +2020,8 @@ V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value);
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
 V7_PRIVATE val_t n_to_str(struct v7 *, val_t, val_t, const char *);
+
+V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
 #if defined(__cplusplus)
 }
@@ -7580,16 +7586,24 @@ ON_FLASH static void object_destructor(struct v7 *v7, void *ptr) {
   }
 }
 
+ON_FLASH V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
+  if (a->refcnt != 0) a->refcnt--;
+
+  if (a->refcnt == 0) {
+#if V7_ENABLE__Memory__stats
+    v7->function_arena_ast_size -= a->mbuf.size;
+#endif
+    ast_free(a);
+    free(a);
+  }
+}
+
 ON_FLASH static void function_destructor(struct v7 *v7, void *ptr) {
   struct v7_function *f = (struct v7_function *) ptr;
   (void) v7;
   if (f == NULL || f->ast == NULL) return;
 
-  if (f->ast->refcnt != 0) f->ast->refcnt--;
-  if (f->ast->refcnt == 0) {
-    ast_free(f->ast);
-    free(f->ast);
-  }
+  release_ast(v7, f->ast);
 }
 
 ON_FLASH struct v7 *v7_create(void) {
@@ -7945,6 +7959,8 @@ ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
       return v7->property_arena.size - v7->property_arena.alive;
     case V7_HEAP_STAT_PROP_HEAP_CELL_SIZE:
       return v7->property_arena.cell_size;
+    case V7_HEAP_STAT_FUNC_AST_SIZE:
+      return v7->function_arena_ast_size;
   }
 }
 #endif
@@ -10771,16 +10787,15 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
     goto cleanup;
   }
   ast_optimize(a);
+#if V7_ENABLE__Memory__stats
+  v7->function_arena_ast_size += a->mbuf.size;
+#endif
 
   v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
   r = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
-  if (a->refcnt != 0) a->refcnt--;
-  if (a->refcnt == 0) {
-    ast_free(a);
-    free(a);
-  }
+  release_ast(v7, a);
 
   if (res != NULL) {
     *res = r;
