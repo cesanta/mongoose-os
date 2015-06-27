@@ -86,7 +86,7 @@ ICACHE_FLASH_ATTR void process_js(char *cmd) {
     }
   }
 
-  v7_gc(v7);
+  v7_gc(v7, 0);
   uart_interrupt_cb = old_int;
 }
 

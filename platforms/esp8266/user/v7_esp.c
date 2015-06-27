@@ -246,29 +246,34 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
  * sysfree: free system heap bytes
  * jssize: size of JS heap in bytes
  * jsfree: free JS heap bytes
- * strsize: size of string heap in bytes
+ * strres: size of reserved string heap in bytes
+ * struse: portion of string heap with used data
  * objnfree: number of free object slots in js heap
  * propnfree: number of free property slots in js heap
  * funcnfree: number of free function slots in js heap
  */
 ICACHE_FLASH_ATTR static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj,
                                           v7_val_t args) {
-  int js_size = v7_heap_stat(v7, V7_HEAP_STAT_HEAP_SIZE);
+  /* take a snapshot of the stats that would change as we populate the result */
+  int sysfree = system_get_free_heap_size();
+  int jssize = v7_heap_stat(v7, V7_HEAP_STAT_HEAP_SIZE);
+  int jsfree = jssize - v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED);
+  int strres = v7_heap_stat(v7, V7_HEAP_STAT_STRING_HEAP_RESERVED);
+  int struse = v7_heap_stat(v7, V7_HEAP_STAT_STRING_HEAP_USED);
+  int objfree = v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE);
+  int propnfree = v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE);
   v7_val_t f = v7_create_object(v7);
   /* prevent the object from being potentially GCed */
   v7_set(v7, args, "_tmp", 4, 0, f);
-  v7_set(v7, f, "sysfree", 7, 0, v7_create_number(system_get_free_heap_size()));
-  v7_set(v7, f, "jssize", 7, 0, v7_create_number(js_size));
-  v7_set(v7, f, "jsfree", 7, 0,
-         v7_create_number(js_size - v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
-  v7_set(v7, f, "strsize", 7, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_STRING_HEAP_SIZE)));
-  v7_set(v7, f, "objnfree", 8, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE)));
+  v7_set(v7, f, "sysfree", 7, 0, v7_create_number(sysfree));
+  v7_set(v7, f, "jssize", 7, 0, v7_create_number(jssize));
+  v7_set(v7, f, "jsfree", 7, 0, v7_create_number(jsfree));
+  v7_set(v7, f, "strres", 7, 0, v7_create_number(strres));
+  v7_set(v7, f, "struse", 7, 0, v7_create_number(struse));
+  v7_set(v7, f, "objfree", 8, 0, v7_create_number(objfree));
   v7_set(v7, f, "objncell", 8, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE)));
-  v7_set(v7, f, "propnfree", 9, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE)));
+  v7_set(v7, f, "propnfree", 9, 0, v7_create_number(propnfree));
   v7_set(v7, f, "propncell", 9, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_CELL_SIZE)));
   v7_set(v7, f, "funcnfree", 9, 0,
@@ -287,7 +292,7 @@ ICACHE_FLASH_ATTR static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj,
   (void) this_obj;
   (void) args;
 
-  v7_gc(v7);
+  v7_gc(v7, 1);
   return v7_create_undefined();
 }
 

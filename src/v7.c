@@ -115,8 +115,11 @@ enum v7_err v7_exec_with(struct v7 *, v7_val_t *result, const char *js_code,
  */
 void v7_compile(const char *js_code, int generate_binary_output, FILE *fp);
 
-/* Call garbage collector */
-void v7_gc(struct v7 *);
+/*
+ * Perform garbage collection.
+ * Pass true to full in order to reclaim unused heap back to the OS.
+ */
+void v7_gc(struct v7 *, int full);
 
 /* Create an empty object */
 v7_val_t v7_create_object(struct v7 *v7);
@@ -193,6 +196,9 @@ int v7_is_cfunction(v7_val_t);
 
 /* Return true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t);
+
+/* Return true if given value is an array object */
+int v7_is_array(struct v7 *, v7_val_t);
 
 /* Return `void *` pointer stored in `v7_val_t` */
 void *v7_to_foreign(v7_val_t);
@@ -302,7 +308,8 @@ const char *v7_get_parser_error(struct v7 *v7);
 enum v7_heap_stat_what {
   V7_HEAP_STAT_HEAP_SIZE,
   V7_HEAP_STAT_HEAP_USED,
-  V7_HEAP_STAT_STRING_HEAP_SIZE,
+  V7_HEAP_STAT_STRING_HEAP_RESERVED,
+  V7_HEAP_STAT_STRING_HEAP_USED,
   V7_HEAP_STAT_OBJ_HEAP_MAX,
   V7_HEAP_STAT_OBJ_HEAP_FREE,
   V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE,
@@ -6272,6 +6279,10 @@ ON_FLASH int v7_is_foreign(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FOREIGN;
 }
 
+ON_FLASH int v7_is_array(struct v7 *v7, val_t v) {
+  return v7_is_object(v) && is_prototype_of(v7, v, v7->array_prototype);
+}
+
 ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
   assert(v7_is_regexp(v7, v));
@@ -7794,7 +7805,7 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #if 0
     fprintf(stderr, "Exhausting arena %s, invoking GC.\n", a->name);
 #endif
-    v7_gc(v7);
+    v7_gc(v7, 0);
     if (a->free == NULL) {
 #if 1
 #ifndef NO_LIBC
@@ -7912,8 +7923,10 @@ ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
       return v7->object_arena.alive * v7->object_arena.cell_size +
              v7->function_arena.alive * v7->function_arena.cell_size +
              v7->property_arena.alive * v7->property_arena.cell_size;
-    case V7_HEAP_STAT_STRING_HEAP_SIZE:
+    case V7_HEAP_STAT_STRING_HEAP_RESERVED:
       return v7->owned_strings.size;
+    case V7_HEAP_STAT_STRING_HEAP_USED:
+      return v7->owned_strings.len;
     case V7_HEAP_STAT_OBJ_HEAP_MAX:
       return v7->object_arena.size;
     case V7_HEAP_STAT_OBJ_HEAP_FREE:
@@ -8090,7 +8103,7 @@ ON_FLASH void gc_dump_owned_strings(struct v7 *v7) {
 
 #ifndef V7_DISABLE_GC
 /* Perform garbage collection */
-ON_FLASH void v7_gc(struct v7 *v7) {
+ON_FLASH void v7_gc(struct v7 *v7, int full) {
   val_t **vp;
 
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
@@ -8128,6 +8141,10 @@ ON_FLASH void v7_gc(struct v7 *v7) {
   gc_dump_arena_stats("After GC objects", &v7->object_arena);
   gc_dump_arena_stats("After GC functions", &v7->function_arena);
   gc_dump_arena_stats("After GC properties", &v7->property_arena);
+
+  if (full) {
+    mbuf_trim(&v7->owned_strings);
+  }
 }
 #endif
 /*
@@ -10215,7 +10232,7 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
 #ifdef V7_ENABLE_GC
   if (v7->need_gc) {
-    v7_gc(v7);
+    v7_gc(v7, 0);
     v7->need_gc = 0;
   }
 #endif
@@ -13546,6 +13563,7 @@ ON_FLASH V7_PRIVATE void init_json(struct v7 *v7) {
  */
 
 
+
 struct a_sort_data {
   struct v7 *v7;
   val_t sort_func;
@@ -13984,10 +14002,37 @@ ON_FLASH static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+ON_FLASH static val_t Array_concat(struct v7 *v7, val_t this_obj, val_t args) {
+  size_t i, j;
+  val_t res;
+  size_t len;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+  tmp_stack_push(&tf, &res);
+
+  if (!v7_is_array(v7, this_obj)) {
+    throw_exception(v7, TYPE_ERROR, "Array expected");
+  }
+
+  len = v7_array_length(v7, args);
+  res = a_splice(v7, this_obj, v7_create_undefined(), 1);
+  for (i = 0; i < len; i++) {
+    val_t a = v7_array_get(v7, args, i);
+    if (!v7_is_array(v7, a)) {
+      v7_array_push(v7, res, a);
+    } else {
+      size_t alen = v7_array_length(v7, a);
+      for (j = 0; j < alen; j++) {
+        v7_array_push(v7, res, v7_array_get(v7, a, j));
+      }
+    }
+  }
+  return res;
+}
+
 ON_FLASH static val_t Array_isArray(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
-  return v7_create_boolean(is_prototype_of(v7, arg0, v7->array_prototype));
+  return v7_create_boolean(v7_is_array(v7, arg0));
 }
 
 ON_FLASH V7_PRIVATE void init_array(struct v7 *v7) {
@@ -13998,17 +14043,18 @@ ON_FLASH V7_PRIVATE void init_array(struct v7 *v7) {
   set_method(v7, ctor, "isArray", Array_isArray, 1);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
 
-  set_method(v7, v7->array_prototype, "push", Array_push, 1);
-  set_method(v7, v7->array_prototype, "sort", Array_sort, 1);
-  set_method(v7, v7->array_prototype, "reverse", Array_reverse, 0);
-  set_method(v7, v7->array_prototype, "join", Array_join, 1);
-  set_method(v7, v7->array_prototype, "toString", Array_toString, 0);
-  set_method(v7, v7->array_prototype, "slice", Array_slice, 2);
-  set_method(v7, v7->array_prototype, "splice", Array_splice, 2);
-  set_method(v7, v7->array_prototype, "map", Array_map, 1);
+  set_method(v7, v7->array_prototype, "concat", Array_concat, 1);
   set_method(v7, v7->array_prototype, "every", Array_every, 1);
-  set_method(v7, v7->array_prototype, "some", Array_some, 1);
   set_method(v7, v7->array_prototype, "filter", Array_filter, 1);
+  set_method(v7, v7->array_prototype, "join", Array_join, 1);
+  set_method(v7, v7->array_prototype, "map", Array_map, 1);
+  set_method(v7, v7->array_prototype, "push", Array_push, 1);
+  set_method(v7, v7->array_prototype, "reverse", Array_reverse, 0);
+  set_method(v7, v7->array_prototype, "slice", Array_slice, 2);
+  set_method(v7, v7->array_prototype, "some", Array_some, 1);
+  set_method(v7, v7->array_prototype, "sort", Array_sort, 1);
+  set_method(v7, v7->array_prototype, "splice", Array_splice, 2);
+  set_method(v7, v7->array_prototype, "toString", Array_toString, 0);
 
   v7_array_set(v7, length, 0, v7_create_cfunction(Array_get_length));
   v7_array_set(v7, length, 1, v7_create_cfunction(Array_set_length));
@@ -16402,7 +16448,7 @@ ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   if (dump_stats) {
     printf("Memory stats during init:\n");
     dump_mm_stats(v7);
-    v7_gc(v7);
+    v7_gc(v7, 0);
     printf("Memory stats before run:\n");
     dump_mm_stats(v7);
   }

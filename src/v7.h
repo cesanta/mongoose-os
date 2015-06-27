@@ -115,8 +115,11 @@ enum v7_err v7_exec_with(struct v7 *, v7_val_t *result, const char *js_code,
  */
 void v7_compile(const char *js_code, int generate_binary_output, FILE *fp);
 
-/* Call garbage collector */
-void v7_gc(struct v7 *);
+/*
+ * Perform garbage collection.
+ * Pass true to full in order to reclaim unused heap back to the OS.
+ */
+void v7_gc(struct v7 *, int full);
 
 /* Create an empty object */
 v7_val_t v7_create_object(struct v7 *v7);
@@ -193,6 +196,9 @@ int v7_is_cfunction(v7_val_t);
 
 /* Return true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t);
+
+/* Return true if given value is an array object */
+int v7_is_array(struct v7 *, v7_val_t);
 
 /* Return `void *` pointer stored in `v7_val_t` */
 void *v7_to_foreign(v7_val_t);
@@ -302,7 +308,8 @@ const char *v7_get_parser_error(struct v7 *v7);
 enum v7_heap_stat_what {
   V7_HEAP_STAT_HEAP_SIZE,
   V7_HEAP_STAT_HEAP_USED,
-  V7_HEAP_STAT_STRING_HEAP_SIZE,
+  V7_HEAP_STAT_STRING_HEAP_RESERVED,
+  V7_HEAP_STAT_STRING_HEAP_USED,
   V7_HEAP_STAT_OBJ_HEAP_MAX,
   V7_HEAP_STAT_OBJ_HEAP_FREE,
   V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE,

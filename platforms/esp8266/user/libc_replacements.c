@@ -38,6 +38,7 @@
 #include "user_interface.h"
 
 #include "v7.h"
+#include "v7_esp.h"
 
 /*
  * strerror provided by libc consumes 2kb RAM
@@ -54,20 +55,36 @@ char ICACHE_FLASH_ATTR* strerror(int errnum) {
   return buf;
 }
 
+ICACHE_FLASH_ATTR
 void* malloc(size_t size) {
-  return (void*) pvPortMalloc(size);
+  void* res = (void*) pvPortMalloc(size);
+  if (res == NULL) {
+    v7_gc(v7, 1);
+    res = (void*) pvPortMalloc(size);
+  }
+  return res;
 }
 
-void free(void* ptr) {
+ICACHE_FLASH_ATTR void free(void* ptr) {
   vPortFree(ptr);
 }
 
-void* realloc(void* ptr, size_t size) {
-  return (void*) pvPortRealloc(ptr, size);
+ICACHE_FLASH_ATTR void* realloc(void* ptr, size_t size) {
+  void* res = (void*) pvPortRealloc(ptr, size);
+  if (res == NULL) {
+    v7_gc(v7, 1);
+    res = (void*) pvPortRealloc(ptr, size);
+  }
+  return res;
 }
 
-void* calloc(size_t num, size_t size) {
-  return (void*) pvPortZalloc(num * size);
+ICACHE_FLASH_ATTR void* calloc(size_t num, size_t size) {
+  void* res = (void*) pvPortZalloc(num * size);
+  if (res == NULL) {
+    v7_gc(v7, 1);
+    res = (void*) pvPortZalloc(num * size);
+  }
+  return res;
 }
 
 int ICACHE_FLASH_ATTR puts(const char* str) {
