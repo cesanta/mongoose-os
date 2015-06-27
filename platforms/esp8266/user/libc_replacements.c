@@ -39,7 +39,7 @@
 
 #include "v7.h"
 
-/* 
+/*
  * strerror provided by libc consumes 2kb RAM
  * Moreover, V7 uses strerror mostly for
  * file operation, so returns of strerror
@@ -277,26 +277,58 @@ double ICACHE_FLASH_ATTR strtod(const char* str, char** endptr) {
     str++;
   } else if (*str == '+') {
     str++;
-  }
-
-  while ((c = *str)) {
-    if (c == '.') {
-      decimals = true;
-      str++;
-      continue;
-    }
-
-    int d = c - '0';
-    if (d < 0 || d > 9) {
-      break;
-    }
-
-    result = 10.0 * result + d;
-    if (decimals) {
-      factor *= 0.1;
-    }
-
+  } else if (*str == '0') {
     str++;
+    if (*str == 'x') { /* base 16 */
+      str++;
+      while ((c = tolower(*str))) {
+        int d;
+        if (c >= '0' && c <= '9') {
+          d = c - '0';
+        } else if (c >= 'a' && c <= 'f') {
+          d = 10 + (c - 'a');
+        } else {
+          break;
+        }
+        result = 16 * result + d;
+        str++;
+      }
+    } else if (*str == 'b') { /* base 2 */
+      str++;
+      while ((c = *str)) {
+        int d = c - '0';
+        if (c != '0' && c != '1') break;
+        result = 2 * result + d;
+        str++;
+      }
+    } else { /* base 8 */
+      while ((c = *str)) {
+        int d = c - '0';
+        if (c < '0' || c > '7') break;
+        result = 8 * result + d;
+        str++;
+      }
+    }
+  } else { /* base 10 */
+    while ((c = *str)) {
+      if (c == '.') {
+        decimals = true;
+        str++;
+        continue;
+      }
+
+      int d = c - '0';
+      if (d < 0 || d > 9) {
+        break;
+      }
+
+      result = 10 * result + d;
+      if (decimals) {
+        factor *= 0.1;
+      }
+
+      str++;
+    }
   }
   if (endptr != NULL) {
     *endptr = (char*) str;
