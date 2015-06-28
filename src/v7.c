@@ -1471,12 +1471,6 @@ struct gc_arena {
 #define UNUSED
 #endif
 
-/*
- * DO NOT SUBMIT: remove this when adding support
- * for predefined strings as roots
- */
-#define V7_DISABLE_PREDEFINED_STRINGS
-
 #define _POSIX_C_SOURCE 200809L
 
 #include <assert.h>
@@ -6979,12 +6973,18 @@ ON_FLASH int v7_set_property(struct v7 *v7, val_t obj, const char *name,
                              size_t len, unsigned int attributes,
                              v7_val_t val) {
   val_t n;
+  int res;
+  /* set_property_v can trigger GC */
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
 
   n = v7_create_string(v7, name, len, 1);
-  return v7_set_property_v(v7, obj, n, attributes, val);
+  res = v7_set_property_v(v7, obj, n, attributes, val);
+  tmp_frame_cleanup(&tf);
+  return res;
 }
 
 ON_FLASH int v7_del_property(struct v7 *v7, val_t obj, const char *name,
@@ -8144,9 +8144,20 @@ ON_FLASH void v7_gc(struct v7 *v7, int full) {
   for (vp = (val_t **) v7->tmp_stack.buf;
        (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
     gc_mark(v7, **vp);
+#ifdef V7_ENABLE_COMPACTING_GC
+    gc_mark_string(v7, *vp);
+#endif
   }
 
 #ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  {
+    int i;
+    for (i = 0; i < PREDEFINED_STR_MAX; i++) {
+      gc_mark_string(v7, &v7->predefined_strings[i]);
+    }
+  }
+#endif
   gc_compact_strings(v7);
 #endif
 

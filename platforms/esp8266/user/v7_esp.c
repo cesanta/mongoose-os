@@ -470,4 +470,5 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   v7_init_http_client(v7);
 
   init_i2cjs(v7);
+  v7_gc(v7, 1);
 }
