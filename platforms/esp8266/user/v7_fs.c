@@ -206,7 +206,7 @@ ICACHE_FLASH_ATTR int spiffs_remove(const char *filename) {
 }
 
 ICACHE_FLASH_ATTR int v7_val_to_file(v7_val_t val) {
-  return (int) v7_to_double(val);
+  return (int) v7_to_number(val);
 }
 
 ICACHE_FLASH_ATTR v7_val_t v7_file_to_val(int fd) {
@@ -214,7 +214,7 @@ ICACHE_FLASH_ATTR v7_val_t v7_file_to_val(int fd) {
 }
 
 ICACHE_FLASH_ATTR int v7_is_file_type(v7_val_t val) {
-  int res = v7_is_double(val);
+  int res = v7_is_number(val);
   return res;
 }
 

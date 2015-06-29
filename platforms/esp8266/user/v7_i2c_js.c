@@ -17,12 +17,12 @@ ICACHE_FLASH_ATTR static v7_val_t i2cjs_init(struct v7 *v7, v7_val_t this_obj,
 
   (void) this_obj;
 
-  if (!v7_is_double(sda_val) || !v7_is_double(scl_val)) {
+  if (!v7_is_number(sda_val) || !v7_is_number(scl_val)) {
     return v7_create_null();
   }
 
-  sda = v7_to_double(sda_val);
-  scl = v7_to_double(scl_val);
+  sda = v7_to_number(sda_val);
+  scl = v7_to_number(scl_val);
 
   conn = malloc(sizeof(struct i2c_connection));
 
@@ -118,7 +118,7 @@ DECL_I2C_GET_BYTE(readByte, i2c_read_byte)
     v7_val_t data_val = v7_array_get(v7, args, 0);                        \
     double data;                                                          \
     if ((conn = i2cjs_get_connection(v7, this_obj)) == NULL ||            \
-        !v7_is_double(data_val) || (data = v7_to_double(data_val)) < 0 || \
+        !v7_is_number(data_val) || (data = v7_to_number(data_val)) < 0 || \
         data > max_value) {                                               \
       return v7_create_number(-1);                                        \
     }                                                                     \
@@ -155,11 +155,11 @@ ICACHE_FLASH_ATTR static v7_val_t i2cjs_readString(struct v7 *v7,
   const char* str;
 
   if ((conn = i2cjs_get_connection(v7, this_obj)) == NULL ||
-      !v7_is_double(len_val)) {
+      !v7_is_number(len_val)) {
     return v7_create_string(v7, "", 0, 1);
   }
 
-  str_val = v7_create_string(v7, 0, v7_to_double(len_val), 1);
+  str_val = v7_create_string(v7, 0, v7_to_number(len_val), 1);
   str = v7_to_string(v7, &str_val, &len);
   i2c_read_bytes(conn, (uint8_t *)str, len);
 

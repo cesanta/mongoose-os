@@ -180,7 +180,7 @@ int v7_is_string(v7_val_t);
 int v7_is_boolean(v7_val_t);
 
 /* Return true if given value is a primitive number value */
-int v7_is_double(v7_val_t);
+int v7_is_number(v7_val_t);
 
 /* Return true if given value is a primitive `null` value */
 int v7_is_null(v7_val_t);
@@ -207,7 +207,7 @@ void *v7_to_foreign(v7_val_t);
 int v7_to_boolean(v7_val_t);
 
 /* Return `double` value stored in `v7_val_t` */
-double v7_to_double(v7_val_t);
+double v7_to_number(v7_val_t);
 
 /* Return `v7_cfunction_t` callback pointer stored in `v7_val_t` */
 v7_cfunction_t v7_to_cfunction(v7_val_t);

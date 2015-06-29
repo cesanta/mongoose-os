@@ -180,7 +180,7 @@ int v7_is_string(v7_val_t);
 int v7_is_boolean(v7_val_t);
 
 /* Return true if given value is a primitive number value */
-int v7_is_double(v7_val_t);
+int v7_is_number(v7_val_t);
 
 /* Return true if given value is a primitive `null` value */
 int v7_is_null(v7_val_t);
@@ -207,7 +207,7 @@ void *v7_to_foreign(v7_val_t);
 int v7_to_boolean(v7_val_t);
 
 /* Return `double` value stored in `v7_val_t` */
-double v7_to_double(v7_val_t);
+double v7_to_number(v7_val_t);
 
 /* Return `v7_cfunction_t` callback pointer stored in `v7_val_t` */
 v7_cfunction_t v7_to_cfunction(v7_val_t);
@@ -4629,14 +4629,14 @@ ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t,
   v7_val_t arg2 = v7_array_get(v7, args, 2);
 
   (void) t;
-  if (v7_is_double(arg1) && v7_is_string(arg0)) {
+  if (v7_is_number(arg1) && v7_is_string(arg0)) {
     struct sockaddr_in sin;
     sock_t sock =
         socket(AF_INET, v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = s_resolve(v7, arg0);
-    sin.sin_port = htons((uint16_t) v7_to_double(arg1));
+    sin.sin_port = htons((uint16_t) v7_to_number(arg1));
     if (connect(sock, (struct sockaddr *) &sin, sizeof(sin)) != 0) {
       closesocket(sock);
     } else {
@@ -4655,14 +4655,14 @@ ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj,
   v7_val_t arg2 = v7_array_get(v7, args, 2);
 
   (void) this_obj;
-  if (v7_is_double(arg0)) {
+  if (v7_is_number(arg0)) {
     struct sockaddr_in sin;
     int on = 1;
     sock_t sock =
         socket(AF_INET, v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
-    sin.sin_port = htons((uint16_t) v7_to_double(arg0));
+    sin.sin_port = htons((uint16_t) v7_to_number(arg0));
     if (v7_is_string(arg1)) {
       sin.sin_addr.s_addr = s_resolve(v7, arg1);
     }
@@ -4700,10 +4700,10 @@ ON_FLASH static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj,
                                        v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
-  if (v7_is_double(prop)) {
+  if (v7_is_number(prop)) {
     struct sockaddr_in sin;
     socklen_t len = sizeof(sin);
-    sock_t sock = (sock_t) v7_to_double(prop);
+    sock_t sock = (sock_t) v7_to_number(prop);
     sock_t fd = accept(sock, (struct sockaddr *) &sin, &len);
     if (fd != INVALID_SOCKET) {
       return s_fd_to_sock_obj(v7, fd);
@@ -4717,7 +4717,7 @@ ON_FLASH static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj,
                                       v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
-  return v7_create_number(closesocket((sock_t) v7_to_double(prop)));
+  return v7_create_number(closesocket((sock_t) v7_to_number(prop)));
 }
 
 /* sock.recv() -> string */
@@ -4725,9 +4725,9 @@ ON_FLASH static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
                                 int all) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) a;
-  if (v7_is_double(prop)) {
+  if (v7_is_number(prop)) {
     char buf[RECV_BUF_SIZE];
-    sock_t sock = (sock_t) v7_to_double(prop);
+    sock_t sock = (sock_t) v7_to_number(prop);
     struct mbuf m;
     int n;
 
@@ -4770,9 +4770,9 @@ ON_FLASH static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj,
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   size_t len, sent = 0;
 
-  if (v7_is_double(prop) && v7_is_string(arg0)) {
+  if (v7_is_number(prop) && v7_is_string(arg0)) {
     const char *s = v7_to_string(v7, &arg0, &len);
-    sock_t sock = (sock_t) v7_to_double(prop);
+    sock_t sock = (sock_t) v7_to_number(prop);
     int n;
 
     while (sent < len && (n = send(sock, s + sent, len - sent, 0)) > 0) {
@@ -6192,7 +6192,7 @@ double _v7_nan;
 
 ON_FLASH enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
-  if (v7_is_double(v)) {
+  if (v7_is_number(v)) {
     return V7_TYPE_NUMBER;
   }
   tag = (v & V7_TAG_MASK) >> 48;
@@ -6244,8 +6244,8 @@ ON_FLASH enum v7_type val_type(struct v7 *v7, val_t v) {
   }
 }
 
-ON_FLASH int v7_is_double(val_t v) {
-  return v == V7_TAG_NAN || !isnan(v7_to_double(v));
+ON_FLASH int v7_is_number(val_t v) {
+  return v == V7_TAG_NAN || !isnan(v7_to_number(v));
 }
 
 ON_FLASH int v7_is_object(val_t v) {
@@ -6379,7 +6379,7 @@ ON_FLASH v7_val_t v7_create_number(double v) {
   return res;
 }
 
-ON_FLASH double v7_to_double(val_t v) {
+ON_FLASH double v7_to_number(val_t v) {
   union {
     double d;
     val_t v;
@@ -6553,7 +6553,7 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (v == V7_TAG_NAN) {
         return c_snprintf(buf, size, "NaN");
       }
-      num = v7_to_double(v);
+      num = v7_to_number(v);
       if (isinf(num)) {
         return c_snprintf(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
       }
@@ -6855,7 +6855,7 @@ v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   val_t v = obj;
   if (v7_is_string(obj)) {
     v = v7->string_prototype;
-  } else if (v7_is_double(obj)) {
+  } else if (v7_is_number(obj)) {
     v = v7->number_prototype;
   } else if (v7_is_boolean(obj)) {
     v = v7->boolean_prototype;
@@ -7555,7 +7555,7 @@ ON_FLASH V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
 ON_FLASH int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && v7_to_boolean(v)) ||
-          (v7_is_double(v) && v7_to_double(v) != 0.0) ||
+          (v7_is_number(v) && v7_to_number(v) != 0.0) ||
           (v7_is_string(v) && v7_to_string(v7, &v, &len) && len > 0) ||
           (v7_is_object(v))) &&
          v != V7_TAG_NAN;
@@ -9202,8 +9202,8 @@ ON_FLASH V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   double res = 0.0;
 
   v = i_value_of(v7, v);
-  if (v7_is_double(v)) {
-    res = v7_to_double(v);
+  if (v7_is_number(v)) {
+    res = v7_to_number(v);
   } else if (v7_is_string(v)) {
     size_t n;
     char *e, *s = (char *) v7_to_string(v7, &v, &n);
@@ -9365,8 +9365,8 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v2 = i_eval_expr(v7, a, pos, scope);
       v1 = i_value_of(v7, v1);
       v2 = i_value_of(v7, v2);
-      if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
-          !(v7_is_undefined(v2) || v7_is_double(v2) || v7_is_boolean(v2))) {
+      if (!(v7_is_undefined(v1) || v7_is_number(v1) || v7_is_boolean(v1)) ||
+          !(v7_is_undefined(v2) || v7_is_number(v2) || v7_is_boolean(v2))) {
         v7_stringify_value(v7, v1, buf, sizeof(buf));
         v1 = v7_create_string(v7, buf, strlen(buf), 1);
         v7_stringify_value(v7, v2, buf, sizeof(buf));
@@ -9574,8 +9574,8 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           res = i_eval_expr(v7, a, pos, scope);
           v1 = i_value_of(v7, v1);
           res = i_value_of(v7, res);
-          if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
-              !(v7_is_undefined(res) || v7_is_double(res) ||
+          if (!(v7_is_undefined(v1) || v7_is_number(v1) || v7_is_boolean(v1)) ||
+              !(v7_is_undefined(res) || v7_is_number(res) ||
                 v7_is_boolean(res))) {
             /*
              * Only stringify non-strings. Note that if an object is large,
@@ -11211,8 +11211,8 @@ ON_FLASH V7_PRIVATE v7_val_t
 Std_isFinite(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   (void) t;
-  return v7_create_boolean(v7_is_double(arg0) && arg0 != V7_TAG_NAN &&
-                           !isinf(v7_to_double(arg0)));
+  return v7_create_boolean(v7_is_number(arg0) && arg0 != V7_TAG_NAN &&
+                           !isinf(v7_to_number(arg0)));
 }
 
 #ifndef NO_LIBC
@@ -13451,7 +13451,7 @@ ON_FLASH V7_PRIVATE void init_error(struct v7 *v7) {
 ON_FLASH static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_length(v7, args) == 0 ? v7_create_number(0.0)
                                               : v7_array_get(v7, args, 0);
-  val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
+  val_t res = v7_is_number(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->number_prototype);
@@ -13470,7 +13470,7 @@ n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   char fmt[10], buf[100];
 
   snprintf(fmt, sizeof(fmt), format, digits);
-  len = snprintf(buf, sizeof(buf), fmt, v7_to_double(i_value_of(v7, t)));
+  len = snprintf(buf, sizeof(buf), fmt, v7_to_number(i_value_of(v7, t)));
 
   return v7_create_string(v7, buf, len, 1);
 }
@@ -13491,7 +13491,7 @@ ON_FLASH static val_t Number_toPrecision(struct v7 *v7, val_t this_obj,
 
 ON_FLASH static val_t Number_valueOf(struct v7 *v7, val_t this_obj,
                                      val_t args) {
-  if (!v7_is_double(this_obj) &&
+  if (!v7_is_number(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
            v7->number_prototype)) {
@@ -13510,7 +13510,7 @@ ON_FLASH static val_t Number_toString(struct v7 *v7, val_t this_obj,
     return v7_create_string(v7, "0", 1, 1);
   }
 
-  if (!v7_is_double(this_obj) &&
+  if (!v7_is_number(this_obj) &&
       !(v7_is_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->number_prototype))) {
     throw_exception(v7, TYPE_ERROR,
@@ -13525,7 +13525,7 @@ ON_FLASH static val_t Number_toString(struct v7 *v7, val_t this_obj,
 ON_FLASH static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
-  return v7_create_boolean(!v7_is_double(arg0) || arg0 == V7_TAG_NAN);
+  return v7_create_boolean(!v7_is_number(arg0) || arg0 == V7_TAG_NAN);
 }
 
 ON_FLASH V7_PRIVATE void init_number(struct v7 *v7) {
@@ -13646,8 +13646,8 @@ ON_FLASH static val_t Array_set_length(struct v7 *v7, val_t this_obj,
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else if (new_len < 0 ||
-             (v7_is_double(arg0) &&
-              (isnan(v7_to_double(arg0)) || isinf(v7_to_double(arg0))))) {
+             (v7_is_number(arg0) &&
+              (isnan(v7_to_number(arg0)) || isinf(v7_to_number(arg0))))) {
     throw_exception(v7, RANGE_ERROR, "Invalid array length");
   } else {
     struct v7_property **p, **next;
@@ -13688,7 +13688,7 @@ ON_FLASH static int a_cmp(void *user_data, const void *pa, const void *pb) {
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
-    return (int) -v7_to_double(res);
+    return (int) -v7_to_number(res);
   } else {
     char sa[100], sb[100];
     to_str(v7, a, sa, sizeof(sa), 0);
@@ -14176,7 +14176,7 @@ ON_FLASH int matherr(struct _exception *exc) {
 ON_FLASH static val_t m_one_arg(struct v7 *v7, val_t args,
                                 double (*f)(double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
-  double d0 = v7_to_double(arg0);
+  double d0 = v7_to_number(arg0);
 #ifdef V7_BROKEN_NAN
   if (isnan(d0)) return V7_TAG_NAN;
 #endif
@@ -14189,8 +14189,8 @@ ON_FLASH static val_t m_two_arg(struct v7 *v7, val_t args,
                                 double (*f)(double, double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t arg1 = v7_array_get(v7, args, 1);
-  double d0 = v7_to_double(arg0);
-  double d1 = v7_to_double(arg1);
+  double d0 = v7_to_number(arg0);
+  double d1 = v7_to_number(arg1);
 #ifdef V7_BROKEN_NAN
   /* pow(NaN,0) == 1, doesn't fix atan2, but who cares */
   if (isnan(d1)) return V7_TAG_NAN;
@@ -14282,7 +14282,7 @@ ON_FLASH static val_t min_max(struct v7 *v7, val_t args, int is_min) {
   int i, len = v7_array_length(v7, args);
 
   for (i = 0; i < len; i++) {
-    double v = v7_to_double(v7_array_get(v7, args, i));
+    double v = v7_to_number(v7_array_get(v7, args, i));
     if (isnan(res) || (is_min && v < res) || (!is_min && v > res)) {
       res = v;
     }
@@ -14412,7 +14412,7 @@ ON_FLASH static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj,
   for (i = 0; i < num_args; i++) {
     char buf[10];
     val_t arg = v7_array_get(v7, args, i);
-    double d = v7_to_double(arg);
+    double d = v7_to_number(arg);
     Rune r = (Rune)((int32_t)(isnan(d) || isinf(d) ? 0 : d) & 0xffff);
     int n = runetochar(buf, &r);
     val_t s = v7_create_string(v7, buf, n, 1);
@@ -14427,10 +14427,10 @@ ON_FLASH static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
   val_t arg = v7_array_get(v7, args, 0);
-  double at = v7_to_double(arg);
+  double at = v7_to_number(arg);
 
   n = utfnlen((char *) p, n);
-  if (v7_is_double(arg) && at >= 0 && at < n) {
+  if (v7_is_number(arg) && at >= 0 && at < n) {
     Rune r = 0;
     p = utfnshift((char *) p, at);
     chartorune(&r, (char *) p);
@@ -14836,8 +14836,8 @@ ON_FLASH V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
   char buf[40];
   size_t l;
   double d;
-  if (v7_is_double(v)) {
-    d = v7_to_double(v);
+  if (v7_is_number(v)) {
+    d = v7_to_number(v);
     /* We want to return LONG_MAX if d is positive Inf, thus d < 0 check */
     if (isnan(d) || (isinf(d) && d < 0)) {
       return 0;
@@ -14864,8 +14864,8 @@ V7_PRIVATE double to_number(struct v7 *v7, val_t v) {
     return +0;
   } else if (v7_is_boolean(v)) {
     return v7_to_boolean(v);
-  } else if (v7_is_double(v)) {
-    return v7_to_double(v);
+  } else if (v7_is_number(v)) {
+    return v7_to_number(v);
   } else if (v7_is_string(v)) {
     /* TODO(lsm): implement */
   } else {
@@ -15554,7 +15554,7 @@ ON_FLASH static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj,
     }
 
     if (!isnan(new_part)) {
-      etime_t current_time = v7_to_double(objtime);
+      etime_t current_time = v7_to_number(objtime);
       ret_time =
           d_changepartoftime(&current_time, &a, breaktimefunc, makefilefunc);
     }
@@ -15680,7 +15680,7 @@ ON_FLASH static val_t Date_toISOString(struct v7 *v7, val_t this_obj,
   int len;
   (void) args;
 
-  time = v7_to_double(d_trytogetobjforstring(v7, this_obj));
+  time = v7_to_number(d_trytogetobjforstring(v7, this_obj));
   len = d_timetoISOstr(&time, buf, sizeof(buf));
 
   return v7_create_string(v7, buf, len, 1);
@@ -15698,7 +15698,7 @@ ON_FLASH static val_t d_tostring(struct v7 *v7, val_t obj,
   char buf[100];
   etime_t time;
 
-  time = v7_to_double(d_trytogetobjforstring(v7, obj));
+  time = v7_to_number(d_trytogetobjforstring(v7, obj));
 
   breaktimefunc(&time, &tp);
   len = tostringfunc(&tp, buf, addtz);
@@ -15781,7 +15781,7 @@ ON_FLASH static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
   struct d_locale prev_locale;
   struct timeparts tp;
 
-  time = v7_to_double(d_trytogetobjforstring(v7, obj));
+  time = v7_to_number(d_trytogetobjforstring(v7, obj));
 
   d_getcurrentlocale(&prev_locale);
   d_setlocale(0);
@@ -15830,7 +15830,7 @@ ON_FLASH static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 ON_FLASH static struct timeparts *d_getTimePart(val_t val, struct timeparts *tp,
                                                 fbreaktime_t breaktimefunc) {
   etime_t time;
-  time = v7_to_double(val);
+  time = v7_to_number(val);
   breaktimefunc(&time, tp);
   return tp;
 }
