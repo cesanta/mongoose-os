@@ -22,6 +22,18 @@
 struct v7 *v7;
 os_timer_t js_timeout_timer;
 
+ICACHE_FLASH_ATTR static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj,
+                                          v7_val_t args) {
+  v7_val_t result = v7_create_object(v7);
+  v7_set(v7, result, "sysfree", 7, 0, v7_create_number(system_get_free_heap_size()));
+  v7_set(v7, result, "used_by_js", 10, 0, v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
+  v7_set(v7, result, "used_by_fs", 10, 0, v7_create_number(spiffs_get_memory_usage()));
+  /* prevent the object from being potentially GCed */
+  v7_set(v7, args, "_tmp", 4, 0, result);
+
+  return result;
+}
+
 ICACHE_FLASH_ATTR static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj,
                                          v7_val_t args) {
   v7_val_t usecsv = v7_array_get(v7, args, 0);
@@ -442,7 +454,7 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
 ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   struct v7_create_opts opts;
-  v7_val_t wifi, dht11, gc, debug;
+  v7_val_t wifi, dht11, gc, debug, os;
 
   opts.object_arena_size = 148;
   opts.function_arena_size = 26;
@@ -487,6 +499,10 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   v7_set_method(v7, debug, "print", Debug_print);
 
   v7_init_http_client(v7);
+
+  os = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "OS", 2, 0, os);
+  v7_set_method(v7, os, "prof", OS_prof);
 
   init_i2cjs(v7);
   init_gpiojs(v7);

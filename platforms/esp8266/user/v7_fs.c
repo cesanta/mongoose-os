@@ -27,6 +27,10 @@ spiffs fs;
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[16 * 4];
 
+ICACHE_FLASH_ATTR int spiffs_get_memory_usage() {
+  return sizeof(spiffs_work_buf) + sizeof(spiffs_fds);
+}
+
 ICACHE_FLASH_ATTR static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size,
                                                     u8 *p, int write) {
   /*
