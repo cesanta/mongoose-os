@@ -36,4 +36,4 @@ File.load('MCP9808.js');
 t = new MCP9808(14,12,1,1,1);
 
 function demo(n, cb) { Cloud.store("temperature",n,{labels: {"sensor":"1"},cb:cb}) }
-function temp() { demo(t.getTemp(), function(d) { print("got:",d, ",mem:", GC.stat().sysfree); setTimeout(temp, 2000)})};
+function temp() { demo(t.getTemp(), function (d) { print("got:", d, ",mem:", GC.stat().sysfree); setTimeout(temp, 2000) }) };

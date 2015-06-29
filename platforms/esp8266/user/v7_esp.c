@@ -17,6 +17,7 @@
 #include "v7_esp_features.h"
 #include "v7_uart.h"
 #include "v7_i2c_js.h"
+#include "v7_gpio_js.h"
 
 struct v7 *v7;
 os_timer_t js_timeout_timer;
@@ -71,37 +72,6 @@ ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
   os_timer_arm(&js_timeout_timer, msecs, 0);
 
   return v7_create_undefined();
-}
-
-ICACHE_FLASH_ATTR static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj,
-                                             v7_val_t args) {
-  v7_val_t pinv = v7_array_get(v7, args, 0);
-  v7_val_t valv = v7_array_get(v7, args, 1);
-  int pin, val;
-
-  if (!v7_is_double(pinv)) {
-    printf("non-numeric pin\n");
-    return v7_create_undefined();
-  }
-  pin = v7_to_double(pinv);
-  val = v7_is_true(v7, valv) ? 1 : 0;
-
-  set_gpio(pin, val);
-
-  return v7_create_undefined();
-}
-
-ICACHE_FLASH_ATTR static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj,
-                                            v7_val_t args) {
-  v7_val_t pinv = v7_array_get(v7, args, 0);
-  int pin;
-
-  if (!v7_is_double(pinv)) {
-    printf("non-numeric pin\n");
-    return v7_create_undefined();
-  }
-  pin = v7_to_double(pinv);
-  return v7_create_boolean(read_gpio_pin(pin));
 }
 
 ICACHE_FLASH_ATTR static v7_val_t Wifi_connect(struct v7 *v7, v7_val_t this_obj,
@@ -419,7 +389,7 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
 ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   struct v7_create_opts opts;
-  v7_val_t wifi, gpio, dht11, gc, debug;
+  v7_val_t wifi, dht11, gc, debug;
 
   opts.object_arena_size = 140;
   opts.function_arena_size = 26;
@@ -436,11 +406,6 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   v7_set_method(v7, v7_get_global_object(v7), "setTimeout", set_timeout);
 
   v7_set_method(v7, v7_get_global_object(v7), "crash", crash);
-
-  gpio = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "GPIO", 4, 0, gpio);
-  v7_set_method(v7, gpio, "read", GPIO_read);
-  v7_set_method(v7, gpio, "write", GPIO_write);
 
   wifi = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Wifi", 4, 0, wifi);
@@ -470,5 +435,7 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   v7_init_http_client(v7);
 
   init_i2cjs(v7);
+  init_gpiojs(v7);
+
   v7_gc(v7, 1);
 }

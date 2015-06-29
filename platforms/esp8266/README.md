@@ -46,9 +46,12 @@ For example `cu` tool on Linux:
 
 ## GPIO
 
-- `GPIO.read(pin_num) -> true or false` return GPIO pin status
-- `GPIO.write(pin_num, true_or_false) -> undefined` set a given pin
-  to `true` or `false`
+- `GPIO.setmode(pin, mode, pull) -> true or false` set pin mode. 'mode' is number,  0 enables both input and output, 1 enables input only, 2 enabled output only, 3 enables interruptions on pin, see `GPUI.setisr`. `pull` is a number, 0 leaves pin floating, 1 connects pin to internal pullup resistor, 2 connects pin to internal pulldown resistor.
+- `GPIO.read(pin_num) -> 0 or 1` return GPIO pin level
+- `GPIO.write(pin_num, true_or_false) -> true of false` set a given pin
+  to `true` or `false`, return false if paramaters are incorrect
+- `GPIO.setisr(pin, isr_type, func) -> true or false` assign interrruption handler for
+  pin. `isr_type` is a number, 0 disables interrupts, 1 enables interupts on positive edge, 2 - on negative edge, 3 - on any edge, 4 - on low level, 5 - on high level. `func` is callback to be called on interrupt, its prototype is `function myisr(pin, level)`.
 
 ## I2C
 

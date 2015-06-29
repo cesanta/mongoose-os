@@ -8,6 +8,7 @@
 #include "osapi.h"
 #include "gpio.h"
 #include "v7_i2c.h"
+#include "v7_periph.h"
 
 #define I2C_INIT_CNT 28
 
@@ -120,7 +121,7 @@ ICACHE_FLASH_ATTR void i2c_read_bytes(struct i2c_connection *conn, uint8_t *buf,
 
   for (i = 0; i < buf_size; i++) {
     *buf++ = i2c_read_byte(conn);
-    i2c_send_ack(conn, i != buf_size - 1? i2c_ack : i2c_nack);
+    i2c_send_ack(conn, i != buf_size - 1 ? i2c_ack : i2c_nack);
   }
 }
 
@@ -178,57 +179,13 @@ ICACHE_FLASH_ATTR enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn,
   return i2c_ack;
 }
 
-/*
- * Map gpio -> { mux reg, func }
- * SDK doesn't provide information
- * about several gpio
- * TODO(alashkin): find missed info
- */
-struct gpio_info {
-  uint8_t gpio_no;
-  uint32_t periph;
-  uint32_t func;
-} gpio_map[] = {{0, PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0},
-                {1, PERIPHS_IO_MUX_U0TXD_U, FUNC_GPIO1},
-                {2, PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2},
-                {3, PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3},
-                {4, PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4},
-                {5, PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5},
-                {6, 0, 0},
-                {7, 0, 0},
-                {8, 0, 0},
-                {9, PERIPHS_IO_MUX_SD_DATA2_U, FUNC_GPIO9},
-                {10, PERIPHS_IO_MUX_SD_DATA3_U, FUNC_GPIO10},
-                {11, 0, 0},
-                {12, PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12},
-                {13, PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13},
-                {14, PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14},
-                {15, PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15}};
-
-ICACHE_FLASH_ATTR static struct gpio_info *i2c_find_gpio(uint8_t gpio_no) {
-  struct gpio_info *ret_val;
-
-  if (gpio_no > sizeof(gpio_map) / sizeof(gpio_map[0])) {
-    return NULL;
-  }
-
-  ret_val = &gpio_map[gpio_no];
-
-  if (ret_val->periph == 0) {
-    /* missed gpio */
-    return NULL;
-  }
-
-  return ret_val;
-}
-
 ICACHE_FLASH_ATTR int i2c_init(uint8_t sda_gpio, uint8_t scl_gpio,
                                struct i2c_connection *conn) {
   uint8_t i;
   struct gpio_info *sda_info, *scl_info;
 
-  sda_info = i2c_find_gpio(sda_gpio);
-  scl_info = i2c_find_gpio(scl_gpio);
+  sda_info = get_gpio_info(sda_gpio);
+  scl_info = get_gpio_info(scl_gpio);
 
   if (sda_info == NULL || scl_info == NULL) {
     return -1;

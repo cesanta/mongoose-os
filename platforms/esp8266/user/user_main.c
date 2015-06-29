@@ -57,8 +57,6 @@ ICACHE_FLASH_ATTR void user_init() {
 #endif
 
   gpio_init();
-  gpio_output_set(0, BIT2, BIT2, 0);
-  set_gpio(2, 0);
 
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, start_cmd, NULL);
