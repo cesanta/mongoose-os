@@ -26,11 +26,11 @@ ICACHE_FLASH_ATTR static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj,
                                          v7_val_t args) {
   v7_val_t usecsv = v7_array_get(v7, args, 0);
   int usecs;
-  if (!v7_is_double(usecsv)) {
+  if (!v7_is_number(usecsv)) {
     printf("usecs is not a double\n\r");
     return v7_create_undefined();
   }
-  usecs = v7_to_double(usecsv);
+  usecs = v7_to_number(usecsv);
   os_delay_us(usecs);
   return v7_create_undefined();
 }
@@ -56,11 +56,11 @@ ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
     printf("cb is not a function\n");
     return v7_create_undefined();
   }
-  if (!v7_is_double(msecsv)) {
+  if (!v7_is_number(msecsv)) {
     printf("msecs is not a double\n");
     return v7_create_undefined();
   }
-  msecs = v7_to_double(msecsv);
+  msecs = v7_to_number(msecsv);
 
   /*
    * used to convey the callback to the timer handler _and_ to root
@@ -102,12 +102,12 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_disconnect(struct v7 *v7,
 ICACHE_FLASH_ATTR static v7_val_t Wifi_mode(struct v7 *v7, v7_val_t this_obj,
                                             v7_val_t args) {
   v7_val_t mode = v7_array_get(v7, args, 0);
-  if (!v7_is_double(mode)) {
+  if (!v7_is_number(mode)) {
     printf("bad mode\n");
     return v7_create_undefined();
   }
 
-  return v7_create_boolean(wifi_set_opmode_current(v7_to_double(mode)));
+  return v7_create_boolean(wifi_set_opmode_current(v7_to_number(mode)));
 }
 
 ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
@@ -202,12 +202,65 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
   (void) this_obj;
   (void) args;
 
-  err = wifi_get_ip_info((v7_is_double(arg) ? v7_to_double(arg) : def), &info);
+  err = wifi_get_ip_info((v7_is_number(arg) ? v7_to_number(arg) : def), &info);
   if (err == 0) {
     v7_throw(v7, "cannot get ip info");
   }
   snprintf(ip, sizeof(ip), IPSTR, IP2STR(&info.ip));
   return v7_create_string(v7, ip, strlen(ip), 1);
+}
+
+ICACHE_FLASH_ATTR void wifi_scan_cb(void *arg, STATUS status) {
+  struct bss_info *info = (struct bss_info *) arg;
+  v7_val_t args, res, cb;
+
+  if (status != OK) {
+    fprintf(stderr, "wifi scan failed: %d\n", status);
+  }
+
+  res = v7_create_array(v7);
+  v7_set(v7, v7_get_global_object(v7), "_scrs", 5, 0, res);
+
+  /* ignore first */
+  while ((info = info->next.stqe_next)) {
+    v7_array_push(v7, res,
+                  v7_create_string(v7, info->ssid, strlen(info->ssid), 1));
+  }
+
+  cb = v7_get(v7, v7_get_global_object(v7), "_sccb", 5);
+  args = v7_create_object(v7);
+  v7_set(v7, args, "cb", 2, 0, cb);
+  v7_set(v7, args, "res", 3, 0, res);
+
+  if (v7_exec_with(v7, &res, "this.cb(this.res)", args) != V7_OK) {
+    char *s = v7_to_json(v7, res, NULL, 0);
+    fprintf(stderr, "exc calling cb: %s\n", s);
+    free(s);
+  }
+
+  v7_set(v7, v7_get_global_object(v7), "_scrs", 5, 0, v7_create_undefined());
+  v7_set(v7, v7_get_global_object(v7), "_sccb", 5, 0, v7_create_undefined());
+  v7_gc(v7, 1);
+  return;
+}
+
+/*
+ * Call the callback with a list of ssids found in the air.
+ */
+ICACHE_FLASH_ATTR static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj,
+                                            v7_val_t args) {
+  v7_val_t cb = v7_array_get(v7, args, 0);
+  v7_set(v7, v7_get_global_object(v7), "_sccb", 5, 0, cb);
+
+  /*
+   * Switch to station mode if not already
+   * in a mode that supports scanning wifi.
+   */
+  if (wifi_get_opmode() == 0x2) {
+    wifi_set_opmode_current(0x1);
+  }
+
+  return v7_create_boolean(wifi_station_scan(NULL, wifi_scan_cb));
 }
 
 /*
@@ -274,11 +327,11 @@ static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   int pin, temp, rh;
   v7_val_t pinv = v7_array_get(v7, args, 0), result;
 
-  if (!v7_is_double(pinv)) {
+  if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
     return v7_create_undefined();
   }
-  pin = v7_to_double(pinv);
+  pin = v7_to_number(pinv);
 
   if (!dht11_read(pin, &temp, &rh)) {
     return v7_create_null();
@@ -305,12 +358,12 @@ ICACHE_FLASH_ATTR static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj,
   int mode, res;
   v7_val_t output_val = v7_array_get(v7, args, 0);
 
-  if (!v7_is_double(output_val)) {
+  if (!v7_is_number(output_val)) {
     printf("Output is not a number\n");
     return v7_create_undefined();
   }
 
-  mode = v7_to_double(output_val);
+  mode = v7_to_number(output_val);
 
   uart_debug_init(0, 0);
   res = uart_redirect_debug(mode);
@@ -359,12 +412,12 @@ Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 ICACHE_FLASH_ATTR
 static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t time_v = v7_array_get(v7, args, 0);
-  uint32 time = v7_to_double(time_v);
+  uint32 time = v7_to_number(time_v);
   v7_val_t flags_v = v7_array_get(v7, args, 1);
-  uint8 flags = v7_to_double(flags_v);
+  uint8 flags = v7_to_number(flags_v);
 
-  if (!v7_is_double(time_v) || time < 0) return v7_create_boolean(false);
-  if (v7_is_double(flags_v)) {
+  if (!v7_is_number(time_v) || time < 0) return v7_create_boolean(false);
+  if (v7_is_number(flags_v)) {
     if (!system_deep_sleep_set_option(flags)) return v7_create_boolean(false);
   }
 
@@ -391,7 +444,7 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t wifi, dht11, gc, debug;
 
-  opts.object_arena_size = 140;
+  opts.object_arena_size = 148;
   opts.function_arena_size = 26;
   opts.property_arena_size = 380;
   opts.c_stack_base = stack_base;
@@ -415,6 +468,7 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   v7_set_method(v7, wifi, "connect", Wifi_connect);
   v7_set_method(v7, wifi, "status", Wifi_status);
   v7_set_method(v7, wifi, "ip", Wifi_ip);
+  v7_set_method(v7, wifi, "scan", Wifi_scan);
 
 #if V7_ESP_ENABLE__DHT11
   dht11 = v7_create_object(v7);

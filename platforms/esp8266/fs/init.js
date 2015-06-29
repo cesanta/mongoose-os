@@ -11,7 +11,22 @@ var cfile = File.open('config.json');
 if (cfile != null) {
     conf = JSON.parse(cfile.readAll());
     if (conf.wifi) {
-        Wifi.setup(conf.wifi.ssid, (conf.wifi.auth || {})[conf.wifi.ssid] || '');
+        if (conf.wifi.ssid) {
+            Wifi.setup(conf.wifi.ssid, (conf.wifi.known || {})[conf.wifi.ssid] || '');
+        } else {
+            print("Scanning nets");
+            Wifi.scan(function(l) {
+                for(var i in l) {
+                    var n = l[i];
+                    if (n in conf.wifi.known) {
+                        print("Joining ", n);
+                        Wifi.setup(n, conf.wifi.known[n]);
+                        return;
+                    }
+                }
+                print("Cannot find known network, use Wifi.setup");
+            });
+        }
     }
     cfile.close();
 }

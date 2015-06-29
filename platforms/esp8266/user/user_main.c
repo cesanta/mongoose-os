@@ -42,8 +42,17 @@ ICACHE_FLASH_ATTR void start_cmd(int dummy) {
 #endif
 }
 
+/* wifi scan can be called only from now on */
+ICACHE_FLASH_ATTR void init_done_cb() {
+  os_timer_disarm(&startcmd_timer);
+  os_timer_setfn(&startcmd_timer, start_cmd, NULL);
+  os_timer_arm(&startcmd_timer, 500, 0);
+}
+
 // Init function
 ICACHE_FLASH_ATTR void user_init() {
+  system_init_done_cb(init_done_cb);
+
   uart_div_modify(0, UART_CLK_FREQ / 115200);
   system_set_os_print(0);
 
@@ -57,8 +66,4 @@ ICACHE_FLASH_ATTR void user_init() {
 #endif
 
   gpio_init();
-
-  os_timer_disarm(&startcmd_timer);
-  os_timer_setfn(&startcmd_timer, start_cmd, NULL);
-  os_timer_arm(&startcmd_timer, 500, 0);
 }
