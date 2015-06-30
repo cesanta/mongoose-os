@@ -890,6 +890,22 @@ typedef struct _stati64 ns_stat_t;
 #define S_ISDIR(x) ((x) &_S_IFDIR)
 #endif
 #define DIRSEP '\\'
+
+/* POSIX opendir/closedir/readdir API for Windows. */
+struct dirent {
+  char d_name[MAX_PATH];
+};
+
+typedef struct DIR {
+  HANDLE handle;
+  WIN32_FIND_DATAW info;
+  struct dirent result;
+} DIR;
+
+DIR *opendir(const char *name);
+int closedir(DIR *dir);
+struct dirent *readdir(DIR *dir);
+
 #else /* not _WIN32 */
 #ifndef NO_LIBC
 #include <dirent.h>
@@ -1110,6 +1126,9 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
  * ==== File.rename(old_name, new_name) -> errno
  * Rename file `old_name` to
  * `new_name`. Return 0 on success, or `errno` value on error.
+ *
+ * ==== File.list(dir_name) -> array_of_names
+ * Return a list of files in a given directory, or `undefined` on error.
  *
  * ==== File.remove(file_name) -> errno
  * Delete file `file_name`.
@@ -4399,6 +4418,116 @@ ON_FLASH int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
   va_end(ap);
   return result;
 }
+
+#ifdef _WIN32
+void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
+  char buf[MAX_PATH * 2], buf2[MAX_PATH * 2], *p;
+
+  strncpy(buf, path, sizeof(buf));
+  buf[sizeof(buf) - 1] = '\0';
+
+  /* Trim trailing slashes. Leave backslash for paths like "X:\" */
+  p = buf + strlen(buf) - 1;
+  while (p > buf && p[-1] != ':' && (p[0] == '\\' || p[0] == '/')) *p-- = '\0';
+
+  /*
+   * Convert to Unicode and back. If doubly-converted string does not
+   * match the original, something is fishy, reject.
+   */
+  memset(wbuf, 0, wbuf_len * sizeof(wchar_t));
+  MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, (int) wbuf_len);
+  WideCharToMultiByte(CP_UTF8, 0, wbuf, (int) wbuf_len, buf2, sizeof(buf2),
+                      NULL, NULL);
+  if (strcmp(buf, buf2) != 0) {
+    wbuf[0] = L'\0';
+  }
+}
+#endif /* _WIN32 */
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+/*
+ * This file contains POSIX opendir/closedir/readdir API implementation
+ * for systems which do not natively support it (e.g. Windows).
+ */
+
+#ifndef NS_FREE
+#define NS_FREE free
+#endif
+
+#ifndef NS_MALLOC
+#define NS_MALLOC malloc
+#endif
+
+#ifdef _WIN32
+DIR *opendir(const char *name) {
+  DIR *dir = NULL;
+  wchar_t wpath[MAX_PATH];
+  DWORD attrs;
+
+  if (name == NULL) {
+    SetLastError(ERROR_BAD_ARGUMENTS);
+  } else if ((dir = (DIR *) NS_MALLOC(sizeof(*dir))) == NULL) {
+    SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+  } else {
+    to_wchar(name, wpath, ARRAY_SIZE(wpath));
+    attrs = GetFileAttributesW(wpath);
+    if (attrs != 0xFFFFFFFF && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+      (void) wcscat(wpath, L"\\*");
+      dir->handle = FindFirstFileW(wpath, &dir->info);
+      dir->result.d_name[0] = '\0';
+    } else {
+      NS_FREE(dir);
+      dir = NULL;
+    }
+  }
+
+  return dir;
+}
+
+int closedir(DIR *dir) {
+  int result = 0;
+
+  if (dir != NULL) {
+    if (dir->handle != INVALID_HANDLE_VALUE)
+      result = FindClose(dir->handle) ? 0 : -1;
+    NS_FREE(dir);
+  } else {
+    result = -1;
+    SetLastError(ERROR_BAD_ARGUMENTS);
+  }
+
+  return result;
+}
+
+struct dirent *readdir(DIR *dir) {
+  struct dirent *result = 0;
+
+  if (dir) {
+    if (dir->handle != INVALID_HANDLE_VALUE) {
+      result = &dir->result;
+      (void) WideCharToMultiByte(CP_UTF8, 0, dir->info.cFileName, -1,
+                                 result->d_name, sizeof(result->d_name), NULL,
+                                 NULL);
+
+      if (!FindNextFileW(dir->handle, &dir->info)) {
+        (void) FindClose(dir->handle);
+        dir->handle = INVALID_HANDLE_VALUE;
+      }
+
+    } else {
+      SetLastError(ERROR_FILE_NOT_FOUND);
+    }
+  } else {
+    SetLastError(ERROR_BAD_ARGUMENTS);
+  }
+
+  return result;
+}
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -4406,6 +4535,43 @@ ON_FLASH int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
 
 
 #if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
+
+#ifdef V7_ENABLE_SPIFFS
+#include <spiffs.h>
+
+typedef struct {
+  spiffs_DIR dh;
+  struct spiffs_dirent de;
+} DIR;
+
+DIR *opendir(const char *dir_name) {
+  DIR *dir = NULL;
+  extern spiffs fs;
+
+  if (dir_name != NULL && (dir = (DIR *) malloc(sizeof(*dir))) != NULL &&
+      SPIFFS_opendir(&fs, (char *) dir_name, &dir->dh) == NULL) {
+    free(dir);
+    dir = NULL;
+  }
+
+  return dir;
+}
+
+int closedir(DIR *dir) {
+  if (dir != NULL) {
+    SPIFFS_closedir(&dir->dh);
+    free(dir);
+  }
+  return 0;
+}
+
+#define d_name name
+#define dirent spiffs_dirent
+
+struct dirent *readdir(DIR *dir) {
+  return SPIFFS_readdir(&dir->dh, &dir->de);
+}
+#endif
 
 static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
@@ -4571,6 +4737,37 @@ ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
+ON_FLASH static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj,
+                                   v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t result = v7_create_undefined();
+
+  (void) this_obj;
+
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *path = v7_to_string(v7, &arg0, &n);
+    struct dirent *dp;
+    DIR *dirp;
+
+    if ((dirp = (opendir(path))) != NULL) {
+      result = v7_create_array(v7);
+      while ((dp = readdir(dirp)) != NULL) {
+        /* Do not show current and parent dirs */
+        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) {
+          continue;
+        }
+        /* Add file name to the list */
+        v7_array_push(v7, result,
+                      v7_create_string(v7, dp->d_name, strlen(dp->d_name), 1));
+      }
+      closedir(dirp);
+    }
+  }
+
+  return result;
+}
+
 ON_FLASH void init_file(struct v7 *v7) {
   v7_val_t file_obj = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "File", 4, 0, file_obj);
@@ -4581,6 +4778,7 @@ ON_FLASH void init_file(struct v7 *v7) {
   v7_set_method(v7, file_obj, "remove", File_remove);
   v7_set_method(v7, file_obj, "rename", File_rename);
   v7_set_method(v7, file_obj, "open", File_open);
+  v7_set_method(v7, file_obj, "list", File_list);
 
   v7_set_method(v7, s_file_proto, "close", File_close);
   v7_set_method(v7, s_file_proto, "read", File_read);

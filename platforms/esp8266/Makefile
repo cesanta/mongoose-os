@@ -76,7 +76,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
            -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF -DV7_ENABLE_GC \
 	         -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DDISABLE_SHA1X -DNO_LIBC \
 					 -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
-					 -DV7_ENABLE__Memory__stats
+					 -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64
 
@@ -120,7 +120,7 @@ TARGET_OUT	:= $(addprefix $(BUILD_BASE)/,$(TARGET).out)
 
 LD_SCRIPT	:= $(addprefix -T./user/,$(LD_SCRIPT))
 
-INCDIR	:= $(addprefix -I,$(SRC_DIR)) 
+INCDIR	:= $(addprefix -I,$(SRC_DIR))
 EXTRA_INCDIR	:= $(addprefix -I,$(EXTRA_INCDIR))
 MODULE_INCDIR	:= $(addsuffix /include,$(INCDIR))
 
