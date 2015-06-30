@@ -84,8 +84,17 @@ DHCP server for it.
 - `Wifi.status() -> status_string` - check current Wifi status
 - `Wifi.ip() -> ip_address_string` - get assigned IP address.
   `Wifi.ip(1)` returns IP address of the access point interface.
+- `Wifi.show()` - returns the current SSID
+- `Wifi.changed(cb)` - invokes `cb` whenever the connection status changes:
+  - 0: connected
+  - 1: disconnected
+  - 2: authmode changed
+  - 3: got ip
+  - 4: client connected to ap
+  - 5: client disconnected from ap
 - `Wifi.mode(mode) -> true or false` - set Wifi mode. `mode` is a number,
   1 is station, 2 is soft-AP, 3 is station + soft-AP
+- `Wifi.scan(cb)` - invoke `cb` with a list of discovered networks.
 
 ## Built-in functions
 

@@ -64,4 +64,11 @@ function demo() {
         setTimeout(demo, 2000)});
 };
 
-if (conf.demo) demo();
+/* put here code that reacts to networking changes */
+Wifi.changed(function(e) {
+    /* got ip */
+    if (e == 3) {
+        if (conf.demo) demo();
+        Wifi.changed(undefined);
+    }
+});

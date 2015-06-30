@@ -241,8 +241,10 @@ ICACHE_FLASH_ATTR void wifi_scan_cb(void *arg, STATUS status) {
 
   cb = v7_get(v7, v7_get_global_object(v7), "_sccb", 5);
   args = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, args);
   v7_set(v7, args, "cb", 2, 0, cb);
   v7_set(v7, args, "res", 3, 0, res);
+  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, v7_create_undefined());
 
   if (v7_exec_with(v7, &res, "this.cb(this.res)", args) != V7_OK) {
     char *s = v7_to_json(v7, res, NULL, 0);
@@ -273,6 +275,51 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj,
   }
 
   return v7_create_boolean(wifi_station_scan(NULL, wifi_scan_cb));
+}
+
+/*
+ * Register a callback that will invoked whenever the wifi status changes.
+ *
+ * Replaces the existing callback if any. Pass undefined to remove the cb.
+ *
+ * The callback will receive a numeric argument:
+ * - 0: connected
+ * - 1: disconnected
+ * - 2: authmode changed
+ * - 3: got ip
+ * - 4: client connected to ap
+ * - 5: client disconnected from ap
+ */
+ICACHE_FLASH_ATTR static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t this_obj,
+                                               v7_val_t args) {
+  v7_val_t cb = v7_array_get(v7, args, 0);
+  v7_set(v7, v7_get_global_object(v7), "_chcb", 5, 0, cb);
+}
+
+ICACHE_FLASH_ATTR void wifi_changed_cb(System_Event_t *evt) {
+  v7_val_t args, cb, res;
+
+  cb = v7_get(v7, v7_get_global_object(v7), "_chcb", 5);
+  if (v7_is_undefined(cb)) return;
+
+  args = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, args);
+  v7_set(v7, args, "cb", 2, 0, cb);
+  v7_set(v7, args, "e", 1, 0, v7_create_number(evt->event));
+  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, v7_create_undefined());
+
+  if (v7_exec_with(v7, &res, "this.cb(this.e)", args) != V7_OK) {
+    char *s = v7_to_json(v7, res, NULL, 0);
+    fprintf(stderr, "exc calling cb: %s\n", s);
+    free(s);
+  }
+}
+
+ICACHE_FLASH_ATTR static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj,
+                                            v7_val_t args) {
+  struct station_config conf;
+  if (!wifi_station_get_config(&conf)) return v7_create_undefined();
+  return v7_create_string(v7, conf.ssid, strlen(conf.ssid), 1);
 }
 
 /*
@@ -481,6 +528,8 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   v7_set_method(v7, wifi, "status", Wifi_status);
   v7_set_method(v7, wifi, "ip", Wifi_ip);
   v7_set_method(v7, wifi, "scan", Wifi_scan);
+  v7_set_method(v7, wifi, "changed", Wifi_changed);
+  v7_set_method(v7, wifi, "show", Wifi_show);
 
 #if V7_ESP_ENABLE__DHT11
   dht11 = v7_create_object(v7);

@@ -44,6 +44,8 @@ ICACHE_FLASH_ATTR void start_cmd(int dummy) {
 
 /* wifi scan can be called only from now on */
 ICACHE_FLASH_ATTR void init_done_cb() {
+  wifi_set_event_handler_cb(wifi_changed_cb);
+
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, start_cmd, NULL);
   os_timer_arm(&startcmd_timer, 500, 0);
