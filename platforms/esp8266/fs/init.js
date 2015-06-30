@@ -47,8 +47,21 @@ Cloud.store = function(name,val,opts) {
     Http.post("http://api.cesanta.com:80", d, opts.cb || function() {});
 }
 
+/* demo */
 File.load('MCP9808.js');
 t = new MCP9808(14,12,1,1,1);
 
-function demo(n, cb) { Cloud.store("temperature",n,{labels: {"sensor":"1"},cb:cb}) }
-function temp() { demo(t.getTemp(), function (d) { print("got:", d, ",mem:", GC.stat().sysfree); setTimeout(temp, 2000) }) };
+/* comment out this if you have a real sensor */
+t.getTemp = function() { return 20+Math.random()*20 };
+
+function push(n, cb) {
+    Cloud.store("temperature", n, {labels: {"sensor": "1"}, cb: cb});
+}
+
+function demo() {
+    push(t.getTemp(), function(d) {
+        print("got:", d, ",mem:", GC.stat().sysfree);
+        setTimeout(demo, 2000)});
+};
+
+if (conf.demo) demo();

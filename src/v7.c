@@ -136,6 +136,10 @@ v7_val_t v7_create_function(struct v7 *, v7_cfunction_t func, int nargs);
 /* Create JavaScript value that holds C/C++ callback pointer. */
 v7_val_t v7_create_cfunction(v7_cfunction_t func);
 
+/* Make f a JS constructor function for objects with prototype in proto. */
+v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
+                               int num_args);
+
 /* Create numeric primitive value */
 v7_val_t v7_create_number(double num);
 
@@ -390,6 +394,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math__atan 1
 #define V7_ENABLE__Math__atan2 1
 #define V7_ENABLE__Math__ceil 1
+#define V7_ENABLE__Math__constants 1
 #define V7_ENABLE__Math__cos 1
 #define V7_ENABLE__Math__exp 1
 #define V7_ENABLE__Math__floor 1
@@ -403,6 +408,8 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math__sqrt 1
 #define V7_ENABLE__Math__tan 1
 #define V7_ENABLE__Memory__stats 1
+#define V7_ENABLE__NUMBER__NEGATIVE_INFINITY 1
+#define V7_ENABLE__NUMBER__POSITIVE_INFINITY 1
 #define V7_ENABLE__Object__create 1
 #define V7_ENABLE__Object__defineProperties 1
 #define V7_ENABLE__Object__defineProperty 1
@@ -1936,8 +1943,6 @@ V7_PRIVATE void init_function(struct v7 *v7);
 V7_PRIVATE void init_stdlib(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
-V7_PRIVATE val_t
-v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t, int);
 
 V7_PRIVATE int set_method(struct v7 *, val_t, const char *, v7_cfunction_t,
                           int);
@@ -7037,10 +7042,9 @@ v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   return obj;
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-v7_create_cfunction_ctor(struct v7 *v7, val_t proto, v7_cfunction_t f,
-                         int num_args) {
-  val_t res = v7_create_function(v7, f, num_args);
+ON_FLASH v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
+                                        v7_cfunction_t f, int num_args) {
+  v7_val_t res = v7_create_function(v7, f, num_args);
 
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
   v7_set_property_v(
@@ -13430,13 +13434,13 @@ ON_FLASH V7_PRIVATE void init_error(struct v7 *v7) {
   val_t error;
   size_t i;
 
-  error = v7_create_cfunction_ctor(v7, v7->error_prototype, Error_ctor, 1);
+  error = v7_create_constructor(v7, v7->error_prototype, Error_ctor, 1);
   v7_set_property(v7, v7->global_object, "Error", 5, V7_PROPERTY_DONT_ENUM,
                   error);
 
   for (i = 0; i < ARRAY_SIZE(error_names); i++) {
-    error = v7_create_cfunction_ctor(v7, create_object(v7, v7->error_prototype),
-                                     Error_ctor, 1);
+    error = v7_create_constructor(v7, create_object(v7, v7->error_prototype),
+                                  Error_ctor, 1);
     v7_set_property(v7, v7->global_object, error_names[i],
                     strlen(error_names[i]), V7_PROPERTY_DONT_ENUM, error);
     v7->error_objects[i] = error;
@@ -13531,8 +13535,7 @@ ON_FLASH static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
 ON_FLASH V7_PRIVATE void init_number(struct v7 *v7) {
   unsigned int attrs =
       V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
-  val_t num =
-      v7_create_cfunction_ctor(v7, v7->number_prototype, Number_ctor, 1);
+  val_t num = v7_create_constructor(v7, v7->number_prototype, Number_ctor, 1);
   v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM,
                   num);
 
@@ -13545,10 +13548,14 @@ ON_FLASH V7_PRIVATE void init_number(struct v7 *v7) {
   v7_set_property(v7, num, "MAX_VALUE", 9, attrs,
                   v7_create_number(1.7976931348623157e+308));
   v7_set_property(v7, num, "MIN_VALUE", 9, attrs, v7_create_number(5e-324));
+#if V7_ENABLE__NUMBER__NEGATIVE_INFINITY
   v7_set_property(v7, num, "NEGATIVE_INFINITY", 17, attrs,
                   v7_create_number(-INFINITY));
+#endif
+#if V7_ENABLE__NUMBER__POSITIVE_INFINITY
   v7_set_property(v7, num, "POSITIVE_INFINITY", 17, attrs,
                   v7_create_number(INFINITY));
+#endif
   v7_set_property(v7, num, "NaN", 3, attrs, V7_TAG_NAN);
 
   v7_set_property(v7, v7->global_object, "NaN", 3, attrs, V7_TAG_NAN);
@@ -14145,7 +14152,7 @@ ON_FLASH static val_t Boolean_toString(struct v7 *v7, val_t this_obj,
 
 ON_FLASH V7_PRIVATE void init_boolean(struct v7 *v7) {
   val_t ctor =
-      v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor, 1);
+      v7_create_constructor(v7, v7->boolean_prototype, Boolean_ctor, 1);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
@@ -14364,6 +14371,7 @@ ON_FLASH V7_PRIVATE void init_math(struct v7 *v7) {
   set_cfunc_prop(v7, math, "tan", Math_tan);
 #endif
 
+#if V7_ENABLE__Math__constants
   v7_set_property(v7, math, "E", 1, 0, v7_create_number(M_E));
   v7_set_property(v7, math, "PI", 2, 0, v7_create_number(M_PI));
   v7_set_property(v7, math, "LN2", 3, 0, v7_create_number(M_LN2));
@@ -14372,9 +14380,9 @@ ON_FLASH V7_PRIVATE void init_math(struct v7 *v7) {
   v7_set_property(v7, math, "LOG10E", 6, 0, v7_create_number(M_LOG10E));
   v7_set_property(v7, math, "SQRT1_2", 7, 0, v7_create_number(M_SQRT1_2));
   v7_set_property(v7, math, "SQRT2", 5, 0, v7_create_number(M_SQRT2));
+#endif
 
   v7_set_property(v7, v7->global_object, "Math", 4, 0, math);
-  v7_set_property(v7, v7->global_object, "NaN", 3, 0, V7_TAG_NAN);
 }
 
 #endif /* V7_ENABLE__Math */
@@ -14982,8 +14990,7 @@ ON_FLASH static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__RegExp */
 
 ON_FLASH V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str =
-      v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
+  val_t str = v7_create_constructor(v7, v7->string_prototype, String_ctor, 1);
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
                   str);
 
@@ -15995,7 +16002,7 @@ ON_FLASH static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   d_set_cfunc_prop(v7, v7->date_prototype, "set" #func, Date_set##func);
 
 ON_FLASH V7_PRIVATE void init_date(struct v7 *v7) {
-  val_t date = v7_create_cfunction_ctor(v7, v7->date_prototype, Date_ctor, 7);
+  val_t date = v7_create_constructor(v7, v7->date_prototype, Date_ctor, 7);
   v7_set_property(v7, v7->global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
                   date);
   d_set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);
@@ -16308,8 +16315,7 @@ ON_FLASH static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 ON_FLASH V7_PRIVATE void init_regex(struct v7 *v7) {
-  val_t ctor =
-      v7_create_cfunction_ctor(v7, v7->regexp_prototype, Regex_ctor, 1);
+  val_t ctor = v7_create_constructor(v7, v7->regexp_prototype, Regex_ctor, 1);
   val_t lastIndex = v7_create_dense_array(v7);
 
   v7_set_property(v7, v7->global_object, "RegExp", 6, V7_PROPERTY_DONT_ENUM,

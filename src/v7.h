@@ -136,6 +136,10 @@ v7_val_t v7_create_function(struct v7 *, v7_cfunction_t func, int nargs);
 /* Create JavaScript value that holds C/C++ callback pointer. */
 v7_val_t v7_create_cfunction(v7_cfunction_t func);
 
+/* Make f a JS constructor function for objects with prototype in proto. */
+v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
+                               int num_args);
+
 /* Create numeric primitive value */
 v7_val_t v7_create_number(double num);
 
