@@ -87,12 +87,23 @@ ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
 }
 
 ICACHE_FLASH_ATTR static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj,
-                                           v7_val_t args) {
+                                              v7_val_t args) {
   (void)v7;
   (void)this_obj;
   (void)args;
   pp_soft_wdt_restart();
 
+  return v7_create_boolean(1);
+}
+
+ICACHE_FLASH_ATTR static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj,
+                                           v7_val_t args) {
+  (void)v7;
+  (void)this_obj;
+  (void)args;
+  system_restart();
+
+  /* Unreachable */
   return v7_create_boolean(1);
 }
 
@@ -563,6 +574,7 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   v7_set(v7, v7_get_global_object(v7), "OS", 2, 0, os);
   v7_set_method(v7, os, "prof", OS_prof);
   v7_set_method(v7, os, "wdt_feed", OS_wdt_feed);
+  v7_set_method(v7, os, "reset", OS_reset);
 
   init_i2cjs(v7);
   init_gpiojs(v7);
