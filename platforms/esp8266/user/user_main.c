@@ -49,6 +49,11 @@ ICACHE_FLASH_ATTR void init_done_cb() {
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, start_cmd, NULL);
   os_timer_arm(&startcmd_timer, 500, 0);
+
+#ifndef ESP_ENABLE_HW_WATCHDOG
+  ets_wdt_disable();
+#endif
+  pp_soft_wdt_stop();
 }
 
 // Init function
@@ -57,10 +62,6 @@ ICACHE_FLASH_ATTR void user_init() {
 
   uart_div_modify(0, UART_CLK_FREQ / 115200);
   system_set_os_print(0);
-
-#ifndef ESP_ENABLE_WATCHDOG
-  ets_wdt_disable();
-#endif
 
 #ifdef V7_ESP_GDB_SERVER
   /* registers exception handlers so that you can hook in gdb on crashes */
