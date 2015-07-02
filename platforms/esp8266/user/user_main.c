@@ -11,6 +11,7 @@
 #include "util.h"
 #include "v7_uart.h"
 #include "v7_gdb.h"
+#include "v7_flash_bytes.h"
 
 extern void ets_wdt_disable(void);
 os_timer_t tick_timer;
@@ -66,6 +67,12 @@ ICACHE_FLASH_ATTR void user_init() {
 #ifdef V7_ESP_GDB_SERVER
   /* registers exception handlers so that you can hook in gdb on crashes */
   gdb_init();
+#endif
+#ifdef V7_ESP_FLASH_ACCESS_EMUL
+  /*
+   * registers exception handlers that allow reading arbitrary data from flash
+   */
+  flash_emul_init();
 #endif
 
   gpio_init();

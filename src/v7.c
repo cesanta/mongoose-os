@@ -11538,37 +11538,27 @@ RODATA static const char js_function_call[] = STRINGIFY(
     };);
 #endif
 
-RODATA static const struct v7_vec js_functions[] = {
+RODATA static const char * const js_functions[] = {
 #if V7_ENABLE__Function__call
-  V7_VEC(js_function_call),
+  js_function_call,
 #endif
 #if V7_ENABLE__Array__reduce
-  V7_VEC(js_array_reduce),
+  js_array_reduce,
 #endif
-  V7_VEC(js_array_indexOf),
-  V7_VEC(js_array_lastIndexOf),
-  V7_VEC(js_array_pop),
-  V7_VEC(js_array_shift)
+  js_array_indexOf,
+  js_array_lastIndexOf,
+  js_array_pop,
+  js_array_shift
 };
 
 #define CEIL(x, y) ((x) / (y) + ((x) % (y) > 0))
 
 ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   val_t res;
-  char *body;
   int i;
 
   for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
-#ifdef __ets__
-    int size = CEIL(js_functions[i].len + 1, 4) * 4;
-    body = (char *) malloc(size);
-    memcpy(body, js_functions[i].p, size);
-#else
-    body = (char *) malloc(js_functions[i].len + 1);
-    strcpy(body, js_functions[i].p);
-#endif
-    v7_exec(v7, &res, body);
-    free(body);
+    v7_exec(v7, &res, js_functions[i]);
   }
 
   /* TODO(lsm): re-enable in a separate PR */

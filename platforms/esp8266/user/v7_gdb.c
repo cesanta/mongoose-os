@@ -12,21 +12,13 @@
 #include "util.h"
 #include "v7_uart.h"
 #include "v7_gdb.h"
+#include "v7_esp_hw.h"
 #include "xtensa/corebits.h"
 
 /* TODO(mkm): not sure if gdb guarantees lowercase hex digits */
 #define fromhex(c) \
   (((c) &0x40) ? ((c) &0x20 ? (c) - 'a' + 10 : (c) - 'A' + 10) : (c) - '0')
 #define hexdigit(n) (((n) < 10) ? '0' + (n) : 'a' + ((n) -10))
-
-#define __stringify_1(x...) #x
-#define __stringify(x...) __stringify_1(x)
-#define RSR(sr)                                       \
-  ({                                                  \
-    uint32_t r;                                       \
-    asm volatile("rsr %0,"__stringify(sr) : "=a"(r)); \
-    r;                                                \
-  })
 
 static struct regfile regs = {0};
 static uint8_t gdb_send_checksum;
@@ -88,6 +80,14 @@ ICACHE_FLASH_ATTR uint8_t gdb_read_unaligned(uint8_t *addr) {
       base >= (uint32_t *) ESP_UPPER_VALID_ADDRESS) {
     return 0;
   }
+
+  word = *base;
+  return (uint8_t)(word >> 8 * ((uintptr_t) addr & 0x3));
+}
+
+ICACHE_FLASH_ATTR uint8_t gdb_read_unaligned_fast(uint8_t *addr) {
+  uint32_t *base = (uint32_t *) ((uintptr_t) addr & ~0x3);
+  uint32_t word;
 
   word = *base;
   return (uint8_t)(word >> 8 * ((uintptr_t) addr & 0x3));
