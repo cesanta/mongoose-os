@@ -40,8 +40,8 @@ ICACHE_FLASH_ATTR void flash_emul_exception_handler(
    * Since vaddr already contains the effective address we don't have to fetch
    * the value of the at register nor decode the third byte of the instruction.
    */
-  uint32_t instr = gdb_read_unaligned_fast((uint8_t *) frame->pc) |
-                   (gdb_read_unaligned_fast((uint8_t *) frame->pc + 1) << 8);
+  uint32_t instr = read_unaligned_byte((uint8_t *) frame->pc) |
+                   (read_unaligned_byte((uint8_t *) frame->pc + 1) << 8);
   uint8_t at = (instr >> 4) & 0xf;
   uint32_t val;
 
@@ -53,7 +53,7 @@ ICACHE_FLASH_ATTR void flash_emul_exception_handler(
      * |----------------+-------+-------+-------+-------|
      * |     imm8       |0 0 0 0|   as  |   at  |0 0 1 0|
      */
-    val = gdb_read_unaligned_fast((uint8_t *) vaddr);
+    val = read_unaligned_byte((uint8_t *) vaddr);
   } else if ((instr & 0x700f) == 0x1002) {
     /*
      * l16ui at, as, imm
@@ -68,8 +68,8 @@ ICACHE_FLASH_ATTR void flash_emul_exception_handler(
      * |----------------+-------+-------+-------+-------|
      * |     imm8       |1 0 0 1|   as  |   at  |0 0 1 0|
      */
-    val = gdb_read_unaligned_fast((uint8_t *) vaddr) |
-          gdb_read_unaligned_fast((uint8_t *) vaddr + 1) << 8;
+    val = read_unaligned_byte((uint8_t *) vaddr) |
+          read_unaligned_byte((uint8_t *) vaddr + 1) << 8;
     if (instr & 0x8000) val = (int16_t) val;
   } else {
     printf("cannot emulate flash mem instr\n");

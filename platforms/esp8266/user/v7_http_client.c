@@ -75,7 +75,8 @@ ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
       snprintf(buf, sizeof(buf),
                "POST %s HTTP/1.0\r\ncontent-length: %d\r\n\r\n%s", ctx->path,
                (int) len, body);
-      v7_set(v7, v7_get_global_object(v7), "_tmp_b", 6, 0, v7_create_undefined);
+      v7_set(v7, v7_get_global_object(v7), "_tmp_b", 6, 0,
+             v7_create_undefined());
     } else {
       fprintf(stderr, "body not a string\n");
     }

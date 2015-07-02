@@ -10,4 +10,6 @@
     r;                                                \
   })
 
+uint8_t read_unaligned_byte(uint8_t *addr);
+
 #endif
