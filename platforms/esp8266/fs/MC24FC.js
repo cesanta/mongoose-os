@@ -1,18 +1,22 @@
 /* http://cesanta.com/docs/smartjs/drivers/mcf24fc */
 function MC24FC(sda,scl,chn) {
-  var c = i2c.init(sda,scl);
+  var c = new I2C(sda,scl);
   var chn = chn;
 
   function read_s(a,sz) {
-    var a0_15 = a & 65535;
-    var a16 = (a & 65536) >> 16
-    var cb = 10 << 4 | a16 << 3 | chn << 1;
+    var a0_15 = a & 0xFFFF;
+    var a16 = (a & 0x10000) >> 16;
+    var i2c_addr = 0b1010000 | a16 << 2 | chn;
 
-    c.start();
-    c.sendByte(cb);
-    c.sendWord(a0_15);
-    c.start();
-    c.sendByte(cb | 1);
+    if (c.start(i2c_addr, I2C.WRITE) != I2C.ACK ||
+        c.send(a0_15 >> 8) != I2C.ACK ||
+        c.send(a0_15 & 0xFF) != I2C.ACK) {
+      return "";
+    }
+
+    if (c.start(i2c_addr, I2C.READ) != I2C.ACK) {
+      return "";
+    }
 
     var ret = c.readString(sz);
 
@@ -21,38 +25,38 @@ function MC24FC(sda,scl,chn) {
     return ret;
   }
 
-  function write_b(cb,a0_15,a16,str,pos,sz) {
-    c.start();
+  function write_b(a0_15,a16,str,pos,sz) {
+    var i2c_addr = 0b1010000 | a16 << 2 | chn;
 
-    if(c.sendByte(cb) != 0) {
+    if (c.start(i2c_addr, I2C.WRITE) != I2C.ACK) {
       return 0;
     }
 
-    if(c.sendWord(a0_15) != 0) {
+    if(c.send(a0_15 >> 8) != I2C.ACK ||
+       c.send(a0_15 & 0xFF) != I2C.ACK) {
       return 0;
     }
 
-    if(c.sendString(str.slice(pos, pos + sz)) != 0) {
+    if(c.send(str.slice(pos, pos + sz)) != I2C.ACK) {
       return 0;
     }
 
     c.stop();
 
-    var i;
-    for (i = 0; i <= 100; i++) {
-      c.start();
-      if(c.sendByte(cb) == 0) {
-        break;
-      }
+    // Wait for write to complete.
+    var i = 0;
+    while (c.start(i2c_addr, I2C.WRITE) != I2C.ACK && i < 100) {
+      i++;
     }
+
+    c.stop();
 
     return i != 100;
   }
 
   function write_s(a,str,pos,sz) {
-    var a0_15 = a & 65535;
-    var a16 = (a & 65536) >> 16
-    var cb = 10 << 4 | a16 << 3 | chn << 1
+    var a0_15 = a & 0xFFFF;
+    var a16 = (a & 0x10000) >> 16
 
     var s, n;
     s = n = sz;
@@ -63,7 +67,7 @@ function MC24FC(sda,scl,chn) {
       n = page_space;
     }
 
-    if (write_b(cb,a0_15,a16,str,pos,n) == 0) {
+    if (write_b(a0_15,a16,str,pos,n) == 0) {
       return 0;
     }
 
@@ -77,7 +81,7 @@ function MC24FC(sda,scl,chn) {
         n = 128;
       }
 
-      if (write_b(cb,a0_15,a16,str,pos,n) == 0) {
+      if (write_b(a0_15,a16,str,pos,n) == 0) {
         return 0;
       }
 
@@ -90,15 +94,14 @@ function MC24FC(sda,scl,chn) {
   }
 
   this.read = function(a,sz) {
-    var r;
 
-    if (a + sz > 131071 ) {
+    if (a + sz > 0x1FFFF) {
       return -1;
     }
 
-    if (a <= 65535 &&
-      a + sz > 65536) {
-      r = 65535 - a + 1;
+    if (a <= 0xFFFF &&
+      a + sz > 0x10000) {
+      var r = 0xFFFF - a + 1;
       return read_s(a, r) +
              read_s(a + r, sz - r);
     } else {
@@ -109,15 +112,14 @@ function MC24FC(sda,scl,chn) {
   this.write = function (a,str) {
     var n, s = str.length;
 
-    if (a + s > 131071) {
+    if (a + s > 0x1FFFF) {
       return -1;
     }
 
-    if (a <= 65535 &&
-        a + s > 65536) {
-      n = 65535 - a + 1;
-      return write_s(a, str, 0, n) +
-       write_s(a + n, str, n, s - n);
+    if (a <= 0xFFFF &&
+        a + s > 0x10000) {
+      n = 0xFFFF - a + 1;
+      return write_s(a, str, 0, n) + write_s(a + n, str, n, s - n);
     } else {
       return write_s(a, str, 0, s);
     }

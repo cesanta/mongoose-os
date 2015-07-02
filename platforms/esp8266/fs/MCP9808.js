@@ -1,36 +1,35 @@
 /*
- * MCP9898 temperature sensor JS i2c wrapper sample
- * Usage: var t = new MCP9808(14,12,1,1,1); print(t.getTemp())
+ * MCP9898 temperature sensor JS I2C wrapper sample.
+ * Example usage:
+ *   var t = new MCP9808(14, 12, 1, 1); print(t.getTemp()); t.close();
  */
 
-function MCP9808(sda, scl, a0, a1, a2) {
-  var i2c_conn = i2c.init(sda, scl);
-  var ctrlByte = 3 << 4 | a2 << 3 | a1 << 2 | a0 << 1;
+function MCP9808(sda, scl, a2, a1, a0) {
+  var c = new I2C(sda, scl);
+  var addr = 0b0011000 | (a2 << 2) | (a1 << 1) | a0;
 
-  this.getTemp = function () {
-    i2c_conn.start();
-
-    if (i2c_conn.sendByte(ctrlByte) != 0) {
+  this.getTemp = function() {
+    // Select the temperature register (5).
+    if (c.start(addr, I2C.WRITE) != I2C.ACK) {
+      return -255;
+    }
+    if (c.send(5) != I2C.ACK) {
+      c.stop();
       return -255;
     }
 
-    if (i2c_conn.sendByte(5) != 0 ) {
-      return -254;
-    }
-
-    i2c_conn.start();
-
-    if (i2c_conn.sendByte(ctrlByte | 1) != 0) {
-      return -253;
+    // Read its value.
+    if (c.start(addr, I2C.READ) != I2C.ACK) {
+      c.stop();
+      return -255;
     }
 
     var temp_u, temp_l;
 
-    temp_u = i2c_conn.readByte();
-    i2c_conn.sendAck();
-    temp_l = i2c_conn.readByte();
-    i2c_conn.sendNack();
-    i2c_conn.stop();
+    temp_u = c.readByte(I2C.ACK);
+    temp_l = c.readByte(I2C.NAK);
+
+    c.stop();
 
     temp_u &= 31;
 
@@ -40,10 +39,5 @@ function MCP9808(sda, scl, a0, a1, a2) {
     } else {
       return temp_u*16 + temp_l/16;
     }
-  }
-
-  this.stop = function () {
-    i2c_conn.close();
-    i2c_conn = null;
   }
 }

@@ -55,21 +55,22 @@ For example `cu` tool on Linux:
 
 ## I2C
 
-- `i2c.init(sda_pin_no,scl_pin_no)` - initialize i2c connection
-  through given pin numbers, return I2C object for further communication
-- `I2C.start()` - send "start" signal to a slave
-- `I2C.stop()` - send "stop" signal to a slave
-- `I2C.sendAck()` - send "ack" to a slave
-- `I2C.sendNack()` - send "nack" to a slave
-- `I2C.getAck()` - read ack/nack from a slave, return 0 for "ack" and "1" for nack
-- `I2C.readByte()` - read one byte from a slave
-- `I2C.sendByte(byte)` - send given byte to a slave, return 0 if slave acked byte or 1 otherwise
-- `I2C.sendWord(word)` - send two bytes in network order, return 0 if slave acked both bytes or 1 otherwise
-- `I2C.sendString(string)` - send string to a slave, return 0 if slave acked all bytes or 1 otherwise
-- `I2C.readString(len)` - read `len` bytes to string, send ack for all bytes except last, which is nacked.
-- `I2C.close()` - close i2c connection and close connection
+Constants:
+- Communication modes: `I2C.READ`, `I2C.WRITE`
+- Acknowledgement types: `I2C.ACK`, `I2C.NAK`, `I2C.NONE`
 
-See [temperature sensor driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MCP9808.js) and [eeprom driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MC24FC.js) for usage example.
+Methods:
+- var i2c = new I2C(sda_gpio, scl_gpio) - constructor.
+- `i2c.start(addr, mode) -> ackType` - claims the bus, puts the slave address on it and reads ack/nak. addr is the 7-bit address (no r/w bit), mode is either I2C.READ or I2C.WRITE.
+- `i2c.stop()` - put stop condition on the bus and release it.
+- `i2c.send(data) -> ackType` - send data to the bus. If `data` is a number between 0 and 255, a single byte is sent. If `data` is a string, all bytes from the string are sent. Return value is the acknowledgement sent by the receiver. When a multi-byte sequence (string) is sent, all bytes must be positively acknowledged by the receiver, except for the last one. Acknowledgement for the last byte becomes the return value. If one of the bytes in the middle was not acknowledged, `I2C.ERR` is returned.
+- `i2c.readByte([ackType]) -> number` - read a byte from the slave and `ACK`/`NAK` as instructed. The argument is optional and defaults to `ACK`. It is possible to specify `NONE`, in which case the acknoewledgment bit is not transmitted, and the call must be followed up by `sendAck`.
+- `i2c.readString(n, [lastAckType]) -> string` - read a sequence of `n` bytes. Ann bytes except the last are `ACK`-ed, `lastAckType` specifies what to do with the last one and works like `ackType` does for `readByte`.
+- `i2c.sendAck(ackType)` - send an acknowledgement. This method must be used after one of the `read` methods with `NONE` ack type.
+
+There is a detailed description of this API in [the source file](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/user/v7_i2c_js.c).
+
+See [temperature sensor driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MCP9808.js) and [EEPROM driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MC24FC.js) for usage example.
 
 ## HTTP
 

@@ -12,69 +12,74 @@ struct i2c_connection {
 
   /* GPIO used as SCL */
   uint8_t scl_gpio;
-
-  /* Internal values */
-  uint8_t sda_last_value;
-  uint8_t scl_last_value;
 };
 
 /*
- * i2c_ack - positive answer
- * i2c_nack - negative anwser
+ * I2C_ACK - positive answer
+ * I2C_NAK - negative anwser
+ * I2C_ERR - a value that can be returned in case of an error.
+ * I2C_NONE - a special value that can be provided to read functions
+ *   to indicate that ack should not be sent at all.
  */
-enum i2c_ack_type { i2c_ack = 0, i2c_nack = 1 };
+enum i2c_ack_type { I2C_ACK = 0, I2C_NAK = 1, I2C_ERR = 2, I2C_NONE = 3 };
 
 /* Initialize i2c master */
-int i2c_init(uint8_t sda_gpio, uint8_t scl_gpio, struct i2c_connection *conn);
+int i2c_init(struct i2c_connection *conn);
 
-/* Set i2c Start condition */
-void i2c_start(struct i2c_connection *conn);
+/*
+ * Set i2c Start condition and send the address on the bus.
+ * addr is the 7-bit address of the target.
+ * rw selects read or write mode (1 = read, 0 = write).
+ *
+ * Returns the ack type received in response to the address.
+ * Returns I2C_NONE in case of invalid arguments.
+ *
+ * TODO(rojer): 10-bit address support.
+ */
+enum i2c_rw { I2C_READ = 1, I2C_WRITE = 0 };
+enum i2c_ack_type i2c_start(struct i2c_connection *conn,
+                            uint16_t addr, enum i2c_rw mode);
 
-/* Set i2c Stop condition */
+/* Set i2c Stop condition. Releases the bus. */
 void i2c_stop(struct i2c_connection *conn);
 
-/* Send answer (ack or nack) to slave */
-void i2c_send_ack(struct i2c_connection *conn, enum i2c_ack_type ack_type);
-
-/* Receives ack or nack from slave */
-enum i2c_ack_type i2c_get_ack(struct i2c_connection *conn);
-
 /*
- * Read one byte from current address
- * "Current address" is device specific concept
- */
-uint8_t i2c_read_byte(struct i2c_connection *conn);
-
-/*
- * Send one byte to i2c
- * Don't wait for ack and don't check it
- */
-void i2c_write_byte(struct i2c_connection *conn, uint8_t data);
-
-/*
- * Send one byte to i2c
- * and wait for ack. Return value = ack/nack (0/1)
+ * Send one byte to i2c. Returns the type of ack that receiver sent.
  */
 enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data);
 
 /*
- * Send array to i2c and wait for ack
- * Return i2c_ack if the whole array is sent successfully
+ * Send array to I2C.
+ * The ack type sent in response to the last transmitted byte is returned,
+ * as well as number of bytes sent.
+ * Receiver must positively acknowledge all bytes except, maybe, the last one.
+ * If all the bytes have been sent, the return value is the acknowledgement
+ * status of the last one (ACK or NAK). If a NAK was received before all the
+ * bytes could be sent, ERR is returned instead.
  */
-enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
-                                 size_t buf_size);
+enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn,
+                                 uint8_t *buf, size_t buf_size);
 
 /*
- * Read array beginning from current address
- * "Current address" is device specific concept
- * NOTE: This function sends ACK for every read byte
+ * Read one byte from the bus, finish with an ack of the specified type.
+ * ack_type can be "none" to prevent sending ack at all, in which case
+ * this call must be followed up by i2c_send_ack.
  */
-void i2c_read_bytes(struct i2c_connection *conn, uint8_t *buf, size_t buf_size);
+uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type);
 
 /*
- * Send uint16 to i2c in big-endian order
- * Don't wait for ack and doesn't check it
+ * Read n bytes from the connection.
+ * Each byte except the last one is acked, for the last one the user has
+ * the choice whether to ack it, nack it or not send ack at all, in which case
+ * this call must be followed up by i2c_send_ack.
  */
-enum i2c_ack_type i2c_send_uint16(struct i2c_connection *conn, uint16_t data);
+void i2c_read_bytes(struct i2c_connection *conn, size_t n, uint8_t *buf,
+                    enum i2c_ack_type last_ack_type);
 
-#endif
+/*
+ * Send an ack of the specified type. Meant to be used after i2c_read_byte{,s}
+ * with ack_type of "none".
+ */
+void i2c_send_ack(struct i2c_connection *conn, enum i2c_ack_type ack_type);
+
+#endif /* V7_I2C_INCLUDED */

@@ -49,7 +49,9 @@ Cloud.store = function(name,val,opts) {
 
 /* demo */
 File.load('MCP9808.js');
-t = new MCP9808(14,12,1,1,1);
+// File.load('MCP9808_test.js');
+File.load('MC24FC.js');
+// File.load('MC24FC_test.js');
 
 /* comment out this if you have a real sensor */
 t.getTemp = function() { return 20+Math.random()*20 };
