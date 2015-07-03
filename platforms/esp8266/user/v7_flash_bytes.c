@@ -46,34 +46,23 @@ ICACHE_FLASH_ATTR void flash_emul_exception_handler(
   uint32_t val;
 
   if ((instr & 0xf00f) == 0x2) {
-    /*
-     * l8ui at, as, imm
-     *
-     * |23            16|15   12|11    8|7     4|3     0|
-     * |----------------+-------+-------+-------+-------|
-     * |     imm8       |0 0 0 0|   as  |   at  |0 0 1 0|
-     */
+    /* l8ui at, as, imm       r = 0 */
     val = read_unaligned_byte((uint8_t *) vaddr);
   } else if ((instr & 0x700f) == 0x1002) {
     /*
-     * l16ui at, as, imm
-     *
-     * |23            16|15   12|11    8|7     4|3     0|
-     * |----------------+-------+-------+-------+-------|
-     * |     imm8       |0 0 0 1|   as  |   at  |0 0 1 0|
-     *
-     * l16si at, as, imm
-     *
-     * |23            16|15   12|11    8|7     4|3     0|
-     * |----------------+-------+-------+-------+-------|
-     * |     imm8       |1 0 0 1|   as  |   at  |0 0 1 0|
+     * l16ui at, as, imm      r = 1
+     * l16si at, as, imm      r = 9
      */
     val = read_unaligned_byte((uint8_t *) vaddr) |
           read_unaligned_byte((uint8_t *) vaddr + 1) << 8;
     if (instr & 0x8000) val = (int16_t) val;
   } else {
     printf("cannot emulate flash mem instr\n");
+#ifdef V7_ESP_GDB_SERVER
     gdb_exception_handler(frame);
+#else
+    _ResetVector();
+#endif
   }
 
   /* a0 and a1 are never used as scratch registers */
