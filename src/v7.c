@@ -6928,11 +6928,8 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
     case V7_TYPE_FOREIGN:
       return c_snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
     default:
-#ifndef NO_LIBC
       printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
-#endif
-      ;
   }
   return 0; /* for compilers that don't know about abort() */
 }
@@ -7912,6 +7909,10 @@ ON_FLASH v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
  */
 
 
+#if V7_ENABLE__Memory__stats
+int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
+#endif
+
 #ifdef V7_ENABLE_COMPACTING_GC
 void gc_mark_string(struct v7 *, val_t *);
 #endif
@@ -8018,27 +8019,20 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #else
   char **r;
   if (a->free == NULL) {
-#if 0
-    fprintf(stderr, "Exhausting arena %s, invoking GC.\n", a->name);
-#endif
     v7_gc(v7, 0);
     if (a->free == NULL) {
 #if 1
-#ifndef NO_LIBC
-      fprintf(stderr, "TODO arena grow\n");
-      abort();
-#else
       printf("%s arena exhausted\n",
              a == &v7->object_arena
                  ? "object"
                  : (a == &v7->property_arena ? "property" : "function"));
 
+#if V7_ENABLE__Memory__stats
       printf("objnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE));
       printf("propnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE));
       printf("funcnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE));
-
-      *(int *) 1 = 1;
 #endif
+      abort();
 #else
       gc_arena_grow(a, a->size * 1.50);
 /* TODO(mkm): relocate */
@@ -10966,8 +10960,10 @@ cleanup:
   return res;
 }
 
-ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
-                                  val_t w) {
+/* like v7_exec_with but frees src if fr is true */
+ON_FLASH
+V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
+                                     val_t w, int fr) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t old_this = v7->this_object;
@@ -10990,7 +10986,12 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
-  if ((err = parse(v7, a, src, 1)) != V7_OK) {
+  err = parse(v7, a, src, 1);
+  if (fr) {
+    free((void *) src);
+  }
+
+  if (err != V7_OK) {
     /*
      * The actual error might not be syntax error but there is no need to
      * add more overhead to the runtime by creating a specific exception for
@@ -11018,6 +11019,11 @@ cleanup:
   memcpy(&v7->label_jmp_buf, &saved_label_buf, sizeof(saved_label_buf));
 
   return err;
+}
+
+ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
+                                  val_t w) {
+  return v7_exec_with2(v7, res, src, w, 0);
 }
 
 ON_FLASH void v7_interrupt(struct v7 *v7) {
@@ -11066,13 +11072,14 @@ ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
     c_fclose(fp);
   } else {
     c_rewind(fp);
-    if (c_fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) {
-      if (c_ferror(fp)) goto cleanup;
+    if ((c_fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) &&
+        c_ferror(fp)) {
+      c_fclose(fp);
+      return err;
     }
     c_fclose(fp);
-    err = v7_exec(v7, res, p);
-  cleanup:
-    free(p);
+    /* v7_exec_with2 will free sources after parse */
+    err = v7_exec_with2(v7, res, p, V7_UNDEFINED, 1);
   }
 
   return err;

@@ -601,3 +601,10 @@ ICACHE_FLASH_ATTR int double_to_str(char* buf, double val, int prec) {
 
   return ptr - buf;
 }
+
+ICACHE_FLASH_ATTR void abort(void) {
+  /* cause an unaligned access exception, that will drop you into gdb */
+  *(int*) 1 = 1;
+  while (1)
+    ; /* avoid gcc warning because stdlib abort() has noreturn attribute */
+}
