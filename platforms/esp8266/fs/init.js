@@ -48,13 +48,17 @@ Cloud.store = function(name,val,opts) {
 }
 
 /* demo */
-File.load('MCP9808.js');
-// File.load('MCP9808_test.js');
-File.load('MC24FC.js');
-// File.load('MC24FC_test.js');
-
-/* comment out this if you have a real sensor */
-t.getTemp = function() { return 20+Math.random()*20 };
+if (conf.demo == 'MCP9808') {
+    File.load('MCP9808.js');
+    t = new MCP9808(14,12,1,1,1);
+    if (!conf.has_temp_sensor) {
+        t.getTemp = function() { return 20+Math.random()*20 };
+    }
+}
+if (conf.demo == 'MC24FC') {
+    File.load('MC24FC.js');
+    File.load('MC24FC_test.js');
+}
 
 function push(n, cb) {
     Cloud.store("temperature", n, {labels: {"sensor": "1"}, cb: cb});
@@ -70,7 +74,7 @@ function demo() {
 Wifi.changed(function(e) {
     /* got ip */
     if (e == 3) {
-        if (conf.demo) demo();
+        if (conf.demo == 'MCP9808') demo();
         Wifi.changed(undefined);
     }
 });

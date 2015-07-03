@@ -36,13 +36,13 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj,
   char prop_name[15];
   int pin, type, len, has_isr, new_isr_provided;
 
-  if (!v7_is_double(pinv) || !v7_is_double(type)) {
+  if (!v7_is_number(pinv) || !v7_is_number(type)) {
     printf("Invalid arguments\n");
     return v7_create_boolean(0);
   }
 
-  pin = v7_to_double(pinv);
-  type = v7_to_double(typev);
+  pin = v7_to_number(pinv);
+  type = v7_to_number(typev);
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
   current_cb = v7_get(v7, v7_get_global_object(v7), prop_name, len);
@@ -81,14 +81,14 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj,
   v7_val_t pullv = v7_array_get(v7, args, 2);
   int pin, mode, pull;
 
-  if (!v7_is_double(pinv) || !v7_is_double(modev) || !v7_is_double(pullv)) {
+  if (!v7_is_number(pinv) || !v7_is_number(modev) || !v7_is_number(pullv)) {
     printf("Invalid arguments");
     return v7_create_undefined();
   }
 
-  pin = v7_to_double(pinv);
-  mode = v7_to_double(modev);
-  pull = v7_to_double(pullv);
+  pin = v7_to_number(pinv);
+  mode = v7_to_number(modev);
+  pull = v7_to_number(pullv);
 
   return v7_create_boolean(v7_gpio_set_mode(pin, mode, pull) == 0);
 }
@@ -99,12 +99,12 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj,
   v7_val_t valv = v7_array_get(v7, args, 1);
   int pin, val;
 
-  if (!v7_is_double(pinv)) {
+  if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
     return v7_create_undefined();
   }
-  pin = v7_to_double(pinv);
-  val = v7_to_double(valv);
+  pin = v7_to_number(pinv);
+  val = v7_to_number(valv);
 
   return v7_create_boolean(v7_gpio_write(pin, val) == 0);
 }
@@ -114,12 +114,12 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj,
   v7_val_t pinv = v7_array_get(v7, args, 0);
   int pin;
 
-  if (!v7_is_double(pinv)) {
+  if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
     return v7_create_undefined();
   }
 
-  pin = v7_to_double(pinv);
+  pin = v7_to_number(pinv);
   return v7_create_number(v7_gpio_read(pin));
 }
 
