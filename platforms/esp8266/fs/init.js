@@ -6,31 +6,24 @@ print("HELO! Type some JS. See https://github.com/cesanta/smart.js for more info
 /* TODO(mkm): move to 'smart.js' */
 //File.load('smart.js');
 
-var conf = {};
-var cfile = File.open('config.json');
-if (cfile != null) {
-    conf = JSON.parse(cfile.readAll());
-    if (conf.wifi) {
-        if (conf.wifi.ssid) {
-            Wifi.setup(conf.wifi.ssid, (conf.wifi.known || {})[conf.wifi.ssid] || '');
-        } else {
-            print("Scanning nets");
-            Wifi.scan(function(l) {
-                for(var i in l) {
-                    var n = l[i];
-                    if (n in conf.wifi.known) {
-                        print("Joining ", n);
-                        Wifi.setup(n, conf.wifi.known[n]);
-                        return;
-                    }
+if (conf.sys.wifi) {
+    if (conf.sys.wifi.ssid) {
+        Wifi.setup(conf.sys.wifi.ssid, (conf.sys.wifi.known || {})[conf.sys.wifi.ssid] || '');
+    } else {
+        print("Scanning nets");
+        Wifi.scan(function(l) {
+            for(var i in l) {
+                var n = l[i];
+                if (n in conf.sys.wifi.known) {
+                    print("Joining ", n);
+                    Wifi.setup(n, conf.sys.wifi.known[n]);
+                    return;
                 }
-                print("Cannot find known network, use Wifi.setup");
-            });
-        }
+            }
+            print("Cannot find known network, use Wifi.setup");
+        });
     }
-    cfile.close();
 }
-delete cfile;
 
 Cloud = {};
 Cloud.mkreq = function(src,dst, key, cmd, args) {
@@ -41,21 +34,21 @@ Cloud.store = function(name,val,opts) {
     var b = opts.labels || {};
     b.__name__ = name;
     var args = {"vars": [[b, val]]};
-    var d = this.mkreq(conf.id, "//api.cesanta.com", conf.key, "/v1/Metrics.Publish", args);
+    var d = this.mkreq(conf.dev.id, "//api.cesanta.com", conf.dev.key, "/v1/Metrics.Publish", args);
     delete b.__name__;
     args = b = null;
     Http.post("http://api.cesanta.com:80", d, opts.cb || function() {});
 }
 
 /* demo */
-if (conf.demo == 'MCP9808') {
+if (conf.user.demo == 'MCP9808') {
     File.load('MCP9808.js');
     t = new MCP9808(14,12,1,1,1);
     if (!conf.has_temp_sensor) {
         t.getTemp = function() { return 20+Math.random()*20 };
     }
 }
-if (conf.demo == 'MC24FC') {
+if (conf.user.demo == 'MC24FC') {
     File.load('MC24FC.js');
     File.load('MC24FC_test.js');
 }
@@ -74,7 +67,7 @@ function demo() {
 Wifi.changed(function(e) {
     /* got ip */
     if (e == 3) {
-        if (conf.demo == 'MCP9808') demo();
+        if (conf.user.demo == 'MCP9808') demo();
         Wifi.changed(undefined);
     }
 });

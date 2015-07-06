@@ -537,6 +537,71 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
+/*
+ * returns the content of a json file wrapped in parenthesis
+ * so that they can be directly evaluated as js. Currently
+ * we don't have a C JSON parse API.
+ */
+ICACHE_FLASH_ATTR char *read_json_file(const char *path) {
+  c_file_t fp;
+  char *p;
+  long file_size;
+
+  if ((fp = c_fopen(path, "r")) == INVALID_FILE) {
+    return NULL;
+  } else if ((file_size = v7_get_file_size(fp)) <= 0) {
+    c_fclose(fp);
+    return NULL;
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 3)) == NULL) {
+    c_fclose(fp);
+    return NULL;
+  } else {
+    c_rewind(fp);
+    if ((c_fread(p + 1, 1, (size_t) file_size, fp) < (size_t) file_size) &&
+        c_ferror(fp)) {
+      c_fclose(fp);
+      return NULL;
+    }
+    c_fclose(fp);
+    p[0] = '(';
+    p[file_size] = ')';
+    return p;
+  }
+}
+
+ICACHE_FLASH_ATTR v7_val_t load_conf(struct v7 *v7, const char *name) {
+  v7_val_t res;
+  char *f;
+  enum v7_err err;
+  f = read_json_file(name);
+  if (f == NULL) {
+    printf("cannot read %s\n", name);
+    return v7_create_object(v7);
+  }
+  printf("PARSING '%s'\n", f);
+  err = v7_exec(v7, &res, f);
+  free(f);
+  if (err != V7_OK) {
+    f = v7_to_json(v7, res, NULL, 0);
+    printf("exc parsing conf: %s\n", f);
+    free(f);
+    return v7_create_object(v7);
+  }
+  return res;
+}
+
+ICACHE_FLASH_ATTR void init_conf(struct v7 *v7) {
+  int i;
+  const char *names[] = {"dev.json", "sys.json", "user.json"};
+  v7_val_t conf = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "conf", ~0, 0, conf);
+
+  for (i = 0; i < (int) sizeof(names) / sizeof(names[0]); i++) {
+    const char *name = names[i];
+    v7_set(v7, conf, name, strlen(name) - 5, 0, load_conf(v7, name));
+  }
+}
+
 ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t wifi, dht11, gc, debug, os;
@@ -597,4 +662,6 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   init_gpiojs(v7);
 
   v7_gc(v7, 1);
+
+  init_conf(v7);
 }

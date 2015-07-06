@@ -18,20 +18,20 @@ os_timer_t tick_timer;
 os_timer_t startcmd_timer;
 
 ICACHE_FLASH_ATTR void start_cmd(int dummy) {
+#ifndef V7_NO_FS
+  fs_init();
+#endif
+
   init_v7(&dummy);
 #if !defined(NO_PROMPT)
   uart_main_init(0);
 #endif
 
-#ifndef V7_NO_FS
-  fs_init();
-
-#ifndef NO_EXEC_INITJS
+#if !defined(V7_NO_FS) && !defined(NO_EXEC_INITJS)
   v7_run_startup();
-#endif
+
   /* Example debug message, enable by calling Debug.setOutput(1) in init.js */
   fprintf(stderr, "init.js called\n");
-
 #endif
 
 #ifndef NO_HTTP_EVAL
