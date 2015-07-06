@@ -4403,7 +4403,7 @@ ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
 
   /* Zero-terminate the result */
   if (buf_size > 0) {
-    buf[i < (int) buf_size ? i : buf_size - 1] = '\0';
+    buf[i < (int) buf_size ? i : (int) buf_size - 1] = '\0';
   }
 
   return i;
