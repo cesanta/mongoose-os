@@ -79,7 +79,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
 					 -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
 					 -DV7_ESP_FLASH_ACCESS_EMUL
 
-MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64
+MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
 CFLAGS		= -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static -DICACHE_FLASH  -DON_FLASH='__attribute__((section(".irom0.text")))' -DRODATA='__attribute__((section(".irom.text")))'   -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA)

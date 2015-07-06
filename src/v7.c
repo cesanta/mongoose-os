@@ -8388,12 +8388,9 @@ ON_FLASH void v7_gc(struct v7 *v7, int full) {
     CHECK(_e == V7_OK, _e); \
   } while (0)
 
-#define THROW(err_code)                                         \
-  do {                                                          \
-    c_snprintf(v7->error_msg, sizeof(v7->error_msg),            \
-               "Parse error: %s line %d", v7->pstate.file_name, \
-               v7->pstate.line_no);                             \
-    return (err_code);                                          \
+#define THROW(err_code)                \
+  do {                                 \
+    return parser_throw(v7, err_code); \
   } while (0)
 
 #define CHECK(cond, code)     \
@@ -8424,6 +8421,12 @@ static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int, int);
 static enum v7_err parse_block(struct v7 *, struct ast *);
 static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
 static enum v7_err parse_use_strict(struct v7 *, struct ast *);
+
+ON_FLASH static enum v7_err parser_throw(struct v7 *v7, enum v7_err err) {
+  c_snprintf(v7->error_msg, sizeof(v7->error_msg), "Parse error: %s line %d",
+             v7->pstate.file_name, v7->pstate.line_no);
+  return err;
+}
 
 ON_FLASH static enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;

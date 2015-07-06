@@ -24,8 +24,12 @@ spiffs fs;
 #define FLASH_BLOCK_SIZE (4 * 1024)
 #define FLASH_UNIT_SIZE 4
 
+#ifndef FS_MAX_OPEN_FILES
+#define FS_MAX_OPEN_FILES 10
+#endif
+
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
-static u8_t spiffs_fds[16 * 4];
+static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
 ICACHE_FLASH_ATTR int spiffs_get_memory_usage() {
   return sizeof(spiffs_work_buf) + sizeof(spiffs_fds);
