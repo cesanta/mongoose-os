@@ -7176,6 +7176,7 @@ ON_FLASH int v7_set_property(struct v7 *v7, val_t obj, const char *name,
   int res;
   /* set_property_v can trigger GC */
   struct gc_tmp_frame tf = new_tmp_frame(v7);
+  tmp_stack_push(&tf, &val);
 
   if (len == (size_t) ~0) {
     len = strlen(name);
@@ -7859,6 +7860,10 @@ ON_FLASH struct v7 *v7_create_opt(struct v7_create_opts opts) {
     p[PREDEFINED_STR_PROTOTYPE] = v7_create_string(v7, "prototype", 9, 1);
     p[PREDEFINED_STR_CONSTRUCTOR] = v7_create_string(v7, "constructor", 11, 1);
     p[PREDEFINED_STR_ARGUMENTS] = v7_create_string(v7, "arguments", 9, 1);
+
+#ifdef V7_FORCE_STRICT_MODE
+    v7->strict_mode = 1;
+#endif
 
     init_stdlib(v7);
     v7->thrown_error = v7_create_undefined();
@@ -10258,21 +10263,27 @@ i_prepare_call(struct v7 *v7, struct v7_function *func, ast_off_t *pos,
 ON_FLASH V7_PRIVATE val_t
 i_invoke_function(struct v7 *v7, struct v7_function *func, val_t frame,
                   ast_off_t body, ast_off_t end) {
+#ifndef V7_FORCE_STRICT_MODE
   int saved_strict_mode = v7->strict_mode;
+#endif
   enum i_break brk = B_RUN;
   val_t res = v7_create_undefined(), saved_call_stack = v7->call_stack;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   tmp_stack_push(&tf, &res);
+#ifndef V7_FORCE_STRICT_MODE
   if (func->attributes & V7_FUNCTION_STRICT) {
     v7->strict_mode = 1;
   }
+#endif
   v7->call_stack = frame; /* ensure GC knows about this call frame */
   res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
   if (brk != B_RETURN) {
     res = v7_create_undefined();
   }
+#ifndef V7_FORCE_STRICT_MODE
   v7->strict_mode = saved_strict_mode;
+#endif
   v7->call_stack = saved_call_stack;
 
   tmp_frame_cleanup(&tf);
@@ -10447,12 +10458,17 @@ ON_FLASH static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
 ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
                                   val_t scope, enum i_break *brk) {
-  ast_off_t maybe_strict, start = *pos;
+#ifndef V7_FORCE_STRICT_MODE
+  ast_off_t maybe_strict;
+#endif
+  ast_off_t start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = v7_create_undefined();
   volatile ast_off_t end; /* Only to pacify GCC. */
   ast_off_t end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
+#ifndef V7_FORCE_STRICT_MODE
   int saved_strict_mode = v7->strict_mode;
+#endif
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &res);
 
@@ -10468,15 +10484,19 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
       ast_move_to_children(a, pos);
+#ifndef V7_FORCE_STRICT_MODE
       maybe_strict = *pos;
       if (*pos < end &&
           (tag = ast_fetch_tag(a, &maybe_strict)) == AST_USE_STRICT) {
         v7->strict_mode = 1;
         *pos = maybe_strict;
       }
+#endif
       i_populate_local_vars(v7, a, start, fvar, scope);
       res = i_eval_stmts(v7, a, pos, end, scope, brk);
+#ifndef V7_FORCE_STRICT_MODE
       v7->strict_mode = saved_strict_mode;
+#endif
       break;
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
