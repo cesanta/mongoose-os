@@ -6502,6 +6502,12 @@ ON_FLASH int v7_is_string(val_t v) {
          t == V7_TAG_STRING_5;
 }
 
+ON_FLASH int v7_is_primitive_string(val_t v) {
+  uint64_t t = v & V7_TAG_MASK;
+  return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O ||
+         t == V7_TAG_STRING_5;
+}
+
 ON_FLASH int v7_is_boolean(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN;
 }
@@ -7111,6 +7117,18 @@ V7_PRIVATE v7_val_t v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
   size_t name_len;
   STATIC char buf[8];
   int fr = 0;
+
+  /* subscripting strings */
+  if (v7_is_string(obj)) {
+    double didx = i_as_num(v7, name);
+    if (!isnan(didx) && !isinf(didx)) {
+      size_t idx = (size_t) didx;
+      s = v7_to_string(v7, &obj, &name_len);
+      if (idx >= name_len) return v7_create_undefined();
+      return v7_create_string(v7, &s[idx], 1, 1);
+    }
+  }
+
   if (v7_is_string(name)) {
     s = v7_to_string(v7, &name, &name_len);
   } else {
@@ -11391,6 +11409,10 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
  */
 
 
+#ifdef NO_LIBC
+void print_str(const char *str);
+#endif
+
 ON_FLASH V7_PRIVATE v7_val_t
 Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char *p, buf[1024];
@@ -11402,10 +11424,18 @@ Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     if (v7_is_string(arg)) {
       size_t n;
       const char *s = v7_to_string(v7, &arg, &n);
+#ifndef NO_LIBC
       printf("%s", s);
+#else
+      print_str(s);
+#endif
     } else {
       p = v7_to_json(v7, arg, buf, sizeof(buf));
+#ifndef NO_LIBC
       printf("%s", p);
+#else
+      print_str(p);
+#endif
       if (p != buf) {
         free(p);
       }

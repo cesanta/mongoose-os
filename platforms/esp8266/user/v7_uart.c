@@ -147,6 +147,14 @@ ICACHE_FLASH_ATTR int c_printf(const char *format, ...) {
   return size;
 }
 
+ICACHE_FLASH_ATTR void print_str(const char *str) {
+  while (*str != '\0') {
+    if (*str == '\n') uart_tx_char(UART_MAIN, '\r');
+    uart_tx_char(UART_MAIN, *str);
+    str++;
+  }
+}
+
 /* shim for fprintf. Handles only (pseudo) stderr */
 ICACHE_FLASH_ATTR int c_ufprintf(FILE *fp, const char *format, ...) {
   int size = -1;

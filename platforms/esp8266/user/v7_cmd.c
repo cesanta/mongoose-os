@@ -79,7 +79,8 @@ ICACHE_FLASH_ATTR void process_js(char *cmd) {
       printf("Exec error:");
     }
 
-    printf("%s\n", p);
+    print_str(p);
+    print_str("\n");
 
     if (p != result_str) {
       free(p);
