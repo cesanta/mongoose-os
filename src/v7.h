@@ -323,7 +323,9 @@ enum v7_heap_stat_what {
   V7_HEAP_STAT_PROP_HEAP_MAX,
   V7_HEAP_STAT_PROP_HEAP_FREE,
   V7_HEAP_STAT_PROP_HEAP_CELL_SIZE,
-  V7_HEAP_STAT_FUNC_AST_SIZE
+  V7_HEAP_STAT_FUNC_AST_SIZE,
+  V7_HEAP_STAT_FUNC_OWNED,
+  V7_HEAP_STAT_FUNC_OWNED_MAX
 };
 
 #if V7_ENABLE__Memory__stats
@@ -340,6 +342,39 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
  * on single threaded environments.
  */
 void v7_interrupt(struct v7 *v7);
+
+/*
+ * Tells the GC about a JS value variable/field owned
+ * by C code.
+ * *
+ * User C code should own v7_val_t variables
+ * if the value's lifetime crosses any invocation
+ * to the v7 runtime that creates new objects or new
+ * properties and thus can potentially trigger GC.
+ *
+ * The registration of the variable prevents the GC from mistakenly treat
+ * the object as garbage. The GC might be triggered potentially
+ * allows the GC to update pointers
+ *
+ * User code should also explicitly disown the variables with v7_disown once
+ * it goes out of scope or the structure containing the v7_val_t field is freed.
+ *
+ * Example:
+ *
+ *  ```
+ *    struct v7_val cb;
+ *    v7_own(v7, &cb);
+ *    cb = v7_array_get(v7, args, 0);
+ *    // do something with cb
+ *    v7_disown(v7, &cb);
+ *  ```
+ */
+void v7_own(struct v7 *v7, v7_val_t *v);
+
+/*
+ * Returns 1 if value is found, 0 otherwise
+ */
+int v7_disown(struct v7 *v7, v7_val_t *v);
 
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 

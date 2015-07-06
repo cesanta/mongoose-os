@@ -50,24 +50,32 @@ ICACHE_FLASH_ATTR static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj,
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR static void js_timeout() {
-  v7_val_t cb = v7_get(v7, v7_get_global_object(v7), "_js_timeout_handler", 19);
+ICACHE_FLASH_ATTR static void js_timeout(void *arg) {
+  v7_val_t *cb = (v7_val_t *) arg;
   v7_val_t res;
-  if (v7_exec_with(v7, &res, "this()", cb) != V7_OK) {
+  v7_own(v7, &res);
+  if (v7_exec_with(v7, &res, "this()", *cb) != V7_OK) {
     char *s = v7_to_json(v7, res, NULL, 0);
     fprintf(stderr, "exc calling cb: %s\n", s);
     free(s);
   }
+  v7_disown(v7, &res);
+  v7_disown(v7, cb);
+  free(arg);
 }
 
 /* Currently can only handle one timer */
 ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
                                               v7_val_t args) {
-  v7_val_t cb = v7_array_get(v7, args, 0);
+  v7_val_t *cb;
   v7_val_t msecsv = v7_array_get(v7, args, 1);
   int msecs;
 
-  if (!v7_is_function(cb)) {
+  cb = (v7_val_t *) malloc(sizeof(*cb));
+  v7_own(v7, cb);
+  *cb = v7_array_get(v7, args, 0);
+
+  if (!v7_is_function(*cb)) {
     printf("cb is not a function\n");
     return v7_create_undefined();
   }
@@ -81,9 +89,8 @@ ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
    * used to convey the callback to the timer handler _and_ to root
    * the function so that the GC doesn't deallocate it.
    */
-  v7_set(v7, v7_get_global_object(v7), "_js_timeout_handler", 19, 0, cb);
   os_timer_disarm(&js_timeout_timer);
-  os_timer_setfn(&js_timeout_timer, js_timeout, NULL);
+  os_timer_setfn(&js_timeout_timer, js_timeout, cb);
   os_timer_arm(&js_timeout_timer, msecs, 0);
 
   return v7_create_undefined();
@@ -368,9 +375,10 @@ ICACHE_FLASH_ATTR static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj,
   int struse = v7_heap_stat(v7, V7_HEAP_STAT_STRING_HEAP_USED);
   int objfree = v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE);
   int propnfree = v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE);
-  v7_val_t f = v7_create_object(v7);
-  /* prevent the object from being potentially GCed */
-  v7_set(v7, args, "_tmp", 4, 0, f);
+  v7_val_t f = v7_create_undefined();
+  v7_own(v7, &f);
+  f = v7_create_object(v7);
+
   v7_set(v7, f, "sysfree", 7, 0, v7_create_number(sysfree));
   v7_set(v7, f, "jssize", 7, 0, v7_create_number(jssize));
   v7_set(v7, f, "jsfree", 7, 0, v7_create_number(jsfree));
@@ -389,6 +397,12 @@ ICACHE_FLASH_ATTR static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj,
   v7_set(v7, f, "astsize", 7, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
 
+  v7_set(v7, f, "owned", ~0, 0,
+         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED)));
+  v7_set(v7, f, "owned_max", ~0, 0,
+         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED_MAX)));
+
+  v7_disown(v7, &f);
   return f;
 }
 

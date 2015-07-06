@@ -323,7 +323,9 @@ enum v7_heap_stat_what {
   V7_HEAP_STAT_PROP_HEAP_MAX,
   V7_HEAP_STAT_PROP_HEAP_FREE,
   V7_HEAP_STAT_PROP_HEAP_CELL_SIZE,
-  V7_HEAP_STAT_FUNC_AST_SIZE
+  V7_HEAP_STAT_FUNC_AST_SIZE,
+  V7_HEAP_STAT_FUNC_OWNED,
+  V7_HEAP_STAT_FUNC_OWNED_MAX
 };
 
 #if V7_ENABLE__Memory__stats
@@ -340,6 +342,39 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
  * on single threaded environments.
  */
 void v7_interrupt(struct v7 *v7);
+
+/*
+ * Tells the GC about a JS value variable/field owned
+ * by C code.
+ * *
+ * User C code should own v7_val_t variables
+ * if the value's lifetime crosses any invocation
+ * to the v7 runtime that creates new objects or new
+ * properties and thus can potentially trigger GC.
+ *
+ * The registration of the variable prevents the GC from mistakenly treat
+ * the object as garbage. The GC might be triggered potentially
+ * allows the GC to update pointers
+ *
+ * User code should also explicitly disown the variables with v7_disown once
+ * it goes out of scope or the structure containing the v7_val_t field is freed.
+ *
+ * Example:
+ *
+ *  ```
+ *    struct v7_val cb;
+ *    v7_own(v7, &cb);
+ *    cb = v7_array_get(v7, args, 0);
+ *    // do something with cb
+ *    v7_disown(v7, &cb);
+ *  ```
+ */
+void v7_own(struct v7 *v7, v7_val_t *v);
+
+/*
+ * Returns 1 if value is found, 0 otherwise
+ */
+int v7_disown(struct v7 *v7, v7_val_t *v);
 
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 
@@ -1694,6 +1729,7 @@ struct v7 {
 #if V7_ENABLE__Memory__stats
   size_t function_arena_ast_size;
 #endif
+  struct mbuf owned_values; /* buffer for GC roots owned by C code */
 
   int strict_mode; /* true if currently in strict mode */
 
@@ -7908,6 +7944,26 @@ ON_FLASH v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
     return v7_create_undefined();
   }
 }
+
+ON_FLASH void v7_own(struct v7 *v7, v7_val_t *v) {
+  mbuf_append(&v7->owned_values, &v, sizeof(v));
+}
+
+ON_FLASH int v7_disown(struct v7 *v7, v7_val_t *v) {
+  v7_val_t **vp =
+      (v7_val_t **) (v7->owned_values.buf + v7->owned_values.len - sizeof(v));
+
+  for (; (char *) vp >= v7->owned_values.buf; vp--) {
+    if (*vp == v) {
+      *vp = *(v7_val_t **) (v7->owned_values.buf + v7->owned_values.len -
+                            sizeof(v));
+      v7->owned_values.len -= sizeof(v);
+      return 1;
+    }
+  }
+
+  return 0;
+}
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -8162,6 +8218,10 @@ ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
       return v7->property_arena.cell_size;
     case V7_HEAP_STAT_FUNC_AST_SIZE:
       return v7->function_arena_ast_size;
+    case V7_HEAP_STAT_FUNC_OWNED:
+      return v7->owned_values.len / sizeof(val_t *);
+    case V7_HEAP_STAT_FUNC_OWNED_MAX:
+      return v7->owned_values.size / sizeof(val_t *);
   }
 }
 #endif
@@ -8319,9 +8379,28 @@ ON_FLASH void gc_dump_owned_strings(struct v7 *v7) {
 #endif
 
 #ifndef V7_DISABLE_GC
+
+/*
+ * builting on gcc, tried out by redefining it.
+ * Using null pointer as base can trigger undefined behavior, hence
+ * a portable workaround that involves a valid yet dummy pointer.
+ * It's meant to be used as a contant expression.
+ */
+#ifndef offsetof
+#define offsetof(st, m) (((ptrdiff_t)(&((st *) 32)->m)) - 32)
+#endif
+
 /* Perform garbage collection */
 ON_FLASH void v7_gc(struct v7 *v7, int full) {
   val_t **vp;
+
+  /*
+   * constant offsets for mbufs to be scanned for roots
+   * needed for pre C99 compatibility.
+   */
+  const static ptrdiff_t root_mbuf_offs[] = {offsetof(struct v7, tmp_stack),
+                                             offsetof(struct v7, owned_values)};
+  int i;
 
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
@@ -8342,12 +8421,16 @@ ON_FLASH void v7_gc(struct v7 *v7, int full) {
   gc_mark(v7, v7->this_object);
   gc_mark(v7, v7->call_stack);
 
-  for (vp = (val_t **) v7->tmp_stack.buf;
-       (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
-    gc_mark(v7, **vp);
+  for (i = 0; i < (int) ARRAY_SIZE(root_mbuf_offs); i++) {
+    const struct mbuf *mbuf =
+        (const struct mbuf *) (((uintptr_t) v7) + root_mbuf_offs[i]);
+
+    for (vp = (val_t **) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
+      gc_mark(v7, **vp);
 #ifdef V7_ENABLE_COMPACTING_GC
-    gc_mark_string(v7, *vp);
+      gc_mark_string(v7, *vp);
 #endif
+    }
   }
 
 #ifdef V7_ENABLE_COMPACTING_GC
