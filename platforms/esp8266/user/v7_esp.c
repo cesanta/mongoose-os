@@ -22,18 +22,26 @@
 struct v7 *v7;
 os_timer_t js_timeout_timer;
 
+/*
+ * global value to keep current Wifi.scan callback.
+ * ESP8266 SDK doesn't allow to pass context info to
+ * wifi_station_scan.
+ */
+v7_val_t wifi_scan_cb;
+
 ICACHE_FLASH_ATTR static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj,
                                           v7_val_t args) {
   v7_val_t result = v7_create_object(v7);
+  v7_own(v7, &result);
+
   v7_set(v7, result, "sysfree", 7, 0,
          v7_create_number(system_get_free_heap_size()));
   v7_set(v7, result, "used_by_js", 10, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
   v7_set(v7, result, "used_by_fs", 10, 0,
          v7_create_number(spiffs_get_memory_usage()));
-  /* prevent the object from being potentially GCed */
-  v7_set(v7, args, "_tmp", 4, 0, result);
 
+  v7_disown(v7, &result);
   return result;
 }
 
@@ -253,16 +261,18 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
   return v7_create_string(v7, ip, strlen(ip), 1);
 }
 
-ICACHE_FLASH_ATTR void wifi_scan_cb(void *arg, STATUS status) {
+ICACHE_FLASH_ATTR void wifi_scan_done(void *arg, STATUS status) {
   struct bss_info *info = (struct bss_info *) arg;
-  v7_val_t args, res, cb;
+  v7_val_t args, res;
+
+  v7_own(v7, &args);
+  v7_own(v7, &res);
 
   if (status != OK) {
     fprintf(stderr, "wifi scan failed: %d\n", status);
   }
 
   res = v7_create_array(v7);
-  v7_set(v7, v7_get_global_object(v7), "_scrs", 5, 0, res);
 
   /* ignore first */
   while ((info = info->next.stqe_next)) {
@@ -270,12 +280,9 @@ ICACHE_FLASH_ATTR void wifi_scan_cb(void *arg, STATUS status) {
                   v7_create_string(v7, info->ssid, strlen(info->ssid), 1));
   }
 
-  cb = v7_get(v7, v7_get_global_object(v7), "_sccb", 5);
   args = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, args);
-  v7_set(v7, args, "cb", 2, 0, cb);
-  v7_set(v7, args, "res", 3, 0, res);
-  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, v7_create_undefined());
+  v7_set(v7, args, "cb", ~0, 0, wifi_scan_cb);
+  v7_set(v7, args, "res", ~0, 0, res);
 
   if (v7_exec_with(v7, &res, "this.cb(this.res)", args) != V7_OK) {
     char *s = v7_to_json(v7, res, NULL, 0);
@@ -283,8 +290,11 @@ ICACHE_FLASH_ATTR void wifi_scan_cb(void *arg, STATUS status) {
     free(s);
   }
 
-  v7_set(v7, v7_get_global_object(v7), "_scrs", 5, 0, v7_create_undefined());
-  v7_set(v7, v7_get_global_object(v7), "_sccb", 5, 0, v7_create_undefined());
+  v7_disown(v7, &res);
+  v7_disown(v7, &args);
+  v7_disown(v7, &wifi_scan_cb);
+  wifi_scan_cb = 0;
+
   v7_gc(v7, 1);
   return;
 }
@@ -294,8 +304,14 @@ ICACHE_FLASH_ATTR void wifi_scan_cb(void *arg, STATUS status) {
  */
 ICACHE_FLASH_ATTR static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj,
                                             v7_val_t args) {
-  v7_val_t cb = v7_array_get(v7, args, 0);
-  v7_set(v7, v7_get_global_object(v7), "_sccb", 5, 0, cb);
+  if (v7_is_function(wifi_scan_cb)) {
+    printf("scan in progress");
+    return v7_create_boolean(0);
+  }
+
+  /* released in wifi_scan_done */
+  v7_own(v7, &wifi_scan_cb);
+  wifi_scan_cb = v7_array_get(v7, args, 0);
 
   /*
    * Switch to station mode if not already
@@ -305,7 +321,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj,
     wifi_set_opmode_current(0x1);
   }
 
-  return v7_create_boolean(wifi_station_scan(NULL, wifi_scan_cb));
+  return v7_create_boolean(wifi_station_scan(NULL, wifi_scan_done));
 }
 
 /*
@@ -334,16 +350,16 @@ ICACHE_FLASH_ATTR void wifi_changed_cb(System_Event_t *evt) {
   if (v7_is_undefined(cb)) return;
 
   args = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, args);
+  v7_own(v7, &args);
   v7_set(v7, args, "cb", 2, 0, cb);
   v7_set(v7, args, "e", 1, 0, v7_create_number(evt->event));
-  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, v7_create_undefined());
 
   if (v7_exec_with(v7, &res, "this.cb(this.e)", args) != V7_OK) {
     char *s = v7_to_json(v7, res, NULL, 0);
     fprintf(stderr, "exc calling cb: %s\n", s);
     free(s);
   }
+  v7_disown(v7, &args);
 }
 
 ICACHE_FLASH_ATTR static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj,
@@ -435,10 +451,10 @@ static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   }
 
   result = v7_create_object(v7);
+  v7_own(v7, &result);
   v7_set(v7, result, "temp", 4, 0, v7_create_number(temp));
   v7_set(v7, result, "rh", 2, 0, v7_create_number(rh));
-  /* prevent the object from being potentially GCed */
-  v7_set(v7, args, "_tmp", 4, 0, result);
+  v7_disown(v7, &result);
   return result;
 }
 #endif /* V7_ESP_ENABLE__DHT11 */
@@ -578,7 +594,6 @@ ICACHE_FLASH_ATTR v7_val_t load_conf(struct v7 *v7, const char *name) {
     printf("cannot read %s\n", name);
     return v7_create_object(v7);
   }
-  printf("PARSING '%s'\n", f);
   err = v7_exec(v7, &res, f);
   free(f);
   if (err != V7_OK) {

@@ -1821,6 +1821,8 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
 
 V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args);
 
+V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t s, val_t at);
+
 V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind);
 
 #if defined(__cplusplus)
@@ -2607,8 +2609,6 @@ utfnlen(char *s, long m)
 	for(n = 0; s < es; n++) {
 		c = *(uchar*)s;
 		if(c < Runeself){
-			if(c == '\0')
-				break;
 			s++;
 			continue;
 		}
@@ -2629,8 +2629,6 @@ utfnshift(char *s, long m)
 	for(n = 0; n < m; n++) {
 		c = *(uchar*)s;
 		if(c < Runeself){
-			if(c == '\0')
-				break;
 			s++;
 			continue;
 		}
@@ -7005,7 +7003,7 @@ ON_FLASH int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
     if (n >= size) {
       n = size - 1;
     }
-    strncpy(buf, str, n);
+    memcpy(buf, str, n);
     buf[n] = '\0';
     return n;
   } else {
@@ -7120,12 +7118,11 @@ V7_PRIVATE v7_val_t v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
 
   /* subscripting strings */
   if (v7_is_string(obj)) {
-    double didx = i_as_num(v7, name);
-    if (!isnan(didx) && !isinf(didx)) {
-      size_t idx = (size_t) didx;
-      s = v7_to_string(v7, &obj, &name_len);
-      if (idx >= name_len) return v7_create_undefined();
-      return v7_create_string(v7, &s[idx], 1, 1);
+    char ch;
+    double dch = v7_char_code_at(v7, obj, name);
+    if (!isnan(dch)) {
+      ch = dch;
+      return v7_create_string(v7, &ch, 1, 1);
     }
   }
 
@@ -9665,23 +9662,25 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       res = v7_create_number(i_num_unary_op(
           v7, tag, i_as_num(v7, i_eval_expr(v7, a, pos, scope))));
       break;
-    case AST_ADD:
+    case AST_ADD: {
+      int l;
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       v1 = i_value_of(v7, v1);
       v2 = i_value_of(v7, v2);
       if (!(v7_is_undefined(v1) || v7_is_number(v1) || v7_is_boolean(v1)) ||
           !(v7_is_undefined(v2) || v7_is_number(v2) || v7_is_boolean(v2))) {
-        v7_stringify_value(v7, v1, buf, sizeof(buf));
-        v1 = v7_create_string(v7, buf, strlen(buf), 1);
-        v7_stringify_value(v7, v2, buf, sizeof(buf));
-        v2 = v7_create_string(v7, buf, strlen(buf), 1);
+        l = v7_stringify_value(v7, v1, buf, sizeof(buf));
+        v1 = v7_create_string(v7, buf, l, 1);
+        l = v7_stringify_value(v7, v2, buf, sizeof(buf));
+        v2 = v7_create_string(v7, buf, l, 1);
         res = s_concat(v7, v1, v2);
       } else {
         res = v7_create_number(
             i_num_bin_op(v7, tag, i_as_num(v7, v1), i_as_num(v7, v2)));
       }
       break;
+    }
     case AST_SUB:
     case AST_REM:
     case AST_MUL:
@@ -14761,11 +14760,11 @@ ON_FLASH static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj,
   return res;
 }
 
-ON_FLASH static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t this_obj,
+                                           val_t arg) {
   size_t n;
   val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
-  val_t arg = v7_array_get(v7, args, 0);
   double at = v7_to_number(arg);
 
   n = utfnlen((char *) p, n);
@@ -14776,6 +14775,10 @@ ON_FLASH static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
     return r;
   }
   return NAN;
+}
+
+ON_FLASH static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+  return v7_char_code_at(v7, this_obj, v7_array_get(v7, args, 0));
 }
 
 ON_FLASH static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj,

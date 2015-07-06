@@ -26,6 +26,7 @@
 struct http_ctx {
   esp_tcp tcp;
   v7_val_t cb;
+  v7_val_t body;
   const char *method;
   char host[256];
   int port;
@@ -68,15 +69,13 @@ ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
   if (strcmp(ctx->method, "GET") == 0) {
     snprintf(buf, sizeof(buf), "GET %s HTTP/1.0\r\n\r\n", ctx->path);
   } else {
-    v7_val_t bodyv = v7_get(v7, v7_get_global_object(v7), "_tmp_b", 6);
-    if (v7_is_string(bodyv)) {
+    if (v7_is_string(ctx->body)) {
       size_t len;
-      const char *body = v7_to_string(v7, &bodyv, &len);
+      const char *body = v7_to_string(v7, &ctx->body, &len);
       snprintf(buf, sizeof(buf),
                "POST %s HTTP/1.0\r\ncontent-length: %d\r\n\r\n%s", ctx->path,
                (int) len, body);
-      v7_set(v7, v7_get_global_object(v7), "_tmp_b", 6, 0,
-             v7_create_undefined());
+      v7_disown(v7, &ctx->body);
     } else {
       fprintf(stderr, "body not a string\n");
     }
@@ -106,18 +105,23 @@ ICACHE_FLASH_ATTR static void http_disconnect_cb(void *arg) {
   }
 
   cb_args = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, cb_args);
+  v7_own(v7, &cb_args);
 
   data = v7_create_string(v7, body, ctx->resp_pos - (body - ctx->resp), 1);
+  v7_own(v7, &data);
   http_free(conn);
 
   v7_array_set(v7, cb_args, 0, ctx->cb);
   v7_array_set(v7, cb_args, 1, data);
+  v7_disown(v7, &data);
+
   if (v7_exec_with(v7, &res, "this[0](this[1])", cb_args) != V7_OK) {
     char *s = v7_to_json(v7, res, NULL, 0);
     fprintf(stderr, "exc calling cb: %s\n", s);
     free(s);
   }
+  v7_disown(v7, &cb_args);
+  v7_disown(v7, &ctx->cb);
 }
 
 /* Invoke user callback as cb(undefined, err_msg) */
@@ -128,13 +132,14 @@ ICACHE_FLASH_ATTR static void http_error_cb(void *arg, int8_t err) {
   v7_val_t cb_args;
 
   cb_args = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, cb_args);
+  v7_own(v7, &cb_args);
 
   snprintf(err_msg, sizeof(err_msg), "connection error: %d\n", err);
   v7_array_set(v7, cb_args, 1,
                v7_create_string(v7, err_msg, sizeof(err_msg), 1));
   http_free(conn);
   v7_apply(v7, ctx->cb, v7_create_undefined(), cb_args);
+  v7_disown(v7, &cb_args);
 }
 
 /*
@@ -150,11 +155,14 @@ ICACHE_FLASH_ATTR static void http_get_dns_cb(const char *name,
 
   if (ipaddr == NULL) {
     v7_val_t cb_args = v7_create_object(v7);
-    v7_set(v7, v7_get_global_object(v7), "_tmp", 4, 0, cb_args);
+    v7_own(v7, &cb_args);
     v7_array_set(v7, cb_args, 1,
                  v7_create_string(v7, err_msg, sizeof(err_msg), 1));
     http_free(conn);
     v7_apply(v7, ctx->cb, v7_create_undefined(), cb_args);
+    v7_disown(v7, &cb_args);
+    v7_disown(v7, &ctx->body); /* body has not been sent yet */
+    v7_disown(v7, &ctx->cb);
   } else {
     memcpy(conn->proto.tcp->remote_ip, &ipaddr->addr, 4);
     conn->proto.tcp->remote_port = ctx->port;
@@ -222,17 +230,12 @@ ICACHE_FLASH_ATTR static v7_val_t Http_call(struct v7 *v7, v7_val_t urlv,
 
   ctx->method = method;
   ctx->cb = cb;
-  /*
-   * TODO(mkm): implement handles, we need a better way to prevent
-   * values being held by C being GCed.
-   */
-  v7_set(v7, v7_get_global_object(v7), "_tmp_d", 6, 0, cb);
-  /*
-   * body is a string and thus can be relocated by compacting GC
-   * It has either to stay in the tmpstack or in a property.
-   * TODO(mkm): make this hack at least reentrant ASAP.
-   */
-  v7_set(v7, v7_get_global_object(v7), "_tmp_b", 6, 0, body);
+  /* to be disowned after invoking the callback */
+  v7_own(v7, &ctx->cb);
+  ctx->body = body;
+  /* to be disowned after sending the request */
+  v7_own(v7, &ctx->body);
+
   espconn_gethostbyname(client, ctx->host, &probably_dns_ip, http_get_dns_cb);
 
   return v7_create_undefined();
