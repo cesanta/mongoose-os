@@ -22,13 +22,14 @@ enum i2c_gpio_val {
 };
 
 ICACHE_FLASH_ATTR
-static void i2c_gpio_val_to_masks(
-    uint8_t gpio, uint8_t val, uint32_t *set_mask, uint32_t *clear_mask,
-    uint32_t *output_enable_mask, uint32_t *output_disable_mask) {
-  uint32_t gpio_mask  = 1 << gpio;
+static void i2c_gpio_val_to_masks(uint8_t gpio, uint8_t val, uint32_t *set_mask,
+                                  uint32_t *clear_mask,
+                                  uint32_t *output_enable_mask,
+                                  uint32_t *output_disable_mask) {
+  uint32_t gpio_mask = 1 << gpio;
   if (val == I2C_LOW || val == I2C_HIGH) {
     *output_enable_mask |= gpio_mask;
-    *set_mask   |= val == 1 ? gpio_mask : 0;
+    *set_mask |= val == 1 ? gpio_mask : 0;
     *clear_mask |= val == 0 ? gpio_mask : 0;
   } else if (val == I2C_INPUT) {
     *output_disable_mask |= gpio_mask;
@@ -36,8 +37,8 @@ static void i2c_gpio_val_to_masks(
 }
 
 ICACHE_FLASH_ATTR
-static void i2c_set_wires_value(struct i2c_connection *conn,
-                                uint8_t sda_val, uint8_t scl_val) {
+static void i2c_set_wires_value(struct i2c_connection *conn, uint8_t sda_val,
+                                uint8_t scl_val) {
   uint32_t set_mask = 0, clear_mask = 0;
   uint32_t output_enable_mask = 0, output_disable_mask = 0;
 
@@ -46,21 +47,21 @@ static void i2c_set_wires_value(struct i2c_connection *conn,
   i2c_gpio_val_to_masks(conn->scl_gpio, scl_val, &set_mask, &clear_mask,
                         &output_enable_mask, &output_disable_mask);
 
-  gpio_output_set(set_mask, clear_mask,
-                  output_enable_mask, output_disable_mask);
+  gpio_output_set(set_mask, clear_mask, output_enable_mask,
+                  output_disable_mask);
 
   /* TODO(rojer): Make speed configurable. */
   os_delay_us(10);
 }
 
 ICACHE_FLASH_ATTR
-enum i2c_ack_type i2c_start(struct i2c_connection *conn,
-                            uint16_t addr, enum i2c_rw mode) {
+enum i2c_ack_type i2c_start(struct i2c_connection *conn, uint16_t addr,
+                            enum i2c_rw mode) {
   enum i2c_ack_type result;
-  uint8_t address_byte = (uint8_t) (addr << 1) | mode;
+  uint8_t address_byte = (uint8_t)(addr << 1) | mode;
 #ifdef V7_ESP_I2C_DEBUG
-  fprintf(stderr, "%d %d, addr %d, mode %d, ab %d\n",
-      (int) conn->sda_gpio, (int) conn->scl_gpio, (int) addr, (int) mode, (int) address_byte);
+  fprintf(stderr, "%d %d, addr %d, mode %d, ab %d\n", (int) conn->sda_gpio,
+          (int) conn->scl_gpio, (int) addr, (int) mode, (int) address_byte);
 #endif
   if (addr > 127 || (mode != I2C_READ && mode != I2C_WRITE)) {
     return I2C_ERR;
@@ -125,8 +126,8 @@ enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data) {
 }
 
 ICACHE_FLASH_ATTR
-enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn,
-                                 uint8_t *buf, size_t buf_size) {
+enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
+                                 size_t buf_size) {
   enum i2c_ack_type ack_type = I2C_NAK;
 
   while (buf_size-- > 0) {
@@ -182,8 +183,7 @@ uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
 }
 
 ICACHE_FLASH_ATTR
-void i2c_read_bytes(struct i2c_connection *conn,
-                    size_t n, uint8_t *buf,
+void i2c_read_bytes(struct i2c_connection *conn, size_t n, uint8_t *buf,
                     enum i2c_ack_type last_ack_type) {
   size_t i;
 
@@ -228,7 +228,7 @@ int i2c_init(struct i2c_connection *conn) {
 
 #ifdef ENABLE_IC2_EEPROM_TEST
 
-#define EEPROM_I2C_ADDR 0x50  /* A0 = A1 = 0 */
+#define EEPROM_I2C_ADDR 0x50 /* A0 = A1 = 0 */
 #define SDA_GPIO 14
 #define SCL_GPIO 12
 

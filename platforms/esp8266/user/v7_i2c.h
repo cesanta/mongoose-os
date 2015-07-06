@@ -37,8 +37,8 @@ int i2c_init(struct i2c_connection *conn);
  * TODO(rojer): 10-bit address support.
  */
 enum i2c_rw { I2C_READ = 1, I2C_WRITE = 0 };
-enum i2c_ack_type i2c_start(struct i2c_connection *conn,
-                            uint16_t addr, enum i2c_rw mode);
+enum i2c_ack_type i2c_start(struct i2c_connection *conn, uint16_t addr,
+                            enum i2c_rw mode);
 
 /* Set i2c Stop condition. Releases the bus. */
 void i2c_stop(struct i2c_connection *conn);
@@ -57,8 +57,8 @@ enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data);
  * status of the last one (ACK or NAK). If a NAK was received before all the
  * bytes could be sent, ERR is returned instead.
  */
-enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn,
-                                 uint8_t *buf, size_t buf_size);
+enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
+                                 size_t buf_size);
 
 /*
  * Read one byte from the bus, finish with an ack of the specified type.

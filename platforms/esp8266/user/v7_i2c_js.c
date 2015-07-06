@@ -52,11 +52,15 @@
  *   acknowledged, except, maybe, the last one.
  *
  * Args:
- *   data: data to send. If "data" is a number between 0 and 255, a single byte is sent. If "data" is a string, all bytes from the string are sent.
+ *   data: data to send. If "data" is a number between 0 and 255, a single byte
+ *   is sent. If "data" is a string, all bytes from the string are sent.
  *
  * Returns:
  *   Acknowledgement sent by the receiver or I2C.ERR if an error occured.
- *   When a multi-byte sequence (string) is sent, all bytes must be positively acknowledged by the receiver, except for the last one - acknowledgement for the last byte becomes the return value. If one of the bytes in the middle was not acknowledged, I2C.ERR is returned.
+ *   When a multi-byte sequence (string) is sent, all bytes must be positively
+ *   acknowledged by the receiver, except for the last one - acknowledgement for
+ *   the last byte becomes the return value. If one of the bytes in the middle
+ *   was not acknowledged, I2C.ERR is returned.
  *
  *
  * I2C.readByte([ackType]) - read one byte and send an ack of specified type.
@@ -67,7 +71,8 @@
  *     sendAck must be made.
  *
  * Returns:
- *   positive number [0, 255] - the byte value, negative number in case of error.
+ *   positive number [0, 255] - the byte value, negative number in case of
+ *   error.
  *
  *
  * I2C.readString(n, [lastAckType]) - read "n" bytes, acknowledge the last one
@@ -117,11 +122,9 @@ static v7_val_t i2cjs_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   }
 
   v7_set(v7, this_obj, s_i2c_sda_prop, ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
-         sda_val);
+         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, sda_val);
   v7_set(v7, this_obj, s_i2c_scl_prop, ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
-         scl_val);
+         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, scl_val);
 
   return this_obj;
 }
@@ -129,10 +132,10 @@ static v7_val_t i2cjs_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 ICACHE_FLASH_ATTR
 static void i2cjs_get_gpio(struct v7 *v7, v7_val_t this_obj,
                            struct i2c_connection *conn) {
-  conn->sda_gpio = v7_to_number(v7_get(
-        v7, this_obj, s_i2c_sda_prop, sizeof(s_i2c_sda_prop) - 1));
-  conn->scl_gpio = v7_to_number(v7_get(
-        v7, this_obj, s_i2c_scl_prop, sizeof(s_i2c_scl_prop) - 1));
+  conn->sda_gpio = v7_to_number(
+      v7_get(v7, this_obj, s_i2c_sda_prop, sizeof(s_i2c_sda_prop) - 1));
+  conn->scl_gpio = v7_to_number(
+      v7_get(v7, this_obj, s_i2c_scl_prop, sizeof(s_i2c_scl_prop) - 1));
 }
 
 ICACHE_FLASH_ATTR
@@ -145,8 +148,8 @@ static v7_val_t i2cjs_start(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
   v7_val_t addr_val = v7_array_get(v7, args, 0);
   v7_val_t mode_val = v7_array_get(v7, args, 1);
-  if (v7_array_length(v7, args) != 2 ||
-      !v7_is_number(addr_val) || !v7_is_number(mode_val)) {
+  if (v7_array_length(v7, args) != 2 || !v7_is_number(addr_val) ||
+      !v7_is_number(mode_val)) {
     return v7_create_number(I2C_NONE);
   }
   addr = v7_to_number(addr_val);
@@ -187,8 +190,8 @@ static v7_val_t i2cjs_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 ICACHE_FLASH_ATTR
-static v7_val_t i2cjs_readByte(
-    struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t i2cjs_readByte(struct v7 *v7, v7_val_t this_obj,
+                               v7_val_t args) {
   struct i2c_connection conn;
   enum i2c_ack_type ack_type = I2C_ACK;
   i2cjs_get_gpio(v7, this_obj, &conn);
@@ -212,7 +215,7 @@ static v7_val_t i2cjs_readString(struct v7 *v7, v7_val_t this_obj,
   size_t tmp;
   enum i2c_ack_type ack_type = I2C_ACK;
   v7_val_t result;
-  const char* str;
+  const char *str;
 
   i2cjs_get_gpio(v7, this_obj, &conn);
 
@@ -231,20 +234,18 @@ static v7_val_t i2cjs_readString(struct v7 *v7, v7_val_t this_obj,
 
   result = v7_create_string(v7, 0, v7_to_number(len_val), 1);
   str = v7_to_string(v7, &result, &tmp);
-  i2c_read_bytes(&conn, v7_to_number(len_val), (uint8_t *)str, ack_type);
+  i2c_read_bytes(&conn, v7_to_number(len_val), (uint8_t *) str, ack_type);
 
   return result;
 }
 
 ICACHE_FLASH_ATTR
-static v7_val_t i2cjs_sendAck(
-    struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t i2cjs_sendAck(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   struct i2c_connection conn;
   v7_val_t ack_val = v7_array_get(v7, args, 0);
   enum i2c_ack_type ack_type = v7_to_number(ack_val);
 
-  if (!v7_is_number(ack_val) ||
-      (ack_type != I2C_ACK && ack_type != I2C_NAK)) {
+  if (!v7_is_number(ack_val) || (ack_type != I2C_ACK && ack_type != I2C_NAK)) {
     return v7_create_boolean(0);
   }
 

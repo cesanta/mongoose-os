@@ -25,9 +25,12 @@ os_timer_t js_timeout_timer;
 ICACHE_FLASH_ATTR static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj,
                                           v7_val_t args) {
   v7_val_t result = v7_create_object(v7);
-  v7_set(v7, result, "sysfree", 7, 0, v7_create_number(system_get_free_heap_size()));
-  v7_set(v7, result, "used_by_js", 10, 0, v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
-  v7_set(v7, result, "used_by_fs", 10, 0, v7_create_number(spiffs_get_memory_usage()));
+  v7_set(v7, result, "sysfree", 7, 0,
+         v7_create_number(system_get_free_heap_size()));
+  v7_set(v7, result, "used_by_js", 10, 0,
+         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
+  v7_set(v7, result, "used_by_fs", 10, 0,
+         v7_create_number(spiffs_get_memory_usage()));
   /* prevent the object from being potentially GCed */
   v7_set(v7, args, "_tmp", 4, 0, result);
 
@@ -88,9 +91,9 @@ ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
 
 ICACHE_FLASH_ATTR static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj,
                                               v7_val_t args) {
-  (void)v7;
-  (void)this_obj;
-  (void)args;
+  (void) v7;
+  (void) this_obj;
+  (void) args;
   pp_soft_wdt_restart();
 
   return v7_create_boolean(1);
@@ -98,9 +101,9 @@ ICACHE_FLASH_ATTR static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj,
 
 ICACHE_FLASH_ATTR static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj,
                                            v7_val_t args) {
-  (void)v7;
-  (void)this_obj;
-  (void)args;
+  (void) v7;
+  (void) this_obj;
+  (void) args;
   system_restart();
 
   /* Unreachable */
