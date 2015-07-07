@@ -14,9 +14,9 @@ Technically, Smart.JS has a device part and a cloud part.
 
 Smart.JS firmware on a device side:
 
-- allows scripting for fast and safe development & firmware update.
+- Allows scripting for fast and safe development & firmware update.
   We do that by developing world's smallest JavaScript scripting engine.
-- provides hardware and networking API that guarantees reliability,
+- Provides hardware and networking API that guarantees reliability,
   scalability and security out-of-the-box.
 - Devices with our software can be managed remotely and update software
   remotely, in a fully automatic or semi-automatic way.
@@ -69,6 +69,68 @@ false
 A JavaScript API reference is below.
 
 # JavaScript API reference
+
+## String
+
+Smart.js has several non-standard extensions for `String.prototype` in
+order to give a compact and fast API to access raw data obtained from
+File, Socket, and hardware input/output such as I2C.
+Smart.jsIO API functions return
+string data as a result of read operations, and that string data is a
+raw byte array. ECMA6 provides `ArrayBuffer` and `DataView` API for dealing
+with raw bytes, because strings in JavaScript are Unicode. That standard
+API is too bloated for the embedded use, and does not allow to use handy
+String API (e.g. `.match()`) against data.
+
+Smart.js internally stores strings as byte arrays. All strings created by the
+String API are UTF8 encoded. Strings that are the result of
+input/output API calls might not be a valid UTF8 strings, but nevertheless
+they are represented as strings, and the following API allows to access
+underlying byte sequence:
+
+- `String.prototype.at(position) -> number or NaN` return byte at index
+  `position`. Byte value is in 0,255 range. If `position` is out of bounds
+  (either negative or larger then the byte array length), NaN is returned.
+  Example: `"ы".at(0)` returns 0xd1.
+- `String.prototype.blen -> number` return string length in bytes.
+  Example: `"ы".blen` returns 2. Note that `"ы".length` is 1, since that
+  string consists of a single Unicode character (2-byte).
+
+## File
+
+File API is a wrapper around standard C calls `fopen()`, `fclose()`,
+`fread()`, `fwrite()`, `rename()`, `remove()`.
+
+- `File.open(file_name [, mode]) -> file_object or null`
+  Open a file `path`. For
+  list of valid `mode` values, see `fopen()` documentation. If `mode` is
+  not specified, mode `rb` is used, i.e. file is opened in read-only mode.
+  Return an opened file object, or null on error. Example:
+  `var f = File.open('/etc/passwd'); f.close();`
+- `file_obj.close() -> undefined`
+  Close opened file object.
+  NOTE: it is user's responsibility to close all opened file streams. V7
+  does not do that automatically.
+- `file_obj.read() -> string`
+  Read portion of data from
+  an opened file stream. Return string with data, or empty string on EOF
+  or error.
+- `file_obj.readAll() -> string`
+  Same as `read()`, but keeps reading data until EOF.
+- `file_obj.write(str) -> num_bytes_written`
+  Write string `str` to the opened file object. Return number of bytes written.
+- `File.rename(old_name, new_name) -> errno`
+  Rename file `old_name` to
+  `new_name`. Return 0 on success, or `errno` value on error.
+- `File.remove(file_name) -> errno`
+  Delete file `file_name`.
+  Return 0 on success, or `errno` value on error.
+- `File.list(dir_name) -> array_of_names`
+  Return a list of files in a given directory, or `undefined` on error.
+
+Note: some file systems, e.g. SPIFFS on ESP8266 platform, are flat. They
+do not support directory structure. Instead, all files reside in the
+top-level directory.
 
 ## GPIO
 
@@ -148,9 +210,6 @@ DHCP server for it.
 - `GC.stat() -> stats_object` - return current memory usage
 - `Debug.mode(mode) -> status_number` - set redirection for system
   and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
-
-Also, Smart.js has support for a flat filesystem. File API is described
-at [V7 API Reference](http://cesanta.com/docs/v7/#_builtin_api).
 
 # Contributions
 

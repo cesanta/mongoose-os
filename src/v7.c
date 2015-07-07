@@ -1126,6 +1126,35 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
  */
 
 /*
+ * === Non-Standard API
+ *
+ *   V7 has several non-standard extensions for `String.prototype` in
+ *   order to give a compact and fast API to access raw data obtained from
+ *   File, Socket, and hardware input/output such as I2C.
+ *   V7 IO API functions return
+ *   string data as a result of read operations, and that string data is a
+ *   raw byte array. ECMA6 provides `ArrayBuffer` and `DataView` API for dealing
+ *   with raw bytes, because strings in JavaScript are Unicode. That standard
+ *   API is too bloated for the embedded use, and does not allow to use handy
+ *   String API (e.g. `.match()`) against data.
+ *
+ *   V7 internally stores strings as byte arrays. All strings created by the
+ *   String API are UTF8 encoded. Strings that are the result of
+ *   input/output API calls might not be a valid UTF8 strings, but nevertheless
+ *   they are represented as strings, and the following API allows to access
+ *   underlying byte sequence:
+ *
+ * ==== String.prototype.at(position) -> number or NaN
+ *      Return byte at index
+ *     `position`. Byte value is in 0,255 range. If `position` is out of bounds
+ *     (either negative or larger then the byte array length), NaN is returned.
+ *     Example: `"ы".at(0)` returns 0xd1.
+ *
+ * ==== String.prototype.blen -> number
+ *     Return string length in bytes.
+ *     Example: `"ы".blen` returns 2. Note that `"ы".length` is 1, since that
+ *     string consists of a single Unicode character (2-byte).
+ *
  * === Builtin API
  *
  * Builtin API provides additional JavaScript interfaces available for V7
@@ -15174,6 +15203,31 @@ ON_FLASH static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
+ON_FLASH static val_t Str_at(struct v7 *v7, val_t this_obj, val_t args) {
+  long arg0 = arg_long(v7, args, 0, -1);
+  val_t s = i_value_of(v7, this_obj);
+
+  if (v7_is_string(s)) {
+    size_t n;
+    const unsigned char *p = (unsigned char *) v7_to_string(v7, &s, &n);
+    if (arg0 >= 0 && (size_t) arg0 < n) {
+      return v7_create_number(p[arg0]);
+    }
+  }
+
+  return v7_create_number(NAN);
+}
+
+ON_FLASH static val_t Str_blen(struct v7 *v7, val_t this_obj, val_t args) {
+  size_t len = 0;
+  val_t s = i_value_of(v7, this_obj);
+  (void) args;
+  if (v7_is_string(s)) {
+    v7_to_string(v7, &s, &len);
+  }
+  return v7_create_number(len);
+}
+
 ON_FLASH V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
   char buf[40];
   size_t l;
@@ -15362,6 +15416,11 @@ ON_FLASH V7_PRIVATE void init_string(struct v7 *v7) {
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));
+
+  /* Non-standard Cesanta extension */
+  set_cfunc_prop(v7, v7->string_prototype, "at", Str_at);
+  v7_set_property(v7, v7->string_prototype, "blen", 4, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Str_blen));
 }
 /*
  * Copyright (c) 2015 Cesanta Software Limited
