@@ -18,6 +18,7 @@
 #include "v7_uart.h"
 #include "v7_i2c_js.h"
 #include "v7_gpio_js.h"
+#include "v7_hspi_js.h"
 
 struct v7 *v7;
 os_timer_t js_timeout_timer;
@@ -675,6 +676,7 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
 
   init_i2cjs(v7);
   init_gpiojs(v7);
+  init_hspijs(v7);
 
   v7_gc(v7, 1);
 
