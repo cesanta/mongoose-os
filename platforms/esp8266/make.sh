@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SDK=cesanta/esp8266-build-oss:1.1.2
+SDK=docker.cesanta.com:5000/esp8266-build-oss:1.2.0
 
 V7DIR=$(dirname $(dirname $(dirname $PWD)))
 DIR=/cesanta${PWD##$V7DIR}

@@ -57,7 +57,11 @@ ICACHE_FLASH_ATTR void init_done_cb() {
   pp_soft_wdt_stop();
 }
 
-// Init function
+/* Invoked by SDK at some point, not used by us. */
+void user_rf_pre_init(void) {
+}
+
+/* Init function */
 ICACHE_FLASH_ATTR void user_init() {
   system_init_done_cb(init_done_cb);
 
