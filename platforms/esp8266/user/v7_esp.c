@@ -396,22 +396,22 @@ ICACHE_FLASH_ATTR static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj,
   v7_own(v7, &f);
   f = v7_create_object(v7);
 
-  v7_set(v7, f, "sysfree", 7, 0, v7_create_number(sysfree));
-  v7_set(v7, f, "jssize", 7, 0, v7_create_number(jssize));
-  v7_set(v7, f, "jsfree", 7, 0, v7_create_number(jsfree));
-  v7_set(v7, f, "strres", 7, 0, v7_create_number(strres));
-  v7_set(v7, f, "struse", 7, 0, v7_create_number(struse));
-  v7_set(v7, f, "objfree", 8, 0, v7_create_number(objfree));
-  v7_set(v7, f, "objncell", 8, 0,
+  v7_set(v7, f, "sysfree", ~0, 0, v7_create_number(sysfree));
+  v7_set(v7, f, "jssize", ~0, 0, v7_create_number(jssize));
+  v7_set(v7, f, "jsfree", ~0, 0, v7_create_number(jsfree));
+  v7_set(v7, f, "strres", ~0, 0, v7_create_number(strres));
+  v7_set(v7, f, "struse", ~0, 0, v7_create_number(struse));
+  v7_set(v7, f, "objfree", ~0, 0, v7_create_number(objfree));
+  v7_set(v7, f, "objncell", ~0, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE)));
-  v7_set(v7, f, "propnfree", 9, 0, v7_create_number(propnfree));
-  v7_set(v7, f, "propncell", 9, 0,
+  v7_set(v7, f, "propnfree", ~0, 0, v7_create_number(propnfree));
+  v7_set(v7, f, "propncell", ~0, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_CELL_SIZE)));
-  v7_set(v7, f, "funcnfree", 9, 0,
+  v7_set(v7, f, "funcnfree", ~0, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE)));
-  v7_set(v7, f, "funcncell", 9, 0,
+  v7_set(v7, f, "funcncell", ~0, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE)));
-  v7_set(v7, f, "astsize", 7, 0,
+  v7_set(v7, f, "astsize", ~0, 0,
          v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
 
   v7_set(v7, f, "owned", ~0, 0,
@@ -622,9 +622,9 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t wifi, dht11, gc, debug, os;
 
-  opts.object_arena_size = 148;
+  opts.object_arena_size = 164;
   opts.function_arena_size = 26;
-  opts.property_arena_size = 380;
+  opts.property_arena_size = 400;
   opts.c_stack_base = stack_base;
 
   v7 = v7_create_opt(opts);
