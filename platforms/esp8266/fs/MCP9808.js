@@ -1,43 +1,28 @@
 /*
  * MCP9898 temperature sensor JS I2C wrapper sample.
  * Example usage:
- *   var t = new MCP9808(14, 12, 1, 1); print(t.getTemp()); t.close();
+ *   var t = new MCP9808(new I2C(14, 12), MCP9808.addr(1, 1, 1));
+ *   print(t.getTemp());
  */
 
-function MCP9808(sda, scl, a2, a1, a0) {
-  var c = new I2C(sda, scl);
-  var addr = 0b0011000 | (a2 << 2) | (a1 << 1) | a0;
-
+function MCP9808(bus, addr) {
   this.getTemp = function() {
-    // Select the temperature register (5).
-    if (c.start(addr, I2C.WRITE) != I2C.ACK) {
+    // Read from the temperature register (5).
+    var r = bus.do(addr, [I2C.WRITE, 5], [I2C.READ, 2]);
+    if (r[r.length - 1] == I2C.ERR) {
       return -255;
     }
-    if (c.send(5) != I2C.ACK) {
-      c.stop();
-      return -255;
+    var temp = (r[1].at(0) << 8) + r[1].at(1);
+    var negative = (temp & (1 << 12)) != 0;
+    temp &= 0xfff;  // leave only data bits.
+    temp /= 16;     // normalize.
+    if (negative) {
+      temp -= 256;
     }
-
-    // Read its value.
-    if (c.start(addr, I2C.READ) != I2C.ACK) {
-      c.stop();
-      return -255;
-    }
-
-    var temp_u, temp_l;
-
-    temp_u = c.readByte(I2C.ACK);
-    temp_l = c.readByte(I2C.NAK);
-
-    c.stop();
-
-    temp_u &= 31;
-
-    if ((temp_u & 16) != 0) {
-      temp_u &= 15;
-      return -(256-(temp_u*16 + temp_l/16));
-    } else {
-      return temp_u*16 + temp_l/16;
-    }
+    return temp;
   }
+}
+
+MCP9808.addr = function(a2, a1, a0) {
+  return 0b0011000 | (a2 << 2) | (a1 << 1) | a0;
 }

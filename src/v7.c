@@ -2457,7 +2457,6 @@ ON_FLASH void mbuf_remove(struct mbuf *mb, size_t n) {
 #include <string.h>
 
 #if V7_ENABLE__UTF
-
 enum
 {
 	Bit1	= 7,
@@ -3830,14 +3829,12 @@ ON_FLASH int runetochar(char *str, Rune *rune) {
 Rune tolowerrune(Rune c) { return tolower(c); }
 Rune toupperrune(Rune c) { return toupper(c); }
 ON_FLASH int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
-  long n;
-  for (n = 0; n < m && *s != '\0'; n++);
-  return n;
+  (void) s;
+  return m;
 }
 
 ON_FLASH char *utfnshift(char *s, long m) {
-  for (; m > 0 && *s != '\0'; m--, s++);
-  return s;
+  return s + m;
 }
 
 #endif /* V7_ENABLE__UTF */
@@ -10115,7 +10112,8 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_CALL: {
       ast_off_t pp = *pos;
       ast_move_to_children(a, &pp);
-      res = i_eval_call(v7, a, pos, scope, i_find_this(v7, a, pp, scope), 0);
+      v1 = i_find_this(v7, a, pp, scope);
+      res = i_eval_call(v7, a, pos, scope, v1, 0);
       break;
     }
     case AST_NEW:
@@ -10938,9 +10936,7 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       size_t name_len;
       size_t saved_tmp_stack_pos = v7->tmp_stack.len;
       volatile enum jmp_type j;
-      val_t catch_scope = v7_create_undefined();
 
-      tmp_stack_push(&tf, &catch_scope);
       memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
       end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -10950,8 +10946,11 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
+        val_t catch_scope;
         v7->tmp_stack.len = saved_tmp_stack_pos;
         catch_scope = create_object(v7, scope);
+        tmp_stack_push(&tf, &catch_scope);
+
         tag = ast_fetch_tag(a, &acatch);
         V7_CHECK(v7, tag == AST_IDENT);
         name = ast_get_inlined_data(a, acatch, &name_len);

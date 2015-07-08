@@ -1,5 +1,5 @@
 function testMC24FC() {
-  var c = new MC24FC(14, 12, 0);
+  var c = new MC24FC(new I2C(14, 12));
   print(c.write(0, "Kittens"));
   print(c.write(7, " > "));
   print(c.write(10, "Puppies"));
