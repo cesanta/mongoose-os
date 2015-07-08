@@ -41,6 +41,7 @@ Smart.JS software on a cloud side has three main components:
 # Supported device architectures
 
 - Texas Instruments CC3200
+- NXP LPC18xx
 - Espressif ESP8266
 
 # Smart.js firmware burning tool (stool)
@@ -247,7 +248,7 @@ You retain the copyright on your contributions.
 
 # Licensing
 
-Mongoose is released under commercial and
+Smart.js is released under the commercial and
 [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open
 source licenses. The GPLv2 open source License does not generally permit
 incorporating this software into non-open source programs.
