@@ -8455,12 +8455,12 @@ ON_FLASH void v7_gc(struct v7 *v7, int full) {
   gc_mark(v7, v7->string_prototype);
   gc_mark(v7, v7->number_prototype);
   gc_mark(v7, v7->function_prototype); /* possibly not reachable */
-  gc_mark(v7, v7->this_object);
 
   gc_mark(v7, v7->object_prototype);
   gc_mark(v7, v7->global_object);
   gc_mark(v7, v7->this_object);
   gc_mark(v7, v7->call_stack);
+  gc_mark(v7, v7->thrown_error);
 
   for (i = 0; i < (int) ARRAY_SIZE(root_mbuf_offs); i++) {
     const struct mbuf *mbuf =
@@ -11134,6 +11134,8 @@ V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     v7->tmp_stack.len = saved_tmp_stack_pos;
     r = v7->thrown_error;
+    /* v7->thrown_error is in the root set, remove it so it doesn't leak */
+    v7->thrown_error = v7_create_undefined();
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }

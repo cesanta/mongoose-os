@@ -53,7 +53,7 @@ hspi_js_txn(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 /*
- * JS: tran(send, [bytes_to_read, command_len_bit, command, addr_len_bit, addr])
+ * JS: tran(send, [bytes_to_read, command, addr])
 */
 ICACHE_FLASH_ATTR v7_val_t
 hspi_js_tran(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -93,7 +93,7 @@ hspi_js_tran(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     }
   }
 
-  /* command (len, data)*/
+  /* command */
   tmp_val = v7_array_get(v7, args, 2);
   if (v7_is_number(tmp_val)) {
     cmd_bits = v7_to_number(tmp_val);

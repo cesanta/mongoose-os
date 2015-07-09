@@ -142,6 +142,19 @@ top-level directory.
 - `GPIO.setisr(pin, isr_type, func) -> true or false` assign interrruption handler for
   pin. `isr_type` is a number, 0 disables interrupts, 1 enables interupts on positive edge, 2 - on negative edge, 3 - on any edge, 4 - on low level, 5 - on high level. `func` is callback to be called on interrupt, its prototype is `function myisr(pin, level)`.
 
+## SPI
+
+Constructor:
+- `var spi = new SPI()`.
+
+API:
+- `spi.tran(dataToSend, [bytesToRead, command, address]) -> number` - send and receive data within one transaction. `dataToSend` - 32bit number to send to SPI. `bytesToRead` - number of bytes to read from SPI (1-4). If device requires explicit command and address, they might be provided via `command` and `address` parameters.
+- `spi.txn(commandLenBits, command, addrLenBits, address, dataToSendLenBits, dataToWrite, dataToReadLenBits, dummyBits) -> number` - send and receive data within one transaction. The same as `spi.tran`, but allows to use arbitrary (1-32 bits) lengths. This function should be used if device requires, for example, 9bit data, 7bit address, 3bit command etc.
+
+There is a detailed description in [the source file](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/user/spi.h).
+
+See [barometer driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MPL115A1.js) for usage example.
+
 ## I2C
 
 Constants:
