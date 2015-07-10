@@ -849,12 +849,22 @@ char *utfutf(char *s1, char *s2);
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
 
-#ifndef AVR_LIBC
+#if !(defined (AVR_LIBC) || defined (PICOTCP))
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
 #include <signal.h>
+#endif
+
+#ifdef PICOTCP
+#define time(x) PICO_TIME()
+#ifndef SOMAXCONN
+#define SOMAXCONN (16)
+#endif
+#ifdef _POSIX_VERSION
+#define signal(...)
+#endif
 #endif
 
 #include <assert.h>
@@ -987,7 +997,7 @@ int64_t strtoll(const char* str, char** endptr, int base);
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#ifndef NO_LIBC
+#if !defined(NO_LIBC) && !defined(NS_DISABLE_FILESYSTEM)
 typedef FILE* c_file_t;
 /*
  * Cannot use fopen & Co directly and
@@ -2396,11 +2406,9 @@ ON_FLASH size_t
 mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   char *p = NULL;
 
-#ifndef NO_LIBC
   assert(a != NULL);
   assert(a->len <= a->size);
   assert(off <= a->len);
-#endif
 
   /* check overflow */
   if (~(size_t) 0 - (size_t) a->buf < len) return 0;
@@ -5261,9 +5269,7 @@ ON_FLASH V7_PRIVATE int calc_llen(size_t len) {
     n++;
   } while (len >>= 7);
 
-#ifndef NO_LIBC
   assert(n <= (int) sizeof(len));
-#endif
 
   return n;
 }
@@ -6151,9 +6157,7 @@ ON_FLASH V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
-#ifndef NO_LIBC
   assert(tag < AST_MAX_TAG);
-#endif
   mbuf_append(&a->mbuf, (char *) &t, sizeof(t));
   mbuf_append(&a->mbuf, NULL, sizeof(ast_skip_t) * d->num_skips);
   return start + 1;
@@ -6164,9 +6168,7 @@ ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
-#ifndef NO_LIBC
   assert(tag < AST_MAX_TAG);
-#endif
 
   mbuf_insert(&a->mbuf, start, NULL, sizeof(ast_skip_t) * d->num_skips);
   mbuf_insert(&a->mbuf, start, (char *) &t, sizeof(t));
@@ -6213,10 +6215,8 @@ ON_FLASH V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
-#ifndef NO_LIBC
   /* assertion, to be optimizable out */
   assert((int) skip < def->num_skips);
-#endif
 
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
@@ -6226,18 +6226,14 @@ ON_FLASH V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
 ON_FLASH V7_PRIVATE ast_off_t
 ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   uint8_t *p;
-#ifndef NO_LIBC
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
-#endif
 
   p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
 ON_FLASH V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
-#ifndef NO_LIBC
   assert(*pos < a->mbuf.len);
-#endif
   return (enum ast_tag)(uint8_t) * (a->mbuf.buf + (*pos)++);
 }
 
@@ -6249,9 +6245,7 @@ ON_FLASH V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
 ON_FLASH V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
-#ifndef NO_LIBC
   assert(*pos - 1 < a->mbuf.len);
-#endif
   if (def->has_varint) {
     int llen;
     size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
@@ -6267,9 +6261,7 @@ ON_FLASH V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
 /* Helper to add a node with inlined data. */
 ON_FLASH V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
                                               const char *name, size_t len) {
-#ifndef NO_LIBC
   assert(ast_node_defs[tag].has_inlined);
-#endif
   embed_string(&a->mbuf, ast_add_node(a, tag), name, len, 0, 1);
 }
 
@@ -6277,18 +6269,14 @@ ON_FLASH V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
 ON_FLASH V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                                  enum ast_tag tag,
                                                  const char *name, size_t len) {
-#ifndef NO_LIBC
   assert(ast_node_defs[tag].has_inlined);
-#endif
   embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len, 0, 1);
 }
 
 ON_FLASH V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
                                                size_t *n) {
   int llen;
-#ifndef NO_LIBC
   assert(pos < a->mbuf.len);
-#endif
   *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
@@ -6554,7 +6542,8 @@ ON_FLASH int v7_is_array(struct v7 *v7, val_t v) {
 
 ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
-  assert(v7_is_regexp(v7, v));
+  int is = v7_is_regexp(v7, v);
+  assert(is == 1);
   p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
   assert(p != NULL);
   return (struct v7_regexp *) v7_to_pointer(p->value);
@@ -7463,9 +7452,7 @@ ON_FLASH int v7_array_set(struct v7 *v7, val_t arr, unsigned long index,
           v7_get_own_property2(v7, arr, "", 0, V7_PROPERTY_HIDDEN);
       struct mbuf *abuf;
       unsigned long len;
-#ifndef NO_LIBC
       assert(p != NULL);
-#endif
       abuf = (struct mbuf *) v7_to_foreign(p->value);
 
       if (v7_to_object(arr)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
@@ -8055,9 +8042,7 @@ ON_FLASH V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
 ON_FLASH V7_PRIVATE void gc_arena_init(struct v7 *v7, struct gc_arena *a,
                                        size_t cell_size, size_t size,
                                        const char *name) {
-#ifndef NO_LIBC
   assert(cell_size >= sizeof(uintptr_t));
-#endif
 
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
@@ -8065,9 +8050,7 @@ ON_FLASH V7_PRIVATE void gc_arena_init(struct v7 *v7, struct gc_arena *a,
 /* Avoid arena initialization cost when GC is disabled */
 #ifndef V7_DISABLE_GC
   gc_arena_grow(v7, a, size);
-#ifndef NO_LIBC
   assert(a->free != NULL);
-#endif
 #else
   (void) size;
 #endif
@@ -8233,13 +8216,12 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
     next = prop->next;
 
-#ifndef NO_LIBC
     /* This usually triggers when marking an already free object */
     assert((char *) prop >= v7->property_arena.base &&
            (char *) prop <
                (v7->property_arena.base +
                 v7->property_arena.size * v7->property_arena.cell_size));
-#endif
+
     MARK(prop);
   }
 
@@ -14141,9 +14123,7 @@ ON_FLASH static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
     siglongjmp(v7->jmp_buf, j);
   }
 
-#ifndef NO_LIBC
   assert(obj != v7->global_object);
-#endif
 
   for (i = 0; i < len; i++) {
     arr[i] = v7_array_get(v7, obj, i);

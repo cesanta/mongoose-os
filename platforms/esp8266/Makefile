@@ -70,7 +70,11 @@ SHIMS = -Dprintf=c_printf -Dfprintf=c_ufprintf \
         -Dc_fclose=spiffs_fclose -Dc_fopen=spiffs_fopen \
 	      -Dc_rename=spiffs_rename -Dc_remove=spiffs_remove  \
         -Dc_fseek=spiffs_fseek -Dc_ftell=spiffs_ftell \
-        -Dc_rewind=spiffs_rewind -Dc_ferror=spiffs_ferror
+        -Dc_rewind=spiffs_rewind -Dc_ferror=spiffs_ferror \
+	      -DNDEBUG
+
+# NDEBUG is required because we don't have an assert shim
+# TODO(mkm): make one
 
 FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
            -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF -DV7_ENABLE_GC \
