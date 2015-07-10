@@ -8191,6 +8191,24 @@ ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
   }
 }
 
+/*
+ * dense arrays contain only one property pointing to an mbuf with array values.
+ */
+ON_FLASH V7_PRIVATE void gc_mark_dense_array(struct v7 *v7,
+                                             struct v7_object *obj) {
+  val_t v = obj->properties->value;
+  struct mbuf *mbuf = (struct mbuf *) v7_to_foreign(v);
+  val_t *vp;
+
+  if (mbuf == NULL) return;
+  for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
+    gc_mark(v7, *vp);
+#ifdef V7_ENABLE_COMPACTING_GC
+    gc_mark_string(v7, vp);
+#endif
+  }
+}
+
 ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   struct v7_object *obj;
   struct v7_property *prop;
@@ -8202,6 +8220,10 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   obj = v7_to_object(v);
   if (MARKED(obj)) return;
 
+  if (obj->attributes & V7_OBJ_DENSE_ARRAY) {
+    gc_mark_dense_array(v7, obj);
+  }
+
   for ((prop = obj->properties), MARK(obj); prop != NULL; prop = next) {
 #ifdef V7_ENABLE_COMPACTING_GC
     gc_mark_string(v7, &prop->value);
@@ -8212,6 +8234,7 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     next = prop->next;
 
 #ifndef NO_LIBC
+    /* This usually triggers when marking an already free object */
     assert((char *) prop >= v7->property_arena.base &&
            (char *) prop <
                (v7->property_arena.base +
@@ -10239,7 +10262,8 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         default:
           *pos = start;
           i_eval_expr(v7, a, pos, scope);
-          return v7_create_boolean(1);
+          res = v7_create_boolean(1);
+          goto cleanup;
       }
 
       if (v7_is_object(lval) &&
@@ -10293,6 +10317,7 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     }
   }
 
+cleanup:
   tmp_frame_cleanup(&tf);
   return res;
 }
