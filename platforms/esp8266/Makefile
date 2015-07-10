@@ -200,7 +200,7 @@ $(FW_BASE):
 	$(Q) mkdir -p $@
 
 $(FW_FILE_FS): $(MKSPIFFS) $(wildcard fs/*)
-	#./$(MKSPIFFS) $(FW_FS_SIZE) ./fs >$(FW_FILE_FS)
+	./$(MKSPIFFS) $(FW_FS_SIZE) ./fs >$(FW_FILE_FS)
 
 $(MKSPIFFS): mkspiffs.c $(SPIFFS_SRC)
 	gcc -o $@ $^ -DON_FLASH="" -DNO_ESP
