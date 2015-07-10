@@ -121,6 +121,8 @@ SRC		:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
 OBJ		:= $(patsubst %.c,$(BUILD_BASE)/%.o,$(SRC))
 LIBS		:= $(addprefix -l,$(LIBS))
 APP_AR		:= $(addprefix $(BUILD_BASE)/,$(TARGET)_app.a)
+DUMMY_MAIN_O		:= $(addprefix $(BUILD_BASE)/,dummy_main.o)
+SYMCHECK_OUT		:= $(addprefix $(BUILD_BASE)/,symcheck.out)
 TARGET_OUT	:= $(addprefix $(BUILD_BASE)/,$(TARGET).out)
 
 LD_SCRIPT	:= $(addprefix -T./user/,$(LD_SCRIPT))
@@ -159,7 +161,7 @@ $1/%.o: %.c
 	$(Q) $(CC) $(INCDIR) $(MODULE_INCDIR) $(EXTRA_INCDIR) $(SDK_INCDIR) $(CFLAGS) -c $$< -o $$@
 endef
 
-.PHONY: all checkdirs flash clean user/v7_version.c
+.PHONY: all checkdirs flash clean user/v7_version.c symcheck
 
 v7: user/v7.c user/v7.h user/v7_version.c
 	@$(MAKE) all
@@ -170,7 +172,18 @@ $(FW_BASE)/%.bin: $(TARGET_OUT) | $(FW_BASE)
 	$(vecho) "FW $(FW_BASE)/"
 	$(Q) $(ESPTOOL) elf2image -o $(FW_BASE)/ $(TARGET_OUT)
 
-$(TARGET_OUT): $(APP_AR)
+# For dummy_main.o
+$(eval $(call compile-objects,$(BUILD_BASE)))
+
+$(SYMCHECK_OUT): $(DUMMY_MAIN_O)
+	$(vecho) "LD $@"
+	$(Q) $(LD) -L$(SDK_LIBDIR) $(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $(DUMMY_MAIN_O) -Wl,--end-group -o $@
+
+symcheck: $(SYMCHECK_OUT) $(APP_AR)
+	$(vecho) "Running symcheck"
+	./symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+
+$(TARGET_OUT): $(APP_AR) symcheck
 	$(vecho) "LD $@"
 	$(Q) $(LD) -L$(SDK_LIBDIR) $(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $(APP_AR) -Wl,--end-group -o $@
 
@@ -187,7 +200,7 @@ $(FW_BASE):
 	$(Q) mkdir -p $@
 
 $(FW_FILE_FS): $(MKSPIFFS) $(wildcard fs/*)
-	./$(MKSPIFFS) $(FW_FS_SIZE) ./fs >$(FW_FILE_FS)
+	#./$(MKSPIFFS) $(FW_FS_SIZE) ./fs >$(FW_FILE_FS)
 
 $(MKSPIFFS): mkspiffs.c $(SPIFFS_SRC)
 	gcc -o $@ $^ -DON_FLASH="" -DNO_ESP

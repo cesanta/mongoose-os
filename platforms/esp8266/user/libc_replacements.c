@@ -99,24 +99,12 @@ int ICACHE_FLASH_ATTR memcmp(const void* s1, const void* s2, size_t n) {
   return ets_memcmp(s1, s2, n);
 }
 
-void* ICACHE_FLASH_ATTR memcpy(void* dest, const void* src, size_t n) {
-  return (void*) ets_memcpy(dest, src, n);
-}
-
-void* ICACHE_FLASH_ATTR memset(void* s, int c, size_t n) {
-  return (void*) ets_memset(s, c, n);
-}
-
 int ICACHE_FLASH_ATTR strcmp(const char* s1, const char* s2) {
   return ets_strcmp(s1, s2);
 }
 
 char* ICACHE_FLASH_ATTR strcpy(char* dest, const char* src) {
   return (char*) ets_strcpy(dest, src);
-}
-
-size_t ICACHE_FLASH_ATTR strlen(const char* s) {
-  return ets_strlen(s);
 }
 
 int ICACHE_FLASH_ATTR strncmp(const char* s1, const char* s2, size_t len) {
