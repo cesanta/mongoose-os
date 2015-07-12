@@ -15,7 +15,8 @@ Technically, Smart.JS has a device part and a cloud part.
 Smart.JS firmware on a device side:
 
 - Allows scripting for fast and safe development & firmware update.
-  We do that by developing world's smallest JavaScript scripting engine.
+  We do that by developing world's smallest
+  [JavaScript engine](https://github.com/cesanta/v7/).
 - Provides hardware and networking API that guarantees reliability,
   scalability and security out-of-the-box.
 - Devices with our software can be managed remotely and update software
@@ -43,6 +44,7 @@ Smart.JS software on a cloud side has three main components:
 - Texas Instruments CC3200
 - NXP LPC18xx
 - Espressif ESP8266
+- Many more will be added soon!
 
 # Smart.js firmware burning tool (stool)
 
@@ -235,6 +237,23 @@ DHCP server for it.
   1 is station, 2 is soft-AP, 3 is station + soft-AP
 - `Wifi.scan(cb)` - invoke `cb` with a list of discovered networks.
 
+## Cloud
+
+This interface provides an easy way to send data to the
+Cesanta cloud. On a cloud side, it is easy to build interactive
+real-time dashboards.
+
+- `Cloud.store(name, value [, options]) -> undefined` - store metric `name`
+with value `value` in a cloud storage. Optional `options` object can be
+used to specify metrics labels and success callback function. Example:
+`Cloud.store('temperature', 36.6)`. The following prerequisites has
+to be met:
+  - Wifi needs to be configured
+  - Global configuration object `conf` needs to have device ID and
+  password set, `conf.dev.id` and `conf.dev.psk`
+  - Device with those ID and PSK needs to be registered in a cloud - see
+    video at the top of this document
+
 ## Built-in functions
 
 - `usleep(num_microseconds) -> undefined` - sleep for `num_microseconds`
@@ -250,6 +269,16 @@ DHCP server for it.
 - `GC.stat() -> stats_object` - return current memory usage
 - `Debug.mode(mode) -> status_number` - set redirection for system
   and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
+
+# Extending Smart.js firmware
+
+It is trivial to add more API functions to the Smart.js firmware.
+Smart.js is built on top of
+[V7 JavaScript engine](https://github.com/cesanta/v7/) which makes it easy
+to export C/C++ functions to JavaScript:
+
+- [V7 reference on exporting C/C++ functions to JS](https://cesanta.com/docs/v7/#_call_c_c_function_from_javascript)
+- See `init_v7()` function at [v7_esp.c](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/user/v7_esp.c) for an example of how specific C/C++ API is exported to ESP8266 firmware. To extend it, just edit `init_v7()` function and rebuild the firmare by running `sh make.sh` in `smartjs/platforms/esp8266` directory.
 
 # Contributions
 
