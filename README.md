@@ -24,13 +24,13 @@ Smart.JS firmware on a device side:
 
 Smart.JS software on a cloud side has three main components:
 
-- device management database that keeps information about all devices,
+- Device management database that keeps information about all devices,
   e.g. unique device ID, device address, software version, et cetera.
-- telemetry database with analytics. It can, for example, store information
+- Telemetry database with analytics. It can, for example, store information
   from remote sensors, like electricity and water meters, and able to answer
   questions like "show me a cumulative power consumption profile for plants
   A and B from 3 AM to 5 AM last night."
-- remote software update manager. Schedules and drives software updates
+- Remote software update manager. Schedules and drives software updates
   in a reliable way. Understands policies like "start remote update with
   device ID 1234 always. Check success in 5 minutes. If failed, roll back
   to previous version and alert. If successful, proceed with 5 more random
@@ -41,20 +41,20 @@ Smart.JS software on a cloud side has three main components:
 
 # Supported device architectures
 
-- Texas Instruments CC3200
-- NXP LPC18xx
-- Espressif ESP8266
+- Espressif ESP8266 (since ALPHA1)
+- Texas Instruments CC3200 (work in progress)
+- NXP LPC18xx (work in progress)
 - Many more will be added soon!
 
-# Smart.js firmware burning tool (stool)
+# Smart.js firmware burning tool (Flashnchips)
 
-For burning Smart.JS firmware to devices, we provide a `stool` utility.
+For burning Smart.JS firmware to devices, we provide a `Flashnchips` utility.
 Click on [releases](https://github.com/cesanta/smart.js/releases)
 link to download it.
 
-Stool utility also provides a serial console. After firmware is successfully
-loaded onto the device, a serial console shows JavaScript prompt where
-user can enter JavaScript commands. A prompt looks like this:
+Flashnchips utility also provides a serial console. After firmware is
+successfully loaded onto the device, a serial console shows JavaScript
+prompt where user can enter JavaScript commands. A prompt looks like this:
 
 ```
 smartjs 12896/2676$
