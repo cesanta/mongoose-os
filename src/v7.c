@@ -11124,7 +11124,7 @@ V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
                                      val_t w, int fr) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
-  val_t old_this = v7->this_object;
+  val_t old_this = v7->this_object, saved_call_stack = v7->call_stack;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
   jmp_buf saved_jmp_buf, saved_label_buf;
@@ -11135,6 +11135,9 @@ V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
+
+  v7_own(v7, &saved_call_stack);
+  v7->call_stack = v7->global_object;
 
   ast_init(a, 0);
   a->refcnt = 1;
@@ -11166,9 +11169,12 @@ V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
 #endif
 
   v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
-  r = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
+  r = i_eval_stmt(v7, a, &pos, v7->call_stack, &brk);
 
 cleanup:
+  v7_disown(v7, &saved_call_stack);
+  v7->call_stack = saved_call_stack;
+
   release_ast(v7, a);
 
   if (res != NULL) {
