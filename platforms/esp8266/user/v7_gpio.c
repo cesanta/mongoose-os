@@ -27,10 +27,14 @@
 
 #define GPIO_PIN_COUNT 16
 
-static GPIO_INT_TYPE int_map[GPIO_PIN_COUNT] = {0};
+static uint16_t int_map[GPIO_PIN_COUNT] = {0};
 #define GPIO_TASK_QUEUE_LEN 25
 static os_event_t gpio_task_queue[GPIO_TASK_QUEUE_LEN];
 #define GPIO_TASK_SIG 0x123
+
+#define GPIO_INTR_TYPE_ONCLICK 6
+#define GPIO_ONCLICK_SKIP_INTR_COUNT 15
+
 /* TODO(alashkin): introduce some kind of tasks priority registry */
 #define TASK_PRIORITY 1
 
@@ -178,6 +182,51 @@ ICACHE_FLASH_ATTR int v7_gpio_read(int pin) {
   return 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(pin));
 }
 
+/*
+ * How mode 6 ("button") works (example):
+ * 1. Button's GPIO level is 0 (low)
+ * 2. We setup handler for level = 1 (high). That means, we will get
+ * interruption
+ * once level become high (e.g. user presses button)
+ * 3. User presses button, level becomes high
+ * 4. Once level become stable, callback is called AND handler for level = 1 is
+ * removed. Handler for level 0 is set.
+ * 5. User still press the button, but we don't have any interruption, because
+ * we already waiting for level = 0
+ * 6. User releases the button. Level become 0, stabilizes, callback is called
+ * AND we starting to wait level = 1.
+ * So, while user holds key we don't have any interruption.
+ * 7. And so on, and so on.
+*/
+ICACHE_FLASH_ATTR static void v7_gpio_process_on_click(
+    int pin, int level, f_gpio_intr_handler_t callback) {
+  if (GPIO_PIN_INTR_HILEVEL - (int_map[pin] & 0xF) != level) {
+    /*
+     * In order to a avoid false positive, waiting
+     * for level became stable
+     * Using 8 MSB in int_map[] for counter, so
+     * instead of count++ using count += 0x100 (1 << 8)
+     */
+    int_map[pin] -= 0x100;
+  } else {
+    int_map[pin] += 0x100;
+  }
+
+  if ((int_map[pin] & 0xFF00) == 0) {
+    /*
+     * Ok, we have GPIO_ONCLICK_SKIP_INTR_COUNT interuptions
+     * of the same type, it is time to call callback
+     * and switch handler to opposite type (low <-> high)
+     * Here we just adjust int_map[] content,
+     * real interruption status will be changed in v7_gpio_intr_dispatcher()
+     */
+    int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 |
+                   (GPIO_PIN_INTR_HILEVEL - level);
+    system_os_post(TASK_PRIORITY,
+                   (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level, callback);
+  }
+}
+
 ICACHE_FLASH_ATTR static void v7_gpio_intr_dispatcher(
     f_gpio_intr_handler_t callback) {
   uint8_t i, level;
@@ -185,15 +234,21 @@ ICACHE_FLASH_ATTR static void v7_gpio_intr_dispatcher(
   uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
 
   for (i = 0; i < GPIO_PIN_COUNT; i++) {
-    if (int_map[i] && (gpio_status & BIT(i))) {
+    if ((int_map[i] & 0xF) && (gpio_status & BIT(i))) {
       gpio_pin_intr_state_set(GPIO_ID_PIN(i), GPIO_PIN_INTR_DISABLE);
       GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status & BIT(i));
       level = 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(i));
 
-      system_os_post(TASK_PRIORITY,
-                     (uint32_t) GPIO_TASK_SIG << 16 | i << 8 | level, callback);
+      if ((int_map[i] & 0xF0) == 0xF0) {
+        /* this is "on click" handler */
+        v7_gpio_process_on_click(i, level, callback);
+      } else {
+        system_os_post(TASK_PRIORITY,
+                       (uint32_t) GPIO_TASK_SIG << 16 | i << 8 | level,
+                       callback);
+      }
 
-      gpio_pin_intr_state_set(GPIO_ID_PIN(i), int_map[i]);
+      gpio_pin_intr_state_set(GPIO_ID_PIN(i), int_map[i] & 0xF);
     }
   }
 }
@@ -213,16 +268,38 @@ ICACHE_FLASH_ATTR void v7_gpio_intr_init(f_gpio_intr_handler_t cb) {
   ETS_GPIO_INTR_ATTACH(v7_gpio_intr_dispatcher, cb);
 }
 
+ICACHE_FLASH_ATTR static void v7_setup_on_click(int pin) {
+  uint8_t current_level = v7_gpio_read(pin);
+  /*
+   * if current level is high, set interupt on low (4)
+   * else set on high (5)
+   */
+  uint8_t type = GPIO_PIN_INTR_HILEVEL - current_level;
+  int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 | type;
+}
+
 ICACHE_FLASH_ATTR int v7_gpio_intr_set(int pin, GPIO_INT_TYPE type) {
   if (get_gpio_info(pin) == NULL) {
     return -1;
   }
+
   ETS_GPIO_INTR_DISABLE();
   GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(pin));
 
+  /*
+   * ESP allows to setup only 1 GPIO interruption handler
+   * and calls it for interupt on any pin
+   * So, we use 1 main function (dispatcher)
+   * and use int_map variable as a map
+   * pin <-> user interruption setup
+   */
   int_map[pin] = type;
 
-  gpio_pin_intr_state_set(GPIO_ID_PIN(pin), type);
+  if (type == GPIO_INTR_TYPE_ONCLICK) {
+    v7_setup_on_click(pin);
+  }
+
+  gpio_pin_intr_state_set(GPIO_ID_PIN(pin), int_map[pin] & 0xF);
   ETS_GPIO_INTR_ENABLE();
 
   return 0;

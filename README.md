@@ -142,8 +142,9 @@ top-level directory.
 - `GPIO.write(pin_num, true_or_false) -> true of false` set a given pin
   to `true` or `false`, return false if paramaters are incorrect
 - `GPIO.setisr(pin, isr_type, func) -> true or false` assign interrruption handler for
-  pin. `isr_type` is a number, 0 disables interrupts, 1 enables interupts on positive edge, 2 - on negative edge, 3 - on any edge, 4 - on low level, 5 - on high level. `func` is callback to be called on interrupt, its prototype is `function myisr(pin, level)`.
+  pin. `isr_type` is a number, 0 disables interrupts, 1 enables interupts on positive edge, 2 - on negative edge, 3 - on any edge, 4 - on low level, 5 - on high level, 6 - button mode. `func` is callback to be called on interrupt, its prototype is `function myisr(pin, level)`.
 
+  See [button helper](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/gpio.js) for `button mode` usage example.
 ## SPI
 
 Constructor:
