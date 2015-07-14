@@ -185,7 +185,7 @@ $(SYMCHECK_OUT): $(DUMMY_MAIN_O)
 
 symcheck: $(SYMCHECK_OUT) $(APP_AR)
 	$(vecho) "Running symcheck"
-	./symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+	python ./symcheck.py $(SYMCHECK_OUT) $(APP_AR)
 
 $(TARGET_OUT): $(APP_AR) symcheck
 	$(vecho) "LD $@"

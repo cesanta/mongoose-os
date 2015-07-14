@@ -307,6 +307,9 @@ $ sh make.sh
 The firmware gets built in the `firmware/` folder. Copy it to the
 `Fish'n'chips`'s `firmware/esp8266/` directory, and it'll be ready to flash!
 
+Notes for Windows users:
+- Operations above should be performed from `boot2docker` console, not from `cmd.exe`
+- Only `C:\Users` is mapped into docker's VM by default, so put cloned repo to `Users` subfolder
 
 # Extending Smart.js firmware
 
