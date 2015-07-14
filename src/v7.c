@@ -1506,9 +1506,15 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int);
 
 typedef void (*gc_cell_destructor_t)(struct v7 *v7, void *);
 
-struct gc_arena {
+struct gc_block {
+  struct gc_block *next;
   struct gc_cell *base;
   size_t size;
+};
+
+struct gc_arena {
+  struct gc_block *blocks;
+  size_t size_increment;
   struct gc_cell *free; /* head of free list */
   size_t cell_size;
 
@@ -1863,6 +1869,8 @@ V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args);
 V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t s, val_t at);
 
 V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind);
+
+V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
 #if defined(__cplusplus)
 }
@@ -2242,7 +2250,7 @@ V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
 V7_PRIVATE void gc_mark(struct v7 *, val_t);
 
-V7_PRIVATE void gc_arena_init(struct v7 *, struct gc_arena *, size_t, size_t,
+V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, size_t,
                               const char *);
 V7_PRIVATE void gc_arena_grow(struct v7 *, struct gc_arena *, size_t);
 V7_PRIVATE void gc_arena_destroy(struct v7 *, struct gc_arena *a);
@@ -7691,6 +7699,8 @@ ON_FLASH const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   char *p;
   int llen;
 
+  assert(v7_is_string(*v));
+
   if (tag == V7_TAG_STRING_I) {
     p = GET_VAL_NAN_PAYLOAD(*v) + 1;
     *sizep = p[-1];
@@ -7902,10 +7912,9 @@ ON_FLASH struct v7 *v7_create_opt(struct v7_create_opts opts) {
   _v7_nan = zero / zero;
 #endif
 
-#define GC_SIZE (64 * 10)
-  if (opts.object_arena_size == 0) opts.object_arena_size = GC_SIZE;
-  if (opts.function_arena_size == 0) opts.function_arena_size = GC_SIZE;
-  if (opts.property_arena_size == 0) opts.property_arena_size = GC_SIZE * 3;
+  if (opts.object_arena_size == 0) opts.object_arena_size = 200;
+  if (opts.function_arena_size == 0) opts.function_arena_size = 100;
+  if (opts.property_arena_size == 0) opts.property_arena_size = 4000;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #ifdef V7_STACK_SIZE
@@ -7914,14 +7923,14 @@ ON_FLASH struct v7 *v7_create_opt(struct v7_create_opts opts) {
 
     v7->cur_dense_prop =
         (struct v7_property *) calloc(1, sizeof(struct v7_property));
-    gc_arena_init(v7, &v7->object_arena, sizeof(struct v7_object),
-                  opts.object_arena_size, "object");
+    gc_arena_init(&v7->object_arena, sizeof(struct v7_object),
+                  opts.object_arena_size, 10, "object");
     v7->object_arena.destructor = object_destructor;
-    gc_arena_init(v7, &v7->function_arena, sizeof(struct v7_function),
-                  opts.function_arena_size, "function");
+    gc_arena_init(&v7->function_arena, sizeof(struct v7_function),
+                  opts.function_arena_size, 10, "function");
     v7->function_arena.destructor = function_destructor;
-    gc_arena_init(v7, &v7->property_arena, sizeof(struct v7_property),
-                  opts.property_arena_size, "property");
+    gc_arena_init(&v7->property_arena, sizeof(struct v7_property),
+                  opts.property_arena_size, 10, "property");
 
     /*
      * The compacting GC exploits the null terminator of the previous
@@ -8016,6 +8025,9 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
 void gc_mark_string(struct v7 *, val_t *);
 #endif
 
+static struct gc_block *gc_new_block(struct gc_arena *a, size_t size);
+static void gc_free_block(struct gc_block *b);
+
 ON_FLASH V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
@@ -8049,62 +8061,57 @@ ON_FLASH V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
 }
 
 /* Initializes a new arena. */
-ON_FLASH V7_PRIVATE void gc_arena_init(struct v7 *v7, struct gc_arena *a,
-                                       size_t cell_size, size_t size,
+ON_FLASH V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
+                                       size_t initial_size,
+                                       size_t size_increment,
                                        const char *name) {
   assert(cell_size >= sizeof(uintptr_t));
 
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
   a->name = name;
-/* Avoid arena initialization cost when GC is disabled */
-#ifndef V7_DISABLE_GC
-  gc_arena_grow(v7, a, size);
-  assert(a->free != NULL);
-#else
-  (void) size;
-#endif
+  a->size_increment = size_increment;
+  a->blocks = gc_new_block(a, initial_size);
 }
 
 ON_FLASH V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
-  if (a->base != NULL) {
+  struct gc_block *b;
+
+  if (a->blocks != NULL) {
     if (a->destructor != NULL) {
       gc_sweep(v7, a, 0);
     }
-    free(a->base);
+    for (b = a->blocks; b != NULL;) {
+      struct gc_block *tmp;
+      tmp = b;
+      b = b->next;
+      gc_free_block(tmp);
+    }
   }
 }
 
-/*
- * Grows the arena by reallocating.
- *
- * The caller is responsible of relocating all the pointers.
- *
- * TODO(mkm): An alternative is to use offsets instead of pointers or
- * instead of growing, maintain a chain of pools, which would also
- * have a smaller memory spike footprint, but it’s slightly more
- * complicated, and can be implemented in a second phase.
- */
-ON_FLASH V7_PRIVATE void gc_arena_grow(struct v7 *v7, struct gc_arena *a,
-                                       size_t new_size) {
-  size_t free_adjust = a->free ? a->free - a->base : 0;
-  size_t old_size = a->size;
-#if V7_ENABLE__Memory__stats
-  uint32_t old_alive = a->alive;
-  uint32_t old_garbage = a->garbage;
-#endif
-  a->size = new_size;
-  a->base = (struct gc_cell *) realloc(a->base, a->size * a->cell_size);
-  memset(a->base + old_size * a->cell_size, 0,
-         (a->size - old_size) * a->cell_size);
-  /* in case we grow preemptively */
-  a->free += free_adjust;
-  /* sweep will add the trailing zeroed memory to free list */
-  gc_sweep(v7, a, old_size);
-#if V7_ENABLE__Memory__stats
-  a->alive = old_alive;     /* sweeping will decrement `alive` */
-  a->garbage = old_garbage; /* sweeping will increment `garbage` */
-#endif
+ON_FLASH static void gc_free_block(struct gc_block *b) {
+  free(b->base);
+  free(b);
+}
+
+ON_FLASH static struct gc_block *gc_new_block(struct gc_arena *a, size_t size) {
+  struct gc_cell *cur;
+  struct gc_block *b = (struct gc_block *) calloc(1, sizeof(*b));
+  if (b == NULL) abort();
+
+  b->size = size;
+  b->base = (struct gc_cell *) calloc(a->cell_size, b->size);
+  if (b->base == NULL) abort();
+
+  for (cur = GC_CELL_OP(a, b->base, +, 0);
+       cur < GC_CELL_OP(a, b->base, +, b->size);
+       cur = GC_CELL_OP(a, cur, +, 1)) {
+    cur->head.link = a->free;
+    a->free = cur;
+  }
+
+  return b;
 }
 
 ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
@@ -8116,7 +8123,7 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   if (a->free == NULL) {
     v7_gc(v7, 0);
     if (a->free == NULL) {
-#if 1
+#ifdef V7_DISABLE_GROWING_GC
       printf("%s arena exhausted\n",
              a == &v7->object_arena
                  ? "object"
@@ -8129,8 +8136,9 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #endif
       abort();
 #else
-      gc_arena_grow(a, a->size * 1.50);
-/* TODO(mkm): relocate */
+      struct gc_block *b = gc_new_block(a, a->size_increment);
+      b->next = a->blocks;
+      a->blocks = b;
 #endif
     }
   }
@@ -8156,31 +8164,63 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 
 /*
  * Scans the arena and add all unmarked cells to the free list.
+ *
+ * Empty blocks get deallocated. The head of the free list will contais cells
+ * from the last (oldest) block. Cells will thus be allocated in block order.
  */
 ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
+  struct gc_block *b;
   struct gc_cell *cur;
+  struct gc_block **prevp = &a->blocks;
 #if V7_ENABLE__Memory__stats
   a->alive = 0;
 #endif
   a->free = NULL;
-  for (cur = GC_CELL_OP(a, a->base, +, start);
-       cur < GC_CELL_OP(a, a->base, +, a->size);
-       cur = GC_CELL_OP(a, cur, +, 1)) {
-    if (MARKED(cur)) {
-      UNMARK(cur);
+
+  for (b = a->blocks; b != NULL;) {
+    size_t freed_in_block = 0;
+    /*
+     * if it turns out that this block is 100% garbage
+     * we can release the whole block, but the addition
+     * of it's cells to the free list has to be undone.
+     */
+    struct gc_cell *prev_free = a->free;
+
+    for (cur = GC_CELL_OP(a, b->base, +, start);
+         cur < GC_CELL_OP(a, b->base, +, b->size);
+         cur = GC_CELL_OP(a, cur, +, 1)) {
+      if (MARKED(cur)) {
+        UNMARK(cur);
 #if V7_ENABLE__Memory__stats
-      a->alive++;
+        a->alive++;
 #endif
-    } else {
-      if (a->destructor != NULL) {
-        a->destructor(v7, cur);
+      } else {
+        if (a->destructor != NULL) {
+          a->destructor(v7, cur);
+        }
+        memset(cur, 0, a->cell_size);
+        cur->head.link = a->free;
+        a->free = cur;
+        freed_in_block++;
+#if V7_ENABLE__Memory__stats
+        a->garbage++;
+#endif
       }
-      memset(cur, 0, a->cell_size);
-      cur->head.link = a->free;
-      a->free = cur;
-#if V7_ENABLE__Memory__stats
-      a->garbage++;
-#endif
+    }
+
+    /*
+     * don't free the initial block, which is at the tail
+     * because it has a special size aimed at reducing waste
+     * and simplifying initial startup. TODO(mkm): improve
+     * */
+    if (b->next != NULL && freed_in_block == b->size) {
+      *prevp = b->next;
+      gc_free_block(b);
+      b = *prevp;
+      a->free = prev_free;
+    } else {
+      prevp = &b->next;
+      b = b->next;
     }
   }
 }
@@ -8227,12 +8267,13 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
     next = prop->next;
 
+#if 0
     /* This usually triggers when marking an already free object */
     assert((struct gc_cell *) prop >= v7->property_arena.base &&
            (struct gc_cell *) prop < GC_CELL_OP(&v7->property_arena,
                                                 v7->property_arena.base, +,
                                                 v7->property_arena.size));
-
+#endif
     MARK(prop);
   }
 
@@ -8241,12 +8282,22 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 }
 
 #if V7_ENABLE__Memory__stats
+
+ON_FLASH V7_PRIVATE size_t gc_arena_size(struct gc_arena *a) {
+  size_t size = 0;
+  struct gc_block *b;
+  for (b = a->blocks; b != NULL; b = b->next) {
+    size += b->size;
+  }
+  return size;
+}
+
 ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
   switch (what) {
     case V7_HEAP_STAT_HEAP_SIZE:
-      return v7->object_arena.size * v7->object_arena.cell_size +
-             v7->function_arena.size * v7->function_arena.cell_size +
-             v7->property_arena.size * v7->property_arena.cell_size;
+      return gc_arena_size(&v7->object_arena) * v7->object_arena.cell_size +
+             gc_arena_size(&v7->function_arena) * v7->function_arena.cell_size +
+             gc_arena_size(&v7->property_arena) * v7->property_arena.cell_size;
     case V7_HEAP_STAT_HEAP_USED:
       return v7->object_arena.alive * v7->object_arena.cell_size +
              v7->function_arena.alive * v7->function_arena.cell_size +
@@ -8256,21 +8307,21 @@ ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
     case V7_HEAP_STAT_STRING_HEAP_USED:
       return v7->owned_strings.len;
     case V7_HEAP_STAT_OBJ_HEAP_MAX:
-      return v7->object_arena.size;
+      return gc_arena_size(&v7->object_arena);
     case V7_HEAP_STAT_OBJ_HEAP_FREE:
-      return v7->object_arena.size - v7->object_arena.alive;
+      return gc_arena_size(&v7->object_arena) - v7->object_arena.alive;
     case V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE:
       return v7->object_arena.cell_size;
     case V7_HEAP_STAT_FUNC_HEAP_MAX:
-      return v7->function_arena.size;
+      return gc_arena_size(&v7->function_arena);
     case V7_HEAP_STAT_FUNC_HEAP_FREE:
-      return v7->function_arena.size - v7->function_arena.alive;
+      return gc_arena_size(&v7->function_arena) - v7->function_arena.alive;
     case V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE:
       return v7->function_arena.cell_size;
     case V7_HEAP_STAT_PROP_HEAP_MAX:
-      return v7->property_arena.size;
+      return gc_arena_size(&v7->property_arena);
     case V7_HEAP_STAT_PROP_HEAP_FREE:
-      return v7->property_arena.size - v7->property_arena.alive;
+      return gc_arena_size(&v7->property_arena) - v7->property_arena.alive;
     case V7_HEAP_STAT_PROP_HEAP_CELL_SIZE:
       return v7->property_arena.cell_size;
     case V7_HEAP_STAT_FUNC_AST_SIZE:
@@ -8290,7 +8341,7 @@ ON_FLASH static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 #if V7_ENABLE__Memory__stats
   if (a->verbose) {
     fprintf(stderr, "%s: total allocations %lu, max %lu, alive %lu\n", msg,
-            a->allocations, a->size, a->alive);
+            a->allocations, gc_arena_size(a), a->alive);
   }
 #endif
 #endif
@@ -8477,6 +8528,10 @@ ON_FLASH void v7_gc(struct v7 *v7, int full) {
   gc_mark(v7, v7->this_object);
   gc_mark(v7, v7->call_stack);
   gc_mark(v7, v7->thrown_error);
+
+  for (i = 0; i < ERROR_CTOR_MAX; i++) {
+    gc_mark(v7, v7->error_objects[i]);
+  }
 
   for (i = 0; i < (int) ARRAY_SIZE(root_mbuf_offs); i++) {
     const struct mbuf *mbuf =
@@ -14949,6 +15004,7 @@ ON_FLASH static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
 
   rxp->lastIndex = 0;
   arr = v7_create_dense_array(v7);
+  v7_own(v7, &arr);
   while (lastMatch) {
     val_t result = rx_exec(v7, ro, so, 1);
     if (v7_is_null(result))
@@ -14964,6 +15020,7 @@ ON_FLASH static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       n++;
     }
   }
+  v7_disown(v7, &arr);
   if (n == 0) return v7_create_null();
   return arr;
 }
@@ -16787,12 +16844,12 @@ ON_FLASH static void print_error(struct v7 *v7, const char *f, val_t e) {
 #if V7_ENABLE__Memory__stats
 ON_FLASH static void dump_mm_arena_stats(const char *msg, struct gc_arena *a) {
   printf("%s: total allocations %lu, total garbage %lu, max %lu, alive %lu\n",
-         msg, a->allocations, a->garbage, a->size, a->alive);
+         msg, a->allocations, a->garbage, gc_arena_size(a), a->alive);
   printf(
       "%s: (bytes: total allocations %lu, total garbage %lu, max %lu, alive "
       "%lu)\n",
       msg, a->allocations * a->cell_size, a->garbage * a->cell_size,
-      a->size * a->cell_size, a->alive * a->cell_size);
+      gc_arena_size(a) * a->cell_size, a->alive * a->cell_size);
 }
 
 ON_FLASH static void dump_mm_stats(struct v7 *v7) {
@@ -16802,9 +16859,9 @@ ON_FLASH static void dump_mm_stats(struct v7 *v7) {
   printf("string arena len: %lu\n", v7->owned_strings.len);
   printf("Total heap size: %lu\n",
          v7->owned_strings.len +
-             v7->object_arena.size * v7->object_arena.cell_size +
-             v7->function_arena.size * v7->function_arena.cell_size +
-             v7->property_arena.size * v7->property_arena.cell_size);
+             gc_arena_size(&v7->object_arena) * v7->object_arena.cell_size +
+             gc_arena_size(&v7->function_arena) * v7->function_arena.cell_size +
+             gc_arena_size(&v7->property_arena) * v7->property_arena.cell_size);
 }
 #endif
 
