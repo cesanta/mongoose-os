@@ -62,7 +62,7 @@ ICACHE_FLASH_ATTR static void http_sent_cb(void *arg) {
 
 /* Called when successfully connected */
 ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
-  char buf[256];
+  char buf[512];  /* TODO(lsm): do something better than this */
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
 
