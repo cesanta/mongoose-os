@@ -7,6 +7,9 @@
 #include "cli.h"
 #include "dialog.h"
 
+#define STRING_VERSION " ## VERSION ## "
+#define STRING_APP_NAME " ## APP_NAME ## "
+
 namespace {
 
 using std::cout;
@@ -68,8 +71,8 @@ void outputHandler(QtMsgType type, const QMessageLogContext& context,
 int main(int argc, char* argv[]) {
   QCoreApplication::setOrganizationName("Cesanta");
   QCoreApplication::setOrganizationDomain("cesanta.com");
-  QCoreApplication::setApplicationName("flashnchips");
-  QCoreApplication::setApplicationVersion("0.1");
+  QCoreApplication::setApplicationName(STRING_APP_NAME);
+  QCoreApplication::setApplicationVersion(STRING_VERSION);
 
   QCommandLineParser parser;
   parser.setApplicationDescription("Smart.js flashing tool");
@@ -90,7 +93,26 @@ int main(int argc, char* argv[]) {
         "Baud rate to use with a given serial port while flashing.",
         "baud-rate"},
        {"probe", "Check device presence on a given port."},
-       {"flash", "Flash firmware from the given directory.", "dir"}});
+       {"flash", "Flash firmware from the given directory.", "dir"},
+       {"esp8266-flash-params",
+        "Override params bytes read from existing firmware. Either a "
+        "comma-separated string or a number. First component of the string is "
+        "the flash mode, must be one of: qio (default), qout, dio, dout. "
+        "Second component is flash size, value values: 2m, 4m (default), 8m, "
+        "16m, 32m, 16m-c1, 32m-c1, 32m-c2. Third one is flash frequency, valid "
+        "values: 40m (default), 26m, 20m, 80m. If it's a number, only 2 lowest "
+        "bytes from it will be written in the header of section 0x0000 in "
+        "big-endian byte order (i.e. high byte is put at offset 2, low byte at "
+        "offset 3).",
+        "params"},
+       {"esp8266-skip-reading-flash-params",
+        "If set and --esp8266-flash-params is not used, reading flash params "
+        "from the device will not be attempted and image at 0x0000 will be "
+        "written as is."},
+       {"esp8266-disable-erase-workaround",
+        "ROM code can erase up to 16 extra 4KB sectors when flashing firmware. "
+        "This flag disables the workaround that makes it erase at most 1 extra "
+        "sector."}});
 
   QStringList commandline;
   for (int i = 0; i < argc; i++) {
@@ -103,31 +125,6 @@ int main(int argc, char* argv[]) {
   // --help/--version and exits with error if there are still some unknown
   // options.
   parser.parse(commandline);
-
-  if (parser.isSet("platform")) {
-    if (parser.value("platform") == "esp8266") {
-      parser.addOptions(
-          {{"esp8266-flash-params",
-            "Override params bytes read from existing firmware. Either a "
-            "comma-separated string or a number. First component of the string "
-            "is the flash mode, must be one of: qio (default), qout, dio, "
-            "dout. Second component is flash size, value values: 2m, 4m "
-            "(default), 8m, 16m, 32m, 16m-c1, 32m-c1, 32m-c2. Third one is "
-            "flash frequency, valid values: 40m (default), 26m, 20m, 80m. If "
-            "it's a number, only 2 lowest bytes from it will be written in the "
-            "header of section 0x0000 in big-endian byte order (i.e. high byte "
-            "is put at offset 2, low byte at offset 3).",
-            "params"},
-           {"esp8266-skip-reading-flash-params",
-            "If set and --esp8266-flash-params is not used, reading flash "
-            "params from the device will not be attempted and image at 0x0000 "
-            "will be written as is."},
-           {"esp8266-disable-erase-workaround",
-            "ROM code can erase up to 16 extra 4KB sectors when flashing "
-            "firmware. This flag disables the workaround that makes it erase "
-            "at most 1 extra sector."}});
-    }
-  }
 
   qInstallMessageHandler(outputHandler);
   if (parser.isSet("debug")) {

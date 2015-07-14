@@ -13,6 +13,9 @@ QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 HEADERS += cli.h dialog.h esp8266.h flasher.h serial.h
 SOURCES += cli.cc dialog.cc esp8266.cc main.cc serial.cc
 
+DEFINES += VERSION=$$VERSION
+DEFINES += APP_NAME=\"$$TARGET\"
+
 # StatusOr
 exists(common/util/statusor.h) {
   STATUS = ./common/util
