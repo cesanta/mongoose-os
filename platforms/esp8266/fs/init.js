@@ -1,7 +1,8 @@
 print("HELO! Type some JS. See https://github.com/cesanta/smart.js for more info.");
 
-/* uncomment this to try out the GDB server */
-/* crash(); */
+print("\nMy Cesanta cloud ID: " + conf.dev.id);
+print("My PSK: " + conf.dev.key);
+print("Use these credentials to add this device on https://dashboard.cesanta.com/");
 
 /* TODO(mkm): move to 'smart.js' */
 //File.load('smart.js');

@@ -5,6 +5,7 @@
 #include "user_config.h"
 #include "user_interface.h"
 #include "v7.h"
+#include "sha1.h"
 #include "mem.h"
 #include "espconn.h"
 #include <math.h>
@@ -608,9 +609,37 @@ ICACHE_FLASH_ATTR v7_val_t load_conf(struct v7 *v7, const char *name) {
 
 ICACHE_FLASH_ATTR void init_conf(struct v7 *v7) {
   int i;
-  const char *names[] = {"dev.json", "sys.json", "user.json"};
+  size_t len;
+  SHA1_CTX ctx;
+  unsigned char sha[20];
+  const char *names[] = {"sys.json", "user.json"};
   v7_val_t conf = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "conf", ~0, 0, conf);
+
+  len = strnlen(V7_DEV_CONF_STR, 0x1000 - 20);
+  SHA1Init(&ctx);
+  SHA1Update(&ctx, (unsigned char *) V7_DEV_CONF_STR, len);
+  SHA1Final(sha, &ctx);
+
+  if (memcmp(V7_DEV_CONF_SHA1, sha, 20) == 0) {
+    v7_val_t res;
+    enum v7_err err;
+    char *f = (char *) malloc(len + 3);
+    strcpy(f + 1, V7_DEV_CONF_STR);
+    f[0] = '(';
+    f[len + 1] = ')';
+    f[len + 2] = '\0';
+    /* TODO(mkm): simplify when we'll have a C json parse API */
+    err = v7_exec(v7, &res, f);
+    free(f);
+    if (err != V7_OK) {
+      f = v7_to_json(v7, res, NULL, 0);
+      printf("exc parsing dev conf: %s\n", f);
+      free(f);
+    } else {
+      v7_set(v7, conf, "dev", ~0, 0, res);
+    }
+  }
 
   for (i = 0; i < (int) sizeof(names) / sizeof(names[0]); i++) {
     const char *name = names[i];

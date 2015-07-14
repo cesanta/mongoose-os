@@ -22,6 +22,9 @@ FW_BASE		= firmware
 # base directory for the V7 sources
 V7_DIR = ../../src
 
+# base directory for the common sources
+COMMON_DIR = ../../../common
+
 # base directory for the compiler
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 
@@ -71,6 +74,7 @@ SHIMS = -Dprintf=c_printf -Dfprintf=c_ufprintf \
 	      -Dc_rename=spiffs_rename -Dc_remove=spiffs_remove  \
         -Dc_fseek=spiffs_fseek -Dc_ftell=spiffs_ftell \
         -Dc_rewind=spiffs_rewind -Dc_ferror=spiffs_ferror \
+        -Dhmac_sha1=v7_hmac_sha1 \
 	      -DNDEBUG
 
 # NDEBUG is required because we don't have an assert shim
@@ -78,7 +82,7 @@ SHIMS = -Dprintf=c_printf -Dfprintf=c_ufprintf \
 
 FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
            -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF -DV7_ENABLE_GC \
-	         -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DDISABLE_SHA1 -DNO_LIBC \
+	         -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DNO_LIBC \
 					 -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
 					 -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
 					 -DV7_ESP_FLASH_ACCESS_EMUL -DV7_FORCE_STRICT_MODE
@@ -163,7 +167,7 @@ endef
 
 .PHONY: all checkdirs flash clean user/v7_version.c symcheck
 
-v7: user/v7.c user/v7.h user/v7_version.c
+v7: user/v7.c user/v7.h user/sha1.h user/v7_version.c
 	@$(MAKE) all
 
 all: checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2) $(FW_FILE_FS)
@@ -215,13 +219,16 @@ flash_fs: $(FW_FILE_FS)
 	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FS_ADDR) $(FW_FILE_FS)
 
 clean:
-	$(Q) rm -rf $(FW_BASE) $(BUILD_BASE) $(MKSPIFFS) user/v7.c user/v7.h user/v7_version.c
+	$(Q) rm -rf $(FW_BASE) $(BUILD_BASE) $(MKSPIFFS) user/v7.c user/v7.h user/sha1.h user/v7_version.c
 
 user/v7.c: $(V7_DIR)/v7.c
 	cp $(V7_DIR)/v7.c user/v7.c
 
 user/v7.h: $(V7_DIR)/v7.h
 	cp $(V7_DIR)/v7.h user/v7.h
+
+user/sha1.h: $(COMMON_DIR)/sha1.h
+	@sed -e 's;#include "osdep.h";;' -e 's;#include "onflash.h";;' $(COMMON_DIR)/sha1.h >user/sha1.h
 
 user/v7_version.c:
 	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
