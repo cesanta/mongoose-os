@@ -135,6 +135,23 @@ Note: some file systems, e.g. SPIFFS on ESP8266 platform, are flat. They
 do not support directory structure. Instead, all files reside in the
 top-level directory.
 
+## HTTP
+
+Http API provides a simple HTTP client:
+
+- `Http.get(url, cb)` performs a HTTP GET request at the given url, and invokes the provided callback `cb` with data and error.
+- `Http.post(url, d, cb)` performs a HTTP POST request at the given url, passing `d` as body (stringified) and invokes the provided callback `cb` with data and error.
+
+Example:
+
+    Http.get("http://jsonip.com", function(d, e) {
+      if(e) {
+        print("error ", e);
+      } else {
+        print("my ip is ", JSON.parse(d).ip);
+      }
+    });
+
 ## GPIO
 
 - `GPIO.setmode(pin, mode, pull) -> true or false` set pin mode. 'mode' is number,  0 enables both input and output, 1 enables input only, 2 enabled output only, 3 enables interruptions on pin, see `GPUI.setisr`. `pull` is a number, 0 leaves pin floating, 1 connects pin to internal pullup resistor, 2 connects pin to internal pulldown resistor.
