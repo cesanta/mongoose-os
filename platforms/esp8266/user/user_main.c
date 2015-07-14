@@ -29,6 +29,10 @@ ICACHE_FLASH_ATTR void start_cmd(int dummy) {
 
   wifi_set_event_handler_cb(wifi_changed_cb);
 
+#ifndef V7_NO_FS
+  init_smartjs();
+#endif
+
 #if !defined(V7_NO_FS) && !defined(NO_EXEC_INITJS)
   v7_run_startup();
 

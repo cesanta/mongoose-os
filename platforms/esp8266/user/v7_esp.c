@@ -711,3 +711,16 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
 
   init_conf(v7);
 }
+
+#ifndef V7_NO_FS
+ICACHE_FLASH_ATTR void init_smartjs() {
+  v7_val_t v;
+  int res = v7_exec_file(v7, &v, "smart.js");
+  if (res != V7_OK) {
+    char *p;
+    p = v7_to_json(v7, v, NULL, 0);
+    printf("smart.js execution: %s\n\r", p);
+    free(p);
+  }
+}
+#endif

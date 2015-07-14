@@ -10489,45 +10489,12 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (v7_is_cfunction(cfunc)) {
-    /*
-     * C functions cannot be closures, hence it's
-     * safe to pass a C stack allocated dense array.
-     *
-     * The stack frame layout will be reorganized with the
-     * bytecode interpreter but C calls will likely
-     * always be special.
-     */
-    struct mbuf *abuf;
-    struct v7_object sargs;
-    struct v7_property prop;
-    /*
-     * cannot use args since it's used as GC root and thus
-     * the GC would mark this C stack object but never unmark it
-     */
-    val_t cargs;
-
-    sargs.prototype = v7_to_object(v7->array_prototype);
-    sargs.attributes = V7_OBJ_DENSE_ARRAY;
-    sargs.properties = &prop;
-    prop.next = NULL;
-    prop.name = v7_create_string(v7, "", 0, 1);
-    prop.value = V7_NULL;
-    prop.attributes = V7_PROPERTY_HIDDEN;
-
-    cargs = v7_object_to_value(&sargs);
-
+    args = v7_create_dense_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
-      v7_array_set(v7, cargs, i, res);
+      v7_array_set(v7, args, i, res);
     }
-    res = v7_to_cfunction(cfunc)(v7, this_object, cargs);
-
-    abuf = (struct mbuf *) v7_to_foreign(prop.value);
-    if (abuf) {
-      mbuf_free(abuf);
-      free(abuf);
-    }
-
+    res = v7_to_cfunction(cfunc)(v7, this_object, args);
     goto cleanup;
   }
   if (!v7_is_function(v1)) {
