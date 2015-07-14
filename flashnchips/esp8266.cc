@@ -341,9 +341,6 @@ class FlasherImpl : public Flasher {
         override_flash_params_(override_flash_params),
         generate_id_if_none_found_(generate_id_if_none_found),
         id_hostname_(id_hostname) {
-    if (id_hostname_.isEmpty()) {
-      id_hostname_ = "api.cesanta.com";
-    }
   }
 
   QString load(const QString& path) override {

@@ -94,6 +94,11 @@ int main(int argc, char* argv[]) {
         "baud-rate"},
        {"probe", "Check device presence on a given port."},
        {"flash", "Flash firmware from the given directory.", "dir"},
+       {"id-domain",
+        "Domain name to use for generated device IDs. Default: api.cesanta.com",
+        "name", "api.cesanta.com"},
+       {"skip-id-generation",
+        "If set, device ID won't be generated and flashed."},
        {"esp8266-flash-params",
         "Override params bytes read from existing firmware. Either a "
         "comma-separated string or a number. First component of the string is "
