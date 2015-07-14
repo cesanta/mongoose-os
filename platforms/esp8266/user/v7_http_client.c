@@ -62,19 +62,25 @@ ICACHE_FLASH_ATTR static void http_sent_cb(void *arg) {
 
 /* Called when successfully connected */
 ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
-  char buf[512];  /* TODO(lsm): do something better than this */
+  char *buf;
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
 
   if (strcmp(ctx->method, "GET") == 0) {
-    snprintf(buf, sizeof(buf), "GET %s HTTP/1.0\r\n\r\n", ctx->path);
+    const char *const reqfmt = "GET %s HTTP/1.0\r\n\r\n";
+    int buflen = strlen(ctx->path) + strlen(reqfmt) - 2 + 1;
+    buf = (char *) malloc(buflen);
+    snprintf(buf, buflen, reqfmt, ctx->path);
   } else {
     if (v7_is_string(ctx->body)) {
+      const char *const reqfmt =
+          "POST %s HTTP/1.0\r\ncontent-length: %d\r\n\r\n%s";
       size_t len;
       const char *body = v7_to_string(v7, &ctx->body, &len);
-      snprintf(buf, sizeof(buf),
-               "POST %s HTTP/1.0\r\ncontent-length: %d\r\n\r\n%s", ctx->path,
-               (int) len, body);
+      /* some space for content length and zero terminator */
+      int buflen = strlen(ctx->path) + strlen(reqfmt) + len + 10;
+      buf = (char *) malloc(buflen);
+      snprintf(buf, buflen, reqfmt, ctx->path, (int) len, body);
       v7_disown(v7, &ctx->body);
     } else {
       fprintf(stderr, "body not a string\n");
@@ -85,6 +91,7 @@ ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
   espconn_regist_sentcb(conn, http_sent_cb);
 
   espconn_sent(conn, buf, strlen(buf));
+  free(buf);
 }
 
 /* Invoke user callback as cb(data, undefined) */
