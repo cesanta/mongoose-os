@@ -271,6 +271,7 @@ to be met:
 - `GC.stat() -> stats_object` - return current memory usage
 - `Debug.mode(mode) -> status_number` - set redirection for system
   and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
+- `Debug.print(...)` - print information to current debug output (set by `Debug.mode`)
 
 # Extending Smart.js firmware
 
