@@ -1507,9 +1507,9 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int);
 typedef void (*gc_cell_destructor_t)(struct v7 *v7, void *);
 
 struct gc_arena {
-  char *base;
+  struct gc_cell *base;
   size_t size;
-  char *free; /* head of free list */
+  struct gc_cell *free; /* head of free list */
   size_t cell_size;
 
 #if V7_ENABLE__Memory__stats
@@ -2209,9 +2209,16 @@ V7_PRIVATE void eval_bcode(struct v7 *, struct bcode *);
 #define V7_DISABLE_GC
 #endif
 
-#define MARK(p) (((struct gc_cell *) (p))->word |= 1)
-#define UNMARK(p) (((struct gc_cell *) (p))->word &= ~1)
-#define MARKED(p) (((struct gc_cell *) (p))->word & 1)
+#define MARK(p) (((struct gc_cell *) (p))->head.word |= 1)
+#define UNMARK(p) (((struct gc_cell *) (p))->head.word &= ~1)
+#define MARKED(p) (((struct gc_cell *) (p))->head.word & 1)
+
+/*
+ * performs arithmetics on gc_cell pointers as if they were arena->cell_size
+ * bytes wide
+ */
+#define GC_CELL_OP(arena, cell, op, arg) \
+  ((struct gc_cell *) (((char *) (cell)) op((arg) * (arena)->cell_size)))
 
 struct gc_tmp_frame {
   struct v7 *v7;
@@ -2219,7 +2226,10 @@ struct gc_tmp_frame {
 };
 
 struct gc_cell {
-  uintptr_t word;
+  union {
+    struct gc_cell *link;
+    uintptr_t word;
+  } head;
 };
 
 #if defined(__cplusplus)
@@ -8084,7 +8094,7 @@ ON_FLASH V7_PRIVATE void gc_arena_grow(struct v7 *v7, struct gc_arena *a,
   uint32_t old_garbage = a->garbage;
 #endif
   a->size = new_size;
-  a->base = (char *) realloc(a->base, a->size * a->cell_size);
+  a->base = (struct gc_cell *) realloc(a->base, a->size * a->cell_size);
   memset(a->base + old_size * a->cell_size, 0,
          (a->size - old_size) * a->cell_size);
   /* in case we grow preemptively */
@@ -8102,7 +8112,7 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   (void) v7;
   return calloc(1, a->cell_size);
 #else
-  char **r;
+  struct gc_cell *r;
   if (a->free == NULL) {
     v7_gc(v7, 0);
     if (a->free == NULL) {
@@ -8124,11 +8134,11 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #endif
     }
   }
-  r = (char **) a->free;
+  r = a->free;
 
   UNMARK(r);
 
-  a->free = *r;
+  a->free = r->head.link;
 
 #if V7_ENABLE__Memory__stats
   a->allocations++;
@@ -8148,13 +8158,14 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
  * Scans the arena and add all unmarked cells to the free list.
  */
 ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
-  char *cur;
+  struct gc_cell *cur;
 #if V7_ENABLE__Memory__stats
   a->alive = 0;
 #endif
   a->free = NULL;
-  for (cur = a->base + (start * a->cell_size);
-       cur < (a->base + (a->size * a->cell_size)); cur += a->cell_size) {
+  for (cur = GC_CELL_OP(a, a->base, +, start);
+       cur < GC_CELL_OP(a, a->base, +, a->size);
+       cur = GC_CELL_OP(a, cur, +, 1)) {
     if (MARKED(cur)) {
       UNMARK(cur);
 #if V7_ENABLE__Memory__stats
@@ -8165,7 +8176,7 @@ ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
         a->destructor(v7, cur);
       }
       memset(cur, 0, a->cell_size);
-      *(char **) cur = a->free;
+      cur->head.link = a->free;
       a->free = cur;
 #if V7_ENABLE__Memory__stats
       a->garbage++;
@@ -8217,10 +8228,10 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     next = prop->next;
 
     /* This usually triggers when marking an already free object */
-    assert((char *) prop >= v7->property_arena.base &&
-           (char *) prop <
-               (v7->property_arena.base +
-                v7->property_arena.size * v7->property_arena.cell_size));
+    assert((struct gc_cell *) prop >= v7->property_arena.base &&
+           (struct gc_cell *) prop < GC_CELL_OP(&v7->property_arena,
+                                                v7->property_arena.base, +,
+                                                v7->property_arena.size));
 
     MARK(prop);
   }
