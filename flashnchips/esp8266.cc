@@ -424,6 +424,9 @@ class FlasherImpl : public Flasher {
         flashParams = params[0] << 8 | params[1];
       } else {
         qWarning() << "Failed to read flash params";
+        emit done(tr("failed to read flash params from the existing firmware"),
+                  false);
+        return;
       }
       if (!rebootIntoBootloader(port_)) {
         emit done(tr("failed to reboot the device after reading flash params"),
@@ -455,6 +458,8 @@ class FlasherImpl : public Flasher {
       } else {
         qWarning() << "Failed to read existing ID block:"
                    << res.status().ToString().c_str();
+        emit done(tr("failed to check for ID presence"), false);
+        return;
       }
       if (!rebootIntoBootloader(port_)) {
         emit done(tr("failed to reboot the device after reading flash params"),
