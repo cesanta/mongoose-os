@@ -48,11 +48,11 @@ Smart.JS software on a cloud side has three main components:
 
 # Smart.js firmware burning tool (Flashnchips)
 
-For burning Smart.JS firmware to devices, we provide a `Flashnchips` utility.
+For burning Smart.JS firmware to devices, we provide a `Flash'n'chips` utility.
 Click on [releases](https://github.com/cesanta/smart.js/releases)
 link to download it.
 
-Flashnchips utility also provides a serial console. After firmware is
+Flash'n'chips utility also provides a serial console. After firmware is
 successfully loaded onto the device, a serial console shows JavaScript
 prompt where user can enter JavaScript commands. A prompt looks like this:
 
@@ -272,6 +272,24 @@ to be met:
 - `Debug.mode(mode) -> status_number` - set redirection for system
   and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
 - `Debug.print(...)` - print information to current debug output (set by `Debug.mode`)
+
+# Building Smart.js firmware
+
+For those who want to build Smart.js firmware themselves, here is an
+instruction on how to do that:
+
+1. Make sure you have [Docker](https://www.docker.com/) installed and running
+2. Execute the following:
+
+```
+$ git clone https://github.com/cesanta/smart.js.git
+$ cd smart.js/platforms/esp8266
+$ sh make.sh
+```
+
+The firmware gets built in the `firmware/` folder. Copy it to the
+`Fish'n'chips`'s `firmware/esp8266/` directory, and it'll be ready to flash!
+
 
 # Extending Smart.js firmware
 
