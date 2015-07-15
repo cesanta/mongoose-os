@@ -311,6 +311,9 @@ Notes for Windows users:
 - Operations above should be performed from `boot2docker` console, not from `cmd.exe`
 - Only `C:\Users` is mapped into docker's VM by default, so put cloned repo to `Users` subfolder
 
+Notes for Mac users:
+- Only `/Users` is mapped into docker's VM by default, so put cloned repo to `Users` subfolder
+
 # Extending Smart.js firmware
 
 It is trivial to add more API functions to the Smart.js firmware.
