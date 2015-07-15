@@ -38,7 +38,7 @@ Cloud.store = function(name,val,opts) {
 }
 
 /* demo */
-if (conf.user.demo == 'MCP9808') {
+if (conf.user.demo === undefined || conf.user.demo == 'MCP9808') {
     File.load('I2C.js');
     File.load('MCP9808.js');
     t = new MCP9808(new I2C(14,12), MCP9808.addr(1,1,1));
