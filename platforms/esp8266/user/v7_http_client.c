@@ -136,16 +136,21 @@ ICACHE_FLASH_ATTR static void http_error_cb(void *arg, int8_t err) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
   char err_msg[128];
-  v7_val_t cb_args;
+  v7_val_t res, cb_args;
 
   cb_args = v7_create_object(v7);
   v7_own(v7, &cb_args);
 
   snprintf(err_msg, sizeof(err_msg), "connection error: %d\n", err);
+  v7_array_set(v7, cb_args, 0, ctx->cb);
   v7_array_set(v7, cb_args, 1,
                v7_create_string(v7, err_msg, sizeof(err_msg), 1));
   http_free(conn);
-  v7_apply(v7, ctx->cb, v7_create_undefined(), cb_args);
+  if (v7_exec_with(v7, &res, "this[0](undefined, this[1])", cb_args) != V7_OK) {
+    char *s = v7_to_json(v7, res, NULL, 0);
+    fprintf(stderr, "exc calling cb: %s\n", s);
+    free(s);
+  }
   v7_disown(v7, &cb_args);
 }
 
@@ -161,12 +166,18 @@ ICACHE_FLASH_ATTR static void http_get_dns_cb(const char *name,
   static char err_msg[] = "cannot resolve";
 
   if (ipaddr == NULL) {
-    v7_val_t cb_args = v7_create_object(v7);
+    v7_val_t res, cb_args = v7_create_object(v7);
     v7_own(v7, &cb_args);
+    v7_array_set(v7, cb_args, 0, ctx->cb);
     v7_array_set(v7, cb_args, 1,
                  v7_create_string(v7, err_msg, sizeof(err_msg), 1));
     http_free(conn);
-    v7_apply(v7, ctx->cb, v7_create_undefined(), cb_args);
+    if (v7_exec_with(v7, &res, "this[0](undefined, this[1])", cb_args) !=
+        V7_OK) {
+      char *s = v7_to_json(v7, res, NULL, 0);
+      fprintf(stderr, "exc calling cb: %s\n", s);
+      free(s);
+    }
     v7_disown(v7, &cb_args);
     v7_disown(v7, &ctx->body); /* body has not been sent yet */
     v7_disown(v7, &ctx->cb);
