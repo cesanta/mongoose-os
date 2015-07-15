@@ -9,6 +9,8 @@
 #include <QDebug>
 #include <QDialog>
 #include <QEvent>
+#include <QFile>
+#include <QFileDialog>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFormLayout>
@@ -38,6 +40,7 @@
 #include "serial.h"
 
 static const int kInputHistoryLength = 100;
+static const char kPromptEnd[] = "$ ";
 
 MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
     : QMainWindow(parent), parser_(parser) {
@@ -78,6 +81,8 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   refresh_timer_ = new QTimer(this);
   refresh_timer_->start(500);
   connect(refresh_timer_, &QTimer::timeout, this, &MainDialog::updatePortList);
+
+  connect(this, &MainDialog::gotPrompt, this, &MainDialog::sendQueuedCommand);
 }
 
 void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
@@ -193,6 +198,7 @@ void MainDialog::addSerialConsole(QBoxLayout* parent) {
   enabled_in_state_.insert(actionSelector_, Terminal);
   actionSelector_->addItem(tr("Select action..."), int(None));
   actionSelector_->addItem(tr("Configure Wi-Fi"), int(ConfigureWiFi));
+  actionSelector_->addItem(tr("Upload file"), int(UploadFile));
 
   connect(connect_disconnect_btn_, &QPushButton::clicked, this,
           &MainDialog::connectDisconnectTerminal);
@@ -397,12 +403,16 @@ void MainDialog::readSerial() {
     qDebug() << "readSerial called with NULL port";
     return;
   }
+  QString data = serial_port_->readAll();
+  if (data.length() >= 2 && data.right(2) == kPromptEnd) {
+    emit gotPrompt();
+  }
   auto* scroll = terminal_->verticalScrollBar();
   bool autoscroll = scroll->value() == scroll->maximum();
   // Appending a bunch of text the hard way, because
   // QPlainTextEdit::appendPlainText creates a new paragraph on each call,
   // making it look like extra newlines.
-  const QStringList parts = QString(serial_port_->readAll()).split('\n');
+  const QStringList parts = data.split('\n');
   QTextCursor cursor = QTextCursor(terminal_->document());
   cursor.movePosition(QTextCursor::End);
   for (int i = 0; i < parts.length() - 1; i++) {
@@ -714,6 +724,9 @@ void MainDialog::doAction(int index) {
     case ConfigureWiFi:
       configureWiFi();
       break;
+    case UploadFile:
+      uploadFile();
+      break;
   }
 }
 
@@ -744,4 +757,44 @@ void MainDialog::configureWiFi() {
                     .arg(password->text());
     serial_port_->write(s.toUtf8());
   }
+}
+
+void MainDialog::uploadFile() {
+  QString name =
+      QFileDialog::getOpenFileName(this, tr("Select file to upload"));
+  if (name.isNull()) {
+    return;
+  }
+  QFile f(name);
+  if (!f.open(QIODevice::ReadOnly)) {
+    QMessageBox::critical(this, tr("Error"), tr("Failed to open the file."));
+    return;
+  }
+  // TODO(imax): hide commands from the console.
+  QByteArray bytes = f.readAll();
+  QString basename = QFileInfo(name).fileName();
+  command_queue_ << QString("var uf = File.open('%1','w')").arg(basename);
+  const int batchSize = 32;
+  for (int i = 0; i < bytes.length(); i += batchSize) {
+    QString hex = bytes.mid(i, batchSize).toHex();
+    QString cmd = "uf.write('";
+    for (int j = 0; j < hex.length(); j += 2) {
+      cmd.append("\\x");
+      cmd.append(hex.mid(j, 2));
+    }
+    cmd.append("')");
+    command_queue_ << cmd;
+  }
+  command_queue_ << "uf.close()";
+  f.close();
+  sendQueuedCommand();
+}
+
+void MainDialog::sendQueuedCommand() {
+  if (serial_port_ == nullptr || command_queue_.length() == 0) {
+    return;
+  }
+  QString cmd = command_queue_.takeFirst();
+  serial_port_->write(cmd.toUtf8());
+  serial_port_->write("\r\n");
 }

@@ -23,6 +23,10 @@ extern struct v7 *v7;
 ICACHE_FLASH_ATTR void process_js(char *cmd);
 
 ICACHE_FLASH_ATTR static void show_prompt(void) {
+  /*
+   * Flashnchips relies on prompt ending with "$ " to detect when it's okay
+   * to send the next line during file upload.
+   */
   printf("smartjs %u/%d$ ", system_get_free_heap_size(),
          v7_heap_stat(v7, V7_HEAP_STAT_HEAP_SIZE) -
              v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED));

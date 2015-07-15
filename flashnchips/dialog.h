@@ -46,6 +46,7 @@ class MainDialog : public QMainWindow {
   enum Action {
     None,
     ConfigureWiFi,
+    UploadFile,
   };
 
  private slots:
@@ -65,13 +66,18 @@ class MainDialog : public QMainWindow {
   void rebootESP8266();
   void doAction(int index);
   void configureWiFi();
+  void uploadFile();
 
   QString openSerial();
   QString closeSerial();
+  void sendQueuedCommand();
 
   void setState(State);
   void enableControlsForCurrentState();
   void showAboutBox();
+
+signals:
+  void gotPrompt();
 
  private:
   void addPortAndPlatform(QBoxLayout *parent);
@@ -104,6 +110,7 @@ class MainDialog : public QMainWindow {
   int history_cursor_ = -1;
   QSettings settings_;
   QComboBox *actionSelector_ = nullptr;
+  QStringList command_queue_;
 
   State state_ = NotConnected;
 };
