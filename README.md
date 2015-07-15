@@ -6,6 +6,10 @@ Smart.JS solves problems of reliability, scalability, security
 and remote management which are common to all verticals, being it industrial
 automation, healthcare, automotive, home automation, or other.
 
+Take a look at 2 minute video that shows Smart.js in action:
+
+[![Smart.js in action](https://cesanta.com/images/Smart.js.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
+
 # Overview
 
 Technically, Smart.JS has a device part and a cloud part.
