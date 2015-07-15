@@ -2,6 +2,16 @@ print("\nMy Cesanta cloud ID: " + conf.dev.id);
 print("My PSK: " + conf.dev.key);
 print("Use these credentials to add this device on https://dashboard.cesanta.com/");
 
+conf.save = function() {
+    var s = function(n,t) {
+        var f = File.open(n, "w");
+        if (f) {
+            f.write(JSON.stringify(t));
+            f.close();
+        }
+    };
+    s("sys.json", this.sys); s("user.json", this.user);
+};
 
 if (conf.sys.wifi) {
     if (conf.sys.wifi.ssid) {

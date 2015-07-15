@@ -580,7 +580,7 @@ ICACHE_FLASH_ATTR char *read_json_file(const char *path) {
     }
     c_fclose(fp);
     p[0] = '(';
-    p[file_size] = ')';
+    p[file_size + 1] = ')';
     return p;
   }
 }
