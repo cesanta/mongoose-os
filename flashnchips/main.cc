@@ -7,9 +7,6 @@
 #include "cli.h"
 #include "dialog.h"
 
-#define STRING_VERSION " ## VERSION ## "
-#define STRING_APP_NAME " ## APP_NAME ## "
-
 namespace {
 
 using std::cout;
@@ -71,8 +68,8 @@ void outputHandler(QtMsgType type, const QMessageLogContext& context,
 int main(int argc, char* argv[]) {
   QCoreApplication::setOrganizationName("Cesanta");
   QCoreApplication::setOrganizationDomain("cesanta.com");
-  QCoreApplication::setApplicationName(STRING_APP_NAME);
-  QCoreApplication::setApplicationVersion(STRING_VERSION);
+  QCoreApplication::setApplicationName(APP_NAME);
+  QCoreApplication::setApplicationVersion(VERSION);
 
   QCommandLineParser parser;
   parser.setApplicationDescription("Smart.js flashing tool");
