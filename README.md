@@ -1,8 +1,8 @@
-# Smart.JS platform
+# Smart.js platform
 
-Smart.JS is a generic, hardware independent, full-stack
+Smart.js is a generic, hardware independent, full-stack
 Internet of Things software platform.
-Smart.JS solves problems of reliability, scalability, security
+Smart.js solves problems of reliability, scalability, security
 and remote management which are common to all verticals, being it industrial
 automation, healthcare, automotive, home automation, or other.
 
@@ -12,11 +12,11 @@ Take a look at 2 minute video that shows Smart.js in action:
 
 # Overview
 
-Technically, Smart.JS has a device part and a cloud part.
+Technically, Smart.js has a device part and a cloud part.
 
 ![](http://cesanta.com/images/smartjs_diagram.png)
 
-Smart.JS firmware on a device side:
+Smart.js firmware on a device side:
 
 - Allows scripting for fast and safe development & firmware update.
   We do that by developing world's smallest
@@ -26,7 +26,7 @@ Smart.JS firmware on a device side:
 - Devices with our software can be managed remotely and update software
   remotely, in a fully automatic or semi-automatic way.
 
-Smart.JS software on a cloud side has three main components:
+Smart.js software on a cloud side has three main components:
 
 - Device management database that keeps information about all devices,
   e.g. unique device ID, device address, software version, et cetera.
@@ -52,7 +52,7 @@ Smart.JS software on a cloud side has three main components:
 
 # Smart.js firmware burning tool (Flashnchips)
 
-For burning Smart.JS firmware to devices, we provide a `Flash'n'chips` utility.
+For burning Smart.js firmware to devices, we provide a `Flash'n'chips` utility.
 Click on [releases](https://github.com/cesanta/smart.js/releases)
 link to download it.
 
