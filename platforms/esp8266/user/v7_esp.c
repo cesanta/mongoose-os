@@ -63,13 +63,11 @@ ICACHE_FLASH_ATTR static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj,
 ICACHE_FLASH_ATTR static void js_timeout(void *arg) {
   v7_val_t *cb = (v7_val_t *) arg;
   v7_val_t res;
-  v7_own(v7, &res);
   if (v7_exec_with(v7, &res, "this()", *cb) != V7_OK) {
     char *s = v7_to_json(v7, res, NULL, 0);
     fprintf(stderr, "exc calling cb: %s\n", s);
     free(s);
   }
-  v7_disown(v7, &res);
   v7_disown(v7, cb);
   free(arg);
 }
