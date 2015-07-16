@@ -31,6 +31,9 @@ os_timer_t js_timeout_timer;
  */
 v7_val_t wifi_scan_cb;
 
+/* true if we're waiting for an ip after invoking Wifi.setup() */
+int wifi_setting_up = 0;
+
 ICACHE_FLASH_ATTR static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj,
                                           v7_val_t args) {
   v7_val_t result = v7_create_object(v7);
@@ -197,7 +200,11 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
     return v7_create_boolean(0);
   }
 
-  return v7_create_boolean(wifi_station_connect());
+  res = wifi_station_connect();
+  if (res) {
+    wifi_setting_up = 1;
+  }
+  return v7_create_boolean(res);
 }
 
 ICACHE_FLASH_ATTR static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj,
@@ -345,6 +352,32 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t this_obj,
 
 ICACHE_FLASH_ATTR void wifi_changed_cb(System_Event_t *evt) {
   v7_val_t args, cb, res;
+
+  if (wifi_setting_up && evt->event == 3) {
+    struct station_config config;
+    v7_val_t res;
+    v7_val_t sys =
+        v7_get(v7, v7_get(v7, v7_get_global_object(v7), "conf", ~0), "sys", ~0);
+    v7_val_t known, wifi = v7_get(v7, sys, "wifi", ~0);
+
+    if (v7_is_undefined(wifi)) {
+      wifi = v7_create_object(v7);
+      v7_set(v7, sys, "wifi", ~0, 0, wifi);
+    }
+    known = v7_get(v7, sys, "known", ~0);
+    if (v7_is_undefined(known)) {
+      known = v7_create_object(v7);
+      v7_set(v7, wifi, "known", ~0, 0, known);
+    }
+
+    wifi_station_get_config(&config);
+
+    v7_set(v7, known, config.ssid, ~0, 0,
+           v7_create_string(v7, config.password, strlen(config.password), 1));
+
+    v7_exec(v7, &res, "conf.save()");
+    wifi_setting_up = 0;
+  }
 
   cb = v7_get(v7, v7_get_global_object(v7), "_chcb", 5);
   if (v7_is_undefined(cb)) return;
