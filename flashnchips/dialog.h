@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QMainWindow>
 #include <QMultiMap>
+#include <QNetworkConfigurationManager>
 #include <QSerialPort>
 #include <QSettings>
 #include <QString>
@@ -111,6 +112,8 @@ signals:
   QSettings settings_;
   QComboBox *actionSelector_ = nullptr;
   QStringList command_queue_;
+
+  QNetworkConfigurationManager net_mgr_;
 
   State state_ = NotConnected;
 };

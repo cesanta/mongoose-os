@@ -83,6 +83,8 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   connect(refresh_timer_, &QTimer::timeout, this, &MainDialog::updatePortList);
 
   connect(this, &MainDialog::gotPrompt, this, &MainDialog::sendQueuedCommand);
+
+  net_mgr_.updateConfigurations();
 }
 
 void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
@@ -733,10 +735,24 @@ void MainDialog::doAction(int index) {
 void MainDialog::configureWiFi() {
   QDialog dlg(this);
   QFormLayout* layout = new QFormLayout();
-  QLineEdit* ssid = new QLineEdit;
+  QComboBox* ssid = new QComboBox;
   QLineEdit* password = new QLineEdit;
   layout->addRow(tr("SSID:"), ssid);
   layout->addRow(tr("Password:"), password);
+
+  ssid->setEditable(true);
+  ssid->setInsertPolicy(QComboBox::NoInsert);
+
+  // net config update is async so this list might be empty
+  // but usually there is enough time to receive the net list
+  // from the OS and if not, blocking doesn't buy anything.
+  for (const auto& net_conf :
+       net_mgr_.allConfigurations(QNetworkConfiguration::Discovered)) {
+    if (net_conf.bearerType() == QNetworkConfiguration::BearerWLAN) {
+      ssid->addItem(net_conf.name());
+    }
+  }
+  ssid->clearEditText();
 
   QPushButton* ok = new QPushButton(tr("&OK"));
   QPushButton* cancel = new QPushButton(tr("&Cancel"));
@@ -753,7 +769,7 @@ void MainDialog::configureWiFi() {
   if (dlg.exec() == QDialog::Accepted) {
     // TODO(imax): escape strings.
     QString s = QString("Wifi.setup('%1', '%2')\r\n")
-                    .arg(ssid->text())
+                    .arg(ssid->currentText())
                     .arg(password->text());
     serial_port_->write(s.toUtf8());
   }
