@@ -28,14 +28,13 @@
  * error codes and doesn't provide
  * error descriptions
  */
-char ICACHE_FLASH_ATTR* strerror(int errnum) {
+char* strerror(int errnum) {
   static char buf[15];
   snprintf(buf, sizeof(buf), "err: %d", errnum);
   buf[sizeof(buf) - 1] = 0;
   return buf;
 }
 
-ICACHE_FLASH_ATTR
 void* malloc(size_t size) {
   void* res = (void*) pvPortMalloc(size);
   if (res == NULL) {
@@ -45,11 +44,11 @@ void* malloc(size_t size) {
   return res;
 }
 
-ICACHE_FLASH_ATTR void free(void* ptr) {
+void free(void* ptr) {
   vPortFree(ptr);
 }
 
-ICACHE_FLASH_ATTR void* realloc(void* ptr, size_t size) {
+void* realloc(void* ptr, size_t size) {
   void* res = (void*) pvPortRealloc(ptr, size);
   if (res == NULL) {
     v7_gc(v7, 1);
@@ -58,7 +57,7 @@ ICACHE_FLASH_ATTR void* realloc(void* ptr, size_t size) {
   return res;
 }
 
-ICACHE_FLASH_ATTR void* calloc(size_t num, size_t size) {
+void* calloc(size_t num, size_t size) {
   void* res = (void*) pvPortZalloc(num * size);
   if (res == NULL) {
     v7_gc(v7, 1);
@@ -67,11 +66,11 @@ ICACHE_FLASH_ATTR void* calloc(size_t num, size_t size) {
   return res;
 }
 
-int ICACHE_FLASH_ATTR puts(const char* str) {
+int puts(const char* str) {
   return os_printf("%s", str);
 }
 
-int ICACHE_FLASH_ATTR sprintf(char* buffer, const char* format, ...) {
+int sprintf(char* buffer, const char* format, ...) {
   int ret;
   va_list arglist;
   va_start(arglist, format);
@@ -80,8 +79,7 @@ int ICACHE_FLASH_ATTR sprintf(char* buffer, const char* format, ...) {
   return ret;
 }
 
-int ICACHE_FLASH_ATTR
-snprintf(char* buffer, size_t size, const char* format, ...) {
+int snprintf(char* buffer, size_t size, const char* format, ...) {
   int ret;
   va_list arglist;
   va_start(arglist, format);
@@ -90,32 +88,31 @@ snprintf(char* buffer, size_t size, const char* format, ...) {
   return ret;
 }
 
-int ICACHE_FLASH_ATTR
-vsnprintf(char* buffer, size_t size, const char* format, va_list arg) {
+int vsnprintf(char* buffer, size_t size, const char* format, va_list arg) {
   return c_vsnprintf(buffer, size, format, arg);
 }
 
-int ICACHE_FLASH_ATTR memcmp(const void* s1, const void* s2, size_t n) {
+int memcmp(const void* s1, const void* s2, size_t n) {
   return ets_memcmp(s1, s2, n);
 }
 
-int ICACHE_FLASH_ATTR strcmp(const char* s1, const char* s2) {
+int strcmp(const char* s1, const char* s2) {
   return ets_strcmp(s1, s2);
 }
 
-char* ICACHE_FLASH_ATTR strcpy(char* dest, const char* src) {
+char* strcpy(char* dest, const char* src) {
   return (char*) ets_strcpy(dest, src);
 }
 
-int ICACHE_FLASH_ATTR strncmp(const char* s1, const char* s2, size_t len) {
+int strncmp(const char* s1, const char* s2, size_t len) {
   return ets_strncmp(s1, s2, len);
 }
 
-char* ICACHE_FLASH_ATTR strncpy(char* dest, const char* src, size_t n) {
+char* strncpy(char* dest, const char* src, size_t n) {
   return (char*) ets_strncpy(dest, src, n);
 }
 
-size_t ICACHE_FLASH_ATTR strnlen(const char* s, size_t len) {
+size_t strnlen(const char* s, size_t len) {
   // there is no ets_strnlen
   const char* cp;
   for (cp = s; len != 0 && *cp != '\0'; cp++, len--)
@@ -123,11 +120,11 @@ size_t ICACHE_FLASH_ATTR strnlen(const char* s, size_t len) {
   return (size_t)(cp - s);
 }
 
-char* ICACHE_FLASH_ATTR strstr(const char* haystack, const char* needle) {
+char* strstr(const char* haystack, const char* needle) {
   return (char*) ets_strstr(haystack, needle);
 }
 
-char* ICACHE_FLASH_ATTR strchr(const char* str, int character) {
+char* strchr(const char* str, int character) {
   while (1) {
     if (*str == 0x00) {
       return NULL;
@@ -139,7 +136,7 @@ char* ICACHE_FLASH_ATTR strchr(const char* str, int character) {
   }
 }
 
-char* ICACHE_FLASH_ATTR strrchr(const char* str, int character) {
+char* strrchr(const char* str, int character) {
   char* ret = NULL;
   while (1) {
     if (*str == 0x00) {
@@ -152,11 +149,11 @@ char* ICACHE_FLASH_ATTR strrchr(const char* str, int character) {
   }
 }
 
-char* ICACHE_FLASH_ATTR strcat(char* dest, const char* src) {
+char* strcat(char* dest, const char* src) {
   return strncat(dest, src, strlen(src));
 }
 
-char* ICACHE_FLASH_ATTR strncat(char* dest, const char* src, size_t n) {
+char* strncat(char* dest, const char* src, size_t n) {
   uint32_t offset = strlen(dest);
   uint32_t i;
   for (i = 0; i < n; i++) {
@@ -168,8 +165,7 @@ char* ICACHE_FLASH_ATTR strncat(char* dest, const char* src, size_t n) {
   return dest;
 }
 
-char* ICACHE_FLASH_ATTR
-strtok_r(char* str, const char* delimiters, char** temp) {
+char* strtok_r(char* str, const char* delimiters, char** temp) {
   static char* ret = NULL;
   char* start = NULL;
   char* end = NULL;
@@ -212,11 +208,11 @@ strtok_r(char* str, const char* delimiters, char** temp) {
   return ret;
 }
 
-char* ICACHE_FLASH_ATTR strtok(char* str, const char* delimiters) {
+char* strtok(char* str, const char* delimiters) {
   return strtok_r(str, delimiters, NULL);
 }
 
-int ICACHE_FLASH_ATTR strcasecmp(const char* str1, const char* str2) {
+int strcasecmp(const char* str1, const char* str2) {
   int d = 0;
   while (1) {
     int c1 = tolower(*str1++);
@@ -228,7 +224,7 @@ int ICACHE_FLASH_ATTR strcasecmp(const char* str1, const char* str2) {
   return d;
 }
 
-char* ICACHE_FLASH_ATTR strdup(const char* str) {
+char* strdup(const char* str) {
   size_t len = strlen(str) + 1;
   char* cstr = malloc(len);
   if (cstr) {
@@ -239,7 +235,7 @@ char* ICACHE_FLASH_ATTR strdup(const char* str) {
 
 // based on Source:
 // https://github.com/anakod/Sming/blob/master/Sming/system/stringconversion.cpp#L93
-double ICACHE_FLASH_ATTR strtod(const char* str, char** endptr) {
+double strtod(const char* str, char** endptr) {
   double result = 0.0;
   double factor = 1.0;
   bool decimals = false;
@@ -325,63 +321,63 @@ double ICACHE_FLASH_ATTR strtod(const char* str, char** endptr) {
 //                             ctype functions
 // ##########################################################################
 
-int ICACHE_FLASH_ATTR isalnum(int c) {
+int isalnum(int c) {
   if (isalpha(c) || isdigit(c)) {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR isalpha(int c) {
+int isalpha(int c) {
   if (islower(c) || isupper(c)) {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR iscntrl(int c) {
+int iscntrl(int c) {
   if (c <= 0x1F || c == 0x7F) {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR isdigit(int c) {
+int isdigit(int c) {
   if (c >= '0' && c <= '9') {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR isgraph(int c) {
+int isgraph(int c) {
   if (isprint(c) && c != ' ') {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR islower(int c) {
+int islower(int c) {
   if (c >= 'a' && c <= 'z') {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR isprint(int c) {
+int isprint(int c) {
   if (!iscntrl(c)) {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR ispunct(int c) {
+int ispunct(int c) {
   if (isgraph(c) && !isalnum(c)) {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR isspace(int c) {
+int isspace(int c) {
   switch (c) {
     case 0x20:  // ' '
     case 0x09:  // '\t'
@@ -394,14 +390,14 @@ int ICACHE_FLASH_ATTR isspace(int c) {
   return 0;
 }
 
-int ICACHE_FLASH_ATTR isupper(int c) {
+int isupper(int c) {
   if (c >= 'A' && c <= 'Z') {
     return 1;
   }
   return 0;
 }
 
-int ICACHE_FLASH_ATTR isxdigit(int c) {
+int isxdigit(int c) {
   if (c >= 'A' && c <= 'F') {
     return 1;
   }
@@ -414,21 +410,21 @@ int ICACHE_FLASH_ATTR isxdigit(int c) {
   return 0;
 }
 
-int ICACHE_FLASH_ATTR tolower(int c) {
+int tolower(int c) {
   if (isupper(c)) {
     c += 0x20;
   }
   return c;
 }
 
-int ICACHE_FLASH_ATTR toupper(int c) {
+int toupper(int c) {
   if (islower(c)) {
     c -= 0x20;
   }
   return c;
 }
 
-int ICACHE_FLASH_ATTR isblank(int c) {
+int isblank(int c) {
   switch (c) {
     case 0x20:  // ' '
     case 0x09:  // '\t'
@@ -441,7 +437,7 @@ int ICACHE_FLASH_ATTR isblank(int c) {
 
 static int errno_var = 0;
 
-int* ICACHE_FLASH_ATTR __errno(void) {
+int* __errno(void) {
   return &errno_var;
 }
 
@@ -449,7 +445,7 @@ int* ICACHE_FLASH_ATTR __errno(void) {
  * Reinventing pow to avoid usage of native pow
  * becouse pow goes to iram0 segment
  */
-ICACHE_FLASH_ATTR static double flash_pow10int(int n) {
+static double flash_pow10int(int n) {
   if (n == 0) {
     return 1;
   } else if (n == 1) {
@@ -467,14 +463,14 @@ ICACHE_FLASH_ATTR static double flash_pow10int(int n) {
  * since it goes to iram segment
  */
 
-ICACHE_FLASH_ATTR static double flash_log10(double x) {
+static double flash_log10(double x) {
   return log(x) / log(10);
 }
 
 /*
  * Attempt to reproduce sprintf's %g
  */
-ICACHE_FLASH_ATTR int double_to_str(char* buf, double val, int prec) {
+int double_to_str(char* buf, double val, int prec) {
   if (isnan(val)) {
     strcpy(buf, "nan");
     return 3;
@@ -570,7 +566,7 @@ ICACHE_FLASH_ATTR int double_to_str(char* buf, double val, int prec) {
   return ptr - buf;
 }
 
-ICACHE_FLASH_ATTR void abort(void) {
+void abort(void) {
   /* cause an unaligned access exception, that will drop you into gdb */
   *(int*) 1 = 1;
   while (1)

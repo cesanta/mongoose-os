@@ -6,7 +6,7 @@
 #include "spi.h"
 #include <stdlib.h>
 
-ICACHE_FLASH_ATTR static uint8_t get_bits(uint32_t n) {
+static uint8_t get_bits(uint32_t n) {
   if (n == 0) {
     return 0;
   } else if (n <= 0xFF) {
@@ -18,8 +18,7 @@ ICACHE_FLASH_ATTR static uint8_t get_bits(uint32_t n) {
   }
 }
 
-ICACHE_FLASH_ATTR v7_val_t
-hspi_js_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t hspi_js_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) v7;
   (void) this_obj;
   (void) args;
@@ -32,8 +31,7 @@ hspi_js_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 * Expose bare txn function to have possibility work with very different devices
 * in JS (9-bit address, 3 bit command, 7 bit data etc)
 */
-ICACHE_FLASH_ATTR v7_val_t
-hspi_js_txn(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t hspi_js_txn(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   uint32_t params[8], res;
   int i;
 
@@ -55,8 +53,7 @@ hspi_js_txn(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 /*
  * JS: tran(send, [bytes_to_read, command, addr])
 */
-ICACHE_FLASH_ATTR v7_val_t
-hspi_js_tran(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t hspi_js_tran(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   static int inited = 0;
   uint8_t cmd_bits = 0;
   uint16_t cmd_data = 0;
@@ -116,7 +113,7 @@ hspi_js_tran(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(res);
 }
 
-ICACHE_FLASH_ATTR void init_hspijs(struct v7 *v7) {
+void init_hspijs(struct v7 *v7) {
   v7_val_t hspi_proto, hspi_ctor;
 
   hspi_proto = v7_create_object(v7);

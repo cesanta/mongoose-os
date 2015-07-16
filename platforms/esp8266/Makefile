@@ -66,7 +66,7 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
              -fno-schedule-insns -fno-schedule-insns2 -fno-strict-aliasing -fno-strict-overflow \
              -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
              -fno-tree-pre -fno-tree-vrp
-
+ 
 SHIMS = -Dprintf=c_printf -Dfprintf=c_ufprintf \
         -DINVALID_FILE=-1 -Dc_file_t=int \
         -Dc_fread=spiffs_fread -Dc_fwrite=spiffs_fwrite \
@@ -90,7 +90,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
-CFLAGS		= -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static -DICACHE_FLASH  -DON_FLASH='__attribute__((section(".irom0.text")))' -DRODATA='__attribute__((section(".irom.text")))'   -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA)
+CFLAGS		= -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static -DICACHE_FLASH -DRODATA='__attribute__((section(".irom.text")))' -DFAST='__attribute__((section(".fast.text")))' -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA)
 
 # linker flags used to generate the main object file
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
@@ -111,6 +111,7 @@ FW_FILE_2_ADDR	= 0x28000
 CC:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 AR:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
 LD:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
+OBJCOPY:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
 
 ####
 #### no user configurable options below here
@@ -185,10 +186,12 @@ $(SYMCHECK_OUT): $(DUMMY_MAIN_O)
 
 symcheck: $(SYMCHECK_OUT) $(APP_AR)
 	$(vecho) "Running symcheck"
-	python ./symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+	@python ./symcheck.py $(SYMCHECK_OUT) $(APP_AR)
 
 $(TARGET_OUT): $(APP_AR) symcheck
 	$(vecho) "LD $@"
+	@$(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
+	@$(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
 	$(Q) $(LD) -L$(SDK_LIBDIR) $(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $(APP_AR) -Wl,--end-group -o $@
 
 $(APP_AR): $(OBJ)
@@ -207,7 +210,7 @@ $(FW_FILE_FS): $(MKSPIFFS) $(wildcard fs/*)
 	./$(MKSPIFFS) $(FW_FS_SIZE) ./fs >$(FW_FILE_FS)
 
 $(MKSPIFFS): mkspiffs.c $(SPIFFS_SRC)
-	gcc -o $@ $^ -DON_FLASH="" -DNO_ESP
+	gcc -o $@ $^ -DNO_ESP
 
 flash: $(FW_FILE_1) $(FW_FILE_2)
 	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FILE_1_ADDR) $(FW_FILE_1) $(FW_FILE_2_ADDR) $(FW_FILE_2) $(FW_FS_ADDR) $(FW_FILE_FS)
@@ -228,7 +231,7 @@ user/v7.h: $(V7_DIR)/v7.h
 	cp $(V7_DIR)/v7.h user/v7.h
 
 user/sha1.h: $(COMMON_DIR)/sha1.h
-	@sed -e 's;#include "osdep.h";;' -e 's;#include "onflash.h";;' $(COMMON_DIR)/sha1.h >user/sha1.h
+	@sed -e 's;#include "osdep.h";;' $(COMMON_DIR)/sha1.h >user/sha1.h
 
 user/v7_version.c:
 	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \

@@ -20,9 +20,9 @@
 
 extern struct v7 *v7;
 
-ICACHE_FLASH_ATTR void process_js(char *cmd);
+void process_js(char *cmd);
 
-ICACHE_FLASH_ATTR static void show_prompt(void) {
+static void show_prompt(void) {
   /*
    * Flashnchips relies on prompt ending with "$ " to detect when it's okay
    * to send the next line during file upload.
@@ -35,7 +35,7 @@ ICACHE_FLASH_ATTR static void show_prompt(void) {
 static uart_process_char_t here_old;
 
 int here_pos = 0;
-ICACHE_FLASH_ATTR static void process_here_char(char ch) {
+static void process_here_char(char ch) {
   /* TODO(mkm): mbuf? */
   static char here_buf[512];
   here_buf[here_pos] = ch;
@@ -51,20 +51,19 @@ ICACHE_FLASH_ATTR static void process_here_char(char ch) {
   }
 }
 
-ICACHE_FLASH_ATTR static void process_here(int argc, char *argv[],
-                                           unsigned int param) {
+static void process_here(int argc, char *argv[], unsigned int param) {
   printf("Terminate input with: EOF\n");
   here_pos = 0;
   here_old = uart_process_char;
   uart_process_char = process_here_char;
 }
 
-ICACHE_FLASH_ATTR static void interrupt_cb(char ch) {
+static void interrupt_cb(char ch) {
   (void) ch;
   v7_interrupt(v7);
 }
 
-ICACHE_FLASH_ATTR void process_js(char *cmd) {
+void process_js(char *cmd) {
   uart_process_char_t old_int = uart_interrupt_cb;
   uart_interrupt_cb = interrupt_cb;
   static char result_str[10];
@@ -95,8 +94,7 @@ ICACHE_FLASH_ATTR void process_js(char *cmd) {
   uart_interrupt_cb = old_int;
 }
 
-ICACHE_FLASH_ATTR static void process_help(int argc, char *argv[],
-                                           unsigned int param) {
+static void process_help(int argc, char *argv[], unsigned int param) {
   char *help_str =
       "Commands:\n"
       ":help - show this help\n"
@@ -119,7 +117,7 @@ void process_prompt_char(char symb);
 static const struct firmware_command cmds[] = {{"help", &process_help, 0},
                                                {"here", &process_here, 0}};
 
-ICACHE_FLASH_ATTR void process_command(char *cmd) {
+void process_command(char *cmd) {
   if (*cmd == ':') {
     int i;
     for (i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
@@ -139,7 +137,7 @@ ICACHE_FLASH_ATTR void process_command(char *cmd) {
   }
 }
 
-ICACHE_FLASH_ATTR void process_prompt_char(char symb) {
+void process_prompt_char(char symb) {
   static char recv_buf[RX_BUFSIZE] = {0};
   static int recv_buf_pos = 0;
   static int swallow = 0;
@@ -192,7 +190,7 @@ ICACHE_FLASH_ATTR void process_prompt_char(char symb) {
   }
 }
 
-ICACHE_FLASH_ATTR int v7_serial_prompt_init(int baud_rate) {
+int v7_serial_prompt_init(int baud_rate) {
   /* TODO(alashkin): load cfg from flash */
 
   uart_process_char = process_prompt_char;

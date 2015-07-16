@@ -34,8 +34,7 @@ v7_val_t wifi_scan_cb;
 /* true if we're waiting for an ip after invoking Wifi.setup() */
 int wifi_setting_up = 0;
 
-ICACHE_FLASH_ATTR static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj,
-                                          v7_val_t args) {
+static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t result = v7_create_object(v7);
   v7_own(v7, &result);
 
@@ -50,8 +49,7 @@ ICACHE_FLASH_ATTR static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj,
   return result;
 }
 
-ICACHE_FLASH_ATTR static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj,
-                                         v7_val_t args) {
+static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t usecsv = v7_array_get(v7, args, 0);
   int usecs;
   if (!v7_is_number(usecsv)) {
@@ -63,7 +61,7 @@ ICACHE_FLASH_ATTR static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj,
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR static void js_timeout(void *arg) {
+static void js_timeout(void *arg) {
   v7_val_t *cb = (v7_val_t *) arg;
   v7_val_t res;
   if (v7_exec_with(v7, &res, "this()", *cb) != V7_OK) {
@@ -76,8 +74,7 @@ ICACHE_FLASH_ATTR static void js_timeout(void *arg) {
 }
 
 /* Currently can only handle one timer */
-ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
-                                              v7_val_t args) {
+static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t *cb;
   v7_val_t msecsv = v7_array_get(v7, args, 1);
   int msecs;
@@ -107,8 +104,7 @@ ICACHE_FLASH_ATTR static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj,
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj,
-                                              v7_val_t args) {
+static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) v7;
   (void) this_obj;
   (void) args;
@@ -117,8 +113,7 @@ ICACHE_FLASH_ATTR static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj,
   return v7_create_boolean(1);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj,
-                                           v7_val_t args) {
+static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) v7;
   (void) this_obj;
   (void) args;
@@ -128,17 +123,15 @@ ICACHE_FLASH_ATTR static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj,
   return v7_create_boolean(1);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Wifi_connect(struct v7 *v7, v7_val_t this_obj,
-                                               v7_val_t args) {
+static v7_val_t Wifi_connect(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) v7;
   (void) this_obj;
   (void) args;
   return v7_create_boolean(wifi_station_connect());
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Wifi_disconnect(struct v7 *v7,
-                                                  v7_val_t this_obj,
-                                                  v7_val_t args) {
+static v7_val_t Wifi_disconnect(struct v7 *v7, v7_val_t this_obj,
+                                v7_val_t args) {
   (void) v7;
   (void) this_obj;
   (void) args;
@@ -153,8 +146,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_disconnect(struct v7 *v7,
  *    2: soft-AP mode
  *    3: station+soft-AP
  */
-ICACHE_FLASH_ATTR static v7_val_t Wifi_mode(struct v7 *v7, v7_val_t this_obj,
-                                            v7_val_t args) {
+static v7_val_t Wifi_mode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t mode = v7_array_get(v7, args, 0);
   if (!v7_is_number(mode)) {
     printf("bad mode\n");
@@ -164,8 +156,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_mode(struct v7 *v7, v7_val_t this_obj,
   return v7_create_boolean(wifi_set_opmode_current(v7_to_number(mode)));
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
-                                             v7_val_t args) {
+static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   struct station_config stationConf;
   v7_val_t ssidv = v7_array_get(v7, args, 0);
   v7_val_t passv = v7_array_get(v7, args, 1);
@@ -207,8 +198,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj,
   return v7_create_boolean(res);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj,
-                                              v7_val_t args) {
+static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   uint8 st = wifi_station_get_connect_status();
   const char *msg;
 
@@ -250,8 +240,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj,
  * if in station mode or station+soft-AP mode: 0
  * if in soft-AP mode: 1
  */
-ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
-                                          v7_val_t args) {
+static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg = v7_array_get(v7, args, 0);
   int err, def = wifi_get_opmode() == 2 ? 1 : 0;
   struct ip_info info;
@@ -268,7 +257,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj,
   return v7_create_string(v7, ip, strlen(ip), 1);
 }
 
-ICACHE_FLASH_ATTR void wifi_scan_done(void *arg, STATUS status) {
+void wifi_scan_done(void *arg, STATUS status) {
   struct bss_info *info = (struct bss_info *) arg;
   v7_val_t args, res;
 
@@ -309,8 +298,7 @@ ICACHE_FLASH_ATTR void wifi_scan_done(void *arg, STATUS status) {
 /*
  * Call the callback with a list of ssids found in the air.
  */
-ICACHE_FLASH_ATTR static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj,
-                                            v7_val_t args) {
+static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   if (v7_is_function(wifi_scan_cb)) {
     printf("scan in progress");
     return v7_create_boolean(0);
@@ -344,13 +332,12 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj,
  * - 4: client connected to ap
  * - 5: client disconnected from ap
  */
-ICACHE_FLASH_ATTR static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t this_obj,
-                                               v7_val_t args) {
+static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t cb = v7_array_get(v7, args, 0);
   v7_set(v7, v7_get_global_object(v7), "_chcb", 5, 0, cb);
 }
 
-ICACHE_FLASH_ATTR void wifi_changed_cb(System_Event_t *evt) {
+void wifi_changed_cb(System_Event_t *evt) {
   v7_val_t args, cb, res;
 
   if (wifi_setting_up && evt->event == 3) {
@@ -395,8 +382,7 @@ ICACHE_FLASH_ATTR void wifi_changed_cb(System_Event_t *evt) {
   v7_disown(v7, &args);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj,
-                                            v7_val_t args) {
+static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   struct station_config conf;
   if (!wifi_station_get_config(&conf)) return v7_create_undefined();
   return v7_create_string(v7, conf.ssid, strlen(conf.ssid), 1);
@@ -414,8 +400,7 @@ ICACHE_FLASH_ATTR static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj,
  * propnfree: number of free property slots in js heap
  * funcnfree: number of free function slots in js heap
  */
-ICACHE_FLASH_ATTR static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj,
-                                          v7_val_t args) {
+static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   /* take a snapshot of the stats that would change as we populate the result */
   int sysfree = system_get_free_heap_size();
   int jssize = v7_heap_stat(v7, V7_HEAP_STAT_HEAP_SIZE);
@@ -458,8 +443,7 @@ ICACHE_FLASH_ATTR static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj,
 /*
  * Force a pass of the garbage collector.
  */
-ICACHE_FLASH_ATTR static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj,
-                                        v7_val_t args) {
+static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) this_obj;
   (void) args;
 
@@ -468,7 +452,7 @@ ICACHE_FLASH_ATTR static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj,
 }
 
 #if V7_ESP_ENABLE__DHT11
-ICACHE_FLASH_ATTR
+
 static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   int pin, temp, rh;
   v7_val_t pinv = v7_array_get(v7, args, 0), result;
@@ -499,8 +483,7 @@ static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * 1 - print debug output to UART0 (V7's console)
  * 2 - print debug output to UART1
  */
-ICACHE_FLASH_ATTR static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj,
-                                             v7_val_t args) {
+static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   int mode, res;
   v7_val_t output_val = v7_array_get(v7, args, 0);
 
@@ -520,8 +503,7 @@ ICACHE_FLASH_ATTR static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj,
 /*
  * Prints message to current debug output
  */
-ICACHE_FLASH_ATTR v7_val_t
-Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char *p, buf[512];
   int i, num_args = v7_array_length(v7, args);
 
@@ -555,7 +537,7 @@ Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  *consumption).
  *
  */
-ICACHE_FLASH_ATTR
+
 static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t time_v = v7_array_get(v7, args, 0);
   uint32 time = v7_to_number(time_v);
@@ -576,7 +558,7 @@ static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * Crashes the process/CPU. Useful to attach a debugger until we have
  * breakpoints.
  */
-ICACHE_FLASH_ATTR
+
 static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) v7;
   (void) this_obj;
@@ -591,7 +573,7 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * so that they can be directly evaluated as js. Currently
  * we don't have a C JSON parse API.
  */
-ICACHE_FLASH_ATTR char *read_json_file(const char *path) {
+char *read_json_file(const char *path) {
   c_file_t fp;
   char *p;
   long file_size;
@@ -618,7 +600,7 @@ ICACHE_FLASH_ATTR char *read_json_file(const char *path) {
   }
 }
 
-ICACHE_FLASH_ATTR v7_val_t load_conf(struct v7 *v7, const char *name) {
+v7_val_t load_conf(struct v7 *v7, const char *name) {
   v7_val_t res;
   char *f;
   enum v7_err err;
@@ -638,7 +620,7 @@ ICACHE_FLASH_ATTR v7_val_t load_conf(struct v7 *v7, const char *name) {
   return res;
 }
 
-ICACHE_FLASH_ATTR void init_conf(struct v7 *v7) {
+void init_conf(struct v7 *v7) {
   int i;
   size_t len;
   SHA1_CTX ctx;
@@ -678,7 +660,7 @@ ICACHE_FLASH_ATTR void init_conf(struct v7 *v7) {
   }
 }
 
-ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
+void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t wifi, dht11, gc, debug, os;
 
@@ -744,7 +726,7 @@ ICACHE_FLASH_ATTR void init_v7(void *stack_base) {
 }
 
 #ifndef V7_NO_FS
-ICACHE_FLASH_ATTR void init_smartjs() {
+void init_smartjs() {
   v7_val_t v;
   int res = v7_exec_file(v7, &v, "smart.js");
   if (res != V7_OK) {

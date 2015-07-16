@@ -26,7 +26,7 @@
 
 #include "spi.h"
 
-ICACHE_FLASH_ATTR void spi_init(uint8_t spi_no) {
+void spi_init(uint8_t spi_no) {
   if (spi_no > 1) return;
 
   spi_init_gpio(spi_no, SPI_CLK_USE_DIV);
@@ -37,12 +37,12 @@ ICACHE_FLASH_ATTR void spi_init(uint8_t spi_no) {
   spi_finalize_init(spi_no);
 }
 
-ICACHE_FLASH_ATTR void spi_finalize_init(uint8_t spi_no) {
+void spi_finalize_init(uint8_t spi_no) {
   SET_PERI_REG_MASK(SPI_USER(spi_no), SPI_CS_SETUP | SPI_CS_HOLD);
   CLEAR_PERI_REG_MASK(SPI_USER(spi_no), SPI_FLASH_MODE);
 }
 
-ICACHE_FLASH_ATTR void spi_init_gpio(uint8_t spi_no, uint8_t sysclk_as_spiclk) {
+void spi_init_gpio(uint8_t spi_no, uint8_t sysclk_as_spiclk) {
   if (spi_no > 1) return;
 
   uint32_t clock_div_flag = 0;
@@ -65,8 +65,7 @@ ICACHE_FLASH_ATTR void spi_init_gpio(uint8_t spi_no, uint8_t sysclk_as_spiclk) {
   }
 }
 
-ICACHE_FLASH_ATTR void spi_clock(uint8_t spi_no, uint16_t prediv,
-                                 uint8_t cntdiv) {
+void spi_clock(uint8_t spi_no, uint16_t prediv, uint8_t cntdiv) {
   if (spi_no > 1) return;
 
   if ((prediv == 0) | (cntdiv == 0)) {
@@ -81,7 +80,7 @@ ICACHE_FLASH_ATTR void spi_clock(uint8_t spi_no, uint16_t prediv,
   }
 }
 
-ICACHE_FLASH_ATTR void spi_tx_byte_order(uint8_t spi_no, uint8_t byte_order) {
+void spi_tx_byte_order(uint8_t spi_no, uint8_t byte_order) {
   if (spi_no > 1) return;
 
   if (byte_order) {
@@ -91,7 +90,7 @@ ICACHE_FLASH_ATTR void spi_tx_byte_order(uint8_t spi_no, uint8_t byte_order) {
   }
 }
 
-ICACHE_FLASH_ATTR void spi_rx_byte_order(uint8_t spi_no, uint8_t byte_order) {
+void spi_rx_byte_order(uint8_t spi_no, uint8_t byte_order) {
   if (spi_no > 1) return;
 
   if (byte_order) {
@@ -101,8 +100,8 @@ ICACHE_FLASH_ATTR void spi_rx_byte_order(uint8_t spi_no, uint8_t byte_order) {
   }
 }
 
-ICACHE_FLASH_ATTR static void spi_set_command(uint8_t spi_no, uint8_t cmd_bits,
-                                              uint16_t cmd_data) {
+static void spi_set_command(uint8_t spi_no, uint8_t cmd_bits,
+                            uint16_t cmd_data) {
   /* Setup Command Data */
   SET_PERI_REG_MASK(
       SPI_USER(spi_no),
@@ -116,9 +115,8 @@ ICACHE_FLASH_ATTR static void spi_set_command(uint8_t spi_no, uint8_t cmd_bits,
                                      command & SPI_USR_COMMAND_VALUE));
 }
 
-ICACHE_FLASH_ATTR static void spi_set_address(uint8_t spi_no,
-                                              uint32_t addr_bits,
-                                              uint32_t addr_data) {
+static void spi_set_address(uint8_t spi_no, uint32_t addr_bits,
+                            uint32_t addr_data) {
   SET_PERI_REG_MASK(SPI_USER(spi_no),
                     SPI_USR_ADDR); /*enable address function in SPI module */
   WRITE_PERI_REG(
@@ -126,9 +124,8 @@ ICACHE_FLASH_ATTR static void spi_set_address(uint8_t spi_no,
       addr_data << (32 - addr_bits)); /* align address data to high bits */
 }
 
-ICACHE_FLASH_ATTR static void spi_set_out_data(uint8_t spi_no,
-                                               uint32_t dout_bits,
-                                               uint32_t dout_data) {
+static void spi_set_out_data(uint8_t spi_no, uint32_t dout_bits,
+                             uint32_t dout_data) {
   SET_PERI_REG_MASK(SPI_USER(spi_no),
                     SPI_USR_MOSI); /* enable MOSI function in SPI module */
   /* copy data to W0 */
@@ -161,12 +158,11 @@ ICACHE_FLASH_ATTR static void spi_set_out_data(uint8_t spi_no,
   }
 }
 
-ICACHE_FLASH_ATTR static void spi_begin_tran(uint8_t spi_no) {
+static void spi_begin_tran(uint8_t spi_no) {
   SET_PERI_REG_MASK(SPI_CMD(spi_no), SPI_USR);
 }
 
-ICACHE_FLASH_ATTR static uint32_t spi_read_data(uint8_t spi_no,
-                                                uint32_t din_bits) {
+static uint32_t spi_read_data(uint8_t spi_no, uint32_t din_bits) {
   while (spi_busy(spi_no))
     ; /* wait for SPI transaction to complete */
 
@@ -181,10 +177,9 @@ ICACHE_FLASH_ATTR static uint32_t spi_read_data(uint8_t spi_no,
   }
 }
 
-ICACHE_FLASH_ATTR uint32_t
-spi_txn(uint8_t spi_no, uint8_t cmd_bits, uint16_t cmd_data, uint8_t addr_bits,
-        uint32_t addr_data, uint8_t dout_bits, uint32_t dout_data,
-        uint8_t din_bits, uint8_t dummy_bits) {
+uint32_t spi_txn(uint8_t spi_no, uint8_t cmd_bits, uint16_t cmd_data,
+                 uint8_t addr_bits, uint32_t addr_data, uint8_t dout_bits,
+                 uint32_t dout_data, uint8_t din_bits, uint8_t dummy_bits) {
   if (spi_no > 1) return 0;
 
   while (spi_busy(spi_no))
@@ -244,8 +239,7 @@ spi_txn(uint8_t spi_no, uint8_t cmd_bits, uint16_t cmd_data, uint8_t addr_bits,
  * Usage sample : measuring pressure with MPL115A1 barometer
  */
 
-ICACHE_FLASH_ATTR static double convert(uint16_t n, uint32_t fcoef,
-                                        uint16_t neg_pos) {
+static double convert(uint16_t n, uint32_t fcoef, uint16_t neg_pos) {
   double res = 1;
   if ((n & (1 << neg_pos)) != 0) {
     n = ~n;
@@ -256,7 +250,7 @@ ICACHE_FLASH_ATTR static double convert(uint16_t n, uint32_t fcoef,
   return res;
 }
 
-ICACHE_FLASH_ATTR void test_MPL115A1() {
+void test_MPL115A1() {
   spi_init(HSPI);
   uint8_t a0_MSB = (uint8_t) spi_txn(HSPI, 0, 0, 0, 0, 8, 0x88, 8, 0);
   uint8_t a0_LSB = (uint8_t) spi_txn(HSPI, 0, 0, 0, 0, 8, 0x8A, 8, 0);

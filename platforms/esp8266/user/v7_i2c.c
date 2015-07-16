@@ -21,7 +21,6 @@ enum i2c_gpio_val {
   I2C_INPUT = 2,
 };
 
-ICACHE_FLASH_ATTR
 static void i2c_gpio_val_to_masks(uint8_t gpio, uint8_t val, uint32_t *set_mask,
                                   uint32_t *clear_mask,
                                   uint32_t *output_enable_mask,
@@ -36,7 +35,6 @@ static void i2c_gpio_val_to_masks(uint8_t gpio, uint8_t val, uint32_t *set_mask,
   } /* else no change */
 }
 
-ICACHE_FLASH_ATTR
 static void i2c_set_wires_value(struct i2c_connection *conn, uint8_t sda_val,
                                 uint8_t scl_val) {
   uint32_t set_mask = 0, clear_mask = 0;
@@ -54,7 +52,6 @@ static void i2c_set_wires_value(struct i2c_connection *conn, uint8_t sda_val,
   os_delay_us(10);
 }
 
-ICACHE_FLASH_ATTR
 enum i2c_ack_type i2c_start(struct i2c_connection *conn, uint16_t addr,
                             enum i2c_rw mode) {
   enum i2c_ack_type result;
@@ -73,19 +70,16 @@ enum i2c_ack_type i2c_start(struct i2c_connection *conn, uint16_t addr,
   return result;
 }
 
-ICACHE_FLASH_ATTR
 void i2c_stop(struct i2c_connection *conn) {
   i2c_set_wires_value(conn, I2C_LOW, I2C_HIGH);
   i2c_set_wires_value(conn, I2C_INPUT, I2C_INPUT);
 }
 
-ICACHE_FLASH_ATTR
 static uint8_t i2c_get_SDA(struct i2c_connection *conn) {
   uint8_t ret_val = (gpio_input_get() & (1 << conn->sda_gpio)) != 0;
   return ret_val;
 }
 
-ICACHE_FLASH_ATTR
 static void i2c_wire_init(uint32_t periph, uint8_t gpio_no, uint8_t func) {
   PIN_FUNC_SELECT(periph, func);
   PIN_PULLUP_EN(periph);
@@ -98,7 +92,6 @@ static void i2c_wire_init(uint32_t periph, uint8_t gpio_no, uint8_t func) {
                  GPIO_REG_READ(GPIO_ENABLE_ADDRESS) | (1 << gpio_no));
 }
 
-ICACHE_FLASH_ATTR
 enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data) {
   enum i2c_ack_type ret_val;
   int8_t i, bit;
@@ -125,7 +118,6 @@ enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data) {
   return ret_val;
 }
 
-ICACHE_FLASH_ATTR
 enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
                                  size_t buf_size) {
   enum i2c_ack_type ack_type = I2C_NAK;
@@ -144,7 +136,6 @@ enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
   return ack_type;
 }
 
-ICACHE_FLASH_ATTR
 void i2c_send_ack(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
   i2c_set_wires_value(conn, ack_type, I2C_LOW);
   i2c_set_wires_value(conn, ack_type, I2C_HIGH);
@@ -154,7 +145,6 @@ void i2c_send_ack(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
 #endif
 }
 
-ICACHE_FLASH_ATTR
 uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
   uint8_t i, ret_val = 0;
 
@@ -182,7 +172,6 @@ uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
   return ret_val;
 }
 
-ICACHE_FLASH_ATTR
 void i2c_read_bytes(struct i2c_connection *conn, size_t n, uint8_t *buf,
                     enum i2c_ack_type last_ack_type) {
   size_t i;
@@ -193,7 +182,6 @@ void i2c_read_bytes(struct i2c_connection *conn, size_t n, uint8_t *buf,
   }
 }
 
-ICACHE_FLASH_ATTR
 int i2c_init(struct i2c_connection *conn) {
   uint8_t i;
   struct gpio_info *sda_info, *scl_info;
@@ -240,7 +228,7 @@ int i2c_init(struct i2c_connection *conn) {
     }                        \
   }
 
-ICACHE_FLASH_ATTR void i2c_eeprom_test() {
+void i2c_eeprom_test() {
   char str[] = "Hello, world!";
   char read_buf[sizeof(str)] = {0};
 

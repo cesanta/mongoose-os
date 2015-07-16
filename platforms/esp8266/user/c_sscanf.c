@@ -93,7 +93,7 @@ static u_char *__sccl(char *, u_char *);
 int c_sscanf(const char *ibuf, const char *fmt, ...);
 int c_vsscanf(const char *input, const char *fmt0, va_list ap);
 
-ON_FLASH int c_sscanf(const char *ibuf, const char *fmt, ...) {
+int c_sscanf(const char *ibuf, const char *fmt, ...) {
   va_list ap;
   int ret;
 
@@ -105,7 +105,7 @@ ON_FLASH int c_sscanf(const char *ibuf, const char *fmt, ...) {
 /*
  * vfscanf
  */
-ON_FLASH int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
+int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
   u_char *fmt = (u_char *) fmt0;
   int c;            /* character from format, or conversion */
   size_t width;     /* field width, or 0 */
@@ -596,7 +596,7 @@ match_failure:
  * closing `]'.  The table has a 1 wherever characters should be
  * considered part of the scanset.
  */
-ON_FLASH static u_char *__sccl(char *tab, u_char *fmt) {
+static u_char *__sccl(char *tab, u_char *fmt) {
   int c, n, v;
 
   /* first `clear' the whole table */

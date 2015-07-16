@@ -17,7 +17,7 @@ extern void ets_wdt_disable(void);
 os_timer_t tick_timer;
 os_timer_t startcmd_timer;
 
-ICACHE_FLASH_ATTR void start_cmd(int dummy) {
+void start_cmd(int dummy) {
 #ifndef V7_NO_FS
   fs_init();
 #endif
@@ -49,7 +49,7 @@ ICACHE_FLASH_ATTR void start_cmd(int dummy) {
 #endif
 }
 
-ICACHE_FLASH_ATTR void init_done_cb() {
+void init_done_cb() {
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, start_cmd, NULL);
   os_timer_arm(&startcmd_timer, 500, 0);
@@ -61,7 +61,7 @@ ICACHE_FLASH_ATTR void init_done_cb() {
 }
 
 /* Init function */
-ICACHE_FLASH_ATTR void user_init() {
+void user_init() {
   system_init_done_cb(init_done_cb);
 
   uart_div_modify(0, UART_CLK_FREQ / 115200);

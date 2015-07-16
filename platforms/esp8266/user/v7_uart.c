@@ -39,7 +39,7 @@ static char rx_buf[RX_BUFFER_SIZE];
 static unsigned s_system_uartno = UART_MAIN;
 static unsigned debug_enabled = 0;
 
-static void rx_isr(void *param) {
+FAST static void rx_isr(void *param) {
   /* TODO(alashkin): add errors checking */
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
   static volatile int tail = 0;
@@ -70,7 +70,7 @@ static void rx_isr(void *param) {
 }
 
 #ifdef V7_ESP_GDB_SERVER
-ICACHE_FLASH_ATTR
+
 int gdb_read_uart() {
   static char buf[256];
   static char pos = 0;
@@ -83,7 +83,6 @@ int gdb_read_uart() {
   return buf[--pos];
 }
 
-ICACHE_FLASH_ATTR
 int gdb_read_uart_buf(char *buf) {
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
 
@@ -107,7 +106,7 @@ int gdb_read_uart_buf(char *buf) {
 }
 #endif
 
-ICACHE_FLASH_ATTR static void uart_tx_char(unsigned uartno, char ch) {
+static void uart_tx_char(unsigned uartno, char ch) {
   while (true) {
     uint32 fifo_cnt =
         (READ_PERI_REG(UART_DATA_STATUS(uartno)) & 0x00FF0000) >> 16;
@@ -118,7 +117,6 @@ ICACHE_FLASH_ATTR static void uart_tx_char(unsigned uartno, char ch) {
   WRITE_PERI_REG(UART_BUF(uartno), ch);
 }
 
-ICACHE_FLASH_ATTR
 static int c_uvprintf(int uart, const char *format, va_list args) {
   static char buf[512];
   int size, i;
@@ -138,7 +136,7 @@ static int c_uvprintf(int uart, const char *format, va_list args) {
   return size;
 }
 
-ICACHE_FLASH_ATTR int c_printf(const char *format, ...) {
+int c_printf(const char *format, ...) {
   int size;
   va_list arglist;
   va_start(arglist, format);
@@ -147,7 +145,7 @@ ICACHE_FLASH_ATTR int c_printf(const char *format, ...) {
   return size;
 }
 
-ICACHE_FLASH_ATTR void print_str(const char *str) {
+void print_str(const char *str) {
   while (*str != '\0') {
     if (*str == '\n') uart_tx_char(UART_MAIN, '\r');
     uart_tx_char(UART_MAIN, *str);
@@ -156,7 +154,7 @@ ICACHE_FLASH_ATTR void print_str(const char *str) {
 }
 
 /* shim for fprintf. Handles only (pseudo) stderr */
-ICACHE_FLASH_ATTR int c_ufprintf(FILE *fp, const char *format, ...) {
+int c_ufprintf(FILE *fp, const char *format, ...) {
   int size = -1;
   va_list arglist;
   va_start(arglist, format);
@@ -172,7 +170,7 @@ ICACHE_FLASH_ATTR int c_ufprintf(FILE *fp, const char *format, ...) {
   return size;
 }
 
-ICACHE_FLASH_ATTR void rx_task(os_event_t *events) {
+void rx_task(os_event_t *events) {
   static int head = 0;
   int tail = events->par;
   int i;
@@ -187,7 +185,7 @@ ICACHE_FLASH_ATTR void rx_task(os_event_t *events) {
   head = tail;
 }
 
-ICACHE_FLASH_ATTR void uart_main_init(int baud_rate) {
+void uart_main_init(int baud_rate) {
   system_os_task(rx_task, TASK_PRIORITY, rx_task_queue, RXTASK_QUEUE_LEN);
 
   if (baud_rate != 0) {
@@ -198,7 +196,7 @@ ICACHE_FLASH_ATTR void uart_main_init(int baud_rate) {
   ETS_UART_INTR_ENABLE();
 }
 
-ICACHE_FLASH_ATTR static void uart_system_tx_char(char ch) {
+static void uart_system_tx_char(char ch) {
   if (ch == '\n') {
     uart_tx_char(s_system_uartno, '\r');
     uart_tx_char(s_system_uartno, '\n');
@@ -207,7 +205,7 @@ ICACHE_FLASH_ATTR static void uart_system_tx_char(char ch) {
   }
 }
 
-ICACHE_FLASH_ATTR int uart_redirect_debug(int mode) {
+int uart_redirect_debug(int mode) {
   switch (mode) {
     case 0:
       debug_enabled = 0;
@@ -225,7 +223,7 @@ ICACHE_FLASH_ATTR int uart_redirect_debug(int mode) {
   return 0;
 }
 
-ICACHE_FLASH_ATTR void uart_debug_init(unsigned periph, unsigned baud_rate) {
+void uart_debug_init(unsigned periph, unsigned baud_rate) {
   if (periph == 0) {
     periph = PERIPHS_IO_MUX_GPIO2_U;
   }

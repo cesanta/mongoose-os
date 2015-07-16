@@ -100,7 +100,6 @@
 static const char s_i2c_sda_prop[] = "__sda";
 static const char s_i2c_scl_prop[] = "__scl";
 
-ICACHE_FLASH_ATTR
 static v7_val_t i2cjs_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   struct i2c_connection conn;
 
@@ -129,7 +128,6 @@ static v7_val_t i2cjs_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return this_obj;
 }
 
-ICACHE_FLASH_ATTR
 static void i2cjs_get_gpio(struct v7 *v7, v7_val_t this_obj,
                            struct i2c_connection *conn) {
   conn->sda_gpio = v7_to_number(
@@ -138,7 +136,6 @@ static void i2cjs_get_gpio(struct v7 *v7, v7_val_t this_obj,
       v7_get(v7, this_obj, s_i2c_scl_prop, sizeof(s_i2c_scl_prop) - 1));
 }
 
-ICACHE_FLASH_ATTR
 static v7_val_t i2cjs_start(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   uint16_t addr;
   enum i2c_rw mode;
@@ -157,7 +154,6 @@ static v7_val_t i2cjs_start(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(i2c_start(&conn, addr, mode));
 }
 
-ICACHE_FLASH_ATTR
 static v7_val_t i2cjs_stop(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   struct i2c_connection conn;
   i2cjs_get_gpio(v7, this_obj, &conn);
@@ -167,7 +163,6 @@ static v7_val_t i2cjs_stop(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR
 static v7_val_t i2cjs_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   struct i2c_connection conn;
   v7_val_t data_val = v7_array_get(v7, args, 0);
@@ -189,7 +184,6 @@ static v7_val_t i2cjs_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(result);
 }
 
-ICACHE_FLASH_ATTR
 static v7_val_t i2cjs_readByte(struct v7 *v7, v7_val_t this_obj,
                                v7_val_t args) {
   struct i2c_connection conn;
@@ -207,7 +201,6 @@ static v7_val_t i2cjs_readByte(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(i2c_read_byte(&conn, ack_type));
 }
 
-ICACHE_FLASH_ATTR
 static v7_val_t i2cjs_readString(struct v7 *v7, v7_val_t this_obj,
                                  v7_val_t args) {
   struct i2c_connection conn;
@@ -239,7 +232,6 @@ static v7_val_t i2cjs_readString(struct v7 *v7, v7_val_t this_obj,
   return result;
 }
 
-ICACHE_FLASH_ATTR
 static v7_val_t i2cjs_sendAck(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   struct i2c_connection conn;
   v7_val_t ack_val = v7_array_get(v7, args, 0);
@@ -255,14 +247,14 @@ static v7_val_t i2cjs_sendAck(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 #ifdef ENABLE_IC2_EEPROM_TEST
-ICACHE_FLASH_ATTR
+
 static v7_val_t i2cjs_test(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   i2c_eeprom_test();
   return v7_create_undefined();
 }
 #endif
 
-ICACHE_FLASH_ATTR void init_i2cjs(struct v7 *v7) {
+void init_i2cjs(struct v7 *v7) {
   v7_val_t i2c_proto, i2c_ctor;
   unsigned int const_attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE;
 

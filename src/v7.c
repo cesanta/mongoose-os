@@ -383,14 +383,6 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #endif /* __cplusplus */
 
 #endif /* V7_HEADER_INCLUDED */
-#ifndef ONFLASH_HEADER_INCLUDED
-#define ONFLASH_HEADER_INCLUDED
-
-#ifndef ON_FLASH
-#define ON_FLASH
-#endif
-
-#endif
 #ifndef V7_FEATURES_H_INCLUDED
 #define V7_FEATURES_H_INCLUDED
 
@@ -715,7 +707,6 @@ void mbuf_resize(struct mbuf *, size_t new_size);
 /* Shrink an Mbuf by resizing its `size` to `len`. */
 void mbuf_trim(struct mbuf *);
 
-
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -728,7 +719,6 @@ void mbuf_trim(struct mbuf *);
 
 #ifndef _UTF_H_
 #define _UTF_H_ 1
-
 
 #if defined(__cplusplus)
 extern "C" {
@@ -747,27 +737,22 @@ enum {
   Runeerror = 0xFFFD        /* decoding error in UTF */
   /* Runemax    = 0xFFFC */ /* maximum rune value */
 };
- 
-/* 
- * For unknown (yet) reasons these functions
- * should be marked ON_FLASH in headers too
- * TODO(alashkin): fix this
- */
+
 /* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
-ON_FLASH int chartorune(Rune *rune, const char *str);
-ON_FLASH int fullrune(char *str, int n);
-ON_FLASH int isdigitrune(Rune c);
-ON_FLASH int isnewline(Rune c);
-ON_FLASH int iswordchar(Rune c);
-ON_FLASH int isalpharune(Rune c);
-ON_FLASH int islowerrune(Rune c);
-ON_FLASH int isspacerune(Rune c);
-ON_FLASH int isupperrune(Rune c);
-ON_FLASH int runetochar(char *str, Rune *rune);
-ON_FLASH Rune tolowerrune(Rune c);
-ON_FLASH Rune toupperrune(Rune c);
-ON_FLASH int utfnlen(char *s, long m);
-ON_FLASH char *utfnshift(char *s, long m);
+int chartorune(Rune *rune, const char *str);
+int fullrune(char *str, int n);
+int isdigitrune(Rune c);
+int isnewline(Rune c);
+int iswordchar(Rune c);
+int isalpharune(Rune c);
+int islowerrune(Rune c);
+int isspacerune(Rune c);
+int isupperrune(Rune c);
+int runetochar(char *str, Rune *rune);
+Rune tolowerrune(Rune c);
+Rune toupperrune(Rune c);
+int utfnlen(char *s, long m);
+char *utfnshift(char *s, long m);
 
 #if 0 /* Not implemented. */
 int istitlerune(Rune c);
@@ -849,7 +834,7 @@ char *utfutf(char *s1, char *s2);
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
 
-#if !(defined (AVR_LIBC) || defined (PICOTCP))
+#if !(defined(AVR_LIBC) || defined(PICOTCP))
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -977,7 +962,7 @@ typedef struct stat ns_stat_t;
 #define DIRSEP '/'
 #endif
 #ifdef __APPLE__
-int64_t strtoll(const char* str, char** endptr, int base);
+int64_t strtoll(const char *str, char **endptr, int base);
 #endif
 #endif /* _WIN32 */
 
@@ -998,7 +983,7 @@ int64_t strtoll(const char* str, char** endptr, int base);
 #endif
 
 #if !defined(NO_LIBC) && !defined(NS_DISABLE_FILESYSTEM)
-typedef FILE* c_file_t;
+typedef FILE *c_file_t;
 /*
  * Cannot use fopen & Co directly and
  * override them with -D because
@@ -1038,7 +1023,6 @@ int c_ferror(c_file_t fd);
 
 #if !defined(BASE64_H_INCLUDED) && !defined(DISABLE_BASE64)
 #define BASE64_H_INCLUDED
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -1545,8 +1529,8 @@ struct gc_arena {
 #define V7_NO_FS
 #endif
 
-#ifndef ON_FLASH
-#define ON_FLASH
+#ifndef FAST
+#define FAST
 #endif
 
 #ifndef RODATA
@@ -2394,20 +2378,20 @@ V7_PRIVATE int calc_llen(size_t len);
 #define MBUF_FREE free
 #endif
 
-ON_FLASH void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
+void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
   mbuf->len = mbuf->size = 0;
   mbuf->buf = NULL;
   mbuf_resize(mbuf, initial_size);
 }
 
-ON_FLASH void mbuf_free(struct mbuf *mbuf) {
+void mbuf_free(struct mbuf *mbuf) {
   if (mbuf->buf != NULL) {
     MBUF_FREE(mbuf->buf);
     mbuf_init(mbuf, 0);
   }
 }
 
-ON_FLASH void mbuf_resize(struct mbuf *a, size_t new_size) {
+void mbuf_resize(struct mbuf *a, size_t new_size) {
   char *p;
   if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
       (p = (char *) MBUF_REALLOC(a->buf, new_size)) != NULL) {
@@ -2416,12 +2400,11 @@ ON_FLASH void mbuf_resize(struct mbuf *a, size_t new_size) {
   }
 }
 
-ON_FLASH void mbuf_trim(struct mbuf *mbuf) {
+void mbuf_trim(struct mbuf *mbuf) {
   mbuf_resize(mbuf, mbuf->len);
 }
 
-ON_FLASH size_t
-mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
+size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   char *p = NULL;
 
   assert(a != NULL);
@@ -2453,11 +2436,11 @@ mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   return len;
 }
 
-ON_FLASH size_t mbuf_append(struct mbuf *a, const void *buf, size_t len) {
+size_t mbuf_append(struct mbuf *a, const void *buf, size_t len) {
   return mbuf_insert(a, a->len, buf, len);
 }
 
-ON_FLASH void mbuf_remove(struct mbuf *mb, size_t n) {
+void mbuf_remove(struct mbuf *mb, size_t n) {
   if (n > 0 && n <= mb->len) {
     memmove(mb->buf, mb->buf + n, mb->len - n);
     mb->len -= n;
@@ -2483,212 +2466,192 @@ ON_FLASH void mbuf_remove(struct mbuf *mb, size_t n) {
 #include <string.h>
 
 #if V7_ENABLE__UTF
-enum
-{
-	Bit1	= 7,
-	Bitx	= 6,
-	Bit2	= 5,
-	Bit3	= 4,
-	Bit4	= 3,
-	Bit5	= 2,
+enum {
+  Bit1 = 7,
+  Bitx = 6,
+  Bit2 = 5,
+  Bit3 = 4,
+  Bit4 = 3,
+  Bit5 = 2,
 
-	T1	= ((1<<(Bit1+1))-1) ^ 0xFF,	/* 0000 0000 */
-	Tx	= ((1<<(Bitx+1))-1) ^ 0xFF,	/* 1000 0000 */
-	T2	= ((1<<(Bit2+1))-1) ^ 0xFF,	/* 1100 0000 */
-	T3	= ((1<<(Bit3+1))-1) ^ 0xFF,	/* 1110 0000 */
-	T4	= ((1<<(Bit4+1))-1) ^ 0xFF,	/* 1111 0000 */
-	T5	= ((1<<(Bit5+1))-1) ^ 0xFF,	/* 1111 1000 */
+  T1 = ((1 << (Bit1 + 1)) - 1) ^ 0xFF, /* 0000 0000 */
+  Tx = ((1 << (Bitx + 1)) - 1) ^ 0xFF, /* 1000 0000 */
+  T2 = ((1 << (Bit2 + 1)) - 1) ^ 0xFF, /* 1100 0000 */
+  T3 = ((1 << (Bit3 + 1)) - 1) ^ 0xFF, /* 1110 0000 */
+  T4 = ((1 << (Bit4 + 1)) - 1) ^ 0xFF, /* 1111 0000 */
+  T5 = ((1 << (Bit5 + 1)) - 1) ^ 0xFF, /* 1111 1000 */
 
-	Rune1	= (1<<(Bit1+0*Bitx))-1,		/* 0000 0000 0000 0000 0111 1111 */
-	Rune2	= (1<<(Bit2+1*Bitx))-1,		/* 0000 0000 0000 0111 1111 1111 */
-	Rune3	= (1<<(Bit3+2*Bitx))-1,		/* 0000 0000 1111 1111 1111 1111 */
-	Rune4	= (1<<(Bit4+3*Bitx))-1,		/* 0011 1111 1111 1111 1111 1111 */
+  Rune1 = (1 << (Bit1 + 0 * Bitx)) - 1, /* 0000 0000 0000 0000 0111 1111 */
+  Rune2 = (1 << (Bit2 + 1 * Bitx)) - 1, /* 0000 0000 0000 0111 1111 1111 */
+  Rune3 = (1 << (Bit3 + 2 * Bitx)) - 1, /* 0000 0000 1111 1111 1111 1111 */
+  Rune4 = (1 << (Bit4 + 3 * Bitx)) - 1, /* 0011 1111 1111 1111 1111 1111 */
 
-	Maskx	= (1<<Bitx)-1,			/* 0011 1111 */
-	Testx	= Maskx ^ 0xFF,			/* 1100 0000 */
+  Maskx = (1 << Bitx) - 1, /* 0011 1111 */
+  Testx = Maskx ^ 0xFF,    /* 1100 0000 */
 
-	Bad	= Runeerror
+  Bad = Runeerror
 };
 
-ON_FLASH int
-chartorune(Rune *rune, const char *str)
-{
-	int c, c1, c2/* , c3 */;
-	unsigned short l;
+int chartorune(Rune *rune, const char *str) {
+  int c, c1, c2 /* , c3 */;
+  unsigned short l;
 
-	/*
-	 * one character sequence
-	 *	00000-0007F => T1
-	 */
-	c = *(uchar*)str;
-	if(c < Tx) {
-		*rune = c;
-		return 1;
-	}
+  /*
+   * one character sequence
+   *	00000-0007F => T1
+   */
+  c = *(uchar *) str;
+  if (c < Tx) {
+    *rune = c;
+    return 1;
+  }
 
-	/*
-	 * two character sequence
-	 *	0080-07FF => T2 Tx
-	 */
-	c1 = *(uchar*)(str+1) ^ Tx;
-	if(c1 & Testx)
-		goto bad;
-	if(c < T3) {
-		if(c < T2)
-			goto bad;
-		l = ((c << Bitx) | c1) & Rune2;
-		if(l <= Rune1)
-			goto bad;
-		*rune = l;
-		return 2;
-	}
+  /*
+   * two character sequence
+   *	0080-07FF => T2 Tx
+   */
+  c1 = *(uchar *) (str + 1) ^ Tx;
+  if (c1 & Testx) goto bad;
+  if (c < T3) {
+    if (c < T2) goto bad;
+    l = ((c << Bitx) | c1) & Rune2;
+    if (l <= Rune1) goto bad;
+    *rune = l;
+    return 2;
+  }
 
-	/*
-	 * three character sequence
-	 *	0800-FFFF => T3 Tx Tx
-	 */
-	c2 = *(uchar*)(str+2) ^ Tx;
-	if(c2 & Testx)
-		goto bad;
-	if(c < T4) {
-		l = ((((c << Bitx) | c1) << Bitx) | c2) & Rune3;
-		if(l <= Rune2)
-			goto bad;
-		*rune = l;
-		return 3;
-	}
+  /*
+   * three character sequence
+   *	0800-FFFF => T3 Tx Tx
+   */
+  c2 = *(uchar *) (str + 2) ^ Tx;
+  if (c2 & Testx) goto bad;
+  if (c < T4) {
+    l = ((((c << Bitx) | c1) << Bitx) | c2) & Rune3;
+    if (l <= Rune2) goto bad;
+    *rune = l;
+    return 3;
+  }
 
-	/*
-	 * four character sequence
-	 *	10000-10FFFF => T4 Tx Tx Tx
-	 */
-	/* if(UTFmax >= 4) {
-		c3 = *(uchar*)(str+3) ^ Tx;
-		if(c3 & Testx)
-			goto bad;
-		if(c < T5) {
-			l = ((((((c << Bitx) | c1) << Bitx) | c2) << Bitx) | c3) & Rune4;
-			if(l <= Rune3)
-				goto bad;
-			if(l > Runemax)
-				goto bad;
-			*rune = l;
-			return 4;
-		}
-	} */
+/*
+ * four character sequence
+ *	10000-10FFFF => T4 Tx Tx Tx
+ */
+/* if(UTFmax >= 4) {
+        c3 = *(uchar*)(str+3) ^ Tx;
+        if(c3 & Testx)
+                goto bad;
+        if(c < T5) {
+                l = ((((((c << Bitx) | c1) << Bitx) | c2) << Bitx) | c3) &
+Rune4;
+                if(l <= Rune3)
+                        goto bad;
+                if(l > Runemax)
+                        goto bad;
+                *rune = l;
+                return 4;
+        }
+} */
 
-	/*
-	 * bad decoding
-	 */
+/*
+ * bad decoding
+ */
 bad:
-	*rune = Bad;
-	return 1;
+  *rune = Bad;
+  return 1;
 }
 
-ON_FLASH int
-runetochar(char *str, Rune *rune)
-{
-	unsigned short c;
+int runetochar(char *str, Rune *rune) {
+  unsigned short c;
 
-	/*
-	 * one character sequence
-	 *	00000-0007F => 00-7F
-	 */
-	c = *rune;
-	if(c <= Rune1) {
-		str[0] = c;
-		return 1;
-	}
+  /*
+   * one character sequence
+   *	00000-0007F => 00-7F
+   */
+  c = *rune;
+  if (c <= Rune1) {
+    str[0] = c;
+    return 1;
+  }
 
-	/*
-	 * two character sequence
-	 *	00080-007FF => T2 Tx
-	 */
-	if(c <= Rune2) {
-		str[0] = T2 | (c >> 1*Bitx);
-		str[1] = Tx | (c & Maskx);
-		return 2;
-	}
+  /*
+   * two character sequence
+   *	00080-007FF => T2 Tx
+   */
+  if (c <= Rune2) {
+    str[0] = T2 | (c >> 1 * Bitx);
+    str[1] = Tx | (c & Maskx);
+    return 2;
+  }
 
-	/*
-	 * three character sequence
-	 *	00800-0FFFF => T3 Tx Tx
-	 */
-	/* if(c > Runemax) 
-		c = Runeerror; */
-	/* if(c <= Rune3) { */
-		str[0] = T3 |  (c >> 2*Bitx);
-		str[1] = Tx | ((c >> 1*Bitx) & Maskx);
-		str[2] = Tx |  (c & Maskx);
-		return 3;
-	/* } */
+  /*
+   * three character sequence
+   *	00800-0FFFF => T3 Tx Tx
+   */
+  /* if(c > Runemax)
+          c = Runeerror; */
+  /* if(c <= Rune3) { */
+  str[0] = T3 | (c >> 2 * Bitx);
+  str[1] = Tx | ((c >> 1 * Bitx) & Maskx);
+  str[2] = Tx | (c & Maskx);
+  return 3;
+  /* } */
 
-	/*
-	 * four character sequence
-	 *	010000-1FFFFF => T4 Tx Tx Tx
-	 */
-	/* str[0] = T4 |  (c >> 3*Bitx);
-	str[1] = Tx | ((c >> 2*Bitx) & Maskx);
-	str[2] = Tx | ((c >> 1*Bitx) & Maskx);
-	str[3] = Tx |  (c & Maskx);
-	return 4; */
+  /*
+   * four character sequence
+   *	010000-1FFFFF => T4 Tx Tx Tx
+   */
+  /* str[0] = T4 |  (c >> 3*Bitx);
+  str[1] = Tx | ((c >> 2*Bitx) & Maskx);
+  str[2] = Tx | ((c >> 1*Bitx) & Maskx);
+  str[3] = Tx |  (c & Maskx);
+  return 4; */
 }
 
-ON_FLASH int
-fullrune(char *str, int n)
-{
-	int c;
+int fullrune(char *str, int n) {
+  int c;
 
-	if(n <= 0)
-		return 0;
-	c = *(uchar*)str;
-	if(c < Tx)
-		return 1;
-	if(c < T3)
-		return n >= 2;
-	if(UTFmax == 3 || c < T4)
-		return n >= 3;
-	return n >= 4;
+  if (n <= 0) return 0;
+  c = *(uchar *) str;
+  if (c < Tx) return 1;
+  if (c < T3) return n >= 2;
+  if (UTFmax == 3 || c < T4) return n >= 3;
+  return n >= 4;
 }
 
-ON_FLASH int
-utfnlen(char *s, long m)
-{
-	int c;
-	long n;
-	Rune rune;
-	char *es;
+int utfnlen(char *s, long m) {
+  int c;
+  long n;
+  Rune rune;
+  char *es;
 
-	es = s + m;
-	for(n = 0; s < es; n++) {
-		c = *(uchar*)s;
-		if(c < Runeself){
-			s++;
-			continue;
-		}
-		if(!fullrune(s, es-s))
-			break;
-		s += chartorune(&rune, s);
-	}
-	return n;
+  es = s + m;
+  for (n = 0; s < es; n++) {
+    c = *(uchar *) s;
+    if (c < Runeself) {
+      s++;
+      continue;
+    }
+    if (!fullrune(s, es - s)) break;
+    s += chartorune(&rune, s);
+  }
+  return n;
 }
 
-ON_FLASH char*
-utfnshift(char *s, long m)
-{
-	int c;
-	long n;
-	Rune rune;
+char *utfnshift(char *s, long m) {
+  int c;
+  long n;
+  Rune rune;
 
-	for(n = 0; n < m; n++) {
-		c = *(uchar*)s;
-		if(c < Runeself){
-			s++;
-			continue;
-		}
-		s += chartorune(&rune, s);
-	}
-	return s;
+  for (n = 0; n < m; n++) {
+    c = *(uchar *) s;
+    if (c < Runeself) {
+      s++;
+      continue;
+    }
+    s += chartorune(&rune, s);
+  }
+  return s;
 }
 
 /*
@@ -2711,1155 +2674,1128 @@ utfnshift(char *s, long m)
  * alpha ranges -
  *	only covers ranges not in lower||upper
  */
-static
-Rune	__alpha2[] =
-{
-	0x00d8,	0x00f6,	/* Ø - ö */
-	0x00f8,	0x01f5,	/* ø - ǵ */
-	0x0250,	0x02a8,	/* ɐ - ʨ */
-	0x038e,	0x03a1,	/* Ύ - Ρ */
-	0x03a3,	0x03ce,	/* Σ - ώ */
-	0x03d0,	0x03d6,	/* ϐ - ϖ */
-	0x03e2,	0x03f3,	/* Ϣ - ϳ */
-	0x0490,	0x04c4,	/* Ґ - ӄ */
-	0x0561,	0x0587,	/* ա - և */
-	0x05d0,	0x05ea,	/* א - ת */
-	0x05f0,	0x05f2,	/* װ - ײ */
-	0x0621,	0x063a,	/* ء - غ */
-	0x0640,	0x064a,	/* ـ - ي */
-	0x0671,	0x06b7,	/* ٱ - ڷ */
-	0x06ba,	0x06be,	/* ں - ھ */
-	0x06c0,	0x06ce,	/* ۀ - ێ */
-	0x06d0,	0x06d3,	/* ې - ۓ */
-	0x0905,	0x0939,	/* अ - ह */
-	0x0958,	0x0961,	/* क़ - ॡ */
-	0x0985,	0x098c,	/* অ - ঌ */
-	0x098f,	0x0990,	/* এ - ঐ */
-	0x0993,	0x09a8,	/* ও - ন */
-	0x09aa,	0x09b0,	/* প - র */
-	0x09b6,	0x09b9,	/* শ - হ */
-	0x09dc,	0x09dd,	/* ড় - ঢ় */
-	0x09df,	0x09e1,	/* য় - ৡ */
-	0x09f0,	0x09f1,	/* ৰ - ৱ */
-	0x0a05,	0x0a0a,	/* ਅ - ਊ */
-	0x0a0f,	0x0a10,	/* ਏ - ਐ */
-	0x0a13,	0x0a28,	/* ਓ - ਨ */
-	0x0a2a,	0x0a30,	/* ਪ - ਰ */
-	0x0a32,	0x0a33,	/* ਲ - ਲ਼ */
-	0x0a35,	0x0a36,	/* ਵ - ਸ਼ */
-	0x0a38,	0x0a39,	/* ਸ - ਹ */
-	0x0a59,	0x0a5c,	/* ਖ਼ - ੜ */
-	0x0a85,	0x0a8b,	/* અ - ઋ */
-	0x0a8f,	0x0a91,	/* એ - ઑ */
-	0x0a93,	0x0aa8,	/* ઓ - ન */
-	0x0aaa,	0x0ab0,	/* પ - ર */
-	0x0ab2,	0x0ab3,	/* લ - ળ */
-	0x0ab5,	0x0ab9,	/* વ - હ */
-	0x0b05,	0x0b0c,	/* ଅ - ଌ */
-	0x0b0f,	0x0b10,	/* ଏ - ଐ */
-	0x0b13,	0x0b28,	/* ଓ - ନ */
-	0x0b2a,	0x0b30,	/* ପ - ର */
-	0x0b32,	0x0b33,	/* ଲ - ଳ */
-	0x0b36,	0x0b39,	/* ଶ - ହ */
-	0x0b5c,	0x0b5d,	/* ଡ଼ - ଢ଼ */
-	0x0b5f,	0x0b61,	/* ୟ - ୡ */
-	0x0b85,	0x0b8a,	/* அ - ஊ */
-	0x0b8e,	0x0b90,	/* எ - ஐ */
-	0x0b92,	0x0b95,	/* ஒ - க */
-	0x0b99,	0x0b9a,	/* ங - ச */
-	0x0b9e,	0x0b9f,	/* ஞ - ட */
-	0x0ba3,	0x0ba4,	/* ண - த */
-	0x0ba8,	0x0baa,	/* ந - ப */
-	0x0bae,	0x0bb5,	/* ம - வ */
-	0x0bb7,	0x0bb9,	/* ஷ - ஹ */
-	0x0c05,	0x0c0c,	/* అ - ఌ */
-	0x0c0e,	0x0c10,	/* ఎ - ఐ */
-	0x0c12,	0x0c28,	/* ఒ - న */
-	0x0c2a,	0x0c33,	/* ప - ళ */
-	0x0c35,	0x0c39,	/* వ - హ */
-	0x0c60,	0x0c61,	/* ౠ - ౡ */
-	0x0c85,	0x0c8c,	/* ಅ - ಌ */
-	0x0c8e,	0x0c90,	/* ಎ - ಐ */
-	0x0c92,	0x0ca8,	/* ಒ - ನ */
-	0x0caa,	0x0cb3,	/* ಪ - ಳ */
-	0x0cb5,	0x0cb9,	/* ವ - ಹ */
-	0x0ce0,	0x0ce1,	/* ೠ - ೡ */
-	0x0d05,	0x0d0c,	/* അ - ഌ */
-	0x0d0e,	0x0d10,	/* എ - ഐ */
-	0x0d12,	0x0d28,	/* ഒ - ന */
-	0x0d2a,	0x0d39,	/* പ - ഹ */
-	0x0d60,	0x0d61,	/* ൠ - ൡ */
-	0x0e01,	0x0e30,	/* ก - ะ */
-	0x0e32,	0x0e33,	/* า - ำ */
-	0x0e40,	0x0e46,	/* เ - ๆ */
-	0x0e5a,	0x0e5b,	/* ๚ - ๛ */
-	0x0e81,	0x0e82,	/* ກ - ຂ */
-	0x0e87,	0x0e88,	/* ງ - ຈ */
-	0x0e94,	0x0e97,	/* ດ - ທ */
-	0x0e99,	0x0e9f,	/* ນ - ຟ */
-	0x0ea1,	0x0ea3,	/* ມ - ຣ */
-	0x0eaa,	0x0eab,	/* ສ - ຫ */
-	0x0ead,	0x0eae,	/* ອ - ຮ */
-	0x0eb2,	0x0eb3,	/* າ - ຳ */
-	0x0ec0,	0x0ec4,	/* ເ - ໄ */
-	0x0edc,	0x0edd,	/* ໜ - ໝ */
-	0x0f18,	0x0f19,	/* ༘ - ༙ */
-	0x0f40,	0x0f47,	/* ཀ - ཇ */
-	0x0f49,	0x0f69,	/* ཉ - ཀྵ */
-	0x10d0,	0x10f6,	/* ა - ჶ */
-	0x1100,	0x1159,	/* ᄀ - ᅙ */
-	0x115f,	0x11a2,	/* ᅟ - ᆢ */
-	0x11a8,	0x11f9,	/* ᆨ - ᇹ */
-	0x1e00,	0x1e9b,	/* Ḁ - ẛ */
-	0x1f50,	0x1f57,	/* ὐ - ὗ */
-	0x1f80,	0x1fb4,	/* ᾀ - ᾴ */
-	0x1fb6,	0x1fbc,	/* ᾶ - ᾼ */
-	0x1fc2,	0x1fc4,	/* ῂ - ῄ */
-	0x1fc6,	0x1fcc,	/* ῆ - ῌ */
-	0x1fd0,	0x1fd3,	/* ῐ - ΐ */
-	0x1fd6,	0x1fdb,	/* ῖ - Ί */
-	0x1fe0,	0x1fec,	/* ῠ - Ῥ */
-	0x1ff2,	0x1ff4,	/* ῲ - ῴ */
-	0x1ff6,	0x1ffc,	/* ῶ - ῼ */
-	0x210a,	0x2113,	/* ℊ - ℓ */
-	0x2115,	0x211d,	/* ℕ - ℝ */
-	0x2120,	0x2122,	/* ℠ - ™ */
-	0x212a,	0x2131,	/* K - ℱ */
-	0x2133,	0x2138,	/* ℳ - ℸ */
-	0x3041,	0x3094,	/* ぁ - ゔ */
-	0x30a1,	0x30fa,	/* ァ - ヺ */
-	0x3105,	0x312c,	/* ㄅ - ㄬ */
-	0x3131,	0x318e,	/* ㄱ - ㆎ */
-	0x3192,	0x319f,	/* ㆒ - ㆟ */
-	0x3260,	0x327b,	/* ㉠ - ㉻ */
-	0x328a,	0x32b0,	/* ㊊ - ㊰ */
-	0x32d0,	0x32fe,	/* ㋐ - ㋾ */
-	0x3300,	0x3357,	/* ㌀ - ㍗ */
-	0x3371,	0x3376,	/* ㍱ - ㍶ */
-	0x337b,	0x3394,	/* ㍻ - ㎔ */
-	0x3399,	0x339e,	/* ㎙ - ㎞ */
-	0x33a9,	0x33ad,	/* ㎩ - ㎭ */
-	0x33b0,	0x33c1,	/* ㎰ - ㏁ */
-	0x33c3,	0x33c5,	/* ㏃ - ㏅ */
-	0x33c7,	0x33d7,	/* ㏇ - ㏗ */
-	0x33d9,	0x33dd,	/* ㏙ - ㏝ */
-	0x4e00,	0x9fff,	/* 一 - 鿿 */
-	0xac00,	0xd7a3,	/* 가 - 힣 */
-	0xf900,	0xfb06,	/* 豈 - ﬆ */
-	0xfb13,	0xfb17,	/* ﬓ - ﬗ */
-	0xfb1f,	0xfb28,	/* ײַ - ﬨ */
-	0xfb2a,	0xfb36,	/* שׁ - זּ */
-	0xfb38,	0xfb3c,	/* טּ - לּ */
-	0xfb40,	0xfb41,	/* נּ - סּ */
-	0xfb43,	0xfb44,	/* ףּ - פּ */
-	0xfb46,	0xfbb1,	/* צּ - ﮱ */
-	0xfbd3,	0xfd3d,	/* ﯓ - ﴽ */
-	0xfd50,	0xfd8f,	/* ﵐ - ﶏ */
-	0xfd92,	0xfdc7,	/* ﶒ - ﷇ */
-	0xfdf0,	0xfdf9,	/* ﷰ - ﷹ */
-	0xfe70,	0xfe72,	/* ﹰ - ﹲ */
-	0xfe76,	0xfefc,	/* ﹶ - ﻼ */
-	0xff66,	0xff6f,	/* ｦ - ｯ */
-	0xff71,	0xff9d,	/* ｱ - ﾝ */
-	0xffa0,	0xffbe,	/* ﾠ - ﾾ */
-	0xffc2,	0xffc7,	/* ￂ - ￇ */
-	0xffca,	0xffcf,	/* ￊ - ￏ */
-	0xffd2,	0xffd7,	/* ￒ - ￗ */
-	0xffda,	0xffdc,	/* ￚ - ￜ */
+static Rune __alpha2[] = {
+    0x00d8, 0x00f6, /* Ø - ö */
+    0x00f8, 0x01f5, /* ø - ǵ */
+    0x0250, 0x02a8, /* ɐ - ʨ */
+    0x038e, 0x03a1, /* Ύ - Ρ */
+    0x03a3, 0x03ce, /* Σ - ώ */
+    0x03d0, 0x03d6, /* ϐ - ϖ */
+    0x03e2, 0x03f3, /* Ϣ - ϳ */
+    0x0490, 0x04c4, /* Ґ - ӄ */
+    0x0561, 0x0587, /* ա - և */
+    0x05d0, 0x05ea, /* א - ת */
+    0x05f0, 0x05f2, /* װ - ײ */
+    0x0621, 0x063a, /* ء - غ */
+    0x0640, 0x064a, /* ـ - ي */
+    0x0671, 0x06b7, /* ٱ - ڷ */
+    0x06ba, 0x06be, /* ں - ھ */
+    0x06c0, 0x06ce, /* ۀ - ێ */
+    0x06d0, 0x06d3, /* ې - ۓ */
+    0x0905, 0x0939, /* अ - ह */
+    0x0958, 0x0961, /* क़ - ॡ */
+    0x0985, 0x098c, /* অ - ঌ */
+    0x098f, 0x0990, /* এ - ঐ */
+    0x0993, 0x09a8, /* ও - ন */
+    0x09aa, 0x09b0, /* প - র */
+    0x09b6, 0x09b9, /* শ - হ */
+    0x09dc, 0x09dd, /* ড় - ঢ় */
+    0x09df, 0x09e1, /* য় - ৡ */
+    0x09f0, 0x09f1, /* ৰ - ৱ */
+    0x0a05, 0x0a0a, /* ਅ - ਊ */
+    0x0a0f, 0x0a10, /* ਏ - ਐ */
+    0x0a13, 0x0a28, /* ਓ - ਨ */
+    0x0a2a, 0x0a30, /* ਪ - ਰ */
+    0x0a32, 0x0a33, /* ਲ - ਲ਼ */
+    0x0a35, 0x0a36, /* ਵ - ਸ਼ */
+    0x0a38, 0x0a39, /* ਸ - ਹ */
+    0x0a59, 0x0a5c, /* ਖ਼ - ੜ */
+    0x0a85, 0x0a8b, /* અ - ઋ */
+    0x0a8f, 0x0a91, /* એ - ઑ */
+    0x0a93, 0x0aa8, /* ઓ - ન */
+    0x0aaa, 0x0ab0, /* પ - ર */
+    0x0ab2, 0x0ab3, /* લ - ળ */
+    0x0ab5, 0x0ab9, /* વ - હ */
+    0x0b05, 0x0b0c, /* ଅ - ଌ */
+    0x0b0f, 0x0b10, /* ଏ - ଐ */
+    0x0b13, 0x0b28, /* ଓ - ନ */
+    0x0b2a, 0x0b30, /* ପ - ର */
+    0x0b32, 0x0b33, /* ଲ - ଳ */
+    0x0b36, 0x0b39, /* ଶ - ହ */
+    0x0b5c, 0x0b5d, /* ଡ଼ - ଢ଼ */
+    0x0b5f, 0x0b61, /* ୟ - ୡ */
+    0x0b85, 0x0b8a, /* அ - ஊ */
+    0x0b8e, 0x0b90, /* எ - ஐ */
+    0x0b92, 0x0b95, /* ஒ - க */
+    0x0b99, 0x0b9a, /* ங - ச */
+    0x0b9e, 0x0b9f, /* ஞ - ட */
+    0x0ba3, 0x0ba4, /* ண - த */
+    0x0ba8, 0x0baa, /* ந - ப */
+    0x0bae, 0x0bb5, /* ம - வ */
+    0x0bb7, 0x0bb9, /* ஷ - ஹ */
+    0x0c05, 0x0c0c, /* అ - ఌ */
+    0x0c0e, 0x0c10, /* ఎ - ఐ */
+    0x0c12, 0x0c28, /* ఒ - న */
+    0x0c2a, 0x0c33, /* ప - ళ */
+    0x0c35, 0x0c39, /* వ - హ */
+    0x0c60, 0x0c61, /* ౠ - ౡ */
+    0x0c85, 0x0c8c, /* ಅ - ಌ */
+    0x0c8e, 0x0c90, /* ಎ - ಐ */
+    0x0c92, 0x0ca8, /* ಒ - ನ */
+    0x0caa, 0x0cb3, /* ಪ - ಳ */
+    0x0cb5, 0x0cb9, /* ವ - ಹ */
+    0x0ce0, 0x0ce1, /* ೠ - ೡ */
+    0x0d05, 0x0d0c, /* അ - ഌ */
+    0x0d0e, 0x0d10, /* എ - ഐ */
+    0x0d12, 0x0d28, /* ഒ - ന */
+    0x0d2a, 0x0d39, /* പ - ഹ */
+    0x0d60, 0x0d61, /* ൠ - ൡ */
+    0x0e01, 0x0e30, /* ก - ะ */
+    0x0e32, 0x0e33, /* า - ำ */
+    0x0e40, 0x0e46, /* เ - ๆ */
+    0x0e5a, 0x0e5b, /* ๚ - ๛ */
+    0x0e81, 0x0e82, /* ກ - ຂ */
+    0x0e87, 0x0e88, /* ງ - ຈ */
+    0x0e94, 0x0e97, /* ດ - ທ */
+    0x0e99, 0x0e9f, /* ນ - ຟ */
+    0x0ea1, 0x0ea3, /* ມ - ຣ */
+    0x0eaa, 0x0eab, /* ສ - ຫ */
+    0x0ead, 0x0eae, /* ອ - ຮ */
+    0x0eb2, 0x0eb3, /* າ - ຳ */
+    0x0ec0, 0x0ec4, /* ເ - ໄ */
+    0x0edc, 0x0edd, /* ໜ - ໝ */
+    0x0f18, 0x0f19, /* ༘ - ༙ */
+    0x0f40, 0x0f47, /* ཀ - ཇ */
+    0x0f49, 0x0f69, /* ཉ - ཀྵ */
+    0x10d0, 0x10f6, /* ა - ჶ */
+    0x1100, 0x1159, /* ᄀ - ᅙ */
+    0x115f, 0x11a2, /* ᅟ - ᆢ */
+    0x11a8, 0x11f9, /* ᆨ - ᇹ */
+    0x1e00, 0x1e9b, /* Ḁ - ẛ */
+    0x1f50, 0x1f57, /* ὐ - ὗ */
+    0x1f80, 0x1fb4, /* ᾀ - ᾴ */
+    0x1fb6, 0x1fbc, /* ᾶ - ᾼ */
+    0x1fc2, 0x1fc4, /* ῂ - ῄ */
+    0x1fc6, 0x1fcc, /* ῆ - ῌ */
+    0x1fd0, 0x1fd3, /* ῐ - ΐ */
+    0x1fd6, 0x1fdb, /* ῖ - Ί */
+    0x1fe0, 0x1fec, /* ῠ - Ῥ */
+    0x1ff2, 0x1ff4, /* ῲ - ῴ */
+    0x1ff6, 0x1ffc, /* ῶ - ῼ */
+    0x210a, 0x2113, /* ℊ - ℓ */
+    0x2115, 0x211d, /* ℕ - ℝ */
+    0x2120, 0x2122, /* ℠ - ™ */
+    0x212a, 0x2131, /* K - ℱ */
+    0x2133, 0x2138, /* ℳ - ℸ */
+    0x3041, 0x3094, /* ぁ - ゔ */
+    0x30a1, 0x30fa, /* ァ - ヺ */
+    0x3105, 0x312c, /* ㄅ - ㄬ */
+    0x3131, 0x318e, /* ㄱ - ㆎ */
+    0x3192, 0x319f, /* ㆒ - ㆟ */
+    0x3260, 0x327b, /* ㉠ - ㉻ */
+    0x328a, 0x32b0, /* ㊊ - ㊰ */
+    0x32d0, 0x32fe, /* ㋐ - ㋾ */
+    0x3300, 0x3357, /* ㌀ - ㍗ */
+    0x3371, 0x3376, /* ㍱ - ㍶ */
+    0x337b, 0x3394, /* ㍻ - ㎔ */
+    0x3399, 0x339e, /* ㎙ - ㎞ */
+    0x33a9, 0x33ad, /* ㎩ - ㎭ */
+    0x33b0, 0x33c1, /* ㎰ - ㏁ */
+    0x33c3, 0x33c5, /* ㏃ - ㏅ */
+    0x33c7, 0x33d7, /* ㏇ - ㏗ */
+    0x33d9, 0x33dd, /* ㏙ - ㏝ */
+    0x4e00, 0x9fff, /* 一 - 鿿 */
+    0xac00, 0xd7a3, /* 가 - 힣 */
+    0xf900, 0xfb06, /* 豈 - ﬆ */
+    0xfb13, 0xfb17, /* ﬓ - ﬗ */
+    0xfb1f, 0xfb28, /* ײַ - ﬨ */
+    0xfb2a, 0xfb36, /* שׁ - זּ */
+    0xfb38, 0xfb3c, /* טּ - לּ */
+    0xfb40, 0xfb41, /* נּ - סּ */
+    0xfb43, 0xfb44, /* ףּ - פּ */
+    0xfb46, 0xfbb1, /* צּ - ﮱ */
+    0xfbd3, 0xfd3d, /* ﯓ - ﴽ */
+    0xfd50, 0xfd8f, /* ﵐ - ﶏ */
+    0xfd92, 0xfdc7, /* ﶒ - ﷇ */
+    0xfdf0, 0xfdf9, /* ﷰ - ﷹ */
+    0xfe70, 0xfe72, /* ﹰ - ﹲ */
+    0xfe76, 0xfefc, /* ﹶ - ﻼ */
+    0xff66, 0xff6f, /* ｦ - ｯ */
+    0xff71, 0xff9d, /* ｱ - ﾝ */
+    0xffa0, 0xffbe, /* ﾠ - ﾾ */
+    0xffc2, 0xffc7, /* ￂ - ￇ */
+    0xffca, 0xffcf, /* ￊ - ￏ */
+    0xffd2, 0xffd7, /* ￒ - ￗ */
+    0xffda, 0xffdc, /* ￚ - ￜ */
 };
 
 /*
  * alpha singlets -
  *	only covers ranges not in lower||upper
  */
-static
-Rune	__alpha1[] =
-{
-	0x00aa,	/* ª */
-	0x00b5,	/* µ */
-	0x00ba,	/* º */
-	0x03da,	/* Ϛ */
-	0x03dc,	/* Ϝ */
-	0x03de,	/* Ϟ */
-	0x03e0,	/* Ϡ */
-	0x06d5,	/* ە */
-	0x09b2,	/* ল */
-	0x0a5e,	/* ਫ਼ */
-	0x0a8d,	/* ઍ */
-	0x0ae0,	/* ૠ */
-	0x0b9c,	/* ஜ */
-	0x0cde,	/* ೞ */
-	0x0e4f,	/* ๏ */
-	0x0e84,	/* ຄ */
-	0x0e8a,	/* ຊ */
-	0x0e8d,	/* ຍ */
-	0x0ea5,	/* ລ */
-	0x0ea7,	/* ວ */
-	0x0eb0,	/* ະ */
-	0x0ebd,	/* ຽ */
-	0x1fbe,	/* ι */
-	0x207f,	/* ⁿ */
-	0x20a8,	/* ₨ */
-	0x2102,	/* ℂ */
-	0x2107,	/* ℇ */
-	0x2124,	/* ℤ */
-	0x2126,	/* Ω */
-	0x2128,	/* ℨ */
-	0xfb3e,	/* מּ */
-	0xfe74,	/* ﹴ */
+static Rune __alpha1[] = {
+    0x00aa, /* ª */
+    0x00b5, /* µ */
+    0x00ba, /* º */
+    0x03da, /* Ϛ */
+    0x03dc, /* Ϝ */
+    0x03de, /* Ϟ */
+    0x03e0, /* Ϡ */
+    0x06d5, /* ە */
+    0x09b2, /* ল */
+    0x0a5e, /* ਫ਼ */
+    0x0a8d, /* ઍ */
+    0x0ae0, /* ૠ */
+    0x0b9c, /* ஜ */
+    0x0cde, /* ೞ */
+    0x0e4f, /* ๏ */
+    0x0e84, /* ຄ */
+    0x0e8a, /* ຊ */
+    0x0e8d, /* ຍ */
+    0x0ea5, /* ລ */
+    0x0ea7, /* ວ */
+    0x0eb0, /* ະ */
+    0x0ebd, /* ຽ */
+    0x1fbe, /* ι */
+    0x207f, /* ⁿ */
+    0x20a8, /* ₨ */
+    0x2102, /* ℂ */
+    0x2107, /* ℇ */
+    0x2124, /* ℤ */
+    0x2126, /* Ω */
+    0x2128, /* ℨ */
+    0xfb3e, /* מּ */
+    0xfe74, /* ﹴ */
 };
 
 /*
  * space ranges
  */
-static
-Rune	__space2[] =
-{
-	0x0009,	0x000a,	/* tab and newline */
-	0x0020,	0x0020,	/* space */
-	0x00a0,	0x00a0,	/*   */
-	0x2000,	0x200b,	/*   - ​ */
-	0x2028,	0x2029,	/*   -   */
-	0x3000,	0x3000,	/* 　 */
-	0xfeff,	0xfeff,	/* ﻿ */
+static Rune __space2[] = {
+    0x0009, 0x000a, /* tab and newline */
+    0x0020, 0x0020, /* space */
+    0x00a0, 0x00a0, /*   */
+    0x2000, 0x200b, /*   - ​ */
+    0x2028, 0x2029, /*   -   */
+    0x3000, 0x3000, /* 　 */
+    0xfeff, 0xfeff, /* ﻿ */
 };
 
 /*
  * lower case ranges
  *	3rd col is conversion excess 500
  */
-static
-Rune	__toupper2[] =
-{
-	0x0061,	0x007a, 468,	/* a-z A-Z */
-	0x00e0,	0x00f6, 468,	/* à-ö À-Ö */
-	0x00f8,	0x00fe, 468,	/* ø-þ Ø-Þ */
-	0x0256,	0x0257, 295,	/* ɖ-ɗ Ɖ-Ɗ */
-	0x0258,	0x0259, 298,	/* ɘ-ə Ǝ-Ə */
-	0x028a,	0x028b, 283,	/* ʊ-ʋ Ʊ-Ʋ */
-	0x03ad,	0x03af, 463,	/* έ-ί Έ-Ί */
-	0x03b1,	0x03c1, 468,	/* α-ρ Α-Ρ */
-	0x03c3,	0x03cb, 468,	/* σ-ϋ Σ-Ϋ */
-	0x03cd,	0x03ce, 437,	/* ύ-ώ Ύ-Ώ */
-	0x0430,	0x044f, 468,	/* а-я А-Я */
-	0x0451,	0x045c, 420,	/* ё-ќ Ё-Ќ */
-	0x045e,	0x045f, 420,	/* ў-џ Ў-Џ */
-	0x0561,	0x0586, 452,	/* ա-ֆ Ա-Ֆ */
-	0x1f00,	0x1f07, 508,	/* ἀ-ἇ Ἀ-Ἇ */
-	0x1f10,	0x1f15, 508,	/* ἐ-ἕ Ἐ-Ἕ */
-	0x1f20,	0x1f27, 508,	/* ἠ-ἧ Ἠ-Ἧ */
-	0x1f30,	0x1f37, 508,	/* ἰ-ἷ Ἰ-Ἷ */
-	0x1f40,	0x1f45, 508,	/* ὀ-ὅ Ὀ-Ὅ */
-	0x1f60,	0x1f67, 508,	/* ὠ-ὧ Ὠ-Ὧ */
-	0x1f70,	0x1f71, 574,	/* ὰ-ά Ὰ-Ά */
-	0x1f72,	0x1f75, 586,	/* ὲ-ή Ὲ-Ή */
-	0x1f76,	0x1f77, 600,	/* ὶ-ί Ὶ-Ί */
-	0x1f78,	0x1f79, 628,	/* ὸ-ό Ὸ-Ό */
-	0x1f7a,	0x1f7b, 612,	/* ὺ-ύ Ὺ-Ύ */
-	0x1f7c,	0x1f7d, 626,	/* ὼ-ώ Ὼ-Ώ */
-	0x1f80,	0x1f87, 508,	/* ᾀ-ᾇ ᾈ-ᾏ */
-	0x1f90,	0x1f97, 508,	/* ᾐ-ᾗ ᾘ-ᾟ */
-	0x1fa0,	0x1fa7, 508,	/* ᾠ-ᾧ ᾨ-ᾯ */
-	0x1fb0,	0x1fb1, 508,	/* ᾰ-ᾱ Ᾰ-Ᾱ */
-	0x1fd0,	0x1fd1, 508,	/* ῐ-ῑ Ῐ-Ῑ */
-	0x1fe0,	0x1fe1, 508,	/* ῠ-ῡ Ῠ-Ῡ */
-	0x2170,	0x217f, 484,	/* ⅰ-ⅿ Ⅰ-Ⅿ */
-	0x24d0,	0x24e9, 474,	/* ⓐ-ⓩ Ⓐ-Ⓩ */
-	0xff41,	0xff5a, 468,	/* ａ-ｚ Ａ-Ｚ */
+static Rune __toupper2[] = {
+    0x0061, 0x007a, 468, /* a-z A-Z */
+    0x00e0, 0x00f6, 468, /* à-ö À-Ö */
+    0x00f8, 0x00fe, 468, /* ø-þ Ø-Þ */
+    0x0256, 0x0257, 295, /* ɖ-ɗ Ɖ-Ɗ */
+    0x0258, 0x0259, 298, /* ɘ-ə Ǝ-Ə */
+    0x028a, 0x028b, 283, /* ʊ-ʋ Ʊ-Ʋ */
+    0x03ad, 0x03af, 463, /* έ-ί Έ-Ί */
+    0x03b1, 0x03c1, 468, /* α-ρ Α-Ρ */
+    0x03c3, 0x03cb, 468, /* σ-ϋ Σ-Ϋ */
+    0x03cd, 0x03ce, 437, /* ύ-ώ Ύ-Ώ */
+    0x0430, 0x044f, 468, /* а-я А-Я */
+    0x0451, 0x045c, 420, /* ё-ќ Ё-Ќ */
+    0x045e, 0x045f, 420, /* ў-џ Ў-Џ */
+    0x0561, 0x0586, 452, /* ա-ֆ Ա-Ֆ */
+    0x1f00, 0x1f07, 508, /* ἀ-ἇ Ἀ-Ἇ */
+    0x1f10, 0x1f15, 508, /* ἐ-ἕ Ἐ-Ἕ */
+    0x1f20, 0x1f27, 508, /* ἠ-ἧ Ἠ-Ἧ */
+    0x1f30, 0x1f37, 508, /* ἰ-ἷ Ἰ-Ἷ */
+    0x1f40, 0x1f45, 508, /* ὀ-ὅ Ὀ-Ὅ */
+    0x1f60, 0x1f67, 508, /* ὠ-ὧ Ὠ-Ὧ */
+    0x1f70, 0x1f71, 574, /* ὰ-ά Ὰ-Ά */
+    0x1f72, 0x1f75, 586, /* ὲ-ή Ὲ-Ή */
+    0x1f76, 0x1f77, 600, /* ὶ-ί Ὶ-Ί */
+    0x1f78, 0x1f79, 628, /* ὸ-ό Ὸ-Ό */
+    0x1f7a, 0x1f7b, 612, /* ὺ-ύ Ὺ-Ύ */
+    0x1f7c, 0x1f7d, 626, /* ὼ-ώ Ὼ-Ώ */
+    0x1f80, 0x1f87, 508, /* ᾀ-ᾇ ᾈ-ᾏ */
+    0x1f90, 0x1f97, 508, /* ᾐ-ᾗ ᾘ-ᾟ */
+    0x1fa0, 0x1fa7, 508, /* ᾠ-ᾧ ᾨ-ᾯ */
+    0x1fb0, 0x1fb1, 508, /* ᾰ-ᾱ Ᾰ-Ᾱ */
+    0x1fd0, 0x1fd1, 508, /* ῐ-ῑ Ῐ-Ῑ */
+    0x1fe0, 0x1fe1, 508, /* ῠ-ῡ Ῠ-Ῡ */
+    0x2170, 0x217f, 484, /* ⅰ-ⅿ Ⅰ-Ⅿ */
+    0x24d0, 0x24e9, 474, /* ⓐ-ⓩ Ⓐ-Ⓩ */
+    0xff41, 0xff5a, 468, /* ａ-ｚ Ａ-Ｚ */
 };
 
 /*
  * lower case singlets
  *	2nd col is conversion excess 500
  */
-static
-Rune	__toupper1[] =
-{
-	0x00ff, 621,	/* ÿ Ÿ */
-	0x0101, 499,	/* ā Ā */
-	0x0103, 499,	/* ă Ă */
-	0x0105, 499,	/* ą Ą */
-	0x0107, 499,	/* ć Ć */
-	0x0109, 499,	/* ĉ Ĉ */
-	0x010b, 499,	/* ċ Ċ */
-	0x010d, 499,	/* č Č */
-	0x010f, 499,	/* ď Ď */
-	0x0111, 499,	/* đ Đ */
-	0x0113, 499,	/* ē Ē */
-	0x0115, 499,	/* ĕ Ĕ */
-	0x0117, 499,	/* ė Ė */
-	0x0119, 499,	/* ę Ę */
-	0x011b, 499,	/* ě Ě */
-	0x011d, 499,	/* ĝ Ĝ */
-	0x011f, 499,	/* ğ Ğ */
-	0x0121, 499,	/* ġ Ġ */
-	0x0123, 499,	/* ģ Ģ */
-	0x0125, 499,	/* ĥ Ĥ */
-	0x0127, 499,	/* ħ Ħ */
-	0x0129, 499,	/* ĩ Ĩ */
-	0x012b, 499,	/* ī Ī */
-	0x012d, 499,	/* ĭ Ĭ */
-	0x012f, 499,	/* į Į */
-	0x0131, 268,	/* ı I */
-	0x0133, 499,	/* ĳ Ĳ */
-	0x0135, 499,	/* ĵ Ĵ */
-	0x0137, 499,	/* ķ Ķ */
-	0x013a, 499,	/* ĺ Ĺ */
-	0x013c, 499,	/* ļ Ļ */
-	0x013e, 499,	/* ľ Ľ */
-	0x0140, 499,	/* ŀ Ŀ */
-	0x0142, 499,	/* ł Ł */
-	0x0144, 499,	/* ń Ń */
-	0x0146, 499,	/* ņ Ņ */
-	0x0148, 499,	/* ň Ň */
-	0x014b, 499,	/* ŋ Ŋ */
-	0x014d, 499,	/* ō Ō */
-	0x014f, 499,	/* ŏ Ŏ */
-	0x0151, 499,	/* ő Ő */
-	0x0153, 499,	/* œ Œ */
-	0x0155, 499,	/* ŕ Ŕ */
-	0x0157, 499,	/* ŗ Ŗ */
-	0x0159, 499,	/* ř Ř */
-	0x015b, 499,	/* ś Ś */
-	0x015d, 499,	/* ŝ Ŝ */
-	0x015f, 499,	/* ş Ş */
-	0x0161, 499,	/* š Š */
-	0x0163, 499,	/* ţ Ţ */
-	0x0165, 499,	/* ť Ť */
-	0x0167, 499,	/* ŧ Ŧ */
-	0x0169, 499,	/* ũ Ũ */
-	0x016b, 499,	/* ū Ū */
-	0x016d, 499,	/* ŭ Ŭ */
-	0x016f, 499,	/* ů Ů */
-	0x0171, 499,	/* ű Ű */
-	0x0173, 499,	/* ų Ų */
-	0x0175, 499,	/* ŵ Ŵ */
-	0x0177, 499,	/* ŷ Ŷ */
-	0x017a, 499,	/* ź Ź */
-	0x017c, 499,	/* ż Ż */
-	0x017e, 499,	/* ž Ž */
-	0x017f, 200,	/* ſ S */
-	0x0183, 499,	/* ƃ Ƃ */
-	0x0185, 499,	/* ƅ Ƅ */
-	0x0188, 499,	/* ƈ Ƈ */
-	0x018c, 499,	/* ƌ Ƌ */
-	0x0192, 499,	/* ƒ Ƒ */
-	0x0199, 499,	/* ƙ Ƙ */
-	0x01a1, 499,	/* ơ Ơ */
-	0x01a3, 499,	/* ƣ Ƣ */
-	0x01a5, 499,	/* ƥ Ƥ */
-	0x01a8, 499,	/* ƨ Ƨ */
-	0x01ad, 499,	/* ƭ Ƭ */
-	0x01b0, 499,	/* ư Ư */
-	0x01b4, 499,	/* ƴ Ƴ */
-	0x01b6, 499,	/* ƶ Ƶ */
-	0x01b9, 499,	/* ƹ Ƹ */
-	0x01bd, 499,	/* ƽ Ƽ */
-	0x01c5, 499,	/* ǅ Ǆ */
-	0x01c6, 498,	/* ǆ Ǆ */
-	0x01c8, 499,	/* ǈ Ǉ */
-	0x01c9, 498,	/* ǉ Ǉ */
-	0x01cb, 499,	/* ǋ Ǌ */
-	0x01cc, 498,	/* ǌ Ǌ */
-	0x01ce, 499,	/* ǎ Ǎ */
-	0x01d0, 499,	/* ǐ Ǐ */
-	0x01d2, 499,	/* ǒ Ǒ */
-	0x01d4, 499,	/* ǔ Ǔ */
-	0x01d6, 499,	/* ǖ Ǖ */
-	0x01d8, 499,	/* ǘ Ǘ */
-	0x01da, 499,	/* ǚ Ǚ */
-	0x01dc, 499,	/* ǜ Ǜ */
-	0x01df, 499,	/* ǟ Ǟ */
-	0x01e1, 499,	/* ǡ Ǡ */
-	0x01e3, 499,	/* ǣ Ǣ */
-	0x01e5, 499,	/* ǥ Ǥ */
-	0x01e7, 499,	/* ǧ Ǧ */
-	0x01e9, 499,	/* ǩ Ǩ */
-	0x01eb, 499,	/* ǫ Ǫ */
-	0x01ed, 499,	/* ǭ Ǭ */
-	0x01ef, 499,	/* ǯ Ǯ */
-	0x01f2, 499,	/* ǲ Ǳ */
-	0x01f3, 498,	/* ǳ Ǳ */
-	0x01f5, 499,	/* ǵ Ǵ */
-	0x01fb, 499,	/* ǻ Ǻ */
-	0x01fd, 499,	/* ǽ Ǽ */
-	0x01ff, 499,	/* ǿ Ǿ */
-	0x0201, 499,	/* ȁ Ȁ */
-	0x0203, 499,	/* ȃ Ȃ */
-	0x0205, 499,	/* ȅ Ȅ */
-	0x0207, 499,	/* ȇ Ȇ */
-	0x0209, 499,	/* ȉ Ȉ */
-	0x020b, 499,	/* ȋ Ȋ */
-	0x020d, 499,	/* ȍ Ȍ */
-	0x020f, 499,	/* ȏ Ȏ */
-	0x0211, 499,	/* ȑ Ȑ */
-	0x0213, 499,	/* ȓ Ȓ */
-	0x0215, 499,	/* ȕ Ȕ */
-	0x0217, 499,	/* ȗ Ȗ */
-	0x0253, 290,	/* ɓ Ɓ */
-	0x0254, 294,	/* ɔ Ɔ */
-	0x025b, 297,	/* ɛ Ɛ */
-	0x0260, 295,	/* ɠ Ɠ */
-	0x0263, 293,	/* ɣ Ɣ */
-	0x0268, 291,	/* ɨ Ɨ */
-	0x0269, 289,	/* ɩ Ɩ */
-	0x026f, 289,	/* ɯ Ɯ */
-	0x0272, 287,	/* ɲ Ɲ */
-	0x0283, 282,	/* ʃ Ʃ */
-	0x0288, 282,	/* ʈ Ʈ */
-	0x0292, 281,	/* ʒ Ʒ */
-	0x03ac, 462,	/* ά Ά */
-	0x03cc, 436,	/* ό Ό */
-	0x03d0, 438,	/* ϐ Β */
-	0x03d1, 443,	/* ϑ Θ */
-	0x03d5, 453,	/* ϕ Φ */
-	0x03d6, 446,	/* ϖ Π */
-	0x03e3, 499,	/* ϣ Ϣ */
-	0x03e5, 499,	/* ϥ Ϥ */
-	0x03e7, 499,	/* ϧ Ϧ */
-	0x03e9, 499,	/* ϩ Ϩ */
-	0x03eb, 499,	/* ϫ Ϫ */
-	0x03ed, 499,	/* ϭ Ϭ */
-	0x03ef, 499,	/* ϯ Ϯ */
-	0x03f0, 414,	/* ϰ Κ */
-	0x03f1, 420,	/* ϱ Ρ */
-	0x0461, 499,	/* ѡ Ѡ */
-	0x0463, 499,	/* ѣ Ѣ */
-	0x0465, 499,	/* ѥ Ѥ */
-	0x0467, 499,	/* ѧ Ѧ */
-	0x0469, 499,	/* ѩ Ѩ */
-	0x046b, 499,	/* ѫ Ѫ */
-	0x046d, 499,	/* ѭ Ѭ */
-	0x046f, 499,	/* ѯ Ѯ */
-	0x0471, 499,	/* ѱ Ѱ */
-	0x0473, 499,	/* ѳ Ѳ */
-	0x0475, 499,	/* ѵ Ѵ */
-	0x0477, 499,	/* ѷ Ѷ */
-	0x0479, 499,	/* ѹ Ѹ */
-	0x047b, 499,	/* ѻ Ѻ */
-	0x047d, 499,	/* ѽ Ѽ */
-	0x047f, 499,	/* ѿ Ѿ */
-	0x0481, 499,	/* ҁ Ҁ */
-	0x0491, 499,	/* ґ Ґ */
-	0x0493, 499,	/* ғ Ғ */
-	0x0495, 499,	/* ҕ Ҕ */
-	0x0497, 499,	/* җ Җ */
-	0x0499, 499,	/* ҙ Ҙ */
-	0x049b, 499,	/* қ Қ */
-	0x049d, 499,	/* ҝ Ҝ */
-	0x049f, 499,	/* ҟ Ҟ */
-	0x04a1, 499,	/* ҡ Ҡ */
-	0x04a3, 499,	/* ң Ң */
-	0x04a5, 499,	/* ҥ Ҥ */
-	0x04a7, 499,	/* ҧ Ҧ */
-	0x04a9, 499,	/* ҩ Ҩ */
-	0x04ab, 499,	/* ҫ Ҫ */
-	0x04ad, 499,	/* ҭ Ҭ */
-	0x04af, 499,	/* ү Ү */
-	0x04b1, 499,	/* ұ Ұ */
-	0x04b3, 499,	/* ҳ Ҳ */
-	0x04b5, 499,	/* ҵ Ҵ */
-	0x04b7, 499,	/* ҷ Ҷ */
-	0x04b9, 499,	/* ҹ Ҹ */
-	0x04bb, 499,	/* һ Һ */
-	0x04bd, 499,	/* ҽ Ҽ */
-	0x04bf, 499,	/* ҿ Ҿ */
-	0x04c2, 499,	/* ӂ Ӂ */
-	0x04c4, 499,	/* ӄ Ӄ */
-	0x04c8, 499,	/* ӈ Ӈ */
-	0x04cc, 499,	/* ӌ Ӌ */
-	0x04d1, 499,	/* ӑ Ӑ */
-	0x04d3, 499,	/* ӓ Ӓ */
-	0x04d5, 499,	/* ӕ Ӕ */
-	0x04d7, 499,	/* ӗ Ӗ */
-	0x04d9, 499,	/* ә Ә */
-	0x04db, 499,	/* ӛ Ӛ */
-	0x04dd, 499,	/* ӝ Ӝ */
-	0x04df, 499,	/* ӟ Ӟ */
-	0x04e1, 499,	/* ӡ Ӡ */
-	0x04e3, 499,	/* ӣ Ӣ */
-	0x04e5, 499,	/* ӥ Ӥ */
-	0x04e7, 499,	/* ӧ Ӧ */
-	0x04e9, 499,	/* ө Ө */
-	0x04eb, 499,	/* ӫ Ӫ */
-	0x04ef, 499,	/* ӯ Ӯ */
-	0x04f1, 499,	/* ӱ Ӱ */
-	0x04f3, 499,	/* ӳ Ӳ */
-	0x04f5, 499,	/* ӵ Ӵ */
-	0x04f9, 499,	/* ӹ Ӹ */
-	0x1e01, 499,	/* ḁ Ḁ */
-	0x1e03, 499,	/* ḃ Ḃ */
-	0x1e05, 499,	/* ḅ Ḅ */
-	0x1e07, 499,	/* ḇ Ḇ */
-	0x1e09, 499,	/* ḉ Ḉ */
-	0x1e0b, 499,	/* ḋ Ḋ */
-	0x1e0d, 499,	/* ḍ Ḍ */
-	0x1e0f, 499,	/* ḏ Ḏ */
-	0x1e11, 499,	/* ḑ Ḑ */
-	0x1e13, 499,	/* ḓ Ḓ */
-	0x1e15, 499,	/* ḕ Ḕ */
-	0x1e17, 499,	/* ḗ Ḗ */
-	0x1e19, 499,	/* ḙ Ḙ */
-	0x1e1b, 499,	/* ḛ Ḛ */
-	0x1e1d, 499,	/* ḝ Ḝ */
-	0x1e1f, 499,	/* ḟ Ḟ */
-	0x1e21, 499,	/* ḡ Ḡ */
-	0x1e23, 499,	/* ḣ Ḣ */
-	0x1e25, 499,	/* ḥ Ḥ */
-	0x1e27, 499,	/* ḧ Ḧ */
-	0x1e29, 499,	/* ḩ Ḩ */
-	0x1e2b, 499,	/* ḫ Ḫ */
-	0x1e2d, 499,	/* ḭ Ḭ */
-	0x1e2f, 499,	/* ḯ Ḯ */
-	0x1e31, 499,	/* ḱ Ḱ */
-	0x1e33, 499,	/* ḳ Ḳ */
-	0x1e35, 499,	/* ḵ Ḵ */
-	0x1e37, 499,	/* ḷ Ḷ */
-	0x1e39, 499,	/* ḹ Ḹ */
-	0x1e3b, 499,	/* ḻ Ḻ */
-	0x1e3d, 499,	/* ḽ Ḽ */
-	0x1e3f, 499,	/* ḿ Ḿ */
-	0x1e41, 499,	/* ṁ Ṁ */
-	0x1e43, 499,	/* ṃ Ṃ */
-	0x1e45, 499,	/* ṅ Ṅ */
-	0x1e47, 499,	/* ṇ Ṇ */
-	0x1e49, 499,	/* ṉ Ṉ */
-	0x1e4b, 499,	/* ṋ Ṋ */
-	0x1e4d, 499,	/* ṍ Ṍ */
-	0x1e4f, 499,	/* ṏ Ṏ */
-	0x1e51, 499,	/* ṑ Ṑ */
-	0x1e53, 499,	/* ṓ Ṓ */
-	0x1e55, 499,	/* ṕ Ṕ */
-	0x1e57, 499,	/* ṗ Ṗ */
-	0x1e59, 499,	/* ṙ Ṙ */
-	0x1e5b, 499,	/* ṛ Ṛ */
-	0x1e5d, 499,	/* ṝ Ṝ */
-	0x1e5f, 499,	/* ṟ Ṟ */
-	0x1e61, 499,	/* ṡ Ṡ */
-	0x1e63, 499,	/* ṣ Ṣ */
-	0x1e65, 499,	/* ṥ Ṥ */
-	0x1e67, 499,	/* ṧ Ṧ */
-	0x1e69, 499,	/* ṩ Ṩ */
-	0x1e6b, 499,	/* ṫ Ṫ */
-	0x1e6d, 499,	/* ṭ Ṭ */
-	0x1e6f, 499,	/* ṯ Ṯ */
-	0x1e71, 499,	/* ṱ Ṱ */
-	0x1e73, 499,	/* ṳ Ṳ */
-	0x1e75, 499,	/* ṵ Ṵ */
-	0x1e77, 499,	/* ṷ Ṷ */
-	0x1e79, 499,	/* ṹ Ṹ */
-	0x1e7b, 499,	/* ṻ Ṻ */
-	0x1e7d, 499,	/* ṽ Ṽ */
-	0x1e7f, 499,	/* ṿ Ṿ */
-	0x1e81, 499,	/* ẁ Ẁ */
-	0x1e83, 499,	/* ẃ Ẃ */
-	0x1e85, 499,	/* ẅ Ẅ */
-	0x1e87, 499,	/* ẇ Ẇ */
-	0x1e89, 499,	/* ẉ Ẉ */
-	0x1e8b, 499,	/* ẋ Ẋ */
-	0x1e8d, 499,	/* ẍ Ẍ */
-	0x1e8f, 499,	/* ẏ Ẏ */
-	0x1e91, 499,	/* ẑ Ẑ */
-	0x1e93, 499,	/* ẓ Ẓ */
-	0x1e95, 499,	/* ẕ Ẕ */
-	0x1ea1, 499,	/* ạ Ạ */
-	0x1ea3, 499,	/* ả Ả */
-	0x1ea5, 499,	/* ấ Ấ */
-	0x1ea7, 499,	/* ầ Ầ */
-	0x1ea9, 499,	/* ẩ Ẩ */
-	0x1eab, 499,	/* ẫ Ẫ */
-	0x1ead, 499,	/* ậ Ậ */
-	0x1eaf, 499,	/* ắ Ắ */
-	0x1eb1, 499,	/* ằ Ằ */
-	0x1eb3, 499,	/* ẳ Ẳ */
-	0x1eb5, 499,	/* ẵ Ẵ */
-	0x1eb7, 499,	/* ặ Ặ */
-	0x1eb9, 499,	/* ẹ Ẹ */
-	0x1ebb, 499,	/* ẻ Ẻ */
-	0x1ebd, 499,	/* ẽ Ẽ */
-	0x1ebf, 499,	/* ế Ế */
-	0x1ec1, 499,	/* ề Ề */
-	0x1ec3, 499,	/* ể Ể */
-	0x1ec5, 499,	/* ễ Ễ */
-	0x1ec7, 499,	/* ệ Ệ */
-	0x1ec9, 499,	/* ỉ Ỉ */
-	0x1ecb, 499,	/* ị Ị */
-	0x1ecd, 499,	/* ọ Ọ */
-	0x1ecf, 499,	/* ỏ Ỏ */
-	0x1ed1, 499,	/* ố Ố */
-	0x1ed3, 499,	/* ồ Ồ */
-	0x1ed5, 499,	/* ổ Ổ */
-	0x1ed7, 499,	/* ỗ Ỗ */
-	0x1ed9, 499,	/* ộ Ộ */
-	0x1edb, 499,	/* ớ Ớ */
-	0x1edd, 499,	/* ờ Ờ */
-	0x1edf, 499,	/* ở Ở */
-	0x1ee1, 499,	/* ỡ Ỡ */
-	0x1ee3, 499,	/* ợ Ợ */
-	0x1ee5, 499,	/* ụ Ụ */
-	0x1ee7, 499,	/* ủ Ủ */
-	0x1ee9, 499,	/* ứ Ứ */
-	0x1eeb, 499,	/* ừ Ừ */
-	0x1eed, 499,	/* ử Ử */
-	0x1eef, 499,	/* ữ Ữ */
-	0x1ef1, 499,	/* ự Ự */
-	0x1ef3, 499,	/* ỳ Ỳ */
-	0x1ef5, 499,	/* ỵ Ỵ */
-	0x1ef7, 499,	/* ỷ Ỷ */
-	0x1ef9, 499,	/* ỹ Ỹ */
-	0x1f51, 508,	/* ὑ Ὑ */
-	0x1f53, 508,	/* ὓ Ὓ */
-	0x1f55, 508,	/* ὕ Ὕ */
-	0x1f57, 508,	/* ὗ Ὗ */
-	0x1fb3, 509,	/* ᾳ ᾼ */
-	0x1fc3, 509,	/* ῃ ῌ */
-	0x1fe5, 507,	/* ῥ Ῥ */
-	0x1ff3, 509,	/* ῳ ῼ */
+static Rune __toupper1[] = {
+    0x00ff, 621, /* ÿ Ÿ */
+    0x0101, 499, /* ā Ā */
+    0x0103, 499, /* ă Ă */
+    0x0105, 499, /* ą Ą */
+    0x0107, 499, /* ć Ć */
+    0x0109, 499, /* ĉ Ĉ */
+    0x010b, 499, /* ċ Ċ */
+    0x010d, 499, /* č Č */
+    0x010f, 499, /* ď Ď */
+    0x0111, 499, /* đ Đ */
+    0x0113, 499, /* ē Ē */
+    0x0115, 499, /* ĕ Ĕ */
+    0x0117, 499, /* ė Ė */
+    0x0119, 499, /* ę Ę */
+    0x011b, 499, /* ě Ě */
+    0x011d, 499, /* ĝ Ĝ */
+    0x011f, 499, /* ğ Ğ */
+    0x0121, 499, /* ġ Ġ */
+    0x0123, 499, /* ģ Ģ */
+    0x0125, 499, /* ĥ Ĥ */
+    0x0127, 499, /* ħ Ħ */
+    0x0129, 499, /* ĩ Ĩ */
+    0x012b, 499, /* ī Ī */
+    0x012d, 499, /* ĭ Ĭ */
+    0x012f, 499, /* į Į */
+    0x0131, 268, /* ı I */
+    0x0133, 499, /* ĳ Ĳ */
+    0x0135, 499, /* ĵ Ĵ */
+    0x0137, 499, /* ķ Ķ */
+    0x013a, 499, /* ĺ Ĺ */
+    0x013c, 499, /* ļ Ļ */
+    0x013e, 499, /* ľ Ľ */
+    0x0140, 499, /* ŀ Ŀ */
+    0x0142, 499, /* ł Ł */
+    0x0144, 499, /* ń Ń */
+    0x0146, 499, /* ņ Ņ */
+    0x0148, 499, /* ň Ň */
+    0x014b, 499, /* ŋ Ŋ */
+    0x014d, 499, /* ō Ō */
+    0x014f, 499, /* ŏ Ŏ */
+    0x0151, 499, /* ő Ő */
+    0x0153, 499, /* œ Œ */
+    0x0155, 499, /* ŕ Ŕ */
+    0x0157, 499, /* ŗ Ŗ */
+    0x0159, 499, /* ř Ř */
+    0x015b, 499, /* ś Ś */
+    0x015d, 499, /* ŝ Ŝ */
+    0x015f, 499, /* ş Ş */
+    0x0161, 499, /* š Š */
+    0x0163, 499, /* ţ Ţ */
+    0x0165, 499, /* ť Ť */
+    0x0167, 499, /* ŧ Ŧ */
+    0x0169, 499, /* ũ Ũ */
+    0x016b, 499, /* ū Ū */
+    0x016d, 499, /* ŭ Ŭ */
+    0x016f, 499, /* ů Ů */
+    0x0171, 499, /* ű Ű */
+    0x0173, 499, /* ų Ų */
+    0x0175, 499, /* ŵ Ŵ */
+    0x0177, 499, /* ŷ Ŷ */
+    0x017a, 499, /* ź Ź */
+    0x017c, 499, /* ż Ż */
+    0x017e, 499, /* ž Ž */
+    0x017f, 200, /* ſ S */
+    0x0183, 499, /* ƃ Ƃ */
+    0x0185, 499, /* ƅ Ƅ */
+    0x0188, 499, /* ƈ Ƈ */
+    0x018c, 499, /* ƌ Ƌ */
+    0x0192, 499, /* ƒ Ƒ */
+    0x0199, 499, /* ƙ Ƙ */
+    0x01a1, 499, /* ơ Ơ */
+    0x01a3, 499, /* ƣ Ƣ */
+    0x01a5, 499, /* ƥ Ƥ */
+    0x01a8, 499, /* ƨ Ƨ */
+    0x01ad, 499, /* ƭ Ƭ */
+    0x01b0, 499, /* ư Ư */
+    0x01b4, 499, /* ƴ Ƴ */
+    0x01b6, 499, /* ƶ Ƶ */
+    0x01b9, 499, /* ƹ Ƹ */
+    0x01bd, 499, /* ƽ Ƽ */
+    0x01c5, 499, /* ǅ Ǆ */
+    0x01c6, 498, /* ǆ Ǆ */
+    0x01c8, 499, /* ǈ Ǉ */
+    0x01c9, 498, /* ǉ Ǉ */
+    0x01cb, 499, /* ǋ Ǌ */
+    0x01cc, 498, /* ǌ Ǌ */
+    0x01ce, 499, /* ǎ Ǎ */
+    0x01d0, 499, /* ǐ Ǐ */
+    0x01d2, 499, /* ǒ Ǒ */
+    0x01d4, 499, /* ǔ Ǔ */
+    0x01d6, 499, /* ǖ Ǖ */
+    0x01d8, 499, /* ǘ Ǘ */
+    0x01da, 499, /* ǚ Ǚ */
+    0x01dc, 499, /* ǜ Ǜ */
+    0x01df, 499, /* ǟ Ǟ */
+    0x01e1, 499, /* ǡ Ǡ */
+    0x01e3, 499, /* ǣ Ǣ */
+    0x01e5, 499, /* ǥ Ǥ */
+    0x01e7, 499, /* ǧ Ǧ */
+    0x01e9, 499, /* ǩ Ǩ */
+    0x01eb, 499, /* ǫ Ǫ */
+    0x01ed, 499, /* ǭ Ǭ */
+    0x01ef, 499, /* ǯ Ǯ */
+    0x01f2, 499, /* ǲ Ǳ */
+    0x01f3, 498, /* ǳ Ǳ */
+    0x01f5, 499, /* ǵ Ǵ */
+    0x01fb, 499, /* ǻ Ǻ */
+    0x01fd, 499, /* ǽ Ǽ */
+    0x01ff, 499, /* ǿ Ǿ */
+    0x0201, 499, /* ȁ Ȁ */
+    0x0203, 499, /* ȃ Ȃ */
+    0x0205, 499, /* ȅ Ȅ */
+    0x0207, 499, /* ȇ Ȇ */
+    0x0209, 499, /* ȉ Ȉ */
+    0x020b, 499, /* ȋ Ȋ */
+    0x020d, 499, /* ȍ Ȍ */
+    0x020f, 499, /* ȏ Ȏ */
+    0x0211, 499, /* ȑ Ȑ */
+    0x0213, 499, /* ȓ Ȓ */
+    0x0215, 499, /* ȕ Ȕ */
+    0x0217, 499, /* ȗ Ȗ */
+    0x0253, 290, /* ɓ Ɓ */
+    0x0254, 294, /* ɔ Ɔ */
+    0x025b, 297, /* ɛ Ɛ */
+    0x0260, 295, /* ɠ Ɠ */
+    0x0263, 293, /* ɣ Ɣ */
+    0x0268, 291, /* ɨ Ɨ */
+    0x0269, 289, /* ɩ Ɩ */
+    0x026f, 289, /* ɯ Ɯ */
+    0x0272, 287, /* ɲ Ɲ */
+    0x0283, 282, /* ʃ Ʃ */
+    0x0288, 282, /* ʈ Ʈ */
+    0x0292, 281, /* ʒ Ʒ */
+    0x03ac, 462, /* ά Ά */
+    0x03cc, 436, /* ό Ό */
+    0x03d0, 438, /* ϐ Β */
+    0x03d1, 443, /* ϑ Θ */
+    0x03d5, 453, /* ϕ Φ */
+    0x03d6, 446, /* ϖ Π */
+    0x03e3, 499, /* ϣ Ϣ */
+    0x03e5, 499, /* ϥ Ϥ */
+    0x03e7, 499, /* ϧ Ϧ */
+    0x03e9, 499, /* ϩ Ϩ */
+    0x03eb, 499, /* ϫ Ϫ */
+    0x03ed, 499, /* ϭ Ϭ */
+    0x03ef, 499, /* ϯ Ϯ */
+    0x03f0, 414, /* ϰ Κ */
+    0x03f1, 420, /* ϱ Ρ */
+    0x0461, 499, /* ѡ Ѡ */
+    0x0463, 499, /* ѣ Ѣ */
+    0x0465, 499, /* ѥ Ѥ */
+    0x0467, 499, /* ѧ Ѧ */
+    0x0469, 499, /* ѩ Ѩ */
+    0x046b, 499, /* ѫ Ѫ */
+    0x046d, 499, /* ѭ Ѭ */
+    0x046f, 499, /* ѯ Ѯ */
+    0x0471, 499, /* ѱ Ѱ */
+    0x0473, 499, /* ѳ Ѳ */
+    0x0475, 499, /* ѵ Ѵ */
+    0x0477, 499, /* ѷ Ѷ */
+    0x0479, 499, /* ѹ Ѹ */
+    0x047b, 499, /* ѻ Ѻ */
+    0x047d, 499, /* ѽ Ѽ */
+    0x047f, 499, /* ѿ Ѿ */
+    0x0481, 499, /* ҁ Ҁ */
+    0x0491, 499, /* ґ Ґ */
+    0x0493, 499, /* ғ Ғ */
+    0x0495, 499, /* ҕ Ҕ */
+    0x0497, 499, /* җ Җ */
+    0x0499, 499, /* ҙ Ҙ */
+    0x049b, 499, /* қ Қ */
+    0x049d, 499, /* ҝ Ҝ */
+    0x049f, 499, /* ҟ Ҟ */
+    0x04a1, 499, /* ҡ Ҡ */
+    0x04a3, 499, /* ң Ң */
+    0x04a5, 499, /* ҥ Ҥ */
+    0x04a7, 499, /* ҧ Ҧ */
+    0x04a9, 499, /* ҩ Ҩ */
+    0x04ab, 499, /* ҫ Ҫ */
+    0x04ad, 499, /* ҭ Ҭ */
+    0x04af, 499, /* ү Ү */
+    0x04b1, 499, /* ұ Ұ */
+    0x04b3, 499, /* ҳ Ҳ */
+    0x04b5, 499, /* ҵ Ҵ */
+    0x04b7, 499, /* ҷ Ҷ */
+    0x04b9, 499, /* ҹ Ҹ */
+    0x04bb, 499, /* һ Һ */
+    0x04bd, 499, /* ҽ Ҽ */
+    0x04bf, 499, /* ҿ Ҿ */
+    0x04c2, 499, /* ӂ Ӂ */
+    0x04c4, 499, /* ӄ Ӄ */
+    0x04c8, 499, /* ӈ Ӈ */
+    0x04cc, 499, /* ӌ Ӌ */
+    0x04d1, 499, /* ӑ Ӑ */
+    0x04d3, 499, /* ӓ Ӓ */
+    0x04d5, 499, /* ӕ Ӕ */
+    0x04d7, 499, /* ӗ Ӗ */
+    0x04d9, 499, /* ә Ә */
+    0x04db, 499, /* ӛ Ӛ */
+    0x04dd, 499, /* ӝ Ӝ */
+    0x04df, 499, /* ӟ Ӟ */
+    0x04e1, 499, /* ӡ Ӡ */
+    0x04e3, 499, /* ӣ Ӣ */
+    0x04e5, 499, /* ӥ Ӥ */
+    0x04e7, 499, /* ӧ Ӧ */
+    0x04e9, 499, /* ө Ө */
+    0x04eb, 499, /* ӫ Ӫ */
+    0x04ef, 499, /* ӯ Ӯ */
+    0x04f1, 499, /* ӱ Ӱ */
+    0x04f3, 499, /* ӳ Ӳ */
+    0x04f5, 499, /* ӵ Ӵ */
+    0x04f9, 499, /* ӹ Ӹ */
+    0x1e01, 499, /* ḁ Ḁ */
+    0x1e03, 499, /* ḃ Ḃ */
+    0x1e05, 499, /* ḅ Ḅ */
+    0x1e07, 499, /* ḇ Ḇ */
+    0x1e09, 499, /* ḉ Ḉ */
+    0x1e0b, 499, /* ḋ Ḋ */
+    0x1e0d, 499, /* ḍ Ḍ */
+    0x1e0f, 499, /* ḏ Ḏ */
+    0x1e11, 499, /* ḑ Ḑ */
+    0x1e13, 499, /* ḓ Ḓ */
+    0x1e15, 499, /* ḕ Ḕ */
+    0x1e17, 499, /* ḗ Ḗ */
+    0x1e19, 499, /* ḙ Ḙ */
+    0x1e1b, 499, /* ḛ Ḛ */
+    0x1e1d, 499, /* ḝ Ḝ */
+    0x1e1f, 499, /* ḟ Ḟ */
+    0x1e21, 499, /* ḡ Ḡ */
+    0x1e23, 499, /* ḣ Ḣ */
+    0x1e25, 499, /* ḥ Ḥ */
+    0x1e27, 499, /* ḧ Ḧ */
+    0x1e29, 499, /* ḩ Ḩ */
+    0x1e2b, 499, /* ḫ Ḫ */
+    0x1e2d, 499, /* ḭ Ḭ */
+    0x1e2f, 499, /* ḯ Ḯ */
+    0x1e31, 499, /* ḱ Ḱ */
+    0x1e33, 499, /* ḳ Ḳ */
+    0x1e35, 499, /* ḵ Ḵ */
+    0x1e37, 499, /* ḷ Ḷ */
+    0x1e39, 499, /* ḹ Ḹ */
+    0x1e3b, 499, /* ḻ Ḻ */
+    0x1e3d, 499, /* ḽ Ḽ */
+    0x1e3f, 499, /* ḿ Ḿ */
+    0x1e41, 499, /* ṁ Ṁ */
+    0x1e43, 499, /* ṃ Ṃ */
+    0x1e45, 499, /* ṅ Ṅ */
+    0x1e47, 499, /* ṇ Ṇ */
+    0x1e49, 499, /* ṉ Ṉ */
+    0x1e4b, 499, /* ṋ Ṋ */
+    0x1e4d, 499, /* ṍ Ṍ */
+    0x1e4f, 499, /* ṏ Ṏ */
+    0x1e51, 499, /* ṑ Ṑ */
+    0x1e53, 499, /* ṓ Ṓ */
+    0x1e55, 499, /* ṕ Ṕ */
+    0x1e57, 499, /* ṗ Ṗ */
+    0x1e59, 499, /* ṙ Ṙ */
+    0x1e5b, 499, /* ṛ Ṛ */
+    0x1e5d, 499, /* ṝ Ṝ */
+    0x1e5f, 499, /* ṟ Ṟ */
+    0x1e61, 499, /* ṡ Ṡ */
+    0x1e63, 499, /* ṣ Ṣ */
+    0x1e65, 499, /* ṥ Ṥ */
+    0x1e67, 499, /* ṧ Ṧ */
+    0x1e69, 499, /* ṩ Ṩ */
+    0x1e6b, 499, /* ṫ Ṫ */
+    0x1e6d, 499, /* ṭ Ṭ */
+    0x1e6f, 499, /* ṯ Ṯ */
+    0x1e71, 499, /* ṱ Ṱ */
+    0x1e73, 499, /* ṳ Ṳ */
+    0x1e75, 499, /* ṵ Ṵ */
+    0x1e77, 499, /* ṷ Ṷ */
+    0x1e79, 499, /* ṹ Ṹ */
+    0x1e7b, 499, /* ṻ Ṻ */
+    0x1e7d, 499, /* ṽ Ṽ */
+    0x1e7f, 499, /* ṿ Ṿ */
+    0x1e81, 499, /* ẁ Ẁ */
+    0x1e83, 499, /* ẃ Ẃ */
+    0x1e85, 499, /* ẅ Ẅ */
+    0x1e87, 499, /* ẇ Ẇ */
+    0x1e89, 499, /* ẉ Ẉ */
+    0x1e8b, 499, /* ẋ Ẋ */
+    0x1e8d, 499, /* ẍ Ẍ */
+    0x1e8f, 499, /* ẏ Ẏ */
+    0x1e91, 499, /* ẑ Ẑ */
+    0x1e93, 499, /* ẓ Ẓ */
+    0x1e95, 499, /* ẕ Ẕ */
+    0x1ea1, 499, /* ạ Ạ */
+    0x1ea3, 499, /* ả Ả */
+    0x1ea5, 499, /* ấ Ấ */
+    0x1ea7, 499, /* ầ Ầ */
+    0x1ea9, 499, /* ẩ Ẩ */
+    0x1eab, 499, /* ẫ Ẫ */
+    0x1ead, 499, /* ậ Ậ */
+    0x1eaf, 499, /* ắ Ắ */
+    0x1eb1, 499, /* ằ Ằ */
+    0x1eb3, 499, /* ẳ Ẳ */
+    0x1eb5, 499, /* ẵ Ẵ */
+    0x1eb7, 499, /* ặ Ặ */
+    0x1eb9, 499, /* ẹ Ẹ */
+    0x1ebb, 499, /* ẻ Ẻ */
+    0x1ebd, 499, /* ẽ Ẽ */
+    0x1ebf, 499, /* ế Ế */
+    0x1ec1, 499, /* ề Ề */
+    0x1ec3, 499, /* ể Ể */
+    0x1ec5, 499, /* ễ Ễ */
+    0x1ec7, 499, /* ệ Ệ */
+    0x1ec9, 499, /* ỉ Ỉ */
+    0x1ecb, 499, /* ị Ị */
+    0x1ecd, 499, /* ọ Ọ */
+    0x1ecf, 499, /* ỏ Ỏ */
+    0x1ed1, 499, /* ố Ố */
+    0x1ed3, 499, /* ồ Ồ */
+    0x1ed5, 499, /* ổ Ổ */
+    0x1ed7, 499, /* ỗ Ỗ */
+    0x1ed9, 499, /* ộ Ộ */
+    0x1edb, 499, /* ớ Ớ */
+    0x1edd, 499, /* ờ Ờ */
+    0x1edf, 499, /* ở Ở */
+    0x1ee1, 499, /* ỡ Ỡ */
+    0x1ee3, 499, /* ợ Ợ */
+    0x1ee5, 499, /* ụ Ụ */
+    0x1ee7, 499, /* ủ Ủ */
+    0x1ee9, 499, /* ứ Ứ */
+    0x1eeb, 499, /* ừ Ừ */
+    0x1eed, 499, /* ử Ử */
+    0x1eef, 499, /* ữ Ữ */
+    0x1ef1, 499, /* ự Ự */
+    0x1ef3, 499, /* ỳ Ỳ */
+    0x1ef5, 499, /* ỵ Ỵ */
+    0x1ef7, 499, /* ỷ Ỷ */
+    0x1ef9, 499, /* ỹ Ỹ */
+    0x1f51, 508, /* ὑ Ὑ */
+    0x1f53, 508, /* ὓ Ὓ */
+    0x1f55, 508, /* ὕ Ὕ */
+    0x1f57, 508, /* ὗ Ὗ */
+    0x1fb3, 509, /* ᾳ ᾼ */
+    0x1fc3, 509, /* ῃ ῌ */
+    0x1fe5, 507, /* ῥ Ῥ */
+    0x1ff3, 509, /* ῳ ῼ */
 };
 
 /*
  * upper case ranges
  *	3rd col is conversion excess 500
  */
-static
-Rune	__tolower2[] =
-{
-	0x0041,	0x005a, 532,	/* A-Z a-z */
-	0x00c0,	0x00d6, 532,	/* À-Ö à-ö */
-	0x00d8,	0x00de, 532,	/* Ø-Þ ø-þ */
-	0x0189,	0x018a, 705,	/* Ɖ-Ɗ ɖ-ɗ */
-	0x018e,	0x018f, 702,	/* Ǝ-Ə ɘ-ə */
-	0x01b1,	0x01b2, 717,	/* Ʊ-Ʋ ʊ-ʋ */
-	0x0388,	0x038a, 537,	/* Έ-Ί έ-ί */
-	0x038e,	0x038f, 563,	/* Ύ-Ώ ύ-ώ */
-	0x0391,	0x03a1, 532,	/* Α-Ρ α-ρ */
-	0x03a3,	0x03ab, 532,	/* Σ-Ϋ σ-ϋ */
-	0x0401,	0x040c, 580,	/* Ё-Ќ ё-ќ */
-	0x040e,	0x040f, 580,	/* Ў-Џ ў-џ */
-	0x0410,	0x042f, 532,	/* А-Я а-я */
-	0x0531,	0x0556, 548,	/* Ա-Ֆ ա-ֆ */
-	0x10a0,	0x10c5, 548,	/* Ⴀ-Ⴥ ა-ჵ */
-	0x1f08,	0x1f0f, 492,	/* Ἀ-Ἇ ἀ-ἇ */
-	0x1f18,	0x1f1d, 492,	/* Ἐ-Ἕ ἐ-ἕ */
-	0x1f28,	0x1f2f, 492,	/* Ἠ-Ἧ ἠ-ἧ */
-	0x1f38,	0x1f3f, 492,	/* Ἰ-Ἷ ἰ-ἷ */
-	0x1f48,	0x1f4d, 492,	/* Ὀ-Ὅ ὀ-ὅ */
-	0x1f68,	0x1f6f, 492,	/* Ὠ-Ὧ ὠ-ὧ */
-	0x1f88,	0x1f8f, 492,	/* ᾈ-ᾏ ᾀ-ᾇ */
-	0x1f98,	0x1f9f, 492,	/* ᾘ-ᾟ ᾐ-ᾗ */
-	0x1fa8,	0x1faf, 492,	/* ᾨ-ᾯ ᾠ-ᾧ */
-	0x1fb8,	0x1fb9, 492,	/* Ᾰ-Ᾱ ᾰ-ᾱ */
-	0x1fba,	0x1fbb, 426,	/* Ὰ-Ά ὰ-ά */
-	0x1fc8,	0x1fcb, 414,	/* Ὲ-Ή ὲ-ή */
-	0x1fd8,	0x1fd9, 492,	/* Ῐ-Ῑ ῐ-ῑ */
-	0x1fda,	0x1fdb, 400,	/* Ὶ-Ί ὶ-ί */
-	0x1fe8,	0x1fe9, 492,	/* Ῠ-Ῡ ῠ-ῡ */
-	0x1fea,	0x1feb, 388,	/* Ὺ-Ύ ὺ-ύ */
-	0x1ff8,	0x1ff9, 372,	/* Ὸ-Ό ὸ-ό */
-	0x1ffa,	0x1ffb, 374,	/* Ὼ-Ώ ὼ-ώ */
-	0x2160,	0x216f, 516,	/* Ⅰ-Ⅿ ⅰ-ⅿ */
-	0x24b6,	0x24cf, 526,	/* Ⓐ-Ⓩ ⓐ-ⓩ */
-	0xff21,	0xff3a, 532,	/* Ａ-Ｚ ａ-ｚ */
+static Rune __tolower2[] = {
+    0x0041, 0x005a, 532, /* A-Z a-z */
+    0x00c0, 0x00d6, 532, /* À-Ö à-ö */
+    0x00d8, 0x00de, 532, /* Ø-Þ ø-þ */
+    0x0189, 0x018a, 705, /* Ɖ-Ɗ ɖ-ɗ */
+    0x018e, 0x018f, 702, /* Ǝ-Ə ɘ-ə */
+    0x01b1, 0x01b2, 717, /* Ʊ-Ʋ ʊ-ʋ */
+    0x0388, 0x038a, 537, /* Έ-Ί έ-ί */
+    0x038e, 0x038f, 563, /* Ύ-Ώ ύ-ώ */
+    0x0391, 0x03a1, 532, /* Α-Ρ α-ρ */
+    0x03a3, 0x03ab, 532, /* Σ-Ϋ σ-ϋ */
+    0x0401, 0x040c, 580, /* Ё-Ќ ё-ќ */
+    0x040e, 0x040f, 580, /* Ў-Џ ў-џ */
+    0x0410, 0x042f, 532, /* А-Я а-я */
+    0x0531, 0x0556, 548, /* Ա-Ֆ ա-ֆ */
+    0x10a0, 0x10c5, 548, /* Ⴀ-Ⴥ ა-ჵ */
+    0x1f08, 0x1f0f, 492, /* Ἀ-Ἇ ἀ-ἇ */
+    0x1f18, 0x1f1d, 492, /* Ἐ-Ἕ ἐ-ἕ */
+    0x1f28, 0x1f2f, 492, /* Ἠ-Ἧ ἠ-ἧ */
+    0x1f38, 0x1f3f, 492, /* Ἰ-Ἷ ἰ-ἷ */
+    0x1f48, 0x1f4d, 492, /* Ὀ-Ὅ ὀ-ὅ */
+    0x1f68, 0x1f6f, 492, /* Ὠ-Ὧ ὠ-ὧ */
+    0x1f88, 0x1f8f, 492, /* ᾈ-ᾏ ᾀ-ᾇ */
+    0x1f98, 0x1f9f, 492, /* ᾘ-ᾟ ᾐ-ᾗ */
+    0x1fa8, 0x1faf, 492, /* ᾨ-ᾯ ᾠ-ᾧ */
+    0x1fb8, 0x1fb9, 492, /* Ᾰ-Ᾱ ᾰ-ᾱ */
+    0x1fba, 0x1fbb, 426, /* Ὰ-Ά ὰ-ά */
+    0x1fc8, 0x1fcb, 414, /* Ὲ-Ή ὲ-ή */
+    0x1fd8, 0x1fd9, 492, /* Ῐ-Ῑ ῐ-ῑ */
+    0x1fda, 0x1fdb, 400, /* Ὶ-Ί ὶ-ί */
+    0x1fe8, 0x1fe9, 492, /* Ῠ-Ῡ ῠ-ῡ */
+    0x1fea, 0x1feb, 388, /* Ὺ-Ύ ὺ-ύ */
+    0x1ff8, 0x1ff9, 372, /* Ὸ-Ό ὸ-ό */
+    0x1ffa, 0x1ffb, 374, /* Ὼ-Ώ ὼ-ώ */
+    0x2160, 0x216f, 516, /* Ⅰ-Ⅿ ⅰ-ⅿ */
+    0x24b6, 0x24cf, 526, /* Ⓐ-Ⓩ ⓐ-ⓩ */
+    0xff21, 0xff3a, 532, /* Ａ-Ｚ ａ-ｚ */
 };
 
 /*
  * upper case singlets
  *	2nd col is conversion excess 500
  */
-static
-Rune	__tolower1[] =
-{
-	0x0100, 501,	/* Ā ā */
-	0x0102, 501,	/* Ă ă */
-	0x0104, 501,	/* Ą ą */
-	0x0106, 501,	/* Ć ć */
-	0x0108, 501,	/* Ĉ ĉ */
-	0x010a, 501,	/* Ċ ċ */
-	0x010c, 501,	/* Č č */
-	0x010e, 501,	/* Ď ď */
-	0x0110, 501,	/* Đ đ */
-	0x0112, 501,	/* Ē ē */
-	0x0114, 501,	/* Ĕ ĕ */
-	0x0116, 501,	/* Ė ė */
-	0x0118, 501,	/* Ę ę */
-	0x011a, 501,	/* Ě ě */
-	0x011c, 501,	/* Ĝ ĝ */
-	0x011e, 501,	/* Ğ ğ */
-	0x0120, 501,	/* Ġ ġ */
-	0x0122, 501,	/* Ģ ģ */
-	0x0124, 501,	/* Ĥ ĥ */
-	0x0126, 501,	/* Ħ ħ */
-	0x0128, 501,	/* Ĩ ĩ */
-	0x012a, 501,	/* Ī ī */
-	0x012c, 501,	/* Ĭ ĭ */
-	0x012e, 501,	/* Į į */
-	0x0130, 301,	/* İ i */
-	0x0132, 501,	/* Ĳ ĳ */
-	0x0134, 501,	/* Ĵ ĵ */
-	0x0136, 501,	/* Ķ ķ */
-	0x0139, 501,	/* Ĺ ĺ */
-	0x013b, 501,	/* Ļ ļ */
-	0x013d, 501,	/* Ľ ľ */
-	0x013f, 501,	/* Ŀ ŀ */
-	0x0141, 501,	/* Ł ł */
-	0x0143, 501,	/* Ń ń */
-	0x0145, 501,	/* Ņ ņ */
-	0x0147, 501,	/* Ň ň */
-	0x014a, 501,	/* Ŋ ŋ */
-	0x014c, 501,	/* Ō ō */
-	0x014e, 501,	/* Ŏ ŏ */
-	0x0150, 501,	/* Ő ő */
-	0x0152, 501,	/* Œ œ */
-	0x0154, 501,	/* Ŕ ŕ */
-	0x0156, 501,	/* Ŗ ŗ */
-	0x0158, 501,	/* Ř ř */
-	0x015a, 501,	/* Ś ś */
-	0x015c, 501,	/* Ŝ ŝ */
-	0x015e, 501,	/* Ş ş */
-	0x0160, 501,	/* Š š */
-	0x0162, 501,	/* Ţ ţ */
-	0x0164, 501,	/* Ť ť */
-	0x0166, 501,	/* Ŧ ŧ */
-	0x0168, 501,	/* Ũ ũ */
-	0x016a, 501,	/* Ū ū */
-	0x016c, 501,	/* Ŭ ŭ */
-	0x016e, 501,	/* Ů ů */
-	0x0170, 501,	/* Ű ű */
-	0x0172, 501,	/* Ų ų */
-	0x0174, 501,	/* Ŵ ŵ */
-	0x0176, 501,	/* Ŷ ŷ */
-	0x0178, 379,	/* Ÿ ÿ */
-	0x0179, 501,	/* Ź ź */
-	0x017b, 501,	/* Ż ż */
-	0x017d, 501,	/* Ž ž */
-	0x0181, 710,	/* Ɓ ɓ */
-	0x0182, 501,	/* Ƃ ƃ */
-	0x0184, 501,	/* Ƅ ƅ */
-	0x0186, 706,	/* Ɔ ɔ */
-	0x0187, 501,	/* Ƈ ƈ */
-	0x018b, 501,	/* Ƌ ƌ */
-	0x0190, 703,	/* Ɛ ɛ */
-	0x0191, 501,	/* Ƒ ƒ */
-	0x0193, 705,	/* Ɠ ɠ */
-	0x0194, 707,	/* Ɣ ɣ */
-	0x0196, 711,	/* Ɩ ɩ */
-	0x0197, 709,	/* Ɨ ɨ */
-	0x0198, 501,	/* Ƙ ƙ */
-	0x019c, 711,	/* Ɯ ɯ */
-	0x019d, 713,	/* Ɲ ɲ */
-	0x01a0, 501,	/* Ơ ơ */
-	0x01a2, 501,	/* Ƣ ƣ */
-	0x01a4, 501,	/* Ƥ ƥ */
-	0x01a7, 501,	/* Ƨ ƨ */
-	0x01a9, 718,	/* Ʃ ʃ */
-	0x01ac, 501,	/* Ƭ ƭ */
-	0x01ae, 718,	/* Ʈ ʈ */
-	0x01af, 501,	/* Ư ư */
-	0x01b3, 501,	/* Ƴ ƴ */
-	0x01b5, 501,	/* Ƶ ƶ */
-	0x01b7, 719,	/* Ʒ ʒ */
-	0x01b8, 501,	/* Ƹ ƹ */
-	0x01bc, 501,	/* Ƽ ƽ */
-	0x01c4, 502,	/* Ǆ ǆ */
-	0x01c5, 501,	/* ǅ ǆ */
-	0x01c7, 502,	/* Ǉ ǉ */
-	0x01c8, 501,	/* ǈ ǉ */
-	0x01ca, 502,	/* Ǌ ǌ */
-	0x01cb, 501,	/* ǋ ǌ */
-	0x01cd, 501,	/* Ǎ ǎ */
-	0x01cf, 501,	/* Ǐ ǐ */
-	0x01d1, 501,	/* Ǒ ǒ */
-	0x01d3, 501,	/* Ǔ ǔ */
-	0x01d5, 501,	/* Ǖ ǖ */
-	0x01d7, 501,	/* Ǘ ǘ */
-	0x01d9, 501,	/* Ǚ ǚ */
-	0x01db, 501,	/* Ǜ ǜ */
-	0x01de, 501,	/* Ǟ ǟ */
-	0x01e0, 501,	/* Ǡ ǡ */
-	0x01e2, 501,	/* Ǣ ǣ */
-	0x01e4, 501,	/* Ǥ ǥ */
-	0x01e6, 501,	/* Ǧ ǧ */
-	0x01e8, 501,	/* Ǩ ǩ */
-	0x01ea, 501,	/* Ǫ ǫ */
-	0x01ec, 501,	/* Ǭ ǭ */
-	0x01ee, 501,	/* Ǯ ǯ */
-	0x01f1, 502,	/* Ǳ ǳ */
-	0x01f2, 501,	/* ǲ ǳ */
-	0x01f4, 501,	/* Ǵ ǵ */
-	0x01fa, 501,	/* Ǻ ǻ */
-	0x01fc, 501,	/* Ǽ ǽ */
-	0x01fe, 501,	/* Ǿ ǿ */
-	0x0200, 501,	/* Ȁ ȁ */
-	0x0202, 501,	/* Ȃ ȃ */
-	0x0204, 501,	/* Ȅ ȅ */
-	0x0206, 501,	/* Ȇ ȇ */
-	0x0208, 501,	/* Ȉ ȉ */
-	0x020a, 501,	/* Ȋ ȋ */
-	0x020c, 501,	/* Ȍ ȍ */
-	0x020e, 501,	/* Ȏ ȏ */
-	0x0210, 501,	/* Ȑ ȑ */
-	0x0212, 501,	/* Ȓ ȓ */
-	0x0214, 501,	/* Ȕ ȕ */
-	0x0216, 501,	/* Ȗ ȗ */
-	0x0386, 538,	/* Ά ά */
-	0x038c, 564,	/* Ό ό */
-	0x03e2, 501,	/* Ϣ ϣ */
-	0x03e4, 501,	/* Ϥ ϥ */
-	0x03e6, 501,	/* Ϧ ϧ */
-	0x03e8, 501,	/* Ϩ ϩ */
-	0x03ea, 501,	/* Ϫ ϫ */
-	0x03ec, 501,	/* Ϭ ϭ */
-	0x03ee, 501,	/* Ϯ ϯ */
-	0x0460, 501,	/* Ѡ ѡ */
-	0x0462, 501,	/* Ѣ ѣ */
-	0x0464, 501,	/* Ѥ ѥ */
-	0x0466, 501,	/* Ѧ ѧ */
-	0x0468, 501,	/* Ѩ ѩ */
-	0x046a, 501,	/* Ѫ ѫ */
-	0x046c, 501,	/* Ѭ ѭ */
-	0x046e, 501,	/* Ѯ ѯ */
-	0x0470, 501,	/* Ѱ ѱ */
-	0x0472, 501,	/* Ѳ ѳ */
-	0x0474, 501,	/* Ѵ ѵ */
-	0x0476, 501,	/* Ѷ ѷ */
-	0x0478, 501,	/* Ѹ ѹ */
-	0x047a, 501,	/* Ѻ ѻ */
-	0x047c, 501,	/* Ѽ ѽ */
-	0x047e, 501,	/* Ѿ ѿ */
-	0x0480, 501,	/* Ҁ ҁ */
-	0x0490, 501,	/* Ґ ґ */
-	0x0492, 501,	/* Ғ ғ */
-	0x0494, 501,	/* Ҕ ҕ */
-	0x0496, 501,	/* Җ җ */
-	0x0498, 501,	/* Ҙ ҙ */
-	0x049a, 501,	/* Қ қ */
-	0x049c, 501,	/* Ҝ ҝ */
-	0x049e, 501,	/* Ҟ ҟ */
-	0x04a0, 501,	/* Ҡ ҡ */
-	0x04a2, 501,	/* Ң ң */
-	0x04a4, 501,	/* Ҥ ҥ */
-	0x04a6, 501,	/* Ҧ ҧ */
-	0x04a8, 501,	/* Ҩ ҩ */
-	0x04aa, 501,	/* Ҫ ҫ */
-	0x04ac, 501,	/* Ҭ ҭ */
-	0x04ae, 501,	/* Ү ү */
-	0x04b0, 501,	/* Ұ ұ */
-	0x04b2, 501,	/* Ҳ ҳ */
-	0x04b4, 501,	/* Ҵ ҵ */
-	0x04b6, 501,	/* Ҷ ҷ */
-	0x04b8, 501,	/* Ҹ ҹ */
-	0x04ba, 501,	/* Һ һ */
-	0x04bc, 501,	/* Ҽ ҽ */
-	0x04be, 501,	/* Ҿ ҿ */
-	0x04c1, 501,	/* Ӂ ӂ */
-	0x04c3, 501,	/* Ӄ ӄ */
-	0x04c7, 501,	/* Ӈ ӈ */
-	0x04cb, 501,	/* Ӌ ӌ */
-	0x04d0, 501,	/* Ӑ ӑ */
-	0x04d2, 501,	/* Ӓ ӓ */
-	0x04d4, 501,	/* Ӕ ӕ */
-	0x04d6, 501,	/* Ӗ ӗ */
-	0x04d8, 501,	/* Ә ә */
-	0x04da, 501,	/* Ӛ ӛ */
-	0x04dc, 501,	/* Ӝ ӝ */
-	0x04de, 501,	/* Ӟ ӟ */
-	0x04e0, 501,	/* Ӡ ӡ */
-	0x04e2, 501,	/* Ӣ ӣ */
-	0x04e4, 501,	/* Ӥ ӥ */
-	0x04e6, 501,	/* Ӧ ӧ */
-	0x04e8, 501,	/* Ө ө */
-	0x04ea, 501,	/* Ӫ ӫ */
-	0x04ee, 501,	/* Ӯ ӯ */
-	0x04f0, 501,	/* Ӱ ӱ */
-	0x04f2, 501,	/* Ӳ ӳ */
-	0x04f4, 501,	/* Ӵ ӵ */
-	0x04f8, 501,	/* Ӹ ӹ */
-	0x1e00, 501,	/* Ḁ ḁ */
-	0x1e02, 501,	/* Ḃ ḃ */
-	0x1e04, 501,	/* Ḅ ḅ */
-	0x1e06, 501,	/* Ḇ ḇ */
-	0x1e08, 501,	/* Ḉ ḉ */
-	0x1e0a, 501,	/* Ḋ ḋ */
-	0x1e0c, 501,	/* Ḍ ḍ */
-	0x1e0e, 501,	/* Ḏ ḏ */
-	0x1e10, 501,	/* Ḑ ḑ */
-	0x1e12, 501,	/* Ḓ ḓ */
-	0x1e14, 501,	/* Ḕ ḕ */
-	0x1e16, 501,	/* Ḗ ḗ */
-	0x1e18, 501,	/* Ḙ ḙ */
-	0x1e1a, 501,	/* Ḛ ḛ */
-	0x1e1c, 501,	/* Ḝ ḝ */
-	0x1e1e, 501,	/* Ḟ ḟ */
-	0x1e20, 501,	/* Ḡ ḡ */
-	0x1e22, 501,	/* Ḣ ḣ */
-	0x1e24, 501,	/* Ḥ ḥ */
-	0x1e26, 501,	/* Ḧ ḧ */
-	0x1e28, 501,	/* Ḩ ḩ */
-	0x1e2a, 501,	/* Ḫ ḫ */
-	0x1e2c, 501,	/* Ḭ ḭ */
-	0x1e2e, 501,	/* Ḯ ḯ */
-	0x1e30, 501,	/* Ḱ ḱ */
-	0x1e32, 501,	/* Ḳ ḳ */
-	0x1e34, 501,	/* Ḵ ḵ */
-	0x1e36, 501,	/* Ḷ ḷ */
-	0x1e38, 501,	/* Ḹ ḹ */
-	0x1e3a, 501,	/* Ḻ ḻ */
-	0x1e3c, 501,	/* Ḽ ḽ */
-	0x1e3e, 501,	/* Ḿ ḿ */
-	0x1e40, 501,	/* Ṁ ṁ */
-	0x1e42, 501,	/* Ṃ ṃ */
-	0x1e44, 501,	/* Ṅ ṅ */
-	0x1e46, 501,	/* Ṇ ṇ */
-	0x1e48, 501,	/* Ṉ ṉ */
-	0x1e4a, 501,	/* Ṋ ṋ */
-	0x1e4c, 501,	/* Ṍ ṍ */
-	0x1e4e, 501,	/* Ṏ ṏ */
-	0x1e50, 501,	/* Ṑ ṑ */
-	0x1e52, 501,	/* Ṓ ṓ */
-	0x1e54, 501,	/* Ṕ ṕ */
-	0x1e56, 501,	/* Ṗ ṗ */
-	0x1e58, 501,	/* Ṙ ṙ */
-	0x1e5a, 501,	/* Ṛ ṛ */
-	0x1e5c, 501,	/* Ṝ ṝ */
-	0x1e5e, 501,	/* Ṟ ṟ */
-	0x1e60, 501,	/* Ṡ ṡ */
-	0x1e62, 501,	/* Ṣ ṣ */
-	0x1e64, 501,	/* Ṥ ṥ */
-	0x1e66, 501,	/* Ṧ ṧ */
-	0x1e68, 501,	/* Ṩ ṩ */
-	0x1e6a, 501,	/* Ṫ ṫ */
-	0x1e6c, 501,	/* Ṭ ṭ */
-	0x1e6e, 501,	/* Ṯ ṯ */
-	0x1e70, 501,	/* Ṱ ṱ */
-	0x1e72, 501,	/* Ṳ ṳ */
-	0x1e74, 501,	/* Ṵ ṵ */
-	0x1e76, 501,	/* Ṷ ṷ */
-	0x1e78, 501,	/* Ṹ ṹ */
-	0x1e7a, 501,	/* Ṻ ṻ */
-	0x1e7c, 501,	/* Ṽ ṽ */
-	0x1e7e, 501,	/* Ṿ ṿ */
-	0x1e80, 501,	/* Ẁ ẁ */
-	0x1e82, 501,	/* Ẃ ẃ */
-	0x1e84, 501,	/* Ẅ ẅ */
-	0x1e86, 501,	/* Ẇ ẇ */
-	0x1e88, 501,	/* Ẉ ẉ */
-	0x1e8a, 501,	/* Ẋ ẋ */
-	0x1e8c, 501,	/* Ẍ ẍ */
-	0x1e8e, 501,	/* Ẏ ẏ */
-	0x1e90, 501,	/* Ẑ ẑ */
-	0x1e92, 501,	/* Ẓ ẓ */
-	0x1e94, 501,	/* Ẕ ẕ */
-	0x1ea0, 501,	/* Ạ ạ */
-	0x1ea2, 501,	/* Ả ả */
-	0x1ea4, 501,	/* Ấ ấ */
-	0x1ea6, 501,	/* Ầ ầ */
-	0x1ea8, 501,	/* Ẩ ẩ */
-	0x1eaa, 501,	/* Ẫ ẫ */
-	0x1eac, 501,	/* Ậ ậ */
-	0x1eae, 501,	/* Ắ ắ */
-	0x1eb0, 501,	/* Ằ ằ */
-	0x1eb2, 501,	/* Ẳ ẳ */
-	0x1eb4, 501,	/* Ẵ ẵ */
-	0x1eb6, 501,	/* Ặ ặ */
-	0x1eb8, 501,	/* Ẹ ẹ */
-	0x1eba, 501,	/* Ẻ ẻ */
-	0x1ebc, 501,	/* Ẽ ẽ */
-	0x1ebe, 501,	/* Ế ế */
-	0x1ec0, 501,	/* Ề ề */
-	0x1ec2, 501,	/* Ể ể */
-	0x1ec4, 501,	/* Ễ ễ */
-	0x1ec6, 501,	/* Ệ ệ */
-	0x1ec8, 501,	/* Ỉ ỉ */
-	0x1eca, 501,	/* Ị ị */
-	0x1ecc, 501,	/* Ọ ọ */
-	0x1ece, 501,	/* Ỏ ỏ */
-	0x1ed0, 501,	/* Ố ố */
-	0x1ed2, 501,	/* Ồ ồ */
-	0x1ed4, 501,	/* Ổ ổ */
-	0x1ed6, 501,	/* Ỗ ỗ */
-	0x1ed8, 501,	/* Ộ ộ */
-	0x1eda, 501,	/* Ớ ớ */
-	0x1edc, 501,	/* Ờ ờ */
-	0x1ede, 501,	/* Ở ở */
-	0x1ee0, 501,	/* Ỡ ỡ */
-	0x1ee2, 501,	/* Ợ ợ */
-	0x1ee4, 501,	/* Ụ ụ */
-	0x1ee6, 501,	/* Ủ ủ */
-	0x1ee8, 501,	/* Ứ ứ */
-	0x1eea, 501,	/* Ừ ừ */
-	0x1eec, 501,	/* Ử ử */
-	0x1eee, 501,	/* Ữ ữ */
-	0x1ef0, 501,	/* Ự ự */
-	0x1ef2, 501,	/* Ỳ ỳ */
-	0x1ef4, 501,	/* Ỵ ỵ */
-	0x1ef6, 501,	/* Ỷ ỷ */
-	0x1ef8, 501,	/* Ỹ ỹ */
-	0x1f59, 492,	/* Ὑ ὑ */
-	0x1f5b, 492,	/* Ὓ ὓ */
-	0x1f5d, 492,	/* Ὕ ὕ */
-	0x1f5f, 492,	/* Ὗ ὗ */
-	0x1fbc, 491,	/* ᾼ ᾳ */
-	0x1fcc, 491,	/* ῌ ῃ */
-	0x1fec, 493,	/* Ῥ ῥ */
-	0x1ffc, 491,	/* ῼ ῳ */
+static Rune __tolower1[] = {
+    0x0100, 501, /* Ā ā */
+    0x0102, 501, /* Ă ă */
+    0x0104, 501, /* Ą ą */
+    0x0106, 501, /* Ć ć */
+    0x0108, 501, /* Ĉ ĉ */
+    0x010a, 501, /* Ċ ċ */
+    0x010c, 501, /* Č č */
+    0x010e, 501, /* Ď ď */
+    0x0110, 501, /* Đ đ */
+    0x0112, 501, /* Ē ē */
+    0x0114, 501, /* Ĕ ĕ */
+    0x0116, 501, /* Ė ė */
+    0x0118, 501, /* Ę ę */
+    0x011a, 501, /* Ě ě */
+    0x011c, 501, /* Ĝ ĝ */
+    0x011e, 501, /* Ğ ğ */
+    0x0120, 501, /* Ġ ġ */
+    0x0122, 501, /* Ģ ģ */
+    0x0124, 501, /* Ĥ ĥ */
+    0x0126, 501, /* Ħ ħ */
+    0x0128, 501, /* Ĩ ĩ */
+    0x012a, 501, /* Ī ī */
+    0x012c, 501, /* Ĭ ĭ */
+    0x012e, 501, /* Į į */
+    0x0130, 301, /* İ i */
+    0x0132, 501, /* Ĳ ĳ */
+    0x0134, 501, /* Ĵ ĵ */
+    0x0136, 501, /* Ķ ķ */
+    0x0139, 501, /* Ĺ ĺ */
+    0x013b, 501, /* Ļ ļ */
+    0x013d, 501, /* Ľ ľ */
+    0x013f, 501, /* Ŀ ŀ */
+    0x0141, 501, /* Ł ł */
+    0x0143, 501, /* Ń ń */
+    0x0145, 501, /* Ņ ņ */
+    0x0147, 501, /* Ň ň */
+    0x014a, 501, /* Ŋ ŋ */
+    0x014c, 501, /* Ō ō */
+    0x014e, 501, /* Ŏ ŏ */
+    0x0150, 501, /* Ő ő */
+    0x0152, 501, /* Œ œ */
+    0x0154, 501, /* Ŕ ŕ */
+    0x0156, 501, /* Ŗ ŗ */
+    0x0158, 501, /* Ř ř */
+    0x015a, 501, /* Ś ś */
+    0x015c, 501, /* Ŝ ŝ */
+    0x015e, 501, /* Ş ş */
+    0x0160, 501, /* Š š */
+    0x0162, 501, /* Ţ ţ */
+    0x0164, 501, /* Ť ť */
+    0x0166, 501, /* Ŧ ŧ */
+    0x0168, 501, /* Ũ ũ */
+    0x016a, 501, /* Ū ū */
+    0x016c, 501, /* Ŭ ŭ */
+    0x016e, 501, /* Ů ů */
+    0x0170, 501, /* Ű ű */
+    0x0172, 501, /* Ų ų */
+    0x0174, 501, /* Ŵ ŵ */
+    0x0176, 501, /* Ŷ ŷ */
+    0x0178, 379, /* Ÿ ÿ */
+    0x0179, 501, /* Ź ź */
+    0x017b, 501, /* Ż ż */
+    0x017d, 501, /* Ž ž */
+    0x0181, 710, /* Ɓ ɓ */
+    0x0182, 501, /* Ƃ ƃ */
+    0x0184, 501, /* Ƅ ƅ */
+    0x0186, 706, /* Ɔ ɔ */
+    0x0187, 501, /* Ƈ ƈ */
+    0x018b, 501, /* Ƌ ƌ */
+    0x0190, 703, /* Ɛ ɛ */
+    0x0191, 501, /* Ƒ ƒ */
+    0x0193, 705, /* Ɠ ɠ */
+    0x0194, 707, /* Ɣ ɣ */
+    0x0196, 711, /* Ɩ ɩ */
+    0x0197, 709, /* Ɨ ɨ */
+    0x0198, 501, /* Ƙ ƙ */
+    0x019c, 711, /* Ɯ ɯ */
+    0x019d, 713, /* Ɲ ɲ */
+    0x01a0, 501, /* Ơ ơ */
+    0x01a2, 501, /* Ƣ ƣ */
+    0x01a4, 501, /* Ƥ ƥ */
+    0x01a7, 501, /* Ƨ ƨ */
+    0x01a9, 718, /* Ʃ ʃ */
+    0x01ac, 501, /* Ƭ ƭ */
+    0x01ae, 718, /* Ʈ ʈ */
+    0x01af, 501, /* Ư ư */
+    0x01b3, 501, /* Ƴ ƴ */
+    0x01b5, 501, /* Ƶ ƶ */
+    0x01b7, 719, /* Ʒ ʒ */
+    0x01b8, 501, /* Ƹ ƹ */
+    0x01bc, 501, /* Ƽ ƽ */
+    0x01c4, 502, /* Ǆ ǆ */
+    0x01c5, 501, /* ǅ ǆ */
+    0x01c7, 502, /* Ǉ ǉ */
+    0x01c8, 501, /* ǈ ǉ */
+    0x01ca, 502, /* Ǌ ǌ */
+    0x01cb, 501, /* ǋ ǌ */
+    0x01cd, 501, /* Ǎ ǎ */
+    0x01cf, 501, /* Ǐ ǐ */
+    0x01d1, 501, /* Ǒ ǒ */
+    0x01d3, 501, /* Ǔ ǔ */
+    0x01d5, 501, /* Ǖ ǖ */
+    0x01d7, 501, /* Ǘ ǘ */
+    0x01d9, 501, /* Ǚ ǚ */
+    0x01db, 501, /* Ǜ ǜ */
+    0x01de, 501, /* Ǟ ǟ */
+    0x01e0, 501, /* Ǡ ǡ */
+    0x01e2, 501, /* Ǣ ǣ */
+    0x01e4, 501, /* Ǥ ǥ */
+    0x01e6, 501, /* Ǧ ǧ */
+    0x01e8, 501, /* Ǩ ǩ */
+    0x01ea, 501, /* Ǫ ǫ */
+    0x01ec, 501, /* Ǭ ǭ */
+    0x01ee, 501, /* Ǯ ǯ */
+    0x01f1, 502, /* Ǳ ǳ */
+    0x01f2, 501, /* ǲ ǳ */
+    0x01f4, 501, /* Ǵ ǵ */
+    0x01fa, 501, /* Ǻ ǻ */
+    0x01fc, 501, /* Ǽ ǽ */
+    0x01fe, 501, /* Ǿ ǿ */
+    0x0200, 501, /* Ȁ ȁ */
+    0x0202, 501, /* Ȃ ȃ */
+    0x0204, 501, /* Ȅ ȅ */
+    0x0206, 501, /* Ȇ ȇ */
+    0x0208, 501, /* Ȉ ȉ */
+    0x020a, 501, /* Ȋ ȋ */
+    0x020c, 501, /* Ȍ ȍ */
+    0x020e, 501, /* Ȏ ȏ */
+    0x0210, 501, /* Ȑ ȑ */
+    0x0212, 501, /* Ȓ ȓ */
+    0x0214, 501, /* Ȕ ȕ */
+    0x0216, 501, /* Ȗ ȗ */
+    0x0386, 538, /* Ά ά */
+    0x038c, 564, /* Ό ό */
+    0x03e2, 501, /* Ϣ ϣ */
+    0x03e4, 501, /* Ϥ ϥ */
+    0x03e6, 501, /* Ϧ ϧ */
+    0x03e8, 501, /* Ϩ ϩ */
+    0x03ea, 501, /* Ϫ ϫ */
+    0x03ec, 501, /* Ϭ ϭ */
+    0x03ee, 501, /* Ϯ ϯ */
+    0x0460, 501, /* Ѡ ѡ */
+    0x0462, 501, /* Ѣ ѣ */
+    0x0464, 501, /* Ѥ ѥ */
+    0x0466, 501, /* Ѧ ѧ */
+    0x0468, 501, /* Ѩ ѩ */
+    0x046a, 501, /* Ѫ ѫ */
+    0x046c, 501, /* Ѭ ѭ */
+    0x046e, 501, /* Ѯ ѯ */
+    0x0470, 501, /* Ѱ ѱ */
+    0x0472, 501, /* Ѳ ѳ */
+    0x0474, 501, /* Ѵ ѵ */
+    0x0476, 501, /* Ѷ ѷ */
+    0x0478, 501, /* Ѹ ѹ */
+    0x047a, 501, /* Ѻ ѻ */
+    0x047c, 501, /* Ѽ ѽ */
+    0x047e, 501, /* Ѿ ѿ */
+    0x0480, 501, /* Ҁ ҁ */
+    0x0490, 501, /* Ґ ґ */
+    0x0492, 501, /* Ғ ғ */
+    0x0494, 501, /* Ҕ ҕ */
+    0x0496, 501, /* Җ җ */
+    0x0498, 501, /* Ҙ ҙ */
+    0x049a, 501, /* Қ қ */
+    0x049c, 501, /* Ҝ ҝ */
+    0x049e, 501, /* Ҟ ҟ */
+    0x04a0, 501, /* Ҡ ҡ */
+    0x04a2, 501, /* Ң ң */
+    0x04a4, 501, /* Ҥ ҥ */
+    0x04a6, 501, /* Ҧ ҧ */
+    0x04a8, 501, /* Ҩ ҩ */
+    0x04aa, 501, /* Ҫ ҫ */
+    0x04ac, 501, /* Ҭ ҭ */
+    0x04ae, 501, /* Ү ү */
+    0x04b0, 501, /* Ұ ұ */
+    0x04b2, 501, /* Ҳ ҳ */
+    0x04b4, 501, /* Ҵ ҵ */
+    0x04b6, 501, /* Ҷ ҷ */
+    0x04b8, 501, /* Ҹ ҹ */
+    0x04ba, 501, /* Һ һ */
+    0x04bc, 501, /* Ҽ ҽ */
+    0x04be, 501, /* Ҿ ҿ */
+    0x04c1, 501, /* Ӂ ӂ */
+    0x04c3, 501, /* Ӄ ӄ */
+    0x04c7, 501, /* Ӈ ӈ */
+    0x04cb, 501, /* Ӌ ӌ */
+    0x04d0, 501, /* Ӑ ӑ */
+    0x04d2, 501, /* Ӓ ӓ */
+    0x04d4, 501, /* Ӕ ӕ */
+    0x04d6, 501, /* Ӗ ӗ */
+    0x04d8, 501, /* Ә ә */
+    0x04da, 501, /* Ӛ ӛ */
+    0x04dc, 501, /* Ӝ ӝ */
+    0x04de, 501, /* Ӟ ӟ */
+    0x04e0, 501, /* Ӡ ӡ */
+    0x04e2, 501, /* Ӣ ӣ */
+    0x04e4, 501, /* Ӥ ӥ */
+    0x04e6, 501, /* Ӧ ӧ */
+    0x04e8, 501, /* Ө ө */
+    0x04ea, 501, /* Ӫ ӫ */
+    0x04ee, 501, /* Ӯ ӯ */
+    0x04f0, 501, /* Ӱ ӱ */
+    0x04f2, 501, /* Ӳ ӳ */
+    0x04f4, 501, /* Ӵ ӵ */
+    0x04f8, 501, /* Ӹ ӹ */
+    0x1e00, 501, /* Ḁ ḁ */
+    0x1e02, 501, /* Ḃ ḃ */
+    0x1e04, 501, /* Ḅ ḅ */
+    0x1e06, 501, /* Ḇ ḇ */
+    0x1e08, 501, /* Ḉ ḉ */
+    0x1e0a, 501, /* Ḋ ḋ */
+    0x1e0c, 501, /* Ḍ ḍ */
+    0x1e0e, 501, /* Ḏ ḏ */
+    0x1e10, 501, /* Ḑ ḑ */
+    0x1e12, 501, /* Ḓ ḓ */
+    0x1e14, 501, /* Ḕ ḕ */
+    0x1e16, 501, /* Ḗ ḗ */
+    0x1e18, 501, /* Ḙ ḙ */
+    0x1e1a, 501, /* Ḛ ḛ */
+    0x1e1c, 501, /* Ḝ ḝ */
+    0x1e1e, 501, /* Ḟ ḟ */
+    0x1e20, 501, /* Ḡ ḡ */
+    0x1e22, 501, /* Ḣ ḣ */
+    0x1e24, 501, /* Ḥ ḥ */
+    0x1e26, 501, /* Ḧ ḧ */
+    0x1e28, 501, /* Ḩ ḩ */
+    0x1e2a, 501, /* Ḫ ḫ */
+    0x1e2c, 501, /* Ḭ ḭ */
+    0x1e2e, 501, /* Ḯ ḯ */
+    0x1e30, 501, /* Ḱ ḱ */
+    0x1e32, 501, /* Ḳ ḳ */
+    0x1e34, 501, /* Ḵ ḵ */
+    0x1e36, 501, /* Ḷ ḷ */
+    0x1e38, 501, /* Ḹ ḹ */
+    0x1e3a, 501, /* Ḻ ḻ */
+    0x1e3c, 501, /* Ḽ ḽ */
+    0x1e3e, 501, /* Ḿ ḿ */
+    0x1e40, 501, /* Ṁ ṁ */
+    0x1e42, 501, /* Ṃ ṃ */
+    0x1e44, 501, /* Ṅ ṅ */
+    0x1e46, 501, /* Ṇ ṇ */
+    0x1e48, 501, /* Ṉ ṉ */
+    0x1e4a, 501, /* Ṋ ṋ */
+    0x1e4c, 501, /* Ṍ ṍ */
+    0x1e4e, 501, /* Ṏ ṏ */
+    0x1e50, 501, /* Ṑ ṑ */
+    0x1e52, 501, /* Ṓ ṓ */
+    0x1e54, 501, /* Ṕ ṕ */
+    0x1e56, 501, /* Ṗ ṗ */
+    0x1e58, 501, /* Ṙ ṙ */
+    0x1e5a, 501, /* Ṛ ṛ */
+    0x1e5c, 501, /* Ṝ ṝ */
+    0x1e5e, 501, /* Ṟ ṟ */
+    0x1e60, 501, /* Ṡ ṡ */
+    0x1e62, 501, /* Ṣ ṣ */
+    0x1e64, 501, /* Ṥ ṥ */
+    0x1e66, 501, /* Ṧ ṧ */
+    0x1e68, 501, /* Ṩ ṩ */
+    0x1e6a, 501, /* Ṫ ṫ */
+    0x1e6c, 501, /* Ṭ ṭ */
+    0x1e6e, 501, /* Ṯ ṯ */
+    0x1e70, 501, /* Ṱ ṱ */
+    0x1e72, 501, /* Ṳ ṳ */
+    0x1e74, 501, /* Ṵ ṵ */
+    0x1e76, 501, /* Ṷ ṷ */
+    0x1e78, 501, /* Ṹ ṹ */
+    0x1e7a, 501, /* Ṻ ṻ */
+    0x1e7c, 501, /* Ṽ ṽ */
+    0x1e7e, 501, /* Ṿ ṿ */
+    0x1e80, 501, /* Ẁ ẁ */
+    0x1e82, 501, /* Ẃ ẃ */
+    0x1e84, 501, /* Ẅ ẅ */
+    0x1e86, 501, /* Ẇ ẇ */
+    0x1e88, 501, /* Ẉ ẉ */
+    0x1e8a, 501, /* Ẋ ẋ */
+    0x1e8c, 501, /* Ẍ ẍ */
+    0x1e8e, 501, /* Ẏ ẏ */
+    0x1e90, 501, /* Ẑ ẑ */
+    0x1e92, 501, /* Ẓ ẓ */
+    0x1e94, 501, /* Ẕ ẕ */
+    0x1ea0, 501, /* Ạ ạ */
+    0x1ea2, 501, /* Ả ả */
+    0x1ea4, 501, /* Ấ ấ */
+    0x1ea6, 501, /* Ầ ầ */
+    0x1ea8, 501, /* Ẩ ẩ */
+    0x1eaa, 501, /* Ẫ ẫ */
+    0x1eac, 501, /* Ậ ậ */
+    0x1eae, 501, /* Ắ ắ */
+    0x1eb0, 501, /* Ằ ằ */
+    0x1eb2, 501, /* Ẳ ẳ */
+    0x1eb4, 501, /* Ẵ ẵ */
+    0x1eb6, 501, /* Ặ ặ */
+    0x1eb8, 501, /* Ẹ ẹ */
+    0x1eba, 501, /* Ẻ ẻ */
+    0x1ebc, 501, /* Ẽ ẽ */
+    0x1ebe, 501, /* Ế ế */
+    0x1ec0, 501, /* Ề ề */
+    0x1ec2, 501, /* Ể ể */
+    0x1ec4, 501, /* Ễ ễ */
+    0x1ec6, 501, /* Ệ ệ */
+    0x1ec8, 501, /* Ỉ ỉ */
+    0x1eca, 501, /* Ị ị */
+    0x1ecc, 501, /* Ọ ọ */
+    0x1ece, 501, /* Ỏ ỏ */
+    0x1ed0, 501, /* Ố ố */
+    0x1ed2, 501, /* Ồ ồ */
+    0x1ed4, 501, /* Ổ ổ */
+    0x1ed6, 501, /* Ỗ ỗ */
+    0x1ed8, 501, /* Ộ ộ */
+    0x1eda, 501, /* Ớ ớ */
+    0x1edc, 501, /* Ờ ờ */
+    0x1ede, 501, /* Ở ở */
+    0x1ee0, 501, /* Ỡ ỡ */
+    0x1ee2, 501, /* Ợ ợ */
+    0x1ee4, 501, /* Ụ ụ */
+    0x1ee6, 501, /* Ủ ủ */
+    0x1ee8, 501, /* Ứ ứ */
+    0x1eea, 501, /* Ừ ừ */
+    0x1eec, 501, /* Ử ử */
+    0x1eee, 501, /* Ữ ữ */
+    0x1ef0, 501, /* Ự ự */
+    0x1ef2, 501, /* Ỳ ỳ */
+    0x1ef4, 501, /* Ỵ ỵ */
+    0x1ef6, 501, /* Ỷ ỷ */
+    0x1ef8, 501, /* Ỹ ỹ */
+    0x1f59, 492, /* Ὑ ὑ */
+    0x1f5b, 492, /* Ὓ ὓ */
+    0x1f5d, 492, /* Ὕ ὕ */
+    0x1f5f, 492, /* Ὗ ὗ */
+    0x1fbc, 491, /* ᾼ ᾳ */
+    0x1fcc, 491, /* ῌ ῃ */
+    0x1fec, 493, /* Ῥ ῥ */
+    0x1ffc, 491, /* ῼ ῳ */
 };
 
-ON_FLASH static Rune*
-rune_bsearch(Rune c, Rune *t, int n, int ne)
-{
-	Rune *p;
-	int m;
+static Rune *rune_bsearch(Rune c, Rune *t, int n, int ne) {
+  Rune *p;
+  int m;
 
-	while(n > 1) {
-		m = n/2;
-		p = t + m*ne;
-		if(c >= p[0]) {
-			t = p;
-			n = n-m;
-		} else
-			n = m;
-	}
-	if(n && c >= t[0])
-		return t;
-	return 0;
+  while (n > 1) {
+    m = n / 2;
+    p = t + m * ne;
+    if (c >= p[0]) {
+      t = p;
+      n = n - m;
+    } else
+      n = m;
+  }
+  if (n && c >= t[0]) return t;
+  return 0;
 }
 
-ON_FLASH Rune
-tolowerrune(Rune c)
-{
-	Rune *p;
+Rune tolowerrune(Rune c) {
+  Rune *p;
 
-	p = rune_bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
-	if(p && c >= p[0] && c <= p[1])
-		return c + p[2] - 500;
-	p = rune_bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
-	if(p && c == p[0])
-		return c + p[1] - 500;
-	return c;
+  p = rune_bsearch(c, __tolower2, nelem(__tolower2) / 3, 3);
+  if (p && c >= p[0] && c <= p[1]) return c + p[2] - 500;
+  p = rune_bsearch(c, __tolower1, nelem(__tolower1) / 2, 2);
+  if (p && c == p[0]) return c + p[1] - 500;
+  return c;
 }
 
-ON_FLASH Rune
-toupperrune(Rune c)
-{
-	Rune *p;
+Rune toupperrune(Rune c) {
+  Rune *p;
 
-	p = rune_bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
-	if(p && c >= p[0] && c <= p[1])
-		return c + p[2] - 500;
-	p = rune_bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
-	if(p && c == p[0])
-		return c + p[1] - 500;
-	return c;
+  p = rune_bsearch(c, __toupper2, nelem(__toupper2) / 3, 3);
+  if (p && c >= p[0] && c <= p[1]) return c + p[2] - 500;
+  p = rune_bsearch(c, __toupper1, nelem(__toupper1) / 2, 2);
+  if (p && c == p[0]) return c + p[1] - 500;
+  return c;
 }
 
-ON_FLASH int
-islowerrune(Rune c)
-{
-	Rune *p;
+int islowerrune(Rune c) {
+  Rune *p;
 
-	p = rune_bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
-	if(p && c >= p[0] && c <= p[1])
-		return 1;
-	p = rune_bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
-	if(p && c == p[0])
-		return 1;
-	return 0;
+  p = rune_bsearch(c, __toupper2, nelem(__toupper2) / 3, 3);
+  if (p && c >= p[0] && c <= p[1]) return 1;
+  p = rune_bsearch(c, __toupper1, nelem(__toupper1) / 2, 2);
+  if (p && c == p[0]) return 1;
+  return 0;
 }
 
-ON_FLASH int
-isupperrune(Rune c)
-{
-	Rune *p;
+int isupperrune(Rune c) {
+  Rune *p;
 
-	p = rune_bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
-	if(p && c >= p[0] && c <= p[1])
-		return 1;
-	p = rune_bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
-	if(p && c == p[0])
-		return 1;
-	return 0;
+  p = rune_bsearch(c, __tolower2, nelem(__tolower2) / 3, 3);
+  if (p && c >= p[0] && c <= p[1]) return 1;
+  p = rune_bsearch(c, __tolower1, nelem(__tolower1) / 2, 2);
+  if (p && c == p[0]) return 1;
+  return 0;
 }
 
-ON_FLASH int isdigitrune(Rune c) {
+int isdigitrune(Rune c) {
   return c >= '0' && c <= '9';
 }
 
-ON_FLASH int isnewline(Rune c) {
+int isnewline(Rune c) {
   return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;
 }
 
-ON_FLASH int iswordchar(Rune c) {
-  return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+int iswordchar(Rune c) {
+  return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') ||
+         (c >= 'A' && c <= 'Z');
 }
 
-ON_FLASH int
-isalpharune(Rune c)
-{
-	Rune *p;
+int isalpharune(Rune c) {
+  Rune *p;
 
-	if(isupperrune(c) || islowerrune(c))
-		return 1;
-	p = rune_bsearch(c, __alpha2, nelem(__alpha2)/2, 2);
-	if(p && c >= p[0] && c <= p[1])
-		return 1;
-	p = rune_bsearch(c, __alpha1, nelem(__alpha1), 1);
-	if(p && c == p[0])
-		return 1;
-	return 0;
+  if (isupperrune(c) || islowerrune(c)) return 1;
+  p = rune_bsearch(c, __alpha2, nelem(__alpha2) / 2, 2);
+  if (p && c >= p[0] && c <= p[1]) return 1;
+  p = rune_bsearch(c, __alpha1, nelem(__alpha1), 1);
+  if (p && c == p[0]) return 1;
+  return 0;
 }
 
-ON_FLASH int
-isspacerune(Rune c)
-{
-	Rune *p;
+int isspacerune(Rune c) {
+  Rune *p;
 
-	p = rune_bsearch(c, __space2, nelem(__space2)/2, 2);
-	if(p && c >= p[0] && c <= p[1])
-		return 1;
-	return 0;
+  p = rune_bsearch(c, __space2, nelem(__space2) / 2, 2);
+  if (p && c >= p[0] && c <= p[1]) return 1;
+  return 0;
 }
 
 #else /* V7_ENABLE__UTF */
 
-ON_FLASH int chartorune(Rune *rune, const char *str) {
-	*rune = *(uchar*)str;
-	return 1;
+int chartorune(Rune *rune, const char *str) {
+  *rune = *(uchar *) str;
+  return 1;
 }
 
-ON_FLASH int fullrune(char *str UNUSED, int n) {
-	return (n <= 0) ? 0 : 1;
+int fullrune(char *str UNUSED, int n) {
+  return (n <= 0) ? 0 : 1;
 }
 
-ON_FLASH int isdigitrune(Rune c) {
+int isdigitrune(Rune c) {
   return isdigit(c);
 }
 
-ON_FLASH int isnewline(Rune c) {
+int isnewline(Rune c) {
   return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;
 }
 
-ON_FLASH int iswordchar(Rune c) {
-  return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+int iswordchar(Rune c) {
+  return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') ||
+         (c >= 'A' && c <= 'Z');
 }
 
-int isalpharune(Rune c) { return isalpha(c); }
-int islowerrune(Rune c) { return islower(c); }
-int isspacerune(Rune c) { return isspace(c); }
-int isupperrune(Rune c) { return isupper(c); }
+int isalpharune(Rune c) {
+  return isalpha(c);
+}
+int islowerrune(Rune c) {
+  return islower(c);
+}
+int isspacerune(Rune c) {
+  return isspace(c);
+}
+int isupperrune(Rune c) {
+  return isupper(c);
+}
 
-ON_FLASH int runetochar(char *str, Rune *rune) {
+int runetochar(char *str, Rune *rune) {
   str[0] = (char) *rune;
   return 1;
 }
 
-Rune tolowerrune(Rune c) { return tolower(c); }
-Rune toupperrune(Rune c) { return toupper(c); }
-ON_FLASH int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
+Rune tolowerrune(Rune c) {
+  return tolower(c);
+}
+Rune toupperrune(Rune c) {
+  return toupper(c);
+}
+int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
   (void) s;
   return m;
 }
 
-ON_FLASH char *utfnshift(char *s, long m) {
+char *utfnshift(char *s, long m) {
   return s + m;
 }
 
@@ -3870,7 +3806,7 @@ ON_FLASH char *utfnshift(char *s, long m) {
  */
 
 
-ON_FLASH void base64_encode(const unsigned char *src, int src_len, char *dst) {
+void base64_encode(const unsigned char *src, int src_len, char *dst) {
   static const char *b64 =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   int i, j, a, b, c;
@@ -3896,7 +3832,7 @@ ON_FLASH void base64_encode(const unsigned char *src, int src_len, char *dst) {
 }
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
-ON_FLASH static unsigned char from_b64(unsigned char ch) {
+static unsigned char from_b64(unsigned char ch) {
   /* Inverse lookup map */
   static const unsigned char tab[128] = {
       255, 255, 255, 255,
@@ -3935,7 +3871,7 @@ ON_FLASH static unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-ON_FLASH int base64_decode(const unsigned char *s, int len, char *dst) {
+int base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
   int orig_len = len;
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
@@ -3973,14 +3909,13 @@ ON_FLASH int base64_decode(const unsigned char *s, int len, char *dst) {
 #ifndef DISABLE_MD5
 
 
-ON_FLASH static void byteReverse(unsigned char *buf, unsigned longs) {
-
-  /* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
+static void byteReverse(unsigned char *buf, unsigned longs) {
+/* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
 #if BYTE_ORDER == BIG_ENDIAN
   do {
-  uint32_t t = (uint32_t) ((unsigned) buf[3] << 8 | buf[2]) << 16 |
-      ((unsigned) buf[1] << 8 | buf[0]);
-    * (uint32_t *) buf = t;
+    uint32_t t = (uint32_t)((unsigned) buf[3] << 8 | buf[2]) << 16 |
+                 ((unsigned) buf[1] << 8 | buf[0]);
+    *(uint32_t *) buf = t;
     buf += 4;
   } while (--longs);
 #else
@@ -3995,13 +3930,13 @@ ON_FLASH static void byteReverse(unsigned char *buf, unsigned longs) {
 #define F4(x, y, z) (y ^ (x | ~z))
 
 #define MD5STEP(f, w, x, y, z, data, s) \
-  ( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
+  (w += f(x, y, z) + data, w = w << s | w >> (32 - s), w += x)
 
 /*
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
  * initialization constants.
  */
-ON_FLASH void MD5_Init(MD5_CTX *ctx) {
+void MD5_Init(MD5_CTX *ctx) {
   ctx->buf[0] = 0x67452301;
   ctx->buf[1] = 0xefcdab89;
   ctx->buf[2] = 0x98badcfe;
@@ -4011,7 +3946,7 @@ ON_FLASH void MD5_Init(MD5_CTX *ctx) {
   ctx->bits[1] = 0;
 }
 
-ON_FLASH static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
+static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
   register uint32_t a, b, c, d;
 
   a = buf[0];
@@ -4093,12 +4028,11 @@ ON_FLASH static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
   buf[3] += d;
 }
 
-ON_FLASH void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
+void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
   uint32_t t;
 
   t = ctx->bits[0];
-  if ((ctx->bits[0] = t + ((uint32_t) len << 3)) < t)
-    ctx->bits[1]++;
+  if ((ctx->bits[0] = t + ((uint32_t) len << 3)) < t) ctx->bits[1]++;
   ctx->bits[1] += (uint32_t) len >> 29;
 
   t = (t >> 3) & 0x3f;
@@ -4129,7 +4063,7 @@ ON_FLASH void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
   memcpy(ctx->in, buf, len);
 }
 
-ON_FLASH void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
+void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   unsigned count;
   unsigned char *p;
   uint32_t *a;
@@ -4149,7 +4083,7 @@ ON_FLASH void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   }
   byteReverse(ctx->in, 14);
 
-  a = (uint32_t *)ctx->in;
+  a = (uint32_t *) ctx->in;
   a[14] = ctx->bits[0];
   a[15] = ctx->bits[1];
 
@@ -4169,15 +4103,18 @@ ON_FLASH void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
 #if defined(__sun)
 #endif
 
-union char64long16 { unsigned char c[64]; uint32_t l[16]; };
+union char64long16 {
+  unsigned char c[64];
+  uint32_t l[16];
+};
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
-ON_FLASH static uint32_t blk0(union char64long16 *block, int i) {
-  /* Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN */
+static uint32_t blk0(union char64long16 *block, int i) {
+/* Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN */
 #if BYTE_ORDER == LITTLE_ENDIAN
-    block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) |
-      (rol(block->l[i], 8) & 0x00FF00FF);
+  block->l[i] =
+      (rol(block->l[i], 24) & 0xFF00FF00) | (rol(block->l[i], 8) & 0x00FF00FF);
 #endif
   return block->l[i];
 }
@@ -4190,15 +4127,27 @@ ON_FLASH static uint32_t blk0(union char64long16 *block, int i) {
 #undef R3
 #undef R4
 
-#define blk(i) (block->l[i&15] = rol(block->l[(i+13)&15]^block->l[(i+8)&15] \
-    ^block->l[(i+2)&15]^block->l[i&15],1))
-#define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(block, i)+0x5A827999+rol(v,5);w=rol(w,30);
-#define R1(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
-#define R2(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
-#define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
-#define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
+#define blk(i)                                                               \
+  (block->l[i & 15] = rol(block->l[(i + 13) & 15] ^ block->l[(i + 8) & 15] ^ \
+                              block->l[(i + 2) & 15] ^ block->l[i & 15],     \
+                          1))
+#define R0(v, w, x, y, z, i)                                          \
+  z += ((w & (x ^ y)) ^ y) + blk0(block, i) + 0x5A827999 + rol(v, 5); \
+  w = rol(w, 30);
+#define R1(v, w, x, y, z, i)                                  \
+  z += ((w & (x ^ y)) ^ y) + blk(i) + 0x5A827999 + rol(v, 5); \
+  w = rol(w, 30);
+#define R2(v, w, x, y, z, i)                          \
+  z += (w ^ x ^ y) + blk(i) + 0x6ED9EBA1 + rol(v, 5); \
+  w = rol(w, 30);
+#define R3(v, w, x, y, z, i)                                        \
+  z += (((w | x) & y) | (w & x)) + blk(i) + 0x8F1BBCDC + rol(v, 5); \
+  w = rol(w, 30);
+#define R4(v, w, x, y, z, i)                          \
+  z += (w ^ x ^ y) + blk(i) + 0xCA62C1D6 + rol(v, 5); \
+  w = rol(w, 30);
 
-ON_FLASH void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
+void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
   uint32_t a, b, c, d, e;
   union char64long16 block[1];
 
@@ -4208,26 +4157,86 @@ ON_FLASH void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
   c = state[2];
   d = state[3];
   e = state[4];
-  R0(a,b,c,d,e, 0); R0(e,a,b,c,d, 1); R0(d,e,a,b,c, 2); R0(c,d,e,a,b, 3);
-  R0(b,c,d,e,a, 4); R0(a,b,c,d,e, 5); R0(e,a,b,c,d, 6); R0(d,e,a,b,c, 7);
-  R0(c,d,e,a,b, 8); R0(b,c,d,e,a, 9); R0(a,b,c,d,e,10); R0(e,a,b,c,d,11);
-  R0(d,e,a,b,c,12); R0(c,d,e,a,b,13); R0(b,c,d,e,a,14); R0(a,b,c,d,e,15);
-  R1(e,a,b,c,d,16); R1(d,e,a,b,c,17); R1(c,d,e,a,b,18); R1(b,c,d,e,a,19);
-  R2(a,b,c,d,e,20); R2(e,a,b,c,d,21); R2(d,e,a,b,c,22); R2(c,d,e,a,b,23);
-  R2(b,c,d,e,a,24); R2(a,b,c,d,e,25); R2(e,a,b,c,d,26); R2(d,e,a,b,c,27);
-  R2(c,d,e,a,b,28); R2(b,c,d,e,a,29); R2(a,b,c,d,e,30); R2(e,a,b,c,d,31);
-  R2(d,e,a,b,c,32); R2(c,d,e,a,b,33); R2(b,c,d,e,a,34); R2(a,b,c,d,e,35);
-  R2(e,a,b,c,d,36); R2(d,e,a,b,c,37); R2(c,d,e,a,b,38); R2(b,c,d,e,a,39);
-  R3(a,b,c,d,e,40); R3(e,a,b,c,d,41); R3(d,e,a,b,c,42); R3(c,d,e,a,b,43);
-  R3(b,c,d,e,a,44); R3(a,b,c,d,e,45); R3(e,a,b,c,d,46); R3(d,e,a,b,c,47);
-  R3(c,d,e,a,b,48); R3(b,c,d,e,a,49); R3(a,b,c,d,e,50); R3(e,a,b,c,d,51);
-  R3(d,e,a,b,c,52); R3(c,d,e,a,b,53); R3(b,c,d,e,a,54); R3(a,b,c,d,e,55);
-  R3(e,a,b,c,d,56); R3(d,e,a,b,c,57); R3(c,d,e,a,b,58); R3(b,c,d,e,a,59);
-  R4(a,b,c,d,e,60); R4(e,a,b,c,d,61); R4(d,e,a,b,c,62); R4(c,d,e,a,b,63);
-  R4(b,c,d,e,a,64); R4(a,b,c,d,e,65); R4(e,a,b,c,d,66); R4(d,e,a,b,c,67);
-  R4(c,d,e,a,b,68); R4(b,c,d,e,a,69); R4(a,b,c,d,e,70); R4(e,a,b,c,d,71);
-  R4(d,e,a,b,c,72); R4(c,d,e,a,b,73); R4(b,c,d,e,a,74); R4(a,b,c,d,e,75);
-  R4(e,a,b,c,d,76); R4(d,e,a,b,c,77); R4(c,d,e,a,b,78); R4(b,c,d,e,a,79);
+  R0(a, b, c, d, e, 0);
+  R0(e, a, b, c, d, 1);
+  R0(d, e, a, b, c, 2);
+  R0(c, d, e, a, b, 3);
+  R0(b, c, d, e, a, 4);
+  R0(a, b, c, d, e, 5);
+  R0(e, a, b, c, d, 6);
+  R0(d, e, a, b, c, 7);
+  R0(c, d, e, a, b, 8);
+  R0(b, c, d, e, a, 9);
+  R0(a, b, c, d, e, 10);
+  R0(e, a, b, c, d, 11);
+  R0(d, e, a, b, c, 12);
+  R0(c, d, e, a, b, 13);
+  R0(b, c, d, e, a, 14);
+  R0(a, b, c, d, e, 15);
+  R1(e, a, b, c, d, 16);
+  R1(d, e, a, b, c, 17);
+  R1(c, d, e, a, b, 18);
+  R1(b, c, d, e, a, 19);
+  R2(a, b, c, d, e, 20);
+  R2(e, a, b, c, d, 21);
+  R2(d, e, a, b, c, 22);
+  R2(c, d, e, a, b, 23);
+  R2(b, c, d, e, a, 24);
+  R2(a, b, c, d, e, 25);
+  R2(e, a, b, c, d, 26);
+  R2(d, e, a, b, c, 27);
+  R2(c, d, e, a, b, 28);
+  R2(b, c, d, e, a, 29);
+  R2(a, b, c, d, e, 30);
+  R2(e, a, b, c, d, 31);
+  R2(d, e, a, b, c, 32);
+  R2(c, d, e, a, b, 33);
+  R2(b, c, d, e, a, 34);
+  R2(a, b, c, d, e, 35);
+  R2(e, a, b, c, d, 36);
+  R2(d, e, a, b, c, 37);
+  R2(c, d, e, a, b, 38);
+  R2(b, c, d, e, a, 39);
+  R3(a, b, c, d, e, 40);
+  R3(e, a, b, c, d, 41);
+  R3(d, e, a, b, c, 42);
+  R3(c, d, e, a, b, 43);
+  R3(b, c, d, e, a, 44);
+  R3(a, b, c, d, e, 45);
+  R3(e, a, b, c, d, 46);
+  R3(d, e, a, b, c, 47);
+  R3(c, d, e, a, b, 48);
+  R3(b, c, d, e, a, 49);
+  R3(a, b, c, d, e, 50);
+  R3(e, a, b, c, d, 51);
+  R3(d, e, a, b, c, 52);
+  R3(c, d, e, a, b, 53);
+  R3(b, c, d, e, a, 54);
+  R3(a, b, c, d, e, 55);
+  R3(e, a, b, c, d, 56);
+  R3(d, e, a, b, c, 57);
+  R3(c, d, e, a, b, 58);
+  R3(b, c, d, e, a, 59);
+  R4(a, b, c, d, e, 60);
+  R4(e, a, b, c, d, 61);
+  R4(d, e, a, b, c, 62);
+  R4(c, d, e, a, b, 63);
+  R4(b, c, d, e, a, 64);
+  R4(a, b, c, d, e, 65);
+  R4(e, a, b, c, d, 66);
+  R4(d, e, a, b, c, 67);
+  R4(c, d, e, a, b, 68);
+  R4(b, c, d, e, a, 69);
+  R4(a, b, c, d, e, 70);
+  R4(e, a, b, c, d, 71);
+  R4(d, e, a, b, c, 72);
+  R4(c, d, e, a, b, 73);
+  R4(b, c, d, e, a, 74);
+  R4(a, b, c, d, e, 75);
+  R4(e, a, b, c, d, 76);
+  R4(d, e, a, b, c, 77);
+  R4(c, d, e, a, b, 78);
+  R4(b, c, d, e, a, 79);
   state[0] += a;
   state[1] += b;
   state[2] += c;
@@ -4237,10 +4246,14 @@ ON_FLASH void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
    * used to ensure that compiler doesn't optimize those out. */
   memset(block, 0, sizeof(block));
   a = b = c = d = e = 0;
-  (void) a; (void) b; (void) c; (void) d; (void) e;
+  (void) a;
+  (void) b;
+  (void) c;
+  (void) d;
+  (void) e;
 }
 
-ON_FLASH void SHA1Init(SHA1_CTX *context) {
+void SHA1Init(SHA1_CTX *context) {
   context->state[0] = 0x67452301;
   context->state[1] = 0xEFCDAB89;
   context->state[2] = 0x98BADCFE;
@@ -4249,33 +4262,33 @@ ON_FLASH void SHA1Init(SHA1_CTX *context) {
   context->count[0] = context->count[1] = 0;
 }
 
-ON_FLASH void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
+void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
   uint32_t i, j;
 
   j = context->count[0];
-  if ((context->count[0] += len << 3) < j)
-    context->count[1]++;
-  context->count[1] += (len>>29);
+  if ((context->count[0] += len << 3) < j) context->count[1]++;
+  context->count[1] += (len >> 29);
   j = (j >> 3) & 63;
   if ((j + len) > 63) {
-    memcpy(&context->buffer[j], data, (i = 64-j));
+    memcpy(&context->buffer[j], data, (i = 64 - j));
     SHA1Transform(context->state, context->buffer);
-    for ( ; i + 63 < len; i += 64) {
+    for (; i + 63 < len; i += 64) {
       SHA1Transform(context->state, &data[i]);
     }
     j = 0;
-  }
-  else i = 0;
+  } else
+    i = 0;
   memcpy(&context->buffer[j], &data[i], len - i);
 }
 
-ON_FLASH void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
+void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
   unsigned i;
   unsigned char finalcount[8], c;
 
   for (i = 0; i < 8; i++) {
-    finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
-                                     >> ((3-(i & 3)) * 8) ) & 255);
+    finalcount[i] = (unsigned char) ((context->count[(i >= 4 ? 0 : 1)] >>
+                                      ((3 - (i & 3)) * 8)) &
+                                     255);
   }
   c = 0200;
   SHA1Update(context, &c, 1);
@@ -4285,16 +4298,16 @@ ON_FLASH void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
   }
   SHA1Update(context, finalcount, 8);
   for (i = 0; i < 20; i++) {
-    digest[i] = (unsigned char)
-      ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
+    digest[i] =
+        (unsigned char) ((context->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
   }
   memset(context, '\0', sizeof(*context));
   memset(&finalcount, '\0', sizeof(finalcount));
 }
 
-ON_FLASH void hmac_sha1(const unsigned char *key, size_t keylen,
-                        const unsigned char *data, size_t datalen,
-                        unsigned char out[20]) {
+void hmac_sha1(const unsigned char *key, size_t keylen,
+               const unsigned char *data, size_t datalen,
+               unsigned char out[20]) {
   SHA1_CTX ctx;
   unsigned char buf1[64], buf2[64], tmp_key[20], i;
 
@@ -4333,22 +4346,21 @@ ON_FLASH void hmac_sha1(const unsigned char *key, size_t keylen,
  */
 
 
-#define C_SNPRINTF_APPEND_CHAR(ch)      \
-  do {                                  \
-    if (i < (int)buf_size) buf[i] = ch; \
-    i++;                                \
+#define C_SNPRINTF_APPEND_CHAR(ch)       \
+  do {                                   \
+    if (i < (int) buf_size) buf[i] = ch; \
+    i++;                                 \
   } while (0)
 
-#define C_SNPRINTF_FLAG_ZERO  1
+#define C_SNPRINTF_FLAG_ZERO 1
 
 #ifdef C_DISABLE_BUILTIN_SNPRINTF
-ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
-                         va_list ap) {
+int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
   return vsnprintf(buf, buf_size, fmt, ap);
 }
 #else
-ON_FLASH static int c_itoa(char *buf, size_t buf_size, int64_t num, int base,
-                           int flags, int field_width) {
+static int c_itoa(char *buf, size_t buf_size, int64_t num, int base, int flags,
+                  int field_width) {
   char tmp[40];
   int i = 0, k = 0, neg = 0;
 
@@ -4388,8 +4400,7 @@ ON_FLASH static int c_itoa(char *buf, size_t buf_size, int64_t num, int base,
   return i;
 }
 
-ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
-                         va_list ap) {
+int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
   int ch, i = 0, len_mod, flags, precision, field_width;
 
   while ((ch = *fmt++) != '\0') {
@@ -4433,8 +4444,14 @@ ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
 
       /* Length modifier */
       switch (*fmt) {
-        case 'h': case 'l': case 'L': case 'I':
-        case 'q': case 'j': case 'z': case 't':
+        case 'h':
+        case 'l':
+        case 'L':
+        case 'I':
+        case 'q':
+        case 'j':
+        case 'z':
+        case 't':
           len_mod = *fmt++;
           if (*fmt == 'h') {
             len_mod = 'H';
@@ -4456,7 +4473,7 @@ ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
           C_SNPRINTF_APPEND_CHAR(s[j]);
         }
       } else if (ch == 'c') {
-        ch = va_arg(ap, int);   /* Always fetch parameter */
+        ch = va_arg(ap, int); /* Always fetch parameter */
         C_SNPRINTF_APPEND_CHAR(ch);
       } else if (ch == 'd' && len_mod == 0) {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, int), 10, flags,
@@ -4496,7 +4513,7 @@ ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
 }
 #endif
 
-ON_FLASH int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
+int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
   int result;
   va_list ap;
   va_start(ap, fmt);
@@ -4663,15 +4680,15 @@ static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
 
 #ifndef NO_LIBC
-ON_FLASH static c_file_t v7_val_to_file(v7_val_t val) {
+static c_file_t v7_val_to_file(v7_val_t val) {
   return (c_file_t) v7_to_foreign(val);
 }
 
-ON_FLASH static v7_val_t v7_file_to_val(c_file_t file) {
+static v7_val_t v7_file_to_val(c_file_t file) {
   return v7_create_foreign(file);
 }
 
-ON_FLASH static int v7_is_file_type(v7_val_t val) {
+static int v7_is_file_type(v7_val_t val) {
   return v7_is_foreign(val);
 }
 #else
@@ -4680,8 +4697,7 @@ v7_val_t v7_file_to_val(c_file_t file);
 int v7_is_file_type(v7_val_t val);
 #endif
 
-ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj,
-                                   v7_val_t args) {
+static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t res = v7_create_undefined();
 
@@ -4695,8 +4711,7 @@ ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj,
   return res;
 }
 
-ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
-                                int all) {
+static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   (void) a;
   if (v7_is_file_type(arg0)) {
@@ -4728,18 +4743,15 @@ ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
   return v7_create_string(v7, "", 0, 1);
 }
 
-ON_FLASH static v7_val_t File_readAll(struct v7 *v7, v7_val_t this_obj,
-                                      v7_val_t args) {
+static v7_val_t File_readAll(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return f_read(v7, this_obj, args, 1);
 }
 
-ON_FLASH static v7_val_t File_read(struct v7 *v7, v7_val_t this_obj,
-                                   v7_val_t args) {
+static v7_val_t File_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return f_read(v7, this_obj, args, 0);
 }
 
-ON_FLASH static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj,
-                                    v7_val_t args) {
+static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   v7_val_t arg1 = v7_array_get(v7, args, 0);
   size_t n, sent = 0, len = 0;
@@ -4755,8 +4767,7 @@ ON_FLASH static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(sent);
 }
 
-ON_FLASH static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj,
-                                    v7_val_t args) {
+static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   int res = -1;
   (void) args;
@@ -4766,8 +4777,7 @@ ON_FLASH static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(res);
 }
 
-ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj,
-                                   v7_val_t args) {
+static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   c_file_t fp = INVALID_FILE;
@@ -4793,8 +4803,7 @@ ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj,
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj,
-                                     v7_val_t args) {
+static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   int res = -1;
@@ -4810,8 +4819,7 @@ ON_FLASH static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
-ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj,
-                                     v7_val_t args) {
+static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   int res = -1;
   (void) this_obj;
@@ -4823,8 +4831,7 @@ ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
-ON_FLASH static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj,
-                                   v7_val_t args) {
+static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t result = v7_create_undefined();
 
@@ -4854,7 +4861,7 @@ ON_FLASH static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj,
   return result;
 }
 
-ON_FLASH void init_file(struct v7 *v7) {
+void init_file(struct v7 *v7) {
   v7_val_t file_obj = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "File", 4, 0, file_obj);
   s_file_proto = v7_create_object(v7);
@@ -4872,7 +4879,7 @@ ON_FLASH void init_file(struct v7 *v7) {
   v7_set_method(v7, s_file_proto, "write", File_write);
 }
 #else
-ON_FLASH void init_file(struct v7 *v7) {
+void init_file(struct v7 *v7) {
   (void) v7;
 }
 #endif
@@ -4895,14 +4902,14 @@ ON_FLASH void init_file(struct v7 *v7) {
 static v7_val_t s_sock_proto;
 static const char s_sock_prop[] = "__sock";
 
-ON_FLASH static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
+static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
   size_t n;
   const char *s = v7_to_string(v7, &ip_address, &n);
   struct hostent *he = gethostbyname(s);
   return he == NULL ? 0 : *(uint32_t *) he->h_addr_list[0];
 }
 
-ON_FLASH static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
+static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
   v7_val_t obj = v7_create_object(v7);
   v7_set_proto(obj, s_sock_proto);
   v7_set(v7, obj, s_sock_prop, sizeof(s_sock_prop) - 1, V7_PROPERTY_DONT_ENUM,
@@ -4911,8 +4918,7 @@ ON_FLASH static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
 }
 
 /* Socket.connect(host, port [, is_udp]) -> socket_object */
-ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t,
-                                        v7_val_t args) {
+static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   v7_val_t arg2 = v7_array_get(v7, args, 2);
@@ -4937,8 +4943,7 @@ ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t,
 }
 
 /* Socket.listen(port [, ip_address [,is_udp]]) -> sock */
-ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj,
-                                       v7_val_t args) {
+static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   v7_val_t arg2 = v7_array_get(v7, args, 2);
@@ -4985,8 +4990,7 @@ ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj,
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj,
-                                       v7_val_t args) {
+static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
   if (v7_is_number(prop)) {
@@ -5002,16 +5006,14 @@ ON_FLASH static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj,
 }
 
 /* sock.close() -> errno */
-ON_FLASH static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj,
-                                      v7_val_t args) {
+static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
   return v7_create_number(closesocket((sock_t) v7_to_number(prop)));
 }
 
 /* sock.recv() -> string */
-ON_FLASH static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
-                                int all) {
+static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) a;
   if (v7_is_number(prop)) {
@@ -5044,17 +5046,15 @@ ON_FLASH static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Socket_recvAll(struct v7 *v7, v7_val_t t,
-                                        v7_val_t args) {
+static v7_val_t Socket_recvAll(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return s_recv(v7, t, args, 1);
 }
 
-ON_FLASH static v7_val_t Socket_recv(struct v7 *v7, v7_val_t t, v7_val_t args) {
+static v7_val_t Socket_recv(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return s_recv(v7, t, args, 0);
 }
 
-ON_FLASH static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj,
-                                     v7_val_t args) {
+static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   size_t len, sent = 0;
@@ -5072,7 +5072,7 @@ ON_FLASH static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(sent);
 }
 
-ON_FLASH void init_socket(struct v7 *v7) {
+void init_socket(struct v7 *v7) {
   v7_val_t socket_obj = v7_create_object(v7);
 
   v7_set(v7, v7_get_global_object(v7), "Socket", 6, 0, socket_obj);
@@ -5099,7 +5099,7 @@ ON_FLASH void init_socket(struct v7 *v7) {
 #endif
 }
 #else
-ON_FLASH void init_socket(struct v7 *v7) {
+void init_socket(struct v7 *v7) {
   (void) v7;
 }
 #endif
@@ -5116,9 +5116,8 @@ ON_FLASH void init_socket(struct v7 *v7) {
 
 typedef void (*b64_func_t)(const unsigned char *, int, char *);
 
-ON_FLASH static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj,
-                                       v7_val_t args, b64_func_t func,
-                                       double mult) {
+static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
+                              b64_func_t func, double mult) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t res = v7_create_undefined();
 
@@ -5137,31 +5136,31 @@ ON_FLASH static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj,
   return res;
 }
 
-ON_FLASH static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
-                                              v7_val_t args) {
+static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
+                                     v7_val_t args) {
   return b64_transform(v7, this_obj, args, (b64_func_t) base64_decode, 0.75);
 }
 
-ON_FLASH static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
-                                              v7_val_t args) {
+static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
+                                     v7_val_t args) {
   return b64_transform(v7, this_obj, args, base64_encode, 1.5);
 }
 
-ON_FLASH static void v7_md5(const char *data, size_t len, char buf[16]) {
+static void v7_md5(const char *data, size_t len, char buf[16]) {
   MD5_CTX ctx;
   MD5_Init(&ctx);
   MD5_Update(&ctx, (unsigned char *) data, len);
   MD5_Final((unsigned char *) buf, &ctx);
 }
 
-ON_FLASH static void v7_sha1(const char *data, size_t len, char buf[20]) {
+static void v7_sha1(const char *data, size_t len, char buf[20]) {
   SHA1_CTX ctx;
   SHA1Init(&ctx);
   SHA1Update(&ctx, (unsigned char *) data, len);
   SHA1Final((unsigned char *) buf, &ctx);
 }
 
-ON_FLASH static void bin2str(char *to, const unsigned char *p, size_t len) {
+static void bin2str(char *to, const unsigned char *p, size_t len) {
   static const char *hex = "0123456789abcdef";
 
   for (; len--; p++) {
@@ -5170,8 +5169,7 @@ ON_FLASH static void bin2str(char *to, const unsigned char *p, size_t len) {
   }
 }
 
-ON_FLASH static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj,
-                                    v7_val_t args) {
+static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -5185,8 +5183,8 @@ ON_FLASH static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj,
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
-                                        v7_val_t args) {
+static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
+                               v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -5201,8 +5199,7 @@ ON_FLASH static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj,
-                                     v7_val_t args) {
+static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -5216,8 +5213,8 @@ ON_FLASH static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj,
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
-                                         v7_val_t args) {
+static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
+                                v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -5233,7 +5230,7 @@ ON_FLASH static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
 }
 #endif
 
-ON_FLASH void init_crypto(struct v7 *v7) {
+void init_crypto(struct v7 *v7) {
 #ifdef V7_ENABLE_CRYPTO
   v7_val_t obj = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Crypto", 6, 0, obj);
@@ -5260,7 +5257,7 @@ ON_FLASH void init_crypto(struct v7 *v7) {
  * assuming that sizeof(size_t) == 4.
  * Small string length (less then 128 bytes) is encoded in 1 byte.
  */
-ON_FLASH V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen) {
+V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen) {
   size_t i = 0, string_len = 0;
 
   do {
@@ -5280,7 +5277,7 @@ ON_FLASH V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen) {
 }
 
 /* Return number of bytes to store length */
-ON_FLASH V7_PRIVATE int calc_llen(size_t len) {
+V7_PRIVATE int calc_llen(size_t len) {
   int n = 0;
 
   do {
@@ -5292,7 +5289,7 @@ ON_FLASH V7_PRIVATE int calc_llen(size_t len) {
   return n;
 }
 
-ON_FLASH V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
+V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
   int i, llen = calc_llen(len);
 
   for (i = 0; i < llen; i++) {
@@ -5325,7 +5322,7 @@ static const struct v7_vec s_keywords[] = {
     V7_VEC("typeof"),     V7_VEC("var"),      V7_VEC("void"),
     V7_VEC("while"),      V7_VEC("with")};
 
-ON_FLASH V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
+V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
   return tok >= TOK_BREAK && tok <= TOK_WITH;
 }
 
@@ -5333,7 +5330,7 @@ ON_FLASH V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
  * Move ptr to the next token, skipping comments and whitespaces.
  * Return number of new line characters detected.
  */
-ON_FLASH V7_PRIVATE int skip_to_next_tok(const char **ptr) {
+V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
@@ -5361,7 +5358,7 @@ ON_FLASH V7_PRIVATE int skip_to_next_tok(const char **ptr) {
 }
 
 /* Advance `s` pointer to the end of identifier  */
-ON_FLASH static void ident(const char **s) {
+static void ident(const char **s) {
   const unsigned char *p = (unsigned char *) *s;
   int n;
   Rune r;
@@ -5385,8 +5382,7 @@ ON_FLASH static void ident(const char **s) {
   *s = (char *) p;
 }
 
-ON_FLASH static enum v7_tok kw(const char *s, int len, int ntoks,
-                               enum v7_tok tok) {
+static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
   int i;
 
   for (i = 0; i < ntoks; i++) {
@@ -5398,8 +5394,8 @@ ON_FLASH static enum v7_tok kw(const char *s, int len, int ntoks,
   return i == ntoks ? TOK_IDENTIFIER : (enum v7_tok)(tok + i);
 }
 
-ON_FLASH static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
-                                   enum v7_tok tok2) {
+static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
+                          enum v7_tok tok2) {
   (*s)++;
   if (s[0][0] == ch1) {
     (*s)++;
@@ -5409,9 +5405,8 @@ ON_FLASH static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
   }
 }
 
-ON_FLASH static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1,
-                                   int ch2, enum v7_tok tok2,
-                                   enum v7_tok tok3) {
+static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1, int ch2,
+                          enum v7_tok tok2, enum v7_tok tok3) {
   if (s[0][1] == ch1 && s[0][2] == ch2) {
     (*s) += 3;
     return tok2;
@@ -5420,9 +5415,8 @@ ON_FLASH static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1,
   return punct1(s, ch1, tok1, tok3);
 }
 
-ON_FLASH static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1,
-                                   int ch2, enum v7_tok tok2,
-                                   enum v7_tok tok3) {
+static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
+                          enum v7_tok tok2, enum v7_tok tok3) {
   (*s)++;
   if (s[0][0] == ch1) {
     (*s)++;
@@ -5435,12 +5429,11 @@ ON_FLASH static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1,
   }
 }
 
-ON_FLASH static void parse_number(const char *s, const char **end,
-                                  double *num) {
+static void parse_number(const char *s, const char **end, double *num) {
   *num = strtod(s, (char **) end);
 }
 
-ON_FLASH static enum v7_tok parse_str_literal(const char **p) {
+static enum v7_tok parse_str_literal(const char **p) {
   const char *s = *p;
   int quote = *s++;
 
@@ -5489,8 +5482,8 @@ ON_FLASH static enum v7_tok parse_str_literal(const char **p) {
  * NOTE(lsm): `prev_tok` is a previously parsed token. It is needed for
  * correctly parsing regex literals.
  */
-ON_FLASH V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
-                                        enum v7_tok prev_tok) {
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
+                               enum v7_tok prev_tok) {
   const char *p = *s;
 
   switch (*p) {
@@ -5756,7 +5749,7 @@ ON_FLASH V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
 }
 
 #ifdef TEST_RUN
-ON_FLASH int main(void) {
+int main(void) {
   const char *src =
       "for (var fo++ = -1; /= <= 1.17; x<<) { == <<=, 'x')} "
       "Infinity %=x<<=2";
@@ -6170,7 +6163,7 @@ V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
  * Returns the offset of the node payload (one byte after the tag).
  * This offset can be passed to `ast_set_skip`.
  */
-ON_FLASH V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
+V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   ast_off_t start = a->mbuf.len;
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
@@ -6181,7 +6174,7 @@ ON_FLASH V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   return start + 1;
 }
 
-ON_FLASH V7_PRIVATE ast_off_t
+V7_PRIVATE ast_off_t
 ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
@@ -6216,7 +6209,7 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  *
  * Every tree reader can assume this and safely skip unknown nodes.
  */
-ON_FLASH V7_PRIVATE ast_off_t
+V7_PRIVATE ast_off_t
 ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
   return ast_modify_skip(a, start, a->mbuf.len, skip);
 }
@@ -6225,9 +6218,9 @@ ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
  * Patches a given skip slot for an already emitted node with the value
  * (stored as delta relative to the `start` node) of the `where` argument.
  */
-ON_FLASH V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
-                                              ast_off_t where,
-                                              enum ast_which_skip skip) {
+V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
+                                     ast_off_t where,
+                                     enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = where - start;
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
@@ -6241,7 +6234,7 @@ ON_FLASH V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
   return where;
 }
 
-ON_FLASH V7_PRIVATE ast_off_t
+V7_PRIVATE ast_off_t
 ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   uint8_t *p;
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
@@ -6250,7 +6243,7 @@ ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   return pos + (p[1] | p[0] << 8);
 }
 
-ON_FLASH V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
+V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
   assert(*pos < a->mbuf.len);
   return (enum ast_tag)(uint8_t) * (a->mbuf.buf + (*pos)++);
 }
@@ -6260,7 +6253,7 @@ ON_FLASH V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
  *
  * TODO(mkm): add doc, find better name.
  */
-ON_FLASH V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
+V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
   assert(*pos - 1 < a->mbuf.len);
@@ -6277,30 +6270,28 @@ ON_FLASH V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
 }
 
 /* Helper to add a node with inlined data. */
-ON_FLASH V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
-                                              const char *name, size_t len) {
+V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
+                                     const char *name, size_t len) {
   assert(ast_node_defs[tag].has_inlined);
   embed_string(&a->mbuf, ast_add_node(a, tag), name, len, 0, 1);
 }
 
 /* Helper to add a node with inlined data. */
-ON_FLASH V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
-                                                 enum ast_tag tag,
-                                                 const char *name, size_t len) {
+V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
+                                        enum ast_tag tag, const char *name,
+                                        size_t len) {
   assert(ast_node_defs[tag].has_inlined);
   embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len, 0, 1);
 }
 
-ON_FLASH V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
-                                               size_t *n) {
+V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
   assert(pos < a->mbuf.len);
   *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
-ON_FLASH V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos,
-                                     double *val) {
+V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
   char tmp;
   char *str;
   size_t str_len;
@@ -6312,8 +6303,7 @@ ON_FLASH V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos,
 }
 
 #ifndef NO_LIBC
-ON_FLASH static void comment_at_depth(FILE *fp, const char *fmt, int depth,
-                                      ...) {
+static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
   int i;
   STATIC char buf[256];
   va_list ap;
@@ -6328,7 +6318,7 @@ ON_FLASH static void comment_at_depth(FILE *fp, const char *fmt, int depth,
 }
 #endif
 
-ON_FLASH V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
+V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
@@ -6349,8 +6339,7 @@ ON_FLASH V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
 }
 
 #ifndef NO_LIBC
-ON_FLASH static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
-                                   int depth) {
+static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
@@ -6403,12 +6392,12 @@ ON_FLASH static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
 }
 #endif
 
-ON_FLASH V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
+V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
   mbuf_init(&ast->mbuf, len);
   ast->refcnt = 0;
 }
 
-ON_FLASH V7_PRIVATE void ast_optimize(struct ast *ast) {
+V7_PRIVATE void ast_optimize(struct ast *ast) {
   /*
    * leave one trailing byte so that literals can be
    * null terminated on the fly.
@@ -6416,7 +6405,7 @@ ON_FLASH V7_PRIVATE void ast_optimize(struct ast *ast) {
   mbuf_resize(&ast->mbuf, ast->mbuf.len + 1);
 }
 
-ON_FLASH V7_PRIVATE void ast_free(struct ast *ast) {
+V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
 }
 
@@ -6428,7 +6417,7 @@ ON_FLASH V7_PRIVATE void ast_free(struct ast *ast) {
  * by V7 with no extra input.
  * `fp` must be an opened writable file stream to write compiled AST to.
  */
-ON_FLASH void v7_compile(const char *code, int binary, FILE *fp) {
+void v7_compile(const char *code, int binary, FILE *fp) {
   struct ast ast;
   struct v7 *v7 = v7_create();
   ast_off_t pos = 0;
@@ -6459,7 +6448,7 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
-ON_FLASH enum v7_type val_type(struct v7 *v7, val_t v) {
+enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_number(v)) {
     return V7_TYPE_NUMBER;
@@ -6513,36 +6502,36 @@ ON_FLASH enum v7_type val_type(struct v7 *v7, val_t v) {
   }
 }
 
-ON_FLASH int v7_is_number(val_t v) {
+int v7_is_number(val_t v) {
   return v == V7_TAG_NAN || !isnan(v7_to_number(v));
 }
 
-ON_FLASH int v7_is_object(val_t v) {
+int v7_is_object(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_OBJECT ||
          (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
-ON_FLASH int v7_is_function(val_t v) {
+int v7_is_function(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
-ON_FLASH int v7_is_string(val_t v) {
+int v7_is_string(val_t v) {
   uint64_t t = v & V7_TAG_MASK;
   return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O ||
          t == V7_TAG_STRING_5;
 }
 
-ON_FLASH int v7_is_primitive_string(val_t v) {
+int v7_is_primitive_string(val_t v) {
   uint64_t t = v & V7_TAG_MASK;
   return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O ||
          t == V7_TAG_STRING_5;
 }
 
-ON_FLASH int v7_is_boolean(val_t v) {
+int v7_is_boolean(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN;
 }
 
-ON_FLASH int v7_is_regexp(struct v7 *v7, val_t v) {
+int v7_is_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
   if (!v7_is_object(v)) return 0;
   p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
@@ -6550,15 +6539,15 @@ ON_FLASH int v7_is_regexp(struct v7 *v7, val_t v) {
   return (p->value & V7_TAG_MASK) == V7_TAG_REGEXP;
 }
 
-ON_FLASH int v7_is_foreign(val_t v) {
+int v7_is_foreign(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FOREIGN;
 }
 
-ON_FLASH int v7_is_array(struct v7 *v7, val_t v) {
+int v7_is_array(struct v7 *v7, val_t v) {
   return v7_is_object(v) && is_prototype_of(v7, v, v7->array_prototype);
 }
 
-ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
   int is = v7_is_regexp(v7, v);
   assert(is == 1);
@@ -6567,58 +6556,58 @@ ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   return (struct v7_regexp *) v7_to_pointer(p->value);
 }
 
-ON_FLASH int v7_is_null(val_t v) {
+int v7_is_null(val_t v) {
   return v == V7_NULL;
 }
 
-ON_FLASH int v7_is_undefined(val_t v) {
+int v7_is_undefined(val_t v) {
   return v == V7_UNDEFINED;
 }
 
-ON_FLASH int v7_is_cfunction(val_t v) {
+int v7_is_cfunction(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
 }
 
 /* A convenience function to check exec result */
-ON_FLASH int v7_is_error(struct v7 *v7, val_t v) {
+int v7_is_error(struct v7 *v7, val_t v) {
   return is_prototype_of(v7, v, v7->error_prototype);
 }
 
-ON_FLASH V7_PRIVATE val_t v7_pointer_to_value(void *p) {
+V7_PRIVATE val_t v7_pointer_to_value(void *p) {
   return ((uint64_t)(uintptr_t) p) & ~V7_TAG_MASK;
 }
 
-ON_FLASH V7_PRIVATE void *v7_to_pointer(val_t v) {
+V7_PRIVATE void *v7_to_pointer(val_t v) {
   return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-ON_FLASH v7_cfunction_t v7_to_cfunction(val_t v) {
+v7_cfunction_t v7_to_cfunction(val_t v) {
   /* Implementation is identical to v7_to_pointer but is separate since
    * object pointers are not directly convertible to function pointers
    * according to ISO C and generates a warning in -Wpedantic mode. */
   return (v7_cfunction_t)(uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-ON_FLASH val_t v7_object_to_value(struct v7_object *o) {
+val_t v7_object_to_value(struct v7_object *o) {
   if (o == NULL) {
     return V7_NULL;
   }
   return v7_pointer_to_value(o) | V7_TAG_OBJECT;
 }
 
-ON_FLASH struct v7_object *v7_to_object(val_t v) {
+struct v7_object *v7_to_object(val_t v) {
   return (struct v7_object *) v7_to_pointer(v);
 }
 
-ON_FLASH val_t v7_function_to_value(struct v7_function *o) {
+val_t v7_function_to_value(struct v7_function *o) {
   return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
 }
 
-ON_FLASH struct v7_function *v7_to_function(val_t v) {
+struct v7_function *v7_to_function(val_t v) {
   return (struct v7_function *) v7_to_pointer(v);
 }
 
-ON_FLASH v7_val_t v7_create_cfunction(v7_cfunction_t f) {
+v7_val_t v7_create_cfunction(v7_cfunction_t f) {
   union {
     void *p;
     v7_cfunction_t f;
@@ -6627,19 +6616,19 @@ ON_FLASH v7_val_t v7_create_cfunction(v7_cfunction_t f) {
   return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
 
-ON_FLASH void *v7_to_foreign(val_t v) {
+void *v7_to_foreign(val_t v) {
   return v7_to_pointer(v);
 }
 
-ON_FLASH v7_val_t v7_create_boolean(int v) {
+v7_val_t v7_create_boolean(int v) {
   return (!!v) | V7_TAG_BOOLEAN;
 }
 
-ON_FLASH int v7_to_boolean(val_t v) {
+int v7_to_boolean(val_t v) {
   return v & 1;
 }
 
-ON_FLASH v7_val_t v7_create_number(double v) {
+v7_val_t v7_create_number(double v) {
   val_t res;
   /* not every NaN is a JS NaN */
   if (isnan(v)) {
@@ -6655,7 +6644,7 @@ ON_FLASH v7_val_t v7_create_number(double v) {
   return res;
 }
 
-ON_FLASH double v7_to_number(val_t v) {
+double v7_to_number(val_t v) {
   union {
     double d;
     val_t v;
@@ -6664,14 +6653,14 @@ ON_FLASH double v7_to_number(val_t v) {
   return u.d;
 }
 
-ON_FLASH V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
+V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
   if (v7_is_function(obj)) {
     return v7->function_prototype;
   }
   return v7_object_to_value(v7_to_object(obj)->prototype);
 }
 
-ON_FLASH V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
+V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   struct v7_object *o = new_object(v7);
   if (o == NULL) {
     return V7_NULL;
@@ -6682,19 +6671,19 @@ ON_FLASH V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   return v7_object_to_value(o);
 }
 
-ON_FLASH v7_val_t v7_create_object(struct v7 *v7) {
+v7_val_t v7_create_object(struct v7 *v7) {
   return create_object(v7, v7->object_prototype);
 }
 
-ON_FLASH v7_val_t v7_create_null(void) {
+v7_val_t v7_create_null(void) {
   return V7_NULL;
 }
 
-ON_FLASH v7_val_t v7_create_undefined(void) {
+v7_val_t v7_create_undefined(void) {
   return V7_UNDEFINED;
 }
 
-ON_FLASH v7_val_t v7_create_array(struct v7 *v7) {
+v7_val_t v7_create_array(struct v7 *v7) {
   val_t a = create_object(v7, v7->array_prototype);
 #if 0
   v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
@@ -6715,7 +6704,7 @@ ON_FLASH v7_val_t v7_create_array(struct v7 *v7) {
  *            (key iteration).
  * TODO(mkm): change the interpreter so it can set elements in dense arrays
  */
-ON_FLASH V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
+V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   val_t a = v7_create_array(v7);
   v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
   v7_to_object(a)->attributes |= V7_OBJ_DENSE_ARRAY;
@@ -6723,8 +6712,8 @@ ON_FLASH V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
 }
 
 #if V7_ENABLE__RegExp
-ON_FLASH v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
-                                   const char *flags, size_t flags_len) {
+v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
+                          const char *flags, size_t flags_len) {
   struct slre_prog *p = NULL;
   struct v7_regexp *rp;
 
@@ -6746,11 +6735,11 @@ ON_FLASH v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 }
 #endif /* V7_ENABLE__RegExp */
 
-ON_FLASH v7_val_t v7_create_foreign(void *p) {
+v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
-ON_FLASH v7_val_t create_function(struct v7 *v7) {
+v7_val_t create_function(struct v7 *v7) {
   struct v7_function *f = new_function(v7);
   val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -6784,7 +6773,7 @@ cleanup:
 }
 
 /* like c_snprintf but returns `size` if write is truncated */
-ON_FLASH static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
+static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   size_t n;
   va_list ap;
   va_start(ap, fmt);
@@ -6797,8 +6786,8 @@ ON_FLASH static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 
 #define BUF_LEFT(size, used) (((size_t)(used) < (size)) ? ((size) - (used)) : 0)
 
-ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
-                               int as_json) {
+V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                      int as_json) {
   char *vp;
   double num;
   for (vp = v7->json_visited_stack.buf;
@@ -7013,7 +7002,7 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
  * v7_to_json allocates a new buffer if value representation doesn't fit into
  * buf. Caller is responsible for freeing that buffer.
  */
-ON_FLASH char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   int len = to_str(v7, v, buf, size, 1);
 
   /* fit null terminating byte */
@@ -7028,8 +7017,7 @@ ON_FLASH char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   }
 }
 
-ON_FLASH int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
-                                size_t size) {
+int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
   if (v7_is_string(v)) {
     size_t n;
     const char *str = v7_to_string(v7, &v, &n);
@@ -7045,7 +7033,7 @@ ON_FLASH int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
   }
 }
 
-ON_FLASH V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
+V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
   p->next = NULL;
   p->name = v7_create_undefined();
@@ -7054,9 +7042,10 @@ ON_FLASH V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   return p;
 }
 
-ON_FLASH V7_PRIVATE struct v7_property *v7_get_own_property2(
-    struct v7 *v7, val_t obj, const char *name, size_t len,
-    unsigned int attrs) {
+V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
+                                                    const char *name,
+                                                    size_t len,
+                                                    unsigned int attrs) {
   struct v7_property *p;
   struct v7_object *o;
   val_t ss;
@@ -7102,15 +7091,14 @@ ON_FLASH V7_PRIVATE struct v7_property *v7_get_own_property2(
   return NULL;
 }
 
-ON_FLASH V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7,
-                                                            val_t obj,
-                                                            const char *name,
-                                                            size_t len) {
+V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
+                                                   const char *name,
+                                                   size_t len) {
   return v7_get_own_property2(v7, obj, name, len, 0);
 }
 
-ON_FLASH struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
-                                             const char *name, size_t len) {
+struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len) {
   if (!v7_is_object(obj)) {
     return NULL;
   }
@@ -7123,8 +7111,7 @@ ON_FLASH struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
   return NULL;
 }
 
-ON_FLASH v7_val_t
-v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
+v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   val_t v = obj;
   if (v7_is_string(obj)) {
     v = v7->string_prototype;
@@ -7141,7 +7128,6 @@ v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
 }
 
-ON_FLASH
 V7_PRIVATE v7_val_t v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
   val_t res;
   const char *s;
@@ -7171,11 +7157,11 @@ V7_PRIVATE v7_val_t v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
   return res;
 }
 
-ON_FLASH V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
+V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
-ON_FLASH int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
+int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
   size_t len;
   const char *n = v7_to_string(v7, &name, &len);
   struct v7_property *p = v7_get_own_property(v7, obj, n, len);
@@ -7185,8 +7171,8 @@ ON_FLASH int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
   return -1;
 }
 
-ON_FLASH int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
-                    unsigned int attrs, val_t val) {
+int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
+           unsigned int attrs, val_t val) {
   struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
     return v7_set_property(v7, obj, name, len,
@@ -7195,9 +7181,8 @@ ON_FLASH int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
   return -1;
 }
 
-ON_FLASH V7_PRIVATE void v7_invoke_setter(struct v7 *v7,
-                                          struct v7_property *prop, val_t obj,
-                                          val_t val) {
+V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
+                                 val_t obj, val_t val) {
   val_t setter = prop->value, args = v7_create_dense_array(v7);
   if (prop->attributes & V7_PROPERTY_GETTER) {
     setter = v7_array_get(v7, prop->value, 1);
@@ -7206,10 +7191,8 @@ ON_FLASH V7_PRIVATE void v7_invoke_setter(struct v7 *v7,
   v7_apply(v7, setter, obj, args);
 }
 
-ON_FLASH V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj,
-                                                    val_t name,
-                                                    unsigned int attributes,
-                                                    val_t val) {
+V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
+                                           unsigned int attributes, val_t val) {
   struct v7_property *prop;
   size_t len;
   const char *n = v7_to_string(v7, &name, &len);
@@ -7247,15 +7230,14 @@ ON_FLASH V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj,
   return prop;
 }
 
-ON_FLASH int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
-                               unsigned int attributes, v7_val_t val) {
+int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
+                      unsigned int attributes, v7_val_t val) {
   struct v7_property *prop = v7_set_prop(v7, obj, name, attributes, val);
   return prop == NULL ? -1 : 0;
 }
 
-ON_FLASH int v7_set_property(struct v7 *v7, val_t obj, const char *name,
-                             size_t len, unsigned int attributes,
-                             v7_val_t val) {
+int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
+                    unsigned int attributes, v7_val_t val) {
   val_t n;
   int res;
   /* set_property_v can trigger GC */
@@ -7272,8 +7254,7 @@ ON_FLASH int v7_set_property(struct v7 *v7, val_t obj, const char *name,
   return res;
 }
 
-ON_FLASH int v7_del_property(struct v7 *v7, val_t obj, const char *name,
-                             size_t len) {
+int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   struct v7_property *prop, *prev;
 
   if (!v7_is_object(obj)) {
@@ -7299,8 +7280,7 @@ ON_FLASH int v7_del_property(struct v7 *v7, val_t obj, const char *name,
   return -1;
 }
 
-ON_FLASH v7_val_t
-v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
+v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
@@ -7322,8 +7302,8 @@ v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   return obj;
 }
 
-ON_FLASH v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
-                                        v7_cfunction_t f, int num_args) {
+v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
+                               int num_args) {
   v7_val_t res = v7_create_function(v7, f, num_args);
 
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
@@ -7345,24 +7325,23 @@ ON_FLASH v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
   return res;
 }
 
-ON_FLASH V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj,
-                                   const char *name, v7_cfunction_t func,
-                                   int num_args) {
+V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                          v7_cfunction_t func, int num_args) {
   return v7_set_property(v7, obj, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_function(v7, func, num_args));
 }
 
-ON_FLASH int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                           v7_cfunction_t func) {
+int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                  v7_cfunction_t func) {
   return set_method(v7, obj, name, func, -1);
 }
 
-ON_FLASH V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                                       v7_cfunction_t f) {
+V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                              v7_cfunction_t f) {
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
 }
 
-ON_FLASH V7_PRIVATE val_t
+V7_PRIVATE val_t
 v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
@@ -7391,8 +7370,8 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
 #define UNPACK_ITER_IDX(p) ((((uintptr_t) p) >> 1) & 0x7FFF)
 #define IS_PACKED_ITER(p) ((uintptr_t) p & 1)
 
-ON_FLASH V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
-                                                     struct v7_property *p) {
+V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
+                                            struct v7_property *p) {
   if (p == NULL && v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
     unsigned long len = v7_array_length(v7, obj);
     return PACK_ITER(len, 0);
@@ -7405,20 +7384,18 @@ ON_FLASH V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
   return p == NULL ? v7_to_object(obj)->properties : p->next;
 }
 
-ON_FLASH V7_PRIVATE val_t
+V7_PRIVATE val_t
 v7_iter_get_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   return IS_PACKED_ITER(p) ? v7_array_get(v7, obj, UNPACK_ITER_IDX(p))
                            : p->value;
 }
 
-ON_FLASH V7_PRIVATE val_t
-v7_iter_get_name(struct v7 *v7, struct v7_property *p) {
+V7_PRIVATE val_t v7_iter_get_name(struct v7 *v7, struct v7_property *p) {
   return IS_PACKED_ITER(p) ? ulong_to_str(v7, UNPACK_ITER_IDX(p)) : p->name;
 }
 
 /* return array index as number or undefined. works with iterators */
-ON_FLASH V7_PRIVATE val_t
-v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
+V7_PRIVATE val_t v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
   int ok;
   unsigned long res;
   if (IS_PACKED_ITER(p)) {
@@ -7429,7 +7406,7 @@ v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
   return v7_create_number(res);
 }
 
-ON_FLASH unsigned long v7_array_length(struct v7 *v7, val_t v) {
+unsigned long v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
   unsigned long key, len = 0;
   char *end;
@@ -7461,8 +7438,7 @@ ON_FLASH unsigned long v7_array_length(struct v7 *v7, val_t v) {
   return len;
 }
 
-ON_FLASH int v7_array_set(struct v7 *v7, val_t arr, unsigned long index,
-                          val_t v) {
+int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
   int res = -1;
   if (v7_is_object(arr)) {
     if (v7_to_object(arr)->attributes & V7_OBJ_DENSE_ARRAY) {
@@ -7510,16 +7486,15 @@ ON_FLASH int v7_array_set(struct v7 *v7, val_t arr, unsigned long index,
   return res;
 }
 
-ON_FLASH int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
+int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
   return v7_array_set(v7, arr, v7_array_length(v7, arr), v);
 }
 
-ON_FLASH val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
+val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
   return v7_array_get2(v7, arr, index, NULL);
 }
 
-ON_FLASH val_t
-v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
+val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
   if (has != NULL) {
     *has = 0;
   }
@@ -7561,7 +7536,7 @@ v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
 }
 
 int nextesc(const char **p); /* from SLRE */
-ON_FLASH V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
   const char *end = s + len;
   size_t n = 0;
   char tmp[4];
@@ -7604,9 +7579,8 @@ ON_FLASH V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 }
 
 /* Insert a string into mbuf at specified offset */
-ON_FLASH V7_PRIVATE void embed_string(struct mbuf *m, size_t offset,
-                                      const char *p, size_t len, int zero_term,
-                                      int unesc) {
+V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
+                             size_t len, int zero_term, int unesc) {
   char *old_base = m->buf;
   int p_backed_by_mbuf = p >= old_base && p < old_base + m->len;
   size_t n = unesc ? unescape(p, len, NULL) : len;
@@ -7632,8 +7606,7 @@ ON_FLASH V7_PRIVATE void embed_string(struct mbuf *m, size_t offset,
 }
 
 /* Create a string */
-ON_FLASH v7_val_t
-v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
+v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
 
@@ -7669,7 +7642,7 @@ v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   return (offset & ~V7_TAG_MASK) | tag;
 }
 
-ON_FLASH V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
   char buf[100], *p, *s;
   val_t res;
   if (v7_is_string(v)) {
@@ -7694,7 +7667,7 @@ ON_FLASH V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
  *
  * Beware that V7 strings are not null terminated!
  */
-ON_FLASH const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
+const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
   char *p;
   int llen;
@@ -7724,7 +7697,7 @@ ON_FLASH const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   return p;
 }
 
-ON_FLASH V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
+V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   size_t a_len, b_len;
   const char *a_ptr, *b_ptr;
 
@@ -7743,7 +7716,7 @@ ON_FLASH V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   }
 }
 
-ON_FLASH V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
+V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   size_t a_len, b_len;
   const char *a_ptr, *b_ptr;
   char *s = NULL;
@@ -7786,7 +7759,7 @@ ON_FLASH V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 }
 
 /* Create V7 strings for integers such as array indices */
-ON_FLASH V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
+V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
   char buf[100];
   int len;
   len = c_snprintf(buf, sizeof(buf), "%lu", n);
@@ -7798,8 +7771,7 @@ ON_FLASH V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
  * `ok` will be set to true if the string conforms to
  * an unsigned long.
  */
-ON_FLASH V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len,
-                                                int *ok) {
+V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
   char *e;
   unsigned long res = strtoul(s, &e, 10);
   *ok = (e == s + len) && len != 0;
@@ -7811,14 +7783,13 @@ ON_FLASH V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len,
  * `ok` will be set to true if the string conforms to
  * an unsigned long.
  */
-ON_FLASH V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v,
-                                               int *ok) {
+V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v, int *ok) {
   char buf[100];
   size_t len = v7_stringify_value(v7, v, buf, sizeof(buf));
   return cstr_to_ulong(buf, len, ok);
 }
 
-ON_FLASH V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
+V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   struct v7_object *obj, *proto;
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
@@ -7836,7 +7807,7 @@ ON_FLASH V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   return 0;
 }
 
-ON_FLASH int v7_is_true(struct v7 *v7, val_t v) {
+int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && v7_to_boolean(v)) ||
           (v7_is_number(v) && v7_to_number(v) != 0.0) ||
@@ -7845,7 +7816,7 @@ ON_FLASH int v7_is_true(struct v7 *v7, val_t v) {
          v != V7_TAG_NAN;
 }
 
-ON_FLASH static void object_destructor(struct v7 *v7, void *ptr) {
+static void object_destructor(struct v7 *v7, void *ptr) {
   struct v7_object *o = (struct v7_object *) ptr;
   struct v7_property *p;
   struct mbuf *abuf;
@@ -7870,7 +7841,7 @@ ON_FLASH static void object_destructor(struct v7 *v7, void *ptr) {
   }
 }
 
-ON_FLASH V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
+V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
   if (a->refcnt != 0) a->refcnt--;
 
   if (a->refcnt == 0) {
@@ -7882,7 +7853,7 @@ ON_FLASH V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
   }
 }
 
-ON_FLASH static void function_destructor(struct v7 *v7, void *ptr) {
+static void function_destructor(struct v7 *v7, void *ptr) {
   struct v7_function *f = (struct v7_function *) ptr;
   (void) v7;
   if (f == NULL || f->ast == NULL) return;
@@ -7890,13 +7861,13 @@ ON_FLASH static void function_destructor(struct v7 *v7, void *ptr) {
   release_ast(v7, f->ast);
 }
 
-ON_FLASH struct v7 *v7_create(void) {
+struct v7 *v7_create(void) {
   struct v7_create_opts opts;
   memset(&opts, 0, sizeof(opts));
   return v7_create_opt(opts);
 }
 
-ON_FLASH struct v7 *v7_create_opt(struct v7_create_opts opts) {
+struct v7 *v7_create_opt(struct v7_create_opts opts) {
   struct v7 *v7 = NULL;
   val_t *p;
   char z = 0;
@@ -7959,11 +7930,11 @@ ON_FLASH struct v7 *v7_create_opt(struct v7_create_opts opts) {
   return v7;
 }
 
-ON_FLASH val_t v7_get_global_object(struct v7 *v7) {
+val_t v7_get_global_object(struct v7 *v7) {
   return v7->global_object;
 }
 
-ON_FLASH void v7_destroy(struct v7 *v7) {
+void v7_destroy(struct v7 *v7) {
 #if 0
   struct ast **a;
 #endif
@@ -7982,7 +7953,7 @@ ON_FLASH void v7_destroy(struct v7 *v7) {
   }
 }
 
-ON_FLASH v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
+v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
   if (v7_is_object(obj)) {
     v7_val_t old_proto = v7_object_to_value(v7_to_object(obj)->prototype);
     v7_to_object(obj)->prototype = v7_to_object(proto);
@@ -7992,11 +7963,11 @@ ON_FLASH v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
   }
 }
 
-ON_FLASH void v7_own(struct v7 *v7, v7_val_t *v) {
+void v7_own(struct v7 *v7, v7_val_t *v) {
   mbuf_append(&v7->owned_values, &v, sizeof(v));
 }
 
-ON_FLASH int v7_disown(struct v7 *v7, v7_val_t *v) {
+int v7_disown(struct v7 *v7, v7_val_t *v) {
   v7_val_t **vp =
       (v7_val_t **) (v7->owned_values.buf + v7->owned_values.len - sizeof(v));
 
@@ -8028,26 +7999,26 @@ void gc_mark_string(struct v7 *, val_t *);
 static struct gc_block *gc_new_block(struct gc_arena *a, size_t size);
 static void gc_free_block(struct gc_block *b);
 
-ON_FLASH V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
+V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
 
-ON_FLASH V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
+V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
   return (struct v7_property *) gc_alloc_cell(v7, &v7->property_arena);
 }
 
-ON_FLASH V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
+V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
   return (struct v7_function *) gc_alloc_cell(v7, &v7->function_arena);
 }
 
-ON_FLASH V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
+V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
   struct gc_tmp_frame frame;
   frame.v7 = v7;
   frame.pos = v7->tmp_stack.len;
   return frame;
 }
 
-ON_FLASH V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
+V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
   tf->v7->tmp_stack.len = tf->pos;
 }
 
@@ -8056,15 +8027,14 @@ ON_FLASH V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
  * roots stack, instead of keeping val_t*, in order to be better
  * able to debug the relocating GC.
  */
-ON_FLASH V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
+V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
   mbuf_append(&tf->v7->tmp_stack, (char *) &vp, sizeof(val_t *));
 }
 
 /* Initializes a new arena. */
-ON_FLASH V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
-                                       size_t initial_size,
-                                       size_t size_increment,
-                                       const char *name) {
+V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
+                              size_t initial_size, size_t size_increment,
+                              const char *name) {
   assert(cell_size >= sizeof(uintptr_t));
 
   memset(a, 0, sizeof(*a));
@@ -8074,7 +8044,7 @@ ON_FLASH V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
   a->blocks = gc_new_block(a, initial_size);
 }
 
-ON_FLASH V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
+V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
   struct gc_block *b;
 
   if (a->blocks != NULL) {
@@ -8090,12 +8060,12 @@ ON_FLASH V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
   }
 }
 
-ON_FLASH static void gc_free_block(struct gc_block *b) {
+static void gc_free_block(struct gc_block *b) {
   free(b->base);
   free(b);
 }
 
-ON_FLASH static struct gc_block *gc_new_block(struct gc_arena *a, size_t size) {
+static struct gc_block *gc_new_block(struct gc_arena *a, size_t size) {
   struct gc_cell *cur;
   struct gc_block *b = (struct gc_block *) calloc(1, sizeof(*b));
   if (b == NULL) abort();
@@ -8114,7 +8084,7 @@ ON_FLASH static struct gc_block *gc_new_block(struct gc_arena *a, size_t size) {
   return b;
 }
 
-ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
+V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #ifdef V7_DISABLE_GC
   (void) v7;
   return calloc(1, a->cell_size);
@@ -8168,7 +8138,7 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
  * Empty blocks get deallocated. The head of the free list will contais cells
  * from the last (oldest) block. Cells will thus be allocated in block order.
  */
-ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
+void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
   struct gc_block *b;
   struct gc_cell *cur;
   struct gc_block **prevp = &a->blocks;
@@ -8228,8 +8198,7 @@ ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
 /*
  * dense arrays contain only one property pointing to an mbuf with array values.
  */
-ON_FLASH V7_PRIVATE void gc_mark_dense_array(struct v7 *v7,
-                                             struct v7_object *obj) {
+V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
   val_t v = obj->properties->value;
   struct mbuf *mbuf = (struct mbuf *) v7_to_foreign(v);
   val_t *vp;
@@ -8243,7 +8212,7 @@ ON_FLASH V7_PRIVATE void gc_mark_dense_array(struct v7 *v7,
   }
 }
 
-ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
+V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   struct v7_object *obj;
   struct v7_property *prop;
   struct v7_property *next;
@@ -8283,7 +8252,7 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
 #if V7_ENABLE__Memory__stats
 
-ON_FLASH V7_PRIVATE size_t gc_arena_size(struct gc_arena *a) {
+V7_PRIVATE size_t gc_arena_size(struct gc_arena *a) {
   size_t size = 0;
   struct gc_block *b;
   for (b = a->blocks; b != NULL; b = b->next) {
@@ -8292,7 +8261,7 @@ ON_FLASH V7_PRIVATE size_t gc_arena_size(struct gc_arena *a) {
   return size;
 }
 
-ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
+int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
   switch (what) {
     case V7_HEAP_STAT_HEAP_SIZE:
       return gc_arena_size(&v7->object_arena) * v7->object_arena.cell_size +
@@ -8334,7 +8303,7 @@ ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
 }
 #endif
 
-ON_FLASH static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
+static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   (void) msg;
   (void) a;
 #ifndef NO_LIBC
@@ -8349,16 +8318,16 @@ ON_FLASH static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 
 #ifdef V7_ENABLE_COMPACTING_GC
 
-ON_FLASH uint64_t gc_string_val_to_offset(val_t v) {
+uint64_t gc_string_val_to_offset(val_t v) {
   return ((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
 }
 
-ON_FLASH val_t gc_string_val_from_offset(uint64_t s) {
+val_t gc_string_val_from_offset(uint64_t s) {
   return s | V7_TAG_STRING_O;
 }
 
 /* Mark a string value */
-ON_FLASH void gc_mark_string(struct v7 *v7, val_t *v) {
+void gc_mark_string(struct v7 *v7, val_t *v) {
   val_t h, tmp = 0;
   char *s;
 
@@ -8403,7 +8372,7 @@ ON_FLASH void gc_mark_string(struct v7 *v7, val_t *v) {
   memcpy(v, &tmp, sizeof(tmp));
 }
 
-ON_FLASH void gc_compact_strings(struct v7 *v7) {
+void gc_compact_strings(struct v7 *v7) {
   char *p = v7->owned_strings.buf + 1;
   uint64_t h, next, head = 1;
   int len, llen;
@@ -8458,7 +8427,7 @@ ON_FLASH void gc_compact_strings(struct v7 *v7) {
   v7->owned_strings.len = head;
 }
 
-ON_FLASH void gc_dump_owned_strings(struct v7 *v7) {
+void gc_dump_owned_strings(struct v7 *v7) {
   size_t i;
 #if 0
   for (i = 0; i < v7->owned_strings.len; i++) {
@@ -8499,7 +8468,7 @@ ON_FLASH void gc_dump_owned_strings(struct v7 *v7) {
 #endif
 
 /* Perform garbage collection */
-ON_FLASH void v7_gc(struct v7 *v7, int full) {
+void v7_gc(struct v7 *v7, int full) {
   val_t **vp;
 
   /*
@@ -8622,19 +8591,19 @@ static enum v7_err parse_block(struct v7 *, struct ast *);
 static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
 static enum v7_err parse_use_strict(struct v7 *, struct ast *);
 
-ON_FLASH static enum v7_err parser_throw(struct v7 *v7, enum v7_err err) {
+static enum v7_err parser_throw(struct v7 *v7, enum v7_err err) {
   c_snprintf(v7->error_msg, sizeof(v7->error_msg), "Parse error: %s line %d",
              v7->pstate.file_name, v7->pstate.line_no);
   return err;
 }
 
-ON_FLASH static enum v7_tok lookahead(const struct v7 *v7) {
+static enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
   double d;
   return get_tok(&s, &d, v7->cur_tok);
 }
 
-ON_FLASH static enum v7_tok next_tok(struct v7 *v7) {
+static enum v7_tok next_tok(struct v7 *v7) {
   int prev_line_no = v7->pstate.prev_line_no;
   CHECK_STACK();
   v7->pstate.prev_line_no = v7->pstate.line_no;
@@ -8647,7 +8616,7 @@ ON_FLASH static enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
-ON_FLASH static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   if (v7->cur_tok == TOK_IDENTIFIER) {
     ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
@@ -8657,8 +8626,8 @@ ON_FLASH static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
   return V7_SYNTAX_ERROR;
 }
 
-ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
-                                                             struct ast *a) {
+static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
+                                                    struct ast *a) {
   CHECK_STACK();
   /* Allow reserved words as property names. */
   if (is_reserved_word_token(v7->cur_tok)) {
@@ -8670,7 +8639,7 @@ ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
@@ -8700,7 +8669,7 @@ ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   CHECK_STACK();
   switch (v7->cur_tok) {
@@ -8779,7 +8748,7 @@ ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   if (v7->cur_tok != TOK_CLOSE_PAREN) {
     do {
@@ -8789,7 +8758,7 @@ ON_FLASH static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   CHECK_STACK();
   switch (v7->cur_tok) {
@@ -8814,8 +8783,7 @@ ON_FLASH static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_member(struct v7 *v7, struct ast *a,
-                                         ast_off_t pos) {
+static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
   CHECK_STACK();
   switch (v7->cur_tok) {
     case TOK_DOT:
@@ -8841,7 +8809,7 @@ ON_FLASH static enum v7_err parse_member(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   CHECK_STACK();
   PARSE(newexpr);
@@ -8858,7 +8826,7 @@ ON_FLASH static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
   }
 }
 
-ON_FLASH static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   CHECK_STACK();
   PARSE(newexpr);
@@ -8881,7 +8849,7 @@ ON_FLASH static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
   }
 }
 
-ON_FLASH static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   CHECK_STACK();
   PARSE(callexpr);
@@ -8904,7 +8872,7 @@ ON_FLASH static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
+enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   for (;;) {
     switch (v7->cur_tok) {
@@ -8979,8 +8947,8 @@ static const struct {
     {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, NONE}},
     {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, NONE}}};
 
-ON_FLASH static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
-                                         int level, ast_off_t pos) {
+static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
+                                ast_off_t pos) {
   int i;
   enum v7_tok tok;
   enum ast_tag ast;
@@ -9029,12 +8997,12 @@ ON_FLASH static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_assign(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_assign(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   return parse_binary(v7, a, 0, a->mbuf.len);
 }
 
-ON_FLASH static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   int group = 0;
   CHECK_STACK();
@@ -9047,7 +9015,7 @@ ON_FLASH static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err end_of_statement(struct v7 *v7) {
+static enum v7_err end_of_statement(struct v7 *v7) {
   CHECK_STACK();
   if (v7->cur_tok == TOK_SEMICOLON || v7->cur_tok == TOK_END_OF_INPUT ||
       v7->cur_tok == TOK_CLOSE_CURLY || v7->after_newline) {
@@ -9056,7 +9024,7 @@ ON_FLASH static enum v7_err end_of_statement(struct v7 *v7) {
   return V7_SYNTAX_ERROR;
 }
 
-ON_FLASH static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   CHECK_STACK();
   start = ast_add_node(a, AST_VAR);
@@ -9077,8 +9045,8 @@ ON_FLASH static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static int parse_optional(struct v7 *v7, struct ast *a,
-                                   enum v7_tok terminator) {
+static int parse_optional(struct v7 *v7, struct ast *a,
+                          enum v7_tok terminator) {
   CHECK_STACK();
   if (v7->cur_tok != terminator) {
     return 1;
@@ -9087,7 +9055,7 @@ ON_FLASH static int parse_optional(struct v7 *v7, struct ast *a,
   return 0;
 }
 
-ON_FLASH static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   CHECK_STACK();
   start = ast_add_node(a, AST_IF);
@@ -9103,7 +9071,7 @@ ON_FLASH static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   int saved_in_loop;
   CHECK_STACK();
@@ -9119,7 +9087,7 @@ ON_FLASH static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   int saved_in_loop;
   CHECK_STACK();
@@ -9139,7 +9107,7 @@ ON_FLASH static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
   ast_off_t start;
   int saved_in_loop;
@@ -9195,7 +9163,7 @@ body:
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   int saved_in_switch;
 
@@ -9244,7 +9212,7 @@ ON_FLASH static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   CHECK_STACK();
   start = ast_add_node(a, AST_TRY);
@@ -9264,7 +9232,7 @@ ON_FLASH static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   CHECK_STACK();
   start = ast_add_node(a, AST_WITH);
@@ -9289,7 +9257,7 @@ ON_FLASH static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
     }                                                \
   } while (0)
 
-ON_FLASH static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   switch (v7->cur_tok) {
     case TOK_SEMICOLON:
@@ -9371,9 +9339,8 @@ ON_FLASH static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
-                                           int require_named,
-                                           int reserved_name) {
+static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
+                                  int require_named, int reserved_name) {
   ast_off_t start;
   ast_off_t outer_last_var_node;
   int saved_in_function;
@@ -9412,7 +9379,7 @@ ON_FLASH static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   EXPECT(TOK_OPEN_CURLY);
   PARSE_ARG(body, TOK_CLOSE_CURLY);
@@ -9420,8 +9387,7 @@ ON_FLASH static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_body(struct v7 *v7, struct ast *a,
-                                       enum v7_tok end) {
+static enum v7_err parse_body(struct v7 *v7, struct ast *a, enum v7_tok end) {
   ast_off_t start;
   CHECK_STACK();
   while (v7->cur_tok != end) {
@@ -9445,7 +9411,7 @@ ON_FLASH static enum v7_err parse_body(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-ON_FLASH static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
   CHECK_STACK();
   if (v7->cur_tok == TOK_STRING_LITERAL &&
       (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
@@ -9457,7 +9423,7 @@ ON_FLASH static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
   return V7_SYNTAX_ERROR;
 }
 
-ON_FLASH static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SCRIPT);
   ast_off_t outer_last_var_node = v7->last_var_node;
   int saved_in_strict = v7->pstate.in_strict;
@@ -9473,7 +9439,7 @@ ON_FLASH static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-ON_FLASH static unsigned long get_column(const char *code, const char *pos) {
+static unsigned long get_column(const char *code, const char *pos) {
   const char *p = pos;
   while (p > code && *p != '\n') {
     p--;
@@ -9481,8 +9447,8 @@ ON_FLASH static unsigned long get_column(const char *code, const char *pos) {
   return p == code ? pos - p : pos - (p + 1);
 }
 
-ON_FLASH V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a,
-                                      const char *src, int verbose) {
+V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
+                             int verbose) {
   enum v7_err err;
   v7->pstate.source_code = v7->pstate.pc = src;
   v7->pstate.file_name = "<stdin>";
@@ -9507,7 +9473,7 @@ ON_FLASH V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a,
   return err;
 }
 
-ON_FLASH const char *v7_get_parser_error(struct v7 *v7) {
+const char *v7_get_parser_error(struct v7 *v7) {
   return v7->error_msg;
 }
 /*
@@ -9538,13 +9504,13 @@ static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
                          int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
-ON_FLASH V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
+V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
   siglongjmp(v7->jmp_buf, THROW_JMP);
 } /* LCOV_EXCL_LINE */
 
-ON_FLASH static val_t create_exception(struct v7 *v7, enum error_ctor ex,
-                                       const char *msg) {
+static val_t create_exception(struct v7 *v7, enum error_ctor ex,
+                              const char *msg) {
   val_t e, args;
   if (v7->creating_exception) {
 #ifndef NO_LIBC
@@ -9561,8 +9527,8 @@ ON_FLASH static val_t create_exception(struct v7 *v7, enum error_ctor ex,
   return e;
 }
 
-ON_FLASH V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
-                                         const char *err_fmt, ...) {
+V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
+                                const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
@@ -9570,7 +9536,7 @@ ON_FLASH V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
   throw_value(v7, create_exception(v7, ex, v7->error_msg));
 } /* LCOV_EXCL_LINE */
 
-ON_FLASH void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
+void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
@@ -9578,7 +9544,7 @@ ON_FLASH void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
   throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
 }
 
-ON_FLASH V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
+V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   val_t f;
   if (!v7_is_object(v)) {
     return v;
@@ -9597,7 +9563,7 @@ ON_FLASH V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 }
 
 /* i_as_num expects callers to root temporary values passed as args */
-ON_FLASH V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
+V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   double res = 0.0;
 
   v = i_value_of(v7, v);
@@ -9622,8 +9588,7 @@ ON_FLASH V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   return res;
 }
 
-ON_FLASH static double i_num_unary_op(struct v7 *v7, enum ast_tag tag,
-                                      double a) {
+static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
   switch (tag) {
     case AST_POSITIVE:
       return a;
@@ -9635,8 +9600,8 @@ ON_FLASH static double i_num_unary_op(struct v7 *v7, enum ast_tag tag,
   }
 }
 
-ON_FLASH static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
-                                    double b) {
+static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
+                           double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
   int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
 
@@ -9661,14 +9626,14 @@ ON_FLASH static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
 
 /* Visual studio 2012+ has signbit() */
 #if defined(V7_WINDOWS) && _MSC_VER < 1700
-ON_FLASH static int signbit(double x) {
+static int signbit(double x) {
   double s = _copysign(1, x);
   return s < 0;
 }
 #endif
 
-ON_FLASH static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
-                                    double b) {
+static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
+                           double b) {
   switch (tag) {
     case AST_ADD: /* simple fixed width nodes with no payload */
       return a + b;
@@ -9700,8 +9665,7 @@ ON_FLASH static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
-ON_FLASH static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a,
-                                  double b) {
+static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
 #ifdef V7_BROKEN_NAN
   if (isnan(a) || isnan(b)) return tag == AST_NE || tag == AST_NE_NE;
 #endif
@@ -9727,8 +9691,8 @@ ON_FLASH static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
-ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                                  val_t scope) {
+static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   ast_off_t end;
   val_t res = v7_create_undefined(), v1 = v7_create_undefined();
@@ -10376,8 +10340,8 @@ cleanup:
   return res;
 }
 
-ON_FLASH static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
-                                  val_t scope) {
+static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
+                         val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, &pos);
   switch (tag) {
     case AST_MEMBER:
@@ -10390,9 +10354,8 @@ ON_FLASH static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
   }
 }
 
-ON_FLASH static void i_populate_local_vars(struct v7 *v7, struct ast *a,
-                                           ast_off_t start, ast_off_t fvar,
-                                           val_t frame) {
+static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
+                                  ast_off_t fvar, val_t frame) {
   enum ast_tag tag;
   ast_off_t next, fvar_end;
   char *name;
@@ -10439,9 +10402,9 @@ ON_FLASH static void i_populate_local_vars(struct v7 *v7, struct ast *a,
   tmp_frame_cleanup(&tf);
 }
 
-ON_FLASH V7_PRIVATE val_t
-i_prepare_call(struct v7 *v7, struct v7_function *func, ast_off_t *pos,
-               ast_off_t *body, ast_off_t *end) {
+V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
+                                ast_off_t *pos, ast_off_t *body,
+                                ast_off_t *end) {
   val_t frame;
   enum ast_tag tag;
   ast_off_t fstart, fvar;
@@ -10466,9 +10429,8 @@ i_prepare_call(struct v7 *v7, struct v7_function *func, ast_off_t *pos,
   return frame;
 }
 
-ON_FLASH V7_PRIVATE val_t
-i_invoke_function(struct v7 *v7, struct v7_function *func, val_t frame,
-                  ast_off_t body, ast_off_t end) {
+V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
+                                   val_t frame, ast_off_t body, ast_off_t end) {
 #ifndef V7_FORCE_STRICT_MODE
   int saved_strict_mode = v7->strict_mode;
 #endif
@@ -10496,9 +10458,8 @@ i_invoke_function(struct v7 *v7, struct v7_function *func, val_t frame,
   return res;
 }
 
-ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                                  val_t scope, val_t this_object,
-                                  int is_constructor) {
+static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope, val_t this_object, int is_constructor) {
   ast_off_t end, fpos, fend, fbody;
   val_t frame = v7_create_undefined(), res = v7_create_undefined();
   val_t v1 = v7_create_undefined(), args = v7_create_undefined();
@@ -10619,9 +10580,8 @@ cleanup:
 static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t,
                          enum i_break *);
 
-ON_FLASH static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                                   ast_off_t end, val_t scope,
-                                   enum i_break *brk) {
+static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                          ast_off_t end, val_t scope, enum i_break *brk) {
   val_t res = v7_create_undefined();
   while (*pos < end && !*brk) {
     res = i_eval_stmt(v7, a, pos, scope, brk);
@@ -10629,8 +10589,8 @@ ON_FLASH static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return res;
 }
 
-ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                                  val_t scope, enum i_break *brk) {
+static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope, enum i_break *brk) {
 #ifndef V7_FORCE_STRICT_MODE
   ast_off_t maybe_strict;
 #endif
@@ -11079,7 +11039,7 @@ cleanup:
 }
 
 /* Invoke a function applying the argument array */
-ON_FLASH val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
+val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
@@ -11158,7 +11118,7 @@ cleanup:
 }
 
 /* like v7_exec_with but frees src if fr is true */
-ON_FLASH
+
 V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
                                      val_t w, int fr) {
   /* TODO(mkm): use GC pool */
@@ -11226,16 +11186,15 @@ cleanup:
   return err;
 }
 
-ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
-                                  val_t w) {
+enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
   return v7_exec_with2(v7, res, src, w, 0);
 }
 
-ON_FLASH void v7_interrupt(struct v7 *v7) {
+void v7_interrupt(struct v7 *v7) {
   v7->interrupt = 1;
 }
 
-ON_FLASH enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
+enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
   return v7_exec_with(v7, res, src, V7_UNDEFINED);
 }
 
@@ -11244,7 +11203,7 @@ ON_FLASH enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
  * Note: this function is intended only for v7_exec_file
  * It is move file pointer to the end of file
  */
-ON_FLASH static int v7_get_file_size(c_file_t fp) {
+static int v7_get_file_size(c_file_t fp) {
   int res = -1;
   if (c_fseek(fp, 0, SEEK_END) == 0) {
     res = c_ftell(fp);
@@ -11255,7 +11214,7 @@ ON_FLASH static int v7_get_file_size(c_file_t fp) {
 #endif
 
 #ifndef V7_NO_FS
-ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
+enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   c_file_t fp;
   char *p;
   long file_size;
@@ -11302,8 +11261,7 @@ ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
 #define POP() (v7->stack[--v7->sp])
 #define TOS() (v7->stack[v7->sp - 1])
 
-ON_FLASH static double b_int_bin_op(struct v7 *v7, enum opcode op, double a,
-                                    double b) {
+static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
   int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
 
@@ -11326,8 +11284,7 @@ ON_FLASH static double b_int_bin_op(struct v7 *v7, enum opcode op, double a,
   }
 }
 
-ON_FLASH static double b_num_bin_op(struct v7 *v7, enum opcode op, double a,
-                                    double b) {
+static double b_num_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
   switch (op) {
     case OP_ADD: /* simple fixed width nodes with no payload */
       return a + b;
@@ -11359,8 +11316,7 @@ ON_FLASH static double b_num_bin_op(struct v7 *v7, enum opcode op, double a,
   }
 }
 
-ON_FLASH static int b_bool_bin_op(struct v7 *v7, enum opcode op, double a,
-                                  double b) {
+static int b_bool_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
 #ifdef V7_BROKEN_NAN
   if (isnan(a) || isnan(b)) return op == OP_NE || op == OP_NE_NE;
 #endif
@@ -11494,8 +11450,7 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
 void print_str(const char *str);
 #endif
 
-ON_FLASH V7_PRIVATE v7_val_t
-Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+V7_PRIVATE v7_val_t Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
 
@@ -11527,7 +11482,7 @@ Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_null();
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
+V7_PRIVATE v7_val_t
 _std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
   enum v7_err err;
   v7_val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
@@ -11547,14 +11502,12 @@ _std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
   return res;
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
+V7_PRIVATE v7_val_t Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
   (void) t;
   return _std_eval(v7, args, ' ', ' ');
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-Std_parseInt(struct v7 *v7, v7_val_t t, v7_val_t args) {
+V7_PRIVATE v7_val_t Std_parseInt(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   v7_val_t arg1 = i_value_of(v7, v7_array_get(v7, args, 1));
   long sign = 1, base = v7_is_undefined(arg1) ? 0 : to_long(v7, arg1, 0), n;
@@ -11601,8 +11554,7 @@ Std_parseInt(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return p == end ? V7_TAG_NAN : v7_create_number(n * sign);
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-Std_parseFloat(struct v7 *v7, v7_val_t t, v7_val_t args) {
+V7_PRIVATE v7_val_t Std_parseFloat(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   char buf[20], *p = buf, *end;
   double result;
@@ -11626,15 +11578,13 @@ Std_parseFloat(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return p == end ? V7_TAG_NAN : v7_create_number(result);
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-Std_isNaN(struct v7 *v7, v7_val_t t, v7_val_t args) {
+V7_PRIVATE v7_val_t Std_isNaN(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   (void) t;
   return v7_create_boolean(arg0 == V7_TAG_NAN);
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-Std_isFinite(struct v7 *v7, v7_val_t t, v7_val_t args) {
+V7_PRIVATE v7_val_t Std_isFinite(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   (void) t;
   return v7_create_boolean(v7_is_number(arg0) && arg0 != V7_TAG_NAN &&
@@ -11642,7 +11592,7 @@ Std_isFinite(struct v7 *v7, v7_val_t t, v7_val_t args) {
 }
 
 #ifndef NO_LIBC
-ON_FLASH static v7_val_t Std_exit(struct v7 *v7, v7_val_t t, v7_val_t args) {
+static v7_val_t Std_exit(struct v7 *v7, v7_val_t t, v7_val_t args) {
   int exit_code = arg_long(v7, args, 0, 0);
   (void) t;
   exit(exit_code);
@@ -11650,7 +11600,7 @@ ON_FLASH static v7_val_t Std_exit(struct v7 *v7, v7_val_t t, v7_val_t args) {
 }
 #endif
 
-ON_FLASH V7_PRIVATE void init_stdlib(struct v7 *v7) {
+V7_PRIVATE void init_stdlib(struct v7 *v7) {
   /*
    * Ensure the first call to v7_create_value will use a null proto:
    * {}.__proto__.__proto__ == null
@@ -11777,7 +11727,7 @@ RODATA static const char * const js_functions[] = {
 
 #define CEIL(x, y) ((x) / (y) + ((x) % (y) > 0))
 
-ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
+ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   val_t res;
   int i;
 
@@ -11834,14 +11784,14 @@ ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
-ON_FLASH static int hex(int c) {
+static int hex(int c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'a' && c <= 'f') return c - 'a' + 10;
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;
   return -SLRE_INVALID_HEX_DIGIT;
 }
 
-ON_FLASH int nextesc(const char **p) {
+int nextesc(const char **p) {
   const unsigned char *s = (unsigned char *) (*p)++;
   switch (*s) {
     case 0:
@@ -12019,12 +11969,12 @@ enum slre_opcode {
   L_WORD_N  /* "\B" non-word boundary */
 };
 
-ON_FLASH static signed char dec(int c) {
+static signed char dec(int c) {
   if (isdigitrune(c)) return c - '0';
   return SLRE_INVALID_DEC_DIGIT;
 }
 
-ON_FLASH static unsigned char re_dec_digit(struct slre_env *e, int c) {
+static unsigned char re_dec_digit(struct slre_env *e, int c) {
   signed char ret = dec(c);
   if (ret < 0) {
     SLRE_THROW(e, SLRE_INVALID_DEC_DIGIT);
@@ -12032,7 +11982,7 @@ ON_FLASH static unsigned char re_dec_digit(struct slre_env *e, int c) {
   return ret;
 }
 
-ON_FLASH static int re_nextc(Rune *r, const char **src, const char *src_end) {
+static int re_nextc(Rune *r, const char **src, const char *src_end) {
   *r = 0;
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
@@ -12054,11 +12004,11 @@ ON_FLASH static int re_nextc(Rune *r, const char **src, const char *src_end) {
   return 0;
 }
 
-ON_FLASH static int re_nextc_env(struct slre_env *e) {
+static int re_nextc_env(struct slre_env *e) {
   return re_nextc(&e->curr_rune, &e->src, e->src_end);
 }
 
-ON_FLASH static void re_nchset(struct slre_env *e) {
+static void re_nchset(struct slre_env *e) {
   if (e->sets_num >= nelem(e->prog->charset)) {
     SLRE_THROW(e, SLRE_TOO_MANY_CHARSETS);
   }
@@ -12066,7 +12016,7 @@ ON_FLASH static void re_nchset(struct slre_env *e) {
   e->curr_set->end = e->curr_set->spans;
 }
 
-ON_FLASH static void re_rng2set(struct slre_env *e, Rune start, Rune end) {
+static void re_rng2set(struct slre_env *e, Rune start, Rune end) {
   if (start > end) {
     SLRE_THROW(e, SLRE_INV_CHARSET_RANGE);
   }
@@ -12082,12 +12032,12 @@ ON_FLASH static void re_rng2set(struct slre_env *e, Rune start, Rune end) {
 
 #define re_d_2set(e) re_rng2set(e, '0', '9')
 
-ON_FLASH static void re_D_2set(struct slre_env *e) {
+static void re_D_2set(struct slre_env *e) {
   re_rng2set(e, 0, '0' - 1);
   re_rng2set(e, '9' + 1, 0xFFFF);
 }
 
-ON_FLASH static void re_s_2set(struct slre_env *e) {
+static void re_s_2set(struct slre_env *e) {
   re_char2set(e, 0x9);
   re_rng2set(e, 0xA, 0xD);
   re_char2set(e, 0x20);
@@ -12096,7 +12046,7 @@ ON_FLASH static void re_s_2set(struct slre_env *e) {
   re_char2set(e, 0xFEFF);
 }
 
-ON_FLASH static void re_S_2set(struct slre_env *e) {
+static void re_S_2set(struct slre_env *e) {
   re_rng2set(e, 0, 0x9 - 1);
   re_rng2set(e, 0xD + 1, 0x20 - 1);
   re_rng2set(e, 0x20 + 1, 0xA0 - 1);
@@ -12105,14 +12055,14 @@ ON_FLASH static void re_S_2set(struct slre_env *e) {
   re_rng2set(e, 0xFEFF + 1, 0xFFFF);
 }
 
-ON_FLASH static void re_w_2set(struct slre_env *e) {
+static void re_w_2set(struct slre_env *e) {
   re_d_2set(e);
   re_rng2set(e, 'A', 'Z');
   re_char2set(e, '_');
   re_rng2set(e, 'a', 'z');
 }
 
-ON_FLASH static void re_W_2set(struct slre_env *e) {
+static void re_W_2set(struct slre_env *e) {
   re_rng2set(e, 0, '0' - 1);
   re_rng2set(e, '9' + 1, 'A' - 1);
   re_rng2set(e, 'Z' + 1, '_' - 1);
@@ -12120,7 +12070,7 @@ ON_FLASH static void re_W_2set(struct slre_env *e) {
   re_rng2set(e, 'z' + 1, 0xFFFF);
 }
 
-ON_FLASH static unsigned char re_endofcount(Rune c) {
+static unsigned char re_endofcount(Rune c) {
   switch (c) {
     case ',':
     case '}':
@@ -12129,11 +12079,11 @@ ON_FLASH static unsigned char re_endofcount(Rune c) {
   return 0;
 }
 
-ON_FLASH static void re_ex_num_overfl(struct slre_env *e) {
+static void re_ex_num_overfl(struct slre_env *e) {
   SLRE_THROW(e, SLRE_NUM_OVERFLOW);
 }
 
-ON_FLASH static enum slre_opcode re_countrep(struct slre_env *e) {
+static enum slre_opcode re_countrep(struct slre_env *e) {
   e->min_rep = 0;
   while (e->src < e->src_end && !re_endofcount(e->curr_rune = *e->src++)) {
     e->min_rep = e->min_rep * 10 + re_dec_digit(e, e->curr_rune);
@@ -12157,7 +12107,7 @@ ON_FLASH static enum slre_opcode re_countrep(struct slre_env *e) {
   return L_COUNT;
 }
 
-ON_FLASH static enum slre_opcode re_lexset(struct slre_env *e) {
+static enum slre_opcode re_lexset(struct slre_env *e) {
   Rune ch = 0;
   unsigned char esc, ch_fl = 0, dash_fl = 0;
   enum slre_opcode type = L_SET;
@@ -12257,7 +12207,7 @@ ON_FLASH static enum slre_opcode re_lexset(struct slre_env *e) {
   return type;
 }
 
-ON_FLASH static int re_lexer(struct slre_env *e) {
+static int re_lexer(struct slre_env *e) {
   if (re_nextc_env(e)) {
     switch (e->curr_rune) {
       case '0':
@@ -12342,13 +12292,13 @@ ON_FLASH static int re_lexer(struct slre_env *e) {
 #define RE_NEXT(env) (env)->lookahead = re_lexer(env)
 #define RE_ACCEPT(env, t) ((env)->lookahead == (t) ? RE_NEXT(env), 1 : 0)
 
-ON_FLASH static struct slre_node *re_nnode(struct slre_env *e, int type) {
+static struct slre_node *re_nnode(struct slre_env *e, int type) {
   memset(e->pend, 0, sizeof(struct slre_node));
   e->pend->type = type;
   return e->pend++;
 }
 
-ON_FLASH static unsigned char re_isemptynd(struct slre_node *nd) {
+static unsigned char re_isemptynd(struct slre_node *nd) {
   if (!nd) return 1;
   switch (nd->type) {
     default:
@@ -12370,10 +12320,9 @@ ON_FLASH static unsigned char re_isemptynd(struct slre_node *nd) {
   }
 }
 
-ON_FLASH static struct slre_node *re_nrep(struct slre_env *e,
-                                          struct slre_node *nd, int ng,
-                                          unsigned short min,
-                                          unsigned short max) {
+static struct slre_node *re_nrep(struct slre_env *e, struct slre_node *nd,
+                                 int ng, unsigned short min,
+                                 unsigned short max) {
   struct slre_node *rep = re_nnode(e, P_REP);
   if (max == SLRE_MAX_REP && re_isemptynd(nd)) {
     SLRE_THROW(e, SLRE_INF_LOOP_M_EMP_STR);
@@ -12387,7 +12336,7 @@ ON_FLASH static struct slre_node *re_nrep(struct slre_env *e,
 
 static struct slre_node *re_parser(struct slre_env *e);
 
-ON_FLASH static struct slre_node *re_parse_la(struct slre_env *e) {
+static struct slre_node *re_parse_la(struct slre_env *e) {
   struct slre_node *nd;
   int min, max;
   switch (e->lookahead) {
@@ -12499,7 +12448,7 @@ ON_FLASH static struct slre_node *re_parse_la(struct slre_env *e) {
   return nd;
 }
 
-ON_FLASH static unsigned char re_endofcat(Rune c, int is_regex) {
+static unsigned char re_endofcat(Rune c, int is_regex) {
   switch (c) {
     case 0:
       return 1;
@@ -12510,7 +12459,7 @@ ON_FLASH static unsigned char re_endofcat(Rune c, int is_regex) {
   return 0;
 }
 
-ON_FLASH static struct slre_node *re_parser(struct slre_env *e) {
+static struct slre_node *re_parser(struct slre_env *e) {
   struct slre_node *alt = NULL, *cat, *nd;
   if (!re_endofcat(e->lookahead, e->is_regex)) {
     cat = re_parse_la(e);
@@ -12532,7 +12481,7 @@ ON_FLASH static struct slre_node *re_parser(struct slre_env *e) {
   return alt;
 }
 
-ON_FLASH static unsigned int re_nodelen(struct slre_node *nd) {
+static unsigned int re_nodelen(struct slre_node *nd) {
   unsigned int n = 0;
   if (!nd) return 0;
   switch (nd->type) {
@@ -12565,14 +12514,13 @@ ON_FLASH static unsigned int re_nodelen(struct slre_node *nd) {
   }
 }
 
-ON_FLASH static struct slre_instruction *re_newinst(struct slre_prog *prog,
-                                                    int opcode) {
+static struct slre_instruction *re_newinst(struct slre_prog *prog, int opcode) {
   memset(prog->end, 0, sizeof(struct slre_instruction));
   prog->end->opcode = opcode;
   return prog->end++;
 }
 
-ON_FLASH static void re_compile(struct slre_env *e, struct slre_node *nd) {
+static void re_compile(struct slre_env *e, struct slre_node *nd) {
   struct slre_instruction *inst, *split, *jump, *rep;
   unsigned int n;
 
@@ -12728,7 +12676,7 @@ ON_FLASH static void re_compile(struct slre_env *e, struct slre_node *nd) {
 }
 
 #ifdef RE_TEST
-ON_FLASH static void print_set(struct slre_class *cp) {
+static void print_set(struct slre_class *cp) {
   struct slre_range *p;
   for (p = cp->spans; p < cp->end; p++) {
     printf("%s", p == cp->spans ? "'" : ",'");
@@ -12745,7 +12693,7 @@ ON_FLASH static void print_set(struct slre_class *cp) {
   printf("]");
 }
 
-ON_FLASH static void node_print(struct slre_node *nd) {
+static void node_print(struct slre_node *nd) {
   if (!nd) {
     printf("Empty");
     return;
@@ -12820,7 +12768,7 @@ ON_FLASH static void node_print(struct slre_node *nd) {
   }
 }
 
-ON_FLASH static void program_print(struct slre_prog *prog) {
+static void program_print(struct slre_prog *prog) {
   struct slre_instruction *inst;
   for (inst = prog->start; inst < prog->end; ++inst) {
     printf("%3d: ", inst - prog->start);
@@ -12900,9 +12848,8 @@ ON_FLASH static void program_print(struct slre_prog *prog) {
 }
 #endif
 
-ON_FLASH int slre_compile(const char *pat, size_t pat_len, const char *flags,
-                          volatile size_t fl_len, struct slre_prog **pr,
-                          int is_regex) {
+int slre_compile(const char *pat, size_t pat_len, const char *flags,
+                 volatile size_t fl_len, struct slre_prog **pr, int is_regex) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
@@ -12982,17 +12929,17 @@ ON_FLASH int slre_compile(const char *pat, size_t pat_len, const char *flags,
   return err_code;
 }
 
-ON_FLASH void slre_free(struct slre_prog *prog) {
+void slre_free(struct slre_prog *prog) {
   if (prog) {
     SLRE_FREE(prog->start);
     SLRE_FREE(prog);
   }
 }
 
-ON_FLASH static struct slre_thread *re_newthread(struct slre_thread *t,
-                                                 struct slre_instruction *pc,
-                                                 const char *start,
-                                                 struct slre_loot *loot) {
+static struct slre_thread *re_newthread(struct slre_thread *t,
+                                        struct slre_instruction *pc,
+                                        const char *start,
+                                        struct slre_loot *loot) {
   struct slre_thread *new_thread =
       (struct slre_thread *) SLRE_MALLOC(sizeof(struct slre_thread));
   if (new_thread != NULL) new_thread->prev = t;
@@ -13002,23 +12949,22 @@ ON_FLASH static struct slre_thread *re_newthread(struct slre_thread *t,
   return new_thread;
 }
 
-ON_FLASH static struct slre_thread *get_prev_thread(struct slre_thread *t) {
+static struct slre_thread *get_prev_thread(struct slre_thread *t) {
   struct slre_thread *tmp_thr = t->prev;
   SLRE_FREE(t);
   return tmp_thr;
 }
 
-ON_FLASH static void free_threads(struct slre_thread *t) {
+static void free_threads(struct slre_thread *t) {
   while (t->prev != NULL) t = get_prev_thread(t);
 }
 
 #define RE_NO_MATCH() \
   if (!(thr = 0)) continue
 
-ON_FLASH static unsigned char re_match(struct slre_instruction *pc,
-                                       const char *current, const char *end,
-                                       const char *bol, unsigned int flags,
-                                       struct slre_loot *loot) {
+static unsigned char re_match(struct slre_instruction *pc, const char *current,
+                              const char *end, const char *bol,
+                              unsigned int flags, struct slre_loot *loot) {
   struct slre_loot sub, tmpsub;
   Rune c, r;
   struct slre_range *p;
@@ -13180,8 +13126,8 @@ ON_FLASH static unsigned char re_match(struct slre_instruction *pc,
   return 0;
 }
 
-ON_FLASH int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
-                       const char *end, struct slre_loot *loot) {
+int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
+              const char *end, struct slre_loot *loot) {
   struct slre_loot tmpsub;
   const char *st = start;
 
@@ -13207,9 +13153,8 @@ ON_FLASH int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
   return !loot->num_captures;
 }
 
-ON_FLASH int slre_replace(struct slre_loot *loot, const char *src,
-                          size_t src_len, const char *rstr, size_t rstr_len,
-                          struct slre_loot *dstsub) {
+int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
+                 const char *rstr, size_t rstr_len, struct slre_loot *dstsub) {
   int size = 0, n;
   Rune curr_rune;
   const char *const rstr_end = rstr + rstr_len;
@@ -13285,9 +13230,8 @@ ON_FLASH int slre_replace(struct slre_loot *loot, const char *src,
   return size;
 }
 
-ON_FLASH int slre_match(const char *re, size_t re_len, const char *flags,
-                        size_t fl_len, const char *str, size_t str_len,
-                        struct slre_loot *loot) {
+int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
+               const char *str, size_t str_len, struct slre_loot *loot) {
   struct slre_prog *prog = NULL;
   int res;
 
@@ -13329,7 +13273,7 @@ static const char *err_code_to_str(int err_code) {
 
 #define RE_TEST_STR_SIZE 2000
 
-ON_FLASH static unsigned get_flags(const char *ch) {
+static unsigned get_flags(const char *ch) {
   unsigned int flags = 0;
 
   while (*ch != '\0') {
@@ -13354,7 +13298,7 @@ ON_FLASH static unsigned get_flags(const char *ch) {
   return flags;
 }
 
-ON_FLASH static void show_usage_and_exit(char *argv[]) {
+static void show_usage_and_exit(char *argv[]) {
   fprintf(stderr, "Usage: %s [OPTIONS]\n", argv[0]);
   fprintf(stderr, "%s\n", "OPTIONS:");
   fprintf(stderr, "%s\n", "  -p <regex_pattern>     Regex pattern");
@@ -13367,9 +13311,9 @@ ON_FLASH static void show_usage_and_exit(char *argv[]) {
   exit(1);
 }
 
-ON_FLASH static int process_line(struct slre_prog *pr, const char *flags,
-                                 const char *line, const char *cap_no,
-                                 const char *replace, const char *verbose) {
+static int process_line(struct slre_prog *pr, const char *flags,
+                        const char *line, const char *cap_no,
+                        const char *replace, const char *verbose) {
   struct slre_loot loot;
   unsigned int fl = flags == NULL ? 0 : get_flags(flags);
   int i, n = cap_no == NULL ? -1 : atoi(cap_no), err_code = 0;
@@ -13400,7 +13344,7 @@ ON_FLASH static int process_line(struct slre_prog *pr, const char *flags,
   return err_code;
 }
 
-ON_FLASH int main(int argc, char **argv) {
+int main(int argc, char **argv) {
   const char *str = NULL, *pattern = NULL, *replace = NULL;
   const char *flags = "", *file_name = NULL, *cap_no = NULL, *verbose = NULL;
   struct slre_prog *pr = NULL;
@@ -13474,8 +13418,7 @@ ON_FLASH int main(int argc, char **argv) {
 
 
 #if V7_ENABLE__Object__getPrototypeOf
-ON_FLASH static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj,
-                                         val_t args) {
+static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
@@ -13487,8 +13430,7 @@ ON_FLASH static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj,
 #endif
 
 #if V7_ENABLE__Object__isPrototypeOf
-ON_FLASH static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj,
-                                        val_t args) {
+static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t proto = v7_array_get(v7, args, 1);
   (void) this_obj;
@@ -13502,9 +13444,8 @@ ON_FLASH static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj,
  * with the iteration order if properties in `for in`
  * This will be obsoleted when arrays will have a special object type.
  */
-ON_FLASH static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p,
-                                         val_t res, int i,
-                                         unsigned int ignore_flags) {
+static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
+                                int i, unsigned int ignore_flags) {
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
   if (p->next) _Obj_append_reverse(v7, p->next, res, i + 1, ignore_flags);
@@ -13512,8 +13453,8 @@ ON_FLASH static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p,
   v7_array_set(v7, res, i, p->name);
 }
 
-ON_FLASH static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
-                                   unsigned int ignore_flags) {
+static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
+                          unsigned int ignore_flags) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t res = v7_create_dense_array(v7);
   if (!v7_is_object(obj)) {
@@ -13525,8 +13466,8 @@ ON_FLASH static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
 }
 #endif
 
-ON_FLASH static struct v7_property *_Obj_getOwnProperty(struct v7 *v7,
-                                                        val_t obj, val_t name) {
+static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
+                                               val_t name) {
   char name_buf[512];
   int name_len;
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
@@ -13534,23 +13475,23 @@ ON_FLASH static struct v7_property *_Obj_getOwnProperty(struct v7 *v7,
 }
 
 #if V7_ENABLE__Object__keys
-ON_FLASH static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 #endif
 
 #if V7_ENABLE__Object__getOwnPropertyNames
-ON_FLASH static val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
-                                              val_t args) {
+static val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 #endif
 
 #if V7_ENABLE__Object__getOwnPropertyDescriptor
-ON_FLASH static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7,
-                                                   val_t this_obj, val_t args) {
+static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
+                                          val_t args) {
   struct v7_property *prop;
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
@@ -13576,9 +13517,8 @@ ON_FLASH static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7,
 }
 #endif
 
-ON_FLASH static void o_set_attr(struct v7 *v7, val_t desc, const char *name,
-                                size_t n, struct v7_property *prop,
-                                unsigned int attr) {
+static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
+                       struct v7_property *prop, unsigned int attr) {
   val_t v = v7_get(v7, desc, name, n);
   if (v7_is_true(v7, v)) {
     prop->attributes &= ~attr;
@@ -13587,9 +13527,8 @@ ON_FLASH static void o_set_attr(struct v7 *v7, val_t desc, const char *name,
   }
 }
 
-ON_FLASH static val_t _Obj_defineProperty(struct v7 *v7, val_t obj,
-                                          const char *name, int name_len,
-                                          val_t desc) {
+static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
+                                 int name_len, val_t desc) {
   val_t val = v7_get(v7, desc, "value", 5);
   struct v7_property *prop = v7_get_own_property(v7, obj, name, name_len);
 
@@ -13613,8 +13552,7 @@ ON_FLASH static val_t _Obj_defineProperty(struct v7 *v7, val_t obj,
 }
 
 #if V7_ENABLE__Object__defineProperty
-ON_FLASH static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj,
-                                         val_t args) {
+static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
   val_t desc = v7_array_get(v7, args, 2);
@@ -13629,7 +13567,7 @@ ON_FLASH static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj,
 }
 #endif
 
-ON_FLASH static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
+static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   struct v7_property *p;
   if (!v7_is_object(descs)) {
     throw_exception(v7, TYPE_ERROR, "object expected");
@@ -13645,8 +13583,7 @@ ON_FLASH static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
 }
 
 #if V7_ENABLE__Object__defineProperties
-ON_FLASH static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
-                                           val_t args) {
+static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
   (void) this_obj;
@@ -13656,7 +13593,7 @@ ON_FLASH static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
 #endif
 
 #if V7_ENABLE__Object__create
-ON_FLASH static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res, proto = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
   (void) this_obj;
@@ -13673,8 +13610,8 @@ ON_FLASH static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
 #endif
 
 #if V7_ENABLE__Object__propertyIsEnumerable
-ON_FLASH static val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
-                                               val_t args) {
+static val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   struct v7_property *prop;
   val_t name = v7_array_get(v7, args, 0);
   if ((prop = _Obj_getOwnProperty(v7, this_obj, name)) == NULL) {
@@ -13686,8 +13623,7 @@ ON_FLASH static val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
 #endif
 
 #if V7_ENABLE__Object__hasOwnProperty
-ON_FLASH static val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj,
-                                         val_t args) {
+static val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t name = v7_array_get(v7, args, 0);
   return v7_create_boolean(_Obj_getOwnProperty(v7, this_obj, name) != NULL);
 }
@@ -13703,8 +13639,7 @@ static enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
 }
 #endif
 
-ON_FLASH V7_PRIVATE val_t
-Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
@@ -13719,7 +13654,7 @@ Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
   (void) args;
@@ -13731,8 +13666,7 @@ ON_FLASH static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 #if V7_ENABLE__Object__preventExtensions
-ON_FLASH static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj,
-                                            val_t args) {
+static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
@@ -13744,8 +13678,7 @@ ON_FLASH static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj,
 #endif
 
 #if V7_ENABLE__Object__isExtensible
-ON_FLASH static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj,
-                                       val_t args) {
+static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
@@ -13756,7 +13689,7 @@ ON_FLASH static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj,
 }
 #endif
 
-ON_FLASH V7_PRIVATE void init_object(struct v7 *v7) {
+V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
   v7_exec(v7, &v,
@@ -13820,7 +13753,7 @@ ON_FLASH V7_PRIVATE void init_object(struct v7 *v7) {
  */
 
 
-ON_FLASH static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t res;
 
@@ -13842,7 +13775,7 @@ static const char *const error_names[] = {"TypeError", "SyntaxError",
 V7_STATIC_ASSERT(ARRAY_SIZE(error_names) == ERROR_CTOR_MAX,
                  error_name_count_mismatch);
 
-ON_FLASH V7_PRIVATE void init_error(struct v7 *v7) {
+V7_PRIVATE void init_error(struct v7 *v7) {
   val_t error;
   size_t i;
 
@@ -13864,7 +13797,7 @@ ON_FLASH V7_PRIVATE void init_error(struct v7 *v7) {
  */
 
 
-ON_FLASH static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_length(v7, args) == 0 ? v7_create_number(0.0)
                                               : v7_array_get(v7, args, 0);
   val_t res = v7_is_number(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
@@ -13878,7 +13811,7 @@ ON_FLASH static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH V7_PRIVATE val_t
+V7_PRIVATE val_t
 n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d = i_as_num(v7, arg0);
@@ -13891,22 +13824,19 @@ n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-ON_FLASH static val_t Number_toFixed(struct v7 *v7, val_t this_obj,
-                                     val_t args) {
+static val_t Number_toFixed(struct v7 *v7, val_t this_obj, val_t args) {
   return n_to_str(v7, this_obj, args, "%%.%dlf");
 }
 
-ON_FLASH static val_t Number_toExp(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Number_toExp(struct v7 *v7, val_t this_obj, val_t args) {
   return n_to_str(v7, this_obj, args, "%%.%de");
 }
 
-ON_FLASH static val_t Number_toPrecision(struct v7 *v7, val_t this_obj,
-                                         val_t args) {
+static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
   return Number_toExp(v7, this_obj, args);
 }
 
-ON_FLASH static val_t Number_valueOf(struct v7 *v7, val_t this_obj,
-                                     val_t args) {
+static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_number(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
@@ -13917,8 +13847,7 @@ ON_FLASH static val_t Number_valueOf(struct v7 *v7, val_t this_obj,
   return Obj_valueOf(v7, this_obj, args);
 }
 
-ON_FLASH static val_t Number_toString(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[50];
   (void) args;
 
@@ -13938,13 +13867,13 @@ ON_FLASH static val_t Number_toString(struct v7 *v7, val_t this_obj,
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
-ON_FLASH static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
   return v7_create_boolean(!v7_is_number(arg0) || arg0 == V7_TAG_NAN);
 }
 
-ON_FLASH V7_PRIVATE void init_number(struct v7 *v7) {
+V7_PRIVATE void init_number(struct v7 *v7) {
   unsigned int attrs =
       V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
   val_t num = v7_create_constructor(v7, v7->number_prototype, Number_ctor, 1);
@@ -13980,8 +13909,7 @@ ON_FLASH V7_PRIVATE void init_number(struct v7 *v7) {
  */
 
 
-ON_FLASH static val_t Json_stringify(struct v7 *v7, val_t this_obj,
-                                     val_t args) {
+static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   char buf[100], *p = v7_to_json(v7, arg0, buf, sizeof(buf));
   val_t res = v7_create_string(v7, p, strlen(p), 1);
@@ -13990,13 +13918,12 @@ ON_FLASH static val_t Json_stringify(struct v7 *v7, val_t this_obj,
   return res;
 }
 
-ON_FLASH V7_PRIVATE v7_val_t
-Json_parse(struct v7 *v7, v7_val_t t, v7_val_t args) {
+V7_PRIVATE v7_val_t Json_parse(struct v7 *v7, v7_val_t t, v7_val_t args) {
   (void) t;
   return _std_eval(v7, args, '(', ')');
 }
 
-ON_FLASH V7_PRIVATE void init_json(struct v7 *v7) {
+V7_PRIVATE void init_json(struct v7 *v7) {
   val_t o = v7_create_object(v7);
   set_method(v7, o, "stringify", Json_stringify, 1);
   set_method(v7, o, "parse", Json_parse, 1);
@@ -14014,7 +13941,7 @@ struct a_sort_data {
   val_t sort_func;
 };
 
-ON_FLASH static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 #if 0
   (void) v7;
   (void) this_obj;
@@ -14037,7 +13964,7 @@ ON_FLASH static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 #endif
 }
 
-ON_FLASH static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   val_t v = v7_create_undefined();
   int i, len = v7_array_length(v7, args);
   for (i = 0; i < len; i++) {
@@ -14047,8 +13974,7 @@ ON_FLASH static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   return v;
 }
 
-ON_FLASH static val_t Array_get_length(struct v7 *v7, val_t this_obj,
-                                       val_t args) {
+static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   long len = 0;
   (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
@@ -14057,8 +13983,7 @@ ON_FLASH static val_t Array_get_length(struct v7 *v7, val_t this_obj,
   return v7_create_number(len);
 }
 
-ON_FLASH static val_t Array_set_length(struct v7 *v7, val_t this_obj,
-                                       val_t args) {
+static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   long new_len = arg_long(v7, args, 0, -1);
 
@@ -14097,7 +14022,7 @@ ON_FLASH static val_t Array_set_length(struct v7 *v7, val_t this_obj,
   return v7_create_number(new_len);
 }
 
-ON_FLASH static int a_cmp(void *user_data, const void *pa, const void *pb) {
+static int a_cmp(void *user_data, const void *pa, const void *pb) {
   struct a_sort_data *sort_data = (struct a_sort_data *) user_data;
   struct v7 *v7 = sort_data->v7;
   val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
@@ -14117,7 +14042,7 @@ ON_FLASH static int a_cmp(void *user_data, const void *pa, const void *pb) {
   }
 }
 
-ON_FLASH static int a_partition(val_t *a, int l, int r, void *user_data) {
+static int a_partition(val_t *a, int l, int r, void *user_data) {
   val_t t, pivot = a[l];
   int i = l, j = r + 1;
 
@@ -14139,7 +14064,7 @@ ON_FLASH static int a_partition(val_t *a, int l, int r, void *user_data) {
   return j;
 }
 
-ON_FLASH static void a_qsort(val_t *a, int l, int r, void *user_data) {
+static void a_qsort(val_t *a, int l, int r, void *user_data) {
   if (l < r) {
     int j = a_partition(a, l, r, user_data);
     a_qsort(a, l, j - 1, user_data);
@@ -14147,9 +14072,8 @@ ON_FLASH static void a_qsort(val_t *a, int l, int r, void *user_data) {
   }
 }
 
-ON_FLASH static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
-                             int (*sorting_func)(void *, const void *,
-                                                 const void *)) {
+static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
+                    int (*sorting_func)(void *, const void *, const void *)) {
   int i = 0, len = v7_array_length(v7, obj);
   val_t *arr;
   val_t arg0 = v7_array_get(v7, args, 0);
@@ -14190,15 +14114,15 @@ ON_FLASH static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   return obj;
 }
 
-ON_FLASH static val_t Array_sort(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_sort(struct v7 *v7, val_t this_obj, val_t args) {
   return a_sort(v7, this_obj, args, a_cmp);
 }
 
-ON_FLASH static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
   return a_sort(v7, this_obj, args, NULL);
 }
 
-ON_FLASH static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t res = v7_create_undefined();
   size_t sep_size = 0;
@@ -14246,13 +14170,11 @@ ON_FLASH static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH static val_t Array_toString(struct v7 *v7, val_t this_obj,
-                                     val_t args) {
+static val_t Array_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return Array_join(v7, this_obj, args);
 }
 
-ON_FLASH static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args,
-                               int mutate) {
+static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
   val_t res = v7_create_dense_array(v7);
   long i, len = v7_array_length(v7, this_obj);
   long num_args = v7_array_length(v7, args);
@@ -14328,16 +14250,15 @@ ON_FLASH static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args,
   return res;
 }
 
-ON_FLASH static val_t Array_slice(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_slice(struct v7 *v7, val_t this_obj, val_t args) {
   return a_splice(v7, this_obj, args, 0);
 }
 
-ON_FLASH static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
   return a_splice(v7, this_obj, args, 1);
 }
 
-ON_FLASH static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0,
-                             val_t *a1) {
+static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
   *a0 = v7_array_get(v7, args, 0);
   *a1 = v7_array_get(v7, args, 1);
   if (v7_is_undefined(*a1)) {
@@ -14345,8 +14266,7 @@ ON_FLASH static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0,
   }
 }
 
-ON_FLASH static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n,
-                              val_t t) {
+static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
   val_t params = v7_create_dense_array(v7);
   v7_array_push(v7, params, v);
   v7_array_push(v7, params, n);
@@ -14354,7 +14274,7 @@ ON_FLASH static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n,
   return v7_apply(v7, a, t, params);
 }
 
-ON_FLASH static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v, res = v7_create_undefined();
   unsigned long len, i;
   int has;
@@ -14376,7 +14296,7 @@ ON_FLASH static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v;
   unsigned long i, len;
   int has;
@@ -14399,7 +14319,7 @@ ON_FLASH static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(1);
 }
 
-ON_FLASH static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v;
   unsigned long i, len;
   int has;
@@ -14422,7 +14342,7 @@ ON_FLASH static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(0);
 }
 
-ON_FLASH static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v, res = v7_create_undefined();
   unsigned long len, i;
   int has;
@@ -14445,7 +14365,7 @@ ON_FLASH static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH static val_t Array_concat(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_concat(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i, j;
   val_t res;
   size_t len;
@@ -14472,13 +14392,13 @@ ON_FLASH static val_t Array_concat(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH static val_t Array_isArray(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_isArray(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
   return v7_create_boolean(v7_is_array(v7, arg0));
 }
 
-ON_FLASH V7_PRIVATE void init_array(struct v7 *v7) {
+V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_function(v7, Array_ctor, 1);
   val_t length = v7_create_dense_array(v7);
 
@@ -14510,8 +14430,7 @@ ON_FLASH V7_PRIVATE void init_array(struct v7 *v7) {
  */
 
 
-ON_FLASH V7_PRIVATE val_t
-Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t v = v7_create_boolean(0); /* false by default */
 
   if (v7_is_true(v7, v7_array_get(v7, args, 0))) {
@@ -14528,8 +14447,7 @@ Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return v;
 }
 
-ON_FLASH static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_boolean(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
@@ -14540,8 +14458,7 @@ ON_FLASH static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj,
   return Obj_valueOf(v7, this_obj, args);
 }
 
-ON_FLASH static val_t Boolean_toString(struct v7 *v7, val_t this_obj,
-                                       val_t args) {
+static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[50];
   (void) args;
 
@@ -14560,7 +14477,7 @@ ON_FLASH static val_t Boolean_toString(struct v7 *v7, val_t this_obj,
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
-ON_FLASH V7_PRIVATE void init_boolean(struct v7 *v7) {
+V7_PRIVATE void init_boolean(struct v7 *v7) {
   val_t ctor =
       v7_create_constructor(v7, v7->boolean_prototype, Boolean_ctor, 1);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
@@ -14577,7 +14494,7 @@ ON_FLASH V7_PRIVATE void init_boolean(struct v7 *v7) {
 #if V7_ENABLE__Math
 
 #ifdef __WATCOM__
-ON_FLASH int matherr(struct _exception *exc) {
+int matherr(struct _exception *exc) {
   if (exc->type == DOMAIN) {
     exc->retval = NAN;
     return 0;
@@ -14590,8 +14507,7 @@ ON_FLASH int matherr(struct _exception *exc) {
     V7_ENABLE__Math__exp || V7_ENABLE__Math__floor || V7_ENABLE__Math__log ||  \
     V7_ENABLE__Math__round || V7_ENABLE__Math__sin || V7_ENABLE__Math__sqrt || \
     V7_ENABLE__Math__tan
-ON_FLASH static val_t m_one_arg(struct v7 *v7, val_t args,
-                                double (*f)(double)) {
+static val_t m_one_arg(struct v7 *v7, val_t args, double (*f)(double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d0 = v7_to_number(arg0);
 #ifdef V7_BROKEN_NAN
@@ -14602,8 +14518,7 @@ ON_FLASH static val_t m_one_arg(struct v7 *v7, val_t args,
 #endif /* V7_ENABLE__Math__* */
 
 #if V7_ENABLE__Math__pow || V7_ENABLE__Math__atan2
-ON_FLASH static val_t m_two_arg(struct v7 *v7, val_t args,
-                                double (*f)(double, double)) {
+static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t arg1 = v7_array_get(v7, args, 1);
   double d0 = v7_to_number(arg0);
@@ -14616,17 +14531,16 @@ ON_FLASH static val_t m_two_arg(struct v7 *v7, val_t args,
 }
 #endif /* V7_ENABLE__Math__pow || V7_ENABLE__Math__atan2 */
 
-#define DEFINE_WRAPPER(name, func)                             \
-  ON_FLASH V7_PRIVATE val_t                                    \
-      Math_##name(struct v7 *v7, val_t this_obj, val_t args) { \
-    (void) this_obj;                                           \
-    return func(v7, args, name);                               \
+#define DEFINE_WRAPPER(name, func)                                          \
+  V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) { \
+    (void) this_obj;                                                        \
+    return func(v7, args, name);                                            \
   }
 
 /* Visual studio 2012+ has round() */
 #if V7_ENABLE__Math__round && \
     ((defined(V7_WINDOWS) && _MSC_VER < 1700) || defined(__WATCOM__))
-ON_FLASH static double round(double n) {
+static double round(double n) {
   return n;
 }
 #endif
@@ -14678,8 +14592,7 @@ DEFINE_WRAPPER(tan, m_one_arg)
 #endif
 
 #if V7_ENABLE__Math__random
-ON_FLASH V7_PRIVATE val_t
-Math_random(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
   static int srand_called = 0;
 
   if (!srand_called) {
@@ -14694,7 +14607,7 @@ Math_random(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Math__random */
 
 #if V7_ENABLE__Math__min || V7_ENABLE__Math__max
-ON_FLASH static val_t min_max(struct v7 *v7, val_t args, int is_min) {
+static val_t min_max(struct v7 *v7, val_t args, int is_min) {
   double res = NAN;
   int i, len = v7_array_length(v7, args);
 
@@ -14710,20 +14623,20 @@ ON_FLASH static val_t min_max(struct v7 *v7, val_t args, int is_min) {
 #endif /* V7_ENABLE__Math__min || V7_ENABLE__Math__max */
 
 #if V7_ENABLE__Math__min
-ON_FLASH V7_PRIVATE val_t Math_min(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Math_min(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return min_max(v7, args, 1);
 }
 #endif
 
 #if V7_ENABLE__Math__max
-ON_FLASH V7_PRIVATE val_t Math_max(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Math_max(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return min_max(v7, args, 0);
 }
 #endif
 
-ON_FLASH V7_PRIVATE void init_math(struct v7 *v7) {
+V7_PRIVATE void init_math(struct v7 *v7) {
   val_t math = v7_create_object(v7);
 
 #if V7_ENABLE__Math__abs
@@ -14804,7 +14717,7 @@ ON_FLASH V7_PRIVATE void init_math(struct v7 *v7) {
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
-ON_FLASH static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0), res = arg0;
 
   if (v7_array_length(v7, args) == 0)
@@ -14821,8 +14734,7 @@ ON_FLASH static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj,
-                                       val_t args) {
+static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   int i, num_args = v7_array_length(v7, args);
   val_t res = v7_create_string(v7, "", 0, 1); /* Empty string */
 
@@ -14840,8 +14752,7 @@ ON_FLASH static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj,
   return res;
 }
 
-ON_FLASH V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t this_obj,
-                                           val_t arg) {
+V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t this_obj, val_t arg) {
   size_t n;
   val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
@@ -14857,16 +14768,15 @@ ON_FLASH V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t this_obj,
   return NAN;
 }
 
-ON_FLASH static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_char_code_at(v7, this_obj, v7_array_get(v7, args, 0));
 }
 
-ON_FLASH static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj,
-                                     val_t args) {
+static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(s_charCodeAt(v7, this_obj, args));
 }
 
-ON_FLASH static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   double code = s_charCodeAt(v7, this_obj, args);
   char buf[10] = {0};
   int len = 0;
@@ -14878,7 +14788,7 @@ ON_FLASH static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-ON_FLASH static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = to_string(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
 
@@ -14890,8 +14800,7 @@ ON_FLASH static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-ON_FLASH static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args,
-                                 int last) {
+static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   val_t arg0 = v7_array_get(v7, args, 0);
   size_t fromIndex = 0;
   double res = -1;
@@ -14940,7 +14849,7 @@ ON_FLASH static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args,
   return v7_create_number(res);
 }
 
-ON_FLASH static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_string(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
@@ -14951,25 +14860,23 @@ ON_FLASH static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
-ON_FLASH static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
   return s_index_of(v7, this_obj, args, 0);
 }
 
-ON_FLASH static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
   return s_index_of(v7, this_obj, args, 1);
 }
 
 #if V7_ENABLE__String__localeCompare
-ON_FLASH static val_t Str_localeCompare(struct v7 *v7, val_t this_obj,
-                                        val_t args) {
+static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = to_string(v7, v7_array_get(v7, args, 0));
   val_t s = to_string(v7, this_obj);
   return v7_create_number(s_cmp(v7, s, arg0));
 }
 #endif
 
-ON_FLASH static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
 
   if (this_obj == v7->string_prototype) {
@@ -14987,7 +14894,7 @@ ON_FLASH static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 #if V7_ENABLE__RegExp
-ON_FLASH static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   val_t so, ro, arr = v7_create_null();
   long previousLastIndex = 0;
   int lastMatch = 1, n = 0, flag_g;
@@ -15031,7 +14938,7 @@ ON_FLASH static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   return arr;
 }
 
-ON_FLASH static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
   const char *s;
   size_t s_len;
   val_t out_str_o;
@@ -15132,7 +15039,7 @@ ON_FLASH static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
   return this_obj;
 }
 
-ON_FLASH static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
   long utf_shift = -1;
 
   if (v7_array_length(v7, args) > 0) {
@@ -15160,7 +15067,7 @@ ON_FLASH static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
 
 #endif /* V7_ENABLE__RegExp */
 
-ON_FLASH static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   long from = 0, to = 0;
   size_t len;
   val_t so = to_string(v7, this_obj);
@@ -15190,8 +15097,8 @@ ON_FLASH static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, begin, end - begin, 1);
 }
 
-ON_FLASH static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
-                                  Rune (*func)(Rune)) {
+static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
+                         Rune (*func)(Rune)) {
   val_t s = to_string(v7, this_obj);
   size_t i, n, len;
   const char *p = v7_to_string(v7, &s, &len);
@@ -15210,21 +15117,19 @@ ON_FLASH static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
   return res;
 }
 
-ON_FLASH static val_t Str_toLowerCase(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+static val_t Str_toLowerCase(struct v7 *v7, val_t this_obj, val_t args) {
   return s_transform(v7, this_obj, args, tolowerrune);
 }
 
-ON_FLASH static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj, val_t args) {
   return s_transform(v7, this_obj, args, toupperrune);
 }
 
-ON_FLASH static int s_isspace(Rune c) {
+static int s_isspace(Rune c) {
   return isspacerune(c) || isnewline(c);
 }
 
-ON_FLASH static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   val_t s = to_string(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
@@ -15243,7 +15148,7 @@ ON_FLASH static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, p + start, end - start, 1);
 }
 
-ON_FLASH static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   size_t len = 0;
   val_t s = i_value_of(v7, this_obj);
 
@@ -15256,7 +15161,7 @@ ON_FLASH static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
-ON_FLASH static val_t Str_at(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_at(struct v7 *v7, val_t this_obj, val_t args) {
   long arg0 = arg_long(v7, args, 0, -1);
   val_t s = i_value_of(v7, this_obj);
 
@@ -15271,7 +15176,7 @@ ON_FLASH static val_t Str_at(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(NAN);
 }
 
-ON_FLASH static val_t Str_blen(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_blen(struct v7 *v7, val_t this_obj, val_t args) {
   size_t len = 0;
   val_t s = i_value_of(v7, this_obj);
   (void) args;
@@ -15281,7 +15186,7 @@ ON_FLASH static val_t Str_blen(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
-ON_FLASH V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
+V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
   char buf[40];
   size_t l;
   double d;
@@ -15325,13 +15230,12 @@ V7_PRIVATE double to_number(struct v7 *v7, val_t v) {
 }
 #endif
 
-ON_FLASH V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n,
-                                  long default_value) {
+V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   val_t arg_n = i_value_of(v7, v7_array_get(v7, args, n));
   return to_long(v7, arg_n, default_value);
 }
 
-ON_FLASH static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
+static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
   const char *p;
   s = to_string(v7, s);
@@ -15352,13 +15256,13 @@ ON_FLASH static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   return v7_create_string(v7, p, len, 1);
 }
 
-ON_FLASH static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long len = arg_long(v7, args, 1, LONG_MAX);
   return s_substr(v7, this_obj, start, len);
 }
 
-ON_FLASH static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long end = arg_long(v7, args, 1, LONG_MAX);
   if (start < 0) start = 0;
@@ -15373,7 +15277,7 @@ ON_FLASH static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 
 /* TODO(mkm): make an alternative implementation without regexps */
 #if V7_ENABLE__RegExp
-ON_FLASH static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
   size_t s_len;
@@ -15430,7 +15334,7 @@ ON_FLASH static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 #endif /* V7_ENABLE__RegExp */
 
-ON_FLASH V7_PRIVATE void init_string(struct v7 *v7) {
+V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str = v7_create_constructor(v7, v7->string_prototype, String_ctor, 1);
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
                   str);
@@ -15527,7 +15431,7 @@ static etimeint_t g_gmtoffms; /* timezone offset, ms, no DST */
 static const char *g_tzname;  /* current timezone name */
 
 /* Leap year formula copied from ECMA 5.1 standart as is */
-ON_FLASH static int ecma_DaysInYear(int y) {
+static int ecma_DaysInYear(int y) {
   if (y % 4 != 0) {
     return 365;
   } else if (y % 4 == 0 && y % 100 != 0) {
@@ -15541,20 +15445,20 @@ ON_FLASH static int ecma_DaysInYear(int y) {
   }
 }
 
-ON_FLASH static etimeint_t ecma_DayFromYear(etimeint_t y) {
+static etimeint_t ecma_DayFromYear(etimeint_t y) {
   return 365 * (y - 1970) + floor((y - 1969) / 4) - floor((y - 1901) / 100) +
          floor((y - 1601) / 400);
 }
 
-ON_FLASH static etimeint_t ecma_TimeFromYear(etimeint_t y) {
+static etimeint_t ecma_TimeFromYear(etimeint_t y) {
   return msPerDay * ecma_DayFromYear(y);
 }
 
-ON_FLASH static int ecma_IsLeapYear(int year) {
+static int ecma_IsLeapYear(int year) {
   return ecma_DaysInYear(year) == 366;
 }
 
-ON_FLASH static int *ecma_getfirstdays(int isleap) {
+static int *ecma_getfirstdays(int isleap) {
   static int sdays[2][MonthsInYear + 1] = {
       {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
       {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366}};
@@ -15562,7 +15466,7 @@ ON_FLASH static int *ecma_getfirstdays(int isleap) {
   return sdays[isleap];
 }
 
-ON_FLASH static int ecma_DaylightSavingTA(etime_t t) {
+static int ecma_DaylightSavingTA(etime_t t) {
   time_t time = t / 1000;
   /*
    * Win32 doesn't have locatime_r
@@ -15581,18 +15485,18 @@ ON_FLASH static int ecma_DaylightSavingTA(etime_t t) {
   }
 }
 
-ON_FLASH static int ecma_LocalTZA() {
+static int ecma_LocalTZA() {
   return (int) -g_gmtoffms;
 }
 
-ON_FLASH static etimeint_t ecma_UTC(etime_t t) {
+static etimeint_t ecma_UTC(etime_t t) {
   return t - ecma_LocalTZA() - ecma_DaylightSavingTA(t - ecma_LocalTZA());
 }
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toLocaleString || \
     V7_ENABLE__Date__toJSON || V7_ENABLE__Date__getters ||          \
     V7_ENABLE__Date__setters
-ON_FLASH static int ecma_YearFromTime_s(etime_t t) {
+static int ecma_YearFromTime_s(etime_t t) {
   int first = floor((t / msPerDay) / 366) + 1970,
       last = floor((t / msPerDay) / 365) + 1970, middle = 0;
 
@@ -15620,15 +15524,15 @@ ON_FLASH static int ecma_YearFromTime_s(etime_t t) {
   return first;
 }
 
-ON_FLASH static etimeint_t ecma_Day(etime_t t) {
+static etimeint_t ecma_Day(etime_t t) {
   return floor(t / msPerDay);
 }
 
-ON_FLASH static int ecma_DayWithinYear(etime_t t, int year) {
+static int ecma_DayWithinYear(etime_t t, int year) {
   return (int) (ecma_Day(t) - ecma_DayFromYear(year));
 }
 
-ON_FLASH static int ecma_MonthFromTime(etime_t t, int year) {
+static int ecma_MonthFromTime(etime_t t, int year) {
   int *days, i;
   etimeint_t dwy = ecma_DayWithinYear(t, year);
 
@@ -15643,7 +15547,7 @@ ON_FLASH static int ecma_MonthFromTime(etime_t t, int year) {
   return -1;
 }
 
-ON_FLASH static int ecma_DateFromTime(etime_t t, int year) {
+static int ecma_DateFromTime(etime_t t, int year) {
   int *days, mft = ecma_MonthFromTime(t, year),
              dwy = ecma_DayWithinYear(t, year);
 
@@ -15656,13 +15560,13 @@ ON_FLASH static int ecma_DateFromTime(etime_t t, int year) {
   return dwy - days[mft] + 1;
 }
 
-#define DEF_EXTRACT_TIMEPART(funcname, c1, c2)     \
-  ON_FLASH static int ecma_##funcname(etime_t t) { \
-    int ret = (etimeint_t) floor(t / c1) % c2;     \
-    if (ret < 0) {                                 \
-      ret += c2;                                   \
-    }                                              \
-    return ret;                                    \
+#define DEF_EXTRACT_TIMEPART(funcname, c1, c2) \
+  static int ecma_##funcname(etime_t t) {      \
+    int ret = (etimeint_t) floor(t / c1) % c2; \
+    if (ret < 0) {                             \
+      ret += c2;                               \
+    }                                          \
+    return ret;                                \
   }
 
 DEF_EXTRACT_TIMEPART(HourFromTime, msPerHour, HoursPerDay)
@@ -15670,7 +15574,7 @@ DEF_EXTRACT_TIMEPART(MinFromTime, msPerMinute, MinutesPerHour)
 DEF_EXTRACT_TIMEPART(SecFromTime, msPerSecond, SecondsPerMinute)
 DEF_EXTRACT_TIMEPART(msFromTime, 1, msPerSecond)
 
-ON_FLASH static int ecma_WeekDay(etime_t t) {
+static int ecma_WeekDay(etime_t t) {
   int ret = (ecma_Day(t) + 4) % 7;
   if (ret < 0) {
     ret += 7;
@@ -15679,7 +15583,7 @@ ON_FLASH static int ecma_WeekDay(etime_t t) {
   return ret;
 }
 
-ON_FLASH static void d_gmtime(const etime_t *t, struct timeparts *tp) {
+static void d_gmtime(const etime_t *t, struct timeparts *tp) {
   tp->year = ecma_YearFromTime_s(*t);
   tp->month = ecma_MonthFromTime(*t, tp->year);
   tp->day = ecma_DateFromTime(*t, tp->year);
@@ -15694,24 +15598,24 @@ ON_FLASH static void d_gmtime(const etime_t *t, struct timeparts *tp) {
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toLocaleString || \
     V7_ENABLE__Date__getters || V7_ENABLE__Date__setters
-ON_FLASH static etimeint_t ecma_LocalTime(etime_t t) {
+static etimeint_t ecma_LocalTime(etime_t t) {
   return t + ecma_LocalTZA() + ecma_DaylightSavingTA(t);
 }
 
-ON_FLASH static void d_localtime(const etime_t *time, struct timeparts *tp) {
+static void d_localtime(const etime_t *time, struct timeparts *tp) {
   etime_t local_time = ecma_LocalTime(*time);
   d_gmtime(&local_time, tp);
 }
 #endif
 
-ON_FLASH static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min,
-                                         etimeint_t sec, etimeint_t ms) {
+static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min, etimeint_t sec,
+                                etimeint_t ms) {
   return ((hour * MinutesPerHour + min) * SecondsPerMinute + sec) *
              msPerSecond +
          ms;
 }
 
-ON_FLASH static etimeint_t ecma_MakeDay(int year, int month, int date) {
+static etimeint_t ecma_MakeDay(int year, int month, int date) {
   int *days;
   etimeint_t yday, mday;
 
@@ -15724,26 +15628,26 @@ ON_FLASH static etimeint_t ecma_MakeDay(int year, int month, int date) {
   return yday + mday + date - 1;
 }
 
-ON_FLASH static etimeint_t ecma_MakeDate(etimeint_t day, etimeint_t time) {
+static etimeint_t ecma_MakeDate(etimeint_t day, etimeint_t time) {
   return (day * msPerDay + time);
 }
 
-ON_FLASH static void d_gettime(etime_t *t) {
+static void d_gettime(etime_t *t) {
   *t = time(NULL);
 }
 
-ON_FLASH static etime_t d_mktime_impl(const struct timeparts *tp) {
+static etime_t d_mktime_impl(const struct timeparts *tp) {
   return ecma_MakeDate(ecma_MakeDay(tp->year, tp->month, tp->day),
                        ecma_MakeTime(tp->hour, tp->min, tp->sec, tp->msec));
 }
 
 #if V7_ENABLE__Date__setters
-ON_FLASH static etime_t d_lmktime(const struct timeparts *tp) {
+static etime_t d_lmktime(const struct timeparts *tp) {
   return ecma_UTC(d_mktime_impl(tp));
 }
 #endif
 
-ON_FLASH static etime_t d_gmktime(const struct timeparts *tp) {
+static etime_t d_gmktime(const struct timeparts *tp) {
   return d_mktime_impl(tp);
 }
 
@@ -15752,7 +15656,7 @@ typedef void (*fbreaktime_t)(const etime_t *, struct timeparts *);
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toLocaleString || \
     V7_ENABLE__Date__toJSON
-ON_FLASH static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
+static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
   val_t ret = i_value_of(v7, obj);
   if (ret == V7_TAG_NAN) {
     throw_exception(v7, TYPE_ERROR, "Date is invalid (for string)");
@@ -15762,7 +15666,7 @@ ON_FLASH static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
 #endif
 
 #if V7_ENABLE__Date__parse || V7_ENABLE__Date__UTC
-ON_FLASH static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
+static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
   /* TODO(alashkin): verify this statement */
   return is_prototype_of(v7, this_obj, v7->date_prototype);
 }
@@ -15771,7 +15675,7 @@ ON_FLASH static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
 static const char *mon_name[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-ON_FLASH int d_getnumbyname(const char **arr, int arr_size, const char *str) {
+int d_getnumbyname(const char **arr, int arr_size, const char *str) {
   int i;
   for (i = 0; i < arr_size; i++) {
     if (strncmp(arr[i], str, 3) == 0) {
@@ -15782,8 +15686,8 @@ ON_FLASH int d_getnumbyname(const char **arr, int arr_size, const char *str) {
   return -1;
 }
 
-ON_FLASH int date_parse(const char *str, int *a1, int *a2, int *a3, char sep,
-                        char *rest) {
+int date_parse(const char *str, int *a1, int *a2, int *a3, char sep,
+               char *rest) {
   char frmDate[] = " %d/%d/%d%[^\0]";
   frmDate[3] = frmDate[6] = sep;
   return sscanf(str, frmDate, a1, a2, a3, rest);
@@ -15795,8 +15699,8 @@ ON_FLASH int date_parse(const char *str, int *a1, int *a2, int *a3, char sep,
  * not very smart but simple, and working according
  * to ECMA5.1 StringToDate function
  */
-ON_FLASH static int d_parsedatestr(const char *jstr, size_t len,
-                                   struct timeparts *tp, int *tz) {
+static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
+                          int *tz) {
   char gmt[4];
   char buf1[100] = {0}, buf2[100] = {0};
   int res = 0;
@@ -15880,8 +15784,7 @@ ON_FLASH static int d_parsedatestr(const char *jstr, size_t len,
   return res <= 2;
 }
 
-ON_FLASH static int d_timeFromString(etime_t *time, const char *str,
-                                     size_t str_len) {
+static int d_timeFromString(etime_t *time, const char *str, size_t str_len) {
   struct timeparts tp;
   int tz;
 
@@ -15941,10 +15844,10 @@ enum detimepartsarr {
   tpmax
 };
 
-ON_FLASH static etime_t d_changepartoftime(const etime_t *current,
-                                           struct dtimepartsarr *a,
-                                           fbreaktime_t breaktimefunc,
-                                           fmaketime_t maketimefunc) {
+static etime_t d_changepartoftime(const etime_t *current,
+                                  struct dtimepartsarr *a,
+                                  fbreaktime_t breaktimefunc,
+                                  fmaketime_t maketimefunc) {
   /*
    * 0 = year, 1 = month , 2 = date , 3 = hours,
    * 4 = minutes, 5 = seconds, 6 = ms
@@ -15980,10 +15883,9 @@ ON_FLASH static etime_t d_changepartoftime(const etime_t *current,
 }
 
 #if V7_ENABLE__Date__setters || V7_ENABLE__Date__UTC
-ON_FLASH static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj,
-                                               val_t args, int start_pos,
-                                               fbreaktime_t breaktimefunc,
-                                               fmaketime_t makefilefunc) {
+static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj, val_t args,
+                                      int start_pos, fbreaktime_t breaktimefunc,
+                                      fmaketime_t makefilefunc) {
   etime_t ret_time = INVALID_TIME;
   long cargs;
 
@@ -16022,7 +15924,7 @@ static int d_tptostr(const struct timeparts *tp, char *buf, int addtz);
 #endif
 
 /* constructor */
-ON_FLASH static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     long cargs = v7_array_length(v7, args);
@@ -16105,8 +16007,7 @@ ON_FLASH static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toJSON
-ON_FLASH static int d_timetoISOstr(const etime_t *time, char *buf,
-                                   size_t buf_size) {
+static int d_timetoISOstr(const etime_t *time, char *buf, size_t buf_size) {
   /* ISO format: "+XXYYYY-MM-DDTHH:mm:ss.sssZ"; */
   struct timeparts tp;
   char use_ext = 0;
@@ -16126,8 +16027,7 @@ ON_FLASH static int d_timetoISOstr(const etime_t *time, char *buf,
          use_ext;
 }
 
-ON_FLASH static val_t Date_toISOString(struct v7 *v7, val_t this_obj,
-                                       val_t args) {
+static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[30];
   etime_t time;
   int len;
@@ -16143,9 +16043,8 @@ ON_FLASH static val_t Date_toISOString(struct v7 *v7, val_t this_obj,
 #if V7_ENABLE__Date__toString
 typedef int (*ftostring_t)(const struct timeparts *, char *, int);
 
-ON_FLASH static val_t d_tostring(struct v7 *v7, val_t obj,
-                                 fbreaktime_t breaktimefunc,
-                                 ftostring_t tostringfunc, int addtz) {
+static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime_t breaktimefunc,
+                        ftostring_t tostringfunc, int addtz) {
   struct timeparts tp;
   int len;
   char buf[100];
@@ -16160,19 +16059,17 @@ ON_FLASH static val_t d_tostring(struct v7 *v7, val_t obj,
 }
 
 /* using macros to avoid copy-paste technic */
-#define DEF_TOSTR(funcname, breaktimefunc, tostrfunc, addtz)             \
-  ON_FLASH static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, \
-                                          val_t args) {                  \
-    (void) args;                                                         \
-    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc, addtz);    \
+#define DEF_TOSTR(funcname, breaktimefunc, tostrfunc, addtz)                  \
+  static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) { \
+    (void) args;                                                              \
+    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc, addtz);         \
   }
 
 /* non-locale function should always return in english and 24h-format */
 static const char *wday_name[] = {"Sun", "Mon", "Tue", "Wed",
                                   "Thu", "Fri", "Sat"};
 
-ON_FLASH static int d_tptodatestr(const struct timeparts *tp, char *buf,
-                                  int addtz) {
+static int d_tptodatestr(const struct timeparts *tp, char *buf, int addtz) {
   (void) addtz;
 
   return sprintf(buf, "%s %s %02d %d", wday_name[tp->dayofweek],
@@ -16181,12 +16078,11 @@ ON_FLASH static int d_tptodatestr(const struct timeparts *tp, char *buf,
 
 DEF_TOSTR(DateString, d_localtime, d_tptodatestr, 1)
 
-ON_FLASH static const char *d_gettzname() {
+static const char *d_gettzname() {
   return g_tzname;
 }
 
-ON_FLASH static int d_tptotimestr(const struct timeparts *tp, char *buf,
-                                  int addtz) {
+static int d_tptotimestr(const struct timeparts *tp, char *buf, int addtz) {
   int len;
 
   len = sprintf(buf, "%02d:%02d:%02d GMT", tp->hour, tp->min, tp->sec);
@@ -16201,8 +16097,7 @@ ON_FLASH static int d_tptotimestr(const struct timeparts *tp, char *buf,
 
 DEF_TOSTR(TimeString, d_localtime, d_tptotimestr, 1)
 
-ON_FLASH static int d_tptostr(const struct timeparts *tp, char *buf,
-                              int addtz) {
+static int d_tptostr(const struct timeparts *tp, char *buf, int addtz) {
   int len = d_tptodatestr(tp, buf, addtz);
   *(buf + len) = ' ';
   return d_tptotimestr(tp, buf + len + 1, addtz) + len + 1;
@@ -16217,16 +16112,16 @@ struct d_locale {
   char locale[50];
 };
 
-ON_FLASH static void d_getcurrentlocale(struct d_locale *loc) {
+static void d_getcurrentlocale(struct d_locale *loc) {
   strcpy(setlocale(LC_TIME, 0), loc->locale);
 }
 
-ON_FLASH static void d_setlocale(const struct d_locale *loc) {
+static void d_setlocale(const struct d_locale *loc) {
   setlocale(LC_TIME, loc ? loc->locale : "");
 }
 
 /* TODO(alashkin): check portability */
-ON_FLASH static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
+static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
   char buf[250];
   size_t len;
   struct tm t;
@@ -16256,11 +16151,10 @@ ON_FLASH static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-#define DEF_TOLOCALESTR(funcname, frm)                                   \
-  ON_FLASH static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, \
-                                          val_t args) {                  \
-    (void) args;                                                         \
-    return d_tolocalestr(v7, this_obj, frm);                             \
+#define DEF_TOLOCALESTR(funcname, frm)                                        \
+  static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) { \
+    (void) args;                                                              \
+    return d_tolocalestr(v7, this_obj, frm);                                  \
   }
 
 DEF_TOLOCALESTR(LocaleString, "%c")
@@ -16268,7 +16162,7 @@ DEF_TOLOCALESTR(LocaleDateString, "%x")
 DEF_TOLOCALESTR(LocaleTimeString, "%X")
 #endif /* V7_ENABLE__Date__toLocaleString */
 
-ON_FLASH static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
   if (!v7_is_object(this_obj) ||
       (v7_is_object(this_obj) &&
@@ -16280,23 +16174,22 @@ ON_FLASH static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 #if V7_ENABLE__Date__getters
-ON_FLASH static struct timeparts *d_getTimePart(val_t val, struct timeparts *tp,
-                                                fbreaktime_t breaktimefunc) {
+static struct timeparts *d_getTimePart(val_t val, struct timeparts *tp,
+                                       fbreaktime_t breaktimefunc) {
   etime_t time;
   time = v7_to_number(val);
   breaktimefunc(&time, tp);
   return tp;
 }
 
-#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                 \
-  ON_FLASH static val_t Date_get##funcName(struct v7 *v7, val_t this_obj,  \
-                                           val_t args) {                   \
-    struct timeparts tp;                                                   \
-    val_t v = i_value_of(v7, this_obj);                                    \
-    (void) args;                                                           \
-    return v7_create_number(                                               \
-        v == V7_TAG_NAN ? NAN                                              \
-                        : d_getTimePart(v, &tp, breaktimefunc)->tpmember); \
+#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                     \
+  static val_t Date_get##funcName(struct v7 *v7, val_t this_obj, val_t args) { \
+    struct timeparts tp;                                                       \
+    val_t v = i_value_of(v7, this_obj);                                        \
+    (void) args;                                                               \
+    return v7_create_number(                                                   \
+        v == V7_TAG_NAN ? NAN                                                  \
+                        : d_getTimePart(v, &tp, breaktimefunc)->tpmember);     \
   }
 
 #define DEF_GET_TP(funcName, tpmember)               \
@@ -16312,12 +16205,11 @@ DEF_GET_TP(Seconds, sec)
 DEF_GET_TP(Milliseconds, msec)
 DEF_GET_TP(Day, dayofweek)
 
-ON_FLASH static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
   return Date_valueOf(v7, this_obj, args);
 }
 
-ON_FLASH static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj,
-                                             val_t args) {
+static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
   (void) v7;
   (void) this_obj;
@@ -16326,9 +16218,9 @@ ON_FLASH static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj,
 #endif /* V7_ENABLE__Date__getters */
 
 #if V7_ENABLE__Date__setters
-ON_FLASH static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args,
-                                    int start_pos, fbreaktime_t breaktimefunc,
-                                    fmaketime_t makefilefunc) {
+static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args,
+                           int start_pos, fbreaktime_t breaktimefunc,
+                           fmaketime_t makefilefunc) {
   val_t n;
   etime_t ret_time = d_time_number_from_arr(v7, this_obj, args, start_pos,
                                             breaktimefunc, makefilefunc);
@@ -16340,12 +16232,10 @@ ON_FLASH static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args,
 }
 
 #define DEF_SET_TP(name, start_pos)                                           \
-  ON_FLASH static val_t Date_setUTC##name(struct v7 *v7, val_t this_obj,      \
-                                          val_t args) {                       \
+  static val_t Date_setUTC##name(struct v7 *v7, val_t this_obj, val_t args) { \
     return d_setTimePart(v7, this_obj, args, start_pos, d_gmtime, d_gmktime); \
   }                                                                           \
-  ON_FLASH static val_t Date_set##name(struct v7 *v7, val_t this_obj,         \
-                                       val_t args) {                          \
+  static val_t Date_set##name(struct v7 *v7, val_t this_obj, val_t args) {    \
     return d_setTimePart(v7, this_obj, args, start_pos, d_localtime,          \
                          d_lmktime);                                          \
   }
@@ -16358,7 +16248,7 @@ DEF_SET_TP(Date, tpdate)
 DEF_SET_TP(Month, tpmonth)
 DEF_SET_TP(FullYear, tpyear)
 
-ON_FLASH static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   val_t n;
   if (v7_array_length(v7, args) >= 1) {
@@ -16372,13 +16262,13 @@ ON_FLASH static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Date__setters */
 
 #if V7_ENABLE__Date__toJSON
-ON_FLASH static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
   return Date_toISOString(v7, this_obj, args);
 }
 #endif /* V7_ENABLE__Date__toJSON */
 
 #if V7_ENABLE__Date__now
-ON_FLASH static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
   (void) v7;
@@ -16391,7 +16281,7 @@ ON_FLASH static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Date__now */
 
 #if V7_ENABLE__Date__parse
-ON_FLASH static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   (void) args;
 
@@ -16414,7 +16304,7 @@ ON_FLASH static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Date__parse */
 
 #if V7_ENABLE__Date__UTC
-ON_FLASH static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
 
@@ -16433,8 +16323,8 @@ ON_FLASH static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
  * We should set V7_PROPERTY_DONT_ENUM for all Date props
  * TODO(mkm): check other objects
 */
-ON_FLASH static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                                     v7_cfunction_t f) {
+static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                            v7_cfunction_t f) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction(f));
 }
@@ -16447,7 +16337,7 @@ ON_FLASH static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   d_set_cfunc_prop(v7, v7->date_prototype, "setUTC" #func, Date_setUTC##func); \
   d_set_cfunc_prop(v7, v7->date_prototype, "set" #func, Date_set##func);
 
-ON_FLASH V7_PRIVATE void init_date(struct v7 *v7) {
+V7_PRIVATE void init_date(struct v7 *v7) {
   val_t date = v7_create_constructor(v7, v7->date_prototype, Date_ctor, 7);
   v7_set_property(v7, v7->global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
                   date);
@@ -16531,7 +16421,7 @@ ON_FLASH V7_PRIVATE void init_date(struct v7 *v7) {
  */
 
 
-ON_FLASH static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   long i, num_args = v7_array_length(v7, args);
   size_t size;
   const char *s;
@@ -16570,8 +16460,7 @@ ON_FLASH static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return tmp;
 }
 
-ON_FLASH static val_t Function_length(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_function *func = v7_to_function(this_obj);
   ast_off_t body, pos = func->ast_off;
   struct ast *a = func->ast;
@@ -16597,15 +16486,14 @@ ON_FLASH static val_t Function_length(struct v7 *v7, val_t this_obj,
   return v7_create_number(argn);
 }
 
-ON_FLASH static val_t Function_apply(struct v7 *v7, val_t this_obj,
-                                     val_t args) {
+static val_t Function_apply(struct v7 *v7, val_t this_obj, val_t args) {
   val_t f = i_value_of(v7, this_obj);
   val_t this_arg = v7_array_get(v7, args, 0);
   val_t func_args = v7_array_get(v7, args, 1);
   return v7_apply(v7, f, this_arg, func_args);
 }
 
-ON_FLASH V7_PRIVATE void init_function(struct v7 *v7) {
+V7_PRIVATE void init_function(struct v7 *v7) {
   val_t ctor = v7_create_function(v7, Function_ctor, 1);
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
@@ -16623,8 +16511,7 @@ ON_FLASH V7_PRIVATE void init_function(struct v7 *v7) {
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
-ON_FLASH V7_PRIVATE val_t
-Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   long argnum = v7_array_length(v7, args);
   if (argnum > 0) {
     val_t ro = to_string(v7, v7_array_get(v7, args, 0));
@@ -16642,7 +16529,7 @@ Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_regexp(v7, "(?:)", 4, NULL, 0);
 }
 
-ON_FLASH static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
@@ -16653,8 +16540,7 @@ ON_FLASH static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(flags & SLRE_FLAG_G);
 }
 
-ON_FLASH static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj,
-                                       val_t args) {
+static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
@@ -16665,8 +16551,7 @@ ON_FLASH static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj,
   return v7_create_boolean(flags & SLRE_FLAG_I);
 }
 
-ON_FLASH static val_t Regex_multiline(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
@@ -16677,7 +16562,7 @@ ON_FLASH static val_t Regex_multiline(struct v7 *v7, val_t this_obj,
   return v7_create_boolean(flags & SLRE_FLAG_M);
 }
 
-ON_FLASH static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
   const char *buf = 0;
   size_t len = 0;
@@ -16689,8 +16574,7 @@ ON_FLASH static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-ON_FLASH static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj,
-                                          val_t args) {
+static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   long lastIndex = 0;
 
   (void) v7;
@@ -16701,8 +16585,7 @@ ON_FLASH static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj,
   return v7_create_number(lastIndex);
 }
 
-ON_FLASH static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj,
-                                          val_t args) {
+static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   long lastIndex = 0;
 
   if (v7_is_regexp(v7, this_obj))
@@ -16712,8 +16595,7 @@ ON_FLASH static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj,
   return v7_create_number(lastIndex);
 }
 
-ON_FLASH V7_PRIVATE val_t
-rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
+V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
   if (v7_is_regexp(v7, rx)) {
     val_t s = to_string(v7, str);
     size_t len;
@@ -16749,18 +16631,18 @@ rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
   return v7_create_null();
 }
 
-ON_FLASH static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
   if (v7_array_length(v7, args) > 0) {
     return rx_exec(v7, this_obj, v7_array_get(v7, args, 0), 0);
   }
   return v7_create_null();
 }
 
-ON_FLASH static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(!v7_is_null(Regex_exec(v7, this_obj, args)));
 }
 
-ON_FLASH V7_PRIVATE void init_regex(struct v7 *v7) {
+V7_PRIVATE void init_regex(struct v7 *v7) {
   val_t ctor = v7_create_constructor(v7, v7->regexp_prototype, Regex_ctor, 1);
   val_t lastIndex = v7_create_dense_array(v7);
 
@@ -16804,7 +16686,7 @@ ON_FLASH V7_PRIVATE void init_regex(struct v7 *v7) {
 
 #include <sys/stat.h>
 
-ON_FLASH static void show_usage(char *argv[]) {
+static void show_usage(char *argv[]) {
   fprintf(stderr, "V7 version %s (c) Cesanta Software, built on %s\n",
           V7_VERSION, __DATE__);
   fprintf(stderr, "Usage: %s [OPTIONS] js_file ...\n", argv[0]);
@@ -16819,7 +16701,7 @@ ON_FLASH static void show_usage(char *argv[]) {
   exit(EXIT_FAILURE);
 }
 
-ON_FLASH static char *read_file(const char *path, size_t *size) {
+static char *read_file(const char *path, size_t *size) {
   FILE *fp;
   struct stat st;
   char *data = NULL;
@@ -16838,7 +16720,7 @@ ON_FLASH static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-ON_FLASH static void print_error(struct v7 *v7, const char *f, val_t e) {
+static void print_error(struct v7 *v7, const char *f, val_t e) {
   char buf[512];
   char *s = v7_to_json(v7, e, buf, sizeof(buf));
   fprintf(stderr, "Exec error [%s]: %s\n", f, s);
@@ -16848,7 +16730,7 @@ ON_FLASH static void print_error(struct v7 *v7, const char *f, val_t e) {
 }
 
 #if V7_ENABLE__Memory__stats
-ON_FLASH static void dump_mm_arena_stats(const char *msg, struct gc_arena *a) {
+static void dump_mm_arena_stats(const char *msg, struct gc_arena *a) {
   printf("%s: total allocations %lu, total garbage %lu, max %lu, alive %lu\n",
          msg, a->allocations, a->garbage, gc_arena_size(a), a->alive);
   printf(
@@ -16858,7 +16740,7 @@ ON_FLASH static void dump_mm_arena_stats(const char *msg, struct gc_arena *a) {
       gc_arena_size(a) * a->cell_size, a->alive * a->cell_size);
 }
 
-ON_FLASH static void dump_mm_stats(struct v7 *v7) {
+static void dump_mm_stats(struct v7 *v7) {
   dump_mm_arena_stats("object: ", &v7->object_arena);
   dump_mm_arena_stats("function: ", &v7->function_arena);
   dump_mm_arena_stats("property: ", &v7->property_arena);
@@ -16876,7 +16758,7 @@ ON_FLASH static void dump_mm_stats(struct v7 *v7) {
  * `init_func()` is an optional intialization function, aimed to export any
  * extra functionality into vanilla v7 engine.
  */
-ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
+int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   struct v7 *v7;
   struct v7_create_opts opts = {0, 0, 0};
   int i, j, show_ast = 0, binary_ast = 0, dump_stats = 0;
@@ -16985,7 +16867,7 @@ ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
 #endif
 
 #ifdef V7_EXE
-ON_FLASH int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   return v7_main(argc, argv, NULL);
 }
 #endif

@@ -19,8 +19,7 @@
 struct espconn server;
 esp_tcp server_tcp;
 
-ICACHE_FLASH_ATTR static void server_eval(struct espconn *c, void *body,
-                                          unsigned short size) {
+static void server_eval(struct espconn *c, void *body, unsigned short size) {
   char *buf, *resp, *j;
   enum v7_err err;
   v7_val_t v;
@@ -62,8 +61,7 @@ ICACHE_FLASH_ATTR static void server_eval(struct espconn *c, void *body,
   free(resp);
 }
 
-ICACHE_FLASH_ATTR static void server_serve(struct espconn *c, void *p,
-                                           unsigned short len) {
+static void server_serve(struct espconn *c, void *p, unsigned short len) {
   int res;
   char *buf = NULL;
   char *filename;
@@ -121,8 +119,7 @@ cleanup:
   return;
 }
 
-ICACHE_FLASH_ATTR static void server_recv(void *arg, char *p,
-                                          unsigned short len) {
+static void server_recv(void *arg, char *p, unsigned short len) {
   struct espconn *c = (struct espconn *) arg;
   char *body = strstr(p, "\r\n\r\n");
 
@@ -142,16 +139,16 @@ ICACHE_FLASH_ATTR static void server_recv(void *arg, char *p,
   }
 }
 
-ICACHE_FLASH_ATTR static void server_sent(void *arg) {
+static void server_sent(void *arg) {
   struct espconn *c = (struct espconn *) arg;
   espconn_disconnect(c);
 }
 
-ICACHE_FLASH_ATTR static void server_disconnect(void *arg) {
+static void server_disconnect(void *arg) {
   (void) arg;
 }
 
-ICACHE_FLASH_ATTR static void server_connect_cb(void *arg) {
+static void server_connect_cb(void *arg) {
   struct espconn *c = (struct espconn *) arg;
 
   if (c == NULL) {
@@ -164,7 +161,7 @@ ICACHE_FLASH_ATTR static void server_connect_cb(void *arg) {
   espconn_regist_disconcb(c, server_disconnect);
 }
 
-ICACHE_FLASH_ATTR void start_http_eval_server() {
+void start_http_eval_server() {
   printf("\nStarting HTTP eval server\n");
   server.type = ESPCONN_TCP;
   server.proto.tcp = &server_tcp;

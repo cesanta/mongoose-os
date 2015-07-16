@@ -11,7 +11,7 @@
 #if SPIFFS_CACHE
 
 // returns cached page for give page index, or null if no such cached page
-ON_FLASH static spiffs_cache_page *spiffs_cache_page_get(spiffs *fs, spiffs_page_ix pix) {
+static spiffs_cache_page *spiffs_cache_page_get(spiffs *fs, spiffs_page_ix pix) {
   spiffs_cache *cache = spiffs_get_cache(fs);
   if ((cache->cpage_use_map & cache->cpage_use_mask) == 0) return 0;
   int i;
@@ -30,7 +30,7 @@ ON_FLASH static spiffs_cache_page *spiffs_cache_page_get(spiffs *fs, spiffs_page
 }
 
 // frees cached page
-ON_FLASH static s32_t spiffs_cache_page_free(spiffs *fs, int ix, u8_t write_back) {
+static s32_t spiffs_cache_page_free(spiffs *fs, int ix, u8_t write_back) {
   s32_t res = SPIFFS_OK;
   spiffs_cache *cache = spiffs_get_cache(fs);
   spiffs_cache_page *cp = spiffs_get_cache_page_hdr(fs, cache, ix);
@@ -56,7 +56,7 @@ ON_FLASH static s32_t spiffs_cache_page_free(spiffs *fs, int ix, u8_t write_back
 }
 
 // removes the oldest accessed cached page
-ON_FLASH static s32_t spiffs_cache_page_remove_oldest(spiffs *fs, u8_t flag_mask, u8_t flags) {
+static s32_t spiffs_cache_page_remove_oldest(spiffs *fs, u8_t flag_mask, u8_t flags) {
   s32_t res = SPIFFS_OK;
   spiffs_cache *cache = spiffs_get_cache(fs);
 
@@ -86,7 +86,7 @@ ON_FLASH static s32_t spiffs_cache_page_remove_oldest(spiffs *fs, u8_t flag_mask
 }
 
 // allocates a new cached page and returns it, or null if all cache pages are busy
-ON_FLASH static spiffs_cache_page *spiffs_cache_page_allocate(spiffs *fs) {
+static spiffs_cache_page *spiffs_cache_page_allocate(spiffs *fs) {
   spiffs_cache *cache = spiffs_get_cache(fs);
   if (cache->cpage_use_map == 0xffffffff) {
     // out of cache memory
@@ -107,7 +107,7 @@ ON_FLASH static spiffs_cache_page *spiffs_cache_page_allocate(spiffs *fs) {
 }
 
 // drops the cache page for give page index
-ON_FLASH void spiffs_cache_drop_page(spiffs *fs, spiffs_page_ix pix) {
+void spiffs_cache_drop_page(spiffs *fs, spiffs_page_ix pix) {
   spiffs_cache_page *cp =  spiffs_cache_page_get(fs, pix);
   if (cp) {
     spiffs_cache_page_free(fs, cp->ix, 0);
@@ -117,7 +117,7 @@ ON_FLASH void spiffs_cache_drop_page(spiffs *fs, spiffs_page_ix pix) {
 // ------------------------------
 
 // reads from spi flash or the cache
-ON_FLASH s32_t spiffs_phys_rd(
+s32_t spiffs_phys_rd(
     spiffs *fs,
     u8_t op,
     spiffs_file fh,
@@ -166,7 +166,7 @@ ON_FLASH s32_t spiffs_phys_rd(
 }
 
 // writes to spi flash and/or the cache
-ON_FLASH s32_t spiffs_phys_wr(
+s32_t spiffs_phys_wr(
     spiffs *fs,
     u8_t op,
     spiffs_file fh,
@@ -209,7 +209,7 @@ ON_FLASH s32_t spiffs_phys_wr(
 
 #if SPIFFS_CACHE_WR
 // returns the cache page that this fd refers, or null if no cache page
-ON_FLASH spiffs_cache_page *spiffs_cache_page_get_by_fd(spiffs *fs, spiffs_fd *fd) {
+spiffs_cache_page *spiffs_cache_page_get_by_fd(spiffs *fs, spiffs_fd *fd) {
   spiffs_cache *cache = spiffs_get_cache(fs);
 
   if ((cache->cpage_use_map & cache->cpage_use_mask) == 0) {
@@ -232,7 +232,7 @@ ON_FLASH spiffs_cache_page *spiffs_cache_page_get_by_fd(spiffs *fs, spiffs_fd *f
 
 // allocates a new cache page and refers this to given fd - flushes an old cache
 // page if all cache is busy
-ON_FLASH spiffs_cache_page *spiffs_cache_page_allocate_by_fd(spiffs *fs, spiffs_fd *fd) {
+spiffs_cache_page *spiffs_cache_page_allocate_by_fd(spiffs *fs, spiffs_fd *fd) {
   // before this function is called, it is ensured that there is no already existing
   // cache page with same object id
   spiffs_cache_page_remove_oldest(fs, SPIFFS_CACHE_FLAG_TYPE_WR, 0);
@@ -249,7 +249,7 @@ ON_FLASH spiffs_cache_page *spiffs_cache_page_allocate_by_fd(spiffs *fs, spiffs_
 }
 
 // unrefers all fds that this cache page refers to and releases the cache page
-ON_FLASH void spiffs_cache_fd_release(spiffs *fs, spiffs_cache_page *cp) {
+void spiffs_cache_fd_release(spiffs *fs, spiffs_cache_page *cp) {
   if (cp == 0) return;
   u32_t i;
   spiffs_fd *fds = (spiffs_fd *)fs->fd_space;
@@ -267,7 +267,7 @@ ON_FLASH void spiffs_cache_fd_release(spiffs *fs, spiffs_cache_page *cp) {
 #endif
 
 // initializes the cache
-ON_FLASH void spiffs_cache_init(spiffs *fs) {
+void spiffs_cache_init(spiffs *fs) {
   if (fs->cache == 0) return;
   u32_t sz = fs->cache_size;
   u32_t cache_mask = 0;

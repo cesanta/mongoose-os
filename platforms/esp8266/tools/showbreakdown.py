@@ -59,6 +59,14 @@ u_funcs, u_objects, u_others_size = process_objdump_res(symb_table)
 symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', path_to_bin + '/build/user/v7.o']).split('\n')
 v7_funcs, v7_objects, v7_others_size = process_objdump_res(symb_table)
 
+# Text sections was copied to flash text sections as a part the build process.
+# Here we're remapping them manually because we use objcopy only for `.a` file
+# and doesn't use it for `.o`
+v7_funcs['.irom0.text'] = v7_funcs.get('.text', 0);
+v7_objects['.irom0.text'] = v7_objects.get('.text', 0);
+v7_funcs['.text'] = v7_funcs.get('.fast.text', 0);
+v7_objects['.text'] = v7_objects.get('.fast.text', 0);
+
 symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', path_to_bin + '/build/app.out']).split('\n')
 all_funcs, all_objects, all_others_size = process_objdump_res(symb_table)
 

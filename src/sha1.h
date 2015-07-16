@@ -6,7 +6,6 @@
 #if !defined(NS_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
 #define NS_SHA1_HEADER_INCLUDED
 
-#include "onflash.h"
 #include "osdep.h"
 
 #ifdef __cplusplus

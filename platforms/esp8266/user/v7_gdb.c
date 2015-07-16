@@ -23,41 +23,41 @@
 static struct regfile regs = {0};
 static uint8_t gdb_send_checksum;
 
-ICACHE_FLASH_ATTR void gdb_nack() {
+void gdb_nack() {
   printf("-");
 }
 
-ICACHE_FLASH_ATTR void gdb_ack() {
+void gdb_ack() {
   printf("+");
 }
 
-ICACHE_FLASH_ATTR void gdb_begin_packet() {
+void gdb_begin_packet() {
   printf("$");
   gdb_send_checksum = 0;
 }
 
-ICACHE_FLASH_ATTR void gdb_end_packet() {
+void gdb_end_packet() {
   printf("#%c%c", hexdigit(gdb_send_checksum >> 4),
          hexdigit(gdb_send_checksum & 0xF));
 }
 
-ICACHE_FLASH_ATTR void gdb_putchar(char ch) {
+void gdb_putchar(char ch) {
   gdb_send_checksum += (uint8_t) ch;
   printf("%c", ch);
 }
 
 /* output a string while computing the checksum */
-ICACHE_FLASH_ATTR void gdb_putstr(char *str) {
+void gdb_putstr(char *str) {
   while (*str) gdb_putchar(*str++);
 }
 
-ICACHE_FLASH_ATTR void gdb_putbyte(uint8_t val) {
+void gdb_putbyte(uint8_t val) {
   gdb_putchar(hexdigit(val >> 4));
   gdb_putchar(hexdigit(val & 0xF));
 }
 
 /* 32-bit integer in native byte order */
-ICACHE_FLASH_ATTR void gdb_putint(uint32_t val) {
+void gdb_putint(uint32_t val) {
   int i;
   uint8_t *v = (uint8_t *) &val;
   for (i = 0; i < 4; i++) {
@@ -66,13 +66,13 @@ ICACHE_FLASH_ATTR void gdb_putint(uint32_t val) {
 }
 
 /* send a gdb packet with checksum */
-ICACHE_FLASH_ATTR void gdb_send_packet(char *str) {
+void gdb_send_packet(char *str) {
   gdb_begin_packet();
   gdb_putstr(str);
   gdb_end_packet();
 }
 
-ICACHE_FLASH_ATTR uint8_t gdb_read_unaligned(uint8_t *addr) {
+uint8_t gdb_read_unaligned(uint8_t *addr) {
   if (addr < (uint8_t *) ESP_LOWER_VALID_ADDRESS ||
       addr >= (uint8_t *) ESP_UPPER_VALID_ADDRESS) {
     return 0;
@@ -93,7 +93,7 @@ ICACHE_FLASH_ATTR uint8_t gdb_read_unaligned(uint8_t *addr) {
  * For a more complete description of the protocol, see
  * https://sourceware.org/gdb/current/onlinedocs/gdb/Remote-Protocol.html
  */
-ICACHE_FLASH_ATTR void gdb_handle_char(int ch) {
+void gdb_handle_char(int ch) {
   static enum {
     GDB_JUNK,
     GDB_DATA,
@@ -189,7 +189,7 @@ ICACHE_FLASH_ATTR void gdb_handle_char(int ch) {
 }
 
 /* The user should detach and let gdb do the talkin' */
-ICACHE_FLASH_ATTR void gdb_server() {
+void gdb_server() {
   printf("waiting for gdb\n");
   /*
    * polling since we cannot wait for interrupts inside
@@ -217,7 +217,7 @@ ICACHE_FLASH_ATTR void gdb_server() {
  * user stack. This might be different in other execution modes on the
  * quite variegated xtensa platform family, but that's how it works on ESP8266.
  */
-void gdb_exception_handler(struct xtos_saved_regs *frame) {
+FAST void gdb_exception_handler(struct xtos_saved_regs *frame) {
   int i;
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
@@ -235,7 +235,7 @@ void gdb_exception_handler(struct xtos_saved_regs *frame) {
   _ResetVector();
 }
 
-ICACHE_FLASH_ATTR void gdb_init() {
+void gdb_init() {
   char causes[] = {EXCCAUSE_ILLEGAL,          EXCCAUSE_INSTR_ERROR,
                    EXCCAUSE_LOAD_STORE_ERROR, EXCCAUSE_DIVIDE_BY_ZERO,
                    EXCCAUSE_UNALIGNED,        EXCCAUSE_INSTR_PROHIBITED,

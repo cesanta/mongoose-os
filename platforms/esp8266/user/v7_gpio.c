@@ -38,7 +38,7 @@ static os_event_t gpio_task_queue[GPIO_TASK_QUEUE_LEN];
 /* TODO(alashkin): introduce some kind of tasks priority registry */
 #define TASK_PRIORITY 1
 
-ICACHE_FLASH_ATTR static void gpio16_set_output_mode() {
+static void gpio16_set_output_mode() {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -52,13 +52,13 @@ ICACHE_FLASH_ATTR static void gpio16_set_output_mode() {
                      (uint32_t) 0x1);
 }
 
-ICACHE_FLASH_ATTR static void gpio16_output_set(uint8_t value) {
+static void gpio16_output_set(uint8_t value) {
   WRITE_PERI_REG(RTC_GPIO_OUT,
                  (READ_PERI_REG(RTC_GPIO_OUT) & (uint32_t) 0xfffffffe) |
                      (uint32_t)(value & 1));
 }
 
-ICACHE_FLASH_ATTR static void gpio16_set_input_mode() {
+static void gpio16_set_input_mode() {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -71,11 +71,11 @@ ICACHE_FLASH_ATTR static void gpio16_set_input_mode() {
                  READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32_t) 0xfffffffe);
 }
 
-ICACHE_FLASH_ATTR static uint8_t gpio16_input_get() {
+static uint8_t gpio16_input_get() {
   return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 
-ICACHE_FLASH_ATTR int v7_gpio_set_mode(int pin, int mode, int pull) {
+int v7_gpio_set_mode(int pin, int mode, int pull) {
   struct gpio_info* gi;
 
   if (pin == 16) {
@@ -152,7 +152,7 @@ ICACHE_FLASH_ATTR int v7_gpio_set_mode(int pin, int mode, int pull) {
   return 0;
 }
 
-ICACHE_FLASH_ATTR int v7_gpio_write(int pin, int level) {
+int v7_gpio_write(int pin, int level) {
   if (get_gpio_info(pin) == NULL) {
     /* Just verifying pin number */
     return -1;
@@ -169,7 +169,7 @@ ICACHE_FLASH_ATTR int v7_gpio_write(int pin, int level) {
   return 0;
 }
 
-ICACHE_FLASH_ATTR int v7_gpio_read(int pin) {
+int v7_gpio_read(int pin) {
   if (get_gpio_info(pin) == NULL) {
     /* Just verifying pin number */
     return -1;
@@ -198,8 +198,8 @@ ICACHE_FLASH_ATTR int v7_gpio_read(int pin) {
  * So, while user holds key we don't have any interruption.
  * 7. And so on, and so on.
 */
-ICACHE_FLASH_ATTR static void v7_gpio_process_on_click(
-    int pin, int level, f_gpio_intr_handler_t callback) {
+static void v7_gpio_process_on_click(int pin, int level,
+                                     f_gpio_intr_handler_t callback) {
   if (GPIO_PIN_INTR_HILEVEL - (int_map[pin] & 0xF) != level) {
     /*
      * In order to a avoid false positive, waiting
@@ -227,8 +227,7 @@ ICACHE_FLASH_ATTR static void v7_gpio_process_on_click(
   }
 }
 
-ICACHE_FLASH_ATTR static void v7_gpio_intr_dispatcher(
-    f_gpio_intr_handler_t callback) {
+static void v7_gpio_intr_dispatcher(f_gpio_intr_handler_t callback) {
   uint8_t i, level;
 
   uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
@@ -253,7 +252,7 @@ ICACHE_FLASH_ATTR static void v7_gpio_intr_dispatcher(
   }
 }
 
-ICACHE_FLASH_ATTR void v7_gpio_task(os_event_t* event) {
+void v7_gpio_task(os_event_t* event) {
   if (event->sig >> 16 != GPIO_TASK_SIG) {
     return;
   }
@@ -262,13 +261,13 @@ ICACHE_FLASH_ATTR void v7_gpio_task(os_event_t* event) {
                                        (event->sig & 0xFF));
 }
 
-ICACHE_FLASH_ATTR void v7_gpio_intr_init(f_gpio_intr_handler_t cb) {
+void v7_gpio_intr_init(f_gpio_intr_handler_t cb) {
   system_os_task(v7_gpio_task, TASK_PRIORITY, gpio_task_queue,
                  GPIO_TASK_QUEUE_LEN);
   ETS_GPIO_INTR_ATTACH(v7_gpio_intr_dispatcher, cb);
 }
 
-ICACHE_FLASH_ATTR static void v7_setup_on_click(int pin) {
+static void v7_setup_on_click(int pin) {
   uint8_t current_level = v7_gpio_read(pin);
   /*
    * if current level is high, set interupt on low (4)
@@ -278,7 +277,7 @@ ICACHE_FLASH_ATTR static void v7_setup_on_click(int pin) {
   int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 | type;
 }
 
-ICACHE_FLASH_ATTR int v7_gpio_intr_set(int pin, GPIO_INT_TYPE type) {
+int v7_gpio_intr_set(int pin, GPIO_INT_TYPE type) {
   if (get_gpio_info(pin) == NULL) {
     return -1;
   }

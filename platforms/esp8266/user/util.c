@@ -11,7 +11,7 @@
 #include "v7_esp.h"
 #include "util.h"
 
-ICACHE_FLASH_ATTR void set_gpio(int g, int v) {
+void set_gpio(int g, int v) {
 #define GPIO_SET(pin) gpio_output_set(1 << pin, 0, 1 << pin, 0);
 #define GPIO_CLR(pin) gpio_output_set(0, 1 << pin, 1 << pin, 0);
   if (v) {
@@ -21,12 +21,11 @@ ICACHE_FLASH_ATTR void set_gpio(int g, int v) {
   }
 }
 
-ICACHE_FLASH_ATTR int read_gpio_pin(int g) {
+int read_gpio_pin(int g) {
   gpio_output_set(0, 0, 0, 1 << g);
   return (gpio_input_get() & (1 << g)) != 0;
 }
 
-ICACHE_FLASH_ATTR
 int await_change(int gpio, int *max_cycles) {
   int v1, v2, n;
   v1 = read_gpio_pin(gpio);
@@ -40,7 +39,7 @@ int await_change(int gpio, int *max_cycles) {
 }
 
 #if !defined(V7_NO_FS) && !defined(NO_EXEC_INITJS)
-ICACHE_FLASH_ATTR void v7_run_startup() {
+void v7_run_startup() {
   v7_val_t v;
   static char buf[15];
   /*

@@ -38,14 +38,13 @@ struct http_ctx {
 /* no idea what is this */
 ip_addr_t probably_dns_ip;
 
-ICACHE_FLASH_ATTR static void http_free(struct espconn *conn) {
+static void http_free(struct espconn *conn) {
   free(conn->proto.tcp);
   free(conn);
 }
 
 /* Called when receiving something through a connection */
-ICACHE_FLASH_ATTR static void http_recv_cb(void *arg, char *p,
-                                           unsigned short len) {
+static void http_recv_cb(void *arg, char *p, unsigned short len) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
 
@@ -56,12 +55,12 @@ ICACHE_FLASH_ATTR static void http_recv_cb(void *arg, char *p,
   ctx->resp_pos += len;
 }
 
-ICACHE_FLASH_ATTR static void http_sent_cb(void *arg) {
+static void http_sent_cb(void *arg) {
   (void) arg;
 }
 
 /* Called when successfully connected */
-ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
+static void http_connect_cb(void *arg) {
   char *buf;
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
@@ -95,7 +94,7 @@ ICACHE_FLASH_ATTR static void http_connect_cb(void *arg) {
 }
 
 /* Invoke user callback as cb(data, undefined) */
-ICACHE_FLASH_ATTR static void http_disconnect_cb(void *arg) {
+static void http_disconnect_cb(void *arg) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
   v7_val_t data, cb_args;
@@ -132,7 +131,7 @@ ICACHE_FLASH_ATTR static void http_disconnect_cb(void *arg) {
 }
 
 /* Invoke user callback as cb(undefined, err_msg) */
-ICACHE_FLASH_ATTR static void http_error_cb(void *arg, int8_t err) {
+static void http_error_cb(void *arg, int8_t err) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
   char err_msg[128];
@@ -158,8 +157,7 @@ ICACHE_FLASH_ATTR static void http_error_cb(void *arg, int8_t err) {
  * If resolved successfuly it will connect. Otherwise invokes
  * user callback as cb(undefined, error_message)
  */
-ICACHE_FLASH_ATTR static void http_get_dns_cb(const char *name,
-                                              ip_addr_t *ipaddr, void *arg) {
+static void http_get_dns_cb(const char *name, ip_addr_t *ipaddr, void *arg) {
   /* WIP: for now return the dns address as if it were the `get` response */
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
@@ -193,9 +191,8 @@ ICACHE_FLASH_ATTR static void http_get_dns_cb(const char *name,
   }
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Http_call(struct v7 *v7, v7_val_t urlv,
-                                            v7_val_t body, v7_val_t cb,
-                                            const char *method) {
+static v7_val_t Http_call(struct v7 *v7, v7_val_t urlv, v7_val_t body,
+                          v7_val_t cb, const char *method) {
   const char *url, *sep;
   char *psep;
   size_t url_len;
@@ -259,15 +256,13 @@ ICACHE_FLASH_ATTR static v7_val_t Http_call(struct v7 *v7, v7_val_t urlv,
   return v7_create_undefined();
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Http_get(struct v7 *v7, v7_val_t this_obj,
-                                           v7_val_t args) {
+static v7_val_t Http_get(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t urlv = v7_array_get(v7, args, 0);
   v7_val_t cb = v7_array_get(v7, args, 1);
   return Http_call(v7, urlv, v7_create_undefined(), cb, "GET");
 }
 
-ICACHE_FLASH_ATTR static v7_val_t Http_post(struct v7 *v7, v7_val_t this_obj,
-                                            v7_val_t args) {
+static v7_val_t Http_post(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t urlv = v7_array_get(v7, args, 0);
   v7_val_t body = v7_array_get(v7, args, 1);
   v7_val_t cb = v7_array_get(v7, args, 2);
@@ -275,7 +270,7 @@ ICACHE_FLASH_ATTR static v7_val_t Http_post(struct v7 *v7, v7_val_t this_obj,
   return Http_call(v7, urlv, body, cb, "POST");
 }
 
-ICACHE_FLASH_ATTR void v7_init_http_client(struct v7 *v7) {
+void v7_init_http_client(struct v7 *v7) {
   v7_val_t http;
 
   http = v7_create_object(v7);

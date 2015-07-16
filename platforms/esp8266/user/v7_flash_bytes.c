@@ -17,8 +17,7 @@
  * target register, patches up the program counter to point to the next
  * instruction and resumes execution.
  */
-ICACHE_FLASH_ATTR void flash_emul_exception_handler(
-    struct xtos_saved_regs *frame) {
+void flash_emul_exception_handler(struct xtos_saved_regs *frame) {
   int i;
   uint32_t vaddr = RSR(EXCVADDR);
   /*
@@ -70,7 +69,7 @@ ICACHE_FLASH_ATTR void flash_emul_exception_handler(
   frame->pc += 3;
 }
 
-ICACHE_FLASH_ATTR void flash_emul_init() {
+void flash_emul_init() {
   _xtos_set_exception_handler(EXCCAUSE_LOAD_STORE_ERROR,
                               flash_emul_exception_handler);
 }

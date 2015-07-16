@@ -6,7 +6,7 @@
 
 static int s_gpio_intr_installed = 0;
 
-ICACHE_FLASH_ATTR static void gpio_intr_handler_proxy(int pin, int level) {
+static void gpio_intr_handler_proxy(int pin, int level) {
   char prop_name[15];
   int len;
   v7_val_t args;
@@ -26,8 +26,7 @@ ICACHE_FLASH_ATTR static void gpio_intr_handler_proxy(int pin, int level) {
   v7_apply(v7, cb, v7_create_undefined(), args);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj,
-                                              v7_val_t args) {
+static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   v7_val_t typev = v7_array_get(v7, args, 1);
   v7_val_t cb = v7_array_get(v7, args, 2);
@@ -74,8 +73,7 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj,
   return v7_create_boolean(v7_gpio_intr_set(pin, type) == 0);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj,
-                                               v7_val_t args) {
+static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   v7_val_t modev = v7_array_get(v7, args, 1);
   v7_val_t pullv = v7_array_get(v7, args, 2);
@@ -93,8 +91,7 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj,
   return v7_create_boolean(v7_gpio_set_mode(pin, mode, pull) == 0);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj,
-                                             v7_val_t args) {
+static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   v7_val_t valv = v7_array_get(v7, args, 1);
   int pin, val;
@@ -109,8 +106,7 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj,
   return v7_create_boolean(v7_gpio_write(pin, val) == 0);
 }
 
-ICACHE_FLASH_ATTR static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj,
-                                            v7_val_t args) {
+static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   int pin;
 
@@ -123,7 +119,7 @@ ICACHE_FLASH_ATTR static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj,
   return v7_create_number(v7_gpio_read(pin));
 }
 
-ICACHE_FLASH_ATTR void init_gpiojs(struct v7 *v7) {
+void init_gpiojs(struct v7 *v7) {
   v7_val_t gpio = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "GPIO", 4, 0, gpio);
   v7_set_method(v7, gpio, "setmode", GPIO_setmode);

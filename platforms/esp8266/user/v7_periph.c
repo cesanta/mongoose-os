@@ -27,7 +27,7 @@ struct gpio_info gpio_map[] = {{0, PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0},
                                {14, PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14},
                                {15, PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15}};
 
-ICACHE_FLASH_ATTR struct gpio_info *get_gpio_info(uint8_t gpio_no) {
+struct gpio_info *get_gpio_info(uint8_t gpio_no) {
   struct gpio_info *ret_val;
 
   if (gpio_no > sizeof(gpio_map) / sizeof(gpio_map[0])) {
