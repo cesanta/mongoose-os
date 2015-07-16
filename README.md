@@ -26,28 +26,9 @@ Smart.js firmware on a device side:
 - Devices with our software can be managed remotely and update software
   remotely, in a fully automatic or semi-automatic way.
 
-Smart.js software on a cloud side has three main components:
-
-- Device management database that keeps information about all devices,
-  e.g. unique device ID, device address, software version, et cetera.
-- Telemetry database with analytics. It can, for example, store information
-  from remote sensors, like electricity and water meters, and able to answer
-  questions like "show me a cumulative power consumption profile for plants
-  A and B from 3 AM to 5 AM last night."
-- Remote software update manager. Schedules and drives software updates
-  in a reliable way. Understands policies like "start remote update with
-  device ID 1234 always. Check success in 5 minutes. If failed, roll back
-  to previous version and alert. If successful, proceed with 5 more random
-  devices of the same class. If successful, proceed with the rest of devices.
-  Never keep more than 5% of devices in flight. If more then 0.1% updates
-  fail, stop the update globally, do not roll back, and alert."
-
-
 # Supported device architectures
 
 - Espressif ESP8266 (since ALPHA1)
-- Texas Instruments CC3200 (work in progress)
-- NXP LPC18xx (work in progress)
 - Many more will be added soon!
 
 # Smart.js firmware burning tool (Flashnchips)
