@@ -100,7 +100,7 @@
  *    PAGE 263: object index page
  *      obj.id:0123 span.ix:0001 flags:INDEX
  *      [264] [265] [fre] [fre]
- *      /[fre] [fre] [fre] [fre]
+ *      [fre] [fre] [fre] [fre]
  *    PAGE 264: object data page
  *      obj.id:0123 span.ix:0004 flags:DATA
  *    PAGE 265: object data page
@@ -124,7 +124,7 @@
 #define SPIFFS_EV_IX_NEW                1
 #define SPIFFS_EV_IX_DEL                2
 
-#define SPIFFS_OBJ_ID_IX_FLAG           (1<<(8*sizeof(spiffs_obj_id)-1))
+#define SPIFFS_OBJ_ID_IX_FLAG           ((spiffs_obj_id)(1<<(8*sizeof(spiffs_obj_id)-1)))
 
 #define SPIFFS_UNDEFINED_LEN            (u32_t)(-1)
 
@@ -665,7 +665,7 @@ s32_t spiffs_gc_clean(
     spiffs_block_ix bix);
 
 s32_t spiffs_gc_quick(
-    spiffs *fs);
+    spiffs *fs, u16_t max_free_pages);
 
 // ---------------
 

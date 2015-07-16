@@ -389,7 +389,10 @@ ON_FLASH s32_t spiffs_obj_lu_find_free(
     int *lu_entry) {
   s32_t res;
   if (!fs->cleaning && fs->free_blocks < 2) {
-    res = spiffs_gc_quick(fs);
+    res = spiffs_gc_quick(fs, 0);
+    if (res == SPIFFS_ERR_NO_DELETED_BLOCKS) {
+      res = SPIFFS_OK;
+    }
     SPIFFS_CHECK_RES(res);
     if (fs->free_blocks < 2) {
       return SPIFFS_ERR_FULL;

@@ -47,6 +47,7 @@ extern "C" {
 #define SPIFFS_ERR_ERASE_FAIL           -10027
 #define SPIFFS_ERR_MAGIC_NOT_POSSIBLE   -10028
 
+#define SPIFFS_ERR_NO_DELETED_BLOCKS    -10029
 
 #define SPIFFS_ERR_INTERNAL             -10050
 
@@ -440,6 +441,12 @@ struct spiffs_dirent *SPIFFS_readdir(spiffs_DIR *d, struct spiffs_dirent *e);
  */
 s32_t SPIFFS_check(spiffs *fs);
 
+/**
+ * Searches for a block with only deleted entries. If found, it is erased.
+ * @param fs            the file system struct
+ */
+s32_t SPIFFS_erase_deleted_block(spiffs *fs);
+
 
 /**
  * Returns number of total bytes available and number of used bytes.
@@ -465,13 +472,60 @@ s32_t SPIFFS_info(spiffs *fs, u32_t *total, u32_t *used);
  * SPIFFS_format.
  * If SPIFFS_mount fails, SPIFFS_format can be called directly without calling
  * SPIFFS_unmount first.
+ *
+ * @param fs            the file system struct
  */
 s32_t SPIFFS_format(spiffs *fs);
 
 /**
  * Returns nonzero if spiffs is mounted, or zero if unmounted.
+ * @param fs            the file system struct
  */
 u8_t SPIFFS_mounted(spiffs *fs);
+
+/**
+ * Tries to find a block where most or all pages are deleted, and erase that
+ * block if found. Does not care for wear levelling. Will not move pages
+ * around.
+ * If parameter max_free_pages are set to 0, only blocks with only deleted
+ * pages will be selected.
+ *
+ * NB: the garbage collector is automatically called when spiffs needs free
+ * pages. The reason for this function is to give possibility to do background
+ * tidying when user knows the system is idle.
+ *
+ * Use with care.
+ *
+ * Setting max_free_pages to anything larger than zero will eventually wear
+ * flash more as a block containing free pages can be erased.
+ *
+ * Will set err_no to SPIFFS_OK if a block was found and erased,
+ * SPIFFS_ERR_NO_DELETED_BLOCK if no matching block was found,
+ * or other error.
+ *
+ * @param fs             the file system struct
+ * @param max_free_pages maximum number allowed free pages in block
+ */
+s32_t SPIFFS_gc_quick(spiffs *fs, u16_t max_free_pages);
+
+/**
+ * Will try to make room for given amount of bytes in the filesystem by moving
+ * pages and erasing blocks.
+ * If it is physically impossible, err_no will be set to SPIFFS_ERR_FULL. If
+ * there already is this amount (or more) of free space, SPIFFS_gc will
+ * silently return. It is recommended to call SPIFFS_info before invoking
+ * this method in order to determine what amount of bytes to give.
+ *
+ * NB: the garbage collector is automatically called when spiffs needs free
+ * pages. The reason for this function is to give possibility to do background
+ * tidying when user knows the system is idle.
+ *
+ * Use with care.
+ *
+ * @param fs            the file system struct
+ * @param size          amount of bytes that should be freed
+ */
+s32_t SPIFFS_gc(spiffs *fs, u32_t size);
 
 #if SPIFFS_TEST_VISUALISATION
 /**

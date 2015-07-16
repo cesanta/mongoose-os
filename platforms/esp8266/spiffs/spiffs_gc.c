@@ -28,7 +28,7 @@ ON_FLASH static s32_t spiffs_gc_erase_block(
 // the block is erased. Compared to the non-quick gc, the quick one ensures
 // that no updates are needed on existing objects on pages that are erased.
 ON_FLASH s32_t spiffs_gc_quick(
-    spiffs *fs) {
+    spiffs *fs, u16_t max_free_pages) {
   s32_t res = SPIFFS_OK;
   u32_t blocks = fs->block_count;
   spiffs_block_ix cur_block = 0;
@@ -47,6 +47,7 @@ ON_FLASH s32_t spiffs_gc_quick(
   // check each block
   while (res == SPIFFS_OK && blocks--) {
     u16_t deleted_pages_in_block = 0;
+    u16_t free_pages_in_block = 0;
 
     int obj_lookup_page = 0;
     // check each object lookup page
@@ -63,9 +64,12 @@ ON_FLASH s32_t spiffs_gc_quick(
           deleted_pages_in_block++;
         } else if (obj_id == SPIFFS_OBJ_ID_FREE) {
           // kill scan, go for next block
-          obj_lookup_page = SPIFFS_OBJ_LOOKUP_PAGES(fs);
-          res = 1; // kill object lu loop
-          break;
+          free_pages_in_block++;
+          if (free_pages_in_block > max_free_pages) {
+            obj_lookup_page = SPIFFS_OBJ_LOOKUP_PAGES(fs);
+            res = 1; // kill object lu loop
+            break;
+          }
         }  else {
           // kill scan, go for next block
           obj_lookup_page = SPIFFS_OBJ_LOOKUP_PAGES(fs);
@@ -78,7 +82,9 @@ ON_FLASH s32_t spiffs_gc_quick(
     } // per object lookup page
     if (res == 1) res = SPIFFS_OK;
 
-    if (res == SPIFFS_OK && deleted_pages_in_block == SPIFFS_PAGES_PER_BLOCK(fs)-SPIFFS_OBJ_LOOKUP_PAGES(fs)) {
+    if (res == SPIFFS_OK &&
+        deleted_pages_in_block + free_pages_in_block == SPIFFS_PAGES_PER_BLOCK(fs)-SPIFFS_OBJ_LOOKUP_PAGES(fs) &&
+        free_pages_in_block <= max_free_pages) {
       // found a fully deleted block
       fs->stats_p_deleted -= deleted_pages_in_block;
       res = spiffs_gc_erase_block(fs, cur_block);
@@ -90,10 +96,13 @@ ON_FLASH s32_t spiffs_gc_quick(
     cur_block_addr += SPIFFS_CFG_LOG_BLOCK_SZ(fs);
   } // per block
 
+  if (res == SPIFFS_OK) {
+    res = SPIFFS_ERR_NO_DELETED_BLOCKS;
+  }
   return res;
 }
 
-// Checks if garbaga collecting is necessary. If so a candidate block is found,
+// Checks if garbage collecting is necessary. If so a candidate block is found,
 // cleansed and erased
 ON_FLASH s32_t spiffs_gc_check(
     spiffs *fs,
@@ -283,7 +292,6 @@ ON_FLASH s32_t spiffs_gc_find_candidate(
     // stoneage sort, but probably not so many blocks
     if (res == SPIFFS_OK && deleted_pages_in_block > 0) {
       // read erase count
-      //
       spiffs_obj_id erase_count;
       res = _spiffs_rd(fs, SPIFFS_OP_C_READ | SPIFFS_OP_T_OBJ_LU2, 0,
           SPIFFS_ERASE_COUNT_PADDR(fs, cur_block),
