@@ -764,8 +764,12 @@ void MainDialog::configureWiFi() {
   connect(cancel, &QPushButton::clicked, &dlg, &QDialog::reject);
   ok->setDefault(true);
 
+  // This is not the default Mac behaviour, but this makes resizing less ugly.
+  layout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+
   dlg.setWindowTitle(tr("Configure Wi-Fi"));
   dlg.setLayout(layout);
+  dlg.setFixedHeight(layout->sizeHint().height());
   if (dlg.exec() == QDialog::Accepted) {
     // TODO(imax): escape strings.
     QString s = QString("Wifi.setup('%1', '%2')\r\n")
