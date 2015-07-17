@@ -7050,7 +7050,7 @@ void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
     fprint_str(f, s);
 #endif
   } else {
-    char *s = v7_to_json(v7, v, buf, 0);
+    char *s = v7_to_json(v7, v, buf, sizeof(buf));
 #ifndef NO_LIBC
     fprintf(f, "%s", s);
 #else
@@ -7894,6 +7894,8 @@ static void object_destructor(struct v7 *v7, void *ptr) {
 }
 
 V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
+  (void) v7;
+
   if (a->refcnt != 0) a->refcnt--;
 
   if (a->refcnt == 0) {
@@ -8352,6 +8354,8 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
     case V7_HEAP_STAT_FUNC_OWNED_MAX:
       return v7->owned_values.size / sizeof(val_t *);
   }
+
+  return -1;
 }
 #endif
 
@@ -8527,7 +8531,7 @@ void v7_gc(struct v7 *v7, int full) {
    * constant offsets for mbufs to be scanned for roots
    * needed for pre C99 compatibility.
    */
-  const static ptrdiff_t root_mbuf_offs[] = {offsetof(struct v7, tmp_stack),
+  static const ptrdiff_t root_mbuf_offs[] = {offsetof(struct v7, tmp_stack),
                                              offsetof(struct v7, owned_values)};
   int i;
 
