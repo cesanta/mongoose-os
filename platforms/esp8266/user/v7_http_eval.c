@@ -79,9 +79,6 @@ static void server_serve(struct espconn *c, void *p, unsigned short len) {
   if (len >= 16 && strncmp(p, "GET /favicon.ico", 16) == 0) {
     espconn_sent(c, (char *) not_found, sizeof(not_found));
     return;
-  } else if (len >= 17 && strncmp(p, "GET /zepto.min.js", 17) == 0) {
-    filename = "zepto.min.js.gz";
-    resp = ok_gzip;
   } else {
     filename = "index.html";
   }
