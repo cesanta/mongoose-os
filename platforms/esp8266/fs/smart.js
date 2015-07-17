@@ -1,5 +1,5 @@
-print("\nMy Cesanta cloud ID: " + conf.dev.id);
-print("My PSK: " + conf.dev.key);
+print("\nMy Cesanta cloud ID:", conf.dev.id);
+print("My PSK:", conf.dev.key);
 print("Use these credentials to add this device on https://dashboard.cesanta.com/");
 
 conf.save = function() {
@@ -22,7 +22,7 @@ if (conf.sys.wifi) {
             for(var i in l) {
                 var n = l[i];
                 if (n in conf.sys.wifi.known) {
-                    print("Joining ", n);
+                    print("Joining", n);
                     Wifi.setup(n, conf.sys.wifi.known[n]);
                     return;
                 }
@@ -49,17 +49,17 @@ Cloud.store = function(name,val,opts) {
 
 /* demo */
 if (conf.user.demo === undefined || conf.user.demo == 'MCP9808') {
-    File.load('I2C.js');
-    File.load('MCP9808.js');
+    File.eval('I2C.js');
+    File.eval('MCP9808.js');
     t = new MCP9808(new I2C(14,12), MCP9808.addr(1,1,1));
     if (!conf.has_temp_sensor) {
         t.getTemp = function() { return 20+Math.random()*20 };
     }
 }
 if (conf.user.demo == 'MC24FC') {
-    File.load('I2C.js');
-    File.load('MC24FC.js');
-    File.load('MC24FC_test.js');
+    File.eval('I2C.js');
+    File.eval('MC24FC.js');
+    File.eval('MC24FC_test.js');
 }
 
 function push(n, cb) {
@@ -70,9 +70,9 @@ function demo() {
     Debug.print("Pushing metric")
     push(t.getTemp(), function(d, e) {
         if (e) {
-            Debug.print("Error sending to the cloud: ", e);
+            Debug.print("Error sending to the cloud:", e);
         } else {
-            Debug.print("Cloud reply: ", d);
+            Debug.print("Cloud reply:", d);
         }
         setTimeout(demo, 2000)});
 };

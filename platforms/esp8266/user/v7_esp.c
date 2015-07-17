@@ -65,9 +65,7 @@ static void js_timeout(void *arg) {
   v7_val_t *cb = (v7_val_t *) arg;
   v7_val_t res;
   if (v7_exec_with(v7, &res, "this()", *cb) != V7_OK) {
-    char *s = v7_to_json(v7, res, NULL, 0);
-    fprintf(stderr, "exc calling cb: %s\n", s);
-    free(s);
+    v7_fprintln(stderr, v7, res);
   }
   v7_disown(v7, cb);
   free(arg);
@@ -281,9 +279,7 @@ void wifi_scan_done(void *arg, STATUS status) {
   v7_set(v7, args, "res", ~0, 0, res);
 
   if (v7_exec_with(v7, &res, "this.cb(this.res)", args) != V7_OK) {
-    char *s = v7_to_json(v7, res, NULL, 0);
-    fprintf(stderr, "exc calling cb: %s\n", s);
-    free(s);
+    v7_fprintln(stderr, v7, res);
   }
 
   v7_disown(v7, &res);
@@ -375,9 +371,7 @@ void wifi_changed_cb(System_Event_t *evt) {
   v7_set(v7, args, "e", 1, 0, v7_create_number(evt->event));
 
   if (v7_exec_with(v7, &res, "this.cb(this.e)", args) != V7_OK) {
-    char *s = v7_to_json(v7, res, NULL, 0);
-    fprintf(stderr, "exc calling cb: %s\n", s);
-    free(s);
+    v7_fprintln(stderr, v7, res);
   }
   v7_disown(v7, &args);
 }
@@ -504,27 +498,16 @@ static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * Prints message to current debug output
  */
 v7_val_t Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  char *p, buf[512];
   int i, num_args = v7_array_length(v7, args);
 
   (void) this_obj;
   for (i = 0; i < num_args; i++) {
-    v7_val_t arg = v7_array_get(v7, args, i);
-    if (v7_is_string(arg)) {
-      size_t n;
-      const char *s = v7_to_string(v7, &arg, &n);
-      os_printf("%s", s);
-    } else {
-      p = v7_to_json(v7, arg, buf, sizeof(buf));
-      os_printf("%s", p);
-      if (p != buf) {
-        free(p);
-      }
-    }
+    v7_fprint(stderr, v7, v7_array_get(v7, args, i));
+    fprintf(stderr, " ");
   }
-  os_printf("\n");
+  fprintf(stderr, "\n");
 
-  return v7_create_null();
+  return v7_create_undefined();
 }
 
 /*
@@ -612,9 +595,7 @@ v7_val_t load_conf(struct v7 *v7, const char *name) {
   err = v7_exec(v7, &res, f);
   free(f);
   if (err != V7_OK) {
-    f = v7_to_json(v7, res, NULL, 0);
-    printf("exc parsing conf: %s\n", f);
-    free(f);
+    v7_println(v7, res);
     return v7_create_object(v7);
   }
   return res;
@@ -646,9 +627,8 @@ void init_conf(struct v7 *v7) {
     err = v7_exec(v7, &res, f);
     free(f);
     if (err != V7_OK) {
-      f = v7_to_json(v7, res, NULL, 0);
-      printf("exc parsing dev conf: %s\n", f);
-      free(f);
+      printf("exc parsing dev conf: ", f);
+      v7_println(v7, res);
     } else {
       v7_set(v7, conf, "dev", ~0, 0, res);
     }
@@ -730,10 +710,8 @@ void init_smartjs() {
   v7_val_t v;
   int res = v7_exec_file(v7, &v, "smart.js");
   if (res != V7_OK) {
-    char *p;
-    p = v7_to_json(v7, v, NULL, 0);
-    printf("smart.js execution: %s\n\r", p);
-    free(p);
+    printf("smart.js execution: ");
+    v7_println(v7, res);
   }
 }
 #endif

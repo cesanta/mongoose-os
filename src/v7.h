@@ -254,6 +254,18 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
  */
 char *v7_to_json(struct v7 *, v7_val_t val, char *buf, size_t buf_len);
 
+/* print a value to stdout */
+void v7_print(struct v7 *, v7_val_t val);
+
+/* print a value into a file */
+void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
+
+/* print a value to stdout followed by a newline */
+void v7_println(struct v7 *, v7_val_t val);
+
+/* print a value into a file followed by a newline */
+void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
+
 /* Return true if given value is `true`, as in JavaScript `if (v)` statement */
 int v7_is_true(struct v7 *v7, v7_val_t v);
 

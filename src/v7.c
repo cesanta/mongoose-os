@@ -254,6 +254,18 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
  */
 char *v7_to_json(struct v7 *, v7_val_t val, char *buf, size_t buf_len);
 
+/* print a value to stdout */
+void v7_print(struct v7 *, v7_val_t val);
+
+/* print a value into a file */
+void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
+
+/* print a value to stdout followed by a newline */
+void v7_println(struct v7 *, v7_val_t val);
+
+/* print a value into a file followed by a newline */
+void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
+
 /* Return true if given value is `true`, as in JavaScript `if (v)` statement */
 int v7_is_true(struct v7 *v7, v7_val_t v);
 
@@ -7022,6 +7034,41 @@ char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   }
 }
 
+void v7_print(struct v7 *v7, v7_val_t v) {
+  v7_fprint(stdout, v7, v);
+}
+
+void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
+  char buf[16];
+
+  if (v7_is_string(v)) {
+    size_t n;
+    const char *s = v7_to_string(v7, &v, &n);
+#ifndef NO_LIBC
+    fprintf(f, "%s", s);
+#else
+    fprint_str(f, s);
+#endif
+  } else {
+    char *s = v7_to_json(v7, v, buf, 0);
+#ifndef NO_LIBC
+    fprintf(f, "%s", s);
+#else
+    fprint_str(f, s);
+#endif
+    if (buf != s) free(s);
+  }
+}
+
+void v7_println(struct v7 *v7, v7_val_t v) {
+  v7_fprintln(stdout, v7, v);
+}
+
+void v7_fprintln(FILE *f, struct v7 *v7, val_t v) {
+  v7_fprint(f, v7, v);
+  fprintf(f, ENDL);
+}
+
 int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
   if (v7_is_string(v)) {
     size_t n;
@@ -11456,35 +11503,16 @@ void print_str(const char *str);
 #endif
 
 V7_PRIVATE v7_val_t Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
 
   (void) this_obj;
   for (i = 0; i < num_args; i++) {
-    v7_val_t arg = v7_array_get(v7, args, i);
-    if (v7_is_string(arg)) {
-      size_t n;
-      const char *s = v7_to_string(v7, &arg, &n);
-#ifndef NO_LIBC
-      printf("%s", s);
-#else
-      print_str(s);
-#endif
-    } else {
-      p = v7_to_json(v7, arg, buf, sizeof(buf));
-#ifndef NO_LIBC
-      printf("%s", p);
-#else
-      print_str(p);
-#endif
-      if (p != buf) {
-        free(p);
-      }
-    }
+    v7_print(v7, v7_array_get(v7, args, i));
+    printf(" ");
   }
   printf(ENDL);
 
-  return v7_create_null();
+  return v7_create_undefined();
 }
 
 V7_PRIVATE v7_val_t

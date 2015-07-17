@@ -122,9 +122,7 @@ static void http_disconnect_cb(void *arg) {
   v7_disown(v7, &data);
 
   if (v7_exec_with(v7, &res, "this[0](this[1])", cb_args) != V7_OK) {
-    char *s = v7_to_json(v7, res, NULL, 0);
-    fprintf(stderr, "exc calling cb: %s\n", s);
-    free(s);
+    v7_fprintln(stderr, v7, res);
   }
   v7_disown(v7, &cb_args);
   v7_disown(v7, &ctx->cb);
@@ -146,9 +144,7 @@ static void http_error_cb(void *arg, int8_t err) {
                v7_create_string(v7, err_msg, sizeof(err_msg), 1));
   http_free(conn);
   if (v7_exec_with(v7, &res, "this[0](undefined, this[1])", cb_args) != V7_OK) {
-    char *s = v7_to_json(v7, res, NULL, 0);
-    fprintf(stderr, "exc calling cb: %s\n", s);
-    free(s);
+    v7_fprintln(stderr, v7, res);
   }
   v7_disown(v7, &cb_args);
 }
@@ -172,9 +168,7 @@ static void http_get_dns_cb(const char *name, ip_addr_t *ipaddr, void *arg) {
     http_free(conn);
     if (v7_exec_with(v7, &res, "this[0](undefined, this[1])", cb_args) !=
         V7_OK) {
-      char *s = v7_to_json(v7, res, NULL, 0);
-      fprintf(stderr, "exc calling cb: %s\n", s);
-      free(s);
+      v7_fprintln(stderr, v7, res);
     }
     v7_disown(v7, &cb_args);
     v7_disown(v7, &ctx->body); /* body has not been sent yet */

@@ -40,23 +40,17 @@ int await_change(int gpio, int *max_cycles) {
 
 #if !defined(V7_NO_FS) && !defined(NO_EXEC_INITJS)
 void v7_run_startup() {
-  v7_val_t v;
-  static char buf[15];
+  v7_val_t res;
   /*
    * It is a question - should we print "Executing
    * and print message if init.js is not found
    * For the moment - print in order
    * to let user know that v7 has some "init.js"
    */
-  printf("\n\rExecuting init.js\n\r");
-  int res = v7_exec_file(v7, &v, "init.js");
-  if (res != V7_OK) {
-    char *p;
-    p = v7_to_json(v7, v, buf, sizeof(buf));
-    printf("init.js execution: %s\n\r", p);
-    if (p != buf) {
-      free(p);
-    }
+  printf("\nExecuting init.js\n");
+  if (v7_exec_file(v7, &res, "init.js") != V7_OK) {
+    printf("init.js execution: ");
+    v7_println(v7, res);
   }
 }
 #endif
