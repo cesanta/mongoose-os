@@ -266,6 +266,9 @@ v7_val_t v7_apply(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
 /* Throw an exception (Error object) with given formatted message. */
 void v7_throw(struct v7 *, const char *msg_fmt, ...);
 
+/* Throw an already existing object. */
+void v7_throw_value(struct v7 *, v7_val_t v);
+
 #define V7_PROPERTY_READ_ONLY 1
 #define V7_PROPERTY_DONT_ENUM 2
 #define V7_PROPERTY_DONT_DELETE 4
@@ -1841,7 +1844,7 @@ struct v7_vec {
 extern "C" {
 #endif /* __cplusplus */
 
-V7_PRIVATE void throw_value(struct v7 *, val_t) NORETURN;
+void v7_throw_value(struct v7 *, v7_val_t v) NORETURN;
 V7_PRIVATE void throw_exception(struct v7 *, enum error_ctor, const char *,
                                 ...) NORETURN;
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
@@ -4697,7 +4700,7 @@ v7_val_t v7_file_to_val(c_file_t file);
 int v7_is_file_type(v7_val_t val);
 #endif
 
-static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t File_eval(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t res = v7_create_undefined();
 
@@ -4705,7 +4708,9 @@ static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   if (v7_is_string(arg0)) {
     size_t n;
     const char *s = v7_to_string(v7, &arg0, &n);
-    v7_exec_file(v7, &res, s);
+    if (v7_exec_file(v7, &res, s) != V7_OK) {
+      v7_throw_value(v7, res);
+    }
   }
 
   return res;
@@ -4867,7 +4872,7 @@ void init_file(struct v7 *v7) {
   s_file_proto = v7_create_object(v7);
   v7_set(v7, file_obj, "prototype", 9, 0, s_file_proto);
 
-  v7_set_method(v7, file_obj, "load", File_load);
+  v7_set_method(v7, file_obj, "eval", File_eval);
   v7_set_method(v7, file_obj, "remove", File_remove);
   v7_set_method(v7, file_obj, "rename", File_rename);
   v7_set_method(v7, file_obj, "open", File_open);
@@ -9504,7 +9509,7 @@ static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
                          int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
-V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
+void v7_throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
   siglongjmp(v7->jmp_buf, THROW_JMP);
 } /* LCOV_EXCL_LINE */
@@ -9533,7 +9538,7 @@ V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  throw_value(v7, create_exception(v7, ex, v7->error_msg));
+  v7_throw_value(v7, create_exception(v7, ex, v7->error_msg));
 } /* LCOV_EXCL_LINE */
 
 void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
@@ -9541,7 +9546,7 @@ void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
+  v7_throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
 }
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
@@ -11497,7 +11502,7 @@ _std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
     err = v7_exec(v7, &res, p);
 
     if (p != buf) free(p);
-    if (err != V7_OK) throw_value(v7, res);
+    if (err != V7_OK) v7_throw_value(v7, res);
   }
   return res;
 }
