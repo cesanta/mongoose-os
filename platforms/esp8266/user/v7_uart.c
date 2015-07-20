@@ -4,7 +4,6 @@
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
-#include "user_config.h"
 #include "user_interface.h"
 #include "v7.h"
 #include "mem.h"

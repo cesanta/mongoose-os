@@ -3,11 +3,9 @@
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
-#include "user_config.h"
 #include "user_interface.h"
 #include "mem.h"
 #include "v7_esp.h"
-#include "v7_http_eval.h"
 #include "util.h"
 #include "v7_uart.h"
 #include "v7_gdb.h"
@@ -38,10 +36,6 @@ void start_cmd(int dummy) {
 
   /* Example debug message, enable by calling Debug.setOutput(1) in init.js */
   fprintf(stderr, "init.js called\n");
-#endif
-
-#ifndef NO_HTTP_EVAL
-  start_http_eval_server();
 #endif
 
 #if !defined(NO_PROMPT)

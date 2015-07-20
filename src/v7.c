@@ -1571,9 +1571,11 @@ struct gc_arena {
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
 #define UNUSED __attribute__((unused))
+#define NOINLINE __attribute__((noinline))
 #else
 #define NORETURN
 #define UNUSED
+#define NOINLINE
 #endif
 
 #define _POSIX_C_SOURCE 200809L
@@ -9747,13 +9749,59 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
   }
 }
 
-static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope) {
+static __attribute__((noinline)) val_t
+    i_eval_expr_common(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                       val_t scope) {
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+  val_t res = v7_create_undefined(), v1 = v7_create_undefined();
+  val_t v2 = v7_create_undefined();
+  double dv;
+  char *name;
+  size_t name_len;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &v1);
+  tmp_stack_push(&tf, &v2);
+
+#if defined(V7_STACK_SIZE) && !defined(V7_DISABLE_INTERPRETER_STACK_CHECK)
+  if ((void *) &v7 <= v7->sp_limit) {
+    v7_throw(v7, "stack overflow");
+  }
+#endif
+
+  if (v7->interrupt == 1) {
+    v7->interrupt = 0;
+    v7_throw(v7, "interrupted");
+  }
+
+  switch (tag) {
+    case AST_NUM:
+      ast_get_num(a, *pos, &dv);
+      ast_move_to_children(a, pos);
+      res = v7_create_number(dv);
+      break;
+    case AST_MEMBER:
+      name = ast_get_inlined_data(a, *pos, &name_len);
+      ast_move_to_children(a, pos);
+      v1 = i_eval_expr(v7, a, pos, scope);
+      res = v7_get(v7, v1, name, name_len);
+      break;
+    default:
+      throw_exception(v7, INTERNAL_ERROR, "Unhandled op");
+  }
+
+  tmp_frame_cleanup(&tf);
+  return res;
+}
+
+static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
+                                           ast_off_t *pos, val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   ast_off_t end;
   val_t res = v7_create_undefined(), v1 = v7_create_undefined();
   val_t v2 = v7_create_undefined();
-  double d1, d2, dv;
+  double d1, d2;
   int i;
   /*
    * TODO(mkm): put this temporary somewhere in the evaluation context
@@ -10057,12 +10105,6 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v2 = i_eval_expr(v7, a, pos, scope);
       res = v7_get_v(v7, v1, v2);
       break;
-    case AST_MEMBER:
-      name = ast_get_inlined_data(a, *pos, &name_len);
-      ast_move_to_children(a, pos);
-      v1 = i_eval_expr(v7, a, pos, scope);
-      res = v7_get(v7, v1, name, name_len);
-      break;
     case AST_SEQ:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -10148,11 +10190,6 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_NOP:
     case AST_UNDEFINED:
       res = v7_create_undefined();
-      break;
-    case AST_NUM:
-      ast_get_num(a, *pos, &dv);
-      ast_move_to_children(a, pos);
-      res = v7_create_number(dv);
       break;
     case AST_STRING:
       name = ast_get_inlined_data(a, *pos, &name_len);
@@ -10394,6 +10431,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
 cleanup:
   tmp_frame_cleanup(&tf);
   return res;
+}
+
+static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope) {
+  enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + *pos);
+  switch (tag) {
+    case AST_NUM:
+    case AST_MEMBER:
+      return i_eval_expr_common(v7, a, pos, scope);
+    default:
+      return i_eval_expr_uncommon(v7, a, pos, scope);
+  }
 }
 
 static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,

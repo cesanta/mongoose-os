@@ -2,7 +2,6 @@
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
-#include "user_config.h"
 #include "v7_periph.h"
 #include "v7_gpio.h"
 
