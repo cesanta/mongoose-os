@@ -21,6 +21,8 @@
 #include <common/util/error_codes.h>
 #include <common/util/statusor.h>
 
+#include "fs.h"
+
 // Code in this file (namely, rebootIntoBootloader function) assumes the same
 // wiring as esptool.py:
 //   RTS - CH_PD or RESET pin
@@ -35,6 +37,8 @@ const ulong flashBlockSize = 4096;
 const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
+const ulong spiffsBlockOffset = 0x1d000;
+const ulong spiffsBlockSize = 0x8000;
 
 // Copy-pasted from
 // https://github.com/themadinventor/esptool/blob/e96336f6561109e67afe03c0695d1e5b0de15da6/esptool.py
@@ -335,10 +339,12 @@ class FlasherImpl : public Flasher {
  public:
   explicit FlasherImpl(bool preserve_flash_params, bool erase_bug_workaround,
                        qint32 override_flash_params,
+                       bool merge_flash_filesystem,
                        bool generate_id_if_none_found, QString id_hostname)
       : preserve_flash_params_(preserve_flash_params),
         erase_bug_workaround_(erase_bug_workaround),
         override_flash_params_(override_flash_params),
+        merge_flash_filesystem_(merge_flash_filesystem),
         generate_id_if_none_found_(generate_id_if_none_found),
         id_hostname_(id_hostname) {
   }
@@ -441,6 +447,25 @@ class FlasherImpl : public Flasher {
                    << images_[0].mid(2, 2).toHex();
       }
       flashParams = images_[0][2] << 8 | images_[0][3];
+    }
+
+    if (merge_flash_filesystem_) {
+      auto res = mergeFlashLocked();
+      if (res.ok()) {
+        images_[spiffsBlockOffset] = res.ValueOrDie();
+        qWarning() << "Merged flash content";
+      } else {
+        qWarning() << "Failed to merge flash content:"
+                   << res.status().ToString().c_str();
+        emit done(tr("failed to merge flash filesystem"), false);
+        return;
+
+      }
+      if (!rebootIntoBootloader(port_)) {
+        emit done(tr("failed to reboot the device after reading flash fs"),
+                  false);
+        return;
+      }
     }
 
     if (generate_id_if_none_found_) {
@@ -712,6 +737,28 @@ class FlasherImpl : public Flasher {
     return r.mid(2, 2);
   }
 
+  // mergeFlashLocked reads the spiffs filesystem from the device
+  // and mounts it in memory. Then it overwrites the files that are
+  // present in the software update but it leaves the existing ones.
+  // The idea is that the filesystem is mostly managed by the user
+  // or by the software update utility, while the core system uploaded by
+  // the flasher should only upload a few core files.
+  util::StatusOr<QByteArray> mergeFlashLocked() {
+    auto res = readFlashLocked(spiffsBlockOffset, spiffsBlockSize);
+    if (!res.ok()) {
+      return res.status();
+    }
+
+    SPIFFS bundled(images_[spiffsBlockOffset]);
+    SPIFFS dev(res.ValueOrDie());
+
+    auto err = dev.merge(bundled);
+    if (!err.ok()) {
+      return err;
+    }
+    return dev.data();
+  }
+
   util::StatusOr<bool> findIdLocked() {
     // Block with ID has the following structure:
     // 1) 20-byte SHA-1 hash of the payload
@@ -772,6 +819,7 @@ class FlasherImpl : public Flasher {
   bool preserve_flash_params_ = true;
   bool erase_bug_workaround_ = true;
   qint32 override_flash_params_ = -1;
+  bool merge_flash_filesystem_ = true;
   bool generate_id_if_none_found_ = true;
   QString id_hostname_;
 };
@@ -779,11 +827,13 @@ class FlasherImpl : public Flasher {
 std::unique_ptr<Flasher> flasher(bool preserveFlashParams,
                                  bool eraseBugWorkaround,
                                  qint32 overrideFlashParams,
+                                 bool mergeFlashFilesystem,
                                  bool generateIdIfNoneFound,
                                  QString idHostname) {
   return std::move(std::unique_ptr<Flasher>(
       new FlasherImpl(preserveFlashParams, eraseBugWorkaround,
-                      overrideFlashParams, generateIdIfNoneFound, idHostname)));
+                      overrideFlashParams, mergeFlashFilesystem,
+                      generateIdIfNoneFound, idHostname)));
 }
 
 namespace {

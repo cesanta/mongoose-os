@@ -18,6 +18,7 @@ bool probe(const QSerialPortInfo& port);
 std::unique_ptr<Flasher> flasher(bool preserveFlashParams = true,
                                  bool eraseBugWorkaround = true,
                                  qint32 overrideFlashParams = -1,
+                                 bool mergeFlashFilesystem = true,
                                  bool generateIdIfNoneFound = true,
                                  QString idHostname = "");
 

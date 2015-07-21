@@ -94,6 +94,8 @@ int main(int argc, char* argv[]) {
        {"id-domain",
         "Domain name to use for generated device IDs. Default: api.cesanta.com",
         "name", "api.cesanta.com"},
+       {"overwrite-flash-fs",
+        "If set, force overwrite the data flash with the factory image"},
        {"skip-id-generation",
         "If set, device ID won't be generated and flashed."},
        {"esp8266-flash-params",

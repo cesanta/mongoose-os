@@ -594,6 +594,7 @@ void MainDialog::loadFirmware() {
   std::unique_ptr<Flasher> f(ESP8266::flasher(
       !parser_->isSet("esp8266-skip-reading-flash-params"),
       !parser_->isSet("esp8266-disable-erase-workaround"), flashParams,
+      !parser_->isSet("overwrite-flash-fs"),
       !parser_->isSet("skip-id-generation"), parser_->value("id-domain")));
   QString err = f->load(fwDir_.absoluteFilePath("esp8266/" + name));
   if (err != "") {
