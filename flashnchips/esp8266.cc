@@ -459,7 +459,6 @@ class FlasherImpl : public Flasher {
                    << res.status().ToString().c_str();
         emit done(tr("failed to merge flash filesystem"), false);
         return;
-
       }
       if (!rebootIntoBootloader(port_)) {
         emit done(tr("failed to reboot the device after reading flash fs"),
@@ -830,10 +829,9 @@ std::unique_ptr<Flasher> flasher(bool preserveFlashParams,
                                  bool mergeFlashFilesystem,
                                  bool generateIdIfNoneFound,
                                  QString idHostname) {
-  return std::move(std::unique_ptr<Flasher>(
-      new FlasherImpl(preserveFlashParams, eraseBugWorkaround,
-                      overrideFlashParams, mergeFlashFilesystem,
-                      generateIdIfNoneFound, idHostname)));
+  return std::move(std::unique_ptr<Flasher>(new FlasherImpl(
+      preserveFlashParams, eraseBugWorkaround, overrideFlashParams,
+      mergeFlashFilesystem, generateIdIfNoneFound, idHostname)));
 }
 
 namespace {
