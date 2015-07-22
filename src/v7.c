@@ -868,9 +868,7 @@ char *utfutf(char *s1, char *s2);
 #endif
 
 #include <assert.h>
-#ifndef NO_LIBC
 #include <ctype.h>
-#endif
 #include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -6465,6 +6463,10 @@ double _v7_infinity;
 
 #ifdef HAS_V7_NAN
 double _v7_nan;
+#endif
+
+#ifdef NO_LIBC
+void fprint_str(FILE *fp, const char *str);
 #endif
 
 enum v7_type val_type(struct v7 *v7, val_t v) {
