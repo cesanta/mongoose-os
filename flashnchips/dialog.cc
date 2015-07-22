@@ -132,6 +132,8 @@ void MainDialog::addFirmwareSelector(QBoxLayout* parent) {
 
   flashingProgress_ = new QProgressBar();
   flashingStatus_ = new QLabel();
+  flashingStatus_->setTextFormat(Qt::RichText);
+  flashingStatus_->setOpenExternalLinks(true);
 
   layout->addWidget(flashingProgress_);
   layout->addWidget(flashingStatus_);

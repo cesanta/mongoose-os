@@ -37,8 +37,8 @@ const ulong flashBlockSize = 4096;
 const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
-const ulong spiffsBlockOffset = 0x6d000;
-const ulong spiffsBlockSize = 0x10000;
+const ulong spiffsBlockOffset = 0x1d000;
+const ulong spiffsBlockSize = 0x8000;
 
 // Copy-pasted from
 // https://github.com/themadinventor/esptool/blob/e96336f6561109e67afe03c0695d1e5b0de15da6/esptool.py
@@ -429,7 +429,9 @@ class FlasherImpl : public Flasher {
     QMutexLocker lock(&lock_);
 
     if (!rebootIntoBootloader(port_)) {
-      emit done(tr("failed to contact the bootloader. Is device connected?"),
+      emit done(tr("Failed to talk to bootloader. See <a "
+                   "href=\"https://github.com/cesanta/smart.js/blob/master/"
+                   "platforms/esp8266/flashing.md\">wiring instructions</a>."),
                 false);
       return;
     }
@@ -467,7 +469,9 @@ class FlasherImpl : public Flasher {
       flashParams = images_[0][2] << 8 | images_[0][3];
     }
 
-    if (merge_flash_filesystem_) {
+// TODO(imax): enable back once it works reliably without aborting flashing.
+#if 0
+    if (false && merge_flash_filesystem_) {
       auto res = mergeFlashLocked();
       if (res.ok()) {
         images_[spiffsBlockOffset] = res.ValueOrDie();
@@ -479,6 +483,7 @@ class FlasherImpl : public Flasher {
         return;
       }
     }
+#endif
 
     if (generate_id_if_none_found_) {
       auto res = findIdLocked();
