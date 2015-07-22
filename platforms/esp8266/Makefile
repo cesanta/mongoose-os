@@ -45,8 +45,8 @@ EXTRA_INCDIR    = include
 LIBS		= m cirom gcc hal pp phy net80211 lwip wpa main
 
 # spiffs parameters
-FW_FS_ADDR = 0x1d000
-FW_FS_SIZE = 32768
+FW_FS_ADDR = 0x6d000
+FW_FS_SIZE = 65536
 
 # some of these flags works around for gdb 7.5.x stacktrace issue
 # while still allowing -Os to remove padding between data in .rodata
@@ -105,7 +105,7 @@ SDK_LDDIR	= ld
 # we create two different files for uploading into the flash
 # these are the names and options to generate them
 FW_FILE_1_ADDR	= 0x00000
-FW_FILE_2_ADDR	= 0x28000
+FW_FILE_2_ADDR	= 0x1d000
 
 # select which tools to use as compiler, librarian and linker
 CC:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
