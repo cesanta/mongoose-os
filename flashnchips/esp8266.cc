@@ -44,11 +44,31 @@ const ulong spiffsBlockSize = 0x10000;
 // https://github.com/themadinventor/esptool/blob/e96336f6561109e67afe03c0695d1e5b0de15da6/esptool.py
 // Copyright (C) 2014 Fredrik Ahlberg
 // License: GPLv2
+// Must be prefixed with 3 32-bit arguments: offset, blocklen, blockcount.
+// Updated to reboot after reading.
 const char ESPReadFlashStub[] =
-    "\x80\x3c\x00\x40\x1c\x4b\x00\x40\x21\x11\x00\x40\x00\x80\xfe\x3f\xc1\xfb"
-    "\xff\xd1\xf8\xff\x2d\x0d\x31\xfd\xff\x41\xf7\xff\x4a\xdd\x51\xf9\xff\xc0"
-    "\x05\x00\x21\xf9\xff\x31\xf3\xff\x41\xf5\xff\xc0\x04\x00\x0b\xcc\x56\xec"
-    "\xfd\x06\xff\xff\x00\x00";
+    "\x80\x3c\x00\x40"  // data: send_packet
+    "\x1c\x4b\x00\x40"  // data: SPIRead
+    "\x80\x00\x00\x40"  // data: ResetVector
+    "\x00\x80\xfe\x3f"  // data: buffer
+    "\xc1\xfb\xff"      //       l32r    a12, $blockcount
+    "\xd1\xf8\xff"      //       l32r    a13, $offset
+    "\x2d\x0d"          // loop: mov.n   a2, a13
+    "\x31\xfd\xff"      //       l32r    a3, $buffer
+    "\x41\xf7\xff"      //       l32r    a4, $blocklen
+    "\x4a\xdd"          //       add.n   a13, a13, a4
+    "\x51\xf9\xff"      //       l32r    a5, $SPIRead
+    "\xc0\x05\x00"      //       callx0  a5
+    "\x21\xf9\xff"      //       l32r    a2, $buffer
+    "\x31\xf3\xff"      //       l32r    a3, $blocklen
+    "\x41\xf5\xff"      //       l32r    a4, $send_packet
+    "\xc0\x04\x00"      //       callx0  a4
+    "\x0b\xcc"          //       addi.n  a12, a12, -1
+    "\x56\xec\xfd"      //       bnez    a12, loop
+    "\x61\xf4\xff"      //       l32r    a6, $ResetVector
+    "\xa0\x06\x00"      //       jx      a6
+    "\x00\x00\x00"      //       // padding
+    ;
 
 // ESP8266 bootloader uses SLIP frame format for communication.
 // https://tools.ietf.org/html/rfc1055
@@ -276,6 +296,15 @@ bool sync(QSerialPort* serial) {
   return true;
 }
 
+bool trySync(QSerialPort* serial, int attempts) {
+  for (; attempts > 0; attempts--) {
+    if (sync(serial)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool rebootIntoBootloader(QSerialPort* serial) {
   serial->setDataTerminalReady(false);
   serial->setRequestToSend(true);
@@ -284,13 +313,7 @@ bool rebootIntoBootloader(QSerialPort* serial) {
   serial->setRequestToSend(false);
   QThread::msleep(50);
   serial->setDataTerminalReady(false);
-  for (int i = 0; i < 3; i++) {
-    serial->clear();
-    if (sync(serial)) {
-      return true;
-    }
-  }
-  return false;
+  return trySync(serial, 3);
 }
 
 void rebootIntoFirmware(QSerialPort* serial) {
@@ -431,11 +454,6 @@ class FlasherImpl : public Flasher {
                   false);
         return;
       }
-      if (!rebootIntoBootloader(port_)) {
-        emit done(tr("failed to reboot the device after reading flash params"),
-                  false);
-        return;
-      }
     }
 
     if (images_.contains(0) && images_[0].length() >= 4 &&
@@ -460,11 +478,6 @@ class FlasherImpl : public Flasher {
         emit done(tr("failed to merge flash filesystem"), false);
         return;
       }
-      if (!rebootIntoBootloader(port_)) {
-        emit done(tr("failed to reboot the device after reading flash fs"),
-                  false);
-        return;
-      }
     }
 
     if (generate_id_if_none_found_) {
@@ -480,11 +493,6 @@ class FlasherImpl : public Flasher {
         qWarning() << "Failed to read existing ID block:"
                    << res.status().ToString().c_str();
         emit done(tr("failed to check for ID presence"), false);
-        return;
-      }
-      if (!rebootIntoBootloader(port_)) {
-        emit done(tr("failed to reboot the device after reading flash params"),
-                  false);
         return;
       }
     }
@@ -691,6 +699,7 @@ class FlasherImpl : public Flasher {
     s2.setByteOrder(QDataStream::LittleEndian);
     s2 << quint32(stub.length()) << quint32(0) << quint32(0) << quint32(0);
     payload.append(stub);
+    qDebug() << "Stub length:" << showbase << hex << stub.length();
     writeCommand(port_, 0x07, payload, checksum(stub));
     resp = readResponse(port_);
     if (!resp.ok()) {
@@ -714,6 +723,13 @@ class FlasherImpl : public Flasher {
       qDebug() << "Failed to read flash.";
       return util::Status(util::error::ABORTED, "failed to read flash");
     }
+
+    if (!trySync(port_, 5)) {
+      qWarning() << "Device did not reboot after reading flash";
+      return util::Status(util::error::ABORTED,
+                          "failed to jump to bootloader after reading flash");
+    }
+
     return r;
   }
 
