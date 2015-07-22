@@ -244,7 +244,7 @@ DHCP server for it.
 ## Cloud
 
 This interface provides an easy way to send data to the
-Cesanta cloud. On a cloud side, it is easy to build interactive
+[Cesanta cloud](https://cloud.cesanta.com/). On a cloud side, it is easy to build interactive
 real-time dashboards.
 
 - `Cloud.store(name, value [, options]) -> undefined` - store metric `name`
