@@ -11,7 +11,7 @@ QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 
 # Input
 HEADERS += cli.h dialog.h esp8266.h flasher.h serial.h fs.h
-SOURCES += cli.cc dialog.cc esp8266.cc main.cc serial.cc fs.cc
+SOURCES += cli.cc dialog.cc esp8266.cc flasher.cc main.cc serial.cc fs.cc
 
 DEFINES += VERSION=\\\"$$VERSION\\\"
 DEFINES += APP_NAME=\\\"$$TARGET\\\"

@@ -573,17 +573,6 @@ void MainDialog::updateFWList() {
 }
 
 void MainDialog::loadFirmware() {
-  int flashParams = -1;
-  if (parser_->isSet("esp8266-flash-params")) {
-    auto r =
-        ESP8266::flashParamsFromString(parser_->value("esp8266-flash-params"));
-
-    if (r.ok()) {
-      flashParams = r.ValueOrDie();
-    } else {
-      qWarning() << "Invalid --esp8266-flash-params value, ignored.";
-    }
-  }
   QString name = fwSelector_->currentText();
   if (name == "") {
     flashingStatus_->setText(tr("No firmware selected"));
@@ -593,11 +582,11 @@ void MainDialog::loadFirmware() {
   if (portName == "") {
     flashingStatus_->setText(tr("No port selected"));
   }
-  std::unique_ptr<Flasher> f(ESP8266::flasher(
-      !parser_->isSet("esp8266-skip-reading-flash-params"),
-      !parser_->isSet("esp8266-disable-erase-workaround"), flashParams,
-      !parser_->isSet("overwrite-flash-fs"),
-      !parser_->isSet("skip-id-generation"), parser_->value("id-domain")));
+  std::unique_ptr<Flasher> f(ESP8266::flasher());
+  util::Status s = f->setOptionsFromCommandLine(*parser_);
+  if (!s.ok()) {
+    qWarning() << "Some options have invalid values:" << s.ToString().c_str();
+  }
   QString err = f->load(fwDir_.absoluteFilePath("esp8266/" + name));
   if (err != "") {
     flashingStatus_->setText(err);

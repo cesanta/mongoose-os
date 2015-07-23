@@ -46,20 +46,6 @@ void CLI::run() {
     }
   }
 
-  int flashParams = -1;
-  if (parser_->isSet("esp8266-flash-params")) {
-    auto r =
-        ESP8266::flashParamsFromString(parser_->value("esp8266-flash-params"));
-
-    if (r.ok()) {
-      flashParams = r.ValueOrDie();
-    } else {
-      cerr << "Invalid --esp8266-flash-params value: " << r.status() << endl
-           << endl;
-      parser_->showHelp(1);
-    }
-  }
-
   if (parser_->isSet("probe-ports")) {
     exit_code = listPorts() ? 0 : 1;
   } else if (parser_->isSet("probe")) {
@@ -81,8 +67,7 @@ void CLI::run() {
            << endl;
       parser_->showHelp(1);
     }
-    if (flash(parser_->value("port"), parser_->value("flash"), speed,
-              flashParams)) {
+    if (flash(parser_->value("port"), parser_->value("flash"), speed)) {
       cerr << "Success." << endl;
       exit_code = 0;
     } else {
@@ -124,8 +109,7 @@ bool CLI::probePort(const QString& portname) {
   return false;
 }
 
-bool CLI::flash(const QString& portname, const QString& path, int speed,
-                int flashParams) {
+bool CLI::flash(const QString& portname, const QString& path, int speed) {
   const auto& ports = QSerialPortInfo::availablePorts();
   QSerialPortInfo info;
   bool found = false;
@@ -142,11 +126,12 @@ bool CLI::flash(const QString& portname, const QString& path, int speed,
     return false;
   }
 
-  std::unique_ptr<Flasher> f(ESP8266::flasher(
-      !parser_->isSet("esp8266-skip-reading-flash-params"),
-      !parser_->isSet("esp8266-disable-erase-workaround"), flashParams,
-      !parser_->isSet("overwrite-flash-fs"),
-      !parser_->isSet("skip-id-generation"), parser_->value("id-domain")));
+  std::unique_ptr<Flasher> f(ESP8266::flasher());
+  util::Status config_status = f->setOptionsFromCommandLine(*parser_);
+  if (!config_status.ok()) {
+    cerr << config_status << endl;
+    return false;
+  }
   QString err = f->load(path);
   if (err != "") {
     cerr << err.toStdString() << endl;

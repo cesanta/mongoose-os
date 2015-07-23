@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include <QCommandLineParser>
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDateTime>
@@ -29,6 +30,11 @@
 //   DTR - GPIO0 pin
 
 namespace ESP8266 {
+
+const char kFlashParamsOption[] = "esp8266-flash-params";
+const char kDisableEraseWorkaroundOption[] = "esp8266-disable-erase-workaround";
+const char kSkipReadingFlashParamsOption[] =
+    "esp8266-skip-reading-flash-params";
 
 namespace {
 
@@ -360,16 +366,93 @@ bool probe(const QSerialPortInfo& port) {
 class FlasherImpl : public Flasher {
   Q_OBJECT
  public:
-  explicit FlasherImpl(bool preserve_flash_params, bool erase_bug_workaround,
-                       qint32 override_flash_params,
-                       bool merge_flash_filesystem,
-                       bool generate_id_if_none_found, QString id_hostname)
-      : preserve_flash_params_(preserve_flash_params),
-        erase_bug_workaround_(erase_bug_workaround),
-        override_flash_params_(override_flash_params),
-        merge_flash_filesystem_(merge_flash_filesystem),
-        generate_id_if_none_found_(generate_id_if_none_found),
-        id_hostname_(id_hostname) {
+  FlasherImpl() : id_hostname_("api.cesanta.com") {
+  }
+
+  util::Status setOption(const QString& name, const QVariant& value) override {
+    if (name == kIdDomainOption) {
+      if (value.type() != QVariant::String) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be a string");
+      }
+      id_hostname_ = value.toString();
+      return util::Status::OK;
+    } else if (name == kOverwriteFSOption) {
+      if (value.type() != QVariant::Bool) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be boolean");
+      }
+      merge_flash_filesystem_ = !value.toBool();
+      return util::Status::OK;
+    } else if (name == kSkipIdGenerationOption) {
+      if (value.type() != QVariant::Bool) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be boolean");
+      }
+      generate_id_if_none_found_ = !value.toBool();
+      return util::Status::OK;
+    } else if (name == kFlashParamsOption) {
+      if (value.type() == QVariant::String) {
+        auto r = flashParamsFromString(value.toString());
+        if (!r.ok()) {
+          return r.status();
+        }
+        override_flash_params_ = r.ValueOrDie();
+      } else if (value.canConvert<int>()) {
+        override_flash_params_ = value.toInt();
+      } else {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be a number or a string");
+      }
+      return util::Status::OK;
+    } else if (name == kDisableEraseWorkaroundOption) {
+      if (value.type() != QVariant::Bool) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be boolean");
+      }
+      erase_bug_workaround_ = !value.toBool();
+      return util::Status::OK;
+    } else if (name == kSkipReadingFlashParamsOption) {
+      if (value.type() != QVariant::Bool) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be boolean");
+      }
+      preserve_flash_params_ = !value.toBool();
+      return util::Status::OK;
+    } else {
+      return util::Status(util::error::INVALID_ARGUMENT, "unknown option");
+    }
+  }
+
+  util::Status setOptionsFromCommandLine(
+      const QCommandLineParser& parser) override {
+    util::Status r;
+
+    QStringList boolOpts({kOverwriteFSOption, kSkipIdGenerationOption,
+                          kDisableEraseWorkaroundOption,
+                          kSkipReadingFlashParamsOption});
+    QStringList stringOpts({kIdDomainOption, kFlashParamsOption});
+
+    for (const auto& opt : boolOpts) {
+      auto s = setOption(opt, parser.isSet(opt));
+      if (!s.ok()) {
+        r = util::Status(
+            s.error_code(),
+            (opt + ": " + s.error_message().c_str()).toStdString());
+      }
+    }
+    for (const auto& opt : stringOpts) {
+      // XXX: currently there's no way to "unset" a string option.
+      if (parser.isSet(opt)) {
+        auto s = setOption(opt, parser.value(opt));
+        if (!s.ok()) {
+          r = util::Status(
+              s.error_code(),
+              (opt + ": " + s.error_message().c_str()).toStdString());
+        }
+      }
+    }
+    return r;
   }
 
   QString load(const QString& path) override {
@@ -844,15 +927,8 @@ class FlasherImpl : public Flasher {
   QString id_hostname_;
 };
 
-std::unique_ptr<Flasher> flasher(bool preserveFlashParams,
-                                 bool eraseBugWorkaround,
-                                 qint32 overrideFlashParams,
-                                 bool mergeFlashFilesystem,
-                                 bool generateIdIfNoneFound,
-                                 QString idHostname) {
-  return std::move(std::unique_ptr<Flasher>(new FlasherImpl(
-      preserveFlashParams, eraseBugWorkaround, overrideFlashParams,
-      mergeFlashFilesystem, generateIdIfNoneFound, idHostname)));
+std::unique_ptr<Flasher> flasher() {
+  return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
 }
 
 namespace {
@@ -912,6 +988,29 @@ util::StatusOr<int> flashParamsFromString(const QString& s) {
           util::error::INVALID_ARGUMENT,
           "must be either a number or a comma-separated list of three items");
   }
+}
+
+void addOptions(QCommandLineParser* parser) {
+  parser->addOptions(
+      {{kFlashParamsOption,
+        "Override params bytes read from existing firmware. Either a "
+        "comma-separated string or a number. First component of the string is "
+        "the flash mode, must be one of: qio (default), qout, dio, dout. "
+        "Second component is flash size, value values: 2m, 4m (default), 8m, "
+        "16m, 32m, 16m-c1, 32m-c1, 32m-c2. Third one is flash frequency, valid "
+        "values: 40m (default), 26m, 20m, 80m. If it's a number, only 2 lowest "
+        "bytes from it will be written in the header of section 0x0000 in "
+        "big-endian byte order (i.e. high byte is put at offset 2, low byte at "
+        "offset 3).",
+        "params"},
+       {kSkipReadingFlashParamsOption,
+        "If set and --esp8266-flash-params is not used, reading flash params "
+        "from the device will not be attempted and image at 0x0000 will be "
+        "written as is."},
+       {kDisableEraseWorkaroundOption,
+        "ROM code can erase up to 16 extra 4KB sectors when flashing firmware. "
+        "This flag disables the workaround that makes it erase at most 1 extra "
+        "sector."}});
 }
 
 }  // namespace ESP8266

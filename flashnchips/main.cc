@@ -6,6 +6,8 @@
 
 #include "cli.h"
 #include "dialog.h"
+#include "esp8266.h"
+#include "flasher.h"
 
 namespace {
 
@@ -91,32 +93,15 @@ int main(int argc, char* argv[]) {
         "baud-rate"},
        {"probe", "Check device presence on a given port."},
        {"flash", "Flash firmware from the given directory.", "dir"},
-       {"id-domain",
+       {Flasher::kIdDomainOption,
         "Domain name to use for generated device IDs. Default: api.cesanta.com",
         "name", "api.cesanta.com"},
-       {"overwrite-flash-fs",
+       {Flasher::kOverwriteFSOption,
         "If set, force overwrite the data flash with the factory image"},
-       {"skip-id-generation",
-        "If set, device ID won't be generated and flashed."},
-       {"esp8266-flash-params",
-        "Override params bytes read from existing firmware. Either a "
-        "comma-separated string or a number. First component of the string is "
-        "the flash mode, must be one of: qio (default), qout, dio, dout. "
-        "Second component is flash size, value values: 2m, 4m (default), 8m, "
-        "16m, 32m, 16m-c1, 32m-c1, 32m-c2. Third one is flash frequency, valid "
-        "values: 40m (default), 26m, 20m, 80m. If it's a number, only 2 lowest "
-        "bytes from it will be written in the header of section 0x0000 in "
-        "big-endian byte order (i.e. high byte is put at offset 2, low byte at "
-        "offset 3).",
-        "params"},
-       {"esp8266-skip-reading-flash-params",
-        "If set and --esp8266-flash-params is not used, reading flash params "
-        "from the device will not be attempted and image at 0x0000 will be "
-        "written as is."},
-       {"esp8266-disable-erase-workaround",
-        "ROM code can erase up to 16 extra 4KB sectors when flashing firmware. "
-        "This flag disables the workaround that makes it erase at most 1 extra "
-        "sector."}});
+       {Flasher::kSkipIdGenerationOption,
+        "If set, device ID won't be generated and flashed."}});
+
+  ESP8266::addOptions(&parser);
 
   QStringList commandline;
   for (int i = 0; i < argc; i++) {

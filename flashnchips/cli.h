@@ -15,8 +15,7 @@ class CLI : public QObject {
  private:
   bool listPorts();
   bool probePort(const QString& portname);
-  bool flash(const QString& portname, const QString& path, int speed,
-             int flashParams);
+  bool flash(const QString& portname, const QString& path, int speed);
   void run();
 
   QCommandLineParser* parser_;
