@@ -7,6 +7,7 @@
 #include <QComboBox>
 #include <QCommandLineParser>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QDialog>
 #include <QEvent>
 #include <QFile>
@@ -32,6 +33,7 @@
 #include <QTextCursor>
 #include <QThread>
 #include <QTimer>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -249,6 +251,16 @@ void MainDialog::addMenuBar() {
   QMenuBar* menu = menuBar();
   QMenu* helpMenu = new QMenu(tr("&Help"), menu);
   QAction* a;
+  a = new QAction(tr("Help"), helpMenu);
+  connect(a, &QAction::triggered, [this]() {
+    const QString url =
+        "https://github.com/cesanta/smart.js/blob/master/flashnchips/README.md";
+    if (!QDesktopServices::openUrl(QUrl(url))) {
+      QMessageBox::warning(this, tr("Error"), tr("Failed to open %1").arg(url));
+    }
+  });
+  helpMenu->addAction(a);
+
   a = new QAction(tr("About Qt"), helpMenu);
   a->setMenuRole(QAction::AboutQtRole);
   connect(a, &QAction::triggered, qApp, &QApplication::aboutQt);
