@@ -30,7 +30,11 @@ struct http_ctx {
   char host[256];
   int port;
   char path[256];
-  char resp[512];
+  /*
+   * It could be great to use mbuf here,
+   * but it is not exposed from v7.c
+   */
+  char resp[1024];
   int resp_pos;
 };
 
@@ -47,7 +51,10 @@ static void http_recv_cb(void *arg, char *p, unsigned short len) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
 
-  if (ctx->resp_pos >= sizeof(ctx->resp)) return;
+  if (ctx->resp_pos + len >= sizeof(ctx->resp)) {
+    /* TODO(mkm): this is overflow, what should we do here? */
+    return;
+  }
 
   /* This WIP implementation assumes the server will close the connection */
   memcpy(ctx->resp + ctx->resp_pos, p, len);
