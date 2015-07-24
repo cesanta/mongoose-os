@@ -221,6 +221,9 @@ static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     case STATION_GOT_IP:
       msg = "got ip";
       break;
+    default:
+      msg = "unknown";
+      break;
   }
   return v7_create_string(v7, msg, strlen(msg), 1);
 }
