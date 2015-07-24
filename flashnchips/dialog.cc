@@ -586,9 +586,17 @@ void MainDialog::updateFWList() {
 
 void MainDialog::loadFirmware() {
   QString name = fwSelector_->currentText();
-  if (name == "") {
-    flashingStatus_->setText(tr("No firmware selected"));
-    return;
+  QString path;
+  if (name != "") {
+    path = fwDir_.absoluteFilePath("esp8266/" + name);
+  } else {
+    path = QFileDialog::getExistingDirectory(this,
+                                             tr("Load firmware from directory"),
+                                             "", QFileDialog::ShowDirsOnly);
+    if (path.isEmpty()) {
+      flashingStatus_->setText(tr("No firmware selected"));
+      return;
+    }
   }
   QString portName = portSelector_->currentData().toString();
   if (portName == "") {
@@ -599,7 +607,7 @@ void MainDialog::loadFirmware() {
   if (!s.ok()) {
     qWarning() << "Some options have invalid values:" << s.ToString().c_str();
   }
-  QString err = f->load(fwDir_.absoluteFilePath("esp8266/" + name));
+  QString err = f->load(path);
   if (err != "") {
     flashingStatus_->setText(err);
     return;
