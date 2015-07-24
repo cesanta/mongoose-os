@@ -117,7 +117,7 @@ static void uart_tx_char(unsigned uartno, char ch) {
 }
 
 static int c_uvprintf(int uart, const char *format, va_list args) {
-  static char buf[512];
+  char buf[512];
   int size, i;
   /* TODO(mkm): add a callback to some c_xxxprintf */
   size = c_vsnprintf(buf, sizeof(buf), format, args);

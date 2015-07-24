@@ -105,6 +105,11 @@ int c_sscanf(const char *ibuf, const char *fmt, ...) {
 /*
  * vfscanf
  */
+/* `basefix' is used to avoid `if' tests in the integer scanner */
+RODATA
+static const short basefix[17] = {10, 1,  2,  3,  4,  5,  6,  7, 8,
+                                  9,  10, 11, 12, 13, 14, 15, 16};
+
 int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
   u_char *fmt = (u_char *) fmt0;
   int c;            /* character from format, or conversion */
@@ -118,10 +123,6 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
   int base;         /* base argument to strtoimax/strtouimax */
   char ccltab[256]; /* character class table for %[...] */
   char buf[BUF];    /* buffer for numeric conversions */
-
-  /* `basefix' is used to avoid `if' tests in the integer scanner */
-  static short basefix[17] = {10, 1,  2,  3,  4,  5,  6,  7, 8,
-                              9,  10, 11, 12, 13, 14, 15, 16};
 
   int input_size = strlen(input);
 

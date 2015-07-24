@@ -13777,16 +13777,18 @@ static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
 }
 #endif
 
+RODATA static const char js_function_Object[] =
+    "function Object(v) {"
+    "if (typeof v === 'boolean') return new Boolean(v);"
+    "if (typeof v === 'number') return new Number(v);"
+    "if (typeof v === 'string') return new String(v);"
+    "if (typeof v === 'date') return new Date(v);"
+    "}";
+
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
-  v7_exec(v7, &v,
-          "function Object(v) {"
-          "if (typeof v === 'boolean') return new Boolean(v);"
-          "if (typeof v === 'number') return new Number(v);"
-          "if (typeof v === 'string') return new String(v);"
-          "if (typeof v === 'date') return new Date(v);"
-          "}");
+  v7_exec(v7, &v, js_function_Object);
 
   object = v7_get(v7, v7->global_object, "Object", 6);
   v7_set(v7, object, "prototype", 9, 0, v7->object_prototype);

@@ -65,7 +65,7 @@ static void interrupt_cb(char ch) {
 void process_js(char *cmd) {
   uart_process_char_t old_int = uart_interrupt_cb;
   uart_interrupt_cb = interrupt_cb;
-  static char result_str[10];
+  char result_str[10];
   v7_val_t v;
   int res = v7_exec(v7, &v, cmd);
 
@@ -93,13 +93,14 @@ void process_js(char *cmd) {
   uart_interrupt_cb = old_int;
 }
 
-static void process_help(int argc, char *argv[], unsigned int param) {
-  char *help_str =
-      "Commands:\n"
-      ":help - show this help\n"
-      ":here - read all input until a line with EOF in it\n"
-      "All other input is treated as JS\n";
+RODATA
+static const char help_str[] =
+    "Commands:\n"
+    ":help - show this help\n"
+    ":here - read all input until a line with EOF in it\n"
+    "All other input is treated as JS\n";
 
+static void process_help(int argc, char *argv[], unsigned int param) {
   printf(help_str);
 }
 
@@ -113,6 +114,7 @@ struct firmware_command {
 
 void process_prompt_char(char symb);
 
+RODATA
 static const struct firmware_command cmds[] = {{"help", &process_help, 0},
                                                {"here", &process_here, 0}};
 
