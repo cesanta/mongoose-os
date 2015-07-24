@@ -633,8 +633,17 @@ void MainDialog::loadFirmware() {
       speed = 230400;
     }
   }
-  qWarning() << "Flashing at " << speed;
-  serial_port_->setBaudRate(speed);
+  qWarning() << "Flashing at " << speed << "(real speed may be different)";
+  // First we set speed to 115200 and only then set it to the value requested.
+  // We do this because Qt may silently refuse to set the speed, leaving the
+  // the previous value in effect. If it fails to set 115200 - we're screwed
+  // anyway, as that's the speed that Smart.js serial console works on.
+  if (!serial_port_->setBaudRate(115200)) {
+    qWarning() << "Failed to set speed to 115200:" << serial_port_->error();
+  }
+  if (!serial_port_->setBaudRate(speed)) {
+    qWarning() << "Failed to set speed:" << serial_port_->error();
+  }
   setState(Flashing);
   err = f->setPort(serial_port_.get());
   if (err != "") {
