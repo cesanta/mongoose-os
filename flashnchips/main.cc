@@ -99,7 +99,10 @@ int main(int argc, char* argv[]) {
        {Flasher::kOverwriteFSOption,
         "If set, force overwrite the data flash with the factory image"},
        {Flasher::kSkipIdGenerationOption,
-        "If set, device ID won't be generated and flashed."}});
+        "If set, device ID won't be generated and flashed."},
+       {"generate-id",
+        "Generate a file with device ID in a format suitable for flashing.",
+        "filename"}});
 
   ESP8266::addOptions(&parser);
 

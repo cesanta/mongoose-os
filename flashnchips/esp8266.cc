@@ -568,12 +568,12 @@ class FlasherImpl : public Flasher {
     }
 #endif
 
-    if (generate_id_if_none_found_) {
+    if (generate_id_if_none_found_ && !images_.contains(idBlockOffset)) {
       auto res = findIdLocked();
       if (res.ok()) {
         if (!res.ValueOrDie()) {
           qWarning() << "Generating new ID";
-          images_[idBlockOffset] = generateIdBlock(id_hostname_);
+          images_[idBlockOffset] = makeIDBlock(id_hostname_);
         } else {
           qWarning() << "Existing ID found";
         }
@@ -885,36 +885,6 @@ class FlasherImpl : public Flasher {
                                     QCryptographicHash::Sha1);
   }
 
-  static QByteArray generateIdBlock(QString id_hostname) {
-    qsrand(QDateTime::currentMSecsSinceEpoch() & 0xFFFFFFFF);
-    QByteArray random;
-    QDataStream s(&random, QIODevice::WriteOnly);
-    for (int i = 0; i < 6; i++) {
-      // Minimal value for RAND_MAX is 32767, so we are guaranteed to get at
-      // least 15 bits of randomness. In that case highest bit of each word will
-      // be 0, but whatever, we're not doing crypto here (although we should).
-      s << qint16(qrand() & 0xFFFF);
-      // TODO(imax): use a proper cryptographic PRNG at least for PSK. It must
-      // be hard to guess PSK knowing the ID, which is not the case with
-      // qrand(): there are at most 2^32 unique sequences.
-    }
-    QByteArray data =
-        QString("{\"id\":\"//%1/d/%2\",\"key\":\"%3\"}")
-            .arg(id_hostname)
-            .arg(QString::fromUtf8(
-                random.mid(0, 5).toBase64(QByteArray::Base64UrlEncoding |
-                                          QByteArray::OmitTrailingEquals)))
-            .arg(QString::fromUtf8(
-                random.mid(5).toBase64(QByteArray::Base64UrlEncoding |
-                                       QByteArray::OmitTrailingEquals)))
-            .toUtf8();
-    QByteArray r = QCryptographicHash::hash(data, QCryptographicHash::Sha1)
-                       .append(data)
-                       .append("\0", 1);
-    r.append(QByteArray("\xFF").repeated(idBlockSize - r.length()));
-    return r;
-  }
-
   mutable QMutex lock_;
   QMap<ulong, QByteArray> images_;
   QSerialPort* port_;
@@ -1011,6 +981,34 @@ void addOptions(QCommandLineParser* parser) {
         "ROM code can erase up to 16 extra 4KB sectors when flashing firmware. "
         "This flag disables the workaround that makes it erase at most 1 extra "
         "sector."}});
+}
+
+QByteArray makeIDBlock(const QString& domain) {
+  qsrand(QDateTime::currentMSecsSinceEpoch() & 0xFFFFFFFF);
+  QByteArray random;
+  QDataStream s(&random, QIODevice::WriteOnly);
+  for (int i = 0; i < 6; i++) {
+    // Minimal value for RAND_MAX is 32767, so we are guaranteed to get at
+    // least 15 bits of randomness. In that case highest bit of each word will
+    // be 0, but whatever, we're not doing crypto here (although we should).
+    s << qint16(qrand() & 0xFFFF);
+    // TODO(imax): use a proper cryptographic PRNG at least for PSK. It must
+    // be hard to guess PSK knowing the ID, which is not the case with
+    // qrand(): there are at most 2^32 unique sequences.
+  }
+  QByteArray data =
+      QString("{\"id\":\"//%1/d/%2\",\"key\":\"%3\"}")
+          .arg(domain)
+          .arg(QString::fromUtf8(random.mid(0, 5).toBase64(
+              QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals)))
+          .arg(QString::fromUtf8(random.mid(5).toBase64(
+              QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals)))
+          .toUtf8();
+  QByteArray r = QCryptographicHash::hash(data, QCryptographicHash::Sha1)
+                     .append(data)
+                     .append("\0", 1);
+  r.append(QByteArray("\xFF").repeated(idBlockSize - r.length()));
+  return r;
 }
 
 }  // namespace ESP8266

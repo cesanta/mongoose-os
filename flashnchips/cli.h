@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QString>
 
+#include <common/util/status.h>
+
 class QCommandLineParser;
 
 class CLI : public QObject {
@@ -16,6 +18,7 @@ class CLI : public QObject {
   bool listPorts();
   bool probePort(const QString& portname);
   bool flash(const QString& portname, const QString& path, int speed);
+  util::Status generateID(const QString& filename, const QString& domain);
   void run();
 
   QCommandLineParser* parser_;

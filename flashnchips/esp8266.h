@@ -22,6 +22,8 @@ util::StatusOr<int> flashParamsFromString(const QString& s);
 
 void addOptions(QCommandLineParser* parser);
 
+QByteArray makeIDBlock(const QString& domain);
+
 extern const char kFlashParamsOption[];
 extern const char kDisableEraseWorkaroundOption[];
 extern const char kSkipReadingFlashParamsOption[];

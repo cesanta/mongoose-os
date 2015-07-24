@@ -5,9 +5,12 @@
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QFile>
 #include <QTimer>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+
+#include <common/util/error_codes.h>
 
 #include "esp8266.h"
 #include "serial.h"
@@ -72,6 +75,16 @@ void CLI::run() {
       exit_code = 0;
     } else {
       cerr << "Flashing failed." << endl;
+      exit_code = 1;
+    }
+  } else if (parser_->isSet("generate-id")) {
+    util::Status s = generateID(parser_->value("generate-id"),
+                                parser_->value(Flasher::kIdDomainOption));
+    if (s.ok()) {
+      cerr << "Success." << endl;
+      exit_code = 0;
+    } else {
+      cerr << s << endl;
       exit_code = 1;
     }
   } else {
@@ -164,4 +177,24 @@ bool CLI::flash(const QString& portname, const QString& path, int speed) {
   cout << endl;
 
   return success;
+}
+
+util::Status CLI::generateID(const QString& filename, const QString& domain) {
+  QByteArray bytes = ESP8266::makeIDBlock(domain);
+  QFile f(filename);
+  if (!f.open(QIODevice::WriteOnly)) {
+    return util::Status(
+        util::error::ABORTED,
+        "failed to open the file: " + f.errorString().toStdString());
+  }
+  qint32 written, start = 0;
+  while (start < bytes.length()) {
+    written = f.write(bytes.mid(start));
+    if (written < 0) {
+      return util::Status(util::error::ABORTED,
+                          "write failed: " + f.errorString().toStdString());
+    }
+    start += written;
+  }
+  return util::Status::OK;
 }
