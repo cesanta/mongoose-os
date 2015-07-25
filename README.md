@@ -10,7 +10,37 @@ Take a look at 2 minute video that shows Smart.js in action:
 
 [![Smart.js in action](https://cesanta.com/images/Smart.js.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
 
-# Overview
+# Quick start guide
+
+1. Download [Flashnchips](https://github.com/cesanta/smart.js/releases)
+   firmware burning tool
+2. Connect the board to your computer via the USB or serial interface
+3. Start Flashnchips, press "Detect Devices" button
+4. Press "Load Firmware" button. That will start a burning process
+   Flashnchips generates random device ID and password (PSK) for the cloud
+   registration.
+5. When burning is complete, Smart.js automatically connects a console
+   to the device, prints generated ID and password, boot messages,
+   and shows an interactive JavaScript prompt. Two numbers shown by prompt
+   are available free memory, and memory taken by Smart.js
+   ![](https://cesanta.com/images/smartjs_quick_start_guide/fc2.png)
+6. Type some JavaScript expression to the console and press enter.
+   Smart.js evaluates the expression and prints evaluation result:
+   ![](https://cesanta.com/images/smartjs_quick_start_guide/fc3.png)
+7. Configure Wifi:
+   enter `Wifi.setup('WifiNetworkName', 'WifiPassword')` to the console.
+   When network is configured, device starts to send random numbers
+   to `cloud.cesanta.com` every second, simulating real sensor data.
+   `cloud.cesanta.com` however will reject that data, because it doesn't
+   accept any data from unregistered devices
+8. Register the device on the cloud:
+   login to [https://cloud.cesanta.com](https://cloud.cesanta.com)
+9. Click on "Add Device" tab, copy/paste device ID and password and press
+   "Add Device" button
+10. Swith to the "Dashboard" tab, and see real-time graph updated:
+  ![](https://cesanta.com/images/smartjs_quick_start_guide/dash1.png)
+
+# Architecture
 
 Technically, Smart.js has a device part and a cloud part.
 
@@ -26,35 +56,10 @@ Smart.js firmware on a device side:
 - Devices with our software can be managed remotely and update software
   remotely, in a fully automatic or semi-automatic way.
 
-# Supported device architectures
+# Supported hardware
 
 - Espressif ESP8266 (since ALPHA1)
 - Many more will be added soon!
-
-# Smart.js firmware burning tool (Flashnchips)
-
-For burning Smart.js firmware to devices, we provide a `Flash'n'chips` utility.
-Click on [releases](https://github.com/cesanta/smart.js/releases)
-link to download it.
-
-Flash'n'chips utility also provides a serial console. After firmware is
-successfully loaded onto the device, a serial console shows JavaScript
-prompt where user can enter JavaScript commands. A prompt looks like this:
-
-```
-smartjs 12896/2676$
-```
-
-Two numbers are: the size of available system heap, and the
-amount of heap is used by Smart.js. Once the command is entered, Smart.js
-shows the evaluation result:
-
-```
-smartjs 12896/2676$ GPIO.read(1)
-false
-```
-
-A JavaScript API reference is below.
 
 # JavaScript API reference
 
@@ -129,11 +134,11 @@ Http API provides a simple HTTP client:
 
 Example:
 
-    Http.get("http://jsonip.com", function(d, e) {
-      if(e) {
-        print("error ", e);
+    Http.get("http://jsonip.com", function(data, error) {
+      if (error) {
+        print("error ", error);
       } else {
-        print("my ip is ", JSON.parse(d).ip);
+        print("my ip is ", JSON.parse(data).ip);
       }
     });
 
@@ -205,8 +210,6 @@ an array with 2 or 3 elements:
 There is a detailed description of this API in [the source file](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/user/v7_i2c_js.c).
 
 See [temperature sensor driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MCP9808.js) and [EEPROM driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MC24FC.js) for usage example.
-
-## HTTP
 
 ## Watchdog timer (ESP8266 specific)
 
