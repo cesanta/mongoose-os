@@ -45,7 +45,7 @@ flashnchips --generate-id 0x10000.bin
 After that just flash `0x10000.bin` at offset 0x10000 along with other pieces:
 
 ```
-path/to/esptool.py -b 115200 -p /dev/ttyUSB0 write_flash 0x00000 0x00000.bin 0x10000 0x10000.bin 0x1d000 0xd1000.bin 0x6d000 0x6d000.bin
+path/to/esptool.py -b 115200 -p /dev/ttyUSB0 write_flash 0x00000 0x00000.bin 0x10000 0x10000.bin 0x1d000 0x1d000.bin 0x6d000 0x6d000.bin
 ```
 
 For NodeMCU v2 board don't forget to also add
