@@ -4,6 +4,7 @@ V7_PATH ?= ../../../v7
 SMARTJS_PATH ?= ../..
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
+ESPSPEED	?= 230400
 VERBOSE ?= 0
 
 BUILD_DIR = build
@@ -212,16 +213,16 @@ clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
 flash: $(FW_OUT) $(FW_FS_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) write_flash \
+	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
 		$(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
 		$(FW_FILE_2_ADDR) $(FW_FILE_2_OUT) \
 		$(FW_FS_ADDR) $(FW_FS_OUT)
 
 flash_no_fs: $(FW_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) write_flash \
+	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
 		$(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
 		$(FW_FILE_2_ADDR) $(FW_FILE_2_OUT)
 
 flash_fs: $(FW_FS_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) write_flash \
+	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
 		$(FW_FS_ADDR) $(FW_FS_OUT)
