@@ -81,7 +81,7 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FI
 # compiler flags using during compilation of source files
 CFLAGS = -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
-         -DICACHE_FLASH -DRODATA='__attribute__((section(".irom.text")))' \
+         -DICACHE_FLASH \
          -DFAST='__attribute__((section(".fast.text")))' \
          -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
          $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA)
@@ -167,7 +167,9 @@ $(APP_AR): $(OBJS)
 	$(Q) $(AR) cru $@ $^
 	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
-
+	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
+	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
+	
 # -- Compilation.
 
 define compile
@@ -189,7 +191,7 @@ $(BUILD_DIR)/v7_version.c: $(APP_OBJS)
 	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
 	SHA=$$(git rev-parse HEAD | head -c 8); \
   DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
-  echo "RODATA const char *v7_version = \"$$REF/$$DATE/$$SHA\";" > $@
+  echo "const char *v7_version = \"$$REF/$$DATE/$$SHA\";" > $@
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

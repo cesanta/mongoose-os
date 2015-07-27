@@ -200,16 +200,24 @@ static double flash_log10(double x) {
 
 /*
  * Attempt to reproduce sprintf's %g
+ * Returns _required_ number of symbols
  */
-int double_to_str(char* buf, double val, int prec) {
+
+#define APPEND_CHAR(ch)              \
+  {                                  \
+    if (count < buf_size) *ptr = ch; \
+    count++;                         \
+  }
+
+int double_to_str(char* buf, size_t buf_size, double val, int prec) {
   if (isnan(val)) {
-    strcpy(buf, "nan");
+    strncpy(buf, "nan", buf_size);
     return 3;
   } else if (isinf(val)) {
-    strcpy(buf, "inf");
+    strncpy(buf, "inf", buf_size);
     return 3;
   } else if (val == 0) {
-    strcpy(buf, "0");
+    strncpy(buf, "0", buf_size);
     return 1;
   }
   /*
@@ -218,7 +226,7 @@ int double_to_str(char* buf, double val, int prec) {
    */
   double precision = flash_pow10int(-prec);
 
-  int mag1, mag2;
+  int mag1, mag2, count = 0;
   char* ptr = buf;
   int neg = (val < 0);
 
@@ -233,7 +241,7 @@ int double_to_str(char* buf, double val, int prec) {
       (mag1 >= prec || (neg && mag1 >= prec - 3) || mag1 <= -(prec - 3));
 
   if (neg) {
-    *ptr = '-';
+    APPEND_CHAR('-');
     ptr++;
   }
 
@@ -257,29 +265,29 @@ int double_to_str(char* buf, double val, int prec) {
     if (pos > 0 && !isinf(pos)) {
       int num = floor(val / pos);
       val -= (num * pos);
-      *ptr = '0' + num;
+      APPEND_CHAR(('0' + num))
       ptr++;
     }
     if (mag1 == 0 && val > 0) {
-      *ptr = '.';
+      APPEND_CHAR('.')
       ptr++;
     }
     mag1--;
   }
   if (use_e != 0) {
     int i, j;
-    *ptr = 'e';
+    APPEND_CHAR('e');
     ptr++;
     if (mag2 > 0) {
-      *ptr = '+';
+      APPEND_CHAR('+')
     } else {
-      *ptr = '-';
+      APPEND_CHAR('-');
       mag2 = -mag2;
     }
     ptr++;
     mag1 = 0;
     while (mag2 > 0) {
-      *ptr = '0' + mag2 % 10;
+      APPEND_CHAR(('0' + mag2 % 10))
       ptr++;
       mag2 /= 10;
       mag1++;
@@ -292,10 +300,12 @@ int double_to_str(char* buf, double val, int prec) {
     }
     ptr += mag1;
   }
-  *ptr = '\0';
+  APPEND_CHAR('\0');
 
-  return ptr - buf;
+  return count - 1;
 }
+
+#undef APPEND_CHAR
 
 void abort(void) {
   /* cause an unaligned access exception, that will drop you into gdb */

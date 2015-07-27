@@ -24,7 +24,7 @@ def print_results(title, funcs, objects):
     print ""
 
 def print_row(fmt, title, funcs, objects):
-    print row_format.format(title, funcs.get('.text', 0),funcs.get('.irom0.text', 0), objects.get('.irom.text', 0),
+    print row_format.format(title, funcs.get('.text', 0),funcs.get('.irom0.text', 0),
                             objects.get('.rodata', 0), objects.get('.data', 0), objects.get('.bss', 0))
 
 def process_objdump_res(symb_table):
@@ -67,6 +67,8 @@ v7_funcs, v7_objects, v7_others_size = process_objdump_res(symb_table)
 # and doesn't use it for `.o`
 v7_funcs['.irom0.text'] = v7_funcs.get('.text', 0);
 v7_objects['.irom0.text'] = v7_objects.get('.text', 0);
+v7_objects['.itom0.text'] = v7_objects.get('.itom0.text',0) + v7_objects.get('.rodata', 0);
+v7_objects['.rodata'] = 0;
 v7_funcs['.text'] = v7_funcs.get('.fast.text', 0);
 v7_objects['.text'] = v7_objects.get('.fast.text', 0);
 
@@ -86,7 +88,7 @@ s_others_size = all_others_size - u_others_size
 u_funcs = sub_res(u_funcs, v7_funcs)
 u_objects = sub_res(u_objects, v7_objects)
 
-headers = [".text", ".irom0.text", ".irom.text", ".rodata", ".data", ".bss"]
+headers = [".text", ".irom0.text", ".rodata", ".data", ".bss"]
 row_format = "{:<15}" * (len(headers)+1)
 print ""
 print "smart.js footprint breakdown"

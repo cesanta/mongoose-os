@@ -1546,10 +1546,6 @@ struct gc_arena {
 #define FAST
 #endif
 
-#ifndef RODATA
-#define RODATA
-#endif
-
 #ifndef STATIC
 #define STATIC
 #endif
@@ -5326,7 +5322,6 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
  * for function get_tok() for rationale for that.
  */
-RODATA
 static const struct v7_vec s_keywords[] = {
     V7_VEC("break"),      V7_VEC("case"),     V7_VEC("catch"),
     V7_VEC("continue"),   V7_VEC("debugger"), V7_VEC("default"),
@@ -5837,7 +5832,6 @@ typedef unsigned short ast_skip_t;
  * and label` is part of our domain model (i.e. JS has a label AST node type).
  *
  */
-RODATA
 const struct ast_node_def ast_node_defs[] = {
     AST_ENTRY("NOP", 0, 0, 0, 0), /* struct {} */
 
@@ -6807,6 +6801,10 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 
 #define BUF_LEFT(size, used) (((size_t)(used) < (size)) ? ((size) - (used)) : 0)
 
+#ifdef V7_TEMP_OFF
+int double_to_str(char *buf, size_t buf_size, double val, int prec);
+#endif
+
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json) {
   char *vp;
@@ -6853,7 +6851,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         return snprintf(buf, size, fmt, num);
 #else
         const int prec = num > 1e10 ? 21 : 10;
-        return double_to_str(buf, num, prec);
+        return double_to_str(buf, size, num, prec);
 #endif
       }
     case V7_TYPE_STRING: {
@@ -8986,7 +8984,6 @@ enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
 #define NONE \
   { (enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0 }
 
-RODATA
 static const struct {
   int len, left_to_right;
   struct {
@@ -9550,7 +9547,6 @@ const char *v7_get_parser_error(struct v7 *v7) {
 #define sigsetjmp(buf, mask) setjmp(buf)
 #endif
 
-RODATA
 static const enum ast_tag assign_op_map[] = {
     AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
     AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
@@ -11746,7 +11742,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 
 #define STRINGIFY(x) #x
 
-RODATA static const char js_array_indexOf[] = STRINGIFY(
+static const char js_array_indexOf[] = STRINGIFY(
     Array.prototype.indexOf = function(a, x) {
       var i; var r = -1; var b = +x;
       if (!b || b < 0) b = 0;
@@ -11754,7 +11750,7 @@ RODATA static const char js_array_indexOf[] = STRINGIFY(
       return r;
     };);
 
-RODATA static const char js_array_lastIndexOf[] = STRINGIFY(
+static const char js_array_lastIndexOf[] = STRINGIFY(
     Array.prototype.lastIndexOf = function(a, x) {
       var i; var r = -1; var b = +x;
       if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
@@ -11763,7 +11759,7 @@ RODATA static const char js_array_lastIndexOf[] = STRINGIFY(
     };);
 
 #if V7_ENABLE__Array__reduce
-RODATA static const char js_array_reduce[] = STRINGIFY(
+static const char js_array_reduce[] = STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
       if (typeof(a) != "function") {
@@ -11781,26 +11777,26 @@ RODATA static const char js_array_reduce[] = STRINGIFY(
     };);
 #endif
 
-RODATA static const char js_array_pop[] = STRINGIFY(
+static const char js_array_pop[] = STRINGIFY(
     Array.prototype.pop = function() {
       var i = this.length - 1;
       return this.splice(i, 1)[0];
     };);
 
-RODATA static const char js_array_shift[] = STRINGIFY(
+static const char js_array_shift[] = STRINGIFY(
     Array.prototype.shift = function() {
       return this.splice(0, 1)[0];
     };);
 
 #if V7_ENABLE__Function__call
-RODATA static const char js_function_call[] = STRINGIFY(
+static const char js_function_call[] = STRINGIFY(
     Function.prototype.call = function() {
       var t = arguments.splice(0, 1)[0];
       return this.apply(t, arguments);
     };);
 #endif
 
-RODATA static const char * const js_functions[] = {
+static const char * const js_functions[] = {
 #if V7_ENABLE__Function__call
   js_function_call,
 #endif
@@ -13777,7 +13773,7 @@ static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
 }
 #endif
 
-RODATA static const char js_function_Object[] =
+static const char js_function_Object[] =
     "function Object(v) {"
     "if (typeof v === 'boolean') return new Boolean(v);"
     "if (typeof v === 'number') return new Number(v);"
@@ -13858,7 +13854,6 @@ static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-RODATA
 static const char *const error_names[] = {"TypeError", "SyntaxError",
                                           "ReferenceError", "InternalError",
                                           "RangeError"};

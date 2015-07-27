@@ -10,7 +10,6 @@
 * TODO(alashkin): find missed info
 */
 
-RODATA
 struct gpio_info gpio_map[] = {{0, PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0},
                                {1, PERIPHS_IO_MUX_U0TXD_U, FUNC_GPIO1},
                                {2, PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2},
