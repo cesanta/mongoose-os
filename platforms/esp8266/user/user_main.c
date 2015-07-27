@@ -11,6 +11,8 @@
 #include "v7_gdb.h"
 #include "v7_flash_bytes.h"
 
+#include "sj_prompt.h"
+
 extern void ets_wdt_disable(void);
 os_timer_t tick_timer;
 os_timer_t startcmd_timer;
@@ -39,7 +41,9 @@ void start_cmd(int dummy) {
 #endif
 
 #if !defined(NO_PROMPT)
-  v7_serial_prompt_init(0);
+  sj_prompt_init(v7);
+  uart_process_char = sj_prompt_process_char;
+  uart_interrupt_cb = sj_prompt_process_char;
 #endif
 }
 

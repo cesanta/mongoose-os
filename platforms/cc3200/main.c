@@ -12,8 +12,11 @@
 #include "pin.h"
 #include "prcm.h"
 #include "rom_map.h"
+#include "timer.h"
 #include "uart.h"
 #include "utils.h"
+
+#include "sj_prompt.h"
 
 #include "v7.h"
 #include "config.h"
@@ -101,29 +104,45 @@ void init_v7(void *stack_base) {
 }
 
 void blinkenlights() {
-  MAP_PRCMPeripheralClkEnable(PRCM_GPIOA1, PRCM_RUN_MODE_CLK);
-
-  MAP_PinTypeGPIO(PIN_02, PIN_MODE_0, false);  /* Green LED */
-  MAP_GPIODirModeSet(GPIOA1_BASE, 0x8, GPIO_DIR_MODE_OUT);
-
   int n = 0;
   unsigned char lm = 1 << (LED_GPIO % 8);
   unsigned char v = 0;
   while (1) {
-    fprintf(stderr, "Hello world!\n");
-    usleep(1000000);
     v ^= lm;
     MAP_GPIOPinWrite(GPIOA1_BASE, lm, v);
+    usleep(1000000);
+/*
+    char *p = malloc(1024);
+    n += 1024;
+    printf("-- %d %p\n", n, p);
+    malloc_stats();
+*/
   }
 }
+
+void uart_int() {
+  char c = UARTCharGet(CONSOLE_UART);
+  sj_prompt_process_char(c);
+  MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX);
+}
+
+void timer_int() {
+  unsigned long int_status = MAP_TimerIntStatus(TIMERA0_BASE, true);
+  MAP_TimerIntClear(TIMERA0_BASE, int_status);
+}
+
+/* Int vector table, defined in startup_gcc.c */
+extern void (* const g_pfnVectors[256])(void);
 
 int main() {
   int dummy;
 
+  MAP_IntVTableBaseSet((unsigned long)&g_pfnVectors[0]);
   MAP_IntMasterEnable();
   MAP_IntEnable(FAULT_SYSTICK);
   PRCMCC3200MCUInit();
 
+  /* Console UART init. */
   MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
   MAP_PinTypeUART(PIN_55, PIN_MODE_3);  /* PIN_55 -> UART0_TX */
   MAP_PinTypeUART(PIN_57, PIN_MODE_3);  /* PIN_57 -> UART0_RX */
@@ -131,12 +150,39 @@ int main() {
       CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
       CONSOLE_BAUD_RATE,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+  MAP_UARTFIFODisable(CONSOLE_UART);
+  MAP_UARTIntRegister(CONSOLE_UART, uart_int);
+  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
+
+  /* GPIO */
+  MAP_PRCMPeripheralClkEnable(PRCM_GPIOA1, PRCM_RUN_MODE_CLK);
+  MAP_PinTypeGPIO(PIN_02, PIN_MODE_0, false);  /* Green LED */
+  MAP_GPIODirModeSet(GPIOA1_BASE, 0x8, GPIO_DIR_MODE_OUT);
+  MAP_GPIOPinWrite(GPIOA1_BASE, 1 << (LED_GPIO % 8), 0);
+
+#if 0
+  /* Timer init. */
+  MAP_PRCMPeripheralClkEnable(PRCM_TIMERA0, PRCM_RUN_MODE_CLK);
+  MAP_PRCMPeripheralReset(PRCM_TIMERA0);
+  MAP_TimerConfigure(TIMERA0_BASE, TIMER_CFG_PERIODIC);
+  MAP_TimerLoadSet(TIMERA0_BASE, TIMER_A, 16000000);
+  MAP_TimerIntRegister(TIMERA0_BASE, TIMER_A, timer_int);
+  MAP_IntPriorityGroupingSet(3);
+  MAP_IntPrioritySet(INT_TIMERA0A, 0xFF);
+  MAP_TimerIntEnable(TIMERA0_BASE, TIMER_TIMA_TIMEOUT);
+  MAP_TimerEnable(TIMERA0_BASE, TIMER_A);
+#endif
+
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+
+  printf("\n\nSmart.JS for CC3200\n");
 
   init_v7(&dummy);
 
-  v7_val_t res;
-  v7_exec(v7, &res, "while(1) { print('Hello, V7!'); usleep(1000000); }");
-//  blinkenlights();
+  sj_prompt_init(v7);
+
+  blinkenlights();
 
   return 0;
 }

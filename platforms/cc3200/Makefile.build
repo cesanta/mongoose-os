@@ -3,8 +3,9 @@
 
 SDK_PATH ?= /cc3200-sdk
 V7_PATH ?= ../../../v7
-OBJDIR = obj
-BINDIR = exe
+SMARTJS_PATH ?= ../..
+OBJDIR = build
+BINDIR = firmware
 
 include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
@@ -15,10 +16,11 @@ PROG = smartjs
 IPATH = ${SDK_PATH} \
         ${SDK_PATH}/inc \
         ${SDK_PATH}/driverlib \
+        ${SMARTJS_PATH}/src \
         ${V7_PATH}
 
 VPATH = ${SDK_PATH}/example/common \
-        ${SDK_PATH}/example/interrupt \
+        ${SMARTJS_PATH}/src \
         ${V7_PATH}
 
 V7_FEATURES = -DV7_BUILD_PROFILE=1 \
@@ -54,15 +56,10 @@ ${OBJDIR}:
 ${BINDIR}:
 	@mkdir -p ${BINDIR}
 
-${BINDIR}/${PROG}.axf: ${OBJDIR}/libc_replacements.o ${OBJDIR}/v7.o ${OBJDIR}/main.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_${COMPILER}.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/systick_if.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/libc_replacements.o ${OBJDIR}/v7.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_hal_cc3200.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/${COMPILER}/exe/libdriver.a
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
-
-flash:
-	cd /home/rojer/cesanta/energia-0101E0016/hardware/tools/lm4f/bin; \
-    ./cc3200prog \
-      /dev/ttyUSB3 \
-      /home/rojer/go/src/cesanta.com/smartjs/platforms/cc3200/${BINDIR}/smartjs.bin

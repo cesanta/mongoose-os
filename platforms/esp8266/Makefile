@@ -1,6 +1,7 @@
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
 V7_PATH ?= ../../../v7
+SMARTJS_PATH ?= ../..
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 VERBOSE ?= 0
@@ -13,9 +14,9 @@ APP = smartjs
 
 APP_MODULES := user spiffs
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            v7.c
+            sj_prompt.c v7.c
 
-VPATH = $(APP_MODULES) $(V7_PATH)
+VPATH = $(APP_MODULES) $(V7_PATH) $(SMARTJS_PATH)/src
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
 LPATH = $(SDK_PATH)/lib
 

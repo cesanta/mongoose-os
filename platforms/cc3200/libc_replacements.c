@@ -9,7 +9,6 @@
 #include "rom_map.h"
 #include "uart.h"
 #include "utils.h"
-#include "example/interrupt/systick_if.h"
 
 #include "config.h"
 
@@ -46,8 +45,8 @@ int _getpid() {
 }
 
 int _isatty(int fd) {
-  fprint_str(stderr, "_isatty is not implemented\n");
-  return 0;
+  /* 0, 1 and 2 are TTYs. */
+  return fd < 2;
 }
 
 ssize_t _write(int fd, const void *buf, size_t count) {
