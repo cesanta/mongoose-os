@@ -1,0 +1,14 @@
+FROM ubuntu:trusty
+
+RUN echo "deb http://ppa.launchpad.net/terry.guo/gcc-arm-embedded/ubuntu trusty main" >> /etc/apt/sources.list.d/gcc-arm-embedded.list
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A3421AFB
+RUN DEBIAN_FRONTEND=noninteractive apt-get update
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q gcc-arm-none-eabi make
+# SDK cannot be downloaded directly (requires registering on the TI site).
+# Furthermore, it is distributed as a Windows binary only (boo). So:
+# 1) Go to http://www.ti.com/tool/CC3200SDK and download the SDK exe file.
+# 2) "Install" the SDK (which just extracts a bunch of files).
+#    You don't need Windows for this, Wine will do just fine.
+# 3) The default install path is C:\TI\CC3200SDK_X.Y.Z.
+#    Take that entire directory and put here.
+ADD CC3200SDK_?.?.?/cc3200-sdk /cc3200-sdk

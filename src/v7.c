@@ -12051,7 +12051,7 @@ enum slre_opcode {
   L_LA_CAP, /* "(?:" lookahead, capture */
   L_LA_N,   /* "(?!" negative lookahead */
   L_REF,    /* "\1" back-reference */
-  L_SET,    /* character set */
+  L_CHSET,  /* character set */
   L_SET_N,  /* negative character set */
   L_WORD,   /* "\b" word boundary */
   L_WORD_N  /* "\B" non-word boundary */
@@ -12198,7 +12198,7 @@ static enum slre_opcode re_countrep(struct slre_env *e) {
 static enum slre_opcode re_lexset(struct slre_env *e) {
   Rune ch = 0;
   unsigned char esc, ch_fl = 0, dash_fl = 0;
-  enum slre_opcode type = L_SET;
+  enum slre_opcode type = L_CHSET;
 
   re_nchset(e);
 
@@ -12308,7 +12308,7 @@ static int re_lexer(struct slre_env *e) {
       case 'd':
         re_nchset(e);
         re_d_2set(e);
-        return L_SET;
+        return L_CHSET;
       case 'D':
         re_nchset(e);
         re_d_2set(e);
@@ -12316,7 +12316,7 @@ static int re_lexer(struct slre_env *e) {
       case 's':
         re_nchset(e);
         re_s_2set(e);
-        return L_SET;
+        return L_CHSET;
       case 'S':
         re_nchset(e);
         re_s_2set(e);
@@ -12324,7 +12324,7 @@ static int re_lexer(struct slre_env *e) {
       case 'w':
         re_nchset(e);
         re_w_2set(e);
-        return L_SET;
+        return L_CHSET;
       case 'W':
         re_nchset(e);
         re_w_2set(e);
@@ -12451,7 +12451,7 @@ static struct slre_node *re_parse_la(struct slre_env *e) {
       nd->par.c = e->curr_rune;
       RE_NEXT(e);
       break;
-    case L_SET:
+    case L_CHSET:
       nd = re_nnode(e, P_SET);
       nd->par.cp = e->curr_set;
       RE_NEXT(e);
