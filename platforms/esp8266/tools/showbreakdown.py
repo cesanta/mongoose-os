@@ -7,6 +7,9 @@ import os.path
 import sys
 
 path_to_bin = "."
+app_lib_path = os.path.join(path_to_bin, 'build', 'smartjs.a')
+app_bin_path = os.path.join(path_to_bin, 'build', 'smartjs.out')
+v7_path = os.path.join(path_to_bin, 'build', 'v7.o')
 
 def print_obj_map(title, results):
     print title
@@ -50,13 +53,13 @@ def sub_res(full_res, part_res):
     return results
 
 # in order to work with make clean verifying app_app.a existence and exiting without an error
-if not os.path.isfile(path_to_bin + '/build/app_app.a'):
+if not os.path.isfile(app_lib_path):
     sys.exit()
 
-symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', path_to_bin + '/build/app_app.a']).split('\n')
+symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', app_lib_path]).split('\n')
 u_funcs, u_objects, u_others_size = process_objdump_res(symb_table)
 
-symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', path_to_bin + '/build/user/v7.o']).split('\n')
+symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', v7_path]).split('\n')
 v7_funcs, v7_objects, v7_others_size = process_objdump_res(symb_table)
 
 # Text sections was copied to flash text sections as a part the build process.
@@ -67,7 +70,7 @@ v7_objects['.irom0.text'] = v7_objects.get('.text', 0);
 v7_funcs['.text'] = v7_funcs.get('.fast.text', 0);
 v7_objects['.text'] = v7_objects.get('.fast.text', 0);
 
-symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', path_to_bin + '/build/app.out']).split('\n')
+symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', app_bin_path]).split('\n')
 all_funcs, all_objects, all_others_size = process_objdump_res(symb_table)
 
 # linker merges irom.text and irom0.text, but since it is different data

@@ -1,48 +1,35 @@
-# Makefile for ESP8266 projects
-#
-# Thanks to:
-# - zarya
-# - Jeroen Domburg (Sprite_tm)
-# - Christian Klippel (mamalala)
-# - Tommie Gannert (tommie)
-#
-# Changelog:
-# - 2014-10-06: Changed the variables to include the header file directory
-# - 2014-10-06: Added global var for the Xtensa tool root
-# - 2014-11-23: Updated for SDK 0.9.3
-# - 2014-12-25: Replaced esptool by esptool.py
-# Output directors to store intermediate compiled files
-# relative to the project directory
-
-ESPPORT		?= /dev/ttyACM0
-
-BUILD_BASE	= build
-FW_BASE		= firmware
-
-# base directory for the V7 sources
-V7_DIR = ../../src
-
-# base directory for the common sources
-COMMON_DIR = ../../src
-
-# base directory for the compiler
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
+SDK_PATH ?= /opt/Espressif/ESP8266_SDK
+V7_PATH ?= ../../../v7
+ESPTOOL	?= esptool.py
+ESPPORT	?= /dev/ttyACM0
+VERBOSE ?= 0
 
-# base directory of the ESP8266 SDK package, absolute
-SDK_BASE        ?= /opt/Espressif/ESP8266_SDK
+BUILD_DIR = build
+TOOLS_DIR = tools
+FW_DIR = firmware
+FS_DIR = fs
+APP = smartjs
 
-# esptool.py path and port
-ESPTOOL		?= esptool.py
+APP_MODULES := user spiffs
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
+            v7.c
 
-# name for the target project
-TARGET		= app
-
-# which modules (subdirectories) of the project to include in compiling
-MODULES		= driver user spiffs
-EXTRA_INCDIR    = include
+VPATH = $(APP_MODULES) $(V7_PATH)
+IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
+LPATH = $(SDK_PATH)/lib
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= m cirom gcc hal pp phy net80211 lwip wpa main
+APP_LIBS = m cirom gcc hal pp phy net80211 lwip wpa main
+
+# linker script used for the above linkier step
+LD_SCRIPT	= user/eagle.app.30000.v6.ld
+
+# linker flags used to generate the main object file
+LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
+
+FW_FILE_1_ADDR = 0x00000
+FW_FILE_2_ADDR = 0x1d000
 
 # spiffs parameters
 FW_FS_ADDR = 0x6d000
@@ -90,153 +77,150 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
-CFLAGS		= -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static -DICACHE_FLASH -DRODATA='__attribute__((section(".irom.text")))' -DFAST='__attribute__((section(".fast.text")))' -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA)
+CFLAGS = -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
+         -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
+         -DICACHE_FLASH -DRODATA='__attribute__((section(".irom.text")))' \
+         -DFAST='__attribute__((section(".fast.text")))' \
+         -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
+         $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA)
 
-# linker flags used to generate the main object file
-LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
+##
+## == No config vars beyond this point.
+##
 
-# linker script used for the above linkier step
-LD_SCRIPT	= eagle.app.30000.v6.ld
+.PHONY: all clean
 
-# various paths from the SDK used in this project
-SDK_LIBDIR	= lib
-SDK_INCDIR	= include include/json
-SDK_LDDIR	= ld
-# we create two different files for uploading into the flash
-# these are the names and options to generate them
-FW_FILE_1_ADDR	= 0x00000
-FW_FILE_2_ADDR	= 0x1d000
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
+SRCS = $(APP_SRCS) v7_version.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/v7_version.o
+LIBS = $(addprefix -l,$(APP_LIBS))
+APP_AR = $(BUILD_DIR)/$(APP).a
+APP_OUT = $(BUILD_DIR)/$(APP).out
+SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
+SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
+FW_FILE_1_OUT = $(FW_DIR)/$(FW_FILE_1_ADDR).bin
+FW_FILE_2_OUT = $(FW_DIR)/$(FW_FILE_2_ADDR).bin
+FW_FS_OUT = $(FW_DIR)/$(FW_FS_ADDR).bin
+FS_FILES = $(wildcard $(FS_DIR)/*)
 
-# select which tools to use as compiler, librarian and linker
-CC:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-AR:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
-LD:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-OBJCOPY:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
+INCDIRS = $(addprefix -I,$(IPATH))
+LIBDIRS = $(addprefix -L,$(LPATH))
 
-####
-#### no user configurable options below here
-####
-SRC_DIR		:= $(MODULES)
-BUILD_DIR	:= $(addprefix $(BUILD_BASE)/,$(MODULES))
-
-SDK_LIBDIR	:= $(addprefix $(SDK_BASE)/,$(SDK_LIBDIR))
-SDK_INCDIR	:= $(addprefix -I$(SDK_BASE)/,$(SDK_INCDIR))
-
-SRC		:= $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
-OBJ		:= $(patsubst %.c,$(BUILD_BASE)/%.o,$(SRC))
-LIBS		:= $(addprefix -l,$(LIBS))
-APP_AR		:= $(addprefix $(BUILD_BASE)/,$(TARGET)_app.a)
-DUMMY_MAIN_O		:= $(addprefix $(BUILD_BASE)/,dummy_main.o)
-SYMCHECK_OUT		:= $(addprefix $(BUILD_BASE)/,symcheck.out)
-TARGET_OUT	:= $(addprefix $(BUILD_BASE)/,$(TARGET).out)
-
-LD_SCRIPT	:= $(addprefix -T./user/,$(LD_SCRIPT))
-
-INCDIR	:= $(addprefix -I,$(SRC_DIR))
-EXTRA_INCDIR	:= $(addprefix -I,$(EXTRA_INCDIR))
-MODULE_INCDIR	:= $(addsuffix /include,$(INCDIR))
-
-FW_FILE_1	:= $(addprefix $(FW_BASE)/,$(FW_FILE_1_ADDR).bin)
-FW_FILE_2	:= $(addprefix $(FW_BASE)/,$(FW_FILE_2_ADDR).bin)
-FW_FILE_FS	:= $(addprefix $(FW_BASE)/,$(FW_FS_ADDR).bin)
-
-UNAME_S := $(shell uname -s)
-
-# users might need to build on docker and flash on local.
-# flash rule might trigger rebuilding of spiffs image
-# and thus the binaries have to have a distinct name
-MKSPIFFS=mkspiffs_$(UNAME_S)
-
-SPIFFS_SRC=$(wildcard spiffs/*.c)
+CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
+AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
+LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
+OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
 
 V ?= $(VERBOSE)
 ifeq ("$(V)","1")
 Q :=
-vecho := @true
 else
 Q := @
-vecho := @echo
 endif
+vecho := @echo " "
 
-vpath %.c $(SRC_DIR)
+all: $(FW_DIR) $(BUILD_DIR) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) $(FW_FS_OUT)
 
-define compile-objects
-$1/%.o: %.c
-	$(vecho) "CC $$<"
-	$(Q) $(CC) $(INCDIR) $(MODULE_INCDIR) $(EXTRA_INCDIR) $(SDK_INCDIR) $(CFLAGS) -c $$< -o $$@
+$(BUILD_DIR) $(FW_DIR):
+	$(Q) mkdir -p $@
+
+
+# Main output product: firmware files.
+$(FW_FILE_1_OUT) $(FW_FILE_2_OUT): $(APP_OUT)
+	$(vecho) "FW $(APP_OUT) -> $(FW_DIR)"
+	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+
+
+# -- Linking.
+
+define link
+$(vecho) "LD $@"
+$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) \
+	$< -Wl,--end-group -o $@
 endef
 
-.PHONY: all checkdirs flash clean user/v7_version.c symcheck
+# Link the main ELF output file. Performs symbol clash check beforehand.
+$(APP_OUT): $(APP_AR) $(SYMCHECK_FLAG)
+	@$(link)
 
-v7: user/v7.c user/v7.h user/sha1.h user/v7_version.c
-	@$(MAKE) all
+# Symbol check: make sure app doesn't override SDK lib symbols.
+# A target is created that uses the same libs but no user code and symbols are
+# checked against main app library to make sure there's no overlap.
+$(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
+	$(vecho) "SYMCHECK $(SYMCHECK_OUT) vs $(APP_AR)"
+	$(Q) python $(TOOLS_DIR)/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+	$(Q) touch $@
 
-all: checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2) $(FW_FILE_FS)
+$(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o
+	@$(link)
 
-$(FW_BASE)/%.bin: $(TARGET_OUT) | $(FW_BASE)
-	$(vecho) "FW $(FW_BASE)/"
-	$(Q) $(ESPTOOL) elf2image -o $(FW_BASE)/ $(TARGET_OUT)
+$(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
+	$(vecho) "GEN $@"
+	$(Q) echo "void user_init(void) {}" > $@
 
-# For dummy_main.o
-$(eval $(call compile-objects,$(BUILD_BASE)))
 
-$(SYMCHECK_OUT): $(DUMMY_MAIN_O)
-	$(vecho) "LD $@"
-	$(Q) $(LD) -L$(SDK_LIBDIR) $(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $(DUMMY_MAIN_O) -Wl,--end-group -o $@
-
-symcheck: $(SYMCHECK_OUT) $(APP_AR)
-	$(vecho) "Running symcheck"
-	@python ./symcheck.py $(SYMCHECK_OUT) $(APP_AR)
-
-$(TARGET_OUT): $(APP_AR) symcheck
-	$(vecho) "LD $@"
-	@$(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
-	@$(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
-	$(Q) $(LD) -L$(SDK_LIBDIR) $(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $(APP_AR) -Wl,--end-group -o $@
-
-$(APP_AR): $(OBJ)
+# Main app lib.
+$(APP_AR): $(OBJS)
 	$(vecho) "AR $@"
 	$(Q) $(AR) cru $@ $^
+	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
+	$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
 
-checkdirs: $(BUILD_DIR) $(FW_BASE)
+# -- Compilation.
 
-$(BUILD_DIR):
-	$(Q) mkdir -p $@
+define compile
+$(vecho) "CC $< -> $@"
+$(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $< -o $@
+endef
 
-$(FW_BASE):
-	$(Q) mkdir -p $@
+# This rule is for normal (pre-existing) sources from VPATH.
+$(BUILD_DIR)/%.o: %.c
+	@$(compile)
 
-$(FW_FILE_FS): $(MKSPIFFS) $(wildcard fs/*)
-	./$(MKSPIFFS) $(FW_FS_SIZE) ./fs >$(FW_FILE_FS)
+# This one is for generated sources in build directory.
+$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
+	@$(compile)
 
-$(MKSPIFFS): mkspiffs.c $(SPIFFS_SRC)
-	gcc -o $@ $^ -DNO_ESP
-
-flash: $(FW_FILE_1) $(FW_FILE_2)
-	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FILE_1_ADDR) $(FW_FILE_1) $(FW_FILE_2_ADDR) $(FW_FILE_2) $(FW_FS_ADDR) $(FW_FILE_FS)
-
-flash_no_fs: $(FW_FILE_1) $(FW_FILE_2)
-	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FILE_1_ADDR) $(FW_FILE_1) $(FW_FILE_2_ADDR) $(FW_FILE_2)
-
-flash_fs: $(FW_FILE_FS)
-	$(ESPTOOL) --port $(ESPPORT) write_flash $(FW_FS_ADDR) $(FW_FILE_FS)
-
-clean:
-	$(Q) rm -rf $(FW_BASE) $(BUILD_BASE) $(MKSPIFFS) user/v7.c user/v7.h user/sha1.h user/v7_version.c
-
-user/v7.c: $(V7_DIR)/v7.c
-	cp $(V7_DIR)/v7.c user/v7.c
-
-user/v7.h: $(V7_DIR)/v7.h
-	cp $(V7_DIR)/v7.h user/v7.h
-
-user/sha1.h: $(COMMON_DIR)/sha1.h
-	@sed -e 's;#include "osdep.h";;' $(COMMON_DIR)/sha1.h >user/sha1.h
-
-user/v7_version.c:
+# Generate version. Only regenrates if there are changes in objects.
+$(BUILD_DIR)/v7_version.c: $(APP_OBJS)
+	$(vecho) "GEN $@"
 	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
 	SHA=$$(git rev-parse HEAD | head -c 8); \
   DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
-  echo "RODATA const char *v7_version = \"$$REF/$$DATE/$$SHA\";" > user/v7_version.c
+  echo "RODATA const char *v7_version = \"$$REF/$$DATE/$$SHA\";" > $@
 
-$(foreach bdir,$(BUILD_DIR),$(eval $(call compile-objects,$(bdir))))
+# Pull in auto-generated .c dependencies (if any).
+-include $(wildcard $(BUILD_DIR)/*.d)
+
+# -- Filesystem.
+
+$(FW_FS_OUT): $(FS_FILES) $(BUILD_DIR)/mkspiffs
+	$(vecho) "MKSPIFFS $(FS_DIR) -> $@"
+	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_DIR) > $@
+
+$(BUILD_DIR)/mkspiffs: $(TOOLS_DIR)/mkspiffs.c $(wildcard spiffs/*.c)
+	$(vecho) "GCC mkspiffs"
+	$(Q) gcc -I. -o $@ $^ -DNO_ESP
+
+
+#
+# Auxiliary targets.
+#
+
+clean:
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
+
+flash: $(FW_OUT) $(FW_FS_OUT)
+	$(Q) $(ESPTOOL) --port $(ESPPORT) write_flash \
+		$(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
+		$(FW_FILE_2_ADDR) $(FW_FILE_2_OUT) \
+		$(FW_FS_ADDR) $(FW_FS_OUT)
+
+flash_no_fs: $(FW_OUT)
+	$(Q) $(ESPTOOL) --port $(ESPPORT) write_flash \
+		$(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
+		$(FW_FILE_2_ADDR) $(FW_FILE_2_OUT)
+
+flash_fs: $(FW_FS_OUT)
+	$(Q) $(ESPTOOL) --port $(ESPPORT) write_flash \
+		$(FW_FS_ADDR) $(FW_FS_OUT)
