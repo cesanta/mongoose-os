@@ -1041,8 +1041,8 @@ int c_ferror(c_file_t fd);
 extern "C" {
 #endif
 
-void base64_encode(const unsigned char *src, int src_len, char *dst);
-int base64_decode(const unsigned char *s, int len, char *dst);
+void cs_base64_encode(const unsigned char *src, int src_len, char *dst);
+int cs_base64_decode(const unsigned char *s, int len, char *dst);
 
 #ifdef __cplusplus
 }
@@ -3817,7 +3817,7 @@ char *utfnshift(char *s, long m) {
  */
 
 
-void base64_encode(const unsigned char *src, int src_len, char *dst) {
+void cs_base64_encode(const unsigned char *src, int src_len, char *dst) {
   static const char *b64 =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   int i, j, a, b, c;
@@ -3882,7 +3882,7 @@ static unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-int base64_decode(const unsigned char *s, int len, char *dst) {
+int cs_base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
   int orig_len = len;
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
@@ -5151,12 +5151,12 @@ static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
 
 static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
                                      v7_val_t args) {
-  return b64_transform(v7, this_obj, args, (b64_func_t) base64_decode, 0.75);
+  return b64_transform(v7, this_obj, args, (b64_func_t) cs_base64_decode, 0.75);
 }
 
 static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
                                      v7_val_t args) {
-  return b64_transform(v7, this_obj, args, base64_encode, 1.5);
+  return b64_transform(v7, this_obj, args, cs_base64_encode, 1.5);
 }
 
 static void v7_md5(const char *data, size_t len, char buf[16]) {
