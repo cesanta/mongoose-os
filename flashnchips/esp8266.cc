@@ -1,5 +1,6 @@
 #include "esp8266.h"
 
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -40,6 +41,7 @@ namespace {
 
 const ulong writeBlockSize = 0x400;
 const ulong flashBlockSize = 4096;
+const ulong eraseBlockSize = 8192;
 const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
@@ -585,26 +587,36 @@ class FlasherImpl : public Flasher {
       }
     }
 
-    written_count_ = 0;
-    for (ulong addr : images_.keys()) {
+    written_blocks_ = 0;
+    for (ulong image_addr : images_.keys()) {
       bool success = false;
-      int written = written_count_;
+      const int written_blocks_before = written_blocks_;
+      int offset = 0;
 
       for (int attempts = 2; attempts >= 0; attempts--) {
-        if (writeFlashLocked(addr, images_[addr])) {
-          success = true;
-          break;
-        }
-        qWarning() << "Failed to write image at" << hex << showbase << addr
-                   << "," << dec << attempts << "attempts left";
-        written_count_ = written;
-        emit progress(written_count_);
+        ulong addr = image_addr + offset;
+        QByteArray data = images_[image_addr].mid(offset);
+        written_blocks_ = written_blocks_before + (offset / writeBlockSize);
+        qWarning() << "Writing" << dec << data.size() << "bytes"
+                   << "@" << hex << showbase << addr;
+        int bytes_written = 0;
+        success = writeFlashLocked(addr, data, &bytes_written);
+        std::cout << "\r\n";
+        if (success) break;
+        // Must resume at the nearest 8K boundary, otherwise erasing will fail.
+        const int progress = bytes_written - bytes_written % eraseBlockSize;
+        // Only fail if we made no progress at all after 3 attempts.
+        if (progress > 0) attempts = 2;
+        qCritical() << "Failed to write image at" << hex << showbase << addr
+                    << "," << dec << attempts << "attempts left";
+        offset += progress;
         if (!rebootIntoBootloader(port_)) {
           break;
         }
       }
       if (!success) {
-        emit done(tr("failed to flash image at 0x%1").arg(addr, 0, 16), false);
+        emit done(tr("failed to flash image at 0x%1").arg(image_addr, 0, 16),
+                  false);
         return;
       }
     }
@@ -676,13 +688,14 @@ class FlasherImpl : public Flasher {
     }
   }
 
-  bool writeFlashLocked(ulong addr, const QByteArray& bytes) {
+  bool writeFlashLocked(ulong addr, const QByteArray& bytes, int* bytes_written) {
     const ulong blocks = bytes.length() / writeBlockSize +
                          (bytes.length() % writeBlockSize == 0 ? 0 : 1);
+    *bytes_written = 0;
     qDebug() << "Writing" << blocks << "blocks at" << hex << showbase << addr;
     emit statusMessage(tr("Erasing flash at 0x%1...").arg(addr, 0, 16));
     if (!writeFlashStartLocked(addr, blocks)) {
-      qDebug() << "Failed to start flashing";
+      qCritical() << "Failed to start flashing";
       return false;
     }
     for (ulong start = 0; start < ulong(bytes.length());
@@ -693,15 +706,17 @@ class FlasherImpl : public Flasher {
             QByteArray("\xff").repeated(writeBlockSize - data.length()));
       }
       qDebug() << "Writing block" << start / writeBlockSize;
-      emit statusMessage(tr("Writing block %1@0x%2...")
-                             .arg(start / writeBlockSize)
-                             .arg(addr, 0, 16));
-      if (!writeFlashBlockLocked(start / writeBlockSize, data)) {
+      const int block_num = start / writeBlockSize;
+      emit statusMessage(tr("Writing block %1 @ 0x%2...")
+                             .arg(block_num)
+                             .arg(addr + start, 0, 16));
+      if (!writeFlashBlockLocked(block_num, data)) {
         qDebug() << "Failed to write block" << start / writeBlockSize;
         return false;
       }
-      written_count_++;
-      emit progress(written_count_);
+      written_blocks_++;
+      emit progress(written_blocks_);
+      *bytes_written += data.length();
     }
     return true;
   }
@@ -888,7 +903,7 @@ class FlasherImpl : public Flasher {
   mutable QMutex lock_;
   QMap<ulong, QByteArray> images_;
   QSerialPort* port_;
-  int written_count_ = 0;
+  int written_blocks_ = 0;
   bool preserve_flash_params_ = true;
   bool erase_bug_workaround_ = true;
   qint32 override_flash_params_ = -1;

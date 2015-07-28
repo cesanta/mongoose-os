@@ -1,0 +1,12 @@
+#ifndef __SMARTJS_PROMPT_H_
+#define __SMARTJS_PROMPT_H_
+
+struct v7;
+
+/* Initialize prompt. */
+void sj_prompt_init(struct v7 *v7);
+
+/* Call this for each arriving char. */
+void sj_prompt_process_char(char ch);
+
+#endif /* __SMARTJS_PROMPT_H_ */
