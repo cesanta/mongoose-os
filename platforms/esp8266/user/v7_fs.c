@@ -75,11 +75,12 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 }
 
 static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
-  if (addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
+  if (0 && addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
     /*
-     * Address & bufsize are aligned to 4, just reading
-     * Since the most of operations are aligned there is no
-     * reason always read into temporaty buffer
+     * For unknown reason spi_flash_read/write
+     * hangs from time to time if size is small (< 8)
+     * and address is not aligned to 0xFF
+     * TODO(alashkin): understand why and remove `0 &&` from `if`
      */
     return spi_flash_read(addr, (u32_t *) dst, size);
   } else {
@@ -88,11 +89,12 @@ static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
 }
 
 static s32_t esp_spiffs_write(u32_t addr, u32_t size, u8_t *src) {
-  if (addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
+  if (0 && addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
     /*
-     * Address & bufsize are aligned to 4, just reading
-     * Since the most of operations are aligned there is no
-     * reason always pre-read & over-write
+     * For unknown reason spi_flash_read/write
+     * hangs from time to time if size is small (< 8)
+     * and address is not aligned to 0xFF
+     * TODO(alashkin): understand why and remove `0 &&` from `if`
      */
     return spi_flash_write(addr, (u32_t *) src, size);
   } else {
