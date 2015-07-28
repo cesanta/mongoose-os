@@ -31,7 +31,7 @@ LD_SCRIPT	= user/eagle.app.30000.v6.ld
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 FW_FILE_1_ADDR = 0x00000
-FW_FILE_2_ADDR = 0x1d000
+FW_FILE_2_ADDR = 0x11000
 
 # spiffs parameters
 FW_FS_ADDR = 0x6d000
