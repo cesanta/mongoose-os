@@ -1,6 +1,6 @@
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
-V7_PATH ?= ../../../v7
+V7_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
@@ -122,6 +122,8 @@ endif
 vecho := @echo " "
 
 all: $(FW_DIR) $(BUILD_DIR) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) $(FW_FS_OUT)
+	$(Q) rm -f `ls $(FW_DIR)/* | \
+		grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT))$$'`
 
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
