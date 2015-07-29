@@ -168,7 +168,8 @@ bool CLI::flash(const QString& portname, const QString& path, int speed) {
          << msg.toStdString();
     success = ok;
     if (!ok) {
-      cout << "Try -V=2 or -V=3 if you want to see more details about the "
+      cout << endl
+           << "Try -V=2 or -V=3 if you want to see more details about the "
               "error." << endl;
     }
   });

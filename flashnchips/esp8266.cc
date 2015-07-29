@@ -194,7 +194,7 @@ struct Response {
   bool valid = false;
 
   bool ok() const {
-    return valid && status == 0 && lastError == 0;
+    return valid && status == 0;
   }
 
   QString error() const {
