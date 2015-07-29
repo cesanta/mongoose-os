@@ -658,6 +658,11 @@ void MainDialog::loadFirmware() {
   connect(f.get(), &Flasher::done,
           [this]() { serial_port_->moveToThread(this->thread()); });
   connect(f.get(), &Flasher::statusMessage, flashingStatus_, &QLabel::setText);
+  connect(f.get(), &Flasher::statusMessage, [](QString msg, bool important) {
+    if (important) {
+      qWarning() << msg.toUtf8().constData();
+    }
+  });
   connect(f.get(), &Flasher::done, this, &MainDialog::flashingDone);
 
   worker_.reset(new QThread);  // TODO(imax): handle already running thread?

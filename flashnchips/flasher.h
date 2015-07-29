@@ -49,7 +49,7 @@ class Flasher : public QObject {
 
 signals:
   void progress(int blocksWritten);
-  void statusMessage(QString);
+  void statusMessage(QString message, bool important = false);
   void done(QString message, bool success);
 };
 

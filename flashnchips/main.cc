@@ -15,14 +15,14 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-static bool ignoreDebug = true;
+static int verbosity = 0;
 
 void outputHandler(QtMsgType type, const QMessageLogContext& context,
                    const QString& msg) {
   QByteArray localMsg = msg.toLocal8Bit();
   switch (type) {
     case QtDebugMsg:
-      if (!ignoreDebug) {
+      if (verbosity >= 3) {
         cerr << "DEBUG: ";
         if (context.file != NULL) {
           cerr << context.file << ":" << context.line;
@@ -34,24 +34,28 @@ void outputHandler(QtMsgType type, const QMessageLogContext& context,
       }
       break;
     case QtWarningMsg:
-      cerr << "WARNING: ";
-      if (context.file != NULL) {
-        cerr << context.file << ":" << context.line;
+      if (verbosity >= 2) {
+        cerr << "WARNING: ";
+        if (context.file != NULL) {
+          cerr << context.file << ":" << context.line;
+        }
+        if (context.function != NULL) {
+          cerr << " (" << context.function << "): ";
+        }
+        cerr << localMsg.constData() << endl;
       }
-      if (context.function != NULL) {
-        cerr << " (" << context.function << "): ";
-      }
-      cerr << localMsg.constData() << endl;
       break;
     case QtCriticalMsg:
-      cerr << "CRITICAL: ";
-      if (context.file != NULL) {
-        cerr << context.file << ":" << context.line;
+      if (verbosity >= 1) {
+        cerr << "CRITICAL: ";
+        if (context.file != NULL) {
+          cerr << context.file << ":" << context.line;
+        }
+        if (context.function != NULL) {
+          cerr << " (" << context.function << "): ";
+        }
+        cerr << localMsg.constData() << endl;
       }
-      if (context.function != NULL) {
-        cerr << " (" << context.function << "): ";
-      }
-      cerr << localMsg.constData() << endl;
       break;
     case QtFatalMsg:
       cerr << "FATAL: ";
@@ -86,7 +90,11 @@ int main(int argc, char* argv[]) {
        {{"l", "probe-ports"},
         "Print the list of available serial ports and try detect device "
         "presence on each of them."},
-       {{"d", "debug"}, "Enable debug output."},
+       {{"d", "debug"}, "Enable debug output. Equivalent to --V=3"},
+       {"V",
+        "Verbosity level. 0 – normal output, 1 - also print critical (but not "
+        "fatal) errors, 2 - also print warnings, 3 - print debug output.",
+        "level", "1"},
        {"port", "Serial port to use.", "port"},
        {"flash-baud-rate",
         "Baud rate to use with a given serial port while flashing.",
@@ -120,7 +128,15 @@ int main(int argc, char* argv[]) {
 
   qInstallMessageHandler(outputHandler);
   if (parser.isSet("debug")) {
-    ignoreDebug = false;
+    verbosity = 3;
+  } else if (parser.isSet("V")) {
+    bool ok;
+    verbosity = parser.value("V").toInt(&ok, 10);
+    if (!ok) {
+      cerr << parser.value("V").toStdString() << " is not a number" << endl
+           << endl;
+      return 1;
+    }
   }
 
   if (argc == 1 || parser.isSet("gui")) {

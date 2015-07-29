@@ -167,9 +167,22 @@ bool CLI::flash(const QString& portname, const QString& path, int speed) {
     cout << endl
          << msg.toStdString();
     success = ok;
+    if (!ok) {
+      cout << "Try -V=2 or -V=3 if you want to see more details about the "
+              "error." << endl;
+    }
   });
-  connect(f.get(), &Flasher::statusMessage,
-          [](QString s) { cout << "\r" << s.toStdString() << std::flush; });
+  connect(f.get(), &Flasher::statusMessage, [](QString s, bool important) {
+    static bool prev = true;
+    if (important) {
+      if (!prev) cout << endl;
+      cout << s.toStdString() << endl
+           << std::flush;
+    } else {
+      cout << "\r" << s.toStdString() << std::flush;
+    }
+    prev = important;
+  });
 
   f->run();  // connected slots should be called inline, so we don't need to
              // unblock the event loop for to print progress on terminal.

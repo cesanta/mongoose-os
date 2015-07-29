@@ -41,7 +41,6 @@ namespace {
 
 const ulong writeBlockSize = 0x400;
 const ulong flashBlockSize = 4096;
-const ulong eraseBlockSize = 8192;
 const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
@@ -471,7 +470,7 @@ class FlasherImpl : public Flasher {
       return tr("no files to flash");
     }
     for (const auto& file : files) {
-      qDebug() << "Loading" << file.fileName();
+      qWarning() << "Loading" << file.fileName();
       bool ok = false;
       ulong addr = file.baseName().toULong(&ok, 16);
       if (!ok) {
@@ -533,10 +532,12 @@ class FlasherImpl : public Flasher {
       // params for the flash chip by its ID.
       QByteArray params = readFlashParamsLocked();
       if (params.length() == 2) {
-        qWarning() << "Current flash params bytes:" << params.toHex();
+        emit statusMessage(
+            tr("Current flash params bytes: %1").arg(QString(params.toHex())),
+            true);
         flashParams = params[0] << 8 | params[1];
       } else {
-        qWarning() << "Failed to read flash params";
+        emit statusMessage(tr("Failed to read flash params"), true);
         emit done(tr("failed to read flash params from the existing firmware"),
                   false);
         return;
@@ -548,8 +549,10 @@ class FlasherImpl : public Flasher {
       if (flashParams >= 0) {
         images_[0][2] = (flashParams >> 8) & 0xff;
         images_[0][3] = flashParams & 0xff;
-        qWarning() << "Adjusting flash params in the image 0x0000 to"
-                   << images_[0].mid(2, 2).toHex();
+        emit statusMessage(
+            tr("Adjusting flash params in the image 0x0000 to %1")
+                .arg(QString(images_[0].mid(2, 2).toHex())),
+            true);
       }
       flashParams = images_[0][2] << 8 | images_[0][3];
     }
@@ -574,14 +577,15 @@ class FlasherImpl : public Flasher {
       auto res = findIdLocked();
       if (res.ok()) {
         if (!res.ValueOrDie()) {
-          qWarning() << "Generating new ID";
+          emit statusMessage(tr("Generating new ID"), true);
           images_[idBlockOffset] = makeIDBlock(id_hostname_);
         } else {
-          qWarning() << "Existing ID found";
+          emit statusMessage(tr("Existing ID found"), true);
         }
       } else {
-        qWarning() << "Failed to read existing ID block:"
-                   << res.status().ToString().c_str();
+        emit statusMessage(tr("Failed to read existing ID block: %1")
+                               .arg(res.status().ToString().c_str()),
+                           true);
         emit done(tr("failed to check for ID presence"), false);
         return;
       }
@@ -592,19 +596,21 @@ class FlasherImpl : public Flasher {
       bool success = false;
       const int written_blocks_before = written_blocks_;
       int offset = 0;
+      emit statusMessage(tr("Writing image 0x%1...").arg(image_addr, 0, 16),
+                         true);
 
       for (int attempts = 2; attempts >= 0; attempts--) {
         ulong addr = image_addr + offset;
         QByteArray data = images_[image_addr].mid(offset);
         written_blocks_ = written_blocks_before + (offset / writeBlockSize);
-        qWarning() << "Writing" << dec << data.size() << "bytes"
-                   << "@" << hex << showbase << addr;
+        emit statusMessage(
+            tr("Writing %1 bytes @ 0x%2").arg(data.size()).arg(addr, 0, 16),
+            true);
         int bytes_written = 0;
         success = writeFlashLocked(addr, data, &bytes_written);
-        std::cout << "\r\n";
         if (success) break;
-        // Must resume at the nearest 8K boundary, otherwise erasing will fail.
-        const int progress = bytes_written - bytes_written % eraseBlockSize;
+        // Must resume at the nearest 4K boundary, otherwise erasing will fail.
+        const int progress = bytes_written - bytes_written % flashBlockSize;
         // Only fail if we made no progress at all after 3 attempts.
         if (progress > 0) attempts = 2;
         qCritical() << "Failed to write image at" << hex << showbase << addr
@@ -688,7 +694,8 @@ class FlasherImpl : public Flasher {
     }
   }
 
-  bool writeFlashLocked(ulong addr, const QByteArray& bytes, int* bytes_written) {
+  bool writeFlashLocked(ulong addr, const QByteArray& bytes,
+                        int* bytes_written) {
     const ulong blocks = bytes.length() / writeBlockSize +
                          (bytes.length() % writeBlockSize == 0 ? 0 : 1);
     *bytes_written = 0;
@@ -828,7 +835,7 @@ class FlasherImpl : public Flasher {
     }
 
     if (!trySync(port_, 5)) {
-      qWarning() << "Device did not reboot after reading flash";
+      qCritical() << "Device did not reboot after reading flash";
       return util::Status(util::error::ABORTED,
                           "failed to jump to bootloader after reading flash");
     }
@@ -842,8 +849,8 @@ class FlasherImpl : public Flasher {
   QByteArray readFlashParamsLocked() {
     auto res = readFlashLocked(0, 4);
     if (!res.ok()) {
-      qWarning() << "Reading flash params failed: "
-                 << res.status().ToString().c_str();
+      qCritical() << "Reading flash params failed: "
+                  << res.status().ToString().c_str();
       return QByteArray();
     }
 
