@@ -10,7 +10,7 @@ struct v7 *v7;
 
 void init_v7() {
   struct v7_create_opts opts = {0, 0, 0};
-  
+
   v7 = v7_create_opt(opts);
 
   sj_init_v7_ext(v7);

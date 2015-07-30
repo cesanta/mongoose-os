@@ -109,16 +109,53 @@ static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
+void sj_call_function(struct v7 *v7, void *arg) {
+  v7_val_t *cb = (v7_val_t *) arg;
+  v7_val_t res;
+  if (v7_exec_with(v7, &res, "this()", *cb) != V7_OK) {
+    v7_fprintln(stderr, v7, res);
+  }
+  v7_disown(v7, cb);
+  free(arg);
+}
+
+/* Currently can only handle one timer */
+static v7_val_t global_set_timeout(struct v7 *v7, v7_val_t this_obj,
+                                   v7_val_t args) {
+  v7_val_t *cb;
+  v7_val_t msecsv = v7_array_get(v7, args, 1);
+  int msecs;
+
+  cb = (v7_val_t *) malloc(sizeof(*cb));
+  v7_own(v7, cb);
+  *cb = v7_array_get(v7, args, 0);
+
+  if (!v7_is_function(*cb)) {
+    printf("cb is not a function\n");
+    return v7_create_undefined();
+  }
+  if (!v7_is_number(msecsv)) {
+    printf("msecs is not a double\n");
+    return v7_create_undefined();
+  }
+  msecs = v7_to_number(msecsv);
+
+  sj_set_timeout(msecs, cb);
+
+  return v7_create_undefined();
+}
+
 void sj_init_v7_ext(struct v7 *v7) {
   v7_val_t os, gc;
 
   v7_set_method(v7, v7_get_global_object(v7), "usleep", global_usleep);
-  
+  v7_set_method(v7, v7_get_global_object(v7), "setTimeout", global_set_timeout);
+
   gc = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "GC", 2, 0, gc);
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "gc", GC_gc);
-  
+
   os = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "OS", 2, 0, os);
   v7_set_method(v7, os, "prof", OS_prof);

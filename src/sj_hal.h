@@ -6,6 +6,7 @@
  */
 
 #include <stdlib.h>
+#include <v7.h>
 
 /* Get system free mamory. */
 size_t sj_get_free_heap_size();
@@ -21,5 +22,8 @@ void sj_system_restart();
 
 /* Delay usecs */
 void sj_usleep(int usecs);
+
+/* Setup timer with msecs timeout and cb as a callback */
+void sj_set_timeout(int msecs, v7_val_t *cb);
 
 #endif /* __SMARTJS_HAL_H_ */

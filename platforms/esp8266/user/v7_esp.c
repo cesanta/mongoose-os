@@ -23,7 +23,6 @@
 #include <sj_v7_ext.h>
 
 struct v7 *v7;
-os_timer_t js_timeout_timer;
 
 /*
  * global value to keep current Wifi.scan callback.
@@ -34,47 +33,6 @@ v7_val_t wifi_scan_cb;
 
 /* true if we're waiting for an ip after invoking Wifi.setup() */
 int wifi_setting_up = 0;
-
-static void js_timeout(void *arg) {
-  v7_val_t *cb = (v7_val_t *) arg;
-  v7_val_t res;
-  if (v7_exec_with(v7, &res, "this()", *cb) != V7_OK) {
-    v7_fprintln(stderr, v7, res);
-  }
-  v7_disown(v7, cb);
-  free(arg);
-}
-
-/* Currently can only handle one timer */
-static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  v7_val_t *cb;
-  v7_val_t msecsv = v7_array_get(v7, args, 1);
-  int msecs;
-
-  cb = (v7_val_t *) malloc(sizeof(*cb));
-  v7_own(v7, cb);
-  *cb = v7_array_get(v7, args, 0);
-
-  if (!v7_is_function(*cb)) {
-    printf("cb is not a function\n");
-    return v7_create_undefined();
-  }
-  if (!v7_is_number(msecsv)) {
-    printf("msecs is not a double\n");
-    return v7_create_undefined();
-  }
-  msecs = v7_to_number(msecsv);
-
-  /*
-   * used to convey the callback to the timer handler _and_ to root
-   * the function so that the GC doesn't deallocate it.
-   */
-  os_timer_disarm(&js_timeout_timer);
-  os_timer_setfn(&js_timeout_timer, js_timeout, cb);
-  os_timer_arm(&js_timeout_timer, msecs, 0);
-
-  return v7_create_undefined();
-}
 
 static v7_val_t Wifi_connect(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) v7;
@@ -549,8 +507,6 @@ void init_v7(void *stack_base) {
          v7_create_string(v7, v7_version, strlen(v7_version), 1));
 
   v7_set_method(v7, v7_get_global_object(v7), "dsleep", dsleep);
-  v7_set_method(v7, v7_get_global_object(v7), "setTimeout", set_timeout);
-
   v7_set_method(v7, v7_get_global_object(v7), "crash", crash);
 
   wifi = v7_create_object(v7);

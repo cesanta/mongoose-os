@@ -46,10 +46,10 @@ static void process_here_char(char ch) {
   printf("%c", ch);
 
   if (s_sjp.pos >= 7 &&
-      strncmp(&s_sjp.buf[s_sjp.pos - 7], "\r\nEOF\r\n", 7) == 0 ||
+          strncmp(&s_sjp.buf[s_sjp.pos - 7], "\r\nEOF\r\n", 7) == 0 ||
       s_sjp.pos >= 5 &&
-      (strncmp(&s_sjp.buf[s_sjp.pos - 5], "\nEOF\n", 5) == 0 ||
-       strncmp(&s_sjp.buf[s_sjp.pos - 5], "\rEOF\r", 5) == 0)) {
+          (strncmp(&s_sjp.buf[s_sjp.pos - 5], "\nEOF\n", 5) == 0 ||
+           strncmp(&s_sjp.buf[s_sjp.pos - 5], "\rEOF\r", 5) == 0)) {
     int end_pos = s_sjp.pos - (s_sjp.buf[s_sjp.pos - 2] == '\r' ? 7 : 5);
     s_sjp.buf[end_pos] = '\0';
     printf("\n");
@@ -121,8 +121,7 @@ struct firmware_command {
 static void process_prompt_char(char symb);
 
 static const struct firmware_command cmds[] = {
-  {"help", &process_help, 0},
-  {"here", &process_here, 0},
+    {"help", &process_help, 0}, {"here", &process_here, 0},
 };
 
 static void process_command(char *cmd) {
@@ -163,7 +162,7 @@ static void process_prompt_char(char ch) {
       break;
     case 0x7f:
     case 0x08:
-      s_sjp.pos--;  /* Swallow BS itself. */
+      s_sjp.pos--; /* Swallow BS itself. */
       if (s_sjp.pos > 0) {
         s_sjp.pos--;
         /* \b only moves the cursor left, let's also clear the char */
