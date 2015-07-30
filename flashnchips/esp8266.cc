@@ -488,6 +488,14 @@ class FlasherImpl : public Flasher {
       }
       images_[addr] = bytes;
     }
+    const QList<ulong> keys = images_.keys();
+    for (int i = 0; i < keys.length() - 1; i++) {
+      if (keys[i] + images_[keys[i]].length() > keys[i + 1]) {
+        return tr("Images at offsets 0x%1 and 0x%2 overlap.")
+            .arg(keys[i], 0, 16)
+            .arg(keys[i + 1], 0, 16);
+      }
+    }
     return "";
   }
 
