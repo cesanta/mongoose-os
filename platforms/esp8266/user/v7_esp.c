@@ -19,6 +19,8 @@
 #include "v7_i2c_js.h"
 #include "v7_gpio_js.h"
 #include "v7_hspi_js.h"
+#include <sj_hal.h>
+#include <sj_v7_ext.h>
 
 struct v7 *v7;
 os_timer_t js_timeout_timer;
@@ -32,33 +34,6 @@ v7_val_t wifi_scan_cb;
 
 /* true if we're waiting for an ip after invoking Wifi.setup() */
 int wifi_setting_up = 0;
-
-static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  v7_val_t result = v7_create_object(v7);
-  v7_own(v7, &result);
-
-  v7_set(v7, result, "sysfree", 7, 0,
-         v7_create_number(system_get_free_heap_size()));
-  v7_set(v7, result, "used_by_js", 10, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
-  v7_set(v7, result, "used_by_fs", 10, 0,
-         v7_create_number(spiffs_get_memory_usage()));
-
-  v7_disown(v7, &result);
-  return result;
-}
-
-static v7_val_t usleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  v7_val_t usecsv = v7_array_get(v7, args, 0);
-  int usecs;
-  if (!v7_is_number(usecsv)) {
-    printf("usecs is not a double\n\r");
-    return v7_create_undefined();
-  }
-  usecs = v7_to_number(usecsv);
-  os_delay_us(usecs);
-  return v7_create_undefined();
-}
 
 static void js_timeout(void *arg) {
   v7_val_t *cb = (v7_val_t *) arg;
@@ -99,25 +74,6 @@ static v7_val_t set_timeout(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   os_timer_arm(&js_timeout_timer, msecs, 0);
 
   return v7_create_undefined();
-}
-
-static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  (void) v7;
-  (void) this_obj;
-  (void) args;
-  pp_soft_wdt_restart();
-
-  return v7_create_boolean(1);
-}
-
-static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  (void) v7;
-  (void) this_obj;
-  (void) args;
-  system_restart();
-
-  /* Unreachable */
-  return v7_create_boolean(1);
 }
 
 static v7_val_t Wifi_connect(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -644,7 +600,7 @@ void init_conf(struct v7 *v7) {
 
 void init_v7(void *stack_base) {
   struct v7_create_opts opts;
-  v7_val_t wifi, dht11, gc, debug, os;
+  v7_val_t wifi, dht11, gc, debug;
 
   opts.object_arena_size = 164;
   opts.function_arena_size = 26;
@@ -657,7 +613,6 @@ void init_v7(void *stack_base) {
          v7_create_string(v7, v7_version, strlen(v7_version), 1));
 
   v7_set_method(v7, v7_get_global_object(v7), "dsleep", dsleep);
-  v7_set_method(v7, v7_get_global_object(v7), "usleep", usleep);
   v7_set_method(v7, v7_get_global_object(v7), "setTimeout", set_timeout);
 
   v7_set_method(v7, v7_get_global_object(v7), "crash", crash);
@@ -692,12 +647,7 @@ void init_v7(void *stack_base) {
 
   v7_init_http_client(v7);
 
-  os = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "OS", 2, 0, os);
-  v7_set_method(v7, os, "prof", OS_prof);
-  v7_set_method(v7, os, "wdt_feed", OS_wdt_feed);
-  v7_set_method(v7, os, "reset", OS_reset);
-
+  sj_init_v7_ext(v7);
   init_i2cjs(v7);
   init_gpiojs(v7);
   init_hspijs(v7);
