@@ -299,19 +299,20 @@ void MainDialog::enableControlsForCurrentState() {
   }
 }
 
-QString MainDialog::openSerial() {
+util::Status MainDialog::openSerial() {
   if (state_ != NotConnected) {
-    return "";
+    return util::Status::OK;
   }
   QString portName = portSelector_->currentData().toString();
   if (portName == "") {
-    return tr("No port selected");
+    return util::Status(util::error::INVALID_ARGUMENT,
+                        tr("No port selected").toStdString());
   }
 
   util::StatusOr<QSerialPort*> r = connectSerial(QSerialPortInfo(portName));
   if (!r.ok()) {
     qDebug() << "connectSerial:" << r.status().ToString().c_str();
-    return QString::fromStdString(r.status().ToString());
+    return r.status();
   }
   serial_port_.reset(r.ValueOrDie());
   connect(serial_port_.get(),
@@ -324,13 +325,14 @@ QString MainDialog::openSerial() {
           });
 
   setState(Connected);
-  return "";
+  return util::Status::OK;
 }
 
-QString MainDialog::closeSerial() {
+util::Status MainDialog::closeSerial() {
   switch (state_) {
     case NotConnected:
-      return tr("port is not connected");
+      return util::Status(util::error::FAILED_PRECONDITION,
+                          tr("Port is not connected").toStdString());
     case Connected:
       break;
     case Terminal:
@@ -339,23 +341,24 @@ QString MainDialog::closeSerial() {
       break;
     case Flashing:
       setState(PortGoneWhileFlashing);
-      return "";
+      return util::Status::OK;
     default:
-      return tr("port is in use");
+      return util::Status(util::error::FAILED_PRECONDITION,
+                          tr("Port is in use").toStdString());
   }
   setState(NotConnected);
   serial_port_->close();
   serial_port_.reset();
-  return "";
+  return util::Status::OK;
 }
 
 void MainDialog::connectDisconnectTerminal() {
-  QString err;
+  util::Status err;
   switch (state_) {
     case NotConnected:
       err = openSerial();
-      if (err != "") {
-        QMessageBox::critical(this, tr("Error"), err);
+      if (!err.ok()) {
+        QMessageBox::critical(this, tr("Error"), err.error_message().c_str());
         return;
       }
 
@@ -389,10 +392,11 @@ void MainDialog::connectDisconnectTerminal() {
   }
 }
 
-QString MainDialog::disconnectTerminalSignals() {
+util::Status MainDialog::disconnectTerminalSignals() {
   if (state_ != Terminal) {
     qDebug() << "Attempt to disconnect signals in non-Terminal mode.";
-    return tr("not in terminal mode");
+    return util::Status(util::error::FAILED_PRECONDITION,
+                        tr("not in terminal mode").toStdString());
   }
 
   disconnect(serial_port_.get(), &QIODevice::readyRead, this,
@@ -400,7 +404,7 @@ QString MainDialog::disconnectTerminalSignals() {
 
   setState(Connected);
   terminal_->appendPlainText(tr("--- disconnected"));
-  return "";
+  return util::Status::OK;
 }
 
 QString trimRight(QString s) {
@@ -543,7 +547,7 @@ void MainDialog::detectPorts() {
   int firstDetected = -1;
   for (int i = 0; i < ports.length(); i++) {
     QString prefix = "";
-    if (ESP8266::probe(ports[i])) {
+    if (ESP8266::probe(ports[i]).ok()) {
       prefix = "✓ ";
       if (firstDetected < 0) {
         firstDetected = i;
@@ -607,17 +611,17 @@ void MainDialog::loadFirmware() {
   if (!s.ok()) {
     qWarning() << "Some options have invalid values:" << s.ToString().c_str();
   }
-  QString err = f->load(path);
-  if (err != "") {
-    flashingStatus_->setText(err);
+  util::Status err = f->load(path);
+  if (!err.ok()) {
+    flashingStatus_->setText(err.error_message().c_str());
     return;
   }
   if (state_ == Terminal) {
     disconnectTerminalSignals();
   }
   err = openSerial();
-  if (err != "") {
-    flashingStatus_->setText(err);
+  if (!err.ok()) {
+    flashingStatus_->setText(err.error_message().c_str());
     return;
   }
   if (state_ != Connected) {
@@ -646,8 +650,8 @@ void MainDialog::loadFirmware() {
   }
   setState(Flashing);
   err = f->setPort(serial_port_.get());
-  if (err != "") {
-    flashingStatus_->setText(err);
+  if (!err.ok()) {
+    flashingStatus_->setText(err.error_message().c_str());
     return;
   }
   flashingProgress_->setRange(0, f->totalBlocks());

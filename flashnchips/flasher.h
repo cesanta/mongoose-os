@@ -21,13 +21,11 @@ class Flasher : public QObject {
   virtual ~Flasher(){};
   // load should read firmware image from a given path and return an empty
   // string if the image is good.
-  // TODO(imax): convert to util::Status.
-  virtual QString load(const QString& path) = 0;
+  virtual util::Status load(const QString& path) = 0;
   // setPort tells which port to use for flashing. port must not be destroyed
   // between calling run() and getting back done() signal. Caller retains port
   // ownership.
-  // TODO(imax): convert to util::Status.
-  virtual QString setPort(QSerialPort* port) = 0;
+  virtual util::Status setPort(QSerialPort* port) = 0;
   // totalBlocks should return the number of blocks in the loaded firmware.
   // It is used to track the progress of flashing.
   virtual int totalBlocks() const = 0;

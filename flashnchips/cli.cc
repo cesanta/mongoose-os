@@ -50,19 +50,21 @@ void CLI::run() {
   }
 
   if (parser_->isSet("probe-ports")) {
-    exit_code = listPorts() ? 0 : 1;
+    listPorts();
+    exit_code = 0;
   } else if (parser_->isSet("probe")) {
     if (!parser_->isSet("port")) {
       cerr << "Need --port" << endl
            << endl;
       parser_->showHelp(1);
     }
-    if (probePort(parser_->value("port"))) {
+    util::Status r = probePort(parser_->value("port"));
+    if (!r.ok()) {
+      cerr << r << endl;
+      exit_code = 1;
+    } else {
       cout << "ok" << endl;
       exit_code = 0;
-    } else {
-      cout << "not found" << endl;
-      exit_code = 1;
     }
   } else if (parser_->isSet("flash")) {
     if (!parser_->isSet("port")) {
@@ -70,11 +72,13 @@ void CLI::run() {
            << endl;
       parser_->showHelp(1);
     }
-    if (flash(parser_->value("port"), parser_->value("flash"), speed)) {
+    util::Status s =
+        flash(parser_->value("port"), parser_->value("flash"), speed);
+    if (s.ok()) {
       cerr << "Success." << endl;
       exit_code = 0;
     } else {
-      cerr << "Flashing failed." << endl;
+      cerr << s << endl;
       exit_code = 1;
     }
   } else if (parser_->isSet("generate-id")) {
@@ -95,22 +99,21 @@ void CLI::run() {
   qApp->exit(exit_code);
 }
 
-bool CLI::listPorts() {
+void CLI::listPorts() {
   const auto& ports = QSerialPortInfo::availablePorts();
   for (const auto& port : ports) {
-    bool present = ESP8266::probe(port);
+    util::Status s = ESP8266::probe(port);
     cout << "Port: " << port.systemLocation().toStdString() << "\t";
-    if (present) {
+    if (s.ok()) {
       cout << "ok";
     } else {
-      cout << "not found";
+      cout << s;
     }
     cout << endl;
   }
-  return true;
 }
 
-bool CLI::probePort(const QString& portname) {
+util::Status CLI::probePort(const QString& portname) {
   const auto& ports = QSerialPortInfo::availablePorts();
   for (const auto& port : ports) {
     if (port.systemLocation() != portname) {
@@ -118,11 +121,11 @@ bool CLI::probePort(const QString& portname) {
     }
     return ESP8266::probe(port);
   }
-  cerr << "No such port." << endl;
-  return false;
+  return util::Status(util::error::FAILED_PRECONDITION, "No such port");
 }
 
-bool CLI::flash(const QString& portname, const QString& path, int speed) {
+util::Status CLI::flash(const QString& portname, const QString& path,
+                        int speed) {
   const auto& ports = QSerialPortInfo::availablePorts();
   QSerialPortInfo info;
   bool found = false;
@@ -135,32 +138,27 @@ bool CLI::flash(const QString& portname, const QString& path, int speed) {
     break;
   }
   if (!found) {
-    cerr << "No such port." << endl;
-    return false;
+    return util::Status(util::error::FAILED_PRECONDITION, "No such port");
   }
 
   std::unique_ptr<Flasher> f(ESP8266::flasher());
   util::Status config_status = f->setOptionsFromCommandLine(*parser_);
   if (!config_status.ok()) {
-    cerr << config_status << endl;
-    return false;
+    return config_status;
   }
-  QString err = f->load(path);
-  if (err != "") {
-    cerr << err.toStdString() << endl;
-    return false;
+  util::Status err = f->load(path);
+  if (!err.ok()) {
+    return err;
   }
 
   util::StatusOr<QSerialPort*> r = connectSerial(info, speed);
   if (!r.ok()) {
-    cerr << r.status().ToString() << endl;
-    return false;
+    return r.status();
   }
   std::unique_ptr<QSerialPort> s(r.ValueOrDie());
   err = f->setPort(s.get());
-  if (err != "") {
-    cerr << err.toStdString() << endl;
-    return false;
+  if (!err.ok()) {
+    return err;
   }
   bool success = false;
   connect(f.get(), &Flasher::done, [&success](QString msg, bool ok) {
@@ -190,7 +188,10 @@ bool CLI::flash(const QString& portname, const QString& path, int speed) {
 
   cout << endl;
 
-  return success;
+  if (!success) {
+    return util::Status(util::error::ABORTED, "Flashing failed.");
+  }
+  return util::Status::OK;
 }
 
 util::Status CLI::generateID(const QString& filename, const QString& domain) {

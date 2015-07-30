@@ -13,6 +13,8 @@
 #include <QStringList>
 #include <QThread>
 
+#include <common/util/status.h>
+
 class QBoxLayout;
 class QCommandLineParser;
 class QComboBox;
@@ -60,7 +62,7 @@ class MainDialog : public QMainWindow {
   void updateFWList();
   void flashingDone(QString msg, bool success);
   void connectDisconnectTerminal();
-  QString disconnectTerminalSignals();
+  util::Status disconnectTerminalSignals();
   void readSerial();
   void writeSerial();
   void setTerminalColors(bool system = true);
@@ -69,8 +71,8 @@ class MainDialog : public QMainWindow {
   void configureWiFi();
   void uploadFile();
 
-  QString openSerial();
-  QString closeSerial();
+  util::Status openSerial();
+  util::Status closeSerial();
   void sendQueuedCommand();
 
   void setState(State);

@@ -5,6 +5,7 @@
 
 #include <QString>
 
+#include <common/util/status.h>
 #include <common/util/statusor.h>
 
 #include "flasher.h"
@@ -14,7 +15,7 @@ class QSerialPortInfo;
 
 namespace ESP8266 {
 
-bool probe(const QSerialPortInfo& port);
+util::Status probe(const QSerialPortInfo& port);
 
 std::unique_ptr<Flasher> flasher();
 

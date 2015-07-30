@@ -24,6 +24,7 @@
 #include <common/util/statusor.h>
 
 #include "fs.h"
+#include "serial.h"
 
 // Code in this file (namely, rebootIntoBootloader function) assumes the same
 // wiring as esptool.py:
@@ -332,36 +333,25 @@ void rebootIntoFirmware(QSerialPort* serial) {
 
 }  // namespace
 
-bool probe(const QSerialPortInfo& port) {
-  QSerialPort s(port);
-  if (!s.setBaudRate(QSerialPort::Baud9600)) {
-    qDebug() << "Failed to set baud rate on " << port.systemLocation();
-    return false;
+util::Status probe(const QSerialPortInfo& port) {
+  auto r = connectSerial(port, 9600);
+  if (!r.ok()) {
+    return r.status();
   }
-  if (!s.setParity(QSerialPort::NoParity)) {
-    qDebug() << "Failed to disable parity on " << port.systemLocation();
-    return false;
-  }
-  if (!s.setFlowControl(QSerialPort::NoFlowControl)) {
-    qDebug() << "Failed to disable flow control on " << port.systemLocation();
-    return false;
-  }
-  if (!s.open(QIODevice::ReadWrite)) {
-    qDebug() << "Failed to open " << port.systemLocation();
-    return false;
+  std::unique_ptr<QSerialPort> s(r.ValueOrDie());
+
+  if (!rebootIntoBootloader(s.get())) {
+    return util::Status(util::error::ABORTED,
+                        "Failed to reboot into bootloader");
   }
 
-  if (!rebootIntoBootloader(&s)) {
-    return false;
-  }
-
-  auto mac = read_MAC(&s).toHex();
+  auto mac = read_MAC(s.get()).toHex();
   if (mac.length() < 6) {
-    return false;
+    return util::Status(util::error::ABORTED, "Failed to read MAC address");
   }
   qDebug() << "MAC address: " << mac;
 
-  return true;
+  return util::Status::OK;
 }
 
 class FlasherImpl : public Flasher {
@@ -456,53 +446,65 @@ class FlasherImpl : public Flasher {
     return r;
   }
 
-  QString load(const QString& path) override {
+  util::Status load(const QString& path) override {
     QMutexLocker lock(&lock_);
     images_.clear();
     QDir dir(path, fwFileGlob, QDir::Name,
              QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
     if (!dir.exists()) {
-      return tr("directory does not exist");
+      return util::Status(util::error::FAILED_PRECONDITION,
+                          tr("Directory does not exist").toStdString());
     }
 
     const auto files = dir.entryInfoList();
     if (files.length() == 0) {
-      return tr("no files to flash");
+      return util::Status(util::error::FAILED_PRECONDITION,
+                          tr("Do files to flash").toStdString());
     }
     for (const auto& file : files) {
       qWarning() << "Loading" << file.fileName();
       bool ok = false;
       ulong addr = file.baseName().toULong(&ok, 16);
       if (!ok) {
-        return tr("%1 is not a valid address").arg(file.baseName());
+        return util::Status(
+            util::error::INVALID_ARGUMENT,
+            tr("%1 is not a valid address").arg(file.baseName()).toStdString());
       }
       QFile f(file.absoluteFilePath());
       if (!f.open(QIODevice::ReadOnly)) {
-        return tr("failed to open %1").arg(file.absoluteFilePath());
+        return util::Status(
+            util::error::ABORTED,
+            tr("Failed to open %1").arg(file.absoluteFilePath()).toStdString());
       }
       auto bytes = f.readAll();
       if (bytes.length() != file.size()) {
         images_.clear();
-        return tr("%1 has size %2, but readAll returned %3 bytes")
-            .arg(file.fileName(), file.size(), bytes.length());
+        return util::Status(util::error::UNAVAILABLE,
+                            tr("%1 has size %2, but readAll returned %3 bytes")
+                                .arg(file.fileName())
+                                .arg(file.size())
+                                .arg(bytes.length())
+                                .toStdString());
       }
       images_[addr] = bytes;
     }
     const QList<ulong> keys = images_.keys();
     for (int i = 0; i < keys.length() - 1; i++) {
       if (keys[i] + images_[keys[i]].length() > keys[i + 1]) {
-        return tr("Images at offsets 0x%1 and 0x%2 overlap.")
-            .arg(keys[i], 0, 16)
-            .arg(keys[i + 1], 0, 16);
+        return util::Status(util::error::FAILED_PRECONDITION,
+                            tr("Images at offsets 0x%1 and 0x%2 overlap.")
+                                .arg(keys[i], 0, 16)
+                                .arg(keys[i + 1], 0, 16)
+                                .toStdString());
       }
     }
-    return "";
+    return util::Status::OK;
   }
 
-  QString setPort(QSerialPort* port) override {
+  util::Status setPort(QSerialPort* port) override {
     QMutexLocker lock(&lock_);
     port_ = port;
-    return "";
+    return util::Status::OK;
   }
 
   int totalBlocks() const override {
@@ -538,17 +540,24 @@ class FlasherImpl : public Flasher {
       // ESP8266 SDK code to properly boot the device.
       // TODO(imax): before reading from flash try to check if have the correct
       // params for the flash chip by its ID.
-      QByteArray params = readFlashParamsLocked();
+      util::StatusOr<QByteArray> r = readFlashParamsLocked();
+      if (!r.ok()) {
+        emit statusMessage(tr("Failed to read flash params: %1")
+                               .arg(r.status().error_message().c_str()),
+                           true);
+        emit done(tr("Failed to read flash params from the existing firmware"),
+                  false);
+      }
+      const QByteArray params = r.ValueOrDie();
       if (params.length() == 2) {
         emit statusMessage(
             tr("Current flash params bytes: %1").arg(QString(params.toHex())),
             true);
         flashParams = params[0] << 8 | params[1];
       } else {
-        emit statusMessage(tr("Failed to read flash params"), true);
-        emit done(tr("failed to read flash params from the existing firmware"),
-                  false);
-        return;
+        qCritical()
+            << "Flash params of unexpected length (want 2 bytes), ignored: "
+            << params.toHex();
       }
     }
 
@@ -615,12 +624,14 @@ class FlasherImpl : public Flasher {
             tr("Writing %1 bytes @ 0x%2").arg(data.size()).arg(addr, 0, 16),
             true);
         int bytes_written = 0;
-        success = writeFlashLocked(addr, data, &bytes_written);
+        util::Status s = writeFlashLocked(addr, data, &bytes_written);
+        success = s.ok();
         if (success) break;
         // Must resume at the nearest 4K boundary, otherwise erasing will fail.
         const int progress = bytes_written - bytes_written % flashBlockSize;
         // Only fail if we made no progress at all after 3 attempts.
         if (progress > 0) attempts = 2;
+        qCritical() << s.ToString().c_str();
         qCritical() << "Failed to write image at" << hex << showbase << addr
                     << "," << dec << attempts << "attempts left";
         offset += progress;
@@ -642,9 +653,11 @@ class FlasherImpl : public Flasher {
         rebootIntoFirmware(port_);
         break;
       default:
-        if (!leaveFlashingModeLocked()) {
+        util::Status s = leaveFlashingModeLocked();
+        if (!s.ok()) {
+          qCritical() << s.ToString().c_str();
           emit done(
-              tr("failed to leave flashing mode. Most likely flashing was "
+              tr("Failed to leave flashing mode. Most likely flashing was "
                  "successful, but you need to reboot your device manually."),
               false);
           return;
@@ -702,16 +715,16 @@ class FlasherImpl : public Flasher {
     }
   }
 
-  bool writeFlashLocked(ulong addr, const QByteArray& bytes,
-                        int* bytes_written) {
+  util::Status writeFlashLocked(ulong addr, const QByteArray& bytes,
+                                int* bytes_written) {
     const ulong blocks = bytes.length() / writeBlockSize +
                          (bytes.length() % writeBlockSize == 0 ? 0 : 1);
     *bytes_written = 0;
     qDebug() << "Writing" << blocks << "blocks at" << hex << showbase << addr;
     emit statusMessage(tr("Erasing flash at 0x%1...").arg(addr, 0, 16));
-    if (!writeFlashStartLocked(addr, blocks)) {
-      qCritical() << "Failed to start flashing";
-      return false;
+    auto s = writeFlashStartLocked(addr, blocks);
+    if (!s.ok()) {
+      return s;
     }
     for (ulong start = 0; start < ulong(bytes.length());
          start += writeBlockSize) {
@@ -725,18 +738,22 @@ class FlasherImpl : public Flasher {
       emit statusMessage(tr("Writing block %1 @ 0x%2...")
                              .arg(block_num)
                              .arg(addr + start, 0, 16));
-      if (!writeFlashBlockLocked(block_num, data)) {
-        qDebug() << "Failed to write block" << start / writeBlockSize;
-        return false;
+      s = writeFlashBlockLocked(block_num, data);
+      if (!s.ok()) {
+        return util::Status(s.error_code(),
+                            QString("Failed to write block %1: %2")
+                                .arg(start / writeBlockSize)
+                                .arg(s.ToString().c_str())
+                                .toStdString());
       }
       written_blocks_++;
       emit progress(written_blocks_);
       *bytes_written += data.length();
     }
-    return true;
+    return util::Status::OK;
   }
 
-  bool writeFlashStartLocked(ulong addr, ulong blocks) {
+  util::Status writeFlashStartLocked(ulong addr, ulong blocks) {
     QByteArray payload;
     QDataStream s(&payload, QIODevice::WriteOnly);
     s.setByteOrder(QDataStream::LittleEndian);
@@ -750,13 +767,14 @@ class FlasherImpl : public Flasher {
     writeCommand(port_, 0x02, payload);
     const auto resp = readResponse(port_, 30000);
     if (!resp.ok()) {
-      qDebug() << "Failed to enter flashing mode." << resp.error();
-      return false;
+      return util::Status(
+          util::error::ABORTED,
+          ("Failed to enter flashing mode, " + resp.error()).toStdString());
     }
-    return true;
+    return util::Status::OK;
   }
 
-  bool writeFlashBlockLocked(int seq, const QByteArray& bytes) {
+  util::Status writeFlashBlockLocked(int seq, const QByteArray& bytes) {
     QByteArray payload;
     QDataStream s(&payload, QIODevice::WriteOnly);
     s.setByteOrder(QDataStream::LittleEndian);
@@ -765,13 +783,12 @@ class FlasherImpl : public Flasher {
     writeCommand(port_, 0x03, payload, checksum(bytes));
     const auto resp = readResponse(port_, 10000);
     if (!resp.ok()) {
-      qDebug() << "Failed to write flash block." << resp.error();
-      return false;
+      return util::Status(util::error::ABORTED, resp.error().toStdString());
     }
-    return true;
+    return util::Status::OK;
   }
 
-  bool leaveFlashingModeLocked() {
+  util::Status leaveFlashingModeLocked() {
     QByteArray payload("\x01\x00\x00\x00", 4);
     writeCommand(port_, 0x04, payload);
     const auto resp = readResponse(port_, 10000);
@@ -779,17 +796,21 @@ class FlasherImpl : public Flasher {
       qDebug() << "Failed to leave flashing mode." << resp.error();
       if (erase_bug_workaround_) {
         // Error here is expected, Espressif's esptool.py ignores it as well.
-        return true;
+        return util::Status::OK;
       }
-      return false;
+      return util::Status(util::error::ABORTED, resp.error().toStdString());
     }
-    return true;
+    return util::Status::OK;
   }
 
   util::StatusOr<QByteArray> readFlashLocked(ulong offset, ulong len) {
     // Init flash.
-    if (!writeFlashStartLocked(0, 0)) {
-      return util::Status(util::error::ABORTED, "failed to initialize flash");
+    util::Status status = writeFlashStartLocked(0, 0);
+    if (!status.ok()) {
+      return util::Status(util::error::ABORTED,
+                          QString("Failed to initialize flash: %1")
+                              .arg(status.ToString().c_str())
+                              .toStdString());
     }
 
     QByteArray stub;
@@ -854,18 +875,16 @@ class FlasherImpl : public Flasher {
   // readFlashParamsLocked puts a snippet of code in the RAM and executes it.
   // You need to reboot the device again after that to talk to the bootloader
   // again.
-  QByteArray readFlashParamsLocked() {
+  util::StatusOr<QByteArray> readFlashParamsLocked() {
     auto res = readFlashLocked(0, 4);
     if (!res.ok()) {
-      qCritical() << "Reading flash params failed: "
-                  << res.status().ToString().c_str();
-      return QByteArray();
+      return res.status();
     }
 
     QByteArray r = res.ValueOrDie();
     if (r[0] != (char) 0xE9) {
-      qDebug() << "Read image doesn't seem to have the proper header.";
-      return QByteArray();
+      return util::Status(util::error::UNKNOWN,
+                          "Read image doesn't seem to have the proper header");
     }
     return r.mid(2, 2);
   }
