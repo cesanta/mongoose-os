@@ -340,69 +340,6 @@ static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_string(v7, conf.ssid, strlen(conf.ssid), 1);
 }
 
-/*
- * Returns an object describing the free memory.
- *
- * sysfree: free system heap bytes
- * jssize: size of JS heap in bytes
- * jsfree: free JS heap bytes
- * strres: size of reserved string heap in bytes
- * struse: portion of string heap with used data
- * objnfree: number of free object slots in js heap
- * propnfree: number of free property slots in js heap
- * funcnfree: number of free function slots in js heap
- */
-static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  /* take a snapshot of the stats that would change as we populate the result */
-  int sysfree = system_get_free_heap_size();
-  int jssize = v7_heap_stat(v7, V7_HEAP_STAT_HEAP_SIZE);
-  int jsfree = jssize - v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED);
-  int strres = v7_heap_stat(v7, V7_HEAP_STAT_STRING_HEAP_RESERVED);
-  int struse = v7_heap_stat(v7, V7_HEAP_STAT_STRING_HEAP_USED);
-  int objfree = v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE);
-  int propnfree = v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE);
-  v7_val_t f = v7_create_undefined();
-  v7_own(v7, &f);
-  f = v7_create_object(v7);
-
-  v7_set(v7, f, "sysfree", ~0, 0, v7_create_number(sysfree));
-  v7_set(v7, f, "jssize", ~0, 0, v7_create_number(jssize));
-  v7_set(v7, f, "jsfree", ~0, 0, v7_create_number(jsfree));
-  v7_set(v7, f, "strres", ~0, 0, v7_create_number(strres));
-  v7_set(v7, f, "struse", ~0, 0, v7_create_number(struse));
-  v7_set(v7, f, "objfree", ~0, 0, v7_create_number(objfree));
-  v7_set(v7, f, "objncell", ~0, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE)));
-  v7_set(v7, f, "propnfree", ~0, 0, v7_create_number(propnfree));
-  v7_set(v7, f, "propncell", ~0, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_CELL_SIZE)));
-  v7_set(v7, f, "funcnfree", ~0, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE)));
-  v7_set(v7, f, "funcncell", ~0, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE)));
-  v7_set(v7, f, "astsize", ~0, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
-
-  v7_set(v7, f, "owned", ~0, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED)));
-  v7_set(v7, f, "owned_max", ~0, 0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED_MAX)));
-
-  v7_disown(v7, &f);
-  return f;
-}
-
-/*
- * Force a pass of the garbage collector.
- */
-static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  (void) this_obj;
-  (void) args;
-
-  v7_gc(v7, 1);
-  return v7_create_undefined();
-}
-
 #if V7_ESP_ENABLE__DHT11
 
 static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -499,7 +436,6 @@ static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * Crashes the process/CPU. Useful to attach a debugger until we have
  * breakpoints.
  */
-
 static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   (void) v7;
   (void) this_obj;
@@ -600,7 +536,7 @@ void init_conf(struct v7 *v7) {
 
 void init_v7(void *stack_base) {
   struct v7_create_opts opts;
-  v7_val_t wifi, dht11, gc, debug;
+  v7_val_t wifi, dht11, debug;
 
   opts.object_arena_size = 164;
   opts.function_arena_size = 26;
@@ -634,11 +570,6 @@ void init_v7(void *stack_base) {
   v7_set(v7, v7_get_global_object(v7), "DHT11", 5, 0, dht11);
   v7_set_method(v7, dht11, "read", DHT11_read);
 #endif /* V7_ESP_ENABLE__DHT11 */
-
-  gc = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "GC", 2, 0, gc);
-  v7_set_method(v7, gc, "stat", GC_stat);
-  v7_set_method(v7, gc, "gc", GC_gc);
 
   debug = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Debug", 5, 0, debug);
