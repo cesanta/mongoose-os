@@ -1,14 +1,18 @@
-#include "ets_sys.h"
-#include "osapi.h"
-#include "gpio.h"
-#include "os_type.h"
-#include "user_interface.h"
-#include "v7.h"
-#include "sha1.h"
-#include "mem.h"
-#include "espconn.h"
+#include <ets_sys.h>
+#include <osapi.h>
+#include <gpio.h>
+#include <os_type.h>
+#include <user_interface.h>
+#include <v7.h>
+#include <sha1.h>
+#include <mem.h>
+#include <espconn.h>
 #include <math.h>
 #include <stdlib.h>
+
+#include <sj_hal.h>
+#include <sj_v7_ext.h>
+#include <sj_conf.h>
 
 #include "v7_esp.h"
 #include "dht11.h"
@@ -19,8 +23,6 @@
 #include "v7_i2c_js.h"
 #include "v7_gpio_js.h"
 #include "v7_hspi_js.h"
-#include <sj_hal.h>
-#include <sj_v7_ext.h>
 
 struct v7 *v7;
 
@@ -403,93 +405,18 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
-/*
- * returns the content of a json file wrapped in parenthesis
- * so that they can be directly evaluated as js. Currently
- * we don't have a C JSON parse API.
- */
-char *read_json_file(const char *path) {
-  c_file_t fp;
-  char *p;
-  long file_size;
-
-  if ((fp = c_fopen(path, "r")) == INVALID_FILE) {
-    return NULL;
-  } else if ((file_size = v7_get_file_size(fp)) <= 0) {
-    c_fclose(fp);
-    return NULL;
-  } else if ((p = (char *) calloc(1, (size_t) file_size + 3)) == NULL) {
-    c_fclose(fp);
-    return NULL;
-  } else {
-    c_rewind(fp);
-    if ((c_fread(p + 1, 1, (size_t) file_size, fp) < (size_t) file_size) &&
-        c_ferror(fp)) {
-      c_fclose(fp);
-      return NULL;
-    }
-    c_fclose(fp);
-    p[0] = '(';
-    p[file_size + 1] = ')';
-    return p;
-  }
-}
-
-v7_val_t load_conf(struct v7 *v7, const char *name) {
-  v7_val_t res;
-  char *f;
-  enum v7_err err;
-  f = read_json_file(name);
-  if (f == NULL) {
-    printf("cannot read %s\n", name);
-    return v7_create_object(v7);
-  }
-  err = v7_exec(v7, &res, f);
-  free(f);
-  if (err != V7_OK) {
-    v7_println(v7, res);
-    return v7_create_object(v7);
-  }
-  return res;
-}
-
-void init_conf(struct v7 *v7) {
-  int i;
-  size_t len;
-  SHA1_CTX ctx;
+void esp_init_conf(struct v7 *v7) {
+  int valid;
   unsigned char sha[20];
-  const char *names[] = {"sys.json", "user.json"};
-  v7_val_t conf = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "conf", ~0, 0, conf);
-
-  len = strnlen(V7_DEV_CONF_STR, 0x1000 - 20);
+  SHA1_CTX ctx;
   SHA1Init(&ctx);
-  SHA1Update(&ctx, (unsigned char *) V7_DEV_CONF_STR, len);
+  SHA1Update(&ctx, (unsigned char *) V7_DEV_CONF_STR,
+             strnlen(V7_DEV_CONF_STR, 0x1000 - 20));
   SHA1Final(sha, &ctx);
 
-  if (memcmp(V7_DEV_CONF_SHA1, sha, 20) == 0) {
-    v7_val_t res;
-    enum v7_err err;
-    char *f = (char *) malloc(len + 3);
-    strcpy(f + 1, V7_DEV_CONF_STR);
-    f[0] = '(';
-    f[len + 1] = ')';
-    f[len + 2] = '\0';
-    /* TODO(mkm): simplify when we'll have a C json parse API */
-    err = v7_exec(v7, &res, f);
-    free(f);
-    if (err != V7_OK) {
-      printf("exc parsing dev conf: ", f);
-      v7_println(v7, res);
-    } else {
-      v7_set(v7, conf, "dev", ~0, 0, res);
-    }
-  }
+  valid = (memcmp(V7_DEV_CONF_SHA1, sha, 20) == 0);
 
-  for (i = 0; i < (int) sizeof(names) / sizeof(names[0]); i++) {
-    const char *name = names[i];
-    v7_set(v7, conf, name, strlen(name) - 5, 0, load_conf(v7, name));
-  }
+  sj_init_conf(v7, valid ? V7_DEV_CONF_STR : NULL);
 }
 
 void init_v7(void *stack_base) {
@@ -539,9 +466,9 @@ void init_v7(void *stack_base) {
   init_gpiojs(v7);
   init_hspijs(v7);
 
-  v7_gc(v7, 1);
+  esp_init_conf(v7);
 
-  init_conf(v7);
+  v7_gc(v7, 1);
 }
 
 #ifndef V7_NO_FS

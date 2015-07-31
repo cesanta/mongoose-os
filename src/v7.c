@@ -11302,11 +11302,8 @@ enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
 }
 
 #ifndef NO_LIBC
-/*
- * Note: this function is intended only for v7_exec_file
- * It is move file pointer to the end of file
- */
-static int v7_get_file_size(c_file_t fp) {
+/* Note: this function move file pointer to the end of file */
+int v7_get_file_size(c_file_t fp) {
   int res = -1;
   if (c_fseek(fp, 0, SEEK_END) == 0) {
     res = c_ftell(fp);
