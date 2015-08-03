@@ -17,7 +17,6 @@
 #include "v7_esp.h"
 #include "dht11.h"
 #include "util.h"
-#include "v7_version.h"
 #include "v7_esp_features.h"
 #include "v7_uart.h"
 #include "v7_i2c_js.h"
@@ -429,9 +428,6 @@ void init_v7(void *stack_base) {
   opts.c_stack_base = stack_base;
 
   v7 = v7_create_opt(opts);
-
-  v7_set(v7, v7_get_global_object(v7), "version", 7, 0,
-         v7_create_string(v7, v7_version, strlen(v7_version), 1));
 
   v7_set_method(v7, v7_get_global_object(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global_object(v7), "crash", crash);

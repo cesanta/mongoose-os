@@ -94,8 +94,8 @@ CFLAGS = -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
 .PHONY: all clean
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-SRCS = $(APP_SRCS) v7_version.c
-OBJS = $(APP_OBJS) $(BUILD_DIR)/v7_version.o
+SRCS = $(APP_SRCS) sj_version.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 APP_OUT = $(BUILD_DIR)/$(APP).out
@@ -189,12 +189,12 @@ $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 	@$(compile)
 
 # Generate version. Only regenrates if there are changes in objects.
-$(BUILD_DIR)/v7_version.c: $(APP_OBJS)
+$(BUILD_DIR)/sj_version.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
 	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
 	SHA=$$(git rev-parse HEAD | head -c 8); \
   DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
-  echo "const char *v7_version = \"$$REF/$$DATE/$$SHA\";" > $@
+  echo "const char *sj_version = \"ESP8266-$$REF/$$DATE/$$SHA\";" > $@
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

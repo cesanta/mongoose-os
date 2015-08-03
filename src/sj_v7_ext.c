@@ -1,5 +1,8 @@
+#include <string.h>
 #include <v7.h>
 #include "sj_hal.h"
+
+extern const char *sj_version;
 
 static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t result = v7_create_object(v7);
@@ -147,6 +150,9 @@ static v7_val_t global_set_timeout(struct v7 *v7, v7_val_t this_obj,
 
 void sj_init_v7_ext(struct v7 *v7) {
   v7_val_t os, gc;
+
+  v7_set(v7, v7_get_global_object(v7), "version", 7, 0,
+         v7_create_string(v7, sj_version, strlen(sj_version), 1));
 
   v7_set_method(v7, v7_get_global_object(v7), "usleep", global_usleep);
   v7_set_method(v7, v7_get_global_object(v7), "setTimeout", global_set_timeout);
