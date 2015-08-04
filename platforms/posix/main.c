@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "smartjs.h"
 
 void run_file(const char *file_name) {

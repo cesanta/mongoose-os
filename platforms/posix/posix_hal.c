@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
+#include <sj_v7_ext.h>
 
 size_t sj_get_free_heap_size() {
   /* TODO(alashkin): What kind of free memory we want to see? */

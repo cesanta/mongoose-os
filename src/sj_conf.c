@@ -3,6 +3,11 @@
 #include <v7.h>
 
 /*
+ * TODO(alashkin): add function sj_get_file_size to HAL interface
+ *  and remove v7_get_file_size from everywhere
+ */
+int v7_get_file_size(c_file_t fp);
+/*
  * returns the content of a json file wrapped in parenthesis
  * so that they can be directly evaluated as js. Currently
  * we don't have a C JSON parse API.
@@ -14,10 +19,6 @@ static char *read_json_file(const char *path) {
 
   if ((fp = c_fopen(path, "r")) == INVALID_FILE) {
     return NULL;
-    /*
-     * TODO(alashkin): add function sj_get_file_size to HAL interface
-     *  and remove v7_get_file_size from everywhere
-     */
   } else if ((file_size = v7_get_file_size(fp)) <= 0) {
     c_fclose(fp);
     return NULL;
