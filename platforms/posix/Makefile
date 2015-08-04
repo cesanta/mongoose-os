@@ -11,7 +11,8 @@ LD = gcc
 V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH)
-APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c
+APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
+			sj_simple_http.c
 
 CFLAGS ?= -O2 -Wall -D_BSD_SOURCE $(V7_FEATURES) -Wno-unused-function
 ADD_LIBS = m rt

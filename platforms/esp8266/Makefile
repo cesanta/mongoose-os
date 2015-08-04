@@ -16,7 +16,7 @@ APP = smartjs
 
 APP_MODULES := user spiffs
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            sj_prompt.c v7.c sj_v7_ext.c sj_conf.c
+            sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c
 
 VPATH = $(APP_MODULES) $(V7_PATH) $(SMARTJS_PATH)/src
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)

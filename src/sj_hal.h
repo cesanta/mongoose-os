@@ -26,4 +26,8 @@ void sj_usleep(int usecs);
 /* Setup timer with msecs timeout and cb as a callback */
 void sj_set_timeout(int msecs, v7_val_t *cb);
 
+/* Make HTTP call, 0/1 - error/success */
+int sj_http_call(struct v7 *v7, const char *url, const char *body,
+                 size_t body_len, const char *method, v7_val_t cb);
+
 #endif /* __SMARTJS_HAL_H_ */

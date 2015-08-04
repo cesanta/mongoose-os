@@ -455,7 +455,7 @@ void init_v7(void *stack_base) {
   v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);
 
-  v7_init_http_client(v7);
+  sj_init_simple_http_client(v7);
 
   sj_init_v7_ext(v7);
   init_i2cjs(v7);
