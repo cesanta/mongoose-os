@@ -2378,6 +2378,8 @@ V7_PRIVATE int calc_llen(size_t len);
  * All rights reserved
  */
 
+#ifndef EXCLUDE_COMMON
+
 #include <assert.h>
 #include <string.h>
 
@@ -2457,6 +2459,8 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
     mb->len -= n;
   }
 }
+
+#endif /* EXCLUDE_COMMON */
 /*
  * The authors of this software are Rob Pike and Ken Thompson.
  *              Copyright (c) 2002 by Lucent Technologies.
@@ -2470,6 +2474,9 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
  * ANY REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
+ 
+#ifndef EXCLUDE_COMMON
+
 #ifndef NO_LIBC
 #include <ctype.h>
 #endif
@@ -3811,10 +3818,14 @@ char *utfnshift(char *s, long m) {
 }
 
 #endif /* V7_ENABLE__UTF */
+
+#endif /* EXCLUDE_COMMON */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
+
+#ifndef EXCLUDE_COMMON
 
 
 void cs_base64_encode(const unsigned char *src, int src_len, char *dst) {
@@ -3900,6 +3911,8 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
   *dst = 0;
   return orig_len - len;
 }
+
+#endif /* EXCLUDE_COMMON */
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -3917,7 +3930,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
  * will fill a supplied 16-byte array with the digest.
  */
 
-#ifndef DISABLE_MD5
+#if !defined(DISABLE_MD5) && !defined(EXCLUDE_COMMON)
 
 
 static void byteReverse(unsigned char *buf, unsigned longs) {
@@ -4103,11 +4116,12 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
-#endif
+
+#endif /* EXCLUDE_COMMON */
 /* Copyright(c) By Steve Reid <steve@edmweb.com> */
 /* 100% Public Domain */
 
-#ifndef DISABLE_SHA1
+#if !defined(DISABLE_SHA1) && !defined(EXCLUDE_COMMON)
 
 
 #define SHA1HANDSOFF
@@ -4350,11 +4364,14 @@ void hmac_sha1(const unsigned char *key, size_t keylen,
   SHA1Update(&ctx, out, 20);
   SHA1Final(out, &ctx);
 }
-#endif
+
+#endif /* EXCLUDE_COMMON */
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
  */
+
+#ifndef EXCLUDE_COMMON
 
 
 #define C_SNPRINTF_APPEND_CHAR(ch)       \
@@ -4557,10 +4574,14 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
   }
 }
 #endif /* _WIN32 */
+
+#endif /* EXCLUDE_COMMON */
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
  */
+
+#ifndef EXCLUDE_COMMON
 
 
 /*
@@ -4642,6 +4663,8 @@ struct dirent *readdir(DIR *dir) {
   return result;
 }
 #endif
+
+#endif /* EXCLUDE_COMMON */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -14675,13 +14698,7 @@ DEFINE_WRAPPER(tan, m_one_arg)
 
 #if V7_ENABLE__Math__random
 V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
-  static int srand_called = 0;
-
-  if (!srand_called) {
-    srand((unsigned) (unsigned long) v7);
-    srand_called++;
-  }
-
+  (void) v7;
   (void) this_obj;
   (void) args;
   return v7_create_number((double) rand() / RAND_MAX);
@@ -14761,6 +14778,11 @@ V7_PRIVATE void init_math(struct v7 *v7) {
   set_cfunc_prop(v7, math, "pow", Math_pow);
 #endif
 #if V7_ENABLE__Math__random
+  /* Incorporate our pointer into the RNG.
+   * If srand() has not been called before, this will provide some randomness.
+   * If it has, it will hopefully not make things worse.
+   */
+  srand(rand() ^ ((intptr_t) v7));
   set_cfunc_prop(v7, math, "random", Math_random);
 #endif
 #if V7_ENABLE__Math__round
