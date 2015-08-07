@@ -1,4 +1,3 @@
-#include "smartjs.h"
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,13 +9,10 @@
 #include <sj_conf.h>
 #include <string.h>
 
-struct v7 *v7;
+#include "smartjs.h"
+#include "posix_http_client.h"
 
-/* TODO(lsm): implement this */
-int sj_http_call(struct v7 *v7, const char *url, const char *body,
-                 size_t body_len, const char *method, v7_val_t cb) {
-  return 0;
-}
+struct v7 *v7;
 
 void init_conf(struct v7 *v7) {
   /* TODO(alashkin): make the filename overridable */
@@ -50,11 +46,14 @@ cleanup:
   }
 }
 
-void init_v7() {
+void init_smartjs() {
   struct v7_create_opts opts = {0, 0, 0};
 
   v7 = v7_create_opt(opts);
 
   sj_init_v7_ext(v7);
   init_conf(v7);
+
+  init_fossa();
+  sj_init_simple_http_client(v7);
 }

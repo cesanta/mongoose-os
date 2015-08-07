@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "smartjs.h"
+#include "posix_http_client.h"
 
 void run_file(const char *file_name) {
   v7_val_t res;
@@ -42,7 +43,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  init_v7();
+  init_smartjs();
 
   run_startups();
 
@@ -54,7 +55,19 @@ int main(int argc, char *argv[]) {
     run_expr(exprs[i]);
   }
 
+  /* Main loop here */
+  while (1) {
+    /*
+     * Now waiting until fossa has active connections and then exiting
+     * TODO(alashkin): change this to something smart
+     */
+    if (!poll_fossa()) {
+      break;
+    }
+  }
+
   v7_destroy(v7);
+  destroy_fossa();
 
   return 0;
 }

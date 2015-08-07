@@ -15,7 +15,7 @@ INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c
 
-CFLAGS ?= -O2 -Wall -D_BSD_SOURCE $(V7_FEATURES) -Wno-unused-function
+CFLAGS ?= -O2 -Wall -g -D_BSD_SOURCE $(V7_FEATURES) -Wno-unused-function
 ADD_LIBS = m
 
 ifeq ($(OS),Windows_NT)

@@ -19,6 +19,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <sj_v7_ext.h>
+
 #include "util.h"
 #include "v7_esp.h"
 
@@ -78,7 +80,7 @@ static void http_connect_cb(void *arg) {
   } else {
     /* TODO(alashkin): should we handle \0 in the middle of the body? */
     const char *const reqfmt =
-        "POST %s HTTP/1.0\r\ncontent-length: %d\r\n\r\n%s";
+        "POST %s HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s";
     size_t body_len = strlen(ctx->body_a);
     /* some space for content length and zero terminator */
     int buflen = strlen(ctx->path) + strlen(reqfmt) + body_len + 10;
@@ -97,10 +99,8 @@ static void http_connect_cb(void *arg) {
 static void http_disconnect_cb(void *arg) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
-  v7_val_t data, cb_args;
   char *body;
   int i;
-  v7_val_t res;
 
   body = ctx->resp;
   for (i = 0; i + 3 < ctx->resp_pos; i++) {
@@ -110,43 +110,18 @@ static void http_disconnect_cb(void *arg) {
     }
   }
 
-  cb_args = v7_create_object(v7);
-  v7_own(v7, &cb_args);
-
-  data = v7_create_string(v7, body, ctx->resp_pos - (body - ctx->resp), 1);
-  v7_own(v7, &data);
+  sj_http_success_callback(v7, ctx->cb, body,
+                           ctx->resp_pos - (body - ctx->resp));
   http_free(conn);
-
-  v7_array_set(v7, cb_args, 0, ctx->cb);
-  v7_array_set(v7, cb_args, 1, data);
-  v7_disown(v7, &data);
-
-  if (v7_exec_with(v7, &res, "this[0](this[1])", cb_args) != V7_OK) {
-    v7_fprintln(stderr, v7, res);
-  }
-  v7_disown(v7, &cb_args);
-  v7_disown(v7, &ctx->cb);
 }
 
 /* Invoke user callback as cb(undefined, err_msg) */
 static void http_error_cb(void *arg, int8_t err) {
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
-  char err_msg[128];
-  v7_val_t res, cb_args;
 
-  cb_args = v7_create_object(v7);
-  v7_own(v7, &cb_args);
-
-  snprintf(err_msg, sizeof(err_msg), "connection error: %d\n", err);
-  v7_array_set(v7, cb_args, 0, ctx->cb);
-  v7_array_set(v7, cb_args, 1,
-               v7_create_string(v7, err_msg, sizeof(err_msg), 1));
+  sj_http_error_callback(v7, ctx->cb, err);
   http_free(conn);
-  if (v7_exec_with(v7, &res, "this[0](undefined, this[1])", cb_args) != V7_OK) {
-    v7_fprintln(stderr, v7, res);
-  }
-  v7_disown(v7, &cb_args);
 }
 
 /*

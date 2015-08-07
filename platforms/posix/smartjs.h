@@ -4,6 +4,6 @@
 #include <v7.h>
 
 extern struct v7 *v7;
-void init_v7();
+void init_smartjs();
 
 #endif
