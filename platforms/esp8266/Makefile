@@ -3,6 +3,7 @@ SDK_PATH ?= /opt/Espressif/ESP8266_SDK
 V7_PATH ?= ../../src
 COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
+KRYPTON_PATH ?= ../../../krypton
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
@@ -13,6 +14,8 @@ TOOLS_DIR = tools
 FW_DIR = firmware
 FS_DIR = fs
 APP = smartjs
+# SSL can be SDK or Krypton
+SSL ?= None
 
 APP_MODULES := user spiffs
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
@@ -93,6 +96,17 @@ CFLAGS = -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
 
 .PHONY: all clean
 
+ifeq "$(SSL)" "SDK"
+FEATURES += -DESP_SSL_SDK
+APP_LIBS += ssl
+else ifeq "$(SSL)" "Krypton"
+IPATH += $(KRYPTON_PATH)
+VPATH += $(KRYPTON_PATH)
+APP_SRCS += krypton.c
+FEATURES += -DESP_SSL_KRYPTON
+#-DKRYPTON_DEBUG -DESP_SSL_KRYPTON_DEBUG
+endif
+
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 SRCS = $(APP_SRCS) sj_version.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
@@ -146,7 +160,7 @@ endef
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
 $(APP_OUT): $(APP_AR) $(SYMCHECK_FLAG)
-	@$(link)
+	$(link)
 
 # Symbol check: make sure app doesn't override SDK lib symbols.
 # A target is created that uses the same libs but no user code and symbols are
@@ -157,7 +171,7 @@ $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
 	$(Q) touch $@
 
 $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o
-	@$(link)
+	$(link)
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
@@ -182,11 +196,11 @@ endef
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c
-	@$(compile)
+	$(compile)
 
 # This one is for generated sources in build directory.
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
-	@$(compile)
+	$(compile)
 
 # Generate version. Only regenrates if there are changes in objects.
 $(BUILD_DIR)/sj_version.c: $(APP_OBJS)

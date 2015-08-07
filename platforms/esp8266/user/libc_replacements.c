@@ -10,6 +10,8 @@
 #include <limits.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
 
 #include "ets_sys.h"
 #include "os_type.h"
@@ -312,4 +314,60 @@ void abort(void) {
   *(int*) 1 = 1;
   while (1)
     ; /* avoid gcc warning because stdlib abort() has noreturn attribute */
+}
+
+uint32_t htonl(uint32_t hostlong) {
+  return ((hostlong & 0xff000000) >> 24) |
+         ((hostlong & 0x00ff0000) >> 8)  |
+         ((hostlong & 0x0000ff00) << 8)  |
+         ((hostlong & 0x000000ff) << 24);
+}
+
+uint16_t htons(uint16_t hostshort) {
+  return ((hostshort & 0xff00) >> 8) |
+         ((hostshort & 0x00ff) << 8);
+}
+
+uint16_t ntohs(uint16_t netshort) {
+  return htons(netshort);
+}
+
+uint32_t ntohl(uint32_t netlong) {
+  return htonl(netlong);
+}
+
+/* These are all dummy stubs. Some Newlib functions link them in for
+ * stdin/stdout, but as far as I can tell they're not used by us. */
+int _close_r(struct _reent *r, int fd) {
+  return 0;
+}
+
+int _open_r(struct _reent *r, const char *n, int f, int m) {
+  return -1;
+}
+
+int _fstat_r (struct _reent *r, int fd, struct stat *s) {
+  return -1;
+}
+
+_ssize_t _read_r (struct _reent *r, int fd, void *buf, size_t len) {
+  return -1;
+}
+
+_ssize_t _write_r (struct _reent *r, int fd, void *buf, size_t len) {
+  return -1;
+}
+
+void *_sbrk_r (struct _reent *r, ptrdiff_t p) {
+  return NULL;
+}
+
+_off_t _lseek_r (struct _reent *r, int fd, _off_t where, int how) {
+  return 0;
+}
+
+int _gettimeofday_r (struct _reent *r, struct timeval *tp, void *tzp) {
+  tp->tv_sec = 42;
+  tp->tv_usec = 123;
+  return 0;
 }

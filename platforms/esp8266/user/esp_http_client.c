@@ -24,6 +24,16 @@
 #include "util.h"
 #include "v7_esp.h"
 
+#ifdef ESP_SSL_KRYPTON
+#include "esp_ssl_krypton.h"
+#elif defined(ESP_SSL_SDK)
+/* Symbols required by axTLS but not used by us. */
+unsigned char *default_certificate;
+unsigned int default_certificate_len = 0;
+unsigned char *default_private_key;
+unsigned int default_private_key_len = 0;
+#endif
+
 /*
  * TODO(alashkin): change all big (1024?) arrays to mbuf
  */
@@ -31,6 +41,7 @@ struct http_ctx {
   esp_tcp tcp;
   v7_val_t cb;
   char body_a[1024];
+  char is_secure;
   const char *method;
   char host[256];
   int port;
@@ -88,10 +99,16 @@ static void http_connect_cb(void *arg) {
     snprintf(buf, buflen, reqfmt, ctx->path, (int) body_len, ctx->body_a);
   }
 
-  espconn_regist_recvcb(conn, http_recv_cb);
-  espconn_regist_sentcb(conn, http_sent_cb);
+  if (ctx->is_secure) {
+#ifdef ESP_SSL_KRYPTON
+    kr_secure_sent(conn, buf, strlen(buf));
+#elif defined(ESP_SSL_SDK)
+    espconn_secure_sent(conn, buf, strlen(buf));
+#endif
+  } else {
+    espconn_sent(conn, buf, strlen(buf));
+  }
 
-  espconn_sent(conn, buf, strlen(buf));
   free(buf);
 }
 
@@ -155,7 +172,19 @@ static void http_get_dns_cb(const char *name, ip_addr_t *ipaddr, void *arg) {
     espconn_regist_connectcb(conn, http_connect_cb);
     espconn_regist_disconcb(conn, http_disconnect_cb);
     espconn_regist_reconcb(conn, http_error_cb);
-    espconn_connect(conn);
+    espconn_regist_recvcb(conn, http_recv_cb);
+    espconn_regist_sentcb(conn, http_sent_cb);
+
+    if (ctx->is_secure) {
+#ifdef ESP_SSL_KRYPTON
+      kr_secure_connect(conn);
+#elif defined(ESP_SSL_SDK)
+      espconn_secure_set_size(1, 5120);  /* 5k buffer for client */
+      espconn_secure_connect(conn);
+#endif
+    } else {
+      espconn_connect(conn);
+    }
   }
 }
 
@@ -164,27 +193,39 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
   const char *sep;
   char *psep;
 
-  struct espconn *client;
-  struct http_ctx *ctx;
+  struct espconn *client = NULL;
+  struct http_ctx *ctx = NULL;
 
-  client = (struct espconn *) malloc(sizeof(struct espconn));
+  client = (struct espconn *) calloc(1, sizeof(*client));
   if (client == NULL) {
     printf("malloc failed Http_get\n");
-    return v7_create_undefined();
+    goto err;
   }
-
   client->type = ESPCONN_TCP;
   client->state = ESPCONN_NONE;
-  ctx = (struct http_ctx *) calloc(sizeof(struct http_ctx), 1);
+  ctx = (struct http_ctx *) calloc(1, sizeof(*ctx));
   if (ctx == NULL) {
     printf("malloc failed Http_get\n");
-    free(client);
-    return v7_create_undefined();
+    goto err;
   }
 
   client->proto.tcp = (esp_tcp *) ctx;
   if (memcmp(url, "http://", 7) == 0) {
     url += 7;
+    ctx->is_secure = 0;
+    ctx->port = 80;
+  } else if (memcmp(url, "https://", 8) == 0) {
+#if defined(ESP_SSL_KRYPTON) || defined(ESP_SSL_SDK)
+    url += 8;
+    ctx->is_secure = 1;
+    ctx->port = 443;
+#else
+    printf("HTTPS is not supported\n");
+    goto err;
+#endif
+  } else {
+    printf("unknown schema\n");
+    goto err;
   }
   ctx->host[0] = ctx->path[0] = '\0';
 
@@ -200,7 +241,6 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
   strcpy(ctx->path, sep);
   if (strlen(sep) == 0) strcpy(ctx->path, "/");
 
-  ctx->port = 80;
   if ((psep = strchr(ctx->host, ':')) != NULL) {
     *psep++ = '\0'; /* chop off port from host */
     ctx->port = atoi(psep);
@@ -224,4 +264,9 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
   espconn_gethostbyname(client, ctx->host, &probably_dns_ip, http_get_dns_cb);
 
   return 1;
+
+err:
+  free(ctx);
+  free(client);
+  return 0;
 }

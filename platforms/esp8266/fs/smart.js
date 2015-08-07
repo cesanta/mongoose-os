@@ -44,7 +44,7 @@ Cloud.store = function(name,val,opts) {
     var d = this.mkreq("/v1/Metrics.Publish", args);
     delete b.__name__;
     args = b = null;
-    Http.post("http://api.cesanta.com:80", d, opts.cb || function() {});
+    Http.post("http://api.cesanta.com", d, opts.cb || function() {});
 }
 
 /* demo */

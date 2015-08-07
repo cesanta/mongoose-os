@@ -253,7 +253,7 @@ static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 void wifi_changed_cb(System_Event_t *evt) {
   v7_val_t args, cb, res;
 
-  if (wifi_setting_up && evt->event == 3) {
+  if (wifi_setting_up && evt->event == EVENT_STAMODE_GOT_IP) {
     struct station_config config;
     v7_val_t res;
     v7_val_t sys =
