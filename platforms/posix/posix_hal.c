@@ -1,13 +1,27 @@
 #include "smartjs.h"
+
 #include <stdlib.h>
-#include <unistd.h>
 #include <signal.h>
 #include <time.h>
 #include <sj_v7_ext.h>
 
+#ifdef _WIN32
+#else
+#include <unistd.h>
+#endif
+
 size_t sj_get_free_heap_size() {
+#if defined(_WIN32)
+  MEMORYSTATUSEX s;
+  s.dwLength = sizeof(s);
+  GlobalMemoryStatusEx(&s);
+  return (size_t) s.ullTotalPhys;
+#elif defined(_SC_PHYS_PAGES) && defined(_SC_PAGE_SIZE)
   /* TODO(alashkin): What kind of free memory we want to see? */
-  return sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE);
+  return sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+#else
+  return 0;
+#endif
 }
 
 void sj_wdt_feed() {
@@ -32,6 +46,7 @@ void posix_timer_callback(int sig, siginfo_t *si, void *uc) {
 }
 
 void sj_set_timeout(int msecs, v7_val_t *cb) {
+#if defined(SA_SIGINFO) && defined(CLOCK_REALTIME)
   struct sigevent te;
   struct itimerspec its;
   struct sigaction sa;
@@ -55,4 +70,8 @@ void sj_set_timeout(int msecs, v7_val_t *cb) {
   its.it_value.tv_nsec = (msecs % 1000) * 1000000;
 
   timer_settime(timer_id, 0, &its, NULL);
+#else
+  /* TODO(lsm): implement this */
+  (void) cb;
+#endif
 }

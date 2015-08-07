@@ -16,7 +16,15 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c
 
 CFLAGS ?= -O2 -Wall -D_BSD_SOURCE $(V7_FEATURES) -Wno-unused-function
-ADD_LIBS = m rt
+ADD_LIBS = m
+
+ifeq ($(OS),Windows_NT)
+else
+  UNAME_S := $(shell uname -s)
+  ifeq ($(UNAME_S),Linux)
+    ADD_LIBS += rt
+  endif
+endif
 
 ifeq ($(VERBOSE),1)
 Q :=
@@ -51,7 +59,7 @@ $(BUILD_DIR)/%.o: %.c
 
 $(BUILD_DIR)/fossa.o: fossa.c
 	$(compile) -DEXCLUDE_COMMON
-	
+
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 	$(compile)
 
@@ -66,7 +74,7 @@ $(BUILD_DIR)/sj_version.c: $(APP_SRCS)
 
 $(BIN_DIR)/$(OUTAPP): $(OBJS)
 	@echo "LD $@"
-	$(Q) $(LD) -Wl,--start-group $(LIBS) $(OBJS) -Wl,--end-group -o $@
+	$(Q) $(LD) $(OBJS) $(LIBS) -o $@
 
 clean:
 	$(Q) rm -rf $(BIN_DIR)/$(OUTAPP) $(BUILD_DIR)
