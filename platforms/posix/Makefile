@@ -6,16 +6,17 @@ BIN_DIR ?= ./bin
 BUILD_DIR ?= ./build
 OUTAPP ?= smartjs
 VERBOSE ?= 0
+SSL ?= OpenSSL
 
 CC = gcc
 LD = gcc
 V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats
+FOSSA_FEATURES =
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c
 
-CFLAGS ?= -O2 -Wall -g -D_BSD_SOURCE $(V7_FEATURES) -Wno-unused-function
 ADD_LIBS = m
 
 ifeq ($(OS),Windows_NT)
@@ -24,6 +25,10 @@ else
   ifeq ($(UNAME_S),Linux)
     ADD_LIBS += rt
   endif
+  ifeq "$(SSL)" "OpenSSL" 
+    FOSSA_FEATURES += -DNS_ENABLE_SSL
+    ADD_LIBS += ssl crypto
+  endif  
 endif
 
 ifeq ($(VERBOSE),1)
@@ -31,6 +36,8 @@ Q :=
 else
 Q := @
 endif
+
+CFLAGS ?= -O2 -Wall -g -D_BSD_SOURCE $(V7_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))

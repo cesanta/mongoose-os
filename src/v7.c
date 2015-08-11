@@ -9770,9 +9770,8 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
   }
 }
 
-static __attribute__((noinline)) val_t
-    i_eval_expr_common(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                       val_t scope) {
+static NOINLINE val_t
+i_eval_expr_common(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = v7_create_undefined(), v1 = v7_create_undefined();
   val_t v2 = v7_create_undefined();
@@ -14782,7 +14781,7 @@ V7_PRIVATE void init_math(struct v7 *v7) {
    * If srand() has not been called before, this will provide some randomness.
    * If it has, it will hopefully not make things worse.
    */
-  srand(rand() ^ ((intptr_t) v7));
+  srand(rand() ^ ((uintptr_t) v7));
   set_cfunc_prop(v7, math, "random", Math_random);
 #endif
 #if V7_ENABLE__Math__round
