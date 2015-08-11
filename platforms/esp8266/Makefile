@@ -83,7 +83,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
-CFLAGS = -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
+CFLAGS = -Wall -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
          -DICACHE_FLASH \
          -DFAST='__attribute__((section(".fast.text")))' \
@@ -103,7 +103,7 @@ else ifeq "$(SSL)" "Krypton"
 IPATH += $(KRYPTON_PATH)
 VPATH += $(KRYPTON_PATH)
 APP_SRCS += krypton.c
-FEATURES += -DESP_SSL_KRYPTON
+FEATURES += -DESP_SSL_KRYPTON -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1
 #-DKRYPTON_DEBUG -DESP_SSL_KRYPTON_DEBUG
 endif
 

@@ -25,18 +25,18 @@ void get_status(void *arg);
 #endif
 
 struct kr_conn {
-  struct espconn *ec;  /* The espconn we're associated with. */
-  int fd;  /* File descriptor, used by send and recv. */
+  struct espconn *ec; /* The espconn we're associated with. */
+  int fd;             /* File descriptor, used by send and recv. */
   SSL_CTX *ssl_ctx;
   SSL *ssl;
   union {
     unsigned int value;
     struct {
-      unsigned int want_read:1;
-      unsigned int want_write:1;
-      unsigned int connected:1;
-      unsigned int sending:1;
-      unsigned int receiving:1;
+      unsigned int want_read : 1;
+      unsigned int want_write : 1;
+      unsigned int connected : 1;
+      unsigned int sending : 1;
+      unsigned int receiving : 1;
     } f;
   } flags;
   int8_t error;
@@ -53,7 +53,7 @@ struct kr_conn {
   struct kr_conn *next;
 };
 
-static struct kr_conn* s_kr_conns;
+static struct kr_conn *s_kr_conns;
 static int s_kr_fd = 3;
 
 /* Connection list management functions. */
@@ -255,7 +255,7 @@ static void kr_connect_cb(void *arg) {
   struct kr_conn *kc = kr_find_conn((struct espconn *) arg);
   if (kc == NULL) return;
   dprintf(("connected, hf=%u\n", system_get_free_heap_size()));
-  
+
   kc->ssl_ctx = SSL_CTX_new(SSLv23_client_method());
   SSL_CTX_set_mode(kc->ssl_ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
   SSL_CTX_set_verify(kc->ssl_ctx, 0 /* no verification; TODO(rojer) */, NULL);
@@ -273,8 +273,8 @@ static void kr_connect_cb(void *arg) {
 static void kr_disconnect_cb(void *arg) {
   struct kr_conn *kc = kr_find_conn((struct espconn *) arg);
   if (kc == NULL) return;
-  dprintf(("kr_disconnect_cb, f=%u, hf=%u\n",
-           kc->flags.value, system_get_free_heap_size()));
+  dprintf(("kr_disconnect_cb, f=%u, hf=%u\n", kc->flags.value,
+           system_get_free_heap_size()));
 #ifdef ESP_SSL_KRYPTON_DEBUG
   os_timer_disarm(&status_timer);
 #endif
@@ -326,7 +326,8 @@ sint8 kr_secure_sent(struct espconn *ec, uint8 *psent, uint16 length) {
   struct kr_conn *kc = kr_find_conn(ec);
   if (kc == NULL) return ESPCONN_ARG;
   int ret = SSL_write(kc->ssl, psent, length);
-  dprintf(("SSL_write %d -> %d %d\n", length, ret, SSL_get_error(kc->ssl, ret)));
+  dprintf(
+      ("SSL_write %d -> %d %d\n", length, ret, SSL_get_error(kc->ssl, ret)));
   return ESPCONN_OK;
 }
 
@@ -337,5 +338,21 @@ void get_status(void *arg) {
   os_timer_arm(&status_timer, 1, 1);
 }
 #endif
+
+/* Defined in ROM, come from wpa_supplicant. */
+extern int md5_vector(size_t num_msgs, const u8 *msgs[], const size_t *msg_lens,
+                      uint8_t *digest);
+extern int sha1_vector(size_t num_msgs, const u8 *msgs[],
+                       const size_t *msg_lens, uint8_t *digest);
+
+void kr_hash_md5_v(size_t num_msgs, const uint8_t *msgs[],
+                   const size_t *msg_lens, uint8_t *digest) {
+  (void) md5_vector(num_msgs, msgs, msg_lens, digest);
+}
+
+void kr_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
+                    const size_t *msg_lens, uint8_t *digest) {
+  (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
+}
 
 #endif /* ESP_SSL_KRYPTON */
