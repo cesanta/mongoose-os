@@ -8,7 +8,7 @@ automation, healthcare, automotive, home automation, or other.
 
 Take a look at 2 minute video that shows Smart.js in action:
 
-[![Smart.js in action](https://cesanta.com/images/Smart.js.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
+[![Smart.js in action](https://docs.cesanta.com/images/Smart.js.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
 
 # Quick start guide
 
@@ -23,10 +23,10 @@ Take a look at 2 minute video that shows Smart.js in action:
    to the device, prints generated ID and password, boot messages,
    and shows an interactive JavaScript prompt. Two numbers shown by prompt
    are available free memory, and memory taken by Smart.js
-   ![](https://cesanta.com/images/smartjs_quick_start_guide/fc2.png)
+   ![](https://docs.cesanta.com/images/smartjs_quick_start_guide/fc2.png)
 6. Type some JavaScript expression to the console and press enter.
    Smart.js evaluates the expression and prints evaluation result:
-   ![](https://cesanta.com/images/smartjs_quick_start_guide/fc3.png)
+   ![](https://docs.cesanta.com/images/smartjs_quick_start_guide/fc3.png)
 7. Configure Wifi:
    enter `Wifi.setup('WifiNetworkName', 'WifiPassword')` to the console.
    When network is configured, device starts to send random numbers
@@ -38,13 +38,13 @@ Take a look at 2 minute video that shows Smart.js in action:
 9. Click on "Add Device" tab, copy/paste device ID and password and press
    "Add Device" button
 10. Swith to the "Dashboard" tab, and see real-time graph updated:
-  ![](https://cesanta.com/images/smartjs_quick_start_guide/dash1.png)
+  ![](https://docs.cesanta.com/images/smartjs_quick_start_guide/dash1.png)
 
 # Architecture
 
 Technically, Smart.js has a device part and a cloud part.
 
-![](http://cesanta.com/images/smartjs_diagram.png)
+![](https://docs.cesanta.com/images/smartjs_diagram.png)
 
 Smart.js firmware on a device side:
 
@@ -309,13 +309,13 @@ Smart.js is built on top of
 [V7 JavaScript engine](https://github.com/cesanta/v7/) which makes it easy
 to export C/C++ functions to JavaScript:
 
-- [V7 reference on exporting C/C++ functions to JS](https://cesanta.com/docs/v7/#_call_c_c_function_from_javascript)
+- [V7 reference on exporting C/C++ functions to JS](https://docs.cesanta.com/v7/#_call_c_c_function_from_javascript)
 - See `init_v7()` function at [v7_esp.c](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/user/v7_esp.c) for an example of how specific C/C++ API is exported to ESP8266 firmware. To extend it, just edit `init_v7()` function and rebuild the firmare by running `sh make.sh` in `smartjs/platforms/esp8266` directory.
 
 # Contributions
 
 People who have agreed to the
-[Cesanta CLA](http://cesanta.com/contributors_la.html)
+[Cesanta CLA](https://docs.cesanta.com/contributors_la.html)
 can make contributions. Note that the CLA isn't a copyright
 _assigment_ but rather a copyright _license_.
 You retain the copyright on your contributions.
@@ -328,6 +328,6 @@ source licenses. The GPLv2 open source License does not generally permit
 incorporating this software into non-open source programs.
 For those customers who do not wish to comply with the GPLv2 open
 source license requirements,
-[Cesanta](http://cesanta.com) offers a full,
+[Cesanta](https://www.cesanta.com) offers a full,
 royalty-free commercial license and professional support
 without any of the GPL restrictions.

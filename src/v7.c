@@ -13,7 +13,7 @@
  * See the GNU General Public License for more details.
  *
  * Alternatively, you can license this software under a commercial
- * license, as set out in <http://cesanta.com/products.html>.
+ * license, as set out in <https://www.cesanta.com/license>.
  */
 
 /*
@@ -502,7 +502,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
  * See the GNU General Public License for more details.
  *
  * Alternatively, you can license this software under a commercial
- * license, as set out in <http://cesanta.com/products.html>.
+ * license, as set out in <https://www.cesanta.com/license>.
  */
 
 #ifdef V7_EXPOSE_PRIVATE
@@ -2276,7 +2276,7 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
  * See the GNU General Public License for more details.
  *
  * Alternatively, you can license this software under a commercial
- * license, as set out in <http://cesanta.com/>.
+ * license, as set out in <https://www.cesanta.com/license>.
  */
 
 #ifndef SLRE_HEADER_INCLUDED
@@ -11864,7 +11864,7 @@ static const char * const js_functions[] = {
  * See the GNU General Public License for more details.
  *
  * Alternatively, you can license this software under a commercial
- * license, as set out in <http://cesanta.com/>.
+ * license, as set out in <https://www.cesanta.com/license>.
  */
 
 
