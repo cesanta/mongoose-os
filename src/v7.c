@@ -10948,7 +10948,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
       for (; v7_to_object(obj) != NULL;
            obj = v7_object_to_value(
-               v7_is_function(obj) ? v7_to_object(obj)->prototype : NULL)) {
+               v7_is_function(obj) ? NULL : v7_to_object(obj)->prototype)) {
         for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
