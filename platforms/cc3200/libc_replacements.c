@@ -84,14 +84,3 @@ int _fstat(int fd, struct stat *s) {
 ssize_t _read(int fd, void *buf, size_t count) {
   _not_implemented("_read");
 }
-
-inline void SysCtlDelay(unsigned long ulCount) {
-}
-
-int usleep(useconds_t usec) {
-  unsigned long ulCount = SYS_CLOCK / 1000000;
-  ulCount *= usec;
-  ulCount /= DELAY_DIVIDER;
-  MAP_UtilsDelay(ulCount);
-  return 0;
-}

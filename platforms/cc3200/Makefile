@@ -1,5 +1,6 @@
 SDK ?= docker.cesanta.com:5000/cc3200-build:1.1.0
 SRC_DIR ?= $(realpath ../../..)
+PORT ?= /dev/ttyUSB1
 
 .PHONY: all clean
 
@@ -12,4 +13,4 @@ all clean:
 
 flash:
 	cd /home/rojer/cesanta/energia-0101E0016/hardware/tools/lm4f/bin; \
-    ./cc3200prog /dev/ttyUSB8 $(CURDIR)/firmware/smartjs.bin
+    ./cc3200prog $(PORT) $(CURDIR)/firmware/smartjs.bin

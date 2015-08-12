@@ -16,8 +16,9 @@
 #include "uart.h"
 #include "utils.h"
 
-#include "sj_prompt.h"
+#include "oslib/osi.h"
 
+#include "sj_prompt.h"
 #include "v7.h"
 #include "config.h"
 
@@ -28,13 +29,13 @@ static const char *v7_version = "TODO";
 
 static v7_val_t js_usleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t usecsv = v7_array_get(v7, args, 0);
-  int usecs;
+  int msecs;
   if (!v7_is_number(usecsv)) {
     printf("usecs is not a double\n\r");
     return v7_create_undefined();
   }
-  usecs = v7_to_number(usecsv);
-  usleep(usecs);
+  msecs = v7_to_number(usecsv) / 1000;
+  osi_Sleep(msecs);
   return v7_create_undefined();
 }
 
@@ -103,44 +104,47 @@ void init_v7(void *stack_base) {
 //  init_conf(v7);
 }
 
-void blinkenlights() {
+static void blinkenlights_task(void *arg) {
   int n = 0;
   unsigned char lm = 1 << (LED_GPIO % 8);
   unsigned char v = 0;
+
+  MAP_PRCMPeripheralClkEnable(PRCM_GPIOA1, PRCM_RUN_MODE_CLK);
+  MAP_PinTypeGPIO(PIN_02, PIN_MODE_0, false);  /* Green LED */
+  MAP_GPIODirModeSet(GPIOA1_BASE, 0x8, GPIO_DIR_MODE_OUT);
+  MAP_GPIOPinWrite(GPIOA1_BASE, 1 << (LED_GPIO % 8), 0);
+
   while (1) {
     v ^= lm;
     MAP_GPIOPinWrite(GPIOA1_BASE, lm, v);
-    usleep(1000000);
-/*
-    char *p = malloc(1024);
-    n += 1024;
-    printf("-- %d %p\n", n, p);
-    malloc_stats();
-*/
+    osi_Sleep(1000);
   }
 }
 
-void uart_int() {
+/* These are FreeRTOS hooks for various life situations. */
+void vApplicationMallocFailedHook() {
+  fprintf(stderr, "malloc failed\n");
+  _exit(123);
+}
+
+void vApplicationIdleHook() {
+  /* Ho-hum. Twiddling our thumbs. */
+}
+
+void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
+  fprintf(stderr, "stack overflow! %s (%p)\n", tn, th);
+}
+
+OsiMsgQ_t s_prompt_input_q;
+
+static void uart_int() {
   char c = UARTCharGet(CONSOLE_UART);
-  sj_prompt_process_char(c);
+  osi_MsgQWrite(&s_prompt_input_q, &c, OSI_NO_WAIT);
   MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX);
 }
 
-void timer_int() {
-  unsigned long int_status = MAP_TimerIntStatus(TIMERA0_BASE, true);
-  MAP_TimerIntClear(TIMERA0_BASE, int_status);
-}
-
-/* Int vector table, defined in startup_gcc.c */
-extern void (* const g_pfnVectors[256])(void);
-
-int main() {
+static void prompt_task(void *arg) {
   int dummy;
-
-  MAP_IntVTableBaseSet((unsigned long)&g_pfnVectors[0]);
-  MAP_IntMasterEnable();
-  MAP_IntEnable(FAULT_SYSTICK);
-  PRCMCC3200MCUInit();
 
   /* Console UART init. */
   MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
@@ -151,38 +155,36 @@ int main() {
       CONSOLE_BAUD_RATE,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
   MAP_UARTFIFODisable(CONSOLE_UART);
-  MAP_UARTIntRegister(CONSOLE_UART, uart_int);
-  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
-
-  /* GPIO */
-  MAP_PRCMPeripheralClkEnable(PRCM_GPIOA1, PRCM_RUN_MODE_CLK);
-  MAP_PinTypeGPIO(PIN_02, PIN_MODE_0, false);  /* Green LED */
-  MAP_GPIODirModeSet(GPIOA1_BASE, 0x8, GPIO_DIR_MODE_OUT);
-  MAP_GPIOPinWrite(GPIOA1_BASE, 1 << (LED_GPIO % 8), 0);
-
-#if 0
-  /* Timer init. */
-  MAP_PRCMPeripheralClkEnable(PRCM_TIMERA0, PRCM_RUN_MODE_CLK);
-  MAP_PRCMPeripheralReset(PRCM_TIMERA0);
-  MAP_TimerConfigure(TIMERA0_BASE, TIMER_CFG_PERIODIC);
-  MAP_TimerLoadSet(TIMERA0_BASE, TIMER_A, 16000000);
-  MAP_TimerIntRegister(TIMERA0_BASE, TIMER_A, timer_int);
-  MAP_IntPriorityGroupingSet(3);
-  MAP_IntPrioritySet(INT_TIMERA0A, 0xFF);
-  MAP_TimerIntEnable(TIMERA0_BASE, TIMER_TIMA_TIMEOUT);
-  MAP_TimerEnable(TIMERA0_BASE, TIMER_A);
-#endif
 
   setvbuf(stdout, NULL, _IONBF, 0);
   setvbuf(stderr, NULL, _IONBF, 0);
-
   printf("\n\nSmart.JS for CC3200\n");
 
+  osi_MsgQCreate(&s_prompt_input_q, "prompt input", 1 /* size */, 32 /* len */);
+  osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
+  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
+
   init_v7(&dummy);
-
   sj_prompt_init(v7);
+  while (1) {
+    char c;
+    osi_MsgQRead(&s_prompt_input_q, &c, OSI_WAIT_FOREVER);
+    sj_prompt_process_char(c);
+  }
+}
 
-  blinkenlights();
+/* Int vector table, defined in startup_gcc.c */
+extern void (* const g_pfnVectors[])(void);
+
+int main() {
+  MAP_IntVTableBaseSet((unsigned long)&g_pfnVectors[0]);
+  MAP_IntEnable(FAULT_SYSTICK);
+  MAP_IntMasterEnable();
+  PRCMCC3200MCUInit();
+
+  osi_TaskCreate(prompt_task, "prompt", V7_STACK_SIZE + 128, NULL, 2, NULL);
+  osi_TaskCreate(blinkenlights_task, "blink", 128, NULL, 1, NULL);
+  osi_start();
 
   return 0;
 }

@@ -36,10 +36,10 @@ V7_FEATURES = -DV7_BUILD_PROFILE=1 \
 #-DV7_ESP_FLASH_ACCESS_EMUL
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
-                  -DV7_STACK_SIZE=8192-64 \
+                  -DV7_STACK_SIZE=8192 -DV7_DISABLE_INTERPRETER_STACK_CHECK \
                   -DFS_MAX_OPEN_FILES=5
 
-CFLAGS += ${V7_FEATURES} ${V7_MEMORY_FLAGS} -Dc_file_t=int -Os
+CFLAGS += -DUSE_FREERTOS ${V7_FEATURES} ${V7_MEMORY_FLAGS} -Dc_file_t=int -Os
 
 .PHONY: all clean flash
 
@@ -56,10 +56,11 @@ ${OBJDIR}:
 ${BINDIR}:
 	@mkdir -p ${BINDIR}
 
-${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_${COMPILER}.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/libc_replacements.o ${OBJDIR}/v7.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_hal_cc3200.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_${COMPILER}.o
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/${COMPILER}/exe/libdriver.a
+${BINDIR}/${PROG}.axf: ${SDK_PATH}/oslib/${COMPILER}/exe/FreeRTOS.a
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
