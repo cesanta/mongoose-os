@@ -113,7 +113,8 @@ enum v7_err v7_exec_with(struct v7 *, v7_val_t *result, const char *js_code,
  * in the binary format, suitable for execution by V7 instance.
  * NOTE: `fp` must be a valid, opened, writable file stream.
  */
-void v7_compile(const char *js_code, int generate_binary_output, FILE *fp);
+enum v7_err v7_compile(const char *js_code, int generate_binary_output,
+                       FILE *fp);
 
 /*
  * Perform garbage collection.

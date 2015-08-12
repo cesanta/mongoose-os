@@ -113,7 +113,8 @@ enum v7_err v7_exec_with(struct v7 *, v7_val_t *result, const char *js_code,
  * in the binary format, suitable for execution by V7 instance.
  * NOTE: `fp` must be a valid, opened, writable file stream.
  */
-void v7_compile(const char *js_code, int generate_binary_output, FILE *fp);
+enum v7_err v7_compile(const char *js_code, int generate_binary_output,
+                       FILE *fp);
 
 /*
  * Perform garbage collection.
@@ -6454,21 +6455,24 @@ V7_PRIVATE void ast_free(struct ast *ast) {
  * by V7 with no extra input.
  * `fp` must be an opened writable file stream to write compiled AST to.
  */
-void v7_compile(const char *code, int binary, FILE *fp) {
+enum v7_err v7_compile(const char *code, int binary, FILE *fp) {
   struct ast ast;
   struct v7 *v7 = v7_create();
   ast_off_t pos = 0;
+  enum v7_err err;
 
   ast_init(&ast, 0);
-  if (parse(v7, &ast, code, 1) != V7_OK) {
-    fprintf(stderr, "%s\n", "parse error");
-  } else if (binary) {
-    fwrite(ast.mbuf.buf, ast.mbuf.len, 1, fp);
-  } else {
-    ast_dump_tree(fp, &ast, &pos, 0);
+  err = parse(v7, &ast, code, 1);
+  if (err == V7_OK) {
+    if (binary) {
+      fwrite(ast.mbuf.buf, ast.mbuf.len, 1, fp);
+    } else {
+      ast_dump_tree(fp, &ast, &pos, 0);
+    }
   }
   ast_free(&ast);
   v7_destroy(v7);
+  return err;
 }
 #endif
 /*
@@ -16939,7 +16943,9 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   /* Execute inline expressions */
   for (j = 0; j < nexprs; j++) {
     if (show_ast) {
-      v7_compile(exprs[j], binary_ast, stdout);
+      if (v7_compile(exprs[j], binary_ast, stdout) != V7_OK) {
+        fprintf(stderr, "%s\n", "parse error");
+      }
     } else if (v7_exec(v7, &res, exprs[j]) != V7_OK) {
       print_error(v7, exprs[j], res);
       res = v7_create_undefined();
