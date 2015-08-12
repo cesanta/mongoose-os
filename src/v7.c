@@ -455,7 +455,6 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__NUMBER__POSITIVE_INFINITY 1
 #define V7_ENABLE__Object__create 1
 #define V7_ENABLE__Object__defineProperties 1
-#define V7_ENABLE__Object__defineProperty 1
 #define V7_ENABLE__Object__getOwnPropertyDescriptor 1
 #define V7_ENABLE__Object__getOwnPropertyNames 1
 #define V7_ENABLE__Object__getPrototypeOf 1
@@ -7422,7 +7421,8 @@ int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
                               v7_cfunction_t f) {
-  return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
+  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
+                         v7_create_cfunction(f));
 }
 
 V7_PRIVATE val_t
@@ -10946,30 +10946,33 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
       loop = *pos;
 
-      for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
-        if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
-          continue;
-        }
-        key = p->name;
-        if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
-          var->value = key;
-        } else {
-          v7_set_property(v7, v7->global_object, name, name_len, 0, key);
-        }
+      for (; v7_to_object(obj) != NULL;
+           obj = v7_object_to_value(v7_to_object(obj)->prototype)) {
+        for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
+          if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+            continue;
+          }
+          key = p->name;
+          if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
+            var->value = key;
+          } else {
+            v7_set_property(v7, v7->global_object, name, name_len, 0, key);
+          }
 
-        /* for some reason lcov doesn't mark the following lines executing */
-        res = i_eval_stmts(v7, a, pos, end, scope, brk); /* LCOV_EXCL_LINE */
-        switch (*brk) {                                  /* LCOV_EXCL_LINE */
-          case B_RUN:
-            break;
-          case B_CONTINUE:
-            *brk = B_RUN;
-            break;
-          case B_BREAK:
-            *brk = B_RUN; /* fall through */
-          case B_RETURN:
-            *pos = end;
-            goto cleanup;
+          /* for some reason lcov doesn't mark the following lines executing */
+          res = i_eval_stmts(v7, a, pos, end, scope, brk); /* LCOV_EXCL_LINE */
+          switch (*brk) {                                  /* LCOV_EXCL_LINE */
+            case B_RUN:
+              break;
+            case B_CONTINUE:
+              *brk = B_RUN;
+              break;
+            case B_BREAK:
+              *brk = B_RUN; /* fall through */
+            case B_RETURN:
+              *pos = end;
+              goto cleanup;
+          }
         }
       }
       *pos = end;
@@ -11783,57 +11786,76 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 #define STRINGIFY(x) #x
 
 static const char js_array_indexOf[] = STRINGIFY(
-    Array.prototype.indexOf = function(a, x) {
-      var i; var r = -1; var b = +x;
-      if (!b || b < 0) b = 0;
-      for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = +i;
-      return r;
-    };);
+    Object.defineProperty(Array.prototype, "indexOf", {
+      writable:true,
+      configurable: true,
+      value: function(a, x) {
+        var i; var r = -1; var b = +x;
+        if (!b || b < 0) b = 0;
+        for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = +i;
+        return r;
+    }}););
 
 static const char js_array_lastIndexOf[] = STRINGIFY(
-    Array.prototype.lastIndexOf = function(a, x) {
-      var i; var r = -1; var b = +x;
-      if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
-      for (i in this) if (i <= b && (r < 0 || i > r) && this[i] === a) r = +i;
-      return r;
-    };);
+    Object.defineProperty(Array.prototype, "lastIndexOf", {
+      writable:true,
+      configurable: true,
+      value: function(a, x) {
+        var i; var r = -1; var b = +x;
+        if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
+        for (i in this) if (i <= b && (r < 0 || i > r) && this[i] === a) r = +i;
+        return r;
+    }}););
 
 #if V7_ENABLE__Array__reduce
 static const char js_array_reduce[] = STRINGIFY(
-    Array.prototype.reduce = function(a, b) {
-      var f = 0;
-      if (typeof(a) != "function") {
-        throw new TypeError(a + " is not a function");
-      }
-      for (var k in this) {
-        if (f == 0 && b === undefined) {
-          b = this[k];
-          f = 1;
-        } else {
-          b = a(b, this[k], k, this);
+    Object.defineProperty(Array.prototype, "reduce", {
+      writable:true,
+      configurable: true,
+      value: function(a, b) {
+        var f = 0;
+        if (typeof(a) != "function") {
+          throw new TypeError(a + " is not a function");
         }
-      }
-      return b;
-    };);
+        for (var k in this) {
+          if (k > this.length) break;
+          if (f == 0 && b === undefined) {
+            b = this[k];
+            f = 1;
+          } else {
+            b = a(b, this[k], k, this);
+          }
+        }
+        return b;
+    }}););
 #endif
 
 static const char js_array_pop[] = STRINGIFY(
-    Array.prototype.pop = function() {
+    Object.defineProperty(Array.prototype, "pop", {
+      writable:true,
+      configurable: true,
+      value: function() {
       var i = this.length - 1;
-      return this.splice(i, 1)[0];
-    };);
+        return this.splice(i, 1)[0];
+    }}););
 
 static const char js_array_shift[] = STRINGIFY(
-    Array.prototype.shift = function() {
-      return this.splice(0, 1)[0];
-    };);
+    Object.defineProperty(Array.prototype, "shift", {
+      writable:true,
+      configurable: true,
+      value: function() {
+        return this.splice(0, 1)[0];
+    }}););
 
 #if V7_ENABLE__Function__call
 static const char js_function_call[] = STRINGIFY(
-    Function.prototype.call = function() {
-      var t = arguments.splice(0, 1)[0];
-      return this.apply(t, arguments);
-    };);
+    Object.defineProperty(Function.prototype, "call", {
+      writable:true,
+      configurable: true,
+      value: function() {
+        var t = arguments.splice(0, 1)[0];
+        return this.apply(t, arguments);
+    }}););
 #endif
 
 static const char * const js_functions[] = {
@@ -13675,7 +13697,6 @@ static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
   return obj;
 }
 
-#if V7_ENABLE__Object__defineProperty
 static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
@@ -13689,7 +13710,6 @@ static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
-#endif
 
 static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   struct v7_property *p;
@@ -13828,7 +13848,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 
   object = v7_get(v7, v7->global_object, "Object", 6);
   v7_set(v7, object, "prototype", 9, 0, v7->object_prototype);
-  v7_set(v7, v7->object_prototype, "constructor", 11, 0, object);
+  v7_set(v7, v7->object_prototype, "constructor", 11, V7_PROPERTY_DONT_ENUM,
+         object);
 
   set_method(v7, v7->object_prototype, "toString", Obj_toString, 0);
 #if V7_ENABLE__Object__getPrototypeOf
@@ -13838,9 +13859,10 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);
 #endif
-#if V7_ENABLE__Object__defineProperty
+
+  /* defineProperty is currently required to perform stdlib initialization */
   set_method(v7, object, "defineProperty", Obj_defineProperty, 3);
-#endif
+
 #if V7_ENABLE__Object__defineProperties
   set_cfunc_prop(v7, object, "defineProperties", Obj_defineProperties);
 #endif
@@ -14546,8 +14568,9 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 
   v7_array_set(v7, length, 0, v7_create_cfunction(Array_get_length));
   v7_array_set(v7, length, 1, v7_create_cfunction(Array_set_length));
-  v7_set_property(v7, v7->array_prototype, "length", 6,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, length);
+  v7_set_property(
+      v7, v7->array_prototype, "length", 6,
+      V7_PROPERTY_GETTER | V7_PROPERTY_SETTER | V7_PROPERTY_DONT_ENUM, length);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -16622,7 +16645,8 @@ V7_PRIVATE void init_function(struct v7 *v7) {
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
   set_method(v7, v7->function_prototype, "apply", Function_apply, 1);
-  v7_set_property(v7, v7->function_prototype, "length", 6, V7_PROPERTY_GETTER,
+  v7_set_property(v7, v7->function_prototype, "length", 6,
+                  V7_PROPERTY_GETTER | V7_PROPERTY_DONT_ENUM,
                   v7_create_cfunction(Function_length));
 }
 /*
