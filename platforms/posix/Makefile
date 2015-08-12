@@ -8,15 +8,14 @@ OUTAPP ?= smartjs
 VERBOSE ?= 0
 SSL ?= OpenSSL
 
-CC = gcc
-LD = gcc
-V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats
+V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
+								   -DV7_ENABLE_GC -DV7_ENABLE_GC \
+								   -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5
 FOSSA_FEATURES =
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c
-
 ADD_LIBS = m
 
 ifeq ($(OS),Windows_NT)
@@ -37,7 +36,7 @@ else
 Q := @
 endif
 
-CFLAGS ?= -O2 -Wall -g -D_BSD_SOURCE $(V7_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function
+CFLAGS ?= -O2 -Wall -g -Wno-pragmas -D_BSD_SOURCE $(V7_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))
@@ -53,7 +52,7 @@ define compile
 $(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
 endef
 
-all:  $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP)
+all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP)
 
 $(BIN_DIR):
 	$(Q) mkdir -p $@
@@ -81,7 +80,7 @@ $(BUILD_DIR)/sj_version.c: $(APP_SRCS)
 
 $(BIN_DIR)/$(OUTAPP): $(OBJS)
 	@echo "LD $@"
-	$(Q) $(LD) $(OBJS) $(LIBS) -o $@
+	$(Q) $(CC) $(OBJS) $(LIBS) -o $@
 
 clean:
 	$(Q) rm -rf $(BIN_DIR)/$(OUTAPP) $(BUILD_DIR)
