@@ -1867,6 +1867,9 @@ V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind);
 
 V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
+V7_PRIVATE v7_val_t
+i_apply(struct v7 *, val_t func, val_t this_obj, val_t args);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -7265,7 +7268,7 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
     setter = v7_array_get(v7, prop->value, 1);
   }
   v7_array_set(v7, args, 0, val);
-  v7_apply(v7, setter, obj, args);
+  i_apply(v7, setter, obj, args);
 }
 
 V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
@@ -7428,7 +7431,7 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
     if (p->attributes & V7_PROPERTY_SETTER) {
       getter = v7_array_get(v7, p->value, 0);
     }
-    return v7_apply(v7, getter, obj, V7_UNDEFINED);
+    return i_apply(v7, getter, obj, V7_UNDEFINED);
   }
   return p->value;
 }
@@ -9601,7 +9604,7 @@ static val_t create_exception(struct v7 *v7, enum error_ctor ex,
   v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
   v7->creating_exception++;
   e = create_object(v7, v7_get(v7, v7->error_objects[ex], "prototype", 9));
-  v7_apply(v7, v7->error_objects[ex], e, args);
+  i_apply(v7, v7->error_objects[ex], e, args);
   v7->creating_exception--;
   return e;
 }
@@ -9631,12 +9634,12 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 
   if ((f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
     /*
-     * v7_apply will root all parameters since it can be called
+     * i_apply will root all parameters since it can be called
      * from user code, hence it's not necessary to root `f`.
      * This assumes all callers of i_value_of will root their
      * temporary values.
      */
-    v = v7_apply(v7, f, v, v7_create_undefined());
+    v = i_apply(v7, f, v, v7_create_undefined());
   }
   return v;
 }
@@ -11163,8 +11166,22 @@ cleanup:
   return res;
 }
 
+v7_val_t v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                  v7_val_t args) {
+  v7_val_t res;
+  jmp_buf saved_jmp_buf;
+  memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
+  if (sigsetjmp(v7->jmp_buf, 0) != 0) {
+    return v7->thrown_error;
+  }
+  res = i_apply(v7, func, this_obj, args);
+  memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
+  return res;
+}
+
 /* Invoke a function applying the argument array */
-val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
+V7_PRIVATE val_t
+i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
@@ -11180,7 +11197,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   tmp_stack_push(&vf, &arguments);
   tmp_stack_push(&vf, &saved_this);
   /*
-   * Since v7_apply can be called from user code
+   * Since i_apply can be called from user code
    * we have to treat all arguments as roots.
    */
   tmp_stack_push(&vf, &args);
@@ -14135,7 +14152,7 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
     val_t res, args = v7_create_dense_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
-    res = v7_apply(v7, func, V7_UNDEFINED, args);
+    res = i_apply(v7, func, V7_UNDEFINED, args);
     return (int) -v7_to_number(res);
   } else {
     char sa[100], sb[100];
@@ -14375,7 +14392,7 @@ static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
   v7_array_push(v7, params, v);
   v7_array_push(v7, params, n);
   v7_array_push(v7, params, t);
-  return v7_apply(v7, a, t, params);
+  return i_apply(v7, a, t, params);
 }
 
 static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
@@ -15094,7 +15111,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
         v7_array_push(v7, arr, v7_create_number(utfnlen(
                                    (char *) s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
-        out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
+        out_str_o = to_string(v7, i_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
         if (rez_len) {
           ptok->start = rez_str;
@@ -16593,7 +16610,7 @@ static val_t Function_apply(struct v7 *v7, val_t this_obj, val_t args) {
   val_t f = i_value_of(v7, this_obj);
   val_t this_arg = v7_array_get(v7, args, 0);
   val_t func_args = v7_array_get(v7, args, 1);
-  return v7_apply(v7, f, this_arg, func_args);
+  return i_apply(v7, f, this_arg, func_args);
 }
 
 V7_PRIVATE void init_function(struct v7 *v7) {
