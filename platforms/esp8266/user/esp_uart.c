@@ -8,7 +8,8 @@
 #include "v7.h"
 #include "mem.h"
 
-#include "v7_uart.h"
+#include "esp_missing_includes.h"
+#include "esp_uart.h"
 
 /* At this moment using uart #0 only */
 #define UART_MAIN 0
@@ -31,12 +32,17 @@
 
 #define UART_SIGINT_CHAR 0x03
 
+/* This is defined in V7. */
+int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap);
+
 uart_process_char_t uart_process_char;
 volatile uart_process_char_t uart_interrupt_cb = NULL;
 static os_event_t rx_task_queue[RXTASK_QUEUE_LEN];
 static char rx_buf[RX_BUFFER_SIZE];
 static unsigned s_system_uartno = UART_MAIN;
 static unsigned debug_enabled = 0;
+
+int gdb_read_uart_buf(char *buf);
 
 FAST static void rx_isr(void *param) {
   /* TODO(alashkin): add errors checking */
@@ -72,7 +78,7 @@ FAST static void rx_isr(void *param) {
 
 int gdb_read_uart() {
   static char buf[256];
-  static char pos = 0;
+  static int pos = 0;
   if (pos == 0) {
     pos = gdb_read_uart_buf(buf);
   }

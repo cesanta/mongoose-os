@@ -7,7 +7,7 @@
 #include "mem.h"
 #include "v7_esp.h"
 #include "util.h"
-#include "v7_uart.h"
+#include "esp_uart.h"
 #include "v7_gdb.h"
 #include "v7_flash_bytes.h"
 

@@ -7,7 +7,7 @@
 #include "user_interface.h"
 #include "mem.h"
 #include "v7_esp.h"
-#include "v7_uart.h"
+#include "esp_uart.h"
 #include "v7_gdb.h"
 #include "v7_esp_hw.h"
 #include "xtensa/corebits.h"

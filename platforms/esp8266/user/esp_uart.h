@@ -1,5 +1,5 @@
-#ifndef V7_UART_INCLUDED
-#define V7_UART_INCLUDED
+#ifndef ESP_UART_INCLUDED
+#define ESP_UART_INCLUDED
 
 typedef void (*uart_process_char_t)(char ch);
 
@@ -9,5 +9,6 @@ void uart_main_init(int baud_rate);
 int uart_redirect_debug(int mode);
 void uart_debug_init(unsigned pin, unsigned baud_rate);
 void print_str(const char *str);
+int c_printf(const char *format, ...);
 
-#endif /* V7_UART_INCLUDED */
+#endif /* ESP_UART_INCLUDED */
