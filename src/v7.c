@@ -14332,7 +14332,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
   long arg1 = arg_long(v7, args, 1, len);
 
   /* Bounds check */
-  if (len <= 0) return res;
+  if (!mutate && len <= 0) return res;
   if (arg0 < 0) arg0 = len + arg0;
   if (arg0 < 0) arg0 = 0;
   if (arg0 > len) arg0 = len;
