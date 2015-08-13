@@ -7,17 +7,18 @@
 #include "mem.h"
 #include "v7_esp.h"
 #include "util.h"
+#include "esp_missing_includes.h"
 #include "esp_uart.h"
 #include "v7_gdb.h"
+#include "v7_fs.h"
 #include "v7_flash_bytes.h"
 
 #include "sj_prompt.h"
 
-extern void ets_wdt_disable(void);
 os_timer_t tick_timer;
 os_timer_t startcmd_timer;
 
-void start_cmd(int dummy) {
+void start_cmd(void *dummy) {
 #ifndef V7_NO_FS
   fs_init();
 #endif
@@ -63,7 +64,7 @@ void user_init() {
   system_init_done_cb(init_done_cb);
 
   uart_div_modify(0, UART_CLK_FREQ / 115200);
-  system_set_os_print(0);
+//  system_set_os_print(0);
 
 #ifdef V7_ESP_GDB_SERVER
   /* registers exception handlers so that you can hook in gdb on crashes */

@@ -14,4 +14,6 @@ int read_gpio_pin(int g);
  * */
 int await_change(int g, int *max_cycles);
 
+void v7_run_startup();
+
 #endif /* V7_UTIL_INCLUDED */
