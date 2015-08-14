@@ -179,7 +179,7 @@ static void http_get_dns_cb(const char *name, ip_addr_t *ipaddr, void *arg) {
 #ifdef ESP_SSL_KRYPTON
       kr_secure_connect(conn);
 #elif defined(ESP_SSL_SDK)
-      espconn_secure_set_size(1, 5120);  /* 5k buffer for client */
+      espconn_secure_set_size(1, 5120); /* 5k buffer for client */
       espconn_secure_connect(conn);
 #endif
     } else {

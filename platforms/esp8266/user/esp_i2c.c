@@ -6,14 +6,24 @@
 
 #include <stdio.h>
 
+#include <v7.h>
+#include <sj_i2c.h>
+
 #include "ets_sys.h"
 #include "osapi.h"
 #include "gpio.h"
-#include "v7_i2c.h"
 #include "v7_periph.h"
 
 /* #define V7_ESP_I2C_DEBUG */
 /* #define ENABLE_IC2_EEPROM_TEST */
+
+struct esp_i2c_connection {
+  /* GPIO used as SDA */
+  uint8_t sda_gpio;
+
+  /* GPIO used as SCL */
+  uint8_t scl_gpio;
+};
 
 enum i2c_gpio_val {
   I2C_LOW = 0,
@@ -35,8 +45,10 @@ static void i2c_gpio_val_to_masks(uint8_t gpio, uint8_t val, uint32_t *set_mask,
   } /* else no change */
 }
 
-static void i2c_set_wires_value(struct i2c_connection *conn, uint8_t sda_val,
+static void i2c_set_wires_value(i2c_connection c, uint8_t sda_val,
                                 uint8_t scl_val) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
+
   uint32_t set_mask = 0, clear_mask = 0;
   uint32_t output_enable_mask = 0, output_disable_mask = 0;
 
@@ -52,8 +64,8 @@ static void i2c_set_wires_value(struct i2c_connection *conn, uint8_t sda_val,
   os_delay_us(10);
 }
 
-enum i2c_ack_type i2c_start(struct i2c_connection *conn, uint16_t addr,
-                            enum i2c_rw mode) {
+enum i2c_ack_type i2c_start(i2c_connection c, uint16_t addr, enum i2c_rw mode) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   enum i2c_ack_type result;
   uint8_t address_byte = (uint8_t)(addr << 1) | mode;
 #ifdef V7_ESP_I2C_DEBUG
@@ -70,12 +82,14 @@ enum i2c_ack_type i2c_start(struct i2c_connection *conn, uint16_t addr,
   return result;
 }
 
-void i2c_stop(struct i2c_connection *conn) {
+void i2c_stop(i2c_connection c) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   i2c_set_wires_value(conn, I2C_LOW, I2C_HIGH);
   i2c_set_wires_value(conn, I2C_INPUT, I2C_INPUT);
 }
 
-static uint8_t i2c_get_SDA(struct i2c_connection *conn) {
+static uint8_t i2c_get_SDA(i2c_connection c) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   uint8_t ret_val = (gpio_input_get() & (1 << conn->sda_gpio)) != 0;
   return ret_val;
 }
@@ -92,7 +106,9 @@ static void i2c_wire_init(uint32_t periph, uint8_t gpio_no, uint8_t func) {
                  GPIO_REG_READ(GPIO_ENABLE_ADDRESS) | (1 << gpio_no));
 }
 
-enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data) {
+enum i2c_ack_type i2c_send_byte(i2c_connection c, uint8_t data) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
+
   enum i2c_ack_type ret_val;
   int8_t i, bit;
 
@@ -118,8 +134,10 @@ enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data) {
   return ret_val;
 }
 
-enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
+enum i2c_ack_type i2c_send_bytes(i2c_connection c, uint8_t *buf,
                                  size_t buf_size) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
+
   enum i2c_ack_type ack_type = I2C_NAK;
 
   while (buf_size-- > 0) {
@@ -136,7 +154,9 @@ enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
   return ack_type;
 }
 
-void i2c_send_ack(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
+void i2c_send_ack(i2c_connection c, enum i2c_ack_type ack_type) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
+
   i2c_set_wires_value(conn, ack_type, I2C_LOW);
   i2c_set_wires_value(conn, ack_type, I2C_HIGH);
   i2c_set_wires_value(conn, ack_type, I2C_LOW);
@@ -145,7 +165,8 @@ void i2c_send_ack(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
 #endif
 }
 
-uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
+uint8_t i2c_read_byte(i2c_connection c, enum i2c_ack_type ack_type) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   uint8_t i, ret_val = 0;
 
   i2c_set_wires_value(conn, I2C_INPUT, I2C_LOW);
@@ -172,8 +193,9 @@ uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type) {
   return ret_val;
 }
 
-void i2c_read_bytes(struct i2c_connection *conn, size_t n, uint8_t *buf,
+void i2c_read_bytes(i2c_connection c, size_t n, uint8_t *buf,
                     enum i2c_ack_type last_ack_type) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   size_t i;
 
   for (i = 0; i < n; i++) {
@@ -182,7 +204,8 @@ void i2c_read_bytes(struct i2c_connection *conn, size_t n, uint8_t *buf,
   }
 }
 
-int i2c_init(struct i2c_connection *conn) {
+int i2c_init(i2c_connection c) {
+  struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   uint8_t i;
   struct gpio_info *sda_info, *scl_info;
 
@@ -209,6 +232,30 @@ int i2c_init(struct i2c_connection *conn) {
   return 0;
 }
 
+/* HAL functions */
+i2c_connection sj_i2c_create(struct v7 *v7, v7_val_t args) {
+  struct esp_i2c_connection *conn;
+  v7_val_t sda_val = v7_array_get(v7, args, 0);
+  double sda = v7_to_number(sda_val);
+  v7_val_t scl_val = v7_array_get(v7, args, 1);
+  double scl = v7_to_number(scl_val);
+
+  if (!v7_is_number(sda_val) || sda < 0 || sda > 255 ||
+      !v7_is_number(scl_val) || scl < 0 || scl > 255) {
+    v7_throw(v7, "Missing arguments for SDA and SCL or wrong type.");
+  }
+
+  conn = malloc(sizeof(*conn));
+  conn->sda_gpio = v7_to_number(sda_val);
+  conn->scl_gpio = v7_to_number(scl_val);
+
+  return conn;
+}
+
+void sj_i2c_close(i2c_connection conn) {
+  free(conn);
+}
+
 /*
  * Low-level API usage example (write & read "Hello, world!" from EEPROM
  * Tested on MICROCHIP 24FC1025-I/P.
@@ -232,7 +279,7 @@ void i2c_eeprom_test() {
   char str[] = "Hello, world!";
   char read_buf[sizeof(str)] = {0};
 
-  struct i2c_connection conn = {.sda_gpio = SDA_GPIO, .scl_gpio = SCL_GPIO};
+  struct esp_i2c_connection conn = {.sda_gpio = SDA_GPIO, .scl_gpio = SCL_GPIO};
   int i;
 
   os_printf("\nStarting i2c test\n");

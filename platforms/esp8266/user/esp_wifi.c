@@ -18,7 +18,6 @@
 #include "util.h"
 #include "v7_esp_features.h"
 #include "esp_uart.h"
-#include "v7_i2c_js.h"
 #include "v7_gpio_js.h"
 #include "v7_hspi_js.h"
 

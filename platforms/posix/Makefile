@@ -10,12 +10,13 @@ SSL ?= OpenSSL
 
 V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
 								   -DV7_ENABLE_GC -DV7_ENABLE_GC \
-								   -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5
+								   -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
+								   -DV7_ENABLE_FILE
 FOSSA_FEATURES =
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
-			sj_simple_http.c fossa.c
+			sj_simple_http.c fossa.c sj_i2c_js.c
 ADD_LIBS = m
 
 ifeq ($(OS),Windows_NT)

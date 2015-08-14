@@ -13,6 +13,7 @@
 #include <sj_hal.h>
 #include <sj_v7_ext.h>
 #include <sj_conf.h>
+#include <sj_i2c_js.h>
 
 #include "v7_esp.h"
 #include "dht11.h"
@@ -20,7 +21,6 @@
 #include "v7_esp_features.h"
 #include "esp_uart.h"
 #include "esp_wifi.h"
-#include "v7_i2c_js.h"
 #include "v7_gpio_js.h"
 #include "v7_hspi_js.h"
 

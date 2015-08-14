@@ -4,10 +4,12 @@
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
+
 #include <sj_hal.h>
 #include <sj_v7_ext.h>
 #include <sj_conf.h>
 #include <string.h>
+#include <sj_i2c_js.h>
 
 #include "smartjs.h"
 #include "posix_http_client.h"
@@ -56,4 +58,6 @@ void init_smartjs() {
 
   init_fossa();
   sj_init_simple_http_client(v7);
+
+  init_i2cjs(v7);
 }

@@ -4,7 +4,7 @@
 #include "os_type.h"
 #include "espconn.h"
 
-/* 
+/*
  * We (aim to) provide an API that closely follows escponn_secure_*
  * but implemented using Krypton.
  */

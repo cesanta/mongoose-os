@@ -1,9 +1,9 @@
-#include "ets_sys.h"
-#include "osapi.h"
-#include "os_type.h"
-#include "v7.h"
-#include "v7_i2c.h"
 #include <stdlib.h>
+
+#include <v7.h>
+
+#include "sj_hal.h"
+#include "sj_i2c.h"
 
 /*
  * JS I2C API.
@@ -97,51 +97,35 @@
  *   Nothing.
  */
 
-static const char s_i2c_sda_prop[] = "__sda";
-static const char s_i2c_scl_prop[] = "__scl";
+static const char s_i2c_conn_prop[] = "__connection";
 
 static v7_val_t i2cjs_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  struct i2c_connection conn;
+  i2c_connection conn;
+  conn = sj_i2c_create(v7, args);
 
-  v7_val_t sda_val = v7_array_get(v7, args, 0);
-  double sda = v7_to_number(sda_val);
-  v7_val_t scl_val = v7_array_get(v7, args, 1);
-  double scl = v7_to_number(scl_val);
-
-  if (!v7_is_number(sda_val) || sda < 0 || sda > 255 ||
-      !v7_is_number(scl_val) || scl < 0 || scl > 255) {
-    v7_throw(v7, "Missing arguments for SDA and SCL or wrong type.");
-  }
-
-  conn.sda_gpio = v7_to_number(sda_val);
-  conn.scl_gpio = v7_to_number(scl_val);
-
-  if (i2c_init(&conn) < 0) {
+  if (i2c_init(conn) < 0) {
     v7_throw(v7, "Failed to initialize I2C library.");
   }
 
-  v7_set(v7, this_obj, s_i2c_sda_prop, ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, sda_val);
-  v7_set(v7, this_obj, s_i2c_scl_prop, ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, scl_val);
+  v7_set(v7, this_obj, s_i2c_conn_prop, ~0,
+         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+         v7_create_foreign(conn));
 
   return this_obj;
 }
 
-static void i2cjs_get_gpio(struct v7 *v7, v7_val_t this_obj,
-                           struct i2c_connection *conn) {
-  conn->sda_gpio = v7_to_number(
-      v7_get(v7, this_obj, s_i2c_sda_prop, sizeof(s_i2c_sda_prop) - 1));
-  conn->scl_gpio = v7_to_number(
-      v7_get(v7, this_obj, s_i2c_scl_prop, sizeof(s_i2c_scl_prop) - 1));
+i2c_connection i2cjs_get_conn(struct v7 *v7, v7_val_t this_obj) {
+  return v7_to_foreign(
+      v7_get(v7, this_obj, s_i2c_conn_prop, sizeof(s_i2c_conn_prop) - 1));
 }
 
 static v7_val_t i2cjs_start(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   uint16_t addr;
   enum i2c_rw mode;
-  enum i2c_ack_type result;
-  struct i2c_connection conn;
-  i2cjs_get_gpio(v7, this_obj, &conn);
+  i2c_connection conn;
+  if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
+    return v7_create_number(I2C_NONE);
+  }
 
   v7_val_t addr_val = v7_array_get(v7, args, 0);
   v7_val_t mode_val = v7_array_get(v7, args, 1);
@@ -151,34 +135,37 @@ static v7_val_t i2cjs_start(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   }
   addr = v7_to_number(addr_val);
   mode = v7_to_number(mode_val);
-  return v7_create_number(i2c_start(&conn, addr, mode));
+  return v7_create_number(i2c_start(conn, addr, mode));
 }
 
 static v7_val_t i2cjs_stop(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  struct i2c_connection conn;
-  i2cjs_get_gpio(v7, this_obj, &conn);
+  i2c_connection conn;
+  if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
+    return v7_create_undefined();
+  }
 
   (void) args;
-  i2c_stop(&conn);
+  i2c_stop(conn);
   return v7_create_undefined();
 }
 
 static v7_val_t i2cjs_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  struct i2c_connection conn;
   v7_val_t data_val = v7_array_get(v7, args, 0);
   size_t len;
   enum i2c_ack_type result = I2C_ERR;
-
-  i2cjs_get_gpio(v7, this_obj, &conn);
+  i2c_connection conn;
+  if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
+    return v7_create_number(I2C_NONE);
+  }
 
   if (v7_is_number(data_val)) {
     double byte = v7_to_number(data_val);
     if (byte >= 0 && byte < 256) {
-      result = i2c_send_byte(&conn, (uint8_t) byte);
+      result = i2c_send_byte(conn, (uint8_t) byte);
     }
   } else if (v7_is_string(data_val)) {
     const char *data = v7_to_string(v7, &data_val, &len);
-    result = i2c_send_bytes(&conn, (uint8_t *) data, len);
+    result = i2c_send_bytes(conn, (uint8_t *) data, len);
   }
 
   return v7_create_number(result);
@@ -186,9 +173,12 @@ static v7_val_t i2cjs_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
 static v7_val_t i2cjs_readByte(struct v7 *v7, v7_val_t this_obj,
                                v7_val_t args) {
-  struct i2c_connection conn;
   enum i2c_ack_type ack_type = I2C_ACK;
-  i2cjs_get_gpio(v7, this_obj, &conn);
+  i2c_connection conn;
+
+  if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
+    return v7_create_number(I2C_NONE);
+  }
 
   if (v7_array_length(v7, args) > 0) {
     v7_val_t ack_val = v7_array_get(v7, args, 0);
@@ -198,19 +188,21 @@ static v7_val_t i2cjs_readByte(struct v7 *v7, v7_val_t this_obj,
       return v7_create_number(-1);
     }
   }
-  return v7_create_number(i2c_read_byte(&conn, ack_type));
+  return v7_create_number(i2c_read_byte(conn, ack_type));
 }
 
 static v7_val_t i2cjs_readString(struct v7 *v7, v7_val_t this_obj,
                                  v7_val_t args) {
-  struct i2c_connection conn;
+  i2c_connection conn;
   v7_val_t len_val = v7_array_get(v7, args, 0);
   size_t tmp;
   enum i2c_ack_type ack_type = I2C_ACK;
   v7_val_t result;
   const char *str;
 
-  i2cjs_get_gpio(v7, this_obj, &conn);
+  if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
+    return v7_create_number(I2C_NONE);
+  }
 
   if (!v7_is_number(len_val) || v7_to_number(len_val) < 0) {
     return v7_create_string(v7, "", 0, 1);
@@ -227,22 +219,36 @@ static v7_val_t i2cjs_readString(struct v7 *v7, v7_val_t this_obj,
 
   result = v7_create_string(v7, 0, v7_to_number(len_val), 1);
   str = v7_to_string(v7, &result, &tmp);
-  i2c_read_bytes(&conn, v7_to_number(len_val), (uint8_t *) str, ack_type);
+  i2c_read_bytes(conn, v7_to_number(len_val), (uint8_t *) str, ack_type);
 
   return result;
 }
 
 static v7_val_t i2cjs_sendAck(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  struct i2c_connection conn;
+  i2c_connection conn;
   v7_val_t ack_val = v7_array_get(v7, args, 0);
   enum i2c_ack_type ack_type = v7_to_number(ack_val);
+
+  if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
+    return v7_create_boolean(0);
+  }
 
   if (!v7_is_number(ack_val) || (ack_type != I2C_ACK && ack_type != I2C_NAK)) {
     return v7_create_boolean(0);
   }
 
-  i2cjs_get_gpio(v7, this_obj, &conn);
-  i2c_send_ack(&conn, ack_type);
+  i2c_send_ack(conn, ack_type);
+  return v7_create_boolean(1);
+}
+
+static v7_val_t i2cjs_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  i2c_connection conn;
+  if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
+    return v7_create_boolean(0);
+  }
+
+  sj_i2c_close(conn);
+
   return v7_create_boolean(1);
 }
 
@@ -265,6 +271,7 @@ void init_i2cjs(struct v7 *v7) {
   v7_set_method(v7, i2c_proto, "readByte", i2cjs_readByte);
   v7_set_method(v7, i2c_proto, "readString", i2cjs_readString);
   v7_set_method(v7, i2c_proto, "sendAck", i2cjs_sendAck);
+  v7_set_method(v7, i2c_proto, "close", i2cjs_close);
 
   i2c_ctor = v7_create_constructor(v7, i2c_proto, i2cjs_ctor, 2);
   v7_set(v7, i2c_ctor, "ACK", 3, const_attrs, v7_create_number(I2C_ACK));

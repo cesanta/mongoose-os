@@ -3,16 +3,12 @@
  *
  * i2c low-level API for ESP8266
  */
-#ifndef V7_I2C_INCLUDED
-#define V7_I2C_INCLUDED
+#ifndef SJ_I2C_INCLUDED
+#define SJ_I2C_INCLUDED
 
-struct i2c_connection {
-  /* GPIO used as SDA */
-  uint8_t sda_gpio;
+#include <stdint.h>
 
-  /* GPIO used as SCL */
-  uint8_t scl_gpio;
-};
+typedef void *i2c_connection;
 
 /*
  * I2C_ACK - positive answer
@@ -24,7 +20,7 @@ struct i2c_connection {
 enum i2c_ack_type { I2C_ACK = 0, I2C_NAK = 1, I2C_ERR = 2, I2C_NONE = 3 };
 
 /* Initialize i2c master */
-int i2c_init(struct i2c_connection *conn);
+int i2c_init(i2c_connection conn);
 
 /*
  * Set i2c Start condition and send the address on the bus.
@@ -37,16 +33,16 @@ int i2c_init(struct i2c_connection *conn);
  * TODO(rojer): 10-bit address support.
  */
 enum i2c_rw { I2C_READ = 1, I2C_WRITE = 0 };
-enum i2c_ack_type i2c_start(struct i2c_connection *conn, uint16_t addr,
+enum i2c_ack_type i2c_start(i2c_connection conn, uint16_t addr,
                             enum i2c_rw mode);
 
 /* Set i2c Stop condition. Releases the bus. */
-void i2c_stop(struct i2c_connection *conn);
+void i2c_stop(i2c_connection conn);
 
 /*
  * Send one byte to i2c. Returns the type of ack that receiver sent.
  */
-enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data);
+enum i2c_ack_type i2c_send_byte(i2c_connection conn, uint8_t data);
 
 /*
  * Send array to I2C.
@@ -57,7 +53,7 @@ enum i2c_ack_type i2c_send_byte(struct i2c_connection *conn, uint8_t data);
  * status of the last one (ACK or NAK). If a NAK was received before all the
  * bytes could be sent, ERR is returned instead.
  */
-enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
+enum i2c_ack_type i2c_send_bytes(i2c_connection conn, uint8_t *buf,
                                  size_t buf_size);
 
 /*
@@ -65,7 +61,7 @@ enum i2c_ack_type i2c_send_bytes(struct i2c_connection *conn, uint8_t *buf,
  * ack_type can be "none" to prevent sending ack at all, in which case
  * this call must be followed up by i2c_send_ack.
  */
-uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type);
+uint8_t i2c_read_byte(i2c_connection conn, enum i2c_ack_type ack_type);
 
 /*
  * Read n bytes from the connection.
@@ -73,13 +69,13 @@ uint8_t i2c_read_byte(struct i2c_connection *conn, enum i2c_ack_type ack_type);
  * the choice whether to ack it, nack it or not send ack at all, in which case
  * this call must be followed up by i2c_send_ack.
  */
-void i2c_read_bytes(struct i2c_connection *conn, size_t n, uint8_t *buf,
+void i2c_read_bytes(i2c_connection conn, size_t n, uint8_t *buf,
                     enum i2c_ack_type last_ack_type);
 
 /*
  * Send an ack of the specified type. Meant to be used after i2c_read_byte{,s}
  * with ack_type of "none".
  */
-void i2c_send_ack(struct i2c_connection *conn, enum i2c_ack_type ack_type);
+void i2c_send_ack(i2c_connection conn, enum i2c_ack_type ack_type);
 
-#endif /* V7_I2C_INCLUDED */
+#endif /* SJ_I2C_INCLUDED */
