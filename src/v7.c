@@ -966,7 +966,9 @@ struct dirent *readdir(DIR *dir);
 #include <stdarg.h>
 #ifndef AVR_LIBC
 #define closesocket(x) close(x)
+#ifndef __cdecl
 #define __cdecl
+#endif
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
 #define to64(x) strtoll(x, NULL, 10)
@@ -15351,7 +15353,7 @@ V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
   }
   if (v7_is_null(v)) return 0;
   l = to_str(v7, v, buf, sizeof(buf), 0);
-  if (l > 0 && isdigit(buf[0])) return strtol(buf, NULL, 10);
+  if (l > 0 && isdigit((int) buf[0])) return strtol(buf, NULL, 10);
   return default_value;
 }
 
