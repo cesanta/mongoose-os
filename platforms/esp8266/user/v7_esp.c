@@ -23,6 +23,7 @@
 #include "esp_wifi.h"
 #include "v7_gpio_js.h"
 #include "v7_hspi_js.h"
+#include "esp_data_gen.h"
 
 struct v7 *v7;
 
@@ -177,6 +178,7 @@ void init_v7(void *stack_base) {
   init_gpiojs(v7);
   init_hspijs(v7);
   init_wifi(v7);
+  init_data_gen_server(v7);
 
   esp_init_conf(v7);
 
