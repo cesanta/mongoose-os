@@ -1604,7 +1604,12 @@ typedef int int32_t;
 typedef unsigned int uint32_t;
 typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
+
+/* For 64bit VisualStudio 2010 */
+#ifndef _UINTPTR_T_DEFINED
 typedef unsigned long uintptr_t;
+#endif
+
 #define __func__ ""
 #else
 #include <stdint.h>
