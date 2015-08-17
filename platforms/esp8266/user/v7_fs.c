@@ -155,15 +155,15 @@ void add_plus(char *ptr, int *open_mode) {
 int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   spiffs_mode sm = 0;
   int res;
-  int rw = (mode & 3);
+  int rw = (flags & 3);
   if (rw == O_RDONLY || rw == O_RDWR) sm |= SPIFFS_RDONLY;
   if (rw == O_WRONLY || rw == O_RDWR) sm |= SPIFFS_WRONLY;
-  if (mode & O_CREAT) sm |= SPIFFS_CREAT;
-  if (mode & O_TRUNC) sm |= SPIFFS_TRUNC;
-  if (mode & O_APPEND) sm |= SPIFFS_APPEND;
+  if (flags & O_CREAT) sm |= SPIFFS_CREAT;
+  if (flags & O_TRUNC) sm |= SPIFFS_TRUNC;
+  if (flags & O_APPEND) sm |= SPIFFS_APPEND;
   /* Supported in newer versions of SPIFFS. */
-  /* if (mode && O_EXCL) sm |= SPIFFS_EXCL; */
-  /* if (mode && O_DIRECT) sm |= SPIFFS_DIRECT; */
+  /* if (flags && O_EXCL) sm |= SPIFFS_EXCL; */
+  /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
 
   res = SPIFFS_open(&fs, (char *) filename, sm, 0);
   set_errno(res);
