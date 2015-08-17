@@ -151,4 +151,9 @@ void init_spijs(struct v7 *v7) {
   v7_set(v7, v7_get_global_object(v7), "SPI", 3, 0, spi_ctor);
 }
 
-#endif
+#else
+
+void init_spijs(struct v7 *v7) {
+}
+
+#endif /* SJ_DISABLE_SPI */
