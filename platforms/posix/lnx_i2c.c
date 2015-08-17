@@ -1,3 +1,5 @@
+#ifndef SJ_DISABLE_I2C
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -149,3 +151,5 @@ void sj_i2c_close(i2c_connection conn) {
   i2c_close(conn);
   free(conn);
 }
+
+#endif /* SJ_DISABLE_I2C */

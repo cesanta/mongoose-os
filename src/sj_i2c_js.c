@@ -5,6 +5,8 @@
 #include "sj_hal.h"
 #include "sj_i2c.h"
 
+#ifndef SJ_DISABLE_I2C
+
 /*
  * JS I2C API.
  *
@@ -287,3 +289,10 @@ void init_i2cjs(struct v7 *v7) {
 
   v7_set(v7, v7_get_global_object(v7), "I2C", 3, 0, i2c_ctor);
 }
+
+#else
+
+void init_i2cjs(struct v7 *v7) {
+}
+
+#endif /* SJ_DISABLE_I2C */
