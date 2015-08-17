@@ -10,6 +10,7 @@
 #include "user_interface.h"
 #include "mem.h"
 #include <errno.h>
+#include <fcntl.h>
 #include "v7.h"
 
 #ifndef V7_NO_FS
@@ -151,62 +152,80 @@ void add_plus(char *ptr, int *open_mode) {
   }
 }
 
-int spiffs_fopen(const char *filename, const char *mode) {
-  int open_mode = 0;
-  char *ptr;
+int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
+  spiffs_mode sm = 0;
   int res;
-  if ((ptr = strstr(mode, "w")) != NULL) {
-    open_mode |= (SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_WRONLY);
-    add_plus(ptr, &open_mode);
-  }
+  int rw = (mode & 3);
+  os_printf("open %s %d %d", flags, mode);
+  if (rw == O_RDONLY || rw == O_RDWR) sm |= SPIFFS_RDONLY;
+  if (rw == O_WRONLY || rw == O_RDWR) sm |= SPIFFS_WRONLY;
+  if (mode & O_CREAT) sm |= SPIFFS_CREAT;
+  if (mode & O_TRUNC) sm |= SPIFFS_TRUNC;
+  if (mode & O_APPEND) sm |= SPIFFS_APPEND;
+  /* Supported in newer versions of SPIFFS. */
+  /* if (mode && O_EXCL) sm |= SPIFFS_EXCL; */
+  /* if (mode && O_DIRECT) sm |= SPIFFS_DIRECT; */
 
-  if ((ptr = strstr(mode, "r")) != NULL) {
-    open_mode |= SPIFFS_RDONLY;
-    add_plus(ptr, &open_mode);
-  }
-
-  if ((ptr = strstr(mode, "a")) != NULL) {
-    open_mode |= (SPIFFS_APPEND | SPIFFS_WRONLY);
-    add_plus(ptr, &open_mode);
-  }
-
-  res = SPIFFS_open(&fs, (char *) filename, open_mode, 0);
+  res = SPIFFS_open(&fs, (char *) filename, sm, 0);
   set_errno(res);
-
   return res;
 }
 
-size_t spiffs_fread(void *ptr, size_t size, size_t count, int fd) {
-  int res = SPIFFS_read(&fs, fd, ptr, size * count);
+_ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
+  int res = SPIFFS_read(&fs, fd, buf, len);
   set_errno(res);
-
-  return res < 0 ? 0 : res;
+  return res;
 }
 
-size_t spiffs_fwrite(const void *ptr, size_t size, size_t count, int fd) {
-  int res = SPIFFS_write(&fs, fd, (char *) ptr, size * count);
+_ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
+  int res = SPIFFS_write(&fs, fd, (char *) buf, len);
   set_errno(res);
-
-  return res < 0 ? 0 : res;
+  return res;
 }
 
-int spiffs_fclose(int fd) {
+_off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
+  ssize_t res = SPIFFS_lseek(&fs, fd, where, whence);
+  set_errno(res);
+  return res;
+}
+
+int _close_r(struct _reent *r, int fd) {
   SPIFFS_close(&fs, fd);
   return 0;
 }
 
-int spiffs_rename(const char *oldname, const char *newname) {
-  int res = SPIFFS_rename(&fs, (char *) oldname, (char *) newname);
+int _rename_r(struct _reent *r, const char *from, const char *to) {
+  int res = SPIFFS_rename(&fs, (char *) from, (char *) to);
   set_errno(res);
 
   return res;
 }
 
-int spiffs_remove(const char *filename) {
+int _unlink_r(struct _reent *r, const char *filename) {
   int res = SPIFFS_remove(&fs, (char *) filename);
   set_errno(res);
 
   return res;
+}
+
+int _fstat_r(struct _reent *r, int fd, struct stat *s) {
+  int res;
+  spiffs_stat ss;
+  memset(s, 0, sizeof(*s));
+  if (fd <= 2) {
+    s->st_ino = fd;
+    s->st_rdev = fd;
+    s->st_mode = S_IFCHR | 0666;
+    return 0;
+  }
+  res = SPIFFS_fstat(&fs, fd, &ss);
+  set_errno(res);
+  if (res < 0) return res;
+  s->st_ino = ss.obj_id;
+  s->st_mode = 0666;
+  s->st_nlink = 1;
+  s->st_size = ss.size;
+  return 0;
 }
 
 int v7_val_to_file(v7_val_t val) {
@@ -220,27 +239,6 @@ v7_val_t v7_file_to_val(int fd) {
 int v7_is_file_type(v7_val_t val) {
   int res = v7_is_number(val);
   return res;
-}
-
-int v7_get_file_size(int fd) {
-  spiffs_stat stat;
-  int res = SPIFFS_fstat(&fs, fd, &stat);
-  set_errno(res);
-
-  if (res < 0) {
-    return res;
-  }
-
-  return stat.size;
-}
-
-void spiffs_rewind(int fd) {
-  int res = SPIFFS_lseek(&fs, fd, 0, SPIFFS_SEEK_SET);
-  set_errno(res);
-}
-
-int spiffs_ferror(int fd) {
-  return SPIFFS_errno(&fs);
 }
 
 #endif

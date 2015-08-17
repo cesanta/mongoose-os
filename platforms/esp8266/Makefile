@@ -61,21 +61,15 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
              -fno-tree-pre -fno-tree-vrp
  
 SHIMS = -Dprintf=c_printf -Dfprintf=c_ufprintf \
-        -DINVALID_FILE=-1 -Dc_file_t=int \
-        -Dc_fread=spiffs_fread -Dc_fwrite=spiffs_fwrite \
-        -Dc_fclose=spiffs_fclose -Dc_fopen=spiffs_fopen \
-	      -Dc_rename=spiffs_rename -Dc_remove=spiffs_remove  \
-        -Dc_fseek=spiffs_fseek -Dc_ftell=spiffs_ftell \
-        -Dc_rewind=spiffs_rewind -Dc_ferror=spiffs_ferror \
         -Dhmac_sha1=v7_hmac_sha1 \
-	      -DNDEBUG
+        -DNDEBUG
 
 # NDEBUG is required because we don't have an assert shim
 # TODO(mkm): make one
 
 FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
            -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF -DV7_ENABLE_GC \
-	         -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DNO_LIBC \
+	         -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DNO_BSD_SOCKETS \
 					 -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
 					 -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
 					 -DV7_ESP_FLASH_ACCESS_EMUL -DV7_FORCE_STRICT_MODE

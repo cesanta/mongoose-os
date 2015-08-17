@@ -950,7 +950,7 @@ int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 
 #else /* not _WIN32 */
-#ifndef NO_LIBC
+#if !defined(NO_LIBC) && !defined(NO_BSD_SOCKETS)
 #include <dirent.h>
 #include <fcntl.h>
 #include <netdb.h>

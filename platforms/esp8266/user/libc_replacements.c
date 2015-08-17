@@ -3,6 +3,7 @@
 * All rights reserved
 */
 
+#include <ctype.h>
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -21,6 +22,12 @@
 
 #include "v7.h"
 #include "v7_esp.h"
+
+/* Why these declarations are commented out in mem.h is beyond me. */
+void *pvPortMalloc(size_t xWantedSize );
+void vPortFree(void *pv );
+void *pvPortZalloc(size_t size);
+void *pvPortRealloc(void *pv, size_t size);
 
 /*
  * strerror provided by libc consumes 2kb RAM
@@ -316,6 +323,11 @@ void abort(void) {
     ; /* avoid gcc warning because stdlib abort() has noreturn attribute */
 }
 
+void _exit(int status) {
+  printf("_exit(%d)\n", status);
+  abort();
+}
+
 uint32_t htonl(uint32_t hostlong) {
   return ((hostlong & 0xff000000) >> 24) | ((hostlong & 0x00ff0000) >> 8) |
          ((hostlong & 0x0000ff00) << 8) | ((hostlong & 0x000000ff) << 24);
@@ -333,34 +345,16 @@ uint32_t ntohl(uint32_t netlong) {
   return htonl(netlong);
 }
 
-/* These are all dummy stubs. Some Newlib functions link them in for
- * stdin/stdout, but as far as I can tell they're not used by us. */
-int _close_r(struct _reent* r, int fd) {
-  return 0;
+void* _malloc_r(struct _reent *r, size_t size) {
+  return malloc(size);
 }
 
-int _open_r(struct _reent* r, const char* n, int f, int m) {
-  return -1;
+void _free_r(struct _reent *r, void *ptr) {
+  free(ptr);
 }
 
-int _fstat_r(struct _reent* r, int fd, struct stat* s) {
-  return -1;
-}
-
-_ssize_t _read_r(struct _reent* r, int fd, void* buf, size_t len) {
-  return -1;
-}
-
-_ssize_t _write_r(struct _reent* r, int fd, void* buf, size_t len) {
-  return -1;
-}
-
-void* _sbrk_r(struct _reent* r, ptrdiff_t p) {
-  return NULL;
-}
-
-_off_t _lseek_r(struct _reent* r, int fd, _off_t where, int how) {
-  return 0;
+void* _realloc_r(struct _reent *r, void* ptr, size_t size) {
+  return realloc(ptr, size);
 }
 
 int _gettimeofday_r(struct _reent* r, struct timeval* tp, void* tzp) {
