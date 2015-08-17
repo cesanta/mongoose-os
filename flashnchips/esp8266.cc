@@ -547,6 +547,7 @@ class FlasherImpl : public Flasher {
                            true);
         emit done(tr("Failed to read flash params from the existing firmware"),
                   false);
+        return;
       }
       const QByteArray params = r.ValueOrDie();
       if (params.length() == 2) {
