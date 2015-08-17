@@ -49,8 +49,6 @@ extern "C" {
 
 #define SPIFFS_ERR_NO_DELETED_BLOCKS    -10029
 
-#define SPIFFS_ERR_FILE_EXISTS          -10030
-
 #define SPIFFS_ERR_INTERNAL             -10050
 
 #define SPIFFS_ERR_TEST                 -10100
@@ -65,25 +63,12 @@ typedef u16_t spiffs_mode;
 // object type
 typedef u8_t spiffs_obj_type;
 
-#if SPIFFS_HAL_CALLBACK_EXTRA
-struct spiffs_t;
-
-/* spi read call function type */
-typedef s32_t (*spiffs_read)(struct spiffs_t *fs, u32_t addr, u32_t size, u8_t *dst);
-/* spi write call function type */
-typedef s32_t (*spiffs_write)(struct spiffs_t *fs, u32_t addr, u32_t size, u8_t *src);
-/* spi erase call function type */
-typedef s32_t (*spiffs_erase)(struct spiffs_t *fs, u32_t addr, u32_t size);
-
-#else // SPIFFS_HAL_CALLBACK_EXTRA
-
 /* spi read call function type */
 typedef s32_t (*spiffs_read)(u32_t addr, u32_t size, u8_t *dst);
 /* spi write call function type */
 typedef s32_t (*spiffs_write)(u32_t addr, u32_t size, u8_t *src);
 /* spi erase call function type */
 typedef s32_t (*spiffs_erase)(u32_t addr, u32_t size);
-#endif // SPIFFS_HAL_CALLBACK_EXTRA
 
 /* file system check callback report operation */
 typedef enum {
@@ -104,13 +89,8 @@ typedef enum {
 } spiffs_check_report;
 
 /* file system check callback function */
-#if SPIFFS_HAL_CALLBACK_EXTRA
-typedef void (*spiffs_check_callback)(struct spiffs_t *fs, spiffs_check_type type, spiffs_check_report report,
-    u32_t arg1, u32_t arg2);
-#else // SPIFFS_HAL_CALLBACK_EXTRA
 typedef void (*spiffs_check_callback)(spiffs_check_type type, spiffs_check_report report,
     u32_t arg1, u32_t arg2);
-#endif // SPIFFS_HAL_CALLBACK_EXTRA
 
 #ifndef SPIFFS_DBG
 #define SPIFFS_DBG(...) \
@@ -140,8 +120,6 @@ typedef void (*spiffs_check_callback)(spiffs_check_type type, spiffs_check_repor
 #define SPIFFS_RDWR                     (SPIFFS_RDONLY | SPIFFS_WRONLY)
 /* Any writes to the filehandle will never be cached */
 #define SPIFFS_DIRECT                   (1<<5)
-/* If SPIFFS_CREAT and SPIFFS_EXCL are set, SPIFFS_open() shall fail if the file exists */
-#define SPIFFS_EXCL                     (1<<6)
 
 #define SPIFFS_SEEK_SET                 (0)
 #define SPIFFS_SEEK_CUR                 (1)
@@ -189,7 +167,7 @@ typedef struct {
 #endif
 } spiffs_config;
 
-typedef struct spiffs_t {
+typedef struct {
   // file system configuration
   spiffs_config cfg;
   // number of logical blocks
@@ -247,8 +225,6 @@ typedef struct spiffs_t {
 
   // mounted flag
   u8_t mounted;
-  // user data
-  void *user_data;
   // config magic
   u32_t config_magic;
 } spiffs;
@@ -360,14 +336,13 @@ s32_t SPIFFS_read(spiffs *fs, spiffs_file fh, void *buf, s32_t len);
 s32_t SPIFFS_write(spiffs *fs, spiffs_file fh, void *buf, s32_t len);
 
 /**
- * Moves the read/write file offset. Resulting offset is returned or negative if error.
- * lseek(fs, fd, 0, SPIFFS_SEEK_CUR) will thus return current offset.
+ * Moves the read/write file offset
  * @param fs            the file system struct
  * @param fh            the filehandle
  * @param offs          how much/where to move the offset
  * @param whence        if SPIFFS_SEEK_SET, the file offset shall be set to offset bytes
  *                      if SPIFFS_SEEK_CUR, the file offset shall be set to its current location plus offset
- *                      if SPIFFS_SEEK_END, the file offset shall be set to the size of the file plus offse, which should be negative
+ *                      if SPIFFS_SEEK_END, the file offset shall be set to the size of the file plus offset
  */
 s32_t SPIFFS_lseek(spiffs *fs, spiffs_file fh, s32_t offs, int whence);
 
@@ -413,7 +388,7 @@ s32_t SPIFFS_fflush(spiffs *fs, spiffs_file fh);
  * @param fs            the file system struct
  * @param fh            the filehandle of the file to close
  */
-s32_t SPIFFS_close(spiffs *fs, spiffs_file fh);
+void SPIFFS_close(spiffs *fs, spiffs_file fh);
 
 /**
  * Renames a file
@@ -465,6 +440,13 @@ struct spiffs_dirent *SPIFFS_readdir(spiffs_DIR *d, struct spiffs_dirent *e);
  * @param fs            the file system struct
  */
 s32_t SPIFFS_check(spiffs *fs);
+
+/**
+ * Searches for a block with only deleted entries. If found, it is erased.
+ * @param fs            the file system struct
+ */
+s32_t SPIFFS_erase_deleted_block(spiffs *fs);
+
 
 /**
  * Returns number of total bytes available and number of used bytes.
@@ -569,7 +551,7 @@ u32_t SPIFFS_buffer_bytes_for_cache(spiffs *fs, u32_t num_pages);
 #endif
 #endif
 
-#if SPIFFS_CACHE
+#if SPIFFS_CHACHE
 #endif
 #if defined(__cplusplus)
 }
