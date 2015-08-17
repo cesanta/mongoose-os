@@ -161,9 +161,9 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   if (flags & O_CREAT) sm |= SPIFFS_CREAT;
   if (flags & O_TRUNC) sm |= SPIFFS_TRUNC;
   if (flags & O_APPEND) sm |= SPIFFS_APPEND;
-  /* Supported in newer versions of SPIFFS. */
-  /* if (flags && O_EXCL) sm |= SPIFFS_EXCL; */
-  /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
+  if (flags & O_EXCL) sm |= SPIFFS_EXCL;
+  /* Not supported by Newlib. */
+  /* if (flags & O_DIRECT) sm |= SPIFFS_DIRECT; */
 
   res = SPIFFS_open(&fs, (char *) filename, sm, 0);
   set_errno(res);
