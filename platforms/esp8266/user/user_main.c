@@ -64,7 +64,7 @@ void user_init() {
   system_init_done_cb(init_done_cb);
 
   uart_div_modify(0, UART_CLK_FREQ / 115200);
-//  system_set_os_print(0);
+  system_set_os_print(0);
 
 #ifdef V7_ESP_GDB_SERVER
   /* registers exception handlers so that you can hook in gdb on crashes */
