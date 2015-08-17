@@ -156,7 +156,6 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   spiffs_mode sm = 0;
   int res;
   int rw = (mode & 3);
-  os_printf("open %s %d %d", flags, mode);
   if (rw == O_RDONLY || rw == O_RDWR) sm |= SPIFFS_RDONLY;
   if (rw == O_WRONLY || rw == O_RDWR) sm |= SPIFFS_WRONLY;
   if (mode & O_CREAT) sm |= SPIFFS_CREAT;
