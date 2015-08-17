@@ -44,25 +44,10 @@ static v7_val_t Wifi_disconnect(struct v7 *v7, v7_val_t this_obj,
   (void) v7;
   (void) this_obj;
   (void) args;
+
+  /* disable any AP mode */
+  wifi_set_opmode_current(0x1);
   return v7_create_boolean(wifi_station_disconnect());
-}
-
-/*
- * Set the wifi mode.
- *
- * Valid modes are:
- *    1: station mode
- *    2: soft-AP mode
- *    3: station+soft-AP
- */
-static v7_val_t Wifi_mode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  v7_val_t mode = v7_array_get(v7, args, 0);
-  if (!v7_is_number(mode)) {
-    printf("bad mode\n");
-    return v7_create_undefined();
-  }
-
-  return v7_create_boolean(wifi_set_opmode_current(v7_to_number(mode)));
 }
 
 static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -79,10 +64,9 @@ static v7_val_t Wifi_setup(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   }
 
   /*
-   * Switch to station mode if not already
-   * in a mode that supports connecting to stations.
+   * Switch to station mode if not already in it
    */
-  if (wifi_get_opmode() == 0x2) {
+  if (wifi_get_opmode() != 0x1) {
     wifi_set_opmode_current(0x1);
   }
   wifi_station_disconnect();
@@ -302,7 +286,6 @@ static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
 void init_wifi(struct v7 *v7) {
   v7_val_t wifi = v7_create_object(v7);
-  v7_set_method(v7, wifi, "mode", Wifi_mode);
   v7_set_method(v7, wifi, "setup", Wifi_setup);
   v7_set_method(v7, wifi, "disconnect", Wifi_disconnect);
   v7_set_method(v7, wifi, "connect", Wifi_connect);

@@ -66,6 +66,9 @@ void user_init() {
   uart_div_modify(0, UART_CLK_FREQ / 115200);
   system_set_os_print(0);
 
+  /* avoid entering AP mode on boot */
+  wifi_set_opmode_current(0x1);
+
 #ifdef V7_ESP_GDB_SERVER
   /* registers exception handlers so that you can hook in gdb on crashes */
   gdb_init();
