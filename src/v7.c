@@ -6495,10 +6495,6 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
-#ifdef NO_LIBC
-void fprint_str(FILE *fp, const char *str);
-#endif
-
 enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_number(v)) {

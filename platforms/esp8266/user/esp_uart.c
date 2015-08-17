@@ -122,51 +122,15 @@ static void uart_tx_char(unsigned uartno, char ch) {
   WRITE_PERI_REG(UART_BUF(uartno), ch);
 }
 
-static int c_uvprintf(int uart, const char *format, va_list args) {
-  char buf[512];
-  int size, i;
-  /* TODO(mkm): add a callback to some c_xxxprintf */
-  size = c_vsnprintf(buf, sizeof(buf), format, args);
-  if (size <= 0) {
-    return size;
-  }
-  if (size > sizeof(buf)) {
-    size = sizeof(buf) - 1;
-  }
-  for (i = 0; i < size; i++) {
-    if (buf[i] == '\n') uart_tx_char(uart, '\r');
-    uart_tx_char(uart, buf[i]);
-  }
+void uart_write(int fd, char *p, size_t len) {
+  size_t i;
+  int uart = (fd == 2) ? s_system_uartno : UART_MAIN;
+  if (fd == 2 && !debug_enabled) return;
 
-  return size;
-}
-
-int c_printf(const char *format, ...) {
-  int size;
-  va_list arglist;
-  va_start(arglist, format);
-  size = c_uvprintf(UART_MAIN, format, arglist);
-  va_end(arglist);
-  return size;
-}
-
-/* shim for fprintf. Handles only (pseudo) stderr and stdout */
-int c_ufprintf(FILE *fp, const char *format, ...) {
-  int size = -1;
-  va_list arglist;
-  va_start(arglist, format);
-
-  if (fp == stderr) {
-    if (debug_enabled) {
-      size = c_uvprintf(s_system_uartno, format, arglist);
-    } else {
-      size = 0;
-    }
-  } else if (fp == stdout) {
-    size = c_uvprintf(s_system_uartno, format, arglist);
+  for (i = 0; i < len; i++) {
+    if (p[i] == '\n') uart_tx_char(uart, '\r');
+    uart_tx_char(uart, p[i]);
   }
-  va_end(arglist);
-  return size;
 }
 
 void rx_task(os_event_t *events) {

@@ -59,9 +59,8 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
              -fno-schedule-insns -fno-schedule-insns2 -fno-strict-aliasing -fno-strict-overflow \
              -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
              -fno-tree-pre -fno-tree-vrp
- 
-SHIMS = -Dprintf=c_printf -Dfprintf=c_ufprintf \
-        -Dhmac_sha1=v7_hmac_sha1 \
+
+SHIMS = -Dhmac_sha1=v7_hmac_sha1 \
         -DNDEBUG
 
 # NDEBUG is required because we don't have an assert shim
@@ -180,7 +179,7 @@ $(APP_AR): $(OBJS)
 	$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
-	
+
 # -- Compilation.
 
 define compile

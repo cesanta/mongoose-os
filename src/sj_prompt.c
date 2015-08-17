@@ -38,6 +38,7 @@ static void show_prompt(void) {
   printf("smartjs %u/%d$ ", sj_get_free_heap_size(),
          v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_SIZE) -
              v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_USED));
+  fflush(stdout);
   s_sjp.pos = 0;
   s_sjp.char_processor = process_prompt_char;
 }

@@ -65,6 +65,8 @@ void user_init() {
 
   uart_div_modify(0, UART_CLK_FREQ / 115200);
   system_set_os_print(0);
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
 
   /* avoid entering AP mode on boot */
   wifi_set_opmode_current(0x1);
