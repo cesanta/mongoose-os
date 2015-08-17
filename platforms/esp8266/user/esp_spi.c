@@ -24,17 +24,25 @@
 * Modified by Cesanta Software, 2015
 */
 
-#include "spi.h"
+#include "esp_spi.h"
 
-void spi_init(uint8_t spi_no) {
-  if (spi_no > 1) return;
+struct esp_spi_connection {
+  uint8_t spi_no;
+};
 
-  spi_init_gpio(spi_no, SPI_CLK_USE_DIV);
-  spi_clock(spi_no, SPI_CLK_PREDIV, SPI_CLK_CNTDIV);
-  spi_tx_byte_order(spi_no, SPI_BYTE_ORDER_HIGH_TO_LOW);
-  spi_rx_byte_order(spi_no, SPI_BYTE_ORDER_HIGH_TO_LOW);
+int spi_init(spi_connection c) {
+  struct esp_spi_connection *conn = (struct esp_spi_connection *) c;
 
-  spi_finalize_init(spi_no);
+  if (conn->spi_no > 1) return;
+
+  spi_init_gpio(conn->spi_no, SPI_CLK_USE_DIV);
+  spi_clock(conn->spi_no, SPI_CLK_PREDIV, SPI_CLK_CNTDIV);
+  spi_tx_byte_order(conn->spi_no, SPI_BYTE_ORDER_HIGH_TO_LOW);
+  spi_rx_byte_order(conn->spi_no, SPI_BYTE_ORDER_HIGH_TO_LOW);
+
+  spi_finalize_init(conn->spi_no);
+
+  return 0;
 }
 
 void spi_finalize_init(uint8_t spi_no) {
@@ -177,32 +185,34 @@ static uint32_t spi_read_data(uint8_t spi_no, uint32_t din_bits) {
   }
 }
 
-uint32_t spi_txn(uint8_t spi_no, uint8_t cmd_bits, uint16_t cmd_data,
+uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
                  uint8_t addr_bits, uint32_t addr_data, uint8_t dout_bits,
                  uint32_t dout_data, uint8_t din_bits, uint8_t dummy_bits) {
-  if (spi_no > 1) return 0;
+  struct esp_spi_connection *conn = (struct esp_spi_connection *) c;
 
-  while (spi_busy(spi_no))
+  if (conn->spi_no > 1) return 0;
+
+  while (spi_busy(conn->spi_no))
     ; /* wait for SPI to be ready*/
 
   /* Enable SPI Functions */
   /* disable MOSI, MISO, ADDR, COMMAND, DUMMY in case previously set */
-  CLEAR_PERI_REG_MASK(SPI_USER(spi_no), SPI_USR_MOSI | SPI_USR_MISO |
-                                            SPI_USR_COMMAND | SPI_USR_ADDR |
-                                            SPI_USR_DUMMY);
+  CLEAR_PERI_REG_MASK(SPI_USER(conn->spi_no), SPI_USR_MOSI | SPI_USR_MISO |
+                                                  SPI_USR_COMMAND |
+                                                  SPI_USR_ADDR | SPI_USR_DUMMY);
 
   /* enable functions based on number of bits. 0 bits = disabled. */
   if (din_bits) {
-    SET_PERI_REG_MASK(SPI_USER(spi_no), SPI_USR_MISO);
+    SET_PERI_REG_MASK(SPI_USER(conn->spi_no), SPI_USR_MISO);
   }
 
   if (dummy_bits) {
-    SET_PERI_REG_MASK(SPI_USER(spi_no), SPI_USR_DUMMY);
+    SET_PERI_REG_MASK(SPI_USER(conn->spi_no), SPI_USR_DUMMY);
   }
 
   /* Setup Bitlengths */
   WRITE_PERI_REG(
-      SPI_USER1(spi_no),
+      SPI_USER1(conn->spi_no),
       ((addr_bits - 1) & SPI_USR_ADDR_BITLEN)
               << SPI_USR_ADDR_BITLEN_S | /* Number of bits in Address */
           ((dout_bits - 1) & SPI_USR_MOSI_BITLEN)
@@ -213,24 +223,38 @@ uint32_t spi_txn(uint8_t spi_no, uint8_t cmd_bits, uint16_t cmd_data,
               << SPI_USR_DUMMY_CYCLELEN_S); /* Number of Dummy bits to insert */
 
   if (cmd_bits) {
-    spi_set_command(spi_no, cmd_bits, cmd_data);
+    spi_set_command(conn->spi_no, cmd_bits, cmd_data);
   }
 
   if (addr_bits) {
-    spi_set_address(spi_no, addr_bits, addr_data);
+    spi_set_address(conn->spi_no, addr_bits, addr_data);
   }
 
   if (dout_bits) {
-    spi_set_out_data(spi_no, dout_bits, dout_data);
+    spi_set_out_data(conn->spi_no, dout_bits, dout_data);
   }
 
-  spi_begin_tran(spi_no);
+  spi_begin_tran(conn->spi_no);
 
   if (din_bits) {
-    return spi_read_data(spi_no, din_bits);
+    return spi_read_data(conn->spi_no, din_bits);
   }
 
   return 1;
+}
+
+spi_connection sj_spi_create(struct v7 *v7, v7_val_t args) {
+  /* Support HSPI only */
+  struct esp_spi_connection *conn = malloc(sizeof(*conn));
+
+  (void) v7;
+  (void) args;
+
+  conn->spi_no = HSPI;
+}
+
+void sj_spi_close(spi_connection conn) {
+  free(conn);
 }
 
 #ifdef MPL115A1_EXAMPLE_ENABLED

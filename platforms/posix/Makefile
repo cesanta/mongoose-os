@@ -17,7 +17,7 @@ FOSSA_FEATURES =
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
-			sj_simple_http.c fossa.c sj_i2c_js.c
+			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c
 ADD_LIBS = m
 
 ifeq ($(OS),Windows_NT)
@@ -26,8 +26,8 @@ else
   ifeq ($(UNAME_S),Linux)
     ADD_LIBS += rt
   endif
-  ifeq ($(UNAME_S),Darwin)
-		SJ_FEATURES += -DSJ_DISABLE_I2C
+  ifneq ($(UNAME_S),Linux)
+		SJ_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI
 	endif
   ifeq "$(SSL)" "OpenSSL" 
     FOSSA_FEATURES += -DNS_ENABLE_SSL

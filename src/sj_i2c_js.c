@@ -99,13 +99,14 @@
  *   Nothing.
  */
 
-static const char s_i2c_conn_prop[] = "__connection";
+static const char s_i2c_conn_prop[] = "_conn";
 
 static v7_val_t i2cjs_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   i2c_connection conn;
   conn = sj_i2c_create(v7, args);
 
   if (i2c_init(conn) < 0) {
+    sj_i2c_close(conn);
     v7_throw(v7, "Failed to initialize I2C library.");
   }
 

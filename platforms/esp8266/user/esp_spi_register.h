@@ -8,8 +8,8 @@
  *  names of these defines are likely to change.
  */
 
-#ifndef SPI_REGISTER_H_INCLUDED
-#define SPI_REGISTER_H_INCLUDED
+#ifndef ESP_SPI_REGISTER_H_INCLUDED
+#define ESP_SPI_REGISTER_H_INCLUDED
 
 #define REG_SPI_BASE(i) (0x60000200 - i * 0x100)
 

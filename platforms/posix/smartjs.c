@@ -10,6 +10,7 @@
 #include <sj_conf.h>
 #include <string.h>
 #include <sj_i2c_js.h>
+#include <sj_spi_js.h>
 
 #include "smartjs.h"
 #include "posix_http_client.h"
@@ -60,4 +61,5 @@ void init_smartjs() {
   sj_init_simple_http_client(v7);
 
   init_i2cjs(v7);
+  init_spijs(v7);
 }

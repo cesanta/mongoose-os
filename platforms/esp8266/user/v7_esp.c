@@ -14,6 +14,7 @@
 #include <sj_v7_ext.h>
 #include <sj_conf.h>
 #include <sj_i2c_js.h>
+#include <sj_spi_js.h>
 
 #include "v7_esp.h"
 #include "dht11.h"
@@ -22,7 +23,6 @@
 #include "esp_uart.h"
 #include "esp_wifi.h"
 #include "v7_gpio_js.h"
-#include "v7_hspi_js.h"
 #include "esp_data_gen.h"
 
 struct v7 *v7;
@@ -176,7 +176,7 @@ void init_v7(void *stack_base) {
   sj_init_v7_ext(v7);
   init_i2cjs(v7);
   init_gpiojs(v7);
-  init_hspijs(v7);
+  init_spijs(v7);
   init_wifi(v7);
   init_data_gen_server(v7);
 

@@ -31,10 +31,6 @@ void sj_set_timeout(int msecs, v7_val_t *cb);
 int sj_http_call(struct v7 *v7, const char *url, const char *body,
                  size_t body_len, const char *method, v7_val_t cb);
 
-/* Create i2c connection */
-i2c_connection sj_i2c_create(struct v7 *v7, v7_val_t args);
-
-/* Close i2c connection and free resources */
-void sj_i2c_close(i2c_connection conn);
+/* See sj_i2c.h and sj_spi.h for i2c & spi HAL related functions */
 
 #endif /* __SMARTJS_HAL_H_ */

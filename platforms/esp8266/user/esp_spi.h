@@ -22,8 +22,8 @@
 * SOFTWARE.
 */
 
-#ifndef SPI_APP_H
-#define SPI_APP_H
+#ifndef ESP_SPI_H
+#define ESP_SPI_H
 
 /*
 * SPI low level API
@@ -98,10 +98,13 @@
 * full-featured example
 */
 
-#include "spi_register.h"
-#include "ets_sys.h"
-#include "osapi.h"
-#include "os_type.h"
+#include <ets_sys.h>
+#include <osapi.h>
+#include <os_type.h>
+
+#include <sj_spi.h>
+
+#include "esp_spi_register.h"
 
 #define SPI 0
 #define HSPI 1
@@ -121,15 +124,6 @@
 #define SPI_CLK_CNTDIV 2
 #define SPI_CLK_FREQ \
   CPU_CLK_FREQ / (SPI_CLK_PREDIV * SPI_CLK_CNTDIV) /* 80 / 20 = 4 MHz */
-
-/*
-* Function Name: spi_init
-*   Description: Wrapper to setup HSPI/SPI GPIO pins and default SPI clock
-*    Parameters: spi_no - SPI (0) or HSPI (1)
-*    Calls spi_init_gpio, spi_clock, spi_tx_byte_order and spi_rx_byte_order
-* inside
-*/
-void spi_init(uint8_t spi_no);
 
 /*
 * Function Name: spi_finalize_init
@@ -191,29 +185,6 @@ void spi_tx_byte_order(uint8_t spi_no, uint8_t byte_order);
 *    0xABCDEFGH would be read as 0xGHEFCDAB
 */
 void spi_rx_byte_order(uint8_t spi_no, uint8_t byte_order);
-
-/*
-* Function Name: spi_txn
-*   Description: SPI transaction function
-*    Parameters: spi_no - SPI (0) or HSPI (1)
-*     cmd_bits - actual number of bits to transmit
-*     cmd_data - command data
-*     addr_bits - actual number of bits to transmit
-*     addr_data - address data
-*     dout_bits - actual number of bits to transmit
-*     dout_data - output data
-*     din_bits - actual number of bits to receive
-*
-*   Returns: read data - uint32_t containing read in data
-*     only if RX was set
-*     0 - something went wrong (or actual read data was 0)
-*     1 - data sent ok (or actual read data is 1)
-*     Note: all data is assumed to be stored in the lower
-*      bits of the data variables (for anything <32 bits).
-*/
-uint32_t spi_txn(uint8_t spi_no, uint8_t cmd_bits, uint16_t cmd_data,
-                 uint8_t addr_bits, uint32_t addr_data, uint8_t dout_bits,
-                 uint32_t dout_data, uint8_t din_bits, uint8_t dummy_bits);
 
 #define spi_busy(spi_no) READ_PERI_REG(SPI_CMD(spi_no)) & SPI_USR
 
