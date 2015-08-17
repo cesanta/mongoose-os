@@ -22,7 +22,7 @@ void fprint_str(FILE *fp, const char *str) {
 void _exit(int status) {
   fprint_str(stderr, "_exit\n");
   /* cause an unaligned access exception, that will drop you into gdb */
-  *(int*) 1 = status;
+  *(int *) 1 = status;
   while (1)
     ; /* avoid gcc warning because stdlib abort() has noreturn attribute */
 }
@@ -54,7 +54,7 @@ ssize_t _write(int fd, const void *buf, size_t count) {
     _not_implemented("_write to files");
   }
   for (size_t i = 0; i < count; i++) {
-    const char c = ((const char *)buf)[i];
+    const char c = ((const char *) buf)[i];
     if (c == '\n') MAP_UARTCharPut(CONSOLE_UART, '\r');
     MAP_UARTCharPut(CONSOLE_UART, c);
   }

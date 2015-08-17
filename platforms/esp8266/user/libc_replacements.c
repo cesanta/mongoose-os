@@ -24,8 +24,8 @@
 #include "v7_esp.h"
 
 /* Why these declarations are commented out in mem.h is beyond me. */
-void *pvPortMalloc(size_t xWantedSize );
-void vPortFree(void *pv );
+void *pvPortMalloc(size_t xWantedSize);
+void vPortFree(void *pv);
 void *pvPortZalloc(size_t size);
 void *pvPortRealloc(void *pv, size_t size);
 
@@ -37,45 +37,45 @@ void *pvPortRealloc(void *pv, size_t size);
  * error codes and doesn't provide
  * error descriptions
  */
-char* strerror(int errnum) {
+char *strerror(int errnum) {
   static char buf[15];
   snprintf(buf, sizeof(buf), "err: %d", errnum);
   buf[sizeof(buf) - 1] = 0;
   return buf;
 }
 
-void* malloc(size_t size) {
-  void* res = (void*) pvPortMalloc(size);
+void *malloc(size_t size) {
+  void *res = (void *) pvPortMalloc(size);
   if (res == NULL) {
     v7_gc(v7, 1);
-    res = (void*) pvPortMalloc(size);
+    res = (void *) pvPortMalloc(size);
   }
   return res;
 }
 
-void free(void* ptr) {
+void free(void *ptr) {
   vPortFree(ptr);
 }
 
-void* realloc(void* ptr, size_t size) {
-  void* res = (void*) pvPortRealloc(ptr, size);
+void *realloc(void *ptr, size_t size) {
+  void *res = (void *) pvPortRealloc(ptr, size);
   if (res == NULL) {
     v7_gc(v7, 1);
-    res = (void*) pvPortRealloc(ptr, size);
+    res = (void *) pvPortRealloc(ptr, size);
   }
   return res;
 }
 
-void* calloc(size_t num, size_t size) {
-  void* res = (void*) pvPortZalloc(num * size);
+void *calloc(size_t num, size_t size) {
+  void *res = (void *) pvPortZalloc(num * size);
   if (res == NULL) {
     v7_gc(v7, 1);
-    res = (void*) pvPortZalloc(num * size);
+    res = (void *) pvPortZalloc(num * size);
   }
   return res;
 }
 
-int sprintf(char* buffer, const char* format, ...) {
+int sprintf(char *buffer, const char *format, ...) {
   int ret;
   va_list arglist;
   va_start(arglist, format);
@@ -84,7 +84,7 @@ int sprintf(char* buffer, const char* format, ...) {
   return ret;
 }
 
-int snprintf(char* buffer, size_t size, const char* format, ...) {
+int snprintf(char *buffer, size_t size, const char *format, ...) {
   int ret;
   va_list arglist;
   va_start(arglist, format);
@@ -93,13 +93,13 @@ int snprintf(char* buffer, size_t size, const char* format, ...) {
   return ret;
 }
 
-int vsnprintf(char* buffer, size_t size, const char* format, va_list arg) {
+int vsnprintf(char *buffer, size_t size, const char *format, va_list arg) {
   return c_vsnprintf(buffer, size, format, arg);
 }
 
 // based on Source:
 // https://github.com/anakod/Sming/blob/master/Sming/system/stringconversion.cpp#L93
-double strtod(const char* str, char** endptr) {
+double strtod(const char *str, char **endptr) {
   double result = 0.0;
   double factor = 1.0;
   bool decimals = false;
@@ -112,7 +112,7 @@ double strtod(const char* str, char** endptr) {
   if (*str == 0x00) {
     // only space in str?
     if (endptr != NULL) {
-      *endptr = (char*) str;
+      *endptr = (char *) str;
     }
     return result;
   }
@@ -176,7 +176,7 @@ double strtod(const char* str, char** endptr) {
     }
   }
   if (endptr != NULL) {
-    *endptr = (char*) str;
+    *endptr = (char *) str;
   }
   return result * factor;
 }
@@ -218,7 +218,7 @@ static double flash_log10(double x) {
     count++;                         \
   }
 
-int double_to_str(char* buf, size_t buf_size, double val, int prec) {
+int double_to_str(char *buf, size_t buf_size, double val, int prec) {
   if (isnan(val)) {
     strncpy(buf, "nan", buf_size);
     return 3;
@@ -236,7 +236,7 @@ int double_to_str(char* buf, size_t buf_size, double val, int prec) {
   double precision = flash_pow10int(-prec);
 
   int mag1, mag2, count = 0;
-  char* ptr = buf;
+  char *ptr = buf;
   int neg = (val < 0);
 
   if (neg != 0) {
@@ -318,7 +318,7 @@ int double_to_str(char* buf, size_t buf_size, double val, int prec) {
 
 void abort(void) {
   /* cause an unaligned access exception, that will drop you into gdb */
-  *(int*) 1 = 1;
+  *(int *) 1 = 1;
   while (1)
     ; /* avoid gcc warning because stdlib abort() has noreturn attribute */
 }
@@ -345,7 +345,7 @@ uint32_t ntohl(uint32_t netlong) {
   return htonl(netlong);
 }
 
-void* _malloc_r(struct _reent *r, size_t size) {
+void *_malloc_r(struct _reent *r, size_t size) {
   return malloc(size);
 }
 
@@ -353,11 +353,11 @@ void _free_r(struct _reent *r, void *ptr) {
   free(ptr);
 }
 
-void* _realloc_r(struct _reent *r, void* ptr, size_t size) {
+void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
   return realloc(ptr, size);
 }
 
-int _gettimeofday_r(struct _reent* r, struct timeval* tp, void* tzp) {
+int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
   tp->tv_sec = 42;
   tp->tv_usec = 123;
   return 0;

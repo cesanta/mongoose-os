@@ -108,7 +108,7 @@ void read_dir(DIR *dir, const char *dir_path) {
   struct dirent *ent;
 
   while ((ent = readdir(dir)) != NULL) {
-    if (ent->d_name[0] == '.') {  /* Excludes ".", ".." and hidden files. */
+    if (ent->d_name[0] == '.') { /* Excludes ".", ".." and hidden files. */
       continue;
     }
     sprintf(path, "%s/%s", dir_path, ent->d_name);

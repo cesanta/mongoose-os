@@ -41,7 +41,7 @@ static v7_val_t js_usleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
 void init_v7(void *stack_base) {
   struct v7_create_opts opts;
-//  v7_val_t wifi, dht11, gc, debug, os;
+  //  v7_val_t wifi, dht11, gc, debug, os;
 
   opts.object_arena_size = 164;
   opts.function_arena_size = 26;
@@ -101,7 +101,7 @@ void init_v7(void *stack_base) {
 #endif
   v7_gc(v7, 1);
 
-//  init_conf(v7);
+  //  init_conf(v7);
 }
 
 static void blinkenlights_task(void *arg) {
@@ -110,7 +110,7 @@ static void blinkenlights_task(void *arg) {
   unsigned char v = 0;
 
   MAP_PRCMPeripheralClkEnable(PRCM_GPIOA1, PRCM_RUN_MODE_CLK);
-  MAP_PinTypeGPIO(PIN_02, PIN_MODE_0, false);  /* Green LED */
+  MAP_PinTypeGPIO(PIN_02, PIN_MODE_0, false); /* Green LED */
   MAP_GPIODirModeSet(GPIOA1_BASE, 0x8, GPIO_DIR_MODE_OUT);
   MAP_GPIOPinWrite(GPIOA1_BASE, 1 << (LED_GPIO % 8), 0);
 
@@ -148,8 +148,8 @@ static void prompt_task(void *arg) {
 
   /* Console UART init. */
   MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
-  MAP_PinTypeUART(PIN_55, PIN_MODE_3);  /* PIN_55 -> UART0_TX */
-  MAP_PinTypeUART(PIN_57, PIN_MODE_3);  /* PIN_57 -> UART0_RX */
+  MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
+  MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* PIN_57 -> UART0_RX */
   MAP_UARTConfigSetExpClk(
       CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
       CONSOLE_BAUD_RATE,
@@ -174,10 +174,10 @@ static void prompt_task(void *arg) {
 }
 
 /* Int vector table, defined in startup_gcc.c */
-extern void (* const g_pfnVectors[])(void);
+extern void (*const g_pfnVectors[])(void);
 
 int main() {
-  MAP_IntVTableBaseSet((unsigned long)&g_pfnVectors[0]);
+  MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
