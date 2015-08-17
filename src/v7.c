@@ -7082,18 +7082,10 @@ void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
   if (v7_is_string(v)) {
     size_t n;
     const char *s = v7_to_string(v7, &v, &n);
-#ifndef NO_LIBC
     fprintf(f, "%s", s);
-#else
-    fprint_str(f, s);
-#endif
   } else {
     char *s = v7_to_json(v7, v, buf, sizeof(buf));
-#ifndef NO_LIBC
     fprintf(f, "%s", s);
-#else
-    fprint_str(f, s);
-#endif
     if (buf != s) free(s);
   }
 }

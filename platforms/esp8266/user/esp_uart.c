@@ -150,24 +150,7 @@ int c_printf(const char *format, ...) {
   return size;
 }
 
-/* This is a workaround for #576. It only supports stdout/stderr */
-void fprint_str(FILE *fp, const char *str) {
-  int uart = (fp == stderr) ? s_system_uartno : UART_MAIN;
-  if (fp == stderr && !debug_enabled) return;
-
-  while (*str != '\0') {
-    if (*str == '\n') uart_tx_char(uart, '\r');
-    uart_tx_char(uart, *str);
-    str++;
-  }
-}
-
-/* This is a workaround for #576 */
-void print_str(const char *str) {
-  fprint_str(stdout, str);
-}
-
-/* shim for fprintf. Handles only (pseudo) stderr */
+/* shim for fprintf. Handles only (pseudo) stderr and stdout */
 int c_ufprintf(FILE *fp, const char *format, ...) {
   int size = -1;
   va_list arglist;
@@ -179,6 +162,8 @@ int c_ufprintf(FILE *fp, const char *format, ...) {
     } else {
       size = 0;
     }
+  } else if (fp == stdout) {
+    size = c_uvprintf(s_system_uartno, format, arglist);
   }
   va_end(arglist);
   return size;
