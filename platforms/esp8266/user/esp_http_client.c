@@ -85,11 +85,13 @@ static void http_connect_cb(void *arg) {
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
 
   if (strcmp(ctx->method, "GET") == 0) {
-    len = asprintf(&buf, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", ctx->path, ctx->host);
+    len = asprintf(&buf, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", ctx->path,
+                   ctx->host);
   } else {
     /* TODO(alashkin): should we handle \0 in the middle of the body? */
-    len = asprintf(&buf, "POST %s HTTP/1.0\r\nHost: %s\r\nContent-Length: %d\r\n\r\n%s",
-                   ctx->path, ctx->host, strlen(ctx->body_a), ctx->body_a);
+    len = asprintf(
+        &buf, "POST %s HTTP/1.0\r\nHost: %s\r\nContent-Length: %d\r\n\r\n%s",
+        ctx->path, ctx->host, strlen(ctx->body_a), ctx->body_a);
   }
   if (len < 0) {
     sj_http_error_callback(v7, ctx->cb, ESPCONN_MEM);

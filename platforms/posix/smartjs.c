@@ -12,6 +12,7 @@
 #include <sj_i2c_js.h>
 #include <sj_spi_js.h>
 #include <sj_fossa.h>
+#include <sj_fossa_ws_client.h>
 
 #include "smartjs.h"
 
@@ -59,6 +60,7 @@ void init_smartjs() {
 
   init_fossa();
   sj_init_simple_http_client(v7);
+  sj_init_ws_client(v7);
 
   init_i2cjs(v7);
   init_spijs(v7);
