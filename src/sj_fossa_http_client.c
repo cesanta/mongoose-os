@@ -1,9 +1,13 @@
+/*
+ * Implements fossa platform specific sj_http_call.
+ * This is common to all platforms that use fossa as networking API
+ */
 #include <stdlib.h>
 #include <v7.h>
 #include <fossa.h>
 #include <sj_hal.h>
 #include <sj_v7_ext.h>
-static struct ns_mgr mgr;
+#include <sj_fossa.h>
 
 struct user_data {
   struct v7 *v7;
@@ -43,29 +47,12 @@ static void fossa_ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
   }
 }
 
-void init_fossa() {
-  ns_mgr_init(&mgr, NULL);
-}
-
-void destroy_fossa() {
-  ns_mgr_free(&mgr);
-}
-
-int poll_fossa() {
-  if (ns_next(&mgr, NULL) != NULL) {
-    ns_mgr_poll(&mgr, 1000);
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 int sj_http_call(struct v7 *v7, const char *url, const char *body,
                  size_t body_len, const char *method, v7_val_t cb) {
   struct ns_connection *nc;
   struct user_data *ud = NULL;
 
-  nc = ns_connect_http(&mgr, fossa_ev_handler, url, 0, body);
+  nc = ns_connect_http(&sj_mgr, fossa_ev_handler, url, 0, body);
 
   if (nc == NULL) {
     sj_http_error_callback(v7, cb, -2);

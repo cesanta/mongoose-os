@@ -11,9 +11,9 @@
 #include <string.h>
 #include <sj_i2c_js.h>
 #include <sj_spi_js.h>
+#include <sj_fossa.h>
 
 #include "smartjs.h"
-#include "posix_http_client.h"
 
 struct v7 *v7;
 

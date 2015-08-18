@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <sj_fossa.h>
 #include "smartjs.h"
-#include "posix_http_client.h"
 
 void run_file(const char *file_name) {
   v7_val_t res;

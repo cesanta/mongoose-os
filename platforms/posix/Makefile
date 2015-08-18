@@ -17,7 +17,8 @@ FOSSA_FEATURES =
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
-			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c
+			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c sj_fossa.c \
+			sj_fossa_http_client.c
 ADD_LIBS = m
 
 ifeq ($(OS),Windows_NT)
