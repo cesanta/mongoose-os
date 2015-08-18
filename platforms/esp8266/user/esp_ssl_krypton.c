@@ -9,8 +9,10 @@
 #include "os_type.h"
 #include "ip_addr.h"
 #include "espconn.h"
+#include "user_interface.h"
 
 #include "esp_ssl_krypton.h"
+#include "esp_missing_includes.h"
 #include "krypton.h"
 
 #ifdef ESP_SSL_KRYPTON_DEBUG
@@ -111,7 +113,7 @@ static void kr_remove_conn(struct kr_conn *kc) {
 
 ssize_t kr_send(int fd, const void *buf, size_t len, int flags) {
   struct kr_conn *kc = kr_find_conn_by_fd(fd);
-  if (kc == NULL) return;
+  if (kc == NULL) return -1;
   /* Apparently, invoking espconn_send while receiveing clobbers some
    * buffer somewhere. Avoid that. */
   if (kc->flags.f.sending || kc->flags.f.receiving) {
@@ -121,14 +123,14 @@ ssize_t kr_send(int fd, const void *buf, size_t len, int flags) {
     return -1;
   }
   kc->flags.f.sending = 1;
-  errno = espconn_sent(kc->ec, (char *) buf, len);
+  errno = espconn_sent(kc->ec, (uint8 *) buf, len);
   dprintf(("sending %d %u %d\n", fd, len, errno));
   return errno == 0 ? len : -1;
 }
 
 ssize_t kr_recv(int fd, void *buf, size_t len, int flags) {
   struct kr_conn *kc = kr_find_conn_by_fd(fd);
-  if (kc == NULL) return;
+  if (kc == NULL) return -1;
   dprintf(("recv %d %u, %u avail\n", fd, len, kc->recv_avail));
   if (kc->recv_avail == 0) {
     errno = EWOULDBLOCK;
