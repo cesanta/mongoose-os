@@ -1,3 +1,5 @@
+#ifndef SJ_DISABLE_I2C
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -8,8 +10,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
-
-#ifndef SJ_DISABLE_I2C
 
 #include <sj_hal.h>
 #include <sj_i2c.h>

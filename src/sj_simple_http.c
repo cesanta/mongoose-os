@@ -46,7 +46,7 @@ static v7_val_t sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
                                     v7_val_t bodyv, v7_val_t cb,
                                     const char *method) {
   const char *body = NULL;
-  size_t url_len, body_len;
+  size_t url_len, body_len = 0;
 
   if (!v7_is_string(urlv)) {
     v7_throw(v7, "url should be a string");
