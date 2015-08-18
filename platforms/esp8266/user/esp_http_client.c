@@ -80,33 +80,31 @@ static void http_sent_cb(void *arg) {
 /* Called when successfully connected */
 static void http_connect_cb(void *arg) {
   char *buf;
+  int len;
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
 
   if (strcmp(ctx->method, "GET") == 0) {
-    const char *const reqfmt = "GET %s HTTP/1.0\r\n\r\n";
-    int buflen = strlen(ctx->path) + strlen(reqfmt) - 2 + 1;
-    buf = (char *) malloc(buflen);
-    snprintf(buf, buflen, reqfmt, ctx->path);
+    len = asprintf(&buf, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", ctx->path, ctx->host);
   } else {
     /* TODO(alashkin): should we handle \0 in the middle of the body? */
-    const char *const reqfmt =
-        "POST %s HTTP/1.0\r\nContent-Length: %d\r\n\r\n%s";
-    size_t body_len = strlen(ctx->body_a);
-    /* some space for content length and zero terminator */
-    int buflen = strlen(ctx->path) + strlen(reqfmt) + body_len + 10;
-    buf = (char *) malloc(buflen);
-    snprintf(buf, buflen, reqfmt, ctx->path, (int) body_len, ctx->body_a);
+    len = asprintf(&buf, "POST %s HTTP/1.0\r\nHost: %s\r\nContent-Length: %d\r\n\r\n%s",
+                   ctx->path, ctx->host, strlen(ctx->body_a), ctx->body_a);
+  }
+  if (len < 0) {
+    sj_http_error_callback(v7, ctx->cb, ESPCONN_MEM);
+    http_free(conn);
+    return;
   }
 
   if (ctx->is_secure) {
 #ifdef ESP_SSL_KRYPTON
-    kr_secure_sent(conn, buf, strlen(buf));
+    kr_secure_sent(conn, (uint8 *) buf, len);
 #elif defined(ESP_SSL_SDK)
-    espconn_secure_sent(conn, buf, strlen(buf));
+    espconn_secure_sent(conn, (uint8 *) buf, len);
 #endif
   } else {
-    espconn_sent(conn, buf, strlen(buf));
+    espconn_sent(conn, (uint8 *) buf, len);
   }
 
   free(buf);
