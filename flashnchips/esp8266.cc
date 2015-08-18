@@ -575,28 +575,14 @@ class FlasherImpl : public Flasher {
       flashParams = images_[0][2] << 8 | images_[0][3];
     }
 
-// TODO(imax): enable back once it works reliably without aborting flashing.
-#if 0
-    if (false && merge_flash_filesystem_) {
-      auto res = mergeFlashLocked();
-      if (res.ok()) {
-        images_[spiffsBlockOffset] = res.ValueOrDie();
-        qWarning() << "Merged flash content";
-      } else {
-        qWarning() << "Failed to merge flash content:"
-                   << res.status().ToString().c_str();
-        emit done(tr("failed to merge flash filesystem"), false);
-        return;
-      }
-    }
-#endif
-
+    bool id_generated = false;
     if (generate_id_if_none_found_ && !images_.contains(idBlockOffset)) {
       auto res = findIdLocked();
       if (res.ok()) {
         if (!res.ValueOrDie()) {
           emit statusMessage(tr("Generating new ID"), true);
           images_[idBlockOffset] = makeIDBlock(id_hostname_);
+          id_generated = true;
         } else {
           emit statusMessage(tr("Existing ID found"), true);
         }
@@ -606,6 +592,24 @@ class FlasherImpl : public Flasher {
                            true);
         emit done(tr("failed to check for ID presence"), false);
         return;
+      }
+    }
+
+    if (merge_flash_filesystem_) {
+      emit statusMessage(tr("Reading file system image..."), true);
+
+      auto res = mergeFlashLocked();
+      if (res.ok()) {
+        images_[spiffsBlockOffset] = res.ValueOrDie();
+        emit statusMessage(tr("Merged flash content"), true);
+      } else {
+        emit statusMessage(tr("Failed to merge flash content: %1")
+                               .arg(res.status().ToString().c_str()),
+                           true);
+        if (!id_generated) {
+          emit done(tr("failed to merge flash filesystem"), false);
+          return;
+        }
       }
     }
 
