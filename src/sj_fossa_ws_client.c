@@ -6,6 +6,9 @@
 #include <sj_v7_ext.h>
 #include <sj_fossa.h>
 
+#define WEBSOCKET_OPEN v7_create_number(1)
+#define WEBSOCKET_CLOSED v7_create_number(2)
+
 struct user_data {
   struct v7 *v7;
   v7_val_t ws;
@@ -19,8 +22,6 @@ static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
     v7_val_t args = v7_create_array(v7);
     v7_array_set(v7, args, 0, ev);
     v7_apply(v7, met, v7_create_undefined(), args);
-  } else {
-    printf("%s not found\n", name);
   }
 }
 
@@ -171,10 +172,41 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
   return v7_create_undefined();
 }
 
+static v7_val_t WebSocket_close(struct v7 *v7, v7_val_t this_obj,
+                                v7_val_t args) {
+  struct ns_connection *nc;
+  v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
+  (void) args;
+  if (v7_is_foreign(ncv) &&
+      (nc = (struct ns_connection *) v7_to_foreign(ncv)) != NULL) {
+    nc->flags |= NSF_CLOSE_IMMEDIATELY;
+  }
+  return v7_create_undefined();
+}
+
+static v7_val_t WebSocket_readyState(struct v7 *v7, v7_val_t this_obj,
+                                     v7_val_t args) {
+  v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
+  if (v7_is_undefined(ncv)) {
+    return WEBSOCKET_CLOSED;
+  } else {
+    return WEBSOCKET_OPEN;
+  }
+}
+
 void sj_init_ws_client(struct v7 *v7) {
   v7_val_t ws_proto = v7_create_object(v7);
   v7_val_t ws = v7_create_constructor(v7, ws_proto, sj_ws_ctor, 1);
+  v7_own(v7, &ws);
 
   v7_set_method(v7, ws_proto, "send", WebSocket_send);
+  v7_set_method(v7, ws_proto, "close", WebSocket_close);
+  v7_set(v7, ws_proto, "readyState", ~0,
+         V7_PROPERTY_DONT_ENUM | V7_PROPERTY_GETTER,
+         v7_create_function(v7, WebSocket_readyState, 0));
+  v7_set(v7, ws, "OPEN", ~0, 0, WEBSOCKET_OPEN);
+  v7_set(v7, ws, "CLOSED", ~0, 0, WEBSOCKET_CLOSED);
   v7_set(v7, v7_get_global_object(v7), "WebSocket", ~0, 0, ws);
+
+  v7_disown(v7, &ws);
 }
