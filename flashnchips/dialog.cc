@@ -100,6 +100,7 @@ void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
   enabled_in_state_.insert(detectBtn_, NotConnected);
   layout->addWidget(detectBtn_, 0);
   connect(detectBtn_, &QPushButton::clicked, this, &MainDialog::detectPorts);
+  portSelector_->addItem(tr("Step 1: select the port or press detect button"));
 
   // TODO(imax): make it do something meaningful when we have more than one
   // platform.
@@ -111,7 +112,7 @@ void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
 }
 
 void MainDialog::addFirmwareSelector(QBoxLayout* parent) {
-  QGroupBox* group = new QGroupBox(tr("Flashing firmware"));
+  QGroupBox* group = new QGroupBox(tr("Step 2: flash the firmware"));
 
   QVBoxLayout* layout = new QVBoxLayout;
 
@@ -179,7 +180,8 @@ void MainDialog::addFSSelector(QBoxLayout* parent) {
 }
 
 void MainDialog::addSerialConsole(QBoxLayout* parent) {
-  QGroupBox* group = new QGroupBox(tr("Serial console"));
+  QGroupBox* group =
+      new QGroupBox(tr("Step 3: talk to the device over serial console"));
 
   QBoxLayout* layout = new QVBoxLayout;
 
@@ -194,10 +196,6 @@ void MainDialog::addSerialConsole(QBoxLayout* parent) {
   enabled_in_state_.insert(reboot_btn_, Connected);
   enabled_in_state_.insert(reboot_btn_, Terminal);
 
-  QCheckBox* systemColors = new QCheckBox(tr("Use default colors"));
-  bool b = settings_.value("terminal/systemColors", true).toBool();
-  systemColors->setChecked(b);
-  QTimer::singleShot(0, [b, this]() { setTerminalColors(b); });
   QPushButton* clear_btn = new QPushButton(tr("Clear"));
 
   actionSelector_ = new QComboBox;
@@ -210,8 +208,6 @@ void MainDialog::addSerialConsole(QBoxLayout* parent) {
           &MainDialog::connectDisconnectTerminal);
   connect(reboot_btn_, &QPushButton::clicked, this, &MainDialog::rebootESP8266);
 
-  connect(systemColors, &QCheckBox::toggled, this,
-          &MainDialog::setTerminalColors);
   connect(actionSelector_, static_cast<void (QComboBox::*) (int) >(
                                &QComboBox::currentIndexChanged),
           this, &MainDialog::doAction);
@@ -219,7 +215,6 @@ void MainDialog::addSerialConsole(QBoxLayout* parent) {
   hlayout->addWidget(connect_disconnect_btn_);
   hlayout->addWidget(reboot_btn_);
   hlayout->addWidget(clear_btn);
-  hlayout->addWidget(systemColors);
   hlayout->addStretch(1);
   hlayout->addWidget(actionSelector_);
 
@@ -486,7 +481,9 @@ void MainDialog::updatePortList() {
   QSet<QString> to_delete, to_add;
 
   for (int i = 0; i < portSelector_->count(); i++) {
-    to_delete.insert(portSelector_->itemData(i).toString());
+    if (portSelector_->itemData(i).type() == QMetaType::QString) {
+      to_delete.insert(portSelector_->itemData(i).toString());
+    }
   }
 
   auto ports = QSerialPortInfo::availablePorts();
@@ -506,7 +503,8 @@ void MainDialog::updatePortList() {
 
   for (const auto& s : to_delete) {
     for (int i = 0; i < portSelector_->count(); i++) {
-      if (portSelector_->itemData(i).toString() == s) {
+      if (portSelector_->itemData(i).type() == QMetaType::QString &&
+          portSelector_->itemData(i).toString() == s) {
         portSelector_->removeItem(i);
         break;
       }
@@ -558,6 +556,14 @@ void MainDialog::detectPorts() {
 
   if (firstDetected >= 0) {
     portSelector_->setCurrentIndex(firstDetected);
+  } else {
+    QMessageBox::information(
+        this, tr("No devices detected"),
+        tr("Could not detect the device on any of serial ports. Make sure the "
+           "device is properly wired and connected and you have drivers for "
+           "the USB-to-serial adapter. See <a "
+           "href=\"https://github.com/cesanta/smart.js/blob/master/platforms/"
+           "esp8266/flashing.md\">this page</a> for more details."));
   }
 
   portSelector_->setDisabled(false);
@@ -677,18 +683,6 @@ void MainDialog::loadFirmware() {
   worker_->start();
   QTimer::singleShot(0, f.get(), &Flasher::run);
   f.release();
-}
-
-void MainDialog::setTerminalColors(bool system) {
-  if (system) {
-    terminal_->setPalette(palette());
-  } else {
-    QPalette p = palette();
-    p.setColor(QPalette::Base, Qt::black);
-    p.setColor(QPalette::Text, Qt::darkGreen);
-    terminal_->setPalette(p);
-  }
-  settings_.setValue("terminal/systemColors", system);
 }
 
 void MainDialog::selectFSDir() {

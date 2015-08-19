@@ -65,7 +65,6 @@ class MainDialog : public QMainWindow {
   util::Status disconnectTerminalSignals();
   void readSerial();
   void writeSerial();
-  void setTerminalColors(bool system = true);
   void rebootESP8266();
   void doAction(int index);
   void configureWiFi();
