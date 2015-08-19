@@ -90,6 +90,8 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
 }
 
 void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
+  QGroupBox* group = new QGroupBox(
+      tr("Step 1: select the serial port or press \"Detect devices\" button"));
   QHBoxLayout* layout = new QHBoxLayout;
 
   portSelector_ = new QComboBox;
@@ -100,7 +102,6 @@ void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
   enabled_in_state_.insert(detectBtn_, NotConnected);
   layout->addWidget(detectBtn_, 0);
   connect(detectBtn_, &QPushButton::clicked, this, &MainDialog::detectPorts);
-  portSelector_->addItem(tr("Step 1: select the port or press detect button"));
 
   // TODO(imax): make it do something meaningful when we have more than one
   // platform.
@@ -108,7 +109,9 @@ void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
   platformSelector->addItem("ESP8266");
   layout->addWidget(platformSelector, 0);
 
-  parent->addLayout(layout);
+  group->setLayout(layout);
+
+  parent->addWidget(group);
 }
 
 void MainDialog::addFirmwareSelector(QBoxLayout* parent) {
