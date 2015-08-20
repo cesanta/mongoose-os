@@ -11,7 +11,7 @@ SSL ?= OpenSSL
 V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
 								   -DV7_ENABLE_GC -DV7_ENABLE_GC \
 								   -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
-								   -DV7_ENABLE_FILE
+								   -DV7_ENABLE_FILE -DV7_MAIN
 SJ_FEATURES =
 FOSSA_FEATURES =
 
@@ -30,10 +30,10 @@ else
   ifneq ($(UNAME_S),Linux)
 		SJ_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI -DSJ_DISABLE_GPIO
 	endif
-  ifeq "$(SSL)" "OpenSSL" 
+  ifeq "$(SSL)" "OpenSSL"
     FOSSA_FEATURES += -DNS_ENABLE_SSL
     ADD_LIBS += ssl crypto
-  endif  
+  endif
 endif
 
 ifeq ($(VERBOSE),1)

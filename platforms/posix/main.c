@@ -1,74 +1,60 @@
 #include <stdio.h>
 #include <string.h>
-#include <sj_fossa.h>
+#include "sj_fossa.h"
+#include "sj_v7_ext.h"
 #include "smartjs.h"
 
-void run_file(const char *file_name) {
+#ifndef JS_DIR_NAME
+#define JS_DIR_NAME "js_files"
+#endif
+
+static const char *s_argv0;
+
+static void pre_init(struct v7 *v7) {
+  static const char *init_files[] = { "smart.js", "user.js" };
+  const char *dir = s_argv0 + strlen(s_argv0) - 1;
+  char path[512];
+  size_t i;
   v7_val_t res;
-  printf("Executing %s\n", file_name);
-  if (v7_exec_file(v7, &res, file_name) != V7_OK) {
-    printf("%s execution: ", file_name);
-    v7_println(v7, res);
+
+  sj_init_v7_ext(v7);
+  init_smartjs(v7);
+
+  /*
+   * Point `dir` to the right-most directory separator of the smartjs binary.
+   * Thus string between `s_argv0` and `dir` pointers would contain a directory
+   * name where our executable lives.
+   */
+  while (dir > s_argv0 && *dir != '/' && *dir != '\\') {
+    dir--;
   }
-}
 
-void run_expr(const char *expr) {
-  v7_val_t res;
-  if (v7_exec(v7, &res, expr) != V7_OK) {
-    printf("Execution error [%s]:\n", expr);
-    v7_println(v7, res);
-  }
-}
-
-void run_startups() {
-  static const char *startup_files[] = {"smart.js", "init.js"};
-  int i;
-
-  for (i = 0; i < sizeof(startup_files) / sizeof(startup_files[0]); i++) {
-    run_file(startup_files[i]);
-  }
-}
-
-int main(int argc, char *argv[]) {
-  const char *exprs[16], *files[16];
-  int i, nexprs = 0, nfiles = 0;
-
-  for (i = 1; i < argc && argv[i][0] == '-'; i++) {
-    if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
-      exprs[nexprs++] = argv[i + 1];
-      i++;
-    } else if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
-      files[nfiles++] = argv[i + 1];
-      i++;
+  /*
+   * Run startup scripts from the directory JS_DIR_NAME.
+   * That directory should be located where the binary (s_argv0) lives.
+   */
+  for (i = 0; i < sizeof(init_files) / sizeof(init_files[0]); i++) {
+    /* Construct path to the startup script */
+    snprintf(path, sizeof(path), "%.*s/%s/%s", (int) (dir - s_argv0), s_argv0,
+             JS_DIR_NAME, init_files[i]);
+    if (v7_exec_file(v7, &res, path) != V7_OK) {
+      fprintf(stderr, "Failed to run %s\n", path);
     }
   }
+}
 
-  init_smartjs();
-
-  run_startups();
-
-  for (i = 0; i < nfiles; i++) {
-    run_file(files[i]);
-  }
-
-  for (i = 0; i < nexprs; i++) {
-    run_expr(exprs[i]);
-  }
-
-  /* Main loop here */
-  while (1) {
+static void post_init(struct v7 *v7) {
+  do {
     /*
      * Now waiting until fossa has active connections
      * and there are active gpio ISR and then exiting
      * TODO(alashkin): change this to something smart
      */
-    if (!fossa_poll() && !gpio_poll()) {
-      break;
-    }
-  }
-
-  v7_destroy(v7);
+  } while (fossa_poll() || gpio_poll());
   fossa_destroy();
+}
 
-  return 0;
+int main(int argc, char *argv[]) {
+  s_argv0 = argv[0];
+  return v7_main(argc, argv, pre_init, post_init);
 }

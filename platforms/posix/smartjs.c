@@ -51,10 +51,8 @@ cleanup:
   }
 }
 
-void init_smartjs() {
-  struct v7_create_opts opts = {0, 0, 0};
-
-  v7 = v7_create_opt(opts);
+void init_smartjs(struct v7 *_v7) {
+  v7 = _v7;
 
   sj_init_v7_ext(v7);
   init_conf(v7);

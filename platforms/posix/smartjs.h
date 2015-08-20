@@ -4,7 +4,7 @@
 #include <v7.h>
 
 extern struct v7 *v7;
-void init_smartjs();
+void init_smartjs(struct v7 *);
 int gpio_poll();
 
 #endif

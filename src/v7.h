@@ -392,7 +392,8 @@ void v7_own(struct v7 *v7, v7_val_t *v);
  */
 int v7_disown(struct v7 *v7, v7_val_t *v);
 
-int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
+int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
+            void (*fini_func)(struct v7 *));
 
 #ifdef __cplusplus
 }

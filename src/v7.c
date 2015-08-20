@@ -392,7 +392,8 @@ void v7_own(struct v7 *v7, v7_val_t *v);
  */
 int v7_disown(struct v7 *v7, v7_val_t *v);
 
-int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
+int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
+            void (*fini_func)(struct v7 *));
 
 #ifdef __cplusplus
 }
@@ -17050,7 +17051,8 @@ static void dump_mm_stats(struct v7 *v7) {
  * `init_func()` is an optional intialization function, aimed to export any
  * extra functionality into vanilla v7 engine.
  */
-int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
+int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
+            void (*fini_func)(struct v7 *)) {
   struct v7 *v7;
   struct v7_create_opts opts = {0, 0, 0};
   int i, j, show_ast = 0, binary_ast = 0, dump_stats = 0;
@@ -17146,6 +17148,10 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
     }
   }
 
+  if (fini_func != NULL) {
+    fini_func(v7);
+  }
+
 #if V7_ENABLE__Memory__stats
   if (dump_stats) {
     printf("Memory stats after run:\n");
@@ -17162,6 +17168,6 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
 
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
-  return v7_main(argc, argv, NULL);
+  return v7_main(argc, argv, NULL, NULL);
 }
 #endif
