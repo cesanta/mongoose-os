@@ -16,6 +16,7 @@ PROG = smartjs
 IPATH = ${SDK_PATH} \
         ${SDK_PATH}/inc \
         ${SDK_PATH}/driverlib \
+        ${SDK_PATH}/oslib \
         ${SDK_PATH}/simplelink/include \
         ${SMARTJS_PATH}/src \
         ${V7_PATH}
@@ -40,7 +41,9 @@ V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
                   -DV7_STACK_SIZE=8192 -DV7_DISABLE_INTERPRETER_STACK_CHECK \
                   -DFS_MAX_OPEN_FILES=5
 
-CFLAGS += -DUSE_FREERTOS ${V7_FEATURES} ${V7_MEMORY_FLAGS} -Dc_file_t=int -Os
+SDK_FLAGS = -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
+
+CFLAGS += $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} -Dc_file_t=int -Os
 
 .PHONY: all clean flash
 
@@ -59,7 +62,7 @@ ${BINDIR}:
 
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/libc_replacements.o ${OBJDIR}/v7.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_hal_cc3200.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/simplelink/gcc/exe/libsimplelink.a
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/gcc/exe/libdriver.a

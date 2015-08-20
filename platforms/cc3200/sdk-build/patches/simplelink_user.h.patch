@@ -1,0 +1,22 @@
+--- /home/rojer/Downloads/CC3200SDK_1.1.0/cc3200-sdk/simplelink/user.h	2015-03-03 19:31:06.000000000 +0000
++++ user.h	2015-08-20 15:52:39.029501687 +0100
+@@ -142,7 +142,9 @@
+ 
+     \warning        
+ */
+-#define SL_INC_STD_BSD_API_NAMING
++// rojer: simplelink.h makes a mess of this, redefining all sorts of stuff.
++// we'll do it ourselves.
++// #define SL_INC_STD_BSD_API_NAMING
+ 
+ 
+ /*!
+@@ -203,7 +205,7 @@
+ 
+     \warning        
+ */
+-#define SL_INC_NET_APP_PKG
++// #define SL_INC_NET_APP_PKG
+ 
+ /*!
+     \brief      Defines whether to include NET_CFG package in SimpleLink 

@@ -1,0 +1,15 @@
+--- /home/rojer/Downloads/CC3200SDK_1.1.0/cc3200-sdk/simplelink/include/simplelink.h	2015-03-03 19:31:06.000000000 +0000
++++ simplelink.h	2015-08-20 16:01:40.228391274 +0100
+@@ -444,8 +444,12 @@
+ 
+ 
+ 
++#ifndef __CONCAT
+ #define __CONCAT(x,y)	x ## y
++#endif
++#ifndef __CONCAT2
+ #define __CONCAT2(x,y)	__CONCAT(x,y)
++#endif
+ 
+ 
+ /*

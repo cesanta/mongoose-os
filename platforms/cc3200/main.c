@@ -17,6 +17,9 @@
 #include "uart.h"
 #include "utils.h"
 
+#include "simplelink.h"
+#include "device.h"
+
 #include "oslib/osi.h"
 
 #include "sj_prompt.h"
