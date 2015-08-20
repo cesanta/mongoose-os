@@ -44,7 +44,12 @@ endif
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
-CFLAGS ?= -O2 -fno-inline -Wall -g -Wno-pragmas -D_BSD_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function
+CFLAGS_EXTRA =
+CFLAGS ?= -O2 -fno-inline -Wall -g -Wno-pragmas -D_BSD_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
+
+ifeq ($(GC_CHECK),1)
+CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions -DV7_ENABLE_GC_CHECK
+endif
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))

@@ -1674,6 +1674,10 @@ extern double _v7_infinity;
 #define EXIT_FAILURE 1
 #endif
 
+#ifdef V7_ENABLE_GC_CHECK
+extern struct v7 *v7_head;
+#endif
+
 /* TODO(lsm): move VM definitions to vm.h */
 #ifndef VM_H_INCLUDED
 #define V7_VALUE_DEFINED
@@ -1814,6 +1818,10 @@ struct v7 {
   volatile int interrupt;
 #ifdef V7_STACK_SIZE
   void *sp_limit;
+#endif
+
+#ifdef V7_ENABLE_GC_CHECK
+  struct v7 *next_v7; /* linked list of v7 contexts, needed by gc check hooks */
 #endif
 };
 
@@ -6495,6 +6503,10 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
+#ifdef V7_ENABLE_GC_CHECK
+struct v7 *v7_head = NULL;
+#endif
+
 enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_number(v)) {
@@ -7972,6 +7984,10 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 #ifdef V7_STACK_SIZE
     v7->sp_limit = (void *) ((uintptr_t) opts.c_stack_base - (V7_STACK_SIZE));
 #endif
+#ifdef V7_ENABLE_GC_CHECK
+    v7->next_v7 = v7_head;
+    v7_head = v7;
+#endif
 
     v7->cur_dense_prop =
         (struct v7_property *) calloc(1, sizeof(struct v7_property));
@@ -8028,6 +8044,19 @@ void v7_destroy(struct v7 *v7) {
     gc_arena_destroy(v7, &v7->object_arena);
     gc_arena_destroy(v7, &v7->function_arena);
     gc_arena_destroy(v7, &v7->property_arena);
+
+#ifdef V7_ENABLE_GC_CHECK
+    /* delete this v7 */
+    {
+      struct v7 *v, **prevp = &v7_head;
+      for (v = v7_head; v != NULL; prevp = &v->next_v7, v = v->next_v7) {
+        if (v == v7) {
+          *prevp = v->next_v7;
+          break;
+        }
+      }
+    }
+#endif
 
     free(v7->cur_dense_prop);
     free(v7);
@@ -8622,6 +8651,56 @@ void v7_gc(struct v7 *v7, int full) {
     mbuf_trim(&v7->owned_strings);
   }
 }
+
+#ifdef V7_ENABLE_GC_CHECK
+
+void __cyg_profile_func_enter(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+
+void __cyg_profile_func_exit(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+
+void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+  (void) this_fn;
+  (void) call_site;
+}
+
+void ast_init();
+
+void __cyg_profile_func_exit(void *this_fn, void *call_site) {
+  struct v7 *v7;
+  void *fp = __builtin_frame_address(1);
+
+  (void) this_fn;
+  (void) call_site;
+
+  for (v7 = v7_head; v7 != NULL; v7 = v7->next_v7) {
+    v7_val_t **vp;
+    if (v7->owned_values.buf == NULL) continue;
+    vp = (v7_val_t **) (v7->owned_values.buf + v7->owned_values.len -
+                        sizeof(v7_val_t *));
+
+    for (; (char *) vp >= v7->owned_values.buf; vp--) {
+      /*
+       * Check if a variable belongs to a dead stack frame.
+       * Addresses lower than the parent frame belong to the
+       * stack frame of the function about to return.
+       * But the heap also usually below the stack and
+       * we don't know the end of the stack. But this hook
+       * is called at each function return, so we have
+       * to check only up to the maximum stack frame size,
+       * let's arbitrarily but reasonably set that at 8k.
+       */
+      if ((void *) *vp <= fp && (void *) *vp > (fp + 8196)) {
+        fprintf(stderr, "Found owned variable after return\n");
+        abort();
+      }
+    }
+  }
+}
+
+#endif /* V7_ENABLE_CHECK_HOOKS */
+
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
