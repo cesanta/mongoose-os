@@ -14418,6 +14418,31 @@ static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
   return i_apply(v7, a, t, params);
 }
 
+static val_t Array_forEach(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t v, cb = v7_array_get(v7, args, 0);
+  unsigned long len, i;
+  int has;
+
+  if (!v7_is_object(this_obj)) {
+    throw_exception(v7, TYPE_ERROR, "Array expected");
+    return v7_create_undefined();
+  }
+
+  if (!v7_is_function(cb)) {
+    throw_exception(v7, TYPE_ERROR, "Function expected");
+    return v7_create_undefined();
+  }
+
+  len = v7_array_length(v7, this_obj);
+  for (i = 0; i < len; i++) {
+    v = v7_array_get2(v7, this_obj, i, &has);
+    if (!has) continue;
+
+    a_prep2(v7, cb, v, v7_create_number(i), this_obj);
+  }
+  return v7_create_undefined();
+}
+
 static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v, res = v7_create_undefined();
   unsigned long len, i;
@@ -14553,6 +14578,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_method(v7, v7->array_prototype, "concat", Array_concat, 1);
   set_method(v7, v7->array_prototype, "every", Array_every, 1);
   set_method(v7, v7->array_prototype, "filter", Array_filter, 1);
+  set_method(v7, v7->array_prototype, "forEach", Array_forEach, 1);
   set_method(v7, v7->array_prototype, "join", Array_join, 1);
   set_method(v7, v7->array_prototype, "map", Array_map, 1);
   set_method(v7, v7->array_prototype, "push", Array_push, 1);
