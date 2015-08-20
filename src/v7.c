@@ -6852,13 +6852,13 @@ int double_to_str(char *buf, size_t buf_size, double val, int prec);
 /*
  * Appends quoted s to buf. Any double quote contained in s will be escaped.
  * Returns the number of characters that would have been added,
- * like snprintf. */
+ * like snprintf.
+ * If size is zero it doesn't output anything but keeps counting.
+ */
 static int snquote(char *buf, size_t size, const char *s, size_t len) {
   char *limit = buf + size - 1;
   const char *end;
   size_t i = 0;
-
-  if (size == 0) return 0;
 
   i++;
   if (buf < limit) *buf++ = '"';
@@ -6875,7 +6875,9 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
   i++;
   if (buf < limit) *buf++ = '"';
 
-  *buf = '\0';
+  if (size != 0) {
+    *buf = '\0';
+  }
   return i;
 }
 
