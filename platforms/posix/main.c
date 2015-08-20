@@ -1,17 +1,18 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "sj_fossa.h"
 #include "sj_v7_ext.h"
 #include "smartjs.h"
 
-#ifndef JS_DIR_NAME
-#define JS_DIR_NAME "js_files"
+#ifndef JS_FS_ROOT
+#define JS_FS_ROOT "."
 #endif
 
 static const char *s_argv0;
 
 static void pre_init(struct v7 *v7) {
-  static const char *init_files[] = { "smart.js", "user.js" };
+  static const char *init_files[] = {"smart.js", "user.js"};
   const char *dir = s_argv0 + strlen(s_argv0) - 1;
   char path[512];
   size_t i;
@@ -29,16 +30,18 @@ static void pre_init(struct v7 *v7) {
     dir--;
   }
 
+  snprintf(path, sizeof(path), "%.*s/%s", (int) (dir - s_argv0), s_argv0,
+           JS_FS_ROOT);
+  chdir(path);
+
   /*
    * Run startup scripts from the directory JS_DIR_NAME.
    * That directory should be located where the binary (s_argv0) lives.
    */
   for (i = 0; i < sizeof(init_files) / sizeof(init_files[0]); i++) {
-    /* Construct path to the startup script */
-    snprintf(path, sizeof(path), "%.*s/%s/%s", (int) (dir - s_argv0), s_argv0,
-             JS_DIR_NAME, init_files[i]);
-    if (v7_exec_file(v7, &res, path) != V7_OK) {
-      fprintf(stderr, "Failed to run %s\n", path);
+    if (v7_exec_file(v7, &res, init_files[i]) != V7_OK) {
+      fprintf(stderr, "Failed to run %s: ", init_files[i]);
+      v7_fprintln(stderr, v7, res);
     }
   }
 }
