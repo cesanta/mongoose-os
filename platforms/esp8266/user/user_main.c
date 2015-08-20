@@ -28,8 +28,6 @@ void start_cmd(void *dummy) {
   uart_main_init(0);
 #endif
 
-  wifi_set_event_handler_cb(wifi_changed_cb);
-
 #ifndef V7_NO_FS
   init_smartjs();
 #endif
@@ -67,9 +65,6 @@ void user_init() {
   system_set_os_print(0);
   setvbuf(stdout, NULL, _IONBF, 0);
   setvbuf(stderr, NULL, _IONBF, 0);
-
-  /* avoid entering AP mode on boot */
-  wifi_set_opmode_current(0x1);
 
 #ifdef V7_ESP_GDB_SERVER
   /* registers exception handlers so that you can hook in gdb on crashes */

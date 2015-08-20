@@ -19,7 +19,8 @@ SSL ?= None
 
 APP_MODULES := user spiffs
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c sj_i2c_js.c sj_spi_js.c
+            sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c \
+            sj_i2c_js.c sj_spi_js.c sj_wifi.c
 
 VPATH = $(APP_MODULES) $(V7_PATH) $(SMARTJS_PATH)/src
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)
@@ -96,8 +97,7 @@ else ifeq "$(SSL)" "Krypton"
 IPATH += $(KRYPTON_PATH)
 VPATH += $(KRYPTON_PATH)
 APP_SRCS += krypton.c
-FEATURES += -DESP_SSL_KRYPTON -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1
-#-DKRYPTON_DEBUG -DESP_SSL_KRYPTON_DEBUG
+FEATURES += -DESP_SSL_KRYPTON -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 -DKRYPTON_DEBUG -DESP_SSL_KRYPTON_DEBUG
 endif
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))

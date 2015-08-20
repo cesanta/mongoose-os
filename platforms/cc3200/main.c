@@ -1,3 +1,4 @@
+#include <malloc.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -19,8 +20,11 @@
 #include "oslib/osi.h"
 
 #include "sj_prompt.h"
+#include "sj_wifi.h"
 #include "v7.h"
 #include "config.h"
+#include "cc3200_sj_hal.h"
+#include "cc3200_wifi.h"
 
 #define LED_GPIO 11
 
@@ -138,8 +142,9 @@ void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
 OsiMsgQ_t s_prompt_input_q;
 
 static void uart_int() {
-  char c = UARTCharGet(CONSOLE_UART);
-  osi_MsgQWrite(&s_prompt_input_q, &c, OSI_NO_WAIT);
+  int c = UARTCharGet(CONSOLE_UART);
+  struct prompt_event pe = {.type = PROMPT_CHAR_EVENT, .data = (void *) c};
+  osi_MsgQWrite(&s_prompt_input_q, &pe, OSI_NO_WAIT);
   MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX);
 }
 
@@ -160,16 +165,34 @@ static void prompt_task(void *arg) {
   setvbuf(stderr, NULL, _IONBF, 0);
   printf("\n\nSmart.JS for CC3200\n");
 
-  osi_MsgQCreate(&s_prompt_input_q, "prompt input", 1 /* size */, 32 /* len */);
+  osi_MsgQCreate(&s_prompt_input_q, "prompt input", sizeof(struct prompt_event),
+                 32 /* len */);
   osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
   MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
-
+  sl_Start(NULL, NULL, NULL);
   init_v7(&dummy);
+  init_wifi(v7);
   sj_prompt_init(v7);
   while (1) {
-    char c;
-    osi_MsgQRead(&s_prompt_input_q, &c, OSI_WAIT_FOREVER);
-    sj_prompt_process_char(c);
+    struct prompt_event pe;
+    osi_MsgQRead(&s_prompt_input_q, &pe, OSI_WAIT_FOREVER);
+    switch (pe.type) {
+      case PROMPT_CHAR_EVENT: {
+        sj_prompt_process_char((char) ((int) pe.data));
+        break;
+      }
+      case V7_EXEC_EVENT: {
+        struct v7_exec_event_data *ped = (struct v7_exec_event_data *) pe.data;
+        v7_val_t res;
+        if (v7_exec_with(v7, &res, ped->code, ped->this_obj) != V7_OK) {
+          v7_fprintln(stderr, v7, res);
+        }
+        v7_disown(v7, &ped->this_obj);
+        free(ped->code);
+        free(ped);
+        break;
+      }
+    }
   }
 }
 
@@ -182,8 +205,9 @@ int main() {
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
 
-  osi_TaskCreate(prompt_task, "prompt", V7_STACK_SIZE + 128, NULL, 2, NULL);
-  osi_TaskCreate(blinkenlights_task, "blink", 128, NULL, 1, NULL);
+  VStartSimpleLinkSpawnTask(8);
+  osi_TaskCreate(prompt_task, "prompt", V7_STACK_SIZE + 256, NULL, 2, NULL);
+  osi_TaskCreate(blinkenlights_task, "blink", 256, NULL, 1, NULL);
   osi_start();
 
   return 0;

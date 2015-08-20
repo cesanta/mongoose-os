@@ -9,7 +9,7 @@
 #include <v7.h>
 #include "sj_i2c.h"
 
-/* Get system free mamory. */
+/* Get system free memory. */
 size_t sj_get_free_heap_size();
 
 /* Get filesystem memory usage */
@@ -32,5 +32,7 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
                  size_t body_len, const char *method, v7_val_t cb);
 
 /* See sj_i2c.h and sj_spi.h for i2c & spi HAL related functions */
+
+void sj_exec_with(struct v7 *v7, const char *code, v7_val_t this_obj);
 
 #endif /* __SMARTJS_HAL_H_ */

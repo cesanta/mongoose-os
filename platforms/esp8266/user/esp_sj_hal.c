@@ -40,3 +40,8 @@ void sj_set_timeout(int msecs, v7_val_t* cb) {
   os_timer_setfn(&js_timeout_timer, esp_timer_callback, cb);
   os_timer_arm(&js_timeout_timer, msecs, 0);
 }
+
+void sj_exec_with(struct v7* v7, const char* code, v7_val_t this_obj) {
+  v7_val_t res;
+  v7_exec_with(v7, &res, code, this_obj);
+}

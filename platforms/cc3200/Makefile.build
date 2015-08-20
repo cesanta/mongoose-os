@@ -16,6 +16,7 @@ PROG = smartjs
 IPATH = ${SDK_PATH} \
         ${SDK_PATH}/inc \
         ${SDK_PATH}/driverlib \
+        ${SDK_PATH}/simplelink/include \
         ${SMARTJS_PATH}/src \
         ${V7_PATH}
 
@@ -56,11 +57,12 @@ ${OBJDIR}:
 ${BINDIR}:
 	@mkdir -p ${BINDIR}
 
-${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/libc_replacements.o ${OBJDIR}/v7.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_hal_cc3200.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_${COMPILER}.o
-${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/${COMPILER}/exe/libdriver.a
-${BINDIR}/${PROG}.axf: ${SDK_PATH}/oslib/${COMPILER}/exe/FreeRTOS.a
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_hal_cc3200.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
+${BINDIR}/${PROG}.axf: ${SDK_PATH}/simplelink/gcc/exe/libsimplelink.a
+${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/gcc/exe/libdriver.a
+${BINDIR}/${PROG}.axf: ${SDK_PATH}/oslib/gcc/exe/FreeRTOS.a
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
