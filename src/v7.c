@@ -6849,6 +6849,36 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 int double_to_str(char *buf, size_t buf_size, double val, int prec);
 #endif
 
+/*
+ * Appends quoted s to buf. Any double quote contained in s will be escaped.
+ * Returns the number of characters that would have been added,
+ * like snprintf. */
+static int snquote(char *buf, size_t size, const char *s, size_t len) {
+  char *limit = buf + size - 1;
+  const char *end;
+  size_t i = 0;
+
+  if (size == 0) return 0;
+
+  i++;
+  if (buf < limit) *buf++ = '"';
+
+  for (end = s + len; s < end; s++) {
+    if (*s == '"') {
+      i++;
+      if (buf < limit) *buf++ = '\\';
+    }
+    i++;
+    if (buf < limit) *buf++ = *s;
+  }
+
+  i++;
+  if (buf < limit) *buf++ = '"';
+
+  *buf = '\0';
+  return i;
+}
+
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json) {
   char *vp;
@@ -6902,7 +6932,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       size_t n;
       const char *str = v7_to_string(v7, &v, &n);
       if (as_json) {
-        return c_snprintf(buf, size, "\"%.*s\"", (int) n, str);
+        return snquote(buf, size, str, n);
       } else {
         return c_snprintf(buf, size, "%.*s", (int) n, str);
       }
@@ -11691,12 +11721,20 @@ _std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
   v7_val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
 
   if (arg != V7_UNDEFINED) {
-    char buf[100], *p;
-    p = v7_to_json(v7, arg, buf, sizeof(buf));
-    if (p[0] == '"') {
-      p[0] = before;
-      p[strlen(p) - 1] = after;
+    char buf[100 + 3], *p = buf;
+    int len = to_str(v7, arg, buf + 1, sizeof(buf) - 3, 0);
+
+    /* fit null terminating byte */
+    if (len >= (int) 100) {
+      /* Buffer is not large enough. Allocate a bigger one */
+      p = (char *) malloc(len + 3);
+      to_str(v7, arg, p + 1, len + 1, 0);
     }
+
+    p[0] = before;
+    p[len + 1] = after;
+    p[len + 2] = '\0';
+
     err = v7_exec(v7, &res, p);
 
     if (p != buf) free(p);
