@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <v7.h>
 #include <fossa.h>
@@ -35,7 +36,8 @@ static void ws_ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
       if (*(int *) ev_data == 0) {
         char *proto = NULL;
         if (ud->proto != NULL) {
-          asprintf(&proto, "Sec-WebSocket-Protocol: %s\n", ud->proto);
+          int tmp = asprintf(&proto, "Sec-WebSocket-Protocol: %s\n", ud->proto);
+          (void) tmp; /* Shutup compiler */
         }
         ns_send_websocket_handshake(nc, "/", proto);
         if (proto != NULL) {

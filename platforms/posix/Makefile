@@ -18,7 +18,7 @@ FOSSA_FEATURES =
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c sj_fossa.c \
-			sj_fossa_http_client.c sj_fossa_ws_client.c
+			sj_fossa_http_client.c sj_fossa_ws_client.c sj_gpio_js.c
 ADD_LIBS = m
 
 ifeq ($(OS),Windows_NT)
@@ -28,7 +28,7 @@ else
     ADD_LIBS += rt
   endif
   ifneq ($(UNAME_S),Linux)
-		SJ_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI
+		SJ_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI -DSJ_DISABLE_GPIO
 	endif
   ifeq "$(SSL)" "OpenSSL" 
     FOSSA_FEATURES += -DNS_ENABLE_SSL
@@ -45,7 +45,7 @@ endif
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -O2 -fno-inline -Wall -g -Wno-pragmas -D_BSD_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
+CFLAGS ?= -O2 -fno-inline -Wall -g -Wno-pragmas -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
 
 ifeq ($(GC_CHECK),1)
 CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions -DV7_ENABLE_GC_CHECK

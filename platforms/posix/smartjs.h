@@ -5,5 +5,6 @@
 
 extern struct v7 *v7;
 void init_smartjs();
+int gpio_poll();
 
 #endif

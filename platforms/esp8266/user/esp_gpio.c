@@ -1,9 +1,11 @@
-#include "ets_sys.h"
-#include "osapi.h"
-#include "gpio.h"
-#include "os_type.h"
+#include <ets_sys.h>
+#include <osapi.h>
+#include <gpio.h>
+#include <os_type.h>
+
+#include <sj_gpio.h>
+
 #include "v7_periph.h"
-#include "v7_gpio.h"
 
 /* These declarations are missing in SDK headers since ~1.0 */
 #define PERIPHS_IO_MUX_PULLDWN BIT6
@@ -11,18 +13,6 @@
   CLEAR_PERI_REG_MASK(PIN_NAME, PERIPHS_IO_MUX_PULLDWN)
 #define PIN_PULLDWN_EN(PIN_NAME) \
   SET_PERI_REG_MASK(PIN_NAME, PERIPHS_IO_MUX_PULLDWN)
-
-#define GPIO_FLOAT 0
-#define GPIO_PULLUP 1
-#define GPIO_PULLDOWN 2
-
-#define GPIO_INOUT 0
-#define GPIO_INPUT 1
-#define GPIO_OUTPUT 2
-#define GPIO_INT 3
-
-#define GPIO_HIGH 1
-#define GPIO_LOW 0
 
 #define GPIO_PIN_COUNT 16
 
@@ -74,11 +64,11 @@ static uint8_t gpio16_input_get() {
   return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 
-int v7_gpio_set_mode(int pin, int mode, int pull) {
+int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   struct gpio_info* gi;
 
   if (pin == 16) {
-    if (mode == GPIO_INPUT) {
+    if (mode == GPIO_MODE_INPUT) {
       gpio16_set_input_mode();
     } else {
       gpio16_set_output_mode();
@@ -93,15 +83,15 @@ int v7_gpio_set_mode(int pin, int mode, int pull) {
   }
 
   switch (pull) {
-    case GPIO_PULLUP:
+    case GPIO_PULL_PULLUP:
       PIN_PULLDWN_DIS(gi->periph);
       PIN_PULLUP_EN(gi->periph);
       break;
-    case GPIO_PULLDOWN:
+    case GPIO_PULL_PULLDOWN:
       PIN_PULLUP_DIS(gi->periph);
       PIN_PULLDWN_EN(gi->periph);
       break;
-    case GPIO_FLOAT:
+    case GPIO_PULL_FLOAT:
       PIN_PULLUP_DIS(gi->periph);
       PIN_PULLDWN_DIS(gi->periph);
       break;
@@ -110,16 +100,16 @@ int v7_gpio_set_mode(int pin, int mode, int pull) {
   }
 
   switch (mode) {
-    case GPIO_INOUT:
+    case GPIO_MODE_INOUT:
       PIN_FUNC_SELECT(gi->periph, gi->func);
       break;
 
-    case GPIO_INPUT:
+    case GPIO_MODE_INPUT:
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_DIS_OUTPUT(pin);
       break;
 
-    case GPIO_OUTPUT:
+    case GPIO_MODE_OUTPUT:
       ETS_GPIO_INTR_DISABLE();
       PIN_FUNC_SELECT(gi->periph, gi->func);
 
@@ -132,7 +122,7 @@ int v7_gpio_set_mode(int pin, int mode, int pull) {
       ETS_GPIO_INTR_ENABLE();
       break;
 
-    case GPIO_INT:
+    case GPIO_MODE_INT:
       ETS_GPIO_INTR_DISABLE();
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_DIS_OUTPUT(pin);
@@ -151,7 +141,7 @@ int v7_gpio_set_mode(int pin, int mode, int pull) {
   return 0;
 }
 
-int v7_gpio_write(int pin, int level) {
+int sj_gpio_write(int pin, enum gpio_level level) {
   if (get_gpio_info(pin) == NULL) {
     /* Just verifying pin number */
     return -1;
@@ -168,7 +158,7 @@ int v7_gpio_write(int pin, int level) {
   return 0;
 }
 
-int v7_gpio_read(int pin) {
+enum gpio_level sj_gpio_read(int pin) {
   if (get_gpio_info(pin) == NULL) {
     /* Just verifying pin number */
     return -1;
@@ -260,14 +250,14 @@ void v7_gpio_task(os_event_t* event) {
                                        (event->sig & 0xFF));
 }
 
-void v7_gpio_intr_init(f_gpio_intr_handler_t cb) {
+void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
   system_os_task(v7_gpio_task, TASK_PRIORITY, gpio_task_queue,
                  GPIO_TASK_QUEUE_LEN);
   ETS_GPIO_INTR_ATTACH(v7_gpio_intr_dispatcher, cb);
 }
 
 static void v7_setup_on_click(int pin) {
-  uint8_t current_level = v7_gpio_read(pin);
+  uint8_t current_level = sj_gpio_read(pin);
   /*
    * if current level is high, set interupt on low (4)
    * else set on high (5)
@@ -276,7 +266,7 @@ static void v7_setup_on_click(int pin) {
   int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 | type;
 }
 
-int v7_gpio_intr_set(int pin, GPIO_INT_TYPE type) {
+int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
   if (get_gpio_info(pin) == NULL) {
     return -1;
   }

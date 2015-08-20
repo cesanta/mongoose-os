@@ -58,16 +58,17 @@ int main(int argc, char *argv[]) {
   /* Main loop here */
   while (1) {
     /*
-     * Now waiting until fossa has active connections and then exiting
+     * Now waiting until fossa has active connections
+     * and there are active gpio ISR and then exiting
      * TODO(alashkin): change this to something smart
      */
-    if (!poll_fossa()) {
+    if (!fossa_poll() && !gpio_poll()) {
       break;
     }
   }
 
   v7_destroy(v7);
-  destroy_fossa();
+  fossa_destroy();
 
   return 0;
 }

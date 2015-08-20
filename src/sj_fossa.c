@@ -2,17 +2,17 @@
 
 struct ns_mgr sj_mgr;
 
-void init_fossa() {
+void fossa_init() {
   ns_mgr_init(&sj_mgr, NULL);
 }
 
-void destroy_fossa() {
+void fossa_destroy() {
   ns_mgr_free(&sj_mgr);
 }
 
-int poll_fossa() {
+int fossa_poll() {
   if (ns_next(&sj_mgr, NULL) != NULL) {
-    ns_mgr_poll(&sj_mgr, 1000);
+    ns_mgr_poll(&sj_mgr, 100);
     return 1;
   } else {
     return 0;

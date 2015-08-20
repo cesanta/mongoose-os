@@ -3,8 +3,8 @@
 
 extern struct ns_mgr sj_mgr;
 
-void init_fossa();
-int poll_fossa();
-void destroy_fossa();
+void fossa_init();
+int fossa_poll();
+void fossa_destroy();
 
 #endif

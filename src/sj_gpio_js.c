@@ -1,10 +1,12 @@
-#include "ets_sys.h"
-#include "osapi.h"
-#include "v7.h"
-#include "v7_gpio.h"
-#include "v7_esp.h"
+#include <v7.h>
+#include "sj_gpio.h"
+
+#ifndef SJ_DISABLE_GPIO
 
 static int s_gpio_intr_installed = 0;
+
+/* TODO(alashkin): use the same v7 pointer in all files/ports */
+static struct v7 *s_v7;
 
 static void gpio_intr_handler_proxy(int pin, int level) {
   char prop_name[15];
@@ -13,17 +15,17 @@ static void gpio_intr_handler_proxy(int pin, int level) {
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
 
-  v7_val_t cb = v7_get(v7, v7_get_global_object(v7), prop_name, len);
+  v7_val_t cb = v7_get(s_v7, v7_get_global_object(s_v7), prop_name, len);
 
   if (!v7_is_function(cb)) {
     return;
   }
 
-  args = v7_create_array(v7);
-  v7_array_push(v7, args, v7_create_number(pin));
-  v7_array_push(v7, args, v7_create_number(level));
+  args = v7_create_array(s_v7);
+  v7_array_push(s_v7, args, v7_create_number(pin));
+  v7_array_push(s_v7, args, v7_create_number(level));
 
-  v7_apply(v7, cb, v7_create_undefined(), args);
+  v7_apply(s_v7, cb, v7_create_undefined(), args);
 }
 
 static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -35,7 +37,7 @@ static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char prop_name[15];
   int pin, type, len, has_isr, new_isr_provided;
 
-  if (!v7_is_number(pinv) || !v7_is_number(type)) {
+  if (!v7_is_number(pinv) || !v7_is_number(typev)) {
     printf("Invalid arguments\n");
     return v7_create_boolean(0);
   }
@@ -66,11 +68,11 @@ static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   }
 
   if (type != 0 && !s_gpio_intr_installed) {
-    v7_gpio_intr_init(gpio_intr_handler_proxy);
+    sj_gpio_intr_init(gpio_intr_handler_proxy);
     s_gpio_intr_installed = 1;
   }
 
-  return v7_create_boolean(v7_gpio_intr_set(pin, type) == 0);
+  return v7_create_boolean(sj_gpio_intr_set(pin, type) == 0);
 }
 
 static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -88,7 +90,7 @@ static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   mode = v7_to_number(modev);
   pull = v7_to_number(pullv);
 
-  return v7_create_boolean(v7_gpio_set_mode(pin, mode, pull) == 0);
+  return v7_create_boolean(sj_gpio_set_mode(pin, mode, pull) == 0);
 }
 
 static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -103,7 +105,7 @@ static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   pin = v7_to_number(pinv);
   val = v7_to_number(valv);
 
-  return v7_create_boolean(v7_gpio_write(pin, val) == 0);
+  return v7_create_boolean(sj_gpio_write(pin, val) == 0);
 }
 
 static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -116,10 +118,11 @@ static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   }
 
   pin = v7_to_number(pinv);
-  return v7_create_number(v7_gpio_read(pin));
+  return v7_create_number(sj_gpio_read(pin));
 }
 
 void init_gpiojs(struct v7 *v7) {
+  s_v7 = v7;
   v7_val_t gpio = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "GPIO", 4, 0, gpio);
   v7_set_method(v7, gpio, "setmode", GPIO_setmode);
@@ -127,3 +130,11 @@ void init_gpiojs(struct v7 *v7) {
   v7_set_method(v7, gpio, "write", GPIO_write);
   v7_set_method(v7, gpio, "setisr", GPIO_setisr);
 }
+
+#else
+
+void init_gpiojs(struct v7 *v7) {
+  (void) v7;
+}
+
+#endif
