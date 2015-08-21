@@ -2,6 +2,7 @@ V7_PATH ?= ../../../v7
 FOSSA_PATH = ?= ../../../fossa
 SRC_PATH ?= ../../src
 COMMON_PATH ?= ../../../common
+CLUBBY_PATH ?= $(SRC_PATH)
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./build
 OUTAPP ?= smartjs
@@ -58,6 +59,8 @@ APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
 VPATH = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 
+FS = $(wildcard $(SRC_PATH)/js/*.js) $(CLUBBY_PATH)/clubby.js
+
 .PHONY: all clean
 
 define compile
@@ -65,7 +68,7 @@ define compile
 $(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
 endef
 
-all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP)
+all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP) fs
 
 $(BIN_DIR):
 	$(Q) mkdir -p $@
@@ -94,6 +97,10 @@ $(BUILD_DIR)/sj_version.c: $(APP_SRCS)
 $(BIN_DIR)/$(OUTAPP): $(OBJS)
 	@echo "LD $@"
 	$(Q) $(CC) $(OBJS) $(LIBS) -o $@
+
+fs: $(FS)
+	@echo "MKFS $@"
+	$(Q) cp $(FS) $(BIN_DIR)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR)/$(OUTAPP) $(BUILD_DIR)

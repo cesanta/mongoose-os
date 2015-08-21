@@ -18,9 +18,6 @@ static void pre_init(struct v7 *v7) {
   size_t i;
   v7_val_t res;
 
-  sj_init_v7_ext(v7);
-  init_smartjs(v7);
-
   /*
    * Point `dir` to the right-most directory separator of the smartjs binary.
    * Thus string between `s_argv0` and `dir` pointers would contain a directory
@@ -32,7 +29,11 @@ static void pre_init(struct v7 *v7) {
 
   snprintf(path, sizeof(path), "%.*s/%s", (int) (dir - s_argv0), s_argv0,
            JS_FS_ROOT);
+  /* All the files, conf, JS, etc are addressed relative to the current dir */
   chdir(path);
+
+  sj_init_v7_ext(v7);
+  init_smartjs(v7);
 
   /*
    * Run startup scripts from the directory JS_DIR_NAME.
