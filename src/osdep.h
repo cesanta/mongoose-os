@@ -203,37 +203,4 @@ int64_t strtoll(const char *str, char **endptr, int base);
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#if !defined(NO_LIBC) && !defined(NS_DISABLE_FILESYSTEM)
-typedef FILE *c_file_t;
-/*
- * Cannot use fopen & Co directly and
- * override them with -D because
- * these overrides conflicts with
- * functions in stdio.h
- */
-#define c_fopen fopen
-#define c_fread fread
-#define c_fwrite fwrite
-#define c_fclose fclose
-#define c_rename rename
-#define c_remove remove
-#define c_fseek fseek
-#define c_ftell ftell
-#define c_rewind rewind
-#define c_ferror ferror
-#define INVALID_FILE NULL
-#else
-/*
- * TODO(alashkin): move to .h file (v7.h?)
- */
-c_file_t c_fopen(const char *filename, const char *mode);
-size_t c_fread(void *ptr, size_t size, size_t count, c_file_t fd);
-size_t c_fwrite(const void *ptr, size_t size, size_t count, c_file_t fd);
-int c_fclose(c_file_t fd);
-int c_rename(const char *oldname, const char *newname);
-int c_remove(const char *filename);
-void c_rewind(c_file_t fd);
-int c_ferror(c_file_t fd);
-#endif
-
 #endif /* OSDEP_HEADER_INCLUDED */

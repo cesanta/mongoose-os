@@ -1000,39 +1000,6 @@ int64_t strtoll(const char *str, char **endptr, int base);
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#if !defined(NO_LIBC) && !defined(NS_DISABLE_FILESYSTEM)
-typedef FILE *c_file_t;
-/*
- * Cannot use fopen & Co directly and
- * override them with -D because
- * these overrides conflicts with
- * functions in stdio.h
- */
-#define c_fopen fopen
-#define c_fread fread
-#define c_fwrite fwrite
-#define c_fclose fclose
-#define c_rename rename
-#define c_remove remove
-#define c_fseek fseek
-#define c_ftell ftell
-#define c_rewind rewind
-#define c_ferror ferror
-#define INVALID_FILE NULL
-#else
-/*
- * TODO(alashkin): move to .h file (v7.h?)
- */
-c_file_t c_fopen(const char *filename, const char *mode);
-size_t c_fread(void *ptr, size_t size, size_t count, c_file_t fd);
-size_t c_fwrite(const void *ptr, size_t size, size_t count, c_file_t fd);
-int c_fclose(c_file_t fd);
-int c_rename(const char *oldname, const char *newname);
-int c_remove(const char *filename);
-void c_rewind(c_file_t fd);
-int c_ferror(c_file_t fd);
-#endif
-
 #endif /* OSDEP_HEADER_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4735,11 +4702,11 @@ static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
 
 #ifndef NO_LIBC
-static c_file_t v7_val_to_file(v7_val_t val) {
-  return (c_file_t) v7_to_foreign(val);
+static FILE *v7_val_to_file(v7_val_t val) {
+  return (FILE *) v7_to_foreign(val);
 }
 
-static v7_val_t v7_file_to_val(c_file_t file) {
+static v7_val_t v7_file_to_val(FILE *file) {
   return v7_create_foreign(file);
 }
 
@@ -4747,8 +4714,8 @@ static int v7_is_file_type(v7_val_t val) {
   return v7_is_foreign(val);
 }
 #else
-c_file_t v7_val_to_file(v7_val_t val);
-v7_val_t v7_file_to_val(c_file_t file);
+FILE *v7_val_to_file(v7_val_t val);
+v7_val_t v7_file_to_val(FILE *file);
 int v7_is_file_type(v7_val_t val);
 #endif
 
@@ -4775,11 +4742,11 @@ static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
     struct mbuf m;
     char buf[BUFSIZ];
     int n;
-    c_file_t fp = v7_val_to_file(arg0);
+    FILE *fp = v7_val_to_file(arg0);
 
     /* Read file contents into mbuf */
     mbuf_init(&m, 0);
-    while ((n = c_fread(buf, 1, sizeof(buf), fp)) > 0) {
+    while ((n = fread(buf, 1, sizeof(buf), fp)) > 0) {
       mbuf_append(&m, buf, n);
       if (!all) {
         break;
@@ -4788,7 +4755,7 @@ static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
 
     /* Proactively close the file on EOF or read error */
     if (n <= 0) {
-      c_fclose(fp);
+      fclose(fp);
     }
 
     if (m.len > 0) {
@@ -4815,8 +4782,8 @@ static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
   if (v7_is_file_type(arg0) && v7_is_string(arg1)) {
     const char *s = v7_to_string(v7, &arg1, &len);
-    c_file_t fp = v7_val_to_file(arg0);
-    while (sent < len && (n = c_fwrite(s + sent, 1, len - sent, fp)) > 0) {
+    FILE *fp = v7_val_to_file(arg0);
+    while (sent < len && (n = fwrite(s + sent, 1, len - sent, fp)) > 0) {
       sent += n;
     }
   }
@@ -4829,7 +4796,7 @@ static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   int res = -1;
   (void) args;
   if (v7_is_file_type(prop)) {
-    res = c_fclose(v7_val_to_file(prop));
+    res = fclose(v7_val_to_file(prop));
   }
   return v7_create_number(res);
 }
@@ -4837,7 +4804,7 @@ static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
-  c_file_t fp = INVALID_FILE;
+  FILE *fp = NULL;
 
   (void) this_obj;
   if (v7_is_string(arg0)) {
@@ -4847,8 +4814,8 @@ static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     if (v7_is_string(arg1)) {
       s2 = v7_to_string(v7, &arg1, &n2);
     }
-    fp = c_fopen(s1, s2);
-    if (fp != INVALID_FILE) {
+    fp = fopen(s1, s2);
+    if (fp != NULL) {
       v7_val_t obj = v7_create_object(v7);
       v7_set_proto(obj, s_file_proto);
       v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
@@ -4870,7 +4837,7 @@ static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     size_t n1, n2;
     const char *from = v7_to_string(v7, &arg0, &n1);
     const char *to = v7_to_string(v7, &arg1, &n2);
-    res = c_rename(from, to);
+    res = rename(from, to);
   }
 
   return v7_create_number(res == 0 ? 0 : errno);
@@ -4883,7 +4850,7 @@ static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   if (v7_is_string(arg0)) {
     size_t n;
     const char *path = v7_to_string(v7, &arg0, &n);
-    res = c_remove(path);
+    res = remove(path);
   }
   return v7_create_number(res == 0 ? 0 : errno);
 }
@@ -11460,10 +11427,10 @@ enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
 
 #ifndef NO_LIBC
 /* Note: this function move file pointer to the end of file */
-int v7_get_file_size(c_file_t fp) {
+int v7_get_file_size(FILE *fp) {
   int res = -1;
-  if (c_fseek(fp, 0, SEEK_END) == 0) {
-    res = c_ftell(fp);
+  if (fseek(fp, 0, SEEK_END) == 0) {
+    res = ftell(fp);
   }
 
   return res;
@@ -11472,13 +11439,13 @@ int v7_get_file_size(c_file_t fp) {
 
 #ifndef V7_NO_FS
 enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
-  c_file_t fp;
+  FILE *fp;
   char *p;
   long file_size;
   enum v7_err err = V7_EXEC_EXCEPTION;
   *res = v7_create_undefined();
 
-  if ((fp = c_fopen(path, "r")) == INVALID_FILE) {
+  if ((fp = fopen(path, "r")) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]",
              path);
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
@@ -11486,19 +11453,19 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "fseek(%s): %s", path,
              strerror(errno));
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-    c_fclose(fp);
+    fclose(fp);
   } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes",
              file_size + 1);
-    c_fclose(fp);
+    fclose(fp);
   } else {
-    c_rewind(fp);
-    if ((c_fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) &&
-        c_ferror(fp)) {
-      c_fclose(fp);
+    rewind(fp);
+    if ((fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) &&
+        ferror(fp)) {
+      fclose(fp);
       return err;
     }
-    c_fclose(fp);
+    fclose(fp);
     /* v7_exec_with2 will free sources after parse */
     err = v7_exec_with2(v7, res, p, V7_UNDEFINED, 1);
   }
