@@ -24,12 +24,14 @@ static void fossa_ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
       connect_status = *(int *) ev_data;
       if (connect_status != 0) {
         sj_http_error_callback(ud->v7, ud->cb, connect_status);
+        v7_disown(ud->v7, &ud->cb);
         free(ud);
         nc->user_data = NULL;
       }
       break;
     case NS_HTTP_REPLY:
       sj_http_success_callback(ud->v7, ud->cb, hm->body.p, hm->body.len);
+      v7_disown(ud->v7, &ud->cb);
       free(ud);
       nc->user_data = NULL;
       nc->flags |= NSF_SEND_AND_CLOSE;
@@ -41,6 +43,7 @@ static void fossa_ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
          * connection closed after receiving reply
          */
         sj_http_error_callback(ud->v7, ud->cb, -3);
+        v7_disown(ud->v7, &ud->cb);
         free(ud);
       }
       break;
@@ -62,6 +65,7 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
   ud = calloc(1, sizeof(*ud));
   ud->v7 = v7;
   ud->cb = cb;
+  v7_own(v7, &ud->cb);
   nc->user_data = ud;
 
   return 0;

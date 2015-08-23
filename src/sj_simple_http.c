@@ -1,45 +1,16 @@
 #include <v7.h>
 #include "sj_hal.h"
+#include "sj_v7_ext.h"
 
 void sj_http_error_callback(struct v7 *v7, v7_val_t cb, int err_no) {
   char err_msg[128];
-  v7_val_t res, cb_args;
-
-  cb_args = v7_create_object(v7);
-  v7_own(v7, &cb_args);
-
   snprintf(err_msg, sizeof(err_msg), "connection error: %d\n", err_no);
-  v7_array_set(v7, cb_args, 0, cb);
-  v7_array_set(v7, cb_args, 1,
-               v7_create_string(v7, err_msg, sizeof(err_msg), 1));
-
-  if (v7_exec_with(v7, &res, "this[0](undefined, this[1])", cb_args) != V7_OK) {
-    v7_fprintln(stderr, v7, res);
-  }
-  v7_disown(v7, &cb_args);
+  sj_invoke_cb2(v7, cb, v7_create_undefined(), v7_create_string(v7, err_msg, ~0, 1));
 }
 
 void sj_http_success_callback(struct v7 *v7, v7_val_t cb, const char *data,
                               size_t data_len) {
-  v7_val_t datav, cb_args;
-  v7_val_t res;
-
-  cb_args = v7_create_object(v7);
-  v7_own(v7, &cb_args);
-
-  datav = v7_create_string(v7, data, data_len, 1);
-  v7_own(v7, &datav);
-
-  v7_array_set(v7, cb_args, 0, cb);
-  v7_array_set(v7, cb_args, 1, datav);
-  v7_disown(v7, &datav);
-
-  if (v7_exec_with(v7, &res, "this[0](this[1])", cb_args) != V7_OK) {
-    v7_fprintln(stderr, v7, res);
-  }
-
-  v7_disown(v7, &cb_args);
-  v7_disown(v7, &cb);
+  sj_invoke_cb1(v7, cb, v7_create_string(v7, data, data_len, 1));
 }
 
 static v7_val_t sj_http_call_helper(struct v7 *v7, v7_val_t urlv,

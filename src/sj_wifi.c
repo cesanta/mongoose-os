@@ -1,21 +1,13 @@
 #include <string.h>
 
 #include "sj_hal.h"
+#include "sj_v7_ext.h"
 #include "sj_wifi.h"
 
 #include "v7.h"
 
 static v7_val_t s_wifi;
 static struct v7 *s_v7;
-
-static void sj_invoke_cb(struct v7 *v7, v7_val_t cb, v7_val_t arg) {
-  v7_val_t this_obj = v7_create_object(v7);
-  v7_own(v7, &this_obj);
-  v7_set(v7, this_obj, "cb", ~0, 0, cb);
-  v7_set(v7, this_obj, "arg", ~0, 0, arg);
-  sj_exec_with(v7, "this.cb(this.arg)", this_obj);
-  v7_disown(v7, &this_obj);
-}
 
 static v7_val_t sj_Wifi_setup(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t ssidv = v7_array_get(v7, args, 0);
@@ -74,7 +66,7 @@ void sj_wifi_on_change_callback(enum sj_wifi_status event) {
   struct v7 *v7 = s_v7;
   v7_val_t cb = v7_get(v7, s_wifi, "_ccb", ~0);
   if (v7_is_undefined(cb) || v7_is_null(cb)) return;
-  sj_invoke_cb(s_v7, cb, v7_create_number(event));
+  sj_invoke_cb1(s_v7, cb, v7_create_number(event));
 }
 
 static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
@@ -102,7 +94,7 @@ void sj_wifi_scan_done(const char **ssids) {
     res = v7_create_undefined();
   }
 
-  sj_invoke_cb(v7, cb, res);
+  sj_invoke_cb1(v7, cb, res);
 
   v7_disown(v7, &res);
   v7_set(v7, s_wifi, "_scb", ~0, V7_PROPERTY_DONT_ENUM | V7_PROPERTY_HIDDEN,
