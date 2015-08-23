@@ -63,7 +63,7 @@ ${BINDIR}:
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o ${OBJDIR}/cc3200_sj_hal.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/libc_replacements.o ${OBJDIR}/v7.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_v7_ext.o ${OBJDIR}/sj_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/simplelink/gcc/exe/libsimplelink.a
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/gcc/exe/libdriver.a

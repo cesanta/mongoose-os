@@ -1,3 +1,5 @@
+#include "sj_v7_ext.h"
+
 #include <string.h>
 #include <v7.h>
 #include "sj_hal.h"

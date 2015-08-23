@@ -22,6 +22,7 @@
 #include "oslib/osi.h"
 
 #include "sj_prompt.h"
+#include "sj_v7_ext.h"
 #include "sj_wifi.h"
 #include "v7.h"
 #include "config.h"
@@ -30,19 +31,7 @@
 #include "cc3200_wifi.h"
 
 struct v7 *v7;
-static const char *v7_version = "TODO";
-
-static v7_val_t js_usleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  v7_val_t usecsv = v7_array_get(v7, args, 0);
-  int msecs;
-  if (!v7_is_number(usecsv)) {
-    printf("usecs is not a double\n\r");
-    return v7_create_undefined();
-  }
-  msecs = v7_to_number(usecsv) / 1000;
-  osi_Sleep(msecs);
-  return v7_create_undefined();
-}
+const char *sj_version = "TODO";
 
 void init_v7(void *stack_base) {
   struct v7_create_opts opts;
@@ -53,11 +42,6 @@ void init_v7(void *stack_base) {
   opts.c_stack_base = stack_base;
 
   v7 = v7_create_opt(opts);
-
-  v7_set(v7, v7_get_global_object(v7), "version", 7, 0,
-         v7_create_string(v7, v7_version, strlen(v7_version), 1));
-  v7_set_method(v7, v7_get_global_object(v7), "usleep", js_usleep);
-  v7_gc(v7, 1);
 }
 
 static void blinkenlights_task(void *arg) {
@@ -117,6 +101,7 @@ static void prompt_task(void *arg) {
   MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
   sl_Start(NULL, NULL, NULL);
   init_v7(&dummy);
+  sj_init_v7_ext(v7);
   init_wifi(v7);
   sj_prompt_init(v7);
   while (1) {
