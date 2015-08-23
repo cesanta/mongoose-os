@@ -90,6 +90,10 @@ static void uart_int() {
   MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX);
 }
 
+void sj_prompt_init_hal(struct v7 *v7) {
+  (void) v7;
+}
+
 static void prompt_task(void *arg) {
   int dummy;
 

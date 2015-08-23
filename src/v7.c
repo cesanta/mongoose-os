@@ -17055,9 +17055,11 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
     }
   }
 
+#ifndef V7_ALLOW_ARGLESS_MAIN
   if (argc == 1) {
     show_usage(argv);
   }
+#endif
 
   v7 = v7_create_opt(opts);
 

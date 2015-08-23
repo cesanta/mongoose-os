@@ -4,6 +4,8 @@
 #include "os_type.h"
 #include <v7.h>
 #include "v7_esp.h"
+#include "sj_prompt.h"
+#include "esp_uart.h"
 
 static os_timer_t js_timeout_timer;
 
@@ -44,4 +46,12 @@ void sj_set_timeout(int msecs, v7_val_t* cb) {
 void sj_exec_with(struct v7* v7, const char* code, v7_val_t this_obj) {
   v7_val_t res;
   v7_exec_with(v7, &res, code, this_obj);
+}
+
+void sj_prompt_init_hal(struct v7* v7) {
+  (void) v7;
+#if !defined(NO_PROMPT)
+  uart_process_char = sj_prompt_process_char;
+  uart_interrupt_cb = sj_prompt_process_char;
+#endif
 }

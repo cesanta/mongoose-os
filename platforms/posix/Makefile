@@ -12,15 +12,17 @@ SSL ?= OpenSSL
 V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
 								   -DV7_ENABLE_GC -DV7_ENABLE_GC \
 								   -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
-								   -DV7_ENABLE_FILE -DV7_MAIN
+								   -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
+								   -DNS_ENABLE_THREADS -DSJ_DISABLE_ECHO
 SJ_FEATURES =
 FOSSA_FEATURES =
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c sj_fossa.c \
-			sj_fossa_http_client.c sj_fossa_ws_client.c sj_gpio_js.c
-ADD_LIBS = m
+			sj_fossa_http_client.c sj_fossa_ws_client.c sj_gpio_js.c \
+			sj_prompt.c
+ADD_LIBS = m pthread
 
 ifeq ($(OS),Windows_NT)
 else

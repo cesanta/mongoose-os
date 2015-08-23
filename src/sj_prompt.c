@@ -35,7 +35,7 @@ static void show_prompt(void) {
    * Flashnchips relies on prompt ending with "$ " to detect when it's okay
    * to send the next line during file upload.
    */
-  printf("smartjs %u/%d$ ", sj_get_free_heap_size(),
+  printf("smartjs %lu/%d$ ", (unsigned long) sj_get_free_heap_size(),
          v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_SIZE) -
              v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_USED));
   fflush(stdout);
@@ -46,11 +46,11 @@ static void show_prompt(void) {
 static void process_here_char(char ch) {
   printf("%c", ch);
 
-  if (s_sjp.pos >= 7 &&
-          strncmp(&s_sjp.buf[s_sjp.pos - 7], "\r\nEOF\r\n", 7) == 0 ||
-      s_sjp.pos >= 5 &&
-          (strncmp(&s_sjp.buf[s_sjp.pos - 5], "\nEOF\n", 5) == 0 ||
-           strncmp(&s_sjp.buf[s_sjp.pos - 5], "\rEOF\r", 5) == 0)) {
+  if ((s_sjp.pos >= 7 &&
+       strncmp(&s_sjp.buf[s_sjp.pos - 7], "\r\nEOF\r\n", 7) == 0) ||
+      (s_sjp.pos >= 5 &&
+       (strncmp(&s_sjp.buf[s_sjp.pos - 5], "\nEOF\n", 5) == 0 ||
+        strncmp(&s_sjp.buf[s_sjp.pos - 5], "\rEOF\r", 5) == 0))) {
     int end_pos = s_sjp.pos - (s_sjp.buf[s_sjp.pos - 2] == '\r' ? 7 : 5);
     s_sjp.buf[end_pos] = '\0';
     printf("\n");
@@ -172,7 +172,9 @@ static void process_prompt_char(char ch) {
       s_sjp.buf[s_sjp.pos] = '\0';
       break;
     case '\r':
+#ifndef SJ_PROMPT_DISABLE_ECHO
       printf("\n");
+#endif
       s_sjp.pos--;
       s_sjp.buf[s_sjp.pos] = '\0';
       process_command(s_sjp.buf);
@@ -181,7 +183,9 @@ static void process_prompt_char(char ch) {
     case '\n':
       break;
     default:
+#ifndef SJ_PROMPT_DISABLE_ECHO
       printf("%c", ch); /* echo */
+#endif
       break;
   }
 }
@@ -193,6 +197,7 @@ void sj_prompt_init(struct v7 *v7) {
   s_sjp.v7 = v7;
 
   printf("\n");
+  sj_prompt_init_hal();
   show_prompt();
 }
 

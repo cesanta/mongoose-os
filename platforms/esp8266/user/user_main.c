@@ -12,7 +12,7 @@
 #include "v7_gdb.h"
 #include "v7_fs.h"
 #include "v7_flash_bytes.h"
-
+#include "esp_uart.h"
 #include "sj_prompt.h"
 
 os_timer_t tick_timer;
@@ -41,8 +41,6 @@ void start_cmd(void *dummy) {
 
 #if !defined(NO_PROMPT)
   sj_prompt_init(v7);
-  uart_process_char = sj_prompt_process_char;
-  uart_interrupt_cb = sj_prompt_process_char;
 #endif
 }
 

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "sj_fossa.h"
 #include "sj_v7_ext.h"
+#include <sj_prompt.h>
 #include "smartjs.h"
 
 #ifndef JS_FS_ROOT
@@ -10,6 +11,7 @@
 #endif
 
 static const char *s_argv0;
+int sj_please_quit;
 
 static void pre_init(struct v7 *v7) {
   static const char *init_files[] = {"smart.js", "user.js"};
@@ -48,13 +50,15 @@ static void pre_init(struct v7 *v7) {
 }
 
 static void post_init(struct v7 *v7) {
+  sj_prompt_init(v7);
+
   do {
     /*
      * Now waiting until fossa has active connections
      * and there are active gpio ISR and then exiting
      * TODO(alashkin): change this to something smart
      */
-  } while (fossa_poll() || gpio_poll());
+  } while ((fossa_poll() || gpio_poll()) && !sj_please_quit);
   fossa_destroy();
 }
 

@@ -33,7 +33,9 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
 
 /* See sj_i2c.h, sj_spi.h and sj_gpio.h for i2c, spi & gpio HAL related
  * functions */
-
 void sj_exec_with(struct v7 *v7, const char *code, v7_val_t this_obj);
+
+/* initialize hooks that send chars to prompt handler */
+void sj_prompt_init_hal();
 
 #endif /* __SMARTJS_HAL_H_ */
