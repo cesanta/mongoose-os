@@ -156,6 +156,7 @@ v7_val_t v7_create_undefined(void);
 /*
  * Create string primitive value.
  * `str` must point to the utf8 string of length `len`.
+ * If `len` is ~0, `str` is assumed to be NUL-terminated and strlen(str) is used
  */
 v7_val_t v7_create_string(struct v7 *, const char *str, size_t len, int copy);
 

@@ -156,6 +156,7 @@ v7_val_t v7_create_undefined(void);
 /*
  * Create string primitive value.
  * `str` must point to the utf8 string of length `len`.
+ * If `len` is ~0, `str` is assumed to be NUL-terminated and strlen(str) is used
  */
 v7_val_t v7_create_string(struct v7 *, const char *str, size_t len, int copy);
 
@@ -7702,6 +7703,8 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
+
+  if (len == ~((size_t) 0)) len = strlen(p);
 
   if (len <= 4) {
     char *s = GET_VAL_NAN_PAYLOAD(offset) + 1;
