@@ -3,11 +3,13 @@
 #include <QApplication>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QObject>
 
 #include "cli.h"
 #include "dialog.h"
 #include "esp8266.h"
 #include "flasher.h"
+#include "sigsource.h"
 
 namespace {
 
@@ -146,6 +148,10 @@ int main(int argc, char* argv[]) {
     app.setApplicationDisplayName("Smart.js flashing tool");
     MainDialog w(&parser);
     w.show();
+    SigSource* ss = initSignalSource(&w);
+    QObject::connect(ss, SIGNAL(flash()), &w, SLOT(flash()));
+    QObject::connect(ss, SIGNAL(connectDisconnect()), &w,
+                     SLOT(connectDisconnectTerminal()));
     return app.exec();
   }
 

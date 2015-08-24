@@ -10,8 +10,8 @@ CONFIG += c++14
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 
 # Input
-HEADERS += cli.h dialog.h esp8266.h flasher.h serial.h fs.h
-SOURCES += cli.cc dialog.cc esp8266.cc flasher.cc main.cc serial.cc fs.cc
+HEADERS += cli.h dialog.h esp8266.h flasher.h fs.h serial.h sigsource.h
+SOURCES += cli.cc dialog.cc esp8266.cc flasher.cc fs.cc main.cc serial.cc
 
 DEFINES += VERSION=\\\"$$VERSION\\\"
 DEFINES += APP_NAME=\\\"$$TARGET\\\"
@@ -35,6 +35,12 @@ SOURCES += ../platforms/esp8266/spiffs/spiffs_gc.c
 SOURCES += ../platforms/esp8266/spiffs/spiffs_nucleus.c
 SOURCES += ../platforms/esp8266/spiffs/spiffs_check.c
 SOURCES += ../platforms/esp8266/spiffs/spiffs_hydrogen.c
+
+unix {
+SOURCES += sigsource_unix.cc
+} else {
+SOURCES += sigsource_dummy.cc
+}
 
 macx {
   QMAKE_INFO_PLIST = Info.plist.in
