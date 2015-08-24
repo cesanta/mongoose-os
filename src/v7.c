@@ -16777,13 +16777,13 @@ V7_PRIVATE val_t to_string(struct v7 *, val_t);
 V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   long argnum = v7_array_length(v7, args);
   if (argnum > 0) {
-    val_t ro = to_string(v7, v7_array_get(v7, args, 0));
+    val_t ro = to_string(v7, v7_array_get(v7, args, 0)), fl;
     size_t re_len, flags_len = 0;
     const char *re, *flags = NULL;
 
     (void) this_obj;
     if (argnum > 1) {
-      val_t fl = to_string(v7, v7_array_get(v7, args, 1));
+      fl = to_string(v7, v7_array_get(v7, args, 1));
       flags = v7_to_string(v7, &fl, &flags_len);
     }
     re = v7_to_string(v7, &ro, &re_len);
