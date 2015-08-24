@@ -15,12 +15,11 @@ ifeq ("$(PORT)", "auto")
 PORT = $(shell ls -1 /dev/ttyUSB* | tail -n 1)
 endif
 flash:
-	docker run --rm -it --privileged -v $(SRC_DIR):/src -v /dev:/dev -v /sys:/sys $(SDK) \
-		/bin/bash -c "\
-			cd /usr/local/bin; \
-			./cc3200prog $(PORT) /src/smartjs/platforms/cc3200/firmware/smartjs.bin \
-		"
+	docker run --rm -it --privileged -v $(SRC_DIR):/src $(SDK) /bin/bash -c "\
+		cd /usr/local/bin; \
+		./cc3200prog $(PORT) /src/smartjs/platforms/cc3200/firmware/smartjs.bin \
+	"
 
 debug:
-	docker run --rm -it --privileged -v $(SRC_DIR):/src -v /dev:/dev $(SDK) \
+	docker run --rm -it --privileged -v $(SRC_DIR):/src $(SDK) \
 		/bin/bash -c "cd /src/smartjs/platforms/cc3200 && tools/gdb.sh"
