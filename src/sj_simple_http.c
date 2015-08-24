@@ -5,7 +5,8 @@
 void sj_http_error_callback(struct v7 *v7, v7_val_t cb, int err_no) {
   char err_msg[128];
   snprintf(err_msg, sizeof(err_msg), "connection error: %d\n", err_no);
-  sj_invoke_cb2(v7, cb, v7_create_undefined(), v7_create_string(v7, err_msg, ~0, 1));
+  sj_invoke_cb2(v7, cb, v7_create_undefined(),
+                v7_create_string(v7, err_msg, ~0, 1));
 }
 
 void sj_http_success_callback(struct v7 *v7, v7_val_t cb, const char *data,

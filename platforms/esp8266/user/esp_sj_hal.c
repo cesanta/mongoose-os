@@ -30,7 +30,7 @@ void sj_usleep(int usecs) {
 }
 
 void esp_timer_callback(void* arg) {
-  v7_val_t *cb = (v7_val_t *) arg;
+  v7_val_t* cb = (v7_val_t*) arg;
   sj_invoke_cb(v7, *cb);
 }
 
