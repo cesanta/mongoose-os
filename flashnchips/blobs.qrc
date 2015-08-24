@@ -1,0 +1,7 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>cc3200/rbtl3100.dll</file>
+  <file>cc3200/rbtl3100s.dll</file>
+  <file>cc3200/rbtl3101_132.dll</file>
+</qresource>
+</RCC>

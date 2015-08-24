@@ -10,8 +10,8 @@ CONFIG += c++14
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 
 # Input
-HEADERS += cli.h dialog.h esp8266.h flasher.h fs.h serial.h sigsource.h
-SOURCES += cli.cc dialog.cc esp8266.cc flasher.cc fs.cc main.cc serial.cc
+HEADERS += cli.h dialog.h esp8266.h flasher.h fs.h serial.h sigsource.h cc3200.h
+SOURCES += cli.cc dialog.cc esp8266.cc flasher.cc fs.cc main.cc serial.cc cc3200.cc
 
 DEFINES += VERSION=\\\"$$VERSION\\\"
 DEFINES += APP_NAME=\\\"$$TARGET\\\"
@@ -40,6 +40,22 @@ unix {
 SOURCES += sigsource_unix.cc
 } else {
 SOURCES += sigsource_dummy.cc
+}
+
+RESOURCES = blobs.qrc
+
+# libftdi stuff.
+macx {
+  # Works for libftdi installed with Homebrew: brew install libftdi
+  INCLUDEPATH += /usr/local/include/libftdi1
+  LIBS += -L/usr/local/lib -lftdi1
+} else:unix {
+  # Works on recent Ubuntu: apt-get install libftdi-dev
+  INCLUDEPATH += /usr/include
+  LIBS += -L/usr/lib/x86_64-linux-gnu -lftdi
+}
+win32 {
+ DEFINES += NO_LIBFTDI
 }
 
 macx {

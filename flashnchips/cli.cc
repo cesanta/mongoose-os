@@ -12,6 +12,7 @@
 
 #include <common/util/error_codes.h>
 
+#include "cc3200.h"
 #include "esp8266.h"
 #include "serial.h"
 
@@ -27,6 +28,7 @@ CLI::CLI(QCommandLineParser* parser, QObject* parent)
 void CLI::run() {
   const QString platform = parser_->value("platform");
   if (platform == "esp8266") {
+  } else if (platform == "cc3200") {
   } else if (platform == "") {
     cerr << "Flag --platform is required." << endl;
     qApp->exit(1);
@@ -102,7 +104,14 @@ void CLI::run() {
 void CLI::listPorts() {
   const auto& ports = QSerialPortInfo::availablePorts();
   for (const auto& port : ports) {
-    util::Status s = ESP8266::probe(port);
+    util::Status s;
+    if (parser_->value("platform") == "esp8266") {
+      s = ESP8266::probe(port);
+    } else if (parser_->value("platform") == "cc3200") {
+      s = CC3200::probe(port);
+    } else {
+      s = util::Status(util::error::INVALID_ARGUMENT, "Invalid platform name");
+    }
     cout << "Port: " << port.systemLocation().toStdString() << "\t";
     if (s.ok()) {
       cout << "ok";
@@ -119,7 +128,14 @@ util::Status CLI::probePort(const QString& portname) {
     if (port.systemLocation() != portname) {
       continue;
     }
-    return ESP8266::probe(port);
+    if (parser_->value("platform") == "esp8266") {
+      return ESP8266::probe(port);
+    } else if (parser_->value("platform") == "cc3200") {
+      return CC3200::probe(port);
+    } else {
+      return util::Status(util::error::INVALID_ARGUMENT,
+                          "Invalid platform name");
+    }
   }
   return util::Status(util::error::FAILED_PRECONDITION, "No such port");
 }
@@ -142,6 +158,14 @@ util::Status CLI::flash(const QString& portname, const QString& path,
   }
 
   std::unique_ptr<Flasher> f(ESP8266::flasher());
+  if (parser_->value("platform") == "esp8266") {
+    f = ESP8266::flasher();
+  } else if (parser_->value("platform") == "cc3200") {
+    f = CC3200::flasher();
+  } else {
+    return util::Status(util::error::INVALID_ARGUMENT, "Invalid platform name");
+  }
+
   util::Status config_status = f->setOptionsFromCommandLine(*parser_);
   if (!config_status.ok()) {
     return config_status;
