@@ -1,4 +1,4 @@
-SDK ?= docker.cesanta.com:5000/cc3200-build:1.1.0-1
+SDK ?= docker.cesanta.com:5000/cc3200-build:1.1.0-2
 SRC_DIR ?= $(realpath ../../..)
 PORT ?= auto
 
@@ -8,6 +8,7 @@ all clean:
 	docker run --rm -it -v $(SRC_DIR):/src $(SDK) \
 		/bin/bash -c "\
 			make -C /src/v7 v7.c && \
+			make -C /src/fossa/src && \
 			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ \
 		"
 

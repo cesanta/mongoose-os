@@ -11,12 +11,3 @@
  
  
  /*!
-@@ -203,7 +205,7 @@
- 
-     \warning        
- */
--#define SL_INC_NET_APP_PKG
-+// #define SL_INC_NET_APP_PKG
- 
- /*!
-     \brief      Defines whether to include NET_CFG package in SimpleLink 

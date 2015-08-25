@@ -4,6 +4,7 @@
  */
 #include "sj_prompt.h"
 #include "sj_hal.h"
+#include "sj_v7_ext.h"
 
 #include <stdarg.h>
 #include <stdlib.h>

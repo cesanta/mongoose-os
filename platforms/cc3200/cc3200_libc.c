@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include "hw_types.h"
 #include "hw_memmap.h"
@@ -11,6 +12,17 @@
 #include "utils.h"
 
 #include "config.h"
+
+/* FIXME */
+int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
+  tp->tv_sec = 42;
+  tp->tv_usec = 123;
+  return 0;
+}
+
+long int random(void) {
+  return 42; /* FIXME */
+}
 
 void fprint_str(FILE *fp, const char *str) {
   while (*str != '\0') {

@@ -3,7 +3,7 @@
 #include "sj_v7_ext.h"
 
 void sj_http_error_callback(struct v7 *v7, v7_val_t cb, int err_no) {
-  char err_msg[128];
+  char err_msg[32];
   snprintf(err_msg, sizeof(err_msg), "connection error: %d\n", err_no);
   sj_invoke_cb2(v7, cb, v7_create_undefined(),
                 v7_create_string(v7, err_msg, ~0, 1));
@@ -22,6 +22,10 @@ static v7_val_t sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
 
   if (!v7_is_string(urlv)) {
     v7_throw(v7, "url should be a string");
+  }
+
+  if (!v7_is_function(cb)) {
+    v7_throw(v7, "cb must be a function");
   }
 
   if (v7_is_string(bodyv)) {

@@ -155,8 +155,15 @@ DIR *opendir(const char *name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 
-#else /* not _WIN32 */
-#if !defined(NO_LIBC) && !defined(NO_BSD_SOCKETS)
+#elif /* not _WIN32 */ defined(NS_CC3200)
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <cc3200_libc.h>
+#include <cc3200_socket.h>
+
+#elif /* not CC3200 */ !defined(NO_LIBC) && !defined(NO_BSD_SOCKETS)
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -167,25 +174,30 @@ struct dirent *readdir(DIR *dir);
 #include <sys/socket.h>
 #include <sys/select.h>
 #endif
+
+#ifndef _WIN32
 #include <errno.h>
 #include <inttypes.h>
 #include <stdarg.h>
+
 #ifndef AVR_LIBC
 #define closesocket(x) close(x)
 #ifndef __cdecl
 #define __cdecl
 #endif
+
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
 #define to64(x) strtoll(x, NULL, 10)
 typedef int sock_t;
 typedef struct stat ns_stat_t;
 #define DIRSEP '/'
-#endif
+#endif /* !AVR_LIBC */
+
 #ifdef __APPLE__
 int64_t strtoll(const char *str, char **endptr, int base);
 #endif
-#endif /* _WIN32 */
+#endif /* !_WIN32 */
 
 #ifdef NS_ENABLE_DEBUG
 #define DBG(x)                  \

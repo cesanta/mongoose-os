@@ -4,6 +4,7 @@
 SDK_PATH ?= /cc3200-sdk
 V7_PATH ?= ../../../v7
 SMARTJS_PATH ?= ../..
+FOSSA_PATH ?= ../../../fossa
 OBJDIR = build
 BINDIR = firmware
 
@@ -13,24 +14,34 @@ include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
 PROG = smartjs
 
-IPATH = ${SDK_PATH} \
+IPATH = . ${SDK_PATH} \
         ${SDK_PATH}/inc \
         ${SDK_PATH}/driverlib \
         ${SDK_PATH}/oslib \
+        ${SDK_PATH}/simplelink \
         ${SDK_PATH}/simplelink/include \
         ${SMARTJS_PATH}/src \
+        ${FOSSA_PATH} \
         ${V7_PATH}
 
 VPATH = ${SDK_PATH}/example/common \
+        ${SDK_PATH}/simplelink \
+				${SDK_PATH}/simplelink/source \
         ${SMARTJS_PATH}/src \
-        ${V7_PATH}
+        ${V7_PATH} \
+        ${FOSSA_PATH}
 
 V7_FEATURES = -DV7_BUILD_PROFILE=1 \
               -DV7_DISABLE_AST_TAG_NAMES -DV7_ENABLE_GC \
-              -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DNO_LIBC \
+              -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
               -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
               -DV7_ENABLE__Memory__stats -DV7_FORCE_STRICT_MODE \
               -DV7_NO_FS
+
+FOSSA_FEATURES = -DNS_CC3200 -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_DAV \
+                 -DNS_DISABLE_SSI -DNS_DISABLE_FILESYSTEM -DNS_DISABLE_SOCKETPAIR \
+                 -DNS_DISABLE_CGI
+#-DNS_ENABLE_DEBUG
 
 # -DV7_TEMP_OFF
 #-DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
@@ -38,12 +49,12 @@ V7_FEATURES = -DV7_BUILD_PROFILE=1 \
 #-DV7_ESP_FLASH_ACCESS_EMUL
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
-                  -DV7_STACK_SIZE=8192 -DV7_DISABLE_INTERPRETER_STACK_CHECK \
+                  -DV7_STACK_SIZE=16384 -DV7_DISABLE_INTERPRETER_STACK_CHECK \
                   -DFS_MAX_OPEN_FILES=5
 
 SDK_FLAGS = -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
-CFLAGS += $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} -Dc_file_t=int -Os
+CFLAGS += $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${FOSSA_FEATURES} -Os
 
 .PHONY: all clean flash
 
@@ -60,12 +71,17 @@ ${OBJDIR}:
 ${BINDIR}:
 	@mkdir -p ${BINDIR}
 
-${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o ${OBJDIR}/cc3200_sj_hal.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_wifi.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/libc_replacements.o ${OBJDIR}/v7.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_v7_ext.o ${OBJDIR}/sj_wifi.o
+${OBJDIR}/fossa.o: ${FOSSA_PATH}/fossa.c
+	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
+
+${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_libc.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJDIR}/cc3200_wifi.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/v7.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_simple_http.o ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_fossa.o ${OBJDIR}/sj_fossa_http_client.o ${OBJDIR}/sj_v7_ext.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/fossa.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
-${BINDIR}/${PROG}.axf: ${SDK_PATH}/simplelink/gcc/exe/libsimplelink.a
+${BINDIR}/${PROG}.axf: ${OBJDIR}/socket.o ${OBJDIR}/wlan.o ${OBJDIR}/driver.o ${OBJDIR}/device.o ${OBJDIR}/netapp.o ${OBJDIR}/cc_pal.o
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/gcc/exe/libdriver.a
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/oslib/gcc/exe/FreeRTOS.a
 SCATTERgcc_${PROG} = ${PROG}.ld

@@ -12,7 +12,6 @@
 #include "pin.h"
 #include "prcm.h"
 #include "rom_map.h"
-#include "timer.h"
 #include "uart.h"
 #include "utils.h"
 
@@ -21,6 +20,7 @@
 
 #include "oslib/osi.h"
 
+#include "sj_fossa.h"
 #include "sj_prompt.h"
 #include "sj_v7_ext.h"
 #include "sj_wifi.h"
@@ -53,6 +53,7 @@ static void blinkenlights_task(void *arg) {
 
 /* These are FreeRTOS hooks for various life situations. */
 void vApplicationMallocFailedHook() {
+  cc3200_leds(RED, ON);
   fprintf(stderr, "malloc failed\n");
   _exit(123);
 }
@@ -62,15 +63,15 @@ void vApplicationIdleHook() {
 }
 
 void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
-  fprintf(stderr, "stack overflow! %s (%p)\n", tn, th);
+  cc3200_leds(RED, ON);
 }
 
-OsiMsgQ_t s_prompt_input_q;
+OsiMsgQ_t s_v7_q;
 
 static void uart_int() {
   int c = UARTCharGet(CONSOLE_UART);
   struct prompt_event pe = {.type = PROMPT_CHAR_EVENT, .data = (void *) c};
-  osi_MsgQWrite(&s_prompt_input_q, &pe, OSI_NO_WAIT);
+  osi_MsgQWrite(&s_v7_q, &pe, OSI_NO_WAIT);
   MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX);
 }
 
@@ -78,35 +79,30 @@ void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
 }
 
-static void prompt_task(void *arg) {
-  int dummy;
+static void fossa_poll_task(void *arg) {
+  fossa_init();
+  while (1) {
+    if (!fossa_poll()) osi_Sleep(2);
+  }
+}
 
-  /* Console UART init. */
-  MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
-  MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
-  MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* PIN_57 -> UART0_RX */
-  MAP_UARTConfigSetExpClk(
-      CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
-      CONSOLE_BAUD_RATE,
-      (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  MAP_UARTFIFODisable(CONSOLE_UART);
-
-  setvbuf(stdout, NULL, _IONBF, 0);
-  setvbuf(stderr, NULL, _IONBF, 0);
+static void v7_task(void *arg) {
+  char dummy;
   printf("\n\nSmart.JS for CC3200\n");
 
-  osi_MsgQCreate(&s_prompt_input_q, "prompt input", sizeof(struct prompt_event),
-                 32 /* len */);
+  osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct prompt_event), 32 /* len */);
   osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
   MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
   sl_Start(NULL, NULL, NULL);
   init_v7(&dummy);
   sj_init_v7_ext(v7);
   init_wifi(v7);
+  sj_init_simple_http_client(v7);
+  osi_TaskCreate(fossa_poll_task, "fossa", 8192, NULL, 2, NULL);
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;
-    osi_MsgQRead(&s_prompt_input_q, &pe, OSI_WAIT_FOREVER);
+    osi_MsgQRead(&s_v7_q, &pe, OSI_WAIT_FOREVER);
     switch (pe.type) {
       case PROMPT_CHAR_EVENT: {
         sj_prompt_process_char((char) ((int) pe.data));
@@ -137,9 +133,23 @@ int main() {
   PRCMCC3200MCUInit();
 
   cc3200_leds_init();
+
+  /* Console UART init. */
+  MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
+  MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
+  MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* PIN_57 -> UART0_RX */
+  MAP_UARTConfigSetExpClk(
+      CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
+      CONSOLE_BAUD_RATE,
+      (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+  MAP_UARTFIFODisable(CONSOLE_UART);
+
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+
   VStartSimpleLinkSpawnTask(8);
-  osi_TaskCreate(prompt_task, "prompt", V7_STACK_SIZE + 256, NULL, 2, NULL);
-  osi_TaskCreate(blinkenlights_task, "blink", 256, NULL, 1, NULL);
+  osi_TaskCreate(v7_task, "v7", V7_STACK_SIZE + 256, NULL, 3, NULL);
+  osi_TaskCreate(blinkenlights_task, "blink", 256, NULL, 9, NULL);
   osi_start();
 
   return 0;
