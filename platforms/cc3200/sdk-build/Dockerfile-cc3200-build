@@ -3,7 +3,7 @@ FROM ubuntu:vivid
 RUN echo "deb http://ppa.launchpad.net/terry.guo/gcc-arm-embedded/ubuntu vivid main" >> /etc/apt/sources.list.d/gcc-arm-embedded.list
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A3421AFB
 RUN DEBIAN_FRONTEND=noninteractive apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q bzip2 curl make openocd patch gcc-arm-none-eabi && apt-get clean
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q bzip2 curl git make openocd patch gcc-arm-none-eabi && apt-get clean
 RUN cd /tmp && curl -O http://energia.nu/files/arm_tools_linux64.tar.bz2
 RUN cd /tmp && tar xvjf arm_tools_linux64.tar.bz2 lm4f/bin/cc3200prog lm4f/bin/dll && mv lm4f/bin/* /usr/local/bin
 # SDK cannot be downloaded directly (requires registering on the TI site).
