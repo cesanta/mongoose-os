@@ -1,10 +1,14 @@
 #ifndef CLI_H
 #define CLI_H
 
+#include <memory>
+
 #include <QObject>
 #include <QString>
 
 #include <common/util/status.h>
+
+#include "hal.h"
 
 class QCommandLineParser;
 
@@ -22,6 +26,7 @@ class CLI : public QObject {
   void run();
 
   QCommandLineParser* parser_;
+  std::unique_ptr<HAL> hal_;
 };
 
 #endif  // CLI_H

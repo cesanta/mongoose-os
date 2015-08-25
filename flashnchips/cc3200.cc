@@ -675,31 +675,41 @@ class FlasherImpl : public Flasher {
   QSerialPort* port_;
 };
 
+class CC3200HAL : public HAL {
+  util::Status probe(const QSerialPortInfo& port) const override {
+    auto r = connectSerial(port, kSerialSpeed);
+    if (!r.ok()) {
+      return r.status();
+    }
+#ifndef NO_LIBFTDI
+    auto ftdi = openFTDI();
+    if (!ftdi.ok()) {
+      return ftdi.status();
+    }
+    std::unique_ptr<ftdi_context, void (*) (ftdi_context*) > ctx(
+        ftdi.ValueOrDie(), ftdi_free);
+    util::Status st = resetSomething(ctx.get());
+    if (!st.ok()) {
+      return st;
+    }
+#endif
+    std::unique_ptr<QSerialPort> s(r.ValueOrDie());
+    return doBreak(s.get());
+  }
+
+  std::unique_ptr<Flasher> flasher() const override {
+    return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
+  }
+
+  std::string name() const override {
+    return "CC3200";
+  }
+};
+
 }  // namespace
 
-util::Status probe(const QSerialPortInfo& port) {
-  auto r = connectSerial(port, kSerialSpeed);
-  if (!r.ok()) {
-    return r.status();
-  }
-#ifndef NO_LIBFTDI
-  auto ftdi = openFTDI();
-  if (!ftdi.ok()) {
-    return ftdi.status();
-  }
-  std::unique_ptr<ftdi_context, void (*) (ftdi_context*) > ctx(
-      ftdi.ValueOrDie(), ftdi_free);
-  util::Status st = resetSomething(ctx.get());
-  if (!st.ok()) {
-    return st;
-  }
-#endif
-  std::unique_ptr<QSerialPort> s(r.ValueOrDie());
-  return doBreak(s.get());
-}
-
-std::unique_ptr<Flasher> flasher() {
-  return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
+std::unique_ptr<::HAL> HAL() {
+  return std::move(std::unique_ptr<::HAL>(new CC3200HAL));
 }
 
 }  // namespace CC3200

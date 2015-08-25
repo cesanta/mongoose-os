@@ -28,7 +28,9 @@ CLI::CLI(QCommandLineParser* parser, QObject* parent)
 void CLI::run() {
   const QString platform = parser_->value("platform");
   if (platform == "esp8266") {
+    hal_ = ESP8266::HAL();
   } else if (platform == "cc3200") {
+    hal_ = CC3200::HAL();
   } else if (platform == "") {
     cerr << "Flag --platform is required." << endl;
     qApp->exit(1);
@@ -102,16 +104,12 @@ void CLI::run() {
 }
 
 void CLI::listPorts() {
+  if (hal_ == nullptr) {
+    return;
+  }
   const auto& ports = QSerialPortInfo::availablePorts();
   for (const auto& port : ports) {
-    util::Status s;
-    if (parser_->value("platform") == "esp8266") {
-      s = ESP8266::probe(port);
-    } else if (parser_->value("platform") == "cc3200") {
-      s = CC3200::probe(port);
-    } else {
-      s = util::Status(util::error::INVALID_ARGUMENT, "Invalid platform name");
-    }
+    util::Status s = hal_->probe(port);
     cout << "Port: " << port.systemLocation().toStdString() << "\t";
     if (s.ok()) {
       cout << "ok";
@@ -123,25 +121,24 @@ void CLI::listPorts() {
 }
 
 util::Status CLI::probePort(const QString& portname) {
+  if (hal_ == nullptr) {
+    return util::Status(util::error::INVALID_ARGUMENT, "No platform selected");
+  }
   const auto& ports = QSerialPortInfo::availablePorts();
   for (const auto& port : ports) {
     if (port.systemLocation() != portname) {
       continue;
     }
-    if (parser_->value("platform") == "esp8266") {
-      return ESP8266::probe(port);
-    } else if (parser_->value("platform") == "cc3200") {
-      return CC3200::probe(port);
-    } else {
-      return util::Status(util::error::INVALID_ARGUMENT,
-                          "Invalid platform name");
-    }
+    return hal_->probe(port);
   }
   return util::Status(util::error::FAILED_PRECONDITION, "No such port");
 }
 
 util::Status CLI::flash(const QString& portname, const QString& path,
                         int speed) {
+  if (hal_ == nullptr) {
+    return util::Status(util::error::INVALID_ARGUMENT, "No platform selected");
+  }
   const auto& ports = QSerialPortInfo::availablePorts();
   QSerialPortInfo info;
   bool found = false;
@@ -157,15 +154,7 @@ util::Status CLI::flash(const QString& portname, const QString& path,
     return util::Status(util::error::FAILED_PRECONDITION, "No such port");
   }
 
-  std::unique_ptr<Flasher> f(ESP8266::flasher());
-  if (parser_->value("platform") == "esp8266") {
-    f = ESP8266::flasher();
-  } else if (parser_->value("platform") == "cc3200") {
-    f = CC3200::flasher();
-  } else {
-    return util::Status(util::error::INVALID_ARGUMENT, "Invalid platform name");
-  }
-
+  std::unique_ptr<Flasher> f(hal_->flasher());
   util::Status config_status = f->setOptionsFromCommandLine(*parser_);
   if (!config_status.ok()) {
     return config_status;

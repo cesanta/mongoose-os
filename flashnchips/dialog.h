@@ -15,6 +15,8 @@
 
 #include <common/util/status.h>
 
+#include "hal.h"
+
 class QBoxLayout;
 class QCommandLineParser;
 class QComboBox;
@@ -53,11 +55,6 @@ class MainDialog : public QMainWindow {
     UploadFile,
   };
 
-  enum Platform {
-    ESP8266,
-    CC3200,
-  };
-
  private slots:
   void updatePortList();
   void detectPorts();
@@ -75,6 +72,7 @@ class MainDialog : public QMainWindow {
   void doAction(int index);
   void configureWiFi();
   void uploadFile();
+  void resetHAL(QString name = QString());
 
   util::Status openSerial();
   util::Status closeSerial();
@@ -120,6 +118,7 @@ signals:
   QComboBox *actionSelector_ = nullptr;
   QStringList command_queue_;
   QComboBox *platformSelector_ = nullptr;
+  std::unique_ptr<HAL> hal_;
 
   QNetworkConfigurationManager net_mgr_;
 

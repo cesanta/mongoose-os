@@ -331,29 +331,6 @@ void rebootIntoFirmware(QSerialPort* serial) {
   serial->setRequestToSend(false);  // pull up RESET
 }
 
-}  // namespace
-
-util::Status probe(const QSerialPortInfo& port) {
-  auto r = connectSerial(port, 9600);
-  if (!r.ok()) {
-    return r.status();
-  }
-  std::unique_ptr<QSerialPort> s(r.ValueOrDie());
-
-  if (!rebootIntoBootloader(s.get())) {
-    return util::Status(util::error::ABORTED,
-                        "Failed to reboot into bootloader");
-  }
-
-  auto mac = read_MAC(s.get()).toHex();
-  if (mac.length() < 6) {
-    return util::Status(util::error::ABORTED, "Failed to read MAC address");
-  }
-  qDebug() << "MAC address: " << mac;
-
-  return util::Status::OK;
-}
-
 class FlasherImpl : public Flasher {
   Q_OBJECT
  public:
@@ -951,8 +928,40 @@ class FlasherImpl : public Flasher {
   QString id_hostname_;
 };
 
-std::unique_ptr<Flasher> flasher() {
-  return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
+class ESP8266HAL : public HAL {
+  util::Status probe(const QSerialPortInfo& port) const override {
+    auto r = connectSerial(port, 9600);
+    if (!r.ok()) {
+      return r.status();
+    }
+    std::unique_ptr<QSerialPort> s(r.ValueOrDie());
+
+    if (!rebootIntoBootloader(s.get())) {
+      return util::Status(util::error::ABORTED,
+                          "Failed to reboot into bootloader");
+    }
+
+    auto mac = read_MAC(s.get()).toHex();
+    if (mac.length() < 6) {
+      return util::Status(util::error::ABORTED, "Failed to read MAC address");
+    }
+    qDebug() << "MAC address: " << mac;
+
+    return util::Status::OK;
+  }
+  std::unique_ptr<Flasher> flasher() const override {
+    return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
+  }
+
+  std::string name() const override {
+    return "ESP8266";
+  }
+};
+
+}  // namespace
+
+std::unique_ptr<::HAL> HAL() {
+  return std::move(std::unique_ptr<::HAL>(new ESP8266HAL));
 }
 
 namespace {

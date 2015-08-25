@@ -3,17 +3,11 @@
 
 #include <memory>
 
-#include <common/util/status.h>
-
-#include "flasher.h"
-
-class QSerialPortInfo;
+#include "hal.h"
 
 namespace CC3200 {
 
-util::Status probe(const QSerialPortInfo& port);
-
-std::unique_ptr<Flasher> flasher();
+std::unique_ptr<HAL> HAL();
 
 }  // namespace CC3200
 

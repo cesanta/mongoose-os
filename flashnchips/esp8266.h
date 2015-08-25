@@ -8,22 +8,19 @@
 #include <common/util/status.h>
 #include <common/util/statusor.h>
 
-#include "flasher.h"
+#include "hal.h"
 
 class QCommandLineParser;
-class QSerialPortInfo;
 
 namespace ESP8266 {
-
-util::Status probe(const QSerialPortInfo& port);
-
-std::unique_ptr<Flasher> flasher();
 
 util::StatusOr<int> flashParamsFromString(const QString& s);
 
 void addOptions(QCommandLineParser* parser);
 
 QByteArray makeIDBlock(const QString& domain);
+
+std::unique_ptr<HAL> HAL();
 
 extern const char kFlashParamsOption[];
 extern const char kDisableEraseWorkaroundOption[];
