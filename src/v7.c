@@ -8706,7 +8706,12 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 
 #endif /* V7_ENABLE_CHECK_HOOKS */
 
-#endif
+#else
+void v7_gc(struct v7 *v7, int full) {
+  (void) v7;
+  (void) full;
+}
+#endif /* V7_DISABLE_GC */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -10817,7 +10822,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &res);
 
-#ifdef V7_ENABLE_GC
+#ifndef V7_DISABLE_GC
   if (v7->need_gc) {
     v7_gc(v7, 0);
     v7->need_gc = 0;
