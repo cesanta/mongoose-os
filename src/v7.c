@@ -5802,7 +5802,7 @@ int main(void) {
  */
 
 
-typedef unsigned short ast_skip_t;
+typedef uint16_t ast_skip_t;
 
 #ifndef V7_DISABLE_AST_TAG_NAMES
 #define AST_ENTRY(a, b, c, d, e) \
@@ -6217,8 +6217,6 @@ ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
 
   return start + 1;
 }
-
-V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
 
 /*
  * Patches a given skip slot for an already emitted node with the
