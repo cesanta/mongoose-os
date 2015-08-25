@@ -39,6 +39,7 @@ class MainDialog : public QMainWindow {
 
  private:
   enum State {
+    NoPortSelected,
     NotConnected,
     Connected,
     Flashing,
@@ -122,7 +123,7 @@ signals:
 
   QNetworkConfigurationManager net_mgr_;
 
-  State state_ = NotConnected;
+  State state_ = NoPortSelected;
 };
 
 #endif  // DIALOG_H

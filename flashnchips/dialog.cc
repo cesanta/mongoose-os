@@ -92,14 +92,35 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
 
 void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
   QGroupBox* group = new QGroupBox(
-      tr("Step 1: select the serial port or press \"Detect devices\" button"));
+      tr("Step 1: connect the device, select the serial port or press \"Detect "
+         "devices\" button"));
   QHBoxLayout* layout = new QHBoxLayout;
 
   portSelector_ = new QComboBox;
   enabled_in_state_.insert(portSelector_, NotConnected);
   layout->addWidget(portSelector_, 1);
+  connect(portSelector_, static_cast<void (QComboBox::*) (int) >(
+                             &QComboBox::currentIndexChanged),
+          [this](int index) {
+            switch (state_) {
+              case NoPortSelected:
+                if (index >= 0) {
+                  setState(NotConnected);
+                }
+                break;
+              case NotConnected:
+                if (index < 0) {
+                  setState(NoPortSelected);
+                }
+                break;
+              default:
+                // no-op
+                break;
+            }
+          });
 
   detectBtn_ = new QPushButton(tr("Detect devices"));
+  enabled_in_state_.insert(detectBtn_, NoPortSelected);
   enabled_in_state_.insert(detectBtn_, NotConnected);
   layout->addWidget(detectBtn_, 0);
   connect(detectBtn_, &QPushButton::clicked, this, &MainDialog::detectPorts);
@@ -107,6 +128,7 @@ void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
   platformSelector_ = new QComboBox;
   platformSelector_->addItem("ESP8266", ESP8266);
   platformSelector_->addItem("CC3200", CC3200);
+  enabled_in_state_.insert(platformSelector_, NoPortSelected);
   enabled_in_state_.insert(platformSelector_, NotConnected);
   connect(platformSelector_, static_cast<void (QComboBox::*) (int) >(
                                  &QComboBox::currentIndexChanged),
@@ -163,6 +185,11 @@ void MainDialog::addFirmwareSelector(QBoxLayout* parent) {
   layout->addWidget(flashingProgress_);
   layout->addWidget(flashingStatus_);
 
+  enabled_in_state_.insert(group, NotConnected);
+  enabled_in_state_.insert(group, Connected);
+  enabled_in_state_.insert(group, Flashing);
+  enabled_in_state_.insert(group, PortGoneWhileFlashing);
+  enabled_in_state_.insert(group, Terminal);
   group->setLayout(layout);
 
   parent->addWidget(group);
@@ -259,6 +286,11 @@ void MainDialog::addSerialConsole(QBoxLayout* parent) {
   layout->addWidget(terminal_, 1);
   layout->addWidget(terminal_input_);
 
+  enabled_in_state_.insert(group, NotConnected);
+  enabled_in_state_.insert(group, Connected);
+  enabled_in_state_.insert(group, Flashing);
+  enabled_in_state_.insert(group, PortGoneWhileFlashing);
+  enabled_in_state_.insert(group, Terminal);
   group->setLayout(layout);
 
   parent->addWidget(group, 1);
@@ -298,6 +330,7 @@ void MainDialog::setState(State newState) {
   enableControlsForCurrentState();
   // TODO(imax): find a better place for this.
   switch (state_) {
+    case NoPortSelected:
     case NotConnected:
       connect_disconnect_btn_->setText(tr("Connect"));
       break;
@@ -372,6 +405,9 @@ util::Status MainDialog::closeSerial() {
 void MainDialog::connectDisconnectTerminal() {
   util::Status err;
   switch (state_) {
+    case NoPortSelected:
+      QMessageBox::critical(this, tr("Error"), tr("No port selected"));
+      break;
     case NotConnected:
       err = openSerial();
       if (!err.ok()) {
@@ -496,7 +532,7 @@ void MainDialog::rebootESP8266() {
 }
 
 void MainDialog::updatePortList() {
-  if (state_ != NotConnected) {
+  if (state_ != NotConnected && state_ != NoPortSelected) {
     return;
   }
 
@@ -510,6 +546,11 @@ void MainDialog::updatePortList() {
 
   auto ports = QSerialPortInfo::availablePorts();
   for (const auto& info : ports) {
+#ifdef Q_OS_MAC
+    if (info.portName().contains("Bluetooth")) {
+      continue;
+    }
+#endif
     to_add.insert(info.portName());
   }
 
