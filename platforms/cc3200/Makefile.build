@@ -31,8 +31,7 @@ VPATH = ${SDK_PATH}/example/common \
         ${V7_PATH} \
         ${FOSSA_PATH}
 
-V7_FEATURES = -DV7_BUILD_PROFILE=1 \
-              -DV7_DISABLE_AST_TAG_NAMES -DV7_ENABLE_GC \
+V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
               -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
               -DV7_ENABLE__Memory__stats -DV7_FORCE_STRICT_MODE \

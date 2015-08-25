@@ -2205,14 +2205,6 @@ V7_PRIVATE void eval_bcode(struct v7 *, struct bcode *);
 #define GC_H_INCLUDED
 
 
-/*
- * Disable GC on 32-bit platform for now
- * It does work but it's less stable than the 64-bit GC.
- */
-#if ULONG_MAX == 4294967295 && !defined(V7_ENABLE_GC)
-#define V7_DISABLE_GC
-#endif
-
 #define MARK(p) (((struct gc_cell *) (p))->head.word |= 1)
 #define UNMARK(p) (((struct gc_cell *) (p))->head.word &= ~1)
 #define MARKED(p) (((struct gc_cell *) (p))->head.word & 1)
