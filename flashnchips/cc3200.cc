@@ -38,6 +38,7 @@ const int kDefaultTimeoutMs = 1000;
 const int kStorageID = 0;
 const char kFWFilename[] = "/sys/mcuimg.bin";
 const int kBlockSizes[] = {0x100, 0x400, 0x1000, 0x4000, 0x10000};
+const int kFileUploadBlockSize = 4096;
 
 const char kOpcodeStartUpload = 0x21;
 const char kOpcodeFinishUpload = 0x22;
@@ -315,9 +316,8 @@ class FlasherImpl : public Flasher {
 
   int totalBlocks() const override {
     QMutexLocker lock(&lock_);
-    const int blockSize = getBlockSize(image_.length());
-    return image_.length() / blockSize +
-           (image_.length() % blockSize > 0 ? 1 : 0);
+    return image_.length() / kFileUploadBlockSize +
+           (image_.length() % kFileUploadBlockSize > 0 ? 1 : 0);
   }
 
   void run() override {
@@ -647,7 +647,6 @@ class FlasherImpl : public Flasher {
     if (!token.ok()) {
       return token.status();
     }
-    const int blockSize = 4096;
     int start = 0;
     while (start < bytes.length()) {
       emit statusMessage(tr("Sending chunk 0x%1...").arg(start, 0, 16));
@@ -655,14 +654,14 @@ class FlasherImpl : public Flasher {
       QDataStream ps(&payload, QIODevice::WriteOnly);
       ps.setByteOrder(QDataStream::BigEndian);
       ps << quint8(kOpcodeFileChunk) << quint32(start);
-      payload.append(bytes.mid(start, blockSize));
+      payload.append(bytes.mid(start, kFileUploadBlockSize));
 
       st = sendPacket(port_, payload);
       if (!st.ok()) {
         return st;
       }
-      start += blockSize;
-      emit progress(start / blockSize);
+      start += kFileUploadBlockSize;
+      emit progress(start / kFileUploadBlockSize);
     }
     QByteArray payload(&kOpcodeFinishUpload, 1);
     payload.append(QByteArray("\0", 1).repeated(63));

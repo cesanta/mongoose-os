@@ -52,6 +52,11 @@ class MainDialog : public QMainWindow {
     UploadFile,
   };
 
+  enum Platform {
+    ESP8266,
+    CC3200,
+  };
+
  private slots:
   void updatePortList();
   void detectPorts();
@@ -113,6 +118,7 @@ signals:
   QSettings settings_;
   QComboBox *actionSelector_ = nullptr;
   QStringList command_queue_;
+  QComboBox *platformSelector_ = nullptr;
 
   QNetworkConfigurationManager net_mgr_;
 

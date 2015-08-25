@@ -37,6 +37,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "cc3200.h"
 #include "esp8266.h"
 #include "flasher.h"
 #include "serial.h"
@@ -103,11 +104,29 @@ void MainDialog::addPortAndPlatform(QBoxLayout* parent) {
   layout->addWidget(detectBtn_, 0);
   connect(detectBtn_, &QPushButton::clicked, this, &MainDialog::detectPorts);
 
-  // TODO(imax): make it do something meaningful when we have more than one
-  // platform.
-  QComboBox* platformSelector = new QComboBox;
-  platformSelector->addItem("ESP8266");
-  layout->addWidget(platformSelector, 0);
+  platformSelector_ = new QComboBox;
+  platformSelector_->addItem("ESP8266", ESP8266);
+  platformSelector_->addItem("CC3200", CC3200);
+  enabled_in_state_.insert(platformSelector_, NotConnected);
+  connect(platformSelector_, static_cast<void (QComboBox::*) (int) >(
+                                 &QComboBox::currentIndexChanged),
+          this, &MainDialog::updateFWList);
+  connect(platformSelector_, static_cast<void (QComboBox::*) (int) >(
+                                 &QComboBox::currentIndexChanged),
+          [this](int index) {
+            settings_.setValue("selectedPlatform",
+                               platformSelector_->itemData(index).toInt());
+          });
+  layout->addWidget(platformSelector_, 0);
+
+  int p = settings_.value("selectedPlatform", ESP8266).toInt();
+  for (int i = 0; i < platformSelector_->count(); i++) {
+    if (p == platformSelector_->itemData(i).toInt()) {
+      QTimer::singleShot(
+          0, [this, i]() { platformSelector_->setCurrentIndex(i); });
+      break;
+    }
+  }
 
   group->setLayout(layout);
 
@@ -484,7 +503,7 @@ void MainDialog::updatePortList() {
   QSet<QString> to_delete, to_add;
 
   for (int i = 0; i < portSelector_->count(); i++) {
-    if (portSelector_->itemData(i).type() == QMetaType::QString) {
+    if (portSelector_->itemData(i).type() == QVariant::String) {
       to_delete.insert(portSelector_->itemData(i).toString());
     }
   }
@@ -506,7 +525,7 @@ void MainDialog::updatePortList() {
 
   for (const auto& s : to_delete) {
     for (int i = 0; i < portSelector_->count(); i++) {
-      if (portSelector_->itemData(i).type() == QMetaType::QString &&
+      if (portSelector_->itemData(i).type() == QVariant::String &&
           portSelector_->itemData(i).toString() == s) {
         portSelector_->removeItem(i);
         break;
@@ -543,12 +562,24 @@ void MainDialog::detectPorts() {
   detectBtn_->setDisabled(true);
   portSelector_->setDisabled(true);
 
+  util::Status (*probe)(const QSerialPortInfo&) = nullptr;
+  switch (platformSelector_->currentData().toInt()) {
+    case ESP8266:
+      probe = ESP8266::probe;
+      break;
+    case CC3200:
+      probe = CC3200::probe;
+      break;
+    default:
+      return;
+  }
+
   portSelector_->clear();
   auto ports = QSerialPortInfo::availablePorts();
   int firstDetected = -1;
   for (int i = 0; i < ports.length(); i++) {
     QString prefix = "";
-    if (ESP8266::probe(ports[i]).ok()) {
+    if (probe(ports[i]).ok()) {
       prefix = "✓ ";
       if (firstDetected < 0) {
         firstDetected = i;
@@ -591,17 +622,40 @@ void MainDialog::flashingDone(QString msg, bool success) {
 }
 
 void MainDialog::updateFWList() {
-  QDir dir(fwDir_.absoluteFilePath("esp8266"));
-  dir.setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
   fwSelector_->clear();
+  QString dirname;
+  switch (platformSelector_->currentData().toInt()) {
+    case ESP8266:
+      dirname = "esp8266";
+      break;
+    case CC3200:
+      dirname = "cc3200";
+      break;
+    default:
+      return;
+  }
+  QDir dir(fwDir_.absoluteFilePath(dirname));
+  dir.setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
   fwSelector_->addItems(dir.entryList());
 }
 
 void MainDialog::loadFirmware() {
+  QString dirname;
+  // TODO(imax): make it less horrible.
+  switch (platformSelector_->currentData().toInt()) {
+    case ESP8266:
+      dirname = "esp8266/";
+      break;
+    case CC3200:
+      dirname = "cc3200/";
+      break;
+    default:
+      return;
+  }
   QString name = fwSelector_->currentText();
   QString path;
   if (name != "") {
-    path = fwDir_.absoluteFilePath("esp8266/" + name);
+    path = fwDir_.absoluteFilePath(dirname + name);
   } else {
     path = QFileDialog::getExistingDirectory(this,
                                              tr("Load firmware from directory"),
@@ -616,6 +670,19 @@ void MainDialog::loadFirmware() {
     flashingStatus_->setText(tr("No port selected"));
   }
   std::unique_ptr<Flasher> f(ESP8266::flasher());
+
+  // TODO(imax): make it less horrible.
+  switch (platformSelector_->currentData().toInt()) {
+    case ESP8266:
+      f = ESP8266::flasher();
+      break;
+    case CC3200:
+      f = CC3200::flasher();
+      break;
+    default:
+      return;
+  }
+
   util::Status s = f->setOptionsFromCommandLine(*parser_);
   if (!s.ok()) {
     qWarning() << "Some options have invalid values:" << s.ToString().c_str();
