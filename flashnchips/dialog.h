@@ -58,6 +58,7 @@ class MainDialog : public QMainWindow {
   void configureWiFi();
   void uploadFile();
   void resetHAL(QString name = QString());
+  void toggleTopBlock(bool show);
 
   util::Status openSerial();
   util::Status closeSerial();

@@ -50,6 +50,7 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   restoreGeometry(settings_.value("window/geometry").toByteArray());
   restoreState(settings_.value("window/state").toByteArray());
   skip_detect_warning_ = settings_.value("skipDetectWarning", false).toBool();
+  toggleTopBlock(settings_.value("window/topBlockVisible", true).toBool());
 
   enableControlsForCurrentState();
 
@@ -158,6 +159,9 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   connect(ui_.actionAbout, &QAction::triggered, this,
           &MainDialog::showAboutBox);
 
+  connect(ui_.topToggleBtn, &QAbstractButton::toggled, this,
+          &MainDialog::toggleTopBlock);
+
   ui_.terminalPortSelector->setModel(ui_.portSelector->model());
   enableControlsForCurrentState();
 }
@@ -200,6 +204,15 @@ void MainDialog::resetHAL(QString name) {
     qFatal("Unknown platform: %s", name.toStdString().c_str());
   }
   QTimer::singleShot(0, this, &MainDialog::updateFWList);
+}
+
+void MainDialog::toggleTopBlock(bool show) {
+  ui_.topGroupBox->setVisible(show);
+  ui_.topToggleBtn->setArrowType(show ? Qt::UpArrow : Qt::DownArrow);
+  ui_.terminalPortSelector->setVisible(!show);
+  ui_.portLabel->setVisible(!show);
+  ui_.topToggleBtn->setChecked(show);
+  settings_.setValue("window/topBlockVisible", show);
 }
 
 util::Status MainDialog::openSerial() {
