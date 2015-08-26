@@ -956,6 +956,11 @@ class ESP8266HAL : public HAL {
   std::string name() const override {
     return "ESP8266";
   }
+
+  util::Status reboot(QSerialPort* port) const override {
+    rebootIntoFirmware(port);
+    return util::Status::OK;
+  }
 };
 
 }  // namespace

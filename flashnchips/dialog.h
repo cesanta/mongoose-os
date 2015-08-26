@@ -55,7 +55,7 @@ class MainDialog : public QMainWindow {
   util::Status disconnectTerminalSignals();
   void readSerial();
   void writeSerial();
-  void rebootESP8266();
+  void reboot();
   void configureWiFi();
   void uploadFile();
   void resetHAL(QString name = QString());

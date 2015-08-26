@@ -133,8 +133,7 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
 
   connect(ui_.connectBtn, &QPushButton::clicked, this,
           &MainDialog::connectDisconnectTerminal);
-  connect(ui_.rebootBtn, &QPushButton::clicked, this,
-          &MainDialog::rebootESP8266);
+  connect(ui_.rebootBtn, &QPushButton::clicked, this, &MainDialog::reboot);
 
   connect(ui_.actionConfigure_Wi_Fi, &QAction::triggered, this,
           &MainDialog::configureWiFi);
@@ -381,16 +380,20 @@ void MainDialog::writeSerial() {
   // Relying on remote echo.
 }
 
-void MainDialog::rebootESP8266() {
+void MainDialog::reboot() {
   if (serial_port_ == nullptr) {
     qDebug() << "Attempt to reboot without an open port!";
     return;
   }
-  // TODO(imax): add a knob for inverted DTR&RTS.
-  serial_port_->setDataTerminalReady(false);
-  serial_port_->setRequestToSend(true);
-  QThread::msleep(50);
-  serial_port_->setRequestToSend(false);
+  if (hal_ == nullptr) {
+    qFatal("No HAL instance");
+  }
+  util::Status st = hal_->reboot(serial_port_.get());
+  if (!st.ok()) {
+    qCritical() << "Rebooting failed:" << st.ToString().c_str();
+    QMessageBox::critical(this, tr("Error"),
+                          QString::fromStdString(st.ToString()));
+  }
 }
 
 void MainDialog::updatePortList() {

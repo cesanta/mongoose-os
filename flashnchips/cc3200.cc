@@ -237,6 +237,18 @@ util::Status resetSomething(ftdi_context* ctx) {
   QThread::msleep(1000);
   return util::Status::OK;
 }
+
+util::Status boot(ftdi_context* ctx) {
+  util::Status st;
+  const std::vector<unsigned char> seq = {0, 0x20};
+  for (unsigned char b : seq) {
+    if (ftdi_write_data(ctx, &b, 1) < 0) {
+      return util::Status(util::error::UNKNOWN, "ftdi_write_data failed");
+    }
+    QThread::msleep(100);
+  }
+  return util::Status::OK;
+}
 #endif
 
 class FlasherImpl : public Flasher {
@@ -395,20 +407,6 @@ class FlasherImpl : public Flasher {
     }
     return -1;
   }
-
-#ifndef NO_LIBFTDI
-  util::Status boot(ftdi_context* ctx) {
-    util::Status st;
-    const std::vector<unsigned char> seq = {0, 0x20};
-    for (unsigned char b : seq) {
-      if (ftdi_write_data(ctx, &b, 1) < 0) {
-        return util::Status(util::error::UNKNOWN, "ftdi_write_data failed");
-      }
-      QThread::msleep(100);
-    }
-    return util::Status::OK;
-  }
-#endif
 
   util::StatusOr<VersionInfo> getVersion() {
     emit statusMessage(tr("Getting device version info..."));
@@ -703,6 +701,21 @@ class CC3200HAL : public HAL {
 
   std::string name() const override {
     return "CC3200";
+  }
+
+  util::Status reboot(QSerialPort*) const override {
+#ifdef NO_LIBFTDI
+    return util::Status(util::error::UNIMPLEMENTED,
+                        "Rebooting CC3200 is not supported");
+#else   // NO_LIBFTDI
+    auto ftdi = openFTDI();
+    if (!ftdi.ok()) {
+      return ftdi.status();
+    }
+    std::unique_ptr<ftdi_context, void (*) (ftdi_context*) > ctx(
+        ftdi.ValueOrDie(), ftdi_free);
+    return boot(ctx.get());
+#endif  // NO_LIBFTDI
   }
 };
 
