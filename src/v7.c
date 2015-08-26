@@ -6254,6 +6254,7 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
   ast_skip_t delta = where - start;
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
+  assert(start <= where);
 
   /* assertion, to be optimizable out */
   assert((int) skip < def->num_skips);
