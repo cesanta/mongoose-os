@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>681</width>
+    <height>595</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Flash’n’Chips</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_4">
+    <item>
+     <widget class="QSplitter" name="splitter">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <widget class="QWidget" name="verticalWidget_2" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
+          <item row="1" column="2">
+           <widget class="QPushButton" name="detectBtn">
+            <property name="text">
+             <string>Detect devices</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QPushButton" name="flashBtn">
+            <property name="text">
+             <string>Flash firmware</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="firmwareSelector"/>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="portSelector"/>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="selectPlatformLabel">
+            <property name="text">
+             <string>1) Select platform:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="selectFirmwareLabel">
+            <property name="text">
+             <string>3) Select firmware:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="platformSelector">
+            <property name="currentText">
+             <string notr="true">ESP8266</string>
+            </property>
+            <item>
+             <property name="text">
+              <string notr="true">ESP8266</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string notr="true">CC3200</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="selectPortLabel">
+            <property name="text">
+             <string>2) Select port:</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBar">
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="statusMessage">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::RichText</enum>
+          </property>
+          <property name="openExternalLinks">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="verticalWidget" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,2,5">
+          <item>
+           <widget class="QLabel" name="logo">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="images.qrc">:/images/smartjs_logo_small.png</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QComboBox" name="terminalPortSelector"/>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox">
+            <property name="title">
+             <string/>
+            </property>
+            <property name="flat">
+             <bool>false</bool>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <property name="leftMargin">
+              <number>3</number>
+             </property>
+             <property name="topMargin">
+              <number>3</number>
+             </property>
+             <property name="rightMargin">
+              <number>3</number>
+             </property>
+             <property name="bottomMargin">
+              <number>3</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="connectBtn">
+               <property name="text">
+                <string>Connect</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="rebootBtn">
+               <property name="text">
+                <string>Reboot</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="clearBtn">
+               <property name="text">
+                <string>Clear</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="talkToDeviceLabel">
+          <property name="text">
+           <string>4) Talk to the device!</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPlainTextEdit" name="terminal">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+          </property>
+          <property name="maximumBlockCount">
+           <number>4096</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="terminalInput">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>681</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuConfigure">
+    <property name="title">
+     <string>Configure</string>
+    </property>
+    <addaction name="actionConfigure_Wi_Fi"/>
+    <addaction name="actionUpload_a_file"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+    <addaction name="actionAbout_Qt"/>
+    <addaction name="actionDocumentation"/>
+    <addaction name="actionExamples"/>
+    <addaction name="actionGetting_started"/>
+    <addaction name="actionRelease_notes"/>
+    <addaction name="actionSmart_js_website"/>
+    <addaction name="actionTroubleshooting"/>
+   </widget>
+   <addaction name="menuConfigure"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <action name="actionConfigure_Wi_Fi">
+   <property name="text">
+    <string>Configure Wi-Fi</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::AboutRole</enum>
+   </property>
+  </action>
+  <action name="actionAbout_Qt">
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::AboutQtRole</enum>
+   </property>
+  </action>
+  <action name="actionDocumentation">
+   <property name="text">
+    <string>Documentation</string>
+   </property>
+  </action>
+  <action name="actionExamples">
+   <property name="text">
+    <string>Examples</string>
+   </property>
+  </action>
+  <action name="actionGetting_started">
+   <property name="text">
+    <string>Getting started</string>
+   </property>
+  </action>
+  <action name="actionRelease_notes">
+   <property name="text">
+    <string>Release notes</string>
+   </property>
+  </action>
+  <action name="actionSmart_js_website">
+   <property name="text">
+    <string>Smart.js website</string>
+   </property>
+  </action>
+  <action name="actionTroubleshooting">
+   <property name="text">
+    <string>Troubleshooting</string>
+   </property>
+  </action>
+  <action name="actionUpload_a_file">
+   <property name="text">
+    <string>Upload a file</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="images.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>portSelector</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>terminalPortSelector</receiver>
+   <slot>setCurrentIndex(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>331</x>
+     <y>81</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>227</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>terminalPortSelector</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>portSelector</receiver>
+   <slot>setCurrentIndex(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>227</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>331</x>
+     <y>81</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
