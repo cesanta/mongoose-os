@@ -5802,7 +5802,11 @@ int main(void) {
  */
 
 
+#ifdef V7_LARGE_AST
+typedef uint32_t ast_skip_t;
+#else
 typedef uint16_t ast_skip_t;
+#endif
 
 #ifndef V7_DISABLE_AST_TAG_NAMES
 #define AST_ENTRY(a, b, c, d, e) \
@@ -6247,15 +6251,22 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
                                      ast_off_t where,
                                      enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
-  uint16_t delta = where - start;
+  ast_skip_t delta = where - start;
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
   /* assertion, to be optimizable out */
   assert((int) skip < def->num_skips);
 
+#ifdef V7_LARGE_AST
+  p[0] = delta >> 24;
+  p[1] = delta >> 16 & 0xff;
+  p[2] = delta >> 8 & 0xff;
+  p[3] = delta & 0xff;
+#else
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
+#endif
   return where;
 }
 
@@ -6265,7 +6276,11 @@ ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
 
   p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
+#ifdef V7_LARGE_AST
+  return pos + (p[3] | p[2] << 8 | p[1] << 16 | p[0] << 24);
+#else
   return pos + (p[1] | p[0] << 8);
+#endif
 }
 
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
