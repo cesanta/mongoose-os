@@ -370,8 +370,21 @@
    </property>
   </action>
  </widget>
+ <tabstops>
+  <tabstop>platformSelector</tabstop>
+  <tabstop>portSelector</tabstop>
+  <tabstop>firmwareSelector</tabstop>
+  <tabstop>flashBtn</tabstop>
+  <tabstop>terminalPortSelector</tabstop>
+  <tabstop>connectBtn</tabstop>
+  <tabstop>rebootBtn</tabstop>
+  <tabstop>clearBtn</tabstop>
+  <tabstop>terminalInput</tabstop>
+  <tabstop>topToggleBtn</tabstop>
+  <tabstop>terminal</tabstop>
+  <tabstop>detectBtn</tabstop>
+ </tabstops>
  <resources>
-  <include location="images.qrc"/>
   <include location="images.qrc"/>
  </resources>
  <connections>
@@ -404,6 +417,70 @@
     <hint type="destinationlabel">
      <x>331</x>
      <y>83</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>topToggleBtn</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>topGroupBox</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>340</x>
+     <y>206</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>340</x>
+     <y>112</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>topToggleBtn</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>portLabel</receiver>
+   <slot>setHidden(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>340</x>
+     <y>206</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>252</x>
+     <y>245</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>topToggleBtn</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>terminalPortSelector</receiver>
+   <slot>setHidden(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>281</x>
+     <y>210</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>301</x>
+     <y>239</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>clearBtn</sender>
+   <signal>clicked()</signal>
+   <receiver>terminal</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>619</x>
+     <y>244</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>576</x>
+     <y>342</y>
     </hint>
    </hints>
   </connection>

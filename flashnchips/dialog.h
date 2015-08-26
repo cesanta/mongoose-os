@@ -18,6 +18,7 @@
 #include "hal.h"
 #include "ui_main.h"
 
+class QAction;
 class QCommandLineParser;
 class QEvent;
 class QSerialPort;
@@ -78,6 +79,7 @@ signals:
   QDir fwDir_;
   std::unique_ptr<QSerialPort> serial_port_;
   QMultiMap<QWidget *, State> enabled_in_state_;
+  QMultiMap<QAction *, State> action_enabled_in_state_;
   QTimer *refresh_timer_;
   QStringList input_history_;
   QString incomplete_input_;

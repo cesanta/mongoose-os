@@ -52,6 +52,44 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   skip_detect_warning_ = settings_.value("skipDetectWarning", false).toBool();
   toggleTopBlock(settings_.value("window/topBlockVisible", true).toBool());
 
+  QString p = settings_.value("selectedPlatform", "ESP8266").toString();
+  for (int i = 0; i < ui_.platformSelector->count(); i++) {
+    if (p == ui_.platformSelector->itemText(i)) {
+      QTimer::singleShot(
+          0, [this, i]() { ui_.platformSelector->setCurrentIndex(i); });
+      break;
+    }
+  }
+
+  net_mgr_.updateConfigurations();
+  resetHAL();
+
+  const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  ui_.terminal->setFont(fixedFont);
+  ui_.terminalInput->installEventFilter(this);
+  ui_.terminalPortSelector->setModel(ui_.portSelector->model());
+
+  action_enabled_in_state_.insert(ui_.actionConfigure_Wi_Fi, Terminal);
+  action_enabled_in_state_.insert(ui_.actionUpload_a_file, Terminal);
+  enabled_in_state_.insert(ui_.connectBtn, Connected);
+  enabled_in_state_.insert(ui_.connectBtn, NotConnected);
+  enabled_in_state_.insert(ui_.connectBtn, Terminal);
+  enabled_in_state_.insert(ui_.detectBtn, NoPortSelected);
+  enabled_in_state_.insert(ui_.detectBtn, NotConnected);
+  enabled_in_state_.insert(ui_.firmwareSelector, Connected);
+  enabled_in_state_.insert(ui_.firmwareSelector, NotConnected);
+  enabled_in_state_.insert(ui_.firmwareSelector, Terminal);
+  enabled_in_state_.insert(ui_.flashBtn, Connected);
+  enabled_in_state_.insert(ui_.flashBtn, NotConnected);
+  enabled_in_state_.insert(ui_.flashBtn, Terminal);
+  enabled_in_state_.insert(ui_.platformSelector, NoPortSelected);
+  enabled_in_state_.insert(ui_.platformSelector, NotConnected);
+  enabled_in_state_.insert(ui_.portSelector, NotConnected);
+  enabled_in_state_.insert(ui_.rebootBtn, Connected);
+  enabled_in_state_.insert(ui_.rebootBtn, Terminal);
+  enabled_in_state_.insert(ui_.terminalInput, Terminal);
+  enabled_in_state_.insert(ui_.terminalPortSelector, NotConnected);
+
   enableControlsForCurrentState();
 
   QTimer::singleShot(0, this, &MainDialog::updatePortList);
@@ -62,10 +100,6 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
 
   connect(this, &MainDialog::gotPrompt, this, &MainDialog::sendQueuedCommand);
 
-  net_mgr_.updateConfigurations();
-
-  enabled_in_state_.insert(ui_.portSelector, NotConnected);
-  enabled_in_state_.insert(ui_.terminalPortSelector, NotConnected);
   connect(ui_.portSelector, static_cast<void (QComboBox::*) (int) >(
                                 &QComboBox::currentIndexChanged),
           [this](int index) {
@@ -86,44 +120,16 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
             }
           });
 
-  enabled_in_state_.insert(ui_.detectBtn, NoPortSelected);
-  enabled_in_state_.insert(ui_.detectBtn, NotConnected);
   connect(ui_.detectBtn, &QPushButton::clicked, this, &MainDialog::detectPorts);
 
-  enabled_in_state_.insert(ui_.platformSelector, NoPortSelected);
-  enabled_in_state_.insert(ui_.platformSelector, NotConnected);
   connect(ui_.platformSelector, &QComboBox::currentTextChanged, this,
           &MainDialog::resetHAL);
   connect(ui_.platformSelector, &QComboBox::currentTextChanged,
           [this](QString platform) {
             settings_.setValue("selectedPlatform", platform);
           });
-  resetHAL();
-
-  QString p = settings_.value("selectedPlatform", "ESP8266").toString();
-  for (int i = 0; i < ui_.platformSelector->count(); i++) {
-    if (p == ui_.platformSelector->itemText(i)) {
-      QTimer::singleShot(
-          0, [this, i]() { ui_.platformSelector->setCurrentIndex(i); });
-      break;
-    }
-  }
-
-  enabled_in_state_.insert(ui_.firmwareSelector, NotConnected);
-  enabled_in_state_.insert(ui_.firmwareSelector, Connected);
-  enabled_in_state_.insert(ui_.firmwareSelector, Terminal);
 
   connect(ui_.flashBtn, &QPushButton::clicked, this, &MainDialog::loadFirmware);
-  enabled_in_state_.insert(ui_.flashBtn, NotConnected);
-  enabled_in_state_.insert(ui_.flashBtn, Connected);
-  enabled_in_state_.insert(ui_.flashBtn, Terminal);
-
-  enabled_in_state_.insert(ui_.connectBtn, NotConnected);
-  enabled_in_state_.insert(ui_.connectBtn, Connected);
-  enabled_in_state_.insert(ui_.connectBtn, Terminal);
-
-  enabled_in_state_.insert(ui_.rebootBtn, Connected);
-  enabled_in_state_.insert(ui_.rebootBtn, Terminal);
 
   connect(ui_.connectBtn, &QPushButton::clicked, this,
           &MainDialog::connectDisconnectTerminal);
@@ -135,16 +141,8 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   connect(ui_.actionUpload_a_file, &QAction::triggered, this,
           &MainDialog::uploadFile);
 
-  const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-  ui_.terminal->setFont(fixedFont);
-
-  enabled_in_state_.insert(ui_.terminalInput, Terminal);
-  ui_.terminalInput->installEventFilter(this);
-
   connect(ui_.terminalInput, &QLineEdit::returnPressed, this,
           &MainDialog::writeSerial);
-  connect(ui_.clearBtn, &QPushButton::clicked, ui_.terminal,
-          &QPlainTextEdit::clear);
 
   connect(ui_.actionDocumentation, &QAction::triggered, [this]() {
     const QString url =
@@ -161,9 +159,6 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
 
   connect(ui_.topToggleBtn, &QAbstractButton::toggled, this,
           &MainDialog::toggleTopBlock);
-
-  ui_.terminalPortSelector->setModel(ui_.portSelector->model());
-  enableControlsForCurrentState();
 }
 
 void MainDialog::setState(State newState) {
@@ -190,6 +185,10 @@ void MainDialog::enableControlsForCurrentState() {
   for (QWidget* w : enabled_in_state_.keys()) {
     w->setEnabled(enabled_in_state_.find(w, state_) != enabled_in_state_.end());
   }
+  for (QAction* a : action_enabled_in_state_.keys()) {
+    a->setEnabled(action_enabled_in_state_.find(a, state_) !=
+                  action_enabled_in_state_.end());
+  }
 }
 
 void MainDialog::resetHAL(QString name) {
@@ -207,10 +206,7 @@ void MainDialog::resetHAL(QString name) {
 }
 
 void MainDialog::toggleTopBlock(bool show) {
-  ui_.topGroupBox->setVisible(show);
   ui_.topToggleBtn->setArrowType(show ? Qt::UpArrow : Qt::DownArrow);
-  ui_.terminalPortSelector->setVisible(!show);
-  ui_.portLabel->setVisible(!show);
   ui_.topToggleBtn->setChecked(show);
   settings_.setValue("window/topBlockVisible", show);
 }
