@@ -43,7 +43,7 @@ SOURCES += sigsource_dummy.cc
 }
 
 RESOURCES = blobs.qrc images.qrc
-FORMS = main.ui
+FORMS = main.ui about.ui
 
 # libftdi stuff.
 macx {

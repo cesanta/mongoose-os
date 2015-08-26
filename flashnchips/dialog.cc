@@ -26,6 +26,7 @@
 #include "esp8266.h"
 #include "flasher.h"
 #include "serial.h"
+#include "ui_about.h"
 
 static const int kInputHistoryLength = 100;
 static const char kPromptEnd[] = "$ ";
@@ -50,7 +51,6 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   restoreGeometry(settings_.value("window/geometry").toByteArray());
   restoreState(settings_.value("window/state").toByteArray());
   skip_detect_warning_ = settings_.value("skipDetectWarning", false).toBool();
-  toggleTopBlock(settings_.value("window/topBlockVisible", true).toBool());
 
   QString p = settings_.value("selectedPlatform", "ESP8266").toString();
   for (int i = 0; i < ui_.platformSelector->count(); i++) {
@@ -63,11 +63,12 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
 
   net_mgr_.updateConfigurations();
   resetHAL();
+  ui_.progressBar->hide();
+  ui_.statusMessage->hide();
 
   const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
   ui_.terminal->setFont(fixedFont);
   ui_.terminalInput->installEventFilter(this);
-  ui_.terminalPortSelector->setModel(ui_.portSelector->model());
 
   action_enabled_in_state_.insert(ui_.actionConfigure_Wi_Fi, Terminal);
   action_enabled_in_state_.insert(ui_.actionUpload_a_file, Terminal);
@@ -88,7 +89,6 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   enabled_in_state_.insert(ui_.rebootBtn, Connected);
   enabled_in_state_.insert(ui_.rebootBtn, Terminal);
   enabled_in_state_.insert(ui_.terminalInput, Terminal);
-  enabled_in_state_.insert(ui_.terminalPortSelector, NotConnected);
 
   enableControlsForCurrentState();
 
@@ -143,7 +143,25 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   connect(ui_.terminalInput, &QLineEdit::returnPressed, this,
           &MainDialog::writeSerial);
 
-  connect(ui_.actionDocumentation, &QAction::triggered, [this]() {
+  connect(ui_.actionOpenWebsite, &QAction::triggered, [this]() {
+    const QString url = "https://www.cesanta.com/smartjs";
+    if (!QDesktopServices::openUrl(QUrl(url))) {
+      QMessageBox::warning(this, tr("Error"), tr("Failed to open %1").arg(url));
+    }
+  });
+  connect(ui_.actionOpenDashboard, &QAction::triggered, [this]() {
+    const QString url = "https://dashboard.cesanta.com/";
+    if (!QDesktopServices::openUrl(QUrl(url))) {
+      QMessageBox::warning(this, tr("Error"), tr("Failed to open %1").arg(url));
+    }
+  });
+  connect(ui_.actionSend_feedback, &QAction::triggered, [this]() {
+    const QString url = "https://www.cesanta.com/contact";
+    if (!QDesktopServices::openUrl(QUrl(url))) {
+      QMessageBox::warning(this, tr("Error"), tr("Failed to open %1").arg(url));
+    }
+  });
+  connect(ui_.actionHelp, &QAction::triggered, [this]() {
     const QString url =
         "https://github.com/cesanta/smart.js/blob/master/flashnchips/README.md";
     if (!QDesktopServices::openUrl(QUrl(url))) {
@@ -155,9 +173,6 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
           &QApplication::aboutQt);
   connect(ui_.actionAbout, &QAction::triggered, this,
           &MainDialog::showAboutBox);
-
-  connect(ui_.topToggleBtn, &QAbstractButton::toggled, this,
-          &MainDialog::toggleTopBlock);
 }
 
 void MainDialog::setState(State newState) {
@@ -202,12 +217,6 @@ void MainDialog::resetHAL(QString name) {
     qFatal("Unknown platform: %s", name.toStdString().c_str());
   }
   QTimer::singleShot(0, this, &MainDialog::updateFWList);
-}
-
-void MainDialog::toggleTopBlock(bool show) {
-  ui_.topToggleBtn->setArrowType(show ? Qt::UpArrow : Qt::DownArrow);
-  ui_.topToggleBtn->setChecked(show);
-  settings_.setValue("window/topBlockVisible", show);
 }
 
 util::Status MainDialog::openSerial() {
@@ -504,6 +513,7 @@ void MainDialog::detectPorts() {
 
 void MainDialog::flashingDone(QString msg, bool success) {
   Q_UNUSED(msg);
+  ui_.progressBar->hide();
   // TODO(imax): provide a command-line option for terminal speed.
   serial_port_->setBaudRate(115200);
   setState(Connected);
@@ -514,6 +524,7 @@ void MainDialog::flashingDone(QString msg, bool success) {
   if (success) {
     ui_.terminal->appendPlainText(tr("--- flashed successfully"));
     connectDisconnectTerminal();
+    ui_.statusMessage->hide();
   } else {
     closeSerial();
   }
@@ -599,6 +610,8 @@ void MainDialog::loadFirmware() {
     ui_.statusMessage->setText(err.error_message().c_str());
     return;
   }
+  ui_.progressBar->show();
+  ui_.statusMessage->show();
   ui_.progressBar->setRange(0, f->totalBlocks());
   ui_.progressBar->setValue(0);
   connect(f.get(), &Flasher::progress, ui_.progressBar,
@@ -626,10 +639,12 @@ void MainDialog::loadFirmware() {
 }
 
 void MainDialog::showAboutBox() {
-  QMessageBox::about(
-      this, tr("Smart.js flashing tool"),
-      tr("Smart.js flashing tool\nVersion %1\nhttps://smartjs.io")
-          .arg(qApp->applicationVersion()));
+  QWidget* w = new QWidget;
+  Ui_About about;
+  about.setupUi(w);
+  about.versionLabel->setText(
+      tr("Version: %1").arg(qApp->applicationVersion()));
+  w->show();
 }
 
 bool MainDialog::eventFilter(QObject* obj, QEvent* e) {

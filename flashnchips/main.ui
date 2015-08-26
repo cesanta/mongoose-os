@@ -6,275 +6,215 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>681</width>
-    <height>514</height>
+    <width>713</width>
+    <height>528</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Flash’n’Chips</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
-    <property name="spacing">
-     <number>0</number>
-    </property>
-    <property name="topMargin">
-     <number>0</number>
-    </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QGroupBox" name="topGroupBox">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
+     <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
+      <item row="1" column="2">
+       <widget class="QPushButton" name="detectBtn">
+        <property name="text">
+         <string>Detect devices</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QPushButton" name="flashBtn">
+        <property name="text">
+         <string>Flash firmware</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="firmwareSelector"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="portSelector"/>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="selectPlatformLabel">
+        <property name="text">
+         <string>1) Select platform:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="selectFirmwareLabel">
+        <property name="text">
+         <string>3) Select firmware:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="platformSelector">
+        <property name="currentText">
+         <string notr="true">ESP8266</string>
+        </property>
+        <item>
+         <property name="text">
+          <string notr="true">ESP8266</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string notr="true">CC3200</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="selectPortLabel">
+        <property name="text">
+         <string>2) Select port:</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QProgressBar" name="progressBar">
+      <property name="value">
+       <number>0</number>
       </property>
-      <property name="title">
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="statusMessage">
+      <property name="text">
        <string/>
       </property>
-      <property name="flat">
-       <bool>false</bool>
+      <property name="textFormat">
+       <enum>Qt::RichText</enum>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
-       <item>
-        <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
-         <item row="1" column="2">
-          <widget class="QPushButton" name="detectBtn">
+      <property name="openExternalLinks">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="terminalControlsLayout" stretch="0,0,3">
+      <item>
+       <widget class="QLabel" name="talkToDeviceLabel">
+        <property name="text">
+         <string>4) Use the console to talk to the device!</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="terminalControlsGroup">
+        <property name="title">
+         <string/>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_4">
+         <property name="leftMargin">
+          <number>3</number>
+         </property>
+         <property name="topMargin">
+          <number>3</number>
+         </property>
+         <property name="rightMargin">
+          <number>3</number>
+         </property>
+         <property name="bottomMargin">
+          <number>3</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="connectBtn">
            <property name="text">
-            <string>Detect devices</string>
+            <string>Connect</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="2">
-          <widget class="QPushButton" name="flashBtn">
+         <item>
+          <widget class="QPushButton" name="rebootBtn">
            <property name="text">
-            <string>Flash firmware</string>
+            <string>Reboot</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
-          <widget class="QComboBox" name="firmwareSelector"/>
-         </item>
-         <item row="1" column="1">
-          <widget class="QComboBox" name="portSelector"/>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="selectPlatformLabel">
+         <item>
+          <widget class="QPushButton" name="clearBtn">
            <property name="text">
-            <string>1) Select platform:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="selectFirmwareLabel">
-           <property name="text">
-            <string>3) Select firmware:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="platformSelector">
-           <property name="currentText">
-            <string notr="true">ESP8266</string>
-           </property>
-           <item>
-            <property name="text">
-             <string notr="true">ESP8266</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string notr="true">CC3200</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="selectPortLabel">
-           <property name="text">
-            <string>2) Select port:</string>
+            <string>Clear</string>
            </property>
           </widget>
          </item>
         </layout>
-       </item>
-       <item>
-        <widget class="QProgressBar" name="progressBar">
-         <property name="value">
-          <number>0</number>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="statusMessage">
-         <property name="text">
-          <string/>
-         </property>
-         <property name="textFormat">
-          <enum>Qt::RichText</enum>
-         </property>
-         <property name="openExternalLinks">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="terminal">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="textInteractionFlags">
+       <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+      </property>
+      <property name="maximumBlockCount">
+       <number>4096</number>
+      </property>
      </widget>
     </item>
     <item>
-     <widget class="QToolButton" name="topToggleBtn">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-        <horstretch>1</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>100500</width>
-        <height>10</height>
-       </size>
-      </property>
+     <widget class="QLineEdit" name="terminalInput">
       <property name="text">
-       <string>...</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-      <property name="autoRaise">
-       <bool>false</bool>
-      </property>
-      <property name="arrowType">
-       <enum>Qt::UpArrow</enum>
+       <string/>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QWidget" name="verticalWidget" native="true">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>1</verstretch>
-       </sizepolicy>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="topMargin">
+       <number>5</number>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <layout class="QHBoxLayout" name="terminalControlsLayout" stretch="0,0,0,1,3">
-         <item>
-          <widget class="QLabel" name="logo">
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap resource="images.qrc">:/images/smartjs_logo_small.png</pixmap>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QLabel" name="portLabel">
-           <property name="text">
-            <string>Port:</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="terminalPortSelector"/>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="terminalControlsGroup">
-           <property name="title">
-            <string/>
-           </property>
-           <property name="flat">
-            <bool>false</bool>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
-            <item>
-             <widget class="QPushButton" name="connectBtn">
-              <property name="text">
-               <string>Connect</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="rebootBtn">
-              <property name="text">
-               <string>Reboot</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="clearBtn">
-              <property name="text">
-               <string>Clear</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QLabel" name="talkToDeviceLabel">
-         <property name="text">
-          <string>4) Talk to the device!</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPlainTextEdit" name="terminal">
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-         <property name="textInteractionFlags">
-          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-         </property>
-         <property name="maximumBlockCount">
-          <number>4096</number>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="terminalInput">
-         <property name="text">
-          <string/>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
+      <item>
+       <widget class="QLabel" name="logo">
+        <property name="text">
+         <string>&lt;a href=&quot;https://www.cesanta.com/smartjs&quot;&gt;&lt;img src=&quot;:/images/smartjs_logo_small.png&quot;&gt;&lt;/a&gt;</string>
+        </property>
+        <property name="openExternalLinks">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>&lt;a href=&quot;https://github.com/cesanta/smart.js&quot;&gt;Documentation&lt;/a&gt;&lt;br/&gt;© Cesanta, 2015</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="openExternalLinks">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -283,36 +223,40 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>681</width>
+     <width>713</width>
      <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuConfigure">
     <property name="title">
-     <string>Configure</string>
+     <string>Connect</string>
     </property>
     <addaction name="actionConfigure_Wi_Fi"/>
-    <addaction name="actionUpload_a_file"/>
+    <addaction name="actionOpenDashboard"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionHelp"/>
+    <addaction name="actionOpenWebsite"/>
+    <addaction name="actionSend_feedback"/>
     <addaction name="actionAbout"/>
     <addaction name="actionAbout_Qt"/>
-    <addaction name="actionDocumentation"/>
-    <addaction name="actionExamples"/>
-    <addaction name="actionGetting_started"/>
-    <addaction name="actionRelease_notes"/>
-    <addaction name="actionSmart_js_website"/>
-    <addaction name="actionTroubleshooting"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionUpload_a_file"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuConfigure"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionConfigure_Wi_Fi">
    <property name="text">
-    <string>Configure Wi-Fi</string>
+    <string>Connect to Wi-Fi</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
@@ -334,39 +278,32 @@
     <enum>QAction::AboutQtRole</enum>
    </property>
   </action>
-  <action name="actionDocumentation">
-   <property name="text">
-    <string>Documentation</string>
-   </property>
-  </action>
-  <action name="actionExamples">
-   <property name="text">
-    <string>Examples</string>
-   </property>
-  </action>
-  <action name="actionGetting_started">
-   <property name="text">
-    <string>Getting started</string>
-   </property>
-  </action>
-  <action name="actionRelease_notes">
-   <property name="text">
-    <string>Release notes</string>
-   </property>
-  </action>
-  <action name="actionSmart_js_website">
+  <action name="actionOpenWebsite">
    <property name="text">
     <string>Smart.js website</string>
    </property>
   </action>
-  <action name="actionTroubleshooting">
+  <action name="actionHelp">
    <property name="text">
-    <string>Troubleshooting</string>
+    <string>Help</string>
    </property>
   </action>
   <action name="actionUpload_a_file">
    <property name="text">
-    <string>Upload a file</string>
+    <string>Upload</string>
+   </property>
+  </action>
+  <action name="actionOpenDashboard">
+   <property name="text">
+    <string>Open dashboard</string>
+   </property>
+  </action>
+  <action name="actionSend_feedback">
+   <property name="text">
+    <string>Send feedback</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::ApplicationSpecificRole</enum>
    </property>
   </action>
  </widget>
@@ -375,12 +312,10 @@
   <tabstop>portSelector</tabstop>
   <tabstop>firmwareSelector</tabstop>
   <tabstop>flashBtn</tabstop>
-  <tabstop>terminalPortSelector</tabstop>
   <tabstop>connectBtn</tabstop>
   <tabstop>rebootBtn</tabstop>
   <tabstop>clearBtn</tabstop>
   <tabstop>terminalInput</tabstop>
-  <tabstop>topToggleBtn</tabstop>
   <tabstop>terminal</tabstop>
   <tabstop>detectBtn</tabstop>
  </tabstops>
@@ -388,86 +323,6 @@
   <include location="images.qrc"/>
  </resources>
  <connections>
-  <connection>
-   <sender>portSelector</sender>
-   <signal>currentIndexChanged(int)</signal>
-   <receiver>terminalPortSelector</receiver>
-   <slot>setCurrentIndex(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>331</x>
-     <y>83</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>324</x>
-     <y>246</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>terminalPortSelector</sender>
-   <signal>currentIndexChanged(int)</signal>
-   <receiver>portSelector</receiver>
-   <slot>setCurrentIndex(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>324</x>
-     <y>246</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>331</x>
-     <y>83</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>topToggleBtn</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>topGroupBox</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>340</x>
-     <y>206</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>340</x>
-     <y>112</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>topToggleBtn</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>portLabel</receiver>
-   <slot>setHidden(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>340</x>
-     <y>206</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>252</x>
-     <y>245</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>topToggleBtn</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>terminalPortSelector</receiver>
-   <slot>setHidden(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>281</x>
-     <y>210</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>301</x>
-     <y>239</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>clearBtn</sender>
    <signal>clicked()</signal>
