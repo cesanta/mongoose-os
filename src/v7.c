@@ -1798,6 +1798,8 @@ struct v7 {
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
 
+  int inhibit_gc; /* while true, GC is inhibited */
+
   volatile int interrupt;
 #ifdef V7_STACK_SIZE
   void *sp_limit;
@@ -7740,7 +7742,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     }
     tag = V7_TAG_STRING_5;
   } else if (own) {
-#ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_COMPACTING_GC
     if ((double) m->len / (double) m->size > 0.9) {
       v7->need_gc = 1;
     }
@@ -8039,13 +8041,17 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     v7->strict_mode = 1;
 #endif
 
+    v7->inhibit_gc = 1;
+
     init_stdlib(v7);
     v7->thrown_error = v7_create_undefined();
-  }
 
-  init_file(v7);
-  init_crypto(v7);
-  init_socket(v7);
+    init_file(v7);
+    init_crypto(v7);
+    init_socket(v7);
+
+    v7->inhibit_gc = 0;
+  }
 
   return v7;
 }
@@ -8125,7 +8131,7 @@ int v7_disown(struct v7 *v7, v7_val_t *v) {
 int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
 #endif
 
-#ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_COMPACTING_GC
 void gc_mark_string(struct v7 *, val_t *);
 #endif
 
@@ -8332,14 +8338,23 @@ void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
  * dense arrays contain only one property pointing to an mbuf with array values.
  */
 V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
-  val_t v = obj->properties->value;
-  struct mbuf *mbuf = (struct mbuf *) v7_to_foreign(v);
+  val_t v;
+  struct mbuf *mbuf;
   val_t *vp;
+
+#if 0
+  /* TODO(mkm): use this when dense array promotion is implemented */
+  v = obj->properties->value;
+#else
+  v = v7_get(v7, v7_object_to_value(obj), "", 0);
+#endif
+
+  mbuf = (struct mbuf *) v7_to_foreign(v);
 
   if (mbuf == NULL) return;
   for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
     gc_mark(v7, *vp);
-#ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_COMPACTING_GC
     gc_mark_string(v7, vp);
 #endif
   }
@@ -8361,7 +8376,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   }
 
   for ((prop = obj->properties), MARK(obj); prop != NULL; prop = next) {
-#ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_COMPACTING_GC
     gc_mark_string(v7, &prop->value);
     gc_mark_string(v7, &prop->name);
 #endif
@@ -8452,7 +8467,7 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 #endif
 }
 
-#ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_COMPACTING_GC
 
 uint64_t gc_string_val_to_offset(val_t v) {
   return ((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
@@ -8615,6 +8630,10 @@ void v7_gc(struct v7 *v7, int full) {
                                              offsetof(struct v7, owned_values)};
   int i;
 
+  if (v7->inhibit_gc) {
+    return;
+  }
+
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
   gc_dump_arena_stats("Before GC properties", &v7->property_arena);
@@ -8644,13 +8663,13 @@ void v7_gc(struct v7 *v7, int full) {
 
     for (vp = (val_t **) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
       gc_mark(v7, **vp);
-#ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_COMPACTING_GC
       gc_mark_string(v7, *vp);
 #endif
     }
   }
 
-#ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_COMPACTING_GC
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
   {
     int i;
