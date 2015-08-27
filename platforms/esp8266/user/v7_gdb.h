@@ -53,5 +53,6 @@ struct regfile {
 };
 
 void gdb_init();
+void gdb_exception_handler(struct xtos_saved_regs *frame);
 
 #endif /* V7_GDB_INCLUDED */

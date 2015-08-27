@@ -1,7 +1,7 @@
 #ifndef V7_PERIPH_INCLUDED
 #define V7_PERIPH_INCLUDED
 
-#include "ets_sys.h"
+#include <stdint.h>
 
 struct gpio_info {
   uint8_t pin;

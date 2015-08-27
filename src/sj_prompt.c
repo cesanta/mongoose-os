@@ -3,6 +3,7 @@
  * All rights reserved
  */
 #include "sj_prompt.h"
+#include "sj_v7_ext.h"
 #include "sj_hal.h"
 #include "sj_v7_ext.h"
 
@@ -36,9 +37,12 @@ static void show_prompt(void) {
    * Flashnchips relies on prompt ending with "$ " to detect when it's okay
    * to send the next line during file upload.
    */
-  printf("smartjs %lu/%d$ ", (unsigned long) sj_get_free_heap_size(),
-         v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_SIZE) -
-             v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_USED));
+
+  /* TODO RTOS(alashkin): RTOS printf doesn't support %lu */
+  printf("smartjs %u/%d$ ", (unsigned int) sj_get_free_heap_size(),
+         (int) v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_SIZE) -
+             (int) v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_USED));
+
   fflush(stdout);
   s_sjp.pos = 0;
   s_sjp.char_processor = process_prompt_char;

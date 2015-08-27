@@ -3,7 +3,13 @@
  * All rights reserved
  */
 
-#include "ets_sys.h"
+#include <ets_sys.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <v7.h>
+
+#ifndef RTOS_SDK
+
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
@@ -11,7 +17,13 @@
 #include "mem.h"
 #include <errno.h>
 #include <fcntl.h>
-#include "v7.h"
+
+#else
+
+#include <c_types.h>
+#include <spi_flash.h>
+
+#endif /* RTOS_SDK */
 
 #ifndef V7_NO_FS
 
@@ -51,7 +63,7 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
    */
 
   if (size > LOG_PAGE_SIZE) {
-    os_printf("Invalid size provided to read/write (%d)\n\r", (int) size);
+    printf("Invalid size provided to read/write (%d)\n\r", (int) size);
     return SPIFFS_ERR_NOT_CONFIGURED;
   }
 
@@ -62,8 +74,8 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 
   int res = spi_flash_read(aligned_addr, (u32_t *) tmp_buf, aligned_size);
   if (res != 0) {
-    os_printf("spi_flash_read failed: %d (%d, %d)\n\r", res, (int) aligned_addr,
-              (int) aligned_size);
+    printf("spi_flash_read failed: %d (%d, %d)\n\r", res, (int) aligned_addr,
+           (int) aligned_size);
     return res;
   }
 
@@ -76,8 +88,8 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 
   res = spi_flash_write(aligned_addr, (u32_t *) tmp_buf, aligned_size);
   if (res != 0) {
-    os_printf("spi_flash_write failed: %d (%d, %d)\n\r", res,
-              (int) aligned_addr, (int) aligned_size);
+    printf("spi_flash_write failed: %d (%d, %d)\n\r", res, (int) aligned_addr,
+           (int) aligned_size);
     return res;
   }
 
@@ -118,8 +130,8 @@ static s32_t esp_spiffs_erase(u32_t addr, u32_t size) {
    * provides here sector address & sector size
    */
   if (size != FLASH_BLOCK_SIZE || addr % FLASH_BLOCK_SIZE != 0) {
-    os_printf("Invalid size provided to esp_spiffs_erase (%d, %d)\n\r",
-              (int) addr, (int) size);
+    printf("Invalid size provided to esp_spiffs_erase (%d, %d)\n\r", (int) addr,
+           (int) size);
     return SPIFFS_ERR_NOT_CONFIGURED;
   }
 

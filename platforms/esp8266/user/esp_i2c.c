@@ -9,10 +9,24 @@
 #include <v7.h>
 #include <sj_i2c.h>
 
-#include "ets_sys.h"
-#include "osapi.h"
-#include "gpio.h"
+#include <ets_sys.h>
 #include "v7_periph.h"
+#include "esp_gpio.h"
+
+#ifndef RTOS_SDK
+
+#include <osapi.h>
+#include <gpio.h>
+
+#else
+
+#include <stdlib.h>
+#include <gpio_register.h>
+#include <pin_mux_register.h>
+#include <eagle_soc.h>
+#include <freertos/portmacro.h>
+
+#endif /* RTOS_SDK */
 
 /* #define V7_ESP_I2C_DEBUG */
 /* #define ENABLE_IC2_EEPROM_TEST */
@@ -206,7 +220,6 @@ void i2c_read_bytes(i2c_connection c, size_t n, uint8_t *buf,
 
 int i2c_init(i2c_connection c) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
-  uint8_t i;
   struct gpio_info *sda_info, *scl_info;
 
   sda_info = get_gpio_info(conn->sda_gpio);
@@ -216,14 +229,14 @@ int i2c_init(i2c_connection c) {
     return -1;
   }
 
-  ETS_GPIO_INTR_DISABLE();
+  gpio_disable_intr(ETS_GPIO_INUM);
 
   i2c_wire_init(sda_info->periph, conn->sda_gpio, sda_info->func);
   i2c_wire_init(scl_info->periph, conn->scl_gpio, scl_info->func);
 
   i2c_set_wires_value(conn, I2C_INPUT, I2C_INPUT);
 
-  ETS_GPIO_INTR_ENABLE();
+  gpio_enable_intr(ETS_GPIO_INUM);
 
   /* Run a cycle to "flush out" the bus. 0xFF is reserved address. */
   i2c_start(conn, 0xFF, I2C_READ);

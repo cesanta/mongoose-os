@@ -1,8 +1,13 @@
-#include "ets_sys.h"
-#include "osapi.h"
-#include "gpio.h"
-#include "util.h"
+#include <ets_sys.h>
+#include <util.h>
 #include "v7_esp_features.h"
+
+#ifndef RTOS_SDK
+#include <osapi.h>
+#include <gpio.h>
+#else
+#include <esp_misc.h>
+#endif
 
 #if V7_ESP_ENABLE__DHT11
 
@@ -47,4 +52,5 @@ int dht11_read(int gpio, int* temp, int* rh) {
    * max_cycles); */
   return (max_cycles > 0 && cs == expected_cs);
 }
+
 #endif /* V7_ESP_ENABLE__DHT11 */

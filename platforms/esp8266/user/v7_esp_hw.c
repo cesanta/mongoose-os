@@ -1,4 +1,9 @@
+#include <stdint.h>
+
+#ifndef RTOS_SDK
 #include "user_interface.h"
+#endif
+
 #include "v7_esp_hw.h"
 
 uint8_t read_unaligned_byte(uint8_t *addr) {

@@ -7,6 +7,7 @@
  * This is a implementation of a simple dummy data generator server.
  * Connect to it via netcat and it will stream 1M of 'A' characters
  */
+#ifndef RTOS_TODO
 
 #include <ets_sys.h>
 #include <osapi.h>
@@ -110,3 +111,5 @@ void init_data_gen_server(struct v7 *v7) {
   v7_set(v7, v7_get_global_object(v7), "Tcp", 3, 0, tcp);
   v7_set_method(v7, tcp, "gen", Tcp_gen);
 }
+
+#endif

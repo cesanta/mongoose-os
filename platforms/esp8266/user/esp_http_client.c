@@ -1,3 +1,4 @@
+#ifndef RTOS_TODO
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -270,3 +271,5 @@ err:
   free(client);
   return 0;
 }
+
+#endif

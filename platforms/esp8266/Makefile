@@ -8,6 +8,8 @@ ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
 VERBOSE ?= 0
+# Should be RTOS or OSS
+SDK = OSS
 
 BUILD_DIR = build
 TOOLS_DIR = tools
@@ -27,7 +29,7 @@ IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)
 LPATH = $(SDK_PATH)/lib
 
 # libraries used in this project, mainly provided by the SDK
-APP_LIBS = m cirom gcc hal pp phy net80211 lwip wpa main
+APP_LIBS = cirom gcc hal pp phy net80211 lwip wpa main
 
 # linker script used for the above linkier step
 LD_SCRIPT	= user/eagle.app.30000.v6.ld
@@ -120,6 +122,24 @@ CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
 LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
+# Temp solution for RTOS SDK
+OBJCOPY2 = $(OBJCOPY)
+
+ifeq "$(SDK)" "RTOS"
+IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
+		 $(SDK_PATH)/include/lwip $(SDK_PATH)/include/lwip/ipv4 \
+		 $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
+		 $(SDK_PATH)/lwip/include/
+		 
+APP_LIBS += freertos mirom
+FEATURES += -DDISABLE_SHA1
+CFLAGS += -DRTOS_SDK -DRTOS_TODO
+OBJCOPY2 = /bin/true
+#TODO(alashkin): try to use the same LD script
+LD_SCRIPT = user/eagle.app.v6.RTOS.ld
+else
+APP_LIBS += m
+endif
 
 V ?= $(VERBOSE)
 ifeq ("$(V)","1")
@@ -177,8 +197,8 @@ $(APP_AR): $(OBJS)
 	$(Q) $(AR) cru $@ $^
 	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
-	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
-	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
+	$(Q) $(OBJCOPY2) --rename-section .rodata=.irom0.text $(APP_AR)
+	$(Q) $(OBJCOPY2) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
 
 # -- Compilation.
 

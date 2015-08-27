@@ -1,7 +1,18 @@
-#include "ets_sys.h"
-#include "osapi.h"
-#include "gpio.h"
+#include <ets_sys.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include "v7_periph.h"
+
+#ifndef RTOS_SDK
+
+#include <osapi.h>
+#include <gpio.h>
+
+#else
+
+#include <pin_mux_register.h>
+
+#endif /* RTOS_SDK */
 
 /*
 * Map gpio -> { mux reg, func }

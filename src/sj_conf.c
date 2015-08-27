@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <sha1.h>
 #include <v7.h>
+#include <string.h>
 
 /*
  * TODO(alashkin): add function sj_get_file_size to HAL interface

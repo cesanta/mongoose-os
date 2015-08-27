@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#ifndef NO_ESP
+#if !defined(NO_ESP) && !defined(RTOS_SDK)
 #include "ets_sys.h"
 #include "osapi.h"
 #include "os_type.h"
