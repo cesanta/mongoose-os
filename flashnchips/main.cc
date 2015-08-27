@@ -149,9 +149,9 @@ int main(int argc, char* argv[]) {
     MainDialog w(&parser);
     w.show();
     SigSource* ss = initSignalSource(&w);
-    QObject::connect(ss, SIGNAL(flash()), &w, SLOT(flash()));
-    QObject::connect(ss, SIGNAL(connectDisconnect()), &w,
-                     SLOT(connectDisconnectTerminal()));
+    QObject::connect(ss, &SigSource::flash, &w, &MainDialog::loadFirmware);
+    QObject::connect(ss, &SigSource::connectDisconnect, &w,
+                     &MainDialog::connectDisconnectTerminal);
     return app.exec();
   }
 

@@ -45,13 +45,14 @@ class MainDialog : public QMainWindow {
     Terminal,
   };
 
+ public slots:
+  void loadFirmware();
+  void connectDisconnectTerminal();
  private slots:
   void updatePortList();
   void detectPorts();
-  void loadFirmware();
   void updateFWList();
   void flashingDone(QString msg, bool success);
-  void connectDisconnectTerminal();
   util::Status disconnectTerminalSignals();
   void readSerial();
   void writeSerial();
