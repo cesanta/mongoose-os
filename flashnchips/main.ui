@@ -98,7 +98,10 @@
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="terminalControlsLayout" stretch="0,0,3">
+     <layout class="QHBoxLayout" name="terminalControlsLayout" stretch="0,0,0,0,0">
+      <property name="topMargin">
+       <number>10</number>
+      </property>
       <item>
        <widget class="QLabel" name="talkToDeviceLabel">
         <property name="text">
@@ -120,48 +123,24 @@
        </spacer>
       </item>
       <item>
-       <widget class="QGroupBox" name="terminalControlsGroup">
-        <property name="title">
-         <string/>
+       <widget class="QPushButton" name="connectBtn">
+        <property name="text">
+         <string>Connect</string>
         </property>
-        <property name="flat">
-         <bool>false</bool>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="rebootBtn">
+        <property name="text">
+         <string>Reboot</string>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_4">
-         <property name="leftMargin">
-          <number>3</number>
-         </property>
-         <property name="topMargin">
-          <number>3</number>
-         </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
-          <number>3</number>
-         </property>
-         <item>
-          <widget class="QPushButton" name="connectBtn">
-           <property name="text">
-            <string>Connect</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="rebootBtn">
-           <property name="text">
-            <string>Reboot</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="clearBtn">
-           <property name="text">
-            <string>Clear</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="clearBtn">
+        <property name="text">
+         <string>Clear</string>
+        </property>
        </widget>
       </item>
      </layout>
@@ -189,7 +168,7 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="topMargin">
-       <number>5</number>
+       <number>10</number>
       </property>
       <item>
        <widget class="QLabel" name="logo">
