@@ -1,4 +1,4 @@
-2/* This linker script generated from xt-genldscripts.tpp for LSP . */
+/* This linker script generated from xt-genldscripts.tpp for LSP . */
 /* Linker Script for ld -N */
 MEMORY
 {
