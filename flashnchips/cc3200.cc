@@ -7,6 +7,7 @@
 #include <IOKit/serial/ioss.h>
 #endif
 
+#include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDebug>
@@ -37,6 +38,7 @@ const int kDefaultTimeoutMs = 1000;
 
 const int kStorageID = 0;
 const char kFWFilename[] = "/sys/mcuimg.bin";
+const char kDevConfFilename[] = "/conf/dev.json";
 const int kBlockSizes[] = {0x100, 0x400, 0x1000, 0x4000, 0x10000};
 const int kFileUploadBlockSize = 4096;
 
@@ -352,17 +354,51 @@ class FlasherImpl : public Flasher {
   }
 
   util::Status setOption(const QString& name, const QVariant& value) override {
-    Q_UNUSED(name);
-    Q_UNUSED(value);
-
+    if (name == kIdDomainOption) {
+      if (value.type() != QVariant::String) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be a string");
+      }
+      id_hostname_ = value.toString();
+      return util::Status::OK;
+    } else if (name == kSkipIdGenerationOption) {
+      if (value.type() != QVariant::Bool) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be boolean");
+      }
+      skip_id_generation_ = value.toBool();
+      return util::Status::OK;
+    }
     return util::Status(util::error::INVALID_ARGUMENT, "Unknown option");
   }
 
   util::Status setOptionsFromCommandLine(
       const QCommandLineParser& parser) override {
-    Q_UNUSED(parser);
+    util::Status r;
 
-    return util::Status::OK;
+    QStringList boolOpts({kSkipIdGenerationOption});
+    QStringList stringOpts({kIdDomainOption});
+
+    for (const auto& opt : boolOpts) {
+      auto s = setOption(opt, parser.isSet(opt));
+      if (!s.ok()) {
+        r = util::Status(
+            s.error_code(),
+            (opt + ": " + s.error_message().c_str()).toStdString());
+      }
+    }
+    for (const auto& opt : stringOpts) {
+      // XXX: currently there's no way to "unset" a string option.
+      if (parser.isSet(opt)) {
+        auto s = setOption(opt, parser.value(opt));
+        if (!s.ok()) {
+          r = util::Status(
+              s.error_code(),
+              (opt + ": " + s.error_message().c_str()).toStdString());
+        }
+      }
+    }
+    return r;
   }
 
  private:
@@ -395,6 +431,22 @@ class FlasherImpl : public Flasher {
     st = uploadFW(image_, kFWFilename);
     if (!st.ok()) {
       return st;
+    }
+    if (!skip_id_generation_) {
+      emit statusMessage(tr("Checking if the device has an ID assigned..."),
+                         true);
+      auto info = getFileInfo(kDevConfFilename);
+      if (!info.ok()) {
+        return info.status();
+      }
+      if (!info.ValueOrDie().exists) {
+        emit statusMessage(tr("Generating a new ID..."), true);
+        QByteArray id = randomDeviceID(id_hostname_);
+        st = uploadFW(id, kDevConfFilename);
+        if (!st.ok()) {
+          return st;
+        }
+      }
     }
 #ifndef NO_LIBFTDI
     emit statusMessage(tr("Rebooting into firmware..."), true);
@@ -782,6 +834,8 @@ class FlasherImpl : public Flasher {
   mutable QMutex lock_;
   QByteArray image_;
   QSerialPort* port_;
+  QString id_hostname_;
+  bool skip_id_generation_ = false;
 };
 
 class CC3200HAL : public HAL {

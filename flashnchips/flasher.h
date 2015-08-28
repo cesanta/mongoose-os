@@ -7,6 +7,7 @@
 
 #include <common/util/status.h>
 
+class QByteArray;
 class QCommandLineParser;
 class QSerialPortInfo;
 class QVariant;
@@ -50,5 +51,7 @@ signals:
   void statusMessage(QString message, bool important = false);
   void done(QString message, bool success);
 };
+
+QByteArray randomDeviceID(const QString& domain);
 
 #endif  // FLASHER_H
