@@ -4,6 +4,7 @@ V7_PATH ?= ../../src
 COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
+SPIFFS_PATH ?= ../../src/spiffs
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
@@ -19,7 +20,7 @@ APP = smartjs
 # SSL can be SDK or Krypton
 SSL ?= None
 
-APP_MODULES := user spiffs
+APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c
@@ -232,9 +233,9 @@ $(FW_FS_OUT): $(FS_FILES) $(BUILD_DIR)/mkspiffs
 	$(vecho) "MKSPIFFS $(FS_DIR) -> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_DIR) > $@
 
-$(BUILD_DIR)/mkspiffs: $(TOOLS_DIR)/mkspiffs.c $(wildcard spiffs/*.c)
+$(BUILD_DIR)/mkspiffs: $(TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
 	$(vecho) "GCC mkspiffs"
-	$(Q) gcc -I. -o $@ $^ -DNO_ESP
+	$(Q) gcc -I. -Iuser -o $@ $^ -DNO_ESP
 
 
 #

@@ -27,7 +27,7 @@
 
 #ifndef V7_NO_FS
 
-#include "./../spiffs/spiffs.h"
+#include "spiffs/spiffs.h"
 #include "esp_uart.h"
 
 /*

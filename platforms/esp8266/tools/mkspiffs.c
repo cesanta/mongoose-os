@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-#include "spiffs/spiffs.h"
+#include "../../src/spiffs/spiffs.h"
 
 #define LOG_PAGE_SIZE 256
 #define FLASH_BLOCK_SIZE (4 * 1024)
