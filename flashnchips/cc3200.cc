@@ -45,6 +45,9 @@ const char kOpcodeFinishUpload = 0x22;
 
 const char kOpcodeFileChunk = 0x24;
 
+const char kOpcodeGetFileInfo = 0x2A;
+const char kOpcodeReadFileChunk = 0x2B;
+
 const char kOpcodeStorageWrite = 0x2D;
 const char kOpcodeFileErase = 0x2E;
 const char kOpcodeGetVersionInfo = 0x2F;
@@ -62,6 +65,11 @@ struct VersionInfo {
 struct StorageInfo {
   quint16 blockSize;
   quint16 blockCount;
+};
+
+struct FileInfo {
+  bool exists;
+  quint32 size;
 };
 
 // Functions for handling the framing protocol. Each frame must be ACKed
@@ -602,7 +610,7 @@ class FlasherImpl : public Flasher {
     return sendPacket(port_, payload);
   }
 
-  util::Status startUpload(const QString& filename, int len) {
+  util::Status openFileForWrite(const QString& filename, int len) {
     emit statusMessage(tr("Uploading %1 (%2 bytes)...").arg(filename).arg(len),
                        true);
     QByteArray payload;
@@ -629,21 +637,59 @@ class FlasherImpl : public Flasher {
     payload.append(filename.toUtf8());
     payload.append('\0');
     payload.append('\0');
-    return sendPacket(port_, payload, 10000);
-  }
-
-  util::Status uploadFW(const QByteArray& bytes, const QString& filename) {
-    util::Status st = eraseFile(filename);
-    if (!st.ok()) {
-      return st;
-    }
-    st = startUpload(filename, bytes.length());
+    util::Status st = sendPacket(port_, payload, 10000);
     if (!st.ok()) {
       return st;
     }
     auto token = readBytes(port_, 4);
     if (!token.ok()) {
       return token.status();
+    }
+    return util::Status::OK;
+  }
+
+  util::Status openFileForRead(const QString& filename) {
+    QByteArray payload;
+    QDataStream ps(&payload, QIODevice::WriteOnly);
+    ps.setByteOrder(QDataStream::BigEndian);
+    ps << quint8(kOpcodeStartUpload) << quint32(0) << quint32(0);
+    payload.append(filename.toUtf8());
+    payload.append('\0');
+    payload.append('\0');
+    util::Status st = sendPacket(port_, payload, 10000);
+    if (!st.ok()) {
+      return st;
+    }
+    auto token = readBytes(port_, 4);
+    if (!token.ok()) {
+      return token.status();
+    }
+    return util::Status::OK;
+  }
+
+  util::Status closeFile() {
+    QByteArray payload(&kOpcodeFinishUpload, 1);
+    payload.append(QByteArray("\0", 1).repeated(63));
+    payload.append(QByteArray("\x46", 1).repeated(256));
+    payload.append("\0", 1);
+    return sendPacket(port_, payload);
+  }
+
+  util::Status uploadFW(const QByteArray& bytes, const QString& filename) {
+    auto info = getFileInfo(filename);
+    if (!info.ok()) {
+      return info.status();
+    }
+    util::Status st;
+    if (info.ValueOrDie().exists) {
+      st = eraseFile(filename);
+      if (!st.ok()) {
+        return st;
+      }
+    }
+    st = openFileForWrite(filename, bytes.length());
+    if (!st.ok()) {
+      return st;
     }
     int start = 0;
     while (start < bytes.length()) {
@@ -661,11 +707,76 @@ class FlasherImpl : public Flasher {
       start += kFileUploadBlockSize;
       emit progress(start / kFileUploadBlockSize);
     }
-    QByteArray payload(&kOpcodeFinishUpload, 1);
-    payload.append(QByteArray("\0", 1).repeated(63));
-    payload.append(QByteArray("\x46", 1).repeated(256));
-    payload.append("\0", 1);
-    return sendPacket(port_, payload);
+    return closeFile();
+  }
+
+  util::StatusOr<FileInfo> getFileInfo(const QString& filename) {
+    QByteArray payload;
+    QDataStream ps(&payload, QIODevice::WriteOnly);
+    ps.setByteOrder(QDataStream::BigEndian);
+    ps << quint8(kOpcodeGetFileInfo) << quint32(filename.length());
+    payload.append(filename.toUtf8());
+    util::Status st = sendPacket(port_, payload);
+    if (!st.ok()) {
+      return st;
+    }
+    auto resp = recvPacket(port_);
+    if (!resp.ok()) {
+      return resp.status();
+    }
+    QByteArray b = resp.ValueOrDie();
+    FileInfo r;
+    r.exists = b[0] == char(1);
+    QDataStream ss(b.mid(4, 4));
+    ss.setByteOrder(QDataStream::BigEndian);
+    ss >> r.size;
+    return r;
+  }
+
+  util::StatusOr<QByteArray> getFile(const QString& filename) {
+    auto info = getFileInfo(filename);
+    if (!info.ok()) {
+      return info.status();
+    }
+    if (!info.ValueOrDie().exists) {
+      return util::Status(util::error::FAILED_PRECONDITION,
+                          "File does not exist");
+    }
+    util::Status st = openFileForRead(filename);
+    if (!st.ok()) {
+      return st;
+    }
+    int size = info.ValueOrDie().size;
+    QByteArray r;
+    while (r.length() < size) {
+      int n = kFileUploadBlockSize;
+      if (n > size - r.length()) {
+        n = size - r.length();
+      }
+
+      QByteArray payload;
+      QDataStream ps(&payload, QIODevice::WriteOnly);
+      ps << quint8(kOpcodeReadFileChunk) << quint32(r.length()) << quint32(n);
+      st = sendPacket(port_, payload);
+      if (!st.ok()) {
+        qCritical() << "getChunk failed at " << r.length() << ": "
+                    << st.ToString().c_str();
+        return st;
+      }
+      auto resp = recvPacket(port_);
+      if (!resp.ok()) {
+        qCritical() << "Failed to read chunk at " << r.length() << ": "
+                    << resp.status().ToString().c_str();
+        return resp.status();
+      }
+      r.append(resp.ValueOrDie());
+    }
+
+    st = closeFile();
+    if (!st.ok()) {
+      return st;
+    }
+    return r;
   }
 
   mutable QMutex lock_;

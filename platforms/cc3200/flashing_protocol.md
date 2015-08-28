@@ -42,6 +42,18 @@ Opcodes are sorted by numerical value.
    * Arguments:
      * 4 bytes: offset of the chunk
      * 4096 bytes: data
+ * `0x2A` – get file info.
+   * Arguments:
+     * 4 bytes: name length
+     * N bytes: file name
+   * Response:
+     * 24 bytes: first byte is 1 if the file exists, 4 bytes at offset 4 – file size
+ * `0x2B` – get file chunk.
+   * Arguments:
+     * 4 bytes: offset
+     * 4 bytes: number of bytes to read
+   * Response:
+     * N bytes: content
  * `0x2D` – raw storage write.
    * Arguments:
      * 4 bytes: storage ID – 0
