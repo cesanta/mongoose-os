@@ -75,9 +75,9 @@ int sj_wifi_connect() {
   sl_Stop(0);
   sl_Start(NULL, NULL, NULL);
 
-  sp.Type = SL_SEC_TYPE_WPA;
   sp.Key = s_wifi_sta_config.pass;
   sp.KeyLen = strlen(s_wifi_sta_config.pass);
+  sp.Type = sp.KeyLen ? SL_SEC_TYPE_WPA : SL_SEC_TYPE_OPEN;
 
   ret = sl_WlanConnect(s_wifi_sta_config.ssid, strlen(s_wifi_sta_config.ssid),
                        0, &sp, 0);
