@@ -514,6 +514,10 @@ void MainDialog::detectPorts() {
 void MainDialog::flashingDone(QString msg, bool success) {
   Q_UNUSED(msg);
   ui_.progressBar->hide();
+  if (scroll_after_flashing_) {
+    auto* scroll = ui_.terminal->verticalScrollBar();
+    scroll->setValue(scroll->maximum());
+  }
   // TODO(imax): provide a command-line option for terminal speed.
   serial_port_->setBaudRate(115200);
   setState(Connected);
@@ -610,6 +614,11 @@ void MainDialog::loadFirmware() {
     ui_.statusMessage->setText(err.error_message().c_str());
     return;
   }
+
+  // Check if the terminal is scrolled down to the bottom before showing
+  // progress bar, so we can scroll it back again after we're done.
+  auto* scroll = ui_.terminal->verticalScrollBar();
+  scroll_after_flashing_ = scroll->value() == scroll->maximum();
   ui_.progressBar->show();
   ui_.statusMessage->show();
   ui_.progressBar->setRange(0, f->totalBlocks());

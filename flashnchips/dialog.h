@@ -87,6 +87,7 @@ signals:
   QSettings settings_;
   QStringList command_queue_;
   std::unique_ptr<HAL> hal_;
+  bool scroll_after_flashing_ = false;
 
   QNetworkConfigurationManager net_mgr_;
 
