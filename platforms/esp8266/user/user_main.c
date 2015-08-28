@@ -32,12 +32,11 @@
 #include "sj_prompt.h"
 #include "util.h"
 #include "v7_fs.h"
+#include "disp_task.h"
 
 #endif /* RTOS_SDK */
 
-#ifdef RTOS_SDK
-xTaskHandle startcmd_task;
-#else
+#ifndef RTOS_SDK
 os_timer_t startcmd_timer;
 #endif
 
@@ -66,10 +65,6 @@ void start_cmd(void *dummy) {
 #if !defined(NO_PROMPT)
   sj_prompt_init(v7);
 #endif
-
-#ifdef RTOS_SDK
-  vTaskDelete(startcmd_task);
-#endif
 }
 
 void init_done_cb() {
@@ -78,14 +73,12 @@ void init_done_cb() {
 #endif
   pp_soft_wdt_stop();
 
-#ifdef RTOS_SDK
-  xTaskCreate(start_cmd, (const signed char *) "start_cmd",
-              (V7_STACK_SIZE + 256) / 4, NULL, tskIDLE_PRIORITY + 2,
-              &startcmd_task);
-#else
+#ifndef RTOS_SDK
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, start_cmd, NULL);
   os_timer_arm(&startcmd_timer, 500, 0);
+#else
+  rtos_dispatch_initialize();
 #endif
 }
 
@@ -121,6 +114,7 @@ void user_init() {
 #endif
 
 #ifdef RTOS_TODO
+  rtos_init_dispatcher();
   init_done_cb();
 #endif
 }

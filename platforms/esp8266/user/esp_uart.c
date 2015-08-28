@@ -22,6 +22,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
+#include "disp_task.h"
 
 #endif /* RTOS_SDK */
 
@@ -53,21 +54,7 @@ uart_process_char_t uart_process_char;
 volatile uart_process_char_t uart_interrupt_cb = NULL;
 
 #ifndef RTOS_SDK
-
 static os_event_t rx_task_queue[RXTASK_QUEUE_LEN];
-
-#else
-
-static xTaskHandle rx_task_handle = NULL;
-static xQueueHandle rx_queue_handle;
-
-struct uart_event {
-  int event;
-  int param;
-};
-
-#define UART_EVENT_CHAR_RECEIVED 1
-void rx_task(void *pvParameters);
 #endif
 
 static char rx_buf[RX_BUFFER_SIZE];
@@ -105,22 +92,7 @@ FAST static void rx_isr(void *param) {
 #ifndef RTOS_SDK
     system_os_post(TASK_PRIORITY, 0, tail);
 #else
-    if (rx_queue_handle == NULL) {
-      rx_queue_handle = xQueueCreate(32, sizeof(struct uart_event));
-      xTaskCreate(rx_task, (const signed char *) "uTask",
-                  (V7_STACK_SIZE + 256) / 4, NULL, tskIDLE_PRIORITY + 2,
-                  &rx_task_handle);
-    }
-    {
-      struct uart_event e;
-      e.event = UART_EVENT_CHAR_RECEIVED;
-      e.param = tail;
-      portBASE_TYPE xHigherPriorityTaskWoken;
-      xQueueSendFromISR(rx_queue_handle, (void *) &e,
-                        &xHigherPriorityTaskWoken);
-      portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
-      /* TODO RTOS(alashkin) : use xTaskResume */
-    }
+    rtos_dispatch_char_handler(tail);
 #endif
   }
 }
@@ -196,7 +168,6 @@ void process_rx_buf(int tail) {
 }
 
 #ifndef RTOS_SDK
-
 void rx_task(os_event_t *events) {
   if (events->sig != 0) {
     return;
@@ -204,23 +175,6 @@ void rx_task(os_event_t *events) {
 
   process_rx_buf(events->par);
 }
-
-#else
-
-void rx_task(void *pvParameters) {
-  struct uart_event e;
-
-  for (;;) {
-    /* TODO RTOS(alashkin): use xTaskSuspend */
-    if (xQueueReceive(rx_queue_handle, (void *) &e,
-                      (portTickType) portMAX_DELAY)) {
-      if (e.event == UART_EVENT_CHAR_RECEIVED) {
-        process_rx_buf(e.param);
-      }
-    }
-  }
-}
-
 #endif /* RTOS_SDK */
 
 void uart_main_init(int baud_rate) {
