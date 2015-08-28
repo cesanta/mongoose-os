@@ -15,9 +15,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.cesanta.flashnchips</string>
 	<key>CFBundleDisplayName</key>
-	<string>Smart.js flashing tool</string>
+	<string>Flash’n’Chips</string>
 	<key>CFBundleName</key>
-	<string>Smart.js flashing tool</string>
+	<string>Flash’n’Chips</string>
 	<key>CFBundleShortVersionString</key>
 	<string>@SHORT_VERSION@</string>
 </dict>
