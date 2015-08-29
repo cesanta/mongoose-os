@@ -199,14 +199,16 @@ int64_t strtoll(const char *str, char **endptr, int base);
 #endif
 #endif /* !_WIN32 */
 
-#ifdef NS_ENABLE_DEBUG
-#define DBG(x)                  \
+#define __DBG(x)                \
   do {                          \
     printf("%-20s ", __func__); \
     printf x;                   \
     putchar('\n');              \
     fflush(stdout);             \
   } while (0)
+
+#ifdef NS_ENABLE_DEBUG
+#define DBG __DBG
 #else
 #define DBG(x)
 #endif
