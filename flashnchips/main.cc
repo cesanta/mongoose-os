@@ -1,3 +1,4 @@
+#include <string.h>
 #include <iostream>
 
 #include <QApplication>
@@ -115,6 +116,20 @@ int main(int argc, char* argv[]) {
         "filename"}});
 
   ESP8266::addOptions(&parser);
+
+#ifdef Q_OS_MAC
+  // Finder adds "-psn_*" argument whenever it shows the Gatekeeper prompt.
+  // We can't just add it to the list of options since numbers in it are not
+  // stable, so we just won't let QCommandLineParser know about that argument.
+  for (int i = 1; i < argc; i++) {
+    if (strncmp(argv[i], "-psn_", 5) == 0) {
+      for (int j = i + 1; j < argc; j++) {
+        argv[j - 1] = argv[j];
+      }
+      argc--;
+    }
+  }
+#endif
 
   QStringList commandline;
   for (int i = 0; i < argc; i++) {
