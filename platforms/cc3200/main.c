@@ -98,7 +98,7 @@ static void v7_task(void *arg) {
   sj_init_v7_ext(v7);
   init_wifi(v7);
   sj_init_simple_http_client(v7);
-  osi_TaskCreate(fossa_poll_task, "fossa", 8192, NULL, 2, NULL);
+  osi_TaskCreate(fossa_poll_task, "fossa", 8192 - 1024, NULL, 2, NULL);
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;
