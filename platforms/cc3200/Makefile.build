@@ -24,8 +24,7 @@ IPATH = . ${SDK_PATH} \
         ${FOSSA_PATH} \
         ${V7_PATH}
 
-VPATH = ${SDK_PATH}/example/common \
-        ${SDK_PATH}/simplelink \
+VPATH = ${SDK_PATH}/simplelink \
 				${SDK_PATH}/simplelink/source \
         ${SMARTJS_PATH}/src \
         ${V7_PATH} \
