@@ -26,6 +26,7 @@
 #include "sj_wifi.h"
 #include "v7.h"
 #include "config.h"
+#include "cc3200_fs.h"
 #include "cc3200_leds.h"
 #include "cc3200_sj_hal.h"
 #include "cc3200_wifi.h"
@@ -97,8 +98,12 @@ static void v7_task(void *arg) {
   init_v7(&dummy);
   sj_init_v7_ext(v7);
   init_wifi(v7);
+  if (init_fs(v7) != 0) {
+    fprintf(stderr, "FS initialization failed.\n");
+  }
   sj_init_simple_http_client(v7);
-  osi_TaskCreate(fossa_poll_task, "fossa", 8192 - 1024, NULL, 2, NULL);
+  osi_TaskCreate(fossa_poll_task, (const signed char *) "fossa", 7 * 1024, NULL,
+                 2, NULL);
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;
@@ -148,8 +153,10 @@ int main() {
   setvbuf(stderr, NULL, _IONBF, 0);
 
   VStartSimpleLinkSpawnTask(8);
-  osi_TaskCreate(v7_task, "v7", V7_STACK_SIZE + 256, NULL, 3, NULL);
-  osi_TaskCreate(blinkenlights_task, "blink", 256, NULL, 9, NULL);
+  osi_TaskCreate(v7_task, (const signed char *) "v7", V7_STACK_SIZE + 256, NULL,
+                 3, NULL);
+  osi_TaskCreate(blinkenlights_task, (const signed char *) "blink", 256, NULL,
+                 9, NULL);
   osi_start();
 
   return 0;

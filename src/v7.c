@@ -431,6 +431,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 #define V7_ENABLE__Date__toJSON 1
 #define V7_ENABLE__Date__toLocaleString 1
 #define V7_ENABLE__Date__toString 1
+#define V7_ENABLE__File__list 1
 #define V7_ENABLE__Function__call 1
 #define V7_ENABLE__Math 1
 #define V7_ENABLE__Math__abs 1
@@ -4668,6 +4669,7 @@ struct dirent *readdir(DIR *dir) {
  */
 
 
+
 #if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
 
 #ifdef V7_ENABLE_SPIFFS
@@ -4705,7 +4707,7 @@ int closedir(DIR *dir) {
 struct dirent *readdir(DIR *dir) {
   return SPIFFS_readdir(&dir->dh, &dir->de);
 }
-#endif
+#endif /* V7_ENABLE_SPIFFS */
 
 static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
@@ -4864,6 +4866,7 @@ static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
+#if V7_ENABLE__File__list
 static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t result = v7_create_undefined();
@@ -4893,6 +4896,7 @@ static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
   return result;
 }
+#endif /* V7_ENABLE__File__list */
 
 void init_file(struct v7 *v7) {
   v7_val_t file_obj = v7_create_object(v7);
@@ -4904,7 +4908,9 @@ void init_file(struct v7 *v7) {
   v7_set_method(v7, file_obj, "remove", File_remove);
   v7_set_method(v7, file_obj, "rename", File_rename);
   v7_set_method(v7, file_obj, "open", File_open);
+#if V7_ENABLE__File__list
   v7_set_method(v7, file_obj, "list", File_list);
+#endif
 
   v7_set_method(v7, s_file_proto, "close", File_close);
   v7_set_method(v7, s_file_proto, "read", File_read);
@@ -4915,7 +4921,7 @@ void init_file(struct v7 *v7) {
 void init_file(struct v7 *v7) {
   (void) v7;
 }
-#endif
+#endif /* NO_LIBC */
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
