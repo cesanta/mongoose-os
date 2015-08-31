@@ -14,14 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#if !defined(NO_ESP) && !defined(RTOS_SDK)
-#include "ets_sys.h"
-#include "osapi.h"
-#include "os_type.h"
-#include "mem.h"
-#else
 #include <stdint.h>
-#endif
 
 typedef int32_t s32_t;
 typedef uint32_t u32_t;

@@ -1,7 +1,7 @@
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
-V7_PATH ?= ../../../v7
-COMMON_PATH ?= ../../../common
+V7_PATH ?= ../../src
+COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SPIFFS_PATH ?= ../../src/spiffs
@@ -14,6 +14,7 @@ SDK = OSS
 
 BUILD_DIR = build
 TOOLS_DIR = tools
+COMMON_TOOLS_DIR ?= ../../tools
 FW_DIR = firmware
 FS_DIR = fs
 APP = smartjs
@@ -132,7 +133,7 @@ IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
 		 $(SDK_PATH)/include/lwip $(SDK_PATH)/include/lwip/ipv4 \
 		 $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
 		 $(SDK_PATH)/lwip/include/
-		 
+
 APP_LIBS += freertos mirom
 FEATURES += -DDISABLE_SHA1
 CFLAGS += -DRTOS_SDK -DRTOS_TODO
@@ -234,9 +235,9 @@ $(FW_FS_OUT): $(FS_FILES) $(BUILD_DIR)/mkspiffs
 	$(vecho) "MKSPIFFS $(FS_DIR) -> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_DIR) > $@
 
-$(BUILD_DIR)/mkspiffs: $(TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
+$(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
 	$(vecho) "GCC mkspiffs"
-	$(Q) gcc -I. -Iuser -o $@ $^ -DNO_ESP
+	$(Q) gcc -I. -I$(SPIFFS_PATH) -Iuser -o $@ $^ -DNO_ESP
 
 
 #
