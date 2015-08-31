@@ -1,19 +1,18 @@
 /* LIBC interface to FS. */
 
-#include "cc3200_fs.h"
+#include "cc3200_fs_spiffs.h"
+#include "cc3200_fs_spiffs_container.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include "spiffs_nucleus.h"
-
-extern struct mount_info s_fsm;
 
 static int set_errno(struct mount_info *m, int res) {
   if (res < 0) errno = SPIFFS_errno(&m->fs);
   return res;
 }
 
-int fs_open(const char *pathname, int flags, mode_t mode) {
+int fs_spiffs_open(const char *pathname, int flags, mode_t mode) {
   struct mount_info *m = &s_fsm;
   spiffs_mode sm = 0;
   int rw = (flags & 3);
@@ -32,7 +31,7 @@ int fs_open(const char *pathname, int flags, mode_t mode) {
   return set_errno(m, res);
 }
 
-int fs_close(int fd) {
+int fs_spiffs_close(int fd) {
   struct mount_info *m = &s_fsm;
   spiffs_fd *sfd;
   dprintf(("close(%d)\n", fd));
@@ -49,21 +48,21 @@ int fs_close(int fd) {
   return 0;
 }
 
-ssize_t fs_read(int fd, void *buf, size_t count) {
+ssize_t fs_spiffs_read(int fd, void *buf, size_t count) {
   struct mount_info *m = &s_fsm;
   dprintf(("read(%d, %u)\n", fd, count));
   if (!m->valid) return set_errno(m, EBADF);
   return set_errno(m, SPIFFS_read(&m->fs, fd, buf, count));
 }
 
-ssize_t fs_write(int fd, const void *buf, size_t count) {
+ssize_t fs_spiffs_write(int fd, const void *buf, size_t count) {
   struct mount_info *m = &s_fsm;
   dprintf(("write(%d, %u)\n", fd, count));
   if (!m->valid) return set_errno(m, EBADF);
   return set_errno(m, SPIFFS_write(&m->fs, fd, (void *) buf, count));
 }
 
-int fs_fstat(int fd, struct stat *s) {
+int fs_spiffs_fstat(int fd, struct stat *s) {
   int res;
   spiffs_stat ss;
   struct mount_info *m = &s_fsm;
@@ -79,14 +78,14 @@ int fs_fstat(int fd, struct stat *s) {
   return 0;
 }
 
-off_t fs_lseek(int fd, off_t offset, int whence) {
+off_t fs_spiffs_lseek(int fd, off_t offset, int whence) {
   struct mount_info *m = &s_fsm;
   dprintf(("lseek(%d, %u, %d)\n", fd, offset, whence));
   if (!m->valid) return set_errno(m, EBADF);
   return set_errno(m, SPIFFS_lseek(&m->fs, fd, offset, whence));
 }
 
-int _rename(const char *from, const char *to) {
+int fs_spiffs_rename(const char *from, const char *to) {
   struct mount_info *m = &s_fsm;
   dprintf(("rename(%s, %s)\n", from, to));
   if (!m->valid) return set_errno(m, EBADF);
@@ -95,13 +94,7 @@ int _rename(const char *from, const char *to) {
   return set_errno(m, res);
 }
 
-int _link(const char *from, const char *to) {
-  dprintf(("link(%s, %s)\n", from, to));
-  errno = ENOTSUP;
-  return -1;
-}
-
-int _unlink(const char *filename) {
+int fs_spiffs_unlink(const char *filename) {
   struct mount_info *m = &s_fsm;
   dprintf(("unlink(%s)\n", filename));
   if (!m->valid) return set_errno(m, EBADF);

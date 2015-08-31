@@ -75,7 +75,9 @@ ${BINDIR}:
 ${OBJDIR}/fossa.o: ${FOSSA_PATH}/fossa.c
 	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
 
-${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_interface.o ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_libc.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_libc.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJDIR}/cc3200_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/v7.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_simple_http.o ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o

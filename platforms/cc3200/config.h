@@ -14,6 +14,6 @@
 #define FS_BLOCK_SIZE 4096
 #define FS_SIZE 64 * 1024
 
-#define MAX_OPEN_FILES 8
+#define MAX_OPEN_SPIFFS_FILES 8
 
 #endif /* __CONFIG_H_ */
