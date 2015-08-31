@@ -1862,11 +1862,12 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 V7_PRIVATE void init_js_stdlib(struct v7 *);
 
+#if V7_ENABLE__RegExp
 V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args);
+V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind);
+#endif
 
 V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t s, val_t at);
-
-V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind);
 
 V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
@@ -2026,7 +2027,6 @@ enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, val_t);
 val_t v7_object_to_value(struct v7_object *);
 val_t v7_function_to_value(struct v7_function *);
 
@@ -2040,10 +2040,15 @@ V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
 V7_PRIVATE void init_math(struct v7 *v7);
 V7_PRIVATE void init_string(struct v7 *v7);
+#if V7_ENABLE__RegExp
 V7_PRIVATE void init_regex(struct v7 *v7);
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, val_t);
+#endif
 V7_PRIVATE void init_number(struct v7 *v7);
 V7_PRIVATE void init_json(struct v7 *v7);
+#if V7_ENABLE__Date
 V7_PRIVATE void init_date(struct v7 *v7);
+#endif
 V7_PRIVATE void init_function(struct v7 *v7);
 V7_PRIVATE void init_stdlib(struct v7 *v7);
 
@@ -6605,6 +6610,7 @@ int v7_is_array(struct v7 *v7, val_t v) {
   return v7_is_object(v) && is_prototype_of(v7, v, v7->array_prototype);
 }
 
+#if V7_ENABLE__RegExp
 V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
   int is = v7_is_regexp(v7, v);
@@ -6613,6 +6619,7 @@ V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   assert(p != NULL);
   return (struct v7_regexp *) v7_to_pointer(p->value);
 }
+#endif
 
 int v7_is_null(val_t v) {
   return v == V7_NULL;
@@ -8602,7 +8609,7 @@ void gc_dump_owned_strings(struct v7 *v7) {
   }
 #else
   for (i = 0; i < v7->owned_strings.len; i++) {
-    if (isprint(v7->owned_strings.buf[i])) {
+    if (isprint((unsigned char) v7->owned_strings.buf[i])) {
       printf("%c", v7->owned_strings.buf[i]);
     } else {
       printf(".");

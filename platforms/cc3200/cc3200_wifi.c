@@ -37,7 +37,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
   if (e->Event == SL_NETAPP_IPV4_IPACQUIRED_EVENT) {
     SlIpV4AcquiredAsync_t *ed = &e->EventData.ipAcquiredV4;
-    asprintf(&s_wifi_sta_config.ip, "%d.%d.%d.%d", SL_IPV4_BYTE(ed->ip, 3),
+    asprintf(&s_wifi_sta_config.ip, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ed->ip, 3),
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = SJ_WIFI_IP_ACQUIRED;
@@ -75,12 +75,12 @@ int sj_wifi_connect() {
   sl_Stop(0);
   sl_Start(NULL, NULL, NULL);
 
-  sp.Key = s_wifi_sta_config.pass;
+  sp.Key = (_i8 *) s_wifi_sta_config.pass;
   sp.KeyLen = strlen(s_wifi_sta_config.pass);
   sp.Type = sp.KeyLen ? SL_SEC_TYPE_WPA : SL_SEC_TYPE_OPEN;
 
-  ret = sl_WlanConnect(s_wifi_sta_config.ssid, strlen(s_wifi_sta_config.ssid),
-                       0, &sp, 0);
+  ret = sl_WlanConnect((const _i8 *) s_wifi_sta_config.ssid,
+                       strlen(s_wifi_sta_config.ssid), 0, &sp, 0);
   if (ret != 0) {
     fprintf(stderr, "WlanConnect error: %d\n", ret);
     return 0;
@@ -129,7 +129,7 @@ int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   int i, n = sl_WlanGetNetworkList(0, 20, info);
   if (n < 0) return 0;
   for (i = 0; i < n; i++) {
-    ssids[i] = info[i].ssid;
+    ssids[i] = (char *) info[i].ssid;
   }
   ssids[i] = NULL;
   cb(ssids);

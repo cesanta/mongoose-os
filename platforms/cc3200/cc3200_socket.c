@@ -12,7 +12,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
     errno = EAFNOSUPPORT;
     return NULL;
   }
-  res = sprintf(dst, "%d.%d.%d.%d", SL_IPV4_BYTE(in->s_addr, 0),
+  res = sprintf(dst, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(in->s_addr, 0),
                 SL_IPV4_BYTE(in->s_addr, 1), SL_IPV4_BYTE(in->s_addr, 2),
                 SL_IPV4_BYTE(in->s_addr, 3));
   return res > 0 ? dst : NULL;
