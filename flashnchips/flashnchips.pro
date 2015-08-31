@@ -28,15 +28,13 @@ HEADERS += $${STATUS}/error_codes.h
 SOURCES += $${STATUS}/error_codes.cc $${STATUS}/logging.cc $${STATUS}/status.cc
 
 INCLUDEPATH += ../src/spiffs
-DEFINES += NO_ESP
 SOURCES += ../src/spiffs/spiffs_cache.c
 SOURCES += ../src/spiffs/spiffs_gc.c
 SOURCES += ../src/spiffs/spiffs_nucleus.c
 SOURCES += ../src/spiffs/spiffs_check.c
 SOURCES += ../src/spiffs/spiffs_hydrogen.c
-# For spiffs_config.h. We'll have to fix it when we have different configs for
-# different platforms.
-INCLUDEPATH += ../platforms/esp8266/user
+# For spiffs_config.h.
+INCLUDEPATH += ../tools
 
 unix {
 SOURCES += sigsource_unix.cc
