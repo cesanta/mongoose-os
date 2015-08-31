@@ -25,6 +25,7 @@
 #include <common/util/status.h>
 #include <common/util/statusor.h>
 
+#include "fs.h"
 #include "serial.h"
 
 namespace CC3200 {
@@ -39,8 +40,11 @@ const int kDefaultTimeoutMs = 1000;
 const int kStorageID = 0;
 const char kFWFilename[] = "/sys/mcuimg.bin";
 const char kDevConfFilename[] = "/conf/dev.json";
+const char kFS0Filename[] = "0.fs";
+const char kFS1Filename[] = "1.fs";
 const int kBlockSizes[] = {0x100, 0x400, 0x1000, 0x4000, 0x10000};
 const int kFileUploadBlockSize = 4096;
+const int kSPIFFSMetadataSize = 64;
 
 const char kOpcodeStartUpload = 0x21;
 const char kOpcodeFinishUpload = 0x22;
@@ -311,7 +315,7 @@ class FlasherImpl : public Flasher {
                               .arg(kMaxSize)
                               .toStdString());
     }
-    return util::Status::OK;
+    return loadSPIFFS(path);
   }
 
   util::Status setPort(QSerialPort* port) override {
@@ -338,8 +342,16 @@ class FlasherImpl : public Flasher {
 
   int totalBlocks() const override {
     QMutexLocker lock(&lock_);
-    return image_.length() / kFileUploadBlockSize +
-           (image_.length() % kFileUploadBlockSize > 0 ? 1 : 0);
+    int r = image_.length() / kFileUploadBlockSize +
+            (image_.length() % kFileUploadBlockSize > 0 ? 1 : 0);
+    if (spiffs_image_.length() > 0) {
+      const int bytes = spiffs_image_.length() + kSPIFFSMetadataSize;
+      r += bytes / kFileUploadBlockSize;
+      if (bytes % kFileUploadBlockSize > 0) {
+        r++;
+      }
+    }
+    return r;
   }
 
   void run() override {
@@ -368,6 +380,13 @@ class FlasherImpl : public Flasher {
       }
       skip_id_generation_ = value.toBool();
       return util::Status::OK;
+    } else if (name == kOverwriteFSOption) {
+      if (value.type() != QVariant::Bool) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be boolean");
+      }
+      overwrite_spiffs_ = value.toBool();
+      return util::Status::OK;
     }
     return util::Status(util::error::INVALID_ARGUMENT, "Unknown option");
   }
@@ -376,7 +395,7 @@ class FlasherImpl : public Flasher {
       const QCommandLineParser& parser) override {
     util::Status r;
 
-    QStringList boolOpts({kSkipIdGenerationOption});
+    QStringList boolOpts({kSkipIdGenerationOption, kOverwriteFSOption});
     QStringList stringOpts({kIdDomainOption});
 
     for (const auto& opt : boolOpts) {
@@ -402,8 +421,40 @@ class FlasherImpl : public Flasher {
   }
 
  private:
+  util::Status loadSPIFFS(const QString& path) {
+    spiffs_image_.clear();
+    QDir dir(path, "fs.img", QDir::Name,
+             QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
+    const auto files = dir.entryInfoList();
+    if (files.length() == 0) {
+      // No FS image, nothing to do.
+      return util::Status::OK;
+    }
+    QFile f(files[0].absoluteFilePath());
+    if (!f.open(QIODevice::ReadOnly)) {
+      return util::Status(util::error::ABORTED,
+                          tr("Failed to open %1")
+                              .arg(files[0].absoluteFilePath())
+                              .toStdString());
+    }
+    spiffs_image_ = f.readAll();
+    if (spiffs_image_.length() != files[0].size()) {
+      const int len = spiffs_image_.length();
+      spiffs_image_.clear();
+      return util::Status(util::error::UNAVAILABLE,
+                          tr("%1 has size %2, but readAll returned %3 bytes")
+                              .arg(files[0].fileName())
+                              .arg(files[0].size())
+                              .arg(len)
+                              .toStdString());
+    }
+    return util::Status::OK;
+  }
+
   util::Status runLocked() {
     util::Status st;
+    progress_ = 0;
+    emit progress(progress_);
 #ifndef NO_LIBFTDI
     emit statusMessage(tr("Opening FTDI context..."), true);
     auto r = openFTDI();
@@ -446,6 +497,13 @@ class FlasherImpl : public Flasher {
         if (!st.ok()) {
           return st;
         }
+      }
+    }
+    if (spiffs_image_.length() > 0) {
+      emit statusMessage(tr("Updating file system image..."), true);
+      st = updateSPIFFS();
+      if (!st.ok()) {
+        return st;
       }
     }
 #ifndef NO_LIBFTDI
@@ -757,7 +815,8 @@ class FlasherImpl : public Flasher {
         return st;
       }
       start += kFileUploadBlockSize;
-      emit progress(start / kFileUploadBlockSize);
+      progress_++;
+      emit progress(progress_);
     }
     return closeFile();
   }
@@ -831,11 +890,90 @@ class FlasherImpl : public Flasher {
     return r;
   }
 
+  util::StatusOr<QByteArray> readSPIFFS(const QString& filename, quint64* seq,
+                                        quint32* block_size,
+                                        quint32* page_size) {
+    auto info = getFileInfo(filename);
+    if (!info.ok()) {
+      return info.status();
+    }
+    if (!info.ValueOrDie().exists) {
+      return QByteArray();
+    }
+    auto data = getFile(filename);
+    if (!data.ok()) {
+      return data.status();
+    }
+    QByteArray bytes = data.ValueOrDie();
+    if (bytes.length() < kSPIFFSMetadataSize) {
+      return util::Status(util::error::FAILED_PRECONDITION,
+                          "Image is too short");
+    }
+    QDataStream meta(bytes.mid(bytes.length() - kSPIFFSMetadataSize));
+    meta.setByteOrder(QDataStream::BigEndian);
+    quint32 fs_size;
+    // See struct fs_info in platforms/cc3200/cc3200_fs_spiffs_container.c
+    meta >> *seq >> fs_size >> *block_size >> *page_size;
+    return bytes.mid(0, bytes.length() - kSPIFFSMetadataSize);
+  }
+
+  util::Status updateSPIFFS() {
+    quint64 seq[2] = {~(0ULL), ~(0ULL)};
+    quint32 page_size[2] = {0, 0}, block_size[2] = {0, 0};
+    auto fs0 = readSPIFFS(kFS0Filename, &seq[0], &block_size[0], &page_size[0]);
+    if (!fs0.ok()) {
+      return fs0.status();
+    }
+    auto fs1 = readSPIFFS(kFS1Filename, &seq[1], &block_size[1], &page_size[1]);
+    if (!fs1.ok()) {
+      return fs1.status();
+    }
+    qWarning() << "Sequence nubmer of 0.fs:" << seq[0];
+    qWarning() << "Sequence nubmer of 1.fs:" << seq[1];
+    QByteArray meta;
+    int min_seq = 0;
+    QDataStream ms(&meta, QIODevice::WriteOnly);
+    ms.setByteOrder(QDataStream::BigEndian);
+    if (seq[0] < seq[1]) {
+      ms << seq[0] - 1;
+      min_seq = 0;
+    } else {
+      ms << seq[1] - 1;
+      min_seq = 1;
+    }
+    ms << quint32(spiffs_image_.length());
+    // TODO(imax): make mkspiffs write page size and block size into a separate
+    // file and use it here instead of hardcoded values.
+    ms << quint32(FLASH_BLOCK_SIZE) << quint32(LOG_PAGE_SIZE);
+    meta.append(
+        QByteArray("\xFF", 1).repeated(kSPIFFSMetadataSize - meta.length()));
+    QByteArray image = spiffs_image_;
+    if ((fs0.ValueOrDie().length() > 0 || fs1.ValueOrDie().length() > 0) &&
+        !overwrite_spiffs_) {
+      SPIFFS bundled(spiffs_image_);
+      SPIFFS dev(min_seq == 0 ? fs0.ValueOrDie() : fs1.ValueOrDie());
+
+      util::Status st = dev.merge(bundled);
+      if (!st.ok()) {
+        return st;
+      }
+
+      image = dev.data();
+    }
+    image.append(meta);
+    QString fname = min_seq == 0 ? kFS1Filename : kFS0Filename;
+    qWarning() << "Overwriting" << fname;
+    return uploadFW(image, fname);
+  }
+
   mutable QMutex lock_;
   QByteArray image_;
+  QByteArray spiffs_image_;
   QSerialPort* port_;
   QString id_hostname_;
   bool skip_id_generation_ = false;
+  bool overwrite_spiffs_ = false;
+  int progress_ = 0;
 };
 
 class CC3200HAL : public HAL {

@@ -7,6 +7,7 @@ SMARTJS_PATH ?= ../..
 FOSSA_PATH ?= ../../../fossa
 OBJDIR = build
 BINDIR = firmware
+FW_FS_SIZE = 65536
 
 include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
@@ -62,7 +63,7 @@ CFLAGS += -Os -Wall $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${FOSSA_FEATU
 .PHONY: all clean flash
 
 all: ${OBJDIR} ${BINDIR}
-all: ${BINDIR}/${PROG}.axf
+all: ${BINDIR}/${PROG}.axf ${BINDIR}/fs.img
 
 clean:
 	@rm -rf ${OBJDIR} ${wildcard *~}
@@ -92,6 +93,9 @@ ${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/gcc/exe/libdriver.a
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/oslib/gcc/exe/FreeRTOS.a
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
+
+${BINDIR}/fs.img: ${wildcard fs/*}
+	/usr/local/bin/mkspiffs ${FW_FS_SIZE} fs > $@
 
 # Target specific warning inhibitions
 
