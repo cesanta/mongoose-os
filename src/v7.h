@@ -81,7 +81,13 @@ struct v7 *v7_create_opt(struct v7_create_opts);
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *);
 
-enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION, V7_STACK_OVERFLOW };
+enum v7_err {
+  V7_OK,
+  V7_SYNTAX_ERROR,
+  V7_EXEC_EXCEPTION,
+  V7_STACK_OVERFLOW,
+  V7_AST_TOO_LARGE
+};
 
 /*
  * Execute JavaScript `js_code`, store result in `result` variable.

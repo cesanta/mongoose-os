@@ -85,7 +85,13 @@ struct v7 *v7_create_opt(struct v7_create_opts);
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *);
 
-enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION, V7_STACK_OVERFLOW };
+enum v7_err {
+  V7_OK,
+  V7_SYNTAX_ERROR,
+  V7_EXEC_EXCEPTION,
+  V7_STACK_OVERFLOW,
+  V7_AST_TOO_LARGE
+};
 
 /*
  * Execute JavaScript `js_code`, store result in `result` variable.
@@ -1455,6 +1461,7 @@ enum ast_tag {
 struct ast {
   struct mbuf mbuf;
   int refcnt;
+  int has_overflow;
 };
 
 typedef unsigned long ast_off_t;
@@ -6026,6 +6033,7 @@ int main(void) {
 typedef uint32_t ast_skip_t;
 #else
 typedef uint16_t ast_skip_t;
+#define AST_SKIP_MAX UINT16_MAX
 #endif
 
 #ifndef V7_DISABLE_AST_TAG_NAMES
@@ -6476,6 +6484,13 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
   const struct ast_node_def *def = &ast_node_defs[tag];
   assert(start <= where);
 
+#ifndef V7_LARGE_AST
+  /* the value of delta overflowed, therefore the ast is not useable */
+  if (where - start > AST_SKIP_MAX) {
+    a->has_overflow = 1;
+  }
+#endif
+
   /* assertion, to be optimizable out */
   assert((int) skip < def->num_skips);
 
@@ -6656,6 +6671,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
 V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
   mbuf_init(&ast->mbuf, len);
   ast->refcnt = 0;
+  ast->has_overflow = 0;
 }
 
 V7_PRIVATE void ast_optimize(struct ast *ast) {
@@ -6668,6 +6684,8 @@ V7_PRIVATE void ast_optimize(struct ast *ast) {
 
 V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
+  ast->refcnt = 0;
+  ast->has_overflow = 0;
 }
 
 #ifndef NO_LIBC
@@ -9906,6 +9924,11 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 
   next_tok(v7);
   err = parse_script(v7, a);
+  if (a->has_overflow) {
+    c_snprintf(v7->error_msg, sizeof(v7->error_msg),
+               "script too large (try V7_LARGE_AST build option)");
+    return V7_AST_TOO_LARGE;
+  }
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
 #ifndef NO_LIBC
     fprintf(stderr, "WARNING parse input not consumed\n");
