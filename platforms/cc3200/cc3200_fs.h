@@ -9,6 +9,7 @@
 struct v7;
 
 int init_fs(struct v7 *v7);
+int set_errno(int e);
 
 #ifdef CC3200_FS_DEBUG
 #define dprintf(x) printf x

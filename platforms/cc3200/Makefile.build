@@ -57,7 +57,7 @@ SDK_FLAGS = -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 DISABLED_SDK_WARNINGS = -Wno-missing-braces -Wno-strict-aliasing
 
 CFLAGS += -Os -Wall $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${FOSSA_FEATURES} ${CFLAGS_EXTRA}
-# -DCC3200_FS_DEBUG
+# CFLAGS += -DCC3200_FS_DEBUG
 
 .PHONY: all clean flash
 
@@ -78,7 +78,7 @@ ${OBJDIR}/fossa.o: ${FOSSA_PATH}/fossa.c
 	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
 
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o ${OBJDIR}/cc3200_fs_failfs.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_libc.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJDIR}/cc3200_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/v7.o

@@ -45,7 +45,7 @@ static _i32 fs_create_container(int cidx, _u32 fs_size) {
   int r = sl_FsDel(fname, 0);
   dprintf(("del %s -> %d\n", fname, r));
   r = sl_FsOpen(fname, FS_MODE_OPEN_CREATE(fsize, 0), NULL, &fh);
-  dprintf(("open %s %u -> %d %d\n", fname, fsize, r, fh));
+  dprintf(("open %s %d -> %d %d\n", fname, (int) fsize, (int) r, (int) fh));
   if (r != 0) return r;
   return fh;
 }
@@ -62,7 +62,7 @@ static _i32 fs_write_meta(struct mount_info *m) {
 
   offset = FS_CONTAINER_SIZE(meta.info.fs_size) - sizeof(meta);
   r = sl_FsWrite(m->fh, offset, (_u8 *) &meta, sizeof(meta));
-  dprintf(("write meta %llu @ %u: %d\n", m->seq, offset, r));
+  dprintf(("write meta %llu @ %d: %d\n", m->seq, (int) offset, (int) r));
   if (r == sizeof(meta)) r = 0;
   return r;
 }
@@ -101,7 +101,6 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
 
   buf_size = 8192;
   buf = get_buf(&buf_size);
-  dprintf(("buf = %u @ %p\n", buf_size, buf));
   if (buf == NULL) {
     r = SPIFFS_ERR_INTERNAL;
     goto out_close_new;
@@ -117,7 +116,7 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
     if (offset + len > m->fs.cfg.phys_size) {
       len = m->fs.cfg.phys_size - offset;
     }
-    dprintf(("copy %u @ %u\n", len, offset));
+    dprintf(("copy %d @ %d\n", (int) len, (int) offset));
     if (len > 0) {
       r = sl_FsRead(old_fh, offset, buf, len);
       if (r != len) {
@@ -153,7 +152,7 @@ out_close_old:
 
 void fs_close_container(struct mount_info *m) {
   if (!m->valid || !m->rw) return;
-  dprintf(("closing fh %d\n", m->fh));
+  dprintf(("closing fh %d\n", (int) m->fh));
   sl_FsClose(m->fh, NULL, NULL, 0);
   m->fh = -1;
   m->rw = 0;
@@ -162,37 +161,39 @@ void fs_close_container(struct mount_info *m) {
 static s32_t failfs_read(u32_t addr, u32_t size, u8_t *dst) {
   struct mount_info *m = &s_fsm;
   _i32 r;
-  dprintf(("failfs_read %u @ %u, cidx %u # %llu, fh %d, valid %d, rw %d\n",
-           size, addr, m->cidx, m->seq, m->fh, m->valid, m->rw));
+  dprintf(("failfs_read %d @ %d, cidx %u # %llu, fh %d, valid %d, rw %d\n",
+           (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid,
+           m->rw));
   if (!m->valid) return SPIFFS_ERR_NOT_READABLE;
   if (m->fh < 0) {
     r = sl_FsOpen(container_fname(m->cidx), FS_MODE_OPEN_READ, NULL, &m->fh);
-    dprintf(("fopen %d\n", r));
+    dprintf(("fopen %d\n", (int) r));
     if (r < 0) return SPIFFS_ERR_NOT_READABLE;
   }
   r = sl_FsRead(m->fh, addr, dst, size);
-  dprintf(("read %d\n", r));
+  dprintf(("read %d\n", (int) r));
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_READABLE;
 }
 
 static s32_t failfs_write(u32_t addr, u32_t size, u8_t *src) {
   struct mount_info *m = &s_fsm;
   _i32 r;
-  dprintf(("failfs_write %u @ %u, cidx %u # %llu, fh %d, valid %d, rw %d\n",
-           size, addr, m->cidx, m->seq, m->fh, m->valid, m->rw));
+  dprintf(("failfs_write %d @ %d, cidx %d # %llu, fh %d, valid %d, rw %d\n",
+           (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid,
+           m->rw));
   if (!m->valid) return SPIFFS_ERR_NOT_WRITABLE;
   if (!m->rw) {
     /* Remount rw. */
     if (fs_switch_container(m, 0, 0) != 0) return SPIFFS_ERR_NOT_WRITABLE;
   }
   r = sl_FsWrite(m->fh, addr, src, size);
-  dprintf(("write %d\n", r));
+  dprintf(("write %d\n", (int) r));
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_WRITABLE;
 }
 
 static s32_t failfs_erase(u32_t addr, u32_t size) {
   struct mount_info *m = &s_fsm;
-  dprintf(("failfs_erase %u @ %u\n", size, addr));
+  dprintf(("failfs_erase %d @ %d\n", (int) size, (int) addr));
   if (m->formatting) {
     /* During formatting, the file is brand new and has just been erased. */
     return SPIFFS_OK;
@@ -207,17 +208,17 @@ static int fs_get_info(int cidx, struct fs_info *info) {
   _i32 fh;
   _u32 offset;
   _i32 r = sl_FsGetInfo(container_fname(cidx), 0, &fi);
-  dprintf(("finfo %s %d %u %u\n", container_fname(cidx), r, fi.FileLen,
-           fi.AllocatedLen));
+  dprintf(("finfo %s %d %d %d\n", container_fname(cidx), (int) r,
+           (int) fi.FileLen, (int) fi.AllocatedLen));
   if (r != 0) return r;
   if (fi.AllocatedLen < sizeof(meta)) return -200;
   r = sl_FsOpen(container_fname(cidx), FS_MODE_OPEN_READ, NULL, &fh);
-  dprintf(("fopen %s %d\n", container_fname(cidx), r));
+  dprintf(("fopen %s %d\n", container_fname(cidx), (int) r));
   if (r != 0) return r;
 
   offset = fi.FileLen - sizeof(meta);
   r = sl_FsRead(fh, offset, (_u8 *) &meta, sizeof(meta));
-  dprintf(("read meta @ %u: %d\n", offset, r));
+  dprintf(("read meta @ %d: %d\n", (int) offset, (int) r));
 
   if (r != sizeof(meta)) {
     r = -201;
@@ -229,8 +230,8 @@ static int fs_get_info(int cidx, struct fs_info *info) {
   }
 
   memcpy(info, &meta.info, sizeof(*info));
-  dprintf(("found fs: %llu %u %u %u\n", info->seq, info->fs_size,
-           info->fs_block_size, info->fs_page_size));
+  dprintf(("found fs: %llu %d %d %d\n", info->seq, (int) info->fs_size,
+           (int) info->fs_block_size, (int) info->fs_page_size));
   r = 0;
 
 out_close:
@@ -266,7 +267,7 @@ static int fs_format(int cidx) {
   s32_t r;
   struct mount_info *m = &s_fsm;
   _u32 fsc_size = FS_CONTAINER_SIZE(FS_SIZE);
-  dprintf(("formatting %d s=%u, cs=%u\n", cidx, FS_SIZE, fsc_size));
+  dprintf(("formatting %d s=%u, cs=%d\n", cidx, FS_SIZE, (int) fsc_size));
 
   m->cidx = cidx;
   r = fs_create_container(cidx, FS_SIZE);
@@ -275,14 +276,14 @@ static int fs_format(int cidx) {
   m->valid = m->rw = m->formatting = 1;
   /* Touch a byte at the end to open a "hole". */
   r = sl_FsWrite(m->fh, fsc_size - 1, (_u8 *) "\xff", 1);
-  dprintf(("write 1 @ %u %d\n", fsc_size - 1, r));
+  dprintf(("write 1 @ %d %d\n", (int) (fsc_size - 1), (int) r));
   if (r != 1) goto out_close;
 
   /* There must be a mount attempt before format. It'll fail and that's ok. */
   r = fs_mount_spiffs(m, FS_SIZE, FS_BLOCK_SIZE, FS_PAGE_SIZE);
-  dprintf(("mount: %d\n", r));
+  dprintf(("mount: %d\n", (int) r));
   r = SPIFFS_format(&m->fs);
-  dprintf(("format: %d\n", r));
+  dprintf(("format: %d\n", (int) r));
   if (r != SPIFFS_OK) goto out_close;
 
   m->seq = INITIAL_SEQ;
