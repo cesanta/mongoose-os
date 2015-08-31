@@ -31,7 +31,7 @@
   (((c) &0x40) ? ((c) &0x20 ? (c) - 'a' + 10 : (c) - 'A' + 10) : (c) - '0')
 #define hexdigit(n) (((n) < 10) ? '0' + (n) : 'a' + ((n) -10))
 
-static struct regfile regs = {0};
+static struct regfile regs;
 static uint8_t gdb_send_checksum;
 
 void gdb_nack() {
@@ -231,7 +231,7 @@ void gdb_server() {
 FAST void gdb_exception_handler(struct xtos_saved_regs *frame) {
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
-  printf("\nTrap %d: pc=%p va=%p\n", cause, frame->pc, vaddr);
+  printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
   memcpy(&regs.a[2], frame->a, sizeof(frame->a));
 
   regs.a[0] = frame->a0;

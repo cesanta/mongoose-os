@@ -7,9 +7,11 @@
 #include <stdio.h>
 #endif
 
+#include <stdio.h>
 #include "v7_gdb.h"
 #include "xtensa/corebits.h"
 #include "v7_esp_hw.h"
+#include "esp_missing_includes.h"
 
 /*
  * Only the L32I, L32I.N, and L32R load instructions can access InstRAM

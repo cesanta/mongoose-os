@@ -125,7 +125,7 @@ static void spi_set_command(uint8_t spi_no, uint8_t cmd_bits,
       ((command >> 8) & 0xff) | ((command << 8) & 0xff00); /* swap byte order */
   WRITE_PERI_REG(SPI_USER2(spi_no), ((((cmd_bits - 1) & SPI_USR_COMMAND_BITLEN)
                                       << SPI_USR_COMMAND_BITLEN_S) |
-                                     command & SPI_USR_COMMAND_VALUE));
+                                     (command & SPI_USR_COMMAND_VALUE)));
 }
 
 static void spi_set_address(uint8_t spi_no, uint32_t addr_bits,

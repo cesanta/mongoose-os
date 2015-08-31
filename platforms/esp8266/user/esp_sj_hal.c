@@ -1,4 +1,4 @@
-#include <ets_sys.h>
+#include "esp_missing_includes.h"
 #include <v7.h>
 #include <sj_v7_ext.h>
 #include <sj_hal.h>

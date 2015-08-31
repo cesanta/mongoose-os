@@ -1,4 +1,3 @@
-
 #include <ets_sys.h>
 #include <sj_gpio.h>
 
@@ -16,7 +15,7 @@
 #else
 
 #include <stdlib.h>
-#include <eagle_soc.h>
+#include <sj_eagle_soc.h>
 #include <pin_mux_register.h>
 #include <gpio_register.h>
 #include <freertos/portmacro.h>
@@ -298,7 +297,8 @@ static void v7_gpio_process_on_click(int pin, int level,
                    (GPIO_PIN_INTR_HILEVEL - level);
 #ifndef RTOS_TODO
     system_os_post(TASK_PRIORITY,
-                   (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level, callback);
+                   (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level,
+                   (os_param_t) callback);
 #endif
   }
 }
@@ -321,7 +321,7 @@ static void v7_gpio_intr_dispatcher(f_gpio_intr_handler_t callback) {
 #ifndef RTOS_TODO
         system_os_post(TASK_PRIORITY,
                        (uint32_t) GPIO_TASK_SIG << 16 | i << 8 | level,
-                       callback);
+                       (os_param_t) callback);
 #endif
       }
 

@@ -1979,7 +1979,9 @@ V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind);
 
 V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t s, val_t at);
 
+#if V7_ENABLE__Memory__stats
 V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
+#endif
 
 V7_PRIVATE v7_val_t
 i_apply(struct v7 *, val_t func, val_t this_obj, val_t args);
@@ -2153,7 +2155,9 @@ V7_PRIVATE void init_object(struct v7 *v7);
 V7_PRIVATE void init_array(struct v7 *v7);
 V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
+#if V7_ENABLE__Math
 V7_PRIVATE void init_math(struct v7 *v7);
+#endif
 V7_PRIVATE void init_string(struct v7 *v7);
 #if V7_ENABLE__RegExp
 V7_PRIVATE void init_regex(struct v7 *v7);
@@ -2264,6 +2268,8 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 #ifndef COMPILER_H_INCLUDED
 #define COMPILER_H_INCLUDED
 
+#ifdef V7_ENABLE_BCODE
+
 /* Amalgamated: #include "internal.h" */
 
 #if defined(__cplusplus)
@@ -2325,6 +2331,8 @@ V7_PRIVATE void eval_bcode(struct v7 *, struct bcode *);
 }
 #endif /* __cplusplus */
 
+#endif /* V7_ENABLE_BCODE */
+
 #endif /* COMPILER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.h"
@@ -2376,7 +2384,6 @@ V7_PRIVATE void gc_mark(struct v7 *, val_t);
 
 V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, size_t,
                               const char *);
-V7_PRIVATE void gc_arena_grow(struct v7 *, struct gc_arena *, size_t);
 V7_PRIVATE void gc_arena_destroy(struct v7 *, struct gc_arena *a);
 V7_PRIVATE void gc_sweep(struct v7 *, struct gc_arena *, size_t);
 V7_PRIVATE void *gc_alloc_cell(struct v7 *, struct gc_arena *);
@@ -5070,12 +5077,14 @@ static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
       result = v7_create_array(v7);
       while ((dp = readdir(dirp)) != NULL) {
         /* Do not show current and parent dirs */
-        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) {
+        if (strcmp((const char *) dp->d_name, ".") == 0 ||
+            strcmp((const char *) dp->d_name, "..") == 0) {
           continue;
         }
         /* Add file name to the list */
         v7_array_push(v7, result,
-                      v7_create_string(v7, dp->d_name, strlen(dp->d_name), 1));
+                      v7_create_string(v7, (const char *) dp->d_name,
+                                       strlen((const char *) dp->d_name), 1));
       }
       closedir(dirp);
     }
@@ -6480,8 +6489,10 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
                                      enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
   ast_skip_t delta = where - start;
+#ifndef NDEBUG
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
+#endif
   assert(start <= where);
 
 #ifndef V7_LARGE_AST
@@ -14038,6 +14049,9 @@ static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
 }
 #endif
 
+#if V7_ENABLE__Object__hasOwnProperty ||       \
+    V7_ENABLE__Object__propertyIsEnumerable || \
+    V7_ENABLE__Object__getOwnPropertyDescriptor
 static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
                                                val_t name) {
   char name_buf[512];
@@ -14045,6 +14059,7 @@ static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
   return v7_get_own_property(v7, obj, name_buf, name_len);
 }
+#endif
 
 #if V7_ENABLE__Object__keys
 static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
@@ -14137,6 +14152,7 @@ static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
 
+#if V7_ENABLE__Object__create || V7_ENABLE__Object__defineProperties
 static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   struct v7_property *p;
   if (!v7_is_object(descs)) {
@@ -14151,6 +14167,7 @@ static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
     _Obj_defineProperty(v7, obj, s, n, p->value);
   }
 }
+#endif
 
 #if V7_ENABLE__Object__defineProperties
 static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {

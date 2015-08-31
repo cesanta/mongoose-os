@@ -148,7 +148,7 @@ double strtod(const char *str, char **endptr) {
   bool decimals = false;
   char c;
 
-  while (isspace(*str)) {
+  while (isspace((int) *str)) {
     str++;
   }
 
@@ -169,7 +169,7 @@ double strtod(const char *str, char **endptr) {
     str++;
     if (*str == 'x') { /* base 16 */
       str++;
-      while ((c = tolower(*str))) {
+      while ((c = tolower((int) *str))) {
         int d;
         if (c >= '0' && c <= '9') {
           d = c - '0';

@@ -20,11 +20,15 @@ void ets_timer_setfn(ETSTimer *t, ETSTimerFunc *fn, void *parg);
 void ets_wdt_disable();
 void ets_delay_us(unsigned us);
 
+void _xtos_set_exception_handler();
+void xthal_set_intenable();
+
 #else
 
-void _ResetVector();
 #define BIT(nr) (1UL << (nr))
 
 #endif /* RTOS_SDK */
+
+void _ResetVector();
 
 #endif /* _ESP_MISSING_INCLUDES_ */

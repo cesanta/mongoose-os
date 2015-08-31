@@ -8,10 +8,13 @@
 
 #include <v7.h>
 #include <sj_i2c.h>
+#include "esp_missing_includes.h"
 
 #include <ets_sys.h>
 #include "v7_periph.h"
 #include "esp_gpio.h"
+
+#include <stdlib.h>
 
 #ifndef RTOS_SDK
 
@@ -20,7 +23,6 @@
 
 #else
 
-#include <stdlib.h>
 #include <gpio_register.h>
 #include <pin_mux_register.h>
 #include <eagle_soc.h>

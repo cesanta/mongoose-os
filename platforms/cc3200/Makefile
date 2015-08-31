@@ -1,4 +1,4 @@
-SDK ?= docker.cesanta.com:5000/cc3200-build:1.1.0-3
+SDK ?= docker.cesanta.com:5000/cc3200-build:1.1.0-4
 SRC_DIR ?= $(realpath ../../..)
 PORT ?= auto
 
@@ -9,7 +9,7 @@ all clean:
 		/bin/bash -c "\
 			make -C /src/v7 v7.c && \
 			make -C /src/fossa/src && \
-			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ \
+			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ CFLAGS_EXTRA='$(CFLAGS_EXTRA)' \
 		"
 
 ifeq ("$(PORT)", "auto")

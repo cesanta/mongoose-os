@@ -84,6 +84,7 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FI
 # compiler flags using during compilation of source files
 CFLAGS = -Wall -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
+				 -Wno-parentheses \
          -DICACHE_FLASH \
          -DFAST='__attribute__((section(".fast.text")))' \
          -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
@@ -239,6 +240,9 @@ $(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/
 	$(vecho) "GCC mkspiffs"
 	$(Q) gcc -I. -I$(SPIFFS_PATH) -Iuser -o $@ $^ -DNO_ESP
 
+# Target specific warning inhibitions
+
+build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 
 #
 # Auxiliary targets.

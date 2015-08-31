@@ -131,8 +131,9 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
   for (;;) {
     c = *fmt++;
     if (c == 0) return (nassigned);
-    if (isspace(c)) {
-      while (input_size > 0 && isspace(*input)) nread++, input_size--, input++;
+    if (isspace((int) c)) {
+      while (input_size > 0 && isspace((int) *input))
+        nread++, input_size--, input++;
       continue;
     }
     if (c != '%') goto literal;
@@ -308,7 +309,7 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
      * that suppress this.
      */
     if ((flags & NOSKIP) == 0) {
-      while (isspace(*input)) {
+      while (isspace((int) *input)) {
         nread++;
         if (--input_size > 0)
           input++;
@@ -362,7 +363,7 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
         /* take only those things in the class */
         if (flags & SUPPRESS) {
           n = 0;
-          while (ccltab[*input]) {
+          while (ccltab[(int) *input]) {
             n++, input_size--, input++;
             if (--width == 0) break;
             if (input_size <= 0) {
@@ -373,7 +374,7 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
           if (n == 0) goto match_failure;
         } else {
           p0 = p = va_arg(ap, char *);
-          while (ccltab[*input]) {
+          while (ccltab[(int) *input]) {
             input_size--;
             *p++ = *input++;
             if (--width == 0) break;
@@ -395,7 +396,7 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
         if (width == 0) width = (size_t) ~0;
         if (flags & SUPPRESS) {
           n = 0;
-          while (!isspace(*input)) {
+          while (!isspace((int) *input)) {
             n++, input_size--, input++;
             if (--width == 0) break;
             if (input_size <= 0) break;
@@ -403,7 +404,7 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
           nread += n;
         } else {
           p0 = p = va_arg(ap, char *);
-          while (!isspace(*input)) {
+          while (!isspace((int) *input)) {
             input_size--;
             *p++ = *input++;
             if (--width == 0) break;
