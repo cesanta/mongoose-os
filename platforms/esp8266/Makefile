@@ -1,7 +1,7 @@
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
-V7_PATH ?= ../../src
-COMMON_PATH ?= ../../src
+V7_PATH ?= ../../../v7
+COMMON_PATH ?= ../../../common
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SPIFFS_PATH ?= ../../src/spiffs

@@ -2,7 +2,7 @@ V7_PATH ?= ../../../v7
 FOSSA_PATH = ?= ../../../fossa
 SRC_PATH ?= ../../src
 COMMON_PATH ?= ../../../common
-CLUBBY_PATH ?= $(SRC_PATH)
+CLUBBY_PATH ?= ../../../cloud/ui
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./build
 OUTAPP ?= smartjs
