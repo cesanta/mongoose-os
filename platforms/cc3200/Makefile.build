@@ -26,8 +26,9 @@ IPATH = . ${SDK_PATH} \
         ${FOSSA_PATH} \
         ${V7_PATH}
 
-VPATH = ${SDK_PATH}/simplelink \
-				${SDK_PATH}/simplelink/source \
+VPATH = ${SDK_PATH}/driverlib \
+        ${SDK_PATH}/simplelink \
+        ${SDK_PATH}/simplelink/source \
         ${SMARTJS_PATH}/src \
         ${SMARTJS_PATH}/src/spiffs \
         ${V7_PATH} \
@@ -88,8 +89,10 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_fossa.o ${OBJDIR}/sj_fossa_http_client.o ${O
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/spiffs_cache.o ${OBJDIR}/spiffs_check.o ${OBJDIR}/spiffs_gc.o ${OBJDIR}/spiffs_hydrogen.o ${OBJDIR}/spiffs_nucleus.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/fossa.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
+# SimpleLink
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/socket.o ${OBJDIR}/wlan.o ${OBJDIR}/driver.o ${OBJDIR}/device.o ${OBJDIR}/netapp.o ${OBJDIR}/cc_pal.o ${OBJDIR}/fs.o
-${BINDIR}/${PROG}.axf: ${SDK_PATH}/driverlib/gcc/exe/libdriver.a
+# DriverLib
+${BINDIR}/${PROG}.axf: ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/interrupt.o ${OBJDIR}/pin.o ${OBJDIR}/prcm.o ${OBJDIR}/spi.o ${OBJDIR}/uart.o ${OBJDIR}/udma.o ${OBJDIR}/utils.o
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/oslib/gcc/exe/FreeRTOS.a
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR

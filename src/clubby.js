@@ -72,13 +72,26 @@ var Clubby = function(arg) {
           delete res.resp;
           if (h) {
             try {
-              val = h(v);
-              res.status = 0;
-              if (val !== undefined) {
-                res.resp = val;
+              var done = function(val, st) {
+                var rk = "resp";
+                res.id = v.id;
+                res.status = st || 0;
+                if (st !== undefined) {
+                  rk = "status_msg";
+                }
+                res[rk] = val;
+                if (val === undefined) {
+                  delete res[rk];
+                }
+                log("sending", req);
+                ws.send(JSON.stringify(req));
+              };
+
+              if (h.length > 1) {
+                h(v, done);
+              } else {
+                done(h(v));
               }
-              log("sending", req);
-              ws.send(JSON.stringify(req));
             } catch(e) {
               error(JSON.stringify(e));
             }
