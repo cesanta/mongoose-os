@@ -126,6 +126,9 @@ typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
 typedef SOCKET sock_t;
 typedef uint32_t in_addr_t;
+#ifndef UINT16_MAX
+#define UINT16_MAX 65535
+#endif
 #ifndef pid_t
 #define pid_t HANDLE
 #endif
