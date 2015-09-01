@@ -136,6 +136,7 @@ typedef uint32_t in_addr_t;
 #define pid_t HANDLE
 #endif
 #define INT64_FMT "I64d"
+#define SIZE_T_FMT "Iu"
 #ifdef __MINGW32__
 typedef struct stat ns_stat_t;
 #else
@@ -194,6 +195,7 @@ struct dirent *readdir(DIR *dir);
 
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
+#define SIZE_T_FMT "zu"
 #define to64(x) strtoll(x, NULL, 10)
 typedef int sock_t;
 typedef struct stat ns_stat_t;

@@ -56,9 +56,9 @@ V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
 
 SDK_FLAGS = -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
-DISABLED_SDK_WARNINGS = -Wno-missing-braces -Wno-strict-aliasing
+DISABLED_SDK_WARNINGS = -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses -Wno-unused-variable
 
-CFLAGS += -Os -Wall $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${FOSSA_FEATURES} ${CFLAGS_EXTRA}
+CFLAGS += -Os -Wall -Werror $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${FOSSA_FEATURES} ${CFLAGS_EXTRA}
 # CFLAGS += -DCC3200_FS_DEBUG
 
 .PHONY: all clean flash
@@ -105,4 +105,6 @@ ${BINDIR}/fs.img: ${wildcard fs/*}
 build/wlan.o: CFLAGS += $(DISABLED_SDK_WARNINGS)
 build/driver.o: CFLAGS += $(DISABLED_SDK_WARNINGS)
 build/fs.o: CFLAGS += $(DISABLED_SDK_WARNINGS)
+build/spi.o: CFLAGS += $(DISABLED_SDK_WARNINGS)
+build/prcm.o: CFLAGS += $(DISABLED_SDK_WARNINGS)
 build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function

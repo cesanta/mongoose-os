@@ -988,6 +988,7 @@ typedef uint32_t in_addr_t;
 #define pid_t HANDLE
 #endif
 #define INT64_FMT "I64d"
+#define SIZE_T_FMT "Iu"
 #ifdef __MINGW32__
 typedef struct stat ns_stat_t;
 #else
@@ -1046,6 +1047,7 @@ struct dirent *readdir(DIR *dir);
 
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
+#define SIZE_T_FMT "zu"
 #define to64(x) strtoll(x, NULL, 10)
 typedef int sock_t;
 typedef struct stat ns_stat_t;
@@ -17336,6 +17338,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "osdep.h" */
 
 #if defined(_MSC_VER) && _MSC_VER >= 1800
 #define fileno _fileno
@@ -17394,11 +17397,12 @@ static void print_error(struct v7 *v7, const char *f, val_t e) {
 
 #if V7_ENABLE__Memory__stats
 static void dump_mm_arena_stats(const char *msg, struct gc_arena *a) {
-  printf("%s: total allocations %lu, total garbage %lu, max %lu, alive %lu\n",
+  printf("%s: total allocations %lu, total garbage %lu, max %" SIZE_T_FMT
+         ", alive %lu\n",
          msg, a->allocations, a->garbage, gc_arena_size(a), a->alive);
   printf(
-      "%s: (bytes: total allocations %lu, total garbage %lu, max %lu, alive "
-      "%lu)\n",
+      "%s: (bytes: total allocations %lu, total garbage %lu, max %" SIZE_T_FMT
+      ", alive %lu)\n",
       msg, a->allocations * a->cell_size, a->garbage * a->cell_size,
       gc_arena_size(a) * a->cell_size, a->alive * a->cell_size);
 }
@@ -17407,8 +17411,8 @@ static void dump_mm_stats(struct v7 *v7) {
   dump_mm_arena_stats("object: ", &v7->object_arena);
   dump_mm_arena_stats("function: ", &v7->function_arena);
   dump_mm_arena_stats("property: ", &v7->property_arena);
-  printf("string arena len: %lu\n", v7->owned_strings.len);
-  printf("Total heap size: %lu\n",
+  printf("string arena len: %" SIZE_T_FMT "\n", v7->owned_strings.len);
+  printf("Total heap size: %" SIZE_T_FMT "\n",
          v7->owned_strings.len +
              gc_arena_size(&v7->object_arena) * v7->object_arena.cell_size +
              gc_arena_size(&v7->function_arena) * v7->function_arena.cell_size +

@@ -32,7 +32,9 @@ static void pre_init(struct v7 *v7) {
   snprintf(path, sizeof(path), "%.*s/%s", (int) (dir - s_argv0), s_argv0,
            JS_FS_ROOT);
   /* All the files, conf, JS, etc are addressed relative to the current dir */
-  chdir(path);
+  if (chdir(path) != 0) {
+    fprintf(stderr, "cannot chdir to %s\n", path);
+  }
 
   sj_init_v7_ext(v7);
   init_smartjs(v7);

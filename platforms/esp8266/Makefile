@@ -82,7 +82,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
-CFLAGS = -Wall -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
+CFLAGS = -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
 				 -Wno-parentheses \
          -DICACHE_FLASH \
