@@ -10766,6 +10766,9 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
         case V7_TYPE_CFUNCTION:
           res = v7_create_string(v7, "function", 8, 1);
           break;
+        case V7_TYPE_UNDEFINED:
+          res = v7_create_string(v7, "undefined", 9, 1);
+          break;
         default:
           res = v7_create_string(v7, "object", 6, 1);
           break;
