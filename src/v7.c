@@ -7121,6 +7121,16 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
     if (*s == '"') {
       i++;
       if (buf < limit) *buf++ = '\\';
+    } else if (*s == '\n') {
+      i++;
+      if (buf < limit) *buf++ = '\\';
+      if (buf < limit) *buf++ = 'n';
+      continue;
+    } else if (*s == '\t') {
+      i++;
+      if (buf < limit) *buf++ = '\\';
+      if (buf < limit) *buf++ = 't';
+      continue;
     }
     i++;
     if (buf < limit) *buf++ = *s;
