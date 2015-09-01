@@ -129,6 +129,9 @@ typedef uint32_t in_addr_t;
 #ifndef UINT16_MAX
 #define UINT16_MAX 65535
 #endif
+#ifndef UINT32_MAX
+#define UINT32_MAX 4294967295
+#endif
 #ifndef pid_t
 #define pid_t HANDLE
 #endif
