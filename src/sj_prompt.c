@@ -81,7 +81,6 @@ static void interrupt_char_processor(char ch) {
 
 static void process_js(char *cmd) {
   s_sjp.char_processor = interrupt_char_processor;
-  char result_str[10];
   v7_val_t v;
   int res = v7_exec(s_sjp.v7, &v, cmd);
 
@@ -90,17 +89,17 @@ static void process_js(char *cmd) {
   } else if (res == V7_STACK_OVERFLOW) {
     printf("Stack overflow: %s\n", v7_get_parser_error(s_sjp.v7));
   } else {
-    char *p = v7_to_json(s_sjp.v7, v, result_str, sizeof(result_str));
-
     if (res == V7_EXEC_EXCEPTION) {
       printf("Exec error:");
     }
 
-    printf("%s\n", p);
+    v7_println(s_sjp.v7, v);
 
-    if (p != result_str) {
-      free(p);
+#if V7_ENABLE__StackTrace
+    if (res == V7_EXEC_EXCEPTION) {
+      v7_fprint_stack_trace(stdout, s_sjp.v7, v);
     }
+#endif
   }
 
   v7_gc(s_sjp.v7, 0 /* full */);

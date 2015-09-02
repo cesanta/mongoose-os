@@ -373,7 +373,7 @@ void v7_interrupt(struct v7 *v7);
 /*
  * Tells the GC about a JS value variable/field owned
  * by C code.
- * *
+ *
  * User C code should own v7_val_t variables
  * if the value's lifetime crosses any invocation
  * to the v7 runtime that creates new objects or new
@@ -402,6 +402,9 @@ void v7_own(struct v7 *v7, v7_val_t *v);
  * Returns 1 if value is found, 0 otherwise
  */
 int v7_disown(struct v7 *v7, v7_val_t *v);
+
+/* Prints stack trace recorded in the exception `e` to file `f` */
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
@@ -489,6 +492,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 #define V7_ENABLE__Object__preventExtensions 1
 #define V7_ENABLE__Object__propertyIsEnumerable 1
 #define V7_ENABLE__RegExp 1
+#define V7_ENABLE__StackTrace 1
 #define V7_ENABLE__String__localeCompare 1
 #define V7_ENABLE__String__localeLowerCase 1
 #define V7_ENABLE__String__localeUpperCase 1
@@ -1857,11 +1861,10 @@ struct v7 {
 
   /*
    * Stack of execution contexts.
-   * Each execution context object in the call stack has hidden properties:
-   *  *  "_p": Parent context (for closures)
-   *  *  "_e": Exception environment
+   * Execution contexts are contained in two chains:
+   * - in the lexical scope via their prototype chain (to allow variable lookup)
+   * - call stack for stack traces (via the ____p hidden property)
    *
-   * Hidden properties have V7_PROPERTY_HIDDEN flag set.
    * Execution contexts should be allocated on heap, because they might not be
    * on a call stack but still referenced (closures).
    */
@@ -10055,6 +10058,20 @@ void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
   v7_throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
 }
 
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
+  val_t frame, func, args;
+
+  for (frame = v7_get(v7, e, "stack", ~0); v7_is_object(frame);
+       frame = v7_get(v7, frame, "____p", ~0)) {
+    args = v7_get(v7, frame, "arguments", ~0);
+    if (v7_is_object(args)) {
+      func = v7_get(v7, args, "callee", ~0);
+      fprintf(f, "   at: ");
+      v7_fprintln(f, v7, func);
+    }
+  }
+}
+
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   val_t f;
   if (!v7_is_object(v)) {
@@ -10982,6 +10999,9 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
 
   frame = v7_create_object(v7);
   v7_to_object(frame)->prototype = func->scope;
+#if V7_ENABLE__StackTrace
+  v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
+#endif
 
   tmp_stack_push(&tf, &frame);
   i_populate_local_vars(v7, func->ast, fstart, fvar, frame);
@@ -11121,6 +11141,10 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (!v7_is_undefined(args)) {
+#if V7_ENABLE__StackTrace
+    v7_set(v7, args, "callee", ~0, 0, v1);
+#endif
+
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
     v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS], args);
 #else
@@ -14352,6 +14376,7 @@ static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   }
   /* TODO(mkm): set non enumerable but provide toString method */
   v7_set_property(v7, res, "message", 7, 0, arg0);
+  v7_set_property(v7, res, "stack", 5, V7_PROPERTY_DONT_ENUM, v7->call_stack);
 
   return res;
 }
@@ -17387,12 +17412,11 @@ static char *read_file(const char *path, size_t *size) {
 }
 
 static void print_error(struct v7 *v7, const char *f, val_t e) {
-  char buf[512];
-  char *s = v7_to_json(v7, e, buf, sizeof(buf));
-  fprintf(stderr, "Exec error [%s]: %s\n", f, s);
-  if (s != buf) {
-    free(s);
-  }
+  fprintf(stderr, "Exec error [%s]: ", f);
+  v7_fprintln(stderr, v7, e);
+#if V7_ENABLE__StackTrace
+  v7_fprint_stack_trace(stderr, v7, e);
+#endif
 }
 
 #if V7_ENABLE__Memory__stats

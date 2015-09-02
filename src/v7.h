@@ -369,7 +369,7 @@ void v7_interrupt(struct v7 *v7);
 /*
  * Tells the GC about a JS value variable/field owned
  * by C code.
- * *
+ *
  * User C code should own v7_val_t variables
  * if the value's lifetime crosses any invocation
  * to the v7 runtime that creates new objects or new
@@ -398,6 +398,9 @@ void v7_own(struct v7 *v7, v7_val_t *v);
  * Returns 1 if value is found, 0 otherwise
  */
 int v7_disown(struct v7 *v7, v7_val_t *v);
+
+/* Prints stack trace recorded in the exception `e` to file `f` */
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
