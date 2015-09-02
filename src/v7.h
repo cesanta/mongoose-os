@@ -281,7 +281,8 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  * Call function `func` with arguments `args`, using `this_obj` as `this`.
  * `args` could be either undefined value, or be an array with arguments.
  */
-v7_val_t v7_apply(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
+enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
+                     v7_val_t this_obj, v7_val_t args);
 
 /* Throw an exception (Error object) with given formatted message. */
 void v7_throw(struct v7 *, const char *msg_fmt, ...);

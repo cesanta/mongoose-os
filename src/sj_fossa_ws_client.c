@@ -20,9 +20,12 @@ static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
   struct v7 *v7 = ud->v7;
   v7_val_t met = v7_get(v7, ud->ws, name, ~0);
   if (!v7_is_undefined(met)) {
-    v7_val_t args = v7_create_array(v7);
+    v7_val_t res, args = v7_create_array(v7);
     v7_array_set(v7, args, 0, ev);
-    v7_apply(v7, met, v7_create_undefined(), args);
+    if (v7_apply(v7, &res, met, v7_create_undefined(), args) != V7_OK) {
+      /* TODO(mkm): make it print stack trace */
+      fprintf(stderr, "cb threw an exception\n");
+    }
   }
 }
 

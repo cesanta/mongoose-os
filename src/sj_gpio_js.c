@@ -11,7 +11,7 @@ static struct v7 *s_v7;
 static void gpio_intr_handler_proxy(int pin, int level) {
   char prop_name[15];
   int len;
-  v7_val_t args;
+  v7_val_t res, args;
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
 
@@ -25,7 +25,10 @@ static void gpio_intr_handler_proxy(int pin, int level) {
   v7_array_push(s_v7, args, v7_create_number(pin));
   v7_array_push(s_v7, args, v7_create_number(level));
 
-  v7_apply(s_v7, cb, v7_create_undefined(), args);
+  if (v7_apply(s_v7, &res, cb, v7_create_undefined(), args) != V7_OK) {
+    /* TODO(mkm): make it print stack trace */
+    fprintf(stderr, "cb threw an exception\n");
+  }
 }
 
 static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {

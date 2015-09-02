@@ -285,7 +285,8 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  * Call function `func` with arguments `args`, using `this_obj` as `this`.
  * `args` could be either undefined value, or be an array with arguments.
  */
-v7_val_t v7_apply(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
+enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
+                     v7_val_t this_obj, v7_val_t args);
 
 /* Throw an exception (Error object) with given formatted message. */
 void v7_throw(struct v7 *, const char *msg_fmt, ...);
@@ -11591,17 +11592,17 @@ cleanup:
   return res;
 }
 
-v7_val_t v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                  v7_val_t args) {
-  v7_val_t res;
+enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
+                     v7_val_t this_obj, v7_val_t args) {
   jmp_buf saved_jmp_buf;
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
-    return v7->thrown_error;
+    *result = v7->thrown_error;
+    return V7_EXEC_EXCEPTION;
   }
-  res = i_apply(v7, func, this_obj, args);
+  *result = i_apply(v7, func, this_obj, args);
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
-  return res;
+  return V7_OK;
 }
 
 /* Invoke a function applying the argument array */
