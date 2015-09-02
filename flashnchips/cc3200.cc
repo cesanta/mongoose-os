@@ -28,6 +28,10 @@
 #include "fs.h"
 #include "serial.h"
 
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+#define qInfo qWarning
+#endif
+
 namespace CC3200 {
 
 namespace {
@@ -156,7 +160,7 @@ util::Status sendAck(QSerialPort* s, int timeout = kDefaultTimeoutMs) {
 }
 
 util::Status doBreak(QSerialPort* s, int timeout = kDefaultTimeoutMs) {
-  qWarning() << "Sending break...";
+  qInfo() << "Sending break...";
   s->clear();
   if (!s->setBreakEnabled(true)) {
     return util::Status(util::error::UNKNOWN,
@@ -671,7 +675,7 @@ class FlasherImpl : public Flasher {
     util::Status st;
     for (int attempt = 0; attempt < 3; attempt++) {
       QThread::sleep(1);
-      qWarning() << "Checking if the device is back online...";
+      qInfo() << "Checking if the device is back online...";
       st = doBreak(port_);
       if (st.ok()) {
         break;
@@ -928,8 +932,8 @@ class FlasherImpl : public Flasher {
     if (!fs1.ok()) {
       return fs1.status();
     }
-    qWarning() << "Sequence nubmer of 0.fs:" << seq[0];
-    qWarning() << "Sequence nubmer of 1.fs:" << seq[1];
+    qInfo() << "Sequence nubmer of 0.fs:" << seq[0];
+    qInfo() << "Sequence nubmer of 1.fs:" << seq[1];
     QByteArray meta;
     int min_seq = 0;
     QDataStream ms(&meta, QIODevice::WriteOnly);
@@ -962,7 +966,7 @@ class FlasherImpl : public Flasher {
     }
     image.append(meta);
     QString fname = min_seq == 0 ? kFS1Filename : kFS0Filename;
-    qWarning() << "Overwriting" << fname;
+    qInfo() << "Overwriting" << fname;
     return uploadFW(image, fname);
   }
 

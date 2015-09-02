@@ -28,6 +28,10 @@
 #include "serial.h"
 #include "ui_about.h"
 
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+#define qInfo qWarning
+#endif
+
 static const int kInputHistoryLength = 100;
 static const char kPromptEnd[] = "$ ";
 
@@ -178,7 +182,7 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
 void MainDialog::setState(State newState) {
   State old = state_;
   state_ = newState;
-  qDebug() << "MainDialog state changed from" << old << "to" << newState;
+  qInfo() << "MainDialog state changed from" << old << "to" << newState;
   enableControlsForCurrentState();
   // TODO(imax): find a better place for this.
   switch (state_) {
@@ -597,7 +601,7 @@ void MainDialog::loadFirmware() {
       speed = 230400;
     }
   }
-  qWarning() << "Flashing at " << speed << "(real speed may be different)";
+  qInfo() << "Flashing at " << speed << "(real speed may be different)";
   // First we set speed to 115200 and only then set it to the value requested.
   // We do this because Qt may silently refuse to set the speed, leaving the
   // the previous value in effect. If it fails to set 115200 - we're screwed
@@ -632,7 +636,7 @@ void MainDialog::loadFirmware() {
           &QLabel::setText);
   connect(f.get(), &Flasher::statusMessage, [](QString msg, bool important) {
     if (important) {
-      qWarning() << msg.toUtf8().constData();
+      qInfo() << msg.toUtf8().constData();
     }
   });
   connect(f.get(), &Flasher::done, this, &MainDialog::flashingDone);

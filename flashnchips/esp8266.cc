@@ -25,6 +25,10 @@
 #include "fs.h"
 #include "serial.h"
 
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+#define qInfo qWarning
+#endif
+
 // Code in this file (namely, rebootIntoBootloader function) assumes the same
 // wiring as esptool.py:
 //   RTS - CH_PD or RESET pin
@@ -438,7 +442,7 @@ class FlasherImpl : public Flasher {
                           tr("Do files to flash").toStdString());
     }
     for (const auto& file : files) {
-      qWarning() << "Loading" << file.fileName();
+      qInfo() << "Loading" << file.fileName();
       bool ok = false;
       ulong addr = file.baseName().toULong(&ok, 16);
       if (!ok) {
@@ -944,7 +948,7 @@ class ESP8266HAL : public HAL {
     if (mac.length() < 6) {
       return util::Status(util::error::ABORTED, "Failed to read MAC address");
     }
-    qDebug() << "MAC address: " << mac;
+    qInfo() << "MAC address: " << mac;
 
     return util::Status::OK;
   }

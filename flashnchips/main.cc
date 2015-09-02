@@ -25,7 +25,7 @@ void outputHandler(QtMsgType type, const QMessageLogContext& context,
   QByteArray localMsg = msg.toLocal8Bit();
   switch (type) {
     case QtDebugMsg:
-      if (verbosity >= 3) {
+      if (verbosity >= 4) {
         cerr << "DEBUG: ";
         if (context.file != NULL) {
           cerr << context.file << ":" << context.line;
@@ -36,6 +36,20 @@ void outputHandler(QtMsgType type, const QMessageLogContext& context,
         cerr << localMsg.constData() << endl;
       }
       break;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 5, 0))
+    case QtInfoMsg:
+      if (verbosity >= 3) {
+        cerr << "INFO: ";
+        if (context.file != NULL) {
+          cerr << context.file << ":" << context.line;
+        }
+        if (context.function != NULL) {
+          cerr << " (" << context.function << "): ";
+        }
+        cerr << localMsg.constData() << endl;
+      }
+      break;
+#endif
     case QtWarningMsg:
       if (verbosity >= 2) {
         cerr << "WARNING: ";
@@ -96,7 +110,8 @@ int main(int argc, char* argv[]) {
        {{"d", "debug"}, "Enable debug output. Equivalent to --V=3"},
        {"V",
         "Verbosity level. 0 – normal output, 1 - also print critical (but not "
-        "fatal) errors, 2 - also print warnings, 3 - print debug output.",
+        "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
+        "print debug output.",
         "level", "1"},
        {"port", "Serial port to use.", "port"},
        {"flash-baud-rate",
