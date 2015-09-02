@@ -11594,15 +11594,18 @@ cleanup:
 
 enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args) {
+  enum v7_err err = V7_OK;
   jmp_buf saved_jmp_buf;
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     *result = v7->thrown_error;
-    return V7_EXEC_EXCEPTION;
+    err = V7_EXEC_EXCEPTION;
+    goto cleanup;
   }
   *result = i_apply(v7, func, this_obj, args);
+cleanup:
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
-  return V7_OK;
+  return err;
 }
 
 /* Invoke a function applying the argument array */
