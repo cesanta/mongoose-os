@@ -88,9 +88,9 @@ void sj_usleep(int usecs) {
 
 void posix_timer_callback(int sig, siginfo_t *si, void *uc) {
 #ifdef __APPLE__
-  sj_invoke_cb(v7, *bsd_timer_cb);
+  sj_invoke_cb0(v7, *bsd_timer_cb);
 #else
-  sj_invoke_cb(v7, *((v7_val_t *) si->si_value.sival_ptr));
+  sj_invoke_cb0(v7, *((v7_val_t *) si->si_value.sival_ptr));
 #endif
 }
 
@@ -184,7 +184,7 @@ void sj_prompt_init_hal() {
   ns_add_sock(&sj_mgr, fds[0], prompt_handler);
 }
 
-void sj_exec_with(struct v7* v7, const char* code, v7_val_t this_obj) {
-  v7_val_t res;
-  v7_exec_with(v7, &res, code, this_obj);
+void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                  v7_val_t args) {
+  _sj_invoke_cb(v7, func, this_obj, args);
 }

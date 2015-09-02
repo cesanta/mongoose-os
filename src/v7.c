@@ -284,6 +284,8 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
 /*
  * Call function `func` with arguments `args`, using `this_obj` as `this`.
  * `args` could be either undefined value, or be an array with arguments.
+ *
+ * Result can be NULL if you don't care about the return value.
  */
 enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args);
@@ -11596,6 +11598,11 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args) {
   enum v7_err err = V7_OK;
   jmp_buf saved_jmp_buf;
+  val_t res;
+  if (result == NULL) {
+    result = &res;
+  }
+
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     *result = v7->thrown_error;

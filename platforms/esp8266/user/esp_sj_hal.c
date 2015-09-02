@@ -54,7 +54,7 @@ void sj_usleep(int usecs) {
 
 void esp_timer_callback(void* arg) {
   v7_val_t* cb = (v7_val_t*) arg;
-  sj_invoke_cb(v7, *cb);
+  sj_invoke_cb0(v7, *cb);
 }
 
 void sj_set_timeout(int msecs, v7_val_t* cb) {
@@ -81,9 +81,9 @@ void sj_set_timeout(int msecs, v7_val_t* cb) {
 #endif
 }
 
-void sj_exec_with(struct v7* v7, const char* code, v7_val_t this_obj) {
-  v7_val_t res;
-  v7_exec_with(v7, &res, code, this_obj);
+void sj_invoke_cb(struct v7* v7, v7_val_t func, v7_val_t this_obj,
+                  v7_val_t args) {
+  _sj_invoke_cb(v7, func, this_obj, args);
 }
 
 void sj_prompt_init_hal(struct v7* v7) {

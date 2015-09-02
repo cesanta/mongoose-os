@@ -114,18 +114,30 @@ static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
+void _sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                   v7_val_t args) {
+  v7_val_t res;
+  if (v7_apply(v7, &res, func, this_obj, args) == V7_EXEC_EXCEPTION) {
+    fprintf(stderr, "cb threw exception: ");
+    v7_fprintln(stderr, v7, res);
+#if V7_ENABLE__StackTrace
+    v7_fprint_stack_trace(stderr, v7, res);
+#endif
+  }
+}
+
 void sj_invoke_cb2(struct v7 *v7, v7_val_t cb, v7_val_t arg1, v7_val_t arg2) {
-  v7_val_t this_obj;
+  v7_val_t args;
   v7_own(v7, &cb);
   v7_own(v7, &arg1);
   v7_own(v7, &arg2);
-  this_obj = v7_create_object(v7);
-  v7_own(v7, &this_obj);
-  v7_set(v7, this_obj, "cb", 2, 0, cb);
-  v7_set(v7, this_obj, "a1", 2, 0, arg1);
-  v7_set(v7, this_obj, "a2", 2, 0, arg2);
-  sj_exec_with(v7, "this.cb(this.a1, this.a2)", this_obj);
-  v7_disown(v7, &this_obj);
+
+  args = v7_create_array(v7);
+  v7_own(v7, &args);
+  v7_array_push(v7, args, arg1);
+  v7_array_push(v7, args, arg2);
+  sj_invoke_cb(v7, cb, v7_get_global_object(v7), args);
+  v7_disown(v7, &args);
   v7_disown(v7, &arg2);
   v7_disown(v7, &arg1);
   v7_disown(v7, &cb);
@@ -135,7 +147,7 @@ void sj_invoke_cb1(struct v7 *v7, v7_val_t cb, v7_val_t arg) {
   sj_invoke_cb2(v7, cb, arg, v7_create_undefined());
 }
 
-void sj_invoke_cb(struct v7 *v7, v7_val_t cb) {
+void sj_invoke_cb0(struct v7 *v7, v7_val_t cb) {
   sj_invoke_cb2(v7, cb, v7_create_undefined(), v7_create_undefined());
 }
 

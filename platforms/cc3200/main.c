@@ -113,15 +113,14 @@ static void v7_task(void *arg) {
         sj_prompt_process_char((char) ((int) pe.data));
         break;
       }
-      case V7_EXEC_EVENT: {
-        struct v7_exec_event_data *ped = (struct v7_exec_event_data *) pe.data;
-        v7_val_t res;
-        if (v7_exec_with(v7, &res, ped->code, ped->this_obj) != V7_OK) {
-          v7_fprintln(stderr, v7, res);
-        }
-        v7_disown(v7, &ped->this_obj);
-        free(ped->code);
-        free(ped);
+      case V7_INVOKE_EVENT: {
+        struct v7_invoke_event_data *ied =
+            (struct v7_invoke_event_data *) pe.data;
+        _sj_invoke_cb(v7, ied->func, ied->this_obj, ied->args);
+        v7_disown(v7, &ied->args);
+        v7_disown(v7, &ied->this_obj);
+        v7_disown(v7, &ied->func);
+        free(ied);
         break;
       }
     }

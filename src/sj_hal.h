@@ -13,8 +13,12 @@
 int sj_http_call(struct v7 *v7, const char *url, const char *body,
                  size_t body_len, const char *method, v7_val_t cb);
 
-/* See sj_i2c.h, sj_spi.h and sj_gpio.h for i2c, spi & gpio HAL related
- * functions */
-void sj_exec_with(struct v7 *v7, const char *code, v7_val_t this_obj);
+/*
+ * Invokes a callback and prints a stack trace in case of exception.
+ *
+ * Port specific implementation have to make sure it's executed in the
+ * main v7 thread.
+ */
+void sj_invoke_cb(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
 
 #endif /* __SMARTJS_HAL_H_ */
