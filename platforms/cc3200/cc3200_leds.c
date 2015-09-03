@@ -5,6 +5,7 @@
 #include "gpio.h"
 #include "pin.h"
 #include "prcm.h"
+#include "rom.h"
 #include "rom_map.h"
 
 void cc3200_leds_init() {

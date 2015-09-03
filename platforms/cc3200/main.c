@@ -11,6 +11,7 @@
 #include "interrupt.h"
 #include "pin.h"
 #include "prcm.h"
+#include "rom.h"
 #include "rom_map.h"
 #include "uart.h"
 #include "utils.h"

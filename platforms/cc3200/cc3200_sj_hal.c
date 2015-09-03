@@ -3,6 +3,7 @@
 
 #include "hw_types.h"
 #include "prcm.h"
+#include "rom.h"
 #include "rom_map.h"
 
 #include "simplelink.h"

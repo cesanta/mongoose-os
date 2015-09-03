@@ -7,6 +7,7 @@
 
 #include "hw_types.h"
 #include "hw_memmap.h"
+#include "rom.h"
 #include "rom_map.h"
 #include "uart.h"
 #include "utils.h"
