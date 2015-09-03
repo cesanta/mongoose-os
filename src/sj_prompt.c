@@ -175,7 +175,7 @@ static void process_prompt_char(char ch) {
       }
       s_sjp.buf[s_sjp.pos] = '\0';
       break;
-    case '\r':
+    case '\n':
 #ifndef SJ_PROMPT_DISABLE_ECHO
       printf("\n");
 #endif
@@ -184,7 +184,7 @@ static void process_prompt_char(char ch) {
       process_command(s_sjp.buf);
       s_sjp.pos = 0;
       break;
-    case '\n':
+    case '\r':
       break;
     default:
 #ifndef SJ_PROMPT_DISABLE_ECHO
