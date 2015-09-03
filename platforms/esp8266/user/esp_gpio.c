@@ -15,6 +15,7 @@
 #else
 
 #include <stdlib.h>
+#include <eagle_soc.h>
 #include <pin_mux_register.h>
 #include <gpio_register.h>
 #include <freertos/portmacro.h>

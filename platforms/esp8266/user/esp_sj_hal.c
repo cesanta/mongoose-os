@@ -17,13 +17,12 @@
 #include <eagle_soc.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/timers.h>
+#include "disp_task.h"
 
 #endif /* RTOS_SDK */
 
 #ifndef RTOS_SDK
 static os_timer_t js_timeout_timer;
-#else
-static xTimerHandle js_timeout_timer;
 #endif
 
 size_t sj_get_free_heap_size() {
@@ -69,27 +68,28 @@ void sj_set_timeout(int msecs, v7_val_t* cb) {
 #else
   /*
    * TODO RTOS (alashkin):
-   * Timers in RTOS run on _very_ limited stack size_t
-   * We should either find way to change it
-   * or start task from timer func and
-   * execute code within its context
+   * Check if we need to delete timer
+   * (free handle)
    */
-  js_timeout_timer =
+  xTimerHandle js_timeout_timer =
       xTimerCreate((const signed char*) "js_timeout_timer",
-                   msecs / portTICK_RATE_MS, pdFALSE, NULL, esp_timer_callback);
+                   msecs / portTICK_RATE_MS, pdFALSE, cb, esp_timer_callback);
   xTimerStart(js_timeout_timer, 0);
 #endif
 }
 
 void sj_invoke_cb(struct v7* v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
+#ifndef RTOS_SDK
   _sj_invoke_cb(v7, func, this_obj, args);
+#else
+  rtos_dispatch_callback(v7, func, this_obj, args);
+#endif
 }
 
 void sj_prompt_init_hal(struct v7* v7) {
   (void) v7;
 #if !defined(NO_PROMPT)
-  //  printf("install uart_process_char\n");
   uart_process_char = sj_prompt_process_char;
   uart_interrupt_cb = sj_prompt_process_char;
 #endif
