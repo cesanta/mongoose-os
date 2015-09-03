@@ -4,6 +4,7 @@
 #include <ets_sys.h>
 #include <v7.h>
 #include <sj_hal.h>
+#include <sj_timers.h>
 #include <sj_v7_ext.h>
 #include <sj_conf.h>
 #include <sj_i2c_js.h>
@@ -185,6 +186,7 @@ void init_v7(void *stack_base) {
   v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);
 
+  sj_init_timers(v7);
   sj_init_v7_ext(v7);
 
   init_gpiojs(v7);

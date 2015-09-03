@@ -24,6 +24,7 @@
 #include "sj_fossa.h"
 #include "sj_i2c_js.h"
 #include "sj_prompt.h"
+#include "sj_timers.h"
 #include "sj_v7_ext.h"
 #include "sj_wifi.h"
 #include "v7.h"
@@ -33,10 +34,10 @@
 #include "cc3200_sj_hal.h"
 #include "cc3200_wifi.h"
 
-struct v7 *v7;
+struct v7 *s_v7;
 const char *sj_version = "TODO";
 
-void init_v7(void *stack_base) {
+struct v7 *init_v7(void *stack_base) {
   struct v7_create_opts opts;
 
   opts.object_arena_size = 164;
@@ -44,7 +45,7 @@ void init_v7(void *stack_base) {
   opts.property_arena_size = 400;
   opts.c_stack_base = stack_base;
 
-  v7 = v7_create_opt(opts);
+  return v7_create_opt(opts);
 }
 
 static void blinkenlights_task(void *arg) {
@@ -90,14 +91,16 @@ static void fossa_poll_task(void *arg) {
 }
 
 static void v7_task(void *arg) {
-  char dummy;
+  struct v7 *v7 = s_v7;
   printf("\n\nSmart.JS for CC3200\n");
 
   osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct prompt_event), 32 /* len */);
   osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
   MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
   sl_Start(NULL, NULL, NULL);
-  init_v7(&dummy);
+
+  v7 = s_v7 = init_v7(&v7);
+  sj_init_timers(v7);
   sj_init_v7_ext(v7);
   init_wifi(v7);
   if (init_fs(v7) != 0) {

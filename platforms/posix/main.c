@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "sj_fossa.h"
-#include "sj_v7_ext.h"
+#include <sj_fossa.h>
 #include <sj_prompt.h>
+#include <sj_timers.h>
+#include <sj_v7_ext.h>
 #include "smartjs.h"
 
 #ifndef JS_FS_ROOT
@@ -36,6 +37,7 @@ static void pre_init(struct v7 *v7) {
     fprintf(stderr, "cannot chdir to %s\n", path);
   }
 
+  sj_init_timers(v7);
   sj_init_v7_ext(v7);
   init_smartjs(v7);
 

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
+#include <sj_timers.h>
 #include <sj_v7_ext.h>
 #ifdef __APPLE__
 #include <sys/time.h>

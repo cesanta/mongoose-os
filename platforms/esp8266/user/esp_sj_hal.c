@@ -1,5 +1,6 @@
 #include "esp_missing_includes.h"
 #include <v7.h>
+#include <sj_timers.h>
 #include <sj_v7_ext.h>
 #include <sj_hal.h>
 
@@ -23,6 +24,8 @@
 
 #ifndef RTOS_SDK
 static os_timer_t js_timeout_timer;
+#else
+static xTimerHandle js_timeout_timer;
 #endif
 
 size_t sj_get_free_heap_size() {
@@ -53,7 +56,12 @@ void sj_usleep(int usecs) {
 
 void esp_timer_callback(void* arg) {
   v7_val_t* cb = (v7_val_t*) arg;
+#ifdef RTOS_SDK
+  xTimerDelete(js_timeout_timer, 0);
+#endif
   sj_invoke_cb0(v7, *cb);
+  v7_disown(v7, cb);
+  free(cb);
 }
 
 void sj_set_timeout(int msecs, v7_val_t* cb) {
@@ -66,12 +74,7 @@ void sj_set_timeout(int msecs, v7_val_t* cb) {
   os_timer_setfn(&js_timeout_timer, esp_timer_callback, cb);
   os_timer_arm(&js_timeout_timer, msecs, 0);
 #else
-  /*
-   * TODO RTOS (alashkin):
-   * Check if we need to delete timer
-   * (free handle)
-   */
-  xTimerHandle js_timeout_timer =
+  js_timeout_timer =
       xTimerCreate((const signed char*) "js_timeout_timer",
                    msecs / portTICK_RATE_MS, pdFALSE, cb, esp_timer_callback);
   xTimerStart(js_timeout_timer, 0);

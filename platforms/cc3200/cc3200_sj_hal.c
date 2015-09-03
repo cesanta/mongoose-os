@@ -11,6 +11,7 @@
 
 #include "cc3200_sj_hal.h"
 #include "sj_hal.h"
+#include "sj_timers.h"
 #include "sj_v7_ext.h"
 #include "v7.h"
 
@@ -63,10 +64,6 @@ void sj_system_restart() {
   MAP_PRCMHibernateIntervalSet(328 /* 32KHz ticks, 100 ms */);
   MAP_PRCMHibernateWakeupSourceEnable(PRCM_HIB_SLOW_CLK_CTR);
   MAP_PRCMHibernateEnter();
-}
-
-void sj_set_timeout(int msecs, v7_val_t *cb) {
-  /* TODO */
 }
 
 void sj_usleep(int usecs) {

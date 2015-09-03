@@ -20,7 +20,7 @@ INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c sj_fossa.c \
 			sj_fossa_http_client.c sj_fossa_ws_client.c sj_gpio_js.c \
-			sj_prompt.c
+			sj_prompt.c sj_timers.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them

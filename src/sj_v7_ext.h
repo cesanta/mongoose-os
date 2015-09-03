@@ -39,9 +39,6 @@ void sj_wdt_feed();
 /* Restart system */
 void sj_system_restart();
 
-/* Setup timer with msecs timeout and cb as a callback */
-void sj_set_timeout(int msecs, v7_val_t *cb);
-
 /* Delay usecs */
 void sj_usleep(int usecs);
 
