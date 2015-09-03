@@ -83,13 +83,6 @@ void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
 }
 
-static void fossa_poll_task(void *arg) {
-  fossa_init();
-  while (1) {
-    if (!fossa_poll()) osi_Sleep(2);
-  }
-}
-
 static void v7_task(void *arg) {
   struct v7 *v7 = s_v7;
   printf("\n\nSmart.JS for CC3200\n");
@@ -106,16 +99,16 @@ static void v7_task(void *arg) {
   if (init_fs(v7) != 0) {
     fprintf(stderr, "FS initialization failed.\n");
   }
+  fossa_init();
   sj_init_simple_http_client(v7);
   init_i2cjs(v7);
-  osi_TaskCreate(fossa_poll_task, (const signed char *) "fossa", 7 * 1024, NULL,
-                 2, NULL);
   v7_val_t res;
   v7_exec_file(v7, &res, "init.js");
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;
-    osi_MsgQRead(&s_v7_q, &pe, OSI_WAIT_FOREVER);
+    fossa_poll(FOSSA_POLL_LENGTH_MS);
+    if (osi_MsgQRead(&s_v7_q, &pe, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (pe.type) {
       case PROMPT_CHAR_EVENT: {
         sj_prompt_process_char((char) ((int) pe.data));

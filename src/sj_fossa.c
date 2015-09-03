@@ -10,9 +10,9 @@ void fossa_destroy() {
   ns_mgr_free(&sj_mgr);
 }
 
-int fossa_poll() {
+int fossa_poll(int ms) {
   if (ns_next(&sj_mgr, NULL) != NULL) {
-    ns_mgr_poll(&sj_mgr, 100);
+    ns_mgr_poll(&sj_mgr, ms);
     return 1;
   } else {
     return 0;

@@ -4,7 +4,7 @@
 extern struct ns_mgr sj_mgr;
 
 void fossa_init();
-int fossa_poll();
+int fossa_poll(int ms);
 void fossa_destroy();
 
 #endif

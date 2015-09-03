@@ -62,7 +62,7 @@ static void post_init(struct v7 *v7) {
      * and there are active gpio ISR and then exiting
      * TODO(alashkin): change this to something smart
      */
-  } while ((fossa_poll() || gpio_poll()) && !sj_please_quit);
+  } while ((fossa_poll(100) || gpio_poll()) && !sj_please_quit);
   fossa_destroy();
 }
 
