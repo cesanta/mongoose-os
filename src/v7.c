@@ -409,6 +409,9 @@ int v7_disown(struct v7 *v7, v7_val_t *v);
 /* Prints stack trace recorded in the exception `e` to file `f` */
 void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 
+/* Print error object message and possibly stack trace to f */
+void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
+
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
 
@@ -1209,6 +1212,12 @@ extern "C" {
 int c_snprintf(char *buf, size_t buf_size, const char *format, ...);
 int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
 
+#if !(_XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L) && \
+        !(__DARWIN_C_LEVEL >= 200809L) ||                    \
+    defined(_WIN32)
+int strnlen(const char *s, size_t maxlen);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -1909,7 +1918,7 @@ struct v7 {
   val_t error_objects[ERROR_CTOR_MAX];
 
   val_t thrown_error;
-  char error_msg[60];     /* Exception message */
+  char error_msg[80];     /* Exception message */
   int creating_exception; /* Avoids reentrant exception creation */
 #if defined(__cplusplus)
   ::jmp_buf jmp_buf;
@@ -2655,7 +2664,7 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
  * ANY REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
- 
+
 #ifndef EXCLUDE_COMMON
 
 #ifndef NO_LIBC
@@ -3992,9 +4001,9 @@ Rune tolowerrune(Rune c) {
 Rune toupperrune(Rune c) {
   return toupper(c);
 }
-int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
+int utfnlen(char *s, long m) {
   (void) s;
-  return m;
+  return (int) strnlen(s, (size_t) m);
 }
 
 char *utfnshift(char *s, long m) {
@@ -4580,6 +4589,17 @@ void hmac_sha1(const unsigned char *key, size_t keylen,
 /* Amalgamated: #include "osdep.h" */
 /* Amalgamated: #include "str_util.h" */
 
+#if !(_XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L) && \
+        !(__DARWIN_C_LEVEL >= 200809L) ||                    \
+    defined(_WIN32)
+int strnlen(const char *s, size_t maxlen) {
+  size_t l = 0;
+  for (; l < maxlen && s[l] != '\0'; l++) {
+  }
+  return l;
+}
+#endif
+
 #define C_SNPRINTF_APPEND_CHAR(ch)       \
   do {                                   \
     if (i < (int) buf_size) buf[i] = ch; \
@@ -4661,6 +4681,11 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
         field_width *= 10;
         field_width += *fmt++ - '0';
       }
+      /* Dynamic field width */
+      if (*fmt == '*') {
+        field_width = va_arg(ap, int);
+        fmt++;
+      }
 
       /* Precision */
       if (*fmt == '.') {
@@ -4702,6 +4727,11 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
       if (ch == 's') {
         const char *s = va_arg(ap, const char *); /* Always fetch parameter */
         int j;
+        int pad = field_width - (precision >= 0 ? strnlen(s, precision) : 0);
+        for (j = 0; j < pad; j++) {
+          C_SNPRINTF_APPEND_CHAR(' ');
+        }
+
         /* Ignore negative and 0 precisions */
         for (j = 0; (precision <= 0 || j < precision) && s[j] != '\0'; j++) {
           C_SNPRINTF_APPEND_CHAR(s[j]);
@@ -9990,8 +10020,9 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
-               "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
-               col, (int) (col + v7->tok_len), v7->tok - col);
+               "parse error at at line %d col %lu:\n%.*s\n%*s^",
+               v7->pstate.line_no, col, (int) (col + v7->tok_len),
+               v7->tok - col, (int) col - 1, "");
   }
   return err;
 }
@@ -14388,6 +14419,19 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 
 /* Amalgamated: #include "internal.h" */
 
+void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
+  /* TODO(mkm): figure out if this is an error object and which kind */
+  v7_val_t msg = v7_get(v7, e, "message", ~0);
+  if (v7_is_undefined(msg)) {
+    msg = e;
+  }
+  fprintf(f, "Exec error [%s]: ", ctx);
+  v7_fprintln(f, v7, msg);
+#if V7_ENABLE__StackTrace
+  v7_fprint_stack_trace(f, v7, e);
+#endif
+}
+
 static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t res;
@@ -17440,14 +17484,6 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void print_error(struct v7 *v7, const char *f, val_t e) {
-  fprintf(stderr, "Exec error [%s]: ", f);
-  v7_fprintln(stderr, v7, e);
-#if V7_ENABLE__StackTrace
-  v7_fprint_stack_trace(stderr, v7, e);
-#endif
-}
-
 #if V7_ENABLE__Memory__stats
 static void dump_mm_arena_stats(const char *msg, struct gc_arena *a) {
   printf("%s: total allocations %lu, total garbage %lu, max %" SIZE_T_FMT
@@ -17546,7 +17582,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
         fprintf(stderr, "%s\n", "parse error");
       }
     } else if (v7_exec(v7, &res, exprs[j]) != V7_OK) {
-      print_error(v7, exprs[j], res);
+      v7_print_error(stderr, v7, exprs[j], res);
       res = v7_create_undefined();
     }
   }
@@ -17563,7 +17599,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
         free(source_code);
       }
     } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {
-      print_error(v7, argv[i], res);
+      v7_print_error(stderr, v7, argv[i], res);
       res = v7_create_undefined();
     }
   }

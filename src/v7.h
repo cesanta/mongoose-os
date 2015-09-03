@@ -405,6 +405,9 @@ int v7_disown(struct v7 *v7, v7_val_t *v);
 /* Prints stack trace recorded in the exception `e` to file `f` */
 void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 
+/* Print error object message and possibly stack trace to f */
+void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
+
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
 
