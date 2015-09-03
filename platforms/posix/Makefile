@@ -54,6 +54,7 @@ endif
 # Non Windows
 ifneq ($(PLATFORM), "WIN")
   ADD_LIBS += m pthread
+  V7_FEATURES += -DDISABLE_MD5
 endif
 
 # Linux 
