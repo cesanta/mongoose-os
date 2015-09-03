@@ -16086,10 +16086,9 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 #include <locale.h>
 #include <time.h>
 
-#ifdef __APPLE__
-int64_t strtoll(const char *, char **, int);
-#elif !defined(_WIN32)
+#ifndef _WIN32
 extern long timezone;
+#include <sys/time.h>
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER >= 1800
@@ -16329,7 +16328,14 @@ static etimeint_t ecma_MakeDate(etimeint_t day, etimeint_t time) {
 }
 
 static void d_gettime(etime_t *t) {
-  *t = time(NULL);
+#ifndef _WIN32
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  *t = (etime_t) tv.tv_sec * 1000 + (etime_t) tv.tv_usec / 1000;
+#else
+  /* TODO(mkm): use native windows API in order to get ms granularity */
+  *t = time(NULL) * 1000.0;
+#endif
 }
 
 static etime_t d_mktime_impl(const struct timeparts *tp) {
