@@ -84,6 +84,7 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJD
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_libc.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJDIR}/cc3200_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/v7.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_i2c_js.o ${OBJDIR}/cc3200_i2c.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_simple_http.o ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_fossa.o ${OBJDIR}/sj_fossa_http_client.o ${OBJDIR}/sj_v7_ext.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/spiffs_cache.o ${OBJDIR}/spiffs_check.o ${OBJDIR}/spiffs_gc.o ${OBJDIR}/spiffs_hydrogen.o ${OBJDIR}/spiffs_nucleus.o
@@ -92,7 +93,7 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
 # SimpleLink
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/socket.o ${OBJDIR}/wlan.o ${OBJDIR}/driver.o ${OBJDIR}/device.o ${OBJDIR}/netapp.o ${OBJDIR}/cc_pal.o ${OBJDIR}/fs.o
 # DriverLib
-${BINDIR}/${PROG}.axf: ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/interrupt.o ${OBJDIR}/pin.o ${OBJDIR}/prcm.o ${OBJDIR}/spi.o ${OBJDIR}/uart.o ${OBJDIR}/udma.o ${OBJDIR}/utils.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/i2c.o ${OBJDIR}/interrupt.o ${OBJDIR}/pin.o ${OBJDIR}/prcm.o ${OBJDIR}/spi.o ${OBJDIR}/uart.o ${OBJDIR}/udma.o ${OBJDIR}/utils.o
 ${BINDIR}/${PROG}.axf: ${SDK_PATH}/oslib/gcc/exe/FreeRTOS.a
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR

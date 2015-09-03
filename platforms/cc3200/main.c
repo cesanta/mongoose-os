@@ -22,6 +22,7 @@
 #include "oslib/osi.h"
 
 #include "sj_fossa.h"
+#include "sj_i2c_js.h"
 #include "sj_prompt.h"
 #include "sj_v7_ext.h"
 #include "sj_wifi.h"
@@ -103,8 +104,11 @@ static void v7_task(void *arg) {
     fprintf(stderr, "FS initialization failed.\n");
   }
   sj_init_simple_http_client(v7);
+  init_i2cjs(v7);
   osi_TaskCreate(fossa_poll_task, (const signed char *) "fossa", 7 * 1024, NULL,
                  2, NULL);
+  v7_val_t res;
+  v7_exec_file(v7, &res, "init.js");
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;
