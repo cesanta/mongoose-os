@@ -11606,7 +11606,7 @@ cleanup:
   return res;
 }
 
-enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
+enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args) {
   enum v7_err err = V7_OK;
   jmp_buf saved_jmp_buf;
