@@ -10,6 +10,22 @@
 #define WEBSOCKET_OPEN v7_create_number(1)
 #define WEBSOCKET_CLOSED v7_create_number(2)
 
+#ifdef _WIN32
+int asprintf(char **ptr, char *fmt, ...) {
+  int size;
+  va_list argv;
+  va_start(argv, fmt);
+  size = vsnprintf(NULL, 0, fmt, argv);
+  if (size > 0) {
+    *ptr = malloc(size + 1);
+    size = vsprintf(*ptr, fmt, argv);
+  }
+
+  va_end(argv);
+  return size;
+}
+#endif
+
 struct user_data {
   struct v7 *v7;
   v7_val_t ws;
@@ -131,6 +147,7 @@ static v7_val_t sj_ws_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     }
 #endif
 
+    (void) use_ssl;
     ns_set_protocol_http_websocket(nc);
 
     ud = calloc(1, sizeof(*ud));

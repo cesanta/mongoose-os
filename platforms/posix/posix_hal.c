@@ -19,6 +19,7 @@ typedef unsigned short u_short;
 #endif
 
 #ifdef _WIN32
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif
@@ -83,9 +84,14 @@ size_t sj_get_fs_memory_usage() {
 }
 
 void sj_usleep(int usecs) {
+#ifndef _WIN32
   usleep(usecs);
+#else
+  Sleep(usecs/1000);
+#endif
 }
 
+#ifndef _WIN32
 void posix_timer_callback(int sig, siginfo_t *si, void *uc) {
 #ifdef __APPLE__
   sj_invoke_cb0(v7, *bsd_timer_cb);
@@ -93,11 +99,23 @@ void posix_timer_callback(int sig, siginfo_t *si, void *uc) {
   sj_invoke_cb0(v7, *((v7_val_t *) si->si_value.sival_ptr));
 #endif
 }
+#else
+struct timer_callback_params {
+  v7_val_t *cb;
+  HANDLE timer;
+};
+
+VOID CALLBACK win32_timer_callback(PVOID param, BOOLEAN timeout) {
+  struct timer_callback_params *p = (struct timer_callback_params *)param;
+  sj_invoke_cb0(v7, *p->cb);
+  DeleteTimerQueueTimer(NULL, p->timer, NULL);
+  free(p);
+}
+#endif
 
 void sj_set_timeout(int msecs, v7_val_t *cb) {
-  struct sigaction sa;
-
 #if defined(SA_SIGINFO) && defined(CLOCK_REALTIME)
+  struct sigaction sa;
   struct sigevent te;
   struct itimerspec its;
   timer_t timer_id;
@@ -122,6 +140,7 @@ void sj_set_timeout(int msecs, v7_val_t *cb) {
   timer_settime(timer_id, 0, &its, NULL);
 
 #elif defined(__APPLE__)
+  struct sigaction sa;
   struct itimerval tv;
 
   bsd_timer_cb = cb;
@@ -139,16 +158,19 @@ void sj_set_timeout(int msecs, v7_val_t *cb) {
 
   setitimer(ITIMER_REAL, &tv, NULL);
 
-#else
-  /* TODO(lsm): implement this */
-  (void) cb;
+#elif defined(_WIN32)
+  struct timer_callback_params *params = malloc(sizeof(*params));
+  params->cb = cb;
+  CreateTimerQueueTimer(&params->timer, NULL,  win32_timer_callback,
+                        (void *)params, msecs, 0,
+                        WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE );
 #endif
 }
 
 static void *stdin_thread(void *param) {
   int ch, sock = (int) (uintptr_t) param;
   while ((ch = getchar()) != EOF) {
-    unsigned char c = (unsigned char) ch;
+    char c = (char) ch;
     send(sock, &c, 1, 0);  // Forward all types characters to the socketpair
   }
   close(sock);
@@ -176,7 +198,7 @@ static void prompt_handler(struct ns_connection *nc, int ev, void *ev_data) {
 
 void sj_prompt_init_hal() {
   int fds[2];
-  if (!ns_socketpair(fds, SOCK_STREAM)) {
+  if (!ns_socketpair((sock_t *)fds, SOCK_STREAM)) {
     printf("cannot create a socketpair\n");
     exit(1);
   }

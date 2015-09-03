@@ -91,6 +91,7 @@
 #endif
 
 #ifdef _WIN32
+#define random() rand()
 #ifdef _MSC_VER
 #pragma comment(lib, "ws2_32.lib") /* Linking with winsock library */
 #endif

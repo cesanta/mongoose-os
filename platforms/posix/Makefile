@@ -10,9 +10,9 @@ VERBOSE ?= 0
 SSL ?= OpenSSL
 
 V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
-								   -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
-								   -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
-								   -DNS_ENABLE_THREADS -DSJ_DISABLE_ECHO -DV7_ENABLE__StackTrace
+			  -DV7_ENABLE_COMPACTING_GC \
+			  -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
+			  -DNS_ENABLE_THREADS -DSJ_DISABLE_ECHO -DV7_ENABLE__StackTrace
 SJ_FEATURES =
 FOSSA_FEATURES =
 
@@ -21,21 +21,50 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c sj_fossa.c \
 			sj_fossa_http_client.c sj_fossa_ws_client.c sj_gpio_js.c \
 			sj_prompt.c
-ADD_LIBS = m pthread
+
+# inline causes crashes in the compacting GC
+# TODO(mkm) figure out which functions are inline sensitive and annotate them
+CFLAGS_EXTRA =
+CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -Wno-pragmas -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
 
 ifeq ($(OS),Windows_NT)
+  PLATFORM="WIN"
 else
   UNAME_S := $(shell uname -s)
   ifeq ($(UNAME_S),Linux)
-    ADD_LIBS += rt
+    PLATFORM="LINUX"
+  else
+    PLATFORM="POSIX"
   endif
-  ifneq ($(UNAME_S),Linux)
-		SJ_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI -DSJ_DISABLE_GPIO
-	endif
-  ifeq "$(SSL)" "OpenSSL"
-    FOSSA_FEATURES += -DNS_ENABLE_SSL
-    ADD_LIBS += ssl crypto
-  endif
+endif
+
+ifeq "$(SSL)" "OpenSSL"
+  FOSSA_FEATURES += -DNS_ENABLE_SSL
+  ADD_LIBS += ssl crypto
+  ifeq ($(PLATFORM), "WIN")
+    ADD_LIBS += gdi32
+  endif 
+endif
+
+# Non Linux
+ifneq ($(PLATFORM), "LINUX")
+  SJ_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI -DSJ_DISABLE_GPIO
+endif
+
+# Non Windows
+ifneq ($(PLATFORM), "WIN")
+  ADD_LIBS += m pthread
+endif
+
+# Linux 
+ifeq ($(PLATFORM), "LINUX")
+  ADD_LIBS += rt
+endif
+
+# Windows
+ifeq ($(PLATFORM), "WIN")
+  CFLAGS += -D_WIN32_WINNT=0x0500
+  ADD_LIBS += ws2_32
 endif
 
 ifeq ($(VERBOSE),1)
@@ -43,11 +72,6 @@ Q :=
 else
 Q := @
 endif
-
-# inline causes crashes in the compacting GC
-# TODO(mkm) figure out which functions are inline sensitive and annotate them
-CFLAGS_EXTRA =
-CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -Wno-pragmas -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
 
 ifeq ($(GC_CHECK),1)
 CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions -DV7_ENABLE_GC_CHECK
@@ -105,3 +129,4 @@ fs: $(FS)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR)/$(OUTAPP) $(BUILD_DIR)
+
