@@ -59,7 +59,7 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
 
   if (nc == NULL) {
     sj_http_error_callback(v7, cb, -2);
-    return 1;
+    return 0;
   }
 
   ud = calloc(1, sizeof(*ud));
@@ -68,5 +68,5 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
   v7_own(v7, &ud->cb);
   nc->user_data = ud;
 
-  return 0;
+  return 1;
 }

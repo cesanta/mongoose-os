@@ -3,7 +3,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
-
 static xTaskHandle disp_task_handle;
 static xQueueHandle main_queue_handle;
 
@@ -27,6 +26,8 @@ struct rtos_event {
 /* Add function to call declaration here */
 void start_cmd(void *dummy);
 void process_rx_buf(int tail);
+int fossa_poll();
+int fossa_has_connections();
 
 /* Add helper for new event here */
 void rtos_dispatch_initialize() {
@@ -50,7 +51,7 @@ static void disp_task(void *params) {
 
   while (1) {
     if (xQueueReceive(main_queue_handle, (void *) &ev,
-                      (portTickType) portMAX_DELAY)) {
+                      500 / portTICK_RATE_MS)) {
       switch (ev.event_id) {
         case RTE_INIT:
           start_cmd(0);
@@ -60,7 +61,11 @@ static void disp_task(void *params) {
           break;
         default:
           printf("Unknown event_id: %d\n", ev.event_id);
+          break;
       }
+    } else {
+      /* Put periodic event handlers here */
+      fossa_poll();
     }
   }
 }

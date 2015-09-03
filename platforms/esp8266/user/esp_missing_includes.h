@@ -26,6 +26,7 @@ void xthal_set_intenable();
 #else
 
 #define BIT(nr) (1UL << (nr))
+uint32_t system_get_time();
 
 #endif /* RTOS_SDK */
 

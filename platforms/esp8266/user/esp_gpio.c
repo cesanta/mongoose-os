@@ -15,7 +15,6 @@
 #else
 
 #include <stdlib.h>
-#include <sj_eagle_soc.h>
 #include <pin_mux_register.h>
 #include <gpio_register.h>
 #include <freertos/portmacro.h>
@@ -31,8 +30,10 @@
 
 #define GPIO_PIN_COUNT 16
 
+#ifndef RTOS_TODO
 static uint16_t int_map[GPIO_PIN_COUNT] = {0};
 #define GPIO_TASK_QUEUE_LEN 25
+#endif
 
 #ifndef RTOS_SDK
 
@@ -255,6 +256,7 @@ enum gpio_level sj_gpio_read(int pin) {
   return 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(pin));
 }
 
+#ifndef RTOS_TODO
 /*
  * How mode 6 ("button") works (example):
  * 1. Button's GPIO level is 0 (low)
@@ -295,11 +297,9 @@ static void v7_gpio_process_on_click(int pin, int level,
      */
     int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 |
                    (GPIO_PIN_INTR_HILEVEL - level);
-#ifndef RTOS_TODO
     system_os_post(TASK_PRIORITY,
                    (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level,
                    (os_param_t) callback);
-#endif
   }
 }
 
@@ -318,11 +318,9 @@ static void v7_gpio_intr_dispatcher(f_gpio_intr_handler_t callback) {
         /* this is "on click" handler */
         v7_gpio_process_on_click(i, level, callback);
       } else {
-#ifndef RTOS_TODO
         system_os_post(TASK_PRIORITY,
                        (uint32_t) GPIO_TASK_SIG << 16 | i << 8 | level,
                        (os_param_t) callback);
-#endif
       }
 
       gpio_pin_intr_state_set(GPIO_ID_PIN(i), int_map[i] & 0xF);
@@ -330,7 +328,6 @@ static void v7_gpio_intr_dispatcher(f_gpio_intr_handler_t callback) {
   }
 }
 
-#ifndef RTOS_TODO
 void v7_gpio_task(os_event_t* event) {
   if (event->sig >> 16 != GPIO_TASK_SIG) {
     return;
@@ -349,6 +346,7 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
 #endif
 }
 
+#ifndef RTOS_TODO
 static void v7_setup_on_click(int pin) {
   uint8_t current_level = sj_gpio_read(pin);
   /*
@@ -358,6 +356,7 @@ static void v7_setup_on_click(int pin) {
   uint8_t type = GPIO_PIN_INTR_HILEVEL - current_level;
   int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 | type;
 }
+#endif
 
 int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
 #ifndef RTOS_TODO

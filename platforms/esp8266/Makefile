@@ -1,6 +1,7 @@
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
 V7_PATH ?= ../../src
+FOSSA_PATH ?= ../../../fossa
 COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
@@ -26,7 +27,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c
 
-VPATH = $(APP_MODULES) $(V7_PATH) $(SMARTJS_PATH)/src
+VPATH = $(APP_MODULES) $(V7_PATH) $(FOSSA_PATH) $(SMARTJS_PATH)/src
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)
 LPATH = $(SDK_PATH)/lib
 
@@ -79,16 +80,21 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
 					 -DV7_ESP_FLASH_ACCESS_EMUL -DV7_FORCE_STRICT_MODE \
 					 -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=1
 
+FOSSA_FEATURES = -DNS_DISABLE_HTTP_WEBSOCKET -DNS_DISABLE_MQTT -DNS_DISABLE_SHA1 -DNS_DISABLE_MD5 \
+				 -DNS_DISABLE_JSON_RPC -DNS_DISABLE_SOCKETPAIR -DNS_DISABLE_DAV \
+				 -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_CGI \
+				 -DNS_DISABLE_FILESYSTEM
+
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
 CFLAGS = -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
-				 -Wno-parentheses \
-         -DICACHE_FLASH \
+         -Wno-parentheses -DICACHE_FLASH -DNS_ESP8266 \
          -DFAST='__attribute__((section(".fast.text")))' \
          -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
-         $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA)
+         $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
+		 $(FOSSA_FEATURES)
 
 ##
 ## == No config vars beyond this point.
@@ -106,6 +112,32 @@ APP_SRCS += krypton.c
 FEATURES += -DESP_SSL_KRYPTON -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 -DKRYPTON_DEBUG -DESP_SSL_KRYPTON_DEBUG
 endif
 
+CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
+AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
+LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
+OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
+# Temp solution for RTOS SDK
+OBJCOPY2 = $(OBJCOPY)
+
+ifeq "$(SDK)" "RTOS"
+IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
+		 $(SDK_PATH)/include/lwip $(SDK_PATH)/include/lwip/ipv4 \
+		 $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
+		 $(SDK_PATH)/lwip/include/
+		 
+APP_SRCS += fossa.c sj_fossa_http_client.c \
+			sj_simple_http.c sj_fossa.c
+			
+APP_LIBS += freertos mirom
+FEATURES += -DDISABLE_SHA1
+CFLAGS += -DRTOS_SDK -DRTOS_TODO
+OBJCOPY2 = /bin/true
+#TODO(alashkin): try to use the same LD script
+LD_SCRIPT = user/eagle.app.v6.RTOS.ld
+else
+APP_LIBS += m
+endif
+
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 SRCS = $(APP_SRCS) sj_version.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
@@ -121,29 +153,6 @@ FS_FILES = $(wildcard $(FS_DIR)/*)
 
 INCDIRS = $(addprefix -I,$(IPATH))
 LIBDIRS = $(addprefix -L,$(LPATH))
-
-CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
-LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
-# Temp solution for RTOS SDK
-OBJCOPY2 = $(OBJCOPY)
-
-ifeq "$(SDK)" "RTOS"
-IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
-		 $(SDK_PATH)/include/lwip $(SDK_PATH)/include/lwip/ipv4 \
-		 $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
-		 $(SDK_PATH)/lwip/include/
-
-APP_LIBS += freertos mirom
-FEATURES += -DDISABLE_SHA1
-CFLAGS += -DRTOS_SDK -DRTOS_TODO
-OBJCOPY2 = /bin/true
-#TODO(alashkin): try to use the same LD script
-LD_SCRIPT = user/eagle.app.v6.RTOS.ld
-else
-APP_LIBS += m
-endif
 
 V ?= $(VERBOSE)
 ifeq ("$(V)","1")
@@ -218,6 +227,9 @@ $(BUILD_DIR)/%.o: %.c
 # This one is for generated sources in build directory.
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 	$(compile)
+
+$(BUILD_DIR)/fossa.o: fossa.c
+	$(compile) -DEXCLUDE_COMMON
 
 # Generate version. Only regenrates if there are changes in objects.
 $(BUILD_DIR)/sj_version.c: $(APP_OBJS)

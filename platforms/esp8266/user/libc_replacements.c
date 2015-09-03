@@ -5,10 +5,11 @@
 
 #include <ets_sys.h>
 #include <v7.h>
-#include "v7_esp.h"
 #include <ctype.h>
 #include <sys/time.h>
 #include <stdint.h>
+#include "esp_missing_includes.h"
+#include "v7_esp.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -372,7 +373,8 @@ void _exit(int status) {
 }
 
 int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
-  tp->tv_sec = 42;
-  tp->tv_usec = 123;
+  uint32_t time = system_get_time();
+  tp->tv_sec = time / 1000000;
+  tp->tv_usec = time % 1000000;
   return 0;
 }

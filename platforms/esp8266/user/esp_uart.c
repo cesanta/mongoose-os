@@ -195,6 +195,7 @@ void uart_main_init(int baud_rate) {
   gpio_enable_intr(ETS_UART_INUM);
 }
 
+#ifndef RTOS_TODO
 static void uart_system_tx_char(char ch) {
   if (ch == '\n') {
     uart_tx_char(s_system_uartno, '\r');
@@ -203,6 +204,7 @@ static void uart_system_tx_char(char ch) {
     uart_tx_char(s_system_uartno, ch);
   }
 }
+#endif
 
 int uart_redirect_debug(int mode) {
   switch (mode) {

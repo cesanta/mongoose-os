@@ -169,7 +169,16 @@ struct dirent *readdir(DIR *dir);
 #include <cc3200_libc.h>
 #include <cc3200_socket.h>
 
-#elif /* not CC3200 */ !defined(NO_LIBC) && !defined(NO_BSD_SOCKETS)
+#elif /* not CC3200 */ defined(NS_ESP8266) && defined(RTOS_SDK)
+
+#include <lwip/sockets.h>
+#include <lwip/netdb.h>
+#include <lwip/dns.h>
+/* TODO(alashkin): check if zero is OK */
+#define SOMAXCONN 0
+#include <stdlib.h>
+
+#elif /* not ESP8266 RTOS */ !defined(NO_LIBC) && !defined(NO_BSD_SOCKETS)
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -188,7 +197,9 @@ struct dirent *readdir(DIR *dir);
 #include <stdarg.h>
 
 #ifndef AVR_LIBC
+#ifndef NS_ESP8266
 #define closesocket(x) close(x)
+#endif
 #ifndef __cdecl
 #define __cdecl
 #endif

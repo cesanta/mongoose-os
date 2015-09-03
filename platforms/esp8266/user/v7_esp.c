@@ -30,6 +30,7 @@
 #else
 
 #include <esp_system.h>
+#include <sj_fossa.h>
 
 #endif /* RTOS_SDK */
 
@@ -140,8 +141,8 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
-#ifndef RTOS_TODO
 void esp_init_conf(struct v7 *v7) {
+#ifndef RTOS_TODO
   int valid;
   unsigned char sha[20];
   SHA1_CTX ctx;
@@ -153,8 +154,10 @@ void esp_init_conf(struct v7 *v7) {
   valid = (memcmp(V7_DEV_CONF_SHA1, sha, 20) == 0);
 
   sj_init_conf(v7, valid ? V7_DEV_CONF_STR : NULL);
-}
+#else
+  sj_init_conf(v7, NULL);
 #endif
+}
 
 void init_v7(void *stack_base) {
   struct v7_create_opts opts;
@@ -191,10 +194,16 @@ void init_v7(void *stack_base) {
   init_wifi(v7);
 
 #ifndef RTOS_TODO
-  sj_init_simple_http_client(v7);
   init_data_gen_server(v7);
-  esp_init_conf(v7);
 #endif
+
+  esp_init_conf(v7);
+
+#ifdef RTOS_SDK
+  fossa_init();
+#endif
+
+  sj_init_simple_http_client(v7);
 
   v7_gc(v7, 1);
 }
