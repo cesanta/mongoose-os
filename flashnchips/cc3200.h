@@ -5,9 +5,15 @@
 
 #include "hal.h"
 
+class QCommandLineParser;
+
 namespace CC3200 {
 
 std::unique_ptr<HAL> HAL();
+
+void addOptions(QCommandLineParser *parser);
+
+extern const char kFormatFailFS[];
 
 }  // namespace CC3200
 

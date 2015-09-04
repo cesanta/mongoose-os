@@ -1,5 +1,6 @@
 #include "cc3200.h"
 
+#include <map>
 #include <memory>
 #include <vector>
 #ifdef Q_OS_OSX
@@ -34,6 +35,8 @@
 
 namespace CC3200 {
 
+const char kFormatFailFS[] = "cc3200-format-sflash";
+
 namespace {
 
 const int kSerialSpeed = 921600;
@@ -54,6 +57,8 @@ const char kOpcodeStartUpload = 0x21;
 const char kOpcodeFinishUpload = 0x22;
 
 const char kOpcodeFileChunk = 0x24;
+
+const char kOpcodeFormatFlash = 0x28;
 
 const char kOpcodeGetFileInfo = 0x2A;
 const char kOpcodeReadFileChunk = 0x2B;
@@ -391,6 +396,24 @@ class FlasherImpl : public Flasher {
       }
       overwrite_spiffs_ = value.toBool();
       return util::Status::OK;
+    } else if (name == kFormatFailFS) {
+      if (value.type() != QVariant::String) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be string");
+      }
+      const std::map<std::string, int> size = {
+          {"512", 512},
+          {"1M", 1024},
+          {"2M", 2 * 1024},
+          {"4M", 4 * 1024},
+          {"8M", 8 * 1024},
+          {"16M", 16 * 1024},
+      };
+      if (size.find(value.toString().toStdString()) == size.end()) {
+        return util::Status(util::error::INVALID_ARGUMENT, "invalid size");
+      }
+      failfs_size_ = size.find(value.toString().toStdString())->second;
+      return util::Status::OK;
     }
     return util::Status(util::error::INVALID_ARGUMENT, "Unknown option");
   }
@@ -400,7 +423,7 @@ class FlasherImpl : public Flasher {
     util::Status r;
 
     QStringList boolOpts({kSkipIdGenerationOption, kOverwriteFSOption});
-    QStringList stringOpts({kIdDomainOption});
+    QStringList stringOpts({kIdDomainOption, kFormatFailFS});
 
     for (const auto& opt : boolOpts) {
       auto s = setOption(opt, parser.isSet(opt));
@@ -481,6 +504,12 @@ class FlasherImpl : public Flasher {
     st = switchToNWPBootloader();
     if (!st.ok()) {
       return st;
+    }
+    if (failfs_size_ > 0) {
+      st = formatFailFS(failfs_size_);
+      if (!st.ok()) {
+        return st;
+      }
     }
     emit statusMessage(tr("Uploading the firmware image..."), true);
     st = uploadFW(image_, kFWFilename);
@@ -970,6 +999,16 @@ class FlasherImpl : public Flasher {
     return uploadFW(image, fname);
   }
 
+  util::Status formatFailFS(int size) {
+    emit statusMessage(tr("Formatting SFLASH file system..."), true);
+    QByteArray payload;
+    QDataStream ps(&payload, QIODevice::WriteOnly);
+    ps.setByteOrder(QDataStream::BigEndian);
+    ps << quint8(kOpcodeFormatFlash) << quint32(2) << quint32(size / 4)
+       << quint32(0) << quint32(0) << quint32(2);
+    return sendPacket(port_, payload, 10000);
+  }
+
   mutable QMutex lock_;
   QByteArray image_;
   QByteArray spiffs_image_;
@@ -977,6 +1016,7 @@ class FlasherImpl : public Flasher {
   QString id_hostname_;
   bool skip_id_generation_ = false;
   bool overwrite_spiffs_ = false;
+  int failfs_size_ = -1;
   int progress_ = 0;
 };
 
@@ -1030,6 +1070,13 @@ class CC3200HAL : public HAL {
 
 std::unique_ptr<::HAL> HAL() {
   return std::move(std::unique_ptr<::HAL>(new CC3200HAL));
+}
+
+void addOptions(QCommandLineParser* parser) {
+  parser->addOptions({{kFormatFailFS,
+                       "Format SFLASH file system before flashing. Accepted "
+                       "sizes: 512, 1M, 2M, 4M, 8M, 16M.",
+                       "size"}});
 }
 
 }  // namespace CC3200

@@ -6,6 +6,7 @@
 #include <QCommandLineParser>
 #include <QObject>
 
+#include "cc3200.h"
 #include "cli.h"
 #include "dialog.h"
 #include "esp8266.h"
@@ -131,6 +132,7 @@ int main(int argc, char* argv[]) {
         "filename"}});
 
   ESP8266::addOptions(&parser);
+  CC3200::addOptions(&parser);
 
 #ifdef Q_OS_MAC
   // Finder adds "-psn_*" argument whenever it shows the Gatekeeper prompt.
