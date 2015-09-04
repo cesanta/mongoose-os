@@ -9976,7 +9976,7 @@ static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   ast_off_t outer_last_var_node = v7->last_var_node;
   int saved_in_strict = v7->pstate.in_strict;
   v7->last_var_node = start;
-  ast_modify_skip(a, start, 1, AST_FUNC_FIRST_VAR_SKIP);
+  ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
   if (parse_use_strict(v7, a) == V7_OK) {
     v7->pstate.in_strict = 1;
   }
@@ -9998,6 +9998,7 @@ static unsigned long get_column(const char *code, const char *pos) {
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
                              int verbose) {
   enum v7_err err;
+  const char *p;
   v7->pstate.source_code = v7->pstate.pc = src;
   v7->pstate.file_name = "<stdin>";
   v7->pstate.line_no = 1;
@@ -10006,6 +10007,21 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   v7->pstate.in_switch = 0;
 
   next_tok(v7);
+  /*
+   * setup initial state for "after newline" tracking.
+   * next_tok will consume our token and position the current line
+   * position at the beginning of the next token.
+   * While processing the first token, both the leading and the
+   * trailing newlines will be counted and thus it will create a spurious
+   * "after newline" condition at the end of the first token
+   * regardless if there is actually a newline after it.
+   */
+  for (p = src; isspace((int) *p); p++) {
+    if (*p == '\n') {
+      v7->pstate.prev_line_no++;
+    }
+  }
+
   err = parse_script(v7, a);
   if (a->has_overflow) {
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
@@ -10019,10 +10035,22 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   }
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
+    int line_len = 0;
+    for (p = v7->tok - col; *p != '\0' && *p != '\n'; p++) {
+      line_len++;
+    }
+
+    /* fixup line number: line_no points to the beginning of the next token */
+    for (; p < v7->pstate.pc; p++) {
+      if (*p == '\n') {
+        v7->pstate.line_no--;
+      }
+    }
+
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
                "parse error at at line %d col %lu:\n%.*s\n%*s^",
-               v7->pstate.line_no, col, (int) (col + v7->tok_len),
-               v7->tok - col, (int) col - 1, "");
+               v7->pstate.line_no, col, line_len, v7->tok - col, (int) col - 1,
+               "");
   }
   return err;
 }
