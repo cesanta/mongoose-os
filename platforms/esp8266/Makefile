@@ -11,7 +11,10 @@ ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
 VERBOSE ?= 0
 # Should be RTOS or OSS
-SDK = OSS
+SDK := $(shell echo $$SDK_FLAVOUR)
+ifndef SDK
+$(error SDK_FLAVOUR not defined)
+endif
 
 BUILD_DIR = build
 TOOLS_DIR = tools
@@ -35,10 +38,10 @@ LPATH = $(SDK_PATH)/lib
 APP_LIBS = cirom gcc hal pp phy net80211 lwip wpa main
 
 # linker script used for the above linkier step
-LD_SCRIPT	= user/eagle.app.30000.v6.ld
+LD_SCRIPT = user/eagle.app.30000.v6.ld
 
 # linker flags used to generate the main object file
-LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
+LDFLAGS = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 FW_FILE_1_ADDR = 0x00000
 FW_FILE_2_ADDR = 0x11000
@@ -74,16 +77,16 @@ SHIMS = -Dhmac_sha1=v7_hmac_sha1 \
 
 FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
            -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF \
-	         -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DNO_BSD_SOCKETS \
-					 -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
-					 -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
-					 -DV7_ESP_FLASH_ACCESS_EMUL -DV7_FORCE_STRICT_MODE \
-					 -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=1
+           -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DNO_BSD_SOCKETS \
+           -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
+           -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
+           -DV7_ESP_FLASH_ACCESS_EMUL -DV7_FORCE_STRICT_MODE \
+           -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=1
 
 FOSSA_FEATURES = -DNS_DISABLE_HTTP_WEBSOCKET -DNS_DISABLE_MQTT -DNS_DISABLE_SHA1 -DNS_DISABLE_MD5 \
-				 -DNS_DISABLE_JSON_RPC -DNS_DISABLE_SOCKETPAIR -DNS_DISABLE_DAV \
-				 -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_CGI \
-				 -DNS_DISABLE_FILESYSTEM
+                 -DNS_DISABLE_JSON_RPC -DNS_DISABLE_SOCKETPAIR -DNS_DISABLE_DAV \
+                 -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_CGI \
+                 -DNS_DISABLE_FILESYSTEM
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
@@ -94,7 +97,7 @@ CFLAGS = -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inlin
          -DFAST='__attribute__((section(".fast.text")))' \
          -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
          $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
-		 $(FOSSA_FEATURES)
+         $(FOSSA_FEATURES)
 
 ##
 ## == No config vars beyond this point.
@@ -121,13 +124,13 @@ OBJCOPY2 = $(OBJCOPY)
 
 ifeq "$(SDK)" "RTOS"
 IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
-		 $(SDK_PATH)/include/lwip $(SDK_PATH)/include/lwip/ipv4 \
-		 $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
-		 $(SDK_PATH)/lwip/include/
-		 
+         $(SDK_PATH)/include/lwip $(SDK_PATH)/include/lwip/ipv4 \
+         $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
+         $(SDK_PATH)/lwip/include/
+
 APP_SRCS += fossa.c sj_fossa_http_client.c \
-			sj_simple_http.c sj_fossa.c
-			
+            sj_simple_http.c sj_fossa.c
+
 APP_LIBS += freertos mirom
 FEATURES += -DDISABLE_SHA1
 CFLAGS += -DRTOS_SDK -DRTOS_TODO
@@ -163,25 +166,23 @@ endif
 vecho := @echo " "
 
 all: $(FW_DIR) $(BUILD_DIR) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) $(FW_FS_OUT)
-	$(Q) rm -f `ls $(FW_DIR)/* | \
-		grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT))$$'`
+	$(Q) rm -f `ls $(FW_DIR)/* \
+    | grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT))$$'`
 
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
-
 
 # Main output product: firmware files.
 $(FW_FILE_1_OUT) $(FW_FILE_2_OUT): $(APP_OUT)
 	$(vecho) "FW $(APP_OUT) -> $(FW_DIR)"
 	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 
-
 # -- Linking.
 
 define link
 $(vecho) "LD $@"
 $(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) \
-	$< -Wl,--end-group -o $@
+  $< -Wl,--end-group -o $@
 endef
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
@@ -236,8 +237,8 @@ $(BUILD_DIR)/sj_version.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
 	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
 	SHA=$$(git rev-parse HEAD | head -c 8); \
-  DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
-  echo "const char *sj_version = \"ESP8266-$$REF/$$DATE/$$SHA\";" > $@
+	DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
+	echo "const char *sj_version = \"ESP8266-$$REF/$$DATE/$$SHA\";" > $@
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
@@ -265,15 +266,15 @@ clean:
 
 flash: $(FW_OUT) $(FW_FS_OUT)
 	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
-		$(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
-		$(FW_FILE_2_ADDR) $(FW_FILE_2_OUT) \
-		$(FW_FS_ADDR) $(FW_FS_OUT)
+                  $(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
+                  $(FW_FILE_2_ADDR) $(FW_FILE_2_OUT) \
+                  $(FW_FS_ADDR) $(FW_FS_OUT)
 
 flash_no_fs: $(FW_OUT)
 	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
-		$(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
-		$(FW_FILE_2_ADDR) $(FW_FILE_2_OUT)
+                  $(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
+                  $(FW_FILE_2_ADDR) $(FW_FILE_2_OUT)
 
 flash_fs: $(FW_FS_OUT)
 	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
-		$(FW_FS_ADDR) $(FW_FS_OUT)
+                  $(FW_FS_ADDR) $(FW_FS_OUT)
