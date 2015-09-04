@@ -1037,6 +1037,8 @@ struct dirent *readdir(DIR *dir);
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
 #include <lwip/dns.h>
+#include <esp_libc.h>
+#define random() os_random()
 /* TODO(alashkin): check if zero is OK */
 #define SOMAXCONN 0
 #include <stdlib.h>
@@ -1178,11 +1180,11 @@ typedef struct {
   uint32_t state[5];
   uint32_t count[2];
   unsigned char buffer[64];
-} SHA1_CTX;
+} cs_sha1_ctx;
 
-void SHA1Init(SHA1_CTX *);
-void SHA1Update(SHA1_CTX *, const unsigned char *data, uint32_t len);
-void SHA1Final(unsigned char digest[20], SHA1_CTX *);
+void cs_sha1_init(cs_sha1_ctx *);
+void cs_sha1_update(cs_sha1_ctx *, const unsigned char *data, uint32_t len);
+void cs_sha1_final(unsigned char digest[20], cs_sha1_ctx *);
 void hmac_sha1(const unsigned char *key, size_t key_len,
                const unsigned char *text, size_t text_len,
                unsigned char out[20]);
@@ -4381,7 +4383,7 @@ static uint32_t blk0(union char64long16 *block, int i) {
   z += (w ^ x ^ y) + blk(i) + 0xCA62C1D6 + rol(v, 5); \
   w = rol(w, 30);
 
-void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
+void cs_sha1_transform(uint32_t state[5], const unsigned char buffer[64]) {
   uint32_t a, b, c, d, e;
   union char64long16 block[1];
 
@@ -4487,7 +4489,7 @@ void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
   (void) e;
 }
 
-void SHA1Init(SHA1_CTX *context) {
+void cs_sha1_init(cs_sha1_ctx *context) {
   context->state[0] = 0x67452301;
   context->state[1] = 0xEFCDAB89;
   context->state[2] = 0x98BADCFE;
@@ -4496,7 +4498,7 @@ void SHA1Init(SHA1_CTX *context) {
   context->count[0] = context->count[1] = 0;
 }
 
-void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
+void cs_sha1_update(cs_sha1_ctx *context, const unsigned char *data, uint32_t len) {
   uint32_t i, j;
 
   j = context->count[0];
@@ -4505,9 +4507,9 @@ void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
   j = (j >> 3) & 63;
   if ((j + len) > 63) {
     memcpy(&context->buffer[j], data, (i = 64 - j));
-    SHA1Transform(context->state, context->buffer);
+    cs_sha1_transform(context->state, context->buffer);
     for (; i + 63 < len; i += 64) {
-      SHA1Transform(context->state, &data[i]);
+      cs_sha1_transform(context->state, &data[i]);
     }
     j = 0;
   } else
@@ -4515,7 +4517,7 @@ void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
   memcpy(&context->buffer[j], &data[i], len - i);
 }
 
-void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
+void cs_sha1_final(unsigned char digest[20], cs_sha1_ctx *context) {
   unsigned i;
   unsigned char finalcount[8], c;
 
@@ -4525,12 +4527,12 @@ void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
                                      255);
   }
   c = 0200;
-  SHA1Update(context, &c, 1);
+  cs_sha1_update(context, &c, 1);
   while ((context->count[0] & 504) != 448) {
     c = 0000;
-    SHA1Update(context, &c, 1);
+    cs_sha1_update(context, &c, 1);
   }
-  SHA1Update(context, finalcount, 8);
+  cs_sha1_update(context, finalcount, 8);
   for (i = 0; i < 20; i++) {
     digest[i] =
         (unsigned char) ((context->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
@@ -4542,13 +4544,13 @@ void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
 void hmac_sha1(const unsigned char *key, size_t keylen,
                const unsigned char *data, size_t datalen,
                unsigned char out[20]) {
-  SHA1_CTX ctx;
+  cs_sha1_ctx ctx;
   unsigned char buf1[64], buf2[64], tmp_key[20], i;
 
   if (keylen > sizeof(buf1)) {
-    SHA1Init(&ctx);
-    SHA1Update(&ctx, key, keylen);
-    SHA1Final(tmp_key, &ctx);
+    cs_sha1_init(&ctx);
+    cs_sha1_update(&ctx, key, keylen);
+    cs_sha1_final(tmp_key, &ctx);
     key = tmp_key;
     keylen = sizeof(tmp_key);
   }
@@ -4563,15 +4565,15 @@ void hmac_sha1(const unsigned char *key, size_t keylen,
     buf2[i] ^= 0x5c;
   }
 
-  SHA1Init(&ctx);
-  SHA1Update(&ctx, buf1, sizeof(buf1));
-  SHA1Update(&ctx, data, datalen);
-  SHA1Final(out, &ctx);
+  cs_sha1_init(&ctx);
+  cs_sha1_update(&ctx, buf1, sizeof(buf1));
+  cs_sha1_update(&ctx, data, datalen);
+  cs_sha1_final(out, &ctx);
 
-  SHA1Init(&ctx);
-  SHA1Update(&ctx, buf2, sizeof(buf2));
-  SHA1Update(&ctx, out, 20);
-  SHA1Final(out, &ctx);
+  cs_sha1_init(&ctx);
+  cs_sha1_update(&ctx, buf2, sizeof(buf2));
+  cs_sha1_update(&ctx, out, 20);
+  cs_sha1_final(out, &ctx);
 }
 
 #endif /* EXCLUDE_COMMON */
@@ -5461,10 +5463,10 @@ static void v7_md5(const char *data, size_t len, char buf[16]) {
 }
 
 static void v7_sha1(const char *data, size_t len, char buf[20]) {
-  SHA1_CTX ctx;
-  SHA1Init(&ctx);
-  SHA1Update(&ctx, (unsigned char *) data, len);
-  SHA1Final((unsigned char *) buf, &ctx);
+  cs_sha1_ctx ctx;
+  cs_sha1_init(&ctx);
+  cs_sha1_update(&ctx, (unsigned char *) data, len);
+  cs_sha1_final((unsigned char *) buf, &ctx);
 }
 
 static void bin2str(char *to, const unsigned char *p, size_t len) {

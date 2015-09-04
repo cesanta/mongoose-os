@@ -146,11 +146,11 @@ void esp_init_conf(struct v7 *v7) {
 #ifndef RTOS_TODO
   int valid;
   unsigned char sha[20];
-  SHA1_CTX ctx;
-  SHA1Init(&ctx);
-  SHA1Update(&ctx, (unsigned char *) V7_DEV_CONF_STR,
-             strnlen(V7_DEV_CONF_STR, 0x1000 - 20));
-  SHA1Final(sha, &ctx);
+  cs_sha1_ctx ctx;
+  cs_sha1_init(&ctx);
+  cs_sha1_update(&ctx, (unsigned char *) V7_DEV_CONF_STR,
+                 strnlen(V7_DEV_CONF_STR, 0x1000 - 20));
+  cs_sha1_final(sha, &ctx);
 
   valid = (memcmp(V7_DEV_CONF_SHA1, sha, 20) == 0);
 
@@ -192,7 +192,6 @@ void init_v7(void *stack_base) {
   init_gpiojs(v7);
   init_i2cjs(v7);
   init_spijs(v7);
-
   init_wifi(v7);
 
 #ifndef RTOS_TODO

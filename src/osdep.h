@@ -175,6 +175,8 @@ struct dirent *readdir(DIR *dir);
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
 #include <lwip/dns.h>
+#include <esp_libc.h>
+#define random() os_random()
 /* TODO(alashkin): check if zero is OK */
 #define SOMAXCONN 0
 #include <stdlib.h>
