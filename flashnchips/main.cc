@@ -1,9 +1,11 @@
 #include <string.h>
 #include <iostream>
+#include <fstream>
 
 #include <QApplication>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QDateTime>
 #include <QObject>
 
 #include "cc3200.h"
@@ -20,6 +22,7 @@ using std::cerr;
 using std::endl;
 
 static int verbosity = 0;
+static std::ostream* logfile = &cerr;
 
 void outputHandler(QtMsgType type, const QMessageLogContext& context,
                    const QString& msg) {
@@ -27,63 +30,63 @@ void outputHandler(QtMsgType type, const QMessageLogContext& context,
   switch (type) {
     case QtDebugMsg:
       if (verbosity >= 4) {
-        cerr << "DEBUG: ";
+        *logfile << "DEBUG: ";
         if (context.file != NULL) {
-          cerr << context.file << ":" << context.line;
+          *logfile << context.file << ":" << context.line;
         }
         if (context.function != NULL) {
-          cerr << " (" << context.function << "): ";
+          *logfile << " (" << context.function << "): ";
         }
-        cerr << localMsg.constData() << endl;
+        *logfile << localMsg.constData() << endl;
       }
       break;
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 5, 0))
     case QtInfoMsg:
       if (verbosity >= 3) {
-        cerr << "INFO: ";
+        *logfile << "INFO: ";
         if (context.file != NULL) {
-          cerr << context.file << ":" << context.line;
+          *logfile << context.file << ":" << context.line;
         }
         if (context.function != NULL) {
-          cerr << " (" << context.function << "): ";
+          *logfile << " (" << context.function << "): ";
         }
-        cerr << localMsg.constData() << endl;
+        *logfile << localMsg.constData() << endl;
       }
       break;
 #endif
     case QtWarningMsg:
       if (verbosity >= 2) {
-        cerr << "WARNING: ";
+        *logfile << "WARNING: ";
         if (context.file != NULL) {
-          cerr << context.file << ":" << context.line;
+          *logfile << context.file << ":" << context.line;
         }
         if (context.function != NULL) {
-          cerr << " (" << context.function << "): ";
+          *logfile << " (" << context.function << "): ";
         }
-        cerr << localMsg.constData() << endl;
+        *logfile << localMsg.constData() << endl;
       }
       break;
     case QtCriticalMsg:
       if (verbosity >= 1) {
-        cerr << "CRITICAL: ";
+        *logfile << "CRITICAL: ";
         if (context.file != NULL) {
-          cerr << context.file << ":" << context.line;
+          *logfile << context.file << ":" << context.line;
         }
         if (context.function != NULL) {
-          cerr << " (" << context.function << "): ";
+          *logfile << " (" << context.function << "): ";
         }
-        cerr << localMsg.constData() << endl;
+        *logfile << localMsg.constData() << endl;
       }
       break;
     case QtFatalMsg:
-      cerr << "FATAL: ";
+      *logfile << "FATAL: ";
       if (context.file != NULL) {
-        cerr << context.file << ":" << context.line;
+        *logfile << context.file << ":" << context.line;
       }
       if (context.function != NULL) {
-        cerr << " (" << context.function << "): ";
+        *logfile << " (" << context.function << "): ";
       }
-      cerr << localMsg.constData() << endl;
+      *logfile << localMsg.constData() << endl;
       abort();
   }
 }
@@ -114,6 +117,7 @@ int main(int argc, char* argv[]) {
         "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
         "print debug output.",
         "level", "1"},
+       {"log", "Redirect logging into a file.", "filename"},
        {"port", "Serial port to use.", "port"},
        {"flash-baud-rate",
         "Baud rate to use with a given serial port while flashing.",
@@ -160,9 +164,20 @@ int main(int argc, char* argv[]) {
   // options.
   parser.parse(commandline);
 
+  if (parser.isSet("log")) {
+    logfile = new std::ofstream(parser.value("log").toStdString(),
+                                std::ios_base::app);
+    if (logfile->fail()) {
+      cerr << "Failed to open log file." << endl;
+      return 1;
+    }
+    *logfile << "\n---------- Log started on "
+             << QDateTime::currentDateTime().toString(Qt::ISODate).toStdString()
+             << endl;
+  }
   qInstallMessageHandler(outputHandler);
   if (parser.isSet("debug")) {
-    verbosity = 3;
+    verbosity = 4;
   } else if (parser.isSet("V")) {
     bool ok;
     verbosity = parser.value("V").toInt(&ok, 10);
