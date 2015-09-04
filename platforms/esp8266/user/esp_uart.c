@@ -195,7 +195,6 @@ void uart_main_init(int baud_rate) {
   gpio_enable_intr(ETS_UART_INUM);
 }
 
-#ifndef RTOS_TODO
 static void uart_system_tx_char(char ch) {
   if (ch == '\n') {
     uart_tx_char(s_system_uartno, '\r');
@@ -204,7 +203,6 @@ static void uart_system_tx_char(char ch) {
     uart_tx_char(s_system_uartno, ch);
   }
 }
-#endif
 
 int uart_redirect_debug(int mode) {
   switch (mode) {
@@ -242,7 +240,5 @@ void uart_debug_init(unsigned periph, unsigned baud_rate) {
   /* Magic: set 8-N-1 mode */
   WRITE_PERI_REG(UART_CONF_TX(UART_DEBUG), 0xC);
 
-#ifndef RTOS_TODO
   os_install_putc1((void *) uart_system_tx_char);
-#endif
 }
