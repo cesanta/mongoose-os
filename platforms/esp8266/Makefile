@@ -179,6 +179,10 @@ $(FW_FILE_1_OUT) $(FW_FILE_2_OUT): $(APP_OUT)
 
 # -- Linking.
 
+ifeq "$(SDK)" "RTOS"
+LDFLAGS += -Wl,--wrap,user_fatal_exception_handler
+endif
+
 define link
 $(vecho) "LD $@"
 $(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) \
@@ -202,7 +206,7 @@ $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
-	$(Q) echo "void user_init(void) {}" > $@
+	$(Q) echo "void user_init(void) {}; void __wrap_user_fatal_exception_handler() {}" > $@
 
 
 # Main app lib.

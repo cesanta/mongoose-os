@@ -23,6 +23,10 @@
 
 #include <c_types.h>
 #include <xtensa/xtruntime.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
+void system_soft_wdt_feed();
 
 #endif /* RTOS_SDK */
 
@@ -211,11 +215,15 @@ void gdb_server() {
    */
   xthal_set_intenable(0);
   for (;;) {
+#ifdef RTOS_SDK
+    system_soft_wdt_feed();
+#endif
     int ch = gdb_read_uart();
     if (ch != -1) gdb_handle_char(ch);
   }
 }
 
+#ifndef RTOS_SDK
 /*
  * xtos low level exception handler (in rom)
  * populates an xtos_regs structure with (most) registers
@@ -245,7 +253,46 @@ FAST void gdb_exception_handler(struct xtos_saved_regs *frame) {
   _ResetVector();
 }
 
+#else /* !RTOS_SDK */
+
+void __wrap_user_fatal_exception_handler(int cause) {
+  xTaskHandle th = xTaskGetCurrentTaskHandle();
+  /*
+   * The task handle should be opaque but we'll assume here it's
+   * a pointer to a tskTaskControlBlock structure, whose first field is:
+   *
+   * volatile portSTACK_TYPE *pxTopOfStack;
+   *
+   * It's documentation at least guarantees that it's the first element.
+   * Before an exception handler is invoked extensa rtos will save the regiters
+   * in a stack frame. We captured the structure of that frame in
+   * xtensa_rtos_stack_frame.
+   */
+  struct xtensa_rtos_stack_frame *frame =
+      (struct xtensa_rtos_stack_frame *) *(void **) th;
+
+  uint32_t vaddr = RSR(EXCVADDR);
+  printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
+
+  memcpy(&regs.a[0], frame->a, sizeof(frame->a));
+  regs.pc = frame->pc;
+  regs.sar = frame->sar;
+  regs.ps = frame->ps;
+  regs.litbase = RSR(LITBASE);
+  gdb_server();
+
+  while (1) {
+    system_soft_wdt_feed();
+  }
+}
+
+#endif /* !RTOS_SDK */
+
 void gdb_init() {
+/*
+ * The RTOS build intercepts all user exceptions with
+ * __wrap_user_fatal_exception_handler
+ */
 #ifndef RTOS_TODO
   char causes[] = {EXCCAUSE_ILLEGAL,          EXCCAUSE_INSTR_ERROR,
                    EXCCAUSE_LOAD_STORE_ERROR, EXCCAUSE_DIVIDE_BY_ZERO,
@@ -255,8 +302,6 @@ void gdb_init() {
   for (i = 0; i < (int) sizeof(causes); i++) {
     _xtos_set_exception_handler(causes[i], gdb_exception_handler);
   }
-#else
-  printf("_xtos_set_exception_handler missing\n");
 #endif
 }
 

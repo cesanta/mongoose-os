@@ -13,6 +13,8 @@
 #include "v7_esp_hw.h"
 #include "esp_missing_includes.h"
 
+#ifndef RTOS_SDK
+
 /*
  * Only the L32I, L32I.N, and L32R load instructions can access InstRAM
  * and InstROM locations. Any other memory access with in those ranges will
@@ -76,12 +78,13 @@ void flash_emul_exception_handler(struct xtos_saved_regs *frame) {
 }
 
 void flash_emul_init() {
-#ifndef RTOS_TODO
   _xtos_set_exception_handler(EXCCAUSE_LOAD_STORE_ERROR,
                               flash_emul_exception_handler);
-#else
-  printf("_xtos_set_exception_handler missing\n");
-#endif
 }
+
+#else
+void flash_emul_init() {
+}
+#endif /* RTOS_SDK */
 
 #endif /* V7_ESP_FLASH_ACCESS_EMUL */

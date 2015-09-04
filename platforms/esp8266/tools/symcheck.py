@@ -6,6 +6,7 @@ import sys
 
 SYM_WHITELIST = set("""
 user_init
+__wrap_user_fatal_exception_handler
 """.strip().split())
 
 def GetSymbols(fname):
