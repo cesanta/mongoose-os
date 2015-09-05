@@ -575,7 +575,7 @@ class FlasherImpl : public Flasher {
       }
     }
 
-    if (merge_flash_filesystem_) {
+    if (merge_flash_filesystem_ && images_.contains(spiffsBlockOffset)) {
       emit statusMessage(tr("Reading file system image..."), true);
 
       auto res = mergeFlashLocked();
