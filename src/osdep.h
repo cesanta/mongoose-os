@@ -119,6 +119,7 @@
 #else
 #define fseeko(x, y, z) fseek((x), (y), (z))
 #endif
+#define random() rand()
 typedef int socklen_t;
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
