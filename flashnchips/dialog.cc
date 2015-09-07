@@ -592,6 +592,7 @@ void MainDialog::loadFirmware() {
     ui_.statusMessage->setText(tr("port is not connected"));
     return;
   }
+  // TODO(imax): make the flasher set the speed instead.
   int speed = 230400;
   if (parser_->isSet("flash-baud-rate")) {
     speed = parser_->value("flash-baud-rate").toInt();

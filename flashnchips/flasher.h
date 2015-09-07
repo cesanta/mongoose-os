@@ -45,6 +45,7 @@ class Flasher : public QObject {
   static const char kIdDomainOption[];
   static const char kSkipIdGenerationOption[];
   static const char kOverwriteFSOption[];
+  static const char kFlashBaudRate[];
 
 signals:
   void progress(int blocksWritten);

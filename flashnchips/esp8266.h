@@ -25,6 +25,8 @@ std::unique_ptr<HAL> HAL();
 extern const char kFlashParamsOption[];
 extern const char kDisableEraseWorkaroundOption[];
 extern const char kSkipReadingFlashParamsOption[];
+extern const char kFlashingDataPort[];
+extern const char kInvertDTRRTS[];
 
 }  // namespace ESP8266
 

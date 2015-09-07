@@ -7,6 +7,7 @@
 const char Flasher::kIdDomainOption[] = "id-domain";
 const char Flasher::kSkipIdGenerationOption[] = "skip-id-generation";
 const char Flasher::kOverwriteFSOption[] = "overwrite-flash-fs";
+const char Flasher::kFlashBaudRate[] = "flash-baud-rate";
 
 QByteArray randomDeviceID(const QString& domain) {
   qsrand(QDateTime::currentMSecsSinceEpoch() & 0xFFFFFFFF);
