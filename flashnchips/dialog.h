@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <QDir>
+#include <QFile>
 #include <QMainWindow>
 #include <QMultiMap>
 #include <QNetworkConfigurationManager>
@@ -88,6 +89,7 @@ signals:
   QStringList command_queue_;
   std::unique_ptr<HAL> hal_;
   bool scroll_after_flashing_ = false;
+  std::unique_ptr<QFile> console_log_;
 
   QNetworkConfigurationManager net_mgr_;
 

@@ -177,6 +177,15 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
           &QApplication::aboutQt);
   connect(ui_.actionAbout, &QAction::triggered, this,
           &MainDialog::showAboutBox);
+
+  if (parser_->isSet("console-log")) {
+    console_log_.reset(new QFile(parser_->value("console-log")));
+    if (!console_log_->open(QIODevice::ReadWrite | QIODevice::Append)) {
+      qCritical() << "Failed to open console log file:"
+                  << console_log_->errorString();
+      console_log_->reset();
+    }
+  }
 }
 
 void MainDialog::setState(State newState) {
@@ -350,16 +359,19 @@ void MainDialog::readSerial() {
     qDebug() << "readSerial called with NULL port";
     return;
   }
-  QString data = serial_port_->readAll();
+  QByteArray data = serial_port_->readAll();
   if (data.length() >= 2 && data.right(2) == kPromptEnd) {
     emit gotPrompt();
+  }
+  if (console_log_) {
+    console_log_->write(data);
   }
   auto* scroll = ui_.terminal->verticalScrollBar();
   bool autoscroll = scroll->value() == scroll->maximum();
   // Appending a bunch of text the hard way, because
   // QPlainTextEdit::appendPlainText creates a new paragraph on each call,
   // making it look like extra newlines.
-  const QStringList parts = data.split('\n');
+  const QStringList parts = QString(data).split('\n');
   QTextCursor cursor = QTextCursor(ui_.terminal->document());
   cursor.movePosition(QTextCursor::End);
   for (int i = 0; i < parts.length() - 1; i++) {

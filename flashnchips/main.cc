@@ -133,7 +133,11 @@ int main(int argc, char* argv[]) {
         "If set, device ID won't be generated and flashed."},
        {"generate-id",
         "Generate a file with device ID in a format suitable for flashing.",
-        "filename"}});
+        "filename"},
+       {"console-log",
+        "If set, bytes read from a serial port in console mode will be "
+        "appended to the given file.",
+        "file"}});
 
   ESP8266::addOptions(&parser);
   CC3200::addOptions(&parser);
