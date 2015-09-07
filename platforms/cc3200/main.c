@@ -21,7 +21,7 @@
 
 #include "oslib/osi.h"
 
-#include "sj_fossa.h"
+#include "sj_mongoose.h"
 #include "sj_i2c_js.h"
 #include "sj_prompt.h"
 #include "sj_timers.h"
@@ -99,7 +99,7 @@ static void v7_task(void *arg) {
   if (init_fs(v7) != 0) {
     fprintf(stderr, "FS initialization failed.\n");
   }
-  fossa_init();
+  mongoose_init();
   sj_init_simple_http_client(v7);
   init_i2cjs(v7);
   v7_val_t res;
@@ -107,7 +107,7 @@ static void v7_task(void *arg) {
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;
-    fossa_poll(FOSSA_POLL_LENGTH_MS);
+    mongoose_poll(FOSSA_POLL_LENGTH_MS);
     if (osi_MsgQRead(&s_v7_q, &pe, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (pe.type) {
       case PROMPT_CHAR_EVENT: {

@@ -25,9 +25,9 @@ typedef unsigned short u_short;
 #include <unistd.h>
 #endif
 
-#include <fossa.h>
+#include <mongoose.h>
 #include <sj_prompt.h>
-#include <sj_fossa.h>
+#include <sj_mongoose.h>
 
 #ifdef __APPLE__
 v7_val_t *bsd_timer_cb = NULL;
@@ -178,7 +178,7 @@ static void *stdin_thread(void *param) {
   return NULL;
 }
 
-static void prompt_handler(struct ns_connection *nc, int ev, void *ev_data) {
+static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   size_t i;
   struct mbuf *io = &nc->recv_mbuf;
   switch (ev) {
@@ -199,12 +199,12 @@ static void prompt_handler(struct ns_connection *nc, int ev, void *ev_data) {
 
 void sj_prompt_init_hal() {
   int fds[2];
-  if (!ns_socketpair((sock_t *)fds, SOCK_STREAM)) {
+  if (!mg_socketpair((sock_t *)fds, SOCK_STREAM)) {
     printf("cannot create a socketpair\n");
     exit(1);
   }
-  ns_start_thread(stdin_thread, (void *) (uintptr_t) fds[1]);
-  ns_add_sock(&sj_mgr, fds[0], prompt_handler);
+  mg_start_thread(stdin_thread, (void *) (uintptr_t) fds[1]);
+  mg_add_sock(&sj_mgr, fds[0], prompt_handler);
 }
 
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,

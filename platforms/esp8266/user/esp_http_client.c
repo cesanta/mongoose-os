@@ -52,7 +52,7 @@ struct http_ctx {
 };
 
 /* no idea what is this */
-ip_addr_t probably_dns_ip;
+ip_addr_t probably_dmg_ip;
 
 static void http_free(struct espconn *conn) {
   free(conn->proto.tcp);
@@ -146,7 +146,7 @@ static void http_error_cb(void *arg, int8_t err) {
  * If resolved successfuly it will connect. Otherwise invokes
  * user callback as cb(undefined, error_message)
  */
-static void http_get_dns_cb(const char *name, ip_addr_t *ipaddr, void *arg) {
+static void http_get_dmg_cb(const char *name, ip_addr_t *ipaddr, void *arg) {
   /* WIP: for now return the dns address as if it were the `get` response */
   struct espconn *conn = (struct espconn *) arg;
   struct http_ctx *ctx = (struct http_ctx *) conn->proto.tcp;
@@ -262,7 +262,7 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
     memcpy(ctx->body_a, body, body_len);
   }
 
-  espconn_gethostbyname(client, ctx->host, &probably_dns_ip, http_get_dns_cb);
+  espconn_gethostbyname(client, ctx->host, &probably_dmg_ip, http_get_dmg_cb);
 
   return 1;
 

@@ -11,8 +11,8 @@
 #include <string.h>
 #include <sj_i2c_js.h>
 #include <sj_spi_js.h>
-#include <sj_fossa.h>
-#include <sj_fossa_ws_client.h>
+#include <sj_mongoose.h>
+#include <sj_mongoose_ws_client.h>
 #include <sj_gpio_js.h>
 
 #include "smartjs.h"
@@ -57,7 +57,7 @@ void init_smartjs(struct v7 *_v7) {
   sj_init_v7_ext(v7);
   init_conf(v7);
 
-  fossa_init();
+  mongoose_init();
   sj_init_simple_http_client(v7);
   sj_init_ws_client(v7);
 

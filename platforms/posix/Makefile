@@ -1,5 +1,5 @@
 V7_PATH ?= ../../../v7
-FOSSA_PATH = ?= ../../../fossa
+MONGOOSE_PATH = ?= ../../../mongoose
 SRC_PATH ?= ../../src
 COMMON_PATH ?= ../../../common
 CLUBBY_PATH ?= $(SRC_PATH)
@@ -14,18 +14,18 @@ V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
 			  -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
 			  -DNS_ENABLE_THREADS -DSJ_PROMPT_DISABLE_ECHO -DV7_ENABLE__StackTrace
 SJ_FEATURES =
-FOSSA_FEATURES =
+MONGOOSE_FEATURES =
 
-INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
+INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(MONGOOSE_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
-			sj_simple_http.c fossa.c sj_i2c_js.c sj_spi_js.c sj_fossa.c \
-			sj_fossa_http_client.c sj_fossa_ws_client.c sj_gpio_js.c \
+			sj_simple_http.c mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
+			sj_mongoose_http_client.c sj_mongoose_ws_client.c sj_gpio_js.c \
 			sj_prompt.c sj_timers.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -Wno-pragmas -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(FOSSA_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
+CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(MONGOOSE_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
 
 ifeq ($(OS),Windows_NT)
   PLATFORM="WIN"
@@ -39,11 +39,11 @@ else
 endif
 
 ifeq "$(SSL)" "OpenSSL"
-  FOSSA_FEATURES += -DNS_ENABLE_SSL
+  MONGOOSE_FEATURES += -DNS_ENABLE_SSL
   ADD_LIBS += ssl crypto
   ifeq ($(PLATFORM), "WIN")
     ADD_LIBS += gdi32
-  endif 
+  endif
 endif
 
 # Non Linux
@@ -57,7 +57,7 @@ ifneq ($(PLATFORM), "WIN")
   V7_FEATURES += -DDISABLE_MD5
 endif
 
-# Linux 
+# Linux
 ifeq ($(PLATFORM), "LINUX")
   ADD_LIBS += rt
 endif
@@ -83,7 +83,7 @@ LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
-VPATH = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(FOSSA_PATH)
+VPATH = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(MONGOOSE_PATH)
 
 FS = $(wildcard $(SRC_PATH)/js/*.js) $(CLUBBY_PATH)/clubby.js
 
@@ -105,7 +105,7 @@ $(BUILD_DIR):
 $(BUILD_DIR)/%.o: %.c
 	$(compile)
 
-$(BUILD_DIR)/fossa.o: fossa.c
+$(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c

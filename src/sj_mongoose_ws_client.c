@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <v7.h>
-#include <fossa.h>
+#include <mongoose.h>
 #include <sj_hal.h>
 #include <sj_v7_ext.h>
-#include <sj_fossa.h>
+#include <sj_mongoose.h>
 
 #define WEBSOCKET_OPEN v7_create_number(1)
 #define WEBSOCKET_CLOSED v7_create_number(2)
@@ -45,7 +45,7 @@ static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
   }
 }
 
-static void ws_ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
+static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   struct websocket_message *wm = (struct websocket_message *) ev_data;
   struct user_data *ud = (struct user_data *) nc->user_data;
   struct v7 *v7 = ud->v7;
@@ -58,7 +58,7 @@ static void ws_ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
           int tmp = asprintf(&proto, "Sec-WebSocket-Protocol: %s\n", ud->proto);
           (void) tmp; /* Shutup compiler */
         }
-        ns_send_websocket_handshake(nc, "/", proto);
+        mg_send_websocket_handshake(nc, "/", proto);
         if (proto != NULL) {
           free(proto);
         }
@@ -116,7 +116,7 @@ static void ws_ev_handler(struct ns_connection *nc, int ev, void *ev_data) {
 *
 */
 static v7_val_t sj_ws_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  struct ns_connection *nc;
+  struct mg_connection *nc;
   struct user_data *ud;
   v7_val_t urlv = v7_array_get(v7, args, 0);
   v7_val_t subprotov = v7_array_get(v7, args, 1);
@@ -139,16 +139,16 @@ static v7_val_t sj_ws_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
       use_ssl = 1;
     }
 
-    nc = ns_connect(&sj_mgr, url, ws_ev_handler);
+    nc = mg_connect(&sj_mgr, url, ws_ev_handler);
     if (nc == NULL) v7_throw(v7, "error creating the connection");
 #ifdef NS_ENABLE_SSL
     if (use_ssl) {
-      ns_set_ssl(nc, NULL, NULL);
+      mg_set_ssl(nc, NULL, NULL);
     }
 #endif
 
     (void) use_ssl;
-    ns_set_protocol_http_websocket(nc);
+    mg_set_protocol_http_websocket(nc);
 
     ud = calloc(1, sizeof(*ud));
     ud->v7 = v7;
@@ -173,7 +173,7 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
                                v7_val_t args) {
   v7_val_t datav = v7_array_get(v7, args, 0);
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
-  struct ns_connection *nc;
+  struct mg_connection *nc;
   const char *data;
   size_t len;
 
@@ -183,24 +183,24 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
   }
 
   if (!v7_is_foreign(ncv) ||
-      (nc = (struct ns_connection *) v7_to_foreign(ncv)) == NULL) {
+      (nc = (struct mg_connection *) v7_to_foreign(ncv)) == NULL) {
     v7_throw(v7, "ws not connected");
     return v7_create_undefined();
   }
 
   data = v7_to_string(v7, &datav, &len);
-  ns_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
+  mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
 
   return v7_create_undefined();
 }
 
 static v7_val_t WebSocket_close(struct v7 *v7, v7_val_t this_obj,
                                 v7_val_t args) {
-  struct ns_connection *nc;
+  struct mg_connection *nc;
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   (void) args;
   if (v7_is_foreign(ncv) &&
-      (nc = (struct ns_connection *) v7_to_foreign(ncv)) != NULL) {
+      (nc = (struct mg_connection *) v7_to_foreign(ncv)) != NULL) {
     nc->flags |= NSF_CLOSE_IMMEDIATELY;
   }
   return v7_create_undefined();

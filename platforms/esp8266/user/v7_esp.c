@@ -31,7 +31,7 @@
 #else
 
 #include <esp_system.h>
-#include <sj_fossa.h>
+#include <sj_mongoose.h>
 
 #endif /* RTOS_SDK */
 
@@ -201,7 +201,7 @@ void init_v7(void *stack_base) {
   esp_init_conf(v7);
 
 #ifdef RTOS_SDK
-  fossa_init();
+  mongoose_init();
 #endif
 
   sj_init_simple_http_client(v7);

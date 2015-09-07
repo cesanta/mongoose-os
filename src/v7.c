@@ -1004,9 +1004,9 @@ typedef uint32_t in_addr_t;
 #define INT64_FMT "I64d"
 #define SIZE_T_FMT "Iu"
 #ifdef __MINGW32__
-typedef struct stat ns_stat_t;
+typedef struct stat cs_stat_t;
 #else
-typedef struct _stati64 ns_stat_t;
+typedef struct _stati64 cs_stat_t;
 #endif
 #ifndef S_ISDIR
 #define S_ISDIR(x) ((x) &_S_IFDIR)
@@ -1077,7 +1077,7 @@ struct dirent *readdir(DIR *dir);
 #define SIZE_T_FMT "zu"
 #define to64(x) strtoll(x, NULL, 10)
 typedef int sock_t;
-typedef struct stat ns_stat_t;
+typedef struct stat cs_stat_t;
 #define DIRSEP '/'
 #endif /* !AVR_LIBC */
 

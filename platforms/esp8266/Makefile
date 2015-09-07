@@ -1,7 +1,7 @@
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
 V7_PATH ?= ../../src
-FOSSA_PATH ?= ../../../fossa
+MONGOOSE_PATH ?= ../../../mongoose
 COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
@@ -30,7 +30,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
 
-VPATH = $(APP_MODULES) $(V7_PATH) $(FOSSA_PATH) $(SMARTJS_PATH)/src
+VPATH = $(APP_MODULES) $(V7_PATH) $(MONGOOSE_PATH) $(SMARTJS_PATH)/src
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)
 LPATH = $(SDK_PATH)/lib
 
@@ -83,7 +83,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DV7_ESP_GDB_SERVER \
            -DV7_ESP_FLASH_ACCESS_EMUL -DV7_FORCE_STRICT_MODE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=1
 
-FOSSA_FEATURES = -DNS_DISABLE_MQTT -DNS_DISABLE_MD5 \
+MONGOOSE_FEATURES = -DNS_DISABLE_MQTT -DNS_DISABLE_MD5 \
                  -DNS_DISABLE_JSON_RPC -DNS_DISABLE_SOCKETPAIR -DNS_DISABLE_DAV \
                  -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_CGI \
                  -DNS_DISABLE_FILESYSTEM
@@ -97,7 +97,7 @@ CFLAGS = -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inlin
          -DFAST='__attribute__((section(".fast.text")))' \
          -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
          $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
-         $(FOSSA_FEATURES)
+         $(MONGOOSE_FEATURES)
 
 ##
 ## == No config vars beyond this point.
@@ -128,8 +128,8 @@ IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
          $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
          $(SDK_PATH)/lwip/include/
 
-APP_SRCS += fossa.c sj_fossa_http_client.c \
-            sj_simple_http.c sj_fossa.c
+APP_SRCS += mongoose.c sj_mongoose_http_client.c \
+            sj_simple_http.c sj_mongoose.c
 
 APP_LIBS += freertos mirom
 CFLAGS += -DRTOS_SDK -DRTOS_TODO
@@ -232,7 +232,7 @@ $(BUILD_DIR)/%.o: %.c
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 	$(compile)
 
-$(BUILD_DIR)/fossa.o: fossa.c
+$(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
 # Generate version. Only regenrates if there are changes in objects.

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <sj_fossa.h>
+#include <sj_mongoose.h>
 #include <sj_prompt.h>
 #include <sj_timers.h>
 #include <sj_v7_ext.h>
@@ -58,12 +58,12 @@ static void post_init(struct v7 *v7) {
 
   do {
     /*
-     * Now waiting until fossa has active connections
+     * Now waiting until mongoose has active connections
      * and there are active gpio ISR and then exiting
      * TODO(alashkin): change this to something smart
      */
-  } while ((fossa_poll(100) || gpio_poll()) && !sj_please_quit);
-  fossa_destroy();
+  } while ((mongoose_poll(100) || gpio_poll()) && !sj_please_quit);
+  mongoose_destroy();
 }
 
 int main(int argc, char *argv[]) {

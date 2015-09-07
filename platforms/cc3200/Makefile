@@ -8,7 +8,7 @@ all clean:
 	docker run --rm -it -v $(SRC_DIR):/src $(SDK) \
 		/bin/bash -c "\
 			make -C /src/v7 v7.c && \
-			make -C /src/fossa/src && \
+			make -C /src/mongoose/src && \
 			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ CFLAGS_EXTRA='$(CFLAGS_EXTRA)' \
 		"
 

@@ -4,7 +4,7 @@
 SDK_PATH ?= /cc3200-sdk
 V7_PATH ?= ../../../v7
 SMARTJS_PATH ?= ../..
-FOSSA_PATH ?= ../../../fossa
+FOSSA_PATH ?= ../../../mongoose
 OBJDIR = build
 BINDIR = firmware
 FW_FS_SIZE = 65536
@@ -82,7 +82,7 @@ ${OBJDIR}:
 ${BINDIR}:
 	@mkdir -p ${BINDIR}
 
-${OBJDIR}/fossa.o: ${FOSSA_PATH}/fossa.c
+${OBJDIR}/mongoose.o: ${FOSSA_PATH}/mongoose.c
 	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
 
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
@@ -92,9 +92,9 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJ
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/v7.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_i2c_js.o ${OBJDIR}/cc3200_i2c.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_simple_http.o ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_fossa.o ${OBJDIR}/sj_fossa_http_client.o ${OBJDIR}/sj_timers.o ${OBJDIR}/sj_v7_ext.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_mongoose.o ${OBJDIR}/sj_mongoose_http_client.o ${OBJDIR}/sj_timers.o ${OBJDIR}/sj_v7_ext.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/spiffs_cache.o ${OBJDIR}/spiffs_check.o ${OBJDIR}/spiffs_gc.o ${OBJDIR}/spiffs_hydrogen.o ${OBJDIR}/spiffs_nucleus.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/fossa.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/mongoose.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
 # FreeRTOS
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/timers.o ${OBJDIR}/list.o ${OBJDIR}/queue.o ${OBJDIR}/tasks.o ${OBJDIR}/port.o ${OBJDIR}/heap_3.o

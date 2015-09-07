@@ -5,7 +5,7 @@
 #include <freertos/queue.h>
 #include "disp_task.h"
 
-#include <sj_fossa.h>
+#include <sj_mongoose.h>
 
 static xTaskHandle disp_task_handle;
 static xQueueHandle main_queue_handle;
@@ -37,7 +37,7 @@ struct rtos_event {
 /* Add function to call declaration here */
 void start_cmd(void *dummy);
 void process_rx_buf(int tail);
-int fossa_has_connections();
+int mongoose_has_connections();
 void _sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                    v7_val_t args);
 
@@ -110,7 +110,7 @@ static void disp_task(void *params) {
       }
     } else {
       /* Put periodic event handlers here */
-      fossa_poll(2);
+      mongoose_poll(2);
     }
   }
 }
