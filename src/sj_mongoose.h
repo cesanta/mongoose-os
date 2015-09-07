@@ -1,5 +1,5 @@
-#ifndef SJ_FOSSA_INCLUDED
-#define SJ_FOSSA_INCLUDED
+#ifndef SJ_MONGOOSE_INCLUDED
+#define SJ_MONGOOSE_INCLUDED
 
 extern struct mg_mgr sj_mgr;
 

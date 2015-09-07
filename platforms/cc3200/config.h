@@ -26,6 +26,6 @@
 #define MAX_OPEN_FAILFS_FILES 8
 
 #define V7_POLL_LENGTH_MS 2
-#define FOSSA_POLL_LENGTH_MS 2
+#define MONGOOSE_POLL_LENGTH_MS 2
 
 #endif /* __CONFIG_H_ */

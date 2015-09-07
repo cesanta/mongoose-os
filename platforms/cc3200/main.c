@@ -107,7 +107,7 @@ static void v7_task(void *arg) {
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;
-    mongoose_poll(FOSSA_POLL_LENGTH_MS);
+    mongoose_poll(MONGOOSE_POLL_LENGTH_MS);
     if (osi_MsgQRead(&s_v7_q, &pe, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (pe.type) {
       case PROMPT_CHAR_EVENT: {

@@ -4,7 +4,7 @@
 SDK_PATH ?= /cc3200-sdk
 V7_PATH ?= ../../../v7
 SMARTJS_PATH ?= ../..
-FOSSA_PATH ?= ../../../mongoose
+MONGOOSE_PATH ?= ../../../mongoose
 OBJDIR = build
 BINDIR = firmware
 FW_FS_SIZE = 65536
@@ -25,7 +25,7 @@ IPATH = . ${SDK_PATH} \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
         ${SMARTJS_PATH}/src \
         ${SMARTJS_PATH}/src/spiffs \
-        ${FOSSA_PATH} \
+        ${MONGOOSE_PATH} \
         ${V7_PATH}
 
 VPATH = ${SDK_PATH}/driverlib \
@@ -38,7 +38,7 @@ VPATH = ${SDK_PATH}/driverlib \
         ${SMARTJS_PATH}/src \
         ${SMARTJS_PATH}/src/spiffs \
         ${V7_PATH} \
-        ${FOSSA_PATH}
+        ${MONGOOSE_PATH}
 
 V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
@@ -46,7 +46,7 @@ V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE__Memory__stats -DV7_FORCE_STRICT_MODE \
               -DV7_ENABLE_FILE -DV7_ENABLE__StackTrace
 
-FOSSA_FEATURES = -DNS_CC3200 -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_DAV \
+MONGOOSE_FEATURES = -DNS_CC3200 -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_DAV \
                  -DNS_DISABLE_SSI -DNS_DISABLE_FILESYSTEM -DNS_DISABLE_SOCKETPAIR \
                  -DNS_DISABLE_CGI
 #-DNS_ENABLE_DEBUG
@@ -64,7 +64,7 @@ SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
 DISABLED_SDK_WARNINGS = -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses -Wno-unused-variable
 
-CFLAGS += -Os -Wall -Werror $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${FOSSA_FEATURES} ${CFLAGS_EXTRA}
+CFLAGS += -Os -Wall -Werror $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${MONGOOSE_FEATURES} ${CFLAGS_EXTRA}
 # CFLAGS += -DCC3200_FS_DEBUG
 
 .PHONY: all clean flash
@@ -82,7 +82,7 @@ ${OBJDIR}:
 ${BINDIR}:
 	@mkdir -p ${BINDIR}
 
-${OBJDIR}/mongoose.o: ${FOSSA_PATH}/mongoose.c
+${OBJDIR}/mongoose.o: ${MONGOOSE_PATH}/mongoose.c
 	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
 
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
