@@ -97,7 +97,7 @@ FAST static void rx_isr(void *param) {
   }
 }
 
-#ifdef V7_ESP_GDB_SERVER
+#ifdef ESP_GDB_SERVER
 
 int gdb_read_uart() {
   static char buf[256];
@@ -145,15 +145,23 @@ static void uart_tx_char(unsigned uartno, char ch) {
   WRITE_PERI_REG(UART_BUF(uartno), ch);
 }
 
-void uart_write(int fd, char *p, size_t len) {
-  size_t i;
+void uart_putchar(int fd, char ch) {
   int uart = (fd == 2) ? s_system_uartno : UART_MAIN;
   if (fd == 2 && !debug_enabled) return;
 
+  if (ch == '\n') uart_tx_char(uart, '\r');
+  uart_tx_char(uart, ch);
+}
+
+void uart_write(int fd, const char *p, size_t len) {
+  size_t i;
   for (i = 0; i < len; i++) {
-    if (p[i] == '\n') uart_tx_char(uart, '\r');
-    uart_tx_char(uart, p[i]);
+    uart_putchar(fd, p[i]);
   }
+}
+
+void uart_puts(int fd, const char *s) {
+  uart_write(fd, s, strlen(s));
 }
 
 void process_rx_buf(int tail) {

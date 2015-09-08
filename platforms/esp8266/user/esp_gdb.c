@@ -1,64 +1,53 @@
-#ifdef V7_ESP_GDB_SERVER
+#ifdef ESP_GDB_SERVER
 
 #include <stdio.h>
 #include <string.h>
 #include <ets_sys.h>
 #include <xtensa/corebits.h>
 #include <stdint.h>
-#include "v7_gdb.h"
+#include "esp_gdb.h"
+#include "esp_exc.h"
 #include "v7_esp_hw.h"
 #include "esp_uart.h"
 #include "esp_missing_includes.h"
 #include "v7_esp.h"
 
-#ifndef RTOS_SDK
-
-#include <osapi.h>
-#include <gpio.h>
-#include <os_type.h>
-#include <user_interface.h>
-#include <mem.h>
-
-#else
-
-#include <c_types.h>
-#include <xtensa/xtruntime.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-
+#ifdef RTOS_SDK
 void system_soft_wdt_feed();
+#endif
 
-#endif /* RTOS_SDK */
+#define ESP_GDB_UART_NO 0
+#define ESP_GDB_FILENO (ESP_GDB_UART_NO + 1)
 
 /* TODO(mkm): not sure if gdb guarantees lowercase hex digits */
 #define fromhex(c) \
   (((c) &0x40) ? ((c) &0x20 ? (c) - 'a' + 10 : (c) - 'A' + 10) : (c) - '0')
 #define hexdigit(n) (((n) < 10) ? '0' + (n) : 'a' + ((n) -10))
 
-static struct regfile regs;
 static uint8_t gdb_send_checksum;
 
 void gdb_nack() {
-  printf("-");
+  uart_puts(ESP_GDB_FILENO, "-");
 }
 
 void gdb_ack() {
-  printf("+");
+  uart_puts(ESP_GDB_FILENO, "+");
 }
 
 void gdb_begin_packet() {
-  printf("$");
+  uart_puts(ESP_GDB_FILENO, "$");
   gdb_send_checksum = 0;
 }
 
 void gdb_end_packet() {
-  printf("#%c%c", hexdigit(gdb_send_checksum >> 4),
-         hexdigit(gdb_send_checksum & 0xF));
+  uart_putchar(ESP_GDB_FILENO, '#');
+  uart_putchar(ESP_GDB_FILENO, hexdigit(gdb_send_checksum >> 4));
+  uart_putchar(ESP_GDB_FILENO, hexdigit(gdb_send_checksum & 0xF));
 }
 
 void gdb_putchar(char ch) {
   gdb_send_checksum += (uint8_t) ch;
-  printf("%c", ch);
+  uart_putchar(ESP_GDB_FILENO, ch);
 }
 
 /* output a string while computing the checksum */
@@ -108,7 +97,7 @@ uint8_t gdb_read_unaligned(uint8_t *addr) {
  * For a more complete description of the protocol, see
  * https://sourceware.org/gdb/current/onlinedocs/gdb/Remote-Protocol.html
  */
-void gdb_handle_char(int ch) {
+void gdb_handle_char(struct regfile *regs, int ch) {
   static enum {
     GDB_JUNK,
     GDB_DATA,
@@ -188,8 +177,8 @@ void gdb_handle_char(int ch) {
           /* dump registers */
           int i;
           gdb_begin_packet();
-          for (i = 0; i < sizeof(regs); i++) {
-            gdb_putbyte(((uint8_t *) &regs)[i]);
+          for (i = 0; i < sizeof(*regs); i++) {
+            gdb_putbyte(((uint8_t *) regs)[i]);
           }
           gdb_end_packet();
           break;
@@ -204,8 +193,8 @@ void gdb_handle_char(int ch) {
 }
 
 /* The user should detach and let gdb do the talkin' */
-void gdb_server() {
-  printf("waiting for gdb\n");
+void gdb_server(struct regfile *regs) {
+  uart_puts(ESP_GDB_FILENO, "waiting for gdb\n");
   /*
    * polling since we cannot wait for interrupts inside
    * an interrupt handler of unknown level.
@@ -213,96 +202,14 @@ void gdb_server() {
    * Interrupts disabled so that the user (or v7 prompt)
    * uart interrupt handler doesn't interfere.
    */
-  xthal_set_intenable(0);
+
   for (;;) {
 #ifdef RTOS_SDK
     system_soft_wdt_feed();
 #endif
     int ch = gdb_read_uart();
-    if (ch != -1) gdb_handle_char(ch);
+    if (ch != -1) gdb_handle_char(regs, ch);
   }
 }
 
-#ifndef RTOS_SDK
-/*
- * xtos low level exception handler (in rom)
- * populates an xtos_regs structure with (most) registers
- * present at the time of the exception and passes it to the
- * high-level handler.
- *
- * Note that the a1 (sp) register is clobbered (bug? necessity?),
- * however the original stack pointer can be inferred from the address
- * of the saved registers area, since the exception handler uses the same
- * user stack. This might be different in other execution modes on the
- * quite variegated xtensa platform family, but that's how it works on ESP8266.
- */
-FAST void gdb_exception_handler(struct xtos_saved_regs *frame) {
-  uint32_t cause = RSR(EXCCAUSE);
-  uint32_t vaddr = RSR(EXCVADDR);
-  printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
-  memcpy(&regs.a[2], frame->a, sizeof(frame->a));
-
-  regs.a[0] = frame->a0;
-  regs.a[1] = (uint32_t) frame + V7_GDB_SP_OFFSET;
-  regs.pc = frame->pc;
-  regs.sar = frame->sar;
-  regs.ps = frame->ps;
-  regs.litbase = RSR(LITBASE);
-  gdb_server();
-
-  _ResetVector();
-}
-
-#else /* !RTOS_SDK */
-
-void __wrap_user_fatal_exception_handler(int cause) {
-  xTaskHandle th = xTaskGetCurrentTaskHandle();
-  /*
-   * The task handle should be opaque but we'll assume here it's
-   * a pointer to a tskTaskControlBlock structure, whose first field is:
-   *
-   * volatile portSTACK_TYPE *pxTopOfStack;
-   *
-   * It's documentation at least guarantees that it's the first element.
-   * Before an exception handler is invoked extensa rtos will save the regiters
-   * in a stack frame. We captured the structure of that frame in
-   * xtensa_rtos_stack_frame.
-   */
-  struct xtensa_rtos_stack_frame *frame =
-      (struct xtensa_rtos_stack_frame *) *(void **) th;
-
-  uint32_t vaddr = RSR(EXCVADDR);
-  printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
-
-  memcpy(&regs.a[0], frame->a, sizeof(frame->a));
-  regs.pc = frame->pc;
-  regs.sar = frame->sar;
-  regs.ps = frame->ps;
-  regs.litbase = RSR(LITBASE);
-  gdb_server();
-
-  while (1) {
-    system_soft_wdt_feed();
-  }
-}
-
-#endif /* !RTOS_SDK */
-
-void gdb_init() {
-/*
- * The RTOS build intercepts all user exceptions with
- * __wrap_user_fatal_exception_handler
- */
-#ifndef RTOS_TODO
-  char causes[] = {EXCCAUSE_ILLEGAL,          EXCCAUSE_INSTR_ERROR,
-                   EXCCAUSE_LOAD_STORE_ERROR, EXCCAUSE_DIVIDE_BY_ZERO,
-                   EXCCAUSE_UNALIGNED,        EXCCAUSE_INSTR_PROHIBITED,
-                   EXCCAUSE_LOAD_PROHIBITED,  EXCCAUSE_STORE_PROHIBITED};
-  int i;
-  for (i = 0; i < (int) sizeof(causes); i++) {
-    _xtos_set_exception_handler(causes[i], gdb_exception_handler);
-  }
-#endif
-}
-
-#endif /* V7_ESP_GDB_SERVER */
+#endif /* ESP_GDB_SERVER */

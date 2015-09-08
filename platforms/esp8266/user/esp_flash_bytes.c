@@ -1,4 +1,4 @@
-#ifdef V7_ESP_FLASH_ACCESS_EMUL
+#ifdef ESP_FLASH_BYTES_EMUL
 
 #ifndef RTOS_SDK
 #include "user_interface.h"
@@ -8,7 +8,7 @@
 #endif
 
 #include <stdio.h>
-#include "v7_gdb.h"
+#include "esp_exc.h"
 #include "xtensa/corebits.h"
 #include "v7_esp_hw.h"
 #include "esp_missing_includes.h"
@@ -65,11 +65,7 @@ void flash_emul_exception_handler(struct xtos_saved_regs *frame) {
     if (instr & 0x8000) val = (int16_t) val;
   } else {
     printf("cannot emulate flash mem instr\n");
-#ifdef V7_ESP_GDB_SERVER
-    gdb_exception_handler(frame);
-#else
-    _ResetVector();
-#endif
+    esp_exception_handler(frame);
   }
 
   /* a0 and a1 are never used as scratch registers */
@@ -87,4 +83,4 @@ void flash_emul_init() {
 }
 #endif /* RTOS_SDK */
 
-#endif /* V7_ESP_FLASH_ACCESS_EMUL */
+#endif /* ESP_FLASH_BYTES_EMUL */

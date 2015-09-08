@@ -365,6 +365,7 @@ void MainDialog::readSerial() {
   }
   if (console_log_) {
     console_log_->write(data);
+    console_log_->flush();
   }
   auto* scroll = ui_.terminal->verticalScrollBar();
   bool autoscroll = scroll->value() == scroll->maximum();

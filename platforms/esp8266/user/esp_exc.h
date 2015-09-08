@@ -1,5 +1,5 @@
-#ifndef V7_GDB_INCLUDED
-#define V7_GDB_INCLUDED
+#ifndef ESP_EXC_INCLUDED
+#define ESP_EXC_INCLUDED
 
 /*
  * the saved registers begin at a fixed position in the xtos
@@ -9,7 +9,7 @@
  * so it should work on future SDK updates, but not necessarily on future
  * revisions of the chip.
  */
-#define V7_GDB_SP_OFFSET 0x100
+#define ESP_EXC_SP_OFFSET 0x100
 
 /*
  * Addresses in this range are guaranteed to be readable without faulting.
@@ -66,9 +66,10 @@ struct regfile {
   uint32_t ps;
 };
 
-void gdb_init();
 #ifndef RTOS_SDK
-void gdb_exception_handler(struct xtos_saved_regs *frame);
+void esp_exception_handler(struct xtos_saved_regs *frame);
 #endif
 
-#endif /* V7_GDB_INCLUDED */
+void esp_exception_handler_init();
+
+#endif /* ESP_EXC_INCLUDED */

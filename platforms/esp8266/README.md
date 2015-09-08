@@ -61,7 +61,8 @@ Connect LED to GPIO pin number 2. Then type this at the prompt and press enter:
 - NO_PROMPT: disables serial javascript prompt
 - NO_EXEC_INITJS: disables running initjs at boot
 - NO_HTTP_EVAL: disables http eval server
-- V7_ESP_GDB_SERVER: enables GDB server
+- ESP_GDB_SERVER: enables GDB server
+- ESP_COREDUMP: enables printing of coredump on crash
 - ESP_ENABLE_WATCHDOG: enables watchdog (the watchdog is not fed nor we provide yet a way to feed it from JS, the ESP will be reset if you execute time consuming operations!)
 
 ## GDB
