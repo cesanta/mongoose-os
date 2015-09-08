@@ -61,8 +61,6 @@ static char rx_buf[RX_BUFFER_SIZE];
 static unsigned s_system_uartno = UART_MAIN;
 static unsigned debug_enabled = 0;
 
-int gdb_read_uart_buf(char *buf);
-
 FAST static void rx_isr(void *param) {
   /* TODO(alashkin): add errors checking */
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
@@ -97,21 +95,7 @@ FAST static void rx_isr(void *param) {
   }
 }
 
-#ifdef ESP_GDB_SERVER
-
-int gdb_read_uart() {
-  static char buf[256];
-  static int pos = 0;
-  if (pos == 0) {
-    pos = gdb_read_uart_buf(buf);
-  }
-  if (pos == 0) {
-    return -1;
-  }
-  return buf[--pos];
-}
-
-int gdb_read_uart_buf(char *buf) {
+static int blocking_read_uart_buf(char *buf) {
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
 
   if ((peri_reg & UART_RXBUF_FULL) != 0 || (peri_reg & UART_RX_NEW) != 0) {
@@ -132,7 +116,18 @@ int gdb_read_uart_buf(char *buf) {
   }
   return 0;
 }
-#endif
+
+int blocking_read_uart() {
+  static char buf[256];
+  static int pos = 0;
+  if (pos == 0) {
+    pos = blocking_read_uart_buf(buf);
+  }
+  if (pos == 0) {
+    return -1;
+  }
+  return buf[--pos];
+}
 
 static void uart_tx_char(unsigned uartno, char ch) {
   while (1) {

@@ -11,6 +11,6 @@ void uart_debug_init(unsigned pin, unsigned baud_rate);
 void uart_putchar(int fd, char ch);
 void uart_write(int fd, const char *p, size_t len);
 void uart_puts(int fd, const char *p);
-int gdb_read_uart();
+int blocking_read_uart();
 
 #endif /* ESP_UART_INCLUDED */

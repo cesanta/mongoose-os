@@ -63,19 +63,20 @@ Connect LED to GPIO pin number 2. Then type this at the prompt and press enter:
 - NO_HTTP_EVAL: disables http eval server
 - ESP_GDB_SERVER: enables GDB server
 - ESP_COREDUMP: enables printing of coredump on crash
+- ESP_COREDUMP_NOAUTO: disables automatic coredumping on crash
 - ESP_ENABLE_WATCHDOG: enables watchdog (the watchdog is not fed nor we provide yet a way to feed it from JS, the ESP will be reset if you execute time consuming operations!)
 
 ## GDB
 
-This build also includes an optional GDB server, enabled with the -DV7_GDB compiler flag.
+This build also includes an optional GDB server, enabled with the -DESP_GDB_SERVER compiler flag.
 When enabled, each illegal instruction or memory access will trap into the GDB server.
 
 This can be very useful both to debug your custom C code, and to provide us with stack traces
 for debugging issues in the JS VM and other parts of the SmartJS SDK.
 
 The user can attach with a gdb build supporting the lx106 framework. We offer such a binary
-in our cesanta/esp8266-build-oss docker image. Please make sure you use at least version 1.1.0
-(if 1.1.0 is not yet the default, you can fetch it as cesanta/esp8266-build-oss:1.1.0).
+in our cesanta/esp8266-build-oss docker image. Please make sure you use at least version 1.3.0
+(if 1.3.0 is not yet the default, you can fetch it as cesanta/esp8266-build-oss:1.3.0-cesanta).
 
 The docker image cannot access the device serial port so you should create a proxy. You can use
 either socat or our http://github.com/cesanta/gopro tool.
@@ -84,8 +85,27 @@ either socat or our http://github.com/cesanta/gopro tool.
 
 Then you invoke the gdb inside the docker image:
 
-    xt-gdb /cesanta/smartjs/platforms/esp8266/build/app.out
+    xt-gdb /cesanta/smartjs/platforms/esp8266/build/smartjs.out
     remote target <yourhost>:1234
 
 The GDB server is incomplete but should be good enough to print a stack trace
 and inspect the state of your application. Breakpoints and resuming are not yet supported.
+
+## Core dumps
+
+This build can also dump memory and machine state in via the uart in a format that can be later
+used to perform post mortem debugging. The feature is enabled with -DESP_COREDUMP.
+
+By default core dumps will be output on the debug uart (uart 1), but at each crash the user
+can request a dump on uart 0 (main serial console).
+The core dump is textual snippet of a few hundreds KB. Your terminal emulation software
+might help you save it into a file, or you might just copy&paste it.
+
+    tools/debug_coredump.sh mylogfile.log
+
+This option is very useful when:
+
+1. You don't want to debug it straight away, but you want to save the state for later inspection.
+2. The device that crashed is in a remote location and it's hard to setup a portforwarding and serial->tcp paraphernalia in order to connect it to gdb.
+3. While live GDB cannot resume or do other cool things, it doesn't make a big difference to do live or post mortem debugging. Using tools/debug_coredump.sh doesn't require you to type complicated commands and know your IP address.
+4. Your device is using uart0 to do some real work and your only troubleshooting channel is uart1 which is unidirectional, and hence cannot be used for the interactive debugger.

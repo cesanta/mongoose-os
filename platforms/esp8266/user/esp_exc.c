@@ -44,8 +44,28 @@ static struct regfile regs;
 static void handle_exception(struct regfile *regs) {
   xthal_set_intenable(0);
 
+#if defined(ESP_COREDUMP) && !defined(ESP_COREDUMP_NOAUTO)
+  printf("Dumping core to debug output\n");
+  esp_dump_core(-1, regs);
+#endif
 #ifdef ESP_COREDUMP
-  esp_dump_core(regs);
+  printf("if you want to dump core, type 'y'");
+#ifdef ESP_GDB_SERVER
+  printf(", or else connect with gdb");
+#endif
+  {
+    int ch;
+    while ((ch = blocking_read_uart())) {
+      if (ch == 'y') {
+        esp_dump_core(1, regs);
+      } else if (ch == '$') {
+        /* we got a GDB packet, speed up retransmission by nacking */
+        printf("-");
+        break;
+      }
+    }
+  }
+  printf("\n");
 #endif
 #ifdef ESP_GDB_SERVER
   gdb_server(regs);
@@ -93,8 +113,8 @@ void __wrap_user_fatal_exception_handler(int cause) {
    * volatile portSTACK_TYPE *pxTopOfStack;
    *
    * It's documentation at least guarantees that it's the first element.
-   * Before an exception handler is invoked extensa rtos will save the regiters
-   * in a stack frame. We captured the structure of that frame in
+   * Before an exception handler is invoked extensa rtos will save the
+   * regiters in a stack frame. We captured the structure of that frame in
    * xtensa_rtos_stack_frame.
    */
   struct xtensa_rtos_stack_frame *frame =
@@ -140,7 +160,8 @@ void esp_exception_handler_init() {
 
 #ifdef ESP_FLASH_BYTES_EMUL
   /*
-   * registers exception handlers that allow reading arbitrary data from flash
+   * registers exception handlers that allow reading arbitrary data from
+   * flash
    */
   flash_emul_init();
 #endif

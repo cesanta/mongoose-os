@@ -194,7 +194,7 @@ void gdb_handle_char(struct regfile *regs, int ch) {
 
 /* The user should detach and let gdb do the talkin' */
 void gdb_server(struct regfile *regs) {
-  uart_puts(ESP_GDB_FILENO, "waiting for gdb\n");
+  uart_puts(ESP_GDB_FILENO, "Waiting for gdb\n");
   /*
    * polling since we cannot wait for interrupts inside
    * an interrupt handler of unknown level.
@@ -207,7 +207,7 @@ void gdb_server(struct regfile *regs) {
 #ifdef RTOS_SDK
     system_soft_wdt_feed();
 #endif
-    int ch = gdb_read_uart();
+    int ch = blocking_read_uart();
     if (ch != -1) gdb_handle_char(regs, ch);
   }
 }
