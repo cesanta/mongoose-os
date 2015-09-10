@@ -11202,7 +11202,31 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
-  cfunc = v1 = i_eval_expr(v7, a, pos, scope);
+  if (v7_is_undefined(this_object) || is_constructor) {
+    cfunc = v1 = i_eval_expr(v7, a, pos, scope);
+  } else {
+    ast_off_t pp = *pos;
+    enum ast_tag tag = ast_fetch_tag(a, &pp);
+    assert(tag == AST_MEMBER || tag == AST_INDEX);
+    switch (tag) {
+      case AST_MEMBER:
+        name = ast_get_inlined_data(a, pp, &name_len);
+        cfunc = v1 = v7_get(v7, this_object, name, name_len);
+        break;
+      case AST_INDEX: {
+        val_t idx;
+        ast_move_to_children(a, &pp);
+        ast_skip_tree(a, &pp);
+        idx = i_eval_expr(v7, a, &pp, scope);
+        cfunc = v1 = v7_get_v(v7, this_object, idx);
+        break;
+      }
+      default:
+        /* impossible */
+        break;
+    }
+    ast_skip_tree(a, pos);
+  }
   if (!v7_is_cfunction(v1) && !v7_is_function(v1)) {
     /* extract the hidden property from a cfunction_object */
     struct v7_property *p;
