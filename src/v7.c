@@ -7222,24 +7222,31 @@ int double_to_str(char *buf, size_t buf_size, double val, int prec);
 static int snquote(char *buf, size_t size, const char *s, size_t len) {
   char *limit = buf + size - 1;
   const char *end;
+  /*
+   * String single character escape sequence:
+   * http://www.ecma-international.org/ecma-262/6.0/index.html#table-34
+   *
+   * 0x8 -> \b
+   * 0x9 -> \t
+   * 0xa -> \n
+   * 0xb -> \v
+   * 0xc -> \f
+   * 0xd -> \r
+   */
+  const char *specials = "btnvfr";
   size_t i = 0;
 
   i++;
   if (buf < limit) *buf++ = '"';
 
   for (end = s + len; s < end; s++) {
-    if (*s == '"') {
+    if (*s == '"' || *s == '\\') {
       i++;
       if (buf < limit) *buf++ = '\\';
-    } else if (*s == '\n') {
+    } else if (*s >= '\b' && *s <= '\r') {
       i++;
       if (buf < limit) *buf++ = '\\';
-      if (buf < limit) *buf++ = 'n';
-      continue;
-    } else if (*s == '\t') {
-      i++;
-      if (buf < limit) *buf++ = '\\';
-      if (buf < limit) *buf++ = 't';
+      if (buf < limit) *buf++ = specials[*s - '\b'];
       continue;
     }
     i++;
@@ -12535,16 +12542,18 @@ int nextesc(const char **p) {
     case 'c':
       ++*p;
       return *s & 31;
-    case 'f':
-      return '\f';
-    case 'n':
-      return '\n';
-    case 'r':
-      return '\r';
+    case 'b':
+      return '\b';
     case 't':
       return '\t';
+    case 'n':
+      return '\n';
     case 'v':
       return '\v';
+    case 'f':
+      return '\f';
+    case 'r':
+      return '\r';
     case '\\':
       return '\\';
     case 'u':
