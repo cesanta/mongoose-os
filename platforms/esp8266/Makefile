@@ -13,7 +13,8 @@ VERBOSE ?= 0
 # Should be RTOS or OSS
 SDK := $(shell echo $$SDK_FLAVOUR)
 ifndef SDK
-$(error SDK_FLAVOUR not defined)
+$(error Use make.sh to build project within docker container. To build against locally \
+        installed ESP SDK define SDK_FLAVOUR (with RTOS or OSS value) enviroment variable)
 endif
 
 BUILD_DIR = build
