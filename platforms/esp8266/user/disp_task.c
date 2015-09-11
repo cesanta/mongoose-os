@@ -1,4 +1,4 @@
-#ifdef RTOS_SDK
+#if defined(RTOS_SDK) && !defined(RTOS_NETWORK_TEST)
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -122,4 +122,4 @@ void rtos_init_dispatcher() {
               &disp_task_handle);
 }
 
-#endif /* RTOS_SDK */
+#endif /* RTOS_SDK && !RTOS_NETWORK_TEST */

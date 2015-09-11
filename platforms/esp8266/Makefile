@@ -134,6 +134,9 @@ APP_SRCS += mongoose.c sj_mongoose_http_client.c \
 
 APP_LIBS += freertos mirom
 CFLAGS += -DRTOS_SDK -DRTOS_TODO
+ifneq "$(NETTEST)" ""
+CFLAGS += -DRTOS_NETWORK_TEST
+endif
 OBJCOPY2 = /bin/true
 #TODO(alashkin): try to use the same LD script
 LD_SCRIPT = user/eagle.app.v6.RTOS.ld
