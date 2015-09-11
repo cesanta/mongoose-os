@@ -7244,7 +7244,7 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
       i++;
       if (buf < limit) *buf++ = '\\';
     } else if (*s >= '\b' && *s <= '\r') {
-      i++;
+      i += 2;
       if (buf < limit) *buf++ = '\\';
       if (buf < limit) *buf++ = specials[*s - '\b'];
       continue;
