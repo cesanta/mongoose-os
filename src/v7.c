@@ -12840,6 +12840,13 @@ static int re_nextc(Rune *r, const char **src, const char *src_end) {
   return 0;
 }
 
+static int re_nextc_raw(Rune *r, const char **src, const char *src_end) {
+  *r = 0;
+  if (*src >= src_end) return 0;
+  *src += chartorune(r, *src);
+  return 0;
+}
+
 static int re_nextc_env(struct slre_env *e) {
   return re_nextc(&e->curr_rune, &e->src, e->src_end);
 }
@@ -13996,7 +14003,7 @@ int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
   const char *const rstr_end = rstr + rstr_len;
 
   memset(dstsub, 0, sizeof(*dstsub));
-  while (rstr < rstr_end && !(n = re_nextc(&curr_rune, &rstr, rstr_end)) &&
+  while (rstr < rstr_end && !(n = re_nextc_raw(&curr_rune, &rstr, rstr_end)) &&
          curr_rune) {
     int sz;
     if (n < 0) return n;
