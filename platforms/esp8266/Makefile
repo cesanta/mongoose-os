@@ -216,8 +216,10 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
 $(APP_AR): $(OBJS)
 	$(vecho) "AR $@"
 	$(Q) $(AR) cru $@ $^
+	# Move all code to flash by default.
 	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
+	# Move strings to flash too, we have the handler.
 	$(Q) $(OBJCOPY2) --rename-section .rodata=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY2) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
 
