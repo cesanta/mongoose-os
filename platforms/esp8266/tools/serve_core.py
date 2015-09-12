@@ -59,7 +59,7 @@ class Core(object):
                 os.exit(1)
 
             core_json = log[begin_pos + len(start_delim) : end_pos]
-            return json.loads(core_json)
+            return json.loads(core_json.replace('\n', ''))
 
     def _map_core(self, core):
         mem = []
