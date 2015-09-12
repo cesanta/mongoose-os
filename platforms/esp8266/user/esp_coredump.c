@@ -35,19 +35,23 @@ static void uart_putdec(int fd, unsigned int n) {
 }
 
 static int core_dump_emit_char_fd = 0;
-static void core_dump_emit_char(char c) {
+static void core_dump_emit_char(char c, void *user_data) {
+  (void) user_data;
   uart_putchar(core_dump_emit_char_fd, c);
 }
 
 static void emit_core_dump_section(int fd, const char *name, uint32_t addr,
                                    uint32_t size) {
+  struct cs_base64_ctx ctx;
   uart_puts(fd, ",\"");
   uart_puts(fd, name);
   uart_puts(fd, "\": {\"addr\": ");
   uart_putdec(fd, addr);
   uart_puts(fd, ", \"data\": \"");
   core_dump_emit_char_fd = fd;
-  cs_base64_encode2((unsigned char *) addr, size, core_dump_emit_char);
+  cs_base64_init(&ctx, core_dump_emit_char, NULL);
+  cs_base64_update(&ctx, (char *) addr, size);
+  cs_base64_finish(&ctx);
   uart_puts(fd, "\"}");
 }
 
