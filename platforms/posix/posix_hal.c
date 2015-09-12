@@ -76,7 +76,8 @@ void sj_wdt_feed() {
 }
 
 void sj_system_restart() {
-  /* TODO(alashkin): Do we really want to restart OS here? */
+  /* An external supervisor can restart us */
+  exit(0);
 }
 
 size_t sj_get_fs_memory_usage() {
@@ -88,7 +89,7 @@ void sj_usleep(int usecs) {
 #ifndef _WIN32
   usleep(usecs);
 #else
-  Sleep(usecs/1000);
+  Sleep(usecs / 1000);
 #endif
 }
 
@@ -107,7 +108,7 @@ struct timer_callback_params {
 };
 
 VOID CALLBACK win32_timer_callback(PVOID param, BOOLEAN timeout) {
-  struct timer_callback_params *p = (struct timer_callback_params *)param;
+  struct timer_callback_params *p = (struct timer_callback_params *) param;
   sj_invoke_cb0(v7, *p->cb);
   DeleteTimerQueueTimer(NULL, p->timer, NULL);
   free(p);
@@ -162,9 +163,9 @@ void sj_set_timeout(int msecs, v7_val_t *cb) {
 #elif defined(_WIN32)
   struct timer_callback_params *params = malloc(sizeof(*params));
   params->cb = cb;
-  CreateTimerQueueTimer(&params->timer, NULL,  win32_timer_callback,
-                        (void *)params, msecs, 0,
-                        WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE );
+  CreateTimerQueueTimer(&params->timer, NULL, win32_timer_callback,
+                        (void *) params, msecs, 0,
+                        WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE);
 #endif
 }
 
@@ -199,7 +200,7 @@ static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
 void sj_prompt_init_hal() {
   int fds[2];
-  if (!mg_socketpair((sock_t *)fds, SOCK_STREAM)) {
+  if (!mg_socketpair((sock_t *) fds, SOCK_STREAM)) {
     printf("cannot create a socketpair\n");
     exit(1);
   }
