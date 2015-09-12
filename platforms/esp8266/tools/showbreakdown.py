@@ -6,10 +6,17 @@ import os
 import os.path
 import sys
 
-path_to_bin = "."
-app_lib_path = os.path.join(path_to_bin, 'build', 'smartjs.a')
-app_bin_path = os.path.join(path_to_bin, 'build', 'smartjs.out')
+path_to_bin = '.'
+build_path = os.path.join(path_to_bin, 'build')
+app_bin_path = [f for f in glob.glob(os.path.join(build_path, '*.out')) if '_symcheck' not in f]
+# in order to work with make clean verifying app.out existence and exiting without an error
+if not app_bin_path:
+    sys.exit(0)
+app_bin_path = app_bin_path[0]
+app_name = os.path.basename(app_bin_path).split('.')[0]
+app_lib_path = os.path.join(path_to_bin, 'build', '%s.a' % app_name)
 v7_path = os.path.join(path_to_bin, 'build', 'v7.o')
+have_v7 = os.path.exists(v7_path)
 
 def print_obj_map(title, results):
     print title
@@ -35,10 +42,12 @@ def process_objdump_res(symb_table):
     for line in symb_table:
         line_tbl = line.split()
         if len(line_tbl) == 6:
-            if line_tbl[2] == "F":
-                funcs[line_tbl[3]] = funcs.get(line_tbl[3],0) + int(line_tbl[4],16)
+            if line_tbl[2] in ('F', 'O'):
+                size = int(line_tbl[4], 16)
+                size += 4 - (size % 3)  # round up to 4 due to alignment reqs
+                funcs[line_tbl[3]] = funcs.get(line_tbl[3], 0) + size
             elif line_tbl[2] == "O":
-                objects[line_tbl[3]] = objects.get(line_tbl[3],0) + int(line_tbl[4],16)
+                objects[line_tbl[3]] = objects.get(line_tbl[3], 0) + int(line_tbl[4], 16)
             else:
                 others_size += int(line_tbl[4],16)
 
@@ -52,25 +61,24 @@ def sub_res(full_res, part_res):
             results[seg] = 0
     return results
 
-# in order to work with make clean verifying app_app.a existence and exiting without an error
-if not os.path.isfile(app_lib_path):
-    sys.exit()
-
 symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', app_lib_path]).split('\n')
 u_funcs, u_objects, u_others_size = process_objdump_res(symb_table)
 
-symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', v7_path]).split('\n')
-v7_funcs, v7_objects, v7_others_size = process_objdump_res(symb_table)
+if have_v7:
+    symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', v7_path]).split('\n')
+    v7_funcs, v7_objects, v7_others_size = process_objdump_res(symb_table)
 
-# Text sections was copied to flash text sections as a part the build process.
-# Here we're remapping them manually because we use objcopy only for `.a` file
-# and doesn't use it for `.o`
-v7_funcs['.irom0.text'] = v7_funcs.get('.text', 0);
-v7_objects['.irom0.text'] = v7_objects.get('.text', 0);
-v7_objects['.itom0.text'] = v7_objects.get('.itom0.text',0) + v7_objects.get('.rodata', 0);
-v7_objects['.rodata'] = 0;
-v7_funcs['.text'] = v7_funcs.get('.fast.text', 0);
-v7_objects['.text'] = v7_objects.get('.fast.text', 0);
+    # Text sections was copied to flash text sections as a part the build process.
+    # Here we're remapping them manually because we use objcopy only for `.a` file
+    # and doesn't use it for `.o`
+    v7_funcs['.irom0.text'] = v7_funcs.get('.text', 0);
+    v7_objects['.irom0.text'] = v7_objects.get('.text', 0);
+    v7_objects['.itom0.text'] = v7_objects.get('.itom0.text',0) + v7_objects.get('.rodata', 0);
+    v7_objects['.rodata'] = 0;
+    v7_funcs['.text'] = v7_funcs.get('.fast.text', 0);
+    v7_objects['.text'] = v7_objects.get('.fast.text', 0);
+else:
+    v7_funcs, v7_objects, v7_others_size = {}, {}, 0
 
 symb_table = subprocess.check_output(['xtensa-lx106-elf-objdump', '-t', app_bin_path]).split('\n')
 all_funcs, all_objects, all_others_size = process_objdump_res(symb_table)
@@ -91,11 +99,12 @@ u_objects = sub_res(u_objects, v7_objects)
 headers = [".text", ".irom0.text", ".rodata", ".data", ".bss"]
 row_format = "{:<15}" * (len(headers)+1)
 print ""
-print "smart.js footprint breakdown"
+print "%s footprint breakdown" % app_name
 print "---------------------------------"
 print row_format.format("", *headers)
-print_row(row_format, "v7", v7_funcs, v7_objects)
-print_row(row_format, "smartjs", u_funcs, u_objects)
+if have_v7:
+    print_row(row_format, "v7", v7_funcs, v7_objects)
+print_row(row_format, app_name, u_funcs, u_objects)
 print_row(row_format, "sys", s_funcs, s_objects)
 print_row(row_format, "total", all_funcs, all_objects)
 
