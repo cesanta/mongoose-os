@@ -7,6 +7,17 @@ var SWUpdate = function(clubby) {
     }
     return r;
   });
+  // TODO(lsm): Move to the File service
+  clubby.oncmd("/v1/SWUpdate.Delete", function(cmd, done) {
+    if (typeof(cmd.args.section) !== 'string')) {
+      done("Need 'section' argument", 1);
+    } else if (cmd.args.section.indexOf("file/") !== 0) {
+      done("Only files on FS are supported", 1);
+    } else {
+      var name = cmd.args.section.substring(5);
+      done('result', File.remove(name));
+    }
+  });
   clubby.oncmd("/v1/SWUpdate.Update", function(cmd, done) {
     if (cmd.args === undefined) {
       done("Need argument", 1);
