@@ -9,7 +9,7 @@ var SWUpdate = function(clubby) {
   });
   // TODO(lsm): Move to the File service
   clubby.oncmd("/v1/SWUpdate.Delete", function(cmd, done) {
-    if (typeof(cmd.args.section) !== 'string')) {
+    if (typeof(cmd.args.section) !== 'string') {
       done("Need 'section' argument", 1);
     } else if (cmd.args.section.indexOf("file/") !== 0) {
       done("Only files on FS are supported", 1);
