@@ -28,14 +28,14 @@ void init_conf(struct v7 *v7) {
 
   if ((fconf = fopen(conf_file_name, "r")) == NULL ||
       stat(conf_file_name, &st) == -1) {
-    printf("Cannot open %s\n", conf_file_name);
+    fprintf(stderr, "Cannot open %s\n", conf_file_name);
     return;
   }
 
   buf = calloc(st.st_size + 1, 1);
 
   if (fread(buf, 1, st.st_size, fconf) != st.st_size) {
-    printf("Cannot read %s\n", conf_file_name);
+    fprintf(stderr, "Cannot read %s\n", conf_file_name);
     goto cleanup;
   }
 

@@ -46,7 +46,7 @@ static v7_val_t load_conf(struct v7 *v7, const char *name) {
   enum v7_err err;
   f = read_json_file(name);
   if (f == NULL) {
-    printf("cannot read %s\n", name);
+    fprintf(stderr, "cannot read %s\n", name);
     return v7_create_object(v7);
   }
   err = v7_exec(v7, &res, f);

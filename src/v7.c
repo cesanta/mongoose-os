@@ -985,11 +985,14 @@ char *utfutf(char *s1, char *s2);
 #endif
 #define random() rand()
 typedef int socklen_t;
+typedef char int8_t;
 typedef unsigned char uint8_t;
+typedef int int32_t;
 typedef unsigned int uint32_t;
+typedef short int16_t;
 typedef unsigned short uint16_t;
-typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
 typedef SOCKET sock_t;
 typedef uint32_t in_addr_t;
 #ifndef UINT16_MAX
@@ -1246,6 +1249,46 @@ int strnlen(const char *s, size_t maxlen);
 #endif
 #endif
 #ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/ubjson.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_UBJSON_H_INCLUDED
+#define CS_UBJSON_H_INCLUDED
+
+/* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "mbuf.h" */
+
+void cs_ubjson_emit_null(struct mbuf *buf);
+void cs_ubjson_emit_boolean(struct mbuf *buf, int v);
+
+void cs_ubjson_emit_int8(struct mbuf *buf, int8_t v);
+void cs_ubjson_emit_uint8(struct mbuf *buf, uint8_t v);
+void cs_ubjson_emit_int16(struct mbuf *buf, int16_t v);
+void cs_ubjson_emit_int32(struct mbuf *buf, int32_t v);
+void cs_ubjson_emit_int64(struct mbuf *buf, int64_t v);
+void cs_ubjson_emit_autoint(struct mbuf *buf, int64_t v);
+void cs_ubjson_emit_float32(struct mbuf *buf, float v);
+void cs_ubjson_emit_float64(struct mbuf *buf, double v);
+void cs_ubjson_emit_autonumber(struct mbuf *buf, double v);
+void cs_ubjson_emit_size(struct mbuf *buf, size_t v);
+void cs_ubjson_emit_string(struct mbuf *buf, const char *s, size_t len);
+void cs_ubjson_emit_bin_header(struct mbuf *buf, size_t len);
+void cs_ubjson_emit_bin(struct mbuf *buf, const char *s, size_t len);
+
+void cs_ubjson_open_object(struct mbuf *buf);
+void cs_ubjson_emit_object_key(struct mbuf *buf, const char *s, size_t len);
+void cs_ubjson_close_object(struct mbuf *buf);
+
+void cs_ubjson_open_array(struct mbuf *buf);
+void cs_ubjson_close_array(struct mbuf *buf);
+
+#endif
+#ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/builtin.h"
 /**/
 #endif
@@ -1381,6 +1424,7 @@ int strnlen(const char *s, size_t maxlen);
 void init_file(struct v7 *);
 void init_socket(struct v7 *);
 void init_crypto(struct v7 *);
+void init_ubjson(struct v7 *);
 
 #endif
 #ifdef V7_MODULE_LINES
@@ -5034,6 +5078,162 @@ struct dirent *readdir(DIR *dir) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/ubjson.c"
+/**/
+#endif
+#ifdef CS_ENABLE_UBJSON
+
+/* Amalgamated: #include "ubjson.h" */
+
+void cs_ubjson_emit_null(struct mbuf *buf) {
+  mbuf_append(buf, "Z", 1);
+}
+
+void cs_ubjson_emit_boolean(struct mbuf *buf, int v) {
+  mbuf_append(buf, v ? "T" : "F", 1);
+}
+
+void cs_ubjson_emit_int8(struct mbuf *buf, int8_t v) {
+  mbuf_append(buf, "i", 1);
+  mbuf_append(buf, &v, 1);
+}
+
+void cs_ubjson_emit_uint8(struct mbuf *buf, uint8_t v) {
+  mbuf_append(buf, "U", 1);
+  mbuf_append(buf, &v, 1);
+}
+
+void cs_ubjson_emit_int16(struct mbuf *buf, int16_t v) {
+  uint8_t b[1 + sizeof(uint16_t)];
+  b[0] = 'I';
+  b[1] = ((uint16_t) v) >> 8;
+  b[2] = ((uint16_t) v) & 0xff;
+  mbuf_append(buf, b, 1 + sizeof(uint16_t));
+}
+
+static void encode_uint32(uint8_t *b, uint32_t v) {
+  b[0] = (v >> 24) & 0xff;
+  b[1] = (v >> 16) & 0xff;
+  b[2] = (v >> 8) & 0xff;
+  b[3] = v & 0xff;
+}
+
+void cs_ubjson_emit_int32(struct mbuf *buf, int32_t v) {
+  uint8_t b[1 + sizeof(uint32_t)];
+  b[0] = 'l';
+  encode_uint32(&b[1], (uint32_t) v);
+  mbuf_append(buf, b, 1 + sizeof(uint32_t));
+}
+
+static void encode_uint64(uint8_t *b, uint64_t v) {
+  b[0] = (v >> 56) & 0xff;
+  b[1] = (v >> 48) & 0xff;
+  b[2] = (v >> 40) & 0xff;
+  b[3] = (v >> 32) & 0xff;
+  b[4] = (v >> 24) & 0xff;
+  b[5] = (v >> 16) & 0xff;
+  b[6] = (v >> 8) & 0xff;
+  b[7] = v & 0xff;
+}
+
+void cs_ubjson_emit_int64(struct mbuf *buf, int64_t v) {
+  uint8_t b[1 + sizeof(uint64_t)];
+  b[0] = 'L';
+  encode_uint64(&b[1], (uint64_t) v);
+  mbuf_append(buf, b, 1 + sizeof(uint64_t));
+}
+
+void cs_ubjson_emit_autoint(struct mbuf *buf, int64_t v) {
+  if (v >= INT8_MIN && v <= INT8_MAX) {
+    cs_ubjson_emit_int8(buf, (int8_t) v);
+  } else if (v >= 0 && v <= 255) {
+    cs_ubjson_emit_uint8(buf, (uint8_t) v);
+  } else if (v >= INT16_MIN && v <= INT16_MAX) {
+    cs_ubjson_emit_int16(buf, (int32_t) v);
+  } else if (v >= INT32_MIN && v <= INT32_MAX) {
+    cs_ubjson_emit_int32(buf, (int32_t) v);
+  } else if (v >= INT64_MIN && v <= INT64_MAX) {
+    cs_ubjson_emit_int64(buf, (int64_t) v);
+  } else {
+    /* TODO(mkm): use "high-precision" stringified type */
+    abort();
+  }
+}
+
+void cs_ubjson_emit_float32(struct mbuf *buf, float v) {
+  uint32_t n;
+  uint8_t b[1 + sizeof(uint32_t)];
+  b[0] = 'd';
+  memcpy(&n, &v, sizeof(v));
+  encode_uint32(&b[1], n);
+  mbuf_append(buf, b, 1 + sizeof(uint32_t));
+}
+
+void cs_ubjson_emit_float64(struct mbuf *buf, double v) {
+  uint64_t n;
+  uint8_t b[1 + sizeof(uint64_t)];
+  b[0] = 'D';
+  memcpy(&n, &v, sizeof(v));
+  encode_uint64(&b[1], n);
+  mbuf_append(buf, b, 1 + sizeof(uint64_t));
+}
+
+void cs_ubjson_emit_autonumber(struct mbuf *buf, double v) {
+  int64_t i = (int64_t) v;
+  if ((double) i == v) {
+    cs_ubjson_emit_autoint(buf, i);
+  } else {
+    cs_ubjson_emit_float64(buf, v);
+  }
+}
+
+void cs_ubjson_emit_size(struct mbuf *buf, size_t v) {
+  /* TODO(mkm): use "high-precision" stringified type */
+  assert(v < INT64_MAX);
+  cs_ubjson_emit_autoint(buf, (int64_t) v);
+}
+
+void cs_ubjson_emit_string(struct mbuf *buf, const char *s, size_t len) {
+  mbuf_append(buf, "S", 1);
+  cs_ubjson_emit_size(buf, len);
+  mbuf_append(buf, s, len);
+}
+
+void cs_ubjson_emit_bin_header(struct mbuf *buf, size_t len) {
+  mbuf_append(buf, "[$U#", 4);
+  cs_ubjson_emit_size(buf, len);
+}
+
+void cs_ubjson_emit_bin(struct mbuf *buf, const char *s, size_t len) {
+  cs_ubjson_emit_bin_header(buf, len);
+  mbuf_append(buf, s, len);
+}
+
+void cs_ubjson_open_object(struct mbuf *buf) {
+  mbuf_append(buf, "{", 1);
+}
+
+void cs_ubjson_emit_object_key(struct mbuf *buf, const char *s, size_t len) {
+  cs_ubjson_emit_size(buf, len);
+  mbuf_append(buf, s, len);
+}
+
+void cs_ubjson_close_object(struct mbuf *buf) {
+  mbuf_append(buf, "}", 1);
+}
+
+void cs_ubjson_open_array(struct mbuf *buf) {
+  mbuf_append(buf, "[", 1);
+}
+
+void cs_ubjson_close_array(struct mbuf *buf) {
+  mbuf_append(buf, "]", 1);
+}
+
+#else
+void cs_ubjson_dummy();
+#endif
+#ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/file.c"
 /**/
 #endif
@@ -5678,6 +5878,271 @@ void init_crypto(struct v7 *v7) {
   (void) v7;
 #endif
 }
+#ifdef V7_MODULE_LINES
+#line 1 "./src/../builtin/v7_ubjson.c"
+/**/
+#endif
+/* Amalgamated: #include "v7_ubjson.h" */
+
+#ifdef V7_ENABLE_UBJSON
+
+#include <v7.h>
+#include <string.h>
+#include <assert.h>
+
+#include <ubjson.h>
+
+/* Amalgamated: #include "internal.h" */
+
+struct ubjson_ctx {
+  struct mbuf out;
+  struct mbuf stack;
+  v7_val_t cb;
+  v7_val_t errb;
+  size_t bytes_left;
+};
+
+struct visit {
+  v7_val_t obj;
+  union {
+    size_t next_idx;
+    struct v7_property *p;
+  } v;
+};
+
+static void _ubjson_call_cb(struct v7 *v7, struct ubjson_ctx *ctx) {
+  v7_val_t res, cb, args = v7_create_array(v7);
+  v7_own(v7, &args);
+
+  if (ctx->out.buf == NULL) {
+    /* signal end of stream */
+    v7_array_push(v7, args, v7_create_undefined());
+    cb = ctx->errb;
+  } else if (ctx->out.len > 0) {
+    v7_array_push(v7, args,
+                  v7_create_string(v7, ctx->out.buf, ctx->out.len, 1));
+    ctx->out.len = 0;
+    cb = ctx->cb;
+  } else {
+    /* avoid calling cb with no output */
+    goto cleanup;
+  }
+
+  if (v7_apply(v7, &res, cb, v7_create_undefined(), args) != V7_OK) {
+    fprintf(stderr, "Got error while calling ubjson cb: ");
+    v7_fprintln(stderr, v7, res);
+  }
+
+cleanup:
+  v7_disown(v7, &args);
+}
+
+struct visit *push_visit(struct mbuf *stack, v7_val_t obj) {
+  struct visit *res;
+  size_t pos = stack->len;
+  mbuf_append(stack, NULL, sizeof(struct visit));
+  res = (struct visit *) (stack->buf + pos);
+  memset(res, 0, sizeof(struct visit));
+  res->obj = obj;
+  return res;
+}
+
+struct visit *cur_visit(struct mbuf *stack) {
+  if (stack->len == 0) return NULL;
+  return (struct visit *) (stack->buf + stack->len - sizeof(struct visit));
+}
+
+void pop_visit(struct mbuf *stack) {
+  stack->len -= sizeof(struct visit);
+}
+
+static struct ubjson_ctx *ubjson_ctx_new(struct v7 *v7, val_t cb, val_t errb) {
+  struct ubjson_ctx *ctx = (struct ubjson_ctx *) malloc(sizeof(*ctx));
+  mbuf_init(&ctx->out, 0);
+  mbuf_init(&ctx->stack, 0);
+  ctx->cb = cb;
+  ctx->errb = errb;
+  v7_own(v7, &ctx->cb);
+  v7_own(v7, &ctx->errb);
+  return ctx;
+}
+
+static void ubjson_ctx_free(struct v7 *v7, struct ubjson_ctx *ctx) {
+  v7_disown(v7, &ctx->errb);
+  v7_disown(v7, &ctx->cb);
+  mbuf_free(&ctx->out);
+  mbuf_free(&ctx->stack);
+  free(ctx);
+}
+
+/* This will be called many time to advance rendering of an ubjson ctx */
+static void _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
+  struct mbuf *buf = &ctx->out, *stack = &ctx->stack;
+  struct visit *cur;
+  v7_val_t gen_proto = v7_get(
+      v7,
+      v7_get(v7, v7_get(v7, v7_get_global_object(v7), "UBJSON", ~0), "Bin", ~0),
+      "prototype", ~0);
+
+  if (ctx->out.len > 0) {
+    _ubjson_call_cb(v7, ctx);
+  }
+
+  for (cur = cur_visit(stack); cur != NULL; cur = cur_visit(stack)) {
+    v7_val_t obj = cur->obj;
+
+    if (v7_is_undefined(obj)) {
+      cs_ubjson_emit_null(buf);
+    } else if (v7_is_null(obj)) {
+      cs_ubjson_emit_null(buf);
+    } else if (v7_is_boolean(obj)) {
+      cs_ubjson_emit_boolean(buf, v7_to_boolean(obj));
+    } else if (v7_is_number(obj)) {
+      cs_ubjson_emit_autonumber(buf, v7_to_number(obj));
+    } else if (v7_is_string(obj)) {
+      size_t n;
+      const char *s = v7_to_string(v7, &obj, &n);
+      cs_ubjson_emit_string(buf, s, n);
+    } else if (v7_is_array(v7, obj)) {
+      unsigned long cur_idx = cur->v.next_idx;
+
+      if (cur->v.next_idx == 0) {
+        cs_ubjson_open_array(buf);
+      }
+
+      cur->v.next_idx++;
+
+      if (cur->v.next_idx > v7_array_length(v7, cur->obj)) {
+        cs_ubjson_close_array(buf);
+      } else {
+        cur = push_visit(stack, v7_array_get(v7, obj, cur_idx));
+        /* skip default popping of visitor frame */
+        continue;
+      }
+    } else if (v7_is_object(obj)) {
+      size_t n;
+      v7_val_t name;
+      const char *s;
+
+      if (v_get_prototype(v7, obj) == gen_proto) {
+        ctx->bytes_left = v7_to_number(v7_get(v7, obj, "size", ~0));
+        cs_ubjson_emit_bin_header(buf, ctx->bytes_left);
+        v7_set(v7, obj, "ctx", ~0, 0, v7_create_foreign(ctx));
+        pop_visit(stack);
+        v7_apply(v7, NULL, v7_get(v7, obj, "user", ~0), obj,
+                 v7_create_undefined());
+        /*
+         * The user generator will reenter calling this function again with the
+         * same context.
+         */
+        return;
+      }
+
+      if (cur->v.p == NULL) {
+        cs_ubjson_open_object(buf);
+      }
+
+      cur->v.p = v7_next_prop(v7, obj, cur->v.p);
+
+      if (cur->v.p == NULL) {
+        cs_ubjson_close_object(buf);
+      } else {
+        name = v7_iter_get_name(v7, cur->v.p);
+        s = v7_to_string(v7, &name, &n);
+        cs_ubjson_emit_object_key(buf, s, n);
+
+        cur = push_visit(stack, v7_get_v(v7, obj, name));
+        /* skip default popping of visitor frame */
+        continue;
+      }
+    } else {
+      fprintf(stderr, "ubsjon: unsupported object: ");
+      v7_fprintln(stderr, v7, obj);
+    }
+
+    pop_visit(stack);
+  }
+
+  if (ctx->out.len > 0) {
+    _ubjson_call_cb(v7, ctx);
+  }
+  mbuf_free(&ctx->out);
+  _ubjson_call_cb(v7, ctx);
+  ubjson_ctx_free(v7, ctx);
+}
+
+static void _ubjson_render(struct v7 *v7, struct ubjson_ctx *ctx,
+                           v7_val_t root) {
+  push_visit(&ctx->stack, root);
+  _ubjson_render_cont(v7, ctx);
+}
+
+static v7_val_t UBJSON_render(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t obj = v7_array_get(v7, args, 0), cb = v7_array_get(v7, args, 1),
+           errb = v7_array_get(v7, args, 2);
+  (void) this_obj;
+
+  struct ubjson_ctx *ctx = ubjson_ctx_new(v7, cb, errb);
+  _ubjson_render(v7, ctx, obj);
+  return v7_create_undefined();
+}
+
+static v7_val_t Bin_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  struct ubjson_ctx *ctx;
+  size_t n;
+  v7_val_t arg;
+  const char *s;
+  (void) v7;
+  (void) this_obj;
+  (void) args;
+
+  arg = v7_array_get(v7, args, 0);
+  ctx = (struct ubjson_ctx *) v7_to_foreign(v7_get(v7, this_obj, "ctx", ~0));
+  s = v7_to_string(v7, &arg, &n);
+  if (n > ctx->bytes_left) {
+    n = ctx->bytes_left;
+  } else {
+    ctx->bytes_left -= n;
+  }
+  /*
+   * TODO(mkm):
+   * this is useless buffering, we should call ubjson cb directly
+   */
+  mbuf_append(&ctx->out, s, n);
+  _ubjson_call_cb(v7, ctx);
+
+  if (ctx->bytes_left == 0) {
+    _ubjson_render_cont(v7, ctx);
+  }
+
+  return v7_create_undefined();
+}
+
+static v7_val_t UBJSON_Bin(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  (void) v7;
+  (void) this_obj;
+  (void) args;
+  v7_set(v7, this_obj, "size", ~0, 0, v7_array_get(v7, args, 0));
+  v7_set(v7, this_obj, "user", ~0, 0, v7_array_get(v7, args, 1));
+  return v7_create_undefined();
+}
+
+void init_ubjson(struct v7 *v7) {
+  v7_val_t gen_proto, ubjson;
+  ubjson = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "UBJSON", 6, 0, ubjson);
+  v7_set_method(v7, ubjson, "render", UBJSON_render);
+  gen_proto = v7_create_object(v7);
+  v7_set(v7, ubjson, "Bin", ~0, 0,
+         v7_create_constructor(v7, gen_proto, UBJSON_Bin, 0));
+  v7_set_method(v7, gen_proto, "send", Bin_send);
+}
+
+#else
+void init_ubjson(struct v7 *v7) {
+  (void) v7;
+}
+#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/varint.c"
 /**/
@@ -8514,6 +8979,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     init_file(v7);
     init_crypto(v7);
     init_socket(v7);
+    init_ubjson(v7);
 
     v7->inhibit_gc = 0;
   }
