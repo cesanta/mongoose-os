@@ -59,7 +59,7 @@ void esp_dump_core(int fd, struct regfile *regs) {
   if (fd == -1) {
     fd = ESP_COREDUMP_FILENO;
   }
-  uart_puts(fd, "-------- Core Dump --------\n");
+  uart_puts(fd, "--- BEGIN CORE DUMP ---\n");
 
   uart_puts(fd, "{\"arch\": \"ESP8266\"");
   emit_core_dump_section(fd, "REGS", (uintptr_t) regs, sizeof(*regs));
@@ -74,7 +74,7 @@ void esp_dump_core(int fd, struct regfile *regs) {
    * on the host where we run GDB.
    */
 
-  uart_puts(fd, "-------- End Core Dump --------\n");
+  uart_puts(fd, "---- END CORE DUMP ----\n");
 }
 
 #endif /* ESP_COREDUMP */

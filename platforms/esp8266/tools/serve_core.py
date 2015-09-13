@@ -33,6 +33,10 @@ parser.add_argument('log', help='serial log containing core dump snippet')
 
 args = parser.parse_args()
 
+START_DELIM = '--- BEGIN CORE DUMP ---'
+END_DELIM =   '---- END CORE DUMP ----'
+
+
 class Core(object):
     def __init__(self, filename):
         dump = self._read(filename)
@@ -41,24 +45,37 @@ class Core(object):
         self.mem.append(self._map_firmware(args.irom_base, args.irom))
         self.regs = base64.decodestring(dump['REGS']['data'])
 
+    def _search_backwards(self, f, start_offset, pattern):
+        offset = start_offset
+        while True:
+            offset = max(0, offset - 10000)
+            f.seek(offset)
+            data = f.read(min(10000, start_offset))
+            pos = data.rfind(pattern)
+            if pos >= 0:
+                return offset + pos
+            elif offset == 0:
+                return -1
+            offset += 5000
+
     def _read(self, filename):
         with open(filename) as f:
-            log = open(filename).read()
-
-            start_delim = '-------- Core Dump --------'
-            end_delim = '-------- End Core Dump --------'
-
-            end_pos = log.rfind(end_delim)
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            end_pos = self._search_backwards(f, f.tell(), END_DELIM)
             if end_pos == -1:
-                print >>sys.stderr, "Cannot find end delimiter:", end_delim
+                print >>sys.stderr, "Cannot find end delimiter:", END_DELIM
                 os.exit(1)
-
-            begin_pos = log.rfind(start_delim, 0, end_pos)
-            if begin_pos == -1:
-                print >>sys.stderr, "Cannot find start delimiter:", start_delim
+            start_pos = self._search_backwards(f, end_pos, START_DELIM)
+            if start_pos == -1:
+                print >>sys.stderr, "Cannot find start delimiter:", START_DELIM
                 os.exit(1)
+            start_pos += len(START_DELIM)
 
-            core_json = log[begin_pos + len(start_delim) : end_pos]
+            print >>sys.stderr, "Found core at %d - %d" % (start_pos, end_pos)
+            f.seek(start_pos)
+            core_json = f.read(end_pos - start_pos)
+            print >>sys.stderr, "%s ... %s" % (core_json[:25], core_json[-25:])
             return json.loads(core_json.replace('\n', ''))
 
     def _map_core(self, core):
