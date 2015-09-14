@@ -34,6 +34,8 @@ var Clubby = function(arg) {
     }
   };
 
+  var me = this;
+
   var reconnect = function() {
     var url = arg.url || defaultUrl;
     log('reconnecting to [' + url + ']');
@@ -84,7 +86,7 @@ var Clubby = function(arg) {
                   delete res[rk];
                 }
                 log("sending", req);
-                ws.send(JSON.stringify(req));
+                me._send(req);
               };
 
               if (h.length > 1) {
@@ -121,6 +123,24 @@ var Clubby = function(arg) {
   reconnect();
 };
 
+if (typeof UBJSON !== "undefined") {
+  Clubby.prototype._send = function(req) {
+    var ws = this.config.ws;
+    UBJSON.render(req, function(b) {
+      ws.send(new Blob([b, undefined]));
+    }, function(e) {
+      if (e !== undefined && this.config.log) {
+        console.log("error rendering", e);
+      }
+      ws.send(new Blob([undefined, ""]));
+    });
+  }
+} else {
+  Clubby.prototype._send = function(req) {
+    this.config.ws.send(JSON.stringify(req));
+  }
+}
+
 Clubby.prototype.call = function(dst, cmd, callback) {
   var c = this.config;
   var log = function(a,b) {
@@ -138,7 +158,7 @@ Clubby.prototype.call = function(dst, cmd, callback) {
   }
   if (c.ws.readyState == WebSocket.OPEN) {
     log('call sending: ', msg);
-    c.ws.send(msg);
+    this._send(req);
   } else if (c.ws.readyState == WebSocket.CLOSED) {
     c.ws.close();
   } else {

@@ -28,6 +28,8 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
 CFLAGS_EXTRA =
 CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(MONGOOSE_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
 
+include ../../../v7/scripts/platform.mk
+
 ifeq ($(OS),Windows_NT)
   PLATFORM="WIN"
 else
@@ -79,6 +81,12 @@ ifeq ($(GC_CHECK),1)
 CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions -DV7_ENABLE_GC_CHECK
 endif
 
+ifeq ($(ASAN),1)
+  CFLAGS += -fsanitize=address -fcolor-diagnostics -fno-common
+  LDFLAGS += -fsanitize=address
+  CC = $(CLANG)
+endif
+
 INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))
 
@@ -123,7 +131,7 @@ $(BUILD_DIR)/sj_version.c: $(APP_SRCS)
 
 $(BIN_DIR)/$(OUTAPP): $(OBJS)
 	@echo "LD $@"
-	$(Q) $(CC) $(OBJS) $(LIBS) -o $@
+	$(Q) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 
 fs: $(FS)
 	@echo "MKFS $@"

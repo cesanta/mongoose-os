@@ -36,12 +36,7 @@ static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
   struct v7 *v7 = ud->v7;
   v7_val_t met = v7_get(v7, ud->ws, name, ~0);
   if (!v7_is_undefined(met)) {
-    v7_val_t res, args = v7_create_array(v7);
-    v7_array_set(v7, args, 0, ev);
-    if (v7_apply(v7, &res, met, v7_create_undefined(), args) != V7_OK) {
-      /* TODO(mkm): make it print stack trace */
-      fprintf(stderr, "cb threw an exception\n");
-    }
+    sj_invoke_cb1(v7, met, ev);
   }
 }
 
@@ -169,16 +164,60 @@ static v7_val_t sj_ws_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
+static void _WebSocket_send_blob(struct v7 *v7, struct mg_connection *nc,
+                                 v7_val_t blob) {
+  const char *data;
+  size_t len;
+  unsigned long alen, i;
+  v7_val_t chunks, chunk;
+
+  chunks = v7_get(v7, blob, "a", ~0);
+  alen = v7_array_length(v7, chunks);
+
+  for (i = 0; i < alen; i++) {
+    int op = i == 0 ? WEBSOCKET_OP_BINARY : WEBSOCKET_OP_CONTINUE;
+    int flag = i == alen - 1 ? 0 : WEBSOCKET_DONT_FIN;
+
+    chunk = v7_array_get(v7, chunks, i);
+    /*
+     * This hack allows us to skip the first or the last frame
+     * while sending blobs. The effect of it is that it's possible to
+     * concatenate more blobs into a single WS message composed of
+     * several fragments.
+     *
+     * WebSocket.send(new Blob(["123", undefined]));
+     * WebSocket.send(new Blob([undefined, "456"]));
+     *
+     * If the last blob component is undefined, the current message is thus
+     * left open. In order to continue sending fragments of the same message
+     * the next send call should have it's first component undefined.
+     *
+     * TODO(mkm): find a better API.
+     */
+    if (!v7_is_undefined(chunk)) {
+      data = v7_to_string(v7, &chunk, &len);
+      mg_send_websocket_frame(nc, op | flag, data, len);
+    }
+  }
+}
+
+static void _WebSocket_send_string(struct v7 *v7, struct mg_connection *nc,
+                                   v7_val_t s) {
+  const char *data;
+  size_t len;
+  data = v7_to_string(v7, &s, &len);
+  mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
+}
+
 static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
                                v7_val_t args) {
   v7_val_t datav = v7_array_get(v7, args, 0);
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   struct mg_connection *nc;
-  const char *data;
-  size_t len;
+  int is_blob = v7_is_instanceof(v7, datav, "Blob");
 
-  if (!v7_is_string(datav)) {
-    v7_throw(v7, "non string data not implemented");
+  if (!v7_is_string(datav) && !is_blob) {
+    v7_throw(v7, "arg should be string or Blob");
     return v7_create_undefined();
   }
 
@@ -188,8 +227,11 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
     return v7_create_undefined();
   }
 
-  data = v7_to_string(v7, &datav, &len);
-  mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
+  if (is_blob) {
+    _WebSocket_send_blob(v7, nc, datav);
+  } else {
+    _WebSocket_send_string(v7, nc, datav);
+  }
 
   return v7_create_undefined();
 }

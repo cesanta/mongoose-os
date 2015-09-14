@@ -214,6 +214,12 @@ int v7_is_foreign(v7_val_t);
 /* Return true if given value is an array object */
 int v7_is_array(struct v7 *, v7_val_t);
 
+/* Return true if the object is an instance of a given constructor */
+int v7_is_instanceof(struct v7 *, v7_val_t o, const char *c);
+
+/* Return true if the object is an instance of a given constructor */
+int v7_is_instanceof_v(struct v7 *, v7_val_t o, v7_val_t c);
+
 /* Return `void *` pointer stored in `v7_val_t` */
 void *v7_to_foreign(v7_val_t);
 

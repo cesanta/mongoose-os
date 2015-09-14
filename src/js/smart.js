@@ -25,18 +25,23 @@ if (typeof(conf) == 'undefined') {
     }
   };
 }
+
+if (typeof(conf.dev.cloud) === 'undefined') {
+  conf.dev.cloud = "//api.cesanta.com";
+}
+
 print('Device id: ' + conf.dev.id);
 print('Device psk: ' + conf.dev.key);
-
+print('Cloud: ' + conf.dev.cloud);
 
 File.eval("clubby.js");
 clubby = new Clubby({
-  url: "ws://api.cesanta.com:80",
+  url: "ws:"+conf.dev.cloud+":80",
   src: conf.dev.id,
   key: conf.dev.key,
   log: false,
   onopen: function() {
-    clubby.call("//api.cesanta.com", {cmd: "/v1/Hello"}, function() {});
+    clubby.call(conf.dev.cloud, {cmd: "/v1/Hello"}, function() {});
   }
 });
 File.eval("swupdate.js");

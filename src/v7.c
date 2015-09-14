@@ -218,6 +218,12 @@ int v7_is_foreign(v7_val_t);
 /* Return true if given value is an array object */
 int v7_is_array(struct v7 *, v7_val_t);
 
+/* Return true if the object is an instance of a given constructor */
+int v7_is_instanceof(struct v7 *, v7_val_t o, const char *c);
+
+/* Return true if the object is an instance of a given constructor */
+int v7_is_instanceof_v(struct v7 *, v7_val_t o, v7_val_t c);
+
 /* Return `void *` pointer stored in `v7_val_t` */
 void *v7_to_foreign(v7_val_t);
 
@@ -454,6 +460,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
  */
 
 #define V7_ENABLE__Array__reduce 1
+#define V7_ENABLE__Blob 1
 #define V7_ENABLE__Date 1
 #define V7_ENABLE__Date__UTC 1
 #define V7_ENABLE__Date__getters 1
@@ -5895,11 +5902,12 @@ void init_crypto(struct v7 *v7) {
 /* Amalgamated: #include "internal.h" */
 
 struct ubjson_ctx {
-  struct mbuf out;
-  struct mbuf stack;
-  v7_val_t cb;
-  v7_val_t errb;
-  size_t bytes_left;
+  struct mbuf out;   /* output buffer */
+  struct mbuf stack; /* visit stack */
+  v7_val_t cb;       /* called to render data  */
+  v7_val_t errb;     /* called to finish; successo or rerror */
+  v7_val_t bin;      /* current Bin object */
+  size_t bytes_left; /* bytes left in current Bin generator */
 };
 
 struct visit {
@@ -5962,12 +5970,22 @@ static struct ubjson_ctx *ubjson_ctx_new(struct v7 *v7, val_t cb, val_t errb) {
   mbuf_init(&ctx->stack, 0);
   ctx->cb = cb;
   ctx->errb = errb;
+  ctx->bin = v7_create_undefined();
   v7_own(v7, &ctx->cb);
   v7_own(v7, &ctx->errb);
+  v7_own(v7, &ctx->bin);
   return ctx;
 }
 
 static void ubjson_ctx_free(struct v7 *v7, struct ubjson_ctx *ctx) {
+  /*
+   * Clear out reference to this context in case there is some lingering
+   * callback.
+   */
+  if (!v7_is_undefined(ctx->bin)) {
+    v7_set(v7, ctx->bin, "ctx", ~0, 0, v7_create_undefined());
+  }
+  v7_disown(v7, &ctx->bin);
   v7_disown(v7, &ctx->errb);
   v7_disown(v7, &ctx->cb);
   mbuf_free(&ctx->out);
@@ -6027,6 +6045,7 @@ static void _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
       if (v_get_prototype(v7, obj) == gen_proto) {
         ctx->bytes_left = v7_to_number(v7_get(v7, obj, "size", ~0));
         cs_ubjson_emit_bin_header(buf, ctx->bytes_left);
+        ctx->bin = obj;
         v7_set(v7, obj, "ctx", ~0, 0, v7_create_foreign(ctx));
         pop_visit(stack);
         v7_apply(v7, NULL, v7_get(v7, obj, "user", ~0), obj,
@@ -6098,6 +6117,9 @@ static v7_val_t Bin_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
   arg = v7_array_get(v7, args, 0);
   ctx = (struct ubjson_ctx *) v7_to_foreign(v7_get(v7, this_obj, "ctx", ~0));
+  if (ctx == NULL) {
+    v7_throw(v7, "UBJSON context closed\n");
+  }
   s = v7_to_string(v7, &arg, &n);
   if (n > ctx->bytes_left) {
     n = ctx->bytes_left;
@@ -8851,6 +8873,14 @@ V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
     }
   }
   return 0;
+}
+
+int v7_is_instanceof(struct v7 *v7, val_t o, const char *c) {
+  return v7_is_instanceof_v(v7, o, v7_get(v7, v7->global_object, c, ~0));
+}
+
+int v7_is_instanceof_v(struct v7 *v7, val_t o, val_t c) {
+  return is_prototype_of(v7, o, v7_get(v7, c, "prototype", 9));
 }
 
 int v7_is_true(struct v7 *v7, val_t v) {
@@ -13005,7 +13035,17 @@ static const char js_function_call[] = STRINGIFY(
     }}););
 #endif
 
+#if V7_ENABLE__Blob
+static const char js_Blob[] = STRINGIFY(
+    function Blob(a) {
+      this.a = a;
+    });
+#endif
+
 static const char * const js_functions[] = {
+#if V7_ENABLE__Blob
+  js_Blob,
+#endif
 #if V7_ENABLE__Function__call
   js_function_call,
 #endif
