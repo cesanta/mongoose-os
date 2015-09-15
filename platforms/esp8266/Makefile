@@ -89,7 +89,7 @@ MONGOOSE_FEATURES = -DNS_DISABLE_MQTT -DNS_DISABLE_MD5 \
                  -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_CGI \
                  -DNS_DISABLE_FILESYSTEM
 
-MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
+MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=9216-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
 CFLAGS = -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
@@ -130,7 +130,7 @@ IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
          $(SDK_PATH)/lwip/include/
 
 APP_SRCS += mongoose.c sj_mongoose_http_client.c \
-            sj_simple_http.c sj_mongoose.c
+            sj_simple_http.c sj_mongoose.c sj_mongoose_ws_client.c
 
 APP_LIBS += freertos mirom
 CFLAGS += -DRTOS_SDK -DRTOS_TODO
@@ -216,10 +216,10 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
 $(APP_AR): $(OBJS)
 	$(vecho) "AR $@"
 	$(Q) $(AR) cru $@ $^
-	# Move all code to flash by default.
+# Move all code to flash by default.
 	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
-	# Move strings to flash too, we have the handler.
+# Move strings to flash too, we have the handler.
 	$(Q) $(OBJCOPY2) --rename-section .rodata=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY2) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
 

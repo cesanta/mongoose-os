@@ -17,6 +17,8 @@
 #include "esp_uart.h"
 #include "esp_sj_wifi.h"
 #include "esp_data_gen.h"
+#include "sj_mongoose_ws_client.h"
+#include <sha1.h>
 
 #ifndef RTOS_SDK
 
@@ -24,7 +26,6 @@
 #include <gpio.h>
 #include <os_type.h>
 #include <user_interface.h>
-#include <sha1.h>
 #include <mem.h>
 #include <espconn.h>
 
@@ -205,6 +206,10 @@ void init_v7(void *stack_base) {
 #endif
 
   sj_init_simple_http_client(v7);
+
+#ifdef RTOS_SDK
+  sj_init_ws_client(v7);
+#endif
 
   v7_gc(v7, 1);
 }

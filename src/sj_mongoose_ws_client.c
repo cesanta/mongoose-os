@@ -214,7 +214,11 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
   v7_val_t datav = v7_array_get(v7, args, 0);
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   struct mg_connection *nc;
-  int is_blob = v7_is_instanceof(v7, datav, "Blob");
+  /*
+   * TODO(alashkin): check why v7_is_instanceof throws exception
+   * in case of string
+   */
+  int is_blob = !v7_is_string(datav) && v7_is_instanceof(v7, datav, "Blob");
 
   if (!v7_is_string(datav) && !is_blob) {
     v7_throw(v7, "arg should be string or Blob");
