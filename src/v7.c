@@ -7767,6 +7767,16 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 int double_to_str(char *buf, size_t buf_size, double val, int prec);
 #endif
 
+static const char *hex_digits = "0123456789abcdef";
+static char *append_hex(char *buf, char *limit, uint8_t c) {
+  if (buf < limit) *buf++ = 'u';
+  if (buf < limit) *buf++ = '0';
+  if (buf < limit) *buf++ = '0';
+  if (buf < limit) *buf++ = hex_digits[(int) ((c >> 4) % 0xf)];
+  if (buf < limit) *buf++ = hex_digits[(int) (c & 0xf)];
+  return buf;
+}
+
 /*
  * Appends quoted s to buf. Any double quote contained in s will be escaped.
  * Returns the number of characters that would have been added,
@@ -7801,6 +7811,10 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
       i += 2;
       if (buf < limit) *buf++ = '\\';
       if (buf < limit) *buf++ = specials[*s - '\b'];
+      continue;
+    } else if ((*s >= '\0' && *s < '\b') || (*s > '\r' && *s < ' ')) {
+      if (buf < limit) *buf++ = '\\';
+      buf = append_hex(buf, limit, (uint8_t) *s);
       continue;
     }
     i++;
