@@ -118,7 +118,7 @@ static void disp_task(void *params) {
 void rtos_init_dispatcher() {
   main_queue_handle = xQueueCreate(32, sizeof(struct rtos_event));
   xTaskCreate(disp_task, (const signed char *) "disp_task",
-              (V7_STACK_SIZE + 256) / 4, NULL, tskIDLE_PRIORITY + 2,
+              (V7_STACK_SIZE + 1024) / 4, NULL, tskIDLE_PRIORITY + 2,
               &disp_task_handle);
 }
 

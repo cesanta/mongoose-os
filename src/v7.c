@@ -10640,6 +10640,13 @@ static unsigned long get_column(const char *code, const char *pos) {
   return p == code ? pos - p : pos - (p + 1);
 }
 
+static const char *get_err_name(enum v7_err err) {
+  static const char *err_names[] = {"", "syntax error", "exception",
+                                    "stack overflow", "script too large"};
+  return (err < sizeof(err_names) / sizeof(err_names[0])) ? err_names[err]
+                                                          : "internal error";
+}
+
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
                              int verbose) {
   enum v7_err err;
@@ -10693,7 +10700,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
     }
 
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
-               "parse error at at line %d col %lu:\n%.*s\n%*s^",
+               "%s at line %d col %lu:\n%.*s\n%*s^", get_err_name(err),
                v7->pstate.line_no, col, line_len, v7->tok - col, (int) col - 1,
                "");
   }
