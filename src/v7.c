@@ -471,6 +471,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 #define V7_ENABLE__Date__toLocaleString 1
 #define V7_ENABLE__Date__toString 1
 #define V7_ENABLE__File__list 1
+#define V7_ENABLE__Function__bind 1
 #define V7_ENABLE__Function__call 1
 #define V7_ENABLE__Math 1
 #define V7_ENABLE__Math__abs 1
@@ -13049,6 +13050,19 @@ static const char js_function_call[] = STRINGIFY(
     }}););
 #endif
 
+#if V7_ENABLE__Function__bind
+static const char js_function_bind[] = STRINGIFY(
+    Object.defineProperty(Function.prototype, "bind", {
+      writable:true,
+      configurable: true,
+      value: function(t) {
+        var f = this;
+        return function() {
+          return f.apply(t, arguments);
+        };
+    }}););
+#endif
+
 #if V7_ENABLE__Blob
 static const char js_Blob[] = STRINGIFY(
     function Blob(a) {
@@ -13062,6 +13076,9 @@ static const char * const js_functions[] = {
 #endif
 #if V7_ENABLE__Function__call
   js_function_call,
+#endif
+#if V7_ENABLE__Function__bind
+  js_function_bind,
 #endif
 #if V7_ENABLE__Array__reduce
   js_array_reduce,
@@ -13079,7 +13096,10 @@ static const char * const js_functions[] = {
   int i;
 
   for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
-    v7_exec(v7, &res, js_functions[i]);
+    if (v7_exec(v7, &res, js_functions[i]) != V7_OK) {
+      fprintf(stderr, "ex: %s:\n", js_functions[i]);
+      v7_fprintln(stderr, v7, res);
+    }
   }
 
   /* TODO(lsm): re-enable in a separate PR */
