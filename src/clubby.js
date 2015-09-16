@@ -53,6 +53,10 @@ var Clubby = function(arg) {
       config.rdy = [];
     };
 
+    // This is a non-standard callback.
+    // Receives number of bytes still waiting to be sent to the client.
+    ws.onsend = config.onsend;
+
     ws.onmessage = function(ev) {
       // Dispatch responses to the correct callback
       log('received: ', ev.data);

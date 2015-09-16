@@ -82,6 +82,9 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       v7_disown(v7, &ud->ws);
       free(ud);
       break;
+    case NS_SEND:
+      invoke_cb(ud, "onsend", v7_create_number(nc->send_mbuf.len));
+      break;
   }
 }
 
