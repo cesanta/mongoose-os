@@ -282,7 +282,7 @@ build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 
 clean:
 	$(foreach jsbin,$(JSBIN_SRCS),\
-		$(Q) rm $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
+		$(Q) rm -f $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
 flash: $(FW_OUT) $(FW_FS_OUT)
