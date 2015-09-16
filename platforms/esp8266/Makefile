@@ -11,12 +11,7 @@ ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
 VERBOSE ?= 0
-# Should be RTOS or OSS
-SDK := $(shell echo $$SDK_FLAVOUR)
-ifndef SDK
-$(error Use make.sh to build project within docker container. To build against locally \
-        installed ESP SDK define SDK_FLAVOUR (with RTOS or OSS value) enviroment variable)
-endif
+SDK ?= RTOS  # or OSS
 
 BUILD_DIR = build
 TOOLS_DIR = tools
@@ -32,7 +27,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
 JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js
-# In order to keep compatibility 
+# In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
 JSBIN_EXT := js
