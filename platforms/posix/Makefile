@@ -18,7 +18,7 @@ SJ_FEATURES =
 MONGOOSE_FEATURES =
 
 INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(MONGOOSE_PATH)
-APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_conf.c \
+APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 			sj_simple_http.c mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
 			sj_mongoose_http_client.c sj_mongoose_ws_client.c sj_gpio_js.c \
 			sj_prompt.c sj_timers.c

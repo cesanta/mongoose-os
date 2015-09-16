@@ -29,7 +29,7 @@ SSL ?= None
 
 APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c \
+            sj_prompt.c v7.c sj_v7_ext.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
 JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js
 # In order to keep compatibility

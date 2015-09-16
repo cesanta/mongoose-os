@@ -6,7 +6,6 @@
 #include <sj_hal.h>
 #include <sj_timers.h>
 #include <sj_v7_ext.h>
-#include <sj_conf.h>
 #include <sj_i2c_js.h>
 #include <sj_spi_js.h>
 #include <sj_gpio_js.h>
@@ -143,24 +142,6 @@ static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_undefined();
 }
 
-void esp_init_conf(struct v7 *v7) {
-#ifndef RTOS_TODO
-  int valid;
-  unsigned char sha[20];
-  cs_sha1_ctx ctx;
-  cs_sha1_init(&ctx);
-  cs_sha1_update(&ctx, (unsigned char *) V7_DEV_CONF_STR,
-                 strnlen(V7_DEV_CONF_STR, 0x1000 - 20));
-  cs_sha1_final(sha, &ctx);
-
-  valid = (memcmp(V7_DEV_CONF_SHA1, sha, 20) == 0);
-
-  sj_init_conf(v7, valid ? V7_DEV_CONF_STR : NULL);
-#else
-  sj_init_conf(v7, NULL);
-#endif
-}
-
 void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t dht11, debug;
@@ -198,8 +179,6 @@ void init_v7(void *stack_base) {
 #ifndef RTOS_TODO
   init_data_gen_server(v7);
 #endif
-
-  esp_init_conf(v7);
 
 #ifdef RTOS_SDK
   mongoose_init();

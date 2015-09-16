@@ -25,7 +25,6 @@
 
 #include <sj_hal.h>
 #include <sj_v7_ext.h>
-#include <sj_conf.h>
 
 #include "v7_esp.h"
 #include "util.h"
