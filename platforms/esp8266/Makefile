@@ -6,6 +6,7 @@ COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SPIFFS_PATH ?= ../../src/spiffs
+CLUBBY_PATH ?= ../../src
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
@@ -30,7 +31,11 @@ APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_conf.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
-
+JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js
+# In order to keep compatibility 
+# with shared JS-files, which can call "File.eval(....)"
+# using JS as extension
+JSBIN_EXT := js
 VPATH = $(APP_MODULES) $(V7_PATH) $(MONGOOSE_PATH) $(SMARTJS_PATH)/src
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)
 LPATH = $(SDK_PATH)/lib
@@ -258,7 +263,10 @@ $(BUILD_DIR)/sj_version.c: $(APP_OBJS)
 
 # -- Filesystem.
 
-$(FW_FS_OUT): $(FS_FILES) $(BUILD_DIR)/mkspiffs
+$(FW_FS_OUT): $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
+		$(vecho) "V7 $(jsbin) -> $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
+		$(BUILD_DIR)/v7 -b $(jsbin) > $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
 	$(vecho) "MKSPIFFS $(FS_DIR) -> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_DIR) > $@
 
@@ -266,6 +274,9 @@ $(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/
 	$(vecho) "GCC mkspiffs"
 	$(Q) gcc -I. -I$(SPIFFS_PATH) -Iuser -o $@ $^ -DNO_ESP
 
+$(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+	$(vecho) "GCC v7"
+	$(Q) gcc -DV7_EXE -DV7_EXPOSE_PRIVATE $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 # Target specific warning inhibitions
 
 build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
@@ -275,6 +286,8 @@ build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 #
 
 clean:
+	$(foreach jsbin,$(JSBIN_SRCS),\
+		$(Q) rm $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
 flash: $(FW_OUT) $(FW_FS_OUT)
