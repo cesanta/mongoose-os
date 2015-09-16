@@ -137,7 +137,7 @@ void wifi_changed_cb(System_Event_t *evt) {
            v7_create_string(v7, (const char *) config.password,
                             strlen((const char *) config.password), 1));
 
-    v7_exec(v7, &res, "conf.save()");
+    v7_exec(v7, "conf.save()", &res);
     wifi_setting_up = 0;
   }
 

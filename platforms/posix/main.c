@@ -46,7 +46,7 @@ static void pre_init(struct v7 *v7) {
    * That directory should be located where the binary (s_argv0) lives.
    */
   for (i = 0; i < sizeof(init_files) / sizeof(init_files[0]); i++) {
-    if (v7_exec_file(v7, &res, init_files[i]) != V7_OK) {
+    if (v7_exec_file(v7, init_files[i], &res) != V7_OK) {
       fprintf(stderr, "Failed to run %s: ", init_files[i]);
       v7_fprintln(stderr, v7, res);
     }

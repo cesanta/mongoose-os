@@ -94,7 +94,9 @@ enum v7_err {
 };
 
 /*
- * Execute JavaScript `js_code`, store result in `result` variable.
+ * Execute JavaScript `js_code`. The result of evaluation is stored in
+ * the `result` variable.
+ *
  * Return:
  *
  *  - V7_OK on success. `result` contains the result of execution.
@@ -104,19 +106,31 @@ enum v7_err {
  *  - V7_AST_TOO_LARGE if `js_code` contains an AST segment longer than 16 bit.
  *    `result` is undefined. To avoid this error, build V7 with V7_LARGE_AST.
  */
-enum v7_err v7_exec(struct v7 *, v7_val_t *result, const char *js_code);
+enum v7_err v7_exec(struct v7 *, const char *js_code, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but loads source code from `path` file.
  */
-enum v7_err v7_exec_file(struct v7 *, v7_val_t *result, const char *path);
+enum v7_err v7_exec_file(struct v7 *, const char *path, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
  * context.
  */
-enum v7_err v7_exec_with(struct v7 *, v7_val_t *result, const char *js_code,
-                         v7_val_t this_obj);
+enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
+                         v7_val_t *result);
+
+/*
+ * Parse `str` and store corresponding JavaScript object in `res` variable.
+ * String `str` should be '\0'-terminated.
+ * Return value and semantic is the same as for `v7_exec()`.
+ */
+enum v7_err v7_parse_json(struct v7 *, const char *str, v7_val_t *res);
+
+/*
+ * Same as `v7_parse_json()`, but loads JSON string from `path`.
+ */
+enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
 
 /*
  * Compile JavaScript code `js_code` into the byte code and write generated
@@ -419,6 +433,9 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 
 /* Print error object message and possibly stack trace to f */
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
+
+/* Print JS value `v` to the open file strean `f` */
+void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
 
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
@@ -1297,6 +1314,23 @@ void cs_ubjson_close_array(struct mbuf *buf);
 
 #endif
 #ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/cs_file.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * Read whole file `path` in memory. It is responsibility of the caller
+ * to `free()` allocated memory. File content is guaranteed to be
+ * '\0'-terminated. File size is returned in `size` variable, which does not
+ * count terminating `\0`.
+ * Return: allocated memory, or NULL on error.
+ */
+char *cs_read_file(const char *path, size_t *size);
+#ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/builtin.h"
 /**/
 #endif
@@ -1670,7 +1704,7 @@ struct v7_pstate {
   int in_strict;    /* True if in strict mode */
 };
 
-V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int);
+V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
 
 #if defined(__cplusplus)
 }
@@ -2342,7 +2376,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json);
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
-V7_PRIVATE val_t _std_eval(struct v7 *v7, val_t args, char before, char after);
+V7_PRIVATE v7_val_t std_eval(struct v7 *, v7_val_t, v7_val_t, int);
 
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
@@ -5242,6 +5276,41 @@ void cs_ubjson_close_array(struct mbuf *buf) {
 void cs_ubjson_dummy();
 #endif
 #ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/cs_file.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+char *cs_read_file(const char *path, size_t *size) {
+  FILE *fp;
+  char *data = NULL;
+  if ((fp = fopen(path, "rb")) == NULL) {
+  } else if (fseek(fp, 0, SEEK_END) != 0) {
+    fclose(fp);
+  } else {
+    data = (char *) malloc(*size + 1);
+    if (data != NULL) {
+      *size = ftell(fp);
+      fseek(fp, 0, SEEK_SET);  /* Some platforms might not have rewind(), Oo */
+      if (fread(data, 1, *size, fp) != *size) {
+        free(data);
+        return NULL;
+      }
+      data[*size] = '\0';
+    }
+    fclose(fp);
+  }
+  return data;
+}
+#ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/file.c"
 /**/
 #endif
@@ -5253,7 +5322,7 @@ void cs_ubjson_dummy();
 /* Amalgamated: #include "v7.h" */
 /* Amalgamated: #include "osdep.h" */
 /* Amalgamated: #include "mbuf.h" */
-
+/* Amalgamated: #include "cs_file.h" */
 /* Amalgamated: #include "v7_features.h" */
 
 #if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
@@ -5324,7 +5393,7 @@ static v7_val_t File_eval(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   if (v7_is_string(arg0)) {
     size_t n;
     const char *s = v7_to_string(v7, &arg0, &n);
-    if (v7_exec_file(v7, &res, s) != V7_OK) {
+    if (v7_exec_file(v7, s, &res) != V7_OK) {
       v7_throw_value(v7, res);
     }
   }
@@ -5440,6 +5509,19 @@ static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
+static v7_val_t File_loadJSON(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0), result = v7_create_undefined();
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t file_name_size;
+    const char *file_name = v7_to_string(v7, &arg0, &file_name_size);
+    if (v7_parse_json_file(v7, file_name, &result) != V7_OK) {
+      result = v7_create_undefined();
+    }
+  }
+  return result;
+}
+
 static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   int res = -1;
@@ -5496,6 +5578,7 @@ void init_file(struct v7 *v7) {
   v7_set_method(v7, file_obj, "remove", File_remove);
   v7_set_method(v7, file_obj, "rename", File_rename);
   v7_set_method(v7, file_obj, "open", File_open);
+  v7_set_method(v7, file_obj, "loadJSON", File_loadJSON);
 #if V7_ENABLE__File__list
   v7_set_method(v7, file_obj, "list", File_list);
 #endif
@@ -7386,7 +7469,7 @@ enum v7_err v7_compile(const char *code, int binary, FILE *fp) {
   enum v7_err err;
 
   ast_init(&ast, 0);
-  err = parse(v7, &ast, code, 1);
+  err = parse(v7, &ast, code, 1, 0);
   if (err == V7_OK) {
     if (binary) {
       fwrite(ast.mbuf.buf, ast.mbuf.len, 1, fp);
@@ -10648,7 +10731,7 @@ static const char *get_err_name(enum v7_err err) {
 }
 
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
-                             int verbose) {
+                             int verbose, int is_json) {
   enum v7_err err;
   const char *p;
   v7->pstate.source_code = v7->pstate.pc = src;
@@ -10674,7 +10757,11 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
     }
   }
 
-  err = parse_script(v7, a);
+  if (is_json) {
+    err = parse_terminal(v7, a);
+  } else {
+    err = parse_script(v7, a);
+  }
   if (a->has_overflow) {
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
                "script too large (try V7_LARGE_AST build option)");
@@ -10722,6 +10809,7 @@ const char *v7_get_parser_error(struct v7 *v7) {
 /* Amalgamated: #include "internal.h" */
 /* Amalgamated: #include "gc.h" */
 /* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "cs_file.h" */
 
 #undef siglongjmp
 #undef sigsetjmp
@@ -12444,8 +12532,8 @@ cleanup:
 
 /* like v7_exec_with but frees src if fr is true */
 
-V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
-                                     val_t w, int fr) {
+V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, val_t *res,
+                              val_t w, int is_json, int fr) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t old_this = v7->this_object, saved_call_stack = v7->call_stack;
@@ -12473,7 +12561,7 @@ V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
-  err = parse(v7, a, src, 1);
+  err = parse(v7, a, src, 1, is_json);
   if (fr) {
     free((void *) src);
   }
@@ -12511,64 +12599,45 @@ cleanup:
   return err;
 }
 
-enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
-  return v7_exec_with2(v7, res, src, w, 0);
-}
-
 void v7_interrupt(struct v7 *v7) {
   v7->interrupt = 1;
 }
 
-enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
-  return v7_exec_with(v7, res, src, V7_UNDEFINED);
+enum v7_err v7_exec_with(struct v7 *v7, const char *src, val_t t, val_t *res) {
+  return i_exec(v7, src, res, t, 0, 0);
 }
 
-#ifndef NO_LIBC
-/* Note: this function move file pointer to the end of file */
-int v7_get_file_size(FILE *fp) {
-  int res = -1;
-  if (fseek(fp, 0, SEEK_END) == 0) {
-    res = ftell(fp);
-  }
-
-  return res;
+enum v7_err v7_exec(struct v7 *v7, const char *src, val_t *res) {
+  return i_exec(v7, src, res, v7_create_undefined(), 0, 0);
 }
-#endif
+
+enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *result) {
+  return i_exec(v7, str, result, v7_create_undefined(), 1, 0);
+}
 
 #ifndef V7_NO_FS
-enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
-  FILE *fp;
+enum v7_err i_file(struct v7 *v7, const char *path, val_t *res, int is_json) {
   char *p;
-  long file_size;
+  size_t file_size;
   enum v7_err err = V7_EXEC_EXCEPTION;
   *res = v7_create_undefined();
 
-  if ((fp = fopen(path, "r")) == NULL) {
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]",
-             path);
+  if ((p = cs_read_file(path, &file_size)) == NULL) {
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open [%s]", path);
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-  } else if ((file_size = v7_get_file_size(fp)) <= 0) {
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "fseek(%s): %s", path,
-             strerror(errno));
-    *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-    fclose(fp);
-  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes",
-             file_size + 1);
-    fclose(fp);
   } else {
-    rewind(fp);
-    if ((fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) &&
-        ferror(fp)) {
-      fclose(fp);
-      return err;
-    }
-    fclose(fp);
-    /* v7_exec_with2 will free sources after parse */
-    err = v7_exec_with2(v7, res, p, V7_UNDEFINED, 1);
+    err = i_exec(v7, p, res, v7_create_undefined(), is_json, 1);
   }
 
   return err;
+}
+
+enum v7_err v7_exec_file(struct v7 *v7, const char *path, val_t *res) {
+  return i_file(v7, path, res, 0);
+}
+
+enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
+  return i_file(v7, path, res, 1);
 }
 #endif
 #ifdef V7_MODULE_LINES
@@ -12796,26 +12865,26 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 V7_PRIVATE v7_val_t
-_std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
+std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj, int is_json) {
   enum v7_err err;
-  v7_val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
+  v7_val_t res = v7_create_undefined();
 
   if (arg != V7_UNDEFINED) {
-    char buf[100 + 3], *p = buf;
-    int len = to_str(v7, arg, buf + 1, sizeof(buf) - 3, 0);
+    char buf[100], *p = buf;
+    int len = to_str(v7, arg, buf, sizeof(buf), 0);
 
-    /* fit null terminating byte */
-    if (len >= (int) 100) {
+    /* Fit null terminating byte and quotes */
+    if (len >= (int) sizeof(buf) - 2) {
       /* Buffer is not large enough. Allocate a bigger one */
       p = (char *) malloc(len + 3);
-      to_str(v7, arg, p + 1, len + 1, 0);
+      to_str(v7, arg, p, len + 2, 0);
     }
 
-    p[0] = before;
-    p[len + 1] = after;
-    p[len + 2] = '\0';
-
-    err = v7_exec(v7, &res, p);
+    if (is_json) {
+      err = v7_parse_json(v7, p, &res);
+    } else {
+      err = v7_exec_with(v7, p, this_obj, &res);
+    }
 
     if (p != buf) free(p);
     if (err != V7_OK) v7_throw_value(v7, res);
@@ -12824,8 +12893,8 @@ _std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
 }
 
 V7_PRIVATE v7_val_t Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
-  (void) t;
-  return _std_eval(v7, args, ' ', ' ');
+  v7_val_t arg = v7_array_get(v7, args, 0);
+  return std_eval(v7, arg, t, 0);
 }
 
 V7_PRIVATE v7_val_t Std_parseInt(struct v7 *v7, v7_val_t t, v7_val_t args) {
@@ -13103,7 +13172,7 @@ static const char * const js_functions[] = {
   int i;
 
   for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
-    if (v7_exec(v7, &res, js_functions[i]) != V7_OK) {
+    if (v7_exec(v7, js_functions[i], &res) != V7_OK) {
       fprintf(stderr, "ex: %s:\n", js_functions[i]);
       v7_fprintln(stderr, v7, res);
     }
@@ -15099,7 +15168,7 @@ static const char js_function_Object[] =
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
-  v7_exec(v7, &v, js_function_Object);
+  v7_exec(v7, js_function_Object, &v);
 
   object = v7_get(v7, v7->global_object, "Object", 6);
   v7_set(v7, object, "prototype", 9, 0, v7->object_prototype);
@@ -15392,8 +15461,8 @@ static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE v7_val_t Json_parse(struct v7 *v7, v7_val_t t, v7_val_t args) {
-  (void) t;
-  return _std_eval(v7, args, '(', ')');
+  v7_val_t arg = v7_array_get(v7, args, 0);
+  return std_eval(v7, arg, t, 1);
 }
 
 V7_PRIVATE void init_json(struct v7 *v7) {
@@ -17988,7 +18057,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   }
   mbuf_append(&m, "})\0", 3);
 
-  ret = v7_exec(v7, &tmp, m.buf);
+  ret = v7_exec(v7, m.buf, &tmp);
   mbuf_free(&m);
   if (ret != V7_OK) {
     throw_exception(v7, SYNTAX_ERROR, "Invalid function body");
@@ -18221,6 +18290,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 
 /* Amalgamated: #include "internal.h" */
 /* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "cs_file.h" */
 
 #if defined(_MSC_VER) && _MSC_VER >= 1800
 #define fileno _fileno
@@ -18247,25 +18317,6 @@ static void show_usage(char *argv[]) {
   fprintf(stderr, "%s\n", "  -vf <n>    function arena size");
   fprintf(stderr, "%s\n", "  -vp <n>    property arena size");
   exit(EXIT_FAILURE);
-}
-
-static char *read_file(const char *path, size_t *size) {
-  FILE *fp;
-  struct stat st;
-  char *data = NULL;
-  if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
-    *size = st.st_size;
-    data = (char *) malloc(*size + 1);
-    if (data != NULL) {
-      if (fread(data, 1, *size, fp) != *size) {
-        free(data);
-        return NULL;
-      }
-      data[*size] = '\0';
-    }
-    fclose(fp);
-  }
-  return data;
 }
 
 #if V7_ENABLE__Memory__stats
@@ -18365,7 +18416,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
       if (v7_compile(exprs[j], binary_ast, stdout) != V7_OK) {
         fprintf(stderr, "%s\n", "parse error");
       }
-    } else if (v7_exec(v7, &res, exprs[j]) != V7_OK) {
+    } else if (v7_exec(v7, exprs[j], &res) != V7_OK) {
       v7_print_error(stderr, v7, exprs[j], res);
       res = v7_create_undefined();
     }
@@ -18376,13 +18427,13 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
     if (show_ast) {
       size_t size;
       char *source_code;
-      if ((source_code = read_file(argv[i], &size)) == NULL) {
+      if ((source_code = cs_read_file(argv[i], &size)) == NULL) {
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
         v7_compile(source_code, binary_ast, stdout);
         free(source_code);
       }
-    } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {
+    } else if (v7_exec_file(v7, argv[i], &res) != V7_OK) {
       v7_print_error(stderr, v7, argv[i], res);
       res = v7_create_undefined();
     }

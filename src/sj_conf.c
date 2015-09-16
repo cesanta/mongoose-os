@@ -3,54 +3,11 @@
 #include <v7.h>
 #include <string.h>
 
-/*
- * TODO(alashkin): add function sj_get_file_size to HAL interface
- *  and remove v7_get_file_size from everywhere
- */
-int v7_get_file_size(FILE *fp);
-/*
- * returns the content of a json file wrapped in parenthesis
- * so that they can be directly evaluated as js. Currently
- * we don't have a C JSON parse API.
- */
-static char *read_json_file(const char *path) {
-  FILE *fp;
-  char *p;
-  long file_size;
-
-  if ((fp = fopen(path, "r")) == NULL) {
-    return NULL;
-  } else if ((file_size = v7_get_file_size(fp)) <= 0) {
-    fclose(fp);
-    return NULL;
-  } else if ((p = (char *) calloc(1, (size_t) file_size + 3)) == NULL) {
-    fclose(fp);
-    return NULL;
-  } else {
-    rewind(fp);
-    if ((fread(p + 1, 1, (size_t) file_size, fp) < (size_t) file_size) &&
-        ferror(fp)) {
-      fclose(fp);
-      return NULL;
-    }
-    fclose(fp);
-    p[0] = '(';
-    p[file_size + 1] = ')';
-    return p;
-  }
-}
-
 static v7_val_t load_conf(struct v7 *v7, const char *name) {
   v7_val_t res;
-  char *f;
   enum v7_err err;
-  f = read_json_file(name);
-  if (f == NULL) {
-    fprintf(stderr, "cannot read %s\n", name);
-    return v7_create_object(v7);
-  }
-  err = v7_exec(v7, &res, f);
-  free(f);
+
+  err = v7_parse_json_file(v7, name, &res);
   if (err != V7_OK) {
     v7_println(v7, res);
     return v7_create_object(v7);
@@ -78,7 +35,7 @@ void sj_init_conf(struct v7 *v7, char *conf_str) {
     char *f = (char *) malloc(len + 3);
     snprintf(f, len + 3, "(%s)", conf_str);
     /* TODO(mkm): simplify when we'll have a C json parse API */
-    err = v7_exec(v7, &res, f);
+    err = v7_exec(v7, f, &res);
     free(f);
     if (err != V7_OK) {
       printf("exc parsing dev conf: %s\n", f);

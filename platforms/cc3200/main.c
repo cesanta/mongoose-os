@@ -103,7 +103,7 @@ static void v7_task(void *arg) {
   sj_init_simple_http_client(v7);
   init_i2cjs(v7);
   v7_val_t res;
-  v7_exec_file(v7, &res, "init.js");
+  v7_exec_file(v7, "init.js", &res);
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;

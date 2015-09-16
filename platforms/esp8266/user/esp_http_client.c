@@ -159,7 +159,7 @@ static void http_get_dmg_cb(const char *name, ip_addr_t *ipaddr, void *arg) {
     v7_array_set(v7, cb_args, 1,
                  v7_create_string(v7, err_msg, sizeof(err_msg), 1));
     http_free(conn);
-    if (v7_exec_with(v7, &res, "this[0](undefined, this[1])", cb_args) !=
+    if (v7_exec_with(v7, "this[0](undefined, this[1])", cb_args, &res) !=
         V7_OK) {
       v7_fprintln(stderr, v7, res);
     }

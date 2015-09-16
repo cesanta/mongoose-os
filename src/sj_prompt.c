@@ -82,7 +82,7 @@ static void interrupt_char_processor(char ch) {
 static void process_js(char *cmd) {
   s_sjp.char_processor = interrupt_char_processor;
   v7_val_t v;
-  int res = v7_exec(s_sjp.v7, &v, cmd);
+  int res = v7_exec(s_sjp.v7, cmd, &v);
 
   if (res == V7_SYNTAX_ERROR) {
     printf("Syntax error: %s\n", v7_get_parser_error(s_sjp.v7));

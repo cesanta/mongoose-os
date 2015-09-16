@@ -90,7 +90,9 @@ enum v7_err {
 };
 
 /*
- * Execute JavaScript `js_code`, store result in `result` variable.
+ * Execute JavaScript `js_code`. The result of evaluation is stored in
+ * the `result` variable.
+ *
  * Return:
  *
  *  - V7_OK on success. `result` contains the result of execution.
@@ -100,19 +102,31 @@ enum v7_err {
  *  - V7_AST_TOO_LARGE if `js_code` contains an AST segment longer than 16 bit.
  *    `result` is undefined. To avoid this error, build V7 with V7_LARGE_AST.
  */
-enum v7_err v7_exec(struct v7 *, v7_val_t *result, const char *js_code);
+enum v7_err v7_exec(struct v7 *, const char *js_code, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but loads source code from `path` file.
  */
-enum v7_err v7_exec_file(struct v7 *, v7_val_t *result, const char *path);
+enum v7_err v7_exec_file(struct v7 *, const char *path, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
  * context.
  */
-enum v7_err v7_exec_with(struct v7 *, v7_val_t *result, const char *js_code,
-                         v7_val_t this_obj);
+enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
+                         v7_val_t *result);
+
+/*
+ * Parse `str` and store corresponding JavaScript object in `res` variable.
+ * String `str` should be '\0'-terminated.
+ * Return value and semantic is the same as for `v7_exec()`.
+ */
+enum v7_err v7_parse_json(struct v7 *, const char *str, v7_val_t *res);
+
+/*
+ * Same as `v7_parse_json()`, but loads JSON string from `path`.
+ */
+enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
 
 /*
  * Compile JavaScript code `js_code` into the byte code and write generated
@@ -415,6 +429,9 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 
 /* Print error object message and possibly stack trace to f */
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
+
+/* Print JS value `v` to the open file strean `f` */
+void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
 
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));

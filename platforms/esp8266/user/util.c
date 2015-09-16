@@ -52,7 +52,7 @@ void v7_run_startup() {
    * to let user know that v7 has some "init.js"
    */
   printf("\nExecuting init.js\n");
-  if (v7_exec_file(v7, &res, "init.js") != V7_OK) {
+  if (v7_exec_file(v7, "init.js", &res) != V7_OK) {
     printf("init.js execution: ");
     v7_println(v7, res);
   }
