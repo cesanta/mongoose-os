@@ -15273,8 +15273,44 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
+/*
+ * Converts a 64 bit signed integer into a string of a given base.
+ * Requires space for 65 bytes (64 bit + null terminator) in the result buffer
+ */
+static char *cs_itoa(int64_t value, char *result, int base) {
+  char *ptr = result, *ptr1 = result, tmp_char;
+  int64_t tmp_value;
+  int64_t sign = value < 0 ? -1 : 1;
+  const char *base36 = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+  if (base < 2 || base > 36) {
+    *result = '\0';
+    return result;
+  }
+
+  /* let's think positive */
+  value = value * sign;
+  do {
+    tmp_value = value;
+    value /= base;
+    *ptr++ = base36[tmp_value - value * base];
+  } while (value);
+
+  /* sign */
+  if (sign < 0) *ptr++ = '-';
+  *ptr-- = '\0';
+  while (ptr1 < ptr) {
+    tmp_char = *ptr;
+    *ptr-- = *ptr1;
+    *ptr1++ = tmp_char;
+  }
+  return result;
+}
+
 static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
-  char buf[50];
+  val_t num, radixv = v7_array_get(v7, args, 0);
+  char buf[65];
+  double d, radix;
   (void) args;
 
   if (this_obj == v7->number_prototype) {
@@ -15288,8 +15324,14 @@ static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
                     "Number.toString called on non-number object");
   }
 
-  /* TODO(mkm) handle radix first arg */
-  v7_stringify_value(v7, i_value_of(v7, this_obj), buf, sizeof(buf));
+  num = i_value_of(v7, this_obj);
+  d = v7_to_number(num);
+  radix = v7_to_number(radixv);
+  if (v7_is_number(radixv) && !isnan(d) && (int64_t) d == d && radix != 10) {
+    cs_itoa(v7_to_number(num), buf, radix);
+  } else {
+    v7_stringify_value(v7, num, buf, sizeof(buf));
+  }
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 

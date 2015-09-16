@@ -1,6 +1,6 @@
 #include "sj_timers.h"
 
-#include <malloc.h>
+#include <stdlib.h>
 
 #include "sj_v7_ext.h"
 
