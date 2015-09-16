@@ -1,10 +1,10 @@
 #!/bin/sh
 
-SDK=docker.cesanta.com:5000/esp8266-build-oss:1.3.0-cesanta
-
 if [ "$1" = "RTOS" ]; then
     shift
-    SDK=docker.cesanta.com:5000/esp8266-build-rtos:1.2.0-cesanta-r4
+    SDK=$(cat sdk.version)
+else
+    SDK=$(cat oss_sdk.version)
 fi
 
 V7DIR=$(dirname $(dirname $PWD))

@@ -1,4 +1,4 @@
-SDK ?= docker.cesanta.com:5000/cc3200-build:1.1.0-4
+SDK ?= $(shell cat sdk.version)
 SRC_DIR ?= $(realpath ../../..)
 PORT ?= auto
 
