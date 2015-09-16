@@ -5296,9 +5296,9 @@ char *cs_read_file(const char *path, size_t *size) {
   } else if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
   } else {
+    *size = ftell(fp);    
     data = (char *) malloc(*size + 1);
     if (data != NULL) {
-      *size = ftell(fp);
       fseek(fp, 0, SEEK_SET);  /* Some platforms might not have rewind(), Oo */
       if (fread(data, 1, *size, fp) != *size) {
         free(data);
