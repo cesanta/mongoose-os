@@ -90,7 +90,8 @@ enum v7_err {
   V7_SYNTAX_ERROR,
   V7_EXEC_EXCEPTION,
   V7_STACK_OVERFLOW,
-  V7_AST_TOO_LARGE
+  V7_AST_TOO_LARGE,
+  V7_INVALID_ARG
 };
 
 /*
@@ -1487,6 +1488,8 @@ void init_ubjson(struct v7 *);
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
+
+#define BIN_AST_SIGNATURE "V\007ASTV10"
 
 enum ast_tag {
   AST_NOP,
@@ -5296,7 +5299,7 @@ char *cs_read_file(const char *path, size_t *size) {
   } else if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
   } else {
-    *size = ftell(fp);    
+    *size = ftell(fp);
     data = (char *) malloc(*size + 1);
     if (data != NULL) {
       fseek(fp, 0, SEEK_SET);  /* Some platforms might not have rewind(), Oo */
@@ -7472,6 +7475,7 @@ enum v7_err v7_compile(const char *code, int binary, FILE *fp) {
   err = parse(v7, &ast, code, 1, 0);
   if (err == V7_OK) {
     if (binary) {
+      fwrite(BIN_AST_SIGNATURE, sizeof(BIN_AST_SIGNATURE), 1, fp);
       fwrite(ast.mbuf.buf, ast.mbuf.len, 1, fp);
     } else {
       ast_dump_tree(fp, &ast, &pos, 0);
@@ -10810,6 +10814,7 @@ const char *v7_get_parser_error(struct v7 *v7) {
 /* Amalgamated: #include "gc.h" */
 /* Amalgamated: #include "osdep.h" */
 /* Amalgamated: #include "cs_file.h" */
+/* Amalgamated: #include "ast.h" */
 
 #undef siglongjmp
 #undef sigsetjmp
@@ -12532,8 +12537,8 @@ cleanup:
 
 /* like v7_exec_with but frees src if fr is true */
 
-V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, val_t *res,
-                              val_t w, int is_json, int fr) {
+V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
+                              val_t *res, val_t w, int is_json, int fr) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t old_this = v7->this_object, saved_call_stack = v7->call_stack;
@@ -12561,7 +12566,18 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, val_t *res,
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
-  err = parse(v7, a, src, 1, is_json);
+  if (strncmp(BIN_AST_SIGNATURE, src, sizeof(BIN_AST_SIGNATURE)) != 0) {
+    err = parse(v7, a, src, 1, is_json);
+  } else {
+    /* TODO(alashkin): try to remove memory doubling */
+    if (src_len == 0) {
+      err = V7_INVALID_ARG;
+    } else {
+      mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
+                  src_len - sizeof(BIN_AST_SIGNATURE));
+    }
+  }
+
   if (fr) {
     free((void *) src);
   }
@@ -12603,16 +12619,23 @@ void v7_interrupt(struct v7 *v7) {
   v7->interrupt = 1;
 }
 
+/*
+ * TODO(alashkin): we need src_len only in case of
+ * binary AST-file, i.e. for i_file & Co
+ * To keep v7_exec_xxxx signatures unchanged
+ * providing 0 as src_len.
+ * That is a dirty workaround.
+ */
 enum v7_err v7_exec_with(struct v7 *v7, const char *src, val_t t, val_t *res) {
-  return i_exec(v7, src, res, t, 0, 0);
+  return i_exec(v7, src, 0, res, t, 0, 0);
 }
 
 enum v7_err v7_exec(struct v7 *v7, const char *src, val_t *res) {
-  return i_exec(v7, src, res, v7_create_undefined(), 0, 0);
+  return i_exec(v7, src, 0, res, v7_create_undefined(), 0, 0);
 }
 
 enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *result) {
-  return i_exec(v7, str, result, v7_create_undefined(), 1, 0);
+  return i_exec(v7, str, 0, result, v7_create_undefined(), 1, 0);
 }
 
 #ifndef V7_NO_FS
@@ -12626,7 +12649,7 @@ enum v7_err i_file(struct v7 *v7, const char *path, val_t *res, int is_json) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open [%s]", path);
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
   } else {
-    err = i_exec(v7, p, res, v7_create_undefined(), is_json, 1);
+    err = i_exec(v7, p, file_size, res, v7_create_undefined(), is_json, 1);
   }
 
   return err;
