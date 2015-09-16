@@ -37,6 +37,9 @@ static void uart_putdec(int fd, unsigned int n) {
 static int core_dump_emit_char_fd = 0;
 static void core_dump_emit_char(char c, void *user_data) {
   (void) user_data;
+#ifdef RTOS_SDK
+  system_soft_wdt_feed();
+#endif
   uart_putchar(core_dump_emit_char_fd, c);
 }
 
@@ -64,7 +67,9 @@ void esp_dump_core(int fd, struct regfile *regs) {
   uart_puts(fd, "{\"arch\": \"ESP8266\"");
   emit_core_dump_section(fd, "REGS", (uintptr_t) regs, sizeof(*regs));
   emit_core_dump_section(fd, "DRAM", 0x3FFE8000, 0x18000);
+#ifndef RTOS_SDK
   emit_core_dump_section(fd, "ROM", 0x40000000, 0x10000);
+#endif
   uart_puts(fd, "}\n");
 
   /*

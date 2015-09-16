@@ -29,7 +29,14 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-void system_soft_wdt_feed();
+int printf_broken(const char *format, ...);
+
+/*
+ * If we leave this out it crashes, WTF?!
+ * It's weird since printfs here are only invoked on exception
+ * and by defining this macro we boot fine without exceptions
+ */
+#define printf printf_broken
 
 #endif /* RTOS_SDK */
 
@@ -56,6 +63,9 @@ static void handle_exception(struct regfile *regs) {
   {
     int ch;
     while ((ch = blocking_read_uart())) {
+#ifdef RTOS_SDK
+      system_soft_wdt_feed();
+#endif
       if (ch == 'y') {
         esp_dump_core(1, regs);
       } else if (ch == '$') {

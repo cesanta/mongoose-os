@@ -126,7 +126,19 @@ void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
   return realloc(ptr, size);
 }
 
-#endif /* RTOS_SDK */
+#else /* !RTOS_SDK */
+
+int printf(const char *format, ...) {
+  va_list arglist;
+  int ret;
+
+  va_start(arglist, format);
+  ret = vfprintf(stdout, format, arglist);
+  va_end(arglist);
+  return ret;
+}
+
+#endif /* !RTOS_SDK */
 
 int snprintf(char *buffer, size_t size, const char *format, ...) {
   int ret;

@@ -133,7 +133,11 @@ APP_SRCS += mongoose.c sj_mongoose_http_client.c \
             sj_simple_http.c sj_mongoose.c sj_mongoose_ws_client.c
 
 APP_LIBS += freertos mirom
-CFLAGS += -DRTOS_SDK -DRTOS_TODO
+# -fno-builtin-printf avoid that the compiler "optimizes"
+# some printf calls: e.g.
+#   printf("foo\n") -> puts("foo")
+#   printf("%c", ch) -> <something_that_calls_esp_stuff_not_libc>
+CFLAGS += -DRTOS_SDK -DRTOS_TODO -fno-builtin-printf
 ifneq "$(NETTEST)" ""
 CFLAGS += -DRTOS_NETWORK_TEST
 endif
