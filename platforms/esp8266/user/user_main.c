@@ -53,13 +53,6 @@ void start_cmd(void *dummy) {
   init_smartjs();
 #endif
 
-#if !defined(V7_NO_FS) && !defined(NO_EXEC_INITJS)
-  v7_run_startup();
-
-  /* Example debug message, enable by calling Debug.setOutput(1) in init.js */
-  fprintf(stderr, "init.js called\n");
-#endif
-
 #if !defined(NO_PROMPT)
   sj_prompt_init(v7);
 #endif

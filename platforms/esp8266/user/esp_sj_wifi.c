@@ -116,15 +116,20 @@ void wifi_changed_cb(System_Event_t *evt) {
       ) {
     struct station_config config;
     v7_val_t res;
-    v7_val_t sys =
-        v7_get(v7, v7_get(v7, v7_get_global_object(v7), "conf", ~0), "sys", ~0);
-    v7_val_t known, wifi = v7_get(v7, sys, "wifi", ~0);
+    v7_val_t conf = v7_get(v7, v7_get_global_object(v7), "conf", ~0);
+    v7_val_t known, wifi;
+
+    if (v7_is_undefined(conf)) {
+      fprintf(stderr, "cannot save conf, no conf object\n");
+      return;
+    }
+    wifi = v7_get(v7, conf, "wifi", ~0);
 
     if (v7_is_undefined(wifi)) {
       wifi = v7_create_object(v7);
-      v7_set(v7, sys, "wifi", ~0, 0, wifi);
+      v7_set(v7, conf, "wifi", ~0, 0, wifi);
     }
-    known = v7_get(v7, sys, "known", ~0);
+    known = v7_get(v7, conf, "known", ~0);
     if (v7_is_undefined(known)) {
       known = v7_create_object(v7);
       v7_set(v7, wifi, "known", ~0, 0, known);

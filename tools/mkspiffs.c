@@ -62,6 +62,7 @@ void copy(char *path, char *fname) {
   ifd = open(path, O_RDONLY);
   if (ifd == -1) {
     fprintf(stderr, "cannot open %s\n", path);
+    perror("cannot open");
     return;
   }
 

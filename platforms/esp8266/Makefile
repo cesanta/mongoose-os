@@ -6,6 +6,7 @@ COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SPIFFS_PATH ?= ../../src/spiffs
+SJSJS_PATH ?= ../../src/js
 CLUBBY_PATH ?= ../../src
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
@@ -23,6 +24,7 @@ TOOLS_DIR = tools
 COMMON_TOOLS_DIR ?= ../../tools
 FW_DIR = firmware
 FS_DIR = fs
+FS_BUILD_DIR = $(BUILD_DIR)/fs
 APP = smartjs
 # SSL can be SDK or Krypton
 SSL ?= None
@@ -31,11 +33,13 @@ APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
-JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js
+JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js
+JS_SRCS    := $(SJSJS_PATH)/smart.js
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
 JSBIN_EXT := js
+JS_EXT := js
 VPATH = $(APP_MODULES) $(V7_PATH) $(MONGOOSE_PATH) $(SMARTJS_PATH)/src
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)
 LPATH = $(SDK_PATH)/lib
@@ -263,12 +267,20 @@ $(BUILD_DIR)/sj_version.c: $(APP_OBJS)
 
 # -- Filesystem.
 
-$(FW_FS_OUT): $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+$(FS_BUILD_DIR):
+	@mkdir -p $(FS_BUILD_DIR)
+
+$(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
-		$(vecho) "V7 $(jsbin) -> $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
-		$(BUILD_DIR)/v7 -b $(jsbin) > $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
+		echo "V7 $(jsbin) -> $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
+		$(BUILD_DIR)/v7 -b $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
+	/usr/bin/rsync -r --copy-links $(FS_DIR)/ $(FS_BUILD_DIR)/
+# OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
+	$(Q) $(foreach js,$(JS_SRCS), \
+		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
+		cp $(js) $(FS_BUILD_DIR))
 	$(vecho) "MKSPIFFS $(FS_DIR) -> $@"
-	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_DIR) > $@
+	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_BUILD_DIR) > $@
 
 $(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
 	$(vecho) "GCC mkspiffs"
@@ -286,8 +298,6 @@ build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 #
 
 clean:
-	$(foreach jsbin,$(JSBIN_SRCS),\
-		$(Q) rm -f $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
 flash: $(FW_OUT) $(FW_FS_OUT)

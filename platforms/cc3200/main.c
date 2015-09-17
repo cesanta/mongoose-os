@@ -103,7 +103,10 @@ static void v7_task(void *arg) {
   sj_init_simple_http_client(v7);
   init_i2cjs(v7);
   v7_val_t res;
-  v7_exec_file(v7, "init.js", &res);
+  if (v7_exec_file(v7, "smart.js", &res) != V7_OK) {
+    fprintf(stderr, "cannot run smart.js: ");
+    v7_fprint(stderr, v7, res);
+  }
   sj_prompt_init(v7);
   while (1) {
     struct prompt_event pe;

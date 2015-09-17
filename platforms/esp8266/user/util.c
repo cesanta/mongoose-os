@@ -41,20 +41,3 @@ int await_change(int gpio, int *max_cycles) {
   }
   return 0;
 }
-
-#if !defined(V7_NO_FS) && !defined(NO_EXEC_INITJS)
-void v7_run_startup() {
-  v7_val_t res;
-  /*
-   * It is a question - should we print "Executing
-   * and print message if init.js is not found
-   * For the moment - print in order
-   * to let user know that v7 has some "init.js"
-   */
-  printf("\nExecuting init.js\n");
-  if (v7_exec_file(v7, "init.js", &res) != V7_OK) {
-    printf("init.js execution: ");
-    v7_println(v7, res);
-  }
-}
-#endif

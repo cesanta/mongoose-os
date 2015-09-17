@@ -18453,7 +18453,10 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
       if ((source_code = cs_read_file(argv[i], &size)) == NULL) {
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
-        v7_compile(source_code, binary_ast, stdout);
+        if (v7_compile(source_code, binary_ast, stdout) != V7_OK) {
+          fprintf(stderr, "error: %s\n", v7->error_msg);
+          exit(1);
+        }
         free(source_code);
       }
     } else if (v7_exec_file(v7, argv[i], &res) != V7_OK) {
