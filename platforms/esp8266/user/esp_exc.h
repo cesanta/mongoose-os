@@ -22,13 +22,14 @@
 #define ESP_UPPER_VALID_ADDRESS 0x60000000
 
 #ifndef RTOS_SDK
+
 /*
  * Constructed by xtos.
  *
  * There is a UserFrame structure in
  * ./esp_iot_rtos_sdk/extra_include/xtensa/xtruntime-frames.h
  */
-struct xtos_saved_regs {
+struct xtensa_stack_frame {
   uint32_t pc; /* instruction causing the trap */
   uint32_t ps;
   uint32_t sar;
@@ -40,7 +41,7 @@ struct xtos_saved_regs {
 #else
 
 /* from <freertos/xtensa_context.h> */
-struct xtensa_rtos_stack_frame {
+struct xtensa_stack_frame {
   uint32_t exit;  /* (offset 0) exit point for dispatch */
   uint32_t pc;    /* return address */
   uint32_t ps;    /* at level 1 ps.excm is set here */
@@ -66,10 +67,7 @@ struct regfile {
   uint32_t ps;
 };
 
-#ifndef RTOS_SDK
-void esp_exception_handler(struct xtos_saved_regs *frame);
-#endif
-
+void esp_exception_handler(struct xtensa_stack_frame *frame);
 void esp_exception_handler_init();
 
 #endif /* ESP_EXC_INCLUDED */

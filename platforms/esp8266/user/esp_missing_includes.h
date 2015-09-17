@@ -23,11 +23,14 @@ void ets_delay_us(unsigned us);
 void _xtos_set_exception_handler();
 void xthal_set_intenable();
 
-#else
+#else /* !RTOS_SDK */
 
 #define BIT(nr) (1UL << (nr))
 uint32_t system_get_time();
 void system_soft_wdt_feed();
+
+/* well, this is not technically a missing include */
+int printf_broken(const char *format, ...);
 
 #endif /* RTOS_SDK */
 

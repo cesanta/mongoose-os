@@ -29,8 +29,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-int printf_broken(const char *format, ...);
-
 /*
  * If we leave this out it crashes, WTF?!
  * It's weird since printfs here are only invoked on exception
@@ -95,7 +93,7 @@ static void handle_exception(struct regfile *regs) {
  * user stack. This might be different in other execution modes on the
  * quite variegated xtensa platform family, but that's how it works on ESP8266.
  */
-FAST void esp_exception_handler(struct xtos_saved_regs *frame) {
+FAST void esp_exception_handler(struct xtensa_stack_frame *frame) {
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
   printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
@@ -114,22 +112,8 @@ FAST void esp_exception_handler(struct xtos_saved_regs *frame) {
 
 #else /* !RTOS_SDK */
 
-void __wrap_user_fatal_exception_handler(int cause) {
-  xTaskHandle th = xTaskGetCurrentTaskHandle();
-  /*
-   * The task handle should be opaque but we'll assume here it's
-   * a pointer to a tskTaskControlBlock structure, whose first field is:
-   *
-   * volatile portSTACK_TYPE *pxTopOfStack;
-   *
-   * It's documentation at least guarantees that it's the first element.
-   * Before an exception handler is invoked extensa rtos will save the
-   * regiters in a stack frame. We captured the structure of that frame in
-   * xtensa_rtos_stack_frame.
-   */
-  struct xtensa_rtos_stack_frame *frame =
-      (struct xtensa_rtos_stack_frame *) *(void **) th;
-
+FAST void esp_exception_handler(struct xtensa_stack_frame *frame) {
+  uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
   printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
 
@@ -144,6 +128,44 @@ void __wrap_user_fatal_exception_handler(int cause) {
   /* TODO(mkm): call system exception vector */
   while (1) {
     system_soft_wdt_feed();
+  }
+}
+
+/*
+ * Possible useful functions to explore
+ * (Already explored: they didn't work, but I might have used them wrong (mkm))
+ *
+ *  XT_RTOS_INT_EXIT();
+ * void _xt_user_exit();
+ */
+
+FAST void __wrap_user_fatal_exception_handler(int cause) {
+  int double_ex = RSR(PS) & 0x10;
+  xTaskHandle th = xTaskGetCurrentTaskHandle();
+  /*
+   * The task handle should be opaque but we'll assume here it's
+   * a pointer to a tskTaskControlBlock structure, whose first field is:
+   *
+   * volatile portSTACK_TYPE *pxTopOfStack;
+   *
+   * It's documentation at least guarantees that it's the first element.
+   * Before an exception handler is invoked extensa rtos will save the
+   * regiters in a stack frame. We captured the structure of that frame in
+   * xtensa_stack_frame.
+   */
+  struct xtensa_stack_frame *frame =
+      (struct xtensa_stack_frame *) *(void **) th;
+
+  if (double_ex) {
+    printf("Double exception\n");
+  }
+#ifdef ESP_FLASH_BYTES_EMUL
+  if (cause == EXCCAUSE_LOAD_STORE_ERROR) {
+    flash_emul_exception_handler(frame);
+  } else
+#endif
+  {
+    esp_exception_handler(frame);
   }
 }
 
