@@ -217,6 +217,7 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
   v7_val_t datav = v7_array_get(v7, args, 0);
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   struct mg_connection *nc;
+  struct user_data *ud;
   /*
    * TODO(alashkin): check why v7_is_instanceof throws exception
    * in case of string
@@ -239,6 +240,10 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t this_obj,
   } else {
     _WebSocket_send_string(v7, nc, datav);
   }
+
+  /* notify that the buffer size changed */
+  ud = (struct user_data *) nc->user_data;
+  invoke_cb(ud, "onsend", v7_create_number(nc->send_mbuf.len));
 
   return v7_create_undefined();
 }

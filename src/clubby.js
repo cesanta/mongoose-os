@@ -129,9 +129,10 @@ var Clubby = function(arg) {
 
 if (typeof UBJSON !== "undefined") {
   Clubby.prototype._send = function(req) {
-    var ws = this.config.ws;
+    var ws = this.config.ws, first = true;
     UBJSON.render(req, function(b) {
-      ws.send(new Blob([b, undefined]));
+      ws.send(new Blob(first ? [b, undefined] : [undefined,b,undefined]));
+      first = false;
     }, function(e) {
       if (e !== undefined && this.config.log) {
         console.log("error rendering", e);
