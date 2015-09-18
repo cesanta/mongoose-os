@@ -79,8 +79,7 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
              -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
              -fno-tree-pre -fno-tree-vrp
 
-SHIMS = -Dhmac_sha1=v7_hmac_sha1 \
-        -DNDEBUG
+SHIMS = -DNDEBUG
 
 # NDEBUG is required because we don't have an assert shim
 # TODO(mkm): make one
