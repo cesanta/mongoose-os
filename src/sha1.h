@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#if !defined(NS_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
-#define NS_SHA1_HEADER_INCLUDED
+#if !defined(MG_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
+#define MG_SHA1_HEADER_INCLUDED
 
 #include "osdep.h"
 
@@ -27,4 +27,4 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-#endif /* NS_SHA1_HEADER_INCLUDED */
+#endif /* MG_SHA1_HEADER_INCLUDED */

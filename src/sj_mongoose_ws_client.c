@@ -46,7 +46,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   struct v7 *v7 = ud->v7;
 
   switch (ev) {
-    case NS_CONNECT:
+    case MG_EV_CONNECT:
       if (*(int *) ev_data == 0) {
         char *proto = NULL;
         if (ud->proto != NULL) {
@@ -61,11 +61,11 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         invoke_cb(ud, "onerror", v7_create_null());
       }
       break;
-    case NS_WEBSOCKET_HANDSHAKE_DONE:
+    case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
       v7_set(v7, ud->ws, "_nc", ~0, V7_PROPERTY_HIDDEN, v7_create_foreign(nc));
       invoke_cb(ud, "onopen", v7_create_null());
       break;
-    case NS_WEBSOCKET_FRAME: {
+    case MG_EV_WEBSOCKET_FRAME: {
       v7_val_t ev, data;
       ev = v7_create_object(v7);
       v7_own(v7, &ev);
@@ -75,14 +75,14 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       v7_disown(v7, &ev);
       break;
     }
-    case NS_CLOSE:
+    case MG_EV_CLOSE:
       invoke_cb(ud, "onclose", v7_create_null());
       nc->user_data = NULL;
       v7_set(v7, ud->ws, "_nc", ~0, V7_PROPERTY_HIDDEN, v7_create_undefined());
       v7_disown(v7, &ud->ws);
       free(ud);
       break;
-    case NS_SEND:
+    case MG_EV_SEND:
       invoke_cb(ud, "onsend", v7_create_number(nc->send_mbuf.len));
       break;
   }
@@ -139,7 +139,7 @@ static v7_val_t sj_ws_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
     nc = mg_connect(&sj_mgr, url, ws_ev_handler);
     if (nc == NULL) v7_throw(v7, "error creating the connection");
-#ifdef NS_ENABLE_SSL
+#ifdef MG_ENABLE_SSL
     if (use_ssl) {
       mg_set_ssl(nc, NULL, NULL);
     }
@@ -255,7 +255,7 @@ static v7_val_t WebSocket_close(struct v7 *v7, v7_val_t this_obj,
   (void) args;
   if (v7_is_foreign(ncv) &&
       (nc = (struct mg_connection *) v7_to_foreign(ncv)) != NULL) {
-    nc->flags |= NSF_CLOSE_IMMEDIATELY;
+    nc->flags |= MG_F_CLOSE_IMMEDIATELY;
   }
   return v7_create_undefined();
 }

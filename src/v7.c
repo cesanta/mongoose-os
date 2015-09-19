@@ -896,8 +896,8 @@ char *utfutf(char *s1, char *s2);
 #ifndef OSDEP_HEADER_INCLUDED
 #define OSDEP_HEADER_INCLUDED
 
-#if !defined(NS_DISABLE_FILESYSTEM) && defined(AVR_NOFS)
-#define NS_DISABLE_FILESYSTEM
+#if !defined(MG_DISABLE_FILESYSTEM) && defined(AVR_NOFS)
+#define MG_DISABLE_FILESYSTEM
 #endif
 
 #undef UNICODE                /* Use ANSI WinAPI functions */
@@ -1057,14 +1057,14 @@ DIR *opendir(const char *name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 
-#elif /* not _WIN32 */ defined(NS_CC3200)
+#elif /* not _WIN32 */ defined(MG_CC3200)
 
 #include <fcntl.h>
 #include <unistd.h>
 #include <cc3200_libc.h>
 #include <cc3200_socket.h>
 
-#elif /* not CC3200 */ defined(NS_ESP8266) && defined(RTOS_SDK)
+#elif /* not CC3200 */ defined(MG_ESP8266) && defined(RTOS_SDK)
 
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
@@ -1082,7 +1082,7 @@ struct dirent *readdir(DIR *dir);
 #include <netdb.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <arpa/inet.h> /* For inet_pton() when NS_ENABLE_IPV6 is defined */
+#include <arpa/inet.h> /* For inet_pton() when MG_ENABLE_IPV6 is defined */
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -1094,7 +1094,7 @@ struct dirent *readdir(DIR *dir);
 #include <stdarg.h>
 
 #ifndef AVR_LIBC
-#ifndef NS_ESP8266
+#ifndef MG_ESP8266
 #define closesocket(x) close(x)
 #endif
 #ifndef __cdecl
@@ -1123,7 +1123,7 @@ int64_t strtoll(const char *str, char **endptr, int base);
     fflush(stdout);             \
   } while (0)
 
-#ifdef NS_ENABLE_DEBUG
+#ifdef MG_ENABLE_DEBUG
 #define DBG __DBG
 #else
 #define DBG(x)
@@ -1217,8 +1217,8 @@ void MD5_Final(unsigned char *md, MD5_CTX *c);
  * All rights reserved
  */
 
-#if !defined(NS_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
-#define NS_SHA1_HEADER_INCLUDED
+#if !defined(MG_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
+#define MG_SHA1_HEADER_INCLUDED
 
 /* Amalgamated: #include "osdep.h" */
 
@@ -1241,7 +1241,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-#endif /* NS_SHA1_HEADER_INCLUDED */
+#endif /* MG_SHA1_HEADER_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/str_util.h"
 /**/
@@ -5046,12 +5046,12 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
  * for systems which do not natively support it (e.g. Windows).
  */
 
-#ifndef NS_FREE
-#define NS_FREE free
+#ifndef MG_FREE
+#define MG_FREE free
 #endif
 
-#ifndef NS_MALLOC
-#define NS_MALLOC malloc
+#ifndef MG_MALLOC
+#define MG_MALLOC malloc
 #endif
 
 #ifdef _WIN32
@@ -5062,7 +5062,7 @@ DIR *opendir(const char *name) {
 
   if (name == NULL) {
     SetLastError(ERROR_BAD_ARGUMENTS);
-  } else if ((dir = (DIR *) NS_MALLOC(sizeof(*dir))) == NULL) {
+  } else if ((dir = (DIR *) MG_MALLOC(sizeof(*dir))) == NULL) {
     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
   } else {
     to_wchar(name, wpath, ARRAY_SIZE(wpath));
@@ -5072,7 +5072,7 @@ DIR *opendir(const char *name) {
       dir->handle = FindFirstFileW(wpath, &dir->info);
       dir->result.d_name[0] = '\0';
     } else {
-      NS_FREE(dir);
+      MG_FREE(dir);
       dir = NULL;
     }
   }
@@ -5086,7 +5086,7 @@ int closedir(DIR *dir) {
   if (dir != NULL) {
     if (dir->handle != INVALID_HANDLE_VALUE)
       result = FindClose(dir->handle) ? 0 : -1;
-    NS_FREE(dir);
+    MG_FREE(dir);
   } else {
     result = -1;
     SetLastError(ERROR_BAD_ARGUMENTS);

@@ -183,7 +183,7 @@ static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   size_t i;
   struct mbuf *io = &nc->recv_mbuf;
   switch (ev) {
-    case NS_RECV:
+    case MG_EV_RECV:
       for (i = 0; i < io->len; i++) {
         sj_prompt_process_char(io->buf[i]);
         if (io->buf[i] == '\n') {
@@ -192,7 +192,7 @@ static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
       }
       mbuf_remove(io, io->len);
       break;
-    case NS_CLOSE:
+    case MG_EV_CLOSE:
       sj_please_quit = 1;
       break;
   }

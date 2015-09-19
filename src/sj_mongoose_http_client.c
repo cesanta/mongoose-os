@@ -21,7 +21,7 @@ static void mongoose_ev_handler(struct mg_connection *nc, int ev,
   int connect_status;
 
   switch (ev) {
-    case NS_CONNECT:
+    case MG_EV_CONNECT:
       connect_status = *(int *) ev_data;
       if (connect_status != 0) {
         sj_http_error_callback(ud->v7, ud->cb, connect_status);
@@ -30,14 +30,14 @@ static void mongoose_ev_handler(struct mg_connection *nc, int ev,
         nc->user_data = NULL;
       }
       break;
-    case NS_HTTP_REPLY:
+    case MG_EV_HTTP_REPLY:
       sj_http_success_callback(ud->v7, ud->cb, hm->body.p, hm->body.len);
       v7_disown(ud->v7, &ud->cb);
       free(ud);
       nc->user_data = NULL;
-      nc->flags |= NSF_SEND_AND_CLOSE;
+      nc->flags |= MG_F_SEND_AND_CLOSE;
       break;
-    case NS_CLOSE:
+    case MG_EV_CLOSE:
       if (ud != NULL) {
         /*
          * Something goes wrong: ud would be NULL if

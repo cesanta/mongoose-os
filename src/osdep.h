@@ -6,8 +6,8 @@
 #ifndef OSDEP_HEADER_INCLUDED
 #define OSDEP_HEADER_INCLUDED
 
-#if !defined(NS_DISABLE_FILESYSTEM) && defined(AVR_NOFS)
-#define NS_DISABLE_FILESYSTEM
+#if !defined(MG_DISABLE_FILESYSTEM) && defined(AVR_NOFS)
+#define MG_DISABLE_FILESYSTEM
 #endif
 
 #undef UNICODE                /* Use ANSI WinAPI functions */
@@ -167,14 +167,14 @@ DIR *opendir(const char *name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 
-#elif /* not _WIN32 */ defined(NS_CC3200)
+#elif /* not _WIN32 */ defined(MG_CC3200)
 
 #include <fcntl.h>
 #include <unistd.h>
 #include <cc3200_libc.h>
 #include <cc3200_socket.h>
 
-#elif /* not CC3200 */ defined(NS_ESP8266) && defined(RTOS_SDK)
+#elif /* not CC3200 */ defined(MG_ESP8266) && defined(RTOS_SDK)
 
 #include <lwip/sockets.h>
 #include <lwip/netdb.h>
@@ -192,7 +192,7 @@ struct dirent *readdir(DIR *dir);
 #include <netdb.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <arpa/inet.h> /* For inet_pton() when NS_ENABLE_IPV6 is defined */
+#include <arpa/inet.h> /* For inet_pton() when MG_ENABLE_IPV6 is defined */
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -204,7 +204,7 @@ struct dirent *readdir(DIR *dir);
 #include <stdarg.h>
 
 #ifndef AVR_LIBC
-#ifndef NS_ESP8266
+#ifndef MG_ESP8266
 #define closesocket(x) close(x)
 #endif
 #ifndef __cdecl
@@ -233,7 +233,7 @@ int64_t strtoll(const char *str, char **endptr, int base);
     fflush(stdout);             \
   } while (0)
 
-#ifdef NS_ENABLE_DEBUG
+#ifdef MG_ENABLE_DEBUG
 #define DBG __DBG
 #else
 #define DBG(x)

@@ -93,17 +93,17 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=1 \
            $(FEATURES_EXTRA)
 
-MONGOOSE_FEATURES = -DNS_DISABLE_MQTT -DNS_DISABLE_MD5 \
-                 -DNS_DISABLE_JSON_RPC -DNS_DISABLE_SOCKETPAIR -DNS_DISABLE_DAV \
-                 -DNS_DISABLE_DIRECTORY_LISTING -DNS_DISABLE_CGI \
-                 -DNS_DISABLE_FILESYSTEM
+MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
+                 -DMG_DISABLE_JSON_RPC -DMG_DISABLE_SOCKETPAIR -DMG_DISABLE_DAV \
+                 -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_CGI \
+                 -DMG_DISABLE_FILESYSTEM
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
 # compiler flags using during compilation of source files
 CFLAGS = -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
-         -Wno-parentheses -DICACHE_FLASH -DNS_ESP8266 \
+         -Wno-parentheses -DICACHE_FLASH -DMG_ESP8266 \
          -DFAST='__attribute__((section(".fast.text")))' \
          -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
          $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
