@@ -76,7 +76,7 @@ class Core(object):
             f.seek(start_pos)
             core_json = f.read(end_pos - start_pos)
             print >>sys.stderr, "%s ... %s" % (core_json[:25], core_json[-25:])
-            return json.loads(core_json.replace('\n', ''))
+            return json.loads(core_json.replace('\n', '').replace('\r', ''))
 
     def _map_core(self, core):
         mem = []
