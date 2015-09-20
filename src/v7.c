@@ -1861,7 +1861,7 @@ typedef unsigned long uintptr_t;
 /* Amalgamated: #include "builtin.h" */
 
 /* Max captures for String.replace() */
-#define V7_RE_MAX_REPL_SUB 255
+#define V7_RE_MAX_REPL_SUB 20
 
 /* MSVC6 doesn't have standard C math constants defined */
 #ifndef M_E
@@ -16625,7 +16625,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       }
       p = (char *) loot.caps[0].end;
     } while (flag_g && p < str_end);
-    if (p < str_end) {
+    if (p <= str_end) {
       ptok->start = p;
       ptok->end = str_end;
       ptok++;
