@@ -1804,6 +1804,7 @@ struct gc_arena {
 #define NOINLINE
 #endif
 
+#undef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 
 #include <assert.h>
