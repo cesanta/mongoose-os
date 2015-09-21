@@ -504,8 +504,8 @@ s32_t spiffs_obj_lu_find_id_and_span_by_phdr(
     spiffs_page_ix exclusion_pix,
     spiffs_page_ix *pix) {
   s32_t res;
-  spiffs_block_ix bix;
-  int entry;
+  spiffs_block_ix bix = 0;
+  int entry = 0;
 
   res = spiffs_obj_lu_find_entry_visitor(fs,
       fs->cursor_block_ix,
