@@ -12546,7 +12546,7 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
   ast_off_t pos = 0;
   jmp_buf saved_jmp_buf, saved_label_buf;
   size_t saved_tmp_stack_pos = v7->tmp_stack.len;
-  enum v7_err err = V7_OK;
+  volatile enum v7_err err = V7_OK;
   val_t r = v7_create_undefined();
 
   /* Make v7_exec() reentrant: save exception environments */
