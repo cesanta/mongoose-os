@@ -2102,13 +2102,6 @@ struct v7_vec {
   } while (0)
 #endif
 
-#define TRACE_VAL(v7, val)                                     \
-  do {                                                         \
-    char buf[200], *p = v7_to_json(v7, val, buf, sizeof(buf)); \
-    printf("%s %d: [%s]\n", __func__, __LINE__, p);            \
-    if (p != buf) free(p);                                     \
-  } while (0)
-
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -8128,7 +8121,6 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
     case V7_TYPE_FOREIGN:
       return c_snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
     default:
-      printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
   }
   return 0; /* for compilers that don't know about abort() */
@@ -9647,28 +9639,14 @@ void gc_compact_strings(struct v7 *v7) {
 
 void gc_dump_owned_strings(struct v7 *v7) {
   size_t i;
-#if 0
-  for (i = 0; i < v7->owned_strings.len; i++) {
-    printf("%02x ", (uint8_t) v7->owned_strings.buf[i]);
-  }
-  printf("\n");
-  for (i = 0; i < v7->owned_strings.len; i++) {
-    if (isprint(v7->owned_strings.buf[i])) {
-      printf(" %c ", v7->owned_strings.buf[i]);
-    } else {
-      printf(" . ");
-    }
-  }
-#else
   for (i = 0; i < v7->owned_strings.len; i++) {
     if (isprint((unsigned char) v7->owned_strings.buf[i])) {
-      printf("%c", v7->owned_strings.buf[i]);
+      fputc(v7->owned_strings.buf[i], stderr);
     } else {
-      printf(".");
+      fputc('.', stderr);
     }
   }
-#endif
-  printf("\n");
+  fputc('\n', stderr);
 }
 
 #endif
