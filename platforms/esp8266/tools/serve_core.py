@@ -29,6 +29,9 @@ parser.add_argument('--iram_base', dest='iram_base', default=0x40100000,
 parser.add_argument('--irom', dest='irom', required=True, help='irom firmware section')
 parser.add_argument('--irom_base', dest='irom_base', default=0x40211000,
                     type=lambda x: int(x,16), help='irom firmware section')
+parser.add_argument('--rom', dest='rom', required=False, help='rom section')
+parser.add_argument('--rom_base', dest='rom_base', default=0x40000000,
+                    type=lambda x: int(x,16), help='rom section')
 parser.add_argument('log', help='serial log containing core dump snippet')
 
 args = parser.parse_args()
@@ -43,6 +46,8 @@ class Core(object):
         self.mem = self._map_core(dump)
         self.mem.append(self._map_firmware(args.iram_base, args.iram))
         self.mem.append(self._map_firmware(args.irom_base, args.irom))
+        if args.rom_base:
+            self.mem.append(self._map_firmware(args.rom_base, args.rom))
         self.regs = base64.decodestring(dump['REGS']['data'])
 
     def _search_backwards(self, f, start_offset, pattern):
@@ -110,20 +115,27 @@ class GDBHandler(SocketServer.BaseRequestHandler):
             pkt = self.read_packet()
             if pkt == "?": # status -> trap
                 self.send_str("S09")
-            if pkt == "g": # dump registers
+            elif pkt == "g": # dump registers
+                print >>sys.stderr, "DUMPING REGS"
                 self.send_str(self.encode_bytes(core.regs))
-            if pkt[0] == "m": # read memory
+            elif pkt[0] == "G": # set registers
+                core.regs = self.decode_bytes(pkt[1:])
+                self.send_str("OK")
+            elif pkt[0] == "m": # read memory
                 addr, size = pkt[1:].split(',')
                 bs = core.read(int(addr, 16), int(size, 16))
                 self.send_str(self.encode_bytes(bs))
             else:
-                print >>sys.stderr, "Ignoring unknown command", pkt
+                print >>sys.stderr, "Ignoring unknown command '%s'" % (pkt,)
                 self.send_str("")
 
         print >>sys.stderr, "GDB closed the connection"
 
     def encode_bytes(self, bs):
         return "".join("{0:02x}".format(ord(i)) for i in bs)
+
+    def decode_bytes(self, s):
+        return s.decode('hex')
 
     def send_ack(self):
         self.request.sendall("+");

@@ -45,5 +45,6 @@ exec docker run --rm -it -v /${V7DIR}:/cesanta -v ${LOG}:/var/log/esp-console.lo
         ; tools/serve_core.py 2>/dev/null \
                                --irom firmware/0x11000.bin \
                                --iram firmware/0x00000.bin \
+                               --rom tools/rom.bin \
                                /var/log/esp-console.log \
         & xt-gdb build/smartjs.out -ex 'target remote 127.0.0.1:1234'"
