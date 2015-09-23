@@ -47,4 +47,4 @@ exec docker run --rm -it -v /${V7DIR}:/cesanta -v ${LOG}:/var/log/esp-console.lo
                                --iram firmware/0x00000.bin \
                                --rom tools/rom.bin \
                                /var/log/esp-console.log \
-        & xt-gdb build/smartjs.out -ex 'target remote 127.0.0.1:1234'"
+        & xt-gdb build/smartjs.out -ex 'target remote 127.0.0.1:1234' -ex 'set confirm off' -ex 'add-symbol-file tools/romsyms 0x40000000'"
