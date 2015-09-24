@@ -37,21 +37,7 @@ namespace {
 const int kInputHistoryLength = 1000;
 const char kPromptEnd[] = "$ ";
 
-const int kDefaultFlashBaudRate = 230400;
 const int kDefaultConsoleBaudRate = 115200;
-
-void setSerialPortSpeed(QSerialPort* port, int speed) {
-  // First we set speed to 115200 and only then set it to the value requested.
-  // We do this because Qt may silently refuse to set the speed, leaving the
-  // the previous value in effect. If it fails to set 115200 - we're screwed
-  // anyway, as that's the speed that Smart.js serial console works on.
-  if (!port->setBaudRate(115200)) {
-    qWarning() << "Failed to set speed to 115200:" << port->error();
-  }
-  if (!port->setBaudRate(speed)) {
-    qWarning() << "Failed to set speed:" << port->error();
-  }
-}
 
 }  // namespace
 
@@ -340,7 +326,7 @@ void MainDialog::connectDisconnectTerminal() {
       }
       qInfo() << "Setting console speed to" << speed
               << "(real speed may be different)";
-      setSerialPortSpeed(serial_port_.get(), speed);
+      setSpeed(serial_port_.get(), speed);
 
       // Write a newline to get a prompt back.
       serial_port_->write(QByteArray("\r\n"));
@@ -637,18 +623,6 @@ void MainDialog::loadFirmware() {
     ui_.statusMessage->setText(tr("port is not connected"));
     return;
   }
-  // TODO(imax): make the flasher set the speed instead.
-  int speed = kDefaultFlashBaudRate;
-  if (parser_->isSet("flash-baud-rate")) {
-    speed = parser_->value("flash-baud-rate").toInt();
-    if (speed == 0) {
-      qDebug() << "Invalid --flash-baud-rate value:"
-               << parser_->value("flash-baud-rate");
-      speed = kDefaultFlashBaudRate;
-    }
-  }
-  qInfo() << "Flashing at " << speed << "(real speed may be different)";
-  setSerialPortSpeed(serial_port_.get(), speed);
   setState(Flashing);
   err = f->setPort(serial_port_.get());
   if (!err.ok()) {

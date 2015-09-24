@@ -330,22 +330,6 @@ class FlasherImpl : public Flasher {
   util::Status setPort(QSerialPort* port) override {
     QMutexLocker lock(&lock_);
     port_ = port;
-    int speed = kSerialSpeed;
-    if (!port_->setBaudRate(speed)) {
-      return util::Status(
-          util::error::INTERNAL,
-          QCoreApplication::translate("connectSerial",
-                                      "Failed to set baud rate").toStdString());
-    }
-#ifdef Q_OS_OSX
-    if (ioctl(port_->handle(), IOSSIOSPEED, &speed) < 0) {
-      return util::Status(
-          util::error::INTERNAL,
-          QCoreApplication::translate("connectSerial",
-                                      "Failed to set baud rate with ioctl")
-              .toStdString());
-    }
-#endif
     return util::Status::OK;
   }
 
@@ -482,6 +466,11 @@ class FlasherImpl : public Flasher {
     util::Status st;
     progress_ = 0;
     emit progress(progress_);
+
+    st = setSpeed(port_, kSerialSpeed);
+    if (!st.ok()) {
+      return st;
+    }
 #ifndef NO_LIBFTDI
     emit statusMessage(tr("Opening FTDI context..."), true);
     auto r = openFTDI();

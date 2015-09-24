@@ -533,6 +533,20 @@ class FlasherImpl : public Flasher {
   void run() override {
     QMutexLocker lock(&lock_);
 
+    util::Status st = runLocked();
+    if (!st.ok()) {
+      emit done(QString::fromStdString(st.error_message()), false);
+      return;
+    }
+    emit done(tr("All done!"), true);
+  }
+
+ private:
+  util::Status runLocked() {
+    QSerialPort* data_port = port_;
+    std::unique_ptr<QSerialPort> second_port;  // used to close separate data
+                                               // port, if any, when we're done
+
     if (!flashing_port_name_.isEmpty()) {
       const auto& ports = QSerialPortInfo::availablePorts();
       QSerialPortInfo info;
@@ -546,27 +560,35 @@ class FlasherImpl : public Flasher {
         break;
       }
       if (!found) {
-        emit done(tr("Port %1 not found").arg(flashing_port_name_), false);
-        return;
+        return util::Status(
+            util::error::NOT_FOUND,
+            tr("Port %1 not found").arg(flashing_port_name_).toStdString());
       }
       auto serial = connectSerial(info, flashing_speed_);
       if (!serial.ok()) {
-        emit done(tr("Failed to open %1: %2")
-                      .arg(flashing_port_name_)
-                      .arg(QString::fromStdString(serial.status().ToString())),
-                  false);
-        return;
+        return util::Status(
+            util::error::UNKNOWN,
+            tr("Failed to open %1: %2")
+                .arg(flashing_port_name_)
+                .arg(QString::fromStdString(serial.status().ToString()))
+                .toStdString());
       }
-      data_port_.reset(serial.ValueOrDie());
+      second_port.reset(serial.ValueOrDie());
+      data_port = second_port.get();
     }
 
-    if (!rebootIntoBootloader(port_, invert_dtr_rts_, data_port_.get())) {
-      emit done(tr("Failed to talk to bootloader. See <a "
-                   "href=\"https://github.com/cesanta/smart.js/blob/master/"
-                   "platforms/esp8266/flashing.md\">wiring instructions</a>."),
-                false);
-      data_port_.reset();
-      return;
+    auto st = setSpeed(data_port, flashing_speed_);
+    if (!st.ok()) {
+      return st;
+    }
+
+    if (!rebootIntoBootloader(port_, invert_dtr_rts_, data_port)) {
+      return util::Status(
+          util::error::UNKNOWN,
+          tr("Failed to talk to bootloader. See <a "
+             "href=\"https://github.com/cesanta/smart.js/blob/master/"
+             "platforms/esp8266/flashing.md\">wiring instructions</a>.")
+              .toStdString());
     }
 
     int flashParams = -1;
@@ -579,15 +601,15 @@ class FlasherImpl : public Flasher {
       // ESP8266 SDK code to properly boot the device.
       // TODO(imax): before reading from flash try to check if have the correct
       // params for the flash chip by its ID.
-      util::StatusOr<QByteArray> r = readFlashParamsLocked();
+      util::StatusOr<QByteArray> r = readFlashParamsLocked(data_port);
       if (!r.ok()) {
         emit statusMessage(tr("Failed to read flash params: %1")
                                .arg(r.status().error_message().c_str()),
                            true);
-        emit done(tr("Failed to read flash params from the existing firmware"),
-                  false);
-        data_port_.reset();
-        return;
+        return util::Status(
+            util::error::UNKNOWN,
+            tr("Failed to read flash params from the existing firmware")
+                .toStdString());
       }
       const QByteArray params = r.ValueOrDie();
       if (params.length() == 2) {
@@ -617,7 +639,7 @@ class FlasherImpl : public Flasher {
 
     bool id_generated = false;
     if (generate_id_if_none_found_ && !images_.contains(idBlockOffset)) {
-      auto res = findIdLocked();
+      auto res = findIdLocked(data_port);
       if (res.ok()) {
         if (!res.ValueOrDie()) {
           emit statusMessage(tr("Generating new ID"), true);
@@ -630,16 +652,16 @@ class FlasherImpl : public Flasher {
         emit statusMessage(tr("Failed to read existing ID block: %1")
                                .arg(res.status().ToString().c_str()),
                            true);
-        emit done(tr("failed to check for ID presence"), false);
-        data_port_.reset();
-        return;
+        return util::Status(
+            util::error::UNKNOWN,
+            tr("failed to check for ID presence").toStdString());
       }
     }
 
     if (merge_flash_filesystem_ && images_.contains(spiffsBlockOffset)) {
       emit statusMessage(tr("Reading file system image..."), true);
 
-      auto res = mergeFlashLocked();
+      auto res = mergeFlashLocked(data_port);
       if (res.ok()) {
         images_[spiffsBlockOffset] = res.ValueOrDie();
         emit statusMessage(tr("Merged flash content"), true);
@@ -648,9 +670,9 @@ class FlasherImpl : public Flasher {
                                .arg(res.status().ToString().c_str()),
                            true);
         if (!id_generated) {
-          emit done(tr("failed to merge flash filesystem"), false);
-          data_port_.reset();
-          return;
+          return util::Status(
+              util::error::UNKNOWN,
+              tr("failed to merge flash filesystem").toStdString());
         }
       }
     }
@@ -671,7 +693,8 @@ class FlasherImpl : public Flasher {
             tr("Writing %1 bytes @ 0x%2").arg(data.size()).arg(addr, 0, 16),
             true);
         int bytes_written = 0;
-        util::Status s = writeFlashLocked(addr, data, &bytes_written);
+        util::Status s =
+            writeFlashLocked(data_port, addr, data, &bytes_written);
         success = s.ok();
         if (success) break;
         // Must resume at the nearest 4K boundary, otherwise erasing will fail.
@@ -682,15 +705,15 @@ class FlasherImpl : public Flasher {
         qCritical() << "Failed to write image at" << hex << showbase << addr
                     << "," << dec << attempts << "attempts left";
         offset += progress;
-        if (!rebootIntoBootloader(port_, invert_dtr_rts_, data_port_.get())) {
+        if (!rebootIntoBootloader(port_, invert_dtr_rts_, data_port)) {
           break;
         }
       }
       if (!success) {
-        emit done(tr("failed to flash image at 0x%1").arg(image_addr, 0, 16),
-                  false);
-        data_port_.reset();
-        return;
+        return util::Status(util::error::UNKNOWN,
+                            tr("failed to flash image at 0x%1")
+                                .arg(image_addr, 0, 16)
+                                .toStdString());
       }
     }
 
@@ -701,24 +724,21 @@ class FlasherImpl : public Flasher {
         rebootIntoFirmware(port_, invert_dtr_rts_);
         break;
       default:
-        util::Status s = leaveFlashingModeLocked();
+        util::Status s = leaveFlashingModeLocked(data_port);
         if (!s.ok()) {
           qCritical() << s.ToString().c_str();
-          emit done(
+          return util::Status(
+              util::error::UNKNOWN,
               tr("Failed to leave flashing mode. Most likely flashing was "
-                 "successful, but you need to reboot your device manually."),
-              false);
-          data_port_.reset();
-          return;
+                 "successful, but you need to reboot your device manually.")
+                  .toStdString());
         }
         break;
     }
 
-    emit done(tr("All done!"), true);
-    data_port_.reset();
+    return util::Status::OK;
   }
 
- private:
   static ulong fixupEraseLength(ulong start, ulong len) {
     // This function allows to offset for SPIEraseArea bug in ESP8266 ROM,
     // making it erase at most one extra 4KB sector.
@@ -765,14 +785,14 @@ class FlasherImpl : public Flasher {
     }
   }
 
-  util::Status writeFlashLocked(ulong addr, const QByteArray& bytes,
-                                int* bytes_written) {
+  util::Status writeFlashLocked(QSerialPort* port, ulong addr,
+                                const QByteArray& bytes, int* bytes_written) {
     const ulong blocks = bytes.length() / writeBlockSize +
                          (bytes.length() % writeBlockSize == 0 ? 0 : 1);
     *bytes_written = 0;
     qDebug() << "Writing" << blocks << "blocks at" << hex << showbase << addr;
     emit statusMessage(tr("Erasing flash at 0x%1...").arg(addr, 0, 16));
-    auto s = writeFlashStartLocked(addr, blocks);
+    auto s = writeFlashStartLocked(port, addr, blocks);
     if (!s.ok()) {
       return s;
     }
@@ -788,7 +808,7 @@ class FlasherImpl : public Flasher {
       emit statusMessage(tr("Writing block %1 @ 0x%2...")
                              .arg(block_num)
                              .arg(addr + start, 0, 16));
-      s = writeFlashBlockLocked(block_num, data);
+      s = writeFlashBlockLocked(port, block_num, data);
       if (!s.ok()) {
         return util::Status(s.error_code(),
                             QString("Failed to write block %1: %2")
@@ -803,7 +823,8 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status writeFlashStartLocked(ulong addr, ulong blocks) {
+  util::Status writeFlashStartLocked(QSerialPort* port, ulong addr,
+                                     ulong blocks) {
     QByteArray payload;
     QDataStream s(&payload, QIODevice::WriteOnly);
     s.setByteOrder(QDataStream::LittleEndian);
@@ -814,9 +835,8 @@ class FlasherImpl : public Flasher {
     }
     s << quint32(blocks) << quint32(writeBlockSize) << quint32(addr);
     qDebug() << "Attempting to start flashing...";
-    writeCommand(data_port_ ? data_port_.get() : port_, 0x02, payload);
-    const auto resp =
-        readResponse(data_port_ ? data_port_.get() : port_, 30000);
+    writeCommand(port, 0x02, payload);
+    const auto resp = readResponse(port, 30000);
     if (!resp.ok()) {
       return util::Status(
           util::error::ABORTED,
@@ -825,27 +845,25 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status writeFlashBlockLocked(int seq, const QByteArray& bytes) {
+  util::Status writeFlashBlockLocked(QSerialPort* port, int seq,
+                                     const QByteArray& bytes) {
     QByteArray payload;
     QDataStream s(&payload, QIODevice::WriteOnly);
     s.setByteOrder(QDataStream::LittleEndian);
     s << quint32(bytes.length()) << quint32(seq) << quint32(0) << quint32(0);
     payload.append(bytes);
-    writeCommand(data_port_ ? data_port_.get() : port_, 0x03, payload,
-                 checksum(bytes));
-    const auto resp =
-        readResponse(data_port_ ? data_port_.get() : port_, 10000);
+    writeCommand(port, 0x03, payload, checksum(bytes));
+    const auto resp = readResponse(port, 10000);
     if (!resp.ok()) {
       return util::Status(util::error::ABORTED, resp.error().toStdString());
     }
     return util::Status::OK;
   }
 
-  util::Status leaveFlashingModeLocked() {
+  util::Status leaveFlashingModeLocked(QSerialPort* port) {
     QByteArray payload("\x01\x00\x00\x00", 4);
-    writeCommand(data_port_ ? data_port_.get() : port_, 0x04, payload);
-    const auto resp =
-        readResponse(data_port_ ? data_port_.get() : port_, 10000);
+    writeCommand(port, 0x04, payload);
+    const auto resp = readResponse(port, 10000);
     if (!resp.ok()) {
       qDebug() << "Failed to leave flashing mode." << resp.error();
       if (erase_bug_workaround_) {
@@ -857,9 +875,10 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::StatusOr<QByteArray> readFlashLocked(ulong offset, ulong len) {
+  util::StatusOr<QByteArray> readFlashLocked(QSerialPort* port, ulong offset,
+                                             ulong len) {
     // Init flash.
-    util::Status status = writeFlashStartLocked(0, 0);
+    util::Status status = writeFlashStartLocked(port, 0, 0);
     if (!status.ok()) {
       return util::Status(util::error::ABORTED,
                           QString("Failed to initialize flash: %1")
@@ -879,8 +898,8 @@ class FlasherImpl : public Flasher {
     s1 << quint32(stub.length()) << quint32(1) << quint32(stub.length())
        << quint32(0x40100000);
 
-    writeCommand(data_port_ ? data_port_.get() : port_, 0x05, payload);
-    auto resp = readResponse(data_port_ ? data_port_.get() : port_);
+    writeCommand(port, 0x05, payload);
+    auto resp = readResponse(port);
     if (!resp.ok()) {
       qDebug() << "Failed to start writing to RAM." << resp.error();
       return util::Status(util::error::ABORTED,
@@ -893,9 +912,8 @@ class FlasherImpl : public Flasher {
     s2 << quint32(stub.length()) << quint32(0) << quint32(0) << quint32(0);
     payload.append(stub);
     qDebug() << "Stub length:" << showbase << hex << stub.length();
-    writeCommand(data_port_ ? data_port_.get() : port_, 0x07, payload,
-                 checksum(stub));
-    resp = readResponse(data_port_ ? data_port_.get() : port_);
+    writeCommand(port, 0x07, payload, checksum(stub));
+    resp = readResponse(port);
     if (!resp.ok()) {
       qDebug() << "Failed to write to RAM." << resp.error();
       return util::Status(util::error::ABORTED, "failed to write to RAM");
@@ -905,20 +923,20 @@ class FlasherImpl : public Flasher {
     QDataStream s3(&payload, QIODevice::WriteOnly);
     s3.setByteOrder(QDataStream::LittleEndian);
     s3 << quint32(0) << quint32(0x4010001c);
-    writeCommand(data_port_ ? data_port_.get() : port_, 0x06, payload);
-    resp = readResponse(data_port_ ? data_port_.get() : port_);
+    writeCommand(port, 0x06, payload);
+    resp = readResponse(port);
     if (!resp.ok()) {
       qDebug() << "Failed to complete writing to RAM." << resp.error();
       return util::Status(util::error::ABORTED, "failed to initialize flash");
     }
 
-    QByteArray r = SLIP_read(data_port_ ? data_port_.get() : port_);
+    QByteArray r = SLIP_read(port);
     if (r.length() < int(len)) {
       qDebug() << "Failed to read flash.";
       return util::Status(util::error::ABORTED, "failed to read flash");
     }
 
-    if (!trySync(data_port_ ? data_port_.get() : port_, 5)) {
+    if (!trySync(port, 5)) {
       qCritical() << "Device did not reboot after reading flash";
       return util::Status(util::error::ABORTED,
                           "failed to jump to bootloader after reading flash");
@@ -930,8 +948,8 @@ class FlasherImpl : public Flasher {
   // readFlashParamsLocked puts a snippet of code in the RAM and executes it.
   // You need to reboot the device again after that to talk to the bootloader
   // again.
-  util::StatusOr<QByteArray> readFlashParamsLocked() {
-    auto res = readFlashLocked(0, 4);
+  util::StatusOr<QByteArray> readFlashParamsLocked(QSerialPort* port) {
+    auto res = readFlashLocked(port, 0, 4);
     if (!res.ok()) {
       return res.status();
     }
@@ -950,8 +968,8 @@ class FlasherImpl : public Flasher {
   // The idea is that the filesystem is mostly managed by the user
   // or by the software update utility, while the core system uploaded by
   // the flasher should only upload a few core files.
-  util::StatusOr<QByteArray> mergeFlashLocked() {
-    auto res = readFlashLocked(spiffsBlockOffset, spiffsBlockSize);
+  util::StatusOr<QByteArray> mergeFlashLocked(QSerialPort* port) {
+    auto res = readFlashLocked(port, spiffsBlockOffset, spiffsBlockSize);
     if (!res.ok()) {
       return res.status();
     }
@@ -966,13 +984,13 @@ class FlasherImpl : public Flasher {
     return dev.data();
   }
 
-  util::StatusOr<bool> findIdLocked() {
+  util::StatusOr<bool> findIdLocked(QSerialPort* port) {
     // Block with ID has the following structure:
     // 1) 20-byte SHA-1 hash of the payload
     // 2) payload (JSON object)
     // 3) 1-byte terminator ('\0')
     // 4) padding with 0xFF bytes to the block size
-    auto res = readFlashLocked(idBlockOffset, idBlockSize);
+    auto res = readFlashLocked(port, idBlockOffset, idBlockSize);
     if (!res.ok()) {
       return res.status();
     }
@@ -1000,7 +1018,6 @@ class FlasherImpl : public Flasher {
   bool generate_id_if_none_found_ = true;
   QString id_hostname_;
   QString flashing_port_name_;
-  std::unique_ptr<QSerialPort> data_port_;
   int flashing_speed_ = 230400;
   bool invert_dtr_rts_ = false;
 };

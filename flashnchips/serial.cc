@@ -32,20 +32,27 @@ util::StatusOr<QSerialPort*> connectSerial(const QSerialPortInfo& port,
                         QCoreApplication::translate(
                             "connectSerial", "Failed to open").toStdString());
   }
-  if (!s->setBaudRate(speed)) {
+  auto st = setSpeed(s.get(), speed);
+  if (!st.ok()) {
+    return st;
+  }
+  return s.release();
+}
+
+util::Status setSpeed(QSerialPort* port, int speed) {
+  if (!port->setBaudRate(speed)) {
     return util::Status(
         util::error::INTERNAL,
-        QCoreApplication::translate("connectSerial", "Failed to set baud rate")
+        QCoreApplication::translate("setSpeed", "Failed to set baud rate")
             .toStdString());
   }
 #ifdef Q_OS_OSX
-  if (ioctl(s->handle(), IOSSIOSPEED, &speed) < 0) {
+  if (ioctl(port->handle(), IOSSIOSPEED, &speed) < 0) {
     return util::Status(
         util::error::INTERNAL,
-        QCoreApplication::translate("connectSerial",
-                                    "Failed to set baud rate with ioctl")
-            .toStdString());
+        QCoreApplication::translate(
+            "setSpeed", "Failed to set baud rate with ioctl").toStdString());
   }
 #endif
-  return s.release();
+  return util::Status::OK;
 }
