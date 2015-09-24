@@ -58,7 +58,9 @@ Smart.js firmware on a device side:
 
 # Supported hardware
 
-- Espressif ESP8266 (since ALPHA1)
+- Espressif ESP8266 - since ALPHA1
+- Texas Instruments CC3200 - since ALPHA2
+- POSIX (Raspberry PI, BeagleBone, Linux, Windows, Mac, etc) - since ALPHA2
 - Many more will be added soon!
 
 # JavaScript API reference
