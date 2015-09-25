@@ -509,6 +509,25 @@ class FlasherImpl : public Flasher {
                                 .toStdString());
       }
     }
+
+    files_.clear();
+    if (dir.exists("fs")) {
+      QDir files_dir(dir.filePath("fs"), "", QDir::Name,
+                     QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
+      for (const auto& file : files_dir.entryInfoList()) {
+        qInfo() << "Loading" << file.fileName();
+        QFile f(file.absoluteFilePath());
+        if (!f.open(QIODevice::ReadOnly)) {
+          return util::Status(util::error::ABORTED,
+                              tr("Failed to open %1")
+                                  .arg(file.absoluteFilePath())
+                                  .toStdString());
+        }
+        files_.insert(file.fileName(), f.readAll());
+        f.close();
+      }
+    }
+
     return util::Status::OK;
   }
 
@@ -981,6 +1000,12 @@ class FlasherImpl : public Flasher {
     if (!err.ok()) {
       return err;
     }
+    if (!files_.empty()) {
+      err = dev.mergeFiles(files_);
+      if (!err.ok()) {
+        return err;
+      }
+    }
     return dev.data();
   }
 
@@ -1009,6 +1034,7 @@ class FlasherImpl : public Flasher {
 
   mutable QMutex lock_;
   QMap<ulong, QByteArray> images_;
+  QMap<QString, QByteArray> files_;
   QSerialPort* port_;
   int written_blocks_ = 0;
   bool preserve_flash_params_ = true;

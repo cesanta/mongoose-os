@@ -324,6 +324,25 @@ class FlasherImpl : public Flasher {
                               .arg(kMaxSize)
                               .toStdString());
     }
+
+    files_.clear();
+    if (dir.exists("fs")) {
+      QDir files_dir(dir.filePath("fs"), "", QDir::Name,
+                     QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
+      for (const auto& file : files_dir.entryInfoList()) {
+        qInfo() << "Loading" << file.fileName();
+        QFile f(file.absoluteFilePath());
+        if (!f.open(QIODevice::ReadOnly)) {
+          return util::Status(util::error::ABORTED,
+                              tr("Failed to open %1")
+                                  .arg(file.absoluteFilePath())
+                                  .toStdString());
+        }
+        files_.insert(file.fileName(), f.readAll());
+        f.close();
+      }
+    }
+
     return loadSPIFFS(path);
   }
 
@@ -980,6 +999,12 @@ class FlasherImpl : public Flasher {
         return st;
       }
 
+      if (!files_.empty()) {
+        st = dev.mergeFiles(files_);
+        if (!st.ok()) {
+          return st;
+        }
+      }
       image = dev.data();
     }
     image.append(meta);
@@ -1001,6 +1026,7 @@ class FlasherImpl : public Flasher {
   mutable QMutex lock_;
   QByteArray image_;
   QByteArray spiffs_image_;
+  QMap<QString, QByteArray> files_;
   QSerialPort* port_;
   QString id_hostname_;
   bool skip_id_generation_ = false;

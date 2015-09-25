@@ -110,7 +110,10 @@ util::Status SPIFFS::merge(SPIFFS &other) {
     return files_status.status();
   }
   auto files = files_status.ValueOrDie();
+  return mergeFiles(files);
+}
 
+util::Status SPIFFS::mergeFiles(const QMap<QString, QByteArray> &files) {
   Mounter m(this);
 
   for (auto i = files.constBegin(); i != files.constEnd(); i++) {

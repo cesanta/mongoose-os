@@ -20,6 +20,7 @@ class SPIFFS {
  public:
   SPIFFS(QByteArray image);
   util::Status merge(SPIFFS& other);
+  util::Status mergeFiles(const QMap<QString, QByteArray>& files);
   QByteArray data() const;
 
  protected:
