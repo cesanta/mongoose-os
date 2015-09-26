@@ -27,3 +27,17 @@ name is interpreted as a hexadecimal number which is used as an offset on flash
 where the content of the file needs to be written.
 
 See also [ESP8266-specific](../platforms/esp8266/flashing.md) notes on wiring.
+
+## Build
+
+Flash’N’Chips requires:
+
+- Qt 5
+- libftdi
+
+Build with:
+
+```
+$ qmake
+$ make
+```
