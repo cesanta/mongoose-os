@@ -2073,6 +2073,10 @@ struct v7 {
 #ifdef V7_ENABLE_GC_CHECK
   struct v7 *next_v7; /* linked list of v7 contexts, needed by gc check hooks */
 #endif
+
+#ifdef V7_MALLOC_GC
+  struct mbuf malloc_trace;
+#endif
 };
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
@@ -7769,8 +7773,10 @@ v7_val_t v7_create_array(struct v7 *v7) {
  */
 V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   val_t a = v7_create_array(v7);
+  v7_own(v7, &a);
   v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
   v7_to_object(a)->attributes |= V7_OBJ_DENSE_ARRAY;
+  v7_disown(v7, &a);
   return a;
 }
 
@@ -9290,6 +9296,12 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #ifdef V7_DISABLE_GC
   (void) v7;
   return calloc(1, a->cell_size);
+#elif V7_MALLOC_GC
+  struct gc_cell *r;
+  v7_gc(v7, 0);
+  r = calloc(1, a->cell_size);
+  mbuf_append(&v7->malloc_trace, &r, sizeof(r));
+  return r;
 #else
   struct gc_cell *r;
   if (a->free == NULL) {
@@ -9333,6 +9345,29 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   return (void *) r;
 #endif
 }
+
+#ifdef V7_MALLOC_GC
+/*
+ * Scans trough the memory blocks registered in the malloc trace.
+ * Free the unmarked ones and reset the mark on the rest.
+ */
+void gc_sweep_malloc(struct v7 *v7) {
+  struct gc_cell **cur;
+  for (cur = (struct gc_cell **) v7->malloc_trace.buf;
+       cur < (struct gc_cell **) (v7->malloc_trace.buf + v7->malloc_trace.len);
+       cur++) {
+    if (*cur == NULL) continue;
+
+    if (MARKED(*cur)) {
+      UNMARK(*cur);
+    } else {
+      free(*cur);
+      /* TODO(mkm): compact malloc trace buffer */
+      *cur = NULL;
+    }
+  }
+}
+#endif
 
 /*
  * Scans the arena and add all unmarked cells to the free list.
@@ -9730,9 +9765,13 @@ void v7_gc(struct v7 *v7, int full) {
   gc_compact_strings(v7);
 #endif
 
+#ifdef V7_MALLOC_GC
+  gc_sweep_malloc(v7);
+#else
   gc_sweep(v7, &v7->object_arena, 0);
   gc_sweep(v7, &v7->function_arena, 0);
   gc_sweep(v7, &v7->property_arena, 0);
+#endif
 
   gc_dump_arena_stats("After GC objects", &v7->object_arena);
   gc_dump_arena_stats("After GC functions", &v7->function_arena);
@@ -11800,12 +11839,12 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
   ast_skip_tree(func->ast, pos);
 
   frame = v7_create_object(v7);
+  tmp_stack_push(&tf, &frame);
   v7_to_object(frame)->prototype = func->scope;
 #if V7_ENABLE__StackTrace
   v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
 #endif
 
-  tmp_stack_push(&tf, &frame);
   i_populate_local_vars(v7, func->ast, fstart, fvar, frame);
   tmp_frame_cleanup(&tf);
   return frame;
