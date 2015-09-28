@@ -9128,14 +9128,14 @@ val_t v7_get_global_object(struct v7 *v7) {
 
 void v7_destroy(struct v7 *v7) {
   if (v7 != NULL) {
+    gc_arena_destroy(v7, &v7->object_arena);
+    gc_arena_destroy(v7, &v7->function_arena);
+    gc_arena_destroy(v7, &v7->property_arena);
+
     mbuf_free(&v7->owned_strings);
     mbuf_free(&v7->foreign_strings);
     mbuf_free(&v7->json_visited_stack);
     mbuf_free(&v7->tmp_stack);
-
-    gc_arena_destroy(v7, &v7->object_arena);
-    gc_arena_destroy(v7, &v7->function_arena);
-    gc_arena_destroy(v7, &v7->property_arena);
 
 #ifdef V7_ENABLE_GC_CHECK
     /* delete this v7 */
@@ -9254,6 +9254,22 @@ V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
 
 V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
   struct gc_block *b;
+  struct gc_cell *c, *next;
+
+  /*
+   * We need to sweep through all live objects and invoke their destructors.
+   * However gc_sweep assumes the arena is full (i.e. the free list is empty)
+   * and contains either live objects or garbage.
+   * This assumption is important since there is no cheap way to tell whether
+   * a cell is used or free, and we can call the destructor only on used cells.
+   * Since gc_arena_destroy can by called at any stage, even when the arena is
+   * half full, we need to consume the free list in order to reuse gc_sweep fast
+   * path and avoid code duplication for invoking the destructors.
+   */
+  for (c = a->free; c != NULL; c = next) {
+    next = c->head.link;
+    memset(c, 0, a->cell_size);
+  }
 
   if (a->blocks != NULL) {
     if (a->destructor != NULL) {
