@@ -7792,6 +7792,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     return V7_UNDEFINED;
   } else {
     val_t obj = create_object(v7, v7->regexp_prototype);
+    v7_own(v7, &obj);
     rp = (struct v7_regexp *) malloc(sizeof(*rp));
     rp->regexp_string = v7_create_string(v7, re, re_len, 1);
     rp->compiled_regexp = p;
@@ -7799,6 +7800,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
     v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN,
                     v7_pointer_to_value(rp) | V7_TAG_REGEXP);
+    v7_disown(v7, &obj);
     return obj;
   }
 }
@@ -10890,10 +10892,14 @@ static val_t create_exception(struct v7 *v7, enum error_ctor ex,
     return V7_UNDEFINED;
   }
   args = v7_create_dense_array(v7);
+  v7_own(v7, &args);
   v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
   v7->creating_exception++;
   e = create_object(v7, v7_get(v7, v7->error_objects[ex], "prototype", 9));
+  v7_own(v7, &e);
   i_apply(v7, v7->error_objects[ex], e, args);
+  v7_disown(v7, &e);
+  v7_disown(v7, &args);
   v7->creating_exception--;
   return e;
 }
@@ -11972,12 +11978,15 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (v7_is_cfunction(cfunc)) {
+    int saved_inhibit_gc = v7->inhibit_gc;
     args = v7_create_dense_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       v7_array_set(v7, args, i, res);
     }
+    v7->inhibit_gc = 1;
     res = v7_to_cfunction(cfunc)(v7, this_object, args);
+    v7->inhibit_gc = saved_inhibit_gc;
     goto cleanup;
   }
   if (!v7_is_function(v1)) {
@@ -12528,7 +12537,10 @@ i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   }
 
   if (v7_is_cfunction(f)) {
+    int saved_inhibit_gc = v7->inhibit_gc;
+    v7->inhibit_gc = 1;
     res = v7_to_cfunction(f)(v7, this_object, args);
+    v7->inhibit_gc = saved_inhibit_gc;
     goto cleanup;
   }
   if (!v7_is_function(f)) {
@@ -15637,10 +15649,13 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
   val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
 
   if (v7_is_function(func)) {
+    int saved_inhibit_gc = v7->inhibit_gc;
     val_t res, args = v7_create_dense_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
+    v7->inhibit_gc = 0;
     res = i_apply(v7, func, V7_UNDEFINED, args);
+    v7->inhibit_gc = saved_inhibit_gc;
     return (int) -v7_to_number(res);
   } else {
     char sa[100], sb[100];
@@ -15876,11 +15891,16 @@ static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
 }
 
 static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
-  val_t params = v7_create_dense_array(v7);
+  int saved_inhibit_gc = v7->inhibit_gc;
+  val_t res, params = v7_create_dense_array(v7);
   v7_array_push(v7, params, v);
   v7_array_push(v7, params, n);
   v7_array_push(v7, params, t);
-  return i_apply(v7, a, t, params);
+
+  v7->inhibit_gc = 0;
+  res = i_apply(v7, a, t, params);
+  v7->inhibit_gc = saved_inhibit_gc;
+  return res;
 }
 
 static val_t Array_forEach(struct v7 *v7, val_t this_obj, val_t args) {
@@ -16545,7 +16565,8 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
 #if V7_ENABLE__RegExp
 static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t so, ro, arr = v7_create_null();
+  val_t so = v7_create_undefined(), ro = v7_create_undefined(),
+        arr = v7_create_null();
   long previousLastIndex = 0;
   int lastMatch = 1, n = 0, flag_g;
   struct v7_regexp *rxp;
@@ -16567,7 +16588,6 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
 
   rxp->lastIndex = 0;
   arr = v7_create_dense_array(v7);
-  v7_own(v7, &arr);
   while (lastMatch) {
     val_t result = rx_exec(v7, ro, so, 1);
     if (v7_is_null(result))
@@ -16583,7 +16603,6 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       n++;
     }
   }
-  v7_disown(v7, &arr);
   if (n == 0) return v7_create_null();
   return arr;
 }
