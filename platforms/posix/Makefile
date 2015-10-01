@@ -1,8 +1,4 @@
-V7_PATH ?= ../../../v7
-MONGOOSE_PATH = ?= ../../../mongoose
 SRC_PATH ?= ../../src
-COMMON_PATH ?= ../../../common
-CLUBBY_PATH ?= $(SRC_PATH)
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./build
 OUTAPP ?= smartjs
@@ -17,7 +13,7 @@ V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
 SJ_FEATURES =
 MONGOOSE_FEATURES =
 
-INCLUDES = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(MONGOOSE_PATH)
+INCLUDES = $(SRC_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 			sj_simple_http.c mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
 			sj_mongoose_http_client.c sj_mongoose_ws_client.c sj_gpio_js.c \
@@ -28,7 +24,7 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 CFLAGS_EXTRA =
 CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(MONGOOSE_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
 
-include ../../../v7/scripts/platform.mk
+include $(SRC_PATH)/platform.mk
 
 ifeq ($(OS),Windows_NT)
   PLATFORM="WIN"
@@ -92,9 +88,9 @@ LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
-VPATH = $(V7_PATH) $(SRC_PATH) $(COMMON_PATH) $(MONGOOSE_PATH)
+VPATH = $(SRC_PATH)
 
-FS = $(wildcard $(SRC_PATH)/js/*.js) $(CLUBBY_PATH)/clubby.js
+FS = $(wildcard $(SRC_PATH)/js/*.js)
 
 .PHONY: all clean
 
