@@ -1,6 +1,7 @@
 Cloud = {};
 Cloud.mkreq = function(cmd, args, dst) {
-    return JSON.stringify({v:1, src: conf.dev.id, dst: dst || "//api.cesanta.com", key: conf.dev.key, cmds:[{cmd:cmd, args: args}]});
+    var ret = {v:1, src: conf.dev.id, dst: dst || "//api.cesanta.com", key: conf.dev.key, cmds:[{cmd:cmd, args: args}]};
+    return JSON.stringify(ret);
 }
 Cloud.store = function(name,val,opts) {
     opts = opts || {};

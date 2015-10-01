@@ -20,6 +20,9 @@ if (typeof(conf) == 'undefined') {
 SJS.init();
 conf.save();
 
+print('')
 print('Device id: ' + conf.dev.id);
 print('Device psk: ' + conf.dev.key);
 print('Cloud: ' + conf.cloud);
+
+File.eval("user.js")

@@ -33,8 +33,8 @@ APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
-JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js
-JS_SRCS    := $(SJSJS_PATH)/smart.js
+JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js $(SJSJS_PATH)/cloud.js
+JS_SRCS    := $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/user.js
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
@@ -278,7 +278,7 @@ $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
 		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
-		cp $(js) $(FS_BUILD_DIR))
+		cp $(js) $(FS_BUILD_DIR);)
 	$(vecho) "MKSPIFFS $(FS_DIR) -> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_BUILD_DIR) > $@
 

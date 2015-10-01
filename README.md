@@ -29,15 +29,15 @@ Take a look at 2 minute video that shows Smart.js in action:
    ![](https://docs.cesanta.com/images/smartjs_quick_start_guide/fc3.png)
 7. Configure Wifi:
    enter `Wifi.setup('WifiNetworkName', 'WifiPassword')` to the console.
-   When network is configured, device starts to send random numbers
+8. Enter `demo()` to start sending random numbers
    to `cloud.cesanta.com` every second, simulating real sensor data.
    `cloud.cesanta.com` however will reject that data, because it doesn't
    accept any data from unregistered devices
-8. Register the device on the cloud:
+9. Register the device on the cloud:
    login to [https://cloud.cesanta.com](https://cloud.cesanta.com)
-9. Click on "Add Device" tab, copy/paste device ID and password and press
+10. Click on "Add Device" tab, copy/paste device ID and password and press
    "Add Device" button
-10. Swith to the "Dashboard" tab, and see real-time graph updated:
+11. Swith to the "Dashboard" tab, and see real-time graph updated:
   ![](https://docs.cesanta.com/images/smartjs_quick_start_guide/dash1.png)
 
 # Architecture
