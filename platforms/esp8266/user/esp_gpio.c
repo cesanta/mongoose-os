@@ -19,6 +19,7 @@
 #include <pin_mux_register.h>
 #include <gpio_register.h>
 #include <freertos/portmacro.h>
+#include <disp_task.h>
 
 #endif /* RTOS_SDK */
 
@@ -31,8 +32,9 @@
 
 #define GPIO_PIN_COUNT 16
 
-#ifndef RTOS_TODO
 static uint16_t int_map[GPIO_PIN_COUNT] = {0};
+
+#ifndef RTOS_TODO
 #define GPIO_TASK_QUEUE_LEN 25
 #endif
 
@@ -42,7 +44,8 @@ static os_event_t gpio_task_queue[GPIO_TASK_QUEUE_LEN];
 /* TODO(alashkin): introduce some kind of tasks priority registry */
 #define TASK_PRIORITY 1
 
-#else
+#else /* RTOS */
+
 #define GPIO_OUTPUT_SET(gpio_no, bit_value)                                   \
   gpio_output_set((bit_value) << gpio_no, ((~(bit_value)) & 0x01) << gpio_no, \
                   1 << gpio_no, 0)
@@ -107,6 +110,14 @@ void gpio_disable_intr(uint32_t num) {
   _xt_isr_mask(1 << num);
 #endif
 }
+
+#ifndef RTOS_SDK
+#define ENTER_CRITICAL() ETS_GPIO_INTR_DISABLE()
+#define EXIT_CRITICAL() ETS_GPIO_INTR_ENABLE()
+#else
+#define ENTER_CRITICAL() portENTER_CRITICAL()
+#define EXIT_CRITICAL() portEXIT_CRITICAL()
+#endif
 
 static void gpio16_set_output_mode() {
   WRITE_PERI_REG(
@@ -191,7 +202,7 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
       break;
 
     case GPIO_MODE_OUTPUT:
-      gpio_disable_intr(ETS_GPIO_INUM);
+      ENTER_CRITICAL();
 
       PIN_FUNC_SELECT(gi->periph, gi->func);
 
@@ -202,22 +213,26 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
                      GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(pin))) &
                          (~GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_ENABLE)));
 
-      gpio_enable_intr(ETS_GPIO_INUM);
-
+      EXIT_CRITICAL();
       break;
 
     case GPIO_MODE_INT:
-#ifndef RTOS_TODO
-      ETS_GPIO_INTR_DISABLE();
+      ENTER_CRITICAL();
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_DIS_OUTPUT(pin);
 
+#ifndef RTOS_SDK
       gpio_register_set(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)),
                         GPIO_PIN_INT_TYPE_SET(GPIO_PIN_INTR_DISABLE) |
                             GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_DISABLE) |
                             GPIO_PIN_SOURCE_SET(GPIO_AS_PIN_SOURCE));
-      ETS_GPIO_INTR_ENABLE();
+#else
+      GPIO_REG_WRITE(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)),
+                     GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(pin))) &
+                         (~GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_ENABLE)));
 #endif
+
+      EXIT_CRITICAL();
       break;
 
     default:
@@ -257,7 +272,6 @@ enum gpio_level sj_gpio_read(int pin) {
   return 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(pin));
 }
 
-#ifndef RTOS_TODO
 /*
  * How mode 6 ("button") works (example):
  * 1. Button's GPIO level is 0 (low)
@@ -298,13 +312,18 @@ static void v7_gpio_process_on_click(int pin, int level,
      */
     int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 |
                    (GPIO_PIN_INTR_HILEVEL - level);
+#ifndef RTOS_SDK
     system_os_post(TASK_PRIORITY,
                    (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level,
                    (os_param_t) callback);
+#else
+    rtos_dispatch_gpio_callback(callback, pin, level);
+#endif
   }
 }
 
-static void v7_gpio_intr_dispatcher(f_gpio_intr_handler_t callback) {
+static void v7_gpio_intr_dispatcher(void* arg) {
+  f_gpio_intr_handler_t callback = (f_gpio_intr_handler_t) arg;
   uint8_t i, level;
 
   uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
@@ -319,9 +338,13 @@ static void v7_gpio_intr_dispatcher(f_gpio_intr_handler_t callback) {
         /* this is "on click" handler */
         v7_gpio_process_on_click(i, level, callback);
       } else {
+#ifndef RTOS_SDK
         system_os_post(TASK_PRIORITY,
                        (uint32_t) GPIO_TASK_SIG << 16 | i << 8 | level,
                        (os_param_t) callback);
+#else
+        rtos_dispatch_gpio_callback(callback, i, level);
+#endif
       }
 
       gpio_pin_intr_state_set(GPIO_ID_PIN(i), int_map[i] & 0xF);
@@ -329,6 +352,7 @@ static void v7_gpio_intr_dispatcher(f_gpio_intr_handler_t callback) {
   }
 }
 
+#ifndef RTOS_SDK
 void v7_gpio_task(os_event_t* event) {
   if (event->sig >> 16 != GPIO_TASK_SIG) {
     return;
@@ -344,10 +368,14 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
   system_os_task(v7_gpio_task, TASK_PRIORITY, gpio_task_queue,
                  GPIO_TASK_QUEUE_LEN);
   ETS_GPIO_INTR_ATTACH(v7_gpio_intr_dispatcher, cb);
+#else
+  portENTER_CRITICAL();
+  _xt_isr_attach(ETS_GPIO_INUM, v7_gpio_intr_dispatcher, cb);
+  _xt_isr_unmask(1 << ETS_GPIO_INUM);
+  portEXIT_CRITICAL();
 #endif
 }
 
-#ifndef RTOS_TODO
 static void v7_setup_on_click(int pin) {
   uint8_t current_level = sj_gpio_read(pin);
   /*
@@ -357,16 +385,11 @@ static void v7_setup_on_click(int pin) {
   uint8_t type = GPIO_PIN_INTR_HILEVEL - current_level;
   int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 | type;
 }
-#endif
 
 int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
-#ifndef RTOS_TODO
   if (get_gpio_info(pin) == NULL) {
     return -1;
   }
-
-  ETS_GPIO_INTR_DISABLE();
-  GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(pin));
 
   /*
    * ESP allows to setup only 1 GPIO interruption handler
@@ -381,8 +404,11 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
     v7_setup_on_click(pin);
   }
 
+  ENTER_CRITICAL();
+  GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(pin));
+
   gpio_pin_intr_state_set(GPIO_ID_PIN(pin), int_map[pin] & 0xF);
-  ETS_GPIO_INTR_ENABLE();
-#endif
+  EXIT_CRITICAL();
+
   return 0;
 }

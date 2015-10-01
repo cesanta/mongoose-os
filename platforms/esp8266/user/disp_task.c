@@ -15,6 +15,7 @@ enum rtos_events {
   RTE_INIT /* no params */,
   RTE_UART_NEWCHAR /* `uart_rx_params` in `rtos_event` are params */,
   RTE_CALLBACK /* `*callback_params` in `rtos_event` */,
+  RTE_GPIO_INTR_CALLBACK /* `gpio_intr_callback_params` in `rtos_event` */
 };
 
 struct rtos_event {
@@ -28,6 +29,11 @@ struct rtos_event {
       v7_val_t this_obj;
       v7_val_t args;
     } * callback_params;
+    struct {
+      f_gpio_intr_handler_t cb;
+      int p1;
+      int p2;
+    } gpio_intr_callback_params;
     /* Add parameters for new events to this union */
   } params;
 
@@ -52,6 +58,20 @@ void rtos_dispatch_char_handler(int tail) {
   struct rtos_event ev;
   ev.event_id = RTE_UART_NEWCHAR;
   ev.params.uart_rx_params.tail = tail;
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+  xQueueSendFromISR(main_queue_handle, (void *) &ev, &xHigherPriorityTaskWoken);
+  portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+}
+
+void rtos_dispatch_gpio_callback(f_gpio_intr_handler_t cb, int p1, int p2) {
+  struct rtos_event ev;
+
+  ev.event_id = RTE_GPIO_INTR_CALLBACK;
+  ev.params.gpio_intr_callback_params.cb = cb;
+  ev.params.gpio_intr_callback_params.p1 = p1;
+  ev.params.gpio_intr_callback_params.p2 = p2;
+
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
   xQueueSendFromISR(main_queue_handle, (void *) &ev, &xHigherPriorityTaskWoken);
@@ -103,6 +123,11 @@ static void disp_task(void *params) {
           v7_disown(ev.params.callback_params->v7,
                     &ev.params.callback_params->args);
           free(ev.params.callback_params);
+          break;
+        case RTE_GPIO_INTR_CALLBACK:
+          ev.params.gpio_intr_callback_params.cb(
+              ev.params.gpio_intr_callback_params.p1,
+              ev.params.gpio_intr_callback_params.p2);
           break;
         default:
           printf("Unknown event_id: %d\n", ev.event_id);
