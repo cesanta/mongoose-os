@@ -8,7 +8,7 @@ commands described below.
 
 ESP8266 board can be accessed through a serial port, or directly via browser if WiFi is configured.
 
-Smartjs firmware can be easily extended by adding custom commands - refer to
+Smartjs firmware can be easily extended bwy adding custom commands - refer to
 https://docs.cesanta.com/v7/ to learn how to export custom functions, and look
 at the examples at `user/v7_cmd.c`.
 
@@ -41,11 +41,6 @@ On Mac or UNIX/Linux system, `cu` or `picocom` tools can be used:
 
 For example `cu` tool on Linux:
     cu -s 115200 -l /dev/ttyUSB0
-
-# Web UI
-
-Smart.js has a built-in web server which shows a web-based UI.
-Point your browser to: http://YOUR_ESP8266_IP_ADDRESS/ to access it.
 
 # Example: blink sketch
 
