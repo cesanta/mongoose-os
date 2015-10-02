@@ -2,11 +2,11 @@
 
 cd $(dirname $0)
 
-if [ "$1" = "OSS" ]; then
+if [ "$1" = "RTOS" ]; then
     shift
-    SDK=$(cat oss_sdk.version)
-else
     SDK=$(cat sdk.version)
+else
+    SDK=$(cat oss_sdk.version)
 fi
 
 V7DIR=$(dirname $(dirname $PWD))
