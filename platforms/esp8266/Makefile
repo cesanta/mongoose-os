@@ -1,13 +1,10 @@
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
-V7_PATH ?= ../../src
-MONGOOSE_PATH ?= ../../../mongoose
-COMMON_PATH ?= ../../src
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
-SPIFFS_PATH ?= ../../src/spiffs
-SJSJS_PATH ?= ../../src/js
-CLUBBY_PATH ?= ../../src/js
+SMARTJS_SRC ?= $(SMARTJS_PATH)/src
+SPIFFS_PATH ?= $(SMARTJS_SRC)/spiffs
+SJSJS_PATH ?= $(SMARTJS_SRC)/js
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
@@ -33,15 +30,15 @@ APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
-JSBIN_SRCS := $(CLUBBY_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js $(SJSJS_PATH)/cloud.js
+JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js $(SJSJS_PATH)/cloud.js
 JS_SRCS    := $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/user.js
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
 JSBIN_EXT := js
 JS_EXT := js
-VPATH = $(APP_MODULES) $(V7_PATH) $(MONGOOSE_PATH) $(SMARTJS_PATH)/src
-IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_PATH)
+VPATH = $(APP_MODULES) $(SMARTJS_SRC)
+IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
 LPATH = $(SDK_PATH)/lib
 
 # libraries used in this project, mainly provided by the SDK
@@ -286,9 +283,9 @@ $(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/
 	$(vecho) "GCC mkspiffs"
 	$(Q) gcc -I. -I$(SPIFFS_PATH) -Iuser -o $@ $^ -DNO_ESP
 
-$(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+$(BUILD_DIR)/v7: $(SMARTJS_SRC)/v7.c $(SMARTJS_SRC)/v7.h
 	$(vecho) "GCC v7"
-	$(Q) gcc -DV7_EXE -DV7_EXPOSE_PRIVATE $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+	$(Q) gcc -DV7_EXE -DV7_EXPOSE_PRIVATE $(SMARTJS_SRC)/v7.c -lm -o $(BUILD_DIR)/v7
 # Target specific warning inhibitions
 
 build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
