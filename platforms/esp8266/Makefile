@@ -30,7 +30,7 @@ APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_simple_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
-JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js $(SJSJS_PATH)/cloud.js
+JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js
 JS_SRCS    := $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/user.js
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
