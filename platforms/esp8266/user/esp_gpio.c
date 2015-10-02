@@ -95,30 +95,6 @@ uint32_t gpio_input_get() {
 #define GPIO_INTR_TYPE_ONCLICK 6
 #define GPIO_ONCLICK_SKIP_INTR_COUNT 15
 
-void gpio_enable_intr(uint32_t num) {
-#ifndef RTOS_SDK
-  ets_isr_unmask(1 << num);
-#else
-  _xt_isr_unmask(1 << num);
-#endif
-}
-
-void gpio_disable_intr(uint32_t num) {
-#ifndef RTOS_SDK
-  ets_isr_mask(1 << num);
-#else
-  _xt_isr_mask(1 << num);
-#endif
-}
-
-#ifndef RTOS_SDK
-#define ENTER_CRITICAL() ETS_GPIO_INTR_DISABLE()
-#define EXIT_CRITICAL() ETS_GPIO_INTR_ENABLE()
-#else
-#define ENTER_CRITICAL() portENTER_CRITICAL()
-#define EXIT_CRITICAL() portEXIT_CRITICAL()
-#endif
-
 static void gpio16_set_output_mode() {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
@@ -202,7 +178,7 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
       break;
 
     case GPIO_MODE_OUTPUT:
-      ENTER_CRITICAL();
+      ENTER_CRITICAL(ETS_GPIO_INUM);
 
       PIN_FUNC_SELECT(gi->periph, gi->func);
 
@@ -213,11 +189,11 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
                      GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(pin))) &
                          (~GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_ENABLE)));
 
-      EXIT_CRITICAL();
+      EXIT_CRITICAL(ETS_GPIO_INUM);
       break;
 
     case GPIO_MODE_INT:
-      ENTER_CRITICAL();
+      ENTER_CRITICAL(ETS_GPIO_INUM);
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_DIS_OUTPUT(pin);
 
@@ -232,10 +208,7 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
                          (~GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_ENABLE)));
 #endif
 
-      EXIT_CRITICAL();
-      break;
-
-    default:
+      EXIT_CRITICAL(ETS_GPIO_INUM);
       return -1;
   }
 
@@ -404,11 +377,11 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
     v7_setup_on_click(pin);
   }
 
-  ENTER_CRITICAL();
+  ENTER_CRITICAL(ETS_GPIO_INUM);
   GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(pin));
 
   gpio_pin_intr_state_set(GPIO_ID_PIN(pin), int_map[pin] & 0xF);
-  EXIT_CRITICAL();
+  EXIT_CRITICAL(ETS_GPIO_INUM);
 
   return 0;
 }

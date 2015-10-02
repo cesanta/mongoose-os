@@ -231,14 +231,14 @@ int i2c_init(i2c_connection c) {
     return -1;
   }
 
-  gpio_disable_intr(ETS_GPIO_INUM);
+  ENTER_CRITICAL(ETS_GPIO_INUM);
 
   i2c_wire_init(sda_info->periph, conn->sda_gpio, sda_info->func);
   i2c_wire_init(scl_info->periph, conn->scl_gpio, scl_info->func);
 
   i2c_set_wires_value(conn, I2C_INPUT, I2C_INPUT);
 
-  gpio_enable_intr(ETS_GPIO_INUM);
+  EXIT_CRITICAL(ETS_GPIO_INUM);
 
   /* Run a cycle to "flush out" the bus. 0xFF is reserved address. */
   i2c_start(conn, 0xFF, I2C_READ);

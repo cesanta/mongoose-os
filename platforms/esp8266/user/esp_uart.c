@@ -191,11 +191,11 @@ void uart_main_init(int baud_rate) {
 
 #ifndef RTOS_SDK
   ETS_UART_INTR_ATTACH(rx_isr, 0);
+  ETS_INTR_ENABLE(ETS_UART_INUM);
 #else
   _xt_isr_attach(ETS_UART_INUM, rx_isr, 0);
+  _xt_isr_unmask(1 << ETS_UART_INUM);
 #endif
-
-  gpio_enable_intr(ETS_UART_INUM);
 }
 
 static void uart_system_tx_char(char ch) {
