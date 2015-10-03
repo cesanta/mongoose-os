@@ -116,7 +116,7 @@ void wifi_changed_cb(System_Event_t *evt) {
       ) {
     struct station_config config;
     v7_val_t res;
-    v7_val_t conf = v7_get(v7, v7_get_global_object(v7), "conf", ~0);
+    v7_val_t conf = v7_get(v7, v7_get_global(v7), "conf", ~0);
     v7_val_t known, wifi;
 
     if (v7_is_undefined(conf)) {

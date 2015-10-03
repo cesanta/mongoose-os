@@ -15,7 +15,7 @@ static void gpio_intr_handler_proxy(int pin, int level) {
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
 
-  v7_val_t cb = v7_get(s_v7, v7_get_global_object(s_v7), prop_name, len);
+  v7_val_t cb = v7_get(s_v7, v7_get_global(s_v7), prop_name, len);
 
   if (!v7_is_function(cb)) {
     return;
@@ -49,7 +49,7 @@ static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   type = v7_to_number(typev);
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
-  current_cb = v7_get(v7, v7_get_global_object(v7), prop_name, len);
+  current_cb = v7_get(v7, v7_get_global(v7), prop_name, len);
   has_isr = v7_is_function(current_cb);
   new_isr_provided = v7_is_function(cb);
 
@@ -64,10 +64,9 @@ static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   }
 
   if (type == 0 && has_isr) {
-    v7_set(v7, v7_get_global_object(v7), prop_name, len, 0,
-           v7_create_undefined());
+    v7_set(v7, v7_get_global(v7), prop_name, len, 0, v7_create_undefined());
   } else if (!has_isr && new_isr_provided) {
-    v7_set(v7, v7_get_global_object(v7), prop_name, len, 0, cb);
+    v7_set(v7, v7_get_global(v7), prop_name, len, 0, cb);
   }
 
   if (type != 0 && !s_gpio_intr_installed) {
@@ -127,7 +126,7 @@ static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 void init_gpiojs(struct v7 *v7) {
   s_v7 = v7;
   v7_val_t gpio = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "GPIO", 4, 0, gpio);
+  v7_set(v7, v7_get_global(v7), "GPIO", 4, 0, gpio);
   v7_set_method(v7, gpio, "setmode", GPIO_setmode);
   v7_set_method(v7, gpio, "read", GPIO_read);
   v7_set_method(v7, gpio, "write", GPIO_write);

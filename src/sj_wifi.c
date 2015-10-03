@@ -137,5 +137,5 @@ void sj_wifi_init(struct v7 *v7) {
   v7_set_method(v7, s_wifi, "ip", Wifi_ip);
   v7_set_method(v7, s_wifi, "changed", Wifi_changed);
   v7_set_method(v7, s_wifi, "scan", Wifi_scan);
-  v7_set(v7, v7_get_global_object(v7), "Wifi", 4, 0, s_wifi);
+  v7_set(v7, v7_get_global(v7), "Wifi", 4, 0, s_wifi);
 }

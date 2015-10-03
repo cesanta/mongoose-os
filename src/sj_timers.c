@@ -31,5 +31,5 @@ static v7_val_t global_set_timeout(struct v7 *v7, v7_val_t this_obj,
 }
 
 void sj_init_timers(struct v7 *v7) {
-  v7_set_method(v7, v7_get_global_object(v7), "setTimeout", global_set_timeout);
+  v7_set_method(v7, v7_get_global(v7), "setTimeout", global_set_timeout);
 }

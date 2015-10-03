@@ -152,19 +152,19 @@ void init_v7(void *stack_base) {
   opts.c_stack_base = stack_base;
   v7 = v7_create_opt(opts);
 
-  v7_set_method(v7, v7_get_global_object(v7), "dsleep", dsleep);
-  v7_set_method(v7, v7_get_global_object(v7), "crash", crash);
+  v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
+  v7_set_method(v7, v7_get_global(v7), "crash", crash);
 
 #if V7_ESP_ENABLE__DHT11
   dht11 = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "DHT11", 5, 0, dht11);
+  v7_set(v7, v7_get_global(v7), "DHT11", 5, 0, dht11);
   v7_set_method(v7, dht11, "read", DHT11_read);
 #else
   (void) dht11;
 #endif /* V7_ESP_ENABLE__DHT11 */
 
   debug = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "Debug", 5, 0, debug);
+  v7_set(v7, v7_get_global(v7), "Debug", 5, 0, debug);
   v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);
 

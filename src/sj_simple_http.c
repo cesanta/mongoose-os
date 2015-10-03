@@ -55,7 +55,7 @@ void sj_init_simple_http_client(struct v7 *v7) {
   v7_val_t http;
 
   http = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "Http", 4, 0, http);
+  v7_set(v7, v7_get_global(v7), "Http", 4, 0, http);
   v7_set_method(v7, http, "get", sj_http_get);
   v7_set_method(v7, http, "post", sj_http_post);
 }

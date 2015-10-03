@@ -136,7 +136,7 @@ void sj_invoke_cb2(struct v7 *v7, v7_val_t cb, v7_val_t arg1, v7_val_t arg2) {
   v7_own(v7, &args);
   v7_array_push(v7, args, arg1);
   v7_array_push(v7, args, arg2);
-  sj_invoke_cb(v7, cb, v7_get_global_object(v7), args);
+  sj_invoke_cb(v7, cb, v7_get_global(v7), args);
   v7_disown(v7, &args);
   v7_disown(v7, &arg2);
   v7_disown(v7, &arg1);
@@ -154,18 +154,18 @@ void sj_invoke_cb0(struct v7 *v7, v7_val_t cb) {
 void sj_init_v7_ext(struct v7 *v7) {
   v7_val_t os, gc;
 
-  v7_set(v7, v7_get_global_object(v7), "version", 7, 0,
+  v7_set(v7, v7_get_global(v7), "version", 7, 0,
          v7_create_string(v7, sj_version, strlen(sj_version), 1));
 
-  v7_set_method(v7, v7_get_global_object(v7), "usleep", global_usleep);
+  v7_set_method(v7, v7_get_global(v7), "usleep", global_usleep);
 
   gc = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "GC", 2, 0, gc);
+  v7_set(v7, v7_get_global(v7), "GC", 2, 0, gc);
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "gc", GC_gc);
 
   os = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "OS", 2, 0, os);
+  v7_set(v7, v7_get_global(v7), "OS", 2, 0, os);
   v7_set_method(v7, os, "prof", OS_prof);
   v7_set_method(v7, os, "wdt_feed", OS_wdt_feed);
   v7_set_method(v7, os, "reset", OS_reset);

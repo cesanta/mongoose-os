@@ -108,7 +108,7 @@ static v7_val_t Tcp_gen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
 void init_data_gen_server(struct v7 *v7) {
   v7_val_t tcp = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "Tcp", 3, 0, tcp);
+  v7_set(v7, v7_get_global(v7), "Tcp", 3, 0, tcp);
   v7_set_method(v7, tcp, "gen", Tcp_gen);
 }
 

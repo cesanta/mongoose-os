@@ -288,7 +288,7 @@ void init_i2cjs(struct v7 *v7) {
   v7_set_method(v7, i2c_ctor, "test", i2cjs_test);
 #endif
 
-  v7_set(v7, v7_get_global_object(v7), "I2C", 3, 0, i2c_ctor);
+  v7_set(v7, v7_get_global(v7), "I2C", 3, 0, i2c_ctor);
 }
 
 #else

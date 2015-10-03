@@ -125,7 +125,7 @@ static v7_val_t sj_ws_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     v7_throw(v7, "invalid ws url string");
   }
 
-  if (v7_is_object(this_obj) && this_obj != v7_get_global_object(v7)) {
+  if (v7_is_object(this_obj) && this_obj != v7_get_global(v7)) {
     int use_ssl = 0;
     size_t len;
     const char *url = v7_to_string(v7, &urlv, &len);
@@ -282,7 +282,7 @@ void sj_init_ws_client(struct v7 *v7) {
          v7_create_function(v7, WebSocket_readyState, 0));
   v7_set(v7, ws, "OPEN", ~0, 0, WEBSOCKET_OPEN);
   v7_set(v7, ws, "CLOSED", ~0, 0, WEBSOCKET_CLOSED);
-  v7_set(v7, v7_get_global_object(v7), "WebSocket", ~0, 0, ws);
+  v7_set(v7, v7_get_global(v7), "WebSocket", ~0, 0, ws);
 
   v7_disown(v7, &ws);
 }

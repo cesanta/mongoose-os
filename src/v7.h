@@ -259,7 +259,7 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
 const char *v7_to_string(struct v7 *, v7_val_t *value, size_t *string_len);
 
 /* Return root level (`global`) object of the given V7 instance. */
-v7_val_t v7_get_global_object(struct v7 *);
+v7_val_t v7_get_global(struct v7 *);
 
 /*
  * Lookup property `name`, `len` in object `obj`. If `obj` holds no such

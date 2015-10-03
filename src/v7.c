@@ -263,7 +263,7 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
 const char *v7_to_string(struct v7 *, v7_val_t *value, size_t *string_len);
 
 /* Return root level (`global`) object of the given V7 instance. */
-v7_val_t v7_get_global_object(struct v7 *);
+v7_val_t v7_get_global(struct v7 *);
 
 /*
  * Lookup property `name`, `len` in object `obj`. If `obj` holds no such
@@ -5575,7 +5575,7 @@ static v7_val_t File_list(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
 void init_file(struct v7 *v7) {
   v7_val_t file_obj = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "File", 4, 0, file_obj);
+  v7_set(v7, v7_get_global(v7), "File", 4, 0, file_obj);
   s_file_proto = v7_create_object(v7);
   v7_set(v7, file_obj, "prototype", 9, 0, s_file_proto);
 
@@ -5797,7 +5797,7 @@ static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 void init_socket(struct v7 *v7) {
   v7_val_t socket_obj = v7_create_object(v7);
 
-  v7_set(v7, v7_get_global_object(v7), "Socket", 6, 0, socket_obj);
+  v7_set(v7, v7_get_global(v7), "Socket", 6, 0, socket_obj);
   s_sock_proto = v7_create_object(v7);
   v7_set(v7, socket_obj, "prototype", 9, 0, s_sock_proto);
 
@@ -5963,7 +5963,7 @@ static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
 void init_crypto(struct v7 *v7) {
 #ifdef V7_ENABLE_CRYPTO
   v7_val_t obj = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "Crypto", 6, 0, obj);
+  v7_set(v7, v7_get_global(v7), "Crypto", 6, 0, obj);
   v7_set_method(v7, obj, "md5", Crypto_md5);
   v7_set_method(v7, obj, "md5_hex", Crypto_md5_hex);
   v7_set_method(v7, obj, "sha1", Crypto_sha1);
@@ -6087,8 +6087,7 @@ static void _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
   struct mbuf *buf = &ctx->out, *stack = &ctx->stack;
   struct visit *cur;
   v7_val_t gen_proto = v7_get(
-      v7,
-      v7_get(v7, v7_get(v7, v7_get_global_object(v7), "UBJSON", ~0), "Bin", ~0),
+      v7, v7_get(v7, v7_get(v7, v7_get_global(v7), "UBJSON", ~0), "Bin", ~0),
       "prototype", ~0);
 
   if (ctx->out.len > 0) {
@@ -6241,7 +6240,7 @@ static v7_val_t UBJSON_Bin(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 void init_ubjson(struct v7 *v7) {
   v7_val_t gen_proto, ubjson;
   ubjson = v7_create_object(v7);
-  v7_set(v7, v7_get_global_object(v7), "UBJSON", 6, 0, ubjson);
+  v7_set(v7, v7_get_global(v7), "UBJSON", 6, 0, ubjson);
   v7_set_method(v7, ubjson, "render", UBJSON_render);
   gen_proto = v7_create_object(v7);
   v7_set(v7, ubjson, "Bin", ~0, 0,
@@ -9124,7 +9123,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
   return v7;
 }
 
-val_t v7_get_global_object(struct v7 *v7) {
+val_t v7_get_global(struct v7 *v7) {
   return v7->global_object;
 }
 
@@ -12898,7 +12897,7 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         if (prop != NULL) {
           prop->value = v3;
         } else {
-          v7_set_v(v7, v7_get_global_object(v7), v2, v3);
+          v7_set_v(v7, v7_get_global(v7), v2, v3);
         }
         PUSH(v3);
         break;
