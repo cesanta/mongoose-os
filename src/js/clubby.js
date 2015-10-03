@@ -127,6 +127,11 @@ var Clubby = function(arg) {
   reconnect();
 };
 
+/*
+ * UBJSON disabled until we can request WS extensions to
+ * the WebSocket API.
+ */
+/*
 if (typeof UBJSON !== "undefined") {
   Clubby.prototype._send = function(req) {
     var ws = this.config.ws, first = true;
@@ -144,6 +149,10 @@ if (typeof UBJSON !== "undefined") {
   Clubby.prototype._send = function(req) {
     this.config.ws.send(JSON.stringify(req));
   }
+}
+*/
+Clubby.prototype._send = function(req) {
+  this.config.ws.send(JSON.stringify(req));
 }
 
 Clubby.prototype.call = function(dst, cmd, callback) {

@@ -5236,7 +5236,7 @@ void cs_ubjson_emit_autonumber(struct mbuf *buf, double v) {
 
 void cs_ubjson_emit_size(struct mbuf *buf, size_t v) {
   /* TODO(mkm): use "high-precision" stringified type */
-  assert(v < INT64_MAX);
+  assert((uint64_t) v < INT64_MAX);
   cs_ubjson_emit_autoint(buf, (int64_t) v);
 }
 
