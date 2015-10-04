@@ -265,6 +265,9 @@ const char *v7_to_string(struct v7 *, v7_val_t *value, size_t *string_len);
 /* Return root level (`global`) object of the given V7 instance. */
 v7_val_t v7_get_global(struct v7 *);
 
+/* Return current `this` object. */
+v7_val_t v7_get_this(struct v7 *);
+
 /*
  * Lookup property `name`, `len` in object `obj`. If `obj` holds no such
  * property, an `undefined` value is returned.
@@ -9184,6 +9187,10 @@ int v7_disown(struct v7 *v7, v7_val_t *v) {
   }
 
   return 0;
+}
+
+v7_val_t v7_get_this(struct v7 *v7) {
+  return v7->this_object;
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
