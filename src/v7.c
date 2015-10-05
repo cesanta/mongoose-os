@@ -11907,6 +11907,18 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
   return res;
 }
 
+static val_t i_call_cfunction(struct v7 *v7, val_t f, val_t this_object,
+                              val_t args) {
+  int saved_inhibit_gc = v7->inhibit_gc;
+  val_t res, old_this = v7->this_object;
+  v7->inhibit_gc = 1;
+  v7->this_object = this_object;
+  res = v7_to_cfunction(f)(v7, this_object, args);
+  v7->this_object = old_this;
+  v7->inhibit_gc = saved_inhibit_gc;
+  return res;
+}
+
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, val_t this_object, int is_constructor) {
   ast_off_t end, fpos, fend, fbody;
@@ -11984,15 +11996,12 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (v7_is_cfunction(cfunc)) {
-    int saved_inhibit_gc = v7->inhibit_gc;
     args = v7_create_dense_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       v7_array_set(v7, args, i, res);
     }
-    v7->inhibit_gc = 1;
-    res = v7_to_cfunction(cfunc)(v7, this_object, args);
-    v7->inhibit_gc = saved_inhibit_gc;
+    res = i_call_cfunction(v7, cfunc, this_object, args);
     goto cleanup;
   }
   if (!v7_is_function(v1)) {
@@ -12543,10 +12552,7 @@ i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   }
 
   if (v7_is_cfunction(f)) {
-    int saved_inhibit_gc = v7->inhibit_gc;
-    v7->inhibit_gc = 1;
-    res = v7_to_cfunction(f)(v7, this_object, args);
-    v7->inhibit_gc = saved_inhibit_gc;
+    res = i_call_cfunction(v7, f, this_object, args);
     goto cleanup;
   }
   if (!v7_is_function(f)) {
