@@ -1,5 +1,7 @@
 # Smart.js platform
 
+[![Join the chat at https://gitter.im/cesanta/smart.js](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cesanta/smart.js?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Smart.js is a generic, hardware independent, full-stack
 Internet of Things software platform.
 Smart.js solves problems of reliability, scalability, security
