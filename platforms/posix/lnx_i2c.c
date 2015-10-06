@@ -132,9 +132,9 @@ void i2c_close(i2c_connection c) {
 }
 
 /* HAL functions */
-i2c_connection sj_i2c_create(struct v7 *v7, v7_val_t args) {
+i2c_connection sj_i2c_create(struct v7 *v7) {
   struct lnx_i2c_connection *conn;
-  v7_val_t bus_no_val = v7_array_get(v7, args, 0);
+  v7_val_t bus_no_val = v7_arg(v7, 0);
   double bus_no = v7_to_number(bus_no_val);
 
   if (!v7_is_number(bus_no) || bus_no < 0) {

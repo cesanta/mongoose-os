@@ -248,11 +248,11 @@ int i2c_init(i2c_connection c) {
 }
 
 /* HAL functions */
-i2c_connection sj_i2c_create(struct v7 *v7, v7_val_t args) {
+i2c_connection sj_i2c_create(struct v7 *v7) {
   struct esp_i2c_connection *conn;
-  v7_val_t sda_val = v7_array_get(v7, args, 0);
+  v7_val_t sda_val = v7_arg(v7, 0);
   double sda = v7_to_number(sda_val);
-  v7_val_t scl_val = v7_array_get(v7, args, 1);
+  v7_val_t scl_val = v7_arg(v7, 1);
   double scl = v7_to_number(scl_val);
 
   if (!v7_is_number(sda_val) || sda < 0 || sda > 255 ||

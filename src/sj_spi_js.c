@@ -21,10 +21,10 @@ static uint8_t get_bits(uint32_t n) {
   }
 }
 
-v7_val_t spi_js_ctor(struct v7 *v7, v7_val_t args) {
+v7_val_t spi_js_ctor(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   spi_connection conn;
-  conn = sj_spi_create(v7, args);
+  conn = sj_spi_create(v7);
 
   if (spi_init(conn) < 0) {
     sj_spi_close(conn);
@@ -46,7 +46,7 @@ spi_connection spijs_get_conn(struct v7 *v7, v7_val_t this_obj) {
 * Expose bare txn function to have possibility work with very different devices
 * in JS (9-bit address, 3 bit command, 7 bit data etc)
 */
-v7_val_t spi_js_txn(struct v7 *v7, v7_val_t args) {
+v7_val_t spi_js_txn(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   uint32_t params[8], res;
   int i;
@@ -57,7 +57,7 @@ v7_val_t spi_js_txn(struct v7 *v7, v7_val_t args) {
   }
 
   for (i = 0; i < 8; i++) {
-    v7_val_t tmp = v7_array_get(v7, args, i);
+    v7_val_t tmp = v7_arg(v7, i);
     if (!v7_is_number(tmp)) {
       return v7_create_number(-1);
     }
@@ -73,7 +73,7 @@ v7_val_t spi_js_txn(struct v7 *v7, v7_val_t args) {
 /*
  * JS: tran(send, [bytes_to_read, command, addr])
 */
-v7_val_t spi_js_tran(struct v7 *v7, v7_val_t args) {
+v7_val_t spi_js_tran(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   uint8_t cmd_bits = 0;
   uint16_t cmd_data = 0;
@@ -88,7 +88,7 @@ v7_val_t spi_js_tran(struct v7 *v7, v7_val_t args) {
   }
 
   /* data to send*/
-  tmp_val = v7_array_get(v7, args, 0);
+  tmp_val = v7_arg(v7, 0);
   if (!v7_is_number(tmp_val)) {
     return v7_create_number(-1);
   }
@@ -100,7 +100,7 @@ v7_val_t spi_js_tran(struct v7 *v7, v7_val_t args) {
   dout_bits = get_bits(dout_data);
 
   /* bytes to receive */
-  tmp_val = v7_array_get(v7, args, 1);
+  tmp_val = v7_arg(v7, 1);
   if (v7_is_number(tmp_val)) {
     din_bits = v7_to_number(tmp_val) * 8;
     if (din_bits > 32) {
@@ -109,13 +109,13 @@ v7_val_t spi_js_tran(struct v7 *v7, v7_val_t args) {
   }
 
   /* command */
-  tmp_val = v7_array_get(v7, args, 2);
+  tmp_val = v7_arg(v7, 2);
   if (v7_is_number(tmp_val)) {
     cmd_bits = v7_to_number(tmp_val);
   }
 
   /* address */
-  tmp_val = v7_array_get(v7, args, 3);
+  tmp_val = v7_arg(v7, 3);
   if (v7_is_number(tmp_val)) {
     addr_data = v7_to_number(tmp_val);
     if (addr_data > 0xFFFFFFFF) {
@@ -131,7 +131,7 @@ v7_val_t spi_js_tran(struct v7 *v7, v7_val_t args) {
   return v7_create_number(res);
 }
 
-v7_val_t spi_js_close(struct v7 *v7, v7_val_t args) {
+v7_val_t spi_js_close(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   spi_connection conn;
 

@@ -36,16 +36,16 @@ static v7_val_t sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
                                         body, body_len, method, cb));
 }
 
-static v7_val_t sj_http_get(struct v7 *v7, v7_val_t args) {
-  v7_val_t urlv = v7_array_get(v7, args, 0);
-  v7_val_t cb = v7_array_get(v7, args, 1);
+static v7_val_t sj_http_get(struct v7 *v7) {
+  v7_val_t urlv = v7_arg(v7, 0);
+  v7_val_t cb = v7_arg(v7, 1);
   return sj_http_call_helper(v7, urlv, v7_create_undefined(), cb, "GET");
 }
 
-static v7_val_t sj_http_post(struct v7 *v7, v7_val_t args) {
-  v7_val_t urlv = v7_array_get(v7, args, 0);
-  v7_val_t body = v7_array_get(v7, args, 1);
-  v7_val_t cb = v7_array_get(v7, args, 2);
+static v7_val_t sj_http_post(struct v7 *v7) {
+  v7_val_t urlv = v7_arg(v7, 0);
+  v7_val_t body = v7_arg(v7, 1);
+  v7_val_t cb = v7_arg(v7, 2);
 
   return sj_http_call_helper(v7, urlv, body, cb, "POST");
 }

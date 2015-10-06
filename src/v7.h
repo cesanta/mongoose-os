@@ -66,7 +66,7 @@ extern "C" {
 struct v7;
 
 /* JavaScript -> C call interface */
-typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t);
+typedef v7_val_t (*v7_cfunction_t)(struct v7 *);
 
 /* Create V7 instance */
 struct v7 *v7_create(void);
@@ -266,6 +266,15 @@ v7_val_t v7_get_global(struct v7 *);
 
 /* Return current `this` object. */
 v7_val_t v7_get_this(struct v7 *);
+
+/* Return current `arguments` array */
+v7_val_t v7_get_arguments(struct v7 *);
+
+/* Return n-th argument */
+v7_val_t v7_arg(struct v7 *, unsigned long n);
+
+/* Return the length of `arguments` */
+unsigned long v7_argc(struct v7 *);
 
 /*
  * Lookup property `name`, `len` in object `obj`. If `obj` holds no such

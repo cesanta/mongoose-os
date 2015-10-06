@@ -115,9 +115,9 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
 }
 
 /* HAL functions */
-spi_connection sj_spi_create(struct v7 *v7, v7_val_t args) {
+spi_connection sj_spi_create(struct v7 *v7) {
   struct lnx_spi_connection *conn;
-  v7_val_t spi_no_val = v7_array_get(v7, args, 0);
+  v7_val_t spi_no_val = v7_arg(v7, 0);
   double spi_no = v7_to_number(spi_no_val);
   ;
 

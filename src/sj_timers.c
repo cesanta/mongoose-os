@@ -5,14 +5,14 @@
 #include "sj_v7_ext.h"
 
 /* Currently can only handle one timer */
-static v7_val_t global_set_timeout(struct v7 *v7, v7_val_t args) {
+static v7_val_t global_set_timeout(struct v7 *v7) {
   v7_val_t *cb;
-  v7_val_t msecsv = v7_array_get(v7, args, 1);
+  v7_val_t msecsv = v7_arg(v7, 1);
   int msecs;
 
   cb = (v7_val_t *) malloc(sizeof(*cb));
   v7_own(v7, cb);
-  *cb = v7_array_get(v7, args, 0);
+  *cb = v7_arg(v7, 0);
 
   if (!v7_is_function(*cb)) {
     printf("cb is not a function\n");

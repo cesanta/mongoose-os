@@ -81,7 +81,7 @@ void i2c_read_bytes(i2c_connection conn, size_t n, uint8_t *buf,
 void i2c_send_ack(i2c_connection conn, enum i2c_ack_type ack_type);
 
 /* Create i2c connection */
-i2c_connection sj_i2c_create(struct v7 *v7, v7_val_t args);
+i2c_connection sj_i2c_create(struct v7 *v7);
 
 /* Close i2c connection and free resources */
 void sj_i2c_close(i2c_connection conn);

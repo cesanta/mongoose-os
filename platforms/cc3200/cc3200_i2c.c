@@ -32,7 +32,7 @@ struct i2c_state {
   uint8_t first : 1;
 };
 
-i2c_connection sj_i2c_create(struct v7 *v7, v7_val_t args) {
+i2c_connection sj_i2c_create(struct v7 *v7) {
   struct i2c_state *c = calloc(1, sizeof(struct i2c_state));
   c->sda_pin = I2C_SDA_PIN;
   c->scl_pin = I2C_SCL_PIN;

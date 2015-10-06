@@ -113,13 +113,12 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 * }
 *
 */
-static v7_val_t sj_ws_ctor(struct v7 *v7, v7_val_t args) {
+static v7_val_t sj_ws_ctor(struct v7 *v7) {
   struct mg_connection *nc;
   struct user_data *ud;
   v7_val_t this_obj = v7_get_this(v7);
-  v7_val_t urlv = v7_array_get(v7, args, 0);
-  v7_val_t subprotov = v7_array_get(v7, args, 1);
-  (void) args;
+  v7_val_t urlv = v7_arg(v7, 0);
+  v7_val_t subprotov = v7_arg(v7, 1);
 
   if (!v7_is_string(urlv)) {
     v7_throw(v7, "invalid ws url string");
@@ -212,9 +211,9 @@ static void _WebSocket_send_string(struct v7 *v7, struct mg_connection *nc,
   mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
 }
 
-static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t args) {
+static v7_val_t WebSocket_send(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
-  v7_val_t datav = v7_array_get(v7, args, 0);
+  v7_val_t datav = v7_arg(v7, 0);
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   struct mg_connection *nc;
   struct user_data *ud;
@@ -248,11 +247,10 @@ static v7_val_t WebSocket_send(struct v7 *v7, v7_val_t args) {
   return v7_create_undefined();
 }
 
-static v7_val_t WebSocket_close(struct v7 *v7, v7_val_t args) {
+static v7_val_t WebSocket_close(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   struct mg_connection *nc;
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
-  (void) args;
   if (v7_is_foreign(ncv) &&
       (nc = (struct mg_connection *) v7_to_foreign(ncv)) != NULL) {
     nc->flags |= MG_F_CLOSE_IMMEDIATELY;
@@ -260,7 +258,7 @@ static v7_val_t WebSocket_close(struct v7 *v7, v7_val_t args) {
   return v7_create_undefined();
 }
 
-static v7_val_t WebSocket_readyState(struct v7 *v7, v7_val_t args) {
+static v7_val_t WebSocket_readyState(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   if (v7_is_undefined(ncv)) {

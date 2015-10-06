@@ -39,9 +39,9 @@ struct v7 *v7;
 
 #if V7_ESP_ENABLE__DHT11
 
-static v7_val_t DHT11_read(struct v7 *v7, v7_val_t args) {
+static v7_val_t DHT11_read(struct v7 *v7) {
   int pin, temp, rh;
-  v7_val_t pinv = v7_array_get(v7, args, 0), result;
+  v7_val_t pinv = v7_arg(v7, 0), result;
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
@@ -69,9 +69,9 @@ static v7_val_t DHT11_read(struct v7 *v7, v7_val_t args) {
  * 1 - print debug output to UART0 (V7's console)
  * 2 - print debug output to UART1
  */
-static v7_val_t Debug_mode(struct v7 *v7, v7_val_t args) {
+static v7_val_t Debug_mode(struct v7 *v7) {
   int mode, res;
-  v7_val_t output_val = v7_array_get(v7, args, 0);
+  v7_val_t output_val = v7_arg(v7, 0);
 
   if (!v7_is_number(output_val)) {
     printf("Output is not a number\n");
@@ -89,11 +89,11 @@ static v7_val_t Debug_mode(struct v7 *v7, v7_val_t args) {
 /*
  * Prints message to current debug output
  */
-v7_val_t Debug_print(struct v7 *v7, v7_val_t args) {
-  int i, num_args = v7_array_length(v7, args);
+v7_val_t Debug_print(struct v7 *v7) {
+  int i, num_args = v7_argc(v7);
 
   for (i = 0; i < num_args; i++) {
-    v7_fprint(stderr, v7, v7_array_get(v7, args, i));
+    v7_fprint(stderr, v7, v7_arg(v7, i));
     fprintf(stderr, " ");
   }
   fprintf(stderr, "\n");
@@ -112,10 +112,10 @@ v7_val_t Debug_print(struct v7 *v7, v7_val_t args) {
  *
  */
 
-static v7_val_t dsleep(struct v7 *v7, v7_val_t args) {
-  v7_val_t time_v = v7_array_get(v7, args, 0);
+static v7_val_t dsleep(struct v7 *v7) {
+  v7_val_t time_v = v7_arg(v7, 0);
   uint32 time = v7_to_number(time_v);
-  v7_val_t flags_v = v7_array_get(v7, args, 1);
+  v7_val_t flags_v = v7_arg(v7, 1);
   uint8 flags = v7_to_number(flags_v);
 
   if (!v7_is_number(time_v) || time < 0) return v7_create_boolean(false);
@@ -132,9 +132,8 @@ static v7_val_t dsleep(struct v7 *v7, v7_val_t args) {
  * Crashes the process/CPU. Useful to attach a debugger until we have
  * breakpoints.
  */
-static v7_val_t crash(struct v7 *v7, v7_val_t args) {
+static v7_val_t crash(struct v7 *v7) {
   (void) v7;
-  (void) args;
 
   *(int *) 1 = 1;
   return v7_create_undefined();
