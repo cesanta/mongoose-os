@@ -1777,9 +1777,6 @@ struct gc_arena {
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
-/* TODO(lsm): re-enable when crash reason found */
-#define V7_DISABLE_GC
-
 /* Amalgamated: #include "license.h" */
 
 /* Check whether we're compiling in an environment with no filesystem */
