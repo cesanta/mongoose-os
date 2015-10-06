@@ -62,8 +62,11 @@ typedef uint64_t v7_val_t;
 extern "C" {
 #endif /* __cplusplus */
 
-struct v7; /* Opaque structure. V7 engine handler. */
-typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
+/* Opaque structure. V7 engine handler. */
+struct v7;
+
+/* JavaScript -> C call interface */
+typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t);
 
 /* Create V7 instance */
 struct v7 *v7_create(void);

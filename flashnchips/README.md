@@ -1,11 +1,11 @@
-# Flash’N’Chips
+# Flashnchips
 
-Flash’N’Chips is the Smart.js flashing tool. It is designed to be simple, but
+Flashnchips is the Smart.js flashing tool. It is designed to be simple, but
 provide advanced options via command-line flags.
 
 ## Firmware format
 
-Flash’N’Chips expects the firmware to be located next to the executable in a
+Flashnchips expects the firmware to be located next to the executable in a
 directory called 'firmware'. This directory must contain a subdirectory named
 after the platform (e.g. 'esp8266'), that should contain one subdirectory for
 each firmware. For example:
@@ -30,7 +30,7 @@ See also [ESP8266-specific](../platforms/esp8266/flashing.md) notes on wiring.
 
 ## Build
 
-Flash’N’Chips requires:
+Flashnchips requires:
 
 - Qt 5
 - libftdi

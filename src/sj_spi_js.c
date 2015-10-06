@@ -21,7 +21,8 @@ static uint8_t get_bits(uint32_t n) {
   }
 }
 
-v7_val_t spi_js_ctor(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t spi_js_ctor(struct v7 *v7, v7_val_t args) {
+  v7_val_t this_obj = v7_get_this(v7);
   spi_connection conn;
   conn = sj_spi_create(v7, args);
 
@@ -45,7 +46,8 @@ spi_connection spijs_get_conn(struct v7 *v7, v7_val_t this_obj) {
 * Expose bare txn function to have possibility work with very different devices
 * in JS (9-bit address, 3 bit command, 7 bit data etc)
 */
-v7_val_t spi_js_txn(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t spi_js_txn(struct v7 *v7, v7_val_t args) {
+  v7_val_t this_obj = v7_get_this(v7);
   uint32_t params[8], res;
   int i;
 
@@ -71,7 +73,8 @@ v7_val_t spi_js_txn(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 /*
  * JS: tran(send, [bytes_to_read, command, addr])
 */
-v7_val_t spi_js_tran(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t spi_js_tran(struct v7 *v7, v7_val_t args) {
+  v7_val_t this_obj = v7_get_this(v7);
   uint8_t cmd_bits = 0;
   uint16_t cmd_data = 0;
   uint32_t addr_bits = 0, addr_data = 0, dout_bits = 0, dout_data = 0,
@@ -128,7 +131,8 @@ v7_val_t spi_js_tran(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(res);
 }
 
-v7_val_t spi_js_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t spi_js_close(struct v7 *v7, v7_val_t args) {
+  v7_val_t this_obj = v7_get_this(v7);
   spi_connection conn;
 
   if ((conn = spijs_get_conn(v7, this_obj)) == NULL) {

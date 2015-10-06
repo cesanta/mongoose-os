@@ -9,7 +9,7 @@
 static v7_val_t s_wifi;
 static struct v7 *s_v7;
 
-static v7_val_t sj_Wifi_setup(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t sj_Wifi_setup(struct v7 *v7, v7_val_t args) {
   v7_val_t ssidv = v7_array_get(v7, args, 0);
   v7_val_t passv = v7_array_get(v7, args, 1);
   const char *ssid, *pass;
@@ -26,16 +26,15 @@ static v7_val_t sj_Wifi_setup(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_boolean(sj_wifi_setup_sta(ssid, pass));
 }
 
-static v7_val_t Wifi_connect(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Wifi_connect(struct v7 *v7, v7_val_t args) {
   return v7_create_boolean(sj_wifi_connect());
 }
 
-static v7_val_t Wifi_disconnect(struct v7 *v7, v7_val_t this_obj,
-                                v7_val_t args) {
+static v7_val_t Wifi_disconnect(struct v7 *v7, v7_val_t args) {
   return v7_create_boolean(sj_wifi_disconnect());
 }
 
-static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Wifi_status(struct v7 *v7, v7_val_t args) {
   v7_val_t res;
   char *status = sj_wifi_get_status();
   if (status == NULL) return v7_create_undefined();
@@ -44,7 +43,7 @@ static v7_val_t Wifi_status(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return res;
 }
 
-static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Wifi_show(struct v7 *v7, v7_val_t args) {
   v7_val_t res;
   char *ssid = sj_wifi_get_connected_ssid();
   if (ssid == NULL) return v7_create_undefined();
@@ -53,7 +52,7 @@ static v7_val_t Wifi_show(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return res;
 }
 
-static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Wifi_ip(struct v7 *v7, v7_val_t args) {
   v7_val_t res;
   char *ip = sj_wifi_get_sta_ip();
   if (ip == NULL) return v7_create_undefined();
@@ -69,7 +68,7 @@ void sj_wifi_on_change_callback(enum sj_wifi_status event) {
   sj_invoke_cb1(s_v7, cb, v7_create_number(event));
 }
 
-static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Wifi_changed(struct v7 *v7, v7_val_t args) {
   v7_val_t cb = v7_array_get(v7, args, 0);
   if (!v7_is_function(cb)) return v7_create_boolean(0);
   v7_set(v7, s_wifi, "_ccb", ~0, V7_PROPERTY_DONT_ENUM | V7_PROPERTY_HIDDEN,
@@ -102,7 +101,7 @@ void sj_wifi_scan_done(const char **ssids) {
 }
 
 /* Call the callback with a list of ssids found in the air. */
-static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Wifi_scan(struct v7 *v7, v7_val_t args) {
   int r;
   v7_val_t cb = v7_get(v7, s_wifi, "_scb", ~0);
   if (v7_is_function(cb)) {

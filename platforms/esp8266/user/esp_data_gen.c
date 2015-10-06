@@ -95,7 +95,7 @@ void start_data_gen_server(int port) {
  *
  * port: tcp port to listen to
  */
-static v7_val_t Tcp_gen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Tcp_gen(struct v7 *v7, v7_val_t args) {
   v7_val_t port = v7_array_get(v7, args, 0);
   if (!v7_is_number(port)) {
     printf("bad port number\n");

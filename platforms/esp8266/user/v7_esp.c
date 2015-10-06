@@ -39,7 +39,7 @@ struct v7 *v7;
 
 #if V7_ESP_ENABLE__DHT11
 
-static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t DHT11_read(struct v7 *v7, v7_val_t args) {
   int pin, temp, rh;
   v7_val_t pinv = v7_array_get(v7, args, 0), result;
 
@@ -69,7 +69,7 @@ static v7_val_t DHT11_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * 1 - print debug output to UART0 (V7's console)
  * 2 - print debug output to UART1
  */
-static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t Debug_mode(struct v7 *v7, v7_val_t args) {
   int mode, res;
   v7_val_t output_val = v7_array_get(v7, args, 0);
 
@@ -89,10 +89,9 @@ static v7_val_t Debug_mode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 /*
  * Prints message to current debug output
  */
-v7_val_t Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+v7_val_t Debug_print(struct v7 *v7, v7_val_t args) {
   int i, num_args = v7_array_length(v7, args);
 
-  (void) this_obj;
   for (i = 0; i < num_args; i++) {
     v7_fprint(stderr, v7, v7_array_get(v7, args, i));
     fprintf(stderr, " ");
@@ -113,7 +112,7 @@ v7_val_t Debug_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  *
  */
 
-static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t dsleep(struct v7 *v7, v7_val_t args) {
   v7_val_t time_v = v7_array_get(v7, args, 0);
   uint32 time = v7_to_number(time_v);
   v7_val_t flags_v = v7_array_get(v7, args, 1);
@@ -133,9 +132,8 @@ static v7_val_t dsleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * Crashes the process/CPU. Useful to attach a debugger until we have
  * breakpoints.
  */
-static v7_val_t crash(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t crash(struct v7 *v7, v7_val_t args) {
   (void) v7;
-  (void) this_obj;
   (void) args;
 
   *(int *) 1 = 1;

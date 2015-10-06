@@ -5,8 +5,7 @@
 #include "sj_v7_ext.h"
 
 /* Currently can only handle one timer */
-static v7_val_t global_set_timeout(struct v7 *v7, v7_val_t this_obj,
-                                   v7_val_t args) {
+static v7_val_t global_set_timeout(struct v7 *v7, v7_val_t args) {
   v7_val_t *cb;
   v7_val_t msecsv = v7_array_get(v7, args, 1);
   int msecs;

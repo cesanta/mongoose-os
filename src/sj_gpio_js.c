@@ -31,7 +31,7 @@ static void gpio_intr_handler_proxy(int pin, int level) {
   }
 }
 
-static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   v7_val_t typev = v7_array_get(v7, args, 1);
   v7_val_t cb = v7_array_get(v7, args, 2);
@@ -77,7 +77,7 @@ static v7_val_t GPIO_setisr(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_boolean(sj_gpio_intr_set(pin, type) == 0);
 }
 
-static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   v7_val_t modev = v7_array_get(v7, args, 1);
   v7_val_t pullv = v7_array_get(v7, args, 2);
@@ -95,7 +95,7 @@ static v7_val_t GPIO_setmode(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_boolean(sj_gpio_set_mode(pin, mode, pull) == 0);
 }
 
-static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t GPIO_write(struct v7 *v7, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   v7_val_t valv = v7_array_get(v7, args, 1);
   int pin, val;
@@ -110,7 +110,7 @@ static v7_val_t GPIO_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_boolean(sj_gpio_write(pin, val) == 0);
 }
 
-static v7_val_t GPIO_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t GPIO_read(struct v7 *v7, v7_val_t args) {
   v7_val_t pinv = v7_array_get(v7, args, 0);
   int pin;
 

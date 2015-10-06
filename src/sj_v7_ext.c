@@ -6,7 +6,7 @@
 
 extern const char *sj_version;
 
-static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t OS_prof(struct v7 *v7, v7_val_t args) {
   v7_val_t result = v7_create_object(v7);
   v7_own(v7, &result);
 
@@ -21,18 +21,16 @@ static v7_val_t OS_prof(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return result;
 }
 
-static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t OS_wdt_feed(struct v7 *v7, v7_val_t args) {
   (void) v7;
-  (void) this_obj;
   (void) args;
   sj_wdt_feed();
 
   return v7_create_boolean(1);
 }
 
-static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t OS_reset(struct v7 *v7, v7_val_t args) {
   (void) v7;
-  (void) this_obj;
   (void) args;
   sj_system_restart();
 
@@ -40,7 +38,7 @@ static v7_val_t OS_reset(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_boolean(1);
 }
 
-static v7_val_t global_usleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t global_usleep(struct v7 *v7, v7_val_t args) {
   v7_val_t usecsv = v7_array_get(v7, args, 0);
   int usecs;
   if (!v7_is_number(usecsv)) {
@@ -64,7 +62,7 @@ static v7_val_t global_usleep(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
  * propnfree: number of free property slots in js heap
  * funcnfree: number of free function slots in js heap
  */
-static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static v7_val_t GC_stat(struct v7 *v7, v7_val_t args) {
   /* take a snapshot of the stats that would change as we populate the result */
   size_t sysfree = sj_get_free_heap_size();
   size_t jssize = v7_heap_stat(v7, V7_HEAP_STAT_HEAP_SIZE);
@@ -106,8 +104,7 @@ static v7_val_t GC_stat(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 /*
  * Force a pass of the garbage collector.
  */
-static v7_val_t GC_gc(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
-  (void) this_obj;
+static v7_val_t GC_gc(struct v7 *v7, v7_val_t args) {
   (void) args;
 
   v7_gc(v7, 1);
