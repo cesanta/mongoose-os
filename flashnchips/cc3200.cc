@@ -991,21 +991,19 @@ class FlasherImpl : public Flasher {
     QByteArray image = spiffs_image_;
     if ((fs0.ValueOrDie().length() > 0 || fs1.ValueOrDie().length() > 0) &&
         !overwrite_spiffs_) {
-      SPIFFS bundled(spiffs_image_);
-      SPIFFS dev(min_seq == 0 ? fs0.ValueOrDie() : fs1.ValueOrDie());
+      QByteArray dev = (min_seq == 0 ? fs0.ValueOrDie() : fs1.ValueOrDie());
 
-      util::Status st = dev.merge(bundled);
-      if (!st.ok()) {
-        return st;
+      auto merged = mergeFilesystems(dev, spiffs_image_);
+      if (!merged.ok()) {
+        return merged.status();
       }
-
       if (!files_.empty()) {
-        st = dev.mergeFiles(files_);
-        if (!st.ok()) {
-          return st;
+        merged = mergeFiles(merged.ValueOrDie(), files_);
+        if (!merged.ok()) {
+          return merged.status();
         }
       }
-      image = dev.data();
+      image = merged.ValueOrDie();
     }
     image.append(meta);
     QString fname = min_seq == 0 ? kFS1Filename : kFS0Filename;
@@ -1057,7 +1055,8 @@ class CC3200HAL : public HAL {
     return doBreak(s.get());
   }
 
-  std::unique_ptr<Flasher> flasher() const override {
+  std::unique_ptr<Flasher> flasher(Prompter* prompter) const override {
+    (void) prompter;  // TODO(rojer): Add prompts to flasher.
     return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
   }
 

@@ -13,32 +13,27 @@
 
 namespace {
 
-// The SPIFFS C library requires us to pass 3 C function callbacks
-// but they don't pass any custom "context". This means that we
-// either have to generate C trampolines (i.e. a form of runtime
-// code generation) or we just make sure only one SPIFFS FS can be
-// mounted at a time.
-QByteArray *mounted_image = nullptr;
-QBasicMutex mounted_image_lock;
-
-int32_t mem_spiffs_read(uint32_t addr, uint32_t size, u8_t *dst) {
-  assert(mounted_image != nullptr);
-  memcpy(dst, mounted_image->data() + addr, size);
+int32_t mem_spiffs_read(struct spiffs_t *fs, uint32_t addr, uint32_t size,
+                        u8_t *dst) {
+  SPIFFS *fsc = static_cast<SPIFFS *>(fs->user_data);
+  memcpy(dst, fsc->mounted_image()->data() + addr, size);
   return SPIFFS_OK;
 }
 
-int32_t mem_spiffs_write(uint32_t addr, uint32_t size, u8_t *src) {
-  assert(mounted_image != nullptr);
-  memcpy(mounted_image->data() + addr, src, size);
+int32_t mem_spiffs_write(struct spiffs_t *fs, uint32_t addr, uint32_t size,
+                         u8_t *src) {
+  SPIFFS *fsc = static_cast<SPIFFS *>(fs->user_data);
+  memcpy(fsc->mounted_image()->data() + addr, src, size);
   return SPIFFS_OK;
 }
 
-int32_t mem_spiffs_erase(uint32_t addr, uint32_t size) {
-  assert(mounted_image != nullptr);
-  memset(mounted_image->data() + addr, 0xff, size);
+int32_t mem_spiffs_erase(struct spiffs_t *fs, uint32_t addr, uint32_t size) {
+  SPIFFS *fsc = static_cast<SPIFFS *>(fs->user_data);
+  memset(fsc->mounted_image()->data() + addr, 0xff, size);
   return SPIFFS_OK;
 }
-}
+
+}  // namespace
 
 class Mounter {
  public:
@@ -64,16 +59,20 @@ class Mounter {
 SPIFFS::SPIFFS(QByteArray image) : image_(image) {
 }
 
-util::Status SPIFFS::mount() {
-  QMutexLocker lock(&mounted_image_lock);
-
-  if (mounted_image != nullptr) {
-    return util::Status(util::error::ABORTED,
-                        "can only mount one SPIFFS fs at a time");
+SPIFFS::SPIFFS(int size) {
+  image_.resize(size);
+  for (int i = 0; i < size; i++) image_[i] = 0xff;
+  mount();  // This will fail but is required per documentation.
+  if (SPIFFS_format(&fs_) != SPIFFS_OK) {
+    qFatal("Could not format SPIFFS (size %d): %d", size, SPIFFS_errno(&fs_));
   }
-  mounted_image = &image_;
+  qDebug() << "Created SPIFFS" << this << ", size" << size;
+}
 
+util::Status SPIFFS::mount() {
   spiffs_config cfg;
+
+  fs_.user_data = this;
 
   cfg.phys_size = image_.size();
   cfg.phys_addr = 0;
@@ -88,66 +87,22 @@ util::Status SPIFFS::mount() {
 
   if (SPIFFS_mount(&fs_, &cfg, spiffs_work_buf_, spiffs_fds_,
                    sizeof(spiffs_fds_), 0, 0, 0) == -1) {
-    return util::Status(util::error::ABORTED, "SPIFFS_mount failed");
+    return util::Status(
+        util::error::ABORTED,
+        "SPIFFS_mount failed: " + std::to_string(SPIFFS_errno(&fs_)));
   }
+
+  qDebug() << "Mounted SPIFFS" << this << ":\n";
+  SPIFFS_vis(&fs_);
   return util::Status::OK;
 }
 
 void SPIFFS::unmount() {
-  QMutexLocker lock(&mounted_image_lock);
-  if (mounted_image == &image_) {
-    mounted_image = nullptr;
-    SPIFFS_unmount(&fs_);
-  } else {
-    qWarning()
-        << "some other instance of SPIFFS is registered as the global instance";
-  }
+  SPIFFS_unmount(&fs_);
 }
 
-util::Status SPIFFS::merge(SPIFFS &other) {
-  util::StatusOr<QMap<QString, QByteArray>> files_status = other.files();
-  if (!files_status.ok()) {
-    return files_status.status();
-  }
-  auto files = files_status.ValueOrDie();
-  return mergeFiles(files);
-}
-
-util::Status SPIFFS::mergeFiles(const QMap<QString, QByteArray> &files) {
-  Mounter m(this);
-
-  for (auto i = files.constBegin(); i != files.constEnd(); i++) {
-    char *fname = const_cast<char *>(i.key().toStdString().c_str());
-    int sfd =
-        SPIFFS_open(&fs_, fname, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
-    if (sfd == -1) {
-      qCritical() << "SPIFFS_open " << fname
-                  << " failed: " << SPIFFS_errno(&fs_);
-      SPIFFS_close(&fs_, sfd);
-      if (SPIFFS_errno(&fs_) == SPIFFS_ERR_FULL) {
-        return util::Status(util::error::ABORTED, "SPIFFS filesystem full");
-      }
-      return util::Status(util::error::ABORTED, "SPIFFS_open failed");
-    }
-
-    uint8_t *d =
-        reinterpret_cast<uint8_t *>(const_cast<char *>(i.value().data()));
-    if (SPIFFS_write(&fs_, sfd, d, i.value().size()) == -1) {
-      qCritical() << "SPIFFS_write " << fname
-                  << " failed: " << SPIFFS_errno(&fs_);
-      if (SPIFFS_errno(&fs_) == SPIFFS_ERR_FULL) {
-        return util::Status(util::error::ABORTED, "SPIFFS filesystem full");
-      }
-      return util::Status(util::error::ABORTED, "SPIFFS_write failed");
-    }
-
-    SPIFFS_close(&fs_, sfd);
-  }
-  return util::Status::OK;
-}
-
-util::StatusOr<QMap<QString, QByteArray>> SPIFFS::files() {
-  QMap<QString, QByteArray> res;
+util::StatusOr<std::map<QString, QByteArray>> SPIFFS::files() {
+  std::map<QString, QByteArray> res;
 
   spiffs_DIR dh;
   struct spiffs_dirent de;
@@ -158,8 +113,11 @@ util::StatusOr<QMap<QString, QByteArray>> SPIFFS::files() {
     return m.status();
   }
 
+  qDebug() << "Listing files in" << this;
   SPIFFS_opendir(&fs_, (char *) ".", &dh);
   while ((d = SPIFFS_readdir(&dh, &de)) != nullptr) {
+    QString name((const char *) d->name);
+    qDebug() << name << d->size << "bytes";
     int rfd = SPIFFS_open(&fs_, (char *) d->name, SPIFFS_RDONLY, 0);
     if (rfd == -1) {
       qCritical() << "Cannot open" << (char *) d->name;
@@ -172,12 +130,91 @@ util::StatusOr<QMap<QString, QByteArray>> SPIFFS::files() {
       qCritical() << "Failed to read" << (char *) d->name;
       return util::Status(util::error::ABORTED, "read failed");
     }
-    res.insert(reinterpret_cast<char *>(d->name), QByteArray(buf.get(), n));
+    res[name] = QByteArray(buf.get(), n);
   }
 
   return res;
 }
 
-QByteArray SPIFFS::data() const {
+QByteArray SPIFFS::image() const {
   return image_;
+}
+
+spiffs *SPIFFS::fs() {
+  return &fs_;
+}
+
+util::StatusOr<QByteArray> mergeFiles(QByteArray old_fs_image,
+                                      QMap<QString, QByteArray> new_files) {
+  if (old_fs_image.isEmpty() && new_files.empty()) return QByteArray();
+  std::map<QString, QByteArray> files;
+  if (!old_fs_image.isEmpty()) {
+    SPIFFS old_fs(old_fs_image);
+    auto old_files = old_fs.files();
+    if (!old_files.ok()) {
+      return util::Status(util::error::ABORTED,
+                          "Unable to read device file system: " +
+                              old_files.status().ToString());
+    }
+    files.insert(old_files.ValueOrDie().begin(), old_files.ValueOrDie().end());
+  }
+  {
+    std::map<QString, QByteArray> new_files_sm(new_files.toStdMap());
+    files.insert(new_files_sm.begin(), new_files_sm.end());
+    // There is currently no way to delete files.
+  }
+  {
+    SPIFFS merged_fs(old_fs_image.size());
+    Mounter m(&merged_fs);
+    for (const auto f : files) {
+      std::string fname = f.first.toStdString();
+      qDebug("Writing '%s' (%d bytes)", fname.c_str(),
+             static_cast<int>(f.second.size()));
+      int sfd = SPIFFS_open(merged_fs.fs(), const_cast<char *>(fname.c_str()),
+                            SPIFFS_CREAT | SPIFFS_RDWR, 0);
+      if (sfd < 0) {
+        qCritical() << "SPIFFS_open " << f.first
+                    << " failed: " << SPIFFS_errno(merged_fs.fs());
+        SPIFFS_close(merged_fs.fs(), sfd);
+        if (SPIFFS_errno(merged_fs.fs()) == SPIFFS_ERR_FULL) {
+          return util::Status(util::error::ABORTED, "SPIFFS filesystem full");
+        }
+        return util::Status(util::error::ABORTED,
+                            "SPIFFS_open '" + f.first.toStdString() +
+                                "' failed: " +
+                                std::to_string(SPIFFS_errno(merged_fs.fs())));
+      }
+
+      uint8_t *d =
+          reinterpret_cast<uint8_t *>(const_cast<char *>(f.second.data()));
+      if (SPIFFS_write(merged_fs.fs(), sfd, d, f.second.size()) == -1) {
+        qCritical() << "SPIFFS_write '" << f.first << "' (" << f.second.size()
+                    << ") failed: " << SPIFFS_errno(merged_fs.fs());
+        if (SPIFFS_errno(merged_fs.fs()) == SPIFFS_ERR_FULL) {
+          SPIFFS_vis(merged_fs.fs());
+          return util::Status(util::error::ABORTED, "SPIFFS filesystem full");
+        }
+        return util::Status(util::error::ABORTED, "SPIFFS_write failed");
+      }
+
+      SPIFFS_close(merged_fs.fs(), sfd);
+    }
+    return std::move(merged_fs.image());
+  }
+}
+
+util::StatusOr<QByteArray> mergeFilesystems(QByteArray old_fs_image,
+                                            QByteArray new_fs_image) {
+  QMap<QString, QByteArray> new_files;
+  if (!new_fs_image.isEmpty()) {
+    SPIFFS new_fs(new_fs_image);
+    auto new_files_st = new_fs.files();
+    if (!new_files_st.ok()) {
+      return util::Status(util::error::ABORTED,
+                          "Unable to read new file system: " +
+                              new_files_st.status().ToString());
+    }
+    new_files = QMap<QString, QByteArray>(new_files_st.ValueOrDie());
+  }
+  return mergeFiles(old_fs_image, new_files);
 }

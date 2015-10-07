@@ -36,7 +36,7 @@ s32_t spiffs_gc_quick(
   int cur_entry = 0;
   spiffs_obj_id *obj_lu_buf = (spiffs_obj_id *)fs->lu_work;
 
-  SPIFFS_GC_DBG("gc_quick: running\n", cur_block);
+  SPIFFS_GC_DBG("gc_quick: running\n");
 #if SPIFFS_GC_STATS
   fs->stats_gc_runs++;
 #endif
@@ -249,9 +249,14 @@ s32_t spiffs_gc_find_candidate(
   memset(fs->work, 0xff, SPIFFS_CFG_LOG_PAGE_SZ(fs));
 
   // divide up work area into block indices and scores
-  // todo alignment?
   spiffs_block_ix *cand_blocks = (spiffs_block_ix *)fs->work;
   s32_t *cand_scores = (s32_t *)(fs->work + max_candidates * sizeof(spiffs_block_ix));
+
+   // align cand_scores on s32_t boundary
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
+  cand_scores = (s32_t*)(((ptrdiff_t)cand_scores + sizeof(ptrdiff_t) - 1) & ~(sizeof(ptrdiff_t) - 1));
+#pragma GCC diagnostic pop
 
   *block_candidates = cand_blocks;
 

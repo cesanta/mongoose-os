@@ -20,8 +20,24 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
+class CLIPrompterImpl : public Prompter {
+ public:
+  CLIPrompterImpl(QObject* parent) : Prompter(parent) {
+  }
+  virtual ~CLIPrompterImpl() {
+  }
+
+  int Prompt(QString text,
+             QList<QPair<QString, QMessageBox::ButtonRole>> buttons) override {
+    cout << "Prompt: " << text.toStdString() << endl;
+    cout << "CLI prompting not implemented, returning default ("
+         << buttons[0].first.toStdString() << ")" << endl;
+    return 0;
+  }
+};
+
 CLI::CLI(QCommandLineParser* parser, QObject* parent)
-    : QObject(parent), parser_(parser) {
+    : QObject(parent), parser_(parser), prompter_(new CLIPrompterImpl(this)) {
   QTimer::singleShot(0, this, &CLI::run);
 }
 
@@ -154,7 +170,7 @@ util::Status CLI::flash(const QString& portname, const QString& path,
     return util::Status(util::error::FAILED_PRECONDITION, "No such port");
   }
 
-  std::unique_ptr<Flasher> f(hal_->flasher());
+  std::unique_ptr<Flasher> f(hal_->flasher(prompter_));
   util::Status config_status = f->setOptionsFromCommandLine(*parser_);
   if (!config_status.ok()) {
     return config_status;

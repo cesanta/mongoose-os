@@ -64,7 +64,7 @@ s32_t spiffs_phys_rd(
     u32_t addr,
     u32_t len,
     u8_t *dst) {
-  return fs->cfg.hal_read_f(addr, len, dst);
+  return SPIFFS_HAL_READ(fs, addr, len, dst);
 }
 
 s32_t spiffs_phys_wr(
@@ -72,7 +72,7 @@ s32_t spiffs_phys_wr(
     u32_t addr,
     u32_t len,
     u8_t *src) {
-  return fs->cfg.hal_write_f(addr, len, src);
+  return SPIFFS_HAL_WRITE(fs, addr, len, src);
 }
 
 #endif
@@ -83,6 +83,7 @@ s32_t spiffs_phys_cpy(
     u32_t dst,
     u32_t src,
     u32_t len) {
+  (void)fh;
   s32_t res;
   u8_t b[SPIFFS_COPY_BUFFER_STACK];
   while (len > 0) {
@@ -227,7 +228,8 @@ s32_t spiffs_erase_block(
   // here we ignore res, just try erasing the block
   while (size > 0) {
     SPIFFS_DBG("erase %08x:%08x\n", addr,  SPIFFS_CFG_PHYS_ERASE_SZ(fs));
-    (void)fs->cfg.hal_erase_f(addr, SPIFFS_CFG_PHYS_ERASE_SZ(fs));
+    SPIFFS_HAL_ERASE(fs, addr, SPIFFS_CFG_PHYS_ERASE_SZ(fs));
+
     addr += SPIFFS_CFG_PHYS_ERASE_SZ(fs);
     size -= SPIFFS_CFG_PHYS_ERASE_SZ(fs);
   }
@@ -285,7 +287,7 @@ static s32_t spiffs_obj_lu_scan_v(
 // Scans thru all obj lu and counts free, deleted and used pages
 // Find the maximum block erase count
 // Checks magic if enabled
- s32_t spiffs_obj_lu_scan(
+s32_t spiffs_obj_lu_scan(
     spiffs *fs) {
   s32_t res;
   spiffs_block_ix bix;
@@ -407,11 +409,11 @@ s32_t spiffs_obj_lu_find_free(
       fs->free_blocks--;
     }
   }
-  if (res == SPIFFS_VIS_END) {
+  if (res == SPIFFS_ERR_FULL) {
     SPIFFS_DBG("fs full\n");
   }
 
-  return res == SPIFFS_VIS_END ? SPIFFS_ERR_FULL : res;
+  return res;
 }
 
 // Find object lookup entry containing given id
@@ -1400,7 +1402,8 @@ s32_t spiffs_object_truncate(
   s32_t res = SPIFFS_OK;
   spiffs *fs = fd->fs;
 
-  res = spiffs_gc_check(fs, remove ? 0 : SPIFFS_DATA_PAGE_SIZE(fs));
+  // need 2 pages if not removing: object index page + possibly chopped data page
+  res = spiffs_gc_check(fs, remove ? 0 : SPIFFS_DATA_PAGE_SIZE(fs) * 2);
   SPIFFS_CHECK_RES(res);
 
   spiffs_page_ix objix_pix = fd->objix_hdr_pix;
@@ -1480,7 +1483,7 @@ s32_t spiffs_object_truncate(
 
     SPIFFS_DBG("truncate: got data pix %04x\n", data_pix);
 
-    if (cur_size - SPIFFS_DATA_PAGE_SIZE(fs) >= new_size) {
+    if (new_size == 0 || remove || cur_size - new_size >= SPIFFS_DATA_PAGE_SIZE(fs)) {
       // delete full data page
       res = spiffs_page_data_check(fs, fd, data_pix, data_spix);
       if (res != SPIFFS_ERR_DELETED && res != SPIFFS_OK && res != SPIFFS_ERR_INDEX_REF_FREE) {
@@ -1764,10 +1767,10 @@ static s32_t spiffs_obj_lu_find_free_obj_id_compact_v(spiffs *fs, spiffs_obj_id 
 // Scans thru all object lookup for object index header pages. If total possible number of
 // object ids cannot fit into a work buffer, these are grouped. When a group containing free
 // object ids is found, the object lu is again scanned for object ids within group and bitmasked.
-// Finally, the bitmasked is searched for a free id
+// Finally, the bitmask is searched for a free id
 s32_t spiffs_obj_lu_find_free_obj_id(spiffs *fs, spiffs_obj_id *obj_id, u8_t *conflicting_name) {
   s32_t res = SPIFFS_OK;
-  u32_t max_objects = (SPIFFS_CFG_PHYS_SZ(fs) / (u32_t)SPIFFS_CFG_LOG_PAGE_SZ(fs)) / 2;
+  u32_t max_objects = (fs->block_count * SPIFFS_OBJ_LOOKUP_MAX_ENTRIES(fs)) / 2;
   spiffs_free_obj_id_state state;
   spiffs_obj_id free_obj_id = SPIFFS_OBJ_ID_FREE;
   state.min_obj_id = 1;

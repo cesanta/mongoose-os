@@ -340,7 +340,8 @@ void rebootIntoFirmware(QSerialPort* serial, bool inverted) {
 class FlasherImpl : public Flasher {
   Q_OBJECT
  public:
-  FlasherImpl() : id_hostname_("api.cesanta.com") {
+  FlasherImpl(Prompter* prompter)
+      : prompter_(prompter), id_hostname_("api.cesanta.com") {
   }
 
   util::Status setOption(const QString& name, const QVariant& value) override {
@@ -682,12 +683,18 @@ class FlasherImpl : public Flasher {
 
       auto res = mergeFlashLocked(data_port);
       if (res.ok()) {
-        images_[spiffsBlockOffset] = res.ValueOrDie();
+        if (res.ValueOrDie().size() > 0) {
+          images_[spiffsBlockOffset] = res.ValueOrDie();
+        } else {
+          images_.remove(spiffsBlockOffset);
+        }
         emit statusMessage(tr("Merged flash content"), true);
       } else {
         emit statusMessage(tr("Failed to merge flash content: %1")
                                .arg(res.status().ToString().c_str()),
                            true);
+        // Temporary: SPIFFS compatibility was broken between 0.3.3 and 0.3.4,
+        // overwrite FS for now.
         if (!id_generated) {
           return util::Status(
               util::error::UNKNOWN,
@@ -988,25 +995,34 @@ class FlasherImpl : public Flasher {
   // or by the software update utility, while the core system uploaded by
   // the flasher should only upload a few core files.
   util::StatusOr<QByteArray> mergeFlashLocked(QSerialPort* port) {
-    auto res = readFlashLocked(port, spiffsBlockOffset, spiffsBlockSize);
-    if (!res.ok()) {
-      return res.status();
+    auto dev_fs = readFlashLocked(port, spiffsBlockOffset, spiffsBlockSize);
+    if (!dev_fs.ok()) {
+      return dev_fs.status();
     }
-
-    SPIFFS bundled(images_[spiffsBlockOffset]);
-    SPIFFS dev(res.ValueOrDie());
-
-    auto err = dev.merge(bundled);
-    if (!err.ok()) {
-      return err;
+    auto merged =
+        mergeFilesystems(dev_fs.ValueOrDie(), images_[spiffsBlockOffset]);
+    if (merged.ok() && !files_.empty()) {
+      merged = mergeFiles(merged.ValueOrDie(), files_);
     }
-    if (!files_.empty()) {
-      err = dev.mergeFiles(files_);
-      if (!err.ok()) {
-        return err;
+    if (!merged.ok()) {
+      QString msg = tr("Failed to merge file system: ") +
+                    QString(merged.status().ToString().c_str()) +
+                    tr("\nWhat should we do?");
+      int answer =
+          prompter_->Prompt(msg, {{tr("Cancel"), QMessageBox::RejectRole},
+                                  {tr("Write new"), QMessageBox::YesRole},
+                                  {tr("Keep old"), QMessageBox::NoRole}});
+      qCritical() << msg << "->" << answer;
+      switch (answer) {
+        case 0:
+          return merged.status();
+        case 1:
+          return images_[spiffsBlockOffset];
+        case 2:
+          return QByteArray();
       }
     }
-    return dev.data();
+    return merged;
   }
 
   util::StatusOr<bool> findIdLocked(QSerialPort* port) {
@@ -1031,6 +1047,8 @@ class FlasherImpl : public Flasher {
            QCryptographicHash::hash(r.mid(SHA1Length, terminator - SHA1Length),
                                     QCryptographicHash::Sha1);
   }
+
+  Prompter* prompter_;
 
   mutable QMutex lock_;
   QMap<ulong, QByteArray> images_;
@@ -1070,8 +1088,8 @@ class ESP8266HAL : public HAL {
 
     return util::Status::OK;
   }
-  std::unique_ptr<Flasher> flasher() const override {
-    return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
+  std::unique_ptr<Flasher> flasher(Prompter* prompter) const override {
+    return std::move(std::unique_ptr<Flasher>(new FlasherImpl(prompter)));
   }
 
   std::string name() const override {

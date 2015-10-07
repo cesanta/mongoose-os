@@ -39,7 +39,7 @@ static s32_t spiffs_cache_page_free(spiffs *fs, int ix, u8_t write_back) {
         (cp->flags & SPIFFS_CACHE_FLAG_TYPE_WR) == 0 &&
         (cp->flags & SPIFFS_CACHE_FLAG_DIRTY)) {
       u8_t *mem =  spiffs_get_cache_page(fs, cache, ix);
-      res = fs->cfg.hal_write_f(SPIFFS_PAGE_TO_PADDR(fs, cp->pix), SPIFFS_CFG_LOG_PAGE_SZ(fs), mem);
+      res = SPIFFS_HAL_WRITE(fs, SPIFFS_PAGE_TO_PADDR(fs, cp->pix), SPIFFS_CFG_LOG_PAGE_SZ(fs), mem);
     }
 
     cp->flags = 0;
@@ -137,10 +137,7 @@ s32_t spiffs_phys_rd(
   } else {
     if ((op & SPIFFS_OP_TYPE_MASK) == SPIFFS_OP_T_OBJ_LU2) {
       // for second layer lookup functions, we do not cache in order to prevent shredding
-      return fs->cfg.hal_read_f(
-          addr ,
-          len,
-          dst);
+      return SPIFFS_HAL_READ(fs, addr, len, dst);
     }
 #if SPIFFS_CACHE_STATS
     fs->cache_misses++;
@@ -151,8 +148,7 @@ s32_t spiffs_phys_rd(
       cp->flags = SPIFFS_CACHE_FLAG_WRTHRU;
       cp->pix = SPIFFS_PADDR_TO_PAGE(fs, addr);
     }
-
-    s32_t res2 = fs->cfg.hal_read_f(
+    s32_t res2 = SPIFFS_HAL_READ(fs,
         addr - SPIFFS_PADDR_TO_PAGE_OFFSET(fs, addr),
         SPIFFS_CFG_LOG_PAGE_SZ(fs),
         spiffs_get_cache_page(fs, cache, cp->ix));
@@ -186,7 +182,7 @@ s32_t spiffs_phys_wr(
         (op & SPIFFS_OP_TYPE_MASK) != SPIFFS_OP_T_OBJ_LU) {
       // page is being deleted, wipe from cache - unless it is a lookup page
       spiffs_cache_page_free(fs, cp->ix, 0);
-      return fs->cfg.hal_write_f(addr, len, src);
+      return SPIFFS_HAL_WRITE(fs, addr, len, src);
     }
 
     u8_t *mem =  spiffs_get_cache_page(fs, cache, cp->ix);
@@ -197,13 +193,13 @@ s32_t spiffs_phys_wr(
 
     if (cp->flags & SPIFFS_CACHE_FLAG_WRTHRU) {
       // page is being updated, no write-cache, just pass thru
-      return fs->cfg.hal_write_f(addr, len, src);
+      return SPIFFS_HAL_WRITE(fs, addr, len, src);
     } else {
       return SPIFFS_OK;
     }
   } else {
     // no cache page, no write cache - just write thru
-    return fs->cfg.hal_write_f(addr, len, src);
+    return SPIFFS_HAL_WRITE(fs, addr, len, src);
   }
 }
 

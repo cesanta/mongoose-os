@@ -1,9 +1,14 @@
 #ifndef FS_H
 #define FS_H
 
+#include <map>
+#include <memory>
+
 #include <QMap>
 #include <QByteArray>
 #include <QString>
+
+#include "prompter.h"
 
 #include <spiffs.h>
 
@@ -19,9 +24,18 @@ class SPIFFS {
 
  public:
   SPIFFS(QByteArray image);
-  util::Status merge(SPIFFS& other);
-  util::Status mergeFiles(const QMap<QString, QByteArray>& files);
-  QByteArray data() const;
+  SPIFFS(int size);
+
+  QByteArray image() const;
+
+  spiffs* fs();
+
+  // For use by C callbacks only.
+  QByteArray* mounted_image() {
+    return &image_;
+  }
+
+  util::StatusOr<std::map<QString, QByteArray>> files();
 
  protected:
   util::Status mount();
@@ -31,7 +45,7 @@ class SPIFFS {
   SPIFFS(const SPIFFS&) = delete;
   SPIFFS& operator=(const SPIFFS&) = delete;
 
-  util::StatusOr<QMap<QString, QByteArray>> files();
+  void initConfig(spiffs_config* cfg);
 
   QByteArray image_;
   spiffs fs_;
@@ -40,5 +54,10 @@ class SPIFFS {
   uint8_t spiffs_work_buf_[LOG_PAGE_SIZE * 2];
   uint8_t spiffs_fds_[32 * 4];
 };
+
+util::StatusOr<QByteArray> mergeFiles(QByteArray old_fs_image,
+                                      QMap<QString, QByteArray> new_files);
+util::StatusOr<QByteArray> mergeFilesystems(QByteArray old_fs_image,
+                                            QByteArray new_fs_image);
 
 #endif  // FS_H

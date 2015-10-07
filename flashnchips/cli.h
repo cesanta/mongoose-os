@@ -9,6 +9,7 @@
 #include <common/util/status.h>
 
 #include "hal.h"
+#include "prompter.h"
 
 class QCommandLineParser;
 
@@ -27,6 +28,7 @@ class CLI : public QObject {
 
   QCommandLineParser* parser_;
   std::unique_ptr<HAL> hal_;
+  Prompter* prompter_;
 };
 
 #endif  // CLI_H

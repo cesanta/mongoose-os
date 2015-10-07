@@ -10,7 +10,7 @@ CONFIG += c++14
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 
 # Input
-HEADERS += cli.h dialog.h esp8266.h flasher.h fs.h serial.h sigsource.h cc3200.h
+HEADERS += cli.h dialog.h esp8266.h flasher.h fs.h prompter.h serial.h sigsource.h cc3200.h
 SOURCES += cli.cc dialog.cc esp8266.cc flasher.cc fs.cc main.cc serial.cc cc3200.cc
 
 DEFINES += VERSION=\\\"$$VERSION\\\"
@@ -33,6 +33,7 @@ SOURCES += ../src/spiffs/spiffs_gc.c
 SOURCES += ../src/spiffs/spiffs_nucleus.c
 SOURCES += ../src/spiffs/spiffs_check.c
 SOURCES += ../src/spiffs/spiffs_hydrogen.c
+DEFINES += SPIFFS_TEST_VISUALISATION=1 SPIFFS_HAL_CALLBACK_EXTRA=1
 # For spiffs_config.h.
 INCLUDEPATH += ../tools
 

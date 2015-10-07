@@ -141,7 +141,9 @@ int main(int argc, char **argv) {
   }
 
   mem_spiffs_erase(0, image_size);
-  mem_spiffs_mount();
+  mem_spiffs_mount();  // Will fail but is required.
+  SPIFFS_format(&fs);
+  mem_spiffs_mount();  // Will succeed.
 
   fprintf(stderr, "adding files in directory %s\n", root_dir);
   if ((dir = opendir(root_dir)) == NULL) {

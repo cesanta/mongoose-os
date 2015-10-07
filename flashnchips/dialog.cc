@@ -13,6 +13,7 @@
 #include <QFontDatabase>
 #include <QFormLayout>
 #include <QMessageBox>
+#include <QMutex>
 #include <QScrollBar>
 #include <QSerialPort>
 #include <QSerialPortInfo>
@@ -20,6 +21,7 @@
 #include <QTextCursor>
 #include <QThread>
 #include <QTimer>
+#include <QWaitCondition>
 #include <QUrl>
 
 #include "cc3200.h"
@@ -40,6 +42,40 @@ const char kPromptEnd[] = "$ ";
 const int kDefaultConsoleBaudRate = 115200;
 
 }  // namespace
+
+class PrompterImpl : public Prompter {
+  Q_OBJECT
+ public:
+  PrompterImpl(QObject* parent) : Prompter(parent) {
+  }
+  virtual ~PrompterImpl() {
+  }
+
+  int Prompt(QString text,
+             QList<QPair<QString, QMessageBox::ButtonRole>> buttons) override {
+    QMutexLocker l(&lock_);
+    emit showPrompt(text, buttons);
+    wc_.wait(&lock_);
+    return clicked_button_;
+  }
+
+signals:
+  void showPrompt(QString text,
+                  QList<QPair<QString, QMessageBox::ButtonRole>> buttons);
+
+ public slots:
+
+  void showPromptResult(int clicked_button) {
+    QMutexLocker l(&lock_);
+    clicked_button_ = clicked_button;
+    wc_.wakeOne();
+  }
+
+ private:
+  QMutex lock_;
+  QWaitCondition wc_;
+  int clicked_button_;
+};
 
 MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
     : QMainWindow(parent), parser_(parser) {
@@ -192,6 +228,11 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
       console_log_->reset();
     }
   }
+
+  prompter_ = new PrompterImpl(this);
+  connect(prompter_, &PrompterImpl::showPrompt, this, &MainDialog::showPrompt);
+  connect(this, &MainDialog::showPromptResult, prompter_,
+          &PrompterImpl::showPromptResult);
 }
 
 void MainDialog::setState(State newState) {
@@ -236,6 +277,21 @@ void MainDialog::resetHAL(QString name) {
     qFatal("Unknown platform: %s", name.toStdString().c_str());
   }
   QTimer::singleShot(0, this, &MainDialog::updateFWList);
+}
+
+void MainDialog::showPrompt(
+    QString text, QList<QPair<QString, QMessageBox::ButtonRole>> buttons) {
+  QMessageBox mb;
+  mb.setText(text);
+  QMap<QAbstractButton*, int> b2i;
+  int i = 0;
+  for (const auto& bd : buttons) {
+    QAbstractButton* b = mb.addButton(bd.first, bd.second);
+    b2i[b] = i++;
+  }
+  mb.exec();
+  QAbstractButton* clicked = mb.clickedButton();
+  emit showPromptResult(b2i.contains(clicked) ? b2i[clicked] : -1);
 }
 
 util::Status MainDialog::openSerial() {
@@ -601,7 +657,7 @@ void MainDialog::loadFirmware() {
   if (portName == "") {
     ui_.statusMessage->setText(tr("No port selected"));
   }
-  std::unique_ptr<Flasher> f(hal_->flasher());
+  std::unique_ptr<Flasher> f(hal_->flasher(prompter_));
   util::Status s = f->setOptionsFromCommandLine(*parser_);
   if (!s.ok()) {
     qWarning() << "Some options have invalid values:" << s.ToString().c_str();
@@ -798,3 +854,5 @@ void MainDialog::sendQueuedCommand() {
   serial_port_->write(cmd.toUtf8());
   serial_port_->write("\r\n");
 }
+
+#include "dialog.moc"
