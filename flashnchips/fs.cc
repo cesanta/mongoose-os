@@ -160,7 +160,9 @@ util::StatusOr<QByteArray> mergeFiles(QByteArray old_fs_image,
   }
   {
     std::map<QString, QByteArray> new_files_sm(new_files.toStdMap());
-    files.insert(new_files_sm.begin(), new_files_sm.end());
+    for (const auto &f : new_files_sm) {
+      files[f.first] = f.second;
+    }
     // There is currently no way to delete files.
   }
   {
