@@ -143,7 +143,7 @@ APP_LIBS += freertos mirom
 # some printf calls: e.g.
 #   printf("foo\n") -> puts("foo")
 #   printf("%c", ch) -> <something_that_calls_esp_stuff_not_libc>
-CFLAGS += -DRTOS_SDK -DRTOS_TODO -fno-builtin-printf
+CFLAGS += -DRTOS_SDK -DRTOS_TODO -DMG_LWIP -fno-builtin-printf
 ifneq "$(NETTEST)" ""
 CFLAGS += -DRTOS_NETWORK_TEST
 endif
