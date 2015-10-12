@@ -12591,6 +12591,12 @@ i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   }
 
   if (!v7_is_undefined(arguments)) {
+    /* include also arguments for which the function doesn't have formals */
+    for (; i < (int) v7_array_length(v7, args); i++) {
+      res = v7_array_get(v7, args, i);
+      v7_array_set(v7, arguments, i, res);
+    }
+
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
     v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
              arguments);
