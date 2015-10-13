@@ -30,7 +30,7 @@
 
 #endif /* RTOS_SDK */
 
-/* #define V7_ESP_I2C_DEBUG */
+/* #define ESP_I2C_DEBUG */
 /* #define ENABLE_IC2_EEPROM_TEST */
 
 struct esp_i2c_connection {
@@ -39,6 +39,8 @@ struct esp_i2c_connection {
 
   /* GPIO used as SCL */
   uint8_t scl_gpio;
+
+  uint8_t started;
 };
 
 enum i2c_gpio_val {
@@ -61,8 +63,15 @@ static void i2c_gpio_val_to_masks(uint8_t gpio, uint8_t val, uint32_t *set_mask,
   } /* else no change */
 }
 
-static void i2c_set_wires_value(i2c_connection c, uint8_t sda_val,
-                                uint8_t scl_val) {
+/* This function delays for half of a SCL pulse, i.e. quarter of a period. */
+static void i2c_half_delay(i2c_connection c) {
+  (void) c;
+  /* This is ~50 KHz. TODO(rojer): Make speed configurable. */
+  os_delay_us(3);
+}
+
+static void i2c_set_sda_scl(i2c_connection c, uint8_t sda_val,
+                            uint8_t scl_val) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
 
   uint32_t set_mask = 0, clear_mask = 0;
@@ -75,33 +84,41 @@ static void i2c_set_wires_value(i2c_connection c, uint8_t sda_val,
 
   gpio_output_set(set_mask, clear_mask, output_enable_mask,
                   output_disable_mask);
-
-  /* TODO(rojer): Make speed configurable. */
-  os_delay_us(10);
 }
 
 enum i2c_ack_type i2c_start(i2c_connection c, uint16_t addr, enum i2c_rw mode) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   enum i2c_ack_type result;
   uint8_t address_byte = (uint8_t)(addr << 1) | mode;
-#ifdef V7_ESP_I2C_DEBUG
+#ifdef ESP_I2C_DEBUG
   fprintf(stderr, "%d %d, addr %d, mode %d, ab %d\n", (int) conn->sda_gpio,
           (int) conn->scl_gpio, (int) addr, (int) mode, (int) address_byte);
 #endif
-  if (addr > 127 || (mode != I2C_READ && mode != I2C_WRITE)) {
+  if (addr > 0x7F || (mode != I2C_READ && mode != I2C_WRITE)) {
     return I2C_ERR;
   }
-  i2c_set_wires_value(conn, I2C_HIGH, I2C_HIGH);
-  i2c_set_wires_value(conn, I2C_LOW, I2C_HIGH);
+  i2c_set_sda_scl(conn, I2C_HIGH, I2C_HIGH);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, I2C_LOW, I2C_HIGH);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, I2C_LOW, I2C_LOW);
+  i2c_half_delay(c);
   result = i2c_send_byte(conn, address_byte);
+  conn->started = 1;
   if (result != I2C_ACK) i2c_stop(conn);
   return result;
 }
 
 void i2c_stop(i2c_connection c) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
-  i2c_set_wires_value(conn, I2C_LOW, I2C_HIGH);
-  i2c_set_wires_value(conn, I2C_INPUT, I2C_INPUT);
+  if (!conn->started) return;
+  i2c_set_sda_scl(conn, I2C_LOW, I2C_LOW);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, I2C_LOW, I2C_HIGH);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, I2C_INPUT, I2C_INPUT);
+  i2c_half_delay(c);
+  conn->started = 0;
 }
 
 static uint8_t i2c_get_SDA(i2c_connection c) {
@@ -110,42 +127,38 @@ static uint8_t i2c_get_SDA(i2c_connection c) {
   return ret_val;
 }
 
-static void i2c_wire_init(uint32_t periph, uint8_t gpio_no, uint8_t func) {
-  PIN_FUNC_SELECT(periph, func);
-  PIN_PULLUP_EN(periph);
-
-  GPIO_REG_WRITE(GPIO_PIN_ADDR(GPIO_ID_PIN(gpio_no)),
-                 GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(gpio_no))) |
-                     GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_ENABLE));
-
-  GPIO_REG_WRITE(GPIO_ENABLE_ADDRESS,
-                 GPIO_REG_READ(GPIO_ENABLE_ADDRESS) | (1 << gpio_no));
-}
-
 enum i2c_ack_type i2c_send_byte(i2c_connection c, uint8_t data) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
 
   enum i2c_ack_type ret_val;
-  int8_t i, bit;
+  int8_t i;
 
   for (i = 7; i >= 0; i--) {
-    bit = (data >> i) & 1;
-    i2c_set_wires_value(conn, bit, I2C_LOW);
-    i2c_set_wires_value(conn, bit, I2C_HIGH);
-#ifdef V7_ESP_I2C_DEBUG
+    int8_t bit = (data >> i) & 1;
+    i2c_set_sda_scl(conn, bit, I2C_LOW);
+    i2c_half_delay(c);
+    i2c_set_sda_scl(conn, bit, I2C_HIGH);
+    i2c_half_delay(c);
+    i2c_half_delay(c);
+    i2c_set_sda_scl(conn, bit, I2C_LOW);
+    i2c_half_delay(c);
+#ifdef ESP_I2C_DEBUG
     fprintf(stderr, "sent %d\n", (int) bit);
 #endif
   }
 
   /* release the bus for slave to write ack */
-  i2c_set_wires_value(conn, I2C_INPUT, I2C_LOW);
-  i2c_set_wires_value(conn, I2C_INPUT, I2C_HIGH);
+  i2c_set_sda_scl(conn, I2C_INPUT, I2C_LOW);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, I2C_INPUT, I2C_HIGH);
+  i2c_half_delay(c);
   ret_val = i2c_get_SDA(conn);
-#ifdef V7_ESP_I2C_DEBUG
+#ifdef ESP_I2C_DEBUG
   fprintf(stderr, "read ack = %d\n", ret_val);
 #endif
-  i2c_set_wires_value(conn, I2C_INPUT, I2C_LOW);
-  i2c_set_wires_value(conn, I2C_HIGH, I2C_LOW);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, I2C_INPUT, I2C_LOW);
+  i2c_half_delay(c);
 
   return ret_val;
 }
@@ -173,10 +186,14 @@ enum i2c_ack_type i2c_send_bytes(i2c_connection c, uint8_t *buf,
 void i2c_send_ack(i2c_connection c, enum i2c_ack_type ack_type) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
 
-  i2c_set_wires_value(conn, ack_type, I2C_LOW);
-  i2c_set_wires_value(conn, ack_type, I2C_HIGH);
-  i2c_set_wires_value(conn, ack_type, I2C_LOW);
-#ifdef V7_ESP_I2C_DEBUG
+  i2c_set_sda_scl(conn, ack_type, I2C_LOW);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, ack_type, I2C_HIGH);
+  i2c_half_delay(c);
+  i2c_half_delay(c);
+  i2c_set_sda_scl(conn, ack_type, I2C_LOW);
+  i2c_half_delay(c);
+#ifdef ESP_I2C_DEBUG
   fprintf(stderr, "sent ack = %d\n", ack_type);
 #endif
 }
@@ -185,23 +202,27 @@ uint8_t i2c_read_byte(i2c_connection c, enum i2c_ack_type ack_type) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
   uint8_t i, ret_val = 0;
 
-  i2c_set_wires_value(conn, I2C_INPUT, I2C_LOW);
+  i2c_set_sda_scl(conn, I2C_INPUT, I2C_LOW);
+  i2c_half_delay(c);
 
   for (i = 0; i < 8; i++) {
     uint8_t bit;
-    i2c_set_wires_value(conn, I2C_INPUT, I2C_HIGH);
+    i2c_set_sda_scl(conn, I2C_INPUT, I2C_HIGH);
+    i2c_half_delay(c);
     bit = i2c_get_SDA(conn);
     ret_val |= (bit << (7 - i));
-#ifdef V7_ESP_I2C_DEBUG
+#ifdef ESP_I2C_DEBUG
     fprintf(stderr, "read %d\n", (int) bit);
 #endif
-    i2c_set_wires_value(conn, I2C_INPUT, I2C_LOW);
+    i2c_half_delay(c);
+    i2c_set_sda_scl(conn, I2C_INPUT, I2C_LOW);
+    i2c_half_delay(c);
   }
 
   if (ack_type != I2C_NONE) {
     i2c_send_ack(conn, ack_type);
   } else {
-#ifdef V7_ESP_I2C_DEBUG
+#ifdef ESP_I2C_DEBUG
     fprintf(stderr, "not sending ack");
 #endif
   }
@@ -222,27 +243,19 @@ void i2c_read_bytes(i2c_connection c, size_t n, uint8_t *buf,
 
 int i2c_init(i2c_connection c) {
   struct esp_i2c_connection *conn = (struct esp_i2c_connection *) c;
-  struct gpio_info *sda_info, *scl_info;
-
-  sda_info = get_gpio_info(conn->sda_gpio);
-  scl_info = get_gpio_info(conn->scl_gpio);
-
-  if (sda_info == NULL || scl_info == NULL) {
-    return -1;
-  }
 
   ENTER_CRITICAL(ETS_GPIO_INUM);
-
-  i2c_wire_init(sda_info->periph, conn->sda_gpio, sda_info->func);
-  i2c_wire_init(scl_info->periph, conn->scl_gpio, scl_info->func);
-
-  i2c_set_wires_value(conn, I2C_INPUT, I2C_INPUT);
-
+  i2c_set_sda_scl(conn, I2C_INPUT, I2C_INPUT);
+  if (sj_gpio_set_mode(conn->sda_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) < 0) {
+    EXIT_CRITICAL(ETS_GPIO_INUM);
+    return -1;
+  }
+  if (sj_gpio_set_mode(conn->scl_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) < 0) {
+    EXIT_CRITICAL(ETS_GPIO_INUM);
+    return -1;
+  }
   EXIT_CRITICAL(ETS_GPIO_INUM);
-
-  /* Run a cycle to "flush out" the bus. 0xFF is reserved address. */
-  i2c_start(conn, 0xFF, I2C_READ);
-  i2c_stop(conn);
+  i2c_half_delay(c);
 
   return 0;
 }
@@ -255,19 +268,21 @@ i2c_connection sj_i2c_create(struct v7 *v7) {
   v7_val_t scl_val = v7_arg(v7, 1);
   double scl = v7_to_number(scl_val);
 
-  if (!v7_is_number(sda_val) || sda < 0 || sda > 255 ||
-      !v7_is_number(scl_val) || scl < 0 || scl > 255) {
-    v7_throw(v7, "Missing arguments for SDA and SCL or wrong type.");
+  if (!v7_is_number(sda_val) || sda < 0 || sda > 16 || !v7_is_number(scl_val) ||
+      scl < 0 || scl > 16) {
+    v7_throw(v7, "Missing or wrong arguments for SDA and SCL.");
   }
 
   conn = malloc(sizeof(*conn));
-  conn->sda_gpio = v7_to_number(sda_val);
-  conn->scl_gpio = v7_to_number(scl_val);
+  conn->sda_gpio = sda;
+  conn->scl_gpio = scl;
+  conn->started = 0;
 
   return conn;
 }
 
 void sj_i2c_close(i2c_connection conn) {
+  i2c_stop(conn);
   free(conn);
 }
 

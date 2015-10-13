@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include <sj_gpio.h>
+
 #ifdef RTOS_SDK
 void gpio_output_conf(uint32_t set_mask, uint32_t clear_mask,
                       uint32_t enable_mask, uint32_t disable_mask);
@@ -19,5 +21,7 @@ void gpio_output_set(uint32_t set_mask, uint32_t clear_mask,
 #define ENTER_CRITICAL(dummy) portENTER_CRITICAL()
 #define EXIT_CRITICAL(dummy) portEXIT_CRITICAL()
 #endif
+
+int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull);
 
 #endif
