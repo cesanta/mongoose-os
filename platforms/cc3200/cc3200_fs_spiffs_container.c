@@ -281,7 +281,7 @@ static int fs_format(int cidx) {
 
   /* There must be a mount attempt before format. It'll fail and that's ok. */
   r = fs_mount_spiffs(m, FS_SIZE, FS_BLOCK_SIZE, FS_PAGE_SIZE);
-  dprintf(("mount: %d\n", (int) r));
+  dprintf(("mount: %d %d\n", (int) r, (int) SPIFFS_errno(&m->fs)));
   r = SPIFFS_format(&m->fs);
   dprintf(("format: %d\n", (int) r));
   if (r != SPIFFS_OK) goto out_close;
@@ -309,7 +309,7 @@ static int fs_mount(int cidx, struct mount_info *m) {
   m->seq = fsi.seq;
   m->valid = 1;
   r = fs_mount_spiffs(m, FS_SIZE, FS_BLOCK_SIZE, FS_PAGE_SIZE);
-  dprintf(("mount %d: %d\n", cidx, r));
+  dprintf(("mount %d: %d %d\n", cidx, (int) r, (int) SPIFFS_errno(&m->fs)));
   return r;
 }
 

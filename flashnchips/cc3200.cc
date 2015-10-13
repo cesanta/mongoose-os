@@ -951,7 +951,7 @@ class FlasherImpl : public Flasher {
                           "Image is too short");
     }
     QDataStream meta(bytes.mid(bytes.length() - kSPIFFSMetadataSize));
-    meta.setByteOrder(QDataStream::BigEndian);
+    meta.setByteOrder(QDataStream::LittleEndian);
     quint32 fs_size;
     // See struct fs_info in platforms/cc3200/cc3200_fs_spiffs_container.c
     meta >> *seq >> fs_size >> *block_size >> *page_size;
@@ -974,15 +974,18 @@ class FlasherImpl : public Flasher {
     QByteArray meta;
     int min_seq = 0;
     QDataStream ms(&meta, QIODevice::WriteOnly);
-    ms.setByteOrder(QDataStream::BigEndian);
+    ms.setByteOrder(QDataStream::LittleEndian);
+    quint64 new_seq;
     if (seq[0] < seq[1]) {
-      ms << seq[0] - 1;
+      new_seq = seq[0] - 1;
       min_seq = 0;
     } else {
-      ms << seq[1] - 1;
+      new_seq = seq[1] - 1;
       min_seq = 1;
     }
-    ms << quint32(spiffs_image_.length());
+    qInfo() << "FS meta:" << new_seq << spiffs_image_.length()
+            << quint32(FLASH_BLOCK_SIZE) << quint32(LOG_PAGE_SIZE);
+    ms << new_seq << quint32(spiffs_image_.length());
     // TODO(imax): make mkspiffs write page size and block size into a separate
     // file and use it here instead of hardcoded values.
     ms << quint32(FLASH_BLOCK_SIZE) << quint32(LOG_PAGE_SIZE);
@@ -1015,7 +1018,7 @@ class FlasherImpl : public Flasher {
     emit statusMessage(tr("Formatting SFLASH file system..."), true);
     QByteArray payload;
     QDataStream ps(&payload, QIODevice::WriteOnly);
-    ps.setByteOrder(QDataStream::BigEndian);
+    ps.setByteOrder(QDataStream::LittleEndian);
     ps << quint8(kOpcodeFormatFlash) << quint32(2) << quint32(size / 4)
        << quint32(0) << quint32(0) << quint32(2);
     return sendPacket(port_, payload, 10000);
