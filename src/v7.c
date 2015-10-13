@@ -7340,6 +7340,7 @@ V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
   char *str;
   size_t str_len;
   str = ast_get_inlined_data(a, pos, &str_len);
+  assert(str + str_len < a->mbuf.buf + a->mbuf.len);
   tmp = str[str_len];
   str[str_len] = '\0';
   *val = strtod(str, NULL);
@@ -10850,6 +10851,11 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
                v7->pstate.line_no, col, line_len, v7->tok - col, (int) col - 1,
                "");
   }
+  /*
+   * ast_get_num needs a trailing byte after a AST_NUM payload to temporarily
+   * set a zero terminator for strtod.
+   */
+  mbuf_append(&a->mbuf, "\0", 1);
   return err;
 }
 
