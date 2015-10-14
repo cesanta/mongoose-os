@@ -80,6 +80,7 @@ CFLAGS += -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
 
 
 .PHONY: all clean
+.NOTPARALLEL: all
 
 ifeq "$(SSL)" "SDK"
 FEATURES += -DESP_SSL_SDK
