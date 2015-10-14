@@ -12809,6 +12809,10 @@ static const char *op_names[] = {
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
+static const enum ast_tag assign_ast_map[] = {
+    AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
+    AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
+
 static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
   int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
@@ -13100,12 +13104,9 @@ static void bcode_push_lit(struct bcode *bcode, uint8_t idx) {
 V7_PRIVATE enum v7_err compile_traverse(struct v7 *v7, struct ast *a,
                                         ast_off_t *pos, struct bcode *bcode);
 
-V7_PRIVATE enum v7_err compile_binary(struct v7 *v7, struct ast *a,
-                                      ast_off_t *pos, enum ast_tag tag,
-                                      struct bcode *bcode) {
+V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
+                                 struct bcode *bcode) {
   uint8_t op;
-  BTRY(compile_traverse(v7, a, pos, bcode));
-  BTRY(compile_traverse(v7, a, pos, bcode));
 
   switch (tag) {
     case AST_ADD:
@@ -13173,6 +13174,15 @@ V7_PRIVATE enum v7_err compile_binary(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
+V7_PRIVATE enum v7_err compile_binary(struct v7 *v7, struct ast *a,
+                                      ast_off_t *pos, enum ast_tag tag,
+                                      struct bcode *bcode) {
+  BTRY(compile_traverse(v7, a, pos, bcode));
+  BTRY(compile_traverse(v7, a, pos, bcode));
+
+  return binary_op(v7, tag, bcode);
+}
+
 static int string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
                       struct bcode *bcode) {
   size_t name_len;
@@ -13230,13 +13240,36 @@ V7_PRIVATE enum v7_err compile_traverse(struct v7 *v7, struct ast *a,
       BTRY(compile_traverse(v7, a, pos, bcode));
       bcode_op(bcode, OP_GET);
       break;
-    case AST_ASSIGN: {
+    case AST_ASSIGN:
+    case AST_REM_ASSIGN:
+    case AST_MUL_ASSIGN:
+    case AST_DIV_ASSIGN:
+    case AST_XOR_ASSIGN:
+    case AST_PLUS_ASSIGN:
+    case AST_MINUS_ASSIGN:
+    case AST_OR_ASSIGN:
+    case AST_AND_ASSIGN:
+    case AST_LSHIFT_ASSIGN:
+    case AST_RSHIFT_ASSIGN:
+    case AST_URSHIFT_ASSIGN: {
       uint8_t lit;
-      tag = ast_fetch_tag(a, pos);
-      (void) tag;
-      assert(tag == AST_IDENT);
+      enum ast_tag ntag;
+      ntag = ast_fetch_tag(a, pos);
+      (void) ntag;
+      assert(ntag == AST_IDENT);
       lit = string_lit(v7, a, pos, bcode);
+
+      if (tag != AST_ASSIGN) {
+        bcode_op(bcode, OP_GET_VAR);
+        bcode_op(bcode, lit);
+      }
+
       BTRY(compile_traverse(v7, a, pos, bcode));
+
+      if (tag != AST_ASSIGN) {
+        binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
+      }
+
       bcode_op(bcode, OP_SET_VAR);
       bcode_op(bcode, lit);
       break;
