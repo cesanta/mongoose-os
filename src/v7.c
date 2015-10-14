@@ -1881,6 +1881,7 @@ typedef unsigned long uintptr_t;
 /* Amalgamated: #include "varint.h" */
 /* Amalgamated: #include "ast.h" */
 /* Amalgamated: #include "parser.h" */
+/* Amalgamated: #include "compiler.h" */
 /* Amalgamated: #include "mm.h" */
 /* Amalgamated: #include "builtin.h" */
 
@@ -2135,6 +2136,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 void v7_throw_value(struct v7 *, v7_val_t v) NORETURN;
+V7_PRIVATE val_t create_exception(struct v7 *, enum error_ctor, const char *);
 V7_PRIVATE void throw_exception(struct v7 *, enum error_ctor, const char *,
                                 ...) NORETURN;
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
@@ -2448,7 +2450,9 @@ extern "C" {
 enum opcode {
   OP_PUSH_ZERO,
   OP_PUSH_ONE,
-  OP_PUSH_LIT,
+  OP_PUSH_LIT, /* 1 byte operand */
+
+  OP_NEG,
 
   OP_ADD,
   OP_SUB,
@@ -2474,7 +2478,9 @@ enum opcode {
   OP_GET,
   OP_SET,
   OP_SET_VAR,
-  OP_GET_VAR /* takes index of var name */
+  OP_GET_VAR, /* takes index of var name */
+
+  OP_MAX,
 };
 
 /*
@@ -2488,13 +2494,25 @@ enum opcode {
  * and combine the literal table with the bytecode list.
  */
 struct bcode {
-  uint8_t *ops;   /* pointer to first instruction opcode */
-  size_t ops_len; /* length of the instruction stream */
-  val_t lit[32];  /* literal table */
-  size_t lit_len; /* length of literal table */
+  struct mbuf ops; /* instruction opcode */
+  struct mbuf lit; /* literal table */
 };
 
+V7_PRIVATE void bcode_init(struct bcode *);
+V7_PRIVATE void bcode_free(struct bcode *);
+
 V7_PRIVATE void eval_bcode(struct v7 *, struct bcode *);
+
+V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *, const char *, v7_val_t *);
+V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *, const char *, v7_val_t *,
+                                      int);
+V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *, const char *,
+                                          v7_val_t *);
+
+V7_PRIVATE enum v7_err compile_script(struct v7 *, struct ast *,
+                                      struct bcode *);
+
+V7_PRIVATE void dump_bcode(FILE *, struct bcode *);
 
 #if defined(__cplusplus)
 }
@@ -7614,6 +7632,7 @@ int v7_is_array(struct v7 *v7, val_t v) {
 V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
   int is = v7_is_regexp(v7, v);
+  (void) is;
   assert(is == 1);
   p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
   assert(p != NULL);
@@ -8416,6 +8435,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   }
 
   n = v7_create_string(v7, name, len, 1);
+  tmp_stack_push(&tf, &n);
   res = v7_set_property_v(v7, obj, n, attributes, val);
   tmp_frame_cleanup(&tf);
   return res;
@@ -9625,10 +9645,10 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *     since we need to be able to distinguish real values from
    *     the saved first 6 bytes of the string, we need to tag the chunk
    *     as V7_TAG_STRING_C
-   *  2. encode value's address (v) into the first bytes of the string.
-   *     the first byte is set to 0 to serve as a mark.
-   *     The remaining 6 bytes are taken from v's least significant bytes.
+   *  2. encode value's address (v) into the first 6 bytes of the string.
    *  3. put the saved 8 bytes (tag + chunk) back into the value.
+   *  4. mark the string by putting '\1' in the NUL terminator of the previous
+   *     string chunk.
    *
    * If a value points to an already marked string we shall:
    *     (0, <6 bytes of a pointer to a val_t>), hence we have to skip
@@ -10903,8 +10923,8 @@ void v7_throw_value(struct v7 *v7, val_t v) {
   siglongjmp(v7->jmp_buf, THROW_JMP);
 } /* LCOV_EXCL_LINE */
 
-static val_t create_exception(struct v7 *v7, enum error_ctor ex,
-                              const char *msg) {
+V7_PRIVATE val_t
+create_exception(struct v7 *v7, enum error_ctor ex, const char *msg) {
   val_t e, args;
   if (v7->creating_exception) {
 #ifndef NO_LIBC
@@ -12765,6 +12785,30 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 #define POP() (v7->stack[--v7->sp])
 #define TOS() (v7->stack[v7->sp - 1])
 
+#define BTRY(call)           \
+  do {                       \
+    enum v7_err _e = call;   \
+    BCHECK(_e == V7_OK, _e); \
+  } while (0)
+
+#define BTHROW(err_code) \
+  do {                   \
+    return err_code;     \
+  } while (0)
+
+#define BCHECK(cond, code)     \
+  do {                         \
+    if (!(cond)) BTHROW(code); \
+  } while (0)
+
+static const char *op_names[] = {
+    "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",    "ADD",     "SUB",    "REM",
+    "MUL",       "DIV",      "LSHIFT",   "RSHIFT", "URSHIFT", "OR",     "XOR",
+    "AND",       "EQ_EQ",    "EQ",       "NE",     "NE_NE",   "LT",     "LE",
+    "GT",        "GE",       "GET",      "SET",    "SET_VAR", "GET_VAR"};
+
+V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
+
 static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
   int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
@@ -12847,15 +12891,16 @@ static int b_bool_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
 }
 
 V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
-  uint8_t *ops = bcode->ops;
-  uint8_t *end = ops + bcode->ops_len;
+  uint8_t *ops = (uint8_t *) bcode->ops.buf;
+  uint8_t *end = ops + bcode->ops.len;
+  val_t *lit = (val_t *) bcode->lit.buf;
 
   char buf[512];
 
   val_t res, v1, v2, v3;
   (void) res;
 
-  while (ops != end) {
+  while (ops < end) {
     enum opcode op = (enum opcode) * ops;
     switch (op) {
       case OP_PUSH_ZERO:
@@ -12866,7 +12911,14 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         break;
       case OP_PUSH_LIT: {
         int arg = (int) *(++ops);
-        PUSH(bcode->lit[arg]);
+        PUSH(lit[arg]);
+        break;
+      }
+      case OP_NEG: {
+        double d1;
+        v1 = POP();
+        d1 = i_as_num(v7, v1);
+        PUSH(v7_create_number(-d1));
         break;
       }
       case OP_ADD: /* TODO: JS add is different! */
@@ -12917,15 +12969,17 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         PUSH(v3);
         break;
       case OP_GET_VAR: {
-        int arg = (int) *(++ops);
-        PUSH(v7_get_v(v7, v7->call_stack, bcode->lit[arg]));
+        int arg;
+        assert(ops < end - 1);
+        arg = (int) *(++ops);
+        PUSH(v7_get_v(v7, v7->call_stack, lit[arg]));
         break;
       }
       case OP_SET_VAR: {
         struct v7_property *prop;
         int arg = (int) *(++ops);
         v3 = POP();
-        v2 = bcode->lit[arg];
+        v2 = lit[arg];
         v1 = v7->call_stack;
 
         v7_stringify_value(v7, v2, buf, sizeof(buf));
@@ -12938,9 +12992,291 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         PUSH(v3);
         break;
       }
+      default:
+        throw_exception(v7, INTERNAL_ERROR, "%s",
+                        __func__); /* LCOV_EXCL_LINE */
+        return;                    /* LCOV_EXCL_LINE */
     }
     ops++;
   }
+}
+
+V7_PRIVATE void bcode_init(struct bcode *bcode) {
+  mbuf_init(&bcode->ops, 0);
+  mbuf_init(&bcode->lit, 0);
+}
+
+V7_PRIVATE void bcode_free(struct bcode *bcode) {
+  mbuf_free(&bcode->ops);
+  mbuf_free(&bcode->lit);
+}
+
+V7_PRIVATE void dump_bcode(FILE *f, struct bcode *bcode) {
+  uint8_t *p = (uint8_t *) bcode->ops.buf;
+  uint8_t *end = p + bcode->ops.len;
+  for (; p < end; p++) {
+    assert(*p < OP_MAX);
+    switch (*p) {
+      case OP_PUSH_LIT:
+      case OP_GET_VAR:
+      case OP_SET_VAR:
+        p++;
+        fprintf(f, "%s(%d)\n", op_names[p[-1]], *p);
+        break;
+      default:
+        fprintf(f, "%s\n", op_names[*p]);
+    }
+  }
+}
+
+V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *v7, const char *src,
+                                      v7_val_t *res, int dump) {
+  enum v7_err err = V7_OK;
+  struct ast a;
+  struct bcode *bcode;
+  val_t saved_call_stack = v7->call_stack;
+  (void) res;
+
+  ast_init(&a, 0);
+  *res = v7_create_undefined();
+
+  err = parse(v7, &a, src, 1, 0);
+  if (err != V7_OK) {
+    *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+    return err;
+  }
+
+  bcode = (struct bcode *) calloc(1, sizeof(*bcode));
+  bcode_init(bcode);
+
+  err = compile_script(v7, &a, bcode);
+  if (err != V7_OK) {
+    if (res != NULL) {
+      *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+    }
+    return err;
+  }
+
+  if (dump) dump_bcode(stderr, bcode);
+
+  v7->call_stack = v7->global_object;
+  eval_bcode(v7, bcode);
+  assert(v7->sp >= 1);
+  *res = POP();
+
+  bcode_free(bcode);
+  free(bcode);
+
+  v7->call_stack = saved_call_stack;
+  return err;
+}
+
+V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
+                                     v7_val_t *res) {
+  return v7_exec_bcode2(v7, src, res, 0);
+}
+
+V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
+                                          v7_val_t *res) {
+  return v7_exec_bcode2(v7, src, res, 1);
+}
+
+static void bcode_op(struct bcode *bcode, uint8_t op) {
+  mbuf_append(&bcode->ops, &op, 1);
+}
+
+static uint8_t bcode_add_lit(struct bcode *bcode, val_t val) {
+  size_t idx = bcode->lit.len / sizeof(val);
+  assert(idx < 0x100);
+  mbuf_append(&bcode->lit, &val, sizeof(val));
+  return idx;
+}
+
+static void bcode_push_lit(struct bcode *bcode, uint8_t idx) {
+  bcode_op(bcode, OP_PUSH_LIT);
+  bcode_op(bcode, idx);
+}
+
+V7_PRIVATE enum v7_err compile_traverse(struct v7 *v7, struct ast *a,
+                                        ast_off_t *pos, struct bcode *bcode);
+
+V7_PRIVATE enum v7_err compile_binary(struct v7 *v7, struct ast *a,
+                                      ast_off_t *pos, enum ast_tag tag,
+                                      struct bcode *bcode) {
+  uint8_t op;
+  BTRY(compile_traverse(v7, a, pos, bcode));
+  BTRY(compile_traverse(v7, a, pos, bcode));
+
+  switch (tag) {
+    case AST_ADD:
+      op = OP_ADD;
+      break;
+    case AST_SUB:
+      op = OP_SUB;
+      break;
+    case AST_REM:
+      op = OP_REM;
+      break;
+    case AST_MUL:
+      op = OP_MUL;
+      break;
+    case AST_DIV:
+      op = OP_DIV;
+      break;
+    case AST_LSHIFT:
+      op = OP_LSHIFT;
+      break;
+    case AST_RSHIFT:
+      op = OP_RSHIFT;
+      break;
+    case AST_URSHIFT:
+      op = OP_URSHIFT;
+      break;
+    case AST_OR:
+      op = OP_OR;
+      break;
+    case AST_XOR:
+      op = OP_XOR;
+      break;
+    case AST_AND:
+      op = OP_ADD;
+      break;
+    case AST_EQ_EQ:
+      op = OP_EQ_EQ;
+      break;
+    case AST_EQ:
+      op = OP_EQ;
+      break;
+    case AST_NE:
+      op = OP_NE;
+      break;
+    case AST_NE_NE:
+      op = OP_NE_NE;
+      break;
+    case AST_LT:
+      op = OP_LT;
+      break;
+    case AST_LE:
+      op = OP_LE;
+      break;
+    case AST_GT:
+      op = OP_GT;
+      break;
+    case AST_GE:
+      op = OP_GE;
+      break;
+    default:
+      strncpy(v7->error_msg, "unknown binary ast node", sizeof(v7->error_msg));
+      return V7_SYNTAX_ERROR;
+  }
+  bcode_op(bcode, op);
+  return V7_OK;
+}
+
+static int string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                      struct bcode *bcode) {
+  size_t name_len;
+  char *name = ast_get_inlined_data(a, *pos, &name_len);
+  ast_move_to_children(a, pos);
+  return bcode_add_lit(bcode, v7_create_string(v7, name, name_len, 1));
+}
+
+V7_PRIVATE enum v7_err compile_traverse(struct v7 *v7, struct ast *a,
+                                        ast_off_t *pos, struct bcode *bcode) {
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+
+  switch (tag) {
+    case AST_ADD:
+    case AST_SUB:
+    case AST_REM:
+    case AST_MUL:
+    case AST_DIV:
+    case AST_LSHIFT:
+    case AST_RSHIFT:
+    case AST_URSHIFT:
+    case AST_OR:
+    case AST_XOR:
+    case AST_AND:
+    case AST_EQ_EQ:
+    case AST_EQ:
+    case AST_NE:
+    case AST_NE_NE:
+    case AST_LT:
+    case AST_LE:
+    case AST_GT:
+    case AST_GE:
+      BTRY(compile_binary(v7, a, pos, tag, bcode));
+      break;
+    case AST_POSITIVE:
+      BTRY(compile_traverse(v7, a, pos, bcode));
+      break;
+    case AST_NEGATIVE:
+      BTRY(compile_traverse(v7, a, pos, bcode));
+      bcode_op(bcode, OP_NEG);
+      break;
+    case AST_IDENT:
+      bcode_op(bcode, OP_GET_VAR);
+      bcode_op(bcode, string_lit(v7, a, pos, bcode));
+      break;
+    case AST_MEMBER: {
+      uint8_t lit = string_lit(v7, a, pos, bcode);
+      BTRY(compile_traverse(v7, a, pos, bcode));
+      bcode_push_lit(bcode, lit);
+      bcode_op(bcode, OP_GET);
+      break;
+    }
+    case AST_INDEX:
+      BTRY(compile_traverse(v7, a, pos, bcode));
+      BTRY(compile_traverse(v7, a, pos, bcode));
+      bcode_op(bcode, OP_GET);
+      break;
+    case AST_ASSIGN: {
+      uint8_t lit;
+      tag = ast_fetch_tag(a, pos);
+      (void) tag;
+      assert(tag == AST_IDENT);
+      lit = string_lit(v7, a, pos, bcode);
+      BTRY(compile_traverse(v7, a, pos, bcode));
+      bcode_op(bcode, OP_SET_VAR);
+      bcode_op(bcode, lit);
+      break;
+    }
+    case AST_NUM: {
+      double dv;
+      ast_get_num(a, *pos, &dv);
+      ast_move_to_children(a, pos);
+      if (dv == 0) {
+        bcode_op(bcode, OP_PUSH_ZERO);
+      } else if (dv == 1) {
+        bcode_op(bcode, OP_PUSH_ONE);
+      } else {
+        bcode_push_lit(bcode, bcode_add_lit(bcode, v7_create_number(dv)));
+      }
+      break;
+    }
+    case AST_STRING:
+      bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
+      break;
+    default:
+      strncpy(v7->error_msg, "unknown ast node", sizeof(v7->error_msg));
+      return V7_SYNTAX_ERROR;
+  }
+  return V7_OK;
+}
+
+/*
+ * Compiles a given script and populates a bcode structure.
+ * The AST must contain an AST_FUNC node at offset ast_off.
+ */
+V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
+                                      struct bcode *bcode) {
+  ast_off_t pos = 0;
+  enum ast_tag tag = ast_fetch_tag(a, &pos);
+  (void) tag;
+  assert(tag == AST_SCRIPT);
+  ast_move_to_children(a, &pos);
+
+  return compile_traverse(v7, a, &pos, bcode);
 }
 
 #endif /* V7_ENABLE_BCODE */
@@ -15312,7 +15648,12 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   /* TODO(mkm): figure out if this is an error object and which kind */
-  v7_val_t msg = v7_get(v7, e, "message", ~0);
+  v7_val_t msg;
+  if (v7_is_undefined(e)) {
+    fprintf(f, "undefined error [%s]\n ", ctx);
+    return;
+  }
+  msg = v7_get(v7, e, "message", ~0);
   if (v7_is_undefined(msg)) {
     msg = e;
   }
@@ -18398,13 +18739,17 @@ static void show_usage(char *argv[]) {
           V7_VERSION, __DATE__);
   fprintf(stderr, "Usage: %s [OPTIONS] js_file ...\n", argv[0]);
   fprintf(stderr, "%s\n", "OPTIONS:");
-  fprintf(stderr, "%s\n", "  -e <expr>  execute expression");
-  fprintf(stderr, "%s\n", "  -t         dump generated text AST");
-  fprintf(stderr, "%s\n", "  -b         dump generated binary AST");
-  fprintf(stderr, "%s\n", "  -mm        dump memory stats");
-  fprintf(stderr, "%s\n", "  -vo <n>    object arena size");
-  fprintf(stderr, "%s\n", "  -vf <n>    function arena size");
-  fprintf(stderr, "%s\n", "  -vp <n>    property arena size");
+#ifdef V7_ENABLE_BCODE
+  fprintf(stderr, "%s\n", "  [--bcode] -e <expr>  execute expression");
+#else
+  fprintf(stderr, "%s\n", "  -e <expr>            execute expression");
+#endif
+  fprintf(stderr, "%s\n", "  -t                   dump generated text AST");
+  fprintf(stderr, "%s\n", "  -b                   dump generated binary AST");
+  fprintf(stderr, "%s\n", "  -mm                  dump memory stats");
+  fprintf(stderr, "%s\n", "  -vo <n>              object arena size");
+  fprintf(stderr, "%s\n", "  -vf <n>              function arena size");
+  fprintf(stderr, "%s\n", "  -vp <n>              property arena size");
   exit(EXIT_FAILURE);
 }
 
@@ -18444,8 +18789,13 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
   struct v7_create_opts opts = {0, 0, 0};
   int i, j, show_ast = 0, binary_ast = 0, dump_stats = 0;
   val_t res = v7_create_undefined();
-  const char *exprs[16];
   int nexprs = 0;
+  const char *exprs[16];
+#ifdef V7_ENABLE_BCODE
+  int use_bcode[16];
+
+  memset((char *) use_bcode, 0, sizeof(use_bcode));
+#endif
 
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
@@ -18457,6 +18807,10 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
     } else if (strcmp(argv[i], "-b") == 0) {
       show_ast = 1;
       binary_ast = 1;
+#ifdef V7_ENABLE_BCODE
+    } else if (strcmp(argv[i], "--bcode") == 0) {
+      use_bcode[nexprs] = 1;
+#endif
     } else if (strcmp(argv[i], "-h") == 0) {
       show_usage(argv);
 #if V7_ENABLE__Memory__stats
@@ -18501,11 +18855,19 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 
   /* Execute inline expressions */
   for (j = 0; j < nexprs; j++) {
+    enum v7_err (*exec)(struct v7 *, const char *, v7_val_t *);
+    exec = v7_exec;
+#ifdef V7_ENABLE_BCODE
+    if (use_bcode[j]) {
+      exec = v7_exec_bcode_dump;
+    }
+#endif
+
     if (show_ast) {
       if (v7_compile(exprs[j], binary_ast, stdout) != V7_OK) {
         fprintf(stderr, "%s\n", "parse error");
       }
-    } else if (v7_exec(v7, exprs[j], &res) != V7_OK) {
+    } else if (exec(v7, exprs[j], &res) != V7_OK) {
       v7_print_error(stderr, v7, exprs[j], res);
       res = v7_create_undefined();
     }
