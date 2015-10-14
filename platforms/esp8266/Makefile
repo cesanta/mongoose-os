@@ -1,14 +1,10 @@
-XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
-SDK_PATH ?= /opt/Espressif/ESP8266_SDK
+include common.mk
+
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
 SPIFFS_PATH ?= $(SMARTJS_SRC)/spiffs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
-ESPTOOL	?= esptool.py
-ESPPORT	?= /dev/ttyACM0
-ESPSPEED	?= 230400
-VERBOSE ?= 0
 # Should be RTOS or OSS
 SDK := $(shell echo $$SDK_FLAVOUR)
 ifndef SDK
@@ -22,6 +18,8 @@ COMMON_TOOLS_DIR ?= ../../tools
 FW_DIR = firmware
 FS_DIR = fs
 FS_BUILD_DIR = $(BUILD_DIR)/fs
+LWIP_PATH = ./lwip/
+
 APP = smartjs
 # SSL can be SDK or Krypton
 SSL ?= None
@@ -39,10 +37,10 @@ JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC)
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
-LPATH = $(SDK_PATH)/lib
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/
 
 # libraries used in this project, mainly provided by the SDK
-APP_LIBS = cirom gcc hal pp phy net80211 lwip wpa main
+APP_LIBS = cirom gcc hal pp phy net80211 wpa main
 
 # linker script used for the above linkier step
 LD_SCRIPT = user/eagle.app.30000.v6.ld
@@ -57,29 +55,7 @@ FW_FILE_2_ADDR = 0x11000
 FW_FS_ADDR = 0x6d000
 FW_FS_SIZE = 65536
 
-# some of these flags works around for gdb 7.5.x stacktrace issue
-# while still allowing -Os to remove padding between data in .rodata
-# section, allowing us to gain about 1k of ram.
-# text section is 4k bigger, but we care more about ram at the moment.
-# TODO(mkm): figure out which flag(s).
-NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
-             -fno-align-functions -fno-align-jumps \
-             -fno-align-loops -fno-align-labels -fno-caller-saves \
-             -fno-crossjumping -fno-cse-follow-jumps -fno-cse-skip-blocks \
-             -fno-delete-null-pointer-checks -fno-devirtualize  \
-             -fno-gcse -fno-gcse-lm -fno-hoist-adjacent-loads \
-             -fno-inline-small-functions -fno-indirect-inlining -fno-partial-inlining \
-             -fno-ipa-cp -fno-ipa-sra -fno-peephole2 -fno-optimize-sibling-calls -fno-optimize-strlen \
-             -fno-reorder-blocks -fno-reorder-blocks-and-partition -fno-reorder-functions \
-             -fno-sched-interblock -fno-sched-spec -fno-rerun-cse-after-loop \
-             -fno-schedule-insns -fno-schedule-insns2 -fno-strict-aliasing -fno-strict-overflow \
-             -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
-             -fno-tree-pre -fno-tree-vrp
-
 SHIMS = -DNDEBUG
-
-# NDEBUG is required because we don't have an assert shim
-# TODO(mkm): make one
 
 FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DESP_COREDUMP -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF \
@@ -97,18 +73,11 @@ MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
-# compiler flags using during compilation of source files
-CFLAGS = -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
-         -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
-         -Wno-parentheses -DICACHE_FLASH -DMG_ESP8266 \
-         -DFAST='__attribute__((section(".fast.text")))' \
-         -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
-         $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
-         $(MONGOOSE_FEATURES)
+CFLAGS += -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
+          $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
+          $(MONGOOSE_FEATURES) -DMG_ESP8266
 
-##
-## == No config vars beyond this point.
-##
+
 
 .PHONY: all clean
 
@@ -122,12 +91,9 @@ APP_SRCS += krypton.c
 FEATURES += -DESP_SSL_KRYPTON -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 -DKRYPTON_DEBUG -DESP_SSL_KRYPTON_DEBUG
 endif
 
-CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
-LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
 # Temp solution for RTOS SDK
 OBJCOPY2 = $(OBJCOPY)
+LWIP_MAKE = $(MAKE)
 
 ifeq "$(SDK)" "RTOS"
 IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
@@ -138,7 +104,7 @@ IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
 APP_SRCS += mongoose.c sj_mongoose_http_client.c \
             sj_simple_http.c sj_mongoose.c sj_mongoose_ws_client.c
 
-APP_LIBS += freertos mirom
+APP_LIBS += freertos mirom lwip
 # -fno-builtin-printf avoid that the compiler "optimizes"
 # some printf calls: e.g.
 #   printf("foo\n") -> puts("foo")
@@ -148,10 +114,11 @@ ifneq "$(NETTEST)" ""
 CFLAGS += -DRTOS_NETWORK_TEST
 endif
 OBJCOPY2 = /bin/true
+LWIP_MAKE = /bin/true
 #TODO(alashkin): try to use the same LD script
 LD_SCRIPT = user/eagle.app.v6.RTOS.ld
 else
-APP_LIBS += m
+APP_LIBS += m lwip_cs
 endif
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
@@ -170,14 +137,6 @@ FS_FILES = $(wildcard $(FS_DIR)/*)
 INCDIRS = $(addprefix -I,$(IPATH))
 LIBDIRS = $(addprefix -L,$(LPATH))
 
-V ?= $(VERBOSE)
-ifeq ("$(V)","1")
-Q :=
-else
-Q := @
-endif
-vecho := @echo " "
-
 all: $(FW_DIR) $(BUILD_DIR) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) $(FW_FS_OUT)
 	$(Q) rm -f `ls $(FW_DIR)/* \
     | grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT))$$'`
@@ -195,12 +154,6 @@ $(FW_FILE_1_OUT) $(FW_FILE_2_OUT): $(APP_OUT)
 ifeq "$(SDK)" "RTOS"
 LDFLAGS += -Wl,--wrap,user_fatal_exception_handler
 endif
-
-define link
-$(vecho) "LD $@"
-$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) \
-  $< -Wl,--end-group -o $@
-endef
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
 $(APP_OUT): $(APP_AR) $(SYMCHECK_FLAG)
@@ -221,7 +174,6 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
 	$(Q) echo "void user_init(void) {}; void __wrap_user_fatal_exception_handler() {}" > $@
 
-
 # Main app lib.
 $(APP_AR): $(OBJS)
 	$(vecho) "AR $@"
@@ -232,13 +184,9 @@ $(APP_AR): $(OBJS)
 # Move strings to flash too, we have the handler.
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY2) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
-
-# -- Compilation.
-
-define compile
-$(vecho) "CC $< -> $@"
-$(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $< -o $@
-endef
+# requires make clean && make to build/rebuild lwIP
+# TODO(alashkin): fix this
+	$(Q) $(LWIP_MAKE) --no-print-directory -C $(LWIP_PATH) all
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c

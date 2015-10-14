@@ -97,6 +97,8 @@ int sprintf(char *buffer, const char *format, ...) {
   return ret;
 }
 
+#ifndef LWIP_OPEN_SRC
+
 uint32_t htonl(uint32_t hostlong) {
   return ((hostlong & 0xff000000) >> 24) | ((hostlong & 0x00ff0000) >> 8) |
          ((hostlong & 0x0000ff00) << 8) | ((hostlong & 0x000000ff) << 24);
@@ -113,6 +115,8 @@ uint16_t ntohs(uint16_t netshort) {
 uint32_t ntohl(uint32_t netlong) {
   return htonl(netlong);
 }
+
+#endif
 
 void *_malloc_r(struct _reent *r, size_t size) {
   return malloc(size);
