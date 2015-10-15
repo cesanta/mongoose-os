@@ -13358,19 +13358,30 @@ V7_PRIVATE enum v7_err compile_traverse(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
+V7_PRIVATE enum v7_err compile_stmts(struct v7 *v7, struct ast *a,
+                                     ast_off_t *pos, ast_off_t end,
+                                     struct bcode *bcode) {
+  while (*pos < end) {
+    BTRY(compile_traverse(v7, a, pos, bcode));
+    if (*pos < end) bcode_op(bcode, OP_POP);
+  }
+  return V7_OK;
+}
+
 /*
  * Compiles a given script and populates a bcode structure.
  * The AST must contain an AST_FUNC node at offset ast_off.
  */
 V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
                                       struct bcode *bcode) {
-  ast_off_t pos = 0;
+  ast_off_t end, pos = 0;
   enum ast_tag tag = ast_fetch_tag(a, &pos);
   (void) tag;
   assert(tag == AST_SCRIPT);
+  end = ast_get_skip(a, pos, AST_END_SKIP);
   ast_move_to_children(a, &pos);
 
-  return compile_traverse(v7, a, &pos, bcode);
+  return compile_stmts(v7, a, &pos, end, bcode);
 }
 
 #endif /* V7_ENABLE_BCODE */
