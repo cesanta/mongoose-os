@@ -13305,9 +13305,20 @@ V7_PRIVATE enum v7_err compile_traverse(struct v7 *v7, struct ast *a,
           bcode_op(bcode, lit);
           break;
         case AST_MEMBER:
-          lit = string_lit(v7, a, pos, bcode);
-          BTRY(compile_traverse(v7, a, pos, bcode));
-          bcode_push_lit(bcode, lit);
+        case AST_INDEX:
+          switch (ntag) {
+            case AST_MEMBER:
+              lit = string_lit(v7, a, pos, bcode);
+              BTRY(compile_traverse(v7, a, pos, bcode));
+              bcode_push_lit(bcode, lit);
+              break;
+            case AST_INDEX:
+              BTRY(compile_traverse(v7, a, pos, bcode));
+              BTRY(compile_traverse(v7, a, pos, bcode));
+              break;
+            default:
+              return V7_SYNTAX_ERROR; /* unreachable, compilers are dumb */
+          }
           if (tag != AST_ASSIGN) {
             bcode_op(bcode, OP_2DUP);
             bcode_op(bcode, OP_GET);
