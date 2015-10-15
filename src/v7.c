@@ -2448,6 +2448,10 @@ extern "C" {
 #endif /* __cplusplus */
 
 enum opcode {
+  OP_POP,
+  OP_DUP,
+  OP_2DUP,
+
   OP_PUSH_ZERO,
   OP_PUSH_ONE,
   OP_PUSH_LIT, /* 1 byte operand */
@@ -12813,10 +12817,11 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
   } while (0)
 
 static const char *op_names[] = {
-    "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",    "ADD",     "SUB",    "REM",
-    "MUL",       "DIV",      "LSHIFT",   "RSHIFT", "URSHIFT", "OR",     "XOR",
-    "AND",       "EQ_EQ",    "EQ",       "NE",     "NE_NE",   "LT",     "LE",
-    "GT",        "GE",       "GET",      "SET",    "SET_VAR", "GET_VAR"};
+    "POP",    "DUP",    "2DUP",    "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT",
+    "NEG",    "ADD",    "SUB",     "REM",       "MUL",      "DIV",
+    "LSHIFT", "RSHIFT", "URSHIFT", "OR",        "XOR",      "AND",
+    "EQ_EQ",  "EQ",     "NE",      "NE_NE",     "LT",       "LE",
+    "GT",     "GE",     "GET",     "SET",       "SET_VAR",  "GET_VAR"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -12918,6 +12923,22 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
   while (ops < end) {
     enum opcode op = (enum opcode) * ops;
     switch (op) {
+      case OP_POP:
+        POP();
+        break;
+      case OP_DUP:
+        v1 = POP();
+        PUSH(v1);
+        PUSH(v1);
+        break;
+      case OP_2DUP:
+        v2 = POP();
+        v1 = POP();
+        PUSH(v1);
+        PUSH(v2);
+        PUSH(v1);
+        PUSH(v2);
+        break;
       case OP_PUSH_ZERO:
         PUSH(v7_create_number(0));
         break;
@@ -13266,23 +13287,41 @@ V7_PRIVATE enum v7_err compile_traverse(struct v7 *v7, struct ast *a,
       uint8_t lit;
       enum ast_tag ntag;
       ntag = ast_fetch_tag(a, pos);
-      (void) ntag;
-      assert(ntag == AST_IDENT);
-      lit = string_lit(v7, a, pos, bcode);
+      switch (ntag) {
+        case AST_IDENT:
+          lit = string_lit(v7, a, pos, bcode);
+          if (tag != AST_ASSIGN) {
+            bcode_op(bcode, OP_GET_VAR);
+            bcode_op(bcode, lit);
+          }
 
-      if (tag != AST_ASSIGN) {
-        bcode_op(bcode, OP_GET_VAR);
-        bcode_op(bcode, lit);
+          BTRY(compile_traverse(v7, a, pos, bcode));
+
+          if (tag != AST_ASSIGN) {
+            binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
+          }
+
+          bcode_op(bcode, OP_SET_VAR);
+          bcode_op(bcode, lit);
+          break;
+        case AST_MEMBER:
+          lit = string_lit(v7, a, pos, bcode);
+          BTRY(compile_traverse(v7, a, pos, bcode));
+          bcode_push_lit(bcode, lit);
+          if (tag != AST_ASSIGN) {
+            bcode_op(bcode, OP_2DUP);
+            bcode_op(bcode, OP_GET);
+          }
+          BTRY(compile_traverse(v7, a, pos, bcode));
+          if (tag != AST_ASSIGN) {
+            binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
+          }
+          bcode_op(bcode, OP_SET);
+          break;
+        default:
+          strncpy(v7->error_msg, "unexpected ast node", sizeof(v7->error_msg));
+          return V7_SYNTAX_ERROR;
       }
-
-      BTRY(compile_traverse(v7, a, pos, bcode));
-
-      if (tag != AST_ASSIGN) {
-        binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
-      }
-
-      bcode_op(bcode, OP_SET_VAR);
-      bcode_op(bcode, lit);
       break;
     }
     case AST_NUM: {
