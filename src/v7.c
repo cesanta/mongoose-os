@@ -9932,8 +9932,19 @@ void v7_gc(struct v7 *v7, int full) {
 
 /* check for stack overflow on embedded devices */
 #ifdef V7_STACK_SIZE
+static enum v7_err parser_throw(struct v7 *v7, enum v7_err err);
+
+NOINLINE static int check_stack(struct v7 *v7) {
+  if ((void *) &v7 <= v7->sp_limit) {
+    parser_throw(v7, V7_SYNTAX_ERROR);
+    return 1;
+  }
+  return 0;
+}
+
 #define CHECK_STACK() \
-  if ((void *) &v7 <= v7->sp_limit) THROW(V7_STACK_OVERFLOW)
+  if (check_stack(v7)) return V7_STACK_OVERFLOW;
+
 #else
 #define CHECK_STACK() (void) 0
 #endif
