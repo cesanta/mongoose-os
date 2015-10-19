@@ -5,12 +5,14 @@ BUILD_DIR = ../build/lwip
 LWIP_PATH = .
 APP = liblwip_cs
 
-APP_MODULES := $(LWIP_PATH)/lwip/netif $(LWIP_PATH)/lwip/core/ $(LWIP_PATH)/lwip/core/ipv4 \
-							$(LWIP_PATH)/lwip/app $(LWIP_PATH)/lwip/api
+APP_MODULES := $(LWIP_PATH)/src/netif $(LWIP_PATH)/src/core \
+							 $(LWIP_PATH)/src/core/ipv4 $(LWIP_PATH)/src/api \
+							 $(LWIP_PATH)/espressif/app
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
 VPATH = $(APP_MODULES)
-IPATH = $(VPATH) $(LWIP_PATH)/include
+IPATH = $(VPATH) $(LWIP_PATH)/src/include $(LWIP_PATH)/espressif/include \
+				$(LWIP_PATH)/src/include/ipv4
 
 .PHONY: all clean
 
@@ -31,6 +33,7 @@ $(BUILD_DIR):
 $(APP_AR): $(OBJS)
 	$(vecho) "AR $@"
 	$(Q) $(AR) cru $@ $^
+	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c
