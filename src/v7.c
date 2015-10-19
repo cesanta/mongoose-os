@@ -1489,10 +1489,13 @@ char *cs_read_file(const char *path, size_t *size);
 #ifndef BUILTIN_HEADER_DEFINED
 #define BUILTIN_HEADER_DEFINED
 
+struct v7;
+
 void init_file(struct v7 *);
 void init_socket(struct v7 *);
 void init_crypto(struct v7 *);
 void init_ubjson(struct v7 *);
+void init_ubjson(struct v7 *v7);
 
 #endif
 #ifdef V7_MODULE_LINES
@@ -6003,10 +6006,10 @@ void init_crypto(struct v7 *v7) {
 #endif
 }
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../builtin/v7_ubjson.c"
+#line 1 "./src/../builtin/ubjson.c"
 /**/
 #endif
-/* Amalgamated: #include "v7_ubjson.h" */
+/* Amalgamated: #include "builtin.h" */
 
 #ifdef V7_ENABLE_UBJSON
 
