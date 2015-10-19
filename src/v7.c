@@ -8136,7 +8136,8 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
           var_end = ast_get_skip(a, var, AST_END_SKIP);
           ast_move_to_children(a, &var);
           while (var < var_end) {
-            V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR_DECL);
+            enum ast_tag tag = ast_fetch_tag(a, &var);
+            V7_CHECK(v7, tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
             name = ast_get_inlined_data(a, var, &name_len);
             ast_move_to_children(a, &var);
             ast_skip_tree(a, &var);
