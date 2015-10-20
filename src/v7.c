@@ -1228,6 +1228,22 @@ void MD5_Init(MD5_CTX *c);
 void MD5_Update(MD5_CTX *c, const unsigned char *data, size_t len);
 void MD5_Final(unsigned char *md, MD5_CTX *c);
 
+/*
+ * Return stringified MD5 hash for NULL terminated list of strings.
+ * Example:
+ *
+ *    char buf[33];
+ *    cs_md5(buf, "foo", "bar", NULL);
+ */
+char *cs_md5(char buf[33], ...);
+
+/*
+ * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
+ * because each byte of input takes 2 bytes in string representation
+ * plus 1 byte for the terminating \0 character.
+ */
+void cs_to_hex(char *to, const unsigned char *p, size_t len);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -4584,6 +4600,42 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memset((char *) ctx, 0, sizeof(*ctx));
 }
 
+/*
+ * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
+ * because each byte of input takes 2 bytes in string representation
+ * plus 1 byte for the terminating \0 character.
+ */
+void cs_to_hex(char *to, const unsigned char *p, size_t len) {
+  static const char *hex = "0123456789abcdef";
+
+  for (; len--; p++) {
+    *to++ = hex[p[0] >> 4];
+    *to++ = hex[p[0] & 0x0f];
+  }
+  *to = '\0';
+}
+
+char *cs_md5(char buf[33], ...) {
+  unsigned char hash[16];
+  const unsigned char *p;
+  va_list ap;
+  MD5_CTX ctx;
+
+  MD5_Init(&ctx);
+
+  va_start(ap, buf);
+  while ((p = va_arg(ap, const unsigned char *) ) != NULL) {
+    size_t len = va_arg(ap, size_t);
+    MD5_Update(&ctx, p, len);
+  }
+  va_end(ap);
+
+  MD5_Final(hash, &ctx);
+  cs_to_hex(buf, hash, sizeof(hash));
+
+  return buf;
+}
+
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/sha1.c"
@@ -5927,15 +5979,6 @@ static void v7_sha1(const char *data, size_t len, char buf[20]) {
   cs_sha1_final((unsigned char *) buf, &ctx);
 }
 
-static void bin2str(char *to, const unsigned char *p, size_t len) {
-  static const char *hex = "0123456789abcdef";
-
-  for (; len--; p++) {
-    *to++ = hex[p[0] >> 4];
-    *to++ = hex[p[0] & 0x0f];
-  }
-}
-
 static v7_val_t Crypto_md5(struct v7 *v7) {
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -5957,7 +6000,7 @@ static v7_val_t Crypto_md5_hex(struct v7 *v7) {
     const char *data = v7_to_string(v7, &arg0, &len);
     char hash[16], buf[sizeof(hash) * 2];
     v7_md5(data, len, hash);
-    bin2str(buf, (unsigned char *) hash, sizeof(hash));
+    cs_to_hex(buf, (unsigned char *) hash, sizeof(hash));
     return v7_create_string(v7, buf, sizeof(buf), 1);
   }
   return v7_create_null();
@@ -5984,7 +6027,7 @@ static v7_val_t Crypto_sha1_hex(struct v7 *v7) {
     const char *data = v7_to_string(v7, &arg0, &len);
     char hash[20], buf[sizeof(hash) * 2];
     v7_sha1(data, len, hash);
-    bin2str(buf, (unsigned char *) hash, sizeof(hash));
+    cs_to_hex(buf, (unsigned char *) hash, sizeof(hash));
     return v7_create_string(v7, buf, sizeof(buf), 1);
   }
   return v7_create_null();
