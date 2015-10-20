@@ -16905,6 +16905,148 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
+/* Substring implementations: RegExp-based and String-based {{{ */
+
+/*
+ * Substring context: currently, used in Str_split() only, but will probably
+ * be used in Str_replace() and other functions as well.
+ *
+ * Needed to provide different implementation for RegExp or String arguments,
+ * keeping common parts reusable.
+ */
+struct _str_split_ctx {
+  /* implementation-specific data */
+  union {
+#if V7_ENABLE__RegExp
+    struct {
+      struct slre_prog *prog;
+      struct slre_loot loot;
+    } regexp;
+#endif
+
+    struct {
+      val_t sep;
+    } string;
+  } impl;
+
+  struct v7 *v7;
+
+  /* start and end of previous match (set by `p_exec()`) */
+  const char *match_start;
+  const char *match_end;
+
+  /* pointers to implementation functions */
+
+  /*
+   * Initialize context
+   */
+  void (*p_init)(struct _str_split_ctx *ctx, struct v7 *v7, val_t sep);
+
+  /*
+   * Look for the next match, set `match_start` and `match_end` to appropriate
+   * values.
+   *
+   * Returns 0 if match found, 1 otherwise (in accordance with `slre_exec()`)
+   */
+  int (*p_exec)(struct _str_split_ctx *ctx, const char *start, const char *end);
+
+#if V7_ENABLE__RegExp
+  /*
+   * Add captured data to resulting array (for RegExp-based implementation only)
+   *
+   * Returns updated `elem` value
+   */
+  long (*p_add_caps)(struct _str_split_ctx *ctx, val_t res, long elem,
+                     long limit);
+#endif
+};
+
+#if V7_ENABLE__RegExp
+/* RegExp-based implementation of `p_init` in `struct _str_split_ctx` */
+static void subs_regexp_init(struct _str_split_ctx *ctx, struct v7 *v7,
+                             val_t sep) {
+  ctx->v7 = v7;
+  ctx->impl.regexp.prog = v7_to_regexp(v7, sep)->compiled_regexp;
+}
+
+/* RegExp-based implementation of `p_exec` in `struct _str_split_ctx` */
+static int subs_regexp_exec(struct _str_split_ctx *ctx, const char *start,
+                            const char *end) {
+  int ret =
+      slre_exec(ctx->impl.regexp.prog, 0, start, end, &ctx->impl.regexp.loot);
+
+  ctx->match_start = ctx->impl.regexp.loot.caps[0].start;
+  ctx->match_end = ctx->impl.regexp.loot.caps[0].end;
+
+  return ret;
+}
+
+/* RegExp-based implementation of `p_add_caps` in `struct _str_split_ctx` */
+static long subs_regexp_split_add_caps(struct _str_split_ctx *ctx, val_t res,
+                                       long elem, long limit) {
+  int i;
+  for (i = 1; i < ctx->impl.regexp.loot.num_captures && elem < limit; i++) {
+    size_t cap_len =
+        ctx->impl.regexp.loot.caps[i].end - ctx->impl.regexp.loot.caps[i].start;
+    v7_array_push(
+        ctx->v7, res,
+        (ctx->impl.regexp.loot.caps[i].start != NULL)
+            ? v7_create_string(ctx->v7, ctx->impl.regexp.loot.caps[i].start,
+                               cap_len, 1)
+            : v7_create_undefined());
+    elem++;
+  }
+  return elem;
+}
+#endif
+
+/* String-based implementation of `p_init` in `struct _str_split_ctx` */
+static void subs_string_init(struct _str_split_ctx *ctx, struct v7 *v7,
+                             val_t sep) {
+  ctx->v7 = v7;
+  ctx->impl.string.sep = sep;
+}
+
+/* String-based implementation of `p_exec` in `struct _str_split_ctx` */
+static int subs_string_exec(struct _str_split_ctx *ctx, const char *start,
+                            const char *end) {
+  int ret = 1;
+  size_t sep_len;
+  const char *psep = v7_to_string(ctx->v7, &ctx->impl.string.sep, &sep_len);
+
+  if (sep_len == 0) {
+    /* separator is an empty string: match empty string */
+    ctx->match_start = start;
+    ctx->match_end = start;
+    ret = 0;
+  } else {
+    size_t i;
+    for (i = 0; start <= (end - sep_len);
+         ++i, start = utfnshift((char *) start, 1)) {
+      if (memcmp(start, psep, sep_len) == 0) {
+        ret = 0;
+        ctx->match_start = start;
+        ctx->match_end = start + sep_len;
+        break;
+      }
+    }
+  }
+
+  return ret;
+}
+
+#if V7_ENABLE__RegExp
+/* String-based implementation of `p_add_caps` in `struct _str_split_ctx` */
+static long subs_string_split_add_caps(struct _str_split_ctx UNUSED *ctx,
+                                       val_t UNUSED res, long elem,
+                                       long UNUSED limit) {
+  /* this is a stub function */
+  return elem;
+}
+#endif
+
+/* }}} */
+
 static val_t String_ctor(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_arg(v7, 0), res = arg0;
@@ -17452,63 +17594,117 @@ static val_t Str_substring(struct v7 *v7) {
   return s_substr(v7, this_obj, start, end - start);
 }
 
-/* TODO(mkm): make an alternative implementation without regexps */
-#if V7_ENABLE__RegExp
 static val_t Str_split(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
   size_t s_len;
   long num_args = v7_argc(v7);
-  struct slre_prog *prog = NULL;
   this_obj = to_string(v7, this_obj);
   s = v7_to_string(v7, &this_obj, &s_len);
   s_end = s + s_len;
 
-  if (num_args == 0 || s_len == 0) {
+  if (num_args == 0) {
+    /*
+     * No arguments were given: resulting array will contain just a single
+     * element: the source string
+     */
     v7_array_push(v7, res, this_obj);
   } else {
     val_t ro = i_value_of(v7, v7_arg(v7, 0));
-    long len, elem = 0, limit = arg_long(v7, 1, LONG_MAX);
-    size_t shift = 0;
-    struct slre_loot loot;
-    if (!v7_is_regexp(v7, ro)) {
-      ro = call_regex_ctor(v7, ro);
-    }
-    prog = v7_to_regexp(v7, ro)->compiled_regexp;
+    long elem, limit = arg_long(v7, 1, LONG_MAX);
+    size_t lookup_idx = 0, substr_idx = 0;
+    struct _str_split_ctx ctx;
 
-    for (; elem < limit && shift < s_len; elem++) {
-      val_t tmp_s;
-      int i;
-      if (slre_exec(prog, 0, s + shift, s_end, &loot)) break;
-      if (loot.caps[0].end - loot.caps[0].start == 0) {
-        tmp_s = v7_create_string(v7, s + shift, 1, 1);
-        shift++;
-      } else {
-        tmp_s =
-            v7_create_string(v7, s + shift, loot.caps[0].start - s - shift, 1);
-        shift = loot.caps[0].end - s;
-      }
-      v7_array_push(v7, res, tmp_s);
+    /* Initialize substring context depending on the argument type */
+    if (v7_is_regexp(v7, ro)) {
+/* use RegExp implementation */
+#if V7_ENABLE__RegExp
+      ctx.p_init = subs_regexp_init;
+      ctx.p_exec = subs_regexp_exec;
+      ctx.p_add_caps = subs_regexp_split_add_caps;
+#else
+      assert(0);
+#endif
+    } else {
+      /*
+       * use String implementation: first of all, convert to String (if it's
+       * not already a String)
+       */
+      ro = to_string(v7, ro);
 
-      for (i = 1; i < loot.num_captures; i++) {
-        v7_array_push(
-            v7, res,
-            (loot.caps[i].start != NULL)
-                ? v7_create_string(v7, loot.caps[i].start,
-                                   loot.caps[i].end - loot.caps[i].start, 1)
-                : v7_create_undefined());
-      }
+      ctx.p_init = subs_string_init;
+      ctx.p_exec = subs_string_exec;
+#if V7_ENABLE__RegExp
+      ctx.p_add_caps = subs_string_split_add_caps;
+#endif
     }
-    len = s_len - shift;
-    if (len > 0 && elem < limit) {
-      v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));
+    /* initialize context */
+    ctx.p_init(&ctx, v7, ro);
+
+    if (s_len == 0) {
+      /*
+       * if `this` is (or converts to) an empty string, resulting array should
+       * contain empty string if only separator does not match an empty string.
+       * Otherwise, the array is left empty
+       */
+      int matches_empty = !ctx.p_exec(&ctx, s, s);
+      if (!matches_empty) {
+        v7_array_push(v7, res, this_obj);
+      }
+    } else {
+      size_t last_match_len = 0;
+
+      for (elem = 0; elem < limit && lookup_idx < s_len;) {
+        size_t substr_len;
+        /* find next match, and break if there's no match */
+        if (ctx.p_exec(&ctx, s + lookup_idx, s_end)) break;
+
+        last_match_len = ctx.match_end - ctx.match_start;
+        substr_len = ctx.match_start - s - substr_idx;
+
+        /* add next substring to the resulting array, if needed */
+        if (substr_len > 0 || last_match_len > 0) {
+          v7_array_push(v7, res,
+                        v7_create_string(v7, s + substr_idx, substr_len, 1));
+          elem++;
+
+#if V7_ENABLE__RegExp
+          /* Add captures (for RegExp only) */
+          elem = ctx.p_add_caps(&ctx, res, elem, limit);
+#endif
+        }
+
+        /* advance lookup_idx appropriately */
+        if (last_match_len == 0) {
+          /* empty match: advance to the next char */
+          const char *next = utfnshift((char *) (s + lookup_idx), 1);
+          lookup_idx += (next - (s + lookup_idx));
+        } else {
+          /* non-empty match: advance to the end of match */
+          lookup_idx = ctx.match_end - s;
+        }
+
+        /*
+         * always remember the end of the match, so that next time we will take
+         * substring from that position
+         */
+        substr_idx = ctx.match_end - s;
+      }
+
+      /* add the last substring to the resulting array, if needed */
+      if (elem < limit) {
+        size_t substr_len = s_len - substr_idx;
+        if (substr_len > 0 || last_match_len > 0) {
+          v7_array_push(v7, res,
+                        v7_create_string(v7, s + substr_idx, substr_len, 1));
+        }
+      }
     }
   }
 
   return res;
 }
-#endif /* V7_ENABLE__RegExp */
 
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str = v7_create_constructor(v7, v7->string_prototype, String_ctor, 1);
@@ -17531,8 +17727,8 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "match", Str_match);
   set_cfunc_prop(v7, v7->string_prototype, "replace", Str_replace);
   set_cfunc_prop(v7, v7->string_prototype, "search", Str_search);
-  set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
 #endif
+  set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
   set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "trim", Str_trim);
   set_cfunc_prop(v7, v7->string_prototype, "toLowerCase", Str_toLowerCase);
