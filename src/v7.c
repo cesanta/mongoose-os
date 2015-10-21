@@ -9200,32 +9200,32 @@ val_t v7_get_global(struct v7 *v7) {
 }
 
 void v7_destroy(struct v7 *v7) {
-  if (v7 != NULL) {
-    gc_arena_destroy(v7, &v7->object_arena);
-    gc_arena_destroy(v7, &v7->function_arena);
-    gc_arena_destroy(v7, &v7->property_arena);
+  if (v7 == NULL) return;
+  gc_arena_destroy(v7, &v7->object_arena);
+  gc_arena_destroy(v7, &v7->function_arena);
+  gc_arena_destroy(v7, &v7->property_arena);
 
-    mbuf_free(&v7->owned_strings);
-    mbuf_free(&v7->foreign_strings);
-    mbuf_free(&v7->json_visited_stack);
-    mbuf_free(&v7->tmp_stack);
+  mbuf_free(&v7->owned_strings);
+  mbuf_free(&v7->owned_values);
+  mbuf_free(&v7->foreign_strings);
+  mbuf_free(&v7->json_visited_stack);
+  mbuf_free(&v7->tmp_stack);
 
 #ifdef V7_ENABLE_GC_CHECK
-    /* delete this v7 */
-    {
-      struct v7 *v, **prevp = &v7_head;
-      for (v = v7_head; v != NULL; prevp = &v->next_v7, v = v->next_v7) {
-        if (v == v7) {
-          *prevp = v->next_v7;
-          break;
-        }
+  /* delete this v7 */
+  {
+    struct v7 *v, **prevp = &v7_head;
+    for (v = v7_head; v != NULL; prevp = &v->next_v7, v = v->next_v7) {
+      if (v == v7) {
+        *prevp = v->next_v7;
+        break;
       }
     }
+  }
 #endif
 
-    free(v7->cur_dense_prop);
-    free(v7);
-  }
+  free(v7->cur_dense_prop);
+  free(v7);
 }
 
 v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
