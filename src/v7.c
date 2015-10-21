@@ -8289,6 +8289,24 @@ void v7_fprintln(FILE *f, struct v7 *v7, val_t v) {
   fprintf(f, ENDL);
 }
 
+int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
+  size_t n;
+  if (v7_is_string(v)) {
+    const char *str = v7_to_string(v7, &v, &n);
+    if (n >= size) {
+      n = size - 1;
+    }
+    memcpy(buf, str, n);
+  } else {
+    n = (size_t) to_str(v7, v, buf, size, 1);
+    if (n >= size) {
+      n = size - 1;
+    }
+  }
+  buf[n] = '\0';
+  return n;
+}
+
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
   p->next = NULL;
@@ -9069,7 +9087,7 @@ V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
  */
 V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v, int *ok) {
   char buf[100];
-  size_t len = v7_stringify(v7, v, buf, sizeof(buf), 0);
+  size_t len = v7_stringify_value(v7, v, buf, sizeof(buf));
   return cstr_to_ulong(buf, len, ok);
 }
 
