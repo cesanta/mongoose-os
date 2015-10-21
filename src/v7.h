@@ -283,22 +283,24 @@ unsigned long v7_argc(struct v7 *);
 v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
 
 /*
- * Generate JSON representation of the JavaScript value `val` into a buffer
- * `buf`, `buf_len`. If `buf_len` is too small to hold generated JSON string,
- * `v7_to_json()` allocates required memory. In that case, it is caller's
- * responsibility to free the allocated buffer. Generated JSON string is
+ * Generate string representation of the JavaScript value `val` into a buffer
+ * `buf`, `len`. If `len` is too small to hold generated a string,
+ * `v7_stringify()` allocates required memory. In that case, it is caller's
+ * responsibility to free the allocated buffer. Generated string is
  * guaranteed to be 0-terminated.
+ * If `as_json` is non-0, then generated string is JSON.
  *
  * Example code:
  *
  *     char buf[100], *p;
- *     p = v7_to_json(v7, obj, buf, sizeof(buf));
+ *     p = v7_stringify(v7, obj, buf, sizeof(buf), 1);
  *     printf("JSON string: [%s]\n", p);
  *     if (p != buf) {
  *       free(p);
  *     }
  */
-char *v7_to_json(struct v7 *, v7_val_t val, char *buf, size_t buf_len);
+char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len, int as_json);
+#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, 1)
 
 /* print a value to stdout */
 void v7_print(struct v7 *, v7_val_t val);
@@ -369,6 +371,21 @@ v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 
 /* Set object's prototype. Return old prototype or undefined on error. */
 v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
+
+/*
+ * Iterate over the object's `obj` properties.
+ *
+ * Usage example:
+ *
+ *     void *handle = NULL;
+ *     v7_val_t name, value;
+ *     unsigned int attrs;
+ *     while ((handle = v7_prop(arg1, h, &name, &value, &attrs)) != NULL) {
+ *       ...
+ *     }
+ */
+void *v7_prop(v7_val_t obj, void *, v7_val_t *name, v7_val_t *value,
+              unsigned *attrs);
 
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);

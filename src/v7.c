@@ -287,22 +287,24 @@ unsigned long v7_argc(struct v7 *);
 v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
 
 /*
- * Generate JSON representation of the JavaScript value `val` into a buffer
- * `buf`, `buf_len`. If `buf_len` is too small to hold generated JSON string,
- * `v7_to_json()` allocates required memory. In that case, it is caller's
- * responsibility to free the allocated buffer. Generated JSON string is
+ * Generate string representation of the JavaScript value `val` into a buffer
+ * `buf`, `len`. If `len` is too small to hold generated a string,
+ * `v7_stringify()` allocates required memory. In that case, it is caller's
+ * responsibility to free the allocated buffer. Generated string is
  * guaranteed to be 0-terminated.
+ * If `as_json` is non-0, then generated string is JSON.
  *
  * Example code:
  *
  *     char buf[100], *p;
- *     p = v7_to_json(v7, obj, buf, sizeof(buf));
+ *     p = v7_stringify(v7, obj, buf, sizeof(buf), 1);
  *     printf("JSON string: [%s]\n", p);
  *     if (p != buf) {
  *       free(p);
  *     }
  */
-char *v7_to_json(struct v7 *, v7_val_t val, char *buf, size_t buf_len);
+char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len, int as_json);
+#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, 1)
 
 /* print a value to stdout */
 void v7_print(struct v7 *, v7_val_t val);
@@ -373,6 +375,21 @@ v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 
 /* Set object's prototype. Return old prototype or undefined on error. */
 v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
+
+/*
+ * Iterate over the object's `obj` properties.
+ *
+ * Usage example:
+ *
+ *     void *handle = NULL;
+ *     v7_val_t name, value;
+ *     unsigned int attrs;
+ *     while ((handle = v7_prop(arg1, h, &name, &value, &attrs)) != NULL) {
+ *       ...
+ *     }
+ */
+void *v7_prop(v7_val_t obj, void *, v7_val_t *name, v7_val_t *value,
+              unsigned *attrs);
 
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
@@ -4416,6 +4433,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
 
 /* Amalgamated: #include "md5.h" */
 
+#ifndef CS_ENABLE_NATIVE_MD5
 static void byteReverse(unsigned char *buf, unsigned longs) {
 /* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
 #if BYTE_ORDER == BIG_ENDIAN
@@ -4599,6 +4617,7 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
+#endif  /* CS_ENABLE_NATIVE_MD5 */
 
 /*
  * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
@@ -8214,14 +8233,14 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
  * v7_to_json allocates a new buffer if value representation doesn't fit into
  * buf. Caller is responsible for freeing that buffer.
  */
-char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
-  int len = to_str(v7, v, buf, size, 1);
+char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size, int json) {
+  int len = to_str(v7, v, buf, size, json);
 
   /* fit null terminating byte */
   if (len >= (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
     char *p = (char *) malloc(len + 1);
-    to_str(v7, v, p, len + 1, 1);
+    to_str(v7, v, p, len + 1, json);
     p[len] = '\0';
     return p;
   } else {
@@ -8254,22 +8273,6 @@ void v7_println(struct v7 *v7, v7_val_t v) {
 void v7_fprintln(FILE *f, struct v7 *v7, val_t v) {
   v7_fprint(f, v7, v);
   fprintf(f, ENDL);
-}
-
-int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
-  if (v7_is_string(v)) {
-    size_t n;
-    const char *str = v7_to_string(v7, &v, &n);
-    if (n >= size) {
-      n = size - 1;
-    }
-    memcpy(buf, str, n);
-    buf[n] = '\0';
-    return n;
-  } else {
-    size_t len = (size_t) to_str(v7, v, buf, size, 1);
-    return len < size ? len : size;
-  }
 }
 
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
@@ -9031,7 +9034,7 @@ V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
  */
 V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v, int *ok) {
   char buf[100];
-  size_t len = v7_stringify_value(v7, v, buf, sizeof(buf));
+  size_t len = v7_stringify(v7, v, buf, sizeof(buf), 0);
   return cstr_to_ulong(buf, len, ok);
 }
 
@@ -9272,6 +9275,20 @@ v7_val_t v7_arg(struct v7 *v7, unsigned long n) {
 
 unsigned long v7_argc(struct v7 *v7) {
   return v7_array_length(v7, v7->arguments);
+}
+
+void *v7_prop(v7_val_t obj, void *handle, v7_val_t *name, v7_val_t *value,
+              unsigned *attrs) {
+  struct v7_property *p = v7_to_object(obj)->properties;
+  if (handle != NULL) {
+    p = ((struct v7_property *) handle)->next;
+  }
+  if (p != NULL) {
+    if (name != NULL) *name = p->name;
+    if (value != NULL) *value = p->value;
+    if (attrs != NULL) *attrs = p->attributes;
+  }
+  return p;
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
