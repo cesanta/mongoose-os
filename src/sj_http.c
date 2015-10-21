@@ -6,6 +6,7 @@
 #include "v7.h"
 #include "mongoose.h"
 #include "sj_mongoose.h"
+#include "sj_v7_ext.h"
 
 struct user_data {
   struct v7 *v7;
@@ -63,20 +64,15 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
   if (ev == MG_EV_HTTP_REQUEST) {
     if (v7_is_function(ud->handler)) {
-      v7_val_t result, args = v7_create_array(ud->v7);
       v7_val_t request = v7_create_object(ud->v7);
       v7_val_t response = v7_create_object(ud->v7);
       v7_own(ud->v7, &request);
       v7_own(ud->v7, &response);
-      v7_own(ud->v7, &args);
       setup_request_object(ud->v7, request, ev_data);
       setup_response_object(ud->v7, response, c, ev_data);
-      v7_array_push(ud->v7, args, request);
-      v7_array_push(ud->v7, args, response);
-      v7_apply(ud->v7, &result, ud->handler, ud->server_obj, args);
+      sj_invoke_cb2(ud->v7, ud->handler, request, response);
       v7_disown(ud->v7, &request);
       v7_disown(ud->v7, &response);
-      v7_disown(ud->v7, &args);
     } else {
       struct mg_serve_http_opts opts;
       memset(&opts, 0, sizeof(opts));
@@ -104,9 +100,20 @@ static struct mg_connection *get_mgconn(struct v7 *v7) {
   return (struct mg_connection *) v7_to_foreign(_c);
 }
 
+static void write_http_status(struct mg_connection *c, unsigned long code) {
+  mg_printf(c, "HTTP/1.1 %lu OK\r\n", code);
+  mg_printf(c, "%s", "Transfer-Encoding: chunked\r\n");
+}
+
 static v7_val_t Http_response_write(struct v7 *v7) {
   struct mg_connection *c = get_mgconn(v7);
   unsigned long i, argc = v7_argc(v7);
+
+  if (!v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
+    write_http_status(c, 200);
+    mg_send(c, "\r\n", 2);
+    v7_set(v7, v7_get_this(v7), "_whd", ~0, 0, v7_create_boolean(1));
+  }
 
   for (i = 0; i < argc; i++) {
     char buf[50], *p = buf;
@@ -131,11 +138,16 @@ static v7_val_t Http_response_writeHead(struct v7 *v7) {
   struct mg_connection *c = get_mgconn(v7);
   unsigned long code = 200;
   v7_val_t arg0 = v7_arg(v7, 0), arg1 = v7_arg(v7, 1);
+
+  if (v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
+    v7_throw(v7, "Headers already sent");
+  }
+
   if (v7_is_number(arg0)) {
     code = v7_to_number(arg0);
   }
-  mg_printf(c, "HTTP/1.1 %lu OK\r\n", code);
-  mg_printf(c, "%s", "Transfer-Encoding: chunked\r\n");
+
+  write_http_status(c, code);
   if (v7_is_object(arg1)) {
     void *h = NULL;
     v7_val_t name, value;
@@ -148,6 +160,7 @@ static v7_val_t Http_response_writeHead(struct v7 *v7) {
     }
   }
   mg_send(c, "\r\n", 2);
+  v7_set(v7, v7_get_this(v7), "_whd", ~0, 0, v7_create_boolean(1));
   return v7_get_this(v7);
 }
 
