@@ -33,6 +33,8 @@
 #define __LWIP_DEBUG_H__
 
 #include "lwip/arch.h"
+/* Changed by Espressif */
+//#include "lwip/opt.h"
 
 /** lower two bits indicate debug level
  * - 0 all

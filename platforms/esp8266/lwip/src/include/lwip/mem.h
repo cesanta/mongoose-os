@@ -33,6 +33,7 @@
 #define __LWIP_MEM_H__
 
 #include "lwip/opt.h"
+/* Changed by Espressif */
 #include "mem_manager.h"
 
 #ifdef __cplusplus
@@ -44,6 +45,7 @@ extern "C" {
 #include <stddef.h> /* for size_t */
 
 typedef size_t mem_size_t;
+#define MEM_SIZE_F SZT_F
 
 /* aliases for C library malloc() */
 #define mem_init()

@@ -127,7 +127,7 @@ static struct memp *memp_tab[MEMP_MAX];
 static
 #endif
 /*++ Changed by Espressif ++*/
-const u32_t memp_sizes[MEMP_MAX] = { //LWIP_MEM_ALIGN_SIZE
+const u32_t memp_sizes[MEMP_MAX] = {
 #define LWIP_MEMPOOL(name,num,size,desc,attr)  LWIP_MEM_ALIGN_SIZE(size),
 /*--                      --*/
 #include "lwip/memp_std.h"
@@ -146,13 +146,10 @@ static const u16_t memp_num[MEMP_MAX] = {
 
 /** This array holds a textual description of each pool. */
 /*++ Changed by Espressif ++*/
-//#ifdef LWIP_DEBUG
-//static const char *memp_desc[MEMP_MAX] = {
 const char *memp_desc[MEMP_MAX] = {
 #define LWIP_MEMPOOL(name,num,size,desc,attr)  (desc),
 #include "lwip/memp_std.h"
 };
-//#endif /* LWIP_DEBUG */
 /*--                      --*/
 
 #if MEMP_SEPARATE_POOLS
@@ -187,12 +184,11 @@ static u8_t memp_memory[MEM_ALIGNMENT - 1
 
 #if MEMP_SANITY_CHECK
 /**
- * Check that memp-lists don't form a circle, modify by ives at 2014.4.23.
+ * Check that memp-lists don't form a circle, using "Floyd's cycle-finding algorithm".
  */
-static int ICACHE_FLASH_ATTR
+static int
 memp_sanity(void)
 {
-  /*++ Changed by Espressif ++*/
   s16_t i;
   struct memp *t, *h;
 
@@ -207,7 +203,6 @@ memp_sanity(void)
       }
     }
   }
-  /*--                      --*/
   return 1;
 }
 #endif /* MEMP_SANITY_CHECK*/

@@ -57,10 +57,8 @@ typedef s8_t err_t;
 #define ERR_INPROGRESS -5    /* Operation in progress    */
 #define ERR_VAL        -6    /* Illegal value.           */
 #define ERR_WOULDBLOCK -7    /* Operation would block.   */
-/*++ Changed by Espressif ++*/
-//#define ERR_USE        -8    /* Address in use.          */
-//#define ERR_ISCONN     -9    /* Already connected.       */
-/*--                      --*/
+#define ERR_USE        -8    /* Address in use.          */
+#define ERR_ISCONN     -9    /* Already connected.       */
 
 /*++ Changed by Espressif ++*/
 #define ERR_IS_FATAL(e) ((e) < ERR_WOULDBLOCK)

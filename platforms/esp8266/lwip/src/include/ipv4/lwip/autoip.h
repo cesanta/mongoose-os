@@ -89,6 +89,7 @@ struct autoip
 };
 
 
+/* Changed by Espressif */
 /** Init srand, has to be called before entering mainloop */
 void autoip_init(void);
 
