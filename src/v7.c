@@ -2136,6 +2136,15 @@ struct v7 {
 #ifdef V7_MALLOC_GC
   struct mbuf malloc_trace;
 #endif
+
+/*
+ * TODO(imax): remove V7_DISABLE_STR_ALLOC_SEQ knob after 2015/12/01 if there
+ * are no issues.
+ */
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+  uint16_t gc_next_asn; /* Next sequence number to use. */
+  uint16_t gc_min_asn;  /* Minimal sequence number currently in use. */
+#endif
 };
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
@@ -2620,6 +2629,11 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *, struct gc_arena *);
 V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *);
 V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *);
 V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
+
+V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
+V7_PRIVATE uint16_t
+gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len);
+V7_PRIVATE int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n);
 
 #if defined(__cplusplus)
 }
@@ -8882,6 +8896,10 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
 #endif
     embed_string(m, m->len, p, len, 1, 0);
     tag = V7_TAG_STRING_O;
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+    /* TODO(imax): panic if offset >= 2^32. */
+    offset |= ((val_t) gc_next_allocation_seqn(v7, p, len)) << 32;
+#endif
   } else {
     /* TODO(mkm): this doesn't set correctly the foreign string length */
     embed_string(m, m->len, (char *) &p, sizeof(p), 0, 0);
@@ -8932,8 +8950,18 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   } else {
     struct mbuf *m =
         (tag == V7_TAG_STRING_O) ? &v7->owned_strings : &v7->foreign_strings;
-    size_t offset = (size_t) v7_to_pointer(*v);
+    size_t offset = (size_t) gc_string_val_to_offset(*v);
     char *s = m->buf + offset;
+
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+    if (tag == V7_TAG_STRING_O) {
+      if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
+        throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
+                        (int) ((*v >> 32) & 0xFFFF));
+        return NULL;
+      }
+    }
+#endif
 
     *sizep = decode_varint((uint8_t *) s, &llen);
     if (tag == V7_TAG_STRING_O) {
@@ -9002,6 +9030,13 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   memcpy(s + a_len, b_ptr, b_len);
   /* Inlined strings are already 0-terminated, but still, why not. */
   s[a_len + b_len] = '\0';
+
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+  if (tag == V7_TAG_STRING_O) {
+    /* TODO(imax): panic if offset >= 2^32. */
+    offset |= ((val_t) gc_next_allocation_seqn(v7, s, a_len + b_len)) << 32;
+  }
+#endif
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
   return (offset & ~V7_TAG_MASK) | tag;
@@ -9153,6 +9188,11 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 #ifdef V7_ENABLE_GC_CHECK
     v7->next_v7 = v7_head;
     v7_head = v7;
+#endif
+
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+    v7->gc_next_asn = 0;
+    v7->gc_min_asn = 0;
 #endif
 
     v7->cur_dense_prop =
@@ -9691,8 +9731,50 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 
 #ifndef V7_DISABLE_COMPACTING_GC
 
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+
+static uint16_t next_asn(struct v7 *v7) {
+  if (v7->gc_next_asn == 0xFFFF) {
+    /* Wrap around explicitly. */
+    v7->gc_next_asn = 0;
+    return 0xFFFF;
+  }
+  return v7->gc_next_asn++;
+}
+
+uint16_t gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len) {
+  uint16_t asn = next_asn(v7);
+  (void) str;
+  (void) len;
+#ifdef V7_GC_VERBOSE
+  fprintf(stderr, "GC ASN %d: \"%.*s\"\n", asn, (int) len, str);
+#endif
+  return asn;
+}
+
+int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n) {
+  /*
+   * This functions attempts to handle integer wraparound in a naive way and
+   * will give false positives when more than 65536 strings are allocated
+   * between GC runs.
+   */
+  int r = (n >= v7->gc_min_asn && n < v7->gc_next_asn) ||
+          (v7->gc_min_asn > v7->gc_next_asn &&
+           (n >= v7->gc_min_asn || n < v7->gc_next_asn));
+  if (!r) {
+    fprintf(stderr, "GC ASN %d is not in [%d,%d)\n", n, v7->gc_min_asn,
+            v7->gc_next_asn);
+  }
+  return r;
+}
+#endif /* V7_DISABLE_STR_ALLOC_SEQ */
+
 uint64_t gc_string_val_to_offset(val_t v) {
-  return ((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
+  return (((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK)
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+         & 0xFFFFFFFF
+#endif
+      ;
 }
 
 val_t gc_string_val_from_offset(uint64_t s) {
@@ -9750,8 +9832,15 @@ void gc_compact_strings(struct v7 *v7) {
   uint64_t h, next, head = 1;
   int len, llen;
 
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+  v7->gc_min_asn = v7->gc_next_asn;
+#endif
   while (p < v7->owned_strings.buf + v7->owned_strings.len) {
     if (p[-1] == '\1') {
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+      /* Not using gc_next_allocation_seqn() as we don't have full string. */
+      uint16_t asn = next_asn(v7);
+#endif
       /* relocate and update ptrs */
       h = 0;
       memcpy(&h, p, sizeof(h) - 2);
@@ -9765,7 +9854,11 @@ void gc_compact_strings(struct v7 *v7) {
         h &= ~V7_TAG_MASK;
         memcpy(&next, (char *) (uintptr_t) h, sizeof(h));
 
-        *(val_t *) (uintptr_t) h = gc_string_val_from_offset(head);
+        *(val_t *) (uintptr_t) h = gc_string_val_from_offset(head)
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+                                   | ((val_t) asn << 32)
+#endif
+            ;
       }
       h &= ~V7_TAG_MASK;
 
@@ -9787,6 +9880,10 @@ void gc_compact_strings(struct v7 *v7) {
        */
       memmove(v7->owned_strings.buf + head, p, len);
       v7->owned_strings.buf[head - 1] = 0x0;
+#if defined(V7_GC_VERBOSE) && !defined(V7_DISABLE_STR_ALLOC_SEQ)
+      fprintf(stderr, "GC updated ASN %d: \"%.*s\"\n", asn, len - llen - 1,
+              v7->owned_strings.buf + head + llen);
+#endif
       p += len;
       head += len;
     } else {
@@ -9796,6 +9893,11 @@ void gc_compact_strings(struct v7 *v7) {
       p += len;
     }
   }
+
+#if defined(V7_GC_VERBOSE) && !defined(V7_DISABLE_STR_ALLOC_SEQ)
+  fprintf(stderr, "GC valid ASN range: [%d,%d)\n", v7->gc_min_asn,
+          v7->gc_next_asn);
+#endif
 
   v7->owned_strings.len = head;
 }
