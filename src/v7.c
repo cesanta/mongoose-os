@@ -1325,7 +1325,7 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
 #if !(_XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L) &&    \
         !(__DARWIN_C_LEVEL >= 200809L) && !defined(RTOS_SDK) || \
     defined(_WIN32)
-int strnlen(const char *s, size_t maxlen);
+size_t strnlen(const char *s, size_t maxlen);
 #endif
 
 #ifdef __cplusplus
@@ -4949,7 +4949,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t keylen,
 #if !(_XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L) &&    \
         !(__DARWIN_C_LEVEL >= 200809L) && !defined(RTOS_SDK) || \
     defined(_WIN32)
-int strnlen(const char *s, size_t maxlen) {
+size_t strnlen(const char *s, size_t maxlen) {
   size_t l = 0;
   for (; l < maxlen && s[l] != '\0'; l++) {
   }
