@@ -60,6 +60,10 @@ typedef s8_t err_t;
 #define ERR_USE        -8    /* Address in use.          */
 #define ERR_ISCONN     -9    /* Already connected.       */
 
+/*++ Unf*cked by Cesanta (to allow to be redefined below) ++*/
+#undef ERR_USE
+#undef ERR_ISCONN
+
 /*++ Changed by Espressif ++*/
 #define ERR_IS_FATAL(e) ((e) < ERR_WOULDBLOCK)
 

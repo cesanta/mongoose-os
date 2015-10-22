@@ -119,7 +119,9 @@ LWIP_MAKE = /bin/true
 #TODO(alashkin): try to use the same LD script
 LD_SCRIPT = user/eagle.app.v6.RTOS.ld
 else
+IPATH += lwip/src/include lwip/src/include/ipv4 lwip/espressif/include
 APP_LIBS += m lwip_cs
+CFLAGS += -DLWIP_OPEN_SRC
 endif
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
