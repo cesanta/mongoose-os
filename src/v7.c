@@ -7905,6 +7905,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     v7_own(v7, &obj);
     rp = (struct v7_regexp *) malloc(sizeof(*rp));
     rp->regexp_string = v7_create_string(v7, re, re_len, 1);
+    v7_own(v7, &rp->regexp_string);
     rp->compiled_regexp = p;
     rp->lastIndex = 0;
 
@@ -9145,6 +9146,7 @@ static void object_destructor(struct v7 *v7, void *ptr) {
 #if V7_ENABLE__RegExp
   if (p != NULL && (p->value & V7_TAG_MASK) == V7_TAG_REGEXP) {
     struct v7_regexp *rp = (struct v7_regexp *) v7_to_foreign(p->value);
+    v7_disown(v7, &rp->regexp_string);
     slre_free(rp->compiled_regexp);
     free(rp);
   }
