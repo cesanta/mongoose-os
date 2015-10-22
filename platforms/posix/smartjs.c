@@ -14,6 +14,7 @@
 #include <sj_mongoose_ws_client.h>
 #include <sj_gpio_js.h>
 #include <sj_http.h>
+#include <sj_uart.h>
 
 #include "smartjs.h"
 
@@ -28,6 +29,7 @@ void init_smartjs(struct v7 *_v7) {
   sj_init_simple_http_client(v7);
   sj_init_ws_client(v7);
   sj_init_http(v7);
+  sj_init_uart(v7);
 
   init_i2cjs(v7);
   init_spijs(v7);

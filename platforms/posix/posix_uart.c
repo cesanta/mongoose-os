@@ -15,12 +15,6 @@ static void uart_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   (void) ev_data;
 
   switch (ev) {
-    case MG_EV_CONNECT:
-      fprintf(stderr, "NS CONNECT\n");
-      break;
-    case MG_EV_CLOSE:
-      fprintf(stderr, "NS CLOSE!\n");
-      break;
     case MG_EV_RECV:
       do {
         n = sj_uart_recv_cb(nc->user_data, nc->recv_mbuf.buf,

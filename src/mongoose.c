@@ -2534,7 +2534,7 @@ static void mg_read_from_socket(struct mg_connection *conn) {
     }
   } else
 #endif
-    while ((n = (int) MG_EV_RECV_FUNC(
+    while ((n = (int) MG_RECV_FUNC(
                 conn->sock, buf, recv_avail_size(conn, sizeof(buf)), 0)) > 0) {
       DBG(("%p %d bytes (PLAIN) <- %d", conn, n, conn->sock));
       mbuf_append(&conn->recv_mbuf, buf, n);
@@ -2581,7 +2581,7 @@ static void mg_write_to_socket(struct mg_connection *conn) {
   } else
 #endif
   {
-    n = (int) MG_EV_SEND_FUNC(conn->sock, io->buf, io->len, 0);
+    n = (int) MG_SEND_FUNC(conn->sock, io->buf, io->len, 0);
   }
 
   DBG(("%p %d bytes -> %d", conn, n, conn->sock));
@@ -2706,8 +2706,10 @@ static void mg_mgr_handle_connection(struct mg_connection *nc, int fd_flags,
 static void mg_mgr_handle_ctl_sock(struct mg_mgr *mgr) {
   struct ctl_msg ctl_msg;
   int len =
-      (int) MG_EV_RECV_FUNC(mgr->ctl[1], (char *) &ctl_msg, sizeof(ctl_msg), 0);
-  MG_EV_SEND_FUNC(mgr->ctl[1], ctl_msg.message, 1, 0);
+      (int) MG_RECV_FUNC(mgr->ctl[1], (char *) &ctl_msg, sizeof(ctl_msg), 0);
+  size_t dummy = MG_SEND_FUNC(mgr->ctl[1], ctl_msg.message, 1, 0);
+  (void) dummy; /* https://gcc.gnu.org/bugzilla/show_bug.cgi?id=25509 */
+
   if (len >= (int) sizeof(ctl_msg.callback) && ctl_msg.callback != NULL) {
     struct mg_connection *nc;
     for (nc = mg_next(mgr, NULL); nc != NULL; nc = mg_next(mgr, nc)) {
@@ -3185,11 +3187,14 @@ void mg_broadcast(struct mg_mgr *mgr, mg_event_handler_t cb, void *data,
    */
   if (mgr->ctl[0] != INVALID_SOCKET && data != NULL &&
       len < sizeof(ctl_msg.message)) {
+    size_t dummy;
+
     ctl_msg.callback = cb;
     memcpy(ctl_msg.message, data, len);
-    MG_EV_SEND_FUNC(mgr->ctl[0], (char *) &ctl_msg,
-                    offsetof(struct ctl_msg, message) + len, 0);
-    MG_EV_RECV_FUNC(mgr->ctl[0], (char *) &len, 1, 0);
+    dummy = MG_SEND_FUNC(mgr->ctl[0], (char *) &ctl_msg,
+                         offsetof(struct ctl_msg, message) + len, 0);
+    dummy = MG_RECV_FUNC(mgr->ctl[0], (char *) &len, 1, 0);
+    (void) dummy;
   }
 }
 
