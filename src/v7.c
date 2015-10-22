@@ -10214,6 +10214,9 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
     next_tok(v7);
     ast_add_node(a, AST_GETTER);
     parse_funcdecl(v7, a, 1, 1);
+  } else if (v7->cur_tok == TOK_IDENTIFIER && lookahead(v7) == TOK_OPEN_PAREN) {
+    /* ecmascript 6 feature */
+    parse_funcdecl(v7, a, 1, 1);
   } else if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
@@ -11729,6 +11732,17 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
             }
             v7_set_property(v7, res, name, name_len, 0, v1);
             break;
+          case AST_FUNC: {
+            ast_off_t func = *pos;
+            ast_move_to_children(a, &func);
+            V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
+            name = ast_get_inlined_data(a, func, &name_len);
+            /* point back to AST_FUNC node */
+            (*pos)--;
+            v1 = i_eval_expr(v7, a, pos, scope);
+            v7_set_property(v7, res, name, name_len, 0, v1);
+            break;
+          }
           case AST_GETTER:
           case AST_SETTER: {
             ast_off_t func = *pos;
@@ -11757,7 +11771,8 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
           }
           default:
             throw_exception(v7, INTERNAL_ERROR,
-                            "Expecting AST_(PROP|GETTER|SETTER) got %d", tag);
+                            "Expecting AST_(PROP|FUNC|GETTER|SETTER) got %d",
+                            tag);
         }
       }
       break;
