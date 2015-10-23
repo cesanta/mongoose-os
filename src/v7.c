@@ -9106,6 +9106,10 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
 
+#ifdef V7_GC_AFTER_STRING_ALLOC
+  v7->need_gc = 1;
+#endif
+
   if (len == ~((size_t) 0)) len = strlen(p);
 
   if (len <= 4) {
@@ -9234,6 +9238,10 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   char *s = NULL;
   uint64_t tag = V7_TAG_STRING_F;
   val_t offset = v7->owned_strings.len;
+
+#ifdef V7_GC_AFTER_STRING_ALLOC
+  v7->need_gc = 1;
+#endif
 
   a_ptr = v7_to_string(v7, &a, &a_len);
   b_ptr = v7_to_string(v7, &b, &b_len);
