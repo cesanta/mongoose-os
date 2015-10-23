@@ -1,6 +1,7 @@
 #ifndef RTOS_SDK
 
 #include <stdio.h>
+
 #include "ets_sys.h"
 #include "osapi.h"
 #include "gpio.h"

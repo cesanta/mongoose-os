@@ -26,14 +26,14 @@
 #include <os_type.h>
 #include <user_interface.h>
 #include <mem.h>
-#include <espconn.h>
 
 #else
 
 #include <esp_system.h>
-#include <sj_mongoose.h>
 
 #endif /* RTOS_SDK */
+
+#include <sj_mongoose.h>
 
 struct v7 *v7;
 
@@ -177,15 +177,9 @@ void init_v7(void *stack_base) {
   init_data_gen_server(v7);
 #endif
 
-#ifdef RTOS_SDK
   mongoose_init();
-#endif
-
   sj_init_simple_http_client(v7);
-
-#ifdef RTOS_SDK
   sj_init_ws_client(v7);
-#endif
 
   v7_gc(v7, 1);
 }

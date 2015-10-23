@@ -394,3 +394,9 @@ int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
   tp->tv_usec = time % 1000000;
   return 0;
 }
+
+#ifndef RTOS_SDK
+long int random(void) {
+  return os_random();
+}
+#endif

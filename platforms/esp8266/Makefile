@@ -27,7 +27,10 @@ SSL ?= None
 APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_simple_http.c \
-            sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c
+            sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
+            mongoose.c sj_mongoose_http_client.c sj_simple_http.c sj_mongoose.c \
+            sj_mongoose_ws_client.c
+
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js
 JS_SRCS    := $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/user.js
 # In order to keep compatibility
@@ -69,7 +72,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
                  -DMG_DISABLE_JSON_RPC -DMG_DISABLE_SOCKETPAIR -DMG_DISABLE_DAV \
                  -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_CGI \
-                 -DMG_DISABLE_FILESYSTEM
+                 -DMG_DISABLE_FILESYSTEM -DMG_DISABLE_SYNC_RESOLVER
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
 
@@ -102,9 +105,6 @@ IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
          $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
          $(SDK_PATH)/lwip/include/
 
-APP_SRCS += mongoose.c sj_mongoose_http_client.c \
-            sj_simple_http.c sj_mongoose.c sj_mongoose_ws_client.c
-
 APP_LIBS += freertos mirom lwip
 # -fno-builtin-printf avoid that the compiler "optimizes"
 # some printf calls: e.g.
@@ -118,10 +118,10 @@ OBJCOPY2 = /bin/true
 LWIP_MAKE = /bin/true
 #TODO(alashkin): try to use the same LD script
 LD_SCRIPT = user/eagle.app.v6.RTOS.ld
-else
+else # OSS SDK
 IPATH += lwip/src/include lwip/src/include/ipv4 lwip/espressif/include
 APP_LIBS += m lwip_cs
-CFLAGS += -DLWIP_OPEN_SRC
+CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWIP_IF
 endif
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
