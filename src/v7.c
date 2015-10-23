@@ -8692,10 +8692,13 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
     return NULL;
   }
 
+  v7_own(v7, &name);
+
   prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
-      return NULL; /* LCOV_EXCL_LINE */
+      prop = NULL; /* LCOV_EXCL_LINE */
+      goto cleanup;
     }
     prop->next = v7_to_object(obj)->properties;
     v7_to_object(obj)->properties = prop;
@@ -8706,11 +8709,15 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
     v7_invoke_setter(v7, prop, obj, val);
-    return 0;
+    prop = NULL;
+    goto cleanup;
   }
 
   prop->value = val;
   prop->attributes = attributes;
+
+cleanup:
+  v7_disown(v7, &name);
   return prop;
 }
 
