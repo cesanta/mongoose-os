@@ -10196,6 +10196,11 @@ void v7_gc(struct v7 *v7, int full) {
   gc_mark(v7, v7->object_prototype);
   gc_mark(v7, v7->global_object);
   gc_mark(v7, v7->this_object);
+/* unlikely but this could be a string as well */
+#ifndef V7_DISABLE_COMPACTING_GC
+  gc_mark_string(v7, &v7->this_object);
+#endif
+
   gc_mark(v7, v7->call_stack);
   gc_mark(v7, v7->thrown_error);
 
@@ -12409,6 +12414,8 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   tmp_stack_push(&tf, &v1);
   tmp_stack_push(&tf, &args);
   tmp_stack_push(&tf, &old_this);
+  /* when this is a string the GC needs to relocate it */
+  tmp_stack_push(&tf, &this_object);
   tmp_stack_push(&tf, &fun_proto);
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
