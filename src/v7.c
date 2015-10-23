@@ -6956,7 +6956,208 @@ typedef uint16_t ast_skip_t;
  * - The name `skip` was chosen because `offset` was too overloaded in general
  * and label` is part of our domain model (i.e. JS has a label AST node type).
  *
+ *
+ * So, each node has a mandatory field: *tag* (see `enum ast_tag`), and a
+ * number of optional fields. Whether the node has one or another optional
+ * field is determined by the *node descriptor*: `struct ast_node_def`. For
+ * each node type (i.e. for each element of `enum ast_tag`) there is a
+ * corresponding descriptor: see `ast_node_defs`.
+ *
+ * Optional fields are:
+ *
+ * - *varint*: a varint-encoded number. At the moment, this field is only used
+ *   together with the next field: inlined data, and a varint number determines
+ *   the inlined data length.
+ * - *inlined data*: a node-specific data. Size of it is determined by the
+ *   previous field: varint.
+ * - *skips*: as explained above, these are integer offsets, encoded in
+ *   big-endian. The number of skips is determined by the node descriptor
+ *   (`struct ast_node_def`). The size of each skip is either 16 or 32 bits,
+ *   depending on whether the macro `V7_LARGE_AST` is set. The order of skips
+ *   is determined by the `enum ast_which_skip`. See examples below for
+ *   clarity.
+ * - *subtrees*: child nodes. Some nodes have fixed number of child nodes; in
+ *   this case, the descriptor has non-zero field `num_subtrees`.  Otherwise,
+ *   `num_subtrees` is zero, and consumer handles child nodes one by one, until
+ *   the end of the node is reached (end of the node is determined by the `end`
+ *   skip)
+ *
+ *
+ * Examples:
+ *
+ * Let's start from the very easy example script: "300;"
+ *
+ * Tree looks as follows:
+ *
+ *    $ ./v7 -e "300;" -t
+ *      SCRIPT
+ *        /- [...] -/
+ *        NUM 300
+ *
+ * Binary data is:
+ *
+ *    $ ./v7 -e "300;" -b | od -A n -t x1
+ *    56 07 41 53 54 56 31 30 00 01 00 09 00 00 13 03
+ *    33 30 30 00
+ *
+ * Let's break it down and examine:
+ *
+ *    - 56 07 41 53 54 56 31 30 00
+ *        Just a format prefix:
+ *        Null-terminated string: `"V\007ASTV10"` (see `BIN_AST_SIGNATURE`)
+ *    - 01
+ *        AST tag: `AST_SCRIPT`. As you see in `ast_node_defs` below, node of
+ *        this type has neither *varint* nor *inlined data* fields, but it has
+ *        2 skips: `end` and `next`. `end` is a skip to the end of the current
+ *        node (`SCRIPT`), and `next` will be explained below.
+ *
+ *        The size of each skip depends on whether `V7_LARGE_AST` is defined.
+ *        If it is, then size is 32 bit, otherwise it's 16 bit. In this
+ *        example, we have 16-bit skips.
+ *
+ *        The order of skips is determined by the `enum ast_which_skip`. If you
+ *        check, you'll see that `AST_END_SKIP` is 0, and `AST_VAR_NEXT_SKIP`
+ *        is 1. So, `end` skip fill be the first, and `next` will be the second:
+ *    - 00 09
+ *        `end` skip: 9 bytes. It's the size of the whole `SCRIPT` data. So, if
+ *        we have an index of the `ASC_SCRIPT` tag, we can just add this skip
+ *        (9) to this index, and therefore skip over the whole node.
+ *    - 00 00
+ *        `next` skip. `next` actually means "next variable node": since
+ *        variables are hoisted in JavaScript, when the interpreter starts
+ *        executing a top-level code or any function, it needs to get a list of
+ *        all defined variables. The `SCRIPT` node has a "skip" to the first
+ *        `var` or `function` declaration, which, in turn, has a "skip" to the
+ *        next one, etc. If there is no next `var` declaration, then 0 is
+ *        stored.
+ *
+ *        In our super-simple script, we have no `var` neither `function`
+ *        declarations, so, this skip is 0.
+ *
+ *        Now, the body of our SCRIPT node goes, which contains child nodes:
+ *
+ *    - 13
+ *        AST tag: `AST_NUM`. Look at the `ast_node_defs`, and we'll see that
+ *        nodes of this type don't have any skips, but they do have the varint
+ *        field and the inlined data. Here we go:
+ *    - 03
+ *        Varint value: 3
+ *    - 33 30 30
+ *        UTF-8 string "300"
+ *
+ *    - 00
+ *        This extra trailing byte at the end of the AST is needed by
+ *        `ast_get_num()` to temporarily set a zero terminator for `strtod()`.
+ *
+ * ---------------
+ *
+ * The next example is a bit more interesting:
+ *
+ *    var foo,
+ *        bar = 1;
+ *    foo = 3;
+ *    var baz = 4;
+ *
+ * Tree:
+ *
+ *    $ ./v7 -e 'var foo, bar=1; foo=3; var baz = 4;' -t
+ *    SCRIPT
+ *      /- [...] -/
+ *      VAR
+ *        /- [...] -/
+ *        VAR_DECL foo
+ *          NOP
+ *        VAR_DECL bar
+ *          NUM 1
+ *      ASSIGN
+ *        IDENT foo
+ *        NUM 3
+ *      VAR
+ *        /- [...] -/
+ *        VAR_DECL baz
+ *          NUM 4
+ *
+ * Binary:
+ *
+ *    $ ./v7 -e 'var foo, bar=1; foo=3; var baz = 4;' -b | od -A n -t x1
+ *    56 07 41 53 54 56 31 30 00 01 00 2d 00 05 02 00
+ *    12 00 1c 03 03 66 6f 6f 00 03 03 62 61 72 13 01
+ *    31 07 14 03 66 6f 6f 13 01 33 02 00 0c 00 00 03
+ *    03 62 61 7a 13 01 34 00
+ *
+ * Break it down:
+ *
+ *    - 56 07 41 53 54 56 31 30 00
+ *        `"V\007ASTV10"`
+ *    - 01:       AST tag: `AST_SCRIPT`
+ *    - 00 2d:    `end` skip: 0x2d = 45 bytes
+ *    - 00 05:    `next` skip: an offset from `AST_SCRIPT` byte to the first
+ *                `var` declaration.
+ *
+ *        Now, body of the SCRIPT node begins, which contains child nodes,
+ *        and the first node is the var declaration `var foo, bar=1;`:
+ *
+ *        SCRIPT node body: {{{
+ *    - 02:       AST tag: `AST_VAR`
+ *    - 00 12:    `end` skip: 18 bytes from tag byte to the end of current node
+ *    - 00 1c:    `next` skip: 28 bytes from tag byte to the next `var` node
+ *
+ *        The VAR node contains arbitrary number of child nodes, so, consumer
+ *        takes advantage of the `end` skip.
+ *
+ *        VAR node body: {{{
+ *    - 03:       AST tag: `AST_VAR_DECL`
+ *    - 03:       Varint value: 3 (the length of the inlined data: a variable
+ *name)
+ *    - 66 6f 6f: UTF-8 string: "foo"
+ *    - 00:       AST tag: `AST_NOP`
+ *                Since we haven't provided any value to store into `foo`, NOP
+ *                without any additional data is stored in AST.
+ *
+ *    - 03:       AST tag: `AST_VAR_DECL`
+ *    - 03:       Varint value: 3 (the length of the inlined data: a variable
+ *name)
+ *    - 62 61 72: UTF-8 string: "bar"
+ *    - 13:       AST tag: `AST_NUM`
+ *    - 01:       Varint value: 1
+ *    - 31:       UTF-8 string "1"
+ *        VAR body end }}}
+ *
+ *    - 07:       AST tag: `AST_ASSIGN`
+ *
+ *        The ASSIGN node has fixed number of subrees: 2 (lvalue and rvalue),
+ *        so there's no `end` skip.
+ *
+ *        ASSIGN node body: {{{
+ *    - 14:       AST tag: `AST_IDENT`
+ *    - 03:       Varint value: 3
+ *    - 66 6f 6f: UTF-8 string: "foo"
+ *
+ *    - 13:       AST tag: `AST_NUM`
+ *    - 01:       Varint value: 1
+ *    - 33:       UTF-8 string: "3"
+ *        ASSIGN body end }}}
+ *
+ *    - 02:       AST tag: `AST_VAR`
+ *    - 00 0c:    `end` skip: 12 bytes from tag byte to the end of current node
+ *    - 00 00:    `next` skip: no more `var` nodes
+ *
+ *        VAR node body: {{{
+ *    - 03:       AST tag: `AST_VAR_DECL`
+ *    - 03:       Varint value: 3 (the length of the inlined data: a variable
+ *name)
+ *    - 62 61 7a: UTF-8 string: "baz"
+ *    - 13:       AST tag: `AST_NUM`
+ *    - 01:       Varint value: 1
+ *    - 34:       UTF-8 string "4"
+ *        VAR body end }}}
+ *        SCRIPT body end }}}
+ *
+ *    - 00:       Extra trailing byte
+ *
+ * --------------------------
  */
+
 const struct ast_node_def ast_node_defs[] = {
     AST_ENTRY("NOP", 0, 0, 0, 0), /* struct {} */
 
