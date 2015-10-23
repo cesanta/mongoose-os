@@ -17465,40 +17465,45 @@ static val_t s_index_of(struct v7 *v7, int last) {
 
   if (!v7_is_undefined(arg0)) {
     const char *p1, *p2, *end;
-    size_t i, n1, n2;
+    size_t i, len1, len2, bytecnt1, bytecnt2;
     val_t sub = to_string(v7, arg0);
     this_obj = to_string(v7, this_obj);
-    p1 = v7_to_string(v7, &this_obj, &n1);
-    p2 = v7_to_string(v7, &sub, &n2);
+    p1 = v7_to_string(v7, &this_obj, &bytecnt1);
+    p2 = v7_to_string(v7, &sub, &bytecnt2);
 
-    if (n2 <= n1) {
-      end = p1 + n1;
-      n1 = utfnlen((char *) p1, n1);
+    if (bytecnt2 <= bytecnt1) {
+      end = p1 + bytecnt1;
+      len1 = utfnlen((char *) p1, bytecnt1);
+      len2 = utfnlen((char *) p2, bytecnt2);
+
       if (v7_argc(v7) > 1) {
+        /* `fromIndex` was provided. Normalize it */
         double d = i_as_num(v7, v7_arg(v7, 1));
         if (isnan(d) || d < 0) {
           d = 0.0;
-        } else if (isinf(d)) {
-          d = n1;
+        } else if (isinf(d) || d > len1) {
+          d = len1;
         }
         fromIndex = d;
-      }
-      if (fromIndex > 0) {
-        if (fromIndex >= n1) return v7_create_number(-1);
-        if (last)
-          end = utfnshift((char *) p1, fromIndex + 1);
-        else
+
+        /* adjust pointers accordingly to `fromIndex` */
+        if (last) {
+          char *end_tmp = utfnshift((char *) p1, fromIndex + len2);
+          end = (end_tmp < end) ? end_tmp : end;
+        } else {
           p1 = utfnshift((char *) p1, fromIndex);
+        }
       }
-      if (!last || fromIndex != 0) {
-        if (0 == n2 || end - p1 == 0)
-          res = 0;
-        else {
-          for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *) p1, 1))
-            if (memcmp(p1, p2, n2) == 0) {
-              res = i;
-              if (!last) break;
-            }
+
+      /*
+       * TODO(dfrank): when `last` is set, start from the end and look
+       * backward. We'll need to improve `utfnshift()` for that, so that it can
+       * handle negative offsets.
+       */
+      for (i = 0; p1 <= (end - bytecnt2); i++, p1 = utfnshift((char *) p1, 1)) {
+        if (memcmp(p1, p2, bytecnt2) == 0) {
+          res = i;
+          if (!last) break;
         }
       }
     }
