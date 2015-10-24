@@ -92,12 +92,12 @@ I2C.prototype.writeRegB = function(addr, reg, b) {
 }
 
 I2C.prototype.readRegW = function(addr, reg) {
-  var bh = this._writeRegAddr(addr, reg, I2C.READ);
-  if (bh < 0) return bh;
-  bh = this.readByte();
-  if (bh < 0) return -4;
+  var r = this._writeRegAddr(addr, reg, I2C.READ);
+  if (r < 0) return r;
   var bl = this.readByte();
-  if (bl < 0) return -5;
+  if (bl < 0) return -4;
+  var bh = this.readByte();
+  if (bh < 0) return -5;
   this.stop();
   return (bh << 8) | bl;
 }

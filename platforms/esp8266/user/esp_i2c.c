@@ -116,9 +116,13 @@ void i2c_stop(i2c_connection c) {
   i2c_half_delay(c);
   i2c_set_sda_scl(conn, I2C_LOW, I2C_HIGH);
   i2c_half_delay(c);
+  i2c_set_sda_scl(conn, I2C_HIGH, I2C_HIGH);
   i2c_set_sda_scl(conn, I2C_INPUT, I2C_INPUT);
   i2c_half_delay(c);
   conn->started = 0;
+#ifdef ESP_I2C_DEBUG
+  fprintf(stderr, "stopped\n");
+#endif
 }
 
 static uint8_t i2c_get_SDA(i2c_connection c) {
