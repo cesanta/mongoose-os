@@ -18,6 +18,7 @@
 
 static os_timer_t poll_tmr;
 static os_event_t s_mg_task_queue[MG_TASK_QUEUE_LEN];
+static int poll_scheduled = 0;
 
 static void mg_lwip_mgr_poll(struct mg_mgr *mgr);
 
@@ -27,6 +28,12 @@ enum mg_sig_type {
   MG_SIG_SENT_CB = 4,
   MG_SIG_CLOSE_CONN = 5,
 };
+
+static void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
+  if (poll_scheduled) return;
+  system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) mgr);
+  poll_scheduled = 1;
+}
 
 static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
   struct mg_connection *nc = (struct mg_connection *) arg;
@@ -46,6 +53,7 @@ static void mg_lwip_tcp_error_cb(void *arg, err_t err) {
   DBG(("%p conn error %d", nc, err));
   if (nc == NULL) return;
   if (nc->flags & MG_F_CONNECTING) {
+    nc->err = err;
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
   } else {
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
@@ -69,8 +77,6 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
   data = (char *) malloc(len);
   if (data == NULL) {
     DBG(("OOM"));
-    pbuf_free(p);
-    tcp_abort(tpcb);
     return ERR_MEM;
   }
   pbuf_copy_partial(p, data, len, 0);
@@ -169,10 +175,13 @@ void mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
 }
 
 void mg_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
-  if (nc->sock != INVALID_SOCKET && nc->send_mbuf.len == 0) {
+  if (0 && /* We cannot use this optimization while our proto handlers assume
+            * they can meddle with the contents of send_mbuf. */
+      nc->sock != INVALID_SOCKET && nc->send_mbuf.len == 0) {
     mg_lwip_tcp_write(nc, buf, len);
   } else {
     mbuf_append(&nc->send_mbuf, buf, len);
+    mg_lwip_mgr_schedule_poll(nc->mgr);
   }
 }
 
@@ -196,6 +205,7 @@ void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
 void mg_if_recved(struct mg_connection *nc, size_t len) {
   if (nc->flags & MG_F_UDP) return;
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
+  DBG(("%p %u", nc, len));
   tcp_recved(tpcb, len);
 }
 
@@ -218,38 +228,41 @@ void mg_if_set_sock(struct mg_connection *nc, sock_t sock) {
 }
 
 static void mg_lwip_task(os_event_t *e) {
+  struct mg_mgr *mgr = NULL;
   DBG(("sig %d", e->sig));
+  poll_scheduled = 0;
   switch ((enum mg_sig_type) e->sig) {
     case MG_SIG_POLL: {
-      struct mg_mgr *mgr = (struct mg_mgr *) e->par;
-      mg_lwip_mgr_poll(mgr);
+      mgr = (struct mg_mgr *) e->par;
       break;
     }
     case MG_SIG_CONNECT_RESULT: {
       struct mg_connection *nc = (struct mg_connection *) e->par;
+      mgr = nc->mgr;
       mg_if_connect_cb(nc, nc->err);
-      /* Send whatever might be in the buffers. */
-      mg_lwip_mgr_poll(nc->mgr);
       break;
     }
     case MG_SIG_CLOSE_CONN: {
       struct mg_connection *nc = (struct mg_connection *) e->par;
+      mgr = nc->mgr;
       nc->flags |= MG_F_CLOSE_IMMEDIATELY;
       mg_close_conn(nc);
       break;
     }
     case MG_SIG_SENT_CB: {
       struct mg_connection *nc = (struct mg_connection *) e->par;
+      mgr = nc->mgr;
       mg_if_sent_cb(nc, nc->err);
       break;
     }
   }
+  mg_lwip_mgr_poll(mgr);
 }
 
 void mg_poll_timer_cb(void *arg) {
   struct mg_mgr *mgr = (struct mg_mgr *) arg;
   DBG(("poll tmr %p", s_mg_task_queue));
-  system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) mgr);
+  mg_lwip_mgr_schedule_poll(mgr);
 }
 
 void mg_ev_mgr_init(struct mg_mgr *mgr) {

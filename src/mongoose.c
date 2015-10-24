@@ -2506,7 +2506,8 @@ static void resolve_cb(struct mg_dns_message *msg, void *data) {
 
 struct mg_connection *mg_connect(struct mg_mgr *mgr, const char *address,
                                  mg_event_handler_t callback) {
-  static struct mg_connect_opts opts;
+  struct mg_connect_opts opts;
+  memset(&opts, 0, sizeof(opts));
   return mg_connect_opt(mgr, address, callback, opts);
 }
 
@@ -2559,7 +2560,8 @@ struct mg_connection *mg_connect_opt(struct mg_mgr *mgr, const char *address,
 
 struct mg_connection *mg_bind(struct mg_mgr *srv, const char *address,
                               mg_event_handler_t event_handler) {
-  static struct mg_bind_opts opts;
+  struct mg_bind_opts opts;
+  memset(&opts, 0, sizeof(opts));
   return mg_bind_opt(srv, address, event_handler, opts);
 }
 
@@ -3072,7 +3074,8 @@ static void mg_mgr_handle_ctl_sock(struct mg_mgr *mgr) {
 
 struct mg_connection *mg_add_sock(struct mg_mgr *s, sock_t sock,
                                   mg_event_handler_t callback) {
-  static struct mg_add_sock_opts opts;
+  struct mg_add_sock_opts opts;
+  memset(&opts, 0, sizeof(opts));
   return mg_add_sock_opt(s, sock, callback, opts);
 }
 
@@ -4020,7 +4023,7 @@ void mg_send_websocket_framev(struct mg_connection *nc, int op,
 
 void mg_printf_websocket_frame(struct mg_connection *nc, int op,
                                const char *fmt, ...) {
-  char mem[4192], *buf = mem;
+  char mem[BUFSIZ], *buf = mem;
   va_list ap;
   int len;
 
@@ -6326,7 +6329,7 @@ int mg_avprintf(char **buf, size_t size, const char *fmt, va_list ap) {
       va_end(ap_copy);
     }
     /* LCOV_EXCL_STOP */
-  } else if (len > (int) size) {
+  } else if (len >= (int) size) {
     /* Standard-compliant code path. Allocate a buffer that is large enough. */
     if ((*buf = (char *) MG_MALLOC(len + 1)) == NULL) {
       len = -1; /* LCOV_EXCL_LINE */
@@ -7702,7 +7705,8 @@ static void mg_resolve_async_eh(struct mg_connection *nc, int ev, void *data) {
 
 int mg_resolve_async(struct mg_mgr *mgr, const char *name, int query,
                      mg_resolve_callback_t cb, void *data) {
-  static struct mg_resolve_async_opts opts;
+  struct mg_resolve_async_opts opts;
+  memset(&opts, 0, sizeof(opts));
   return mg_resolve_async_opt(mgr, name, query, cb, data, opts);
 }
 
