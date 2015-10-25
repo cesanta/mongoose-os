@@ -8084,10 +8084,12 @@ v7_val_t v7_create_array(struct v7 *v7) {
  */
 V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   val_t a = v7_create_array(v7);
+#ifdef V7_ENABLE_DENSE_ARRAYS
   v7_own(v7, &a);
   v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
   v7_to_object(a)->attributes |= V7_OBJ_DENSE_ARRAY;
   v7_disown(v7, &a);
+#endif
   return a;
 }
 
@@ -9705,7 +9707,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #elif V7_MALLOC_GC
   struct gc_cell *r;
   v7_gc(v7, 0);
-  r = calloc(1, a->cell_size);
+  r = (struct gc_cell *) calloc(1, a->cell_size);
   mbuf_append(&v7->malloc_trace, &r, sizeof(r));
   return r;
 #else
@@ -9855,6 +9857,10 @@ V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
 
   mbuf = (struct mbuf *) v7_to_foreign(v);
 
+  /* function scope pointer is aliased to the object's prototype pointer */
+  gc_mark(v7, v7_object_to_value(obj->prototype));
+  MARK(obj);
+
   if (mbuf == NULL) return;
   for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
     gc_mark(v7, *vp);
@@ -9862,6 +9868,7 @@ V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
     gc_mark_string(v7, vp);
 #endif
   }
+  UNMARK(obj);
 }
 
 V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
@@ -10209,6 +10216,10 @@ void v7_gc(struct v7 *v7, int full) {
   if (v7->inhibit_gc) {
     return;
   }
+
+#if defined(V7_GC_VERBOSE)
+  fprintf(stderr, "V7 GC pass\n");
+#endif
 
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
