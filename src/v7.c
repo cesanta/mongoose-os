@@ -8699,6 +8699,7 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
   }
 
   v7_own(v7, &name);
+  v7_own(v7, &val);
 
   prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
@@ -8723,6 +8724,7 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
   prop->attributes = attributes;
 
 cleanup:
+  v7_disown(v7, &val);
   v7_disown(v7, &name);
   return prop;
 }
