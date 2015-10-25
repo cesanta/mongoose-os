@@ -13,6 +13,7 @@
 #include "dht11.h"
 #include "util.h"
 #include "v7_esp_features.h"
+#include "esp_pwm.h"
 #include "esp_uart.h"
 #include "esp_sj_wifi.h"
 #include "esp_data_gen.h"
@@ -170,6 +171,7 @@ void init_v7(void *stack_base) {
 
   init_gpiojs(v7);
   init_i2cjs(v7);
+  init_pwm(v7);
   init_spijs(v7);
   init_wifi(v7);
 

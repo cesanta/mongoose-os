@@ -23,5 +23,6 @@ void gpio_output_set(uint32_t set_mask, uint32_t clear_mask,
 #endif
 
 int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull);
+int sj_gpio_write(int pin, enum gpio_level level);
 
 #endif

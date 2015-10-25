@@ -25,6 +25,7 @@ var Clubby = function(arg) {
     map: {},        // request_id -> callback mapping
     hnd: {},        // command_id -> callback mapping
     rdy: [],        // callbacks called once as soon client is connected
+    queue: [],      // Requests to send as soon client is connected
     src: arg.src + ( arg.ephemeral && randomString || "" )
   });
 
@@ -49,8 +50,10 @@ var Clubby = function(arg) {
 
     ws.onopen = function(ev) {
       if (config.onopen) config.onopen();
-      $.each(config.rdy, function(i, r) { r()});
+      $.each(config.rdy, function(i, r) { r() });
       config.rdy = [];
+      $.each(config.queue, function(i, req) { me._send(req); });
+      config.queue = [];
     };
 
     // This is a non-standard callback.
@@ -174,6 +177,7 @@ Clubby.prototype.call = function(dst, cmd, callback) {
     log('call sending: ', msg);
     this._send(req);
   } else if (c.ws.readyState == WebSocket.CLOSED) {
+    c.queue.push(req);
     c.ws.close();
   } else {
     log('NOT sending:', c.ws.readyState, msg);

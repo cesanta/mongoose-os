@@ -41,7 +41,7 @@ struct gpio_info gpio_map[] = {{0, PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0},
 struct gpio_info *get_gpio_info(uint8_t gpio_no) {
   struct gpio_info *ret_val;
 
-  if (gpio_no > sizeof(gpio_map) / sizeof(gpio_map[0])) {
+  if (gpio_no >= sizeof(gpio_map) / sizeof(gpio_map[0])) {
     return NULL;
   }
 
