@@ -9199,8 +9199,13 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
     if (tag == V7_TAG_STRING_O) {
       if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
+#ifndef V7_GC_ASN_PANIC
         throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
                         (int) ((*v >> 32) & 0xFFFF));
+#else
+        fprintf(stderr, "Invalid ASN: %d\n", (int) ((*v >> 32) & 0xFFFF));
+        abort();
+#endif
         return NULL;
       }
     }
@@ -10076,11 +10081,11 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   }
 #endif
   if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
-#ifdef V7_DONT_PANIC
+#ifndef V7_GC_ASN_PANIC
     throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
                     (int) ((*v >> 32) & 0xFFFF));
 #else
-    fprintf(stderr, "Invalid ASN: %d", (int) ((*v >> 32) & 0xFFFF));
+    fprintf(stderr, "Invalid ASN: %d\n", (int) ((*v >> 32) & 0xFFFF));
     abort();
 #endif
     return;
