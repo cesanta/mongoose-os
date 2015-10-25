@@ -9242,56 +9242,27 @@ V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
 }
 
 V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
-  size_t a_len, b_len;
-  const char *a_ptr, *b_ptr;
-  char *s = NULL;
-  uint64_t tag = V7_TAG_STRING_F;
-  val_t offset = v7->owned_strings.len;
+  size_t a_len, b_len, res_len;
+  const char *a_ptr, *b_ptr, *res_ptr;
+  val_t res;
 
-#ifdef V7_GC_AFTER_STRING_ALLOC
-  v7->need_gc = 1;
-#endif
-
+  /* Find out lengths of both srtings */
   a_ptr = v7_to_string(v7, &a, &a_len);
   b_ptr = v7_to_string(v7, &b, &b_len);
 
-  /* Create a new string which is a concatenation a + b */
-  if (a_len + b_len <= 4) {
-    offset = 0;
-    /* TODO(mkm): make it work on big endian too */
-    s = GET_VAL_NAN_PAYLOAD(offset) + 1;
-    s[-1] = a_len + b_len;
-    tag = V7_TAG_STRING_I;
-  } else if (a_len + b_len == 5) {
-    offset = 0;
-    /* TODO(mkm): make it work on big endian too */
-    s = GET_VAL_NAN_PAYLOAD(offset);
-    tag = V7_TAG_STRING_5;
-  } else {
-    int llen = calc_llen(a_len + b_len);
-    mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen + 1);
-    /* all pointers might have been relocated */
-    s = v7->owned_strings.buf + offset;
-    encode_varint(a_len + b_len, (unsigned char *) s); /* Write length */
-    s += llen;
-    a_ptr = v7_to_string(v7, &a, &a_len);
-    b_ptr = v7_to_string(v7, &b, &b_len);
-    tag = V7_TAG_STRING_O;
-  }
-  memcpy(s, a_ptr, a_len);
-  memcpy(s + a_len, b_ptr, b_len);
-  /* Inlined strings are already 0-terminated, but still, why not. */
-  s[a_len + b_len] = '\0';
+  /* Create an placeholder string */
+  res = v7_create_string(v7, NULL, a_len + b_len, 1);
 
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
-  if (tag == V7_TAG_STRING_O) {
-    /* TODO(imax): panic if offset >= 2^32. */
-    offset |= ((val_t) gc_next_allocation_seqn(v7, s, a_len + b_len)) << 32;
-  }
-#endif
+  /* v7_create_string() may have reallocated mbuf - revalidate pointers */
+  a_ptr = v7_to_string(v7, &a, &a_len);
+  b_ptr = v7_to_string(v7, &b, &b_len);
 
-  /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
-  return (offset & ~V7_TAG_MASK) | tag;
+  /* Copy strings into the placeholder */
+  res_ptr = v7_to_string(v7, &res, &res_len);
+  memcpy((char *) res_ptr, a_ptr, a_len);
+  memcpy((char *) res_ptr + a_len, b_ptr, b_len);
+
+  return res;
 }
 
 /* Create V7 strings for integers such as array indices */
