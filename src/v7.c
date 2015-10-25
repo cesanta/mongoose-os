@@ -12893,6 +12893,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
                  name_len == v7->label_len &&
                  memcmp(name, v7->label, name_len) == 0) {
+        v7->inhibit_gc = 0;
         v7->tmp_stack.len = saved_tmp_stack_pos;
         *pos = saved_pos;
         if (j == CONTINUE_JMP) {
@@ -12924,6 +12925,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
         val_t catch_scope;
+        v7->inhibit_gc = 0;
         v7->tmp_stack.len = saved_tmp_stack_pos;
         catch_scope = create_object(v7, scope);
         tmp_stack_push(&tf, &catch_scope);
@@ -12937,6 +12939,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
       } else {
         percolate = 1;
+        v7->inhibit_gc = 0;
       }
 
       memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
@@ -13020,6 +13023,7 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
 
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
+    v7->inhibit_gc = 0;
     *result = v7->thrown_error;
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
@@ -13140,6 +13144,7 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
   ast_init(a, 0);
   a->refcnt = 1;
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
+    v7->inhibit_gc = 0;
     v7->tmp_stack.len = saved_tmp_stack_pos;
     r = v7->thrown_error;
     /* v7->thrown_error is in the root set, remove it so it doesn't leak */
