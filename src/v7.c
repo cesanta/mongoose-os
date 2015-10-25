@@ -9993,6 +9993,11 @@ uint16_t gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len) {
 #ifdef V7_GC_VERBOSE
   fprintf(stderr, "GC ASN %d: \"%.*s\"\n", asn, (int) len, str);
 #endif
+#ifdef V7_GC_PANIC_ON_ASN
+  if (asn == (V7_GC_PANIC_ON_ASN)) {
+    abort();
+  }
+#endif
   return asn;
 }
 
@@ -10056,7 +10061,23 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *  Note: 64-bit pointers can be represented with 48-bits
    */
 
+  if ((*v & V7_TAG_MASK) == V7_TAG_STRING_O) {
+    uint16_t asn = (*v >> 32) & 0xFFFF;
+    fprintf(stderr, "GC marking ASN %d\n", asn);
+    if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
+#ifdef V7_DONT_PANIC
+      throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
+                      (int) ((*v >> 32) & 0xFFFF));
+#else
+      fprintf(stderr, "Invalid ASN: %d", (int) ((*v >> 32) & 0xFFFF));
+      abort();
+#endif
+      return;
+    }
+  }
+
   s = v7->owned_strings.buf + gc_string_val_to_offset(*v);
+  assert(s < v7->owned_strings.buf + v7->owned_strings.len);
   if (s[-1] == '\0') {
     memcpy(&tmp, s, sizeof(tmp) - 2);
     tmp |= V7_TAG_STRING_C;
@@ -11651,9 +11672,13 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
           !(v7_is_undefined(v2) || v7_is_number(v2) || v7_is_boolean(v2))) {
         l = v7_stringify_value(v7, v1, buf, sizeof(buf));
         v1 = v7_create_string(v7, buf, l, 1);
+        v7_own(v7, &v1);
         l = v7_stringify_value(v7, v2, buf, sizeof(buf));
+        v7_own(v7, &v2);
         v2 = v7_create_string(v7, buf, l, 1);
         res = s_concat(v7, v1, v2);
+        v7_disown(v7, &v1);
+        v7_disown(v7, &v2);
       } else {
         res = v7_create_number(
             i_num_bin_op(v7, tag, i_as_num(v7, v1), i_as_num(v7, v2)));
