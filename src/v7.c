@@ -2502,6 +2502,8 @@ enum opcode {
   OP_PUSH_UNDEFINED,
   OP_PUSH_NULL,
   OP_PUSH_THIS,
+  OP_PUSH_TRUE,
+  OP_PUSH_FALSE,
   OP_PUSH_ZERO,
   OP_PUSH_ONE,
   OP_PUSH_LIT, /* 1 byte operand */
@@ -13311,10 +13313,10 @@ V7_PRIVATE val_t debug_tos(struct v7 *v7) {
 
 static const char *op_names[] = {
     "POP", "DUP", "2DUP", "PUSH_UNDEFINED", "PUSH_NULL", "PUSH_THIS",
-    "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG", "ADD", "SUB", "REM", "MUL",
-    "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ", "EQ",
-    "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET", "SET", "SET_VAR", "GET_VAR",
-    "JMP", "JMP_TRUE"};
+    "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",
+    "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR",
+    "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET",
+    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -13492,6 +13494,12 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         break;
       case OP_PUSH_THIS:
         PUSH(v7_get_this(v7));
+        break;
+      case OP_PUSH_TRUE:
+        PUSH(v7_create_boolean(1));
+        break;
+      case OP_PUSH_FALSE:
+        PUSH(v7_create_boolean(0));
         break;
       case OP_PUSH_ZERO:
         PUSH(v7_create_number(0));
@@ -13905,6 +13913,19 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       }
       break;
     }
+    case AST_NULL:
+      bcode_op(bcode, OP_PUSH_NULL);
+      break;
+    case AST_NOP:
+    case AST_UNDEFINED:
+      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      break;
+    case AST_TRUE:
+      bcode_op(bcode, OP_PUSH_TRUE);
+      break;
+    case AST_FALSE:
+      bcode_op(bcode, OP_PUSH_FALSE);
+      break;
     case AST_NUM: {
       double dv;
       ast_get_num(a, *pos, &dv);
@@ -13945,6 +13966,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode) {
   ast_off_t end;
   enum ast_tag tag = ast_fetch_tag(a, pos);
+  ast_off_t cond;
   bcode_off_t body_target, body_label, cond_label;
 
   switch (tag) {
@@ -13964,8 +13986,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   <C>
      *   JMP_TRUE body
      */
-    case AST_WHILE: {
-      ast_off_t cond;
+    case AST_WHILE:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       cond = *pos;
@@ -13997,6 +14018,63 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       BTRY(compile_expr(v7, a, &cond, bcode));
       bcode_op(bcode, OP_JMP_TRUE);
+      body_label = bcode_add_target(bcode);
+      bcode_patch_target(bcode, body_label, body_target);
+      break;
+    /*
+     * for(INIT,COND,IT) {
+     *   B...
+     * }
+     *
+     * ->
+     *   <INIT>
+     *   POP
+     *   PUSH_UNDEFINED
+     *   JMP cond
+     * body:
+     *   POP
+     *   <B>
+     *   <IT>
+     *   POP
+     * cond:
+     *   <COND>
+     *   JMP_TRUE body
+     */
+    case AST_FOR: {
+      ast_off_t iter, body, lookahead;
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      body = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
+      ast_move_to_children(a, pos);
+
+      BTRY(compile_expr(v7, a, pos, bcode));
+      cond = *pos;
+      ast_skip_tree(a, pos);
+      iter = *pos;
+      *pos = body;
+
+      bcode_op(bcode, OP_POP);
+      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      bcode_op(bcode, OP_JMP);
+      cond_label = bcode_add_target(bcode);
+      body_target = bcode_pos(bcode);
+      bcode_op(bcode, OP_POP);
+      BTRY(compile_stmts(v7, a, pos, end, bcode));
+      BTRY(compile_expr(v7, a, &iter, bcode));
+      bcode_op(bcode, OP_POP);
+
+      bcode_patch_target(bcode, cond_label, bcode_pos(bcode));
+
+      /*
+       * Handle for(INIT;;ITER)
+       */
+      lookahead = cond;
+      tag = ast_fetch_tag(a, &lookahead);
+      if (tag == AST_NOP) {
+        bcode_op(bcode, OP_JMP);
+      } else {
+        BTRY(compile_expr(v7, a, &cond, bcode));
+        bcode_op(bcode, OP_JMP_TRUE);
+      }
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
       break;
