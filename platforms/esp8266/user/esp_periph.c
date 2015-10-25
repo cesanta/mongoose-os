@@ -1,7 +1,7 @@
 #include <ets_sys.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "v7_periph.h"
+#include "esp_periph.h"
 
 #ifndef RTOS_SDK
 

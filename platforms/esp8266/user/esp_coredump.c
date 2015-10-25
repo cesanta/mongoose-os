@@ -5,12 +5,14 @@
 #include <ets_sys.h>
 #include <xtensa/corebits.h>
 #include <stdint.h>
-#include "esp_gdb.h"
+
 #include "esp_exc.h"
-#include "v7_esp_hw.h"
-#include "esp_uart.h"
+#include "esp_gdb.h"
+#include "esp_hw.h"
 #include "esp_missing_includes.h"
+#include "esp_uart.h"
 #include "v7_esp.h"
+
 #include "base64.h"
 
 #define ESP_COREDUMP_UART_NO 1

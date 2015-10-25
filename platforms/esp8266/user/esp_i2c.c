@@ -5,16 +5,16 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <ets_sys.h>
 
 #include <v7.h>
 #include <sj_i2c.h>
-#include "esp_missing_includes.h"
 
-#include <ets_sys.h>
-#include "v7_periph.h"
 #include "esp_gpio.h"
-
-#include <stdlib.h>
+#include "esp_periph.h"
+#include "esp_missing_includes.h"
 
 #ifndef RTOS_SDK
 

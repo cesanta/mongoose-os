@@ -1,5 +1,5 @@
-#ifndef V7_PERIPH_INCLUDED
-#define V7_PERIPH_INCLUDED
+#ifndef ESP_PERIPH_INCLUDED
+#define ESP_PERIPH_INCLUDED
 
 #include <stdint.h>
 
@@ -11,4 +11,4 @@ struct gpio_info {
 
 struct gpio_info *get_gpio_info(uint8_t gpio_no);
 
-#endif
+#endif /* ESP_PERIPH_INCLUDED */

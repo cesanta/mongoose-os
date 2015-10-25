@@ -1,5 +1,5 @@
-#ifndef _V7_ESP_HW_INCLUDED
-#define _V7_ESP_HW_INCLUDED
+#ifndef ESP_HW_INCLUDED
+#define ESP_HW_INCLUDED
 
 #define __stringify_1(x...) #x
 #define __stringify(x...) __stringify_1(x)

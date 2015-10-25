@@ -1,18 +1,21 @@
+#include "esp_exc.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <ets_sys.h>
 #include <xtensa/corebits.h>
 #include <stdint.h>
-#include "esp_exc.h"
-#include "esp_gdb.h"
+
 #include "esp_coredump.h"
 #include "esp_flash_bytes.h"
-#include "v7_esp_hw.h"
+#include "esp_gdb.h"
+#include "esp_hw.h"
 #include "esp_uart.h"
 #include "esp_missing_includes.h"
-#include "v7_esp.h"
-#include "base64.h"
 #include "esp_uart.h"
+#include "v7_esp.h"
+
+#include "base64.h"
 
 #ifndef RTOS_SDK
 

@@ -3,7 +3,7 @@
 
 #include "esp_gpio.h"
 #include "esp_missing_includes.h"
-#include "v7_periph.h"
+#include "esp_periph.h"
 
 #ifndef RTOS_SDK
 

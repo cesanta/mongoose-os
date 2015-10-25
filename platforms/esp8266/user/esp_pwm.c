@@ -5,14 +5,14 @@
 #include <stdlib.h>
 
 #include "ets_sys.h"
+#include "gpio.h"
 #include "osapi.h"
 #include "os_type.h"
 #include "user_interface.h"
 #include "esp_missing_includes.h"
 
-#include "gpio.h"
 #include "esp_gpio.h"
-#include "v7_periph.h"
+#include "esp_periph.h"
 
 #include <v7.h>
 

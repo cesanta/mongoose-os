@@ -1,6 +1,8 @@
 #ifndef ESP_EXC_INCLUDED
 #define ESP_EXC_INCLUDED
 
+#include <stdint.h>
+
 /*
  * the saved registers begin at a fixed position in the xtos
  * low-level exception handler. I don't know if 0x100 it's just an

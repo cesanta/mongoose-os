@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include "esp_exc.h"
 #include "xtensa/corebits.h"
-#include "v7_esp_hw.h"
+#include "esp_hw.h"
 #include "esp_missing_includes.h"
 
 /*

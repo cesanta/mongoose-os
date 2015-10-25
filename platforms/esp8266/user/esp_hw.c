@@ -4,7 +4,7 @@
 #include "user_interface.h"
 #endif
 
-#include "v7_esp_hw.h"
+#include "esp_hw.h"
 
 uint8_t read_unaligned_byte(uint8_t *addr) {
   uint32_t *base = (uint32_t *) ((uintptr_t) addr & ~0x3);
