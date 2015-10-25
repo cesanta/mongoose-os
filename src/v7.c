@@ -6041,10 +6041,10 @@ static v7_val_t Crypto_md5_hex(struct v7 *v7) {
   if (v7_is_string(arg0)) {
     size_t len;
     const char *data = v7_to_string(v7, &arg0, &len);
-    char hash[16], buf[sizeof(hash) * 2];
+    char hash[16], buf[sizeof(hash) * 2 + 1];
     v7_md5(data, len, hash);
     cs_to_hex(buf, (unsigned char *) hash, sizeof(hash));
-    return v7_create_string(v7, buf, sizeof(buf), 1);
+    return v7_create_string(v7, buf, sizeof(buf) - 1, 1);
   }
   return v7_create_null();
 }
@@ -6068,10 +6068,10 @@ static v7_val_t Crypto_sha1_hex(struct v7 *v7) {
   if (v7_is_string(arg0)) {
     size_t len;
     const char *data = v7_to_string(v7, &arg0, &len);
-    char hash[20], buf[sizeof(hash) * 2];
+    char hash[20], buf[sizeof(hash) * 2 + 1];
     v7_sha1(data, len, hash);
     cs_to_hex(buf, (unsigned char *) hash, sizeof(hash));
-    return v7_create_string(v7, buf, sizeof(buf), 1);
+    return v7_create_string(v7, buf, sizeof(buf) - 1, 1);
   }
   return v7_create_null();
 }
