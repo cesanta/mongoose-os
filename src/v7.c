@@ -2640,6 +2640,8 @@ V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *);
 V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *);
 V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
 
+V7_PRIVATE void compute_need_gc(struct v7 *);
+
 V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
 V7_PRIVATE uint16_t
 gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len);
@@ -9133,9 +9135,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     tag = V7_TAG_STRING_5;
   } else if (own) {
 #ifndef V7_DISABLE_COMPACTING_GC
-    if ((double) m->len / (double) m->size > 0.9) {
-      v7->need_gc = 1;
-    }
+    compute_need_gc(v7);
 #endif
     embed_string(m, m->len, p, len, 1, 0);
     tag = V7_TAG_STRING_O;
@@ -10178,6 +10178,14 @@ void gc_dump_owned_strings(struct v7 *v7) {
 #ifndef offsetof
 #define offsetof(st, m) (((ptrdiff_t)(&((st *) 32)->m)) - 32)
 #endif
+
+V7_PRIVATE void compute_need_gc(struct v7 *v7) {
+  struct mbuf *m = &v7->owned_strings;
+  if ((double) m->len / (double) m->size > 0.9) {
+    v7->need_gc = 1;
+  }
+  /* TODO(mkm): check free heap */
+}
 
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7, int full) {
