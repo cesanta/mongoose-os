@@ -10035,11 +10035,6 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   val_t h, tmp = 0;
   char *s;
 
-  if (((*v & V7_TAG_MASK) != V7_TAG_STRING_O) &&
-      (*v & V7_TAG_MASK) != V7_TAG_STRING_C) {
-    return;
-  }
-
   /*
    * If a value points to an unmarked string we shall:
    *  1. save the first 6 bytes of the string
@@ -10061,21 +10056,25 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *  Note: 64-bit pointers can be represented with 48-bits
    */
 
-  if ((*v & V7_TAG_MASK) == V7_TAG_STRING_O) {
+  if ((*v & V7_TAG_MASK) != V7_TAG_STRING_O) {
+    return;
+  }
+
 #ifdef V7_GC_VERBOSE
+  {
     uint16_t asn = (*v >> 32) & 0xFFFF;
     fprintf(stderr, "GC marking ASN %d\n", asn);
+  }
 #endif
-    if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
+  if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
 #ifdef V7_DONT_PANIC
-      throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
-                      (int) ((*v >> 32) & 0xFFFF));
+    throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
+                    (int) ((*v >> 32) & 0xFFFF));
 #else
-      fprintf(stderr, "Invalid ASN: %d", (int) ((*v >> 32) & 0xFFFF));
-      abort();
+    fprintf(stderr, "Invalid ASN: %d", (int) ((*v >> 32) & 0xFFFF));
+    abort();
 #endif
-      return;
-    }
+    return;
   }
 
   s = v7->owned_strings.buf + gc_string_val_to_offset(*v);
