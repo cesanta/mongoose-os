@@ -10232,6 +10232,10 @@ void v7_gc(struct v7 *v7, int full) {
 
   gc_mark(v7, v7->call_stack);
   gc_mark(v7, v7->thrown_error);
+#ifndef V7_DISABLE_COMPACTING_GC
+  /* JS allows to throw strings */
+  gc_mark_string(v7, &v7->thrown_error);
+#endif
 
   for (i = 0; i < ERROR_CTOR_MAX; i++) {
     gc_mark(v7, v7->error_objects[i]);
