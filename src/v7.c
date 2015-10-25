@@ -10062,8 +10062,10 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    */
 
   if ((*v & V7_TAG_MASK) == V7_TAG_STRING_O) {
+#ifdef V7_GC_VERBOSE
     uint16_t asn = (*v >> 32) & 0xFFFF;
     fprintf(stderr, "GC marking ASN %d\n", asn);
+#endif
     if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
 #ifdef V7_DONT_PANIC
       throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
