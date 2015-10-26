@@ -20,6 +20,13 @@ function ADPS9301(i2c, addr_sel) {
     return i2c.readRegW(ADDR, reg);
   }
 
+  // Set options.
+  //   hiGain - true/1 for high gain mode, false/0 for low.
+  //   intgTm - integration time. 0 - 13.7 ms, 1 - 101 ms, 2 - 402 ms.
+  this.setOpts = function(hiGain, intgTm) {
+    return i2c.writeRegB(ADDR, 0x81, ((hiGain & 1) << 4) | (intgTm & 3)) == 0;
+  }
+
   this.getID = function() {
     return i2c.readRegB(ADDR, 0x8A);
   }

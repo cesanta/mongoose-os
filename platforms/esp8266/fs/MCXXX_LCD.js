@@ -3,7 +3,7 @@
  * Datasheet: http://goo.gl/3C5rR2
  */
 
-function MCXXX(i2c) {
+function MCXXX(i2c, numLines, numCols) {
   var icon_on = false;
 
   this.init = function(display_on, cursor_on, cursor_blink, contrast) {
@@ -18,6 +18,10 @@ function MCXXX(i2c) {
     ]);
   };
 
+  this.cls = function() {
+    return sendInsn([I_CLS()]);
+  }
+
   this.setContrast = function(contrast) {
     return sendInsn([
       I1_PICS(icon_on, true, contrast >> 4),
@@ -26,27 +30,24 @@ function MCXXX(i2c) {
   };
 
   this.setText = function(text) {
-    function splitLines(text) {
-      var lines = [];
-      var i = 0, j = 0;
-      while ((j = text.indexOf('\n', i)) > 0) {
-        lines.push(text.substr(i, j - i));
-        i = j + 1;
+    var lines = text.split('\n');
+    var curX = 0, curY = 0;
+    for (var i = 0; i < numLines; i++) {
+      var line = (lines[i] || '').substr(0, numCols);
+      if (line.length > 0) {
+        curX = Math.min(15, line.length);
+        curY = i;
       }
-      if (i <= text.length) lines.push(text.substr(i));
-      return lines;
+      var numPad = numCols - line.length;
+      while (numPad-- > 0) line += ' ';
+      if (!sendInsn([I_DISPLAY_ON(true, false, false),
+                     I_SET_DRAM_ADDR(i * 0x40)]) ||
+          !sendData(line)) {
+        return false;
+      }
     }
-    var lines = splitLines(text);  // text.split('\n');
-    print(lines);
-    if (!sendInsn([I_CLS()]) ||
-        !sendData(lines[0].substr(0, 16))) {
-      return false;
-    }
-    if (lines.length > 1) {
-      return sendInsn([I_SET_DRAM_ADDR(0x40)]) &&
-             sendData(lines[1].substr(0, 16));
-    }
-    return true;
+    return sendInsn([I_DISPLAY_ON(true, true, true),
+                     I_SET_DRAM_ADDR(0x40 * curY + curX)]);
   }
 
   // Some constants.
@@ -57,12 +58,13 @@ function MCXXX(i2c) {
   // Helpers for constructing instruction bytes.
   function I_CLS() { return 0x1; };
   function I_HOME() { return 0x2; };
-  function I_EMS() { return 0x4; };
+  function I_MOVE(screen, right) { return 0x4 | (right ? 2 : 0) | (screen & 1); };
   function I_DISPLAY_ON(display_on, con, cb) {
     return 0x8 | ((display_on & 1) << 2) | ((con & 1) << 1) | (cb & 1);
   };
   function I_FCS(n_lines, double_height, insn_table) {
-    return 0x20 | 0x10 /* DL */ | ((n_lines == 2) << 3) | ((double_height & 1) << 2) | (insn_table & 1);
+    return 0x20 | 0x10 /* DL */ | ((n_lines == 2) << 3) |
+           ((double_height & 1) << 2) | (insn_table & 1);
   };
   function I_SET_DRAM_ADDR(addr) { return 0x80 | (addr & 0x7f); };
   function I0_CD_SHIFT(sc, rl) { return 0x10 | ((sc & 1) << 3) | ((rl & 1) << 2); };

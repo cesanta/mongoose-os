@@ -36,12 +36,20 @@ static void uart_putdec(int fd, unsigned int n) {
   }
 }
 
+static uint32_t last_char_ts = 0;
 static int core_dump_emit_char_fd = 0;
 static void core_dump_emit_char(char c, void *user_data) {
   int *col_counter = (int *) user_data;
 #ifdef RTOS_SDK
   system_soft_wdt_feed();
 #endif
+  /* Since we have may have no flow control on dbg uart, limit the speed
+   * the we emit the chars at. It's important to deliver core dumps intact. */
+  uint32_t now;
+  do {
+    now = system_get_time();
+  } while (now > last_char_ts /* handle overflow */ &&
+           now - last_char_ts < 100 /* Char time @ 115200 is 70 us */);
   (*col_counter)++;
   uart_putchar(core_dump_emit_char_fd, c);
   if (*col_counter >= 160) {

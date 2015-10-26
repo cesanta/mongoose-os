@@ -49,6 +49,7 @@ var Clubby = function(arg) {
     };
 
     ws.onopen = function(ev) {
+      log('connected');
       if (config.onopen) config.onopen();
       $.each(config.rdy, function(i, r) { r() });
       config.rdy = [];

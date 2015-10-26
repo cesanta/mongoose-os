@@ -186,12 +186,18 @@ static v7_val_t PWM_set(struct v7 *v7) {
   ETS_FRC1_INTR_DISABLE();
   p->period = period;
   p->duty = duty;
-  p->val = (period == duty);
-  p->cnt = duty;
+  if (p->cnt == 0 || p->cnt > period) {
+    p->val = 1;
+    p->cnt = p->duty;
+    sj_gpio_write(pin, p->val);
+  }
   ETS_FRC1_INTR_ENABLE();
 
+  if (duty == 0 || period == duty) {
+    sj_gpio_write(pin, (period == duty));
+  }
+
   pwm_configure_timer();
-  sj_gpio_write(pin, p->val);
   return v7_create_boolean(1);
 }
 
@@ -219,6 +225,7 @@ FAST void pwm_timer_int_cb(void *arg) {
       } else {
         set |= bit;
       }
+      sj_gpio_set_mode(p->pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
     } else {
       uint32_t v = READ_PERI_REG(RTC_GPIO_OUT) & 0xfffffffe;
       v |= ~p->val;
