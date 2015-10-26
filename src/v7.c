@@ -17088,6 +17088,8 @@ static val_t Array_forEach(struct v7 *v7) {
   val_t v, cb = v7_arg(v7, 0);
   unsigned long len, i;
   int has;
+  /* a_prep2 uninhibits GC when calling cb */
+  struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
@@ -17099,6 +17101,8 @@ static val_t Array_forEach(struct v7 *v7) {
     return v7_create_undefined();
   }
 
+  tmp_stack_push(&vf, &v);
+
   len = v7_array_length(v7, this_obj);
   for (i = 0; i < len; i++) {
     v = v7_array_get2(v7, this_obj, i, &has);
@@ -17106,6 +17110,7 @@ static val_t Array_forEach(struct v7 *v7) {
 
     a_prep2(v7, cb, v, v7_create_number(i), this_obj);
   }
+  tmp_frame_cleanup(&vf);
   return v7_create_undefined();
 }
 
@@ -17114,13 +17119,22 @@ static val_t Array_map(struct v7 *v7) {
   val_t arg0, arg1, el, v, res = v7_create_undefined();
   unsigned long len, i;
   int has;
+  /* a_prep2 uninhibits GC when calling cb */
+  struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
+    tmp_frame_cleanup(&vf);
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, &arg0, &arg1);
     res = v7_create_dense_array(v7);
     len = v7_array_length(v7, this_obj);
+
+    tmp_stack_push(&vf, &arg0);
+    tmp_stack_push(&vf, &arg1);
+    tmp_stack_push(&vf, &res);
+    tmp_stack_push(&vf, &v);
+
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
       if (!has) continue;
@@ -17129,6 +17143,7 @@ static val_t Array_map(struct v7 *v7) {
     }
   }
 
+  tmp_frame_cleanup(&vf);
   return res;
 }
 
@@ -17137,11 +17152,17 @@ static val_t Array_every(struct v7 *v7) {
   val_t arg0, arg1, el, v;
   unsigned long i, len;
   int has;
+  /* a_prep2 uninhibits GC when calling cb */
+  struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, &arg0, &arg1);
+
+    tmp_stack_push(&vf, &arg0);
+    tmp_stack_push(&vf, &arg1);
+    tmp_stack_push(&vf, &v);
 
     len = v7_array_length(v7, this_obj);
     for (i = 0; i < len; i++) {
@@ -17149,10 +17170,12 @@ static val_t Array_every(struct v7 *v7) {
       if (!has) continue;
       el = a_prep2(v7, arg0, v, v7_create_number(i), arg1);
       if (!v7_is_true(v7, el)) {
+        tmp_frame_cleanup(&vf);
         return v7_create_boolean(0);
       }
     }
   }
+  tmp_frame_cleanup(&vf);
   return v7_create_boolean(1);
 }
 
@@ -17161,11 +17184,17 @@ static val_t Array_some(struct v7 *v7) {
   val_t arg0, arg1, el, v;
   unsigned long i, len;
   int has;
+  /* a_prep2 uninhibits GC when calling cb */
+  struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, &arg0, &arg1);
+
+    tmp_stack_push(&vf, &arg0);
+    tmp_stack_push(&vf, &arg1);
+    tmp_stack_push(&vf, &v);
 
     len = v7_array_length(v7, this_obj);
     for (i = 0; i < len; i++) {
@@ -17173,10 +17202,12 @@ static val_t Array_some(struct v7 *v7) {
       if (!has) continue;
       el = a_prep2(v7, arg0, v, v7_create_number(i), arg1);
       if (v7_is_true(v7, el)) {
+        tmp_frame_cleanup(&vf);
         return v7_create_boolean(1);
       }
     }
   }
+  tmp_frame_cleanup(&vf);
   return v7_create_boolean(0);
 }
 
@@ -17185,6 +17216,8 @@ static val_t Array_filter(struct v7 *v7) {
   val_t arg0, arg1, el, v, res = v7_create_undefined();
   unsigned long len, i;
   int has;
+  /* a_prep2 uninhibits GC when calling cb */
+  struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
@@ -17192,6 +17225,12 @@ static val_t Array_filter(struct v7 *v7) {
     a_prep1(v7, this_obj, &arg0, &arg1);
     res = v7_create_dense_array(v7);
     len = v7_array_length(v7, this_obj);
+
+    tmp_stack_push(&vf, &arg0);
+    tmp_stack_push(&vf, &arg1);
+    tmp_stack_push(&vf, &res);
+    tmp_stack_push(&vf, &v);
+
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
       if (!has) continue;
@@ -17201,6 +17240,7 @@ static val_t Array_filter(struct v7 *v7) {
       }
     }
   }
+  tmp_frame_cleanup(&vf);
   return res;
 }
 
@@ -17208,8 +17248,6 @@ static val_t Array_concat(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   size_t i, j, len;
   val_t res, saved_args;
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
-  tmp_stack_push(&tf, &res);
 
   if (!v7_is_array(v7, this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
