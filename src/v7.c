@@ -1984,7 +1984,7 @@ extern double _v7_infinity;
 #define EXIT_FAILURE 1
 #endif
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
 extern struct v7 *v7_head;
 #endif
 
@@ -2135,7 +2135,7 @@ struct v7 {
   void *sp_lwm;
 #endif
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
   struct v7 *next_v7; /* linked list of v7 contexts, needed by gc check hooks */
 #endif
 
@@ -7831,7 +7831,7 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
 struct v7 *v7_head = NULL;
 #endif
 
@@ -9425,7 +9425,8 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     v7->sp_limit = (void *) ((uintptr_t) opts.c_stack_base - (V7_STACK_SIZE));
     v7->sp_lwm = opts.c_stack_base;
 #endif
-#ifdef V7_ENABLE_GC_CHECK
+
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
     v7->next_v7 = v7_head;
     v7_head = v7;
 #endif
@@ -10310,7 +10311,7 @@ void v7_gc(struct v7 *v7, int full) {
   }
 }
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
 
 void __cyg_profile_func_enter(void *this_fn, void *call_site)
     __attribute__((no_instrument_function));
@@ -10318,12 +10319,36 @@ void __cyg_profile_func_enter(void *this_fn, void *call_site)
 void __cyg_profile_func_exit(void *this_fn, void *call_site)
     __attribute__((no_instrument_function));
 
+#ifdef V7_STACK_GUARD_MIN_SIZE
+
 void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+  static int profile_enter = 0;
+  void *fp = __builtin_frame_address(0);
+
+  (void) call_site;
+
+  if (profile_enter || v7_head == NULL || v7_head->sp_limit == NULL) return;
+
+  profile_enter++;
+  if (((int) fp - (int) v7_head->sp_limit) < V7_STACK_GUARD_MIN_SIZE) {
+    printf("fun %p sp %p limit %p left %d\n", this_fn, fp, v7_head->sp_limit,
+           (int) fp - (int) v7_head->sp_limit);
+    abort();
+  }
+  profile_enter--;
+}
+
+void __cyg_profile_func_exit(void *this_fn, void *call_site) {
   (void) this_fn;
   (void) call_site;
 }
 
-void ast_init();
+#else
+
+void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+  (void) this_fn;
+  (void) call_site;
+}
 
 void __cyg_profile_func_exit(void *this_fn, void *call_site) {
   struct v7 *v7;
@@ -10356,6 +10381,7 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
     }
   }
 }
+#endif
 
 #endif /* V7_ENABLE_CHECK_HOOKS */
 

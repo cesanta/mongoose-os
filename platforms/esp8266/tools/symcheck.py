@@ -7,6 +7,8 @@ import sys
 SYM_WHITELIST = set("""
 user_init
 __wrap_user_fatal_exception_handler
+__cyg_profile_func_enter
+__cyg_profile_func_exit
 """.strip().split())
 
 def GetSymbols(fname):

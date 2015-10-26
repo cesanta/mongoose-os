@@ -68,6 +68,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
            -DESP_FLASH_BYTES_EMUL -DV7_FORCE_STRICT_MODE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
+           -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions \
            $(FEATURES_EXTRA)
 
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
@@ -176,7 +177,10 @@ $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
-	$(Q) echo "void user_init(void) {}; void __wrap_user_fatal_exception_handler() {}" > $@
+	$(Q) echo "void user_init(void){}; " \
+            "void __wrap_user_fatal_exception_handler(){}; " \
+            "void __cyg_profile_func_enter(void *this_fn, void *call_site){};" \
+            "void __cyg_profile_func_exit(void *this_fn, void *call_site){}" > $@
 
 # Main app lib.
 $(APP_AR): $(OBJS)

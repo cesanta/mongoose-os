@@ -19,6 +19,9 @@
 #define ESP_COREDUMP_FILENO (ESP_COREDUMP_UART_NO + 1)
 
 /* output an unsigned decimal integer */
+static void uart_putdec(int fd, unsigned int n)
+    __attribute__((no_instrument_function));
+
 static void uart_putdec(int fd, unsigned int n) {
   unsigned int tmp;
   unsigned long long p = 1;
@@ -38,6 +41,9 @@ static void uart_putdec(int fd, unsigned int n) {
 
 static uint32_t last_char_ts = 0;
 static int core_dump_emit_char_fd = 0;
+static void core_dump_emit_char(char c, void *user_data)
+    __attribute__((no_instrument_function));
+
 static void core_dump_emit_char(char c, void *user_data) {
   int *col_counter = (int *) user_data;
 #ifdef RTOS_SDK
@@ -60,6 +66,10 @@ static void core_dump_emit_char(char c, void *user_data) {
 
 /* address must be aligned to 4 and size must be multiple of 4 */
 static void emit_core_dump_section(int fd, const char *name, uint32_t addr,
+                                   uint32_t size)
+    __attribute__((no_instrument_function));
+
+static void emit_core_dump_section(int fd, const char *name, uint32_t addr,
                                    uint32_t size) {
   struct cs_base64_ctx ctx;
   int col_counter = 0;
@@ -81,6 +91,9 @@ static void emit_core_dump_section(int fd, const char *name, uint32_t addr,
   cs_base64_finish(&ctx);
   uart_puts(fd, "\"}");
 }
+
+void esp_dump_core(int fd, struct regfile *regs)
+    __attribute__((no_instrument_function));
 
 void esp_dump_core(int fd, struct regfile *regs) {
   if (fd == -1) {
