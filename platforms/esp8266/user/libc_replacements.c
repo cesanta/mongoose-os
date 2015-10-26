@@ -59,10 +59,12 @@ char *strerror(int errnum) {
 
 void *malloc(size_t size) {
   void *res = (void *) pvPortMalloc(size);
+#ifndef NO_V7
   if (res == NULL) {
     v7_gc(v7, 1);
     res = (void *) pvPortMalloc(size);
   }
+#endif
   return res;
 }
 
@@ -72,19 +74,23 @@ void free(void *ptr) {
 
 void *realloc(void *ptr, size_t size) {
   void *res = (void *) pvPortRealloc(ptr, size);
+#ifndef NO_V7
   if (res == NULL) {
     v7_gc(v7, 1);
     res = (void *) pvPortRealloc(ptr, size);
   }
+#endif
   return res;
 }
 
 void *calloc(size_t num, size_t size) {
   void *res = (void *) pvPortZalloc(num * size);
+#ifndef NO_V7
   if (res == NULL) {
     v7_gc(v7, 1);
     res = (void *) pvPortZalloc(num * size);
   }
+#endif
   return res;
 }
 
@@ -295,7 +301,7 @@ int double_to_str(char *buf, size_t buf_size, double val, int prec) {
    */
   double precision = flash_pow10int(-prec);
 
-  int mag1, mag2, count = 0;
+  int mag1 = 0, mag2 = 0, count = 0;
   char *ptr = buf;
   int neg = (val < 0);
 

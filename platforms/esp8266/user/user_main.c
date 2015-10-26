@@ -13,7 +13,6 @@
 #include "esp_missing_includes.h"
 #include "esp_uart.h"
 #include "esp_exc.h"
-#include "v7_fs.h"
 #include "esp_uart.h"
 #include "sj_prompt.h"
 
@@ -30,10 +29,11 @@
 #include "esp_exc.h"
 #include "sj_prompt.h"
 #include "util.h"
-#include "v7_fs.h"
 #include "disp_task.h"
 
 #endif /* RTOS_SDK */
+
+#include "esp_fs.h"
 
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;

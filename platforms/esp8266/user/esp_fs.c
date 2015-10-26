@@ -6,7 +6,10 @@
 #include <ets_sys.h>
 #include <errno.h>
 #include <fcntl.h>
+
+#ifndef NO_V7
 #include <v7.h>
+#endif
 
 #ifndef RTOS_SDK
 
@@ -270,6 +273,7 @@ int _fstat_r(struct _reent *r, int fd, struct stat *s) {
   return 0;
 }
 
+#ifndef NO_V7
 int v7_val_to_file(v7_val_t val) {
   return (int) v7_to_number(val);
 }
@@ -282,5 +286,6 @@ int v7_is_file_type(v7_val_t val) {
   int res = v7_is_number(val);
   return res;
 }
+#endif
 
 #endif

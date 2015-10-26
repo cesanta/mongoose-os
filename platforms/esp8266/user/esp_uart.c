@@ -1,6 +1,6 @@
 #include <stdarg.h>
 #include <ets_sys.h>
-#include <v7.h>
+#include <string.h>
 
 #include "esp_missing_includes.h"
 #include "esp_uart.h"
