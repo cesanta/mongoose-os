@@ -102,7 +102,7 @@ static void process_js(char *cmd) {
 #endif
   }
 
-  v7_gc(s_sjp.v7, 0 /* full */);
+  v7_gc(s_sjp.v7, 1 /* full */);
 }
 
 static const char help_str[] =

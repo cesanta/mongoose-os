@@ -2641,6 +2641,8 @@ V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *);
 V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
 
 V7_PRIVATE void compute_need_gc(struct v7 *);
+/* perform gc if not inhibited */
+V7_PRIVATE void maybe_gc(struct v7 *);
 
 V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
 V7_PRIVATE uint16_t
@@ -9686,14 +9688,15 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   return calloc(1, a->cell_size);
 #elif V7_MALLOC_GC
   struct gc_cell *r;
-  v7_gc(v7, 0);
+  maybe_gc(v7);
   r = (struct gc_cell *) calloc(1, a->cell_size);
   mbuf_append(&v7->malloc_trace, &r, sizeof(r));
   return r;
 #else
   struct gc_cell *r;
   if (a->free == NULL) {
-    v7_gc(v7, 0);
+    maybe_gc(v7);
+
     if (a->free == NULL) {
 #ifdef V7_DISABLE_GROWING_GC
       printf("%s arena exhausted\n",
@@ -10189,6 +10192,12 @@ V7_PRIVATE void compute_need_gc(struct v7 *v7) {
   /* TODO(mkm): check free heap */
 }
 
+V7_PRIVATE void maybe_gc(struct v7 *v7) {
+  if (!v7->inhibit_gc) {
+    v7_gc(v7, 0);
+  }
+}
+
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7, int full) {
   val_t **vp;
@@ -10200,10 +10209,6 @@ void v7_gc(struct v7 *v7, int full) {
   static const ptrdiff_t root_mbuf_offs[] = {offsetof(struct v7, tmp_stack),
                                              offsetof(struct v7, owned_values)};
   int i;
-
-  if (v7->inhibit_gc) {
-    return;
-  }
 
 #if defined(V7_GC_VERBOSE)
   fprintf(stderr, "V7 GC pass\n");
@@ -10332,6 +10337,10 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 #endif /* V7_ENABLE_CHECK_HOOKS */
 
 #else
+V7_PRIVATE void maybe_gc(struct v7 *v7) {
+  (void) v7;
+}
+
 void v7_gc(struct v7 *v7, int full) {
   (void) v7;
   (void) full;
@@ -12611,7 +12620,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
 #ifndef V7_DISABLE_GC
   if (v7->need_gc) {
-    v7_gc(v7, 0);
+    maybe_gc(v7);
     v7->need_gc = 0;
   }
 #endif
