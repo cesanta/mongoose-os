@@ -8675,11 +8675,16 @@ int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
 
 V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
                                  val_t obj, val_t val) {
-  val_t setter = prop->value, args = v7_create_dense_array(v7);
+  val_t setter = prop->value, args;
+  v7_own(v7, &val);
+  args = v7_create_dense_array(v7);
+  v7_own(v7, &args);
   if (prop->attributes & V7_PROPERTY_GETTER) {
     setter = v7_array_get(v7, prop->value, 1);
   }
   v7_array_set(v7, args, 0, val);
+  v7_disown(v7, &args);
+  v7_disown(v7, &val);
   i_apply(v7, setter, obj, args);
 }
 
@@ -10197,6 +10202,9 @@ V7_PRIVATE void maybe_gc(struct v7 *v7) {
     v7_gc(v7, 0);
   }
 }
+#if defined(V7_GC_VERBOSE)
+static int gc_pass = 0;
+#endif
 
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7, int full) {
@@ -10211,7 +10219,7 @@ void v7_gc(struct v7 *v7, int full) {
   int i;
 
 #if defined(V7_GC_VERBOSE)
-  fprintf(stderr, "V7 GC pass\n");
+  fprintf(stderr, "V7 GC pass %d\n", ++gc_pass);
 #endif
 
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
