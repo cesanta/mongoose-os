@@ -13982,6 +13982,52 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
   switch (tag) {
     /*
+     * if(E) {
+     *   BT...
+     * } else {
+     *   BF...
+     * }
+     *
+     * ->
+     *
+     *   <E>
+     *   JMP_TRUE body
+     *   <BF>
+     *   JMP end
+     * body:
+     *   <BT>
+     * end:
+     *
+     * If else clause is omitted, it will emit output equivalent to:
+     *
+     * if(E) {BT} else undefined;
+     */
+    case AST_IF: {
+      ast_off_t end_true, iffalse;
+      bcode_off_t end_label;
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      iffalse = end_true = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
+      ast_move_to_children(a, pos);
+
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_JMP_TRUE);
+      body_label = bcode_add_target(bcode);
+
+      if (iffalse != end) {
+        BTRY(compile_stmts(v7, a, &iffalse, end, bcode));
+      } else {
+        bcode_op(bcode, OP_PUSH_UNDEFINED);
+      }
+      bcode_op(bcode, OP_JMP);
+      end_label = bcode_add_target(bcode);
+
+      bcode_patch_target(bcode, body_label, bcode_pos(bcode));
+      BTRY(compile_stmts(v7, a, pos, end_true, bcode));
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      *pos = end;
+      break;
+    }
+    /*
      * while(C) {
      *   B...
      * }
