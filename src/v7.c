@@ -9993,7 +9993,15 @@ uint16_t gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len) {
   (void) str;
   (void) len;
 #ifdef V7_GC_VERBOSE
-  fprintf(stderr, "GC ASN %d: \"%.*s\"\n", asn, (int) len, str);
+  /*
+   * ESP SDK printf cannot cope with null strings
+   * as created by s_concat.
+   */
+  if (str == NULL) {
+    fprintf(stderr, "GC ASN %d: <nil>\n", asn, (int) len);
+  } else {
+    fprintf(stderr, "GC ASN %d: \"%.*s\"\n", asn, (int) len, str);
+  }
 #endif
 #ifdef V7_GC_PANIC_ON_ASN
   if (asn == (V7_GC_PANIC_ON_ASN)) {
