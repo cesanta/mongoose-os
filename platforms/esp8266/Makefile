@@ -66,7 +66,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
            -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
            -DESP_FLASH_BYTES_EMUL -DV7_FORCE_STRICT_MODE \
-           -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=1 \
+           -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            $(FEATURES_EXTRA)
 
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
