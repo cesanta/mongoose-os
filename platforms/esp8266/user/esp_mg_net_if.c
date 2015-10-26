@@ -20,8 +20,6 @@ static os_timer_t poll_tmr;
 static os_event_t s_mg_task_queue[MG_TASK_QUEUE_LEN];
 static int poll_scheduled = 0;
 
-static void mg_lwip_mgr_poll(struct mg_mgr *mgr);
-
 enum mg_sig_type {
   MG_SIG_POLL = 0,
   MG_SIG_CONNECT_RESULT = 2,
@@ -256,7 +254,7 @@ static void mg_lwip_task(os_event_t *e) {
       break;
     }
   }
-  mg_lwip_mgr_poll(mgr);
+  mg_mgr_poll(mgr, 0);
 }
 
 void mg_poll_timer_cb(void *arg) {
@@ -285,10 +283,13 @@ void mg_ev_mgr_remove_conn(struct mg_connection *nc) {
   (void) nc;
 }
 
-static void mg_lwip_mgr_poll(struct mg_mgr *mgr) {
+time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   int n = 0;
+  time_t now = time(NULL);
   struct mg_connection *nc, *tmp;
-  DBG(("begin poll, hf=%u", system_get_free_heap_size()));
+  (void) timeout_ms;
+  DBG(("begin poll, now=%u, hf=%u", (unsigned int) now,
+       system_get_free_heap_size()));
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
     tmp = nc->next;
     n++;
@@ -301,12 +302,9 @@ static void mg_lwip_mgr_poll(struct mg_mgr *mgr) {
       mg_lwip_tcp_write(nc, nc->send_mbuf.buf, nc->send_mbuf.len);
       mbuf_remove(&nc->send_mbuf, nc->send_mbuf.len);
     }
+    mg_if_poll(nc, now);
   }
   DBG(("end poll, %d conns", n));
-}
-
-time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
-  mg_lwip_mgr_poll(mgr);
-  return time(NULL);
+  return now;
 }
 #endif /* ESP_ENABLE_MG_LWIP_IF */
