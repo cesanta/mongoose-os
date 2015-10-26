@@ -12924,7 +12924,10 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       char *name;
       size_t name_len;
       size_t saved_tmp_stack_pos = v7->tmp_stack.len;
+      val_t saved_call_stack = v7->call_stack;
       volatile enum jmp_type j;
+
+      tmp_stack_push(&tf, &saved_call_stack);
 
       memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
@@ -12936,6 +12939,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
         val_t catch_scope;
+        v7->call_stack = saved_call_stack;
         v7->inhibit_gc = 0;
         v7->tmp_stack.len = saved_tmp_stack_pos;
         catch_scope = create_object(v7, scope);
@@ -13027,7 +13031,7 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args) {
   enum v7_err err = V7_OK;
   jmp_buf saved_jmp_buf;
-  val_t res;
+  val_t res, saved_call_stack = v7->call_stack;
   if (result == NULL) {
     result = &res;
   }
@@ -13036,12 +13040,15 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     v7->inhibit_gc = 0;
     *result = v7->thrown_error;
+    /* v7->thrown_error is in the root set, remove it so it doesn't leak */
+    v7->thrown_error = v7_create_undefined();
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
   *result = i_apply(v7, func, this_obj, args);
 cleanup:
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
+  v7->call_stack = saved_call_stack;
   return err;
 }
 
