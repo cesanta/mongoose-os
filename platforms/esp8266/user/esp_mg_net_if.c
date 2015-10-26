@@ -152,9 +152,41 @@ void mg_if_connect_udp(struct mg_connection *nc) {
   system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
 }
 
+static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
+  struct mg_connection *lc = (struct mg_connection *) arg, *nc;
+  union socket_address sa;
+  DBG(("%p conn from %s:%u\n", lc, ipaddr_ntoa(&newtpcb->remote_ip),
+       newtpcb->remote_port));
+  sa.sin.sin_addr.s_addr = newtpcb->remote_ip.addr;
+  sa.sin.sin_port = htons(newtpcb->remote_port);
+  nc = mg_if_accept_tcp_cb(lc, &sa, sizeof(sa.sin));
+  if (nc == NULL) {
+    tcp_abort(newtpcb);
+    return ERR_ABRT;
+  }
+  nc->sock = (int) newtpcb;
+  tcp_arg(newtpcb, nc);
+  tcp_err(newtpcb, mg_lwip_tcp_error_cb);
+  tcp_sent(newtpcb, mg_lwip_tcp_sent_cb);
+  tcp_recv(newtpcb, mg_lwip_tcp_recv_cb);
+  return ERR_OK;
+}
+
 int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
-  /* TODO(rojer) */
-  return -1;
+  struct tcp_pcb *tpcb = tcp_new();
+  ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
+  u16_t port = ntohs(sa->sin.sin_port);
+  nc->err = tcp_bind(tpcb, ip, port);
+  DBG(("%p tcp_bind(%s:%u) = %d", nc, ipaddr_ntoa(ip), port, nc->err));
+  if (nc->err != ERR_OK) {
+    tcp_close(tpcb);
+    return -1;
+  }
+  nc->sock = (int) tpcb;
+  tcp_arg(tpcb, nc);
+  tpcb = tcp_listen(tpcb);
+  tcp_accept(tpcb, mg_lwip_accept_cb);
+  return 0;
 }
 
 int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
