@@ -473,6 +473,11 @@ void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
 
+#ifdef V7_STACK_SIZE
+/* Returns lowest recorded available stack size. */
+int v7_get_stack_avail_lwm(struct v7 *v7);
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -2127,6 +2132,7 @@ struct v7 {
   volatile int interrupt;
 #ifdef V7_STACK_SIZE
   void *sp_limit;
+  void *sp_lwm;
 #endif
 
 #ifdef V7_ENABLE_GC_CHECK
@@ -9417,6 +9423,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #ifdef V7_STACK_SIZE
     v7->sp_limit = (void *) ((uintptr_t) opts.c_stack_base - (V7_STACK_SIZE));
+    v7->sp_lwm = opts.c_stack_base;
 #endif
 #ifdef V7_ENABLE_GC_CHECK
     v7->next_v7 = v7_head;
@@ -12307,9 +12314,19 @@ cleanup:
   return res;
 }
 
+#ifdef V7_STACK_SIZE
+int v7_get_stack_avail_lwm(struct v7 *v7) {
+  return ((char *) v7->sp_lwm - (char *) v7->sp_limit);
+}
+#endif
+
 static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope) {
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + *pos);
+#ifdef V7_STACK_SIZE
+  void *sp = &v7;
+  if (sp < v7->sp_lwm) v7->sp_lwm = sp;
+#endif
   switch (tag) {
     case AST_NUM:
     case AST_MEMBER:

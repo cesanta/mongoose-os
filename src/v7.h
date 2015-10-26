@@ -469,6 +469,11 @@ void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
 
+#ifdef V7_STACK_SIZE
+/* Returns lowest recorded available stack size. */
+int v7_get_stack_avail_lwm(struct v7 *v7);
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
