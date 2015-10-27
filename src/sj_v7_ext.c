@@ -115,6 +115,14 @@ void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
    */
   FILE *fs[] = {stdout, stderr};
   size_t i;
+
+  /*
+   * own because the exception could be a string,
+   * and if not owned here, print_stack_trace could get
+   * an unrelocated argument an ASN violation.
+   */
+  v7_own(v7, &exc);
+
   for (i = 0; i < sizeof(fs) / sizeof(fs[0]); i++) {
     fprintf(fs[i], "%s: ", msg);
     v7_fprintln(fs[i], v7, exc);
@@ -122,6 +130,8 @@ void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
     v7_fprint_stack_trace(fs[i], v7, exc);
 #endif
   }
+
+  v7_disown(v7, &exc);
 }
 
 void _sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
