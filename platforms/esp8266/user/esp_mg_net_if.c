@@ -51,6 +51,7 @@ static void mg_lwip_tcp_error_cb(void *arg, err_t err) {
   struct mg_connection *nc = (struct mg_connection *) arg;
   DBG(("%p conn error %d", nc, err));
   if (nc == NULL) return;
+  nc->sock = INVALID_SOCKET; /* Has already been deallocated */
   if (nc->flags & MG_F_CONNECTING) {
     nc->err = err;
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
@@ -103,6 +104,7 @@ static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
 void mg_if_connect_tcp(struct mg_connection *nc,
                        const union socket_address *sa) {
   struct tcp_pcb *tpcb = tcp_new();
+  nc->sock = (int) tpcb;
   ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
   u16_t port = ntohs(sa->sin.sin_port);
   tcp_arg(tpcb, nc);
@@ -112,16 +114,15 @@ void mg_if_connect_tcp(struct mg_connection *nc,
   nc->err = tcp_bind(tpcb, IP_ADDR_ANY, 0 /* any port */);
   DBG(("%p tcp_bind = %d", nc, nc->err));
   if (nc->err != ERR_OK) {
-    tcp_close(tpcb);
+    system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
     return;
   }
   nc->err = tcp_connect(tpcb, ip, port, mg_lwip_tcp_conn_cb);
   DBG(("%p tcp_connect = %d", nc, nc->err));
   if (nc->err != ERR_OK) {
-    tcp_close(tpcb);
+    system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
     return;
   }
-  nc->sock = (int) tpcb;
 }
 
 static void mg_lwip_udp_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p,
@@ -245,19 +246,20 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
 
 void mg_if_destroy_conn(struct mg_connection *nc) {
   int i;
-  if (nc->sock == INVALID_SOCKET) return;
-  if (!(nc->flags & MG_F_UDP)) {
-    struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
-    tcp_arg(tpcb, NULL);
-    DBG(("tcp_close %p", tpcb));
-    tcp_arg(tpcb, NULL);
-    tcp_close(tpcb);
-  } else {
-    struct udp_pcb *upcb = (struct udp_pcb *) nc->sock;
-    DBG(("udp_remove %p", upcb));
-    udp_remove(upcb);
+  if (nc->sock != INVALID_SOCKET) {
+    if (!(nc->flags & MG_F_UDP)) {
+      struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
+      tcp_arg(tpcb, NULL);
+      DBG(("tcp_close %p", tpcb));
+      tcp_arg(tpcb, NULL);
+      tcp_close(tpcb);
+    } else {
+      struct udp_pcb *upcb = (struct udp_pcb *) nc->sock;
+      DBG(("udp_remove %p", upcb));
+      udp_remove(upcb);
+    }
+    nc->sock = INVALID_SOCKET;
   }
-  nc->sock = INVALID_SOCKET;
   /* Walk the queue and null-out further signals for this conn. */
   for (i = 0; i < MG_TASK_QUEUE_LEN; i++) {
     if ((struct mg_connection *) s_mg_task_queue[i].par == nc) {
