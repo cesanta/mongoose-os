@@ -263,16 +263,20 @@ static double flash_pow10int(int n) {
   }
 }
 
+#if 0
 /*
  * Using ln to get lg in order
  * to avoid usage of native log10
  * since it goes to iram segment
+ * Update: it seems new SDK fixed this
  */
 
 static double flash_log10(double x) {
   return log(x) / log(10);
 }
+#endif
 
+#define flash_log10 log10
 /*
  * Attempt to reproduce sprintf's %g
  * Returns _required_ number of symbols
@@ -381,6 +385,7 @@ int double_to_str(char *buf, size_t buf_size, double val, int prec) {
 }
 
 #undef APPEND_CHAR
+#undef flash_log10
 
 void abort(void) {
   /* cause an unaligned access exception, that will drop you into gdb */
