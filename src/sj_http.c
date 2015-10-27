@@ -10,12 +10,13 @@
 
 struct user_data {
   struct v7 *v7;
-  v7_val_t server_obj;
+  v7_val_t obj;
   v7_val_t handler;
 };
 
 static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
+static v7_val_t sj_http_request_proto;
 
 static v7_val_t Http_createServer(struct v7 *v7) {
   v7_val_t cb = v7_arg(v7, 0);
@@ -78,20 +79,37 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       memset(&opts, 0, sizeof(opts));
       mg_serve_http(c, ev_data, opts);
     }
+  } else if (ev == MG_EV_HTTP_REPLY) {
+    if (v7_is_function(ud->handler)) {
+      v7_val_t response = v7_create_object(ud->v7);
+      setup_request_object(ud->v7, response, ev_data);
+      v7_own(ud->v7, &response);
+      sj_invoke_cb1(ud->v7, ud->handler, response);
+      v7_disown(ud->v7, &response);
+    }
+  } else if (ev == MG_EV_CLOSE) {
+    if (c->listener == NULL && ud != NULL) {
+      v7_disown(ud->v7, &ud->obj);
+      free(ud);
+      c->user_data = NULL;
+    }
   }
 }
 
-static void start_http_server(struct v7 *v7, const char *str, v7_val_t obj) {
+static void start_http_server(struct v7 *v7, const char *addr, v7_val_t obj) {
   struct mg_connection *c;
-  c = mg_bind(&sj_mgr, str, http_ev_handler);
+  struct user_data *ud;
+
+  c = mg_bind(&sj_mgr, addr, http_ev_handler);
   if (c == NULL) {
     v7_throw(v7, "Cannot bind");
   }
   mg_set_protocol_http_websocket(c);
-  c->user_data = malloc(sizeof(struct user_data));
-  ((struct user_data *) c->user_data)->v7 = v7;
-  ((struct user_data *) c->user_data)->server_obj = obj;
-  ((struct user_data *) c->user_data)->handler = v7_get(v7, obj, "_cb", 3);
+  c->user_data = ud = (struct user_data *) malloc(sizeof(*ud));
+  ud->v7 = v7;
+  ud->obj = obj;
+  ud->handler = v7_get(v7, obj, "_cb", 3);
+  v7_own(v7, &ud->obj);
 }
 
 static struct mg_connection *get_mgconn(struct v7 *v7) {
@@ -100,30 +118,35 @@ static struct mg_connection *get_mgconn(struct v7 *v7) {
   return (struct mg_connection *) v7_to_foreign(_c);
 }
 
-static void write_http_status(struct mg_connection *c, unsigned long code) {
-  mg_printf(c, "HTTP/1.1 %lu OK\r\n", code);
+static void http_write_chunked_encoding_header(struct mg_connection *c) {
   mg_printf(c, "%s", "Transfer-Encoding: chunked\r\n");
 }
 
-static v7_val_t Http_response_write(struct v7 *v7) {
-  struct mg_connection *c = get_mgconn(v7);
-  unsigned long i, argc = v7_argc(v7);
+static void write_http_status(struct mg_connection *c, unsigned long code) {
+  mg_printf(c, "HTTP/1.1 %lu OK\r\n", code);
+  http_write_chunked_encoding_header(c);
+}
 
-  if (!v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
-    write_http_status(c, 200);
-    mg_send(c, "\r\n", 2);
-    v7_set(v7, v7_get_this(v7), "_whd", ~0, 0, v7_create_boolean(1));
-  }
-
-  for (i = 0; i < argc; i++) {
+static void Http_write_data(struct v7 *v7, struct mg_connection *c) {
+  v7_val_t arg0 = v7_arg(v7, 0);
+  if (!v7_is_undefined(arg0)) {
     char buf[50], *p = buf;
-    v7_val_t arg_i = v7_arg(v7, i);
-    p = v7_stringify(v7, arg_i, buf, sizeof(buf), 0);
+    p = v7_stringify(v7, arg0, buf, sizeof(buf), 0);
     mg_send_http_chunk(c, p, strlen(p));
     if (p != buf) {
       free(p);
     }
   }
+}
+
+static v7_val_t Http_response_write(struct v7 *v7) {
+  struct mg_connection *c = get_mgconn(v7);
+  if (!v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
+    write_http_status(c, 200);
+    mg_send(c, "\r\n", 2);
+    v7_set(v7, v7_get_this(v7), "_whd", ~0, 0, v7_create_boolean(1));
+  }
+  Http_write_data(v7, c);
   return v7_get_this(v7);
 }
 
@@ -233,21 +256,82 @@ static v7_val_t Http_Server_listen(struct v7 *v7) {
   return this_obj;
 }
 
+static v7_val_t Http_request_write(struct v7 *v7) {
+  struct mg_connection *c = get_mgconn(v7);
+  Http_write_data(v7, c);
+  return v7_get_this(v7);
+}
+
+static v7_val_t Http_request_end(struct v7 *v7) {
+  struct mg_connection *c = get_mgconn(v7);
+  Http_request_write(v7);
+  mg_send_http_chunk(c, "", 0);
+  return v7_get_this(v7);
+}
+
+static v7_val_t Http_createClient(struct v7 *v7) {
+  v7_val_t opts = v7_arg(v7, 0);
+  char addr[200];
+  struct mg_connection *c;
+  struct user_data *ud;
+  size_t n;
+  v7_val_t v_h = v7_get(v7, opts, "hostname", ~0);
+  v7_val_t v_p = v7_get(v7, opts, "port", ~0);
+  v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
+  v7_val_t v_m = v7_get(v7, opts, "method", ~0);
+  int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
+  const char *host = v7_is_string(v_h) ? v7_to_string(v7, &v_h, &n) : "";
+  const char *uri = v7_is_string(v_uri) ? v7_to_string(v7, &v_uri, &n) : "/";
+  const char *method = v7_is_string(v_m) ? v7_to_string(v7, &v_m, &n) : "GET";
+
+  snprintf(addr, sizeof(addr), "%s:%d", host, port);
+
+  if ((c = mg_connect(&sj_mgr, addr, http_ev_handler)) == NULL) {
+    v7_throw(v7, "Cannot connect");
+  }
+
+  mg_set_protocol_http_websocket(c);
+  mg_printf(c, "%s %s HTTP/1.1\r\n", method, uri);
+  mg_printf(c, "Host: %s\r\n", host);
+  http_write_chunked_encoding_header(c);
+  mg_printf(c, "%s", "\r\n");
+
+  c->user_data = ud = (struct user_data *) calloc(1, sizeof(*ud));
+
+  ud->v7 = v7;
+  ud->obj = v7_create_object(v7);
+  ud->handler = v7_arg(v7, 1);
+
+  v7_own(v7, &ud->obj);
+  v7_set_proto(ud->obj, sj_http_request_proto);
+  v7_set(v7, ud->obj, "_c", ~0, 0, v7_create_foreign(c));
+
+  return ud->obj;
+}
+
 void sj_init_http(struct v7 *v7) {
   v7_own(v7, &sj_http_server_proto);
   v7_own(v7, &sj_http_response_proto);
+  v7_own(v7, &sj_http_request_proto);
   sj_http_server_proto = v7_create_object(v7);
   sj_http_response_proto = v7_create_object(v7);
+  sj_http_request_proto = v7_create_object(v7);
 
   /* NOTE(lsm): setting Http to globals immediately to avoid gc-ing it */
   v7_val_t Http = v7_create_object(v7);
   v7_set(v7, v7_get_global(v7), "Http", ~0, 0, Http);
 
   v7_set_method(v7, Http, "createServer", Http_createServer);
+  v7_set_method(v7, Http, "request", Http_createClient);
+
   v7_set_method(v7, sj_http_server_proto, "listen", Http_Server_listen);
+
   v7_set_method(v7, sj_http_response_proto, "writeHead",
                 Http_response_writeHead);
   v7_set_method(v7, sj_http_response_proto, "write", Http_response_write);
   v7_set_method(v7, sj_http_response_proto, "end", Http_response_end);
   v7_set_method(v7, sj_http_response_proto, "serve", Http_response_serve);
+
+  v7_set_method(v7, sj_http_request_proto, "write", Http_request_write);
+  v7_set_method(v7, sj_http_request_proto, "end", Http_request_end);
 }
