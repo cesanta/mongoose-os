@@ -94,6 +94,12 @@ void *calloc(size_t num, size_t size) {
   return res;
 }
 
+/*
+ * TODO(alashkin): remove this code
+ * if newlib's sprintf implementation
+ * is good
+ */
+#if 0
 int sprintf(char *buffer, const char *format, ...) {
   int ret;
   va_list arglist;
@@ -102,6 +108,7 @@ int sprintf(char *buffer, const char *format, ...) {
   va_end(arglist);
   return ret;
 }
+#endif
 
 #ifndef LWIP_OPEN_SRC
 
@@ -150,6 +157,12 @@ int printf(const char *format, ...) {
 
 #endif /* !RTOS_SDK */
 
+/*
+ * TODO(alashkin): remove this code
+ * if newlib's snprintf implementation
+ * is good
+ */
+#if 0
 int snprintf(char *buffer, size_t size, const char *format, ...) {
   int ret;
   va_list arglist;
@@ -158,6 +171,7 @@ int snprintf(char *buffer, size_t size, const char *format, ...) {
   va_end(arglist);
   return ret;
 }
+#endif
 
 int vsnprintf(char *buffer, size_t size, const char *format, va_list arg) {
   return c_vsnprintf(buffer, size, format, arg);

@@ -190,6 +190,12 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   /* if (flags && O_EXCL) sm |= SPIFFS_EXCL; */
   /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
 
+  /* spiffs doesn't support directories, not even the trivial ./something */
+  if (filename != NULL && (strlen(filename) > 2) &&
+      (strncmp(filename, "./", 2) == 0)) {
+    filename += 2;
+  }
+
   res = SPIFFS_open(&fs, (char *) filename, sm, 0);
   if (res >= 0) {
     res += NUM_SYS_FD;
@@ -271,6 +277,26 @@ int _fstat_r(struct _reent *r, int fd, struct stat *s) {
   s->st_nlink = 1;
   s->st_size = ss.size;
   return 0;
+}
+
+int _stat_r(struct _reent *r, const char *path, struct stat *s) {
+  int ret, fd;
+
+  /*
+   * spiffs has no directories, simulating statting root directory;
+   * required for mg_send_http_file.
+   */
+  if ((strcmp(path, "./") == 0) || (strcmp(path, "/") == 0)) {
+    memset(s, 0, sizeof(*s));
+    s->st_mode = S_IFDIR;
+    return 0;
+  }
+
+  fd = _open_r(NULL, path, O_RDONLY, 0);
+  if (fd == -1) return -1;
+  ret = _fstat_r(NULL, fd, s);
+  _close_r(NULL, fd);
+  return ret;
 }
 
 #ifndef NO_V7
