@@ -13095,6 +13095,7 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args) {
   enum v7_err err = V7_OK;
   jmp_buf saved_jmp_buf;
+  size_t saved_tmp_stack_pos = v7->tmp_stack.len;
   val_t res, saved_call_stack = v7->call_stack;
   if (result == NULL) {
     result = &res;
@@ -13103,6 +13104,7 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     v7->inhibit_gc = 0;
+    v7->tmp_stack.len = saved_tmp_stack_pos;
     *result = v7->thrown_error;
     /* v7->thrown_error is in the root set, remove it so it doesn't leak */
     v7->thrown_error = v7_create_undefined();
