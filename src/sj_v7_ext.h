@@ -25,6 +25,9 @@ void sj_invoke_cb0(struct v7 *v7, v7_val_t cb);
 void sj_invoke_cb1(struct v7 *v7, v7_val_t cb, v7_val_t arg);
 void sj_invoke_cb2(struct v7 *v7, v7_val_t cb, v7_val_t arg1, v7_val_t arg2);
 
+/* Prints an exception to stdout or stderr depending on debug mode */
+void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg);
+
 /* HAL */
 
 /* Get system free memory. */

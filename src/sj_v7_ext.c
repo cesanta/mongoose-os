@@ -107,15 +107,28 @@ static v7_val_t GC_gc(struct v7 *v7) {
   return v7_create_undefined();
 }
 
+void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
+  /*
+   * TOD(mkm) add some API to hal to fetch the current debug mode
+   * and avoid logging to stdout if according no error messages should go
+   * there (e.g. because it's used to implement a serial protocol).
+   */
+  FILE *fs[] = {stdout, stderr};
+  size_t i;
+  for (i = 0; i < sizeof(fs) / sizeof(fs[0]); i++) {
+    fprintf(fs[i], "%s: ", msg);
+    v7_fprintln(fs[i], v7, exc);
+#if V7_ENABLE__StackTrace
+    v7_fprint_stack_trace(fs[i], v7, exc);
+#endif
+  }
+}
+
 void _sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                    v7_val_t args) {
   v7_val_t res;
   if (v7_apply(v7, &res, func, this_obj, args) == V7_EXEC_EXCEPTION) {
-    fprintf(stderr, "cb threw exception: ");
-    v7_fprintln(stderr, v7, res);
-#if V7_ENABLE__StackTrace
-    v7_fprint_stack_trace(stderr, v7, res);
-#endif
+    sj_print_exception(v7, res, "cb threw exception");
   }
 }
 

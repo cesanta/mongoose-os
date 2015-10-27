@@ -81,28 +81,21 @@ static void interrupt_char_processor(char ch) {
 
 static void process_js(char *cmd) {
   s_sjp.char_processor = interrupt_char_processor;
-  v7_val_t v;
-  int res = v7_exec(s_sjp.v7, cmd, &v);
+  v7_val_t res;
+  enum v7_err err = v7_exec(s_sjp.v7, cmd, &res);
+  struct v7 *v7 = s_sjp.v7;
 
-  if (res == V7_SYNTAX_ERROR) {
-    printf("Syntax error: %s\n", v7_get_parser_error(s_sjp.v7));
-  } else if (res == V7_STACK_OVERFLOW) {
-    printf("Stack overflow: %s\n", v7_get_parser_error(s_sjp.v7));
+  if (err == V7_SYNTAX_ERROR) {
+    printf("Syntax error: %s\n", v7_get_parser_error(v7));
+  } else if (err == V7_STACK_OVERFLOW) {
+    printf("Stack overflow: %s\n", v7_get_parser_error(v7));
+  } else if (err == V7_EXEC_EXCEPTION) {
+    sj_print_exception(v7, res, "Exec error");
   } else {
-    if (res == V7_EXEC_EXCEPTION) {
-      printf("Exec error:");
-    }
-
-    v7_println(s_sjp.v7, v);
-
-#if V7_ENABLE__StackTrace
-    if (res == V7_EXEC_EXCEPTION) {
-      v7_fprint_stack_trace(stdout, s_sjp.v7, v);
-    }
-#endif
+    v7_println(v7, res);
   }
 
-  v7_gc(s_sjp.v7, 1 /* full */);
+  v7_gc(v7, 1 /* full */);
 }
 
 static const char help_str[] =
