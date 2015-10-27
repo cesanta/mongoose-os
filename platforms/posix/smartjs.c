@@ -26,7 +26,6 @@ void init_smartjs(struct v7 *_v7) {
   sj_init_v7_ext(v7);
 
   mongoose_init();
-  sj_init_simple_http_client(v7);
   sj_init_ws_client(v7);
   sj_init_http(v7);
   sj_init_uart(v7);

@@ -15,8 +15,8 @@ MONGOOSE_FEATURES = -DMG_USE_READ_WRITE
 
 INCLUDES = $(SRC_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
-			sj_simple_http.c mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
-			sj_mongoose_http_client.c sj_mongoose_ws_client.c sj_gpio_js.c \
+			mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
+			sj_mongoose_ws_client.c sj_gpio_js.c \
 			sj_prompt.c sj_timers.c sj_uart.c sj_http.c
 
 # inline causes crashes in the compacting GC
