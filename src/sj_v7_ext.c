@@ -160,11 +160,26 @@ void sj_invoke_cb2(struct v7 *v7, v7_val_t cb, v7_val_t arg1, v7_val_t arg2) {
 }
 
 void sj_invoke_cb1(struct v7 *v7, v7_val_t cb, v7_val_t arg) {
-  sj_invoke_cb2(v7, cb, arg, v7_create_undefined());
+  v7_val_t args;
+  v7_own(v7, &cb);
+  v7_own(v7, &arg);
+  args = v7_create_array(v7);
+  v7_own(v7, &args);
+  v7_array_push(v7, args, arg);
+  sj_invoke_cb(v7, cb, v7_get_global(v7), args);
+  v7_disown(v7, &args);
+  v7_disown(v7, &arg);
+  v7_disown(v7, &cb);
 }
 
 void sj_invoke_cb0(struct v7 *v7, v7_val_t cb) {
-  sj_invoke_cb2(v7, cb, v7_create_undefined(), v7_create_undefined());
+  v7_val_t args;
+  v7_own(v7, &cb);
+  args = v7_create_array(v7);
+  v7_own(v7, &args);
+  sj_invoke_cb(v7, cb, v7_get_global(v7), args);
+  v7_disown(v7, &args);
+  v7_disown(v7, &cb);
 }
 
 void sj_init_v7_ext(struct v7 *v7) {

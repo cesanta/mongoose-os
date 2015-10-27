@@ -81,6 +81,9 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
   pbuf_copy_partial(p, data, len, 0);
   pbuf_free(p);
   mg_if_recv_tcp_cb(nc, data, len);
+  if (nc->send_mbuf.len > 0) {
+    system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) nc);
+  }
   return ERR_OK;
 }
 

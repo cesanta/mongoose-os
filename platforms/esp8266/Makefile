@@ -31,8 +31,10 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             mongoose.c sj_mongoose_http_client.c sj_simple_http.c sj_mongoose.c \
             sj_mongoose_ws_client.c
 
-JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js
-JS_SRCS    := $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/user.js
+JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
+              $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
+              $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js
+JS_SRCS    := $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
@@ -68,7 +70,6 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
            -DESP_FLASH_BYTES_EMUL -DV7_FORCE_STRICT_MODE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
-           -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions \
            $(FEATURES_EXTRA)
 
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
@@ -76,7 +77,9 @@ MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
                  -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_CGI \
                  -DMG_DISABLE_FILESYSTEM -DMG_DISABLE_SYNC_RESOLVER
 
-MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DV7_STACK_SIZE=8192-64 -DFS_MAX_OPEN_FILES=5
+MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
+               -DV7_STACK_SIZE=8192-64 \
+               -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
 
 CFLAGS += -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
           $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
@@ -194,7 +197,7 @@ $(APP_AR): $(OBJS)
 	$(Q) $(OBJCOPY2) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
 # requires make clean && make to build/rebuild lwIP
 # TODO(alashkin): fix this
-	$(Q) $(LWIP_MAKE) --no-print-directory -C $(LWIP_PATH) all
+	$(Q) $(LWIP_MAKE) --no-print-directory -C $(LWIP_PATH) -j3 all
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c
