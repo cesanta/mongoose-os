@@ -1984,8 +1984,11 @@ extern double _v7_infinity;
 #define EXIT_FAILURE 1
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
+#ifdef V7_ENABLE_GC_CHECK
 extern struct v7 *v7_head;
+#endif
+#ifdef V7_STACK_GUARD_MIN_SIZE
+extern void *v7_sp_limit;
 #endif
 
 /* TODO(lsm): move VM definitions to vm.h */
@@ -2135,7 +2138,7 @@ struct v7 {
   void *sp_lwm;
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
+#ifdef V7_ENABLE_GC_CHECK
   struct v7 *next_v7; /* linked list of v7 contexts, needed by gc check hooks */
 #endif
 
@@ -7825,7 +7828,7 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
+#ifdef V7_ENABLE_GC_CHECK
 struct v7 *v7_head = NULL;
 #endif
 
@@ -9441,9 +9444,12 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 #ifdef V7_STACK_SIZE
     v7->sp_limit = (void *) ((uintptr_t) opts.c_stack_base - (V7_STACK_SIZE));
     v7->sp_lwm = opts.c_stack_base;
+#ifdef V7_STACK_GUARD_MIN_SIZE
+    v7_sp_limit = v7->sp_limit;
+#endif
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
+#ifdef V7_ENABLE_GC_CHECK
     v7->next_v7 = v7_head;
     v7_head = v7;
 #endif
@@ -9601,6 +9607,10 @@ void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
 
 /* Amalgamated: #include "internal.h" */
 /* Amalgamated: #include "gc.h" */
+
+#ifdef V7_STACK_GUARD_MIN_SIZE
+void *v7_sp_limit = NULL;
+#endif
 
 #if V7_ENABLE__Memory__stats
 int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
@@ -10346,12 +10356,12 @@ void __cyg_profile_func_enter(void *this_fn, void *call_site) {
 
   (void) call_site;
 
-  if (profile_enter || v7_head == NULL || v7_head->sp_limit == NULL) return;
+  if (profile_enter || v7_sp_limit == NULL) return;
 
   profile_enter++;
-  if (((int) fp - (int) v7_head->sp_limit) < V7_STACK_GUARD_MIN_SIZE) {
-    printf("fun %p sp %p limit %p left %d\n", this_fn, fp, v7_head->sp_limit,
-           (int) fp - (int) v7_head->sp_limit);
+  if (((int) fp - (int) v7_sp_limit) < V7_STACK_GUARD_MIN_SIZE) {
+    printf("fun %p sp %p limit %p left %d\n", this_fn, fp, v7_sp_limit,
+           (int) fp - (int) v7_sp_limit);
     abort();
   }
   profile_enter--;
