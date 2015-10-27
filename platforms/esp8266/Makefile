@@ -224,10 +224,10 @@ $(FS_BUILD_DIR):
 	@mkdir -p $(FS_BUILD_DIR)
 
 $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+	/usr/bin/rsync -r --copy-links $(FS_DIR)/ $(FS_BUILD_DIR)/
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
 		echo "V7 $(jsbin) -> $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
 		$(BUILD_DIR)/v7 -b $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
-	/usr/bin/rsync -r --copy-links $(FS_DIR)/ $(FS_BUILD_DIR)/
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
 		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
