@@ -25,6 +25,7 @@ enum mg_sig_type {
   MG_SIG_CONNECT_RESULT = 2,
   MG_SIG_SENT_CB = 4,
   MG_SIG_CLOSE_CONN = 5,
+  MG_SIG_TOMBSTONE = 0xffff,
 };
 
 static void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
@@ -240,16 +241,25 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
 }
 
 void mg_if_destroy_conn(struct mg_connection *nc) {
+  int i;
   if (nc->sock == INVALID_SOCKET) return;
   if (!(nc->flags & MG_F_UDP)) {
     struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
     tcp_arg(tpcb, NULL);
     DBG(("tcp_close %p", tpcb));
+    tcp_arg(tpcb, NULL);
     tcp_close(tpcb);
   } else {
     struct udp_pcb *upcb = (struct udp_pcb *) nc->sock;
     DBG(("udp_remove %p", upcb));
     udp_remove(upcb);
+  }
+  nc->sock = INVALID_SOCKET;
+  /* Walk the queue and null-out further signals for this conn. */
+  for (i = 0; i < MG_TASK_QUEUE_LEN; i++) {
+    if ((struct mg_connection *) s_mg_task_queue[i].par == nc) {
+      s_mg_task_queue[i].sig = MG_SIG_TOMBSTONE;
+    }
   }
 }
 
@@ -262,6 +272,8 @@ static void mg_lwip_task(os_event_t *e) {
   DBG(("sig %d", e->sig));
   poll_scheduled = 0;
   switch ((enum mg_sig_type) e->sig) {
+    case MG_SIG_TOMBSTONE:
+      break;
     case MG_SIG_POLL: {
       mgr = (struct mg_mgr *) e->par;
       break;
@@ -286,7 +298,9 @@ static void mg_lwip_task(os_event_t *e) {
       break;
     }
   }
-  mg_mgr_poll(mgr, 0);
+  if (mgr != NULL) {
+    mg_mgr_poll(mgr, 0);
+  }
 }
 
 void mg_poll_timer_cb(void *arg) {
