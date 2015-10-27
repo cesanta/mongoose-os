@@ -381,15 +381,15 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
  *
  * Usage example:
  *
- *     void *handle = NULL;
- *     v7_val_t name, value;
+ *     void *h = NULL;
+ *     v7_val_t name, val;
  *     unsigned int attrs;
- *     while ((handle = v7_prop(arg1, h, &name, &value, &attrs)) != NULL) {
+ *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
  *       ...
  *     }
  */
-void *v7_prop(v7_val_t obj, void *, v7_val_t *name, v7_val_t *value,
-              unsigned *attrs);
+void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
+                   unsigned int *attrs);
 
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
@@ -2437,13 +2437,6 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
 
-V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *, val_t,
-                                            struct v7_property *);
-V7_PRIVATE val_t v7_iter_get_value(struct v7 *, val_t, struct v7_property *);
-V7_PRIVATE val_t v7_iter_get_name(struct v7 *, struct v7_property *);
-V7_PRIVATE uint8_t v7_iter_get_attrs(struct v7_property *);
-V7_PRIVATE val_t v7_iter_get_index(struct v7 *, struct v7_property *);
-
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
@@ -2461,7 +2454,9 @@ V7_PRIVATE v7_val_t std_eval(struct v7 *, v7_val_t, v7_val_t, int);
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+#ifdef V7_ENABLE_DENSE_ARRAYS
 V7_PRIVATE val_t ulong_to_str(struct v7 *, unsigned long);
+#endif
 V7_PRIVATE unsigned long str_to_ulong(struct v7 *, val_t, int *);
 V7_PRIVATE unsigned long cstr_to_ulong(const char *, size_t len, int *);
 V7_PRIVATE void embed_string(struct mbuf *, size_t, const char *, size_t, int,
@@ -6130,7 +6125,7 @@ struct visit {
   v7_val_t obj;
   union {
     size_t next_idx;
-    struct v7_property *p;
+    void *p;
   } v;
 };
 
@@ -6276,12 +6271,11 @@ static void _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
         cs_ubjson_open_object(buf);
       }
 
-      cur->v.p = v7_next_prop(v7, obj, cur->v.p);
+      cur->v.p = v7_next_prop(cur->v.p, obj, &name, NULL, NULL);
 
       if (cur->v.p == NULL) {
         cs_ubjson_close_object(buf);
       } else {
-        name = v7_iter_get_name(v7, cur->v.p);
         s = v7_to_string(v7, &name, &n);
         cs_ubjson_emit_object_key(buf, s, n);
 
@@ -8338,24 +8332,21 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
     case V7_TYPE_ERROR_OBJECT: {
       /* TODO(imax): make it return the desired size of the buffer */
       char *b = buf;
-      struct v7_property *p;
+      void *h = NULL;
+      v7_val_t name, val;
+      unsigned attrs;
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "{");
-      for (p = v7_next_prop(v7, v, NULL); p != NULL;
-           p = v7_next_prop(v7, v, p)) {
+      while ((h = v7_next_prop(h, v, &name, &val, &attrs)) != NULL) {
         size_t n;
         const char *s;
-        val_t name;
-        if (v7_iter_get_attrs(p) &
-            (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+        if (attrs & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
           continue;
         }
-        name = v7_iter_get_name(v7, p);
         s = v7_to_string(v7, &name, &n);
         b += c_snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
-        b += to_str(v7, v7_iter_get_value(v7, v, p), b, BUF_LEFT(size, b - buf),
-                    1);
-        if (p->next) {
+        b += to_str(v7, val, b, BUF_LEFT(size, b - buf), 1);
+        if (((struct v7_property *) h)->next) {
           b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
@@ -8870,6 +8861,16 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   return p->value;
 }
 
+#if V7_ENABLE_DENSE_ARRAYS
+
+/* Create V7 strings for integers such as array indices */
+V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
+  char buf[100];
+  int len;
+  len = c_snprintf(buf, sizeof(buf), "%lu", n);
+  return v7_create_string(v7, buf, len, 1);
+}
+
 /*
  * Pack 15-bit length and 15 bit index, leaving 2 bits for tag. the LSB has to
  * be set to distinguish it from a prop pointer.
@@ -8884,21 +8885,42 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
 #define UNPACK_ITER_IDX(p) ((((uintptr_t) p) >> 1) & 0x7FFF)
 #define IS_PACKED_ITER(p) ((uintptr_t) p & 1)
 
-V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
-                                            struct v7_property *p) {
-  if (p == NULL && v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
-    unsigned long len = v7_array_length(v7, obj);
-    if (len == 0) {
-      return NULL;
+void *v7_next_prop(struct v7 *v7, val_t obj, void *h, val_t *name, val_t *val,
+                   unsigned int *attrs) {
+  struct v7_property *p = (struct v7_property *) h;
+
+  if (v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
+    /* This is a dense array. Find backing mbuf and fetch values from there */
+    struct v7_property *hp =
+        v7_get_own_property2(v7, obj, "", 0, V7_PROPERTY_HIDDEN);
+    struct mbuf *abuf = NULL;
+    unsigned long len, idx;
+    if (hp != NULL) {
+      abuf = (struct mbuf *) v7_to_foreign(hp->value);
     }
-    return PACK_ITER(len, 0);
-  } else if (IS_PACKED_ITER(p)) {
-    unsigned long len = UNPACK_ITER_LEN(p);
-    unsigned long idx = UNPACK_ITER_IDX(p);
-    return idx + 1 == len ? v7_to_object(obj)->properties
-                          : PACK_ITER(len, idx + 1);
+    if (abuf == NULL) return NULL;
+    len = abuf->len / sizeof(val_t);
+    if (len == 0) return NULL;
+    idx = (p == NULL) ? 0 : UNPACK_ITER_IDX(p) + 1;
+    p = (idx == len) ? v7_to_object(obj)->properties : PACK_ITER(len, idx);
+    if (val != NULL) *val = ((val_t *) abuf->buf)[idx];
+    if (attrs != NULL) *attrs = 0;
+    if (name != NULL) {
+      char buf[20];
+      int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
+      *name = v7_create_string(v7, buf, n, 1);
+    }
+  } else {
+    /* Ordinary object */
+    p = (p == NULL) ? v7_to_object(obj)->properties : p->next;
+    if (p != NULL) {
+      if (name != NULL) *name = p->name;
+      if (val != NULL) *val = p->value;
+      if (attrs != NULL) *attrs = p->attributes;
+    }
   }
-  return p == NULL ? v7_to_object(obj)->properties : p->next;
+
+  return p;
 }
 
 V7_PRIVATE val_t
@@ -8926,6 +8948,7 @@ V7_PRIVATE val_t v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
   if (!ok || res >= UINT32_MAX) return v7_create_undefined();
   return v7_create_number(res);
 }
+#endif
 
 unsigned long v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
@@ -8935,6 +8958,7 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
     return 0;
   }
 
+#if V7_ENABLE_DENSE_ARRAYS
   if (v7_to_object(v)->attributes & V7_OBJ_DENSE_ARRAY) {
     struct v7_property *p =
         v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
@@ -8944,14 +8968,15 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
     if (abuf == NULL) return 0;
     return abuf->len / sizeof(val_t);
   }
+#endif
 
-  for (p = v7_next_prop(v7, v, NULL); p != NULL; p = v7_next_prop(v7, v, p)) {
-    val_t idx = v7_iter_get_index(v7, p);
-    if (!v7_is_undefined(idx) && v7_to_number(idx) >= len) {
-      len = v7_to_number(idx) + 1;
+  for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
+    int ok;
+    unsigned long n = str_to_ulong(v7, p->name, &ok);
+    if (ok && n >= len && n < UINT32_MAX) {
+      len = n + 1;
     }
   }
-
   return len;
 }
 
@@ -9280,14 +9305,6 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   return res;
 }
 
-/* Create V7 strings for integers such as array indices */
-V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
-  char buf[100];
-  int len;
-  len = c_snprintf(buf, sizeof(buf), "%lu", n);
-  return v7_create_string(v7, buf, len, 1);
-}
-
 /*
  * Convert a V7 string to to an unsigned integer.
  * `ok` will be set to true if the string conforms to
@@ -9558,10 +9575,12 @@ unsigned long v7_argc(struct v7 *v7) {
   return v7_array_length(v7, v7->arguments);
 }
 
-void *v7_prop(v7_val_t obj, void *handle, v7_val_t *name, v7_val_t *value,
-              unsigned *attrs) {
-  struct v7_property *p = v7_to_object(obj)->properties;
-  if (handle != NULL) {
+void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
+                   unsigned *attrs) {
+  struct v7_property *p;
+  if (handle == NULL) {
+    p = v7_to_object(obj)->properties;
+  } else {
     p = ((struct v7_property *) handle)->next;
   }
   if (p != NULL) {
@@ -12825,7 +12844,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       size_t name_len;
       val_t obj, key;
       ast_off_t loop;
-      struct v7_property *p, *var;
+      struct v7_property *var;
       tmp_stack_push(&tf, &obj);
       tmp_stack_push(&tf, &key);
 
@@ -12857,13 +12876,13 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       for (; v7_to_object(obj) != NULL;
            obj = v7_object_to_value(
                v7_is_function(obj) ? NULL : v7_to_object(obj)->prototype)) {
-        for (p = v7_next_prop(v7, obj, NULL); p;
-             p = v7_next_prop(v7, obj, p), *pos = loop) {
-          if (v7_iter_get_attrs(p) &
-              (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+        void *h = NULL;
+        unsigned int attrs;
+        while ((h = v7_next_prop(h, obj, &key, NULL, &attrs)) != NULL) {
+          if (attrs & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+            *pos = loop;
             continue;
           }
-          key = v7_iter_get_name(v7, p);
           if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
             var->value = key;
           } else {
@@ -12884,6 +12903,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
               *pos = end;
               goto cleanup;
           }
+          *pos = loop;
         }
       }
       *pos = end;

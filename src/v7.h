@@ -377,15 +377,15 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
  *
  * Usage example:
  *
- *     void *handle = NULL;
- *     v7_val_t name, value;
+ *     void *h = NULL;
+ *     v7_val_t name, val;
  *     unsigned int attrs;
- *     while ((handle = v7_prop(arg1, h, &name, &value, &attrs)) != NULL) {
+ *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
  *       ...
  *     }
  */
-void *v7_prop(v7_val_t obj, void *, v7_val_t *name, v7_val_t *value,
-              unsigned *attrs);
+void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
+                   unsigned int *attrs);
 
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);

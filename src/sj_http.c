@@ -152,7 +152,7 @@ static v7_val_t Http_response_writeHead(struct v7 *v7) {
     void *h = NULL;
     v7_val_t name, value;
     unsigned int attrs;
-    while ((h = v7_prop(arg1, h, &name, &value, &attrs)) != NULL) {
+    while ((h = v7_next_prop(h, arg1, &name, &value, &attrs)) != NULL) {
       size_t n1, n2;
       const char *s1 = v7_to_string(v7, &name, &n1);
       const char *s2 = v7_to_string(v7, &value, &n2);
