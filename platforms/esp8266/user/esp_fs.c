@@ -192,9 +192,8 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
 
   /* spiffs doesn't support directories, not even the trivial ./something */
-  if (filename != NULL && (strlen(filename) > 2) &&
-      (strncmp(filename, "./", 2) == 0)) {
-    filename += 2;
+  while (*filename != '\0' && (*filename == '/' || *filename == '.')) {
+    filename++;
   }
 
   res = SPIFFS_open(&fs, (char *) filename, sm, 0);
