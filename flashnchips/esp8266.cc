@@ -50,7 +50,7 @@ const ulong flashBlockSize = 4096;
 const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
-const ulong spiffsBlockOffset = 0x6d000;
+const ulong spiffsBlockOffset = 0x70000;
 const ulong spiffsBlockSize = 0x10000;
 
 // Copy-pasted from
