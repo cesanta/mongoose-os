@@ -166,7 +166,7 @@ API:
 - `spi.tran(dataToSend, [bytesToRead, command, address]) -> number` - send and receive data within one transaction. `dataToSend` - 32bit number to send to SPI. `bytesToRead` - number of bytes to read from SPI (1-4). If device requires explicit command and address, they might be provided via `command` and `address` parameters.
 - `spi.txn(commandLenBits, command, addrLenBits, address, dataToSendLenBits, dataToWrite, dataToReadLenBits, dummyBits) -> number` - send and receive data within one transaction. The same as `spi.tran`, but allows to use arbitrary (1-32 bits) lengths. This function should be used if device requires, for example, 9bit data, 7bit address, 3bit command etc.
 
-There is a detailed description in [the source file](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/user/spi.h).
+There is a detailed description in [the source file](https://github.com/cesanta/smart.js/blob/master/src/sj_spi_js.c).
 
 See [barometer driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MPL115A1.js) for usage example.
 
@@ -211,7 +211,7 @@ an array with 2 or 3 elements:
     - Device sent NACK before all the bytes were written.
     - `ackType` for the last byte written doesn't match what was expected.
 
-There is a detailed description of this API in [the source file](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/user/v7_i2c_js.c).
+There is a detailed description of this API in [the source file](https://github.com/cesanta/smart.js/blob/master/src/sj_i2c_js.c).
 
 See [temperature sensor driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MCP9808.js) and [EEPROM driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MC24FC.js) for usage example.
 
