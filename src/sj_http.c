@@ -82,8 +82,8 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   } else if (ev == MG_EV_HTTP_REPLY) {
     if (v7_is_function(ud->handler)) {
       v7_val_t response = v7_create_object(ud->v7);
-      setup_request_object(ud->v7, response, ev_data);
       v7_own(ud->v7, &response);
+      setup_request_object(ud->v7, response, ev_data);
       sj_invoke_cb1(ud->v7, ud->handler, response);
       v7_disown(ud->v7, &response);
     }
@@ -305,6 +305,7 @@ static v7_val_t Http_createClient(struct v7 *v7) {
   v7_own(v7, &ud->obj);
   v7_set_proto(ud->obj, sj_http_request_proto);
   v7_set(v7, ud->obj, "_c", ~0, 0, v7_create_foreign(c));
+  v7_set(v7, ud->obj, "_cb", ~0, 0, ud->handler);
 
   return ud->obj;
 }
