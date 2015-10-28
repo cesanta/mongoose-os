@@ -32,6 +32,8 @@
 
 #endif /* RTOS_SDK */
 
+/* #define ESP_ABORT_ON_MALLOC_FAILURE */
+
 /* Why these declarations are commented out in mem.h is beyond me. */
 void *pvPortMalloc(size_t xWantedSize);
 void vPortFree(void *pv);
@@ -59,11 +61,8 @@ char *strerror(int errnum) {
 
 void *malloc(size_t size) {
   void *res = (void *) pvPortMalloc(size);
-#ifndef NO_V7
-  if (res == NULL) {
-    v7_gc(v7, 1);
-    res = (void *) pvPortMalloc(size);
-  }
+#ifdef ESP_ABORT_ON_MALLOC_FAILURE
+  if (res == NULL) abort();
 #endif
   return res;
 }
@@ -73,11 +72,18 @@ void free(void *ptr) {
 }
 
 void *realloc(void *ptr, size_t size) {
-  void *res = (void *) pvPortRealloc(ptr, size);
-#ifndef NO_V7
+  void *res;
+  /* ESP realloc is annoying - it prints an error message if reallocing to 0. */
+  if (size == 0) {
+    vPortFree(ptr);
+    return NULL;
+  }
+  res = (void *) pvPortRealloc(ptr, size);
+#ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) {
-    v7_gc(v7, 1);
-    res = (void *) pvPortRealloc(ptr, size);
+    printf("failed to alloc %u bytes, %d avail\n", size,
+           system_get_free_heap_size());
+    abort();
   }
 #endif
   return res;
@@ -85,11 +91,8 @@ void *realloc(void *ptr, size_t size) {
 
 void *calloc(size_t num, size_t size) {
   void *res = (void *) pvPortZalloc(num * size);
-#ifndef NO_V7
-  if (res == NULL) {
-    v7_gc(v7, 1);
-    res = (void *) pvPortZalloc(num * size);
-  }
+#ifdef ESP_ABORT_ON_MALLOC_FAILURE
+  if (res == NULL) abort();
 #endif
   return res;
 }
@@ -401,6 +404,7 @@ int double_to_str(char *buf, size_t buf_size, double val, int prec) {
 #undef APPEND_CHAR
 #undef flash_log10
 
+void abort(void) __attribute__((no_instrument_function));
 void abort(void) {
   /* cause an unaligned access exception, that will drop you into gdb */
   *(int *) 1 = 1;

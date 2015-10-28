@@ -1,5 +1,6 @@
 #ifdef ESP_ENABLE_MG_LWIP_IF
 #include <mongoose.h>
+#include <v7.h>
 
 #include "ets_sys.h"
 #include "osapi.h"
@@ -157,6 +158,7 @@ void mg_if_connect_udp(struct mg_connection *nc) {
   system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
 }
 
+#ifndef SJ_DISABLE_LISTENER
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   struct mg_connection *lc = (struct mg_connection *) arg, *nc;
   union socket_address sa;
@@ -193,6 +195,11 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
   tcp_accept(tpcb, mg_lwip_accept_cb);
   return 0;
 }
+#else
+int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
+  return -1;
+}
+#endif
 
 int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   /* TODO(rojer) */
@@ -203,6 +210,7 @@ void mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
   nc->err = tcp_write(tpcb, buf, len, TCP_WRITE_FLAG_COPY);
   tcp_output(tpcb);
+  mbuf_trim(&nc->send_mbuf);
   DBG(("%p tcp_write %u = %d", nc, len, nc->err));
   if (nc->err != ERR_OK) {
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
@@ -242,6 +250,7 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
   DBG(("%p %u", nc, len));
   tcp_recved(tpcb, len);
+  mbuf_trim(&nc->recv_mbuf);
 }
 
 void mg_if_destroy_conn(struct mg_connection *nc) {
@@ -334,13 +343,15 @@ void mg_ev_mgr_remove_conn(struct mg_connection *nc) {
   (void) nc;
 }
 
+extern struct v7 *v7;
+
 time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   int n = 0;
   time_t now = time(NULL);
   struct mg_connection *nc, *tmp;
   (void) timeout_ms;
-  DBG(("begin poll, now=%u, hf=%u", (unsigned int) now,
-       system_get_free_heap_size()));
+  DBG(("begin poll, now=%u, hf=%u, sf lwm=%u", (unsigned int) now,
+       system_get_free_heap_size(), v7_get_stack_avail_lwm(v7)));
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
     tmp = nc->next;
     n++;
