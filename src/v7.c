@@ -1984,7 +1984,7 @@ extern double _v7_infinity;
 #define EXIT_FAILURE 1
 #endif
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
 extern struct v7 *v7_head;
 #endif
 #ifdef V7_STACK_GUARD_MIN_SIZE
@@ -2138,7 +2138,7 @@ struct v7 {
   void *sp_lwm;
 #endif
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
   struct v7 *next_v7; /* linked list of v7 contexts, needed by gc check hooks */
 #endif
 
@@ -7828,7 +7828,7 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
 struct v7 *v7_head = NULL;
 #endif
 
@@ -9449,7 +9449,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 #endif
 #endif
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
     v7->next_v7 = v7_head;
     v7_head = v7;
 #endif
@@ -9518,7 +9518,7 @@ void v7_destroy(struct v7 *v7) {
   mbuf_free(&v7->json_visited_stack);
   mbuf_free(&v7->tmp_stack);
 
-#ifdef V7_ENABLE_GC_CHECK
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
   /* delete this v7 */
   {
     struct v7 *v, **prevp = &v7_head;
@@ -10359,6 +10359,8 @@ void __cyg_profile_func_enter(void *this_fn, void *call_site) {
   if (profile_enter || v7_sp_limit == NULL) return;
 
   profile_enter++;
+  if (fp < v7_head->sp_lwm) v7_head->sp_lwm = fp;
+
   if (((int) fp - (int) v7_sp_limit) < V7_STACK_GUARD_MIN_SIZE) {
     printf("fun %p sp %p limit %p left %d\n", this_fn, fp, v7_sp_limit,
            (int) fp - (int) v7_sp_limit);
