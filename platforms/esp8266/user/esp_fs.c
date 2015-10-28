@@ -167,6 +167,7 @@ int fs_init() {
 void set_errno(int res) {
   if (res < 0) {
     errno = SPIFFS_errno(&fs);
+    fprintf(stderr, "spiffs error: %d\n", errno);
   }
 }
 
