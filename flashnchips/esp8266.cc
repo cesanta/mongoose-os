@@ -51,7 +51,7 @@ const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
 const ulong spiffsBlockOffset = 0x70000;
-const ulong spiffsBlockSize = 0x10000;
+const ulong spiffsBlockSize = 49152;
 
 // Copy-pasted from
 // https://github.com/themadinventor/esptool/blob/e96336f6561109e67afe03c0695d1e5b0de15da6/esptool.py
