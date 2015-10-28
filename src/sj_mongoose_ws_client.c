@@ -10,26 +10,11 @@
 #define WEBSOCKET_OPEN v7_create_number(1)
 #define WEBSOCKET_CLOSED v7_create_number(2)
 
-#ifdef _WIN32
-int asprintf(char **ptr, char *fmt, ...) {
-  int size;
-  va_list argv;
-  va_start(argv, fmt);
-  size = vsnprintf(NULL, 0, fmt, argv);
-  if (size > 0) {
-    *ptr = malloc(size + 1);
-    size = vsprintf(*ptr, fmt, argv);
-  }
-
-  va_end(argv);
-  return size;
-}
-#endif
-
 struct user_data {
   struct v7 *v7;
   v7_val_t ws;
   char *proto;
+  char *extra_headers;
 };
 
 static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
@@ -48,15 +33,17 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   switch (ev) {
     case MG_EV_CONNECT:
       if (*(int *) ev_data == 0) {
-        char *proto = NULL;
-        if (ud->proto != NULL) {
-          int tmp = asprintf(&proto, "Sec-WebSocket-Protocol: %s\n", ud->proto);
-          (void) tmp; /* Shutup compiler */
+        char buf[100] = {'\0'};
+        if (ud->proto != NULL || ud->extra_headers != NULL) {
+          snprintf(buf, sizeof(buf), "%s%s%s%s",
+                   ud->proto ? "Sec-WebSocket-Protocol: " : "",
+                   ud->proto ? ud->proto : "", ud->proto ? "\r\n" : "",
+                   ud->extra_headers ? ud->extra_headers : "");
+          free(ud->proto);
+          free(ud->extra_headers);
+          ud->proto = ud->extra_headers = NULL;
         }
-        mg_send_websocket_handshake(nc, "/", proto);
-        if (proto != NULL) {
-          free(proto);
-        }
+        mg_send_websocket_handshake(nc, "/", buf);
       } else {
         invoke_cb(ud, "onerror", v7_create_null());
       }
@@ -80,6 +67,9 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       nc->user_data = NULL;
       v7_set(v7, ud->ws, "_nc", ~0, V7_PROPERTY_HIDDEN, v7_create_undefined());
       v7_disown(v7, &ud->ws);
+      /* Free strings here in case if connect failed */
+      free(ud->proto);
+      free(ud->extra_headers);
       free(ud);
       break;
     case MG_EV_SEND:
@@ -95,7 +85,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 * protocol: websocket subprotocol
 *
 * Example:
-* ws = new WebSocket('wss://localhost:1234');
+* ws = new WebSocket('wss://localhost:1234', 'my_protocol', 'ExtraHdr: hi\n');
 * ws.onopen = function(ev) {
 *     print("ON OPEN", ev);
 * }
@@ -119,6 +109,8 @@ static v7_val_t sj_ws_ctor(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t urlv = v7_arg(v7, 0);
   v7_val_t subprotov = v7_arg(v7, 1);
+  v7_val_t ehv = v7_arg(v7, 2);
+  size_t n;
 
   if (!v7_is_string(urlv)) {
     v7_throw(v7, "invalid ws url string");
@@ -154,11 +146,12 @@ static v7_val_t sj_ws_ctor(struct v7 *v7) {
     v7_own(v7, &ud->ws);
 
     if (v7_is_string(subprotov)) {
-      size_t len;
-      const char *proto = v7_to_string(v7, &subprotov, &len);
-      ud->proto = strdup(proto);
+      ud->proto = strdup(v7_to_string(v7, &subprotov, &n));
     }
 
+    if (v7_is_string(ehv)) {
+      ud->extra_headers = strdup(v7_to_string(v7, &ehv, &n));
+    }
   } else {
     v7_throw(v7, "WebSocket ctor called without new");
   }

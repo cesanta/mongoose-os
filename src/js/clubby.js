@@ -8,10 +8,11 @@ var Clubby = function(arg) {
   //    src: CLIENT_ID,
   //    key: CLIENT_PASSWORD,
   //    log: BOOLEAN,
+  //    eh: EXTRA_HEADERS_STRING,    // Extra HTTP headers on WS negotiation
   //    ephemeral: BOOLEAN,          // if true do append random str to url, default true
   //    onopen: CALLBACK_OPTIONAL,   // Called when socket is connected
   //    onstart: CALLBACK_OPTIONAL,  // Called at any clubby call
-  //    onstop: CALLBACK_OPTIONAL    // Called when all clubby calls are ended
+  //    onstop: CALLBACK_OPTIONAL,   // Called when all clubby calls are ended
   //    oncmd: CALLBACK_OPTIONAL     // Called on each incoming command
   // }
 
@@ -40,7 +41,7 @@ var Clubby = function(arg) {
   var reconnect = function() {
     var url = arg.url || defaultUrl;
     log('reconnecting to [' + url + ']');
-    var ws = config.ws = new WebSocket(url, 'clubby.cesanta.com');
+    var ws = config.ws = new WebSocket(url, 'clubby.cesanta.com', config.eh);
 
     ws.onclose = function(ev) {
       log('ws closed');
