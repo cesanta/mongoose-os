@@ -10410,6 +10410,11 @@ V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
+#ifdef V7_MALLOC_GC
+  (void) a;
+  (void) ptr;
+  return 1;
+#else
   const struct gc_cell *p = (const struct gc_cell *) ptr;
   struct gc_block *b;
   for (b = a->blocks; b != NULL; b = b->next) {
@@ -10418,6 +10423,7 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
     }
   }
   return 0;
+#endif
 }
 
 #if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
