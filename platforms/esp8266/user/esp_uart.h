@@ -1,6 +1,8 @@
 #ifndef ESP_UART_INCLUDED
 #define ESP_UART_INCLUDED
 
+#include <string.h>
+
 typedef void (*uart_process_char_t)(char ch);
 
 extern uart_process_char_t uart_process_char;
@@ -12,5 +14,9 @@ void uart_putchar(int fd, char ch);
 void uart_write(int fd, const char *p, size_t len);
 void uart_puts(int fd, const char *p);
 int blocking_read_uart();
+int blocking_read_uart_buf(char *buf, size_t buf_len);
+int tx_fifo_len(int uart_no);
+int rx_fifo_len(int uart_no);
+void uart_tx_char(unsigned uartno, char ch);
 
 #endif /* ESP_UART_INCLUDED */

@@ -10445,7 +10445,7 @@ void __cyg_profile_func_enter(void *this_fn, void *call_site) {
   if (profile_enter || v7_sp_limit == NULL) return;
 
   profile_enter++;
-  if (fp < v7_head->sp_lwm) v7_head->sp_lwm = fp;
+  if (v7_head != NULL && fp < v7_head->sp_lwm) v7_head->sp_lwm = fp;
 
   if (((int) fp - (int) v7_sp_limit) < V7_STACK_GUARD_MIN_SIZE) {
     printf("fun %p sp %p limit %p left %d\n", this_fn, fp, v7_sp_limit,

@@ -26,10 +26,6 @@
 
 #endif /* RTOS_SDK */
 
-/* At this moment using uart #0 only */
-#define UART_MAIN 0
-#define UART_DEBUG 1
-
 #define UART_BASE(i) (0x60000000 + (i) *0xf00)
 #define UART_INTR_STATUS(i) (UART_BASE(i) + 0x8)
 #define UART_FORMAT_ERROR (BIT(3))
@@ -41,6 +37,10 @@
 #define UART_DATA_STATUS(i) (UART_BASE(i) + 0x1C)
 #define UART_BUF(i) UART_BASE(i)
 #define UART_CONF_TX(i) (UART_BASE(i) + 0x20)
+
+#define UART_MAIN 0
+#define UART_DEBUG 1
+
 #define TASK_PRIORITY 0
 #define RXTASK_QUEUE_LEN 10
 #define RX_BUFFER_SIZE 0x100
@@ -60,6 +60,14 @@ static os_event_t rx_task_queue[RXTASK_QUEUE_LEN];
 static char rx_buf[RX_BUFFER_SIZE];
 static unsigned s_system_uartno = UART_MAIN;
 static unsigned debug_enabled = 0;
+
+int rx_fifo_len(int uart_no) {
+  return READ_PERI_REG(UART_DATA_STATUS(uart_no)) & 0xff;
+}
+
+int tx_fifo_len(int uart_no) {
+  return (READ_PERI_REG(UART_DATA_STATUS(uart_no)) >> 16) & 0xff;
+}
 
 FAST static void rx_isr(void *param) {
   /* TODO(alashkin): add errors checking */
@@ -95,7 +103,7 @@ FAST static void rx_isr(void *param) {
   }
 }
 
-static int blocking_read_uart_buf(char *buf) {
+int blocking_read_uart_buf(char *buf, size_t buf_len) {
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
 
   if ((peri_reg & UART_RXBUF_FULL) != 0 || (peri_reg & UART_RX_NEW) != 0) {
@@ -106,7 +114,7 @@ static int blocking_read_uart_buf(char *buf) {
 
     char_count = READ_PERI_REG(UART_DATA_STATUS(UART_MAIN)) & 0x000000FF;
 
-    for (i = 0; i < char_count; i++) {
+    for (i = 0; i < char_count && i < buf_len; i++) {
       buf[i] = READ_PERI_REG(UART_BUF(UART_MAIN)) & 0xFF;
     }
 
@@ -121,7 +129,7 @@ int blocking_read_uart() {
   static char buf[256];
   static int pos = 0;
   if (pos == 0) {
-    pos = blocking_read_uart_buf(buf);
+    pos = blocking_read_uart_buf(buf, sizeof(buf));
   }
   if (pos == 0) {
     return -1;
