@@ -378,12 +378,14 @@ static void mg_lwip_task(os_event_t *e) {
       break;
     }
     case MG_SIG_V7_CALLBACK: {
+#ifndef NO_V7
       struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
       _sj_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
       v7_disown(cba->v7, &cba->func);
       v7_disown(cba->v7, &cba->this_obj);
       v7_disown(cba->v7, &cba->args);
       free(cba);
+#endif
       break;
     }
   }
