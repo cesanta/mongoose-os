@@ -421,6 +421,13 @@ class FlasherImpl : public Flasher {
       }
       invert_dtr_rts_ = value.toBool();
       return util::Status::OK;
+    } else if (name == kDumpFSOption) {
+      if (value.type() != QVariant::String) {
+        return util::Status(util::error::INVALID_ARGUMENT,
+                            "value must be a string");
+      }
+      fs_dump_filename_ = value.toString();
+      return util::Status::OK;
     } else {
       return util::Status(util::error::INVALID_ARGUMENT, "unknown option");
     }
@@ -434,7 +441,7 @@ class FlasherImpl : public Flasher {
                           kDisableEraseWorkaroundOption,
                           kSkipReadingFlashParamsOption, kInvertDTRRTS});
     QStringList stringOpts({kIdDomainOption, kFlashParamsOption,
-                            kFlashingDataPort, kFlashBaudRate});
+                            kFlashingDataPort, kFlashBaudRate, kDumpFSOption});
 
     for (const auto& opt : boolOpts) {
       auto s = setOption(opt, parser.isSet(opt));
@@ -999,6 +1006,15 @@ class FlasherImpl : public Flasher {
     if (!dev_fs.ok()) {
       return dev_fs.status();
     }
+    if (!fs_dump_filename_.isEmpty()) {
+      QFile f(fs_dump_filename_);
+      if (f.open(QIODevice::WriteOnly)) {
+        f.write(dev_fs.ValueOrDie());
+      } else {
+        qCritical() << "Failed to open" << fs_dump_filename_ << ":"
+                    << f.errorString();
+      }
+    }
     auto merged =
         mergeFilesystems(dev_fs.ValueOrDie(), images_[spiffsBlockOffset]);
     if (merged.ok() && !files_.empty()) {
@@ -1064,6 +1080,7 @@ class FlasherImpl : public Flasher {
   QString flashing_port_name_;
   int flashing_speed_ = 230400;
   bool invert_dtr_rts_ = false;
+  QString fs_dump_filename_;
 };
 
 class ESP8266HAL : public HAL {

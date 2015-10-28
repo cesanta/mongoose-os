@@ -131,6 +131,8 @@ int main(int argc, char* argv[]) {
         "name", "api.cesanta.com"},
        {Flasher::kOverwriteFSOption,
         "If set, force overwrite the data flash with the factory image"},
+       {Flasher::kDumpFSOption,
+        "Dump file system image to a given file before merging.", "filename"},
        {Flasher::kSkipIdGenerationOption,
         "If set, device ID won't be generated and flashed."},
        {"generate-id",
