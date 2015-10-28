@@ -17,6 +17,7 @@
 #include "esp_uart.h"
 #include "esp_sj_wifi.h"
 #include "esp_data_gen.h"
+#include "sj_http.h"
 #include "sj_mongoose_ws_client.h"
 #include <sha1.h>
 
@@ -180,7 +181,7 @@ void init_v7(void *stack_base) {
 #endif
 
   mongoose_init();
-  sj_init_simple_http_client(v7);
+  sj_init_http(v7);
   sj_init_ws_client(v7);
 
   v7_gc(v7, 1);

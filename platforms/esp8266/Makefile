@@ -26,10 +26,9 @@ SSL ?= None
 
 APP_MODULES := user $(SPIFFS_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            sj_prompt.c v7.c sj_v7_ext.c sj_simple_http.c \
+            sj_prompt.c v7.c sj_v7_ext.c sj_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
-            mongoose.c sj_mongoose_http_client.c sj_simple_http.c sj_mongoose.c \
-            sj_mongoose_ws_client.c
+            mongoose.c sj_mongoose.c sj_mongoose_ws_client.c
 
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
               $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
@@ -65,7 +64,7 @@ SHIMS = -DNDEBUG
 
 FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DESP_COREDUMP -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF \
-           -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 -DNO_BSD_SOCKETS \
+           -DV7_ENABLE_COMPACTING_GC -DNO_BSD_SOCKETS \
            -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
            -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
            -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
@@ -74,9 +73,9 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            $(FEATURES_EXTRA)
 
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
-                 -DMG_DISABLE_JSON_RPC -DMG_DISABLE_SOCKETPAIR -DMG_DISABLE_DAV \
-                 -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_CGI \
-                 -DMG_DISABLE_FILESYSTEM -DMG_DISABLE_SYNC_RESOLVER
+                    -DMG_DISABLE_JSON_RPC -DMG_DISABLE_SOCKETPAIR \
+                    -DMG_DISABLE_DAV -DMG_DISABLE_CGI -DMG_DISABLE_POPEN \
+                    -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_SYNC_RESOLVER
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
                -DV7_STACK_SIZE=8192-64 \
