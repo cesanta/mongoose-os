@@ -2653,6 +2653,11 @@ V7_PRIVATE uint16_t
 gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len);
 V7_PRIVATE int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n);
 
+/* return 0 if v is an object/function with a bad pointer */
+V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v);
+/* checks whether a pointer is within the ranges of an arena */
+V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *p);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -9905,6 +9910,14 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     return;
   }
   obj = v7_to_object(v);
+  /*
+   * we treat all object like things like objects but they might be functions,
+   * gc_gheck_val checks the appropriate arena per actual value type.
+   */
+  if (!gc_check_val(v7, v)) {
+    abort();
+  }
+
   if (MARKED(obj)) return;
 
   if (obj->attributes & V7_OBJ_DENSE_ARRAY) {
@@ -9912,6 +9925,10 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   }
 
   for ((prop = obj->properties), MARK(obj); prop != NULL; prop = next) {
+    if (!gc_check_ptr(&v7->property_arena, prop)) {
+      abort();
+    }
+
 #ifndef V7_DISABLE_COMPACTING_GC
     gc_mark_string(v7, &prop->value);
     gc_mark_string(v7, &prop->name);
@@ -9919,14 +9936,6 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     gc_mark(v7, prop->value);
 
     next = prop->next;
-
-#if 0
-    /* This usually triggers when marking an already free object */
-    assert((struct gc_cell *) prop >= v7->property_arena.base &&
-           (struct gc_cell *) prop < GC_CELL_OP(&v7->property_arena,
-                                                v7->property_arena.base, +,
-                                                v7->property_arena.size));
-#endif
     MARK(prop);
   }
 
@@ -10338,6 +10347,26 @@ void v7_gc(struct v7 *v7, int full) {
   if (full) {
     mbuf_trim(&v7->owned_strings);
   }
+}
+
+V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v) {
+  if (v7_is_function(v)) {
+    return gc_check_ptr(&v7->function_arena, v7_to_function(v));
+  } else if (v7_is_object(v)) {
+    return gc_check_ptr(&v7->object_arena, v7_to_object(v));
+  }
+  return 1;
+}
+
+V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
+  const struct gc_cell *p = (const struct gc_cell *) ptr;
+  struct gc_block *b;
+  for (b = a->blocks; b != NULL; b = b->next) {
+    if (p >= b->base && p < GC_CELL_OP(a, b->base, +, b->size)) {
+      return 1;
+    }
+  }
+  return 0;
 }
 
 #if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
