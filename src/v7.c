@@ -256,7 +256,8 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
 
 /*
  * Return pointer to string stored in `v7_val_t`.
- * String length returned in `string_len`. Returned string pointer is
+ * String length returned in `string_len`. For all strings owned by V7
+ * engine, returned string pointer is
  * guaranteed to be 0-terminated, suitable for standard C library string API.
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
@@ -1835,6 +1836,10 @@ struct gc_arena {
 
 /* Amalgamated: #include "license.h" */
 
+#ifdef V7_ENABLE_DICTIONARY_STRINGS
+#define V7_DISABLE_PREDEFINED_STRINGS
+#endif
+
 /* Check whether we're compiling in an environment with no filesystem */
 #if defined(ARDUINO) && (ARDUINO == 106)
 #define V7_NO_FS
@@ -2277,7 +2282,7 @@ typedef uint64_t val_t;
 #define V7_TAG_STRING_C ((uint64_t) 0xFFF6 << 48)  /* String chunk */
 #define V7_TAG_FUNCTION ((uint64_t) 0xFFF5 << 48)  /* JavaScript function */
 #define V7_TAG_CFUNCTION ((uint64_t) 0xFFF4 << 48) /* C function */
-#define V7_TAG_GETSETTER ((uint64_t) 0xFFF3 << 48) /* getter+setter */
+#define V7_TAG_STRING_D ((uint64_t) 0xFFF3 << 48)  /* Dictionary string  */
 #define V7_TAG_REGEXP ((uint64_t) 0xFFF2 << 48)    /* Regex */
 #define V7_TAG_NOVALUE ((uint64_t) 0xFFF1 << 48)   /* Sentinel for no value */
 #define V7_TAG_MASK ((uint64_t) 0xFFFF << 48)
@@ -2428,7 +2433,7 @@ V7_PRIVATE v7_val_t v7_get_v(struct v7 *, v7_val_t, v7_val_t);
 
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
-V7_PRIVATE int v7_set_v(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
+int v7_set_v(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
 V7_PRIVATE int v7_set_property_v(struct v7 *, v7_val_t obj, v7_val_t name,
                                  unsigned int attributes, v7_val_t val);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
@@ -7837,6 +7842,47 @@ double _v7_nan;
 struct v7 *v7_head = NULL;
 #endif
 
+#ifdef V7_ENABLE_DICTIONARY_STRINGS
+/*
+ * Dictionary of read-only strings with length > 5.
+ * NOTE(lsm): must be sorted alphabetically, because
+ * v_find_string_in_dictionary performs binary search over this list.
+ */
+struct v7_vec v_dictionary_strings[] = {
+    V7_VEC("Function"), V7_VEC("Infinity"), V7_VEC("Object"),
+    V7_VEC("arguments"), V7_VEC("concat"), V7_VEC("configurable"),
+    V7_VEC("constructor"), V7_VEC("defineProperty"), V7_VEC("defineProperties"),
+    V7_VEC("defineProperties"), V7_VEC("every"),
+    V7_VEC("getOwnPropertyDescriptor"), V7_VEC("getOwnPropertyNames"),
+    V7_VEC("getPrototypeOf"), V7_VEC("hasOwnProperty"), V7_VEC("function"),
+    V7_VEC("isExtensible"), V7_VEC("isFinite"), V7_VEC("isPrototypeOf"),
+    V7_VEC("indexOf"), V7_VEC("lastIndexOf"), V7_VEC("length"),
+    V7_VEC("parseInt"), V7_VEC("propertyIsEnumerable"), V7_VEC("prototype"),
+    V7_VEC("toString"), V7_VEC("valueOf"), V7_VEC("writable")};
+
+static int v_find_string_in_dictionary(const char *s, size_t len) {
+  size_t start = 0, end = ARRAY_SIZE(v_dictionary_strings);
+
+  while (s != NULL && start < end) {
+    size_t mid = start + (end - start) / 2;
+    struct v7_vec *v = &v_dictionary_strings[mid];
+    size_t min_len = len < (size_t) v->len ? len : v->len;
+    int comparison_result = memcmp(s, v->p, min_len);
+    if (comparison_result == 0) {
+      comparison_result = len - v->len;
+    }
+    if (comparison_result < 0) {
+      end = mid;
+    } else if (comparison_result > 0) {
+      start = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+  return -1;
+}
+#endif
+
 enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_number(v)) {
@@ -7907,13 +7953,7 @@ int v7_is_function(val_t v) {
 int v7_is_string(val_t v) {
   uint64_t t = v & V7_TAG_MASK;
   return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O ||
-         t == V7_TAG_STRING_5;
-}
-
-int v7_is_primitive_string(val_t v) {
-  uint64_t t = v & V7_TAG_MASK;
-  return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O ||
-         t == V7_TAG_STRING_5;
+         t == V7_TAG_STRING_5 || t == V7_TAG_STRING_D;
 }
 
 int v7_is_boolean(val_t v) {
@@ -9159,6 +9199,9 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
+#ifdef V7_ENABLE_DICTIONARY_STRINGS
+  int dict_index;
+#endif
 
 #ifdef V7_GC_AFTER_STRING_ALLOC
   v7->need_gc = 1;
@@ -9181,6 +9224,12 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
       memcpy(s, p, len);
     }
     tag = V7_TAG_STRING_5;
+#ifdef V7_ENABLE_DICTIONARY_STRINGS
+  } else if ((dict_index = v_find_string_in_dictionary(p, len)) >= 0) {
+    offset = 0;
+    GET_VAL_NAN_PAYLOAD(offset)[0] = dict_index;
+    tag = V7_TAG_STRING_D;
+#endif
   } else if (own) {
 #ifndef V7_DISABLE_COMPACTING_GC
     compute_need_gc(v7);
@@ -9220,11 +9269,7 @@ V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
   return res;
 }
 
-/*
- * Get a pointer to string and string length.
- *
- * Beware that V7 strings are not null terminated!
- */
+/* Get a pointer to string and string length. */
 const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
   char *p;
@@ -9238,6 +9283,12 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   } else if (tag == V7_TAG_STRING_5) {
     p = GET_VAL_NAN_PAYLOAD(*v);
     *sizep = 5;
+#ifdef V7_ENABLE_DICTIONARY_STRINGS
+  } else if (tag == V7_TAG_STRING_D) {
+    int index = ((unsigned char *) GET_VAL_NAN_PAYLOAD(*v))[0];
+    *sizep = v_dictionary_strings[index].len;
+    p = (char *) v_dictionary_strings[index].p;
+#endif
   } else {
     struct mbuf *m =
         (tag == V7_TAG_STRING_O) ? &v7->owned_strings : &v7->foreign_strings;
@@ -17937,10 +17988,11 @@ static val_t String_ctor(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_arg(v7, 0), res = arg0;
 
-  if (v7_argc(v7) == 0)
+  if (v7_argc(v7) == 0) {
     res = v7_create_string(v7, NULL, 0, 1);
-  else if (!v7_is_string(arg0))
+  } else if (!v7_is_string(arg0)) {
     res = to_string(v7, arg0);
+  }
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
@@ -18332,15 +18384,16 @@ static val_t Str_slice(struct v7 *v7) {
 static val_t s_transform(struct v7 *v7, val_t obj, Rune (*func)(Rune)) {
   val_t s = to_string(v7, obj);
   size_t i, n, len;
-  const char *p = v7_to_string(v7, &s, &len);
-  val_t res = v7_create_string(v7, p, len, 1);
+  const char *p2, *p = v7_to_string(v7, &s, &len);
+  /* Pass NULL to make sure we're not creating dictionary value */
+  val_t res = v7_create_string(v7, NULL, len, 1);
   Rune r;
 
-  p = v7_to_string(v7, &res, &len);
+  p2 = v7_to_string(v7, &res, &len);
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
     r = func(r);
-    runetochar((char *) p + i, &r);
+    runetochar((char *) p2 + i, &r);
   }
 
   return res;

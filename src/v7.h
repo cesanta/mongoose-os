@@ -252,7 +252,8 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
 
 /*
  * Return pointer to string stored in `v7_val_t`.
- * String length returned in `string_len`. Returned string pointer is
+ * String length returned in `string_len`. For all strings owned by V7
+ * engine, returned string pointer is
  * guaranteed to be 0-terminated, suitable for standard C library string API.
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
