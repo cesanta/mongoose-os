@@ -72,11 +72,20 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            $(FEATURES_EXTRA)
 
-MONGOOSE_FEATURES = -DMG_DISABLE_MQTT -DMG_DISABLE_MD5 \
-                    -DMG_DISABLE_JSON_RPC -DMG_DISABLE_SOCKETPAIR \
+MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
+                    -DMG_DISABLE_JSON_RPC \
+                    -DMG_DISABLE_COAP \
+                    -DMG_DISABLE_SYNC_RESOLVER \
                     -DMG_DISABLE_HTTP_DIGEST_AUTH \
-                    -DMG_DISABLE_DAV -DMG_DISABLE_CGI -DMG_DISABLE_POPEN \
-                    -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_SYNC_RESOLVER
+                    -DMG_DISABLE_MD5 \
+                    -DMG_DISABLE_SOCKETPAIR \
+                    -DMG_DISABLE_DAV -DMG_DISABLE_CGI \
+                    -DMG_DISABLE_SSI \
+                    -DMG_DISABLE_DIRECTORY_LISTING \
+                    -DMG_MAX_HTTP_HEADERS=20 \
+                    -DMG_MAX_HTTP_REQUEST_SIZE=1024 \
+                    -DMG_MAX_PATH=40 \
+                    -DMG_MAX_HTTP_SEND_IOBUF=1024
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
                -DV7_STACK_SIZE=8192-64 \
