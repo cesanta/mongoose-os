@@ -1,6 +1,7 @@
 #ifdef ESP_ENABLE_MG_LWIP_IF
+#include "esp_mg_net_if.h"
+
 #include <mongoose.h>
-#include <v7.h>
 
 #include "ets_sys.h"
 #include "osapi.h"
@@ -13,6 +14,8 @@
 #include <lwip/tcp.h>
 #include <lwip/udp.h>
 
+#include <sj_v7_ext.h>
+
 #define MG_TASK_PRIORITY 2
 #define MG_POLL_INTERVAL_MS 500
 #define MG_TASK_QUEUE_LEN 20
@@ -22,12 +25,22 @@ static os_event_t s_mg_task_queue[MG_TASK_QUEUE_LEN];
 static int poll_scheduled = 0;
 
 enum mg_sig_type {
-  MG_SIG_POLL = 0,
-  MG_SIG_CONNECT_RESULT = 2,
-  MG_SIG_SENT_CB = 4,
-  MG_SIG_CLOSE_CONN = 5,
+  MG_SIG_POLL = 0,           /* struct mg_mgr* */
+  MG_SIG_CONNECT_RESULT = 2, /* struct mg_connection* */
+  MG_SIG_SENT_CB = 4,        /* struct mg_connection* */
+  MG_SIG_CLOSE_CONN = 5,     /* struct mg_connection* */
+  MG_SIG_V7_CALLBACK = 10,   /* struct v7_callback_args* */
   MG_SIG_TOMBSTONE = 0xffff,
 };
+
+struct v7_callback_args {
+  struct v7 *v7;
+  v7_val_t func;
+  v7_val_t this_obj;
+  v7_val_t args;
+};
+
+static void mg_lwip_task(os_event_t *e);
 
 static void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   if (poll_scheduled) return;
@@ -281,42 +294,6 @@ void mg_if_set_sock(struct mg_connection *nc, sock_t sock) {
   nc->sock = sock;
 }
 
-static void mg_lwip_task(os_event_t *e) {
-  struct mg_mgr *mgr = NULL;
-  DBG(("sig %d", e->sig));
-  poll_scheduled = 0;
-  switch ((enum mg_sig_type) e->sig) {
-    case MG_SIG_TOMBSTONE:
-      break;
-    case MG_SIG_POLL: {
-      mgr = (struct mg_mgr *) e->par;
-      break;
-    }
-    case MG_SIG_CONNECT_RESULT: {
-      struct mg_connection *nc = (struct mg_connection *) e->par;
-      mgr = nc->mgr;
-      mg_if_connect_cb(nc, nc->err);
-      break;
-    }
-    case MG_SIG_CLOSE_CONN: {
-      struct mg_connection *nc = (struct mg_connection *) e->par;
-      mgr = nc->mgr;
-      nc->flags |= MG_F_CLOSE_IMMEDIATELY;
-      mg_close_conn(nc);
-      break;
-    }
-    case MG_SIG_SENT_CB: {
-      struct mg_connection *nc = (struct mg_connection *) e->par;
-      mgr = nc->mgr;
-      mg_if_sent_cb(nc, nc->err);
-      break;
-    }
-  }
-  if (mgr != NULL) {
-    mg_mgr_poll(mgr, 0);
-  }
-}
-
 void mg_poll_timer_cb(void *arg) {
   struct mg_mgr *mgr = (struct mg_mgr *) arg;
   DBG(("poll tmr %p", s_mg_task_queue));
@@ -369,4 +346,68 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   DBG(("end poll, %d conns", n));
   return now;
 }
+
+static void mg_lwip_task(os_event_t *e) {
+  struct mg_mgr *mgr = NULL;
+  DBG(("sig %d", e->sig));
+  poll_scheduled = 0;
+  switch ((enum mg_sig_type) e->sig) {
+    case MG_SIG_TOMBSTONE:
+      break;
+    case MG_SIG_POLL: {
+      mgr = (struct mg_mgr *) e->par;
+      break;
+    }
+    case MG_SIG_CONNECT_RESULT: {
+      struct mg_connection *nc = (struct mg_connection *) e->par;
+      mgr = nc->mgr;
+      mg_if_connect_cb(nc, nc->err);
+      break;
+    }
+    case MG_SIG_CLOSE_CONN: {
+      struct mg_connection *nc = (struct mg_connection *) e->par;
+      mgr = nc->mgr;
+      nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+      mg_close_conn(nc);
+      break;
+    }
+    case MG_SIG_SENT_CB: {
+      struct mg_connection *nc = (struct mg_connection *) e->par;
+      mgr = nc->mgr;
+      mg_if_sent_cb(nc, nc->err);
+      break;
+    }
+    case MG_SIG_V7_CALLBACK: {
+      struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
+      _sj_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
+      v7_disown(cba->v7, &cba->func);
+      v7_disown(cba->v7, &cba->this_obj);
+      v7_disown(cba->v7, &cba->args);
+      free(cba);
+      break;
+    }
+  }
+  if (mgr != NULL) {
+    mg_mgr_poll(mgr, 0);
+  }
+}
+
+void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                             v7_val_t args) {
+  struct v7_callback_args *cba =
+      (struct v7_callback_args *) calloc(1, sizeof(*cba));
+  if (cba == NULL) {
+    DBG(("OOM"));
+    return;
+  }
+  cba->v7 = v7;
+  cba->func = func;
+  cba->this_obj = this_obj;
+  cba->args = args;
+  v7_own(v7, &cba->func);
+  v7_own(v7, &cba->this_obj);
+  v7_own(v7, &cba->args);
+  system_os_post(MG_TASK_PRIORITY, MG_SIG_V7_CALLBACK, (uint32_t) cba);
+}
+
 #endif /* ESP_ENABLE_MG_LWIP_IF */

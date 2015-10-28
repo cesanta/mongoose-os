@@ -6,6 +6,7 @@
 
 #include "v7_esp.h"
 #include "sj_prompt.h"
+#include "esp_mg_net_if.h"
 #include "esp_uart.h"
 
 #ifndef RTOS_SDK
@@ -51,7 +52,7 @@ void sj_usleep(int usecs) {
 void sj_invoke_cb(struct v7* v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
 #ifndef RTOS_SDK
-  _sj_invoke_cb(v7, func, this_obj, args);
+  mg_dispatch_v7_callback(v7, func, this_obj, args);
 #else
   rtos_dispatch_callback(v7, func, this_obj, args);
 #endif
