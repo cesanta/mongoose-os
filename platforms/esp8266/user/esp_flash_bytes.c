@@ -35,6 +35,8 @@
  * target register, patches up the program counter to point to the next
  * instruction and resumes execution.
  */
+void flash_emul_exception_handler(struct xtensa_stack_frame *frame)
+    __attribute__((no_instrument_function));
 void flash_emul_exception_handler(struct xtensa_stack_frame *frame) {
   uint32_t vaddr = RSR(EXCVADDR);
 

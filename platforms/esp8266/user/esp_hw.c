@@ -6,6 +6,8 @@
 
 #include "esp_hw.h"
 
+uint8_t read_unaligned_byte(uint8_t *addr)
+    __attribute__((no_instrument_function));
 uint8_t read_unaligned_byte(uint8_t *addr) {
   uint32_t *base = (uint32_t *) ((uintptr_t) addr & ~0x3);
   uint32_t word;
