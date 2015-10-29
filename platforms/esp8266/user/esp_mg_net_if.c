@@ -97,7 +97,7 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
   pbuf_free(p);
   mg_if_recv_tcp_cb(nc, data, len);
   if (nc->send_mbuf.len > 0) {
-    system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) nc);
+    mg_lwip_mgr_schedule_poll(nc->mgr);
   }
   return ERR_OK;
 }
@@ -229,7 +229,11 @@ void mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
   tcp_output(tpcb);
   mbuf_trim(&nc->send_mbuf);
   DBG(("%p tcp_write %u = %d", nc, len, nc->err));
-  if (nc->err != ERR_OK) {
+  /*
+   * We ignore ERR_MEM because memory will be freed up when the data is sent
+   * and we'll retry.
+   */
+  if (nc->err != ERR_OK && nc->err != ERR_MEM) {
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
   }
 }
