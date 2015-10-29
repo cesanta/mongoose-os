@@ -20,7 +20,6 @@
   ((void *) ((uintptr_t) MMAP_BASE | ((desc - mmap_descs) << MMAP_DESC_BITS)))
 
 struct mmap_desc {
-  int fd;
   void *base;
   uint32_t pages;
   uint32_t *blocks; /* pages long */

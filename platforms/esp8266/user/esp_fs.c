@@ -71,7 +71,7 @@ int spiffs_get_memory_usage() {
 static struct mmap_desc *alloc_mmap_desc() {
   size_t i;
   for (i = 0; i < sizeof(mmap_descs) / sizeof(mmap_descs[0]); i++) {
-    if (mmap_descs[i].fd == 0) {
+    if (mmap_descs[i].blocks == NULL) {
       return &mmap_descs[i];
     }
   }
