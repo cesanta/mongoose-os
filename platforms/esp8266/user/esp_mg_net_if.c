@@ -221,6 +221,10 @@ int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
 
 void mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
+  if (nc->sock == INVALID_SOCKET) {
+    DBG(("%p tcp_write invalid socket %d", nc, nc->err));
+    return;
+  }
   nc->err = tcp_write(tpcb, buf, len, TCP_WRITE_FLAG_COPY);
   tcp_output(tpcb);
   mbuf_trim(&nc->send_mbuf);
