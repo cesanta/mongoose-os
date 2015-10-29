@@ -7044,11 +7044,11 @@ typedef uint16_t ast_skip_t;
  *
  *    $ ./v7 -e "300;" -b | od -A n -t x1
  *    56 07 41 53 54 56 31 30 00 01 00 09 00 00 13 03
- *    33 30 30 00
+ *    33 30 30
  *
  * Let's break it down and examine:
  *
- *    - 56 07 41 53 54 56 31 30 00
+ *    - 56 07 41 53 54 56 31 30
  *        Just a format prefix:
  *        Null-terminated string: `"V\007ASTV10"` (see `BIN_AST_SIGNATURE`)
  *    - 01
@@ -7090,10 +7090,6 @@ typedef uint16_t ast_skip_t;
  *        Varint value: 3
  *    - 33 30 30
  *        UTF-8 string "300"
- *
- *    - 00
- *        This extra trailing byte at the end of the AST is needed by
- *        `ast_get_num()` to temporarily set a zero terminator for `strtod()`.
  *
  * ---------------
  *
@@ -7694,15 +7690,20 @@ V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
 }
 
 V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
-  char tmp;
   char *str;
   size_t str_len;
+  char buf[12];
+  char *p = buf;
   str = ast_get_inlined_data(a, pos, &str_len);
-  assert(str + str_len < a->mbuf.buf + a->mbuf.len);
-  tmp = str[str_len];
-  str[str_len] = '\0';
-  *val = strtod(str, NULL);
-  str[str_len] = tmp;
+  assert(str + str_len <= a->mbuf.buf + a->mbuf.len);
+
+  if (str_len > sizeof(buf) - 1) {
+    p = (char *) malloc(str_len + 1);
+  }
+  strncpy(p, str, str_len);
+  p[str_len] = '\0';
+  *val = strtod(p, NULL);
+  if (p != buf) free(p);
 }
 
 #ifndef NO_LIBC
@@ -11538,11 +11539,6 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
                v7->pstate.line_no, col, line_len, v7->tok - col, (int) col - 1,
                "");
   }
-  /*
-   * ast_get_num needs a trailing byte after a AST_NUM payload to temporarily
-   * set a zero terminator for strtod.
-   */
-  mbuf_append(&a->mbuf, "\0", 1);
   return err;
 }
 
