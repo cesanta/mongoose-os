@@ -77,6 +77,7 @@ void init_done_cb() {
 /* Init function */
 void user_init() {
 #ifndef RTOS_TODO
+  system_update_cpu_freq(SYS_CPU_160MHZ);
   system_init_done_cb(init_done_cb);
 #endif
 
