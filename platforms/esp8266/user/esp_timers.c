@@ -58,9 +58,7 @@ struct timer_info {
 
 void esp_timer_callback(void *arg) {
   struct timer_info *ti = (struct timer_info *) arg;
-  os_timer_disarm(&ti->t); /* just in case */
   sj_invoke_cb0(v7, *ti->cb);
-  v7_gc(v7, true);
   v7_disown(v7, ti->cb);
   free(ti->cb);
   free(ti);

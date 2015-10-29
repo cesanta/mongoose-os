@@ -16,7 +16,7 @@ function ADPS9301(i2c, addr_sel) {
 
   // Read sensor data from sensor 0 or 1.
   this.readData = function(sensor) {
-    var reg = 0b10101100 | ((sensor & 1) << 1);
+    var reg = 0xAC | ((sensor & 1) << 1);
     return i2c.readRegW(ADDR, reg);
   }
 

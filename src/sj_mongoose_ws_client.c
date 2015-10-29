@@ -19,6 +19,7 @@ struct user_data {
 
 static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
   struct v7 *v7 = ud->v7;
+  DBG(("%s", name));
   v7_val_t met = v7_get(v7, ud->ws, name, ~0);
   if (!v7_is_undefined(met)) {
     sj_invoke_cb1(v7, met, ev);

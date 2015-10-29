@@ -75,7 +75,7 @@ void *realloc(void *ptr, size_t size) {
   void *res;
   /* ESP realloc is annoying - it prints an error message if reallocing to 0. */
   if (size == 0) {
-    vPortFree(ptr);
+    free(ptr);
     return NULL;
   }
   res = (void *) pvPortRealloc(ptr, size);

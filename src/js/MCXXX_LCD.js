@@ -5,6 +5,7 @@
 
 function MCXXX(i2c, numLines, numCols) {
   var icon_on = false;
+  var lines = [];
 
   this.init = function(display_on, cursor_on, cursor_blink, contrast) {
     return sendInsn([
@@ -30,24 +31,16 @@ function MCXXX(i2c, numLines, numCols) {
   };
 
   this.setText = function(text) {
-    var lines = text.split('\n');
-    var curX = 0, curY = 0;
-    for (var i = 0; i < numLines; i++) {
-      var line = (lines[i] || '').substr(0, numCols);
-      if (line.length > 0) {
-        curX = Math.min(15, line.length);
-        curY = i;
-      }
-      var numPad = numCols - line.length;
-      while (numPad-- > 0) line += ' ';
-      if (!sendInsn([I_DISPLAY_ON(true, false, false),
-                     I_SET_DRAM_ADDR(i * 0x40)]) ||
-          !sendData(line)) {
-        return false;
-      }
-    }
-    return sendInsn([I_DISPLAY_ON(true, true, true),
-                     I_SET_DRAM_ADDR(0x40 * curY + curX)]);
+    lines = text.split('\n');
+    while (lines.length > numLines) lines.pop();
+    return this._sendLines();
+  }
+
+  this.addLine = function(line) {
+    var ll = line.split('\n');
+    lines.shift();
+    lines.push(ll[0]);
+    return this._sendLines();
   }
 
   // Some constants.
@@ -107,4 +100,24 @@ function MCXXX(i2c, numLines, numCols) {
     i2c.stop();
     return true;
   };
+
+  this._sendLines = function() {
+    var curX = 0, curY = 0;
+    for (var i = 0; i < numLines; i++) {
+      var line = (lines[i] || '').substr(0, numCols);
+      if (line.length > 0) {
+        curX = Math.min(15, line.length);
+        curY = i;
+      }
+      var numPad = numCols - line.length;
+      while (numPad-- > 0) line += ' ';
+      if (!sendInsn([I_DISPLAY_ON(true, false, false),
+                     I_SET_DRAM_ADDR(i * 0x40)]) ||
+          !sendData(line)) {
+        return false;
+      }
+    }
+    return sendInsn([I_DISPLAY_ON(true, true, true),
+                     I_SET_DRAM_ADDR(0x40 * curY + curX)]);
+  }
 }

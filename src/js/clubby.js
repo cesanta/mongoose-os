@@ -111,28 +111,36 @@ var Clubby = function(arg) {
       };
 
       if (h) {
-        try {
-          var done = function(val, st) {
-            var rk = "resp";
-            res.status = st || 0;
-            if (st !== undefined) {
-              rk = "status_msg";
-            }
-            res[rk] = val;
-            if (val === undefined) {
-              delete res[rk];
-            }
-            log("sending", frame);
-            me._send(frame);
-          };
-
-          if (h.length > 1) {
-            h(cmd, done);
-          } else {
-            done(h(cmd));
+        var done = function(val, st) {
+          var rk = "resp";
+          res.status = st || 0;
+          if (st !== undefined) {
+            rk = "status_msg";
           }
-        } catch(e) {
-          error(JSON.stringify(e));
+          res[rk] = val;
+          if (val === undefined) {
+            delete res[rk];
+          }
+          log("sending", frame);
+          me._send(frame);
+        };
+
+        if (h.length > 1) {
+          setTimeout(function(){
+            try {
+              h(cmd, done);
+            } catch(e) {
+              error(JSON.stringify(e));
+            }
+          }, 0);
+        } else {
+          setTimeout(function(){
+            try {
+              done(h(cmd));
+            } catch(e) {
+              error(JSON.stringify(e));
+            }
+          }, 0);
         }
       } else {
         error("unknown command " + cmd.cmd);
