@@ -37,19 +37,19 @@
  *   can be added and removed at any time.
  *   Note: GPIO 16 is not currently supported.
  * + Period can be different for different pins.
- * + Up to 50 KHz frequency can be generated.
+ * + Up to 5 KHz frequency can be generated.
  * + No interrupts in idle mode (no pins configured or duty = 0 for all).
  */
 
-#define PWM_BASE_RATE_US 10
-/* The following constants are used to get the base 50 KHz freq (20 uS period)
+#define PWM_BASE_RATE_US 100
+/* The following constants are used to get the base 5 KHz freq (200 uS period)
  * used to drive PWM. */
 #define TMR_PRESCALER_16 4 /* 16x prescaler */
 /* At 80 MHZ timer clock source is 26 MHz and each unit of this adds 0.2 uS. */
-#define TMR_RELOAD_VALUE_80 43
+#define TMR_RELOAD_VALUE_80 (43 + 450)
 /* At 160, the frequency is the same but the constant fraction that accounts for
  * interrupt handling code running before reload needs to be adjusted. */
-#define TMR_RELOAD_VALUE_160 46
+#define TMR_RELOAD_VALUE_160 (46 + 450)
 
 /* #define ESP_PWM_DEBUG */
 
