@@ -205,7 +205,7 @@ double strtod(const char *str, char **endptr) {
     str++;
   } else if (*str == '+') {
     str++;
-  } else if (*str == '0') {
+  } else if (*str == '0' && *(str + 1) != '.') {
     str++;
     if (*str == 'x') { /* base 16 */
       str++;
