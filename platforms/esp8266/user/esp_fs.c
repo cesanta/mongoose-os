@@ -31,7 +31,12 @@
 #ifndef V7_NO_FS
 
 #include "spiffs/spiffs.h"
+#include "spiffs_config.h"
 #include "esp_uart.h"
+
+#include "esp_fs.h"
+
+#include <sys/mman.h>
 
 /*
  * number of file descriptors reserved for system.
@@ -43,8 +48,6 @@
 
 spiffs fs;
 
-/* LOG_PAGE_SIZE have to be more than SPIFFS_OBJ_NAME_LEN */
-#define LOG_PAGE_SIZE 256
 #define FLASH_BLOCK_SIZE (4 * 1024)
 #define FLASH_UNIT_SIZE 4
 
@@ -52,11 +55,49 @@ spiffs fs;
 #define FS_MAX_OPEN_FILES 10
 #endif
 
+#define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
+#define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
+
+struct mmap_desc mmap_descs[SJ_MMAP_SLOTS];
+static struct mmap_desc *cur_mmap_desc;
+
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
 int spiffs_get_memory_usage() {
   return sizeof(spiffs_work_buf) + sizeof(spiffs_fds);
+}
+
+static struct mmap_desc *alloc_mmap_desc() {
+  size_t i;
+  for (i = 0; i < sizeof(mmap_descs) / sizeof(mmap_descs[0]); i++) {
+    if (mmap_descs[i].fd == 0) {
+      return &mmap_descs[i];
+    }
+  }
+  return NULL;
+}
+
+void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
+  int pages = (len + LOG_PAGE_SIZE - 1) / LOG_PAGE_SIZE;
+  struct mmap_desc *desc = alloc_mmap_desc();
+  if (desc == NULL) {
+    fprintf(stderr, "cannot allocate mmap desc\n");
+    return MAP_FAILED;
+  }
+
+  cur_mmap_desc = desc;
+  desc->pages = 0;
+  desc->blocks = (uint32_t *) calloc(sizeof(uint32_t), pages);
+  desc->base = MMAP_ADDR_FROM_DESC(desc);
+  SPIFFS_read(&fs, fd - NUM_SYS_FD, DUMMY_MMAP_BUFFER_START, len);
+  /*
+   * this breaks the posix-like mmap abstraction but file descriptors are a
+   * scarse resource here.
+   */
+  SPIFFS_close(&fs, fd - NUM_SYS_FD);
+
+  return desc->base;
 }
 
 static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
@@ -100,6 +141,16 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 }
 
 static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
+#ifdef CS_MMAP
+  if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
+    if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
+      fprintf(stderr, "mmap spiffs prep read: %x %u %p\n", addr, size, dst);
+      cur_mmap_desc->blocks[cur_mmap_desc->pages++] = FLASH_BASE + addr;
+    }
+    return SPIFFS_OK;
+  }
+#endif
+
   if (0 && addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
     /*
      * For unknown reason spi_flash_read/write

@@ -1395,6 +1395,10 @@ void cs_ubjson_close_array(struct mbuf *buf);
  * Return: allocated memory, or NULL on error.
  */
 char *cs_read_file(const char *path, size_t *size);
+
+#ifdef CS_MMAP
+char *cs_mmap_file(const char *path, size_t *size);
+#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/builtin.h"
 /**/
@@ -5458,6 +5462,10 @@ void cs_ubjson_dummy();
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef CS_MMAP
+#include <sys/mman.h>
+#endif
+
 char *cs_read_file(const char *path, size_t *size) {
   FILE *fp;
   char *data = NULL;
@@ -5468,7 +5476,7 @@ char *cs_read_file(const char *path, size_t *size) {
     *size = ftell(fp);
     data = (char *) malloc(*size + 1);
     if (data != NULL) {
-      fseek(fp, 0, SEEK_SET);  /* Some platforms might not have rewind(), Oo */
+      fseek(fp, 0, SEEK_SET); /* Some platforms might not have rewind(), Oo */
       if (fread(data, 1, *size, fp) != *size) {
         free(data);
         return NULL;
@@ -5479,6 +5487,20 @@ char *cs_read_file(const char *path, size_t *size) {
   }
   return data;
 }
+
+#ifdef CS_MMAP
+char *cs_mmap_file(const char *path, size_t *size) {
+  char *r;
+  int fd = open(path, O_RDONLY);
+  struct stat st;
+  if (fd == -1) return NULL;
+  fstat(fd, &st);
+  *size = (size_t) st.st_size;
+  r = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  if (r == MAP_FAILED) return NULL;
+  return r;
+}
+#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/file.c"
 /**/
@@ -13340,6 +13362,7 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
   size_t saved_tmp_stack_pos = v7->tmp_stack.len;
   volatile enum v7_err err = V7_OK;
   val_t r = v7_create_undefined();
+  int noopt = 0;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
@@ -13366,8 +13389,17 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
     if (src_len == 0) {
       err = V7_INVALID_ARG;
     } else {
-      mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
-                  src_len - sizeof(BIN_AST_SIGNATURE));
+      if (fr == 0) {
+        /* Unmanaged memory, usually rom or mmapped flash */
+        mbuf_free(&a->mbuf);
+        a->mbuf.buf = (char *) (src + sizeof(BIN_AST_SIGNATURE));
+        a->mbuf.size = a->mbuf.len = src_len - sizeof(BIN_AST_SIGNATURE);
+        a->refcnt++; /* prevent freeing */
+        noopt = 1;
+      } else {
+        mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
+                    src_len - sizeof(BIN_AST_SIGNATURE));
+      }
     }
   }
 
@@ -13384,7 +13416,10 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
     r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
     goto cleanup;
   }
-  ast_optimize(a);
+
+  if (!noopt) {
+    ast_optimize(a);
+  }
 #if V7_ENABLE__Memory__stats
   v7->function_arena_ast_size += a->mbuf.size;
 #endif
@@ -13436,13 +13471,33 @@ enum v7_err i_file(struct v7 *v7, const char *path, val_t *res, int is_json) {
   char *p;
   size_t file_size;
   enum v7_err err = V7_EXEC_EXCEPTION;
+  char *(*rd)(const char *, size_t *);
   *res = v7_create_undefined();
 
-  if ((p = cs_read_file(path, &file_size)) == NULL) {
+  rd = cs_read_file;
+#ifdef V7_MMAP_EXEC
+  rd = cs_mmap_file;
+#ifdef V7_MMAP_EXEC_ONLY
+#define I_STRINGIFY(x) #x
+#define I_STRINGIFY2(x) I_STRINGIFY(x)
+
+  /* don't use mmap if path is not a substring of V7_MMAP_EXEC_ONLY */
+  if (strstr("" I_STRINGIFY2(V7_MMAP_EXEC_ONLY), path) == NULL) {
+    rd = cs_read_file;
+  }
+#endif
+#endif
+
+  if ((p = rd(path, &file_size)) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open [%s]", path);
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
   } else {
-    err = i_exec(v7, p, file_size, res, v7_create_undefined(), is_json, 1);
+#ifndef V7_MMAP_EXEC
+    int fr = 1;
+#else
+    int fr = 0;
+#endif
+    err = i_exec(v7, p, file_size, res, v7_create_undefined(), is_json, fr);
   }
 
   return err;

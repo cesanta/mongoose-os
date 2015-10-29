@@ -70,6 +70,8 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE -DESP_GDB_SERVER \
            -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
            -DESP_FLASH_BYTES_EMUL -DV7_FORCE_STRICT_MODE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
+           -DCS_MMAP -DV7_MMAP_EXEC \
+           -DV7_MMAP_EXEC_ONLY="smart.js_clubby.js_sys_rts.js_MCXXX_LCD.js_I2C.js" \
            $(FEATURES_EXTRA)
 
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
