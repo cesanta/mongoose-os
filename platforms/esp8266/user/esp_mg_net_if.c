@@ -336,7 +336,7 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   struct mg_connection *nc, *tmp;
   (void) timeout_ms;
   DBG(("begin poll, now=%u, hf=%u, sf lwm=%u", (unsigned int) now,
-       system_get_free_heap_size(), v7_get_stack_avail_lwm(v7)));
+       system_get_free_heap_size(), 0U));
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
     tmp = nc->next;
     n++;
