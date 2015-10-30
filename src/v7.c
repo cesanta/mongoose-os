@@ -7048,7 +7048,7 @@ typedef uint16_t ast_skip_t;
  *
  * Let's break it down and examine:
  *
- *    - 56 07 41 53 54 56 31 30
+ *    - 56 07 41 53 54 56 31 30 00
  *        Just a format prefix:
  *        Null-terminated string: `"V\007ASTV10"` (see `BIN_AST_SIGNATURE`)
  *    - 01
@@ -7125,7 +7125,7 @@ typedef uint16_t ast_skip_t;
  *    56 07 41 53 54 56 31 30 00 01 00 2d 00 05 02 00
  *    12 00 1c 03 03 66 6f 6f 00 03 03 62 61 72 13 01
  *    31 07 14 03 66 6f 6f 13 01 33 02 00 0c 00 00 03
- *    03 62 61 7a 13 01 34 00
+ *    03 62 61 7a 13 01 34
  *
  * Break it down:
  *
@@ -7194,8 +7194,6 @@ typedef uint16_t ast_skip_t;
  *    - 34:       UTF-8 string "4"
  *        VAR body end }}}
  *        SCRIPT body end }}}
- *
- *    - 00:       Extra trailing byte
  *
  * --------------------------
  */
