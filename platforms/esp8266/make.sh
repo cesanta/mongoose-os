@@ -15,5 +15,8 @@ DIR=/cesanta/${PWD##$V7DIR}
 # Note: "//" in "//bin/bash" is a workaround for a boot2docker bug on Windows.
 V=$(for i in "$@" ; do echo $i; done | xargs  -I% echo -n "'%' " )
 
-exec docker run --rm -it -v /$V7DIR:/cesanta ${SDK} //bin/bash -c \
-     "cd $DIR && make $V && python ./tools/showbreakdown.py"
+exec docker run --rm -it -v /$V7DIR:/cesanta ${SDK} //bin/bash -c "\
+     make -C /cesanta/v7 v7.c && \
+     make -C /cesanta/mongoose/src && \
+     cd $DIR && make $V && python ./tools/showbreakdown.py \
+     "
