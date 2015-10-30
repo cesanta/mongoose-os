@@ -138,12 +138,7 @@ int blocking_read_uart() {
 }
 
 void uart_tx_char(unsigned uartno, char ch) {
-  while (1) {
-    uint32 fifo_cnt =
-        (READ_PERI_REG(UART_DATA_STATUS(uartno)) & 0x00FF0000) >> 16;
-    if (fifo_cnt < 126) {
-      break;
-    }
+  while (tx_fifo_len(uartno) > 126) {
   }
   WRITE_PERI_REG(UART_BUF(uartno), ch);
 }

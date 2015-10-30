@@ -57,13 +57,18 @@ static void handle_exception(struct regfile *regs) {
 
 #if defined(ESP_COREDUMP) && !defined(ESP_COREDUMP_NOAUTO)
   printf("Dumping core to debug output\n");
-  esp_dump_core(-1, regs);
-#endif
-#ifdef ESP_COREDUMP
+  esp_dump_core(1, regs);
+#else
   printf("if you want to dump core, type 'y'");
 #ifdef ESP_GDB_SERVER
-  printf(", or else connect with gdb");
+  printf(", or ")
 #endif
+#endif
+#ifdef ESP_GDB_SERVER
+  printf("connect with gdb now\n");
+#endif
+
+#if defined(ESP_COREDUMP_NOAUTO) || defined(ESP_GDB_SERVER)
   {
     int ch;
     while ((ch = blocking_read_uart())) {
@@ -75,14 +80,11 @@ static void handle_exception(struct regfile *regs) {
       } else if (ch == '$') {
         /* we got a GDB packet, speed up retransmission by nacking */
         printf("-");
+        gdb_server(regs);
         break;
       }
     }
   }
-  printf("\n");
-#endif
-#ifdef ESP_GDB_SERVER
-  gdb_server(regs);
 #endif
 }
 
@@ -116,10 +118,17 @@ FAST void esp_exception_handler(struct xtensa_stack_frame *frame) {
   regs.litbase = RSR(LITBASE);
 
   handle_exception(&regs);
+
+  uart_write(1, "rebooting\n", 10);
+  while (tx_fifo_len(0) > 0) {
+  }
+  while (tx_fifo_len(1) > 0) {
+  }
+
   _ResetVector();
 }
 
-#else /* !RTOS_SDK */
+#else /* RTOS_SDK */
 
 FAST void esp_exception_handler(struct xtensa_stack_frame *frame)
     __attribute__((no_instrument_function));
