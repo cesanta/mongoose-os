@@ -2657,11 +2657,14 @@ V7_PRIVATE void compute_need_gc(struct v7 *);
 /* perform gc if not inhibited */
 V7_PRIVATE void maybe_gc(struct v7 *);
 
-V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
 V7_PRIVATE uint16_t
 gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len);
 V7_PRIVATE int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n);
+V7_PRIVATE void gc_check_valid_allocation_seqn(struct v7 *v7, uint16_t n);
+#endif
 
+V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
 /* return 0 if v is an object/function with a bad pointer */
 V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v);
 /* checks whether a pointer is within the ranges of an arena */
@@ -9322,18 +9325,7 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
     char *s = m->buf + offset;
 
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
-    if (tag == V7_TAG_STRING_O) {
-      if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
-#ifndef V7_GC_ASN_PANIC
-        throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
-                        (int) ((*v >> 32) & 0xFFFF));
-#else
-        fprintf(stderr, "Invalid ASN: %d\n", (int) ((*v >> 32) & 0xFFFF));
-        abort();
-#endif
-        return NULL;
-      }
-    }
+    gc_check_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF);
 #endif
 
     *sizep = decode_varint((uint8_t *) s, &llen);
@@ -10142,6 +10134,18 @@ int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n) {
   }
   return r;
 }
+
+void gc_check_valid_allocation_seqn(struct v7 *v7, uint16_t n) {
+  if (!gc_is_valid_allocation_seqn(v7, n)) {
+#ifndef V7_GC_ASN_PANIC
+    throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d", (int) n);
+#else
+    fprintf(stderr, "Invalid ASN: %d\n", (int) n);
+    abort();
+#endif
+  }
+}
+
 #endif /* V7_DISABLE_STR_ALLOC_SEQ */
 
 uint64_t gc_string_val_to_offset(val_t v) {
@@ -10192,16 +10196,10 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
     fprintf(stderr, "GC marking ASN %d\n", asn);
   }
 #endif
-  if (!gc_is_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF)) {
-#ifndef V7_GC_ASN_PANIC
-    throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d",
-                    (int) ((*v >> 32) & 0xFFFF));
-#else
-    fprintf(stderr, "Invalid ASN: %d\n", (int) ((*v >> 32) & 0xFFFF));
-    abort();
+
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+  gc_check_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF);
 #endif
-    return;
-  }
 
   s = v7->owned_strings.buf + gc_string_val_to_offset(*v);
   assert(s < v7->owned_strings.buf + v7->owned_strings.len);

@@ -1,3 +1,12 @@
+#
+# ESP8266 Smart.js
+#
+# SDK: either RTOS or OSS (default)
+# GC_DEBUG: if "true" (default) enables string ASN checks
+# STACK_GUARD: if "true" (default) enables soft stack guard
+# SSL: if set to "Krypton" enables SSL with the krypton lib
+#
+
 include common.mk
 
 SMARTJS_PATH ?= ../..
@@ -90,8 +99,17 @@ MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
                     -DMG_MAX_HTTP_SEND_IOBUF=1024
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
-               -DV7_STACK_SIZE=8192-64 \
-               -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
+               -DV7_STACK_SIZE=8192-64
+
+GC_DEBUG ?= true
+ifneq "$(GC_DEBUG)" "true"
+MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
+endif
+
+STACK_GUARD ?= true
+ifeq "$(STACK_GUARD)" "true"
+MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
+endif
 
 CFLAGS += -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
           $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
@@ -102,10 +120,7 @@ CFLAGS += -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
 .PHONY: all clean
 .NOTPARALLEL: all
 
-ifeq "$(SSL)" "SDK"
-FEATURES += -DESP_SSL_SDK
-APP_LIBS += ssl
-else ifeq "$(SSL)" "Krypton"
+ifeq "$(SSL)" "Krypton"
 IPATH += $(KRYPTON_PATH)
 VPATH += $(KRYPTON_PATH)
 APP_SRCS += krypton.c
