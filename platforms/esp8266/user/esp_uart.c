@@ -103,7 +103,7 @@ FAST static void rx_isr(void *param) {
   }
 }
 
-int blocking_read_uart_buf(char *buf, size_t buf_len) {
+int blocking_read_uart_buf(char *buf) {
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
 
   if ((peri_reg & UART_RXBUF_FULL) != 0 || (peri_reg & UART_RX_NEW) != 0) {
@@ -114,12 +114,13 @@ int blocking_read_uart_buf(char *buf, size_t buf_len) {
 
     char_count = READ_PERI_REG(UART_DATA_STATUS(UART_MAIN)) & 0x000000FF;
 
-    for (i = 0; i < char_count && i < buf_len; i++) {
+    for (i = 0; i < char_count; i++) {
       buf[i] = READ_PERI_REG(UART_BUF(UART_MAIN)) & 0xFF;
     }
 
     WRITE_PERI_REG(UART_CLEAR_INTR(UART_MAIN), UART_RXBUF_FULL | UART_RX_NEW);
     SET_PERI_REG_MASK(UART_CTRL_INTR(UART_MAIN), UART_RXBUF_FULL | UART_RX_NEW);
+
     return char_count;
   }
   return 0;
@@ -129,7 +130,7 @@ int blocking_read_uart() {
   static char buf[256];
   static int pos = 0;
   if (pos == 0) {
-    pos = blocking_read_uart_buf(buf, sizeof(buf));
+    pos = blocking_read_uart_buf(buf);
   }
   if (pos == 0) {
     return -1;
