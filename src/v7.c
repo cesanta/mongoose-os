@@ -880,7 +880,7 @@ enum {
 
 /* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
 int chartorune(Rune *rune, const char *str);
-int fullrune(char *str, int n);
+int fullrune(const char *str, int n);
 int isdigitrune(Rune c);
 int isnewline(Rune c);
 int iswordchar(Rune c);
@@ -891,8 +891,8 @@ int isupperrune(Rune c);
 int runetochar(char *str, Rune *rune);
 Rune tolowerrune(Rune c);
 Rune toupperrune(Rune c);
-int utfnlen(char *s, long m);
-char *utfnshift(char *s, long m);
+int utfnlen(const char *s, long m);
+const char *utfnshift(const char *s, long m);
 
 #if 0 /* Not implemented. */
 int istitlerune(Rune c);
@@ -3062,7 +3062,7 @@ int runetochar(char *str, Rune *rune) {
   return 4; */
 }
 
-int fullrune(char *str, int n) {
+int fullrune(const char *str, int n) {
   int c;
 
   if (n <= 0) return 0;
@@ -3073,11 +3073,11 @@ int fullrune(char *str, int n) {
   return n >= 4;
 }
 
-int utfnlen(char *s, long m) {
+int utfnlen(const char *s, long m) {
   int c;
   long n;
   Rune rune;
-  char *es;
+  const char *es;
 
   es = s + m;
   for (n = 0; s < es; n++) {
@@ -3092,7 +3092,7 @@ int utfnlen(char *s, long m) {
   return n;
 }
 
-char *utfnshift(char *s, long m) {
+const char *utfnshift(const char *s, long m) {
   int c;
   long n;
   Rune rune;
@@ -4204,7 +4204,7 @@ int chartorune(Rune *rune, const char *str) {
   return 1;
 }
 
-int fullrune(char *str UNUSED, int n) {
+int fullrune(const char *str UNUSED, int n) {
   return (n <= 0) ? 0 : 1;
 }
 
@@ -4245,12 +4245,12 @@ Rune tolowerrune(Rune c) {
 Rune toupperrune(Rune c) {
   return toupper(c);
 }
-int utfnlen(char *s, long m) {
+int utfnlen(const char *s, long m) {
   (void) s;
   return (int) strnlen(s, (size_t) m);
 }
 
-char *utfnshift(char *s, long m) {
+const char *utfnshift(const char *s, long m) {
   return s + m;
 }
 
@@ -18019,7 +18019,7 @@ static int subs_string_exec(struct _str_split_ctx *ctx, const char *start,
   } else {
     size_t i;
     for (i = 0; start <= (end - sep_len);
-         ++i, start = utfnshift((char *) start, 1)) {
+         ++i, start = utfnshift(start, 1)) {
       if (memcmp(start, psep, sep_len) == 0) {
         ret = 0;
         ctx->match_start = start;
@@ -18086,10 +18086,10 @@ V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t obj, val_t arg) {
   const char *p = v7_to_string(v7, &s, &n);
   double at = v7_to_number(arg);
 
-  n = utfnlen((char *) p, n);
+  n = utfnlen(p, n);
   if (v7_is_number(arg) && at >= 0 && at < n) {
     Rune r = 0;
-    p = utfnshift((char *) p, at);
+    p = utfnshift(p, at);
     chartorune(&r, (char *) p);
     return r;
   }
@@ -18145,8 +18145,8 @@ static val_t s_index_of(struct v7 *v7, int last) {
 
     if (bytecnt2 <= bytecnt1) {
       end = p1 + bytecnt1;
-      len1 = utfnlen((char *) p1, bytecnt1);
-      len2 = utfnlen((char *) p2, bytecnt2);
+      len1 = utfnlen(p1, bytecnt1);
+      len2 = utfnlen(p2, bytecnt2);
 
       if (v7_argc(v7) > 1) {
         /* `fromIndex` was provided. Normalize it */
@@ -18160,10 +18160,10 @@ static val_t s_index_of(struct v7 *v7, int last) {
 
         /* adjust pointers accordingly to `fromIndex` */
         if (last) {
-          char *end_tmp = utfnshift((char *) p1, fromIndex + len2);
+          const char *end_tmp = utfnshift(p1, fromIndex + len2);
           end = (end_tmp < end) ? end_tmp : end;
         } else {
-          p1 = utfnshift((char *) p1, fromIndex);
+          p1 = utfnshift(p1, fromIndex);
         }
       }
 
@@ -18172,7 +18172,7 @@ static val_t s_index_of(struct v7 *v7, int last) {
        * backward. We'll need to improve `utfnshift()` for that, so that it can
        * handle negative offsets.
        */
-      for (i = 0; p1 <= (end - bytecnt2); i++, p1 = utfnshift((char *) p1, 1)) {
+      for (i = 0; p1 <= (end - bytecnt2); i++, p1 = utfnshift(p1, 1)) {
         if (memcmp(p1, p2, bytecnt2) == 0) {
           res = i;
           if (!last) break;
@@ -18333,7 +18333,7 @@ static val_t Str_replace(struct v7 *v7) {
                                      loot.caps[i].end - loot.caps[i].start, 1));
         }
         v7_array_push(v7, arr, v7_create_number(utfnlen(
-                                   (char *) s, loot.caps[0].start - s)));
+                                   s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, i_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
@@ -18402,7 +18402,7 @@ static val_t Str_search(struct v7 *v7) {
     if (!slre_exec(v7_to_regexp(v7, ro)->compiled_regexp, 0, s, s + s_len,
                    &sub))
       utf_shift =
-          utfnlen((char *) s, sub.caps[0].start - s); /* calc shift for UTF-8 */
+          utfnlen(s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else
     utf_shift = 0;
   return v7_create_number(utf_shift);
@@ -18418,7 +18418,7 @@ static val_t Str_slice(struct v7 *v7) {
   const char *begin = v7_to_string(v7, &so, &len), *end;
   int num_args = v7_argc(v7);
 
-  to = len = utfnlen((char *) begin, len);
+  to = len = utfnlen(begin, len);
   if (num_args > 0) {
     from = arg_long(v7, 0, 0);
     if (from < 0) {
@@ -18436,8 +18436,8 @@ static val_t Str_slice(struct v7 *v7) {
     }
   }
   if (from > to) to = from;
-  end = utfnshift((char *) begin, to);
-  begin = utfnshift((char *) begin, from);
+  end = utfnshift(begin, to);
+  begin = utfnshift(begin, from);
   return v7_create_string(v7, begin, end - begin, 1);
 }
 
@@ -18499,7 +18499,7 @@ static val_t Str_length(struct v7 *v7) {
 
   if (v7_is_string(s)) {
     const char *p = v7_to_string(v7, &s, &len);
-    len = utfnlen((char *) p, len);
+    len = utfnlen(p, len);
   }
 
   return v7_create_number(len);
@@ -18561,7 +18561,7 @@ static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   const char *p;
   s = to_string(v7, s);
   p = v7_to_string(v7, &s, &n);
-  n = utfnlen((char *) p, n);
+  n = utfnlen(p, n);
 
   if (start < (long) n && len > 0) {
     if (start < 0) start = (long) n + start;
@@ -18570,7 +18570,7 @@ static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
     if (start > (long) n) start = n;
     if (len < 0) len = 0;
     if (len > (long) n - start) len = n - start;
-    p = utfnshift((char *) p, start);
+    p = utfnshift(p, start);
   } else
     len = 0;
 
@@ -18682,7 +18682,7 @@ static val_t Str_split(struct v7 *v7) {
         /* advance lookup_idx appropriately */
         if (last_match_len == 0) {
           /* empty match: advance to the next char */
-          const char *next = utfnshift((char *) (s + lookup_idx), 1);
+          const char *next = utfnshift((s + lookup_idx), 1);
           lookup_idx += (next - (s + lookup_idx));
         } else {
           /* non-empty match: advance to the end of match */
@@ -19995,7 +19995,7 @@ V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
     size_t len;
     struct slre_loot sub;
     struct slre_cap *ptok = sub.caps;
-    char *const str = (char *) v7_to_string(v7, &s, &len);
+    const char *const str = v7_to_string(v7, &s, &len);
     const char *const end = str + len;
     const char *begin = str;
     struct v7_regexp *rp = v7_to_regexp(v7, rx);
