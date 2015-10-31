@@ -219,11 +219,11 @@ int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   return -1;
 }
 
-void mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
+int mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
   if (nc->sock == INVALID_SOCKET) {
     DBG(("%p tcp_write invalid socket %d", nc, nc->err));
-    return;
+    return 0;
   }
   nc->err = tcp_write(tpcb, buf, len, TCP_WRITE_FLAG_COPY);
   tcp_output(tpcb);
@@ -233,9 +233,14 @@ void mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
    * We ignore ERR_MEM because memory will be freed up when the data is sent
    * and we'll retry.
    */
-  if (nc->err != ERR_OK && nc->err != ERR_MEM) {
-    system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
+  if (nc->err != ERR_OK) {
+    if (nc->err != ERR_MEM) {
+      system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
+    } else {
+      return 0;
+    }
   }
+  return 1;
 }
 
 void mg_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
@@ -346,8 +351,9 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
       continue;
     }
     if (nc->send_mbuf.len > 0 && !(nc->flags & (MG_F_CONNECTING | MG_F_UDP))) {
-      mg_lwip_tcp_write(nc, nc->send_mbuf.buf, nc->send_mbuf.len);
-      mbuf_remove(&nc->send_mbuf, nc->send_mbuf.len);
+      if (mg_lwip_tcp_write(nc, nc->send_mbuf.buf, nc->send_mbuf.len)) {
+        mbuf_remove(&nc->send_mbuf, nc->send_mbuf.len);
+      }
     }
     mg_if_poll(nc, now);
   }
