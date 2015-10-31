@@ -1163,20 +1163,6 @@ int64_t strtoll(const char *str, char **endptr, int base);
 #endif
 #endif /* !_WIN32 */
 
-#define __DBG(x)                \
-  do {                          \
-    printf("%-20s ", __func__); \
-    printf x;                   \
-    putchar('\n');              \
-    fflush(stdout);             \
-  } while (0)
-
-#ifdef MG_ENABLE_DEBUG
-#define DBG __DBG
-#else
-#define DBG(x)
-#endif
-
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
