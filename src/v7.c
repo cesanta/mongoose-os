@@ -18016,8 +18016,7 @@ static int subs_string_exec(struct _str_split_ctx *ctx, const char *start,
     ret = 0;
   } else {
     size_t i;
-    for (i = 0; start <= (end - sep_len);
-         ++i, start = utfnshift(start, 1)) {
+    for (i = 0; start <= (end - sep_len); ++i, start = utfnshift(start, 1)) {
       if (memcmp(start, psep, sep_len) == 0) {
         ret = 0;
         ctx->match_start = start;
@@ -18330,8 +18329,8 @@ static val_t Str_replace(struct v7 *v7) {
                                      v7, loot.caps[i].start,
                                      loot.caps[i].end - loot.caps[i].start, 1));
         }
-        v7_array_push(v7, arr, v7_create_number(utfnlen(
-                                   s, loot.caps[0].start - s)));
+        v7_array_push(v7, arr,
+                      v7_create_number(utfnlen(s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, i_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
@@ -18399,8 +18398,7 @@ static val_t Str_search(struct v7 *v7) {
 
     if (!slre_exec(v7_to_regexp(v7, ro)->compiled_regexp, 0, s, s + s_len,
                    &sub))
-      utf_shift =
-          utfnlen(s, sub.caps[0].start - s); /* calc shift for UTF-8 */
+      utf_shift = utfnlen(s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else
     utf_shift = 0;
   return v7_create_number(utf_shift);
