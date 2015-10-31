@@ -18,5 +18,6 @@ int blocking_read_uart_buf(char *buf);
 int tx_fifo_len(int uart_no);
 int rx_fifo_len(int uart_no);
 void uart_tx_char(unsigned uartno, char ch);
+void uart_set_custom_callback(uart_process_char_t cb);
 
 #endif /* ESP_UART_INCLUDED */
