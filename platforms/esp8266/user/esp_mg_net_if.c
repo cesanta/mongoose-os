@@ -12,15 +12,18 @@
 
 #include <lwip/pbuf.h>
 #include <lwip/tcp.h>
+#include <lwip/tcp_impl.h>
 #include <lwip/udp.h>
 
 #include <sj_v7_ext.h>
 
 #define MG_TASK_PRIORITY 2
-#define MG_POLL_INTERVAL_MS 500
+#define MG_POLL_INTERVAL_MS 1000
 #define MG_TASK_QUEUE_LEN 20
 
-static os_timer_t poll_tmr;
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+static os_timer_t s_poll_tmr;
 static os_event_t s_mg_task_queue[MG_TASK_QUEUE_LEN];
 static int poll_scheduled = 0;
 
@@ -219,39 +222,40 @@ int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   return -1;
 }
 
-int mg_lwip_tcp_write(struct mg_connection *nc, const void *buf, size_t len) {
+static void mg_lwip_tcp_write(struct mg_connection *nc) {
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
+  size_t len;
   if (nc->sock == INVALID_SOCKET) {
     DBG(("%p tcp_write invalid socket %d", nc, nc->err));
-    return 0;
+    return;
   }
-  nc->err = tcp_write(tpcb, buf, len, TCP_WRITE_FLAG_COPY);
+  len = MIN(tpcb->mss, MIN(nc->send_mbuf.len, tpcb->snd_buf));
+  if (len == 0) {
+    DBG(("%p no buf avail %u %u %u %p %p", nc, tpcb->acked, tpcb->snd_buf,
+         tpcb->snd_queuelen, tpcb->unsent, tpcb->unacked));
+    tcp_output(tpcb);
+    return;
+  }
+  nc->err = tcp_write(tpcb, nc->send_mbuf.buf, len, TCP_WRITE_FLAG_COPY);
   tcp_output(tpcb);
-  mbuf_trim(&nc->send_mbuf);
   DBG(("%p tcp_write %u = %d", nc, len, nc->err));
-  /*
-   * We ignore ERR_MEM because memory will be freed up when the data is sent
-   * and we'll retry.
-   */
   if (nc->err != ERR_OK) {
     if (nc->err != ERR_MEM) {
       system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
-    } else {
-      return 0;
     }
+    /*
+     * We ignore ERR_MEM because memory will be freed up when the data is sent
+     * and we'll retry.
+     */
+  } else {
+    mbuf_remove(&nc->send_mbuf, len);
+    mbuf_trim(&nc->send_mbuf);
   }
-  return 1;
 }
 
 void mg_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
-  if (0 && /* We cannot use this optimization while our proto handlers assume
-            * they can meddle with the contents of send_mbuf. */
-      nc->sock != INVALID_SOCKET && nc->send_mbuf.len == 0) {
-    mg_lwip_tcp_write(nc, buf, len);
-  } else {
-    mbuf_append(&nc->send_mbuf, buf, len);
-    mg_lwip_mgr_schedule_poll(nc->mgr);
-  }
+  mbuf_append(&nc->send_mbuf, buf, len);
+  mg_lwip_mgr_schedule_poll(nc->mgr);
 }
 
 void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
@@ -307,6 +311,41 @@ void mg_if_set_sock(struct mg_connection *nc, sock_t sock) {
   nc->sock = sock;
 }
 
+#if MG_LWIP_REXMIT_INTERVAL_MS > 0
+/*
+ * This is pretty a pretty dumb retry mechanism. It doesn't account for RTT
+ * variability, but it's simple and it does help. So it'll do for now.
+ * TODO(rojer): Port the fancy RTT-tracking logic from TCPUART.
+ */
+
+/* From LWIP. */
+void tcp_rexmit_rto(struct tcp_pcb *pcb);
+
+static os_timer_t s_rexmit_tmr;
+
+static void mg_lwip_maybe_rexmit(struct mg_connection *nc) {
+  uint16_t saved_nrtx;
+  struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
+  if (nc->flags & MG_F_UDP ||
+      tpcb->unacked == NULL) {  // || tpcb->unacked->len == 0) {
+    return;
+  }
+  /* We do not want this rexmit to interfere with slow timer's backoff. */
+  saved_nrtx = tpcb->nrtx;
+  DBG(("rexmit %u", tpcb->unacked->len));
+  tcp_rexmit_rto(tpcb);
+  tpcb->nrtx = saved_nrtx;
+}
+
+static void mg_lwip_rexmit_timer_cb(void *arg) {
+  struct mg_mgr *mgr = (struct mg_mgr *) arg;
+  struct mg_connection *nc;
+  for (nc = mgr->active_connections; nc != NULL; nc = nc->next) {
+    mg_lwip_maybe_rexmit(nc);
+  }
+}
+#endif
+
 void mg_poll_timer_cb(void *arg) {
   struct mg_mgr *mgr = (struct mg_mgr *) arg;
   DBG(("poll tmr %p", s_mg_task_queue));
@@ -317,12 +356,19 @@ void mg_ev_mgr_init(struct mg_mgr *mgr) {
   DBG(("%p Mongoose init, tq %p", mgr, s_mg_task_queue));
   system_os_task(mg_lwip_task, MG_TASK_PRIORITY, s_mg_task_queue,
                  MG_TASK_QUEUE_LEN);
-  os_timer_setfn(&poll_tmr, mg_poll_timer_cb, mgr);
-  os_timer_arm(&poll_tmr, MG_POLL_INTERVAL_MS, 1 /* repeat */);
+  os_timer_setfn(&s_poll_tmr, mg_poll_timer_cb, mgr);
+  os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 1 /* repeat */);
+#if MG_LWIP_REXMIT_INTERVAL_MS
+  os_timer_setfn(&s_rexmit_tmr, mg_lwip_rexmit_timer_cb, mgr);
+  os_timer_arm(&s_rexmit_tmr, MG_LWIP_REXMIT_INTERVAL_MS, 1 /* repeat */);
+#endif
 }
 
 void mg_ev_mgr_free(struct mg_mgr *mgr) {
-  os_timer_disarm(&poll_tmr);
+  os_timer_disarm(&s_poll_tmr);
+#if MG_LWIP_REXMIT_INTERVAL_MS > 0
+  os_timer_disarm(&s_rexmit_tmr);
+#endif
 }
 
 void mg_ev_mgr_add_conn(struct mg_connection *nc) {
@@ -350,12 +396,10 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
       mg_close_conn(nc);
       continue;
     }
-    if (nc->send_mbuf.len > 0 && !(nc->flags & (MG_F_CONNECTING | MG_F_UDP))) {
-      if (mg_lwip_tcp_write(nc, nc->send_mbuf.buf, nc->send_mbuf.len)) {
-        mbuf_remove(&nc->send_mbuf, nc->send_mbuf.len);
-      }
-    }
     mg_if_poll(nc, now);
+    if (!(nc->flags & (MG_F_CONNECTING | MG_F_UDP))) {
+      if (nc->send_mbuf.len > 0) mg_lwip_tcp_write(nc);
+    }
   }
   DBG(("end poll, %d conns", n));
   return now;
