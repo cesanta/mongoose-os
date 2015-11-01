@@ -326,13 +326,13 @@ static os_timer_t s_rexmit_tmr;
 static void mg_lwip_maybe_rexmit(struct mg_connection *nc) {
   uint16_t saved_nrtx;
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
-  if (nc->flags & MG_F_UDP ||
-      tpcb->unacked == NULL) {  // || tpcb->unacked->len == 0) {
+  if (nc->sock == INVALID_SOCKET || nc->flags & MG_F_UDP ||
+      nc->flags & MG_F_LISTENING || tpcb->unacked == NULL) {
     return;
   }
   /* We do not want this rexmit to interfere with slow timer's backoff. */
   saved_nrtx = tpcb->nrtx;
-  DBG(("rexmit %u", tpcb->unacked->len));
+  DBG(("%p rexmit %u", nc, tpcb->unacked->len));
   tcp_rexmit_rto(tpcb);
   tpcb->nrtx = saved_nrtx;
 }
