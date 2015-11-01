@@ -459,7 +459,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
     if (oversize > 0) {
       LWIP_ASSERT("inconsistent oversize vs. space", oversize_used <= space);
       seg = last_unsent;
-      oversize_used = oversize < len ? oversize : len;
+      oversize_used = LWIP_MIN(space, LWIP_MIN(oversize, len));
       pos += oversize_used;
       oversize -= oversize_used;
       space -= oversize_used;
