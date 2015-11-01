@@ -38,8 +38,8 @@ function MCXXX(i2c, numLines, numCols) {
 
   this.addLine = function(line) {
     var ll = line.split('\n');
-    lines.shift();
     lines.push(ll[0]);
+    while (lines.length > numLines) lines.shift();
     return this._sendLines();
   }
 
