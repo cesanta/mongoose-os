@@ -42,8 +42,9 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
               $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
               $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js \
+              $(SJSJS_PATH)/demo.js \
               $(JSBIN_EXTRA)
-JS_SRCS    := $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js
+JS_SRCS    := $(SJSJS_PATH)/smart.js 
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
@@ -80,7 +81,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DESP_FLASH_BYTES_EMUL -DV7_FORCE_STRICT_MODE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            -DCS_MMAP -DV7_MMAP_EXEC \
-           -DV7_MMAP_EXEC_ONLY="smart.js_clubby.js_sys_rts.js_MCXXX_LCD.js_I2C.js" \
+           -DV7_MMAP_EXEC_ONLY="smart.js_clubby.js_sys_rts.js_MCXXX_LCD.js_I2C.js_cloud.js_demo.js" \
            $(FEATURES_EXTRA)
 
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
