@@ -11,5 +11,9 @@ Cloud.store = function(name,val,opts) {
     var d = this.mkreq("/v1/Metrics.Publish", args);
     delete b.__name__;
     args = b = null;
-    Http.request({hostname:"api.cesanta.com", method: "POST"}, opts.cb || function() {}).end(d);
+    if (typeof(Http.request) == 'undefined') {
+      Http.post("http://api.cesanta.com", d, opts.cb || function() {});
+    } else {
+      Http.request({hostname:"api.cesanta.com", method: "POST"}, opts.cb || function() {}).end(d);
+    }
 }
