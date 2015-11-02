@@ -61,7 +61,7 @@ static void handle_exception(struct regfile *regs) {
 #else
   printf("if you want to dump core, type 'y'");
 #ifdef ESP_GDB_SERVER
-  printf(", or ")
+  printf(", or ");
 #endif
 #endif
 #ifdef ESP_GDB_SERVER
