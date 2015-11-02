@@ -57,7 +57,7 @@ static void handle_exception(struct regfile *regs) {
 
 #if defined(ESP_COREDUMP) && !defined(ESP_COREDUMP_NOAUTO)
   printf("Dumping core to debug output\n");
-  esp_dump_core(1, regs);
+  esp_dump_core(-1, regs);
 #else
   printf("if you want to dump core, type 'y'");
 #ifdef ESP_GDB_SERVER
