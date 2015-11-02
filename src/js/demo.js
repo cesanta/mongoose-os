@@ -1,3 +1,12 @@
+if (typeof(Debug) == 'undefined') {
+  // This is stub for CC3200
+  Debug = {};
+
+  Debug.print = function(a,b) {
+    print(a, b);
+  }
+}
+
 if (typeof(conf.user) == 'undefined') {
   print("Initializing demo data source")
   t = {};

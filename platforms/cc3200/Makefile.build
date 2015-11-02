@@ -8,12 +8,25 @@ MONGOOSE_PATH ?= ../../../mongoose
 OBJDIR = build
 BINDIR = firmware
 FW_FS_SIZE = 65536
+SMARTJS_SRC ?= $(SMARTJS_PATH)/src
+SJSJS_PATH ?= $(SMARTJS_SRC)/js
+FS_DIR = fs
+FS_BUILD_DIR = $(OBJDIR)/fs
 
 include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
 .PHONY: all clean flash
 
 PROG = smartjs
+
+JS_SRCS    := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
+              $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
+              $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js \
+              $(JSBIN_EXTRA) $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js \
+              $(SJSJS_PATH)/user.js
+
+JSBIN_EXT := js
+JS_EXT := js
 
 IPATH = . ${SDK_PATH} \
         ${SDK_PATH}/inc \
@@ -107,8 +120,18 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/i2c.o ${OBJDIR
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
 
-${BINDIR}/fs.img: ${wildcard fs/*}
+${BINDIR}/fs.img: ${wildcard fs/*} $(JS_SRCS)
+	/usr/bin/rsync -r --copy-links $(FS_DIR)/ $(FS_BUILD_DIR)/
+# OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
+	$(Q) $(foreach js,$(JS_SRCS), \
+		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
+		cp $(js) $(FS_BUILD_DIR);)
 	/usr/local/bin/mkspiffs ${FW_FS_SIZE} fs > $@
+	/usr/local/bin/mkspiffs ${FW_FS_SIZE} $(OBJDIR)/fs > $@
+
+$(OBJDIR)/v7: $(SMARTJS_SRC)/v7.c $(SMARTJS_SRC)/v7.h
+	@echo "GCC v7"
+	$(Q) gcc -DV7_EXE -DV7_EXPOSE_PRIVATE $(SMARTJS_SRC)/v7.c -lm -o $(BUILD_DIR)/v7
 
 # Target specific warning inhibitions
 
