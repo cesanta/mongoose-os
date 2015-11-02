@@ -3,11 +3,16 @@
  * Datasheet: http://goo.gl/3C5rR2
  */
 
-function MCXXX(i2c, numLines, numCols) {
+function MCXXX(i2c, numLines, numCols, resetPin) {
   var icon_on = false;
   var lines = [];
 
   this.init = function(display_on, cursor_on, cursor_blink, contrast) {
+    if (resetPin !== undefined) {
+      GPIO.setmode(resetPin, 2, 0);
+      GPIO.write(resetPin, 0);
+      GPIO.write(resetPin, 1);
+    }
     return sendInsn([
       I_FCS(2, false, 1),
       I1_SET_OSC_FREQ(0, 4),

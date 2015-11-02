@@ -391,12 +391,15 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
     tmp = nc->next;
     n++;
-    if ((nc->flags & MG_F_CLOSE_IMMEDIATELY) ||
-        (nc->send_mbuf.len == 0 && (nc->flags & MG_F_SEND_AND_CLOSE))) {
+    if (nc->flags & MG_F_CLOSE_IMMEDIATELY) {
       mg_close_conn(nc);
       continue;
     }
     mg_if_poll(nc, now);
+    if (nc->send_mbuf.len == 0 && (nc->flags & MG_F_SEND_AND_CLOSE)) {
+      mg_close_conn(nc);
+      continue;
+    }
     if (!(nc->flags & (MG_F_CONNECTING | MG_F_UDP))) {
       if (nc->send_mbuf.len > 0) mg_lwip_tcp_write(nc);
     }
