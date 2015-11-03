@@ -1,6 +1,21 @@
 #include "spiffs.h"
 #include "spiffs_nucleus.h"
 
+/*
+ * Smart.js specific; added by mkm@cesanta.com - 2015/11/03
+ *
+ * We need know when spiffs moves data under the hood
+ * because we keep a mapping of logical file positions to
+ * physical flash locations in order to implement mmap.
+ */
+#ifdef SPIFFS_ON_PAGE_MOVE_HOOK
+void SPIFFS_ON_PAGE_MOVE_HOOK(
+    spiffs *fs,
+    spiffs_file fh,
+    spiffs_page_ix src_pix,
+    spiffs_page_ix dst_pix);
+#endif
+
 static s32_t spiffs_page_data_check(spiffs *fs, spiffs_fd *fd, spiffs_page_ix pix, spiffs_span_ix spix) {
   s32_t res = SPIFFS_OK;
   if (pix == (spiffs_page_ix)-1) {
@@ -654,6 +669,16 @@ s32_t spiffs_page_move(
   }
   // mark source deleted
   res = spiffs_page_delete(fs, src_pix);
+/*
+ * Smart.js specific; added by mkm@cesanta.com - 2015/11/03
+ *
+ * We need know when spiffs moves data under the hood
+ */
+#ifdef SPIFFS_ON_PAGE_MOVE_HOOK
+  if (res >= SPIFFS_OK) {
+    SPIFFS_ON_PAGE_MOVE_HOOK(fs, fh, src_pix, free_pix);
+  }
+#endif
   return res;
 }
 

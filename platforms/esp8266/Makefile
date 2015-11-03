@@ -80,6 +80,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
            -DESP_FLASH_BYTES_EMUL -DV7_FORCE_STRICT_MODE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
+           -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC \
            -DV7_MMAP_EXEC_ONLY="smart.js_clubby.js_sys_rts.js_MCXXX_LCD.js_I2C.js_cloud.js_demo.js" \
            $(FEATURES_EXTRA)

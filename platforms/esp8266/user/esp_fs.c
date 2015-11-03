@@ -31,6 +31,7 @@
 #ifndef V7_NO_FS
 
 #include "spiffs/spiffs.h"
+#include "spiffs/spiffs_nucleus.h"
 #include "spiffs_config.h"
 #include "esp_uart.h"
 
@@ -98,6 +99,27 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
   SPIFFS_close(&fs, fd - NUM_SYS_FD);
 
   return desc->base;
+}
+
+void esp_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
+                                  spiffs_page_ix src_pix,
+                                  spiffs_page_ix dst_pix) {
+  int i, j;
+  for (i = 0; i < (int) (sizeof(mmap_descs) / sizeof(mmap_descs[0])); i++) {
+    if (mmap_descs[i].blocks) {
+      for (j = 0; j < mmap_descs[i].pages; j++) {
+        uint32_t addr = (unsigned int) mmap_descs[i].blocks[j];
+        uint32_t blk = SPIFFS_BLOCK_FOR_PAGE(
+            fs, SPIFFS_PADDR_TO_PAGE(fs, addr - FLASH_BASE));
+        if (blk == src_pix || blk == dst_pix) {
+          printf("SPIFFS PAGE MOVE block: from %x to %x\n", src_pix, dst_pix);
+          printf("desc: %d page: %d addr: %x paddr: %x blk: %x\n", i, j, addr,
+                 addr - FLASH_BASE, blk);
+          abort();
+        }
+      }
+    }
+  }
 }
 
 static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
