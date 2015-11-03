@@ -8311,6 +8311,8 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json) {
   char *vp;
   double num;
+  if (size > 0) *buf = '\0';
+
   for (vp = v7->json_visited_stack.buf;
        vp < v7->json_visited_stack.buf + v7->json_visited_stack.len;
        vp += sizeof(val_t)) {
