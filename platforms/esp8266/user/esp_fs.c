@@ -101,6 +101,9 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
   return desc->base;
 }
 
+/*
+ * Relocate mmapped pages.
+ */
 void esp_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
                                   spiffs_page_ix src_pix,
                                   spiffs_page_ix dst_pix) {
@@ -108,14 +111,11 @@ void esp_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
   for (i = 0; i < (int) (sizeof(mmap_descs) / sizeof(mmap_descs[0])); i++) {
     if (mmap_descs[i].blocks) {
       for (j = 0; j < mmap_descs[i].pages; j++) {
-        uint32_t addr = (unsigned int) mmap_descs[i].blocks[j];
-        uint32_t blk = SPIFFS_BLOCK_FOR_PAGE(
-            fs, SPIFFS_PADDR_TO_PAGE(fs, addr - FLASH_BASE));
-        if (blk == src_pix || blk == dst_pix) {
-          printf("SPIFFS PAGE MOVE block: from %x to %x\n", src_pix, dst_pix);
-          printf("desc: %d page: %d addr: %x paddr: %x blk: %x\n", i, j, addr,
-                 addr - FLASH_BASE, blk);
-          abort();
+        uint32_t addr = mmap_descs[i].blocks[j];
+        uint32_t page = SPIFFS_PADDR_TO_PAGE(fs, addr - FLASH_BASE);
+        if (page == src_pix) {
+          int delta = (int) dst_pix - (int) src_pix;
+          mmap_descs[i].blocks[j] += delta * LOG_PAGE_SIZE;
         }
       }
     }
