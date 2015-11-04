@@ -2556,6 +2556,8 @@ enum opcode {
   OP_JMP_TRUE,
   OP_JMP_FALSE,
 
+  OP_CREATE_OBJ, /* creates an empty object */
+
   OP_MAX,
 };
 
@@ -13587,7 +13589,7 @@ static const char *op_names[] = {
     "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",
     "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR",
     "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET",
-    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE"};
+    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -13901,6 +13903,9 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         }
         break;
       }
+      case OP_CREATE_OBJ:
+        PUSH(v7_create_object(v7));
+        break;
       default:
         throw_exception(v7, INTERNAL_ERROR, "%s",
                         __func__); /* LCOV_EXCL_LINE */
@@ -14251,6 +14256,40 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_POP);
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      break;
+    }
+    case AST_OBJECT: {
+      /*
+       * {a:<B>, ...}
+       *
+       * ->
+       *
+       *   CREATE_OBJ
+       *   DUP
+       *   PUSH_LIT "a"
+       *   <B>
+       *   SET
+       *   POP
+       *   ...
+       */
+      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      bcode_op(bcode, OP_CREATE_OBJ);
+      while (*pos < end) {
+        tag = ast_fetch_tag(a, pos);
+        switch (tag) {
+          case AST_PROP:
+            bcode_op(bcode, OP_DUP);
+            bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
+            BTRY(compile_expr(v7, a, pos, bcode));
+            bcode_op(bcode, OP_SET);
+            bcode_op(bcode, OP_POP);
+            break;
+          default:
+            strncpy(v7->error_msg, "not implemented", sizeof(v7->error_msg));
+            return V7_SYNTAX_ERROR;
+        }
+      }
       break;
     }
     case AST_NULL:
