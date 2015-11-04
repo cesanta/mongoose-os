@@ -13787,7 +13787,29 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         PUSH(v7_create_number(-d1));
         break;
       }
-      case OP_ADD: /* TODO: JS add is different! */
+      case OP_ADD: {
+        int l;
+        v2 = POP();
+        v1 = POP();
+        v1 = i_value_of(v7, v1);
+        v2 = i_value_of(v7, v2);
+        if (!(v7_is_undefined(v1) || v7_is_number(v1) || v7_is_boolean(v1)) ||
+            !(v7_is_undefined(v2) || v7_is_number(v2) || v7_is_boolean(v2))) {
+          l = v7_stringify_value(v7, v1, buf, sizeof(buf));
+          v1 = v7_create_string(v7, buf, l, 1);
+          v7_own(v7, &v1);
+          l = v7_stringify_value(v7, v2, buf, sizeof(buf));
+          v7_own(v7, &v2);
+          v2 = v7_create_string(v7, buf, l, 1);
+          PUSH(s_concat(v7, v1, v2));
+          v7_disown(v7, &v1);
+          v7_disown(v7, &v2);
+        } else {
+          PUSH(v7_create_number(
+              b_num_bin_op(v7, op, i_as_num(v7, v1), i_as_num(v7, v2))));
+        }
+        break;
+      }
       case OP_SUB:
       case OP_REM:
       case OP_MUL:
