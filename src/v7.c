@@ -14153,6 +14153,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       }
       break;
     }
+    case AST_LOGICAL_OR:
     case AST_LOGICAL_AND: {
       /*
        * A && B
@@ -14169,7 +14170,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_off_t end_label;
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_DUP);
-      bcode_op(bcode, OP_JMP_FALSE);
+      bcode_op(bcode, tag == AST_LOGICAL_AND ? OP_JMP_FALSE : OP_JMP_TRUE);
       end_label = bcode_add_target(bcode);
       bcode_op(bcode, OP_POP);
       BTRY(compile_expr(v7, a, pos, bcode));
