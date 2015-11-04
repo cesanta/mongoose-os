@@ -2557,6 +2557,7 @@ enum opcode {
   OP_JMP_FALSE,
 
   OP_CREATE_OBJ, /* creates an empty object */
+  OP_CREATE_ARR, /* creates an empty array */
 
   OP_MAX,
 };
@@ -13589,7 +13590,8 @@ static const char *op_names[] = {
     "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",
     "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR",
     "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET",
-    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ"};
+    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ",
+    "CREATE_ARR"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -13724,6 +13726,7 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
   uint8_t *end = ops + bcode->ops.len;
   val_t *lit = (val_t *) bcode->lit.buf;
 
+  size_t name_len;
   char buf[512];
 
   val_t res, v1, v2, v3;
@@ -13851,13 +13854,19 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         v1 = POP();
         PUSH(v7_get_v(v7, v1, v2));
         break;
-      case OP_SET:
+      case OP_SET: {
         v3 = POP();
         v2 = POP();
         v1 = POP();
-        v7_set_v(v7, v1, v2, v3);
+        if (!v7_is_string(v2)) {
+          name_len = v7_stringify_value(v7, v2, buf, sizeof(buf));
+          v7_set(v7, v1, buf, name_len, 0, v3);
+        } else {
+          v7_set_v(v7, v1, v2, v3);
+        }
         PUSH(v3);
         break;
+      }
       case OP_GET_VAR: {
         int arg;
         assert(ops < end - 1);
@@ -13905,6 +13914,9 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
       }
       case OP_CREATE_OBJ:
         PUSH(v7_create_object(v7));
+        break;
+      case OP_CREATE_ARR:
+        PUSH(v7_create_array(v7));
         break;
       default:
         throw_exception(v7, INTERNAL_ERROR, "%s",
@@ -14290,6 +14302,55 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
             return V7_SYNTAX_ERROR;
         }
       }
+      break;
+    }
+    case AST_ARRAY: {
+      /*
+       * [<A>,,<B>,...]
+       *
+       * ->
+       *
+       *   CREATE_ARR
+       *   PUSH_ZERO
+       *
+       *   2DUP
+       *   <A>
+       *   SET
+       *   POP
+       *   PUSH_ONE
+       *   ADD
+       *
+       *   PUSH_ONE
+       *   ADD
+       *
+       *   2DUP
+       *   <B>
+       *   ...
+       *   POP // tmp index
+       *
+       * TODO(mkm): optimize this out. we can have more compact array push
+       * that uses a special marker value for missing array elements
+       * (which are not the same as undefined btw)
+       */
+      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      bcode_op(bcode, OP_CREATE_ARR);
+      bcode_op(bcode, OP_PUSH_ZERO);
+      while (*pos < end) {
+        ast_off_t lookahead = *pos;
+        tag = ast_fetch_tag(a, &lookahead);
+        if (tag != AST_NOP) {
+          bcode_op(bcode, OP_2DUP);
+          BTRY(compile_expr(v7, a, pos, bcode));
+          bcode_op(bcode, OP_SET);
+          bcode_op(bcode, OP_POP);
+        } else {
+          *pos = lookahead; /* skip nop */
+        }
+        bcode_op(bcode, OP_PUSH_ONE);
+        bcode_op(bcode, OP_ADD);
+      }
+      bcode_op(bcode, OP_POP);
       break;
     }
     case AST_NULL:
