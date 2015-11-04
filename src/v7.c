@@ -1919,6 +1919,7 @@ typedef unsigned long uintptr_t;
 /* Amalgamated: #include "varint.h" */
 /* Amalgamated: #include "ast.h" */
 /* Amalgamated: #include "parser.h" */
+/* Amalgamated: #include "bcode.h" */
 /* Amalgamated: #include "compiler.h" */
 /* Amalgamated: #include "mm.h" */
 /* Amalgamated: #include "builtin.h" */
@@ -2474,7 +2475,7 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
 #endif /* VM_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/compiler.h"
+#line 1 "./src/bcode.h"
 /**/
 #endif
 /*
@@ -2482,12 +2483,28 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
  * All rights reserved
  */
 
-#ifndef COMPILER_H_INCLUDED
-#define COMPILER_H_INCLUDED
+#ifndef BCODE_H_INCLUDED
+#define BCODE_H_INCLUDED
 
 #ifdef V7_ENABLE_BCODE
 
 /* Amalgamated: #include "internal.h" */
+
+#define BTRY(call)           \
+  do {                       \
+    enum v7_err _e = call;   \
+    BCHECK(_e == V7_OK, _e); \
+  } while (0)
+
+#define BTHROW(err_code) \
+  do {                   \
+    return err_code;     \
+  } while (0)
+
+#define BCHECK(cond, code)     \
+  do {                         \
+    if (!(cond)) BTHROW(code); \
+  } while (0)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -2569,11 +2586,50 @@ V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *, const char *, v7_val_t *,
                                       int);
 V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *, const char *,
                                           v7_val_t *);
+V7_PRIVATE void dump_bcode(FILE *, struct bcode *);
+
+V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
+                                     v7_val_t *res);
+V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
+                                          v7_val_t *res);
+
+V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
+V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
+V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx);
+V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
+V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode);
+V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
+                                   bcode_off_t target);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE_BCODE */
+
+#endif /* BCODE_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/compiler.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef COMPILER_H_INCLUDED
+#define COMPILER_H_INCLUDED
+
+#ifdef V7_ENABLE_BCODE
+
+/* Amalgamated: #include "internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 V7_PRIVATE enum v7_err compile_script(struct v7 *, struct ast *,
                                       struct bcode *);
-
-V7_PRIVATE void dump_bcode(FILE *, struct bcode *);
 
 #if defined(__cplusplus)
 }
@@ -13493,7 +13549,7 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 }
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/compiler.c"
+#line 1 "./src/bcode.c"
 /**/
 #endif
 /*
@@ -13526,22 +13582,6 @@ V7_PRIVATE val_t debug_tos(struct v7 *v7) {
 #define TOS() debug_tos(v7)
 #endif
 
-#define BTRY(call)           \
-  do {                       \
-    enum v7_err _e = call;   \
-    BCHECK(_e == V7_OK, _e); \
-  } while (0)
-
-#define BTHROW(err_code) \
-  do {                   \
-    return err_code;     \
-  } while (0)
-
-#define BCHECK(cond, code)     \
-  do {                         \
-    if (!(cond)) BTHROW(code); \
-  } while (0)
-
 static const char *op_names[] = {
     "POP", "DUP", "2DUP", "PUSH_UNDEFINED", "PUSH_NULL", "PUSH_THIS",
     "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",
@@ -13550,10 +13590,6 @@ static const char *op_names[] = {
     "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
-
-static const enum ast_tag assign_ast_map[] = {
-    AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
-    AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
 
 static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
@@ -13914,23 +13950,23 @@ V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
   return v7_exec_bcode2(v7, src, res, 1);
 }
 
-static void bcode_op(struct bcode *bcode, uint8_t op) {
+V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op) {
   mbuf_append(&bcode->ops, &op, 1);
 }
 
-static uint8_t bcode_add_lit(struct bcode *bcode, val_t val) {
+V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, val_t val) {
   size_t idx = bcode->lit.len / sizeof(val);
   assert(idx < 0x100);
   mbuf_append(&bcode->lit, &val, sizeof(val));
   return idx;
 }
 
-static void bcode_push_lit(struct bcode *bcode, uint8_t idx) {
+V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx) {
   bcode_op(bcode, OP_PUSH_LIT);
   bcode_op(bcode, idx);
 }
 
-static bcode_off_t bcode_pos(struct bcode *bcode) {
+V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode) {
   return bcode->ops.len;
 }
 
@@ -13939,17 +13975,35 @@ static bcode_off_t bcode_pos(struct bcode *bcode) {
  * This location can be updated with bcode_patch_target.
  * To be issued following a JMP_* bytecode
  */
-static bcode_off_t bcode_add_target(struct bcode *bcode) {
+V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode) {
   bcode_off_t pos = bcode_pos(bcode);
   bcode_off_t zero = 0;
   mbuf_append(&bcode->ops, &zero, sizeof(bcode_off_t));
   return pos;
 }
 
-static void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
-                               bcode_off_t target) {
+V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
+                                   bcode_off_t target) {
   memcpy(bcode->ops.buf + label, &target, sizeof(target));
 }
+
+#endif /* V7_ENABLE_BCODE */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/compiler.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "internal.h" */
+
+#ifdef V7_ENABLE_BCODE
+
+static const enum ast_tag assign_ast_map[] = {
+    AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
+    AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
 
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode);
