@@ -2537,6 +2537,7 @@ enum opcode {
 
   OP_JMP,
   OP_JMP_TRUE,
+  OP_JMP_FALSE,
 
   OP_MAX,
 };
@@ -13546,7 +13547,7 @@ static const char *op_names[] = {
     "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",
     "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR",
     "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET",
-    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE"};
+    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -13656,6 +13657,7 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
       fprintf(f, "(%d)", *p);
       break;
     case OP_JMP:
+    case OP_JMP_FALSE:
     case OP_JMP_TRUE: {
       bcode_off_t target;
       p++;
@@ -13825,6 +13827,14 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         ops = (uint8_t *) bcode->ops.buf + target - 1;
         break;
       }
+      case OP_JMP_FALSE: {
+        bcode_off_t target = bcode_get_target(&ops);
+        v1 = POP();
+        if (!v7_is_true(v7, v1)) {
+          ops = (uint8_t *) bcode->ops.buf + target - 1;
+        }
+        break;
+      }
       case OP_JMP_TRUE: {
         bcode_off_t target = bcode_get_target(&ops);
         v1 = POP();
@@ -13980,7 +13990,7 @@ V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
       op = OP_XOR;
       break;
     case AST_AND:
-      op = OP_ADD;
+      op = OP_AND;
       break;
     case AST_EQ_EQ:
       op = OP_EQ_EQ;
@@ -14141,6 +14151,29 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
           strncpy(v7->error_msg, "unexpected ast node", sizeof(v7->error_msg));
           return V7_SYNTAX_ERROR;
       }
+      break;
+    }
+    case AST_LOGICAL_AND: {
+      /*
+       * A && B
+       *
+       * ->
+       *
+       *   <A>
+       *   JMP_FALSE end
+       *   POP
+       *   <B>
+       * end:
+       *
+       */
+      bcode_off_t end_label;
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_DUP);
+      bcode_op(bcode, OP_JMP_FALSE);
+      end_label = bcode_add_target(bcode);
+      bcode_op(bcode, OP_POP);
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       break;
     }
     case AST_NULL:
