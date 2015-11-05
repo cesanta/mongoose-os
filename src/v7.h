@@ -289,7 +289,9 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
  * `v7_stringify()` allocates required memory. In that case, it is caller's
  * responsibility to free the allocated buffer. Generated string is
  * guaranteed to be 0-terminated.
- * If `as_json` is non-0, then generated string is JSON.
+ * Stringifying as JSON will produce JSON output.
+ * Debug stringification is mostly like JSON, but will not omit non-JSON
+ * objects like functions.
  *
  * Example code:
  *
@@ -300,8 +302,14 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
  *       free(p);
  *     }
  */
-char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len, int as_json);
-#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, 1)
+enum v7_stringify_flags {
+  V7_STRINGIFY_DEFAULT = 0,
+  V7_STRINGIFY_JSON = 1,
+  V7_STRINGIFY_DEBUG = 2,
+};
+char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
+                   enum v7_stringify_flags flags);
+#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
 
 /* print a value to stdout */
 void v7_print(struct v7 *, v7_val_t val);

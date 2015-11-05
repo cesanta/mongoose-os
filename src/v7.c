@@ -293,7 +293,9 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
  * `v7_stringify()` allocates required memory. In that case, it is caller's
  * responsibility to free the allocated buffer. Generated string is
  * guaranteed to be 0-terminated.
- * If `as_json` is non-0, then generated string is JSON.
+ * Stringifying as JSON will produce JSON output.
+ * Debug stringification is mostly like JSON, but will not omit non-JSON
+ * objects like functions.
  *
  * Example code:
  *
@@ -304,8 +306,14 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
  *       free(p);
  *     }
  */
-char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len, int as_json);
-#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, 1)
+enum v7_stringify_flags {
+  V7_STRINGIFY_DEFAULT = 0,
+  V7_STRINGIFY_JSON = 1,
+  V7_STRINGIFY_DEBUG = 2,
+};
+char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
+                   enum v7_stringify_flags flags);
+#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
 
 /* print a value to stdout */
 void v7_print(struct v7 *, v7_val_t val);
@@ -2445,7 +2453,7 @@ V7_PRIVATE int v7_del_property(struct v7 *, val_t, const char *, size_t);
 V7_PRIVATE val_t v7_array_get2(struct v7 *, v7_val_t, unsigned long, int *);
 V7_PRIVATE long arg_long(struct v7 *v7, int n, long default_value);
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
-                      int as_json);
+                      enum v7_stringify_flags flags);
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
 V7_PRIVATE v7_val_t std_eval(struct v7 *, v7_val_t, v7_val_t, int);
@@ -8370,7 +8378,7 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
 }
 
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
-                      int as_json) {
+                      enum v7_stringify_flags flags) {
   char *vp;
   double num;
   if (size > 0) *buf = '\0';
@@ -8423,7 +8431,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
     case V7_TYPE_STRING: {
       size_t n;
       const char *str = v7_to_string(v7, &v, &n);
-      if (as_json) {
+      if (flags & (V7_STRINGIFY_JSON | V7_STRINGIFY_DEBUG)) {
         return snquote(buf, size, str, n);
       } else {
         return c_snprintf(buf, size, "%.*s", (int) n, str);
@@ -8451,11 +8459,19 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
     case V7_TYPE_CFUNCTION_OBJECT:
       v = i_value_of(v7, v);
       return c_snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
+    case V7_TYPE_DATE_OBJECT: {
+      v7_val_t func, val;
+      func = v7_get(v7, v, "toString", 8);
+#if V7_ENABLE__Date__toJSON
+      if (flags & V7_STRINGIFY_JSON) func = v7_get(v7, v, "toJSON", 6);
+#endif
+      val = i_apply(v7, func, v, V7_UNDEFINED);
+      return to_str(v7, val, buf, size, flags);
+    }
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
     case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT: {
       /* TODO(imax): make it return the desired size of the buffer */
       char *b = buf;
@@ -8470,12 +8486,33 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         if (attrs & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
           continue;
         }
-        s = v7_to_string(v7, &name, &n);
-        b += c_snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
-        b += to_str(v7, val, b, BUF_LEFT(size, b - buf), 1);
-        if (((struct v7_property *) h)->next) {
+        if (flags & V7_STRINGIFY_JSON) {
+          switch (val_type(v7, val)) {
+            case V7_TYPE_NULL:
+            case V7_TYPE_BOOLEAN:
+            case V7_TYPE_BOOLEAN_OBJECT:
+            case V7_TYPE_NUMBER:
+            case V7_TYPE_NUMBER_OBJECT:
+            case V7_TYPE_STRING:
+            case V7_TYPE_STRING_OBJECT:
+            case V7_TYPE_GENERIC_OBJECT:
+            case V7_TYPE_ARRAY_OBJECT:
+            case V7_TYPE_DATE_OBJECT:
+              break;
+            default:
+              continue;
+          }
+        }
+        if (b - buf != 1) { /* Not the first property to be printed */
           b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
+        s = v7_to_string(v7, &name, &n);
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
+        if (val_type(v7, val) == V7_TYPE_STRING ||
+            val_type(v7, val) == V7_TYPE_STRING_OBJECT) {
+          flags = V7_STRINGIFY_JSON;
+        }
+        b += to_str(v7, val, b, BUF_LEFT(size, b - buf), flags);
       }
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
       v7->json_visited_stack.len -= sizeof(v);
@@ -8487,19 +8524,19 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       char *b = buf;
       size_t i, len = v7_array_length(v7, v);
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-      if (as_json) {
+      if (flags & (V7_STRINGIFY_JSON | V7_STRINGIFY_DEBUG)) {
         b += c_snprintf(b, BUF_LEFT(size, b - buf), "[");
       }
       for (i = 0; i < len; i++) {
         el = v7_array_get2(v7, v, i, &has);
         if (has) {
-          b += to_str(v7, el, b, BUF_LEFT(size, b - buf), 1);
+          b += to_str(v7, el, b, BUF_LEFT(size, b - buf), flags);
         }
         if (i != len - 1) {
           b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
-      if (as_json) {
+      if (flags & (V7_STRINGIFY_JSON | V7_STRINGIFY_DEBUG)) {
         b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
       }
       v7->json_visited_stack.len -= sizeof(v);
@@ -8586,17 +8623,18 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
 #undef BUF_LEFT
 
 /*
- * v7_to_json allocates a new buffer if value representation doesn't fit into
+ * v7_stringify allocates a new buffer if value representation doesn't fit into
  * buf. Caller is responsible for freeing that buffer.
  */
-char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size, int json) {
-  int len = to_str(v7, v, buf, size, json);
+char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size,
+                   enum v7_stringify_flags flags) {
+  int len = to_str(v7, v, buf, size, flags);
 
   /* fit null terminating byte */
   if (len >= (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
     char *p = (char *) malloc(len + 1);
-    to_str(v7, v, p, len + 1, json);
+    to_str(v7, v, p, len + 1, flags);
     p[len] = '\0';
     return p;
   } else {
@@ -8610,16 +8648,9 @@ void v7_print(struct v7 *v7, v7_val_t v) {
 
 void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
   char buf[16];
-
-  if (v7_is_string(v)) {
-    size_t n;
-    const char *s = v7_to_string(v7, &v, &n);
-    fprintf(f, "%s", s);
-  } else {
-    char *s = v7_to_json(v7, v, buf, sizeof(buf));
-    fprintf(f, "%s", s);
-    if (buf != s) free(s);
-  }
+  char *s = v7_stringify(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEBUG);
+  fprintf(f, "%s", s);
+  if (buf != s) free(s);
 }
 
 void v7_println(struct v7 *v7, v7_val_t v) {
@@ -8640,7 +8671,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
     }
     memcpy(buf, str, n);
   } else {
-    n = (size_t) to_str(v7, v, buf, size, 1);
+    n = (size_t) to_str(v7, v, buf, size, V7_STRINGIFY_DEFAULT);
     if (n >= size) {
       n = size - 1;
     }
@@ -8764,7 +8795,7 @@ V7_PRIVATE v7_val_t v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
   if (v7_is_string(name)) {
     s = v7_to_string(v7, &name, &name_len);
   } else {
-    s = v7_to_json(v7, name, buf, sizeof(buf));
+    s = v7_stringify(v7, name, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
     name_len = strlen(s);
     fr = (s != buf);
   }
@@ -9335,7 +9366,8 @@ V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
     return v;
   }
 
-  s = p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
+  s = p = v7_stringify(v7, i_value_of(v7, v), buf, sizeof(buf),
+                       V7_STRINGIFY_DEFAULT);
   if (p[0] == '"') {
     p[strlen(p) - 1] = '\0';
     s++;
@@ -14658,13 +14690,13 @@ std_eval(struct v7 *v7, v7_val_t arg, val_t this_obj, int is_json) {
 
   if (arg != V7_UNDEFINED) {
     char buf[100], *p = buf;
-    int len = to_str(v7, arg, buf, sizeof(buf), 0);
+    int len = to_str(v7, arg, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
 
     /* Fit null terminating byte and quotes */
     if (len >= (int) sizeof(buf) - 2) {
       /* Buffer is not large enough. Allocate a bigger one */
       p = (char *) malloc(len + 3);
-      to_str(v7, arg, p, len + 2, 0);
+      to_str(v7, arg, p, len + 2, V7_STRINGIFY_DEFAULT);
     }
 
     if (is_json) {
@@ -14703,7 +14735,7 @@ V7_PRIVATE v7_val_t Std_parseInt(struct v7 *v7) {
     size_t str_len;
     p = (char *) v7_to_string(v7, &arg0, &str_len);
   } else {
-    to_str(v7, arg0, buf, sizeof(buf), 0);
+    to_str(v7, arg0, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
     buf[sizeof(buf) - 1] = '\0';
   }
 
@@ -14739,7 +14771,7 @@ V7_PRIVATE v7_val_t Std_parseFloat(struct v7 *v7) {
     size_t str_len;
     p = (char *) v7_to_string(v7, &arg0, &str_len);
   } else {
-    to_str(v7, arg0, buf, sizeof(buf), 0);
+    to_str(v7, arg0, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
     buf[sizeof(buf) - 1] = '\0';
   }
 
@@ -17351,8 +17383,8 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
     return (int) -v7_to_number(res);
   } else {
     char sa[100], sb[100];
-    to_str(v7, a, sa, sizeof(sa), 0);
-    to_str(v7, b, sb, sizeof(sb), 0);
+    to_str(v7, a, sa, sizeof(sa), V7_STRINGIFY_DEFAULT);
+    to_str(v7, b, sb, sizeof(sb), V7_STRINGIFY_DEFAULT);
     sa[sizeof(sa) - 1] = sb[sizeof(sb) - 1] = '\0';
     return strcmp(sb, sa);
   }
@@ -17469,10 +17501,11 @@ static val_t Array_join(struct v7 *v7) {
 
       /* Append next item from an array */
       p = buf;
-      n = to_str(v7, v7_array_get(v7, this_obj, i), buf, sizeof(buf), 0);
+      n = to_str(v7, v7_array_get(v7, this_obj, i), buf, sizeof(buf),
+                 V7_STRINGIFY_DEFAULT);
       if (n > (long) sizeof(buf)) {
         p = (char *) malloc(n + 1);
-        to_str(v7, v7_array_get(v7, this_obj, i), p, n, 0);
+        to_str(v7, v7_array_get(v7, this_obj, i), p, n, V7_STRINGIFY_DEFAULT);
       }
       mbuf_append(&m, p, n);
       if (p != buf) {
@@ -18775,7 +18808,7 @@ V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
     return (long) d;
   }
   if (v7_is_null(v)) return 0;
-  l = to_str(v7, v, buf, sizeof(buf), 0);
+  l = to_str(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
   if (l > 0 && isdigit((int) buf[0])) return strtol(buf, NULL, 10);
   return default_value;
 }
@@ -20370,6 +20403,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *)) {
   struct v7 *v7;
   struct v7_create_opts opts = {0, 0, 0};
+  int as_json = 0;
   int i, j, show_ast = 0, binary_ast = 0, dump_stats = 0;
   val_t res = v7_create_undefined();
   int nexprs = 0;
@@ -20396,6 +20430,8 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 #endif
     } else if (strcmp(argv[i], "-h") == 0) {
       show_usage(argv);
+    } else if (strcmp(argv[i], "-j") == 0) {
+      as_json = 1;
 #if V7_ENABLE__Memory__stats
     } else if (strcmp(argv[i], "-mm") == 0) {
       dump_stats = 1;
@@ -20478,7 +20514,8 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 
   if (!show_ast) {
     char buf[2000];
-    char *s = v7_to_json(v7, res, buf, sizeof(buf));
+    char *s = v7_stringify(v7, res, buf, sizeof(buf),
+                           as_json ? V7_STRINGIFY_JSON : V7_STRINGIFY_DEBUG);
     printf("%s\n", s);
     if (s != buf) {
       free(s);
