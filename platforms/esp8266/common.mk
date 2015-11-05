@@ -3,6 +3,9 @@ SDK_PATH ?= /opt/Espressif/ESP8266_SDK
 ESPTOOL	?= esptool.py
 ESPPORT	?= /dev/ttyACM0
 ESPSPEED	?= 230400
+# For flash = > 16Mbit
+ESPFLASHARGS = --flash_mode dio --flash_size 32m
+
 VERBOSE ?= 0
 
 # some of these flags works around for gdb 7.5.x stacktrace issue

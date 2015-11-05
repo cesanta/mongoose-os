@@ -14,6 +14,8 @@ KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
 SPIFFS_PATH ?= $(SMARTJS_SRC)/spiffs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
+USE_BOOTLOADER ?=
+
 # Should be RTOS or OSS
 SDK := $(shell echo $$SDK_FLAVOUR)
 ifndef SDK
@@ -44,7 +46,7 @@ JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
               $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js \
               $(SJSJS_PATH)/demo.js \
               $(JSBIN_EXTRA)
-JS_SRCS    := $(SJSJS_PATH)/smart.js 
+JS_SRCS    := $(SJSJS_PATH)/smart.js
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
@@ -52,13 +54,13 @@ JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC)
 IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK
 APP_LIBS = cirom gcc hal pp phy net80211 wpa main
 
 # linker script used for the above linkier step
-LD_SCRIPT = user/eagle.app.30000.v6.ld
+LD_SCRIPT = user/smartjs_no_bootloader.ld
 
 # linker flags used to generate the main object file
 LDFLAGS = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
@@ -117,8 +119,6 @@ CFLAGS += -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
           $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(CFLAGS_EXTRA) \
           $(MONGOOSE_FEATURES) -DMG_ESP8266
 
-
-
 .PHONY: all clean
 .NOTPARALLEL: all
 
@@ -174,7 +174,20 @@ FS_FILES = $(wildcard $(FS_DIR)/*)
 INCDIRS = $(addprefix -I,$(IPATH))
 LIBDIRS = $(addprefix -L,$(LPATH))
 
-all: $(FW_DIR) $(BUILD_DIR) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) $(FW_FS_OUT)
+ESP_TOOL_CMD = 	$(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+
+ifeq "$(USE_BOOTLOADER)" "1"
+ADDITIONAL_DEPS = rboot
+ESPTOOL2     ?= ./build/esptool2
+FW_FILE_2_ADDR = 0x02000
+FW_SECTS      = .text .data .rodata
+FW_USER_ARGS  = -quiet -bin -boot2
+ESP_TOOL_CMD = $(ESPTOOL2) $(FW_USER_ARGS) $(APP_OUT) \
+               $(FW_DIR)/$(FW_FILE_2_ADDR).bin $(FW_SECTS)
+LD_SCRIPT = user/smartjs_use_bootloader.ld
+endif
+
+all: $(FW_DIR) $(BUILD_DIR) $(ADDITIONAL_DEPS) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) $(FW_FS_OUT)
 	$(Q) rm -f `ls $(FW_DIR)/* \
     | grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT))$$'`
 
@@ -184,7 +197,7 @@ $(BUILD_DIR) $(FW_DIR):
 # Main output product: firmware files.
 $(FW_FILE_1_OUT) $(FW_FILE_2_OUT): $(APP_OUT)
 	$(vecho) "FW $(APP_OUT) -> $(FW_DIR)"
-	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+	$(Q) $(ESP_TOOL_CMD)
 
 # -- Linking.
 
@@ -282,20 +295,28 @@ build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 # Auxiliary targets.
 #
 
+rboot: $(BUILD_DIR)/esptool2 $(BUILD_DIR)/rboot.bin
+
+$(BUILD_DIR)/esptool2:
+	$(MAKE) -C ./bootloader/esptool2
+
+$(BUILD_DIR)/rboot.bin: $(BUILD_DIR)/esptool2
+	$(MAKE) -C ./bootloader/rboot
+
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
 flash: $(FW_OUT) $(FW_FS_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
+	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
                   $(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
                   $(FW_FILE_2_ADDR) $(FW_FILE_2_OUT) \
                   $(FW_FS_ADDR) $(FW_FS_OUT)
 
 flash_no_fs: $(FW_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
+	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
                   $(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
                   $(FW_FILE_2_ADDR) $(FW_FILE_2_OUT)
 
 flash_fs: $(FW_FS_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash \
+	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
                   $(FW_FS_ADDR) $(FW_FS_OUT)
