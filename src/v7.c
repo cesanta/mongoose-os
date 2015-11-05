@@ -418,6 +418,9 @@ enum v7_heap_stat_what {
   V7_HEAP_STAT_PROP_HEAP_FREE,
   V7_HEAP_STAT_PROP_HEAP_CELL_SIZE,
   V7_HEAP_STAT_FUNC_AST_SIZE,
+#ifdef V7_ENABLE_BCODE
+  V7_HEAP_STAT_FUNC_BCODE_SIZE,
+#endif
   V7_HEAP_STAT_FUNC_OWNED,
   V7_HEAP_STAT_FUNC_OWNED_MAX
 };
@@ -2098,6 +2101,7 @@ struct v7 {
   struct gc_arena property_arena;
 #if V7_ENABLE__Memory__stats
   size_t function_arena_ast_size;
+  size_t function_arena_bcode_size;
 #endif
   struct mbuf owned_values; /* buffer for GC roots owned by C code */
 
@@ -2354,8 +2358,12 @@ struct v7_function {
   struct v7_property *properties;
   struct v7_object *scope; /* lexical scope of the closure */
   uintptr_t debug;
-  struct ast *ast;         /* AST, used as a byte code for execution */
-  unsigned int ast_off;    /* Position of the function node in the AST */
+  struct ast *ast;      /* AST, used as a byte code for execution */
+  unsigned int ast_off; /* Position of the function node in the AST */
+#ifdef V7_ENABLE_BCODE
+  /* if bcode is non NULL the function is evaluated with the bcode evaluator */
+  struct bcode *bcode; /* bytecode, might be shared between functions */
+#endif
   unsigned int attributes; /* Function attributes */
 #define V7_FUNCTION_STRICT 1
 };
@@ -2576,21 +2584,24 @@ typedef uint32_t bcode_off_t;
 
 /*
  * Each JS function will have one bcode structure
- * containing the instruction stream and a literal table.
+ * containing the instruction stream, a literal table, and function
+ * metadata.
  * Instructions contain references to literals (strings, constants, etc)
- * relative to their
  *
- * TODO(mkm): turn lit into a heap allocated structure,
- * or make the whole bytecode structure a dynamically sized structure
- * and combine the literal table with the bytecode list.
+ * The bcode struct can be shared between function instances
+ * and keeps a reference count used to free it in the function destructor.
  */
 struct bcode {
   struct mbuf ops; /* instruction opcode */
   struct mbuf lit; /* literal table */
+  int refcnt;      /* reference count */
+  int args;        /* number of args */
+  v7_val_t name;   /* function name: string  or undefined */
 };
 
 V7_PRIVATE void bcode_init(struct bcode *);
 V7_PRIVATE void bcode_free(struct bcode *);
+V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
 
 V7_PRIVATE void eval_bcode(struct v7 *, struct bcode *);
 
@@ -9570,9 +9581,17 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
 static void function_destructor(struct v7 *v7, void *ptr) {
   struct v7_function *f = (struct v7_function *) ptr;
   (void) v7;
-  if (f == NULL || f->ast == NULL) return;
+  if (f == NULL) return;
 
-  release_ast(v7, f->ast);
+  if (f->ast != NULL) {
+    release_ast(v7, f->ast);
+  }
+
+#ifdef V7_ENABLE_BCODE
+  if (f->bcode != NULL) {
+    release_bcode(v7, f->bcode);
+  }
+#endif
 }
 
 struct v7 *v7_create(void) {
@@ -10144,6 +10163,10 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
       return v7->property_arena.cell_size;
     case V7_HEAP_STAT_FUNC_AST_SIZE:
       return v7->function_arena_ast_size;
+#ifdef V7_ENABLE_BCODE
+    case V7_HEAP_STAT_FUNC_BCODE_SIZE:
+      return v7->function_arena_bcode_size;
+#endif
     case V7_HEAP_STAT_FUNC_OWNED:
       return v7->owned_values.len / sizeof(val_t *);
     case V7_HEAP_STAT_FUNC_OWNED_MAX:
@@ -13986,11 +14009,30 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
 V7_PRIVATE void bcode_init(struct bcode *bcode) {
   mbuf_init(&bcode->ops, 0);
   mbuf_init(&bcode->lit, 0);
+  bcode->refcnt = 0;
+  bcode->name = v7_create_undefined();
+  bcode->args = 0;
 }
 
 V7_PRIVATE void bcode_free(struct bcode *bcode) {
   mbuf_free(&bcode->ops);
   mbuf_free(&bcode->lit);
+  bcode->refcnt = 0;
+}
+
+V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
+  (void) v7;
+
+  assert(b->refcnt > 0);
+  if (b->refcnt != 0) b->refcnt--;
+
+  if (b->refcnt == 0) {
+#if V7_ENABLE__Memory__stats
+    v7->function_arena_bcode_size -= b->ops.size + b->lit.size;
+#endif
+    bcode_free(b);
+    free(b);
+  }
 }
 
 V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *v7, const char *src,
