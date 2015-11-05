@@ -8478,6 +8478,11 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       void *h = NULL;
       v7_val_t name, val;
       unsigned attrs;
+      if (flags == V7_STRINGIFY_DEFAULT) {
+        val = i_apply(v7, v7_get(v7, v, "toString", 8), v, V7_UNDEFINED);
+        return to_str(v7, val, buf, size, flags);
+      }
+
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "{");
       while ((h = v7_next_prop(h, v, &name, &val, &attrs)) != NULL) {
@@ -16917,13 +16922,20 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7) {
 }
 
 static val_t Obj_toString(struct v7 *v7) {
-  val_t this_obj = v7_get_this(v7);
+  val_t cons, name, this_obj = v7_get_this(v7);
   char buf[20];
-  const char *type = "Object";
-  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
-    type = "Array";
+  const char *str = "Object";
+  size_t name_len = 6;
+
+  cons = v7_get(v7, this_obj, "constructor", ~0);
+  if (!v7_is_undefined(cons)) {
+    name = v7_get(v7, cons, "name", ~0);
+    if (!v7_is_undefined(name)) {
+      str = v7_to_string(v7, &name, &name_len);
+    }
   }
-  c_snprintf(buf, sizeof(buf), "[object %s]", type);
+
+  c_snprintf(buf, sizeof(buf), "[object %.*s]", (int) name_len, str);
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
@@ -17057,6 +17069,17 @@ static val_t Error_ctor(struct v7 *v7) {
   return res;
 }
 
+static val_t Error_toString(struct v7 *v7) {
+  val_t this_obj = v7_get_this(v7);
+  val_t prefix, msg = v7_get(v7, this_obj, "message", ~0);
+  if (!v7_is_string(msg)) {
+    return v7_create_string(v7, "Error", ~0, 1);
+  }
+
+  prefix = v7_create_string(v7, "Error: ", ~0, 1);
+  return s_concat(v7, prefix, msg);
+}
+
 static const char *const error_names[] = {"TypeError", "SyntaxError",
                                           "ReferenceError", "InternalError",
                                           "RangeError"};
@@ -17070,6 +17093,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
   error = v7_create_constructor(v7, v7->error_prototype, Error_ctor, 1);
   v7_set_property(v7, v7->global_object, "Error", 5, V7_PROPERTY_DONT_ENUM,
                   error);
+  set_method(v7, v7->error_prototype, "toString", Error_toString, 0);
 
   for (i = 0; i < ARRAY_SIZE(error_names); i++) {
     error = v7_create_constructor(v7, create_object(v7, v7->error_prototype),
@@ -17841,6 +17865,9 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);
   set_method(v7, ctor, "isArray", Array_isArray, 1);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
+  v7_set_property(v7, v7->array_prototype, "constructor", ~0,
+                  V7_PROPERTY_HIDDEN, ctor);
+  v7_set_property(v7, ctor, "name", 4, 0, v7_create_string(v7, "Array", ~0, 1));
 
   set_method(v7, v7->array_prototype, "concat", Array_concat, 1);
   set_method(v7, v7->array_prototype, "every", Array_every, 1);
@@ -20136,6 +20163,31 @@ static val_t Function_length(struct v7 *v7) {
   return v7_create_number(argn);
 }
 
+static val_t Function_name(struct v7 *v7) {
+  v7_val_t this_obj = v7_get_this(v7);
+  struct v7_function *func;
+  ast_off_t pos;
+  struct ast *a;
+  char *name;
+  size_t name_len;
+
+  this_obj = i_value_of(v7, this_obj);
+  if (!v7_is_function(this_obj)) return v7_create_undefined();
+
+  func = v7_to_function(this_obj);
+  pos = func->ast_off;
+  a = func->ast;
+
+  V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
+  ast_move_to_children(a, &pos);
+  if (ast_fetch_tag(a, &pos) != AST_IDENT) {
+    return v7_create_string(v7, "", 0, 1);
+  }
+
+  name = ast_get_inlined_data(a, pos, &name_len);
+  return v7_create_string(v7, name, name_len, 1);
+}
+
 static val_t Function_apply(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   val_t f = i_value_of(v7, this_obj);
@@ -20152,6 +20204,9 @@ V7_PRIVATE void init_function(struct v7 *v7) {
   v7_set_property(v7, v7->function_prototype, "length", 6,
                   V7_PROPERTY_GETTER | V7_PROPERTY_DONT_ENUM,
                   v7_create_cfunction(Function_length));
+  v7_set_property(v7, v7->function_prototype, "name", 4,
+                  V7_PROPERTY_GETTER | V7_PROPERTY_DONT_ENUM,
+                  v7_create_cfunction(Function_name));
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_regex.c"
