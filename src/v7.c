@@ -2559,6 +2559,8 @@ enum opcode {
   OP_CREATE_OBJ, /* creates an empty object */
   OP_CREATE_ARR, /* creates an empty array */
 
+  OP_CALL, /* takes number of args */
+
   OP_MAX,
 };
 
@@ -13591,7 +13593,7 @@ static const char *op_names[] = {
     "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR",
     "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET",
     "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ",
-    "CREATE_ARR"};
+    "CREATE_ARR", "CALL"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -13693,6 +13695,7 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
     case OP_PUSH_LIT:
     case OP_GET_VAR:
     case OP_SET_VAR:
+    case OP_CALL:
       p++;
       fprintf(f, "(%d)", *p);
       break;
@@ -13918,6 +13921,22 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
       case OP_CREATE_ARR:
         PUSH(v7_create_array(v7));
         break;
+      case OP_CALL: {
+        /* Naive implementation pending stack frame redesign */
+        int args = (int) *(++ops);
+        if (v7->sp < args) {
+          throw_exception(v7, INTERNAL_ERROR, "stack underflow",
+                          __func__); /* LCOV_EXCL_LINE */
+        }
+        v2 = v7_create_dense_array(v7);
+        while (args > 0) {
+          v7_array_set(v7, v2, --args, POP());
+        }
+        v1 = POP();
+        /* TODO(mkm) handle `this` */
+        PUSH(i_apply(v7, v1, v7_get_global(v7), v2));
+        break;
+      }
       default:
         throw_exception(v7, INTERNAL_ERROR, "%s",
                         __func__); /* LCOV_EXCL_LINE */
@@ -14268,6 +14287,22 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_POP);
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      break;
+    }
+    case AST_CALL: {
+      int args;
+      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      BTRY(compile_expr(v7, a, pos, bcode));
+      for (args = 0; *pos < end; args++) {
+        BTRY(compile_expr(v7, a, pos, bcode));
+      }
+      bcode_op(bcode, OP_CALL);
+      if (args > 0x7f) {
+        strncpy(v7->error_msg, "too many arguments", sizeof(v7->error_msg));
+        return V7_SYNTAX_ERROR;
+      }
+      bcode_op(bcode, (uint8_t) args);
       break;
     }
     case AST_OBJECT: {
