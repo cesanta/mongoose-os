@@ -18,5 +18,5 @@ V=$(for i in "$@" ; do echo $i; done | xargs  -I% echo -n "'%' " )
 exec docker run --rm -it -v /$V7DIR:/cesanta ${SDK} //bin/bash -c "\
      make -C /cesanta/v7 v7.c && \
      make -C /cesanta/mongoose/src && \
-     cd $DIR && make $V && python ./tools/showbreakdown.py \
+     cd $DIR && make -f Makefile.build $V && python ./tools/showbreakdown.py \
      "
