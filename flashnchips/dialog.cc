@@ -650,6 +650,7 @@ void MainDialog::loadFirmware() {
                                              "", QFileDialog::ShowDirsOnly);
     if (path.isEmpty()) {
       ui_.statusMessage->setText(tr("No firmware selected"));
+      ui_.statusMessage->show();
       return;
     }
   }
@@ -660,11 +661,15 @@ void MainDialog::loadFirmware() {
   std::unique_ptr<Flasher> f(hal_->flasher(prompter_));
   util::Status s = f->setOptionsFromCommandLine(*parser_);
   if (!s.ok()) {
-    qWarning() << "Some options have invalid values:" << s.ToString().c_str();
+    ui_.statusMessage->setText(tr("Invalid command line flag setting: ") +
+                               s.ToString().c_str());
+    ui_.statusMessage->show();
+    return;
   }
   util::Status err = f->load(path);
   if (!err.ok()) {
     ui_.statusMessage->setText(err.error_message().c_str());
+    ui_.statusMessage->show();
     return;
   }
   if (state_ == Terminal) {

@@ -37,15 +37,15 @@ class Flasher : public QObject {
   // status on error or if option is not known.
   virtual util::Status setOption(const QString& name,
                                  const QVariant& value) = 0;
-  // setOptions should extract known options from parser, proceeding to the next
-  // option on any errors and returning non-OK status if there was any errors.
+  // setOptions should extract known options from parser, returning non-OK
+  // status if there were any errors.
   virtual util::Status setOptionsFromCommandLine(
       const QCommandLineParser& parser) = 0;
 
   static const char kIdDomainOption[];
   static const char kSkipIdGenerationOption[];
   static const char kOverwriteFSOption[];
-  static const char kFlashBaudRate[];
+  static const char kFlashBaudRateOption[];
   static const char kDumpFSOption[];
 
 signals:
