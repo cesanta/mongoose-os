@@ -10480,16 +10480,19 @@ V7_PRIVATE void maybe_gc(struct v7 *v7) {
 static int gc_pass = 0;
 #endif
 
+/* mark an mbuf containing val_t values */
+static void gc_mark_mbuf(struct v7 *v7, const struct mbuf *mbuf) {
+  val_t **vp;
+  for (vp = (val_t **) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
+    gc_mark(v7, **vp);
+#ifndef V7_DISABLE_COMPACTING_GC
+    gc_mark_string(v7, *vp);
+#endif
+  }
+}
+
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7, int full) {
-  val_t **vp;
-
-  /*
-   * constant offsets for mbufs to be scanned for roots
-   * needed for pre C99 compatibility.
-   */
-  static const ptrdiff_t root_mbuf_offs[] = {offsetof(struct v7, tmp_stack),
-                                             offsetof(struct v7, owned_values)};
   int i;
 
 #if defined(V7_GC_VERBOSE)
@@ -10528,17 +10531,8 @@ void v7_gc(struct v7 *v7, int full) {
     gc_mark(v7, v7->error_objects[i]);
   }
 
-  for (i = 0; i < (int) ARRAY_SIZE(root_mbuf_offs); i++) {
-    const struct mbuf *mbuf =
-        (const struct mbuf *) (((uintptr_t) v7) + root_mbuf_offs[i]);
-
-    for (vp = (val_t **) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
-      gc_mark(v7, **vp);
-#ifndef V7_DISABLE_COMPACTING_GC
-      gc_mark_string(v7, *vp);
-#endif
-    }
-  }
+  gc_mark_mbuf(v7, &v7->tmp_stack);
+  gc_mark_mbuf(v7, &v7->owned_values);
 
 #ifndef V7_DISABLE_COMPACTING_GC
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
