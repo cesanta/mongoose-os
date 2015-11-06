@@ -8058,6 +8058,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_STRING_I >> 48:
     case V7_TAG_STRING_O >> 48:
     case V7_TAG_STRING_F >> 48:
+#ifdef V7_ENABLE_DICTIONARY_STRINGS
+    case V7_TAG_STRING_D >> 48:
+#endif
     case V7_TAG_STRING_5 >> 48:
       return V7_TYPE_STRING;
     case V7_TAG_BOOLEAN >> 48:
@@ -8069,7 +8072,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_REGEXP >> 48:
       return V7_TYPE_REGEXP_OBJECT;
     default:
-      /* TODO(mkm): or should we crash? */
+      abort();
       return V7_TYPE_UNDEFINED;
   }
 }
