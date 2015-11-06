@@ -2169,7 +2169,7 @@ enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
 /* Vector, describes some memory location pointed by 'p' with length 'len' */
 struct v7_vec {
   const char *p;
-  int len;
+  size_t len;
 };
 #define V7_VEC(str) \
   { (str), sizeof(str) - 1 }
@@ -6625,7 +6625,7 @@ static void ident(const char **s) {
   *s = (char *) p;
 }
 
-static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
+static enum v7_tok kw(const char *s, size_t len, int ntoks, enum v7_tok tok) {
   int i;
 
   for (i = 0; i < ntoks; i++) {
@@ -7944,25 +7944,60 @@ struct v7 *v7_head = NULL;
  * NOTE(lsm): must be sorted alphabetically, because
  * v_find_string_in_dictionary performs binary search over this list.
  */
-struct v7_vec v_dictionary_strings[] = {
-    V7_VEC("Function"), V7_VEC("Infinity"), V7_VEC("Object"),
-    V7_VEC("arguments"), V7_VEC("concat"), V7_VEC("configurable"),
-    V7_VEC("constructor"), V7_VEC("defineProperty"), V7_VEC("defineProperties"),
-    V7_VEC("defineProperties"), V7_VEC("every"),
+static const struct v7_vec v_dictionary_strings[] = {
+    V7_VEC("Boolean"), V7_VEC("Crypto"), V7_VEC("Function"), V7_VEC("Infinity"),
+    V7_VEC("InternalError"), V7_VEC("LOG10E"), V7_VEC("MAX_VALUE"),
+    V7_VEC("MIN_VALUE"), V7_VEC("NEGATIVE_INFINITY"), V7_VEC("Number"),
+    V7_VEC("Object"), V7_VEC("POSITIVE_INFINITY"), V7_VEC("RangeError"),
+    V7_VEC("ReferenceError"), V7_VEC("RegExp"), V7_VEC("SQRT1_2"),
+    V7_VEC("Socket"), V7_VEC("String"), V7_VEC("SyntaxError"),
+    V7_VEC("TypeError"), V7_VEC("accept"), V7_VEC("arguments"),
+    V7_VEC("base64_decode"), V7_VEC("base64_encode"), V7_VEC("charAt"),
+    V7_VEC("charCodeAt"), V7_VEC("concat"), V7_VEC("configurable"),
+    V7_VEC("connect"), V7_VEC("constructor"), V7_VEC("create"),
+    V7_VEC("defineProperties"), V7_VEC("defineProperty"), V7_VEC("every"),
+    V7_VEC("filter"), V7_VEC("forEach"), V7_VEC("fromCharCode"),
+    V7_VEC("function"), V7_VEC("getDate"), V7_VEC("getDay"),
+    V7_VEC("getFullYear"), V7_VEC("getHours"), V7_VEC("getMilliseconds"),
+    V7_VEC("getMinutes"), V7_VEC("getMonth"),
     V7_VEC("getOwnPropertyDescriptor"), V7_VEC("getOwnPropertyNames"),
-    V7_VEC("getPrototypeOf"), V7_VEC("hasOwnProperty"), V7_VEC("function"),
-    V7_VEC("isExtensible"), V7_VEC("isFinite"), V7_VEC("isPrototypeOf"),
-    V7_VEC("indexOf"), V7_VEC("lastIndexOf"), V7_VEC("length"),
-    V7_VEC("parseInt"), V7_VEC("propertyIsEnumerable"), V7_VEC("prototype"),
-    V7_VEC("toString"), V7_VEC("valueOf"), V7_VEC("writable")};
+    V7_VEC("getPrototypeOf"), V7_VEC("getSeconds"), V7_VEC("getTime"),
+    V7_VEC("getTimezoneOffset"), V7_VEC("getUTCDate"), V7_VEC("getUTCDay"),
+    V7_VEC("getUTCFullYear"), V7_VEC("getUTCHours"),
+    V7_VEC("getUTCMilliseconds"), V7_VEC("getUTCMinutes"),
+    V7_VEC("getUTCMonth"), V7_VEC("getUTCSeconds"), V7_VEC("global"),
+    V7_VEC("hasOwnProperty"), V7_VEC("ignoreCase"), V7_VEC("indexOf"),
+    V7_VEC("isArray"), V7_VEC("isExtensible"), V7_VEC("isFinite"),
+    V7_VEC("isPrototypeOf"), V7_VEC("lastIndex"), V7_VEC("lastIndexOf"),
+    V7_VEC("length"), V7_VEC("listen"), V7_VEC("loadJSON"),
+    V7_VEC("localeCompare"), V7_VEC("md5_hex"), V7_VEC("multiline"),
+    V7_VEC("parseFloat"), V7_VEC("parseInt"), V7_VEC("preventExtensions"),
+    V7_VEC("propertyIsEnumerable"), V7_VEC("prototype"), V7_VEC("random"),
+    V7_VEC("readAll"), V7_VEC("recvAll"), V7_VEC("reduce"), V7_VEC("remove"),
+    V7_VEC("rename"), V7_VEC("replace"), V7_VEC("reverse"), V7_VEC("search"),
+    V7_VEC("setDate"), V7_VEC("setFullYear"), V7_VEC("setHours"),
+    V7_VEC("setMilliseconds"), V7_VEC("setMinutes"), V7_VEC("setMonth"),
+    V7_VEC("setSeconds"), V7_VEC("setTime"), V7_VEC("setUTCDate"),
+    V7_VEC("setUTCFullYear"), V7_VEC("setUTCHours"),
+    V7_VEC("setUTCMilliseconds"), V7_VEC("setUTCMinutes"),
+    V7_VEC("setUTCMonth"), V7_VEC("setUTCSeconds"), V7_VEC("sha1_hex"),
+    V7_VEC("source"), V7_VEC("splice"), V7_VEC("stringify"), V7_VEC("substr"),
+    V7_VEC("substring"), V7_VEC("toDateString"), V7_VEC("toExponential"),
+    V7_VEC("toFixed"), V7_VEC("toISOString"), V7_VEC("toJSON"),
+    V7_VEC("toLocaleDateString"), V7_VEC("toLocaleLowerCase"),
+    V7_VEC("toLocaleString"), V7_VEC("toLocaleTimeString"),
+    V7_VEC("toLocaleUpperCase"), V7_VEC("toLowerCase"), V7_VEC("toPrecision"),
+    V7_VEC("toString"), V7_VEC("toTimeString"), V7_VEC("toUTCString"),
+    V7_VEC("toUpperCase"), V7_VEC("valueOf"), V7_VEC("writable"),
+};
 
 static int v_find_string_in_dictionary(const char *s, size_t len) {
   size_t start = 0, end = ARRAY_SIZE(v_dictionary_strings);
 
   while (s != NULL && start < end) {
     size_t mid = start + (end - start) / 2;
-    struct v7_vec *v = &v_dictionary_strings[mid];
-    size_t min_len = len < (size_t) v->len ? len : v->len;
+    const struct v7_vec *v = &v_dictionary_strings[mid];
+    size_t min_len = len < v->len ? len : v->len;
     int comparison_result = memcmp(s, v->p, min_len);
     if (comparison_result == 0) {
       comparison_result = len - v->len;
