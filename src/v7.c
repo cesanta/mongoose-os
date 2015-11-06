@@ -14708,6 +14708,32 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, body_label, body_target);
       break;
     }
+    case AST_VAR: {
+      /*
+       * Var decls are hoisted when the function frame is created. Vars
+       * declared inside a `with` or `catch` block belong to the function
+       * lexical scope, and although those clauses create an inner frame
+       * no new variables should be created in it. A var decl thus
+       * behaves as a normal assignment at runtime.
+       */
+      uint8_t lit;
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      while (*pos < end) {
+        tag = ast_fetch_tag(a, pos);
+        if (tag == AST_FUNC_DECL) {
+          strncpy(v7->error_msg, "not implemented yet", sizeof(v7->error_msg));
+          printf("SYNTAX ERROR: %s\n", v7->error_msg);
+          return V7_SYNTAX_ERROR;
+        }
+        V7_CHECK(v7, tag == AST_VAR_DECL);
+        lit = string_lit(v7, a, pos, bcode);
+        BTRY(compile_expr(v7, a, pos, bcode));
+        bcode_op(bcode, OP_SET_VAR);
+        bcode_op(bcode, lit);
+      }
+      break;
+    }
     default:
       (*pos)--;
       return compile_expr(v7, a, pos, bcode);
