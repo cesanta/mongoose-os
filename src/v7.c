@@ -1739,6 +1739,8 @@ V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, size_t *);
 V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
 V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
 
+V7_PRIVATE void ast_dump_tree(FILE *, struct ast *, ast_off_t *, int depth);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -2592,11 +2594,11 @@ typedef uint32_t bcode_off_t;
  * and keeps a reference count used to free it in the function destructor.
  */
 struct bcode {
-  struct mbuf ops; /* instruction opcode */
-  struct mbuf lit; /* literal table */
-  int refcnt;      /* reference count */
-  int args;        /* number of args */
-  v7_val_t name;   /* function name: string  or undefined */
+  struct mbuf ops;   /* instruction opcode */
+  struct mbuf lit;   /* literal table */
+  struct mbuf names; /* function name, `args` arg names, local names */
+  int refcnt;        /* reference count */
+  int args;          /* number of args */
 };
 
 V7_PRIVATE void bcode_init(struct bcode *);
@@ -2620,6 +2622,7 @@ V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
 V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
 V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx);
+V7_PRIVATE void bcode_add_name(struct bcode *bcode, v7_val_t v);
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
 V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode);
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
@@ -2654,6 +2657,8 @@ extern "C" {
 
 V7_PRIVATE enum v7_err compile_script(struct v7 *, struct ast *,
                                       struct bcode *);
+V7_PRIVATE enum v7_err compile_function(struct v7 *, struct ast *, ast_off_t *,
+                                        struct bcode *);
 
 #if defined(__cplusplus)
 }
@@ -7811,7 +7816,8 @@ V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
 }
 
 #ifndef NO_LIBC
-static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
+V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
+                              int depth) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
@@ -8602,6 +8608,53 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       struct ast *a = func->ast;
 
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "[function");
+
+#ifdef V7_ENABLE_BCODE
+      if (a == NULL) {
+        int i;
+        assert(func->bcode != NULL);
+        /* first entry in name list */
+        name = (char *) v7_to_string(v7, (val_t *) func->bcode->names.buf,
+                                     &name_len);
+        if (name_len > 0) {
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), " %.*s", (int) name_len,
+                          name);
+        }
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "(");
+        for (i = 0; i < func->bcode->args; i++) {
+          name = (char *) v7_to_string(
+              v7, (val_t *) (func->bcode->names.buf + (i + 1) * sizeof(val_t)),
+              &name_len);
+
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len,
+                          name);
+          if (i < func->bcode->args - 1) {
+            b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
+          }
+        }
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), ")");
+
+        if (func->bcode->names.len / sizeof(val_t) >
+            (size_t)(func->bcode->args + 1)) {
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), "{var ");
+          for (i = func->bcode->args + 1;
+               (size_t) i < func->bcode->names.len / sizeof(val_t); i++) {
+            name = (char *) v7_to_string(
+                v7, (val_t *) (func->bcode->names.buf + i * sizeof(val_t)),
+                &name_len);
+            b += c_snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len,
+                            name);
+            if ((size_t) i < func->bcode->names.len / sizeof(val_t) - 1) {
+              b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
+            }
+          }
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
+        }
+
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
+        return b - buf;
+      }
+#endif
 
       V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
       start = pos - 1;
@@ -14038,14 +14091,15 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
 V7_PRIVATE void bcode_init(struct bcode *bcode) {
   mbuf_init(&bcode->ops, 0);
   mbuf_init(&bcode->lit, 0);
+  mbuf_init(&bcode->names, 0);
   bcode->refcnt = 0;
-  bcode->name = v7_create_undefined();
   bcode->args = 0;
 }
 
 V7_PRIVATE void bcode_free(struct bcode *bcode) {
   mbuf_free(&bcode->ops);
   mbuf_free(&bcode->lit);
+  mbuf_free(&bcode->names);
   bcode->refcnt = 0;
 }
 
@@ -14130,6 +14184,10 @@ V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, val_t val) {
 V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx) {
   bcode_op(bcode, OP_PUSH_LIT);
   bcode_op(bcode, idx);
+}
+
+V7_PRIVATE void bcode_add_name(struct bcode *bcode, val_t v) {
+  mbuf_append(&bcode->names, &v, sizeof(v));
 }
 
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode) {
@@ -14496,6 +14554,20 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_POP);
       break;
     }
+    case AST_FUNC: {
+      uint8_t flit = 0;
+      val_t funv = create_function(v7);
+      struct v7_function *func = v7_to_function(funv);
+      func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
+      bcode_init(func->bcode);
+      func->bcode->refcnt = 1;
+      flit = bcode_add_lit(bcode, funv);
+
+      (*pos)--;
+      BTRY(compile_function(v7, a, pos, func->bcode));
+      bcode_push_lit(bcode, flit);
+      break;
+    }
     case AST_NULL:
       bcode_op(bcode, OP_PUSH_NULL);
       break;
@@ -14526,7 +14598,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
       break;
     default:
-      strncpy(v7->error_msg, "unknown ast node", sizeof(v7->error_msg));
+      sprintf(v7->error_msg, "unknown ast node %d", (int) tag);
+      abort();
       return V7_SYNTAX_ERROR;
   }
   return V7_OK;
@@ -14743,7 +14816,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
 /*
  * Compiles a given script and populates a bcode structure.
- * The AST must contain an AST_FUNC node at offset ast_off.
+ * The AST must start with an AST_SCRIPT node.
  */
 V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
                                       struct bcode *bcode) {
@@ -14755,6 +14828,70 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
   ast_move_to_children(a, &pos);
 
   return compile_stmts(v7, a, &pos, end, bcode);
+}
+
+/*
+ * Compiles a given function and populates a bcode structure.
+ * The AST must contain an AST_FUNC node at offset ast_off.
+ */
+V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
+                                        ast_off_t *pos, struct bcode *bcode) {
+  ast_off_t start, end, body, var, next, var_end;
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+  const char *name;
+  size_t name_len;
+
+  (void) tag;
+  assert(tag == AST_FUNC);
+  start = *pos - 1;
+  end = ast_get_skip(a, *pos, AST_END_SKIP);
+  body = ast_get_skip(a, *pos, AST_FUNC_BODY_SKIP);
+  var = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
+  ast_move_to_children(a, pos);
+
+  tag = ast_fetch_tag(a, pos);
+  if (tag == AST_IDENT) {
+    name = ast_get_inlined_data(a, *pos, &name_len);
+    ast_move_to_children(a, pos);
+    bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
+  } else {
+    /* anonymous */
+    bcode_add_name(bcode, v7_create_string(v7, "", 0, 1));
+  }
+
+  for (bcode->args = 0; *pos < body; bcode->args++) {
+    tag = ast_fetch_tag(a, pos);
+    V7_CHECK(v7, tag == AST_IDENT);
+    name = ast_get_inlined_data(a, *pos, &name_len);
+    ast_move_to_children(a, pos);
+    bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
+  }
+
+  if (var != start) {
+    do {
+      V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR);
+      next = ast_get_skip(a, var, AST_VAR_NEXT_SKIP);
+      if (next == var) {
+        next = 0;
+      }
+
+      var_end = ast_get_skip(a, var, AST_END_SKIP);
+      ast_move_to_children(a, &var);
+      while (var < var_end) {
+        enum ast_tag tag = ast_fetch_tag(a, &var);
+        V7_CHECK(v7, tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
+        name = ast_get_inlined_data(a, var, &name_len);
+        ast_move_to_children(a, &var);
+        ast_skip_tree(a, &var);
+        bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
+      }
+      if (next > 0) {
+        var = next - 1;
+      }
+    } while (next != 0);
+  }
+  *pos = body;
+  return compile_stmts(v7, a, pos, end, bcode);
 }
 
 #endif /* V7_ENABLE_BCODE */
@@ -20244,6 +20381,13 @@ static val_t Function_length(struct v7 *v7) {
 
   if (!v7_is_function(i_value_of(v7, this_obj))) return 0;
 
+#ifdef V7_ENABLE_BCODE
+  if (a == NULL) {
+    assert(func->bcode != NULL);
+    return v7_create_number(func->bcode->args);
+  }
+#endif
+
   V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
   body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);
 
@@ -20274,6 +20418,16 @@ static val_t Function_name(struct v7 *v7) {
   func = v7_to_function(this_obj);
   pos = func->ast_off;
   a = func->ast;
+
+#ifdef V7_ENABLE_BCODE
+  if (a == NULL) {
+    val_t res;
+    assert(func->bcode != NULL);
+    assert(func->bcode->names.len >= sizeof(res));
+    memcpy(&res, func->bcode->names.buf, sizeof(res));
+    return res;
+  }
+#endif
 
   V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
   ast_move_to_children(a, &pos);
