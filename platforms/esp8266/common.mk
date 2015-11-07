@@ -42,13 +42,17 @@ vecho := @echo " "
 
 define link
 $(vecho) "LD $@"
-$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) \
+$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $1 \
   $< -Wl,--end-group -o $@
 endef
 
+define compile_params
+$(vecho) "CC $1 -> $2"
+$(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $1 -o $2
+endef
+
 define compile
-$(vecho) "CC $< -> $@"
-$(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $< -o $@
+$(call compile_params,$<,$@)
 endef
 
 CFLAGS := -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \

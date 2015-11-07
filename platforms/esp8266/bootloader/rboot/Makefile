@@ -45,7 +45,7 @@ RBOOT_EXTRA_INCDIR := $(addprefix -I,$(RBOOT_EXTRA_INCDIR))
 
 .SECONDARY:
 
-all: $(RBOOT_BUILD_BASE) $(RBOOT_FW_BASE) $(RBOOT_BUILD_BASE)/rboot.bin $(RBOOT_FW_BASE)/$(FW_NAME)
+all: $(RBOOT_BUILD_BASE) $(RBOOT_FW_BASE) $(RBOOT_FW_BASE)/rboot.bin
 
 $(RBOOT_FW_BASE)/$(FW_NAME):
 	cp $(RBOOT_BUILD_BASE)/rboot.bin  $(RBOOT_FW_BASE)/0x00000.bin
@@ -80,7 +80,7 @@ $(RBOOT_BUILD_BASE)/%.elf: $(RBOOT_BUILD_BASE)/%.o
 	@echo "LD $@"
 	@$(LD) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
 
-$(RBOOT_BUILD_BASE)/%.bin: $(RBOOT_BUILD_BASE)/%.elf
+$(RBOOT_FW_BASE)/%.bin: $(RBOOT_BUILD_BASE)/%.elf
 	@echo "E2 $@"
 	@$(ESPTOOL2) $(E2_OPTS) $< $@ .text .rodata
 
