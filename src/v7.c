@@ -17183,7 +17183,17 @@ static val_t Obj_toString(struct v7 *v7) {
   if (!v7_is_undefined(cons)) {
     name = v7_get(v7, cons, "name", ~0);
     if (!v7_is_undefined(name)) {
-      str = v7_to_string(v7, &name, &name_len);
+      size_t tmp_len;
+      const char *tmp_str;
+      tmp_str = v7_to_string(v7, &name, &tmp_len);
+      /*
+       * objects constructed with an anonymous constructor are represented as
+       * Object, ch11/11.1/11.1.1/S11.1.1_A4.2.js
+       */
+      if (tmp_len > 0) {
+        str = tmp_str;
+        name_len = tmp_len;
+      }
     }
   }
 
@@ -20495,9 +20505,19 @@ V7_PRIVATE val_t to_string(struct v7 *, val_t);
 V7_PRIVATE val_t Regex_ctor(struct v7 *v7) {
   long argnum = v7_argc(v7);
   if (argnum > 0) {
-    val_t ro = to_string(v7, v7_arg(v7, 0)), fl;
+    val_t arg = v7_arg(v7, 0);
+    val_t ro, fl;
     size_t re_len, flags_len = 0;
     const char *re, *flags = NULL;
+
+    if (v7_is_regexp(v7, arg)) {
+      if (argnum > 1) {
+        /* ch15/15.10/15.10.3/S15.10.3.1_A2_T1.js */
+        throw_exception(v7, TYPE_ERROR, "invalid flags");
+      }
+      return arg;
+    }
+    ro = to_string(v7, arg);
 
     if (argnum > 1) {
       fl = to_string(v7, v7_arg(v7, 1));
