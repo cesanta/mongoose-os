@@ -9490,7 +9490,7 @@ V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
 /* Get a pointer to string and string length. */
 const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
-  char *p;
+  const char *p;
   int llen;
 
   assert(v7_is_string(*v));
@@ -9505,7 +9505,7 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   } else if (tag == V7_TAG_STRING_D) {
     int index = ((unsigned char *) GET_VAL_NAN_PAYLOAD(*v))[0];
     *sizep = v_dictionary_strings[index].len;
-    p = (char *) v_dictionary_strings[index].p;
+    p = v_dictionary_strings[index].p;
 #endif
   } else {
     struct mbuf *m =
@@ -10284,6 +10284,18 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 }
 #endif
 
+V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v) {
+  return (((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK)
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+         & 0xFFFFFFFF
+#endif
+      ;
+}
+
+V7_PRIVATE val_t gc_string_val_from_offset(uint64_t s) {
+  return s | V7_TAG_STRING_O;
+}
+
 #ifndef V7_DISABLE_COMPACTING_GC
 
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
@@ -10348,18 +10360,6 @@ void gc_check_valid_allocation_seqn(struct v7 *v7, uint16_t n) {
 }
 
 #endif /* V7_DISABLE_STR_ALLOC_SEQ */
-
-uint64_t gc_string_val_to_offset(val_t v) {
-  return (((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK)
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
-         & 0xFFFFFFFF
-#endif
-      ;
-}
-
-val_t gc_string_val_from_offset(uint64_t s) {
-  return s | V7_TAG_STRING_O;
-}
 
 /* Mark a string value */
 void gc_mark_string(struct v7 *v7, val_t *v) {
@@ -13297,19 +13297,26 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     cont:
       if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmt(v7, a, pos, scope, brk);
-      } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
-                 name_len == v7->label_len &&
-                 memcmp(name, v7->label, name_len) == 0) {
-        v7->inhibit_gc = 0;
-        v7->tmp_stack.len = saved_tmp_stack_pos;
-        *pos = saved_pos;
-        if (j == CONTINUE_JMP) {
-          v7->lab_cont = 1;
-          goto cont;
-        }
-        ast_skip_tree(a, pos);
       } else {
-        siglongjmp(old_jmp, j);
+        /*
+         * got here right after exception: cleanup tmp frame that might
+         * have been allocated before the exception was thrown
+         */
+        v7->tmp_stack.len = saved_tmp_stack_pos;
+
+        if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
+            name_len == v7->label_len &&
+            memcmp(name, v7->label, name_len) == 0) {
+          v7->inhibit_gc = 0;
+          *pos = saved_pos;
+          if (j == CONTINUE_JMP) {
+            v7->lab_cont = 1;
+            goto cont;
+          }
+          ast_skip_tree(a, pos);
+        } else {
+          siglongjmp(old_jmp, j);
+        }
       }
       memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
       break;
@@ -13319,7 +13326,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       jmp_buf old_jmp;
       char *name;
       size_t name_len;
-      size_t saved_tmp_stack_pos = v7->tmp_stack.len;
+      size_t saved_tmp_stack_pos;
       val_t saved_call_stack = v7->call_stack;
       volatile enum jmp_type j;
 
@@ -13331,26 +13338,34 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
       finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
       ast_move_to_children(a, pos);
+
+      saved_tmp_stack_pos = v7->tmp_stack.len;
       if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
-      } else if (j == THROW_JMP && acatch != finally) {
-        val_t catch_scope;
-        v7->call_stack = saved_call_stack;
-        v7->inhibit_gc = 0;
-        v7->tmp_stack.len = saved_tmp_stack_pos;
-        catch_scope = create_object(v7, scope);
-        tmp_stack_push(&tf, &catch_scope);
-
-        tag = ast_fetch_tag(a, &acatch);
-        V7_CHECK(v7, tag == AST_IDENT);
-        name = ast_get_inlined_data(a, acatch, &name_len);
-        v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
-        ast_move_to_children(a, &acatch);
-        memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-        res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
       } else {
-        percolate = 1;
+        /*
+         * got here right after exception: cleanup tmp frame that might
+         * have been allocated before the exception was thrown
+         */
+        v7->tmp_stack.len = saved_tmp_stack_pos;
         v7->inhibit_gc = 0;
+
+        if (j == THROW_JMP && acatch != finally) {
+          val_t catch_scope;
+          v7->call_stack = saved_call_stack;
+          catch_scope = create_object(v7, scope);
+          tmp_stack_push(&tf, &catch_scope);
+
+          tag = ast_fetch_tag(a, &acatch);
+          V7_CHECK(v7, tag == AST_IDENT);
+          name = ast_get_inlined_data(a, acatch, &name_len);
+          v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
+          ast_move_to_children(a, &acatch);
+          memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+          res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
+        } else {
+          percolate = 1;
+        }
       }
 
       memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
