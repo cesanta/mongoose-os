@@ -44,7 +44,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
               $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
               $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js \
-              $(SJSJS_PATH)/demo.js \
+              $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/fileservice.js \
               $(JSBIN_EXTRA)
 JS_SRCS    := $(SJSJS_PATH)/smart.js
 # In order to keep compatibility
