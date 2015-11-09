@@ -20,7 +20,7 @@ it from the
 skip to the next step. For those who want to build/customize the firmware,
 make sure you have docker installed and running. Then,
 
-    sh make.sh
+    make
 
 This will produce three binary images under the firmware/ subdirectory.
 
