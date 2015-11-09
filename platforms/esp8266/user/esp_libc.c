@@ -3,13 +3,10 @@
 * All rights reserved
 */
 
-#include <ets_sys.h>
-#include <v7.h>
 #include <ctype.h>
 #include <sys/time.h>
 #include <stdint.h>
 #include "esp_missing_includes.h"
-#include "v7_esp.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -24,21 +21,20 @@
 #include <limits.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <ets_sys.h>
 #include <os_type.h>
 #include <osapi.h>
 #include <mem.h>
 #include <user_interface.h>
 #include <errno.h>
 
+#else
+
+#include <espressif/esp_system.h>
+
 #endif /* RTOS_SDK */
 
 /* #define ESP_ABORT_ON_MALLOC_FAILURE */
-
-/* Why these declarations are commented out in mem.h is beyond me. */
-void *pvPortMalloc(size_t xWantedSize);
-void vPortFree(void *pv);
-void *pvPortZalloc(size_t size);
-void *pvPortRealloc(void *pv, size_t size);
 
 int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
 
@@ -180,6 +176,7 @@ int vsnprintf(char *buffer, size_t size, const char *format, va_list arg) {
   return c_vsnprintf(buffer, size, format, arg);
 }
 
+#ifndef ESP_DISABLE_STRTOD
 /*
  * based on Source:
  * https://github.com/anakod/Sming/blob/master/Sming/system/stringconversion.cpp#L93
@@ -373,19 +370,6 @@ static double flash_pow10int(int n) {
   }
 }
 
-#if 0
-/*
- * Using ln to get lg in order
- * to avoid usage of native log10
- * since it goes to iram segment
- * Update: it seems new SDK fixed this
- */
-
-static double flash_log10(double x) {
-  return log(x) / log(10);
-}
-#endif
-
 #define flash_log10 log10
 /*
  * Attempt to reproduce sprintf's %g
@@ -493,6 +477,7 @@ int double_to_str(char *buf, size_t buf_size, double val, int prec) {
 
   return count - 1;
 }
+#endif /* ESP_DISABLE_STRTOD */
 
 #undef APPEND_CHAR
 #undef flash_log10

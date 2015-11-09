@@ -1,6 +1,4 @@
 #ifdef ESP_ENABLE_MG_LWIP_IF
-#include "esp_mg_net_if.h"
-
 #include <mongoose.h>
 
 #include "ets_sys.h"
@@ -15,9 +13,19 @@
 #include <lwip/tcp_impl.h>
 #include <lwip/udp.h>
 
+#ifndef NO_V7
+#include <v7.h>
 #include <sj_v7_ext.h>
 
-#define MG_TASK_PRIORITY 2
+struct v7_callback_args {
+  struct v7 *v7;
+  v7_val_t func;
+  v7_val_t this_obj;
+  v7_val_t args;
+};
+#endif
+
+#define MG_TASK_PRIORITY 1
 #define MG_POLL_INTERVAL_MS 1000
 #define MG_TASK_QUEUE_LEN 20
 
@@ -34,13 +42,6 @@ enum mg_sig_type {
   MG_SIG_CLOSE_CONN = 5,     /* struct mg_connection* */
   MG_SIG_V7_CALLBACK = 10,   /* struct v7_callback_args* */
   MG_SIG_TOMBSTONE = 0xffff,
-};
-
-struct v7_callback_args {
-  struct v7 *v7;
-  v7_val_t func;
-  v7_val_t this_obj;
-  v7_val_t args;
 };
 
 static void mg_lwip_task(os_event_t *e);
@@ -455,6 +456,7 @@ static void mg_lwip_task(os_event_t *e) {
   }
 }
 
+#ifndef NO_V7
 void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                              v7_val_t args) {
   struct v7_callback_args *cba =
@@ -472,5 +474,6 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   v7_own(v7, &cba->args);
   system_os_post(MG_TASK_PRIORITY, MG_SIG_V7_CALLBACK, (uint32_t) cba);
 }
+#endif
 
 #endif /* ESP_ENABLE_MG_LWIP_IF */

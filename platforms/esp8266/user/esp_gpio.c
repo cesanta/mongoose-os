@@ -42,7 +42,7 @@ static uint16_t int_map[GPIO_PIN_COUNT] = {0};
 
 static os_event_t gpio_task_queue[GPIO_TASK_QUEUE_LEN];
 /* TODO(alashkin): introduce some kind of tasks priority registry */
-#define TASK_PRIORITY 1
+#define TASK_PRIORITY 2
 
 #else /* RTOS */
 

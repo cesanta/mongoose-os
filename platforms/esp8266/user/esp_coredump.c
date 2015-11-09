@@ -5,6 +5,9 @@
 #include <ets_sys.h>
 #include <xtensa/corebits.h>
 #include <stdint.h>
+#ifdef RTOS_SDK
+#include <espressif/esp_system.h>
+#endif
 
 #include "esp_exc.h"
 #include "esp_gdb.h"

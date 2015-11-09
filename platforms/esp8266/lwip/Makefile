@@ -1,7 +1,7 @@
 include ./../common.mk
 
 
-BUILD_DIR = ../build/lwip
+BUILD_DIR ?= ../build/lwip
 LWIP_PATH = .
 APP = liblwip_cs
 

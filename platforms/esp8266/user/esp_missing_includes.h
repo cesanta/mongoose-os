@@ -1,13 +1,12 @@
 #ifndef _ESP_MISSING_INCLUDES_
 #define _ESP_MISSING_INCLUDES_
 
-#include <ets_sys.h>
-#include <stdint.h>
-
 void pp_soft_wdt_stop();
 void uart_div_modify(int no, unsigned int freq);
 
 #ifndef RTOS_SDK
+
+#include <ets_sys.h>
 
 /* There are no declarations for these anywhere in the SDK (as of 1.2.0). */
 void ets_install_putc1(void *routine);
@@ -25,10 +24,15 @@ int os_printf_plus(const char *format, ...);
 void _xtos_set_exception_handler();
 void xthal_set_intenable();
 
+/* These are present in mem.h but are commented out. */
+void *pvPortMalloc(size_t xWantedSize);
+void vPortFree(void *pv);
+void *pvPortZalloc(size_t size);
+void *pvPortRealloc(void *pv, size_t size);
+
 #else /* !RTOS_SDK */
 
 #define BIT(nr) (1UL << (nr))
-uint32_t system_get_time();
 void system_soft_wdt_feed();
 
 /* well, this is not technically a missing include */
