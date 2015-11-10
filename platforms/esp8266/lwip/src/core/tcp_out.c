@@ -1264,27 +1264,62 @@ tcp_rexmit_rto(struct tcp_pcb *pcb)
 #if 1 /* by Snake: resolve the bug of pbuf reuse */
   seg = pcb->unacked;
   while (seg != NULL) {
-	if (seg->p->eb) {
-		if (t0_1st) {
-			t0_head = t0_tail = seg;
-			t0_1st = false;
-		} else {
-			t0_tail->next = seg;
-			t0_tail = seg;
-		}
-		seg = seg->next;
-		t0_tail->next = NULL;
-	} else {
-		if (t1_1st) {
-			t1_head = t1_tail = seg;
-			t1_1st = false;
-		} else {
-			t1_tail->next = seg;
-			t1_tail = seg;
-		}
-		seg = seg->next;
-		t1_tail->next = NULL;
-	}
+    if (seg->p->eb) {
+      int do_rexmit = 0;
+#ifdef LWIP_ENABLE_ESF_BUF_REXMIT
+      /*
+       * rojer: So we cannot rexmit this as is because it has esf_buf attached.
+       * Fine. We'll create a replacement, with no esf_buf, and rexmit that.
+       */
+      u16_t l2_l3_hdr_len = ((u8_t*) seg->tcphdr - (u8_t*) seg->p->payload);
+      u16_t data_len = seg->p->tot_len - TCP_HLEN - l2_l3_hdr_len;
+      struct pbuf *new_p = pbuf_alloc(PBUF_TRANSPORT, data_len, PBUF_RAM);
+      if (new_p != NULL) {
+        struct tcp_hdr *new_tcphdr = NULL;
+        /* Cannot allocate RAW from the start due to header alignment reqs.
+         * Instead, we allocate PBUF_TRANSPORT and then "add" the headers. */
+        pbuf_header(new_p, TCP_HLEN);
+        new_tcphdr = (struct tcp_hdr *) new_p->payload;
+        pbuf_header(new_p, ((u8_t*) seg->tcphdr - (u8_t*) seg->p->payload));
+        pbuf_copy(new_p, seg->p);
+        new_p->eb = NULL;
+        LWIP_DEBUGF(TCP_DEBUG,
+                    ("cloned %p (%u) -> %p (%u) %p %p %p %p\n",
+                     new_p, new_p->len, seg->p, seg->p->len, seg->p->payload,
+                     seg->dataptr, seg->tcphdr, new_tcphdr));
+        seg->tcphdr = new_tcphdr;
+        pbuf_free(seg->p);
+        seg->p = new_p;
+        do_rexmit = 1; /* This new buf we can rexmit. */
+      }
+#endif /* LWIP_ENABLE_ESF_BUF_REXMIT */
+      if (!do_rexmit) {
+        LWIP_DEBUGF(TCP_DEBUG,
+                    ("rexmit fail %p %p %u\n", seg->p, seg->p->eb, seg->len));
+        /* Cannot rexmit. Leave on unacked queue. */
+        if (t0_1st) {
+          t0_head = t0_tail = seg;
+          t0_1st = false;
+        } else {
+          t0_tail->next = seg;
+          t0_tail = seg;
+        }
+        seg = seg->next;
+        t0_tail->next = NULL;
+        continue;
+      }
+    } else {
+      LWIP_DEBUGF(TCP_DEBUG, ("rexmit easy %p\n", seg->p));
+    }
+    if (t1_1st) {
+      t1_head = t1_tail = seg;
+      t1_1st = false;
+    } else {
+      t1_tail->next = seg;
+      t1_tail = seg;
+    }
+    seg = seg->next;
+    t1_tail->next = NULL;
   }
   if (t1_head && t1_tail) {
 	t1_tail->next = pcb->unsent;
