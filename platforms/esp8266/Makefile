@@ -3,13 +3,7 @@ SDK ?= OSS
 V7DIR ?= $(realpath ../../..)
 DIR = $(shell bash -c 'echo -n /cesanta$${PWD\#\#$(V7DIR)}')
 
-
-ifeq ($(SDK),RTOS)
-	SDK_CAT = $(shell cat sdk.version)
-else
-	SDK_CAT = $(shell cat oss_sdk.version)
-endif
-
+SDK_CAT = $(shell cat sdk.version)
 
 .PHONY: all clean
 
