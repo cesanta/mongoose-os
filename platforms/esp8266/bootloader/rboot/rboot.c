@@ -260,14 +260,26 @@ uint32 NOINLINE find_image() {
 		|| romconf->chksum != calc_chksum((uint8*)romconf, (uint8*)&romconf->chksum)
 #endif
 		) {
-		// create a default config for a standard 2 rom setup
+		/*
+		 * Vanilla rboot offers 2 roms by default
+		 * Maybe it is better to generate rboot config
+		 * explicit and write it,
+		 * but anyway, default 2-roms setting
+		 * isn't suitable for smart.js
+		 * So, change it to 3
+		 */
 		ets_printf("Writing default boot config.\r\n");
 		ets_memset(romconf, 0x00, sizeof(rboot_config));
 		romconf->magic = BOOT_CONFIG_MAGIC;
 		romconf->version = BOOT_CONFIG_VERSION;
-		romconf->count = 2;
-		romconf->roms[0] = SECTOR_SIZE * (BOOT_CONFIG_SECTOR + 1);
-		romconf->roms[1] = (flashsize / 2) + (SECTOR_SIZE * (BOOT_CONFIG_SECTOR + 1));
+		romconf->count = 3;
+		/*
+		 * FD_FW_ADDR, C1_FW_ADDR and C2_FW_ADDR
+		 * must be defined by -D
+		 */
+		romconf->roms[0] = FD_FW_ADDR;
+		romconf->roms[1] = C1_FW_ADDR;
+		romconf->roms[2] = C2_FW_ADDR;
 #ifdef BOOT_CONFIG_CHKSUM
 		romconf->chksum = calc_chksum((uint8*)romconf, (uint8*)&romconf->chksum);
 #endif

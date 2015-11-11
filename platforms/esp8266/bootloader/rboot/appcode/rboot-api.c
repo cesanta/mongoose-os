@@ -17,6 +17,8 @@
 #include <osapi.h>
 
 #include "rboot-api.h"
+#include "../rboot-private.h"
+#include "esp_missing_includes.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,13 +41,13 @@ bool ICACHE_FLASH_ATTR rboot_set_config(rboot_config *conf) {
 	uint8 chksum;
 	uint8 *ptr;
 #endif
-	
+
 	buffer = (uint8*)os_malloc(SECTOR_SIZE);
 	if (!buffer) {
 		//os_printf("No ram!\r\n");
 		return false;
 	}
-	
+
 #ifdef BOOT_CONFIG_CHKSUM
 	chksum = CHKSUM_INIT;
 	for (ptr = (uint8*)conf; ptr < &conf->chksum; ptr++) {
@@ -53,12 +55,12 @@ bool ICACHE_FLASH_ATTR rboot_set_config(rboot_config *conf) {
 	}
 	conf->chksum = chksum;
 #endif
-	
+
 	spi_flash_read(BOOT_CONFIG_SECTOR * SECTOR_SIZE, (uint32*)buffer, SECTOR_SIZE);
 	memcpy(buffer, conf, sizeof(rboot_config));
 	spi_flash_erase_sector(BOOT_CONFIG_SECTOR);
 	spi_flash_write(BOOT_CONFIG_SECTOR * SECTOR_SIZE, (uint32*)buffer, SECTOR_SIZE);
-	
+
 	os_free(buffer);
 	return true;
 }
@@ -86,21 +88,21 @@ rboot_write_status ICACHE_FLASH_ATTR rboot_write_init(uint32 start_addr) {
 	status.start_sector = start_addr / SECTOR_SIZE;
 	//status.max_sector_count = 200;
 	//os_printf("init addr: 0x%08x\r\n", start_addr);
-	
+
 	return status;
 }
 
 // function to do the actual writing to flash
 // call repeatedly with more data (max len per write is the flash sector size (4k))
 bool ICACHE_FLASH_ATTR rboot_write_flash(rboot_write_status *status, uint8 *data, uint16 len) {
-	
+
 	bool ret = false;
 	uint8 *buffer;
-	
+
 	if (data == NULL || len == 0) {
 		return true;
 	}
-	
+
 	// get a buffer
 	buffer = (uint8 *)os_zalloc(len + status->extra_count);
 	if (!buffer) {
