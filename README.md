@@ -12,9 +12,12 @@ Take a look at 2 minute video that shows Smart.js in action:
 
 [![Smart.js in action](https://docs.cesanta.com/images/Smart.js.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
 
-# Documentation
+# Documentation and Downloads
 
 - [Smart.js Developer Centre](https://docs.cesanta.com/smartjs) - User Guide and API reference
+- Current development Smart.js firmware biulds:
+   - [smartjs\_devel\_win.zip](https://goo.gl/1E6Vms) - Windows build
+   - [smartjs\_devel\_mac.zip](https://goo.gl/849sHV) - MacOS build
 
 # Contributions
 

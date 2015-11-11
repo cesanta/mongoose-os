@@ -2,7 +2,7 @@ VERSION = 0.1
 
 TEMPLATE = app
 !macx:TARGET = flashnchips
-macx:TARGET = "Flash’n’Chips"
+macx:TARGET = "FlashNChips"
 INCLUDEPATH += .
 QT += widgets serialport network
 CONFIG += c++14
