@@ -1131,7 +1131,7 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
-#endif  /* CS_ENABLE_NATIVE_MD5 */
+#endif /* CS_ENABLE_NATIVE_MD5 */
 
 /*
  * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
@@ -1443,7 +1443,8 @@ void cs_sha1_init(cs_sha1_ctx *context) {
   context->count[0] = context->count[1] = 0;
 }
 
-void cs_sha1_update(cs_sha1_ctx *context, const unsigned char *data, uint32_t len) {
+void cs_sha1_update(cs_sha1_ctx *context, const unsigned char *data,
+                    uint32_t len) {
   uint32_t i, j;
 
   j = context->count[0];
@@ -6000,6 +6001,7 @@ void mg_send_http_file(struct mg_connection *nc, char *path,
   uint32_t remote_ip = ntohl(*(uint32_t *) &nc->sa.sin.sin_addr);
   cs_stat_t st;
 
+  DBG(("serving [%s]", path));
   stat_result = mg_stat(path, &st);
   is_directory = !stat_result && S_ISDIR(st.st_mode);
 

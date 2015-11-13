@@ -14,6 +14,7 @@ KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
 SPIFFS_PATH ?= $(SMARTJS_SRC)/spiffs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
+V7_PATH ?= ../../../v7
 USE_BOOTLOADER ?=
 
 # Should be RTOS or OSS
@@ -23,7 +24,8 @@ $(error Use default Makefile to build project within docker container. To build 
         installed ESP SDK define SDK_FLAVOUR (with RTOS or OSS value) enviroment variable)
 endif
 
-BUILD_DIR = build
+BUILD_DIR = $(CURDIR)/build
+LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
 TOOLS_DIR = tools
 COMMON_TOOLS_DIR ?= ../../tools
 FW_DIR = firmware
@@ -57,13 +59,10 @@ IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK
-APP_LIBS = cirom gcc hal pp phy net80211 wpa main
+APP_LIBS = c gcc hal pp phy net80211 wpa main
 
 # linker script used for the above linkier step
 LD_SCRIPT = user/smartjs_no_bootloader.ld
-
-# linker flags used to generate the main object file
-LDFLAGS = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 
 FW_FILE_1_ADDR = 0x00000
 FW_FILE_2_ADDR = 0x11000
@@ -76,7 +75,6 @@ SHIMS = -DNDEBUG
 
 FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DESP_COREDUMP -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF \
-           -DV7_ENABLE_DICTIONARY_STRINGS \
            -DV7_ENABLE_COMPACTING_GC -DNO_BSD_SOCKETS -DDISABLE_MD5 \
            -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
            -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
@@ -128,7 +126,6 @@ CFLAGS += -DFS_ADDR=$(FW_FS_ADDR)
 endif
 
 .PHONY: all clean
-.NOTPARALLEL: all
 
 ifeq "$(SSL)" "Krypton"
 IPATH += $(KRYPTON_PATH)
@@ -140,10 +137,6 @@ endif
 ifeq "$(USE_BOOTLOADER)" "1"
 APP_SRCS := $(filter-out esp_fs.c,$(APP_SRCS))
 endif
-
-# Temp solution for RTOS SDK
-OBJCOPY2 = $(OBJCOPY)
-LWIP_MAKE = $(MAKE)
 
 ifeq "$(SDK)" "RTOS"
 IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
@@ -160,8 +153,6 @@ CFLAGS += -DRTOS_SDK -DRTOS_TODO -DMG_LWIP -fno-builtin-printf
 ifneq "$(NETTEST)" ""
 CFLAGS += -DRTOS_NETWORK_TEST
 endif
-OBJCOPY2 = /bin/true
-LWIP_MAKE = /bin/true
 #TODO(alashkin): try to use the same LD script
 LD_SCRIPT = user/eagle.app.v6.RTOS.ld
 else # OSS SDK
@@ -176,6 +167,7 @@ OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 APP_OUT = $(BUILD_DIR)/$(APP).out
+LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 FW_FILE_1_OUT = $(FW_DIR)/$(FW_FILE_1_ADDR).bin
@@ -233,15 +225,13 @@ endif
 ifeq "$(USE_BOOTLOADER)" "1"
 define compile_fs
 $(call compile_params,$(ESP_FS_SRC),$(ESP_FS_OBJ)) -DFS_ADDR=$(FW_FS_ADDR)
-$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(ESP_FS_OBJ)
-$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(ESP_FS_OBJ)
 $(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(ESP_FS_OBJ)
-$(Q) $(OBJCOPY2) --rename-section .rodata.str1.1=.irom0.text $(ESP_FS_OBJ)
+$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(ESP_FS_OBJ)
 endef
 endif
 
-$(APP_OUT): $(APP_AR) $(SYMCHECK_FLAG)
 # Link the main ELF output file. Performs symbol clash check beforehand.
+$(APP_OUT): $(APP_AR) $(LWIP_AR) $(SYMCHECK_FLAG)
 ifeq "$(USE_BOOTLOADER)" "1"
 	$(eval FW_FS_ADDR=$(shell cat $(BOOT_CFG)  \
 				| grep $(basename $(notdir $@)): | awk -F ':' '{print $$4}'))
@@ -279,15 +269,14 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
 $(APP_AR): $(OBJS)
 	$(vecho) "AR $@"
 	$(Q) $(AR) cru $@ $^
-# Move all code to flash by default.
-	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
-	$(Q) $(OBJCOPY) --rename-section .fast.text=.text $(APP_AR)
 # Move strings to flash too, we have the handler.
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
-	$(Q) $(OBJCOPY2) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
-# requires make clean && make to build/rebuild lwIP
-# TODO(alashkin): fix this
-	$(Q) $(LWIP_MAKE) --no-print-directory -C $(LWIP_PATH) -j3 all
+	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
+
+
+# LWIP.
+$(LWIP_AR): $(LWIP_PATH)
+	$(Q) $(MAKE) --no-print-directory -C $(LWIP_PATH) -j3 all BUILD_DIR=$(LWIP_BUILD_DIR)
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c
@@ -331,6 +320,10 @@ $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(
 $(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
 	$(vecho) "GCC mkspiffs"
 	$(Q) gcc -I. -I$(SPIFFS_PATH) -Iuser -o $@ $^ -DNO_ESP
+
+$(SMARTJS_SRC)/v7.c:
+	make -C $(V7_PATH) v7.c
+	ln -s ../../v7/v7.c $(SMARTJS_SRC)/v7.c
 
 $(BUILD_DIR)/v7: $(SMARTJS_SRC)/v7.c $(SMARTJS_SRC)/v7.h
 	$(vecho) "GCC v7"

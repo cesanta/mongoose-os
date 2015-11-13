@@ -76,6 +76,10 @@
 /* last local UDP port */
 static u16_t udp_port = UDP_LOCAL_PORT_RANGE_START;
 
+#ifdef MEMLEAK_DEBUG
+static const char mem_debug_file[] ICACHE_RODATA_ATTR = __FILE__;
+#endif
+
 /* The list of UDP PCBs */
 /* exported in udp.h (was static) */
 struct udp_pcb *udp_pcbs;

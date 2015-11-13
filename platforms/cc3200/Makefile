@@ -9,7 +9,7 @@ all clean:
 		/bin/bash -c "\
 			make -C /src/v7 v7.c && \
 			make -C /src/mongoose/src && \
-			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ CFLAGS_EXTRA='$(CFLAGS_EXTRA)' \
+			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ $(MAKEFLAGS) \
 		"
 
 ifeq ("$(PORT)", "auto")

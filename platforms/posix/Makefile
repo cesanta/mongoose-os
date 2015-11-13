@@ -1,4 +1,5 @@
 SRC_PATH ?= ../../src
+V7_PATH ?= ../../../v7
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./build
 OUTAPP ?= smartjs
@@ -9,7 +10,7 @@ V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
 			  -DV7_ENABLE_COMPACTING_GC \
 			  -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
 			  -DMG_ENABLE_THREADS -DSJ_PROMPT_DISABLE_ECHO \
-			  -DCS_ENABLE_UBJSON -DV7_ENABLE_UBJSON -DV7_ENABLE_DICTIONARY_STRINGS
+			  -DCS_ENABLE_UBJSON -DV7_ENABLE_UBJSON
 SJ_FEATURES =
 MONGOOSE_FEATURES = -DMG_USE_READ_WRITE
 
@@ -124,6 +125,10 @@ $(BUILD_DIR)/sj_version.c: $(APP_SRCS)
 	echo "const char *sj_version = \"POSIX-$$REF/$$DATE/$$SHA\";" > $(BUILD_DIR)/sj_version.c
 
 -include $(wildcard $(BUILD_DIR)/*.d)
+
+$(SRC_PATH)/v7.c:
+	@make -C $(V7_PATH) v7.c
+	@ln -s ../../v7/v7.c $(SRC_PATH)/v7.c
 
 $(BIN_DIR)/$(OUTAPP): $(OBJS)
 	@echo "LD $@"

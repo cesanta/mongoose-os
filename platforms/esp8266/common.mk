@@ -56,6 +56,10 @@ $(call compile_params,$<,$@)
 endef
 
 CFLAGS := -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
-         -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
-         -Wno-parentheses -DICACHE_FLASH  \
-         -DFAST='__attribute__((section(".fast.text")))' \
+          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
+          -Wno-parentheses -DFAST='__attribute__((section(".fast.text")))' \
+          -ffunction-sections
+
+# linker flags used to generate the main object file
+LDFLAGS = -nostdlib -Wl,--no-check-sections -u call_user_start \
+          -Wl,-static -Wl,--gc-sections

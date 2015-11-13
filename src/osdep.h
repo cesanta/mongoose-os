@@ -110,7 +110,7 @@
 #define __func__ __FILE__ ":" STR(__LINE__)
 #endif
 #define snprintf _snprintf
-#define fileno  _fileno
+#define fileno _fileno
 #define vsnprintf _vsnprintf
 #define sleep(x) Sleep((x) *1000)
 #define to64(x) _atoi64(x)

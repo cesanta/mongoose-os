@@ -34,7 +34,7 @@
 
 #include "lwip/opt.h"
 /* Changed by Espressif */
-#include "mem_manager.h"
+//#include "mem_manager.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +53,7 @@ typedef size_t mem_size_t;
  * allow these defines to be overridden.
  */
 /*++ Changed by Espressif ++*/
+#ifndef MEMLEAK_DEBUG
 #ifndef mem_free
 #define mem_free vPortFree
 #endif
@@ -67,6 +68,28 @@ typedef size_t mem_size_t;
 #endif
 #ifndef mem_zalloc
 #define mem_zalloc pvPortZalloc
+#endif
+#else
+#ifndef mem_free
+#define mem_free(s) \
+do{\
+	const char *file = mem_debug_file;\
+    vPortFree(s, file, __LINE__);\
+}while(0)
+#endif
+#ifndef mem_malloc
+#define mem_malloc(s) ({const char *file = mem_debug_file; pvPortMalloc(s, file, __LINE__);})
+#endif
+#ifndef mem_calloc
+#define mem_calloc(s) ({const char *file = mem_debug_file; pvPortCalloc(s, file, __LINE__);})
+#endif
+#ifndef mem_realloc
+#define mem_realloc(p, s) ({const char *file = mem_debug_file; pvPortRealloc(p, s, file, __LINE__);})
+#endif
+#ifndef mem_zalloc
+#define mem_zalloc(s) ({const char *file = mem_debug_file; pvPortZalloc(s, file, __LINE__);})
+#endif
+
 #endif
 
 #ifndef os_malloc

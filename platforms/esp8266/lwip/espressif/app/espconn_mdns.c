@@ -1,3 +1,4 @@
+#ifdef ESP_ENABLE_ESPCONN
 /******************************************************************************
  * Copyright 2013-2014 Espressif Systems (Wuxi)
  *
@@ -132,3 +133,4 @@ espconn_mdns_init(struct mdns_info *info)
 {
 	mdns_init(info);
 }
+#endif /* ESP_ENABLE_ESPCONN */

@@ -90,6 +90,10 @@
 #define DHCP_CREATE_RAND_XID 1
 #endif
 
+#ifdef MEMLEAK_DEBUG
+static const char mem_debug_file[] ICACHE_RODATA_ATTR = __FILE__;
+#endif
+
 /** Default for DHCP_GLOBAL_XID is 0xABCD0000
  * This can be changed by defining DHCP_GLOBAL_XID and DHCP_GLOBAL_XID_HEADER, e.g.
  *  #define DHCP_GLOBAL_XID_HEADER "stdlib.h"
@@ -385,6 +389,15 @@ dhcp_fine_tmr()
   while (netif != NULL) {
     /* only act on DHCP configured interfaces */
     if (netif->dhcp != NULL) {
+      /*add DHCP retries processing by LiuHan*/
+      if (DHCP_MAXRTX != 0) {
+    	  if (netif->dhcp->tries >= DHCP_MAXRTX){
+			  os_printf("DHCP timeout\n");
+			  if (netif->dhcp_event != NULL)
+				  netif->dhcp_event();
+			  break;
+		  }
+      }
       /* timer is active (non zero), and is about to trigger now */      
       if (netif->dhcp->request_timeout > 1) {
         netif->dhcp->request_timeout--;
@@ -400,6 +413,7 @@ dhcp_fine_tmr()
     /* proceed to next network interface */
     netif = netif->next;
   }
+
 }
 
 /**

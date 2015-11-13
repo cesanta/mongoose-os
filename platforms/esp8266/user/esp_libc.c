@@ -56,7 +56,7 @@ char *strerror(int errnum) {
 #ifndef RTOS_SDK
 
 void *malloc(size_t size) {
-  void *res = (void *) pvPortMalloc(size);
+  void *res = (void *) os_malloc(size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
@@ -64,7 +64,7 @@ void *malloc(size_t size) {
 }
 
 void free(void *ptr) {
-  vPortFree(ptr);
+  os_free(ptr);
 }
 
 void *realloc(void *ptr, size_t size) {
@@ -74,7 +74,7 @@ void *realloc(void *ptr, size_t size) {
     free(ptr);
     return NULL;
   }
-  res = (void *) pvPortRealloc(ptr, size);
+  res = (void *) os_realloc(ptr, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) {
     printf("failed to alloc %u bytes, %d avail\n", size,
@@ -86,7 +86,7 @@ void *realloc(void *ptr, size_t size) {
 }
 
 void *calloc(size_t num, size_t size) {
-  void *res = (void *) pvPortZalloc(num * size);
+  void *res = (void *) os_zalloc(num * size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif

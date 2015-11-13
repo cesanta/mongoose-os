@@ -6,13 +6,13 @@ LWIP_PATH = .
 APP = liblwip_cs
 
 APP_MODULES := $(LWIP_PATH)/src/netif $(LWIP_PATH)/src/core \
-							 $(LWIP_PATH)/src/core/ipv4 $(LWIP_PATH)/src/api \
-							 $(LWIP_PATH)/espressif/app
+               $(LWIP_PATH)/src/core/ipv4 $(LWIP_PATH)/src/api \
+               $(LWIP_PATH)/espressif/app
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
 VPATH = $(APP_MODULES)
 IPATH = $(VPATH) $(LWIP_PATH)/src/include $(LWIP_PATH)/espressif/include \
-				$(LWIP_PATH)/src/include/ipv4
+        $(LWIP_PATH)/src/include/ipv4
 
 .PHONY: all clean
 
@@ -22,8 +22,11 @@ OBJS = $(APP_OBJS)
 APP_AR = $(BUILD_DIR)/$(APP).a
 INCDIRS = $(addprefix -I,$(IPATH))
 
-CFLAGS += -w -DICACHE_FLASH -DLWIP_OPEN_SRC -DPBUF_RSV_FOR_WLAN -DEBUF_LWIP \
-          -DLWIP_RANDOMIZE_INITIAL_LOCAL_PORTS -DLWIP_RAND=os_random
+# espconn API is disabled, to enable add -DESP_ENABLE_ESPCONN below.
+
+CFLAGS += -w -DLWIP_OPEN_SRC -DPBUF_RSV_FOR_WLAN -DEBUF_LWIP \
+          -DLWIP_RANDOMIZE_INITIAL_LOCAL_PORTS -DLWIP_RAND=os_random \
+          $(CFLAGS_EXTRA)
 
 all: $(BUILD_DIR) $(APP_AR)
 
@@ -34,7 +37,6 @@ $(BUILD_DIR):
 $(APP_AR): $(OBJS)
 	$(vecho) "AR $@"
 	$(Q) $(AR) cru $@ $^
-	$(Q) $(OBJCOPY) --rename-section .text=.irom0.text $(APP_AR)
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c

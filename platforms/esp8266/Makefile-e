@@ -10,10 +10,9 @@ all clean:
 		//bin/bash -c "\
 			if [ -d /cesanta/v7 ] ; then make -C /cesanta/v7 v7.c ; fi && \
 			if [ -d /cesanta/mongoose/src ] ; then make -C /cesanta/mongoose/src ; fi && \
-			\
 			cd $(DIR) && \
-			make -f Makefile.build $@ CFLAGS_EXTRA='$(CFLAGS_EXTRA)' && \
-			python ./tools/showbreakdown.py \
+			make -f Makefile.build $@ $(MAKEFLAGS) \
+				&& python ./tools/showbreakdown.py \
 		"
 
 

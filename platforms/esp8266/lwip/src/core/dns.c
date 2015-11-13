@@ -83,6 +83,10 @@
 
 #include <string.h>
 
+#ifdef MEMLEAK_DEBUG
+static const char mem_debug_file[] ICACHE_RODATA_ATTR = __FILE__;
+#endif
+
 /** DNS server IP address */
 #ifndef DNS_SERVER_ADDRESS
 /* Changed by Espressif */

@@ -55,6 +55,10 @@
 
 #include <string.h>
 
+#ifdef MEMLEAK_DEBUG
+static const char mem_debug_file[] ICACHE_RODATA_ATTR = __FILE__;
+#endif
+
 #ifndef TCP_LOCAL_PORT_RANGE_START
 /* From http://www.iana.org/assignments/port-numbers:
    "The Dynamic and/or Private Ports are those from 49152 through 65535" */

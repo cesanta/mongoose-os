@@ -25,10 +25,11 @@ void _xtos_set_exception_handler();
 void xthal_set_intenable();
 
 /* These are present in mem.h but are commented out. */
-void *pvPortMalloc(size_t xWantedSize);
-void vPortFree(void *pv);
-void *pvPortZalloc(size_t size);
-void *pvPortRealloc(void *pv, size_t size);
+void *pvPortMalloc(size_t xWantedSize, const char *file, int line);
+void vPortFree(void *pv, const char *file, int line);
+void *pvPortZalloc(size_t size, const char *file, int line);
+void *pvPortRealloc(void *pv, size_t size, const char *file, int line);
+void pp_soft_wdt_restart();
 
 #else /* !RTOS_SDK */
 

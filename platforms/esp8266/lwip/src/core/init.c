@@ -272,7 +272,7 @@ lwip_init(void)
   /*++ Changed by Espressif ++*/
   MEMP_NUM_TCP_PCB = 5;
   TCP_WND = (4 * TCP_MSS);
-  TCP_MAXRTX = 3;
+  TCP_MAXRTX = 12;
   TCP_SYNMAXRTX = 6;
   /*--                      --*/
 

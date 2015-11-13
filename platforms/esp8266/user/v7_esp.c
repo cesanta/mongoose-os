@@ -16,7 +16,6 @@
 #include "esp_pwm.h"
 #include "esp_uart.h"
 #include "esp_sj_wifi.h"
-#include "esp_data_gen.h"
 #include "sj_http.h"
 #include "sj_mongoose_ws_client.h"
 #include <sha1.h>
@@ -175,10 +174,6 @@ void init_v7(void *stack_base) {
   init_pwm(v7);
   init_spijs(v7);
   init_wifi(v7);
-
-#ifndef RTOS_TODO
-  init_data_gen_server(v7);
-#endif
 
   mongoose_init();
   sj_init_http(v7);

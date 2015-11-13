@@ -32,15 +32,16 @@ static v7_val_t Http_createServer(struct v7 *v7) {
 
 static void setup_request_object(struct v7 *v7, v7_val_t request,
                                  struct http_message *hm) {
-  int i;
+  int i, qslen = hm->query_string.len;
   v7_val_t headers = v7_create_object(v7);
 
   /* TODO(lsm): implement as getters to save memory */
   v7_set(v7, request, "headers", ~0, 0, headers);
   v7_set(v7, request, "method", ~0, 0,
          v7_create_string(v7, hm->method.p, hm->method.len, 1));
-  v7_set(v7, request, "uri", ~0, 0,
-         v7_create_string(v7, hm->uri.p, hm->uri.len, 1));
+  v7_set(v7, request, "url", ~0, 0,
+         v7_create_string(v7, hm->uri.p,
+                          hm->uri.len + (qslen == 0 ? 0 : qslen + 1), 1));
   v7_set(v7, request, "body", ~0, 0,
          v7_create_string(v7, hm->body.p, hm->body.len, 1));
 
@@ -53,11 +54,10 @@ static void setup_request_object(struct v7 *v7, v7_val_t request,
 }
 
 static void setup_response_object(struct v7 *v7, v7_val_t response,
-                                  struct mg_connection *c,
-                                  struct http_message *hm) {
+                                  struct mg_connection *c, v7_val_t request) {
   v7_set_proto(response, sj_http_response_proto);
   v7_set(v7, response, "_c", ~0, 0, v7_create_foreign(c));
-  v7_set(v7, response, "_hm", ~0, 0, v7_create_foreign(hm));
+  v7_set(v7, response, "_r", ~0, 0, request);
 }
 
 static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
@@ -70,7 +70,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       v7_own(ud->v7, &request);
       v7_own(ud->v7, &response);
       setup_request_object(ud->v7, request, ev_data);
-      setup_response_object(ud->v7, response, c, ev_data);
+      setup_response_object(ud->v7, response, c, request);
       sj_invoke_cb2(ud->v7, ud->handler, request, response);
       v7_disown(ud->v7, &request);
       v7_disown(ud->v7, &response);
@@ -222,15 +222,25 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
 
 static v7_val_t Http_response_serve(struct v7 *v7) {
   struct mg_serve_http_opts opts;
+  struct http_message hm;
   struct mg_connection *c = get_mgconn(v7);
-  void *hm = v7_to_foreign(v7_get(v7, v7_get_this(v7), "_hm", ~0));
-  size_t i;
+  size_t i, n;
+  v7_val_t request = v7_get(v7, v7_get_this(v7), "_r", ~0);
+  v7_val_t url_v = v7_get(v7, request, "url", ~0);
+  const char *url = v7_to_string(v7, &url_v, &n);
+  const char *quest = strchr(url, '?');
 
   memset(&opts, 0, sizeof(opts));
+  memset(&hm, 0, sizeof(hm));
+
+  /* Set up "fake" parsed HTTP message */
+  hm.uri.p = url;
+  hm.uri.len = quest == NULL ? n : n - (quest - url);
+
   if (v7_argc(v7) > 0) {
     populate_opts_from_js_argument(v7, v7_arg(v7, 0), &opts);
   }
-  mg_serve_http(c, hm, opts);
+  mg_serve_http(c, &hm, opts);
   for (i = 0; i < ARRAY_SIZE(s_map); i++) {
     free(*(char **) ((char *) &opts + s_map[i].offset));
   }

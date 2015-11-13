@@ -58,7 +58,6 @@ V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
               -DV7_ENABLE__Memory__stats -DV7_FORCE_STRICT_MODE \
               -DV7_ENABLE_FILE -DV7_ENABLE__StackTrace \
-              -DV7_ENABLE_DICTIONARY_STRINGS
 
 
 MONGOOSE_FEATURES = -DMG_CC3200 -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_DAV \
@@ -130,6 +129,10 @@ ${BINDIR}/fs.img: ${wildcard fs/*} $(JS_SRCS)
 		cp $(js) $(FS_BUILD_DIR);)
 	/usr/local/bin/mkspiffs ${FW_FS_SIZE} fs > $@
 	/usr/local/bin/mkspiffs ${FW_FS_SIZE} $(OBJDIR)/fs > $@
+
+$(SMARTJS_SRC)/v7.c:
+	make -C $(V7_PATH) v7.c
+	ln -s ../../v7/v7.c $(SMARTJS_SRC)/v7.c
 
 $(OBJDIR)/v7: $(SMARTJS_SRC)/v7.c $(SMARTJS_SRC)/v7.h
 	@echo "GCC v7"

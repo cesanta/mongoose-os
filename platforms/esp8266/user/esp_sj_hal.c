@@ -51,7 +51,9 @@ void sj_usleep(int usecs) {
 
 void sj_invoke_cb(struct v7* v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
-#ifndef RTOS_SDK
+#ifdef MG_SYNC_CALLBACKS
+  _sj_invoke_cb(v7, func, this_obj, args);
+#elif !defined(RTOS_SDK)
   mg_dispatch_v7_callback(v7, func, this_obj, args);
 #else
   rtos_dispatch_callback(v7, func, this_obj, args);
