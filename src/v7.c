@@ -425,9 +425,23 @@ enum v7_heap_stat_what {
   V7_HEAP_STAT_FUNC_OWNED_MAX
 };
 
+enum v7_stack_stat_what {
+  /* max stack size consumed by `i_exec()` */
+  V7_STACK_STAT_EXEC,
+  /* max stack size consumed by `parse()` (which is called from `i_exec()`) */
+  V7_STACK_STAT_PARSER,
+
+  V7_STACK_STATS_CNT
+};
+
 #if V7_ENABLE__Memory__stats
 /* Returns a given heap statistics */
 int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
+#endif
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
+void v7_stack_stat_clean(struct v7 *v7);
 #endif
 
 /*
@@ -777,6 +791,58 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 #endif /* __cplusplus */
 
 #endif /* V7_TOKENIZER_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/cyg_profile.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * This file contains GCC/clang instrumentation callbacks, as well as
+ * accompanying code. The actual code in these callbacks depends on enabled
+ * features. See cyg_profile.c for some implementation details rationale.
+ */
+
+struct v7;
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+
+/*
+ * Stack-tracking functionality:
+ *
+ * The idea is that the caller should allocate `struct stack_track_ctx`
+ * (typically on stack) in the function to track the stack usage of, and call
+ * `v7_stack_track_start()` in the beginning.
+ *
+ * Before quitting current stack frame (for example, before returning from
+ * function), call `v7_stack_track_end()`, which returns the maximum stack
+ * consumed size.
+ *
+ * These calls can be nested: for example, we may track the stack usage of the
+ * whole application by using these functions in `main()`, as well as track
+ * stack usage of any nested functions.
+ *
+ * Just to stress: both `v7_stack_track_start()` / `v7_stack_track_end()`
+ * should be called for the same instance of `struct stack_track_ctx` in the
+ * same stack frame.
+ */
+
+/* stack tracking context */
+struct stack_track_ctx {
+  struct stack_track_ctx *next;
+  void *start;
+  void *max;
+};
+
+/* see explanation above */
+void v7_stack_track_start(struct v7 *v7, struct stack_track_ctx *ctx);
+/* see explanation above */
+int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx);
+
+#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/mbuf.h"
 /**/
@@ -2521,6 +2587,7 @@ typedef unsigned long uintptr_t;
 /* Amalgamated: #include "compiler.h" */
 /* Amalgamated: #include "mm.h" */
 /* Amalgamated: #include "builtin.h" */
+/* Amalgamated: #include "cyg_profile.h" */
 
 /* Max captures for String.replace() */
 #define V7_RE_MAX_REPL_SUB 20
@@ -2578,11 +2645,18 @@ extern double _v7_infinity;
 #define EXIT_FAILURE 1
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
-extern struct v7 *v7_head;
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE) || \
+    defined(V7_ENABLE_STACK_TRACKING)
+/* Need to enable GCC/clang instrumentation */
+#define V7_CYG_PROFILE_ON
 #endif
-#ifdef V7_STACK_GUARD_MIN_SIZE
+
+#if defined(V7_CYG_PROFILE_ON)
+extern struct v7 *v7_head;
+
+#if defined(V7_STACK_GUARD_MIN_SIZE)
 extern void *v7_sp_limit;
+#endif
 #endif
 
 /* TODO(lsm): move VM definitions to vm.h */
@@ -2723,8 +2797,17 @@ struct v7 {
   void *sp_lwm;
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
-  struct v7 *next_v7; /* linked list of v7 contexts, needed by gc check hooks */
+#if defined(V7_CYG_PROFILE_ON)
+  /* linked list of v7 contexts, needed by cyg_profile hooks */
+  struct v7 *next_v7;
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  /* linked list of stack tracking contexts */
+  struct stack_track_ctx *stack_track_ctx;
+
+  int stack_stat[V7_STACK_STATS_CNT];
+#endif
+
 #endif
 
 #ifdef V7_MALLOC_GC
@@ -8694,7 +8777,7 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
+#if defined(V7_CYG_PROFILE_ON)
 struct v7 *v7_head = NULL;
 #endif
 
@@ -10437,7 +10520,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 #endif
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
+#if defined(V7_CYG_PROFILE_ON)
     v7->next_v7 = v7_head;
     v7_head = v7;
 #endif
@@ -10500,7 +10583,7 @@ void v7_destroy(struct v7 *v7) {
   mbuf_free(&v7->json_visited_stack);
   mbuf_free(&v7->tmp_stack);
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
+#if defined(V7_CYG_PROFILE_ON)
   /* delete this v7 */
   {
     struct v7 *v, **prevp = &v7_head;
@@ -11362,82 +11445,6 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
   return 0;
 #endif
 }
-
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE)
-
-void __cyg_profile_func_enter(void *this_fn, void *call_site)
-    __attribute__((no_instrument_function));
-
-void __cyg_profile_func_exit(void *this_fn, void *call_site)
-    __attribute__((no_instrument_function));
-
-#ifdef V7_STACK_GUARD_MIN_SIZE
-
-void __cyg_profile_func_enter(void *this_fn, void *call_site) {
-  static int profile_enter = 0;
-  void *fp = __builtin_frame_address(0);
-
-  (void) call_site;
-
-  if (profile_enter || v7_sp_limit == NULL) return;
-
-  profile_enter++;
-  if (v7_head != NULL && fp < v7_head->sp_lwm) v7_head->sp_lwm = fp;
-
-  if (((int) fp - (int) v7_sp_limit) < V7_STACK_GUARD_MIN_SIZE) {
-    printf("fun %p sp %p limit %p left %d\n", this_fn, fp, v7_sp_limit,
-           (int) fp - (int) v7_sp_limit);
-    abort();
-  }
-  profile_enter--;
-}
-
-void __cyg_profile_func_exit(void *this_fn, void *call_site) {
-  (void) this_fn;
-  (void) call_site;
-}
-
-#else
-
-void __cyg_profile_func_enter(void *this_fn, void *call_site) {
-  (void) this_fn;
-  (void) call_site;
-}
-
-void __cyg_profile_func_exit(void *this_fn, void *call_site) {
-  struct v7 *v7;
-  void *fp = __builtin_frame_address(1);
-
-  (void) this_fn;
-  (void) call_site;
-
-  for (v7 = v7_head; v7 != NULL; v7 = v7->next_v7) {
-    v7_val_t **vp;
-    if (v7->owned_values.buf == NULL) continue;
-    vp = (v7_val_t **) (v7->owned_values.buf + v7->owned_values.len -
-                        sizeof(v7_val_t *));
-
-    for (; (char *) vp >= v7->owned_values.buf; vp--) {
-      /*
-       * Check if a variable belongs to a dead stack frame.
-       * Addresses lower than the parent frame belong to the
-       * stack frame of the function about to return.
-       * But the heap also usually below the stack and
-       * we don't know the end of the stack. But this hook
-       * is called at each function return, so we have
-       * to check only up to the maximum stack frame size,
-       * let's arbitrarily but reasonably set that at 8k.
-       */
-      if ((void *) *vp <= fp && (void *) *vp > (fp + 8196)) {
-        fprintf(stderr, "Found owned variable after return\n");
-        abort();
-      }
-    }
-  }
-}
-#endif
-
-#endif /* V7_ENABLE_CHECK_HOOKS */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/parser.c"
 /**/
@@ -13843,6 +13850,13 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   struct cr_ctx cr_ctx;
   union user_arg_ret arg_retval;
   enum cr_status rc;
+#if defined(V7_ENABLE_STACK_TRACKING)
+  struct stack_track_ctx stack_track_ctx;
+#endif
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  v7_stack_track_start(v7, &stack_track_ctx);
+#endif
 
   v7->pstate.source_code = v7->pstate.pc = src;
   v7->pstate.file_name = "<stdin>";
@@ -13969,6 +13983,15 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 
   /* free resources occupied by context (at least, "stack" arrays) */
   cr_context_free(&cr_ctx);
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  {
+    int diff = v7_stack_track_end(v7, &stack_track_ctx);
+    if (diff > v7->stack_stat[V7_STACK_STAT_PARSER]) {
+      v7->stack_stat[V7_STACK_STAT_PARSER] = diff;
+    }
+  }
+#endif
 
   if (a->has_overflow) {
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
@@ -15820,6 +15843,13 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
   volatile enum v7_err err = V7_OK;
   val_t r = v7_create_undefined();
   int noopt = 0;
+#if defined(V7_ENABLE_STACK_TRACKING)
+  struct stack_track_ctx stack_track_ctx;
+#endif
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  v7_stack_track_start(v7, &stack_track_ctx);
+#endif
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
@@ -15896,6 +15926,15 @@ cleanup:
   v7->this_object = old_this;
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&v7->label_jmp_buf, &saved_label_buf, sizeof(saved_label_buf));
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  {
+    int diff = v7_stack_track_end(v7, &stack_track_ctx);
+    if (diff > v7->stack_stat[V7_STACK_STAT_EXEC]) {
+      v7->stack_stat[V7_STACK_STAT_EXEC] = diff;
+    }
+  }
+#endif
 
   return err;
 }
@@ -19441,6 +19480,179 @@ int main(int argc, char **argv) {
 #endif /* SLRE_TEST */
 
 #endif /* V7_ENABLE__RegExp */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/cyg_profile.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * This file contains GCC/clang instrumentation callbacks. The actual
+ * code in these callbacks depends on enabled features.
+ *
+ * Currently, the code from different subsystems is embedded right into
+ * callbacks for performance reasons. It would be probably more elegant
+ * to have subsystem-specific functions that will be called from these
+ * callbacks, but since the callbacks are called really a lot (on each v7
+ * function call), I decided it's better to inline the code right here.
+ */
+
+/* Amalgamated: #include "internal.h" */
+
+#if defined(V7_CYG_PROFILE_ON)
+
+void __cyg_profile_func_enter(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+
+void __cyg_profile_func_exit(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+
+void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+#if defined(V7_STACK_GUARD_MIN_SIZE)
+  {
+    static int profile_enter = 0;
+    void *fp = __builtin_frame_address(0);
+
+    (void) call_site;
+
+    if (profile_enter || v7_sp_limit == NULL) return;
+
+    profile_enter++;
+    if (v7_head != NULL && fp < v7_head->sp_lwm) v7_head->sp_lwm = fp;
+
+    if (((int) fp - (int) v7_sp_limit) < V7_STACK_GUARD_MIN_SIZE) {
+      printf("fun %p sp %p limit %p left %d\n", this_fn, fp, v7_sp_limit,
+             (int) fp - (int) v7_sp_limit);
+      abort();
+    }
+    profile_enter--;
+  }
+#endif
+
+#if defined(V7_ENABLE_GC_CHECK)
+  {
+    (void) this_fn;
+    (void) call_site;
+  }
+#endif
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  {
+    struct v7 *v7;
+    struct stack_track_ctx *ctx;
+    void *fp = __builtin_frame_address(1);
+
+    (void) this_fn;
+    (void) call_site;
+
+    /*
+     * TODO(dfrank): it actually won't work for multiple instances of v7 running
+     * in parallel threads. We need to know the exact v7 instance for which
+     * current function is called, but so far I failed to find a way to do this.
+     */
+    for (v7 = v7_head; v7 != NULL; v7 = v7->next_v7) {
+      for (ctx = v7->stack_track_ctx; ctx != NULL; ctx = ctx->next) {
+        /* commented because it fails on legal code compiled with -O3 */
+        /*assert(fp <= ctx->start);*/
+
+        if (fp < ctx->max) {
+          ctx->max = fp;
+        }
+      }
+    }
+  }
+#endif
+}
+
+void __cyg_profile_func_exit(void *this_fn, void *call_site) {
+#if defined(V7_STACK_GUARD_MIN_SIZE)
+  {
+    (void) this_fn;
+    (void) call_site;
+  }
+#endif
+
+#if defined(V7_ENABLE_GC_CHECK)
+  {
+    struct v7 *v7;
+    void *fp = __builtin_frame_address(1);
+
+    (void) this_fn;
+    (void) call_site;
+
+    for (v7 = v7_head; v7 != NULL; v7 = v7->next_v7) {
+      v7_val_t **vp;
+      if (v7->owned_values.buf == NULL) continue;
+      vp = (v7_val_t **) (v7->owned_values.buf + v7->owned_values.len -
+                          sizeof(v7_val_t *));
+
+      for (; (char *) vp >= v7->owned_values.buf; vp--) {
+        /*
+         * Check if a variable belongs to a dead stack frame.
+         * Addresses lower than the parent frame belong to the
+         * stack frame of the function about to return.
+         * But the heap also usually below the stack and
+         * we don't know the end of the stack. But this hook
+         * is called at each function return, so we have
+         * to check only up to the maximum stack frame size,
+         * let's arbitrarily but reasonably set that at 8k.
+         */
+        if ((void *) *vp <= fp && (void *) *vp > (fp + 8196)) {
+          fprintf(stderr, "Found owned variable after return\n");
+          abort();
+        }
+      }
+    }
+  }
+#endif
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  {
+    (void) this_fn;
+    (void) call_site;
+  }
+#endif
+}
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+
+void v7_stack_track_start(struct v7 *v7, struct stack_track_ctx *ctx) {
+  /* insert new context at the head of the list */
+  ctx->next = v7->stack_track_ctx;
+  v7->stack_track_ctx = ctx;
+
+  /* init both `max` and `start` to the current frame pointer */
+  ctx->max = ctx->start = __builtin_frame_address(0);
+}
+
+int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx) {
+  int diff;
+
+  /* this function can be called only for the head context */
+  assert(v7->stack_track_ctx == ctx);
+
+  diff = (int) ((char *) ctx->start - (char *) ctx->max);
+
+  /* remove context from the linked list */
+  v7->stack_track_ctx = ctx->next;
+
+  return (int) diff;
+}
+
+int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what) {
+  assert(what < V7_STACK_STATS_CNT);
+  return v7->stack_stat[what];
+}
+
+void v7_stack_stat_clean(struct v7 *v7) {
+  memset(v7->stack_stat, 0x00, sizeof(v7->stack_stat));
+}
+
+#endif /* V7_ENABLE_STACK_TRACKING */
+#endif /* V7_CYG_PROFILE_ON */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_object.c"
 /**/

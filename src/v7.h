@@ -421,9 +421,23 @@ enum v7_heap_stat_what {
   V7_HEAP_STAT_FUNC_OWNED_MAX
 };
 
+enum v7_stack_stat_what {
+  /* max stack size consumed by `i_exec()` */
+  V7_STACK_STAT_EXEC,
+  /* max stack size consumed by `parse()` (which is called from `i_exec()`) */
+  V7_STACK_STAT_PARSER,
+
+  V7_STACK_STATS_CNT
+};
+
 #if V7_ENABLE__Memory__stats
 /* Returns a given heap statistics */
 int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
+#endif
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
+void v7_stack_stat_clean(struct v7 *v7);
 #endif
 
 /*
