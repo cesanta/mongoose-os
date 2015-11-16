@@ -1,5 +1,4 @@
-include ./../common.mk
-
+include common.mk
 
 BUILD_DIR ?= ../build/lwip
 LWIP_PATH = .

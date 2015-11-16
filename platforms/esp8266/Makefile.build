@@ -7,13 +7,14 @@
 # SSL: if set to "Krypton" enables SSL with the krypton lib
 #
 
-include common.mk
+include ../../../common/platforms/esp8266/common.mk
 
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
 SPIFFS_PATH ?= $(SMARTJS_SRC)/spiffs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
+LWIP_PATH ?= lwip
 V7_PATH ?= ../../../v7
 USE_BOOTLOADER ?=
 
@@ -31,7 +32,6 @@ COMMON_TOOLS_DIR ?= ../../tools
 FW_DIR = firmware
 FS_DIR = fs
 FS_BUILD_DIR = $(BUILD_DIR)/fs
-LWIP_PATH = ./lwip/
 
 APP = smartjs
 # SSL can be SDK or Krypton
