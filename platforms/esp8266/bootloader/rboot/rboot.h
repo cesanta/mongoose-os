@@ -55,7 +55,10 @@ typedef struct {
 	uint8 current_rom;	   // currently selected rom
 	uint8 gpio_rom;		   // rom to use for gpio boot
 	uint8 count;		   // number of roms in use
-	uint8 unused[2];	   // padding
+	uint8 previous_rom; // previously selected rom
+	uint8 is_first_boot;
+	uint8 boot_attempts;
+	uint8 padding[3];  // align to 4 bytes
 	uint32 roms[MAX_ROMS]; // flash addresses of the roms
 #ifdef BOOT_CONFIG_CHKSUM
 	uint8 chksum;		   // config chksum
