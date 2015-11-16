@@ -214,25 +214,28 @@ static s32_t esp_spiffs_erase(u32_t addr, u32_t size) {
   return spi_flash_erase_sector(addr / FLASH_BLOCK_SIZE);
 }
 
-int fs_init() {
+int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
+             uint8_t *fds, size_t fds_size) {
   spiffs_config cfg;
 
-#if !SPIFFS_SINGLETON
   /* FS_SIZE & FS_ADDR are provided via Makefile */
-  cfg.phys_size = FS_SIZE;
-  cfg.phys_addr = FS_ADDR;
+  cfg.phys_addr = addr;
+  cfg.phys_size = size;
 
   cfg.phys_erase_block = FLASH_BLOCK_SIZE;
   cfg.log_block_size = FLASH_BLOCK_SIZE;
   cfg.log_page_size = LOG_PAGE_SIZE;
-#endif
 
   cfg.hal_read_f = esp_spiffs_read;
   cfg.hal_write_f = esp_spiffs_write;
   cfg.hal_erase_f = esp_spiffs_erase;
 
-  return SPIFFS_mount(&fs, &cfg, spiffs_work_buf, spiffs_fds,
-                      sizeof(spiffs_fds), 0, 0, 0);
+  return SPIFFS_mount(spf, &cfg, workbuf, fds, fds_size, 0, 0, 0);
+}
+
+int fs_init() {
+  return fs_mount(&fs, FS_ADDR, FS_SIZE, spiffs_work_buf, spiffs_fds,
+                  sizeof(spiffs_fds));
 }
 
 /* Wrappers for V7 */

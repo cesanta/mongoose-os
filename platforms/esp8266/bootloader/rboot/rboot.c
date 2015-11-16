@@ -261,6 +261,7 @@ uint32 NOINLINE find_image() {
 #endif
 		) {
 		/*
+		 * Modified by Cesanta
 		 * Vanilla rboot offers 2 roms by default
 		 * Maybe it is better to generate rboot config
 		 * explicit and write it,
@@ -300,6 +301,41 @@ uint32 NOINLINE find_image() {
 		romconf->current_rom = 0;
 		updateConfig = TRUE;
 	} else {
+		/* Modified by Cesanta */
+		if (romconf->is_first_boot != 0) {
+				ets_printf("First boot, attempt %d\n", romconf->boot_attempts);
+			/* boot is unconfirmed */
+			if (romconf->boot_attempts == 0) {
+				/* haven't try to load yes */
+				ets_printf("Boot is unconfirmed\r\n");
+				romconf->boot_attempts++;
+			} else {
+				ets_printf("Attempts != 0\r\n");
+				/* already tried to boot this rom */
+				if (romconf->current_rom == 0) {
+					/*
+					 * current rom is FD and it cannot be loaded
+					 * device bricked
+					 */
+					ets_printf("Cannot load factory default firmware," \
+										 "reflash device via serial, halting\r\n");
+					return;
+				} else {
+					ets_printf("Boot failed, fallback to fw #%d\r\n",
+											romconf->previous_rom);
+					romconf->current_rom = romconf->previous_rom;
+					/* next will be factory default */
+					romconf->previous_rom = 0;
+					/* clear fw update flag, to avoid post-update acttions */
+					romconf->fw_updated = 0;
+					romconf->boot_attempts = 0;
+				}
+			}
+
+			SPIEraseSector(BOOT_CONFIG_SECTOR);
+			SPIWrite(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
+		}
+		/* End of Cesanta modifications */
 		// try rom selected in the config
 		romToBoot = romconf->current_rom;
 	}

@@ -5,6 +5,8 @@
 #define SJ_MMAP_SLOTS 16
 #endif
 
+#include "spiffs/spiffs.h"
+
 /* LOG_PAGE_SIZE have to be more than SPIFFS_OBJ_NAME_LEN */
 #define LOG_PAGE_SIZE 256
 #define SPIFFS_PAGE_HEADER_SIZE 5
@@ -28,5 +30,7 @@ struct mmap_desc {
 extern struct mmap_desc mmap_descs[SJ_MMAP_SLOTS];
 
 int fs_init();
+int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
+             uint8_t *fds, size_t fds_size);
 
 #endif /* V7_FS_INCLUDED */
