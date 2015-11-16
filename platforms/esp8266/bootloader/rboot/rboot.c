@@ -268,12 +268,14 @@ uint32 NOINLINE find_image() {
 		 * but anyway, default 2-roms setting
 		 * isn't suitable for smart.js
 		 * So, change it to 3
+		 * Also, turning on GPIO mode
 		 */
 		ets_printf("Writing default boot config.\r\n");
 		ets_memset(romconf, 0x00, sizeof(rboot_config));
 		romconf->magic = BOOT_CONFIG_MAGIC;
 		romconf->version = BOOT_CONFIG_VERSION;
 		romconf->count = 3;
+		romconf->mode = MODE_GPIO_ROM;
 		/*
 		 * FD_FW_ADDR, C1_FW_ADDR and C2_FW_ADDR
 		 * must be defined by -D
@@ -293,12 +295,21 @@ uint32 NOINLINE find_image() {
 	if ((romconf->mode & MODE_GPIO_ROM) && (get_gpio16() == 0)) {
 		ets_printf("Booting GPIO-selected.\r\n");
 		romToBoot = romconf->gpio_rom;
+		/*
+		 * Modified by Cesanta
+		 * Make FD current
+		 */
+		updateConfig = TRUE;
+		romconf->fw_updated = 0;
+		romconf->is_first_boot = 0;
 		gpio_boot = TRUE;
 	} else if (romconf->current_rom >= romconf->count) {
 		// if invalid rom selected try rom 0
 		ets_printf("Invalid rom selected, defaulting.\r\n");
 		romToBoot = 0;
 		romconf->current_rom = 0;
+		romconf->fw_updated = 0;
+		romconf->is_first_boot = 0;
 		updateConfig = TRUE;
 	} else {
 		/* Modified by Cesanta */
@@ -318,8 +329,11 @@ uint32 NOINLINE find_image() {
 					 * device bricked
 					 */
 					ets_printf("Cannot load factory default firmware," \
-										 "reflash device via serial, halting\r\n");
-					return;
+										 "reflash device via serial\r\n");
+					ets_wdt_disable();
+					ets_delay_us(2000);
+					romconf->boot_attempts = 0;
+					/* Next time trying to boot FD */
 				} else {
 					ets_printf("Boot failed, fallback to fw #%d\r\n",
 											romconf->previous_rom);
@@ -332,8 +346,7 @@ uint32 NOINLINE find_image() {
 				}
 			}
 
-			SPIEraseSector(BOOT_CONFIG_SECTOR);
-			SPIWrite(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
+			updateConfig = TRUE;
 		}
 		/* End of Cesanta modifications */
 		// try rom selected in the config
