@@ -35,24 +35,22 @@ uint8 rBoot_mmap_2 = 0xff;
 
 // this function must remain in iram
 void IRAM_ATTR Cache_Read_Enable_New() {
-	
+
 	if (rBoot_mmap_1 == 0xff) {
 		uint32 addr;
 		rboot_config conf;
-		
+
 		Cache_Read_Disable();
-		
+
 		SPIRead(BOOT_CONFIG_SECTOR * SECTOR_SIZE, &conf, sizeof(rboot_config));
-		
+
 		addr = conf.roms[conf.current_rom];
 		addr /= 0x100000;
-		
+
 		rBoot_mmap_2 = addr / 2;
 		rBoot_mmap_1 = addr % 2;
-		
-		//ets_printf("mmap %d,%d,1\r\n", rBoot_mmap_1, rBoot_mmap_2);
 	}
-	
+
 	Cache_Read_Enable(rBoot_mmap_1, rBoot_mmap_2, 1);
 }
 
