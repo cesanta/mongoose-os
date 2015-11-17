@@ -56,6 +56,17 @@ const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
 
+enum ESP8266ROMCommand {
+  cmdFlashWriteStart = 0x02,
+  cmdFlashWriteBlock = 0x03,
+  cmdFlashWriteFinish = 0x04,
+  cmdRAMWriteStart = 0x05,
+  cmdRAMWriteFinish = 0x06,
+  cmdRAMWriteBlock = 0x07,
+  cmdSync = 0x08,
+  cmdReadReg = 0x0A,
+};
+
 // Copy-pasted from
 // https://github.com/themadinventor/esptool/blob/e96336f6561109e67afe03c0695d1e5b0de15da6/esptool.py
 // Copyright (C) 2014 Fredrik Ahlberg
@@ -258,13 +269,13 @@ QByteArray read_register(QSerialPort* serial, quint32 addr) {
   QDataStream s(&payload, QIODevice::WriteOnly);
   s.setByteOrder(QDataStream::LittleEndian);
   s << addr;
-  writeCommand(serial, 0x0A, payload);
+  writeCommand(serial, cmdReadReg, payload);
   auto resp = readResponse(serial);
   if (!resp.valid) {
-    qDebug() << "Invalid response to command " << 0x0A;
+    qDebug() << "Invalid response to command " << cmdReadReg;
     return QByteArray();
   }
-  if (resp.command != 0x0A) {
+  if (resp.command != cmdReadReg) {
     qDebug() << "Response to unexpected command: " << resp.command;
     return QByteArray();
   }
@@ -302,7 +313,7 @@ QByteArray read_MAC(QSerialPort* serial) {
 bool sync(QSerialPort* serial) {
   QByteArray payload("\x07\x07\x12\x20");
   payload.append(QByteArray("\x55").repeated(32));
-  writeCommand(serial, 0x08, payload);
+  writeCommand(serial, cmdSync, payload);
   for (int i = 0; i < 8; i++) {
     auto resp = readResponse(serial);
     if (!resp.valid) {
@@ -341,11 +352,12 @@ void rebootIntoFirmware(QSerialPort* serial, bool inverted) {
 }
 
 util::Status softResetFromBootloader(QSerialPort* port) {
+  // Start a fake RAM write operation.
   QByteArray payload;
   QDataStream s1(&payload, QIODevice::WriteOnly);
   s1.setByteOrder(QDataStream::LittleEndian);
   s1 << quint32(0) << quint32(0) << quint32(0) << quint32(0x40100000);
-  writeCommand(port, 0x05, payload);
+  writeCommand(port, cmdRAMWriteStart, payload);
   auto resp = readResponse(port);
   if (!resp.ok()) {
     qDebug() << "Failed to start (fake) write to RAM:" << resp.error();
@@ -353,10 +365,11 @@ util::Status softResetFromBootloader(QSerialPort* port) {
   }
   payload.clear();
 
+  // Finish RAM write and jump to ResetVector.
   QDataStream s2(&payload, QIODevice::WriteOnly);
   s2.setByteOrder(QDataStream::LittleEndian);
   s2 << quint32(0) << quint32(0x40000080);
-  writeCommand(port, 0x06, payload);
+  writeCommand(port, cmdRAMWriteFinish, payload);
   auto resp2 = readResponse(port);
   if (!resp2.ok()) {
     qDebug() << "Failed to invoke ResetVector:" << resp2.error();
@@ -929,7 +942,7 @@ class FlasherImpl : public Flasher {
     }
     s << quint32(blocks) << quint32(writeBlockSize) << quint32(addr);
     qDebug() << "Attempting to start flashing...";
-    writeCommand(port, 0x02, payload);
+    writeCommand(port, cmdFlashWriteStart, payload);
     const auto resp = readResponse(port, 30000);
     if (!resp.ok()) {
       return util::Status(
@@ -946,7 +959,7 @@ class FlasherImpl : public Flasher {
     s.setByteOrder(QDataStream::LittleEndian);
     s << quint32(bytes.length()) << quint32(seq) << quint32(0) << quint32(0);
     payload.append(bytes);
-    writeCommand(port, 0x03, payload, checksum(bytes));
+    writeCommand(port, cmdFlashWriteBlock, payload, checksum(bytes));
     const auto resp = readResponse(port, 10000);
     if (!resp.ok()) {
       return util::Status(util::error::ABORTED, resp.error().toStdString());
@@ -956,7 +969,7 @@ class FlasherImpl : public Flasher {
 
   util::Status leaveFlashingModeLocked(QSerialPort* port) {
     QByteArray payload("\x01\x00\x00\x00", 4);
-    writeCommand(port, 0x04, payload);
+    writeCommand(port, cmdFlashWriteFinish, payload);
     const auto resp = readResponse(port, 10000);
     if (!resp.ok()) {
       qDebug() << "Failed to leave flashing mode." << resp.error();
@@ -992,7 +1005,7 @@ class FlasherImpl : public Flasher {
     s1 << quint32(stub.length()) << quint32(1) << quint32(stub.length())
        << quint32(0x40100000);
 
-    writeCommand(port, 0x05, payload);
+    writeCommand(port, cmdRAMWriteStart, payload);
     auto resp = readResponse(port);
     if (!resp.ok()) {
       qDebug() << "Failed to start writing to RAM." << resp.error();
@@ -1006,7 +1019,7 @@ class FlasherImpl : public Flasher {
     s2 << quint32(stub.length()) << quint32(0) << quint32(0) << quint32(0);
     payload.append(stub);
     qDebug() << "Stub length:" << showbase << hex << stub.length();
-    writeCommand(port, 0x07, payload, checksum(stub));
+    writeCommand(port, cmdRAMWriteBlock, payload, checksum(stub));
     resp = readResponse(port);
     if (!resp.ok()) {
       qDebug() << "Failed to write to RAM." << resp.error();
@@ -1017,7 +1030,7 @@ class FlasherImpl : public Flasher {
     QDataStream s3(&payload, QIODevice::WriteOnly);
     s3.setByteOrder(QDataStream::LittleEndian);
     s3 << quint32(0) << quint32(0x4010001c);
-    writeCommand(port, 0x06, payload);
+    writeCommand(port, cmdRAMWriteFinish, payload);
     resp = readResponse(port);
     if (!resp.ok()) {
       qDebug() << "Failed to complete writing to RAM." << resp.error();
@@ -1170,6 +1183,8 @@ class ESP8266HAL : public HAL {
     }
     qInfo() << "MAC address: " << mac;
 
+    // Reset the device, otherwise it will remember the detected baud rate
+    // which may prevent it from flashing successfully.
     auto st = softResetFromBootloader(s.get());
     if (!st.ok()) {
       qWarning() << "Failed to reset device after probing:"
