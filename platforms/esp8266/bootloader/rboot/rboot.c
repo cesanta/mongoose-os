@@ -274,15 +274,14 @@ uint32 NOINLINE find_image() {
 		ets_memset(romconf, 0x00, sizeof(rboot_config));
 		romconf->magic = BOOT_CONFIG_MAGIC;
 		romconf->version = BOOT_CONFIG_VERSION;
-		romconf->count = 3;
+		romconf->count = 2;
 		romconf->mode = MODE_GPIO_ROM;
 		/*
 		 * FD_FW_ADDR, C1_FW_ADDR and C2_FW_ADDR
 		 * must be defined by -D
 		 */
-		romconf->roms[0] = FD_FW_ADDR;
-		romconf->roms[1] = C1_FW_ADDR;
-		romconf->roms[2] = C2_FW_ADDR;
+		romconf->roms[0] = C1_FW_ADDR;
+		romconf->roms[1] = C2_FW_ADDR;
 #ifdef BOOT_CONFIG_CHKSUM
 		romconf->chksum = calc_chksum((uint8*)romconf, (uint8*)&romconf->chksum);
 #endif
@@ -294,7 +293,7 @@ uint32 NOINLINE find_image() {
 	// if gpio mode enabled check status of the gpio
 	if ((romconf->mode & MODE_GPIO_ROM) && (get_gpio16() == 0)) {
 		ets_printf("Booting GPIO-selected.\r\n");
-		romToBoot = romconf->gpio_rom;
+		romToBoot = romconf->previous_rom;
 		/*
 		 * Modified by Cesanta
 		 * Make FD current
@@ -321,29 +320,12 @@ uint32 NOINLINE find_image() {
 				ets_printf("Boot is unconfirmed\r\n");
 				romconf->boot_attempts++;
 			} else {
-				ets_printf("Attempts != 0\r\n");
-				/* already tried to boot this rom */
-				if (romconf->current_rom == 0) {
-					/*
-					 * current rom is FD and it cannot be loaded
-					 * device bricked
-					 */
-					ets_printf("Cannot load factory default firmware," \
-										 "reflash device via serial\r\n");
-					ets_wdt_disable();
-					ets_delay_us(2000);
-					romconf->boot_attempts = 0;
-					/* Next time trying to boot FD */
-				} else {
-					ets_printf("Boot failed, fallback to fw #%d\r\n",
+				ets_printf("Boot failed, fallback to fw #%d\r\n",
 											romconf->previous_rom);
-					romconf->current_rom = romconf->previous_rom;
-					/* next will be factory default */
-					romconf->previous_rom = 0;
-					/* clear fw update flag, to avoid post-update acttions */
-					romconf->fw_updated = 0;
-					romconf->boot_attempts = 0;
-				}
+				romconf->current_rom = romconf->previous_rom;
+				/* clear fw update flag, to avoid post-update acttions */
+				romconf->fw_updated = 0;
+				romconf->boot_attempts = 0;
 			}
 
 			updateConfig = TRUE;

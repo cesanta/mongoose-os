@@ -59,7 +59,7 @@ typedef struct {
 	uint8 is_first_boot;
 	uint8 boot_attempts;
 	uint8 fw_updated;
-	uint8 padding[3];  // align to 4 bytes
+	uint8 padding[2];
 	uint32 roms[MAX_ROMS]; // flash addresses of the roms
 #ifdef BOOT_CONFIG_CHKSUM
 	uint8 chksum;		   // config chksum
