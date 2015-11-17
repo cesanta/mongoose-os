@@ -41,7 +41,7 @@ os_timer_t startcmd_timer;
 
 void start_cmd(void *dummy) {
 #ifndef V7_NO_FS
-  fs_init();
+  fs_init(FS_ADDR, FS_SIZE);
 #endif
 
   init_v7(&dummy);

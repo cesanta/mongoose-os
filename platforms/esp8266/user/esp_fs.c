@@ -233,14 +233,8 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
   return SPIFFS_mount(spf, &cfg, workbuf, fds, fds_size, 0, 0, 0);
 }
 
-int fs_init_addr(uint32_t addr) {
-  return fs_mount(&fs, addr, FS_SIZE, spiffs_work_buf, spiffs_fds,
-                  sizeof(spiffs_fds));
-}
-
-/* TODO(alashkin): remove hard coded FD_ADDR from sjs */
-int fs_init() {
-  return fs_mount(&fs, FS_ADDR, FS_SIZE, spiffs_work_buf, spiffs_fds,
+int fs_init(uint32_t addr, uint32_t size) {
+  return fs_mount(&fs, addr, size, spiffs_work_buf, spiffs_fds,
                   sizeof(spiffs_fds));
 }
 
