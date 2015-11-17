@@ -19,7 +19,7 @@ endif
 
 CFLAGS    = -Os -O3 -Wpointer-arith -Wundef -Werror -Wl,-EL \
 						-fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals \
-						-D__ets__ -DICACHE_FLASH $(CFLAGS_EXTRA)
+						-D__ets__ -DFAST='__attribute__((section(".fast.text")))' -DICACHE_FLASH $(CFLAGS_EXTRA)
 
 LDFLAGS   = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static -L $(SDK_BASE)/ld/
 LD_SCRIPT = $(SDK_BASE)/ld/eagle.app.v6.ld

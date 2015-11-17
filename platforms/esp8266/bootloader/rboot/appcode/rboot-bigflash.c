@@ -5,6 +5,8 @@
 // See license.txt for license terms.
 //////////////////////////////////////////////////
 
+/* clang-format off */
+
 #ifdef RBOOT_INTEGRATION
 #include <rboot-integration.h>
 #endif
@@ -34,7 +36,7 @@ uint8 rBoot_mmap_1 = 0xff;
 uint8 rBoot_mmap_2 = 0xff;
 
 // this function must remain in iram
-void IRAM_ATTR Cache_Read_Enable_New() {
+void FAST Cache_Read_Enable_New() {
 
 	if (rBoot_mmap_1 == 0xff) {
 		uint32 addr;
