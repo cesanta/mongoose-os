@@ -340,6 +340,32 @@ void rebootIntoFirmware(QSerialPort* serial, bool inverted) {
   serial->setRequestToSend(inverted);  // pull up RESET
 }
 
+util::Status softResetFromBootloader(QSerialPort* port) {
+  QByteArray payload;
+  QDataStream s1(&payload, QIODevice::WriteOnly);
+  s1.setByteOrder(QDataStream::LittleEndian);
+  s1 << quint32(0) << quint32(0) << quint32(0) << quint32(0x40100000);
+  writeCommand(port, 0x05, payload);
+  auto resp = readResponse(port);
+  if (!resp.ok()) {
+    qDebug() << "Failed to start (fake) write to RAM:" << resp.error();
+    return util::Status(util::error::ABORTED, "failed to start writing to RAM");
+  }
+  payload.clear();
+
+  QDataStream s2(&payload, QIODevice::WriteOnly);
+  s2.setByteOrder(QDataStream::LittleEndian);
+  s2 << quint32(0) << quint32(0x40000080);
+  writeCommand(port, 0x06, payload);
+  auto resp2 = readResponse(port);
+  if (!resp2.ok()) {
+    qDebug() << "Failed to invoke ResetVector:" << resp2.error();
+    return util::Status(util::error::ABORTED, "failed to invoke ResetVector");
+  }
+
+  return util::Status::OK;
+}
+
 class FlasherImpl : public Flasher {
   Q_OBJECT
  public:
@@ -1143,6 +1169,12 @@ class ESP8266HAL : public HAL {
       return util::Status(util::error::ABORTED, "Failed to read MAC address");
     }
     qInfo() << "MAC address: " << mac;
+
+    auto st = softResetFromBootloader(s.get());
+    if (!st.ok()) {
+      qWarning() << "Failed to reset device after probing:"
+                 << st.error_message().c_str();
+    }
 
     return util::Status::OK;
   }
