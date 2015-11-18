@@ -103,6 +103,7 @@ MG_INTERNAL size_t mg_handle_chunked(struct mg_connection *nc,
 
 #ifndef MG_DISABLE_FILESYSTEM
 MG_INTERNAL time_t mg_parse_date_string(const char *datetime);
+MG_INTERNAL int mg_is_not_modified(struct http_message *hm, cs_stat_t *st);
 #endif
 
 /* Forward declarations for testing. */
@@ -1803,7 +1804,7 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 #define _MG_CALLBACK_MODIFIABLE_FLAGS_MASK                               \
   (MG_F_USER_1 | MG_F_USER_2 | MG_F_USER_3 | MG_F_USER_4 | MG_F_USER_5 | \
    MG_F_USER_6 | MG_F_WEBSOCKET_NO_DEFRAG | MG_F_SEND_AND_CLOSE |        \
-   MG_F_CLOSE_IMMEDIATELY | MG_F_IS_WEBSOCKET)
+   MG_F_CLOSE_IMMEDIATELY | MG_F_IS_WEBSOCKET | MG_F_DELETE_CHUNK)
 
 #ifndef intptr_t
 #define intptr_t long
@@ -1842,9 +1843,16 @@ MG_INTERNAL void mg_remove_conn(struct mg_connection *conn) {
 MG_INTERNAL void mg_call(struct mg_connection *nc,
                          mg_event_handler_t ev_handler, int ev, void *ev_data) {
   unsigned long flags_before;
-
-  DBG(("%p ev=%d ev_data=%p flags=%lu rmbl=%d smbl=%d", nc, ev, ev_data,
-       nc->flags, (int) nc->recv_mbuf.len, (int) nc->send_mbuf.len));
+  if (ev_handler == NULL) {
+    /*
+     * If protocol handler is specified, call it. Otherwise, call user-specified
+     * event handler.
+     */
+    ev_handler = nc->proto_handler ? nc->proto_handler : nc->handler;
+  }
+  DBG(("%p %s ev=%d ev_data=%p flags=%lu rmbl=%d smbl=%d", nc,
+       ev_handler == nc->handler ? "user" : "proto", ev, ev_data, nc->flags,
+       (int) nc->recv_mbuf.len, (int) nc->send_mbuf.len));
 
 #ifndef MG_DISABLE_FILESYSTEM
   /* LCOV_EXCL_START */
@@ -1855,23 +1863,17 @@ MG_INTERNAL void mg_call(struct mg_connection *nc,
   }
 /* LCOV_EXCL_STOP */
 #endif
-
-  if (ev_handler == NULL) {
-    /*
-     * If protocol handler is specified, call it. Otherwise, call user-specified
-     * event handler.
-     */
-    ev_handler = nc->proto_handler ? nc->proto_handler : nc->handler;
-  }
   if (ev_handler != NULL) {
     flags_before = nc->flags;
     ev_handler(nc, ev, ev_data);
-    if (nc->flags != flags_before) {
+    /* Prevent user handler from fiddling with system flags. */
+    if (ev_handler == nc->handler && nc->flags != flags_before) {
       nc->flags = (flags_before & ~_MG_CALLBACK_MODIFIABLE_FLAGS_MASK) |
                   (nc->flags & _MG_CALLBACK_MODIFIABLE_FLAGS_MASK);
     }
   }
-  DBG(("%p after flags=%d rmbl=%d smbl=%d", nc, (int) nc->flags,
+  DBG(("%p after %s flags=%lu rmbl=%d smbl=%d", nc,
+       ev_handler == nc->handler ? "user" : "proto", nc->flags,
        (int) nc->recv_mbuf.len, (int) nc->send_mbuf.len));
 }
 
@@ -2388,6 +2390,15 @@ void mg_if_sent_cb(struct mg_connection *nc, int num_sent) {
 
 static void mg_recv_common(struct mg_connection *nc, void *buf, int len) {
   DBG(("%p %d %u", nc, len, (unsigned int) nc->recv_mbuf.len));
+  if (nc->flags & MG_F_CLOSE_IMMEDIATELY) {
+    DBG(("%p discarded %d bytes", nc, len));
+    /*
+     * This connection will not survive next poll. Do not deliver events,
+     * send data to /dev/null without acking.
+     */
+    MG_FREE(buf);
+    return;
+  }
   nc->last_io_time = time(NULL);
   if (nc->recv_mbuf.len == 0) {
     /* Adopt buf as recv_mbuf's backing store. */
@@ -2763,7 +2774,7 @@ void mg_if_connect_tcp(struct mg_connection *nc,
   mg_set_non_blocking_mode(nc->sock);
 #endif
   rc = connect(nc->sock, &sa->sa, sizeof(sa->sin));
-  nc->err = rc == 0 ? 0 : (errno ? errno : 1);
+  nc->err = mg_is_error(rc) ? errno : 0;
   DBG(("%p sock %d err %d", nc, nc->sock, nc->err));
 }
 
@@ -4073,7 +4084,7 @@ void mg_printf_websocket_frame(struct mg_connection *nc, int op,
 }
 
 static void websocket_handler(struct mg_connection *nc, int ev, void *ev_data) {
-  nc->handler(nc, ev, ev_data);
+  mg_call(nc, nc->handler, ev, ev_data);
 
   switch (ev) {
     case MG_EV_RECV:
@@ -4265,7 +4276,7 @@ MG_INTERNAL size_t mg_handle_chunked(struct mg_connection *nc,
 
     /* Send MG_EV_HTTP_CHUNK event */
     nc->flags &= ~MG_F_DELETE_CHUNK;
-    nc->handler(nc, MG_EV_HTTP_CHUNK, hm);
+    mg_call(nc, nc->handler, MG_EV_HTTP_CHUNK, hm);
 
     /* Delete processed data if user set MG_F_DELETE_CHUNK flag */
     if (nc->flags & MG_F_DELETE_CHUNK) {
@@ -4316,9 +4327,10 @@ void http_handler(struct mg_connection *nc, int ev, void *ev_data) {
      * before MG_EV_CLOSE message.
      */
     if (io->len > 0 && mg_parse_http(io->buf, io->len, hm, is_req) > 0) {
+      int ev2 = is_req ? MG_EV_HTTP_REQUEST : MG_EV_HTTP_REPLY;
       hm->message.len = io->len;
       hm->body.len = io->buf + io->len - hm->body.p;
-      nc->handler(nc, is_req ? MG_EV_HTTP_REQUEST : MG_EV_HTTP_REPLY, hm);
+      mg_call(nc, nc->handler, ev2, hm);
     }
     free_http_proto_data(nc);
   }
@@ -4327,7 +4339,7 @@ void http_handler(struct mg_connection *nc, int ev, void *ev_data) {
     transfer_file_data(nc);
   }
 
-  nc->handler(nc, ev, ev_data);
+  mg_call(nc, nc->handler, ev, ev_data);
 
   if (ev == MG_EV_RECV) {
     struct mg_str *s;
@@ -4340,6 +4352,7 @@ void http_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
 
     if (req_len < 0 || (req_len == 0 && io->len >= MG_MAX_HTTP_REQUEST_SIZE)) {
+      DBG(("invalid request"));
       nc->flags |= MG_F_CLOSE_IMMEDIATELY;
     } else if (req_len == 0) {
       /* Do nothing, request is not yet fully buffered */
@@ -4352,7 +4365,7 @@ void http_handler(struct mg_connection *nc, int ev, void *ev_data) {
       mbuf_remove(io, req_len);
       nc->proto_handler = websocket_handler;
       nc->flags |= MG_F_IS_WEBSOCKET;
-      nc->handler(nc, MG_EV_WEBSOCKET_HANDSHAKE_DONE, NULL);
+      mg_call(nc, nc->handler, MG_EV_WEBSOCKET_HANDSHAKE_DONE, NULL);
       websocket_handler(nc, MG_EV_RECV, ev_data);
     } else if (nc->listener != NULL &&
                (vec = mg_get_http_header(hm, "Sec-WebSocket-Key")) != NULL) {
@@ -4362,12 +4375,12 @@ void http_handler(struct mg_connection *nc, int ev, void *ev_data) {
       nc->flags |= MG_F_IS_WEBSOCKET;
 
       /* Send handshake */
-      nc->handler(nc, MG_EV_WEBSOCKET_HANDSHAKE_REQUEST, hm);
+      mg_call(nc, nc->handler, MG_EV_WEBSOCKET_HANDSHAKE_REQUEST, hm);
       if (!(nc->flags & MG_F_CLOSE_IMMEDIATELY)) {
         if (nc->send_mbuf.len == 0) {
           ws_handshake(nc, vec);
         }
-        nc->handler(nc, MG_EV_WEBSOCKET_HANDSHAKE_DONE, NULL);
+        mg_call(nc, nc->handler, MG_EV_WEBSOCKET_HANDSHAKE_DONE, NULL);
         websocket_handler(nc, MG_EV_RECV, ev_data);
       }
     }
@@ -4421,10 +4434,10 @@ void http_handler(struct mg_connection *nc, int ev, void *ev_data) {
       if (js_callback_handled_request) {
         nc->flags |= MG_F_SEND_AND_CLOSE;
       } else {
-        nc->handler(nc, trigger_ev, hm);
+        mg_call(nc, nc->handler, trigger_ev, hm);
       }
 #else
-      nc->handler(nc, trigger_ev, hm);
+      mg_call(nc, nc->handler, trigger_ev, hm);
 #endif
       mbuf_remove(io, hm->message.len);
     }
@@ -5981,13 +5994,17 @@ MG_INTERNAL time_t mg_parse_date_string(const char *datetime) {
   return result;
 }
 
-static int mg_is_not_modified(struct http_message *hm, cs_stat_t *st) {
-  char etag[64];
-  struct mg_str *ims = mg_get_http_header(hm, "If-Modified-Since");
-  struct mg_str *inm = mg_get_http_header(hm, "If-None-Match");
-  construct_etag(etag, sizeof(etag), st);
-  return (inm != NULL && !mg_vcasecmp(inm, etag)) ||
-         (ims != NULL && st->st_mtime <= mg_parse_date_string(ims->p));
+MG_INTERNAL int mg_is_not_modified(struct http_message *hm, cs_stat_t *st) {
+  struct mg_str *hdr;
+  if ((hdr = mg_get_http_header(hm, "If-None-Match")) != NULL) {
+    char etag[64];
+    construct_etag(etag, sizeof(etag), st);
+    return mg_vcasecmp(hdr, etag) == 0;
+  } else if ((hdr = mg_get_http_header(hm, "If-Modified-Since")) != NULL) {
+    return st->st_mtime <= mg_parse_date_string(hdr->p);
+  } else {
+    return 0;
+  }
 }
 
 static void mg_send_digest_auth_request(struct mg_connection *c,

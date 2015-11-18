@@ -230,7 +230,11 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
   cfg.hal_write_f = esp_spiffs_write;
   cfg.hal_erase_f = esp_spiffs_erase;
 
-  return SPIFFS_mount(spf, &cfg, workbuf, fds, fds_size, 0, 0, 0);
+  if (SPIFFS_mount(spf, &cfg, workbuf, fds, fds_size, 0, 0, 0) != SPIFFS_OK) {
+    return SPIFFS_errno(spf);
+  }
+
+  return 0;
 }
 
 int fs_init(uint32_t addr, uint32_t size) {

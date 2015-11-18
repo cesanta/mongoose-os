@@ -79,27 +79,32 @@ static void mg_lwip_tcp_error_cb(void *arg, err_t err) {
 }
 
 static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
-                                 struct pbuf *p, err_t err) {
+                                 struct pbuf *chain, err_t err) {
   struct mg_connection *nc = (struct mg_connection *) arg;
-  char *data;
-  size_t len = (p != NULL ? p->len : 0);
-  DBG(("%p %u %d", nc, len, err));
+  DBG(("%p %p %u %u %d", nc, tpcb, (chain != NULL ? chain->tot_len : 0), err));
   if (nc == NULL) {
     tcp_abort(tpcb);
     return ERR_ARG;
   }
-  if (p == NULL) {
+  if (chain == NULL) {
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
     return ERR_OK;
   }
-  data = (char *) malloc(len);
-  if (data == NULL) {
-    DBG(("OOM"));
-    return ERR_MEM;
+  while (chain != NULL) {
+    struct pbuf *seg = chain;
+    size_t len = seg->len;
+    char *data = (char *) malloc(len);
+    if (data == NULL) {
+      DBG(("OOM"));
+      return ERR_MEM;
+    }
+    /* We only want to take one segment, pin the rest of the chain. */
+    if (chain->next != NULL) pbuf_ref(chain->next);
+    chain = pbuf_dechain(chain);
+    pbuf_copy_partial(seg, data, len, 0);
+    pbuf_free(seg);
+    mg_if_recv_tcp_cb(nc, data, len); /* callee takes over data */
   }
-  pbuf_copy_partial(p, data, len, 0);
-  pbuf_free(p);
-  mg_if_recv_tcp_cb(nc, data, len);
   if (nc->send_mbuf.len > 0) {
     mg_lwip_mgr_schedule_poll(nc->mgr);
   }
@@ -109,7 +114,7 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
 static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
                                  u16_t num_sent) {
   struct mg_connection *nc = (struct mg_connection *) arg;
-  DBG(("%p %u", nc, num_sent));
+  DBG(("%p %p %u", nc, tpcb, num_sent));
   if (nc == NULL) {
     tcp_abort(tpcb);
     return ERR_ABRT;
@@ -136,7 +141,7 @@ void mg_if_connect_tcp(struct mg_connection *nc,
     return;
   }
   nc->err = tcp_connect(tpcb, ip, port, mg_lwip_tcp_conn_cb);
-  DBG(("%p tcp_connect = %d", nc, nc->err));
+  DBG(("%p tcp_connect %p = %d", nc, tpcb, nc->err));
   if (nc->err != ERR_OK) {
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
     return;
@@ -179,7 +184,7 @@ void mg_if_connect_udp(struct mg_connection *nc) {
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   struct mg_connection *lc = (struct mg_connection *) arg, *nc;
   union socket_address sa;
-  DBG(("%p conn from %s:%u\n", lc, ipaddr_ntoa(&newtpcb->remote_ip),
+  DBG(("%p conn %p from %s:%u\n", lc, newtpcb, ipaddr_ntoa(&newtpcb->remote_ip),
        newtpcb->remote_port));
   sa.sin.sin_addr.s_addr = newtpcb->remote_ip.addr;
   sa.sin.sin_port = htons(newtpcb->remote_port);
@@ -290,12 +295,12 @@ void mg_if_destroy_conn(struct mg_connection *nc) {
     if (!(nc->flags & MG_F_UDP)) {
       struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
       tcp_arg(tpcb, NULL);
-      DBG(("tcp_close %p", tpcb));
+      DBG(("%p tcp_close %p", nc, tpcb));
       tcp_arg(tpcb, NULL);
       tcp_close(tpcb);
     } else {
       struct udp_pcb *upcb = (struct udp_pcb *) nc->sock;
-      DBG(("udp_remove %p", upcb));
+      DBG(("%p udp_remove %p", nc, upcb));
       udp_remove(upcb);
     }
     nc->sock = INVALID_SOCKET;
