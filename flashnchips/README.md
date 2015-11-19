@@ -41,3 +41,15 @@ Build with:
 $ qmake
 $ make
 ```
+
+### Ubuntu trusty (14.04)
+
+Ubuntu trusty ships with Qt 5.2.
+You need to install they Qt5.5 backport available at https://launchpad.net/~hedges/+archive/ubuntu/qt5.5
+
+```
+$ apt-get install qt55declarative qt55serialport libgl1-mesa-dev libftdi-dev
+$ export PATH=/opt/qt55/bin:$PATH
+```
+
+and then run the build steps outlined previously.

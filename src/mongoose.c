@@ -317,16 +317,29 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
 #line 1 "src/../../common/cs_dbg.c"
 /**/
 #endif
+/* Amalgamated: #include "cs_dbg.h" */
+
 #include <stdarg.h>
 #include <stdio.h>
 
-void cs_dbg_printf(const char *fmt, ...) {
+enum cs_log_level s_cs_log_level =
+#ifdef CS_ENABLE_DEBUG
+    LL_DEBUG;
+#else
+    LL_ERROR;
+#endif
+
+void cs_log_printf(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   vfprintf(stderr, fmt, ap);
   va_end(ap);
   fputc('\n', stderr);
   fflush(stderr);
+}
+
+void cs_log_set_level(enum cs_log_level level) {
+  s_cs_log_level = level;
 }
 #ifdef NS_MODULE_LINES
 #line 1 "src/../../common/dirent.c"
@@ -2076,7 +2089,7 @@ MG_INTERNAL struct mg_connection *mg_create_connection(
 MG_INTERNAL int mg_parse_address(const char *str, union socket_address *sa,
                                  int *proto, char *host, size_t host_len) {
   unsigned int a, b, c, d, port = 0;
-  int len = 0;
+  int ch, len = 0;
 #ifdef MG_ENABLE_IPV6
   char buf[100];
 #endif
@@ -2126,7 +2139,8 @@ MG_INTERNAL int mg_parse_address(const char *str, union socket_address *sa,
     return -1;
   }
 
-  return port < 0xffffUL && str[len] == '\0' ? len : -1;
+  ch = str[len]; /* Character that follows the address */
+  return port < 0xffffUL && (ch == '\0' || ch == ',' || isspace(ch)) ? len : -1;
 }
 
 #ifdef MG_ENABLE_SSL
@@ -2135,6 +2149,7 @@ MG_INTERNAL int mg_parse_address(const char *str, union socket_address *sa,
  * https://github.com/cesanta/mongoose/blob/master/scripts/generate_ssl_certificates.sh
  */
 
+#ifndef MG_DISABLE_PFS
 /*
  * Cipher suite options used for TLS negotiation.
  * https://wiki.mozilla.org/Security/Server_Side_TLS#Recommended_configurations
@@ -2178,7 +2193,6 @@ static const char mg_s_cipher_list[] =
 #endif
     ;
 
-#ifndef MG_DISABLE_PFS
 /*
  * Default DH params for PFS cipher negotiation. This is a 2048-bit group.
  * Will be used if none are provided by the user in the certificate file.
@@ -2213,8 +2227,8 @@ static int mg_use_cert(SSL_CTX *ctx, const char *pem_file) {
   } else if (SSL_CTX_use_certificate_file(ctx, pem_file, 1) == 0 ||
              SSL_CTX_use_PrivateKey_file(ctx, pem_file, 1) == 0) {
     return -2;
-#ifndef MG_DISABLE_PFS
   } else {
+#ifndef MG_DISABLE_PFS
     BIO *bio = NULL;
     DH *dh = NULL;
 
@@ -2238,11 +2252,10 @@ static int mg_use_cert(SSL_CTX *ctx, const char *pem_file) {
       SSL_CTX_set_options(ctx, SSL_OP_SINGLE_DH_USE);
       DH_free(dh);
     }
-
+#endif
     SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
     SSL_CTX_use_certificate_chain_file(ctx, pem_file);
     return 0;
-#endif
   }
 }
 
@@ -4469,6 +4482,27 @@ void mg_send_websocket_handshake(struct mg_connection *nc, const char *uri,
 #endif /* MG_DISABLE_HTTP_WEBSOCKET */
 
 #ifndef MG_DISABLE_FILESYSTEM
+
+void mg_send_response_line(struct mg_connection *nc, int status_code,
+                           const char *extra_headers) {
+  const char *status_message = "OK";
+  switch (status_code) {
+    case 206:
+      status_message = "Partial Content";
+      break;
+    case 416:
+      status_message = "Requested range not satisfiable";
+      break;
+    case 418:
+      status_message = "I'm a teapot";
+      break;
+  }
+  mg_printf(nc, "HTTP/1.1 %d %s\r\n", status_code, status_message);
+  if (extra_headers != NULL) {
+    mg_printf(nc, "%s\r\n", extra_headers);
+  }
+}
+
 static void send_http_error(struct mg_connection *nc, int code,
                             const char *reason) {
   if (reason == NULL) {
@@ -4643,8 +4677,8 @@ static void handle_ssi_request(struct mg_connection *nc, const char *path,
     mg_set_close_on_exec(fileno(fp));
 
     mime_type = get_mime_type(path, "text/plain", opts);
+    mg_send_response_line(nc, 200, opts->extra_headers);
     mg_printf(nc,
-              "HTTP/1.1 200 OK\r\n"
               "Content-Type: %.*s\r\n"
               "Connection: close\r\n\r\n",
               (int) mime_type.len, mime_type.p);
@@ -4709,7 +4743,6 @@ static void mg_send_http_file2(struct mg_connection *nc, const char *path,
     int64_t r1 = 0, r2 = 0, cl = st->st_size;
     struct mg_str *range_hdr = mg_get_http_header(hm, "Range");
     int n, status_code = 200;
-    const char *status_message = "OK";
 
     /* Handle Range header */
     range[0] = '\0';
@@ -4722,14 +4755,12 @@ static void mg_send_http_file2(struct mg_connection *nc, const char *path,
       }
       if (r1 > r2 || r2 >= cl) {
         status_code = 416;
-        status_message = "Requested range not satisfiable";
         cl = 0;
         snprintf(range, sizeof(range),
                  "Content-Range: bytes */%" INT64_FMT "\r\n",
                  (int64_t) st->st_size);
       } else {
         status_code = 206;
-        status_message = "Partial Content";
         cl = r2 - r1 + 1;
         snprintf(range, sizeof(range), "Content-Range: bytes %" INT64_FMT
                                        "-%" INT64_FMT "/%" INT64_FMT "\r\n",
@@ -4749,8 +4780,8 @@ static void mg_send_http_file2(struct mg_connection *nc, const char *path,
      *    position
      * TODO(mkm): fix ESP8266 RTOS SDK
      */
+    mg_send_response_line(nc, status_code, opts->extra_headers);
     mg_printf(nc,
-              "HTTP/1.1 %d %s\r\n"
               "Date: %s\r\n"
               "Last-Modified: %s\r\n"
               "Accept-Ranges: bytes\r\n"
@@ -4761,8 +4792,8 @@ static void mg_send_http_file2(struct mg_connection *nc, const char *path,
               "Content-Length: %" SIZE_T_FMT
               "\r\n"
               "%sEtag: %s\r\n\r\n",
-              status_code, status_message, current_time, last_modified,
-              (int) mime_type.len, mime_type.p, (size_t) cl, range, etag);
+              current_time, last_modified, (int) mime_type.len, mime_type.p,
+              (size_t) cl, range, etag);
 
     nc->proto_data = (void *) dp;
     dp->cl = cl;
@@ -5219,9 +5250,9 @@ static void send_directory_listing(struct mg_connection *nc, const char *dir,
       "document.onclick = function(ev){ "
       "var c = ev.target.rel; if (c) srt(tb, c)}; srt(tb, 2); };</script>";
 
-  mg_printf(nc, "%s\r\n%s: %s\r\n%s: %s\r\n\r\n", "HTTP/1.1 200 OK",
-            "Transfer-Encoding", "chunked", "Content-Type",
-            "text/html; charset=utf-8");
+  mg_send_response_line(nc, 200, opts->extra_headers);
+  mg_printf(nc, "%s: %s\r\n%s: %s\r\n\r\n", "Transfer-Encoding", "chunked",
+            "Content-Type", "text/html; charset=utf-8");
 
   mg_printf_http_chunk(
       nc,

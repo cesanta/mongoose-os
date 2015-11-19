@@ -106,6 +106,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -272,18 +273,41 @@ int64_t strtoll(const char *str, char **endptr, int base);
 #ifndef _CS_DBG_H_
 #define _CS_DBG_H_
 
-#ifdef CS_ENABLE_DEBUG
+enum cs_log_level {
+  LL_NONE = -1,
+  LL_ERROR = 0,
+  LL_WARN = 1,
+  LL_INFO = 2,
+  LL_DEBUG = 3,
 
-void cs_dbg_printf(const char *fmt, ...);
-#define __DBG(x)                         \
-  do {                                   \
+  _LL_MIN = -2,
+  _LL_MAX = 4,
+};
+
+#ifndef CS_NDEBUG
+
+extern enum cs_log_level s_cs_log_level;
+void cs_log_set_level(enum cs_log_level level);
+
+void cs_log_printf(const char *fmt, ...);
+
+#define LOG(l, x)                        \
+  if (s_cs_log_level >= l) {             \
     fprintf(stderr, "%-20s ", __func__); \
-    cs_dbg_printf x;                     \
-  } while (0)
-#define DBG __DBG
+    cs_log_printf x;                     \
+  }
 
-#else
+#define DBG(x)                           \
+  if (s_cs_log_level >= LL_DEBUG) {      \
+    fprintf(stderr, "%-20s ", __func__); \
+    cs_log_printf x;                     \
+  }
 
+#else /* NDEBUG */
+
+#define cs_log_set_level(l)
+
+#define LOG(l, x)
 #define DBG(x)
 
 #endif
@@ -1192,6 +1216,10 @@ FILE *mg_fopen(const char *path, const char *mode);
 int mg_open(const char *path, int flag, int mode);
 #endif /* MG_DISABLE_FILESYSTEM */
 
+#ifdef _WIN32
+#define MG_ENABLE_THREADS
+#endif
+
 #ifdef MG_ENABLE_THREADS
 /*
  * Start a new detached thread.
@@ -1323,7 +1351,11 @@ extern "C" {
 #endif
 
 #ifndef MG_MAX_PATH
+#ifdef PATH_MAX
+#define MG_MAX_PATH PATH_MAX
+#else
 #define MG_MAX_PATH 1024
+#endif
 #endif
 
 #ifndef MG_MAX_HTTP_SEND_IOBUF
@@ -1498,6 +1530,22 @@ void mg_send_http_chunk(struct mg_connection *nc, const char *buf, size_t len);
  * Functionality is similar to `mg_send_http_chunk()`.
  */
 void mg_printf_http_chunk(struct mg_connection *, const char *, ...);
+
+/*
+ * Send response status line.
+ * If `extra_headers` is not NULL, then `extra_headers` are also sent
+ * after the reponse line, followed by a new line.
+ * Example:
+ *
+ *      mg_send_response_line(nc, 200, "Access-Control-Allow-Origin: *");
+ *
+ * Will result in:
+ *
+ *      HTTP/1.1 200 OK\r\n
+ *      Access-Control-Allow-Origin: *\r\n
+ */
+void mg_send_response_line(struct mg_connection *nc, int status_code,
+                           const char *extra_headers);
 
 /*
  * Send printf-formatted HTTP chunk, escaping HTML tags.
@@ -1726,6 +1774,12 @@ struct mg_serve_http_opts {
    * ".txt=text/plain; charset=utf-8,.c=text/plain"
    */
   const char *custom_mime_types;
+
+  /*
+   * Extra HTTP headers to add to each server response.
+   * Example: to enable CORS, set this to "Access-Control-Allow-Origin: *".
+   */
+  const char *extra_headers;
 };
 
 /*
