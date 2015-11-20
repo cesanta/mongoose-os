@@ -26,6 +26,7 @@
 #include <common/util/status.h>
 #include <common/util/statusor.h>
 
+#include "config.h"
 #include "fs.h"
 #include "serial.h"
 
@@ -421,15 +422,14 @@ class FlasherImpl : public Flasher {
     return util::Status(util::error::INVALID_ARGUMENT, "Unknown option");
   }
 
-  util::Status setOptionsFromCommandLine(
-      const QCommandLineParser& parser) override {
+  util::Status setOptionsFromConfig(const Config& config) override {
     util::Status r;
 
     QStringList boolOpts({kSkipIdGenerationOption, kOverwriteFSOption});
     QStringList stringOpts({kIdDomainOption, kFormatFailFS});
 
     for (const auto& opt : boolOpts) {
-      auto s = setOption(opt, parser.isSet(opt));
+      auto s = setOption(opt, config.isSet(opt));
       if (!s.ok()) {
         r = util::Status(
             s.error_code(),
@@ -438,8 +438,8 @@ class FlasherImpl : public Flasher {
     }
     for (const auto& opt : stringOpts) {
       // XXX: currently there's no way to "unset" a string option.
-      if (parser.isSet(opt)) {
-        auto s = setOption(opt, parser.value(opt));
+      if (config.isSet(opt)) {
+        auto s = setOption(opt, config.value(opt));
         if (!s.ok()) {
           r = util::Status(
               s.error_code(),
@@ -1089,8 +1089,8 @@ std::unique_ptr<::HAL> HAL() {
   return std::move(std::unique_ptr<::HAL>(new CC3200HAL));
 }
 
-void addOptions(QCommandLineParser* parser) {
-  parser->addOptions({{kFormatFailFS,
+void addOptions(Config* config) {
+  config->addOptions({{kFormatFailFS,
                        "Format SFLASH file system before flashing. Accepted "
                        "sizes: 512, 1M, 2M, 4M, 8M, 16M.",
                        "size"}});

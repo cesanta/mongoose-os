@@ -7,8 +7,8 @@
 
 #include <common/util/status.h>
 
+class Config;
 class QByteArray;
-class QCommandLineParser;
 class QSerialPortInfo;
 class QVariant;
 
@@ -37,10 +37,9 @@ class Flasher : public QObject {
   // status on error or if option is not known.
   virtual util::Status setOption(const QString& name,
                                  const QVariant& value) = 0;
-  // setOptions should extract known options from parser, returning non-OK
-  // status if there were any errors.
-  virtual util::Status setOptionsFromCommandLine(
-      const QCommandLineParser& parser) = 0;
+  // setOptionsFromConfig should extract known options from parser, returning
+  // non-OK status if there were any errors.
+  virtual util::Status setOptionsFromConfig(const Config& config) = 0;
 
   static const char kIdDomainOption[];
   static const char kSkipIdGenerationOption[];

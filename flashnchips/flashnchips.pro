@@ -10,8 +10,8 @@ CONFIG += c++14
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 
 # Input
-HEADERS += cli.h dialog.h esp8266.h flasher.h fs.h prompter.h serial.h sigsource.h cc3200.h
-SOURCES += cli.cc dialog.cc esp8266.cc flasher.cc fs.cc main.cc serial.cc cc3200.cc
+HEADERS += cli.h config.h dialog.h esp8266.h flasher.h fs.h prompter.h serial.h sigsource.h cc3200.h
+SOURCES += cli.cc config.cc dialog.cc esp8266.cc flasher.cc fs.cc main.cc serial.cc cc3200.cc
 
 DEFINES += VERSION=\\\"$$VERSION\\\"
 DEFINES += APP_NAME=\\\"$$TARGET\\\"

@@ -25,6 +25,7 @@
 #include <QUrl>
 
 #include "cc3200.h"
+#include "config.h"
 #include "esp8266.h"
 #include "flasher.h"
 #include "serial.h"
@@ -77,8 +78,8 @@ signals:
   int clicked_button_;
 };
 
-MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
-    : QMainWindow(parent), parser_(parser) {
+MainDialog::MainDialog(Config* config, QWidget* parent)
+    : QMainWindow(parent), config_(config) {
   ui_.setupUi(this);
 
   fwDir_ = QDir(QApplication::applicationDirPath());
@@ -220,8 +221,8 @@ MainDialog::MainDialog(QCommandLineParser* parser, QWidget* parent)
   connect(ui_.actionAbout, &QAction::triggered, this,
           &MainDialog::showAboutBox);
 
-  if (parser_->isSet("console-log")) {
-    console_log_.reset(new QFile(parser_->value("console-log")));
+  if (config_->isSet("console-log")) {
+    console_log_.reset(new QFile(config_->value("console-log")));
     if (!console_log_->open(QIODevice::ReadWrite | QIODevice::Append)) {
       qCritical() << "Failed to open console log file:"
                   << console_log_->errorString();
@@ -372,11 +373,11 @@ void MainDialog::connectDisconnectTerminal() {
               &MainDialog::readSerial);
 
       speed = kDefaultConsoleBaudRate;
-      if (parser_->isSet("console-baud-rate")) {
-        speed = parser_->value("console-baud-rate").toInt();
+      if (config_->isSet("console-baud-rate")) {
+        speed = config_->value("console-baud-rate").toInt();
         if (speed == 0) {
           qDebug() << "Invalid --console-baud-rate value:"
-                   << parser_->value("console-baud-rate");
+                   << config_->value("console-baud-rate");
           speed = kDefaultConsoleBaudRate;
         }
       }
@@ -659,7 +660,7 @@ void MainDialog::loadFirmware() {
     ui_.statusMessage->setText(tr("No port selected"));
   }
   std::unique_ptr<Flasher> f(hal_->flasher(prompter_));
-  util::Status s = f->setOptionsFromCommandLine(*parser_);
+  util::Status s = f->setOptionsFromConfig(*config_);
   if (!s.ok()) {
     ui_.statusMessage->setText(tr("Invalid command line flag setting: ") +
                                s.ToString().c_str());

@@ -23,9 +23,9 @@
 #include "prompter.h"
 #include "ui_main.h"
 
+class Config;
 class PrompterImpl;
 class QAction;
-class QCommandLineParser;
 class QEvent;
 class QSerialPort;
 
@@ -35,7 +35,7 @@ class MainDialog : public QMainWindow {
   Q_OBJECT
 
  public:
-  MainDialog(QCommandLineParser *parser, QWidget *parent = 0);
+  MainDialog(Config *config, QWidget *parent = 0);
 
  protected:
   bool eventFilter(QObject *, QEvent *);  // used for input history navigation
@@ -83,7 +83,7 @@ signals:
   void showPromptResult(int clicked_button);
 
  private:
-  QCommandLineParser *parser_ = nullptr;
+  Config *config_ = nullptr;
   bool skip_detect_warning_ = false;
   std::unique_ptr<QThread> worker_;
   QDir fwDir_;

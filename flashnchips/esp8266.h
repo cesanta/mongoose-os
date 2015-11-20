@@ -10,13 +10,13 @@
 
 #include "hal.h"
 
-class QCommandLineParser;
+class Config;
 
 namespace ESP8266 {
 
 util::StatusOr<int> flashParamsFromString(const QString& s);
 
-void addOptions(QCommandLineParser* parser);
+void addOptions(Config* parser);
 
 QByteArray makeIDBlock(const QString& domain);
 

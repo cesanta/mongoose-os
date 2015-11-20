@@ -22,6 +22,7 @@
 #include <common/util/error_codes.h>
 #include <common/util/statusor.h>
 
+#include "config.h"
 #include "fs.h"
 #include "serial.h"
 
@@ -486,15 +487,14 @@ class FlasherImpl : public Flasher {
     }
   }
 
-  util::Status setOptionsFromCommandLine(
-      const QCommandLineParser& parser) override {
+  util::Status setOptionsFromConfig(const Config& config) override {
     util::Status r;
 
     QStringList boolOpts({kOverwriteFSOption, kSkipIdGenerationOption,
                           kDisableEraseWorkaroundOption,
                           kSkipReadingFlashParamsOption, kInvertDTRRTSOption});
     for (const auto& opt : boolOpts) {
-      auto s = setOption(opt, parser.isSet(opt));
+      auto s = setOption(opt, config.isSet(opt));
       if (!s.ok()) {
         return util::Status(
             s.error_code(),
@@ -506,8 +506,8 @@ class FlasherImpl : public Flasher {
                             kFlashingDataPortOption, kDumpFSOption});
     for (const auto& opt : stringOpts) {
       // XXX: currently there's no way to "unset" a string option.
-      if (parser.isSet(opt)) {
-        auto s = setOption(opt, parser.value(opt));
+      if (config.isSet(opt)) {
+        auto s = setOption(opt, config.value(opt));
         if (!s.ok()) {
           return util::Status(
               s.error_code(),
@@ -520,7 +520,7 @@ class FlasherImpl : public Flasher {
         {kFlashBaudRateOption, kSPIFFSOffsetOption, kSPIFFSSizeOption});
     for (const auto& opt : intOpts) {
       bool ok;
-      int value = parser.value(opt).toInt(&ok, 0);
+      int value = config.value(opt).toInt(&ok, 0);
       if (!ok) {
         return util::Status(util::error::INVALID_ARGUMENT,
                             (opt + ": Invalid numeric value.").toStdString());
@@ -1273,7 +1273,7 @@ util::StatusOr<int> flashParamsFromString(const QString& s) {
   }
 }
 
-void addOptions(QCommandLineParser* parser) {
+void addOptions(Config* parser) {
   parser->addOptions(
       {{kFlashParamsOption,
         "Override params bytes read from existing firmware. Either a "

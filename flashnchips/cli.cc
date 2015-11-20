@@ -13,6 +13,7 @@
 #include <common/util/error_codes.h>
 
 #include "cc3200.h"
+#include "config.h"
 #include "esp8266.h"
 #include "serial.h"
 
@@ -36,8 +37,11 @@ class CLIPrompterImpl : public Prompter {
   }
 };
 
-CLI::CLI(QCommandLineParser* parser, QObject* parent)
-    : QObject(parent), parser_(parser), prompter_(new CLIPrompterImpl(this)) {
+CLI::CLI(Config* config, QCommandLineParser* parser, QObject* parent)
+    : QObject(parent),
+      config_(config),
+      parser_(parser),
+      prompter_(new CLIPrompterImpl(this)) {
   QTimer::singleShot(0, this, &CLI::run);
 }
 
@@ -60,8 +64,8 @@ void CLI::run() {
   int exit_code = 0;
   int speed = 230400;
 
-  if (parser_->isSet("flash-baud-rate")) {
-    speed = parser_->value("flash-baud-rate").toInt();
+  if (config_->isSet("flash-baud-rate")) {
+    speed = config_->value("flash-baud-rate").toInt();
     if (speed == 0) {
       cerr << "Baud rate must be a number." << endl
            << endl;
@@ -103,7 +107,7 @@ void CLI::run() {
     }
   } else if (parser_->isSet("generate-id")) {
     util::Status s = generateID(parser_->value("generate-id"),
-                                parser_->value(Flasher::kIdDomainOption));
+                                config_->value(Flasher::kIdDomainOption));
     if (s.ok()) {
       cerr << "Success." << endl;
       exit_code = 0;
@@ -171,7 +175,7 @@ util::Status CLI::flash(const QString& portname, const QString& path,
   }
 
   std::unique_ptr<Flasher> f(hal_->flasher(prompter_));
-  util::Status config_status = f->setOptionsFromCommandLine(*parser_);
+  util::Status config_status = f->setOptionsFromConfig(*config_);
   if (!config_status.ok()) {
     return config_status;
   }
