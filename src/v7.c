@@ -373,6 +373,9 @@ unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 /* Insert value `v` in array `arr` at index `index`. */
 int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
 
+/* Delete value in array `arr` at index `index`, if it exists. */
+void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
+
 /* Insert value `v` in array `arr` at the end of the array. */
 int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
 
@@ -2758,11 +2761,17 @@ struct v7 {
 #endif
   struct mbuf owned_values; /* buffer for GC roots owned by C code */
 
-  int strict_mode; /* true if currently in strict mode */
-
   val_t error_objects[ERROR_CTOR_MAX];
 
-  val_t thrown_error;
+  val_t thrown_error; /* see also `is_thrown` below */
+
+  /*
+   * value that is going to be returned. Needed when some `finally` block needs
+   * to be executed after `return my_value;` was issued. Used in bcode.
+   * See also `is_returned` below
+   */
+  val_t returned_value;
+
   char error_msg[80];     /* Exception message */
   int creating_exception; /* Avoids reentrant exception creation */
 #if defined(__cplusplus)
@@ -2789,8 +2798,6 @@ struct v7 {
 
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
-
-  int inhibit_gc; /* while true, GC is inhibited */
 
   volatile int interrupt;
 #ifdef V7_STACK_SIZE
@@ -2830,6 +2837,15 @@ struct v7 {
   size_t parser_stack_data_max_len;
   size_t parser_stack_ret_max_len;
 #endif
+
+  /* true if currently in strict mode */
+  unsigned int strict_mode : 1;
+  /* while true, GC is inhibited */
+  unsigned int inhibit_gc : 1;
+  /* true if `thrown_error` is valid (used in bcode) */
+  unsigned int is_thrown : 1;
+  /* true if `returned_value` is valid (used in bcode) */
+  unsigned int is_returned : 1;
 };
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
@@ -3090,7 +3106,8 @@ V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
 V7_PRIVATE val_t create_object(struct v7 *, val_t);
-V7_PRIVATE v7_val_t create_function(struct v7 *v7);
+V7_PRIVATE val_t create_function2(struct v7 *, struct v7_object *, val_t);
+V7_PRIVATE val_t create_function(struct v7 *);
 V7_PRIVATE v7_val_t v7_create_dense_array(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
@@ -3101,9 +3118,21 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
                                                     const char *name, size_t,
                                                     unsigned int attrs);
 
-/* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
+/*
+ * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated
+ *
+ * Returns a pointer to the property structure, given an object and a name of
+ * the property as a pointer to string buffer and length.
+ *
+ * See also `v7_get_property_v`
+ */
 V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
                                                const char *name, size_t);
+/*
+ * Just like `v7_get_property`, but takes name as a `v7_val_t`
+ */
+V7_PRIVATE struct v7_property *v7_get_property_v(struct v7 *v7, val_t obj,
+                                                 v7_val_t name);
 V7_PRIVATE v7_val_t v7_get_v(struct v7 *, v7_val_t, v7_val_t);
 
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
@@ -3235,6 +3264,7 @@ enum opcode {
   OP_LE,
   OP_GT,
   OP_GE,
+  OP_INSTANCEOF,
 
   OP_IN,
   OP_GET,
@@ -3249,8 +3279,82 @@ enum opcode {
   OP_CREATE_OBJ, /* creates an empty object */
   OP_CREATE_ARR, /* creates an empty array */
 
+  /*
+   * Copies the function object at TOS and assigns current scope
+   * in func->scope.
+   *
+   * ( a -- a )
+   */
+  OP_FUNC_LIT,
   OP_CALL, /* takes number of args */
   OP_RET,
+
+  /*
+   * Pushes a value (bcode offset of `catch` block) from opcode argument to
+   * "try stack".
+   *
+   * Used in the beginning of the `try` block.
+   *
+   * `( T: -- T: a )`
+   */
+  OP_TRY_PUSH_CATCH,
+
+  /*
+   * Pushes a value (bcode offset of `finally` block) from opcode argument to
+   * "try stack".
+   *
+   * Used in the beginning of the `try` block.
+   *
+   * `( T: -- T: a )`
+   */
+  OP_TRY_PUSH_FINALLY,
+
+  /*
+   * Pops a value (bcode offset of `finally` or `catch` block) from "try
+   * stack", and discards it
+   *
+   * Used in the end of the `try` block, as well as in the beginning of the
+   * `catch` and `finally` blocks
+   *
+   * `( T: a -- T: )`
+   */
+  OP_TRY_POP,
+
+  /*
+   * Used in the end of the `finally` block:
+   *
+   * - if some value is currently being thrown, keep throwing it.
+   *   If eventually we encounter `catch` block, the thrown value gets
+   *   populated on TOS:
+   *
+   *   `( -- a )`
+   *
+   * - if there is some pending value to return, keep returning it.
+   *   If we encounter no further `finally` blocks, then the returned value
+   *   gets populated on TOS:
+   *
+   *   `( -- a )`
+   *
+   *   And return is performed.
+   *
+   * - otherwise, do nothing
+   */
+  OP_AFTER_FINALLY,
+
+  /*
+   * Throw value from TOS. First of all, it pops the value and saves it into
+   * `v7->thrown_error`:
+   *
+   * `( a -- )`
+   *
+   * Then unwinds stack looking for the first `catch` or `finally` blocks.
+   *
+   * - if `finally` is found, thrown value is kept into `v7->thrown_error`.
+   * - if `catch` is found, thrown value is pushed back to the stack:
+   *   `( -- a )`
+   * - otherwise, thrown value is kept into `v7->thrown_error`
+   */
+  OP_THROW,
 
   OP_MAX,
 };
@@ -3278,13 +3382,9 @@ V7_PRIVATE void bcode_init(struct bcode *);
 V7_PRIVATE void bcode_free(struct bcode *);
 V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
 
-V7_PRIVATE void eval_bcode(struct v7 *, struct bcode *);
+V7_PRIVATE enum v7_err eval_bcode(struct v7 *, struct bcode *);
 
 V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *, const char *, v7_val_t *);
-V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *, const char *, v7_val_t *,
-                                      int);
-V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *, const char *,
-                                          v7_val_t *);
 V7_PRIVATE void dump_bcode(FILE *, struct bcode *);
 
 V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
@@ -9152,9 +9252,10 @@ v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
-v7_val_t create_function(struct v7 *v7) {
+V7_PRIVATE
+val_t create_function2(struct v7 *v7, struct v7_object *scope, val_t proto) {
   struct v7_function *f = new_function(v7);
-  val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
+  val_t fval = v7_function_to_value(f);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   if (f == NULL) {
     fval = v7_create_null();
@@ -9164,10 +9265,9 @@ v7_val_t create_function(struct v7 *v7) {
   tmp_stack_push(&tf, &fval);
 
   f->properties = NULL;
-  f->scope = NULL;
+  f->scope = scope;
   f->attributes = 0;
   /* TODO(mkm): lazily create these properties on first access */
-  proto = v7_create_object(v7);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9,
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE, proto);
@@ -9175,6 +9275,10 @@ v7_val_t create_function(struct v7 *v7) {
 cleanup:
   tmp_frame_cleanup(&tf);
   return fval;
+}
+
+val_t create_function(struct v7 *v7) {
+  return create_function2(v7, NULL, v7_create_object(v7));
 }
 
 /* like c_snprintf but returns `size` if write is truncated */
@@ -9691,6 +9795,28 @@ struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
   return NULL;
 }
 
+struct v7_property *v7_get_property_v(struct v7 *v7, val_t obj, v7_val_t name) {
+  struct v7_property *ret;
+  const char *s;
+  size_t name_len;
+  STATIC char buf[8];
+  int fr = 0;
+
+  if (v7_is_string(name)) {
+    s = v7_to_string(v7, &name, &name_len);
+  } else {
+    s = v7_stringify(v7, name, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+    name_len = strlen(s);
+    fr = (s != buf);
+  }
+
+  ret = v7_get_property(v7, obj, s, name_len);
+  if (fr) {
+    free((void *) s);
+  }
+  return ret;
+}
+
 v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   val_t v = obj;
   if (v7_is_string(obj)) {
@@ -10099,6 +10225,12 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
     }
   }
   return res;
+}
+
+void v7_array_del(struct v7 *v7, val_t arr, unsigned long index) {
+  char buf[20];
+  int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
+  v7_del_property(v7, arr, buf, n);
 }
 
 int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
@@ -10688,7 +10820,10 @@ void gc_mark_string(struct v7 *, val_t *);
 
 static struct gc_block *gc_new_block(struct gc_arena *a, size_t size);
 static void gc_free_block(struct gc_block *b);
-static void gc_mark_mbuf(struct v7 *v7, const struct mbuf *mbuf);
+static void gc_mark_mbuf_pt(struct v7 *v7, const struct mbuf *mbuf);
+#ifdef V7_ENABLE_BCODE
+static void gc_mark_mbuf_val(struct v7 *v7, const struct mbuf *mbuf);
+#endif
 
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
@@ -11004,7 +11139,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   if (v7_is_function(v)) {
     struct v7_function *func = v7_to_function(v);
     if (func->bcode != NULL) {
-      gc_mark_mbuf(v7, &func->bcode->lit);
+      gc_mark_mbuf_val(v7, &func->bcode->lit);
     }
   }
 #endif
@@ -11333,8 +11468,10 @@ V7_PRIVATE void maybe_gc(struct v7 *v7) {
 static int gc_pass = 0;
 #endif
 
-/* mark an mbuf containing val_t values */
-static void gc_mark_mbuf(struct v7 *v7, const struct mbuf *mbuf) {
+/*
+ * mark an mbuf containing *pointers* to `val_t` values
+ */
+static void gc_mark_mbuf_pt(struct v7 *v7, const struct mbuf *mbuf) {
   val_t **vp;
   for (vp = (val_t **) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
     gc_mark(v7, **vp);
@@ -11343,6 +11480,21 @@ static void gc_mark_mbuf(struct v7 *v7, const struct mbuf *mbuf) {
 #endif
   }
 }
+
+#ifdef V7_ENABLE_BCODE
+/*
+ * mark an mbuf containing `val_t` values (*not pointers* to them)
+ */
+static void gc_mark_mbuf_val(struct v7 *v7, const struct mbuf *mbuf) {
+  val_t *vp;
+  for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
+    gc_mark(v7, *vp);
+#ifndef V7_DISABLE_COMPACTING_GC
+    gc_mark_string(v7, vp);
+#endif
+  }
+}
+#endif
 
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7, int full) {
@@ -11385,19 +11537,24 @@ void v7_gc(struct v7 *v7, int full) {
   gc_mark_string(v7, &v7->thrown_error);
 #endif
 
+  gc_mark(v7, v7->returned_value);
+#ifndef V7_DISABLE_COMPACTING_GC
+  gc_mark_string(v7, &v7->returned_value);
+#endif
+
   for (i = 0; i < ERROR_CTOR_MAX; i++) {
     gc_mark(v7, v7->error_objects[i]);
   }
 
 #ifdef V7_ENABLE_BCODE
-  gc_mark_mbuf(v7, &v7->stack);
+  gc_mark_mbuf_val(v7, &v7->stack);
   gc_mark(v7, v7->stash);
 #ifndef V7_DISABLE_COMPACTING_GC
   gc_mark_string(v7, &v7->stash);
 #endif
 #endif
-  gc_mark_mbuf(v7, &v7->tmp_stack);
-  gc_mark_mbuf(v7, &v7->owned_values);
+  gc_mark_mbuf_pt(v7, &v7->tmp_stack);
+  gc_mark_mbuf_pt(v7, &v7->owned_values);
 
 #ifndef V7_DISABLE_COMPACTING_GC
   gc_compact_strings(v7);
@@ -14802,9 +14959,8 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
       break;
     case AST_IN:
       v1 = i_eval_expr(v7, a, pos, scope);
-      v7_stringify_value(v7, v1, buf, sizeof(buf));
       v2 = i_eval_expr(v7, a, pos, scope);
-      res = v7_create_boolean(v7_get_property(v7, v2, buf, -1) != NULL);
+      res = v7_create_boolean(v7_get_property_v(v7, v2, v1) != NULL);
       break;
     case AST_VAR:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -16022,18 +16178,44 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 
 #ifdef V7_ENABLE_BCODE
 
+/*
+ * Tags that are used for bcode offsets in "try stack" ("____p")
+ */
+
+#define OFFSET_TAG_CATCH ((uint64_t) 0x01 << (sizeof(bcode_off_t) * 8))
+#define OFFSET_TAG_FINALLY ((uint64_t) 0x02 << (sizeof(bcode_off_t) * 8))
+#define OFFSET_TAG_MASK ((uint64_t) 0x03 << (sizeof(bcode_off_t) * 8))
+#define OFFSET_TAG(v) ((v) &OFFSET_TAG_MASK)
+#define OFFSET_VALUE(v) \
+  ((bcode_off_t)((v) & (((uint64_t) 1 << (sizeof(bcode_off_t) * 8)) - 1)))
+
+/*
+ * make sure `bcode_off_t` is just 32-bit, so that it can fit in double
+ * with 3-bit tag
+ */
+V7_STATIC_ASSERT(sizeof(bcode_off_t) <= sizeof(uint32_t),
+                 too_large_bcode_off_t);
+
 #define PUSH(v) stack_push(&v7->stack, v)
 #define POP() stack_pop(&v7->stack)
 #define TOS() stack_tos(&v7->stack)
 #define SP() stack_sp(&v7->stack)
+
+enum found_try_block {
+  FOUND_TRY_BLOCK_NONE,
+  FOUND_TRY_BLOCK_CATCH,
+  FOUND_TRY_BLOCK_FINALLY,
+};
 
 static const char *op_names[] = {
     "POP", "DUP", "2DUP", "STASH", "UNSTASH", "PUSH_UNDEFINED", "PUSH_NULL",
     "PUSH_THIS", "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT",
     "NOT", "LOGICAL_NOT", "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT",
     "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT",
-    "LE", "GT", "GE", "IN", "GET", "SET", "SET_VAR", "GET_VAR", "JMP",
-    "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
+    "LE", "GT", "GE", "INSTANCEOF", "IN", "GET", "SET", "SET_VAR", "GET_VAR",
+    "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "FUNC_LIT",
+    "CALL", "RET", "TRY_PUSH_CATCH", "TRY_PUSH_FINALLY", "TRY_POP",
+    "AFTER_FINALLY", "THROW"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -16160,7 +16342,9 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
       break;
     case OP_JMP:
     case OP_JMP_FALSE:
-    case OP_JMP_TRUE: {
+    case OP_JMP_TRUE:
+    case OP_TRY_PUSH_CATCH:
+    case OP_TRY_PUSH_FINALLY: {
       bcode_off_t target;
       p++;
       memcpy(&target, p, sizeof(target));
@@ -16202,6 +16386,8 @@ static void bcode_restore_registers(struct bcode *bcode,
  * Each function frame is linked to the caller frame via ____p hidden property
  * ___rb points to the caller bcode object while ___ro points to the op address
  * of the next instruction to be performed after return.
+ * ____t is a "try stack": array of offsets of active `catch` and `finally`
+ * blocks, and ____s is the length of the data stack.
  *
  * The caller's bcode object is needed because we have to restore literals
  * and `end` registers.
@@ -16217,21 +16403,296 @@ static void bcode_perform_call(struct v7 *v7, struct bcode *bcode,
   v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(bcode));
   v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
          v7_create_foreign(r->ops + 1));
+  v7_set(v7, frame, "____t", 5, V7_PROPERTY_HIDDEN, v7_create_dense_array(v7));
+  v7_set(v7, frame, "____s", 5, V7_PROPERTY_HIDDEN,
+         v7_create_number(v7->stack.len));
   v7_to_object(frame)->prototype = func->scope;
   v7->call_stack = frame;
   bcode_restore_registers(func->bcode, r);
 }
 
-static void bcode_perform_return(struct v7 *v7, struct bcode_registers *r) {
+static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
+#ifdef V7_BCODE_TRACE
+  printf("unwinding stack by 1 level\n");
+#endif
+
   struct bcode *bcode =
       (struct bcode *) v7_to_foreign(v7_get(v7, v7->call_stack, "___rb", 5));
   bcode_restore_registers(bcode, r);
+
   r->ops = (uint8_t *) v7_to_foreign(v7_get(v7, v7->call_stack, "___ro", 5));
+  /* adjust data stack length (restore saved) */
+  {
+    size_t saved_stack_len =
+        v7_to_number(v7_get(v7, v7->call_stack, "____s", 5));
+    assert(saved_stack_len <= v7->stack.len);
+    v7->stack.len = saved_stack_len;
+  }
   v7->call_stack = v7_get(v7, v7->call_stack, "____p", 5);
 }
 
-V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *_bcode) {
+/*
+ * Unwinds local "try stack" (i.e. local-to-current-function stack of nested
+ * `try` blocks)
+ *
+ * If `ignore_catch` is non-zero, `catch` blocks are ignored (only `finally`
+ * considered)
+ *
+ * Returns 1 when control was transferred to some `catch` or
+ * `finally` block, 0 otherwise.
+ */
+static enum found_try_block unwind_local_try_stack(struct v7 *v7,
+                                                   struct bcode_registers *r,
+                                                   int ignore_catch) {
+  val_t arr = v7_create_undefined();
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+  enum found_try_block ret = FOUND_TRY_BLOCK_NONE;
+  unsigned long length;
+
+  tmp_stack_push(&tf, &arr);
+
+  arr = v7_get(v7, v7->call_stack, "____t", 5);
+  if (v7_is_array(v7, arr)) {
+    /*
+     * pop latest element from "try stack", loop until we need to transfer
+     * control there
+     */
+    while ((length = v7_array_length(v7, arr)) > 0) {
+      /* get latest offset from the "try stack" */
+      uint64_t offset = v7_to_number(v7_array_get(v7, arr, length - 1));
+
+      if (!ignore_catch || OFFSET_TAG(offset) != OFFSET_TAG_CATCH) {
+        /* need to transfer control to this offset */
+        r->ops = (uint8_t *) r->bcode->ops.buf + OFFSET_VALUE(offset);
+#ifdef V7_BCODE_TRACE
+        printf("transferring to %u\n", (unsigned int) OFFSET_VALUE(offset));
+#endif
+        switch (OFFSET_TAG(offset)) {
+          case OFFSET_TAG_CATCH:
+            ret = FOUND_TRY_BLOCK_CATCH;
+            break;
+          case OFFSET_TAG_FINALLY:
+            ret = FOUND_TRY_BLOCK_FINALLY;
+            break;
+          default:
+            assert(0);
+            break;
+        }
+        break;
+      } else {
+#ifdef V7_BCODE_TRACE
+        printf("skipped catch %u\n", (unsigned int) OFFSET_VALUE(offset));
+#endif
+        /*
+         * since we don't need to control transfer there, just pop
+         * it from the "try stack"
+         */
+        v7_array_del(v7, arr, length - 1);
+      }
+    }
+  }
+
+  tmp_frame_cleanup(&tf);
+  return ret;
+}
+
+/*
+ * Perform return, but if there is a `finally` block in effect, transfer
+ * control there.
+ *
+ * If `take_retval` is non-zero, value to return will be popped from stack
+ * (and saved into `v7->returned_value`), otherwise, it won't be affected.
+ */
+static void bcode_perform_return(struct v7 *v7, struct bcode_registers *r,
+                                 int take_retval) {
+  assert(take_retval || v7->is_returned);
+
+  if (take_retval) {
+    v7->returned_value = POP();
+    v7->is_returned = 1;
+
+    /*
+     * returning (say, from `finally`) dismisses any errors that are being
+     * thrown at the moment as well
+     */
+    v7->is_thrown = 0;
+    v7->thrown_error = v7_create_undefined();
+  }
+
+  /*
+   * Try to unwind local "try stack", ignoring `catch` blocks. If there are no
+   * `finally` blocks in effect, actually perform return.
+   */
+  if (unwind_local_try_stack(v7, r, 1 /*ignore_catch*/) ==
+      FOUND_TRY_BLOCK_NONE) {
+    /*
+     * no `finally` blocks were found, so, perform return: unwind stack by 1
+     * level, and populate TOS with the return value
+     */
+    unwind_stack_1level(v7, r);
+
+    PUSH(v7->returned_value);
+    v7->is_returned = 0;
+    v7->returned_value = v7_create_undefined();
+  }
+}
+
+/*
+ * Perform throw.
+ *
+ * If `take_thrown_value` is non-zero, value to return will be popped from
+ * stack (and saved into `v7->thrown_error`), otherwise, it won't be affected.
+ *
+ * Returns `V7_OK` if thrown exception was caught, `V7_EXEC_EXCEPTION`
+ * otherwise (in this case, evaluation of current script must be stopped)
+ */
+static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
+                                       int take_thrown_value) {
+  enum v7_err err = V7_OK;
+  enum found_try_block found;
+
+  assert(take_thrown_value || v7->is_thrown);
+
+  if (take_thrown_value) {
+    v7->thrown_error = POP();
+    v7->is_thrown = 1;
+
+    /* Throwing dismisses any pending return values */
+    v7->is_returned = 0;
+    v7->returned_value = v7_create_undefined();
+  }
+
+  while ((found = unwind_local_try_stack(v7, r, 0 /*don't ignore catch*/)) ==
+         FOUND_TRY_BLOCK_NONE) {
+    if (v7->call_stack != v7->global_object) {
+      /* not reached bottom of the stack yet, keep unwinding */
+      unwind_stack_1level(v7, r);
+    } else {
+      /* reached stack bottom: uncaught exception */
+      err = V7_EXEC_EXCEPTION;
+      break;
+    }
+  }
+
+  if (found == FOUND_TRY_BLOCK_CATCH) {
+    /*
+     * we're going to enter `catch` block, so, populate TOS with the thrown
+     * value, and clear it in v7 context.
+     */
+    PUSH(v7->thrown_error);
+    v7->is_thrown = 0;
+    v7->thrown_error = v7_create_undefined();
+  }
+
+  return err;
+}
+
+/*
+ * Create an error value, push it on TOS, and perform an exception throw.
+ *
+ * Returns `V7_OK` if thrown exception was caught, `V7_EXEC_EXCEPTION`
+ * otherwise (in this case, evaluation of current script must be stopped)
+ */
+static enum v7_err bcode_throw_exception(struct v7 *v7,
+                                         struct bcode_registers *r,
+                                         enum error_ctor ex,
+                                         const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  PUSH(create_exception(v7, ex, v7->error_msg));
+  return bcode_perform_throw(v7, r, 1);
+} /* LCOV_EXCL_LINE */
+
+/*
+ * Copy a function literal prototype and binds it to the current scope.
+ *
+ * Assumes `func` is owned by the caller.
+ */
+static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
+  val_t res;
+  struct v7_function *f, *rf;
+  assert(v7_is_function(func));
+  f = v7_to_function(func);
+  res = create_function2(v7, v7_to_object(v7->call_stack),
+                         v7_get(v7, func, "prototype", 9));
+  rf = v7_to_function(res);
+  rf->bcode = f->bcode;
+  rf->bcode->refcnt++;
+  return res;
+}
+
+/*
+ * Evaluate `OP_TRY_PUSH_CATCH` or `OP_TRY_PUSH_FINALLY`: Take an offset (from
+ * the parameter of opcode) and push it onto "try stack"
+ */
+V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
+                              struct bcode_registers *r) {
+  val_t arr = v7_create_undefined();
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+  bcode_off_t target;
+  uint64_t offset_tag = 0;
+
+  tmp_stack_push(&tf, &arr);
+
+  /* make sure "try stack" (i.e. "____t") array exists */
+  arr = v7_get(v7, v7->call_stack, "____t", 5);
+  if (arr == V7_UNDEFINED) {
+    arr = v7_create_dense_array(v7);
+    v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN, arr);
+  }
+
+  /*
+   * push the target address at the end of the "try stack" array
+   */
+  switch (op) {
+    case OP_TRY_PUSH_CATCH:
+      offset_tag = OFFSET_TAG_CATCH;
+      break;
+    case OP_TRY_PUSH_FINALLY:
+      offset_tag = OFFSET_TAG_FINALLY;
+      break;
+    default:
+      assert(0);
+      break;
+  }
+  target = bcode_get_target(&r->ops);
+  v7_array_set(v7, arr, v7_array_length(v7, arr),
+               v7_create_number((uint64_t) target | offset_tag));
+
+  tmp_frame_cleanup(&tf);
+}
+
+/*
+ * Evaluate `OP_TRY_POP`: just pop latest item from "try stack", ignoring it
+ */
+V7_PRIVATE void eval_try_pop(struct v7 *v7) {
+  val_t arr = v7_create_undefined();
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+  tmp_stack_push(&tf, &arr);
+  unsigned long length;
+
+  /* get "try stack" array, which must be defined and must not be emtpy */
+  arr = v7_get(v7, v7->call_stack, "____t", 5);
+  if (arr == V7_UNDEFINED) {
+    throw_exception(v7, INTERNAL_ERROR, "TRY_POP when ____t does not exist");
+  }
+
+  length = v7_array_length(v7, arr);
+  if (length == 0) {
+    throw_exception(v7, INTERNAL_ERROR, "TRY_POP when ____t is empty");
+  }
+
+  /* delete the latest element of this array */
+  v7_array_del(v7, arr, length - 1);
+
+  tmp_frame_cleanup(&tf);
+}
+
+V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *_bcode) {
   struct bcode_registers r;
+  enum v7_err err = V7_OK;
 
   size_t name_len;
   char buf[512];
@@ -16250,7 +16711,7 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *_bcode) {
   tmp_stack_push(&tf, &frame);
 
 restart:
-  while (r.ops < r.end) {
+  while (r.ops < r.end && err == V7_OK) {
     enum opcode op = (enum opcode) * r.ops;
 #ifdef V7_BCODE_TRACE
     {
@@ -16386,6 +16847,18 @@ restart:
         PUSH(v7_create_boolean(b_bool_bin_op(v7, op, d1, d2)));
         break;
       }
+      case OP_INSTANCEOF: {
+        v2 = POP();
+        v1 = POP();
+        if (!v7_is_function(v2) && !v7_is_cfunction(i_value_of(v7, v2))) {
+          err = bcode_throw_exception(
+              v7, &r, TYPE_ERROR, "Expecting a function in instanceof check");
+          goto restart;
+        }
+        PUSH(v7_create_boolean(
+            is_prototype_of(v7, v1, v7_get(v7, v2, "prototype", 9))));
+        break;
+      }
       case OP_IN:
         v2 = POP();
         v1 = POP();
@@ -16412,9 +16885,24 @@ restart:
       }
       case OP_GET_VAR: {
         int arg;
+        struct v7_property *p;
         assert(r.ops < r.end - 1);
         arg = (int) *(++r.ops);
-        PUSH(v7_get_v(v7, v7->call_stack, r.lit[arg]));
+        if ((p = v7_get_property_v(v7, v7->call_stack, r.lit[arg])) == NULL) {
+          /* variable does not exist: Reference Error */
+          const char *s;
+          size_t name_len;
+
+          assert(v7_is_string(r.lit[arg]));
+          s = v7_to_string(v7, &r.lit[arg], &name_len);
+
+          err =
+              bcode_throw_exception(v7, &r, REFERENCE_ERROR,
+                                    "[%.*s] is not defined", (int) name_len, s);
+          goto restart;
+        } else {
+          PUSH(v7_property_value(v7, v7->call_stack, p));
+        }
         break;
       }
       case OP_SET_VAR: {
@@ -16461,71 +16949,106 @@ restart:
       case OP_CREATE_ARR:
         PUSH(v7_create_array(v7));
         break;
+      case OP_FUNC_LIT: {
+        v1 = POP();
+        v2 = bcode_instantiate_function(v7, v1);
+        PUSH(v2);
+        break;
+      }
       case OP_CALL: {
         /* Naive implementation pending stack frame redesign */
         int args = (int) *(++r.ops);
         val_t this_obj = v7_get_global(v7); /* TODO(mkm) handle `this` */
 
         if (SP() < args) {
-          throw_exception(v7, INTERNAL_ERROR, "stack underflow",
-                          __func__); /* LCOV_EXCL_LINE */
-        }
-        v2 = v7_create_dense_array(v7);
-        while (args > 0) {
-          v7_array_set(v7, v2, --args, POP());
-        }
-        v1 = POP();
-
-        if (v7_to_function(v1)->ast != NULL) {
-          /*
-           * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
-           * exceptions
-           */
-          PUSH(i_apply(v7, v1, this_obj, v2));
+          err =
+              bcode_throw_exception(v7, &r, INTERNAL_ERROR, "stack underflow");
+          goto restart;
         } else {
-          int i, names_len;
-          val_t *name;
-          struct v7_function *func = v7_to_function(v1);
-
-          frame = v7_create_object(v7);
-
-          names_len = func->bcode->names.len / sizeof(val_t);
-          name = (val_t *) func->bcode->names.buf;
-
-          assert(func->bcode->args < names_len);
-          for (i = 1; i < func->bcode->args + 1; i++) {
-            v7_set_v(v7, frame, name[i], v7_array_get(v7, v2, i - 1));
+          v2 = v7_create_dense_array(v7);
+          while (args > 0) {
+            v7_array_set(v7, v2, --args, POP());
           }
-          for (; i < names_len; i++, name++) {
-            v7_set_v(v7, frame, name[i], v7_create_undefined());
-          }
-          bcode_perform_call(v7, r.bcode, frame, func, &r);
+          v1 = POP();
 
-          frame = v7_create_undefined();
-          continue; /* don't increment ops */
+          if (v7_to_function(v1)->ast != NULL) {
+            /*
+             * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
+             * exceptions
+             */
+            PUSH(i_apply(v7, v1, this_obj, v2));
+          } else {
+            int i, names_len;
+            val_t *name;
+            struct v7_function *func = v7_to_function(v1);
+
+            frame = v7_create_object(v7);
+
+            names_len = func->bcode->names.len / sizeof(val_t);
+            name = (val_t *) func->bcode->names.buf;
+
+            assert(func->bcode->args < names_len);
+            for (i = 1; i < func->bcode->args + 1; i++) {
+              v7_set_v(v7, frame, name[i], v7_array_get(v7, v2, i - 1));
+            }
+            for (; i < names_len; i++, name++) {
+              v7_set_v(v7, frame, name[i], v7_create_undefined());
+            }
+            bcode_perform_call(v7, r.bcode, frame, func, &r);
+
+            frame = v7_create_undefined();
+            continue; /* don't increment ops */
+          }
         }
         break;
       }
       case OP_RET:
-        bcode_perform_return(v7, &r);
+        bcode_perform_return(v7, &r, 1);
+        goto restart;
+      case OP_TRY_PUSH_CATCH:
+      case OP_TRY_PUSH_FINALLY:
+        eval_try_push(v7, op, &r);
+        break;
+      case OP_TRY_POP:
+        eval_try_pop(v7);
+        break;
+      case OP_AFTER_FINALLY:
+        /*
+         * exited from `finally` block: if some value is currently being
+         * returned, continue returning it.
+         *
+         * Likewise, if some value is currently being thrown, continue
+         * unwinding stack.
+         */
+        if (v7->is_thrown) {
+          err = bcode_perform_throw(v7, &r, 0 /*don't take value from stack*/);
+          goto restart;
+        } else if (v7->is_returned) {
+          bcode_perform_return(v7, &r, 0 /*don't take value from stack*/);
+          goto restart;
+        }
+        break;
+      case OP_THROW:
+        err = bcode_perform_throw(v7, &r, 1 /*take thrown value*/);
         goto restart;
       default:
-        tmp_frame_cleanup(&tf);
-        throw_exception(v7, INTERNAL_ERROR, "%s",
-                        __func__); /* LCOV_EXCL_LINE */
-        return;                    /* LCOV_EXCL_LINE */
+        err = bcode_throw_exception(v7, &r, INTERNAL_ERROR,
+                                    "Unknown opcode: %d", (int) op);
+        goto restart;
     }
     r.ops++;
   }
 
   /* implicit return */
   if (v7->call_stack != v7->global_object) {
-    bcode_perform_return(v7, &r);
+    bcode_perform_return(v7, &r, 1);
     POP();
     PUSH(v7_create_undefined());
     goto restart;
   }
   tmp_frame_cleanup(&tf);
+
+  return err;
 }
 
 V7_PRIVATE void bcode_init(struct bcode *bcode) {
@@ -16558,8 +17081,8 @@ V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
   }
 }
 
-V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *v7, const char *src,
-                                      v7_val_t *res, int dump) {
+V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
+                                     v7_val_t *res) {
   enum v7_err err = V7_OK;
   struct ast a;
   struct bcode *bcode;
@@ -16586,28 +17109,21 @@ V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *v7, const char *src,
     return err;
   }
 
-  if (dump) dump_bcode(stderr, bcode);
-
   v7->call_stack = v7->global_object;
-  eval_bcode(v7, bcode);
-  assert(SP() >= 1);
-  *res = POP();
+  err = eval_bcode(v7, bcode);
+  if (err == V7_OK) {
+    assert(SP() >= 1);
+    *res = POP();
+  } else {
+    /* some exception happened */
+    *res = v7->thrown_error;
+  }
 
   bcode_free(bcode);
   free(bcode);
 
   v7->call_stack = saved_call_stack;
   return err;
-}
-
-V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
-                                     v7_val_t *res) {
-  return v7_exec_bcode2(v7, src, res, 0);
-}
-
-V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
-                                          v7_val_t *res) {
-  return v7_exec_bcode2(v7, src, res, 1);
 }
 
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op) {
@@ -16733,6 +17249,9 @@ V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
       break;
     case AST_GE:
       op = OP_GE;
+      break;
+    case AST_INSTANCEOF:
+      op = OP_INSTANCEOF;
       break;
     default:
       strncpy(v7->error_msg, "unknown binary ast node", sizeof(v7->error_msg));
@@ -16879,6 +17398,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     case AST_LE:
     case AST_GT:
     case AST_GE:
+    case AST_INSTANCEOF:
       BTRY(compile_binary(v7, a, pos, tag, bcode));
       break;
     case AST_LOGICAL_NOT:
@@ -17062,8 +17582,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       uint8_t flit = 0;
       val_t funv = create_function(v7);
       struct v7_function *func = v7_to_function(funv);
-      func->scope =
-          v7_to_object(v7_get_global(v7)); /* TODO(mkm): handle closures */
+      func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode);
       func->bcode->refcnt = 1;
@@ -17072,6 +17591,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       (*pos)--;
       BTRY(compile_function(v7, a, pos, func->bcode));
       bcode_push_lit(bcode, flit);
+      bcode_op(bcode, OP_FUNC_LIT);
       break;
     }
     case AST_THIS:
@@ -17237,6 +17757,175 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
       break;
+
+    /*
+     * Frame objects (`v7->call_stack`) contain one more hidden property:
+     * `____t`, which is an array of offsets in bcode. Each element of the array
+     * is an offset of either `catch` or `finally` block (distinguished by the
+     * tag: `OFFSET_TAG_CATCH` or `OFFSET_TAG_FINALLY`). Let's call this array
+     * as a "try stack". When evaluator enters new `try` block, it adds
+     * appropriate offset(s) at the top of "try stack", and when we unwind the
+     * stack, we can "pop" offsets from "try stack" at each level.
+     *
+     * try {
+     *   TRY_B
+     * } catch (e) {
+     *   CATCH_B
+     * } finally {
+     *   FIN_B
+     * }
+     *
+     * ->
+     *    OP_TRY_PUSH_FINALLY finally
+     *    OP_TRY_PUSH_CATCH catch
+     *    <TRY_B>
+     *    OP_TRY_POP
+     *    JMP finally
+     *  catch:
+     *    OP_TRY_POP
+     *    OP_SET_VAR (bind exception to the catch variable)
+     *    <CATCH_B>
+     *  finally:
+     *    OP_TRY_POP
+     *    <FIN_B>
+     *    OP_AFTER_FINALLY
+     *
+     * ---------------
+     *
+     * try {
+     *   TRY_B
+     * } catch (e) {
+     *   CATCH_B
+     * }
+     *
+     * ->
+     *    OP_TRY_PUSH_CATCH catch
+     *    <TRY_B>
+     *    OP_TRY_POP
+     *    JMP end
+     *  catch:
+     *    OP_TRY_POP
+     *    OP_SET_VAR (bind exception to the catch variable)
+     *    <CATCH_B>
+     *  end:
+     *
+     * ---------------
+     *
+     * try {
+     *   TRY_B
+     * } finally {
+     *   FIN_B
+     * }
+     *
+     * ->
+     *    OP_TRY_PUSH_FINALLY finally
+     *    <TRY_B>
+     *  finally:
+     *    OP_TRY_POP
+     *    <FIN_B>
+     *    OP_AFTER_FINALLY
+     */
+    case AST_TRY: {
+      ast_off_t acatch, afinally;
+      bcode_off_t finally_label, catch_label;
+
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+      afinally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
+      ast_move_to_children(a, pos);
+
+      /* make sure at least `catch` or `finally` is present */
+      if (acatch == end) {
+        strncpy(v7->error_msg, "Missing catch or finally after try",
+                sizeof(v7->error_msg));
+        return V7_SYNTAX_ERROR;
+      }
+
+      if (afinally != end) {
+        /* `finally` clause is present: push its offset */
+        bcode_op(bcode, OP_TRY_PUSH_FINALLY);
+        finally_label = bcode_add_target(bcode);
+      }
+
+      if (acatch != afinally) {
+        /* `catch` clause is present: push its offset */
+        bcode_op(bcode, OP_TRY_PUSH_CATCH);
+        catch_label = bcode_add_target(bcode);
+      }
+
+      /* compile statements of `try` block */
+      BTRY(compile_stmts(v7, a, pos, acatch, bcode));
+
+      if (acatch != afinally) {
+        /* `catch` clause is present: compile it */
+        bcode_off_t after_catch_label;
+
+        /*
+         * pop offset pushed by OP_TRY_PUSH_CATCH, and jump over the `catch`
+         * block
+         */
+        bcode_op(bcode, OP_TRY_POP);
+        bcode_op(bcode, OP_JMP);
+        after_catch_label = bcode_add_target(bcode);
+
+        /* --- catch --- */
+
+        /* in case of exception in the `try` block above, we'll get here */
+        bcode_patch_target(bcode, catch_label, bcode_pos(bcode));
+
+        /* pop offset pushed by OP_TRY_PUSH_CATCH */
+        bcode_op(bcode, OP_TRY_POP);
+
+        /*
+         * retrieve identifier where to store thrown error, and make sure
+         * it is actually an indentifier (AST_IDENT)
+         */
+        tag = ast_fetch_tag(a, pos);
+        BCHECK(tag == AST_IDENT, V7_SYNTAX_ERROR);
+
+        /*
+         * When we enter `catch` block, the TOS contains thrown value.
+         * Let's add code that saves thrown error into specified identifier
+         */
+        {
+          uint8_t lit = string_lit(v7, a, pos, bcode);
+          bcode_op(bcode, OP_SET_VAR);
+          bcode_op(bcode, lit);
+        }
+
+        /*
+         * compile statements until the end of `catch` clause
+         * (`afinally` points to the end of the `catch` clause independently
+         * of whether the `finally` clause is present)
+         */
+        BTRY(compile_stmts(v7, a, pos, afinally, bcode));
+
+        bcode_patch_target(bcode, after_catch_label, bcode_pos(bcode));
+      }
+
+      if (afinally != end) {
+        /* `finally` clause is present: compile it */
+
+        /* --- finally --- */
+
+        /* after the `try` block above executes, we'll get here */
+        bcode_patch_target(bcode, finally_label, bcode_pos(bcode));
+
+        /* pop offset pushed by OP_TRY_PUSH_FINALLY */
+        bcode_op(bcode, OP_TRY_POP);
+
+        /* compile statements until the end of `finally` clause */
+        BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+        bcode_op(bcode, OP_AFTER_FINALLY);
+      }
+    } break;
+
+    case AST_THROW: {
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_THROW);
+    } break;
+
     /*
      * for(INIT,COND,IT) {
      *   B...
@@ -17367,14 +18056,23 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
                                       struct bcode *bcode) {
   ast_off_t end, pos = 0;
   enum ast_tag tag = ast_fetch_tag(a, &pos);
+  enum v7_err ret;
   (void) tag;
   assert(tag == AST_SCRIPT);
   end = ast_get_skip(a, pos, AST_END_SKIP);
   ast_move_to_children(a, &pos);
 
-  return compile_stmts(v7, a, &pos, end, bcode);
+  ret = compile_stmts(v7, a, &pos, end, bcode);
+
+#ifdef V7_BCODE_DUMP
+  fprintf(stderr, "--- script ---\n");
+  dump_bcode(stderr, bcode);
+#endif
+
+  return ret;
 }
 
+extern void dump_bcode(FILE *f, struct bcode *bcode);
 /*
  * Compiles a given function and populates a bcode structure.
  * The AST must contain an AST_FUNC node at offset ast_off.
@@ -17440,6 +18138,11 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   if (bcode->ops.buf == NULL) {
     bcode_op(bcode, OP_PUSH_UNDEFINED);
   }
+
+#ifdef V7_BCODE_DUMP
+  fprintf(stderr, "--- function ---\n");
+  dump_bcode(stderr, bcode);
+#endif
   return V7_OK;
 }
 
@@ -23536,7 +24239,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
     exec = v7_exec;
 #ifdef V7_ENABLE_BCODE
     if (use_bcode[j]) {
-      exec = v7_exec_bcode_dump;
+      exec = v7_exec_bcode;
     }
 #endif
 

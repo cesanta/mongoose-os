@@ -369,6 +369,9 @@ unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 /* Insert value `v` in array `arr` at index `index`. */
 int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
 
+/* Delete value in array `arr` at index `index`, if it exists. */
+void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
+
 /* Insert value `v` in array `arr` at the end of the array. */
 int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
 
