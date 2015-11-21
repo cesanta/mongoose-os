@@ -16372,6 +16372,7 @@ struct bcode_registers {
   uint8_t *ops;
   uint8_t *end;
   val_t *lit;
+  unsigned int need_inc_ops : 1;
 };
 
 static void bcode_restore_registers(struct bcode *bcode,
@@ -16535,6 +16536,9 @@ static void bcode_perform_return(struct v7 *v7, struct bcode_registers *r,
     v7->is_returned = 0;
     v7->returned_value = v7_create_undefined();
   }
+
+  /* `ops` already points to the needed instruction, no need to increment it */
+  r->need_inc_ops = 0;
 }
 
 /*
@@ -16583,6 +16587,9 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
     v7->is_thrown = 0;
     v7->thrown_error = v7_create_undefined();
   }
+
+  /* `ops` already points to the needed instruction, no need to increment it */
+  r->need_inc_ops = 0;
 
   return err;
 }
@@ -16713,6 +16720,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *_bcode) {
 restart:
   while (r.ops < r.end && err == V7_OK) {
     enum opcode op = (enum opcode) * r.ops;
+    r.need_inc_ops = 1;
 #ifdef V7_BCODE_TRACE
     {
       uint8_t *dops = r.ops;
@@ -16853,10 +16861,10 @@ restart:
         if (!v7_is_function(v2) && !v7_is_cfunction(i_value_of(v7, v2))) {
           err = bcode_throw_exception(
               v7, &r, TYPE_ERROR, "Expecting a function in instanceof check");
-          goto restart;
+        } else {
+          PUSH(v7_create_boolean(
+              is_prototype_of(v7, v1, v7_get(v7, v2, "prototype", 9))));
         }
-        PUSH(v7_create_boolean(
-            is_prototype_of(v7, v1, v7_get(v7, v2, "prototype", 9))));
         break;
       }
       case OP_IN:
@@ -16899,7 +16907,7 @@ restart:
           err =
               bcode_throw_exception(v7, &r, REFERENCE_ERROR,
                                     "[%.*s] is not defined", (int) name_len, s);
-          goto restart;
+          break;
         } else {
           PUSH(v7_property_value(v7, v7->call_stack, p));
         }
@@ -16963,7 +16971,7 @@ restart:
         if (SP() < args) {
           err =
               bcode_throw_exception(v7, &r, INTERNAL_ERROR, "stack underflow");
-          goto restart;
+          break;
         } else {
           v2 = v7_create_dense_array(v7);
           while (args > 0) {
@@ -17004,7 +17012,7 @@ restart:
       }
       case OP_RET:
         bcode_perform_return(v7, &r, 1);
-        goto restart;
+        break;
       case OP_TRY_PUSH_CATCH:
       case OP_TRY_PUSH_FINALLY:
         eval_try_push(v7, op, &r);
@@ -17022,21 +17030,23 @@ restart:
          */
         if (v7->is_thrown) {
           err = bcode_perform_throw(v7, &r, 0 /*don't take value from stack*/);
-          goto restart;
+          break;
         } else if (v7->is_returned) {
           bcode_perform_return(v7, &r, 0 /*don't take value from stack*/);
-          goto restart;
+          break;
         }
         break;
       case OP_THROW:
         err = bcode_perform_throw(v7, &r, 1 /*take thrown value*/);
-        goto restart;
+        break;
       default:
         err = bcode_throw_exception(v7, &r, INTERNAL_ERROR,
                                     "Unknown opcode: %d", (int) op);
-        goto restart;
+        break;
     }
-    r.ops++;
+    if (r.need_inc_ops) {
+      r.ops++;
+    }
   }
 
   /* implicit return */
