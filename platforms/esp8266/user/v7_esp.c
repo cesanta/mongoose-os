@@ -9,6 +9,7 @@
 #include <sj_i2c_js.h>
 #include <sj_spi_js.h>
 #include <sj_gpio_js.h>
+#include <sj_adc_js.h>
 #include "v7_esp.h"
 #include "dht11.h"
 #include "util.h"
@@ -170,6 +171,7 @@ void init_v7(void *stack_base) {
   sj_init_v7_ext(v7);
 
   init_gpiojs(v7);
+  init_adcjs(v7);
   init_i2cjs(v7);
   init_pwm(v7);
   init_spijs(v7);

@@ -2730,6 +2730,10 @@ struct v7 {
   val_t date_prototype;
   val_t function_prototype;
 
+#ifdef V7_ENABLE_BCODE
+  struct bcode *bcode;
+#endif
+
   /*
    * Stack of execution contexts.
    * Execution contexts are contained in two chains:
@@ -11547,12 +11551,21 @@ void v7_gc(struct v7 *v7, int full) {
   }
 
 #ifdef V7_ENABLE_BCODE
+  /* mark all items on bcode stack */
   gc_mark_mbuf_val(v7, &v7->stack);
+
+  /* mark temporary ("stash") register for `OP_STASH` and `OP_UNSTASH` */
   gc_mark(v7, v7->stash);
 #ifndef V7_DISABLE_COMPACTING_GC
   gc_mark_string(v7, &v7->stash);
 #endif
+
+  /* mark literals of the bcode being executed */
+  if (v7->bcode != NULL) {
+    gc_mark_mbuf_val(v7, &v7->bcode->lit);
+  }
 #endif
+
   gc_mark_mbuf_pt(v7, &v7->tmp_stack);
   gc_mark_mbuf_pt(v7, &v7->owned_values);
 
@@ -17095,7 +17108,6 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
                                      v7_val_t *res) {
   enum v7_err err = V7_OK;
   struct ast a;
-  struct bcode *bcode;
   val_t saved_call_stack = v7->call_stack;
   (void) res;
 
@@ -17108,10 +17120,10 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
     return err;
   }
 
-  bcode = (struct bcode *) calloc(1, sizeof(*bcode));
-  bcode_init(bcode);
+  v7->bcode = (struct bcode *) calloc(1, sizeof(*v7->bcode));
+  bcode_init(v7->bcode);
 
-  err = compile_script(v7, &a, bcode);
+  err = compile_script(v7, &a, v7->bcode);
   if (err != V7_OK) {
     if (res != NULL) {
       *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
@@ -17120,7 +17132,7 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
   }
 
   v7->call_stack = v7->global_object;
-  err = eval_bcode(v7, bcode);
+  err = eval_bcode(v7, v7->bcode);
   if (err == V7_OK) {
     assert(SP() >= 1);
     *res = POP();
@@ -17129,8 +17141,9 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
     *res = v7->thrown_error;
   }
 
-  bcode_free(bcode);
-  free(bcode);
+  bcode_free(v7->bcode);
+  free(v7->bcode);
+  v7->bcode = NULL;
 
   v7->call_stack = saved_call_stack;
   return err;
