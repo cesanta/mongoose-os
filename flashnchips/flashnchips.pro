@@ -5,7 +5,7 @@ TEMPLATE = app
 macx:TARGET = "FlashNChips"
 INCLUDEPATH += .
 QT += widgets serialport network
-CONFIG += c++14
+CONFIG += c++11
 
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 

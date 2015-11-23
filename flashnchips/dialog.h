@@ -81,6 +81,9 @@ class MainDialog : public QMainWindow {
 signals:
   void gotPrompt();
   void showPromptResult(int clicked_button);
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  void updatePlatformSelector(int index);
+#endif
 
  private:
   Config *config_ = nullptr;

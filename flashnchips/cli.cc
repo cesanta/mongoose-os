@@ -42,7 +42,11 @@ CLI::CLI(Config* config, QCommandLineParser* parser, QObject* parent)
       config_(config),
       parser_(parser),
       prompter_(new CLIPrompterImpl(this)) {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  QTimer::singleShot(0, this, SLOT(run()));
+#else
   QTimer::singleShot(0, this, &CLI::run);
+#endif
 }
 
 void CLI::run() {

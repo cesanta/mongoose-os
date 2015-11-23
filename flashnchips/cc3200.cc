@@ -1090,10 +1090,13 @@ std::unique_ptr<::HAL> HAL() {
 }
 
 void addOptions(Config* config) {
-  config->addOptions({{kFormatFailFS,
-                       "Format SFLASH file system before flashing. Accepted "
-                       "sizes: 512, 1M, 2M, 4M, 8M, 16M.",
-                       "size"}});
+  // QCommandLineOption supports C++11-style initialization only since Qt 5.4.
+  QList<QCommandLineOption> opts;
+  opts.append(QCommandLineOption(kFormatFailFS,
+                                 "Format SFLASH file system before flashing. "
+                                 "Accepted sizes: 512, 1M, 2M, 4M, 8M, 16M.",
+                                 "size"));
+  config->addOptions(opts);
 }
 
 }  // namespace CC3200

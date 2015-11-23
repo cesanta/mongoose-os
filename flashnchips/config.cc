@@ -70,7 +70,14 @@ void Config::fromCommandLine(const QCommandLineParser& parser) {
 }
 
 bool Config::addOptionsToParser(QCommandLineParser* parser) const {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  for (const auto& opt : options_) {
+    parser->addOption(opt);
+  }
+  return true;
+#else
   return parser->addOptions(options_);
+#endif
 }
 
 QList<QCommandLineOption> Config::options() const {

@@ -1273,41 +1273,49 @@ util::StatusOr<int> flashParamsFromString(const QString& s) {
   }
 }
 
-void addOptions(Config* parser) {
-  parser->addOptions(
-      {{kFlashParamsOption,
-        "Override params bytes read from existing firmware. Either a "
-        "comma-separated string or a number. First component of the string is "
-        "the flash mode, must be one of: qio (default), qout, dio, dout. "
-        "Second component is flash size, value values: 2m, 4m (default), 8m, "
-        "16m, 32m, 16m-c1, 32m-c1, 32m-c2. Third one is flash frequency, valid "
-        "values: 40m (default), 26m, 20m, 80m. If it's a number, only 2 lowest "
-        "bytes from it will be written in the header of section 0x0000 in "
-        "big-endian byte order (i.e. high byte is put at offset 2, low byte at "
-        "offset 3).",
-        "params"},
-       {kSkipReadingFlashParamsOption,
-        "If set and --esp8266-flash-params is not used, reading flash params "
-        "from the device will not be attempted and image at 0x0000 will be "
-        "written as is."},
-       {kDisableEraseWorkaroundOption,
-        "ROM code can erase up to 16 extra 4KB sectors when flashing firmware. "
-        "This flag disables the workaround that makes it erase at most 1 extra "
-        "sector."},
-       {kFlashingDataPortOption,
-        "If set, communication with ROM will be performed using another serial "
-        "port. DTR/RTS signals for rebooting and console will still use the "
-        "main port.",
-        "port"},
-       {kInvertDTRRTSOption,
-        "If set, code that reboots the board will assume that your "
-        "USB-to-serial adapter has logical levels for DTR and RTS lines "
-        "inverted."},
-       {kSPIFFSOffsetOption,
-        "Location of the SPIFFS filesystem block in flash.", "offset",
-        kDefaultSPIFFSOffset},
-       {kSPIFFSSizeOption, "Size of the SPIFFS region in flash.", "size",
-        kDefaultSPIFFSSize}});
+void addOptions(Config* config) {
+  // QCommandLineOption supports C++11-style initialization only since Qt 5.4.
+  QList<QCommandLineOption> opts;
+  opts.append(QCommandLineOption(
+      kFlashParamsOption,
+      "Override params bytes read from existing firmware. Either a "
+      "comma-separated string or a number. First component of the string is "
+      "the flash mode, must be one of: qio (default), qout, dio, dout. "
+      "Second component is flash size, value values: 2m, 4m (default), 8m, "
+      "16m, 32m, 16m-c1, 32m-c1, 32m-c2. Third one is flash frequency, valid "
+      "values: 40m (default), 26m, 20m, 80m. If it's a number, only 2 lowest "
+      "bytes from it will be written in the header of section 0x0000 in "
+      "big-endian byte order (i.e. high byte is put at offset 2, low byte at "
+      "offset 3).",
+      "params"));
+  opts.append(QCommandLineOption(
+      kSkipReadingFlashParamsOption,
+      "If set and --esp8266-flash-params is not used, reading flash params "
+      "from the device will not be attempted and image at 0x0000 will be "
+      "written as is."));
+  opts.append(QCommandLineOption(
+      kDisableEraseWorkaroundOption,
+      "ROM code can erase up to 16 extra 4KB sectors when flashing firmware. "
+      "This flag disables the workaround that makes it erase at most 1 extra "
+      "sector."));
+  opts.append(QCommandLineOption(
+      kFlashingDataPortOption,
+      "If set, communication with ROM will be performed using another serial "
+      "port. DTR/RTS signals for rebooting and console will still use the "
+      "main port.",
+      "port"));
+  opts.append(QCommandLineOption(
+      kInvertDTRRTSOption,
+      "If set, code that reboots the board will assume that your "
+      "USB-to-serial adapter has logical levels for DTR and RTS lines "
+      "inverted."));
+  opts.append(QCommandLineOption(
+      kSPIFFSOffsetOption, "Location of the SPIFFS filesystem block in flash.",
+      "offset", kDefaultSPIFFSOffset));
+  opts.append(QCommandLineOption(kSPIFFSSizeOption,
+                                 "Size of the SPIFFS region in flash.", "size",
+                                 kDefaultSPIFFSSize));
+  config->addOptions(opts);
 }
 
 QByteArray makeIDBlock(const QString& domain) {

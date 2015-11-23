@@ -100,33 +100,44 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setApplicationVersion(VERSION);
 
   Config config;
-  config.addOptions(
-      {{{"debug", "d"}, "Enable debug output. Equivalent to --V=4"},
-       {{"verbose", "V"},
-        "Verbosity level. 0 – normal output, 1 - also print critical (but not "
-        "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
-        "print debug output.",
-        "level",
-        "1"},
-       {"log", "Redirect logging into a file.", "filename"},
-       {"console-baud-rate", "Baud rate to use with the console serial port.",
-        "number", "115200"},
-       {Flasher::kFlashBaudRateOption,
-        "Baud rate to use with the serial port used for flashing.", "number",
-        "0"},
-       {Flasher::kIdDomainOption,
-        "Domain name to use for generated device IDs. Default: api.cesanta.com",
-        "name", "api.cesanta.com"},
-       {Flasher::kOverwriteFSOption,
-        "If set, force overwrite the data flash with the factory image"},
-       {Flasher::kDumpFSOption,
-        "Dump file system image to a given file before merging.", "filename"},
-       {Flasher::kSkipIdGenerationOption,
-        "If set, device ID won't be generated and flashed."},
-       {"console-log",
-        "If set, bytes read from a serial port in console mode will be "
-        "appended to the given file.",
-        "file"}});
+  // QCommandLineOption supports C++11-style initialization only since Qt 5.4.
+  QList<QCommandLineOption> commonOpts;
+  commonOpts.append(QCommandLineOption(
+      {"debug", "d"}, "Enable debug output. Equivalent to --V=4"));
+  commonOpts.append(QCommandLineOption(
+      {"verbose", "V"},
+      "Verbosity level. 0 – normal output, 1 - also print critical (but not "
+      "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
+      "print debug output.",
+      "level", "1"));
+  commonOpts.append(
+      QCommandLineOption("log", "Redirect logging into a file.", "filename"));
+  commonOpts.append(QCommandLineOption(
+      "console-baud-rate", "Baud rate to use with the console serial port.",
+      "number", "115200"));
+  commonOpts.append(QCommandLineOption(
+      Flasher::kFlashBaudRateOption,
+      "Baud rate to use with the serial port used for flashing.", "number",
+      "0"));
+  commonOpts.append(QCommandLineOption(
+      Flasher::kIdDomainOption,
+      "Domain name to use for generated device IDs. Default: api.cesanta.com",
+      "name", "api.cesanta.com"));
+  commonOpts.append(QCommandLineOption(
+      Flasher::kOverwriteFSOption,
+      "If set, force overwrite the data flash with the factory image"));
+  commonOpts.append(QCommandLineOption(
+      Flasher::kDumpFSOption,
+      "Dump file system image to a given file before merging.", "filename"));
+  commonOpts.append(
+      QCommandLineOption(Flasher::kSkipIdGenerationOption,
+                         "If set, device ID won't be generated and flashed."));
+  commonOpts.append(QCommandLineOption(
+      "console-log",
+      "If set, bytes read from a serial port in console mode will be "
+      "appended to the given file.",
+      "file"));
+  config.addOptions(commonOpts);
   ESP8266::addOptions(&config);
   CC3200::addOptions(&config);
 
@@ -134,21 +145,32 @@ int main(int argc, char* argv[]) {
   parser.setApplicationDescription("Smart.js flashing tool");
   parser.addHelpOption();
   parser.addVersionOption();
-  parser.addOptions({
-      {"gui", "Run in GUI mode."},
-      {{"p", "platform"},
-       "Target device platform. Required. Valid values: esp8266, cc3200.",
-       "platform"},
-      {"port", "Serial port to use.", "port"},
-      {{"l", "probe-ports"},
-       "Print the list of available serial ports and try detect device "
-       "presence on each of them."},
-      {"probe", "Check device presence on a given port."},
-      {"flash", "Flash firmware from the given directory.", "dir"},
-      {"generate-id",
-       "Generate a file with device ID in a format suitable for flashing.",
-       "filename"},
-  });
+  QList<QCommandLineOption> cliOpts;
+  cliOpts.append(QCommandLineOption("gui", "Run in GUI mode."));
+  cliOpts.append(QCommandLineOption(
+      {"p", "platform"},
+      "Target device platform. Required. Valid values: esp8266, cc3200.",
+      "platform"));
+  cliOpts.append(QCommandLineOption("port", "Serial port to use.", "port"));
+  cliOpts.append(QCommandLineOption(
+      {"l", "probe-ports"},
+      "Print the list of available serial ports and try detect device "
+      "presence on each of them."));
+  cliOpts.append(
+      QCommandLineOption("probe", "Check device presence on a given port."));
+  cliOpts.append(QCommandLineOption(
+      "flash", "Flash firmware from the given directory.", "dir"));
+  cliOpts.append(QCommandLineOption(
+      "generate-id",
+      "Generate a file with device ID in a format suitable for flashing.",
+      "filename"));
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  for (const auto& opt : cliOpts) {
+    parser.addOption(opt);
+  }
+#else
+  parser.addOptions(cliOpts);
+#endif
   config.addOptionsToParser(&parser);
 
 #ifdef Q_OS_MAC

@@ -99,11 +99,20 @@ MainDialog::MainDialog(Config* config, QWidget* parent)
   restoreState(settings_.value("window/state").toByteArray());
   skip_detect_warning_ = settings_.value("skipDetectWarning", false).toBool();
 
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  connect(this, &MainDialog::updatePlatformSelector, ui_.platformSelector,
+          &QComboBox::setCurrentIndex, Qt::QueuedConnection);
+#endif
+
   QString p = settings_.value("selectedPlatform", "ESP8266").toString();
   for (int i = 0; i < ui_.platformSelector->count(); i++) {
     if (p == ui_.platformSelector->itemText(i)) {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+      emit updatePlatformSelector(i);
+#else
       QTimer::singleShot(
           0, [this, i]() { ui_.platformSelector->setCurrentIndex(i); });
+#endif
       break;
     }
   }
@@ -139,8 +148,13 @@ MainDialog::MainDialog(Config* config, QWidget* parent)
 
   enableControlsForCurrentState();
 
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  QTimer::singleShot(0, this, SLOT(updatePortList()));
+  QTimer::singleShot(0, this, SLOT(updateFWList()));
+#else
   QTimer::singleShot(0, this, &MainDialog::updatePortList);
   QTimer::singleShot(0, this, &MainDialog::updateFWList);
+#endif
   refresh_timer_ = new QTimer(this);
   refresh_timer_->start(500);
   connect(refresh_timer_, &QTimer::timeout, this, &MainDialog::updatePortList);
@@ -277,7 +291,11 @@ void MainDialog::resetHAL(QString name) {
   } else {
     qFatal("Unknown platform: %s", name.toStdString().c_str());
   }
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  QTimer::singleShot(0, this, SLOT(updateFWList()));
+#else
   QTimer::singleShot(0, this, &MainDialog::updateFWList);
+#endif
 }
 
 void MainDialog::showPrompt(
@@ -316,7 +334,11 @@ util::Status MainDialog::openSerial() {
               &QSerialPort::error),
           [this](QSerialPort::SerialPortError err) {
             if (err == QSerialPort::ResourceError) {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+              QTimer::singleShot(0, this, SLOT(closeSerial()));
+#else
               QTimer::singleShot(0, this, &MainDialog::closeSerial);
+#endif
             }
           });
 
@@ -720,7 +742,11 @@ void MainDialog::loadFirmware() {
   f->moveToThread(worker_.get());
   serial_port_->moveToThread(worker_.get());
   worker_->start();
+#if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
+  QTimer::singleShot(0, f.get(), SLOT(run()));
+#else
   QTimer::singleShot(0, f.get(), &Flasher::run);
+#endif
   f.release();
 }
 
