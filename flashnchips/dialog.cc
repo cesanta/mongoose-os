@@ -145,6 +145,7 @@ MainDialog::MainDialog(Config* config, QWidget* parent)
   enabled_in_state_.insert(ui_.rebootBtn, Connected);
   enabled_in_state_.insert(ui_.rebootBtn, Terminal);
   enabled_in_state_.insert(ui_.terminalInput, Terminal);
+  enabled_in_state_.insert(ui_.uploadBtn, Terminal);
 
   enableControlsForCurrentState();
 
@@ -200,6 +201,8 @@ MainDialog::MainDialog(Config* config, QWidget* parent)
           &MainDialog::configureWiFi);
   connect(ui_.actionUpload_a_file, &QAction::triggered, this,
           &MainDialog::uploadFile);
+
+  connect(ui_.uploadBtn, &QPushButton::clicked, this, &MainDialog::uploadFile);
 
   connect(ui_.terminalInput, &QLineEdit::returnPressed, this,
           &MainDialog::writeSerial);

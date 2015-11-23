@@ -98,7 +98,7 @@
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="terminalControlsLayout" stretch="0,0,0,0,0">
+     <layout class="QHBoxLayout" name="terminalControlsLayout" stretch="0,0,0,0,0,0">
       <property name="topMargin">
        <number>10</number>
       </property>
@@ -140,6 +140,13 @@
        <widget class="QPushButton" name="clearBtn">
         <property name="text">
          <string>Clear</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="uploadBtn">
+        <property name="text">
+         <string>Upload file</string>
         </property>
        </widget>
       </item>
