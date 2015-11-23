@@ -81,14 +81,17 @@ static void mg_lwip_tcp_error_cb(void *arg, err_t err) {
 static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
                                  struct pbuf *chain, err_t err) {
   struct mg_connection *nc = (struct mg_connection *) arg;
-  DBG(("%p %p %u %u %d", nc, tpcb, (chain != NULL ? chain->tot_len : 0), err));
-  if (nc == NULL) {
+  DBG(("%p %p %u %d", nc, tpcb, (chain != NULL ? chain->tot_len : 0), err));
+  if (chain == NULL) {
+    if (nc != NULL) {
+      system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
+    } else {
+      /* Tombstoned connection, do nothing. */
+    }
+    return ERR_OK;
+  } else if (nc == NULL) {
     tcp_abort(tpcb);
     return ERR_ARG;
-  }
-  if (chain == NULL) {
-    system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);
-    return ERR_OK;
   }
   while (chain != NULL) {
     struct pbuf *seg = chain;
@@ -184,7 +187,7 @@ void mg_if_connect_udp(struct mg_connection *nc) {
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   struct mg_connection *lc = (struct mg_connection *) arg, *nc;
   union socket_address sa;
-  DBG(("%p conn %p from %s:%u\n", lc, newtpcb, ipaddr_ntoa(&newtpcb->remote_ip),
+  DBG(("%p conn %p from %s:%u", lc, newtpcb, ipaddr_ntoa(&newtpcb->remote_ip),
        newtpcb->remote_port));
   sa.sin.sin_addr.s_addr = newtpcb->remote_ip.addr;
   sa.sin.sin_port = htons(newtpcb->remote_port);
@@ -284,7 +287,7 @@ void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
 void mg_if_recved(struct mg_connection *nc, size_t len) {
   if (nc->flags & MG_F_UDP) return;
   struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
-  DBG(("%p %u", nc, len));
+  DBG(("%p %p %u", nc, tpcb, len));
   tcp_recved(tpcb, len);
   mbuf_trim(&nc->recv_mbuf);
 }

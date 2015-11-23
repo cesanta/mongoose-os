@@ -22,10 +22,12 @@ APP_AR = $(BUILD_DIR)/$(APP).a
 INCDIRS = $(addprefix -I,$(IPATH))
 
 # espconn API is disabled, to enable add -DESP_ENABLE_ESPCONN below.
+#
+# Lowering TCP_MSL avoids long TIME_WAIT and LAST_ACK states.
 
 CFLAGS += -w -DLWIP_OPEN_SRC -DPBUF_RSV_FOR_WLAN -DEBUF_LWIP \
           -DLWIP_RANDOMIZE_INITIAL_LOCAL_PORTS -DLWIP_RAND=os_random \
-          $(CFLAGS_EXTRA)
+          -DTCP_MSL=3000 $(CFLAGS_EXTRA)
 
 all: $(BUILD_DIR) $(APP_AR)
 
