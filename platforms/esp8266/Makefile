@@ -11,7 +11,7 @@ all clean:
 			if [ -d /cesanta/v7 ] ; then make -C /cesanta/v7 v7.c ; fi && \
 			if [ -d /cesanta/mongoose/src ] ; then make -C /cesanta/mongoose/src ; fi && \
 			cd $(DIR) && \
-			make -f Makefile.build $@ -$(MAKEFLAGS) \
+			make -f Makefile.build $@ $(MAKEFLAGS) \
 				&& python ./tools/showbreakdown.py \
 		"
 
