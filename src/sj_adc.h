@@ -3,6 +3,9 @@
 
 /* HAL */
 
-double sj_adc_read(int pin);
+uint32_t sj_adc_read(int pin);
+
+/* return the voltage read by the ADC */
+double sj_adc_read_voltage(int pin);
 
 #endif
