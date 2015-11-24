@@ -17903,7 +17903,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
-     *   PUSH_UNDEFINED
+     *   DUP
      *   JMP cond
      * body:
      *   <B>
@@ -17918,10 +17918,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       ast_skip_tree(a, pos);
 
       /*
-       * While statement's value is the value of the last executed
-       * body statement or undefined in case the body wasn't ever run.
+       * As all compound statements, it's value is the previous statement's
+       * value if no body statement is executed.
        */
-      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      bcode_op(bcode, OP_DUP);
 
       /*
        * Condition check is at the end of the loop, this layout
@@ -18127,7 +18127,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * ->
      *   <INIT>
      *   POP
-     *   PUSH_UNDEFINED
+     *   DUP
      *   JMP cond
      * body:
      *   <B>
@@ -18150,7 +18150,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       *pos = body;
 
       bcode_op(bcode, OP_POP);
-      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      bcode_op(bcode, OP_DUP);
       bcode_op(bcode, OP_JMP);
       cond_label = bcode_add_target(bcode);
       body_target = bcode_pos(bcode);
