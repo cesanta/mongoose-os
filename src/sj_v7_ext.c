@@ -1,6 +1,8 @@
 #include "sj_v7_ext.h"
 
 #include <string.h>
+
+#include <cs_dbg.h>
 #include <v7.h>
 #include "sj_hal.h"
 
@@ -33,6 +35,16 @@ static v7_val_t OS_reset(struct v7 *v7) {
   sj_system_restart();
 
   /* Unreachable */
+  return v7_create_boolean(1);
+}
+
+static v7_val_t OS_set_log_level(struct v7 *v7) {
+  v7_val_t llv = v7_arg(v7, 0);
+  int ll;
+  if (!v7_is_number(llv)) return v7_create_boolean(0);
+  ll = v7_to_number(llv);
+  if (ll <= _LL_MIN || ll >= _LL_MAX) return v7_create_boolean(0);
+  cs_log_set_level((enum cs_log_level) ll);
   return v7_create_boolean(1);
 }
 
@@ -200,4 +212,5 @@ void sj_init_v7_ext(struct v7 *v7) {
   v7_set_method(v7, os, "prof", OS_prof);
   v7_set_method(v7, os, "wdt_feed", OS_wdt_feed);
   v7_set_method(v7, os, "reset", OS_reset);
+  v7_set_method(v7, os, "set_log_level", OS_set_log_level);
 }
