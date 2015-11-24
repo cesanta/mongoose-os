@@ -7,7 +7,9 @@
 # SSL: if set to "Krypton" enables SSL with the krypton lib
 #
 
-include ../../../common/platforms/esp8266/common.mk
+COMMON_MK_DIR ?= .
+
+include $(COMMON_MK_DIR)/common.mk
 
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
