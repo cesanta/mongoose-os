@@ -3346,6 +3346,14 @@ enum opcode {
   OP_JMP,
   OP_JMP_TRUE,
   OP_JMP_FALSE,
+  /*
+   * Like OP_JMP_TRUE but if the branch
+   * is taken it also drops another stack element:
+   *
+   * if `b` is true: `( a b -- )`
+   * if `b` is false: `( a b -- a )`
+   */
+  OP_JMP_TRUE_DROP,
 
   OP_CREATE_OBJ, /* creates an empty object */
   OP_CREATE_ARR, /* creates an empty array */
@@ -3354,7 +3362,7 @@ enum opcode {
    * Copies the function object at TOS and assigns current scope
    * in func->scope.
    *
-   * ( a -- a )
+   * `( a -- a )`
    */
   OP_FUNC_LIT,
   OP_CALL, /* takes number of args */
@@ -16348,6 +16356,7 @@ static const char *op_names[] = {
   "JMP",
   "JMP_TRUE",
   "JMP_FALSE",
+  "JMP_TRUE_DROP",
   "CREATE_OBJ",
   "CREATE_ARR",
   "FUNC_LIT",
@@ -16486,6 +16495,7 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
     case OP_JMP:
     case OP_JMP_FALSE:
     case OP_JMP_TRUE:
+    case OP_JMP_TRUE_DROP:
     case OP_TRY_PUSH_CATCH:
     case OP_TRY_PUSH_FINALLY: {
       bcode_off_t target;
@@ -17101,6 +17111,17 @@ restart:
         v1 = POP();
         if (v7_is_true(v7, v1)) {
           r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
+        }
+        break;
+      }
+      case OP_JMP_TRUE_DROP: {
+        bcode_off_t target = bcode_get_target(&r.ops);
+        v1 = POP();
+        if (v7_is_true(v7, v1)) {
+          r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
+          v1 = POP();
+          POP();
+          PUSH(v1);
         }
         break;
       }
@@ -17960,7 +17981,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
   enum ast_tag tag = ast_fetch_tag(a, pos);
   ast_off_t cond;
   bcode_off_t body_target, body_label, cond_label;
+  struct mbuf case_labels;
   enum v7_err ret = V7_OK;
+
+  mbuf_init(&case_labels, 0);
 
   switch (tag) {
     /*
@@ -18224,13 +18248,138 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
 
       v7->is_compound = 1;
-    } break;
-
+      break;
+    }
     case AST_THROW: {
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_THROW);
-    } break;
+      break;
+    }
+    /*
+     * switch(E) {
+     * default:
+     *   D...
+     * case C1:
+     *   B1...
+     * case C2:
+     *   B2...
+     * }
+     *
+     * ->
+     *   <E>
+     *   DUP
+     *   <C1>
+     *   EQ
+     *   JMP_TRUE_DROP l1
+     *   DUP
+     *   <C2>
+     *   EQ
+     *   JMP_TRUE_DROP l2
+     *   DROP
+     *   JMP dfl
+     *
+     * dfl:
+     *   <D>
+     *
+     * l1:
+     *   <B1>
+     *
+     * l2:
+     *   <B2>
+     *
+     * end:
+     *
+     * If the default case is missing we treat it as if had an empty body and
+     * placed in last position (i.e. `dfl` label is replaced with `end`).
+     *
+     * Before emitting a case/default block (except the first one) we have to
+     * drop the TOS resulting from evaluating the last expression
+     */
+    case AST_SWITCH: {
+      bcode_off_t dfl_label;
+      ast_off_t case_end, case_start;
+      enum ast_tag case_tag;
+      int i, has_default = 0, cases = 0;
 
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+
+      BTRY(compile_expr(v7, a, pos, bcode));
+
+      case_start = *pos;
+      /* first pass: evaluate case expression and generate jump table */
+      while (*pos < end) {
+        case_tag = ast_fetch_tag(a, pos);
+        assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
+
+        case_end = ast_get_skip(a, *pos, AST_END_SKIP);
+        ast_move_to_children(a, pos);
+
+        switch (case_tag) {
+          case AST_DEFAULT:
+            /* default jump table entry must be the last one */
+            break;
+          case AST_CASE: {
+            bcode_off_t case_label;
+            bcode_op(bcode, OP_DUP);
+            BTRY(compile_expr(v7, a, pos, bcode));
+            bcode_op(bcode, OP_EQ);
+            bcode_op(bcode, OP_JMP_TRUE_DROP);
+            case_label = bcode_add_target(bcode);
+            cases++;
+            mbuf_append(&case_labels, &case_label, sizeof(case_label));
+            break;
+          }
+          default:
+            assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
+        }
+        *pos = case_end;
+      }
+
+      /* jmp table epilogue: unconditional jump to default case */
+      bcode_op(bcode, OP_DROP);
+      bcode_op(bcode, OP_JMP);
+      dfl_label = bcode_add_target(bcode);
+
+      *pos = case_start;
+      /* second pass: emit case bodies and patch jump table */
+
+      for (i = 0; *pos < end;) {
+        case_tag = ast_fetch_tag(a, pos);
+        assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
+        assert(i <= cases);
+
+        case_end = ast_get_skip(a, *pos, AST_END_SKIP);
+        ast_move_to_children(a, pos);
+
+        switch (case_tag) {
+          case AST_DEFAULT:
+            has_default = 1;
+            bcode_patch_target(bcode, dfl_label, bcode_pos(bcode));
+            BTRY(compile_stmts(v7, a, pos, case_end, bcode));
+            break;
+          case AST_CASE: {
+            bcode_off_t case_label = ((bcode_off_t *) case_labels.buf)[i++];
+            bcode_patch_target(bcode, case_label, bcode_pos(bcode));
+            ast_skip_tree(a, pos);
+            BTRY(compile_stmts(v7, a, pos, case_end, bcode));
+            break;
+          }
+          default:
+            assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
+        }
+
+        *pos = case_end;
+      }
+      mbuf_free(&case_labels);
+
+      if (!has_default) {
+        bcode_patch_target(bcode, dfl_label, bcode_pos(bcode));
+      }
+
+      v7->is_compound = 1;
+      break;
+    }
     /*
      * for(INIT,COND,IT) {
      *   B...
@@ -18347,7 +18496,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       (*pos)--;
       BTRY(compile_expr(v7, a, pos, bcode));
   }
+
 clean:
+  mbuf_free(&case_labels);
   return ret;
 }
 
@@ -20561,13 +20712,15 @@ int main(int argc, char **argv) {
 
 #if defined(V7_CYG_PROFILE_ON)
 
-void __cyg_profile_func_enter(void *this_fn, void *call_site)
-    __attribute__((no_instrument_function));
+#ifndef IRAM
+#define IRAM
+#endif
 
-void __cyg_profile_func_exit(void *this_fn, void *call_site)
-    __attribute__((no_instrument_function));
+#ifndef NOINSTR
+#define NOINSTR __attribute__((no_instrument_function))
+#endif
 
-void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+IRAM NOINSTR void __cyg_profile_func_enter(void *this_fn, void *call_site) {
 #if defined(V7_STACK_GUARD_MIN_SIZE)
   {
     static int profile_enter = 0;
@@ -20624,7 +20777,7 @@ void __cyg_profile_func_enter(void *this_fn, void *call_site) {
 #endif
 }
 
-void __cyg_profile_func_exit(void *this_fn, void *call_site) {
+IRAM NOINSTR void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 #if defined(V7_STACK_GUARD_MIN_SIZE)
   {
     (void) this_fn;
