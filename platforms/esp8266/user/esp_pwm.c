@@ -65,7 +65,7 @@ static int s_num_pwms;
 static struct pwm_info *s_pwms;
 static uint32_t s_pwm_timer_reload_value = TMR_RELOAD_VALUE_80;
 
-FAST void pwm_timer_int_cb(void *arg);
+void pwm_timer_int_cb(void *arg);
 
 static struct pwm_info *find_or_create_pwm_info(uint8_t pin, int create) {
   int i;
@@ -201,7 +201,7 @@ static v7_val_t PWM_set(struct v7 *v7) {
   return v7_create_boolean(1);
 }
 
-FAST void pwm_timer_int_cb(void *arg) {
+IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
   /* Reloading at the very start is crucial for correct timing.
    * Reload first, then do whatever you want. */
   RTC_REG_WRITE(FRC1_LOAD_ADDRESS, s_pwm_timer_reload_value);

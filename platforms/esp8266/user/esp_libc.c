@@ -482,8 +482,7 @@ int double_to_str(char *buf, size_t buf_size, double val, int prec) {
 #undef APPEND_CHAR
 #undef flash_log10
 
-void abort(void) __attribute__((no_instrument_function));
-void abort(void) {
+NOINSTR void abort(void) {
   /* cause an unaligned access exception, that will drop you into gdb */
   *(int *) 1 = 1;
   while (1)

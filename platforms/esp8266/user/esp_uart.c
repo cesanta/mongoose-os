@@ -70,7 +70,7 @@ int tx_fifo_len(int uart_no) {
   return (READ_PERI_REG(UART_DATA_STATUS(uart_no)) >> 16) & 0xff;
 }
 
-FAST static void rx_isr(void *param) {
+IRAM NOINSTR static void rx_isr(void *param) {
   /* TODO(alashkin): add errors checking */
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
   static volatile int tail = 0;

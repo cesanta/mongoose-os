@@ -9,7 +9,4 @@
  */
 void flash_emul_init();
 
-void flash_emul_exception_handler(struct xtensa_stack_frame *frame)
-    __attribute__((no_instrument_function));
-
 #endif /* V7_FLASH_ACCESS_EMUL */

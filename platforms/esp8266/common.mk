@@ -76,7 +76,8 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
 
 CFLAGS := -Wall -Werror -Os $(NO_Os_FLAGS) -g3 -Wpointer-arith -Wl,-EL -fno-inline-functions \
           -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
-          -Wno-parentheses -DFAST='__attribute__((section(".fast.text")))' \
+          -Wno-parentheses -DIRAM='__attribute__((section(".fast.text")))' \
+          -DNOINSTR='__attribute__((no_instrument_function))' \
           -ffunction-sections
 
 # linker flags used to generate the main object file

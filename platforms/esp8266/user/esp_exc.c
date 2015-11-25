@@ -49,10 +49,7 @@
  */
 static struct regfile regs;
 
-static void handle_exception(struct regfile *regs)
-    __attribute__((no_instrument_function));
-
-static void handle_exception(struct regfile *regs) {
+IRAM NOINSTR static void handle_exception(struct regfile *regs) {
   xthal_set_intenable(0);
 
 #if defined(ESP_COREDUMP) && !defined(ESP_COREDUMP_NOAUTO)
@@ -101,10 +98,7 @@ static void handle_exception(struct regfile *regs) {
  * user stack. This might be different in other execution modes on the
  * quite variegated xtensa platform family, but that's how it works on ESP8266.
  */
-FAST void esp_exception_handler(struct xtensa_stack_frame *frame)
-    __attribute__((no_instrument_function));
-
-FAST void esp_exception_handler(struct xtensa_stack_frame *frame) {
+IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
   printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
@@ -130,10 +124,7 @@ FAST void esp_exception_handler(struct xtensa_stack_frame *frame) {
 
 #else /* RTOS_SDK */
 
-FAST void esp_exception_handler(struct xtensa_stack_frame *frame)
-    __attribute__((no_instrument_function));
-
-FAST void esp_exception_handler(struct xtensa_stack_frame *frame) {
+IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
   printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
@@ -160,10 +151,7 @@ FAST void esp_exception_handler(struct xtensa_stack_frame *frame) {
  * void _xt_user_exit();
  */
 
-FAST void __wrap_user_fatal_exception_handler(int cause)
-    __attribute__((no_instrument_function));
-
-FAST void __wrap_user_fatal_exception_handler(int cause) {
+IRAM NOINSTR void __wrap_user_fatal_exception_handler(int cause) {
   int double_ex = RSR(PS) & 0x10;
   xTaskHandle th = xTaskGetCurrentTaskHandle();
   /*
@@ -195,9 +183,7 @@ FAST void __wrap_user_fatal_exception_handler(int cause) {
 
 #endif /* !RTOS_SDK */
 
-void esp_exception_handler_init() __attribute__((no_instrument_function));
-
-void esp_exception_handler_init() {
+NOINSTR void esp_exception_handler_init() {
 #if defined(ESP_FLASH_BYTES_EMUL) || defined(ESP_GDB_SERVER) || \
     defined(ESP_COREDUMP)
 

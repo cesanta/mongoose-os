@@ -35,9 +35,8 @@
  * target register, patches up the program counter to point to the next
  * instruction and resumes execution.
  */
-FAST void flash_emul_exception_handler(struct xtensa_stack_frame *frame)
-    __attribute__((no_instrument_function));
-void flash_emul_exception_handler(struct xtensa_stack_frame *frame) {
+IRAM NOINSTR void flash_emul_exception_handler(
+    struct xtensa_stack_frame *frame) {
   uint32_t vaddr = RSR(EXCVADDR);
 
   /*
@@ -127,7 +126,7 @@ void flash_emul_exception_handler(struct xtensa_stack_frame *frame) {
 }
 
 #ifndef RTOS_SDK
-void flash_emul_init() {
+NOINSTR void flash_emul_init() {
   _xtos_set_exception_handler(EXCCAUSE_LOAD_STORE_ERROR,
                               flash_emul_exception_handler);
   /* for mmap */
