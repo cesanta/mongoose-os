@@ -16358,7 +16358,7 @@ static const char *op_names[] = {
   "TRY_POP",
   "AFTER_FINALLY",
   "THROW"};
-/* clang-format off */
+/* clang-format on */
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
