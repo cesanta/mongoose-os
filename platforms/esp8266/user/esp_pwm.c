@@ -225,7 +225,6 @@ IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
       } else {
         set |= bit;
       }
-      sj_gpio_set_mode(p->pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
     } else {
       uint32_t v = READ_PERI_REG(RTC_GPIO_OUT) & 0xfffffffe;
       v |= ~p->val;
