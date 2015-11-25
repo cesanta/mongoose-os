@@ -34,6 +34,7 @@ struct v7_callback_args {
 static os_timer_t s_poll_tmr;
 static os_event_t s_mg_task_queue[MG_TASK_QUEUE_LEN];
 static int poll_scheduled = 0;
+static int s_suspended = 0;
 
 enum mg_sig_type {
   MG_SIG_POLL = 0,           /* struct mg_mgr* */
@@ -461,6 +462,24 @@ static void mg_lwip_task(os_event_t *e) {
   }
   if (mgr != NULL) {
     mg_mgr_poll(mgr, 0);
+    if (s_suspended) {
+      int can_suspend = 1;
+      struct mg_connection *nc;
+      /* Looking for data to send and if there isn't any - suspending */
+      for (nc = mgr->active_connections; nc != NULL; nc = nc->next) {
+        if (nc->send_mbuf.len > 0) {
+          can_suspend = 0;
+          break;
+        }
+      }
+
+      if (can_suspend) {
+        os_timer_disarm(&s_poll_tmr);
+#if MG_LWIP_REXMIT_INTERVAL_MS > 0
+        os_timer_disarm(&s_rexmit_tmr);
+#endif
+      }
+    }
   }
 }
 
@@ -483,5 +502,26 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   system_os_post(MG_TASK_PRIORITY, MG_SIG_V7_CALLBACK, (uint32_t) cba);
 }
 #endif
+
+void mg_suspend() {
+  /*
+   * We need to complete all pending operation, here we just set flag
+   * and lwip task will disable itself once all data is sent
+   */
+  s_suspended = 1;
+}
+
+void mg_resume() {
+  if (!s_suspended) {
+    return;
+  }
+
+  s_suspended = 0;
+
+  os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 1 /* repeat */);
+#if MG_LWIP_REXMIT_INTERVAL_MS
+  os_timer_arm(&s_rexmit_tmr, MG_LWIP_REXMIT_INTERVAL_MS, 1 /* repeat */);
+#endif
+}
 
 #endif /* ESP_ENABLE_MG_LWIP_IF */
