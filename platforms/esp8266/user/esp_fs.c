@@ -30,6 +30,8 @@
 
 #ifndef V7_NO_FS
 
+#include <cs_dbg.h>
+
 #include "spiffs/spiffs.h"
 #include "spiffs/spiffs_nucleus.h"
 #include "spiffs_config.h"
@@ -83,7 +85,7 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
   int pages = (len + LOG_PAGE_SIZE - 1) / LOG_PAGE_SIZE;
   struct mmap_desc *desc = alloc_mmap_desc();
   if (desc == NULL) {
-    fprintf(stderr, "cannot allocate mmap desc\n");
+    LOG(LL_ERROR, ("cannot allocate mmap desc"));
     return MAP_FAILED;
   }
 
@@ -129,7 +131,7 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
    */
 
   if (size > LOG_PAGE_SIZE) {
-    printf("Invalid size provided to read/write (%d)\n\r", (int) size);
+    LOG(LL_ERROR, ("Invalid size provided to read/write (%d)", (int) size));
     return SPIFFS_ERR_NOT_CONFIGURED;
   }
 
@@ -140,8 +142,8 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 
   int res = spi_flash_read(aligned_addr, (u32_t *) tmp_buf, aligned_size);
   if (res != 0) {
-    printf("spi_flash_read failed: %d (%d, %d)\n\r", res, (int) aligned_addr,
-           (int) aligned_size);
+    LOG(LL_ERROR, ("spi_flash_read failed: %d (%d, %d)", res,
+                   (int) aligned_addr, (int) aligned_size));
     return res;
   }
 
@@ -154,8 +156,8 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 
   res = spi_flash_write(aligned_addr, (u32_t *) tmp_buf, aligned_size);
   if (res != 0) {
-    printf("spi_flash_write failed: %d (%d, %d)\n\r", res, (int) aligned_addr,
-           (int) aligned_size);
+    LOG(LL_ERROR, ("spi_flash_write failed: %d (%d, %d)", res,
+                   (int) aligned_addr, (int) aligned_size));
     return res;
   }
 
@@ -166,7 +168,7 @@ static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
 #ifdef CS_MMAP
   if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
     if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
-      fprintf(stderr, "mmap spiffs prep read: %x %u %p\n", addr, size, dst);
+      LOG(LL_DEBUG, ("mmap spiffs prep read: %x %u %p", addr, size, dst));
       cur_mmap_desc->blocks[cur_mmap_desc->pages++] = FLASH_BASE + addr;
     }
     return SPIFFS_OK;
@@ -206,8 +208,8 @@ static s32_t esp_spiffs_erase(u32_t addr, u32_t size) {
    * provides here sector address & sector size
    */
   if (size != FLASH_BLOCK_SIZE || addr % FLASH_BLOCK_SIZE != 0) {
-    printf("Invalid size provided to esp_spiffs_erase (%d, %d)\n\r", (int) addr,
-           (int) size);
+    LOG(LL_ERROR, ("Invalid size provided to esp_spiffs_erase (%d, %d)",
+                   (int) addr, (int) size));
     return SPIFFS_ERR_NOT_CONFIGURED;
   }
 
@@ -247,7 +249,7 @@ int fs_init(uint32_t addr, uint32_t size) {
 void set_errno(int res) {
   if (res < 0) {
     errno = SPIFFS_errno(&fs);
-    fprintf(stderr, "spiffs error: %d\n", errno);
+    LOG(LL_ERROR, ("spiffs error: %d", errno));
   }
 }
 

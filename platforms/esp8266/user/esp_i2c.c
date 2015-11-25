@@ -12,6 +12,8 @@
 #include <v7.h>
 #include <sj_i2c.h>
 
+#include <cs_dbg.h>
+
 #include "esp_gpio.h"
 #include "esp_periph.h"
 #include "esp_missing_includes.h"
@@ -91,8 +93,9 @@ enum i2c_ack_type i2c_start(i2c_connection c, uint16_t addr, enum i2c_rw mode) {
   enum i2c_ack_type result;
   uint8_t address_byte = (uint8_t)(addr << 1) | mode;
 #ifdef ESP_I2C_DEBUG
-  fprintf(stderr, "%d %d, addr %d, mode %d, ab %d\n", (int) conn->sda_gpio,
-          (int) conn->scl_gpio, (int) addr, (int) mode, (int) address_byte);
+  LOG(LL_DEBUG,
+      ("%d %d, addr %d, mode %d, ab %d", (int) conn->sda_gpio,
+       (int) conn->scl_gpio, (int) addr, (int) mode, (int) address_byte));
 #endif
   if (addr > 0x7F || (mode != I2C_READ && mode != I2C_WRITE)) {
     return I2C_ERR;
@@ -121,7 +124,7 @@ void i2c_stop(i2c_connection c) {
   i2c_half_delay(c);
   conn->started = 0;
 #ifdef ESP_I2C_DEBUG
-  fprintf(stderr, "stopped\n");
+  LOG(LL_DEBUG, ("stopped"));
 #endif
 }
 
@@ -147,7 +150,7 @@ enum i2c_ack_type i2c_send_byte(i2c_connection c, uint8_t data) {
     i2c_set_sda_scl(conn, bit, I2C_LOW);
     i2c_half_delay(c);
 #ifdef ESP_I2C_DEBUG
-    fprintf(stderr, "sent %d\n", (int) bit);
+    LOG(LL_DEBUG, ("sent %d", (int) bit));
 #endif
   }
 
@@ -158,7 +161,7 @@ enum i2c_ack_type i2c_send_byte(i2c_connection c, uint8_t data) {
   i2c_half_delay(c);
   ret_val = i2c_get_SDA(conn);
 #ifdef ESP_I2C_DEBUG
-  fprintf(stderr, "read ack = %d\n", ret_val);
+  LOG(LL_DEBUG, ("read ack = %d", ret_val));
 #endif
   i2c_half_delay(c);
   i2c_set_sda_scl(conn, I2C_INPUT, I2C_LOW);
@@ -198,7 +201,7 @@ void i2c_send_ack(i2c_connection c, enum i2c_ack_type ack_type) {
   i2c_set_sda_scl(conn, ack_type, I2C_LOW);
   i2c_half_delay(c);
 #ifdef ESP_I2C_DEBUG
-  fprintf(stderr, "sent ack = %d\n", ack_type);
+  LOG(LL_DEBUG, ("sent ack = %d", ack_type));
 #endif
 }
 
@@ -216,7 +219,7 @@ uint8_t i2c_read_byte(i2c_connection c, enum i2c_ack_type ack_type) {
     bit = i2c_get_SDA(conn);
     ret_val |= (bit << (7 - i));
 #ifdef ESP_I2C_DEBUG
-    fprintf(stderr, "read %d\n", (int) bit);
+    LOG(LL_DEBUG, ("read %d", (int) bit));
 #endif
     i2c_half_delay(c);
     i2c_set_sda_scl(conn, I2C_INPUT, I2C_LOW);
@@ -227,7 +230,7 @@ uint8_t i2c_read_byte(i2c_connection c, enum i2c_ack_type ack_type) {
     i2c_send_ack(conn, ack_type);
   } else {
 #ifdef ESP_I2C_DEBUG
-    fprintf(stderr, "not sending ack");
+    LOG(LL_DEBUG, ("not sending ack"));
 #endif
   }
 

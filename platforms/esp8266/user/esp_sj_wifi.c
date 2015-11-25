@@ -23,6 +23,8 @@
 
 #endif /* RTOS_SDK */
 
+#include <cs_dbg.h>
+
 #include <sj_hal.h>
 #include <sj_v7_ext.h>
 
@@ -54,7 +56,7 @@ int sj_wifi_setup_sta(const char *ssid, const char *pass) {
 
   res = wifi_station_set_config_current(&stationConf);
   if (!res) {
-    fprintf(stderr, "Failed to set station config\n");
+    LOG(LL_ERROR, ("Failed to set station config"));
     return 0;
   }
 
@@ -120,7 +122,7 @@ void wifi_changed_cb(System_Event_t *evt) {
     v7_val_t known, wifi;
 
     if (v7_is_undefined(conf)) {
-      fprintf(stderr, "cannot save conf, no conf object\n");
+      LOG(LL_ERROR, ("cannot save conf, no conf object"));
       return;
     }
     wifi = v7_get(v7, conf, "wifi", ~0);
@@ -195,7 +197,7 @@ void wifi_scan_done(void *arg, STATUS status) {
     wifi_scan_cb(ssids);
     free(ssids);
   } else {
-    fprintf(stderr, "wifi scan failed: %d\n", status);
+    LOG(LL_ERROR, ("wifi scan failed: %d", status));
     wifi_scan_cb(NULL);
   }
 }
