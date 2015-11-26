@@ -2856,8 +2856,8 @@ struct v7 {
   unsigned int is_thrown : 1;
   /* true if `returned_value` is valid (used in bcode) */
   unsigned int is_returned : 1;
-  /* true if last emitted statement is a compound statement */
-  unsigned int is_compound : 1;
+  /* true if last emitted statement does not affect data stack */
+  unsigned int is_stack_neutral : 1;
 };
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
@@ -3434,6 +3434,13 @@ enum opcode {
    * - otherwise, thrown value is kept into `v7->thrown_error`
    */
   OP_THROW,
+
+  /*
+   * Sets strict mode to active (`v7->strict_mode`). Stack neutral.
+   *
+   * `( -- )`
+   */
+  OP_USE_STRICT,
 
   OP_MAX,
 };
@@ -16366,7 +16373,9 @@ static const char *op_names[] = {
   "TRY_PUSH_FINALLY",
   "TRY_POP",
   "AFTER_FINALLY",
-  "THROW"};
+  "THROW",
+  "USE_STRICT",
+};
 /* clang-format on */
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
@@ -16557,9 +16566,18 @@ static void bcode_perform_call(struct v7 *v7, struct bcode *bcode,
   v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(bcode));
   v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
          v7_create_foreign(r->ops + 1));
+
+  /* "try stack" */
   v7_set(v7, frame, "____t", 5, V7_PROPERTY_HIDDEN, v7_create_dense_array(v7));
+
+  /* stack size */
   v7_set(v7, frame, "____s", 5, V7_PROPERTY_HIDDEN,
          v7_create_number(v7->stack.len));
+
+  /* `strict_mode` */
+  v7_set(v7, frame, "___us", 5, V7_PROPERTY_HIDDEN,
+         v7_create_number(!!v7->strict_mode));
+
   v7_to_object(frame)->prototype = func->scope;
   v7->call_stack = frame;
   bcode_restore_registers(func->bcode, r);
@@ -16585,6 +16603,11 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
     assert(saved_stack_len <= v7->stack.len);
     v7->stack.len = saved_stack_len;
   }
+
+  /* restore `strict_mode` */
+  v7->strict_mode = v7_get(v7, v7->call_stack, "___us", 5);
+
+  /* finally, drop the frame which we've just unwound */
   v7->call_stack = v7_get(v7, v7->call_stack, "____p", 5);
 }
 
@@ -16768,6 +16791,19 @@ static enum v7_err bcode_throw_exception(struct v7 *v7,
   return bcode_perform_throw(v7, r, 1);
 } /* LCOV_EXCL_LINE */
 
+static enum v7_err bcode_throw_reference_error(struct v7 *v7,
+                                               struct bcode_registers *r,
+                                               val_t var_name) {
+  const char *s;
+  size_t name_len;
+
+  assert(v7_is_string(var_name));
+  s = v7_to_string(v7, &var_name, &name_len);
+
+  return bcode_throw_exception(v7, r, REFERENCE_ERROR, "[%.*s] is not defined",
+                               (int) name_len, s);
+}
+
 /*
  * Copy a function literal prototype and binds it to the current scope.
  *
@@ -16853,7 +16889,7 @@ V7_PRIVATE void eval_try_pop(struct v7 *v7) {
   tmp_frame_cleanup(&tf);
 }
 
-V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *_bcode) {
+V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   struct bcode_registers r;
   enum v7_err err = V7_OK;
 
@@ -16865,13 +16901,24 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *_bcode) {
         frame = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
-  bcode_restore_registers(_bcode, &r);
+  bcode_restore_registers(bcode, &r);
 
   tmp_stack_push(&tf, &res);
   tmp_stack_push(&tf, &v1);
   tmp_stack_push(&tf, &v2);
   tmp_stack_push(&tf, &v3);
   tmp_stack_push(&tf, &frame);
+
+  /* populate local variables */
+  {
+    val_t *name, *locals_end;
+    name = (val_t *) bcode->names.buf;
+    locals_end = name + (bcode->names.len / sizeof(val_t));
+
+    for (; name < locals_end; ++name) {
+      v7_set_v(v7, v7->global_object, *name, v7_create_undefined());
+    }
+  }
 
 restart:
   while (r.ops < r.end && err == V7_OK) {
@@ -17061,15 +17108,7 @@ restart:
         arg = (int) *(++r.ops);
         if ((p = v7_get_property_v(v7, v7->call_stack, r.lit[arg])) == NULL) {
           /* variable does not exist: Reference Error */
-          const char *s;
-          size_t name_len;
-
-          assert(v7_is_string(r.lit[arg]));
-          s = v7_to_string(v7, &r.lit[arg], &name_len);
-
-          err =
-              bcode_throw_exception(v7, &r, REFERENCE_ERROR,
-                                    "[%.*s] is not defined", (int) name_len, s);
+          err = bcode_throw_reference_error(v7, &r, r.lit[arg]);
           break;
         } else {
           PUSH(v7_property_value(v7, v7->call_stack, p));
@@ -17087,8 +17126,15 @@ restart:
         prop = v7_get_property(v7, v1, buf, strlen(buf));
         if (prop != NULL) {
           prop->value = v3;
-        } else {
+        } else if (!v7->strict_mode) {
           v7_set_v(v7, v7_get_global(v7), v2, v3);
+        } else {
+          /*
+           * In strict mode, throw reference error instead of polluting Global
+           * Object
+           */
+          err = bcode_throw_reference_error(v7, &r, v2);
+          break;
         }
         PUSH(v3);
         break;
@@ -17153,29 +17199,65 @@ restart:
           }
           v1 = POP();
 
-          if (v7_to_function(v1)->ast != NULL) {
+          if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
+            /* tried to call non-function object: throw a TypeError */
+
+            /*
+             * TODO(dfrank): include reasonable name of an object to the error
+             * message. Currently, we have just a value on stack, not the name
+             * of it, so, if we have the code like:
+             *
+             *      var foo = 1;
+             *      foo();
+             *
+             * We have `1` here, but not `"foo"`.
+             */
+            err = bcode_throw_exception(v7, &r, TYPE_ERROR, "not a function");
+          } else if (v7_to_function(v1)->ast != NULL) {
             /*
              * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
              * exceptions
              */
             PUSH(i_apply(v7, v1, this_obj, v2));
           } else {
-            int i, names_len;
-            val_t *name;
+            val_t *name, *arg_end, *locals_end;
             struct v7_function *func = v7_to_function(v1);
 
             frame = v7_create_object(v7);
 
-            names_len = func->bcode->names.len / sizeof(val_t);
-            name = (val_t *) func->bcode->names.buf;
+            /*
+             * first element of `names` is the function name (if the function
+             * is anonymous, it's an empty string)
+             *
+             * Then, arguments follow. We know number of arguments, so, we know
+             * how many names to take.
+             *
+             * And then, local variables follow.
+             */
 
-            assert(func->bcode->args < names_len);
-            for (i = 1; i < func->bcode->args + 1; i++) {
-              v7_set_v(v7, frame, name[i], v7_array_get(v7, v2, i - 1));
+            name = (val_t *) func->bcode->names.buf;
+            arg_end = name + 1 /*function name*/ + func->bcode->args;
+            locals_end = name + (func->bcode->names.len / sizeof(val_t));
+
+            assert(arg_end <= locals_end);
+
+            /* populate function itself */
+            v7_set_v(v7, frame, *name++, v1);
+
+            /* populate arguments */
+            {
+              int arg_num;
+              for (arg_num = 0; name < arg_end; ++name, ++arg_num) {
+                v7_set_v(v7, frame, *name, v7_array_get(v7, v2, arg_num));
+              }
             }
-            for (; i < names_len; i++, name++) {
-              v7_set_v(v7, frame, name[i], v7_create_undefined());
+
+            /* populate local variables */
+            for (; name < locals_end; ++name) {
+              v7_set_v(v7, frame, *name, v7_create_undefined());
             }
+
+            /* transfer control to the function */
             bcode_perform_call(v7, r.bcode, frame, func, &r);
 
             frame = v7_create_undefined();
@@ -17211,6 +17293,9 @@ restart:
         break;
       case OP_THROW:
         err = bcode_perform_throw(v7, &r, 1 /*take thrown value*/);
+        break;
+      case OP_USE_STRICT:
+        v7->strict_mode = 1;
         break;
       default:
         err = bcode_throw_exception(v7, &r, INTERNAL_ERROR,
@@ -17279,6 +17364,22 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
   enum v7_err err = V7_OK;
   struct ast a;
   val_t saved_call_stack = v7->call_stack;
+  size_t saved_stack_len = v7->stack.len;
+  struct bcode *saved_bcode = v7->bcode;
+
+#ifndef V7_FORCE_STRICT_MODE
+  int saved_strict_mode = v7->strict_mode;
+  v7->strict_mode = 0;
+#else
+  v7->strict_mode = 1;
+#endif
+
+  /*
+   * We need to zero it beforehand, since we may get to `clean` before the new
+   * one is initialized
+   */
+  v7->bcode = NULL;
+
   (void) res;
 
   ast_init(&a, 0);
@@ -17287,9 +17388,10 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
   err = parse(v7, &a, src, 1, 0);
   if (err != V7_OK) {
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-    return err;
+    goto clean;
   }
 
+  /* init new bcode */
   v7->bcode = (struct bcode *) calloc(1, sizeof(*v7->bcode));
   bcode_init(v7->bcode);
 
@@ -17298,7 +17400,7 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
     if (res != NULL) {
       *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
     }
-    return err;
+    goto clean;
   }
 
   v7->call_stack = v7->global_object;
@@ -17311,10 +17413,20 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
     *res = v7->thrown_error;
   }
 
-  bcode_free(v7->bcode);
-  free(v7->bcode);
-  v7->bcode = NULL;
+clean:
 
+  v7->stack.len = saved_stack_len;
+
+  /* free current bcode if needed, and restore the previous one */
+  if (v7->bcode != NULL) {
+    bcode_free(v7->bcode);
+    free(v7->bcode);
+  }
+  v7->bcode = saved_bcode;
+
+#ifndef V7_FORCE_STRICT_MODE
+  v7->strict_mode = saved_strict_mode;
+#endif
   v7->call_stack = saved_call_stack;
   return err;
 }
@@ -17445,6 +17557,8 @@ V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
 static const enum ast_tag assign_ast_map[] = {
     AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
     AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
+
+extern void dump_bcode(FILE *f, struct bcode *bcode);
 
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode);
@@ -17642,6 +17756,72 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
     default:
       BTHROW_MSG(V7_SYNTAX_ERROR, "unexpected ast node");
   }
+clean:
+  return ret;
+}
+
+/*
+ * Walks through all declarations (`var` and `function`) in the current scope,
+ * and adds all of them to `bcode->names`. Additionally, `function`
+ * declarations are compiled right here, since they're hoisted in JS.
+ */
+static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
+                                      ast_off_t start, ast_off_t fvar,
+                                      struct bcode *bcode) {
+  ast_off_t next, fvar_end;
+  char *name;
+  size_t name_len;
+  uint8_t lit;
+  enum v7_err ret = V7_OK;
+
+  if (fvar != start) {
+    /* iterate all `AST_VAR`s in the current scope */
+    do {
+      BCHECK_INTERNAL(ast_fetch_tag(a, &fvar) == AST_VAR);
+
+      next = ast_get_skip(a, fvar, AST_VAR_NEXT_SKIP);
+      if (next == fvar) {
+        next = 0;
+      }
+
+      fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
+      ast_move_to_children(a, &fvar);
+
+      /*
+       * iterate all `AST_VAR_DECL`s and `AST_FUNC_DECL`s in the current
+       * `AST_VAR`
+       */
+      while (fvar < fvar_end) {
+        enum ast_tag tag = ast_fetch_tag(a, &fvar);
+        BCHECK_INTERNAL(tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
+        name = ast_get_inlined_data(a, fvar, &name_len);
+        if (tag == AST_VAR_DECL) {
+          /*
+           * it's a `var` declaration, so, skip the value for now, it'll be set
+           * to `undefined` initially
+           */
+          ast_move_to_children(a, &fvar);
+          ast_skip_tree(a, &fvar);
+        } else {
+          /*
+           * tag is an AST_FUNC_DECL: since functions in JS are hoisted,
+           * we compile it and put `OP_SET_VAR` directly here
+           */
+          lit = string_lit(v7, a, &fvar, bcode);
+          BTRY(compile_expr(v7, a, &fvar, bcode));
+          bcode_op(bcode, OP_SET_VAR);
+          bcode_op(bcode, lit);
+        }
+        bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
+      }
+
+      if (next > 0) {
+        fvar = next - 1;
+      }
+
+    } while (next != 0);
+  }
+
 clean:
   return ret;
 }
@@ -17965,10 +18145,10 @@ V7_PRIVATE enum v7_err compile_stmts(struct v7 *v7, struct ast *a,
   enum v7_err ret = V7_OK;
   while (*pos < end) {
     BTRY(compile_stmt(v7, a, pos, bcode));
-    if (!v7->is_compound) {
+    if (!v7->is_stack_neutral) {
       bcode_op(bcode, OP_SWAP_DROP);
     } else {
-      v7->is_compound = 0;
+      v7->is_stack_neutral = 0;
     }
   }
 clean:
@@ -18042,7 +18222,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_patch_target(bcode, if_false_label, bcode_pos(bcode));
       }
 
-      v7->is_compound = 1;
+      v7->is_stack_neutral = 1;
       break;
     }
     /*
@@ -18082,7 +18262,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
 
-      v7->is_compound = 1;
+      v7->is_stack_neutral = 1;
       break;
 
     /*
@@ -18247,14 +18427,16 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_op(bcode, OP_AFTER_FINALLY);
       }
 
-      v7->is_compound = 1;
+      v7->is_stack_neutral = 1;
       break;
     }
+
     case AST_THROW: {
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_THROW);
       break;
     }
+
     /*
      * switch(E) {
      * default:
@@ -18377,7 +18559,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_patch_target(bcode, dfl_label, bcode_pos(bcode));
       }
 
-      v7->is_compound = 1;
+      v7->is_stack_neutral = 1;
       break;
     }
     /*
@@ -18433,7 +18615,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
 
-      v7->is_compound = 1;
+      v7->is_stack_neutral = 1;
       break;
     }
     /*
@@ -18458,7 +18640,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
 
-      v7->is_compound = 1;
+      v7->is_stack_neutral = 1;
       break;
     }
     case AST_VAR: {
@@ -18474,13 +18656,24 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       ast_move_to_children(a, pos);
       while (*pos < end) {
         tag = ast_fetch_tag(a, pos);
-        BCHECK_MSG(tag != AST_FUNC_DECL, V7_SYNTAX_ERROR,
-                   "not implemented yet");
-        BCHECK_INTERNAL(tag == AST_VAR_DECL);
-        lit = string_lit(v7, a, pos, bcode);
-        BTRY(compile_expr(v7, a, pos, bcode));
-        bcode_op(bcode, OP_SET_VAR);
-        bcode_op(bcode, lit);
+        if (tag == AST_FUNC_DECL) {
+          /*
+           * function declarations are already set during hoisting (see
+           * `compile_local_vars()`), so, skip it
+           */
+          ast_move_to_children(a, pos);
+          ast_skip_tree(a, pos);
+        } else {
+          /*
+           * compile `var` declaration: basically it looks just like an
+           * assignment
+           */
+          BCHECK_INTERNAL(tag == AST_VAR_DECL);
+          lit = string_lit(v7, a, pos, bcode);
+          BTRY(compile_expr(v7, a, pos, bcode));
+          bcode_op(bcode, OP_SET_VAR);
+          bcode_op(bcode, lit);
+        }
       }
       break;
     }
@@ -18492,6 +18685,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_RET);
       break;
+    case AST_USE_STRICT:
+      bcode_op(bcode, OP_USE_STRICT);
+      v7->is_stack_neutral = 1;
+      break;
     default:
       (*pos)--;
       BTRY(compile_expr(v7, a, pos, bcode));
@@ -18502,61 +18699,86 @@ clean:
   return ret;
 }
 
+static enum v7_err compile_body(struct v7 *v7, struct ast *a,
+                                struct bcode *bcode, ast_off_t start,
+                                ast_off_t end, ast_off_t body, ast_off_t fvar,
+                                ast_off_t *pos) {
+  enum v7_err ret = V7_OK;
+
+#ifndef V7_FORCE_STRICT_MODE
+  /* check 'use strict' */
+  if (*pos < end) {
+    ast_off_t tmp_pos = body;
+    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
+      v7->strict_mode = 1;
+    }
+  }
+#endif
+
+  /* put initial value for the function body execution */
+  bcode_op(bcode, OP_PUSH_UNDEFINED);
+
+  /*
+   * fill `bcode->names` with function's local vars. Note that we should do
+   * this *after* `OP_PUSH_UNDEFINED`, since `compile_local_vars` emits
+   * code that assign the hoisted functions to local variables, and those
+   * statements assume that the stack contains `undefined`.
+   */
+  BTRY(compile_local_vars(v7, a, start, fvar, bcode));
+
+  /* compile body */
+  *pos = body;
+  BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+clean:
+  return ret;
+}
+
 /*
  * Compiles a given script and populates a bcode structure.
  * The AST must start with an AST_SCRIPT node.
  */
 V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
                                       struct bcode *bcode) {
-  ast_off_t end, pos = 0;
+  ast_off_t start, end, fvar, pos = 0;
   enum ast_tag tag = ast_fetch_tag(a, &pos);
   enum v7_err ret = V7_OK;
   (void) tag;
 #ifndef V7_FORCE_STRICT_MODE
   int saved_strict_mode = v7->strict_mode;
+  v7->strict_mode = 0;
+#else
+  v7->strict_mode = 1;
 #endif
+  /* first tag should always be AST_SCRIPT */
   assert(tag == AST_SCRIPT);
+
+  start = pos - 1;
   end = ast_get_skip(a, pos, AST_END_SKIP);
+  fvar = ast_get_skip(a, pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
   ast_move_to_children(a, &pos);
 
-#ifndef V7_FORCE_STRICT_MODE
-  /* check 'use strict' */
-  if (pos < end) {
-    ast_off_t tmp_pos = pos;
-    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
-      v7->strict_mode = 1;
-      /*
-       * move `pos` offset, effectively removing `AST_USE_STRICT` from the
-       * script
-       */
-      pos = tmp_pos;
-    }
-  }
-#endif
-
-  bcode_op(bcode, OP_PUSH_UNDEFINED);
-
-  ret = compile_stmts(v7, a, &pos, end, bcode);
+  BTRY(compile_body(v7, a, bcode, start, end, pos /* body */, fvar, &pos));
 
 #ifdef V7_BCODE_DUMP
   fprintf(stderr, "--- script ---\n");
   dump_bcode(stderr, bcode);
 #endif
 
+clean:
 #ifndef V7_FORCE_STRICT_MODE
   v7->strict_mode = saved_strict_mode;
 #endif
   return ret;
 }
 
-extern void dump_bcode(FILE *f, struct bcode *bcode);
 /*
  * Compiles a given function and populates a bcode structure.
  * The AST must contain an AST_FUNC node at offset ast_off.
  */
 V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
                                         ast_off_t *pos, struct bcode *bcode) {
-  ast_off_t start, end, body, var, next, var_end;
+  ast_off_t start, end, body, fvar;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const char *name;
   size_t name_len;
@@ -18570,7 +18792,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   start = *pos - 1;
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   body = ast_get_skip(a, *pos, AST_FUNC_BODY_SKIP);
-  var = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
+  fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
   ast_move_to_children(a, pos);
 
   /* retrieve function name */
@@ -18594,49 +18816,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
     bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
   }
 
-#ifndef V7_FORCE_STRICT_MODE
-  /* check 'use strict' */
-  if (*pos < end) {
-    ast_off_t tmp_pos = body;
-    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
-      v7->strict_mode = 1;
-      /* move `body` offset, effectively removing `AST_USE_STRICT` from it */
-      body = tmp_pos;
-    }
-  }
-#endif
-
-  if (var != start) {
-    /* there are some `var`s in function, let's compile them all */
-    do {
-      BCHECK_INTERNAL(ast_fetch_tag(a, &var) == AST_VAR);
-      next = ast_get_skip(a, var, AST_VAR_NEXT_SKIP);
-      if (next == var) {
-        next = 0;
-      }
-
-      var_end = ast_get_skip(a, var, AST_END_SKIP);
-      ast_move_to_children(a, &var);
-      while (var < var_end) {
-        enum ast_tag tag = ast_fetch_tag(a, &var);
-        BCHECK_INTERNAL(tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
-        name = ast_get_inlined_data(a, var, &name_len);
-        ast_move_to_children(a, &var);
-        ast_skip_tree(a, &var);
-        bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
-      }
-      if (next > 0) {
-        var = next - 1;
-      }
-    } while (next != 0);
-  }
-
-  /* put initial value for the function body execution */
-  bcode_op(bcode, OP_PUSH_UNDEFINED);
-
-  /* compile function body */
-  *pos = body;
-  BTRY(compile_stmts(v7, a, pos, end, bcode));
+  BTRY(compile_body(v7, a, bcode, start, end, body, fvar, pos));
 
 #ifdef V7_BCODE_DUMP
   fprintf(stderr, "--- function ---\n");
