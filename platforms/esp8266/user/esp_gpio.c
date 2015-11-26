@@ -216,11 +216,6 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
 }
 
 int sj_gpio_write(int pin, enum gpio_level level) {
-  if (get_gpio_info(pin) == NULL) {
-    /* Just verifying pin number */
-    return -1;
-  }
-
   level &= 0x1;
 
   if (pin == 16) {
@@ -228,18 +223,23 @@ int sj_gpio_write(int pin, enum gpio_level level) {
     return 0;
   }
 
-  GPIO_OUTPUT_SET(GPIO_ID_PIN(pin), level);
-  return 0;
-}
-
-enum gpio_level sj_gpio_read(int pin) {
   if (get_gpio_info(pin) == NULL) {
     /* Just verifying pin number */
     return -1;
   }
 
+  GPIO_OUTPUT_SET(GPIO_ID_PIN(pin), level);
+  return 0;
+}
+
+enum gpio_level sj_gpio_read(int pin) {
   if (pin == 16) {
     return 0x1 & gpio16_input_get();
+  }
+
+  if (get_gpio_info(pin) == NULL) {
+    /* Just verifying pin number */
+    return -1;
   }
 
   return 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(pin));
