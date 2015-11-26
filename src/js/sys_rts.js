@@ -30,22 +30,31 @@ SJS.init = function() {
     }
   }
 
-  if (typeof Wifi !== undefined && conf.wifi) {
-    if (conf.wifi.ssid) {
-      Wifi.setup(conf.wifi.ssid, (conf.wifi.known || {})[conf.wifi.ssid] || '');
-    } else {
-      print("Scanning nets");
-      Wifi.scan(function(l) {
-        for(var i in l) {
-          var n = l[i];
-          if (n in conf.wifi.known) {
-            print("Joining", n);
-            Wifi.setup(n, conf.wifi.known[n]);
-            return;
+  if (typeof Wifi !== undefined) {
+    Wifi.changed(function(e) {
+      switch (e) {
+        case 0: print("Wifi disconnected"); break;
+        case 2: print("Wifi connected, IP:", Wifi.ip()); break;
+      };
+    });
+
+    if (conf.wifi) {
+      if (conf.wifi.ssid) {
+        Wifi.setup(conf.wifi.ssid, (conf.wifi.known || {})[conf.wifi.ssid] || '');
+      } else {
+        print("Scanning nets");
+        Wifi.scan(function(l) {
+          for(var i in l) {
+            var n = l[i];
+            if (n in conf.wifi.known) {
+              print("Joining", n);
+              Wifi.setup(n, conf.wifi.known[n]);
+              return;
+            }
           }
-        }
-        print("Cannot find known network, use Wifi.setup");
-      });
+          print("Cannot find known network, use Wifi.setup");
+        });
+      }
     }
   }
 };
