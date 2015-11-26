@@ -3485,6 +3485,7 @@ V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx);
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, v7_val_t v);
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
 V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode);
+V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *, uint8_t op);
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
                                    bcode_off_t target);
 
@@ -17200,6 +17201,15 @@ restart:
           v1 = POP();
 
           if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
+            /* extract the hidden property from a cfunction_object */
+            struct v7_property *p;
+            p = v7_get_own_property2(v7, v1, "", 0, V7_PROPERTY_HIDDEN);
+            if (p != NULL) {
+              v1 = p->value;
+            }
+          }
+
+          if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
             /* tried to call non-function object: throw a TypeError */
 
             /*
@@ -17471,6 +17481,12 @@ V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode) {
   bcode_off_t zero = 0;
   mbuf_append(&bcode->ops, &zero, sizeof(bcode_off_t));
   return pos;
+}
+
+/* Appends an op requiring a branch target. See bcode_add_target. */
+V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *bcode, uint8_t op) {
+  bcode_op(bcode, op);
+  return bcode_add_target(bcode);
 }
 
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
@@ -17925,8 +17941,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_off_t end_label;
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_DUP);
-      bcode_op(bcode, tag == AST_LOGICAL_AND ? OP_JMP_FALSE : OP_JMP_TRUE);
-      end_label = bcode_add_target(bcode);
+      end_label = bcode_op_target(
+          bcode, tag == AST_LOGICAL_AND ? OP_JMP_FALSE : OP_JMP_TRUE);
       bcode_op(bcode, OP_DROP);
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
@@ -18196,16 +18212,14 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       ast_move_to_children(a, pos);
 
       BTRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_JMP_FALSE);
-      if_false_label = bcode_add_target(bcode);
+      if_false_label = bcode_op_target(bcode, OP_JMP_FALSE);
 
       /* body if true */
       BTRY(compile_stmts(v7, a, pos, if_false, bcode));
 
       if (if_false != end) {
         /* `else` branch is present */
-        bcode_op(bcode, OP_JMP);
-        end_label = bcode_add_target(bcode);
+        end_label = bcode_op_target(bcode, OP_JMP);
 
         /* will jump here if `false` */
         bcode_patch_target(bcode, if_false_label, bcode_pos(bcode));
@@ -18249,8 +18263,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * Condition check is at the end of the loop, this layout
        * reduces the number of jumps in the steady state.
        */
-      bcode_op(bcode, OP_JMP);
-      cond_label = bcode_add_target(bcode);
+      cond_label = bcode_op_target(bcode, OP_JMP);
       body_target = bcode_pos(bcode);
 
       BTRY(compile_stmts(v7, a, pos, end, bcode));
@@ -18258,8 +18271,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, cond_label, bcode_pos(bcode));
 
       BTRY(compile_expr(v7, a, &cond, bcode));
-      bcode_op(bcode, OP_JMP_TRUE);
-      body_label = bcode_add_target(bcode);
+      body_label = bcode_op_target(bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
 
       v7->is_stack_neutral = 1;
@@ -18345,14 +18357,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       if (afinally != end) {
         /* `finally` clause is present: push its offset */
-        bcode_op(bcode, OP_TRY_PUSH_FINALLY);
-        finally_label = bcode_add_target(bcode);
+        finally_label = bcode_op_target(bcode, OP_TRY_PUSH_FINALLY);
       }
 
       if (acatch != afinally) {
         /* `catch` clause is present: push its offset */
-        bcode_op(bcode, OP_TRY_PUSH_CATCH);
-        catch_label = bcode_add_target(bcode);
+        catch_label = bcode_op_target(bcode, OP_TRY_PUSH_CATCH);
       }
 
       /* compile statements of `try` block */
@@ -18367,8 +18377,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
          * block
          */
         bcode_op(bcode, OP_TRY_POP);
-        bcode_op(bcode, OP_JMP);
-        after_catch_label = bcode_add_target(bcode);
+        after_catch_label = bcode_op_target(bcode, OP_JMP);
 
         /* --- catch --- */
 
@@ -18506,8 +18515,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
             bcode_op(bcode, OP_DUP);
             BTRY(compile_expr(v7, a, pos, bcode));
             bcode_op(bcode, OP_EQ);
-            bcode_op(bcode, OP_JMP_TRUE_DROP);
-            case_label = bcode_add_target(bcode);
+            case_label = bcode_op_target(bcode, OP_JMP_TRUE_DROP);
             cases++;
             mbuf_append(&case_labels, &case_label, sizeof(case_label));
             break;
@@ -18520,8 +18528,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       /* jmp table epilogue: unconditional jump to default case */
       bcode_op(bcode, OP_DROP);
-      bcode_op(bcode, OP_JMP);
-      dfl_label = bcode_add_target(bcode);
+      dfl_label = bcode_op_target(bcode, OP_JMP);
 
       *pos = case_start;
       /* second pass: emit case bodies and patch jump table */
@@ -18592,8 +18599,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       *pos = body;
 
       bcode_op(bcode, OP_DROP);
-      bcode_op(bcode, OP_JMP);
-      cond_label = bcode_add_target(bcode);
+      cond_label = bcode_op_target(bcode, OP_JMP);
       body_target = bcode_pos(bcode);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
       BTRY(compile_expr(v7, a, &iter, bcode));
@@ -18636,8 +18642,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body_target = bcode_pos(bcode);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
       BTRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_JMP_TRUE);
-      body_label = bcode_add_target(bcode);
+      body_label = bcode_op_target(bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
 
       v7->is_stack_neutral = 1;
@@ -20900,7 +20905,11 @@ int main(int argc, char **argv) {
 #define NOINSTR __attribute__((no_instrument_function))
 #endif
 
-IRAM NOINSTR void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+IRAM NOINSTR void __cyg_profile_func_enter(void *this_fn, void *call_site);
+
+IRAM NOINSTR void __cyg_profile_func_exit(void *this_fn, void *call_site);
+
+IRAM void __cyg_profile_func_enter(void *this_fn, void *call_site) {
 #if defined(V7_STACK_GUARD_MIN_SIZE)
   {
     static int profile_enter = 0;
@@ -20957,7 +20966,7 @@ IRAM NOINSTR void __cyg_profile_func_enter(void *this_fn, void *call_site) {
 #endif
 }
 
-IRAM NOINSTR void __cyg_profile_func_exit(void *this_fn, void *call_site) {
+IRAM void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 #if defined(V7_STACK_GUARD_MIN_SIZE)
   {
     (void) this_fn;
