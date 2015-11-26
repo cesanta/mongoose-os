@@ -16560,9 +16560,9 @@ static void bcode_restore_registers(struct bcode *bcode,
  *
  * Caller of bcode_perform_call is responsible for owning `frame`
  */
-static void bcode_perform_call(struct v7 *v7, struct bcode *bcode,
-                               v7_val_t frame, struct v7_function *func,
-                               struct bcode_registers *r) {
+static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
+                                      v7_val_t frame, struct v7_function *func,
+                                      struct bcode_registers *r) {
   v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
   v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(bcode));
   v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
@@ -16585,6 +16585,8 @@ static void bcode_perform_call(struct v7 *v7, struct bcode *bcode,
 
   /* `ops` already points to the needed instruction, no need to increment it */
   r->need_inc_ops = 0;
+
+  return V7_OK;
 }
 
 static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
@@ -16684,8 +16686,9 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
  * If `take_retval` is non-zero, value to return will be popped from stack
  * (and saved into `v7->returned_value`), otherwise, it won't be affected.
  */
-static void bcode_perform_return(struct v7 *v7, struct bcode_registers *r,
-                                 int take_retval) {
+static enum v7_err bcode_perform_return(struct v7 *v7,
+                                        struct bcode_registers *r,
+                                        int take_retval) {
   assert(take_retval || v7->is_returned);
 
   if (take_retval) {
@@ -16719,6 +16722,8 @@ static void bcode_perform_return(struct v7 *v7, struct bcode_registers *r,
 
   /* `ops` already points to the needed instruction, no need to increment it */
   r->need_inc_ops = 0;
+
+  return V7_OK;
 }
 
 /*
@@ -16892,7 +16897,7 @@ V7_PRIVATE void eval_try_pop(struct v7 *v7) {
 
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   struct bcode_registers r;
-  enum v7_err err = V7_OK;
+  enum v7_err ret = V7_OK;
 
   size_t name_len;
   char buf[512];
@@ -16922,7 +16927,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   }
 
 restart:
-  while (r.ops < r.end && err == V7_OK) {
+  while (r.ops < r.end && ret == V7_OK) {
     enum opcode op = (enum opcode) * r.ops;
     r.need_inc_ops = 1;
 #ifdef V7_BCODE_TRACE
@@ -17070,8 +17075,8 @@ restart:
         v2 = POP();
         v1 = POP();
         if (!v7_is_function(v2) && !v7_is_cfunction(i_value_of(v7, v2))) {
-          err = bcode_throw_exception(
-              v7, &r, TYPE_ERROR, "Expecting a function in instanceof check");
+          BTRY(bcode_throw_exception(
+              v7, &r, TYPE_ERROR, "Expecting a function in instanceof check"));
         } else {
           PUSH(v7_create_boolean(
               is_prototype_of(v7, v1, v7_get(v7, v2, "prototype", 9))));
@@ -17109,7 +17114,7 @@ restart:
         arg = (int) *(++r.ops);
         if ((p = v7_get_property_v(v7, v7->call_stack, r.lit[arg])) == NULL) {
           /* variable does not exist: Reference Error */
-          err = bcode_throw_reference_error(v7, &r, r.lit[arg]);
+          BTRY(bcode_throw_reference_error(v7, &r, r.lit[arg]));
           break;
         } else {
           PUSH(v7_property_value(v7, v7->call_stack, p));
@@ -17134,7 +17139,7 @@ restart:
            * In strict mode, throw reference error instead of polluting Global
            * Object
            */
-          err = bcode_throw_reference_error(v7, &r, v2);
+          BTRY(bcode_throw_reference_error(v7, &r, v2));
           break;
         }
         PUSH(v3);
@@ -17190,8 +17195,8 @@ restart:
         val_t this_obj = v7_get_global(v7); /* TODO(mkm) handle `this` */
 
         if (SP() < args) {
-          err =
-              bcode_throw_exception(v7, &r, INTERNAL_ERROR, "stack underflow");
+          BTRY(
+              bcode_throw_exception(v7, &r, INTERNAL_ERROR, "stack underflow"));
           break;
         } else {
           v2 = v7_create_dense_array(v7);
@@ -17222,7 +17227,7 @@ restart:
              *
              * We have `1` here, but not `"foo"`.
              */
-            err = bcode_throw_exception(v7, &r, TYPE_ERROR, "not a function");
+            BTRY(bcode_throw_exception(v7, &r, TYPE_ERROR, "not a function"));
           } else if (v7_to_function(v1)->ast != NULL) {
             /*
              * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
@@ -17268,7 +17273,7 @@ restart:
             }
 
             /* transfer control to the function */
-            bcode_perform_call(v7, r.bcode, frame, func, &r);
+            BTRY(bcode_perform_call(v7, r.bcode, frame, func, &r));
 
             frame = v7_create_undefined();
           }
@@ -17276,7 +17281,7 @@ restart:
         break;
       }
       case OP_RET:
-        bcode_perform_return(v7, &r, 1);
+        BTRY(bcode_perform_return(v7, &r, 1));
         break;
       case OP_TRY_PUSH_CATCH:
       case OP_TRY_PUSH_FINALLY:
@@ -17294,22 +17299,22 @@ restart:
          * unwinding stack.
          */
         if (v7->is_thrown) {
-          err = bcode_perform_throw(v7, &r, 0 /*don't take value from stack*/);
+          BTRY(bcode_perform_throw(v7, &r, 0 /*don't take value from stack*/));
           break;
         } else if (v7->is_returned) {
-          bcode_perform_return(v7, &r, 0 /*don't take value from stack*/);
+          BTRY(bcode_perform_return(v7, &r, 0 /*don't take value from stack*/));
           break;
         }
         break;
       case OP_THROW:
-        err = bcode_perform_throw(v7, &r, 1 /*take thrown value*/);
+        BTRY(bcode_perform_throw(v7, &r, 1 /*take thrown value*/));
         break;
       case OP_USE_STRICT:
         v7->strict_mode = 1;
         break;
       default:
-        err = bcode_throw_exception(v7, &r, INTERNAL_ERROR,
-                                    "Unknown opcode: %d", (int) op);
+        BTRY(bcode_throw_exception(v7, &r, INTERNAL_ERROR, "Unknown opcode: %d",
+                                   (int) op));
         break;
     }
 
@@ -17329,14 +17334,15 @@ restart:
 
   /* implicit return */
   if (v7->call_stack != v7->global_object) {
-    bcode_perform_return(v7, &r, 1);
+    BTRY(bcode_perform_return(v7, &r, 1));
     POP();
     PUSH(v7_create_undefined());
     goto restart;
   }
-  tmp_frame_cleanup(&tf);
 
-  return err;
+clean:
+  tmp_frame_cleanup(&tf);
+  return ret;
 }
 
 V7_PRIVATE void bcode_init(struct bcode *bcode) {
