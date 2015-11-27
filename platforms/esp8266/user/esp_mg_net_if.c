@@ -317,6 +317,30 @@ void mg_if_destroy_conn(struct mg_connection *nc) {
   }
 }
 
+void mg_if_get_conn_addr(struct mg_connection *nc, int remote,
+                         union socket_address *sa) {
+  memset(sa, 0, sizeof(*sa));
+  if (nc->sock == INVALID_SOCKET) return;
+  if (nc->flags & MG_F_UDP) {
+    struct udp_pcb *upcb = (struct udp_pcb *) nc->sock;
+    if (remote) {
+      memcpy(sa, &nc->sa, sizeof(*sa));
+    } else {
+      sa->sin.sin_port = htons(upcb->local_port);
+      sa->sin.sin_addr.s_addr = upcb->local_ip.addr;
+    }
+  } else {
+    struct tcp_pcb *tpcb = (struct tcp_pcb *) nc->sock;
+    if (remote) {
+      sa->sin.sin_port = htons(tpcb->remote_port);
+      sa->sin.sin_addr.s_addr = tpcb->remote_ip.addr;
+    } else {
+      sa->sin.sin_port = htons(tpcb->local_port);
+      sa->sin.sin_addr.s_addr = tpcb->local_ip.addr;
+    }
+  }
+}
+
 void mg_if_set_sock(struct mg_connection *nc, sock_t sock) {
   nc->sock = sock;
 }

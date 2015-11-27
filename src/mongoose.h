@@ -281,9 +281,10 @@ enum cs_log_level {
   LL_WARN = 1,
   LL_INFO = 2,
   LL_DEBUG = 3,
+  LL_VERBOSE_DEBUG = 4,
 
   _LL_MIN = -2,
-  _LL_MAX = 4,
+  _LL_MAX = 5,
 };
 
 #ifndef CS_NDEBUG
@@ -299,10 +300,10 @@ void cs_log_printf(const char *fmt, ...);
     cs_log_printf x;                     \
   }
 
-#define DBG(x)                           \
-  if (s_cs_log_level >= LL_DEBUG) {      \
-    fprintf(stderr, "%-20s ", __func__); \
-    cs_log_printf x;                     \
+#define DBG(x)                              \
+  if (s_cs_log_level >= LL_VERBOSE_DEBUG) { \
+    fprintf(stderr, "%-20s ", __func__);    \
+    cs_log_printf x;                        \
   }
 
 #else /* NDEBUG */
@@ -1116,6 +1117,10 @@ void mg_if_destroy_conn(struct mg_connection *nc);
 
 void mg_close_conn(struct mg_connection *nc);
 
+/* Put connection's address into *sa, local (remote = 0) or remote. */
+void mg_if_get_conn_addr(struct mg_connection *nc, int remote,
+                         union socket_address *sa);
+
 #endif /* MG_NET_IF_HEADER_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1241,7 +1246,7 @@ void mg_set_close_on_exec(sock_t);
 #define MG_SOCK_STRINGIFY_PORT 2
 #define MG_SOCK_STRINGIFY_REMOTE 4
 /*
- * Convert socket's local or remote address into string.
+ * Convert connection's local or remote address into string.
  *
  * The `flags` parameter is a bit mask that controls the behavior,
  * see `MG_SOCK_STRINGIFY_*` definitions.
@@ -1253,7 +1258,11 @@ void mg_set_close_on_exec(sock_t);
  * If both port number and IP address are printed, they are separated by `:`.
  * If compiled with `-DMG_ENABLE_IPV6`, IPv6 addresses are supported.
  */
+void mg_conn_addr_to_str(struct mg_connection *nc, char *buf, size_t len,
+                         int flags);
+#ifndef MG_DISABLE_SOCKET_IF /* Legacy interface. */
 void mg_sock_to_str(sock_t sock, char *buf, size_t len, int flags);
+#endif
 
 /*
  * Convert socket's address into string.
@@ -1281,7 +1290,7 @@ int mg_hexdump(const void *buf, int len, char *dst, int dst_len);
  * event handler.
  */
 void mg_hexdump_connection(struct mg_connection *nc, const char *path,
-                           int num_bytes, int ev);
+                           const void *buf, int num_bytes, int ev);
 /*
  * Print message to buffer. If buffer is large enough to hold the message,
  * return buffer. If buffer is to small, allocate large enough buffer on heap,
