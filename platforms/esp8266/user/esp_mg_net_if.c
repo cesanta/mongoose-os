@@ -548,4 +548,8 @@ void mg_resume() {
 #endif
 }
 
+int mg_is_suspended() {
+  return s_suspended;
+}
+
 #endif /* ESP_ENABLE_MG_LWIP_IF */

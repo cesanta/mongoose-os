@@ -11,6 +11,7 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 /* TODO(alashkin): Should we move these functions to mongoose interface? */
 void mg_suspend();
 void mg_resume();
+int mg_is_suspended();
 
 #endif /* !RTOS_SDK */
 
