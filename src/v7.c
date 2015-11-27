@@ -2856,6 +2856,8 @@ struct v7 {
   unsigned int is_thrown : 1;
   /* true if `returned_value` is valid (used in bcode) */
   unsigned int is_returned : 1;
+  /* true if a finally block is executing while breaking */
+  unsigned int is_breaking : 1;
   /* true if last emitted statement does not affect data stack */
   unsigned int is_stack_neutral : 1;
 };
@@ -3287,6 +3289,19 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 extern "C" {
 #endif /* __cplusplus */
 
+/*
+ *
+ * Stack diagrams follow the syntax and semantics of:
+ *
+ * http://everything2.com/title/Forth+stack+diagrams[Forth stack diagrams].
+ *
+ * We use the following extension in the terminology:
+ *
+ * `T`: "Try stack".
+ * `A`: opcode arguments.
+ * `S`: stash register (one element stack).
+ *
+ */
 enum opcode {
   OP_DROP,    /* `( a -- )` */
   OP_DUP,     /* `( a -- a a )` */
@@ -3374,7 +3389,7 @@ enum opcode {
    *
    * Used in the beginning of the `try` block.
    *
-   * `( T: -- T: a )`
+   * `( A: a -- T: a )`
    */
   OP_TRY_PUSH_CATCH,
 
@@ -3384,9 +3399,31 @@ enum opcode {
    *
    * Used in the beginning of the `try` block.
    *
-   * `( T: -- T: a )`
+   * `( A: a -- T: a )`
+   *
+   * TODO: implement me
    */
   OP_TRY_PUSH_FINALLY,
+
+  /*
+   * Pushes a value (bcode offset of a label) from opcode argument to
+   * "try stack".
+   *
+   * Used in the beginning of loops that contain break or continue.
+   *
+   * `( A: a -- T: a )`
+   */
+  OP_TRY_PUSH_BREAK_CONTINUE,
+
+  /*
+   * Like OP_TRY_PUSH_BREAK_CONTINUE, but the label pushed on the try stack
+   * will only we used for breaks and ignored for continues.
+   *
+   * Used to implement break in switch statements.
+   *
+   * `( A: a -- T: a )`
+   */
+  OP_TRY_PUSH_BREAK,
 
   /*
    * Pops a value (bcode offset of `finally` or `catch` block) from "try
@@ -3436,11 +3473,12 @@ enum opcode {
   OP_THROW,
 
   /*
-   * Sets strict mode to active (`v7->strict_mode`). Stack neutral.
+   * Unwind to next break entry in the try stack, evaluating
+   * all finally blocks on its way up.
    *
    * `( -- )`
    */
-  OP_USE_STRICT,
+  OP_BREAK,
 
   OP_MAX,
 };
@@ -3462,9 +3500,11 @@ struct bcode {
   struct mbuf names; /* function name, `args` arg names, local names */
   int refcnt;        /* reference count */
   int args;          /* number of args */
+
+  unsigned int strict_mode : 1;
 };
 
-V7_PRIVATE void bcode_init(struct bcode *);
+V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode);
 V7_PRIVATE void bcode_free(struct bcode *);
 V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
 
@@ -16294,7 +16334,8 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 
 #define OFFSET_TAG_CATCH ((uint64_t) 0x01 << (sizeof(bcode_off_t) * 8))
 #define OFFSET_TAG_FINALLY ((uint64_t) 0x02 << (sizeof(bcode_off_t) * 8))
-#define OFFSET_TAG_MASK ((uint64_t) 0x03 << (sizeof(bcode_off_t) * 8))
+#define OFFSET_TAG_BREAK ((uint64_t) 0x03 << (sizeof(bcode_off_t) * 8))
+#define OFFSET_TAG_MASK ((uint64_t) 0x07 << (sizeof(bcode_off_t) * 8))
 #define OFFSET_TAG(v) ((v) &OFFSET_TAG_MASK)
 #define OFFSET_VALUE(v) \
   ((bcode_off_t)((v) & (((uint64_t) 1 << (sizeof(bcode_off_t) * 8)) - 1)))
@@ -16315,6 +16356,7 @@ enum found_try_block {
   FOUND_TRY_BLOCK_NONE,
   FOUND_TRY_BLOCK_CATCH,
   FOUND_TRY_BLOCK_FINALLY,
+  FOUND_BREAK,
 };
 
 /* clang-format off */
@@ -16372,10 +16414,12 @@ static const char *op_names[] = {
   "RET",
   "TRY_PUSH_CATCH",
   "TRY_PUSH_FINALLY",
+  "TRY_PUSH_BREAK_CONTINUE",
+  "TRY_PUSH_BREAK",
   "TRY_POP",
   "AFTER_FINALLY",
   "THROW",
-  "USE_STRICT",
+  "BREAK",
 };
 /* clang-format on */
 
@@ -16507,7 +16551,9 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
     case OP_JMP_TRUE:
     case OP_JMP_TRUE_DROP:
     case OP_TRY_PUSH_CATCH:
-    case OP_TRY_PUSH_FINALLY: {
+    case OP_TRY_PUSH_FINALLY:
+    case OP_TRY_PUSH_BREAK_CONTINUE:
+    case OP_TRY_PUSH_BREAK: {
       bcode_off_t target;
       p++;
       memcpy(&target, p, sizeof(target));
@@ -16562,11 +16608,16 @@ static void bcode_restore_registers(struct bcode *bcode,
  */
 static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
                                       v7_val_t frame, struct v7_function *func,
-                                      struct bcode_registers *r) {
+                                      struct bcode_registers *r,
+                                      val_t this_object) {
   v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
   v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(bcode));
   v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
          v7_create_foreign(r->ops + 1));
+
+  /* `this` object */
+  v7_set(v7, frame, "___th", 5, V7_PROPERTY_HIDDEN, v7_get_this(v7));
+  v7->this_object = this_object;
 
   /* "try stack" */
   v7_set(v7, frame, "____t", 5, V7_PROPERTY_HIDDEN, v7_create_dense_array(v7));
@@ -16574,10 +16625,6 @@ static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
   /* stack size */
   v7_set(v7, frame, "____s", 5, V7_PROPERTY_HIDDEN,
          v7_create_number(v7->stack.len));
-
-  /* `strict_mode` */
-  v7_set(v7, frame, "___us", 5, V7_PROPERTY_HIDDEN,
-         v7_create_number(!!v7->strict_mode));
 
   v7_to_object(frame)->prototype = func->scope;
   v7->call_stack = frame;
@@ -16607,8 +16654,8 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
     v7->stack.len = saved_stack_len;
   }
 
-  /* restore `strict_mode` */
-  v7->strict_mode = v7_get(v7, v7->call_stack, "___us", 5);
+  /* restore `this` object */
+  v7->this_object = v7_get(v7, v7->call_stack, "___th", 5);
 
   /* finally, drop the frame which we've just unwound */
   v7->call_stack = v7_get(v7, v7->call_stack, "____p", 5);
@@ -16621,12 +16668,15 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
  * If `ignore_catch` is non-zero, `catch` blocks are ignored (only `finally`
  * considered)
  *
+ * If `ignore_break` is non-zero, `break` exit points are ignored.
+ *
  * Returns 1 when control was transferred to some `catch` or
  * `finally` block, 0 otherwise.
  */
 static enum found_try_block unwind_local_try_stack(struct v7 *v7,
                                                    struct bcode_registers *r,
-                                                   int ignore_catch) {
+                                                   int ignore_catch,
+                                                   int ignore_break) {
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   enum found_try_block ret = FOUND_TRY_BLOCK_NONE;
@@ -16643,8 +16693,8 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
     while ((length = v7_array_length(v7, arr)) > 0) {
       /* get latest offset from the "try stack" */
       uint64_t offset = v7_to_number(v7_array_get(v7, arr, length - 1));
-
-      if (!ignore_catch || OFFSET_TAG(offset) != OFFSET_TAG_CATCH) {
+      if ((!ignore_catch || OFFSET_TAG(offset) != OFFSET_TAG_CATCH) &&
+          (!ignore_break || OFFSET_TAG(offset) != OFFSET_TAG_BREAK)) {
         /* need to transfer control to this offset */
         r->ops = (uint8_t *) r->bcode->ops.buf + OFFSET_VALUE(offset);
 #ifdef V7_BCODE_TRACE
@@ -16656,6 +16706,9 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
             break;
           case OFFSET_TAG_FINALLY:
             ret = FOUND_TRY_BLOCK_FINALLY;
+            break;
+          case OFFSET_TAG_BREAK:
+            ret = FOUND_BREAK;
             break;
           default:
             assert(0);
@@ -16677,6 +16730,32 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
 
   tmp_frame_cleanup(&tf);
   return ret;
+}
+
+/*
+ * Perform break, if there is a `finally` block in effect, transfer
+ * control there.
+ */
+static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
+  enum found_try_block found;
+  v7->is_breaking = 0;
+  /*
+   * Try to unwind local "try stack", ignoring `catch` blocks. If there are no
+   * `finally` blocks in effect, actually transfer control to break target.
+   */
+  found = unwind_local_try_stack(v7, r, 1 /*ignore_catch*/, 0 /*ignore_break*/);
+  assert(found != FOUND_TRY_BLOCK_NONE);
+
+  /*
+   * upon exit of a finally block we'll reenter here if is_breaking is true.
+   * See OP_AFTER_FINALLY.
+   */
+  if (found == FOUND_TRY_BLOCK_FINALLY) {
+    v7->is_breaking = 1;
+  }
+
+  /* `ops` already points to the needed instruction, no need to increment it */
+  r->need_inc_ops = 0;
 }
 
 /*
@@ -16707,7 +16786,7 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
    * Try to unwind local "try stack", ignoring `catch` blocks. If there are no
    * `finally` blocks in effect, actually perform return.
    */
-  if (unwind_local_try_stack(v7, r, 1 /*ignore_catch*/) ==
+  if (unwind_local_try_stack(v7, r, 1 /*ignore_catch*/, 1 /*ignore_break*/) ==
       FOUND_TRY_BLOCK_NONE) {
     /*
      * no `finally` blocks were found, so, perform return: unwind stack by 1
@@ -16751,7 +16830,8 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
     v7->returned_value = v7_create_undefined();
   }
 
-  while ((found = unwind_local_try_stack(v7, r, 0 /*don't ignore catch*/)) ==
+  while ((found = unwind_local_try_stack(v7, r, 0 /*don't ignore catch*/,
+                                         1 /*ignore break*/)) ==
          FOUND_TRY_BLOCK_NONE) {
     if (v7->call_stack != v7->global_object) {
       /* not reached bottom of the stack yet, keep unwinding */
@@ -16857,6 +16937,9 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
       break;
     case OP_TRY_PUSH_FINALLY:
       offset_tag = OFFSET_TAG_FINALLY;
+      break;
+    case OP_TRY_PUSH_BREAK:
+      offset_tag = OFFSET_TAG_BREAK;
       break;
     default:
       assert(0);
@@ -17132,7 +17215,7 @@ restart:
         prop = v7_get_property(v7, v1, buf, strlen(buf));
         if (prop != NULL) {
           prop->value = v3;
-        } else if (!v7->strict_mode) {
+        } else if (!r.bcode->strict_mode) {
           v7_set_v(v7, v7_get_global(v7), v2, v3);
         } else {
           /*
@@ -17192,9 +17275,8 @@ restart:
       case OP_CALL: {
         /* Naive implementation pending stack frame redesign */
         int args = (int) *(++r.ops);
-        val_t this_obj = v7_get_global(v7); /* TODO(mkm) handle `this` */
 
-        if (SP() < args) {
+        if (SP() < (args + 1 /*func*/ + 1 /*this*/)) {
           BTRY(
               bcode_throw_exception(v7, &r, INTERNAL_ERROR, "stack underflow"));
           break;
@@ -17203,7 +17285,11 @@ restart:
           while (args > 0) {
             v7_array_set(v7, v2, --args, POP());
           }
+          /* pop function to call */
           v1 = POP();
+
+          /* pop `this` */
+          v3 = POP();
 
           if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
             /* extract the hidden property from a cfunction_object */
@@ -17233,10 +17319,29 @@ restart:
              * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
              * exceptions
              */
-            PUSH(i_apply(v7, v1, this_obj, v2));
+
+            /*
+             * In "function invocation pattern", the `this` value popped from
+             * stack is an `undefined`. And in non-strict mode, we should change
+             * it to global object.
+             */
+            if (!r.bcode->strict_mode && v7_is_undefined(v3)) {
+              v3 = v7->global_object;
+            }
+
+            PUSH(i_apply(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/));
           } else {
             val_t *name, *arg_end, *locals_end;
             struct v7_function *func = v7_to_function(v1);
+
+            /*
+             * In "function invocation pattern", the `this` value popped from
+             * stack is an `undefined`. And in non-strict mode, we should change
+             * it to global object.
+             */
+            if (!func->bcode->strict_mode && v7_is_undefined(v3)) {
+              v3 = v7->global_object;
+            }
 
             frame = v7_create_object(v7);
 
@@ -17273,7 +17378,7 @@ restart:
             }
 
             /* transfer control to the function */
-            BTRY(bcode_perform_call(v7, r.bcode, frame, func, &r));
+            BTRY(bcode_perform_call(v7, r.bcode, frame, func, &r, v3 /*this*/));
 
             frame = v7_create_undefined();
           }
@@ -17285,6 +17390,7 @@ restart:
         break;
       case OP_TRY_PUSH_CATCH:
       case OP_TRY_PUSH_FINALLY:
+      case OP_TRY_PUSH_BREAK:
         eval_try_push(v7, op, &r);
         break;
       case OP_TRY_POP:
@@ -17304,13 +17410,15 @@ restart:
         } else if (v7->is_returned) {
           BTRY(bcode_perform_return(v7, &r, 0 /*don't take value from stack*/));
           break;
+        } else if (v7->is_breaking) {
+          bcode_perform_break(v7, &r);
         }
         break;
       case OP_THROW:
         BTRY(bcode_perform_throw(v7, &r, 1 /*take thrown value*/));
         break;
-      case OP_USE_STRICT:
-        v7->strict_mode = 1;
+      case OP_BREAK:
+        bcode_perform_break(v7, &r);
         break;
       default:
         BTRY(bcode_throw_exception(v7, &r, INTERNAL_ERROR, "Unknown opcode: %d",
@@ -17321,10 +17429,13 @@ restart:
 #ifdef V7_BCODE_TRACE
     /* print current stack state */
     {
-      char *str = v7_stringify(v7, TOS(), NULL, 0, V7_STRINGIFY_DEFAULT);
+      char buf[40];
+      char *str = v7_stringify(v7, TOS(), buf, sizeof(buf), V7_STRINGIFY_DEBUG);
       fprintf(stderr, "        stack size: %u, TOS: '%s'\n",
               (unsigned int) (v7->stack.len / sizeof(val_t)), str);
-      free(str);
+      if (str != buf) {
+        free(str);
+      }
     }
 #endif
     if (r.need_inc_ops) {
@@ -17345,12 +17456,13 @@ clean:
   return ret;
 }
 
-V7_PRIVATE void bcode_init(struct bcode *bcode) {
+V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode) {
   mbuf_init(&bcode->ops, 0);
   mbuf_init(&bcode->lit, 0);
   mbuf_init(&bcode->names, 0);
   bcode->refcnt = 0;
   bcode->args = 0;
+  bcode->strict_mode = strict_mode;
 }
 
 V7_PRIVATE void bcode_free(struct bcode *bcode) {
@@ -17383,13 +17495,6 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
   size_t saved_stack_len = v7->stack.len;
   struct bcode *saved_bcode = v7->bcode;
 
-#ifndef V7_FORCE_STRICT_MODE
-  int saved_strict_mode = v7->strict_mode;
-  v7->strict_mode = 0;
-#else
-  v7->strict_mode = 1;
-#endif
-
   /*
    * We need to zero it beforehand, since we may get to `clean` before the new
    * one is initialized
@@ -17409,7 +17514,11 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
 
   /* init new bcode */
   v7->bcode = (struct bcode *) calloc(1, sizeof(*v7->bcode));
-  bcode_init(v7->bcode);
+#ifndef V7_FORCE_STRICT_MODE
+  bcode_init(v7->bcode, 0);
+#else
+  bcode_init(v7->bcode, 1);
+#endif
 
   err = compile_script(v7, &a, v7->bcode);
   if (err != V7_OK) {
@@ -17440,9 +17549,6 @@ clean:
   }
   v7->bcode = saved_bcode;
 
-#ifndef V7_FORCE_STRICT_MODE
-  v7->strict_mode = saved_strict_mode;
-#endif
   v7->call_stack = saved_call_stack;
   return err;
 }
@@ -17848,8 +17954,67 @@ clean:
   return ret;
 }
 
+/*
+ * Just like `compile_expr`, but it takes additional argument: `for_call`.
+ * If it's non-zero, the stack is additionally populated with `this` value
+ * for call.
+ *
+ * If there is a refinement (a dot, or a subscript), then it'll be the
+ * appropriate object. Otherwise, it's `undefined`.
+ *
+ * In non-strict mode, `undefined` will be changed to Global Object at runtime,
+ * see `OP_CALL` handling in `eval_bcode()`.
+ */
+V7_PRIVATE enum v7_err compile_expr_ext(struct v7 *v7, struct ast *a,
+                                        ast_off_t *pos, struct bcode *bcode,
+                                        uint8_t for_call) {
+  ast_off_t pos_start = *pos;
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+  enum v7_err ret = V7_OK;
+
+  switch (tag) {
+    case AST_MEMBER: {
+      uint8_t lit = string_lit(v7, a, pos, bcode);
+      BTRY(compile_expr(v7, a, pos, bcode));
+      if (for_call) {
+        /* current TOS will be used as `this` */
+        bcode_op(bcode, OP_DUP);
+      }
+      bcode_push_lit(bcode, lit);
+      bcode_op(bcode, OP_GET);
+      break;
+    }
+
+    case AST_INDEX:
+      BTRY(compile_expr(v7, a, pos, bcode));
+      if (for_call) {
+        /* current TOS will be used as `this` */
+        bcode_op(bcode, OP_DUP);
+      }
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_GET);
+      break;
+
+    default:
+      if (for_call) {
+        /*
+         * `this` will be an `undefined` (but it may change to Global Object
+         * at runtime)
+         */
+        bcode_op(bcode, OP_PUSH_UNDEFINED);
+      }
+      *pos = pos_start;
+      BTRY(compile_expr(v7, a, pos, bcode));
+      break;
+  }
+
+clean:
+  return ret;
+}
+
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode) {
+  ast_off_t pos_start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   enum v7_err ret = V7_OK;
 
@@ -17895,17 +18060,18 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_GET_VAR);
       bcode_op(bcode, string_lit(v7, a, pos, bcode));
       break;
-    case AST_MEMBER: {
-      uint8_t lit = string_lit(v7, a, pos, bcode);
-      BTRY(compile_expr(v7, a, pos, bcode));
-      bcode_push_lit(bcode, lit);
-      bcode_op(bcode, OP_GET);
-      break;
-    }
+    case AST_MEMBER:
     case AST_INDEX:
-      BTRY(compile_expr(v7, a, pos, bcode));
-      BTRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_GET);
+      /*
+       * These two are handled by the "extended" version of this function,
+       * since we may need to put `this` value on stack, for "method pattern
+       * invocation".
+       *
+       * First of all, restore starting AST position, and then call extended
+       * function.
+       */
+      *pos = pos_start;
+      BTRY(compile_expr_ext(v7, a, pos, bcode, 0 /*not for call*/));
       break;
     case AST_IN:
       BTRY(compile_expr(v7, a, pos, bcode));
@@ -17955,10 +18121,46 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       break;
     }
     case AST_CALL: {
+      /*
+       * f()
+       *
+       * ->
+       *
+       *  PUSH_UNDEFINED (value for `this`)
+       *  GET_VAR "f"
+       *  CALL 0 args
+       *
+       * ---------------
+       *
+       * f(a, b)
+       *
+       * ->
+       *
+       *  PUSH_UNDEFINED (value for `this`)
+       *  GET_VAR "f"
+       *  GET_VAR "a"
+       *  GET_VAR "b"
+       *  CALL 2 args
+       *
+       * ---------------
+       *
+       * o.f(a, b)
+       *
+       * ->
+       *
+       *  GET_VAR "o" (so that `this` will be an `o`)
+       *  DUP         (we'll also need `o` for GET below, so, duplicate it)
+       *  PUSH_LIT "f"
+       *  GET         (get property "f" of the object "o")
+       *  GET_VAR "a"
+       *  GET_VAR "b"
+       *  CALL 2 args
+       *
+       */
       int args;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
-      BTRY(compile_expr(v7, a, pos, bcode));
+      BTRY(compile_expr_ext(v7, a, pos, bcode, 1 /*for call*/));
       for (args = 0; *pos < end; args++) {
         BTRY(compile_expr(v7, a, pos, bcode));
       }
@@ -18000,7 +18202,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
           case AST_PROP:
             bcode_op(bcode, OP_DUP);
             lit = string_lit(v7, a, pos, bcode);
-            if (v7->strict_mode) {
+            if (bcode->strict_mode) {
               /*
                * In strict mode, check for duplicate property names in
                * object literals
@@ -18102,11 +18304,11 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       struct v7_function *func = v7_to_function(funv);
       func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
-      bcode_init(func->bcode);
+      bcode_init(func->bcode, bcode->strict_mode);
       func->bcode->refcnt = 1;
       flit = bcode_add_lit(bcode, funv);
 
-      (*pos)--;
+      *pos = pos_start;
       BTRY(compile_function(v7, a, pos, func->bcode));
       bcode_push_lit(bcode, flit);
       bcode_op(bcode, OP_FUNC_LIT);
@@ -18180,11 +18382,14 @@ clean:
 V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode) {
   ast_off_t end;
-  enum ast_tag tag = ast_fetch_tag(a, pos);
-  ast_off_t cond;
+  enum ast_tag tag;
+  ast_off_t cond, pos_start;
   bcode_off_t body_target, body_label, cond_label;
   struct mbuf case_labels;
   enum v7_err ret = V7_OK;
+
+  pos_start = *pos;
+  tag = ast_fetch_tag(a, pos);
 
   mbuf_init(&case_labels, 0);
 
@@ -18282,7 +18487,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       v7->is_stack_neutral = 1;
       break;
-
+    case AST_BREAK:
+      bcode_op(bcode, OP_BREAK);
+      break;
     /*
      * Frame objects (`v7->call_stack`) contain one more hidden property:
      * `____t`, which is an array of offsets in bcode. Each element of the array
@@ -18463,6 +18670,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * }
      *
      * ->
+     *
+     *   TRY_PUSH_BREAK end
      *   <E>
      *   DUP
      *   <C1>
@@ -18485,6 +18694,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   <B2>
      *
      * end:
+     *   TRY_POP_BREAK
      *
      * If the default case is missing we treat it as if had an empty body and
      * placed in last position (i.e. `dfl` label is replaced with `end`).
@@ -18493,13 +18703,15 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * drop the TOS resulting from evaluating the last expression
      */
     case AST_SWITCH: {
-      bcode_off_t dfl_label;
+      bcode_off_t dfl_label, end_label;
       ast_off_t case_end, case_start;
       enum ast_tag case_tag;
       int i, has_default = 0, cases = 0;
 
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
+
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
 
       BTRY(compile_expr(v7, a, pos, bcode));
 
@@ -18571,6 +18783,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       if (!has_default) {
         bcode_patch_target(bcode, dfl_label, bcode_pos(bcode));
       }
+
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
@@ -18696,12 +18911,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_RET);
       break;
-    case AST_USE_STRICT:
-      bcode_op(bcode, OP_USE_STRICT);
-      v7->is_stack_neutral = 1;
-      break;
     default:
-      (*pos)--;
+      *pos = pos_start;
       BTRY(compile_expr(v7, a, pos, bcode));
   }
 
@@ -18721,7 +18932,9 @@ static enum v7_err compile_body(struct v7 *v7, struct ast *a,
   if (*pos < end) {
     ast_off_t tmp_pos = body;
     if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
-      v7->strict_mode = 1;
+      bcode->strict_mode = 1;
+      /* move `body` offset, effectively removing `AST_USE_STRICT` from it */
+      body = tmp_pos;
     }
   }
 #endif
@@ -18755,12 +18968,6 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
   enum ast_tag tag = ast_fetch_tag(a, &pos);
   enum v7_err ret = V7_OK;
   (void) tag;
-#ifndef V7_FORCE_STRICT_MODE
-  int saved_strict_mode = v7->strict_mode;
-  v7->strict_mode = 0;
-#else
-  v7->strict_mode = 1;
-#endif
   /* first tag should always be AST_SCRIPT */
   assert(tag == AST_SCRIPT);
 
@@ -18777,9 +18984,6 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
 #endif
 
 clean:
-#ifndef V7_FORCE_STRICT_MODE
-  v7->strict_mode = saved_strict_mode;
-#endif
   return ret;
 }
 
@@ -18794,9 +18998,6 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   const char *name;
   size_t name_len;
   enum v7_err ret = V7_OK;
-#ifndef V7_FORCE_STRICT_MODE
-  int saved_strict_mode = v7->strict_mode;
-#endif
 
   (void) tag;
   assert(tag == AST_FUNC);
@@ -18834,9 +19035,6 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   dump_bcode(stderr, bcode);
 #endif
 
-#ifndef V7_FORCE_STRICT_MODE
-  v7->strict_mode = saved_strict_mode;
-#endif
 clean:
   return ret;
 }
