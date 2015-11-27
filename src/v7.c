@@ -2858,6 +2858,8 @@ struct v7 {
   unsigned int is_returned : 1;
   /* true if a finally block is executing while breaking */
   unsigned int is_breaking : 1;
+  /* true if some value is currently stashed */
+  unsigned int is_stashed : 1;
   /* true if last emitted statement does not affect data stack */
   unsigned int is_stack_neutral : 1;
 };
@@ -3306,6 +3308,7 @@ enum opcode {
   OP_DROP,    /* `( a -- )` */
   OP_DUP,     /* `( a -- a a )` */
   OP_2DUP,    /* `( a b -- a b a b )` */
+  OP_SWAP,    /* `( a b -- b a )` */
   OP_STASH,   /* `( a S: b -- a S: a)` saves TOS to stash reg */
   OP_UNSTASH, /* `( a S: b -- b S: nil )` replaces tos with stash reg */
 
@@ -3380,6 +3383,23 @@ enum opcode {
 
   OP_CREATE_OBJ, /* creates an empty object */
   OP_CREATE_ARR, /* creates an empty array */
+
+  /*
+   * Yields the next property name.
+   * Used in the for..in construct.
+   *
+   * The first evaluation must receive `null` as handle.
+   * Subsequent evaluations will either:
+   *
+   * a) produce a new handle, the key and true value:
+   *
+   * `( o h -- o h' key true)`
+   *
+   * b) produce a false value only, indicating no more properties:
+   *
+   * `( o h -- false)`
+   */
+  OP_NEXT_PROP,
 
   /*
    * Copies the function object at TOS and assigns current scope
@@ -16360,11 +16380,15 @@ V7_STATIC_ASSERT(sizeof(bcode_off_t) <= sizeof(uint32_t),
 #define TOS() stack_tos(&v7->stack)
 #define SP() stack_sp(&v7->stack)
 
-enum found_try_block {
-  FOUND_TRY_BLOCK_NONE,
-  FOUND_TRY_BLOCK_CATCH,
-  FOUND_TRY_BLOCK_FINALLY,
-  FOUND_BREAK,
+/*
+ * Local-to-function block types that we might want to consider when unwinding
+ * stack for whatever reason. see `unwind_local_blocks_stack()`.
+ */
+enum local_block {
+  LOCAL_BLOCK_NONE = (0),
+  LOCAL_BLOCK_CATCH = (1 << 0),
+  LOCAL_BLOCK_FINALLY = (1 << 1),
+  LOCAL_BLOCK_BREAK = (1 << 2),
 };
 
 /* clang-format off */
@@ -16372,6 +16396,7 @@ static const char *op_names[] = {
   "DROP",
   "DUP",
   "2DUP",
+  "SWAP",
   "STASH",
   "UNSTASH",
   "SWAP_DROP",
@@ -16419,6 +16444,7 @@ static const char *op_names[] = {
   "JMP_TRUE_DROP",
   "CREATE_OBJ",
   "CREATE_ARR",
+  "NEXT_PROP",
   "FUNC_LIT",
   "CALL",
   "RET",
@@ -16674,23 +16700,22 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
 
 /*
  * Unwinds local "try stack" (i.e. local-to-current-function stack of nested
- * `try` blocks)
+ * `try` blocks), looking for local-to-function blocks.
  *
- * If `ignore_catch` is non-zero, `catch` blocks are ignored (only `finally`
- * considered)
+ * Block types of interest are specified with `wanted_blocks_mask`: it's a
+ * bitmask of `enum local_block` values.
  *
- * If `ignore_break` is non-zero, `break` exit points are ignored.
+ * Only blocks of specified types will be considered, others will be dropped.
  *
- * Returns 1 when control was transferred to some `catch` or
- * `finally` block, 0 otherwise.
+ * Returns id of the block type that control was transferred into, or
+ * `LOCAL_BLOCK_NONE` if no appropriate block was found. Note: returned value
+ * contains at most 1 block bit; it can't contain multiple bits.
  */
-static enum found_try_block unwind_local_try_stack(struct v7 *v7,
-                                                   struct bcode_registers *r,
-                                                   int ignore_catch,
-                                                   int ignore_break) {
+static enum local_block unwind_local_blocks_stack(
+    struct v7 *v7, struct bcode_registers *r, unsigned int wanted_blocks_mask) {
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
-  enum found_try_block ret = FOUND_TRY_BLOCK_NONE;
+  enum local_block found_block = LOCAL_BLOCK_NONE;
   unsigned long length;
 
   tmp_stack_push(&tf, &arr);
@@ -16704,31 +16729,37 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
     while ((length = v7_array_length(v7, arr)) > 0) {
       /* get latest offset from the "try stack" */
       uint64_t offset = v7_to_number(v7_array_get(v7, arr, length - 1));
-      if ((!ignore_catch || OFFSET_TAG(offset) != OFFSET_TAG_CATCH) &&
-          (!ignore_break || OFFSET_TAG(offset) != OFFSET_TAG_BREAK)) {
+      enum local_block cur_block;
+
+      /* get id of the current block type */
+      switch (OFFSET_TAG(offset)) {
+        case OFFSET_TAG_CATCH:
+          cur_block = LOCAL_BLOCK_CATCH;
+          break;
+        case OFFSET_TAG_FINALLY:
+          cur_block = LOCAL_BLOCK_FINALLY;
+          break;
+        case OFFSET_TAG_BREAK:
+          cur_block = LOCAL_BLOCK_BREAK;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+
+      if (cur_block & wanted_blocks_mask) {
         /* need to transfer control to this offset */
         r->ops = (uint8_t *) r->bcode->ops.buf + OFFSET_VALUE(offset);
 #ifdef V7_BCODE_TRACE
-        printf("transferring to %u\n", (unsigned int) OFFSET_VALUE(offset));
+        printf("transferring to block #%d: %u\n", (int) cur_block,
+               (unsigned int) OFFSET_VALUE(offset));
 #endif
-        switch (OFFSET_TAG(offset)) {
-          case OFFSET_TAG_CATCH:
-            ret = FOUND_TRY_BLOCK_CATCH;
-            break;
-          case OFFSET_TAG_FINALLY:
-            ret = FOUND_TRY_BLOCK_FINALLY;
-            break;
-          case OFFSET_TAG_BREAK:
-            ret = FOUND_BREAK;
-            break;
-          default:
-            assert(0);
-            break;
-        }
+        found_block = cur_block;
         break;
       } else {
 #ifdef V7_BCODE_TRACE
-        printf("skipped catch %u\n", (unsigned int) OFFSET_VALUE(offset));
+        printf("skipped block #%d: %u\n", (int) cur_block,
+               (unsigned int) OFFSET_VALUE(offset));
 #endif
         /*
          * since we don't need to control transfer there, just pop
@@ -16740,7 +16771,7 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
   }
 
   tmp_frame_cleanup(&tf);
-  return ret;
+  return found_block;
 }
 
 /*
@@ -16748,20 +16779,20 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
  * control there.
  */
 static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
-  enum found_try_block found;
+  enum local_block found;
   v7->is_breaking = 0;
   /*
-   * Try to unwind local "try stack", ignoring `catch` blocks. If there are no
-   * `finally` blocks in effect, actually transfer control to break target.
+   * Try to unwind local "try stack", considering only `finally` and `break`.
    */
-  found = unwind_local_try_stack(v7, r, 1 /*ignore_catch*/, 0 /*ignore_break*/);
-  assert(found != FOUND_TRY_BLOCK_NONE);
+  found = unwind_local_blocks_stack(v7, r,
+                                    (LOCAL_BLOCK_BREAK | LOCAL_BLOCK_FINALLY));
+  assert(found != LOCAL_BLOCK_NONE);
 
   /*
    * upon exit of a finally block we'll reenter here if is_breaking is true.
    * See OP_AFTER_FINALLY.
    */
-  if (found == FOUND_TRY_BLOCK_FINALLY) {
+  if (found == LOCAL_BLOCK_FINALLY) {
     v7->is_breaking = 1;
   }
 
@@ -16794,11 +16825,11 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
   }
 
   /*
-   * Try to unwind local "try stack", ignoring `catch` blocks. If there are no
-   * `finally` blocks in effect, actually perform return.
+   * Try to unwind local "try stack", considering only `finally` blocks. If
+   * there are no `finally` blocks in effect, actually perform return.
    */
-  if (unwind_local_try_stack(v7, r, 1 /*ignore_catch*/, 1 /*ignore_break*/) ==
-      FOUND_TRY_BLOCK_NONE) {
+  if (unwind_local_blocks_stack(v7, r, (LOCAL_BLOCK_FINALLY)) ==
+      LOCAL_BLOCK_NONE) {
     /*
      * no `finally` blocks were found, so, perform return: unwind stack by 1
      * level, and populate TOS with the return value
@@ -16828,7 +16859,7 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
 static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
                                        int take_thrown_value) {
   enum v7_err err = V7_OK;
-  enum found_try_block found;
+  enum local_block found;
 
   assert(take_thrown_value || v7->is_thrown);
 
@@ -16841,9 +16872,9 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
     v7->returned_value = v7_create_undefined();
   }
 
-  while ((found = unwind_local_try_stack(v7, r, 0 /*don't ignore catch*/,
-                                         1 /*ignore break*/)) ==
-         FOUND_TRY_BLOCK_NONE) {
+  while ((found = unwind_local_blocks_stack(
+              v7, r, (LOCAL_BLOCK_CATCH | LOCAL_BLOCK_FINALLY))) ==
+         LOCAL_BLOCK_NONE) {
     if (v7->call_stack != v7->global_object) {
       /* not reached bottom of the stack yet, keep unwinding */
       unwind_stack_1level(v7, r);
@@ -16854,7 +16885,7 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
     }
   }
 
-  if (found == FOUND_TRY_BLOCK_CATCH) {
+  if (found == LOCAL_BLOCK_CATCH) {
     /*
      * we're going to enter `catch` block, so, populate TOS with the thrown
      * value, and clear it in v7 context.
@@ -17049,13 +17080,23 @@ restart:
         PUSH(v1);
         PUSH(v2);
         break;
+      case OP_SWAP:
+        v1 = POP();
+        v2 = POP();
+        PUSH(v1);
+        PUSH(v2);
+        break;
       case OP_STASH:
+        assert(!v7->is_stashed);
         v7->stash = TOS();
+        v7->is_stashed = 1;
         break;
       case OP_UNSTASH:
+        assert(v7->is_stashed);
         POP();
         PUSH(v7->stash);
         v7->stash = v7_create_undefined();
+        v7->is_stashed = 0;
         break;
 
       case OP_SWAP_DROP:
@@ -17308,6 +17349,27 @@ restart:
       case OP_CREATE_ARR:
         PUSH(v7_create_array(v7));
         break;
+      case OP_NEXT_PROP: {
+        void *h;
+        v1 = POP(); /* handle */
+        v2 = POP(); /* object */
+
+        if (v7_is_null(v1)) {
+          v1 = v7_create_foreign(NULL);
+        }
+
+        h = v7_next_prop(v7_to_foreign(v1), v2, &res, NULL, NULL);
+
+        if (h == NULL) {
+          PUSH(v7_create_boolean(0));
+        } else {
+          PUSH(v2);
+          PUSH(v7_create_foreign(h));
+          PUSH(res);
+          PUSH(v7_create_boolean(1));
+        }
+        break;
+      }
       case OP_FUNC_LIT: {
         v1 = POP();
         v2 = bcode_instantiate_function(v7, v1);
@@ -18943,6 +19005,123 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
+
+      v7->is_stack_neutral = 1;
+      break;
+    }
+    /*
+     * for(I in O) {
+     *   B...
+     * }
+     *
+     * ->
+     *
+     *   DUP
+     *   <O>
+     *   SWAP
+     *   STASH
+     *   DROP
+     *   PUSH_NULL
+     * loop:
+     *   NEXT_PROP
+     *   JMP_FALSE end
+     *   SET_VAR <I>
+     *   UNSTASH
+     *   <B>
+     *   STASH
+     *   DROP
+     *   JMP loop
+     * end:
+     *   UNSTASH
+     *
+     */
+    case AST_FOR_IN: {
+      uint8_t lit;
+      bcode_off_t loop_label, loop_target, end_label;
+      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+
+      ast_move_to_children(a, pos);
+
+      tag = ast_fetch_tag(a, pos);
+      /* TODO(mkm) accept any l-value */
+      if (tag == AST_VAR) {
+        ast_move_to_children(a, pos);
+        tag = ast_fetch_tag(a, pos);
+        BCHECK_INTERNAL(tag == AST_VAR_DECL);
+        lit = string_lit(v7, a, pos, bcode);
+        ast_skip_tree(a, pos);
+      } else {
+        BCHECK_INTERNAL(tag == AST_IDENT);
+        lit = string_lit(v7, a, pos, bcode);
+      }
+
+      /*
+       * preserve previous statement value.
+       * We need to feed the previous value into the stash
+       * because it's required for the loop steady state.
+       *
+       * The stash register is required to simplify the steady state stack
+       * management, in particular the removal of value in 3rd position in case
+       * a of not taken exit.
+       *
+       * TODO(mkm): consider having a stash OP that moves a value to the stash
+       * register instead of copying it. The current behaviour has been
+       * optimized for the `assign` use case which seems more common.
+       */
+      bcode_op(bcode, OP_DUP);
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_SWAP);
+      bcode_op(bcode, OP_STASH);
+      bcode_op(bcode, OP_DROP);
+
+      /*
+       * OP_NEXT_PROP keeps the current position in an opaque handler.
+       * Feeding a null as initial value.
+       */
+      bcode_op(bcode, OP_PUSH_NULL);
+
+      /* loop: */
+      loop_target = bcode_pos(bcode);
+
+      /*
+       * The loop stead state begins with the following stack layout:
+       * `( S:v o h )`
+       */
+
+      bcode_op(bcode, OP_NEXT_PROP);
+      end_label = bcode_op_target(bcode, OP_JMP_FALSE);
+      bcode_op(bcode, OP_SET_VAR);
+      bcode_op(bcode, lit);
+
+      /*
+       * The stash register contains the value of the previous statement,
+       * being it the statement before the for..in statement or
+       * the previous iteration. We move it to the data stack. It will
+       * be replaced by the values of the body statements as usual.
+       */
+      bcode_op(bcode, OP_UNSTASH);
+
+      /*
+       * This node is always a NOP, for compatibility
+       * with the layout of the AST_FOR node.
+       */
+      ast_skip_tree(a, pos);
+
+      BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+      /*
+       * Save the last body statement. If next evaluation of NEXT_PROP returns
+       * false, we'll unstash it.
+       */
+      bcode_op(bcode, OP_STASH);
+      bcode_op(bcode, OP_DROP);
+
+      loop_label = bcode_op_target(bcode, OP_JMP);
+      bcode_patch_target(bcode, loop_label, loop_target);
+
+      /* end: */
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      bcode_op(bcode, OP_UNSTASH);
 
       v7->is_stack_neutral = 1;
       break;
