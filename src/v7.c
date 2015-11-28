@@ -2850,6 +2850,8 @@ struct v7 {
 
   /* true if currently in strict mode */
   unsigned int strict_mode : 1;
+  /* true if currently running function is called as a constructor */
+  unsigned int is_constructor : 1;
   /* while true, GC is inhibited */
   unsigned int inhibit_gc : 1;
   /* true if `thrown_error` is valid (used in bcode) */
@@ -3409,6 +3411,7 @@ enum opcode {
    */
   OP_FUNC_LIT,
   OP_CALL, /* takes number of args */
+  OP_NEW,  /* takes number of args */
   OP_RET,
 
   /*
@@ -16447,6 +16450,7 @@ static const char *op_names[] = {
   "NEXT_PROP",
   "FUNC_LIT",
   "CALL",
+  "NEW",
   "RET",
   "TRY_PUSH_CATCH",
   "TRY_PUSH_FINALLY",
@@ -16580,6 +16584,7 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
     case OP_GET_VAR:
     case OP_SET_VAR:
     case OP_CALL:
+    case OP_NEW:
       p++;
       fprintf(f, "(%d)", *p);
       break;
@@ -16621,6 +16626,26 @@ struct bcode_registers {
   unsigned int need_inc_ops : 1;
 };
 
+/*
+ * If returning from function implicitly, then set return value to `undefined`.
+ *
+ * And if function was called as a constructor, then make sure returned
+ * value is an object.
+ */
+static void bcode_adjust_retval(struct v7 *v7, uint8_t is_explicit_return) {
+  if (!is_explicit_return) {
+    /* returning implicitly: set return value to `undefined` */
+    POP();
+    PUSH(v7_create_undefined());
+  }
+
+  if (v7->is_constructor && !v7_is_object(TOS())) {
+    /* constructor is going to return non-object: replace it with `this` */
+    POP();
+    PUSH(v7_get_this(v7));
+  }
+}
+
 static void bcode_restore_registers(struct bcode *bcode,
                                     struct bcode_registers *r) {
   r->bcode = bcode;
@@ -16646,7 +16671,8 @@ static void bcode_restore_registers(struct bcode *bcode,
 static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
                                       v7_val_t frame, struct v7_function *func,
                                       struct bcode_registers *r,
-                                      val_t this_object) {
+                                      val_t this_object,
+                                      uint8_t is_constructor) {
   v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
   v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(bcode));
   v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
@@ -16662,6 +16688,10 @@ static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
   /* stack size */
   v7_set(v7, frame, "____s", 5, V7_PROPERTY_HIDDEN,
          v7_create_number(v7->stack.len));
+
+  /* is constructor */
+  v7_set(v7, frame, "____c", 5, V7_PROPERTY_HIDDEN, v7->is_constructor);
+  v7->is_constructor = is_constructor;
 
   v7_to_object(frame)->prototype = func->scope;
   v7->call_stack = frame;
@@ -16693,6 +16723,9 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
 
   /* restore `this` object */
   v7->this_object = v7_get(v7, v7->call_stack, "___th", 5);
+
+  /* restore `is_constructor` */
+  v7->is_constructor = v7_get(v7, v7->call_stack, "____c", 5);
 
   /* finally, drop the frame which we've just unwound */
   v7->call_stack = v7_get(v7, v7->call_stack, "____p", 5);
@@ -17029,7 +17062,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
 
   val_t res = v7_create_undefined(), v1 = v7_create_undefined(),
         v2 = v7_create_undefined(), v3 = v7_create_undefined(),
-        frame = v7_create_undefined();
+        v4 = v7_create_undefined(), frame = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   bcode_restore_registers(bcode, &r);
@@ -17038,6 +17071,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   tmp_stack_push(&tf, &v1);
   tmp_stack_push(&tf, &v2);
   tmp_stack_push(&tf, &v3);
+  tmp_stack_push(&tf, &v4);
   tmp_stack_push(&tf, &frame);
 
   /* populate local variables */
@@ -17376,9 +17410,11 @@ restart:
         PUSH(v2);
         break;
       }
-      case OP_CALL: {
+      case OP_CALL:
+      case OP_NEW: {
         /* Naive implementation pending stack frame redesign */
         int args = (int) *(++r.ops);
+        uint8_t is_constructor = (op == OP_NEW);
 
         if (SP() < (args + 1 /*func*/ + 1 /*this*/)) {
           BTRY(
@@ -17423,6 +17459,9 @@ restart:
              * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
              * exceptions
              */
+            /*
+             * TODO(dfrank): constructors aren't handled
+             */
 
             /*
              * In "function invocation pattern", the `this` value popped from
@@ -17438,12 +17477,29 @@ restart:
             val_t *name, *arg_end, *locals_end;
             struct v7_function *func = v7_to_function(v1);
 
-            /*
-             * In "function invocation pattern", the `this` value popped from
-             * stack is an `undefined`. And in non-strict mode, we should change
-             * it to global object.
-             */
-            if (!func->bcode->strict_mode && v7_is_undefined(v3)) {
+            if (is_constructor) {
+              /*
+               * The function is invoked as a constructor: we ignore `this`
+               * value popped from stack, create new object and set prototype.
+               */
+              v3 = v7_create_object(v7);
+              v4 = v7_get(v7, v1 /*func*/, "prototype", 9);
+              if (!v7_is_object(v4)) {
+                /* TODO(dfrank): box primitive value */
+                BTRY(bcode_throw_exception(
+                    v7, &r, TYPE_ERROR,
+                    "Cannot set a primitive value as object prototype"));
+                goto restart;
+              }
+              v7_to_object(v3 /*this*/)->prototype = v7_to_object(v4);
+              v4 = v7_create_undefined();
+
+            } else if (!func->bcode->strict_mode && v7_is_undefined(v3)) {
+              /*
+               * In "function invocation pattern", the `this` value popped from
+               * stack is an `undefined`. And in non-strict mode, we should
+               * change it to global object.
+               */
               v3 = v7->global_object;
             }
 
@@ -17482,7 +17538,8 @@ restart:
             }
 
             /* transfer control to the function */
-            BTRY(bcode_perform_call(v7, r.bcode, frame, func, &r, v3 /*this*/));
+            BTRY(bcode_perform_call(v7, r.bcode, frame, func, &r, v3 /*this*/,
+                                    is_constructor));
 
             frame = v7_create_undefined();
           }
@@ -17490,7 +17547,8 @@ restart:
         break;
       }
       case OP_RET:
-        BTRY(bcode_perform_return(v7, &r, 1));
+        bcode_adjust_retval(v7, 1 /*explicit return*/);
+        BTRY(bcode_perform_return(v7, &r, 1 /*take value from stack*/));
         break;
       case OP_TRY_PUSH_CATCH:
       case OP_TRY_PUSH_FINALLY:
@@ -17549,9 +17607,8 @@ restart:
 
   /* implicit return */
   if (v7->call_stack != v7->global_object) {
+    bcode_adjust_retval(v7, 0 /*implicit return*/);
     BTRY(bcode_perform_return(v7, &r, 1));
-    POP();
-    PUSH(v7_create_undefined());
     goto restart;
   }
 
@@ -18284,7 +18341,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       }
       break;
     }
-    case AST_CALL: {
+    case AST_CALL:
+    case AST_NEW: {
       /*
        * f()
        *
@@ -18328,7 +18386,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       for (args = 0; *pos < end; args++) {
         BTRY(compile_expr(v7, a, pos, bcode));
       }
-      bcode_op(bcode, OP_CALL);
+      bcode_op(bcode, (tag == AST_CALL ? OP_CALL : OP_NEW));
       BCHECK_MSG(args <= 0x7f, V7_SYNTAX_ERROR, "too many arguments");
       bcode_op(bcode, (uint8_t) args);
       break;
