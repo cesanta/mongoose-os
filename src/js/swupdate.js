@@ -41,7 +41,7 @@ var SWUpdate = function(clubby) {
       file.write(data);
       file.close();
       setTimeout(function() {
-        OS.reset();
+        Sys.reboot();
       }, 3000);
       done();
     };

@@ -8,7 +8,7 @@
 
 extern const char *sj_version;
 
-static v7_val_t OS_prof(struct v7 *v7) {
+static v7_val_t Sys_prof(struct v7 *v7) {
   v7_val_t result = v7_create_object(v7);
   v7_own(v7, &result);
 
@@ -23,14 +23,14 @@ static v7_val_t OS_prof(struct v7 *v7) {
   return result;
 }
 
-static v7_val_t OS_wdt_feed(struct v7 *v7) {
+static v7_val_t Sys_wdtFeed(struct v7 *v7) {
   (void) v7;
   sj_wdt_feed();
 
   return v7_create_boolean(1);
 }
 
-static v7_val_t OS_reset(struct v7 *v7) {
+static v7_val_t Sys_reboot(struct v7 *v7) {
   (void) v7;
   sj_system_restart();
 
@@ -38,7 +38,7 @@ static v7_val_t OS_reset(struct v7 *v7) {
   return v7_create_boolean(1);
 }
 
-static v7_val_t OS_set_log_level(struct v7 *v7) {
+static v7_val_t Sys_setLogLevel(struct v7 *v7) {
   v7_val_t llv = v7_arg(v7, 0);
   int ll;
   if (!v7_is_number(llv)) return v7_create_boolean(0);
@@ -208,9 +208,9 @@ void sj_init_v7_ext(struct v7 *v7) {
   v7_set_method(v7, gc, "gc", GC_gc);
 
   os = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "OS", 2, 0, os);
-  v7_set_method(v7, os, "prof", OS_prof);
-  v7_set_method(v7, os, "wdt_feed", OS_wdt_feed);
-  v7_set_method(v7, os, "reset", OS_reset);
-  v7_set_method(v7, os, "set_log_level", OS_set_log_level);
+  v7_set(v7, v7_get_global(v7), "Sys", 2, 0, os);
+  v7_set_method(v7, os, "prof", Sys_prof);
+  v7_set_method(v7, os, "wdtFeed", Sys_wdtFeed);
+  v7_set_method(v7, os, "reboot", Sys_reboot);
+  v7_set_method(v7, os, "setLogLevel", Sys_setLogLevel);
 }
