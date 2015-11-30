@@ -7,6 +7,7 @@ var Clubby = function(arg) {
   //    url: URL_OF_API_BACKEND_OPTIONAL,
   //    src: CLIENT_ID,
   //    key: CLIENT_PASSWORD,
+  //    timeout: timeout_in_seconds, // Default command timeout
   //    log: BOOLEAN,
   //    eh: EXTRA_HEADERS_STRING,    // Extra HTTP headers on WS negotiation
   //    ephemeral: BOOLEAN,          // if true do append random str to url, default true
@@ -176,35 +177,26 @@ if (typeof UBJSON !== "undefined") {
 }
 */
 Clubby.prototype._send = function(req) {
+  if (this.config.log) console.log('sending: ', req);
   this.config.ws.send(JSON.stringify(req));
 }
 
 Clubby.prototype.call = function(dst, cmd, callback) {
   var c = this.config;
-  var log = function(a,b) {
-    if (c.log) {
-      console.log(a, b);
-    }
-  };
   var id = c.next_req_id++;
   var req = { v: 1, dst: dst, src: c.src, key: c.key };
-  req.cmds = [ $.extend({ id: id}, cmd) ];
+  req.cmds = [ $.extend({ id: id, timeout: c.timeout }, cmd) ];
   c.map[id] = callback; // Store callback for the given message ID
   var msg = JSON.stringify(req);
   if (c.onstart) {
     c.onstart(msg);
   }
   if (c.ws.readyState == WebSocket.OPEN) {
-    log('call sending: ', msg);
     this._send(req);
-  } else if (c.ws.readyState == WebSocket.CLOSED) {
+  } else {
+    if (this.config.log) console.log('queuing: ', msg);
     c.queue.push(req);
     c.ws.close();
-  } else {
-    log('NOT sending:', c.ws.readyState, msg);
-    if (c.onerror) {
-      c.onerror(c.ws, msg);
-    }
   }
 };
 

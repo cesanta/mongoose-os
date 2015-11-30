@@ -195,7 +195,7 @@ void sj_invoke_cb0(struct v7 *v7, v7_val_t cb) {
 }
 
 void sj_init_v7_ext(struct v7 *v7) {
-  v7_val_t os, gc;
+  v7_val_t gc, sys;
 
   v7_set(v7, v7_get_global(v7), "version", 7, 0,
          v7_create_string(v7, sj_version, strlen(sj_version), 1));
@@ -207,10 +207,10 @@ void sj_init_v7_ext(struct v7 *v7) {
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "gc", GC_gc);
 
-  os = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "Sys", 2, 0, os);
-  v7_set_method(v7, os, "prof", Sys_prof);
-  v7_set_method(v7, os, "wdtFeed", Sys_wdtFeed);
-  v7_set_method(v7, os, "reboot", Sys_reboot);
-  v7_set_method(v7, os, "setLogLevel", Sys_setLogLevel);
+  sys = v7_create_object(v7);
+  v7_set(v7, v7_get_global(v7), "Sys", 3, 0, sys);
+  v7_set_method(v7, sys, "prof", Sys_prof);
+  v7_set_method(v7, sys, "wdtFeed", Sys_wdtFeed);
+  v7_set_method(v7, sys, "reboot", Sys_reboot);
+  v7_set_method(v7, sys, "setLogLevel", Sys_setLogLevel);
 }
