@@ -34,6 +34,7 @@
 #endif /* RTOS_SDK */
 
 #include "esp_fs.h"
+#include "config.h"
 
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;
@@ -60,6 +61,13 @@ void start_cmd(void *dummy) {
 }
 
 void init_done_cb() {
+  struct sys_config cfg;
+
+  /* TODO(lsm): handle errors */
+  memset(&cfg, 0, sizeof(cfg));
+  load_config("conf_sys_defaults.json", "conf.json", &cfg);
+  apply_config(&cfg);
+
 #if !defined(ESP_ENABLE_HW_WATCHDOG) && !defined(RTOS_TODO)
   ets_wdt_disable();
 #endif

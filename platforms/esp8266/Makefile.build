@@ -7,9 +7,10 @@
 # SSL: if set to "Krypton" enables SSL with the krypton lib
 #
 
-COMMON_MK_DIR ?= .
+REPO_ROOT ?= ../../..
+COMMON_ESP_DIR ?= $(REPO_ROOT)/common/platforms/esp8266
 
-include $(COMMON_MK_DIR)/common.mk
+include $(COMMON_ESP_DIR)/common.mk
 
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
@@ -39,11 +40,12 @@ APP = smartjs
 # SSL can be SDK or Krypton
 SSL ?= None
 
-APP_MODULES := user $(SPIFFS_PATH)
+APP_MODULES := user $(SPIFFS_PATH) $(COMMON_ESP_DIR)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            sj_prompt.c v7.c sj_v7_ext.c sj_http.c \
+            sj_prompt.c v7.c sj_v7_ext.c sj_http.c sj_config.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
-            sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c
+            sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c \
+            sys_config.c
 
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
               $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
@@ -57,7 +59,7 @@ JS_SRCS    := $(SJSJS_PATH)/smart.js
 JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC)
-IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
+IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK
@@ -290,6 +292,11 @@ $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 $(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
+user/user_main.c: sys_config.h
+
+sys_config.c sys_config.h: $(COMMON_ESP_DIR)/fs/conf_sys_defaults.json
+	python $(REPO_ROOT)/tools/json_to_c_config.py $< sys_config
+
 # Generate version. Only regenrates if there are changes in objects.
 $(BUILD_DIR)/sj_version.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
@@ -349,7 +356,7 @@ $(BUILD_DIR)/rboot.bin: $(BUILD_DIR)/esptool2
 endif
 
 clean:
-	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR) sys_conf.*
 
 flash: $(FW_OUT) $(FW_FS_OUT)
 	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \

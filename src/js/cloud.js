@@ -17,3 +17,20 @@ Cloud.store = function(name,val,opts) {
       Http.request({hostname:"api.cesanta.com", method: "POST"}, opts.cb || function() {}).end(d);
     }
 }
+
+Cloud.init = function(backend, device_id, device_psk) {
+  File.eval("clubby.js");
+  clubby = new Clubby({
+    url: 'ws:' + backend + ':80',
+    src: device_id,
+    key: device_psk,
+    log: false,
+    onopen: function() {
+      clubby.call(conf.cloud, {cmd: "/v1/Hello"}, function() {});
+    }
+  });
+  File.eval("swupdate.js");
+  SWUpdate(clubby);
+  File.eval("fileservice.js");
+  FileService(clubby);
+}
