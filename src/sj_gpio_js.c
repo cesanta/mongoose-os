@@ -131,7 +131,7 @@ static v7_val_t GPIO_read(struct v7 *v7) {
 void init_gpiojs(struct v7 *v7) {
   s_v7 = v7;
   v7_val_t gpio = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "GPIO", 4, 0, gpio);
+  v7_set(v7, v7_get_global(v7), "GPIO", ~0, 0, gpio);
   v7_set_method(v7, gpio, "setmode", GPIO_setmode);
   v7_set_method(v7, gpio, "read", GPIO_read);
   v7_set_method(v7, gpio, "write", GPIO_write);

@@ -197,18 +197,18 @@ void sj_invoke_cb0(struct v7 *v7, v7_val_t cb) {
 void sj_init_v7_ext(struct v7 *v7) {
   v7_val_t gc, sys;
 
-  v7_set(v7, v7_get_global(v7), "version", 7, 0,
+  v7_set(v7, v7_get_global(v7), "version", ~0, 0,
          v7_create_string(v7, sj_version, strlen(sj_version), 1));
 
   v7_set_method(v7, v7_get_global(v7), "usleep", global_usleep);
 
   gc = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "GC", 2, 0, gc);
+  v7_set(v7, v7_get_global(v7), "GC", ~0, 0, gc);
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "gc", GC_gc);
 
   sys = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "Sys", 3, 0, sys);
+  v7_set(v7, v7_get_global(v7), "Sys", ~0, 0, sys);
   v7_set_method(v7, sys, "prof", Sys_prof);
   v7_set_method(v7, sys, "wdtFeed", Sys_wdtFeed);
   v7_set_method(v7, sys, "reboot", Sys_reboot);
