@@ -61,7 +61,7 @@ IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK
-APP_LIBS = c gcc hal pp phy net80211 wpa main
+APP_LIBS = c crypto gcc hal pp phy net80211 wpa main
 
 # linker script used for the above linkier step
 LD_SCRIPT = user/smartjs_no_bootloader.ld
