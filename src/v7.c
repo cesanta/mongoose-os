@@ -2109,6 +2109,11 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
  * Socket API provides low-level socket API.
  *
+ * ==== File.eval(file_name)
+ * Parse and run `file_name`.
+ * Throws an exception if the file doesn't exist, cannot be parsed or if the
+ * script throws any exception.
+ *
  * ==== File.open(file_name [, mode]) -> file_object or null
  * Open a file `path`. For
  * list of valid `mode` values, see `fopen()` documentation. If `mode` is
@@ -17654,6 +17659,10 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
   struct ast a;
   val_t saved_call_stack = v7->call_stack;
   size_t saved_stack_len = v7->stack.len;
+#ifndef NDEBUG
+  size_t saved_try_stack_len =
+      v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
+#endif
   struct bcode *saved_bcode = v7->bcode;
 
   /*
@@ -17693,6 +17702,8 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
   err = eval_bcode(v7, v7->bcode);
   if (err == V7_OK) {
     assert(SP() >= 1);
+    assert(v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5)) ==
+           saved_try_stack_len);
     *res = POP();
   } else {
     /* some exception happened */
@@ -18100,6 +18111,13 @@ static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
           BTRY(compile_expr(v7, a, &fvar, bcode));
           bcode_op(bcode, OP_SET_VAR);
           bcode_op(bcode, lit);
+
+          /* function declarations are stack-neutral */
+          bcode_op(bcode, OP_DROP);
+          /*
+           * Note: the `is_stack_neutral` flag will be set by `compile_stmt`
+           * later, when it encounters `AST_FUNC_DECL` again.
+           */
         }
         bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
       }
@@ -18679,18 +18697,26 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
+     *   TRY_PUSH_BREAK end
      *   JMP cond
      * body:
      *   <B>
      * cond:
      *   <C>
      *   JMP_TRUE body
+     * end:
+     *   TRY_POP
+     *
      */
-    case AST_WHILE:
+    case AST_WHILE: {
+      bcode_off_t end_label;
+
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       cond = *pos;
       ast_skip_tree(a, pos);
+
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
 
       /*
        * Condition check is at the end of the loop, this layout
@@ -18707,8 +18733,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body_label = bcode_op_target(bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
 
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      bcode_op(bcode, OP_TRY_POP);
+
       v7->is_stack_neutral = 1;
       break;
+    }
     case AST_BREAK:
       bcode_op(bcode, OP_BREAK);
       break;
@@ -19018,8 +19048,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * }
      *
      * ->
+     *
      *   <INIT>
-     *   POP
+     *   DROP
+     *   TRY_PUSH_BREAK end
      *   JMP cond
      * body:
      *   <B>
@@ -19028,9 +19060,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * cond:
      *   <COND>
      *   JMP_TRUE body
+     * end:
+     *   TRY_POP
+     *
      */
     case AST_FOR: {
       ast_off_t iter, body, lookahead;
+      bcode_off_t end_label;
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       body = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
       ast_move_to_children(a, pos);
@@ -19042,6 +19078,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       *pos = body;
 
       bcode_op(bcode, OP_DROP);
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
       cond_label = bcode_op_target(bcode, OP_JMP);
       body_target = bcode_pos(bcode);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
@@ -19063,6 +19100,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
@@ -19080,6 +19119,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   STASH
      *   DROP
      *   PUSH_NULL
+     *   TRY_PUSH_BREAK brend
      * loop:
      *   NEXT_PROP
      *   JMP_FALSE end
@@ -19091,11 +19131,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   JMP loop
      * end:
      *   UNSTASH
+     * brend:
+     *   TRY_POP
      *
      */
     case AST_FOR_IN: {
       uint8_t lit;
-      bcode_off_t loop_label, loop_target, end_label;
+      bcode_off_t loop_label, loop_target, end_label, brend_label;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
 
       ast_move_to_children(a, pos);
@@ -19137,6 +19179,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * Feeding a null as initial value.
        */
       bcode_op(bcode, OP_PUSH_NULL);
+
+      brend_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
 
       /* loop: */
       loop_target = bcode_pos(bcode);
@@ -19181,6 +19225,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       bcode_op(bcode, OP_UNSTASH);
 
+      bcode_patch_target(bcode, brend_label, bcode_pos(bcode));
+      bcode_op(bcode, OP_TRY_POP);
+
       v7->is_stack_neutral = 1;
       break;
     }
@@ -19191,19 +19238,27 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
+     *   TRY_PUSH_BREAK end
      * body:
      *   <B>
      *   <COND>
      *   JMP_TRUE body
+     * end:
+     *   TRY_POP
+     *
      */
     case AST_DOWHILE: {
+      bcode_off_t end_label;
       end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
       ast_move_to_children(a, pos);
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
       body_target = bcode_pos(bcode);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
       BTRY(compile_expr(v7, a, pos, bcode));
       body_label = bcode_op_target(bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
@@ -19224,20 +19279,29 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         if (tag == AST_FUNC_DECL) {
           /*
            * function declarations are already set during hoisting (see
-           * `compile_local_vars()`), so, skip it
+           * `compile_local_vars()`), so, skip it.
+           *
+           * Plus, they are stack-neutral, so don't forget to set
+           * `is_stack_neutral`.
            */
           ast_move_to_children(a, pos);
           ast_skip_tree(a, pos);
+          v7->is_stack_neutral = 1;
         } else {
           /*
-           * compile `var` declaration: basically it looks just like an
-           * assignment
+           * compile `var` declaration: basically it looks similar to an
+           * assignment, but it differs from an assignment is that it's
+           * stack-neutral: `1; var a = 5;` yields `1`, not `5`.
            */
           BCHECK_INTERNAL(tag == AST_VAR_DECL);
           lit = string_lit(v7, a, pos, bcode);
           BTRY(compile_expr(v7, a, pos, bcode));
           bcode_op(bcode, OP_SET_VAR);
           bcode_op(bcode, lit);
+
+          /* `var` declaration is stack-neutral */
+          bcode_op(bcode, OP_DROP);
+          v7->is_stack_neutral = 1;
         }
       }
       break;
