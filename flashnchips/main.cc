@@ -103,16 +103,6 @@ int main(int argc, char* argv[]) {
   // QCommandLineOption supports C++11-style initialization only since Qt 5.4.
   QList<QCommandLineOption> commonOpts;
   commonOpts.append(QCommandLineOption(
-      {"debug", "d"}, "Enable debug output. Equivalent to --V=4"));
-  commonOpts.append(QCommandLineOption(
-      {"verbose", "V"},
-      "Verbosity level. 0 – normal output, 1 - also print critical (but not "
-      "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
-      "print debug output.",
-      "level", "1"));
-  commonOpts.append(
-      QCommandLineOption("log", "Redirect logging into a file.", "filename"));
-  commonOpts.append(QCommandLineOption(
       "console-baud-rate", "Baud rate to use with the console serial port.",
       "number", "115200"));
   commonOpts.append(QCommandLineOption(
@@ -164,6 +154,18 @@ int main(int argc, char* argv[]) {
       "generate-id",
       "Generate a file with device ID in a format suitable for flashing.",
       "filename"));
+  cliOpts.append(QCommandLineOption(
+      {"debug", "d"}, "Enable debug output. Equivalent to --V=4"));
+  // TODO(imax): allow these 2 options to be adjusted at runtime and move them
+  // to commonOpts.
+  cliOpts.append(QCommandLineOption(
+      {"verbose", "V"},
+      "Verbosity level. 0 – normal output, 1 - also print critical (but not "
+      "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
+      "print debug output.",
+      "level", "1"));
+  cliOpts.append(
+      QCommandLineOption("log", "Redirect logging into a file.", "filename"));
 #if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
   for (const auto& opt : cliOpts) {
     parser.addOption(opt);

@@ -245,13 +245,8 @@ MainDialog::MainDialog(Config* config, QWidget* parent)
   connect(&settingsDlg_, &SettingsDialog::knobUpdated, this,
           &MainDialog::updateConfig);
 
-  if (config_->isSet("console-log")) {
-    console_log_.reset(new QFile(config_->value("console-log")));
-    if (!console_log_->open(QIODevice::ReadWrite | QIODevice::Append)) {
-      qCritical() << "Failed to open console log file:"
-                  << console_log_->errorString();
-      console_log_->reset();
-    }
+  for (const auto& opt : config_->options()) {
+    updateConfig(opt.names()[0]);
   }
 
   prompter_ = new PrompterImpl(this);
@@ -401,6 +396,18 @@ void MainDialog::connectDisconnectTerminal() {
       }
     // fallthrough
     case Connected:
+      if (config_->isSet("console-log") &&
+          (console_log_ == nullptr ||
+           console_log_->fileName() != config_->value("console-log"))) {
+        console_log_.reset(new QFile(config_->value("console-log")));
+        if (!console_log_->open(QIODevice::ReadWrite | QIODevice::Append)) {
+          qCritical() << "Failed to open console log file:"
+                      << console_log_->errorString();
+          console_log_->reset();
+        }
+      } else {
+        console_log_.reset();
+      }
       connect(serial_port_.get(), &QIODevice::readyRead, this,
               &MainDialog::readSerial);
 
