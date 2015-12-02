@@ -18,16 +18,7 @@
 # otherwise docker-machine (or boot2docker) won't make it available to your
 # docker VM.
 
-SDK=docker.cesanta.com:5000/esp8266-build-oss:1.3.0-cesanta
-
-# The GDB distributed in our stable SDK image has an old gdb
-# that doesn't still do a good job on stacktraces. However
-# the latest one also has some problem and the image is big
-# so we'll default with the old GDB which is good enough for the job
-if [ "$1" == "--experimental" ]; then
-    shift
-    SDK=docker.cesanta.com:5000/esp8266-build-bleed:latest
-fi
+SDK=docker.cesanta.com:5000/esp8266-build-oss:1.5.0-cesanta-r1
 
 cd $(dirname $0)
 V7DIR=$(dirname $(dirname $(dirname $(dirname $PWD))))
