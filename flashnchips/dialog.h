@@ -21,6 +21,7 @@
 
 #include "hal.h"
 #include "prompter.h"
+#include "settings.h"
 #include "ui_main.h"
 
 class Config;
@@ -78,6 +79,9 @@ class MainDialog : public QMainWindow {
   void showPrompt(QString text,
                   QList<QPair<QString, QMessageBox::ButtonRole>> buttons);
 
+  void showSettings();
+  void updateConfig(const QString &name);
+
 signals:
   void gotPrompt();
   void showPromptResult(int clicked_button);
@@ -103,6 +107,7 @@ signals:
   bool scroll_after_flashing_ = false;
   std::unique_ptr<QFile> console_log_;
   PrompterImpl *prompter_;
+  SettingsDialog settingsDlg_;
 
   QNetworkConfigurationManager net_mgr_;
 

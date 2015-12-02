@@ -256,8 +256,15 @@
     </property>
     <addaction name="actionUpload_a_file"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionSettings"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuConfigure"/>
+   <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionConfigure_Wi_Fi">
@@ -310,6 +317,11 @@
    </property>
    <property name="menuRole">
     <enum>QAction::ApplicationSpecificRole</enum>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>Advanced settings</string>
    </property>
   </action>
  </widget>

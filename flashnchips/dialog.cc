@@ -79,7 +79,9 @@ signals:
 };
 
 MainDialog::MainDialog(Config* config, QWidget* parent)
-    : QMainWindow(parent), config_(config) {
+    : QMainWindow(parent),
+      config_(config),
+      settingsDlg_(config->options(), this) {
   ui_.setupUi(this);
 
   fwDir_ = QDir(QApplication::applicationDirPath());
@@ -237,6 +239,11 @@ MainDialog::MainDialog(Config* config, QWidget* parent)
           &QApplication::aboutQt);
   connect(ui_.actionAbout, &QAction::triggered, this,
           &MainDialog::showAboutBox);
+
+  connect(ui_.actionSettings, &QAction::triggered, this,
+          &MainDialog::showSettings);
+  connect(&settingsDlg_, &SettingsDialog::knobUpdated, this,
+          &MainDialog::updateConfig);
 
   if (config_->isSet("console-log")) {
     console_log_.reset(new QFile(config_->value("console-log")));
@@ -888,6 +895,19 @@ void MainDialog::sendQueuedCommand() {
   QString cmd = command_queue_.takeFirst();
   serial_port_->write(cmd.toUtf8());
   serial_port_->write("\r\n");
+}
+
+void MainDialog::showSettings() {
+  settingsDlg_.show();
+}
+
+void MainDialog::updateConfig(const QString& name) {
+  if (settings_.value(SettingsDialog::isSetKey(name), false).toBool()) {
+    config_->setValue(
+        name, settings_.value(SettingsDialog::valueKey(name), "").toString());
+  } else {
+    config_->unset(name);
+  }
 }
 
 #include "dialog.moc"
