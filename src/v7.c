@@ -368,6 +368,14 @@ int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
 int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
                   v7_cfunction_t func);
 
+/*
+ * Delete own property of an object `obj`. Does not follow the prototype chain.
+ *
+ * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.  Return 0 on
+ * success, -1 on error.
+ */
+int v7_del_property(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
+
 /* Return array length */
 unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 
@@ -3160,7 +3168,8 @@ V7_PRIVATE v7_val_t v7_get_v(struct v7 *, v7_val_t, v7_val_t);
 
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
-int v7_set_v(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
+int v7_set_v(struct v7 *v7, v7_val_t obj, v7_val_t name, unsigned int attrs,
+             v7_val_t val);
 V7_PRIVATE int v7_set_property_v(struct v7 *, v7_val_t obj, v7_val_t name,
                                  unsigned int attributes, v7_val_t val);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
@@ -3171,12 +3180,6 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
 
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
-
-/*
- * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
- * Return 0 on success, -1 on error.
- */
-V7_PRIVATE int v7_del_property(struct v7 *, val_t, const char *, size_t);
 
 V7_PRIVATE val_t v7_array_get2(struct v7 *, v7_val_t, unsigned long, int *);
 V7_PRIVATE long arg_long(struct v7 *v7, int n, long default_value);
@@ -3418,6 +3421,22 @@ enum opcode {
   OP_CALL, /* takes number of args */
   OP_NEW,  /* takes number of args */
   OP_RET,
+
+  /*
+   * Deletes the property of given name `p` from the given object `o`. Returns
+   * boolean value `a`.
+   *
+   * `( o p -- a )`
+   */
+  OP_DELETE,
+
+  /*
+   * Like `OP_DELETE`, but uses the current scope as an object to delete
+   * a property from.
+   *
+   * `( p -- a )`
+   */
+  OP_DELETE_VAR,
 
   /*
    * Pushes a value (bcode offset of `catch` block) from opcode argument to
@@ -10034,12 +10053,14 @@ V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
-int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
+int v7_set_v(struct v7 *v7, val_t obj, val_t name, unsigned int attrs,
+             val_t val) {
   size_t len;
   const char *n = v7_to_string(v7, &name, &len);
   struct v7_property *p = v7_get_own_property(v7, obj, n, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    return v7_set_property_v(v7, obj, name, p == NULL ? 0 : p->attributes, val);
+    return v7_set_property_v(v7, obj, name, p == NULL ? attrs : p->attributes,
+                             val);
   }
   return -1;
 }
@@ -10142,6 +10163,9 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   return res;
 }
 
+/*
+ * See comments in `v7.h`
+ */
 int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   struct v7_property *prop, *prev;
 
@@ -16457,6 +16481,8 @@ static const char *op_names[] = {
   "CALL",
   "NEW",
   "RET",
+  "DELETE",
+  "DELETE_VAR",
   "TRY_PUSH_CATCH",
   "TRY_PUSH_FINALLY",
   "TRY_PUSH_BREAK_CONTINUE",
@@ -16485,8 +16511,41 @@ V7_PRIVATE val_t stack_tos(struct mbuf *s) {
   return *(val_t *) (s->buf + s->len - sizeof(val_t));
 }
 
+#ifdef V7_BCODE_TRACE_STACK
+V7_PRIVATE val_t stack_at(struct mbuf *s, size_t idx) {
+  assert(s->len >= sizeof(val_t) * idx);
+  return *(val_t *) (s->buf + s->len - sizeof(val_t) - idx * sizeof(val_t));
+}
+#endif
+
 V7_PRIVATE int stack_sp(struct mbuf *s) {
   return s->len / sizeof(val_t);
+}
+
+/*
+ * Delete a property with name `name`, `len` from an object `obj`. If the
+ * object does not contain own property with the given `name`, moves to `obj`'s
+ * prototype, and so on.
+ *
+ * If the property is eventually found, it is deleted, and `0` is returned.
+ * Otherwise, `-1` is returned.
+ *
+ * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
+ *
+ * See `v7_del_property()` as well.
+ */
+static int del_property_deep(struct v7 *v7, val_t obj, const char *name,
+                             size_t len) {
+  if (!v7_is_object(obj)) {
+    return -1;
+  }
+  for (; obj != V7_NULL; obj = v_get_prototype(v7, obj)) {
+    int del_res;
+    if ((del_res = v7_del_property(v7, obj, name, len)) != -1) {
+      return del_res;
+    }
+  }
+  return -1;
 }
 
 static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
@@ -17079,14 +17138,19 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   tmp_stack_push(&tf, &v4);
   tmp_stack_push(&tf, &frame);
 
-  /* populate local variables */
+  /*
+   * populate local variables on the Global Object, making them undeletable
+   * (since they're defined with `var`)
+   */
   {
     val_t *name, *locals_end;
     name = (val_t *) bcode->names.buf;
     locals_end = name + (bcode->names.len / sizeof(val_t));
 
     for (; name < locals_end; ++name) {
-      v7_set_v(v7, v7->global_object, *name, v7_create_undefined());
+      /* set undeletable property on Global Object */
+      v7_set_v(v7, v7->global_object, *name, V7_PROPERTY_DONT_DELETE,
+               v7_create_undefined());
     }
   }
 
@@ -17302,7 +17366,7 @@ restart:
           name_len = v7_stringify_value(v7, v2, buf, sizeof(buf));
           v7_set(v7, v1, buf, name_len, 0, v3);
         } else {
-          v7_set_v(v7, v1, v2, v3);
+          v7_set_v(v7, v1, v2, 0, v3);
         }
         PUSH(v3);
         break;
@@ -17338,7 +17402,7 @@ restart:
         if (prop != NULL) {
           prop->value = v3;
         } else if (!r.bcode->strict_mode) {
-          v7_set_v(v7, v7_get_global(v7), v2, v3);
+          v7_set_v(v7, v7_get_global(v7), v2, 0, v3);
         } else {
           /*
            * In strict mode, throw reference error instead of polluting Global
@@ -17527,19 +17591,21 @@ restart:
             assert(arg_end <= locals_end);
 
             /* populate function itself */
-            v7_set_v(v7, frame, *name++, v1);
+            v7_set_v(v7, frame, *name++, V7_PROPERTY_DONT_DELETE, v1);
 
             /* populate arguments */
             {
               int arg_num;
               for (arg_num = 0; name < arg_end; ++name, ++arg_num) {
-                v7_set_v(v7, frame, *name, v7_array_get(v7, v2, arg_num));
+                v7_set_v(v7, frame, *name, V7_PROPERTY_DONT_DELETE,
+                         v7_array_get(v7, v2, arg_num));
               }
             }
 
             /* populate local variables */
             for (; name < locals_end; ++name) {
-              v7_set_v(v7, frame, *name, v7_create_undefined());
+              v7_set_v(v7, frame, *name, V7_PROPERTY_DONT_DELETE,
+                       v7_create_undefined());
             }
 
             /* transfer control to the function */
@@ -17555,6 +17621,65 @@ restart:
         bcode_adjust_retval(v7, 1 /*explicit return*/);
         BTRY(bcode_perform_return(v7, &r, 1 /*take value from stack*/));
         break;
+      case OP_DELETE:
+      case OP_DELETE_VAR: {
+        size_t name_len;
+        struct v7_property *prop;
+
+        res = v7_create_boolean(1);
+
+        /* pop property name to delete */
+        v2 = POP();
+
+        if (op == OP_DELETE) {
+          /* pop object to delete the property from */
+          v1 = POP();
+        } else {
+          /* use scope as an object to delete the property from */
+          v1 = v7->call_stack;
+        }
+
+        assert(v7_is_object(v1));
+
+        name_len = v7_stringify_value(v7, v2, buf, sizeof(buf));
+
+        prop = v7_get_property(v7, v1, buf, name_len);
+        if (prop != NULL) {
+          /* found needed property */
+
+          if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
+            /*
+             * this property is undeletable. In non-strict mode, we just
+             * return `false`; otherwise, we throw.
+             */
+            if (!r.bcode->strict_mode) {
+              res = v7_create_boolean(0);
+            } else {
+              BTRY(bcode_throw_exception(v7, &r, TYPE_ERROR,
+                                         "Cannot delete property '%s'", buf));
+              goto restart;
+            }
+          } else {
+            /*
+             * delete property: when we operate on the current scope, we should
+             * walk the prototype chain when deleting property.
+             *
+             * But when we operate on a "real" object, we should delete own
+             * properties only.
+             */
+            if (op == OP_DELETE) {
+              v7_del_property(v7, v1, buf, name_len);
+            } else {
+              del_property_deep(v7, v1, buf, name_len);
+            }
+          }
+        } else {
+          /* not found a property; will just return `true` */
+        }
+
+        PUSH(res);
+        break;
+      }
       case OP_TRY_PUSH_CATCH:
       case OP_TRY_PUSH_FINALLY:
       case OP_TRY_PUSH_BREAK:
@@ -17603,6 +17728,22 @@ restart:
       if (str != buf) {
         free(str);
       }
+
+#ifdef V7_BCODE_TRACE_STACK
+      {
+        size_t i;
+        for (i = 0; i < (v7->stack.len / sizeof(val_t)); i++) {
+          char *str = v7_stringify(v7, stack_at(&v7->stack, i), buf,
+                                   sizeof(buf), V7_STRINGIFY_DEBUG);
+
+          fprintf(stderr, "        #: '%s'\n", str);
+
+          if (str != buf) {
+            free(str);
+          }
+        }
+      }
+#endif
     }
 #endif
     if (r.need_inc_ops) {
@@ -18191,6 +18332,69 @@ clean:
   return ret;
 }
 
+V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
+                                      ast_off_t *pos, struct bcode *bcode) {
+  ast_off_t pos_start = *pos;
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+  enum v7_err ret = V7_OK;
+
+  switch (tag) {
+    case AST_MEMBER: {
+      /* Delete a specified property of an object */
+      uint8_t lit = string_lit(v7, a, pos, bcode);
+      /* put an object to delete property from */
+      BTRY(compile_expr(v7, a, pos, bcode));
+      /* put a property name */
+      bcode_push_lit(bcode, lit);
+      bcode_op(bcode, OP_DELETE);
+      break;
+    }
+
+    case AST_INDEX:
+      /* Delete a specified property of an object */
+      /* put an object to delete property from */
+      BTRY(compile_expr(v7, a, pos, bcode));
+      /* put a property name */
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_DELETE);
+      break;
+
+    case AST_IDENT:
+      /* Delete the scope variable (or throw an error if strict mode) */
+      if (!bcode->strict_mode) {
+        /* put a property name */
+        bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
+        bcode_op(bcode, OP_DELETE_VAR);
+      } else {
+        BTHROW_MSG(V7_SYNTAX_ERROR,
+                   "Delete of an unqualified identifier in strict mode.");
+      }
+      break;
+
+    case AST_UNDEFINED:
+      /*
+       * `undefined` should actually be an undeletable property of the Global
+       * Object, so, trying to delete it just yields `false`
+       */
+      bcode_op(bcode, OP_PUSH_FALSE);
+      break;
+
+    default:
+      /*
+       * For all other cases, we evaluate the expression given to `delete`
+       * for side effects, then drop the result, and yield `true`
+       */
+      *pos = pos_start;
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_DROP);
+      bcode_op(bcode, OP_PUSH_TRUE);
+      break;
+  }
+
+clean:
+  return ret;
+}
+
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode) {
   ast_off_t pos_start = *pos;
@@ -18407,6 +18611,11 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, (tag == AST_CALL ? OP_CALL : OP_NEW));
       BCHECK_MSG(args <= 0x7f, V7_SYNTAX_ERROR, "too many arguments");
       bcode_op(bcode, (uint8_t) args);
+      break;
+    }
+    case AST_DELETE: {
+      ast_move_to_children(a, pos);
+      BTRY(compile_delete(v7, a, pos, bcode));
       break;
     }
     case AST_OBJECT: {
@@ -19598,6 +19807,9 @@ static v7_val_t Std_exit(struct v7 *v7) {
 #endif
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
+  unsigned int attr_internal =
+      V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
+
   /*
    * Ensure the first call to v7_create_value will use a null proto:
    * {}.__proto__.__proto__ == null
@@ -19624,7 +19836,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   set_method(v7, v7->global_object, "isNaN", Std_isNaN, 1);
   set_method(v7, v7->global_object, "isFinite", Std_isFinite, 1);
 
-  v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
+  v7_set_property(v7, v7->global_object, "Infinity", 8, attr_internal,
                   v7_create_number(INFINITY));
   v7_set_property(v7, v7->global_object, "global", 6, 0, v7->global_object);
 

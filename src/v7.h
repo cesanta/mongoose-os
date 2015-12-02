@@ -364,6 +364,14 @@ int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
 int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
                   v7_cfunction_t func);
 
+/*
+ * Delete own property of an object `obj`. Does not follow the prototype chain.
+ *
+ * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.  Return 0 on
+ * success, -1 on error.
+ */
+int v7_del_property(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
+
 /* Return array length */
 unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 
