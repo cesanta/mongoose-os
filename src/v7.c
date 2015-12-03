@@ -340,11 +340,18 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
 enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args);
 
-/* Throw an exception (Error object) with given formatted message. */
-void v7_throw(struct v7 *, const char *msg_fmt, ...);
+/*
+ * Throw an exception with given formatted message.
+ *
+ * Pass "Error" as typ for a generic error.
+ */
+v7_val_t v7_throw(struct v7 *, const char *typ, const char *msg_fmt, ...);
 
 /* Throw an already existing object. */
-void v7_throw_value(struct v7 *, v7_val_t v);
+v7_val_t v7_throw_value(struct v7 *, v7_val_t v);
+
+/* Returns 1 if some value is currently thrown, 0 otherwise */
+int v7_has_thrown(struct v7 *v7);
 
 #define V7_PROPERTY_READ_ONLY 1
 #define V7_PROPERTY_DONT_ENUM 2
@@ -2546,10 +2553,12 @@ struct gc_arena {
 #define NORETURN __attribute__((noreturn))
 #define UNUSED __attribute__((unused))
 #define NOINLINE __attribute__((noinline))
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #define NORETURN
 #define UNUSED
 #define NOINLINE
+#define WARN_UNUSED_RESULT
 #endif
 
 #undef _POSIX_C_SOURCE
@@ -2721,15 +2730,12 @@ enum v7_type {
   V7_NUM_TYPES
 };
 
-enum error_ctor {
-  TYPE_ERROR,
-  SYNTAX_ERROR,
-  REFERENCE_ERROR,
-  INTERNAL_ERROR,
-  RANGE_ERROR,
-
-  ERROR_CTOR_MAX
-};
+#define TYPE_ERROR "TypeError"
+#define SYNTAX_ERROR "SyntaxError"
+#define REFERENCE_ERROR "ReferenceError"
+#define INTERNAL_ERROR "InternalError"
+#define RANGE_ERROR "RangeError"
+#define ERROR_CTOR_MAX 5
 
 /* Amalgamated: #include "vm.h" */
 /* Amalgamated: #include "compiler.h" */
@@ -2916,9 +2922,12 @@ struct v7_vec {
 extern "C" {
 #endif /* __cplusplus */
 
-void v7_throw_value(struct v7 *, v7_val_t v) NORETURN;
-V7_PRIVATE val_t create_exception(struct v7 *, enum error_ctor, const char *);
-V7_PRIVATE void throw_exception(struct v7 *, enum error_ctor, const char *,
+v7_val_t v7_throw(struct v7 *, const char *typ, const char *msg_fmt,
+                  ...) WARN_UNUSED_RESULT;
+v7_val_t v7_throw_value(struct v7 *, v7_val_t v) WARN_UNUSED_RESULT;
+V7_PRIVATE void i_throw_value(struct v7 *, v7_val_t v) NORETURN;
+V7_PRIVATE val_t create_exception(struct v7 *, const char *typ, const char *);
+V7_PRIVATE void throw_exception(struct v7 *, const char *typ, const char *,
                                 ...) NORETURN;
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
@@ -6798,7 +6807,7 @@ static v7_val_t File_eval(struct v7 *v7) {
     size_t n;
     const char *s = v7_to_string(v7, &arg0, &n);
     if (v7_exec_file(v7, s, &res) != V7_OK) {
-      v7_throw_value(v7, res);
+      return v7_throw_value(v7, res);
     }
   }
 
@@ -7577,7 +7586,7 @@ static v7_val_t Bin_send(struct v7 *v7) {
   arg = v7_arg(v7, 0);
   ctx = (struct ubjson_ctx *) v7_to_foreign(v7_get(v7, this_obj, "ctx", ~0));
   if (ctx == NULL) {
-    v7_throw(v7, "UBJSON context closed\n");
+    return v7_throw(v7, "Error", "UBJSON context closed\n");
   }
   s = v7_to_string(v7, &arg, &n);
   if (n > ctx->bytes_left) {
@@ -10403,7 +10412,8 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
 
       if (v7_to_object(arr)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
         if (v7->strict_mode) {
-          throw_exception(v7, TYPE_ERROR, "Object is not extensible");
+          /* throw_exception(v7, TYPE_ERROR, "Object is not extensible"); */
+          return -1;
         }
         return res;
       }
@@ -10896,10 +10906,9 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 #endif
 
     v7->inhibit_gc = 1;
-
-    init_stdlib(v7);
     v7->thrown_error = v7_create_undefined();
 
+    init_stdlib(v7);
     init_file(v7);
     init_crypto(v7);
     init_socket(v7);
@@ -14387,9 +14396,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
     return V7_AST_TOO_LARGE;
   }
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
-#ifndef NO_LIBC
-    fprintf(stderr, "WARNING parse input not consumed\n");
-#endif
+    err = V7_SYNTAX_ERROR;
   }
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
@@ -14450,17 +14457,31 @@ static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
                          int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
-void v7_throw_value(struct v7 *v7, val_t v) {
+val_t v7_throw_value(struct v7 *v7, val_t v) {
+  v7->thrown_error = v;
+  return v7_create_undefined();
+}
+
+void i_throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
   siglongjmp(v7->jmp_buf, THROW_JMP);
 } /* LCOV_EXCL_LINE */
 
+int v7_has_thrown(struct v7 *v7) {
+  return !v7_is_undefined(v7->thrown_error);
+}
+
 V7_PRIVATE val_t
-create_exception(struct v7 *v7, enum error_ctor ex, const char *msg) {
-  val_t e, args;
+create_exception(struct v7 *v7, const char *typ, const char *msg) {
+  val_t e, args, typv;
+#if 0
+  assert(v7_is_undefined(v7->thrown_error));
+#endif
+
   if (v7->creating_exception) {
 #ifndef NO_LIBC
-    fprintf(stderr, "Exception creation throws an exception %d: %s\n", ex, msg);
+    fprintf(stderr, "Exception creation throws an exception %s: %s\n", typ,
+            msg);
 #endif
     return V7_UNDEFINED;
   }
@@ -14468,30 +14489,44 @@ create_exception(struct v7 *v7, enum error_ctor ex, const char *msg) {
   v7_own(v7, &args);
   v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
   v7->creating_exception++;
-  e = create_object(v7, v7_get(v7, v7->error_objects[ex], "prototype", 9));
+  typv = v7_get(v7, v7->global_object, typ, ~0);
+  if (v7_is_undefined(typv)) {
+    fprintf(stderr, "cannot find exception %s\n", typ);
+  }
+  v7_own(v7, &typv);
+  e = create_object(v7, v7_get(v7, typv, "prototype", 9));
   v7_own(v7, &e);
-  i_apply(v7, v7->error_objects[ex], e, args);
+  i_apply(v7, typv, e, args);
+  v7_disown(v7, &typv);
   v7_disown(v7, &e);
   v7_disown(v7, &args);
   v7->creating_exception--;
   return e;
 }
 
-V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
+V7_PRIVATE void throw_exception(struct v7 *v7, const char *typ,
                                 const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  v7_throw_value(v7, create_exception(v7, ex, v7->error_msg));
+  i_throw_value(v7, create_exception(v7, typ, v7->error_msg));
 } /* LCOV_EXCL_LINE */
 
-void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
+void i_throw(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  v7_throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
+  i_throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
+}
+
+v7_val_t v7_throw(struct v7 *v7, const char *typ, const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  return v7_throw_value(v7, create_exception(v7, typ, v7->error_msg));
 }
 
 void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
@@ -14671,13 +14706,13 @@ i_eval_expr_common(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t scope) {
 
 #if defined(V7_STACK_SIZE) && !defined(V7_DISABLE_INTERPRETER_STACK_CHECK)
   if ((void *) &v7 <= v7->sp_limit) {
-    v7_throw(v7, "stack overflow");
+    i_throw(v7, "stack overflow");
   }
 #endif
 
   if (v7->interrupt == 1) {
     v7->interrupt = 0;
-    v7_throw(v7, "interrupted");
+    i_throw(v7, "interrupted");
   }
 
   switch (tag) {
@@ -14723,13 +14758,13 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
 
 #if defined(V7_STACK_SIZE) && !defined(V7_DISABLE_INTERPRETER_STACK_CHECK)
   if ((void *) &v7 <= v7->sp_limit) {
-    v7_throw(v7, "stack overflow");
+    i_throw(v7, "stack overflow");
   }
 #endif
 
   if (v7->interrupt == 1) {
     v7->interrupt = 0;
-    v7_throw(v7, "interrupted");
+    i_throw(v7, "interrupted");
   }
 
   switch (tag) {
@@ -15502,6 +15537,15 @@ static val_t i_call_cfunction(struct v7 *v7, val_t f, val_t this_object,
                               val_t args) {
   int saved_inhibit_gc = v7->inhibit_gc;
   val_t res, old_this = v7->this_object, old_args = v7->arguments;
+  val_t saved_thrown = v7->thrown_error;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &old_this);
+  tmp_stack_push(&tf, &old_args);
+  tmp_stack_push(&tf, &saved_thrown);
+
+  v7->thrown_error = v7_create_undefined();
   v7->inhibit_gc = 1;
   v7->this_object = this_object;
   v7->arguments = args;
@@ -15509,6 +15553,14 @@ static val_t i_call_cfunction(struct v7 *v7, val_t f, val_t this_object,
   v7->arguments = old_args;
   v7->this_object = old_this;
   v7->inhibit_gc = saved_inhibit_gc;
+  if (!v7_is_undefined(v7->thrown_error)) {
+    val_t e = v7->thrown_error;
+    v7->thrown_error = v7_create_undefined();
+    i_throw_value(v7, e);
+  }
+  v7->thrown_error = saved_thrown;
+
+  tmp_frame_cleanup(&tf);
   return res;
 }
 
@@ -16030,6 +16082,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           V7_CHECK(v7, tag == AST_IDENT);
           name = ast_get_inlined_data(a, acatch, &name_len);
           v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
+          v7->thrown_error = v7_create_undefined();
           ast_move_to_children(a, &acatch);
           memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
           res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
@@ -16071,10 +16124,12 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       break;
     }
     case AST_VALUE_RETURN:
+      v7->thrown_error = v7_create_undefined();
       res = i_eval_expr(v7, a, pos, scope);
       *brk = B_RETURN;
       break;
     case AST_RETURN:
+      v7->thrown_error = v7_create_undefined();
       *brk = B_RETURN;
       break;
     case AST_BREAK:
@@ -16094,8 +16149,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       siglongjmp(v7->jmp_buf, CONTINUE_JMP);
       break; /* unreachable */
     case AST_THROW:
-      v7->thrown_error = i_eval_expr(v7, a, pos, scope);
-      siglongjmp(v7->jmp_buf, THROW_JMP);
+      i_throw_value(v7, i_eval_expr(v7, a, pos, scope));
       break; /* unreachable */
     default:
       (*pos)--;
@@ -16323,6 +16377,7 @@ cleanup:
   }
 #endif
 
+  assert(v7->creating_exception == 0);
   return err;
 }
 
@@ -16572,7 +16627,7 @@ static int del_property_deep(struct v7 *v7, val_t obj, const char *name,
   return -1;
 }
 
-static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
+static double b_int_bin_op(enum opcode op, double a, double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
   int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
 
@@ -16590,12 +16645,11 @@ static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
     case OP_AND:
       return ia & ib;
     default:
-      throw_exception(v7, INTERNAL_ERROR, "%s", __func__); /* LCOV_EXCL_LINE */
-      return 0;                                            /* LCOV_EXCL_LINE */
+      assert(0);
   }
 }
 
-static double b_num_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
+static double b_num_bin_op(enum opcode op, double a, double b) {
   switch (op) {
     case OP_ADD: /* simple fixed width nodes with no payload */
       return a + b;
@@ -16620,14 +16674,13 @@ static double b_num_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
     case OP_OR:
     case OP_XOR:
     case OP_AND:
-      return b_int_bin_op(v7, op, a, b);
+      return b_int_bin_op(op, a, b);
     default:
-      throw_exception(v7, INTERNAL_ERROR, "%s", __func__); /* LCOV_EXCL_LINE */
-      return 0;                                            /* LCOV_EXCL_LINE */
+      assert(0);
   }
 }
 
-static int b_bool_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
+static int b_bool_bin_op(enum opcode op, double a, double b) {
 #ifdef V7_BROKEN_NAN
   if (isnan(a) || isnan(b)) return op == OP_NE || op == OP_NE_NE;
 #endif
@@ -16648,8 +16701,7 @@ static int b_bool_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
     case OP_GE:
       return a >= b;
     default:
-      throw_exception(v7, INTERNAL_ERROR, "%s", __func__); /* LCOV_EXCL_LINE */
-      return 0;                                            /* LCOV_EXCL_LINE */
+      assert(0);
   }
 }
 
@@ -16665,7 +16717,7 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   uint8_t *p = *ops;
 
   assert(*p < OP_MAX);
-  fprintf(f, "%zu: %s", p - (uint8_t *) bcode->ops.buf, op_names[*p]);
+  fprintf(f, "%zu: %s", (size_t)(p - (uint8_t *) bcode->ops.buf), op_names[*p]);
   switch (*p) {
     case OP_PUSH_LIT:
     case OP_SAFE_GET_VAR:
@@ -17040,8 +17092,8 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
  */
 static enum v7_err bcode_throw_exception(struct v7 *v7,
                                          struct bcode_registers *r,
-                                         enum error_ctor ex,
-                                         const char *err_fmt, ...) {
+                                         const char *ex, const char *err_fmt,
+                                         ...) {
   va_list ap;
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
@@ -17307,7 +17359,7 @@ restart:
           v7_disown(v7, &v2);
         } else {
           PUSH(v7_create_number(
-              b_num_bin_op(v7, op, i_as_num(v7, v1), i_as_num(v7, v2))));
+              b_num_bin_op(op, i_as_num(v7, v1), i_as_num(v7, v2))));
         }
         break;
       }
@@ -17326,7 +17378,7 @@ restart:
         v1 = POP();
         d1 = i_as_num(v7, v1);
         d2 = i_as_num(v7, v2);
-        PUSH(v7_create_number(b_num_bin_op(v7, op, d1, d2)));
+        PUSH(v7_create_number(b_num_bin_op(op, d1, d2)));
         break;
       }
       case OP_EQ_EQ:
@@ -17342,7 +17394,7 @@ restart:
         v1 = POP();
         d1 = i_as_num(v7, v1);
         d2 = i_as_num(v7, v2);
-        PUSH(v7_create_boolean(b_bool_bin_op(v7, op, d1, d2)));
+        PUSH(v7_create_boolean(b_bool_bin_op(op, d1, d2)));
         break;
       }
       case OP_INSTANCEOF: {
@@ -19790,7 +19842,7 @@ std_eval(struct v7 *v7, v7_val_t arg, val_t this_obj, int is_json) {
     }
 
     if (p != buf) free(p);
-    if (err != V7_OK) v7_throw_value(v7, res);
+    if (err != V7_OK) return v7_throw_value(v7, res);
   }
   return res;
 }
@@ -21974,7 +22026,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 static val_t Obj_getPrototypeOf(struct v7 *v7) {
   val_t arg = v7_arg(v7, 0);
   if (!v7_is_object(arg)) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "Object.getPrototypeOf called on non-object");
   }
   return v_get_prototype(v7, arg);
@@ -22008,7 +22060,7 @@ static val_t _Obj_ownKeys(struct v7 *v7, unsigned int ignore_flags) {
   val_t obj = v7_arg(v7, 0);
   val_t res = v7_create_dense_array(v7);
   if (!v7_is_object(obj)) {
-    throw_exception(v7, TYPE_ERROR, "Object.keys called on non-object");
+    return v7_throw(v7, TYPE_ERROR, "Object.keys called on non-object");
   }
 
   _Obj_append_reverse(v7, v7_to_object(obj)->properties, res, 0, ignore_flags);
@@ -22088,7 +22140,7 @@ static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
   }
 
   if (prop == NULL) {
-    throw_exception(v7, INTERNAL_ERROR, "OOM");
+    return v7_throw(v7, "Error", "OOM");
   } else {
     o_set_attr(v7, desc, "enumerable", 10, prop, V7_PROPERTY_DONT_ENUM);
     o_set_attr(v7, desc, "writable", 8, prop, V7_PROPERTY_READ_ONLY);
@@ -22108,17 +22160,17 @@ static val_t Obj_defineProperty(struct v7 *v7) {
   char name_buf[512];
   int name_len;
   if (!v7_is_object(obj)) {
-    throw_exception(v7, TYPE_ERROR, "object expected");
+    return v7_throw(v7, TYPE_ERROR, "object expected");
   }
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
 
 #if V7_ENABLE__Object__create || V7_ENABLE__Object__defineProperties
-static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
+static val_t o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   struct v7_property *p;
   if (!v7_is_object(descs)) {
-    throw_exception(v7, TYPE_ERROR, "object expected");
+    return v7_throw(v7, TYPE_ERROR, "object expected");
   }
   for (p = v7_to_object(descs)->properties; p; p = p->next) {
     size_t n;
@@ -22128,6 +22180,7 @@ static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
     }
     _Obj_defineProperty(v7, obj, s, n, p->value);
   }
+  return v7_create_undefined();
 }
 #endif
 
@@ -22145,7 +22198,7 @@ static val_t Obj_create(struct v7 *v7) {
   val_t res, proto = v7_arg(v7, 0);
   val_t descs = v7_arg(v7, 1);
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "Object prototype may only be an Object or null");
   }
   res = create_object(v7, proto);
@@ -22224,7 +22277,7 @@ static val_t Obj_toString(struct v7 *v7) {
 static val_t Obj_preventExtensions(struct v7 *v7) {
   val_t arg = v7_arg(v7, 0);
   if (!v7_is_object(arg)) {
-    throw_exception(v7, TYPE_ERROR, "Object expected");
+    return v7_throw(v7, TYPE_ERROR, "Object expected");
   }
   v7_to_object(arg)->attributes |= V7_OBJ_NOT_EXTENSIBLE;
   return arg;
@@ -22235,7 +22288,7 @@ static val_t Obj_preventExtensions(struct v7 *v7) {
 static val_t Obj_isExtensible(struct v7 *v7) {
   val_t arg = v7_arg(v7, 0);
   if (!v7_is_object(arg)) {
-    throw_exception(v7, TYPE_ERROR, "Object expected");
+    return v7_throw(v7, TYPE_ERROR, "Object expected");
   }
   return v7_create_boolean(
       !(v7_to_object(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE));
@@ -22361,9 +22414,9 @@ static val_t Error_toString(struct v7 *v7) {
   return s_concat(v7, prefix, msg);
 }
 
-static const char *const error_names[] = {"TypeError", "SyntaxError",
-                                          "ReferenceError", "InternalError",
-                                          "RangeError"};
+static const char *const error_names[] = {
+    TYPE_ERROR, SYNTAX_ERROR, REFERENCE_ERROR, INTERNAL_ERROR, RANGE_ERROR};
+
 V7_STATIC_ASSERT(ARRAY_SIZE(error_names) == ERROR_CTOR_MAX,
                  error_name_count_mismatch);
 
@@ -22440,7 +22493,7 @@ static val_t Number_valueOf(struct v7 *v7) {
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
            v7->number_prototype)) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "Number.valueOf called on non-number object");
   }
   return Obj_valueOf(v7);
@@ -22493,7 +22546,7 @@ static val_t Number_toString(struct v7 *v7) {
   if (!v7_is_number(this_obj) &&
       !(v7_is_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->number_prototype))) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "Number.toString called on non-number object");
   }
 
@@ -22638,11 +22691,11 @@ static val_t Array_set_length(struct v7 *v7) {
   long new_len = arg_long(v7, 0, -1);
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Array expected");
+    return v7_throw(v7, TYPE_ERROR, "Array expected");
   } else if (new_len < 0 ||
              (v7_is_number(arg0) &&
               (isnan(v7_to_number(arg0)) || isinf(v7_to_number(arg0))))) {
-    throw_exception(v7, RANGE_ERROR, "Invalid array length");
+    return v7_throw(v7, RANGE_ERROR, "Invalid array length");
   } else {
     struct v7_property **p, **next;
     long index, max_index = -1;
@@ -22945,13 +22998,11 @@ static val_t Array_forEach(struct v7 *v7) {
   struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Array expected");
-    return v7_create_undefined();
+    return v7_throw(v7, TYPE_ERROR, "Array expected");
   }
 
   if (!v7_is_function(cb)) {
-    throw_exception(v7, TYPE_ERROR, "Function expected");
-    return v7_create_undefined();
+    return v7_throw(v7, TYPE_ERROR, "Function expected");
   }
 
   tmp_stack_push(&vf, &v);
@@ -22977,7 +23028,7 @@ static val_t Array_map(struct v7 *v7) {
 
   if (!v7_is_object(this_obj)) {
     tmp_frame_cleanup(&vf);
-    throw_exception(v7, TYPE_ERROR, "Array expected");
+    return v7_throw(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, &arg0, &arg1);
     res = v7_create_dense_array(v7);
@@ -23009,7 +23060,7 @@ static val_t Array_every(struct v7 *v7) {
   struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Array expected");
+    return v7_throw(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, &arg0, &arg1);
 
@@ -23041,7 +23092,7 @@ static val_t Array_some(struct v7 *v7) {
   struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Array expected");
+    return v7_throw(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, &arg0, &arg1);
 
@@ -23073,7 +23124,7 @@ static val_t Array_filter(struct v7 *v7) {
   struct gc_tmp_frame vf = new_tmp_frame(v7);
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Array expected");
+    return v7_throw(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, &arg0, &arg1);
     res = v7_create_dense_array(v7);
@@ -23103,7 +23154,7 @@ static val_t Array_concat(struct v7 *v7) {
   val_t res, saved_args;
 
   if (!v7_is_array(v7, this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Array expected");
+    return v7_throw(v7, TYPE_ERROR, "Array expected");
   }
 
   len = v7_argc(v7);
@@ -23205,7 +23256,7 @@ static val_t Boolean_valueOf(struct v7 *v7) {
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
            v7->boolean_prototype)) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "Boolean.valueOf called on non-boolean object");
   }
   return Obj_valueOf(v7);
@@ -23222,7 +23273,7 @@ static val_t Boolean_toString(struct v7 *v7) {
   if (!v7_is_boolean(this_obj) &&
       !(v7_is_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->boolean_prototype))) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "Boolean.toString called on non-boolean object");
   }
 
@@ -23761,7 +23812,7 @@ static val_t Str_valueOf(struct v7 *v7) {
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
            v7->string_prototype)) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "String.valueOf called on non-string object");
   }
   return Obj_valueOf(v7);
@@ -23794,7 +23845,7 @@ static val_t Str_toString(struct v7 *v7) {
   if (!v7_is_string(this_obj) &&
       !(v7_is_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->string_prototype))) {
-    throw_exception(v7, TYPE_ERROR,
+    return v7_throw(v7, TYPE_ERROR,
                     "String.toString called on non-string object");
   }
 
@@ -24616,7 +24667,7 @@ typedef void (*fbreaktime_t)(const etime_t *, struct timeparts *);
 static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
   val_t ret = i_value_of(v7, obj);
   if (ret == V7_TAG_NAN) {
-    throw_exception(v7, TYPE_ERROR, "Date is invalid (for string)");
+    return v7_throw(v7, TYPE_ERROR, "Date is invalid (for string)");
   }
   return ret;
 }
@@ -25126,7 +25177,7 @@ static val_t Date_valueOf(struct v7 *v7) {
   if (!v7_is_object(this_obj) ||
       (v7_is_object(this_obj) &&
        v7_to_object(this_obj)->prototype != v7_to_object(v7->date_prototype))) {
-    throw_exception(v7, TYPE_ERROR, "Date.valueOf called on non-Date object");
+    return v7_throw(v7, TYPE_ERROR, "Date.valueOf called on non-Date object");
   }
 
   return Obj_valueOf(v7);
@@ -25242,7 +25293,7 @@ static val_t Date_parse(struct v7 *v7) {
   etime_t ret_time = INVALID_TIME;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Date.parse() called on object");
+    return v7_throw(v7, TYPE_ERROR, "Date.parse() called on object");
   }
 
   if (v7_argc(v7) >= 1) {
@@ -25265,7 +25316,7 @@ static val_t Date_UTC(struct v7 *v7) {
   etime_t ret_time;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
-    throw_exception(v7, TYPE_ERROR, "Date.now() called on object");
+    return v7_throw(v7, TYPE_ERROR, "Date.now() called on object");
   }
 
   ret_time = d_time_number_from_arr(v7, tpyear, 0, d_gmktime);
@@ -25414,7 +25465,7 @@ static val_t Function_ctor(struct v7 *v7) {
   ret = v7_exec(v7, m.buf, &tmp);
   mbuf_free(&m);
   if (ret != V7_OK) {
-    throw_exception(v7, SYNTAX_ERROR, "Invalid function body");
+    return v7_throw(v7, SYNTAX_ERROR, "Invalid function body");
   }
   return tmp;
 }
@@ -25532,7 +25583,7 @@ V7_PRIVATE val_t Regex_ctor(struct v7 *v7) {
     if (v7_is_regexp(v7, arg)) {
       if (argnum > 1) {
         /* ch15/15.10/15.10.3/S15.10.3.1_A2_T1.js */
-        throw_exception(v7, TYPE_ERROR, "invalid flags");
+        return v7_throw(v7, TYPE_ERROR, "invalid flags");
       }
       return arg;
     }
