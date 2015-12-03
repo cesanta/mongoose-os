@@ -2944,8 +2944,8 @@ V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t s, val_t at);
 V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 #endif
 
-V7_PRIVATE v7_val_t
-i_apply(struct v7 *, val_t func, val_t this_obj, val_t args);
+V7_PRIVATE v7_val_t i_apply(struct v7 *, val_t func, val_t this_obj, val_t args,
+                            uint8_t is_constructor);
 
 #if defined(__cplusplus)
 }
@@ -9370,7 +9370,7 @@ double v7_to_number(val_t v) {
 }
 
 V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
-  if (v7_is_function(obj)) {
+  if (v7_is_function(obj) || v7_is_cfunction(obj)) {
     return v7->function_prototype;
   }
   return v7_object_to_value(v7_to_object(obj)->prototype);
@@ -9665,7 +9665,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
 #if V7_ENABLE__Date__toJSON
       if (flags & V7_STRINGIFY_JSON) func = v7_get(v7, v, "toJSON", 6);
 #endif
-      val = i_apply(v7, func, v, V7_UNDEFINED);
+      val = i_apply(v7, func, v, V7_UNDEFINED, 0);
       return to_str(v7, val, buf, size, flags);
     }
     case V7_TYPE_GENERIC_OBJECT:
@@ -9679,7 +9679,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       v7_val_t name, val;
       unsigned attrs;
       if (flags == V7_STRINGIFY_DEFAULT) {
-        val = i_apply(v7, v7_get(v7, v, "toString", 8), v, V7_UNDEFINED);
+        val = i_apply(v7, v7_get(v7, v, "toString", 8), v, V7_UNDEFINED, 0);
         return to_str(v7, val, buf, size, flags);
       }
 
@@ -10116,7 +10116,7 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_array_set(v7, args, 0, val);
   v7_disown(v7, &args);
   v7_disown(v7, &val);
-  i_apply(v7, setter, obj, args);
+  i_apply(v7, setter, obj, args, 0);
 }
 
 V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
@@ -10275,7 +10275,7 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
     if (p->attributes & V7_PROPERTY_SETTER) {
       getter = v7_array_get(v7, p->value, 0);
     }
-    return i_apply(v7, getter, obj, V7_UNDEFINED);
+    return i_apply(v7, getter, obj, V7_UNDEFINED, 0);
   }
   return p->value;
 }
@@ -14459,16 +14459,18 @@ static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
 val_t v7_throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
+  v7->is_thrown = 1;
   return v7_create_undefined();
 }
 
 void i_throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
+  v7->is_thrown = 1;
   siglongjmp(v7->jmp_buf, THROW_JMP);
 } /* LCOV_EXCL_LINE */
 
 int v7_has_thrown(struct v7 *v7) {
-  return !v7_is_undefined(v7->thrown_error);
+  return v7->is_thrown;
 }
 
 V7_PRIVATE val_t
@@ -14496,7 +14498,7 @@ create_exception(struct v7 *v7, const char *typ, const char *msg) {
   v7_own(v7, &typv);
   e = create_object(v7, v7_get(v7, typv, "prototype", 9));
   v7_own(v7, &e);
-  i_apply(v7, typv, e, args);
+  i_apply(v7, typv, e, args, 0);
   v7_disown(v7, &typv);
   v7_disown(v7, &e);
   v7_disown(v7, &args);
@@ -14556,7 +14558,7 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
      * This assumes all callers of i_value_of will root their
      * temporary values.
      */
-    v = i_apply(v7, f, v, v7_create_undefined());
+    v = i_apply(v7, f, v, v7_create_undefined(), 0);
   }
   return v;
 }
@@ -15538,6 +15540,7 @@ static val_t i_call_cfunction(struct v7 *v7, val_t f, val_t this_object,
   int saved_inhibit_gc = v7->inhibit_gc;
   val_t res, old_this = v7->this_object, old_args = v7->arguments;
   val_t saved_thrown = v7->thrown_error;
+  int saved_is_thrown = v7->is_thrown;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   tmp_stack_push(&tf, &res);
@@ -15546,6 +15549,7 @@ static val_t i_call_cfunction(struct v7 *v7, val_t f, val_t this_object,
   tmp_stack_push(&tf, &saved_thrown);
 
   v7->thrown_error = v7_create_undefined();
+  v7->is_thrown = 0;
   v7->inhibit_gc = 1;
   v7->this_object = this_object;
   v7->arguments = args;
@@ -15553,12 +15557,11 @@ static val_t i_call_cfunction(struct v7 *v7, val_t f, val_t this_object,
   v7->arguments = old_args;
   v7->this_object = old_this;
   v7->inhibit_gc = saved_inhibit_gc;
-  if (!v7_is_undefined(v7->thrown_error)) {
-    val_t e = v7->thrown_error;
-    v7->thrown_error = v7_create_undefined();
-    i_throw_value(v7, e);
+  if (v7_has_thrown(v7)) {
+    i_throw_value(v7, v7->thrown_error);
   }
   v7->thrown_error = saved_thrown;
+  v7->is_thrown = saved_is_thrown;
 
   tmp_frame_cleanup(&tf);
   return res;
@@ -16073,6 +16076,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         v7->inhibit_gc = 0;
 
         if (j == THROW_JMP && acatch != finally) {
+          /* need to eval `catch` block */
           val_t catch_scope;
           v7->call_stack = saved_call_stack;
           catch_scope = create_object(v7, scope);
@@ -16083,6 +16087,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           name = ast_get_inlined_data(a, acatch, &name_len);
           v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
           v7->thrown_error = v7_create_undefined();
+          v7->is_thrown = 0;
           ast_move_to_children(a, &acatch);
           memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
           res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
@@ -16125,11 +16130,13 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     }
     case AST_VALUE_RETURN:
       v7->thrown_error = v7_create_undefined();
+      v7->is_thrown = 0;
       res = i_eval_expr(v7, a, pos, scope);
       *brk = B_RETURN;
       break;
     case AST_RETURN:
       v7->thrown_error = v7_create_undefined();
+      v7->is_thrown = 0;
       *brk = B_RETURN;
       break;
     case AST_BREAK:
@@ -16179,10 +16186,11 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
     *result = v7->thrown_error;
     /* v7->thrown_error is in the root set, remove it so it doesn't leak */
     v7->thrown_error = v7_create_undefined();
+    v7->is_thrown = 0;
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
-  *result = i_apply(v7, func, this_obj, args);
+  *result = i_apply(v7, func, this_obj, args, 0);
 cleanup:
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
   v7->call_stack = saved_call_stack;
@@ -16190,8 +16198,8 @@ cleanup:
 }
 
 /* Invoke a function applying the argument array */
-V7_PRIVATE val_t
-i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
+V7_PRIVATE val_t i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args,
+                         uint8_t is_constructor) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
@@ -16263,6 +16271,10 @@ i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
 
   v7->this_object = this_object;
   res = i_invoke_function(v7, func, frame, body, end);
+  if (is_constructor && !v7_is_object(res)) {
+    /* constructor returned non-object: replace it with `this` */
+    res = v7->this_object;
+  }
   v7->this_object = saved_this;
 
 cleanup:
@@ -16307,6 +16319,7 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
     r = v7->thrown_error;
     /* v7->thrown_error is in the root set, remove it so it doesn't leak */
     v7->thrown_error = v7_create_undefined();
+    v7->is_thrown = 0;
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
@@ -17133,6 +17146,70 @@ static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
   return res;
 }
 
+/**
+ * Call C function `func` with given `this_object` and array of arguments
+ * `args`. `func` should be a C function pointer, not C function object.
+ *
+ * If function returns normally, the value returned from it is pushed to the
+ * bcode stack, and `V7_OK` is returned.
+ *
+ * If function throws, then `bcode_perform_throw` is called, and return
+ * semantic is the same as `bcode_perform_throw` has: `V7_OK` if exception was
+ * caught, `V7_EXEC_EXCEPTION` otherwise.
+ */
+static enum v7_err call_cfunction(struct v7 *v7, struct bcode_registers *r,
+                                  val_t func, val_t this_object, val_t args,
+                                  uint8_t is_constructor) {
+  enum v7_err ret = V7_OK;
+
+  val_t res = v7_create_undefined();
+  val_t saved_this = v7->this_object;
+  val_t saved_thrown = v7->thrown_error;
+  int saved_is_thrown = v7->is_thrown;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &saved_this);
+  tmp_stack_push(&tf, &saved_thrown);
+
+  /*
+   * prepare cfunction environment: `this`, `arguments`. Plus, we need to know
+   * whether the C function has thrown, so, we also clear thrown error and
+   * will check it afterwards.
+   */
+  v7->thrown_error = v7_create_undefined();
+  v7->is_thrown = 0;
+  v7->this_object = this_object;
+  v7->arguments = args;
+
+  /* call C function */
+  res = v7_to_cfunction(func)(v7);
+
+  v7->arguments = v7_create_undefined();
+  if (v7_has_thrown(v7)) {
+    /* C function has thrown; perform bcode throw, then */
+    BTRY(bcode_perform_throw(v7, r, 0 /*don't take value from stack*/));
+  } else {
+    /* C function returned normally: restore `thrown_error` */
+    v7->thrown_error = saved_thrown;
+    v7->is_thrown = saved_is_thrown;
+
+    if (is_constructor && !v7_is_object(res)) {
+      /* constructor returned non-object: replace it with `this` */
+      res = v7_get_this(v7);
+    }
+
+    v7->this_object = saved_this;
+
+    /* push value returned from C function to bcode stack */
+    PUSH(res);
+  }
+
+clean:
+  tmp_frame_cleanup(&tf);
+  return ret;
+}
+
 /*
  * Evaluate `OP_TRY_PUSH_CATCH` or `OP_TRY_PUSH_FINALLY`: Take an offset (from
  * the parameter of opcode) and push it onto "try stack"
@@ -17596,6 +17673,34 @@ restart:
           /* pop `this` */
           v3 = POP();
 
+          /*
+           * adjust `this` if the function is called with the constructor
+           * invocation pattern
+           */
+          if (is_constructor) {
+            /*
+             * The function is invoked as a constructor: we ignore `this`
+             * value popped from stack, create new object and set prototype.
+             */
+
+            /*
+             * get "prototype" property from the constructor function,
+             * and make sure it's an object
+             */
+            v4 = v7_get(v7, v1 /*func*/, "prototype", 9);
+            if (!v7_is_object(v4)) {
+              /* TODO(dfrank): box primitive value */
+              BTRY(bcode_throw_exception(
+                  v7, &r, TYPE_ERROR,
+                  "Cannot set a primitive value as object prototype"));
+              goto restart;
+            }
+
+            /* create an object with given prototype */
+            v3 = create_object(v7, v4 /*prototype*/);
+            v4 = v7_create_undefined();
+          }
+
           if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
             /* extract the hidden property from a cfunction_object */
             struct v7_property *p;
@@ -17619,13 +17724,12 @@ restart:
              * We have `1` here, but not `"foo"`.
              */
             BTRY(bcode_throw_exception(v7, &r, TYPE_ERROR, "not a function"));
-          } else if (v7_to_function(v1)->ast != NULL) {
+          } else if (v7_is_function(v1) && v7_to_function(v1)->ast != NULL) {
+            /* call interpreter function */
+
             /*
              * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
              * exceptions
-             */
-            /*
-             * TODO(dfrank): constructors aren't handled
              */
 
             /*
@@ -17633,38 +17737,39 @@ restart:
              * stack is an `undefined`. And in non-strict mode, we should change
              * it to global object.
              */
-            if (!r.bcode->strict_mode && v7_is_undefined(v3)) {
+            if (!is_constructor && !r.bcode->strict_mode &&
+                v7_is_undefined(v3)) {
               v3 = v7->global_object;
             }
 
-            PUSH(i_apply(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/));
+            PUSH(i_apply(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/,
+                         is_constructor));
+          } else if (v7_is_cfunction(v1)) {
+            /* call cfunction */
+
+            /*
+             * In "function invocation pattern", the `this` value popped from
+             * stack is an `undefined`. And in non-strict mode, we should change
+             * it to global object.
+             */
+            if (!is_constructor && !r.bcode->strict_mode &&
+                v7_is_undefined(v3)) {
+              v3 = v7->global_object;
+            }
+
+            BTRY(call_cfunction(v7, &r, v1 /*func*/, v3 /*this*/, v2 /*args*/,
+                                is_constructor));
           } else {
             val_t *name, *arg_end, *locals_end;
             struct v7_function *func = v7_to_function(v1);
 
-            if (is_constructor) {
-              /*
-               * The function is invoked as a constructor: we ignore `this`
-               * value popped from stack, create new object and set prototype.
-               */
-              v3 = v7_create_object(v7);
-              v4 = v7_get(v7, v1 /*func*/, "prototype", 9);
-              if (!v7_is_object(v4)) {
-                /* TODO(dfrank): box primitive value */
-                BTRY(bcode_throw_exception(
-                    v7, &r, TYPE_ERROR,
-                    "Cannot set a primitive value as object prototype"));
-                goto restart;
-              }
-              v7_to_object(v3 /*this*/)->prototype = v7_to_object(v4);
-              v4 = v7_create_undefined();
-
-            } else if (!func->bcode->strict_mode && v7_is_undefined(v3)) {
-              /*
-               * In "function invocation pattern", the `this` value popped from
-               * stack is an `undefined`. And in non-strict mode, we should
-               * change it to global object.
-               */
+            /*
+             * In "function invocation pattern", the `this` value popped from
+             * stack is an `undefined`. And in non-strict mode, we should change
+             * it to global object.
+             */
+            if (!is_constructor && !func->bcode->strict_mode &&
+                v7_is_undefined(v3)) {
               v3 = v7->global_object;
             }
 
@@ -22736,7 +22841,7 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     v7->inhibit_gc = 0;
-    res = i_apply(v7, func, V7_UNDEFINED, args);
+    res = i_apply(v7, func, V7_UNDEFINED, args, 0);
     v7->inhibit_gc = saved_inhibit_gc;
     return (int) -v7_to_number(res);
   } else {
@@ -22984,7 +23089,7 @@ static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
   v7_array_push(v7, params, t);
 
   v7->inhibit_gc = 0;
-  res = i_apply(v7, a, t, params);
+  res = i_apply(v7, a, t, params, 0);
   v7->inhibit_gc = saved_inhibit_gc;
   return res;
 }
@@ -23957,7 +24062,7 @@ static val_t Str_replace(struct v7 *v7) {
         v7_array_push(v7, arr,
                       v7_create_number(utfnlen(s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
-        out_str_o = to_string(v7, i_apply(v7, str_func, this_obj, arr));
+        out_str_o = to_string(v7, i_apply(v7, str_func, this_obj, arr, 0));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
         if (rez_len) {
           ptok->start = rez_str;
@@ -25542,7 +25647,7 @@ static val_t Function_apply(struct v7 *v7) {
   val_t f = i_value_of(v7, this_obj);
   val_t this_arg = v7_arg(v7, 0);
   val_t func_args = v7_arg(v7, 1);
-  return i_apply(v7, f, this_arg, func_args);
+  return i_apply(v7, f, this_arg, func_args, 0);
 }
 
 V7_PRIVATE void init_function(struct v7 *v7) {
