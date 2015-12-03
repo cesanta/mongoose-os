@@ -356,7 +356,7 @@ $(BUILD_DIR)/rboot.bin: $(BUILD_DIR)/esptool2
 endif
 
 clean:
-	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR) sys_conf.*
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR) sys_config.*
 
 flash: $(FW_OUT) $(FW_FS_OUT)
 	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
