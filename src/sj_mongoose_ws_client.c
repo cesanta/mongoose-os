@@ -114,7 +114,7 @@ static v7_val_t sj_ws_ctor(struct v7 *v7) {
   size_t n;
 
   if (!v7_is_string(urlv)) {
-    v7_throw(v7, "invalid ws url string");
+    return v7_throw(v7, "Error", "invalid ws url string");
   }
 
   if (v7_is_object(this_obj) && this_obj != v7_get_global(v7)) {
@@ -130,7 +130,8 @@ static v7_val_t sj_ws_ctor(struct v7 *v7) {
     }
 
     nc = mg_connect(&sj_mgr, url, ws_ev_handler);
-    if (nc == NULL) v7_throw(v7, "error creating the connection");
+    if (nc == NULL)
+      return v7_throw(v7, "Error", "error creating the connection");
 #ifdef MG_ENABLE_SSL
     if (use_ssl) {
       mg_set_ssl(nc, NULL, NULL);
@@ -154,7 +155,7 @@ static v7_val_t sj_ws_ctor(struct v7 *v7) {
       ud->extra_headers = strdup(v7_to_string(v7, &ehv, &n));
     }
   } else {
-    v7_throw(v7, "WebSocket ctor called without new");
+    return v7_throw(v7, "Error", "WebSocket ctor called without new");
   }
 
   return v7_create_undefined();
@@ -218,14 +219,12 @@ static v7_val_t WebSocket_send(struct v7 *v7) {
   int is_blob = !v7_is_string(datav) && v7_is_instanceof(v7, datav, "Blob");
 
   if (!v7_is_string(datav) && !is_blob) {
-    v7_throw(v7, "arg should be string or Blob");
-    return v7_create_undefined();
+    return v7_throw(v7, "Error", "arg should be string or Blob");
   }
 
   if (!v7_is_foreign(ncv) ||
       (nc = (struct mg_connection *) v7_to_foreign(ncv)) == NULL) {
-    v7_throw(v7, "ws not connected");
-    return v7_create_undefined();
+    return v7_throw(v7, "Error", "ws not connected");
   }
 
   if (is_blob) {

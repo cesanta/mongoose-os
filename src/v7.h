@@ -336,11 +336,18 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
 enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args);
 
-/* Throw an exception (Error object) with given formatted message. */
-void v7_throw(struct v7 *, const char *msg_fmt, ...);
+/*
+ * Throw an exception with given formatted message.
+ *
+ * Pass "Error" as typ for a generic error.
+ */
+v7_val_t v7_throw(struct v7 *, const char *typ, const char *msg_fmt, ...);
 
 /* Throw an already existing object. */
-void v7_throw_value(struct v7 *, v7_val_t v);
+v7_val_t v7_throw_value(struct v7 *, v7_val_t v);
+
+/* Returns 1 if some value is currently thrown, 0 otherwise */
+int v7_has_thrown(struct v7 *v7);
 
 #define V7_PROPERTY_READ_ONLY 1
 #define V7_PROPERTY_DONT_ENUM 2

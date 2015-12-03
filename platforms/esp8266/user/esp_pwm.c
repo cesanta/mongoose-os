@@ -146,12 +146,12 @@ static v7_val_t PWM_set(struct v7 *v7) {
   int pin, period, duty;
 
   if (!v7_is_number(pinv) || !v7_is_number(periodv) || !v7_is_number(dutyv)) {
-    v7_throw(v7, "Numeric argument expected");
+    return v7_throw(v7, "Error", "Numeric argument expected");
   }
 
   pin = v7_to_number(pinv);
   if (pin != 16 && get_gpio_info(pin) == NULL) {
-    v7_throw(v7, "Invalid pin number");
+    return v7_throw(v7, "Error", "Invalid pin number");
   }
 
   period = v7_to_number(periodv);
@@ -159,14 +159,14 @@ static v7_val_t PWM_set(struct v7 *v7) {
 
   if (period != 0 &&
       (period < PWM_BASE_RATE_US * 2 || duty < 0 || duty > period)) {
-    v7_throw(v7, "Invalid period / duty value");
+    return v7_throw(v7, "Error", "Invalid period / duty value");
   }
 
   period /= PWM_BASE_RATE_US;
   duty /= PWM_BASE_RATE_US;
 
   p = find_or_create_pwm_info(pin, (period > 0 && duty >= 0));
-  if (p == NULL) v7_throw(v7, "OOM");
+  if (p == NULL) return v7_throw(v7, "Error", "OOM");
 
   if (period == 0) {
     if (p != NULL) {

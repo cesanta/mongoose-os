@@ -21,11 +21,11 @@ static v7_val_t sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
   size_t url_len, body_len = 0;
 
   if (!v7_is_string(urlv)) {
-    v7_throw(v7, "url should be a string");
+    return v7_throw(v7, "Error", "url should be a string");
   }
 
   if (!v7_is_function(cb)) {
-    v7_throw(v7, "cb must be a function");
+    return v7_throw(v7, "Error", "cb must be a function");
   }
 
   if (v7_is_string(bodyv)) {

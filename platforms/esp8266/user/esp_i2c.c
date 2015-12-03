@@ -269,7 +269,7 @@ int i2c_init(i2c_connection c) {
 
 /* HAL functions */
 i2c_connection sj_i2c_create(struct v7 *v7) {
-  struct esp_i2c_connection *conn;
+  struct esp_i2c_connection *conn = NULL;
   v7_val_t sda_val = v7_arg(v7, 0);
   double sda = v7_to_number(sda_val);
   v7_val_t scl_val = v7_arg(v7, 1);
@@ -277,13 +277,13 @@ i2c_connection sj_i2c_create(struct v7 *v7) {
 
   if (!v7_is_number(sda_val) || sda < 0 || sda > 16 || !v7_is_number(scl_val) ||
       scl < 0 || scl > 16) {
-    v7_throw(v7, "Missing or wrong arguments for SDA and SCL.");
+    v7_throw(v7, "Error", "Missing or wrong arguments for SDA and SCL.");
+  } else {
+    conn = malloc(sizeof(*conn));
+    conn->sda_gpio = sda;
+    conn->scl_gpio = scl;
+    conn->started = 0;
   }
-
-  conn = malloc(sizeof(*conn));
-  conn->sda_gpio = sda;
-  conn->scl_gpio = scl;
-  conn->started = 0;
 
   return conn;
 }

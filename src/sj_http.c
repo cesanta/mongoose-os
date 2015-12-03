@@ -22,7 +22,7 @@ static v7_val_t Http_createServer(struct v7 *v7) {
   v7_val_t cb = v7_arg(v7, 0);
   v7_val_t server = v7_create_undefined();
   if (!v7_is_function(cb)) {
-    v7_throw(v7, "Invalid argument");
+    return v7_throw(v7, "Error", "Invalid argument");
   }
   server = v7_create_object(v7);
   v7_set_proto(server, sj_http_server_proto);
@@ -102,7 +102,8 @@ static void start_http_server(struct v7 *v7, const char *addr, v7_val_t obj) {
 
   c = mg_bind(&sj_mgr, addr, http_ev_handler);
   if (c == NULL) {
-    v7_throw(v7, "Cannot bind");
+    v7_throw(v7, "Error", "Cannot bind");
+    return;
   }
   mg_set_protocol_http_websocket(c);
   c->user_data = ud = (struct user_data *) malloc(sizeof(*ud));
@@ -163,7 +164,7 @@ static v7_val_t Http_response_writeHead(struct v7 *v7) {
   v7_val_t arg0 = v7_arg(v7, 0), arg1 = v7_arg(v7, 1);
 
   if (v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
-    v7_throw(v7, "Headers already sent");
+    return v7_throw(v7, "Error", "Headers already sent");
   }
 
   if (v7_is_number(arg0)) {
@@ -254,7 +255,7 @@ static v7_val_t Http_Server_listen(struct v7 *v7) {
   v7_val_t arg0 = v7_arg(v7, 0);
 
   if (!v7_is_number(arg0) && !v7_is_string(arg0)) {
-    v7_throw(v7, "Function expected");
+    return v7_throw(v7, "Error", "Function expected");
   }
 
   p = v7_stringify(v7, arg0, buf, sizeof(buf), 0);
@@ -297,7 +298,7 @@ static v7_val_t Http_createClient(struct v7 *v7) {
   snprintf(addr, sizeof(addr), "%s:%d", host, port);
 
   if ((c = mg_connect(&sj_mgr, addr, http_ev_handler)) == NULL) {
-    v7_throw(v7, "Cannot connect");
+    return v7_throw(v7, "Error", "Cannot connect");
   }
 
   mg_set_protocol_http_websocket(c);

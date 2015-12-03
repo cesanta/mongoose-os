@@ -106,9 +106,12 @@ static v7_val_t i2cjs_ctor(struct v7 *v7) {
   i2c_connection conn;
   conn = sj_i2c_create(v7);
 
-  if (i2c_init(conn) < 0) {
+  if (v7_has_thrown(v7)) {
+    /* js_i2c_create() has thrown, so, return */
+    return v7_create_undefined();
+  } else if (i2c_init(conn) < 0) {
     sj_i2c_close(conn);
-    v7_throw(v7, "Failed to initialize I2C library.");
+    return v7_throw(v7, "Error", "Failed to initialize I2C library.");
   }
 
   v7_set(v7, this_obj, s_i2c_conn_prop, ~0,

@@ -41,7 +41,7 @@ static v7_val_t UART_ctor(struct v7 *v7) {
   size_t len;
 
   if (!v7_is_string(dev)) {
-    v7_throw(v7, "device must be string");
+    return v7_throw(v7, "Error", "device must be string");
   }
 
   ud = (struct user_data *) calloc(1, sizeof(struct user_data));
@@ -53,7 +53,7 @@ static v7_val_t UART_ctor(struct v7 *v7) {
   name = v7_to_string(v7, &dev, &len);
   uart = sj_hal_open_uart(name, (void *) ud);
   if (uart == NULL) {
-    v7_throw(v7, "cannot open uart");
+    return v7_throw(v7, "Error", "cannot open uart");
   }
 
   v7_set(v7, this_obj, "_ud", ~0, V7_PROPERTY_HIDDEN, v7_create_foreign(ud));

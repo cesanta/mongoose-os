@@ -26,9 +26,12 @@ v7_val_t spi_js_ctor(struct v7 *v7) {
   spi_connection conn;
   conn = sj_spi_create(v7);
 
-  if (spi_init(conn) < 0) {
+  if (v7_has_thrown(v7)) {
+    /* sj_spi_create() has thrown, so, return */
+    return v7_create_undefined();
+  } else if (spi_init(conn) < 0) {
     sj_spi_close(conn);
-    v7_throw(v7, "Failed to initialize SPI library.");
+    return v7_throw(v7, "Error", "Failed to initialize SPI library.");
   }
 
   v7_set(v7, this_obj, s_spi_conn_prop, ~0,
