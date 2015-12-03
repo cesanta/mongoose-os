@@ -14,6 +14,8 @@ struct user_data {
   v7_val_t handler;
 };
 
+#define MG_F_CLOSE_CONNECTION_AFTER_RESPONSE MG_F_USER_1
+
 static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
 static v7_val_t sj_http_request_proto;
@@ -86,6 +88,10 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       setup_request_object(ud->v7, response, ev_data);
       sj_invoke_cb1(ud->v7, ud->handler, response);
       v7_disown(ud->v7, &response);
+    }
+
+    if (c->flags & MG_F_CLOSE_CONNECTION_AFTER_RESPONSE) {
+      c->flags |= MG_F_CLOSE_IMMEDIATELY;
     }
   } else if (ev == MG_EV_CLOSE) {
     if (c->listener == NULL && ud != NULL) {
@@ -277,6 +283,7 @@ static v7_val_t Http_request_end(struct v7 *v7) {
   struct mg_connection *c = get_mgconn(v7);
   Http_request_write(v7);
   mg_send_http_chunk(c, "", 0);
+  c->flags |= MG_F_CLOSE_CONNECTION_AFTER_RESPONSE;
   return v7_get_this(v7);
 }
 
