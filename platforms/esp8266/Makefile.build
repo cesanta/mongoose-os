@@ -97,7 +97,9 @@ MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
                     -DMG_DISABLE_HTTP_DIGEST_AUTH \
                     -DMG_DISABLE_MD5 \
                     -DMG_DISABLE_SOCKETPAIR \
-                    -DMG_DISABLE_DAV -DMG_DISABLE_CGI \
+                    -DMG_DISABLE_HTTP_KEEP_ALIVE \
+                    -DMG_DISABLE_DAV \
+                    -DMG_DISABLE_CGI \
                     -DMG_DISABLE_SSI \
                     -DMG_DISABLE_DIRECTORY_LISTING \
                     -DMG_MAX_HTTP_HEADERS=20 \
@@ -177,7 +179,7 @@ FW_FILE_1_OUT = $(FW_DIR)/$(FW_FILE_1_ADDR).bin
 FW_FILE_2_OUT = $(FW_DIR)/$(FW_FILE_2_ADDR).bin
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 FW_FS_OUT = $(FW_DIR)/$(FW_FS_ADDR).bin
-FS_FILES = $(wildcard $(FS_DIR)/*)
+FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_ESP_DIR)/fs/*) 
 
 INCDIRS = $(addprefix -I,$(IPATH))
 LIBDIRS = $(addprefix -L,$(LPATH))
@@ -314,7 +316,7 @@ $(FS_BUILD_DIR):
 	@mkdir -p $(FS_BUILD_DIR)
 
 $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
-	/usr/bin/rsync -r --copy-links $(FS_DIR)/ $(FS_BUILD_DIR)/
+	/usr/bin/rsync -r --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
 		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\

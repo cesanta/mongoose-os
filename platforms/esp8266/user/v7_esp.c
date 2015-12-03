@@ -35,7 +35,8 @@
 
 #endif /* RTOS_SDK */
 
-#include <sj_mongoose.h>
+#include "sj_mongoose.h"
+#include "config.h"
 
 struct v7 *v7;
 
@@ -182,6 +183,13 @@ void init_v7(void *stack_base) {
   sj_init_ws_client(v7);
 
   v7_gc(v7, 1);
+
+  {
+    /* NOTE(lsm): must be done after mongoose_init(). */
+    struct sys_config cfg;
+    load_config("conf_sys_defaults.json", "conf.json", &cfg);
+    apply_config(&cfg);
+  }
 }
 
 #ifndef V7_NO_FS
