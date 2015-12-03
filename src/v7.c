@@ -2873,6 +2873,8 @@ struct v7 {
   unsigned int is_returned : 1;
   /* true if a finally block is executing while breaking */
   unsigned int is_breaking : 1;
+  /* true if when a continue OP is executed, reset by OP_JMP_IF_CONTINUE */
+  unsigned int is_continuing : 1;
   /* true if some value is currently stashed */
   unsigned int is_stashed : 1;
   /* true if last emitted statement does not affect data stack */
@@ -3391,6 +3393,14 @@ enum opcode {
    */
   OP_JMP_TRUE_DROP,
 
+  /*
+   * Conditional jump on the v7->is_continuing flag.
+   * Clears the flag once executed.
+   *
+   * `( -- )`
+   */
+  OP_JMP_IF_CONTINUE,
+
   OP_CREATE_OBJ, /* creates an empty object */
   OP_CREATE_ARR, /* creates an empty array */
 
@@ -3464,21 +3474,23 @@ enum opcode {
    * Pushes a value (bcode offset of a label) from opcode argument to
    * "try stack".
    *
-   * Used in the beginning of loops that contain break or continue.
+   * Used at the beginning of loops that contain break or continue.
+   * Possible optimisation: don't emit if we can ensure that no break or
+   * continue statement is used.
    *
    * `( A: a -- T: a )`
    */
-  OP_TRY_PUSH_BREAK_CONTINUE,
+  OP_TRY_PUSH_LOOP,
 
   /*
-   * Like OP_TRY_PUSH_BREAK_CONTINUE, but the label pushed on the try stack
-   * will only we used for breaks and ignored for continues.
+   * Pushes a value (bcode offset of a label) from opcode argument to
+   * "try stack".
    *
-   * Used to implement break in switch statements.
+   * Used at the beginning of switch statements.
    *
    * `( A: a -- T: a )`
    */
-  OP_TRY_PUSH_BREAK,
+  OP_TRY_PUSH_SWITCH,
 
   /*
    * Pops a value (bcode offset of `finally` or `catch` block) from "try
@@ -3534,6 +3546,14 @@ enum opcode {
    * `( -- )`
    */
   OP_BREAK,
+
+  /*
+   * Like OP_BREAK, but sets the v7->is_continuing flag
+   * which will cause OP_JMP_IF_CONTINUE to restart the loop.
+   *
+   * `( -- )`
+   */
+  OP_CONTINUE,
 
   OP_MAX,
 };
@@ -16394,7 +16414,8 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 
 #define OFFSET_TAG_CATCH ((uint64_t) 0x01 << (sizeof(bcode_off_t) * 8))
 #define OFFSET_TAG_FINALLY ((uint64_t) 0x02 << (sizeof(bcode_off_t) * 8))
-#define OFFSET_TAG_BREAK ((uint64_t) 0x03 << (sizeof(bcode_off_t) * 8))
+#define OFFSET_TAG_LOOP ((uint64_t) 0x03 << (sizeof(bcode_off_t) * 8))
+#define OFFSET_TAG_SWITCH ((uint64_t) 0x04 << (sizeof(bcode_off_t) * 8))
 #define OFFSET_TAG_MASK ((uint64_t) 0x07 << (sizeof(bcode_off_t) * 8))
 #define OFFSET_TAG(v) ((v) &OFFSET_TAG_MASK)
 #define OFFSET_VALUE(v) \
@@ -16420,7 +16441,8 @@ enum local_block {
   LOCAL_BLOCK_NONE = (0),
   LOCAL_BLOCK_CATCH = (1 << 0),
   LOCAL_BLOCK_FINALLY = (1 << 1),
-  LOCAL_BLOCK_BREAK = (1 << 2),
+  LOCAL_BLOCK_LOOP = (1 << 2),
+  LOCAL_BLOCK_SWITCH = (1 << 3),
 };
 
 /* clang-format off */
@@ -16474,6 +16496,7 @@ static const char *op_names[] = {
   "JMP_TRUE",
   "JMP_FALSE",
   "JMP_TRUE_DROP",
+  "JMP_IF_CONTINUE",
   "CREATE_OBJ",
   "CREATE_ARR",
   "NEXT_PROP",
@@ -16485,12 +16508,13 @@ static const char *op_names[] = {
   "DELETE_VAR",
   "TRY_PUSH_CATCH",
   "TRY_PUSH_FINALLY",
-  "TRY_PUSH_BREAK_CONTINUE",
-  "TRY_PUSH_BREAK",
+  "TRY_PUSH_LOOP",
+  "TRY_PUSH_SWITCH",
   "TRY_POP",
   "AFTER_FINALLY",
   "THROW",
   "BREAK",
+  "CONTINUE",
 };
 /* clang-format on */
 
@@ -16656,10 +16680,11 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
     case OP_JMP_FALSE:
     case OP_JMP_TRUE:
     case OP_JMP_TRUE_DROP:
+    case OP_JMP_IF_CONTINUE:
     case OP_TRY_PUSH_CATCH:
     case OP_TRY_PUSH_FINALLY:
-    case OP_TRY_PUSH_BREAK_CONTINUE:
-    case OP_TRY_PUSH_BREAK: {
+    case OP_TRY_PUSH_LOOP:
+    case OP_TRY_PUSH_SWITCH: {
       bcode_off_t target;
       p++;
       memcpy(&target, p, sizeof(target));
@@ -16836,8 +16861,11 @@ static enum local_block unwind_local_blocks_stack(
         case OFFSET_TAG_FINALLY:
           cur_block = LOCAL_BLOCK_FINALLY;
           break;
-        case OFFSET_TAG_BREAK:
-          cur_block = LOCAL_BLOCK_BREAK;
+        case OFFSET_TAG_LOOP:
+          cur_block = LOCAL_BLOCK_LOOP;
+          break;
+        case OFFSET_TAG_SWITCH:
+          cur_block = LOCAL_BLOCK_SWITCH;
           break;
         default:
           assert(0);
@@ -16878,11 +16906,17 @@ static enum local_block unwind_local_blocks_stack(
 static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
   enum local_block found;
   v7->is_breaking = 0;
+  unsigned int mask;
+  if (v7->is_continuing) {
+    mask = LOCAL_BLOCK_LOOP;
+  } else {
+    mask = LOCAL_BLOCK_LOOP | LOCAL_BLOCK_SWITCH;
+  }
+
   /*
    * Try to unwind local "try stack", considering only `finally` and `break`.
    */
-  found = unwind_local_blocks_stack(v7, r,
-                                    (LOCAL_BLOCK_BREAK | LOCAL_BLOCK_FINALLY));
+  found = unwind_local_blocks_stack(v7, r, mask | LOCAL_BLOCK_FINALLY);
   assert(found != LOCAL_BLOCK_NONE);
 
   /*
@@ -17077,16 +17111,18 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
     case OP_TRY_PUSH_FINALLY:
       offset_tag = OFFSET_TAG_FINALLY;
       break;
-    case OP_TRY_PUSH_BREAK:
-      offset_tag = OFFSET_TAG_BREAK;
+    case OP_TRY_PUSH_LOOP:
+      offset_tag = OFFSET_TAG_LOOP;
+      break;
+    case OP_TRY_PUSH_SWITCH:
+      offset_tag = OFFSET_TAG_SWITCH;
       break;
     default:
       assert(0);
       break;
   }
   target = bcode_get_target(&r->ops);
-  v7_array_set(v7, arr, v7_array_length(v7, arr),
-               v7_create_number((uint64_t) target | offset_tag));
+  v7_array_push(v7, arr, v7_create_number((uint64_t) target | offset_tag));
 
   tmp_frame_cleanup(&tf);
 }
@@ -17094,7 +17130,8 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
 /*
  * Evaluate `OP_TRY_POP`: just pop latest item from "try stack", ignoring it
  */
-V7_PRIVATE void eval_try_pop(struct v7 *v7) {
+V7_PRIVATE enum v7_err eval_try_pop(struct v7 *v7) {
+  enum v7_err ret = V7_OK;
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &arr);
@@ -17102,19 +17139,18 @@ V7_PRIVATE void eval_try_pop(struct v7 *v7) {
 
   /* get "try stack" array, which must be defined and must not be emtpy */
   arr = v7_get(v7, v7->call_stack, "____t", 5);
-  if (arr == V7_UNDEFINED) {
-    throw_exception(v7, INTERNAL_ERROR, "TRY_POP when ____t does not exist");
-  }
+  BCHECK_MSG(!v7_is_undefined(arr), V7_INTERNAL_ERROR,
+             "TRY_POP when ____t does not exist");
 
   length = v7_array_length(v7, arr);
-  if (length == 0) {
-    throw_exception(v7, INTERNAL_ERROR, "TRY_POP when ____t is empty");
-  }
+  BCHECK_MSG(length != 0, V7_INTERNAL_ERROR, "TRY_POP when ____t is empty");
 
   /* delete the latest element of this array */
   v7_array_del(v7, arr, length - 1);
 
+clean:
   tmp_frame_cleanup(&tf);
+  return ret;
 }
 
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
@@ -17446,6 +17482,14 @@ restart:
         }
         break;
       }
+      case OP_JMP_IF_CONTINUE: {
+        bcode_off_t target = bcode_get_target(&r.ops);
+        if (v7->is_continuing) {
+          r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
+        }
+        v7->is_continuing = 0;
+        break;
+      }
       case OP_CREATE_OBJ:
         PUSH(v7_create_object(v7));
         break;
@@ -17682,11 +17726,12 @@ restart:
       }
       case OP_TRY_PUSH_CATCH:
       case OP_TRY_PUSH_FINALLY:
-      case OP_TRY_PUSH_BREAK:
+      case OP_TRY_PUSH_LOOP:
+      case OP_TRY_PUSH_SWITCH:
         eval_try_push(v7, op, &r);
         break;
       case OP_TRY_POP:
-        eval_try_pop(v7);
+        BTRY(eval_try_pop(v7));
         break;
       case OP_AFTER_FINALLY:
         /*
@@ -17710,6 +17755,10 @@ restart:
         BTRY(bcode_perform_throw(v7, &r, 1 /*take thrown value*/));
         break;
       case OP_BREAK:
+        bcode_perform_break(v7, &r);
+        break;
+      case OP_CONTINUE:
+        v7->is_continuing = 1;
         bcode_perform_break(v7, &r);
         break;
       default:
@@ -18906,7 +18955,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
-     *   TRY_PUSH_BREAK end
+     *   TRY_PUSH_LOOP end
      *   JMP cond
      * body:
      *   <B>
@@ -18914,18 +18963,19 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   <C>
      *   JMP_TRUE body
      * end:
+     *   JMP_IF_CONTINUE cond
      *   TRY_POP
      *
      */
     case AST_WHILE: {
-      bcode_off_t end_label;
+      bcode_off_t end_label, continue_label, continue_target;
 
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       cond = *pos;
       ast_skip_tree(a, pos);
 
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
 
       /*
        * Condition check is at the end of the loop, this layout
@@ -18936,13 +18986,16 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       BTRY(compile_stmts(v7, a, pos, end, bcode));
 
-      bcode_patch_target(bcode, cond_label, bcode_pos(bcode));
+      continue_target = bcode_pos(bcode);
+      bcode_patch_target(bcode, cond_label, continue_target);
 
       BTRY(compile_expr(v7, a, &cond, bcode));
       body_label = bcode_op_target(bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
 
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      bcode_patch_target(bcode, continue_label, continue_target);
       bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
@@ -18950,6 +19003,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
     }
     case AST_BREAK:
       bcode_op(bcode, OP_BREAK);
+      break;
+    case AST_CONTINUE:
+      bcode_op(bcode, OP_CONTINUE);
       break;
     /*
      * Frame objects (`v7->call_stack`) contain one more hidden property:
@@ -19132,7 +19188,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
-     *   TRY_PUSH_BREAK end
+     *   TRY_PUSH_SWITCH end
      *   <E>
      *   DUP
      *   <C1>
@@ -19155,7 +19211,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   <B2>
      *
      * end:
-     *   TRY_POP_BREAK
+     *   TRY_POP
      *
      * If the default case is missing we treat it as if had an empty body and
      * placed in last position (i.e. `dfl` label is replaced with `end`).
@@ -19172,7 +19228,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
 
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_SWITCH);
 
       BTRY(compile_expr(v7, a, pos, bcode));
 
@@ -19260,22 +19316,24 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      *   <INIT>
      *   DROP
-     *   TRY_PUSH_BREAK end
+     *   TRY_PUSH_LOOP end
      *   JMP cond
      * body:
      *   <B>
+     * next:
      *   <IT>
-     *   POP
+     *   DROP
      * cond:
      *   <COND>
      *   JMP_TRUE body
      * end:
+     *   JMP_IF_CONTINUE next
      *   TRY_POP
      *
      */
     case AST_FOR: {
       ast_off_t iter, body, lookahead;
-      bcode_off_t end_label;
+      bcode_off_t end_label, continue_label, continue_target;
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       body = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
       ast_move_to_children(a, pos);
@@ -19287,10 +19345,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       *pos = body;
 
       bcode_op(bcode, OP_DROP);
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
       cond_label = bcode_op_target(bcode, OP_JMP);
       body_target = bcode_pos(bcode);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+      continue_target = bcode_pos(bcode);
+
       BTRY(compile_expr(v7, a, &iter, bcode));
       bcode_op(bcode, OP_DROP);
 
@@ -19310,6 +19371,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+
+      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      bcode_patch_target(bcode, continue_label, continue_target);
+
       bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
@@ -19328,25 +19393,28 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   STASH
      *   DROP
      *   PUSH_NULL
-     *   TRY_PUSH_BREAK brend
+     *   TRY_PUSH_LOOP brend
      * loop:
      *   NEXT_PROP
      *   JMP_FALSE end
      *   SET_VAR <I>
      *   UNSTASH
      *   <B>
+     * next:
      *   STASH
      *   DROP
      *   JMP loop
      * end:
      *   UNSTASH
      * brend:
+     *   JMP_IF_CONTINUE next
      *   TRY_POP
      *
      */
     case AST_FOR_IN: {
       uint8_t lit;
-      bcode_off_t loop_label, loop_target, end_label, brend_label;
+      bcode_off_t loop_label, loop_target, end_label, brend_label,
+          continue_label, continue_target;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
 
       ast_move_to_children(a, pos);
@@ -19389,7 +19457,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        */
       bcode_op(bcode, OP_PUSH_NULL);
 
-      brend_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
+      brend_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
 
       /* loop: */
       loop_target = bcode_pos(bcode);
@@ -19420,6 +19488,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       BTRY(compile_stmts(v7, a, pos, end, bcode));
 
+      continue_target = bcode_pos(bcode);
+
       /*
        * Save the last body statement. If next evaluation of NEXT_PROP returns
        * false, we'll unstash it.
@@ -19434,7 +19504,11 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       bcode_op(bcode, OP_UNSTASH);
 
+      /* brend: */
       bcode_patch_target(bcode, brend_label, bcode_pos(bcode));
+
+      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      bcode_patch_target(bcode, continue_label, continue_target);
       bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
@@ -19447,26 +19521,33 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
-     *   TRY_PUSH_BREAK end
+     *   TRY_PUSH_LOOP end
      * body:
      *   <B>
+     * cond:
      *   <COND>
      *   JMP_TRUE body
      * end:
+     *   JMP_IF_CONTINUE cond
      *   TRY_POP
      *
      */
     case AST_DOWHILE: {
-      bcode_off_t end_label;
+      bcode_off_t end_label, continue_label, continue_target;
       end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
       ast_move_to_children(a, pos);
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_BREAK);
+      end_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
       body_target = bcode_pos(bcode);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+      continue_target = bcode_pos(bcode);
       BTRY(compile_expr(v7, a, pos, bcode));
       body_label = bcode_op_target(bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
+
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      bcode_patch_target(bcode, continue_label, continue_target);
       bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
@@ -21724,9 +21805,16 @@ int main(int argc, char **argv) {
 #define NOINSTR __attribute__((no_instrument_function))
 #endif
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 IRAM NOINSTR void __cyg_profile_func_enter(void *this_fn, void *call_site);
 
 IRAM NOINSTR void __cyg_profile_func_exit(void *this_fn, void *call_site);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
 IRAM void __cyg_profile_func_enter(void *this_fn, void *call_site) {
 #if defined(V7_STACK_GUARD_MIN_SIZE)
