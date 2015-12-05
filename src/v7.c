@@ -2585,9 +2585,14 @@ struct gc_arena {
 #ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
+
+/* VS2015 Update 1 has ISO C99 `isnan` and `isinf` defined in math.h */
+#if _MSC_FULL_VER < 190023506
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
-#define __unused
+#endif
+
+#define __unused __pragma(warning(suppress : 4100))
 typedef __int64 int64_t;
 typedef int int32_t;
 typedef unsigned int uint32_t;
@@ -2599,7 +2604,10 @@ typedef unsigned char uint8_t;
 typedef unsigned long uintptr_t;
 #endif
 
+#ifndef __func__
 #define __func__ ""
+#endif
+
 #else
 #include <stdint.h>
 #endif
@@ -2790,6 +2798,8 @@ struct v7 {
 #endif
   struct mbuf owned_values; /* buffer for GC roots owned by C code */
 
+  struct mbuf act_bcodes;
+
   val_t error_objects[ERROR_CTOR_MAX];
 
   val_t thrown_error; /* see also `is_thrown` below */
@@ -2944,8 +2954,12 @@ V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t s, val_t at);
 V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 #endif
 
-V7_PRIVATE v7_val_t i_apply(struct v7 *, val_t func, val_t this_obj, val_t args,
-                            uint8_t is_constructor);
+V7_PRIVATE enum v7_err i_apply(struct v7 *v7, v7_val_t *volatile result,
+                               val_t f, val_t this_object, val_t args,
+                               uint8_t is_constructor);
+
+V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
+                              val_t *res, val_t w, int is_json, int fr);
 
 #if defined(__cplusplus)
 }
@@ -3219,6 +3233,10 @@ V7_PRIVATE double i_as_num(struct v7 *, val_t);
 
 V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
+V7_PRIVATE enum v7_err apply_private(struct v7 *v7, v7_val_t *volatile result,
+                                     v7_val_t func, v7_val_t this_obj,
+                                     v7_val_t args, uint8_t is_constructor);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -3353,6 +3371,7 @@ enum opcode {
   OP_LOGICAL_NOT,
 
   OP_NEG,
+  OP_POS,
 
   OP_ADD,
   OP_SUB,
@@ -3594,7 +3613,6 @@ V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
 
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *, struct bcode *);
 
-V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *, const char *, v7_val_t *);
 V7_PRIVATE void dump_bcode(FILE *, struct bcode *);
 
 V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
@@ -3603,15 +3621,22 @@ V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
                                           v7_val_t *res);
 
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
-V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
-V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, uint8_t idx);
-V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx);
+V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
+V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx);
+V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx);
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, v7_val_t v);
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
 V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode);
 V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *, uint8_t op);
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
                                    bcode_off_t target);
+
+V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
+                              v7_val_t *res, v7_val_t w, int is_json, int fr);
+
+V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
+                               v7_val_t this_obj, v7_val_t args,
+                               uint8_t is_constructor);
 
 #if defined(__cplusplus)
 }
@@ -3644,6 +3669,8 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *, struct ast *,
                                       struct bcode *);
 V7_PRIVATE enum v7_err compile_function(struct v7 *, struct ast *, ast_off_t *,
                                         struct bcode *);
+V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
+                                    ast_off_t *pos, struct bcode *bcode);
 
 #if defined(__cplusplus)
 }
@@ -9079,6 +9106,7 @@ enum v7_err v7_compile(const char *code, int binary, FILE *fp) {
 /* Amalgamated: #include "internal.h" */
 /* Amalgamated: #include "gc.h" */
 /* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "cs_file.h" */
 
 #ifdef HAS_V7_INFINITY
 double _v7_infinity;
@@ -9091,6 +9119,20 @@ double _v7_nan;
 #if defined(V7_CYG_PROFILE_ON)
 struct v7 *v7_head = NULL;
 #endif
+
+#if !defined(V7_USE_BCODE)
+#define EXEC i_exec
+#define APPLY i_apply
+#else
+#define EXEC b_exec
+#define APPLY b_apply
+#endif
+
+#undef siglongjmp
+#undef sigsetjmp
+
+#define siglongjmp longjmp
+#define sigsetjmp(buf, mask) setjmp(buf)
 
 /*
  * Dictionary of read-only strings with length > 5.
@@ -9439,8 +9481,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
   if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
       p == NULL) {
-    throw_exception(v7, TYPE_ERROR, "Invalid regex");
-    return V7_UNDEFINED;
+    return v7_throw(v7, TYPE_ERROR, "Invalid regex");
   } else {
     val_t obj = create_object(v7, v7->regexp_prototype);
     v7_own(v7, &obj);
@@ -9660,12 +9701,13 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       v = i_value_of(v7, v);
       return c_snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
     case V7_TYPE_DATE_OBJECT: {
-      v7_val_t func, val;
+      v7_val_t func, val = v7_create_undefined();
       func = v7_get(v7, v, "toString", 8);
 #if V7_ENABLE__Date__toJSON
       if (flags & V7_STRINGIFY_JSON) func = v7_get(v7, v, "toJSON", 6);
 #endif
-      val = i_apply(v7, func, v, V7_UNDEFINED, 0);
+      /* TODO(dfrank): check return value */
+      apply_private(v7, &val, func, v, V7_UNDEFINED, 0);
       return to_str(v7, val, buf, size, flags);
     }
     case V7_TYPE_GENERIC_OBJECT:
@@ -9676,10 +9718,12 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       /* TODO(imax): make it return the desired size of the buffer */
       char *b = buf;
       void *h = NULL;
-      v7_val_t name, val;
+      v7_val_t name = v7_create_undefined(), val = v7_create_undefined();
       unsigned attrs;
       if (flags == V7_STRINGIFY_DEFAULT) {
-        val = i_apply(v7, v7_get(v7, v, "toString", 8), v, V7_UNDEFINED, 0);
+        /* TODO(dfrank): check return value */
+        apply_private(v7, &val, v7_get(v7, v, "toString", 8), v, V7_UNDEFINED,
+                      0);
         return to_str(v7, val, buf, size, flags);
       }
 
@@ -10041,8 +10085,13 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   } else if (v7_is_boolean(obj)) {
     v = v7->boolean_prototype;
   } else if (v7_is_undefined(obj)) {
+#if !defined(V7_USE_BCODE)
     throw_exception(v7, TYPE_ERROR, "cannot read property '%.*s' of undefined",
                     (int) name_len, name);
+#else
+    return v7_throw(v7, TYPE_ERROR, "cannot read property '%.*s' of undefined",
+                    (int) name_len, name);
+#endif
   } else if (v7_is_cfunction(obj)) {
     return V7_UNDEFINED;
   }
@@ -10116,7 +10165,10 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_array_set(v7, args, 0, val);
   v7_disown(v7, &args);
   v7_disown(v7, &val);
-  i_apply(v7, setter, obj, args, 0);
+  {
+    val_t val = v7_create_undefined();
+    apply_private(v7, &val, setter, obj, args, 0);
+  }
 }
 
 V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
@@ -10275,7 +10327,12 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
     if (p->attributes & V7_PROPERTY_SETTER) {
       getter = v7_array_get(v7, p->value, 0);
     }
-    return i_apply(v7, getter, obj, V7_UNDEFINED, 0);
+    {
+      val_t val = v7_create_undefined();
+      /* TODO(dfrank): check return value */
+      apply_private(v7, &val, getter, obj, V7_UNDEFINED, 0);
+      return val;
+    }
   }
   return p->value;
 }
@@ -11014,6 +11071,112 @@ void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
   }
   return p;
 }
+
+/*
+ * TODO(alashkin): we need src_len only in case of
+ * binary AST-file, i.e. for exec_file & Co
+ * To keep v7_exec_xxxx signatures unchanged
+ * providing 0 as src_len.
+ * That is a dirty workaround.
+ */
+enum v7_err v7_exec_with(struct v7 *v7, const char *src, val_t t, val_t *res) {
+  return EXEC(v7, src, 0, res, t, 0, 0);
+}
+
+enum v7_err v7_exec(struct v7 *v7, const char *src, val_t *res) {
+  return EXEC(v7, src, 0, res, v7_create_undefined(), 0, 0);
+}
+
+enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *result) {
+  return EXEC(v7, str, 0, result, v7_create_undefined(), 1, 0);
+}
+
+#ifndef V7_NO_FS
+static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
+                             int is_json) {
+  char *p;
+  size_t file_size;
+  enum v7_err err = V7_EXEC_EXCEPTION;
+  char *(*rd)(const char *, size_t *);
+  *res = v7_create_undefined();
+
+  rd = cs_read_file;
+#ifdef V7_MMAP_EXEC
+  rd = cs_mmap_file;
+#ifdef V7_MMAP_EXEC_ONLY
+#define I_STRINGIFY(x) #x
+#define I_STRINGIFY2(x) I_STRINGIFY(x)
+
+  /* don't use mmap if path is not a substring of V7_MMAP_EXEC_ONLY */
+  if (strstr("" I_STRINGIFY2(V7_MMAP_EXEC_ONLY), path) == NULL) {
+    rd = cs_read_file;
+  }
+#endif
+#endif
+
+  if ((p = rd(path, &file_size)) == NULL) {
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open [%s]", path);
+    *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+  } else {
+#ifndef V7_MMAP_EXEC
+    int fr = 1;
+#else
+    int fr = 0;
+#endif
+    err = EXEC(v7, p, file_size, res, v7_create_undefined(), is_json, fr);
+  }
+
+  return err;
+}
+
+enum v7_err v7_exec_file(struct v7 *v7, const char *path, val_t *res) {
+  return exec_file(v7, path, res, 0);
+}
+
+enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
+  return exec_file(v7, path, res, 1);
+}
+
+V7_PRIVATE enum v7_err apply_private(struct v7 *v7, v7_val_t *volatile result,
+                                     v7_val_t func, v7_val_t this_obj,
+                                     v7_val_t args, uint8_t is_constructor) {
+  return APPLY(v7, result, func, this_obj, args, is_constructor);
+}
+
+enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
+                     v7_val_t this_obj, v7_val_t args) {
+#if !defined(V7_USE_BCODE)
+  enum v7_err err = V7_OK;
+  jmp_buf saved_jmp_buf;
+  size_t saved_tmp_stack_pos = v7->tmp_stack.len;
+  val_t res, saved_call_stack = v7->call_stack;
+  if (result == NULL) {
+    result = &res;
+  }
+
+  memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
+  if (sigsetjmp(v7->jmp_buf, 0) != 0) {
+    v7->inhibit_gc = 0;
+    v7->tmp_stack.len = saved_tmp_stack_pos;
+    *result = v7->thrown_error;
+    /* v7->thrown_error is in the root set, remove it so it doesn't leak */
+    v7->thrown_error = v7_create_undefined();
+    v7->is_thrown = 0;
+    err = V7_EXEC_EXCEPTION;
+    goto cleanup;
+  }
+  err = apply_private(v7, result, func, this_obj, args, 0);
+
+cleanup:
+  memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
+  v7->call_stack = saved_call_stack;
+  return err;
+#else
+  return APPLY(v7, result, func, this_obj, args, 0);
+#endif
+}
+
+#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
 /**/
@@ -11024,6 +11187,7 @@ void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
  */
 
 /* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "bcode.h" */
 /* Amalgamated: #include "gc.h" */
 
 #ifdef V7_STACK_GUARD_MIN_SIZE
@@ -11360,6 +11524,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     struct v7_function *func = v7_to_function(v);
     if (func->bcode != NULL) {
       gc_mark_mbuf_val(v7, &func->bcode->lit);
+      gc_mark_mbuf_val(v7, &func->bcode->names);
     }
   }
 #endif
@@ -11548,7 +11713,9 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
 #ifdef V7_GC_VERBOSE
   {
     uint16_t asn = (*v >> 32) & 0xFFFF;
-    fprintf(stderr, "GC marking ASN %d\n", asn);
+    size_t size;
+    fprintf(stderr, "GC marking ASN %d: '%s'\n", asn,
+            v7_to_string(v7, v, &size));
   }
 #endif
 
@@ -11714,6 +11881,18 @@ static void gc_mark_mbuf_val(struct v7 *v7, const struct mbuf *mbuf) {
 #endif
   }
 }
+
+/*
+ * mark an mbuf containing foreign pointers to `struct bcode`
+ */
+static void gc_mark_mbuf_bcode_pt(struct v7 *v7, const struct mbuf *mbuf) {
+  struct bcode **vp;
+  for (vp = (struct bcode **) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len;
+       vp++) {
+    gc_mark_mbuf_val(v7, &(*vp)->lit);
+    gc_mark_mbuf_val(v7, &(*vp)->names);
+  }
+}
 #endif
 
 /* Perform garbage collection */
@@ -11780,6 +11959,8 @@ void v7_gc(struct v7 *v7, int full) {
   if (v7->bcode != NULL) {
     gc_mark_mbuf_val(v7, &v7->bcode->lit);
   }
+
+  gc_mark_mbuf_bcode_pt(v7, &v7->act_bcodes);
 #endif
 
   gc_mark_mbuf_pt(v7, &v7->tmp_stack);
@@ -14498,7 +14679,7 @@ create_exception(struct v7 *v7, const char *typ, const char *msg) {
   v7_own(v7, &typv);
   e = create_object(v7, v7_get(v7, typv, "prototype", 9));
   v7_own(v7, &e);
-  i_apply(v7, typv, e, args, 0);
+  apply_private(v7, NULL, typv, e, args, 0);
   v7_disown(v7, &typv);
   v7_disown(v7, &e);
   v7_disown(v7, &args);
@@ -14553,12 +14734,13 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 
   if ((f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
     /*
-     * i_apply will root all parameters since it can be called
+     * apply_private will root all parameters since it can be called
      * from user code, hence it's not necessary to root `f`.
      * This assumes all callers of i_value_of will root their
      * temporary values.
      */
-    v = i_apply(v7, f, v, v7_create_undefined(), 0);
+    /* TODO(dfrank): check return value */
+    apply_private(v7, &v, f, v, v7_create_undefined(), 0);
   }
   return v;
 }
@@ -15162,6 +15344,9 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
       for (p = name + name_len - 1; *p != '/';) p--;
       res = v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
                              (name + name_len) - p - 1);
+      if (v7_has_thrown(v7)) {
+        i_throw_value(v7, v7->thrown_error);
+      }
       break;
 #else
       throw_exception(v7, INTERNAL_ERROR, "Regexp support is disabled");
@@ -16169,37 +16354,10 @@ cleanup:
   return res;
 }
 
-enum v7_err v7_apply(struct v7 *v7, v7_val_t *volatile result, v7_val_t func,
-                     v7_val_t this_obj, v7_val_t args) {
-  enum v7_err err = V7_OK;
-  jmp_buf saved_jmp_buf;
-  size_t saved_tmp_stack_pos = v7->tmp_stack.len;
-  val_t res, saved_call_stack = v7->call_stack;
-  if (result == NULL) {
-    result = &res;
-  }
-
-  memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
-  if (sigsetjmp(v7->jmp_buf, 0) != 0) {
-    v7->inhibit_gc = 0;
-    v7->tmp_stack.len = saved_tmp_stack_pos;
-    *result = v7->thrown_error;
-    /* v7->thrown_error is in the root set, remove it so it doesn't leak */
-    v7->thrown_error = v7_create_undefined();
-    v7->is_thrown = 0;
-    err = V7_EXEC_EXCEPTION;
-    goto cleanup;
-  }
-  *result = i_apply(v7, func, this_obj, args, 0);
-cleanup:
-  memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
-  v7->call_stack = saved_call_stack;
-  return err;
-}
-
 /* Invoke a function applying the argument array */
-V7_PRIVATE val_t i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args,
-                         uint8_t is_constructor) {
+V7_PRIVATE enum v7_err i_apply(struct v7 *v7, v7_val_t *volatile result,
+                               val_t f, val_t this_object, val_t args,
+                               uint8_t is_constructor) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
@@ -16279,7 +16437,10 @@ V7_PRIVATE val_t i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args,
 
 cleanup:
   tmp_frame_cleanup(&vf);
-  return res;
+  if (result != NULL) {
+    *result = res;
+  }
+  return V7_OK;
 }
 
 /* like v7_exec_with but frees src if fr is true */
@@ -16397,71 +16558,6 @@ cleanup:
 void v7_interrupt(struct v7 *v7) {
   v7->interrupt = 1;
 }
-
-/*
- * TODO(alashkin): we need src_len only in case of
- * binary AST-file, i.e. for i_file & Co
- * To keep v7_exec_xxxx signatures unchanged
- * providing 0 as src_len.
- * That is a dirty workaround.
- */
-enum v7_err v7_exec_with(struct v7 *v7, const char *src, val_t t, val_t *res) {
-  return i_exec(v7, src, 0, res, t, 0, 0);
-}
-
-enum v7_err v7_exec(struct v7 *v7, const char *src, val_t *res) {
-  return i_exec(v7, src, 0, res, v7_create_undefined(), 0, 0);
-}
-
-enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *result) {
-  return i_exec(v7, str, 0, result, v7_create_undefined(), 1, 0);
-}
-
-#ifndef V7_NO_FS
-enum v7_err i_file(struct v7 *v7, const char *path, val_t *res, int is_json) {
-  char *p;
-  size_t file_size;
-  enum v7_err err = V7_EXEC_EXCEPTION;
-  char *(*rd)(const char *, size_t *);
-  *res = v7_create_undefined();
-
-  rd = cs_read_file;
-#ifdef V7_MMAP_EXEC
-  rd = cs_mmap_file;
-#ifdef V7_MMAP_EXEC_ONLY
-#define I_STRINGIFY(x) #x
-#define I_STRINGIFY2(x) I_STRINGIFY(x)
-
-  /* don't use mmap if path is not a substring of V7_MMAP_EXEC_ONLY */
-  if (strstr("" I_STRINGIFY2(V7_MMAP_EXEC_ONLY), path) == NULL) {
-    rd = cs_read_file;
-  }
-#endif
-#endif
-
-  if ((p = rd(path, &file_size)) == NULL) {
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open [%s]", path);
-    *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-  } else {
-#ifndef V7_MMAP_EXEC
-    int fr = 1;
-#else
-    int fr = 0;
-#endif
-    err = i_exec(v7, p, file_size, res, v7_create_undefined(), is_json, fr);
-  }
-
-  return err;
-}
-
-enum v7_err v7_exec_file(struct v7 *v7, const char *path, val_t *res) {
-  return i_file(v7, path, res, 0);
-}
-
-enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
-  return i_file(v7, path, res, 1);
-}
-#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/bcode.c"
 /**/
@@ -16533,6 +16629,7 @@ static const char *op_names[] = {
   "NOT",
   "LOGICAL_NOT",
   "NEG",
+  "POS",
   "ADD",
   "SUB",
   "REM",
@@ -16726,6 +16823,19 @@ static bcode_off_t bcode_get_target(uint8_t **ops) {
   return target;
 }
 
+/*
+ * Reads varint-encoded integer from the provided pointer, and adjusts
+ * the pointer appropriately
+ */
+static size_t bcode_get_varint(uint8_t **ops) {
+  size_t ret = 0;
+  int len = 0;
+  (*ops)++;
+  ret = decode_varint(*ops, &len);
+  *ops += len - 1;
+  return ret;
+}
+
 V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   uint8_t *p = *ops;
 
@@ -16733,6 +16843,8 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   fprintf(f, "%zu: %s", (size_t)(p - (uint8_t *) bcode->ops.buf), op_names[*p]);
   switch (*p) {
     case OP_PUSH_LIT:
+      fprintf(f, "(%lu)", (unsigned long) bcode_get_varint(&p));
+      break;
     case OP_SAFE_GET_VAR:
     case OP_GET_VAR:
     case OP_SET_VAR:
@@ -17150,27 +17262,26 @@ static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
  * Call C function `func` with given `this_object` and array of arguments
  * `args`. `func` should be a C function pointer, not C function object.
  *
- * If function returns normally, the value returned from it is pushed to the
- * bcode stack, and `V7_OK` is returned.
- *
- * If function throws, then `bcode_perform_throw` is called, and return
- * semantic is the same as `bcode_perform_throw` has: `V7_OK` if exception was
- * caught, `V7_EXEC_EXCEPTION` otherwise.
+ * Use `has_thrown` argument to find out whether the called function has
+ * thrown. Note it might be different from just calling `v7_has_thrown()`
+ * afterwards, because some exception might be thrown before we call
+ * cfunction.
  */
-static enum v7_err call_cfunction(struct v7 *v7, struct bcode_registers *r,
-                                  val_t func, val_t this_object, val_t args,
-                                  uint8_t is_constructor) {
-  enum v7_err ret = V7_OK;
-
+static val_t call_cfunction(struct v7 *v7, val_t func, val_t this_object,
+                            val_t args, uint8_t is_constructor,
+                            uint8_t *has_thrown) {
+  int saved_inhibit_gc = v7->inhibit_gc;
   val_t res = v7_create_undefined();
   val_t saved_this = v7->this_object;
   val_t saved_thrown = v7->thrown_error;
+  val_t saved_arguments = v7->arguments;
   int saved_is_thrown = v7->is_thrown;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   tmp_stack_push(&tf, &res);
   tmp_stack_push(&tf, &saved_this);
   tmp_stack_push(&tf, &saved_thrown);
+  tmp_stack_push(&tf, &saved_arguments);
 
   /*
    * prepare cfunction environment: `this`, `arguments`. Plus, we need to know
@@ -17180,16 +17291,20 @@ static enum v7_err call_cfunction(struct v7 *v7, struct bcode_registers *r,
   v7->thrown_error = v7_create_undefined();
   v7->is_thrown = 0;
   v7->this_object = this_object;
+  v7->inhibit_gc = 1;
   v7->arguments = args;
 
   /* call C function */
   res = v7_to_cfunction(func)(v7);
 
-  v7->arguments = v7_create_undefined();
-  if (v7_has_thrown(v7)) {
-    /* C function has thrown; perform bcode throw, then */
-    BTRY(bcode_perform_throw(v7, r, 0 /*don't take value from stack*/));
-  } else {
+  v7->arguments = saved_arguments;
+  v7->inhibit_gc = saved_inhibit_gc;
+
+  /* Report to the caller whether the cfunction has thrown */
+  if (has_thrown != NULL) {
+    *has_thrown = v7_has_thrown(v7);
+  }
+  if (!v7_has_thrown(v7)) {
     /* C function returned normally: restore `thrown_error` */
     v7->thrown_error = saved_thrown;
     v7->is_thrown = saved_is_thrown;
@@ -17200,14 +17315,10 @@ static enum v7_err call_cfunction(struct v7 *v7, struct bcode_registers *r,
     }
 
     v7->this_object = saved_this;
-
-    /* push value returned from C function to bcode stack */
-    PUSH(res);
   }
 
-clean:
   tmp_frame_cleanup(&tf);
-  return ret;
+  return res;
 }
 
 /*
@@ -17282,6 +17393,20 @@ clean:
   return ret;
 }
 
+static void own_bcode(struct v7 *v7, struct bcode *p) {
+  mbuf_append(&v7->act_bcodes, &p, sizeof(p));
+}
+
+static void disown_bcode(struct v7 *v7, struct bcode *p) {
+  struct bcode **vp =
+      (struct bcode **) (v7->act_bcodes.buf + v7->act_bcodes.len - sizeof(p));
+
+  /* given `p` should be the last item */
+  assert(*vp == p);
+
+  v7->act_bcodes.len -= sizeof(p);
+}
+
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   struct bcode_registers r;
   enum v7_err ret = V7_OK;
@@ -17321,6 +17446,11 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
 
 restart:
   while (r.ops < r.end && ret == V7_OK) {
+    if (v7->need_gc) {
+      maybe_gc(v7);
+      v7->need_gc = 0;
+    }
+
     enum opcode op = (enum opcode) * r.ops;
     r.need_inc_ops = 1;
 #ifdef V7_BCODE_TRACE
@@ -17395,7 +17525,7 @@ restart:
         PUSH(v7_create_number(1));
         break;
       case OP_PUSH_LIT: {
-        int arg = (int) *(++r.ops);
+        size_t arg = bcode_get_varint(&r.ops);
         PUSH(r.lit[arg]);
         break;
       }
@@ -17415,6 +17545,13 @@ restart:
         v1 = POP();
         d1 = i_as_num(v7, v1);
         PUSH(v7_create_number(-d1));
+        break;
+      }
+      case OP_POS: {
+        double d1;
+        v1 = POP();
+        d1 = i_as_num(v7, v1);
+        PUSH(v7_create_number(d1));
         break;
       }
       case OP_ADD: {
@@ -17458,20 +17595,87 @@ restart:
         PUSH(v7_create_number(b_num_bin_op(op, d1, d2)));
         break;
       }
-      case OP_EQ_EQ:
+      case OP_EQ_EQ: {
+        v2 = POP();
+        v1 = POP();
+        if (v7_is_string(v1) && v7_is_string(v2)) {
+          res = v7_create_boolean(s_cmp(v7, v1, v2) == 0);
+        } else if (v1 == v2 && v1 == V7_TAG_NAN) {
+          res = v7_create_boolean(0);
+        } else {
+          res = v7_create_boolean(v1 == v2);
+        }
+        PUSH(res);
+        break;
+      }
+      case OP_NE_NE: {
+        v2 = POP();
+        v1 = POP();
+        if (v7_is_string(v1) && v7_is_string(v2)) {
+          res = v7_create_boolean(s_cmp(v7, v1, v2) != 0);
+        } else if (v1 == v2 && v1 == V7_TAG_NAN) {
+          res = v7_create_boolean(1);
+        } else {
+          res = v7_create_boolean(v1 != v2);
+        }
+        PUSH(res);
+        break;
+      }
       case OP_EQ:
       case OP_NE:
-      case OP_NE_NE:
       case OP_LT:
       case OP_LE:
       case OP_GT:
       case OP_GE: {
-        double d1, d2;
         v2 = POP();
         v1 = POP();
-        d1 = i_as_num(v7, v1);
-        d2 = i_as_num(v7, v2);
-        PUSH(v7_create_boolean(b_bool_bin_op(op, d1, d2)));
+        if (op == OP_EQ || op == OP_NE) {
+          if (((v7_is_object(v1) || v7_is_object(v2)) && v1 == v2)) {
+            res = v7_create_boolean(op == OP_EQ);
+            PUSH(res);
+            break;
+          } else if (v7_is_undefined(v1) || v7_is_null(v1)) {
+            res = v7_create_boolean((op != OP_EQ) ^
+                                    (v7_is_undefined(v2) || v7_is_null(v2)));
+            PUSH(res);
+            break;
+          } else if (v7_is_undefined(v2) || v7_is_null(v2)) {
+            res = v7_create_boolean((op != OP_EQ) ^
+                                    (v7_is_undefined(v1) || v7_is_null(v1)));
+            PUSH(res);
+            break;
+          }
+        }
+        if (v7_is_string(v1) && v7_is_string(v2)) {
+          int cmp = s_cmp(v7, v1, v2);
+          switch (op) {
+            case OP_EQ:
+              res = v7_create_boolean(cmp == 0);
+              break;
+            case OP_NE:
+              res = v7_create_boolean(cmp != 0);
+              break;
+            case OP_LT:
+              res = v7_create_boolean(cmp < 0);
+              break;
+            case OP_LE:
+              res = v7_create_boolean(cmp <= 0);
+              break;
+            case OP_GT:
+              res = v7_create_boolean(cmp > 0);
+              break;
+            case OP_GE:
+              res = v7_create_boolean(cmp >= 0);
+              break;
+            default:
+              /* should never be here */
+              assert(0);
+          }
+        } else {
+          res = v7_create_boolean(
+              b_bool_bin_op(op, i_as_num(v7, v1), i_as_num(v7, v2)));
+        }
+        PUSH(res);
         break;
       }
       case OP_INSTANCEOF: {
@@ -17626,15 +17830,30 @@ restart:
         PUSH(v7_create_array(v7));
         break;
       case OP_NEXT_PROP: {
-        void *h;
+        void *h = NULL;
         v1 = POP(); /* handle */
         v2 = POP(); /* object */
 
-        if (v7_is_null(v1)) {
-          v1 = v7_create_foreign(NULL);
+        if (!v7_is_null(v1)) {
+          h = v7_to_foreign(v1);
         }
 
-        h = v7_next_prop(v7_to_foreign(v1), v2, &res, NULL, NULL);
+        if (v7_is_object(v2)) {
+          unsigned int attrs;
+          do {
+            /* iterate properties until we find a non-hidden enumerable one */
+            do {
+              h = v7_next_prop(h, v2, &res, NULL, &attrs);
+            } while (h != NULL &&
+                     (attrs & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
+
+            if (h == NULL) {
+              /* no more properties in this object: proceed to the prototype */
+              v2 = v7_object_to_value(
+                  v7_is_function(v2) ? NULL : v7_to_object(v2)->prototype);
+            }
+          } while (h == NULL && v7_to_object(v2) != NULL);
+        }
 
         if (h == NULL) {
           PUSH(v7_create_boolean(0));
@@ -17725,8 +17944,8 @@ restart:
              */
             BTRY(bcode_throw_exception(v7, &r, TYPE_ERROR, "not a function"));
           } else if (v7_is_function(v1) && v7_to_function(v1)->ast != NULL) {
-            /* call interpreter function */
-
+/* call interpreter function */
+#if !defined(V7_USE_BCODE)
             /*
              * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
              * exceptions
@@ -17742,10 +17961,19 @@ restart:
               v3 = v7->global_object;
             }
 
-            PUSH(i_apply(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/,
-                         is_constructor));
+            apply_private(v7, &v4 /*result*/, v1 /*func*/, v3 /*this*/,
+                          v2 /*args*/, is_constructor);
+            PUSH(v4);
+#else
+            /*
+             * when bcode is used for main execution, we should never
+             * encounter old functions for interpreter
+             */
+            assert(0);
+#endif
           } else if (v7_is_cfunction(v1)) {
             /* call cfunction */
+            uint8_t has_thrown = 0;
 
             /*
              * In "function invocation pattern", the `this` value popped from
@@ -17757,8 +17985,16 @@ restart:
               v3 = v7->global_object;
             }
 
-            BTRY(call_cfunction(v7, &r, v1 /*func*/, v3 /*this*/, v2 /*args*/,
-                                is_constructor));
+            v4 = call_cfunction(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/,
+                                is_constructor, &has_thrown);
+            if (!has_thrown) {
+              /* push value returned from C function to bcode stack */
+              PUSH(v4);
+            } else {
+              /* C function has thrown; perform bcode throw, then */
+              BTRY(bcode_perform_throw(v7, &r,
+                                       0 /*don't take value from stack*/));
+            }
           } else {
             val_t *name, *arg_end, *locals_end;
             struct v7_function *func = v7_to_function(v1);
@@ -18000,34 +18236,72 @@ V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
   }
 }
 
-V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
-                                     v7_val_t *res) {
-  enum v7_err err = V7_OK;
-  struct ast a;
-  val_t saved_call_stack = v7->call_stack;
-  size_t saved_stack_len = v7->stack.len;
-#ifndef NDEBUG
-  size_t saved_try_stack_len =
-      v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
+/*
+ * TODO(dfrank) this function is probably too overloaded: it handles both
+ * `v7_exec` and `v7_apply`. Read below why it's written this way, but it's
+ * probably a good idea to factor out common functionality in some other
+ * function.
+ *
+ * If `src` is not `NULL`, then we behave in favour of `v7_exec`: parse,
+ * compile, and evaluate the script. The `func` and `args` are ignored.
+ *
+ * If, however, `src` is `NULL`, then we behave in favour of `v7_apply`: we
+ * call the provided `func` with `args`. But unlike interpreter, we can't just
+ * call the provided function: we need to setup environment for this call.
+ *
+ * Currently, we just quickly generate the "wrapper" bcode for the function.
+ * This wrapper bcode looks like this:
+ *
+ *    OP_PUSH_UNDEFINED
+ *    OP_PUSH_LIT       # push this
+ *    OP_PUSH_LIT       # push function
+ *    OP_PUSH_LIT       # push arg1
+ *    OP_PUSH_LIT       # push arg2
+ *    ...
+ *    OP_PUSH_LIT       # push argN
+ *    OP_CALL(N)        # call function with N arguments
+ *    OP_SWAP_DROP
+ *
+ * and then, bcode evaluator proceeds with this code.
+ *
+ * In fact, both cases (eval or apply) are quite similar: we should prepare
+ * environment for the bcode evaluation in exactly the same way, and the only
+ * different part is where we get the bcode from. This is why that
+ * functionality is baked in the single function, but it would be good to make
+ * it suck less.
+ */
+V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
+                               val_t func, val_t args, val_t *res, val_t w,
+                               int is_json, int fr, uint8_t is_constructor) {
+#if defined(V7_BCODE_TRACE_SRC)
+  printf("src:'%s'\n", src);
 #endif
+
+  /* TODO(mkm): use GC pool */
+  struct ast *a = (struct ast *) malloc(sizeof(struct ast));
+  val_t old_this = v7->this_object, saved_call_stack = v7->call_stack;
+  val_t try_stack = v7_create_undefined();
+  size_t saved_stack_len = v7->stack.len;
+  enum v7_err err = V7_OK;
+  val_t r = v7_create_undefined();
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+  int noopt = 0;
   struct bcode *saved_bcode = v7->bcode;
+#if defined(V7_ENABLE_STACK_TRACKING)
+  struct stack_track_ctx stack_track_ctx;
+#endif
 
-  /*
-   * We need to zero it beforehand, since we may get to `clean` before the new
-   * one is initialized
-   */
-  v7->bcode = NULL;
+#if defined(V7_ENABLE_STACK_TRACKING)
+  v7_stack_track_start(v7, &stack_track_ctx);
+#endif
 
-  (void) res;
-
-  ast_init(&a, 0);
-  *res = v7_create_undefined();
-
-  err = parse(v7, &a, src, 1, 0);
-  if (err != V7_OK) {
-    *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-    goto clean;
-  }
+  tmp_stack_push(&tf, &old_this);
+  tmp_stack_push(&tf, &try_stack);
+  tmp_stack_push(&tf, &saved_call_stack);
+  tmp_stack_push(&tf, &func);
+  tmp_stack_push(&tf, &args);
+  tmp_stack_push(&tf, &w);
+  tmp_stack_push(&tf, &r);
 
   /* init new bcode */
   v7->bcode = (struct bcode *) calloc(1, sizeof(*v7->bcode));
@@ -18037,29 +18311,187 @@ V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
   bcode_init(v7->bcode, 1);
 #endif
 
-  err = compile_script(v7, &a, v7->bcode);
-  if (err != V7_OK) {
-    if (res != NULL) {
-      *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+  own_bcode(v7, v7->bcode);
+
+  try_stack = v7_get(v7, v7->call_stack, "____t", 5);
+
+  ast_init(a, 0);
+  a->refcnt = 1;
+
+  if (src != NULL) {
+    /*
+     * Caller provided some source code, so, parse and compile it.
+     */
+
+    if (strncmp(BIN_AST_SIGNATURE, src, sizeof(BIN_AST_SIGNATURE)) != 0) {
+      err = parse(v7, a, src, 1, is_json);
+    } else {
+      /* TODO(alashkin): try to remove memory doubling */
+      if (src_len == 0) {
+        err = V7_INVALID_ARG;
+      } else {
+        if (fr == 0) {
+          /* Unmanaged memory, usually rom or mmapped flash */
+          mbuf_free(&a->mbuf);
+          a->mbuf.buf = (char *) (src + sizeof(BIN_AST_SIGNATURE));
+          a->mbuf.size = a->mbuf.len = src_len - sizeof(BIN_AST_SIGNATURE);
+          a->refcnt++; /* prevent freeing */
+          noopt = 1;
+        } else {
+          mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
+                      src_len - sizeof(BIN_AST_SIGNATURE));
+        }
+      }
     }
-    goto clean;
+
+    if (fr) {
+      free((void *) src);
+    }
+
+    if (err != V7_OK) {
+      /*
+       * The actual error might not be syntax error but there is no need to
+       * add more overhead to the runtime by creating a specific exception for
+       * other parse errors.
+       */
+      r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+      goto cleanup;
+    }
+
+    if (!noopt) {
+      ast_optimize(a);
+    }
+#if V7_ENABLE__Memory__stats
+    v7->function_arena_ast_size += a->mbuf.size;
+#endif
+
+    v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
+
+    if (!is_json) {
+      err = compile_script(v7, a, v7->bcode);
+    } else {
+      ast_off_t pos = 0;
+      err = compile_expr(v7, a, &pos, v7->bcode);
+    }
+
+    if (err != V7_OK) {
+      r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+      goto cleanup;
+    }
+  } else if (v7_is_function(func)) {
+    /*
+     * Caller did not provide source code, so, assume we should call
+     * provided function. Here, we prepare "wrapper" bcode.
+     */
+
+    /* call func */
+    uint8_t lit = 0;
+    int args_cnt = v7_array_length(v7, args);
+
+    bcode_op(v7->bcode, OP_PUSH_UNDEFINED);
+
+    /* push `this` */
+    lit = bcode_add_lit(v7->bcode, w);
+    bcode_push_lit(v7->bcode, lit);
+
+    /* push func literal */
+    lit = bcode_add_lit(v7->bcode, func);
+    bcode_push_lit(v7->bcode, lit);
+
+    /* push args */
+    {
+      int i;
+      for (i = 0; i < args_cnt; i++) {
+        lit = bcode_add_lit(v7->bcode, v7_array_get(v7, args, i));
+        bcode_push_lit(v7->bcode, lit);
+      }
+    }
+
+    bcode_op(v7->bcode, OP_CALL);
+    /* TODO(dfrank): check if args <= 0x7f */
+    bcode_op(v7->bcode, (uint8_t) args_cnt);
+
+    bcode_op(v7->bcode, OP_SWAP_DROP);
+  } else {
+    /* probably cfunction */
+
+    if (!v7_is_cfunction(func)) {
+      /* extract the hidden property from a cfunction_object */
+      struct v7_property *p;
+      p = v7_get_own_property2(v7, func, "", 0, V7_PROPERTY_HIDDEN);
+      if (p != NULL) {
+        func = p->value;
+      }
+    }
+
+    if (v7_is_cfunction(func)) {
+      /* call cfunction */
+      uint8_t has_thrown = 0;
+      r = call_cfunction(v7, func, w, args, 0 /* not a ctor */, &has_thrown);
+      if (has_thrown) {
+        err = V7_EXEC_EXCEPTION;
+        goto cleanup;
+      }
+    } else {
+      /* value is not a function */
+      r = v7_throw(v7, TYPE_ERROR, "value is not a function");
+      err = V7_EXEC_EXCEPTION;
+      goto cleanup;
+    }
+
+    goto cleanup;
   }
+
+  /* We now have bcode to evaluate; proceed to it */
 
   v7->call_stack = v7->global_object;
+  /*
+   * Even though we reset `call_stack` to `global_object`, this is not enough,
+   * since `global_object` might have its own "try stack", so, we should
+   * explicitly delete it as well as a part of preparing bcode environment.
+   */
+  v7_del_property(v7, v7->call_stack, "____t", 5);
+
   err = eval_bcode(v7, v7->bcode);
   if (err == V7_OK) {
-    assert(SP() >= 1);
-    assert(v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5)) ==
-           saved_try_stack_len);
-    *res = POP();
+    /*
+     * bcode evaluated successfully. Make sure try stack is empty.
+     * (data stack will be checked below, in `cleanup`)
+     */
+    unsigned long try_stack_len =
+        v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
+    if (try_stack_len != 0) {
+      printf("try_stack_len=%lu, should be 0", try_stack_len);
+    }
+    assert(try_stack_len == 0);
+
+    /* get the value returned from the evaluated script */
+    r = POP();
   } else {
-    /* some exception happened */
-    *res = v7->thrown_error;
+    /* some exception happened. */
+    r = v7->thrown_error;
+
+    /*
+     * After an exception, stack might have any arbitrary length, so, just
+     * restore the saved length
+     */
+    assert(SP() >= 1);
+    v7->stack.len = saved_stack_len;
   }
 
-clean:
+cleanup:
 
-  v7->stack.len = saved_stack_len;
+  /*
+   * Data stack should have the same length as it was before evaluating script.
+   */
+  assert(v7->stack.len == saved_stack_len);
+
+  v7->call_stack = saved_call_stack;
+  v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN, try_stack);
+
+  release_ast(v7, a);
+
+  disown_bcode(v7, v7->bcode);
 
   /* free current bcode if needed, and restore the previous one */
   if (v7->bcode != NULL) {
@@ -18068,30 +18500,81 @@ clean:
   }
   v7->bcode = saved_bcode;
 
-  v7->call_stack = saved_call_stack;
+  if (is_constructor && !v7_is_object(r)) {
+    /* constructor returned non-object: replace it with `this` */
+    r = v7->this_object;
+  }
+  if (res != NULL) {
+    *res = r;
+  }
+  v7->this_object = old_this;
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  {
+    int diff = v7_stack_track_end(v7, &stack_track_ctx);
+    if (diff > v7->stack_stat[V7_STACK_STAT_EXEC]) {
+      v7->stack_stat[V7_STACK_STAT_EXEC] = diff;
+    }
+  }
+#endif
+
+  tmp_frame_cleanup(&tf);
   return err;
+}
+
+V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
+                               v7_val_t this_obj, v7_val_t args,
+                               uint8_t is_constructor) {
+  return b_exec2(v7, NULL, 0, func, args, result, this_obj, 0, 0,
+                 is_constructor);
+}
+
+V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
+                              val_t *res, val_t w, int is_json, int fr) {
+  return b_exec2(v7, src, src_len, v7_create_undefined(), v7_create_undefined(),
+                 res, w, is_json, fr, 0);
+}
+
+/* TODO(dfrank): remove this function */
+V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
+                                     v7_val_t *res) {
+  return b_exec2(v7, src, 0, v7_create_undefined(), v7_create_undefined(), res,
+                 v7_create_undefined(), 0, 0, 0);
 }
 
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op) {
   mbuf_append(&bcode->ops, &op, 1);
 }
 
-V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, val_t val) {
+/*
+ * Appends varint-encoded integer to the `ops` mbuf
+ */
+V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value) {
+  int k = calc_llen(value); /* Calculate how many bytes length takes */
+  int offset = bcode->ops.len;
+
+  /* Allocate buffer */
+  mbuf_append(&bcode->ops, NULL, k);
+
+  /* Write value */
+  encode_varint(value, (unsigned char *) bcode->ops.buf + offset);
+}
+
+V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, val_t val) {
   size_t idx = bcode->lit.len / sizeof(val);
-  assert(idx < 0x100);
   mbuf_append(&bcode->lit, &val, sizeof(val));
   return idx;
 }
 
-V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, uint8_t idx) {
+V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx) {
   val_t ret;
   memcpy(&ret, bcode->lit.buf + (size_t) idx * sizeof(ret), sizeof(ret));
   return ret;
 }
 
-V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx) {
+V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx) {
   bcode_op(bcode, OP_PUSH_LIT);
-  bcode_op(bcode, idx);
+  bcode_add_varint(bcode, idx);
 }
 
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, val_t v) {
@@ -18302,6 +18785,18 @@ static int string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
   char *name = ast_get_inlined_data(a, *pos, &name_len);
   ast_move_to_children(a, pos);
   return bcode_add_lit(bcode, v7_create_string(v7, name, name_len, 1));
+}
+
+static int regexp_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                      struct bcode *bcode) {
+  size_t name_len;
+  char *p;
+  char *name = ast_get_inlined_data(a, *pos, &name_len);
+  ast_move_to_children(a, pos);
+  for (p = name + name_len - 1; *p != '/';) p--;
+  return bcode_add_lit(bcode,
+                       v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
+                                        (name + name_len) - p - 1));
 }
 
 /*
@@ -18640,6 +19135,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       break;
     case AST_POSITIVE:
       BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_POS);
       break;
     case AST_NEGATIVE:
       BTRY(compile_expr(v7, a, pos, bcode));
@@ -18714,7 +19210,6 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       */
       bcode_off_t false_label, end_label;
       BTRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_DUP);
       false_label = bcode_op_target(bcode, OP_JMP_FALSE);
       BTRY(compile_expr(v7, a, pos, bcode));
       end_label = bcode_op_target(bcode, OP_JMP);
@@ -19005,6 +19500,28 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     }
     case AST_STRING:
       bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
+      break;
+    case AST_REGEX:
+#if V7_ENABLE__RegExp
+      bcode_push_lit(bcode, regexp_lit(v7, a, pos, bcode));
+      if (v7_has_thrown(v7)) {
+        ret = V7_SYNTAX_ERROR;
+        goto clean;
+      }
+#else
+      BTHROW_MSG(V7_SYNTAX_ERROR, "Regexp support is disabled");
+#endif
+      break;
+    case AST_LABEL:
+    case AST_LABELED_BREAK:
+    case AST_LABELED_CONTINUE:
+      /* TODO(dfrank): implement */
+      sprintf(v7->error_msg, "not implemented");
+      ret = V7_SYNTAX_ERROR;
+      break;
+    case AST_WITH:
+      sprintf(v7->error_msg, "not implemented");
+      ret = V7_SYNTAX_ERROR;
       break;
     default:
       sprintf(v7->error_msg, "unknown ast node %d", (int) tag);
@@ -19495,7 +20012,25 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       body = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
       ast_move_to_children(a, pos);
 
-      BTRY(compile_expr(v7, a, pos, bcode));
+      lookahead = *pos;
+      tag = ast_fetch_tag(a, &lookahead);
+      /*
+       * Support for `var` declaration in INIT
+       */
+      if (tag == AST_VAR) {
+        *pos = lookahead;
+        uint8_t lit;
+        ast_move_to_children(a, pos);
+        tag = ast_fetch_tag(a, pos);
+        BCHECK_INTERNAL(tag == AST_VAR_DECL);
+        lit = string_lit(v7, a, pos, bcode);
+        BTRY(compile_expr(v7, a, pos, bcode));
+        bcode_op(bcode, OP_SET_VAR);
+        bcode_op(bcode, lit);
+      } else {
+        /* normal expression in INIT (not `var` declaration) */
+        BTRY(compile_expr(v7, a, pos, bcode));
+      }
       cond = *pos;
       ast_skip_tree(a, pos);
       iter = *pos;
@@ -22837,11 +23372,12 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
 
   if (v7_is_function(func)) {
     int saved_inhibit_gc = v7->inhibit_gc;
-    val_t res, args = v7_create_dense_array(v7);
+    val_t res = v7_create_undefined(), args = v7_create_dense_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     v7->inhibit_gc = 0;
-    res = i_apply(v7, func, V7_UNDEFINED, args, 0);
+    /* TODO(dfrank): check return value */
+    apply_private(v7, &res, func, V7_UNDEFINED, args, 0);
     v7->inhibit_gc = saved_inhibit_gc;
     return (int) -v7_to_number(res);
   } else {
@@ -23083,13 +23619,14 @@ static void a_prep1(struct v7 *v7, val_t t, val_t *a0, val_t *a1) {
 
 static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
   int saved_inhibit_gc = v7->inhibit_gc;
-  val_t res, params = v7_create_dense_array(v7);
+  val_t res = v7_create_undefined(), params = v7_create_dense_array(v7);
   v7_array_push(v7, params, v);
   v7_array_push(v7, params, n);
   v7_array_push(v7, params, t);
 
   v7->inhibit_gc = 0;
-  res = i_apply(v7, a, t, params, 0);
+  /* TODO(dfrank): check return value */
+  apply_private(v7, &res, a, t, params, 0);
   v7->inhibit_gc = saved_inhibit_gc;
   return res;
 }
@@ -23985,28 +24522,31 @@ static val_t Str_match(struct v7 *v7) {
     ro = call_regex_ctor(v7, ro);
   }
 
-  rxp = v7_to_regexp(v7, ro);
-  flag_g = slre_get_flags(rxp->compiled_regexp) & SLRE_FLAG_G;
-  if (!flag_g) return rx_exec(v7, ro, so, 0);
+  /* `v7_create_regexp()` might have thrown, so, check it */
+  if (!v7_has_thrown(v7)) {
+    rxp = v7_to_regexp(v7, ro);
+    flag_g = slre_get_flags(rxp->compiled_regexp) & SLRE_FLAG_G;
+    if (!flag_g) return rx_exec(v7, ro, so, 0);
 
-  rxp->lastIndex = 0;
-  arr = v7_create_dense_array(v7);
-  while (lastMatch) {
-    val_t result = rx_exec(v7, ro, so, 1);
-    if (v7_is_null(result))
-      lastMatch = 0;
-    else {
-      long thisIndex = rxp->lastIndex;
-      if (thisIndex == previousLastIndex) {
-        previousLastIndex = thisIndex + 1;
-        rxp->lastIndex = previousLastIndex;
-      } else
-        previousLastIndex = thisIndex;
-      v7_array_push(v7, arr, v7_array_get(v7, result, 0));
-      n++;
+    rxp->lastIndex = 0;
+    arr = v7_create_dense_array(v7);
+    while (lastMatch) {
+      val_t result = rx_exec(v7, ro, so, 1);
+      if (v7_is_null(result))
+        lastMatch = 0;
+      else {
+        long thisIndex = rxp->lastIndex;
+        if (thisIndex == previousLastIndex) {
+          previousLastIndex = thisIndex + 1;
+          rxp->lastIndex = previousLastIndex;
+        } else
+          previousLastIndex = thisIndex;
+        v7_array_push(v7, arr, v7_array_get(v7, result, 0));
+        n++;
+      }
     }
+    if (n == 0) return v7_create_null();
   }
-  if (n == 0) return v7_create_null();
   return arr;
 }
 
@@ -24062,7 +24602,12 @@ static val_t Str_replace(struct v7 *v7) {
         v7_array_push(v7, arr,
                       v7_create_number(utfnlen(s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
-        out_str_o = to_string(v7, i_apply(v7, str_func, this_obj, arr, 0));
+        {
+          val_t val = v7_create_undefined();
+          /* TODO(dfrank): check return value */
+          apply_private(v7, &val, str_func, this_obj, arr, 0);
+          out_str_o = to_string(v7, val);
+        }
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
         if (rez_len) {
           ptok->start = rez_str;
@@ -24502,8 +25047,12 @@ extern long timezone;
 #include <sys/time.h>
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER >= 1800
+#if defined(_MSC_VER)
+#define timezone _timezone
+#define tzname _tzname
+#if _MSC_VER >= 1800
 #define tzset _tzset
+#endif
 #endif
 
 typedef double etime_t; /* double is suitable type for ECMA time */
@@ -25647,7 +26196,9 @@ static val_t Function_apply(struct v7 *v7) {
   val_t f = i_value_of(v7, this_obj);
   val_t this_arg = v7_arg(v7, 0);
   val_t func_args = v7_arg(v7, 1);
-  return i_apply(v7, f, this_arg, func_args, 0);
+  val_t val = v7_create_undefined();
+  apply_private(v7, &val, f, this_arg, func_args, 0);
+  return val;
 }
 
 V7_PRIVATE void init_function(struct v7 *v7) {
