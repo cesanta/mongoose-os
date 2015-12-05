@@ -201,7 +201,6 @@ struct {
   size_t offset;
 } s_map[] = {MAKE_SERVE_HTTP_OPTS_MAPPING(document_root),
              MAKE_SERVE_HTTP_OPTS_MAPPING(index_files),
-             MAKE_SERVE_HTTP_OPTS_MAPPING(access_log_file),
              MAKE_SERVE_HTTP_OPTS_MAPPING(auth_domain),
              MAKE_SERVE_HTTP_OPTS_MAPPING(global_auth_file),
              MAKE_SERVE_HTTP_OPTS_MAPPING(enable_directory_listing),
