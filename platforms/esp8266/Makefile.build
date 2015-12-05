@@ -21,6 +21,11 @@ LWIP_PATH ?= lwip
 V7_PATH ?= ../../../v7
 USE_BOOTLOADER ?=
 
+GIT_REF     = $(shell git symbolic-ref HEAD | sed 's:refs/heads/::')
+GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
+DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
+FW_VERSION  = ESP8266/$(GIT_REF)/$(DATE)/$(GIT_SHA)
+
 # Should be RTOS or OSS
 SDK := $(shell echo $$SDK_FLAVOUR)
 ifndef SDK
@@ -52,7 +57,8 @@ JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
               $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js \
               $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/fileservice.js \
               $(JSBIN_EXTRA)
-JS_SRCS    := $(SJSJS_PATH)/smart.js
+JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
+
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
 # using JS as extension
@@ -124,6 +130,7 @@ endif
 
 CFLAGS += -DFS_SIZE=$(FW_FS_SIZE) \
           $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
+          -DFW_VERSION=\"$(FW_VERSION)\" \
           $(CFLAGS_EXTRA)
 
 ifneq "$(USE_BOOTLOADER)" "1"
@@ -302,10 +309,7 @@ sys_config.c sys_config.h: $(COMMON_ESP_DIR)/fs/conf_sys_defaults.json
 # Generate version. Only regenrates if there are changes in objects.
 $(BUILD_DIR)/sj_version.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
-	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
-	SHA=$$(git rev-parse HEAD | head -c 8); \
-	DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
-	echo "const char *sj_version = \"ESP8266-$$REF/$$DATE/$$SHA\";" > $@
+	echo "const char *sj_version = \"$(FW_VERSION)\";" > $@
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

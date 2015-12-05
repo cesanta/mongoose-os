@@ -189,13 +189,22 @@ void init_v7(void *stack_base) {
     struct sys_config cfg;
     load_config("conf_sys_defaults.json", "conf.json", &cfg);
     apply_config(&cfg);
+
+    /* Export read-only vars to JS runtime */
+    v7_val_t obj = v7_create_object(v7);
+    struct ro_var *rv;
+    for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
+      v7_set(v7, obj, rv->name, ~0, 0, v7_create_string(v7, *rv->ptr, ~0, 1));
+    }
+    v7_val_t Sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
+    v7_set(v7, Sys, "ro_vars", ~0, 0, obj);
   }
 }
 
 #ifndef V7_NO_FS
 void init_smartjs() {
   v7_val_t res;
-  if (v7_exec_file(v7, "smart.js", &res) != V7_OK) {
+  if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
     printf("Init error: ");
     v7_println(v7, res);
   }
