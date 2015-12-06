@@ -275,7 +275,7 @@ uint32 NOINLINE find_image() {
 		romconf->magic = BOOT_CONFIG_MAGIC;
 		romconf->version = BOOT_CONFIG_VERSION;
 		romconf->count = 2;
-		romconf->mode = MODE_GPIO_ROM;
+		romconf->mode = MODE_STANDARD;
 		/*
 		 * FD_FW_ADDR, C1_FW_ADDR and C2_FW_ADDR
 		 * must be defined by -D
