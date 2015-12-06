@@ -49,8 +49,7 @@ APP_MODULES := user $(SPIFFS_PATH) $(COMMON_ESP_DIR)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_http.c sj_config.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
-            sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c \
-            sys_config.c
+            sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c
 
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
               $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
@@ -174,21 +173,22 @@ CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWI
 endif
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-SRCS = $(APP_SRCS) sj_version.c
-OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
+SRCS = $(APP_SRCS) sj_version.c sys_config.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o $(BUILD_DIR)/sys_config.o
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 APP_OUT = $(BUILD_DIR)/$(APP).out
 LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
+GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 FW_FILE_1_OUT = $(FW_DIR)/$(FW_FILE_1_ADDR).bin
 FW_FILE_2_OUT = $(FW_DIR)/$(FW_FILE_2_ADDR).bin
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 FW_FS_OUT = $(FW_DIR)/$(FW_FS_ADDR).bin
 FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_ESP_DIR)/fs/*) 
 
-INCDIRS = $(addprefix -I,$(IPATH))
+INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = 	$(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
@@ -291,25 +291,30 @@ $(LWIP_AR): $(LWIP_PATH)
 	$(Q) $(MAKE) --no-print-directory -C $(LWIP_PATH) -j3 all BUILD_DIR=$(LWIP_BUILD_DIR)
 
 # This rule is for normal (pre-existing) sources from VPATH.
-$(BUILD_DIR)/%.o: %.c
+$(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
 	$(compile)
 
 # This one is for generated sources in build directory.
-$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
+$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 	$(compile)
 
 $(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
-user/user_main.c: sys_config.h
+# Common gathering point for all generated files.
+# Except version, which is special because it depends on objects.
+$(GENFILES_FLAG): $(BUILD_DIR)/sys_config.c
+	$(Q) touch $@
 
-sys_config.c sys_config.h: $(COMMON_ESP_DIR)/fs/conf_sys_defaults.json
-	python $(REPO_ROOT)/tools/json_to_c_config.py $< sys_config
+# Generate sys_config.
+$(BUILD_DIR)/sys_config.c: $(COMMON_ESP_DIR)/fs/conf_sys_defaults.json
+	$(vecho) "GEN $^ -> $@"
+	$(Q) python $(REPO_ROOT)/tools/json_to_c_config.py $< $(BUILD_DIR)/sys_config
 
 # Generate version. Only regenrates if there are changes in objects.
 $(BUILD_DIR)/sj_version.c: $(APP_OBJS)
 	$(vecho) "GEN $@"
-	echo "const char *sj_version = \"$(FW_VERSION)\";" > $@
+	$(Q) echo "const char *sj_version = \"$(FW_VERSION)\";" > $@
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
@@ -362,7 +367,7 @@ $(BUILD_DIR)/rboot.bin: $(BUILD_DIR)/esptool2
 endif
 
 clean:
-	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR) sys_config.*
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
 flash: $(FW_OUT) $(FW_FS_OUT)
 	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
