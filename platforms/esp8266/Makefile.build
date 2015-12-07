@@ -173,8 +173,8 @@ CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWI
 endif
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-SRCS = $(APP_SRCS) sj_version.c sys_config.c
-OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o $(BUILD_DIR)/sys_config.o
+SRCS = $(APP_SRCS) sys_config.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/sys_config.o
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 APP_OUT = $(BUILD_DIR)/$(APP).out
@@ -310,11 +310,6 @@ $(GENFILES_FLAG): $(BUILD_DIR)/sys_config.c
 $(BUILD_DIR)/sys_config.c: $(COMMON_ESP_DIR)/fs/conf_sys_defaults.json
 	$(vecho) "GEN $^ -> $@"
 	$(Q) python $(REPO_ROOT)/tools/json_to_c_config.py $< $(BUILD_DIR)/sys_config
-
-# Generate version. Only regenrates if there are changes in objects.
-$(BUILD_DIR)/sj_version.c: $(APP_OBJS)
-	$(vecho) "GEN $@"
-	$(Q) echo "const char *sj_version = \"$(FW_VERSION)\";" > $@
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
