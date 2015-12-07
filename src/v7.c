@@ -16573,24 +16573,95 @@ void v7_interrupt(struct v7 *v7) {
 #ifdef V7_ENABLE_BCODE
 
 /*
- * Tags that are used for bcode offsets in "try stack" ("____p")
+ * Bcode offsets in "try stack" (`____p`) are stored in JS numbers, i.e.
+ * in `double`s. Apart from the offset itself, we also need some additional
+ * data:
+ *
+ * - type of the block that offset represents (`catch`, `finally`, `switch`,
+ *   or some loop)
+ * - size of the stack when the block is created (needed when throwing, since
+ *   if exception is thrown from the middle of the expression, the stack may
+ *   have any arbitrary length)
+ *
+ * We bake all this data into integer part of the double (53 bits) :
+ *
+ * - 32 bits: bcode offset
+ * - 3 bits: "tag": the type of the block
+ * - 16 bits: stack size
  */
 
-#define OFFSET_TAG_CATCH ((uint64_t) 0x01 << (sizeof(bcode_off_t) * 8))
-#define OFFSET_TAG_FINALLY ((uint64_t) 0x02 << (sizeof(bcode_off_t) * 8))
-#define OFFSET_TAG_LOOP ((uint64_t) 0x03 << (sizeof(bcode_off_t) * 8))
-#define OFFSET_TAG_SWITCH ((uint64_t) 0x04 << (sizeof(bcode_off_t) * 8))
-#define OFFSET_TAG_MASK ((uint64_t) 0x07 << (sizeof(bcode_off_t) * 8))
-#define OFFSET_TAG(v) ((v) &OFFSET_TAG_MASK)
-#define OFFSET_VALUE(v) \
-  ((bcode_off_t)((v) & (((uint64_t) 1 << (sizeof(bcode_off_t) * 8)) - 1)))
+/*
+ * Widths of data parts
+ */
+#define LBLOCK_OFFSET_WIDTH 32
+#define LBLOCK_TAG_WIDTH 3
+#define LBLOCK_STACK_SIZE_WIDTH 16
+
+/*
+ * Shifts of data parts
+ */
+#define LBLOCK_OFFSET_SHIFT (0)
+#define LBLOCK_TAG_SHIFT (LBLOCK_OFFSET_SHIFT + LBLOCK_OFFSET_WIDTH)
+#define LBLOCK_STACK_SIZE_SHIFT (LBLOCK_TAG_SHIFT + LBLOCK_TAG_WIDTH)
+#define LBLOCK_TOTAL_WIDTH (LBLOCK_STACK_SIZE_SHIFT + LBLOCK_STACK_SIZE_WIDTH)
+
+/*
+ * Masks of data parts
+ */
+#define LBLOCK_OFFSET_MASK \
+  ((uint64_t)(((uint64_t) 1 << LBLOCK_OFFSET_WIDTH) - 1) << LBLOCK_OFFSET_SHIFT)
+#define LBLOCK_TAG_MASK \
+  ((uint64_t)(((uint64_t) 1 << LBLOCK_TAG_WIDTH) - 1) << LBLOCK_TAG_SHIFT)
+#define LBLOCK_STACK_SIZE_MASK                               \
+  ((uint64_t)(((uint64_t) 1 << LBLOCK_STACK_SIZE_WIDTH) - 1) \
+   << LBLOCK_STACK_SIZE_SHIFT)
+
+/*
+ * Self-check: make sure all the data can fit into double's mantissa
+ */
+#if (LBLOCK_TOTAL_WIDTH > 53)
+#error lblock width is too large, it can't fit into double's mantissa
+#endif
+
+/*
+ * Tags that are used for bcode offsets in "try stack" (`____p`)
+ */
+#define LBLOCK_TAG_CATCH ((uint64_t) 0x01 << LBLOCK_TAG_SHIFT)
+#define LBLOCK_TAG_FINALLY ((uint64_t) 0x02 << LBLOCK_TAG_SHIFT)
+#define LBLOCK_TAG_LOOP ((uint64_t) 0x03 << LBLOCK_TAG_SHIFT)
+#define LBLOCK_TAG_SWITCH ((uint64_t) 0x04 << LBLOCK_TAG_SHIFT)
+
+/*
+ * Yields 32-bit bcode offset value
+ */
+#define LBLOCK_OFFSET(v) \
+  ((bcode_off_t)(((v) &LBLOCK_OFFSET_MASK) >> LBLOCK_OFFSET_SHIFT))
+
+/*
+ * Yields tag value (unshifted, to be compared with macros like
+ * `LBLOCK_TAG_CATCH`, etc)
+ */
+#define LBLOCK_TAG(v) ((v) &LBLOCK_TAG_MASK)
+
+/*
+ * Yields stack size
+ */
+#define LBLOCK_STACK_SIZE(v) \
+  (((v) &LBLOCK_STACK_SIZE_MASK) >> LBLOCK_STACK_SIZE_SHIFT)
+
+/*
+ * Yields `uint64_t` value to be stored as a JavaScript number
+ */
+#define LBLOCK_ITEM_CREATE(offset, tag, stack_size) \
+  ((uint64_t)(offset) | (tag) |                     \
+   (((uint64_t)(stack_size)) << LBLOCK_STACK_SIZE_SHIFT))
 
 /*
  * make sure `bcode_off_t` is just 32-bit, so that it can fit in double
  * with 3-bit tag
  */
-V7_STATIC_ASSERT(sizeof(bcode_off_t) <= sizeof(uint32_t),
-                 too_large_bcode_off_t);
+V7_STATIC_ASSERT((sizeof(bcode_off_t) * 8) == LBLOCK_OFFSET_WIDTH,
+                 wrong_size_of_bcode_off_t);
 
 #define PUSH(v) stack_push(&v7->stack, v)
 #define POP() stack_pop(&v7->stack)
@@ -17006,12 +17077,19 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
  *
  * Only blocks of specified types will be considered, others will be dropped.
  *
+ * If `restore_stack_size` is non-zero, the `v7->stack.len` will be restored
+ * to the value saved when the block was created. This is useful when throwing,
+ * since if we throw from the middle of the expression, the stack could have
+ * any size. But you probably shouldn't set this flag when breaking and
+ * returning, since it may hide real bugs in the opcode.
+ *
  * Returns id of the block type that control was transferred into, or
  * `LOCAL_BLOCK_NONE` if no appropriate block was found. Note: returned value
  * contains at most 1 block bit; it can't contain multiple bits.
  */
 static enum local_block unwind_local_blocks_stack(
-    struct v7 *v7, struct bcode_registers *r, unsigned int wanted_blocks_mask) {
+    struct v7 *v7, struct bcode_registers *r, unsigned int wanted_blocks_mask,
+    uint8_t restore_stack_size) {
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   enum local_block found_block = LOCAL_BLOCK_NONE;
@@ -17031,17 +17109,17 @@ static enum local_block unwind_local_blocks_stack(
       enum local_block cur_block;
 
       /* get id of the current block type */
-      switch (OFFSET_TAG(offset)) {
-        case OFFSET_TAG_CATCH:
+      switch (LBLOCK_TAG(offset)) {
+        case LBLOCK_TAG_CATCH:
           cur_block = LOCAL_BLOCK_CATCH;
           break;
-        case OFFSET_TAG_FINALLY:
+        case LBLOCK_TAG_FINALLY:
           cur_block = LOCAL_BLOCK_FINALLY;
           break;
-        case OFFSET_TAG_LOOP:
+        case LBLOCK_TAG_LOOP:
           cur_block = LOCAL_BLOCK_LOOP;
           break;
-        case OFFSET_TAG_SWITCH:
+        case LBLOCK_TAG_SWITCH:
           cur_block = LOCAL_BLOCK_SWITCH;
           break;
         default:
@@ -17051,17 +17129,21 @@ static enum local_block unwind_local_blocks_stack(
 
       if (cur_block & wanted_blocks_mask) {
         /* need to transfer control to this offset */
-        r->ops = (uint8_t *) r->bcode->ops.buf + OFFSET_VALUE(offset);
+        r->ops = (uint8_t *) r->bcode->ops.buf + LBLOCK_OFFSET(offset);
 #ifdef V7_BCODE_TRACE
         printf("transferring to block #%d: %u\n", (int) cur_block,
-               (unsigned int) OFFSET_VALUE(offset));
+               (unsigned int) LBLOCK_OFFSET(offset));
 #endif
         found_block = cur_block;
+        /* if needed, restore stack size to the saved value */
+        if (restore_stack_size) {
+          v7->stack.len = LBLOCK_STACK_SIZE(offset);
+        }
         break;
       } else {
 #ifdef V7_BCODE_TRACE
         printf("skipped block #%d: %u\n", (int) cur_block,
-               (unsigned int) OFFSET_VALUE(offset));
+               (unsigned int) LBLOCK_OFFSET(offset));
 #endif
         /*
          * since we don't need to control transfer there, just pop
@@ -17093,7 +17175,7 @@ static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
   /*
    * Try to unwind local "try stack", considering only `finally` and `break`.
    */
-  found = unwind_local_blocks_stack(v7, r, mask | LOCAL_BLOCK_FINALLY);
+  found = unwind_local_blocks_stack(v7, r, mask | LOCAL_BLOCK_FINALLY, 0);
   assert(found != LOCAL_BLOCK_NONE);
 
   /*
@@ -17136,7 +17218,7 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
    * Try to unwind local "try stack", considering only `finally` blocks. If
    * there are no `finally` blocks in effect, actually perform return.
    */
-  if (unwind_local_blocks_stack(v7, r, (LOCAL_BLOCK_FINALLY)) ==
+  if (unwind_local_blocks_stack(v7, r, (LOCAL_BLOCK_FINALLY), 0) ==
       LOCAL_BLOCK_NONE) {
     /*
      * no `finally` blocks were found, so, perform return: unwind stack by 1
@@ -17181,7 +17263,7 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
   }
 
   while ((found = unwind_local_blocks_stack(
-              v7, r, (LOCAL_BLOCK_CATCH | LOCAL_BLOCK_FINALLY))) ==
+              v7, r, (LOCAL_BLOCK_CATCH | LOCAL_BLOCK_FINALLY), 1)) ==
          LOCAL_BLOCK_NONE) {
     if (v7->call_stack != v7->global_object) {
       /* not reached bottom of the stack yet, keep unwinding */
@@ -17346,23 +17428,24 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
    */
   switch (op) {
     case OP_TRY_PUSH_CATCH:
-      offset_tag = OFFSET_TAG_CATCH;
+      offset_tag = LBLOCK_TAG_CATCH;
       break;
     case OP_TRY_PUSH_FINALLY:
-      offset_tag = OFFSET_TAG_FINALLY;
+      offset_tag = LBLOCK_TAG_FINALLY;
       break;
     case OP_TRY_PUSH_LOOP:
-      offset_tag = OFFSET_TAG_LOOP;
+      offset_tag = LBLOCK_TAG_LOOP;
       break;
     case OP_TRY_PUSH_SWITCH:
-      offset_tag = OFFSET_TAG_SWITCH;
+      offset_tag = LBLOCK_TAG_SWITCH;
       break;
     default:
       assert(0);
       break;
   }
   target = bcode_get_target(&r->ops);
-  v7_array_push(v7, arr, v7_create_number((uint64_t) target | offset_tag));
+  v7_array_push(v7, arr, v7_create_number(LBLOCK_ITEM_CREATE(target, offset_tag,
+                                                             v7->stack.len)));
 
   tmp_frame_cleanup(&tf);
 }
