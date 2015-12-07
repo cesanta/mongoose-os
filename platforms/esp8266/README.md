@@ -60,7 +60,10 @@ Connect LED to GPIO pin number 2. Then type this at the prompt and press enter:
 - ESP_COREDUMP: enables printing of coredump on crash
 - ESP_COREDUMP_NOAUTO: disables automatic coredumping on crash
 - ESP_ENABLE_WATCHDOG: enables watchdog (the watchdog is not fed nor we provide yet a way to feed it from JS, the ESP will be reset if you execute time consuming operations!)
-- ESP_ADC_DIVIDER: The ESP12 board has an internal voltage divider to map 3.3V to internal 1V on the A0 pin. Set this flag to 3.3 in order to calibrate the ADC reading for the A0 pin. Otherwise, you can use the adjacent pin marked as RSV (reserved) which is connected directly to the ADC input.
+
+## ADC
+
+ESP8266 has a 10-bit ADC with input voltage range of 0 - 1V. To measure higher values you will need an external voltage divider.
 
 ## GDB
 
