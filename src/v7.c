@@ -18979,6 +18979,7 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
       fixup_post_op(tag, bcode);
       break;
     default:
+      /* TODO(dfrank): actually we need a ReferenceError to be thrown here */
       BTHROW_MSG(V7_SYNTAX_ERROR, "unexpected ast node");
   }
 clean:
@@ -19274,7 +19275,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     case AST_LSHIFT_ASSIGN:
     case AST_RSHIFT_ASSIGN:
     case AST_URSHIFT_ASSIGN:
-      compile_assign(v7, a, pos, tag, bcode);
+      BTRY(compile_assign(v7, a, pos, tag, bcode));
       break;
     case AST_COND: {
       /*
@@ -20101,25 +20102,41 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * Support for `var` declaration in INIT
        */
       if (tag == AST_VAR) {
+        ast_off_t fvar_end;
         *pos = lookahead;
+        fvar_end = ast_get_skip(a, *pos, AST_END_SKIP);
         uint8_t lit;
         ast_move_to_children(a, pos);
-        tag = ast_fetch_tag(a, pos);
-        BCHECK_INTERNAL(tag == AST_VAR_DECL);
-        lit = string_lit(v7, a, pos, bcode);
-        BTRY(compile_expr(v7, a, pos, bcode));
-        bcode_op(bcode, OP_SET_VAR);
-        bcode_op(bcode, lit);
+
+        /*
+         * Iterate through all vars in the given `var` declaration: they are
+         * just like assigments here
+         */
+        while (*pos < fvar_end) {
+          tag = ast_fetch_tag(a, pos);
+          /* Only var declarations are allowed (not function declarations) */
+          BCHECK_INTERNAL(tag == AST_VAR_DECL);
+          lit = string_lit(v7, a, pos, bcode);
+          BTRY(compile_expr(v7, a, pos, bcode));
+
+          /* Just like an assigment */
+          bcode_op(bcode, OP_SET_VAR);
+          bcode_op(bcode, lit);
+
+          /* INIT is stack-neutral */
+          bcode_op(bcode, OP_DROP);
+        }
       } else {
         /* normal expression in INIT (not `var` declaration) */
         BTRY(compile_expr(v7, a, pos, bcode));
+        /* INIT is stack-neutral */
+        bcode_op(bcode, OP_DROP);
       }
       cond = *pos;
       ast_skip_tree(a, pos);
       iter = *pos;
       *pos = body;
 
-      bcode_op(bcode, OP_DROP);
       end_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
       cond_label = bcode_op_target(bcode, OP_JMP);
       body_target = bcode_pos(bcode);
@@ -20181,15 +20198,25 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   JMP loop
      * end:
      *   UNSTASH
+     *   JMP try_pop:
      * brend:
+     *              # got here after a `break` or `continue` from a loop body:
      *   JMP_IF_CONTINUE next
+     *
+     *              # we're not going to `continue`, so, need to remove an
+     *              # extra stuff that was needed for the NEXT_PROP
+     *
+     *   SWAP_DROP  # drop handle
+     *   SWAP_DROP  # drop <O>
+     *   SWAP_DROP  # drop the value preceding the loop
+     * try_pop:
      *   TRY_POP
      *
      */
     case AST_FOR_IN: {
       uint8_t lit;
       bcode_off_t loop_label, loop_target, end_label, brend_label,
-          continue_label, continue_target;
+          continue_label, pop_label, continue_target;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
 
       ast_move_to_children(a, pos);
@@ -20279,11 +20306,21 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       bcode_op(bcode, OP_UNSTASH);
 
+      pop_label = bcode_op_target(bcode, OP_JMP);
+
       /* brend: */
       bcode_patch_target(bcode, brend_label, bcode_pos(bcode));
 
       continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
       bcode_patch_target(bcode, continue_label, continue_target);
+
+      bcode_op(bcode, OP_SWAP_DROP);
+      bcode_op(bcode, OP_SWAP_DROP);
+      bcode_op(bcode, OP_SWAP_DROP);
+
+      /* try_pop: */
+      bcode_patch_target(bcode, pop_label, bcode_pos(bcode));
+
       bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
