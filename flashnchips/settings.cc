@@ -54,6 +54,7 @@ SettingsDialog::SettingsDialog(QList<QCommandLineOption> knobs, QWidget* parent)
   }
 
   ui_.knobList->setLayout(layout);
+  connect(this, &SettingsDialog::finished, this, &SettingsDialog::emitUpdates);
 }
 
 SettingsDialog::~SettingsDialog() {
@@ -64,12 +65,19 @@ void SettingsDialog::checkboxToggled(const QString& name) {
     lineedit_[name]->setEnabled(checkbox_[name]->isChecked());
   }
   settings_.setValue(isSetKey(name), checkbox_[name]->isChecked());
-  emit knobUpdated(name);
+  updated_.insert(name);
 }
 
 void SettingsDialog::valueChanged(const QString& name) {
   settings_.setValue(valueKey(name), lineedit_[name]->text());
-  emit knobUpdated(name);
+  updated_.insert(name);
+}
+
+void SettingsDialog::emitUpdates() {
+  for (const auto& name : updated_) {
+    emit knobUpdated(name);
+  }
+  updated_.clear();
 }
 
 QString SettingsDialog::isSetKey(const QString& name) {

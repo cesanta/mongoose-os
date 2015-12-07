@@ -14,84 +14,11 @@
 #include "dialog.h"
 #include "esp8266.h"
 #include "flasher.h"
+#include "log.h"
 #include "sigsource.h"
 
-namespace {
-
-using std::cout;
 using std::cerr;
 using std::endl;
-
-static int verbosity = 0;
-static std::ostream* logfile = &cerr;
-
-void outputHandler(QtMsgType type, const QMessageLogContext& context,
-                   const QString& msg) {
-  QByteArray localMsg = msg.toLocal8Bit();
-  switch (type) {
-    case QtDebugMsg:
-      if (verbosity >= 4) {
-        *logfile << "DEBUG: ";
-        if (context.file != NULL) {
-          *logfile << context.file << ":" << context.line;
-        }
-        if (context.function != NULL) {
-          *logfile << " (" << context.function << "): ";
-        }
-        *logfile << localMsg.constData() << endl;
-      }
-      break;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 5, 0))
-    case QtInfoMsg:
-      if (verbosity >= 3) {
-        *logfile << "INFO: ";
-        if (context.file != NULL) {
-          *logfile << context.file << ":" << context.line;
-        }
-        if (context.function != NULL) {
-          *logfile << " (" << context.function << "): ";
-        }
-        *logfile << localMsg.constData() << endl;
-      }
-      break;
-#endif
-    case QtWarningMsg:
-      if (verbosity >= 2) {
-        *logfile << "WARNING: ";
-        if (context.file != NULL) {
-          *logfile << context.file << ":" << context.line;
-        }
-        if (context.function != NULL) {
-          *logfile << " (" << context.function << "): ";
-        }
-        *logfile << localMsg.constData() << endl;
-      }
-      break;
-    case QtCriticalMsg:
-      if (verbosity >= 1) {
-        *logfile << "CRITICAL: ";
-        if (context.file != NULL) {
-          *logfile << context.file << ":" << context.line;
-        }
-        if (context.function != NULL) {
-          *logfile << " (" << context.function << "): ";
-        }
-        *logfile << localMsg.constData() << endl;
-      }
-      break;
-    case QtFatalMsg:
-      *logfile << "FATAL: ";
-      if (context.file != NULL) {
-        *logfile << context.file << ":" << context.line;
-      }
-      if (context.function != NULL) {
-        *logfile << " (" << context.function << "): ";
-      }
-      *logfile << localMsg.constData() << endl;
-      abort();
-  }
-}
-}
 
 int main(int argc, char* argv[]) {
   QCoreApplication::setOrganizationName("Cesanta");
@@ -127,6 +54,14 @@ int main(int argc, char* argv[]) {
       "If set, bytes read from a serial port in console mode will be "
       "appended to the given file.",
       "file"));
+  commonOpts.append(QCommandLineOption(
+      {"verbose", "V"},
+      "Verbosity level. 0 – normal output, 1 - also print critical (but not "
+      "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
+      "print debug output.",
+      "level", "1"));
+  commonOpts.append(
+      QCommandLineOption("log", "Redirect logging into a file.", "filename"));
   config.addOptions(commonOpts);
   ESP8266::addOptions(&config);
   CC3200::addOptions(&config);
@@ -156,16 +91,6 @@ int main(int argc, char* argv[]) {
       "filename"));
   cliOpts.append(QCommandLineOption(
       {"debug", "d"}, "Enable debug output. Equivalent to --V=4"));
-  // TODO(imax): allow these 2 options to be adjusted at runtime and move them
-  // to commonOpts.
-  cliOpts.append(QCommandLineOption(
-      {"verbose", "V"},
-      "Verbosity level. 0 – normal output, 1 - also print critical (but not "
-      "fatal) errors, 2 - also print warnings, 3 - print info messages, 4 - "
-      "print debug output.",
-      "level", "1"));
-  cliOpts.append(
-      QCommandLineOption("log", "Redirect logging into a file.", "filename"));
 #if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
   for (const auto& opt : cliOpts) {
     parser.addOption(opt);
@@ -202,8 +127,8 @@ int main(int argc, char* argv[]) {
   parser.parse(commandline);
 
   if (parser.isSet("log")) {
-    logfile = new std::ofstream(parser.value("log").toStdString(),
-                                std::ios_base::app);
+    auto* logfile = new std::ofstream(parser.value("log").toStdString(),
+                                      std::ios_base::app);
     if (logfile->fail()) {
       cerr << "Failed to open log file." << endl;
       return 1;
@@ -211,13 +136,16 @@ int main(int argc, char* argv[]) {
     *logfile << "\n---------- Log started on "
              << QDateTime::currentDateTime().toString(Qt::ISODate).toStdString()
              << endl;
+    Log::setFile(logfile);
+  } else {
+    Log::setFile(&cerr);
   }
-  qInstallMessageHandler(outputHandler);
+  Log::init();
   if (parser.isSet("debug")) {
-    verbosity = 4;
+    Log::setVerbosity(4);
   } else if (parser.isSet("V")) {
     bool ok;
-    verbosity = parser.value("V").toInt(&ok, 10);
+    Log::setVerbosity(parser.value("V").toInt(&ok, 10));
     if (!ok) {
       cerr << parser.value("V").toStdString() << " is not a number" << endl
            << endl;

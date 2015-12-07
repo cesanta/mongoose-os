@@ -1,8 +1,12 @@
 #include "dialog.h"
 
+#include <iostream>
+#include <fstream>
+
 #include <QApplication>
 #include <QBoxLayout>
 #include <QCommandLineParser>
+#include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDialog>
@@ -28,6 +32,7 @@
 #include "config.h"
 #include "esp8266.h"
 #include "flasher.h"
+#include "log.h"
 #include "serial.h"
 #include "ui_about.h"
 
@@ -905,6 +910,7 @@ void MainDialog::sendQueuedCommand() {
 }
 
 void MainDialog::showSettings() {
+  settingsDlg_.setModal(true);
   settingsDlg_.show();
 }
 
@@ -914,6 +920,33 @@ void MainDialog::updateConfig(const QString& name) {
         name, settings_.value(SettingsDialog::valueKey(name), "").toString());
   } else {
     config_->unset(name);
+  }
+  if (name == "verbose") {
+    bool ok;
+    int v;
+    v = config_->value("verbose").toInt(&ok, 10);
+    if (ok) {
+      Log::setVerbosity(v);
+    } else {
+      qCritical() << "Failed to change verbosity level:"
+                  << config_->value("verbose") << "is not a number";
+    }
+  } else if (name == "log") {
+    if (config_->value("log").isEmpty()) {
+      Log::setFile(&std::cerr);
+    } else {
+      auto* logfile = new std::ofstream(config_->value("log").toStdString(),
+                                        std::ios_base::app);
+      if (logfile->fail()) {
+        std::cerr << "Failed to open log file." << std::endl;
+        return;
+      }
+      *logfile
+          << "\n---------- Log started on "
+          << QDateTime::currentDateTime().toString(Qt::ISODate).toStdString()
+          << std::endl;
+      Log::setFile(logfile);
+    }
   }
 }
 

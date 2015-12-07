@@ -43,14 +43,38 @@ Command-line flags override values specified here.</string>
         <x>0</x>
         <y>0</y>
         <width>440</width>
-        <height>282</height>
+        <height>242</height>
        </rect>
       </property>
      </widget>
     </widget>
    </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close</set>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>clicked(QAbstractButton*)</signal>
+   <receiver>SettingsDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>232</x>
+     <y>391</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>205</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

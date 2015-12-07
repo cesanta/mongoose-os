@@ -29,6 +29,7 @@ signals:
  private slots:
   void checkboxToggled(const QString& name);
   void valueChanged(const QString& name);
+  void emitUpdates();
 
  private:
   QList<QCommandLineOption> knobs_;
@@ -36,6 +37,7 @@ signals:
   QMap<QString, QCheckBox*> checkbox_;
   QMap<QString, QLineEdit*> lineedit_;
   QSettings settings_;
+  QSet<QString> updated_;
 };
 
 #endif  // SETTINGS_H
