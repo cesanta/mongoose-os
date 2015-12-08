@@ -259,6 +259,19 @@ void add_plus(char *ptr, int *open_mode) {
   }
 }
 
+static char *get_fixed_filename(const char *filename) {
+  /* spiffs doesn't support directories, not even the trivial ./something */
+  while (*filename != '\0' && (*filename == '/' || *filename == '.')) {
+    filename++;
+  }
+
+  /*
+   * all SPIFFs functions doesn't work with const char *, so
+   * removing const here
+   */
+  return (char *) filename;
+}
+
 int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   spiffs_mode sm = 0;
   int res;
@@ -273,12 +286,7 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   /* if (flags && O_EXCL) sm |= SPIFFS_EXCL; */
   /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
 
-  /* spiffs doesn't support directories, not even the trivial ./something */
-  while (*filename != '\0' && (*filename == '/' || *filename == '.')) {
-    filename++;
-  }
-
-  res = SPIFFS_open(&fs, (char *) filename, sm, 0);
+  res = SPIFFS_open(&fs, get_fixed_filename(filename), sm, 0);
   if (res >= 0) {
     res += NUM_SYS_FD;
   }
@@ -328,14 +336,15 @@ int _close_r(struct _reent *r, int fd) {
 }
 
 int _rename_r(struct _reent *r, const char *from, const char *to) {
-  int res = SPIFFS_rename(&fs, (char *) from, (char *) to);
+  int res =
+      SPIFFS_rename(&fs, get_fixed_filename(from), get_fixed_filename(to));
   set_errno(res);
 
   return res;
 }
 
 int _unlink_r(struct _reent *r, const char *filename) {
-  int res = SPIFFS_remove(&fs, (char *) filename);
+  int res = SPIFFS_remove(&fs, get_fixed_filename(filename));
   set_errno(res);
 
   return res;
