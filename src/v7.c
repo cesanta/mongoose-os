@@ -15900,7 +15900,8 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
 static val_t i_call_cfunction(struct v7 *v7, val_t f, val_t this_object,
                               val_t args) {
   int saved_inhibit_gc = v7->inhibit_gc;
-  val_t res, old_this = v7->this_object, old_args = v7->arguments;
+  val_t res = v7_create_undefined(), old_this = v7->this_object,
+        old_args = v7->arguments;
   val_t saved_thrown = v7->thrown_error;
   int saved_is_thrown = v7->is_thrown;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
