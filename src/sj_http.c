@@ -12,6 +12,7 @@ struct user_data {
   struct v7 *v7;
   v7_val_t obj;
   v7_val_t handler;
+  v7_val_t timeout_callback;
 };
 
 #define MG_F_CLOSE_CONNECTION_AFTER_RESPONSE MG_F_USER_1
@@ -73,7 +74,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       v7_own(ud->v7, &response);
       setup_request_object(ud->v7, request, ev_data);
       setup_response_object(ud->v7, response, c, request);
-      sj_invoke_cb2(ud->v7, ud->handler, request, response);
+      sj_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
       v7_disown(ud->v7, &request);
       v7_disown(ud->v7, &response);
     } else {
@@ -86,16 +87,19 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       v7_val_t response = v7_create_object(ud->v7);
       v7_own(ud->v7, &response);
       setup_request_object(ud->v7, response, ev_data);
-      sj_invoke_cb1(ud->v7, ud->handler, response);
+      sj_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);
       v7_disown(ud->v7, &response);
     }
 
     if (c->flags & MG_F_CLOSE_CONNECTION_AFTER_RESPONSE) {
       c->flags |= MG_F_CLOSE_IMMEDIATELY;
     }
+  } else if (ev == MG_EV_TIMER) {
+    sj_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
   } else if (ev == MG_EV_CLOSE) {
     if (c->listener == NULL && ud != NULL) {
       v7_disown(ud->v7, &ud->obj);
+      v7_disown(ud->v7, &ud->timeout_callback);
       free(ud);
       c->user_data = NULL;
     }
@@ -286,22 +290,34 @@ static v7_val_t Http_request_end(struct v7 *v7) {
   return v7_get_this(v7);
 }
 
+static v7_val_t Http_request_abort(struct v7 *v7) {
+  struct mg_connection *c = get_mgconn(v7);
+  c->flags |= MG_F_CLOSE_IMMEDIATELY;
+  return v7_get_this(v7);
+}
+
+static v7_val_t Http_request_set_timeout(struct v7 *v7) {
+  struct mg_connection *c = get_mgconn(v7);
+  struct user_data *ud = (struct user_data *) c->user_data;
+  mg_set_timer(c, time(NULL) + v7_to_number(v7_arg(v7, 0)) / 1000.0);
+  ud->timeout_callback = v7_arg(v7, 1);
+  v7_own(v7, &ud->timeout_callback);
+  return v7_get_this(v7);
+}
+
 static v7_val_t Http_createClient(struct v7 *v7) {
   v7_val_t opts = v7_arg(v7, 0);
   char addr[200];
   struct mg_connection *c;
   struct user_data *ud;
-  size_t n;
   v7_val_t v_h = v7_get(v7, opts, "hostname", ~0);
   v7_val_t v_p = v7_get(v7, opts, "port", ~0);
   v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
   v7_val_t v_m = v7_get(v7, opts, "method", ~0);
   int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
-  const char *host = v7_is_string(v_h) ? v7_get_string_data(v7, &v_h, &n) : "";
-  const char *uri =
-      v7_is_string(v_uri) ? v7_get_string_data(v7, &v_uri, &n) : "/";
-  const char *method =
-      v7_is_string(v_m) ? v7_get_string_data(v7, &v_m, &n) : "GET";
+  const char *host = v7_is_string(v_h) ? v7_to_cstring(v7, &v_h) : "";
+  const char *uri = v7_is_string(v_uri) ? v7_to_cstring(v7, &v_uri) : "/";
+  const char *method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
 
   snprintf(addr, sizeof(addr), "%s:%d", host, port);
 
@@ -354,4 +370,7 @@ void sj_init_http(struct v7 *v7) {
 
   v7_set_method(v7, sj_http_request_proto, "write", Http_request_write);
   v7_set_method(v7, sj_http_request_proto, "end", Http_request_end);
+  v7_set_method(v7, sj_http_request_proto, "abort", Http_request_abort);
+  v7_set_method(v7, sj_http_request_proto, "setTimeout",
+                Http_request_set_timeout);
 }

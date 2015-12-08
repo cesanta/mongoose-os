@@ -1925,7 +1925,9 @@ void mg_close_conn(struct mg_connection *conn) {
 
 void mg_mgr_init(struct mg_mgr *m, void *user_data) {
   memset(m, 0, sizeof(*m));
+#ifndef MG_DISABLE_SOCKETPAIR
   m->ctl[0] = m->ctl[1] = INVALID_SOCKET;
+#endif
   m->user_data = user_data;
 
 #ifdef _WIN32
@@ -1989,8 +1991,8 @@ void mg_mgr_free(struct mg_mgr *m) {
 #ifndef MG_DISABLE_SOCKETPAIR
   if (m->ctl[0] != INVALID_SOCKET) closesocket(m->ctl[0]);
   if (m->ctl[1] != INVALID_SOCKET) closesocket(m->ctl[1]);
-#endif
   m->ctl[0] = m->ctl[1] = INVALID_SOCKET;
+#endif
 
   for (conn = m->active_connections; conn != NULL; conn = tmp_conn) {
     tmp_conn = conn->next;
@@ -2486,11 +2488,13 @@ void mg_if_connect_cb(struct mg_connection *nc, int err) {
  *    either failure (and dealloc the connection)
  *    or success (and proceed with connect()
  */
-static void resolve_cb(struct mg_dns_message *msg, void *data) {
+static void resolve_cb(struct mg_dns_message *msg, void *data,
+                       enum mg_resolve_err e) {
   struct mg_connection *nc = (struct mg_connection *) data;
   int i;
   int failure = -1;
 
+  nc->flags &= ~MG_F_RESOLVING;
   if (msg != NULL) {
     /*
      * Take the first DNS A answer and run...
@@ -2508,6 +2512,11 @@ static void resolve_cb(struct mg_dns_message *msg, void *data) {
         return;
       }
     }
+  }
+
+  if (e == MG_RESOLVE_TIMEOUT) {
+    double now = time(NULL);
+    mg_call(nc, NULL, MG_EV_TIMER, &now);
   }
 
   /*
@@ -2555,12 +2564,18 @@ struct mg_connection *mg_connect_opt(struct mg_mgr *mgr, const char *address,
      * DNS resolution is required for host.
      * mg_parse_address() fills port in nc->sa, which we pass to resolve_cb()
      */
-    if (mg_resolve_async(nc->mgr, host, MG_DNS_A_RECORD, resolve_cb, nc) != 0) {
+    struct mg_connection *dns_conn = NULL;
+    struct mg_resolve_async_opts o;
+    memset(&o, 0, sizeof(o));
+    o.dns_conn = &dns_conn;
+    if (mg_resolve_async_opt(nc->mgr, host, MG_DNS_A_RECORD, resolve_cb, nc,
+                             o) != 0) {
       MG_SET_PTRPTR(opts.error_string, "cannot schedule DNS lookup");
       mg_destroy_conn(nc);
       return NULL;
     }
-
+    nc->priv_2 = dns_conn;
+    nc->flags |= MG_F_RESOLVING;
     return nc;
 #else
     MG_SET_PTRPTR(opts.error_string, "Resolver is disabled");
@@ -2697,6 +2712,22 @@ int mg_check_ip_acl(const char *acl, uint32_t remote_ip) {
 void mg_forward(struct mg_connection *from, struct mg_connection *to) {
   mg_send(to, from->recv_mbuf.buf, from->recv_mbuf.len);
   mbuf_remove(&from->recv_mbuf, from->recv_mbuf.len);
+}
+
+double mg_set_timer(struct mg_connection *c, double timestamp) {
+  double result = c->ev_timer_time;
+  c->ev_timer_time = timestamp;
+  /*
+   * If this connection is resolving, it's not in the list of active
+   * connections, so not processed yet. It has a DNS resolver connection
+   * linked to it. Set up a timer for the DNS connection.
+   */
+  DBG(("%p %p %d -> %lu", c, c->priv_2, c->flags & MG_F_RESOLVING,
+       (unsigned long) timestamp));
+  if ((c->flags & MG_F_RESOLVING) && c->priv_2 != NULL) {
+    ((struct mg_connection *) c->priv_2)->ev_timer_time = timestamp;
+  }
+  return result;
 }
 #ifdef NS_MODULE_LINES
 #line 1 "src/net_if_socket.c"
@@ -3141,6 +3172,7 @@ static void mg_mgr_handle_ctl_sock(struct mg_mgr *mgr) {
   int len =
       (int) MG_RECV_FUNC(mgr->ctl[1], (char *) &ctl_msg, sizeof(ctl_msg), 0);
   size_t dummy = MG_SEND_FUNC(mgr->ctl[1], ctl_msg.message, 1, 0);
+  DBG(("read %d from ctl socket", len));
   (void) dummy; /* https://gcc.gnu.org/bugzilla/show_bug.cgi?id=25509 */
   if (len >= (int) sizeof(ctl_msg.callback) && ctl_msg.callback != NULL) {
     struct mg_connection *nc;
@@ -3367,7 +3399,9 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int milli) {
   FD_ZERO(&read_set);
   FD_ZERO(&write_set);
   FD_ZERO(&err_set);
+#ifndef MG_DISABLE_SOCKETPAIR
   mg_add_to_set(mgr->ctl[1], &read_set, &max_fd);
+#endif
 
   for (nc = mgr->active_connections, num_fds = 0; nc != NULL; nc = tmp) {
     tmp = nc->next;
@@ -7830,6 +7864,7 @@ struct mg_resolve_async_request {
   void *data;
   time_t timeout;
   int max_retries;
+  enum mg_resolve_err err;
 
   /* state */
   time_t last_time;
@@ -7959,6 +7994,7 @@ static void mg_resolve_async_eh(struct mg_connection *nc, int ev, void *data) {
     case MG_EV_CONNECT:
     case MG_EV_POLL:
       if (req->retries > req->max_retries) {
+        req->err = MG_RESOLVE_EXCEEDED_RETRY_COUNT;
         nc->flags |= MG_F_CLOSE_IMMEDIATELY;
         break;
       }
@@ -7972,9 +8008,11 @@ static void mg_resolve_async_eh(struct mg_connection *nc, int ev, void *data) {
       msg = (struct mg_dns_message *) MG_MALLOC(sizeof(*msg));
       if (mg_parse_dns(nc->recv_mbuf.buf, *(int *) data, msg) == 0 &&
           msg->num_answers > 0) {
-        req->callback(msg, req->data);
+        req->callback(msg, req->data, MG_RESOLVE_OK);
         nc->user_data = NULL;
         MG_FREE(req);
+      } else {
+        req->err = MG_RESOLVE_NO_ANSWERS;
       }
       MG_FREE(msg);
       nc->flags |= MG_F_CLOSE_IMMEDIATELY;
@@ -7987,10 +8025,14 @@ static void mg_resolve_async_eh(struct mg_connection *nc, int ev, void *data) {
       nc->flags &= ~MG_F_CLOSE_IMMEDIATELY;
       mbuf_remove(&nc->send_mbuf, nc->send_mbuf.len);
       break;
+    case MG_EV_TIMER:
+      req->err = MG_RESOLVE_TIMEOUT;
+      nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+      break;
     case MG_EV_CLOSE:
       /* If we got here with request still not done, fire an error callback. */
       if (req != NULL) {
-        req->callback(NULL, req->data);
+        req->callback(NULL, req->data, req->err);
         nc->user_data = NULL;
         MG_FREE(req);
       }
@@ -8012,7 +8054,7 @@ int mg_resolve_async_opt(struct mg_mgr *mgr, const char *name, int query,
   struct mg_connection *dns_nc;
   const char *nameserver = opts.nameserver_url;
 
-  DBG(("%s %d", name, query));
+  DBG(("%s %d %p", name, query, opts.dns_conn));
 
   /* resolve with DNS */
   req = (struct mg_resolve_async_request *) MG_CALLOC(1, sizeof(*req));
@@ -8045,6 +8087,9 @@ int mg_resolve_async_opt(struct mg_mgr *mgr, const char *name, int query,
     return -1;
   }
   dns_nc->user_data = req;
+  if (opts.dns_conn != NULL) {
+    *opts.dns_conn = dns_nc;
+  }
 
   return 0;
 }
