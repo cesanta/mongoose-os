@@ -73,7 +73,7 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 APP_LIBS = c crypto gcc hal pp phy net80211 wpa main
 
 # linker script used for the above linkier step
-LD_SCRIPT = user/smartjs_no_bootloader.ld
+LD_SCRIPT = ld/no_bootloader.ld
 
 FW_FILE_1_ADDR = 0x00000
 FW_FILE_2_ADDR = 0x11000
@@ -166,7 +166,7 @@ ifneq "$(NETTEST)" ""
 CFLAGS += -DRTOS_NETWORK_TEST
 endif
 #TODO(alashkin): try to use the same LD script
-LD_SCRIPT = user/eagle.app.v6.RTOS.ld
+LD_SCRIPT = ld/eagle.app.v6.RTOS.ld
 else # OSS SDK
 IPATH += lwip/src/include lwip/src/include/ipv4 lwip/espressif/include
 APP_LIBS += m lwip_cs
@@ -205,7 +205,7 @@ FW_FILES_OUT = $(addprefix $(FW_DIR)/, $(addsuffix .bin, $(FWs)))
 ESP_FS_SRC =./user/esp_fs.c
 ESP_FS_OBJ = $(BUILD_DIR)/esp_fs.o
 BOOT_CFG = ./user/boot.cfg
-LDSCRIPT_TEMPL = ./user/smartjs_use_bootloader.ld
+LD_SCRIPT_TEMPL = ld/bootloader.ld
 FW_FS_OUT = $(FW_DIR)/fs.bin
 endif
 
@@ -250,7 +250,7 @@ ifeq "$(USE_BOOTLOADER)" "1"
 				| grep $(basename $(notdir $@)): | awk -F ':' '{print $$4}'))
 	$(eval IROM0ADDR=$(shell cat $(BOOT_CFG)  \
 				| grep $(basename $(notdir $@)): | awk -F ':' '{print $$3}'))
-	$(Q) sed -e 's/_IROM0ADDR/$(IROM0ADDR)/' $(LDSCRIPT_TEMPL) > $(BUILD_DIR)/smartjs_ls_$(IROM0ADDR).ld
+	$(Q) sed -e 's/_IROM0ADDR/$(IROM0ADDR)/' $(LD_SCRIPT_TEMPL) > $(BUILD_DIR)/smartjs_ls_$(IROM0ADDR).ld
 	$(eval LD_SCRIPT=$(BUILD_DIR)/smartjs_ls_$(IROM0ADDR).ld)
 	$(vecho) "Linking for IROM0 = $(IROM0ADDR), FS = $(FW_FS_ADDR)"
 	$(compile_fs)

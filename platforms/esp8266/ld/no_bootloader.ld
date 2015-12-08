@@ -17,4 +17,4 @@ PHDRS
   irom0_0_phdr PT_LOAD;
 }
 
-INCLUDE "smartjs_ld_common.ld"
+INCLUDE "../ld/common.ld"
