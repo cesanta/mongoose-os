@@ -77,7 +77,7 @@ FW_FILE_1_ADDR = 0x00000
 FW_FILE_2_ADDR = 0x11000
 
 # spiffs parameters
-FW_FS_ADDR = 0x70000
+FW_FS_ADDR = 0x71000
 FW_FS_SIZE = 49152
 
 SHIMS = -DNDEBUG
@@ -87,7 +87,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DV7_ENABLE_COMPACTING_GC -DNO_BSD_SOCKETS -DDISABLE_MD5 \
            -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
            -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
-           -DV7_ENABLE__Memory__stats -DV7_ENABLE_SPIFFS \
+           -DV7_ENABLE__Memory__stats -DCS_ENABLE_SPIFFS \
            -DESP_FLASH_BYTES_EMUL -DV7_FORCE_STRICT_MODE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
@@ -103,10 +103,9 @@ MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
                     -DMG_DISABLE_MD5 \
                     -DMG_DISABLE_SOCKETPAIR \
                     -DMG_DISABLE_HTTP_KEEP_ALIVE \
-                    -DMG_DISABLE_DAV \
+                    -DMG_DISABLE_DAV_AUTH \
                     -DMG_DISABLE_CGI \
                     -DMG_DISABLE_SSI \
-                    -DMG_DISABLE_DIRECTORY_LISTING \
                     -DMG_MAX_HTTP_HEADERS=20 \
                     -DMG_MAX_HTTP_REQUEST_SIZE=1024 \
                     -DMG_MAX_PATH=40 \
@@ -186,7 +185,7 @@ FW_FILE_1_OUT = $(FW_DIR)/$(FW_FILE_1_ADDR).bin
 FW_FILE_2_OUT = $(FW_DIR)/$(FW_FILE_2_ADDR).bin
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 FW_FS_OUT = $(FW_DIR)/$(FW_FS_ADDR).bin
-FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_ESP_DIR)/fs/*) 
+FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_ESP_DIR)/fs/*)
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
