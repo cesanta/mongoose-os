@@ -120,7 +120,7 @@ static v7_val_t sj_ws_ctor(struct v7 *v7) {
   if (v7_is_object(this_obj) && this_obj != v7_get_global(v7)) {
     int use_ssl = 0;
     size_t len;
-    const char *url = v7_to_string(v7, &urlv, &len);
+    const char *url = v7_get_string_data(v7, &urlv, &len);
 
     if (strncmp(url, "ws://", 5) == 0) {
       url += 5;
@@ -148,11 +148,11 @@ static v7_val_t sj_ws_ctor(struct v7 *v7) {
     v7_own(v7, &ud->ws);
 
     if (v7_is_string(subprotov)) {
-      ud->proto = strdup(v7_to_string(v7, &subprotov, &n));
+      ud->proto = strdup(v7_get_string_data(v7, &subprotov, &n));
     }
 
     if (v7_is_string(ehv)) {
-      ud->extra_headers = strdup(v7_to_string(v7, &ehv, &n));
+      ud->extra_headers = strdup(v7_get_string_data(v7, &ehv, &n));
     }
   } else {
     return v7_throw(v7, "Error", "WebSocket ctor called without new");
@@ -192,7 +192,7 @@ static void _WebSocket_send_blob(struct v7 *v7, struct mg_connection *nc,
      * TODO(mkm): find a better API.
      */
     if (!v7_is_undefined(chunk)) {
-      data = v7_to_string(v7, &chunk, &len);
+      data = v7_get_string_data(v7, &chunk, &len);
       mg_send_websocket_frame(nc, op | flag, data, len);
     }
   }
@@ -202,7 +202,7 @@ static void _WebSocket_send_string(struct v7 *v7, struct mg_connection *nc,
                                    v7_val_t s) {
   const char *data;
   size_t len;
-  data = v7_to_string(v7, &s, &len);
+  data = v7_get_string_data(v7, &s, &len);
   mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
 }
 

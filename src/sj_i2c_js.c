@@ -172,7 +172,7 @@ static v7_val_t i2cjs_send(struct v7 *v7) {
       result = i2c_send_byte(conn, (uint8_t) byte);
     }
   } else if (v7_is_string(data_val)) {
-    const char *data = v7_to_string(v7, &data_val, &len);
+    const char *data = v7_get_string_data(v7, &data_val, &len);
     result = i2c_send_bytes(conn, (uint8_t *) data, len);
   }
 
@@ -226,7 +226,7 @@ static v7_val_t i2cjs_readString(struct v7 *v7) {
   }
 
   result = v7_create_string(v7, 0, v7_to_number(len_val), 1);
-  str = v7_to_string(v7, &result, &tmp);
+  str = v7_get_string_data(v7, &result, &tmp);
   i2c_read_bytes(conn, v7_to_number(len_val), (uint8_t *) str, ack_type);
 
   return result;

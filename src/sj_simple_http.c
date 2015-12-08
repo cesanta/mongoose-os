@@ -29,11 +29,11 @@ static v7_val_t sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
   }
 
   if (v7_is_string(bodyv)) {
-    body = v7_to_string(v7, &bodyv, &body_len);
+    body = v7_get_string_data(v7, &bodyv, &body_len);
   }
 
-  return v7_create_boolean(sj_http_call(v7, v7_to_string(v7, &urlv, &url_len),
-                                        body, body_len, method, cb));
+  return v7_create_boolean(sj_http_call(
+      v7, v7_get_string_data(v7, &urlv, &url_len), body, body_len, method, cb));
 }
 
 static v7_val_t sj_http_get(struct v7 *v7) {

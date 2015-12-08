@@ -184,8 +184,8 @@ static v7_val_t Http_response_writeHead(struct v7 *v7) {
     unsigned int attrs;
     while ((h = v7_next_prop(h, arg1, &name, &value, &attrs)) != NULL) {
       size_t n1, n2;
-      const char *s1 = v7_to_string(v7, &name, &n1);
-      const char *s2 = v7_to_string(v7, &value, &n2);
+      const char *s1 = v7_get_string_data(v7, &name, &n1);
+      const char *s2 = v7_get_string_data(v7, &value, &n2);
       mg_printf(c, "%.*s: %.*s\r\n", (int) n1, s1, (int) n2, s2);
     }
   }
@@ -220,7 +220,7 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
     v7_val_t v = v7_get(v7, obj, s_map[i].name, ~0);
     if (v7_is_string(v)) {
       size_t n;
-      const char *str = v7_to_string(v7, &v, &n);
+      const char *str = v7_get_string_data(v7, &v, &n);
       *(char **) ((char *) opts + s_map[i].offset) = strdup(str);
     }
   }
@@ -233,7 +233,7 @@ static v7_val_t Http_response_serve(struct v7 *v7) {
   size_t i, n;
   v7_val_t request = v7_get(v7, v7_get_this(v7), "_r", ~0);
   v7_val_t url_v = v7_get(v7, request, "url", ~0);
-  const char *url = v7_to_string(v7, &url_v, &n);
+  const char *url = v7_get_string_data(v7, &url_v, &n);
   const char *quest = strchr(url, '?');
 
   memset(&opts, 0, sizeof(opts));
@@ -297,9 +297,11 @@ static v7_val_t Http_createClient(struct v7 *v7) {
   v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
   v7_val_t v_m = v7_get(v7, opts, "method", ~0);
   int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
-  const char *host = v7_is_string(v_h) ? v7_to_string(v7, &v_h, &n) : "";
-  const char *uri = v7_is_string(v_uri) ? v7_to_string(v7, &v_uri, &n) : "/";
-  const char *method = v7_is_string(v_m) ? v7_to_string(v7, &v_m, &n) : "GET";
+  const char *host = v7_is_string(v_h) ? v7_get_string_data(v7, &v_h, &n) : "";
+  const char *uri =
+      v7_is_string(v_uri) ? v7_get_string_data(v7, &v_uri, &n) : "/";
+  const char *method =
+      v7_is_string(v_m) ? v7_get_string_data(v7, &v_m, &n) : "GET";
 
   snprintf(addr, sizeof(addr), "%s:%d", host, port);
 

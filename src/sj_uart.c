@@ -50,7 +50,7 @@ static v7_val_t UART_ctor(struct v7 *v7) {
   ud->cb = v7_create_undefined();
   v7_own(v7, &ud->cb);
 
-  name = v7_to_string(v7, &dev, &len);
+  name = v7_get_string_data(v7, &dev, &len);
   uart = sj_hal_open_uart(name, (void *) ud);
   if (uart == NULL) {
     return v7_throw(v7, "Error", "cannot open uart");
@@ -65,7 +65,7 @@ static v7_val_t UART_write(struct v7 *v7) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_get(v7, this_obj, "_dev", ~0), data = v7_arg(v7, 0);
   size_t len;
-  const char *d = v7_to_string(v7, &data, &len);
+  const char *d = v7_get_string_data(v7, &data, &len);
 
   (void) v7;
   (void) this_obj;

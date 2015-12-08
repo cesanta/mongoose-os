@@ -20,8 +20,8 @@ static v7_val_t sj_Wifi_setup(struct v7 *v7) {
     return v7_create_undefined();
   }
 
-  ssid = v7_to_string(v7, &ssidv, &ssid_len);
-  pass = v7_to_string(v7, &passv, &pass_len);
+  ssid = v7_get_string_data(v7, &ssidv, &ssid_len);
+  pass = v7_get_string_data(v7, &passv, &pass_len);
 
   return v7_create_boolean(sj_wifi_setup_sta(ssid, pass));
 }

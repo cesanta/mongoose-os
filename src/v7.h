@@ -268,16 +268,38 @@ double v7_to_number(v7_val_t);
 v7_cfunction_t v7_to_cfunction(v7_val_t);
 
 /*
- * Return pointer to string stored in `v7_val_t`.
- * String length returned in `string_len`. For all strings owned by V7
- * engine, returned string pointer is
- * guaranteed to be 0-terminated, suitable for standard C library string API.
+ * Return a pointer to the string stored in `v7_val_t`.
+ *
+ * String length returned in `string_len`.
+ *
+ * JS strings can contain embedded NUL chars and might or not might be NUL
+ *terminated.
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
  * garbage collector, which in turn may relocate string data and invalidate
- * pointer returned by `v7_to_string()`.
+ * pointer returned by `v7_get_string_data()`.
+ *
+ * Short JS strings are embedded inside the `v7_val_t` value itself. This is why
+ * a pointer to a `v7_val_t` is required. It also means that the string data
+ * will become invalid once that `v7_val_t` value goes out of scope.
  */
-const char *v7_to_string(struct v7 *, v7_val_t *value, size_t *string_len);
+const char *v7_get_string_data(struct v7 *, v7_val_t *value,
+                               size_t *string_len);
+
+/*
+ * Returns a pointer to the string stored in `v7_val_t`.
+ *
+ * Returns NULL if the value is not a string or if the string is not compatible
+ * with a C string.
+ *
+ * C compatible strings contain exactly one NUL char, in terminal position.
+ *
+ * All strings owned by the V7 engine (see v7_create_string) are guaranteed to
+ * be NUL terminated.
+ * Out of these, those that don't include embedded NUL chars are guaranteed to
+ * be C compatible.
+ */
+const char *v7_to_cstring(struct v7 *v7, v7_val_t *value);
 
 /* Return root level (`global`) object of the given V7 instance. */
 v7_val_t v7_get_global(struct v7 *);
