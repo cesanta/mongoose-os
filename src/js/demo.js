@@ -1,20 +1,24 @@
 if (typeof(Debug) == 'undefined') {
   // This is stub for CC3200
-  Debug = {};
+  var Debug = {};
 
   Debug.print = function(a,b) {
     print(a, b);
   }
 }
 
+if (!conf){
+  var conf = {};
+}
+
 if (typeof(conf.user) == 'undefined') {
   print("Initializing demo data source")
-  t = {};
+  var t = {};
   t.getTemp = function() { return 20+Math.random()*20 };
 } else if (conf.user.demo == 'MCP9808') {
   File.eval('I2C.js');
   File.eval('MCP9808.js');
-  t = new MCP9808(new I2C(14,12), MCP9808.addr(1,1,1));
+  var t = new MCP9808(new I2C(14,12), MCP9808.addr(1,1,1));
 } else if (conf.user.demo == 'MC24FC') {
   File.eval('I2C.js');
   File.eval('MC24FC.js');
