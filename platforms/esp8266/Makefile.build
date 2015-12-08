@@ -51,10 +51,12 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
             sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c
 
-JSBIN_SRCS := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
-              $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
-              $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js \
-              $(SJSJS_PATH)/demo.js $(SJSJS_PATH)/fileservice.js \
+JSBIN_SRCS := $(SJSJS_PATH)/clubby.js \
+              $(SJSJS_PATH)/cloud.js \
+              $(SJSJS_PATH)/swupdate.js \
+              $(SJSJS_PATH)/demo.js \
+              $(SJSJS_PATH)/fileservice.js \
+              $(SJSJS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
 JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
 
@@ -92,7 +94,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC \
-           -DV7_MMAP_EXEC_ONLY="smart.js_clubby.js_sys_rts.js_MCXXX_LCD.js_I2C.js_cloud.js_demo.js" \
+           -DV7_MMAP_EXEC_ONLY="clubby.js_I2C.js_cloud.js_demo.js" \
            $(FEATURES_EXTRA)
 
 MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
