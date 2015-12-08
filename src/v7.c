@@ -125,6 +125,10 @@ enum v7_err v7_exec_file(struct v7 *, const char *path, v7_val_t *result);
 enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
                          v7_val_t *result);
 
+#if defined(V7_ENABLE_BCODE)
+enum v7_err v7_exec_bcode(struct v7 *v7, const char *src, v7_val_t *res);
+#endif
+
 /*
  * Parse `str` and store corresponding JavaScript object in `res` variable.
  * String `str` should be '\0'-terminated.
@@ -1497,6 +1501,37 @@ size_t strnlen(const char *s, size_t maxlen);
 #ifdef __cplusplus
 }
 #endif
+#endif
+#ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/cs_dirent.h"
+/**/
+#endif
+#ifndef DIRENT_H_INCLUDED
+#define DIRENT_H_INCLUDED
+
+#ifdef CS_ENABLE_SPIFFS
+
+#include <spiffs.h>
+
+typedef struct {
+  spiffs_DIR dh;
+  struct spiffs_dirent de;
+} DIR;
+
+#define d_name name
+#define dirent spiffs_dirent
+
+int rmdir(const char *path);
+int mkdir(const char *path, mode_t mode);
+
+#endif
+
+#if defined(_WIN32) || defined(CS_ENABLE_SPIFFS)
+DIR *opendir(const char *dir_name);
+int closedir(DIR *dir);
+struct dirent *readdir(DIR *dir);
+#endif
+
 #endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/ubjson.h"
@@ -2986,6 +3021,8 @@ struct v7_vec {
 #define V7_STATIC_ASSERT(COND, MSG) \
   typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
 
+#if !defined(V7_USE_BCODE)
+
 #ifndef NDEBUG
 #define V7_CHECK(v7, COND)                                            \
   do {                                                                \
@@ -3000,6 +3037,20 @@ struct v7_vec {
   } while (0)
 #endif
 
+#else
+
+/*
+ * TODO(dfrank): check all usages of this macro, and convert it to bcode-
+ * compatible "throwing"
+ */
+#define V7_CHECK(v7, COND) \
+  do {                     \
+    if (!(COND)) {         \
+    }                      \
+  } while (0)
+
+#endif
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -3007,10 +3058,7 @@ extern "C" {
 v7_val_t v7_throw(struct v7 *, const char *typ, const char *msg_fmt,
                   ...) WARN_UNUSED_RESULT;
 v7_val_t v7_throw_value(struct v7 *, v7_val_t v) WARN_UNUSED_RESULT;
-V7_PRIVATE void i_throw_value(struct v7 *, v7_val_t v) NORETURN;
 V7_PRIVATE val_t create_exception(struct v7 *, const char *typ, const char *);
-V7_PRIVATE void throw_exception(struct v7 *, const char *typ, const char *,
-                                ...) NORETURN;
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 V7_PRIVATE void init_js_stdlib(struct v7 *);
@@ -3026,12 +3074,18 @@ V7_PRIVATE double v7_char_code_at(struct v7 *v7, val_t s, val_t at);
 V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 #endif
 
+#if !defined(V7_USE_BCODE)
 V7_PRIVATE enum v7_err i_apply(struct v7 *v7, v7_val_t *volatile result,
                                val_t f, val_t this_object, val_t args,
                                uint8_t is_constructor);
 
 V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
                               val_t *res, val_t w, int is_json, int fr);
+
+V7_PRIVATE void i_throw_value(struct v7 *, v7_val_t v) NORETURN;
+V7_PRIVATE void throw_exception(struct v7 *, const char *typ, const char *,
+                                ...) NORETURN;
+#endif
 
 #if defined(__cplusplus)
 }
@@ -3685,12 +3739,9 @@ V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
 
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *, struct bcode *);
 
+#ifdef V7_BCODE_DUMP
 V7_PRIVATE void dump_bcode(FILE *, struct bcode *);
-
-V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
-                                     v7_val_t *res);
-V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
-                                          v7_val_t *res);
+#endif
 
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
 V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
@@ -6358,7 +6409,7 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/dirent.c"
+#line 1 "./src/../../common/cs_dirent.c"
 /**/
 #endif
 /*
@@ -6369,6 +6420,7 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 #ifndef EXCLUDE_COMMON
 
 /* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "cs_dirent.h" */
 
 /*
  * This file contains POSIX opendir/closedir/readdir API implementation
@@ -6449,6 +6501,48 @@ struct dirent *readdir(DIR *dir) {
   return result;
 }
 #endif
+
+#ifdef CS_ENABLE_SPIFFS
+
+DIR *opendir(const char *dir_name) {
+  DIR *dir = NULL;
+  extern spiffs fs;
+
+  if (dir_name != NULL && (dir = (DIR *) malloc(sizeof(*dir))) != NULL &&
+      SPIFFS_opendir(&fs, (char *) dir_name, &dir->dh) == NULL) {
+    free(dir);
+    dir = NULL;
+  }
+
+  return dir;
+}
+
+int closedir(DIR *dir) {
+  if (dir != NULL) {
+    SPIFFS_closedir(&dir->dh);
+    free(dir);
+  }
+  return 0;
+}
+
+struct dirent *readdir(DIR *dir) {
+  return SPIFFS_readdir(&dir->dh, &dir->de);
+}
+
+/* SPIFFs doesn't support directory operations */
+int rmdir(const char *path) {
+  (void) path;
+  return ENOTDIR;
+}
+
+int mkdir(const char *path, mode_t mode) {
+  (void) path;
+  (void) mode;
+  /* for spiffs supports only root dir, which comes from mongoose as '.' */
+  return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
+}
+
+#endif /* CS_ENABLE_SPIFFS */
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
@@ -6838,45 +6932,9 @@ void cr_context_free(struct cr_ctx *p_ctx) {
 /* Amalgamated: #include "mbuf.h" */
 /* Amalgamated: #include "cs_file.h" */
 /* Amalgamated: #include "v7_features.h" */
+/* Amalgamated: #include "dirent.h" */
 
 #if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
-
-#ifdef V7_ENABLE_SPIFFS
-#include <spiffs.h>
-
-typedef struct {
-  spiffs_DIR dh;
-  struct spiffs_dirent de;
-} DIR;
-
-DIR *opendir(const char *dir_name) {
-  DIR *dir = NULL;
-  extern spiffs fs;
-
-  if (dir_name != NULL && (dir = (DIR *) malloc(sizeof(*dir))) != NULL &&
-      SPIFFS_opendir(&fs, (char *) dir_name, &dir->dh) == NULL) {
-    free(dir);
-    dir = NULL;
-  }
-
-  return dir;
-}
-
-int closedir(DIR *dir) {
-  if (dir != NULL) {
-    SPIFFS_closedir(&dir->dh);
-    free(dir);
-  }
-  return 0;
-}
-
-#define d_name name
-#define dirent spiffs_dirent
-
-struct dirent *readdir(DIR *dir) {
-  return SPIFFS_readdir(&dir->dh, &dir->de);
-}
-#endif /* V7_ENABLE_SPIFFS */
 
 static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
@@ -10275,7 +10333,13 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
 
   if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
     if (v7->strict_mode) {
+#if !defined(V7_USE_BCODE)
       throw_exception(v7, TYPE_ERROR, "Object is not extensible");
+#else
+/*
+ * TODO(dfrank): take advantage of v7_throw()
+ */
+#endif
     }
     return NULL;
   }
@@ -11192,6 +11256,13 @@ enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *result) {
   return EXEC(v7, str, 0, result, v7_create_undefined(), 1, 0);
 }
 
+#if defined(V7_ENABLE_BCODE)
+/* TODO(dfrank): remove this function */
+enum v7_err v7_exec_bcode(struct v7 *v7, const char *src, v7_val_t *res) {
+  return b_exec(v7, src, 0, res, v7_create_undefined(), 0, 0);
+}
+#endif
+
 #ifndef V7_NO_FS
 static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
                              int is_json) {
@@ -11276,6 +11347,120 @@ cleanup:
 #else
   return APPLY(v7, result, func, this_obj, args, 0);
 #endif
+}
+
+V7_PRIVATE val_t
+create_exception(struct v7 *v7, const char *typ, const char *msg) {
+  val_t e, args, typv;
+#if 0
+  assert(v7_is_undefined(v7->thrown_error));
+#endif
+
+  if (v7->creating_exception) {
+#ifndef NO_LIBC
+    fprintf(stderr, "Exception creation throws an exception %s: %s\n", typ,
+            msg);
+#endif
+    return V7_UNDEFINED;
+  }
+  args = v7_create_dense_array(v7);
+  v7_own(v7, &args);
+  v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
+  v7->creating_exception++;
+  typv = v7_get(v7, v7->global_object, typ, ~0);
+  if (v7_is_undefined(typv)) {
+    fprintf(stderr, "cannot find exception %s\n", typ);
+  }
+  v7_own(v7, &typv);
+  e = create_object(v7, v7_get(v7, typv, "prototype", 9));
+  v7_own(v7, &e);
+  apply_private(v7, NULL, typv, e, args, 0);
+  v7_disown(v7, &typv);
+  v7_disown(v7, &e);
+  v7_disown(v7, &args);
+  v7->creating_exception--;
+  return e;
+}
+
+V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
+  val_t f;
+  if (!v7_is_object(v)) {
+    return v;
+  }
+
+  if ((f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
+    /*
+     * apply_private will root all parameters since it can be called
+     * from user code, hence it's not necessary to root `f`.
+     * This assumes all callers of i_value_of will root their
+     * temporary values.
+     */
+    /* TODO(dfrank): check return value */
+    apply_private(v7, &v, f, v, v7_create_undefined(), 0);
+  }
+  return v;
+}
+
+/* i_as_num expects callers to root temporary values passed as args */
+V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
+  double res = 0.0;
+
+  v = i_value_of(v7, v);
+  if (v7_is_number(v)) {
+    res = v7_to_number(v);
+  } else if (v7_is_string(v)) {
+    size_t n;
+    char *e, *s = (char *) v7_get_string_data(v7, &v, &n);
+    if (n != 0) {
+      res = strtod(s, &e);
+      if (e - n != s) {
+        res = NAN;
+      }
+    }
+  } else if (v7_is_boolean(v)) {
+    res = (double) v7_to_boolean(v);
+  } else if (v7_is_null(v)) {
+    res = 0.0;
+  } else {
+    res = NAN;
+  }
+  return res;
+}
+
+val_t v7_throw_value(struct v7 *v7, val_t v) {
+  v7->thrown_error = v;
+  v7->is_thrown = 1;
+  return v7_create_undefined();
+}
+
+v7_val_t v7_throw(struct v7 *v7, const char *typ, const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  return v7_throw_value(v7, create_exception(v7, typ, v7->error_msg));
+}
+
+int v7_has_thrown(struct v7 *v7) {
+  return v7->is_thrown;
+}
+
+void v7_interrupt(struct v7 *v7) {
+  v7->interrupt = 1;
+}
+
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
+  val_t frame, func, args;
+
+  for (frame = v7_get(v7, e, "stack", ~0); v7_is_object(frame);
+       frame = v7_get(v7, frame, "____p", ~0)) {
+    args = v7_get(v7, frame, "arguments", ~0);
+    if (v7_is_object(args)) {
+      func = v7_get(v7, args, "callee", ~0);
+      fprintf(f, "   at: ");
+      v7_fprintln(f, v7, func);
+    }
+  }
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
@@ -11769,7 +11954,7 @@ int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n) {
 
 void gc_check_valid_allocation_seqn(struct v7 *v7, uint16_t n) {
   if (!gc_is_valid_allocation_seqn(v7, n)) {
-#ifndef V7_GC_ASN_PANIC
+#if !defined(V7_GC_ASN_PANIC) && !defined(V7_USE_BCODE)
     throw_exception(v7, INTERNAL_ERROR, "Invalid ASN: %d", (int) n);
 #else
     fprintf(stderr, "Invalid ASN: %d\n", (int) n);
@@ -14719,6 +14904,8 @@ const char *v7_get_parser_error(struct v7 *v7) {
 /* Amalgamated: #include "cs_file.h" */
 /* Amalgamated: #include "ast.h" */
 
+#if !defined(V7_USE_BCODE)
+
 #undef siglongjmp
 #undef sigsetjmp
 
@@ -14738,54 +14925,11 @@ static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
                          int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
-val_t v7_throw_value(struct v7 *v7, val_t v) {
-  v7->thrown_error = v;
-  v7->is_thrown = 1;
-  return v7_create_undefined();
-}
-
 void i_throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
   v7->is_thrown = 1;
   siglongjmp(v7->jmp_buf, THROW_JMP);
 } /* LCOV_EXCL_LINE */
-
-int v7_has_thrown(struct v7 *v7) {
-  return v7->is_thrown;
-}
-
-V7_PRIVATE val_t
-create_exception(struct v7 *v7, const char *typ, const char *msg) {
-  val_t e, args, typv;
-#if 0
-  assert(v7_is_undefined(v7->thrown_error));
-#endif
-
-  if (v7->creating_exception) {
-#ifndef NO_LIBC
-    fprintf(stderr, "Exception creation throws an exception %s: %s\n", typ,
-            msg);
-#endif
-    return V7_UNDEFINED;
-  }
-  args = v7_create_dense_array(v7);
-  v7_own(v7, &args);
-  v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
-  v7->creating_exception++;
-  typv = v7_get(v7, v7->global_object, typ, ~0);
-  if (v7_is_undefined(typv)) {
-    fprintf(stderr, "cannot find exception %s\n", typ);
-  }
-  v7_own(v7, &typv);
-  e = create_object(v7, v7_get(v7, typv, "prototype", 9));
-  v7_own(v7, &e);
-  apply_private(v7, NULL, typv, e, args, 0);
-  v7_disown(v7, &typv);
-  v7_disown(v7, &e);
-  v7_disown(v7, &args);
-  v7->creating_exception--;
-  return e;
-}
 
 V7_PRIVATE void throw_exception(struct v7 *v7, const char *typ,
                                 const char *err_fmt, ...) {
@@ -14802,73 +14946,6 @@ void i_throw(struct v7 *v7, const char *err_fmt, ...) {
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   i_throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
-}
-
-v7_val_t v7_throw(struct v7 *v7, const char *typ, const char *err_fmt, ...) {
-  va_list ap;
-  va_start(ap, err_fmt);
-  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
-  va_end(ap);
-  return v7_throw_value(v7, create_exception(v7, typ, v7->error_msg));
-}
-
-void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
-  val_t frame, func, args;
-
-  for (frame = v7_get(v7, e, "stack", ~0); v7_is_object(frame);
-       frame = v7_get(v7, frame, "____p", ~0)) {
-    args = v7_get(v7, frame, "arguments", ~0);
-    if (v7_is_object(args)) {
-      func = v7_get(v7, args, "callee", ~0);
-      fprintf(f, "   at: ");
-      v7_fprintln(f, v7, func);
-    }
-  }
-}
-
-V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
-  val_t f;
-  if (!v7_is_object(v)) {
-    return v;
-  }
-
-  if ((f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
-    /*
-     * apply_private will root all parameters since it can be called
-     * from user code, hence it's not necessary to root `f`.
-     * This assumes all callers of i_value_of will root their
-     * temporary values.
-     */
-    /* TODO(dfrank): check return value */
-    apply_private(v7, &v, f, v, v7_create_undefined(), 0);
-  }
-  return v;
-}
-
-/* i_as_num expects callers to root temporary values passed as args */
-V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
-  double res = 0.0;
-
-  v = i_value_of(v7, v);
-  if (v7_is_number(v)) {
-    res = v7_to_number(v);
-  } else if (v7_is_string(v)) {
-    size_t n;
-    char *e, *s = (char *) v7_get_string_data(v7, &v, &n);
-    if (n != 0) {
-      res = strtod(s, &e);
-      if (e - n != s) {
-        res = NAN;
-      }
-    }
-  } else if (v7_is_boolean(v)) {
-    res = (double) v7_to_boolean(v);
-  } else if (v7_is_null(v)) {
-    res = 0.0;
-  } else {
-    res = NAN;
-  }
-  return res;
 }
 
 static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
@@ -16655,9 +16732,7 @@ cleanup:
   return err;
 }
 
-void v7_interrupt(struct v7 *v7) {
-  v7->interrupt = 1;
-}
+#endif /* !defined(V7_USE_BCODE) */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/bcode.c"
 /**/
@@ -16927,6 +17002,9 @@ static double b_int_bin_op(enum opcode op, double a, double b) {
       return ia & ib;
     default:
       assert(0);
+#if defined(NDEBUG)
+      return 0;
+#endif
   }
 }
 
@@ -16958,6 +17036,9 @@ static double b_num_bin_op(enum opcode op, double a, double b) {
       return b_int_bin_op(op, a, b);
     default:
       assert(0);
+#if defined(NDEBUG)
+      return 0;
+#endif
   }
 }
 
@@ -16983,6 +17064,9 @@ static int b_bool_bin_op(enum opcode op, double a, double b) {
       return a >= b;
     default:
       assert(0);
+#if defined(NDEBUG)
+      return 0;
+#endif
   }
 }
 
@@ -17007,6 +17091,7 @@ static size_t bcode_get_varint(uint8_t **ops) {
   return ret;
 }
 
+#ifdef V7_BCODE_DUMP
 V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   uint8_t *p = *ops;
 
@@ -17054,6 +17139,7 @@ V7_PRIVATE void dump_bcode(FILE *f, struct bcode *bcode) {
     dump_op(f, bcode, &p);
   }
 }
+#endif
 
 struct bcode_registers {
   struct bcode *bcode;
@@ -17206,7 +17292,7 @@ static enum local_block unwind_local_blocks_stack(
     while ((length = v7_array_length(v7, arr)) > 0) {
       /* get latest offset from the "try stack" */
       int64_t offset = v7_to_number(v7_array_get(v7, arr, length - 1));
-      enum local_block cur_block;
+      enum local_block cur_block = LOCAL_BLOCK_NONE;
 
       /* get id of the current block type */
       switch (LBLOCK_TAG(offset)) {
@@ -17582,12 +17668,13 @@ static void own_bcode(struct v7 *v7, struct bcode *p) {
 }
 
 static void disown_bcode(struct v7 *v7, struct bcode *p) {
+#ifndef NDEBUG
   struct bcode **vp =
       (struct bcode **) (v7->act_bcodes.buf + v7->act_bcodes.len - sizeof(p));
 
   /* given `p` should be the last item */
   assert(*vp == p);
-
+#endif
   v7->act_bcodes.len -= sizeof(p);
 }
 
@@ -18729,13 +18816,6 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
                  res, w, is_json, fr, 0);
 }
 
-/* TODO(dfrank): remove this function */
-V7_PRIVATE enum v7_err v7_exec_bcode(struct v7 *v7, const char *src,
-                                     v7_val_t *res) {
-  return b_exec2(v7, src, 0, v7_create_undefined(), v7_create_undefined(), res,
-                 v7_create_undefined(), 0, 0, 0);
-}
-
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op) {
   mbuf_append(&bcode->ops, &op, 1);
 }
@@ -18886,7 +18966,9 @@ static const enum ast_tag assign_ast_map[] = {
     AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
     AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
 
+#ifdef V7_BCODE_DUMP
 extern void dump_bcode(FILE *f, struct bcode *bcode);
+#endif
 
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode);
@@ -18985,6 +19067,7 @@ static size_t string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return bcode_add_lit(bcode, v7_create_string(v7, name, name_len, 1));
 }
 
+#if V7_ENABLE__RegExp
 static size_t regexp_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          struct bcode *bcode) {
   size_t name_len;
@@ -18996,6 +19079,7 @@ static size_t regexp_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
                        v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
                                         (name + name_len) - p - 1));
 }
+#endif
 
 /*
  * a++ and a-- need to ignore the updated value.
