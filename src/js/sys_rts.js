@@ -60,13 +60,13 @@ SJS.init = function() {
 };
 
 // cloud
-function initCloud() {
+function initCloud(ll) {
   File.eval("clubby.js");
   clubby = new Clubby({
     url: 'ws:' + conf.cloud + ':80',
     src: conf.dev.id,
     key: conf.dev.key,
-    log: false,
+    log: !!ll,
     onopen: function() {
       clubby.call(conf.cloud, {cmd: "/v1/Hello"}, function() {});
     }
