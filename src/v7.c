@@ -160,13 +160,38 @@ v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);
 
 /*
- * Create function object. `func` is a C callback, `nargs` is a number of
- * arguments
+ * Create a JS function object backed by a cfunction.
+ *
+ * `func` is a C callback, `nargs` is a number of arguments.
+ *
+ * Passing `-1` to `nargs` will avoid creating a `length` property. Accessing
+ * the `length` property in that case will thus invoke the prototype's `length`
+ * getter which defaults to 0.
+ *
+ * A function object is JS object having the Function prototype that holds a
+ * cfunction value in a hidden property.
+ *
+ * JS function objects have properties such as:
+ * - `length`: number of arguments
+ * - `prototype`: prototype of objects created when using the `new` operator
+ *
+ *
+ * ECMA compliance minor details:
+ *
+ * The `length` property is useful for introspection and the stdlib defines it
+ * for many core functions mostly because the ECMA test suite requires it and we
+ * don't want to skip otherwise useful tests just because the `length` property
+ * check fails early in the test. User defined functions don't need to specify
+ * the length and passing -1 is a safe choice, as it will also reduce the
+ * footprint.
+ *
+ * The subtle difference between set `length` explicitly to 0 rather than
+ * just defaulting the `0` value from the prototype is that in the former case
+ * the property cannot be change since it's read only. This again, is important
+ * only for ecma compliance and your user code might or might not find this
+ *relevant.
  */
 v7_val_t v7_create_function(struct v7 *, v7_cfunction_t func, int nargs);
-
-/* Create JavaScript value that holds C/C++ callback pointer. */
-v7_val_t v7_create_cfunction(v7_cfunction_t func);
 
 /* Make f a JS constructor function for objects with prototype in proto. */
 v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
@@ -219,6 +244,15 @@ v7_val_t v7_create_regexp(struct v7 *, const char *regex, size_t regex_len,
  * `sizeof(void*)` >= 8, please use byte arrays instead.
  */
 v7_val_t v7_create_foreign(void *ptr);
+
+/*
+ * Create a JS value that holds C/C++ callback pointer.
+ *
+ * This is a low-level function value. It's not a real object and cannot hold
+ * user defined properties. You should use `v7_create_function` unless you know
+ * what you're doing.
+ */
+v7_val_t v7_create_cfunction(v7_cfunction_t func);
 
 /* Return true if given value is a JavaScript object */
 int v7_is_object(v7_val_t);
