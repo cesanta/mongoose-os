@@ -6870,8 +6870,10 @@ static v7_val_t File_eval(struct v7 *v7) {
   v7_val_t res = v7_create_undefined();
 
   if (v7_is_string(arg0)) {
-    size_t n;
-    const char *s = v7_get_string_data(v7, &arg0, &n);
+    const char *s = v7_to_cstring(v7, &arg0);
+    if (s == NULL) {
+      return v7_throw(v7, "TypeError", "Invalid string");
+    }
     if (v7_exec_file(v7, s, &res) != V7_OK) {
       return v7_throw_value(v7, res);
     }
@@ -6954,12 +6956,17 @@ static v7_val_t File_open(struct v7 *v7) {
   FILE *fp = NULL;
 
   if (v7_is_string(arg0)) {
-    size_t n1, n2;
-    const char *s1 = v7_get_string_data(v7, &arg0, &n1);
+    const char *s1 = v7_to_cstring(v7, &arg0);
     const char *s2 = "rb"; /* Open files in read mode by default */
+
     if (v7_is_string(arg1)) {
-      s2 = v7_get_string_data(v7, &arg1, &n2);
+      s2 = v7_to_cstring(v7, &arg1);
     }
+
+    if (s1 == NULL || s2 == NULL) {
+      return v7_create_null();
+    }
+
     fp = fopen(s1, s2);
     if (fp != NULL) {
       v7_val_t obj = v7_create_object(v7);
@@ -6979,9 +6986,12 @@ static v7_val_t File_rename(struct v7 *v7) {
   int res = -1;
 
   if (v7_is_string(arg0) && v7_is_string(arg1)) {
-    size_t n1, n2;
-    const char *from = v7_get_string_data(v7, &arg0, &n1);
-    const char *to = v7_get_string_data(v7, &arg1, &n2);
+    const char *from = v7_to_cstring(v7, &arg0);
+    const char *to = v7_to_cstring(v7, &arg1);
+    if (from == NULL || to == NULL) {
+      return v7_create_number(ENOENT);
+    }
+
     res = rename(from, to);
   }
 
@@ -6991,8 +7001,9 @@ static v7_val_t File_rename(struct v7 *v7) {
 static v7_val_t File_loadJSON(struct v7 *v7) {
   v7_val_t arg0 = v7_arg(v7, 0), result = v7_create_undefined();
   if (v7_is_string(arg0)) {
-    size_t file_name_size;
-    const char *file_name = v7_get_string_data(v7, &arg0, &file_name_size);
+    const char *file_name = v7_to_cstring(v7, &arg0);
+    if (file_name == NULL) return result;
+
     if (v7_parse_json_file(v7, file_name, &result) != V7_OK) {
       result = v7_create_undefined();
     }
@@ -7004,8 +7015,10 @@ static v7_val_t File_remove(struct v7 *v7) {
   v7_val_t arg0 = v7_arg(v7, 0);
   int res = -1;
   if (v7_is_string(arg0)) {
-    size_t n;
-    const char *path = v7_get_string_data(v7, &arg0, &n);
+    const char *path = v7_to_cstring(v7, &arg0);
+    if (path == NULL) {
+      return v7_create_number(ENOENT);
+    }
     res = remove(path);
   }
   return v7_create_number(res == 0 ? 0 : errno);
@@ -7017,10 +7030,13 @@ static v7_val_t File_list(struct v7 *v7) {
   v7_val_t result = v7_create_undefined();
 
   if (v7_is_string(arg0)) {
-    size_t n;
-    const char *path = v7_get_string_data(v7, &arg0, &n);
+    const char *path = v7_to_cstring(v7, &arg0);
     struct dirent *dp;
     DIR *dirp;
+
+    if (path == NULL) {
+      return result;
+    }
 
     if ((dirp = (opendir(path))) != NULL) {
       result = v7_create_array(v7);
@@ -11187,6 +11203,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path, val_t *res) {
 enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
   return exec_file(v7, path, res, 1);
 }
+#endif /* V7_NO_FS */
 
 V7_PRIVATE enum v7_err apply_private(struct v7 *v7, v7_val_t *volatile result,
                                      v7_val_t func, v7_val_t this_obj,
@@ -11226,8 +11243,6 @@ cleanup:
   return APPLY(v7, result, func, this_obj, args, 0);
 #endif
 }
-
-#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
 /**/
@@ -16660,11 +16675,11 @@ void v7_interrupt(struct v7 *v7) {
  * Masks of data parts
  */
 #define LBLOCK_OFFSET_MASK \
-  ((uint64_t)(((uint64_t) 1 << LBLOCK_OFFSET_WIDTH) - 1) << LBLOCK_OFFSET_SHIFT)
+  ((int64_t)(((int64_t) 1 << LBLOCK_OFFSET_WIDTH) - 1) << LBLOCK_OFFSET_SHIFT)
 #define LBLOCK_TAG_MASK \
-  ((uint64_t)(((uint64_t) 1 << LBLOCK_TAG_WIDTH) - 1) << LBLOCK_TAG_SHIFT)
-#define LBLOCK_STACK_SIZE_MASK                               \
-  ((uint64_t)(((uint64_t) 1 << LBLOCK_STACK_SIZE_WIDTH) - 1) \
+  ((int64_t)(((int64_t) 1 << LBLOCK_TAG_WIDTH) - 1) << LBLOCK_TAG_SHIFT)
+#define LBLOCK_STACK_SIZE_MASK                             \
+  ((int64_t)(((int64_t) 1 << LBLOCK_STACK_SIZE_WIDTH) - 1) \
    << LBLOCK_STACK_SIZE_SHIFT)
 
 /*
@@ -16677,10 +16692,10 @@ void v7_interrupt(struct v7 *v7) {
 /*
  * Tags that are used for bcode offsets in "try stack" (`____p`)
  */
-#define LBLOCK_TAG_CATCH ((uint64_t) 0x01 << LBLOCK_TAG_SHIFT)
-#define LBLOCK_TAG_FINALLY ((uint64_t) 0x02 << LBLOCK_TAG_SHIFT)
-#define LBLOCK_TAG_LOOP ((uint64_t) 0x03 << LBLOCK_TAG_SHIFT)
-#define LBLOCK_TAG_SWITCH ((uint64_t) 0x04 << LBLOCK_TAG_SHIFT)
+#define LBLOCK_TAG_CATCH ((int64_t) 0x01 << LBLOCK_TAG_SHIFT)
+#define LBLOCK_TAG_FINALLY ((int64_t) 0x02 << LBLOCK_TAG_SHIFT)
+#define LBLOCK_TAG_LOOP ((int64_t) 0x03 << LBLOCK_TAG_SHIFT)
+#define LBLOCK_TAG_SWITCH ((int64_t) 0x04 << LBLOCK_TAG_SHIFT)
 
 /*
  * Yields 32-bit bcode offset value
@@ -16701,11 +16716,11 @@ void v7_interrupt(struct v7 *v7) {
   (((v) &LBLOCK_STACK_SIZE_MASK) >> LBLOCK_STACK_SIZE_SHIFT)
 
 /*
- * Yields `uint64_t` value to be stored as a JavaScript number
+ * Yields `int64_t` value to be stored as a JavaScript number
  */
 #define LBLOCK_ITEM_CREATE(offset, tag, stack_size) \
-  ((uint64_t)(offset) | (tag) |                     \
-   (((uint64_t)(stack_size)) << LBLOCK_STACK_SIZE_SHIFT))
+  ((int64_t)(offset) | (tag) |                      \
+   (((int64_t)(stack_size)) << LBLOCK_STACK_SIZE_SHIFT))
 
 /*
  * make sure `bcode_off_t` is just 32-bit, so that it can fit in double
@@ -17156,7 +17171,7 @@ static enum local_block unwind_local_blocks_stack(
      */
     while ((length = v7_array_length(v7, arr)) > 0) {
       /* get latest offset from the "try stack" */
-      uint64_t offset = v7_to_number(v7_array_get(v7, arr, length - 1));
+      int64_t offset = v7_to_number(v7_array_get(v7, arr, length - 1));
       enum local_block cur_block;
 
       /* get id of the current block type */
@@ -17463,7 +17478,7 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   bcode_off_t target;
-  uint64_t offset_tag = 0;
+  int64_t offset_tag = 0;
 
   tmp_stack_push(&tf, &arr);
 
