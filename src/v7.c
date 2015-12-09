@@ -166,40 +166,19 @@ v7_val_t v7_create_array(struct v7 *v7);
 /*
  * Create a JS function object backed by a cfunction.
  *
- * `func` is a C callback, `nargs` is a number of arguments.
- *
- * Passing `-1` to `nargs` will avoid creating a `length` property. Accessing
- * the `length` property in that case will thus invoke the prototype's `length`
- * getter which defaults to 0.
+ * `func` is a C callback.
  *
  * A function object is JS object having the Function prototype that holds a
  * cfunction value in a hidden property.
  *
- * JS function objects have properties such as:
- * - `length`: number of arguments
- * - `prototype`: prototype of objects created when using the `new` operator
- *
- *
- * ECMA compliance minor details:
- *
- * The `length` property is useful for introspection and the stdlib defines it
- * for many core functions mostly because the ECMA test suite requires it and we
- * don't want to skip otherwise useful tests just because the `length` property
- * check fails early in the test. User defined functions don't need to specify
- * the length and passing -1 is a safe choice, as it will also reduce the
- * footprint.
- *
- * The subtle difference between set `length` explicitly to 0 rather than
- * just defaulting the `0` value from the prototype is that in the former case
- * the property cannot be change since it's read only. This again, is important
- * only for ecma compliance and your user code might or might not find this
- *relevant.
+ * The function object will have a `prototype` property holding an object that
+ * will be used as the prototype of objects created when calling the function
+ * with the `new` operator.
  */
-v7_val_t v7_create_function(struct v7 *, v7_cfunction_t func, int nargs);
+v7_val_t v7_create_function(struct v7 *, v7_cfunction_t func);
 
 /* Make f a JS constructor function for objects with prototype in proto. */
-v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
-                               int num_args);
+v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f);
 
 /* Create numeric primitive value */
 v7_val_t v7_create_number(double num);
@@ -297,13 +276,24 @@ int v7_is_instanceof(struct v7 *, v7_val_t o, const char *c);
 /* Return true if the object is an instance of a given constructor */
 int v7_is_instanceof_v(struct v7 *, v7_val_t o, v7_val_t c);
 
-/* Return `void *` pointer stored in `v7_val_t` */
+/*
+ * Return `void *` pointer stored in `v7_val_t`.
+ *
+ * Returns NULL if the value is not a foreign pointer.
+ */
 void *v7_to_foreign(v7_val_t);
 
-/* Return boolean stored in `v7_val_t`: 0 for `false`, non-0 for `true` */
+/*
+ * Return boolean stored in `v7_val_t`:
+ *  0 for `false` or non-boolean, non-0 for `true`
+ */
 int v7_to_boolean(v7_val_t);
 
-/* Return `double` value stored in `v7_val_t` */
+/*
+ * Return `double` value stored in `v7_val_t`
+ *
+ * Returns NaN for non-numbers.
+ */
 double v7_to_number(v7_val_t);
 
 /* Return `v7_cfunction_t` callback pointer stored in `v7_val_t` */
@@ -315,7 +305,7 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
  * String length returned in `string_len`.
  *
  * JS strings can contain embedded NUL chars and might or not might be NUL
- *terminated.
+ * terminated.
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
  * garbage collector, which in turn may relocate string data and invalidate
@@ -3299,6 +3289,41 @@ V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *, val_t,
 V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
                                                     const char *name, size_t,
                                                     unsigned int attrs);
+
+/*
+ * Like v7_create_function but also sets the function's `length` property.
+ *
+ * The `length` property is useful for introspection and the stdlib defines it
+ * for many core functions mostly because the ECMA test suite requires it and we
+ * don't want to skip otherwise useful tests just because the `length` property
+ * check fails early in the test. User defined functions don't need to specify
+ * the length and passing -1 is a safe choice, as it will also reduce the
+ * footprint.
+ *
+ * The subtle difference between set `length` explicitly to 0 rather than
+ * just defaulting the `0` value from the prototype is that in the former case
+ * the property cannot be change since it's read only. This again, is important
+ * only for ecma compliance and your user code might or might not find this
+ * relevant.
+ *
+ * NODO(lsm): please don't combine v7_create_function_arg and v7_create_function
+ * into one function. Currently `nargs` is useful only internally. External
+ * users can just use `v7_set` to set the length.
+ */
+V7_PRIVATE
+v7_val_t v7_create_function_nargs(struct v7 *, v7_cfunction_t func, int nargs);
+
+/*
+ * Like v7_create_constructor but also sets the function's `length` property.
+ *
+ * NODO(lsm): please don't combine v7_create_constructor_nargs and
+ * v7_create_constructor.
+ * into one function. Currently `nargs` is useful only internally. External
+ * users can just use `v7_set` to set the length.
+ */
+V7_PRIVATE
+v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
+                                     v7_cfunction_t f, int num_args);
 
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated
@@ -6341,6 +6366,9 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
       } else if (ch == 'd' && len_mod == 'l') {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, long), 10, flags,
                     field_width);
+      } else if (ch == 'd' && len_mod == 'q') {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, int64_t), 10, flags,
+                    field_width);
       } else if ((ch == 'x' || ch == 'u') && len_mod == 0) {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, unsigned),
                     ch == 'x' ? 16 : 10, flags, field_width);
@@ -7796,7 +7824,7 @@ void init_ubjson(struct v7 *v7) {
   v7_set_method(v7, ubjson, "render", UBJSON_render);
   gen_proto = v7_create_object(v7);
   v7_set(v7, ubjson, "Bin", ~0, 0,
-         v7_create_constructor(v7, gen_proto, UBJSON_Bin, 0));
+         v7_create_constructor(v7, gen_proto, UBJSON_Bin));
   v7_set_method(v7, gen_proto, "send", Bin_send);
 }
 
@@ -9525,6 +9553,9 @@ v7_val_t v7_create_cfunction(v7_cfunction_t f) {
 }
 
 void *v7_to_foreign(val_t v) {
+  if (!v7_is_foreign(v)) {
+    return NULL;
+  }
   return v7_to_pointer(v);
 }
 
@@ -9533,7 +9564,11 @@ v7_val_t v7_create_boolean(int v) {
 }
 
 int v7_to_boolean(val_t v) {
-  return v & 1;
+  if (v7_is_boolean(v)) {
+    return v & 1;
+  } else {
+    return 0;
+  }
 }
 
 v7_val_t v7_create_number(double v) {
@@ -9558,6 +9593,7 @@ double v7_to_number(val_t v) {
     val_t v;
   } u;
   u.v = v;
+  /* Due to NaN packing, any non-numeric value is already a valid NaN value */
   return u.d;
 }
 
@@ -10429,7 +10465,9 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
+V7_PRIVATE
+v7_val_t v7_create_function_nargs(struct v7 *v7, v7_cfunction_t f,
+                                  int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
@@ -10444,9 +10482,14 @@ v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   return obj;
 }
 
-v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
-                               int num_args) {
-  v7_val_t res = v7_create_function(v7, f, num_args);
+v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f) {
+  return v7_create_function_nargs(v7, f, -1);
+}
+
+V7_PRIVATE v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
+                                                v7_cfunction_t f,
+                                                int num_args) {
+  v7_val_t res = v7_create_function_nargs(v7, f, num_args);
 
   v7_set_property(
       v7, res, "prototype", 9,
@@ -10456,10 +10499,15 @@ v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
   return res;
 }
 
+v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
+                               v7_cfunction_t f) {
+  return v7_create_constructor_nargs(v7, proto, f, -1);
+}
+
 V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
                           v7_cfunction_t func, int num_args) {
   return v7_set_property(v7, obj, name, strlen(name), V7_PROPERTY_DONT_ENUM,
-                         v7_create_function(v7, func, num_args));
+                         v7_create_function_nargs(v7, func, num_args));
 }
 
 int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
@@ -11016,7 +11064,7 @@ static void object_destructor(struct v7 *v7, void *ptr) {
 
 #if V7_ENABLE__RegExp
   if (p != NULL && (p->value & V7_TAG_MASK) == V7_TAG_REGEXP) {
-    struct v7_regexp *rp = (struct v7_regexp *) v7_to_foreign(p->value);
+    struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(p->value);
     v7_disown(v7, &rp->regexp_string);
     slre_free(rp->compiled_regexp);
     free(rp);
@@ -16856,6 +16904,7 @@ enum local_block {
   LOCAL_BLOCK_SWITCH = (1 << 3),
 };
 
+#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 /* clang-format off */
 static const char *op_names[] = {
   "DROP",
@@ -16931,6 +16980,7 @@ static const char *op_names[] = {
 /* clang-format on */
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
+#endif
 
 V7_PRIVATE void stack_push(struct mbuf *s, val_t v) {
   mbuf_append(s, &v, sizeof(v));
@@ -23393,14 +23443,14 @@ V7_PRIVATE void init_error(struct v7 *v7) {
   val_t error;
   size_t i;
 
-  error = v7_create_constructor(v7, v7->error_prototype, Error_ctor, 1);
+  error = v7_create_constructor_nargs(v7, v7->error_prototype, Error_ctor, 1);
   v7_set_property(v7, v7->global_object, "Error", 5, V7_PROPERTY_DONT_ENUM,
                   error);
   set_method(v7, v7->error_prototype, "toString", Error_toString, 0);
 
   for (i = 0; i < ARRAY_SIZE(error_names); i++) {
-    error = v7_create_constructor(v7, create_object(v7, v7->error_prototype),
-                                  Error_ctor, 1);
+    error = v7_create_constructor_nargs(
+        v7, create_object(v7, v7->error_prototype), Error_ctor, 1);
     v7_set_property(v7, v7->global_object, error_names[i],
                     strlen(error_names[i]), V7_PROPERTY_DONT_ENUM, error);
     v7->error_objects[i] = error;
@@ -23538,7 +23588,8 @@ static val_t n_isNaN(struct v7 *v7) {
 V7_PRIVATE void init_number(struct v7 *v7) {
   unsigned int attrs =
       V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
-  val_t num = v7_create_constructor(v7, v7->number_prototype, Number_ctor, 1);
+  val_t num =
+      v7_create_constructor_nargs(v7, v7->number_prototype, Number_ctor, 1);
   v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM,
                   num);
 
@@ -24162,7 +24213,7 @@ static val_t Array_isArray(struct v7 *v7) {
 }
 
 V7_PRIVATE void init_array(struct v7 *v7) {
-  val_t ctor = v7_create_function(v7, Array_ctor, 1);
+  val_t ctor = v7_create_function_nargs(v7, Array_ctor, 1);
   val_t length = v7_create_dense_array(v7);
 
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);
@@ -24254,7 +24305,7 @@ static val_t Boolean_toString(struct v7 *v7) {
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
   val_t ctor =
-      v7_create_constructor(v7, v7->boolean_prototype, Boolean_ctor, 1);
+      v7_create_constructor_nargs(v7, v7->boolean_prototype, Boolean_ctor, 1);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
@@ -25312,7 +25363,8 @@ static val_t Str_split(struct v7 *v7) {
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_constructor(v7, v7->string_prototype, String_ctor, 1);
+  val_t str =
+      v7_create_constructor_nargs(v7, v7->string_prototype, String_ctor, 1);
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
                   str);
 
@@ -26329,7 +26381,8 @@ static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   d_set_cfunc_prop(v7, v7->date_prototype, "set" #func, Date_set##func);
 
 V7_PRIVATE void init_date(struct v7 *v7) {
-  val_t date = v7_create_constructor(v7, v7->date_prototype, Date_ctor, 7);
+  val_t date =
+      v7_create_constructor_nargs(v7, v7->date_prototype, Date_ctor, 7);
   v7_set_property(v7, v7->global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
                   date);
   d_set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);
@@ -26532,7 +26585,7 @@ static val_t Function_apply(struct v7 *v7) {
 }
 
 V7_PRIVATE void init_function(struct v7 *v7) {
-  val_t ctor = v7_create_function(v7, Function_ctor, 1);
+  val_t ctor = v7_create_function_nargs(v7, Function_ctor, 1);
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
   set_method(v7, v7->function_prototype, "apply", Function_apply, 1);
@@ -26700,7 +26753,8 @@ static val_t Regex_test(struct v7 *v7) {
 }
 
 V7_PRIVATE void init_regex(struct v7 *v7) {
-  val_t ctor = v7_create_constructor(v7, v7->regexp_prototype, Regex_ctor, 1);
+  val_t ctor =
+      v7_create_constructor_nargs(v7, v7->regexp_prototype, Regex_ctor, 1);
   val_t lastIndex = v7_create_dense_array(v7);
 
   v7_set_property(v7, v7->global_object, "RegExp", 6, V7_PROPERTY_DONT_ENUM,

@@ -272,13 +272,24 @@ int v7_is_instanceof(struct v7 *, v7_val_t o, const char *c);
 /* Return true if the object is an instance of a given constructor */
 int v7_is_instanceof_v(struct v7 *, v7_val_t o, v7_val_t c);
 
-/* Return `void *` pointer stored in `v7_val_t` */
+/*
+ * Return `void *` pointer stored in `v7_val_t`.
+ *
+ * Returns NULL if the value is not a foreign pointer.
+ */
 void *v7_to_foreign(v7_val_t);
 
-/* Return boolean stored in `v7_val_t`: 0 for `false`, non-0 for `true` */
+/*
+ * Return boolean stored in `v7_val_t`:
+ *  0 for `false` or non-boolean, non-0 for `true`
+ */
 int v7_to_boolean(v7_val_t);
 
-/* Return `double` value stored in `v7_val_t` */
+/*
+ * Return `double` value stored in `v7_val_t`
+ *
+ * Returns NaN for non-numbers.
+ */
 double v7_to_number(v7_val_t);
 
 /* Return `v7_cfunction_t` callback pointer stored in `v7_val_t` */
@@ -290,7 +301,7 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
  * String length returned in `string_len`.
  *
  * JS strings can contain embedded NUL chars and might or not might be NUL
- *terminated.
+ * terminated.
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
  * garbage collector, which in turn may relocate string data and invalidate
