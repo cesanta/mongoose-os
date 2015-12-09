@@ -113,7 +113,7 @@ void sj_init_uart(struct v7 *v7) {
 
   uart = v7_create_object(v7);
   uart_proto = v7_create_object(v7);
-  uart_ctor = v7_create_constructor(v7, uart_proto, UART_ctor, 1);
+  uart_ctor = v7_create_constructor(v7, uart_proto, UART_ctor);
 
   v7_set(v7, uart, "dev", ~0, V7_PROPERTY_HIDDEN, uart_ctor);
   v7_set_method(v7, uart_proto, "read", UART_read);

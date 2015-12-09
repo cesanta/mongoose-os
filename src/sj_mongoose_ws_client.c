@@ -263,14 +263,14 @@ static v7_val_t WebSocket_readyState(struct v7 *v7) {
 
 void sj_init_ws_client(struct v7 *v7) {
   v7_val_t ws_proto = v7_create_object(v7);
-  v7_val_t ws = v7_create_constructor(v7, ws_proto, sj_ws_ctor, 1);
+  v7_val_t ws = v7_create_constructor(v7, ws_proto, sj_ws_ctor);
   v7_own(v7, &ws);
 
   v7_set_method(v7, ws_proto, "send", WebSocket_send);
   v7_set_method(v7, ws_proto, "close", WebSocket_close);
   v7_set(v7, ws_proto, "readyState", ~0,
          V7_PROPERTY_DONT_ENUM | V7_PROPERTY_GETTER,
-         v7_create_function(v7, WebSocket_readyState, 0));
+         v7_create_function(v7, WebSocket_readyState));
   v7_set(v7, ws, "OPEN", ~0, 0, WEBSOCKET_OPEN);
   v7_set(v7, ws, "CLOSED", ~0, 0, WEBSOCKET_CLOSED);
   v7_set(v7, v7_get_global(v7), "WebSocket", ~0, 0, ws);
