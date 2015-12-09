@@ -4,6 +4,7 @@ import subprocess
 import glob
 import os
 import os.path
+import re
 import sys
 
 path_to_bin = '.'
@@ -16,6 +17,26 @@ app_bin_path = app_bin_path[0]
 app_name = os.path.basename(app_bin_path).split('.')[0]
 app_lib_path = os.path.join(path_to_bin, 'build', '%s.a' % app_name)
 modules = ['v7.o', 'mongoose.o']
+
+flash_size = 512 * 1024
+# Try to get code segment size from linker script.
+ld_scripts = glob.glob(os.path.join(build_path, '*.ld'))
+if len(ld_scripts) == 1:
+    auto_flash_size = 0
+    for line in open(ld_scripts[0]):
+        m = re.match(r'\s*(\S+).+len\s*=\s*(\S+)', line)
+        if m:
+            seg_name = m.group(1)
+            seg_size = long(m.group(2), 0)
+            if seg_name.startswith('iram') or seg_name.startswith('irom'):
+                auto_flash_size += seg_size
+    if auto_flash_size > 0:
+        flash_size = auto_flash_size
+
+fs_size = 0
+fs_size_flag_file = os.path.join(build_path, 'fs.size')
+if os.path.exists(fs_size_flag_file):
+    fs_size = long(open(fs_size_flag_file).read(), 0)
 
 def print_obj_map(title, results):
     print title
@@ -121,11 +142,15 @@ if all_others_size !=0:
     print "Others: ", all_others_size
 
 bin_files = glob.glob(path_to_bin + "/firmware/*.bin")
-flash_size = 0
+fw_size = 0
 
 for f in bin_files:
-    flash_size += os.path.getsize(f)
+    fw_size += os.path.getsize(f)
+
+fw_size -= fs_size
 
 print ""
-print "Firmware size is {}Kb (of 512Kb), {}% is available".format(flash_size/1024 , 100 - flash_size*100/(512*1024))
+print "Firmware size is %dK, %dK of %dK (%d%%) is available; FS size %dK" % (
+        fw_size / 1024, (flash_size - fw_size) / 1024, flash_size / 1024,
+        100 - fw_size * 100.0 / flash_size, fs_size / 1024)
 print ""

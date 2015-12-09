@@ -1,7 +1,6 @@
 #
 # ESP8266 Smart.js
 #
-# SDK: either RTOS or OSS (default)
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
 # SSL: if set to "Krypton" enables SSL with the krypton lib
@@ -21,17 +20,11 @@ LWIP_PATH ?= lwip
 V7_PATH ?= ../../../v7
 USE_BOOTLOADER ?=
 
-GIT_REF     = $(shell git symbolic-ref HEAD | sed 's:refs/heads/::')
-GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
-DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
-FW_VERSION  = ESP8266/$(GIT_REF)/$(DATE)/$(GIT_SHA)
-
-# Should be RTOS or OSS
-SDK := $(shell echo $$SDK_FLAVOUR)
-ifndef SDK
-$(error Use default Makefile to build project within docker container. To build against locally \
-        installed ESP SDK define SDK_FLAVOUR (with RTOS or OSS value) enviroment variable)
-endif
+FLASH_SIZE ?= 512K
+FW_FILE_1_ADDR = 0
+FW_FILE_2_ADDR = 0x11000
+FW_FS_SIZE = 36864
+SYS_PARAM_SIZE = 0x4000
 
 BUILD_DIR = $(CURDIR)/build
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
@@ -71,16 +64,6 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK
 APP_LIBS = c crypto gcc hal pp phy net80211 wpa main
-
-# linker script used for the above linkier step
-LD_SCRIPT = ld/no_bootloader.ld
-
-FW_FILE_1_ADDR = 0x00000
-FW_FILE_2_ADDR = 0x11000
-
-# spiffs parameters
-FW_FS_ADDR = 0x73000
-FW_FS_SIZE = 36864
 
 SHIMS = -DNDEBUG
 
@@ -128,15 +111,6 @@ ifeq "$(STACK_GUARD)" "true"
 MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
 endif
 
-CFLAGS += -DFS_SIZE=$(FW_FS_SIZE) \
-          $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
-          -DFW_VERSION=\"$(FW_VERSION)\" \
-          $(CFLAGS_EXTRA)
-
-ifneq "$(USE_BOOTLOADER)" "1"
-CFLAGS += -DFS_ADDR=$(FW_FS_ADDR)
-endif
-
 .PHONY: all clean
 
 ifeq "$(SSL)" "Krypton"
@@ -150,49 +124,9 @@ ifeq "$(USE_BOOTLOADER)" "1"
 APP_SRCS := $(filter-out esp_fs.c,$(APP_SRCS))
 endif
 
-ifeq "$(SDK)" "RTOS"
-IPATH += $(SDK_PATH)/include/espressif/esp8266 $(SDK_PATH)/include/espressif \
-         $(SDK_PATH)/include/lwip $(SDK_PATH)/include/lwip/ipv4 \
-         $(SDK_PATH)/include/lwip/ipv6 $(SDK_PATH)/extra_include \
-         $(SDK_PATH)/lwip/include/
-
-APP_LIBS += freertos mirom lwip
-# -fno-builtin-printf avoid that the compiler "optimizes"
-# some printf calls: e.g.
-#   printf("foo\n") -> puts("foo")
-#   printf("%c", ch) -> <something_that_calls_esp_stuff_not_libc>
-CFLAGS += -DRTOS_SDK -DRTOS_TODO -DMG_LWIP -fno-builtin-printf
-ifneq "$(NETTEST)" ""
-CFLAGS += -DRTOS_NETWORK_TEST
-endif
-#TODO(alashkin): try to use the same LD script
-LD_SCRIPT = ld/eagle.app.v6.RTOS.ld
-else # OSS SDK
 IPATH += lwip/src/include lwip/src/include/ipv4 lwip/espressif/include
 APP_LIBS += m lwip_cs
 CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWIP_IF
-endif
-
-APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-SRCS = $(APP_SRCS) sys_config.c
-OBJS = $(APP_OBJS) $(BUILD_DIR)/sys_config.o
-LIBS = $(addprefix -l,$(APP_LIBS))
-APP_AR = $(BUILD_DIR)/$(APP).a
-APP_OUT = $(BUILD_DIR)/$(APP).out
-LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
-SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
-SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
-GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-FW_FILE_1_OUT = $(FW_DIR)/$(FW_FILE_1_ADDR).bin
-FW_FILE_2_OUT = $(FW_DIR)/$(FW_FILE_2_ADDR).bin
-FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
-FW_FS_OUT = $(FW_DIR)/$(FW_FS_ADDR).bin
-FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_ESP_DIR)/fs/*)
-
-INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
-LIBDIRS = $(addprefix -L,$(LPATH))
-
-ESP_TOOL_CMD = 	$(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 
 ifeq "$(USE_BOOTLOADER)" "1"
 PREREQ = rboot
@@ -207,11 +141,48 @@ ESP_FS_OBJ = $(BUILD_DIR)/esp_fs.o
 BOOT_CFG = ./user/boot.cfg
 LD_SCRIPT_TEMPL = ld/bootloader.ld
 FW_FS_OUT = $(FW_DIR)/fs.bin
+else
+FW_FS_OUT = $(FW_DIR)/$(FW_FS_ADDR).bin
+LD_SCRIPT_TEMPL = ld/no_bootloader.ld
 endif
 
+_FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
+   sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
+
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
+SRCS = $(APP_SRCS) sys_config.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/sys_config.o
+LIBS = $(addprefix -l,$(APP_LIBS))
+APP_AR = $(BUILD_DIR)/$(APP).a
+APP_OUT = $(BUILD_DIR)/$(APP).out
+LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
+SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
+SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
+GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
+FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
+FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
+FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
+FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_ESP_DIR)/fs/*)
+FW_FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(FW_FS_SIZE)))")
+LD_SCRIPT = $(BUILD_DIR)/$(APP).$(_FLASH_SIZE).ld
+
+GIT_REF     = $(shell git symbolic-ref HEAD | sed 's:refs/heads/::')
+GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
+DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
+FW_VERSION  = ESP8266/$(GIT_REF)/$(DATE)/$(GIT_SHA)
+
+INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
+LIBDIRS = $(addprefix -L,$(LPATH))
+
+ESP_TOOL_CMD = 	$(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+
+CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
+          -DFS_ADDR=$(FW_FS_ADDR) -DFS_SIZE=$(FW_FS_SIZE) \
+          -DFW_VERSION=\"$(FW_VERSION)\" \
+          $(CFLAGS_EXTRA)
+
 all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
-ifeq "$(USE_BOOTLOADER)" "1"
-else
+ifneq "$(USE_BOOTLOADER)" "1"
 	$(Q) rm -f `ls $(FW_DIR)/* \
     | grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT))$$'`
 endif
@@ -229,11 +200,8 @@ else
 	$(vecho) "FW $(APP_OUT) -> $(FW_DIR)"
 	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 endif
-# -- Linking.
 
-ifeq "$(SDK)" "RTOS"
-LDFLAGS += -Wl,--wrap,user_fatal_exception_handler
-endif
+# -- Linking.
 
 ifeq "$(USE_BOOTLOADER)" "1"
 define compile_fs
@@ -244,14 +212,12 @@ endef
 endif
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
-$(APP_OUT): $(APP_AR) $(LWIP_AR) $(SYMCHECK_FLAG)
+$(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
 ifeq "$(USE_BOOTLOADER)" "1"
 	$(eval FW_FS_ADDR=$(shell cat $(BOOT_CFG)  \
 				| grep $(basename $(notdir $@)): | awk -F ':' '{print $$4}'))
 	$(eval IROM0ADDR=$(shell cat $(BOOT_CFG)  \
 				| grep $(basename $(notdir $@)): | awk -F ':' '{print $$3}'))
-	$(Q) sed -e 's/_IROM0ADDR/$(IROM0ADDR)/' $(LD_SCRIPT_TEMPL) > $(BUILD_DIR)/smartjs_ls_$(IROM0ADDR).ld
-	$(eval LD_SCRIPT=$(BUILD_DIR)/smartjs_ls_$(IROM0ADDR).ld)
 	$(vecho) "Linking for IROM0 = $(IROM0ADDR), FS = $(FW_FS_ADDR)"
 	$(compile_fs)
 	$(link) $(ESP_FS_OBJ)
@@ -268,7 +234,7 @@ $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
 	$(Q) python $(TOOLS_DIR)/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
 	$(Q) touch $@
 
-$(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o
+$(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
 	$(link)
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)
@@ -304,13 +270,21 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 
 # Common gathering point for all generated files.
 # Except version, which is special because it depends on objects.
-$(GENFILES_FLAG): $(BUILD_DIR)/sys_config.c
+$(GENFILES_FLAG): $(BUILD_DIR)/sys_config.c $(LD_SCRIPT)
 	$(Q) touch $@
 
 # Generate sys_config.
 $(BUILD_DIR)/sys_config.c: $(COMMON_ESP_DIR)/fs/conf_sys_defaults.json
 	$(vecho) "GEN $^ -> $@"
 	$(Q) python $(REPO_ROOT)/tools/json_to_c_config.py $< $(BUILD_DIR)/sys_config
+
+# Generate linker script.
+$(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
+	$(eval _IROM0ADDR=$(shell printf "0x%08x" $$((0x40200000 + $(FW_FILE_2_ADDR)))))
+	$(eval _IROM0SIZE=$(shell printf "0x%05x" $$(($(FW_FS_ADDR) - $(FW_FILE_2_ADDR)))))
+	$(vecho) "GEN $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
+	$(Q) rm -f $(BUILD_DIR)/*.ld
+	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
@@ -329,8 +303,9 @@ $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
 		echo "V7 $(jsbin) -> $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
 		$(BUILD_DIR)/v7 -b $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
-	$(vecho) "MKSPIFFS $(FS_DIR) -> $@"
+	$(vecho) "FS $(FS_DIR) ($(FW_FS_SIZE) @ $(FW_FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(FW_FS_SIZE) $(FS_BUILD_DIR) > $@
+	$(Q) echo $(FW_FS_SIZE) > $(BUILD_DIR)/fs.size
 
 $(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
 	$(vecho) "GCC mkspiffs"
