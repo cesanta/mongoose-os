@@ -15,7 +15,7 @@ static const char *s_argv0;
 int sj_please_quit;
 
 static void pre_init(struct v7 *v7) {
-  static const char *init_files[] = {"smart.js"};
+  static const char *init_files[] = {"sys_init.js"};
   const char *dir = s_argv0 + strlen(s_argv0) - 1;
   char path[512];
   size_t i;

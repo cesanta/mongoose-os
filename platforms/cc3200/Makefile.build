@@ -19,11 +19,11 @@ include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
 PROG = smartjs
 
-JS_SRCS    := $(SJSJS_PATH)/clubby.js $(SJSJS_PATH)/sys_rts.js \
+JS_SRCS    := $(SJSJS_PATH)/clubby.js \
               $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
-              $(SJSJS_PATH)/MCXXX_LCD.js $(SJSJS_PATH)/I2C.js \
-              $(JSBIN_EXTRA) $(SJSJS_PATH)/smart.js $(SJSJS_PATH)/demo.js \
-              $(SJSJS_PATH)/user.js
+              $(SJSJS_PATH)/I2C.js \
+              $(JSBIN_EXTRA) $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/demo.js \
+              $(SJSJS_PATH)/app_init.js
 
 JSBIN_EXT := js
 JS_EXT := js

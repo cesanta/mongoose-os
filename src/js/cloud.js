@@ -1,6 +1,6 @@
 var Cloud = {};
 Cloud.mkreq = function(cmd, args, dst) {
-    var ret = {v:1, src: conf.dev.id, dst: dst || "//api.cesanta.com", key: conf.dev.key, cmds:[{cmd:cmd, args: args}]};
+    var ret = {v:1, src: Sys.conf.dev.id, dst: dst || "//api.cesanta.com", key: Sys.conf.dev.key, cmds:[{cmd:cmd, args: args}]};
     return JSON.stringify(ret);
 }
 Cloud.store = function(name,val,opts) {
@@ -26,7 +26,7 @@ Cloud.init = function(backend, device_id, device_psk) {
     key: device_psk,
     log: false,
     onopen: function() {
-      clubby.call(conf.cloud, {cmd: "/v1/Hello"}, function() {});
+      clubby.call(backend, {cmd: "/v1/Hello"}, function() {});
     }
   });
   File.eval("swupdate.js");
