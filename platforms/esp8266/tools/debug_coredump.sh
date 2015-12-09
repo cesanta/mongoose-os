@@ -33,7 +33,7 @@ fi
 # run core server in background and connect xt-gdb to it
 exec docker run --rm -it -v /${V7DIR}:/cesanta -v ${LOG}:/var/log/esp-console.log ${SDK} /bin/bash -c \
      "cd /cesanta/smartjs/platforms/esp8266/ \
-        ; tools/serve_core.py 2>/dev/null \
+        ; tools/serve_core.py \
                                --irom firmware/0x11000.bin \
                                --iram firmware/0x00000.bin \
                                --rom tools/rom.bin \
