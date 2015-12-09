@@ -19,19 +19,23 @@ app_lib_path = os.path.join(path_to_bin, 'build', '%s.a' % app_name)
 modules = ['v7.o', 'mongoose.o']
 
 flash_size = 512 * 1024
+code_seg_size = flash_size  # Not true, but we need something.
 # Try to get code segment size from linker script.
 ld_scripts = glob.glob(os.path.join(build_path, '*.ld'))
 if len(ld_scripts) == 1:
-    auto_flash_size = 0
+    m = re.match(r'.*\.(\d+).ld$', ld_scripts[0])
+    if m:
+        flash_size = long(m.group(1), 0)
+    auto_code_seg_size = 0
     for line in open(ld_scripts[0]):
         m = re.match(r'\s*(\S+).+len\s*=\s*(\S+)', line)
         if m:
             seg_name = m.group(1)
             seg_size = long(m.group(2), 0)
             if seg_name.startswith('iram') or seg_name.startswith('irom'):
-                auto_flash_size += seg_size
-    if auto_flash_size > 0:
-        flash_size = auto_flash_size
+                auto_code_seg_size += seg_size
+    if auto_code_seg_size > 0:
+        code_seg_size = auto_code_seg_size
 
 fs_size = 0
 fs_size_flag_file = os.path.join(build_path, 'fs.size')
@@ -147,10 +151,16 @@ fw_size = 0
 for f in bin_files:
     fw_size += os.path.getsize(f)
 
-fw_size -= fs_size
+code_size = fw_size - fs_size
 
-print ""
-print "Firmware size is %dK, %dK of %dK (%d%%) is available; FS size %dK" % (
-        fw_size / 1024, (flash_size - fw_size) / 1024, flash_size / 1024,
-        100 - fw_size * 100.0 / flash_size, fs_size / 1024)
-print ""
+print """
+Flash size: %(flash_size)dK, FS size: %(fs_size)dK
+Code size: %(code_size)dK of %(cs_size)dK, %(cs_av)dK (%(cs_av_pct)d%%) is available
+""" % {
+    "flash_size": flash_size / 1024,
+    "code_size": code_size / 1024,
+    "cs_av": (code_seg_size - code_size) / 1024,
+    "cs_size": code_seg_size / 1024,
+    "cs_av_pct": 100 - code_size * 100.0 / code_seg_size,
+    "fs_size": fs_size / 1024,
+}
