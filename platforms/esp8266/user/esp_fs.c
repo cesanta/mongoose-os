@@ -249,7 +249,8 @@ int fs_init(uint32_t addr, uint32_t size) {
 void set_errno(int res) {
   if (res < 0) {
     errno = SPIFFS_errno(&fs);
-    LOG(LL_ERROR, ("spiffs error: %d", errno));
+    /* NOTE(lsm): use DEBUG level, as "not found" error -10002 is too noisy */
+    LOG(LL_DEBUG, ("spiffs error: %d", errno));
   }
 }
 
