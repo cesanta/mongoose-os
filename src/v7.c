@@ -16696,7 +16696,6 @@ V7_PRIVATE enum v7_err i_exec(struct v7 *v7, const char *src, int src_len,
   memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
 
   v7_own(v7, &saved_call_stack);
-  v7->call_stack = v7->global_object;
 
   ast_init(a, 0);
   a->refcnt = 1;
@@ -18791,6 +18790,13 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
 
   /* We now have bcode to evaluate; proceed to it */
 
+  /*
+   * TODO(mkm):
+   * this breaks eval, but without it ____s tracking get's screwed up
+   *
+   * We removed it from interpreter in order to let eval work in the context
+   * of the current function.
+   */
   v7->call_stack = v7->global_object;
   /*
    * Even though we reset `call_stack` to `global_object`, this is not enough,
@@ -20974,6 +20980,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->number_prototype = v7_create_object(v7);
   v7->error_prototype = v7_create_object(v7);
   v7->global_object = v7_create_object(v7);
+  v7->call_stack = v7->global_object;
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);
   v7->function_prototype = v7_create_object(v7);
