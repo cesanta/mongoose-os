@@ -2875,6 +2875,13 @@ struct v7 {
    */
   val_t call_stack;
 
+  /*
+   * Bcode executes until it reaches `bottom_call_stack`. For top-level code,
+   * it's `global_object`, for some "inner" scripts, such as `eval`'d code,
+   * it's the `call_stack` of the `eval` statement.
+   */
+  val_t bottom_call_stack;
+
 #ifdef V7_ENABLE_BCODE
   struct mbuf stack; /* value stack for bcode interpreter */
   val_t stash;       /* temporary register for STASH and UNSTASH instructions */
@@ -17511,11 +17518,17 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
   while ((found = unwind_local_blocks_stack(
               v7, r, (LOCAL_BLOCK_CATCH | LOCAL_BLOCK_FINALLY), 1)) ==
          LOCAL_BLOCK_NONE) {
-    if (v7->call_stack != v7->global_object) {
+    if (v7->call_stack != v7->bottom_call_stack) {
+#ifdef V7_BCODE_TRACE
+      printf("not at the bottom of the stack, going to unwind..\n");
+#endif
       /* not reached bottom of the stack yet, keep unwinding */
       unwind_stack_1level(v7, r);
     } else {
-      /* reached stack bottom: uncaught exception */
+/* reached stack bottom: uncaught exception */
+#ifdef V7_BCODE_TRACE
+      printf("reached stack bottom: uncaught exception\n");
+#endif
       err = V7_EXEC_EXCEPTION;
       break;
     }
@@ -17760,7 +17773,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   tmp_stack_push(&tf, &frame);
 
   /*
-   * populate local variables on the Global Object, making them undeletable
+   * populate local variables on current scope, making them undeletable
    * (since they're defined with `var`)
    */
   {
@@ -17770,7 +17783,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
 
     for (; name < locals_end; ++name) {
       /* set undeletable property on Global Object */
-      v7_set_v(v7, v7->global_object, *name, V7_PROPERTY_DONT_DELETE,
+      v7_set_v(v7, v7->call_stack, *name, V7_PROPERTY_DONT_DELETE,
                v7_create_undefined());
     }
   }
@@ -18250,6 +18263,12 @@ restart:
                   v7, &r, TYPE_ERROR,
                   "Cannot set a primitive value as object prototype"));
               goto restart;
+            } else if (v7_is_function(v4) || v7_is_cfunction(v4)) {
+              /* TODO(dfrank): add support for a function to be a prototype */
+              BTRY(bcode_throw_exception(
+                  v7, &r, TYPE_ERROR,
+                  "Not implemented: function as a prototype"));
+              goto restart;
             }
 
             /* create an object with given prototype */
@@ -18540,10 +18559,19 @@ restart:
   }
 
   /* implicit return */
-  if (v7->call_stack != v7->global_object) {
+  if (v7->call_stack != v7->bottom_call_stack) {
+#ifdef V7_BCODE_TRACE
+    printf("return implicitly\n");
+#endif
     bcode_adjust_retval(v7, 0 /*implicit return*/);
     BTRY(bcode_perform_return(v7, &r, 1));
     goto restart;
+  } else {
+#ifdef V7_BCODE_TRACE
+    const char *s = (v7->call_stack != v7->global_object) ? "not global object"
+                                                          : "global object";
+    printf("reached bottom_call_stack (%s)\n", s);
+#endif
   }
 
 clean:
@@ -18625,8 +18653,9 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
 
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
-  val_t old_this = v7->this_object, saved_call_stack = v7->call_stack;
-  val_t try_stack = v7_create_undefined();
+  val_t old_this = v7->this_object;
+  val_t saved_bottom_call_stack = v7->bottom_call_stack;
+  val_t saved_try_stack = v7_create_undefined();
   size_t saved_stack_len = v7->stack.len;
   enum v7_err err = V7_OK;
   val_t r = v7_create_undefined();
@@ -18642,8 +18671,8 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
 #endif
 
   tmp_stack_push(&tf, &old_this);
-  tmp_stack_push(&tf, &try_stack);
-  tmp_stack_push(&tf, &saved_call_stack);
+  tmp_stack_push(&tf, &saved_bottom_call_stack);
+  tmp_stack_push(&tf, &saved_try_stack);
   tmp_stack_push(&tf, &func);
   tmp_stack_push(&tf, &args);
   tmp_stack_push(&tf, &w);
@@ -18659,7 +18688,7 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
 
   own_bcode(v7, v7->bcode);
 
-  try_stack = v7_get(v7, v7->call_stack, "____t", 5);
+  saved_try_stack = v7_get(v7, v7->call_stack, "____t", 5);
 
   ast_init(a, 0);
   a->refcnt = 1;
@@ -18791,19 +18820,17 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   /* We now have bcode to evaluate; proceed to it */
 
   /*
-   * TODO(mkm):
-   * this breaks eval, but without it ____s tracking get's screwed up
-   *
-   * We removed it from interpreter in order to let eval work in the context
-   * of the current function.
+   * Set current call stack as the "bottom" call stack, so that bcode evaluator
+   * will exit when it reaches this "bottom"
    */
-  v7->call_stack = v7->global_object;
+  v7->bottom_call_stack = v7->call_stack;
+
   /*
-   * Even though we reset `call_stack` to `global_object`, this is not enough,
-   * since `global_object` might have its own "try stack", so, we should
-   * explicitly delete it as well as a part of preparing bcode environment.
+   * Exceptions in "nested" script should not percolate into the "outer"
+   * script, so, reset the try stack (it will be restored later)
    */
-  v7_del_property(v7, v7->call_stack, "____t", 5);
+  v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN,
+         v7_create_dense_array(v7));
 
   err = eval_bcode(v7, v7->bcode);
   if (err == V7_OK) {
@@ -18813,9 +18840,11 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
      */
     unsigned long try_stack_len =
         v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
+#ifndef NDEBUG
     if (try_stack_len != 0) {
-      printf("try_stack_len=%lu, should be 0", try_stack_len);
+      printf("try_stack_len=%lu, should be 0\n", try_stack_len);
     }
+#endif
     assert(try_stack_len == 0);
 
     /* get the value returned from the evaluated script */
@@ -18841,10 +18870,14 @@ cleanup:
   /*
    * Data stack should have the same length as it was before evaluating script.
    */
+  if (v7->stack.len != saved_stack_len) {
+    printf("len=%d, saved=%d\n", (int) v7->stack.len, (int) saved_stack_len);
+  }
   assert(v7->stack.len == saved_stack_len);
 
-  v7->call_stack = saved_call_stack;
-  v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN, try_stack);
+  v7->bottom_call_stack = saved_bottom_call_stack;
+
+  v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN, saved_try_stack);
 
   release_ast(v7, a);
 
@@ -20981,6 +21014,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->error_prototype = v7_create_object(v7);
   v7->global_object = v7_create_object(v7);
   v7->call_stack = v7->global_object;
+  v7->bottom_call_stack = v7->call_stack;
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);
   v7->function_prototype = v7_create_object(v7);
