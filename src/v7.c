@@ -8637,11 +8637,11 @@ typedef uint16_t ast_skip_t;
 #endif
 
 #ifndef V7_DISABLE_AST_TAG_NAMES
-#define AST_ENTRY(a, b, c, d, e) \
-  { (a), (b), (c), (d), (e) }
+#define AST_ENTRY(name, has_varint, has_inlined, num_skips, num_subtrees) \
+  { (name), (has_varint), (has_inlined), (num_skips), (num_subtrees) }
 #else
-#define AST_ENTRY(a, b, c, d, e) \
-  { (b), (c), (d), (e) }
+#define AST_ENTRY(name, has_varint, has_inlined, num_skips, num_subtrees) \
+  { (has_varint), (has_inlined), (num_skips), (num_subtrees) }
 #endif
 
 /*
