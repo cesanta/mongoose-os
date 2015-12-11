@@ -16,17 +16,14 @@ $.each = function(a, f) {
   });
 };
 
-console = {
-  log: print
-};
+console = { log: print };
 
 Sys.conf = File.loadJSON('conf_sys_defaults.json') || {};
 $.extend(Sys.conf, File.loadJSON('conf.json') || {});
+Sys.id = Sys.ro_vars.arch + '_' + (Sys.ro_vars.mac_address || '0');
 
 print('\nStarting Smart.js - see documentation at',
       'https://cesanta.com/developer/smartjs',
-      '\n========== Sys.conf:\n', Sys.conf,
-      '\n========== Sys.ro_vars:\n', Sys.ro_vars,
-      '\n==========\n');
+      '\n==> Sys:\n', Sys, '\n');
 
 File.eval('app_init.js');

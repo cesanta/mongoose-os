@@ -21,6 +21,7 @@ struct ro_var *g_ro_vars = NULL;
 
 static struct mg_serve_http_opts s_http_server_opts;
 static const char *s_fw_version = FW_VERSION;
+static const char *s_architecture = "esp8266";
 static char s_mac_address[13];
 
 static int do_station(const struct sys_config *cfg) {
@@ -237,6 +238,7 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
 
 int apply_config(const struct sys_config *cfg) {
   REGISTER_RO_VAR(fw_version, &s_fw_version);
+  REGISTER_RO_VAR(arch, &s_architecture);
 
   /* Initialize debug first */
   uart_debug_init(0, 0);

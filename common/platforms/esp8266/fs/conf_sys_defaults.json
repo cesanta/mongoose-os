@@ -22,7 +22,7 @@
     "enable_webdav" : true
   },
   "debug": {
-    "level": 2,
-    "mode": 1
+    "level": 3,
+    "mode": 2
   }
 }
