@@ -145,7 +145,7 @@ enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
  * NOTE: `fp` must be a valid, opened, writable file stream.
  */
 enum v7_err v7_compile(const char *js_code, int generate_binary_output,
-                       FILE *fp);
+                       int use_bcode, FILE *fp);
 
 /*
  * Perform garbage collection.
