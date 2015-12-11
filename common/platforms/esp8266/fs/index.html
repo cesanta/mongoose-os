@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+<meta charset="UTF-8">
+<title>Configuration Console</title>
+<style>
+body {
+width: 100%;
+color: #777;
+font-family: "Open Sans", Arial, sans-serif;
+line-height: 22px;
+font-size: 13px;
+overflow-x: hidden;
+overflow-y: scroll;
+}
+* { outline: none; }
+h1 { font-size: 140%; }
+.row {
+position: relative;
+width: 80%;
+border: 1px solid transparent;
+margin-bottom: 1em;
+margin-left: auto;
+margin-right: auto;
+}
+.param { xdisplay: inline-block; }
+.header {
+text-align: center; border-radius: 0.2em;
+font-weight: bold; font-size: 200%;
+min-height: 3em; vertical-align: middle; line-height: 3em;
+color: #eee; background: #3795d0;
+}
+.button {
+color: #ffffff;
+display: inline-block;
+font-weight: normal;
+text-align: center;
+vertical-align: middle;
+touch-action: manipulation;
+border: 1px solid transparent;
+white-space: nowrap;
+padding: 0.5em 1em;
+font-size: 110%;
+border-radius: 0.4em;
+-webkit-user-select: none;
+cursor: pointer;
+width: 10em;
+}
+.btn-reset {
+background-color: #CC4648;
+}
+.btn-reboot {
+background-color: #cc4648;
+}
+.btn-save {
+background-color: #3f9531;
+float: right;
+}
+#loading {
+position: fixed; top: 0; left: 45%; padding: 0.2em 1em; z-index: 999;
+color: white; background: #fbb117; font-weight: bold; display: none;
+}
+.orange { background: #fbb117; }
+label {
+min-width: 13em;
+display: inline-block;
+text-align: right;
+margin: 0.2em 1em 0 0;
+font-size: 12px;
+padding: 0.2em 0;
+}
+select {
+font-size: 90%;
+line-height: 2em;
+height: 2em;
+background: #fff;
+padding: 1em;
+width: 17em;
+color: #555;
+}
+input[disabled] { background: #e0e0e0; }
+input[type=checkbox] { box-shadow: none !important; }
+input[type=text],input[type=password],input[type=checkbox] {
+font-size: 90%;
+padding: 0.4em;
+color: #555;
+border: 1px solid #cccccc;
+border-radius: 0.4em;
+width: 16em;
+}
+</style>
+<script type="text/javascript">
+  var DEFAULTS = {};  // System defaults config
+  var CONFIG = {};  // Configuration object. Gets set up on window load
+
+  var merge = function(_a, _b) {
+    var a = JSON.parse(JSON.stringify(_a));  // make a copy
+    var b = JSON.parse(JSON.stringify(_b));  // make a copy
+    for (k in b) {
+      if (typeof(a[k]) === 'object' && typeof(b[k]) == 'object') {
+        a[k] = merge(a[k], b[k]);
+      } else {
+        a[k] = b[k];
+      }
+    }
+    return a;
+  };
+
+  var ajax = function(url, callback, post_data) {
+    var httpRequest = window.XMLHttpRequest ?
+      new XMLHttpRequest() :
+      new ActiveXObject("Microsoft.XMLHTTP");
+
+    httpRequest.onreadystatechange = function() {
+      if (httpRequest.readyState == 4) {
+        document.getElementById('loading').style.display = 'none';
+        try {
+          if (httpRequest.status != 200) throw(httpRequest.statusText);
+          var t = httpRequest.responseText;
+          var obj = t ? JSON.parse(t) : '';
+          callback(obj);
+        } catch(e) {
+          //alert('Error fetching ' + httpRequest.responseURL + ': ' + e);
+          callback(undefined, e);
+        }
+      }
+    };
+    httpRequest.open(post_data !== undefined ? 'PUT' : 'GET', url, true);
+    httpRequest.send(post_data);
+    document.getElementById('loading').style.display = 'block';
+  };
+
+  var getElementValue = function(el) {
+    if (!el) return '';
+    if (el.type == 'checkbox') return el.checked ? true : false;
+    return el.value;
+  };
+
+  var setElementValue = function(el, val) {
+    if (el.type == 'checkbox') el.checked = !!val;
+    el.value = val;
+  };
+
+  var showMsg = function(result, error) {
+    alert(error ? 'Error: ' + error :
+          'Success. Module is rebooting, please reload this page.');
+  };
+
+  window.onload = function() {
+    document.getElementById('btn_reboot').onclick = function() {
+      ajax('/reboot', showMsg);
+    };
+
+    document.getElementById('btn_save').onclick = function() {
+      var c = merge({}, DEFAULTS);
+      delete c.ro_vars;
+      var walk = function(c1, c2, p) {
+        var n = 0;
+        for (var k in c1) {
+          var path = p ? p + '.' + k : k;
+          if (typeof(c1[k]) == 'object') {
+            var j = walk(c1[k], c2[k], path);
+            if (j == 0) { delete c1[k]; } else { n += j };
+          } else {
+            c1[k] = getElementValue(document.getElementById(path));
+            if (c1[k] == c2[k]) { delete c1[k]; } else { n++; };
+          }
+        }
+        return n;
+      };
+      walk(c, DEFAULTS, '');
+      var text = JSON.stringify(c, null, 2);
+      ajax('/conf.json', function() {
+        ajax('/reboot', showMsg);
+      }, text);
+    };
+
+    document.getElementById('btn_reset').onclick = function() {
+      ajax('/factory_reset', showMsg);
+    };
+
+    var renderConfig = function(c, schema) {
+      var html = [];
+      var walk = function(c, p) {
+        for (var k in c) {
+          var path = p ? p + '.' + k : k;
+          var d = schema[path] || {}; // UI descriptor for that config param
+          var parent_d = schema[p];
+          var val = c[k];
+          if (typeof(val) == 'object') {
+            if (!d.hide) {
+              html.push('<h1>', d.title || path, '</h1>\n');
+            }
+            walk(val, path);
+          } else {
+            html.push('<div class="param">',
+                      '<label for="', path, '">', d.title || k, '</label>');
+
+            // Look if the element should be disabled.
+            var extra_attrs = '';
+            if (d.read_only || parent_d.read_only) {
+              extra_attrs = ' disabled ';
+            }
+
+            if (typeof(val) == 'boolean') {
+              html.push('<input type="checkbox" id="', path,
+                        '" ', extra_attrs, val ? ' checked' : '', '/>');
+            } else if (d.type == 'select') {
+              html.push('<select ', extra_attrs, 'id="', path, '">');
+              for (var i = 0; d.values && i < d.values.length; i++) {
+                var o = d.values[i];
+                html.push('<option value="', o.value, '" ', extra_attrs,
+                          o.value == val ? 'selected' : '', '>',
+                          o.title, '</option>');
+              }
+              html.push('</select>');
+            } else {
+              html.push('<input ', extra_attrs, 'type="text" id="', path,
+                        '" value="', val, '"/>');
+            }
+            html.push('</div>\n');
+          }
+        }
+      };
+      walk(c, '');
+      document.getElementById('config').innerHTML = html.join('');
+    };
+
+
+    // Load configuration and update the UI
+    ajax('/conf_sys_defaults.json', function(obj, error) {
+      DEFAULTS = obj;
+      ajax('/conf_app_defaults.json', function(obj, error) {
+        DEFAULTS = merge(DEFAULTS, obj || {});
+        ajax('/conf.json', function(obj, error) {
+          CONFIG = merge(DEFAULTS, obj || {});
+          ajax('/ro_vars', function(obj, error) {
+            CONFIG = merge(CONFIG, { ro_vars: obj || {} });
+            ajax('/conf_sys_schema.json', function(obj, error) {
+              renderConfig(CONFIG, obj || {});
+            });
+          });
+        });
+      });
+    });
+  };
+</script>
+</head>
+<body>
+  <div id="loading">Loading, please wait...</div>
+  <div class="row header">
+    Smart.js ESP8266 Configuration Console
+  </div>
+
+  <div class="row" id="config">
+  </div>
+
+  <div class="row">
+    <input id="btn_reboot" type="button" value="Reboot"
+    class="button btn-reboot"/>
+    <input id="btn_reset" type="button" value="Factory Reset"
+    class="button btn-reset"/>
+    <span id="fw_version"></span>
+    <input id="btn_save" type="button" value="Save Settings"
+    class="button btn-save"/>
+  </div>
+
+</body>
+</html>

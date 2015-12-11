@@ -6,7 +6,7 @@
 # SSL: if set to "Krypton" enables SSL with the krypton lib
 #
 
-REPO_ROOT ?= ../../..
+REPO_ROOT ?= ../..
 COMMON_ESP_DIR ?= $(REPO_ROOT)/common/platforms/esp8266
 
 include $(COMMON_ESP_DIR)/common.mk
@@ -299,15 +299,15 @@ $(FS_BUILD_DIR):
 	@mkdir -p $(FS_BUILD_DIR)
 
 $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
-	/usr/bin/rsync -r --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
-		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
+		echo "CP $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
 		cp $(js) $(FS_BUILD_DIR);)
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
-		echo "V7 $(jsbin) -> $(FS_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
+		echo "V7 $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
 		$(BUILD_DIR)/v7 -b $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
-	$(vecho) "FS $(FS_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
+	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
+	$(vecho) "FS $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
 	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
 

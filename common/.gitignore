@@ -1,0 +1,33 @@
+# Ignore vim's swap files
+.*.swp
+# and Finder's .DS_Store
+.DS_Store
+# and Sublime Text stuff
+*.sublime-workspace
+*.sublime-project
+# and YouCompleteMe stuff
+.ycm_extra_conf.py
+.ycm_extra_conf.pyc
+# and build artifacts
+TAGS
+GPATH
+GRTAGS
+GTAGS
+Debug
+Release
+*.a
+*.app/
+*.dSYM
+*.exe
+*.ilk
+*.o
+*.obj
+*.pdb
+*.gcda
+*.gcno
+*.gcov
+lcov.info
+moc_*.cpp
+*.moc
+.qmake.stash
+v7.c

@@ -124,10 +124,9 @@ ENTRY_${PROG} = ResetISR
 ${BINDIR}/fs.img: ${wildcard fs/*} $(JS_SRCS)
 	/usr/bin/rsync -r --copy-links $(FS_DIR)/ $(FS_BUILD_DIR)/
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
-	$(Q) $(foreach js,$(JS_SRCS), \
+	$(Q) $(foreach js,$(JS_SRCS) ${wildcard fs/*}, \
 		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
 		cp $(js) $(FS_BUILD_DIR);)
-	/usr/local/bin/mkspiffs ${FW_FS_SIZE} fs > $@
 	/usr/local/bin/mkspiffs ${FW_FS_SIZE} $(OBJDIR)/fs > $@
 
 $(SMARTJS_SRC)/v7.c:
