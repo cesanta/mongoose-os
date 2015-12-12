@@ -3108,6 +3108,26 @@ enum opcode {
    */
   OP_CONTINUE,
 
+  /*
+   * Used when we enter the `catch` block. Takes a varint argument -- index of
+   * the exception variable name in the literals table.
+   *
+   * Pops the exception value from the stack, creates a private frame,
+   * sets exception property on it with the given name. pushes this
+   * private frame to call stack.
+   *
+   * `( e -- )`
+   */
+  OP_ENTER_CATCH,
+
+  /*
+   * Ued when we exit from the `catch` block. Merely pops the private frame
+   * from the call stack.
+   *
+   * `( -- )`
+   */
+  OP_EXIT_CATCH,
+
   OP_MAX,
 };
 
@@ -9685,6 +9705,8 @@ static const char *op_names[] = {
   "THROW",
   "BREAK",
   "CONTINUE",
+  "ENTER_CATCH",
+  "EXIT_CATCH",
 };
 /* clang-format on */
 
@@ -9939,12 +9961,58 @@ static void bcode_adjust_retval(struct v7 *v7, uint8_t is_explicit_return) {
   }
 }
 
-static void bcode_restore_registers(struct bcode *bcode,
+static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
                                     struct bcode_registers *r) {
   r->bcode = bcode;
   r->ops = (uint8_t *) bcode->ops.buf;
   r->end = r->ops + bcode->ops.len;
   r->lit = (val_t *) bcode->lit.buf;
+
+  /*
+   * TODO(dfrank): modifying `v7->bcode` from this function looks like a hack
+   */
+  v7->bcode = bcode;
+}
+
+/*
+ * Save some context in the current frame (`v7->call_stack`). Used before
+ * pushing new frame, either "function" frame or "private" frame.
+ *
+ * For "function" frame, `r` must be non-NULL.
+ * For "private" frame, `r` must be NULL.
+ */
+static void bcode_save_frame_details(struct v7 *v7, v7_val_t frame,
+                                     struct bcode_registers *r) {
+  /* save previous call stack */
+  v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
+
+  /* "try stack" */
+  v7_set(v7, frame, "____t", 5, V7_PROPERTY_HIDDEN, v7_create_dense_array(v7));
+
+  /* stack size */
+  v7_set(v7, frame, "____s", 5, V7_PROPERTY_HIDDEN,
+         v7_create_number(v7->stack.len));
+
+  if (r != NULL) {
+    /* save bcode and the current position in it */
+    v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN,
+           v7_create_foreign(r->bcode));
+    v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
+           v7_create_foreign(r->ops + 1));
+
+    /* `this` object */
+    v7_set(v7, frame, "___th", 5, V7_PROPERTY_HIDDEN, v7_get_this(v7));
+
+    /* is constructor */
+    v7_set(v7, frame, "____c", 5, V7_PROPERTY_HIDDEN, v7->is_constructor);
+  } else {
+    /*
+     * No bcode registers is provided: assume it's not going to change,
+     * and create `___rb` containing a NULL-pointer. This is the way we
+     * distinguish between "function" frames and "private" frames.
+     */
+    v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(NULL));
+  }
 }
 
 /*
@@ -9961,34 +10029,22 @@ static void bcode_restore_registers(struct bcode *bcode,
  *
  * Caller of bcode_perform_call is responsible for owning `frame`
  */
-static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
-                                      v7_val_t frame, struct v7_function *func,
+static enum v7_err bcode_perform_call(struct v7 *v7, v7_val_t frame,
+                                      struct v7_function *func,
                                       struct bcode_registers *r,
                                       val_t this_object,
                                       uint8_t is_constructor) {
-  v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
-  v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(bcode));
-  v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
-         v7_create_foreign(r->ops + 1));
+  /* save context on current frame */
+  bcode_save_frame_details(v7, frame, r);
 
-  /* `this` object */
-  v7_set(v7, frame, "___th", 5, V7_PROPERTY_HIDDEN, v7_get_this(v7));
+  /* after context is saved, we can change current context */
   v7->this_object = this_object;
-
-  /* "try stack" */
-  v7_set(v7, frame, "____t", 5, V7_PROPERTY_HIDDEN, v7_create_dense_array(v7));
-
-  /* stack size */
-  v7_set(v7, frame, "____s", 5, V7_PROPERTY_HIDDEN,
-         v7_create_number(v7->stack.len));
-
-  /* is constructor */
-  v7_set(v7, frame, "____c", 5, V7_PROPERTY_HIDDEN, v7->is_constructor);
   v7->is_constructor = is_constructor;
 
+  /* new frame will inherit from the function's scope */
   v7_to_object(frame)->prototype = func->scope;
   v7->call_stack = frame;
-  bcode_restore_registers(func->bcode, r);
+  bcode_restore_registers(v7, func->bcode, r);
 
   /* `ops` already points to the needed instruction, no need to increment it */
   r->need_inc_ops = 0;
@@ -9996,16 +10052,43 @@ static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
   return V7_OK;
 }
 
-static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
+/*
+ * Unwinds `call_stack` by 1 frame.
+ *
+ * Returns `1` if the unwound frame is a "function" frame, or `0` if it's
+ * a "private" frame.
+ */
+static uint8_t unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
+  /*
+   * We have two types of frames: "function" frames and "private" frames.
+   * The "private" frames don't contain some fields, so, we need to
+   * distinguish between them.
+   */
+  uint8_t is_func_frame = 0;
 #ifdef V7_BCODE_TRACE
   printf("unwinding stack by 1 level\n");
 #endif
 
+  /*
+   * Whatever the frame type is, we try to retrieve `bcode` pointer and see
+   * if it's non-NULL. If it is, we have "function" frame.
+   */
   struct bcode *bcode =
       (struct bcode *) v7_to_foreign(v7_get(v7, v7->call_stack, "___rb", 5));
-  bcode_restore_registers(bcode, r);
+  is_func_frame = (bcode != NULL);
 
-  r->ops = (uint8_t *) v7_to_foreign(v7_get(v7, v7->call_stack, "___ro", 5));
+  if (is_func_frame) {
+    bcode_restore_registers(v7, bcode, r);
+
+    r->ops = (uint8_t *) v7_to_foreign(v7_get(v7, v7->call_stack, "___ro", 5));
+
+    /* restore `this` object */
+    v7->this_object = v7_get(v7, v7->call_stack, "___th", 5);
+
+    /* restore `is_constructor` */
+    v7->is_constructor = v7_get(v7, v7->call_stack, "____c", 5);
+  }
+
   /* adjust data stack length (restore saved) */
   {
     size_t saved_stack_len =
@@ -10014,14 +10097,24 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
     v7->stack.len = saved_stack_len;
   }
 
-  /* restore `this` object */
-  v7->this_object = v7_get(v7, v7->call_stack, "___th", 5);
-
-  /* restore `is_constructor` */
-  v7->is_constructor = v7_get(v7, v7->call_stack, "____c", 5);
-
   /* finally, drop the frame which we've just unwound */
   v7->call_stack = v7_get(v7, v7->call_stack, "____p", 5);
+
+  return is_func_frame;
+}
+
+static enum v7_err bcode_private_frame_push(struct v7 *v7, v7_val_t frame) {
+  /*
+   * save context on current frame. We pass `NULL` for `bcode_registers`
+   * because we're creating "private" frame.
+   */
+  bcode_save_frame_details(v7, frame, NULL);
+
+  /* new frame will inherit from the current frame */
+  v7_to_object(frame)->prototype = v7_to_object(v7->call_stack);
+  v7->call_stack = frame;
+
+  return V7_OK;
 }
 
 /*
@@ -10129,10 +10222,27 @@ static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
   }
 
   /*
-   * Try to unwind local "try stack", considering only `finally` and `break`.
+   * Keep unwinding until we find local block of interest. We should not
+   * encounter any "function" frames; only "private" frames are allowed.
    */
-  found = unwind_local_blocks_stack(v7, r, mask | LOCAL_BLOCK_FINALLY, 0);
-  assert(found != LOCAL_BLOCK_NONE);
+  for (;;) {
+    /*
+     * Try to unwind local "try stack", considering only `finally` and `break`.
+     */
+    found = unwind_local_blocks_stack(v7, r, mask | LOCAL_BLOCK_FINALLY, 0);
+    if (found == LOCAL_BLOCK_NONE) {
+      /*
+       * no blocks found: this may happen if only the `break` or `continue` has
+       * occurred inside "private" frame. So, unwind this frame, make sure it
+       * is indeed "private" (not "function"), and keep unwinding local blocks.
+       */
+      uint8_t is_func_frame = unwind_stack_1level(v7, r);
+      assert(!is_func_frame);
+    } else {
+      /* found some block to transfer control into, stop unwinding */
+      break;
+    }
+  }
 
   /*
    * upon exit of a finally block we'll reenter here if is_breaking is true.
@@ -10156,9 +10266,14 @@ static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
 static enum v7_err bcode_perform_return(struct v7 *v7,
                                         struct bcode_registers *r,
                                         int take_retval) {
+  /*
+   * We should either take retval from the stack, or some value should already
+   * be pending to return
+   */
   assert(take_retval || v7->is_returned);
 
   if (take_retval) {
+    /* taking return value from stack */
     v7->returned_value = POP();
     v7->is_returned = 1;
 
@@ -10171,20 +10286,32 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
   }
 
   /*
-   * Try to unwind local "try stack", considering only `finally` blocks. If
-   * there are no `finally` blocks in effect, actually perform return.
+   * Keep unwinding until we unwound "function" frame, or found some `finally`
+   * block.
    */
-  if (unwind_local_blocks_stack(v7, r, (LOCAL_BLOCK_FINALLY), 0) ==
-      LOCAL_BLOCK_NONE) {
-    /*
-     * no `finally` blocks were found, so, perform return: unwind stack by 1
-     * level, and populate TOS with the return value
-     */
-    unwind_stack_1level(v7, r);
+  for (;;) {
+    /* Try to unwind local "try stack", considering only `finally` blocks */
+    if (unwind_local_blocks_stack(v7, r, (LOCAL_BLOCK_FINALLY), 0) ==
+        LOCAL_BLOCK_NONE) {
+      /*
+       * no `finally` blocks were found, so, unwind stack by 1 level, and see
+       * if it's a "function" frame. If not, will keep unwinding.
+       */
+      if (unwind_stack_1level(v7, r)) {
+        /*
+         * unwound frame is a "function" frame, so, push returned value to
+         * stack, and stop unwinding
+         */
+        PUSH(v7->returned_value);
+        v7->is_returned = 0;
+        v7->returned_value = v7_create_undefined();
 
-    PUSH(v7->returned_value);
-    v7->is_returned = 0;
-    v7->returned_value = v7_create_undefined();
+        break;
+      }
+    } else {
+      /* found `finally` block, so, stop unwinding */
+      break;
+    }
   }
 
   /* `ops` already points to the needed instruction, no need to increment it */
@@ -10466,7 +10593,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
         v4 = v7_create_undefined(), frame = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
-  bcode_restore_registers(bcode, &r);
+  bcode_restore_registers(v7, bcode, &r);
 
   tmp_stack_push(&tf, &res);
   tmp_stack_push(&tf, &v1);
@@ -11105,7 +11232,7 @@ restart:
             }
 
             /* transfer control to the function */
-            BTRY(bcode_perform_call(v7, r.bcode, frame, func, &r, v3 /*this*/,
+            BTRY(bcode_perform_call(v7, frame, func, &r, v3 /*this*/,
                                     is_constructor));
 
             frame = v7_create_undefined();
@@ -11222,6 +11349,32 @@ restart:
         v7->is_continuing = 1;
         bcode_perform_break(v7, &r);
         break;
+      case OP_ENTER_CATCH: {
+        size_t arg = bcode_get_varint(&r.ops);
+        /* pop thrown value from stack */
+        v1 = POP();
+        /* get the name of the thrown value */
+        v2 = r.lit[arg];
+
+        /*
+         * create a new stack frame (a "private" one), and set exception
+         * property on it
+         */
+        frame = v7_create_object(v7);
+        v7_set_v(v7, frame, v2, 0, v1);
+
+        /* Push this "private" frame on the call stack */
+        bcode_private_frame_push(v7, frame);
+        break;
+      }
+      case OP_EXIT_CATCH: {
+        uint8_t is_func_frame = 0;
+        /* unwind 1 frame */
+        is_func_frame = unwind_stack_1level(v7, &r);
+        /* make sure the unwound frame is the "private" frame */
+        assert(is_func_frame == 0);
+        break;
+      }
       default:
         BTRY(bcode_throw_exception(v7, &r, INTERNAL_ERROR, "Unknown opcode: %d",
                                    (int) op));
@@ -11523,19 +11676,23 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   /* We now have bcode to evaluate; proceed to it */
 
   /*
-   * Set current call stack as the "bottom" call stack, so that bcode evaluator
-   * will exit when it reaches this "bottom"
-   */
-  v7->bottom_call_stack = v7->call_stack;
-
-  /*
    * Exceptions in "nested" script should not percolate into the "outer"
    * script, so, reset the try stack (it will be restored later)
    */
   v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN,
          v7_create_dense_array(v7));
 
+  /*
+   * Set current call stack as the "bottom" call stack, so that bcode evaluator
+   * will exit when it reaches this "bottom"
+   */
+  v7->bottom_call_stack = v7->call_stack;
+
+  /* Evaluate bcode */
   err = eval_bcode(v7, v7->bcode);
+
+  assert(v7->bottom_call_stack == v7->call_stack);
+
   if (err == V7_OK) {
     /*
      * bcode evaluated successfully. Make sure try stack is empty.
@@ -20482,9 +20639,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *    JMP finally
      *  catch:
      *    OP_TRY_POP
-     *    OP_SET_VAR        (bind exception to the catch variable)
-     *    OP_DROP           (remove exception from stack)
+     *    OP_ENTER_CATCH <e>
      *    <CATCH_B>
+     *    OP_EXIT_CATCH
      *  finally:
      *    OP_TRY_POP
      *    <FIN_B>
@@ -20505,9 +20662,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *    JMP end
      *  catch:
      *    OP_TRY_POP
-     *    OP_SET_VAR        (bind exception to the catch variable)
-     *    OP_DROP           (remove exception from stack)
+     *    OP_ENTER_CATCH <e>
      *    <CATCH_B>
+     *    OP_EXIT_CATCH
      *  end:
      *
      * ---------------
@@ -20575,15 +20732,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         BCHECK(tag == AST_IDENT, V7_SYNTAX_ERROR);
 
         /*
-         * When we enter `catch` block, the TOS contains thrown value.
-         * Let's add code that saves thrown error into specified identifier
+         * when we enter `catch` block, the TOS contains thrown value.
+         * We should create private frame for the `catch` clause, and populate
+         * a variable with the thrown value there.
+         * The `OP_ENTER_CATCH` opcode does just that.
          */
-        bcode_op_lit(bcode, OP_SET_VAR, string_lit(v7, a, pos, bcode));
-        /*
-         * Exception value should not stay on stack; we have on stack the
-         * latest element from `try` block. So, just drop exception value.
-         */
-        bcode_op(bcode, OP_DROP);
+        bcode_op_lit(bcode, OP_ENTER_CATCH, string_lit(v7, a, pos, bcode));
 
         /*
          * compile statements until the end of `catch` clause
@@ -20591,6 +20745,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
          * of whether the `finally` clause is present)
          */
         BTRY(compile_stmts(v7, a, pos, afinally, bcode));
+
+        /* pop private frame */
+        bcode_op(bcode, OP_EXIT_CATCH);
 
         bcode_patch_target(bcode, after_catch_label, bcode_pos(bcode));
       }
