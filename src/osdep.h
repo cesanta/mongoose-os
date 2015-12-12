@@ -63,9 +63,9 @@
 
 #ifdef PICOTCP
 #define time(x) PICO_TIME()
-#include "pico_config.h"
-#include "pico_bsd_sockets.h"
-#include "pico_bsd_syscalls.h"
+#include "common/pico_config.h"
+#include "common/pico_bsd_sockets.h"
+#include "common/pico_bsd_syscalls.h"
 #ifndef SOMAXCONN
 #define SOMAXCONN (16)
 #endif
@@ -240,6 +240,18 @@ int64_t strtoll(const char *str, char **endptr, int base);
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
+
+#ifdef __GNUC__
+#define NORETURN __attribute__((noreturn))
+#define UNUSED __attribute__((unused))
+#define NOINLINE __attribute__((noinline))
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+#define NORETURN
+#define UNUSED
+#define NOINLINE
+#define WARN_UNUSED_RESULT
 #endif
 
 #endif /* OSDEP_HEADER_INCLUDED */

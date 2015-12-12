@@ -7,7 +7,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include "mbuf.h"
+#include "common/mbuf.h"
 
 #ifndef MBUF_REALLOC
 #define MBUF_REALLOC realloc

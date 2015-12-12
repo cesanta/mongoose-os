@@ -5,8 +5,8 @@
 
 #ifndef EXCLUDE_COMMON
 
-#include "osdep.h"
-#include "str_util.h"
+#include "common/osdep.h"
+#include "common/str_util.h"
 
 #ifdef _MG_PROVIDE_STRNLEN
 size_t strnlen(const char *s, size_t maxlen) {

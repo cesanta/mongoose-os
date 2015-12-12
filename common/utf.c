@@ -14,15 +14,17 @@
 
 #ifndef EXCLUDE_COMMON
 
+/* clang-format off */
+
 #ifndef NO_LIBC
 #include <ctype.h>
 #endif
 #include <stdarg.h>
 #include <string.h>
-#include "internal.h"
-#include "utf.h"
+#include "common/osdep.h"
+#include "common/utf.h"
 
-#if V7_ENABLE__UTF
+#if CS_ENABLE_UTF8
 enum {
   Bit1 = 7,
   Bitx = 6,
@@ -226,7 +228,7 @@ const char *utfnshift(const char *s, long m) {
  */
 #include <stdarg.h>
 #include <string.h>
-#include "utf.h"
+#include "common/utf.h"
 
 /*
  * alpha ranges -
@@ -1300,7 +1302,7 @@ int isspacerune(Rune c) {
   return 0;
 }
 
-#else /* V7_ENABLE__UTF */
+#else /* CS_ENABLE_UTF8 */
 
 int chartorune(Rune *rune, const char *str) {
   *rune = *(uchar *) str;
@@ -1357,6 +1359,6 @@ const char *utfnshift(const char *s, long m) {
   return s + m;
 }
 
-#endif /* V7_ENABLE__UTF */
+#endif /* CS_ENABLE_UTF8 */
 
 #endif /* EXCLUDE_COMMON */

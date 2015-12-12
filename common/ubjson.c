@@ -1,6 +1,6 @@
 #ifdef CS_ENABLE_UBJSON
 
-#include "ubjson.h"
+#include "common/ubjson.h"
 
 void cs_ubjson_emit_null(struct mbuf *buf) {
   mbuf_append(buf, "Z", 1);

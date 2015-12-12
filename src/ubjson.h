@@ -6,8 +6,8 @@
 #ifndef CS_UBJSON_H_INCLUDED
 #define CS_UBJSON_H_INCLUDED
 
-#include "osdep.h"
-#include "mbuf.h"
+#include "common/osdep.h"
+#include "common/mbuf.h"
 
 void cs_ubjson_emit_null(struct mbuf *buf);
 void cs_ubjson_emit_boolean(struct mbuf *buf, int v);

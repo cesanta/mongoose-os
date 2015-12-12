@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "coroutine.h"
+#include "common/coroutine.h"
 
 /*
  * Unwinds stack by 1 function. Used when we're returning from function and

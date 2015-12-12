@@ -60,7 +60,7 @@ JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
 JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC)
-IPATH = $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) .
+IPATH = $(REPO_ROOT) $(VPATH) $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK

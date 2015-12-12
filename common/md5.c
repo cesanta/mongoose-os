@@ -17,7 +17,7 @@
 
 #if !defined(DISABLE_MD5) && !defined(EXCLUDE_COMMON)
 
-#include "md5.h"
+#include "common/md5.h"
 
 #ifndef CS_ENABLE_NATIVE_MD5
 static void byteReverse(unsigned char *buf, unsigned longs) {

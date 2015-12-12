@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#include "test_util.h"
-#include "str_util.h"
+#include "common/test_util.h"
+#include "common/str_util.h"
 
 int num_tests;
 

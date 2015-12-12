@@ -1,4 +1,4 @@
-#include "test_util.h"
+#include "common/test_util.h"
 
 #include <ctype.h>
 #include <stdio.h>

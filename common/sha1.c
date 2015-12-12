@@ -3,11 +3,11 @@
 
 #if !defined(DISABLE_SHA1) && !defined(EXCLUDE_COMMON)
 
-#include "sha1.h"
+#include "common/sha1.h"
 
 #define SHA1HANDSOFF
 #if defined(__sun)
-#include "solarisfixes.h"
+#include "common/solarisfixes.h"
 #endif
 
 union char64long16 {

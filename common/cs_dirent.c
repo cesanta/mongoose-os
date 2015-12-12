@@ -5,8 +5,8 @@
 
 #ifndef EXCLUDE_COMMON
 
-#include "osdep.h"
-#include "cs_dirent.h"
+#include "common/osdep.h"
+#include "common/cs_dirent.h"
 
 /*
  * This file contains POSIX opendir/closedir/readdir API implementation

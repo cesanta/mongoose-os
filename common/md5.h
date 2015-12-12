@@ -6,7 +6,7 @@
 #ifndef MD5_HEADER_DEFINED
 #define MD5_HEADER_DEFINED
 
-#include "osdep.h"
+#include "common/osdep.h"
 
 #ifdef __cplusplus
 extern "C" {
