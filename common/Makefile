@@ -7,6 +7,12 @@ ifneq ("$(wildcard /usr/local/bin/clang-3.6)","")
 	CLANG_FORMAT:=/usr/local/bin/clang-format-3.6
 endif
 
+sys_config.h: fs/conf_sys_defaults.json
+	@python ..//tools/json_to_c_config.py $< sys_config
+	@$(MAKE) format
+
+pre-commit: sys_config.h
+
 .PHONY: unit_test
 
 all: unit_test

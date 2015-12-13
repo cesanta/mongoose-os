@@ -46,10 +46,6 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c
 
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js \
-              $(SJSJS_PATH)/cloud.js \
-              $(SJSJS_PATH)/swupdate.js \
-              $(SJSJS_PATH)/demo.js \
-              $(SJSJS_PATH)/fileservice.js \
               $(SJSJS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
 JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
@@ -154,8 +150,8 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-SRCS = $(APP_SRCS) sys_config.c
-OBJS = $(APP_OBJS) $(BUILD_DIR)/sys_config.o
+SRCS = $(APP_SRCS)
+OBJS = $(APP_OBJS)
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 APP_OUT = $(BUILD_DIR)/$(APP).out
@@ -166,14 +162,15 @@ GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
-FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_ESP_DIR)/fs/*)
+FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(REPO_ROOT)/common/fs/*)
 FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
 LD_SCRIPT = $(BUILD_DIR)/$(APP).$(_FLASH_SIZE).ld
 
+FW_ARCHITECTURE = esp8266
 GIT_REF     = $(shell git symbolic-ref HEAD | sed 's:refs/heads/::')
 GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
 DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
-FW_VERSION  = ESP8266/$(GIT_REF)/$(DATE)/$(GIT_SHA)
+FW_VERSION  = $(FW_ARCHITECTURE)/$(GIT_REF)/$(DATE)/$(GIT_SHA)
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
@@ -183,6 +180,7 @@ ESP_TOOL_CMD = 	$(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_ADDR=$(FS_ADDR) -DFS_SIZE=$(_FS_SIZE) \
           -DFW_VERSION=\"$(FW_VERSION)\" \
+          -DFW_ARCHITECTURE=\"$(FW_ARCHITECTURE)\" \
           $(CFLAGS_EXTRA)
 
 all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
@@ -274,13 +272,8 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 
 # Common gathering point for all generated files.
 # Except version, which is special because it depends on objects.
-$(GENFILES_FLAG): $(BUILD_DIR)/sys_config.c $(LD_SCRIPT)
+$(GENFILES_FLAG): $(LD_SCRIPT)
 	$(Q) touch $@
-
-# Generate sys_config.
-$(BUILD_DIR)/sys_config.c: $(COMMON_ESP_DIR)/fs/conf_sys_defaults.json
-	$(vecho) "GEN $^ -> $@"
-	$(Q) python $(REPO_ROOT)/tools/json_to_c_config.py $< $(BUILD_DIR)/sys_config
 
 # Generate linker script.
 $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)

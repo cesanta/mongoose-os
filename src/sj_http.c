@@ -72,13 +72,9 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     if (v7_is_function(ud->handler)) {
       v7_val_t request = v7_create_object(ud->v7);
       v7_val_t response = v7_create_object(ud->v7);
-      v7_own(ud->v7, &request);
-      v7_own(ud->v7, &response);
       setup_request_object(ud->v7, request, ev_data);
       setup_response_object(ud->v7, response, c, request);
       sj_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
-      v7_disown(ud->v7, &request);
-      v7_disown(ud->v7, &response);
     } else {
       struct mg_serve_http_opts opts;
       memset(&opts, 0, sizeof(opts));
@@ -87,10 +83,8 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   } else if (ev == MG_EV_HTTP_REPLY) {
     if (v7_is_function(ud->handler)) {
       v7_val_t response = v7_create_object(ud->v7);
-      v7_own(ud->v7, &response);
       setup_request_object(ud->v7, response, ev_data);
       sj_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);
-      v7_disown(ud->v7, &response);
     }
 
     if (c->flags & MG_F_CLOSE_CONNECTION_AFTER_RESPONSE) {

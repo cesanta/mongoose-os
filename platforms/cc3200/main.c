@@ -22,6 +22,7 @@
 #include "oslib/osi.h"
 
 #include "sj_mongoose.h"
+#include "sj_http.h"
 #include "sj_i2c_js.h"
 #include "sj_prompt.h"
 #include "sj_timers.h"
@@ -33,6 +34,7 @@
 #include "cc3200_leds.h"
 #include "cc3200_sj_hal.h"
 #include "cc3200_wifi.h"
+#include "device_config.h"
 
 struct v7 *s_v7;
 const char *sj_version = "TODO";
@@ -100,14 +102,19 @@ static void v7_task(void *arg) {
     fprintf(stderr, "FS initialization failed.\n");
   }
   mongoose_init();
-  sj_init_simple_http_client(v7);
+  sj_init_http(v7);
   init_i2cjs(v7);
+
+  /* Common config infrastructure. Mongoose & v7 must be initialized. */
+  init_device(v7);
+
   v7_val_t res;
   if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
-    fprintf(stderr, "cannot run smart.js: ");
+    fprintf(stderr, "Error: ");
     v7_fprint(stderr, v7, res);
   }
   sj_prompt_init(v7);
+
   while (1) {
     struct prompt_event pe;
     mongoose_poll(MONGOOSE_POLL_LENGTH_MS);
@@ -133,6 +140,19 @@ static void v7_task(void *arg) {
 
 /* Int vector table, defined in startup_gcc.c */
 extern void (*const g_pfnVectors[])(void);
+
+void device_reboot(void) {
+  /* TODO(lsm): implement this */
+}
+
+void device_get_mac_address(uint8_t mac[6]) {
+  /* TODO(lsm): implement this */
+}
+
+int device_init_platform(struct sys_config *cfg) {
+  /* TODO(lsm): implement this */
+  return 1; /* success */
+}
 
 int main() {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);

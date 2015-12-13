@@ -2,9 +2,10 @@
 # It can be used without container too if SDK_PATH and V7_PATH are configured.
 
 SDK_PATH ?= /cc3200-sdk
-V7_PATH ?= ../../../v7
-SMARTJS_PATH ?= ../..
-MONGOOSE_PATH ?= ../../../mongoose
+REPO_ROOT ?= ../../..
+V7_PATH ?= $(REPO_ROOT)/v7
+SMARTJS_PATH ?= $(REPO_ROOT)/smartjs
+MONGOOSE_PATH ?= $(REPO_ROOT)/mongoose
 OBJDIR = build
 BINDIR = firmware
 FW_FS_SIZE = 65536
@@ -13,6 +14,13 @@ SJSJS_PATH ?= $(SMARTJS_SRC)/js
 FS_DIR = fs
 FS_BUILD_DIR = $(OBJDIR)/fs
 
+# FW_VERSION is copy-pasted from ESP makefile. Share!
+FW_ARCHITECTURE = cc3200
+GIT_REF     = $(shell git symbolic-ref HEAD | sed 's:refs/heads/::')
+GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
+DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
+FW_VERSION  = $(FW_ARCHITECTURE)/$(GIT_REF)/$(DATE)/$(GIT_SHA)
+
 include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
 .PHONY: all clean flash
@@ -20,9 +28,7 @@ include ${SDK_PATH}/tools/gcc_scripts/makedefs
 PROG = smartjs
 
 JS_SRCS    := $(SJSJS_PATH)/clubby.js \
-              $(SJSJS_PATH)/cloud.js $(SJSJS_PATH)/swupdate.js \
-              $(SJSJS_PATH)/I2C.js \
-              $(JSBIN_EXTRA) $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/demo.js \
+              $(SJSJS_PATH)/sys_init.js \
               $(SJSJS_PATH)/app_init.js
 
 JSBIN_EXT := js
@@ -38,6 +44,7 @@ IPATH = . ${SDK_PATH} \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
         ${SMARTJS_PATH}/src \
         ${SMARTJS_PATH}/src/spiffs \
+        ${REPO_ROOT}/common \
         ${MONGOOSE_PATH} \
         ${V7_PATH}
 
@@ -53,16 +60,37 @@ VPATH = ${SDK_PATH}/driverlib \
         ${V7_PATH} \
         ${MONGOOSE_PATH}
 
-V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_DISABLE_AST_TAG_NAMES \
-              -DV7_ENABLE_COMPACTING_GC -DDISABLE_MD5 \
-              -DV7_ENABLE__Math -DV7_ENABLE__Math__random \
-              -DV7_ENABLE__Memory__stats -DV7_FORCE_STRICT_MODE \
-              -DV7_ENABLE_FILE -DV7_ENABLE__StackTrace \
+V7_FEATURES = -DV7_BUILD_PROFILE=1 \
+              -DV7_DISABLE_AST_TAG_NAMES \
+              -DV7_ENABLE_COMPACTING_GC \
+              -DDISABLE_MD5 \
+              -DNO_BSD_SOCKETS \
+              -DV7_ENABLE__Math \
+              -DV7_ENABLE__Math__random \
+              -DV7_ENABLE__Memory__stats \
+              -DV7_FORCE_STRICT_MODE \
+              -DV7_ENABLE_FILE
 
+# TODO(lsm): copy-paste from ESP makefile. share!
+MONGOOSE_FEATURES = -DMG_DISABLE_MQTT \
+                    -DMG_DISABLE_JSON_RPC \
+                    -DMG_DISABLE_COAP \
+                    -DMG_DISABLE_SYNC_RESOLVER \
+                    -DMG_DISABLE_HTTP_DIGEST_AUTH \
+                    -DMG_DISABLE_MD5 \
+                    -DMG_DISABLE_SOCKETPAIR \
+                    -DMG_DISABLE_HTTP_KEEP_ALIVE \
+                    -DMG_DISABLE_DAV_AUTH \
+                    -DMG_DISABLE_CGI \
+                    -DMG_DISABLE_SSI \
+                    -DMG_MAX_HTTP_HEADERS=20 \
+                    -DMG_MAX_HTTP_REQUEST_SIZE=1024 \
+                    -DMG_MAX_PATH=40 \
+                    -DMG_MAX_HTTP_SEND_IOBUF=1024 \
+                    -DNO_BSD_SOCKETS \
+                    -DMG_DISABLE_FILESYSTEM \
+                    -DMG_CC3200
 
-MONGOOSE_FEATURES = -DMG_CC3200 -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_DAV \
-                 -DMG_DISABLE_SSI -DMG_DISABLE_FILESYSTEM -DMG_DISABLE_SOCKETPAIR \
-                 -DMG_DISABLE_CGI
 #-DMG_ENABLE_DEBUG
 
 # -DV7_TEMP_OFF
@@ -71,14 +99,19 @@ MONGOOSE_FEATURES = -DMG_CC3200 -DMG_DISABLE_DIRECTORY_LISTING -DMG_DISABLE_DAV 
 #-DV7_ESP_FLASH_ACCESS_EMUL
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
-                  -DV7_STACK_SIZE=16384 -DV7_DISABLE_INTERPRETER_STACK_CHECK \
+                  -DV7_STACK_SIZE=8192-64 \
+                  -DV7_DISABLE_INTERPRETER_STACK_CHECK \
                   -DFS_MAX_OPEN_FILES=5
 
 SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
 DISABLED_SDK_WARNINGS = -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses -Wno-unused-variable
 
-CFLAGS += -Os -Wall -Werror $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} ${MONGOOSE_FEATURES} ${CFLAGS_EXTRA}
+CFLAGS += -Os -Wall -Werror -DNDEBUG \
+          $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} \
+          -DFW_VERSION=\"$(FW_VERSION)\" \
+          -DFW_ARCHITECTURE=\"$(FW_ARCHITECTURE)\" \
+          ${MONGOOSE_FEATURES} ${CFLAGS_EXTRA}
 # CFLAGS += -DCC3200_FS_DEBUG
 
 .PHONY: all clean flash
@@ -91,7 +124,7 @@ clean:
 	@rm -rf ${BINDIR} ${wildcard *~}
 
 ${OBJDIR}:
-	@mkdir -p ${OBJDIR}
+	@mkdir -p ${OBJDIR} ${FS_BUILD_DIR}
 
 ${BINDIR}:
 	@mkdir -p ${BINDIR}
@@ -99,13 +132,20 @@ ${BINDIR}:
 ${OBJDIR}/mongoose.o: ${MONGOOSE_PATH}/mongoose.c
 	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
 
+${OBJDIR}/device_config.o: $(REPO_ROOT)/common/device_config.c
+	${CC} ${CFLAGS} -D${COMPILER} -o ${@} ${<}
+
+${OBJDIR}/sys_config.o: $(REPO_ROOT)/common/sys_config.c
+	${CC} ${CFLAGS} -D${COMPILER} -o ${@} ${<}
+
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sys_config.o ${OBJDIR}/cc3200_config.o ${OBJDIR}/device_config.o ${OBJDIR}/sj_config.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o ${OBJDIR}/cc3200_fs_failfs.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_libc.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJDIR}/cc3200_timers.o ${OBJDIR}/cc3200_wifi.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/v7.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_i2c_js.o ${OBJDIR}/cc3200_i2c.o
-${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_simple_http.o ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_http.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_mongoose.o ${OBJDIR}/sj_mongoose_http_client.o ${OBJDIR}/sj_timers.o ${OBJDIR}/sj_v7_ext.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/spiffs_cache.o ${OBJDIR}/spiffs_check.o ${OBJDIR}/spiffs_gc.o ${OBJDIR}/spiffs_hydrogen.o ${OBJDIR}/spiffs_nucleus.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/mongoose.o
@@ -121,10 +161,9 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/i2c.o ${OBJDIR
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
 
-${BINDIR}/fs.img: ${wildcard fs/*} $(JS_SRCS)
-	/usr/bin/rsync -r --copy-links $(FS_DIR)/ $(FS_BUILD_DIR)/
+${BINDIR}/fs.img: ${wildcard $(REPO_ROOT)/common/fs/*} $(JS_SRCS)
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
-	$(Q) $(foreach js,$(JS_SRCS) ${wildcard fs/*}, \
+	$(Q) $(foreach js,$(JS_SRCS) ${wildcard $(REPO_ROOT)/common/fs/*}, \
 		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
 		cp $(js) $(FS_BUILD_DIR);)
 	/usr/local/bin/mkspiffs ${FW_FS_SIZE} $(OBJDIR)/fs > $@
