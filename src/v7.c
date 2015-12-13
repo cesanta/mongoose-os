@@ -610,9 +610,9 @@ int v7_get_stack_avail_lwm(struct v7 *v7);
 #endif
 
 /* Only one will actually be used based on V7_BUILD_PROFILE. */
-/* Amalgamated: #include "features_minimal.h" */
-/* Amalgamated: #include "features_medium.h" */
-/* Amalgamated: #include "features_full.h" */
+/* Amalgamated: #include "v7/src/features_minimal.h" */
+/* Amalgamated: #include "v7/src/features_medium.h" */
+/* Amalgamated: #include "v7/src/features_full.h" */
 
 #endif /* V7_FEATURES_H_INCLUDED */
 #ifdef V7_MODULE_LINES
@@ -678,7 +678,6 @@ int v7_get_stack_avail_lwm(struct v7 *v7);
 #define V7_ENABLE__String__localeCompare 1
 #define V7_ENABLE__String__localeLowerCase 1
 #define V7_ENABLE__String__localeUpperCase 1
-#define V7_ENABLE__UTF 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
 #ifdef V7_MODULE_LINES
@@ -693,7 +692,6 @@ int v7_get_stack_avail_lwm(struct v7 *v7);
 #define V7_ENABLE__Math 1
 #define V7_ENABLE__Math__atan2 1
 #define V7_ENABLE__RegExp 1
-#define V7_ENABLE__UTF 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
 #ifdef V7_MODULE_LINES
@@ -746,7 +744,7 @@ int v7_get_stack_avail_lwm(struct v7 *v7);
 #ifndef V7_TOKENIZER_H_INCLUDED
 #define V7_TOKENIZER_H_INCLUDED
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 enum v7_tok {
   TOK_END_OF_INPUT,
@@ -1153,9 +1151,9 @@ char *utfutf(char *s1, char *s2);
 
 #ifdef PICOTCP
 #define time(x) PICO_TIME()
-/* Amalgamated: #include "pico_config.h" */
-/* Amalgamated: #include "pico_bsd_sockets.h" */
-/* Amalgamated: #include "pico_bsd_syscalls.h" */
+/* Amalgamated: #include "common/pico_config.h" */
+/* Amalgamated: #include "common/pico_bsd_sockets.h" */
+/* Amalgamated: #include "common/pico_bsd_syscalls.h" */
 #ifndef SOMAXCONN
 #define SOMAXCONN (16)
 #endif
@@ -1332,6 +1330,18 @@ int64_t strtoll(const char *str, char **endptr, int base);
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
+#ifdef __GNUC__
+#define NORETURN __attribute__((noreturn))
+#define UNUSED __attribute__((unused))
+#define NOINLINE __attribute__((noinline))
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+#define NORETURN
+#define UNUSED
+#define NOINLINE
+#define WARN_UNUSED_RESULT
+#endif
+
 #endif /* OSDEP_HEADER_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/base64.h"
@@ -1386,7 +1396,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #ifndef MD5_HEADER_DEFINED
 #define MD5_HEADER_DEFINED
 
-/* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "common/osdep.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -1435,7 +1445,7 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 #if !defined(MG_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
 #define MG_SHA1_HEADER_INCLUDED
 
-/* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "common/osdep.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -1535,8 +1545,8 @@ struct dirent *readdir(DIR *dir);
 #ifndef CS_UBJSON_H_INCLUDED
 #define CS_UBJSON_H_INCLUDED
 
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "mbuf.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/mbuf.h" */
 
 void cs_ubjson_emit_null(struct mbuf *buf);
 void cs_ubjson_emit_boolean(struct mbuf *buf, int v);
@@ -1603,9 +1613,9 @@ char *cs_mmap_file(const char *path, size_t *size);
 #ifndef _COROUTINE_H
 #define _COROUTINE_H
 
-/* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "common/osdep.h" */
 
-/* Amalgamated: #include "../common/mbuf.h" */
+/* Amalgamated: #include "common/mbuf.h" */
 
 /* user-defined union, this module only operates on the pointer */
 union user_arg_ret;
@@ -2333,7 +2343,7 @@ void init_ubjson(struct v7 *v7);
 #define AST_H_INCLUDED
 
 #include <stdio.h>
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -2540,7 +2550,7 @@ V7_PRIVATE void ast_dump_tree(FILE *, struct ast *, ast_off_t *, int depth);
 #ifndef V7_PARSER_H_INCLUDED
 #define V7_PARSER_H_INCLUDED
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -2580,7 +2590,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
 
 #ifdef V7_ENABLE_BCODE
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 /*
  * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
@@ -3244,7 +3254,7 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
 #ifndef MM_H_INCLUDED
 #define MM_H_INCLUDED
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 typedef void (*gc_cell_destructor_t)(struct v7 *v7, void *);
 
@@ -3285,7 +3295,7 @@ struct gc_arena {
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
-/* Amalgamated: #include "license.h" */
+/* Amalgamated: #include "v7/src/license.h" */
 
 /* Check whether we're compiling in an environment with no filesystem */
 #if defined(ARDUINO) && (ARDUINO == 106)
@@ -3312,18 +3322,6 @@ struct gc_arena {
  */
 #define V7_BROKEN_NAN
 
-#ifdef __GNUC__
-#define NORETURN __attribute__((noreturn))
-#define UNUSED __attribute__((unused))
-#define NOINLINE __attribute__((noinline))
-#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#else
-#define NORETURN
-#define UNUSED
-#define NOINLINE
-#define WARN_UNUSED_RESULT
-#endif
-
 #undef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 
@@ -3343,7 +3341,8 @@ struct gc_arena {
 #include <setjmp.h>
 
 /* Public API. Implemented in api.c */
-/* Amalgamated: #include "../v7.h" */
+/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "common/osdep.h" */
 
 #ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
@@ -3375,22 +3374,22 @@ typedef unsigned long uintptr_t;
 #include <stdint.h>
 #endif
 
-/* Amalgamated: #include "v7_features.h" */
+/* Amalgamated: #include "v7/src/v7_features.h" */
 
 /* Private API */
-/* Amalgamated: #include "utf.h" */
-/* Amalgamated: #include "str_util.h" */
-/* Amalgamated: #include "mbuf.h" */
-/* Amalgamated: #include "tokenizer.h" */
-/* Amalgamated: #include "slre.h" */
-/* Amalgamated: #include "varint.h" */
-/* Amalgamated: #include "ast.h" */
-/* Amalgamated: #include "parser.h" */
-/* Amalgamated: #include "bcode.h" */
-/* Amalgamated: #include "compiler.h" */
-/* Amalgamated: #include "mm.h" */
-/* Amalgamated: #include "builtin.h" */
-/* Amalgamated: #include "cyg_profile.h" */
+/* Amalgamated: #include "common/utf.h" */
+/* Amalgamated: #include "common/str_util.h" */
+/* Amalgamated: #include "common/mbuf.h" */
+/* Amalgamated: #include "v7/src/tokenizer.h" */
+/* Amalgamated: #include "v7/src/slre.h" */
+/* Amalgamated: #include "v7/src/varint.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/parser.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/compiler.h" */
+/* Amalgamated: #include "v7/src/mm.h" */
+/* Amalgamated: #include "v7/builtin/builtin.h" */
+/* Amalgamated: #include "v7/src/cyg_profile.h" */
 
 /* Max captures for String.replace() */
 #define V7_RE_MAX_REPL_SUB 20
@@ -3508,8 +3507,8 @@ enum v7_type {
 #define RANGE_ERROR "RangeError"
 #define ERROR_CTOR_MAX 5
 
-/* Amalgamated: #include "vm.h" */
-/* Amalgamated: #include "compiler.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/compiler.h" */
 
 struct v7 {
   val_t global_object;
@@ -3767,7 +3766,7 @@ V7_PRIVATE void throw_exception(struct v7 *, const char *typ, const char *,
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 /* TODO(mkm): remove ifdef once v7 has been moved here */
 #ifndef V7_VALUE_DEFINED
@@ -4080,7 +4079,7 @@ V7_PRIVATE enum v7_err apply_private(struct v7 *v7, v7_val_t *volatile result,
 
 #ifdef V7_ENABLE_BCODE
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -4112,8 +4111,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 #ifndef GC_H_INCLUDED
 #define GC_H_INCLUDED
 
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "vm.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #define MARK(p) (((struct gc_cell *) (p))->head.word |= 1)
 #define UNMARK(p) (((struct gc_cell *) (p))->head.word &= ~1)
@@ -4286,7 +4285,7 @@ int slre_get_flags(struct slre_prog *);
 #ifndef V7_VARINT_H_INCLUDED
 #define V7_VARINT_H_INCLUDED
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -4314,7 +4313,7 @@ V7_PRIVATE int calc_llen(size_t len);
 
 #include <assert.h>
 #include <string.h>
-/* Amalgamated: #include "mbuf.h" */
+/* Amalgamated: #include "common/mbuf.h" */
 
 #ifndef MBUF_REALLOC
 #define MBUF_REALLOC realloc
@@ -4419,15 +4418,17 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
 
 #ifndef EXCLUDE_COMMON
 
+/* clang-format off */
+
 #ifndef NO_LIBC
 #include <ctype.h>
 #endif
 #include <stdarg.h>
 #include <string.h>
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "utf.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/utf.h" */
 
-#if V7_ENABLE__UTF
+#if CS_ENABLE_UTF8
 enum {
   Bit1 = 7,
   Bitx = 6,
@@ -4631,7 +4632,7 @@ const char *utfnshift(const char *s, long m) {
  */
 #include <stdarg.h>
 #include <string.h>
-/* Amalgamated: #include "utf.h" */
+/* Amalgamated: #include "common/utf.h" */
 
 /*
  * alpha ranges -
@@ -5705,7 +5706,7 @@ int isspacerune(Rune c) {
   return 0;
 }
 
-#else /* V7_ENABLE__UTF */
+#else /* CS_ENABLE_UTF8 */
 
 int chartorune(Rune *rune, const char *str) {
   *rune = *(uchar *) str;
@@ -5762,7 +5763,7 @@ const char *utfnshift(const char *s, long m) {
   return s + m;
 }
 
-#endif /* V7_ENABLE__UTF */
+#endif /* CS_ENABLE_UTF8 */
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
@@ -5776,7 +5777,7 @@ const char *utfnshift(const char *s, long m) {
 
 #ifndef EXCLUDE_COMMON
 
-/* Amalgamated: #include "base64.h" */
+/* Amalgamated: #include "common/base64.h" */
 #include <string.h>
 
 /* ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ */
@@ -5990,7 +5991,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
 
 #if !defined(DISABLE_MD5) && !defined(EXCLUDE_COMMON)
 
-/* Amalgamated: #include "md5.h" */
+/* Amalgamated: #include "common/md5.h" */
 
 #ifndef CS_ENABLE_NATIVE_MD5
 static void byteReverse(unsigned char *buf, unsigned longs) {
@@ -6224,11 +6225,11 @@ char *cs_md5(char buf[33], ...) {
 
 #if !defined(DISABLE_SHA1) && !defined(EXCLUDE_COMMON)
 
-/* Amalgamated: #include "sha1.h" */
+/* Amalgamated: #include "common/sha1.h" */
 
 #define SHA1HANDSOFF
 #if defined(__sun)
-/* Amalgamated: #include "solarisfixes.h" */
+/* Amalgamated: #include "common/solarisfixes.h" */
 #endif
 
 union char64long16 {
@@ -6481,8 +6482,8 @@ void cs_hmac_sha1(const unsigned char *key, size_t keylen,
 
 #ifndef EXCLUDE_COMMON
 
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "str_util.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/str_util.h" */
 
 #ifdef _MG_PROVIDE_STRNLEN
 size_t strnlen(const char *s, size_t maxlen) {
@@ -6719,8 +6720,8 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 
 #ifndef EXCLUDE_COMMON
 
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "cs_dirent.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/cs_dirent.h" */
 
 /*
  * This file contains POSIX opendir/closedir/readdir API implementation
@@ -6851,7 +6852,7 @@ int mkdir(const char *path, mode_t mode) {
 #endif
 #ifdef CS_ENABLE_UBJSON
 
-/* Amalgamated: #include "ubjson.h" */
+/* Amalgamated: #include "common/ubjson.h" */
 
 void cs_ubjson_emit_null(struct mbuf *buf) {
   mbuf_append(buf, "Z", 1);
@@ -7073,7 +7074,7 @@ char *cs_mmap_file(const char *path, size_t *size) {
 #include <string.h>
 #include <stdlib.h>
 
-/* Amalgamated: #include "coroutine.h" */
+/* Amalgamated: #include "common/coroutine.h" */
 
 /*
  * Unwinds stack by 1 function. Used when we're returning from function and
@@ -7227,12 +7228,12 @@ void cr_context_free(struct cr_ctx *p_ctx) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "v7.h" */
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "mbuf.h" */
-/* Amalgamated: #include "cs_file.h" */
-/* Amalgamated: #include "v7_features.h" */
-/* Amalgamated: #include "dirent.h" */
+/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/mbuf.h" */
+/* Amalgamated: #include "common/cs_file.h" */
+/* Amalgamated: #include "v7/src/v7_features.h" */
+/* Amalgamated: #include "common/cs_dirent.h" */
 
 #if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
 
@@ -7485,9 +7486,9 @@ void init_file(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "v7.h" */
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "mbuf.h" */
+/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/mbuf.h" */
 
 #ifdef V7_ENABLE_SOCKET
 
@@ -7715,10 +7716,10 @@ void init_socket(struct v7 *v7) {
 #include <stdlib.h>
 #include <string.h>
 
-/* Amalgamated: #include "v7.h" */
-/* Amalgamated: #include "md5.h" */
-/* Amalgamated: #include "sha1.h" */
-/* Amalgamated: #include "base64.h" */
+/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "common/md5.h" */
+/* Amalgamated: #include "common/sha1.h" */
+/* Amalgamated: #include "common/base64.h" */
 
 #ifdef V7_ENABLE_CRYPTO
 
@@ -7837,17 +7838,17 @@ void init_crypto(struct v7 *v7) {
 #line 1 "./src/../builtin/ubjson.c"
 /**/
 #endif
-/* Amalgamated: #include "builtin.h" */
+/* Amalgamated: #include "v7/builtin/builtin.h" */
 
 #ifdef V7_ENABLE_UBJSON
 
-#include <v7.h>
+/* Amalgamated: #include "v7/v7.h" */
 #include <string.h>
 #include <assert.h>
 
-#include <ubjson.h>
+/* Amalgamated: #include "common/ubjson.h" */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 struct ubjson_ctx {
   struct mbuf out;   /* output buffer */
@@ -8114,7 +8115,7 @@ void init_ubjson(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 /*
  * Strings in AST are encoded as tuples (length, string).
@@ -8174,7 +8175,7 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
@@ -8647,7 +8648,7 @@ int main(void) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #ifdef V7_LARGE_AST
 typedef uint32_t ast_skip_t;
@@ -9520,8 +9521,8 @@ V7_PRIVATE void ast_free(struct ast *ast) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "gc.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
 
 #ifdef V7_ENABLE_BCODE
 
@@ -10231,13 +10232,15 @@ static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
      */
     found = unwind_local_blocks_stack(v7, r, mask | LOCAL_BLOCK_FINALLY, 0);
     if (found == LOCAL_BLOCK_NONE) {
-      /*
-       * no blocks found: this may happen if only the `break` or `continue` has
-       * occurred inside "private" frame. So, unwind this frame, make sure it
-       * is indeed "private" (not "function"), and keep unwinding local blocks.
-       */
+/*
+ * no blocks found: this may happen if only the `break` or `continue` has
+ * occurred inside "private" frame. So, unwind this frame, make sure it
+ * is indeed "private" (not "function"), and keep unwinding local blocks.
+ */
+#if !defined(NDEBUG)
       uint8_t is_func_frame = unwind_stack_1level(v7, r);
       assert(!is_func_frame);
+#endif
     } else {
       /* found some block to transfer control into, stop unwinding */
       break;
@@ -11373,6 +11376,9 @@ restart:
         is_func_frame = unwind_stack_1level(v7, &r);
         /* make sure the unwound frame is the "private" frame */
         assert(is_func_frame == 0);
+#if defined(NDEBUG)
+        (void) is_func_frame;
+#endif
         break;
       }
       default:
@@ -11694,13 +11700,13 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   assert(v7->bottom_call_stack == v7->call_stack);
 
   if (err == V7_OK) {
-    /*
-     * bcode evaluated successfully. Make sure try stack is empty.
-     * (data stack will be checked below, in `cleanup`)
-     */
+/*
+ * bcode evaluated successfully. Make sure try stack is empty.
+ * (data stack will be checked below, in `cleanup`)
+ */
+#ifndef NDEBUG
     unsigned long try_stack_len =
         v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
-#ifndef NDEBUG
     if (try_stack_len != 0) {
       printf("try_stack_len=%lu, should be 0\n", try_stack_len);
     }
@@ -11977,10 +11983,10 @@ V7_PRIVATE void bcode_serialize(struct v7 *v7, struct bcode *bcode, FILE *out) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "gc.h" */
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "cs_file.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/cs_file.h" */
 
 #ifdef HAS_V7_INFINITY
 double _v7_infinity;
@@ -14279,9 +14285,9 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "bcode.h" */
-/* Amalgamated: #include "gc.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
 
 #ifdef V7_STACK_GUARD_MIN_SIZE
 void *v7_sp_limit = NULL;
@@ -15115,8 +15121,8 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "coroutine.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "common/coroutine.h" */
 
 #define ACCEPT(t) (((v7)->cur_tok == (t)) ? next_tok((v7)), 1 : 0)
 
@@ -17706,11 +17712,11 @@ const char *v7_get_parser_error(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "gc.h" */
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "cs_file.h" */
-/* Amalgamated: #include "ast.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/cs_file.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
 
 #if !defined(V7_USE_BCODE)
 
@@ -19550,7 +19556,7 @@ cleanup:
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #ifdef V7_ENABLE_BCODE
 
@@ -21397,7 +21403,7 @@ clean:
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #ifdef NO_LIBC
 void print_str(const char *str);
@@ -21609,7 +21615,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 /* clang-format off */
 /* because clang-format would break JS code, e.g. === converted to == = ... */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #define STRINGIFY(x) #x
 
@@ -21771,7 +21777,7 @@ static const char * const js_functions[] = {
  * license, as set out in <https://www.cesanta.com/license>.
  */
 
-/* Amalgamated: #include "v7_features.h" */
+/* Amalgamated: #include "v7/src/v7_features.h" */
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -21782,8 +21788,8 @@ static const char * const js_functions[] = {
 #include <ctype.h>
 #endif
 
-/* Amalgamated: #include "utf.h" */
-/* Amalgamated: #include "slre.h" */
+/* Amalgamated: #include "common/utf.h" */
+/* Amalgamated: #include "v7/src/slre.h" */
 
 /* Limitations */
 #define SLRE_MAX_RANGES 32
@@ -23450,7 +23456,7 @@ int main(int argc, char **argv) {
  * function call), I decided it's better to inline the code right here.
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if defined(V7_CYG_PROFILE_ON)
 
@@ -23625,7 +23631,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if V7_ENABLE__Object__getPrototypeOf
 static val_t Obj_getPrototypeOf(struct v7 *v7) {
@@ -23971,7 +23977,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   /* TODO(mkm): figure out if this is an error object and which kind */
@@ -24051,7 +24057,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 static val_t Number_ctor(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
@@ -24211,7 +24217,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 static val_t Json_stringify(struct v7 *v7) {
   val_t arg0 = v7_arg(v7, 0);
@@ -24241,9 +24247,9 @@ V7_PRIVATE void init_json(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
-/* Amalgamated: #include "gc.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
 
 struct a_sort_data {
   struct v7 *v7;
@@ -24838,7 +24844,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 V7_PRIVATE val_t Boolean_ctor(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
@@ -24906,7 +24912,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if V7_ENABLE__Math
 
@@ -25129,7 +25135,7 @@ V7_PRIVATE void init_math(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
@@ -26003,7 +26009,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if V7_ENABLE__Date
 
@@ -27054,7 +27060,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 static val_t Function_ctor(struct v7 *v7) {
   long i, num_args = v7_argc(v7);
@@ -27191,7 +27197,7 @@ V7_PRIVATE void init_function(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if V7_ENABLE__RegExp
 
@@ -27374,9 +27380,9 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "internal.h" */
-/* Amalgamated: #include "osdep.h" */
-/* Amalgamated: #include "cs_file.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/cs_file.h" */
 
 #if defined(_MSC_VER) && _MSC_VER >= 1800
 #define fileno _fileno
