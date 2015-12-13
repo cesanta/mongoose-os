@@ -1,0 +1,1 @@
+../../../../common/device_config.h

@@ -1,0 +1,17 @@
+{
+  "wifi": {
+    "ap": {
+      "pass": ""
+    },
+    "sta": {
+      "ssid": "cookadoodadoo",
+      "pass": "try less cork"
+    },
+  },
+  "http": {
+    "enable": false,
+  },
+  "debug": {
+    "level": 1
+  }
+}

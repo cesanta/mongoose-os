@@ -1,0 +1,48 @@
+
+== Quick Start Guide
+
+-  Download
+   link:https://github.com/cesanta/smart.js/releases[Flashnchips]
+   firmware burning tool
+-  Connect the board to your computer via the USB or serial interface
+-  Start Flashnchips.
+-  If you are using a USB connector, and "Select port" dropdown is disabled,
+   then USB-to-serial driver needs to be installed:
+   * CC3200 USB drivers:
+   link:https://backend.cesanta.com/FTDI_Driver_Mac.pkg[for MacOS], for
+   link:https://developer.mbed.org/media/downloads/drivers/mbedWinSerial_16466.exe[for Windows]
+   * FTDI drivers are at
+   link:http://www.ftdichip.com/Drivers/VCP.htm[FTDI website]
+   * Drivers for NodeMCU v1 board is at link:https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx[Silabs CP2102 page].
+-  Restart Flashnchips after driver installation. "Select port" dropdown must
+   automatically pick up a serial port to where your board is connected.
+-  For CC3200 board, make sure that SOP2 pin is shorted, or wired to TCK.
+-  Press "Flash Firmware" button. That will burn Smart.js firmware on
+   the flash memory.
+-  When burning is complete, Smart.js automatically connects a console
+   to the device, prints device configuration, boot messages,
+   and shows an interactive JavaScript prompt. Notice the unique
+   "device_id" in the configuration - it will be needed to talk to the cloud.
+   Smart.js +
+   image:smartjs_quick_start_guide/fc2.png[width="75%",align="center"]
+-  Two numbers shown by prompt
+   are available free memory, and memory taken by Smart.js
+-  Type some JavaScript expression to the console and press enter.
+   Smart.js evaluates the expression and prints evaluation result: +
+   image:smartjs_quick_start_guide/fc3.png[width="75%",align="center"]
+-  Configure Wifi. This is not needed on POSIX platforms like RPI, where
+   networking is already configured. Note that Smart.js provides flexible
+   configuration infrastructure, described in the next section. Here,
+   we use quick ad-hoc way to configure.
+-  Enter `Wifi.setup('WifiNetworkName', 'WifiPassword')` to the console
+-  Using your mouse, copy the value of device ID printed earlier
+-  Enter `demoSendRandomData()` to start sending random numbers
+   to `cloud.cesanta.com` every second, simulating real sensor data.
+   `cloud.cesanta.com` however will reject that data, because it doesn't
+   accept data from unregistered devices
+-  Register the device on the cloud: login to
+   link:https://cloud.cesanta.com/#/devices[]
+-  Click on "Devices" tab, copy/paste device ID. Leave PSK field blank.
+   Press "Add Device" button.
+-  Switch to the "Dashboard" tab, and see real-time graph updated: +
+   image:smartjs_quick_start_guide/dash1.png[width="75%"]

@@ -1,0 +1,68 @@
+
+== Smart.js firmware
+
+=== Configuration infrastructure
+
+After boot, Smart.js creates a WiFi Access Point (AP) called `SMARTJS_??????`,
+where `??` are replaced by the hex numbers from device's MAC address.
+On that AP, Smart.js runs a web server on address `192.168.4.1` with
+a configuration interface:
+
+image:smartjs_quick_start_guide/cfg.png[width="75%",align="center"]
+
+- Join `SMARTJS_??????` AP and point your browser at link:http://192.168.4.1[]
+- Change configuration parameters as needed, press Save.
+- The module will reboot with new configuration.
+
+It is possible to add custom parameters to the configuration UI - see section
+below. Configuration parameters are accessible by JavaScript code through
+`Sys.conf` variable.
+
+=== Filesystem
+
+Smart.js uses SPIFFS filesystem on some of the boards (e.g. ESP8266, CC3200).
+SPIFFS is a flat filesystem, i.e. it has no directories. To provide the same
+look at feel on all platforms, Smart.js uses flat filesystem on all
+architectures.
+
+Below there is a quick description of the files and their meaning.
+System files, not supposed to be edited:
+
+sys_init.js::
+  Main system initialization file. This file is the only file
+  called by the C firmware code.
+conf_sys_defaults.json::
+  System configuration.
+conf_sys_schema.json::
+  Contains description of the system configuration, used by the Web UI
+  to render controls.
+conf.json::
+  This file can be absent. It is created by the Web UI when user saves
+  configuration, and contains only overrides to system and app config files.
+index.html::
+  Configuration Web UI file.
+sys_*.js::
+  Various drivers.
+
+Files that are meant to be edited by developers:
+
+app_init.js::
+  Application-specific file. This file is called by `sys_init.js`.
+  User code must go here.
+conf_app_defaults.json::
+  Application-specific configuration file. Initially empty.
+  If application wants to show it's
+  own config parameters on the configuration Web UI, those parameters should
+  go in this file.
+conf_app_schema.json::
+  Description of the app-specific config options.
+
+When Smart.js starts, it reads `conf_sys_defaults.json`, merges it with,
+`conf_app_defaults.json`, and subsequently merges with `conf.json`.
+Therefore, in order to override any setting from the default config files,
+put the override into `conf.json` - that's exactly what Web UI is doing when
+user presses Save button.
+
+`conf_app_defaults.json` file is empty by default. Put your application
+specific configuration parameters there, the same way system parameters are
+kept in `conf_sys_defaults.json`.
