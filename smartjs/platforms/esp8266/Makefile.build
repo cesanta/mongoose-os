@@ -16,6 +16,7 @@ KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
 SPIFFS_PATH ?= $(SMARTJS_SRC)/spiffs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
+COMMON_FS_PATH ?= $(SMARTJS_SRC)/fs
 LWIP_PATH ?= lwip
 V7_PATH ?= ../../../v7
 USE_BOOTLOADER ?=
@@ -162,7 +163,7 @@ GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
-FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(REPO_ROOT)/common/fs/*)
+FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_FS_PATH)/*)
 FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
 LD_SCRIPT = $(BUILD_DIR)/$(APP).$(_FLASH_SIZE).ld
 

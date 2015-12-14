@@ -1,1 +1,1 @@
-../../../../common/device_config.c
+../../../src/device_config.c

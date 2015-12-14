@@ -3,10 +3,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "mongoose.h"
-#include "cs_file.h"
-#include "sj_mongoose.h"
-#include "device_config.h"
+#include "mongoose/mongoose.h"
+#include "common/cs_file.h"
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/device_config.h"
 
 #define SYSTEM_DEFAULT_JSON_FILE "conf_sys_defaults.json"
 #define OVERRIDES_JSON_FILE "conf.json"

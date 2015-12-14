@@ -1,8 +1,8 @@
 #ifndef CONFIG_H_INCLUDED
 #define CONFIG_H_INCLUDED
 
-#include "sys_config.h"
-#include "v7.h"
+#include "smartjs/src/sys_config.h"
+#include "v7/v7.h"
 
 /* Read-only firmware setting */
 struct ro_var {

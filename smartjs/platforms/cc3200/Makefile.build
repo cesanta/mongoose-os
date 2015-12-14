@@ -10,6 +10,7 @@ OBJDIR = build
 BINDIR = firmware
 FW_FS_SIZE = 65536
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
+COMMON_FS_PATH ?= $(SMARTJS_SRC)/fs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
 FS_DIR = fs
 FS_BUILD_DIR = $(OBJDIR)/fs
@@ -108,6 +109,7 @@ SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 DISABLED_SDK_WARNINGS = -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses -Wno-unused-variable
 
 CFLAGS += -Os -Wall -Werror -DNDEBUG \
+          -I$(REPO_ROOT) \
           $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} \
           -DFW_VERSION=\"$(FW_VERSION)\" \
           -DFW_ARCHITECTURE=\"$(FW_ARCHITECTURE)\" \
@@ -132,12 +134,6 @@ ${BINDIR}:
 ${OBJDIR}/mongoose.o: ${MONGOOSE_PATH}/mongoose.c
 	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
 
-${OBJDIR}/device_config.o: $(REPO_ROOT)/common/device_config.c
-	${CC} ${CFLAGS} -D${COMPILER} -o ${@} ${<}
-
-${OBJDIR}/sys_config.o: $(REPO_ROOT)/common/sys_config.c
-	${CC} ${CFLAGS} -D${COMPILER} -o ${@} ${<}
-
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sys_config.o ${OBJDIR}/cc3200_config.o ${OBJDIR}/device_config.o ${OBJDIR}/sj_config.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o ${OBJDIR}/cc3200_fs_failfs.o
@@ -147,6 +143,7 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/v7.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_i2c_js.o ${OBJDIR}/cc3200_i2c.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_wifi.o ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_http.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sj_mongoose.o ${OBJDIR}/sj_mongoose_http_client.o ${OBJDIR}/sj_timers.o ${OBJDIR}/sj_v7_ext.o
+${BINDIR}/${PROG}.axf: ${OBJDIR}/device_config.o ${OBJDIR}/sys_config.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/spiffs_cache.o ${OBJDIR}/spiffs_check.o ${OBJDIR}/spiffs_gc.o ${OBJDIR}/spiffs_hydrogen.o ${OBJDIR}/spiffs_nucleus.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/mongoose.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/startup_gcc.o
@@ -161,9 +158,9 @@ ${BINDIR}/${PROG}.axf: ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/i2c.o ${OBJDIR
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
 
-${BINDIR}/fs.img: ${wildcard $(REPO_ROOT)/common/fs/*} $(JS_SRCS)
+${BINDIR}/fs.img: ${wildcard $(COMMON_FS_PATH)/*} $(JS_SRCS)
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
-	$(Q) $(foreach js,$(JS_SRCS) ${wildcard $(REPO_ROOT)/common/fs/*}, \
+	$(Q) $(foreach js,$(JS_SRCS) ${wildcard $(COMMON_FS_PATH)/*}, \
 		echo "CP $(js) -> $(FS_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
 		cp $(js) $(FS_BUILD_DIR);)
 	/usr/local/bin/mkspiffs ${FW_FS_SIZE} $(OBJDIR)/fs > $@

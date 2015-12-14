@@ -1,1 +1,1 @@
-../../../../common/sys_config.c
+../../../src/sys_config.c
