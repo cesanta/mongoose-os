@@ -3,22 +3,26 @@
 
 #include "v7.h"
 
-void sj_wifi_init(struct v7* v7);
+#include "smartjs/src/sys_config.h"
+
+void sj_wifi_init(struct v7 *v7);
 
 /* HAL */
 
-int sj_wifi_setup_sta(const char* ssid, const char* pass);
+int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
+
+int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg);
 
 int sj_wifi_connect(); /* To previously _setup network. */
 int sj_wifi_disconnect();
 
 /* These return allocated strings which will be free'd. */
-char* sj_wifi_get_status();
-char* sj_wifi_get_connected_ssid();
-char* sj_wifi_get_sta_ip();
+char *sj_wifi_get_status();
+char *sj_wifi_get_connected_ssid();
+char *sj_wifi_get_sta_ip();
 
 /* Caller owns SSIDS, they are not freed by the callee. */
-typedef void (*sj_wifi_scan_cb_t)(const char** ssids);
+typedef void (*sj_wifi_scan_cb_t)(const char **ssids);
 int sj_wifi_scan(sj_wifi_scan_cb_t cb);
 
 /* Invoke this when Wifi connection state changes. */

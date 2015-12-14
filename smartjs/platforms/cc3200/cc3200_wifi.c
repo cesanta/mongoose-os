@@ -2,8 +2,10 @@
 #include <stdio.h>
 
 #include "simplelink.h"
+#include "netapp.h"
 #include "wlan.h"
 
+#include "cc3200_socket.h"
 #include "sj_wifi.h"
 #include "v7.h"
 #include "config.h"
@@ -52,16 +54,96 @@ void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
                                   SlHttpServerResponse_t *resp) {
 }
 
-int sj_wifi_setup_sta(const char *ssid, const char *pass) {
+int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   s_wifi_sta_config.status = SJ_WIFI_DISCONNECTED;
   free(s_wifi_sta_config.ssid);
   free(s_wifi_sta_config.pass);
   free(s_wifi_sta_config.ip);
-  s_wifi_sta_config.ssid = strdup(ssid);
-  s_wifi_sta_config.pass = strdup(pass);
+  s_wifi_sta_config.ssid = strdup(cfg->ssid);
+  s_wifi_sta_config.pass = strdup(cfg->pass);
   s_wifi_sta_config.ip = NULL;
 
   return sj_wifi_connect();
+}
+
+int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+  int ret;
+  uint8_t v;
+  SlNetCfgIpV4Args_t ipcfg;
+  SlNetAppDhcpServerBasicOpt_t dhcpcfg;
+
+  if ((ret = sl_WlanSetMode(ROLE_AP)) != 0) {
+    fprintf(stderr, "sl_WlanSetMode: %d\n", ret);
+    return 0;
+  }
+
+  if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SSID, strlen(cfg->ssid),
+                        (const uint8_t *) cfg->ssid)) != 0) {
+    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_SSID): %d\n", ret);
+    return 0;
+  }
+
+  v = strlen(cfg->pass) > 0 ? SL_SEC_TYPE_WPA : SL_SEC_TYPE_OPEN;
+  if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SECURITY_TYPE, 1, &v)) !=
+      0) {
+    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_SECURITY_TYPE): %d\n", ret);
+    return 0;
+  }
+  if (v == SL_SEC_TYPE_WPA &&
+      (ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_PASSWORD,
+                        strlen(cfg->pass), (const uint8_t *) cfg->pass)) != 0) {
+    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_PASSWORD): %d\n", ret);
+    return 0;
+  }
+
+  v = cfg->channel;
+  if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_CHANNEL, 1,
+                        (uint8_t *) &v)) != 0) {
+    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_CHANNEL): %d\n", ret);
+    return 0;
+  }
+
+  v = cfg->hidden;
+  if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_HIDDEN_SSID, 1,
+                        (uint8_t *) &v)) != 0) {
+    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_HIDDEN_SSID): %d\n", ret);
+    return 0;
+  }
+
+  memset(&ipcfg, 0, sizeof(ipcfg));
+  if (!inet_pton(AF_INET, cfg->ip, &ipcfg.ipV4) ||
+      !inet_pton(AF_INET, cfg->netmask, &ipcfg.ipV4Mask) ||
+      !inet_pton(AF_INET, cfg->gw, &ipcfg.ipV4Gateway) ||
+      !inet_pton(AF_INET, cfg->gw, &ipcfg.ipV4DnsServer) ||
+      (ret = sl_NetCfgSet(SL_IPV4_AP_P2P_GO_STATIC_ENABLE,
+                          IPCONFIG_MODE_ENABLE_IPV4, sizeof(ipcfg),
+                          (uint8_t *) &ipcfg)) != 0) {
+    fprintf(stderr, "sl_NetCfgSet(IPCONFIG_MODE_ENABLE_IPV4): %d\n", ret);
+    return 0;
+  }
+
+  memset(&dhcpcfg, 0, sizeof(dhcpcfg));
+  dhcpcfg.lease_time = 900;
+  if (!inet_pton(AF_INET, cfg->dhcp_start, &dhcpcfg.ipv4_addr_start) ||
+      !inet_pton(AF_INET, cfg->dhcp_end, &dhcpcfg.ipv4_addr_last) ||
+      (ret = sl_NetAppSet(SL_NET_APP_DHCP_SERVER_ID,
+                          NETAPP_SET_DHCP_SRV_BASIC_OPT, sizeof(dhcpcfg),
+                          (uint8_t *) &dhcpcfg)) != 0) {
+    fprintf(stderr, "sl_NetCfgSet(NETAPP_SET_DHCP_SRV_BASIC_OPT): %d\n", ret);
+    return 0;
+  }
+
+  /* We don't need TI's web server. */
+  sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
+
+  /* Turning the device off and on for the change to take effect. */
+  sl_Stop(0);
+  sl_Start(NULL, NULL, NULL);
+  osi_Sleep(100);
+
+  fprintf(stderr, "AP %s configured\n", cfg->ssid);
+
+  return 1;
 }
 
 int sj_wifi_connect() {

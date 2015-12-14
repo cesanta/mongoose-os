@@ -11,9 +11,11 @@
       "pass": "Elduderino",
       "hidden": 0,
       "channel": 6,
-      "dhcp_start": "192.168.4.1",
-      "dhcp_end": "192.168.4.200",
-      "dhcp_netmask": "255.255.255.0"
+      "ip": "192.168.4.1",
+      "netmask": "255.255.255.0",
+      "gw": "192.168.4.1",
+      "dhcp_start": "192.168.4.2",
+      "dhcp_end": "192.168.4.200"
     }
   },
   "http": {

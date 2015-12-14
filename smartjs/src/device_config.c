@@ -157,7 +157,7 @@ int init_device(struct v7 *v7) {
 
   /* Init mac address readonly var - users may use it as device ID */
   device_get_mac_address(mac);
-  snprintf(s_mac_address, sizeof(s_mac_address), "%02x%02x%02x%02x%02x%02x",
+  snprintf(s_mac_address, sizeof(s_mac_address), "%02X%02X%02X%02X%02X%02X",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   REGISTER_RO_VAR(mac_address, &mac_address_ptr);
   LOG(LL_INFO, ("MAC: %s\n", s_mac_address));

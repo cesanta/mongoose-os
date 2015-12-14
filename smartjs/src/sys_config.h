@@ -9,10 +9,12 @@ struct sys_config {
   } debug;
   struct sys_config_wifi {
     struct sys_config_wifi_ap {
+      char *gw;
       char *ssid;
       char *dhcp_start;
       char *dhcp_end;
-      char *dhcp_netmask;
+      char *ip;
+      char *netmask;
       int mode;
       char *pass;
       int hidden;

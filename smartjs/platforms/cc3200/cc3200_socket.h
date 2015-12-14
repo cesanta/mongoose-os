@@ -139,6 +139,7 @@
 
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 char *inet_ntoa(struct in_addr in);
+int inet_pton(int af, const char *src, void *dst);
 
 void cc3200_set_non_blocking_mode(int fd);
 

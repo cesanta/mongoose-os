@@ -41,29 +41,92 @@ static sj_wifi_scan_cb_t wifi_scan_cb;
 /* true if we're waiting for an ip after invoking Wifi.setup() */
 int wifi_setting_up = 0;
 
-int sj_wifi_setup_sta(const char *ssid, const char *pass) {
+int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   int res;
-  struct station_config stationConf;
+  struct station_config sta_cfg;
   /* Switch to station mode if not already in it. */
   if (wifi_get_opmode() != 0x1) {
     wifi_set_opmode_current(0x1);
   }
   wifi_station_disconnect();
 
-  stationConf.bssid_set = 0;
-  strncpy((char *) &stationConf.ssid, ssid, 32);
-  strncpy((char *) &stationConf.password, pass, 64);
+  sta_cfg.bssid_set = 0;
+  strncpy((char *) &sta_cfg.ssid, cfg->ssid, 32);
+  strncpy((char *) &sta_cfg.password, cfg->pass, 64);
 
-  res = wifi_station_set_config_current(&stationConf);
+  res = wifi_station_set_config_current(&sta_cfg);
   if (!res) {
     LOG(LL_ERROR, ("Failed to set station config"));
     return 0;
   }
 
+  LOG(LL_DEBUG, ("Joining %s", sta_cfg.ssid));
   res = wifi_station_connect();
   if (res) {
     wifi_setting_up = 1;
   }
+  return 1;
+}
+
+int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+  struct softap_config ap_cfg;
+  struct ip_info info;
+  struct dhcps_lease dhcps;
+
+  memset(&ap_cfg, 0, sizeof(ap_cfg));
+
+  int pass_len = strlen(cfg->pass);
+  int ssid_len = strlen(cfg->ssid);
+
+  if (ssid_len > sizeof(ap_cfg.ssid) || pass_len > sizeof(ap_cfg.password)) {
+    LOG(LL_ERROR, ("AP SSID or PASS too long"));
+    return 0;
+  }
+
+  if (pass_len != 0 && pass_len < 8) {
+    /*
+     * If we don't check pwd len here and it will be less than 8 chars
+     * esp will setup _open_ wifi with name ESP_<mac address here>
+     */
+    LOG(LL_ERROR, ("AP password too short"));
+    return 0;
+  }
+
+  strncpy((char *) ap_cfg.ssid, cfg->ssid, sizeof(ap_cfg.ssid));
+  strncpy((char *) ap_cfg.password, cfg->pass, sizeof(ap_cfg.password));
+  ap_cfg.ssid_len = ssid_len;
+  if (pass_len != 0) {
+    ap_cfg.authmode = AUTH_WPA2_PSK;
+  }
+  ap_cfg.channel = cfg->channel;
+  ap_cfg.ssid_hidden = (cfg->hidden != 0);
+  ap_cfg.max_connection = 1;
+  ap_cfg.beacon_interval = 100; /* ms */
+
+  LOG(LL_DEBUG, ("Setting up %s on channel %d", ap_cfg.ssid, ap_cfg.channel));
+  wifi_softap_set_config_current(&ap_cfg);
+
+  LOG(LL_DEBUG, ("Restarting DHCP server"));
+  wifi_softap_dhcps_stop();
+
+  /*
+   * We have to set ESP's IP address explicitly also, GW IP has to be the
+   * same. Using ap_dhcp_start as IP address for ESP
+   */
+  info.netmask.addr = ipaddr_addr(cfg->netmask);
+  info.ip.addr = ipaddr_addr(cfg->ip);
+  info.gw.addr = ipaddr_addr(cfg->gw);
+  wifi_set_ip_info(SOFTAP_IF, &info);
+
+  dhcps.start_ip.addr = ipaddr_addr(cfg->dhcp_start);
+  dhcps.end_ip.addr = ipaddr_addr(cfg->dhcp_end);
+  wifi_softap_set_dhcps_lease(&dhcps);
+
+  wifi_softap_dhcps_start();
+
+  wifi_get_ip_info(SOFTAP_IF, &info);
+  LOG(LL_INFO, ("AP address is " IPSTR "", IP2STR(&info.ip)));
+
   return 1;
 }
 

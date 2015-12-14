@@ -142,16 +142,7 @@ static void v7_task(void *arg) {
 extern void (*const g_pfnVectors[])(void);
 
 void device_reboot(void) {
-  /* TODO(lsm): implement this */
-}
-
-void device_get_mac_address(uint8_t mac[6]) {
-  /* TODO(lsm): implement this */
-}
-
-int device_init_platform(struct sys_config *cfg) {
-  /* TODO(lsm): implement this */
-  return 1; /* success */
+  sj_system_restart();
 }
 
 int main() {

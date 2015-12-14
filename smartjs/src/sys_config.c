@@ -19,6 +19,10 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
+  if (sj_conf_get_str(toks, "wifi.ap.gw", &dst->wifi.ap.gw) == 0 &&
+      require_keys)
+    goto done;
+
   if (sj_conf_get_str(toks, "wifi.ap.ssid", &dst->wifi.ap.ssid) == 0 &&
       require_keys)
     goto done;
@@ -32,8 +36,11 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_str(toks, "wifi.ap.dhcp_netmask",
-                      &dst->wifi.ap.dhcp_netmask) == 0 &&
+  if (sj_conf_get_str(toks, "wifi.ap.ip", &dst->wifi.ap.ip) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "wifi.ap.netmask", &dst->wifi.ap.netmask) == 0 &&
       require_keys)
     goto done;
 
