@@ -13584,9 +13584,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     GET_VAL_NAN_PAYLOAD(offset)[0] = dict_index;
     tag = V7_TAG_STRING_D;
   } else if (own) {
-#ifndef V7_DISABLE_COMPACTING_GC
     compute_need_gc(v7);
-#endif
     embed_string(m, m->len, p, len, 1, 0);
     tag = V7_TAG_STRING_O;
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
@@ -14310,9 +14308,7 @@ void *v7_sp_limit = NULL;
 int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
 #endif
 
-#ifndef V7_DISABLE_COMPACTING_GC
 void gc_mark_string(struct v7 *, val_t *);
-#endif
 
 static struct gc_block *gc_new_block(struct gc_arena *a, size_t size);
 static void gc_free_block(struct gc_block *b);
@@ -14435,23 +14431,9 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
     maybe_gc(v7);
 
     if (a->free == NULL) {
-#ifdef V7_DISABLE_GROWING_GC
-      printf("%s arena exhausted\n",
-             a == &v7->object_arena
-                 ? "object"
-                 : (a == &v7->property_arena ? "property" : "function"));
-
-#if V7_ENABLE__Memory__stats
-      printf("objnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE));
-      printf("propnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE));
-      printf("funcnfree: %d\n", v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE));
-#endif
-      abort();
-#else
       struct gc_block *b = gc_new_block(a, a->size_increment);
       b->next = a->blocks;
       a->blocks = b;
-#endif
     }
   }
   r = a->free;
@@ -14584,9 +14566,7 @@ V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
   if (mbuf == NULL) return;
   for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
     gc_mark(v7, *vp);
-#ifndef V7_DISABLE_COMPACTING_GC
     gc_mark_string(v7, vp);
-#endif
   }
   UNMARK(obj);
 }
@@ -14619,10 +14599,8 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
       abort();
     }
 
-#ifndef V7_DISABLE_COMPACTING_GC
     gc_mark_string(v7, &prop->value);
     gc_mark_string(v7, &prop->name);
-#endif
     gc_mark(v7, prop->value);
 
     next = prop->next;
@@ -14726,8 +14704,6 @@ V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v) {
 V7_PRIVATE val_t gc_string_val_from_offset(uint64_t s) {
   return s | V7_TAG_STRING_O;
 }
-
-#ifndef V7_DISABLE_COMPACTING_GC
 
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
 
@@ -14938,8 +14914,6 @@ void gc_dump_owned_strings(struct v7 *v7) {
   fputc('\n', stderr);
 }
 
-#endif
-
 /*
  * builting on gcc, tried out by redefining it.
  * Using null pointer as base can trigger undefined behavior, hence
@@ -14974,9 +14948,7 @@ static void gc_mark_mbuf_pt(struct v7 *v7, const struct mbuf *mbuf) {
   val_t **vp;
   for (vp = (val_t **) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
     gc_mark(v7, **vp);
-#ifndef V7_DISABLE_COMPACTING_GC
     gc_mark_string(v7, *vp);
-#endif
   }
 }
 
@@ -14988,9 +14960,7 @@ static void gc_mark_mbuf_val(struct v7 *v7, const struct mbuf *mbuf) {
   val_t *vp;
   for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
     gc_mark(v7, *vp);
-#ifndef V7_DISABLE_COMPACTING_GC
     gc_mark_string(v7, vp);
-#endif
   }
 }
 
@@ -15036,22 +15006,16 @@ void v7_gc(struct v7 *v7, int full) {
   gc_mark(v7, v7->object_prototype);
   gc_mark(v7, v7->global_object);
   gc_mark(v7, v7->this_object);
-/* unlikely but this could be a string as well */
-#ifndef V7_DISABLE_COMPACTING_GC
+  /* unlikely but this could be a string as well */
   gc_mark_string(v7, &v7->this_object);
-#endif
 
   gc_mark(v7, v7->call_stack);
   gc_mark(v7, v7->thrown_error);
-#ifndef V7_DISABLE_COMPACTING_GC
   /* JS allows to throw strings */
   gc_mark_string(v7, &v7->thrown_error);
-#endif
 
   gc_mark(v7, v7->returned_value);
-#ifndef V7_DISABLE_COMPACTING_GC
   gc_mark_string(v7, &v7->returned_value);
-#endif
 
   for (i = 0; i < ERROR_CTOR_MAX; i++) {
     gc_mark(v7, v7->error_objects[i]);
@@ -15063,9 +15027,7 @@ void v7_gc(struct v7 *v7, int full) {
 
   /* mark temporary ("stash") register for `OP_STASH` and `OP_UNSTASH` */
   gc_mark(v7, v7->stash);
-#ifndef V7_DISABLE_COMPACTING_GC
   gc_mark_string(v7, &v7->stash);
-#endif
 
   /* mark literals of the bcode being executed */
   if (v7->bcode != NULL) {
@@ -15078,9 +15040,7 @@ void v7_gc(struct v7 *v7, int full) {
   gc_mark_mbuf_pt(v7, &v7->tmp_stack);
   gc_mark_mbuf_pt(v7, &v7->owned_values);
 
-#ifndef V7_DISABLE_COMPACTING_GC
   gc_compact_strings(v7);
-#endif
 
 #ifdef V7_MALLOC_GC
   gc_sweep_malloc(v7);
