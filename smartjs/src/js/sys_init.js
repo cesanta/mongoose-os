@@ -1,4 +1,5 @@
-$ = {};
+"use strict";
+global.$ = {};
 $.extend = function(a, b) {
   if(a === undefined) {
     a = {};
@@ -19,7 +20,7 @@ $.each = function(a, f) {
   });
 };
 
-console = { log: print };
+global.console = { log: print };
 
 Sys.conf = File.loadJSON('conf_sys_defaults.json') || {};
 $.extend(Sys.conf, File.loadJSON('conf.json') || {});

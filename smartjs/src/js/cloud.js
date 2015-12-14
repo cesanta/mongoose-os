@@ -1,4 +1,5 @@
-var Cloud = {
+"use strict";
+global.Cloud = {
   backend: 'api.cesanta.com'
 };
 
