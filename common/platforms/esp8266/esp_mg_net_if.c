@@ -16,7 +16,7 @@
 #ifdef ESP_SSL_KRYPTON
 #include "krypton.h"
 
-#define MG_LWIP_SSL_READ_SIZE 512
+#define MG_LWIP_SSL_READ_SIZE 1024
 
 static void mg_lwip_ssl_do_hs(struct mg_connection *nc);
 static void mg_lwip_ssl_send(struct mg_connection *nc);
