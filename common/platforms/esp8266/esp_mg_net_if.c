@@ -371,6 +371,8 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
   /* Currently SSL acknowledges data immediately.
    * TODO(rojer): Find a way to propagate mg_if_recved. */
   tcp_recved(cs->pcb.tcp, len);
+#else
+  (void) cs;
 #endif
   mbuf_trim(&nc->recv_mbuf);
 }
@@ -524,6 +526,8 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   DBG(("begin poll, now=%u, hf=%u, sf lwm=%u", (unsigned int) now,
        system_get_free_heap_size(), 0U));
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
+    struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+    (void) cs;
     tmp = nc->next;
     n++;
     if (nc->flags & MG_F_CLOSE_IMMEDIATELY) {
@@ -538,8 +542,7 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
       continue;
     }
 #ifdef ESP_SSL_KRYPTON
-    if (nc->ssl != NULL) {
-      struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+    if (nc->ssl != NULL && cs != NULL && cs->pcb.tcp->state == ESTABLISHED) {
       if (((nc->flags & MG_F_WANT_WRITE) || nc->send_mbuf.len > 0) &&
           cs->pcb.tcp->snd_buf > 0) {
         /* Can write more. */

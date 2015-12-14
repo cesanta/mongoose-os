@@ -19,9 +19,9 @@ Cloud.store = function(name,val,opts) {
                opts.cb || function() {}).end(d);
 }
 
-Cloud.init = function(backend, device_id, device_psk) {
+Cloud.init = function(backend, device_id, device_psk, opts) {
   File.eval("clubby.js");
-  global.clubby = new Clubby({
+  var copts = $.extend({
     url: 'ws:' + backend + ':80',
     src: device_id,
     key: device_psk,
@@ -29,7 +29,8 @@ Cloud.init = function(backend, device_id, device_psk) {
     onopen: function() {
       clubby.call(backend, {cmd: "/v1/Hello"}, function() {});
     }
-  });
+  }, opts);
+  global.clubby = new Clubby(copts);
   File.eval("swupdate.js");
   SWUpdate(clubby);
   File.eval("fileservice.js");
