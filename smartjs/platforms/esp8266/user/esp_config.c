@@ -26,15 +26,14 @@ static int do_wifi(const struct sys_config *cfg) {
     wifi_set_opmode_current(STATIONAP_MODE);
     result =
         sj_wifi_setup_ap(&cfg->wifi.ap) ? sj_wifi_setup_sta(&cfg->wifi.sta) : 0;
-  } else if (cfg->wifi.ap.mode >= 1 && !cfg->wifi.sta.enable) {
-    wifi_set_opmode_current(SOFTAP_MODE);
-    result = sj_wifi_setup_ap(&cfg->wifi.ap);
-  } else if (cfg->wifi.ap.mode >= 1 && cfg->wifi.sta.enable) {
+  } else if (cfg->wifi.sta.enable) {
     wifi_set_opmode_current(STATION_MODE);
     result = sj_wifi_setup_sta(&cfg->wifi.sta);
+  } else if (cfg->wifi.ap.mode > 0) {
+    wifi_set_opmode_current(SOFTAP_MODE);
+    result = sj_wifi_setup_ap(&cfg->wifi.ap);
   } else {
     LOG(LL_WARN, ("No wifi mode specified"));
-    return 1;
   }
 
   return result;
@@ -50,9 +49,5 @@ int device_init_platform(struct sys_config *cfg) {
   uart_redirect_debug(cfg->debug.mode);
   cs_log_set_level(cfg->debug.level);
 
-  if (!do_wifi(cfg)) {
-    return 0;
-  }
-
-  return 1;
+  return do_wifi(cfg);
 }
