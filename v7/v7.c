@@ -2590,6 +2590,8 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
 
 #ifdef V7_ENABLE_BCODE
 
+#define BIN_BCODE_SIGNATURE "V\007BCODE:"
+
 /* Amalgamated: #include "v7/src/internal.h" */
 
 /*
@@ -3172,6 +3174,7 @@ enum bcode_ser_lit_tag {
 V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode);
 V7_PRIVATE void bcode_free(struct bcode *);
 V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
+V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *b);
 
 #ifndef V7_NO_FS
 /*
@@ -3208,6 +3211,8 @@ V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
  *
  */
 V7_PRIVATE void bcode_serialize(struct v7 *, struct bcode *, FILE *f);
+V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
+                                  const char *data);
 #endif
 
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *, struct bcode *);
@@ -4045,8 +4050,14 @@ V7_PRIVATE val_t ulong_to_str(struct v7 *, unsigned long);
 #endif
 V7_PRIVATE unsigned long str_to_ulong(struct v7 *, val_t, int *);
 V7_PRIVATE unsigned long cstr_to_ulong(const char *, size_t len, int *);
-V7_PRIVATE void embed_string(struct mbuf *, size_t, const char *, size_t, int,
-                             int);
+
+enum embstr_flags {
+  EMBSTR_ZERO_TERM = (1 << 0),
+  EMBSTR_UNESCAPE = (1 << 1),
+};
+
+V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
+                             size_t len, uint8_t /*enum embstr_flags*/ flags);
 /* TODO(mkm): rename after regexp merge */
 V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value);
@@ -9367,7 +9378,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
 V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
                                      const char *name, size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_add_node(a, tag), name, len, 0, 1);
+  embed_string(&a->mbuf, ast_add_node(a, tag), name, len, EMBSTR_UNESCAPE);
 }
 
 /* Helper to add a node with inlined data. */
@@ -9375,7 +9386,8 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                         enum ast_tag tag, const char *name,
                                         size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len, 0, 1);
+  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len,
+               EMBSTR_UNESCAPE);
 }
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
@@ -10067,7 +10079,7 @@ static uint8_t unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
    */
   uint8_t is_func_frame = 0;
 #ifdef V7_BCODE_TRACE
-  printf("unwinding stack by 1 level\n");
+  fprintf(stderr, "unwinding stack by 1 level\n");
 #endif
 
   /*
@@ -10181,8 +10193,8 @@ static enum local_block unwind_local_blocks_stack(
         /* need to transfer control to this offset */
         r->ops = (uint8_t *) r->bcode->ops.buf + LBLOCK_OFFSET(offset);
 #ifdef V7_BCODE_TRACE
-        printf("transferring to block #%d: %u\n", (int) cur_block,
-               (unsigned int) LBLOCK_OFFSET(offset));
+        fprintf(stderr, "transferring to block #%d: %u\n", (int) cur_block,
+                (unsigned int) LBLOCK_OFFSET(offset));
 #endif
         found_block = cur_block;
         /* if needed, restore stack size to the saved value */
@@ -10192,8 +10204,8 @@ static enum local_block unwind_local_blocks_stack(
         break;
       } else {
 #ifdef V7_BCODE_TRACE
-        printf("skipped block #%d: %u\n", (int) cur_block,
-               (unsigned int) LBLOCK_OFFSET(offset));
+        fprintf(stderr, "skipped block #%d: %u\n", (int) cur_block,
+                (unsigned int) LBLOCK_OFFSET(offset));
 #endif
         /*
          * since we don't need to control transfer there, just pop
@@ -10353,14 +10365,14 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
          LOCAL_BLOCK_NONE) {
     if (v7->call_stack != v7->bottom_call_stack) {
 #ifdef V7_BCODE_TRACE
-      printf("not at the bottom of the stack, going to unwind..\n");
+      fprintf(stderr, "not at the bottom of the stack, going to unwind..\n");
 #endif
       /* not reached bottom of the stack yet, keep unwinding */
       unwind_stack_1level(v7, r);
     } else {
 /* reached stack bottom: uncaught exception */
 #ifdef V7_BCODE_TRACE
-      printf("reached stack bottom: uncaught exception\n");
+      fprintf(stderr, "reached stack bottom: uncaught exception\n");
 #endif
       err = V7_EXEC_EXCEPTION;
       break;
@@ -11436,7 +11448,7 @@ restart:
   /* implicit return */
   if (v7->call_stack != v7->bottom_call_stack) {
 #ifdef V7_BCODE_TRACE
-    printf("return implicitly\n");
+    fprintf(stderr, "return implicitly\n");
 #endif
     bcode_adjust_retval(v7, 0 /*implicit return*/);
     BTRY(bcode_perform_return(v7, &r, 1));
@@ -11445,7 +11457,7 @@ restart:
 #ifdef V7_BCODE_TRACE
     const char *s = (v7->call_stack != v7->global_object) ? "not global object"
                                                           : "global object";
-    printf("reached bottom_call_stack (%s)\n", s);
+    fprintf(stderr, "reached bottom_call_stack (%s)\n", s);
 #endif
   }
 
@@ -11468,6 +11480,11 @@ V7_PRIVATE void bcode_free(struct bcode *bcode) {
   mbuf_free(&bcode->lit);
   mbuf_free(&bcode->names);
   bcode->refcnt = 0;
+}
+
+V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *b) {
+  (void) v7;
+  b->refcnt++;
 }
 
 V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
@@ -11523,7 +11540,7 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
                                val_t func, val_t args, val_t *res, val_t w,
                                int is_json, int fr, uint8_t is_constructor) {
 #if defined(V7_BCODE_TRACE_SRC)
-  printf("src:'%s'\n", src);
+  fprintf(stderr, "src:'%s'\n", src);
 #endif
 
   /* TODO(mkm): use GC pool */
@@ -11561,6 +11578,7 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   bcode_init(v7->bcode, 1);
 #endif
 
+  retain_bcode(v7, v7->bcode);
   own_bcode(v7, v7->bcode);
 
   saved_try_stack = v7_get(v7, v7->call_stack, "____t", 5);
@@ -11573,55 +11591,73 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
      * Caller provided some source code, so, parse and compile it.
      */
 
-    if (strncmp(BIN_AST_SIGNATURE, src, sizeof(BIN_AST_SIGNATURE)) != 0) {
-      err = parse(v7, a, src, 1, is_json);
+    if (strncmp(BIN_BCODE_SIGNATURE, src, sizeof(BIN_BCODE_SIGNATURE)) != 0) {
+      if (strncmp(BIN_AST_SIGNATURE, src, sizeof(BIN_AST_SIGNATURE)) != 0) {
+        err = parse(v7, a, src, 1, is_json);
+      } else {
+        /* TODO(alashkin): try to remove memory doubling */
+        if (src_len == 0) {
+          err = V7_INVALID_ARG;
+        } else {
+          if (fr == 0) {
+            /* Unmanaged memory, usually rom or mmapped flash */
+            mbuf_free(&a->mbuf);
+            a->mbuf.buf = (char *) (src + sizeof(BIN_AST_SIGNATURE));
+            a->mbuf.size = a->mbuf.len = src_len - sizeof(BIN_AST_SIGNATURE);
+            a->refcnt++; /* prevent freeing */
+            noopt = 1;
+          } else {
+            mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
+                        src_len - sizeof(BIN_AST_SIGNATURE));
+          }
+        }
+      }
+
+      if (err != V7_OK) {
+        /*
+         * The actual error might not be syntax error but there is no need to
+         * add more overhead to the runtime by creating a specific exception for
+         * other parse errors.
+         */
+        r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+        goto cleanup;
+      }
+
+      if (!noopt) {
+        ast_optimize(a);
+      }
+#if V7_ENABLE__Memory__stats
+      v7->function_arena_ast_size += a->mbuf.size;
+#endif
+
+      v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
+
+      if (!is_json) {
+        err = compile_script(v7, a, v7->bcode);
+      } else {
+        ast_off_t pos = 0;
+        err = compile_expr(v7, a, &pos, v7->bcode);
+      }
+
     } else {
-      /* TODO(alashkin): try to remove memory doubling */
+      /* we have a serialized bcode */
+
       if (src_len == 0) {
         err = V7_INVALID_ARG;
       } else {
-        if (fr == 0) {
-          /* Unmanaged memory, usually rom or mmapped flash */
-          mbuf_free(&a->mbuf);
-          a->mbuf.buf = (char *) (src + sizeof(BIN_AST_SIGNATURE));
-          a->mbuf.size = a->mbuf.len = src_len - sizeof(BIN_AST_SIGNATURE);
-          a->refcnt++; /* prevent freeing */
-          noopt = 1;
-        } else {
-          mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
-                      src_len - sizeof(BIN_AST_SIGNATURE));
-        }
+        bcode_deserialize(v7, v7->bcode, src + sizeof(BIN_BCODE_SIGNATURE));
+
+        /*
+         * Currently, we only support serialized bcode that is stored in some
+         * mmapped memory. Otherwise, we don't yet have any mechanism to free
+         * this memory at the appropriate time.
+         */
+        assert(fr == 0);
       }
     }
 
     if (fr) {
       free((void *) src);
-    }
-
-    if (err != V7_OK) {
-      /*
-       * The actual error might not be syntax error but there is no need to
-       * add more overhead to the runtime by creating a specific exception for
-       * other parse errors.
-       */
-      r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-      goto cleanup;
-    }
-
-    if (!noopt) {
-      ast_optimize(a);
-    }
-#if V7_ENABLE__Memory__stats
-    v7->function_arena_ast_size += a->mbuf.size;
-#endif
-
-    v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
-
-    if (!is_json) {
-      err = compile_script(v7, a, v7->bcode);
-    } else {
-      ast_off_t pos = 0;
-      err = compile_expr(v7, a, &pos, v7->bcode);
     }
 
     if (err != V7_OK) {
@@ -11721,7 +11757,7 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
     unsigned long try_stack_len =
         v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
     if (try_stack_len != 0) {
-      printf("try_stack_len=%lu, should be 0\n", try_stack_len);
+      fprintf(stderr, "try_stack_len=%lu, should be 0\n", try_stack_len);
     }
 #endif
     assert(try_stack_len == 0);
@@ -11750,7 +11786,8 @@ cleanup:
    * Data stack should have the same length as it was before evaluating script.
    */
   if (v7->stack.len != saved_stack_len) {
-    printf("len=%d, saved=%d\n", (int) v7->stack.len, (int) saved_stack_len);
+    fprintf(stderr, "len=%d, saved=%d\n", (int) v7->stack.len,
+            (int) saved_stack_len);
   }
   assert(v7->stack.len == saved_stack_len);
 
@@ -11764,8 +11801,7 @@ cleanup:
 
   /* free current bcode if needed, and restore the previous one */
   if (v7->bcode != NULL) {
-    bcode_free(v7->bcode);
-    free(v7->bcode);
+    release_bcode(v7, v7->bcode);
   }
   v7->bcode = saved_bcode;
 
@@ -11981,9 +12017,141 @@ V7_PRIVATE void bcode_serialize(struct v7 *v7, struct bcode *bcode, FILE *out) {
   (void) v7;
   (void) bcode;
 
-  fprintf(out, "V\007BCODE:");
+  fwrite(BIN_BCODE_SIGNATURE, sizeof(BIN_BCODE_SIGNATURE), 1, out);
   bcode_serialize_func(v7, bcode, out);
 }
+
+static size_t bcode_deserialize_varint(const char **data) {
+  size_t ret = 0;
+  int len = 0;
+  ret = decode_varint((const unsigned char *) (*data), &len);
+  *data += len;
+  return ret;
+}
+
+static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
+                                          const char *data);
+
+static val_t bcode_deserialize_string(struct v7 *v7, const char **data) {
+  val_t v;
+  size_t lit_len = 0;
+  lit_len = bcode_deserialize_varint(data);
+  v = v7_create_string(v7, *data, lit_len, 0);
+  *data += lit_len + 1 /*NULL-terminator*/;
+
+  return v;
+}
+
+static const char *bcode_deserialize_lit(struct v7 *v7, struct bcode *bcode,
+                                         const char *data) {
+  enum bcode_ser_lit_tag lit_tag;
+  size_t lit_len = 0;
+
+  (void) v7;
+
+  lit_tag = (enum bcode_ser_lit_tag) * data++;
+
+  switch (lit_tag) {
+    case BCODE_SER_NUMBER: {
+      double val;
+      char buf[12];
+      char *p = buf;
+      lit_len = bcode_deserialize_varint(&data);
+
+      if (lit_len > sizeof(buf) - 1) {
+        p = (char *) malloc(lit_len + 1);
+      }
+      strncpy(p, data, lit_len);
+      data += lit_len;
+      p[lit_len] = '\0';
+      val = strtod(p, NULL);
+      if (p != buf) free(p);
+
+      bcode_add_lit(bcode, v7_create_number(val));
+      break;
+    }
+
+    case BCODE_SER_STRING: {
+      bcode_add_lit(bcode, bcode_deserialize_string(v7, &data));
+      break;
+    }
+
+    case BCODE_SER_REGEX: {
+      /* TODO */
+      assert(0);
+      break;
+    }
+
+    case BCODE_SER_FUNCTION: {
+      val_t funv = create_function(v7);
+      struct v7_function *func = v7_to_function(funv);
+      func->scope = NULL;
+      func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
+      bcode_init(func->bcode, bcode->strict_mode);
+      retain_bcode(v7, func->bcode);
+      bcode_add_lit(bcode, funv);
+      data = bcode_deserialize_func(v7, func->bcode, data);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+
+  return data;
+}
+
+static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
+                                          const char *data) {
+  size_t size;
+
+  /* get number of literals */
+  size = bcode_deserialize_varint(&data);
+  /* deserialize all literals */
+  for (; size > 0; --size) {
+    data = bcode_deserialize_lit(v7, bcode, data);
+  }
+
+  /* get number of names */
+  size = bcode_deserialize_varint(&data);
+  /* deserialize all names */
+  for (; size > 0; --size) {
+    bcode_add_name(bcode, bcode_deserialize_string(v7, &data));
+  }
+
+  /* get number of args */
+  bcode->args = bcode_deserialize_varint(&data);
+
+  /* get opcode size */
+  size = bcode_deserialize_varint(&data);
+
+  bcode->ops.buf = (char *) data;
+  bcode->ops.size = size;
+  bcode->ops.len = size;
+
+  /*
+   * prevent freeing of this bcode by "retaining" it multiple times, since it's
+   * actually backed by the buffer that is managed differently.
+   *
+   * TODO(dfrank) : this looks like a total hack, we need to find better
+   * solution
+   */
+  retain_bcode(v7, bcode);
+  retain_bcode(v7, bcode);
+
+  bcode->refcnt++; /* prevent freeing */
+
+  data += size;
+
+  return data;
+}
+
+V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
+                                  const char *data) {
+  data = bcode_deserialize_func(v7, bcode, data);
+}
+
 #endif
 
 #endif /* V7_ENABLE_BCODE */
@@ -13527,27 +13695,39 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t len, int zero_term, int unesc) {
+                             size_t len, uint8_t /*enum embstr_flags*/ flags) {
   char *old_base = m->buf;
-  int p_backed_by_mbuf = p >= old_base && p < old_base + m->len;
-  size_t n = unesc ? unescape(p, len, NULL) : len;
-  int k = calc_llen(n); /* Calculate how many bytes length takes */
-  size_t tot_len = k + n + zero_term;
-  mbuf_insert(m, offset, NULL, tot_len); /* Allocate  buffer */
+  uint8_t p_backed_by_mbuf = p >= old_base && p < old_base + m->len;
+  size_t n = (flags & EMBSTR_UNESCAPE) ? unescape(p, len, NULL) : len;
+
+  /* Calculate how many bytes length takes */
+  int k = calc_llen(n);
+
+  /* total length: varing length + string len + zero-term */
+  size_t tot_len = k + n + !!(flags & EMBSTR_ZERO_TERM);
+
+  /* Allocate buffer */
+  mbuf_insert(m, offset, NULL, tot_len);
+
   /* Fixup p if it was relocated by mbuf_insert() above */
   if (p_backed_by_mbuf) {
     p += m->buf - old_base;
   }
-  encode_varint(n, (unsigned char *) m->buf + offset); /* Write length */
+
+  /* Write length */
+  encode_varint(n, (unsigned char *) m->buf + offset);
+
   /* Write string */
   if (p != 0) {
-    if (unesc) {
+    if (flags & EMBSTR_UNESCAPE) {
       unescape(p, len, m->buf + offset + k);
     } else {
       memcpy(m->buf + offset + k, p, len);
     }
   }
-  if (zero_term) {
+
+  /* add NULL-terminator if needed */
+  if (flags & EMBSTR_ZERO_TERM) {
     m->buf[offset + tot_len - 1] = '\0';
   }
 }
@@ -13585,15 +13765,24 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     tag = V7_TAG_STRING_D;
   } else if (own) {
     compute_need_gc(v7);
-    embed_string(m, m->len, p, len, 1, 0);
+    embed_string(m, m->len, p, len, EMBSTR_ZERO_TERM);
     tag = V7_TAG_STRING_O;
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
     /* TODO(imax): panic if offset >= 2^32. */
     offset |= ((val_t) gc_next_allocation_seqn(v7, p, len)) << 32;
 #endif
   } else {
-    /* TODO(mkm): this doesn't set correctly the foreign string length */
-    embed_string(m, m->len, (char *) &p, sizeof(p), 0, 0);
+    /* foreign string */
+    size_t pos = m->len;
+    int llen = calc_llen(len);
+
+    /* allocate space for len and ptr */
+    mbuf_insert(m, pos, NULL, llen + sizeof(p));
+
+    encode_varint(len, (uint8_t *) (m->buf + pos));
+    memcpy(m->buf + pos + llen, &p, sizeof(p));
+
+    tag = V7_TAG_STRING_F;
   }
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
@@ -13639,22 +13828,24 @@ const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
     int index = ((unsigned char *) GET_VAL_NAN_PAYLOAD(*v))[0];
     *sizep = v_dictionary_strings[index].len;
     p = v_dictionary_strings[index].p;
-  } else {
-    struct mbuf *m =
-        (tag == V7_TAG_STRING_O) ? &v7->owned_strings : &v7->foreign_strings;
+  } else if (tag == V7_TAG_STRING_O) {
     size_t offset = (size_t) gc_string_val_to_offset(*v);
-    char *s = m->buf + offset;
+    char *s = v7->owned_strings.buf + offset;
 
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
     gc_check_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF);
 #endif
 
     *sizep = decode_varint((uint8_t *) s, &llen);
-    if (tag == V7_TAG_STRING_O) {
-      p = s + llen;
-    } else {
-      memcpy(&p, s + llen, sizeof(p));
-    }
+    p = s + llen;
+  } else if (tag == V7_TAG_STRING_F) {
+    size_t offset = (size_t) gc_string_val_to_offset(*v);
+    char *s = v7->foreign_strings.buf + offset;
+
+    *sizep = decode_varint((uint8_t *) s, &llen);
+    memcpy(&p, s + llen, sizeof(p));
+  } else {
+    assert(0);
   }
 
   return p;
@@ -20367,7 +20558,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode, bcode->strict_mode);
-      func->bcode->refcnt = 1;
+      retain_bcode(v7, func->bcode);
       flit = bcode_add_lit(bcode, funv);
 
       *pos = pos_start;
