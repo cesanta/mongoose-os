@@ -17,6 +17,7 @@
       {"value": 2, "title": "Always enable (ESP8266 only)"}
     ]
   },
+  "wifi.ap.trigger_on_gpio": { "title": "Trigger AP on high GPIO" },
   "wifi.ap.ssid": { "title": "SSID" },
   "wifi.ap.pass": { "title": "Password" },
   "wifi.ap.hidden": { "title": "Hide SSID" },

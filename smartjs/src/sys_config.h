@@ -14,6 +14,7 @@ struct sys_config {
       char *dhcp_start;
       char *dhcp_end;
       char *ip;
+      int trigger_on_gpio;
       char *netmask;
       int mode;
       char *pass;

@@ -40,6 +40,11 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
+  if (sj_conf_get_int(toks, "wifi.ap.trigger_on_gpio",
+                      &dst->wifi.ap.trigger_on_gpio) == 0 &&
+      require_keys)
+    goto done;
+
   if (sj_conf_get_str(toks, "wifi.ap.netmask", &dst->wifi.ap.netmask) == 0 &&
       require_keys)
     goto done;

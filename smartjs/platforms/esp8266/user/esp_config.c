@@ -10,6 +10,7 @@
 #include "cs_file.h"
 #include "cs_dbg.h"
 #include "esp_uart.h"
+#include "esp_gpio.h"
 
 void device_reboot(void) {
   system_restart();
@@ -17,19 +18,26 @@ void device_reboot(void) {
 
 static int do_wifi(const struct sys_config *cfg) {
   int result = 1;
+  int gpio = cfg->wifi.ap.trigger_on_gpio;
+  int trigger_ap = 0;
 
   wifi_set_opmode_current(STATION_MODE);
   wifi_station_set_auto_connect(0);
   wifi_station_disconnect();
 
-  if (cfg->wifi.ap.mode == 2 && cfg->wifi.sta.enable) {
+  if (gpio >= 0) {
+    sj_gpio_set_mode(gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP);
+    trigger_ap = sj_gpio_read(gpio) == GPIO_LEVEL_HIGH;
+  }
+
+  if (!trigger_ap && cfg->wifi.ap.mode == 2 && cfg->wifi.sta.enable) {
     wifi_set_opmode_current(STATIONAP_MODE);
     result =
         sj_wifi_setup_ap(&cfg->wifi.ap) ? sj_wifi_setup_sta(&cfg->wifi.sta) : 0;
-  } else if (cfg->wifi.sta.enable) {
+  } else if (!trigger_ap && cfg->wifi.sta.enable) {
     wifi_set_opmode_current(STATION_MODE);
     result = sj_wifi_setup_sta(&cfg->wifi.sta);
-  } else if (cfg->wifi.ap.mode > 0) {
+  } else if (trigger_ap || cfg->wifi.ap.mode > 0) {
     wifi_set_opmode_current(SOFTAP_MODE);
     result = sj_wifi_setup_ap(&cfg->wifi.ap);
   } else {

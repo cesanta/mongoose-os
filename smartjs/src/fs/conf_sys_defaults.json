@@ -7,6 +7,7 @@
     },
     "ap": {
       "mode": 2,
+      "trigger_on_gpio": -1,
       "ssid": "SMARTJS_??????",
       "pass": "Elduderino",
       "hidden": 0,
