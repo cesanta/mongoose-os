@@ -121,10 +121,6 @@ enum v7_err v7_exec_file(struct v7 *, const char *path, v7_val_t *result);
 enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
                          v7_val_t *result);
 
-#if defined(V7_ENABLE_BCODE)
-enum v7_err v7_exec_bcode(struct v7 *v7, const char *src, v7_val_t *res);
-#endif
-
 /*
  * Parse `str` and store corresponding JavaScript object in `res` variable.
  * String `str` should be '\0'-terminated.
@@ -499,9 +495,7 @@ enum v7_heap_stat_what {
   V7_HEAP_STAT_PROP_HEAP_FREE,
   V7_HEAP_STAT_PROP_HEAP_CELL_SIZE,
   V7_HEAP_STAT_FUNC_AST_SIZE,
-#ifdef V7_ENABLE_BCODE
   V7_HEAP_STAT_FUNC_BCODE_SIZE,
-#endif
   V7_HEAP_STAT_FUNC_OWNED,
   V7_HEAP_STAT_FUNC_OWNED_MAX
 };

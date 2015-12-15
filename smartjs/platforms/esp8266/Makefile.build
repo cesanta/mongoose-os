@@ -21,8 +21,8 @@ LWIP_PATH ?= lwip
 V7_PATH ?= ../../../v7
 USE_BOOTLOADER ?=
 
-FLASH_SIZE ?= 512K
-FS_SIZE ?= 36K
+FLASH_SIZE ?= 1M
+FS_SIZE ?= 64K
 
 FW_FILE_1_ADDR = 0
 FW_FILE_2_ADDR = 0x11000
@@ -299,7 +299,7 @@ $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(
 		cp $(js) $(FS_BUILD_DIR);)
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
 		echo "V7 $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
-		$(BUILD_DIR)/v7 -b $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
+		$(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
 	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
 	$(vecho) "FS $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
