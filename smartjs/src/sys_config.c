@@ -1,7 +1,7 @@
 /* generated from fs/conf_sys_defaults.json - do not edit */
-#include "mongoose.h"
-#include "sys_config.h"
-#include "sj_config.h"
+#include "mongoose/mongoose.h"
+#include "smartjs/src/sys_config.h"
+#include "smartjs/src/sj_config.h"
 
 int parse_sys_config(const char *json, struct sys_config *dst,
                      int require_keys) {

@@ -5,16 +5,16 @@
 #include <signal.h>
 #include <time.h>
 
-#include <sj_hal.h>
-#include <sj_v7_ext.h>
+#include "smartjs/src/sj_hal.h"
+#include "smartjs/src/sj_v7_ext.h"
 #include <string.h>
-#include <sj_i2c_js.h>
-#include <sj_spi_js.h>
-#include <sj_mongoose.h>
-#include <sj_mongoose_ws_client.h>
-#include <sj_gpio_js.h>
-#include <sj_http.h>
-#include <sj_uart.h>
+#include "smartjs/src/sj_i2c_js.h"
+#include "smartjs/src/sj_spi_js.h"
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_mongoose_ws_client.h"
+#include "smartjs/src/sj_gpio_js.h"
+#include "smartjs/src/sj_http.h"
+#include "smartjs/src/sj_uart.h"
 
 #include "smartjs.h"
 

@@ -1,7 +1,7 @@
 #ifndef SJ_CONFIG_H
 #define SJ_CONFIG_H
 
-#include "mongoose.h"
+#include "mongoose/mongoose.h"
 
 /*
  * NOTE(lsm): sj_conf_get_str() allocates *val on heap. Caller owns it.

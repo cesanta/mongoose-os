@@ -6,7 +6,7 @@
 #ifndef SJ_UART_INCLUDED
 #define SJ_UART_INCLUDED
 
-#include <v7.h>
+#include "v7/v7.h"
 
 /*
  * Return a port specific opaque pointer meant to be

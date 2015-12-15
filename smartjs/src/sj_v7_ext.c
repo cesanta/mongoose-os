@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-#include <cs_dbg.h>
-#include <v7.h>
+#include "common/cs_dbg.h"
+#include "v7/v7.h"
 #include "sj_hal.h"
 
 static v7_val_t Sys_prof(struct v7 *v7) {

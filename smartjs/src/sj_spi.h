@@ -2,7 +2,7 @@
 #define SJ_SPI_INCLUDED
 
 #include <stdint.h>
-#include <v7.h>
+#include "v7/v7.h"
 
 typedef void *spi_connection;
 

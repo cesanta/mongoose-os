@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include <v7.h>
+#include "v7/v7.h"
 
 #ifndef SJ_DISABLE_SPI
 
@@ -18,6 +18,8 @@ static uint8_t get_bits(uint32_t n) {
     return 16;
   } else if (n <= 0xFFFFFFFF) {
     return 32;
+  } else {
+    return 64;
   }
 }
 

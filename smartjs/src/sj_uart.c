@@ -1,4 +1,4 @@
-#include <v7.h>
+#include "v7/v7.h"
 #include <stdlib.h>
 
 #include "sj_uart.h"

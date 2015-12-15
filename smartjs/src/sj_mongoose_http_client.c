@@ -3,11 +3,11 @@
  * This is common to all platforms that use mongoose as networking API
  */
 #include <stdlib.h>
-#include <v7.h>
-#include <mongoose.h>
-#include <sj_hal.h>
-#include <sj_v7_ext.h>
-#include <sj_mongoose.h>
+#include "v7/v7.h"
+#include "mongoose/mongoose.h"
+#include "smartjs/src/sj_hal.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_mongoose.h"
 
 struct user_data {
   struct v7 *v7;

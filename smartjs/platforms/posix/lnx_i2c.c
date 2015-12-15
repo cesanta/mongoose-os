@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <sj_hal.h>
+#include "smartjs/src/sj_hal.h"
 #include <sj_i2c.h>
 
 struct lnx_i2c_connection {

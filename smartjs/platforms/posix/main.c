@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <sj_mongoose.h>
-#include <sj_prompt.h>
-#include <sj_timers.h>
-#include <sj_v7_ext.h>
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_prompt.h"
+#include "smartjs/src/sj_timers.h"
+#include "smartjs/src/sj_v7_ext.h"
 #include "smartjs.h"
 
 #ifndef JS_FS_ROOT

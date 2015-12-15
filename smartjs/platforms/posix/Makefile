@@ -1,3 +1,4 @@
+REPO_ROOT ?= ../../..
 SRC_PATH ?= ../../src
 V7_PATH ?= ../../../v7
 BIN_DIR ?= ./bin
@@ -16,7 +17,7 @@ V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
 SJ_FEATURES =
 MONGOOSE_FEATURES = -DMG_USE_READ_WRITE
 
-INCLUDES = $(SRC_PATH)
+INCLUDES = $(REPO_ROOT) $(SRC_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 			mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
 			sj_mongoose_ws_client.c sj_gpio_js.c \

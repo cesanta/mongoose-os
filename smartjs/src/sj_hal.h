@@ -6,7 +6,7 @@
  */
 
 #include <stdlib.h>
-#include <v7.h>
+#include "v7/v7.h"
 #include "sj_i2c.h"
 
 /* Make HTTP call, 0/1 - error/success */

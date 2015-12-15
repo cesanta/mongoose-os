@@ -4,9 +4,9 @@
 #include <fcntl.h>
 #include <termios.h>
 
-#include <sj_uart.h>
-#include <mongoose.h>
-#include <sj_mongoose.h>
+#include "smartjs/src/sj_uart.h"
+#include "mongoose/mongoose.h"
+#include "smartjs/src/sj_mongoose.h"
 
 #define SJ_UART_DEFAULT_BAUD 115000
 

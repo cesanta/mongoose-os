@@ -1,7 +1,7 @@
 #ifndef __SMARTJS_TIMERS_H_
 #define __SMARTJS_TIMERS_H_
 
-#include <v7.h>
+#include "v7/v7.h"
 
 void sj_init_timers(struct v7 *v7);
 

@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
-#include <sj_timers.h>
-#include <sj_v7_ext.h>
+#include "smartjs/src/sj_timers.h"
+#include "smartjs/src/sj_v7_ext.h"
 #ifdef __APPLE__
 #include <sys/time.h>
 #include <sys/types.h>
@@ -25,9 +25,9 @@ typedef unsigned short u_short;
 #include <unistd.h>
 #endif
 
-#include <mongoose.h>
-#include <sj_prompt.h>
-#include <sj_mongoose.h>
+#include "mongoose/mongoose.h"
+#include "smartjs/src/sj_prompt.h"
+#include "smartjs/src/sj_mongoose.h"
 
 #ifdef __APPLE__
 v7_val_t *bsd_timer_cb = NULL;

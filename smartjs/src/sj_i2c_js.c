@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include <v7.h>
+#include "v7/v7.h"
 
 #include "sj_hal.h"
 #include "sj_i2c.h"

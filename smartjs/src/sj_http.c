@@ -5,10 +5,9 @@
 
 #include <strings.h>
 
-#include "v7.h"
-#include "mongoose.h"
-#include "sj_mongoose.h"
-#include "sj_v7_ext.h"
+#include "mongoose/mongoose.h"
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_v7_ext.h"
 
 struct user_data {
   struct v7 *v7;

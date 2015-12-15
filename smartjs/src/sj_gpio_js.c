@@ -1,4 +1,4 @@
-#include <v7.h>
+#include "v7/v7.h"
 #include "sj_gpio.h"
 
 #ifndef SJ_DISABLE_GPIO

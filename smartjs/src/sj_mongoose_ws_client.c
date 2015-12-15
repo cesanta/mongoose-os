@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <v7.h>
-#include <mongoose.h>
-#include <sj_hal.h>
-#include <sj_v7_ext.h>
-#include <sj_mongoose.h>
+#include "v7/v7.h"
+#include "mongoose/mongoose.h"
+#include "smartjs/src/sj_hal.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_mongoose.h"
 
 #define WEBSOCKET_OPEN v7_create_number(1)
 #define WEBSOCKET_CLOSED v7_create_number(2)
