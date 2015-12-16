@@ -3523,8 +3523,6 @@ struct v7 {
   val_t date_prototype;
   val_t function_prototype;
 
-  struct bcode *bcode;
-
   /*
    * Stack of execution contexts.
    * Execution contexts are contained in two chains:
@@ -3544,7 +3542,12 @@ struct v7 {
   val_t bottom_call_stack;
 
   struct mbuf stack; /* value stack for bcode interpreter */
-  val_t stash;       /* temporary register for STASH and UNSTASH instructions */
+
+  /*
+   * temporary register for `OP_STASH` and `OP_UNSTASH` instructions. Valid if
+   * `v7->is_stashed` is non-zero
+   */
+  val_t stash;
 
   struct mbuf owned_strings;   /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings; /* Sequence of (varint len, char *data) */
@@ -3561,11 +3564,21 @@ struct v7 {
 #endif
   struct mbuf owned_values; /* buffer for GC roots owned by C code */
 
+  /*
+   * Stack of the root bcodes being executed at the moment. Note that when some
+   * regular JS function is called inside `eval_bcode()`, the function's bcode
+   * is NOT added here. Buf if some cfunction is called, which in turn calls
+   * `b_exec()` (or `b_apply()`) recursively, the new bcode is added to this
+   * stack.
+   */
   struct mbuf act_bcodes;
 
   val_t error_objects[ERROR_CTOR_MAX];
 
-  val_t thrown_error; /* see also `is_thrown` below */
+  /*
+   * Value that is being thrown. Valid if `is_thrown` is non-zero (see below)
+   */
+  val_t thrown_error;
 
   /*
    * value that is going to be returned. Needed when some `finally` block needs
@@ -3574,18 +3587,12 @@ struct v7 {
    */
   val_t returned_value;
 
-  char error_msg[80];     /* Exception message */
-  int creating_exception; /* Avoids reentrant exception creation */
+  char error_msg[80]; /* Exception message */
 #if defined(__cplusplus)
   ::jmp_buf jmp_buf;
-  ::jmp_buf label_jmp_buf;
 #else
-  jmp_buf jmp_buf;       /* Exception environment for v7_exec() */
-  jmp_buf label_jmp_buf; /* Target for non local (labeled) breaks */
+  jmp_buf jmp_buf; /* Exception environment for v7_exec() */
 #endif
-  char *label;      /* Inner label */
-  size_t label_len; /* Inner label length */
-  int lab_cont;     /* True if re-entering a loop with labeled continue */
 
   struct mbuf json_visited_stack; /* Detecting cycle in to_json */
 
@@ -3640,21 +3647,34 @@ struct v7 {
   size_t parser_stack_ret_max_len;
 #endif
 
-  /* true if currently in strict mode */
+  /*
+   * true if exception is currently being created. Needed to avoid recursive
+   * exception creation
+   */
+  unsigned int creating_exception : 1;
+  /*
+   * true if currently in strict mode
+   *
+   * TODO(dfrank) : this field is needed only for public functions like
+   * `v7_set_prop()` and `v7_array_set()`, but do we actually need to consider
+   * strict mode in these functions, and throw exceptions?
+   *
+   * If not, then we should get rid of `v7->strict_mode` whatsoever.
+   */
   unsigned int strict_mode : 1;
   /* true if currently running function is called as a constructor */
   unsigned int is_constructor : 1;
   /* while true, GC is inhibited */
   unsigned int inhibit_gc : 1;
-  /* true if `thrown_error` is valid (used in bcode) */
+  /* true if `thrown_error` is valid */
   unsigned int is_thrown : 1;
-  /* true if `returned_value` is valid (used in bcode) */
+  /* true if `returned_value` is valid */
   unsigned int is_returned : 1;
   /* true if a finally block is executing while breaking */
   unsigned int is_breaking : 1;
-  /* true if when a continue OP is executed, reset by OP_JMP_IF_CONTINUE */
+  /* true when a continue OP is executed, reset by `OP_JMP_IF_CONTINUE` */
   unsigned int is_continuing : 1;
-  /* true if some value is currently stashed */
+  /* true if some value is currently stashed (`v7->stash`) */
   unsigned int is_stashed : 1;
   /* true if last emitted statement does not affect data stack */
   unsigned int is_stack_neutral : 1;
@@ -9951,9 +9971,13 @@ static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
   r->lit = (val_t *) bcode->lit.buf;
 
   /*
-   * TODO(dfrank): modifying `v7->bcode` from this function looks like a hack
+   * TODO(dfrank) : the field `v7->strict_mode` is needed only for public
+   * functions like `v7_set_prop()` and `v7_array_set()`, but do we actually
+   * need to consider strict mode in these functions, and throw exceptions?
+   *
+   * If not, then we should get rid of `v7->strict_mode` whatsoever.
    */
-  v7->bcode = bcode;
+  v7->strict_mode = bcode->strict_mode;
 }
 
 /*
@@ -10425,12 +10449,12 @@ static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
 static val_t call_cfunction(struct v7 *v7, val_t func, val_t this_object,
                             val_t args, uint8_t is_constructor,
                             uint8_t *has_thrown) {
-  int saved_inhibit_gc = v7->inhibit_gc;
+  uint8_t saved_inhibit_gc = v7->inhibit_gc;
   val_t res = v7_create_undefined();
   val_t saved_this = v7->this_object;
   val_t saved_thrown = v7->thrown_error;
   val_t saved_arguments = v7->arguments;
-  int saved_is_thrown = v7->is_thrown;
+  uint8_t saved_is_thrown = v7->is_thrown;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   tmp_stack_push(&tf, &res);
@@ -11488,15 +11512,15 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
 
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
-  val_t old_this = v7->this_object;
+  val_t saved_this = v7->this_object;
   val_t saved_bottom_call_stack = v7->bottom_call_stack;
   val_t saved_try_stack = v7_create_undefined();
   size_t saved_stack_len = v7->stack.len;
   enum v7_err err = V7_OK;
   val_t r = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
-  int noopt = 0;
-  struct bcode *saved_bcode = v7->bcode;
+  uint8_t noopt = 0;
+  struct bcode *bcode = NULL;
 #if defined(V7_ENABLE_STACK_TRACKING)
   struct stack_track_ctx stack_track_ctx;
 #endif
@@ -11505,7 +11529,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
   v7_stack_track_start(v7, &stack_track_ctx);
 #endif
 
-  tmp_stack_push(&tf, &old_this);
+  tmp_stack_push(&tf, &saved_this);
   tmp_stack_push(&tf, &saved_bottom_call_stack);
   tmp_stack_push(&tf, &saved_try_stack);
   tmp_stack_push(&tf, &func);
@@ -11514,15 +11538,15 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
   tmp_stack_push(&tf, &r);
 
   /* init new bcode */
-  v7->bcode = (struct bcode *) calloc(1, sizeof(*v7->bcode));
+  bcode = (struct bcode *) calloc(1, sizeof(*bcode));
 #ifndef V7_FORCE_STRICT_MODE
-  bcode_init(v7->bcode, 0);
+  bcode_init(bcode, 0);
 #else
-  bcode_init(v7->bcode, 1);
+  bcode_init(bcode, 1);
 #endif
 
-  retain_bcode(v7, v7->bcode);
-  own_bcode(v7, v7->bcode);
+  retain_bcode(v7, bcode);
+  own_bcode(v7, bcode);
 
   saved_try_stack = v7_get(v7, v7->call_stack, "____t", 5);
 
@@ -11577,10 +11601,10 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
           v7_is_undefined(this_object) ? v7->global_object : this_object;
 
       if (!is_json) {
-        err = compile_script(v7, a, v7->bcode);
+        err = compile_script(v7, a, bcode);
       } else {
         ast_off_t pos = 0;
-        err = compile_expr(v7, a, &pos, v7->bcode);
+        err = compile_expr(v7, a, &pos, bcode);
       }
 
     } else {
@@ -11589,7 +11613,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
       if (src_len == 0) {
         err = V7_INVALID_ARG;
       } else {
-        bcode_deserialize(v7, v7->bcode, src + sizeof(BIN_BCODE_SIGNATURE));
+        bcode_deserialize(v7, bcode, src + sizeof(BIN_BCODE_SIGNATURE));
 
         /*
          * Currently, we only support serialized bcode that is stored in some
@@ -11618,30 +11642,30 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
     size_t lit = 0;
     int args_cnt = v7_array_length(v7, args);
 
-    bcode_op(v7->bcode, OP_PUSH_UNDEFINED);
+    bcode_op(bcode, OP_PUSH_UNDEFINED);
 
     /* push `this` */
-    lit = bcode_add_lit(v7->bcode, this_object);
-    bcode_push_lit(v7->bcode, lit);
+    lit = bcode_add_lit(bcode, this_object);
+    bcode_push_lit(bcode, lit);
 
     /* push func literal */
-    lit = bcode_add_lit(v7->bcode, func);
-    bcode_push_lit(v7->bcode, lit);
+    lit = bcode_add_lit(bcode, func);
+    bcode_push_lit(bcode, lit);
 
     /* push args */
     {
       int i;
       for (i = 0; i < args_cnt; i++) {
-        lit = bcode_add_lit(v7->bcode, v7_array_get(v7, args, i));
-        bcode_push_lit(v7->bcode, lit);
+        lit = bcode_add_lit(bcode, v7_array_get(v7, args, i));
+        bcode_push_lit(bcode, lit);
       }
     }
 
-    bcode_op(v7->bcode, OP_CALL);
+    bcode_op(bcode, OP_CALL);
     /* TODO(dfrank): check if args <= 0x7f */
-    bcode_op(v7->bcode, (uint8_t) args_cnt);
+    bcode_op(bcode, (uint8_t) args_cnt);
 
-    bcode_op(v7->bcode, OP_SWAP_DROP);
+    bcode_op(bcode, OP_SWAP_DROP);
   } else {
     /* probably cfunction */
 
@@ -11689,7 +11713,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
   v7->bottom_call_stack = v7->call_stack;
 
   /* Evaluate bcode */
-  err = eval_bcode(v7, v7->bcode);
+  err = eval_bcode(v7, bcode);
 
   assert(v7->bottom_call_stack == v7->call_stack);
 
@@ -11742,13 +11766,10 @@ cleanup:
 
   release_ast(v7, a);
 
-  disown_bcode(v7, v7->bcode);
-
-  /* free current bcode if needed, and restore the previous one */
-  if (v7->bcode != NULL) {
-    release_bcode(v7, v7->bcode);
-  }
-  v7->bcode = saved_bcode;
+  /* disown and release current bcode */
+  disown_bcode(v7, bcode);
+  release_bcode(v7, bcode);
+  bcode = NULL;
 
   if (is_constructor && !v7_is_object(r)) {
     /* constructor returned non-object: replace it with `this` */
@@ -11757,7 +11778,7 @@ cleanup:
   if (res != NULL) {
     *res = r;
   }
-  v7->this_object = old_this;
+  v7->this_object = saved_this;
 
 #if defined(V7_ENABLE_STACK_TRACKING)
   {
@@ -11827,7 +11848,7 @@ V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode) {
 }
 
 /*
- * Appends a branch target and returns it's location.
+ * Appends a branch target and returns its location.
  * This location can be updated with bcode_patch_target.
  * To be issued following a JMP_* bytecode
  */
@@ -14130,7 +14151,7 @@ create_exception(struct v7 *v7, const char *typ, const char *msg) {
   args = v7_create_dense_array(v7);
   v7_own(v7, &args);
   v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
-  v7->creating_exception++;
+  v7->creating_exception = 1;
   typv = v7_get(v7, v7->global_object, typ, ~0);
   if (v7_is_undefined(typv)) {
     fprintf(stderr, "cannot find exception %s\n", typ);
@@ -14142,7 +14163,7 @@ create_exception(struct v7 *v7, const char *typ, const char *msg) {
   v7_disown(v7, &typv);
   v7_disown(v7, &e);
   v7_disown(v7, &args);
-  v7->creating_exception--;
+  v7->creating_exception = 0;
   return e;
 }
 
@@ -15018,11 +15039,7 @@ void v7_gc(struct v7 *v7, int full) {
   gc_mark(v7, v7->stash);
   gc_mark_string(v7, &v7->stash);
 
-  /* mark literals of the bcode being executed */
-  if (v7->bcode != NULL) {
-    gc_mark_mbuf_val(v7, &v7->bcode->lit);
-  }
-
+  /* mark literals and names of all the active bcodes */
   gc_mark_mbuf_bcode_pt(v7, &v7->act_bcodes);
 
   gc_mark_mbuf_pt(v7, &v7->tmp_stack);
