@@ -62,6 +62,24 @@ typedef uint64_t v7_val_t;
 extern "C" {
 #endif /* __cplusplus */
 
+/*
+ * Property attributes bitmask
+ */
+typedef unsigned char v7_prop_attr_t;
+#define V7_PROPERTY_READ_ONLY (1 << 0)
+#define V7_PROPERTY_DONT_ENUM (1 << 1)
+#define V7_PROPERTY_DONT_DELETE (1 << 2)
+#define V7_PROPERTY_HIDDEN (1 << 3)
+#define V7_PROPERTY_GETTER (1 << 4)
+#define V7_PROPERTY_SETTER (1 << 5)
+
+/*
+ * Object attributes bitmask
+ */
+typedef unsigned char v7_obj_attr_t;
+#define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
+#define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
+
 /* Opaque structure. V7 engine handler. */
 struct v7;
 
@@ -412,20 +430,13 @@ v7_val_t v7_throw_value(struct v7 *, v7_val_t v);
 /* Returns 1 if some value is currently thrown, 0 otherwise */
 int v7_has_thrown(struct v7 *v7);
 
-#define V7_PROPERTY_READ_ONLY 1
-#define V7_PROPERTY_DONT_ENUM 2
-#define V7_PROPERTY_DONT_DELETE 4
-#define V7_PROPERTY_HIDDEN 8
-#define V7_PROPERTY_GETTER 16
-#define V7_PROPERTY_SETTER 32
-
 /*
  * Set object property. `name`, `name_len` specify property name, `attrs`
  * specify property attributes, `val` is a property value. Return non-zero
  * on success, 0 on error (e.g. out of memory).
  */
 int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
-           unsigned int attrs, v7_val_t val);
+           v7_prop_attr_t attrs, v7_val_t val);
 
 /*
  * A helper function to define object's method backed by a C function `func`.
@@ -476,7 +487,7 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
  *     }
  */
 void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   unsigned int *attrs);
+                   v7_prop_attr_t *attrs);
 
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
