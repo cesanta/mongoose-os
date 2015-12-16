@@ -66,7 +66,7 @@ extern "C" {
 struct v7;
 
 /* JavaScript -> C call interface */
-typedef v7_val_t (*v7_cfunction_t)(struct v7 *);
+typedef v7_val_t(v7_cfunction_t)(struct v7 *);
 
 /* Create V7 instance */
 struct v7 *v7_create(void);
@@ -167,10 +167,11 @@ v7_val_t v7_create_array(struct v7 *v7);
  * will be used as the prototype of objects created when calling the function
  * with the `new` operator.
  */
-v7_val_t v7_create_function(struct v7 *, v7_cfunction_t func);
+v7_val_t v7_create_function(struct v7 *, v7_cfunction_t *func);
 
 /* Make f a JS constructor function for objects with prototype in proto. */
-v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f);
+v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
+                               v7_cfunction_t *f);
 
 /* Create numeric primitive value */
 v7_val_t v7_create_number(double num);
@@ -227,7 +228,7 @@ v7_val_t v7_create_foreign(void *ptr);
  * user defined properties. You should use `v7_create_function` unless you know
  * what you're doing.
  */
-v7_val_t v7_create_cfunction(v7_cfunction_t func);
+v7_val_t v7_create_cfunction(v7_cfunction_t *func);
 
 /* Return true if given value is a JavaScript object */
 int v7_is_object(v7_val_t);
@@ -288,8 +289,8 @@ int v7_to_boolean(v7_val_t);
  */
 double v7_to_number(v7_val_t);
 
-/* Return `v7_cfunction_t` callback pointer stored in `v7_val_t` */
-v7_cfunction_t v7_to_cfunction(v7_val_t);
+/* Return `v7_cfunction_t *` callback pointer stored in `v7_val_t` */
+v7_cfunction_t *v7_to_cfunction(v7_val_t);
 
 /*
  * Return a pointer to the string stored in `v7_val_t`.
@@ -431,7 +432,7 @@ int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
  * Return value is the same as for `v7_set()`.
  */
 int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
-                  v7_cfunction_t func);
+                  v7_cfunction_t *func);
 
 /*
  * Delete own property of an object `obj`. Does not follow the prototype chain.
