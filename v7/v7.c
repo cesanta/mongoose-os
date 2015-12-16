@@ -3697,36 +3697,6 @@ struct v7_vec {
 #define V7_STATIC_ASSERT(COND, MSG) \
   typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
 
-/*
- * TODO(dfrank): check all usages of this macro, and convert it to bcode-
- * compatible "throwing". Leaving #if 0 .. #endif just as a reminder about
- * what it looked like
- */
-#define V7_CHECK(v7, COND) \
-  do {                     \
-    if (!(COND)) {         \
-    }                      \
-  } while (0)
-
-/*
- * TODO(dfrank) remove it when `V7_CHECK` is implemented appropriately
- */
-#if 0
-#ifndef NDEBUG
-#define V7_CHECK(v7, COND)                                            \
-  do {                                                                \
-    if (!(COND))                                                      \
-      throw_exception(v7, INTERNAL_ERROR, "%s line %d: %s", __func__, \
-                      __LINE__, #COND);                               \
-  } while (0)
-#else
-#define V7_CHECK(v7, COND)                                                 \
-  do {                                                                     \
-    if (!(COND)) throw_exception(v7, INTERNAL_ERROR, "line %d", __LINE__); \
-  } while (0)
-#endif
-#endif
-
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
