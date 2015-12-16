@@ -6,6 +6,13 @@
  * necessary for Mongoose core to work w/o BSD socket headers.
  */
 
+#include <sys/time.h>
+
+/* We'll bring our own timeval, than you very much. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#ifndef RTOS_SDK
+
 /* Various structs and functions, such as in_addr_t are provided by LWIP. */
 #include <lwip/ip_addr.h>
 #include <lwip/inet.h>
@@ -26,5 +33,7 @@
 
 /* Implemented in libc_replacements */
 long int random(void);
+
+#endif
 
 #endif /* MG_LOCALS_INCLUDED */

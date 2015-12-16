@@ -152,4 +152,7 @@ struct hostent {
 };
 struct hostent *gethostbyname(const char *name);
 
+struct timeval;
+int gettimeofday(struct timeval *t, void *tz);
+
 #endif /* __CC3200_SOCKET_H_ */

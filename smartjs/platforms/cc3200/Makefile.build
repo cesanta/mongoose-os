@@ -131,7 +131,8 @@ ${BINDIR}:
 	@mkdir -p ${BINDIR}
 
 ${OBJDIR}/mongoose.o: ${MONGOOSE_PATH}/mongoose.c
-	${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
+	@echo "  CC    $^"
+	@${CC} ${CFLAGS} -DEXCLUDE_COMMON -D${COMPILER} -o ${@} ${<}
 
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/main.o
 ${BINDIR}/${PROG}.axf: ${OBJDIR}/sys_config.o ${OBJDIR}/cc3200_config.o ${OBJDIR}/device_config.o ${OBJDIR}/sj_config.o

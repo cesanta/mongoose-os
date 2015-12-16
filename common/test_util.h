@@ -21,6 +21,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <common/cs_time.h>
+
 extern int num_tests;
 
 #ifdef MG_TEST_ABORT_ON_FAIL
@@ -32,7 +34,6 @@ extern int num_tests;
 int _assert_streq(const char *actual, const char *expected);
 int _assert_streq_nz(const char *actual, const char *expected);
 void _strfail(const char *a, const char *e, int len);
-double _now();
 
 #define FAIL(str, line)                                              \
   do {                                                               \
@@ -51,9 +52,9 @@ double _now();
   do {                                         \
     const char *msg = NULL;                    \
     if (strstr(#test, filter)) {               \
-      double elapsed = _now();                 \
+      double elapsed = cs_time();              \
       msg = test();                            \
-      elapsed = _now() - elapsed;              \
+      elapsed = cs_time() - elapsed;           \
       printf("  [%.3f] %s\n", elapsed, #test); \
       *total_elapsed += elapsed;               \
     }                                          \

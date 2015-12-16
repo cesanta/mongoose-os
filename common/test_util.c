@@ -39,18 +39,6 @@ void _strfail(const char *a, const char *e, int len) {
   free(ee);
 }
 
-double _now() {
-  double now;
-#ifndef _WIN32
-  struct timeval tv;
-  if (gettimeofday(&tv, NULL /* tz */) != 0) return 0;
-  now = (double) tv.tv_sec + (((double) tv.tv_usec) / 1000000.0);
-#else
-  now = GetTickCount() / 1000.0;
-#endif
-  return now;
-}
-
 int _assert_streq(const char *actual, const char *expected) {
   if (strcmp(actual, expected) != 0) {
     _strfail(actual, expected, -1);
