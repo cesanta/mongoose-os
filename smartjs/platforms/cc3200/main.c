@@ -28,7 +28,7 @@
 #include "sj_timers.h"
 #include "sj_v7_ext.h"
 #include "sj_wifi.h"
-#include "v7.h"
+#include "v7/v7.h"
 #include "config.h"
 #include "cc3200_fs.h"
 #include "cc3200_leds.h"

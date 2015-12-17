@@ -4,7 +4,7 @@
 #include "sj_v7_ext.h"
 #include "sj_wifi.h"
 
-#include "v7.h"
+#include "v7/v7.h"
 
 static v7_val_t s_wifi;
 static struct v7 *s_v7;

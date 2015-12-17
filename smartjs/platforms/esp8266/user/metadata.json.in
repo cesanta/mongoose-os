@@ -1,0 +1,14 @@
+{
+  "name": "%NAME%",
+  "build": "%BUILD%",
+  "description": "%DESCRIPTION%",
+  "platform": "%PLATFORM%",
+  "timestamp": "%TIMESTAMP%",
+  "version": %VERSION%,
+  "c1_url" : "%C1_FILE%",
+  "c1_checksum" : "%C1_CHECKSUM%",
+  "c2_url" : "%C2_FILE%",
+  "c2_checksum" : "%C2_CHECKSUM%",
+  "fs_url" : "%FS_FILE%",
+  "fs_checksum" : "%FS_CHECKSUM%"
+}

@@ -367,13 +367,11 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
   if (nc->flags & MG_F_UDP) return;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   DBG(("%p %p %u", nc, cs->pcb.tcp, len));
-#ifndef ESP_SSL_KRYPTON
   /* Currently SSL acknowledges data immediately.
    * TODO(rojer): Find a way to propagate mg_if_recved. */
-  tcp_recved(cs->pcb.tcp, len);
-#else
-  (void) cs;
-#endif
+  if (nc->ssl == NULL) {
+    tcp_recved(cs->pcb.tcp, len);
+  }
   mbuf_trim(&nc->recv_mbuf);
 }
 

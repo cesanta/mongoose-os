@@ -1,11 +1,16 @@
 REPO_ROOT ?= ../../..
+COMMON_PATH = $(REPO_ROOT)/common
 SRC_PATH ?= ../../src
 V7_PATH ?= ../../../v7
+MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./build
 OUTAPP ?= smartjs
 VERBOSE ?= 0
 SSL ?= OpenSSL
+
+# For FW_VERSION, MG_FEATURES_TINY
+include $(REPO_ROOT)/smartjs/common.mk
 
 V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
               -DV7_ENABLE_COMPACTING_GC \
@@ -20,14 +25,23 @@ INCLUDES = $(REPO_ROOT) $(SRC_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 			mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
 			sj_mongoose_ws_client.c sj_gpio_js.c \
-			sj_prompt.c sj_timers.c sj_uart.c sj_http.c
+			sj_prompt.c sj_timers.c sj_uart.c sj_http.c \
+			sj_config.c sys_config.c device_config.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -D_BSD_SOURCE -D_GNU_SOURCE $(V7_FEATURES) $(SJ_FEATURES) $(MONGOOSE_FEATURES) -Wno-unused-function $(CFLAGS_EXTRA)
+CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -Wno-unused-function \
+          -D_BSD_SOURCE \
+          -D_GNU_SOURCE \
+          $(V7_FEATURES) \
+          $(SJ_FEATURES) \
+          $(MONGOOSE_FEATURES) \
+          -DFW_VERSION=\"$(FW_VERSION)\" \
+          -DFW_ARCHITECTURE=\"$(PLATFORM)\" \
+          $(CFLAGS_EXTRA)
 
-include $(SRC_PATH)/platform.mk
+include $(COMMON_PATH)/scripts/platform.mk
 
 ifeq ($(OS),Windows_NT)
   PLATFORM="WIN"
@@ -90,12 +104,12 @@ INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-OBJS = $(APP_OBJS) $(BUILD_DIR)/sj_version.o
-VPATH = $(SRC_PATH)
+OBJS = $(APP_OBJS)
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH)
 
-FS = $(wildcard $(SRC_PATH)/js/*.js)
+FS_FILES = $(wildcard $(SRC_PATH)/js/*init.js $(SRC_PATH)/fs/*)
 
-.PHONY: all clean
+.PHONY: all clean fs
 
 define compile
 @echo "CC $< -> $@"
@@ -119,27 +133,21 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 	$(compile)
 
-$(BUILD_DIR)/sj_version.c: $(APP_SRCS)
-	@echo "GEN sj_version.c"
-	@REF=$$(git symbolic-ref HEAD | sed 's:refs/heads/::'); \
-	SHA=$$(git rev-parse HEAD | head -c 8); \
-	DATE=$$(TZ=GMT date +"%Y%m%d-%H%M%S"); \
-	echo "const char *sj_version = \"POSIX-$$REF/$$DATE/$$SHA\";" > $(BUILD_DIR)/sj_version.c
-
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(SRC_PATH)/v7.c:
+$(V7_PATH)/v7.c:
 	@make -C $(V7_PATH) v7.c
-	@ln -s ../../v7/v7.c $(SRC_PATH)/v7.c
 
 $(BIN_DIR)/$(OUTAPP): $(OBJS)
 	@echo "LD $@"
 	$(Q) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 
-fs: $(FS)
+# After file copy, change default HTTP port to 9080
+fs: $(BIN_DIR) $(FS_FILES)
 	@echo "MKFS $@"
-	$(Q) cp $(FS) $(BIN_DIR)
+	$(Q) cp $(FS_FILES) $(BIN_DIR)
+	$(Q) perl -pi"" -e 's/"80"/"9080"/' $(BIN_DIR)/conf_sys_defaults.json
 
 clean:
-	$(Q) rm -rf $(BIN_DIR)/$(OUTAPP) $(BUILD_DIR)
+	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
 

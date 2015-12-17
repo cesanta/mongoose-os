@@ -2,10 +2,10 @@
 
 SDK=docker.cesanta.com:5000/eabihf-arm-build
 
-DEVDIR=$(dirname $(dirname $PWD))
+DEVDIR=$(dirname $(dirname $(dirname $PWD))
 BASE=""
 
-if [ -L ${DEVDIR}/src/platform.mk ]; then
+if [ -L ${DEVDIR}/common/scripts/platform.mk ]; then
     # symlink to common repo
     DEVDIR=$(dirname ${DEVDIR})
     BASE=smartjs/

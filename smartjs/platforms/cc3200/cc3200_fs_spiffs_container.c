@@ -9,7 +9,7 @@
 #include "device.h"
 #include "fs.h"
 
-#include "v7.h"
+#include "v7/v7.h"
 #include "config.h"
 #include "spiffs_nucleus.h"
 

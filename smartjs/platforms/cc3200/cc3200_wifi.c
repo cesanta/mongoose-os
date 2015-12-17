@@ -7,7 +7,7 @@
 
 #include "cc3200_socket.h"
 #include "sj_wifi.h"
-#include "v7.h"
+#include "v7/v7.h"
 #include "config.h"
 
 struct cc3200_wifi_config {

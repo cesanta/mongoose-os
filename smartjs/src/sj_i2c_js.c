@@ -272,7 +272,7 @@ static v7_val_t i2cjs_test(struct v7 *v7) {
 
 void init_i2cjs(struct v7 *v7) {
   v7_val_t i2c_proto, i2c_ctor;
-  unsigned int const_attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE;
+  v7_prop_attr_t const_attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE;
 
   i2c_proto = v7_create_object(v7);
   v7_set_method(v7, i2c_proto, "start", i2cjs_start);

@@ -1,7 +1,7 @@
 #ifndef _CC3200_HAL_H_
 #define _CC3200_HAL_H_
 
-#include "v7.h"
+#include "v7/v7.h"
 
 #define PROMPT_CHAR_EVENT 0
 #define V7_INVOKE_EVENT 1

@@ -14,7 +14,7 @@ typedef char bool;
 #include "rom_map.h"
 
 #include "sj_i2c.h"
-#include "v7.h"
+#include "v7/v7.h"
 #include "config.h"
 
 /* Documentation: TRM (swru367b), Chapter 7 */

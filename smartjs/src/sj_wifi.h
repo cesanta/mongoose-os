@@ -1,7 +1,7 @@
 #ifndef __SMARTJS_WIFI_H_
 #define __SMARTJS_WIFI_H_
 
-#include "v7.h"
+#include "v7/v7.h"
 
 #include "smartjs/src/sys_config.h"
 

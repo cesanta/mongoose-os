@@ -251,7 +251,7 @@ static v7_val_t Http_response_writeHead(struct v7 *v7) {
   if (v7_is_object(arg1)) {
     void *h = NULL;
     v7_val_t name, value;
-    unsigned int attrs;
+    v7_prop_attr_t attrs;
     while ((h = v7_next_prop(h, arg1, &name, &value, &attrs)) != NULL) {
       size_t n1, n2;
       const char *s1 = v7_get_string_data(v7, &name, &n1);

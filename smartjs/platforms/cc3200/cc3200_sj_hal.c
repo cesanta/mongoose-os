@@ -13,7 +13,7 @@
 #include "sj_hal.h"
 #include "sj_timers.h"
 #include "sj_v7_ext.h"
-#include "v7.h"
+#include "v7/v7.h"
 
 #include "oslib/osi.h"
 

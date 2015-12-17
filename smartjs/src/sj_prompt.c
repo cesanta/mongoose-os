@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "v7.h"
+#include "v7/v7.h"
 
 #define RX_BUFSIZE 512
 #define SIGINT_CHAR 0x03

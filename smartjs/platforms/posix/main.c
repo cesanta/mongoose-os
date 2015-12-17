@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <time.h>
+
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_prompt.h"
 #include "smartjs/src/sj_timers.h"
 #include "smartjs/src/sj_v7_ext.h"
 #include "smartjs.h"
+#include "device_config.h"
 
 #ifndef JS_FS_ROOT
 #define JS_FS_ROOT "."
@@ -14,7 +18,7 @@
 static const char *s_argv0;
 int sj_please_quit;
 
-static void pre_init(struct v7 *v7) {
+static void run_init_script(struct v7 *v7) {
   static const char *init_files[] = {"sys_init.js"};
   const char *dir = s_argv0 + strlen(s_argv0) - 1;
   char path[512];
@@ -37,10 +41,6 @@ static void pre_init(struct v7 *v7) {
     fprintf(stderr, "cannot chdir to %s\n", path);
   }
 
-  sj_init_timers(v7);
-  sj_init_v7_ext(v7);
-  init_smartjs(v7);
-
   /*
    * Run startup scripts from the directory JS_DIR_NAME.
    * That directory should be located where the binary (s_argv0) lives.
@@ -53,9 +53,16 @@ static void pre_init(struct v7 *v7) {
   }
 }
 
+static void pre_init(struct v7 *v7) {
+  sj_init_timers(v7);
+  sj_init_v7_ext(v7);
+  init_smartjs(v7);
+}
+
 static void post_init(struct v7 *v7) {
   sj_prompt_init(v7);
-
+  init_device(v7);
+  run_init_script(v7);
   do {
     /*
      * Now waiting until mongoose has active connections
@@ -64,6 +71,22 @@ static void post_init(struct v7 *v7) {
      */
   } while ((mongoose_poll(100) || gpio_poll()) && !sj_please_quit);
   mongoose_destroy();
+}
+
+int device_init_platform(struct sys_config *cfg) {
+  return cfg == NULL ? 0 : 1;
+}
+
+void device_reboot(void) {
+  exit(0);
+}
+
+void device_get_mac_address(uint8_t mac[6]) {
+  int i;
+  srand(time(NULL));
+  for (i = 0; i < 6; i++) {
+    mac[i] = (double) rand() / RAND_MAX * 255;
+  }
 }
 
 int main(int argc, char *argv[]) {
