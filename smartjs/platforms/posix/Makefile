@@ -107,7 +107,7 @@ APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 OBJS = $(APP_OBJS)
 VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH)
 
-FS_FILES = $(wildcard $(SRC_PATH)/js/*init.js $(SRC_PATH)/fs/*) $(SRC_PATH)/js/clubby.js 
+FS_FILES = $(wildcard $(SRC_PATH)/js/* $(SRC_PATH)/fs/*)
 
 .PHONY: all clean fs
 
