@@ -4,7 +4,7 @@ $.extend = function(a, b) {
   if(a === undefined) {
     a = {};
   }
-  for (k in b) {
+  for (var k in b) {
     if (typeof(a[k]) === 'object' && typeof(b[k]) == 'object') {
       $.extend(a[k], b[k]);
     } else {
