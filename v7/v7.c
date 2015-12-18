@@ -2602,10 +2602,10 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
  * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
  * "throws" an error with `BTHROW()`
  */
-#define BTRY(call)           \
-  do {                       \
-    enum v7_err _e = call;   \
-    BCHECK(_e == V7_OK, _e); \
+#define BTRY2(call, clean_label)           \
+  do {                                     \
+    enum v7_err _e = call;                 \
+    BCHECK2(_e == V7_OK, _e, clean_label); \
   } while (0)
 
 /*
@@ -2614,42 +2614,22 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
  * For this to work, you should have local `enum v7_err ret` variable,
  * and a `clean` label.
  */
-#define BTHROW(err_code) \
-  do {                   \
-    ret = (err_code);    \
-    goto clean;          \
+#define BTHROW2(err_code, clean_label)                           \
+  do {                                                           \
+    assert(!v7_is_undefined(v7->thrown_error) && v7->is_thrown); \
+    ret = (err_code);                                            \
+    goto clean_label;                                            \
   } while (0)
 
 /*
  * Checks provided condition `cond`, and if it's false, then "throws"
  * provided `err_code` (see `BTHROW()`)
  */
-#define BCHECK(cond, err_code) \
-  do {                         \
-    if (!(cond)) {             \
-      BTHROW(err_code);        \
-    }                          \
-  } while (0)
-
-/*
- * The same as `BTHROW`, but additionally takes an error message
- */
-#define BTHROW_MSG(err_code, err_msg)                         \
-  do {                                                        \
-    strncpy(v7->error_msg, (err_msg), sizeof(v7->error_msg)); \
-    ret = (err_code);                                         \
-    goto clean;                                               \
-  } while (0)
-
-/*
- * The same as `BCHECK`, but additionally takes an error message that is used
- * in case of error
- */
-#define BCHECK_MSG(cond, err_code, err_msg) \
-  do {                                      \
-    if (!(cond)) {                          \
-      BTHROW_MSG(err_code, err_msg);        \
-    }                                       \
+#define BCHECK2(cond, err_code, clean_label) \
+  do {                                       \
+    if (!(cond)) {                           \
+      BTHROW2(err_code, clean_label);        \
+    }                                        \
   } while (0)
 
 /*
@@ -2659,12 +2639,18 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
  * TODO(dfrank): it would be good to have formatted string: then, we can
  * specify file and line.
  */
-#define BCHECK_INTERNAL(cond)                          \
-  do {                                                 \
-    if (!(cond)) {                                     \
-      BTHROW_MSG(V7_INTERNAL_ERROR, "internal error"); \
-    }                                                  \
+#define BCHECK_INTERNAL2(cond, clean_label)         \
+  do {                                              \
+    if (!(cond)) {                                  \
+      set_exception(v7, "Error", "Internal error"); \
+      BTHROW2(V7_INTERNAL_ERROR, clean_label);      \
+    }                                               \
   } while (0)
+
+#define BTRY(call) BTRY2(call, clean)
+#define BTHROW(err_code) BTHROW2(err_code, clean)
+#define BCHECK(cond, err_code) BCHECK2(cond, err_code, clean)
+#define BCHECK_INTERNAL(cond) BCHECK_INTERNAL2(cond, clean)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -3516,6 +3502,16 @@ enum v7_type {
 #define INTERNAL_ERROR "InternalError"
 #define RANGE_ERROR "RangeError"
 #define ERROR_CTOR_MAX 5
+/*
+ * TODO(dfrank): add also `EvalError`, guarded by something like
+ * `V7_ENABLE__EvalError`
+ *
+ * Because we now have ecma tests failing:
+ *
+ * 8129 FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-iii-24.js (tail -c
+ * +7600043 tests/ecmac.db|head -c 496): [{"message":"[EvalError] is not
+ * defined"}]
+ */
 
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
@@ -3888,6 +3884,13 @@ struct v7_regexp {
 extern "C" {
 #endif /* __cplusplus */
 
+/*
+ * Set exception of given type `typ` with the formatted message to the v7
+ * context.
+ */
+V7_PRIVATE void set_exception(struct v7 *v7, const char *typ,
+                              const char *err_fmt, ...);
+
 /* TODO(mkm): possibly replace those with macros for inlining */
 enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
@@ -4016,8 +4019,8 @@ V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
 
 V7_PRIVATE val_t v7_array_get2(struct v7 *, v7_val_t, unsigned long, int *);
 V7_PRIVATE long arg_long(struct v7 *v7, int n, long default_value);
-V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
-                      enum v7_stringify_flags flags);
+V7_PRIVATE enum v7_err to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                              int *res_len, enum v7_stringify_flags flags);
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
 V7_PRIVATE v7_val_t std_eval(struct v7 *, v7_val_t, v7_val_t, int);
@@ -4047,7 +4050,7 @@ V7_PRIVATE double i_as_num(struct v7 *, val_t);
 
 V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
-V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
+V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
                               val_t func, val_t args, val_t *res,
                               val_t this_object, int is_json, int fr,
                               uint8_t is_constructor);
@@ -10329,7 +10332,7 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
  */
 static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
                                        int take_thrown_value) {
-  enum v7_err err = V7_OK;
+  enum v7_err ret = V7_OK;
   enum local_block found;
 
   assert(take_thrown_value || v7->is_thrown);
@@ -10357,7 +10360,7 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
 #ifdef V7_BCODE_TRACE
       fprintf(stderr, "reached stack bottom: uncaught exception\n");
 #endif
-      err = V7_EXEC_EXCEPTION;
+      ret = V7_EXEC_EXCEPTION;
       break;
     }
   }
@@ -10375,7 +10378,7 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
   /* `ops` already points to the needed instruction, no need to increment it */
   r->need_inc_ops = 0;
 
-  return err;
+  return ret;
 }
 
 /*
@@ -10550,11 +10553,16 @@ V7_PRIVATE enum v7_err eval_try_pop(struct v7 *v7) {
 
   /* get "try stack" array, which must be defined and must not be emtpy */
   arr = v7_get(v7, v7->call_stack, "____t", 5);
-  BCHECK_MSG(!v7_is_undefined(arr), V7_INTERNAL_ERROR,
-             "TRY_POP when ____t does not exist");
+  if (v7_is_undefined(arr)) {
+    set_exception(v7, "Error", "TRY_POP when ____t does not exist");
+    BTHROW(V7_INTERNAL_ERROR);
+  }
 
   length = v7_array_length(v7, arr);
-  BCHECK_MSG(length != 0, V7_INTERNAL_ERROR, "TRY_POP when ____t is empty");
+  if (length == 0) {
+    set_exception(v7, "Error", "TRY_POP when ____t is empty");
+    BTHROW(V7_INTERNAL_ERROR);
+  }
 
   /* delete the latest element of this array */
   v7_array_del(v7, arr, length - 1);
@@ -11492,7 +11500,7 @@ V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
  * functionality is baked in the single function, but it would be good to make
  * it suck less.
  */
-V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
+V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
                               val_t func, val_t args, val_t *res,
                               val_t this_object, int is_json, int fr,
                               uint8_t is_constructor) {
@@ -11506,7 +11514,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
   val_t saved_bottom_call_stack = v7->bottom_call_stack;
   val_t saved_try_stack = v7_create_undefined();
   size_t saved_stack_len = v7->stack.len;
-  enum v7_err err = V7_OK;
+  enum v7_err ret = V7_OK;
   val_t r = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   uint8_t noopt = 0;
@@ -11538,47 +11546,63 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
   retain_bcode(v7, bcode);
   own_bcode(v7, bcode);
 
-  saved_try_stack = v7_get(v7, v7->call_stack, "____t", 5);
-
   ast_init(a, 0);
   a->refcnt = 1;
 
+  saved_try_stack = v7_get(v7, v7->call_stack, "____t", 5);
+
+  /*
+   * Exceptions in "nested" script should not percolate into the "outer"
+   * script, so, reset the try stack (it will be restored later)
+   */
+  v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN,
+         v7_create_dense_array(v7));
+
+  /*
+   * Set current call stack as the "bottom" call stack, so that bcode evaluator
+   * will exit when it reaches this "bottom"
+   */
+  v7->bottom_call_stack = v7->call_stack;
+
   if (src != NULL) {
-    /*
-     * Caller provided some source code, so, parse and compile it.
-     */
+    /* Caller provided some source code, so, handle it somehow */
 
-    if (strncmp(BIN_BCODE_SIGNATURE, src, sizeof(BIN_BCODE_SIGNATURE)) != 0) {
-      if (strncmp(BIN_AST_SIGNATURE, src, sizeof(BIN_AST_SIGNATURE)) != 0) {
-        err = parse(v7, a, src, 1, is_json);
-      } else {
-        /* TODO(alashkin): try to remove memory doubling */
-        if (src_len == 0) {
-          err = V7_INVALID_ARG;
+    if (src_len >= sizeof(BIN_BCODE_SIGNATURE) &&
+        strncmp(BIN_BCODE_SIGNATURE, src, sizeof(BIN_BCODE_SIGNATURE)) == 0) {
+      /* we have a serialized bcode */
+
+      bcode_deserialize(v7, bcode, src + sizeof(BIN_BCODE_SIGNATURE));
+
+      /*
+       * Currently, we only support serialized bcode that is stored in some
+       * mmapped memory. Otherwise, we don't yet have any mechanism to free
+       * this memory at the appropriate time.
+       */
+      assert(fr == 0);
+    } else {
+      /* Maybe regular JavaScript source or binary AST data */
+
+      if (src_len >= sizeof(BIN_AST_SIGNATURE) &&
+          strncmp(BIN_AST_SIGNATURE, src, sizeof(BIN_AST_SIGNATURE)) == 0) {
+        /* we have binary AST data */
+
+        if (fr == 0) {
+          /* Unmanaged memory, usually rom or mmapped flash */
+          mbuf_free(&a->mbuf);
+          a->mbuf.buf = (char *) (src + sizeof(BIN_AST_SIGNATURE));
+          a->mbuf.size = a->mbuf.len = src_len - sizeof(BIN_AST_SIGNATURE);
+          a->refcnt++; /* prevent freeing */
+          noopt = 1;
         } else {
-          if (fr == 0) {
-            /* Unmanaged memory, usually rom or mmapped flash */
-            mbuf_free(&a->mbuf);
-            a->mbuf.buf = (char *) (src + sizeof(BIN_AST_SIGNATURE));
-            a->mbuf.size = a->mbuf.len = src_len - sizeof(BIN_AST_SIGNATURE);
-            a->refcnt++; /* prevent freeing */
-            noopt = 1;
-          } else {
-            mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
-                        src_len - sizeof(BIN_AST_SIGNATURE));
-          }
+          mbuf_append(&a->mbuf, src + sizeof(BIN_AST_SIGNATURE),
+                      src_len - sizeof(BIN_AST_SIGNATURE));
         }
+      } else {
+        /* we have regular JavaScript source, so, parse it */
+        BTRY(parse(v7, a, src, 1, is_json));
       }
 
-      if (err != V7_OK) {
-        /*
-         * The actual error might not be syntax error but there is no need to
-         * add more overhead to the runtime by creating a specific exception for
-         * other parse errors.
-         */
-        r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-        goto cleanup;
-      }
+      /* we now have binary AST, let's compile it */
 
       if (!noopt) {
         ast_optimize(a);
@@ -11591,37 +11615,13 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
           v7_is_undefined(this_object) ? v7->global_object : this_object;
 
       if (!is_json) {
-        err = compile_script(v7, a, bcode);
+        BTRY(compile_script(v7, a, bcode));
       } else {
         ast_off_t pos = 0;
-        err = compile_expr(v7, a, &pos, bcode);
-      }
-
-    } else {
-      /* we have a serialized bcode */
-
-      if (src_len == 0) {
-        err = V7_INVALID_ARG;
-      } else {
-        bcode_deserialize(v7, bcode, src + sizeof(BIN_BCODE_SIGNATURE));
-
-        /*
-         * Currently, we only support serialized bcode that is stored in some
-         * mmapped memory. Otherwise, we don't yet have any mechanism to free
-         * this memory at the appropriate time.
-         */
-        assert(fr == 0);
+        BTRY(compile_expr(v7, a, &pos, bcode));
       }
     }
 
-    if (fr) {
-      free((void *) src);
-    }
-
-    if (err != V7_OK) {
-      r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-      goto cleanup;
-    }
   } else if (v7_is_function(func)) {
     /*
      * Caller did not provide source code, so, assume we should call
@@ -11674,72 +11674,74 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, int src_len,
       r = call_cfunction(v7, func, this_object, args, 0 /* not a ctor */,
                          &has_thrown);
       if (has_thrown) {
-        err = V7_EXEC_EXCEPTION;
-        goto cleanup;
+        BTHROW(V7_EXEC_EXCEPTION);
       }
     } else {
       /* value is not a function */
-      r = v7_throw(v7, TYPE_ERROR, "value is not a function");
-      err = V7_EXEC_EXCEPTION;
-      goto cleanup;
+      set_exception(v7, TYPE_ERROR, "value is not a function");
+      BTHROW(V7_EXEC_EXCEPTION);
     }
 
-    goto cleanup;
+    goto clean;
   }
 
   /* We now have bcode to evaluate; proceed to it */
 
-  /*
-   * Exceptions in "nested" script should not percolate into the "outer"
-   * script, so, reset the try stack (it will be restored later)
-   */
-  v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN,
-         v7_create_dense_array(v7));
-
-  /*
-   * Set current call stack as the "bottom" call stack, so that bcode evaluator
-   * will exit when it reaches this "bottom"
-   */
-  v7->bottom_call_stack = v7->call_stack;
-
   /* Evaluate bcode */
-  err = eval_bcode(v7, bcode);
+  BTRY(eval_bcode(v7, bcode));
 
-  assert(v7->bottom_call_stack == v7->call_stack);
-
-  if (err == V7_OK) {
 /*
  * bcode evaluated successfully. Make sure try stack is empty.
- * (data stack will be checked below, in `cleanup`)
+ * (data stack will be checked below, in `clean`)
  */
 #ifndef NDEBUG
+  {
     unsigned long try_stack_len =
         v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
     if (try_stack_len != 0) {
       fprintf(stderr, "try_stack_len=%lu, should be 0\n", try_stack_len);
     }
-#endif
     assert(try_stack_len == 0);
+  }
+#endif
 
-    /* get the value returned from the evaluated script */
-    r = POP();
-  } else {
+  /* get the value returned from the evaluated script */
+  r = POP();
+
+clean:
+
+  assert(v7->bottom_call_stack == v7->call_stack);
+
+  /* free `src` if needed */
+  /*
+   * TODO(dfrank) : free it above, just after parsing, and make sure you use
+   * BTRY2() with custom label instead of BTRY()
+   */
+  if (src != NULL && fr) {
+    free((void *) src);
+  }
+
+  /* disown and release current bcode */
+  disown_bcode(v7, bcode);
+  release_bcode(v7, bcode);
+  bcode = NULL;
+
+  if (ret != V7_OK) {
     /* some exception happened. */
     r = v7->thrown_error;
 
-    /* clear thrown error from the v7 context */
-    v7->thrown_error = v7_create_undefined();
-    v7->is_thrown = 0;
+    /* if this is a top-level bcode, clear thrown error from the v7 context */
+    if (v7->act_bcodes.len == 0) {
+      v7->thrown_error = v7_create_undefined();
+      v7->is_thrown = 0;
+    }
 
     /*
      * After an exception, stack might have any arbitrary length, so, just
      * restore the saved length
      */
-    assert(SP() >= 1);
     v7->stack.len = saved_stack_len;
   }
-
-cleanup:
 
   /*
    * Data stack should have the same length as it was before evaluating script.
@@ -11755,11 +11757,6 @@ cleanup:
   v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN, saved_try_stack);
 
   release_ast(v7, a);
-
-  /* disown and release current bcode */
-  disown_bcode(v7, bcode);
-  release_bcode(v7, bcode);
-  bcode = NULL;
 
   if (is_constructor && !v7_is_object(r)) {
     /* constructor returned non-object: replace it with `this` */
@@ -11780,7 +11777,7 @@ cleanup:
 #endif
 
   tmp_frame_cleanup(&tf);
-  return err;
+  return ret;
 }
 
 V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
@@ -12623,10 +12620,16 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
   return i;
 }
 
-V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
-                      enum v7_stringify_flags flags) {
+/*
+ * TODO(dfrank): make `res_len` to be `size_t *`
+ */
+V7_PRIVATE enum v7_err to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                              int *res_len, enum v7_stringify_flags flags) {
   char *vp;
   double num;
+  enum v7_err ret = V7_OK;
+  int len = 0;
+
   if (size > 0) *buf = '\0';
 
   for (vp = v7->json_visited_stack.buf;
@@ -12634,32 +12637,39 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
        vp += sizeof(val_t)) {
     if (*(val_t *) vp == v) {
       strncpy(buf, "[Circular]", size);
-      return 10;
+      len = 10;
+      goto clean;
     }
   }
 
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
       strncpy(buf, "null", size);
-      return 4;
+      len = 4;
+      goto clean;
     case V7_TYPE_UNDEFINED:
       strncpy(buf, "undefined", size);
-      return 9;
+      len = 9;
+      goto clean;
     case V7_TYPE_BOOLEAN:
       if (v7_to_boolean(v)) {
         strncpy(buf, "true", size);
-        return 4;
+        len = 4;
+        goto clean;
       } else {
         strncpy(buf, "false", size);
-        return 5;
+        len = 5;
+        goto clean;
       }
     case V7_TYPE_NUMBER:
       if (v == V7_TAG_NAN) {
-        return c_snprintf(buf, size, "NaN");
+        len = c_snprintf(buf, size, "NaN");
+        goto clean;
       }
       num = v7_to_number(v);
       if (isinf(num)) {
-        return c_snprintf(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
+        len = c_snprintf(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
+        goto clean;
       }
       {
 /*
@@ -12668,19 +12678,23 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
  */
 #ifndef V7_TEMP_OFF
         const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
-        return snprintf(buf, size, fmt, num);
+        len = snprintf(buf, size, fmt, num);
+        goto clean;
 #else
         const int prec = num > 1e10 ? 21 : 10;
-        return double_to_str(buf, size, num, prec);
+        len = double_to_str(buf, size, num, prec);
+        goto clean;
 #endif
       }
     case V7_TYPE_STRING: {
       size_t n;
       const char *str = v7_get_string_data(v7, &v, &n);
       if (flags & (V7_STRINGIFY_JSON | V7_STRINGIFY_DEBUG)) {
-        return snquote(buf, size, str, n);
+        len = snquote(buf, size, str, n);
+        goto clean;
       } else {
-        return c_snprintf(buf, size, "%.*s", (int) n, str);
+        len = c_snprintf(buf, size, "%.*s", (int) n, str);
+        goto clean;
       }
     }
 #if V7_ENABLE__RegExp
@@ -12689,22 +12703,26 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       char s2[3] = {0};
       struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(v);
       const char *s1 = v7_get_string_data(v7, &rp->regexp_string, &n1);
-      int flags = slre_get_flags(rp->compiled_regexp);
-      if (flags & SLRE_FLAG_G) s2[n2++] = 'g';
-      if (flags & SLRE_FLAG_I) s2[n2++] = 'i';
-      if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
-      return c_snprintf(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
+      int re_flags = slre_get_flags(rp->compiled_regexp);
+      if (re_flags & SLRE_FLAG_G) s2[n2++] = 'g';
+      if (re_flags & SLRE_FLAG_I) s2[n2++] = 'i';
+      if (re_flags & SLRE_FLAG_M) s2[n2++] = 'm';
+      len = c_snprintf(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
+      goto clean;
     }
 #endif
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
-      return c_snprintf(buf, size, "cfunc_xxxxxx");
+      len = c_snprintf(buf, size, "cfunc_xxxxxx");
+      goto clean;
 #else
-      return c_snprintf(buf, size, "cfunc_%p", v7_to_pointer(v));
+      len = c_snprintf(buf, size, "cfunc_%p", v7_to_pointer(v));
+      goto clean;
 #endif
     case V7_TYPE_CFUNCTION_OBJECT:
       v = i_value_of(v7, v);
-      return c_snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
+      len = c_snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
+      goto clean;
     case V7_TYPE_DATE_OBJECT: {
       v7_val_t func, val = v7_create_undefined();
       func = v7_get(v7, v, "toString", 8);
@@ -12713,7 +12731,8 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
 #endif
       /* TODO(dfrank): check return value */
       b_apply(v7, &val, func, v, V7_UNDEFINED, 0);
-      return to_str(v7, val, buf, size, flags);
+      BTRY(to_str(v7, val, buf, size, &len, flags));
+      goto clean;
     }
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
@@ -12728,7 +12747,15 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (flags == V7_STRINGIFY_DEFAULT) {
         /* TODO(dfrank): check return value */
         b_apply(v7, &val, v7_get(v7, v, "toString", 8), v, V7_UNDEFINED, 0);
-        return to_str(v7, val, buf, size, flags);
+
+        /* make sure that the value returned from `toString` is a primitive */
+        if (v7_is_object(val)) {
+          set_exception(v7, TYPE_ERROR,
+                        "Cannot convert object to primitive value");
+          BTHROW(V7_EXEC_EXCEPTION);
+        }
+        BTRY(to_str(v7, val, buf, size, &len, flags));
+        goto clean;
       }
 
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
@@ -12765,27 +12792,34 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
             val_type(v7, val) == V7_TYPE_STRING_OBJECT) {
           flags = V7_STRINGIFY_JSON;
         }
-        b += to_str(v7, val, b, BUF_LEFT(size, b - buf), flags);
+        {
+          int tmp = 0;
+          BTRY(to_str(v7, val, b, BUF_LEFT(size, b - buf), &tmp, flags));
+          b += tmp;
+        }
       }
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
       v7->json_visited_stack.len -= sizeof(v);
-      return b - buf;
+      len = b - buf;
+      goto clean;
     }
     case V7_TYPE_ARRAY_OBJECT: {
       val_t el;
       int has;
       char *b = buf;
-      size_t i, len = v7_array_length(v7, v);
+      size_t i, alen = v7_array_length(v7, v);
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       if (flags & (V7_STRINGIFY_JSON | V7_STRINGIFY_DEBUG)) {
         b += c_snprintf(b, BUF_LEFT(size, b - buf), "[");
       }
-      for (i = 0; i < len; i++) {
+      for (i = 0; i < alen; i++) {
         el = v7_array_get2(v7, v, i, &has);
         if (has) {
-          b += to_str(v7, el, b, BUF_LEFT(size, b - buf), flags);
+          int tmp = 0;
+          BTRY(to_str(v7, el, b, BUF_LEFT(size, b - buf), &tmp, flags));
+          b += tmp;
         }
-        if (i != len - 1) {
+        if (i != alen - 1) {
           b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
@@ -12793,7 +12827,8 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
       }
       v7->json_visited_stack.len -= sizeof(v);
-      return b - buf;
+      len = b - buf;
+      goto clean;
     }
     case V7_TYPE_FUNCTION_OBJECT: {
       char *name;
@@ -12844,14 +12879,26 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       }
 
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
-      return b - buf;
+      len = b - buf;
+      goto clean;
     }
     case V7_TYPE_FOREIGN:
-      return c_snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
+      len = c_snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
+      goto clean;
     default:
       abort();
   }
-  return 0; /* for compilers that don't know about abort() */
+  len = 0; /* for compilers that don't know about abort() */
+  goto clean;
+
+clean:
+  if (ret != V7_OK) {
+    len = 0;
+  }
+  if (res_len != NULL) {
+    *res_len = len;
+  }
+  return ret;
 }
 
 #undef BUF_LEFT
@@ -12862,13 +12909,14 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
  */
 char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size,
                    enum v7_stringify_flags flags) {
-  int len = to_str(v7, v, buf, size, flags);
+  int len;
+  to_str(v7, v, buf, size, &len, flags);
 
   /* fit null terminating byte */
   if (len >= (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
     char *p = (char *) malloc(len + 1);
-    to_str(v7, v, p, len + 1, flags);
+    to_str(v7, v, p, len + 1, NULL, flags);
     p[len] = '\0';
     return p;
   } else {
@@ -12905,7 +12953,11 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
     }
     memcpy(buf, str, n);
   } else {
-    n = (size_t) to_str(v7, v, buf, size, V7_STRINGIFY_DEFAULT);
+    {
+      int tmp;
+      to_str(v7, v, buf, size, &tmp, V7_STRINGIFY_DEFAULT);
+      n = (size_t) tmp;
+    }
     if (n >= size) {
       n = size - 1;
     }
@@ -14125,36 +14177,53 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
   return b_apply(v7, result, func, this_obj, args, 0);
 }
 
+/*
+ * Create an instance of exception with type `typ` (see `TYPE_ERROR`,
+ * `SYNTAX_ERROR`, etc) and message `msg`.
+ */
 V7_PRIVATE val_t
 create_exception(struct v7 *v7, const char *typ, const char *msg) {
-  val_t e, args, typv;
+  val_t e = v7_create_undefined(), ctor_args = v7_create_undefined(),
+        ctor_func = v7_create_undefined();
 #if 0
   assert(v7_is_undefined(v7->thrown_error));
 #endif
+
+  v7_own(v7, &ctor_args);
+  v7_own(v7, &ctor_func);
+  v7_own(v7, &e);
 
   if (v7->creating_exception) {
 #ifndef NO_LIBC
     fprintf(stderr, "Exception creation throws an exception %s: %s\n", typ,
             msg);
 #endif
-    return V7_UNDEFINED;
+  } else {
+    v7->creating_exception = 1;
+
+    /* Prepare arguments for the `Error` constructor */
+    ctor_args = v7_create_dense_array(v7);
+    v7_array_set(v7, ctor_args, 0, v7_create_string(v7, msg, strlen(msg), 1));
+
+    /* Get constructor for the given error `typ` */
+    ctor_func = v7_get(v7, v7->global_object, typ, ~0);
+    if (v7_is_undefined(ctor_func)) {
+      fprintf(stderr, "cannot find exception %s\n", typ);
+    }
+
+    /* Create an error object, with prototype from constructor function */
+    e = create_object(v7, v7_get(v7, ctor_func, "prototype", 9));
+
+    /* Finally, call the constructor, passing an error as `this` */
+    b_apply(v7, NULL, ctor_func, e, ctor_args, 0);
+
+    v7_disown(v7, &ctor_func);
+    v7_disown(v7, &e);
+    v7_disown(v7, &ctor_args);
+
+    v7->creating_exception = 0;
   }
-  args = v7_create_dense_array(v7);
-  v7_own(v7, &args);
-  v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
-  v7->creating_exception = 1;
-  typv = v7_get(v7, v7->global_object, typ, ~0);
-  if (v7_is_undefined(typv)) {
-    fprintf(stderr, "cannot find exception %s\n", typ);
-  }
-  v7_own(v7, &typv);
-  e = create_object(v7, v7_get(v7, typv, "prototype", 9));
-  v7_own(v7, &e);
-  b_apply(v7, NULL, typv, e, args, 0);
-  v7_disown(v7, &typv);
-  v7_disown(v7, &e);
-  v7_disown(v7, &args);
-  v7->creating_exception = 0;
+
   return e;
 }
 
@@ -14215,6 +14284,18 @@ v7_val_t v7_throw(struct v7 *v7, const char *typ, const char *err_fmt, ...) {
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   return v7_throw_value(v7, create_exception(v7, typ, v7->error_msg));
+}
+
+V7_PRIVATE void set_exception(struct v7 *v7, const char *typ,
+                              const char *err_fmt, ...) {
+  /* TODO(dfrank) : get rid of v7->error_msg, allocate mem right here */
+  va_list ap;
+  va_start(ap, err_fmt);
+  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+
+  v7->thrown_error = create_exception(v7, typ, v7->error_msg);
+  v7->is_thrown = 1;
 }
 
 int v7_has_thrown(struct v7 *v7) {
@@ -17491,7 +17572,7 @@ fid_none:
 
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
                              int verbose, int is_json) {
-  enum v7_err err;
+  enum v7_err ret;
   const char *p;
   struct cr_ctx cr_ctx;
   union user_arg_ret arg_retval;
@@ -17540,35 +17621,31 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   /* proceed to coroutine execution */
   rc = parser_cr_exec(&cr_ctx, v7, a);
 
-  /* set `err` depending on coroutine state */
+  /* set `ret` depending on coroutine state */
   switch (rc) {
     case CR_RES__OK:
-      err = V7_OK;
+      ret = V7_OK;
       break;
     case CR_RES__ERR_UNCAUGHT_EXCEPTION:
       switch ((enum parser_exc_id) CR_THROWN_C(&cr_ctx)) {
         case PARSER_EXC_ID__SYNTAX_ERROR:
-          err = V7_SYNTAX_ERROR;
+          ret = V7_SYNTAX_ERROR;
           break;
         case PARSER_EXC_ID__EXEC_EXCEPTION:
-          err = V7_EXEC_EXCEPTION;
+          ret = V7_EXEC_EXCEPTION;
           break;
         case PARSER_EXC_ID__STACK_OVERFLOW:
-          err = V7_STACK_OVERFLOW;
+          ret = V7_STACK_OVERFLOW;
           break;
         case PARSER_EXC_ID__AST_TOO_LARGE:
-          err = V7_AST_TOO_LARGE;
+          ret = V7_AST_TOO_LARGE;
           break;
         case PARSER_EXC_ID__INVALID_ARG:
-          err = V7_INVALID_ARG;
+          ret = V7_INVALID_ARG;
           break;
 
         default:
-          /*
-           * TODO(dfrank): why don't we have `V7_INTERNAL_ERROR`? Maybe let's
-           * add it?  For now, using `V7_SYNTAX_ERROR`
-           */
-          err = V7_SYNTAX_ERROR;
+          ret = V7_INTERNAL_ERROR;
 #ifndef NO_LIBC
           fprintf(stderr, "internal error: no exception id set\n");
 #endif
@@ -17576,11 +17653,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
       }
       break;
     default:
-      /*
-       * TODO(dfrank): why don't we have `V7_INTERNAL_ERROR`? Maybe let's add
-       * it?  For now, using `V7_SYNTAX_ERROR`
-       */
-      err = V7_SYNTAX_ERROR;
+      ret = V7_INTERNAL_ERROR;
 #ifndef NO_LIBC
       fprintf(stderr, "internal error: parser coroutine return code: %d\n",
               (int) rc);
@@ -17640,14 +17713,14 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 #endif
 
   if (a->has_overflow) {
-    c_snprintf(v7->error_msg, sizeof(v7->error_msg),
-               "script too large (try V7_LARGE_AST build option)");
-    return V7_AST_TOO_LARGE;
+    set_exception(v7, SYNTAX_ERROR,
+                  "script too large (try V7_LARGE_AST build option)");
+    BTHROW(V7_AST_TOO_LARGE);
   }
-  if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
-    err = V7_SYNTAX_ERROR;
+  if (ret == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
+    ret = V7_SYNTAX_ERROR;
   }
-  if (verbose && err != V7_OK) {
+  if (verbose && ret != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
     int line_len = 0;
     for (p = v7->tok - col; *p != '\0' && *p != '\n'; p++) {
@@ -17661,12 +17734,13 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
       }
     }
 
-    c_snprintf(v7->error_msg, sizeof(v7->error_msg),
-               "%s at line %d col %lu:\n%.*s\n%*s^", get_err_name(err),
-               v7->pstate.line_no, col, line_len, v7->tok - col, (int) col - 1,
-               "");
+    set_exception(v7, SYNTAX_ERROR, "%s at line %d col %lu:\n%.*s\n%*s^",
+                  get_err_name(ret), v7->pstate.line_no, col, line_len,
+                  v7->tok - col, (int) col - 1, "");
+    BTHROW(ret);
   }
-  return err;
+clean:
+  return ret;
 }
 
 const char *v7_get_parser_error(struct v7 *v7) {
@@ -17823,7 +17897,8 @@ V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
       op = OP_INSTANCEOF;
       break;
     default:
-      BTHROW_MSG(V7_SYNTAX_ERROR, "unknown binary ast node");
+      set_exception(v7, SYNTAX_ERROR, "unknown binary ast node");
+      BTHROW(V7_SYNTAX_ERROR);
   }
   bcode_op(bcode, op);
 clean:
@@ -17960,8 +18035,9 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
       fixup_post_op(tag, bcode);
       break;
     default:
-      /* TODO(dfrank): actually we need a ReferenceError to be thrown here */
-      BTHROW_MSG(V7_SYNTAX_ERROR, "unexpected ast node");
+      /* We end up here on expressions like `1 = 2;`, it's a ReferenceError */
+      set_exception(v7, REFERENCE_ERROR, "unexpected ast node");
+      BTHROW(V7_SYNTAX_ERROR);
   }
 clean:
   return ret;
@@ -18131,8 +18207,9 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
         bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
         bcode_op(bcode, OP_DELETE_VAR);
       } else {
-        BTHROW_MSG(V7_SYNTAX_ERROR,
-                   "Delete of an unqualified identifier in strict mode.");
+        set_exception(v7, SYNTAX_ERROR,
+                      "Delete of an unqualified identifier in strict mode.");
+        BTHROW(V7_SYNTAX_ERROR);
       }
       break;
 
@@ -18372,7 +18449,10 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
         BTRY(compile_expr(v7, a, pos, bcode));
       }
       bcode_op(bcode, (tag == AST_CALL ? OP_CALL : OP_NEW));
-      BCHECK_MSG(args <= 0x7f, V7_SYNTAX_ERROR, "too many arguments");
+      if (args > 0x7f) {
+        set_exception(v7, SYNTAX_ERROR, "too many arguments");
+        BTHROW(V7_SYNTAX_ERROR);
+      }
       bcode_op(bcode, (uint8_t) args);
       break;
     }
@@ -18435,12 +18515,10 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 
                 if (size1 == size2 && memcmp(str1, str2, size1) == 0) {
                   /* found already existing property of the same name */
-                  strncpy(v7->error_msg,
-                          "duplicate data property in object literal "
-                          "is not allowed in strict mode",
-                          sizeof(v7->error_msg));
-                  ret = V7_SYNTAX_ERROR;
-                  goto ast_object_clean;
+                  set_exception(v7, SYNTAX_ERROR,
+                                "duplicate data property in object literal "
+                                "is not allowed in strict mode");
+                  BTHROW2(V7_SYNTAX_ERROR, ast_object_clean);
                 }
               }
               mbuf_append(&cur_literals, &lit, sizeof(lit));
@@ -18451,14 +18529,16 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
             bcode_op(bcode, OP_DROP);
             break;
           default:
-            strncpy(v7->error_msg, "not implemented", sizeof(v7->error_msg));
-            ret = V7_SYNTAX_ERROR;
-            goto ast_object_clean;
+            set_exception(v7, SYNTAX_ERROR, "not implemented");
+            BTHROW2(V7_SYNTAX_ERROR, ast_object_clean);
         }
       }
 
     ast_object_clean:
       mbuf_free(&cur_literals);
+      if (ret != V7_OK) {
+        BTHROW(ret);
+      }
       break;
     }
     case AST_ARRAY: {
@@ -18571,24 +18651,31 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
         goto clean;
       }
 #else
-      BTHROW_MSG(V7_SYNTAX_ERROR, "Regexp support is disabled");
+      set_exception(v7, SYNTAX_ERROR, "Regexp support is disabled");
+      BTHROW(V7_SYNTAX_ERROR);
 #endif
       break;
     case AST_LABEL:
     case AST_LABELED_BREAK:
     case AST_LABELED_CONTINUE:
       /* TODO(dfrank): implement */
-      sprintf(v7->error_msg, "not implemented");
-      ret = V7_SYNTAX_ERROR;
+      set_exception(v7, SYNTAX_ERROR, "not implemented");
+      BTHROW(V7_SYNTAX_ERROR);
       break;
     case AST_WITH:
-      sprintf(v7->error_msg, "not implemented");
-      ret = V7_SYNTAX_ERROR;
+      set_exception(v7, SYNTAX_ERROR, "not implemented");
+      BTHROW(V7_SYNTAX_ERROR);
       break;
     default:
-      sprintf(v7->error_msg, "unknown ast node %d", (int) tag);
-      abort();
-      ret = V7_SYNTAX_ERROR;
+      /*
+       * We end up here if the AST is broken.
+       *
+       * It might be appropriate to return `V7_INTERNAL_ERROR` here, but since
+       * we might receive AST from network or something, we just interpret
+       * it as SyntaxError.
+       */
+      set_exception(v7, SYNTAX_ERROR, "unknown ast node %d", (int) tag);
+      BTHROW(V7_SYNTAX_ERROR);
   }
 clean:
   return ret;
@@ -19556,13 +19643,14 @@ std_eval(struct v7 *v7, v7_val_t arg, val_t this_obj, int is_json) {
 
   if (arg != V7_UNDEFINED) {
     char buf[100], *p = buf;
-    int len = to_str(v7, arg, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+    int len;
+    to_str(v7, arg, buf, sizeof(buf), &len, V7_STRINGIFY_DEFAULT);
 
     /* Fit null terminating byte and quotes */
     if (len >= (int) sizeof(buf) - 2) {
       /* Buffer is not large enough. Allocate a bigger one */
       p = (char *) malloc(len + 3);
-      to_str(v7, arg, p, len + 2, V7_STRINGIFY_DEFAULT);
+      to_str(v7, arg, p, len + 2, NULL, V7_STRINGIFY_DEFAULT);
     }
 
     if (is_json) {
@@ -19601,7 +19689,8 @@ V7_PRIVATE v7_val_t Std_parseInt(struct v7 *v7) {
     size_t str_len;
     p = (char *) v7_get_string_data(v7, &arg0, &str_len);
   } else {
-    to_str(v7, arg0, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+    to_str(v7, arg0, buf, sizeof(buf), NULL, V7_STRINGIFY_DEFAULT);
+    /* TODO(dfrank) : remove it, since null byte is already set by `to_str` */
     buf[sizeof(buf) - 1] = '\0';
   }
 
@@ -19637,7 +19726,7 @@ V7_PRIVATE v7_val_t Std_parseFloat(struct v7 *v7) {
     size_t str_len;
     p = (char *) v7_get_string_data(v7, &arg0, &str_len);
   } else {
-    to_str(v7, arg0, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+    to_str(v7, arg0, buf, sizeof(buf), NULL, V7_STRINGIFY_DEFAULT);
     buf[sizeof(buf) - 1] = '\0';
   }
 
@@ -22475,8 +22564,8 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
     return (int) -v7_to_number(res);
   } else {
     char sa[100], sb[100];
-    to_str(v7, a, sa, sizeof(sa), V7_STRINGIFY_DEFAULT);
-    to_str(v7, b, sb, sizeof(sb), V7_STRINGIFY_DEFAULT);
+    to_str(v7, a, sa, sizeof(sa), NULL, V7_STRINGIFY_DEFAULT);
+    to_str(v7, b, sb, sizeof(sb), NULL, V7_STRINGIFY_DEFAULT);
     sa[sizeof(sa) - 1] = sb[sizeof(sb) - 1] = '\0';
     return strcmp(sb, sa);
   }
@@ -22593,11 +22682,16 @@ static val_t Array_join(struct v7 *v7) {
 
       /* Append next item from an array */
       p = buf;
-      n = to_str(v7, v7_array_get(v7, this_obj, i), buf, sizeof(buf),
-                 V7_STRINGIFY_DEFAULT);
+      {
+        int tmp;
+        to_str(v7, v7_array_get(v7, this_obj, i), buf, sizeof(buf), &tmp,
+               V7_STRINGIFY_DEFAULT);
+        n = tmp;
+      }
       if (n > (long) sizeof(buf)) {
         p = (char *) malloc(n + 1);
-        to_str(v7, v7_array_get(v7, this_obj, i), p, n, V7_STRINGIFY_DEFAULT);
+        to_str(v7, v7_array_get(v7, this_obj, i), p, n, NULL,
+               V7_STRINGIFY_DEFAULT);
       }
       mbuf_append(&m, p, n);
       if (p != buf) {
@@ -22710,23 +22804,39 @@ static void a_prep1(struct v7 *v7, val_t t, val_t *a0, val_t *a1) {
   }
 }
 
-static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
+/*
+ * Call callback function `cb`, passing `this_obj` as `this`, with the
+ * following arguments:
+ *
+ *   cb(v, n, this_obj);
+ *
+ */
+static val_t a_prep2(struct v7 *v7, val_t cb, val_t v, val_t n,
+                     val_t this_obj) {
   int saved_inhibit_gc = v7->inhibit_gc;
-  val_t res = v7_create_undefined(), params = v7_create_dense_array(v7);
-  v7_array_push(v7, params, v);
-  v7_array_push(v7, params, n);
-  v7_array_push(v7, params, t);
+  val_t res = v7_create_dense_array(v7), args = v7_create_dense_array(v7);
+
+  v7_own(v7, &res);
+  v7_own(v7, &args);
+
+  v7_array_push(v7, args, v);
+  v7_array_push(v7, args, n);
+  v7_array_push(v7, args, this_obj);
 
   v7->inhibit_gc = 0;
-  /* TODO(dfrank): check return value */
-  b_apply(v7, &res, a, t, params, 0);
+  /* TODO(dfrank) : check return value */
+  b_apply(v7, &res, cb, this_obj, args, 0);
+
   v7->inhibit_gc = saved_inhibit_gc;
+  v7_disown(v7, &res);
+  v7_disown(v7, &args);
+
   return res;
 }
 
 static val_t Array_forEach(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
-  val_t v, cb = v7_arg(v7, 0);
+  val_t v = v7_create_undefined(), cb = v7_arg(v7, 0);
   unsigned long len, i;
   int has;
   /* a_prep2 uninhibits GC when calling cb */
@@ -23898,7 +24008,7 @@ static val_t Str_blen(struct v7 *v7) {
 
 V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
   char buf[40];
-  size_t l;
+  int l;
   double d;
   if (v7_is_number(v)) {
     d = v7_to_number(v);
@@ -23911,7 +24021,7 @@ V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
     return (long) d;
   }
   if (v7_is_null(v)) return 0;
-  l = to_str(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+  to_str(v7, v, buf, sizeof(buf), &l, V7_STRINGIFY_DEFAULT);
   if (l > 0 && isdigit((int) buf[0])) return strtol(buf, NULL, 10);
   return default_value;
 }
