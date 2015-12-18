@@ -2,7 +2,7 @@
 GIT_REF     = $(shell git symbolic-ref HEAD | sed 's:refs/heads/::')
 GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
 DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
-FW_VERSION  = $(GIT_REF)/$(DATE)/$(GIT_SHA)
+FW_VERSION  = $(DATE)/$(GIT_REF)/$(GIT_SHA)
 
 MG_FEATURES_TINY = \
                    -DMG_DISABLE_MQTT \

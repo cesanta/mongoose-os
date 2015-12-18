@@ -22,6 +22,17 @@
 #define FW_ARCHITECTURE "UNKNOWN_ARCH"
 #endif
 
+/*
+ * The only sys_config instance
+ * If application requires access to its configuration
+ * in run-time (not in init-time, it can access it through
+ * const struct sys_config *get_cfg()
+ */
+struct sys_config s_cfg;
+struct sys_config *get_cfg() {
+  return &s_cfg;
+}
+
 /* Global vars */
 struct ro_var *g_ro_vars = NULL;
 
@@ -134,19 +145,18 @@ static int init_web_server(const struct sys_config *cfg) {
 }
 
 int init_device(struct v7 *v7) {
-  struct sys_config cfg;
   char *defaults = NULL, *overrides = NULL;
   size_t size;
   int result = 0;
   uint8_t mac[6] = "";
 
   /* Load system defaults - mandatory */
-  memset(&cfg, 0, sizeof(cfg));
+  memset(&s_cfg, 0, sizeof(s_cfg));
   if ((defaults = cs_read_file(SYSTEM_DEFAULT_JSON_FILE, &size)) != NULL &&
-      parse_sys_config(defaults, &cfg, 1)) {
+      parse_sys_config(defaults, &s_cfg, 1)) {
     /* Successfully loaded system config. Try overrides - they are optional. */
     overrides = cs_read_file(OVERRIDES_JSON_FILE, &size);
-    parse_sys_config(overrides, &cfg, 0);
+    parse_sys_config(overrides, &s_cfg, 0);
     result = 1;
   }
   free(defaults);
@@ -162,10 +172,11 @@ int init_device(struct v7 *v7) {
   REGISTER_RO_VAR(mac_address, &mac_address_ptr);
   LOG(LL_INFO, ("MAC: %s\n", s_mac_address));
 
-  expand_mac_address_placeholders((char *) cfg.wifi.ap.ssid);
+  expand_mac_address_placeholders((char *) get_cfg()->wifi.ap.ssid);
 
-  if (result && (result = device_init_platform(&cfg)) != 0 && cfg.http.enable) {
-    result = init_web_server(&cfg);
+  if (result && (result = device_init_platform(get_cfg())) != 0 &&
+      get_cfg()->http.enable) {
+    result = init_web_server(get_cfg());
   }
 
   /* NOTE(lsm): must be done last */

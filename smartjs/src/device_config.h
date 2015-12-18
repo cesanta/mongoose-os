@@ -21,6 +21,8 @@ extern struct ro_var *g_ro_vars;
     g_ro_vars = &v;                  \
   } while (0)
 
+struct sys_config *get_cfg();
+
 /* Common init provides this API */
 int init_device(struct v7 *);
 

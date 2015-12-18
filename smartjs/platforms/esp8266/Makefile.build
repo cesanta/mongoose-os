@@ -86,8 +86,9 @@ JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
 JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC) $(V7_PATH) $(MONGOOSE_PATH)
-IPATH = $(REPO_ROOT) $(COMMON_DIR) $(SMARTJS_SRC) $(VPATH)\
-		$(LWIP_PATH)/src/include $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
+IPATH = $(REPO_ROOT) $(COMMON_DIR) $(SMARTJS_SRC) $(VPATH) \
+		$(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
+		$(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
 		$(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
@@ -192,17 +193,21 @@ LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = 	$(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 
+TIMESTAMP=$(shell TZ=GMT date +"%Y%m%d%H%M")
+
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_VERSION=\"$(FW_VERSION)\" \
           -DFW_ARCHITECTURE=\"esp8266\" \
+		  -DFW_TIMESTAMP=\"$(TIMESTAMP)\"\
           $(CFLAGS_EXTRA)
 
 ifneq "${OTA}" "1"
-CFLAGS += -DFS_ADDR=$(FS_ADDR)
+CFLAGS += -DFS_ADDR=$(FS_ADDR) -DDISABLE_OTA
 else
 # TODO(alashkin): debug only, remove this line
 CFLAGS += -DFS_ADDR=$(FS1_ADDR)
+CFLAGS += $(BOOTLOADER_FLAGS)
 endif
 
 all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT) $(FNC_FILES_OUT) $(FW_METADATA_FILE)
@@ -223,7 +228,6 @@ $(BUILD_DIR) $(FW_DIR):
 
 $(FW_METADATA_FILE) : $(FW_FILES_OUT)
 	$(vecho) GEN $(FW_METADATA_FILE)
-	$(eval TIMESTAMP=$(shell TZ=GMT date +"%Y%m%d%H%M"))
 	$(eval BUILD_REF=$(shell git symbolic-ref HEAD | sed 's:refs/heads/::'))
 	$(eval BUILD_SHA=$(shell git rev-parse HEAD | head -c 8))
 	$(Q) sed -e 's,%VERSION%,$(FW_VERSION),' \

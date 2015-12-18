@@ -89,6 +89,35 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
+  if (sj_conf_get_str(toks, "update.tls_server_name",
+                      &dst->update.tls_server_name) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "update.server_timeout",
+                      &dst->update.server_timeout) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "update.metadata_url", &dst->update.metadata_url) ==
+          0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "update.server_address",
+                      &dst->update.server_address) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_bool(toks, "update.tls_ena", &dst->update.tls_ena) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "update.tls_ca_file", &dst->update.tls_ca_file) ==
+          0 &&
+      require_keys)
+    goto done;
+
   result = 1;
 done:
   free(toks);

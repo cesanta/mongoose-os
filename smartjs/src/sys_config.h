@@ -32,6 +32,14 @@ struct sys_config {
     char *port;
     int enable_webdav;
   } http;
+  struct sys_config_update {
+    char *tls_server_name;
+    int server_timeout;
+    char *metadata_url;
+    char *server_address;
+    int tls_ena;
+    char *tls_ca_file;
+  } update;
 };
 
 int parse_sys_config(const char *, struct sys_config *, int);

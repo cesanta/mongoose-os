@@ -24,6 +24,14 @@
     "port": "80",
     "enable_webdav" : true
   },
+  "update": {
+    "server_address": "127.0.0.1",
+    "metadata_url": "nothing.here",
+    "tls_ena": false,
+    "tls_server_name": "nothing.here",
+    "tls_ca_file": "nothing.pem",
+    "server_timeout": 10
+  },
   "debug": {
     "level": 3,
     "mode": 1

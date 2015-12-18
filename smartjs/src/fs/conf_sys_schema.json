@@ -28,6 +28,13 @@
   "wifi.ap.gw": { "title": "Default Gateway" },
   "wifi.ap.ip": { "title": "Access Point IP address" },
 
+  "update": {"title": "Firmware updater"},
+  "update.server_address": {"title": "Update server"},
+  "update.metadata_url": {"title": "Update endpoint"},
+  "update.tls_ena": {"title": "Use TLS for update"},
+  "update.tls_server_name": {"title": "TLS server name"},
+  "update.tls_ca_file": {"title" : "TLS CA filename"},
+  "update.server_timeout" : {"title" : "Server Timeout"},
   "http": { "title": "HTTP Server" },
   "http.port": { "title": "Listening Port" },
   "http.enable": { "title": "Enable HTTP Server" },
