@@ -24,7 +24,9 @@
   "wifi.ap.channel": { "title": "Channel" },
   "wifi.ap.dhcp_start": { "title": "DHCP Start Address" },
   "wifi.ap.dhcp_end": { "title": "DHCP End Address" },
-  "wifi.ap.dhcp_netmask": { "title": "DHCP Network Mask" },
+  "wifi.ap.netmask": { "title": "DHCP Network Mask" },
+  "wifi.ap.gw": { "title": "Default Gateway" },
+  "wifi.ap.ip": { "title": "Access Point IP address" },
 
   "http": { "title": "HTTP Server" },
   "http.port": { "title": "Listening Port" },
