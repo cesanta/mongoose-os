@@ -21,7 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <common/cs_time.h>
+#include "common/cs_time.h"
 
 extern int num_tests;
 

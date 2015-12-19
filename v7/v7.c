@@ -10753,8 +10753,16 @@ restart:
           v7_disown(v7, &v1);
           v7_disown(v7, &v2);
         } else {
-          PUSH(v7_create_number(
-              b_num_bin_op(op, i_as_num(v7, v1), i_as_num(v7, v2))));
+          /*
+           * Convert both operands to numbers.
+           *
+           * NOTE: we should do that as a separate step, since order of
+           * evaluation is well-defined in JavaScript, but is undefined in C.
+           */
+          double num1 = i_as_num(v7, v1);
+          double num2 = i_as_num(v7, v2);
+
+          PUSH(v7_create_number(b_num_bin_op(op, num1, num2)));
         }
         break;
       }
@@ -10853,8 +10861,19 @@ restart:
               assert(0);
           }
         } else {
-          res = v7_create_boolean(
-              b_bool_bin_op(op, i_as_num(v7, v1), i_as_num(v7, v2)));
+          /*
+           * Convert both operands to numbers.
+           *
+           * NOTE: we should do that as a separate step, since order of
+           * evaluation is well-defined in JavaScript, but is undefined in C,
+           * so, for example, this code would be incorrect:
+           *
+           *   `b_bool_bin_op(op, i_as_num(v7, v1), i_as_num(v7, v2))`
+           */
+          double num1 = i_as_num(v7, v1);
+          double num2 = i_as_num(v7, v2);
+
+          res = v7_create_boolean(b_bool_bin_op(op, num1, num2));
         }
         PUSH(res);
         break;
