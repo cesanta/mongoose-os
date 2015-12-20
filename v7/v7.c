@@ -3501,16 +3501,21 @@ enum v7_type {
 #define REFERENCE_ERROR "ReferenceError"
 #define INTERNAL_ERROR "InternalError"
 #define RANGE_ERROR "RangeError"
-#define ERROR_CTOR_MAX 5
+#define EVAL_ERROR "EvalError"
+#define ERROR_CTOR_MAX 6
 /*
- * TODO(dfrank): add also `EvalError`, guarded by something like
- * `V7_ENABLE__EvalError`
+ * TODO(dfrank): EvalError is not so important, we should guard it behind
+ * something like `V7_ENABLE__EvalError`. However doing so makes it hard to
+ * keep ERROR_CTOR_MAX up to date; perhaps let's find a better way of doing it.
  *
- * Because we now have ecma tests failing:
+ * EvalError is useful mostly because we now have ecma tests failing:
  *
  * 8129 FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-iii-24.js (tail -c
  * +7600043 tests/ecmac.db|head -c 496): [{"message":"[EvalError] is not
  * defined"}]
+ *
+ * Those tests are not EvalError specific, and they do test that the exception
+ * handling machinery works as intended.
  */
 
 /* Amalgamated: #include "v7/src/vm.h" */
@@ -22254,8 +22259,9 @@ static val_t Error_toString(struct v7 *v7) {
   return s_concat(v7, prefix, msg);
 }
 
-static const char *const error_names[] = {
-    TYPE_ERROR, SYNTAX_ERROR, REFERENCE_ERROR, INTERNAL_ERROR, RANGE_ERROR};
+static const char *const error_names[] = {TYPE_ERROR,      SYNTAX_ERROR,
+                                          REFERENCE_ERROR, INTERNAL_ERROR,
+                                          RANGE_ERROR,     EVAL_ERROR};
 
 V7_STATIC_ASSERT(ARRAY_SIZE(error_names) == ERROR_CTOR_MAX,
                  error_name_count_mismatch);
