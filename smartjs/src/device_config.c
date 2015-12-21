@@ -81,9 +81,6 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
       struct http_message *hm = (struct http_message *) p;
       char *buf = NULL;
 
-      LOG(LL_DEBUG,
-          ("HTTP request to [%.*s]\n", (int) hm->message.len, hm->message.p));
-
       if (mg_vcmp(&hm->uri, "/reboot") == 0) {
         c->flags |= MG_F_RELOAD_CONFIG;
         mg_send_head(c, 200, 0, json_headers);
@@ -105,7 +102,11 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
       } else {
         mg_serve_http(c, p, s_http_server_opts);
       }
-      LOG(LL_DEBUG, ("mbuf len: %lu\n", (unsigned long) c->send_mbuf.len));
+
+      LOG(LL_DEBUG,
+          ("[%.*s] -> [%.*s]\n", (int) ((hm->body.p - 1) - hm->message.p),
+           hm->message.p, (int) c->send_mbuf.len, c->send_mbuf.buf));
+
       c->flags |= MG_F_SEND_AND_CLOSE;
       free(buf);
       break;
