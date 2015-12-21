@@ -1,7 +1,5 @@
 # Smart.js platform
 
-[![Join the chat at https://gitter.im/cesanta/smart.js](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cesanta/smart.js?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 Smart.js is a generic, hardware independent, full-stack
 Internet of Things software platform.
 Smart.js solves problems of reliability, scalability, security
@@ -15,6 +13,8 @@ Take a look at 2 minute video that shows Smart.js in action:
 # Documentation and Downloads
 
 - [Smart.js Developer Centre](https://docs.cesanta.com/smartjs) - User Guide and API reference
+- [Support Forum](http://forum.cesanta.com/index.php?p=/categories/smart-js) -
+  Ask your technical questions here
 - Current development Smart.js firmware biulds:
    - [smartjs\_devel\_win.zip](https://backend.cesanta.com/devel/smartjs_devel_win.zip) - Windows build
    - [smartjs\_devel\_mac.zip](https://backend.cesanta.com/devel/smartjs_devel_mac.zip) - MacOS build
