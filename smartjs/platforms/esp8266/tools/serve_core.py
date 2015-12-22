@@ -21,16 +21,20 @@ import json
 import os
 import sys
 
+IRAM_BASE=0x40100000
+IROM_BASE=0x40200000
+ROM_BASE= 0x40000000
+
 parser = argparse.ArgumentParser(description='Serve ESP core dump to GDB')
 parser.add_argument('--port', dest='port', default=1234, type=int, help='listening port')
 parser.add_argument('--iram', dest='iram', required=True, help='iram firmware section')
-parser.add_argument('--iram_base', dest='iram_base', default=0x40100000,
+parser.add_argument('--iram_addr', dest='iram_addr',
                     type=lambda x: int(x,16), help='iram firmware section')
 parser.add_argument('--irom', dest='irom', required=True, help='irom firmware section')
-parser.add_argument('--irom_base', dest='irom_base', default=0x40211000,
+parser.add_argument('--irom_addr', dest='irom_addr',
                     type=lambda x: int(x,16), help='irom firmware section')
 parser.add_argument('--rom', dest='rom', required=False, help='rom section')
-parser.add_argument('--rom_base', dest='rom_base', default=0x40000000,
+parser.add_argument('--rom_addr', dest='rom_addr', default=ROM_BASE,
                     type=lambda x: int(x,16), help='rom section')
 parser.add_argument('log', help='serial log containing core dump snippet')
 
@@ -44,10 +48,10 @@ class Core(object):
     def __init__(self, filename):
         dump = self._read(filename)
         self.mem = self._map_core(dump)
-        self.mem.append(self._map_firmware(args.iram_base, args.iram))
-        self.mem.append(self._map_firmware(args.irom_base, args.irom))
-        if args.rom_base:
-            self.mem.append(self._map_firmware(args.rom_base, args.rom))
+        self.mem.append(self._map_firmware(args.iram_addr, args.iram, IRAM_BASE))
+        self.mem.append(self._map_firmware(args.irom_addr, args.irom, IROM_BASE))
+        if args.rom_addr:
+            self.mem.append(self._map_firmware(args.rom_addr, args.rom, ROM_BASE))
         self.regs = base64.decodestring(dump['REGS']['data'])
 
     def _search_backwards(self, f, start_offset, pattern):
@@ -93,11 +97,19 @@ class Core(object):
             mem.append((v["addr"], v["addr"] + len(data), data))
         return mem
 
-    def _map_firmware(self, base, filename):
+    def _map_firmware(self, addr, filename, base):
+        if addr is None:
+            name = os.path.splitext(os.path.basename(filename))[0]
+            addr = base + int(name, 16)
         with open(filename) as f:
             data = f.read()
-            print >>sys.stderr, "Mapping {0} at {1:#02x}".format(filename, base)
-            return (base, base + len(data), data)
+            # ea 04 is the magic number number for new format ESP image files
+            # as produced by rboot or esp-specific OTA enabled build scripts.
+            # The new image format contains code relocated 16 bytes ahead.
+            if ord(data[0]) == 0xea and ord(data[1]) == 0x04:
+                addr += 0x10
+            print >>sys.stderr, "Mapping {0} at {1:#02x}".format(filename, addr)
+            return (addr, addr + len(data), data)
 
     def read(self, addr, size):
         for base, end, data in self.mem:
@@ -116,7 +128,6 @@ class GDBHandler(SocketServer.BaseRequestHandler):
             if pkt == "?": # status -> trap
                 self.send_str("S09")
             elif pkt == "g": # dump registers
-                print >>sys.stderr, "DUMPING REGS"
                 self.send_str(self.encode_bytes(core.regs))
             elif pkt[0] == "G": # set registers
                 core.regs = self.decode_bytes(pkt[1:])
@@ -125,6 +136,20 @@ class GDBHandler(SocketServer.BaseRequestHandler):
                 addr, size = pkt[1:].split(',')
                 bs = core.read(int(addr, 16), int(size, 16))
                 self.send_str(self.encode_bytes(bs))
+            elif pkt.startswith("Hg"):
+                self.send_str("OK")
+            elif pkt.startswith("Hc-1"):
+                # cannot continue, this is post mortem debugging
+                self.send_str("E01")
+            elif pkt == "qC":
+                self.send_str("1")
+            elif pkt == "qTStatus" or pkt == "qOffsets" or pkt.startswith("qSupported"):
+                # silently ignore
+                self.send_str("")
+            elif pkt == "qAttached":
+                self.send_str("1")
+            elif pkt == "qSymbol::":
+                self.send_str("OK")
             else:
                 print >>sys.stderr, "Ignoring unknown command '%s'" % (pkt,)
                 self.send_str("")
