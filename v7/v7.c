@@ -22668,7 +22668,7 @@ static val_t Array_set_length(struct v7 *v7) {
   enum v7_err rcode = V7_OK;
   val_t arg0 = v7_arg(v7, 0);
   val_t this_obj = v7_get_this(v7);
-  long new_len;
+  long new_len = 0;
 
   V7_TRY(arg_long(v7, 0, -1, &new_len));
 
