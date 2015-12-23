@@ -57,6 +57,9 @@ char *strerror(int errnum) {
 
 void *malloc(size_t size) {
   void *res = (void *) os_malloc(size);
+#ifdef ESP_ENABLE_MALLOC_TRACES
+  os_printf("ma %p %u\n", res, size);
+#endif
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
@@ -64,6 +67,9 @@ void *malloc(size_t size) {
 }
 
 void free(void *ptr) {
+#ifdef ESP_ENABLE_MALLOC_TRACES
+  os_printf("fr %p\n", ptr);
+#endif
   os_free(ptr);
 }
 
@@ -75,6 +81,9 @@ void *realloc(void *ptr, size_t size) {
     return NULL;
   }
   res = (void *) os_realloc(ptr, size);
+#ifdef ESP_ENABLE_MALLOC_TRACES
+  os_printf("re %p %p %u\n", ptr, res, size);
+#endif
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) {
     printf("failed to alloc %u bytes, %d avail\n", size,
@@ -87,6 +96,9 @@ void *realloc(void *ptr, size_t size) {
 
 void *calloc(size_t num, size_t size) {
   void *res = (void *) os_zalloc(num * size);
+#ifdef ESP_ENABLE_MALLOC_TRACES
+  os_printf("ca %p %u\n", res, num * size);
+#endif
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
