@@ -28,7 +28,7 @@ void stub_main() {
   }
 
   send_packet(&flash_size, sizeof(flash_size));
+  send_packet(&flash_size, 0);
 
-  while (1) {
-  }
+  _ResetVector();
 }

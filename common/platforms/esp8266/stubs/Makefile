@@ -4,6 +4,7 @@
 #
 
 STUB = stub_hello.c
+LIBS =
 PARAMS =
 PORT = /dev/ttyUSB0
 
@@ -17,25 +18,25 @@ XT_CC = xtensa-lx106-elf-gcc
 
 all: $(STUB_ELF)
 
-$(STUB_ELF): $(STUB)
+$(STUB_ELF): $(STUB) $(LIBS)
 	@echo "  CC   $^ -> $@"
 	@[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
 	@docker run --rm -i -v $(CURDIR):/cesanta $(SDK) //bin/bash -c \
     "cd /cesanta && \
-     $(XT_CC) -std=c99 -Wall -Werror -Os \
-         -mtext-section-literals -mlongcalls -nostdlib \
+     $(XT_CC) -I/opt/Espressif/ESP8266_SDK -std=c99 -Wall -Werror -Os \
+         -mtext-section-literals -mlongcalls -nostdlib -fno-builtin \
          -Wl,-static -Tstub.ld -o $@ $^"
 
 wrap: $(STUB_JSON)
 
-$(STUB_JSON): $(STUB_ELF)
-	@echo "  WRAP $^ -> $@"
+$(STUB_JSON): $(STUB_ELF) esptool.py
+	@echo "  WRAP $< -> $@"
 	@docker run --rm -i -v $(CURDIR):/cesanta $(SDK) //bin/bash -c \
-    "cd /cesanta && ./esptool.py wrap_stub $^ > $@"
+    "cd /cesanta && ./esptool.py wrap_stub $< > $@"
 
 run: $(STUB_JSON)
-	@echo "  RUN  $^ $(PARAMS) -> $(PORT)"
-	@./esptool.py --port $(PORT) run_stub $^ $(PARAMS)
+	@echo "  RUN  $< $(PARAMS) -> $(PORT)"
+	@time ./esptool.py --port $(PORT) run_stub $< $(PARAMS)
 
 clean:
 	@rm -rf $(BUILD_DIR)

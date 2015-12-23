@@ -46,9 +46,9 @@ const char kSkipReadingFlashParamsOption[] =
 const char kFlashingDataPortOption[] = "esp8266-flashing-data-port";
 const char kInvertDTRRTSOption[] = "esp8266-invert-dtr-rts";
 const char kSPIFFSOffsetOption[] = "esp8266-spiffs-offset";
-const char kDefaultSPIFFSOffset[] = "0x73000";
+const char kDefaultSPIFFSOffset[] = "0xec000";
 const char kSPIFFSSizeOption[] = "esp8266-spiffs-size";
-const char kDefaultSPIFFSSize[] = "49152";
+const char kDefaultSPIFFSSize[] = "65536";
 
 const int kDefaultFlashBaudRate = 230400;
 const ulong writeBlockSize = 0x400;

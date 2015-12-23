@@ -91,6 +91,31 @@ class ESPROM:
                 b = b + c
         return b
 
+    def read_packet(self):
+        b = ''
+        while True:
+            c = self._port.read(1)
+            if c != '\xc0':
+                print 'Invalid head of packet (%s)' % repr(c)
+                continue
+            break
+             #   raise Exception('Invalid head of packet (%s)' % repr(c))
+        while True:
+            c = self._port.read(1)
+            if c == '\xc0':
+                break
+            if c == '\xdb':
+                c = self._port.read(1)
+                if c == '\xdc':
+                    b = b + '\xc0'
+                elif c == '\xdd':
+                    b = b + '\xdb'
+                else:
+                    raise Exception('Invalid SLIP escape')
+            else:
+                b = b + c
+        return b
+
     """ Write bytes to the serial port while performing SLIP escaping """
     def write(self, packet):
         buf = '\xc0'+(packet.replace('\xdb','\xdb\xdd').replace('\xc0','\xdb\xdc'))+'\xc0'
@@ -448,10 +473,12 @@ def wrap_stub(args):
         'params_start': e.get_symbol_addr('_params_start'),
         'code': e.load_section('.code'),
         'code_start': e.get_symbol_addr('_code_start'),
-        'data': e.load_section('.data'),
-        'data_start': e.get_symbol_addr('_data_start'),
         'entry': e.get_symbol_addr(args.entry),
     }
+    data = e.load_section('.data')
+    if len(data) > 0:
+        stub['data'] = data
+        stub['data_start'] = e.get_symbol_addr('_data_start')
     params_len = e.get_symbol_addr('_params_end') - stub['params_start']
     if params_len % 4 != 0:
         raise Exception('Params must be dwords')
@@ -465,47 +492,47 @@ def wrap_stub(args):
         'Stub params: %d @ 0x%08x, code: %d @ 0x%08x, data: %d @ 0x%08x, entry: %s @ 0x%x' % (
             params_len, stub['params_start'],
             len(stub['code']), stub['code_start'],
-            len(stub['data']), stub['data_start'],
+            len(stub.get('data', '')), stub.get('data_start', 0),
             args.entry, stub['entry']))
 
     jstub = dict(stub)
     jstub['code'] = hexify(stub['code'])
-    jstub['data'] = hexify(stub['data'])
+    if 'data' in stub:
+        jstub['data'] = hexify(stub['data'])
     return stub, jstub
 
 
 def run_stub(args):
-        jstub = json.load(open(args.input))
-        stub = dict(jstub)
-        stub['code'] = unhexify(jstub['code'])
+    jstub = json.load(open(args.input))
+    stub = dict(jstub)
+    stub['code'] = unhexify(jstub['code'])
+    if 'data' in jstub:
         stub['data'] = unhexify(jstub['data'])
 
-        if stub['num_params'] != len(args.params):
-            raise Exception('Stub requires %d params, %d provided'
-                            % (stub['num_params'], len(args.params)))
+    if stub['num_params'] != len(args.params):
+        raise Exception('Stub requires %d params, %d provided'
+                        % (stub['num_params'], len(args.params)))
 
-        params = struct.pack('<' + ('I' * stub['num_params']), *args.params)
-        pc = params + stub['code']
+    params = struct.pack('<' + ('I' * stub['num_params']), *args.params)
+    pc = params + stub['code']
 
-        # Trick ROM to initialize SFlash
-        esp.flash_begin(0, 0)
+    # Trick ROM to initialize SFlash
+    #esp.flash_begin(0, 0)
 
-        # Download
-        esp.mem_begin(len(pc), 1, len(pc), stub['params_start'])
-        esp.mem_block(pc, 0)
-        if len(stub['data']) > 0:
-            esp.mem_begin(len(stub['data']), 1, len(stub['data']), stub['data_start'])
-            esp.mem_block(stub['data'], 0)
-        esp.mem_finish(stub['entry'])
+    # Download
+    esp.mem_begin(len(pc), 1, len(pc), stub['params_start'])
+    esp.mem_block(pc, 0)
+    if 'data' in stub:
+        esp.mem_begin(len(stub['data']), 1, len(stub['data']), stub['data_start'])
+        esp.mem_block(stub['data'], 0)
+    esp.mem_finish(stub['entry'])
 
-        print 'Stub executed, reading response:'
-
-        # Fetch the response
-        data = ''
-        while True:
-            r = esp._port.read(1)
-            sys.stdout.write(hexify(r))
-            sys.stdout.flush()
+    print 'Stub executed, reading response:'
+    while True:
+        p = esp.read_packet()
+        print hexify(p)
+        if p == '':
+            return
 
 
 if __name__ == '__main__':

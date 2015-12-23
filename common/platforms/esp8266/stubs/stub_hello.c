@@ -19,6 +19,5 @@ const char *hello = "Hello";
 
 void stub_main() {
   send_packet(hello, 5);
-  while (1) {
-  }
+  _ResetVector();
 }
