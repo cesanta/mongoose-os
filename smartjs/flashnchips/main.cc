@@ -41,8 +41,8 @@ int main(int argc, char* argv[]) {
       "Domain name to use for generated device IDs. Default: api.cesanta.com",
       "name", "api.cesanta.com"));
   commonOpts.append(QCommandLineOption(
-      Flasher::kOverwriteFSOption,
-      "If set, force overwrite the data flash with the factory image"));
+      Flasher::kMergeFSOption,
+      "If set, merge the device FS data with the factory image"));
   commonOpts.append(QCommandLineOption(
       Flasher::kDumpFSOption,
       "Dump file system image to a given file before merging.", "filename"));

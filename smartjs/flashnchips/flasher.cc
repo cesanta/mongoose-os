@@ -6,7 +6,7 @@
 
 const char Flasher::kIdDomainOption[] = "id-domain";
 const char Flasher::kSkipIdGenerationOption[] = "skip-id-generation";
-const char Flasher::kOverwriteFSOption[] = "overwrite-flash-fs";
+const char Flasher::kMergeFSOption[] = "merge-flash-fs";
 const char Flasher::kFlashBaudRateOption[] = "flash-baud-rate";
 const char Flasher::kDumpFSOption[] = "dump-fs";
 

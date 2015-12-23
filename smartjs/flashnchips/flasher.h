@@ -43,7 +43,7 @@ class Flasher : public QObject {
 
   static const char kIdDomainOption[];
   static const char kSkipIdGenerationOption[];
-  static const char kOverwriteFSOption[];
+  static const char kMergeFSOption[];
   static const char kFlashBaudRateOption[];
   static const char kDumpFSOption[];
 

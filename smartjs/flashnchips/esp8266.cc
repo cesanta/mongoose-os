@@ -395,12 +395,12 @@ class FlasherImpl : public Flasher {
       }
       id_hostname_ = value.toString();
       return util::Status::OK;
-    } else if (name == kOverwriteFSOption) {
+    } else if (name == kMergeFSOption) {
       if (value.type() != QVariant::Bool) {
         return util::Status(util::error::INVALID_ARGUMENT,
                             "value must be boolean");
       }
-      merge_flash_filesystem_ = !value.toBool();
+      merge_flash_filesystem_ = value.toBool();
       return util::Status::OK;
     } else if (name == kSkipIdGenerationOption) {
       if (value.type() != QVariant::Bool) {
@@ -490,7 +490,7 @@ class FlasherImpl : public Flasher {
   util::Status setOptionsFromConfig(const Config& config) override {
     util::Status r;
 
-    QStringList boolOpts({kOverwriteFSOption, kSkipIdGenerationOption,
+    QStringList boolOpts({kMergeFSOption, kSkipIdGenerationOption,
                           kDisableEraseWorkaroundOption,
                           kSkipReadingFlashParamsOption, kInvertDTRRTSOption});
     for (const auto& opt : boolOpts) {
@@ -1152,7 +1152,7 @@ class FlasherImpl : public Flasher {
   bool preserve_flash_params_ = true;
   bool erase_bug_workaround_ = true;
   qint32 override_flash_params_ = -1;
-  bool merge_flash_filesystem_ = true;
+  bool merge_flash_filesystem_ = false;
   bool generate_id_if_none_found_ = true;
   QString id_hostname_;
   QString flashing_port_name_;

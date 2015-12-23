@@ -393,12 +393,12 @@ class FlasherImpl : public Flasher {
       }
       skip_id_generation_ = value.toBool();
       return util::Status::OK;
-    } else if (name == kOverwriteFSOption) {
+    } else if (name == kMergeFSOption) {
       if (value.type() != QVariant::Bool) {
         return util::Status(util::error::INVALID_ARGUMENT,
                             "value must be boolean");
       }
-      overwrite_spiffs_ = value.toBool();
+      merge_spiffs_ = value.toBool();
       return util::Status::OK;
     } else if (name == kFormatFailFS) {
       if (value.type() != QVariant::String) {
@@ -425,7 +425,7 @@ class FlasherImpl : public Flasher {
   util::Status setOptionsFromConfig(const Config& config) override {
     util::Status r;
 
-    QStringList boolOpts({kSkipIdGenerationOption, kOverwriteFSOption});
+    QStringList boolOpts({kSkipIdGenerationOption, kMergeFSOption});
     QStringList stringOpts({kIdDomainOption, kFormatFailFS});
 
     for (const auto& opt : boolOpts) {
@@ -993,7 +993,7 @@ class FlasherImpl : public Flasher {
         QByteArray("\xFF", 1).repeated(kSPIFFSMetadataSize - meta.length()));
     QByteArray image = spiffs_image_;
     if ((fs0.ValueOrDie().length() > 0 || fs1.ValueOrDie().length() > 0) &&
-        !overwrite_spiffs_) {
+        merge_spiffs_) {
       QByteArray dev = (min_seq == 0 ? fs0.ValueOrDie() : fs1.ValueOrDie());
 
       auto merged = mergeFilesystems(dev, spiffs_image_);
@@ -1031,7 +1031,7 @@ class FlasherImpl : public Flasher {
   QSerialPort* port_;
   QString id_hostname_;
   bool skip_id_generation_ = false;
-  bool overwrite_spiffs_ = false;
+  bool merge_spiffs_ = false;
   int failfs_size_ = -1;
   int progress_ = 0;
 };
