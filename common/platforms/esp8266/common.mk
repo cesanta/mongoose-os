@@ -42,8 +42,8 @@ vecho := @echo " "
 
 define link
 $(vecho) "LD $@"
-$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $(LIBS) $1 \
-  $< -Wl,--end-group -o $@
+$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $< $(LIBS) $1 \
+-Wl,--end-group -o $@
 endef
 
 define compile_params

@@ -4,7 +4,7 @@
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
 # SSL: if set to "Krypton" enables SSL with the krypton lib
-# OTA: if "true" enables rboot as a bootloader and generates two FW
+# OTA: if "true" enables rboot as a bootloader and generates files required for OTA
 #
 
 REPO_ROOT ?= ../../..
@@ -25,26 +25,21 @@ COMMON_FS_PATH ?= $(SMARTJS_SRC)/fs
 LWIP_PATH ?= $(COMMON_ESP_DIR)/lwip
 V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
-BOOTLOADER_PATH ?= ./bootloader
+BOOTLOADER_PATH ?= $(COMMON_ESP_DIR)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 OTA ?=
 
 FLASH_SIZE ?= 1M
+
 FS_SIZE ?= 64K
 
 SYS_PARAM_SIZE = 0x4000
 
-ifneq "${OTA}" "1"
 FW_FILE_1_ADDR = 0
 FW_FILE_2_ADDR = 0x11000
-else
-# FW layout for OTA
-# ESP can map 8Mbit of code maximum, so, using first 8Mit for two FW
-# and put FSs behind this 8Mbit.
-# with system params, FnC compatibility and rboot we have 464Kb for code
-FW_FILE_1_ADDR = 0x11000
-FW_FILE_2_ADDR = 0x81000
-ROM_SIZE = 0x74000
+
+ifeq "${OTA}" "1"
+FW2_FILE_2_ADDR=$(shell printf "0x%08x" $$(($(FW_FILE_2_ADDR) + 0x100000)))
 endif
 
 BUILD_DIR = $(CURDIR)/build
@@ -53,14 +48,9 @@ TOOLS_DIR = tools
 COMMON_TOOLS_DIR ?= ../../tools
 FW_DIR = firmware
 
-ifeq "${OTA}" "1"
-$(eval FW_DIR_ROOT = $(FW_DIR))
-$(eval FW_DIR = $(FW_DIR_ROOT)/all)
-endif
-
 FS_DIR = fs
 FS_BUILD_DIR = $(BUILD_DIR)/fs
-RBOOT_FW_NAME = rboot.bin
+RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
 
@@ -75,6 +65,10 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c \
 			device_config.c sys_config.c
 
+ifeq "${OTA}" "1"
+APP_SRCS += rboot-bigflash.c rboot-api.c
+endif
+
 JSBIN_SRCS := $(SJSJS_PATH)/clubby.js \
               $(SJSJS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
@@ -85,7 +79,8 @@ JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
 # using JS as extension
 JSBIN_EXT := js
 JS_EXT := js
-VPATH = $(APP_MODULES) $(SMARTJS_SRC) $(V7_PATH) $(MONGOOSE_PATH)
+VPATH = $(APP_MODULES) $(SMARTJS_SRC) $(V7_PATH) $(MONGOOSE_PATH) \
+		$(BOOTLOADER_PATH)/rboot/appcode
 IPATH = $(REPO_ROOT) $(COMMON_DIR) $(SMARTJS_SRC) $(VPATH) \
 		$(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
 		$(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
@@ -93,7 +88,13 @@ IPATH = $(REPO_ROOT) $(COMMON_DIR) $(SMARTJS_SRC) $(VPATH) \
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK
-APP_LIBS = c crypto gcc hal pp phy net80211 wpa main
+APP_LIBS = c crypto gcc hal pp phy net80211 wpa
+
+ifneq "${OTA}" "1"
+APP_LIBS += main
+else
+APP_LIBS += main_ota
+endif
 
 SHIMS = -DNDEBUG
 
@@ -105,10 +106,14 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DV7_ENABLE__Memory__stats -DCS_ENABLE_SPIFFS \
            -DESP_FLASH_BYTES_EMUL \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
-           -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
+           $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
+
+
+ifneq "${OTA}" "1"
+FEATURES +=-DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC \
-           -DV7_MMAP_EXEC_ONLY="sys_init.js_clubby.js_I2C.js_cloud.js_demo.js" \
-           $(FEATURES_EXTRA)
+           -DV7_MMAP_EXEC_ONLY="sys_init.js_clubby.js_I2C.js_cloud.js_demo.js"
+endif
 
 MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266
 
@@ -138,13 +143,9 @@ endif
 APP_LIBS += m lwip_cs
 CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWIP_IF
 
-ifneq "${OTA}" "1"
 FW_FS_OUT = $(FW_DIR)/$(FS_ADDR).bin
-else
-FW_FS_OUT = $(FW_DIR)/fs.bin
-endif
 
-LD_SCRIPT_TEMPL = ld/no_bootloader.ld
+LD_SCRIPT_TEMPL = ld/smartjs.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
@@ -167,24 +168,22 @@ IMAGE_HEADER_SIZE = 0
 FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_FS_PATH)/*)
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
-ifneq "${OTA}" "1"
-FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
 APP_OUT = $(BUILD_DIR)/$(APP).out
 LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
+
+ifneq "${OTA}" "1"
+FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
 else
-APP_OUT = $(BUILD_DIR)/$(APP).$(FW_FILE_1_ADDR).out  $(BUILD_DIR)/$(APP).$(FW_FILE_2_ADDR).out
-FS1_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE) - $(_FS_SIZE)))")
-FS2_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
-PREREQ = rboot
-BOOTLOADER_FLAGS = -DC1_FW_ADDR=$(FW_FILE_1_ADDR) \
-                   -DC2_FW_ADDR=$(FW_FILE_2_ADDR) \
-                   -DC1_FS_ADDR=$(FS1_ADDR) \
-                   -DC2_FS_ADDR=$(FS2_ADDR)
 IMAGE_HEADER_SIZE = 0x10
-LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_1_ADDR).ld $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
-# To keeo FnC compatibility we have to put rboot, FW1 and FS to /firmware dir
-# with addresses as file names
-FNC_FILES_OUT = $(FW_DIR_ROOT)/0x00000.bin $(FW_DIR_ROOT)/$(FW_FILE_1_OUT) $(FW_DIR_ROOT)/$(FS1_ADDR)
+ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
+FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE)))")
+FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE)))")
+PREREQ = rboot
+BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
+                   -DFW2_ADDR=$(FW2_FILE_2_ADDR) \
+				   -DFW1_FS_ADDR=$(FS_ADDR) \
+				   -DFW2_FS_ADDR=$(FS2_ADDR)
+
 FW_METADATA_FILE= $(FW_DIR)/metadata.json
 endif
 
@@ -205,23 +204,13 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
 ifneq "${OTA}" "1"
 CFLAGS += -DFS_ADDR=$(FS_ADDR) -DDISABLE_OTA
 else
-# TODO(alashkin): debug only, remove this line
-CFLAGS += -DFS_ADDR=$(FS1_ADDR)
 CFLAGS += $(BOOTLOADER_FLAGS)
+LDFLAGS += -u Cache_Read_Enable_New
 endif
 
-all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT) $(FNC_FILES_OUT) $(FW_METADATA_FILE)
-ifneq "$(OTA)" "1"
+all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT) $(FW_METADATA_FILE)
 	$(Q) rm -f `ls $(FW_DIR)/* \
-    | grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT))$$'`
-else
-	$(Q) rm -f `ls $(FW_DIR_ROOT)/* \
-    | grep -vE '^($(FW_DIR_ROOT)/0x00000.bin|$(FW_DIR_ROOT)/$(FW_FILE_1_ADDR).bin|\
-	$(FW_DIR_ROOT)/$(FS1_ADDR).bin|all)$$'`
-	$(Q) rm -f `ls $(FW_DIR)/* \
-    | grep -vE '^($(FW_DIR)/$(RBOOT_FW_NAME)|$(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|\
-	$(FW_METADATA_FILE)|$(FW_FS_OUT))$$'`
-endif
+    | grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT)|$(FW_DIR)/metadata.json)$$'`
 
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
@@ -230,43 +219,31 @@ $(FW_METADATA_FILE) : $(FW_FILES_OUT)
 	$(vecho) GEN $(FW_METADATA_FILE)
 	$(eval BUILD_REF=$(shell git symbolic-ref HEAD | sed 's:refs/heads/::'))
 	$(eval BUILD_SHA=$(shell git rev-parse HEAD | head -c 8))
-	$(Q) sed -e 's,%VERSION%,$(FW_VERSION),' \
-	  -e 's,%NAME%,flower,' \
+	$(Q) sed -e 's,%VERSION%,\"$(FW_VERSION)\",' \
+	  -e 's,%NAME%,smartjs,' \
 	  -e 's,%BUILD%,$(BUILD_REF)/$(BUILD_SHA),' \
 	  -e 's,%DESCRIPTION%,,' \
 	  -e 's,%PLATFORM%,esp8266,' \
 	  -e 's,%TIMESTAMP%,$(TIMESTAMP),' \
-	  -e 's,%C1_FILE%,$(FW_FILE_1_OUT),' \
-	  -e 's,%C2_FILE%,$(FW_FILE_2_OUT),' \
-	  -e 's,%FS_FILE%,$(FW_FS_OUT),' \
-	  -e 's,%C1_CHECKSUM%,$(shell sha1sum $(FW_FILE_1_OUT) | awk '{print $$1}'),' \
-	  -e 's,%C2_CHECKSUM%,$(shell sha1sum $(FW_FILE_2_OUT) | awk '{print $$1}'),' \
+	  -e 's,%FW_FILE%,/updates/$(notdir $(FW_FILE_2_OUT)),' \
+	  -e 's,%FS_FILE%,/updates/$(notdir $(FW_FS_OUT)),' \
+	  -e 's,%FW_CHECKSUM%,$(shell sha1sum $(FW_FILE_2_OUT) | awk '{print $$1}'),' \
 	  -e 's,%FS_CHECKSUM%,$(shell sha1sum $(FW_FS_OUT) | awk '{print $$1}'),' \
 	  ./user/metadata.json.in > $@
 
-$(FNC_FILES_OUT) : $(FW_FILES_OUT)
-# Using cp instead of ln to support Windows (in future)
-	$(Q) cp $(FW_DIR)/$(RBOOT_FW_NAME) $(FW_DIR_ROOT)/0x00000.bin
-	$(Q) cp $(FW_FILE_1_OUT) $(FW_DIR_ROOT)/$(FW_FILE_1_ADDR).bin
-	$(Q) cp $(FW_FS_OUT) $(FW_DIR_ROOT)/$(FS1_ADDR).bin
-
 # Main output product: firmware files.
 $(FW_FILES_OUT): $(APP_OUT)
-ifneq "$(OTA)" "1"
 	$(vecho) "FW $(APP_OUT) -> $(FW_DIR)"
+ifneq "$(OTA)" "1"
 	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 else
-	$(vecho) "FW $(BUILD_DIR)/$(APP).$(basename $(notdir $@)).out -> $@"
-	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $(BUILD_DIR)/$(APP).$(basename $(notdir $@)).out $@ $(FW_SECTS)
+	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $(APP_OUT) $@ $(FW_SECTS)
 endif
 
 # -- Linking.
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
 $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
-ifeq "$(OTA)" "1"
-	$(eval LD_SCRIPT=$(BUILD_DIR)/$(subst $(APP).,,$(basename $(notdir $@))).ld)
-endif
 	$(link)
 
 # Symbol check: make sure app doesn't override SDK lib symbols.
@@ -278,9 +255,6 @@ $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
 	$(Q) touch $@
 
 $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
-ifeq "$(OTA)" "1"
-	$(eval LD_SCRIPT=$(BUILD_DIR)/$(FW_FILE_1_ADDR).ld)
-endif
 	$(link)
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS)

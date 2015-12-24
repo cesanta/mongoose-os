@@ -8,15 +8,17 @@
 
 #include "esp_updater.h"
 #include "esp_missing_includes.h"
-#include "../bootloader/rboot/appcode/rboot-api.h"
+#include "rboot/rboot/appcode/rboot-api.h"
 #include "smartjs/src/sj_config.h"
 #include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_mongoose.h"
+
 /*
  * It looks too dangerous to put this numbers to
  * metadata file, so, they are compile-time consts
  */
-static unsigned int fw_addresses[] = {C1_FW_ADDR, C2_FW_ADDR};
-static unsigned int fs_addresses[] = {C1_FS_ADDR, C2_FS_ADDR};
+static unsigned int fw_addresses[] = {FW1_ADDR, FW2_ADDR};
+static unsigned int fs_addresses[] = {FW1_FS_ADDR, FW2_FS_ADDR};
 
 static int s_current_received;
 static int s_file_size;
@@ -80,8 +82,8 @@ static void set_update_status(enum update_status us) {
 }
 
 static int verify_timeout() {
-  if (system_get_time() / 1000 - s_last_received_time >
-      get_cfg()->update.server_timeout) {
+  if (system_get_time() - s_last_received_time >
+      get_cfg()->update.server_timeout * 1000000) {
     if (s_current_connection != NULL) {
       s_current_connection->flags |= MG_F_CLOSE_IMMEDIATELY;
     }
@@ -202,7 +204,7 @@ static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
 
     case MG_EV_RECV: {
-      s_last_received_time = system_get_time() / 1000;
+      s_last_received_time = system_get_time();
       if (s_update_status == US_WAITING_METADATA) {
         /* Metadata is processed in MS_EV_HTTP_REPLY */
         break;
@@ -330,6 +332,8 @@ void update_timer_cb(void *arg) {
     case US_GOT_METADATA: {
       struct json_token *toks = parse_json2(s_metadata, strlen(s_metadata));
       if (toks == NULL) {
+        LOG(LL_DEBUG, ("Cannot parse metadata (len=%d)\n%s", strlen(s_metadata),
+                       s_metadata));
         goto error;
       }
 
@@ -351,13 +355,10 @@ void update_timer_cb(void *arg) {
         break;
       }
 
-      /* Use c1 in case of FD or c2 and c2 in case of c1 */
       s_new_rom_number = rboot_get_current_rom() == 1 ? 0 : 1;
       LOG(LL_DEBUG, ("ROM to write: %d", s_new_rom_number));
 
-      char buf[50];
-      snprintf(buf, sizeof(buf), "c%d_url", s_new_rom_number + 1);
-      if (!sj_conf_get_str(toks, buf, &s_fw_url)) {
+      if (!sj_conf_get_str(toks, "fw_url", &s_fw_url)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FW url: %s", s_fw_url));
@@ -367,8 +368,7 @@ void update_timer_cb(void *arg) {
       }
       LOG(LL_DEBUG, ("FS url: %s", s_fs_url));
 
-      snprintf(buf, sizeof(buf), "c%d_checksum", s_new_rom_number + 1);
-      if (!sj_conf_get_str(toks, buf, &s_fw_checksum)) {
+      if (!sj_conf_get_str(toks, "fw_checksum", &s_fw_checksum)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FW checksum: %s", s_fw_checksum));
@@ -472,7 +472,7 @@ void update_start(struct mg_mgr *mgr) {
   }
 
   s_update_status = US_NOT_STARTED;
-  s_last_received_time = system_get_time() / 1000;
+  s_last_received_time = system_get_time();
   os_timer_setfn(&s_update_timer, update_timer_cb, mgr);
   os_timer_arm(&s_update_timer, 1000, 1);
 }
@@ -532,6 +532,21 @@ void rollback_fw() {
    */
   os_timer_setfn(&s_reboot_timer, reboot_timer_cb, NULL);
   os_timer_arm(&s_reboot_timer, 1000, 0);
+}
+
+static v7_val_t Updater_startupdate(struct v7 *v7) {
+  LOG(LL_DEBUG, ("Starting update"));
+  update_start(&sj_mgr);
+
+  return v7_create_boolean(1);
+}
+
+void init_updater(struct v7 *v7) {
+  v7_val_t updater = v7_create_object(v7);
+  v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
+
+  v7_set(v7, sys, "updater", ~0, 0, updater);
+  v7_set_method(v7, updater, "start", Updater_startupdate);
 }
 
 #endif /* DISABLE_OTA */

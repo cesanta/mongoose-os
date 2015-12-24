@@ -34,6 +34,7 @@
 #endif /* RTOS_SDK */
 
 #include "esp_fs.h"
+#include "esp_updater.h"
 
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;
@@ -41,7 +42,11 @@ os_timer_t startcmd_timer;
 
 void start_cmd(void *dummy) {
 #ifndef V7_NO_FS
+#ifndef DISABLE_OTA
+  fs_init(get_fs_addr(), FS_SIZE);
+#else
   fs_init(FS_ADDR, FS_SIZE);
+#endif
 #endif
 
   init_v7(&dummy);
@@ -52,6 +57,10 @@ void start_cmd(void *dummy) {
 
 #ifndef V7_NO_FS
   init_smartjs();
+#endif
+
+#ifndef DISABLE_OTA
+  finish_update();
 #endif
 
 #if !defined(NO_PROMPT)

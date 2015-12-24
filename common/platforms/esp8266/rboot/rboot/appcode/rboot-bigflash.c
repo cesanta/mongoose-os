@@ -36,8 +36,7 @@ uint8 rBoot_mmap_1 = 0xff;
 uint8 rBoot_mmap_2 = 0xff;
 
 // this function must remain in iram
-IRAM void Cache_Read_Enable_New() {
-
+IRAM NOINSTR void Cache_Read_Enable_New() {
 	if (rBoot_mmap_1 == 0xff) {
 		uint32 addr;
 		rboot_config conf;

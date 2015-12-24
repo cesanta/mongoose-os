@@ -3,7 +3,8 @@
 
 #ifndef DISABLE_OTA
 
-#include "mongoose.h"
+#include "mongoose/mongoose.h"
+#include "v7/v7.h"
 
 enum update_status {
   US_NOT_STARTED,
@@ -16,7 +17,9 @@ enum update_status {
   US_NOTHING_TODO
 };
 
-void update_start(struct mg_mgr *mgr);
+void init_updater(struct v7* v7);
+
+void update_start(struct mg_mgr* mgr);
 enum update_status update_get_status(void);
 int finish_update();
 uint32_t get_fs_addr();

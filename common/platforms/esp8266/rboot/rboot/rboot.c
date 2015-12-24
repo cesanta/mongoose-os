@@ -280,8 +280,8 @@ uint32 NOINLINE find_image() {
 		 * FD_FW_ADDR, C1_FW_ADDR and C2_FW_ADDR
 		 * must be defined by -D
 		 */
-		romconf->roms[0] = C1_FW_ADDR;
-		romconf->roms[1] = C2_FW_ADDR;
+		romconf->roms[0] = FW1_ADDR;
+		romconf->roms[1] = FW2_ADDR;
 #ifdef BOOT_CONFIG_CHKSUM
 		romconf->chksum = calc_chksum((uint8*)romconf, (uint8*)&romconf->chksum);
 #endif

@@ -1,9 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
-#include <string.h>
 #include <ets_sys.h>
-#include <v7.h>
-#include <sj_hal.h>
+#include <v7/v7.h>
 #include <sj_timers.h>
 #include <sj_v7_ext.h>
 #include <sj_i2c_js.h>
@@ -12,22 +10,15 @@
 #include <sj_adc_js.h>
 #include "v7_esp.h"
 #include "dht11.h"
-#include "util.h"
-#include "v7_esp_features.h"
 #include "esp_pwm.h"
 #include "esp_uart.h"
 #include "esp_sj_wifi.h"
 #include "sj_http.h"
 #include "sj_mongoose_ws_client.h"
-#include <sha1.h>
+#include "common/sha1.h"
+#include "esp_updater.h"
 
 #ifndef RTOS_SDK
-
-#include <osapi.h>
-#include <gpio.h>
-#include <os_type.h>
-#include <user_interface.h>
-#include <mem.h>
 
 #else
 
@@ -184,6 +175,10 @@ void init_v7(void *stack_base) {
 
   /* NOTE(lsm): must be done after mongoose_init(). */
   init_device(v7);
+
+#ifndef DISABLE_OTA
+  init_updater(v7);
+#endif
 
   v7_gc(v7, 1);
 }

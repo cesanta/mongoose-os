@@ -8,7 +8,7 @@ SDK_BASE ?= /opt/Espressif/ESP8266_SDK
 
 RBOOT_BUILD_BASE ?= ../../build
 RBOOT_FW_BASE    ?= ../../firmware
-FW_NAME = 0x00000.bin
+
 ifndef XTENSA_BINDIR
 CC := xtensa-lx106-elf-gcc
 LD := xtensa-lx106-elf-gcc
