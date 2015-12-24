@@ -107,13 +107,9 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DESP_FLASH_BYTES_EMUL \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
-
-
-ifneq "${OTA}" "1"
-FEATURES +=-DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
+           -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC \
            -DV7_MMAP_EXEC_ONLY="sys_init.js_clubby.js_I2C.js_cloud.js_demo.js"
-endif
 
 MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266
 
