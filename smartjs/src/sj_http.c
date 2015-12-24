@@ -9,13 +9,33 @@
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_v7_ext.h"
 
+/*
+ * Mongoose connection's user data that is used by the JavaScript HTTP
+ * bindings.
+ */
 struct user_data {
   struct v7 *v7;
+  /*
+   * Object which represents either:
+   *
+   * - request (prototype: `sj_http_request_proto`)
+   * - response (prototype: `sj_http_response_proto`)
+   *
+   * See `sj_init_http()`, which initializes those prototypes.
+   */
   v7_val_t obj;
+
+  /* Provided JavaScript callback */
   v7_val_t handler;
+
+  /* Callback for `request.setTimeout()` */
   v7_val_t timeout_callback;
 };
 
+/*
+ * Flag that is used to close connection immediately after response.
+ * Used in `Http.get()`.
+ */
 #define MG_F_CLOSE_CONNECTION_AFTER_RESPONSE MG_F_USER_1
 
 static v7_val_t sj_http_server_proto;
@@ -64,22 +84,35 @@ static void setup_response_object(struct v7 *v7, v7_val_t response,
   v7_set(v7, response, "_r", ~0, 0, request);
 }
 
+/*
+ * Mongoose event handler. If JavaScript callback was provided, call it
+ */
 static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   struct user_data *ud = (struct user_data *) c->user_data;
 
   if (ev == MG_EV_HTTP_REQUEST) {
+    /* HTTP request has arrived */
+
     if (v7_is_function(ud->handler)) {
+      /* call provided JavaScript callback with `request` and `response` */
       v7_val_t request = v7_create_object(ud->v7);
       v7_val_t response = v7_create_object(ud->v7);
       setup_request_object(ud->v7, request, ev_data);
       setup_response_object(ud->v7, response, c, request);
       sj_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
     } else {
+      /*
+       * no JavaScript callback provided; serve the request with the default
+       * options by `mg_serve_http()`
+       */
       struct mg_serve_http_opts opts;
       memset(&opts, 0, sizeof(opts));
       mg_serve_http(c, ev_data, opts);
     }
   } else if (ev == MG_EV_HTTP_REPLY) {
+    /* HTTP response has arrived */
+
+    /* if JavaScript callback was provided, call it with `response` */
     if (v7_is_function(ud->handler)) {
       v7_val_t response = v7_create_object(ud->v7);
       setup_request_object(ud->v7, response, ev_data);
@@ -119,6 +152,12 @@ static v7_val_t start_http_server(struct v7 *v7, const char *addr,
   return obj;
 }
 
+/*
+ * Parse URL; used for:
+ *
+ * - `URL.parse()`
+ * - `Http.request()` and `Http.get()`, when provided `opts` is a string.
+ */
 static v7_val_t sj_url_parse(struct v7 *v7, v7_val_t url_v) {
   v7_val_t opts, protocol_v;
   size_t i, j, len;
@@ -186,11 +225,19 @@ static v7_val_t sj_url_parse(struct v7 *v7, v7_val_t url_v) {
   return opts;
 }
 
+/*
+ * Returns mongoose connection saved in the user data object `obj`.
+ *
+ * For some details on `obj`, see `struct user_data::obj`
+ */
 static struct mg_connection *get_mgconn_obj(struct v7 *v7, v7_val_t obj) {
   v7_val_t _c = v7_get(v7, obj, "_c", ~0);
   return (struct mg_connection *) v7_to_foreign(_c);
 }
 
+/*
+ * Same as `get_mgconn_obj()`, but uses `this` as an `obj`.
+ */
 static struct mg_connection *get_mgconn(struct v7 *v7) {
   return get_mgconn_obj(v7, v7_get_this(v7));
 }
@@ -371,40 +418,69 @@ static v7_val_t Http_request_set_timeout(struct v7 *v7) {
   return v7_get_this(v7);
 }
 
+/*
+ * Create request object, used by `Http.request()` and `Http.get()`
+ */
 static v7_val_t sj_http_request_common(struct v7 *v7, v7_val_t opts,
                                        v7_val_t cb) {
   char addr[200];
   struct mg_connection *c;
   struct user_data *ud;
 
+  /*
+   * Determine type of provided `opts`, and if it's a string, then parse
+   * it to object
+   */
   if (v7_is_string(opts)) {
     opts = sj_url_parse(v7, opts);
-    if (v7_has_thrown(v7)) return opts; /* Must be an exception. */
+    if (v7_has_thrown(v7)) {
+      return opts; /* Must be an exception. */
+    }
   } else if (!v7_is_object(opts)) {
     return v7_throw(v7, "Error", "opts must be an object or a string URL");
   }
 
+  /*
+   * Now, `opts` is guaranteed to be an object.
+   * Let's retrieve needed properties
+   */
   v7_val_t v_h = v7_get(v7, opts, "hostname", ~0);
   v7_val_t v_p = v7_get(v7, opts, "port", ~0);
   v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
   v7_val_t v_m = v7_get(v7, opts, "method", ~0);
+
+  /* Perform options validation and set defaults if needed */
   int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
   const char *host = v7_is_string(v_h) ? v7_to_cstring(v7, &v_h) : "";
   const char *uri = v7_is_string(v_uri) ? v7_to_cstring(v7, &v_uri) : "/";
   const char *method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
 
+  /* Compose address like host:port */
   snprintf(addr, sizeof(addr), "%s:%d", host, port);
 
+  /*
+   * Try to connect, passing `http_ev_handler` as the callback, which will
+   * call provided JavaScript function (we'll set it in user data below).
+   */
   if ((c = mg_connect(&sj_mgr, addr, http_ev_handler)) == NULL) {
     return v7_throw(v7, "Error", "Cannot connect");
   }
 
+  /*
+   * Attach mongoose's built-in HTTP event handler to the connection, and send
+   * necessary headers
+   */
   mg_set_protocol_http_websocket(c);
   mg_printf(c, "%s %s HTTP/1.1\r\n", method, uri);
   mg_printf(c, "Host: %s\r\n", host);
   http_write_chunked_encoding_header(c);
   mg_printf(c, "%s", "\r\n");
 
+  /*
+   * Allocate and initialize user data structure that is used by the JS HTTP
+   * interface. Create the request object (which will have the request
+   * prototype `sj_http_request_proto`), and set provided callback function.
+   */
   c->user_data = ud = (struct user_data *) calloc(1, sizeof(*ud));
 
   ud->v7 = v7;
@@ -413,7 +489,11 @@ static v7_val_t sj_http_request_common(struct v7 *v7, v7_val_t opts,
 
   v7_own(v7, &ud->obj);
   v7_set_proto(ud->obj, sj_http_request_proto);
+
+  /* internal property: mongoose connection */
   v7_set(v7, ud->obj, "_c", ~0, 0, v7_create_foreign(c));
+
+  /* internal property: callback function that was passed as an argument */
   v7_set(v7, ud->obj, "_cb", ~0, 0, ud->handler);
 
   return ud->obj;
@@ -426,6 +506,7 @@ static v7_val_t Http_createClient(struct v7 *v7) {
 static v7_val_t Http_get(struct v7 *v7) {
   v7_val_t res = sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1));
   if (!v7_has_thrown(v7)) {
+    /* Prepare things to close the connection immediately after response */
     struct mg_connection *c = get_mgconn_obj(v7, res);
     mg_send_http_chunk(c, "", 0);
     c->flags |= MG_F_CLOSE_CONNECTION_AFTER_RESPONSE;
@@ -455,12 +536,14 @@ void sj_init_http(struct v7 *v7) {
 
   v7_set_method(v7, sj_http_server_proto, "listen", Http_Server_listen);
 
+  /* Initialize response prototype */
   v7_set_method(v7, sj_http_response_proto, "writeHead",
                 Http_response_writeHead);
   v7_set_method(v7, sj_http_response_proto, "write", Http_response_write);
   v7_set_method(v7, sj_http_response_proto, "end", Http_response_end);
   v7_set_method(v7, sj_http_response_proto, "serve", Http_response_serve);
 
+  /* Initialize request prototype */
   v7_set_method(v7, sj_http_request_proto, "write", Http_request_write);
   v7_set_method(v7, sj_http_request_proto, "end", Http_request_end);
   v7_set_method(v7, sj_http_request_proto, "abort", Http_request_abort);
