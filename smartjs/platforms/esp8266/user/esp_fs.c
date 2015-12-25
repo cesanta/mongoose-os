@@ -172,8 +172,9 @@ static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
 #ifndef DISABLE_OTA
       /*
        * If FW uses OTA (and flash mapping) addr might be > 0x100000
-       * and FLASH_BASE + addr will address somewhere behind irom segment
-       * So, we need map it back to irom
+       * and FLASH_BASE + addr will point somewhere behind flash
+       * mapped area (40200000h-40300000h)
+       * So, we need map it back.
        */
       addr &= 0xFFFFF;
 #endif
