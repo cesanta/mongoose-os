@@ -3154,7 +3154,7 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *, struct bcode *);
 
 #ifdef V7_BCODE_DUMP
-V7_PRIVATE void dump_bcode(FILE *, struct bcode *);
+V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *, struct bcode *);
 #endif
 
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
@@ -9896,7 +9896,8 @@ static size_t bcode_get_varint(uint8_t **ops) {
 }
 
 #if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
-V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
+V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
+                        uint8_t **ops) {
   uint8_t *p = *ops;
 
   assert(*p < OP_MAX);
@@ -9905,9 +9906,12 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
     case OP_PUSH_LIT:
     case OP_SAFE_GET_VAR:
     case OP_GET_VAR:
-    case OP_SET_VAR:
-      fprintf(f, "(%lu)", (unsigned long) bcode_get_varint(&p));
+    case OP_SET_VAR: {
+      size_t idx = bcode_get_varint(&p);
+      fprintf(f, "(%lu): ", (unsigned long) idx);
+      v7_fprint(f, v7, ((val_t *) bcode->lit.buf)[idx]);
       break;
+    }
     case OP_CALL:
     case OP_NEW:
       p++;
@@ -9938,11 +9942,11 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
 #endif
 
 #ifdef V7_BCODE_DUMP
-V7_PRIVATE void dump_bcode(FILE *f, struct bcode *bcode) {
+V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *f, struct bcode *bcode) {
   uint8_t *p = (uint8_t *) bcode->ops.buf;
   uint8_t *end = p + bcode->ops.len;
   for (; p < end; p++) {
-    dump_op(f, bcode, &p);
+    dump_op(v7, f, bcode, &p);
   }
 }
 #endif
@@ -14444,7 +14448,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
         bcode_serialize(v7, &bcode, fp);
       } else {
 #ifdef V7_BCODE_DUMP
-        dump_bcode(fp, &bcode);
+        dump_bcode(v7, fp, &bcode);
 #else
         fprintf(stderr, "build flag V7_BCODE_DUMP not enabled\n");
 #endif
@@ -17915,7 +17919,7 @@ static const enum ast_tag assign_ast_map[] = {
     AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
 
 #ifdef V7_BCODE_DUMP
-extern void dump_bcode(FILE *f, struct bcode *bcode);
+extern void dump_bcode(struct v7 *v7, FILE *f, struct bcode *bcode);
 #endif
 
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
@@ -19635,7 +19639,7 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
 
 #ifdef V7_BCODE_DUMP
   fprintf(stderr, "--- script ---\n");
-  dump_bcode(stderr, bcode);
+  dump_bcode(v7, stderr, bcode);
 #endif
 
 clean:
@@ -19687,7 +19691,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
 
 #ifdef V7_BCODE_DUMP
   fprintf(stderr, "--- function ---\n");
-  dump_bcode(stderr, bcode);
+  dump_bcode(v7, stderr, bcode);
 #endif
 
 clean:
