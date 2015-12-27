@@ -194,7 +194,7 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_VERSION=\"$(FW_VERSION)\" \
           -DFW_ARCHITECTURE=\"esp8266\" \
-		  -DFW_TIMESTAMP=\"$(TIMESTAMP)\"\
+          -DFW_TIMESTAMP=\"$(TIMESTAMP)\"\
           $(CFLAGS_EXTRA)
 
 ifneq "${OTA}" "1"
@@ -228,7 +228,11 @@ $(FW_METADATA_FILE) : $(FW_FILES_OUT)
 	  ./user/metadata.json.in > $@
 
 # Main output product: firmware files.
+#ifreq "${OTA}" "1"
 $(FW_FILES_OUT): $(APP_OUT)
+#else
+$(FW_FILE_2_OUT) : $(APP_OUT)
+#endif
 	$(vecho) "FW $(APP_OUT) -> $(FW_DIR)"
 ifneq "$(OTA)" "1"
 	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
@@ -349,9 +353,8 @@ $(ESPTOOL2):
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/esptool2 BUILD_DIR=$(BUILD_DIR)
 
 $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
-	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot RBOOT_BUILD_BASE=$(BUILD_DIR) \
-					ESPTOOL2=$(ESPTOOL2) RBOOT_FW_BASE=$(BUILD_DIR) \
-					RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
+	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) \
+					ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
 
 $(FW_DIR)/$(RBOOT_FW_NAME) : $(BUILD_DIR)/rboot.bin
 	$(Q) cp $(BUILD_DIR)/rboot.bin $(FW_DIR)/$(RBOOT_FW_NAME)

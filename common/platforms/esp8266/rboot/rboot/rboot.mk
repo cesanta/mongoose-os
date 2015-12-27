@@ -6,8 +6,8 @@
 ESPTOOL2 ?= ../../build/esptool2
 SDK_BASE ?= /opt/Espressif/ESP8266_SDK
 
-RBOOT_BUILD_BASE ?= ../../build
-RBOOT_FW_BASE    ?= ../../firmware
+# RBOOT_BUILD_BASE should be provided via makefile parameters
+RBOOT_BUILD_BASE ?=
 
 ifndef XTENSA_BINDIR
 CC := xtensa-lx106-elf-gcc
@@ -50,16 +50,7 @@ RBOOT_EXTRA_INCDIR := $(addprefix -I,$(RBOOT_EXTRA_INCDIR))
 
 .SECONDARY:
 
-all: $(RBOOT_BUILD_BASE) $(RBOOT_FW_BASE) $(RBOOT_FW_BASE)/rboot.bin
-
-$(RBOOT_FW_BASE)/$(FW_NAME):
-	cp $(RBOOT_BUILD_BASE)/rboot.bin  $(RBOOT_FW_BASE)/0x00000.bin
-
-$(RBOOT_BUILD_BASE):
-	mkdir -p $@
-
-$(RBOOT_FW_BASE):
-	mkdir -p $@
+all: $(RBOOT_BUILD_BASE)/rboot.bin
 
 $(RBOOT_BUILD_BASE)/rboot-stage2a.o: rboot-stage2a.c rboot-private.h rboot.h
 	@echo "CC $<"
@@ -85,7 +76,7 @@ $(RBOOT_BUILD_BASE)/%.elf: $(RBOOT_BUILD_BASE)/%.o
 	@echo "LD $@"
 	@$(LD) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
 
-$(RBOOT_FW_BASE)/%.bin: $(RBOOT_BUILD_BASE)/%.elf
+$(RBOOT_BUILD_BASE)/%.bin: $(RBOOT_BUILD_BASE)/%.elf
 	@echo "E2 $@"
 	@$(ESPTOOL2) $(E2_OPTS) $< $@ .text .rodata
 
