@@ -3250,6 +3250,14 @@ V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *, uint8_t op);
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
                                    bcode_off_t target);
 
+V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value);
+V7_PRIVATE size_t bcode_get_varint(uint8_t **ops);
+
+#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
+V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
+                        uint8_t **ops);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -9994,6 +10002,19 @@ V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value) {
   encode_varint(value, (unsigned char *) bcode->ops.buf + offset);
 }
 
+/*
+ * Reads varint-encoded integer from the provided pointer, and adjusts
+ * the pointer appropriately
+ */
+V7_PRIVATE size_t bcode_get_varint(uint8_t **ops) {
+  size_t ret = 0;
+  int len = 0;
+  (*ops)++;
+  ret = decode_varint(*ops, &len);
+  *ops += len - 1;
+  return ret;
+}
+
 V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, val_t val) {
   size_t idx = bcode->lit.len / sizeof(val);
   mbuf_append(&bcode->lit, &val, sizeof(val));
@@ -10575,19 +10596,6 @@ static bcode_off_t bcode_get_target(uint8_t **ops) {
   memcpy(&target, *ops, sizeof(target));
   *ops += sizeof(target) - 1;
   return target;
-}
-
-/*
- * Reads varint-encoded integer from the provided pointer, and adjusts
- * the pointer appropriately
- */
-static size_t bcode_get_varint(uint8_t **ops) {
-  size_t ret = 0;
-  int len = 0;
-  (*ops)++;
-  ret = decode_varint(*ops, &len);
-  *ops += len - 1;
-  return ret;
 }
 
 struct bcode_registers {
@@ -11288,7 +11296,7 @@ restart:
     {
       uint8_t *dops = r.ops;
       fprintf(stderr, "eval ");
-      dump_op(stderr, r.bcode, &dops);
+      dump_op(v7, stderr, r.bcode, &dops);
     }
 #endif
 
@@ -14712,9 +14720,9 @@ enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *result) {
 #ifndef V7_NO_FS
 static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
                              int is_json) {
+  enum v7_err rcode = V7_OK;
   char *p;
   size_t file_size;
-  enum v7_err err = V7_EXEC_EXCEPTION;
   char *(*rd)(const char *, size_t *);
 
   rd = cs_read_file;
@@ -14732,19 +14740,32 @@ static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
 #endif
 
   if ((p = rd(path, &file_size)) == NULL) {
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open [%s]", path);
-    *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
+    rcode = v7_throwf(v7, SYNTAX_ERROR, "cannot open [%s]", path);
+    /*
+     * In order to maintain compat with existing API, we should save the
+     * current exception value into `*res`
+     *
+     * TODO(dfrank): probably change API: clients can use `v7_thrown_value()`
+     * now
+     */
+    *res = v7_thrown_value(v7);
+    goto clean;
   } else {
 #ifndef V7_MMAP_EXEC
     int fr = 1;
 #else
     int fr = 0;
 #endif
-    err = b_exec(v7, p, file_size, v7_create_undefined(), v7_create_undefined(),
-                 res, v7_create_undefined(), is_json, fr, 0);
+    rcode =
+        b_exec(v7, p, file_size, v7_create_undefined(), v7_create_undefined(),
+               res, v7_create_undefined(), is_json, fr, 0);
+    if (rcode != V7_OK) {
+      goto clean;
+    }
   }
 
-  return err;
+clean:
+  return rcode;
 }
 
 enum v7_err v7_exec_file(struct v7 *v7, const char *path, val_t *res) {
