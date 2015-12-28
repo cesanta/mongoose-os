@@ -20,7 +20,7 @@
 using std::cerr;
 using std::endl;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   QCoreApplication::setOrganizationName("Cesanta");
   QCoreApplication::setOrganizationDomain("cesanta.com");
   QCoreApplication::setApplicationName(APP_NAME);
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
   cliOpts.append(QCommandLineOption(
       {"debug", "d"}, "Enable debug output. Equivalent to --V=4"));
 #if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
-  for (const auto& opt : cliOpts) {
+  for (const auto &opt : cliOpts) {
     parser.addOption(opt);
   }
 #else
@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
   parser.parse(commandline);
 
   if (parser.isSet("log")) {
-    auto* logfile = new std::ofstream(parser.value("log").toStdString(),
+    auto *logfile = new std::ofstream(parser.value("log").toStdString(),
                                       std::ios_base::app);
     if (logfile->fail()) {
       cerr << "Failed to open log file." << endl;
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
     app.setApplicationDisplayName("Smart.js flashing tool");
     MainDialog w(&config);
     w.show();
-    SigSource* ss = initSignalSource(&w);
+    SigSource *ss = initSignalSource(&w);
     QObject::connect(ss, &SigSource::flash, &w, &MainDialog::loadFirmware);
     QObject::connect(ss, &SigSource::connectDisconnect, &w,
                      &MainDialog::connectDisconnectTerminal);

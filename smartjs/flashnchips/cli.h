@@ -18,19 +18,19 @@ class CLI : public QObject {
   Q_OBJECT
 
  public:
-  CLI(Config* config, QCommandLineParser* parser, QObject* parent = 0);
+  CLI(Config *config, QCommandLineParser *parser, QObject *parent = 0);
 
  private:
   void listPorts();
-  util::Status probePort(const QString& portname);
-  util::Status flash(const QString& portname, const QString& path, int speed);
-  util::Status generateID(const QString& filename, const QString& domain);
+  util::Status probePort(const QString &portname);
+  util::Status flash(const QString &portname, const QString &path, int speed);
+  util::Status generateID(const QString &filename, const QString &domain);
   void run();
 
-  Config* config_ = nullptr;
-  QCommandLineParser* parser_ = nullptr;
+  Config *config_ = nullptr;
+  QCommandLineParser *parser_ = nullptr;
   std::unique_ptr<HAL> hal_;
-  Prompter* prompter_;
+  Prompter *prompter_;
 };
 
 #endif  // CLI_H

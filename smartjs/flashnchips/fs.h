@@ -28,10 +28,10 @@ class SPIFFS {
 
   QByteArray image() const;
 
-  spiffs* fs();
+  spiffs *fs();
 
   // For use by C callbacks only.
-  QByteArray* mounted_image() {
+  QByteArray *mounted_image() {
     return &image_;
   }
 
@@ -42,10 +42,10 @@ class SPIFFS {
   void unmount();
 
  private:
-  SPIFFS(const SPIFFS&) = delete;
-  SPIFFS& operator=(const SPIFFS&) = delete;
+  SPIFFS(const SPIFFS &) = delete;
+  SPIFFS &operator=(const SPIFFS &) = delete;
 
-  void initConfig(spiffs_config* cfg);
+  void initConfig(spiffs_config *cfg);
 
   QByteArray image_;
   spiffs fs_;

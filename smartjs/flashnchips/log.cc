@@ -19,8 +19,8 @@ QMutex mtx;  // guards verbosity and logfile.
 int verbosity = 0;
 std::unique_ptr<std::ostream> logfile(nullptr);
 
-void outputHandler(QtMsgType type, const QMessageLogContext& context,
-                   const QString& msg) {
+void outputHandler(QtMsgType type, const QMessageLogContext &context,
+                   const QString &msg) {
   QMutexLocker lock(&mtx);
   if (logfile == nullptr) {
     return;
@@ -102,7 +102,7 @@ void setVerbosity(int v) {
   verbosity = v;
 }
 
-void setFile(std::ostream* file) {
+void setFile(std::ostream *file) {
   QMutexLocker lock(&mtx);
   if (logfile.get() == &cerr) {
     logfile.release();

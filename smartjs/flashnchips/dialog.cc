@@ -52,7 +52,7 @@ const int kDefaultConsoleBaudRate = 115200;
 class PrompterImpl : public Prompter {
   Q_OBJECT
  public:
-  PrompterImpl(QObject* parent) : Prompter(parent) {
+  PrompterImpl(QObject *parent) : Prompter(parent) {
   }
   virtual ~PrompterImpl() {
   }
@@ -83,7 +83,7 @@ signals:
   int clicked_button_;
 };
 
-MainDialog::MainDialog(Config* config, QWidget* parent)
+MainDialog::MainDialog(Config *config, QWidget *parent)
     : QMainWindow(parent),
       config_(config),
       settingsDlg_(config->options(), this) {
@@ -250,7 +250,7 @@ MainDialog::MainDialog(Config* config, QWidget* parent)
   connect(&settingsDlg_, &SettingsDialog::knobUpdated, this,
           &MainDialog::updateConfig);
 
-  for (const auto& opt : config_->options()) {
+  for (const auto &opt : config_->options()) {
     updateConfig(opt.names()[0]);
   }
 
@@ -281,10 +281,10 @@ void MainDialog::setState(State newState) {
 }
 
 void MainDialog::enableControlsForCurrentState() {
-  for (QWidget* w : enabled_in_state_.keys()) {
+  for (QWidget *w : enabled_in_state_.keys()) {
     w->setEnabled(enabled_in_state_.find(w, state_) != enabled_in_state_.end());
   }
-  for (QAction* a : action_enabled_in_state_.keys()) {
+  for (QAction *a : action_enabled_in_state_.keys()) {
     a->setEnabled(action_enabled_in_state_.find(a, state_) !=
                   action_enabled_in_state_.end());
   }
@@ -312,14 +312,14 @@ void MainDialog::showPrompt(
     QString text, QList<QPair<QString, QMessageBox::ButtonRole>> buttons) {
   QMessageBox mb;
   mb.setText(text);
-  QMap<QAbstractButton*, int> b2i;
+  QMap<QAbstractButton *, int> b2i;
   int i = 0;
-  for (const auto& bd : buttons) {
-    QAbstractButton* b = mb.addButton(bd.first, bd.second);
+  for (const auto &bd : buttons) {
+    QAbstractButton *b = mb.addButton(bd.first, bd.second);
     b2i[b] = i++;
   }
   mb.exec();
-  QAbstractButton* clicked = mb.clickedButton();
+  QAbstractButton *clicked = mb.clickedButton();
   emit showPromptResult(b2i.contains(clicked) ? b2i[clicked] : -1);
 }
 
@@ -333,7 +333,7 @@ util::Status MainDialog::openSerial() {
                         tr("No port selected").toStdString());
   }
 
-  util::StatusOr<QSerialPort*> r = connectSerial(QSerialPortInfo(portName));
+  util::StatusOr<QSerialPort *> r = connectSerial(QSerialPortInfo(portName));
   if (!r.ok()) {
     qDebug() << "connectSerial:" << r.status().ToString().c_str();
     return r.status();
@@ -488,7 +488,7 @@ void MainDialog::readSerial() {
     console_log_->write(data);
     console_log_->flush();
   }
-  auto* scroll = ui_.terminal->verticalScrollBar();
+  auto *scroll = ui_.terminal->verticalScrollBar();
   bool autoscroll = scroll->value() == scroll->maximum();
   // Appending a bunch of text the hard way, because
   // QPlainTextEdit::appendPlainText creates a new paragraph on each call,
@@ -557,7 +557,7 @@ void MainDialog::updatePortList() {
   }
 
   auto ports = QSerialPortInfo::availablePorts();
-  for (const auto& info : ports) {
+  for (const auto &info : ports) {
 #ifdef Q_OS_MAC
     if (info.portName().contains("Bluetooth")) {
       continue;
@@ -576,7 +576,7 @@ void MainDialog::updatePortList() {
     qDebug() << "Adding ports:" << to_add;
   }
 
-  for (const auto& s : to_delete) {
+  for (const auto &s : to_delete) {
     for (int i = 0; i < ui_.portSelector->count(); i++) {
       if (ui_.portSelector->itemData(i).type() == QVariant::String &&
           ui_.portSelector->itemData(i).toString() == s) {
@@ -586,7 +586,7 @@ void MainDialog::updatePortList() {
     }
   }
 
-  for (const auto& s : to_add) {
+  for (const auto &s : to_add) {
     ui_.portSelector->addItem(s, s);
   }
 }
@@ -653,7 +653,7 @@ void MainDialog::flashingDone(QString msg, bool success) {
   Q_UNUSED(msg);
   ui_.progressBar->hide();
   if (scroll_after_flashing_) {
-    auto* scroll = ui_.terminal->verticalScrollBar();
+    auto *scroll = ui_.terminal->verticalScrollBar();
     scroll->setValue(scroll->maximum());
   }
   setState(Connected);
@@ -738,7 +738,7 @@ void MainDialog::loadFirmware() {
 
   // Check if the terminal is scrolled down to the bottom before showing
   // progress bar, so we can scroll it back again after we're done.
-  auto* scroll = ui_.terminal->verticalScrollBar();
+  auto *scroll = ui_.terminal->verticalScrollBar();
   scroll_after_flashing_ = scroll->value() == scroll->maximum();
   ui_.progressBar->show();
   ui_.statusMessage->show();
@@ -773,7 +773,7 @@ void MainDialog::loadFirmware() {
 }
 
 void MainDialog::showAboutBox() {
-  QWidget* w = new QWidget;
+  QWidget *w = new QWidget;
   Ui_About about;
   about.setupUi(w);
   about.versionLabel->setText(
@@ -781,12 +781,12 @@ void MainDialog::showAboutBox() {
   w->show();
 }
 
-bool MainDialog::eventFilter(QObject* obj, QEvent* e) {
+bool MainDialog::eventFilter(QObject *obj, QEvent *e) {
   if (obj != ui_.terminalInput) {
     return QMainWindow::eventFilter(obj, e);
   }
   if (e->type() == QEvent::KeyPress) {
-    QKeyEvent* key = static_cast<QKeyEvent*>(e);
+    QKeyEvent *key = static_cast<QKeyEvent *>(e);
     if (key->key() == Qt::Key_Up) {
       if (input_history_.length() == 0) {
         return true;
@@ -816,7 +816,7 @@ bool MainDialog::eventFilter(QObject* obj, QEvent* e) {
   return false;
 }
 
-void MainDialog::closeEvent(QCloseEvent* event) {
+void MainDialog::closeEvent(QCloseEvent *event) {
   settings_.setValue("window/geometry", saveGeometry());
   settings_.setValue("window/state", saveState());
   QMainWindow::closeEvent(event);
@@ -824,9 +824,9 @@ void MainDialog::closeEvent(QCloseEvent* event) {
 
 void MainDialog::configureWiFi() {
   QDialog dlg(this);
-  QFormLayout* layout = new QFormLayout();
-  QComboBox* ssid = new QComboBox;
-  QLineEdit* password = new QLineEdit;
+  QFormLayout *layout = new QFormLayout();
+  QComboBox *ssid = new QComboBox;
+  QLineEdit *password = new QLineEdit;
   layout->addRow(tr("SSID:"), ssid);
   layout->addRow(tr("Password:"), password);
 
@@ -836,7 +836,7 @@ void MainDialog::configureWiFi() {
   // net config update is async so this list might be empty
   // but usually there is enough time to receive the net list
   // from the OS and if not, blocking doesn't buy anything.
-  for (const auto& net_conf :
+  for (const auto &net_conf :
        net_mgr_.allConfigurations(QNetworkConfiguration::Discovered)) {
     if (net_conf.bearerType() == QNetworkConfiguration::BearerWLAN) {
       ssid->addItem(net_conf.name());
@@ -844,9 +844,9 @@ void MainDialog::configureWiFi() {
   }
   ssid->clearEditText();
 
-  QPushButton* ok = new QPushButton(tr("&OK"));
-  QPushButton* cancel = new QPushButton(tr("&Cancel"));
-  QHBoxLayout* hlayout = new QHBoxLayout;
+  QPushButton *ok = new QPushButton(tr("&OK"));
+  QPushButton *cancel = new QPushButton(tr("&Cancel"));
+  QHBoxLayout *hlayout = new QHBoxLayout;
   hlayout->addWidget(ok);
   hlayout->addWidget(cancel);
   layout->addRow(hlayout);
@@ -914,7 +914,7 @@ void MainDialog::showSettings() {
   settingsDlg_.show();
 }
 
-void MainDialog::updateConfig(const QString& name) {
+void MainDialog::updateConfig(const QString &name) {
   if (settings_.value(SettingsDialog::isSetKey(name), false).toBool()) {
     config_->setValue(
         name, settings_.value(SettingsDialog::valueKey(name), "").toString());
@@ -935,7 +935,7 @@ void MainDialog::updateConfig(const QString& name) {
     if (config_->value("log").isEmpty()) {
       Log::setFile(&std::cerr);
     } else {
-      auto* logfile = new std::ofstream(config_->value("log").toStdString(),
+      auto *logfile = new std::ofstream(config_->value("log").toStdString(),
                                         std::ios_base::app);
       if (logfile->fail()) {
         std::cerr << "Failed to open log file." << std::endl;

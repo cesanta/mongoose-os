@@ -12,7 +12,7 @@
  * Reads temperature and humidity data.
  * Returns 1 on success, on error.
  */
-int dht11_read(int gpio, int* temp, int* rh);
+int dht11_read(int gpio, int *temp, int *rh);
 #endif
 
 #endif /* DHT11_INCLUDED */

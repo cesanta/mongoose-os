@@ -133,7 +133,7 @@ static uint8_t gpio16_input_get() {
 }
 
 int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
-  struct gpio_info* gi;
+  struct gpio_info *gi;
 
   if (pin == 16) {
     if (mode == GPIO_MODE_INPUT) {
@@ -295,7 +295,7 @@ static void v7_gpio_process_on_click(int pin, int level,
   }
 }
 
-static void v7_gpio_intr_dispatcher(void* arg) {
+static void v7_gpio_intr_dispatcher(void *arg) {
   f_gpio_intr_handler_t callback = (f_gpio_intr_handler_t) arg;
   uint8_t i, level;
 
@@ -326,7 +326,7 @@ static void v7_gpio_intr_dispatcher(void* arg) {
 }
 
 #ifndef RTOS_SDK
-void v7_gpio_task(os_event_t* event) {
+void v7_gpio_task(os_event_t *event) {
   if (event->sig >> 16 != GPIO_TASK_SIG) {
     return;
   }

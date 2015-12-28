@@ -12,7 +12,7 @@
 #if V7_ESP_ENABLE__DHT11
 
 static unsigned int dht11_read_bits(int gpio, int n_bits, int thresh,
-                                    int* max_cycles) {
+                                    int *max_cycles) {
   int result = 0;
   while (n_bits-- > 0 && *max_cycles > 0) {
     result <<= 1;
@@ -24,7 +24,7 @@ static unsigned int dht11_read_bits(int gpio, int n_bits, int thresh,
   return result;
 }
 
-int dht11_read(int gpio, int* temp, int* rh) {
+int dht11_read(int gpio, int *temp, int *rh) {
   unsigned int cs, expected_cs;
   int max_cycles = 100000, thresh;
   /* Get DHT11's attention. */

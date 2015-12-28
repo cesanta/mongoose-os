@@ -96,7 +96,7 @@ struct FileInfo {
 // First byte of each frame sent to the device is an opcode, rest are the
 // arguments.
 
-quint8 checksum(const QByteArray& bytes) {
+quint8 checksum(const QByteArray &bytes) {
   quint8 r = 0;
   for (const unsigned char c : bytes) {
     r = (r + c) % 0x100;
@@ -104,7 +104,7 @@ quint8 checksum(const QByteArray& bytes) {
   return r;
 }
 
-util::StatusOr<QByteArray> readBytes(QSerialPort* s, int n,
+util::StatusOr<QByteArray> readBytes(QSerialPort *s, int n,
                                      int timeout = kDefaultTimeoutMs) {
   QByteArray r;
   int i = 0;
@@ -131,7 +131,7 @@ util::StatusOr<QByteArray> readBytes(QSerialPort* s, int n,
   return r;
 }
 
-util::Status writeBytes(QSerialPort* s, const QByteArray& bytes,
+util::Status writeBytes(QSerialPort *s, const QByteArray &bytes,
                         int timeout = kDefaultTimeoutMs) {
   qDebug() << "Writing bytes:" << bytes.toHex();
   if (!s->write(bytes)) {
@@ -147,7 +147,7 @@ util::Status writeBytes(QSerialPort* s, const QByteArray& bytes,
   return util::Status::OK;
 }
 
-util::Status recvAck(QSerialPort* s, int timeout = kDefaultTimeoutMs) {
+util::Status recvAck(QSerialPort *s, int timeout = kDefaultTimeoutMs) {
   auto r = readBytes(s, 2, timeout);
   if (!r.ok()) {
     return r.status();
@@ -161,11 +161,11 @@ util::Status recvAck(QSerialPort* s, int timeout = kDefaultTimeoutMs) {
   return util::Status::OK;
 }
 
-util::Status sendAck(QSerialPort* s, int timeout = kDefaultTimeoutMs) {
+util::Status sendAck(QSerialPort *s, int timeout = kDefaultTimeoutMs) {
   return writeBytes(s, QByteArray("\x00\xCC", 2), timeout);
 }
 
-util::Status doBreak(QSerialPort* s, int timeout = kDefaultTimeoutMs) {
+util::Status doBreak(QSerialPort *s, int timeout = kDefaultTimeoutMs) {
   qInfo() << "Sending break...";
   s->clear();
   if (!s->setBreakEnabled(true)) {
@@ -184,7 +184,7 @@ util::Status doBreak(QSerialPort* s, int timeout = kDefaultTimeoutMs) {
   return recvAck(s, timeout);
 }
 
-util::StatusOr<QByteArray> recvPacket(QSerialPort* s,
+util::StatusOr<QByteArray> recvPacket(QSerialPort *s,
                                       int timeout = kDefaultTimeoutMs) {
   auto r = readBytes(s, 3, timeout);
   if (!r.ok()) {
@@ -211,7 +211,7 @@ util::StatusOr<QByteArray> recvPacket(QSerialPort* s,
   return payload.ValueOrDie();
 }
 
-util::Status sendPacket(QSerialPort* s, const QByteArray& bytes,
+util::Status sendPacket(QSerialPort *s, const QByteArray &bytes,
                         int timeout = kDefaultTimeoutMs) {
   QByteArray header;
   QDataStream hs(&header, QIODevice::WriteOnly);
@@ -229,9 +229,9 @@ util::Status sendPacket(QSerialPort* s, const QByteArray& bytes,
 }
 
 #ifndef NO_LIBFTDI
-util::StatusOr<ftdi_context*> openFTDI() {
-  std::unique_ptr<ftdi_context, void (*) (ftdi_context*) > ctx(ftdi_new(),
-                                                               ftdi_free);
+util::StatusOr<ftdi_context *> openFTDI() {
+  std::unique_ptr<ftdi_context, void (*) (ftdi_context *) > ctx(ftdi_new(),
+                                                                ftdi_free);
   if (ftdi_set_interface(ctx.get(), INTERFACE_A) != 0) {
     return util::Status(util::error::UNKNOWN, "ftdi_set_interface failed");
   }
@@ -248,7 +248,7 @@ util::StatusOr<ftdi_context*> openFTDI() {
   return ctx.release();
 }
 
-util::Status resetSomething(ftdi_context* ctx) {
+util::Status resetSomething(ftdi_context *ctx) {
   unsigned char c = 1;
   if (ftdi_write_data(ctx, &c, 1) < 0) {
     return util::Status(util::error::UNKNOWN, "ftdi_write_data failed");
@@ -262,7 +262,7 @@ util::Status resetSomething(ftdi_context* ctx) {
   return util::Status::OK;
 }
 
-util::Status boot(ftdi_context* ctx) {
+util::Status boot(ftdi_context *ctx) {
   util::Status st;
   const std::vector<unsigned char> seq = {0, 0x20};
   for (unsigned char b : seq) {
@@ -279,7 +279,7 @@ class FlasherImpl : public Flasher {
   Q_OBJECT
  public:
   FlasherImpl(){};
-  util::Status load(const QString& path) override {
+  util::Status load(const QString &path) override {
     QMutexLocker lock(&lock_);
     QDir dir(path, "*.bin", QDir::Name,
              QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
@@ -330,7 +330,7 @@ class FlasherImpl : public Flasher {
     if (dir.exists("fs")) {
       QDir files_dir(dir.filePath("fs"), "", QDir::Name,
                      QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
-      for (const auto& file : files_dir.entryInfoList()) {
+      for (const auto &file : files_dir.entryInfoList()) {
         qInfo() << "Loading" << file.fileName();
         QFile f(file.absoluteFilePath());
         if (!f.open(QIODevice::ReadOnly)) {
@@ -347,7 +347,7 @@ class FlasherImpl : public Flasher {
     return loadSPIFFS(path);
   }
 
-  util::Status setPort(QSerialPort* port) override {
+  util::Status setPort(QSerialPort *port) override {
     QMutexLocker lock(&lock_);
     port_ = port;
     return util::Status::OK;
@@ -378,7 +378,7 @@ class FlasherImpl : public Flasher {
     emit done(tr("All done!"), true);
   }
 
-  util::Status setOption(const QString& name, const QVariant& value) override {
+  util::Status setOption(const QString &name, const QVariant &value) override {
     if (name == kIdDomainOption) {
       if (value.type() != QVariant::String) {
         return util::Status(util::error::INVALID_ARGUMENT,
@@ -422,13 +422,13 @@ class FlasherImpl : public Flasher {
     return util::Status(util::error::INVALID_ARGUMENT, "Unknown option");
   }
 
-  util::Status setOptionsFromConfig(const Config& config) override {
+  util::Status setOptionsFromConfig(const Config &config) override {
     util::Status r;
 
     QStringList boolOpts({kSkipIdGenerationOption, kMergeFSOption});
     QStringList stringOpts({kIdDomainOption, kFormatFailFS});
 
-    for (const auto& opt : boolOpts) {
+    for (const auto &opt : boolOpts) {
       auto s = setOption(opt, config.isSet(opt));
       if (!s.ok()) {
         r = util::Status(
@@ -436,7 +436,7 @@ class FlasherImpl : public Flasher {
             (opt + ": " + s.error_message().c_str()).toStdString());
       }
     }
-    for (const auto& opt : stringOpts) {
+    for (const auto &opt : stringOpts) {
       // XXX: currently there's no way to "unset" a string option.
       if (config.isSet(opt)) {
         auto s = setOption(opt, config.value(opt));
@@ -451,7 +451,7 @@ class FlasherImpl : public Flasher {
   }
 
  private:
-  util::Status loadSPIFFS(const QString& path) {
+  util::Status loadSPIFFS(const QString &path) {
     spiffs_image_.clear();
     QDir dir(path, "fs.img", QDir::Name,
              QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
@@ -496,8 +496,8 @@ class FlasherImpl : public Flasher {
     if (!r.ok()) {
       return r.status();
     }
-    std::unique_ptr<ftdi_context, void (*) (ftdi_context*) > ctx(r.ValueOrDie(),
-                                                                 ftdi_free);
+    std::unique_ptr<ftdi_context, void (*) (ftdi_context *) > ctx(
+        r.ValueOrDie(), ftdi_free);
     emit statusMessage(tr("Resetting the device..."), true);
     st = resetSomething(ctx.get());
     if (!st.ok()) {
@@ -623,7 +623,7 @@ class FlasherImpl : public Flasher {
     return sendPacket(port_, payload);
   }
 
-  util::Status sendChunk(int offset, const QByteArray& bytes) {
+  util::Status sendChunk(int offset, const QByteArray &bytes) {
     QByteArray payload;
     QDataStream ps(&payload, QIODevice::WriteOnly);
     ps.setByteOrder(QDataStream::BigEndian);
@@ -633,7 +633,7 @@ class FlasherImpl : public Flasher {
     return sendPacket(port_, payload);
   }
 
-  util::Status rawWrite(quint32 offset, const QByteArray& bytes) {
+  util::Status rawWrite(quint32 offset, const QByteArray &bytes) {
     auto si = getStorageInfo();
     if (!si.ok()) {
       return si.status();
@@ -750,7 +750,7 @@ class FlasherImpl : public Flasher {
     return recvAck(port_);
   }
 
-  util::Status eraseFile(const QString& name) {
+  util::Status eraseFile(const QString &name) {
     emit statusMessage(tr("Erasing %1...").arg(name));
     QByteArray payload;
     QDataStream ps(&payload, QIODevice::WriteOnly);
@@ -761,7 +761,7 @@ class FlasherImpl : public Flasher {
     return sendPacket(port_, payload);
   }
 
-  util::Status openFileForWrite(const QString& filename, int len) {
+  util::Status openFileForWrite(const QString &filename, int len) {
     emit statusMessage(tr("Uploading %1 (%2 bytes)...").arg(filename).arg(len),
                        true);
     QByteArray payload;
@@ -799,7 +799,7 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status openFileForRead(const QString& filename) {
+  util::Status openFileForRead(const QString &filename) {
     QByteArray payload;
     QDataStream ps(&payload, QIODevice::WriteOnly);
     ps.setByteOrder(QDataStream::BigEndian);
@@ -826,7 +826,7 @@ class FlasherImpl : public Flasher {
     return sendPacket(port_, payload);
   }
 
-  util::Status uploadFW(const QByteArray& bytes, const QString& filename) {
+  util::Status uploadFW(const QByteArray &bytes, const QString &filename) {
     auto info = getFileInfo(filename);
     if (!info.ok()) {
       return info.status();
@@ -862,7 +862,7 @@ class FlasherImpl : public Flasher {
     return closeFile();
   }
 
-  util::StatusOr<FileInfo> getFileInfo(const QString& filename) {
+  util::StatusOr<FileInfo> getFileInfo(const QString &filename) {
     QByteArray payload;
     QDataStream ps(&payload, QIODevice::WriteOnly);
     ps.setByteOrder(QDataStream::BigEndian);
@@ -885,7 +885,7 @@ class FlasherImpl : public Flasher {
     return r;
   }
 
-  util::StatusOr<QByteArray> getFile(const QString& filename) {
+  util::StatusOr<QByteArray> getFile(const QString &filename) {
     auto info = getFileInfo(filename);
     if (!info.ok()) {
       return info.status();
@@ -931,9 +931,9 @@ class FlasherImpl : public Flasher {
     return r;
   }
 
-  util::StatusOr<QByteArray> readSPIFFS(const QString& filename, quint64* seq,
-                                        quint32* block_size,
-                                        quint32* page_size) {
+  util::StatusOr<QByteArray> readSPIFFS(const QString &filename, quint64 *seq,
+                                        quint32 *block_size,
+                                        quint32 *page_size) {
     auto info = getFileInfo(filename);
     if (!info.ok()) {
       return info.status();
@@ -1028,7 +1028,7 @@ class FlasherImpl : public Flasher {
   QByteArray image_;
   QByteArray spiffs_image_;
   QMap<QString, QByteArray> files_;
-  QSerialPort* port_;
+  QSerialPort *port_;
   QString id_hostname_;
   bool skip_id_generation_ = false;
   bool merge_spiffs_ = false;
@@ -1037,7 +1037,7 @@ class FlasherImpl : public Flasher {
 };
 
 class CC3200HAL : public HAL {
-  util::Status probe(const QSerialPortInfo& port) const override {
+  util::Status probe(const QSerialPortInfo &port) const override {
     auto r = connectSerial(port, kSerialSpeed);
     if (!r.ok()) {
       return r.status();
@@ -1047,7 +1047,7 @@ class CC3200HAL : public HAL {
     if (!ftdi.ok()) {
       return ftdi.status();
     }
-    std::unique_ptr<ftdi_context, void (*) (ftdi_context*) > ctx(
+    std::unique_ptr<ftdi_context, void (*) (ftdi_context *) > ctx(
         ftdi.ValueOrDie(), ftdi_free);
     util::Status st = resetSomething(ctx.get());
     if (!st.ok()) {
@@ -1058,7 +1058,7 @@ class CC3200HAL : public HAL {
     return doBreak(s.get());
   }
 
-  std::unique_ptr<Flasher> flasher(Prompter* prompter) const override {
+  std::unique_ptr<Flasher> flasher(Prompter *prompter) const override {
     (void) prompter;  // TODO(rojer): Add prompts to flasher.
     return std::move(std::unique_ptr<Flasher>(new FlasherImpl));
   }
@@ -1067,7 +1067,7 @@ class CC3200HAL : public HAL {
     return "CC3200";
   }
 
-  util::Status reboot(QSerialPort*) const override {
+  util::Status reboot(QSerialPort *) const override {
 #ifdef NO_LIBFTDI
     return util::Status(util::error::UNIMPLEMENTED,
                         "Rebooting CC3200 is not supported");
@@ -1076,7 +1076,7 @@ class CC3200HAL : public HAL {
     if (!ftdi.ok()) {
       return ftdi.status();
     }
-    std::unique_ptr<ftdi_context, void (*) (ftdi_context*) > ctx(
+    std::unique_ptr<ftdi_context, void (*) (ftdi_context *) > ctx(
         ftdi.ValueOrDie(), ftdi_free);
     return boot(ctx.get());
 #endif  // NO_LIBFTDI
@@ -1089,7 +1089,7 @@ std::unique_ptr<::HAL> HAL() {
   return std::move(std::unique_ptr<::HAL>(new CC3200HAL));
 }
 
-void addOptions(Config* config) {
+void addOptions(Config *config) {
   // QCommandLineOption supports C++11-style initialization only since Qt 5.4.
   QList<QCommandLineOption> opts;
   opts.append(QCommandLineOption(kFormatFailFS,

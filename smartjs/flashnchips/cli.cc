@@ -23,7 +23,7 @@ using std::endl;
 
 class CLIPrompterImpl : public Prompter {
  public:
-  CLIPrompterImpl(QObject* parent) : Prompter(parent) {
+  CLIPrompterImpl(QObject *parent) : Prompter(parent) {
   }
   virtual ~CLIPrompterImpl() {
   }
@@ -37,7 +37,7 @@ class CLIPrompterImpl : public Prompter {
   }
 };
 
-CLI::CLI(Config* config, QCommandLineParser* parser, QObject* parent)
+CLI::CLI(Config *config, QCommandLineParser *parser, QObject *parent)
     : QObject(parent),
       config_(config),
       parser_(parser),
@@ -131,8 +131,8 @@ void CLI::listPorts() {
   if (hal_ == nullptr) {
     return;
   }
-  const auto& ports = QSerialPortInfo::availablePorts();
-  for (const auto& port : ports) {
+  const auto &ports = QSerialPortInfo::availablePorts();
+  for (const auto &port : ports) {
     util::Status s = hal_->probe(port);
     cout << "Port: " << port.systemLocation().toStdString() << "\t";
     if (s.ok()) {
@@ -144,12 +144,12 @@ void CLI::listPorts() {
   }
 }
 
-util::Status CLI::probePort(const QString& portname) {
+util::Status CLI::probePort(const QString &portname) {
   if (hal_ == nullptr) {
     return util::Status(util::error::INVALID_ARGUMENT, "No platform selected");
   }
-  const auto& ports = QSerialPortInfo::availablePorts();
-  for (const auto& port : ports) {
+  const auto &ports = QSerialPortInfo::availablePorts();
+  for (const auto &port : ports) {
     if (port.systemLocation() != portname) {
       continue;
     }
@@ -158,15 +158,15 @@ util::Status CLI::probePort(const QString& portname) {
   return util::Status(util::error::FAILED_PRECONDITION, "No such port");
 }
 
-util::Status CLI::flash(const QString& portname, const QString& path,
+util::Status CLI::flash(const QString &portname, const QString &path,
                         int speed) {
   if (hal_ == nullptr) {
     return util::Status(util::error::INVALID_ARGUMENT, "No platform selected");
   }
-  const auto& ports = QSerialPortInfo::availablePorts();
+  const auto &ports = QSerialPortInfo::availablePorts();
   QSerialPortInfo info;
   bool found = false;
-  for (const auto& port : ports) {
+  for (const auto &port : ports) {
     if (port.systemLocation() != portname) {
       continue;
     }
@@ -188,7 +188,7 @@ util::Status CLI::flash(const QString& portname, const QString& path,
     return err;
   }
 
-  util::StatusOr<QSerialPort*> r = connectSerial(info, speed);
+  util::StatusOr<QSerialPort *> r = connectSerial(info, speed);
   if (!r.ok()) {
     return r.status();
   }
@@ -231,7 +231,7 @@ util::Status CLI::flash(const QString& portname, const QString& path,
   return util::Status::OK;
 }
 
-util::Status CLI::generateID(const QString& filename, const QString& domain) {
+util::Status CLI::generateID(const QString &filename, const QString &domain) {
   QByteArray bytes = ESP8266::makeIDBlock(domain);
   QFile f(filename);
   if (!f.open(QIODevice::WriteOnly)) {

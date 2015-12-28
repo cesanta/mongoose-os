@@ -27,31 +27,31 @@ class Config {
   virtual ~Config(){};
 
   // addOptions adds options to the list of supported options.
-  void addOptions(const QList<QCommandLineOption>& options);
+  void addOptions(const QList<QCommandLineOption> &options);
 
   // isSet returns true if, on any level, a given option has a value assigned.
-  bool isSet(const QString& optionName) const;
+  bool isSet(const QString &optionName) const;
 
   // set sets the value of an option to an empty string. Mainly useful for
   // boolean flags.
-  void set(const QString& name, Level level = Level::Settings);
+  void set(const QString &name, Level level = Level::Settings);
 
   // setValue sets the value of a given option.
-  void setValue(const QString& name, const QString& value,
+  void setValue(const QString &name, const QString &value,
                 Level level = Level::Settings);
 
   // unset removes the value assigned to a given option.
-  void unset(const QString& name, Level level = Level::Settings);
+  void unset(const QString &name, Level level = Level::Settings);
 
   // value returns a value assigned to a given option.
-  QString value(const QString& optionName) const;
+  QString value(const QString &optionName) const;
 
   // fromCommandLine stores takes values for known options from parser and
   // stores them at Flags level.
-  void fromCommandLine(const QCommandLineParser& parser);
+  void fromCommandLine(const QCommandLineParser &parser);
 
   // addOptionsToParser adds all known options to the parser.
-  bool addOptionsToParser(QCommandLineParser* parser) const;
+  bool addOptionsToParser(QCommandLineParser *parser) const;
 
   // options returns a list of known options.
   QList<QCommandLineOption> options() const;

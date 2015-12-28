@@ -12,8 +12,8 @@
 #include <common/util/error_codes.h>
 #include <common/util/status.h>
 
-util::StatusOr<QSerialPort*> connectSerial(const QSerialPortInfo& port,
-                                           int speed) {
+util::StatusOr<QSerialPort *> connectSerial(const QSerialPortInfo &port,
+                                            int speed) {
   std::unique_ptr<QSerialPort> s(new QSerialPort(port));
   if (!s->setParity(QSerialPort::NoParity)) {
     return util::Status(
@@ -39,7 +39,7 @@ util::StatusOr<QSerialPort*> connectSerial(const QSerialPortInfo& port,
   return s.release();
 }
 
-util::Status setSpeed(QSerialPort* port, int speed) {
+util::Status setSpeed(QSerialPort *port, int speed) {
   if (!port->setBaudRate(speed)) {
     return util::Status(
         util::error::INTERNAL,

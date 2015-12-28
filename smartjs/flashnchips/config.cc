@@ -2,28 +2,28 @@
 
 #include <QCommandLineParser>
 
-void Config::addOptions(const QList<QCommandLineOption>& options) {
+void Config::addOptions(const QList<QCommandLineOption> &options) {
   options_.append(options);
-  for (const auto& opt : options) {
+  for (const auto &opt : options) {
     if (!opt.defaultValues().isEmpty()) {
       // Only first value is taken into account.
-      for (const auto& name : opt.names()) {
+      for (const auto &name : opt.names()) {
         defaults_[name] = opt.defaultValues()[0];
       }
     }
   }
 }
 
-bool Config::isSet(const QString& optionName) const {
+bool Config::isSet(const QString &optionName) const {
   return defaults_.contains(optionName) || settings_.contains(optionName) ||
          flags_.contains(optionName);
 }
 
-void Config::set(const QString& name, Config::Level level) {
+void Config::set(const QString &name, Config::Level level) {
   setValue(name, "", level);
 }
 
-void Config::setValue(const QString& name, const QString& value,
+void Config::setValue(const QString &name, const QString &value,
                       Config::Level level) {
   switch (level) {
     case Level::Defaults:
@@ -38,7 +38,7 @@ void Config::setValue(const QString& name, const QString& value,
   };
 }
 
-void Config::unset(const QString& name, Config::Level level) {
+void Config::unset(const QString &name, Config::Level level) {
   switch (level) {
     case Level::Defaults:
       defaults_.remove(name);
@@ -52,26 +52,26 @@ void Config::unset(const QString& name, Config::Level level) {
   };
 }
 
-QString Config::value(const QString& optionName) const {
+QString Config::value(const QString &optionName) const {
   if (flags_.contains(optionName)) return flags_.value(optionName);
   if (settings_.contains(optionName)) return settings_.value(optionName);
   if (defaults_.contains(optionName)) return defaults_.value(optionName);
   return "";
 }
 
-void Config::fromCommandLine(const QCommandLineParser& parser) {
-  for (const auto& opt : options_) {
+void Config::fromCommandLine(const QCommandLineParser &parser) {
+  for (const auto &opt : options_) {
     if (parser.isSet(opt.names()[0])) {
-      for (const auto& name : opt.names()) {
+      for (const auto &name : opt.names()) {
         flags_[name] = parser.value(name);
       }
     }
   }
 }
 
-bool Config::addOptionsToParser(QCommandLineParser* parser) const {
+bool Config::addOptionsToParser(QCommandLineParser *parser) const {
 #if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
-  for (const auto& opt : options_) {
+  for (const auto &opt : options_) {
     parser->addOption(opt);
   }
   return true;

@@ -105,7 +105,7 @@ const unsigned char SLIPEscape = 0xDB;
 const unsigned char SLIPEscapeFrameDelimiter = 0xDC;
 const unsigned char SLIPEscapeEscape = 0xDD;
 
-qint64 SLIP_write(QSerialPort* out, const QByteArray& bytes) {
+qint64 SLIP_write(QSerialPort *out, const QByteArray &bytes) {
   // XXX: errors are ignored.
   qDebug() << "Writing bytes" << out->portName() << ":" << bytes.toHex();
   out->putChar(SLIPFrameDelimiter);
@@ -131,7 +131,7 @@ qint64 SLIP_write(QSerialPort* out, const QByteArray& bytes) {
   return bytes.length();
 }
 
-QByteArray SLIP_read(QSerialPort* in, int readTimeout = 200) {
+QByteArray SLIP_read(QSerialPort *in, int readTimeout = 200) {
   QByteArray ret;
   char c = 0;
   // Skip everything before the frame start.
@@ -187,7 +187,7 @@ QByteArray SLIP_read(QSerialPort* in, int readTimeout = 200) {
   }
 }
 
-quint8 checksum(const QByteArray& data) {
+quint8 checksum(const QByteArray &data) {
   quint8 r = 0xEF;
   for (int i = 0; i < data.length(); i++) {
     r ^= data[i];
@@ -195,7 +195,7 @@ quint8 checksum(const QByteArray& data) {
   return r;
 }
 
-void writeCommand(QSerialPort* out, quint8 cmd, const QByteArray& payload,
+void writeCommand(QSerialPort *out, quint8 cmd, const QByteArray &payload,
                   quint8 csum = 0) {
   QByteArray frame;
   QDataStream s(&frame, QIODevice::WriteOnly);
@@ -229,7 +229,7 @@ struct Response {
   }
 };
 
-Response readResponse(QSerialPort* in, int timeout = 200) {
+Response readResponse(QSerialPort *in, int timeout = 200) {
   Response ret;
   ret.valid = false;
   QByteArray resp = SLIP_read(in, timeout);
@@ -250,7 +250,7 @@ Response readResponse(QSerialPort* in, int timeout = 200) {
   s >> ret.command >> size;
 
   ret.value.resize(4);
-  char* buf = ret.value.data();
+  char *buf = ret.value.data();
   s.readRawData(buf, 4);
 
   ret.body.resize(size);
@@ -265,7 +265,7 @@ Response readResponse(QSerialPort* in, int timeout = 200) {
   return ret;
 }
 
-QByteArray read_register(QSerialPort* serial, quint32 addr) {
+QByteArray read_register(QSerialPort *serial, quint32 addr) {
   QByteArray payload;
   QDataStream s(&payload, QIODevice::WriteOnly);
   s.setByteOrder(QDataStream::LittleEndian);
@@ -287,7 +287,7 @@ QByteArray read_register(QSerialPort* serial, quint32 addr) {
   return resp.value;
 }
 
-QByteArray read_MAC(QSerialPort* serial) {
+QByteArray read_MAC(QSerialPort *serial) {
   QByteArray ret;
   auto mac1 = read_register(serial, 0x3ff00050);
   auto mac2 = read_register(serial, 0x3ff00054);
@@ -311,7 +311,7 @@ QByteArray read_MAC(QSerialPort* serial) {
   return ret;
 }
 
-bool sync(QSerialPort* serial) {
+bool sync(QSerialPort *serial) {
   QByteArray payload("\x07\x07\x12\x20");
   payload.append(QByteArray("\x55").repeated(32));
   writeCommand(serial, cmdSync, payload);
@@ -324,7 +324,7 @@ bool sync(QSerialPort* serial) {
   return true;
 }
 
-bool trySync(QSerialPort* serial, int attempts) {
+bool trySync(QSerialPort *serial, int attempts) {
   for (; attempts > 0; attempts--) {
     if (sync(serial)) {
       return true;
@@ -333,8 +333,8 @@ bool trySync(QSerialPort* serial, int attempts) {
   return false;
 }
 
-bool rebootIntoBootloader(QSerialPort* serial, bool inverted,
-                          QSerialPort* data_port = nullptr) {
+bool rebootIntoBootloader(QSerialPort *serial, bool inverted,
+                          QSerialPort *data_port = nullptr) {
   serial->setDataTerminalReady(inverted);
   serial->setRequestToSend(!inverted);
   QThread::msleep(50);
@@ -345,14 +345,14 @@ bool rebootIntoBootloader(QSerialPort* serial, bool inverted,
   return trySync(data_port != nullptr ? data_port : serial, 3);
 }
 
-void rebootIntoFirmware(QSerialPort* serial, bool inverted) {
+void rebootIntoFirmware(QSerialPort *serial, bool inverted) {
   serial->setDataTerminalReady(inverted);  // pull up GPIO0
   serial->setRequestToSend(!inverted);     // pull down RESET
   QThread::msleep(50);
   serial->setRequestToSend(inverted);  // pull up RESET
 }
 
-util::Status softResetFromBootloader(QSerialPort* port) {
+util::Status softResetFromBootloader(QSerialPort *port) {
   // Start a fake RAM write operation.
   QByteArray payload;
   QDataStream s1(&payload, QIODevice::WriteOnly);
@@ -383,11 +383,11 @@ util::Status softResetFromBootloader(QSerialPort* port) {
 class FlasherImpl : public Flasher {
   Q_OBJECT
  public:
-  FlasherImpl(Prompter* prompter)
+  FlasherImpl(Prompter *prompter)
       : prompter_(prompter), id_hostname_("api.cesanta.com") {
   }
 
-  util::Status setOption(const QString& name, const QVariant& value) override {
+  util::Status setOption(const QString &name, const QVariant &value) override {
     if (name == kIdDomainOption) {
       if (value.type() != QVariant::String) {
         return util::Status(util::error::INVALID_ARGUMENT,
@@ -487,13 +487,13 @@ class FlasherImpl : public Flasher {
     }
   }
 
-  util::Status setOptionsFromConfig(const Config& config) override {
+  util::Status setOptionsFromConfig(const Config &config) override {
     util::Status r;
 
     QStringList boolOpts({kMergeFSOption, kSkipIdGenerationOption,
                           kDisableEraseWorkaroundOption,
                           kSkipReadingFlashParamsOption, kInvertDTRRTSOption});
-    for (const auto& opt : boolOpts) {
+    for (const auto &opt : boolOpts) {
       auto s = setOption(opt, config.isSet(opt));
       if (!s.ok()) {
         return util::Status(
@@ -504,7 +504,7 @@ class FlasherImpl : public Flasher {
 
     QStringList stringOpts({kIdDomainOption, kFlashParamsOption,
                             kFlashingDataPortOption, kDumpFSOption});
-    for (const auto& opt : stringOpts) {
+    for (const auto &opt : stringOpts) {
       // XXX: currently there's no way to "unset" a string option.
       if (config.isSet(opt)) {
         auto s = setOption(opt, config.value(opt));
@@ -518,7 +518,7 @@ class FlasherImpl : public Flasher {
 
     QStringList intOpts(
         {kFlashBaudRateOption, kSPIFFSOffsetOption, kSPIFFSSizeOption});
-    for (const auto& opt : intOpts) {
+    for (const auto &opt : intOpts) {
       bool ok;
       int value = config.value(opt).toInt(&ok, 0);
       if (!ok) {
@@ -535,7 +535,7 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status load(const QString& path) override {
+  util::Status load(const QString &path) override {
     QMutexLocker lock(&lock_);
     images_.clear();
     QDir dir(path, fwFileGlob, QDir::Name,
@@ -550,7 +550,7 @@ class FlasherImpl : public Flasher {
       return util::Status(util::error::FAILED_PRECONDITION,
                           tr("Do files to flash").toStdString());
     }
-    for (const auto& file : files) {
+    for (const auto &file : files) {
       qInfo() << "Loading" << file.fileName();
       bool ok = false;
       ulong addr = file.baseName().toULong(&ok, 16);
@@ -592,7 +592,7 @@ class FlasherImpl : public Flasher {
     if (dir.exists("fs")) {
       QDir files_dir(dir.filePath("fs"), "", QDir::Name,
                      QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
-      for (const auto& file : files_dir.entryInfoList()) {
+      for (const auto &file : files_dir.entryInfoList()) {
         qInfo() << "Loading" << file.fileName();
         QFile f(file.absoluteFilePath());
         if (!f.open(QIODevice::ReadOnly)) {
@@ -609,7 +609,7 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status setPort(QSerialPort* port) override {
+  util::Status setPort(QSerialPort *port) override {
     QMutexLocker lock(&lock_);
     port_ = port;
     return util::Status::OK;
@@ -618,7 +618,7 @@ class FlasherImpl : public Flasher {
   int totalBlocks() const override {
     QMutexLocker lock(&lock_);
     int r = 0;
-    for (const auto& bytes : images_.values()) {
+    for (const auto &bytes : images_.values()) {
       r += bytes.length() / writeBlockSize;
       if (bytes.length() % writeBlockSize != 0) {
         r++;
@@ -640,15 +640,15 @@ class FlasherImpl : public Flasher {
 
  private:
   util::Status runLocked() {
-    QSerialPort* data_port = port_;
+    QSerialPort *data_port = port_;
     std::unique_ptr<QSerialPort> second_port;  // used to close separate data
                                                // port, if any, when we're done
 
     if (!flashing_port_name_.isEmpty()) {
-      const auto& ports = QSerialPortInfo::availablePorts();
+      const auto &ports = QSerialPortInfo::availablePorts();
       QSerialPortInfo info;
       bool found = false;
-      for (const auto& port : ports) {
+      for (const auto &port : ports) {
         if (port.systemLocation() != flashing_port_name_) {
           continue;
         }
@@ -892,8 +892,8 @@ class FlasherImpl : public Flasher {
     }
   }
 
-  util::Status writeFlashLocked(QSerialPort* port, ulong addr,
-                                const QByteArray& bytes, int* bytes_written) {
+  util::Status writeFlashLocked(QSerialPort *port, ulong addr,
+                                const QByteArray &bytes, int *bytes_written) {
     const ulong blocks = bytes.length() / writeBlockSize +
                          (bytes.length() % writeBlockSize == 0 ? 0 : 1);
     *bytes_written = 0;
@@ -930,7 +930,7 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status writeFlashStartLocked(QSerialPort* port, ulong addr,
+  util::Status writeFlashStartLocked(QSerialPort *port, ulong addr,
                                      ulong blocks) {
     QByteArray payload;
     QDataStream s(&payload, QIODevice::WriteOnly);
@@ -952,8 +952,8 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status writeFlashBlockLocked(QSerialPort* port, int seq,
-                                     const QByteArray& bytes) {
+  util::Status writeFlashBlockLocked(QSerialPort *port, int seq,
+                                     const QByteArray &bytes) {
     QByteArray payload;
     QDataStream s(&payload, QIODevice::WriteOnly);
     s.setByteOrder(QDataStream::LittleEndian);
@@ -967,7 +967,7 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::Status leaveFlashingModeLocked(QSerialPort* port) {
+  util::Status leaveFlashingModeLocked(QSerialPort *port) {
     QByteArray payload("\x01\x00\x00\x00", 4);
     writeCommand(port, cmdFlashWriteFinish, payload);
     const auto resp = readResponse(port, 10000);
@@ -982,7 +982,7 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  util::StatusOr<QByteArray> readFlashLocked(QSerialPort* port, ulong offset,
+  util::StatusOr<QByteArray> readFlashLocked(QSerialPort *port, ulong offset,
                                              ulong len) {
     // Init flash.
     util::Status status = writeFlashStartLocked(port, 0, 0);
@@ -1055,7 +1055,7 @@ class FlasherImpl : public Flasher {
   // readFlashParamsLocked puts a snippet of code in the RAM and executes it.
   // You need to reboot the device again after that to talk to the bootloader
   // again.
-  util::StatusOr<QByteArray> readFlashParamsLocked(QSerialPort* port) {
+  util::StatusOr<QByteArray> readFlashParamsLocked(QSerialPort *port) {
     auto res = readFlashLocked(port, 0, 4);
     if (!res.ok()) {
       return res.status();
@@ -1075,7 +1075,7 @@ class FlasherImpl : public Flasher {
   // The idea is that the filesystem is mostly managed by the user
   // or by the software update utility, while the core system uploaded by
   // the flasher should only upload a few core files.
-  util::StatusOr<QByteArray> mergeFlashLocked(QSerialPort* port) {
+  util::StatusOr<QByteArray> mergeFlashLocked(QSerialPort *port) {
     emit statusMessage(tr("Reading file system image (%1 @ %2)...")
                            .arg(spiffs_size_)
                            .arg(spiffs_offset_, 0, 16),
@@ -1119,7 +1119,7 @@ class FlasherImpl : public Flasher {
     return merged;
   }
 
-  util::StatusOr<bool> findIdLocked(QSerialPort* port) {
+  util::StatusOr<bool> findIdLocked(QSerialPort *port) {
     // Block with ID has the following structure:
     // 1) 20-byte SHA-1 hash of the payload
     // 2) payload (JSON object)
@@ -1142,12 +1142,12 @@ class FlasherImpl : public Flasher {
                                     QCryptographicHash::Sha1);
   }
 
-  Prompter* prompter_;
+  Prompter *prompter_;
 
   mutable QMutex lock_;
   QMap<ulong, QByteArray> images_;
   QMap<QString, QByteArray> files_;
-  QSerialPort* port_;
+  QSerialPort *port_;
   int written_blocks_ = 0;
   bool preserve_flash_params_ = true;
   bool erase_bug_workaround_ = true;
@@ -1164,7 +1164,7 @@ class FlasherImpl : public Flasher {
 };
 
 class ESP8266HAL : public HAL {
-  util::Status probe(const QSerialPortInfo& port) const override {
+  util::Status probe(const QSerialPortInfo &port) const override {
     auto r = connectSerial(port, 9600);
     if (!r.ok()) {
       return r.status();
@@ -1193,7 +1193,7 @@ class ESP8266HAL : public HAL {
 
     return util::Status::OK;
   }
-  std::unique_ptr<Flasher> flasher(Prompter* prompter) const override {
+  std::unique_ptr<Flasher> flasher(Prompter *prompter) const override {
     return std::move(std::unique_ptr<Flasher>(new FlasherImpl(prompter)));
   }
 
@@ -1201,7 +1201,7 @@ class ESP8266HAL : public HAL {
     return "ESP8266";
   }
 
-  util::Status reboot(QSerialPort* port) const override {
+  util::Status reboot(QSerialPort *port) const override {
     // TODO(imax): find a way to pass value of `--esp8266-invert-dtr-rts` here.
     rebootIntoFirmware(port, false);
     return util::Status::OK;
@@ -1239,7 +1239,7 @@ const map<string, int> flashFreq = {
 };
 }
 
-util::StatusOr<int> flashParamsFromString(const QString& s) {
+util::StatusOr<int> flashParamsFromString(const QString &s) {
   QStringList parts = s.split(',');
   switch (parts.size()) {
     case 1: {  // number
@@ -1273,7 +1273,7 @@ util::StatusOr<int> flashParamsFromString(const QString& s) {
   }
 }
 
-void addOptions(Config* config) {
+void addOptions(Config *config) {
   // QCommandLineOption supports C++11-style initialization only since Qt 5.4.
   QList<QCommandLineOption> opts;
   opts.append(QCommandLineOption(
@@ -1318,7 +1318,7 @@ void addOptions(Config* config) {
   config->addOptions(opts);
 }
 
-QByteArray makeIDBlock(const QString& domain) {
+QByteArray makeIDBlock(const QString &domain) {
   QByteArray data = randomDeviceID(domain);
   QByteArray r = QCryptographicHash::hash(data, QCryptographicHash::Sha1)
                      .append(data)

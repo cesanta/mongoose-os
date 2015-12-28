@@ -22,11 +22,11 @@ class Flasher : public QObject {
   virtual ~Flasher(){};
   // load should read firmware image from a given path and return an empty
   // string if the image is good.
-  virtual util::Status load(const QString& path) = 0;
+  virtual util::Status load(const QString &path) = 0;
   // setPort tells which port to use for flashing. port must not be destroyed
   // between calling run() and getting back done() signal. Caller retains port
   // ownership.
-  virtual util::Status setPort(QSerialPort* port) = 0;
+  virtual util::Status setPort(QSerialPort *port) = 0;
   // totalBlocks should return the number of blocks in the loaded firmware.
   // It is used to track the progress of flashing.
   virtual int totalBlocks() const = 0;
@@ -35,11 +35,11 @@ class Flasher : public QObject {
   virtual void run() = 0;
   // setOption should set a named option to a given value, returning non-OK
   // status on error or if option is not known.
-  virtual util::Status setOption(const QString& name,
-                                 const QVariant& value) = 0;
+  virtual util::Status setOption(const QString &name,
+                                 const QVariant &value) = 0;
   // setOptionsFromConfig should extract known options from parser, returning
   // non-OK status if there were any errors.
-  virtual util::Status setOptionsFromConfig(const Config& config) = 0;
+  virtual util::Status setOptionsFromConfig(const Config &config) = 0;
 
   static const char kIdDomainOption[];
   static const char kSkipIdGenerationOption[];
@@ -53,6 +53,6 @@ signals:
   void done(QString message, bool success);
 };
 
-QByteArray randomDeviceID(const QString& domain);
+QByteArray randomDeviceID(const QString &domain);
 
 #endif  // FLASHER_H

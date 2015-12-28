@@ -10,7 +10,7 @@ const char Flasher::kMergeFSOption[] = "merge-flash-fs";
 const char Flasher::kFlashBaudRateOption[] = "flash-baud-rate";
 const char Flasher::kDumpFSOption[] = "dump-fs";
 
-QByteArray randomDeviceID(const QString& domain) {
+QByteArray randomDeviceID(const QString &domain) {
   qsrand(QDateTime::currentMSecsSinceEpoch() & 0xFFFFFFFF);
   QByteArray random;
   QDataStream s(&random, QIODevice::WriteOnly);
