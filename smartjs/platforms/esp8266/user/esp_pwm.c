@@ -138,7 +138,8 @@ static void pwm_configure_timer() {
   ETS_FRC1_INTR_ENABLE();
 }
 
-static v7_val_t PWM_set(struct v7 *v7) {
+static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   struct pwm_info *p;
   v7_val_t pinv = v7_arg(v7, 0);
   v7_val_t periodv = v7_arg(v7, 1);
@@ -146,12 +147,14 @@ static v7_val_t PWM_set(struct v7 *v7) {
   int pin, period, duty;
 
   if (!v7_is_number(pinv) || !v7_is_number(periodv) || !v7_is_number(dutyv)) {
-    return v7_throw(v7, "Error", "Numeric argument expected");
+    rcode = v7_throwf(v7, "Error", "Numeric argument expected");
+    goto clean;
   }
 
   pin = v7_to_number(pinv);
   if (pin != 16 && get_gpio_info(pin) == NULL) {
-    return v7_throw(v7, "Error", "Invalid pin number");
+    rcode = v7_throwf(v7, "Error", "Invalid pin number");
+    goto clean;
   }
 
   period = v7_to_number(periodv);
@@ -159,14 +162,18 @@ static v7_val_t PWM_set(struct v7 *v7) {
 
   if (period != 0 &&
       (period < PWM_BASE_RATE_US * 2 || duty < 0 || duty > period)) {
-    return v7_throw(v7, "Error", "Invalid period / duty value");
+    rcode = v7_throwf(v7, "Error", "Invalid period / duty value");
+    goto clean;
   }
 
   period /= PWM_BASE_RATE_US;
   duty /= PWM_BASE_RATE_US;
 
   p = find_or_create_pwm_info(pin, (period > 0 && duty >= 0));
-  if (p == NULL) return v7_throw(v7, "Error", "OOM");
+  if (p == NULL) {
+    rcode = v7_throwf(v7, "Error", "OOM");
+    goto clean;
+  }
 
   if (period == 0) {
     if (p != NULL) {
@@ -174,11 +181,13 @@ static v7_val_t PWM_set(struct v7 *v7) {
       pwm_configure_timer();
       sj_gpio_write(pin, 0);
     }
-    return v7_create_boolean(1);
+    *res = v7_create_boolean(1);
+    goto clean;
   }
 
   if (p->period == period && p->duty == duty) {
-    return v7_create_boolean(1);
+    *res = v7_create_boolean(1);
+    goto clean;
   }
 
   sj_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
@@ -198,7 +207,11 @@ static v7_val_t PWM_set(struct v7 *v7) {
   }
 
   pwm_configure_timer();
-  return v7_create_boolean(1);
+  *res = v7_create_boolean(1);
+  goto clean;
+
+clean:
+  return rcode;
 }
 
 IRAM NOINSTR void pwm_timer_int_cb(void *arg) {

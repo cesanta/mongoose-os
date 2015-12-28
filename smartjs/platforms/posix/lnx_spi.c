@@ -115,20 +115,25 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
 }
 
 /* HAL functions */
-spi_connection sj_spi_create(struct v7 *v7) {
+enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res) {
+  enum v7_err rcode = V7_OK;
   struct lnx_spi_connection *conn = NULL;
   v7_val_t spi_no_val = v7_arg(v7, 0);
   double spi_no = v7_to_number(spi_no_val);
   ;
 
   if (!v7_is_number(spi_no_val) || spi_no < 0) {
-    v7_throw(v7, "Error", "Missing arguments for SPI number or wrong type.");
+    rcode = v7_throwf(v7, "Error", "Missing arguments for SPI number or wrong type.");
+    goto clean;
   } else {
     conn = malloc(sizeof(*conn));
     conn->spi_no = v7_to_number(spi_no);
   }
 
-  return conn;
+  *res = conn;
+
+clean:
+  return rcode;
 }
 
 void sj_spi_close(spi_connection c) {

@@ -33,26 +33,29 @@ struct v7 *v7;
 
 #if V7_ESP_ENABLE__DHT11
 
-static v7_val_t DHT11_read(struct v7 *v7) {
+static enum v7_err DHT11_read(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   int pin, temp, rh;
-  v7_val_t pinv = v7_arg(v7, 0), result;
+  v7_val_t pinv = v7_arg(v7, 0);
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    return v7_create_undefined();
+    *res = v7_create_undefined();
+    goto clean;
   }
   pin = v7_to_number(pinv);
 
   if (!dht11_read(pin, &temp, &rh)) {
-    return v7_create_null();
+    *res = v7_create_null();
+    goto clean;
   }
 
-  result = v7_create_object(v7);
-  v7_own(v7, &result);
-  v7_set(v7, result, "temp", 4, 0, v7_create_number(temp));
-  v7_set(v7, result, "rh", 2, 0, v7_create_number(rh));
-  v7_disown(v7, &result);
-  return result;
+  *res = v7_create_object(v7);
+  v7_set(v7, *res, "temp", 4, 0, v7_create_number(temp));
+  v7_set(v7, *res, "rh", 2, 0, v7_create_number(rh));
+
+clean:
+  return rcode;
 }
 #endif /* V7_ESP_ENABLE__DHT11 */
 
@@ -63,27 +66,33 @@ static v7_val_t DHT11_read(struct v7 *v7) {
  * 1 - print debug output to UART0 (V7's console)
  * 2 - print debug output to UART1
  */
-static v7_val_t Debug_mode(struct v7 *v7) {
-  int mode, res;
+static enum v7_err Debug_mode(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  int mode, ires;
   v7_val_t output_val = v7_arg(v7, 0);
 
   if (!v7_is_number(output_val)) {
     printf("Output is not a number\n");
-    return v7_create_undefined();
+    *res = v7_create_undefined();
+    goto clean;
   }
 
   mode = v7_to_number(output_val);
 
   uart_debug_init(0, 0);
-  res = uart_redirect_debug(mode);
+  ires = uart_redirect_debug(mode);
 
-  return v7_create_number(res < 0 ? res : mode);
+  *res = v7_create_number(ires < 0 ? ires : mode);
+  goto clean;
+
+clean:
+  return rcode;
 }
 
 /*
  * Prints message to current debug output
  */
-v7_val_t Debug_print(struct v7 *v7) {
+enum v7_err Debug_print(struct v7 *v7, v7_val_t *res) {
   int i, num_args = v7_argc(v7);
 
   for (i = 0; i < num_args; i++) {
@@ -92,7 +101,7 @@ v7_val_t Debug_print(struct v7 *v7) {
   }
   fprintf(stderr, "\n");
 
-  return v7_create_undefined();
+  return V7_OK;
 }
 
 /*
@@ -106,31 +115,42 @@ v7_val_t Debug_print(struct v7 *v7) {
  *
  */
 
-static v7_val_t dsleep(struct v7 *v7) {
+static enum v7_err dsleep(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t time_v = v7_arg(v7, 0);
   uint32 time = v7_to_number(time_v);
   v7_val_t flags_v = v7_arg(v7, 1);
   uint8 flags = v7_to_number(flags_v);
 
-  if (!v7_is_number(time_v) || time < 0) return v7_create_boolean(false);
+  if (!v7_is_number(time_v) || time < 0) {
+    *res = v7_create_boolean(false);
+    goto clean;
+  }
   if (v7_is_number(flags_v)) {
-    if (!system_deep_sleep_set_option(flags)) return v7_create_boolean(false);
+    if (!system_deep_sleep_set_option(flags)) {
+      *res = v7_create_boolean(false);
+      goto clean;
+    }
   }
 
   system_deep_sleep(time);
 
-  return v7_create_boolean(true);
+  *res = v7_create_boolean(true);
+  goto clean;
+
+clean:
+  return rcode;
 }
 
 /*
  * Crashes the process/CPU. Useful to attach a debugger until we have
  * breakpoints.
  */
-static v7_val_t crash(struct v7 *v7) {
+static enum v7_err crash(struct v7 *v7, v7_val_t *res) {
   (void) v7;
 
   *(int *) 1 = 1;
-  return v7_create_undefined();
+  return V7_OK;
 }
 
 void init_v7(void *stack_base) {

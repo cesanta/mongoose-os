@@ -44,6 +44,18 @@
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For FILE */
 
+/*
+ * TODO(dfrank) : improve amalgamation, so that we'll be able to include
+ * files here, and include common/osdep.h
+ *
+ * For now, copy-pasting `WARN_UNUSED_RESULT` here
+ */
+#ifdef __GNUC__
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+#define WARN_UNUSED_RESULT
+#endif
+
 #define V7_VERSION "1.0"
 
 #if (defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64__)) || \
@@ -83,8 +95,19 @@ typedef unsigned char v7_obj_attr_t;
 /* Opaque structure. V7 engine handler. */
 struct v7;
 
+enum v7_err {
+  V7_OK,
+  V7_SYNTAX_ERROR,
+  V7_EXEC_EXCEPTION,
+  V7_STACK_OVERFLOW,
+  V7_AST_TOO_LARGE,
+  V7_INVALID_ARG,
+  V7_INTERNAL_ERROR,
+};
+
 /* JavaScript -> C call interface */
-typedef v7_val_t(v7_cfunction_t)(struct v7 *);
+typedef enum v7_err(v7_cfunction_t)(struct v7 *v7,
+                                    v7_val_t *res) WARN_UNUSED_RESULT;
 
 /* Create V7 instance */
 struct v7 *v7_create(void);
@@ -101,16 +124,6 @@ struct v7 *v7_create_opt(struct v7_create_opts);
 
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *);
-
-enum v7_err {
-  V7_OK,
-  V7_SYNTAX_ERROR,
-  V7_EXEC_EXCEPTION,
-  V7_STACK_OVERFLOW,
-  V7_AST_TOO_LARGE,
-  V7_INVALID_ARG,
-  V7_INTERNAL_ERROR,
-};
 
 /*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
@@ -215,8 +228,9 @@ v7_val_t v7_create_string(struct v7 *, const char *str, size_t len, int copy);
  * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
  * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
  */
-v7_val_t v7_create_regexp(struct v7 *, const char *regex, size_t regex_len,
-                          const char *flags, size_t flags_len);
+enum v7_err v7_create_regexp(struct v7 *, const char *regex, size_t regex_len,
+                             const char *flags, size_t flags_len,
+                             v7_val_t *res);
 
 /*
  * Create JavaScript value that holds C/C++ `void *` pointer.
@@ -366,6 +380,16 @@ unsigned long v7_argc(struct v7 *);
 v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
 
 /*
+ * Like `v7_get()`, but "returns" value through `res` pointer argument.
+ * `res` must not be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
+                            size_t name_len, v7_val_t *res) WARN_UNUSED_RESULT;
+
+/*
  * Generate string representation of the JavaScript value `val` into a buffer
  * `buf`, `len`. If `len` is too small to hold generated a string,
  * `v7_stringify()` allocates required memory. In that case, it is caller's
@@ -391,6 +415,18 @@ enum v7_stringify_flags {
 };
 char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
                    enum v7_stringify_flags flags);
+
+/*
+ * Like `v7_stringify()`, but "returns" value through the `res` pointer
+ * argument. `res` must not be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
+                                  size_t size, enum v7_stringify_flags flags,
+                                  char **res);
+
 #define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
 
 /* print a value to stdout */
@@ -417,18 +453,33 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
 enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args);
 
+/* Throw an already existing value. */
+enum v7_err v7_throw(struct v7 *v7, v7_val_t val) WARN_UNUSED_RESULT;
+
 /*
  * Throw an exception with given formatted message.
  *
  * Pass "Error" as typ for a generic error.
  */
-v7_val_t v7_throw(struct v7 *, const char *typ, const char *msg_fmt, ...);
+enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt,
+                      ...) WARN_UNUSED_RESULT;
 
-/* Throw an already existing object. */
-v7_val_t v7_throw_value(struct v7 *, v7_val_t v);
+/*
+ * Rethrow the currently thrown object. In fact, it just returns
+ * V7_EXEC_EXCEPTION.
+ */
+enum v7_err v7_rethrow(struct v7 *v7) WARN_UNUSED_RESULT;
 
-/* Returns 1 if some value is currently thrown, 0 otherwise */
-int v7_has_thrown(struct v7 *v7);
+/*
+ * Returns the value that is being thrown at the moment, or `undefined` if
+ * nothing is being thrown
+ */
+v7_val_t v7_thrown_value(struct v7 *v7);
+
+/*
+ * Clear thrown error from the v7 context
+ */
+enum v7_err v7_thrown_clear(struct v7 *v7);
 
 /*
  * Set object property. `name`, `name_len` specify property name, `attrs`
@@ -437,6 +488,17 @@ int v7_has_thrown(struct v7 *v7);
  */
 int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
            v7_prop_attr_t attrs, v7_val_t val);
+
+/*
+ * Like `v7_set()`, but "returns" value through the `res` pointer argument.
+ * `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+enum v7_err v7_set_throwing(struct v7 *v7, v7_val_t obj, const char *name,
+                            size_t len, v7_prop_attr_t attrs, v7_val_t val,
+                            int *res) WARN_UNUSED_RESULT;
 
 /*
  * A helper function to define object's method backed by a C function `func`.
@@ -459,11 +521,32 @@ unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 /* Insert value `v` in array `arr` at index `index`. */
 int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
 
+/*
+ * Like `v7_array_set()`, but "returns" value through the `res` pointer
+ * argument. `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
+                                  unsigned long index, v7_val_t v,
+                                  int *res) WARN_UNUSED_RESULT;
+
 /* Delete value in array `arr` at index `index`, if it exists. */
 void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
 
 /* Insert value `v` in array `arr` at the end of the array. */
 int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
+
+/*
+ * Like `v7_array_push()`, but "returns" value through the `res` pointer
+ * argument. `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
+                                   int *res) WARN_UNUSED_RESULT;
 
 /*
  * Return array member at index `index`. If `index` is out of bounds, undefined

@@ -42,16 +42,20 @@ static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
 static v7_val_t sj_http_request_proto;
 
-static v7_val_t Http_createServer(struct v7 *v7) {
+static enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
-  v7_val_t server = v7_create_undefined();
+
   if (!v7_is_function(cb)) {
-    return v7_throw(v7, "Error", "Invalid argument");
+    rcode = v7_throwf(v7, "Error", "Invalid argument");
+    goto clean;
   }
-  server = v7_create_object(v7);
-  v7_set_proto(server, sj_http_server_proto);
-  v7_set(v7, server, "_cb", ~0, 0, cb);
-  return server;
+  *res = v7_create_object(v7);
+  v7_set_proto(*res, sj_http_server_proto);
+  v7_set(v7, *res, "_cb", ~0, 0, cb);
+
+clean:
+  return rcode;
 }
 
 static void setup_request_object(struct v7 *v7, v7_val_t request,
@@ -134,14 +138,16 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   }
 }
 
-static v7_val_t start_http_server(struct v7 *v7, const char *addr,
-                                  v7_val_t obj) {
+static enum v7_err start_http_server(struct v7 *v7, const char *addr,
+                                     v7_val_t obj) {
+  enum v7_err rcode = V7_OK;
   struct mg_connection *c;
   struct user_data *ud;
 
   c = mg_bind(&sj_mgr, addr, http_ev_handler);
   if (c == NULL) {
-    return v7_throw(v7, "Error", "Cannot bind");
+    rcode = v7_throwf(v7, "Error", "Cannot bind");
+    goto clean;
   }
   mg_set_protocol_http_websocket(c);
   c->user_data = ud = (struct user_data *) malloc(sizeof(*ud));
@@ -149,7 +155,9 @@ static v7_val_t start_http_server(struct v7 *v7, const char *addr,
   ud->obj = obj;
   ud->handler = v7_get(v7, obj, "_cb", 3);
   v7_own(v7, &ud->obj);
-  return obj;
+
+clean:
+  return rcode;
 }
 
 /*
@@ -158,14 +166,18 @@ static v7_val_t start_http_server(struct v7 *v7, const char *addr,
  * - `URL.parse()`
  * - `Http.request()` and `Http.get()`, when provided `opts` is a string.
  */
-static v7_val_t sj_url_parse(struct v7 *v7, v7_val_t url_v) {
+static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t opts, protocol_v;
   size_t i, j, len;
   int state = 0;
   const char *url;
+
   if (!v7_is_string(url_v)) {
-    return v7_throw(v7, "Error", "URL must be a string");
+    rcode = v7_throwf(v7, "Error", "URL must be a string");
+    goto clean;
   }
+
   url = v7_get_string_data(v7, &url_v, &len);
   opts = v7_create_object(v7);
   for (i = j = 0; j < len; j++) {
@@ -222,7 +234,10 @@ static v7_val_t sj_url_parse(struct v7 *v7, v7_val_t url_v) {
         break;
     }
   }
-  return opts;
+  *res = opts;
+
+clean:
+  return rcode;
 }
 
 /*
@@ -263,7 +278,7 @@ static void Http_write_data(struct v7 *v7, struct mg_connection *c) {
   }
 }
 
-static v7_val_t Http_response_write(struct v7 *v7) {
+static enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *c = get_mgconn(v7);
   if (!v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
     write_http_status(c, 200);
@@ -271,23 +286,35 @@ static v7_val_t Http_response_write(struct v7 *v7) {
     v7_set(v7, v7_get_this(v7), "_whd", ~0, 0, v7_create_boolean(1));
   }
   Http_write_data(v7, c);
-  return v7_get_this(v7);
+  *res = v7_get_this(v7);
+  return V7_OK;
 }
 
-static v7_val_t Http_response_end(struct v7 *v7) {
+static enum v7_err Http_response_end(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   struct mg_connection *c = get_mgconn(v7);
-  Http_response_write(v7);
+
+  rcode = Http_response_write(v7, res);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
   mg_send_http_chunk(c, "", 0);
-  return v7_get_this(v7);
+  *res = v7_get_this(v7);
+
+clean:
+  return rcode;
 }
 
-static v7_val_t Http_response_writeHead(struct v7 *v7) {
+static enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   struct mg_connection *c = get_mgconn(v7);
   unsigned long code = 200;
   v7_val_t arg0 = v7_arg(v7, 0), arg1 = v7_arg(v7, 1);
 
   if (v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
-    return v7_throw(v7, "Error", "Headers already sent");
+    rcode = v7_throwf(v7, "Error", "Headers already sent");
+    goto clean;
   }
 
   if (v7_is_number(arg0)) {
@@ -308,7 +335,10 @@ static v7_val_t Http_response_writeHead(struct v7 *v7) {
   }
   mg_send(c, "\r\n", 2);
   v7_set(v7, v7_get_this(v7), "_whd", ~0, 0, v7_create_boolean(1));
-  return v7_get_this(v7);
+  *res = v7_get_this(v7);
+
+clean:
+  return rcode;
 }
 
 #define MAKE_SERVE_HTTP_OPTS_MAPPING(name) \
@@ -343,7 +373,7 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
   }
 }
 
-static v7_val_t Http_response_serve(struct v7 *v7) {
+static enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   struct mg_serve_http_opts opts;
   struct http_message hm;
   struct mg_connection *c = get_mgconn(v7);
@@ -368,61 +398,88 @@ static v7_val_t Http_response_serve(struct v7 *v7) {
     free(*(char **) ((char *) &opts + s_map[i].offset));
   }
 
-  return v7_get_this(v7);
+  *res = v7_get_this(v7);
+
+  return V7_OK;
 }
 
-static v7_val_t Http_Server_listen(struct v7 *v7) {
+static enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   char buf[50], *p = buf;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t arg0 = v7_arg(v7, 0);
 
   if (!v7_is_number(arg0) && !v7_is_string(arg0)) {
-    return v7_throw(v7, "Error", "Function expected");
+    rcode = v7_throwf(v7, "Error", "Function expected");
+    goto clean;
   }
 
   p = v7_stringify(v7, arg0, buf, sizeof(buf), 0);
-  this_obj = start_http_server(v7, p, this_obj);
+  rcode = start_http_server(v7, p, this_obj);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  *res = this_obj;
+
+clean:
   if (p != buf) {
     free(p);
   }
-
-  return this_obj;
+  return rcode;
 }
 
-static v7_val_t Http_request_write(struct v7 *v7) {
+static enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *c = get_mgconn(v7);
   Http_write_data(v7, c);
-  return v7_get_this(v7);
+  *res = v7_get_this(v7);
+  return V7_OK;
 }
 
-static v7_val_t Http_request_end(struct v7 *v7) {
+static enum v7_err Http_request_end(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   struct mg_connection *c = get_mgconn(v7);
-  Http_request_write(v7);
+
+  rcode = Http_request_write(v7, res);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
   mg_send_http_chunk(c, "", 0);
   c->flags |= MG_F_CLOSE_CONNECTION_AFTER_RESPONSE;
-  return v7_get_this(v7);
+  *res = v7_get_this(v7);
+
+clean:
+  return rcode;
 }
 
-static v7_val_t Http_request_abort(struct v7 *v7) {
+static enum v7_err Http_request_abort(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *c = get_mgconn(v7);
   c->flags |= MG_F_CLOSE_IMMEDIATELY;
-  return v7_get_this(v7);
+  *res = v7_get_this(v7);
+
+  return V7_OK;
 }
 
-static v7_val_t Http_request_set_timeout(struct v7 *v7) {
+static enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *c = get_mgconn(v7);
   struct user_data *ud = (struct user_data *) c->user_data;
   mg_set_timer(c, time(NULL) + v7_to_number(v7_arg(v7, 0)) / 1000.0);
   ud->timeout_callback = v7_arg(v7, 1);
   v7_own(v7, &ud->timeout_callback);
-  return v7_get_this(v7);
+
+  *res = v7_get_this(v7);
+
+  return V7_OK;
 }
 
 /*
  * Create request object, used by `Http.request()` and `Http.get()`
  */
-static v7_val_t sj_http_request_common(struct v7 *v7, v7_val_t opts,
-                                       v7_val_t cb) {
+WARN_UNUSED_RESULT
+static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
+                                          v7_val_t cb, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   char addr[200];
   struct mg_connection *c;
   struct user_data *ud;
@@ -432,12 +489,13 @@ static v7_val_t sj_http_request_common(struct v7 *v7, v7_val_t opts,
    * it to object
    */
   if (v7_is_string(opts)) {
-    opts = sj_url_parse(v7, opts);
-    if (v7_has_thrown(v7)) {
-      return opts; /* Must be an exception. */
+    rcode = sj_url_parse(v7, opts, &opts);
+    if (rcode != V7_OK) {
+      goto clean;
     }
   } else if (!v7_is_object(opts)) {
-    return v7_throw(v7, "Error", "opts must be an object or a string URL");
+    rcode = v7_throwf(v7, "Error", "opts must be an object or a string URL");
+    goto clean;
   }
 
   /*
@@ -463,7 +521,8 @@ static v7_val_t sj_http_request_common(struct v7 *v7, v7_val_t opts,
    * call provided JavaScript function (we'll set it in user data below).
    */
   if ((c = mg_connect(&sj_mgr, addr, http_ev_handler)) == NULL) {
-    return v7_throw(v7, "Error", "Cannot connect");
+    rcode = v7_throwf(v7, "Error", "Cannot connect");
+    goto clean;
   }
 
   /*
@@ -496,26 +555,34 @@ static v7_val_t sj_http_request_common(struct v7 *v7, v7_val_t opts,
   /* internal property: callback function that was passed as an argument */
   v7_set(v7, ud->obj, "_cb", ~0, 0, ud->handler);
 
-  return ud->obj;
+  *res = ud->obj;
+
+clean:
+  return rcode;
 }
 
-static v7_val_t Http_createClient(struct v7 *v7) {
-  return sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1));
+static enum v7_err Http_createClient(struct v7 *v7, v7_val_t *res) {
+  return sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1), res);
 }
 
-static v7_val_t Http_get(struct v7 *v7) {
-  v7_val_t res = sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1));
-  if (!v7_has_thrown(v7)) {
-    /* Prepare things to close the connection immediately after response */
-    struct mg_connection *c = get_mgconn_obj(v7, res);
-    mg_send_http_chunk(c, "", 0);
-    c->flags |= MG_F_CLOSE_CONNECTION_AFTER_RESPONSE;
+static enum v7_err Http_get(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  rcode = sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1), res);
+  if (rcode != V7_OK) {
+    goto clean;
   }
-  return res;
+
+  /* Prepare things to close the connection immediately after response */
+  struct mg_connection *c = get_mgconn_obj(v7, *res);
+  mg_send_http_chunk(c, "", 0);
+  c->flags |= MG_F_CLOSE_CONNECTION_AFTER_RESPONSE;
+
+clean:
+  return rcode;
 }
 
-static v7_val_t URL_parse(struct v7 *v7) {
-  return sj_url_parse(v7, v7_arg(v7, 0));
+static enum v7_err URL_parse(struct v7 *v7, v7_val_t *res) {
+  return sj_url_parse(v7, v7_arg(v7, 0), res);
 }
 
 void sj_init_http(struct v7 *v7) {

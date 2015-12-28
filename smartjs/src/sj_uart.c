@@ -32,7 +32,8 @@ size_t sj_uart_recv_cb(void *ctx, const char *d, size_t len) {
  * new UART("platform_specific_name")
  *
  */
-static v7_val_t UART_ctor(struct v7 *v7) {
+static enum v7_err UART_ctor(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_arg(v7, 0);
   struct user_data *ud;
@@ -41,7 +42,8 @@ static v7_val_t UART_ctor(struct v7 *v7) {
   size_t len;
 
   if (!v7_is_string(dev)) {
-    return v7_throw(v7, "Error", "device must be string");
+    rcode = v7_throwf(v7, "Error", "device must be string");
+    goto clean;
   }
 
   ud = (struct user_data *) calloc(1, sizeof(struct user_data));
@@ -53,15 +55,18 @@ static v7_val_t UART_ctor(struct v7 *v7) {
   name = v7_get_string_data(v7, &dev, &len);
   uart = sj_hal_open_uart(name, (void *) ud);
   if (uart == NULL) {
-    return v7_throw(v7, "Error", "cannot open uart");
+    rcode = v7_throwf(v7, "Error", "cannot open uart");
+    goto clean;
   }
 
   v7_set(v7, this_obj, "_ud", ~0, V7_PROPERTY_HIDDEN, v7_create_foreign(ud));
   v7_set(v7, this_obj, "_dev", ~0, V7_PROPERTY_HIDDEN, v7_create_foreign(uart));
-  return v7_create_undefined();
+
+clean:
+  return rcode;
 }
 
-static v7_val_t UART_write(struct v7 *v7) {
+static enum v7_err UART_write(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_get(v7, this_obj, "_dev", ~0), data = v7_arg(v7, 0);
   size_t len;
@@ -71,25 +76,28 @@ static v7_val_t UART_write(struct v7 *v7) {
   (void) this_obj;
 
   sj_hal_write_uart(v7_to_foreign(dev), d, len);
-  return v7_create_undefined();
+
+  return V7_OK;
 }
 
 /*
  * Read the content of the UART. It does not block.
  * Optional `max_len` parameter, defaults to max size_t.
  */
-static v7_val_t UART_read(struct v7 *v7) {
+static enum v7_err UART_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_get(v7, this_obj, "_dev", ~0), maxv = v7_arg(v7, 0);
   size_t max = v7_is_number(maxv) ? (size_t) v7_to_number(maxv) : ~0;
-  return sj_hal_read_uart(v7, v7_to_foreign(dev), max);
+  *res = sj_hal_read_uart(v7, v7_to_foreign(dev), max);
+
+  return V7_OK;
 }
 
 /*
  * Regiter a callback to be invoked when there is at least N bytes available.
  * N defaults to maxint if undefined
  */
-static v7_val_t UART_recv(struct v7 *v7) {
+static enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t cb = v7_arg(v7, 0);
   v7_val_t wantv = v7_arg(v7, 1);
@@ -101,7 +109,8 @@ static v7_val_t UART_recv(struct v7 *v7) {
   v7_own(v7, &ud->cb);
   ud->want = want;
   /* TODO(mkm): trigger cb if there is already something in the buffer */
-  return v7_create_undefined();
+
+  return V7_OK;
 }
 
 void sj_init_uart(struct v7 *v7) {

@@ -248,7 +248,7 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
   return 1;
 }
 
-spi_connection sj_spi_create(struct v7 *v7) {
+enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res) {
   /* Support HSPI only */
   struct esp_spi_connection *conn = malloc(sizeof(*conn));
 
@@ -256,7 +256,9 @@ spi_connection sj_spi_create(struct v7 *v7) {
 
   conn->spi_no = HSPI;
 
-  return conn;
+  *res = conn;
+
+  return V7_OK;
 }
 
 void sj_spi_close(spi_connection conn) {

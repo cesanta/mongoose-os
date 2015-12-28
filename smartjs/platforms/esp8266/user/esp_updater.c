@@ -534,11 +534,12 @@ void rollback_fw() {
   os_timer_arm(&s_reboot_timer, 1000, 0);
 }
 
-static v7_val_t Updater_startupdate(struct v7 *v7) {
+static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
   LOG(LL_DEBUG, ("Starting update"));
   update_start(&sj_mgr);
 
-  return v7_create_boolean(1);
+  *res = v7_create_boolean(1);
+  return V7_OK;
 }
 
 void init_updater(struct v7 *v7) {

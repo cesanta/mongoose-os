@@ -23,24 +23,31 @@ static uint8_t get_bits(uint32_t n) {
   }
 }
 
-v7_val_t spi_js_ctor(struct v7 *v7) {
+enum v7_err spi_js_ctor(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   spi_connection conn;
-  conn = sj_spi_create(v7);
 
-  if (v7_has_thrown(v7)) {
-    /* sj_spi_create() has thrown, so, return */
-    return v7_create_undefined();
-  } else if (spi_init(conn) < 0) {
+  rcode = sj_spi_create(v7, &conn);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  if (spi_init(conn) < 0) {
     sj_spi_close(conn);
-    return v7_throw(v7, "Error", "Failed to initialize SPI library.");
+    rcode = v7_throwf(v7, "Error", "Failed to initialize SPI library.");
+    goto clean;
   }
 
   v7_set(v7, this_obj, s_spi_conn_prop, ~0,
          V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
          v7_create_foreign(conn));
 
-  return this_obj;
+  /* implicitly returning `this` */
+  goto clean;
+
+clean:
+  return rcode;
 }
 
 spi_connection spijs_get_conn(struct v7 *v7, v7_val_t this_obj) {
@@ -51,56 +58,67 @@ spi_connection spijs_get_conn(struct v7 *v7, v7_val_t this_obj) {
 * Expose bare txn function to have possibility work with very different devices
 * in JS (9-bit address, 3 bit command, 7 bit data etc)
 */
-v7_val_t spi_js_txn(struct v7 *v7) {
+enum v7_err spi_js_txn(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
-  uint32_t params[8], res;
+  uint32_t params[8], ires;
   int i;
 
   spi_connection conn;
   if ((conn = spijs_get_conn(v7, this_obj)) == NULL) {
-    return v7_create_number(0);
+    *res = v7_create_number(0);
+    goto clean;
   }
 
   for (i = 0; i < 8; i++) {
     v7_val_t tmp = v7_arg(v7, i);
     if (!v7_is_number(tmp)) {
-      return v7_create_number(-1);
+      *res = v7_create_number(-1);
+      goto clean;
     }
     params[i] = v7_to_number(tmp);
   }
 
-  res = spi_txn(conn, params[0], params[1], params[2], params[3], params[4],
-                params[5], params[6], params[7]);
+  ires = spi_txn(conn, params[0], params[1], params[2], params[3], params[4],
+                 params[5], params[6], params[7]);
 
-  return v7_create_number(res);
+  *res = v7_create_number(ires);
+  goto clean;
+
+clean:
+  return rcode;
 }
 
 /*
  * JS: tran(send, [bytes_to_read, command, addr])
 */
-v7_val_t spi_js_tran(struct v7 *v7) {
+enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   uint8_t cmd_bits = 0;
   uint16_t cmd_data = 0;
   uint32_t addr_bits = 0, addr_data = 0, dout_bits = 0, dout_data = 0,
            din_bits = 0, dummy_bits = 0;
-  uint32_t res;
+  uint32_t ires;
   v7_val_t tmp_val;
   spi_connection conn;
 
   if ((conn = spijs_get_conn(v7, this_obj)) == NULL) {
-    return v7_create_number(0);
+    *res = v7_create_number(0);
+    goto clean;
   }
 
   /* data to send*/
   tmp_val = v7_arg(v7, 0);
   if (!v7_is_number(tmp_val)) {
-    return v7_create_number(-1);
+    *res = v7_create_number(-1);
+    goto clean;
   }
 
   dout_data = v7_to_number(tmp_val);
   if (dout_data > 0xFFFFFFFF) {
-    return v7_create_number(-1);
+    *res = v7_create_number(-1);
+    goto clean;
   }
   dout_bits = get_bits(dout_data);
 
@@ -109,7 +127,8 @@ v7_val_t spi_js_tran(struct v7 *v7) {
   if (v7_is_number(tmp_val)) {
     din_bits = v7_to_number(tmp_val) * 8;
     if (din_bits > 32) {
-      return v7_create_number(-1);
+      *res = v7_create_number(-1);
+      goto clean;
     }
   }
 
@@ -124,28 +143,39 @@ v7_val_t spi_js_tran(struct v7 *v7) {
   if (v7_is_number(tmp_val)) {
     addr_data = v7_to_number(tmp_val);
     if (addr_data > 0xFFFFFFFF) {
-      return v7_create_number(-1);
+      *res = v7_create_number(-1);
+      goto clean;
     }
 
     addr_bits = get_bits(addr_data);
   }
 
-  res = spi_txn(conn, cmd_bits, cmd_data, addr_bits, addr_data, dout_bits,
-                dout_data, din_bits, dummy_bits);
+  ires = spi_txn(conn, cmd_bits, cmd_data, addr_bits, addr_data, dout_bits,
+                 dout_data, din_bits, dummy_bits);
 
-  return v7_create_number(res);
+  *res = v7_create_number(ires);
+  goto clean;
+
+clean:
+  return rcode;
 }
 
-v7_val_t spi_js_close(struct v7 *v7) {
+enum v7_err spi_js_close(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   spi_connection conn;
 
   if ((conn = spijs_get_conn(v7, this_obj)) == NULL) {
-    return v7_create_boolean(0);
+    *res = v7_create_boolean(0);
+    goto clean;
   }
 
   sj_spi_close(conn);
-  return v7_create_boolean(1);
+  *res = v7_create_boolean(1);
+  goto clean;
+
+clean:
+  return rcode;
 }
 
 void init_spijs(struct v7 *v7) {

@@ -33,7 +33,7 @@ uint32_t spi_txn(spi_connection conn, uint8_t cmd_bits, uint16_t cmd_data,
                  uint32_t dout_data, uint8_t din_bits, uint8_t dummy_bits);
 
 /* Create SPI connection */
-spi_connection sj_spi_create(struct v7 *v7);
+enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res);
 
 /* Close SPI connection and free resources */
 void sj_spi_close(spi_connection conn);

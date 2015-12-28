@@ -3,30 +3,34 @@
 
 #ifndef SJ_DISABLE_ADC
 
-static v7_val_t ADC_read(struct v7 *v7) {
+static enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   int pin;
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    return v7_create_undefined();
+    *res = v7_create_undefined();
+  } else {
+    pin = v7_to_number(pinv);
+    *res = v7_create_number(sj_adc_read(pin));
   }
 
-  pin = v7_to_number(pinv);
-  return v7_create_number(sj_adc_read(pin));
+  return V7_OK;
 }
 
-static v7_val_t ADC_readVoltage(struct v7 *v7) {
+static enum v7_err ADC_readVoltage(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   int pin;
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    return v7_create_undefined();
+    *res = v7_create_undefined();
+  } else {
+    pin = v7_to_number(pinv);
+    *res = v7_create_number(sj_adc_read_voltage(pin));
   }
 
-  pin = v7_to_number(pinv);
-  return v7_create_number(sj_adc_read_voltage(pin));
+  return V7_OK;
 }
 
 void init_adcjs(struct v7 *v7) {

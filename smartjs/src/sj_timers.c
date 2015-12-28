@@ -5,7 +5,7 @@
 #include "sj_v7_ext.h"
 
 /* Currently can only handle one timer */
-static v7_val_t global_set_timeout(struct v7 *v7) {
+static enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
   v7_val_t *cb;
   v7_val_t msecsv = v7_arg(v7, 1);
   int msecs;
@@ -16,17 +16,15 @@ static v7_val_t global_set_timeout(struct v7 *v7) {
 
   if (!v7_is_function(*cb)) {
     printf("cb is not a function\n");
-    return v7_create_undefined();
-  }
-  if (!v7_is_number(msecsv)) {
+  } else if (!v7_is_number(msecsv)) {
     printf("msecs is not a double\n");
-    return v7_create_undefined();
+  } else {
+    msecs = v7_to_number(msecsv);
+
+    sj_set_timeout(msecs, cb);
   }
-  msecs = v7_to_number(msecsv);
 
-  sj_set_timeout(msecs, cb);
-
-  return v7_create_undefined();
+  return V7_OK;
 }
 
 void sj_init_timers(struct v7 *v7) {

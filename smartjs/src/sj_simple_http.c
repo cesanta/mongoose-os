@@ -14,40 +14,46 @@ void sj_http_success_callback(struct v7 *v7, v7_val_t cb, const char *data,
   sj_invoke_cb1(v7, cb, v7_create_string(v7, data, data_len, 1));
 }
 
-static v7_val_t sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
-                                    v7_val_t bodyv, v7_val_t cb,
-                                    const char *method) {
+static enum v7_err sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
+                                       v7_val_t bodyv, v7_val_t cb,
+                                       const char *method, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   const char *body = NULL;
   size_t url_len, body_len = 0;
 
   if (!v7_is_string(urlv)) {
-    return v7_throw(v7, "Error", "url should be a string");
+    rcode = v7_throwf(v7, "Error", "url should be a string");
+    goto clean;
   }
 
   if (!v7_is_function(cb)) {
-    return v7_throw(v7, "Error", "cb must be a function");
+    rcode = v7_throwf(v7, "Error", "cb must be a function");
+    goto clean;
   }
 
   if (v7_is_string(bodyv)) {
     body = v7_get_string_data(v7, &bodyv, &body_len);
   }
 
-  return v7_create_boolean(sj_http_call(
+  *res = v7_create_boolean(sj_http_call(
       v7, v7_get_string_data(v7, &urlv, &url_len), body, body_len, method, cb));
+
+clean:
+  return rcode;
 }
 
-static v7_val_t sj_http_get(struct v7 *v7) {
+static enum v7_err sj_http_get(struct v7 *v7, v7_val_t *res) {
   v7_val_t urlv = v7_arg(v7, 0);
   v7_val_t cb = v7_arg(v7, 1);
-  return sj_http_call_helper(v7, urlv, v7_create_undefined(), cb, "GET");
+  return sj_http_call_helper(v7, urlv, v7_create_undefined(), cb, "GET", res);
 }
 
-static v7_val_t sj_http_post(struct v7 *v7) {
+static enum v7_err sj_http_post(struct v7 *v7, v7_val_t *res) {
   v7_val_t urlv = v7_arg(v7, 0);
   v7_val_t body = v7_arg(v7, 1);
   v7_val_t cb = v7_arg(v7, 2);
 
-  return sj_http_call_helper(v7, urlv, body, cb, "POST");
+  return sj_http_call_helper(v7, urlv, body, cb, "POST", res);
 }
 
 void sj_init_simple_http_client(struct v7 *v7) {
