@@ -91,6 +91,7 @@ typedef unsigned char v7_prop_attr_t;
 typedef unsigned char v7_obj_attr_t;
 #define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
 #define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
+#define V7_OBJ_FUNCTION (1 << 2)       /* function object */
 
 /* Opaque structure. V7 engine handler. */
 struct v7;
@@ -262,8 +263,12 @@ v7_val_t v7_create_foreign(void *ptr);
  */
 v7_val_t v7_create_cfunction(v7_cfunction_t *func);
 
-/* Return true if given value is a JavaScript object */
-int v7_is_object(v7_val_t);
+/*
+ * Return true if the given value is an object or function.
+ * i.e. it returns true if the value holds properties and can be
+ * used as argument to v7_get and v7_set.
+ */
+int v7_is_object(v7_val_t v);
 
 /* Return true if given value is a JavaScript function object */
 int v7_is_function(v7_val_t);
@@ -555,7 +560,7 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
 v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 
 /* Set object's prototype. Return old prototype or undefined on error. */
-v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
+v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
 
 /*
  * Iterate over the object's `obj` properties.

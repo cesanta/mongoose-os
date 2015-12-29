@@ -95,6 +95,7 @@ typedef unsigned char v7_prop_attr_t;
 typedef unsigned char v7_obj_attr_t;
 #define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
 #define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
+#define V7_OBJ_FUNCTION (1 << 2)       /* function object */
 
 /* Opaque structure. V7 engine handler. */
 struct v7;
@@ -266,8 +267,12 @@ v7_val_t v7_create_foreign(void *ptr);
  */
 v7_val_t v7_create_cfunction(v7_cfunction_t *func);
 
-/* Return true if given value is a JavaScript object */
-int v7_is_object(v7_val_t);
+/*
+ * Return true if the given value is an object or function.
+ * i.e. it returns true if the value holds properties and can be
+ * used as argument to v7_get and v7_set.
+ */
+int v7_is_object(v7_val_t v);
 
 /* Return true if given value is a JavaScript function object */
 int v7_is_function(v7_val_t);
@@ -559,7 +564,7 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
 v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 
 /* Set object's prototype. Return old prototype or undefined on error. */
-v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
+v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
 
 /*
  * Iterate over the object's `obj` properties.
@@ -3684,7 +3689,7 @@ typedef uint64_t val_t;
  * JavaScript value is either a primitive, or an object.
  * There are 5 primitive types: Undefined, Null, Boolean, Number, String.
  * Non-primitive type is an Object type. There are several classes of Objects,
- * see description of `struct v7_object` below for more details.
+ * see description of `struct v7_generic_object` below for more details.
  * This enumeration combines types and object classes in one enumeration.
  * NOTE(lsm): compile with `-fshort-enums` to reduce sizeof(enum v7_type) to 1.
  */
@@ -3760,7 +3765,7 @@ struct v7 {
   struct mbuf tmp_stack; /* Stack of val_t* elements, used as root set */
   int need_gc;           /* Set to true to trigger GC when safe */
 
-  struct gc_arena object_arena;
+  struct gc_arena generic_object_arena;
   struct gc_arena function_arena;
   struct gc_arena property_arena;
 #if V7_ENABLE__Memory__stats
@@ -3934,10 +3939,20 @@ struct v7 {
 #define V7_UNDEFINED V7_TAG_UNDEFINED
 
 struct v7_property {
-  struct v7_property *next; /* Linkage in struct v7_object::properties */
+  struct v7_property *
+      next; /* Linkage in struct v7_generic_object::properties */
   v7_prop_attr_t attributes;
   val_t name;  /* Property name (a string) */
   val_t value; /* Property value */
+};
+
+/*
+ * "base object": structure which is shared between objects and functions.
+ */
+struct v7_object {
+  /* First HIDDEN property in a chain is an internal object value */
+  struct v7_property *properties;
+  v7_obj_attr_t attributes;
 };
 
 /*
@@ -3960,11 +3975,12 @@ struct v7_property {
  *    typeof(a) == 'object';
  *    typeof(Number(a)) == 'number';
  */
-struct v7_object {
-  /* First HIDDEN property in a chain is an internal object value */
-  struct v7_property *properties;
+struct v7_generic_object {
+  /*
+   * This has to be the first field so that objects can be managed by the GC.
+   */
+  struct v7_object base;
   struct v7_object *prototype;
-  v7_obj_attr_t attributes;
 };
 
 /*
@@ -3993,16 +4009,9 @@ struct v7_function {
    * Functions are objects. This has to be the first field so that function
    * objects can be managed by the GC.
    */
-  struct v7_property *properties;
-  struct v7_object *scope; /* lexical scope of the closure */
+  struct v7_object base;
+  struct v7_generic_object *scope; /* lexical scope of the closure */
 
-  /*
-   * TODO(dfrank) : make v7_function actually inherit v7_object, instead of
-   * this crazy hack: it's located at exactly the same offset as the
-   * `v7_object.attributes`, and it's needed to not corrupt memory when
-   * function is used as an object, and its attributes changed
-   */
-  v7_obj_attr_t attr_dummy;
   /* bytecode, might be shared between functions */
   struct bcode *bcode;
 };
@@ -4078,11 +4087,40 @@ enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
-val_t v7_object_to_value(struct v7_object *);
-val_t v7_function_to_value(struct v7_function *);
+V7_PRIVATE val_t v7_object_to_value(struct v7_object *);
+V7_PRIVATE val_t v7_function_to_value(struct v7_function *);
 
-struct v7_object *v7_to_object(val_t);
-struct v7_function *v7_to_function(val_t);
+/*
+ * Returns pointer to the struct representing an object.
+ * Given value must be an object (the caller can verify it
+ * by calling `v7_is_object()`)
+ */
+V7_PRIVATE struct v7_object *v7_to_object(v7_val_t v);
+
+/*
+ * Given a pointer to the object structure, returns a
+ * pointer to the prototype object, or `NULL` if there is
+ * no prototype.
+ */
+V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
+                                           struct v7_object *obj);
+
+/*
+ * Set new prototype `proto` for the given object `obj`. Returns `0` at
+ * success, `-1` at failure (it may fail if given `obj` is a function object:
+ * it's impossible to change function object's prototype)
+ */
+V7_PRIVATE int obj_prototype_set(struct v7 *v7, struct v7_object *obj,
+                                 struct v7_object *proto);
+
+/*
+ * Return true if given value is a JavaScript object (will return
+ * false for function)
+ */
+V7_PRIVATE int v7_is_generic_object(v7_val_t);
+
+V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t);
+V7_PRIVATE struct v7_function *v7_to_function(val_t);
 V7_PRIVATE void *v7_to_pointer(val_t v);
 
 V7_PRIVATE void init_object(struct v7 *v7);
@@ -4106,14 +4144,15 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *,
 V7_PRIVATE int set_method(struct v7 *, val_t, const char *,
                           v7_cfunction_t *func, int);
 
-V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
+V7_PRIVATE val_t obj_prototype_v(struct v7 *, val_t);
 V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
 V7_PRIVATE val_t create_object(struct v7 *, val_t);
-V7_PRIVATE val_t create_function2(struct v7 *, struct v7_object *, val_t);
+V7_PRIVATE val_t
+create_function2(struct v7 *, struct v7_generic_object *, val_t);
 V7_PRIVATE val_t create_function(struct v7 *);
 V7_PRIVATE v7_val_t v7_create_dense_array(struct v7 *v7);
 
@@ -4356,7 +4395,7 @@ struct gc_cell {
 extern "C" {
 #endif /* __cplusplus */
 
-V7_PRIVATE struct v7_object *new_object(struct v7 *);
+V7_PRIVATE struct v7_generic_object *new_generic_object(struct v7 *);
 V7_PRIVATE struct v7_property *new_property(struct v7 *);
 V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
@@ -7611,7 +7650,7 @@ static enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
     fp = fopen(s1, s2);
     if (fp != NULL) {
       v7_val_t obj = v7_create_object(v7);
-      v7_set_proto(obj, s_file_proto);
+      v7_set_proto(v7, obj, s_file_proto);
       v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
              v7_file_to_val(fp));
       *res = obj;
@@ -7795,7 +7834,7 @@ static enum v7_err s_fd_to_sock_obj(struct v7 *v7, sock_t fd, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
 
   *res = v7_create_object(v7);
-  v7_set_proto(*res, s_sock_proto);
+  v7_set_proto(v7, *res, s_sock_proto);
   v7_set(v7, *res, s_sock_prop, sizeof(s_sock_prop) - 1, V7_PROPERTY_DONT_ENUM,
          v7_create_number(fd));
 
@@ -8341,7 +8380,7 @@ static void _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
       v7_val_t name;
       const char *s;
 
-      if (v_get_prototype(v7, obj) == gen_proto) {
+      if (obj_prototype_v(v7, obj) == gen_proto) {
         ctx->bytes_left = v7_to_number(v7_get(v7, obj, "size", ~0));
         cs_ubjson_emit_bin_header(buf, ctx->bytes_left);
         ctx->bin = obj;
@@ -10580,7 +10619,7 @@ static int del_property_deep(struct v7 *v7, val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return -1;
   }
-  for (; obj != V7_NULL; obj = v_get_prototype(v7, obj)) {
+  for (; obj != V7_NULL; obj = obj_prototype_v(v7, obj)) {
     int del_res;
     if ((del_res = v7_del_property(v7, obj, name, len)) != -1) {
       return del_res;
@@ -10805,7 +10844,7 @@ static enum v7_err bcode_perform_call(struct v7 *v7, v7_val_t frame,
   v7->is_constructor = is_constructor;
 
   /* new frame will inherit from the function's scope */
-  v7_to_object(frame)->prototype = func->scope;
+  obj_prototype_set(v7, v7_to_object(frame), &func->scope->base);
   v7->call_stack = frame;
   bcode_restore_registers(v7, func->bcode, r);
 
@@ -10874,7 +10913,7 @@ static enum v7_err bcode_private_frame_push(struct v7 *v7, v7_val_t frame) {
   bcode_save_frame_details(v7, frame, NULL);
 
   /* new frame will inherit from the current frame */
-  v7_to_object(frame)->prototype = v7_to_object(v7->call_stack);
+  obj_prototype_set(v7, v7_to_object(frame), v7_to_object(v7->call_stack));
   v7->call_stack = frame;
 
   return V7_OK;
@@ -11186,7 +11225,7 @@ static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
   struct v7_function *f, *rf;
   assert(v7_is_function(func));
   f = v7_to_function(func);
-  res = create_function2(v7, v7_to_object(v7->call_stack),
+  res = create_function2(v7, v7_to_generic_object(v7->call_stack),
                          v7_get(v7, func, "prototype", 9));
   rf = v7_to_function(res);
   rf->bcode = f->bcode;
@@ -11813,10 +11852,9 @@ restart:
 
             if (h == NULL) {
               /* no more properties in this object: proceed to the prototype */
-              v2 = v7_object_to_value(
-                  v7_is_function(v2) ? NULL : v7_to_object(v2)->prototype);
+              v2 = obj_prototype_v(v7, v2);
             }
-          } while (h == NULL && v7_to_object(v2) != NULL);
+          } while (h == NULL && v7_to_generic_object(v2) != NULL);
         }
 
         if (h == NULL) {
@@ -11877,10 +11915,10 @@ restart:
                   v7, TYPE_ERROR,
                   "Cannot set a primitive value as object prototype"));
               goto op_done;
-            } else if (v7_is_function(v4) || v7_is_cfunction(v4)) {
+            } else if (v7_is_cfunction(v4)) {
               /* TODO(dfrank): add support for a function to be a prototype */
               BTRY(v7_throwf(v7, TYPE_ERROR,
-                             "Not implemented: function as a prototype"));
+                             "Not implemented: cfunction as a prototype"));
               goto op_done;
             }
 
@@ -12659,22 +12697,17 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_UNDEFINED >> 48:
       return V7_TYPE_UNDEFINED;
     case V7_TAG_OBJECT >> 48:
-      if (v7_to_object(v)->prototype == v7_to_object(v7->array_prototype)) {
+      if (obj_prototype_v(v7, v) == v7->array_prototype) {
         return V7_TYPE_ARRAY_OBJECT;
-      } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->boolean_prototype)) {
+      } else if (obj_prototype_v(v7, v) == v7->boolean_prototype) {
         return V7_TYPE_BOOLEAN_OBJECT;
-      } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->string_prototype)) {
+      } else if (obj_prototype_v(v7, v) == v7->string_prototype) {
         return V7_TYPE_STRING_OBJECT;
-      } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->number_prototype)) {
+      } else if (obj_prototype_v(v7, v) == v7->number_prototype) {
         return V7_TYPE_NUMBER_OBJECT;
-      } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->function_prototype)) {
+      } else if (obj_prototype_v(v7, v) == v7->function_prototype) {
         return V7_TYPE_CFUNCTION_OBJECT;
-      } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->date_prototype)) {
+      } else if (obj_prototype_v(v7, v) == v7->date_prototype) {
         return V7_TYPE_DATE_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
@@ -12708,6 +12741,10 @@ int v7_is_object(val_t v) {
          (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
+V7_PRIVATE int v7_is_generic_object(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_OBJECT;
+}
+
 int v7_is_function(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
@@ -12724,7 +12761,7 @@ int v7_is_boolean(val_t v) {
 
 int v7_is_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
-  if (!v7_is_object(v)) return 0;
+  if (!v7_is_generic_object(v)) return 0;
   p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
   if (p == NULL) return 0;
   return (p->value & V7_TAG_MASK) == V7_TAG_REGEXP;
@@ -12735,7 +12772,7 @@ int v7_is_foreign(val_t v) {
 }
 
 int v7_is_array(struct v7 *v7, val_t v) {
-  return v7_is_object(v) && is_prototype_of(v7, v, v7->array_prototype);
+  return v7_is_generic_object(v) && is_prototype_of(v7, v, v7->array_prototype);
 }
 
 #if V7_ENABLE__RegExp
@@ -12785,22 +12822,64 @@ v7_cfunction_t *v7_to_cfunction(val_t v) {
   return (v7_cfunction_t *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-val_t v7_object_to_value(struct v7_object *o) {
+V7_PRIVATE val_t v7_object_to_value(struct v7_object *o) {
   if (o == NULL) {
     return V7_NULL;
+  } else if (o->attributes & V7_OBJ_FUNCTION) {
+    return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
+  } else {
+    return v7_pointer_to_value(o) | V7_TAG_OBJECT;
   }
-  return v7_pointer_to_value(o) | V7_TAG_OBJECT;
 }
 
-struct v7_object *v7_to_object(val_t v) {
-  return (struct v7_object *) v7_to_pointer(v);
-}
-
-val_t v7_function_to_value(struct v7_function *o) {
+V7_PRIVATE val_t v7_function_to_value(struct v7_function *o) {
   return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
 }
 
-struct v7_function *v7_to_function(val_t v) {
+V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v) {
+  if (v7_is_null(v)) {
+    return NULL;
+  } else {
+    assert(v7_is_generic_object(v));
+    return (struct v7_generic_object *) v7_to_pointer(v);
+  }
+}
+
+V7_PRIVATE struct v7_object *v7_to_object(val_t v) {
+  if (v7_is_null(v)) {
+    return NULL;
+  } else {
+    assert(v7_is_object(v));
+    return (struct v7_object *) v7_to_pointer(v);
+  }
+}
+
+V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
+                                           struct v7_object *obj) {
+  if (obj->attributes & V7_OBJ_FUNCTION) {
+    return v7_to_object(v7->function_prototype);
+  } else {
+    return ((struct v7_generic_object *) obj)->prototype;
+  }
+}
+
+V7_PRIVATE int obj_prototype_set(struct v7 *v7, struct v7_object *obj,
+                                 struct v7_object *proto) {
+  int ret = -1;
+  (void) v7;
+
+  if (obj->attributes & V7_OBJ_FUNCTION) {
+    ret = -1;
+  } else {
+    ((struct v7_generic_object *) obj)->prototype = proto;
+    ret = 0;
+  }
+
+  return ret;
+}
+
+V7_PRIVATE struct v7_function *v7_to_function(val_t v) {
+  assert(v7_is_function(v));
   return (struct v7_function *) v7_to_pointer(v);
 }
 
@@ -12858,22 +12937,22 @@ double v7_to_number(val_t v) {
   return u.d;
 }
 
-V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
+V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj) {
   if (v7_is_function(obj) || v7_is_cfunction(obj)) {
     return v7->function_prototype;
   }
-  return v7_object_to_value(v7_to_object(obj)->prototype);
+  return v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
 }
 
 V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
-  struct v7_object *o = new_object(v7);
+  struct v7_generic_object *o = new_generic_object(v7);
   if (o == NULL) {
     return V7_NULL;
   }
   (void) v7;
-  o->properties = NULL;
-  o->prototype = v7_to_object(prototype);
-  return v7_object_to_value(o);
+  o->base.properties = NULL;
+  obj_prototype_set(v7, &o->base, v7_to_object(prototype));
+  return v7_object_to_value(&o->base);
 }
 
 v7_val_t v7_create_object(struct v7 *v7) {
@@ -12914,7 +12993,14 @@ V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
 #ifdef V7_ENABLE_DENSE_ARRAYS
   v7_own(v7, &a);
   v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
+
+  /*
+   * Before setting a `V7_OBJ_DENSE_ARRAY` flag, make sure we don't have
+   * `V7_OBJ_FUNCTION` flag set
+   */
+  assert(!(v7_to_object(a)->attributes & V7_OBJ_FUNCTION));
   v7_to_object(a)->attributes |= V7_OBJ_DENSE_ARRAY;
+
   v7_disown(v7, &a);
 #endif
   return a;
@@ -12954,7 +13040,8 @@ v7_val_t v7_create_foreign(void *p) {
 }
 
 V7_PRIVATE
-val_t create_function2(struct v7 *v7, struct v7_object *scope, val_t proto) {
+val_t create_function2(struct v7 *v7, struct v7_generic_object *scope,
+                       val_t proto) {
   struct v7_function *f;
   val_t fval = v7_create_null();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -12970,8 +13057,16 @@ val_t create_function2(struct v7 *v7, struct v7_object *scope, val_t proto) {
 
   fval = v7_function_to_value(f);
 
-  f->properties = NULL;
+  f->base.properties = NULL;
   f->scope = scope;
+
+  /*
+   * Before setting a `V7_OBJ_FUNCTION` flag, make sure we don't have
+   * `V7_OBJ_DENSE_ARRAY` flag set
+   */
+  assert(!(f->base.attributes & V7_OBJ_DENSE_ARRAY));
+  f->base.attributes |= V7_OBJ_FUNCTION;
+
   /* TODO(mkm): lazily create these properties on first access */
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9,
@@ -13520,7 +13615,7 @@ struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  for (; obj != V7_NULL; obj = v_get_prototype(v7, obj)) {
+  for (; obj != V7_NULL; obj = obj_prototype_v(v7, obj)) {
     struct v7_property *prop;
     if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
       return prop;
@@ -14537,17 +14632,13 @@ clean:
 }
 
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
-  struct v7_object *obj, *proto;
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
   }
-  if (v7_is_function(o)) {
-    return p == v7->function_prototype ||
-           is_prototype_of(v7, v7->function_prototype, p);
-  }
-  proto = v7_to_object(p);
-  for (obj = v7_to_object(o); obj; obj = obj->prototype) {
-    if (obj->prototype == proto) {
+
+  /* walk the prototype chain */
+  for (; !v7_is_null(o); o = obj_prototype_v(v7, o)) {
+    if (obj_prototype_v(v7, o) == p) {
       return 1;
     }
   }
@@ -14571,12 +14662,12 @@ int v7_is_true(struct v7 *v7, val_t v) {
          v != V7_TAG_NAN;
 }
 
-static void object_destructor(struct v7 *v7, void *ptr) {
-  struct v7_object *o = (struct v7_object *) ptr;
+static void generic_object_destructor(struct v7 *v7, void *ptr) {
+  struct v7_generic_object *o = (struct v7_generic_object *) ptr;
   struct v7_property *p;
   struct mbuf *abuf;
 
-  p = v7_get_own_property2(v7, v7_object_to_value(o), "", 0,
+  p = v7_get_own_property2(v7, v7_object_to_value(&o->base), "", 0,
                            V7_PROPERTY_HIDDEN);
 
 #if V7_ENABLE__RegExp
@@ -14588,7 +14679,7 @@ static void object_destructor(struct v7 *v7, void *ptr) {
   }
 #endif
 
-  if (o->attributes & V7_OBJ_DENSE_ARRAY) {
+  if (o->base.attributes & V7_OBJ_DENSE_ARRAY) {
     if (p != NULL &&
         ((abuf = (struct mbuf *) v7_to_foreign(p->value)) != NULL)) {
       mbuf_free(abuf);
@@ -14667,9 +14758,9 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 
     v7->cur_dense_prop =
         (struct v7_property *) calloc(1, sizeof(struct v7_property));
-    gc_arena_init(&v7->object_arena, sizeof(struct v7_object),
+    gc_arena_init(&v7->generic_object_arena, sizeof(struct v7_generic_object),
                   opts.object_arena_size, 10, "object");
-    v7->object_arena.destructor = object_destructor;
+    v7->generic_object_arena.destructor = generic_object_destructor;
     gc_arena_init(&v7->function_arena, sizeof(struct v7_function),
                   opts.function_arena_size, 10, "function");
     v7->function_arena.destructor = function_destructor;
@@ -14707,7 +14798,7 @@ val_t v7_get_global(struct v7 *v7) {
 
 void v7_destroy(struct v7 *v7) {
   if (v7 == NULL) return;
-  gc_arena_destroy(v7, &v7->object_arena);
+  gc_arena_destroy(v7, &v7->generic_object_arena);
   gc_arena_destroy(v7, &v7->function_arena);
   gc_arena_destroy(v7, &v7->property_arena);
 
@@ -14736,10 +14827,11 @@ void v7_destroy(struct v7 *v7) {
   free(v7);
 }
 
-v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
-  if (v7_is_object(obj)) {
-    v7_val_t old_proto = v7_object_to_value(v7_to_object(obj)->prototype);
-    v7_to_object(obj)->prototype = v7_to_object(proto);
+v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto) {
+  if (v7_is_generic_object(obj)) {
+    v7_val_t old_proto =
+        v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
+    obj_prototype_set(v7, v7_to_object(obj), v7_to_object(proto));
     return old_proto;
   } else {
     return v7_create_undefined();
@@ -15133,8 +15225,9 @@ static void gc_free_block(struct gc_block *b);
 static void gc_mark_mbuf_pt(struct v7 *v7, const struct mbuf *mbuf);
 static void gc_mark_mbuf_val(struct v7 *v7, const struct mbuf *mbuf);
 
-V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
-  return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
+V7_PRIVATE struct v7_generic_object *new_generic_object(struct v7 *v7) {
+  return (struct v7_generic_object *) gc_alloc_cell(v7,
+                                                    &v7->generic_object_arena);
 }
 
 V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
@@ -15361,7 +15454,8 @@ void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
 /*
  * dense arrays contain only one property pointing to an mbuf with array values.
  */
-V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
+V7_PRIVATE void gc_mark_dense_array(struct v7 *v7,
+                                    struct v7_generic_object *obj) {
   val_t v;
   struct mbuf *mbuf;
   val_t *vp;
@@ -15370,13 +15464,13 @@ V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
   /* TODO(mkm): use this when dense array promotion is implemented */
   v = obj->properties->value;
 #else
-  v = v7_get(v7, v7_object_to_value(obj), "", 0);
+  v = v7_get(v7, v7_object_to_value(&obj->base), "", 0);
 #endif
 
   mbuf = (struct mbuf *) v7_to_foreign(v);
 
   /* function scope pointer is aliased to the object's prototype pointer */
-  gc_mark(v7, v7_object_to_value(obj->prototype));
+  gc_mark(v7, v7_object_to_value(obj_prototype(v7, &obj->base)));
   MARK(obj);
 
   if (mbuf == NULL) return;
@@ -15388,14 +15482,14 @@ V7_PRIVATE void gc_mark_dense_array(struct v7 *v7, struct v7_object *obj) {
 }
 
 V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
-  struct v7_object *obj;
+  struct v7_object *obj_base;
   struct v7_property *prop;
   struct v7_property *next;
 
   if (!v7_is_object(v)) {
     return;
   }
-  obj = v7_to_object(v);
+  obj_base = v7_to_object(v);
   /*
    * we treat all object like things like objects but they might be functions,
    * gc_gheck_val checks the appropriate arena per actual value type.
@@ -15404,13 +15498,15 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     abort();
   }
 
-  if (MARKED(obj)) return;
+  if (MARKED(obj_base)) return;
 
-  if (obj->attributes & V7_OBJ_DENSE_ARRAY) {
+  if (obj_base->attributes & V7_OBJ_DENSE_ARRAY) {
+    struct v7_generic_object *obj = v7_to_generic_object(v);
     gc_mark_dense_array(v7, obj);
   }
 
-  for ((prop = obj->properties), MARK(obj); prop != NULL; prop = next) {
+  for ((prop = obj_base->properties), MARK(obj_base); prop != NULL;
+       prop = next) {
     if (!gc_check_ptr(&v7->property_arena, prop)) {
       abort();
     }
@@ -15423,10 +15519,15 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     MARK(prop);
   }
 
-  /* function scope pointer is aliased to the object's prototype pointer */
-  gc_mark(v7, v7_object_to_value(obj->prototype));
+  /* mark object's prototype */
+  gc_mark(v7, obj_prototype_v(v7, v));
+
   if (v7_is_function(v)) {
     struct v7_function *func = v7_to_function(v);
+
+    /* mark function's scope */
+    gc_mark(v7, v7_object_to_value(&func->scope->base));
+
     if (func->bcode != NULL) {
       gc_mark_mbuf_val(v7, &func->bcode->lit);
       gc_mark_mbuf_val(v7, &func->bcode->names);
@@ -15448,11 +15549,13 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *a) {
 int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
   switch (what) {
     case V7_HEAP_STAT_HEAP_SIZE:
-      return gc_arena_size(&v7->object_arena) * v7->object_arena.cell_size +
+      return gc_arena_size(&v7->generic_object_arena) *
+                 v7->generic_object_arena.cell_size +
              gc_arena_size(&v7->function_arena) * v7->function_arena.cell_size +
              gc_arena_size(&v7->property_arena) * v7->property_arena.cell_size;
     case V7_HEAP_STAT_HEAP_USED:
-      return v7->object_arena.alive * v7->object_arena.cell_size +
+      return v7->generic_object_arena.alive *
+                 v7->generic_object_arena.cell_size +
              v7->function_arena.alive * v7->function_arena.cell_size +
              v7->property_arena.alive * v7->property_arena.cell_size;
     case V7_HEAP_STAT_STRING_HEAP_RESERVED:
@@ -15460,11 +15563,12 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
     case V7_HEAP_STAT_STRING_HEAP_USED:
       return v7->owned_strings.len;
     case V7_HEAP_STAT_OBJ_HEAP_MAX:
-      return gc_arena_size(&v7->object_arena);
+      return gc_arena_size(&v7->generic_object_arena);
     case V7_HEAP_STAT_OBJ_HEAP_FREE:
-      return gc_arena_size(&v7->object_arena) - v7->object_arena.alive;
+      return gc_arena_size(&v7->generic_object_arena) -
+             v7->generic_object_arena.alive;
     case V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE:
-      return v7->object_arena.cell_size;
+      return v7->generic_object_arena.cell_size;
     case V7_HEAP_STAT_FUNC_HEAP_MAX:
       return gc_arena_size(&v7->function_arena);
     case V7_HEAP_STAT_FUNC_HEAP_FREE:
@@ -15803,7 +15907,7 @@ void v7_gc(struct v7 *v7, int full) {
   fprintf(stderr, "V7 GC pass %d\n", ++gc_pass);
 #endif
 
-  gc_dump_arena_stats("Before GC objects", &v7->object_arena);
+  gc_dump_arena_stats("Before GC objects", &v7->generic_object_arena);
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
   gc_dump_arena_stats("Before GC properties", &v7->property_arena);
 
@@ -15852,12 +15956,12 @@ void v7_gc(struct v7 *v7, int full) {
 #ifdef V7_MALLOC_GC
   gc_sweep_malloc(v7);
 #else
-  gc_sweep(v7, &v7->object_arena, 0);
+  gc_sweep(v7, &v7->generic_object_arena, 0);
   gc_sweep(v7, &v7->function_arena, 0);
   gc_sweep(v7, &v7->property_arena, 0);
 #endif
 
-  gc_dump_arena_stats("After GC objects", &v7->object_arena);
+  gc_dump_arena_stats("After GC objects", &v7->generic_object_arena);
   gc_dump_arena_stats("After GC functions", &v7->function_arena);
   gc_dump_arena_stats("After GC properties", &v7->property_arena);
 
@@ -15871,7 +15975,7 @@ V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v) {
   if (v7_is_function(v)) {
     return gc_check_ptr(&v7->function_arena, v7_to_function(v));
   } else if (v7_is_object(v)) {
-    return gc_check_ptr(&v7->object_arena, v7_to_object(v));
+    return gc_check_ptr(&v7->generic_object_arena, v7_to_object(v));
   }
   return 1;
 }
@@ -22721,7 +22825,7 @@ static enum v7_err Obj_getPrototypeOf(struct v7 *v7, v7_val_t *res) {
         v7_throwf(v7, TYPE_ERROR, "Object.getPrototypeOf called on non-object");
     goto clean;
   }
-  *res = v_get_prototype(v7, arg);
+  *res = obj_prototype_v(v7, arg);
 
 clean:
   return rcode;
@@ -22733,7 +22837,7 @@ WARN_UNUSED_RESULT
 static enum v7_err Obj_isPrototypeOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t obj = v7_arg(v7, 0);
-  val_t proto = v7_arg(v7, 1);
+  val_t proto = v7_get_this(v7);
 
   *res = v7_create_boolean(is_prototype_of(v7, obj, proto));
 
@@ -23353,8 +23457,9 @@ static enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
     *res = v7_create_number(d);
   }
 
-  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
-    v7_to_object(this_obj)->prototype = v7_to_object(v7->number_prototype);
+  if (v7_is_generic_object(this_obj) && this_obj != v7->global_object) {
+    obj_prototype_set(v7, v7_to_object(this_obj),
+                      v7_to_object(v7->number_prototype));
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
 
     /*
@@ -23423,8 +23528,7 @@ static enum v7_err Number_valueOf(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(this_obj) &&
       (v7_is_object(this_obj) &&
-       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-           v7->number_prototype)) {
+       obj_prototype_v(v7, this_obj) != v7->number_prototype)) {
     rcode =
         v7_throwf(v7, TYPE_ERROR, "Number.valueOf called on non-number object");
     goto clean;
@@ -23487,7 +23591,7 @@ static enum v7_err Number_toString(struct v7 *v7, v7_val_t *res) {
   }
 
   if (!v7_is_number(this_obj) &&
-      !(v7_is_object(this_obj) &&
+      !(v7_is_generic_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->number_prototype))) {
     rcode = v7_throwf(v7, TYPE_ERROR,
                       "Number.toString called on non-number object");
@@ -23692,7 +23796,7 @@ static enum v7_err Array_set_length(struct v7 *v7, v7_val_t *res) {
     struct v7_property **p, **next;
     long index, max_index = -1;
 
-    /* Remove all items with an index higher then new_len */
+    /* Remove all items with an index higher than new_len */
     for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
       size_t n;
       const char *s = v7_get_string_data(v7, &p[0]->name, &n);
@@ -23975,6 +24079,12 @@ static enum v7_err a_splice(struct v7 *v7, int mutate, v7_val_t *res) {
   long num_args = v7_argc(v7);
   long elems_to_insert = num_args > 2 ? num_args - 2 : 0;
   long arg0, arg1;
+
+  if (!v7_is_object(this_obj)) {
+    rcode = v7_throwf(v7, TYPE_ERROR,
+                      "Array.splice or Array.slice called on non-object value");
+    goto clean;
+  }
 
   *res = v7_create_dense_array(v7);
 
@@ -24445,9 +24555,10 @@ V7_PRIVATE enum v7_err Boolean_ctor(struct v7 *v7, v7_val_t *res) {
     *res = v7_create_boolean(1);
   }
 
-  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
+  if (v7_is_generic_object(this_obj) && this_obj != v7->global_object) {
     /* called as "new Boolean(...)" */
-    v7_to_object(this_obj)->prototype = v7_to_object(v7->boolean_prototype);
+    obj_prototype_set(v7, v7_to_object(this_obj),
+                      v7_to_object(v7->boolean_prototype));
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
 
     /*
@@ -24465,8 +24576,7 @@ static enum v7_err Boolean_valueOf(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   if (!v7_is_boolean(this_obj) &&
       (v7_is_object(this_obj) &&
-       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-           v7->boolean_prototype)) {
+       obj_prototype_v(v7, this_obj) != v7->boolean_prototype)) {
     rcode = v7_throwf(v7, TYPE_ERROR,
                       "Boolean.valueOf called on non-boolean object");
     goto clean;
@@ -24496,7 +24606,7 @@ static enum v7_err Boolean_toString(struct v7 *v7, v7_val_t *res) {
   }
 
   if (!v7_is_boolean(this_obj) &&
-      !(v7_is_object(this_obj) &&
+      !(v7_is_generic_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->boolean_prototype))) {
     rcode = v7_throwf(v7, TYPE_ERROR,
                       "Boolean.toString called on non-boolean object");
@@ -24956,8 +25066,9 @@ static enum v7_err String_ctor(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
-    v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
+  if (v7_is_generic_object(this_obj) && this_obj != v7->global_object) {
+    obj_prototype_set(v7, v7_to_object(this_obj),
+                      v7_to_object(v7->string_prototype));
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
     /*
      * implicitly returning `this`: `call_cfunction()` in bcode.c will do
@@ -25174,8 +25285,7 @@ static enum v7_err Str_valueOf(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_string(this_obj) &&
       (v7_is_object(this_obj) &&
-       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-           v7->string_prototype)) {
+       obj_prototype_v(v7, this_obj) != v7->string_prototype)) {
     rcode =
         v7_throwf(v7, TYPE_ERROR, "String.valueOf called on non-string object");
     goto clean;
@@ -25234,7 +25344,7 @@ static enum v7_err Str_toString(struct v7 *v7, v7_val_t *res) {
   }
 
   if (!v7_is_string(this_obj) &&
-      !(v7_is_object(this_obj) &&
+      !(v7_is_generic_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->string_prototype))) {
     rcode = v7_throwf(v7, TYPE_ERROR,
                       "String.toString called on non-string object");
@@ -26690,7 +26800,7 @@ static enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   etime_t ret_time = INVALID_TIME;
-  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
+  if (v7_is_generic_object(this_obj) && this_obj != v7->global_object) {
     long cargs = v7_argc(v7);
     if (cargs <= 0) {
       /* no parameters - return current date & time */
@@ -26752,7 +26862,9 @@ static enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
       }
     }
 
-    v7_to_object(this_obj)->prototype = v7_to_object(v7->date_prototype);
+    obj_prototype_set(v7, v7_to_object(this_obj),
+                      v7_to_object(v7->date_prototype));
+
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN,
                     v7_create_number(ret_time));
     /*
@@ -26959,9 +27071,9 @@ WARN_UNUSED_RESULT
 static enum v7_err Date_valueOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  if (!v7_is_object(this_obj) ||
-      (v7_is_object(this_obj) &&
-       v7_to_object(this_obj)->prototype != v7_to_object(v7->date_prototype))) {
+  if (!v7_is_generic_object(this_obj) ||
+      (v7_is_generic_object(this_obj) &&
+       obj_prototype_v(v7, this_obj) != v7->date_prototype)) {
     rcode = v7_throwf(v7, TYPE_ERROR, "Date.valueOf called on non-Date object");
     goto clean;
   }
@@ -27752,13 +27864,14 @@ static void dump_mm_arena_stats(const char *msg, struct gc_arena *a) {
 }
 
 static void dump_mm_stats(struct v7 *v7) {
-  dump_mm_arena_stats("object: ", &v7->object_arena);
+  dump_mm_arena_stats("object: ", &v7->generic_object_arena);
   dump_mm_arena_stats("function: ", &v7->function_arena);
   dump_mm_arena_stats("property: ", &v7->property_arena);
   printf("string arena len: %" SIZE_T_FMT "\n", v7->owned_strings.len);
   printf("Total heap size: %" SIZE_T_FMT "\n",
          v7->owned_strings.len +
-             gc_arena_size(&v7->object_arena) * v7->object_arena.cell_size +
+             gc_arena_size(&v7->generic_object_arena) *
+                 v7->generic_object_arena.cell_size +
              gc_arena_size(&v7->function_arena) * v7->function_arena.cell_size +
              gc_arena_size(&v7->property_arena) * v7->property_arena.cell_size);
 }

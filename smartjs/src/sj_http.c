@@ -51,7 +51,7 @@ static enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
   *res = v7_create_object(v7);
-  v7_set_proto(*res, sj_http_server_proto);
+  v7_set_proto(v7, *res, sj_http_server_proto);
   v7_set(v7, *res, "_cb", ~0, 0, cb);
 
 clean:
@@ -83,7 +83,7 @@ static void setup_request_object(struct v7 *v7, v7_val_t request,
 
 static void setup_response_object(struct v7 *v7, v7_val_t response,
                                   struct mg_connection *c, v7_val_t request) {
-  v7_set_proto(response, sj_http_response_proto);
+  v7_set_proto(v7, response, sj_http_response_proto);
   v7_set(v7, response, "_c", ~0, 0, v7_create_foreign(c));
   v7_set(v7, response, "_r", ~0, 0, request);
 }
@@ -547,7 +547,7 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   ud->handler = cb;
 
   v7_own(v7, &ud->obj);
-  v7_set_proto(ud->obj, sj_http_request_proto);
+  v7_set_proto(v7, ud->obj, sj_http_request_proto);
 
   /* internal property: mongoose connection */
   v7_set(v7, ud->obj, "_c", ~0, 0, v7_create_foreign(c));
