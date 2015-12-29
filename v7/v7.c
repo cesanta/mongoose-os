@@ -3927,22 +3927,32 @@ struct v7 {
  * provided they are sign extended
  */
 
-#define V7_TAG_OBJECT ((uint64_t) 0xFFFF << 48)
-#define V7_TAG_FOREIGN ((uint64_t) 0xFFFE << 48)
-#define V7_TAG_UNDEFINED ((uint64_t) 0xFFFD << 48)
-#define V7_TAG_BOOLEAN ((uint64_t) 0xFFFC << 48)
-#define V7_TAG_NAN ((uint64_t) 0xFFFB << 48)
-#define V7_TAG_STRING_I ((uint64_t) 0xFFFA << 48)  /* Inlined string len < 5 */
-#define V7_TAG_STRING_5 ((uint64_t) 0xFFF9 << 48)  /* Inlined string len 5 */
-#define V7_TAG_STRING_O ((uint64_t) 0xFFF8 << 48)  /* Owned string */
-#define V7_TAG_STRING_F ((uint64_t) 0xFFF7 << 48)  /* Foreign string */
-#define V7_TAG_STRING_C ((uint64_t) 0xFFF6 << 48)  /* String chunk */
-#define V7_TAG_FUNCTION ((uint64_t) 0xFFF5 << 48)  /* JavaScript function */
-#define V7_TAG_CFUNCTION ((uint64_t) 0xFFF4 << 48) /* C function */
-#define V7_TAG_STRING_D ((uint64_t) 0xFFF3 << 48)  /* Dictionary string  */
-#define V7_TAG_REGEXP ((uint64_t) 0xFFF2 << 48)    /* Regex */
-#define V7_TAG_NOVALUE ((uint64_t) 0xFFF1 << 48)   /* Sentinel for no value */
-#define V7_TAG_MASK ((uint64_t) 0xFFFF << 48)
+/*
+ * A tag is made of the sign bit and the 4 lower order bits of byte 6.
+ * So in total we have 32 possible tags.
+ *
+ * Tag (1,0) however cannot hold a zero payload otherwise it's interpreted as an
+ * INFINITY; for simplicity we're just not going to use that combination.
+ */
+#define MAKE_TAG(s, t) \
+  ((uint64_t)(s) << 63 | (uint64_t) 0xfff0 << 48 | (uint64_t)(t) << 48)
+
+#define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
+#define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
+#define V7_TAG_UNDEFINED MAKE_TAG(1, 0xD)
+#define V7_TAG_BOOLEAN MAKE_TAG(1, 0xC)
+#define V7_TAG_NAN MAKE_TAG(1, 0xB)
+#define V7_TAG_STRING_I MAKE_TAG(1, 0xA)  /* Inlined string len < 5 */
+#define V7_TAG_STRING_5 MAKE_TAG(1, 0x9)  /* Inlined string len 5 */
+#define V7_TAG_STRING_O MAKE_TAG(1, 0x8)  /* Owned string */
+#define V7_TAG_STRING_F MAKE_TAG(1, 0x7)  /* Foreign string */
+#define V7_TAG_STRING_C MAKE_TAG(1, 0x6)  /* String chunk */
+#define V7_TAG_FUNCTION MAKE_TAG(1, 0x5)  /* JavaScript function */
+#define V7_TAG_CFUNCTION MAKE_TAG(1, 0x4) /* C function */
+#define V7_TAG_STRING_D MAKE_TAG(1, 0x3)  /* Dictionary string  */
+#define V7_TAG_REGEXP MAKE_TAG(1, 0x2)    /* Regex */
+#define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
+#define V7_TAG_MASK MAKE_TAG(1, 0xF)
 
 #define V7_NULL V7_TAG_FOREIGN
 #define V7_UNDEFINED V7_TAG_UNDEFINED
