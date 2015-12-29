@@ -972,6 +972,9 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
  * All rights reserved
  */
 
+#ifndef CYG_PROFILE_H_INCLUDED
+#define CYG_PROFILE_H_INCLUDED
+
 /*
  * This file contains GCC/clang instrumentation callbacks, as well as
  * accompanying code. The actual code in these callbacks depends on enabled
@@ -1014,7 +1017,9 @@ void v7_stack_track_start(struct v7 *v7, struct stack_track_ctx *ctx);
 /* see explanation above */
 int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx);
 
-#endif
+#endif /* V7_ENABLE_STACK_TRACKING */
+
+#endif /* CYG_PROFILE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/mbuf.h"
 /**/
@@ -2432,6 +2437,7 @@ void init_ubjson(struct v7 *v7);
 #define AST_H_INCLUDED
 
 #include <stdio.h>
+/* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 
 #if defined(__cplusplus)
@@ -2641,6 +2647,9 @@ V7_PRIVATE void ast_dump_tree(FILE *, struct ast *, ast_off_t *, int depth);
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
+struct v7;
+struct ast;
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -2658,7 +2667,8 @@ struct v7_pstate {
   int in_strict;    /* True if in strict mode */
 };
 
-V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
+V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
+                             int);
 
 #if defined(__cplusplus)
 }
@@ -2680,6 +2690,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int, int);
 #define BIN_BCODE_SIGNATURE "V\007BCODE:"
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "common/mbuf.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -3276,6 +3287,7 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 #define EVAL_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -3363,12 +3375,6 @@ struct gc_arena {
 #define ENDL "\n"
 #endif
 
-#undef siglongjmp
-#undef sigsetjmp
-
-#define siglongjmp longjmp
-#define sigsetjmp(buf, mask) setjmp(buf)
-
 /*
  * In some compilers (watcom) NAN == NAN (and other comparisons) don't follow
  * the rules of IEEE 754. Since we don't know a priori which compilers
@@ -3430,25 +3436,6 @@ typedef unsigned long uintptr_t;
 #endif
 
 /* Amalgamated: #include "v7/src/v7_features.h" */
-
-/* Private API */
-/* Amalgamated: #include "common/utf.h" */
-/* Amalgamated: #include "common/str_util.h" */
-/* Amalgamated: #include "common/mbuf.h" */
-/* Amalgamated: #include "v7/src/tokenizer.h" */
-/* Amalgamated: #include "v7/src/slre.h" */
-/* Amalgamated: #include "v7/src/varint.h" */
-/* Amalgamated: #include "v7/src/ast.h" */
-/* Amalgamated: #include "v7/src/parser.h" */
-/* Amalgamated: #include "v7/src/bcode.h" */
-/* Amalgamated: #include "v7/src/eval.h" */
-/* Amalgamated: #include "v7/src/compiler.h" */
-/* Amalgamated: #include "v7/src/mm.h" */
-/* Amalgamated: #include "v7/builtin/builtin.h" */
-/* Amalgamated: #include "v7/src/cyg_profile.h" */
-
-/* Max captures for String.replace() */
-#define V7_RE_MAX_REPL_SUB 20
 
 /* MSVC6 doesn't have standard C math constants defined */
 #ifndef M_E
@@ -3517,11 +3504,181 @@ extern void *v7_sp_limit;
 #endif
 #endif
 
-/* TODO(lsm): move VM definitions to vm.h */
-#ifndef VM_H_INCLUDED
-#define V7_VALUE_DEFINED
-typedef uint64_t val_t;
+/* Vector, describes some memory location pointed by 'p' with length 'len' */
+struct v7_vec {
+  const char *p;
+  size_t len;
+};
+
+#define V7_VEC(str) \
+  { (str), sizeof(str) - 1 }
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
+
+#define V7_STATIC_ASSERT(COND, MSG) \
+  typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
+
+#endif /* V7_INTERNAL_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_string.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_STRING_H_INCLUDED
+#define STD_STRING_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+/* Max captures for String.replace() */
+#define V7_RE_MAX_REPL_SUB 20
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
+                                       double *res) WARN_UNUSED_RESULT;
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_STRING_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_regex.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_REGEX_H_INCLUDED
+#define STD_REGEX_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if V7_ENABLE__RegExp
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE enum v7_err Regex_ctor(struct v7 *v7, v7_val_t *res);
+V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, v7_val_t rx, v7_val_t vstr,
+                               int lind, v7_val_t *res);
+
+V7_PRIVATE void init_regex(struct v7 *v7);
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE__RegExp */
+
+#endif /* STD_REGEX_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_error.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_ERROR_H_INCLUDED
+#define STD_ERROR_H_INCLUDED
+
+struct v7;
+
+/*
+ * JavaScript error types
+ */
+#define TYPE_ERROR "TypeError"
+#define SYNTAX_ERROR "SyntaxError"
+#define REFERENCE_ERROR "ReferenceError"
+#define INTERNAL_ERROR "InternalError"
+#define RANGE_ERROR "RangeError"
+#define EVAL_ERROR "EvalError"
+#define ERROR_CTOR_MAX 6
+/*
+ * TODO(mkm): EvalError is not so important, we should guard it behind
+ * something like `V7_ENABLE__EvalError`. However doing so makes it hard to
+ * keep ERROR_CTOR_MAX up to date; perhaps let's find a better way of doing it.
+ *
+ * EvalError is useful mostly because we now have ecma tests failing:
+ *
+ * 8129 FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-iii-24.js (tail -c
+ * +7600043 tests/ecmac.db|head -c 496): [{"message":"[EvalError] is not
+ * defined"}]
+ *
+ * Those tests are not EvalError specific, and they do test that the exception
+ * handling machinery works as intended.
+ */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_error(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_ERROR_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/js_stdlib.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef JS_STDLIB_H_INCLUDED
+#define JS_STDLIB_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_js_stdlib(struct v7 *);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* JS_STDLIB_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/vm.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef VM_H_INCLUDED
+#define VM_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_error.h" */
+/* Amalgamated: #include "v7/src/mm.h" */
+/* Amalgamated: #include "v7/src/parser.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/tokenizer.h" */
+
+typedef uint64_t val_t;
 
 /*
  * JavaScript value is either a primitive, or an object.
@@ -3555,31 +3712,6 @@ enum v7_type {
   V7_TYPE_MAX_OBJECT_TYPE,
   V7_NUM_TYPES
 };
-
-#define TYPE_ERROR "TypeError"
-#define SYNTAX_ERROR "SyntaxError"
-#define REFERENCE_ERROR "ReferenceError"
-#define INTERNAL_ERROR "InternalError"
-#define RANGE_ERROR "RangeError"
-#define EVAL_ERROR "EvalError"
-#define ERROR_CTOR_MAX 6
-/*
- * TODO(dfrank): EvalError is not so important, we should guard it behind
- * something like `V7_ENABLE__EvalError`. However doing so makes it hard to
- * keep ERROR_CTOR_MAX up to date; perhaps let's find a better way of doing it.
- *
- * EvalError is useful mostly because we now have ecma tests failing:
- *
- * 8129 FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-iii-24.js (tail -c
- * +7600043 tests/ecmac.db|head -c 496): [{"message":"[EvalError] is not
- * defined"}]
- *
- * Those tests are not EvalError specific, and they do test that the exception
- * handling machinery works as intended.
- */
-
-/* Amalgamated: #include "v7/src/vm.h" */
-/* Amalgamated: #include "v7/src/compiler.h" */
 
 struct v7 {
   val_t global_object;
@@ -3752,69 +3884,6 @@ struct v7 {
   /* true if last emitted statement does not affect data stack */
   unsigned int is_stack_neutral : 1;
 };
-
-enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
-
-/* Vector, describes some memory location pointed by 'p' with length 'len' */
-struct v7_vec {
-  const char *p;
-  size_t len;
-};
-#define V7_VEC(str) \
-  { (str), sizeof(str) - 1 }
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
-#endif
-
-#define V7_STATIC_ASSERT(COND, MSG) \
-  typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE val_t create_exception(struct v7 *, const char *typ, const char *);
-V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
-
-V7_PRIVATE void init_js_stdlib(struct v7 *);
-
-#if V7_ENABLE__RegExp
-V7_PRIVATE enum v7_err Regex_ctor(struct v7 *v7, v7_val_t *res);
-V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, val_t rx, val_t vstr, int lind,
-                               val_t *res);
-#endif
-
-V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, val_t s, val_t at,
-                                       double *res) WARN_UNUSED_RESULT;
-
-#if V7_ENABLE__Memory__stats
-V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
-#endif
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_INTERNAL_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/vm.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef VM_H_INCLUDED
-#define VM_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-/* TODO(mkm): remove ifdef once v7 has been moved here */
-#ifndef V7_VALUE_DEFINED
-typedef uint64_t val_t;
-#endif
 
 /*
  *  Double-precision floating-point number, IEEE 754
@@ -4018,16 +4087,11 @@ V7_PRIVATE void *v7_to_pointer(val_t v);
 
 V7_PRIVATE void init_object(struct v7 *v7);
 V7_PRIVATE void init_array(struct v7 *v7);
-V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
 #if V7_ENABLE__Math
 V7_PRIVATE void init_math(struct v7 *v7);
 #endif
 V7_PRIVATE void init_string(struct v7 *v7);
-#if V7_ENABLE__RegExp
-V7_PRIVATE void init_regex(struct v7 *v7);
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, val_t);
-#endif
 V7_PRIVATE void init_number(struct v7 *v7);
 V7_PRIVATE void init_json(struct v7 *v7);
 #if V7_ENABLE__Date
@@ -4162,6 +4226,10 @@ V7_PRIVATE enum v7_err to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                               size_t *res_len,
                               enum v7_stringify_flags flags) WARN_UNUSED_RESULT;
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
+
+V7_PRIVATE val_t
+create_exception(struct v7 *v7, const char *typ, const char *msg);
+
 V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v,
                                   val_t *res) WARN_UNUSED_RESULT;
 
@@ -4182,6 +4250,8 @@ enum embstr_flags {
   EMBSTR_ZERO_TERM = (1 << 0),
   EMBSTR_UNESCAPE = (1 << 1),
 };
+
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len, uint8_t /*enum embstr_flags*/ flags);
@@ -4225,6 +4295,8 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
 #define COMPILER_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -4312,10 +4384,16 @@ V7_PRIVATE void gc_check_valid_allocation_seqn(struct v7 *v7, uint16_t n);
 #endif
 
 V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
+
 /* return 0 if v is an object/function with a bad pointer */
 V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v);
+
 /* checks whether a pointer is within the ranges of an arena */
 V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *p);
+
+#if V7_ENABLE__Memory__stats
+V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
+#endif
 
 #if defined(__cplusplus)
 }
@@ -8111,13 +8189,15 @@ void init_crypto(struct v7 *v7) {
 
 #ifdef V7_ENABLE_UBJSON
 
-/* Amalgamated: #include "v7/v7.h" */
 #include <string.h>
 #include <assert.h>
+
+/* Amalgamated: #include "v7/v7.h" */
 
 /* Amalgamated: #include "common/ubjson.h" */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 struct ubjson_ctx {
   struct mbuf out;   /* output buffer */
@@ -8462,7 +8542,9 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
@@ -8936,6 +9018,11 @@ int main(void) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "common/mbuf.h" */
+/* Amalgamated: #include "v7/src/varint.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "common/str_util.h" */
 
 #ifdef V7_LARGE_AST
 typedef uint32_t ast_skip_t;
@@ -9810,6 +9897,8 @@ V7_PRIVATE void ast_free(struct ast *ast) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 
 #if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
@@ -10319,8 +10408,12 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/compiler.h" */
+/* Amalgamated: #include "v7/src/cyg_profile.h" */
 
 /*
  * Bcode offsets in "try stack" (`____p`) are stored in JS numbers, i.e.
@@ -12450,10 +12543,19 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
  * All rights reserved
  */
 
-/* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/cs_file.h" */
+/* Amalgamated: #include "common/str_util.h" */
+/* Amalgamated: #include "common/utf.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/slre.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/varint.h" */
+/* Amalgamated: #include "v7/src/std_string.h" */
+/* Amalgamated: #include "v7/src/compiler.h" */
+/* Amalgamated: #include "v7/builtin/builtin.h" */
 
 #ifdef HAS_V7_INFINITY
 double _v7_infinity;
@@ -15012,6 +15114,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 
 #ifdef V7_STACK_GUARD_MIN_SIZE
@@ -15797,8 +15900,13 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
  * All rights reserved
  */
 
-/* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "common/coroutine.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/parser.h" */
+/* Amalgamated: #include "v7/src/tokenizer.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/cyg_profile.h" */
 
 #define ACCEPT(t) (((v7)->cur_tok == (t)) ? next_tok((v7)), 1 : 0)
 
@@ -18382,6 +18490,9 @@ const char *v7_get_parser_error(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/compiler.h" */
+/* Amalgamated: #include "v7/src/std_error.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 /*
  * The bytecode compiler takes an AST as input and produces one or more
@@ -20267,6 +20378,9 @@ clean:
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/std_regex.h" */
+/* Amalgamated: #include "v7/src/js_stdlib.h" */
 
 #ifdef NO_LIBC
 void print_str(const char *str);
@@ -20573,6 +20687,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 /* because clang-format would break JS code, e.g. === converted to == = ... */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #define STRINGIFY(x) #x
 
@@ -22414,6 +22529,8 @@ int main(int argc, char **argv) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/cyg_profile.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #if defined(V7_CYG_PROFILE_ON)
 
@@ -22588,7 +22705,9 @@ void v7_stack_stat_clean(struct v7 *v7) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #if V7_ENABLE__Object__getPrototypeOf
 WARN_UNUSED_RESULT
@@ -23120,6 +23239,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/std_error.h" */
 
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   /* TODO(mkm): figure out if this is an error object and which kind */
@@ -23210,6 +23331,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
 static enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
@@ -23441,6 +23563,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
 static enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
@@ -23474,8 +23597,8 @@ V7_PRIVATE void init_json(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
-
 /* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "common/str_util.h" */
 
 struct a_sort_data {
   val_t sort_func;
@@ -24309,6 +24432,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Boolean_ctor(struct v7 *v7, v7_val_t *res) {
@@ -24412,6 +24536,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #if V7_ENABLE__Math
 
@@ -24662,7 +24787,12 @@ V7_PRIVATE void init_math(struct v7 *v7) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_string.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/slre.h" */
+/* Amalgamated: #include "v7/src/std_regex.h" */
 
 V7_PRIVATE enum v7_err to_string(struct v7 *, val_t, val_t *res);
 
@@ -25979,6 +26109,8 @@ V7_PRIVATE void init_string(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "common/str_util.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #if V7_ENABLE__Date
 
@@ -27128,6 +27260,8 @@ V7_PRIVATE void init_date(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
 
 WARN_UNUSED_RESULT
 static enum v7_err Function_ctor(struct v7 *v7, v7_val_t *res) {
@@ -27266,7 +27400,11 @@ V7_PRIVATE void init_function(struct v7 *v7) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_regex.h" */
+/* Amalgamated: #include "v7/src/slre.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #if V7_ENABLE__RegExp
 
@@ -27568,6 +27706,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/cs_file.h" */
 
