@@ -212,7 +212,13 @@ void wifi_changed_cb(System_Event_t *evt) {
            v7_create_string(v7, (const char *) config.password,
                             strlen((const char *) config.password), 1));
 
-    v7_exec(v7, "conf.save()", &res);
+    {
+      enum v7_err rcode = v7_exec(v7, "conf.save()", &res);
+      assert(rcode == V7_OK);
+#if defined(NDEBUG)
+      (void) rcode;
+#endif
+    }
     wifi_setting_up = 0;
   }
 

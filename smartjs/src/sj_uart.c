@@ -1,5 +1,6 @@
 #include "v7/v7.h"
 #include <stdlib.h>
+#include <assert.h>
 
 #include "sj_uart.h"
 #include "sj_v7_ext.h"
@@ -129,7 +130,14 @@ void sj_init_uart(struct v7 *v7) {
   v7_set_method(v7, uart_proto, "write", UART_write);
   v7_set_method(v7, uart_proto, "recv", UART_recv);
   v7_set(v7, v7_get_global(v7), "UART", ~0, 0, uart);
-  v7_exec(v7, "UART.open = function (d) { return new UART.dev(d); }", NULL);
+  {
+    enum v7_err rcode = v7_exec(
+        v7, "UART.open = function (d) { return new UART.dev(d); }", NULL);
+    assert(rcode == V7_OK);
+#if defined(NDEBUG)
+    (void) rcode;
+#endif
+  }
 
   v7_disown(v7, &uart_ctor);
   v7_disown(v7, &uart_proto);

@@ -139,31 +139,35 @@ void v7_destroy(struct v7 *);
  *  - V7_AST_TOO_LARGE if `js_code` contains an AST segment longer than 16 bit.
  *    `result` is undefined. To avoid this error, build V7 with V7_LARGE_AST.
  */
-enum v7_err v7_exec(struct v7 *, const char *js_code, v7_val_t *result);
+enum v7_err v7_exec(struct v7 *, const char *js_code,
+                    v7_val_t *result) WARN_UNUSED_RESULT;
 
 /*
  * Same as `v7_exec()`, but loads source code from `path` file.
  */
-enum v7_err v7_exec_file(struct v7 *, const char *path, v7_val_t *result);
+enum v7_err v7_exec_file(struct v7 *, const char *path,
+                         v7_val_t *result) WARN_UNUSED_RESULT;
 
 /*
  * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
  * context.
  */
 enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
-                         v7_val_t *result);
+                         v7_val_t *result) WARN_UNUSED_RESULT;
 
 /*
  * Parse `str` and store corresponding JavaScript object in `res` variable.
  * String `str` should be '\0'-terminated.
  * Return value and semantic is the same as for `v7_exec()`.
  */
-enum v7_err v7_parse_json(struct v7 *, const char *str, v7_val_t *res);
+enum v7_err v7_parse_json(struct v7 *, const char *str,
+                          v7_val_t *res) WARN_UNUSED_RESULT;
 
 /*
  * Same as `v7_parse_json()`, but loads JSON string from `path`.
  */
-enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
+enum v7_err v7_parse_json_file(struct v7 *, const char *path,
+                               v7_val_t *res) WARN_UNUSED_RESULT;
 
 /*
  * Compile JavaScript code `js_code` into the byte code and write generated
@@ -173,7 +177,7 @@ enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
  * NOTE: `fp` must be a valid, opened, writable file stream.
  */
 enum v7_err v7_compile(const char *js_code, int generate_binary_output,
-                       int use_bcode, FILE *fp);
+                       int use_bcode, FILE *fp) WARN_UNUSED_RESULT;
 
 /*
  * Perform garbage collection.
@@ -231,7 +235,7 @@ v7_val_t v7_create_string(struct v7 *, const char *str, size_t len, int copy);
  */
 enum v7_err v7_create_regexp(struct v7 *, const char *regex, size_t regex_len,
                              const char *flags, size_t flags_len,
-                             v7_val_t *res);
+                             v7_val_t *res) WARN_UNUSED_RESULT;
 
 /*
  * Create JavaScript value that holds C/C++ `void *` pointer.
@@ -430,7 +434,7 @@ char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
  */
 enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
                                   size_t size, enum v7_stringify_flags flags,
-                                  char **res);
+                                  char **res) WARN_UNUSED_RESULT;
 
 #define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
 
@@ -456,7 +460,7 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  * Result can be NULL if you don't care about the return value.
  */
 enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
-                     v7_val_t this_obj, v7_val_t args);
+                     v7_val_t this_obj, v7_val_t args) WARN_UNUSED_RESULT;
 
 /* Throw an already existing value. */
 enum v7_err v7_throw(struct v7 *v7, v7_val_t val) WARN_UNUSED_RESULT;
@@ -480,11 +484,6 @@ enum v7_err v7_rethrow(struct v7 *v7) WARN_UNUSED_RESULT;
  * nothing is being thrown
  */
 v7_val_t v7_thrown_value(struct v7 *v7);
-
-/*
- * Clear thrown error from the v7 context
- */
-enum v7_err v7_thrown_clear(struct v7 *v7);
 
 /*
  * Set object property. `name`, `name_len` specify property name, `attrs`
