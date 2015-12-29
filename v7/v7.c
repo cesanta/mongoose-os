@@ -1022,6 +1022,8 @@ void v7_stack_track_start(struct v7 *v7, struct stack_track_ctx *ctx);
 /* see explanation above */
 int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx);
 
+void v7_stack_stat_clean(struct v7 *v7);
+
 #endif /* V7_ENABLE_STACK_TRACKING */
 
 #endif /* CYG_PROFILE_H_INCLUDED */
@@ -2574,7 +2576,11 @@ struct ast {
 
 typedef unsigned long ast_off_t;
 
-#ifdef __GNUC__
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 8
+#define GCC_HAS_PRAGMA_DIAGNOSTIC
+#endif
+
+#ifdef GCC_HAS_PRAGMA_DIAGNOSTIC
 /*
  * TODO(mkm): GCC complains that bitfields on char are not standard
  */
@@ -2585,14 +2591,17 @@ struct ast_node_def {
 #ifndef V7_DISABLE_AST_TAG_NAMES
   const char *name; /* tag name, for debugging and serialization */
 #endif
-  /* int because some archs cannot address flash with byte instructions */
-  unsigned int has_varint : 1;   /* has a varint body */
-  unsigned int has_inlined : 1;  /* inlined data whose size is in varint fld */
-  unsigned int num_skips : 3;    /* number of skips */
-  unsigned int num_subtrees : 3; /* number of fixed subtrees */
+  unsigned char has_varint : 1;   /* has a varint body */
+  unsigned char has_inlined : 1;  /* inlined data whose size is in varint fld */
+  unsigned char num_skips : 3;    /* number of skips */
+  unsigned char num_subtrees : 3; /* number of fixed subtrees */
 };
 extern const struct ast_node_def ast_node_defs[];
-#ifdef __GNUC__
+#if V7_ENABLE_FOOTPRINT_REPORT
+extern const size_t ast_node_defs_size;
+extern const size_t ast_node_defs_count;
+#endif
+#ifdef GCC_HAS_PRAGMA_DIAGNOSTIC
 #pragma GCC diagnostic pop
 #endif
 
@@ -9640,6 +9649,11 @@ const struct ast_node_def ast_node_defs[] = {
 
 V7_STATIC_ASSERT(AST_MAX_TAG < 256, ast_tag_should_fit_in_char);
 V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
+
+#if V7_ENABLE_FOOTPRINT_REPORT
+const size_t ast_node_defs_size = sizeof(ast_node_defs);
+const size_t ast_node_defs_count = ARRAY_SIZE(ast_node_defs);
+#endif
 
 /*
  * Begins an AST node by appending a tag to the AST.
