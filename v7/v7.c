@@ -7664,7 +7664,8 @@ static enum v7_err File_loadJSON(struct v7 *v7, v7_val_t *res) {
 
     rcode = v7_parse_json_file(v7, file_name, res);
     if (rcode != V7_OK) {
-      goto clean;
+      /* swallow exception and return undefined */
+      rcode = V7_OK;
     }
   }
 
