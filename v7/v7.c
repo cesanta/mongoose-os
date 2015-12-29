@@ -14474,15 +14474,20 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
 #endif
   } else {
     /* foreign string */
-    size_t pos = m->len;
-    int llen = calc_llen(len);
+    if (sizeof(void *) <= 4 && len <= UINT16_MAX) {
+      /* small foreign strings can fit length and ptr in the val_t */
+      offset = (uint64_t) len << 32 | (uint64_t)(uintptr_t) p;
+    } else {
+      /* bigger strings need indirection that uses ram */
+      size_t pos = m->len;
+      int llen = calc_llen(len);
 
-    /* allocate space for len and ptr */
-    mbuf_insert(m, pos, NULL, llen + sizeof(p));
+      /* allocate space for len and ptr */
+      mbuf_insert(m, pos, NULL, llen + sizeof(p));
 
-    encode_varint(len, (uint8_t *) (m->buf + pos));
-    memcpy(m->buf + pos + llen, &p, sizeof(p));
-
+      encode_varint(len, (uint8_t *) (m->buf + pos));
+      memcpy(m->buf + pos + llen, &p, sizeof(p));
+    }
     tag = V7_TAG_STRING_F;
   }
 
@@ -14549,11 +14554,32 @@ const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
     *sizep = decode_varint((uint8_t *) s, &llen);
     p = s + llen;
   } else if (tag == V7_TAG_STRING_F) {
-    size_t offset = (size_t) gc_string_val_to_offset(*v);
-    char *s = v7->foreign_strings.buf + offset;
+    /*
+     * short foreign strings on <=32-bit machines can be encoded in a compact
+     * form:
+     *
+     *     7         6        5        4        3        2        1        0
+     *  11111111|1111tttt|llllllll|llllllll|ssssssss|ssssssss|ssssssss|ssssssss
+     *
+     * Strings longer than 2^26 will be indireceted through the foreign_strings
+     * mbuf.
+     *
+     * We don't use a different tag to represent those two cases. Instead, all
+     * foreign strings represented with the help of the foreign_strings mbuf
+     * will have the upper 16-bits of the payload set to zero. This allows us to
+     * represent up to 477 million foreign strings longer than 64k.
+     */
+    uint16_t len = (*v >> 32) & 0xFFFF;
+    if (sizeof(void *) <= 4 && len != 0) {
+      *sizep = (size_t) len;
+      p = (const char *) (uintptr_t) *v;
+    } else {
+      size_t offset = (size_t) gc_string_val_to_offset(*v);
+      char *s = v7->foreign_strings.buf + offset;
 
-    *sizep = decode_varint((uint8_t *) s, &llen);
-    memcpy(&p, s + llen, sizeof(p));
+      *sizep = decode_varint((uint8_t *) s, &llen);
+      memcpy(&p, s + llen, sizeof(p));
+    }
   } else {
     assert(0);
   }
