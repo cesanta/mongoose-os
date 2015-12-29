@@ -11,11 +11,27 @@ int parse_sys_config(const char *json, struct sys_config *dst,
   if (json == NULL) goto done;
   if ((toks = parse_json2(json, strlen(json))) == NULL) goto done;
 
-  if (sj_conf_get_int(toks, "debug.mode", &dst->debug.mode) == 0 &&
+  if (sj_conf_get_bool(toks, "tls.enable", &dst->tls.enable) == 0 &&
       require_keys)
     goto done;
 
-  if (sj_conf_get_int(toks, "debug.level", &dst->debug.level) == 0 &&
+  if (sj_conf_get_str(toks, "tls.ca_file", &dst->tls.ca_file) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "tls.server_name", &dst->tls.server_name) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_bool(toks, "http.enable", &dst->http.enable) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "http.port", &dst->http.port) == 0 && require_keys)
+    goto done;
+
+  if (sj_conf_get_bool(toks, "http.enable_webdav", &dst->http.enable_webdav) ==
+          0 &&
       require_keys)
     goto done;
 
@@ -77,28 +93,6 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_bool(toks, "http.enable", &dst->http.enable) == 0 &&
-      require_keys)
-    goto done;
-
-  if (sj_conf_get_str(toks, "http.port", &dst->http.port) == 0 && require_keys)
-    goto done;
-
-  if (sj_conf_get_bool(toks, "http.enable_webdav", &dst->http.enable_webdav) ==
-          0 &&
-      require_keys)
-    goto done;
-
-  if (sj_conf_get_str(toks, "update.tls_server_name",
-                      &dst->update.tls_server_name) == 0 &&
-      require_keys)
-    goto done;
-
-  if (sj_conf_get_int(toks, "update.server_timeout",
-                      &dst->update.server_timeout) == 0 &&
-      require_keys)
-    goto done;
-
   if (sj_conf_get_str(toks, "update.metadata_url", &dst->update.metadata_url) ==
           0 &&
       require_keys)
@@ -109,12 +103,38 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_bool(toks, "update.tls_ena", &dst->update.tls_ena) == 0 &&
+  if (sj_conf_get_int(toks, "update.server_timeout",
+                      &dst->update.server_timeout) == 0 &&
       require_keys)
     goto done;
 
-  if (sj_conf_get_str(toks, "update.tls_ca_file", &dst->update.tls_ca_file) ==
+  if (sj_conf_get_str(toks, "clubby.device_psk", &dst->clubby.device_psk) ==
           0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "clubby.server_address",
+                      &dst->clubby.server_address) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_bool(toks, "clubby.enable", &dst->clubby.enable) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "clubby.backend", &dst->clubby.backend) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "clubby.device_id", &dst->clubby.device_id) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "debug.mode", &dst->debug.mode) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "debug.level", &dst->debug.level) == 0 &&
       require_keys)
     goto done;
 

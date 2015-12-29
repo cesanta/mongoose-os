@@ -27,10 +27,19 @@
   "update": {
     "server_address": "127.0.0.1:8081",
     "metadata_url": "/updates/metadata.json",
-    "tls_ena": false,
-    "tls_server_name": "nothing.here",
-    "tls_ca_file": "nothing.pem",
     "server_timeout": 10
+  },
+  "tls": {
+    "enable": false,
+    "server_name": "nothing.here",
+    "ca_file": "nothing.pem"
+  },
+  "clubby": {
+    "enable": false,
+    "server_address": "127.0.0.1:8911",
+    "device_id": "device_1",
+    "device_psk": "psk_1",
+    "backend": "//api.cesanta.com"
   },
   "debug": {
     "level": 3,

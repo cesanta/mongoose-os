@@ -63,7 +63,8 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_http.c sj_config.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
             sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c \
-			device_config.c sys_config.c
+            device_config.c sys_config.c ubjserializer.c clubby_proto.c \
+            sj_clubby.c
 
 ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
@@ -80,7 +81,7 @@ JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
 JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC) $(V7_PATH) $(MONGOOSE_PATH) \
-		$(BOOTLOADER_PATH)/rboot/appcode
+		$(BOOTLOADER_PATH)/rboot/appcode $(COMMON_DIR)
 IPATH = $(REPO_ROOT) $(COMMON_DIR) $(SMARTJS_SRC) $(VPATH) \
 		$(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
 		$(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
@@ -108,7 +109,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
-           -DCS_MMAP -DV7_MMAP_EXEC \
+           -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON \
            -DV7_MMAP_EXEC_ONLY="sys_init.js_clubby.js_I2C.js_cloud.js_demo.js"
 
 MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266

@@ -27,12 +27,12 @@
 
 #include <sj_hal.h>
 #include <sj_v7_ext.h>
-
+#include "sj_clubby.h"
 #include "v7_esp.h"
 #include "util.h"
 #include "v7_esp_features.h"
 #include "esp_uart.h"
-
+#include "device_config.h"
 #include "sj_wifi.h"
 #include "v7.h"
 
@@ -179,6 +179,12 @@ void wifi_changed_cb(System_Event_t *evt) {
       evt->event_id == EVENT_STAMODE_GOT_IP
 #endif
       ) {
+#ifndef DISABLE_C_CLUBBY
+    if (get_cfg()->clubby.enable != 0) {
+      /* TODO(alashkin): put clubby initialization somewhere in smartjs/src */
+      sj_init_clubby(v7);
+    }
+#endif
     struct station_config config;
     v7_val_t res;
     v7_val_t conf = v7_get(v7, v7_get_global(v7), "conf", ~0);

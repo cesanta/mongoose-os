@@ -31,14 +31,23 @@
   "update": {"title": "Firmware updater"},
   "update.server_address": {"title": "Update server"},
   "update.metadata_url": {"title": "Update endpoint"},
-  "update.tls_ena": {"title": "Use TLS for update"},
-  "update.tls_server_name": {"title": "TLS server name"},
-  "update.tls_ca_file": {"title" : "TLS CA filename"},
   "update.server_timeout" : {"title" : "Server Timeout"},
   "http": { "title": "HTTP Server" },
   "http.port": { "title": "Listening Port" },
   "http.enable": { "title": "Enable HTTP Server" },
   "http.enable_webdav": { "title": "Enable WebDAV access" },
+
+  "tls": {"title": "TLS settings"},
+  "tls.enable": {"title" : "Enable TLS"},
+  "tls.server_name": {"title" : "TLS server name"},
+  "tls.ca_file": {"title" : "TLS CA file"},
+
+  "clubby": {"title": "Cloud settings"},
+  "clubby.enable": {"title": "Enable cloud communication" },
+  "clubby.server_address": {"title:": "Cloud server address"},
+  "clubby.device_id": {"title": "Device ID"},
+  "clubby.device_psk": {"title": "Device password"},
+  "clubby.backend" : {"title" : "Backend name" },
 
   "debug": { "title": "Debug Settings" },
   "debug.level": {

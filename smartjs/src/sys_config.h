@@ -3,10 +3,16 @@
 #define _SYS_CONFIG_H_
 
 struct sys_config {
-  struct sys_config_debug {
-    int mode;
-    int level;
-  } debug;
+  struct sys_config_tls {
+    int enable;
+    char *ca_file;
+    char *server_name;
+  } tls;
+  struct sys_config_http {
+    int enable;
+    char *port;
+    int enable_webdav;
+  } http;
   struct sys_config_wifi {
     struct sys_config_wifi_ap {
       char *gw;
@@ -27,19 +33,22 @@ struct sys_config {
       char *pass;
     } sta;
   } wifi;
-  struct sys_config_http {
-    int enable;
-    char *port;
-    int enable_webdav;
-  } http;
   struct sys_config_update {
-    char *tls_server_name;
-    int server_timeout;
     char *metadata_url;
     char *server_address;
-    int tls_ena;
-    char *tls_ca_file;
+    int server_timeout;
   } update;
+  struct sys_config_clubby {
+    char *device_psk;
+    char *server_address;
+    int enable;
+    char *backend;
+    char *device_id;
+  } clubby;
+  struct sys_config_debug {
+    int mode;
+    int level;
+  } debug;
 };
 
 int parse_sys_config(const char *, struct sys_config *, int);

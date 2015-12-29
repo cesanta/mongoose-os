@@ -47,15 +47,14 @@ static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data);
 
 static void do_http_connect(struct mg_mgr *mgr, const char *uri) {
   static char *url;
-  asprintf(&url, "http%s://%s%s", get_cfg()->update.tls_ena ? "s" : "",
+  asprintf(&url, "http%s://%s%s", get_cfg()->tls.enable ? "s" : "",
            get_cfg()->update.server_address, uri);
   LOG(LL_DEBUG, ("Full url: %s", url));
   s_current_connection = mg_connect_http(mgr, mg_ev_handler, url, NULL, NULL);
-#ifdef ESP_SSL_KRYPTON
-  if (get_cfg()->update.tls_ena) {
-    char *ca_file =
-        get_cfg()->update.tls_ca_file[0] ? get_cfg()->update.tls_ca_file : NULL;
-    char *server_name = get_cfg()->update.tls_server_name;
+#ifdef SSL_KRYPTON
+  if (get_cfg()->tls.enabled) {
+    char *ca_file = get_cfg()->tls.ca_file[0] ? get_cfg()->tls.ca_file : NULL;
+    char *server_name = get_cfg()->tls.server_name;
     mg_set_ssl(s_current_connection, NULL, ca_file);
     if (server_name[0] == '\0') {
       char *p;
