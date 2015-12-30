@@ -6,8 +6,6 @@
 
 #ifndef DISABLE_C_CLUBBY
 
-typedef struct ub_ctx clubby_ctx_t;
-
 enum clubby_event_type {
   CLUBBY_NET_CONNECT /* net_connect in `clubby_event` struct */,
   CLUBBY_CONNECT /* no params */,
@@ -28,16 +26,21 @@ struct clubby_event {
     } frame;
     struct {
       struct json_token *resp_body;
-      /* TODO(alashkin): change id type to int64_t */
+      /* TODO(alashkin) change to int64 */
       int32_t id;
       int status;
       struct json_token *status_msg;
       struct json_token *resp;
     } response;
     struct {
-      struct json_token *req;
+      struct json_token *cmd_body;
+      /* TODO(alashkin) change to int64 */
+      int32_t id;
+      struct json_token *cmd;
+      struct json_token *src;
     } request;
   };
+  void *user_data;
 };
 
 typedef void (*clubby_callback)(struct clubby_event *evt);

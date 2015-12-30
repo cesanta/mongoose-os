@@ -108,7 +108,7 @@ void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
   mg_send_websocket_frame(s_clubby_conn, op | flags, d, l);
 }
 
-ub_val_t clubby_proto_create_frame(clubby_ctx_t *ctx, const char *dst) {
+ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *dst) {
   ub_val_t frame = ub_create_object(ctx);
   ub_add_prop(ctx, frame, "src", ub_create_string(get_cfg()->clubby.device_id));
   ub_add_prop(ctx, frame, "key",
@@ -176,7 +176,7 @@ static void clubby_proto_parse_resp(struct json_token *resp_arr) {
 
     struct json_token *id_tok = find_json_token(resp, "id");
     if (id_tok == NULL || id_tok->type != JSON_TYPE_NUMBER) {
-      LOG(LL_ERROR, ("No id in response?! |%.*s|", resp->len, resp->ptr));
+      LOG(LL_ERROR, ("No id in response |%.*s|", resp->len, resp->ptr));
       break;
     }
     /* Any number inside a JSON message will have non-number character.
@@ -205,6 +205,65 @@ static void clubby_proto_parse_resp(struct json_token *resp_arr) {
   }
 }
 
+static void clubby_proto_parse_req(struct json_token *frame,
+                                   struct json_token *cmds_arr) {
+  if (cmds_arr->type != JSON_TYPE_ARRAY || cmds_arr->num_desc == 0) {
+    /* Just for debugging - there _is_ cmds field but it is empty */
+    LOG(LL_ERROR, ("No cmd in cmds"));
+    return;
+  }
+
+  struct json_token *cmd = NULL;
+  struct clubby_event evt;
+
+  evt.ev = CLUBBY_REQUEST;
+  evt.request.src = find_json_token(frame, "src");
+  if (evt.request.src == NULL || evt.request.src->type != JSON_TYPE_STRING) {
+    LOG(LL_ERROR, ("Invalid src |%.*s|", frame->len, frame->ptr));
+    return;
+  }
+
+  /*
+   * If any required field is missing we stop processing of the whole package
+   * It looks simpler & safer
+   */
+  const char *cmds_arr_end = cmds_arr->ptr + cmds_arr->len;
+  for (cmd = cmds_arr + 1;
+       cmd->type != JSON_TYPE_EOF && cmd->ptr < cmds_arr_end;) {
+    if (cmd->type != JSON_TYPE_OBJECT) {
+      LOG(LL_ERROR, ("Commands array contains %d instead of object: |%.*s|",
+                     cmd->type, cmd->len, cmd->ptr));
+      break;
+    }
+
+    evt.request.cmd_body = cmd;
+
+    evt.request.cmd = find_json_token(cmd, "cmd");
+    if (evt.request.cmd == NULL || evt.request.cmd->type != JSON_TYPE_STRING) {
+      LOG(LL_ERROR, ("Invalid command |%.*s|", cmd->len, cmd->ptr));
+      break;
+    }
+
+    struct json_token *id_tok = find_json_token(cmd, "id");
+    if (id_tok == NULL || id_tok->type != JSON_TYPE_NUMBER) {
+      LOG(LL_ERROR, ("No id command |%.*s|", cmd->len, cmd->ptr));
+      break;
+    }
+
+    evt.request.id = strtoul(id_tok->ptr, NULL, 10);
+
+    s_clubby_cb(&evt);
+
+    const char *cmd_end = cmd->ptr + cmd->len;
+    struct json_token *next = cmd + 1;
+    while (next->type != JSON_TYPE_EOF && next->ptr < cmd_end) {
+      next++;
+    }
+
+    cmd = next;
+  }
+}
+
 static void clubby_proto_handle_frame(struct mg_str data) {
   struct json_token *frame = parse_json2(data.p, data.len);
 
@@ -222,11 +281,7 @@ static void clubby_proto_handle_frame(struct mg_str data) {
 
   tmp = find_json_token(frame, "cmds");
   if (tmp != NULL) {
-    /* Don't perform any pre-parsing now, just send json to calback */
-    struct clubby_event evt;
-    evt.ev = CLUBBY_REQUEST;
-    evt.request.req = tmp;
-    s_clubby_cb(&evt);
+    clubby_proto_parse_req(frame, tmp);
   }
 
   free(frame);
