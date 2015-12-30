@@ -111,8 +111,8 @@ enum v7_err {
 };
 
 /* JavaScript -> C call interface */
-typedef enum v7_err(v7_cfunction_t)(struct v7 *v7,
-                                    v7_val_t *res) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+typedef enum v7_err(v7_cfunction_t)(struct v7 *v7, v7_val_t *res);
 
 /* Create V7 instance */
 struct v7 *v7_create(void);
@@ -143,35 +143,36 @@ void v7_destroy(struct v7 *);
  *  - V7_AST_TOO_LARGE if `js_code` contains an AST segment longer than 16 bit.
  *    `result` is undefined. To avoid this error, build V7 with V7_LARGE_AST.
  */
-enum v7_err v7_exec(struct v7 *, const char *js_code,
-                    v7_val_t *result) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+enum v7_err v7_exec(struct v7 *, const char *js_code, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but loads source code from `path` file.
  */
-enum v7_err v7_exec_file(struct v7 *, const char *path,
-                         v7_val_t *result) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+enum v7_err v7_exec_file(struct v7 *, const char *path, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
  * context.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
-                         v7_val_t *result) WARN_UNUSED_RESULT;
+                         v7_val_t *result);
 
 /*
  * Parse `str` and store corresponding JavaScript object in `res` variable.
  * String `str` should be '\0'-terminated.
  * Return value and semantic is the same as for `v7_exec()`.
  */
-enum v7_err v7_parse_json(struct v7 *, const char *str,
-                          v7_val_t *res) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+enum v7_err v7_parse_json(struct v7 *, const char *str, v7_val_t *res);
 
 /*
  * Same as `v7_parse_json()`, but loads JSON string from `path`.
  */
-enum v7_err v7_parse_json_file(struct v7 *, const char *path,
-                               v7_val_t *res) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
 
 /*
  * Compile JavaScript code `js_code` into the byte code and write generated
@@ -180,8 +181,9 @@ enum v7_err v7_parse_json_file(struct v7 *, const char *path,
  * in the binary format, suitable for execution by V7 instance.
  * NOTE: `fp` must be a valid, opened, writable file stream.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_compile(const char *js_code, int generate_binary_output,
-                       int use_bcode, FILE *fp) WARN_UNUSED_RESULT;
+                       int use_bcode, FILE *fp);
 
 /*
  * Perform garbage collection.
@@ -237,9 +239,10 @@ v7_val_t v7_create_string(struct v7 *, const char *str, size_t len, int copy);
  * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
  * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_create_regexp(struct v7 *, const char *regex, size_t regex_len,
                              const char *flags, size_t flags_len,
-                             v7_val_t *res) WARN_UNUSED_RESULT;
+                             v7_val_t *res);
 
 /*
  * Create JavaScript value that holds C/C++ `void *` pointer.
@@ -399,8 +402,9 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
  * Caller should check the error code returned, and if it's something other
  * than `V7_OK`, perform cleanup and return this code further.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
-                            size_t name_len, v7_val_t *res) WARN_UNUSED_RESULT;
+                            size_t name_len, v7_val_t *res);
 
 /*
  * Generate string representation of the JavaScript value `val` into a buffer
@@ -436,9 +440,10 @@ char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
  * Caller should check the error code returned, and if it's something other
  * than `V7_OK`, perform cleanup and return this code further.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
                                   size_t size, enum v7_stringify_flags flags,
-                                  char **res) WARN_UNUSED_RESULT;
+                                  char **res);
 
 #define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
 
@@ -463,25 +468,28 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  *
  * Result can be NULL if you don't care about the return value.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
-                     v7_val_t this_obj, v7_val_t args) WARN_UNUSED_RESULT;
+                     v7_val_t this_obj, v7_val_t args);
 
 /* Throw an already existing value. */
-enum v7_err v7_throw(struct v7 *v7, v7_val_t val) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+enum v7_err v7_throw(struct v7 *v7, v7_val_t val);
 
 /*
  * Throw an exception with given formatted message.
  *
  * Pass "Error" as typ for a generic error.
  */
-enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt,
-                      ...) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt, ...);
 
 /*
  * Rethrow the currently thrown object. In fact, it just returns
  * V7_EXEC_EXCEPTION.
  */
-enum v7_err v7_rethrow(struct v7 *v7) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+enum v7_err v7_rethrow(struct v7 *v7);
 
 /*
  * Returns the value that is being thrown at the moment, or `undefined` if
@@ -504,9 +512,10 @@ int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
  * Caller should check the error code returned, and if it's something other
  * than `V7_OK`, perform cleanup and return this code further.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_set_throwing(struct v7 *v7, v7_val_t obj, const char *name,
                             size_t len, v7_prop_attr_t attrs, v7_val_t val,
-                            int *res) WARN_UNUSED_RESULT;
+                            int *res);
 
 /*
  * A helper function to define object's method backed by a C function `func`.
@@ -536,9 +545,9 @@ int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
  * Caller should check the error code returned, and if it's something other
  * than `V7_OK`, perform cleanup and return this code further.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
-                                  unsigned long index, v7_val_t v,
-                                  int *res) WARN_UNUSED_RESULT;
+                                  unsigned long index, v7_val_t v, int *res);
 
 /* Delete value in array `arr` at index `index`, if it exists. */
 void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
@@ -553,8 +562,9 @@ int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
  * Caller should check the error code returned, and if it's something other
  * than `V7_OK`, perform cleanup and return this code further.
  */
+WARN_UNUSED_RESULT
 enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
-                                   int *res) WARN_UNUSED_RESULT;
+                                   int *res);
 
 /*
  * Return array member at index `index`. If `index` is out of bounds, undefined
@@ -3308,17 +3318,19 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 extern "C" {
 #endif /* __cplusplus */
 
-V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7,
-                                  struct bcode *bcode) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode);
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
                                v7_val_t this_obj, v7_val_t args,
-                               uint8_t is_constructor) WARN_UNUSED_RESULT;
+                               uint8_t is_constructor);
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
                               v7_val_t func, v7_val_t args, v7_val_t *res,
                               v7_val_t this_object, int is_json, int fr,
-                              uint8_t is_constructor) WARN_UNUSED_RESULT;
+                              uint8_t is_constructor);
 
 #if defined(__cplusplus)
 }
@@ -3565,8 +3577,8 @@ extern "C" {
 
 V7_PRIVATE void init_object(struct v7 *v7);
 
-V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7,
-                                   v7_val_t *res) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res);
 
 #if defined(__cplusplus)
 }
@@ -3596,11 +3608,13 @@ extern "C" {
 
 V7_PRIVATE void init_string(struct v7 *v7);
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
-                                       double *res) WARN_UNUSED_RESULT;
+                                       double *res);
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err arg_long(struct v7 *v7, int n, long default_value,
-                                long *res) WARN_UNUSED_RESULT;
+                                long *res);
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -3916,8 +3930,9 @@ extern "C" {
 
 V7_PRIVATE void init_stdlib(struct v7 *v7);
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
-                                int is_json, v7_val_t *res) WARN_UNUSED_RESULT;
+                                int is_json, v7_val_t *res);
 
 #if defined(__cplusplus)
 }
@@ -4413,9 +4428,9 @@ V7_PRIVATE v7_val_t v7_create_dense_array(struct v7 *v7);
 /*
  * NOTE: `res` is allowed to be NULL
  */
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_stringify_value(struct v7 *v7, val_t v, char *buf,
-                                          size_t size,
-                                          size_t *res) WARN_UNUSED_RESULT;
+                                          size_t size, size_t *res);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
 V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *, val_t,
@@ -4476,15 +4491,17 @@ V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
 V7_PRIVATE enum v7_err v7_get_property_v(struct v7 *v7, val_t obj,
                                          v7_val_t name,
                                          struct v7_property **res);
+
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_get_throwing_v(struct v7 *v7, v7_val_t obj,
-                                         v7_val_t name,
-                                         v7_val_t *res) WARN_UNUSED_RESULT;
+                                         v7_val_t name, v7_val_t *res);
 
 V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *, struct v7_property *,
                                         val_t, val_t);
+
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_set_v(struct v7 *v7, v7_val_t obj, v7_val_t name,
-                                v7_prop_attr_t attrs, v7_val_t val,
-                                int *res) WARN_UNUSED_RESULT;
+                                v7_prop_attr_t attrs, v7_val_t val, int *res);
 
 /*
  * NOTE: `res` is allowed to be `NULL`.
@@ -4497,32 +4514,34 @@ V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, v7_prop_attr_t attributes,
                                v7_val_t val);
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_set_property_throwing(struct v7 *v7, val_t obj,
                                                 const char *name, size_t len,
                                                 v7_prop_attr_t attributes,
-                                                v7_val_t val,
-                                                int *res) WARN_UNUSED_RESULT;
+                                                v7_val_t val, int *res);
 
 V7_PRIVATE enum v7_err v7_set_prop(struct v7 *v7, val_t obj, val_t name,
                                    v7_prop_attr_t attributes, val_t val,
                                    struct v7_property **res);
 
 /* Return address of property value or NULL if the passed property is NULL */
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_property_value(struct v7 *, val_t,
-                                         struct v7_property *,
-                                         val_t *res) WARN_UNUSED_RESULT;
+                                         struct v7_property *, val_t *res);
 
 V7_PRIVATE val_t v7_array_get2(struct v7 *, v7_val_t, unsigned long, int *);
+
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err to_str(struct v7 *v7, val_t v, char *buf, size_t size,
-                              size_t *res_len,
-                              enum v7_stringify_flags flags) WARN_UNUSED_RESULT;
+                              size_t *res_len, enum v7_stringify_flags flags);
+
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 
-V7_PRIVATE val_t
-create_exception(struct v7 *v7, const char *typ, const char *msg);
+V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
+                                        const char *msg, val_t *res);
 
-V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v,
-                                  val_t *res) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v, val_t *res);
 
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
@@ -4530,8 +4549,10 @@ V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 #ifdef V7_ENABLE_DENSE_ARRAYS
 V7_PRIVATE val_t ulong_to_str(struct v7 *, unsigned long);
 #endif
+
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err str_to_ulong(struct v7 *, val_t, int *,
-                                    unsigned long *res) WARN_UNUSED_RESULT;
+                                    unsigned long *res);
 V7_PRIVATE unsigned long cstr_to_ulong(const char *, size_t len, int *);
 
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
@@ -4543,8 +4564,9 @@ enum embstr_flags {
 
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len, uint8_t /*enum embstr_flags*/ flags);
-V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v,
-                                 val_t *res) WARN_UNUSED_RESULT;
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v, val_t *res);
 /*
  * Try to convert value to long integer, without calling `valueOf()`:
  *
@@ -4554,8 +4576,9 @@ V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v,
  *   the string data as a number
  * - If all of the above failed, use `default_value`
  */
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
-                               long *res) WARN_UNUSED_RESULT;
+                               long *res);
 
 /*
  * Try to convert value to `double`:
@@ -4567,8 +4590,8 @@ V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
  * - If null, return 0
  * - Otherwise, return `NaN`
  */
-V7_PRIVATE enum v7_err i_as_num(struct v7 *v7, val_t v,
-                                double *res) WARN_UNUSED_RESULT;
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err i_as_num(struct v7 *v7, val_t v, double *res);
 
 #if defined(__cplusplus)
 }
@@ -10854,7 +10877,11 @@ enum local_block {
 };
 
 /*
- * Like `V7_TRY()`, but to be used inside `eval_bcode()` only.
+ * Like `V7_TRY()`, but to be used inside `eval_bcode()` only: you should
+ * wrap all calls to cfunctions into `BTRY()` instead of `V7_TRY()`.
+ *
+ * If the provided function returns something other than `V7_OK`, this macro
+ * calls `bcode_perform_throw`, which performs bcode stack unwinding.
  */
 #define BTRY(call)                                                            \
   do {                                                                        \
@@ -11415,13 +11442,16 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
 }
 
 /*
- * Perform throw.
+ * Perform throw inside `eval_bcode()`.
  *
  * If `take_thrown_value` is non-zero, value to return will be popped from
  * stack (and saved into `v7->thrown_error`), otherwise, it won't be affected.
  *
  * Returns `V7_OK` if thrown exception was caught, `V7_EXEC_EXCEPTION`
  * otherwise (in this case, evaluation of current script must be stopped)
+ *
+ * When calling this function from `eval_bcode()`, you should wrap this call
+ * into the `V7_TRY()` macro.
  */
 static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
                                        int take_thrown_value) {
@@ -11475,34 +11505,23 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
 }
 
 /*
- * Create an error value, push it on TOS, and perform an exception throw.
- *
- * Returns `V7_OK` if thrown exception was caught, `V7_EXEC_EXCEPTION`
- * otherwise (in this case, evaluation of current script must be stopped)
+ * Throws reference error from `eval_bcode()`. Always wrap a call to this
+ * function into `V7_TRY()`.
  */
-static enum v7_err bcode_throw_exception(struct v7 *v7,
-                                         struct bcode_registers *r,
-                                         const char *ex, const char *err_fmt,
-                                         ...) {
-  va_list ap;
-  va_start(ap, err_fmt);
-  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
-  va_end(ap);
-  PUSH(create_exception(v7, ex, v7->error_msg));
-  return bcode_perform_throw(v7, r, 1);
-} /* LCOV_EXCL_LINE */
-
 static enum v7_err bcode_throw_reference_error(struct v7 *v7,
                                                struct bcode_registers *r,
                                                val_t var_name) {
+  enum v7_err rcode = V7_OK;
   const char *s;
   size_t name_len;
 
   assert(v7_is_string(var_name));
   s = v7_get_string_data(v7, &var_name, &name_len);
 
-  return bcode_throw_exception(v7, r, REFERENCE_ERROR, "[%.*s] is not defined",
-                               (int) name_len, s);
+  rcode = v7_throwf(v7, REFERENCE_ERROR, "[%.*s] is not defined",
+                    (int) name_len, s);
+  (void) rcode;
+  return bcode_perform_throw(v7, r, 0);
 }
 
 /*
@@ -15284,18 +15303,19 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
  * Create an instance of exception with type `typ` (see `TYPE_ERROR`,
  * `SYNTAX_ERROR`, etc) and message `msg`.
  */
-V7_PRIVATE val_t
-create_exception(struct v7 *v7, const char *typ, const char *msg) {
+V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
+                                        const char *msg, val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t e = v7_create_undefined(), ctor_args = v7_create_undefined(),
-        ctor_func = v7_create_undefined();
+  uint8_t saved_creating_exception = v7->creating_exception;
+  val_t ctor_args = v7_create_undefined(), ctor_func = v7_create_undefined();
 #if 0
   assert(v7_is_undefined(v7->thrown_error));
 #endif
 
+  *res = v7_create_undefined();
+
   v7_own(v7, &ctor_args);
   v7_own(v7, &ctor_func);
-  v7_own(v7, &e);
 
   if (v7->creating_exception) {
 #ifndef NO_LIBC
@@ -15316,23 +15336,21 @@ create_exception(struct v7 *v7, const char *typ, const char *msg) {
     }
 
     /* Create an error object, with prototype from constructor function */
-    e = create_object(v7, v7_get(v7, ctor_func, "prototype", 9));
+    *res = create_object(v7, v7_get(v7, ctor_func, "prototype", 9));
 
-    /* Finally, call the constructor, passing an error as `this` */
-    V7_TRY(b_apply(v7, NULL, ctor_func, e, ctor_args, 0));
-
-    v7_disown(v7, &ctor_func);
-    v7_disown(v7, &e);
-    v7_disown(v7, &ctor_args);
-
-    v7->creating_exception = 0;
+    /*
+     * Finally, call the error constructor, passing an error object as `this`
+     */
+    V7_TRY(b_apply(v7, NULL, ctor_func, *res, ctor_args, 0));
   }
 
 clean:
-  (void) rcode;
-  /* TODO(dfrank) : make create_exception() to return v7_err? */
-  assert(rcode == V7_OK);
-  return e;
+  v7->creating_exception = saved_creating_exception;
+
+  v7_disown(v7, &ctor_func);
+  v7_disown(v7, &ctor_args);
+
+  return rcode;
 }
 
 V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v, val_t *res) {
@@ -15403,12 +15421,24 @@ enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
 enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt,
                       ...) {
   /* TODO(dfrank) : get rid of v7->error_msg, allocate mem right here */
+  enum v7_err rcode = V7_OK;
   va_list ap;
+  val_t e = v7_create_undefined();
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
 
-  return v7_throw(v7, create_exception(v7, typ, v7->error_msg));
+  v7_own(v7, &e);
+  rcode = create_exception(v7, typ, v7->error_msg, &e);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  rcode = v7_throw(v7, e);
+
+clean:
+  v7_disown(v7, &e);
+  return rcode;
 }
 
 enum v7_err v7_rethrow(struct v7 *v7) {
