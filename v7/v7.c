@@ -2641,6 +2641,8 @@ V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
 
 V7_PRIVATE void ast_dump_tree(FILE *, struct ast *, ast_off_t *, int depth);
 
+V7_PRIVATE void release_ast(struct v7 *, struct ast *);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -3306,10 +3308,17 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 extern "C" {
 #endif /* __cplusplus */
 
-V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode);
+V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7,
+                                  struct bcode *bcode) WARN_UNUSED_RESULT;
+
 V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
                                v7_val_t this_obj, v7_val_t args,
-                               uint8_t is_constructor);
+                               uint8_t is_constructor) WARN_UNUSED_RESULT;
+
+V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
+                              v7_val_t func, v7_val_t args, v7_val_t *res,
+                              v7_val_t this_object, int is_json, int fr,
+                              uint8_t is_constructor) WARN_UNUSED_RESULT;
 
 #if defined(__cplusplus)
 }
@@ -3535,6 +3544,36 @@ struct v7_vec {
 
 #endif /* V7_INTERNAL_H_INCLUDED */
 #ifdef V7_MODULE_LINES
+#line 1 "./src/std_object.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_OBJECT_H_INCLUDED
+#define STD_OBJECT_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+struct v7;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_object(struct v7 *v7);
+
+V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7,
+                                   v7_val_t *res) WARN_UNUSED_RESULT;
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_OBJECT_H_INCLUDED */
+#ifdef V7_MODULE_LINES
 #line 1 "./src/std_string.h"
 /**/
 #endif
@@ -3555,9 +3594,13 @@ struct v7_vec {
 extern "C" {
 #endif /* __cplusplus */
 
+V7_PRIVATE void init_string(struct v7 *v7);
+
 V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
                                        double *res) WARN_UNUSED_RESULT;
 
+V7_PRIVATE enum v7_err arg_long(struct v7 *v7, int n, long default_value,
+                                long *res) WARN_UNUSED_RESULT;
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -3648,6 +3691,187 @@ V7_PRIVATE void init_error(struct v7 *v7);
 
 #endif /* STD_ERROR_H_INCLUDED */
 #ifdef V7_MODULE_LINES
+#line 1 "./src/std_array.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_ARRAY_H_INCLUDED
+#define STD_ARRAY_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_array(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_ARRAY_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_boolean.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_BOOLEAN_H_INCLUDED
+#define STD_BOOLEAN_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_boolean(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_BOOLEAN_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_date.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_DATE_H_INCLUDED
+#define STD_DATE_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if V7_ENABLE__Date
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_date(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE__Date */
+#endif /* STD_DATE_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_function.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_FUNCTION_H_INCLUDED
+#define STD_FUNCTION_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_function(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_FUNCTION_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_json.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_JSON_H_INCLUDED
+#define STD_JSON_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_json(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_JSON_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_math.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_MATH_H_INCLUDED
+#define STD_MATH_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if V7_ENABLE__Math
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_math(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE__Math */
+#endif /* STD_MATH_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_number.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_NUMBER_H_INCLUDED
+#define STD_NUMBER_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_number(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_NUMBER_H_INCLUDED */
+#ifdef V7_MODULE_LINES
 #line 1 "./src/js_stdlib.h"
 /**/
 #endif
@@ -3672,6 +3896,34 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
 #endif /* __cplusplus */
 
 #endif /* JS_STDLIB_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/stdlib.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STDLIB_H_INCLUDED
+#define STDLIB_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_stdlib(struct v7 *v7);
+
+V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
+                                int is_json, v7_val_t *res) WARN_UNUSED_RESULT;
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STDLIB_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/vm.h"
 /**/
@@ -4102,7 +4354,6 @@ extern "C" {
 
 /* TODO(mkm): possibly replace those with macros for inlining */
 enum v7_type val_type(struct v7 *v7, val_t);
-int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
 V7_PRIVATE val_t v7_object_to_value(struct v7_object *);
@@ -4140,21 +4391,6 @@ V7_PRIVATE int v7_is_generic_object(v7_val_t);
 V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t);
 V7_PRIVATE struct v7_function *v7_to_function(val_t);
 V7_PRIVATE void *v7_to_pointer(val_t v);
-
-V7_PRIVATE void init_object(struct v7 *v7);
-V7_PRIVATE void init_array(struct v7 *v7);
-V7_PRIVATE void init_boolean(struct v7 *v7);
-#if V7_ENABLE__Math
-V7_PRIVATE void init_math(struct v7 *v7);
-#endif
-V7_PRIVATE void init_string(struct v7 *v7);
-V7_PRIVATE void init_number(struct v7 *v7);
-V7_PRIVATE void init_json(struct v7 *v7);
-#if V7_ENABLE__Date
-V7_PRIVATE void init_date(struct v7 *v7);
-#endif
-V7_PRIVATE void init_function(struct v7 *v7);
-V7_PRIVATE void init_stdlib(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *,
                               v7_cfunction_t *func);
@@ -4277,8 +4513,6 @@ V7_PRIVATE enum v7_err v7_property_value(struct v7 *, val_t,
                                          val_t *res) WARN_UNUSED_RESULT;
 
 V7_PRIVATE val_t v7_array_get2(struct v7 *, v7_val_t, unsigned long, int *);
-V7_PRIVATE enum v7_err arg_long(struct v7 *v7, int n, long default_value,
-                                long *res) WARN_UNUSED_RESULT;
 V7_PRIVATE enum v7_err to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                               size_t *res_len,
                               enum v7_stringify_flags flags) WARN_UNUSED_RESULT;
@@ -4290,9 +4524,6 @@ create_exception(struct v7 *v7, const char *typ, const char *msg);
 V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v,
                                   val_t *res) WARN_UNUSED_RESULT;
 
-V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, val_t this_obj,
-                                int is_json, v7_val_t *res) WARN_UNUSED_RESULT;
-
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
@@ -4303,36 +4534,41 @@ V7_PRIVATE enum v7_err str_to_ulong(struct v7 *, val_t, int *,
                                     unsigned long *res) WARN_UNUSED_RESULT;
 V7_PRIVATE unsigned long cstr_to_ulong(const char *, size_t len, int *);
 
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
+
 enum embstr_flags {
   EMBSTR_ZERO_TERM = (1 << 0),
   EMBSTR_UNESCAPE = (1 << 1),
 };
 
-V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
-
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len, uint8_t /*enum embstr_flags*/ flags);
-/* TODO(mkm): rename after regexp merge */
 V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v,
                                  val_t *res) WARN_UNUSED_RESULT;
+/*
+ * Try to convert value to long integer, without calling `valueOf()`:
+ *
+ * - If it's a number, just convert to integer
+ * - If it's null, return 0
+ * - Convert to string (if not already a string), and try to interpret
+ *   the string data as a number
+ * - If all of the above failed, use `default_value`
+ */
 V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
                                long *res) WARN_UNUSED_RESULT;
 
-V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7,
-                                   v7_val_t *res) WARN_UNUSED_RESULT;
+/*
+ * Try to convert value to `double`:
+ *
+ * - If not a primitive, call `valueOf()` (i.e. `i_value_of()`)
+ * - If number, just return double value
+ * - If string, try to interpret the string data as a number
+ * - If boolean, return 0 or 1
+ * - If null, return 0
+ * - Otherwise, return `NaN`
+ */
 V7_PRIVATE enum v7_err i_as_num(struct v7 *v7, val_t v,
                                 double *res) WARN_UNUSED_RESULT;
-
-V7_PRIVATE void release_ast(struct v7 *, struct ast *);
-
-V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
-                              val_t func, val_t args, val_t *res,
-                              val_t this_object, int is_json, int fr,
-                              uint8_t is_constructor) WARN_UNUSED_RESULT;
-
-V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
-                               v7_val_t this_obj, v7_val_t args,
-                               uint8_t is_constructor) WARN_UNUSED_RESULT;
 
 #if defined(__cplusplus)
 }
@@ -9967,6 +10203,20 @@ V7_PRIVATE void ast_free(struct ast *ast) {
   ast->refcnt = 0;
   ast->has_overflow = 0;
 }
+
+V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
+  (void) v7;
+
+  if (a->refcnt != 0) a->refcnt--;
+
+  if (a->refcnt == 0) {
+#if V7_ENABLE__Memory__stats
+    v7->function_arena_ast_size -= a->mbuf.size;
+#endif
+    ast_free(a);
+    free(a);
+  }
+}
 #ifdef V7_MODULE_LINES
 #line 1 "./src/bcode.c"
 /**/
@@ -11412,6 +11662,7 @@ static void disown_bcode(struct v7 *v7, struct bcode *p) {
   v7->act_bcodes.len -= sizeof(p);
 }
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   struct bcode_registers r;
   enum v7_err rcode = V7_OK;
@@ -12631,9 +12882,11 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
+/* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/builtin/builtin.h" */
 
 #ifdef HAS_V7_INFINITY
@@ -12837,11 +13090,6 @@ int v7_is_undefined(val_t v) {
 
 int v7_is_cfunction(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
-}
-
-/* A convenience function to check exec result */
-int v7_is_error(struct v7 *v7, val_t v) {
-  return is_prototype_of(v7, v, v7->error_prototype);
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
@@ -13650,8 +13898,8 @@ V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
   return v7_get_own_property2(v7, obj, name, len, 0);
 }
 
-struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
-                                    size_t len) {
+V7_PRIVATE struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
+                                               const char *name, size_t len) {
   if (!v7_is_object(obj)) {
     return NULL;
   }
@@ -13664,8 +13912,9 @@ struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
   return NULL;
 }
 
-enum v7_err v7_get_property_v(struct v7 *v7, val_t obj, v7_val_t name,
-                              struct v7_property **res) {
+V7_PRIVATE enum v7_err v7_get_property_v(struct v7 *v7, val_t obj,
+                                         v7_val_t name,
+                                         struct v7_property **res) {
   enum v7_err rcode = V7_OK;
   size_t name_len;
   STATIC char buf[8];
@@ -14537,10 +14786,12 @@ V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v, val_t *res) {
       v7_stringify_throwing(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEFAULT, &p));
   s = p;
 
+  /* If the value is quoted, remove the surrounding quotes */
   if (p[0] == '"') {
     p[strlen(p) - 1] = '\0';
     s++;
   }
+
   *res = v7_create_string(v7, s, strlen(s), 1);
 
 clean:
@@ -14751,20 +15002,6 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
       mbuf_free(abuf);
       free(abuf);
     }
-  }
-}
-
-V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
-  (void) v7;
-
-  if (a->refcnt != 0) a->refcnt--;
-
-  if (a->refcnt == 0) {
-#if V7_ENABLE__Memory__stats
-    v7->function_arena_ast_size -= a->mbuf.size;
-#endif
-    ast_free(a);
-    free(a);
   }
 }
 
@@ -20544,7 +20781,18 @@ clean:
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/stdlib.h" */
+/* Amalgamated: #include "v7/src/std_array.h" */
+/* Amalgamated: #include "v7/src/std_boolean.h" */
+/* Amalgamated: #include "v7/src/std_date.h" */
+/* Amalgamated: #include "v7/src/std_error.h" */
+/* Amalgamated: #include "v7/src/std_function.h" */
+/* Amalgamated: #include "v7/src/std_json.h" */
+/* Amalgamated: #include "v7/src/std_math.h" */
+/* Amalgamated: #include "v7/src/std_number.h" */
+/* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/std_regex.h" */
+/* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/js_stdlib.h" */
 
 #ifdef NO_LIBC
@@ -20633,6 +20881,12 @@ V7_PRIVATE enum v7_err Std_parseInt(struct v7 *v7, v7_val_t *res) {
 
   *res = V7_TAG_NAN;
 
+  /*
+   * TODO(dfrank) : don't call `i_value_of` here, since Node doesn't do that:
+   *
+   *    > parseInt({valueOf:function(){return 1}});
+   *    NaN
+   */
   rcode = i_value_of(v7, v7_arg(v7, 0), &arg0);
   if (rcode != V7_OK) {
     goto clean;
@@ -20967,8 +21221,6 @@ static const char * const js_functions[] = {
   js_array_pop,
   js_array_shift
 };
-
-#define CEIL(x, y) ((x) / (y) + ((x) % (y) > 0))
 
  V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   val_t res;
@@ -22872,6 +23124,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 
 #if V7_ENABLE__Object__getPrototypeOf
@@ -23501,6 +23754,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
@@ -23733,6 +23987,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
@@ -23768,6 +24023,8 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
 struct a_sort_data {
@@ -24608,6 +24865,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
@@ -24969,8 +25227,8 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/std_regex.h" */
-
-V7_PRIVATE enum v7_err to_string(struct v7 *, val_t, val_t *res);
+/* Amalgamated: #include "v7/src/std_object.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
 
 /* Substring implementations: RegExp-based and String-based {{{ */
 
@@ -25942,6 +26200,10 @@ V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
   char buf[40];
   size_t l;
   double d;
+
+  /*
+   * If the value is a number, then just convert it to long
+   */
   if (v7_is_number(v)) {
     d = v7_to_number(v);
     /* We want to return LONG_MAX if d is positive Inf, thus d < 0 check */
@@ -25955,10 +26217,19 @@ V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
     *res = (long) d;
     goto clean;
   }
+
+  /*
+   * If the value is `null`, return 0
+   */
   if (v7_is_null(v)) {
     *res = 0;
     goto clean;
   }
+
+  /*
+   * Convert value to string, and try to interpret it as a string containing
+   * a number
+   */
   rcode = to_str(v7, v, buf, sizeof(buf), &l, V7_STRINGIFY_DEFAULT);
   if (rcode != V7_OK) {
     goto clean;
@@ -25968,6 +26239,9 @@ V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
     goto clean;
   }
 
+  /*
+   * Failed to convert the value to number, resorting to the default value
+   */
   *res = default_value;
   goto clean;
 
@@ -26286,6 +26560,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "common/str_util.h" */
+/* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 
 #if V7_ENABLE__Date
@@ -27440,6 +27715,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
 
 WARN_UNUSED_RESULT
 static enum v7_err Function_ctor(struct v7 *v7, v7_val_t *res) {
@@ -27581,12 +27857,11 @@ V7_PRIVATE void init_function(struct v7 *v7) {
 /* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_regex.h" */
+/* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 
 #if V7_ENABLE__RegExp
-
-V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v, val_t *res);
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Regex_ctor(struct v7 *v7, v7_val_t *res) {
