@@ -3,6 +3,7 @@
 
 #include "v7/v7.h"
 
+typedef void (*timer_callback)();
 void sj_init_timers(struct v7 *v7);
 
 /* HAL */
@@ -12,5 +13,6 @@ void sj_init_timers(struct v7 *v7);
  * (after invocation).
  */
 void sj_set_timeout(int msecs, v7_val_t *cb);
+void sj_set_c_timeout(int msecs, timer_callback cb);
 
 #endif /* __SMARTJS_TIMERS_H_ */

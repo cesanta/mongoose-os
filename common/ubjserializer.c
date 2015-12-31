@@ -14,7 +14,7 @@ struct link {
 struct prop {
   struct link link; /* for freeing up */
   struct prop *next;
-  const char *name;
+  struct ub_str *name;
   ub_val_t val;
 };
 
@@ -26,6 +26,11 @@ struct ub_obj {
 struct ub_arr {
   struct link link;
   struct mbuf elems;
+};
+
+struct ub_str {
+  struct link link;
+  char s[1];
 };
 
 struct ub_bin {
@@ -126,8 +131,7 @@ static void ub_render_cont(struct ub_ctx *ctx) {
     } else if (obj.kind == UBJSON_TYPE_NUMBER) {
       cs_ubjson_emit_autonumber(buf, obj.val.n);
     } else if (obj.kind == UBJSON_TYPE_STRING) {
-      const char *s = obj.val.s;
-      cs_ubjson_emit_string(buf, s, strlen(s));
+      cs_ubjson_emit_string(buf, obj.val.s->s, strlen(obj.val.s->s));
     } else if (obj.kind == UBJSON_TYPE_ARRAY) {
       unsigned long cur_idx = cur->v.next_idx;
 
@@ -168,7 +172,7 @@ static void ub_render_cont(struct ub_ctx *ctx) {
       if (cur->v.p == NULL) {
         cs_ubjson_close_object(buf);
       } else {
-        s = cur->v.p->name;
+        s = cur->v.p->name->s;
         cs_ubjson_emit_object_key(buf, s, strlen(s));
 
         cur = push_visit(stack, ub_get(obj, s));
@@ -219,6 +223,13 @@ static void *ub_alloc(struct ub_ctx *ctx, size_t size) {
   return res;
 }
 
+struct ub_str *create_ub_str(struct ub_ctx *ctx, const char *str) {
+  size_t len = strlen(str);
+  struct ub_str *res = ub_alloc(ctx, sizeof(*res) + len);
+  memcpy((char *) res->s, str, len + 1);
+  return res;
+}
+
 ub_val_t ub_create_object(struct ub_ctx *ctx) {
   struct ub_obj *o = ub_alloc(ctx, sizeof(*o));
   ub_val_t res = {UBJSON_TYPE_OBJECT, {.o = o}};
@@ -258,7 +269,8 @@ ub_val_t ub_create_null() {
   return res;
 }
 
-ub_val_t ub_create_string(const char *s) {
+ub_val_t ub_create_string(struct ub_ctx *ctx, const char *str) {
+  struct ub_str *s = create_ub_str(ctx, str);
   ub_val_t res = {UBJSON_TYPE_STRING, {.s = s}};
   return res;
 }
@@ -280,7 +292,7 @@ ub_val_t ub_get(ub_val_t o, const char *name) {
   assert(o.kind == UBJSON_TYPE_OBJECT);
   struct prop *p;
   for (p = o.val.o->props; p != NULL; p = p->next) {
-    if (strcmp(p->name, name) == 0) {
+    if (strcmp(p->name->s, name) == 0) {
       return p->val;
     }
   }
@@ -292,7 +304,7 @@ void ub_add_prop(struct ub_ctx *ctx, ub_val_t obj, const char *name,
   assert(obj.kind == UBJSON_TYPE_OBJECT);
   struct prop *p = ub_alloc(ctx, sizeof(*p));
   p->next = obj.val.o->props;
-  p->name = name;
+  p->name = create_ub_str(ctx, name);
   p->val = val;
   obj.val.o->props = p;
 }

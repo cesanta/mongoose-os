@@ -12,6 +12,7 @@
 
 #define WS_PROTOCOL "clubby.cesanta.com"
 #define MG_F_WS_FRAGMENTED MG_F_USER_6
+#define MG_F_CLUBBY_CONNECTED MG_F_USER_5
 
 static struct mg_connection *s_clubby_conn;
 
@@ -29,13 +30,18 @@ void clubby_proto_init(clubby_callback cb) {
   s_clubby_cb = cb;
 }
 
+int clubby_proto_is_connected() {
+  return s_clubby_conn != NULL &&
+         (s_clubby_conn->flags & MG_F_CLUBBY_CONNECTED);
+}
+
 int clubby_proto_connect(struct mg_mgr *mgr) {
   if (s_clubby_conn != NULL) {
     /* We support only one connection to cloud */
     LOG(LL_ERROR, ("Clubby already connected"));
 
     /* TODO(alashkin): handle this */
-    return 0;
+    return 1;
   }
 
   LOG(LL_DEBUG, ("Connecting to %s", get_cfg()->clubby.server_address));
@@ -89,8 +95,12 @@ void clubby_proto_disconnect() {
 void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
   (void) user_data;
 
-  if (s_clubby_conn == NULL) {
-    /* TODO(alashkin): queue the packet */
+  if (!clubby_proto_is_connected()) {
+    /*
+     * Not trying to reconect here,
+     * It should be done before calling clubby_proto_ws_emit
+     */
+    LOG(LL_ERROR, ("Clubby is not connected"));
     return;
   }
 
@@ -108,41 +118,44 @@ void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
   mg_send_websocket_frame(s_clubby_conn, op | flags, d, l);
 }
 
-ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *dst) {
+ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx, const char *dst) {
   ub_val_t frame = ub_create_object(ctx);
-  ub_add_prop(ctx, frame, "src", ub_create_string(get_cfg()->clubby.device_id));
+  ub_add_prop(ctx, frame, "src",
+              ub_create_string(ctx, get_cfg()->clubby.device_id));
   ub_add_prop(ctx, frame, "key",
-              ub_create_string(get_cfg()->clubby.device_psk));
-  ub_add_prop(ctx, frame, "dst", ub_create_string(dst));
+              ub_create_string(ctx, get_cfg()->clubby.device_psk));
+  ub_add_prop(ctx, frame, "dst", ub_create_string(ctx, dst));
 
   return frame;
 }
 
-void clubby_proto_send_resp(const char *dst, int64_t id, int status,
-                            const char *status_msg) {
-  struct ub_ctx *ctx = ub_ctx_new();
-
-  ub_val_t frame = clubby_proto_create_frame(ctx, dst);
+ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *dst,
+                                  int64_t id, int status,
+                                  const char *status_msg) {
+  ub_val_t frame = clubby_proto_create_frame_base(ctx, dst);
   ub_val_t resp = ub_create_array(ctx);
   ub_add_prop(ctx, frame, "resp", resp);
   ub_val_t respv = ub_create_object(ctx);
   ub_array_push(ctx, resp, respv);
   ub_add_prop(ctx, respv, "id", ub_create_number(id));
   ub_add_prop(ctx, respv, "status", ub_create_number(status));
+
   if (status_msg != 0) {
-    ub_add_prop(ctx, respv, "status_msg", ub_create_string(status_msg));
+    ub_add_prop(ctx, respv, "status_msg", ub_create_string(ctx, status_msg));
   }
 
-  LOG(LL_DEBUG,
-      ("Clubby: sending resp to %s (id=%lld status=%d)", dst, id, status));
-
-  ub_render(ctx, frame, clubby_proto_ws_emit, NULL);
+  return frame;
 }
 
-void clubby_proto_send_cmd(struct ub_ctx *ctx, const char *dst, ub_val_t cmds) {
-  ub_val_t frame = clubby_proto_create_frame(ctx, dst);
+ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *dst,
+                                   ub_val_t cmds) {
+  ub_val_t frame = clubby_proto_create_frame_base(ctx, dst);
   ub_add_prop(ctx, frame, "cmds", cmds);
 
+  return frame;
+}
+
+void clubby_proto_send(struct ub_ctx *ctx, ub_val_t frame) {
   ub_render(ctx, frame, clubby_proto_ws_emit, NULL);
 }
 
@@ -314,6 +327,7 @@ void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
     case MG_EV_WEBSOCKET_HANDSHAKE_DONE: {
       LOG(LL_DEBUG, ("HANDSHAKE DONE"));
+      nc->flags |= MG_F_CLUBBY_CONNECTED;
       evt.ev = CLUBBY_CONNECT;
       s_clubby_cb(&evt);
       break;
@@ -339,6 +353,7 @@ void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
     case MG_EV_CLOSE:
       LOG(LL_DEBUG, ("CLOSE"));
+      nc->flags &= ~MG_F_CLUBBY_CONNECTED;
       s_clubby_conn = NULL;
       evt.ev = CLUBBY_DISCONNECT;
       s_clubby_cb(&evt);

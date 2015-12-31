@@ -180,9 +180,8 @@ void wifi_changed_cb(System_Event_t *evt) {
 #endif
       ) {
 #ifndef DISABLE_C_CLUBBY
-    if (get_cfg()->clubby.enable != 0) {
-      /* TODO(alashkin): put clubby initialization somewhere in smartjs/src */
-      sj_init_clubby(v7);
+    if (get_cfg()->clubby.connect_on_boot != 0) {
+      sj_clubby_connect();
     }
 #endif
     struct station_config config;

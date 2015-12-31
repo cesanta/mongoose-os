@@ -35,11 +35,13 @@
     "ca_file": "nothing.pem"
   },
   "clubby": {
-    "enable": false,
+    "connect_on_boot": false,
     "server_address": "127.0.0.1:8911",
     "device_id": "device_1",
     "device_psk": "psk_1",
-    "backend": "//api.cesanta.com"
+    "backend": "//api.cesanta.com",
+    "reconnect_timeout" : 10,
+    "cmd_timeout" : 300
   },
   "debug": {
     "level": 3,

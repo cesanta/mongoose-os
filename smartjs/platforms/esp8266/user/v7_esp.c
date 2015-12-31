@@ -17,6 +17,7 @@
 #include "sj_mongoose_ws_client.h"
 #include "common/sha1.h"
 #include "esp_updater.h"
+#include "sj_clubby.h"
 
 #ifndef RTOS_SDK
 
@@ -198,6 +199,10 @@ void init_v7(void *stack_base) {
 
 #ifndef DISABLE_OTA
   init_updater(v7);
+#endif
+
+#ifndef DISABLE_C_CLUBBY
+  sj_init_clubby(v7);
 #endif
 
   v7_gc(v7, 1);

@@ -6,13 +6,19 @@
 
 #ifndef DISABLE_C_CLUBBY
 
+/*
+ * Here are low-level clubby functions
+ * They ARE NOT intended for using anywhere but `sj_clubby.c`
+ * Use functions from 'sj_clubby.h` instead
+ */
+
 enum clubby_event_type {
   CLUBBY_NET_CONNECT /* net_connect in `clubby_event` struct */,
   CLUBBY_CONNECT /* no params */,
-  CLUBBY_FRAME /* frame */,
   CLUBBY_DISCONNECT /* no params */,
   CLUBBY_REQUEST /* request */,
-  CLUBBY_RESPONSE /* response */
+  CLUBBY_RESPONSE /* response */,
+  CLUBBY_FRAME /* frame */,
 };
 
 struct clubby_event {
@@ -45,13 +51,18 @@ struct clubby_event {
 
 typedef void (*clubby_callback)(struct clubby_event *evt);
 
-void clubby_proto_send_cmd(struct ub_ctx *ctx, const char *dst, ub_val_t cmds);
-void clubby_proto_send_resp(const char *dst, int64_t id, int status,
-                            const char *status_msg);
+ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *dst,
+                                  int64_t id, int status,
+                                  const char *status_msg);
+ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *dst,
+                                   ub_val_t cmds);
+
+void clubby_proto_send(struct ub_ctx *ctx, ub_val_t frame);
 
 void clubby_proto_init(clubby_callback cb);
 int clubby_proto_connect(struct mg_mgr *mgr);
 void clubby_proto_disconnect();
+int clubby_proto_is_connected();
 
 /* Utility */
 int64_t clubby_proto_get_new_id();

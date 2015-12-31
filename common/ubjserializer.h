@@ -9,6 +9,7 @@
 struct ub_arr;
 struct ub_bin;
 struct ub_obj;
+struct ub_str;
 
 enum ubjson_type {
   UBJSON_TYPE_ARRAY,
@@ -26,7 +27,7 @@ typedef struct {
   enum ubjson_type kind;
   union {
     double n;
-    const char *s;
+    struct ub_str *s;
     struct ub_arr *a;
     struct ub_bin *b;
     struct ub_obj *o;
@@ -48,7 +49,7 @@ ub_val_t ub_create_boolean(int n);
 ub_val_t ub_create_null();
 ub_val_t ub_create_number(double n);
 ub_val_t ub_create_object(struct ub_ctx *ctx);
-ub_val_t ub_create_string(const char *s);
+ub_val_t ub_create_string(struct ub_ctx *ctx, const char *s);
 ub_val_t ub_create_undefined();
 
 int ub_is_bin(ub_val_t);

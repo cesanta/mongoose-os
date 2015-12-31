@@ -53,23 +53,42 @@ void sj_set_timeout(int msecs, v7_val_t *cb) {
 
 struct timer_info {
   os_timer_t t;
-  v7_val_t *cb;
+  v7_val_t *js_cb;
+  timer_callback c_cb;
 };
 
 void esp_timer_callback(void *arg) {
   struct timer_info *ti = (struct timer_info *) arg;
-  sj_invoke_cb0(v7, *ti->cb);
-  v7_disown(v7, ti->cb);
-  free(ti->cb);
+
+  if (ti->js_cb != NULL) {
+    sj_invoke_cb0(v7, *ti->js_cb);
+    v7_disown(v7, ti->js_cb);
+    free(ti->js_cb);
+  }
+
+  if (ti->c_cb != NULL) {
+    ti->c_cb();
+  }
+
   free(ti);
+}
+
+static void esp_set_timeout(int msecs, struct timer_info *ti) {
+  os_timer_disarm(&ti->t);
+  os_timer_setfn(&ti->t, esp_timer_callback, ti);
+  os_timer_arm(&ti->t, msecs, 0 /* repeat */);
 }
 
 void sj_set_timeout(int msecs, v7_val_t *cb) {
   struct timer_info *ti = calloc(1, sizeof(*ti));
-  ti->cb = cb;
-  os_timer_disarm(&ti->t);
-  os_timer_setfn(&ti->t, esp_timer_callback, ti);
-  os_timer_arm(&ti->t, msecs, 0 /* repeat */);
+  ti->js_cb = cb;
+  esp_set_timeout(msecs, ti);
+}
+
+void sj_set_c_timeout(int msecs, timer_callback cb) {
+  struct timer_info *ti = calloc(1, sizeof(*ti));
+  ti->c_cb = cb;
+  esp_set_timeout(msecs, ti);
 }
 
 #endif /* !RTOS_SDK */
