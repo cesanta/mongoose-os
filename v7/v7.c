@@ -302,8 +302,22 @@ int v7_is_undefined(v7_val_t);
 /* Return true if given value is a JavaScript RegExp object*/
 int v7_is_regexp(struct v7 *, v7_val_t);
 
-/* Return true if given value holds C callback */
-int v7_is_cfunction(v7_val_t);
+/* Return true if given value holds a pointer to C callback */
+int v7_is_cfunction_ptr(v7_val_t v);
+
+/* Return true if given value holds an object which represents C callback */
+int v7_is_cfunction_obj(struct v7 *v7, v7_val_t v);
+
+/*
+ * Return true if given value is either cfunction pointer or cfunction object
+ */
+int v7_is_cfunction(struct v7 *v7, v7_val_t v);
+
+/*
+ * Returns true if given value is callable (i.e. it's either a JS function,
+ * cfunction pointer or cfunction object)
+ */
+int v7_is_callable(struct v7 *v7, v7_val_t v);
 
 /* Return true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t);
@@ -337,8 +351,11 @@ int v7_to_boolean(v7_val_t);
  */
 double v7_to_number(v7_val_t);
 
-/* Return `v7_cfunction_t *` callback pointer stored in `v7_val_t` */
-v7_cfunction_t *v7_to_cfunction(v7_val_t);
+/*
+ * Return `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
+ * if given value is neither cfunction pointer nor cfunction object.
+ */
+v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
 
 /*
  * Return a pointer to the string stored in `v7_val_t`.
@@ -11568,7 +11585,7 @@ static enum v7_err call_cfunction(struct v7 *v7, val_t func, val_t this_object,
   v7->arguments = args;
 
   /* call C function */
-  rcode = v7_to_cfunction(func)(v7, res);
+  rcode = v7_to_cfunction(v7, func)(v7, res);
   if (rcode != V7_OK) {
     goto clean;
   }
@@ -11986,9 +12003,7 @@ restart:
       case OP_INSTANCEOF: {
         v2 = POP();
         v1 = POP();
-        BTRY(i_value_of(v7, v2, &v3));
-
-        if (!v7_is_function(v2) && !v7_is_cfunction(v3)) {
+        if (!v7_is_callable(v7, v2)) {
           BTRY(v7_throwf(v7, TYPE_ERROR,
                          "Expecting a function in instanceof check"));
           goto op_done;
@@ -12225,8 +12240,11 @@ restart:
                   v7, TYPE_ERROR,
                   "Cannot set a primitive value as object prototype"));
               goto op_done;
-            } else if (v7_is_cfunction(v4)) {
-              /* TODO(dfrank): add support for a function to be a prototype */
+            } else if (v7_is_cfunction_ptr(v4)) {
+              /*
+               * TODO(dfrank): maybe add support for a cfunction pointer to be
+               * a prototype
+               */
               BTRY(v7_throwf(v7, TYPE_ERROR,
                              "Not implemented: cfunction as a prototype"));
               goto op_done;
@@ -12237,16 +12255,7 @@ restart:
             v4 = v7_create_undefined();
           }
 
-          if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
-            /* extract the hidden property from a cfunction_object */
-            struct v7_property *p;
-            p = v7_get_own_property2(v7, v1, "", 0, V7_PROPERTY_HIDDEN);
-            if (p != NULL) {
-              v1 = p->value;
-            }
-          }
-
-          if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
+          if (!v7_is_callable(v7, v1)) {
             /* tried to call non-function object: throw a TypeError */
 
             /*
@@ -12261,7 +12270,7 @@ restart:
              */
             BTRY(v7_throwf(v7, TYPE_ERROR, "value is not a function"));
             goto op_done;
-          } else if (v7_is_cfunction(v1)) {
+          } else if (v7_is_cfunction_ptr(v1) || v7_is_cfunction_obj(v7, v1)) {
             /* call cfunction */
 
             /*
@@ -12745,28 +12754,13 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
     bcode_op(bcode, (uint8_t) args_cnt);
 
     bcode_op(bcode, OP_SWAP_DROP);
-  } else {
-    /* probably cfunction */
-
-    if (!v7_is_cfunction(func)) {
-      /* extract the hidden property from a cfunction_object */
-      struct v7_property *p;
-      p = v7_get_own_property2(v7, func, "", 0, V7_PROPERTY_HIDDEN);
-      if (p != NULL) {
-        func = p->value;
-      }
-    }
-
-    if (v7_is_cfunction(func)) {
-      /* call cfunction */
-      V7_TRY(
-          call_cfunction(v7, func, this_object, args, 0 /* not a ctor */, &r));
-    } else {
-      /* value is not a function */
-      V7_TRY(v7_throwf(v7, TYPE_ERROR, "value is not a function"));
-    }
-
+  } else if (v7_is_cfunction_ptr(func) || v7_is_cfunction_obj(v7, func)) {
+    /* call cfunction */
+    V7_TRY(call_cfunction(v7, func, this_object, args, 0 /* not a ctor */, &r));
     goto clean;
+  } else {
+    /* value is not a function */
+    V7_TRY(v7_throwf(v7, TYPE_ERROR, "value is not a function"));
   }
 
   /* We now have bcode to evaluate; proceed to it */
@@ -13107,8 +13101,32 @@ int v7_is_undefined(val_t v) {
   return v == V7_UNDEFINED;
 }
 
-int v7_is_cfunction(val_t v) {
+int v7_is_cfunction_ptr(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
+}
+
+int v7_is_cfunction_obj(struct v7 *v7, val_t v) {
+  int ret = 0;
+  if (v7_is_object(v)) {
+    /* extract the hidden property from a cfunction_object */
+    struct v7_property *p;
+    p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+    if (p != NULL) {
+      v = p->value;
+    }
+
+    ret = v7_is_cfunction_ptr(v);
+  }
+  return ret;
+}
+
+int v7_is_cfunction(struct v7 *v7, val_t v) {
+  return v7_is_cfunction_ptr(v) || v7_is_cfunction_obj(v7, v);
+}
+
+int v7_is_callable(struct v7 *v7, val_t v) {
+  return v7_is_function(v) || v7_is_cfunction_ptr(v) ||
+         v7_is_cfunction_obj(v7, v);
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
@@ -13122,11 +13140,27 @@ V7_PRIVATE void *v7_to_pointer(val_t v) {
   return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-v7_cfunction_t *v7_to_cfunction(val_t v) {
-  /* Implementation is identical to v7_to_pointer but is separate since
-   * object pointers are not directly convertible to function pointers
-   * according to ISO C and generates a warning in -Wpedantic mode. */
-  return (v7_cfunction_t *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
+v7_cfunction_t *v7_to_cfunction(struct v7 *v7, val_t v) {
+  v7_cfunction_t *ret = NULL;
+
+  if (v7_is_cfunction_ptr(v)) {
+    /* Implementation is identical to v7_to_pointer but is separate since
+     * object pointers are not directly convertible to function pointers
+     * according to ISO C and generates a warning in -Wpedantic mode. */
+    ret = (v7_cfunction_t *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
+  } else {
+    /* maybe cfunction object */
+
+    /* extract the hidden property from a cfunction_object */
+    struct v7_property *p;
+    p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+    if (p != NULL) {
+      /* yes, it's cfunction object. Extract cfunction pointer from it */
+      ret = v7_to_cfunction(v7, p->value);
+    }
+  }
+
+  return ret;
 }
 
 V7_PRIVATE val_t v7_object_to_value(struct v7_object *o) {
@@ -13245,7 +13279,17 @@ double v7_to_number(val_t v) {
 }
 
 V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj) {
-  if (v7_is_function(obj) || v7_is_cfunction(obj)) {
+  /*
+   * NOTE: we don't use v7_is_callable() here, because it involves walking
+   * through the object's properties, which may be expensive. And it's done
+   * anyway for cfunction objects as it would for any other generic objects by
+   * the call to `obj_prototype()`.
+   *
+   * Since this function is called quite often (at least, GC walks the
+   * prototype chain), it's better to just handle cfunction objects as generic
+   * objects.
+   */
+  if (v7_is_function(obj) || v7_is_cfunction_ptr(obj)) {
     return v7->function_prototype;
   }
   return v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
@@ -13982,7 +14026,7 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
     rcode = v7_throwf(v7, TYPE_ERROR, "cannot read property '%.*s' of null",
                       (int) name_len, name);
     goto clean;
-  } else if (v7_is_cfunction(obj)) {
+  } else if (v7_is_cfunction_ptr(obj)) {
     *res = V7_UNDEFINED;
     goto clean;
   }
@@ -15353,11 +15397,14 @@ clean:
   return rcode;
 }
 
+/*
+ * TODO(dfrank): rename once we get rid of old `to_string`, `i_as_num`, etc
+ */
 V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v, val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t f = v7_create_undefined();
+  val_t func_valueOf = v7_create_undefined();
 
-  v7_own(v7, &f);
+  v7_own(v7, &func_valueOf);
   v7_own(v7, &v);
 
   if (!v7_is_object(v)) {
@@ -15365,10 +15412,10 @@ V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v, val_t *res) {
     goto clean;
   }
 
-  V7_TRY(v7_get_throwing(v7, v, "valueOf", 7, &f));
+  V7_TRY(v7_get_throwing(v7, v, "valueOf", 7, &func_valueOf));
 
-  if (f != V7_UNDEFINED) {
-    V7_TRY(b_apply(v7, res, f, v, v7_create_undefined(), 0));
+  if (v7_is_callable(v7, func_valueOf)) {
+    V7_TRY(b_apply(v7, res, func_valueOf, v, v7_create_undefined(), 0));
   }
 
 clean:
@@ -15377,7 +15424,7 @@ clean:
   }
 
   v7_disown(v7, &v);
-  v7_disown(v7, &f);
+  v7_disown(v7, &func_valueOf);
 
   return rcode;
 }
@@ -15832,6 +15879,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     gc_mark_dense_array(v7, obj);
   }
 
+  /* mark object itself, and its properties */
   for ((prop = obj_base->properties), MARK(obj_base); prop != NULL;
        prop = next) {
     if (!gc_check_ptr(&v7->property_arena, prop)) {
@@ -24184,7 +24232,7 @@ static enum v7_err a_cmp(struct v7 *v7, void *user_data, const void *pa,
   struct a_sort_data *sort_data = (struct a_sort_data *) user_data;
   val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
 
-  if (v7_is_function(func)) {
+  if (v7_is_callable(v7, func)) {
     int saved_inhibit_gc = v7->inhibit_gc;
     val_t vres = v7_create_undefined(), args = v7_create_dense_array(v7);
     v7_array_push(v7, args, a);
@@ -24600,7 +24648,7 @@ static enum v7_err Array_forEach(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  if (!v7_is_function(cb)) {
+  if (!v7_is_callable(v7, cb)) {
     rcode = v7_throwf(v7, TYPE_ERROR, "Function expected");
     goto clean;
   }
@@ -25862,7 +25910,7 @@ static enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
     prog = v7_to_regexp(v7, ro)->compiled_regexp;
     flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
 
-    if (!v7_is_function(str_func)) {
+    if (!v7_is_callable(v7, str_func)) {
       rcode = to_string(v7, str_func, &str_func);
       if (rcode != V7_OK) {
         goto clean;
@@ -25879,7 +25927,7 @@ static enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
         out_sub_num++;
       }
 
-      if (v7_is_function(str_func)) { /* replace function */
+      if (v7_is_callable(v7, str_func)) { /* replace function */
         const char *rez_str;
         size_t rez_len;
         val_t arr = v7_create_dense_array(v7);

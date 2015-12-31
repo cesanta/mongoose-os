@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "mongoose.h"
-#include "ubjson.h"
-#include "ubjserializer.h"
-#include "cs_dbg.h"
+#include "common/ubjson.h"
+#include "common/ubjserializer.h"
+#include "common/cs_dbg.h"
 
 struct link {
   struct link *next;

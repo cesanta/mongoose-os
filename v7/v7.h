@@ -298,8 +298,22 @@ int v7_is_undefined(v7_val_t);
 /* Return true if given value is a JavaScript RegExp object*/
 int v7_is_regexp(struct v7 *, v7_val_t);
 
-/* Return true if given value holds C callback */
-int v7_is_cfunction(v7_val_t);
+/* Return true if given value holds a pointer to C callback */
+int v7_is_cfunction_ptr(v7_val_t v);
+
+/* Return true if given value holds an object which represents C callback */
+int v7_is_cfunction_obj(struct v7 *v7, v7_val_t v);
+
+/*
+ * Return true if given value is either cfunction pointer or cfunction object
+ */
+int v7_is_cfunction(struct v7 *v7, v7_val_t v);
+
+/*
+ * Returns true if given value is callable (i.e. it's either a JS function,
+ * cfunction pointer or cfunction object)
+ */
+int v7_is_callable(struct v7 *v7, v7_val_t v);
 
 /* Return true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t);
@@ -333,8 +347,11 @@ int v7_to_boolean(v7_val_t);
  */
 double v7_to_number(v7_val_t);
 
-/* Return `v7_cfunction_t *` callback pointer stored in `v7_val_t` */
-v7_cfunction_t *v7_to_cfunction(v7_val_t);
+/*
+ * Return `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
+ * if given value is neither cfunction pointer nor cfunction object.
+ */
+v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
 
 /*
  * Return a pointer to the string stored in `v7_val_t`.
