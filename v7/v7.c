@@ -357,17 +357,6 @@ double v7_to_number(v7_val_t);
  */
 v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
 
-enum v7_to_primitive_hint {
-  /* Call `valueOf()` first, then `toString()` if needed */
-  V7_TO_PRIMITIVE_HINT_NUMBER,
-
-  /* Call `toString()` first, then `valueOf()` if needed */
-  V7_TO_PRIMITIVE_HINT_STRING,
-
-  /* STRING for Date, NUMBER for everything else */
-  V7_TO_PRIMITIVE_HINT_AUTO,
-};
-
 /*
  * Return a pointer to the string stored in `v7_val_t`.
  *
@@ -4737,11 +4726,21 @@ V7_PRIVATE enum v7_err to_string(struct v7 *v7, v7_val_t v, v7_val_t *res,
  *   - If `toString()` returned non-primitive value, throw `TypeError`.
  *
  * This function `to_primitive()` performs either type of conversion,
- * depending on the `hint` argument (see `enum v7_to_primitive_hint`).
+ * depending on the `hint` argument (see `enum to_primitive_hint`).
  */
+enum to_primitive_hint {
+  /* Call `valueOf()` first, then `toString()` if needed */
+  V7_TO_PRIMITIVE_HINT_NUMBER,
+
+  /* Call `toString()` first, then `valueOf()` if needed */
+  V7_TO_PRIMITIVE_HINT_STRING,
+
+  /* STRING for Date, NUMBER for everything else */
+  V7_TO_PRIMITIVE_HINT_AUTO,
+};
 WARN_UNUSED_RESULT
-enum v7_err to_primitive(struct v7 *v7, v7_val_t v,
-                         enum v7_to_primitive_hint hint, v7_val_t *res);
+enum v7_err to_primitive(struct v7 *v7, v7_val_t v, enum to_primitive_hint hint,
+                         v7_val_t *res);
 
 /*
  * Convert primitive value to string, using common JavaScript semantics. If
@@ -14163,7 +14162,7 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
                       (int) name_len, name);
     goto clean;
   } else if (v7_is_cfunction_ptr(obj)) {
-    v = V7_UNDEFINED;
+    v = v7->function_prototype;
   }
 
   V7_TRY(
@@ -15818,7 +15817,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-enum v7_err to_primitive(struct v7 *v7, val_t v, enum v7_to_primitive_hint hint,
+enum v7_err to_primitive(struct v7 *v7, val_t v, enum to_primitive_hint hint,
                          val_t *res) {
   enum v7_err rcode = V7_OK;
   enum v7_err (*p_func)(struct v7 *v7, val_t v, val_t *res);

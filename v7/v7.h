@@ -353,17 +353,6 @@ double v7_to_number(v7_val_t);
  */
 v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
 
-enum v7_to_primitive_hint {
-  /* Call `valueOf()` first, then `toString()` if needed */
-  V7_TO_PRIMITIVE_HINT_NUMBER,
-
-  /* Call `toString()` first, then `valueOf()` if needed */
-  V7_TO_PRIMITIVE_HINT_STRING,
-
-  /* STRING for Date, NUMBER for everything else */
-  V7_TO_PRIMITIVE_HINT_AUTO,
-};
-
 /*
  * Return a pointer to the string stored in `v7_val_t`.
  *
