@@ -353,6 +353,17 @@ double v7_to_number(v7_val_t);
  */
 v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
 
+enum v7_to_primitive_hint {
+  /* Call `valueOf()` first, then `toString()` if needed */
+  V7_TO_PRIMITIVE_HINT_NUMBER,
+
+  /* Call `toString()` first, then `valueOf()` if needed */
+  V7_TO_PRIMITIVE_HINT_STRING,
+
+  /* STRING for Date, NUMBER for everything else */
+  V7_TO_PRIMITIVE_HINT_AUTO,
+};
+
 /*
  * Return a pointer to the string stored in `v7_val_t`.
  *
@@ -421,30 +432,43 @@ enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
 
 /*
  * Generate string representation of the JavaScript value `val` into a buffer
- * `buf`, `len`. If `len` is too small to hold generated a string,
+ * `buf`, `len`. If `len` is too small to hold a generated string,
  * `v7_stringify()` allocates required memory. In that case, it is caller's
- * responsibility to free the allocated buffer. Generated string is
- * guaranteed to be 0-terminated.
- * Stringifying as JSON will produce JSON output.
- * Debug stringification is mostly like JSON, but will not omit non-JSON
- * objects like functions.
+ * responsibility to free the allocated buffer. Generated string is guaranteed
+ * to be 0-terminated.
+ *
+ * Available stringification modes are:
+ *
+ * - V7_STRINGIFY_DEFAULT:
+ *   Convert JS value to string, using common JavaScript semantics:
+ *   - If value is an object:
+ *     - call `toString()`;
+ *     - If `toString()` returned non-primitive value, call `valueOf()`;
+ *     - If `valueOf()` returned non-primitive value, throw `TypeError`.
+ *   - Now we have a primitive, and if it's not a string, then stringify it.
+ *
+ * - V7_STRINGIFY_JSON:
+ *   Generate JSON output
+ *
+ * - V7_STRINGIFY_DEBUG:
+ *   Mostly like JSON, but will not omit non-JSON objects like functions.
  *
  * Example code:
  *
  *     char buf[100], *p;
- *     p = v7_stringify(v7, obj, buf, sizeof(buf), 1);
+ *     p = v7_stringify(v7, obj, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
  *     printf("JSON string: [%s]\n", p);
  *     if (p != buf) {
  *       free(p);
  *     }
  */
-enum v7_stringify_flags {
-  V7_STRINGIFY_DEFAULT = 0,
-  V7_STRINGIFY_JSON = 1,
-  V7_STRINGIFY_DEBUG = 2,
+enum v7_stringify_mode {
+  V7_STRINGIFY_DEFAULT,
+  V7_STRINGIFY_JSON,
+  V7_STRINGIFY_DEBUG,
 };
 char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
-                   enum v7_stringify_flags flags);
+                   enum v7_stringify_mode mode);
 
 /*
  * Like `v7_stringify()`, but "returns" value through the `res` pointer
@@ -455,9 +479,12 @@ char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
  */
 WARN_UNUSED_RESULT
 enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
-                                  size_t size, enum v7_stringify_flags flags,
+                                  size_t size, enum v7_stringify_mode mode,
                                   char **res);
 
+/*
+ * A shortcut for `v7_stringify()` with `V7_STRINGIFY_JSON`
+ */
 #define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
 
 /* print a value to stdout */
@@ -489,6 +516,9 @@ enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
 WARN_UNUSED_RESULT
 enum v7_err v7_throw(struct v7 *v7, v7_val_t val);
 
+/* Clears currently thrown value */
+void v7_clear_thrown(struct v7 *v7);
+
 /*
  * Throw an exception with given formatted message.
  *
@@ -506,9 +536,10 @@ enum v7_err v7_rethrow(struct v7 *v7);
 
 /*
  * Returns the value that is being thrown at the moment, or `undefined` if
- * nothing is being thrown
+ * nothing is being thrown. If `is_thrown` is not `NULL`, it will be set
+ * to either 0 or 1, depending on whether something is thrown at the moment.
  */
-v7_val_t v7_thrown_value(struct v7 *v7);
+v7_val_t v7_thrown_value(struct v7 *v7, unsigned char *is_thrown);
 
 /*
  * Set object property. `name`, `name_len` specify property name, `attrs`
