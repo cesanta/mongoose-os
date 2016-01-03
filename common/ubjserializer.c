@@ -260,12 +260,12 @@ ub_val_t ub_create_number(double n) {
 }
 
 ub_val_t ub_create_boolean(int n) {
-  ub_val_t res = {n ? UBJSON_TYPE_TRUE : UBJSON_TYPE_FALSE};
+  ub_val_t res = {n ? UBJSON_TYPE_TRUE : UBJSON_TYPE_FALSE, {}};
   return res;
 }
 
 ub_val_t ub_create_null() {
-  ub_val_t res = {UBJSON_TYPE_NULL};
+  ub_val_t res = {UBJSON_TYPE_NULL, {}};
   return res;
 }
 
@@ -276,7 +276,7 @@ ub_val_t ub_create_string(struct ub_ctx *ctx, const char *str) {
 }
 
 ub_val_t ub_create_undefined() {
-  ub_val_t res = {UBJSON_TYPE_UNDEFINED};
+  ub_val_t res = {UBJSON_TYPE_UNDEFINED, {}};
   return res;
 }
 

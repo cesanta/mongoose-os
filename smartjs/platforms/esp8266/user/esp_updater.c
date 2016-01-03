@@ -21,9 +21,9 @@ static unsigned int fw_addresses[] = {FW1_ADDR, FW2_ADDR};
 static unsigned int fs_addresses[] = {FW1_FS_ADDR, FW2_FS_ADDR};
 
 static int s_current_received;
-static int s_file_size;
+static size_t s_file_size;
 static int s_current_write_address;
-static int s_written;
+static size_t s_written;
 static int s_area_prepared;
 
 static enum update_status s_update_status;
@@ -82,7 +82,7 @@ static void set_update_status(enum update_status us) {
 
 static int verify_timeout() {
   if (system_get_time() - s_last_received_time >
-      get_cfg()->update.server_timeout * 1000000) {
+      (uint32_t)(get_cfg()->update.server_timeout * 1000000)) {
     if (s_current_connection != NULL) {
       s_current_connection->flags |= MG_F_CLOSE_IMMEDIATELY;
     }
@@ -122,7 +122,7 @@ static void bin2hex(const uint8_t *src, int src_len, char *dst) {
   }
 }
 
-static int verify_checksum(uint32_t addr, int len,
+static int verify_checksum(uint32_t addr, size_t len,
                            const char *provided_checksum) {
   uint8_t read_buf[4 * 100];
   char written_checksum[50];
@@ -221,7 +221,7 @@ static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         if ((parsed = mg_parse_http(io->buf, io->len, &hm, 0)) > 0) {
           if (hm.body.len != 0) {
             LOG(LL_DEBUG, ("fw_updater: file size: %d", (int) hm.body.len));
-            if (hm.body.len == ~0) {
+            if (hm.body.len == (size_t) ~0) {
               LOG(LL_DEBUG,
                   ("Invalid content-length, perhaps chunked-encoding"));
               download_error(nc);
@@ -491,6 +491,7 @@ void set_boot_params(uint8_t new_rom, uint8_t prev_rom) {
 }
 
 static void reboot_timer_cb(void *arg) {
+  (void) arg;
   /*
    * just reboot system, fw boot is not commited so, rboot will do actual
    * rollback
@@ -534,6 +535,7 @@ void rollback_fw() {
 }
 
 static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
   LOG(LL_DEBUG, ("Starting update"));
   update_start(&sj_mgr);
 

@@ -27,6 +27,7 @@ enum v7_err spi_js_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   spi_connection conn;
+  (void) res;
 
   rcode = sj_spi_create(v7, &conn);
   if (rcode != V7_OK) {

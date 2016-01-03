@@ -36,11 +36,13 @@ clean:
 }
 
 static enum v7_err Wifi_connect(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
   *res = v7_create_boolean(sj_wifi_connect());
   return V7_OK;
 }
 
 static enum v7_err Wifi_disconnect(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
   *res = v7_create_boolean(sj_wifi_disconnect());
   return V7_OK;
 }

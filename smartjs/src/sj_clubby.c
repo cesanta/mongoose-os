@@ -171,13 +171,14 @@ void sj_clubby_send_resp(const char *dst, int64_t id, int status,
    * TODO(alashkin): is it good?
    */
   struct ub_ctx *ctx = ub_ctx_new();
-  clubby_proto_send(ctx, clubby_proto_create_resp(ctx, dst, id, 0, status_msg));
+  clubby_proto_send(ctx,
+                    clubby_proto_create_resp(ctx, dst, id, status, status_msg));
 }
 
 static void clubby_hello_req_callback(struct clubby_event *evt) {
   LOG(LL_DEBUG, ("Incoming /v1/Hello received, id=%d", evt->request.id));
   char src[100] = {0};
-  if (evt->request.src->len > sizeof(src)) {
+  if ((size_t) evt->request.src->len > sizeof(src)) {
     LOG(LL_ERROR, ("src too long, len=%d", evt->request.src->len));
     return;
   }
@@ -323,6 +324,7 @@ void sj_clubby_disconnect() {
 }
 
 static enum v7_err clubby_sayHello(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
   clubby_send_hello();
   *res = v7_create_boolean(1);
 

@@ -75,8 +75,8 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 
   memset(&ap_cfg, 0, sizeof(ap_cfg));
 
-  int pass_len = strlen(cfg->pass);
-  int ssid_len = strlen(cfg->ssid);
+  size_t pass_len = strlen(cfg->pass);
+  size_t ssid_len = strlen(cfg->ssid);
 
   if (ssid_len > sizeof(ap_cfg.ssid) || pass_len > sizeof(ap_cfg.password)) {
     LOG(LL_ERROR, ("AP SSID or PASS too long"));

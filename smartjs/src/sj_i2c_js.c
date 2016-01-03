@@ -105,6 +105,7 @@ static enum v7_err i2cjs_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   i2c_connection conn = NULL;
+  (void) res;
   rcode = sj_i2c_create(v7, &conn);
   if (rcode != V7_OK) {
     goto clean;
@@ -161,6 +162,7 @@ static enum v7_err i2cjs_stop(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   i2c_connection conn;
   v7_val_t this_obj = v7_get_this(v7);
+  (void) res;
   if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
     goto clean;
   }

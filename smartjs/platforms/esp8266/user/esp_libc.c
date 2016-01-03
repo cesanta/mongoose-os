@@ -143,14 +143,17 @@ uint32_t ntohl(uint32_t netlong) {
 #endif
 
 void *_malloc_r(struct _reent *r, size_t size) {
+  (void) r;
   return malloc(size);
 }
 
 void _free_r(struct _reent *r, void *ptr) {
+  (void) r;
   free(ptr);
 }
 
 void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
+  (void) r;
   return realloc(ptr, size);
 }
 
@@ -388,10 +391,10 @@ static double flash_pow10int(int n) {
  * Returns _required_ number of symbols
  */
 
-#define APPEND_CHAR(ch)              \
-  {                                  \
-    if (count < buf_size) *ptr = ch; \
-    count++;                         \
+#define APPEND_CHAR(ch)                    \
+  {                                        \
+    if (count < (int) buf_size) *ptr = ch; \
+    count++;                               \
   }
 
 int double_to_str(char *buf, size_t buf_size, double val, int prec) {
@@ -508,6 +511,8 @@ void _exit(int status) {
 
 int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
   uint32_t time = system_get_time();
+  (void) r;
+  (void) tzp;
   tp->tv_sec = time / 1000000;
   tp->tv_usec = time % 1000000;
   return 0;

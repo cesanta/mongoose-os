@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "v7/v7.h"
+#include "common/osdep.h"
 
 #define RX_BUFSIZE 512
 #define SIGINT_CHAR 0x03
@@ -70,6 +71,9 @@ static void process_here_char(char ch) {
 }
 
 static void process_here(int argc, char *argv[], unsigned int param) {
+  (void) argc;
+  (void) argv;
+  (void) param;
   printf("Terminate input with: EOF\n");
   s_sjp.pos = 0;
   s_sjp.char_processor = process_here_char;
@@ -105,6 +109,9 @@ static const char help_str[] =
     "All other input is treated as JS\n";
 
 static void process_help(int argc, char *argv[], unsigned int param) {
+  (void) argc;
+  (void) argv;
+  (void) param;
   printf(help_str);
 }
 
@@ -124,8 +131,8 @@ static const struct firmware_command cmds[] = {
 
 static void process_command(char *cmd) {
   if (*cmd == ':') {
-    int i;
-    for (i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
+    size_t i;
+    for (i = 0; i < ARRAY_SIZE(cmds); i++) {
       if (strncmp(cmd + 1, cmds[i].command, strlen(cmds[i].command)) == 0) {
         cmds[i].proc(0, 0, cmds[i].param);
         break;

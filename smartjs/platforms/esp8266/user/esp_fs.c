@@ -38,6 +38,7 @@
 #include "esp_uart.h"
 
 #include "esp_fs.h"
+#include "common/osdep.h"
 
 #include <sys/mman.h>
 
@@ -84,6 +85,11 @@ static struct mmap_desc *alloc_mmap_desc() {
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
   int pages = (len + LOG_PAGE_SIZE - 1) / LOG_PAGE_SIZE;
   struct mmap_desc *desc = alloc_mmap_desc();
+  (void) addr;
+  (void) prot;
+  (void) flags;
+  (void) offset;
+
   if (desc == NULL) {
     LOG(LL_ERROR, ("cannot allocate mmap desc"));
     return MAP_FAILED;
@@ -109,8 +115,10 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
 void esp_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
                                   spiffs_page_ix src_pix,
                                   spiffs_page_ix dst_pix) {
-  int i, j;
-  for (i = 0; i < (int) (sizeof(mmap_descs) / sizeof(mmap_descs[0])); i++) {
+  size_t i, j;
+  (void) fh;
+  /* for (i = 0; i < (sizeof(mmap_descs) / sizeof(mmap_descs[0])); i++) { */
+  for (i = 0; i < ARRAY_SIZE(mmap_descs); i++) {
     if (mmap_descs[i].blocks) {
       for (j = 0; j < mmap_descs[i].pages; j++) {
         uint32_t addr = mmap_descs[i].blocks[j];
@@ -286,6 +294,8 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   spiffs_mode sm = 0;
   int res;
   int rw = (flags & 3);
+  (void) r;
+  (void) mode;
   if (rw == O_RDONLY || rw == O_RDWR) sm |= SPIFFS_RDONLY;
   if (rw == O_WRONLY || rw == O_RDWR) sm |= SPIFFS_WRONLY | SPIFFS_CREAT;
   if (flags & O_CREAT) sm |= SPIFFS_CREAT;
@@ -306,6 +316,7 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
 
 _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
   ssize_t res;
+  (void) r;
   if (fd < NUM_SYS_FD) {
     res = -1;
   } else {
@@ -316,6 +327,7 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
 }
 
 _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
+  (void) r;
   if (fd < NUM_SYS_FD) {
     uart_write(fd, buf, len);
     return len;
@@ -328,6 +340,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
 
 _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
   ssize_t res;
+  (void) r;
   if (fd < NUM_SYS_FD) {
     res = -1;
   } else {
@@ -338,6 +351,7 @@ _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
 }
 
 int _close_r(struct _reent *r, int fd) {
+  (void) r;
   if (fd < NUM_SYS_FD) {
     return -1;
   }
@@ -348,6 +362,7 @@ int _close_r(struct _reent *r, int fd) {
 int _rename_r(struct _reent *r, const char *from, const char *to) {
   int res =
       SPIFFS_rename(&fs, get_fixed_filename(from), get_fixed_filename(to));
+  (void) r;
   set_errno(res);
 
   return res;
@@ -355,6 +370,7 @@ int _rename_r(struct _reent *r, const char *from, const char *to) {
 
 int _unlink_r(struct _reent *r, const char *filename) {
   int res = SPIFFS_remove(&fs, get_fixed_filename(filename));
+  (void) r;
   set_errno(res);
 
   return res;
@@ -363,6 +379,7 @@ int _unlink_r(struct _reent *r, const char *filename) {
 int _fstat_r(struct _reent *r, int fd, struct stat *s) {
   int res;
   spiffs_stat ss;
+  (void) r;
   memset(s, 0, sizeof(*s));
   if (fd < NUM_SYS_FD) {
     s->st_ino = fd;
@@ -382,6 +399,7 @@ int _fstat_r(struct _reent *r, int fd, struct stat *s) {
 
 int _stat_r(struct _reent *r, const char *path, struct stat *s) {
   int ret, fd;
+  (void) r;
 
   /*
    * spiffs has no directories, simulating statting root directory;

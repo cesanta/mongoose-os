@@ -185,7 +185,7 @@ static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  if (p->period == period && p->duty == duty) {
+  if (p->period == (uint32_t) period && p->duty == (uint32_t) duty) {
     *res = v7_create_boolean(1);
     goto clean;
   }
@@ -195,7 +195,7 @@ static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
   ETS_FRC1_INTR_DISABLE();
   p->period = period;
   p->duty = duty;
-  if (p->cnt == 0 || p->cnt > period) {
+  if (p->cnt == 0 || p->cnt > (uint32_t) period) {
     p->val = 1;
     p->cnt = p->duty;
     sj_gpio_write(pin, p->val);
@@ -218,7 +218,9 @@ IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
   /* Reloading at the very start is crucial for correct timing.
    * Reload first, then do whatever you want. */
   RTC_REG_WRITE(FRC1_LOAD_ADDRESS, s_pwm_timer_reload_value);
-  uint32_t i, v, set = 0, clear = 0;
+  int i;
+  uint32_t v, set = 0, clear = 0;
+  (void) arg;
 #ifdef ESP_PWM_DEBUG
   {
     v = GPIO_REG_READ(GPIO_OUT_ADDRESS);

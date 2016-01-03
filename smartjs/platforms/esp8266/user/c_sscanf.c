@@ -123,7 +123,7 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
   char ccltab[256]; /* character class table for %[...] */
   char buf[BUF];    /* buffer for numeric conversions */
 
-  int input_size = strlen(input);
+  size_t input_size = strlen(input);
 
   nassigned = 0;
   nread = 0;
@@ -333,7 +333,8 @@ int c_vsscanf(const char *input, const char *fmt0, va_list ap) {
         if (flags & SUPPRESS) {
           size_t sum = 0;
           for (;;) {
-            if ((n = input_size) < width) {
+            if (input_size < width) {
+              n = input_size;
               sum += n;
               width -= n;
               input += n;

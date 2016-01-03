@@ -95,6 +95,7 @@ clean:
  */
 enum v7_err Debug_print(struct v7 *v7, v7_val_t *res) {
   int i, num_args = v7_argc(v7);
+  (void) res;
 
   for (i = 0; i < num_args; i++) {
     v7_fprint(stderr, v7, v7_arg(v7, i));
@@ -119,7 +120,7 @@ enum v7_err Debug_print(struct v7 *v7, v7_val_t *res) {
 static enum v7_err dsleep(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t time_v = v7_arg(v7, 0);
-  uint32 time = v7_to_number(time_v);
+  double time = v7_to_number(time_v);
   v7_val_t flags_v = v7_arg(v7, 1);
   uint8 flags = v7_to_number(flags_v);
 
@@ -134,7 +135,7 @@ static enum v7_err dsleep(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  system_deep_sleep(time);
+  system_deep_sleep((uint32_t) time);
 
   *res = v7_create_boolean(true);
   goto clean;
@@ -149,6 +150,7 @@ clean:
  */
 static enum v7_err crash(struct v7 *v7, v7_val_t *res) {
   (void) v7;
+  (void) res;
 
   *(int *) 1 = 1;
   return V7_OK;

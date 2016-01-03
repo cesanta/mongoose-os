@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "v7/v7.h"
 #include "mongoose/mongoose.h"
 #include "smartjs/src/sj_hal.h"
@@ -113,6 +114,7 @@ static enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
   v7_val_t subprotov = v7_arg(v7, 1);
   v7_val_t ehv = v7_arg(v7, 2);
   size_t n;
+  (void) res;
 
   if (!v7_is_string(urlv)) {
     rcode = v7_throwf(v7, "Error", "invalid ws url string");
@@ -219,6 +221,7 @@ static enum v7_err WebSocket_send(struct v7 *v7, v7_val_t *res) {
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   struct mg_connection *nc;
   struct user_data *ud;
+  (void) res;
 
   /*
    * TODO(alashkin): check why v7_is_instanceof throws exception
@@ -256,6 +259,7 @@ static enum v7_err WebSocket_close(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   struct mg_connection *nc;
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
+  (void) res;
 
   if (v7_is_foreign(ncv) &&
       (nc = (struct mg_connection *) v7_to_foreign(ncv)) != NULL) {

@@ -28,6 +28,7 @@ static enum v7_err Sys_wdtFeed(struct v7 *v7, v7_val_t *res) {
 
 static enum v7_err Sys_reboot(struct v7 *v7, v7_val_t *res) {
   (void) v7;
+  (void) res;
   sj_system_restart();
 
   /* Unreachable */
@@ -58,6 +59,7 @@ clean:
 static enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
   v7_val_t usecsv = v7_arg(v7, 0);
   int usecs;
+  (void) res;
 
   if (!v7_is_number(usecsv)) {
     printf("usecs is not a double\n\r");
@@ -121,6 +123,7 @@ static enum v7_err GC_stat(struct v7 *v7, v7_val_t *res) {
  * Force a pass of the garbage collector.
  */
 static enum v7_err GC_gc(struct v7 *v7, v7_val_t *res) {
+  (void) res;
   v7_gc(v7, 1);
   return V7_OK;
 }

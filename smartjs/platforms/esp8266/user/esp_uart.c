@@ -74,6 +74,7 @@ IRAM NOINSTR static void rx_isr(void *param) {
   /* TODO(alashkin): add errors checking */
   unsigned int peri_reg = READ_PERI_REG(UART_INTR_STATUS(UART_MAIN));
   static volatile int tail = 0;
+  (void) param;
 
   if ((peri_reg & UART_RXBUF_FULL) != 0 || (peri_reg & UART_RX_NEW) != 0) {
     int char_count, i;

@@ -1,7 +1,7 @@
 #ifndef CLUBBY_PROTO_H
 #define CLUBBY_PROTO_H
 
-#include "mongoose.h"
+#include "mongoose/mongoose.h"
 #include "common/ubjserializer.h"
 
 #ifndef DISABLE_C_CLUBBY

@@ -9,6 +9,7 @@ static enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
   v7_val_t *cb;
   v7_val_t msecsv = v7_arg(v7, 1);
   int msecs;
+  (void) res;
 
   cb = (v7_val_t *) malloc(sizeof(*cb));
   v7_own(v7, cb);

@@ -223,6 +223,7 @@ static void mg_lwip_udp_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p,
   size_t len = p->len;
   char *data = (char *) malloc(len);
   union socket_address sa;
+  (void) pcb;
   DBG(("%p %s:%u %u", nc, ipaddr_ntoa(addr), port, p->len));
   if (data == NULL) {
     DBG(("OOM"));
@@ -254,6 +255,7 @@ void mg_if_connect_udp(struct mg_connection *nc) {
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   struct mg_connection *lc = (struct mg_connection *) arg, *nc;
   union socket_address sa;
+  (void) err;
   DBG(("%p conn %p from %s:%u", lc, newtpcb, ipaddr_ntoa(&newtpcb->remote_ip),
        newtpcb->remote_port));
   sa.sin.sin_addr.s_addr = newtpcb->remote_ip.addr;
@@ -296,6 +298,8 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
 #endif
 
 int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
+  (void) nc;
+  (void) sa;
   /* TODO(rojer) */
   return -1;
 }
@@ -500,6 +504,7 @@ void mg_ev_mgr_init(struct mg_mgr *mgr) {
 }
 
 void mg_ev_mgr_free(struct mg_mgr *mgr) {
+  (void) mgr;
   os_timer_disarm(&s_poll_tmr);
 #if MG_LWIP_REXMIT_INTERVAL_MS > 0
   os_timer_disarm(&s_rexmit_tmr);
