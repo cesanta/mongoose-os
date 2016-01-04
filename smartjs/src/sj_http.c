@@ -306,6 +306,21 @@ clean:
   return rcode;
 }
 
+static void http_write_headers(struct v7 *v7, v7_val_t headers_obj,
+                               struct mg_connection *c) {
+  if (v7_is_object(headers_obj)) {
+    void *h = NULL;
+    v7_val_t name, value;
+    v7_prop_attr_t attrs;
+    while ((h = v7_next_prop(h, headers_obj, &name, &value, &attrs)) != NULL) {
+      size_t n1, n2;
+      const char *s1 = v7_get_string_data(v7, &name, &n1);
+      const char *s2 = v7_get_string_data(v7, &value, &n2);
+      mg_printf(c, "%.*s: %.*s\r\n", (int) n1, s1, (int) n2, s2);
+    }
+  }
+}
+
 static enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   struct mg_connection *c = get_mgconn(v7);
@@ -322,17 +337,7 @@ static enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   }
 
   write_http_status(c, code);
-  if (v7_is_object(arg1)) {
-    void *h = NULL;
-    v7_val_t name, value;
-    v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(h, arg1, &name, &value, &attrs)) != NULL) {
-      size_t n1, n2;
-      const char *s1 = v7_get_string_data(v7, &name, &n1);
-      const char *s2 = v7_get_string_data(v7, &value, &n2);
-      mg_printf(c, "%.*s: %.*s\r\n", (int) n1, s1, (int) n2, s2);
-    }
-  }
+  http_write_headers(v7, arg1, c);
   mg_send(c, "\r\n", 2);
   v7_set(v7, v7_get_this(v7), "_whd", ~0, 0, v7_create_boolean(1));
   *res = v7_get_this(v7);
@@ -506,6 +511,7 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   v7_val_t v_p = v7_get(v7, opts, "port", ~0);
   v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
   v7_val_t v_m = v7_get(v7, opts, "method", ~0);
+  v7_val_t v_hdrs = v7_get(v7, opts, "headers", ~0);
 
   /* Perform options validation and set defaults if needed */
   int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
@@ -532,6 +538,7 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   mg_set_protocol_http_websocket(c);
   mg_printf(c, "%s %s HTTP/1.1\r\n", method, uri);
   mg_printf(c, "Host: %s\r\n", host);
+  http_write_headers(v7, v_hdrs, c);
   http_write_chunked_encoding_header(c);
   mg_printf(c, "%s", "\r\n");
 
