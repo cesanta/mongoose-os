@@ -27,9 +27,9 @@ class Flasher : public QObject {
   // between calling run() and getting back done() signal. Caller retains port
   // ownership.
   virtual util::Status setPort(QSerialPort *port) = 0;
-  // totalBlocks should return the number of blocks in the loaded firmware.
+  // totalBytes should return the number of bytes in the loaded firmware.
   // It is used to track the progress of flashing.
-  virtual int totalBlocks() const = 0;
+  virtual int totalBytes() const = 0;
   // run should actually do the flashing. It needs to be started in a separate
   // thread as it does not return until the flashing is done (or failed).
   virtual void run() = 0;

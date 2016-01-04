@@ -91,6 +91,8 @@ enum stub_cmd {
    * Jump to _ResetVector.
    *
    * No Args, input or output (but status 0 is emitted before reboot).
+   *
+   * Note: currently this reboots back into ROM. Let's call it a feature.
    */
   CMD_REBOOT = 0x70,
 };
@@ -183,10 +185,10 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     SLIP_send(&num_written, 4);
   }
 
+  ets_isr_mask(1 << ETS_UART_INUM);
+
   MD5Final(digest, &ctx);
   SLIP_send(digest, 16);
-
-  ets_isr_attach(ETS_UART_INUM, uart_rx_intr_handler, UartDev);
 
   return 0;
 }
@@ -241,7 +243,7 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
   return 0;
 }
 
-uint8_t cmd_loop() {
+void cmd_loop() {
   while (1) {
     uint8_t cmd;
     uint32_t args[4];
@@ -291,10 +293,7 @@ uint8_t cmd_loop() {
         break;
       }
       case CMD_REBOOT: {
-        SLIP_send(&resp, 0);
-        ets_delay_us(10000);
-        _ResetVector();
-        /* Not reached */
+        resp = 0;
         break;
       }
     }
@@ -304,6 +303,9 @@ uint8_t cmd_loop() {
 
 void stub_main() {
   uint32_t baud_rate = params[0];
+  uint32_t greeting = 0x4941484f; /* OHAI */
+
+  ets_set_user_start(NULL);
 
   spi_flash_attach();
 
@@ -313,9 +315,11 @@ void stub_main() {
     ets_delay_us(10000);
   }
 
+  SLIP_send(&greeting, 4);
+
   cmd_loop();
 
+  ets_delay_us(10000);
   _ResetVector();
-  while (1) {
-  } /* Not reached */
+  /* Not reached */
 }

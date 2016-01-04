@@ -3,5 +3,6 @@
   <file>cc3200/rbtl3100.dll</file>
   <file>cc3200/rbtl3100s.dll</file>
   <file>cc3200/rbtl3101_132.dll</file>
+  <file>esp8266/stub_flasher.json</file>
 </qresource>
 </RCC>

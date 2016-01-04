@@ -7,10 +7,15 @@
 #endif
 
 #include <QCoreApplication>
+#include <QDebug>
 #include <QSerialPort>
 
 #include <common/util/error_codes.h>
 #include <common/util/status.h>
+
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+#define qInfo qWarning
+#endif
 
 util::StatusOr<QSerialPort *> connectSerial(const QSerialPortInfo &port,
                                             int speed) {
@@ -40,6 +45,8 @@ util::StatusOr<QSerialPort *> connectSerial(const QSerialPortInfo &port,
 }
 
 util::Status setSpeed(QSerialPort *port, int speed) {
+  qInfo() << "Setting" << port->portName() << "speed to" << speed
+          << "(real speed may be different)";
   if (!port->setBaudRate(speed)) {
     return util::Status(
         util::error::INTERNAL,

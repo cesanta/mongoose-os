@@ -333,6 +333,7 @@ util::Status MainDialog::openSerial() {
                         tr("No port selected").toStdString());
   }
 
+  qDebug() << "Opening" << portName;
   util::StatusOr<QSerialPort *> r = connectSerial(QSerialPortInfo(portName));
   if (!r.ok()) {
     qDebug() << "connectSerial:" << r.status().ToString().c_str();
@@ -364,7 +365,7 @@ util::Status MainDialog::closeSerial() {
     case Connected:
       break;
     case Terminal:
-      disconnectTerminalSignals();
+      disconnectTerminal();
       readSerial();  // read the remainder of the buffer before closing the port
       break;
     case Flashing:
@@ -425,8 +426,6 @@ void MainDialog::connectDisconnectTerminal() {
           speed = kDefaultConsoleBaudRate;
         }
       }
-      qInfo() << "Setting console speed to" << speed
-              << "(real speed may be different)";
       setSpeed(serial_port_.get(), speed);
 
       // Write a newline to get a prompt back.
@@ -437,11 +436,7 @@ void MainDialog::connectDisconnectTerminal() {
       ui_.terminal->appendPlainText("");  // readSerial will append stuff here.
       break;
     case Terminal:
-      disconnect(serial_port_.get(), &QIODevice::readyRead, this,
-                 &MainDialog::readSerial);
-
-      setState(Connected);
-      ui_.terminal->appendPlainText(tr("--- disconnected"));
+      disconnectTerminal();
       closeSerial();
     case Flashing:
     case PortGoneWhileFlashing:
@@ -449,7 +444,7 @@ void MainDialog::connectDisconnectTerminal() {
   }
 }
 
-util::Status MainDialog::disconnectTerminalSignals() {
+util::Status MainDialog::disconnectTerminal() {
   if (state_ != Terminal) {
     qDebug() << "Attempt to disconnect signals in non-Terminal mode.";
     return util::Status(util::error::FAILED_PRECONDITION,
@@ -535,7 +530,9 @@ void MainDialog::reboot() {
   if (hal_ == nullptr) {
     qFatal("No HAL instance");
   }
+  disconnectTerminal();
   util::Status st = hal_->reboot(serial_port_.get());
+  connectDisconnectTerminal();
   if (!st.ok()) {
     qCritical() << "Rebooting failed:" << st.ToString().c_str();
     QMessageBox::critical(this, tr("Error"),
@@ -718,7 +715,7 @@ void MainDialog::loadFirmware() {
     return;
   }
   if (state_ == Terminal) {
-    disconnectTerminalSignals();
+    disconnectTerminal();
   }
   err = openSerial();
   if (!err.ok()) {
@@ -742,8 +739,7 @@ void MainDialog::loadFirmware() {
   scroll_after_flashing_ = scroll->value() == scroll->maximum();
   ui_.progressBar->show();
   ui_.statusMessage->show();
-  ui_.progressBar->setRange(0, f->totalBlocks());
-  ui_.progressBar->setValue(0);
+  ui_.progressBar->setRange(0, f->totalBytes());
   connect(f.get(), &Flasher::progress, ui_.progressBar,
           &QProgressBar::setValue);
   connect(f.get(), &Flasher::done, ui_.statusMessage, &QLabel::setText);
@@ -751,11 +747,10 @@ void MainDialog::loadFirmware() {
           [this]() { serial_port_->moveToThread(this->thread()); });
   connect(f.get(), &Flasher::statusMessage, ui_.statusMessage,
           &QLabel::setText);
-  connect(f.get(), &Flasher::statusMessage, [](QString msg, bool important) {
-    if (important) {
-      qInfo() << msg.toUtf8().constData();
-    }
-  });
+  connect(f.get(), &Flasher::statusMessage,
+          [this](QString msg, bool important) {
+            if (important) qInfo() << msg.toUtf8().constData();
+          });
   connect(f.get(), &Flasher::done, this, &MainDialog::flashingDone);
 
   worker_.reset(new QThread);  // TODO(imax): handle already running thread?
@@ -765,11 +760,10 @@ void MainDialog::loadFirmware() {
   serial_port_->moveToThread(worker_.get());
   worker_->start();
 #if (QT_VERSION < QT_VERSION_CHECK(5, 4, 0))
-  QTimer::singleShot(0, f.get(), SLOT(run()));
+  QTimer::singleShot(0, f.release(), SLOT(run()));
 #else
-  QTimer::singleShot(0, f.get(), &Flasher::run);
+  QTimer::singleShot(0, f.release(), &Flasher::run);
 #endif
-  f.release();
 }
 
 void MainDialog::showAboutBox() {

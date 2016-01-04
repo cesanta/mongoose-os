@@ -10,8 +10,12 @@ CONFIG += c++11
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
 
 # Input
-HEADERS += cli.h config.h dialog.h esp8266.h flasher.h fs.h prompter.h serial.h settings.h sigsource.h cc3200.h log.h
-SOURCES += cli.cc config.cc dialog.cc esp8266.cc flasher.cc fs.cc main.cc serial.cc settings.cc cc3200.cc log.cc
+HEADERS += cli.h config.h dialog.h esp_flasher_client.h esp_rom_client.h \
+           esp8266.h flasher.h fs.h prompter.h serial.h settings.h \
+           slip.h status_qt.h sigsource.h cc3200.h log.h
+SOURCES += cli.cc config.cc dialog.cc esp_flasher_client.cc esp_rom_client.cc \
+           esp8266.cc flasher.cc fs.cc main.cc serial.cc settings.cc \
+           slip.cc status_qt.cc cc3200.cc log.cc
 
 DEFINES += VERSION=\\\"$$VERSION\\\"
 DEFINES += APP_NAME=\\\"$$TARGET\\\"

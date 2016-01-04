@@ -60,7 +60,7 @@ class MainDialog : public QMainWindow {
   void detectPorts();
   void updateFWList();
   void flashingDone(QString msg, bool success);
-  util::Status disconnectTerminalSignals();
+  util::Status disconnectTerminal();
   void readSerial();
   void writeSerial();
   void reboot();

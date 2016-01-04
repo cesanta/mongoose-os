@@ -353,16 +353,11 @@ class FlasherImpl : public Flasher {
     return util::Status::OK;
   }
 
-  int totalBlocks() const override {
+  int totalBytes() const override {
     QMutexLocker lock(&lock_);
-    int r = image_.length() / kFileUploadBlockSize +
-            (image_.length() % kFileUploadBlockSize > 0 ? 1 : 0);
+    int r = image_.length();
     if (spiffs_image_.length() > 0) {
-      const int bytes = spiffs_image_.length() + kSPIFFSMetadataSize;
-      r += bytes / kFileUploadBlockSize;
-      if (bytes % kFileUploadBlockSize > 0) {
-        r++;
-      }
+      r += spiffs_image_.length() + kSPIFFSMetadataSize;
     }
     return r;
   }
@@ -856,7 +851,7 @@ class FlasherImpl : public Flasher {
         return st;
       }
       start += kFileUploadBlockSize;
-      progress_++;
+      progress_ += kFileUploadBlockSize;
       emit progress(progress_);
     }
     return closeFile();

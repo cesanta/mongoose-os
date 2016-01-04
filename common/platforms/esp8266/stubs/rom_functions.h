@@ -28,15 +28,21 @@ void spi_flash_attach();
 void memset(void *addr, uint8_t c, uint32_t len);
 
 void ets_delay_us(uint32_t delay_micros);
+
+void ets_isr_mask(uint32_t ints);
 void ets_isr_unmask(uint32_t ints);
 typedef void (*int_handler_t)(void *arg);
 int_handler_t ets_isr_attach(uint32_t int_num, int_handler_t handler,
                              void *arg);
 void ets_intr_lock();
 void ets_intr_unlock();
+void ets_set_user_start(void (*user_start_fn)());
+
+uint32_t rtc_get_reset_reason();
+void software_reset();
+void rom_phy_reset_req();
 
 void uart_rx_intr_handler(void *arg);
-void *UartDev;
 
 void _ResetVector();
 
