@@ -498,8 +498,8 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  * Result can be NULL if you don't care about the return value.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
-                     v7_val_t this_obj, v7_val_t args);
+enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                     v7_val_t args, v7_val_t *res);
 
 /* Throw an already existing value. */
 WARN_UNUSED_RESULT

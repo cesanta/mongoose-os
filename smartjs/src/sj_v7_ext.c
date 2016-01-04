@@ -158,7 +158,7 @@ void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
 void _sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                    v7_val_t args) {
   v7_val_t res;
-  if (v7_apply(v7, &res, func, this_obj, args) == V7_EXEC_EXCEPTION) {
+  if (v7_apply(v7, func, this_obj, args, &res) == V7_EXEC_EXCEPTION) {
     sj_print_exception(v7, res, "cb threw exception");
   }
 }
