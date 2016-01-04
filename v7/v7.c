@@ -7996,6 +7996,7 @@ void cr_context_free(struct cr_ctx *p_ctx) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/v7.h" */
 /* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/mbuf.h" */
@@ -8027,7 +8028,7 @@ int v7_is_file_type(v7_val_t val);
 #endif
 
 WARN_UNUSED_RESULT
-static enum v7_err File_eval(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_eval(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -8089,17 +8090,17 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_readAll(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_readAll(struct v7 *v7, v7_val_t *res) {
   return f_read(v7, 1, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_read(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_read(struct v7 *v7, v7_val_t *res) {
   return f_read(v7, 0, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
@@ -8120,7 +8121,7 @@ static enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_close(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_close(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t prop = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
@@ -8136,7 +8137,7 @@ static enum v7_err File_close(struct v7 *v7, v7_val_t *res) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
   v7_val_t arg1 = v7_arg(v7, 1);
@@ -8173,7 +8174,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_rename(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_rename(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
   v7_val_t arg1 = v7_arg(v7, 1);
@@ -8197,7 +8198,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_loadJSON(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_loadJSON(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -8221,7 +8222,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err File_remove(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_remove(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
   int ires = -1;
@@ -8242,7 +8243,7 @@ clean:
 
 #if V7_ENABLE__File__list
 WARN_UNUSED_RESULT
-static enum v7_err File_list(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_list(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -8313,6 +8314,7 @@ void init_file(struct v7 *v7) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/v7.h" */
 /* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/mbuf.h" */
@@ -8351,7 +8353,7 @@ static enum v7_err s_fd_to_sock_obj(struct v7 *v7, sock_t fd, v7_val_t *res) {
 
 /* Socket.connect(host, port [, is_udp]) -> socket_object */
 WARN_UNUSED_RESULT
-static enum v7_err Socket_connect(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Socket_connect(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
   v7_val_t arg1 = v7_arg(v7, 1);
@@ -8381,7 +8383,7 @@ clean:
 
 /* Socket.listen(port [, ip_address [,is_udp]]) -> sock */
 WARN_UNUSED_RESULT
-static enum v7_err Socket_listen(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Socket_listen(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
   v7_val_t arg1 = v7_arg(v7, 1);
@@ -8433,7 +8435,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Socket_accept(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Socket_accept(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
@@ -8456,7 +8458,7 @@ clean:
 
 /* sock.close() -> errno */
 WARN_UNUSED_RESULT
-static enum v7_err Socket_close(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Socket_close(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
@@ -8506,17 +8508,17 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Socket_recvAll(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Socket_recvAll(struct v7 *v7, v7_val_t *res) {
   return s_recv(v7, 1, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Socket_recv(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Socket_recv(struct v7 *v7, v7_val_t *res) {
   return s_recv(v7, 0, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Socket_send(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Socket_send(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t arg0 = v7_arg(v7, 0);
@@ -8581,6 +8583,7 @@ void init_socket(struct v7 *v7) {
 #include <stdlib.h>
 #include <string.h>
 
+/* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/v7.h" */
 /* Amalgamated: #include "common/md5.h" */
 /* Amalgamated: #include "common/sha1.h" */
@@ -8612,12 +8615,12 @@ static enum v7_err b64_transform(struct v7 *v7, b64_func_t func, double mult,
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Crypto_base64_decode(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Crypto_base64_decode(struct v7 *v7, v7_val_t *res) {
   return b64_transform(v7, (b64_func_t) cs_base64_decode, 0.75, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Crypto_base64_encode(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Crypto_base64_encode(struct v7 *v7, v7_val_t *res) {
   return b64_transform(v7, cs_base64_encode, 1.5, res);
 }
 
@@ -8636,7 +8639,7 @@ static void v7_sha1(const char *data, size_t len, char buf[20]) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Crypto_md5(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Crypto_md5(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -8656,7 +8659,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Crypto_md5_hex(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Crypto_md5_hex(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -8676,7 +8679,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Crypto_sha1(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Crypto_sha1(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -8695,7 +8698,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Crypto_sha1_hex(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Crypto_sha1_hex(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
@@ -8959,7 +8962,7 @@ static enum v7_err _ubjson_render(struct v7 *v7, struct ubjson_ctx *ctx,
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err UBJSON_render(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err UBJSON_render(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t obj = v7_arg(v7, 0), cb = v7_arg(v7, 1), errb = v7_arg(v7, 2);
   (void) res;
@@ -8974,7 +8977,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err Bin_send(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Bin_send(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   struct ubjson_ctx *ctx;
   size_t n;
@@ -9011,7 +9014,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err UBJSON_Bin(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err UBJSON_Bin(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
 
   (void) res;
@@ -21654,7 +21657,7 @@ clean:
 
 #ifndef NO_LIBC
 WARN_UNUSED_RESULT
-static enum v7_err Std_exit(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Std_exit(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   long exit_code;
 
@@ -23763,7 +23766,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 
 #if V7_ENABLE__Object__getPrototypeOf
 WARN_UNUSED_RESULT
-static enum v7_err Obj_getPrototypeOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_getPrototypeOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t arg = v7_arg(v7, 0);
 
@@ -23781,7 +23784,7 @@ clean:
 
 #if V7_ENABLE__Object__isPrototypeOf
 WARN_UNUSED_RESULT
-static enum v7_err Obj_isPrototypeOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_isPrototypeOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t obj = v7_arg(v7, 0);
   val_t proto = v7_get_this(v7);
@@ -23850,21 +23853,22 @@ clean:
 
 #if V7_ENABLE__Object__keys
 WARN_UNUSED_RESULT
-static enum v7_err Obj_keys(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_keys(struct v7 *v7, v7_val_t *res) {
   return _Obj_ownKeys(v7, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM, res);
 }
 #endif
 
 #if V7_ENABLE__Object__getOwnPropertyNames
 WARN_UNUSED_RESULT
-static enum v7_err Obj_getOwnPropertyNames(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_getOwnPropertyNames(struct v7 *v7, v7_val_t *res) {
   return _Obj_ownKeys(v7, V7_PROPERTY_HIDDEN, res);
 }
 #endif
 
 #if V7_ENABLE__Object__getOwnPropertyDescriptor
 WARN_UNUSED_RESULT
-static enum v7_err Obj_getOwnPropertyDescriptor(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_getOwnPropertyDescriptor(struct v7 *v7,
+                                                    v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   struct v7_property *prop;
   val_t obj = v7_arg(v7, 0);
@@ -23975,7 +23979,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Obj_defineProperty(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_defineProperty(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t obj = v7_arg(v7, 0);
   val_t name = v7_arg(v7, 1);
@@ -24031,7 +24035,7 @@ clean:
 
 #if V7_ENABLE__Object__defineProperties
 WARN_UNUSED_RESULT
-static enum v7_err Obj_defineProperties(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_defineProperties(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t descs = v7_create_undefined();
 
@@ -24073,7 +24077,7 @@ clean:
 
 #if V7_ENABLE__Object__propertyIsEnumerable
 WARN_UNUSED_RESULT
-static enum v7_err Obj_propertyIsEnumerable(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_propertyIsEnumerable(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   struct v7_property *prop;
@@ -24100,7 +24104,7 @@ clean:
 
 #if V7_ENABLE__Object__hasOwnProperty
 WARN_UNUSED_RESULT
-static enum v7_err Obj_hasOwnProperty(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_hasOwnProperty(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t name = v7_arg(v7, 0);
@@ -24143,7 +24147,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Obj_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t ctor, name, this_obj = v7_get_this(v7);
   char buf[20];
@@ -24185,7 +24189,7 @@ clean:
 
 #if V7_ENABLE__Object__preventExtensions
 WARN_UNUSED_RESULT
-static enum v7_err Obj_preventExtensions(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_preventExtensions(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t arg = v7_arg(v7, 0);
   if (!v7_is_object(arg)) {
@@ -24202,7 +24206,7 @@ clean:
 
 #if V7_ENABLE__Object__isExtensible
 WARN_UNUSED_RESULT
-static enum v7_err Obj_isExtensible(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_isExtensible(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t arg = v7_arg(v7, 0);
 
@@ -24319,7 +24323,7 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_arg(v7, 0);
@@ -24338,7 +24342,7 @@ static enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Error_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Error_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t prefix, msg = v7_get(v7, this_obj, "message", ~0);
@@ -24395,7 +24399,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
-static enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_argc(v7) == 0 ? v7_create_number(0.0) : v7_arg(v7, 0);
@@ -24425,7 +24429,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err n_to_str(struct v7 *v7, const char *format, val_t *res) {
+V7_PRIVATE enum v7_err n_to_str(struct v7 *v7, const char *format, val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_arg(v7, 0);
@@ -24461,22 +24465,22 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Number_toFixed(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Number_toFixed(struct v7 *v7, v7_val_t *res) {
   return n_to_str(v7, "%%.%dlf", res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Number_toExp(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Number_toExp(struct v7 *v7, v7_val_t *res) {
   return n_to_str(v7, "%%.%de", res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Number_toPrecision(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Number_toPrecision(struct v7 *v7, v7_val_t *res) {
   return Number_toExp(v7, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Number_valueOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Number_valueOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
 
@@ -24532,7 +24536,7 @@ static char *cs_itoa(int64_t value, char *result, int base) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Number_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Number_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t radixv = v7_arg(v7, 0);
@@ -24586,7 +24590,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err n_isNaN(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err n_isNaN(struct v7 *v7, v7_val_t *res) {
   val_t arg0 = v7_arg(v7, 0);
   *res = v7_create_boolean(!v7_is_number(arg0) || arg0 == V7_TAG_NAN);
   return V7_OK;
@@ -24638,7 +24642,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
-static enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
   val_t arg0 = v7_arg(v7, 0);
   char buf[100], *p = v7_to_json(v7, arg0, buf, sizeof(buf));
   *res = v7_create_string(v7, p, strlen(p), 1);
@@ -24680,7 +24684,7 @@ struct a_sort_data {
 };
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_ctor(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   unsigned long i, len;
 
@@ -24704,7 +24708,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_push(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_push(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int i, len = v7_argc(v7);
 
@@ -24729,7 +24733,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_get_length(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_get_length(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   long len = 0;
@@ -24743,7 +24747,7 @@ static enum v7_err Array_get_length(struct v7 *v7, v7_val_t *res) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_set_length(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_set_length(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t arg0 = v7_arg(v7, 0);
   val_t this_obj = v7_get_this(v7);
@@ -24962,17 +24966,17 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_sort(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_sort(struct v7 *v7, v7_val_t *res) {
   return a_sort(v7, a_cmp, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_reverse(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_reverse(struct v7 *v7, v7_val_t *res) {
   return a_sort(v7, NULL, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_join(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_join(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_arg(v7, 0);
@@ -25036,7 +25040,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_toString(struct v7 *v7, v7_val_t *res) {
   return Array_join(v7, res);
 }
 
@@ -25150,12 +25154,12 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_slice(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_slice(struct v7 *v7, v7_val_t *res) {
   return a_splice(v7, 0, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_splice(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_splice(struct v7 *v7, v7_val_t *res) {
   return a_splice(v7, 1, res);
 }
 
@@ -25203,7 +25207,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_forEach(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_forEach(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t v = v7_create_undefined(), cb = v7_arg(v7, 0);
@@ -25241,7 +25245,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_map(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_map(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0, arg1, el, v;
@@ -25283,7 +25287,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_every(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_every(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0, arg1, el, v;
@@ -25327,7 +25331,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_some(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_some(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0, arg1, el, v;
@@ -25371,7 +25375,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_filter(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_filter(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0, arg1, el, v;
@@ -25414,7 +25418,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_concat(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_concat(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   size_t i, j, len;
@@ -25465,7 +25469,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Array_isArray(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Array_isArray(struct v7 *v7, v7_val_t *res) {
   val_t arg0 = v7_arg(v7, 0);
   *res = v7_create_boolean(v7_is_array(v7, arg0));
   return V7_OK;
@@ -25541,7 +25545,7 @@ V7_PRIVATE enum v7_err Boolean_ctor(struct v7 *v7, v7_val_t *res) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Boolean_valueOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Boolean_valueOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   if (!v7_is_boolean(this_obj) &&
@@ -25562,7 +25566,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Boolean_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Boolean_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
 
@@ -26016,7 +26020,7 @@ static long subs_string_split_add_caps(struct _str_split_ctx UNUSED *ctx,
 /* }}} */
 
 WARN_UNUSED_RESULT
-static enum v7_err String_ctor(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err String_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_arg(v7, 0);
@@ -26048,7 +26052,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_fromCharCode(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_fromCharCode(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int i, num_args = v7_argc(v7);
 
@@ -26107,7 +26111,7 @@ static enum v7_err s_charCodeAt(struct v7 *v7, double *res) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_charCodeAt(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_charCodeAt(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   double dnum = 0;
 
@@ -26123,7 +26127,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_charAt(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_charAt(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   double code = 0;
   char buf[10] = {0};
@@ -26145,7 +26149,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_concat(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_concat(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   int i, num_args = v7_argc(v7);
@@ -26249,7 +26253,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_valueOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_valueOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
 
@@ -26269,18 +26273,18 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_indexOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_indexOf(struct v7 *v7, v7_val_t *res) {
   return s_index_of(v7, 0, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_lastIndexOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_lastIndexOf(struct v7 *v7, v7_val_t *res) {
   return s_index_of(v7, 1, res);
 }
 
 #if V7_ENABLE__String__localeCompare
 WARN_UNUSED_RESULT
-static enum v7_err Str_localeCompare(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_localeCompare(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_create_undefined();
@@ -26304,7 +26308,7 @@ clean:
 #endif
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
 
@@ -26355,7 +26359,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_match(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_match(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t so = v7_create_undefined(), ro = v7_create_undefined();
@@ -26435,7 +26439,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   const char *s;
@@ -26588,7 +26592,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_search(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_search(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   long utf_shift = -1;
@@ -26634,7 +26638,7 @@ clean:
 #endif /* V7_ENABLE__RegExp */
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_slice(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_slice(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   long from = 0, to = 0;
@@ -26719,13 +26723,13 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_toLowerCase(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_toLowerCase(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   return s_transform(v7, this_obj, tolowerrune, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_toUpperCase(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_toUpperCase(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   return s_transform(v7, this_obj, toupperrune, res);
 }
@@ -26735,7 +26739,7 @@ static int s_isspace(Rune c) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_trim(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_trim(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t s = v7_create_undefined();
@@ -26765,7 +26769,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_length(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_length(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   size_t len = 0;
@@ -26787,7 +26791,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_at(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_at(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   long arg0;
@@ -26819,7 +26823,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_blen(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_blen(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   size_t len = 0;
@@ -26874,7 +26878,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_substr(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_substr(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   long start, len;
@@ -26899,7 +26903,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_substring(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_substring(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   long start, end;
@@ -26930,7 +26934,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Str_split(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Str_split(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   const char *s, *s_end;
@@ -27713,7 +27717,7 @@ static int d_tptostr(const struct timeparts *tp, char *buf, int addtz);
 
 /* constructor */
 WARN_UNUSED_RESULT
-static enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   etime_t ret_time = INVALID_TIME;
@@ -27842,7 +27846,7 @@ static int d_timetoISOstr(const etime_t *time, char *buf, size_t buf_size) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Date_toISOString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_toISOString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   char buf[30];
@@ -27883,7 +27887,7 @@ static enum v7_err d_tostring(struct v7 *v7, val_t obj,
 /* using macros to avoid copy-paste technic */
 #define DEF_TOSTR(funcname, breaktimefunc, tostrfunc, addtz)               \
   WARN_UNUSED_RESULT                                                       \
-  static enum v7_err Date_to##funcname(struct v7 *v7, v7_val_t *res) {     \
+  V7_PRIVATE enum v7_err Date_to##funcname(struct v7 *v7, v7_val_t *res) { \
     val_t this_obj = v7_get_this(v7);                                      \
     return d_tostring(v7, this_obj, breaktimefunc, tostrfunc, addtz, res); \
   }
@@ -27978,11 +27982,11 @@ static enum v7_err d_tolocalestr(struct v7 *v7, val_t obj, const char *frm,
   return rcode;
 }
 
-#define DEF_TOLOCALESTR(funcname, frm)                                 \
-  WARN_UNUSED_RESULT                                                   \
-  static enum v7_err Date_to##funcname(struct v7 *v7, v7_val_t *res) { \
-    val_t this_obj = v7_get_this(v7);                                  \
-    return d_tolocalestr(v7, this_obj, frm, res);                      \
+#define DEF_TOLOCALESTR(funcname, frm)                                     \
+  WARN_UNUSED_RESULT                                                       \
+  V7_PRIVATE enum v7_err Date_to##funcname(struct v7 *v7, v7_val_t *res) { \
+    val_t this_obj = v7_get_this(v7);                                      \
+    return d_tolocalestr(v7, this_obj, frm, res);                          \
   }
 
 DEF_TOLOCALESTR(LocaleString, "%c")
@@ -27991,7 +27995,7 @@ DEF_TOLOCALESTR(LocaleTimeString, "%X")
 #endif /* V7_ENABLE__Date__toLocaleString */
 
 WARN_UNUSED_RESULT
-static enum v7_err Date_valueOf(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_valueOf(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   if (!v7_is_generic_object(this_obj) ||
@@ -28019,23 +28023,23 @@ static struct timeparts *d_getTimePart(val_t val, struct timeparts *tp,
   return tp;
 }
 
-#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                 \
-  WARN_UNUSED_RESULT                                                       \
-  static enum v7_err Date_get##funcName(struct v7 *v7, v7_val_t *res) {    \
-    enum v7_err rcode = V7_OK;                                             \
-    val_t v = v7_create_undefined();                                       \
-    struct timeparts tp;                                                   \
-    val_t this_obj = v7_get_this(v7);                                      \
-                                                                           \
-    rcode = obj_value_of(v7, this_obj, &v);                                \
-    if (rcode != V7_OK) {                                                  \
-      goto clean;                                                          \
-    }                                                                      \
-    *res = v7_create_number(                                               \
-        v == V7_TAG_NAN ? NAN                                              \
-                        : d_getTimePart(v, &tp, breaktimefunc)->tpmember); \
-  clean:                                                                   \
-    return rcode;                                                          \
+#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                  \
+  WARN_UNUSED_RESULT                                                        \
+  V7_PRIVATE enum v7_err Date_get##funcName(struct v7 *v7, v7_val_t *res) { \
+    enum v7_err rcode = V7_OK;                                              \
+    val_t v = v7_create_undefined();                                        \
+    struct timeparts tp;                                                    \
+    val_t this_obj = v7_get_this(v7);                                       \
+                                                                            \
+    rcode = obj_value_of(v7, this_obj, &v);                                 \
+    if (rcode != V7_OK) {                                                   \
+      goto clean;                                                           \
+    }                                                                       \
+    *res = v7_create_number(                                                \
+        v == V7_TAG_NAN ? NAN                                               \
+                        : d_getTimePart(v, &tp, breaktimefunc)->tpmember);  \
+  clean:                                                                    \
+    return rcode;                                                           \
   }
 
 #define DEF_GET_TP(funcName, tpmember)               \
@@ -28052,12 +28056,12 @@ DEF_GET_TP(Milliseconds, msec)
 DEF_GET_TP(Day, dayofweek)
 
 WARN_UNUSED_RESULT
-static enum v7_err Date_getTime(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_getTime(struct v7 *v7, v7_val_t *res) {
   return Date_valueOf(v7, res);
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Date_getTimezoneOffset(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_getTimezoneOffset(struct v7 *v7, v7_val_t *res) {
   (void) v7;
   *res = v7_create_number(g_gmtoffms / msPerMinute);
   return V7_OK;
@@ -28080,14 +28084,14 @@ static enum v7_err d_setTimePart(struct v7 *v7, int start_pos,
   return rcode;
 }
 
-#define DEF_SET_TP(name, start_pos)                                    \
-  WARN_UNUSED_RESULT                                                   \
-  static enum v7_err Date_setUTC##name(struct v7 *v7, v7_val_t *res) { \
-    return d_setTimePart(v7, start_pos, d_gmtime, d_gmktime, res);     \
-  }                                                                    \
-  WARN_UNUSED_RESULT                                                   \
-  static enum v7_err Date_set##name(struct v7 *v7, v7_val_t *res) {    \
-    return d_setTimePart(v7, start_pos, d_localtime, d_lmktime, res);  \
+#define DEF_SET_TP(name, start_pos)                                        \
+  WARN_UNUSED_RESULT                                                       \
+  V7_PRIVATE enum v7_err Date_setUTC##name(struct v7 *v7, v7_val_t *res) { \
+    return d_setTimePart(v7, start_pos, d_gmtime, d_gmktime, res);         \
+  }                                                                        \
+  WARN_UNUSED_RESULT                                                       \
+  V7_PRIVATE enum v7_err Date_set##name(struct v7 *v7, v7_val_t *res) {    \
+    return d_setTimePart(v7, start_pos, d_localtime, d_lmktime, res);      \
   }
 
 DEF_SET_TP(Milliseconds, tpmsec)
@@ -28099,7 +28103,7 @@ DEF_SET_TP(Month, tpmonth)
 DEF_SET_TP(FullYear, tpyear)
 
 WARN_UNUSED_RESULT
-static enum v7_err Date_setTime(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_setTime(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
 
@@ -28119,14 +28123,14 @@ clean:
 
 #if V7_ENABLE__Date__toJSON
 WARN_UNUSED_RESULT
-static enum v7_err Date_toJSON(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_toJSON(struct v7 *v7, v7_val_t *res) {
   return Date_toISOString(v7, res);
 }
 #endif /* V7_ENABLE__Date__toJSON */
 
 #if V7_ENABLE__Date__now
 WARN_UNUSED_RESULT
-static enum v7_err Date_now(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_now(struct v7 *v7, v7_val_t *res) {
   etime_t ret_time;
   (void) v7;
 
@@ -28139,7 +28143,7 @@ static enum v7_err Date_now(struct v7 *v7, v7_val_t *res) {
 
 #if V7_ENABLE__Date__parse
 WARN_UNUSED_RESULT
-static enum v7_err Date_parse(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_parse(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   etime_t ret_time = INVALID_TIME;
@@ -28168,7 +28172,7 @@ clean:
 
 #if V7_ENABLE__Date__UTC
 WARN_UNUSED_RESULT
-static enum v7_err Date_UTC(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Date_UTC(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   etime_t ret_time;
@@ -28307,7 +28311,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/eval.h" */
 
 WARN_UNUSED_RESULT
-static enum v7_err Function_ctor(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Function_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   long i, num_args = v7_argc(v7);
   size_t size;
@@ -28356,7 +28360,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Function_length(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Function_length(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   struct v7_function *func;
@@ -28379,7 +28383,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Function_name(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Function_name(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   struct v7_function *func;
@@ -28404,7 +28408,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Function_apply(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Function_apply(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t this_arg = v7_arg(v7, 0);
@@ -28425,7 +28429,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Function_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Function_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   char *name;
   size_t name_len;
@@ -28565,7 +28569,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_global(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_global(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int flags = 0;
   val_t this_obj = v7_get_this(v7);
@@ -28586,7 +28590,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_ignoreCase(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_ignoreCase(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int flags = 0;
   val_t this_obj = v7_get_this(v7);
@@ -28607,7 +28611,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_multiline(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_multiline(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int flags = 0;
   val_t this_obj = v7_get_this(v7);
@@ -28628,7 +28632,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_source(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_source(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   val_t r = v7_create_undefined();
@@ -28651,7 +28655,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_get_lastIndex(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_get_lastIndex(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   long lastIndex = 0;
   val_t this_obj = v7_get_this(v7);
@@ -28666,7 +28670,7 @@ static enum v7_err Regex_get_lastIndex(struct v7 *v7, v7_val_t *res) {
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_set_lastIndex(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_set_lastIndex(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   long lastIndex = 0;
   val_t this_obj = v7_get_this(v7);
@@ -28740,7 +28744,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_exec(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_exec(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
 
@@ -28758,7 +28762,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_test(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_test(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t tmp = v7_create_undefined();
 
@@ -28774,7 +28778,7 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-static enum v7_err Regex_toString(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Regex_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   size_t n1, n2 = 0;
   char s2[3] = {0};
