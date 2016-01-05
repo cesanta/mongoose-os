@@ -4247,7 +4247,7 @@ struct v7 {
  * INFINITY; for simplicity we're just not going to use that combination.
  */
 #define MAKE_TAG(s, t) \
-  ((uint64_t)(s) << 63 | (uint64_t) 0xfff0 << 48 | (uint64_t)(t) << 48)
+  ((uint64_t)(s) << 63 | (uint64_t) 0x7ff0 << 48 | (uint64_t)(t) << 48)
 
 #define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
 #define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
