@@ -15,10 +15,11 @@
 
 namespace {
 
-const int flashBlockSize = 64 * 1024;
+const quint32 flashBlockSize = 64 * 1024;
 // These are rather conservative estimates. Used in timeout calculations.
-const int flashBlockReadWriteTimeMs = 250;
-const int flashBlockEraseTimeMs = 900;
+const quint32 flashBlockReadWriteTimeMs = 250;
+const quint32 flashBlockEraseTimeMs = 900;
+const quint32 flashEraseMinTimeoutMs = 5000;
 
 const quint32 flashReadBlockSize = 1024;
 }
@@ -86,7 +87,9 @@ util::Status ESPFlasherClient::erase(quint32 addr, quint32 size) {
   s << addr << size;
   st = SLIP::send(rom_->data_port(), args);
   if (!st.ok()) return QSP(prefix + "arg write failed", st);
-  const int timeoutMs = flashBlockEraseTimeMs * (size / flashBlockSize + 1);
+  const int timeoutMs =
+      std::max(flashEraseMinTimeoutMs,
+               flashBlockEraseTimeMs * (size / flashBlockSize + 1));
   auto res = SLIP::recv(rom_->data_port(), timeoutMs);
   if (!res.ok()) return QSP(prefix + "failed to read response", res.status());
   return util::Status::OK;
@@ -113,7 +116,9 @@ util::Status ESPFlasherClient::write(quint32 addr, QByteArray data,
   while (numWritten < quint32(data.length())) {
     int timeoutMs = 200;
     if (numSent == 0 && erase) {
-      timeoutMs = flashBlockEraseTimeMs * (data.length() / flashBlockSize + 1);
+      timeoutMs = std::max(
+          flashEraseMinTimeoutMs,
+          flashBlockEraseTimeMs * (data.length() / flashBlockSize + 1));
     }
     auto res = SLIP::recv(rom_->data_port(), timeoutMs);
     if (!res.ok()) {
