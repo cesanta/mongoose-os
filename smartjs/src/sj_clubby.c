@@ -7,7 +7,7 @@
 
 #ifndef DISABLE_C_CLUBBY
 
-#define MAX_COMMAND_NAME_LENGTH 15
+#define MAX_COMMAND_NAME_LENGTH 30
 #define RECONNECT_TIMEOUT_MULTIPLY 1.3
 
 static struct v7 *s_v7;
@@ -704,13 +704,28 @@ error:
   return V7_OK;
 }
 
+int sj_clubby_register_command_handler(const char *cmd, clubby_callback cb,
+                                       void *user_data) {
+  return clubby_register_callback(cmd, strlen(cmd), cb, user_data);
+}
+
+void sj_clubby_send_reply(struct clubby_event *evt, int status,
+                          const char *status_msg) {
+  /* TODO(alashkin): add `len` parameter to ubjserializer */
+  char *dst = calloc(1, evt->request.src->len + 1);
+  memcpy(dst, evt->request.src->ptr, evt->request.src->len);
+
+  sj_clubby_send_resp(dst, evt->request.id, status, status_msg);
+}
+
 void sj_init_clubby(struct v7 *v7) {
   s_v7 = v7;
 
   clubby_proto_init(clubby_cb);
   reset_reconnect_timeout();
 
-  clubby_register_callback("/v1/Hello", 9, clubby_hello_req_callback, NULL);
+  sj_clubby_register_command_handler("/v1/Hello", clubby_hello_req_callback,
+                                     NULL);
 
   v7_val_t clubby = v7_create_object(v7);
   v7_set(v7, v7_get_global(v7), "clubby", ~0, 0, clubby);

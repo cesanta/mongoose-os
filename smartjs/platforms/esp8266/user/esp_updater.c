@@ -12,6 +12,9 @@
 #include "smartjs/src/sj_config.h"
 #include "smartjs/src/device_config.h"
 #include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_clubby.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "v7/v7.h"
 
 /*
  * It looks too dangerous to put this numbers to
@@ -26,10 +29,13 @@ static int s_current_write_address;
 static size_t s_written;
 static int s_area_prepared;
 
+static struct v7 *s_v7;
+static v7_val_t s_updater_notify_cb;
 static enum update_status s_update_status;
 static os_timer_t s_update_timer;
 static os_timer_t s_reboot_timer;
 static char *s_metadata;
+static char *s_metadata_url;
 static char *s_fw_url;
 static char *s_fs_url;
 static char *s_fw_checksum;
@@ -44,13 +50,15 @@ static enum download_status s_download_status = DS_NOT_STARTED;
 /* Forward declarations */
 void set_boot_params(uint8_t new_rom, uint8_t prev_rom);
 static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data);
+static int notify_js(enum update_status us, const char *info);
 
-static void do_http_connect(struct mg_mgr *mgr, const char *uri) {
+static void do_http_connect(const char *uri) {
   static char *url;
   asprintf(&url, "http%s://%s%s", get_cfg()->tls.enable ? "s" : "",
            get_cfg()->update.server_address, uri);
   LOG(LL_DEBUG, ("Full url: %s", url));
-  s_current_connection = mg_connect_http(mgr, mg_ev_handler, url, NULL, NULL);
+  s_current_connection =
+      mg_connect_http(&sj_mgr, mg_ev_handler, url, NULL, NULL);
 #ifdef SSL_KRYPTON
   if (get_cfg()->tls.enabled) {
     char *ca_file = get_cfg()->tls.ca_file[0] ? get_cfg()->tls.ca_file : NULL;
@@ -306,12 +314,13 @@ static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 }
 
 void update_timer_cb(void *arg) {
+  (void) arg;
   switch (s_update_status) {
     case US_NOT_STARTED: {
       /* Starting with loading metadata */
       LOG(LL_DEBUG,
           ("Loading metadata from %s", get_cfg()->update.metadata_url));
-      do_http_connect((struct mg_mgr *) arg, get_cfg()->update.metadata_url);
+      do_http_connect(s_metadata_url);
       set_update_status(US_WAITING_METADATA);
       set_download_status(DS_IN_PROGRESS);
       break;
@@ -382,7 +391,7 @@ void update_timer_cb(void *arg) {
       LOG(LL_DEBUG, ("Address to write ROM: %X", s_current_write_address));
 
       LOG(LL_INFO, ("Loading %s", s_fw_url));
-      do_http_connect((struct mg_mgr *) arg, s_fw_url);
+      do_http_connect(s_fw_url);
       set_update_status(US_DOWNLOADING_FW);
       set_download_status(DS_IN_PROGRESS);
       goto cleanup;
@@ -408,7 +417,7 @@ void update_timer_cb(void *arg) {
           LOG(LL_DEBUG, ("Loading %s", s_fs_url));
           s_file_size = s_current_received = s_area_prepared = 0;
           s_current_write_address = fs_addresses[s_new_rom_number];
-          do_http_connect((struct mg_mgr *) arg, s_fs_url);
+          do_http_connect(s_fs_url);
           set_update_status(US_DOWNLOADING_FS);
           set_download_status(DS_IN_PROGRESS);
         }
@@ -441,20 +450,25 @@ void update_timer_cb(void *arg) {
 
       set_boot_params(s_new_rom_number, rboot_get_current_rom());
 
-      system_restart();
-      set_update_status(US_NOT_STARTED); /* Paranoia? */
+      if (!notify_js(US_COMPLETED, NULL)) {
+        system_restart();
+      }
+
+      set_update_status(US_NOT_STARTED);
       break;
     }
 
     case US_NOTHING_TODO: {
       os_timer_disarm(&s_update_timer);
       /* Leave this status to support UI stuff */
+      notify_js(US_NOTHING_TODO, NULL);
       break;
     }
 
     case US_ERROR: {
       LOG(LL_ERROR, ("Update failed"));
       os_timer_disarm(&s_update_timer);
+      notify_js(US_ERROR, NULL);
     }
   }
 }
@@ -463,16 +477,27 @@ enum update_status update_get_status(void) {
   return s_update_status;
 }
 
-void update_start(struct mg_mgr *mgr) {
+void update_start(const char *metadata_url) {
   if (s_update_status != US_NOT_STARTED && s_update_status != US_NOTHING_TODO &&
       s_update_status != US_ERROR) {
     LOG(LL_INFO, ("Update already in progress"));
     return;
   }
 
+  if (s_metadata_url) {
+    free(s_metadata_url);
+  }
+
+  if (metadata_url != NULL) {
+    s_metadata_url = strdup(metadata_url);
+  } else {
+    /* Fallback to cfg-stored metadata url. Debug only */
+    s_metadata_url = strdup(get_cfg()->update.metadata_url);
+  }
+
   s_update_status = US_NOT_STARTED;
   s_last_received_time = system_get_time();
-  os_timer_setfn(&s_update_timer, update_timer_cb, mgr);
+  os_timer_setfn(&s_update_timer, update_timer_cb, NULL);
   os_timer_arm(&s_update_timer, 1000, 1);
 }
 
@@ -534,21 +559,153 @@ void rollback_fw() {
   os_timer_arm(&s_reboot_timer, 1000, 0);
 }
 
+static int notify_js(enum update_status us, const char *info) {
+  if (!v7_is_undefined(s_updater_notify_cb)) {
+    if (info == NULL) {
+      sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_create_number(us));
+    } else {
+      sj_invoke_cb2(s_v7, s_updater_notify_cb, v7_create_number(us),
+                    v7_create_string(s_v7, info, ~0, 1));
+    };
+
+    return 1;
+  }
+
+  return 0;
+}
+
+static void handle_clubby_update(struct clubby_event *evt) {
+  LOG(LL_DEBUG, ("Command received: %.*s", evt->request.cmd_body->len,
+                 evt->request.cmd_body->ptr));
+
+  struct json_token *args = find_json_token(evt->request.cmd_body, "args");
+  if (args == NULL || args->type != JSON_TYPE_OBJECT) {
+    goto bad_request;
+  }
+
+  struct json_token *section = find_json_token(args, "section");
+  struct json_token *blob_url = find_json_token(args, "blob_url");
+
+  /*
+   * TODO(alashkin): enable update for another files, not
+   * firmware only
+   */
+  if (section == NULL || section->type != JSON_TYPE_STRING ||
+      memcmp(section->ptr, "firmware", section->len) != 0 || blob_url == NULL ||
+      blob_url->type != JSON_TYPE_STRING) {
+    goto bad_request;
+  }
+
+  LOG(LL_DEBUG, ("metadata url: %.*s", blob_url->len, blob_url->ptr));
+
+  /*
+   * TODO(alashkin): should we send reply after upgrade?
+   * New version will be reported after reboot as labels,
+   * But it makes sense to send status != 0 if update failed
+   */
+  sj_clubby_send_reply(evt, 0, NULL);
+
+  /*
+   * If user setup callback for updater, just call it.
+   * User can start update with Sys.updater.start()
+   */
+  char *metadata_url = calloc(1, blob_url->len + 1);
+  memcpy(metadata_url, blob_url->ptr, blob_url->len);
+
+  if (!notify_js(US_NOT_STARTED, metadata_url)) {
+    update_start(metadata_url);
+  }
+
+  free(metadata_url);
+
+  return;
+
+bad_request:
+  sj_clubby_send_reply(evt, 1, "malformed request");
+}
+
 static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
-  (void) v7;
   LOG(LL_DEBUG, ("Starting update"));
-  update_start(&sj_mgr);
+  v7_val_t metadata_url_v = v7_arg(v7, 0);
+  if (v7_is_undefined(metadata_url_v)) {
+    /* Using default metadata address */
+    update_start(NULL);
+  } else if (v7_is_string(metadata_url_v)) {
+    update_start(v7_to_cstring(v7, &metadata_url_v));
+  } else {
+    printf("Invalid arguments\n");
+    *res = v7_create_boolean(0);
+    return V7_OK;
+  }
+
+  *res = v7_create_boolean(1);
+  return V7_OK;
+}
+
+/*
+ * Example of notification function:
+ * function upd(ev, url) {
+ *      if (ev == Sys.updater.GOT_REQUEST) {
+ *         print("Starting update from", url);
+ *         Sys.updater.start(url);
+ *       }  else if(ev == Sys.updater.NOTHING_TODO) {
+ *         print("No need to update");
+ *       } else if(ev == Sys.updater.FAILED) {
+ *         print("Update failed");
+ *       } else if(ev == Sys.updater.COMPLETED) {
+ *         print("Update completed");
+ *         Sys.reboot();
+ *       }
+ * }
+ */
+
+static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
+  v7_val_t cb = v7_arg(v7, 0);
+  if (!v7_is_function(cb)) {
+    printf("Invalid arguments\n");
+    *res = v7_create_boolean(0);
+    return V7_OK;
+  }
+
+  if (!v7_is_undefined(s_updater_notify_cb)) {
+    v7_disown(v7, &s_updater_notify_cb);
+  }
+
+  s_updater_notify_cb = cb;
+  v7_own(v7, &s_updater_notify_cb);
 
   *res = v7_create_boolean(1);
   return V7_OK;
 }
 
 void init_updater(struct v7 *v7) {
+  s_v7 = v7;
   v7_val_t updater = v7_create_object(v7);
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
+  s_updater_notify_cb = v7_create_undefined();
 
   v7_set(v7, sys, "updater", ~0, 0, updater);
   v7_set_method(v7, updater, "start", Updater_startupdate);
+  v7_set_method(v7, updater, "notify", Updater_notify);
+
+  v7_set(s_v7, updater, "GOT_REQUEST", ~0,
+         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+         v7_create_number(US_NOT_STARTED));
+
+  v7_set(s_v7, updater, "COMPLETED", ~0,
+         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+         v7_create_number(US_COMPLETED));
+
+  v7_set(s_v7, updater, "NOTHING_TODO", ~0,
+         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+         v7_create_number(US_NOTHING_TODO));
+
+  v7_set(s_v7, updater, "FAILED", ~0,
+         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+         v7_create_number(US_ERROR));
+
+  sj_clubby_register_command_handler("/v1/SWUpdate.Update",
+                                     handle_clubby_update, NULL);
 }
 
 #endif /* DISABLE_OTA */

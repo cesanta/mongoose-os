@@ -19,7 +19,8 @@ enum update_status {
 
 void init_updater(struct v7 *v7);
 
-void update_start(struct mg_mgr *mgr);
+void update_start(const char *metadata_url);
+
 enum update_status update_get_status(void);
 int finish_update();
 uint32_t get_fs_addr();
