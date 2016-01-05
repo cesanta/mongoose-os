@@ -185,7 +185,7 @@ width: 16em;
         for (var k in c) {
           var path = p ? p + '.' + k : k;
           var d = schema[path] || {}; // UI descriptor for that config param
-          var parent_d = schema[p];
+          var parent_d = schema[p] || {};
           var val = c[k];
           if (typeof(val) == 'object') {
             if (!d.hide) {

@@ -44,12 +44,12 @@
 
   "clubby": {"title": "Cloud settings"},
   "clubby.connect_on_boot": {"title": "Connect cloud on startup" },
-  "clubby.server_address": {"title:": "Cloud server address"},
+  "clubby.server_address": {"title": "Cloud server address"},
   "clubby.device_id": {"title": "Device ID"},
   "clubby.device_psk": {"title": "Device password"},
   "clubby.backend" : {"title" : "Backend name" },
-  "clubby.reconnect_timeout" : {title: "Reconnect timeout" },
-  "clubby.cmd_timeout" : {title: "Default command timeout" },
+  "clubby.reconnect_timeout" : {"title": "Reconnect timeout" },
+  "clubby.cmd_timeout" : {"title": "Default command timeout" },
 
   "debug": { "title": "Debug Settings" },
   "debug.level": {
