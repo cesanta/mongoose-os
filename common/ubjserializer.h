@@ -40,6 +40,7 @@ typedef void (*ub_cb_t)(char *d, size_t l, int end, void *user_data);
 typedef void (*ub_bin_cb_t)(struct ub_ctx *ctx, void *user_data);
 
 struct ub_ctx *ub_ctx_new();
+void ub_ctx_free(struct ub_ctx *ctx);
 void ub_render(struct ub_ctx *ctx, ub_val_t root, ub_cb_t cb, void *user_data);
 
 ub_val_t ub_create_array(struct ub_ctx *ctx);

@@ -106,6 +106,7 @@ FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
            -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
            -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
            -DV7_ENABLE__Memory__stats -DCS_ENABLE_SPIFFS \
+           -DV7_ENABLE__Function__bind \
            -DESP_FLASH_BYTES_EMUL \
            -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \

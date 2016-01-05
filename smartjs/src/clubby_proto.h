@@ -54,6 +54,8 @@ typedef void (*clubby_callback)(struct clubby_event *evt);
 ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *dst,
                                   int64_t id, int status,
                                   const char *status_msg);
+ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx, const char *dst);
+
 ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *dst,
                                    ub_val_t cmds);
 

@@ -90,7 +90,7 @@ struct ub_ctx *ub_ctx_new() {
   return ctx;
 }
 
-static void ub_ctx_free(struct ub_ctx *ctx) {
+void ub_ctx_free(struct ub_ctx *ctx) {
   mbuf_free(&ctx->out);
   mbuf_free(&ctx->stack);
   struct link *l, *tmp;
