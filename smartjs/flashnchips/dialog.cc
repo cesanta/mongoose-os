@@ -638,8 +638,8 @@ void MainDialog::detectPorts() {
         tr("Could not detect the device on any of serial ports. Make sure the "
            "device is properly wired and connected and you have drivers for "
            "the USB-to-serial adapter. See <a "
-           "href=\"https://github.com/cesanta/smart.js/blob/master/platforms/"
-           "esp8266/flashing.md\">this page</a> for more details."));
+           "href=\"https://github.com/cesanta/smart.js/blob/master/smartjs/"
+           "platforms/esp8266/flashing.md\">this page</a> for more details."));
   }
 
   ui_.portSelector->setDisabled(false);
