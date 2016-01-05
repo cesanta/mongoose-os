@@ -27853,10 +27853,20 @@ V7_PRIVATE enum v7_err Date_toISOString(struct v7 *v7, v7_val_t *res) {
   etime_t time;
   int len;
 
+  if (val_type(v7, this_obj) != V7_TYPE_DATE_OBJECT) {
+    rcode = v7_throwf(v7, TYPE_ERROR, "This is not a Date object");
+    goto clean;
+  }
+
   time = v7_to_number(d_trytogetobjforstring(v7, this_obj));
   len = d_timetoISOstr(&time, buf, sizeof(buf));
+  if (len > (int) (sizeof(buf) - 1 /*null-term*/)) {
+    len = (int) (sizeof(buf) - 1 /*null-term*/);
+  }
 
   *res = v7_create_string(v7, buf, len, 1);
+
+clean:
   return rcode;
 }
 #endif /* V7_ENABLE__Date__toString || V7_ENABLE__Date__toJSON */
