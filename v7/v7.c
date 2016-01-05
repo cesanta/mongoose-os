@@ -8006,7 +8006,6 @@ void cr_context_free(struct cr_ctx *p_ctx) {
 
 #if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
 
-static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
 
 #ifndef NO_LIBC
@@ -8159,7 +8158,9 @@ V7_PRIVATE enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
     fp = fopen(s1, s2);
     if (fp != NULL) {
       v7_val_t obj = v7_create_object(v7);
-      v7_set_proto(v7, obj, s_file_proto);
+      v7_val_t file_proto = v7_get(
+          v7, v7_get(v7, v7_get_global(v7), "File", ~0), "prototype", ~0);
+      v7_set_proto(v7, obj, file_proto);
       v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
              v7_file_to_val(fp));
       *res = obj;
@@ -8281,10 +8282,9 @@ clean:
 #endif /* V7_ENABLE__File__list */
 
 void init_file(struct v7 *v7) {
-  v7_val_t file_obj = v7_create_object(v7);
+  v7_val_t file_obj = v7_create_object(v7), file_proto = v7_create_object(v7);
   v7_set(v7, v7_get_global(v7), "File", 4, 0, file_obj);
-  s_file_proto = v7_create_object(v7);
-  v7_set(v7, file_obj, "prototype", 9, 0, s_file_proto);
+  v7_set(v7, file_obj, "prototype", 9, 0, file_proto);
 
   v7_set_method(v7, file_obj, "eval", File_eval);
   v7_set_method(v7, file_obj, "remove", File_remove);
@@ -8295,10 +8295,10 @@ void init_file(struct v7 *v7) {
   v7_set_method(v7, file_obj, "list", File_list);
 #endif
 
-  v7_set_method(v7, s_file_proto, "close", File_close);
-  v7_set_method(v7, s_file_proto, "read", File_read);
-  v7_set_method(v7, s_file_proto, "readAll", File_readAll);
-  v7_set_method(v7, s_file_proto, "write", File_write);
+  v7_set_method(v7, file_proto, "close", File_close);
+  v7_set_method(v7, file_proto, "read", File_read);
+  v7_set_method(v7, file_proto, "readAll", File_readAll);
+  v7_set_method(v7, file_proto, "write", File_write);
 }
 #else
 void init_file(struct v7 *v7) {
@@ -8329,7 +8329,6 @@ void init_file(struct v7 *v7) {
 #define RECV_BUF_SIZE 1024
 #endif
 
-static v7_val_t s_sock_proto;
 static const char s_sock_prop[] = "__sock";
 
 static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
@@ -8342,9 +8341,11 @@ static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
 WARN_UNUSED_RESULT
 static enum v7_err s_fd_to_sock_obj(struct v7 *v7, sock_t fd, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
+  v7_val_t sock_proto =
+      v7_get(v7, v7_get(v7, v7_get_global(v7), "Socket", ~0), "prototype", ~0);
 
   *res = v7_create_object(v7);
-  v7_set_proto(v7, *res, s_sock_proto);
+  v7_set_proto(v7, *res, sock_proto);
   v7_set(v7, *res, s_sock_prop, sizeof(s_sock_prop) - 1, V7_PROPERTY_DONT_ENUM,
          v7_create_number(fd));
 
@@ -8541,20 +8542,20 @@ V7_PRIVATE enum v7_err Socket_send(struct v7 *v7, v7_val_t *res) {
 }
 
 void init_socket(struct v7 *v7) {
-  v7_val_t socket_obj = v7_create_object(v7);
+  v7_val_t socket_obj = v7_create_object(v7), sock_proto = v7_create_object(v7);
 
   v7_set(v7, v7_get_global(v7), "Socket", 6, 0, socket_obj);
-  s_sock_proto = v7_create_object(v7);
-  v7_set(v7, socket_obj, "prototype", 9, 0, s_sock_proto);
+  sock_proto = v7_create_object(v7);
+  v7_set(v7, socket_obj, "prototype", 9, 0, sock_proto);
 
   v7_set_method(v7, socket_obj, "connect", Socket_connect);
   v7_set_method(v7, socket_obj, "listen", Socket_listen);
 
-  v7_set_method(v7, s_sock_proto, "accept", Socket_accept);
-  v7_set_method(v7, s_sock_proto, "send", Socket_send);
-  v7_set_method(v7, s_sock_proto, "recv", Socket_recv);
-  v7_set_method(v7, s_sock_proto, "recvAll", Socket_recvAll);
-  v7_set_method(v7, s_sock_proto, "close", Socket_close);
+  v7_set_method(v7, sock_proto, "accept", Socket_accept);
+  v7_set_method(v7, sock_proto, "send", Socket_send);
+  v7_set_method(v7, sock_proto, "recv", Socket_recv);
+  v7_set_method(v7, sock_proto, "recvAll", Socket_recvAll);
+  v7_set_method(v7, sock_proto, "close", Socket_close);
 
 #ifdef _WIN32
   {
