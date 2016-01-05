@@ -28,7 +28,7 @@ V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
 BOOTLOADER_PATH ?= $(COMMON_ESP_DIR)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
-OTA ?=
+OTA ?= 1
 
 FLASH_SIZE ?= 1M
 
