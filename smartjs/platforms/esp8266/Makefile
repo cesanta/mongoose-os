@@ -1,5 +1,5 @@
 SRC_DIR ?= $(realpath ../../..)
-DIR = $(shell bash -c 'echo -n /cesanta$${PWD\#\#$(SRC_DIR)}')
+DIR = $(subst $(SRC_DIR),/cesanta,$(CURDIR))
 
 SDK_CAT = $(shell cat sdk.version)
 
