@@ -46,10 +46,11 @@ const char kDefaultSPIFFSSize[] = "65536";
 const char kNoMinimizeWritesOption[] = "esp8266-no-minimize-writes";
 
 const int kDefaultFlashBaudRate = 230400;
-const ulong flashBlockSize = 4096;
 const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
-const ulong idBlockSize = flashBlockSize;
+const ulong idBlockSizeSectors = 1;
+/* Last 16K of flash are reserved for system params. */
+const quint32 kSystemParamsAreaSize = 16 * 1024;
 
 class FlasherImpl : public Flasher {
   Q_OBJECT
@@ -233,16 +234,6 @@ class FlasherImpl : public Flasher {
       }
       images_[addr] = bytes;
     }
-    const QList<ulong> keys = images_.keys();
-    for (int i = 0; i < keys.length() - 1; i++) {
-      if (keys[i] + images_[keys[i]].length() > keys[i + 1]) {
-        return util::Status(util::error::FAILED_PRECONDITION,
-                            tr("Images at offsets 0x%1 and 0x%2 overlap.")
-                                .arg(keys[i], 0, 16)
-                                .arg(keys[i + 1], 0, 16)
-                                .toStdString());
-      }
-    }
 
     files_.clear();
     if (dir.exists("fs")) {
@@ -391,30 +382,28 @@ class FlasherImpl : public Flasher {
     }
     qInfo() << "Flash size:" << flashSize;
 
-    int flashParams = -1;
-    if (override_flash_params_ >= 0) {
-      flashParams = override_flash_params_;
-    } else {
-      // We don't have constants for larger flash sizes.
-      if (flashSize > 4194304) flashSize = 4194304;
-      // We use detected size + DIO @ 40MHz which should be a safe default.
-      // Advanced users wishing to use other modes and freqs can override.
-      flashParams =
-          flashParamsFromString(tr("dio,%1m,40m").arg(flashSize * 8 / 1048576))
-              .ValueOrDie();
-    }
+    st = sanityCheckImages(images_, flashSize, flasher_client.kFlashSectorSize);
+    if (!st.ok()) return st;
 
-    if (images_.contains(0) && images_[0].length() >= 4 &&
-        images_[0][0] == (char) 0xE9) {
-      if (flashParams >= 0) {
-        images_[0][2] = (flashParams >> 8) & 0xff;
-        images_[0][3] = flashParams & 0xff;
-        emit statusMessage(
-            tr("Adjusting flash params in the image 0x0000 to 0x%1")
-                .arg(QString(images_[0].mid(2, 2).toHex())),
-            true);
+    if (images_.contains(0) && images_[0].length() >= 4) {
+      int flashParams = 0;
+      if (override_flash_params_ >= 0) {
+        flashParams = override_flash_params_;
+      } else {
+        // We don't have constants for larger flash sizes.
+        if (flashSize > 4194304) flashSize = 4194304;
+        // We use detected size + DIO @ 40MHz which should be a safe default.
+        // Advanced users wishing to use other modes and freqs can override.
+        flashParams =
+            flashParamsFromString(
+                tr("dio,%1m,40m").arg(flashSize * 8 / 1048576)).ValueOrDie();
       }
-      flashParams = images_[0][2] << 8 | images_[0][3];
+      images_[0][2] = (flashParams >> 8) & 0xff;
+      images_[0][3] = flashParams & 0xff;
+      emit statusMessage(
+          tr("Adjusting flash params in the image 0x0000 to 0x%1")
+              .arg(QString(images_[0].mid(2, 2).toHex())),
+          true);
     }
 
     bool id_generated = false;
@@ -473,9 +462,9 @@ class FlasherImpl : public Flasher {
       emit progress(progress_);
       int origLength = data.length();
 
-      if (data.length() % flasher_client.flashSectorSize != 0) {
-        quint32 padLen = flasher_client.flashSectorSize -
-                         (data.length() % flasher_client.flashSectorSize);
+      if (data.length() % flasher_client.kFlashSectorSize != 0) {
+        quint32 padLen = flasher_client.kFlashSectorSize -
+                         (data.length() % flasher_client.kFlashSectorSize);
         data.reserve(data.length() + padLen);
         while (padLen-- > 0) data.append('\x00');
       }
@@ -526,6 +515,57 @@ class FlasherImpl : public Flasher {
     return util::Status(util::error::UNAVAILABLE,
                         "Flashing succeded but reboot failed.\nYou may need to "
                         "reboot manually.");
+  }
+
+  util::Status sanityCheckImages(const QMap<ulong, QByteArray> &images,
+                                 quint32 flashSize, quint32 flashSectorSize) {
+    const auto keys = images_.keys();
+    for (int i = 0; i < keys.length() - 1; i++) {
+      const quint32 imageBegin = keys[i];
+      const QByteArray &image = images[imageBegin];
+      const quint32 imageEnd = imageBegin + image.length();
+      if (imageBegin >= flashSize || imageEnd > flashSize) {
+        return QS(util::error::INVALID_ARGUMENT,
+                  tr("Image %1 @ 0x%2 will not fit in flash (size %3)")
+                      .arg(image.length())
+                      .arg(imageBegin, 0, 16)
+                      .arg(flashSize));
+      }
+      if (imageBegin % flashSectorSize != 0) {
+        return QS(util::error::INVALID_ARGUMENT,
+                  tr("Image starting address (0x%1) is not on flash sector "
+                     "boundary (sector size %2)")
+                      .arg(imageBegin, 0, 16)
+                      .arg(flashSectorSize));
+      }
+      if (imageBegin == 0 && image.length() >= 1) {
+        if (image[0] != (char) 0xE9) {
+          return QS(util::error::INVALID_ARGUMENT,
+                    tr("Invalid magic byte in the first image"));
+        }
+      }
+      const quint32 systemParamsBegin = flashSize - kSystemParamsAreaSize;
+      const quint32 systemParamsEnd = flashSize;
+      if (imageBegin < systemParamsEnd && imageEnd > systemParamsBegin) {
+        return QS(util::error::INVALID_ARGUMENT,
+                  tr("Image 0x%1 overlaps with system params area (%2 @ 0x%3)")
+                      .arg(imageBegin, 0, 16)
+                      .arg(kSystemParamsAreaSize)
+                      .arg(systemParamsBegin, 0, 16));
+      }
+      if (i > 0) {
+        const quint32 prevImageBegin = keys[i - 1];
+        const quint32 prevImageEnd = keys[i - 1] + images[keys[i - 1]].length();
+        // We traverse the list in order, so a simple check will suffice.
+        if (prevImageEnd > imageBegin) {
+          return QS(util::error::INVALID_ARGUMENT,
+                    tr("Images at offsets 0x%1 and 0x%2 overlap.")
+                        .arg(prevImageBegin, 0, 16)
+                        .arg(imageBegin, 0, 16));
+        }
+      }
+    }
+    return util::Status::OK;
   }
 
   // mergeFlashLocked reads the spiffs filesystem from the device
@@ -589,7 +629,8 @@ class FlasherImpl : public Flasher {
     // 2) payload (JSON object)
     // 3) 1-byte terminator ('\0')
     // 4) padding with 0xFF bytes to the block size
-    auto res = fc->read(idBlockOffset, idBlockSize);
+    auto res =
+        fc->read(idBlockOffset, idBlockSizeSectors * fc->kFlashSectorSize);
     if (!res.ok()) {
       return res.status();
     }
@@ -617,19 +658,20 @@ class FlasherImpl : public Flasher {
           tr("Checksumming %1 @ 0x%2...").arg(data.length()).arg(addr, 0, 16),
           true);
       ESPFlasherClient::DigestResult digests;
-      auto dr = fc->digest(addr, data.length(), flashBlockSize);
+      auto dr = fc->digest(addr, data.length(), fc->kFlashSectorSize);
       QMap<ulong, QByteArray> newImages;
       if (!dr.ok()) {
         qWarning() << "Error computing digest:" << dr.status();
         return images;
       }
       digests = dr.ValueOrDie();
-      int numBlocks = (data.length() + flashBlockSize - 1) / flashBlockSize;
+      int numBlocks =
+          (data.length() + fc->kFlashSectorSize - 1) / fc->kFlashSectorSize;
       quint32 newAddr = addr, newLen = 0;
       quint32 newImageSize = 0;
       for (int i = 0; i < numBlocks; i++) {
-        int offset = i * flashBlockSize;
-        int len = flashBlockSize;
+        int offset = i * fc->kFlashSectorSize;
+        int len = fc->kFlashSectorSize;
         if (len > data.length() - offset) len = data.length() - offset;
         const QByteArray &hash = QCryptographicHash::hash(
             data.mid(offset, len), QCryptographicHash::Md5);
@@ -648,7 +690,7 @@ class FlasherImpl : public Flasher {
         } else {
           // This block is different. Start new or extend existing image.
           if (newLen == 0) {
-            newAddr = addr + i * flashBlockSize;
+            newAddr = addr + i * fc->kFlashSectorSize;
           }
           newLen += len;
           newImageSize += len;
@@ -694,6 +736,7 @@ class FlasherImpl : public Flasher {
   Prompter *prompter_;
 
   mutable QMutex lock_;
+  // A number of things depend on images_ being ordered by address.
   QMap<ulong, QByteArray> images_;
   QMap<QString, QByteArray> files_;
   QSerialPort *port_;
@@ -860,7 +903,6 @@ QByteArray makeIDBlock(const QString &domain) {
   QByteArray r = QCryptographicHash::hash(data, QCryptographicHash::Sha1)
                      .append(data)
                      .append("\0", 1);
-  r.append(QByteArray("\xFF").repeated(idBlockSize - r.length()));
   return r;
 }
 
