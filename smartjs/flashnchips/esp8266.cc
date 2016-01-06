@@ -38,8 +38,6 @@ namespace ESP8266 {
 namespace {
 
 const char kFlashParamsOption[] = "esp8266-flash-params";
-const char kSkipReadingFlashParamsOption[] =
-    "esp8266-skip-reading-flash-params";
 const char kFlashingDataPortOption[] = "esp8266-flashing-data-port";
 const char kSPIFFSOffsetOption[] = "esp8266-spiffs-offset";
 const char kDefaultSPIFFSOffset[] = "0xec000";
@@ -52,14 +50,6 @@ const ulong flashBlockSize = 4096;
 const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSize = flashBlockSize;
-
-enum ESP8266ROMCommand {
-  cmdRAMWriteStart = 0x05,
-  cmdRAMWriteFinish = 0x06,
-  cmdRAMWriteBlock = 0x07,
-  cmdSync = 0x08,
-  cmdReadReg = 0x0A,
-};
 
 class FlasherImpl : public Flasher {
   Q_OBJECT
@@ -103,13 +93,6 @@ class FlasherImpl : public Flasher {
         return util::Status(util::error::INVALID_ARGUMENT,
                             "value must be a number or a string");
       }
-      return util::Status::OK;
-    } else if (name == kSkipReadingFlashParamsOption) {
-      if (value.type() != QVariant::Bool) {
-        return util::Status(util::error::INVALID_ARGUMENT,
-                            "value must be boolean");
-      }
-      preserve_flash_params_ = !value.toBool();
       return util::Status::OK;
     } else if (name == kFlashingDataPortOption) {
       if (value.type() != QVariant::String) {
@@ -164,9 +147,8 @@ class FlasherImpl : public Flasher {
   util::Status setOptionsFromConfig(const Config &config) override {
     util::Status r;
 
-    QStringList boolOpts({kMergeFSOption, kNoMinimizeWritesOption,
-                          kSkipIdGenerationOption,
-                          kSkipReadingFlashParamsOption});
+    QStringList boolOpts(
+        {kMergeFSOption, kNoMinimizeWritesOption, kSkipIdGenerationOption});
     for (const auto &opt : boolOpts) {
       auto s = setOption(opt, config.isSet(opt));
       if (!s.ok()) {
@@ -393,41 +375,33 @@ class FlasherImpl : public Flasher {
       return QSP("Failed to run and communicate with flasher stub", st);
     }
 
+    auto flashChipIDRes = flasher_client.getFlashChipID();
+    quint32 flashSize = 524288;  // A safe default.
+    if (flashChipIDRes.ok()) {
+      quint32 mfg = (flashChipIDRes.ValueOrDie() & 0xff000000) >> 24;
+      quint32 type = (flashChipIDRes.ValueOrDie() & 0x00ff0000) >> 16;
+      quint32 capacity = (flashChipIDRes.ValueOrDie() & 0x0000ff00) >> 8;
+      qInfo() << "Flash chip ID:" << hex << showbase << mfg << type << capacity;
+      if (mfg != 0 && capacity >= 0x13 && capacity < 0x20) {
+        // Capacity is the power of two.
+        flashSize = 1 << capacity;
+      }
+    } else {
+      qCritical() << "Failed to get flash chip id:" << flashChipIDRes.status();
+    }
+    qInfo() << "Flash size:" << flashSize;
+
     int flashParams = -1;
     if (override_flash_params_ >= 0) {
       flashParams = override_flash_params_;
-    } else if (preserve_flash_params_) {
-      // Here we're trying to read 2 bytes from already flashed firmware and
-      // copy them to the image we're about to write. These 2 bytes (bytes 2 and
-      // 3, counting from zero) are the paramters of the flash chip needed by
-      // ESP8266 SDK code to properly boot the device.
-      // TODO(imax): before reading from flash try to check if have the correct
-      // params for the flash chip by its ID.
-      util::StatusOr<QByteArray> r = readFlashParamsLocked(&flasher_client);
-      if (!r.ok()) {
-        emit statusMessage(tr("Failed to read flash params: %1")
-                               .arg(r.status().error_message().c_str()),
-                           true);
-        QString msg = tr("Failed to read flash params: %1. Continue anyway?")
-                          .arg(r.status().error_message().c_str());
-        int answer = prompter_->Prompt(msg, {{tr("Yes"), QMessageBox::YesRole},
-                                             {tr("No"), QMessageBox::NoRole}});
-        if (answer == 1) {
-          return util::Status(
-              util::error::UNKNOWN,
-              tr("Failed to read flash params from the existing firmware")
-                  .toStdString());
-        }
-        QByteArray safeParams(2, 0);
-        safeParams[0] = 0x02;  // DIO;
-        safeParams[1] = 0;     // 40 MHz
-        r = safeParams;
-      }
-      const QByteArray params = r.ValueOrDie();
-      emit statusMessage(
-          tr("Current flash params bytes: %1").arg(QString(params.toHex())),
-          true);
-      flashParams = params[0] << 8 | params[1];
+    } else {
+      // We don't have constants for larger flash sizes.
+      if (flashSize > 4194304) flashSize = 4194304;
+      // We use detected size + DIO @ 40MHz which should be a safe default.
+      // Advanced users wishing to use other modes and freqs can override.
+      flashParams =
+          flashParamsFromString(tr("dio,%1m,40m").arg(flashSize * 8 / 1048576))
+              .ValueOrDie();
     }
 
     if (images_.contains(0) && images_[0].length() >= 4 &&
@@ -436,7 +410,7 @@ class FlasherImpl : public Flasher {
         images_[0][2] = (flashParams >> 8) & 0xff;
         images_[0][3] = flashParams & 0xff;
         emit statusMessage(
-            tr("Adjusting flash params in the image 0x0000 to %1")
+            tr("Adjusting flash params in the image 0x0000 to 0x%1")
                 .arg(QString(images_[0].mid(2, 2).toHex())),
             true);
       }
@@ -552,23 +526,6 @@ class FlasherImpl : public Flasher {
     return util::Status(util::error::UNAVAILABLE,
                         "Flashing succeded but reboot failed.\nYou may need to "
                         "reboot manually.");
-  }
-
-  // readFlashParamsLocked puts a snippet of code in the RAM and executes it.
-  // You need to reboot the device again after that to talk to the bootloader
-  // again.
-  util::StatusOr<QByteArray> readFlashParamsLocked(ESPFlasherClient *fc) {
-    auto res = fc->read(0, 4);
-    if (!res.ok()) {
-      return res.status();
-    }
-
-    QByteArray r = res.ValueOrDie();
-    if (r[0] != (char) 0xE9) {
-      return util::Status(util::error::UNKNOWN,
-                          "Read image doesn't seem to have the proper header");
-    }
-    return r.mid(2, 2);
   }
 
   // mergeFlashLocked reads the spiffs filesystem from the device
@@ -742,7 +699,6 @@ class FlasherImpl : public Flasher {
   QSerialPort *port_;
   std::unique_ptr<ESPROMClient> rom_;
   int progress_ = 0;
-  bool preserve_flash_params_ = true;
   qint32 override_flash_params_ = -1;
   bool merge_flash_filesystem_ = false;
   bool generate_id_if_none_found_ = true;
@@ -880,11 +836,6 @@ void addOptions(Config *config) {
       "big-endian byte order (i.e. high byte is put at offset 2, low byte at "
       "offset 3).",
       "params"));
-  opts.append(QCommandLineOption(
-      kSkipReadingFlashParamsOption,
-      "If set and --esp8266-flash-params is not used, reading flash params "
-      "from the device will not be attempted and image at 0x0000 will be "
-      "written as is."));
   opts.append(QCommandLineOption(
       kFlashingDataPortOption,
       "If set, communication with ROM will be performed using another serial "

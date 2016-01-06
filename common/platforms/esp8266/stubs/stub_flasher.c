@@ -38,6 +38,14 @@ uint32_t params[1] __attribute__((section(".params")));
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 
+/* From spi_register.h */
+#define REG_SPI_BASE(i)     (0x60000200 - i*0x100)
+
+#define SPI_CMD(i)          (REG_SPI_BASE(i) + 0x0)
+#define SPI_RDID            (BIT(28))
+
+#define SPI_W0(i)         (REG_SPI_BASE(i) + 0x40)
+
 enum stub_cmd {
   /*
    * Erase a region of SPI flash.
@@ -46,7 +54,7 @@ enum stub_cmd {
    * Input: none.
    * Output: none.
    */
-  CMD_FLASH_ERASE = 0x30,
+  CMD_FLASH_ERASE = 0,
 
   /*
    * Write to the SPI flash.
@@ -60,7 +68,7 @@ enum stub_cmd {
    *         Use this feedback to keep buffer above 1K but below 4K.
    *         Final packet will contain MD5 digest of the data written.
    */
-  CMD_FLASH_WRITE = 0x40,
+  CMD_FLASH_WRITE = 1,
 
   /*
    * Read from the SPI flash.
@@ -73,7 +81,7 @@ enum stub_cmd {
    * Note: No flow control is performed, it is assumed that the host can cope
    * with the inbound stream.
    */
-  CMD_FLASH_READ = 0x50,
+  CMD_FLASH_READ = 2,
 
   /*
    * Compute MD5 digest of the specified flash region.
@@ -85,7 +93,9 @@ enum stub_cmd {
    *         Otherwise, there will be a separate digest for each block,
    *         the remainder (if any) and the overall digest at the end.
    */
-  CMD_FLASH_DIGEST = 0x60,
+  CMD_FLASH_DIGEST = 3,
+
+  CMD_FLASH_READ_CHIP_ID = 4,
 
   /*
    * Jump to _ResetVector.
@@ -94,7 +104,7 @@ enum stub_cmd {
    *
    * Note: currently this reboots back into ROM. Let's call it a feature.
    */
-  CMD_REBOOT = 0x70,
+  CMD_REBOOT = 5,
 };
 
 int do_flash_erase(uint32_t addr, uint32_t len) {
@@ -243,6 +253,15 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
   return 0;
 }
 
+int do_flash_read_chip_id() {
+  uint32_t chip_id = 0;
+  WRITE_PERI_REG(SPI_CMD(0), SPI_RDID);
+  while (READ_PERI_REG(SPI_CMD(0)) & SPI_RDID) {}
+  chip_id = READ_PERI_REG(SPI_W0(0)) & 0xFFFFFF;
+  send_packet(&chip_id, sizeof(chip_id));
+  return 0;
+}
+
 void cmd_loop() {
   while (1) {
     uint8_t cmd;
@@ -292,6 +311,10 @@ void cmd_loop() {
         }
         break;
       }
+      case CMD_FLASH_READ_CHIP_ID: {
+        resp = do_flash_read_chip_id();
+        break;
+      }
       case CMD_REBOOT: {
         resp = 0;
         break;
@@ -307,7 +330,8 @@ void stub_main() {
 
   ets_set_user_start(NULL);
 
-  spi_flash_attach();
+  /* Selects SPI functions for flash pins. */
+  SelectSpiFunction();
 
   if (baud_rate > 0) {
     ets_delay_us(1000);

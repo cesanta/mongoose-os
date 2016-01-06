@@ -41,6 +41,8 @@ class ESPFlasherClient : public QObject {
   util::StatusOr<DigestResult> digest(quint32 addr, quint32 size,
                                       quint32 digestBlockSize);
 
+  util::StatusOr<quint32> getFlashChipID();
+
   util::Status reboot();
 
 signals:

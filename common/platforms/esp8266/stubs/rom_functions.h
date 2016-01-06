@@ -23,7 +23,15 @@ uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
 uint32_t SPIWrite(uint32_t addr, const uint8_t *src, uint32_t size);
 uint32_t SPIEraseBlock(uint32_t block_num);
 uint32_t SPIEraseSector(uint32_t sector_num);
+uint32_t SPI_read_status();
+uint32_t Wait_SPI_Idle();
 void spi_flash_attach();
+
+void SelectSpiFunction();
+void SPIFlashModeConfig(uint32_t a, uint32_t b);
+void SPIReadModeCnfig(uint32_t a);
+
+void Cache_Read_Disable();
 
 void memset(void *addr, uint8_t c, uint32_t len);
 

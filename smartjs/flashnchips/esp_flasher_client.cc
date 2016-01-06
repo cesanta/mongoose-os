@@ -22,7 +22,24 @@ const quint32 flashBlockEraseTimeMs = 900;
 const quint32 flashEraseMinTimeoutMs = 5000;
 
 const quint32 flashReadBlockSize = 1024;
+
+// Must be in sync with stub_flasher.c
+enum stub_cmd {
+  CMD_FLASH_ERASE = 0,
+  CMD_FLASH_WRITE = 1,
+  CMD_FLASH_READ = 2,
+  CMD_FLASH_DIGEST = 3,
+  CMD_FLASH_READ_CHIP_ID = 4,
+  CMD_REBOOT = 5,
+};
+
+QByteArray cmdByte(enum stub_cmd cmd) {
+  QByteArray result;
+  result.append(quint8(cmd));
+  return result;
 }
+
+}  // namespace
 
 ESPFlasherClient::ESPFlasherClient(ESPROMClient *rom) : rom_(rom) {
 }
@@ -38,6 +55,9 @@ util::Status ESPFlasherClient::connect(qint32 baudRate) {
     return util::Status(util::error::FAILED_PRECONDITION,
                         "ESPROMClient not connected");
   }
+
+  if (baudRate == rom_->data_port()->baudRate()) baudRate = 0;  // Don't change
+
   QFile f(":/esp8266/stub_flasher.json");
   if (!f.open(QIODevice::ReadOnly)) {
     return util::Status(util::error::UNAVAILABLE, "Failed to open stub");
@@ -45,7 +65,7 @@ util::Status ESPFlasherClient::connect(qint32 baudRate) {
   util::Status st = rom_->runStub(f.readAll(), {quint32(baudRate)});
   if (!st.ok()) return QSP(prefix + "runStub failed", st);
 
-  if (baudRate > 0 && baudRate != rom_->data_port()->baudRate()) {
+  if (baudRate > 0) {
     oldBaudRate_ = rom_->data_port()->baudRate();
     st = setSpeed(rom_->data_port(), baudRate);
     if (!st.ok()) return QSP(prefix + "failed to set baud rate", st);
@@ -79,7 +99,7 @@ util::Status ESPFlasherClient::erase(quint32 addr, quint32 size) {
   const QString prefix =
       tr("ESPFlasherClient::erase(0x%1, %2): ").arg(addr, 0, 16).arg(size);
   qDebug() << prefix;
-  util::Status st = SLIP::send(rom_->data_port(), {"\x30"});
+  util::Status st = SLIP::send(rom_->data_port(), cmdByte(CMD_FLASH_ERASE));
   if (!st.ok()) return QSP(prefix + "command write failed", st);
   QByteArray args;
   QDataStream s(&args, QIODevice::WriteOnly);
@@ -102,7 +122,7 @@ util::Status ESPFlasherClient::write(quint32 addr, QByteArray data,
                              .arg(data.length())
                              .arg(erase);
   qDebug() << prefix;
-  util::Status st = SLIP::send(rom_->data_port(), {"\x40"});
+  util::Status st = SLIP::send(rom_->data_port(), cmdByte(CMD_FLASH_WRITE));
   if (!st.ok()) {
     return QSP(prefix + "command write failed", st);
   }
@@ -189,7 +209,7 @@ util::StatusOr<QByteArray> ESPFlasherClient::read(quint32 addr, quint32 size) {
   const QString prefix =
       tr("ESPFlasherClient::read(0x%1, %2): ").arg(addr, 0, 16).arg(size);
   qDebug() << prefix;
-  util::Status st = SLIP::send(rom_->data_port(), {"\x50"});
+  util::Status st = SLIP::send(rom_->data_port(), cmdByte(CMD_FLASH_READ));
   if (!st.ok()) return QSP(prefix + "command write failed", st);
   QByteArray args;
   QDataStream s(&args, QIODevice::WriteOnly);
@@ -241,7 +261,7 @@ util::StatusOr<ESPFlasherClient::DigestResult> ESPFlasherClient::digest(
                              .arg(size)
                              .arg(digestBlockSize);
   qDebug() << prefix;
-  util::Status st = SLIP::send(rom_->data_port(), {"\x60"});
+  util::Status st = SLIP::send(rom_->data_port(), cmdByte(CMD_FLASH_DIGEST));
   if (!st.ok()) return QSP(prefix + "command write failed", st);
   QByteArray args;
   QDataStream s(&args, QIODevice::WriteOnly);
@@ -276,9 +296,32 @@ util::StatusOr<ESPFlasherClient::DigestResult> ESPFlasherClient::digest(
   // Not reached.
 }
 
+util::StatusOr<quint32> ESPFlasherClient::getFlashChipID() {
+  const QString prefix = tr("ESPFlasherClient::getFlashChipID(): ");
+  qDebug() << prefix;
+  util::Status st =
+      SLIP::send(rom_->data_port(), cmdByte(CMD_FLASH_READ_CHIP_ID));
+  if (!st.ok()) return QSP(prefix + "command write failed", st);
+  auto res = SLIP::recv(rom_->data_port(), 1000);
+  if (!res.ok()) return QSP(prefix + "failed to read result", res.status());
+  quint32 chipID = 0;
+  QByteArray respBytes = res.ValueOrDie();
+  if (respBytes.length() != 4)
+    return QS(util::error::INTERNAL,
+              prefix + tr("invalid result length: %1").arg(respBytes.length()));
+  QDataStream s(respBytes);
+  s.setByteOrder(QDataStream::BigEndian);  // BigEndian to preserve byte order.
+  s >> chipID;
+  if (chipID == 0)
+    return QS(util::error::INTERNAL, prefix + "failed to get chip id");
+  res = SLIP::recv(rom_->data_port());
+  if (!res.ok()) return QSP(prefix + "failed to read status", res.status());
+  return chipID;
+}
+
 util::Status ESPFlasherClient::reboot() {
   qDebug() << "ESPFlasherClient::reboot()";
-  util::Status st = SLIP::send(rom_->data_port(), {"\x70"});
+  util::Status st = SLIP::send(rom_->data_port(), cmdByte(CMD_REBOOT));
   if (!st.ok()) return QSP(tr("reboot(): command write failed"), st);
   auto res = SLIP::recv(rom_->data_port(), 15000);
   if (!st.ok()) return QSP(tr("reboot(): failed to read response"), st);
