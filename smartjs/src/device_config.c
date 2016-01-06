@@ -9,7 +9,6 @@
 #include "smartjs/src/device_config.h"
 
 #define SYSTEM_DEFAULT_JSON_FILE "conf_sys_defaults.json"
-#define OVERRIDES_JSON_FILE "conf.json"
 
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'

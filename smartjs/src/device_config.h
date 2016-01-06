@@ -4,6 +4,8 @@
 #include "smartjs/src/sys_config.h"
 #include "v7/v7.h"
 
+#define OVERRIDES_JSON_FILE "conf.json"
+
 /* Read-only firmware setting */
 struct ro_var {
   struct ro_var *next;

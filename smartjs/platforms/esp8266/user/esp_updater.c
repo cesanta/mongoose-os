@@ -15,6 +15,9 @@
 #include "smartjs/src/sj_clubby.h"
 #include "smartjs/src/sj_v7_ext.h"
 #include "v7/v7.h"
+#include "esp_fs.h"
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 /*
  * It looks too dangerous to put this numbers to
@@ -506,13 +509,133 @@ void set_boot_params(uint8_t new_rom, uint8_t prev_rom) {
   rc.previous_rom = prev_rom;
   rc.current_rom = new_rom;
   /*
-   * using tow flags - is_first_boot & fw_updated
+   * using two flags - is_first_boot & fw_updated
    * we need them to manage fw fallbacks
    */
   rc.is_first_boot = 1;
   rc.fw_updated = 1;
   rc.boot_attempts = 0;
   rboot_set_config(&rc);
+}
+
+static int file_copy(spiffs *old_fs, char *file_name) {
+  LOG(LL_DEBUG, ("Copying %s", file_name));
+  int ret = 0;
+  FILE *f = NULL;
+  spiffs_stat stat;
+
+  spiffs_file fd = SPIFFS_open(old_fs, file_name, SPIFFS_RDONLY, 0);
+  if (fd < 0) {
+    int err = SPIFFS_errno(old_fs);
+    if (err == SPIFFS_ERR_NOT_FOUND) {
+      LOG(LL_WARN, ("File %s not found, skipping", file_name));
+      return 1;
+    } else {
+      LOG(LL_ERROR, ("Failed to open %s, error %d", file_name, err));
+      return 0;
+    }
+  }
+
+  if (SPIFFS_fstat(old_fs, fd, &stat) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)", file_name,
+                   SPIFFS_errno(old_fs)));
+    goto exit;
+  }
+
+  LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
+
+  f = fopen(file_name, "w");
+  if (f == NULL) {
+    LOG(LL_ERROR, ("Failed to open %s", file_name));
+    goto exit;
+  }
+
+  char buf[512];
+  int32_t readen, to_read = 0, total = 0;
+  to_read = MIN(sizeof(buf), stat.size);
+
+  while (to_read != 0) {
+    if ((readen = SPIFFS_read(old_fs, fd, buf, to_read)) < 0) {
+      LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d", to_read,
+                     file_name, SPIFFS_errno(old_fs)));
+      goto exit;
+    }
+
+    if (fwrite(buf, 1, readen, f) != (size_t) readen) {
+      LOG(LL_ERROR, ("Failed to write %d bytes to %s", readen, file_name));
+      goto exit;
+    }
+
+    total += readen;
+    LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
+
+    to_read = MIN(sizeof(buf), (stat.size - total));
+  }
+
+  LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
+
+  ret = 1;
+
+exit:
+  if (fd >= 0) {
+    SPIFFS_close(old_fs, fd);
+  }
+
+  if (f != NULL) {
+    fclose(f);
+  }
+
+  return ret;
+}
+
+static int fs_merge(uint32_t old_fs_addr) {
+  uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
+  uint8_t spiffs_fds[32 * 2];
+  spiffs old_fs;
+  int ret = 0;
+  spiffs_DIR dir, *dir_ptr = NULL;
+  LOG(LL_DEBUG, ("Mounting fs %d @ 0x%x", FS_SIZE, old_fs_addr));
+  if (fs_mount(&old_fs, old_fs_addr, FS_SIZE, spiffs_work_buf, spiffs_fds,
+               sizeof(spiffs_fds))) {
+    LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
+    return 1;
+  }
+  /*
+   * here we can use fread & co to read
+   * current fs and SPIFFs functions to read
+   * old one
+   */
+
+  /* Copy predefined overrides files */
+  if (!file_copy(&old_fs, OVERRIDES_JSON_FILE)) {
+    goto cleanup;
+  }
+
+  /* Copy files with name started with FILE_UPDATE_PREF ("imp_" by default) */
+  dir_ptr = SPIFFS_opendir(&old_fs, ".", &dir);
+  if (dir_ptr == NULL) {
+    LOG(LL_ERROR, ("Failed to open root directory"));
+    goto cleanup;
+  }
+
+  struct spiffs_dirent de, *de_ptr;
+  while ((de_ptr = SPIFFS_readdir(dir_ptr, &de)) != NULL) {
+    if (memcmp(de_ptr->name, FILE_UPDATE_PREF, strlen(FILE_UPDATE_PREF)) == 0) {
+      if (!file_copy(&old_fs, (char *) de_ptr->name)) {
+        goto cleanup;
+      }
+    }
+  }
+
+  ret = 1;
+cleanup:
+  if (dir_ptr != NULL) {
+    SPIFFS_closedir(dir_ptr);
+  }
+
+  SPIFFS_unmount(&old_fs);
+
+  return ret;
 }
 
 static void reboot_timer_cb(void *arg) {
@@ -532,14 +655,28 @@ int finish_update() {
       rc.is_first_boot = 0;
       rboot_set_config(&rc);
     }
-    return 0;
+    return 1;
   }
 
-  /* Ok, commiting update */
-  rc.is_first_boot = 0;
-  rc.fw_updated = 0;
-  rboot_set_config(&rc);
-  LOG(LL_DEBUG, ("Firmware commited"));
+  /*
+   * We merge FS _after_ booting to new FW, to give a chance
+   * to change merge behavior in new FW
+   */
+  if (fs_merge(fs_addresses[rc.previous_rom]) != 0) {
+    /* Ok, commiting update */
+    rc.is_first_boot = 0;
+    rc.fw_updated = 0;
+    rboot_set_config(&rc);
+    LOG(LL_DEBUG, ("Firmware commited"));
+
+    return 1;
+  } else {
+    LOG(LL_ERROR,
+        ("Failed to merge filesystem, rollback to previous firmware"));
+
+    rollback_fw();
+    return 0;
+  }
 
   return 1;
 }

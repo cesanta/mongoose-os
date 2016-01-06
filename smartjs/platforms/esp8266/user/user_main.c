@@ -35,15 +35,26 @@
 
 #include "esp_fs.h"
 #include "esp_updater.h"
+#include "mongoose/mongoose.h" /* For cs_log_set_level() */
 
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;
 #endif
 
 void start_cmd(void *dummy) {
+  /*
+   * In order to see debug output (at least errors) during boot we have to
+   * initialize debug in this point. But default we put debug to UART0 with
+   * level=LL_ERROR, then configuration is loaded this settings are overridden
+   */
+  uart_debug_init(0, 0);
+  uart_redirect_debug(1);
+  cs_log_set_level(LL_ERROR);
+
 #ifndef V7_NO_FS
 #ifndef DISABLE_OTA
   fs_init(get_fs_addr(), FS_SIZE);
+  finish_update();
 #else
   fs_init(FS_ADDR, FS_SIZE);
 #endif
@@ -57,10 +68,6 @@ void start_cmd(void *dummy) {
 
 #ifndef V7_NO_FS
   init_smartjs();
-#endif
-
-#ifndef DISABLE_OTA
-  finish_update();
 #endif
 
 #if !defined(NO_PROMPT)

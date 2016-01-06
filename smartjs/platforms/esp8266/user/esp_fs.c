@@ -237,7 +237,6 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
              uint8_t *fds, size_t fds_size) {
   spiffs_config cfg;
 
-  /* FS_SIZE & FS_ADDR are provided via Makefile */
   cfg.phys_addr = addr;
   cfg.phys_size = size;
 

@@ -32,7 +32,11 @@ OTA ?= 1
 
 FLASH_SIZE ?= 1M
 
+ifeq "${OTA}" "1"
+FS_SIZE ?= 128K
+else
 FS_SIZE ?= 64K
+endif
 
 SYS_PARAM_SIZE = 0x4000
 

@@ -28,7 +28,7 @@ URL=http://${BASE_URL}${UPDATES_ROOT}
 CURL=curl
 
 FW_FILE=0x11000.bin
-FS_FILE=0xf0000.bin
+FS_FILE=0xe0000.bin
 METADATA_FILE=metadata.json
 
 for i in ${FW_DIR}/${FW_FILE} ${FW_DIR}/${FS_FILE} ${FW_DIR}/${METADATA_FILE}; do

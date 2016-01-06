@@ -6,6 +6,8 @@
 #include "mongoose/mongoose.h"
 #include "v7/v7.h"
 
+#define FILE_UPDATE_PREF "imp_"
+
 enum update_status {
   US_NOT_STARTED,
   US_WAITING_METADATA,
