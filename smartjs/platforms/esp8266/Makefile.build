@@ -5,7 +5,8 @@
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
 # SSL: if set to "Krypton" enables SSL with the krypton lib
-# OTA: if "true" enables rboot as a bootloader and generates files required for OTA
+# OTA: if "1" enables rboot as a bootloader and generates files required for OTA
+# FREEZE: if "1" freezes the stdlib object graph into a static graph loadable in ROM
 #
 
 REPO_ROOT ?= ../../..
@@ -29,6 +30,7 @@ MONGOOSE_PATH ?= ../../../mongoose
 BOOTLOADER_PATH ?= $(COMMON_ESP_DIR)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 OTA ?= 1
+FREEZE ?=
 
 FLASH_SIZE ?= 1M
 
@@ -104,15 +106,17 @@ endif
 
 SHIMS = -DNDEBUG
 
-FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
-           -DESP_COREDUMP -DV7_DISABLE_AST_TAG_NAMES -DV7_TEMP_OFF \
-           -DV7_ENABLE_COMPACTING_GC -DNO_BSD_SOCKETS -DDISABLE_MD5 \
-           -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
-           -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
-           -DV7_ENABLE__Memory__stats -DCS_ENABLE_SPIFFS \
-           -DV7_ENABLE__Function__bind \
-           -DESP_FLASH_BYTES_EMUL \
-           -DV7_ENABLE__File__list=1 -DV7_ENABLE__StackTrace=0 \
+V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
+              -DV7_DISABLE_AST_TAG_NAMES -DDISABLE_MD5 \
+              -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
+              -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
+              -DV7_ENABLE__Function__bind -DV7_ENABLE__File__list=1 \
+              -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
+              -DV7_EXPOSE_PRIVATE \
+
+FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
+           -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
+				   -DNO_BSD_SOCKETS \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON \
@@ -173,6 +177,11 @@ FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
 LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
+
+ifeq "${FREEZE}" "1"
+FEATURES += -DV7_THAW
+APP_OBJS += $(BUILD_DIR)/fr.o
+endif
 
 ifneq "${OTA}" "1"
 FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
@@ -295,6 +304,18 @@ $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 $(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
+$(BUILD_DIR)/fr.dump: $(BUILD_DIR)/v7
+	$(vecho) "FREEZE"
+	$(Q) $(BUILD_DIR)/v7 -freeze $@
+
+$(BUILD_DIR)/fr.sym: $(BUILD_DIR)/v7
+	$(vecho) "$(BUILD_DIR)/v7"
+	$(Q) @nm $(BUILD_DIR)/v7 > $@
+
+$(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
+	$(vecho) "GEN fr.c"
+	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
+
 # Common gathering point for all generated files.
 # Except version, which is special because it depends on objects.
 $(GENFILES_FLAG): $(LD_SCRIPT)
@@ -343,7 +364,7 @@ $(V7_PATH)/v7.c:
 
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC v7"
-	$(Q) gcc -DV7_EXE -DV7_EXPOSE_PRIVATE $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 # Target specific warning inhibitions
 
 build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function

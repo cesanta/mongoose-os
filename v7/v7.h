@@ -84,6 +84,7 @@ typedef unsigned char v7_prop_attr_t;
 #define V7_PROPERTY_HIDDEN (1 << 3)
 #define V7_PROPERTY_GETTER (1 << 4)
 #define V7_PROPERTY_SETTER (1 << 5)
+#define V7_PROPERTY_OFF_HEAP (1 << 6) /* property not managed by V7 HEAP */
 
 /*
  * Object attributes bitmask
@@ -92,6 +93,7 @@ typedef unsigned char v7_obj_attr_t;
 #define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
 #define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
 #define V7_OBJ_FUNCTION (1 << 2)       /* function object */
+#define V7_OBJ_OFF_HEAP (1 << 3)       /* object not managed by V7 HEAP */
 
 /* Opaque structure. V7 engine handler. */
 struct v7;
@@ -119,6 +121,10 @@ struct v7_create_opts {
   size_t property_arena_size;
 #ifdef V7_STACK_SIZE
   void *c_stack_base;
+#endif
+#ifdef V7_FREEZE
+  /* if not NULL, dump JS heap after init */
+  char *freeze_file;
 #endif
 };
 struct v7 *v7_create_opt(struct v7_create_opts);

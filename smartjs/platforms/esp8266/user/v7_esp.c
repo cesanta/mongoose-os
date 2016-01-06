@@ -160,9 +160,15 @@ void init_v7(void *stack_base) {
   struct v7_create_opts opts;
   v7_val_t dht11, debug;
 
+#ifdef V7_THAW
+  opts.object_arena_size = 85;
+  opts.function_arena_size = 16;
+  opts.property_arena_size = 170;
+#else
   opts.object_arena_size = 164;
   opts.function_arena_size = 26;
   opts.property_arena_size = 400;
+#endif
   opts.c_stack_base = stack_base;
   v7 = v7_create_opt(opts);
 

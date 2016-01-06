@@ -173,6 +173,7 @@ typedef uint32_t in_addr_t;
 #define pid_t HANDLE
 #endif
 #define INT64_FMT "I64d"
+#define INT64_X_FMT "I64x"
 #define SIZE_T_FMT "Iu"
 #ifdef __MINGW32__
 typedef struct stat cs_stat_t;
@@ -252,6 +253,7 @@ struct dirent *readdir(DIR *dir);
 
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
 #if defined(ESP8266) || defined(MG_ESP8266) || defined(MG_CC3200)
 #define SIZE_T_FMT "u"
 #else
@@ -1804,15 +1806,21 @@ int mg_http_create_digest_auth_header(char *buf, size_t buf_len,
  * Host headers. `extra_headers` is an extra HTTP headers to send, e.g.
  * `"User-Agent: my-app\r\n"`.
  * If `post_data` is NULL, then GET request is created. Otherwise, POST request
- * is created with the specified POST data. Examples:
+ * is created with the specified POST data. Note that if the data being posted
+ * is a form submission, the `Content-Type` header should be set accordingly
+ * (see example below).
+ *
+ * Examples:
  *
  * [source,c]
  * ----
  *   nc1 = mg_connect_http(mgr, ev_handler_1, "http://www.google.com", NULL,
  *                         NULL);
  *   nc2 = mg_connect_http(mgr, ev_handler_1, "https://github.com", NULL, NULL);
- *   nc3 = mg_connect_http(mgr, ev_handler_1, "my_server:8000/form_submit/",
- *                         NULL, "var_1=value_1&var_2=value_2");
+ *   nc3 = mg_connect_http(
+ *       mgr, ev_handler_1, "my_server:8000/form_submit/",
+ *       "Content-Type: application/x-www-form-urlencoded\r\n",
+ *       "var_1=value_1&var_2=value_2");
  * ----
  */
 struct mg_connection *mg_connect_http(struct mg_mgr *mgr,

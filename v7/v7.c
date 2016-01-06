@@ -88,6 +88,7 @@ typedef unsigned char v7_prop_attr_t;
 #define V7_PROPERTY_HIDDEN (1 << 3)
 #define V7_PROPERTY_GETTER (1 << 4)
 #define V7_PROPERTY_SETTER (1 << 5)
+#define V7_PROPERTY_OFF_HEAP (1 << 6) /* property not managed by V7 HEAP */
 
 /*
  * Object attributes bitmask
@@ -96,6 +97,7 @@ typedef unsigned char v7_obj_attr_t;
 #define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
 #define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
 #define V7_OBJ_FUNCTION (1 << 2)       /* function object */
+#define V7_OBJ_OFF_HEAP (1 << 3)       /* object not managed by V7 HEAP */
 
 /* Opaque structure. V7 engine handler. */
 struct v7;
@@ -123,6 +125,10 @@ struct v7_create_opts {
   size_t property_arena_size;
 #ifdef V7_STACK_SIZE
   void *c_stack_base;
+#endif
+#ifdef V7_FREEZE
+  /* if not NULL, dump JS heap after init */
+  char *freeze_file;
 #endif
 };
 struct v7 *v7_create_opt(struct v7_create_opts);
@@ -1378,6 +1384,7 @@ typedef uint32_t in_addr_t;
 #define pid_t HANDLE
 #endif
 #define INT64_FMT "I64d"
+#define INT64_X_FMT "I64x"
 #define SIZE_T_FMT "Iu"
 #ifdef __MINGW32__
 typedef struct stat cs_stat_t;
@@ -1457,6 +1464,7 @@ struct dirent *readdir(DIR *dir);
 
 #define INVALID_SOCKET (-1)
 #define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
 #if defined(ESP8266) || defined(MG_ESP8266) || defined(MG_CC3200)
 #define SIZE_T_FMT "u"
 #else
@@ -4178,6 +4186,10 @@ struct v7 {
   size_t parser_stack_ret_max_len;
 #endif
 
+#ifdef V7_FREEZE
+  FILE *freeze_file;
+#endif
+
   /*
    * true if exception is currently being created. Needed to avoid recursive
    * exception creation
@@ -4944,6 +4956,39 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 #endif /* __cplusplus */
 
 #endif /* GC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/freeze.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef FREEZE_H_INCLUDED
+#define FREEZE_H_INCLUDED
+
+#ifdef V7_FREEZE
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+struct v7_property;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void freeze(struct v7 *v7, char *filename);
+V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v);
+V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_FREEZE */
+
+#endif /* FREEZE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/slre.h"
 /**/
@@ -13156,7 +13201,12 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
+/* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "v7/builtin/builtin.h" */
+
+#ifdef V7_THAW
+extern struct v7_vals *fr_vals;
+#endif
 
 #ifdef HAS_V7_INFINITY
 double _v7_infinity;
@@ -15371,13 +15421,38 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     v7->inhibit_gc = 1;
     v7->vals.thrown_error = v7_create_undefined();
 
+#if defined(V7_THAW) && !defined(V7_FREEZE_NOT_READONLY)
+    {
+      struct v7_generic_object *obj;
+      v7->vals = *fr_vals;
+      v7->vals.global_object = v7_create_object(v7);
+
+      /*
+       * The global object has to be mutable.
+       */
+      obj = v7_to_generic_object(v7->vals.global_object);
+      *obj = *v7_to_generic_object(fr_vals->global_object);
+      obj->base.attributes &= ~(V7_OBJ_NOT_EXTENSIBLE | V7_OBJ_OFF_HEAP);
+      v7_set(v7, v7->vals.global_object, "global", 6, 0,
+             v7->vals.global_object);
+
+      v7->vals.call_stack = v7->vals.global_object;
+      v7->vals.this_object = v7->vals.global_object;
+    }
+#else
     init_stdlib(v7);
     init_file(v7);
     init_crypto(v7);
     init_socket(v7);
     init_ubjson(v7);
+#endif
 
     v7->inhibit_gc = 0;
+#ifdef V7_FREEZE
+    if (opts.freeze_file != NULL) {
+      freeze(v7, opts.freeze_file);
+    }
+#endif
   }
 
   return v7;
@@ -16179,6 +16254,9 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/freeze.h" */
+
+#include <stdio.h>
 
 #ifdef V7_STACK_GUARD_MIN_SIZE
 void *v7_sp_limit = NULL;
@@ -16460,6 +16538,15 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     return;
   }
   obj_base = v7_to_object(v);
+
+  /*
+   * we ignore objects that are not managed by V7 heap, such as frozen
+   * objects, especially when on flash.
+   */
+  if (obj_base->attributes & V7_OBJ_OFF_HEAP) {
+    return;
+  }
+
   /*
    * we treat all object like things like objects but they might be functions,
    * gc_gheck_val checks the appropriate arena per actual value type.
@@ -16470,6 +16557,12 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
   if (MARKED(obj_base)) return;
 
+#ifdef V7_FREEZE
+  if (v7->freeze_file != NULL) {
+    freeze_obj(v7->freeze_file, v);
+  }
+#endif
+
   if (obj_base->attributes & V7_OBJ_DENSE_ARRAY) {
     struct v7_generic_object *obj = v7_to_generic_object(v);
     gc_mark_dense_array(v7, obj);
@@ -16478,9 +16571,19 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   /* mark object itself, and its properties */
   for ((prop = obj_base->properties), MARK(obj_base); prop != NULL;
        prop = next) {
+    if (prop->attributes & V7_PROPERTY_OFF_HEAP) {
+      break;
+    }
+
     if (!gc_check_ptr(&v7->property_arena, prop)) {
       abort();
     }
+
+#ifdef V7_FREEZE
+    if (v7->freeze_file != NULL) {
+      freeze_prop(v7, v7->freeze_file, prop);
+    }
+#endif
 
     gc_mark_string(v7, &prop->value);
     gc_mark_string(v7, &prop->name);
@@ -16683,6 +16786,18 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *
    *  Note: 64-bit pointers can be represented with 48-bits
    */
+
+  {}
+/*
+ * Freeze.
+ */
+#ifdef V7_FREEZE
+  if (v7->freeze_file != NULL && (*v & V7_TAG_MASK) == V7_TAG_STRING_O) {
+    printf("Cannot freeze unless all strings are STRING_D or STRING_F:");
+    v7_println(v7, *v);
+    abort();
+  }
+#endif
 
   if ((*v & V7_TAG_MASK) != V7_TAG_STRING_O) {
     return;
@@ -16943,6 +17058,133 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
   return 0;
 #endif
 }
+#ifdef V7_MODULE_LINES
+#line 1 "./src/freeze.c"
+/**/
+#endif
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/freeze.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "common/base64.h" */
+
+#include <stdio.h>
+
+#ifdef V7_FREEZE
+
+V7_PRIVATE void freeze(struct v7 *v7, char *filename) {
+  size_t i;
+
+  v7->freeze_file = fopen(filename, "w");
+  assert(v7->freeze_file != NULL);
+
+#ifndef V7_FREEZE_NOT_READONLY
+  /*
+   * We have to remove `global` from the global object since
+   * when thawing global will actually be a new mutable object
+   * living on the heap.
+   */
+  v7_del_property(v7, v7->vals.global_object, "global", 6);
+
+  /*
+   * evaluator leaves this trash which we have to remove
+   * otherwise the evaluator will find those properties
+   * but they will be readonly.
+   */
+  v7_del_property(v7, v7->vals.global_object, "____p", 5);
+  v7_del_property(v7, v7->vals.global_object, "____t", 5);
+  v7_del_property(v7, v7->vals.global_object, "____s", 5);
+  v7_del_property(v7, v7->vals.global_object, "___rb", 5);
+  v7_del_property(v7, v7->vals.global_object, "___ro", 5);
+  v7_del_property(v7, v7->vals.global_object, "___th", 5);
+  v7_del_property(v7, v7->vals.global_object, "____c", 5);
+#endif
+
+  for (i = 0; i < sizeof(v7->vals) / sizeof(val_t); i++) {
+    val_t v = ((val_t *) &v7->vals)[i];
+    fprintf(v7->freeze_file,
+            "{\"type\":\"global\", \"idx\":%zu, \"value\":\"%p\"}\n", i,
+            v7_is_object(v) ? v7_to_object(v) : 0x0);
+  }
+
+  /*
+   * since v7->freeze_file is not NULL this will cause freeze_obj and
+   * freeze_prop to be called for each reachable object and property.
+   */
+  v7_gc(v7, 1);
+  assert(v7->stack.len == 0);
+
+  fclose(v7->freeze_file);
+  v7->freeze_file = NULL;
+}
+
+static char *freeze_mbuf(struct mbuf *mbuf) {
+  char *res = malloc(512 + mbuf->len);
+  res[0] = '"';
+  cs_base64_encode((const unsigned char *) mbuf->buf, mbuf->len, &res[1]);
+  strcat(res, "\"");
+  return res;
+}
+
+V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
+  struct v7_object *obj_base = v7_to_object(v);
+  unsigned int attrs = V7_OBJ_OFF_HEAP;
+
+#ifndef V7_FREEZE_NOT_READONLY
+  attrs |= V7_OBJ_NOT_EXTENSIBLE;
+#endif
+
+  if (v7_is_function(v)) {
+    struct v7_function *func = v7_to_function(v);
+    struct bcode *bcode = func->bcode;
+    char *jops = freeze_mbuf(&bcode->ops);
+    char *jlit = freeze_mbuf(&bcode->lit);
+    char *jnames = freeze_mbuf(&bcode->names);
+    fprintf(f,
+            "{\"type\":\"func\", \"addr\":\"%p\", \"props\":\"%p\", "
+            "\"attrs\":%d, \"scope\":\"%p\", \"bcode\":\"%p\"}\n",
+            obj_base, (void *) ((uintptr_t) obj_base->properties & ~0x1),
+            obj_base->attributes | attrs, func->scope, bcode);
+    fprintf(f,
+            "{\"type\":\"bcode\", \"addr\":\"%p\", \"args\":%d, "
+            "\"strict_mode\": %d, \"ops\":%s, \"lit\":%s, \"names\":%s}\n",
+            bcode, bcode->args, bcode->strict_mode, jops, jlit, jnames);
+    free(jops);
+    free(jlit);
+    free(jnames);
+  } else {
+    struct v7_generic_object *gob = v7_to_generic_object(v);
+    fprintf(f,
+            "{\"type\":\"obj\", \"addr\":\"%p\", \"props\":\"%p\", "
+            "\"attrs\":%d, \"proto\":\"%p\"}\n",
+            obj_base, (void *) ((uintptr_t) obj_base->properties & ~0x1),
+            obj_base->attributes | attrs, gob->prototype);
+  }
+}
+
+V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
+  unsigned int attrs = V7_PROPERTY_OFF_HEAP;
+#ifndef V7_FREEZE_NOT_READONLY
+  attrs |= V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE;
+#endif
+
+  fprintf(f,
+          "{\"type\":\"prop\","
+          " \"addr\":\"%p\","
+          " \"next\":\"%p\","
+          " \"attrs\":%d,"
+          " \"name\":\"0x%" INT64_X_FMT
+          "\","
+          " \"value_type\":%d,"
+          " \"value\":\"0x%" INT64_X_FMT
+          "\","
+          " \"name_str\":\"%s\"}\n",
+          prop, prop->next, prop->attributes | attrs, prop->name,
+          val_type(v7, prop->value), prop->value,
+          v7_to_cstring(v7, &prop->name));
+}
+
+#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/parser.c"
 /**/
@@ -24054,7 +24296,7 @@ clean:
 
 #if V7_ENABLE__Object__create
 WARN_UNUSED_RESULT
-static enum v7_err Obj_create(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err Obj_create(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t proto = v7_arg(v7, 0);
   val_t descs = v7_arg(v7, 1);
@@ -28891,6 +29133,9 @@ static void show_usage(char *argv[]) {
   fprintf(stderr, "%s\n", "  -vo <n>              object arena size");
   fprintf(stderr, "%s\n", "  -vf <n>              function arena size");
   fprintf(stderr, "%s\n", "  -vp <n>              property arena size");
+#ifdef V7_FREEZE
+  fprintf(stderr, "%s\n", "  -freeze filename     dump JS heap into a file");
+#endif
   exit(EXIT_FAILURE);
 }
 
@@ -28928,12 +29173,15 @@ static void dump_mm_stats(struct v7 *v7) {
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *)) {
   struct v7 *v7;
-  struct v7_create_opts opts = {0, 0, 0};
+  struct v7_create_opts opts;
   int as_json = 0;
   int i, j, show_ast = 0, binary_ast = 0, dump_bcode = 0, dump_stats = 0;
   val_t res = v7_create_undefined();
   int nexprs = 0;
   const char *exprs[16];
+
+  memset(&opts, 0, sizeof(opts));
+
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
@@ -28965,6 +29213,12 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
       opts.property_arena_size = atoi(argv[i + 1]);
       i++;
     }
+#ifdef V7_FREEZE
+    else if (strcmp(argv[i], "-freeze") == 0 && i + 1 < argc) {
+      opts.freeze_file = argv[i + 1];
+      i++;
+    }
+#endif
   }
 
 #ifndef V7_ALLOW_ARGLESS_MAIN
@@ -28974,6 +29228,12 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 #endif
 
   v7 = v7_create_opt(opts);
+
+#ifdef V7_FREEZE
+  if (opts.freeze_file != NULL) {
+    exit(0);
+  }
+#endif
 
   if (init_func != NULL) {
     init_func(v7);
