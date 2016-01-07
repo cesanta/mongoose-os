@@ -137,6 +137,22 @@ struct v7 *v7_create_opt(struct v7_create_opts);
 void v7_destroy(struct v7 *);
 
 /*
+ * Enable or disable GC.
+ *
+ * Must be called before invoking v7_exec or v7_apply
+ * from within a cfunction unless you know what you're doing.
+ *
+ * GC is disabled during execution of cfunctions in order to simplify
+ * memory management of simple cfunctions.
+ * However executing even small snippets of JS code causes a lot of memory
+ * pressure. Enabling GC solves that but forces you to take care of the
+ * reachability of your temporary V7 val_t variables, as the GC needs
+ * to know where they are since objects and strings can be either reclaimed
+ * or relocated during a GC pass.
+ */
+void v7_set_gc_enabled(struct v7 *v7, int enabled);
+
+/*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
  * the `result` variable.
  *
@@ -8085,6 +8101,7 @@ V7_PRIVATE enum v7_err File_eval(struct v7 *v7, v7_val_t *res) {
       goto clean;
     }
 
+    v7_set_gc_enabled(v7, 1);
     rcode = v7_exec_file(v7, s, res);
     if (rcode != V7_OK) {
       goto clean;
@@ -15556,6 +15573,10 @@ void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
   return p;
 }
 
+void v7_set_gc_enabled(struct v7 *v7, int enabled) {
+  v7->inhibit_gc = !enabled;
+}
+
 /*
  * TODO(alashkin): we need src_len only in case of
  * binary AST-file, i.e. for exec_file & Co
@@ -21741,6 +21762,7 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, val_t this_obj,
       }
     }
 
+    v7_set_gc_enabled(v7, 1);
     if (is_json) {
       rcode = v7_parse_json(v7, p, res);
     } else {

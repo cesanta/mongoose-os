@@ -133,6 +133,22 @@ struct v7 *v7_create_opt(struct v7_create_opts);
 void v7_destroy(struct v7 *);
 
 /*
+ * Enable or disable GC.
+ *
+ * Must be called before invoking v7_exec or v7_apply
+ * from within a cfunction unless you know what you're doing.
+ *
+ * GC is disabled during execution of cfunctions in order to simplify
+ * memory management of simple cfunctions.
+ * However executing even small snippets of JS code causes a lot of memory
+ * pressure. Enabling GC solves that but forces you to take care of the
+ * reachability of your temporary V7 val_t variables, as the GC needs
+ * to know where they are since objects and strings can be either reclaimed
+ * or relocated during a GC pass.
+ */
+void v7_set_gc_enabled(struct v7 *v7, int enabled);
+
+/*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
  * the `result` variable.
  *
