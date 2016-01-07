@@ -169,12 +169,14 @@ static void clubby_proto_parse_resp(struct json_token *resp_arr) {
     return;
   }
 
-  /* Frozen's API for working with arrays is nonexistent, so what we do here
+  /*
+   * Frozen's API for working with arrays is nonexistent, so what we do here
    * looks kinda funny.
    * Things to note: resp_arr->len is length of the array in characters, not
    * elements.
    * tok->num_desc includes all the tokens inside array, not just elements.
-   * There is basically no way to tell number of elements upfront. */
+   * There is basically no way to tell number of elements upfront.
+   */
   struct json_token *resp = NULL;
   const char *resp_arr_end = resp_arr->ptr + resp_arr->len;
   for (resp = resp_arr + 1;
@@ -192,8 +194,10 @@ static void clubby_proto_parse_resp(struct json_token *resp_arr) {
       LOG(LL_ERROR, ("No id in response |%.*s|", resp->len, resp->ptr));
       break;
     }
-    /* Any number inside a JSON message will have non-number character.
-     * Hence, no need to have it explicitly nul-terminated. */
+    /*
+     * Any number inside a JSON message will have non-number character.
+     * Hence, no need to have it explicitly nul-terminated.
+     */
     evt.response.id = strtoul(id_tok->ptr, NULL, 10);
 
     struct json_token *status_tok = find_json_token(resp, "status");
