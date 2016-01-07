@@ -77,10 +77,11 @@ ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
 endif
 
-JSBIN_SRCS := $(SJSJS_PATH)/clubby.js \
+JSBIN_SRCS := $(SJSJS_PATH)/sys_init.js \
+              $(SJSJS_PATH)/app_init.js \
               $(SJSJS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
-JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
+JS_SRCS    :=
 
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
@@ -120,7 +121,7 @@ FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON \
-           -DV7_MMAP_EXEC_ONLY="sys_init.js_clubby.js_I2C.js_cloud.js_demo.js"
+           -DV7_MMAP_EXEC_ONLY="sys_init.js_app_init.js_I2C.js"
 
 MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266
 
