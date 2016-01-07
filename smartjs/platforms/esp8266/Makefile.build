@@ -88,11 +88,11 @@ JS_SRCS    := $(SJSJS_PATH)/sys_init.js $(SJSJS_PATH)/app_init.js
 JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC) $(V7_PATH) $(MONGOOSE_PATH) \
-		$(BOOTLOADER_PATH)/rboot/appcode $(COMMON_DIR)
+        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_DIR)
 IPATH = $(REPO_ROOT) $(COMMON_DIR) $(SMARTJS_SRC) $(VPATH) \
-		$(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
-		$(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
-		$(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) .
+        $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
+        $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
+        $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ ./user/
 
 # libraries used in this project, mainly provided by the SDK
@@ -116,7 +116,7 @@ V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
 
 FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
-				   -DNO_BSD_SOCKETS \
+           -DNO_BSD_SOCKETS \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON \
@@ -193,8 +193,8 @@ FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE)))")
 PREREQ = rboot
 BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW2_ADDR=$(FW2_FILE_2_ADDR) \
-				   -DFW1_FS_ADDR=$(FS_ADDR) \
-				   -DFW2_FS_ADDR=$(FS2_ADDR)
+                   -DFW1_FS_ADDR=$(FS_ADDR) \
+                   -DFW2_FS_ADDR=$(FS2_ADDR)
 
 FW_METADATA_FILE= $(FW_DIR)/metadata.json
 endif
@@ -202,7 +202,7 @@ endif
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
-ESP_TOOL_CMD = 	$(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 
 TIMESTAMP=$(shell TZ=GMT date +"%Y%m%d%H%M")
 
@@ -345,11 +345,11 @@ $(FS_BUILD_DIR):
 $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
-		echo "CP $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
-		cp $(js) $(FS_BUILD_DIR);)
+    echo "CP $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
+    cp $(js) $(FS_BUILD_DIR);)
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
-		echo "V7 $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
-		$(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
+    echo "V7 $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
+    $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
 	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
 	$(vecho) "FS $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
@@ -382,7 +382,7 @@ $(ESPTOOL2):
 
 $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) \
-					ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
+    ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
 
 $(FW_DIR)/$(RBOOT_FW_NAME) : $(BUILD_DIR)/rboot.bin
 	$(Q) cp $(BUILD_DIR)/rboot.bin $(FW_DIR)/$(RBOOT_FW_NAME)
