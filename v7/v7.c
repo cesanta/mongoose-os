@@ -16766,6 +16766,8 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   val_t h, tmp = 0;
   char *s;
 
+/* clang-format off */
+
   /*
    * If a value points to an unmarked string we shall:
    *  1. save the first 6 bytes of the string
@@ -16787,7 +16789,8 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *  Note: 64-bit pointers can be represented with 48-bits
    */
 
-  {}
+/* clang-format on */
+
 /*
  * Freeze.
  */
