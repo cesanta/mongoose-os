@@ -131,26 +131,10 @@ struct v7_create_opts {
   char *freeze_file;
 #endif
 };
-struct v7 *v7_create_opt(struct v7_create_opts);
+struct v7 *v7_create_opt(struct v7_create_opts opts);
 
 /* Destroy V7 instance */
-void v7_destroy(struct v7 *);
-
-/*
- * Enable or disable GC.
- *
- * Must be called before invoking v7_exec or v7_apply
- * from within a cfunction unless you know what you're doing.
- *
- * GC is disabled during execution of cfunctions in order to simplify
- * memory management of simple cfunctions.
- * However executing even small snippets of JS code causes a lot of memory
- * pressure. Enabling GC solves that but forces you to take care of the
- * reachability of your temporary V7 val_t variables, as the GC needs
- * to know where they are since objects and strings can be either reclaimed
- * or relocated during a GC pass.
- */
-void v7_set_gc_enabled(struct v7 *v7, int enabled);
+void v7_destroy(struct v7 *v7);
 
 /*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
@@ -166,20 +150,20 @@ void v7_set_gc_enabled(struct v7 *v7, int enabled);
  *    `result` is undefined. To avoid this error, build V7 with V7_LARGE_AST.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_exec(struct v7 *, const char *js_code, v7_val_t *result);
+enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but loads source code from `path` file.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_exec_file(struct v7 *, const char *path, v7_val_t *result);
+enum v7_err v7_exec_file(struct v7 *v7, const char *path, v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
  * context.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
+enum v7_err v7_exec_with(struct v7 *v7, const char *js_code, v7_val_t this_obj,
                          v7_val_t *result);
 
 /*
@@ -188,13 +172,13 @@ enum v7_err v7_exec_with(struct v7 *, const char *js_code, v7_val_t this_obj,
  * Return value and semantic is the same as for `v7_exec()`.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_parse_json(struct v7 *, const char *str, v7_val_t *res);
+enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res);
 
 /*
  * Same as `v7_parse_json()`, but loads JSON string from `path`.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
+enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res);
 
 /*
  * Compile JavaScript code `js_code` into the byte code and write generated
@@ -206,12 +190,6 @@ enum v7_err v7_parse_json_file(struct v7 *, const char *path, v7_val_t *res);
 WARN_UNUSED_RESULT
 enum v7_err v7_compile(const char *js_code, int generate_binary_output,
                        int use_bcode, FILE *fp);
-
-/*
- * Perform garbage collection.
- * Pass true to full in order to reclaim unused heap back to the OS.
- */
-void v7_gc(struct v7 *, int full);
 
 /* Create an empty object */
 v7_val_t v7_create_object(struct v7 *v7);
@@ -252,17 +230,20 @@ v7_val_t v7_create_undefined(void);
 /*
  * Create string primitive value.
  * `str` must point to the utf8 string of length `len`.
- * If `len` is ~0, `str` is assumed to be NUL-terminated and strlen(str) is used
+ * If `len` is ~0, `str` is assumed to be NUL-terminated and `strlen(str)`
+ * is used.
  */
-v7_val_t v7_create_string(struct v7 *, const char *str, size_t len, int copy);
+v7_val_t v7_create_string(struct v7 *v7, const char *str, size_t len, int copy);
 
 /*
  * Create RegExp object.
  * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
  * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
+ * If `regex_len` is ~0, `regex` is assumed to be NUL-terminated and
+ * `strlen(regex)` is used.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_create_regexp(struct v7 *, const char *regex, size_t regex_len,
+enum v7_err v7_create_regexp(struct v7 *v7, const char *regex, size_t regex_len,
                              const char *flags, size_t flags_len,
                              v7_val_t *res);
 
@@ -297,41 +278,41 @@ v7_val_t v7_create_foreign(void *ptr);
 v7_val_t v7_create_cfunction(v7_cfunction_t *func);
 
 /*
- * Return true if the given value is an object or function.
+ * Returns true if the given value is an object or function.
  * i.e. it returns true if the value holds properties and can be
  * used as argument to v7_get and v7_set.
  */
 int v7_is_object(v7_val_t v);
 
-/* Return true if given value is a JavaScript function object */
-int v7_is_function(v7_val_t);
+/* Returns true if given value is a JavaScript function object */
+int v7_is_function(v7_val_t v);
 
-/* Return true if given value is a primitive string value */
-int v7_is_string(v7_val_t);
+/* Returns true if given value is a primitive string value */
+int v7_is_string(v7_val_t v);
 
-/* Return true if given value is a primitive boolean value */
-int v7_is_boolean(v7_val_t);
+/* Returns true if given value is a primitive boolean value */
+int v7_is_boolean(v7_val_t v);
 
-/* Return true if given value is a primitive number value */
-int v7_is_number(v7_val_t);
+/* Returns true if given value is a primitive number value */
+int v7_is_number(v7_val_t v);
 
-/* Return true if given value is a primitive `null` value */
-int v7_is_null(v7_val_t);
+/* Returns true if given value is a primitive `null` value */
+int v7_is_null(v7_val_t v);
 
-/* Return true if given value is a primitive `undefined` value */
-int v7_is_undefined(v7_val_t);
+/* Returns true if given value is a primitive `undefined` value */
+int v7_is_undefined(v7_val_t v);
 
-/* Return true if given value is a JavaScript RegExp object*/
-int v7_is_regexp(struct v7 *, v7_val_t);
+/* Returns true if given value is a JavaScript RegExp object*/
+int v7_is_regexp(struct v7 *v7, v7_val_t v);
 
-/* Return true if given value holds a pointer to C callback */
+/* Returns true if given value holds a pointer to C callback */
 int v7_is_cfunction_ptr(v7_val_t v);
 
-/* Return true if given value holds an object which represents C callback */
+/* Returns true if given value holds an object which represents C callback */
 int v7_is_cfunction_obj(struct v7 *v7, v7_val_t v);
 
 /*
- * Return true if given value is either cfunction pointer or cfunction object
+ * Returns true if given value is either cfunction pointer or cfunction object
  */
 int v7_is_cfunction(struct v7 *v7, v7_val_t v);
 
@@ -341,50 +322,53 @@ int v7_is_cfunction(struct v7 *v7, v7_val_t v);
  */
 int v7_is_callable(struct v7 *v7, v7_val_t v);
 
-/* Return true if given value holds `void *` pointer */
-int v7_is_foreign(v7_val_t);
+/* Returns true if given value holds `void *` pointer */
+int v7_is_foreign(v7_val_t v);
 
-/* Return true if given value is an array object */
-int v7_is_array(struct v7 *, v7_val_t);
+/* Returns true if given value is an array object */
+int v7_is_array(struct v7 *v7, v7_val_t v);
 
-/* Return true if the object is an instance of a given constructor */
-int v7_is_instanceof(struct v7 *, v7_val_t o, const char *c);
+/* Returns true if the object is an instance of a given constructor. */
+int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
 
-/* Return true if the object is an instance of a given constructor */
-int v7_is_instanceof_v(struct v7 *, v7_val_t o, v7_val_t c);
+/* Returns true if the object is an instance of a given constructor. */
+int v7_is_instanceof_v(struct v7 *v7, v7_val_t o, v7_val_t c);
+
+/* Returns true if given value evaluates to true, as in `if (v)` statement. */
+int v7_is_true(struct v7 *v7, v7_val_t v);
 
 /*
- * Return `void *` pointer stored in `v7_val_t`.
+ * Returns `void *` pointer stored in `v7_val_t`.
  *
  * Returns NULL if the value is not a foreign pointer.
  */
-void *v7_to_foreign(v7_val_t);
+void *v7_to_foreign(v7_val_t v);
 
 /*
- * Return boolean stored in `v7_val_t`:
+ * Returns boolean stored in `v7_val_t`:
  *  0 for `false` or non-boolean, non-0 for `true`
  */
-int v7_to_boolean(v7_val_t);
+int v7_to_boolean(v7_val_t v);
 
 /*
- * Return `double` value stored in `v7_val_t`
+ * Returns `double` value stored in `v7_val_t`.
  *
  * Returns NaN for non-numbers.
  */
-double v7_to_number(v7_val_t);
+double v7_to_number(v7_val_t v);
 
 /*
- * Return `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
+ * Returns `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
  * if given value is neither cfunction pointer nor cfunction object.
  */
 v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
 
 /*
- * Return a pointer to the string stored in `v7_val_t`.
+ * Returns a pointer to the string stored in `v7_val_t`.
  *
- * String length returned in `string_len`.
+ * String length returned in `len`.
  *
- * JS strings can contain embedded NUL chars and might or not might be NUL
+ * JS strings can contain embedded NUL chars and may or may not be NUL
  * terminated.
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
@@ -395,8 +379,7 @@ v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
  * a pointer to a `v7_val_t` is required. It also means that the string data
  * will become invalid once that `v7_val_t` value goes out of scope.
  */
-const char *v7_get_string_data(struct v7 *, v7_val_t *value,
-                               size_t *string_len);
+const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
 
 /*
  * Returns a pointer to the string stored in `v7_val_t`.
@@ -411,28 +394,38 @@ const char *v7_get_string_data(struct v7 *, v7_val_t *value,
  * Out of these, those that don't include embedded NUL chars are guaranteed to
  * be C compatible.
  */
-const char *v7_to_cstring(struct v7 *v7, v7_val_t *value);
+const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
 
 /* Return root level (`global`) object of the given V7 instance. */
-v7_val_t v7_get_global(struct v7 *);
+v7_val_t v7_get_global(struct v7 *v);
 
 /* Return current `this` object. */
-v7_val_t v7_get_this(struct v7 *);
+v7_val_t v7_get_this(struct v7 *v);
 
 /* Return current `arguments` array */
-v7_val_t v7_get_arguments(struct v7 *);
+v7_val_t v7_get_arguments(struct v7 *v);
 
-/* Return n-th argument */
-v7_val_t v7_arg(struct v7 *, unsigned long n);
+/* Return i-th argument */
+v7_val_t v7_arg(struct v7 *v, unsigned long i);
 
 /* Return the length of `arguments` */
-unsigned long v7_argc(struct v7 *);
+unsigned long v7_argc(struct v7 *v7);
 
 /*
- * Lookup property `name`, `len` in object `obj`. If `obj` holds no such
- * property, an `undefined` value is returned.
+ * Object interface.
  */
-v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
+
+/* Set object's prototype. Return old prototype or undefined on error. */
+v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
+
+/*
+ * Lookup property `name` in object `obj`. If `obj` holds no such property,
+ * an `undefined` value is returned.
+ *
+ * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
+ * `strlen(name)` is used.
+ */
+v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
 
 /*
  * Like `v7_get()`, but "returns" value through `res` pointer argument.
@@ -444,6 +437,109 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
 WARN_UNUSED_RESULT
 enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
                             size_t name_len, v7_val_t *res);
+
+/*
+ * Set object property. `name`, `name_len` specify property name, `attrs`
+ * specify property attributes, `val` is a property value.
+ *
+ * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
+ * `strlen(name)` is used.
+ *
+ * Returns non-zero on success, 0 on error (e.g. out of memory).
+ */
+int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
+           v7_prop_attr_t attrs, v7_val_t v);
+
+/*
+ * Like `v7_set()`, but "returns" value through the `res` pointer argument.
+ * `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_set_throwing(struct v7 *v7, v7_val_t obj, const char *name,
+                            size_t name_len, v7_prop_attr_t attrs, v7_val_t v,
+                            int *res);
+
+/*
+ * A helper function to define object's method backed by a C function `func`.
+ * `name` must be NUL-terminated.
+ *
+ * Return value is the same as for `v7_set()`.
+ */
+int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
+                  v7_cfunction_t *func);
+
+/*
+ * Delete own property `name` of the object `obj`. Does not follow the
+ * prototype chain.
+ *
+ * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
+ * `strlen(name)` is used.
+ *
+ * Returns 0 on success, -1 on error.
+ */
+int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
+
+/*
+ * Iterate over the `obj`'s properties.
+ *
+ * Usage example:
+ *
+ *     void *h = NULL;
+ *     v7_val_t name, val;
+ *     unsigned int attrs;
+ *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
+ *       ...
+ *     }
+ */
+void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
+                   v7_prop_attr_t *attrs);
+
+/*
+ * Array interface.
+ */
+
+/* Returns length on an array. If `arr` is not an array, 0 is returned. */
+unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
+
+/* Insert value `v` in array `arr` at the end of the array. */
+int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
+
+/*
+ * Like `v7_array_push()`, but "returns" value through the `res` pointer
+ * argument. `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
+                                   int *res);
+
+/*
+ * Return array member at index `index`. If `index` is out of bounds, undefined
+ * is returned.
+ */
+v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
+
+/* Insert value `v` into `arr` at index `index`. */
+int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
+
+/*
+ * Like `v7_array_set()`, but "returns" value through the `res` pointer
+ * argument. `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
+                                  unsigned long index, v7_val_t v, int *res);
+
+/* Delete value in array `arr` at index `index`, if it exists. */
+void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
 
 /*
  * Generate string representation of the JavaScript value `val` into a buffer
@@ -482,7 +578,7 @@ enum v7_stringify_mode {
   V7_STRINGIFY_JSON,
   V7_STRINGIFY_DEBUG,
 };
-char *v7_stringify(struct v7 *, v7_val_t v, char *buf, size_t len,
+char *v7_stringify(struct v7 *v7, v7_val_t v, char *buf, size_t len,
                    enum v7_stringify_mode mode);
 
 /*
@@ -502,37 +598,41 @@ enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
  */
 #define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
 
-/* print a value to stdout */
-void v7_print(struct v7 *, v7_val_t val);
+/* Output a string representation of the value to stdout.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_print(struct v7 *v7, v7_val_t v);
 
-/* print a value into a file */
+/* Output a string representation of the value to stdout followed by a newline.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_println(struct v7 *v7, v7_val_t v);
+
+/* Output a string representation of the value to a file.
+ * V7_STRINGIFY_DEBUG mode is used. */
 void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
 
-/* print a value to stdout followed by a newline */
-void v7_println(struct v7 *, v7_val_t val);
-
-/* print a value into a file followed by a newline */
+/* Output a string representation of the value to a file followed by a newline.
+ * V7_STRINGIFY_DEBUG mode is used. */
 void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
 
-/* Return true if given value is `true`, as in JavaScript `if (v)` statement */
-int v7_is_true(struct v7 *v7, v7_val_t v);
+/* Output stack trace recorded in the exception `e` to file `f` */
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
+
+/* Output error object message and possibly stack trace to f */
+void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
 
 /*
  * Call function `func` with arguments `args`, using `this_obj` as `this`.
- * `args` could be either undefined value, or be an array with arguments.
+ * `args` should be an array containing arguments or `undefined`.
  *
- * Result can be NULL if you don't care about the return value.
+ * `res` can be `NULL` if return value is not required.
  */
 WARN_UNUSED_RESULT
 enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                      v7_val_t args, v7_val_t *res);
 
-/* Throw an already existing value. */
+/* Throw an exception with an already existing value. */
 WARN_UNUSED_RESULT
-enum v7_err v7_throw(struct v7 *v7, v7_val_t val);
-
-/* Clears currently thrown value */
-void v7_clear_thrown(struct v7 *v7);
+enum v7_err v7_throw(struct v7 *v7, v7_val_t v);
 
 /*
  * Throw an exception with given formatted message.
@@ -554,100 +654,10 @@ enum v7_err v7_rethrow(struct v7 *v7);
  * nothing is being thrown. If `is_thrown` is not `NULL`, it will be set
  * to either 0 or 1, depending on whether something is thrown at the moment.
  */
-v7_val_t v7_thrown_value(struct v7 *v7, unsigned char *is_thrown);
+v7_val_t v7_get_thrown_value(struct v7 *v7, unsigned char *is_thrown);
 
-/*
- * Set object property. `name`, `name_len` specify property name, `attrs`
- * specify property attributes, `val` is a property value. Return non-zero
- * on success, 0 on error (e.g. out of memory).
- */
-int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
-           v7_prop_attr_t attrs, v7_val_t val);
-
-/*
- * Like `v7_set()`, but "returns" value through the `res` pointer argument.
- * `res` is allowed to be `NULL`.
- *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_set_throwing(struct v7 *v7, v7_val_t obj, const char *name,
-                            size_t len, v7_prop_attr_t attrs, v7_val_t val,
-                            int *res);
-
-/*
- * A helper function to define object's method backed by a C function `func`.
- * Return value is the same as for `v7_set()`.
- */
-int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
-                  v7_cfunction_t *func);
-
-/*
- * Delete own property of an object `obj`. Does not follow the prototype chain.
- *
- * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.  Return 0 on
- * success, -1 on error.
- */
-int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
-
-/* Return array length */
-unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
-
-/* Insert value `v` in array `arr` at index `index`. */
-int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
-
-/*
- * Like `v7_array_set()`, but "returns" value through the `res` pointer
- * argument. `res` is allowed to be `NULL`.
- *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
-                                  unsigned long index, v7_val_t v, int *res);
-
-/* Delete value in array `arr` at index `index`, if it exists. */
-void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
-
-/* Insert value `v` in array `arr` at the end of the array. */
-int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
-
-/*
- * Like `v7_array_push()`, but "returns" value through the `res` pointer
- * argument. `res` is allowed to be `NULL`.
- *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
-                                   int *res);
-
-/*
- * Return array member at index `index`. If `index` is out of bounds, undefined
- * is returned.
- */
-v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
-
-/* Set object's prototype. Return old prototype or undefined on error. */
-v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
-
-/*
- * Iterate over the object's `obj` properties.
- *
- * Usage example:
- *
- *     void *h = NULL;
- *     v7_val_t name, val;
- *     unsigned int attrs;
- *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
- *       ...
- *     }
- */
-void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   v7_prop_attr_t *attrs);
+/* Clears currently thrown value, if any. */
+void v7_clear_thrown_value(struct v7 *v7);
 
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
@@ -702,6 +712,22 @@ void v7_stack_stat_clean(struct v7 *v7);
 void v7_interrupt(struct v7 *v7);
 
 /*
+ * Enable or disable GC.
+ *
+ * Must be called before invoking v7_exec or v7_apply
+ * from within a cfunction unless you know what you're doing.
+ *
+ * GC is disabled during execution of cfunctions in order to simplify
+ * memory management of simple cfunctions.
+ * However executing even small snippets of JS code causes a lot of memory
+ * pressure. Enabling GC solves that but forces you to take care of the
+ * reachability of your temporary V7 val_t variables, as the GC needs
+ * to know where they are since objects and strings can be either reclaimed
+ * or relocated during a GC pass.
+ */
+void v7_set_gc_enabled(struct v7 *v7, int enabled);
+
+/*
  * Tells the GC about a JS value variable/field owned
  * by C code.
  *
@@ -734,14 +760,11 @@ void v7_own(struct v7 *v7, v7_val_t *v);
  */
 int v7_disown(struct v7 *v7, v7_val_t *v);
 
-/* Prints stack trace recorded in the exception `e` to file `f` */
-void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
-
-/* Print error object message and possibly stack trace to f */
-void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
-
-/* Print JS value `v` to the open file strean `f` */
-void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
+/*
+ * Perform garbage collection.
+ * Pass true to full in order to reclaim unused heap back to the OS.
+ */
+void v7_gc(struct v7 *v7, int full);
 
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *));
@@ -13786,6 +13809,8 @@ enum v7_err v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
   struct slre_prog *p = NULL;
   struct v7_regexp *rp;
 
+  if (re_len == ~((size_t) 0)) re_len = strlen(re);
+
   if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
       p == NULL) {
     rcode = v7_throwf(v7, TYPE_ERROR, "Invalid regex");
@@ -14131,7 +14156,7 @@ char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size,
                    enum v7_stringify_mode mode) {
   enum v7_err rcode = V7_OK;
   uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_thrown_value(v7, &saved_is_thrown);
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
   char *ret = NULL;
 
   rcode = v7_stringify_throwing(v7, v, buf, size, mode, &ret);
@@ -14140,7 +14165,7 @@ char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size,
     if (saved_is_thrown) {
       rcode = v7_throw(v7, saved_thrown);
     } else {
-      v7_clear_thrown(v7);
+      v7_clear_thrown_value(v7);
     }
 
     buf[0] = '\0';
@@ -14357,7 +14382,7 @@ clean:
 v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   enum v7_err rcode = V7_OK;
   uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_thrown_value(v7, &saved_is_thrown);
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
   v7_val_t ret = v7_create_undefined();
 
   rcode = v7_get_throwing(v7, obj, name, name_len, &ret);
@@ -14366,7 +14391,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     if (saved_is_thrown) {
       rcode = v7_throw(v7, saved_thrown);
     } else {
-      v7_clear_thrown(v7);
+      v7_clear_thrown_value(v7);
     }
     ret = v7_create_undefined();
   }
@@ -14575,7 +14600,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
                     v7_prop_attr_t attributes, v7_val_t val) {
   enum v7_err rcode = V7_OK;
   uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_thrown_value(v7, &saved_is_thrown);
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
   int ret = -1;
 
   rcode = v7_set_property_throwing(v7, obj, name, len, attributes, val, &ret);
@@ -14584,7 +14609,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     if (saved_is_thrown) {
       rcode = v7_throw(v7, saved_thrown);
     } else {
-      v7_clear_thrown(v7);
+      v7_clear_thrown_value(v7);
     }
     ret = -1;
   }
@@ -14681,7 +14706,7 @@ V7_PRIVATE v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
 
 v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
                                v7_cfunction_t *f) {
-  return v7_create_constructor_nargs(v7, proto, f, -1);
+  return v7_create_constructor_nargs(v7, proto, f, ~0);
 }
 
 V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
@@ -14692,7 +14717,7 @@ V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
 
 int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
                   v7_cfunction_t *func) {
-  return set_method(v7, obj, name, func, -1);
+  return set_method(v7, obj, name, func, ~0);
 }
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
@@ -14872,7 +14897,7 @@ clean:
 int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
   enum v7_err rcode = V7_OK;
   uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_thrown_value(v7, &saved_is_thrown);
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
   int ret = -1;
 
   rcode = v7_array_set_throwing(v7, arr, index, v, &ret);
@@ -14881,7 +14906,7 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
     if (saved_is_thrown) {
       rcode = v7_throw(v7, saved_thrown);
     } else {
-      v7_clear_thrown(v7);
+      v7_clear_thrown_value(v7);
     }
     ret = -1;
   }
@@ -15627,10 +15652,10 @@ static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
      * In order to maintain compat with existing API, we should save the
      * current exception value into `*res`
      *
-     * TODO(dfrank): probably change API: clients can use `v7_thrown_value()`
-     * now
+     * TODO(dfrank): probably change API: clients can use
+     *`v7_get_thrown_value()` now.
      */
-    *res = v7_thrown_value(v7, NULL);
+    *res = v7_get_thrown_value(v7, NULL);
     goto clean;
   } else {
 #ifndef V7_MMAP_EXEC
@@ -16146,7 +16171,7 @@ enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
   return V7_EXEC_EXCEPTION;
 }
 
-void v7_clear_thrown(struct v7 *v7) {
+void v7_clear_thrown_value(struct v7 *v7) {
   v7->vals.thrown_error = v7_create_undefined();
   v7->is_thrown = 0;
 }
@@ -16182,7 +16207,7 @@ enum v7_err v7_rethrow(struct v7 *v7) {
   return V7_EXEC_EXCEPTION;
 }
 
-v7_val_t v7_thrown_value(struct v7 *v7, uint8_t *is_thrown) {
+v7_val_t v7_get_thrown_value(struct v7 *v7, uint8_t *is_thrown) {
   if (is_thrown != NULL) {
     *is_thrown = v7->is_thrown;
   }
