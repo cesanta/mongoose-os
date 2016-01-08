@@ -589,7 +589,7 @@ int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.  Return 0 on
  * success, -1 on error.
  */
-int v7_del_property(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
+int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
 
 /* Return array length */
 unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
@@ -11226,7 +11226,7 @@ V7_PRIVATE int stack_sp(struct mbuf *s) {
  *
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  *
- * See `v7_del_property()` as well.
+ * See `v7_del()` as well.
  */
 static int del_property_deep(struct v7 *v7, val_t obj, const char *name,
                              size_t len) {
@@ -11235,7 +11235,7 @@ static int del_property_deep(struct v7 *v7, val_t obj, const char *name,
   }
   for (; obj != V7_NULL; obj = obj_prototype_v(v7, obj)) {
     int del_res;
-    if ((del_res = v7_del_property(v7, obj, name, len)) != -1) {
+    if ((del_res = v7_del(v7, obj, name, len)) != -1) {
       return del_res;
     }
   }
@@ -12740,7 +12740,7 @@ restart:
            * properties only.
            */
           if (op == OP_DELETE) {
-            v7_del_property(v7, v1, buf, name_len);
+            v7_del(v7, v1, buf, name_len);
           } else {
             del_property_deep(v7, v1, buf, name_len);
           }
@@ -14619,7 +14619,7 @@ clean:
 /*
  * See comments in `v7.h`
  */
-int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
+int v7_del(struct v7 *v7, val_t obj, const char *name, size_t len) {
   struct v7_property *prop, *prev;
 
   if (!v7_is_object(obj)) {
@@ -14953,7 +14953,7 @@ clean:
 void v7_array_del(struct v7 *v7, val_t arr, unsigned long index) {
   char buf[20];
   int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
-  v7_del_property(v7, arr, buf, n);
+  v7_del(v7, arr, buf, n);
 }
 
 int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
@@ -17108,20 +17108,20 @@ V7_PRIVATE void freeze(struct v7 *v7, char *filename) {
    * when thawing global will actually be a new mutable object
    * living on the heap.
    */
-  v7_del_property(v7, v7->vals.global_object, "global", 6);
+  v7_del(v7, v7->vals.global_object, "global", 6);
 
   /*
    * evaluator leaves this trash which we have to remove
    * otherwise the evaluator will find those properties
    * but they will be readonly.
    */
-  v7_del_property(v7, v7->vals.global_object, "____p", 5);
-  v7_del_property(v7, v7->vals.global_object, "____t", 5);
-  v7_del_property(v7, v7->vals.global_object, "____s", 5);
-  v7_del_property(v7, v7->vals.global_object, "___rb", 5);
-  v7_del_property(v7, v7->vals.global_object, "___ro", 5);
-  v7_del_property(v7, v7->vals.global_object, "___th", 5);
-  v7_del_property(v7, v7->vals.global_object, "____c", 5);
+  v7_del(v7, v7->vals.global_object, "____p", 5);
+  v7_del(v7, v7->vals.global_object, "____t", 5);
+  v7_del(v7, v7->vals.global_object, "____s", 5);
+  v7_del(v7, v7->vals.global_object, "___rb", 5);
+  v7_del(v7, v7->vals.global_object, "___ro", 5);
+  v7_del(v7, v7->vals.global_object, "___th", 5);
+  v7_del(v7, v7->vals.global_object, "____c", 5);
 #endif
 
   for (i = 0; i < sizeof(v7->vals) / sizeof(val_t); i++) {
