@@ -711,7 +711,8 @@ static int notify_js(enum update_status us, const char *info) {
   return 0;
 }
 
-static void handle_clubby_update(struct clubby_event *evt) {
+static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
+  (void) user_data;
   LOG(LL_DEBUG, ("Command received: %.*s", evt->request.cmd_body->len,
                  evt->request.cmd_body->ptr));
 
@@ -841,8 +842,8 @@ void init_updater(struct v7 *v7) {
          V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
          v7_create_number(US_ERROR));
 
-  sj_clubby_register_command_handler("/v1/SWUpdate.Update",
-                                     handle_clubby_update, NULL);
+  sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_clubby_update,
+                                    NULL);
 }
 
 #endif /* DISABLE_OTA */

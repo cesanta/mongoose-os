@@ -7,16 +7,15 @@
 
 #ifndef DISABLE_C_CLUBBY
 
+typedef void (*clubby_callback_t)(struct clubby_event *evt, void *user_data);
+
 void sj_init_clubby(struct v7 *v7);
 
-void sj_clubby_connect();
-void sj_clubby_disconnect();
-void sj_clubby_send_resp(const char *dst, int64_t id, int status,
-                         const char *status_msg);
 void sj_clubby_send_reply(struct clubby_event *evt, int status,
                           const char *status_msg);
-int sj_clubby_register_command_handler(const char *cmd, clubby_callback cb,
-                                       void *user_data);
+
+int sj_clubby_register_global_command(const char *cmd, clubby_callback_t cb,
+                                      void *user_data);
 
 /* TODO(alashkin): add more sending functions to header */
 #endif /* DISABLE_C_CLUBBY */

@@ -179,11 +179,6 @@ void wifi_changed_cb(System_Event_t *evt) {
       evt->event_id == EVENT_STAMODE_GOT_IP
 #endif
       ) {
-#ifndef DISABLE_C_CLUBBY
-    if (get_cfg()->clubby.connect_on_boot != 0) {
-      sj_clubby_connect();
-    }
-#endif
     struct station_config config;
     v7_val_t res;
     v7_val_t conf = v7_get(v7, v7_get_global(v7), "conf", ~0);

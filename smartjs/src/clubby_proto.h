@@ -46,25 +46,34 @@ struct clubby_event {
       struct json_token *src;
     } request;
   };
-  void *user_data;
+  void *context;
 };
 
-typedef void (*clubby_callback)(struct clubby_event *evt);
+typedef void (*clubby_proto_callback_t)(struct clubby_event *evt);
 
-ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *dst,
+ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
+                                  const char *device_psk, const char *dst,
                                   int64_t id, int status,
                                   const char *status_msg);
-ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx, const char *dst);
 
-ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *dst,
+ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
+                                        const char *device_id,
+                                        const char *device_psk,
+                                        const char *dst);
+
+ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *device_id,
+                                   const char *device_psk, const char *dst,
                                    ub_val_t cmds);
 
-void clubby_proto_send(struct ub_ctx *ctx, ub_val_t frame);
+void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
+                       ub_val_t frame);
 
-void clubby_proto_init(clubby_callback cb);
-int clubby_proto_connect(struct mg_mgr *mgr);
-void clubby_proto_disconnect();
-int clubby_proto_is_connected();
+void clubby_proto_init(clubby_proto_callback_t cb);
+struct mg_connection *clubby_proto_connect(struct mg_mgr *mgr,
+                                           const char *server_address,
+                                           void *context);
+void clubby_proto_disconnect(struct mg_connection *nc);
+int clubby_proto_is_connected(struct mg_connection *nc);
 
 /* Utility */
 int64_t clubby_proto_get_new_id();

@@ -14,50 +14,42 @@
 #define MG_F_WS_FRAGMENTED MG_F_USER_6
 #define MG_F_CLUBBY_CONNECTED MG_F_USER_5
 
-static struct mg_connection *s_clubby_conn;
-
 /* Dispatcher callback */
-static clubby_callback s_clubby_cb;
+static clubby_proto_callback_t s_clubby_cb;
 
 /* Forward declarations */
 void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data);
 
-struct mg_connection *clubby_proto_get_conn() {
-  return s_clubby_conn;
-}
-
-void clubby_proto_init(clubby_callback cb) {
+void clubby_proto_init(clubby_proto_callback_t cb) {
   s_clubby_cb = cb;
 }
 
-int clubby_proto_is_connected() {
-  return s_clubby_conn != NULL &&
-         (s_clubby_conn->flags & MG_F_CLUBBY_CONNECTED);
+int clubby_proto_is_connected(struct mg_connection *nc) {
+  return nc != NULL && (nc->flags & MG_F_CLUBBY_CONNECTED);
 }
 
-int clubby_proto_connect(struct mg_mgr *mgr) {
-  if (s_clubby_conn != NULL) {
-    /* We support only one connection to cloud */
-    LOG(LL_ERROR, ("Clubby already connected"));
+struct mg_connection *clubby_proto_connect(struct mg_mgr *mgr,
+                                           const char *server_address,
+                                           void *context) {
+  LOG(LL_DEBUG, ("Connecting to %s", server_address));
 
-    /* TODO(alashkin): handle this */
-    return 1;
-  }
-
-  LOG(LL_DEBUG, ("Connecting to %s", get_cfg()->clubby.server_address));
-
-  s_clubby_conn =
-      mg_connect(mgr, get_cfg()->clubby.server_address, clubby_proto_handler);
-  if (s_clubby_conn == NULL) {
-    LOG(LL_DEBUG, ("Cannot connect to %s", get_cfg()->clubby.server_address));
+  struct mg_connection *nc =
+      mg_connect(mgr, server_address, clubby_proto_handler);
+  if (nc == NULL) {
+    LOG(LL_DEBUG, ("Cannot connect to %s", server_address));
     struct clubby_event evt;
-    evt.ev = CLUBBY_CONNECT;
+    evt.ev = CLUBBY_NET_CONNECT;
     evt.net_connect.success = 0;
+    evt.context = context;
     s_clubby_cb(&evt);
-    return 0;
+    return NULL;
   }
 
 #ifdef SSL_KRYPTON
+  /*
+   * TODO(alashkin): here we use TLS settings from configuration
+   * probably we have to move it to clubby local configuration
+   */
   if (s_cfg->tls_ena) {
     char *ca_file =
         get_cfg()->tls->tls_ca_file[0] ? get_cfg()->tls->tls_ca_file : NULL;
@@ -74,15 +66,15 @@ int clubby_proto_connect(struct mg_mgr *mgr) {
   }
 #endif
 
-  mg_set_protocol_http_websocket(s_clubby_conn);
+  nc->user_data = context;
+  mg_set_protocol_http_websocket(nc);
 
-  return 1;
+  return nc;
 }
 
-void clubby_proto_disconnect() {
-  if (s_clubby_conn != NULL) {
-    s_clubby_conn->flags = MG_F_SEND_AND_CLOSE;
-    s_clubby_conn = NULL;
+void clubby_proto_disconnect(struct mg_connection *nc) {
+  if (nc != NULL) {
+    nc->flags = MG_F_SEND_AND_CLOSE;
   }
 }
 
@@ -93,9 +85,9 @@ void clubby_proto_disconnect() {
  * bookkeeping. TODO(mkm): consider moving to Mongoose.
  */
 void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
-  (void) user_data;
+  struct mg_connection *nc = (struct mg_connection *) user_data;
 
-  if (!clubby_proto_is_connected()) {
+  if (!clubby_proto_is_connected(nc)) {
     /*
      * Not trying to reconect here,
      * It should be done before calling clubby_proto_ws_emit
@@ -105,34 +97,37 @@ void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
   }
 
   int flags = end ? 0 : WEBSOCKET_DONT_FIN;
-  int op = s_clubby_conn->flags & MG_F_WS_FRAGMENTED ? WEBSOCKET_OP_CONTINUE
-                                                     : WEBSOCKET_OP_BINARY;
+  int op = nc->flags & MG_F_WS_FRAGMENTED ? WEBSOCKET_OP_CONTINUE
+                                          : WEBSOCKET_OP_BINARY;
   if (!end) {
-    s_clubby_conn->flags |= MG_F_WS_FRAGMENTED;
+    nc->flags |= MG_F_WS_FRAGMENTED;
   } else {
-    s_clubby_conn->flags &= ~MG_F_WS_FRAGMENTED;
+    nc->flags &= ~MG_F_WS_FRAGMENTED;
   }
 
   LOG(LL_DEBUG, ("sending websocket frame flags=%x", op | flags));
 
-  mg_send_websocket_frame(s_clubby_conn, op | flags, d, l);
+  mg_send_websocket_frame(nc, op | flags, d, l);
 }
 
-ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx, const char *dst) {
+ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
+                                        const char *device_id,
+                                        const char *device_psk,
+                                        const char *dst) {
   ub_val_t frame = ub_create_object(ctx);
-  ub_add_prop(ctx, frame, "src",
-              ub_create_string(ctx, get_cfg()->clubby.device_id));
-  ub_add_prop(ctx, frame, "key",
-              ub_create_string(ctx, get_cfg()->clubby.device_psk));
+  ub_add_prop(ctx, frame, "src", ub_create_string(ctx, device_id));
+  ub_add_prop(ctx, frame, "key", ub_create_string(ctx, device_psk));
   ub_add_prop(ctx, frame, "dst", ub_create_string(ctx, dst));
 
   return frame;
 }
 
-ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *dst,
+ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
+                                  const char *device_psk, const char *dst,
                                   int64_t id, int status,
                                   const char *status_msg) {
-  ub_val_t frame = clubby_proto_create_frame_base(ctx, dst);
+  ub_val_t frame =
+      clubby_proto_create_frame_base(ctx, device_id, device_psk, dst);
   ub_val_t resp = ub_create_array(ctx);
   ub_add_prop(ctx, frame, "resp", resp);
   ub_val_t respv = ub_create_object(ctx);
@@ -147,22 +142,27 @@ ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *dst,
   return frame;
 }
 
-ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *dst,
+ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *device_id,
+                                   const char *device_psk, const char *dst,
                                    ub_val_t cmds) {
-  ub_val_t frame = clubby_proto_create_frame_base(ctx, dst);
+  ub_val_t frame =
+      clubby_proto_create_frame_base(ctx, device_id, device_psk, dst);
   ub_add_prop(ctx, frame, "cmds", cmds);
 
   return frame;
 }
 
-void clubby_proto_send(struct ub_ctx *ctx, ub_val_t frame) {
-  ub_render(ctx, frame, clubby_proto_ws_emit, NULL);
+void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
+                       ub_val_t frame) {
+  ub_render(ctx, frame, clubby_proto_ws_emit, nc);
 }
 
-static void clubby_proto_parse_resp(struct json_token *resp_arr) {
+static void clubby_proto_parse_resp(struct json_token *resp_arr,
+                                    void *context) {
   struct clubby_event evt;
 
   evt.ev = CLUBBY_RESPONSE;
+  evt.context = context;
 
   if (resp_arr->type != JSON_TYPE_ARRAY || resp_arr->num_desc == 0) {
     LOG(LL_ERROR, ("No resp in resp"));
@@ -223,7 +223,7 @@ static void clubby_proto_parse_resp(struct json_token *resp_arr) {
 }
 
 static void clubby_proto_parse_req(struct json_token *frame,
-                                   struct json_token *cmds_arr) {
+                                   struct json_token *cmds_arr, void *context) {
   if (cmds_arr->type != JSON_TYPE_ARRAY || cmds_arr->num_desc == 0) {
     /* Just for debugging - there _is_ cmds field but it is empty */
     LOG(LL_ERROR, ("No cmd in cmds"));
@@ -234,6 +234,7 @@ static void clubby_proto_parse_req(struct json_token *frame,
   struct clubby_event evt;
 
   evt.ev = CLUBBY_REQUEST;
+  evt.context = context;
   evt.request.src = find_json_token(frame, "src");
   if (evt.request.src == NULL || evt.request.src->type != JSON_TYPE_STRING) {
     LOG(LL_ERROR, ("Invalid src |%.*s|", frame->len, frame->ptr));
@@ -281,7 +282,7 @@ static void clubby_proto_parse_req(struct json_token *frame,
   }
 }
 
-static void clubby_proto_handle_frame(struct mg_str data) {
+static void clubby_proto_handle_frame(struct mg_str data, void *context) {
   struct json_token *frame = parse_json2(data.p, data.len);
 
   if (frame == NULL) {
@@ -293,12 +294,12 @@ static void clubby_proto_handle_frame(struct mg_str data) {
 
   tmp = find_json_token(frame, "resp");
   if (tmp != NULL) {
-    clubby_proto_parse_resp(tmp);
+    clubby_proto_parse_resp(tmp, context);
   }
 
   tmp = find_json_token(frame, "cmds");
   if (tmp != NULL) {
-    clubby_proto_parse_req(frame, tmp);
+    clubby_proto_parse_req(frame, tmp, context);
   }
 
   free(frame);
@@ -311,6 +312,7 @@ void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_CONNECT: {
       evt.ev = CLUBBY_NET_CONNECT;
       evt.net_connect.success = (*(int *) ev_data == 0);
+      evt.context = nc->user_data;
 
       LOG(LL_DEBUG, ("CONNECT (%d)", evt.net_connect.success));
 
@@ -333,6 +335,7 @@ void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
       LOG(LL_DEBUG, ("HANDSHAKE DONE"));
       nc->flags |= MG_F_CLUBBY_CONNECTED;
       evt.ev = CLUBBY_CONNECT;
+      evt.context = nc->user_data;
       s_clubby_cb(&evt);
       break;
     }
@@ -348,9 +351,10 @@ void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
        */
       evt.frame.data.len = wm->size;
       evt.ev = CLUBBY_FRAME;
+      evt.context = nc->user_data;
       s_clubby_cb(&evt);
 
-      clubby_proto_handle_frame(evt.frame.data);
+      clubby_proto_handle_frame(evt.frame.data, nc->user_data);
 
       break;
     }
@@ -358,8 +362,8 @@ void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_CLOSE:
       LOG(LL_DEBUG, ("CLOSE"));
       nc->flags &= ~MG_F_CLUBBY_CONNECTED;
-      s_clubby_conn = NULL;
       evt.ev = CLUBBY_DISCONNECT;
+      evt.context = nc->user_data;
       s_clubby_cb(&evt);
       break;
   }

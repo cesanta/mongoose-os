@@ -55,6 +55,7 @@ struct timer_info {
   os_timer_t t;
   v7_val_t *js_cb;
   timer_callback c_cb;
+  void *c_cb_param;
 };
 
 void esp_timer_callback(void *arg) {
@@ -67,7 +68,7 @@ void esp_timer_callback(void *arg) {
   }
 
   if (ti->c_cb != NULL) {
-    ti->c_cb();
+    ti->c_cb(ti->c_cb_param);
   }
 
   free(ti);
@@ -85,9 +86,10 @@ void sj_set_timeout(int msecs, v7_val_t *cb) {
   esp_set_timeout(msecs, ti);
 }
 
-void sj_set_c_timeout(int msecs, timer_callback cb) {
+void sj_set_c_timeout(int msecs, timer_callback cb, void *param) {
   struct timer_info *ti = calloc(1, sizeof(*ti));
   ti->c_cb = cb;
+  ti->c_cb_param = param;
   esp_set_timeout(msecs, ti);
 }
 
