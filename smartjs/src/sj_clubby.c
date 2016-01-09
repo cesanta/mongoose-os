@@ -13,17 +13,17 @@
 
 static struct v7 *s_v7;
 
-const char s_ready_cmd[] = "_$conn_ready$_";
-const char s_onopen_cmd[] = "_$conn_onopen$_";
-const char s_onclose_cmd[] = "_$conn_onclose$_";
-const char s_oncmd_cmd[] = "_$conn_ononcmd$_";
-const char s_clubby_prop[] = "_$clubby_prop$_";
+static const char s_ready_cmd[] = "_$conn_ready$_";
+static const char s_onopen_cmd[] = "_$conn_onopen$_";
+static const char s_onclose_cmd[] = "_$conn_onclose$_";
+static const char s_oncmd_cmd[] = "_$conn_ononcmd$_";
+static const char s_clubby_prop[] = "_$clubby_prop$_";
 
 struct clubby_cb_info {
   char id[MAX_COMMAND_NAME_LENGTH];
   int8_t id_len;
 
-  clubby_callback_t cb;
+  sj_clubby_callback_t cb;
   void *user_data;
 
   struct clubby_cb_info *next;
@@ -49,6 +49,18 @@ struct clubby {
   struct sys_config_clubby cfg;
 };
 
+/*
+ * This is not the real clubby, just storage for global handlers
+ */
+static struct clubby s_global_clubby;
+
+static void clubby_connect(struct clubby *clubby);
+static void clubby_disconnect(struct clubby *clubby);
+static void schedule_reconnect();
+static int register_js_callback(struct clubby *clubby, struct v7 *v7,
+                                const char *id, int8_t id_len,
+                                sj_clubby_callback_t cb, v7_val_t cbv);
+
 static void free_clubby(struct clubby *clubby) {
   /*
    * TODO(alashkin): free queues, responses etc and find the way
@@ -60,11 +72,6 @@ static void free_clubby(struct clubby *clubby) {
   free(clubby->cfg.backend);
   free(clubby);
 }
-
-/*
- * This is not the real clubby, just storage for global handlers
- */
-static struct clubby s_global_clubby;
 
 static void set_clubby(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
   v7_set(v7, obj, s_clubby_prop, sizeof(s_clubby_prop),
@@ -89,17 +96,13 @@ static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
     return V7_OK;                                          \
   }
 
-static void schedule_reconnect();
-void sj_clubby_connect(struct clubby *clubby);
-void sj_clubby_disconnect(struct clubby *clubby);
-
 static void reset_reconnect_timeout(struct clubby *clubby) {
   clubby->reconnect_timeout =
       clubby->cfg.reconnect_timeout / RECONNECT_TIMEOUT_MULTIPLY;
 }
 
 static void reconnect_cb(void *param) {
-  sj_clubby_connect((struct clubby *) param);
+  clubby_connect((struct clubby *) param);
 }
 
 static void schedule_reconnect(struct clubby *clubby) {
@@ -108,9 +111,9 @@ static void schedule_reconnect(struct clubby *clubby) {
   sj_set_c_timeout(clubby->reconnect_timeout * 1000, reconnect_cb, clubby);
 }
 
-static int clubby_register_callback(struct clubby *clubby, const char *id,
-                                    int8_t id_len, clubby_callback_t cb,
-                                    void *user_data) {
+static int register_callback(struct clubby *clubby, const char *id,
+                             int8_t id_len, sj_clubby_callback_t cb,
+                             void *user_data) {
   struct clubby_cb_info *new_cb_info = calloc(1, sizeof(*new_cb_info));
 
   if (new_cb_info == NULL) {
@@ -134,8 +137,8 @@ static int clubby_register_callback(struct clubby *clubby, const char *id,
   return 1;
 }
 
-static struct clubby_cb_info *clubby_remove_cbinfo(
-    struct clubby *clubby, struct clubby_cb_info *cb_info) {
+static struct clubby_cb_info *remove_cbinfo(struct clubby *clubby,
+                                            struct clubby_cb_info *cb_info) {
   struct clubby_cb_info *current = clubby->resp_cbs;
   struct clubby_cb_info *prev = NULL;
   struct clubby_cb_info *ret = NULL;
@@ -161,10 +164,9 @@ static struct clubby_cb_info *clubby_remove_cbinfo(
   return ret;
 }
 
-static struct clubby_cb_info *clubby_find_cbinfo(struct clubby *clubby,
-                                                 struct clubby_cb_info *start,
-                                                 const char *id,
-                                                 int8_t id_len) {
+static struct clubby_cb_info *find_cbinfo(struct clubby *clubby,
+                                          struct clubby_cb_info *start,
+                                          const char *id, int8_t id_len) {
   struct clubby_cb_info *current = start ? start->next : clubby->resp_cbs;
 
   while (current != NULL) {
@@ -176,14 +178,6 @@ static struct clubby_cb_info *clubby_find_cbinfo(struct clubby *clubby,
   }
 
   return current;
-}
-
-/* Using separated callback for /v1/Hello in demo and debug purposes */
-static void clubby_hello_resp_callback(struct clubby_event *evt,
-                                       void *user_data) {
-  (void) user_data;
-  LOG(LL_DEBUG,
-      ("Got response for /v1/Hello, status=%d", evt->response.status));
 }
 
 static void enqueue_frame(struct clubby *clubby, struct ub_ctx *ctx,
@@ -218,12 +212,81 @@ static struct queued_frame *pop_queued_frame(struct clubby *clubby) {
 }
 
 /*
+ * TODO(alashkin): try to move this function to ubjsetializer.c
+ * (or something like ubjsetializer_ex.c
+ */
+static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
+  LOG(LL_VERBOSE_DEBUG, ("enter"));
+
+  if (v7_is_number(obj)) {
+    double n = v7_to_number(obj);
+    LOG(LL_VERBOSE_DEBUG, ("type=number val=%d", (int) n))
+    return ub_create_number(n);
+  } else if (v7_is_string(obj)) {
+    const char *s = v7_to_cstring(v7, &obj);
+    LOG(LL_VERBOSE_DEBUG, ("type=string val=%s", s))
+    return ub_create_string(ctx, s);
+  } else if (v7_is_array(v7, obj)) {
+    int i, arr_len = v7_array_length(v7, obj);
+    LOG(LL_VERBOSE_DEBUG, ("type=array len=%d", arr_len));
+    ub_val_t ub_arr = ub_create_array(ctx);
+    for (i = 0; i < arr_len; i++) {
+      v7_val_t item = v7_array_get(v7, obj, i);
+      ub_array_push(ctx, ub_arr, obj_to_ubj(v7, ctx, item));
+    }
+    return ub_arr;
+  } else if (v7_is_object(obj)) {
+    LOG(LL_VERBOSE_DEBUG, ("type=object"));
+    ub_val_t ub_obj = ub_create_object(ctx);
+    void *h = NULL;
+    v7_val_t name, val;
+    v7_prop_attr_t attrs;
+    while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
+      LOG(LL_VERBOSE_DEBUG, ("propname=%s", v7_to_cstring(v7, &name)));
+      ub_add_prop(ctx, ub_obj, v7_to_cstring(v7, &name),
+                  obj_to_ubj(v7, ctx, val));
+    }
+    return ub_obj;
+  } else {
+    char buf[100], *p;
+    p = v7_stringify(v7, obj, buf, sizeof(buf), V7_STRINGIFY_JSON);
+    LOG(LL_ERROR, ("Unknown type, val=%s", p));
+    ub_val_t ret = ub_create_string(ctx, p);
+    if (p != buf) {
+      free(p);
+    }
+    return ret;
+  }
+}
+
+static int register_js_callback(struct clubby *clubby, struct v7 *v7,
+                                const char *id, int8_t id_len,
+                                sj_clubby_callback_t cb, v7_val_t cbv) {
+  v7_val_t *cb_ptr = malloc(sizeof(*cb_ptr));
+  if (cb_ptr == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return 0;
+  }
+  *cb_ptr = cbv;
+  v7_own(v7, cb_ptr);
+  return register_callback(clubby, id, id_len, cb, cb_ptr);
+}
+
+/* Using separated callback for /v1/Hello in demo and debug purposes */
+static void clubby_hello_resp_callback(struct clubby_event *evt,
+                                       void *user_data) {
+  (void) user_data;
+  LOG(LL_DEBUG,
+      ("Got response for /v1/Hello, status=%d", evt->response.status));
+}
+
+/*
  * Sends or enqueues clubby frame
  * frame must be the whole clubbu command in ubjson
  * unserialized state
  */
-void sj_clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
-                          ub_val_t frame) {
+static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
+                              ub_val_t frame) {
   if (clubby_proto_is_connected(clubby->nc)) {
     clubby_proto_send(clubby->nc, ctx, frame);
   } else {
@@ -238,17 +301,17 @@ void sj_clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
  * cmds parameter must be an ubjson array (created by `ub_create_array`)
  * and each element should represent one command (created by `ub_create_object`)
  */
-void sj_clubby_send_cmds(struct clubby *clubby, struct ub_ctx *ctx,
-                         const char *dst, ub_val_t cmds) {
+static void clubby_send_cmds(struct clubby *clubby, struct ub_ctx *ctx,
+                             const char *dst, ub_val_t cmds) {
   ub_val_t frame = clubby_proto_create_frame_base(ctx, clubby->cfg.device_id,
                                                   clubby->cfg.device_psk, dst);
   ub_add_prop(ctx, frame, "cmds", cmds);
 
-  sj_clubby_send_frame(clubby, ctx, frame);
+  clubby_send_frame(clubby, ctx, frame);
 }
 
-void sj_clubby_send_resp(struct clubby *clubby, const char *dst, int64_t id,
-                         int status, const char *status_msg) {
+static void clubby_send_resp(struct clubby *clubby, const char *dst, int64_t id,
+                             int status, const char *status_msg) {
   /*
    * Do not queueing responses. Work like clubby.js
    * TODO(alashkin): is it good?
@@ -277,7 +340,7 @@ static void clubby_hello_req_callback(struct clubby_event *evt,
   snprintf(status_msg, sizeof(status_msg) - 1, "Hello, this is %s",
            clubby->cfg.device_id);
 
-  sj_clubby_send_resp(clubby, src, evt->request.id, 0, status_msg);
+  clubby_send_resp(clubby, src, evt->request.id, 0, status_msg);
 }
 
 static void clubby_send_hello(struct clubby *clubby) {
@@ -288,10 +351,10 @@ static void clubby_send_hello(struct clubby *clubby) {
   ub_add_prop(ctx, cmdv, "cmd", ub_create_string(ctx, "/v1/Hello"));
   int32_t id = clubby_proto_get_new_id();
   ub_add_prop(ctx, cmdv, "id", ub_create_number(id));
-  clubby_register_callback(clubby, (char *) &id, sizeof(id),
-                           clubby_hello_resp_callback, NULL);
+  register_callback(clubby, (char *) &id, sizeof(id),
+                    clubby_hello_resp_callback, NULL);
 
-  sj_clubby_send_cmds(clubby, ctx, clubby->cfg.backend, cmds);
+  clubby_send_cmds(clubby, ctx, clubby->cfg.backend, cmds);
 }
 
 static void clubby_send_labels(struct clubby *clubby) {
@@ -315,7 +378,7 @@ static void clubby_send_labels(struct clubby *clubby) {
   ub_add_prop(ctx, args, "labels", labels);
 
   /* We don't intrested in resp, so, using default resp handler */
-  sj_clubby_send_cmds(clubby, ctx, clubby->cfg.backend, cmds);
+  clubby_send_cmds(clubby, ctx, clubby->cfg.backend, cmds);
 }
 
 static int clubby_call_cb(struct clubby *clubby, const char *id, int8_t id_len,
@@ -323,10 +386,10 @@ static int clubby_call_cb(struct clubby *clubby, const char *id, int8_t id_len,
   int ret = 0;
 
   struct clubby_cb_info *cb_info = NULL;
-  while ((cb_info = clubby_find_cbinfo(clubby, cb_info, id, id_len)) != NULL) {
+  while ((cb_info = find_cbinfo(clubby, cb_info, id, id_len)) != NULL) {
     cb_info->cb(evt, cb_info->user_data);
     if (remove_after_call) {
-      cb_info = clubby_remove_cbinfo(clubby, cb_info);
+      cb_info = remove_cbinfo(clubby, cb_info);
     }
     ret = 1;
     /* continue loop, we may have several callbacks for the same command */
@@ -424,7 +487,7 @@ static void clubby_cb(struct clubby_event *evt) {
   }
 }
 
-void sj_clubby_connect(struct clubby *clubby) {
+static void clubby_connect(struct clubby *clubby) {
   clubby->session_flags &= ~SF_MANUAL_DISCONNECT;
   struct mg_connection *nc =
       clubby_proto_connect(&sj_mgr, clubby->cfg.server_address, clubby);
@@ -435,66 +498,9 @@ void sj_clubby_connect(struct clubby *clubby) {
   clubby->nc = nc;
 }
 
-void sj_clubby_disconnect(struct clubby *clubby) {
+static void clubby_disconnect(struct clubby *clubby) {
   clubby->session_flags |= SF_MANUAL_DISCONNECT;
   clubby_proto_disconnect(clubby->nc);
-}
-
-static enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
-  DECLARE_CLUBBY();
-
-  clubby_send_hello(clubby);
-  *res = v7_create_boolean(1);
-
-  return V7_OK;
-}
-
-/*
- * TODO(alashkin): try to move this function to ubjsetializer.c
- * (or something like ubjsetializer_ex.c
- */
-static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
-  LOG(LL_VERBOSE_DEBUG, ("enter"));
-
-  if (v7_is_number(obj)) {
-    double n = v7_to_number(obj);
-    LOG(LL_VERBOSE_DEBUG, ("type=number val=%d", (int) n))
-    return ub_create_number(n);
-  } else if (v7_is_string(obj)) {
-    const char *s = v7_to_cstring(v7, &obj);
-    LOG(LL_VERBOSE_DEBUG, ("type=string val=%s", s))
-    return ub_create_string(ctx, s);
-  } else if (v7_is_array(v7, obj)) {
-    int i, arr_len = v7_array_length(v7, obj);
-    LOG(LL_VERBOSE_DEBUG, ("type=array len=%d", arr_len));
-    ub_val_t ub_arr = ub_create_array(ctx);
-    for (i = 0; i < arr_len; i++) {
-      v7_val_t item = v7_array_get(v7, obj, i);
-      ub_array_push(ctx, ub_arr, obj_to_ubj(v7, ctx, item));
-    }
-    return ub_arr;
-  } else if (v7_is_object(obj)) {
-    LOG(LL_VERBOSE_DEBUG, ("type=object"));
-    ub_val_t ub_obj = ub_create_object(ctx);
-    void *h = NULL;
-    v7_val_t name, val;
-    v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
-      LOG(LL_VERBOSE_DEBUG, ("propname=%s", v7_to_cstring(v7, &name)));
-      ub_add_prop(ctx, ub_obj, v7_to_cstring(v7, &name),
-                  obj_to_ubj(v7, ctx, val));
-    }
-    return ub_obj;
-  } else {
-    char buf[100], *p;
-    p = v7_stringify(v7, obj, buf, sizeof(buf), V7_STRINGIFY_JSON);
-    LOG(LL_ERROR, ("Unknown type, val=%s", p));
-    ub_val_t ret = ub_create_string(ctx, p);
-    if (p != buf) {
-      free(p);
-    }
-    return ret;
-  }
 }
 
 static void clubby_simple_cb(struct clubby_event *evt, void *user_data) {
@@ -510,6 +516,30 @@ static void clubby_simple_cb_run_once(struct clubby_event *evt,
   sj_invoke_cb0(s_v7, *cbp);
   v7_disown(s_v7, cbp);
   free(cbp);
+}
+
+static enum v7_err clubby_set_on_event(const char *eventid, int8_t eventid_len,
+                                       struct v7 *v7, v7_val_t *res) {
+  DECLARE_CLUBBY();
+
+  v7_val_t cbv = v7_arg(v7, 0);
+
+  if (!v7_is_function(cbv)) {
+    printf("Invalid arguments\n");
+    goto error;
+  }
+
+  if (!register_js_callback(clubby, v7, eventid, eventid_len, clubby_simple_cb,
+                            cbv)) {
+    goto error;
+  }
+
+  *res = v7_create_boolean(1);
+  return V7_OK;
+
+error:
+  *res = v7_create_boolean(0);
+  return V7_OK;
 }
 
 static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
@@ -545,8 +575,8 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
  * Trying to reproduce handleCmd from clubby.js
  * TODO(alashkin): handleCmd doesn't support `response` field
  */
-static void send_response(struct clubby *clubby, int64_t id, const char *dst,
-                          v7_val_t val, v7_val_t st) {
+static void clubby_send_response(struct clubby *clubby, int64_t id,
+                                 const char *dst, v7_val_t val, v7_val_t st) {
   struct ub_ctx *ctx = ub_ctx_new();
   ub_val_t resp = clubby_proto_create_resp(
       ctx, clubby->cfg.device_id, clubby->cfg.device_psk, dst, id,
@@ -574,7 +604,7 @@ static enum v7_err done_func(struct v7 *v7, v7_val_t *res) {
   v7_val_t valv = v7_arg(v7, 0);
   v7_val_t stv = v7_arg(v7, 1);
 
-  send_response(ctx->clubby, ctx->id, ctx->dst, valv, stv);
+  clubby_send_response(ctx->clubby, ctx->id, ctx->dst, valv, stv);
   *res = v7_create_boolean(1);
 
   free(ctx->dst);
@@ -630,7 +660,8 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
     v7_val_t res;
     cb_res = v7_apply(s_v7, *cbv, v7_get_global(s_v7), args, &res);
     if (cb_res == V7_OK) {
-      send_response(clubby, evt->request.id, dst, res, v7_create_undefined());
+      clubby_send_response(clubby, evt->request.id, dst, res,
+                           v7_create_undefined());
     } else {
       LOG(LL_ERROR, ("Callback invocation error"));
     }
@@ -691,17 +722,13 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
   }
 }
 
-static int sj_register_callback(struct clubby *clubby, struct v7 *v7,
-                                const char *id, int8_t id_len,
-                                clubby_callback_t cb, v7_val_t cbv) {
-  v7_val_t *cb_ptr = malloc(sizeof(*cb_ptr));
-  if (cb_ptr == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
-    return 0;
-  }
-  *cb_ptr = cbv;
-  v7_own(v7, cb_ptr);
-  return clubby_register_callback(clubby, id, id_len, cb, cb_ptr);
+static enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
+  DECLARE_CLUBBY();
+
+  clubby_send_hello(clubby);
+  *res = v7_create_boolean(1);
+
+  return V7_OK;
 }
 
 /* clubby.call(dst: string, cmd: object, callback(resp): function) */
@@ -743,12 +770,12 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   ub_val_t cmds = ub_create_array(ctx);
   ub_array_push(ctx, cmds, obj_to_ubj(v7, ctx, cmdv));
 
-  if (!sj_register_callback(clubby, v7, (char *) &id, sizeof(id),
+  if (!register_js_callback(clubby, v7, (char *) &id, sizeof(id),
                             clubby_resp_cb, cbv)) {
     goto error;
   }
 
-  sj_clubby_send_cmds(clubby, ctx, v7_to_cstring(v7, &dstv), cmds);
+  clubby_send_cmds(clubby, ctx, v7_to_cstring(v7, &dstv), cmds);
   *res = v7_create_boolean(1);
 
   return V7_OK;
@@ -772,7 +799,7 @@ static enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
      * oncmd is called with one arg, and this arg is function -
      * setup global `oncmd` handler
      */
-    if (!sj_register_callback(clubby, v7, s_oncmd_cmd, sizeof(s_oncmd_cmd),
+    if (!register_js_callback(clubby, v7, s_oncmd_cmd, sizeof(s_oncmd_cmd),
                               clubby_simple_cb_run_once, arg1)) {
       goto error;
     }
@@ -782,36 +809,12 @@ static enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
      * setup handler for specific command
      */
     const char *cmd_str = v7_to_cstring(v7, &arg1);
-    if (!sj_register_callback(clubby, v7, cmd_str, strlen(cmd_str),
+    if (!register_js_callback(clubby, v7, cmd_str, strlen(cmd_str),
                               clubby_req_cb, arg2)) {
       goto error;
     }
   } else {
     printf("Invalid arguments");
-    goto error;
-  }
-
-  *res = v7_create_boolean(1);
-  return V7_OK;
-
-error:
-  *res = v7_create_boolean(0);
-  return V7_OK;
-}
-
-static enum v7_err clubby_set_on_event(const char *eventid, int8_t eventid_len,
-                                       struct v7 *v7, v7_val_t *res) {
-  DECLARE_CLUBBY();
-
-  v7_val_t cbv = v7_arg(v7, 0);
-
-  if (!v7_is_function(cbv)) {
-    printf("Invalid arguments\n");
-    goto error;
-  }
-
-  if (!sj_register_callback(clubby, v7, eventid, eventid_len, clubby_simple_cb,
-                            cbv)) {
     goto error;
   }
 
@@ -846,7 +849,7 @@ static enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     sj_invoke_cb0(v7, cbv);
     v7_disown(v7, &cbv);
   } else {
-    if (!sj_register_callback(clubby, v7, s_ready_cmd, sizeof(s_ready_cmd),
+    if (!register_js_callback(clubby, v7, s_ready_cmd, sizeof(s_ready_cmd),
                               clubby_simple_cb_run_once, cbv)) {
       goto error;
     }
@@ -894,7 +897,7 @@ error:
   {                                                                            \
     v7_val_t tmp = v7_get(v7, arg, #name1, ~0);                                \
     if (v7_is_function(tmp)) {                                                 \
-      sj_register_callback(clubby, v7, name2, sizeof(name2), clubby_simple_cb, \
+      register_js_callback(clubby, v7, name2, sizeof(name2), clubby_simple_cb, \
                            tmp);                                               \
     } else if (!v7_is_undefined(tmp)) {                                        \
       free_clubby(clubby);                                                     \
@@ -933,15 +936,14 @@ static enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
 
   set_clubby(v7, this_obj, clubby);
   reset_reconnect_timeout(clubby);
-  sj_clubby_connect(clubby);
+  clubby_connect(clubby);
 
   return V7_OK;
 }
 
-int sj_clubby_register_global_command(const char *cmd, clubby_callback_t cb,
+int sj_clubby_register_global_command(const char *cmd, sj_clubby_callback_t cb,
                                       void *user_data) {
-  return clubby_register_callback(&s_global_clubby, cmd, strlen(cmd), cb,
-                                  user_data);
+  return register_callback(&s_global_clubby, cmd, strlen(cmd), cb, user_data);
 }
 
 void sj_clubby_send_reply(struct clubby_event *evt, int status,
@@ -952,7 +954,7 @@ void sj_clubby_send_reply(struct clubby_event *evt, int status,
   char *dst = calloc(1, evt->request.src->len + 1);
   memcpy(dst, evt->request.src->ptr, evt->request.src->len);
 
-  sj_clubby_send_resp(clubby, dst, evt->request.id, status, status_msg);
+  clubby_send_resp(clubby, dst, evt->request.id, status, status_msg);
 }
 
 void sj_init_clubby(struct v7 *v7) {
@@ -975,6 +977,9 @@ void sj_init_clubby(struct v7 *v7) {
 
   sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
                                     NULL);
+
+  /* TODO(alashkin): remove or expose functions below */
+  (void) clubby_disconnect;
 }
 
 #endif /* DISABLE_C_CLUBBY */

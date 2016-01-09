@@ -69,13 +69,15 @@ void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
                        ub_val_t frame);
 
 void clubby_proto_init(clubby_proto_callback_t cb);
+
 struct mg_connection *clubby_proto_connect(struct mg_mgr *mgr,
                                            const char *server_address,
                                            void *context);
+
 void clubby_proto_disconnect(struct mg_connection *nc);
+
 int clubby_proto_is_connected(struct mg_connection *nc);
 
-/* Utility */
 int64_t clubby_proto_get_new_id();
 
 #endif /* DISABLE_C_CLUBBY */

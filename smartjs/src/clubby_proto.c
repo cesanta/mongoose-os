@@ -15,7 +15,8 @@
 static clubby_proto_callback_t s_clubby_cb;
 
 /* Forward declarations */
-void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data);
+static void clubby_proto_handler(struct mg_connection *nc, int ev,
+                                 void *ev_data);
 
 void clubby_proto_init(clubby_proto_callback_t cb) {
   s_clubby_cb = cb;
@@ -81,7 +82,7 @@ void clubby_proto_disconnect(struct mg_connection *nc) {
  * our own
  * bookkeeping. TODO(mkm): consider moving to Mongoose.
  */
-void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
+static void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
   struct mg_connection *nc = (struct mg_connection *) user_data;
 
   if (!clubby_proto_is_connected(nc)) {
@@ -302,7 +303,8 @@ static void clubby_proto_handle_frame(struct mg_str data, void *context) {
   free(frame);
 }
 
-void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
+static void clubby_proto_handler(struct mg_connection *nc, int ev,
+                                 void *ev_data) {
   struct clubby_event evt;
 
   switch (ev) {
