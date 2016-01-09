@@ -25,7 +25,7 @@ include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
 PROG = smartjs
 
-JS_SRCS    := $(SJSJS_PATH)/clubby.js \
+JS_SRCS    := ./clubby.js \
               $(SJSJS_PATH)/sys_init.js \
               $(SJSJS_PATH)/app_init.js
 
