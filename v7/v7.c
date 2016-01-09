@@ -228,9 +228,14 @@ v7_val_t v7_create_null(void);
 v7_val_t v7_create_undefined(void);
 
 /*
- * Create string primitive value.
+ * Creates a string primitive value.
  * `str` must point to the utf8 string of length `len`.
- * If `len` is ~0, `str` is assumed to be NUL-terminated and `strlen(str)`
+ * If `len` is ~0, `str` is assumed to be NUL-terminated and `strlen(str)` is
+ * used.
+ *
+ * If `copy` is non-zero, the string data is copied and owned by the GC. The
+ * caller can free the string data afterwards. Otherwise (`copy` is zero), the
+ * caller owns the string data, and is responsible for not freeing it while it
  * is used.
  */
 v7_val_t v7_create_string(struct v7 *v7, const char *str, size_t len, int copy);
@@ -15139,8 +15144,8 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
 }
 
 /* Create a string */
-v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
-  struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
+v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int copy) {
+  struct mbuf *m = copy ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
   int dict_index;
 
@@ -15169,7 +15174,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     offset = 0;
     GET_VAL_NAN_PAYLOAD(offset)[0] = dict_index;
     tag = V7_TAG_STRING_D;
-  } else if (own) {
+  } else if (copy) {
     compute_need_gc(v7);
     embed_string(m, m->len, p, len, EMBSTR_ZERO_TERM);
     tag = V7_TAG_STRING_O;
