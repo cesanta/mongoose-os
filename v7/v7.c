@@ -7806,8 +7806,16 @@ void cs_ubjson_emit_autonumber(struct mbuf *buf, double v) {
 }
 
 void cs_ubjson_emit_size(struct mbuf *buf, size_t v) {
-  /* TODO(mkm): use "high-precision" stringified type */
+/* TODO(mkm): use "high-precision" stringified type */
+
+#if defined(INTPTR_MAX) && defined(INT32_MAX) && (INTPTR_MAX != INT32_MAX)
+  /*
+   * This assert expression is always true on 32-bit system,
+   * shutting up compiler
+   */
   assert((uint64_t) v < INT64_MAX);
+#endif
+
   cs_ubjson_emit_autoint(buf, (int64_t) v);
 }
 

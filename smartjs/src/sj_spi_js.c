@@ -194,6 +194,7 @@ void init_spijs(struct v7 *v7) {
 #else
 
 void init_spijs(struct v7 *v7) {
+  (void) v7;
 }
 
 #endif /* SJ_DISABLE_SPI */

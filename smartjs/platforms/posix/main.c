@@ -8,6 +8,7 @@
 #include "smartjs/src/sj_prompt.h"
 #include "smartjs/src/sj_timers.h"
 #include "smartjs/src/sj_v7_ext.h"
+#include "common/cs_dbg.h"
 #include "smartjs.h"
 #include "device_config.h"
 
@@ -74,7 +75,9 @@ static void post_init(struct v7 *v7) {
 }
 
 int device_init_platform(struct sys_config *cfg) {
-  return cfg == NULL ? 0 : 1;
+  cs_log_set_level(cfg->debug.level);
+
+  return 1;
 }
 
 void device_reboot(void) {

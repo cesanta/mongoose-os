@@ -95,6 +95,9 @@ void sj_usleep(int usecs) {
 
 #ifndef _WIN32
 void posix_timer_callback(int sig, siginfo_t *si, void *uc) {
+  (void) sig;
+  (void) uc;
+  (void) si;
 #ifdef __APPLE__
   sj_invoke_cb0(v7, *bsd_timer_cb);
 #else
@@ -181,6 +184,7 @@ static void *stdin_thread(void *param) {
 
 static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   size_t i;
+  (void) ev_data;
   struct mbuf *io = &nc->recv_mbuf;
   switch (ev) {
     case MG_EV_RECV:
@@ -211,4 +215,34 @@ void sj_prompt_init_hal() {
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
   _sj_invoke_cb(v7, func, this_obj, args);
+}
+
+/*
+ * Not smart, but simple and cross-platform implementation of c-timeouts
+ * JS timers aren't suitable because Apple's version offers
+ * only one timer, while C-code (like clubby implementation might
+ * need several.
+ */
+struct c_timeout_param {
+  timer_callback cb;
+  void *data;
+  int msecs;
+};
+
+void *c_timeout_cb(void* param) {
+  struct c_timeout_param *p = (struct c_timeout_param *)param;
+  usleep(p->msecs * 1000);
+  p->cb(p->data);
+
+  free(p);
+  return NULL;
+}
+
+void sj_set_c_timeout(int msecs, timer_callback cb, void *param) {
+  struct c_timeout_param *p = malloc(sizeof(*p));
+  p->cb = cb;
+  p->data = param;
+  p->msecs = msecs;
+
+  mg_start_thread(c_timeout_cb, p);
 }

@@ -1,7 +1,4 @@
 #include <stdlib.h>
-#include <ets_sys.h>
-#include <osapi.h>
-#include <user_interface.h>
 #include <stdio.h>
 
 #include "clubby_proto.h"
@@ -320,11 +317,12 @@ void clubby_proto_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
       if (evt.net_connect.success) {
         char *proto = NULL;
-        (void) asprintf(
+        int dummy = asprintf(
             &proto,
             "Sec-WebSocket-Protocol: %s\r\n"
             "Sec-WebSocket-Extensions: %s-encoding; in=json; out=ubjson\r\n",
             WS_PROTOCOL, WS_PROTOCOL);
+        (void) dummy;
         mg_send_websocket_handshake(nc, "/", proto);
         free(proto);
       }

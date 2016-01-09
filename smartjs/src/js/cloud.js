@@ -21,19 +21,12 @@ Cloud.store = function(name,val,opts) {
 }
 
 Cloud.init = function(backend, device_id, device_psk, opts) {
-  File.eval("clubby.js");
   var copts = $.extend({
-    url: 'ws:' + backend + ':80',
+    url: backend + ':80',
     src: device_id,
     key: device_psk,
-    log: false,
-    onopen: function() {
-      clubby.call(backend, {cmd: "/v1/Hello"}, function() {});
-    }
   }, opts);
   global.clubby = new Clubby(copts);
-  File.eval("swupdate.js");
-  SWUpdate(clubby);
   File.eval("fileservice.js");
   FileService(clubby);
 }

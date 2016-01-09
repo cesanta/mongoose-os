@@ -878,9 +878,9 @@ error:
 #define GET_STR_PARAM(name1, name2)                                     \
   {                                                                     \
     v7_val_t tmp = v7_get(v7, arg, #name2, ~0);                         \
-    if (v7_is_undefined(tmp)) {                                         \
+    if (v7_is_undefined(tmp) && get_cfg()->clubby.name1 != NULL) {      \
       clubby->cfg.name1 = strdup(get_cfg()->clubby.name1);              \
-    } else if (v7_is_number(tmp)) {                                     \
+    } else if (v7_is_string(tmp)) {                                     \
       clubby->cfg.name1 = strdup(v7_to_cstring(v7, &tmp));              \
     } else {                                                            \
       free_clubby(clubby);                                              \

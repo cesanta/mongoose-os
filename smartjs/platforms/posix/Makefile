@@ -19,19 +19,20 @@ V7_FEATURES = -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
               -DCS_ENABLE_UBJSON -DV7_ENABLE_UBJSON
 
 SJ_FEATURES =
-MONGOOSE_FEATURES = -DMG_USE_READ_WRITE
+MONGOOSE_FEATURES = -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS
 
 INCLUDES = $(REPO_ROOT) $(SRC_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 			mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
 			sj_mongoose_ws_client.c sj_gpio_js.c \
 			sj_prompt.c sj_timers.c sj_uart.c sj_http.c \
-			sj_config.c sys_config.c device_config.c
+			sj_config.c sys_config.c device_config.c \
+			clubby_proto.c ubjserializer.c sj_clubby.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -O2 -fno-inline -Wall -Werror -g -Wno-unused-function \
+CFLAGS ?= -O2 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
           -D_BSD_SOURCE \
           -D_GNU_SOURCE \
           $(V7_FEATURES) \
@@ -105,7 +106,7 @@ LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 OBJS = $(APP_OBJS)
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH)
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/* $(SRC_PATH)/fs/*)
 

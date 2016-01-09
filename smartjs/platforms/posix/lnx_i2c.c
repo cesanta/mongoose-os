@@ -64,6 +64,7 @@ int i2c_init(i2c_connection c) {
 }
 
 enum i2c_ack_type i2c_start(i2c_connection c, uint16_t addr, enum i2c_rw mode) {
+  (void) mode;
   struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
   /*
    * In Linux we should't set RW here
@@ -111,6 +112,7 @@ uint8_t i2c_read_byte(i2c_connection c, enum i2c_ack_type ack_type) {
 
 void i2c_read_bytes(i2c_connection c, size_t n, uint8_t *buf,
                     enum i2c_ack_type last_ack_type) {
+  (void) last_ack_type;
   struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
   lnx_i2c_read_shim(conn->fd, buf, n);
 
@@ -124,6 +126,7 @@ void i2c_read_bytes(i2c_connection c, size_t n, uint8_t *buf,
 void i2c_send_ack(i2c_connection c, enum i2c_ack_type ack_type) {
   /* For compatibility only */
   (void) c;
+  (void) ack_type;
 }
 
 void i2c_close(i2c_connection c) {

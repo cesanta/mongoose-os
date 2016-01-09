@@ -355,6 +355,7 @@ void init_i2cjs(struct v7 *v7) {
 #else
 
 void init_i2cjs(struct v7 *v7) {
+  (void) v7;
 }
 
 #endif /* SJ_DISABLE_I2C */

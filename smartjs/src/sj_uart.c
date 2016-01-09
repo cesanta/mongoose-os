@@ -34,6 +34,7 @@ size_t sj_uart_recv_cb(void *ctx, const char *d, size_t len) {
  *
  */
 static enum v7_err UART_ctor(struct v7 *v7, v7_val_t *res) {
+  (void) res;
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_arg(v7, 0);
@@ -77,6 +78,7 @@ static enum v7_err UART_write(struct v7 *v7, v7_val_t *res) {
   (void) this_obj;
 
   sj_hal_write_uart(v7_to_foreign(dev), d, len);
+  *res = v7_create_boolean(1);
 
   return V7_OK;
 }
@@ -88,7 +90,7 @@ static enum v7_err UART_write(struct v7 *v7, v7_val_t *res) {
 static enum v7_err UART_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_get(v7, this_obj, "_dev", ~0), maxv = v7_arg(v7, 0);
-  size_t max = v7_is_number(maxv) ? (size_t) v7_to_number(maxv) : ~0;
+  size_t max = v7_is_number(maxv) ? (size_t) v7_to_number(maxv) : (size_t) ~0;
   *res = sj_hal_read_uart(v7, v7_to_foreign(dev), max);
 
   return V7_OK;
@@ -103,13 +105,16 @@ static enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   v7_val_t cb = v7_arg(v7, 0);
   v7_val_t wantv = v7_arg(v7, 1);
   v7_val_t udv = v7_get(v7, this_obj, "_ud", ~0);
-  size_t want = v7_is_number(wantv) ? (size_t) v7_to_number(wantv) : ~0;
+  size_t want =
+      v7_is_number(wantv) ? (size_t) v7_to_number(wantv) : (size_t) ~0;
 
   struct user_data *ud = (struct user_data *) v7_to_foreign(udv);
   ud->cb = cb;
   v7_own(v7, &ud->cb);
   ud->want = want;
   /* TODO(mkm): trigger cb if there is already something in the buffer */
+
+  *res = v7_create_boolean(1);
 
   return V7_OK;
 }
