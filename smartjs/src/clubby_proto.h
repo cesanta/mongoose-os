@@ -32,16 +32,14 @@ struct clubby_event {
     } frame;
     struct {
       struct json_token *resp_body;
-      /* TODO(alashkin) change to int64 */
-      int32_t id;
+      int64_t id;
       int status;
       struct json_token *status_msg;
       struct json_token *resp;
     } response;
     struct {
       struct json_token *cmd_body;
-      /* TODO(alashkin) change to int64 */
-      int32_t id;
+      int64_t id;
       struct json_token *cmd;
       struct json_token *src;
     } request;

@@ -328,8 +328,9 @@ static void clubby_hello_req_callback(struct clubby_event *evt,
   struct clubby *clubby = (struct clubby *) evt->context;
   (void) user_data;
 
-  LOG(LL_DEBUG, ("Incoming /v1/Hello received, id=%d", evt->request.id));
-  char src[100] = {0};
+  LOG(LL_DEBUG,
+      ("Incoming /v1/Hello received, id=%d", (int32_t) evt->request.id));
+  char src[512] = {0};
   if ((size_t) evt->request.src->len > sizeof(src)) {
     LOG(LL_ERROR, ("src too long, len=%d", evt->request.src->len));
     return;
@@ -349,7 +350,7 @@ static void clubby_send_hello(struct clubby *clubby) {
   ub_val_t cmdv = ub_create_object(ctx);
   ub_array_push(ctx, cmds, cmdv);
   ub_add_prop(ctx, cmdv, "cmd", ub_create_string(ctx, "/v1/Hello"));
-  int32_t id = clubby_proto_get_new_id();
+  int64_t id = clubby_proto_get_new_id();
   ub_add_prop(ctx, cmdv, "id", ub_create_number(id));
   register_callback(clubby, (char *) &id, sizeof(id),
                     clubby_hello_resp_callback, NULL);
@@ -363,7 +364,7 @@ static void clubby_send_labels(struct clubby *clubby) {
   ub_val_t cmdv = ub_create_object(ctx);
   ub_array_push(ctx, cmds, cmdv);
   ub_add_prop(ctx, cmdv, "cmd", ub_create_string(ctx, "/v1/Label.Set"));
-  int32_t id = clubby_proto_get_new_id();
+  int64_t id = clubby_proto_get_new_id();
   ub_add_prop(ctx, cmdv, "id", ub_create_number(id));
   ub_val_t args = ub_create_object(ctx);
   ub_add_prop(ctx, cmdv, "args", args);
@@ -465,8 +466,9 @@ static void clubby_cb(struct clubby_event *evt) {
     }
 
     case CLUBBY_REQUEST: {
-      LOG(LL_DEBUG, ("CLUBBY_REQUEST: id=%d cmd=%.*s", evt->request.id,
-                     evt->request.cmd->len, evt->request.cmd->ptr));
+      LOG(LL_DEBUG,
+          ("CLUBBY_REQUEST: id=%d cmd=%.*s", (int32_t) evt->request.id,
+           evt->request.cmd->len, evt->request.cmd->ptr));
 
       /* Calling global "oncmd", if any */
       clubby_call_cb(clubby, s_oncmd_cmd, sizeof(s_oncmd_cmd), evt, 0);
@@ -747,7 +749,7 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
 
   /* Check if id and timeout exists and put default if not */
   v7_val_t idv = v7_get(v7, cmdv, "id", 2);
-  int32_t id;
+  int64_t id;
 
   if (!v7_is_number(idv)) {
     id = clubby_proto_get_new_id();

@@ -196,7 +196,7 @@ static void clubby_proto_parse_resp(struct json_token *resp_arr,
      * Any number inside a JSON message will have non-number character.
      * Hence, no need to have it explicitly nul-terminated.
      */
-    evt.response.id = strtoul(id_tok->ptr, NULL, 10);
+    evt.response.id = to64(id_tok->ptr);
 
     struct json_token *status_tok = find_json_token(resp, "status");
     if (status_tok == NULL || status_tok->type != JSON_TYPE_NUMBER) {
@@ -266,7 +266,7 @@ static void clubby_proto_parse_req(struct json_token *frame,
       break;
     }
 
-    evt.request.id = strtoul(id_tok->ptr, NULL, 10);
+    evt.request.id = to64(id_tok->ptr);
 
     s_clubby_cb(&evt);
 
