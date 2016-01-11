@@ -242,6 +242,8 @@ $(FW_METADATA_FILE) : $(FW_FILES_OUT)
 	  -e 's,%FS_FILE%,/updates/$(notdir $(FW_FS_OUT)),' \
 	  -e 's,%FW_CHECKSUM%,$(shell sha1sum $(FW_FILE_2_OUT) | awk '{print $$1}'),' \
 	  -e 's,%FS_CHECKSUM%,$(shell sha1sum $(FW_FS_OUT) | awk '{print $$1}'),' \
+	  -e 's,%BOOT_FILE%,/updates/$(notdir $(FW_FILE_1_OUT)),' \
+	  -e 's,%BOOT_CHECKSUM%,$(shell sha1sum $(FW_FILE_1_OUT) | awk '{print $$1}'),' \
 	  ./user/metadata.json.in > $@
 
 # Main output product: firmware files.
