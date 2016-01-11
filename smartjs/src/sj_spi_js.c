@@ -40,8 +40,8 @@ enum v7_err spi_js_ctor(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  v7_set(v7, this_obj, s_spi_conn_prop, ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+  v7_def(v7, this_obj, s_spi_conn_prop, ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_create_foreign(conn));
 
   /* implicitly returning `this` */
@@ -188,7 +188,7 @@ void init_spijs(struct v7 *v7) {
   v7_set_method(v7, spi_proto, "close", spi_js_close);
 
   spi_ctor = v7_create_constructor(v7, spi_proto, spi_js_ctor);
-  v7_set(v7, v7_get_global(v7), "SPI", ~0, 0, spi_ctor);
+  v7_set(v7, v7_get_global(v7), "SPI", ~0, spi_ctor);
 }
 
 #else

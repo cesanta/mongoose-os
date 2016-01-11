@@ -107,7 +107,7 @@ static enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
     *res = v7_create_boolean(0);
     goto clean;
   }
-  v7_set(v7, s_wifi, "_ccb", ~0, V7_PROPERTY_DONT_ENUM | V7_PROPERTY_HIDDEN,
+  v7_def(v7, s_wifi, "_ccb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
          cb);
   *res = v7_create_boolean(1);
   goto clean;
@@ -136,7 +136,7 @@ void sj_wifi_scan_done(const char **ssids) {
   sj_invoke_cb1(v7, cb, res);
 
   v7_disown(v7, &res);
-  v7_set(v7, s_wifi, "_scb", ~0, V7_PROPERTY_DONT_ENUM | V7_PROPERTY_HIDDEN,
+  v7_def(v7, s_wifi, "_scb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
          v7_create_undefined());
 }
 
@@ -157,14 +157,12 @@ static enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
     *res = v7_create_boolean(0);
     goto clean;
   }
-  v7_set(v7, s_wifi, "_scb", ~0, V7_PROPERTY_DONT_ENUM | V7_PROPERTY_HIDDEN,
+  v7_def(v7, s_wifi, "_scb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
          cb);
 
   r = sj_wifi_scan(sj_wifi_scan_done);
-  if (r == 0) {
-    v7_set(v7, s_wifi, "_scb", ~0, V7_PROPERTY_DONT_ENUM | V7_PROPERTY_HIDDEN,
-           v7_create_undefined());
-  }
+  v7_def(v7, s_wifi, "_scb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
+         v7_create_undefined());
   *res = v7_create_boolean(r);
   goto clean;
 
@@ -183,5 +181,5 @@ void sj_wifi_init(struct v7 *v7) {
   v7_set_method(v7, s_wifi, "ip", Wifi_ip);
   v7_set_method(v7, s_wifi, "changed", Wifi_changed);
   v7_set_method(v7, s_wifi, "scan", Wifi_scan);
-  v7_set(v7, v7_get_global(v7), "Wifi", ~0, 0, s_wifi);
+  v7_set(v7, v7_get_global(v7), "Wifi", ~0, s_wifi);
 }

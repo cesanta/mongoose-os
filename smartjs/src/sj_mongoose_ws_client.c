@@ -51,7 +51,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       }
       break;
     case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
-      v7_set(v7, ud->ws, "_nc", ~0, V7_PROPERTY_HIDDEN, v7_create_foreign(nc));
+      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_create_foreign(nc));
       invoke_cb(ud, "onopen", v7_create_null());
       break;
     case MG_EV_WEBSOCKET_FRAME: {
@@ -59,7 +59,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       ev = v7_create_object(v7);
       v7_own(v7, &ev);
       data = v7_create_string(v7, (char *) wm->data, wm->size, 1);
-      v7_set(v7, ev, "data", ~0, 0, data);
+      v7_set(v7, ev, "data", ~0, data);
       invoke_cb(ud, "onmessage", ev);
       v7_disown(v7, &ev);
       break;
@@ -67,7 +67,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_CLOSE:
       invoke_cb(ud, "onclose", v7_create_null());
       nc->user_data = NULL;
-      v7_set(v7, ud->ws, "_nc", ~0, V7_PROPERTY_HIDDEN, v7_create_undefined());
+      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_create_undefined());
       v7_disown(v7, &ud->ws);
       /* Free strings here in case if connect failed */
       free(ud->proto);
@@ -288,12 +288,12 @@ void sj_init_ws_client(struct v7 *v7) {
 
   v7_set_method(v7, ws_proto, "send", WebSocket_send);
   v7_set_method(v7, ws_proto, "close", WebSocket_close);
-  v7_set(v7, ws_proto, "readyState", ~0,
-         V7_PROPERTY_DONT_ENUM | V7_PROPERTY_GETTER,
+  v7_def(v7, ws_proto, "readyState", ~0,
+         (V7_DESC_ENUMERABLE(0) | V7_DESC_GETTER(1)),
          v7_create_function(v7, WebSocket_readyState));
-  v7_set(v7, ws, "OPEN", ~0, 0, WEBSOCKET_OPEN);
-  v7_set(v7, ws, "CLOSED", ~0, 0, WEBSOCKET_CLOSED);
-  v7_set(v7, v7_get_global(v7), "WebSocket", ~0, 0, ws);
+  v7_set(v7, ws, "OPEN", ~0, WEBSOCKET_OPEN);
+  v7_set(v7, ws, "CLOSED", ~0, WEBSOCKET_CLOSED);
+  v7_set(v7, v7_get_global(v7), "WebSocket", ~0, ws);
 
   v7_disown(v7, &ws);
 }

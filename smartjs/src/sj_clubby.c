@@ -74,8 +74,8 @@ static void free_clubby(struct clubby *clubby) {
 }
 
 static void set_clubby(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
-  v7_set(v7, obj, s_clubby_prop, sizeof(s_clubby_prop),
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE | V7_PROPERTY_HIDDEN,
+  v7_def(v7, obj, s_clubby_prop, sizeof(s_clubby_prop),
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0) | _V7_DESC_HIDDEN(1)),
          v7_create_foreign(clubby));
 }
 
@@ -753,15 +753,14 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(idv)) {
     id = clubby_proto_get_new_id();
-    v7_set(v7, cmdv, "id", 2, 0, v7_create_number(id));
+    v7_set(v7, cmdv, "id", 2, v7_create_number(id));
   } else {
     id = v7_to_number(idv);
   }
 
   v7_val_t timeoutv = v7_get(v7, cmdv, "timeout", 7);
   if (!v7_is_number(timeoutv)) {
-    v7_set(v7, cmdv, "timeout", 7, 0,
-           v7_create_number(clubby->cfg.cmd_timeout));
+    v7_set(v7, cmdv, "timeout", 7, v7_create_number(clubby->cfg.cmd_timeout));
   }
 
   /*
@@ -973,7 +972,7 @@ void sj_init_clubby(struct v7 *v7) {
 
   clubby_ctor_v = v7_create_constructor(v7, clubby_proto_v, Clubby_ctor);
 
-  v7_set(v7, v7_get_global(v7), "Clubby", ~0, 0, clubby_ctor_v);
+  v7_set(v7, v7_get_global(v7), "Clubby", ~0, clubby_ctor_v);
 
   clubby_proto_init(clubby_cb);
 

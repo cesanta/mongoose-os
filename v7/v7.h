@@ -77,14 +77,51 @@ extern "C" {
 /*
  * Property attributes bitmask
  */
-typedef unsigned char v7_prop_attr_t;
-#define V7_PROPERTY_READ_ONLY (1 << 0)
-#define V7_PROPERTY_DONT_ENUM (1 << 1)
-#define V7_PROPERTY_DONT_DELETE (1 << 2)
-#define V7_PROPERTY_HIDDEN (1 << 3)
-#define V7_PROPERTY_GETTER (1 << 4)
-#define V7_PROPERTY_SETTER (1 << 5)
-#define V7_PROPERTY_OFF_HEAP (1 << 6) /* property not managed by V7 HEAP */
+typedef unsigned int v7_prop_attr_t;
+#define V7_PROPERTY_NON_WRITABLE (1 << 0)
+#define V7_PROPERTY_NON_ENUMERABLE (1 << 1)
+#define V7_PROPERTY_NON_CONFIGURABLE (1 << 2)
+#define V7_PROPERTY_GETTER (1 << 3)
+#define V7_PROPERTY_SETTER (1 << 4)
+#define _V7_PROPERTY_HIDDEN (1 << 5)
+/* property not managed by V7 HEAP */
+#define _V7_PROPERTY_OFF_HEAP (1 << 6)
+/*
+ * not a property attribute, but a flag for `v7_def()`. It's here in order to
+ * keep all offsets in one place
+ */
+#define _V7_DESC_PRESERVE_VALUE (1 << 7)
+
+/*
+ * Internal helpers for `V7_DESC_...` macros
+ */
+#define _V7_DESC_SHIFT 16
+#define _V7_DESC_MASK ((1 << _V7_DESC_SHIFT) - 1)
+#define _V7_MK_DESC(v, n) \
+  (((v7_prop_attr_desc_t)(n)) << _V7_DESC_SHIFT | ((v) ? (n) : 0))
+#define _V7_MK_DESC_INV(v, n) _V7_MK_DESC(!(v), (n))
+
+/*
+ * Property attribute descriptors that may be given to `v7_def()`: for each
+ * attribute (`v7_prop_attr_t`), there is a corresponding macro, which takes
+ * param: either 1 (set attribute) or 0 (clear attribute). If some particular
+ * attribute isn't mentioned at all, it's left unchanged (or default, if the
+ * property is being created)
+ *
+ * There is additional flag: `V7_DESC_PRESERVE_VALUE`. If it is set, the
+ * property value isn't changed (or set to `undefined` if the property is being
+ * created)
+ */
+typedef unsigned long v7_prop_attr_desc_t;
+#define V7_DESC_WRITABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_WRITABLE)
+#define V7_DESC_ENUMERABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_ENUMERABLE)
+#define V7_DESC_CONFIGURABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_CONFIGURABLE)
+#define V7_DESC_GETTER(v) _V7_MK_DESC(v, V7_PROPERTY_GETTER)
+#define V7_DESC_SETTER(v) _V7_MK_DESC(v, V7_PROPERTY_SETTER)
+#define V7_DESC_PRESERVE_VALUE _V7_DESC_PRESERVE_VALUE
+
+#define _V7_DESC_HIDDEN(v) _V7_MK_DESC(v, _V7_PROPERTY_HIDDEN)
+#define _V7_DESC_OFF_HEAP(v) _V7_MK_DESC(v, _V7_PROPERTY_OFF_HEAP)
 
 /*
  * Object attributes bitmask
@@ -281,7 +318,7 @@ v7_val_t v7_create_cfunction(v7_cfunction_t *func);
 /*
  * Returns true if the given value is an object or function.
  * i.e. it returns true if the value holds properties and can be
- * used as argument to v7_get and v7_set.
+ * used as argument to `v7_get`, `v7_set` and `v7_def`.
  */
 int v7_is_object(v7_val_t v);
 
@@ -440,28 +477,29 @@ enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
                             size_t name_len, v7_val_t *res);
 
 /*
- * Set object property. `name`, `name_len` specify property name, `attrs`
- * specify property attributes, `val` is a property value.
+ * Define object property, similar to JavaScript `Object.defineProperty()`.
+ *
+ * `name`, `name_len` specify property name, `val` is a property value.
+ * `attrs_desc` is a set of flags which can affect property's attributes,
+ * see comment of `v7_prop_attr_desc_t` for details.
  *
  * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
  * `strlen(name)` is used.
  *
  * Returns non-zero on success, 0 on error (e.g. out of memory).
+ *
+ * See also `v7_set()`.
  */
-int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
-           v7_prop_attr_t attrs, v7_val_t v);
+int v7_def(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
+           v7_prop_attr_desc_t attrs_desc, v7_val_t v);
 
 /*
- * Like `v7_set()`, but "returns" value through the `res` pointer argument.
- * `res` is allowed to be `NULL`.
+ * Set object property. Behaves just like JavaScript assignment.
  *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
+ * See also `v7_def()`.
  */
-WARN_UNUSED_RESULT
-enum v7_err v7_set_throwing(struct v7 *v7, v7_val_t obj, const char *name,
-                            size_t name_len, v7_prop_attr_t attrs, v7_val_t v,
-                            int *res);
+int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t len,
+           v7_val_t val);
 
 /*
  * A helper function to define object's method backed by a C function `func`.
@@ -722,7 +760,7 @@ void v7_interrupt(struct v7 *v7);
  * memory management of simple cfunctions.
  * However executing even small snippets of JS code causes a lot of memory
  * pressure. Enabling GC solves that but forces you to take care of the
- * reachability of your temporary V7 val_t variables, as the GC needs
+ * reachability of your temporary V7 v7_val_t variables, as the GC needs
  * to know where they are since objects and strings can be either reclaimed
  * or relocated during a GC pass.
  */

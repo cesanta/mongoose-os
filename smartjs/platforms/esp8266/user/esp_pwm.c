@@ -259,7 +259,7 @@ IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
 
 void init_pwm(struct v7 *v7) {
   v7_val_t pwm = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "PWM", ~0, 0, pwm);
+  v7_set(v7, v7_get_global(v7), "PWM", ~0, pwm);
   v7_set_method(v7, pwm, "set", PWM_set);
 }
 

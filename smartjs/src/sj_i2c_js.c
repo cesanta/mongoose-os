@@ -116,8 +116,8 @@ static enum v7_err i2cjs_ctor(struct v7 *v7, v7_val_t *res) {
     rcode = v7_throwf(v7, "Error", "Failed to initialize I2C library.");
     goto clean;
   } else {
-    v7_set(v7, this_obj, s_i2c_conn_prop, ~0,
-           V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+    v7_def(v7, this_obj, s_i2c_conn_prop, ~0,
+           (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
            v7_create_foreign(conn));
 
     /* implicitly returning `this` */
@@ -326,7 +326,9 @@ static enum v7_err i2cjs_test(struct v7 *v7, v7_val_t *res) {
 
 void init_i2cjs(struct v7 *v7) {
   v7_val_t i2c_proto, i2c_ctor;
-  v7_prop_attr_t const_attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE;
+
+  v7_prop_attr_desc_t const_attrs =
+      (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0));
 
   i2c_proto = v7_create_object(v7);
   v7_set_method(v7, i2c_proto, "start", i2cjs_start);
@@ -338,18 +340,18 @@ void init_i2cjs(struct v7 *v7) {
   v7_set_method(v7, i2c_proto, "close", i2cjs_close);
 
   i2c_ctor = v7_create_constructor(v7, i2c_proto, i2cjs_ctor);
-  v7_set(v7, i2c_ctor, "ACK", 3, const_attrs, v7_create_number(I2C_ACK));
-  v7_set(v7, i2c_ctor, "NAK", 3, const_attrs, v7_create_number(I2C_NAK));
-  v7_set(v7, i2c_ctor, "ERR", 3, const_attrs, v7_create_number(I2C_ERR));
-  v7_set(v7, i2c_ctor, "NONE", 4, const_attrs, v7_create_number(I2C_NONE));
-  v7_set(v7, i2c_ctor, "READ", 4, const_attrs, v7_create_number(I2C_READ));
-  v7_set(v7, i2c_ctor, "WRITE", 5, const_attrs, v7_create_number(I2C_WRITE));
+  v7_def(v7, i2c_ctor, "ACK", 3, const_attrs, v7_create_number(I2C_ACK));
+  v7_def(v7, i2c_ctor, "NAK", 3, const_attrs, v7_create_number(I2C_NAK));
+  v7_def(v7, i2c_ctor, "ERR", 3, const_attrs, v7_create_number(I2C_ERR));
+  v7_def(v7, i2c_ctor, "NONE", 4, const_attrs, v7_create_number(I2C_NONE));
+  v7_def(v7, i2c_ctor, "READ", 4, const_attrs, v7_create_number(I2C_READ));
+  v7_def(v7, i2c_ctor, "WRITE", 5, const_attrs, v7_create_number(I2C_WRITE));
 
 #ifdef ENABLE_IC2_EEPROM_TEST
   v7_set_method(v7, i2c_ctor, "test", i2cjs_test);
 #endif
 
-  v7_set(v7, v7_get_global(v7), "I2C", ~0, 0, i2c_ctor);
+  v7_set(v7, v7_get_global(v7), "I2C", ~0, i2c_ctor);
 }
 
 #else

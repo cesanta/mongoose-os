@@ -822,24 +822,24 @@ void init_updater(struct v7 *v7) {
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
   s_updater_notify_cb = v7_create_undefined();
 
-  v7_set(v7, sys, "updater", ~0, 0, updater);
+  v7_set(v7, sys, "updater", ~0, updater);
   v7_set_method(v7, updater, "start", Updater_startupdate);
   v7_set_method(v7, updater, "notify", Updater_notify);
 
-  v7_set(s_v7, updater, "GOT_REQUEST", ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+  v7_def(s_v7, updater, "GOT_REQUEST", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_create_number(US_NOT_STARTED));
 
-  v7_set(s_v7, updater, "COMPLETED", ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+  v7_def(s_v7, updater, "COMPLETED", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_create_number(US_COMPLETED));
 
-  v7_set(s_v7, updater, "NOTHING_TODO", ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+  v7_def(s_v7, updater, "NOTHING_TODO", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_create_number(US_NOTHING_TODO));
 
-  v7_set(s_v7, updater, "FAILED", ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
+  v7_def(s_v7, updater, "FAILED", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_create_number(US_ERROR));
 
   sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_clubby_update,

@@ -35,7 +35,7 @@ static enum v7_err ADC_readVoltage(struct v7 *v7, v7_val_t *res) {
 
 void init_adcjs(struct v7 *v7) {
   v7_val_t adc = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "ADC", ~0, 0, adc);
+  v7_set(v7, v7_get_global(v7), "ADC", ~0, adc);
   v7_set_method(v7, adc, "read", ADC_read);
   v7_set_method(v7, adc, "readVoltage", ADC_readVoltage);
 }

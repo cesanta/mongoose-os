@@ -61,8 +61,8 @@ static enum v7_err UART_ctor(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  v7_set(v7, this_obj, "_ud", ~0, V7_PROPERTY_HIDDEN, v7_create_foreign(ud));
-  v7_set(v7, this_obj, "_dev", ~0, V7_PROPERTY_HIDDEN, v7_create_foreign(uart));
+  v7_def(v7, this_obj, "_ud", ~0, _V7_DESC_HIDDEN(1), v7_create_foreign(ud));
+  v7_def(v7, this_obj, "_dev", ~0, _V7_DESC_HIDDEN(1), v7_create_foreign(uart));
 
 clean:
   return rcode;
@@ -130,11 +130,11 @@ void sj_init_uart(struct v7 *v7) {
   uart_proto = v7_create_object(v7);
   uart_ctor = v7_create_constructor(v7, uart_proto, UART_ctor);
 
-  v7_set(v7, uart, "dev", ~0, V7_PROPERTY_HIDDEN, uart_ctor);
+  v7_def(v7, uart, "dev", ~0, _V7_DESC_HIDDEN(1), uart_ctor);
   v7_set_method(v7, uart_proto, "read", UART_read);
   v7_set_method(v7, uart_proto, "write", UART_write);
   v7_set_method(v7, uart_proto, "recv", UART_recv);
-  v7_set(v7, v7_get_global(v7), "UART", ~0, 0, uart);
+  v7_set(v7, v7_get_global(v7), "UART", ~0, uart);
   {
     enum v7_err rcode = v7_exec(
         v7, "UART.open = function (d) { return new UART.dev(d); }", NULL);

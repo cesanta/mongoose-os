@@ -81,14 +81,51 @@ extern "C" {
 /*
  * Property attributes bitmask
  */
-typedef unsigned char v7_prop_attr_t;
-#define V7_PROPERTY_READ_ONLY (1 << 0)
-#define V7_PROPERTY_DONT_ENUM (1 << 1)
-#define V7_PROPERTY_DONT_DELETE (1 << 2)
-#define V7_PROPERTY_HIDDEN (1 << 3)
-#define V7_PROPERTY_GETTER (1 << 4)
-#define V7_PROPERTY_SETTER (1 << 5)
-#define V7_PROPERTY_OFF_HEAP (1 << 6) /* property not managed by V7 HEAP */
+typedef unsigned int v7_prop_attr_t;
+#define V7_PROPERTY_NON_WRITABLE (1 << 0)
+#define V7_PROPERTY_NON_ENUMERABLE (1 << 1)
+#define V7_PROPERTY_NON_CONFIGURABLE (1 << 2)
+#define V7_PROPERTY_GETTER (1 << 3)
+#define V7_PROPERTY_SETTER (1 << 4)
+#define _V7_PROPERTY_HIDDEN (1 << 5)
+/* property not managed by V7 HEAP */
+#define _V7_PROPERTY_OFF_HEAP (1 << 6)
+/*
+ * not a property attribute, but a flag for `v7_def()`. It's here in order to
+ * keep all offsets in one place
+ */
+#define _V7_DESC_PRESERVE_VALUE (1 << 7)
+
+/*
+ * Internal helpers for `V7_DESC_...` macros
+ */
+#define _V7_DESC_SHIFT 16
+#define _V7_DESC_MASK ((1 << _V7_DESC_SHIFT) - 1)
+#define _V7_MK_DESC(v, n) \
+  (((v7_prop_attr_desc_t)(n)) << _V7_DESC_SHIFT | ((v) ? (n) : 0))
+#define _V7_MK_DESC_INV(v, n) _V7_MK_DESC(!(v), (n))
+
+/*
+ * Property attribute descriptors that may be given to `v7_def()`: for each
+ * attribute (`v7_prop_attr_t`), there is a corresponding macro, which takes
+ * param: either 1 (set attribute) or 0 (clear attribute). If some particular
+ * attribute isn't mentioned at all, it's left unchanged (or default, if the
+ * property is being created)
+ *
+ * There is additional flag: `V7_DESC_PRESERVE_VALUE`. If it is set, the
+ * property value isn't changed (or set to `undefined` if the property is being
+ * created)
+ */
+typedef unsigned long v7_prop_attr_desc_t;
+#define V7_DESC_WRITABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_WRITABLE)
+#define V7_DESC_ENUMERABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_ENUMERABLE)
+#define V7_DESC_CONFIGURABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_CONFIGURABLE)
+#define V7_DESC_GETTER(v) _V7_MK_DESC(v, V7_PROPERTY_GETTER)
+#define V7_DESC_SETTER(v) _V7_MK_DESC(v, V7_PROPERTY_SETTER)
+#define V7_DESC_PRESERVE_VALUE _V7_DESC_PRESERVE_VALUE
+
+#define _V7_DESC_HIDDEN(v) _V7_MK_DESC(v, _V7_PROPERTY_HIDDEN)
+#define _V7_DESC_OFF_HEAP(v) _V7_MK_DESC(v, _V7_PROPERTY_OFF_HEAP)
 
 /*
  * Object attributes bitmask
@@ -285,7 +322,7 @@ v7_val_t v7_create_cfunction(v7_cfunction_t *func);
 /*
  * Returns true if the given value is an object or function.
  * i.e. it returns true if the value holds properties and can be
- * used as argument to v7_get and v7_set.
+ * used as argument to `v7_get`, `v7_set` and `v7_def`.
  */
 int v7_is_object(v7_val_t v);
 
@@ -444,28 +481,29 @@ enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
                             size_t name_len, v7_val_t *res);
 
 /*
- * Set object property. `name`, `name_len` specify property name, `attrs`
- * specify property attributes, `val` is a property value.
+ * Define object property, similar to JavaScript `Object.defineProperty()`.
+ *
+ * `name`, `name_len` specify property name, `val` is a property value.
+ * `attrs_desc` is a set of flags which can affect property's attributes,
+ * see comment of `v7_prop_attr_desc_t` for details.
  *
  * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
  * `strlen(name)` is used.
  *
  * Returns non-zero on success, 0 on error (e.g. out of memory).
+ *
+ * See also `v7_set()`.
  */
-int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
-           v7_prop_attr_t attrs, v7_val_t v);
+int v7_def(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
+           v7_prop_attr_desc_t attrs_desc, v7_val_t v);
 
 /*
- * Like `v7_set()`, but "returns" value through the `res` pointer argument.
- * `res` is allowed to be `NULL`.
+ * Set object property. Behaves just like JavaScript assignment.
  *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
+ * See also `v7_def()`.
  */
-WARN_UNUSED_RESULT
-enum v7_err v7_set_throwing(struct v7 *v7, v7_val_t obj, const char *name,
-                            size_t name_len, v7_prop_attr_t attrs, v7_val_t v,
-                            int *res);
+int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t len,
+           v7_val_t val);
 
 /*
  * A helper function to define object's method backed by a C function `func`.
@@ -726,7 +764,7 @@ void v7_interrupt(struct v7 *v7);
  * memory management of simple cfunctions.
  * However executing even small snippets of JS code causes a lot of memory
  * pressure. Enabling GC solves that but forces you to take care of the
- * reachability of your temporary V7 val_t variables, as the GC needs
+ * reachability of your temporary V7 v7_val_t variables, as the GC needs
  * to know where they are since objects and strings can be either reclaimed
  * or relocated during a GC pass.
  */
@@ -4509,12 +4547,6 @@ V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t);
 V7_PRIVATE struct v7_function *v7_to_function(val_t);
 V7_PRIVATE void *v7_to_pointer(val_t v);
 
-V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *,
-                              v7_cfunction_t *func);
-
-V7_PRIVATE int set_method(struct v7 *, val_t, const char *,
-                          v7_cfunction_t *func, int);
-
 V7_PRIVATE val_t obj_prototype_v(struct v7 *, val_t);
 V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
@@ -4554,7 +4586,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
  *
  * NODO(lsm): please don't combine v7_create_function_arg and v7_create_function
  * into one function. Currently `nargs` is useful only internally. External
- * users can just use `v7_set` to set the length.
+ * users can just use `v7_def` to set the length.
  */
 V7_PRIVATE
 v7_val_t v7_create_function_nargs(struct v7 *, v7_cfunction_t *func, int nargs);
@@ -4565,7 +4597,7 @@ v7_val_t v7_create_function_nargs(struct v7 *, v7_cfunction_t *func, int nargs);
  * NODO(lsm): please don't combine v7_create_constructor_nargs and
  * v7_create_constructor.
  * into one function. Currently `nargs` is useful only internally. External
- * users can just use `v7_set` to set the length.
+ * users can just use `v7_def` to set the length.
  */
 V7_PRIVATE
 v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
@@ -4592,33 +4624,59 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_get_throwing_v(struct v7 *v7, v7_val_t obj,
                                          v7_val_t name, v7_val_t *res);
 
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *, struct v7_property *,
                                         val_t, val_t);
 
+/*
+ * Like `set_property`, but takes property name as a `val_t`
+ */
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_set_v(struct v7 *v7, v7_val_t obj, v7_val_t name,
-                                v7_prop_attr_t attrs, v7_val_t val, int *res);
+V7_PRIVATE enum v7_err set_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      val_t val, struct v7_property **res);
 
 /*
- * NOTE: `res` is allowed to be `NULL`.
+ * Like JavaScript assignment: set a property with given `name` + `len` at
+ * the object `obj` to value `val`. Returns a property through the `res`
+ * (which may be `NULL` if return value is not required)
  */
-V7_PRIVATE enum v7_err v7_set_property_v(struct v7 *, v7_val_t obj,
-                                         v7_val_t name,
-                                         v7_prop_attr_t attributes,
-                                         v7_val_t val, int *res);
-V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
-                               size_t len, v7_prop_attr_t attributes,
-                               v7_val_t val);
-
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_set_property_throwing(struct v7 *v7, val_t obj,
-                                                const char *name, size_t len,
-                                                v7_prop_attr_t attributes,
-                                                v7_val_t val, int *res);
+V7_PRIVATE enum v7_err set_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_val_t val,
+                                    struct v7_property **res);
 
-V7_PRIVATE enum v7_err v7_set_prop(struct v7 *v7, val_t obj, val_t name,
-                                   v7_prop_attr_t attributes, val_t val,
-                                   struct v7_property **res);
+/*
+ * Define object property, similar to JavaScript `Object.defineProperty()`.
+ *
+ * Just like public `v7_def()`, but returns `enum v7_err`, and therefore can
+ * throw.
+ *
+ * Additionally, takes param `as_assign`: if it is non-zero, it behaves
+ * similarly to plain JavaScript assignment in terms of some exception-related
+ * corner cases.
+ *
+ * `res` may be `NULL`.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_prop_attr_desc_t attrs_desc,
+                                    v7_val_t val, uint8_t as_assign,
+                                    struct v7_property **res);
+
+/*
+ * Like `def_property()`, but takes property name as a `val_t`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      v7_prop_attr_desc_t attrs_desc, val_t val,
+                                      uint8_t as_assign,
+                                      struct v7_property **res);
+
+V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *,
+                              v7_cfunction_t *func);
+
+V7_PRIVATE int set_method(struct v7 *, val_t, const char *,
+                          v7_cfunction_t *func, int);
 
 /* Return address of property value or NULL if the passed property is NULL */
 WARN_UNUSED_RESULT
@@ -8259,7 +8317,7 @@ V7_PRIVATE enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
       v7_val_t file_proto = v7_get(
           v7, v7_get(v7, v7_get_global(v7), "File", ~0), "prototype", ~0);
       v7_set_proto(v7, obj, file_proto);
-      v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
+      v7_def(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_DESC_ENUMERABLE(0),
              v7_file_to_val(fp));
       *res = obj;
       goto clean;
@@ -8381,8 +8439,8 @@ clean:
 
 void init_file(struct v7 *v7) {
   v7_val_t file_obj = v7_create_object(v7), file_proto = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "File", 4, 0, file_obj);
-  v7_set(v7, file_obj, "prototype", 9, 0, file_proto);
+  v7_set(v7, v7_get_global(v7), "File", 4, file_obj);
+  v7_set(v7, file_obj, "prototype", 9, file_proto);
 
   v7_set_method(v7, file_obj, "eval", File_eval);
   v7_set_method(v7, file_obj, "remove", File_remove);
@@ -8444,7 +8502,7 @@ static enum v7_err s_fd_to_sock_obj(struct v7 *v7, sock_t fd, v7_val_t *res) {
 
   *res = v7_create_object(v7);
   v7_set_proto(v7, *res, sock_proto);
-  v7_set(v7, *res, s_sock_prop, sizeof(s_sock_prop) - 1, V7_PROPERTY_DONT_ENUM,
+  v7_def(v7, *res, s_sock_prop, sizeof(s_sock_prop) - 1, V7_DESC_ENUMERABLE(0),
          v7_create_number(fd));
 
   return rcode;
@@ -8589,8 +8647,8 @@ static enum v7_err s_recv(struct v7 *v7, int all, v7_val_t *res) {
 
     if (n <= 0) {
       closesocket(sock);
-      v7_set(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1,
-             V7_PROPERTY_DONT_ENUM, v7_create_number(INVALID_SOCKET));
+      v7_def(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1,
+             V7_DESC_ENUMERABLE(0), v7_create_number(INVALID_SOCKET));
     }
 
     if (m.len > 0) {
@@ -8642,9 +8700,9 @@ V7_PRIVATE enum v7_err Socket_send(struct v7 *v7, v7_val_t *res) {
 void init_socket(struct v7 *v7) {
   v7_val_t socket_obj = v7_create_object(v7), sock_proto = v7_create_object(v7);
 
-  v7_set(v7, v7_get_global(v7), "Socket", 6, 0, socket_obj);
+  v7_set(v7, v7_get_global(v7), "Socket", 6, socket_obj);
   sock_proto = v7_create_object(v7);
-  v7_set(v7, socket_obj, "prototype", 9, 0, sock_proto);
+  v7_set(v7, socket_obj, "prototype", 9, sock_proto);
 
   v7_set_method(v7, socket_obj, "connect", Socket_connect);
   v7_set_method(v7, socket_obj, "listen", Socket_listen);
@@ -8820,7 +8878,7 @@ clean:
 void init_crypto(struct v7 *v7) {
 #ifdef V7_ENABLE_CRYPTO
   v7_val_t obj = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "Crypto", 6, 0, obj);
+  v7_set(v7, v7_get_global(v7), "Crypto", 6, obj);
   v7_set_method(v7, obj, "md5", Crypto_md5);
   v7_set_method(v7, obj, "md5_hex", Crypto_md5_hex);
   v7_set_method(v7, obj, "sha1", Crypto_sha1);
@@ -8931,7 +8989,7 @@ static void ubjson_ctx_free(struct v7 *v7, struct ubjson_ctx *ctx) {
    * callback.
    */
   if (!v7_is_undefined(ctx->bin)) {
-    v7_set(v7, ctx->bin, "ctx", ~0, 0, v7_create_undefined());
+    v7_set(v7, ctx->bin, "ctx", ~0, v7_create_undefined());
   }
   v7_disown(v7, &ctx->bin);
   v7_disown(v7, &ctx->errb);
@@ -8995,7 +9053,7 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
         ctx->bytes_left = v7_to_number(v7_get(v7, obj, "size", ~0));
         cs_ubjson_emit_bin_header(buf, ctx->bytes_left);
         ctx->bin = obj;
-        v7_set(v7, obj, "ctx", ~0, 0, v7_create_foreign(ctx));
+        v7_set(v7, obj, "ctx", ~0, v7_create_foreign(ctx));
         pop_visit(stack);
         rcode = v7_apply(v7, v7_get(v7, obj, "user", ~0), obj,
                          v7_create_undefined(), NULL);
@@ -9118,8 +9176,8 @@ V7_PRIVATE enum v7_err UBJSON_Bin(struct v7 *v7, v7_val_t *res) {
 
   (void) res;
 
-  v7_set(v7, this_obj, "size", ~0, 0, v7_arg(v7, 0));
-  v7_set(v7, this_obj, "user", ~0, 0, v7_arg(v7, 1));
+  v7_set(v7, this_obj, "size", ~0, v7_arg(v7, 0));
+  v7_set(v7, this_obj, "user", ~0, v7_arg(v7, 1));
 
   return V7_OK;
 }
@@ -9127,10 +9185,10 @@ V7_PRIVATE enum v7_err UBJSON_Bin(struct v7 *v7, v7_val_t *res) {
 void init_ubjson(struct v7 *v7) {
   v7_val_t gen_proto, ubjson;
   ubjson = v7_create_object(v7);
-  v7_set(v7, v7_get_global(v7), "UBJSON", 6, 0, ubjson);
+  v7_set(v7, v7_get_global(v7), "UBJSON", 6, ubjson);
   v7_set_method(v7, ubjson, "render", UBJSON_render);
   gen_proto = v7_create_object(v7);
-  v7_set(v7, ubjson, "Bin", ~0, 0,
+  v7_set(v7, ubjson, "Bin", ~0,
          v7_create_constructor(v7, gen_proto, UBJSON_Bin));
   v7_set_method(v7, gen_proto, "send", Bin_send);
 }
@@ -11454,34 +11512,34 @@ static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
 static void bcode_save_frame_details(struct v7 *v7, v7_val_t frame,
                                      struct bcode_registers *r) {
   /* save previous call stack */
-  v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->vals.call_stack);
+  v7_def(v7, frame, "____p", 5, _V7_DESC_HIDDEN(1), v7->vals.call_stack);
 
   /* "try stack" */
-  v7_set(v7, frame, "____t", 5, V7_PROPERTY_HIDDEN, v7_create_dense_array(v7));
+  v7_def(v7, frame, "____t", 5, _V7_DESC_HIDDEN(1), v7_create_dense_array(v7));
 
   /* stack size */
-  v7_set(v7, frame, "____s", 5, V7_PROPERTY_HIDDEN,
+  v7_def(v7, frame, "____s", 5, _V7_DESC_HIDDEN(1),
          v7_create_number(v7->stack.len));
 
   if (r != NULL) {
     /* save bcode and the current position in it */
-    v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN,
+    v7_def(v7, frame, "___rb", 5, _V7_DESC_HIDDEN(1),
            v7_create_foreign(r->bcode));
-    v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
+    v7_def(v7, frame, "___ro", 5, _V7_DESC_HIDDEN(1),
            v7_create_foreign(r->ops + 1));
 
     /* `this` object */
-    v7_set(v7, frame, "___th", 5, V7_PROPERTY_HIDDEN, v7_get_this(v7));
+    v7_def(v7, frame, "___th", 5, _V7_DESC_HIDDEN(1), v7_get_this(v7));
 
     /* is constructor */
-    v7_set(v7, frame, "____c", 5, V7_PROPERTY_HIDDEN, v7->is_constructor);
+    v7_def(v7, frame, "____c", 5, _V7_DESC_HIDDEN(1), v7->is_constructor);
   } else {
     /*
      * No bcode registers is provided: assume it's not going to change,
      * and create `___rb` containing a NULL-pointer. This is the way we
      * distinguish between "function" frames and "private" frames.
      */
-    v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(NULL));
+    v7_def(v7, frame, "___rb", 5, _V7_DESC_HIDDEN(1), v7_create_foreign(NULL));
   }
 }
 
@@ -11957,7 +12015,7 @@ static void eval_try_push(struct v7 *v7, enum opcode op,
   arr = v7_get(v7, v7->vals.call_stack, "____t", 5);
   if (arr == V7_UNDEFINED) {
     arr = v7_create_dense_array(v7);
-    v7_set(v7, v7->vals.call_stack, "____t", 5, V7_PROPERTY_HIDDEN, arr);
+    v7_def(v7, v7->vals.call_stack, "____t", 5, _V7_DESC_HIDDEN(1), arr);
   }
 
   /*
@@ -12072,8 +12130,9 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
 
     for (; name < locals_end; ++name) {
       /* set undeletable property on Global Object */
-      V7_TRY(v7_set_v(v7, v7->vals.call_stack, *name, V7_PROPERTY_DONT_DELETE,
-                      v7_create_undefined(), NULL));
+      V7_TRY(def_property_v(v7, v7->vals.call_stack, *name,
+                            V7_DESC_CONFIGURABLE(0), v7_create_undefined(),
+                            1 /*as_assign*/, NULL));
     }
   }
 
@@ -12412,7 +12471,7 @@ restart:
         BTRY(to_string(v7, v2, &v2, NULL, 0, NULL));
 
         /* set value */
-        BTRY(v7_set_v(v7, v1, v2, 0, v3, NULL));
+        BTRY(set_property_v(v7, v1, v2, v3, NULL));
 
         PUSH(v3);
         break;
@@ -12451,7 +12510,7 @@ restart:
         if (prop != NULL) {
           prop->value = v3;
         } else if (!r.bcode->strict_mode) {
-          BTRY(v7_set_v(v7, v7_get_global(v7), v2, 0, v3, NULL));
+          BTRY(set_property_v(v7, v7_get_global(v7), v2, v3, NULL));
         } else {
           /*
            * In strict mode, throw reference error instead of polluting Global
@@ -12525,8 +12584,8 @@ restart:
             /* iterate properties until we find a non-hidden enumerable one */
             do {
               h = v7_next_prop(h, v2, &res, NULL, &attrs);
-            } while (h != NULL &&
-                     (attrs & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
+            } while (h != NULL && (attrs & (_V7_PROPERTY_HIDDEN |
+                                            V7_PROPERTY_NON_ENUMERABLE)));
 
             if (h == NULL) {
               /* no more properties in this object: proceed to the prototype */
@@ -12675,15 +12734,16 @@ restart:
             assert(arg_end <= locals_end);
 
             /* populate function itself */
-            BTRY(v7_set_v(v7, frame, *name++, V7_PROPERTY_DONT_DELETE, v1,
-                          NULL));
+            BTRY(def_property_v(v7, frame, *name++, V7_DESC_CONFIGURABLE(0), v1,
+                                0 /*not assign*/, NULL));
 
             /* populate arguments */
             {
               int arg_num;
               for (arg_num = 0; name < arg_end; ++name, ++arg_num) {
-                BTRY(v7_set_v(v7, frame, *name, V7_PROPERTY_DONT_DELETE,
-                              v7_array_get(v7, v2, arg_num), NULL));
+                BTRY(def_property_v(v7, frame, *name, V7_DESC_CONFIGURABLE(0),
+                                    v7_array_get(v7, v2, arg_num),
+                                    0 /*not assign*/, NULL));
               }
             }
 
@@ -12698,12 +12758,13 @@ restart:
              *
              * yields 2.
              */
-            v7_set(v7, frame, "arguments", 9, V7_PROPERTY_DONT_DELETE, v2);
+            v7_def(v7, frame, "arguments", 9, V7_DESC_CONFIGURABLE(0), v2);
 
             /* populate local variables */
             for (; name < locals_end; ++name) {
-              BTRY(v7_set_v(v7, frame, *name, V7_PROPERTY_DONT_DELETE,
-                            v7_create_undefined(), NULL));
+              BTRY(def_property_v(v7, frame, *name, V7_DESC_CONFIGURABLE(0),
+                                  v7_create_undefined(), 0 /*not assign*/,
+                                  NULL));
             }
 
             /* transfer control to the function */
@@ -12756,7 +12817,7 @@ restart:
 
         /* found needed property */
 
-        if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
+        if (prop->attributes & V7_PROPERTY_NON_CONFIGURABLE) {
           /*
            * this property is undeletable. In non-strict mode, we just
            * return `false`; otherwise, we throw.
@@ -12839,7 +12900,7 @@ restart:
          * property on it
          */
         frame = v7_create_object(v7);
-        BTRY(v7_set_v(v7, frame, v2, 0, v1, NULL));
+        BTRY(set_property_v(v7, frame, v2, v1, NULL));
 
         /* Push this "private" frame on the call stack */
         bcode_private_frame_push(v7, frame);
@@ -13007,7 +13068,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
    * Exceptions in "nested" script should not percolate into the "outer"
    * script, so, reset the try stack (it will be restored later)
    */
-  v7_set(v7, v7->vals.call_stack, "____t", 5, V7_PROPERTY_HIDDEN,
+  v7_def(v7, v7->vals.call_stack, "____t", 5, _V7_DESC_HIDDEN(1),
          v7_create_dense_array(v7));
 
   /*
@@ -13198,7 +13259,7 @@ clean:
 
   v7->vals.bottom_call_stack = saved_bottom_call_stack;
 
-  v7_set(v7, v7->vals.call_stack, "____t", 5, V7_PROPERTY_HIDDEN,
+  v7_def(v7, v7->vals.call_stack, "____t", 5, _V7_DESC_HIDDEN(1),
          saved_try_stack);
 
   release_ast(v7, a);
@@ -13272,6 +13333,11 @@ double _v7_nan;
 #if defined(V7_CYG_PROFILE_ON)
 struct v7 *v7_head = NULL;
 #endif
+
+/*
+ * Default property attributes (see `v7_prop_attr_t`)
+ */
+#define V7_DEFAULT_PROPERTY_ATTRS 0
 
 /*
  * Dictionary of read-only strings with length > 5.
@@ -13524,7 +13590,7 @@ int v7_is_boolean(val_t v) {
 int v7_is_regexp(struct v7 *v7, val_t v) {
   struct v7_property *p;
   if (!v7_is_generic_object(v)) return 0;
-  p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+  p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
   if (p == NULL) return 0;
   return (p->value & V7_TAG_MASK) == V7_TAG_REGEXP;
 }
@@ -13544,7 +13610,7 @@ V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
   int is = v7_is_regexp(v7, v);
   (void) is;
   assert(is == 1);
-  p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+  p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
   assert(p != NULL);
   return (struct v7_regexp *) v7_to_pointer(p->value);
 }
@@ -13567,7 +13633,7 @@ int v7_is_cfunction_obj(struct v7 *v7, val_t v) {
   if (v7_is_object(v)) {
     /* extract the hidden property from a cfunction_object */
     struct v7_property *p;
-    p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+    p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
     if (p != NULL) {
       v = p->value;
     }
@@ -13610,7 +13676,7 @@ v7_cfunction_t *v7_to_cfunction(struct v7 *v7, val_t v) {
 
     /* extract the hidden property from a cfunction_object */
     struct v7_property *p;
-    p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+    p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
     if (p != NULL) {
       /* yes, it's cfunction object. Extract cfunction pointer from it */
       ret = v7_to_cfunction(v7, p->value);
@@ -13778,7 +13844,7 @@ v7_val_t v7_create_undefined(void) {
 v7_val_t v7_create_array(struct v7 *v7) {
   val_t a = create_object(v7, v7->vals.array_prototype);
 #if 0
-  v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
+  v7_def(v7, a, "", 0, _V7_DESC_HIDDEN(1), V7_NULL);
 #endif
   return a;
 }
@@ -13800,7 +13866,7 @@ V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   val_t a = v7_create_array(v7);
 #ifdef V7_ENABLE_DENSE_ARRAYS
   v7_own(v7, &a);
-  v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
+  v7_def(v7, a, "", 0, _V7_DESC_HIDDEN(1), V7_NULL);
 
   /*
    * Before setting a `V7_OBJ_DENSE_ARRAY` flag, make sure we don't have
@@ -13836,8 +13902,8 @@ enum v7_err v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     rp->compiled_regexp = p;
     rp->lastIndex = 0;
 
-    v7_set_property(v7, *res, "", 0, V7_PROPERTY_HIDDEN,
-                    v7_pointer_to_value(rp) | V7_TAG_REGEXP);
+    v7_def(v7, *res, "", 0, _V7_DESC_HIDDEN(1),
+           v7_pointer_to_value(rp) | V7_TAG_REGEXP);
   }
 
 clean:
@@ -13878,9 +13944,9 @@ val_t create_function2(struct v7 *v7, struct v7_generic_object *scope,
   f->base.attributes |= V7_OBJ_FUNCTION;
 
   /* TODO(mkm): lazily create these properties on first access */
-  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
-  v7_set_property(v7, fval, "prototype", 9,
-                  V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE, proto);
+  v7_def(v7, proto, "constructor", 11, V7_DESC_ENUMERABLE(0), fval);
+  v7_def(v7, fval, "prototype", 9,
+         V7_DESC_ENUMERABLE(0) | V7_DESC_CONFIGURABLE(0), proto);
 
 cleanup:
   tmp_frame_cleanup(&tf);
@@ -14082,7 +14148,7 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
       while ((h = v7_next_prop(h, v, &name, &val, &attrs)) != NULL) {
         size_t n;
         const char *s;
-        if (attrs & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+        if (attrs & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
           continue;
         }
         if (!is_debug && should_skip_for_json(val_type(v7, val))) {
@@ -14464,55 +14530,6 @@ V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
 }
 
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_set_v(struct v7 *v7, val_t obj, val_t name,
-                                v7_prop_attr_t attrs, val_t val, int *res) {
-  enum v7_err rcode = V7_OK;
-  size_t len;
-  const char *n = v7_get_string_data(v7, &name, &len);
-  struct v7_property *p = v7_get_own_property(v7, obj, n, len);
-  if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    V7_TRY(v7_set_property_v(v7, obj, name, p == NULL ? attrs : p->attributes,
-                             val, res));
-  } else {
-    if (res != NULL) {
-      *res = -1;
-    }
-  }
-
-clean:
-  return rcode;
-}
-
-int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
-           v7_prop_attr_t attrs, val_t val) {
-  struct v7_property *p = v7_get_own_property(v7, obj, name, len);
-  if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    return v7_set_property(v7, obj, name, len,
-                           p == NULL ? attrs : p->attributes, val);
-  }
-  return -1;
-}
-
-WARN_UNUSED_RESULT
-enum v7_err v7_set_throwing(struct v7 *v7, val_t obj, const char *name,
-                            size_t len, v7_prop_attr_t attrs, val_t val,
-                            int *res) {
-  enum v7_err rcode = V7_OK;
-  struct v7_property *p = v7_get_own_property(v7, obj, name, len);
-  if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    V7_TRY(v7_set_property_throwing(
-        v7, obj, name, len, p == NULL ? attrs : p->attributes, val, res));
-  } else {
-    if (res != NULL) {
-      *res = -1;
-    }
-  }
-
-clean:
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
                                         val_t obj, val_t val) {
   enum v7_err rcode = V7_OK;
@@ -14535,88 +14552,69 @@ clean:
   return rcode;
 }
 
-V7_PRIVATE enum v7_err v7_set_prop(struct v7 *v7, val_t obj, val_t name,
-                                   v7_prop_attr_t attributes, val_t val,
-                                   struct v7_property **res) {
-  enum v7_err rcode = V7_OK;
-  struct v7_property *prop = NULL;
-  size_t len;
-  const char *n = v7_get_string_data(v7, &name, &len);
+static v7_prop_attr_t apply_attrs_desc(v7_prop_attr_desc_t attrs_desc,
+                                       v7_prop_attr_t old_attrs) {
+  v7_prop_attr_t ret = old_attrs;
+  if (old_attrs & V7_PROPERTY_NON_CONFIGURABLE) {
+    /*
+     * The property is non-configurable: we can only change it from being
+     * writable to non-writable
+     */
 
-  v7_own(v7, &name);
-  v7_own(v7, &val);
-
-  if (!v7_is_object(obj)) {
-    *res = NULL;
-    goto clean;
-  }
-
-  if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
-    if (v7->strict_mode) {
-      V7_THROW(v7_throwf(v7, TYPE_ERROR, "Object is not extensible"));
+    if ((attrs_desc >> _V7_DESC_SHIFT) & V7_PROPERTY_NON_WRITABLE &&
+        (attrs_desc & V7_PROPERTY_NON_WRITABLE)) {
+      ret |= V7_PROPERTY_NON_WRITABLE;
     }
-    *res = NULL;
-    goto clean;
+
+  } else {
+    /* The property is configurable: we can change any attributes */
+    ret = (old_attrs & ~(attrs_desc >> _V7_DESC_SHIFT)) |
+          (attrs_desc & _V7_DESC_MASK);
   }
 
-  prop = v7_get_own_property(v7, obj, n, len);
-  if (prop == NULL) {
-    if ((prop = v7_create_property(v7)) == NULL) {
-      *res = NULL; /* LCOV_EXCL_LINE */
-      goto clean;
-    }
-    prop->next = v7_to_object(obj)->properties;
-    v7_to_object(obj)->properties = prop;
-  }
-
-  if (v7_is_undefined(prop->name)) {
-    prop->name = name;
-  }
-  if (prop->attributes & V7_PROPERTY_SETTER) {
-    V7_TRY(v7_invoke_setter(v7, prop, obj, val));
-    *res = NULL;
-    goto clean;
-  }
-
-  prop->value = val;
-  prop->attributes = attributes;
-
-  *res = prop;
-
-clean:
-  v7_disown(v7, &val);
-  v7_disown(v7, &name);
-
-  return rcode;
+  return ret;
 }
 
-/*
- * NOTE: `res` is allowed to be `NULL`.
- */
-enum v7_err v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
-                              v7_prop_attr_t attributes, v7_val_t val,
-                              int *res) {
-  enum v7_err rcode = V7_OK;
-  struct v7_property *prop = NULL;
-
-  V7_TRY(v7_set_prop(v7, obj, name, attributes, val, &prop));
-
-  if (res != NULL) {
-    *res = (prop == NULL) ? -1 : 0;
-  }
-
-clean:
-  return rcode;
-}
-
-int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
-                    v7_prop_attr_t attributes, v7_val_t val) {
+int v7_def(struct v7 *v7, val_t obj, const char *name, size_t len,
+           v7_prop_attr_desc_t attrs_desc, v7_val_t val) {
   enum v7_err rcode = V7_OK;
   uint8_t saved_is_thrown = 0;
   val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
   int ret = -1;
 
-  rcode = v7_set_property_throwing(v7, obj, name, len, attributes, val, &ret);
+  {
+    struct v7_property *tmp = NULL;
+    rcode = def_property(v7, obj, name, len, attrs_desc, val, 0 /*not assign*/,
+                         &tmp);
+    ret = (tmp == NULL) ? -1 : 0;
+  }
+
+  if (rcode != V7_OK) {
+    rcode = V7_OK;
+    if (saved_is_thrown) {
+      rcode = v7_throw(v7, saved_thrown);
+    } else {
+      v7_clear_thrown_value(v7);
+    }
+    ret = -1;
+  }
+
+  return ret;
+}
+
+int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
+           v7_val_t val) {
+  enum v7_err rcode = V7_OK;
+  uint8_t saved_is_thrown = 0;
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
+  int ret = -1;
+
+  {
+    struct v7_property *tmp = NULL;
+    rcode = set_property(v7, obj, name, len, val, &tmp);
+    ret = (tmp == NULL) ? -1 : 0;
+  }
+
   if (rcode != V7_OK) {
     rcode = V7_OK;
     if (saved_is_thrown) {
@@ -14631,27 +14629,190 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
 }
 
 WARN_UNUSED_RESULT
-enum v7_err v7_set_property_throwing(struct v7 *v7, val_t obj, const char *name,
-                                     size_t len, v7_prop_attr_t attributes,
-                                     v7_val_t val, int *res) {
+V7_PRIVATE enum v7_err set_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      val_t val, struct v7_property **res) {
+  return def_property_v(v7, obj, name, 0, val, 1 /*as_assign*/, res);
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err set_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_val_t val,
+                                    struct v7_property **res) {
+  return def_property(v7, obj, name, len, 0, val, 1 /*as_assign*/, res);
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      v7_prop_attr_desc_t attrs_desc, val_t val,
+                                      uint8_t as_assign,
+                                      struct v7_property **res) {
   enum v7_err rcode = V7_OK;
-  val_t n = v7_create_undefined();
-  /* set_property_v can trigger GC */
+  struct v7_property *prop = NULL;
+  size_t len;
+  const char *n = v7_get_string_data(v7, &name, &len);
+
+  v7_own(v7, &name);
+  v7_own(v7, &val);
+
+  if (!v7_is_object(obj)) {
+    prop = NULL;
+    goto clean;
+  }
+
+  prop = v7_get_own_property(v7, obj, n, len);
+  if (prop == NULL) {
+    /*
+     * The own property with given `name` doesn't exist yet: try to create it,
+     * set requested `name` and `attributes`, and append to the object's
+     * properties
+     */
+
+    /* make sure the object is extensible */
+    if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
+      /*
+       * We should throw if we use `Object.defineProperty`, or if we're in
+       * strict mode.
+       */
+      if (v7->strict_mode || !as_assign) {
+        V7_THROW(v7_throwf(v7, TYPE_ERROR, "Object is not extensible"));
+      }
+      prop = NULL;
+      goto clean;
+    }
+
+    if ((prop = v7_create_property(v7)) == NULL) {
+      prop = NULL; /* LCOV_EXCL_LINE */
+      goto clean;
+    }
+    prop->name = name;
+    prop->value = val;
+    prop->attributes = apply_attrs_desc(attrs_desc, V7_DEFAULT_PROPERTY_ATTRS);
+
+    prop->next = v7_to_object(obj)->properties;
+    v7_to_object(obj)->properties = prop;
+    goto clean;
+  } else {
+    /* Property already exists */
+
+    if (prop->attributes & V7_PROPERTY_NON_WRITABLE) {
+      /* The property is read-only */
+
+      if (as_assign) {
+        /* Plain assignment: in strict mode throw, otherwise ignore */
+        if (v7->strict_mode) {
+          V7_THROW(
+              v7_throwf(v7, TYPE_ERROR, "Cannot assign to read-only property"));
+        } else {
+          prop = NULL;
+          goto clean;
+        }
+      } else if (prop->attributes & V7_PROPERTY_NON_CONFIGURABLE) {
+        /*
+         * Use `Object.defineProperty` semantic, and the property is
+         * non-configurable: if no value is provided, or if new value is equal
+         * to the existing one, then just fall through to change attributes;
+         * otherwise, throw.
+         */
+
+        if (!(attrs_desc & V7_DESC_PRESERVE_VALUE)) {
+          uint8_t equal = 0;
+          if (v7_is_string(val) && v7_is_string(prop->value)) {
+            equal = (s_cmp(v7, val, prop->value) == 0);
+          } else {
+            equal = (val == prop->value);
+          }
+
+          if (!equal) {
+            /* Values are not equal: should throw */
+            V7_THROW(v7_throwf(v7, TYPE_ERROR,
+                               "Cannot redefine read-only property"));
+          } else {
+            /*
+             * Values are equal. Will fall through so that attributes might
+             * change.
+             */
+          }
+        } else {
+          /*
+           * No value is provided. Will fall through so that attributes might
+           * change.
+           */
+        }
+      } else {
+        /*
+         * Use `Object.defineProperty` semantic, and the property is
+         * configurable: will fall through and assign new value, effectively
+         * ignoring non-writable flag. This is the same as making a property
+         * writable, then assigning a new value, and making a property
+         * non-writable again.
+         */
+      }
+    } else if (prop->attributes & V7_PROPERTY_SETTER) {
+      /* Invoke setter */
+      V7_TRY(v7_invoke_setter(v7, prop, obj, val));
+      prop = NULL;
+      goto clean;
+    }
+
+    /* Set value and apply attrs delta */
+    if (!(attrs_desc & V7_DESC_PRESERVE_VALUE)) {
+      prop->value = val;
+    }
+    prop->attributes = apply_attrs_desc(attrs_desc, prop->attributes);
+  }
+
+clean:
+
+  if (res != NULL) {
+    *res = prop;
+  }
+
+  v7_disown(v7, &val);
+  v7_disown(v7, &name);
+
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_prop_attr_desc_t attrs_desc,
+                                    v7_val_t val, uint8_t as_assign,
+                                    struct v7_property **res) {
+  enum v7_err rcode = V7_OK;
+  val_t name_val = v7_create_undefined();
+  /* def_property_v can trigger GC */
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   tmp_stack_push(&tf, &val);
-  tmp_stack_push(&tf, &n);
+  tmp_stack_push(&tf, &name_val);
 
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
 
-  n = v7_create_string(v7, name, len, 1);
-  V7_TRY(v7_set_property_v(v7, obj, n, attributes, val, res));
-  tmp_frame_cleanup(&tf);
+  name_val = v7_create_string(v7, name, len, 1);
+  V7_TRY(def_property_v(v7, obj, name_val, attrs_desc, val, as_assign, res));
 
 clean:
+  tmp_frame_cleanup(&tf);
   return rcode;
+}
+
+V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                          v7_cfunction_t *func, int num_args) {
+  return v7_def(v7, obj, name, strlen(name), V7_DESC_ENUMERABLE(0),
+                v7_create_function_nargs(v7, func, num_args));
+}
+
+int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                  v7_cfunction_t *func) {
+  return set_method(v7, obj, name, func, ~0);
+}
+
+V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                              v7_cfunction_t *f) {
+  return v7_def(v7, o, name, strlen(name), V7_DESC_ENUMERABLE(0),
+                v7_create_cfunction(f));
 }
 
 /*
@@ -14689,12 +14850,11 @@ v7_val_t v7_create_function_nargs(struct v7 *v7, v7_cfunction_t *f,
   val_t obj = create_object(v7, v7->vals.function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
-  v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
+  v7_def(v7, obj, "", 0, _V7_DESC_HIDDEN(1), v7_create_cfunction(f));
   if (num_args >= 0) {
-    v7_set_property(
-        v7, obj, "length", 6,
-        V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
-        v7_create_number(num_args));
+    v7_def(v7, obj, "length", 6, (V7_DESC_ENUMERABLE(0) | V7_DESC_WRITABLE(0) |
+                                  V7_DESC_CONFIGURABLE(0)),
+           v7_create_number(num_args));
   }
   tmp_frame_cleanup(&tf);
   return obj;
@@ -14709,34 +14869,16 @@ V7_PRIVATE v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
                                                 int num_args) {
   v7_val_t res = v7_create_function_nargs(v7, f, num_args);
 
-  v7_set_property(
-      v7, res, "prototype", 9,
-      V7_PROPERTY_DONT_ENUM | V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
-      proto);
-  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
+  v7_def(v7, res, "prototype", 9, (V7_DESC_ENUMERABLE(0) | V7_DESC_WRITABLE(0) |
+                                   V7_DESC_CONFIGURABLE(0)),
+         proto);
+  v7_def(v7, proto, "constructor", 11, V7_DESC_ENUMERABLE(0), res);
   return res;
 }
 
 v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
                                v7_cfunction_t *f) {
   return v7_create_constructor_nargs(v7, proto, f, ~0);
-}
-
-V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                          v7_cfunction_t *func, int num_args) {
-  return v7_set_property(v7, obj, name, strlen(name), V7_PROPERTY_DONT_ENUM,
-                         v7_create_function_nargs(v7, func, num_args));
-}
-
-int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                  v7_cfunction_t *func) {
-  return set_method(v7, obj, name, func, ~0);
-}
-
-V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                              v7_cfunction_t *f) {
-  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
-                         v7_create_cfunction(f));
 }
 
 WARN_UNUSED_RESULT
@@ -14796,7 +14938,7 @@ void *v7_next_prop(struct v7 *v7, val_t obj, void *h, val_t *name, val_t *val,
   if (v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
     /* This is a dense array. Find backing mbuf and fetch values from there */
     struct v7_property *hp =
-        v7_get_own_property2(v7, obj, "", 0, V7_PROPERTY_HIDDEN);
+        v7_get_own_property2(v7, obj, "", 0, _V7_PROPERTY_HIDDEN);
     struct mbuf *abuf = NULL;
     unsigned long len, idx;
     if (hp != NULL) {
@@ -14877,7 +15019,7 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
 #if V7_ENABLE_DENSE_ARRAYS
   if (v7_to_object(v)->attributes & V7_OBJ_DENSE_ARRAY) {
     struct v7_property *p =
-        v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+        v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
     struct mbuf *abuf;
     if (p == NULL) {
       len = 0;
@@ -14935,7 +15077,7 @@ enum v7_err v7_array_set_throwing(struct v7 *v7, val_t arr, unsigned long index,
   if (v7_is_object(arr)) {
     if (v7_to_object(arr)->attributes & V7_OBJ_DENSE_ARRAY) {
       struct v7_property *p =
-          v7_get_own_property2(v7, arr, "", 0, V7_PROPERTY_HIDDEN);
+          v7_get_own_property2(v7, arr, "", 0, _V7_PROPERTY_HIDDEN);
       struct mbuf *abuf;
       unsigned long len;
       assert(p != NULL);
@@ -14974,7 +15116,11 @@ enum v7_err v7_array_set_throwing(struct v7 *v7, val_t arr, unsigned long index,
     } else {
       char buf[20];
       int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
-      rcode = v7_set_throwing(v7, arr, buf, n, 0, v, &ires);
+      {
+        struct v7_property *tmp = NULL;
+        rcode = set_property(v7, arr, buf, n, v, &tmp);
+        ires = (tmp == NULL) ? -1 : 0;
+      }
       if (rcode != V7_OK) {
         goto clean;
       }
@@ -15020,7 +15166,7 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
   if (v7_is_object(arr)) {
     if (v7_to_object(arr)->attributes & V7_OBJ_DENSE_ARRAY) {
       struct v7_property *p =
-          v7_get_own_property2(v7, arr, "", 0, V7_PROPERTY_HIDDEN);
+          v7_get_own_property2(v7, arr, "", 0, _V7_PROPERTY_HIDDEN);
       struct mbuf *abuf = NULL;
       unsigned long len;
       if (p != NULL) {
@@ -15378,7 +15524,7 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
   struct mbuf *abuf;
 
   p = v7_get_own_property2(v7, v7_object_to_value(&o->base), "", 0,
-                           V7_PROPERTY_HIDDEN);
+                           _V7_PROPERTY_HIDDEN);
 
 #if V7_ENABLE__RegExp
   if (p != NULL && (p->value & V7_TAG_MASK) == V7_TAG_REGEXP) {
@@ -15488,8 +15634,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
       obj = v7_to_generic_object(v7->vals.global_object);
       *obj = *v7_to_generic_object(fr_vals->global_object);
       obj->base.attributes &= ~(V7_OBJ_NOT_EXTENSIBLE | V7_OBJ_OFF_HEAP);
-      v7_set(v7, v7->vals.global_object, "global", 6, 0,
-             v7->vals.global_object);
+      v7_set(v7, v7->vals.global_object, "global", 6, v7->vals.global_object);
 
       v7->vals.call_stack = v7->vals.global_object;
       v7->vals.this_object = v7->vals.global_object;
@@ -16630,7 +16775,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   /* mark object itself, and its properties */
   for ((prop = obj_base->properties), MARK(obj_base); prop != NULL;
        prop = next) {
-    if (prop->attributes & V7_PROPERTY_OFF_HEAP) {
+    if (prop->attributes & _V7_PROPERTY_OFF_HEAP) {
       break;
     }
 
@@ -17225,9 +17370,9 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
 }
 
 V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
-  unsigned int attrs = V7_PROPERTY_OFF_HEAP;
+  unsigned int attrs = _V7_PROPERTY_OFF_HEAP;
 #ifndef V7_FREEZE_NOT_READONLY
-  attrs |= V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE;
+  attrs |= V7_PROPERTY_NON_WRITABLE | V7_PROPERTY_NON_CONFIGURABLE;
 #endif
 
   fprintf(f,
@@ -21981,8 +22126,8 @@ V7_PRIVATE enum v7_err Std_exit(struct v7 *v7, v7_val_t *res) {
 #endif
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
-  v7_prop_attr_t attr_internal =
-      V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
+  v7_prop_attr_desc_t attr_internal =
+      (V7_DESC_ENUMERABLE(0) | V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0));
 
   /*
    * Ensure the first call to v7_create_value will use a null proto:
@@ -22012,10 +22157,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   set_method(v7, v7->vals.global_object, "isNaN", Std_isNaN, 1);
   set_method(v7, v7->vals.global_object, "isFinite", Std_isFinite, 1);
 
-  v7_set_property(v7, v7->vals.global_object, "Infinity", 8, attr_internal,
-                  v7_create_number(INFINITY));
-  v7_set_property(v7, v7->vals.global_object, "global", 6, 0,
-                  v7->vals.global_object);
+  v7_def(v7, v7->vals.global_object, "Infinity", 8, attr_internal,
+         v7_create_number(INFINITY));
+  v7_set(v7, v7->vals.global_object, "global", 6, v7->vals.global_object);
 
   init_object(v7);
   init_array(v7);
@@ -24160,14 +24304,15 @@ clean:
 #if V7_ENABLE__Object__keys
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Obj_keys(struct v7 *v7, v7_val_t *res) {
-  return _Obj_ownKeys(v7, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM, res);
+  return _Obj_ownKeys(v7, _V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE,
+                      res);
 }
 #endif
 
 #if V7_ENABLE__Object__getOwnPropertyNames
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Obj_getOwnPropertyNames(struct v7 *v7, v7_val_t *res) {
-  return _Obj_ownKeys(v7, V7_PROPERTY_HIDDEN, res);
+  return _Obj_ownKeys(v7, _V7_PROPERTY_HIDDEN, res);
 }
 #endif
 
@@ -24191,17 +24336,14 @@ V7_PRIVATE enum v7_err Obj_getOwnPropertyDescriptor(struct v7 *v7,
   }
 
   desc = v7_create_object(v7);
-  v7_set_property(v7, desc, "value", 5, 0, prop->value);
-  v7_set_property(
-      v7, desc, "writable", 8, 0,
-      v7_create_boolean(!(prop->attributes & V7_PROPERTY_READ_ONLY)));
-  v7_set_property(
-      v7, desc, "enumerable", 10, 0,
-      v7_create_boolean(
-          !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM))));
-  v7_set_property(
-      v7, desc, "configurable", 12, 0,
-      v7_create_boolean(!(prop->attributes & V7_PROPERTY_DONT_DELETE)));
+  v7_set(v7, desc, "value", 5, prop->value);
+  v7_set(v7, desc, "writable", 8,
+         v7_create_boolean(!(prop->attributes & V7_PROPERTY_NON_WRITABLE)));
+  v7_set(v7, desc, "enumerable", 10,
+         v7_create_boolean(!(prop->attributes & (_V7_PROPERTY_HIDDEN |
+                                                 V7_PROPERTY_NON_ENUMERABLE))));
+  v7_set(v7, desc, "configurable", 12,
+         v7_create_boolean(!(prop->attributes & V7_PROPERTY_NON_CONFIGURABLE)));
 
   *res = desc;
 
@@ -24212,9 +24354,11 @@ clean:
 
 WARN_UNUSED_RESULT
 static enum v7_err o_set_attr(struct v7 *v7, val_t desc, const char *name,
-                              size_t n, struct v7_property *prop,
-                              v7_prop_attr_t attr) {
+                              size_t n, v7_prop_attr_desc_t *pattrs_delta,
+                              v7_prop_attr_desc_t flag_true,
+                              v7_prop_attr_desc_t flag_false) {
   enum v7_err rcode = V7_OK;
+
   val_t v = v7_create_undefined();
   rcode = v7_get_throwing(v7, desc, name, n, &v);
   if (rcode != V7_OK) {
@@ -24222,9 +24366,9 @@ static enum v7_err o_set_attr(struct v7 *v7, val_t desc, const char *name,
   }
 
   if (v7_is_true(v7, v)) {
-    prop->attributes &= ~attr;
+    *pattrs_delta |= flag_true;
   } else {
-    prop->attributes |= attr;
+    *pattrs_delta |= flag_false;
   }
 
 clean:
@@ -24237,44 +24381,53 @@ static enum v7_err _Obj_defineProperty(struct v7 *v7, val_t obj,
                                        val_t desc, val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t val = v7_create_undefined();
-  struct v7_property *prop = v7_get_own_property(v7, obj, name, name_len);
+  v7_prop_attr_desc_t attrs_desc = 0;
 
-  rcode = v7_get_throwing(v7, desc, "value", 5, &val);
+  /*
+   * get provided value, or set `V7_DESC_PRESERVE_VALUE` flag if no value is
+   * provided at all
+   */
+  {
+    struct v7_property *prop = v7_get_property(v7, desc, "value", 5);
+    if (prop == NULL) {
+      /* no value is provided */
+      attrs_desc |= V7_DESC_PRESERVE_VALUE;
+    } else {
+      /* value is provided: use it */
+      rcode = v7_property_value(v7, desc, prop, &val);
+      if (rcode != V7_OK) {
+        goto clean;
+      }
+    }
+  }
+
+  /* Examine given properties, and set appropriate flags for `def_property` */
+
+  rcode = o_set_attr(v7, desc, "enumerable", 10, &attrs_desc,
+                     V7_DESC_ENUMERABLE(1), V7_DESC_ENUMERABLE(0));
   if (rcode != V7_OK) {
     goto clean;
   }
 
-  if (prop == NULL) {
-    val_t key = v7_create_string(v7, name, name_len, 1);
-    rcode = v7_set_prop(v7, obj, key, 0, val, &prop);
-    if (rcode != V7_OK) {
-      goto clean;
-    }
+  rcode = o_set_attr(v7, desc, "writable", 8, &attrs_desc, V7_DESC_WRITABLE(1),
+                     V7_DESC_WRITABLE(0));
+  if (rcode != V7_OK) {
+    goto clean;
   }
 
-  if (prop == NULL) {
-    rcode = v7_throwf(v7, "Error", "OOM");
+  rcode = o_set_attr(v7, desc, "configurable", 12, &attrs_desc,
+                     V7_DESC_CONFIGURABLE(1), V7_DESC_CONFIGURABLE(0));
+  if (rcode != V7_OK) {
     goto clean;
-  } else {
-    rcode = o_set_attr(v7, desc, "enumerable", 10, prop, V7_PROPERTY_DONT_ENUM);
-    if (rcode != V7_OK) {
-      goto clean;
-    }
+  }
 
-    rcode = o_set_attr(v7, desc, "writable", 8, prop, V7_PROPERTY_READ_ONLY);
-    if (rcode != V7_OK) {
-      goto clean;
-    }
+  /* TODO(dfrank) : add getter/setter support */
 
-    rcode =
-        o_set_attr(v7, desc, "configurable", 12, prop, V7_PROPERTY_DONT_DELETE);
-    if (rcode != V7_OK) {
-      goto clean;
-    }
-
-    if (!v7_is_undefined(val)) {
-      prop->value = val;
-    }
+  /* Finally, do the job on defining the property */
+  rcode = def_property(v7, obj, name, name_len, attrs_desc, val,
+                       0 /*not assign*/, NULL);
+  if (rcode != V7_OK) {
+    goto clean;
   }
 
   *res = obj;
@@ -24325,7 +24478,7 @@ static enum v7_err o_define_props(struct v7 *v7, val_t obj, val_t descs,
   for (p = v7_to_object(descs)->properties; p; p = p->next) {
     size_t n;
     const char *s = v7_get_string_data(v7, &p->name, &n);
-    if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+    if (p->attributes & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
       continue;
     }
     rcode = _Obj_defineProperty(v7, obj, s, n, p->value, res);
@@ -24397,8 +24550,9 @@ V7_PRIVATE enum v7_err Obj_propertyIsEnumerable(struct v7 *v7, v7_val_t *res) {
   if (prop == NULL) {
     *res = v7_create_boolean(0);
   } else {
-    *res = v7_create_boolean(
-        !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
+    *res =
+        v7_create_boolean(!(prop->attributes & (_V7_PROPERTY_HIDDEN |
+                                                V7_PROPERTY_NON_ENUMERABLE)));
   }
 
   goto clean;
@@ -24442,7 +24596,7 @@ V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  p = v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
+  p = v7_get_own_property2(v7, this_obj, "", 0, _V7_PROPERTY_HIDDEN);
   if (p != NULL) {
     *res = p->value;
     goto clean;
@@ -24548,9 +24702,9 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 #endif
 
   object = v7_get(v7, v7->vals.global_object, "Object", 6);
-  v7_set(v7, object, "prototype", 9, 0, v7->vals.object_prototype);
-  v7_set(v7, v7->vals.object_prototype, "constructor", 11,
-         V7_PROPERTY_DONT_ENUM, object);
+  v7_set(v7, object, "prototype", 9, v7->vals.object_prototype);
+  v7_def(v7, v7->vals.object_prototype, "constructor", 11,
+         V7_DESC_ENUMERABLE(0), object);
 
   set_method(v7, v7->vals.object_prototype, "toString", Obj_toString, 0);
 #if V7_ENABLE__Object__getPrototypeOf
@@ -24640,9 +24794,8 @@ V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
     *res = create_object(v7, v7->vals.error_prototype);
   }
   /* TODO(mkm): set non enumerable but provide toString method */
-  v7_set_property(v7, *res, "message", 7, 0, arg0);
-  v7_set_property(v7, *res, "stack", 5, V7_PROPERTY_DONT_ENUM,
-                  v7->vals.call_stack);
+  v7_set(v7, *res, "message", 7, arg0);
+  v7_def(v7, *res, "stack", 5, V7_DESC_ENUMERABLE(0), v7->vals.call_stack);
 
   return rcode;
 }
@@ -24679,15 +24832,14 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 
   error =
       v7_create_constructor_nargs(v7, v7->vals.error_prototype, Error_ctor, 1);
-  v7_set_property(v7, v7->vals.global_object, "Error", 5, V7_PROPERTY_DONT_ENUM,
-                  error);
+  v7_def(v7, v7->vals.global_object, "Error", 5, V7_DESC_ENUMERABLE(0), error);
   set_method(v7, v7->vals.error_prototype, "toString", Error_toString, 0);
 
   for (i = 0; i < ARRAY_SIZE(error_names); i++) {
     error = v7_create_constructor_nargs(
         v7, create_object(v7, v7->vals.error_prototype), Error_ctor, 1);
-    v7_set_property(v7, v7->vals.global_object, error_names[i],
-                    strlen(error_names[i]), V7_PROPERTY_DONT_ENUM, error);
+    v7_def(v7, v7->vals.global_object, error_names[i], strlen(error_names[i]),
+           V7_DESC_ENUMERABLE(0), error);
     v7->vals.error_objects[i] = error;
   }
 }
@@ -24722,7 +24874,7 @@ V7_PRIVATE enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
   if (v7_is_generic_object(this_obj) && this_obj != v7->vals.global_object) {
     obj_prototype_set(v7, v7_to_object(this_obj),
                       v7_to_object(v7->vals.number_prototype));
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
+    v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), *res);
 
     /*
      * implicitly returning `this`: `call_cfunction()` in bcode.c will do
@@ -24903,12 +25055,12 @@ V7_PRIVATE enum v7_err n_isNaN(struct v7 *v7, v7_val_t *res) {
 }
 
 V7_PRIVATE void init_number(struct v7 *v7) {
-  v7_prop_attr_t attrs =
-      V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
+  v7_prop_attr_desc_t attrs_desc =
+      (V7_DESC_WRITABLE(0) | V7_DESC_ENUMERABLE(0) | V7_DESC_CONFIGURABLE(0));
   val_t num = v7_create_constructor_nargs(v7, v7->vals.number_prototype,
                                           Number_ctor, 1);
-  v7_set_property(v7, v7->vals.global_object, "Number", 6,
-                  V7_PROPERTY_DONT_ENUM, num);
+
+  v7_def(v7, v7->vals.global_object, "Number", 6, V7_DESC_ENUMERABLE(0), num);
 
   set_cfunc_prop(v7, v7->vals.number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->vals.number_prototype, "toPrecision",
@@ -24917,22 +25069,22 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   set_cfunc_prop(v7, v7->vals.number_prototype, "valueOf", Number_valueOf);
   set_cfunc_prop(v7, v7->vals.number_prototype, "toString", Number_toString);
 
-  v7_set_property(v7, num, "MAX_VALUE", 9, attrs,
-                  v7_create_number(1.7976931348623157e+308));
-  v7_set_property(v7, num, "MIN_VALUE", 9, attrs, v7_create_number(5e-324));
+  v7_def(v7, num, "MAX_VALUE", 9, attrs_desc,
+         v7_create_number(1.7976931348623157e+308));
+  v7_def(v7, num, "MIN_VALUE", 9, attrs_desc, v7_create_number(5e-324));
 #if V7_ENABLE__NUMBER__NEGATIVE_INFINITY
-  v7_set_property(v7, num, "NEGATIVE_INFINITY", 17, attrs,
-                  v7_create_number(-INFINITY));
+  v7_def(v7, num, "NEGATIVE_INFINITY", 17, attrs_desc,
+         v7_create_number(-INFINITY));
 #endif
 #if V7_ENABLE__NUMBER__POSITIVE_INFINITY
-  v7_set_property(v7, num, "POSITIVE_INFINITY", 17, attrs,
-                  v7_create_number(INFINITY));
+  v7_def(v7, num, "POSITIVE_INFINITY", 17, attrs_desc,
+         v7_create_number(INFINITY));
 #endif
-  v7_set_property(v7, num, "NaN", 3, attrs, V7_TAG_NAN);
+  v7_def(v7, num, "NaN", 3, attrs_desc, V7_TAG_NAN);
 
-  v7_set_property(v7, v7->vals.global_object, "NaN", 3, attrs, V7_TAG_NAN);
-  v7_set_property(v7, v7->vals.global_object, "isNaN", 5, V7_PROPERTY_DONT_ENUM,
-                  v7_create_cfunction(n_isNaN));
+  v7_def(v7, v7->vals.global_object, "NaN", 3, attrs_desc, V7_TAG_NAN);
+  v7_def(v7, v7->vals.global_object, "isNaN", 5, V7_DESC_ENUMERABLE(0),
+         v7_create_cfunction(n_isNaN));
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_json.c"
@@ -24967,8 +25119,7 @@ V7_PRIVATE void init_json(struct v7 *v7) {
   val_t o = v7_create_object(v7);
   set_method(v7, o, "stringify", Json_stringify, 1);
   set_method(v7, o, "parse", Json_parse, 1);
-  v7_set_property(v7, v7->vals.global_object, "JSON", 4, V7_PROPERTY_DONT_ENUM,
-                  o);
+  v7_def(v7, v7->vals.global_object, "JSON", 4, V7_DESC_ENUMERABLE(0), o);
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_array.c"
@@ -25095,7 +25246,7 @@ V7_PRIVATE enum v7_err Array_set_length(struct v7 *v7, v7_val_t *res) {
     if (new_len > 0 && max_index < new_len - 1) {
       char buf[40];
       c_snprintf(buf, sizeof(buf), "%ld", new_len - 1);
-      v7_set_property(v7, this_obj, buf, strlen(buf), 0, V7_UNDEFINED);
+      v7_set(v7, this_obj, buf, strlen(buf), V7_UNDEFINED);
     }
   }
 
@@ -25407,7 +25558,7 @@ static enum v7_err a_splice(struct v7 *v7, int mutate, v7_val_t *res) {
      * TODO(mkm): figure out if trimming is better
      */
     struct v7_property *p =
-        v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
+        v7_get_own_property2(v7, this_obj, "", 0, _V7_PROPERTY_HIDDEN);
     struct mbuf *abuf;
     if (p == NULL) {
       goto clean;
@@ -25448,7 +25599,7 @@ static enum v7_err a_splice(struct v7 *v7, int mutate, v7_val_t *res) {
     for (i = 2; i < num_args; i++) {
       char key[20];
       size_t n = c_snprintf(key, sizeof(key), "%ld", arg0 + i - 2);
-      rcode = v7_set_throwing(v7, this_obj, key, n, 0, v7_arg(v7, i), NULL);
+      rcode = set_property(v7, this_obj, key, n, v7_arg(v7, i), NULL);
       if (rcode != V7_OK) {
         goto clean;
       }
@@ -25785,12 +25936,12 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_function_nargs(v7, Array_ctor, 1);
   val_t length = v7_create_dense_array(v7);
 
-  v7_set_property(v7, ctor, "prototype", 9, 0, v7->vals.array_prototype);
+  v7_set(v7, ctor, "prototype", 9, v7->vals.array_prototype);
   set_method(v7, ctor, "isArray", Array_isArray, 1);
-  v7_set_property(v7, v7->vals.global_object, "Array", 5, 0, ctor);
-  v7_set_property(v7, v7->vals.array_prototype, "constructor", ~0,
-                  V7_PROPERTY_HIDDEN, ctor);
-  v7_set_property(v7, ctor, "name", 4, 0, v7_create_string(v7, "Array", ~0, 1));
+  v7_set(v7, v7->vals.global_object, "Array", 5, ctor);
+  v7_def(v7, v7->vals.array_prototype, "constructor", ~0, _V7_DESC_HIDDEN(1),
+         ctor);
+  v7_set(v7, ctor, "name", 4, v7_create_string(v7, "Array", ~0, 1));
 
   set_method(v7, v7->vals.array_prototype, "concat", Array_concat, 1);
   set_method(v7, v7->vals.array_prototype, "every", Array_every, 1);
@@ -25808,9 +25959,8 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 
   v7_array_set(v7, length, 0, v7_create_cfunction(Array_get_length));
   v7_array_set(v7, length, 1, v7_create_cfunction(Array_set_length));
-  v7_set_property(
-      v7, v7->vals.array_prototype, "length", 6,
-      V7_PROPERTY_GETTER | V7_PROPERTY_SETTER | V7_PROPERTY_DONT_ENUM, length);
+  v7_def(v7, v7->vals.array_prototype, "length", 6,
+         V7_DESC_ENUMERABLE(0) | V7_DESC_GETTER(1) | V7_DESC_SETTER(1), length);
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_boolean.c"
@@ -25839,7 +25989,7 @@ V7_PRIVATE enum v7_err Boolean_ctor(struct v7 *v7, v7_val_t *res) {
     /* called as "new Boolean(...)" */
     obj_prototype_set(v7, v7_to_object(this_obj),
                       v7_to_object(v7->vals.boolean_prototype));
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
+    v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), *res);
 
     /*
      * implicitly returning `this`: `call_cfunction()` in bcode.c will do
@@ -25908,7 +26058,7 @@ clean:
 V7_PRIVATE void init_boolean(struct v7 *v7) {
   val_t ctor = v7_create_constructor_nargs(v7, v7->vals.boolean_prototype,
                                            Boolean_ctor, 1);
-  v7_set_property(v7, v7->vals.global_object, "Boolean", 7, 0, ctor);
+  v7_set(v7, v7->vals.global_object, "Boolean", 7, ctor);
 
   set_cfunc_prop(v7, v7->vals.boolean_prototype, "valueOf", Boolean_valueOf);
   set_cfunc_prop(v7, v7->vals.boolean_prototype, "toString", Boolean_toString);
@@ -26151,17 +26301,17 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 #endif
 
 #if V7_ENABLE__Math__constants
-  v7_set_property(v7, math, "E", 1, 0, v7_create_number(M_E));
-  v7_set_property(v7, math, "PI", 2, 0, v7_create_number(M_PI));
-  v7_set_property(v7, math, "LN2", 3, 0, v7_create_number(M_LN2));
-  v7_set_property(v7, math, "LN10", 4, 0, v7_create_number(M_LN10));
-  v7_set_property(v7, math, "LOG2E", 5, 0, v7_create_number(M_LOG2E));
-  v7_set_property(v7, math, "LOG10E", 6, 0, v7_create_number(M_LOG10E));
-  v7_set_property(v7, math, "SQRT1_2", 7, 0, v7_create_number(M_SQRT1_2));
-  v7_set_property(v7, math, "SQRT2", 5, 0, v7_create_number(M_SQRT2));
+  v7_set(v7, math, "E", 1, v7_create_number(M_E));
+  v7_set(v7, math, "PI", 2, v7_create_number(M_PI));
+  v7_set(v7, math, "LN2", 3, v7_create_number(M_LN2));
+  v7_set(v7, math, "LN10", 4, v7_create_number(M_LN10));
+  v7_set(v7, math, "LOG2E", 5, v7_create_number(M_LOG2E));
+  v7_set(v7, math, "LOG10E", 6, v7_create_number(M_LOG10E));
+  v7_set(v7, math, "SQRT1_2", 7, v7_create_number(M_SQRT1_2));
+  v7_set(v7, math, "SQRT2", 5, v7_create_number(M_SQRT2));
 #endif
 
-  v7_set_property(v7, v7->vals.global_object, "Math", 4, 0, math);
+  v7_set(v7, v7->vals.global_object, "Math", 4, math);
 }
 
 #endif /* V7_ENABLE__Math */
@@ -26345,7 +26495,7 @@ V7_PRIVATE enum v7_err String_ctor(struct v7 *v7, v7_val_t *res) {
   if (v7_is_generic_object(this_obj) && this_obj != v7->vals.global_object) {
     obj_prototype_set(v7, v7_to_object(this_obj),
                       v7_to_object(v7->vals.string_prototype));
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
+    v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), *res);
     /*
      * implicitly returning `this`: `call_cfunction()` in bcode.c will do
      * that for us
@@ -27388,8 +27538,7 @@ clean:
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str = v7_create_constructor_nargs(v7, v7->vals.string_prototype,
                                           String_ctor, 1);
-  v7_set_property(v7, v7->vals.global_object, "String", 6,
-                  V7_PROPERTY_DONT_ENUM, str);
+  v7_def(v7, v7->vals.global_object, "String", 6, V7_DESC_ENUMERABLE(0), str);
 
   set_cfunc_prop(v7, str, "fromCharCode", Str_fromCharCode);
   set_cfunc_prop(v7, v7->vals.string_prototype, "charCodeAt", Str_charCodeAt);
@@ -27424,13 +27573,13 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 #endif
   set_cfunc_prop(v7, v7->vals.string_prototype, "toString", Str_toString);
 
-  v7_set_property(v7, v7->vals.string_prototype, "length", 6,
-                  V7_PROPERTY_GETTER, v7_create_cfunction(Str_length));
+  v7_def(v7, v7->vals.string_prototype, "length", 6, V7_DESC_GETTER(1),
+         v7_create_cfunction(Str_length));
 
   /* Non-standard Cesanta extension */
   set_cfunc_prop(v7, v7->vals.string_prototype, "at", Str_at);
-  v7_set_property(v7, v7->vals.string_prototype, "blen", 4, V7_PROPERTY_GETTER,
-                  v7_create_cfunction(Str_blen));
+  v7_def(v7, v7->vals.string_prototype, "blen", 4, V7_DESC_GETTER(1),
+         v7_create_cfunction(Str_blen));
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_date.c"
@@ -28098,8 +28247,7 @@ V7_PRIVATE enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
     obj_prototype_set(v7, v7_to_object(this_obj),
                       v7_to_object(v7->vals.date_prototype));
 
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN,
-                    v7_create_number(ret_time));
+    v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), v7_create_number(ret_time));
     /*
      * implicitly returning `this`: `call_cfunction()` in bcode.c will do
      * that for us
@@ -28395,7 +28543,7 @@ static enum v7_err d_setTimePart(struct v7 *v7, int start_pos,
       d_time_number_from_arr(v7, start_pos, breaktimefunc, maketimefunc);
 
   *res = v7_create_number(ret_time);
-  v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
+  v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), *res);
 
   return rcode;
 }
@@ -28430,7 +28578,7 @@ V7_PRIVATE enum v7_err Date_setTime(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, *res);
+  v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), *res);
 
 clean:
   return rcode;
@@ -28509,13 +28657,13 @@ clean:
 /****** Initialization *******/
 
 /*
- * We should set V7_PROPERTY_DONT_ENUM for all Date props
+ * We should clear V7_PROPERTY_ENUMERABLE for all Date props
  * TODO(mkm): check other objects
 */
 static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
                             v7_cfunction_t *f) {
-  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
-                         v7_create_cfunction(f));
+  return v7_def(v7, o, name, strlen(name), V7_DESC_ENUMERABLE(0),
+                v7_create_cfunction(f));
 }
 
 #define DECLARE_GET(func)                                       \
@@ -28531,8 +28679,7 @@ static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
 V7_PRIVATE void init_date(struct v7 *v7) {
   val_t date =
       v7_create_constructor_nargs(v7, v7->vals.date_prototype, Date_ctor, 7);
-  v7_set_property(v7, v7->vals.global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
-                  date);
+  v7_def(v7, v7->vals.global_object, "Date", 4, V7_DESC_ENUMERABLE(0), date);
   d_set_cfunc_prop(v7, v7->vals.date_prototype, "valueOf", Date_valueOf);
 
 #if V7_ENABLE__Date__getters
@@ -28804,16 +28951,17 @@ V7_PRIVATE enum v7_err Function_toString(struct v7 *v7, v7_val_t *res) {
 
 V7_PRIVATE void init_function(struct v7 *v7) {
   val_t ctor = v7_create_function_nargs(v7, Function_ctor, 1);
-  v7_set_property(v7, ctor, "prototype", 9, 0, v7->vals.function_prototype);
-  v7_set_property(v7, v7->vals.global_object, "Function", 8, 0, ctor);
+
+  v7_set(v7, ctor, "prototype", 9, v7->vals.function_prototype);
+  v7_set(v7, v7->vals.global_object, "Function", 8, ctor);
   set_method(v7, v7->vals.function_prototype, "apply", Function_apply, 1);
   set_method(v7, v7->vals.function_prototype, "toString", Function_toString, 0);
-  v7_set_property(v7, v7->vals.function_prototype, "length", 6,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_DONT_ENUM,
-                  v7_create_cfunction(Function_length));
-  v7_set_property(v7, v7->vals.function_prototype, "name", 4,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_DONT_ENUM,
-                  v7_create_cfunction(Function_name));
+  v7_def(v7, v7->vals.function_prototype, "length", 6,
+         (V7_DESC_ENUMERABLE(0) | V7_DESC_GETTER(1)),
+         v7_create_cfunction(Function_length));
+  v7_def(v7, v7->vals.function_prototype, "name", 4,
+         (V7_DESC_ENUMERABLE(0) | V7_DESC_GETTER(1)),
+         v7_create_cfunction(Function_name));
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_regex.c"
@@ -29043,9 +29191,8 @@ V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, val_t rx, val_t vstr, int lind,
                                                 ptok->end - ptok->start, 1));
       }
       if (flag_g) rp->lastIndex = utfnlen(str, sub.caps->end + rel - str);
-      v7_set_property(
-          v7, arr, "index", 5, V7_PROPERTY_READ_ONLY,
-          v7_create_number(utfnlen(str + rel, sub.caps->start - str)));
+      v7_def(v7, arr, "index", 5, V7_DESC_WRITABLE(0),
+             v7_create_number(utfnlen(str + rel, sub.caps->start - str)));
       *res = arr;
       goto clean;
     } else {
@@ -29134,26 +29281,25 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
       v7_create_constructor_nargs(v7, v7->vals.regexp_prototype, Regex_ctor, 1);
   val_t lastIndex = v7_create_dense_array(v7);
 
-  v7_set_property(v7, v7->vals.global_object, "RegExp", 6,
-                  V7_PROPERTY_DONT_ENUM, ctor);
+  v7_def(v7, v7->vals.global_object, "RegExp", 6, V7_DESC_ENUMERABLE(0), ctor);
 
   set_cfunc_prop(v7, v7->vals.regexp_prototype, "exec", Regex_exec);
   set_cfunc_prop(v7, v7->vals.regexp_prototype, "test", Regex_test);
   set_method(v7, v7->vals.regexp_prototype, "toString", Regex_toString, 0);
 
-  v7_set_property(v7, v7->vals.regexp_prototype, "global", 6,
-                  V7_PROPERTY_GETTER, v7_create_cfunction(Regex_global));
-  v7_set_property(v7, v7->vals.regexp_prototype, "ignoreCase", 10,
-                  V7_PROPERTY_GETTER, v7_create_cfunction(Regex_ignoreCase));
-  v7_set_property(v7, v7->vals.regexp_prototype, "multiline", 9,
-                  V7_PROPERTY_GETTER, v7_create_cfunction(Regex_multiline));
-  v7_set_property(v7, v7->vals.regexp_prototype, "source", 6,
-                  V7_PROPERTY_GETTER, v7_create_cfunction(Regex_source));
+  v7_def(v7, v7->vals.regexp_prototype, "global", 6, V7_DESC_GETTER(1),
+         v7_create_cfunction(Regex_global));
+  v7_def(v7, v7->vals.regexp_prototype, "ignoreCase", 10, V7_DESC_GETTER(1),
+         v7_create_cfunction(Regex_ignoreCase));
+  v7_def(v7, v7->vals.regexp_prototype, "multiline", 9, V7_DESC_GETTER(1),
+         v7_create_cfunction(Regex_multiline));
+  v7_def(v7, v7->vals.regexp_prototype, "source", 6, V7_DESC_GETTER(1),
+         v7_create_cfunction(Regex_source));
 
   v7_array_set(v7, lastIndex, 0, v7_create_cfunction(Regex_get_lastIndex));
   v7_array_set(v7, lastIndex, 1, v7_create_cfunction(Regex_set_lastIndex));
-  v7_set_property(v7, v7->vals.regexp_prototype, "lastIndex", 9,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, lastIndex);
+  v7_def(v7, v7->vals.regexp_prototype, "lastIndex", 9,
+         (V7_DESC_GETTER(1) | V7_DESC_SETTER(1)), lastIndex);
 }
 
 #endif /* V7_ENABLE__RegExp */
