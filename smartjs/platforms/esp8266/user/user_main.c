@@ -53,7 +53,7 @@ void start_cmd(void *dummy) {
 
 #ifndef V7_NO_FS
 #ifndef DISABLE_OTA
-  fs_init(get_fs_addr(get_current_rom()), get_fs_size(get_current_rom()));
+  fs_init(get_fs_addr(), FS_SIZE);
   finish_update();
 #else
   fs_init(FS_ADDR, FS_SIZE);

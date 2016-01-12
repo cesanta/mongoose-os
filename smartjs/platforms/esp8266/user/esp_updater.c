@@ -19,6 +19,13 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+/*
+ * It looks too dangerous to put this numbers to
+ * metadata file, so, they are compile-time consts
+ */
+static unsigned int fw_addresses[] = {FW1_ADDR, FW2_ADDR};
+static unsigned int fs_addresses[] = {FW1_FS_ADDR, FW2_FS_ADDR};
+
 static int s_current_received;
 static size_t s_file_size;
 static int s_current_write_address;
@@ -47,32 +54,6 @@ static enum download_status s_download_status = DS_NOT_STARTED;
 void set_boot_params(uint8_t new_rom, uint8_t prev_rom);
 static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data);
 static int notify_js(enum update_status us, const char *info);
-
-rboot_config *get_rboot_config() {
-  static rboot_config *cfg = NULL;
-  if (cfg == NULL) {
-    cfg = malloc(sizeof(*cfg));
-    *cfg = rboot_get_config();
-  }
-
-  return cfg;
-}
-
-uint8_t get_current_rom() {
-  return get_rboot_config()->current_rom;
-}
-
-uint32_t get_fw_addr(uint8_t rom) {
-  return get_rboot_config()->roms[rom];
-}
-
-uint32_t get_fs_addr(uint8_t rom) {
-  return get_rboot_config()->fs_addresses[rom];
-}
-
-uint32_t get_fs_size(uint8_t rom) {
-  return get_rboot_config()->fs_sizes[rom];
-}
 
 static void do_http_connect(const char *uri) {
   static char *url;
@@ -385,7 +366,7 @@ void update_timer_cb(void *arg) {
         break;
       }
 
-      s_new_rom_number = get_current_rom() == 1 ? 0 : 1;
+      s_new_rom_number = rboot_get_current_rom() == 1 ? 0 : 1;
       LOG(LL_DEBUG, ("ROM to write: %d", s_new_rom_number));
 
       if (!sj_conf_get_str(toks, "fw_url", &s_fw_url)) {
@@ -409,7 +390,7 @@ void update_timer_cb(void *arg) {
       LOG(LL_DEBUG, ("FS checksum: %s", s_fs_checksum));
 
       s_file_size = s_current_received = s_area_prepared = 0;
-      s_current_write_address = get_fw_addr(s_new_rom_number);
+      s_current_write_address = fw_addresses[s_new_rom_number];
       LOG(LL_DEBUG, ("Address to write ROM: %X", s_current_write_address));
 
       LOG(LL_INFO, ("Loading %s", s_fw_url));
@@ -431,14 +412,14 @@ void update_timer_cb(void *arg) {
       if (s_download_status == DS_IN_PROGRESS) {
         verify_timeout();
       } else if (s_download_status == DS_COMPLETED) {
-        if (verify_checksum(get_fw_addr(s_new_rom_number), s_file_size,
+        if (verify_checksum(fw_addresses[s_new_rom_number], s_file_size,
                             s_fw_checksum) != 0) {
           set_update_status(US_ERROR);
         } else {
           /* Start FS download */
           LOG(LL_DEBUG, ("Loading %s", s_fs_url));
           s_file_size = s_current_received = s_area_prepared = 0;
-          s_current_write_address = get_fs_addr(s_new_rom_number);
+          s_current_write_address = fs_addresses[s_new_rom_number];
           do_http_connect(s_fs_url);
           set_update_status(US_DOWNLOADING_FS);
           set_download_status(DS_IN_PROGRESS);
@@ -452,7 +433,7 @@ void update_timer_cb(void *arg) {
       if (s_download_status == DS_IN_PROGRESS) {
         verify_timeout();
       } else if (s_download_status == DS_COMPLETED) {
-        if (verify_checksum(get_fs_addr(s_new_rom_number), s_file_size,
+        if (verify_checksum(fs_addresses[s_new_rom_number], s_file_size,
                             s_fs_checksum) != 0) {
           set_update_status(US_ERROR);
         } else {
@@ -667,11 +648,12 @@ static void reboot_timer_cb(void *arg) {
 }
 
 int finish_update() {
-  if (!get_rboot_config()->fw_updated) {
-    if (get_rboot_config()->is_first_boot != 0) {
+  rboot_config rc = rboot_get_config();
+  if (!rc.fw_updated) {
+    if (rc.is_first_boot != 0) {
       LOG(LL_INFO, ("Firmware was rolled back, commiting it"));
-      get_rboot_config()->is_first_boot = 0;
-      rboot_set_config(get_rboot_config());
+      rc.is_first_boot = 0;
+      rboot_set_config(&rc);
     }
     return 1;
   }
@@ -680,11 +662,11 @@ int finish_update() {
    * We merge FS _after_ booting to new FW, to give a chance
    * to change merge behavior in new FW
    */
-  if (fs_merge(get_fs_addr(get_rboot_config()->previous_rom)) != 0) {
+  if (fs_merge(fs_addresses[rc.previous_rom]) != 0) {
     /* Ok, commiting update */
-    get_rboot_config()->is_first_boot = 0;
-    get_rboot_config()->fw_updated = 0;
-    rboot_set_config(get_rboot_config());
+    rc.is_first_boot = 0;
+    rc.fw_updated = 0;
+    rboot_set_config(&rc);
     LOG(LL_DEBUG, ("Firmware commited"));
 
     return 1;
@@ -697,6 +679,11 @@ int finish_update() {
   }
 
   return 1;
+}
+
+uint32_t get_fs_addr() {
+  rboot_config rc = rboot_get_config();
+  return fs_addresses[rc.current_rom];
 }
 
 void rollback_fw() {

@@ -61,9 +61,6 @@ typedef struct {
 	uint8 fw_updated;
 	uint8 padding[2];
 	uint32 roms[MAX_ROMS]; // flash addresses of the roms
-	uint32 roms_sizes[MAX_ROMS]; // sizes of the roms
-	uint32 fs_addresses[MAX_ROMS]; // file system addresses
-	uint32 fs_sizes[MAX_ROMS]; // file system sizes
 #ifdef BOOT_CONFIG_CHKSUM
 	uint8 chksum;		   // config chksum
 #endif

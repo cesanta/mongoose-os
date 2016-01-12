@@ -25,12 +25,7 @@ void update_start(const char *metadata_url);
 
 enum update_status update_get_status(void);
 int finish_update();
-
-uint8_t get_current_rom();
-uint32_t get_fw_addr(uint8_t rom);
-uint32_t get_fs_addr(uint8_t rom);
-uint32_t get_fs_size(uint8_t rom);
-
+uint32_t get_fs_addr();
 void rollback_fw();
 
 #endif

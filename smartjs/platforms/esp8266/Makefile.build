@@ -196,9 +196,7 @@ PREREQ = rboot
 BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW2_ADDR=$(FW2_FILE_2_ADDR) \
                    -DFW1_FS_ADDR=$(FS_ADDR) \
-                   -DFW2_FS_ADDR=$(FS2_ADDR) \
-                   -DFS_SIZE=$(_FS_SIZE) \
-                   -DFW_SIZE=$(ROM_SIZE)
+                   -DFW2_FS_ADDR=$(FS2_ADDR)
 
 FW_METADATA_FILE= $(FW_DIR)/metadata.json
 endif
