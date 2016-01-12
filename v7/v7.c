@@ -3789,6 +3789,8 @@ V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
 #ifndef STD_ERROR_H_INCLUDED
 #define STD_ERROR_H_INCLUDED
 
+/* Amalgamated: #include "v7/src/license.h" */
+
 struct v7;
 
 /*
@@ -4063,7 +4065,7 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
 
 #endif /* STDLIB_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/vm.h"
+#line 1 "./src/types.h"
 /**/
 #endif
 /*
@@ -4071,14 +4073,13 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
  * All rights reserved
  */
 
-#ifndef VM_H_INCLUDED
-#define VM_H_INCLUDED
+#ifndef V7_TYPES_H_INCLUDED
+#define V7_TYPES_H_INCLUDED
 
-/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
 /* Amalgamated: #include "v7/src/mm.h" */
 /* Amalgamated: #include "v7/src/parser.h" */
-/* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/tokenizer.h" */
 
 typedef uint64_t val_t;
@@ -4303,64 +4304,6 @@ struct v7 {
   unsigned int is_stack_neutral : 1;
 };
 
-/*
- *  Double-precision floating-point number, IEEE 754
- *
- *  64 bit (8 bytes) in total
- *  1  bit sign
- *  11 bits exponent
- *  52 bits mantissa
- *      7         6        5        4        3        2        1        0
- *  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
- *
- * If an exponent is all-1 and mantissa is all-0, then it is an INFINITY:
- *  11111111|11110000|00000000|00000000|00000000|00000000|00000000|00000000
- *
- * If an exponent is all-1 and mantissa's MSB is 1, it is a quiet NaN:
- *  11111111|11111000|00000000|00000000|00000000|00000000|00000000|00000000
- *
- *  V7 NaN-packing:
- *    sign and exponent is 0xfff
- *    4 bits specify type (tag), must be non-zero
- *    48 bits specify value
- *
- *  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
- *   NaN marker |type|  48-bit placeholder for values: pointers, strings
- *
- * On 64-bit platforms, pointers are really 48 bit only, so they can fit,
- * provided they are sign extended
- */
-
-/*
- * A tag is made of the sign bit and the 4 lower order bits of byte 6.
- * So in total we have 32 possible tags.
- *
- * Tag (1,0) however cannot hold a zero payload otherwise it's interpreted as an
- * INFINITY; for simplicity we're just not going to use that combination.
- */
-#define MAKE_TAG(s, t) \
-  ((uint64_t)(s) << 63 | (uint64_t) 0x7ff0 << 48 | (uint64_t)(t) << 48)
-
-#define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
-#define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
-#define V7_TAG_UNDEFINED MAKE_TAG(1, 0xD)
-#define V7_TAG_BOOLEAN MAKE_TAG(1, 0xC)
-#define V7_TAG_NAN MAKE_TAG(1, 0xB)
-#define V7_TAG_STRING_I MAKE_TAG(1, 0xA)  /* Inlined string len < 5 */
-#define V7_TAG_STRING_5 MAKE_TAG(1, 0x9)  /* Inlined string len 5 */
-#define V7_TAG_STRING_O MAKE_TAG(1, 0x8)  /* Owned string */
-#define V7_TAG_STRING_F MAKE_TAG(1, 0x7)  /* Foreign string */
-#define V7_TAG_STRING_C MAKE_TAG(1, 0x6)  /* String chunk */
-#define V7_TAG_FUNCTION MAKE_TAG(1, 0x5)  /* JavaScript function */
-#define V7_TAG_CFUNCTION MAKE_TAG(1, 0x4) /* C function */
-#define V7_TAG_STRING_D MAKE_TAG(1, 0x3)  /* Dictionary string  */
-#define V7_TAG_REGEXP MAKE_TAG(1, 0x2)    /* Regex */
-#define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
-#define V7_TAG_MASK MAKE_TAG(1, 0xF)
-
-#define V7_NULL V7_TAG_FOREIGN
-#define V7_UNDEFINED V7_TAG_UNDEFINED
-
 struct v7_property {
   struct v7_property *
       next; /* Linkage in struct v7_generic_object::properties */
@@ -4444,6 +4387,85 @@ struct v7_regexp {
   struct slre_prog *compiled_regexp;
   long lastIndex;
 };
+
+#endif /* V7_TYPES_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/vm.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef VM_H_INCLUDED
+#define VM_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_error.h" */
+/* Amalgamated: #include "v7/src/mm.h" */
+/* Amalgamated: #include "v7/src/parser.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/tokenizer.h" */
+/* Amalgamated: #include "v7/src/types.h" */
+
+/*
+ *  Double-precision floating-point number, IEEE 754
+ *
+ *  64 bit (8 bytes) in total
+ *  1  bit sign
+ *  11 bits exponent
+ *  52 bits mantissa
+ *      7         6        5        4        3        2        1        0
+ *  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
+ *
+ * If an exponent is all-1 and mantissa is all-0, then it is an INFINITY:
+ *  11111111|11110000|00000000|00000000|00000000|00000000|00000000|00000000
+ *
+ * If an exponent is all-1 and mantissa's MSB is 1, it is a quiet NaN:
+ *  11111111|11111000|00000000|00000000|00000000|00000000|00000000|00000000
+ *
+ *  V7 NaN-packing:
+ *    sign and exponent is 0xfff
+ *    4 bits specify type (tag), must be non-zero
+ *    48 bits specify value
+ *
+ *  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
+ *   NaN marker |type|  48-bit placeholder for values: pointers, strings
+ *
+ * On 64-bit platforms, pointers are really 48 bit only, so they can fit,
+ * provided they are sign extended
+ */
+
+/*
+ * A tag is made of the sign bit and the 4 lower order bits of byte 6.
+ * So in total we have 32 possible tags.
+ *
+ * Tag (1,0) however cannot hold a zero payload otherwise it's interpreted as an
+ * INFINITY; for simplicity we're just not going to use that combination.
+ */
+#define MAKE_TAG(s, t) \
+  ((uint64_t)(s) << 63 | (uint64_t) 0x7ff0 << 48 | (uint64_t)(t) << 48)
+
+#define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
+#define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
+#define V7_TAG_UNDEFINED MAKE_TAG(1, 0xD)
+#define V7_TAG_BOOLEAN MAKE_TAG(1, 0xC)
+#define V7_TAG_NAN MAKE_TAG(1, 0xB)
+#define V7_TAG_STRING_I MAKE_TAG(1, 0xA)  /* Inlined string len < 5 */
+#define V7_TAG_STRING_5 MAKE_TAG(1, 0x9)  /* Inlined string len 5 */
+#define V7_TAG_STRING_O MAKE_TAG(1, 0x8)  /* Owned string */
+#define V7_TAG_STRING_F MAKE_TAG(1, 0x7)  /* Foreign string */
+#define V7_TAG_STRING_C MAKE_TAG(1, 0x6)  /* String chunk */
+#define V7_TAG_FUNCTION MAKE_TAG(1, 0x5)  /* JavaScript function */
+#define V7_TAG_CFUNCTION MAKE_TAG(1, 0x4) /* C function */
+#define V7_TAG_STRING_D MAKE_TAG(1, 0x3)  /* Dictionary string  */
+#define V7_TAG_REGEXP MAKE_TAG(1, 0x2)    /* Regex */
+#define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
+#define V7_TAG_MASK MAKE_TAG(1, 0xF)
+
+#define V7_NULL V7_TAG_FOREIGN
+#define V7_UNDEFINED V7_TAG_UNDEFINED
 
 #if defined(__cplusplus)
 extern "C" {
@@ -4648,7 +4670,7 @@ V7_PRIVATE int is_finite(v7_val_t v);
 #ifndef EXCEPTIONS_H_INCLUDED
 #define EXCEPTIONS_H_INCLUDED
 
-/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 /*
  * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
@@ -4970,7 +4992,7 @@ V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
 #ifndef V7_STRING_H_INCLUDED
 #define V7_STRING_H_INCLUDED
 
-/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -5062,7 +5084,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 #define GC_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 #define MARK(p) (((struct gc_cell *) (p))->head.word |= 1)
 #define UNMARK(p) (((struct gc_cell *) (p))->head.word &= ~1)
@@ -8983,6 +9005,7 @@ void init_crypto(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 struct ubjson_ctx {
   struct mbuf out;   /* output buffer */
@@ -9344,7 +9367,7 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
 
 /* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
@@ -9822,6 +9845,7 @@ int main(void) {
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
@@ -10720,6 +10744,7 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 /* clang-format off */
@@ -11236,6 +11261,7 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
@@ -13385,6 +13411,7 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 /* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
@@ -15280,6 +15307,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 /*
  * Dictionary of read-only strings with length > 5.
@@ -15697,6 +15725,7 @@ const char *v7_to_cstring(struct v7 *v7, v7_val_t *value) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 
 enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
@@ -15813,6 +15842,7 @@ clean:
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
@@ -16578,6 +16608,7 @@ clean:
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/freeze.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 #include <stdio.h>
 
@@ -17388,7 +17419,13 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
 #line 1 "./src/freeze.c"
 /**/
 #endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
@@ -17525,6 +17562,7 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
 /* Amalgamated: #include "v7/src/parser.h" */
 /* Amalgamated: #include "v7/src/tokenizer.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
@@ -20114,6 +20152,7 @@ const char *v7_get_parser_error(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 
 /*
@@ -22001,6 +22040,7 @@ clean:
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/std_array.h" */
@@ -22316,6 +22356,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 #define STRINGIFY(x) #x
 
@@ -24157,6 +24198,7 @@ int main(int argc, char **argv) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 #if defined(V7_CYG_PROFILE_ON)
 
@@ -24335,6 +24377,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
 #if V7_ENABLE__Object__getPrototypeOf
@@ -24884,6 +24927,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
 
@@ -24976,8 +25020,9 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
-/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
@@ -25219,6 +25264,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
@@ -25257,6 +25303,7 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
 
 struct a_sort_data {
   val_t sort_func;
@@ -26096,6 +26143,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
 WARN_UNUSED_RESULT
@@ -26197,6 +26245,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 
 #if V7_ENABLE__Math
 
@@ -26451,6 +26500,7 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/std_regex.h" */
@@ -27715,6 +27765,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
 #if V7_ENABLE__Date
@@ -28892,6 +28943,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
@@ -29102,6 +29154,7 @@ V7_PRIVATE void init_function(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
 #if V7_ENABLE__RegExp
