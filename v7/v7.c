@@ -4063,92 +4063,6 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
 
 #endif /* STDLIB_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/exceptions.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef EXCEPTIONS_H_INCLUDED
-#define EXCEPTIONS_H_INCLUDED
-
-/*
- * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
- * "throws" an error with `V7_THROW()`
- */
-#define V7_TRY2(call, clean_label)           \
-  do {                                       \
-    enum v7_err _e = call;                   \
-    V7_CHECK2(_e == V7_OK, _e, clean_label); \
-  } while (0)
-
-/*
- * Sets return value to the provided one, and `goto`s `clean`.
- *
- * For this to work, you should have local `enum v7_err rcode` variable,
- * and a `clean` label.
- */
-#define V7_THROW2(err_code, clean_label)                              \
-  do {                                                                \
-    rcode = (err_code);                                               \
-    assert(rcode != V7_OK);                                           \
-    assert(!v7_is_undefined(v7->vals.thrown_error) && v7->is_thrown); \
-    goto clean_label;                                                 \
-  } while (0)
-
-/*
- * Checks provided condition `cond`, and if it's false, then "throws"
- * provided `err_code` (see `V7_THROW()`)
- */
-#define V7_CHECK2(cond, err_code, clean_label) \
-  do {                                         \
-    if (!(cond)) {                             \
-      V7_THROW2(err_code, clean_label);        \
-    }                                          \
-  } while (0)
-
-/*
- * Checks provided condition `cond`, and if it's false, then "throws"
- * internal error
- *
- * TODO(dfrank): it would be good to have formatted string: then, we can
- * specify file and line.
- */
-#define V7_CHECK_INTERNAL2(cond, clean_label)                       \
-  do {                                                              \
-    if (!(cond)) {                                                  \
-      enum v7_err rcode = v7_throwf(v7, "Error", "Internal error"); \
-      (void) rcode;                                                 \
-      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                    \
-    }                                                               \
-  } while (0)
-
-/*
- * Shortcuts for the macros above, but they assume the clean label `clean`.
- */
-
-#define V7_TRY(call) V7_TRY2(call, clean)
-#define V7_THROW(err_code) V7_THROW2(err_code, clean)
-#define V7_CHECK(cond, err_code) V7_CHECK2(cond, err_code, clean)
-#define V7_CHECK_INTERNAL(cond) V7_CHECK_INTERNAL2(cond, clean)
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/*
- * At the moment, all exception-related functions are public, and are declared
- * in `v7.h`
- */
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* EXCEPTIONS_H_INCLUDED */
-#ifdef V7_MODULE_LINES
 #line 1 "./src/vm.h"
 /**/
 #endif
@@ -4536,7 +4450,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* TODO(mkm): possibly replace those with macros for inlining */
-enum v7_type val_type(struct v7 *v7, val_t);
+V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
 V7_PRIVATE val_t v7_object_to_value(struct v7_object *);
@@ -4714,20 +4628,124 @@ V7_PRIVATE val_t v7_array_get2(struct v7 *, v7_val_t, unsigned long, int *);
 
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 
+/* Returns true if given value is a number, not NaN and not Infinity. */
+V7_PRIVATE int is_finite(v7_val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* VM_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/exceptions.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef EXCEPTIONS_H_INCLUDED
+#define EXCEPTIONS_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/vm.h" */
+
+/*
+ * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
+ * "throws" an error with `V7_THROW()`
+ */
+#define V7_TRY2(call, clean_label)           \
+  do {                                       \
+    enum v7_err _e = call;                   \
+    V7_CHECK2(_e == V7_OK, _e, clean_label); \
+  } while (0)
+
+/*
+ * Sets return value to the provided one, and `goto`s `clean`.
+ *
+ * For this to work, you should have local `enum v7_err rcode` variable,
+ * and a `clean` label.
+ */
+#define V7_THROW2(err_code, clean_label)                              \
+  do {                                                                \
+    rcode = (err_code);                                               \
+    assert(rcode != V7_OK);                                           \
+    assert(!v7_is_undefined(v7->vals.thrown_error) && v7->is_thrown); \
+    goto clean_label;                                                 \
+  } while (0)
+
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * provided `err_code` (see `V7_THROW()`)
+ */
+#define V7_CHECK2(cond, err_code, clean_label) \
+  do {                                         \
+    if (!(cond)) {                             \
+      V7_THROW2(err_code, clean_label);        \
+    }                                          \
+  } while (0)
+
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * internal error
+ *
+ * TODO(dfrank): it would be good to have formatted string: then, we can
+ * specify file and line.
+ */
+#define V7_CHECK_INTERNAL2(cond, clean_label)                       \
+  do {                                                              \
+    if (!(cond)) {                                                  \
+      enum v7_err rcode = v7_throwf(v7, "Error", "Internal error"); \
+      (void) rcode;                                                 \
+      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                    \
+    }                                                               \
+  } while (0)
+
+/*
+ * Shortcuts for the macros above, but they assume the clean label `clean`.
+ */
+
+#define V7_TRY(call) V7_TRY2(call, clean)
+#define V7_THROW(err_code) V7_THROW2(err_code, clean)
+#define V7_CHECK(cond, err_code) V7_CHECK2(cond, err_code, clean)
+#define V7_CHECK_INTERNAL(cond) V7_CHECK_INTERNAL2(cond, clean)
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * At the moment, most of the exception-related functions are public, and are
+ * declared in `v7.h`
+ */
+
+/*
+ * Create an instance of the exception with type `typ` (see `TYPE_ERROR`,
+ * `SYNTAX_ERROR`, etc), and message `msg`.
+ */
 V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
                                         const char *msg, val_t *res);
 
-/*
- * Calls `valueOf()` on given object `v`
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res);
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
+#endif /* EXCEPTIONS_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/conversion.h"
+/**/
+#endif
 /*
- * Calls `toString()` on given object `v`
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
  */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res);
+
+#ifndef CONVERSION_H_INCLUDED
+#define CONVERSION_H_INCLUDED
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 /*
  * Conversion API
@@ -4916,6 +4934,18 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
                                         uint8_t is_debug);
 
 /*
+ * Calls `valueOf()` on given object `v`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res);
+
+/*
+ * Calls `toString()` on given object `v`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res);
+
+/*
  * If given value is `undefined`, returns `default_value`; otherwise,
  * converts value to number, and then truncates to `long`.
  */
@@ -4923,14 +4953,11 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
                                long *res);
 
-/* Returns true if given value is a number, not NaN and not Infinity. */
-V7_PRIVATE int is_finite(v7_val_t v);
-
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 
-#endif /* VM_H_INCLUDED */
+#endif /* CONVERSION_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/string.h"
 /**/
@@ -11210,6 +11237,7 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 /*
  * Bcode offsets in "try stack" (`____p`) are stored in JS numbers, i.e.
@@ -13391,7 +13419,7 @@ struct v7 *v7_head = NULL;
  */
 #define V7_DEFAULT_PROPERTY_ATTRS 0
 
-enum v7_type val_type(struct v7 *v7, val_t v) {
+V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_number(v)) {
     return V7_TYPE_NUMBER;
@@ -13856,331 +13884,6 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 #ifdef V7_TEMP_OFF
 int double_to_str(char *buf, size_t buf_size, double val, int prec);
 #endif
-
-static const char *hex_digits = "0123456789abcdef";
-static char *append_hex(char *buf, char *limit, uint8_t c) {
-  if (buf < limit) *buf++ = 'u';
-  if (buf < limit) *buf++ = '0';
-  if (buf < limit) *buf++ = '0';
-  if (buf < limit) *buf++ = hex_digits[(int) ((c >> 4) % 0xf)];
-  if (buf < limit) *buf++ = hex_digits[(int) (c & 0xf)];
-  return buf;
-}
-
-/*
- * Appends quoted s to buf. Any double quote contained in s will be escaped.
- * Returns the number of characters that would have been added,
- * like snprintf.
- * If size is zero it doesn't output anything but keeps counting.
- */
-static int snquote(char *buf, size_t size, const char *s, size_t len) {
-  char *limit = buf + size - 1;
-  const char *end;
-  /*
-   * String single character escape sequence:
-   * http://www.ecma-international.org/ecma-262/6.0/index.html#table-34
-   *
-   * 0x8 -> \b
-   * 0x9 -> \t
-   * 0xa -> \n
-   * 0xb -> \v
-   * 0xc -> \f
-   * 0xd -> \r
-   */
-  const char *specials = "btnvfr";
-  size_t i = 0;
-
-  i++;
-  if (buf < limit) *buf++ = '"';
-
-  for (end = s + len; s < end; s++) {
-    if (*s == '"' || *s == '\\') {
-      i++;
-      if (buf < limit) *buf++ = '\\';
-    } else if (*s >= '\b' && *s <= '\r') {
-      i += 2;
-      if (buf < limit) *buf++ = '\\';
-      if (buf < limit) *buf++ = specials[*s - '\b'];
-      continue;
-    } else if ((unsigned char) *s < '\b' || (*s > '\r' && *s < ' ')) {
-      if (buf < limit) *buf++ = '\\';
-      buf = append_hex(buf, limit, (uint8_t) *s);
-      continue;
-    }
-    i++;
-    if (buf < limit) *buf++ = *s;
-  }
-
-  i++;
-  if (buf < limit) *buf++ = '"';
-
-  if (size != 0) {
-    *buf = '\0';
-  }
-  return i;
-}
-
-/*
- * Returns whether the value of given type should be skipped when generating
- * JSON output
- */
-static int should_skip_for_json(enum v7_type type) {
-  int ret;
-  switch (type) {
-    /* All permitted values */
-    case V7_TYPE_NULL:
-    case V7_TYPE_BOOLEAN:
-    case V7_TYPE_BOOLEAN_OBJECT:
-    case V7_TYPE_NUMBER:
-    case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_STRING:
-    case V7_TYPE_STRING_OBJECT:
-    case V7_TYPE_GENERIC_OBJECT:
-    case V7_TYPE_ARRAY_OBJECT:
-    case V7_TYPE_DATE_OBJECT:
-    case V7_TYPE_REGEXP_OBJECT:
-    case V7_TYPE_ERROR_OBJECT:
-      ret = 0;
-      break;
-    default:
-      ret = 1;
-      break;
-  }
-  return ret;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
-                                        size_t size, size_t *res_len,
-                                        uint8_t is_debug) {
-  val_t el;
-  char *vp;
-  enum v7_err rcode = V7_OK;
-  size_t len = 0;
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
-
-  tmp_stack_push(&tf, &v);
-  tmp_stack_push(&tf, &el);
-  /*
-   * TODO(dfrank) : also push all `v7_val_t`s that are declared below
-   */
-
-  if (size > 0) *buf = '\0';
-
-  if (!is_debug && should_skip_for_json(val_type(v7, v))) {
-    goto clean;
-  }
-
-  for (vp = v7->json_visited_stack.buf;
-       vp < v7->json_visited_stack.buf + v7->json_visited_stack.len;
-       vp += sizeof(val_t)) {
-    if (*(val_t *) vp == v) {
-      strncpy(buf, "[Circular]", size);
-      len = 10;
-      goto clean;
-    }
-  }
-
-  switch (val_type(v7, v)) {
-    case V7_TYPE_NULL:
-    case V7_TYPE_BOOLEAN:
-    case V7_TYPE_NUMBER:
-    case V7_TYPE_UNDEFINED:
-    case V7_TYPE_CFUNCTION:
-    case V7_TYPE_FOREIGN:
-      /* For those types, regular `primitive_to_str()` works */
-      V7_TRY(primitive_to_str(v7, v, NULL, buf, size, &len));
-      goto clean;
-
-    case V7_TYPE_STRING: {
-      /*
-       * For strings we can't just use `primitive_to_str()`, because we need
-       * quoted value
-       */
-      size_t n;
-      const char *str = v7_get_string_data(v7, &v, &n);
-      len = snquote(buf, size, str, n);
-      goto clean;
-    }
-
-    case V7_TYPE_DATE_OBJECT: {
-      v7_val_t func = v7_mk_undefined(), val = v7_mk_undefined();
-      V7_TRY(v7_get_throwing(v7, v, "toString", 8, &func));
-#if V7_ENABLE__Date__toJSON
-      if (!is_debug) {
-        V7_TRY(v7_get_throwing(v7, v, "toJSON", 6, &func));
-      }
-#endif
-      V7_TRY(b_apply(v7, func, v, V7_UNDEFINED, 0, &val));
-      V7_TRY(to_json_or_debug(v7, val, buf, size, &len, is_debug));
-      goto clean;
-    }
-    case V7_TYPE_GENERIC_OBJECT:
-    case V7_TYPE_BOOLEAN_OBJECT:
-    case V7_TYPE_STRING_OBJECT:
-    case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_REGEXP_OBJECT:
-    case V7_TYPE_ERROR_OBJECT: {
-      /* TODO(imax): make it return the desired size of the buffer */
-      char *b = buf;
-      void *h = NULL;
-      v7_val_t name = v7_mk_undefined(), val = v7_mk_undefined();
-      v7_prop_attr_t attrs;
-
-      mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-      b += c_snprintf(b, BUF_LEFT(size, b - buf), "{");
-      while ((h = v7_next_prop(h, v, &name, &val, &attrs)) != NULL) {
-        size_t n;
-        const char *s;
-        if (attrs & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
-          continue;
-        }
-        if (!is_debug && should_skip_for_json(val_type(v7, val))) {
-          continue;
-        }
-        if (b - buf != 1) { /* Not the first property to be printed */
-          b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
-        }
-        s = v7_get_string_data(v7, &name, &n);
-        b += c_snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
-        {
-          size_t tmp = 0;
-          V7_TRY(to_json_or_debug(v7, val, b, BUF_LEFT(size, b - buf), &tmp,
-                                  is_debug));
-          b += tmp;
-        }
-      }
-      b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
-      v7->json_visited_stack.len -= sizeof(v);
-      len = b - buf;
-      goto clean;
-    }
-    case V7_TYPE_ARRAY_OBJECT: {
-      int has;
-      char *b = buf;
-      size_t i, alen = v7_array_length(v7, v);
-      mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-      b += c_snprintf(b, BUF_LEFT(size, b - buf), "[");
-      for (i = 0; i < alen; i++) {
-        el = v7_array_get2(v7, v, i, &has);
-        if (has) {
-          size_t tmp = 0;
-          if (!is_debug && should_skip_for_json(val_type(v7, el))) {
-            b += c_snprintf(b, BUF_LEFT(size, b - buf), "null");
-          } else {
-            V7_TRY(to_json_or_debug(v7, el, b, BUF_LEFT(size, b - buf), &tmp,
-                                    is_debug));
-          }
-          b += tmp;
-        }
-        if (i != alen - 1) {
-          b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
-        }
-      }
-      b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
-      v7->json_visited_stack.len -= sizeof(v);
-      len = b - buf;
-      goto clean;
-    }
-    case V7_TYPE_CFUNCTION_OBJECT:
-      V7_TRY(obj_value_of(v7, v, &v));
-      len = c_snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
-      goto clean;
-    case V7_TYPE_FUNCTION_OBJECT:
-      V7_TRY(to_string(v7, v, NULL, buf, size, &len));
-      goto clean;
-
-    case V7_TYPE_MAX_OBJECT_TYPE:
-    case V7_NUM_TYPES:
-      abort();
-  }
-
-  abort();
-
-  len = 0; /* for compilers that don't know about abort() */
-  goto clean;
-
-clean:
-  if (rcode != V7_OK) {
-    len = 0;
-  }
-  if (res_len != NULL) {
-    *res_len = len;
-  }
-  tmp_frame_cleanup(&tf);
-  return rcode;
-}
-
-/*
- * v7_stringify allocates a new buffer if value representation doesn't fit into
- * buf. Caller is responsible for freeing that buffer.
- */
-char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size,
-                   enum v7_stringify_mode mode) {
-  enum v7_err rcode = V7_OK;
-  uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
-  char *ret = NULL;
-
-  rcode = v7_stringify_throwing(v7, v, buf, size, mode, &ret);
-  if (rcode != V7_OK) {
-    rcode = V7_OK;
-    if (saved_is_thrown) {
-      rcode = v7_throw(v7, saved_thrown);
-    } else {
-      v7_clear_thrown_value(v7);
-    }
-
-    buf[0] = '\0';
-    ret = buf;
-  }
-
-  return ret;
-}
-
-enum v7_err v7_stringify_throwing(struct v7 *v7, val_t v, char *buf,
-                                  size_t size, enum v7_stringify_mode mode,
-                                  char **res) {
-  enum v7_err rcode = V7_OK;
-  char *p = buf;
-  size_t len;
-
-  switch (mode) {
-    case V7_STRINGIFY_DEFAULT:
-      V7_TRY(to_string(v7, v, NULL, buf, size, &len));
-      break;
-
-    case V7_STRINGIFY_JSON:
-      V7_TRY(to_json_or_debug(v7, v, buf, size, &len, 0));
-      break;
-
-    case V7_STRINGIFY_DEBUG:
-      V7_TRY(to_json_or_debug(v7, v, buf, size, &len, 1));
-      break;
-  }
-
-  /* fit null terminating byte */
-  if (len >= size) {
-    /* Buffer is not large enough. Allocate a bigger one */
-    p = (char *) malloc(len + 1);
-    V7_TRY(v7_stringify_throwing(v7, v, p, len + 1, mode, res));
-    assert(*res == p);
-    goto clean;
-  } else {
-    *res = p;
-    goto clean;
-  }
-
-clean:
-  /*
-   * If we're going to throw, and we allocated a buffer, then free it.
-   * But if we don't throw, then the caller will free it.
-   */
-  if (rcode != V7_OK && p != buf) {
-    free(p);
-  }
-  return rcode;
-}
 
 void v7_print(struct v7 *v7, v7_val_t v) {
   v7_fprint(stdout, v7, v);
@@ -15490,482 +15193,6 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   return b_apply(v7, func, this_obj, args, 0, res);
 }
 
-/*
- * Create an instance of exception with type `typ` (see `TYPE_ERROR`,
- * `SYNTAX_ERROR`, etc) and message `msg`.
- */
-V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
-                                        const char *msg, val_t *res) {
-  enum v7_err rcode = V7_OK;
-  uint8_t saved_creating_exception = v7->creating_exception;
-  val_t ctor_args = v7_mk_undefined(), ctor_func = v7_mk_undefined();
-#if 0
-  assert(v7_is_undefined(v7->vals.thrown_error));
-#endif
-
-  *res = v7_mk_undefined();
-
-  v7_own(v7, &ctor_args);
-  v7_own(v7, &ctor_func);
-
-  if (v7->creating_exception) {
-#ifndef NO_LIBC
-    fprintf(stderr, "Exception creation throws an exception %s: %s\n", typ,
-            msg);
-#endif
-  } else {
-    v7->creating_exception = 1;
-
-    /* Prepare arguments for the `Error` constructor */
-    ctor_args = v7_mk_dense_array(v7);
-    v7_array_set(v7, ctor_args, 0, v7_mk_string(v7, msg, strlen(msg), 1));
-
-    /* Get constructor for the given error `typ` */
-    ctor_func = v7_get(v7, v7->vals.global_object, typ, ~0);
-    if (v7_is_undefined(ctor_func)) {
-      fprintf(stderr, "cannot find exception %s\n", typ);
-    }
-
-    /* Create an error object, with prototype from constructor function */
-    *res = mk_object(v7, v7_get(v7, ctor_func, "prototype", 9));
-
-    /*
-     * Finally, call the error constructor, passing an error object as `this`
-     */
-    V7_TRY(b_apply(v7, ctor_func, *res, ctor_args, 0, NULL));
-  }
-
-clean:
-  v7->creating_exception = saved_creating_exception;
-
-  v7_disown(v7, &ctor_func);
-  v7_disown(v7, &ctor_args);
-
-  return rcode;
-}
-
-V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res) {
-  enum v7_err rcode = V7_OK;
-  val_t func_valueOf = v7_mk_undefined();
-
-  v7_own(v7, &func_valueOf);
-  v7_own(v7, &v);
-
-  /*
-   * TODO(dfrank): use `assert(v7_is_object(v))` instead, like `obj_to_string()`
-   * does, and fix all callers to ensure it's an object before calling.
-   *
-   * Or, conversely, make `obj_to_string()` to accept objects.
-   */
-  if (!v7_is_object(v)) {
-    *res = v;
-    goto clean;
-  }
-
-  V7_TRY(v7_get_throwing(v7, v, "valueOf", 7, &func_valueOf));
-
-  if (v7_is_callable(v7, func_valueOf)) {
-    V7_TRY(b_apply(v7, func_valueOf, v, v7_mk_undefined(), 0, res));
-  }
-
-clean:
-  if (rcode != V7_OK) {
-    *res = v;
-  }
-
-  v7_disown(v7, &v);
-  v7_disown(v7, &func_valueOf);
-
-  return rcode;
-}
-
-/*
- * Caller should ensure that `v` is an object
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res) {
-  enum v7_err rcode = V7_OK;
-  val_t to_string_func = v7_mk_undefined();
-
-  /* Caller should ensure that `v` is an object */
-  assert(v7_is_object(v));
-
-  v7_own(v7, &to_string_func);
-  v7_own(v7, &v);
-
-  /*
-   * If `toString` is callable, then call it; otherwise, just return source
-   * value
-   */
-  V7_TRY(v7_get_throwing(v7, v, "toString", 8, &to_string_func));
-  if (v7_is_callable(v7, to_string_func)) {
-    V7_TRY(b_apply(v7, to_string_func, v, v7_mk_undefined(), 0, res));
-  } else {
-    *res = v;
-  }
-
-clean:
-  v7_disown(v7, &v);
-  v7_disown(v7, &to_string_func);
-
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
-                               long *res) {
-  enum v7_err rcode = V7_OK;
-  double d;
-
-  /* if value is `undefined`, just return `default_value` */
-  if (v7_is_undefined(v)) {
-    *res = default_value;
-    goto clean;
-  }
-
-  /* Try to convert value to number */
-  rcode = to_number_v(v7, v, &v);
-  if (rcode != V7_OK) {
-    goto clean;
-  }
-
-  /*
-   * Conversion to number succeeded, so, convert it to long
-   */
-
-  d = v7_to_number(v);
-  /* We want to return LONG_MAX if d is positive Inf, thus d < 0 check */
-  if (isnan(d) || (isinf(d) && d < 0)) {
-    *res = 0;
-    goto clean;
-  } else if (d > LONG_MAX) {
-    *res = LONG_MAX;
-    goto clean;
-  }
-  *res = (long) d;
-  goto clean;
-
-clean:
-  return rcode;
-}
-
-static void save_val(struct v7 *v7, const char *str, size_t str_len,
-                     val_t *dst_v, char *dst, size_t dst_size, int wanted_len,
-                     size_t *res_wanted_len) {
-  if (dst_v != NULL) {
-    *dst_v = v7_mk_string(v7, str, str_len, 1);
-  }
-
-  if (dst != NULL && dst_size > 0) {
-    size_t size = str_len + 1 /*null-term*/;
-    if (size > dst_size) {
-      size = dst_size;
-    }
-    memcpy(dst, str, size);
-
-    /* make sure we have null-term */
-    dst[dst_size - 1] = '\0';
-  }
-
-  if (res_wanted_len != NULL) {
-    *res_wanted_len = (wanted_len >= 0) ? (size_t) wanted_len : str_len;
-  }
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
-                                        char *buf, size_t buf_size,
-                                        size_t *res_len) {
-  enum v7_err rcode = V7_OK;
-  char tmp_buf[25];
-  double num;
-  size_t wanted_len;
-
-  assert(!v7_is_object(v));
-
-  memset(tmp_buf, 0x00, sizeof(tmp_buf));
-
-  v7_own(v7, &v);
-
-  switch (val_type(v7, v)) {
-    case V7_TYPE_STRING: {
-      /* if `res` provided, set it to source value */
-      if (res != NULL) {
-        *res = v;
-      }
-
-      /* if buf provided, copy string data there */
-      if (buf != NULL && buf_size > 0) {
-        size_t size;
-        const char *str = v7_get_string_data(v7, &v, &size);
-        size += 1 /*null-term*/;
-
-        if (size > buf_size) {
-          size = buf_size;
-        }
-
-        memcpy(buf, str, size);
-
-        /* make sure we have a null-term */
-        buf[buf_size - 1] = '\0';
-      }
-
-      if (res_len != NULL) {
-        v7_get_string_data(v7, &v, res_len);
-      }
-
-      goto clean;
-    }
-    case V7_TYPE_NULL:
-      strncpy(tmp_buf, "null", sizeof(tmp_buf) - 1);
-      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
-      goto clean;
-    case V7_TYPE_UNDEFINED:
-      strncpy(tmp_buf, "undefined", sizeof(tmp_buf) - 1);
-      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
-      goto clean;
-    case V7_TYPE_BOOLEAN:
-      if (v7_to_boolean(v)) {
-        strncpy(tmp_buf, "true", sizeof(tmp_buf) - 1);
-        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
-        goto clean;
-      } else {
-        strncpy(tmp_buf, "false", sizeof(tmp_buf) - 1);
-        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
-        goto clean;
-      }
-    case V7_TYPE_NUMBER:
-      if (v == V7_TAG_NAN) {
-        strncpy(tmp_buf, "NaN", sizeof(tmp_buf) - 1);
-        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
-        goto clean;
-      }
-      num = v7_to_number(v);
-      if (isinf(num)) {
-        if (num < 0.0) {
-          strncpy(tmp_buf, "-Infinity", sizeof(tmp_buf) - 1);
-        } else {
-          strncpy(tmp_buf, "Infinity", sizeof(tmp_buf) - 1);
-        }
-        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
-        goto clean;
-      }
-      {
-/*
- * ESP8266's sprintf doesn't support double & float.
- * TODO(alashkin): fix this
- */
-#ifndef V7_TEMP_OFF
-        const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
-        wanted_len = snprintf(tmp_buf, sizeof(tmp_buf), fmt, num);
-#else
-        const int prec = num > 1e10 ? 21 : 10;
-        wanted_len = double_to_str(tmp_buf, sizeof(tmp_buf), num, prec);
-#endif
-        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
-                 res_len);
-        goto clean;
-      }
-    case V7_TYPE_CFUNCTION:
-#ifdef V7_UNIT_TEST
-      wanted_len = c_snprintf(tmp_buf, sizeof(tmp_buf), "cfunc_xxxxxx");
-      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
-               res_len);
-      goto clean;
-#else
-      wanted_len =
-          c_snprintf(tmp_buf, sizeof(tmp_buf), "cfunc_%p", v7_to_pointer(v));
-      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
-               res_len);
-      goto clean;
-#endif
-    case V7_TYPE_FOREIGN:
-      wanted_len = c_snprintf(tmp_buf, sizeof(tmp_buf), "[foreign_%p]",
-                              v7_to_foreign(v));
-      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
-               res_len);
-      goto clean;
-    default:
-      abort();
-  }
-
-clean:
-
-  v7_disown(v7, &v);
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err primitive_to_number(struct v7 *v7, val_t v, val_t *res) {
-  enum v7_err rcode = V7_OK;
-
-  assert(!v7_is_object(v));
-
-  *res = v;
-
-  if (v7_is_number(*res)) {
-    goto clean;
-  }
-
-  if (v7_is_undefined(*res)) {
-    *res = V7_TAG_NAN;
-    goto clean;
-  }
-
-  if (v7_is_null(*res)) {
-    *res = v7_mk_number(0.0);
-    goto clean;
-  }
-
-  if (v7_is_boolean(*res)) {
-    *res = v7_mk_number(!!v7_to_boolean(v));
-    goto clean;
-  }
-
-  if (v7_is_cfunction_ptr(*res)) {
-    *res = v7_mk_number(0.0);
-    goto clean;
-  }
-
-  if (v7_is_string(*res)) {
-    double d;
-    size_t n;
-    char *e, *s = (char *) v7_get_string_data(v7, res, &n);
-    if (n != 0) {
-      /*
-       * TODO(dfrank) handle Infinity
-       */
-      d = strtod(s, &e);
-      if (e - n != s) {
-        d = NAN;
-      }
-    } else {
-      /* empty string: convert to 0 */
-      d = 0.0;
-    }
-    *res = v7_mk_number(d);
-    goto clean;
-  }
-
-  assert(0);
-
-clean:
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-enum v7_err to_primitive(struct v7 *v7, val_t v, enum to_primitive_hint hint,
-                         val_t *res) {
-  enum v7_err rcode = V7_OK;
-  enum v7_err (*p_func)(struct v7 *v7, val_t v, val_t *res);
-
-  v7_own(v7, &v);
-
-  *res = v;
-
-  /*
-   * If given value is an object, try to convert it to string by calling first
-   * preferred function (`toString()` or `valueOf()`, depending on the `hint`
-   * argument)
-   */
-  if (v7_is_object(*res)) {
-    /* Handle special case for Date object */
-    if (hint == V7_TO_PRIMITIVE_HINT_AUTO) {
-      hint = (obj_prototype_v(v7, *res) == v7->vals.date_prototype)
-                 ? V7_TO_PRIMITIVE_HINT_STRING
-                 : V7_TO_PRIMITIVE_HINT_NUMBER;
-    }
-
-    p_func =
-        (hint == V7_TO_PRIMITIVE_HINT_NUMBER) ? obj_value_of : obj_to_string;
-    rcode = p_func(v7, *res, res);
-    if (rcode != V7_OK) {
-      goto clean;
-    }
-
-    /*
-     * If returned value is still an object, get original argument value
-     */
-    if (v7_is_object(*res)) {
-      *res = v;
-    }
-  }
-
-  /*
-   * If the value is still an object, try to call second function (`valueOf()`
-   * or `toString()`)
-   */
-  if (v7_is_object(*res)) {
-    p_func =
-        (hint == V7_TO_PRIMITIVE_HINT_NUMBER) ? obj_to_string : obj_value_of;
-    rcode = p_func(v7, *res, res);
-    if (rcode != V7_OK) {
-      goto clean;
-    }
-  }
-
-  /*
-   * If the value is still an object, then throw.
-   */
-  if (v7_is_object(*res)) {
-    rcode =
-        v7_throwf(v7, TYPE_ERROR, "Cannot convert object to primitive value");
-    goto clean;
-  }
-
-clean:
-  v7_disown(v7, &v);
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v, val_t *res, char *buf,
-                                 size_t buf_size, size_t *res_len) {
-  enum v7_err rcode = V7_OK;
-
-  v7_own(v7, &v);
-
-  /*
-   * Convert value to primitive if needed, calling `toString()` first
-   */
-  V7_TRY(to_primitive(v7, v, V7_TO_PRIMITIVE_HINT_STRING, &v));
-
-  /*
-   * Now, we're guaranteed to have a primitive here. Convert it to string.
-   */
-  V7_TRY(primitive_to_str(v7, v, res, buf, buf_size, res_len));
-
-clean:
-  v7_disown(v7, &v);
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_number_v(struct v7 *v7, val_t v, val_t *res) {
-  enum v7_err rcode = V7_OK;
-
-  *res = v;
-
-  /*
-   * Convert value to primitive if needed, calling `valueOf()` first
-   */
-  rcode = to_primitive(v7, *res, V7_TO_PRIMITIVE_HINT_NUMBER, res);
-  if (rcode != V7_OK) {
-    goto clean;
-  }
-
-  /*
-   * Now, we're guaranteed to have a primitive here. Convert it to number.
-   */
-  rcode = primitive_to_number(v7, *res, res);
-  if (rcode != V7_OK) {
-    goto clean;
-  }
-
-clean:
-  return rcode;
-}
-
 void v7_interrupt(struct v7 *v7) {
   v7->interrupt = 1;
 }
@@ -16050,6 +15277,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 
@@ -16467,7 +15695,9 @@ const char *v7_to_cstring(struct v7 *v7, v7_val_t *value) {
 
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
 
 enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
   v7->vals.thrown_error = val;
@@ -16516,6 +15746,823 @@ v7_val_t v7_get_thrown_value(struct v7 *v7, uint8_t *is_thrown) {
     *is_thrown = v7->is_thrown;
   }
   return v7->vals.thrown_error;
+}
+
+/*
+ * Create an instance of the exception with type `typ` (see `TYPE_ERROR`,
+ * `SYNTAX_ERROR`, etc) and message `msg`.
+ */
+V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
+                                        const char *msg, val_t *res) {
+  enum v7_err rcode = V7_OK;
+  uint8_t saved_creating_exception = v7->creating_exception;
+  val_t ctor_args = v7_mk_undefined(), ctor_func = v7_mk_undefined();
+#if 0
+  assert(v7_is_undefined(v7->vals.thrown_error));
+#endif
+
+  *res = v7_mk_undefined();
+
+  v7_own(v7, &ctor_args);
+  v7_own(v7, &ctor_func);
+
+  if (v7->creating_exception) {
+#ifndef NO_LIBC
+    fprintf(stderr, "Exception creation throws an exception %s: %s\n", typ,
+            msg);
+#endif
+  } else {
+    v7->creating_exception = 1;
+
+    /* Prepare arguments for the `Error` constructor */
+    ctor_args = v7_mk_dense_array(v7);
+    v7_array_set(v7, ctor_args, 0, v7_mk_string(v7, msg, strlen(msg), 1));
+
+    /* Get constructor for the given error `typ` */
+    ctor_func = v7_get(v7, v7->vals.global_object, typ, ~0);
+    if (v7_is_undefined(ctor_func)) {
+      fprintf(stderr, "cannot find exception %s\n", typ);
+    }
+
+    /* Create an error object, with prototype from constructor function */
+    *res = mk_object(v7, v7_get(v7, ctor_func, "prototype", 9));
+
+    /*
+     * Finally, call the error constructor, passing an error object as `this`
+     */
+    V7_TRY(b_apply(v7, ctor_func, *res, ctor_args, 0, NULL));
+  }
+
+clean:
+  v7->creating_exception = saved_creating_exception;
+
+  v7_disown(v7, &ctor_func);
+  v7_disown(v7, &ctor_args);
+
+  return rcode;
+}
+#ifdef V7_MODULE_LINES
+#line 1 "./src/conversion.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "common/str_util.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
+
+static void save_val(struct v7 *v7, const char *str, size_t str_len,
+                     val_t *dst_v, char *dst, size_t dst_size, int wanted_len,
+                     size_t *res_wanted_len) {
+  if (dst_v != NULL) {
+    *dst_v = v7_mk_string(v7, str, str_len, 1);
+  }
+
+  if (dst != NULL && dst_size > 0) {
+    size_t size = str_len + 1 /*null-term*/;
+    if (size > dst_size) {
+      size = dst_size;
+    }
+    memcpy(dst, str, size);
+
+    /* make sure we have null-term */
+    dst[dst_size - 1] = '\0';
+  }
+
+  if (res_wanted_len != NULL) {
+    *res_wanted_len = (wanted_len >= 0) ? (size_t) wanted_len : str_len;
+  }
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
+                                        char *buf, size_t buf_size,
+                                        size_t *res_len) {
+  enum v7_err rcode = V7_OK;
+  char tmp_buf[25];
+  double num;
+  size_t wanted_len;
+
+  assert(!v7_is_object(v));
+
+  memset(tmp_buf, 0x00, sizeof(tmp_buf));
+
+  v7_own(v7, &v);
+
+  switch (val_type(v7, v)) {
+    case V7_TYPE_STRING: {
+      /* if `res` provided, set it to source value */
+      if (res != NULL) {
+        *res = v;
+      }
+
+      /* if buf provided, copy string data there */
+      if (buf != NULL && buf_size > 0) {
+        size_t size;
+        const char *str = v7_get_string_data(v7, &v, &size);
+        size += 1 /*null-term*/;
+
+        if (size > buf_size) {
+          size = buf_size;
+        }
+
+        memcpy(buf, str, size);
+
+        /* make sure we have a null-term */
+        buf[buf_size - 1] = '\0';
+      }
+
+      if (res_len != NULL) {
+        v7_get_string_data(v7, &v, res_len);
+      }
+
+      goto clean;
+    }
+    case V7_TYPE_NULL:
+      strncpy(tmp_buf, "null", sizeof(tmp_buf) - 1);
+      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
+      goto clean;
+    case V7_TYPE_UNDEFINED:
+      strncpy(tmp_buf, "undefined", sizeof(tmp_buf) - 1);
+      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
+      goto clean;
+    case V7_TYPE_BOOLEAN:
+      if (v7_to_boolean(v)) {
+        strncpy(tmp_buf, "true", sizeof(tmp_buf) - 1);
+        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
+        goto clean;
+      } else {
+        strncpy(tmp_buf, "false", sizeof(tmp_buf) - 1);
+        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
+        goto clean;
+      }
+    case V7_TYPE_NUMBER:
+      if (v == V7_TAG_NAN) {
+        strncpy(tmp_buf, "NaN", sizeof(tmp_buf) - 1);
+        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
+        goto clean;
+      }
+      num = v7_to_number(v);
+      if (isinf(num)) {
+        if (num < 0.0) {
+          strncpy(tmp_buf, "-Infinity", sizeof(tmp_buf) - 1);
+        } else {
+          strncpy(tmp_buf, "Infinity", sizeof(tmp_buf) - 1);
+        }
+        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
+        goto clean;
+      }
+      {
+/*
+ * ESP8266's sprintf doesn't support double & float.
+ * TODO(alashkin): fix this
+ */
+#ifndef V7_TEMP_OFF
+        const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
+        wanted_len = snprintf(tmp_buf, sizeof(tmp_buf), fmt, num);
+#else
+        const int prec = num > 1e10 ? 21 : 10;
+        wanted_len = double_to_str(tmp_buf, sizeof(tmp_buf), num, prec);
+#endif
+        save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
+                 res_len);
+        goto clean;
+      }
+    case V7_TYPE_CFUNCTION:
+#ifdef V7_UNIT_TEST
+      wanted_len = c_snprintf(tmp_buf, sizeof(tmp_buf), "cfunc_xxxxxx");
+      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
+               res_len);
+      goto clean;
+#else
+      wanted_len =
+          c_snprintf(tmp_buf, sizeof(tmp_buf), "cfunc_%p", v7_to_pointer(v));
+      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
+               res_len);
+      goto clean;
+#endif
+    case V7_TYPE_FOREIGN:
+      wanted_len = c_snprintf(tmp_buf, sizeof(tmp_buf), "[foreign_%p]",
+                              v7_to_foreign(v));
+      save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
+               res_len);
+      goto clean;
+    default:
+      abort();
+  }
+
+clean:
+
+  v7_disown(v7, &v);
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err primitive_to_number(struct v7 *v7, val_t v, val_t *res) {
+  enum v7_err rcode = V7_OK;
+
+  assert(!v7_is_object(v));
+
+  *res = v;
+
+  if (v7_is_number(*res)) {
+    goto clean;
+  }
+
+  if (v7_is_undefined(*res)) {
+    *res = V7_TAG_NAN;
+    goto clean;
+  }
+
+  if (v7_is_null(*res)) {
+    *res = v7_mk_number(0.0);
+    goto clean;
+  }
+
+  if (v7_is_boolean(*res)) {
+    *res = v7_mk_number(!!v7_to_boolean(v));
+    goto clean;
+  }
+
+  if (v7_is_cfunction_ptr(*res)) {
+    *res = v7_mk_number(0.0);
+    goto clean;
+  }
+
+  if (v7_is_string(*res)) {
+    double d;
+    size_t n;
+    char *e, *s = (char *) v7_get_string_data(v7, res, &n);
+    if (n != 0) {
+      /*
+       * TODO(dfrank) handle Infinity
+       */
+      d = strtod(s, &e);
+      if (e - n != s) {
+        d = NAN;
+      }
+    } else {
+      /* empty string: convert to 0 */
+      d = 0.0;
+    }
+    *res = v7_mk_number(d);
+    goto clean;
+  }
+
+  assert(0);
+
+clean:
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+enum v7_err to_primitive(struct v7 *v7, val_t v, enum to_primitive_hint hint,
+                         val_t *res) {
+  enum v7_err rcode = V7_OK;
+  enum v7_err (*p_func)(struct v7 *v7, val_t v, val_t *res);
+
+  v7_own(v7, &v);
+
+  *res = v;
+
+  /*
+   * If given value is an object, try to convert it to string by calling first
+   * preferred function (`toString()` or `valueOf()`, depending on the `hint`
+   * argument)
+   */
+  if (v7_is_object(*res)) {
+    /* Handle special case for Date object */
+    if (hint == V7_TO_PRIMITIVE_HINT_AUTO) {
+      hint = (obj_prototype_v(v7, *res) == v7->vals.date_prototype)
+                 ? V7_TO_PRIMITIVE_HINT_STRING
+                 : V7_TO_PRIMITIVE_HINT_NUMBER;
+    }
+
+    p_func =
+        (hint == V7_TO_PRIMITIVE_HINT_NUMBER) ? obj_value_of : obj_to_string;
+    rcode = p_func(v7, *res, res);
+    if (rcode != V7_OK) {
+      goto clean;
+    }
+
+    /*
+     * If returned value is still an object, get original argument value
+     */
+    if (v7_is_object(*res)) {
+      *res = v;
+    }
+  }
+
+  /*
+   * If the value is still an object, try to call second function (`valueOf()`
+   * or `toString()`)
+   */
+  if (v7_is_object(*res)) {
+    p_func =
+        (hint == V7_TO_PRIMITIVE_HINT_NUMBER) ? obj_to_string : obj_value_of;
+    rcode = p_func(v7, *res, res);
+    if (rcode != V7_OK) {
+      goto clean;
+    }
+  }
+
+  /*
+   * If the value is still an object, then throw.
+   */
+  if (v7_is_object(*res)) {
+    rcode =
+        v7_throwf(v7, TYPE_ERROR, "Cannot convert object to primitive value");
+    goto clean;
+  }
+
+clean:
+  v7_disown(v7, &v);
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_string(struct v7 *v7, val_t v, val_t *res, char *buf,
+                                 size_t buf_size, size_t *res_len) {
+  enum v7_err rcode = V7_OK;
+
+  v7_own(v7, &v);
+
+  /*
+   * Convert value to primitive if needed, calling `toString()` first
+   */
+  V7_TRY(to_primitive(v7, v, V7_TO_PRIMITIVE_HINT_STRING, &v));
+
+  /*
+   * Now, we're guaranteed to have a primitive here. Convert it to string.
+   */
+  V7_TRY(primitive_to_str(v7, v, res, buf, buf_size, res_len));
+
+clean:
+  v7_disown(v7, &v);
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_number_v(struct v7 *v7, val_t v, val_t *res) {
+  enum v7_err rcode = V7_OK;
+
+  *res = v;
+
+  /*
+   * Convert value to primitive if needed, calling `valueOf()` first
+   */
+  rcode = to_primitive(v7, *res, V7_TO_PRIMITIVE_HINT_NUMBER, res);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  /*
+   * Now, we're guaranteed to have a primitive here. Convert it to number.
+   */
+  rcode = primitive_to_number(v7, *res, res);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+clean:
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
+                               long *res) {
+  enum v7_err rcode = V7_OK;
+  double d;
+
+  /* if value is `undefined`, just return `default_value` */
+  if (v7_is_undefined(v)) {
+    *res = default_value;
+    goto clean;
+  }
+
+  /* Try to convert value to number */
+  rcode = to_number_v(v7, v, &v);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  /*
+   * Conversion to number succeeded, so, convert it to long
+   */
+
+  d = v7_to_number(v);
+  /* We want to return LONG_MAX if d is positive Inf, thus d < 0 check */
+  if (isnan(d) || (isinf(d) && d < 0)) {
+    *res = 0;
+    goto clean;
+  } else if (d > LONG_MAX) {
+    *res = LONG_MAX;
+    goto clean;
+  }
+  *res = (long) d;
+  goto clean;
+
+clean:
+  return rcode;
+}
+
+V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res) {
+  enum v7_err rcode = V7_OK;
+  val_t func_valueOf = v7_mk_undefined();
+
+  v7_own(v7, &func_valueOf);
+  v7_own(v7, &v);
+
+  /*
+   * TODO(dfrank): use `assert(v7_is_object(v))` instead, like `obj_to_string()`
+   * does, and fix all callers to ensure it's an object before calling.
+   *
+   * Or, conversely, make `obj_to_string()` to accept objects.
+   */
+  if (!v7_is_object(v)) {
+    *res = v;
+    goto clean;
+  }
+
+  V7_TRY(v7_get_throwing(v7, v, "valueOf", 7, &func_valueOf));
+
+  if (v7_is_callable(v7, func_valueOf)) {
+    V7_TRY(b_apply(v7, func_valueOf, v, v7_mk_undefined(), 0, res));
+  }
+
+clean:
+  if (rcode != V7_OK) {
+    *res = v;
+  }
+
+  v7_disown(v7, &v);
+  v7_disown(v7, &func_valueOf);
+
+  return rcode;
+}
+
+/*
+ * Caller should ensure that `v` is an object
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res) {
+  enum v7_err rcode = V7_OK;
+  val_t to_string_func = v7_mk_undefined();
+
+  /* Caller should ensure that `v` is an object */
+  assert(v7_is_object(v));
+
+  v7_own(v7, &to_string_func);
+  v7_own(v7, &v);
+
+  /*
+   * If `toString` is callable, then call it; otherwise, just return source
+   * value
+   */
+  V7_TRY(v7_get_throwing(v7, v, "toString", 8, &to_string_func));
+  if (v7_is_callable(v7, to_string_func)) {
+    V7_TRY(b_apply(v7, to_string_func, v, v7_mk_undefined(), 0, res));
+  } else {
+    *res = v;
+  }
+
+clean:
+  v7_disown(v7, &v);
+  v7_disown(v7, &to_string_func);
+
+  return rcode;
+}
+
+static const char *hex_digits = "0123456789abcdef";
+static char *append_hex(char *buf, char *limit, uint8_t c) {
+  if (buf < limit) *buf++ = 'u';
+  if (buf < limit) *buf++ = '0';
+  if (buf < limit) *buf++ = '0';
+  if (buf < limit) *buf++ = hex_digits[(int) ((c >> 4) % 0xf)];
+  if (buf < limit) *buf++ = hex_digits[(int) (c & 0xf)];
+  return buf;
+}
+
+/*
+ * Appends quoted s to buf. Any double quote contained in s will be escaped.
+ * Returns the number of characters that would have been added,
+ * like snprintf.
+ * If size is zero it doesn't output anything but keeps counting.
+ */
+static int snquote(char *buf, size_t size, const char *s, size_t len) {
+  char *limit = buf + size - 1;
+  const char *end;
+  /*
+   * String single character escape sequence:
+   * http://www.ecma-international.org/ecma-262/6.0/index.html#table-34
+   *
+   * 0x8 -> \b
+   * 0x9 -> \t
+   * 0xa -> \n
+   * 0xb -> \v
+   * 0xc -> \f
+   * 0xd -> \r
+   */
+  const char *specials = "btnvfr";
+  size_t i = 0;
+
+  i++;
+  if (buf < limit) *buf++ = '"';
+
+  for (end = s + len; s < end; s++) {
+    if (*s == '"' || *s == '\\') {
+      i++;
+      if (buf < limit) *buf++ = '\\';
+    } else if (*s >= '\b' && *s <= '\r') {
+      i += 2;
+      if (buf < limit) *buf++ = '\\';
+      if (buf < limit) *buf++ = specials[*s - '\b'];
+      continue;
+    } else if ((unsigned char) *s < '\b' || (*s > '\r' && *s < ' ')) {
+      if (buf < limit) *buf++ = '\\';
+      buf = append_hex(buf, limit, (uint8_t) *s);
+      continue;
+    }
+    i++;
+    if (buf < limit) *buf++ = *s;
+  }
+
+  i++;
+  if (buf < limit) *buf++ = '"';
+
+  if (size != 0) {
+    *buf = '\0';
+  }
+  return i;
+}
+
+/*
+ * Returns whether the value of given type should be skipped when generating
+ * JSON output
+ */
+static int should_skip_for_json(enum v7_type type) {
+  int ret;
+  switch (type) {
+    /* All permitted values */
+    case V7_TYPE_NULL:
+    case V7_TYPE_BOOLEAN:
+    case V7_TYPE_BOOLEAN_OBJECT:
+    case V7_TYPE_NUMBER:
+    case V7_TYPE_NUMBER_OBJECT:
+    case V7_TYPE_STRING:
+    case V7_TYPE_STRING_OBJECT:
+    case V7_TYPE_GENERIC_OBJECT:
+    case V7_TYPE_ARRAY_OBJECT:
+    case V7_TYPE_DATE_OBJECT:
+    case V7_TYPE_REGEXP_OBJECT:
+    case V7_TYPE_ERROR_OBJECT:
+      ret = 0;
+      break;
+    default:
+      ret = 1;
+      break;
+  }
+  return ret;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
+                                        size_t size, size_t *res_len,
+                                        uint8_t is_debug) {
+  val_t el;
+  char *vp;
+  enum v7_err rcode = V7_OK;
+  size_t len = 0;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
+  tmp_stack_push(&tf, &v);
+  tmp_stack_push(&tf, &el);
+  /*
+   * TODO(dfrank) : also push all `v7_val_t`s that are declared below
+   */
+
+  if (size > 0) *buf = '\0';
+
+  if (!is_debug && should_skip_for_json(val_type(v7, v))) {
+    goto clean;
+  }
+
+  for (vp = v7->json_visited_stack.buf;
+       vp < v7->json_visited_stack.buf + v7->json_visited_stack.len;
+       vp += sizeof(val_t)) {
+    if (*(val_t *) vp == v) {
+      strncpy(buf, "[Circular]", size);
+      len = 10;
+      goto clean;
+    }
+  }
+
+  switch (val_type(v7, v)) {
+    case V7_TYPE_NULL:
+    case V7_TYPE_BOOLEAN:
+    case V7_TYPE_NUMBER:
+    case V7_TYPE_UNDEFINED:
+    case V7_TYPE_CFUNCTION:
+    case V7_TYPE_FOREIGN:
+      /* For those types, regular `primitive_to_str()` works */
+      V7_TRY(primitive_to_str(v7, v, NULL, buf, size, &len));
+      goto clean;
+
+    case V7_TYPE_STRING: {
+      /*
+       * For strings we can't just use `primitive_to_str()`, because we need
+       * quoted value
+       */
+      size_t n;
+      const char *str = v7_get_string_data(v7, &v, &n);
+      len = snquote(buf, size, str, n);
+      goto clean;
+    }
+
+    case V7_TYPE_DATE_OBJECT: {
+      v7_val_t func = v7_mk_undefined(), val = v7_mk_undefined();
+      V7_TRY(v7_get_throwing(v7, v, "toString", 8, &func));
+#if V7_ENABLE__Date__toJSON
+      if (!is_debug) {
+        V7_TRY(v7_get_throwing(v7, v, "toJSON", 6, &func));
+      }
+#endif
+      V7_TRY(b_apply(v7, func, v, V7_UNDEFINED, 0, &val));
+      V7_TRY(to_json_or_debug(v7, val, buf, size, &len, is_debug));
+      goto clean;
+    }
+    case V7_TYPE_GENERIC_OBJECT:
+    case V7_TYPE_BOOLEAN_OBJECT:
+    case V7_TYPE_STRING_OBJECT:
+    case V7_TYPE_NUMBER_OBJECT:
+    case V7_TYPE_REGEXP_OBJECT:
+    case V7_TYPE_ERROR_OBJECT: {
+      /* TODO(imax): make it return the desired size of the buffer */
+      char *b = buf;
+      void *h = NULL;
+      v7_val_t name = v7_mk_undefined(), val = v7_mk_undefined();
+      v7_prop_attr_t attrs;
+
+      mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "{");
+      while ((h = v7_next_prop(h, v, &name, &val, &attrs)) != NULL) {
+        size_t n;
+        const char *s;
+        if (attrs & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
+          continue;
+        }
+        if (!is_debug && should_skip_for_json(val_type(v7, val))) {
+          continue;
+        }
+        if (b - buf != 1) { /* Not the first property to be printed */
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
+        }
+        s = v7_get_string_data(v7, &name, &n);
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
+        {
+          size_t tmp = 0;
+          V7_TRY(to_json_or_debug(v7, val, b, BUF_LEFT(size, b - buf), &tmp,
+                                  is_debug));
+          b += tmp;
+        }
+      }
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
+      v7->json_visited_stack.len -= sizeof(v);
+      len = b - buf;
+      goto clean;
+    }
+    case V7_TYPE_ARRAY_OBJECT: {
+      int has;
+      char *b = buf;
+      size_t i, alen = v7_array_length(v7, v);
+      mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "[");
+      for (i = 0; i < alen; i++) {
+        el = v7_array_get2(v7, v, i, &has);
+        if (has) {
+          size_t tmp = 0;
+          if (!is_debug && should_skip_for_json(val_type(v7, el))) {
+            b += c_snprintf(b, BUF_LEFT(size, b - buf), "null");
+          } else {
+            V7_TRY(to_json_or_debug(v7, el, b, BUF_LEFT(size, b - buf), &tmp,
+                                    is_debug));
+          }
+          b += tmp;
+        }
+        if (i != alen - 1) {
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
+        }
+      }
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
+      v7->json_visited_stack.len -= sizeof(v);
+      len = b - buf;
+      goto clean;
+    }
+    case V7_TYPE_CFUNCTION_OBJECT:
+      V7_TRY(obj_value_of(v7, v, &v));
+      len = c_snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
+      goto clean;
+    case V7_TYPE_FUNCTION_OBJECT:
+      V7_TRY(to_string(v7, v, NULL, buf, size, &len));
+      goto clean;
+
+    case V7_TYPE_MAX_OBJECT_TYPE:
+    case V7_NUM_TYPES:
+      abort();
+  }
+
+  abort();
+
+  len = 0; /* for compilers that don't know about abort() */
+  goto clean;
+
+clean:
+  if (rcode != V7_OK) {
+    len = 0;
+  }
+  if (res_len != NULL) {
+    *res_len = len;
+  }
+  tmp_frame_cleanup(&tf);
+  return rcode;
+}
+
+/*
+ * v7_stringify allocates a new buffer if value representation doesn't fit into
+ * buf. Caller is responsible for freeing that buffer.
+ */
+char *v7_stringify(struct v7 *v7, val_t v, char *buf, size_t size,
+                   enum v7_stringify_mode mode) {
+  enum v7_err rcode = V7_OK;
+  uint8_t saved_is_thrown = 0;
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
+  char *ret = NULL;
+
+  rcode = v7_stringify_throwing(v7, v, buf, size, mode, &ret);
+  if (rcode != V7_OK) {
+    rcode = V7_OK;
+    if (saved_is_thrown) {
+      rcode = v7_throw(v7, saved_thrown);
+    } else {
+      v7_clear_thrown_value(v7);
+    }
+
+    buf[0] = '\0';
+    ret = buf;
+  }
+
+  return ret;
+}
+
+enum v7_err v7_stringify_throwing(struct v7 *v7, val_t v, char *buf,
+                                  size_t size, enum v7_stringify_mode mode,
+                                  char **res) {
+  enum v7_err rcode = V7_OK;
+  char *p = buf;
+  size_t len;
+
+  switch (mode) {
+    case V7_STRINGIFY_DEFAULT:
+      V7_TRY(to_string(v7, v, NULL, buf, size, &len));
+      break;
+
+    case V7_STRINGIFY_JSON:
+      V7_TRY(to_json_or_debug(v7, v, buf, size, &len, 0));
+      break;
+
+    case V7_STRINGIFY_DEBUG:
+      V7_TRY(to_json_or_debug(v7, v, buf, size, &len, 1));
+      break;
+  }
+
+  /* fit null terminating byte */
+  if (len >= size) {
+    /* Buffer is not large enough. Allocate a bigger one */
+    p = (char *) malloc(len + 1);
+    V7_TRY(v7_stringify_throwing(v7, v, p, len + 1, mode, res));
+    assert(*res == p);
+    goto clean;
+  } else {
+    *res = p;
+    goto clean;
+  }
+
+clean:
+  /*
+   * If we're going to throw, and we allocated a buffer, then free it.
+   * But if we don't throw, then the caller will free it.
+   */
+  if (rcode != V7_OK && p != buf) {
+    free(p);
+  }
+  return rcode;
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
@@ -21954,6 +22001,7 @@ clean:
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/std_array.h" */
 /* Amalgamated: #include "v7/src/std_boolean.h" */
@@ -24287,6 +24335,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 #if V7_ENABLE__Object__getPrototypeOf
 WARN_UNUSED_RESULT
@@ -24928,6 +24977,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
@@ -25201,11 +25251,12 @@ V7_PRIVATE void init_json(struct v7 *v7) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/std_string.h" */
-/* Amalgamated: #include "common/str_util.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 struct a_sort_data {
   val_t sort_func;
@@ -26045,6 +26096,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Boolean_ctor(struct v7 *v7, v7_val_t *res) {
@@ -26404,6 +26456,7 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/std_regex.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 /* Substring implementations: RegExp-based and String-based {{{ */
 
@@ -27662,6 +27715,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 #if V7_ENABLE__Date
 
@@ -28840,6 +28894,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Function_ctor(struct v7 *v7, v7_val_t *res) {
@@ -29047,6 +29102,7 @@ V7_PRIVATE void init_function(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 #if V7_ENABLE__RegExp
 
