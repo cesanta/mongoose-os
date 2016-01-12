@@ -699,10 +699,10 @@ void rollback_fw() {
 static int notify_js(enum update_status us, const char *info) {
   if (!v7_is_undefined(s_updater_notify_cb)) {
     if (info == NULL) {
-      sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_create_number(us));
+      sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_mk_number(us));
     } else {
-      sj_invoke_cb2(s_v7, s_updater_notify_cb, v7_create_number(us),
-                    v7_create_string(s_v7, info, ~0, 1));
+      sj_invoke_cb2(s_v7, s_updater_notify_cb, v7_mk_number(us),
+                    v7_mk_string(s_v7, info, ~0, 1));
     };
 
     return 1;
@@ -772,11 +772,11 @@ static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
     update_start(v7_to_cstring(v7, &metadata_url_v));
   } else {
     printf("Invalid arguments\n");
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     return V7_OK;
   }
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   return V7_OK;
 }
 
@@ -801,7 +801,7 @@ static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   v7_val_t cb = v7_arg(v7, 0);
   if (!v7_is_function(cb)) {
     printf("Invalid arguments\n");
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     return V7_OK;
   }
 
@@ -812,15 +812,15 @@ static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   s_updater_notify_cb = cb;
   v7_own(v7, &s_updater_notify_cb);
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   return V7_OK;
 }
 
 void init_updater(struct v7 *v7) {
   s_v7 = v7;
-  v7_val_t updater = v7_create_object(v7);
+  v7_val_t updater = v7_mk_object(v7);
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
-  s_updater_notify_cb = v7_create_undefined();
+  s_updater_notify_cb = v7_mk_undefined();
 
   v7_set(v7, sys, "updater", ~0, updater);
   v7_set_method(v7, updater, "start", Updater_startupdate);
@@ -828,19 +828,19 @@ void init_updater(struct v7 *v7) {
 
   v7_def(s_v7, updater, "GOT_REQUEST", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_create_number(US_NOT_STARTED));
+         v7_mk_number(US_NOT_STARTED));
 
   v7_def(s_v7, updater, "COMPLETED", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_create_number(US_COMPLETED));
+         v7_mk_number(US_COMPLETED));
 
   v7_def(s_v7, updater, "NOTHING_TODO", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_create_number(US_NOTHING_TODO));
+         v7_mk_number(US_NOTHING_TODO));
 
   v7_def(s_v7, updater, "FAILED", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_create_number(US_ERROR));
+         v7_mk_number(US_ERROR));
 
   sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_clubby_update,
                                     NULL);

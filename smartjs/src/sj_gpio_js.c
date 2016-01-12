@@ -21,11 +21,11 @@ static void gpio_intr_handler_proxy(int pin, int level) {
     return;
   }
 
-  args = v7_create_array(s_v7);
-  v7_array_push(s_v7, args, v7_create_number(pin));
-  v7_array_push(s_v7, args, v7_create_number(level));
+  args = v7_mk_array(s_v7);
+  v7_array_push(s_v7, args, v7_mk_number(pin));
+  v7_array_push(s_v7, args, v7_mk_number(level));
 
-  if (v7_apply(s_v7, cb, v7_create_undefined(), args, &res) != V7_OK) {
+  if (v7_apply(s_v7, cb, v7_mk_undefined(), args, &res) != V7_OK) {
     /* TODO(mkm): make it print stack trace */
     fprintf(stderr, "cb threw an exception\n");
   }
@@ -43,7 +43,7 @@ static enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv) || !v7_is_number(typev)) {
     printf("Invalid arguments\n");
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
 
@@ -57,18 +57,18 @@ static enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
 
   if (!has_isr && !new_isr_provided) {
     printf("Missing callback\n");
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   };
 
   if (has_isr && new_isr_provided && current_cb != cb) {
     printf("Only one interruption handler is allowed for pin\n");
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
 
   if (type == 0 && has_isr) {
-    v7_set(v7, v7_get_global(v7), prop_name, len, v7_create_undefined());
+    v7_set(v7, v7_get_global(v7), prop_name, len, v7_mk_undefined());
   } else if (!has_isr && new_isr_provided) {
     v7_set(v7, v7_get_global(v7), prop_name, len, cb);
   }
@@ -78,7 +78,7 @@ static enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
     s_gpio_intr_installed = 1;
   }
 
-  *res = v7_create_boolean(sj_gpio_intr_set(pin, type) == 0);
+  *res = v7_mk_boolean(sj_gpio_intr_set(pin, type) == 0);
   goto clean;
 
 clean:
@@ -93,12 +93,12 @@ static enum v7_err GPIO_setmode(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv) || !v7_is_number(modev) || !v7_is_number(pullv)) {
     printf("Invalid arguments");
-    *res = v7_create_undefined();
+    *res = v7_mk_undefined();
   } else {
     pin = v7_to_number(pinv);
     mode = v7_to_number(modev);
     pull = v7_to_number(pullv);
-    *res = v7_create_boolean(sj_gpio_set_mode(pin, mode, pull) == 0);
+    *res = v7_mk_boolean(sj_gpio_set_mode(pin, mode, pull) == 0);
   }
 
   return V7_OK;
@@ -111,7 +111,7 @@ static enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    *res = v7_create_undefined();
+    *res = v7_mk_undefined();
   } else {
     pin = v7_to_number(pinv);
 
@@ -121,7 +121,7 @@ static enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
      */
     val = !!v7_is_true(v7, valv);
 
-    *res = v7_create_boolean(sj_gpio_write(pin, val) == 0);
+    *res = v7_mk_boolean(sj_gpio_write(pin, val) == 0);
   }
 
   return V7_OK;
@@ -133,10 +133,10 @@ static enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    *res = v7_create_undefined();
+    *res = v7_mk_undefined();
   } else {
     pin = v7_to_number(pinv);
-    *res = v7_create_number(sj_gpio_read(pin));
+    *res = v7_mk_number(sj_gpio_read(pin));
   }
 
   return V7_OK;
@@ -144,7 +144,7 @@ static enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
 
 void init_gpiojs(struct v7 *v7) {
   s_v7 = v7;
-  v7_val_t gpio = v7_create_object(v7);
+  v7_val_t gpio = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "GPIO", ~0, gpio);
   v7_set_method(v7, gpio, "setmode", GPIO_setmode);
   v7_set_method(v7, gpio, "read", GPIO_read);

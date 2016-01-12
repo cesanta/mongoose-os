@@ -23,7 +23,7 @@
  * several families of functions V7 provides:
  *
  * - `v7_exec_*()` execute a piece of JavaScript code, put result in `v7_val_t`
- * - `v7_create_*()` convert C/C++ values into JavaScript `v7_val_t` values
+ * - `v7_mk_*()` convert C/C++ values into JavaScript `v7_val_t` values
  * - `v7_to_*()` convert JavaScript `v7_val_t` values into C/C++ values
  * - `v7_is_*()` test whether JavaScript `v7_val_t` value is of given type
  * - misc functions that throw exceptions, operate on arrays & objects,
@@ -152,7 +152,7 @@ typedef enum v7_err(v7_cfunction_t)(struct v7 *v7, v7_val_t *res);
 /* Create V7 instance */
 struct v7 *v7_create(void);
 
-struct v7_create_opts {
+struct v7_mk_opts {
   size_t object_arena_size;
   size_t function_arena_size;
   size_t property_arena_size;
@@ -164,7 +164,7 @@ struct v7_create_opts {
   char *freeze_file;
 #endif
 };
-struct v7 *v7_create_opt(struct v7_create_opts opts);
+struct v7 *v7_mk_opt(struct v7_mk_opts opts);
 
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *v7);
@@ -224,14 +224,14 @@ WARN_UNUSED_RESULT
 enum v7_err v7_compile(const char *js_code, int generate_binary_output,
                        int use_bcode, FILE *fp);
 
-/* Create an empty object */
-v7_val_t v7_create_object(struct v7 *v7);
+/* Make an empty object */
+v7_val_t v7_mk_object(struct v7 *v7);
 
-/* Create an empty array object */
-v7_val_t v7_create_array(struct v7 *v7);
+/* Make an empty array object */
+v7_val_t v7_mk_array(struct v7 *v7);
 
 /*
- * Create a JS function object backed by a cfunction.
+ * Make a JS function object backed by a cfunction.
  *
  * `func` is a C callback.
  *
@@ -242,23 +242,22 @@ v7_val_t v7_create_array(struct v7 *v7);
  * will be used as the prototype of objects created when calling the function
  * with the `new` operator.
  */
-v7_val_t v7_create_function(struct v7 *, v7_cfunction_t *func);
+v7_val_t v7_mk_function(struct v7 *, v7_cfunction_t *func);
 
 /* Make f a JS constructor function for objects with prototype in proto. */
-v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
-                               v7_cfunction_t *f);
+v7_val_t v7_mk_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t *f);
 
-/* Create numeric primitive value */
-v7_val_t v7_create_number(double num);
+/* Make numeric primitive value */
+v7_val_t v7_mk_number(double num);
 
-/* Create boolean primitive value (either `true` or `false`) */
-v7_val_t v7_create_boolean(int is_true);
+/* Make boolean primitive value (either `true` or `false`) */
+v7_val_t v7_mk_boolean(int is_true);
 
-/* Create `null` primitive value */
-v7_val_t v7_create_null(void);
+/* Make `null` primitive value */
+v7_val_t v7_mk_null(void);
 
-/* Create `undefined` primitive value */
-v7_val_t v7_create_undefined(void);
+/* Make `undefined` primitive value */
+v7_val_t v7_mk_undefined(void);
 
 /*
  * Creates a string primitive value.
@@ -271,22 +270,21 @@ v7_val_t v7_create_undefined(void);
  * caller owns the string data, and is responsible for not freeing it while it
  * is used.
  */
-v7_val_t v7_create_string(struct v7 *v7, const char *str, size_t len, int copy);
+v7_val_t v7_mk_string(struct v7 *v7, const char *str, size_t len, int copy);
 
 /*
- * Create RegExp object.
+ * Make RegExp object.
  * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
  * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
  * If `regex_len` is ~0, `regex` is assumed to be NUL-terminated and
  * `strlen(regex)` is used.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_create_regexp(struct v7 *v7, const char *regex, size_t regex_len,
-                             const char *flags, size_t flags_len,
-                             v7_val_t *res);
+enum v7_err v7_mk_regexp(struct v7 *v7, const char *regex, size_t regex_len,
+                         const char *flags, size_t flags_len, v7_val_t *res);
 
 /*
- * Create JavaScript value that holds C/C++ `void *` pointer.
+ * Make JavaScript value that holds C/C++ `void *` pointer.
  *
  * A foreign value is completely opaque and JS code cannot do anything useful
  * with it except holding it in properties and passing it around.
@@ -304,16 +302,16 @@ enum v7_err v7_create_regexp(struct v7 *v7, const char *regex, size_t regex_len,
  * If you need to store exactly sizeof(void*) bytes of raw data where
  * `sizeof(void*)` >= 8, please use byte arrays instead.
  */
-v7_val_t v7_create_foreign(void *ptr);
+v7_val_t v7_mk_foreign(void *ptr);
 
 /*
- * Create a JS value that holds C/C++ callback pointer.
+ * Make a JS value that holds C/C++ callback pointer.
  *
  * This is a low-level function value. It's not a real object and cannot hold
- * user defined properties. You should use `v7_create_function` unless you know
+ * user defined properties. You should use `v7_mk_function` unless you know
  * what you're doing.
  */
-v7_val_t v7_create_cfunction(v7_cfunction_t *func);
+v7_val_t v7_mk_cfunction(v7_cfunction_t *func);
 
 /*
  * Returns true if the given value is an object or function.
@@ -427,7 +425,7 @@ const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
  *
  * C compatible strings contain exactly one NUL char, in terminal position.
  *
- * All strings owned by the V7 engine (see v7_create_string) are guaranteed to
+ * All strings owned by the V7 engine (see v7_mk_string) are guaranteed to
  * be NUL terminated.
  * Out of these, those that don't include embedded NUL chars are guaranteed to
  * be C compatible.

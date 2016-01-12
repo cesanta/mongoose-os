@@ -7,13 +7,12 @@
 #include "sj_hal.h"
 
 static enum v7_err Sys_prof(struct v7 *v7, v7_val_t *res) {
-  *res = v7_create_object(v7);
+  *res = v7_mk_object(v7);
 
-  v7_set(v7, *res, "sysfree", 7, v7_create_number(sj_get_free_heap_size()));
+  v7_set(v7, *res, "sysfree", 7, v7_mk_number(sj_get_free_heap_size()));
   v7_set(v7, *res, "used_by_js", 10,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
-  v7_set(v7, *res, "used_by_fs", 10,
-         v7_create_number(sj_get_fs_memory_usage()));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
+  v7_set(v7, *res, "used_by_fs", 10, v7_mk_number(sj_get_fs_memory_usage()));
 
   return V7_OK;
 }
@@ -22,7 +21,7 @@ static enum v7_err Sys_wdtFeed(struct v7 *v7, v7_val_t *res) {
   (void) v7;
   sj_wdt_feed();
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   return V7_OK;
 }
 
@@ -40,16 +39,16 @@ static enum v7_err Sys_setLogLevel(struct v7 *v7, v7_val_t *res) {
   v7_val_t llv = v7_arg(v7, 0);
   int ll;
   if (!v7_is_number(llv)) {
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
   ll = v7_to_number(llv);
   if (ll <= _LL_MIN || ll >= _LL_MAX) {
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
   cs_log_set_level((enum cs_log_level) ll);
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   goto clean;
 
 clean:
@@ -92,29 +91,29 @@ static enum v7_err GC_stat(struct v7 *v7, v7_val_t *res) {
   size_t struse = v7_heap_stat(v7, V7_HEAP_STAT_STRING_HEAP_USED);
   size_t objfree = v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_FREE);
   size_t propnfree = v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE);
-  *res = v7_create_object(v7);
+  *res = v7_mk_object(v7);
 
-  v7_set(v7, *res, "sysfree", ~0, v7_create_number(sysfree));
-  v7_set(v7, *res, "jssize", ~0, v7_create_number(jssize));
-  v7_set(v7, *res, "jsfree", ~0, v7_create_number(jsfree));
-  v7_set(v7, *res, "strres", ~0, v7_create_number(strres));
-  v7_set(v7, *res, "struse", ~0, v7_create_number(struse));
-  v7_set(v7, *res, "objfree", ~0, v7_create_number(objfree));
+  v7_set(v7, *res, "sysfree", ~0, v7_mk_number(sysfree));
+  v7_set(v7, *res, "jssize", ~0, v7_mk_number(jssize));
+  v7_set(v7, *res, "jsfree", ~0, v7_mk_number(jsfree));
+  v7_set(v7, *res, "strres", ~0, v7_mk_number(strres));
+  v7_set(v7, *res, "struse", ~0, v7_mk_number(struse));
+  v7_set(v7, *res, "objfree", ~0, v7_mk_number(objfree));
   v7_set(v7, *res, "objncell", ~0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE)));
-  v7_set(v7, *res, "propnfree", ~0, v7_create_number(propnfree));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE)));
+  v7_set(v7, *res, "propnfree", ~0, v7_mk_number(propnfree));
   v7_set(v7, *res, "propncell", ~0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_CELL_SIZE)));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_CELL_SIZE)));
   v7_set(v7, *res, "funcnfree", ~0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE)));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE)));
   v7_set(v7, *res, "funcncell", ~0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE)));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE)));
   v7_set(v7, *res, "astsize", ~0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
   v7_set(v7, *res, "owned", ~0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED)));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED)));
   v7_set(v7, *res, "owned_max", ~0,
-         v7_create_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED_MAX)));
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED_MAX)));
 
   return V7_OK;
 }
@@ -170,7 +169,7 @@ void sj_invoke_cb2_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj,
   v7_own(v7, &arg1);
   v7_own(v7, &arg2);
 
-  args = v7_create_array(v7);
+  args = v7_mk_array(v7);
   v7_own(v7, &args);
   v7_array_push(v7, args, arg1);
   v7_array_push(v7, args, arg2);
@@ -186,7 +185,7 @@ void sj_invoke_cb1_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj,
   v7_val_t args;
   v7_own(v7, &cb);
   v7_own(v7, &arg);
-  args = v7_create_array(v7);
+  args = v7_mk_array(v7);
   v7_own(v7, &args);
   v7_array_push(v7, args, arg);
   sj_invoke_cb(v7, cb, this_obj, args);
@@ -198,7 +197,7 @@ void sj_invoke_cb1_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj,
 void sj_invoke_cb0_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj) {
   v7_val_t args;
   v7_own(v7, &cb);
-  args = v7_create_array(v7);
+  args = v7_mk_array(v7);
   v7_own(v7, &args);
   sj_invoke_cb(v7, cb, this_obj, args);
   v7_disown(v7, &args);
@@ -222,12 +221,12 @@ void sj_init_v7_ext(struct v7 *v7) {
 
   v7_set_method(v7, v7_get_global(v7), "usleep", global_usleep);
 
-  gc = v7_create_object(v7);
+  gc = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "GC", ~0, gc);
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "gc", GC_gc);
 
-  sys = v7_create_object(v7);
+  sys = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Sys", ~0, sys);
   v7_set_method(v7, sys, "prof", Sys_prof);
   v7_set_method(v7, sys, "wdtFeed", Sys_wdtFeed);

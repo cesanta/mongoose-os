@@ -76,7 +76,7 @@ static void free_clubby(struct clubby *clubby) {
 static void set_clubby(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
   v7_def(v7, obj, s_clubby_prop, sizeof(s_clubby_prop),
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0) | _V7_DESC_HIDDEN(1)),
-         v7_create_foreign(clubby));
+         v7_mk_foreign(clubby));
 }
 
 static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
@@ -92,7 +92,7 @@ static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
   struct clubby *clubby = get_clubby(v7, v7_get_this(v7)); \
   if (clubby == NULL) {                                    \
     LOG(LL_ERROR, ("Invalid call"));                       \
-    *res = v7_create_boolean(0);                           \
+    *res = v7_mk_boolean(0);                               \
     return V7_OK;                                          \
   }
 
@@ -536,11 +536,11 @@ static enum v7_err clubby_set_on_event(const char *eventid, int8_t eventid_len,
     goto error;
   }
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   return V7_OK;
 
 error:
-  *res = v7_create_boolean(0);
+  *res = v7_mk_boolean(0);
   return V7_OK;
 }
 
@@ -560,7 +560,7 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
      * TODO(alashkin): do we need to report in case of malformed
      * answer of just skip it?
      */
-    cb_param = v7_create_undefined();
+    cb_param = v7_mk_undefined();
   }
 
   v7_own(s_v7, &cb_param);
@@ -598,7 +598,7 @@ static enum v7_err done_func(struct v7 *v7, v7_val_t *res) {
   v7_val_t me = v7_get_this(v7);
   if (!v7_is_foreign(me)) {
     LOG(LL_ERROR, ("Internal error"));
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     return V7_OK;
   }
 
@@ -607,7 +607,7 @@ static enum v7_err done_func(struct v7 *v7, v7_val_t *res) {
   v7_val_t stv = v7_arg(v7, 1);
 
   clubby_send_response(ctx->clubby, ctx->id, ctx->dst, valv, stv);
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
 
   free(ctx->dst);
   free(ctx);
@@ -634,7 +634,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
      * TODO(alashkin): do we need to report in case of malformed
      * answer of just skip it?
      */
-    clubby_param = v7_create_undefined();
+    clubby_param = v7_mk_undefined();
   }
 
   v7_val_t argcv = v7_get(s_v7, *cbv, "length", ~0);
@@ -657,13 +657,13 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
      */
     enum v7_err cb_res;
     v7_val_t args;
-    args = v7_create_array(s_v7);
+    args = v7_mk_array(s_v7);
     v7_array_push(s_v7, args, clubby_param);
     v7_val_t res;
     cb_res = v7_apply(s_v7, *cbv, v7_get_global(s_v7), args, &res);
     if (cb_res == V7_OK) {
       clubby_send_response(clubby, evt->request.id, dst, res,
-                           v7_create_undefined());
+                           v7_mk_undefined());
     } else {
       LOG(LL_ERROR, ("Callback invocation error"));
     }
@@ -690,9 +690,9 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
 
     v7_own(s_v7, &clubby_param);
 
-    v7_val_t done_func_v = v7_create_cfunction(done_func);
-    v7_val_t bind_args = v7_create_array(s_v7);
-    v7_array_push(s_v7, bind_args, v7_create_foreign(ctx));
+    v7_val_t done_func_v = v7_mk_cfunction(done_func);
+    v7_val_t bind_args = v7_mk_array(s_v7);
+    v7_array_push(s_v7, bind_args, v7_mk_foreign(ctx));
     v7_val_t donevb;
     res = v7_apply(s_v7, v7_get(s_v7, done_func_v, "bind", ~0), done_func_v,
                    bind_args, &donevb);
@@ -702,7 +702,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
       goto cleanup;
     }
 
-    v7_val_t cb_args = v7_create_array(s_v7);
+    v7_val_t cb_args = v7_mk_array(s_v7);
     v7_array_push(s_v7, cb_args, clubby_param);
     v7_array_push(s_v7, cb_args, donevb);
 
@@ -728,7 +728,7 @@ static enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   clubby_send_hello(clubby);
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
 
   return V7_OK;
 }
@@ -753,14 +753,14 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(idv)) {
     id = clubby_proto_get_new_id();
-    v7_set(v7, cmdv, "id", 2, v7_create_number(id));
+    v7_set(v7, cmdv, "id", 2, v7_mk_number(id));
   } else {
     id = v7_to_number(idv);
   }
 
   v7_val_t timeoutv = v7_get(v7, cmdv, "timeout", 7);
   if (!v7_is_number(timeoutv)) {
-    v7_set(v7, cmdv, "timeout", 7, v7_create_number(clubby->cfg.cmd_timeout));
+    v7_set(v7, cmdv, "timeout", 7, v7_mk_number(clubby->cfg.cmd_timeout));
   }
 
   /*
@@ -777,7 +777,7 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   }
 
   clubby_send_cmds(clubby, ctx, v7_to_cstring(v7, &dstv), cmds);
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
 
   return V7_OK;
 
@@ -785,7 +785,7 @@ error:
   if (ctx != NULL) {
     ub_ctx_free(ctx);
   }
-  *res = v7_create_boolean(0);
+  *res = v7_mk_boolean(0);
   return V7_OK;
 }
 
@@ -819,11 +819,11 @@ static enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   return V7_OK;
 
 error:
-  *res = v7_create_boolean(0);
+  *res = v7_mk_boolean(0);
   return V7_OK;
 }
 
@@ -856,11 +856,11 @@ static enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   return V7_OK;
 
 error:
-  *res = v7_create_boolean(0);
+  *res = v7_mk_boolean(0);
   return V7_OK;
 }
 
@@ -962,7 +962,7 @@ void sj_init_clubby(struct v7 *v7) {
   s_v7 = v7;
 
   v7_val_t clubby_proto_v, clubby_ctor_v;
-  clubby_proto_v = v7_create_object(v7);
+  clubby_proto_v = v7_mk_object(v7);
   v7_set_method(v7, clubby_proto_v, "sayHello", Clubby_sayHello);
   v7_set_method(v7, clubby_proto_v, "call", Clubby_call);
   v7_set_method(v7, clubby_proto_v, "oncmd", Clubby_oncmd);
@@ -970,7 +970,7 @@ void sj_init_clubby(struct v7 *v7) {
   v7_set_method(v7, clubby_proto_v, "onopen", Clubby_onopen);
   v7_set_method(v7, clubby_proto_v, "onclose", Clubby_onclose);
 
-  clubby_ctor_v = v7_create_constructor(v7, clubby_proto_v, Clubby_ctor);
+  clubby_ctor_v = v7_mk_constructor(v7, clubby_proto_v, Clubby_ctor);
 
   v7_set(v7, v7_get_global(v7), "Clubby", ~0, clubby_ctor_v);
 

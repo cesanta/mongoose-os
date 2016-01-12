@@ -9,10 +9,10 @@ static enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    *res = v7_create_undefined();
+    *res = v7_mk_undefined();
   } else {
     pin = v7_to_number(pinv);
-    *res = v7_create_number(sj_adc_read(pin));
+    *res = v7_mk_number(sj_adc_read(pin));
   }
 
   return V7_OK;
@@ -24,17 +24,17 @@ static enum v7_err ADC_readVoltage(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    *res = v7_create_undefined();
+    *res = v7_mk_undefined();
   } else {
     pin = v7_to_number(pinv);
-    *res = v7_create_number(sj_adc_read_voltage(pin));
+    *res = v7_mk_number(sj_adc_read_voltage(pin));
   }
 
   return V7_OK;
 }
 
 void init_adcjs(struct v7 *v7) {
-  v7_val_t adc = v7_create_object(v7);
+  v7_val_t adc = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "ADC", ~0, adc);
   v7_set_method(v7, adc, "read", ADC_read);
   v7_set_method(v7, adc, "readVoltage", ADC_readVoltage);

@@ -50,7 +50,7 @@ static enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
     rcode = v7_throwf(v7, "Error", "Invalid argument");
     goto clean;
   }
-  *res = v7_create_object(v7);
+  *res = v7_mk_object(v7);
   v7_set_proto(v7, *res, sj_http_server_proto);
   v7_set(v7, *res, "_cb", ~0, cb);
 
@@ -61,30 +61,30 @@ clean:
 static void setup_request_object(struct v7 *v7, v7_val_t request,
                                  struct http_message *hm) {
   int i, qslen = hm->query_string.len;
-  v7_val_t headers = v7_create_object(v7);
+  v7_val_t headers = v7_mk_object(v7);
 
   /* TODO(lsm): implement as getters to save memory */
   v7_set(v7, request, "headers", ~0, headers);
   v7_set(v7, request, "method", ~0,
-         v7_create_string(v7, hm->method.p, hm->method.len, 1));
+         v7_mk_string(v7, hm->method.p, hm->method.len, 1));
   v7_set(v7, request, "url", ~0,
-         v7_create_string(v7, hm->uri.p,
-                          hm->uri.len + (qslen == 0 ? 0 : qslen + 1), 1));
+         v7_mk_string(v7, hm->uri.p, hm->uri.len + (qslen == 0 ? 0 : qslen + 1),
+                      1));
   v7_set(v7, request, "body", ~0,
-         v7_create_string(v7, hm->body.p, hm->body.len, 1));
+         v7_mk_string(v7, hm->body.p, hm->body.len, 1));
 
   for (i = 0; hm->header_names[i].len > 0; i++) {
     const struct mg_str *name = &hm->header_names[i];
     const struct mg_str *value = &hm->header_values[i];
     v7_set(v7, headers, name->p, name->len,
-           v7_create_string(v7, value->p, value->len, 1));
+           v7_mk_string(v7, value->p, value->len, 1));
   }
 }
 
 static void setup_response_object(struct v7 *v7, v7_val_t response,
                                   struct mg_connection *c, v7_val_t request) {
   v7_set_proto(v7, response, sj_http_response_proto);
-  v7_set(v7, response, "_c", ~0, v7_create_foreign(c));
+  v7_set(v7, response, "_c", ~0, v7_mk_foreign(c));
   v7_set(v7, response, "_r", ~0, request);
 }
 
@@ -99,8 +99,8 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
     if (v7_is_function(ud->handler)) {
       /* call provided JavaScript callback with `request` and `response` */
-      v7_val_t request = v7_create_object(ud->v7);
-      v7_val_t response = v7_create_object(ud->v7);
+      v7_val_t request = v7_mk_object(ud->v7);
+      v7_val_t response = v7_mk_object(ud->v7);
       setup_request_object(ud->v7, request, ev_data);
       setup_response_object(ud->v7, response, c, request);
       sj_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
@@ -118,7 +118,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
     /* if JavaScript callback was provided, call it with `response` */
     if (v7_is_function(ud->handler)) {
-      v7_val_t response = v7_create_object(ud->v7);
+      v7_val_t response = v7_mk_object(ud->v7);
       setup_request_object(ud->v7, response, ev_data);
       sj_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);
     }
@@ -179,12 +179,12 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
   }
 
   url = v7_get_string_data(v7, &url_v, &len);
-  opts = v7_create_object(v7);
+  opts = v7_mk_object(v7);
   for (i = j = 0; j < len; j++) {
     switch (state) {
       case 0:
         if (url[j] == '/') {
-          protocol_v = v7_create_string(v7, url + i, j - i - 1, 1);
+          protocol_v = v7_mk_string(v7, url + i, j - i - 1, 1);
           v7_set(v7, opts, "protocol", ~0, protocol_v);
           j += 1;
           i = j + 1;
@@ -195,12 +195,11 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
         if (url[j] == '/' || (j > i && url[j] == ':') || j == len - 1) {
           int hl = j - i;
           if (j == len - 1 && url[j] != '/' && url[j] != ':') hl++;
-          v7_set(v7, opts, "hostname", ~0,
-                 v7_create_string(v7, url + i, hl, 1));
+          v7_set(v7, opts, "hostname", ~0, v7_mk_string(v7, url + i, hl, 1));
           if (url[j] == '/' || j == len - 1) {
             const char *protocol = v7_to_cstring(v7, &protocol_v);
             int port = strcasecmp(protocol, "https") == 0 ? 443 : 80;
-            v7_set(v7, opts, "port", ~0, v7_create_number(port));
+            v7_set(v7, opts, "port", ~0, v7_mk_number(port));
             i = j;
             if (j == len - 1) j--;
             state = 3;
@@ -218,7 +217,7 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
           if (l > sizeof(ps) - 1) l = sizeof(ps) - 1;
           memcpy(ps, url + i, l);
           ps[l] = '\0';
-          v7_set(v7, opts, "port", ~0, v7_create_number(atoi(ps)));
+          v7_set(v7, opts, "port", ~0, v7_mk_number(atoi(ps)));
           i = j;
           if (j == len - 1) j--;
           state = 3;
@@ -226,9 +225,8 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
         break;
       case 3:
         if (j == len - 1) {
-          v7_val_t path_v = j - i > 0
-                                ? v7_create_string(v7, url + i, j - i + 1, 1)
-                                : v7_create_string(v7, "/", 1, 1);
+          v7_val_t path_v = j - i > 0 ? v7_mk_string(v7, url + i, j - i + 1, 1)
+                                      : v7_mk_string(v7, "/", 1, 1);
           v7_set(v7, opts, "path", ~0, path_v);
         }
         break;
@@ -283,7 +281,7 @@ static enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
     write_http_status(c, 200);
     mg_send(c, "\r\n", 2);
-    v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_create_boolean(1));
+    v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_mk_boolean(1));
   }
   Http_write_data(v7, c);
   *res = v7_get_this(v7);
@@ -339,7 +337,7 @@ static enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   write_http_status(c, code);
   http_write_headers(v7, arg1, c);
   mg_send(c, "\r\n", 2);
-  v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_create_boolean(1));
+  v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_mk_boolean(1));
   *res = v7_get_this(v7);
 
 clean:
@@ -550,14 +548,14 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   c->user_data = ud = (struct user_data *) calloc(1, sizeof(*ud));
 
   ud->v7 = v7;
-  ud->obj = v7_create_object(v7);
+  ud->obj = v7_mk_object(v7);
   ud->handler = cb;
 
   v7_own(v7, &ud->obj);
   v7_set_proto(v7, ud->obj, sj_http_request_proto);
 
   /* internal property: mongoose connection */
-  v7_set(v7, ud->obj, "_c", ~0, v7_create_foreign(c));
+  v7_set(v7, ud->obj, "_c", ~0, v7_mk_foreign(c));
 
   /* internal property: callback function that was passed as an argument */
   v7_set(v7, ud->obj, "_cb", ~0, ud->handler);
@@ -596,12 +594,12 @@ void sj_init_http(struct v7 *v7) {
   v7_own(v7, &sj_http_server_proto);
   v7_own(v7, &sj_http_response_proto);
   v7_own(v7, &sj_http_request_proto);
-  sj_http_server_proto = v7_create_object(v7);
-  sj_http_response_proto = v7_create_object(v7);
-  sj_http_request_proto = v7_create_object(v7);
+  sj_http_server_proto = v7_mk_object(v7);
+  sj_http_response_proto = v7_mk_object(v7);
+  sj_http_request_proto = v7_mk_object(v7);
 
   /* NOTE(lsm): setting Http to globals immediately to avoid gc-ing it */
-  v7_val_t Http = v7_create_object(v7);
+  v7_val_t Http = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Http", ~0, Http);
 
   v7_set_method(v7, Http, "createServer", Http_createServer);
@@ -624,7 +622,7 @@ void sj_init_http(struct v7 *v7) {
   v7_set_method(v7, sj_http_request_proto, "setTimeout",
                 Http_request_set_timeout);
 
-  v7_val_t URL = v7_create_object(v7);
+  v7_val_t URL = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "URL", ~0, URL);
   v7_set_method(v7, URL, "parse", URL_parse);
 }

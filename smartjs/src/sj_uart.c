@@ -18,10 +18,10 @@ size_t sj_uart_recv_cb(void *ctx, const char *d, size_t len) {
 
   if (len < want || v7_is_undefined(ud->cb)) return 0;
 
-  ud->cb = v7_create_undefined();
+  ud->cb = v7_mk_undefined();
   ud->want = 0;
 
-  s = v7_create_string(ud->v7, d, want, 1);
+  s = v7_mk_string(ud->v7, d, want, 1);
   sj_invoke_cb1(ud->v7, cb, s);
 
   return want;
@@ -51,7 +51,7 @@ static enum v7_err UART_ctor(struct v7 *v7, v7_val_t *res) {
   ud = (struct user_data *) calloc(1, sizeof(struct user_data));
   ud->v7 = v7;
   ud->want = 0;
-  ud->cb = v7_create_undefined();
+  ud->cb = v7_mk_undefined();
   v7_own(v7, &ud->cb);
 
   name = v7_get_string_data(v7, &dev, &len);
@@ -61,8 +61,8 @@ static enum v7_err UART_ctor(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  v7_def(v7, this_obj, "_ud", ~0, _V7_DESC_HIDDEN(1), v7_create_foreign(ud));
-  v7_def(v7, this_obj, "_dev", ~0, _V7_DESC_HIDDEN(1), v7_create_foreign(uart));
+  v7_def(v7, this_obj, "_ud", ~0, _V7_DESC_HIDDEN(1), v7_mk_foreign(ud));
+  v7_def(v7, this_obj, "_dev", ~0, _V7_DESC_HIDDEN(1), v7_mk_foreign(uart));
 
 clean:
   return rcode;
@@ -78,7 +78,7 @@ static enum v7_err UART_write(struct v7 *v7, v7_val_t *res) {
   (void) this_obj;
 
   sj_hal_write_uart(v7_to_foreign(dev), d, len);
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
 
   return V7_OK;
 }
@@ -114,21 +114,21 @@ static enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   ud->want = want;
   /* TODO(mkm): trigger cb if there is already something in the buffer */
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
 
   return V7_OK;
 }
 
 void sj_init_uart(struct v7 *v7) {
-  v7_val_t uart = v7_create_undefined(), uart_proto = v7_create_undefined(),
-           uart_ctor = v7_create_undefined();
+  v7_val_t uart = v7_mk_undefined(), uart_proto = v7_mk_undefined(),
+           uart_ctor = v7_mk_undefined();
   v7_own(v7, &uart);
   v7_own(v7, &uart_proto);
   v7_own(v7, &uart_ctor);
 
-  uart = v7_create_object(v7);
-  uart_proto = v7_create_object(v7);
-  uart_ctor = v7_create_constructor(v7, uart_proto, UART_ctor);
+  uart = v7_mk_object(v7);
+  uart_proto = v7_mk_object(v7);
+  uart_ctor = v7_mk_constructor(v7, uart_proto, UART_ctor);
 
   v7_def(v7, uart, "dev", ~0, _V7_DESC_HIDDEN(1), uart_ctor);
   v7_set_method(v7, uart_proto, "read", UART_read);

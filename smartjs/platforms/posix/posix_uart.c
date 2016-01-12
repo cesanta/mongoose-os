@@ -37,7 +37,7 @@ v7_val_t sj_hal_read_uart(struct v7 *v7, void *uart, size_t len) {
   if (len > nc->recv_mbuf.len) {
     len = nc->recv_mbuf.len;
   }
-  s = v7_create_string(v7, nc->recv_mbuf.buf, len, 1);
+  s = v7_mk_string(v7, nc->recv_mbuf.buf, len, 1);
   mbuf_remove(&nc->recv_mbuf, len);
   return s;
 }

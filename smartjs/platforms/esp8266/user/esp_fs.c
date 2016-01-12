@@ -423,7 +423,7 @@ int v7_val_to_file(v7_val_t val) {
 }
 
 v7_val_t v7_file_to_val(int fd) {
-  return v7_create_number(fd);
+  return v7_mk_number(fd);
 }
 
 int v7_is_file_type(v7_val_t val) {

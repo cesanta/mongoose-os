@@ -191,20 +191,20 @@ void wifi_changed_cb(System_Event_t *evt) {
     wifi = v7_get(v7, conf, "wifi", ~0);
 
     if (v7_is_undefined(wifi)) {
-      wifi = v7_create_object(v7);
+      wifi = v7_mk_object(v7);
       v7_set(v7, conf, "wifi", ~0, wifi);
     }
     known = v7_get(v7, conf, "known", ~0);
     if (v7_is_undefined(known)) {
-      known = v7_create_object(v7);
+      known = v7_mk_object(v7);
       v7_set(v7, wifi, "known", ~0, known);
     }
 
     wifi_station_get_config(&config);
 
     v7_set(v7, known, (const char *) config.ssid, ~0,
-           v7_create_string(v7, (const char *) config.password,
-                            strlen((const char *) config.password), 1));
+           v7_mk_string(v7, (const char *) config.password,
+                        strlen((const char *) config.password), 1));
 
     {
       enum v7_err rcode = v7_exec(v7, "conf.save()", &res);

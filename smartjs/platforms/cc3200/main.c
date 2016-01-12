@@ -40,14 +40,14 @@ struct v7 *s_v7;
 const char *sj_version = "TODO";
 
 struct v7 *init_v7(void *stack_base) {
-  struct v7_create_opts opts;
+  struct v7_mk_opts opts;
 
   opts.object_arena_size = 164;
   opts.function_arena_size = 26;
   opts.property_arena_size = 400;
   opts.c_stack_base = stack_base;
 
-  return v7_create_opt(opts);
+  return v7_mk_opt(opts);
 }
 
 static void blinkenlights_task(void *arg) {

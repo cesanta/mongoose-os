@@ -44,9 +44,9 @@ static const char *mac_address_ptr = s_mac_address;
 static void export_read_only_vars_to_v7(struct v7 *v7) {
   struct ro_var *rv;
   if (v7 == NULL) return;
-  v7_val_t obj = v7_create_object(v7);
+  v7_val_t obj = v7_mk_object(v7);
   for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
-    v7_set(v7, obj, rv->name, ~0, v7_create_string(v7, *rv->ptr, ~0, 1));
+    v7_set(v7, obj, rv->name, ~0, v7_mk_string(v7, *rv->ptr, ~0, 1));
   }
   v7_val_t Sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
   v7_set(v7, Sys, "ro_vars", ~0, obj);

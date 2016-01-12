@@ -41,8 +41,7 @@ enum v7_err spi_js_ctor(struct v7 *v7, v7_val_t *res) {
   }
 
   v7_def(v7, this_obj, s_spi_conn_prop, ~0,
-         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_create_foreign(conn));
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)), v7_mk_foreign(conn));
 
   /* implicitly returning `this` */
   goto clean;
@@ -67,14 +66,14 @@ enum v7_err spi_js_txn(struct v7 *v7, v7_val_t *res) {
 
   spi_connection conn;
   if ((conn = spijs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_number(0);
+    *res = v7_mk_number(0);
     goto clean;
   }
 
   for (i = 0; i < 8; i++) {
     v7_val_t tmp = v7_arg(v7, i);
     if (!v7_is_number(tmp)) {
-      *res = v7_create_number(-1);
+      *res = v7_mk_number(-1);
       goto clean;
     }
     params[i] = v7_to_number(tmp);
@@ -83,7 +82,7 @@ enum v7_err spi_js_txn(struct v7 *v7, v7_val_t *res) {
   ires = spi_txn(conn, params[0], params[1], params[2], params[3], params[4],
                  params[5], params[6], params[7]);
 
-  *res = v7_create_number(ires);
+  *res = v7_mk_number(ires);
   goto clean;
 
 clean:
@@ -105,20 +104,20 @@ enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
   spi_connection conn;
 
   if ((conn = spijs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_number(0);
+    *res = v7_mk_number(0);
     goto clean;
   }
 
   /* data to send*/
   tmp_val = v7_arg(v7, 0);
   if (!v7_is_number(tmp_val)) {
-    *res = v7_create_number(-1);
+    *res = v7_mk_number(-1);
     goto clean;
   }
 
   dout_data = v7_to_number(tmp_val);
   if (dout_data > 0xFFFFFFFF) {
-    *res = v7_create_number(-1);
+    *res = v7_mk_number(-1);
     goto clean;
   }
   dout_bits = get_bits(dout_data);
@@ -128,7 +127,7 @@ enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
   if (v7_is_number(tmp_val)) {
     din_bits = v7_to_number(tmp_val) * 8;
     if (din_bits > 32) {
-      *res = v7_create_number(-1);
+      *res = v7_mk_number(-1);
       goto clean;
     }
   }
@@ -144,7 +143,7 @@ enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
   if (v7_is_number(tmp_val)) {
     addr_data = v7_to_number(tmp_val);
     if (addr_data > 0xFFFFFFFF) {
-      *res = v7_create_number(-1);
+      *res = v7_mk_number(-1);
       goto clean;
     }
 
@@ -154,7 +153,7 @@ enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
   ires = spi_txn(conn, cmd_bits, cmd_data, addr_bits, addr_data, dout_bits,
                  dout_data, din_bits, dummy_bits);
 
-  *res = v7_create_number(ires);
+  *res = v7_mk_number(ires);
   goto clean;
 
 clean:
@@ -167,12 +166,12 @@ enum v7_err spi_js_close(struct v7 *v7, v7_val_t *res) {
   spi_connection conn;
 
   if ((conn = spijs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
 
   sj_spi_close(conn);
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   goto clean;
 
 clean:
@@ -182,12 +181,12 @@ clean:
 void init_spijs(struct v7 *v7) {
   v7_val_t spi_proto, spi_ctor;
 
-  spi_proto = v7_create_object(v7);
+  spi_proto = v7_mk_object(v7);
   v7_set_method(v7, spi_proto, "tran", spi_js_tran);
   v7_set_method(v7, spi_proto, "txn", spi_js_txn);
   v7_set_method(v7, spi_proto, "close", spi_js_close);
 
-  spi_ctor = v7_create_constructor(v7, spi_proto, spi_js_ctor);
+  spi_ctor = v7_mk_constructor(v7, spi_proto, spi_js_ctor);
   v7_set(v7, v7_get_global(v7), "SPI", ~0, spi_ctor);
 }
 

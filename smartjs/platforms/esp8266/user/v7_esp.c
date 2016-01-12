@@ -41,19 +41,19 @@ static enum v7_err DHT11_read(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    *res = v7_create_undefined();
+    *res = v7_mk_undefined();
     goto clean;
   }
   pin = v7_to_number(pinv);
 
   if (!dht11_read(pin, &temp, &rh)) {
-    *res = v7_create_null();
+    *res = v7_mk_null();
     goto clean;
   }
 
-  *res = v7_create_object(v7);
-  v7_set(v7, *res, "temp", 4, v7_create_number(temp));
-  v7_set(v7, *res, "rh", 2, v7_create_number(rh));
+  *res = v7_mk_object(v7);
+  v7_set(v7, *res, "temp", 4, v7_mk_number(temp));
+  v7_set(v7, *res, "rh", 2, v7_mk_number(rh));
 
 clean:
   return rcode;
@@ -74,7 +74,7 @@ static enum v7_err Debug_mode(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(output_val)) {
     printf("Output is not a number\n");
-    *res = v7_create_undefined();
+    *res = v7_mk_undefined();
     goto clean;
   }
 
@@ -83,7 +83,7 @@ static enum v7_err Debug_mode(struct v7 *v7, v7_val_t *res) {
   uart_debug_init(0, 0);
   ires = uart_redirect_debug(mode);
 
-  *res = v7_create_number(ires < 0 ? ires : mode);
+  *res = v7_mk_number(ires < 0 ? ires : mode);
   goto clean;
 
 clean:
@@ -125,19 +125,19 @@ static enum v7_err dsleep(struct v7 *v7, v7_val_t *res) {
   uint8 flags = v7_to_number(flags_v);
 
   if (!v7_is_number(time_v) || time < 0) {
-    *res = v7_create_boolean(false);
+    *res = v7_mk_boolean(false);
     goto clean;
   }
   if (v7_is_number(flags_v)) {
     if (!system_deep_sleep_set_option(flags)) {
-      *res = v7_create_boolean(false);
+      *res = v7_mk_boolean(false);
       goto clean;
     }
   }
 
   system_deep_sleep((uint32_t) time);
 
-  *res = v7_create_boolean(true);
+  *res = v7_mk_boolean(true);
   goto clean;
 
 clean:
@@ -157,7 +157,7 @@ static enum v7_err crash(struct v7 *v7, v7_val_t *res) {
 }
 
 void init_v7(void *stack_base) {
-  struct v7_create_opts opts;
+  struct v7_mk_opts opts;
   v7_val_t dht11, debug;
 
 #ifdef V7_THAW
@@ -170,20 +170,20 @@ void init_v7(void *stack_base) {
   opts.property_arena_size = 400;
 #endif
   opts.c_stack_base = stack_base;
-  v7 = v7_create_opt(opts);
+  v7 = v7_mk_opt(opts);
 
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
 
 #if V7_ESP_ENABLE__DHT11
-  dht11 = v7_create_object(v7);
+  dht11 = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "DHT11", 5, dht11);
   v7_set_method(v7, dht11, "read", DHT11_read);
 #else
   (void) dht11;
 #endif /* V7_ESP_ENABLE__DHT11 */
 
-  debug = v7_create_object(v7);
+  debug = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Debug", 5, debug);
   v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);

@@ -8,8 +8,8 @@
 #include "smartjs/src/sj_v7_ext.h"
 #include "smartjs/src/sj_mongoose.h"
 
-#define WEBSOCKET_OPEN v7_create_number(1)
-#define WEBSOCKET_CLOSED v7_create_number(2)
+#define WEBSOCKET_OPEN v7_mk_number(1)
+#define WEBSOCKET_CLOSED v7_mk_number(2)
 
 struct user_data {
   struct v7 *v7;
@@ -47,27 +47,27 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         }
         mg_send_websocket_handshake(nc, "/", buf);
       } else {
-        invoke_cb(ud, "onerror", v7_create_null());
+        invoke_cb(ud, "onerror", v7_mk_null());
       }
       break;
     case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
-      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_create_foreign(nc));
-      invoke_cb(ud, "onopen", v7_create_null());
+      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_foreign(nc));
+      invoke_cb(ud, "onopen", v7_mk_null());
       break;
     case MG_EV_WEBSOCKET_FRAME: {
       v7_val_t ev, data;
-      ev = v7_create_object(v7);
+      ev = v7_mk_object(v7);
       v7_own(v7, &ev);
-      data = v7_create_string(v7, (char *) wm->data, wm->size, 1);
+      data = v7_mk_string(v7, (char *) wm->data, wm->size, 1);
       v7_set(v7, ev, "data", ~0, data);
       invoke_cb(ud, "onmessage", ev);
       v7_disown(v7, &ev);
       break;
     }
     case MG_EV_CLOSE:
-      invoke_cb(ud, "onclose", v7_create_null());
+      invoke_cb(ud, "onclose", v7_mk_null());
       nc->user_data = NULL;
-      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_create_undefined());
+      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_undefined());
       v7_disown(v7, &ud->ws);
       /* Free strings here in case if connect failed */
       free(ud->proto);
@@ -75,7 +75,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       free(ud);
       break;
     case MG_EV_SEND:
-      invoke_cb(ud, "onsend", v7_create_number(nc->send_mbuf.len));
+      invoke_cb(ud, "onsend", v7_mk_number(nc->send_mbuf.len));
       break;
   }
 }
@@ -248,7 +248,7 @@ static enum v7_err WebSocket_send(struct v7 *v7, v7_val_t *res) {
 
   /* notify that the buffer size changed */
   ud = (struct user_data *) nc->user_data;
-  invoke_cb(ud, "onsend", v7_create_number(nc->send_mbuf.len));
+  invoke_cb(ud, "onsend", v7_mk_number(nc->send_mbuf.len));
 
 clean:
   return rcode;
@@ -282,15 +282,15 @@ static enum v7_err WebSocket_readyState(struct v7 *v7, v7_val_t *res) {
 }
 
 void sj_init_ws_client(struct v7 *v7) {
-  v7_val_t ws_proto = v7_create_object(v7);
-  v7_val_t ws = v7_create_constructor(v7, ws_proto, sj_ws_ctor);
+  v7_val_t ws_proto = v7_mk_object(v7);
+  v7_val_t ws = v7_mk_constructor(v7, ws_proto, sj_ws_ctor);
   v7_own(v7, &ws);
 
   v7_set_method(v7, ws_proto, "send", WebSocket_send);
   v7_set_method(v7, ws_proto, "close", WebSocket_close);
   v7_def(v7, ws_proto, "readyState", ~0,
          (V7_DESC_ENUMERABLE(0) | V7_DESC_GETTER(1)),
-         v7_create_function(v7, WebSocket_readyState));
+         v7_mk_function(v7, WebSocket_readyState));
   v7_set(v7, ws, "OPEN", ~0, WEBSOCKET_OPEN);
   v7_set(v7, ws, "CLOSED", ~0, WEBSOCKET_CLOSED);
   v7_set(v7, v7_get_global(v7), "WebSocket", ~0, ws);

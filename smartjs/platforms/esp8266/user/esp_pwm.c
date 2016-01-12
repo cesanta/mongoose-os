@@ -181,12 +181,12 @@ static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
       pwm_configure_timer();
       sj_gpio_write(pin, 0);
     }
-    *res = v7_create_boolean(1);
+    *res = v7_mk_boolean(1);
     goto clean;
   }
 
   if (p->period == (uint32_t) period && p->duty == (uint32_t) duty) {
-    *res = v7_create_boolean(1);
+    *res = v7_mk_boolean(1);
     goto clean;
   }
 
@@ -207,7 +207,7 @@ static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
   }
 
   pwm_configure_timer();
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   goto clean;
 
 clean:
@@ -258,7 +258,7 @@ IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
 }
 
 void init_pwm(struct v7 *v7) {
-  v7_val_t pwm = v7_create_object(v7);
+  v7_val_t pwm = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "PWM", ~0, pwm);
   v7_set_method(v7, pwm, "set", PWM_set);
 }

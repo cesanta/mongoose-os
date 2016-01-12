@@ -118,7 +118,7 @@ static enum v7_err i2cjs_ctor(struct v7 *v7, v7_val_t *res) {
   } else {
     v7_def(v7, this_obj, s_i2c_conn_prop, ~0,
            (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-           v7_create_foreign(conn));
+           v7_mk_foreign(conn));
 
     /* implicitly returning `this` */
   }
@@ -139,19 +139,19 @@ static enum v7_err i2cjs_start(struct v7 *v7, v7_val_t *res) {
   i2c_connection conn;
   v7_val_t this_obj = v7_get_this(v7);
   if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_number(I2C_NONE);
+    *res = v7_mk_number(I2C_NONE);
     goto clean;
   }
 
   v7_val_t addr_val = v7_arg(v7, 0);
   v7_val_t mode_val = v7_arg(v7, 1);
   if (v7_argc(v7) != 2 || !v7_is_number(addr_val) || !v7_is_number(mode_val)) {
-    *res = v7_create_number(I2C_NONE);
+    *res = v7_mk_number(I2C_NONE);
     goto clean;
   }
   addr = v7_to_number(addr_val);
   mode = v7_to_number(mode_val);
-  *res = v7_create_number(i2c_start(conn, addr, mode));
+  *res = v7_mk_number(i2c_start(conn, addr, mode));
   goto clean;
 
 clean:
@@ -182,7 +182,7 @@ static enum v7_err i2cjs_send(struct v7 *v7, v7_val_t *res) {
   i2c_connection conn;
   v7_val_t this_obj = v7_get_this(v7);
   if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_number(I2C_NONE);
+    *res = v7_mk_number(I2C_NONE);
     goto clean;
   }
 
@@ -196,7 +196,7 @@ static enum v7_err i2cjs_send(struct v7 *v7, v7_val_t *res) {
     result = i2c_send_bytes(conn, (uint8_t *) data, len);
   }
 
-  *res = v7_create_number(result);
+  *res = v7_mk_number(result);
   goto clean;
 
 clean:
@@ -210,23 +210,23 @@ static enum v7_err i2cjs_readByte(struct v7 *v7, v7_val_t *res) {
   i2c_connection conn;
 
   if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_number(I2C_NONE);
+    *res = v7_mk_number(I2C_NONE);
     goto clean;
   }
 
   if (v7_argc(v7) > 0) {
     v7_val_t ack_val = v7_arg(v7, 0);
     if (!v7_is_number(ack_val)) {
-      *res = v7_create_number(-1);
+      *res = v7_mk_number(-1);
       goto clean;
     }
     ack_type = v7_to_number(ack_val);
     if (ack_type != I2C_ACK && ack_type != I2C_NAK && ack_type != I2C_NONE) {
-      *res = v7_create_number(-1);
+      *res = v7_mk_number(-1);
       goto clean;
     }
   }
-  *res = v7_create_number(i2c_read_byte(conn, ack_type));
+  *res = v7_mk_number(i2c_read_byte(conn, ack_type));
   goto clean;
 
 clean:
@@ -243,29 +243,29 @@ static enum v7_err i2cjs_readString(struct v7 *v7, v7_val_t *res) {
   const char *str;
 
   if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_number(I2C_NONE);
+    *res = v7_mk_number(I2C_NONE);
     goto clean;
   }
 
   if (!v7_is_number(len_val) || v7_to_number(len_val) < 0) {
-    *res = v7_create_string(v7, "", 0, 1);
+    *res = v7_mk_string(v7, "", 0, 1);
     goto clean;
   }
 
   if (v7_argc(v7) > 1) {
     v7_val_t ack_val = v7_arg(v7, 1);
     if (!v7_is_number(ack_val)) {
-      *res = v7_create_string(v7, "", 0, 1);
+      *res = v7_mk_string(v7, "", 0, 1);
       goto clean;
     }
     ack_type = v7_to_number(ack_val);
     if (ack_type != I2C_ACK && ack_type != I2C_NAK && ack_type != I2C_NONE) {
-      *res = v7_create_string(v7, "", 0, 1);
+      *res = v7_mk_string(v7, "", 0, 1);
       goto clean;
     }
   }
 
-  *res = v7_create_string(v7, 0, v7_to_number(len_val), 1);
+  *res = v7_mk_string(v7, 0, v7_to_number(len_val), 1);
   str = v7_get_string_data(v7, res, &tmp);
   i2c_read_bytes(conn, v7_to_number(len_val), (uint8_t *) str, ack_type);
 
@@ -281,17 +281,17 @@ static enum v7_err i2cjs_sendAck(struct v7 *v7, v7_val_t *res) {
   enum i2c_ack_type ack_type = v7_to_number(ack_val);
 
   if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
 
   if (!v7_is_number(ack_val) || (ack_type != I2C_ACK && ack_type != I2C_NAK)) {
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
 
   i2c_send_ack(conn, ack_type);
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   goto clean;
 
 clean:
@@ -303,13 +303,13 @@ static enum v7_err i2cjs_close(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   i2c_connection conn;
   if ((conn = i2cjs_get_conn(v7, this_obj)) == NULL) {
-    *res = v7_create_boolean(0);
+    *res = v7_mk_boolean(0);
     goto clean;
   }
 
   sj_i2c_close(conn);
 
-  *res = v7_create_boolean(1);
+  *res = v7_mk_boolean(1);
   goto clean;
 
 clean:
@@ -330,7 +330,7 @@ void init_i2cjs(struct v7 *v7) {
   v7_prop_attr_desc_t const_attrs =
       (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0));
 
-  i2c_proto = v7_create_object(v7);
+  i2c_proto = v7_mk_object(v7);
   v7_set_method(v7, i2c_proto, "start", i2cjs_start);
   v7_set_method(v7, i2c_proto, "stop", i2cjs_stop);
   v7_set_method(v7, i2c_proto, "send", i2cjs_send);
@@ -339,13 +339,13 @@ void init_i2cjs(struct v7 *v7) {
   v7_set_method(v7, i2c_proto, "sendAck", i2cjs_sendAck);
   v7_set_method(v7, i2c_proto, "close", i2cjs_close);
 
-  i2c_ctor = v7_create_constructor(v7, i2c_proto, i2cjs_ctor);
-  v7_def(v7, i2c_ctor, "ACK", 3, const_attrs, v7_create_number(I2C_ACK));
-  v7_def(v7, i2c_ctor, "NAK", 3, const_attrs, v7_create_number(I2C_NAK));
-  v7_def(v7, i2c_ctor, "ERR", 3, const_attrs, v7_create_number(I2C_ERR));
-  v7_def(v7, i2c_ctor, "NONE", 4, const_attrs, v7_create_number(I2C_NONE));
-  v7_def(v7, i2c_ctor, "READ", 4, const_attrs, v7_create_number(I2C_READ));
-  v7_def(v7, i2c_ctor, "WRITE", 5, const_attrs, v7_create_number(I2C_WRITE));
+  i2c_ctor = v7_mk_constructor(v7, i2c_proto, i2cjs_ctor);
+  v7_def(v7, i2c_ctor, "ACK", 3, const_attrs, v7_mk_number(I2C_ACK));
+  v7_def(v7, i2c_ctor, "NAK", 3, const_attrs, v7_mk_number(I2C_NAK));
+  v7_def(v7, i2c_ctor, "ERR", 3, const_attrs, v7_mk_number(I2C_ERR));
+  v7_def(v7, i2c_ctor, "NONE", 4, const_attrs, v7_mk_number(I2C_NONE));
+  v7_def(v7, i2c_ctor, "READ", 4, const_attrs, v7_mk_number(I2C_READ));
+  v7_def(v7, i2c_ctor, "WRITE", 5, const_attrs, v7_mk_number(I2C_WRITE));
 
 #ifdef ENABLE_IC2_EEPROM_TEST
   v7_set_method(v7, i2c_ctor, "test", i2cjs_test);
