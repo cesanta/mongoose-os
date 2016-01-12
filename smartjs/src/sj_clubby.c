@@ -963,6 +963,8 @@ void sj_init_clubby(struct v7 *v7) {
 
   v7_val_t clubby_proto_v, clubby_ctor_v;
   clubby_proto_v = v7_mk_object(v7);
+  v7_own(v7, &clubby_proto_v);
+
   v7_set_method(v7, clubby_proto_v, "sayHello", Clubby_sayHello);
   v7_set_method(v7, clubby_proto_v, "call", Clubby_call);
   v7_set_method(v7, clubby_proto_v, "oncmd", Clubby_oncmd);
@@ -978,6 +980,8 @@ void sj_init_clubby(struct v7 *v7) {
 
   sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
                                     NULL);
+
+  v7_disown(v7, &clubby_proto_v);
 
   /* TODO(alashkin): remove or expose functions below */
   (void) clubby_disconnect;

@@ -113,6 +113,7 @@ V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
               -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
               -DV7_ENABLE__Function__bind -DV7_ENABLE__File__list=1 \
               -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
+              -DV7_ENABLE__Object__getPrototypeOf \
               -DV7_EXPOSE_PRIVATE \
 
 FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \

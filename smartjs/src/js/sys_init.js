@@ -30,4 +30,8 @@ print('\nStarting Smart.js - see documentation at',
       'https://cesanta.com/developer/smartjs',
       '\n==> Sys:\n', Sys, '\n');
 
+if (Sys.conf.clubby.connect_on_boot) {
+  global.clubby = new Clubby();
+}
+
 File.eval('app_init.js');
