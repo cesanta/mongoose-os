@@ -4063,6 +4063,92 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
 
 #endif /* STDLIB_H_INCLUDED */
 #ifdef V7_MODULE_LINES
+#line 1 "./src/exceptions.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef EXCEPTIONS_H_INCLUDED
+#define EXCEPTIONS_H_INCLUDED
+
+/*
+ * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
+ * "throws" an error with `V7_THROW()`
+ */
+#define V7_TRY2(call, clean_label)           \
+  do {                                       \
+    enum v7_err _e = call;                   \
+    V7_CHECK2(_e == V7_OK, _e, clean_label); \
+  } while (0)
+
+/*
+ * Sets return value to the provided one, and `goto`s `clean`.
+ *
+ * For this to work, you should have local `enum v7_err rcode` variable,
+ * and a `clean` label.
+ */
+#define V7_THROW2(err_code, clean_label)                              \
+  do {                                                                \
+    rcode = (err_code);                                               \
+    assert(rcode != V7_OK);                                           \
+    assert(!v7_is_undefined(v7->vals.thrown_error) && v7->is_thrown); \
+    goto clean_label;                                                 \
+  } while (0)
+
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * provided `err_code` (see `V7_THROW()`)
+ */
+#define V7_CHECK2(cond, err_code, clean_label) \
+  do {                                         \
+    if (!(cond)) {                             \
+      V7_THROW2(err_code, clean_label);        \
+    }                                          \
+  } while (0)
+
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * internal error
+ *
+ * TODO(dfrank): it would be good to have formatted string: then, we can
+ * specify file and line.
+ */
+#define V7_CHECK_INTERNAL2(cond, clean_label)                       \
+  do {                                                              \
+    if (!(cond)) {                                                  \
+      enum v7_err rcode = v7_throwf(v7, "Error", "Internal error"); \
+      (void) rcode;                                                 \
+      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                    \
+    }                                                               \
+  } while (0)
+
+/*
+ * Shortcuts for the macros above, but they assume the clean label `clean`.
+ */
+
+#define V7_TRY(call) V7_TRY2(call, clean)
+#define V7_THROW(err_code) V7_THROW2(err_code, clean)
+#define V7_CHECK(cond, err_code) V7_CHECK2(cond, err_code, clean)
+#define V7_CHECK_INTERNAL(cond) V7_CHECK_INTERNAL2(cond, clean)
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * At the moment, all exception-related functions are public, and are declared
+ * in `v7.h`
+ */
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* EXCEPTIONS_H_INCLUDED */
+#ifdef V7_MODULE_LINES
 #line 1 "./src/vm.h"
 /**/
 #endif
@@ -4444,62 +4530,6 @@ struct v7_regexp {
   struct slre_prog *compiled_regexp;
   long lastIndex;
 };
-
-/*
- * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
- * "throws" an error with `V7_THROW()`
- */
-#define V7_TRY2(call, clean_label)           \
-  do {                                       \
-    enum v7_err _e = call;                   \
-    V7_CHECK2(_e == V7_OK, _e, clean_label); \
-  } while (0)
-
-/*
- * Sets return value to the provided one, and `goto`s `clean`.
- *
- * For this to work, you should have local `enum v7_err rcode` variable,
- * and a `clean` label.
- */
-#define V7_THROW2(err_code, clean_label)                              \
-  do {                                                                \
-    rcode = (err_code);                                               \
-    assert(rcode != V7_OK);                                           \
-    assert(!v7_is_undefined(v7->vals.thrown_error) && v7->is_thrown); \
-    goto clean_label;                                                 \
-  } while (0)
-
-/*
- * Checks provided condition `cond`, and if it's false, then "throws"
- * provided `err_code` (see `V7_THROW()`)
- */
-#define V7_CHECK2(cond, err_code, clean_label) \
-  do {                                         \
-    if (!(cond)) {                             \
-      V7_THROW2(err_code, clean_label);        \
-    }                                          \
-  } while (0)
-
-/*
- * Checks provided condition `cond`, and if it's false, then "throws"
- * internal error
- *
- * TODO(dfrank): it would be good to have formatted string: then, we can
- * specify file and line.
- */
-#define V7_CHECK_INTERNAL2(cond, clean_label)                       \
-  do {                                                              \
-    if (!(cond)) {                                                  \
-      enum v7_err rcode = v7_throwf(v7, "Error", "Internal error"); \
-      (void) rcode;                                                 \
-      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                    \
-    }                                                               \
-  } while (0)
-
-#define V7_TRY(call) V7_TRY2(call, clean)
-#define V7_THROW(err_code) V7_THROW2(err_code, clean)
-#define V7_CHECK(cond, err_code) V7_CHECK2(cond, err_code, clean)
-#define V7_CHECK_INTERNAL(cond) V7_CHECK_INTERNAL2(cond, clean)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -11153,6 +11183,8 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 
 /*
  * Bcode offsets in "try stack" (`____p`) are stored in JS numbers, i.e.
@@ -13300,6 +13332,7 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 /* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
@@ -16311,55 +16344,6 @@ clean:
   return rcode;
 }
 
-enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
-  v7->vals.thrown_error = val;
-  v7->is_thrown = 1;
-  return V7_EXEC_EXCEPTION;
-}
-
-void v7_clear_thrown_value(struct v7 *v7) {
-  v7->vals.thrown_error = v7_mk_undefined();
-  v7->is_thrown = 0;
-}
-
-enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt,
-                      ...) {
-  /* TODO(dfrank) : get rid of v7->error_msg, allocate mem right here */
-  enum v7_err rcode = V7_OK;
-  va_list ap;
-  val_t e = v7_mk_undefined();
-  va_start(ap, err_fmt);
-  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
-  va_end(ap);
-
-  v7_own(v7, &e);
-  rcode = create_exception(v7, typ, v7->error_msg, &e);
-  if (rcode != V7_OK) {
-    goto clean;
-  }
-
-  rcode = v7_throw(v7, e);
-
-clean:
-  v7_disown(v7, &e);
-  return rcode;
-}
-
-enum v7_err v7_rethrow(struct v7 *v7) {
-  assert(v7->is_thrown);
-#ifdef NDEBUG
-  (void) v7;
-#endif
-  return V7_EXEC_EXCEPTION;
-}
-
-v7_val_t v7_get_thrown_value(struct v7 *v7, uint8_t *is_thrown) {
-  if (is_thrown != NULL) {
-    *is_thrown = v7->is_thrown;
-  }
-  return v7->vals.thrown_error;
-}
-
 void v7_interrupt(struct v7 *v7) {
   v7->interrupt = 1;
 }
@@ -16433,6 +16417,67 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
   return err;
 }
 #endif
+#ifdef V7_MODULE_LINES
+#line 1 "./src/exceptions.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "common/str_util.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+
+enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
+  v7->vals.thrown_error = val;
+  v7->is_thrown = 1;
+  return V7_EXEC_EXCEPTION;
+}
+
+void v7_clear_thrown_value(struct v7 *v7) {
+  v7->vals.thrown_error = v7_mk_undefined();
+  v7->is_thrown = 0;
+}
+
+enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt,
+                      ...) {
+  /* TODO(dfrank) : get rid of v7->error_msg, allocate mem right here */
+  enum v7_err rcode = V7_OK;
+  va_list ap;
+  val_t e = v7_mk_undefined();
+  va_start(ap, err_fmt);
+  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+
+  v7_own(v7, &e);
+  rcode = create_exception(v7, typ, v7->error_msg, &e);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  rcode = v7_throw(v7, e);
+
+clean:
+  v7_disown(v7, &e);
+  return rcode;
+}
+
+enum v7_err v7_rethrow(struct v7 *v7) {
+  assert(v7->is_thrown);
+#ifdef NDEBUG
+  (void) v7;
+#endif
+  return V7_EXEC_EXCEPTION;
+}
+
+v7_val_t v7_get_thrown_value(struct v7 *v7, uint8_t *is_thrown) {
+  if (is_thrown != NULL) {
+    *is_thrown = v7->is_thrown;
+  }
+  return v7->vals.thrown_error;
+}
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
 /**/
@@ -17394,6 +17439,7 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
 /* Amalgamated: #include "v7/src/parser.h" */
 /* Amalgamated: #include "v7/src/tokenizer.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
 
@@ -19982,6 +20028,7 @@ const char *v7_get_parser_error(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 
 /*
  * The bytecode compiler takes an AST as input and produces one or more
