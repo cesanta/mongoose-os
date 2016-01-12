@@ -13887,10 +13887,6 @@ val_t mk_function(struct v7 *v7) {
   return mk_function2(v7, NULL, v7_mk_object(v7));
 }
 
-#ifdef V7_TEMP_OFF
-int double_to_str(char *buf, size_t buf_size, double val, int prec);
-#endif
-
 void v7_print(struct v7 *v7, v7_val_t v) {
   v7_fprint(stdout, v7, v);
 }
@@ -15887,6 +15883,10 @@ clean:
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+
+#ifdef V7_TEMP_OFF
+int double_to_str(char *buf, size_t buf_size, double val, int prec);
+#endif
 
 static void save_val(struct v7 *v7, const char *str, size_t str_len,
                      val_t *dst_v, char *dst, size_t dst_size, int wanted_len,
