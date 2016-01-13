@@ -4656,6 +4656,62 @@ V7_PRIVATE int is_finite(v7_val_t v);
 
 #endif /* VM_H_INCLUDED */
 #ifdef V7_MODULE_LINES
+#line 1 "./src/exec.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_EXEC_H_INCLUDED
+#define V7_EXEC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/types.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * At the moment, all exec-related functions are public, and are declared in
+ * `v7.h`
+ */
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_EXEC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/util.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_UTIL_H_INCLUDED
+#define V7_UTIL_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/types.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * At the moment, all utility functions are public, and are declared in
+ * `v7.h`
+ */
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_UTIL_H_INCLUDED */
+#ifdef V7_MODULE_LINES
 #line 1 "./src/exceptions.h"
 /**/
 #endif
@@ -13440,9 +13496,7 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
  */
 
 /* Amalgamated: #include "common/osdep.h" */
-/* Amalgamated: #include "common/cs_file.h" */
 /* Amalgamated: #include "common/str_util.h" */
-/* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/builtin/builtin.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
@@ -13899,26 +13953,6 @@ cleanup:
 
 val_t mk_function(struct v7 *v7) {
   return mk_function2(v7, NULL, v7_mk_object(v7));
-}
-
-void v7_print(struct v7 *v7, v7_val_t v) {
-  v7_fprint(stdout, v7, v);
-}
-
-void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
-  char buf[16];
-  char *s = v7_stringify(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEBUG);
-  fprintf(f, "%s", s);
-  if (buf != s) free(s);
-}
-
-void v7_println(struct v7 *v7, v7_val_t v) {
-  v7_fprintln(stdout, v7, v);
-}
-
-void v7_fprintln(FILE *f, struct v7 *v7, val_t v) {
-  v7_fprint(f, v7, v);
-  fprintf(f, ENDL);
 }
 
 V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7) {
@@ -14507,49 +14541,6 @@ clean:
   return rcode;
 }
 
-int nextesc(const char **p); /* from SLRE */
-V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
-  const char *end = s + len;
-  size_t n = 0;
-  char tmp[4];
-  Rune r;
-
-  while (s < end) {
-    s += chartorune(&r, s);
-    if (r == '\\' && s < end) {
-      switch (*s) {
-        case '"':
-          s++, r = '"';
-          break;
-        case '\'':
-          s++, r = '\'';
-          break;
-        case '\n':
-          s++, r = '\n';
-          break;
-        default: {
-          const char *tmp_s = s;
-          int i = nextesc(&s);
-          switch (i) {
-            case -SLRE_INVALID_ESC_CHAR:
-              r = '\\';
-              s = tmp_s;
-              n += runetochar(to == NULL ? tmp : to + n, &r);
-              s += chartorune(&r, s);
-              break;
-            case -SLRE_INVALID_HEX_DIGIT:
-            default:
-              r = i;
-          }
-        }
-      }
-    }
-    n += runetochar(to == NULL ? tmp : to + n, &r);
-  }
-
-  return n;
-}
-
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
@@ -14818,6 +14809,32 @@ void v7_set_gc_enabled(struct v7 *v7, int enabled) {
   v7->inhibit_gc = !enabled;
 }
 
+enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                     v7_val_t args, v7_val_t *res) {
+  return b_apply(v7, func, this_obj, args, 0, res);
+}
+
+void v7_interrupt(struct v7 *v7) {
+  v7->interrupt = 1;
+}
+#ifdef V7_MODULE_LINES
+#line 1 "./src/exec.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* osdep.h must be included before `cs_file.h` TODO(dfrank) : fix this */
+/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/cs_file.h" */
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/compiler.h" */
+
 /*
  * TODO(alashkin): we need src_len only in case of
  * binary AST-file, i.e. for exec_file & Co
@@ -14899,29 +14916,6 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 }
 #endif /* V7_NO_FS */
 
-enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                     v7_val_t args, v7_val_t *res) {
-  return b_apply(v7, func, this_obj, args, 0, res);
-}
-
-void v7_interrupt(struct v7 *v7) {
-  v7->interrupt = 1;
-}
-
-void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
-  val_t frame, func, args;
-
-  for (frame = v7_get(v7, e, "stack", ~0); v7_is_object(frame);
-       frame = v7_get(v7, frame, "____p", ~0)) {
-    args = v7_get(v7, frame, "arguments", ~0);
-    if (v7_is_object(args)) {
-      func = v7_get(v7, args, "callee", ~0);
-      fprintf(f, "   at: ");
-      v7_fprintln(f, v7, func);
-    }
-  }
-}
-
 #ifndef NO_LIBC
 /*
  * Compile a given JS source into a given output representation.
@@ -14978,6 +14972,51 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 }
 #endif
 #ifdef V7_MODULE_LINES
+#line 1 "./src/util.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/types.h" */
+
+void v7_print(struct v7 *v7, v7_val_t v) {
+  v7_fprint(stdout, v7, v);
+}
+
+void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
+  char buf[16];
+  char *s = v7_stringify(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEBUG);
+  fprintf(f, "%s", s);
+  if (buf != s) free(s);
+}
+
+void v7_println(struct v7 *v7, v7_val_t v) {
+  v7_fprintln(stdout, v7, v);
+}
+
+void v7_fprintln(FILE *f, struct v7 *v7, val_t v) {
+  v7_fprint(f, v7, v);
+  fprintf(f, ENDL);
+}
+
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
+  val_t frame, func, args;
+
+  for (frame = v7_get(v7, e, "stack", ~0); v7_is_object(frame);
+       frame = v7_get(v7, frame, "____p", ~0)) {
+    args = v7_get(v7, frame, "arguments", ~0);
+    if (v7_is_object(args)) {
+      func = v7_get(v7, args, "callee", ~0);
+      fprintf(f, "   at: ");
+      v7_fprintln(f, v7, func);
+    }
+  }
+}
+#ifdef V7_MODULE_LINES
 #line 1 "./src/string.c"
 /**/
 #endif
@@ -14986,12 +15025,14 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/slre.h" */
 
 /*
  * Dictionary of read-only strings with length > 5.
@@ -15137,6 +15178,49 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("writable"),
 };
 /* clang-format on */
+
+int nextesc(const char **p); /* from SLRE */
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
+  const char *end = s + len;
+  size_t n = 0;
+  char tmp[4];
+  Rune r;
+
+  while (s < end) {
+    s += chartorune(&r, s);
+    if (r == '\\' && s < end) {
+      switch (*s) {
+        case '"':
+          s++, r = '"';
+          break;
+        case '\'':
+          s++, r = '\'';
+          break;
+        case '\n':
+          s++, r = '\n';
+          break;
+        default: {
+          const char *tmp_s = s;
+          int i = nextesc(&s);
+          switch (i) {
+            case -SLRE_INVALID_ESC_CHAR:
+              r = '\\';
+              s = tmp_s;
+              n += runetochar(to == NULL ? tmp : to + n, &r);
+              s += chartorune(&r, s);
+              break;
+            case -SLRE_INVALID_HEX_DIGIT:
+            default:
+              r = i;
+          }
+        }
+      }
+    }
+    n += runetochar(to == NULL ? tmp : to + n, &r);
+  }
+
+  return n;
+}
 
 static int v_find_string_in_dictionary(const char *s, size_t len) {
   size_t start = 0, end = ARRAY_SIZE(v_dictionary_strings);
