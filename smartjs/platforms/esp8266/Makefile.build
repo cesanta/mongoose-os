@@ -192,11 +192,14 @@ IMAGE_HEADER_SIZE = 0x10
 ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
 FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE)))")
 FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE)))")
-PREREQ = rboot
+RBOOT_EMPTY_CFG=$(FW_DIR)/0x01000.bin
+PREREQ = rboot $(RBOOT_EMPTY_CFG)
 BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW2_ADDR=$(FW2_FILE_2_ADDR) \
                    -DFW1_FS_ADDR=$(FS_ADDR) \
-                   -DFW2_FS_ADDR=$(FS2_ADDR)
+                   -DFW2_FS_ADDR=$(FS2_ADDR) \
+                   -DFS_SIZE=$(_FS_SIZE) \
+                   -DFW_SIZE=$(ROM_SIZE)
 
 FW_METADATA_FILE= $(FW_DIR)/metadata.json
 endif
@@ -224,7 +227,10 @@ endif
 
 all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT) $(FW_METADATA_FILE)
 	$(Q) rm -f `ls $(FW_DIR)/* \
-    | grep -vE '^($(FW_FILE_1_OUT)|$(FW_FILE_2_OUT)|$(FW_FS_OUT)|$(FW_DIR)/metadata.json)$$'`
+		| grep -vE '^($(FW_FILE_1_OUT)|$(RBOOT_EMPTY_CFG)|$(FW_FILE_2_OUT)|$(FW_FS_OUT)|$(FW_DIR)/metadata.json)$$'`
+
+$(RBOOT_EMPTY_CFG):
+	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" >$(RBOOT_EMPTY_CFG)
 
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
