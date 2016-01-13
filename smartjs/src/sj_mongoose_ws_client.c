@@ -14,6 +14,7 @@
 struct user_data {
   struct v7 *v7;
   v7_val_t ws;
+  char *host;
   char *proto;
   char *extra_headers;
 };
@@ -36,13 +37,17 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_CONNECT:
       if (*(int *) ev_data == 0) {
         char buf[100] = {'\0'};
-        if (ud->proto != NULL || ud->extra_headers != NULL) {
-          snprintf(buf, sizeof(buf), "%s%s%s%s",
+        if (ud->proto != NULL || ud->extra_headers != NULL ||
+            ud->host != NULL) {
+          snprintf(buf, sizeof(buf), "%s%s%s%s%s%s%s",
                    ud->proto ? "Sec-WebSocket-Protocol: " : "",
                    ud->proto ? ud->proto : "", ud->proto ? "\r\n" : "",
+                   ud->host ? "Host: " : "", ud->host ? ud->host : "",
+                   ud->host ? "\r\n" : "",
                    ud->extra_headers ? ud->extra_headers : "");
           free(ud->proto);
           free(ud->extra_headers);
+          free(ud->proto);
           ud->proto = ud->extra_headers = NULL;
         }
         mg_send_websocket_handshake(nc, "/", buf);
@@ -133,7 +138,36 @@ static enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
       use_ssl = 1;
     }
 
-    nc = mg_connect(&sj_mgr, url, ws_ev_handler);
+    /* TODO(alashkin): use mg_parse_uri here */
+    int host_len = 0, have_port = 0;
+    while (*(url + host_len) != 0) {
+      if (*(url + host_len) == '/') {
+        break;
+      } else if (*(url + host_len) == ':') {
+        have_port = 1;
+      }
+
+      host_len++;
+    }
+
+    char *host = calloc(1, host_len + 1);
+    if (host == NULL) {
+      rcode = v7_throwf(v7, "Error", "Out of memory");
+      goto clean;
+    }
+    memcpy(host, url, host_len);
+
+    char *url_with_port = NULL;
+    if (!have_port) {
+      int ret = asprintf(&url_with_port, "%.*s%s%.*s", host_len, url, ":80",
+                         (int) (strlen(url) - host_len), url + host_len);
+      (void) ret;
+    }
+
+    nc =
+        mg_connect(&sj_mgr, url_with_port ? url_with_port : url, ws_ev_handler);
+    free(url_with_port);
+
     if (nc == NULL) {
       rcode = v7_throwf(v7, "Error", "error creating the connection");
       goto clean;
@@ -151,6 +185,7 @@ static enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
     ud->v7 = v7;
     ud->ws = this_obj;
     nc->user_data = ud;
+    ud->host = host;
     v7_own(v7, &ud->ws);
 
     if (v7_is_string(subprotov)) {
