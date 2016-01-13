@@ -3816,7 +3816,6 @@ int mg_parse_uri(struct mg_str uri, struct mg_str *scheme,
 
   const char *p = uri.p, *end = p + uri.len;
   while (p < end) {
-    printf("STATE: %d (%s)\n", state, p);
     switch (state) {
       case P_START:
         /*
@@ -3859,11 +3858,13 @@ int mg_parse_uri(struct mg_str uri, struct mg_str *scheme,
             state = P_HOST;
             break;
           } else if (*p == '/') {
-            /* backtrack and parse as host */
-            state = P_HOST;
-            p = ruser_info.p;
             break;
           }
+        }
+        if (p == end || *p == '/') {
+          /* backtrack and parse as host */
+          state = P_HOST;
+          p = ruser_info.p;
         }
         ruser_info.len = p - ruser_info.p;
         break;
@@ -7113,6 +7114,11 @@ int mg_match_prefix(const char *pattern, int pattern_len, const char *str) {
     }
   }
   return j;
+}
+
+struct mg_str mg_mk_str(const char *s) {
+  struct mg_str ret = {s, strlen(s)};
+  return ret;
 }
 #ifdef NS_MODULE_LINES
 #line 1 "./src/json-rpc.c"

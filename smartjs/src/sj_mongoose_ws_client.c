@@ -131,36 +131,33 @@ static enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
     size_t len;
     const char *url = v7_get_string_data(v7, &urlv, &len);
 
-    if (strncmp(url, "ws://", 5) == 0) {
+    struct mg_str host, scheme;
+    unsigned int port;
+
+    if (mg_parse_uri(mg_mk_str(url), &scheme, NULL, &host, &port, NULL, NULL,
+                     NULL) < 0) {
+      rcode = v7_throwf(v7, "Error", "invalid ws url string");
+      goto clean;
+    }
+
+    if (mg_vcmp(&scheme, "ws") == 0) {
       url += 5;
-    } else if (strncmp(url, "wss://", 6) == 0) {
+    } else if (mg_vcmp(&scheme, "wss") == 0) {
       url += 6;
       use_ssl = 1;
     }
-
-    /* TODO(alashkin): use mg_parse_uri here */
-    int host_len = 0, have_port = 0;
-    while (*(url + host_len) != 0) {
-      if (*(url + host_len) == '/') {
-        break;
-      } else if (*(url + host_len) == ':') {
-        have_port = 1;
-      }
-
-      host_len++;
-    }
-
-    char *host = calloc(1, host_len + 1);
-    if (host == NULL) {
+    char *host_str = calloc(1, host.len + 1);
+    if (host_str == NULL) {
       rcode = v7_throwf(v7, "Error", "Out of memory");
       goto clean;
     }
-    memcpy(host, url, host_len);
+    memcpy(host_str, host.p, host.len);
 
     char *url_with_port = NULL;
-    if (!have_port) {
-      int ret = asprintf(&url_with_port, "%.*s%s%.*s", host_len, url, ":80",
-                         (int) (strlen(url) - host_len), url + host_len);
+    if (port == 0) {
+      /* mg_connect doesn't support user info, skip it */
+      int ret = asprintf(&url_with_port, "%.*s%s%s", (int) host.len, host.p,
+                         use_ssl ? ":443" : ":80", host.p + host.len);
       (void) ret;
     }
 
@@ -185,7 +182,7 @@ static enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
     ud->v7 = v7;
     ud->ws = this_obj;
     nc->user_data = ud;
-    ud->host = host;
+    ud->host = host_str;
     v7_own(v7, &ud->ws);
 
     if (v7_is_string(subprotov)) {
