@@ -46,7 +46,7 @@ static enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
 
-  if (!v7_is_function(cb)) {
+  if (!v7_is_callable(v7, cb)) {
     rcode = v7_throwf(v7, "Error", "Invalid argument");
     goto clean;
   }
@@ -97,7 +97,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   if (ev == MG_EV_HTTP_REQUEST) {
     /* HTTP request has arrived */
 
-    if (v7_is_function(ud->handler)) {
+    if (v7_is_callable(ud->v7, ud->handler)) {
       /* call provided JavaScript callback with `request` and `response` */
       v7_val_t request = v7_mk_object(ud->v7);
       v7_val_t response = v7_mk_object(ud->v7);
@@ -117,7 +117,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     /* HTTP response has arrived */
 
     /* if JavaScript callback was provided, call it with `response` */
-    if (v7_is_function(ud->handler)) {
+    if (v7_is_callable(ud->v7, ud->handler)) {
       v7_val_t response = v7_mk_object(ud->v7);
       setup_request_object(ud->v7, response, ev_data);
       sj_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);

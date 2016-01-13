@@ -526,7 +526,7 @@ static enum v7_err clubby_set_on_event(const char *eventid, int8_t eventid_len,
 
   v7_val_t cbv = v7_arg(v7, 0);
 
-  if (!v7_is_function(cbv)) {
+  if (!v7_is_callable(v7, cbv)) {
     printf("Invalid arguments\n");
     goto error;
   }
@@ -742,7 +742,7 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   v7_val_t cmdv = v7_arg(v7, 1);
   v7_val_t cbv = v7_arg(v7, 2);
 
-  if (!v7_is_string(dstv) || !v7_is_object(cmdv) || !v7_is_function(cbv)) {
+  if (!v7_is_string(dstv) || !v7_is_object(cmdv) || !v7_is_callable(v7, cbv)) {
     printf("Invalid arguments\n");
     goto error;
   }
@@ -795,7 +795,7 @@ static enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
   v7_val_t arg1 = v7_arg(v7, 0);
   v7_val_t arg2 = v7_arg(v7, 1);
 
-  if (v7_is_function(arg1) && v7_is_undefined(arg2)) {
+  if (v7_is_callable(v7, arg1) && v7_is_undefined(arg2)) {
     /*
      * oncmd is called with one arg, and this arg is function -
      * setup global `oncmd` handler
@@ -804,7 +804,7 @@ static enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
                               clubby_simple_cb_run_once, arg1)) {
       goto error;
     }
-  } else if (v7_is_string(arg1) && v7_is_function(arg2)) {
+  } else if (v7_is_string(arg1) && v7_is_callable(v7, arg2)) {
     /*
      * oncmd is called with two args - string and function
      * setup handler for specific command
@@ -840,7 +840,7 @@ static enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
 
   v7_val_t cbv = v7_arg(v7, 0);
 
-  if (!v7_is_function(cbv)) {
+  if (!v7_is_callable(v7, cbv)) {
     printf("Invalid arguments\n");
     goto error;
   }
@@ -897,7 +897,7 @@ error:
 #define GET_CB_PARAM(name1, name2)                                             \
   {                                                                            \
     v7_val_t tmp = v7_get(v7, arg, #name1, ~0);                                \
-    if (v7_is_function(tmp)) {                                                 \
+    if (v7_is_callable(v7, tmp)) {                                             \
       register_js_callback(clubby, v7, name2, sizeof(name2), clubby_simple_cb, \
                            tmp);                                               \
     } else if (!v7_is_undefined(tmp)) {                                        \
@@ -972,7 +972,7 @@ void sj_init_clubby(struct v7 *v7) {
   v7_set_method(v7, clubby_proto_v, "onopen", Clubby_onopen);
   v7_set_method(v7, clubby_proto_v, "onclose", Clubby_onclose);
 
-  clubby_ctor_v = v7_mk_constructor(v7, clubby_proto_v, Clubby_ctor);
+  clubby_ctor_v = v7_mk_function_with_proto(v7, Clubby_ctor, clubby_proto_v);
 
   v7_set(v7, v7_get_global(v7), "Clubby", ~0, clubby_ctor_v);
 

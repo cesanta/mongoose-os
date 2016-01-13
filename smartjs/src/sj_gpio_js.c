@@ -17,7 +17,7 @@ static void gpio_intr_handler_proxy(int pin, int level) {
 
   v7_val_t cb = v7_get(s_v7, v7_get_global(s_v7), prop_name, len);
 
-  if (!v7_is_function(cb)) {
+  if (!v7_is_callable(s_v7, cb)) {
     return;
   }
 
@@ -52,8 +52,8 @@ static enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
   current_cb = v7_get(v7, v7_get_global(v7), prop_name, len);
-  has_isr = v7_is_function(current_cb);
-  new_isr_provided = v7_is_function(cb);
+  has_isr = v7_is_callable(v7, current_cb);
+  new_isr_provided = v7_is_callable(v7, cb);
 
   if (!has_isr && !new_isr_provided) {
     printf("Missing callback\n");

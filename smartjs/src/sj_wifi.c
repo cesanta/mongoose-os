@@ -103,7 +103,7 @@ void sj_wifi_on_change_callback(enum sj_wifi_status event) {
 static enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
-  if (!v7_is_function(cb)) {
+  if (!v7_is_callable(v7, cb)) {
     *res = v7_mk_boolean(0);
     goto clean;
   }
@@ -121,7 +121,7 @@ void sj_wifi_scan_done(const char **ssids) {
   v7_val_t cb = v7_get(v7, s_wifi, "_scb", ~0);
   v7_val_t res = v7_mk_undefined();
   const char **p;
-  if (!v7_is_function(cb)) return;
+  if (!v7_is_callable(v7, cb)) return;
 
   v7_own(v7, &res);
   if (ssids != NULL) {
@@ -145,14 +145,14 @@ static enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int r;
   v7_val_t cb = v7_get(v7, s_wifi, "_scb", ~0);
-  if (v7_is_function(cb)) {
+  if (v7_is_callable(v7, cb)) {
     fprintf(stderr, "scan in progress");
     *res = v7_mk_boolean(0);
     goto clean;
   }
 
   cb = v7_arg(v7, 0);
-  if (!v7_is_function(cb)) {
+  if (!v7_is_callable(v7, cb)) {
     fprintf(stderr, "invalid argument");
     *res = v7_mk_boolean(0);
     goto clean;

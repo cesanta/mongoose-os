@@ -15,7 +15,7 @@ static enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
   v7_own(v7, cb);
   *cb = v7_arg(v7, 0);
 
-  if (!v7_is_function(*cb)) {
+  if (!v7_is_callable(v7, *cb)) {
     printf("cb is not a function\n");
   } else if (!v7_is_number(msecsv)) {
     printf("msecs is not a double\n");

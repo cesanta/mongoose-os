@@ -877,7 +877,7 @@ static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
 
 static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   v7_val_t cb = v7_arg(v7, 0);
-  if (!v7_is_function(cb)) {
+  if (!v7_is_callable(v7, cb)) {
     printf("Invalid arguments\n");
     *res = v7_mk_boolean(0);
     return V7_OK;

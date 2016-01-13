@@ -2523,7 +2523,7 @@ struct v7_generic_object {
  * object, `vars`, with different values of `num`.
  */
 
-struct v7_function {
+struct v7_js_function {
   /*
    * Functions are objects. This has to be the first field so that function
    * objects can be managed by the GC.
@@ -2627,13 +2627,26 @@ extern "C" {
 /* Returns true if given value is a number, not NaN and not Infinity. */
 V7_PRIVATE int is_finite(v7_val_t v);
 
-V7_PRIVATE val_t v7_pointer_to_value(void *p);
+V7_PRIVATE val_t pointer_to_value(void *p);
 V7_PRIVATE void *v7_to_pointer(val_t v);
-V7_PRIVATE val_t v7_function_to_value(struct v7_function *o);
-V7_PRIVATE struct v7_function *v7_to_function(val_t v);
+V7_PRIVATE struct v7_js_function *to_js_function(val_t v);
 V7_PRIVATE val_t
-mk_function2(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
-V7_PRIVATE val_t mk_function(struct v7 *v7);
+mk_js_function2(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
+V7_PRIVATE val_t mk_js_function(struct v7 *v7);
+V7_PRIVATE int is_js_function(val_t v);
+V7_PRIVATE v7_val_t mk_cfunction_lite(v7_cfunction_t *f);
+
+/* Returns true if given value holds a pointer to C callback */
+V7_PRIVATE int is_cfunction_lite(v7_val_t v);
+
+/* Returns true if given value holds an object which represents C callback */
+V7_PRIVATE int is_cfunction_obj(struct v7 *v7, v7_val_t v);
+
+/*
+ * Returns `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
+ * if given value is neither cfunction pointer nor cfunction object.
+ */
+V7_PRIVATE v7_cfunction_t *to_cfunction(struct v7 *v7, v7_val_t v);
 
 /*
  * Like v7_mk_function but also sets the function's `length` property.
@@ -2652,23 +2665,24 @@ V7_PRIVATE val_t mk_function(struct v7 *v7);
  * relevant.
  *
  * NODO(lsm): please don't combine v7_mk_function_arg and v7_mk_function
- * into one function. Currently `nargs` is useful only internally. External
+ * into one function. Currently `num_args` is useful only internally. External
  * users can just use `v7_def` to set the length.
  */
 V7_PRIVATE
-v7_val_t v7_mk_function_nargs(struct v7 *v7, v7_cfunction_t *func, int nargs);
+v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *func, int num_args);
 
 /*
- * Like v7_mk_constructor but also sets the function's `length` property.
+ * Like v7_mk_function_with_proto but also sets the function's `length`
+ *property.
  *
- * NODO(lsm): please don't combine v7_mk_constructor_nargs and
- * v7_mk_constructor.
- * into one function. Currently `nargs` is useful only internally. External
+ * NODO(lsm): please don't combine mk_cfunction_obj_with_proto and
+ * v7_mk_function_with_proto.
+ * into one function. Currently `num_args` is useful only internally. External
  * users can just use `v7_def` to set the length.
  */
 V7_PRIVATE
-v7_val_t v7_mk_constructor_nargs(struct v7 *v7, v7_val_t proto,
-                                 v7_cfunction_t *f, int num_args);
+v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7, v7_cfunction_t *f,
+                                     int num_args, v7_val_t proto);
 
 V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
 
@@ -3552,7 +3566,7 @@ extern "C" {
 
 V7_PRIVATE struct v7_generic_object *new_generic_object(struct v7 *);
 V7_PRIVATE struct v7_property *new_property(struct v7 *);
-V7_PRIVATE struct v7_function *new_function(struct v7 *);
+V7_PRIVATE struct v7_js_function *new_function(struct v7 *);
 
 V7_PRIVATE void gc_mark(struct v7 *, val_t);
 
@@ -8532,7 +8546,8 @@ void init_ubjson(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), "UBJSON", 6, ubjson);
   v7_set_method(v7, ubjson, "render", UBJSON_render);
   gen_proto = v7_mk_object(v7);
-  v7_set(v7, ubjson, "Bin", ~0, v7_mk_constructor(v7, gen_proto, UBJSON_Bin));
+  v7_set(v7, ubjson, "Bin", ~0,
+         v7_mk_function_with_proto(v7, UBJSON_Bin, gen_proto));
   v7_set_method(v7, gen_proto, "send", Bin_send);
 }
 
@@ -10294,8 +10309,8 @@ static void bcode_serialize_lit(struct v7 *v7, val_t v, FILE *out) {
      * case V7_TYPE_REGEXP_OBJECT:
      */
     case V7_TYPE_FUNCTION_OBJECT: {
-      struct v7_function *func;
-      func = v7_to_function(v);
+      struct v7_js_function *func;
+      func = to_js_function(v);
       assert(func->bcode != NULL);
 
       bcode_serialize_emit_type_tag(BCODE_SER_FUNCTION, out);
@@ -10419,8 +10434,8 @@ static const char *bcode_deserialize_lit(struct v7 *v7, struct bcode *bcode,
     }
 
     case BCODE_SER_FUNCTION: {
-      val_t funv = mk_function(v7);
-      struct v7_function *func = v7_to_function(funv);
+      val_t funv = mk_js_function(v7);
+      struct v7_js_function *func = to_js_function(funv);
       func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode, bcode->strict_mode);
@@ -10910,7 +10925,7 @@ static void bcode_save_frame_details(struct v7 *v7, v7_val_t frame,
  * Caller of bcode_perform_call is responsible for owning `frame`
  */
 static enum v7_err bcode_perform_call(struct v7 *v7, v7_val_t frame,
-                                      struct v7_function *func,
+                                      struct v7_js_function *func,
                                       struct bcode_registers *r,
                                       val_t this_object,
                                       uint8_t is_constructor) {
@@ -11294,12 +11309,12 @@ static enum v7_err bcode_throw_reference_error(struct v7 *v7,
  */
 static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
   val_t res;
-  struct v7_function *f, *rf;
-  assert(v7_is_function(func));
-  f = v7_to_function(func);
-  res = mk_function2(v7, v7_to_generic_object(v7->vals.call_stack),
-                     v7_get(v7, func, "prototype", 9));
-  rf = v7_to_function(res);
+  struct v7_js_function *f, *rf;
+  assert(is_js_function(func));
+  f = to_js_function(func);
+  res = mk_js_function2(v7, v7_to_generic_object(v7->vals.call_stack),
+                        v7_get(v7, func, "prototype", 9));
+  rf = to_js_function(res);
   rf->bcode = f->bcode;
   rf->bcode->refcnt++;
   return res;
@@ -11331,7 +11346,7 @@ static enum v7_err call_cfunction(struct v7 *v7, val_t func, val_t this_object,
   v7->vals.arguments = args;
 
   /* call C function */
-  rcode = v7_to_cfunction(v7, func)(v7, res);
+  rcode = to_cfunction(v7, func)(v7, res);
   if (rcode != V7_OK) {
     goto clean;
   }
@@ -12004,7 +12019,7 @@ restart:
                   v7, TYPE_ERROR,
                   "Cannot set a primitive value as object prototype"));
               goto op_done;
-            } else if (v7_is_cfunction_ptr(v4)) {
+            } else if (is_cfunction_lite(v4)) {
               /*
                * TODO(dfrank): maybe add support for a cfunction pointer to be
                * a prototype
@@ -12034,7 +12049,7 @@ restart:
              */
             BTRY(v7_throwf(v7, TYPE_ERROR, "value is not a function"));
             goto op_done;
-          } else if (v7_is_cfunction_ptr(v1) || v7_is_cfunction_obj(v7, v1)) {
+          } else if (is_cfunction_lite(v1) || is_cfunction_obj(v7, v1)) {
             /* call cfunction */
 
             /*
@@ -12055,7 +12070,7 @@ restart:
 
           } else {
             val_t *name, *arg_end, *locals_end;
-            struct v7_function *func = v7_to_function(v1);
+            struct v7_js_function *func = to_js_function(v1);
 
             /*
              * In "function invocation pattern", the `this` value popped from
@@ -12486,7 +12501,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
       }
     }
 
-  } else if (v7_is_function(func)) {
+  } else if (is_js_function(func)) {
     /*
      * Caller did not provide source code, so, assume we should call
      * provided function. Here, we prepare "wrapper" bcode.
@@ -12520,7 +12535,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
     bcode_op(bcode, (uint8_t) args_cnt);
 
     bcode_op(bcode, OP_SWAP_DROP);
-  } else if (v7_is_cfunction_ptr(func) || v7_is_cfunction_obj(v7, func)) {
+  } else if (is_cfunction_lite(func) || is_cfunction_obj(v7, func)) {
     /* call cfunction */
     V7_TRY(call_cfunction(v7, func, this_object, args, 0 /* not a ctor */, &r));
     goto clean;
@@ -12773,7 +12788,7 @@ int v7_is_undefined(val_t v) {
 
 /* Foreign {{{ */
 
-V7_PRIVATE val_t v7_pointer_to_value(void *p) {
+V7_PRIVATE val_t pointer_to_value(void *p) {
   uint64_t n = ((uint64_t)(uintptr_t) p);
 
   assert((n & V7_TAG_MASK) == 0 || (n & V7_TAG_MASK) == (~0 & V7_TAG_MASK));
@@ -12792,7 +12807,7 @@ void *v7_to_foreign(val_t v) {
 }
 
 v7_val_t v7_mk_foreign(void *p) {
-  return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
+  return pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
 int v7_is_foreign(val_t v) {
@@ -12803,19 +12818,19 @@ int v7_is_foreign(val_t v) {
 
 /* Function {{{ */
 
-V7_PRIVATE val_t v7_function_to_value(struct v7_function *o) {
-  return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
+static val_t js_function_to_value(struct v7_js_function *o) {
+  return pointer_to_value(o) | V7_TAG_FUNCTION;
 }
 
-V7_PRIVATE struct v7_function *v7_to_function(val_t v) {
-  assert(v7_is_function(v));
-  return (struct v7_function *) v7_to_pointer(v);
+V7_PRIVATE struct v7_js_function *to_js_function(val_t v) {
+  assert(is_js_function(v));
+  return (struct v7_js_function *) v7_to_pointer(v);
 }
 
 V7_PRIVATE
-val_t mk_function2(struct v7 *v7, struct v7_generic_object *scope,
-                   val_t proto) {
-  struct v7_function *f;
+val_t mk_js_function2(struct v7 *v7, struct v7_generic_object *scope,
+                      val_t proto) {
+  struct v7_js_function *f;
   val_t fval = v7_mk_null();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &proto);
@@ -12828,7 +12843,7 @@ val_t mk_function2(struct v7 *v7, struct v7_generic_object *scope,
     goto cleanup;
   }
 
-  fval = v7_function_to_value(f);
+  fval = js_function_to_value(f);
 
   f->base.properties = NULL;
   f->scope = scope;
@@ -12850,12 +12865,16 @@ cleanup:
   return fval;
 }
 
-V7_PRIVATE val_t mk_function(struct v7 *v7) {
-  return mk_function2(v7, NULL, v7_mk_object(v7));
+V7_PRIVATE val_t mk_js_function(struct v7 *v7) {
+  return mk_js_function2(v7, NULL, v7_mk_object(v7));
+}
+
+V7_PRIVATE int is_js_function(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
 V7_PRIVATE
-v7_val_t v7_mk_function_nargs(struct v7 *v7, v7_cfunction_t *f, int num_args) {
+v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *f, int num_args) {
   val_t obj = mk_object(v7, v7->vals.function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
@@ -12869,13 +12888,10 @@ v7_val_t v7_mk_function_nargs(struct v7 *v7, v7_cfunction_t *f, int num_args) {
   return obj;
 }
 
-v7_val_t v7_mk_function(struct v7 *v7, v7_cfunction_t *f) {
-  return v7_mk_function_nargs(v7, f, -1);
-}
-
-V7_PRIVATE v7_val_t v7_mk_constructor_nargs(struct v7 *v7, v7_val_t proto,
-                                            v7_cfunction_t *f, int num_args) {
-  v7_val_t res = v7_mk_function_nargs(v7, f, num_args);
+V7_PRIVATE v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7,
+                                                v7_cfunction_t *f, int num_args,
+                                                v7_val_t proto) {
+  v7_val_t res = mk_cfunction_obj(v7, f, num_args);
 
   v7_def(v7, res, "prototype", 9, (V7_DESC_ENUMERABLE(0) | V7_DESC_WRITABLE(0) |
                                    V7_DESC_CONFIGURABLE(0)),
@@ -12884,27 +12900,19 @@ V7_PRIVATE v7_val_t v7_mk_constructor_nargs(struct v7 *v7, v7_val_t proto,
   return res;
 }
 
-v7_val_t v7_mk_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t *f) {
-  return v7_mk_constructor_nargs(v7, proto, f, ~0);
-}
-
-int v7_is_function(val_t v) {
-  return (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
-}
-
-v7_val_t v7_mk_cfunction(v7_cfunction_t *f) {
+V7_PRIVATE v7_val_t mk_cfunction_lite(v7_cfunction_t *f) {
   union {
     void *p;
     v7_cfunction_t *f;
   } u;
   u.f = f;
-  return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
+  return pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
 
-v7_cfunction_t *v7_to_cfunction(struct v7 *v7, val_t v) {
+V7_PRIVATE v7_cfunction_t *to_cfunction(struct v7 *v7, val_t v) {
   v7_cfunction_t *ret = NULL;
 
-  if (v7_is_cfunction_ptr(v)) {
+  if (is_cfunction_lite(v)) {
     /* Implementation is identical to v7_to_pointer but is separate since
      * object pointers are not directly convertible to function pointers
      * according to ISO C and generates a warning in -Wpedantic mode. */
@@ -12917,18 +12925,18 @@ v7_cfunction_t *v7_to_cfunction(struct v7 *v7, val_t v) {
     p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
     if (p != NULL) {
       /* yes, it's cfunction object. Extract cfunction pointer from it */
-      ret = v7_to_cfunction(v7, p->value);
+      ret = to_cfunction(v7, p->value);
     }
   }
 
   return ret;
 }
 
-int v7_is_cfunction_ptr(val_t v) {
+V7_PRIVATE int is_cfunction_lite(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
 }
 
-int v7_is_cfunction_obj(struct v7 *v7, val_t v) {
+V7_PRIVATE int is_cfunction_obj(struct v7 *v7, val_t v) {
   int ret = 0;
   if (v7_is_object(v)) {
     /* extract the hidden property from a cfunction_object */
@@ -12938,18 +12946,26 @@ int v7_is_cfunction_obj(struct v7 *v7, val_t v) {
       v = p->value;
     }
 
-    ret = v7_is_cfunction_ptr(v);
+    ret = is_cfunction_lite(v);
   }
   return ret;
 }
 
-int v7_is_cfunction(struct v7 *v7, val_t v) {
-  return v7_is_cfunction_ptr(v) || v7_is_cfunction_obj(v7, v);
+v7_val_t v7_mk_function(struct v7 *v7, v7_cfunction_t *f) {
+  return mk_cfunction_obj(v7, f, -1);
+}
+
+v7_val_t v7_mk_function_with_proto(struct v7 *v7, v7_cfunction_t *f,
+                                   v7_val_t proto) {
+  return mk_cfunction_obj_with_proto(v7, f, ~0, proto);
+}
+
+v7_val_t v7_mk_cfunction(v7_cfunction_t *f) {
+  return mk_cfunction_lite(f);
 }
 
 int v7_is_callable(struct v7 *v7, val_t v) {
-  return v7_is_function(v) || v7_is_cfunction_ptr(v) ||
-         v7_is_cfunction_obj(v7, v);
+  return is_js_function(v) || is_cfunction_lite(v) || is_cfunction_obj(v7, v);
 }
 
 /* }}} Function */
@@ -12983,7 +12999,7 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
 }
 
 static void function_destructor(struct v7 *v7, void *ptr) {
-  struct v7_function *f = (struct v7_function *) ptr;
+  struct v7_js_function *f = (struct v7_js_function *) ptr;
   (void) v7;
   if (f == NULL) return;
 
@@ -13041,7 +13057,7 @@ struct v7 *v7_mk_opt(struct v7_mk_opts opts) {
     gc_arena_init(&v7->generic_object_arena, sizeof(struct v7_generic_object),
                   opts.object_arena_size, 10, "object");
     v7->generic_object_arena.destructor = generic_object_destructor;
-    gc_arena_init(&v7->function_arena, sizeof(struct v7_function),
+    gc_arena_init(&v7->function_arena, sizeof(struct v7_js_function),
                   opts.function_arena_size, 10, "function");
     v7->function_arena.destructor = function_destructor;
     gc_arena_init(&v7->property_arena, sizeof(struct v7_property),
@@ -13862,7 +13878,7 @@ v7_val_t v7_mk_string(struct v7 *v7, const char *p, size_t len, int copy) {
     tag = V7_TAG_STRING_F;
   }
 
-  /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
+  /* NOTE(lsm): don't use pointer_to_value, 32-bit ptrs will truncate */
   return (offset & ~V7_TAG_MASK) | tag;
 }
 
@@ -14357,9 +14373,9 @@ V7_PRIVATE val_t v7_object_to_value(struct v7_object *o) {
   if (o == NULL) {
     return V7_NULL;
   } else if (o->attributes & V7_OBJ_FUNCTION) {
-    return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
+    return pointer_to_value(o) | V7_TAG_FUNCTION;
   } else {
-    return v7_pointer_to_value(o) | V7_TAG_OBJECT;
+    return pointer_to_value(o) | V7_TAG_OBJECT;
   }
 }
 
@@ -14521,7 +14537,7 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
     rcode = v7_throwf(v7, TYPE_ERROR, "cannot read property '%.*s' of null",
                       (int) name_len, name);
     goto clean;
-  } else if (v7_is_cfunction_ptr(obj)) {
+  } else if (is_cfunction_lite(obj)) {
     v = v7->vals.function_prototype;
   }
 
@@ -14875,7 +14891,7 @@ clean:
 V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
                           v7_cfunction_t *func, int num_args) {
   return v7_def(v7, obj, name, strlen(name), V7_DESC_ENUMERABLE(0),
-                v7_mk_function_nargs(v7, func, num_args));
+                mk_cfunction_obj(v7, func, num_args));
 }
 
 int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
@@ -14999,7 +15015,7 @@ V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj) {
    * prototype chain), it's better to just handle cfunction objects as generic
    * objects.
    */
-  if (v7_is_function(obj) || v7_is_cfunction_ptr(obj)) {
+  if (is_js_function(obj) || is_cfunction_lite(obj)) {
     return v7->vals.function_prototype;
   }
   return v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
@@ -15076,7 +15092,7 @@ enum v7_err v7_mk_regexp(struct v7 *v7, const char *re, size_t re_len,
     rp->lastIndex = 0;
 
     v7_def(v7, *res, "", 0, _V7_DESC_HIDDEN(1),
-           v7_pointer_to_value(rp) | V7_TAG_REGEXP);
+           pointer_to_value(rp) | V7_TAG_REGEXP);
   }
 
 clean:
@@ -15430,7 +15446,7 @@ V7_PRIVATE enum v7_err primitive_to_number(struct v7 *v7, val_t v, val_t *res) {
     goto clean;
   }
 
-  if (v7_is_cfunction_ptr(*res)) {
+  if (is_cfunction_lite(*res)) {
     *res = v7_mk_number(0.0);
     goto clean;
   }
@@ -16061,8 +16077,8 @@ V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
   return (struct v7_property *) gc_alloc_cell(v7, &v7->property_arena);
 }
 
-V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
-  return (struct v7_function *) gc_alloc_cell(v7, &v7->function_arena);
+V7_PRIVATE struct v7_js_function *new_function(struct v7 *v7) {
+  return (struct v7_js_function *) gc_alloc_cell(v7, &v7->function_arena);
 }
 
 V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
@@ -16375,8 +16391,8 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   /* mark object's prototype */
   gc_mark(v7, obj_prototype_v(v7, v));
 
-  if (v7_is_function(v)) {
-    struct v7_function *func = v7_to_function(v);
+  if (is_js_function(v)) {
+    struct v7_js_function *func = to_js_function(v);
 
     /* mark function's scope */
     gc_mark(v7, v7_object_to_value(&func->scope->base));
@@ -16816,8 +16832,8 @@ void v7_gc(struct v7 *v7, int full) {
 }
 
 V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v) {
-  if (v7_is_function(v)) {
-    return gc_check_ptr(&v7->function_arena, v7_to_function(v));
+  if (is_js_function(v)) {
+    return gc_check_ptr(&v7->function_arena, to_js_function(v));
   } else if (v7_is_object(v)) {
     return gc_check_ptr(&v7->generic_object_arena, v7_to_object(v));
   }
@@ -16923,8 +16939,8 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
   attrs |= V7_OBJ_NOT_EXTENSIBLE;
 #endif
 
-  if (v7_is_function(v)) {
-    struct v7_function *func = v7_to_function(v);
+  if (is_js_function(v)) {
+    struct v7_js_function *func = to_js_function(v);
     struct bcode *bcode = func->bcode;
     char *jops = freeze_mbuf(&bcode->ops);
     char *jlit = freeze_mbuf(&bcode->lit);
@@ -20440,8 +20456,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     }
     case AST_FUNC: {
       size_t flit = 0;
-      val_t funv = mk_function(v7);
-      struct v7_function *func = v7_to_function(funv);
+      val_t funv = mk_js_function(v7);
+      struct v7_js_function *func = to_js_function(funv);
       func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode, bcode->strict_mode);
@@ -24427,13 +24443,14 @@ V7_PRIVATE void init_error(struct v7 *v7) {
   val_t error;
   size_t i;
 
-  error = v7_mk_constructor_nargs(v7, v7->vals.error_prototype, Error_ctor, 1);
+  error =
+      mk_cfunction_obj_with_proto(v7, Error_ctor, 1, v7->vals.error_prototype);
   v7_def(v7, v7->vals.global_object, "Error", 5, V7_DESC_ENUMERABLE(0), error);
   set_method(v7, v7->vals.error_prototype, "toString", Error_toString, 0);
 
   for (i = 0; i < ARRAY_SIZE(error_names); i++) {
-    error = v7_mk_constructor_nargs(v7, mk_object(v7, v7->vals.error_prototype),
-                                    Error_ctor, 1);
+    error = mk_cfunction_obj_with_proto(
+        v7, Error_ctor, 1, mk_object(v7, v7->vals.error_prototype));
     v7_def(v7, v7->vals.global_object, error_names[i], strlen(error_names[i]),
            V7_DESC_ENUMERABLE(0), error);
     v7->vals.error_objects[i] = error;
@@ -24656,8 +24673,8 @@ V7_PRIVATE enum v7_err n_isNaN(struct v7 *v7, v7_val_t *res) {
 V7_PRIVATE void init_number(struct v7 *v7) {
   v7_prop_attr_desc_t attrs_desc =
       (V7_DESC_WRITABLE(0) | V7_DESC_ENUMERABLE(0) | V7_DESC_CONFIGURABLE(0));
-  val_t num =
-      v7_mk_constructor_nargs(v7, v7->vals.number_prototype, Number_ctor, 1);
+  val_t num = mk_cfunction_obj_with_proto(v7, Number_ctor, 1,
+                                          v7->vals.number_prototype);
 
   v7_def(v7, v7->vals.global_object, "Number", 6, V7_DESC_ENUMERABLE(0), num);
 
@@ -25536,7 +25553,7 @@ V7_PRIVATE enum v7_err Array_isArray(struct v7 *v7, v7_val_t *res) {
 }
 
 V7_PRIVATE void init_array(struct v7 *v7) {
-  val_t ctor = v7_mk_function_nargs(v7, Array_ctor, 1);
+  val_t ctor = mk_cfunction_obj(v7, Array_ctor, 1);
   val_t length = v7_mk_dense_array(v7);
 
   v7_set(v7, ctor, "prototype", 9, v7->vals.array_prototype);
@@ -25659,8 +25676,8 @@ clean:
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
-  val_t ctor =
-      v7_mk_constructor_nargs(v7, v7->vals.boolean_prototype, Boolean_ctor, 1);
+  val_t ctor = mk_cfunction_obj_with_proto(v7, Boolean_ctor, 1,
+                                           v7->vals.boolean_prototype);
   v7_set(v7, v7->vals.global_object, "Boolean", 7, ctor);
 
   set_cfunc_prop(v7, v7->vals.boolean_prototype, "valueOf", Boolean_valueOf);
@@ -27109,8 +27126,8 @@ clean:
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str =
-      v7_mk_constructor_nargs(v7, v7->vals.string_prototype, String_ctor, 1);
+  val_t str = mk_cfunction_obj_with_proto(v7, String_ctor, 1,
+                                          v7->vals.string_prototype);
   v7_def(v7, v7->vals.global_object, "String", 6, V7_DESC_ENUMERABLE(0), str);
 
   set_cfunc_prop(v7, str, "fromCharCode", Str_fromCharCode);
@@ -28254,7 +28271,7 @@ static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
 
 V7_PRIVATE void init_date(struct v7 *v7) {
   val_t date =
-      v7_mk_constructor_nargs(v7, v7->vals.date_prototype, Date_ctor, 7);
+      mk_cfunction_obj_with_proto(v7, Date_ctor, 7, v7->vals.date_prototype);
   v7_def(v7, v7->vals.global_object, "Date", 4, V7_DESC_ENUMERABLE(0), date);
   d_set_cfunc_prop(v7, v7->vals.date_prototype, "valueOf", Date_valueOf);
 
@@ -28405,18 +28422,18 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Function_length(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
-  struct v7_function *func;
+  struct v7_js_function *func;
 
   rcode = obj_value_of(v7, this_obj, &this_obj);
   if (rcode != V7_OK) {
     goto clean;
   }
-  if (!v7_is_function(this_obj)) {
+  if (!is_js_function(this_obj)) {
     *res = v7_mk_number(0);
     goto clean;
   }
 
-  func = v7_to_function(this_obj);
+  func = to_js_function(this_obj);
 
   *res = v7_mk_number(func->bcode->args);
 
@@ -28428,17 +28445,17 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Function_name(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
-  struct v7_function *func;
+  struct v7_js_function *func;
 
   rcode = obj_value_of(v7, this_obj, &this_obj);
   if (rcode != V7_OK) {
     goto clean;
   }
-  if (!v7_is_function(this_obj)) {
+  if (!is_js_function(this_obj)) {
     goto clean;
   }
 
-  func = v7_to_function(this_obj);
+  func = to_js_function(this_obj);
 
   assert(func->bcode != NULL);
   assert(func->bcode->names.len >= sizeof(*res));
@@ -28477,7 +28494,7 @@ V7_PRIVATE enum v7_err Function_toString(struct v7 *v7, v7_val_t *res) {
   size_t name_len;
   char buf[50];
   char *b = buf;
-  struct v7_function *func = v7_to_function(v7_get_this(v7));
+  struct v7_js_function *func = to_js_function(v7_get_this(v7));
   int i;
 
   b += c_snprintf(b, BUF_LEFT(sizeof(buf), b - buf), "[function");
@@ -28529,7 +28546,7 @@ V7_PRIVATE enum v7_err Function_toString(struct v7 *v7, v7_val_t *res) {
 }
 
 V7_PRIVATE void init_function(struct v7 *v7) {
-  val_t ctor = v7_mk_function_nargs(v7, Function_ctor, 1);
+  val_t ctor = mk_cfunction_obj(v7, Function_ctor, 1);
 
   v7_set(v7, ctor, "prototype", 9, v7->vals.function_prototype);
   v7_set(v7, v7->vals.global_object, "Function", 8, ctor);
@@ -28862,7 +28879,7 @@ clean:
 
 V7_PRIVATE void init_regex(struct v7 *v7) {
   val_t ctor =
-      v7_mk_constructor_nargs(v7, v7->vals.regexp_prototype, Regex_ctor, 1);
+      mk_cfunction_obj_with_proto(v7, Regex_ctor, 1, v7->vals.regexp_prototype);
   val_t lastIndex = v7_mk_dense_array(v7);
 
   v7_def(v7, v7->vals.global_object, "RegExp", 6, V7_DESC_ENUMERABLE(0), ctor);

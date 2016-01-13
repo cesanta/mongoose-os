@@ -339,7 +339,7 @@ void init_i2cjs(struct v7 *v7) {
   v7_set_method(v7, i2c_proto, "sendAck", i2cjs_sendAck);
   v7_set_method(v7, i2c_proto, "close", i2cjs_close);
 
-  i2c_ctor = v7_mk_constructor(v7, i2c_proto, i2cjs_ctor);
+  i2c_ctor = v7_mk_function_with_proto(v7, i2cjs_ctor, i2c_proto);
   v7_def(v7, i2c_ctor, "ACK", 3, const_attrs, v7_mk_number(I2C_ACK));
   v7_def(v7, i2c_ctor, "NAK", 3, const_attrs, v7_mk_number(I2C_NAK));
   v7_def(v7, i2c_ctor, "ERR", 3, const_attrs, v7_mk_number(I2C_ERR));

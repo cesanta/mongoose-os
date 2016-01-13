@@ -186,7 +186,7 @@ void init_spijs(struct v7 *v7) {
   v7_set_method(v7, spi_proto, "txn", spi_js_txn);
   v7_set_method(v7, spi_proto, "close", spi_js_close);
 
-  spi_ctor = v7_mk_constructor(v7, spi_proto, spi_js_ctor);
+  spi_ctor = v7_mk_function_with_proto(v7, spi_js_ctor, spi_proto);
   v7_set(v7, v7_get_global(v7), "SPI", ~0, spi_ctor);
 }
 

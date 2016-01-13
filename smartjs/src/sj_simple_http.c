@@ -25,7 +25,7 @@ static enum v7_err sj_http_call_helper(struct v7 *v7, v7_val_t urlv,
     goto clean;
   }
 
-  if (!v7_is_function(cb)) {
+  if (!v7_is_callable(v7, cb)) {
     rcode = v7_throwf(v7, "Error", "cb must be a function");
     goto clean;
   }

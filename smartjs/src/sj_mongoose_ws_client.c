@@ -315,7 +315,7 @@ static enum v7_err WebSocket_readyState(struct v7 *v7, v7_val_t *res) {
 
 void sj_init_ws_client(struct v7 *v7) {
   v7_val_t ws_proto = v7_mk_object(v7);
-  v7_val_t ws = v7_mk_constructor(v7, ws_proto, sj_ws_ctor);
+  v7_val_t ws = v7_mk_function_with_proto(v7, sj_ws_ctor, ws_proto);
   v7_own(v7, &ws);
 
   v7_set_method(v7, ws_proto, "send", WebSocket_send);
