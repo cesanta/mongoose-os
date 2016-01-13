@@ -278,7 +278,7 @@ static void Http_write_data(struct v7 *v7, struct mg_connection *c) {
 
 static enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *c = get_mgconn(v7);
-  if (!v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
+  if (!v7_is_truthy(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
     write_http_status(c, 200);
     mg_send(c, "\r\n", 2);
     v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_mk_boolean(1));
@@ -325,7 +325,7 @@ static enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   unsigned long code = 200;
   v7_val_t arg0 = v7_arg(v7, 0), arg1 = v7_arg(v7, 1);
 
-  if (v7_is_true(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
+  if (v7_is_truthy(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
     rcode = v7_throwf(v7, "Error", "Headers already sent");
     goto clean;
   }

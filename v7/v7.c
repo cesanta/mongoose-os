@@ -375,7 +375,7 @@ int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
 int v7_is_instanceof_v(struct v7 *v7, v7_val_t o, v7_val_t c);
 
 /* Returns true if given value evaluates to true, as in `if (v)` statement. */
-int v7_is_true(struct v7 *v7, v7_val_t v);
+int v7_is_truthy(struct v7 *v7, v7_val_t v);
 
 /*
  * Returns `void *` pointer stored in `v7_val_t`.
@@ -4794,6 +4794,10 @@ extern "C" {
  * - If you want to call `valueOf()` on the object, use `obj_value_of()`;
  * - If you want to call `toString()` on the object, use `obj_to_string()`;
  *
+ * - If you need to convert any JS value to boolean using common JavaScript
+ *   semantics (as in the expression `if (v)` or `Boolean(v)`), use
+ *   `to_boolean_v()`.
+ *
  * - If you want to get the JSON representation of a value, use
  *   `to_json_or_debug()`, passing `0` as `is_debug` : writes data to your C
  *   buffer;
@@ -4971,6 +4975,15 @@ V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res);
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
                                long *res);
+
+/*
+ * Converts value to boolean as in the expression `if (v)` or `Boolean(v)`.
+ *
+ * NOTE: it can't throw (even if the given value is an object with `valueOf()`
+ * that throws), so it returns `val_t` directly.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
 
 #if defined(__cplusplus)
 }
@@ -8638,7 +8651,7 @@ V7_PRIVATE enum v7_err Socket_connect(struct v7 *v7, v7_val_t *res) {
   if (v7_is_number(arg1) && v7_is_string(arg0)) {
     struct sockaddr_in sin;
     sock_t sock =
-        socket(AF_INET, v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
+        socket(AF_INET, v7_is_truthy(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = s_resolve(v7, arg0);
@@ -8669,7 +8682,7 @@ V7_PRIVATE enum v7_err Socket_listen(struct v7 *v7, v7_val_t *res) {
     struct sockaddr_in sin;
     int on = 1;
     sock_t sock =
-        socket(AF_INET, v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
+        socket(AF_INET, v7_is_truthy(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = htons((uint16_t) v7_to_number(arg0));
@@ -12350,7 +12363,7 @@ restart:
       }
       case OP_LOGICAL_NOT:
         v1 = POP();
-        PUSH(v7_mk_boolean(!v7_is_true(v7, v1)));
+        PUSH(v7_mk_boolean(!v7_is_truthy(v7, v1)));
         break;
       case OP_NOT: {
         v1 = POP();
@@ -12657,7 +12670,7 @@ restart:
       case OP_JMP_FALSE: {
         bcode_off_t target = bcode_get_target(&r.ops);
         v1 = POP();
-        if (!v7_is_true(v7, v1)) {
+        if (!v7_is_truthy(v7, v1)) {
           r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
         }
         break;
@@ -12665,7 +12678,7 @@ restart:
       case OP_JMP_TRUE: {
         bcode_off_t target = bcode_get_target(&r.ops);
         v1 = POP();
-        if (v7_is_true(v7, v1)) {
+        if (v7_is_truthy(v7, v1)) {
           r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
         }
         break;
@@ -12673,7 +12686,7 @@ restart:
       case OP_JMP_TRUE_DROP: {
         bcode_off_t target = bcode_get_target(&r.ops);
         v1 = POP();
-        if (v7_is_true(v7, v1)) {
+        if (v7_is_truthy(v7, v1)) {
           r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
           v1 = POP();
           POP();
@@ -13436,6 +13449,7 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
@@ -14558,13 +14572,8 @@ int v7_is_instanceof_v(struct v7 *v7, val_t o, val_t c) {
   return is_prototype_of(v7, o, v7_get(v7, c, "prototype", 9));
 }
 
-int v7_is_true(struct v7 *v7, val_t v) {
-  size_t len;
-  return ((v7_is_boolean(v) && v7_to_boolean(v)) ||
-          (v7_is_number(v) && v7_to_number(v) != 0.0) ||
-          (v7_is_string(v) && v7_get_string_data(v7, &v, &len) && len > 0) ||
-          (v7_is_object(v))) &&
-         v != V7_TAG_NAN;
+int v7_is_truthy(struct v7 *v7, val_t v) {
+  return v7_to_boolean(to_boolean_v(v7, v));
 }
 
 static void generic_object_destructor(struct v7 *v7, void *ptr) {
@@ -16562,6 +16571,21 @@ clean:
   }
   tmp_frame_cleanup(&tf);
   return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v) {
+  size_t len;
+  int is_truthy;
+
+  is_truthy =
+      ((v7_is_boolean(v) && v7_to_boolean(v)) ||
+       (v7_is_number(v) && v7_to_number(v) != 0.0) ||
+       (v7_is_string(v) && v7_get_string_data(v7, &v, &len) && len > 0) ||
+       (v7_is_object(v))) &&
+      v != V7_TAG_NAN;
+
+  return v7_mk_boolean(is_truthy);
 }
 
 /*
@@ -24572,7 +24596,7 @@ static enum v7_err o_set_attr(struct v7 *v7, val_t desc, const char *name,
     goto clean;
   }
 
-  if (v7_is_true(v7, v)) {
+  if (v7_is_truthy(v7, v)) {
     *pattrs_delta |= flag_true;
   } else {
     *pattrs_delta |= flag_false;
@@ -25984,7 +26008,7 @@ V7_PRIVATE enum v7_err Array_every(struct v7 *v7, v7_val_t *res) {
       if (rcode != V7_OK) {
         goto clean;
       }
-      if (!v7_is_true(v7, el)) {
+      if (!v7_is_truthy(v7, el)) {
         *res = v7_mk_boolean(0);
         goto clean;
       }
@@ -26028,7 +26052,7 @@ V7_PRIVATE enum v7_err Array_some(struct v7 *v7, v7_val_t *res) {
       if (rcode != V7_OK) {
         goto clean;
       }
-      if (v7_is_true(v7, el)) {
+      if (v7_is_truthy(v7, el)) {
         *res = v7_mk_boolean(1);
         goto clean;
       }
@@ -26071,7 +26095,7 @@ V7_PRIVATE enum v7_err Array_filter(struct v7 *v7, v7_val_t *res) {
       if (rcode != V7_OK) {
         goto clean;
       }
-      if (v7_is_true(v7, el)) {
+      if (v7_is_truthy(v7, el)) {
         rcode = v7_array_push_throwing(v7, *res, v, NULL);
         if (rcode != V7_OK) {
           goto clean;
@@ -26192,11 +26216,8 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Boolean_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  *res = v7_mk_boolean(0); /* false by default */
 
-  if (v7_is_true(v7, v7_arg(v7, 0))) {
-    *res = v7_mk_boolean(1);
-  }
+  *res = to_boolean_v(v7, v7_arg(v7, 0));
 
   if (v7_is_generic_object(this_obj) && this_obj != v7->vals.global_object) {
     /* called as "new Boolean(...)" */

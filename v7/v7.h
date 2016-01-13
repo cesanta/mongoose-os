@@ -371,7 +371,7 @@ int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
 int v7_is_instanceof_v(struct v7 *v7, v7_val_t o, v7_val_t c);
 
 /* Returns true if given value evaluates to true, as in `if (v)` statement. */
-int v7_is_true(struct v7 *v7, v7_val_t v);
+int v7_is_truthy(struct v7 *v7, v7_val_t v);
 
 /*
  * Returns `void *` pointer stored in `v7_val_t`.

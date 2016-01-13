@@ -119,7 +119,7 @@ static enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
      * We assume 0 if the value is "falsy",
      * and 1 if the value is "truthy"
      */
-    val = !!v7_is_true(v7, valv);
+    val = !!v7_is_truthy(v7, valv);
 
     *res = v7_mk_boolean(sj_gpio_write(pin, val) == 0);
   }
