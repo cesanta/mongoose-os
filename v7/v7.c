@@ -3735,9 +3735,6 @@ extern "C" {
 
 V7_PRIVATE void init_string(struct v7 *v7);
 
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
-                                       double *res);
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -3768,7 +3765,6 @@ V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, v7_val_t rx, v7_val_t vstr,
                                int lind, v7_val_t *res);
 
 V7_PRIVATE void init_regex(struct v7 *v7);
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
 
 #if defined(__cplusplus)
 }
@@ -4474,23 +4470,6 @@ extern "C" {
 /* Returns true if given value is a number, not NaN and not Infinity. */
 V7_PRIVATE int is_finite(v7_val_t v);
 
-V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype);
-V7_PRIVATE val_t v7_object_to_value(struct v7_object *o);
-V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v);
-
-/*
- * Returns pointer to the struct representing an object.
- * Given value must be an object (the caller can verify it
- * by calling `v7_is_object()`)
- */
-V7_PRIVATE struct v7_object *v7_to_object(v7_val_t v);
-
-/*
- * Return true if given value is a JavaScript object (will return
- * false for function)
- */
-V7_PRIVATE int v7_is_generic_object(v7_val_t v);
-
 V7_PRIVATE val_t v7_pointer_to_value(void *p);
 V7_PRIVATE void *v7_to_pointer(val_t v);
 V7_PRIVATE val_t v7_function_to_value(struct v7_function *o);
@@ -4533,6 +4512,45 @@ v7_val_t v7_mk_function_nargs(struct v7 *v7, v7_cfunction_t *func, int nargs);
 V7_PRIVATE
 v7_val_t v7_mk_constructor_nargs(struct v7 *v7, v7_val_t proto,
                                  v7_cfunction_t *f, int num_args);
+
+V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
+
+/* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
+#define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* VM_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/object.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef OBJECT_H_INCLUDED
+#define OBJECT_H_INCLUDED
+
+V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype);
+V7_PRIVATE val_t v7_object_to_value(struct v7_object *o);
+V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v);
+
+/*
+ * Returns pointer to the struct representing an object.
+ * Given value must be an object (the caller can verify it
+ * by calling `v7_is_object()`)
+ */
+V7_PRIVATE struct v7_object *v7_to_object(v7_val_t v);
+
+/*
+ * Return true if given value is a JavaScript object (will return
+ * false for function)
+ */
+V7_PRIVATE int v7_is_generic_object(v7_val_t v);
 
 V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7);
 
@@ -4648,16 +4666,24 @@ V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj);
 
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
 
-V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
+#endif /* OBJECT_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/regexp.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
 
-/* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
-#define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
+#ifndef V7_REGEXP_H_INCLUDED
+#define V7_REGEXP_H_INCLUDED
 
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
+#if V7_ENABLE__RegExp
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
+#endif /* V7_ENABLE__RegExp */
 
-#endif /* VM_H_INCLUDED */
+#endif /* V7_REGEXP_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/exec.h"
 /**/
@@ -5067,6 +5093,9 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
 extern "C" {
 #endif /* __cplusplus */
 
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
+                                       double *res);
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 
@@ -9097,6 +9126,7 @@ void init_crypto(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 
 struct ubjson_ctx {
@@ -11350,6 +11380,7 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
@@ -13517,6 +13548,7 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 /* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 #ifdef V7_THAW
 extern struct v7_vals *fr_vals;
@@ -13533,13 +13565,6 @@ double _v7_nan;
 #if defined(V7_CYG_PROFILE_ON)
 struct v7 *v7_head = NULL;
 #endif
-
-/*
- * Default property attributes (see `v7_prop_attr_t`)
- */
-#define V7_DEFAULT_PROPERTY_ATTRS 0
-
-/* Core JS entities {{{ */
 
 /* Number {{{ */
 
@@ -13579,14 +13604,6 @@ V7_PRIVATE int is_finite(val_t v) {
 
 /* }}} Number */
 
-/* Array {{{ */
-
-/*
- * All array internals are in `array.c`
- */
-
-/* }}} Array */
-
 /* Boolean {{{ */
 
 v7_val_t v7_mk_boolean(int v) {
@@ -13606,58 +13623,6 @@ int v7_is_boolean(val_t v) {
 }
 
 /* }}} Boolean */
-
-/* Regexp {{{ */
-
-#if V7_ENABLE__RegExp
-enum v7_err v7_mk_regexp(struct v7 *v7, const char *re, size_t re_len,
-                         const char *flags, size_t flags_len, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-  struct slre_prog *p = NULL;
-  struct v7_regexp *rp;
-
-  if (re_len == ~((size_t) 0)) re_len = strlen(re);
-
-  if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
-      p == NULL) {
-    rcode = v7_throwf(v7, TYPE_ERROR, "Invalid regex");
-    goto clean;
-  } else {
-    *res = mk_object(v7, v7->vals.regexp_prototype);
-    rp = (struct v7_regexp *) malloc(sizeof(*rp));
-    rp->regexp_string = v7_mk_string(v7, re, re_len, 1);
-    v7_own(v7, &rp->regexp_string);
-    rp->compiled_regexp = p;
-    rp->lastIndex = 0;
-
-    v7_def(v7, *res, "", 0, _V7_DESC_HIDDEN(1),
-           v7_pointer_to_value(rp) | V7_TAG_REGEXP);
-  }
-
-clean:
-  return rcode;
-}
-
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
-  struct v7_property *p;
-  int is = v7_is_regexp(v7, v);
-  (void) is;
-  assert(is == 1);
-  p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
-  assert(p != NULL);
-  return (struct v7_regexp *) v7_to_pointer(p->value);
-}
-#endif
-
-int v7_is_regexp(struct v7 *v7, val_t v) {
-  struct v7_property *p;
-  if (!v7_is_generic_object(v)) return 0;
-  p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
-  if (p == NULL) return 0;
-  return (p->value & V7_TAG_MASK) == V7_TAG_REGEXP;
-}
-
-/* }}} Regexp */
 
 /* null {{{ */
 
@@ -13682,62 +13647,6 @@ int v7_is_undefined(val_t v) {
 }
 
 /* }}} undefined */
-
-/* Object {{{ */
-
-V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype) {
-  struct v7_generic_object *o = new_generic_object(v7);
-  if (o == NULL) {
-    return V7_NULL;
-  }
-  (void) v7;
-  o->base.properties = NULL;
-  obj_prototype_set(v7, &o->base, v7_to_object(prototype));
-  return v7_object_to_value(&o->base);
-}
-
-v7_val_t v7_mk_object(struct v7 *v7) {
-  return mk_object(v7, v7->vals.object_prototype);
-}
-
-V7_PRIVATE val_t v7_object_to_value(struct v7_object *o) {
-  if (o == NULL) {
-    return V7_NULL;
-  } else if (o->attributes & V7_OBJ_FUNCTION) {
-    return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
-  } else {
-    return v7_pointer_to_value(o) | V7_TAG_OBJECT;
-  }
-}
-
-V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v) {
-  if (v7_is_null(v)) {
-    return NULL;
-  } else {
-    assert(v7_is_generic_object(v));
-    return (struct v7_generic_object *) v7_to_pointer(v);
-  }
-}
-
-V7_PRIVATE struct v7_object *v7_to_object(val_t v) {
-  if (v7_is_null(v)) {
-    return NULL;
-  } else {
-    assert(v7_is_object(v));
-    return (struct v7_object *) v7_to_pointer(v);
-  }
-}
-
-int v7_is_object(val_t v) {
-  return (v & V7_TAG_MASK) == V7_TAG_OBJECT ||
-         (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
-}
-
-V7_PRIVATE int v7_is_generic_object(val_t v) {
-  return (v & V7_TAG_MASK) == V7_TAG_OBJECT;
-}
-
-/* }}} Object */
 
 /* Foreign {{{ */
 
@@ -13921,666 +13830,6 @@ int v7_is_callable(struct v7 *v7, val_t v) {
 }
 
 /* }}} Function */
-
-/* String {{{ */
-
-/*
- * All string internals are in `string.c`
- */
-
-/* }}} String */
-
-/* }}} Core JS entities */
-
-/* Object properties {{{ */
-
-V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7) {
-  struct v7_property *p = new_property(v7);
-  p->next = NULL;
-  p->name = v7_mk_undefined();
-  p->value = v7_mk_undefined();
-  p->attributes = 0;
-  return p;
-}
-
-V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
-                                                    const char *name,
-                                                    size_t len,
-                                                    v7_prop_attr_t attrs) {
-  struct v7_property *p;
-  struct v7_object *o;
-  val_t ss;
-  if (!v7_is_object(obj)) {
-    return NULL;
-  }
-  if (len == (size_t) ~0) {
-    len = strlen(name);
-  }
-
-  o = v7_to_object(obj);
-  /*
-   * len check is needed to allow getting the mbuf from the hidden property.
-   * TODO(mkm): however hidden properties cannot be safely represented with
-   * a zero length string anyway, so this will change.
-   */
-  if (o->attributes & V7_OBJ_DENSE_ARRAY && len > 0) {
-    int ok, has;
-    unsigned long i = cstr_to_ulong(name, len, &ok);
-    if (ok) {
-      v7->cur_dense_prop->value = v7_array_get2(v7, obj, i, &has);
-      return has ? v7->cur_dense_prop : NULL;
-    }
-  }
-
-  if (len <= 5) {
-    ss = v7_mk_string(v7, name, len, 1);
-    for (p = o->properties; p != NULL; p = p->next) {
-      if (p->name == ss && (attrs == 0 || (p->attributes & attrs))) {
-        return p;
-      }
-    }
-  } else {
-    for (p = o->properties; p != NULL; p = p->next) {
-      size_t n;
-      const char *s = v7_get_string_data(v7, &p->name, &n);
-      if (n == len && strncmp(s, name, len) == 0 &&
-          (attrs == 0 || (p->attributes & attrs))) {
-        return p;
-      }
-    }
-  }
-  return NULL;
-}
-
-V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
-                                                   const char *name,
-                                                   size_t len) {
-  return v7_get_own_property2(v7, obj, name, len, 0);
-}
-
-V7_PRIVATE struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
-                                               const char *name, size_t len) {
-  if (!v7_is_object(obj)) {
-    return NULL;
-  }
-  for (; obj != V7_NULL; obj = obj_prototype_v(v7, obj)) {
-    struct v7_property *prop;
-    if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
-      return prop;
-    }
-  }
-  return NULL;
-}
-
-V7_PRIVATE enum v7_err v7_get_property_v(struct v7 *v7, val_t obj,
-                                         v7_val_t name,
-                                         struct v7_property **res) {
-  enum v7_err rcode = V7_OK;
-  size_t name_len;
-  STATIC char buf[8];
-  const char *s = buf;
-  uint8_t fr = 0;
-
-  if (v7_is_string(name)) {
-    s = v7_get_string_data(v7, &name, &name_len);
-  } else {
-    char *stmp;
-    V7_TRY(v7_stringify_throwing(v7, name, buf, sizeof(buf),
-                                 V7_STRINGIFY_DEFAULT, &stmp));
-    s = stmp;
-    if (s != buf) {
-      fr = 1;
-    }
-    name_len = strlen(s);
-  }
-
-  *res = v7_get_property(v7, obj, s, name_len);
-
-clean:
-  if (fr) {
-    free((void *) s);
-  }
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
-                            size_t name_len, val_t *res) {
-  enum v7_err rcode = V7_OK;
-  val_t v = obj;
-  if (v7_is_string(obj)) {
-    v = v7->vals.string_prototype;
-  } else if (v7_is_number(obj)) {
-    v = v7->vals.number_prototype;
-  } else if (v7_is_boolean(obj)) {
-    v = v7->vals.boolean_prototype;
-  } else if (v7_is_undefined(obj)) {
-    rcode =
-        v7_throwf(v7, TYPE_ERROR, "cannot read property '%.*s' of undefined",
-                  (int) name_len, name);
-    goto clean;
-  } else if (v7_is_null(obj)) {
-    rcode = v7_throwf(v7, TYPE_ERROR, "cannot read property '%.*s' of null",
-                      (int) name_len, name);
-    goto clean;
-  } else if (v7_is_cfunction_ptr(obj)) {
-    v = v7->vals.function_prototype;
-  }
-
-  V7_TRY(
-      v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len), res));
-
-clean:
-  return rcode;
-}
-
-v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
-  enum v7_err rcode = V7_OK;
-  uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
-  v7_val_t ret = v7_mk_undefined();
-
-  rcode = v7_get_throwing(v7, obj, name, name_len, &ret);
-  if (rcode != V7_OK) {
-    rcode = V7_OK;
-    if (saved_is_thrown) {
-      rcode = v7_throw(v7, saved_thrown);
-    } else {
-      v7_clear_thrown_value(v7);
-    }
-    ret = v7_mk_undefined();
-  }
-
-  return ret;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_get_throwing_v(struct v7 *v7, v7_val_t obj,
-                                         v7_val_t name, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-  size_t name_len;
-  STATIC char buf[8];
-  const char *s = buf;
-  uint8_t fr = 0;
-
-  /* subscripting strings */
-  if (v7_is_string(obj)) {
-    char ch;
-    double dch = 0;
-
-    rcode = v7_char_code_at(v7, obj, name, &dch);
-    if (rcode != V7_OK) {
-      goto clean;
-    }
-
-    if (!isnan(dch)) {
-      ch = dch;
-      *res = v7_mk_string(v7, &ch, 1, 1);
-      goto clean;
-    }
-  }
-
-  if (v7_is_string(name)) {
-    s = v7_get_string_data(v7, &name, &name_len);
-  } else {
-    char *stmp;
-    V7_TRY(v7_stringify_throwing(v7, name, buf, sizeof(buf),
-                                 V7_STRINGIFY_DEFAULT, &stmp));
-    s = stmp;
-    if (s != buf) {
-      fr = 1;
-    }
-    name_len = strlen(s);
-  }
-  V7_TRY(v7_get_throwing(v7, obj, s, name_len, res));
-
-clean:
-  if (fr) {
-    free((void *) s);
-  }
-  return rcode;
-}
-
-V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
-  *p = NULL;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
-                                        val_t obj, val_t val) {
-  enum v7_err rcode = V7_OK;
-  val_t setter = prop->value, args;
-  v7_own(v7, &val);
-  args = v7_mk_dense_array(v7);
-  v7_own(v7, &args);
-  if (prop->attributes & V7_PROPERTY_GETTER) {
-    setter = v7_array_get(v7, prop->value, 1);
-  }
-  v7_array_set(v7, args, 0, val);
-  v7_disown(v7, &args);
-  v7_disown(v7, &val);
-  {
-    val_t val = v7_mk_undefined();
-    V7_TRY(b_apply(v7, setter, obj, args, 0, &val));
-  }
-
-clean:
-  return rcode;
-}
-
-static v7_prop_attr_t apply_attrs_desc(v7_prop_attr_desc_t attrs_desc,
-                                       v7_prop_attr_t old_attrs) {
-  v7_prop_attr_t ret = old_attrs;
-  if (old_attrs & V7_PROPERTY_NON_CONFIGURABLE) {
-    /*
-     * The property is non-configurable: we can only change it from being
-     * writable to non-writable
-     */
-
-    if ((attrs_desc >> _V7_DESC_SHIFT) & V7_PROPERTY_NON_WRITABLE &&
-        (attrs_desc & V7_PROPERTY_NON_WRITABLE)) {
-      ret |= V7_PROPERTY_NON_WRITABLE;
-    }
-
-  } else {
-    /* The property is configurable: we can change any attributes */
-    ret = (old_attrs & ~(attrs_desc >> _V7_DESC_SHIFT)) |
-          (attrs_desc & _V7_DESC_MASK);
-  }
-
-  return ret;
-}
-
-int v7_def(struct v7 *v7, val_t obj, const char *name, size_t len,
-           v7_prop_attr_desc_t attrs_desc, v7_val_t val) {
-  enum v7_err rcode = V7_OK;
-  uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
-  int ret = -1;
-
-  {
-    struct v7_property *tmp = NULL;
-    rcode = def_property(v7, obj, name, len, attrs_desc, val, 0 /*not assign*/,
-                         &tmp);
-    ret = (tmp == NULL) ? -1 : 0;
-  }
-
-  if (rcode != V7_OK) {
-    rcode = V7_OK;
-    if (saved_is_thrown) {
-      rcode = v7_throw(v7, saved_thrown);
-    } else {
-      v7_clear_thrown_value(v7);
-    }
-    ret = -1;
-  }
-
-  return ret;
-}
-
-int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
-           v7_val_t val) {
-  enum v7_err rcode = V7_OK;
-  uint8_t saved_is_thrown = 0;
-  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
-  int ret = -1;
-
-  {
-    struct v7_property *tmp = NULL;
-    rcode = set_property(v7, obj, name, len, val, &tmp);
-    ret = (tmp == NULL) ? -1 : 0;
-  }
-
-  if (rcode != V7_OK) {
-    rcode = V7_OK;
-    if (saved_is_thrown) {
-      rcode = v7_throw(v7, saved_thrown);
-    } else {
-      v7_clear_thrown_value(v7);
-    }
-    ret = -1;
-  }
-
-  return ret;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err set_property_v(struct v7 *v7, val_t obj, val_t name,
-                                      val_t val, struct v7_property **res) {
-  return def_property_v(v7, obj, name, 0, val, 1 /*as_assign*/, res);
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err set_property(struct v7 *v7, val_t obj, const char *name,
-                                    size_t len, v7_val_t val,
-                                    struct v7_property **res) {
-  return def_property(v7, obj, name, len, 0, val, 1 /*as_assign*/, res);
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
-                                      v7_prop_attr_desc_t attrs_desc, val_t val,
-                                      uint8_t as_assign,
-                                      struct v7_property **res) {
-  enum v7_err rcode = V7_OK;
-  struct v7_property *prop = NULL;
-  size_t len;
-  const char *n = v7_get_string_data(v7, &name, &len);
-
-  v7_own(v7, &name);
-  v7_own(v7, &val);
-
-  if (!v7_is_object(obj)) {
-    prop = NULL;
-    goto clean;
-  }
-
-  prop = v7_get_own_property(v7, obj, n, len);
-  if (prop == NULL) {
-    /*
-     * The own property with given `name` doesn't exist yet: try to create it,
-     * set requested `name` and `attributes`, and append to the object's
-     * properties
-     */
-
-    /* make sure the object is extensible */
-    if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
-      /*
-       * We should throw if we use `Object.defineProperty`, or if we're in
-       * strict mode.
-       */
-      if (v7->strict_mode || !as_assign) {
-        V7_THROW(v7_throwf(v7, TYPE_ERROR, "Object is not extensible"));
-      }
-      prop = NULL;
-      goto clean;
-    }
-
-    if ((prop = v7_mk_property(v7)) == NULL) {
-      prop = NULL; /* LCOV_EXCL_LINE */
-      goto clean;
-    }
-    prop->name = name;
-    prop->value = val;
-    prop->attributes = apply_attrs_desc(attrs_desc, V7_DEFAULT_PROPERTY_ATTRS);
-
-    prop->next = v7_to_object(obj)->properties;
-    v7_to_object(obj)->properties = prop;
-    goto clean;
-  } else {
-    /* Property already exists */
-
-    if (prop->attributes & V7_PROPERTY_NON_WRITABLE) {
-      /* The property is read-only */
-
-      if (as_assign) {
-        /* Plain assignment: in strict mode throw, otherwise ignore */
-        if (v7->strict_mode) {
-          V7_THROW(
-              v7_throwf(v7, TYPE_ERROR, "Cannot assign to read-only property"));
-        } else {
-          prop = NULL;
-          goto clean;
-        }
-      } else if (prop->attributes & V7_PROPERTY_NON_CONFIGURABLE) {
-        /*
-         * Use `Object.defineProperty` semantic, and the property is
-         * non-configurable: if no value is provided, or if new value is equal
-         * to the existing one, then just fall through to change attributes;
-         * otherwise, throw.
-         */
-
-        if (!(attrs_desc & V7_DESC_PRESERVE_VALUE)) {
-          uint8_t equal = 0;
-          if (v7_is_string(val) && v7_is_string(prop->value)) {
-            equal = (s_cmp(v7, val, prop->value) == 0);
-          } else {
-            equal = (val == prop->value);
-          }
-
-          if (!equal) {
-            /* Values are not equal: should throw */
-            V7_THROW(v7_throwf(v7, TYPE_ERROR,
-                               "Cannot redefine read-only property"));
-          } else {
-            /*
-             * Values are equal. Will fall through so that attributes might
-             * change.
-             */
-          }
-        } else {
-          /*
-           * No value is provided. Will fall through so that attributes might
-           * change.
-           */
-        }
-      } else {
-        /*
-         * Use `Object.defineProperty` semantic, and the property is
-         * configurable: will fall through and assign new value, effectively
-         * ignoring non-writable flag. This is the same as making a property
-         * writable, then assigning a new value, and making a property
-         * non-writable again.
-         */
-      }
-    } else if (prop->attributes & V7_PROPERTY_SETTER) {
-      /* Invoke setter */
-      V7_TRY(v7_invoke_setter(v7, prop, obj, val));
-      prop = NULL;
-      goto clean;
-    }
-
-    /* Set value and apply attrs delta */
-    if (!(attrs_desc & V7_DESC_PRESERVE_VALUE)) {
-      prop->value = val;
-    }
-    prop->attributes = apply_attrs_desc(attrs_desc, prop->attributes);
-  }
-
-clean:
-
-  if (res != NULL) {
-    *res = prop;
-  }
-
-  v7_disown(v7, &val);
-  v7_disown(v7, &name);
-
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
-                                    size_t len, v7_prop_attr_desc_t attrs_desc,
-                                    v7_val_t val, uint8_t as_assign,
-                                    struct v7_property **res) {
-  enum v7_err rcode = V7_OK;
-  val_t name_val = v7_mk_undefined();
-  /* def_property_v can trigger GC */
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
-
-  tmp_stack_push(&tf, &val);
-  tmp_stack_push(&tf, &name_val);
-
-  if (len == (size_t) ~0) {
-    len = strlen(name);
-  }
-
-  name_val = v7_mk_string(v7, name, len, 1);
-  V7_TRY(def_property_v(v7, obj, name_val, attrs_desc, val, as_assign, res));
-
-clean:
-  tmp_frame_cleanup(&tf);
-  return rcode;
-}
-
-V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                          v7_cfunction_t *func, int num_args) {
-  return v7_def(v7, obj, name, strlen(name), V7_DESC_ENUMERABLE(0),
-                v7_mk_function_nargs(v7, func, num_args));
-}
-
-int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                  v7_cfunction_t *func) {
-  return set_method(v7, obj, name, func, ~0);
-}
-
-V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                              v7_cfunction_t *f) {
-  return v7_def(v7, o, name, strlen(name), V7_DESC_ENUMERABLE(0),
-                v7_mk_cfunction(f));
-}
-
-/*
- * See comments in `v7.h`
- */
-int v7_del(struct v7 *v7, val_t obj, const char *name, size_t len) {
-  struct v7_property *prop, *prev;
-
-  if (!v7_is_object(obj)) {
-    return -1;
-  }
-  if (len == (size_t) ~0) {
-    len = strlen(name);
-  }
-  for (prev = NULL, prop = v7_to_object(obj)->properties; prop != NULL;
-       prev = prop, prop = prop->next) {
-    size_t n;
-    const char *s = v7_get_string_data(v7, &prop->name, &n);
-    if (n == len && strncmp(s, name, len) == 0) {
-      if (prev) {
-        prev->next = prop->next;
-      } else {
-        v7_to_object(obj)->properties = prop->next;
-      }
-      v7_destroy_property(&prop);
-      return 0;
-    }
-  }
-  return -1;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_property_value(struct v7 *v7, val_t obj,
-                                         struct v7_property *p, val_t *res) {
-  enum v7_err rcode = V7_OK;
-  if (p == NULL) {
-    *res = V7_UNDEFINED;
-    goto clean;
-  }
-  if (p->attributes & V7_PROPERTY_GETTER) {
-    val_t getter = p->value;
-    if (p->attributes & V7_PROPERTY_SETTER) {
-      getter = v7_array_get(v7, p->value, 0);
-    }
-    {
-      V7_TRY(b_apply(v7, getter, obj, V7_UNDEFINED, 0, res));
-      goto clean;
-    }
-  }
-
-  *res = p->value;
-  goto clean;
-
-clean:
-  return rcode;
-}
-
-void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   v7_prop_attr_t *attrs) {
-  struct v7_property *p;
-  if (handle == NULL) {
-    p = v7_to_object(obj)->properties;
-  } else {
-    p = ((struct v7_property *) handle)->next;
-  }
-  if (p != NULL) {
-    if (name != NULL) *name = p->name;
-    if (value != NULL) *value = p->value;
-    if (attrs != NULL) *attrs = p->attributes;
-  }
-  return p;
-}
-
-/* }}} Object properties */
-
-/* Object prototypes {{{ */
-
-V7_PRIVATE int obj_prototype_set(struct v7 *v7, struct v7_object *obj,
-                                 struct v7_object *proto) {
-  int ret = -1;
-  (void) v7;
-
-  if (obj->attributes & V7_OBJ_FUNCTION) {
-    ret = -1;
-  } else {
-    ((struct v7_generic_object *) obj)->prototype = proto;
-    ret = 0;
-  }
-
-  return ret;
-}
-
-V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
-                                           struct v7_object *obj) {
-  if (obj->attributes & V7_OBJ_FUNCTION) {
-    return v7_to_object(v7->vals.function_prototype);
-  } else {
-    return ((struct v7_generic_object *) obj)->prototype;
-  }
-}
-
-V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj) {
-  /*
-   * NOTE: we don't use v7_is_callable() here, because it involves walking
-   * through the object's properties, which may be expensive. And it's done
-   * anyway for cfunction objects as it would for any other generic objects by
-   * the call to `obj_prototype()`.
-   *
-   * Since this function is called quite often (at least, GC walks the
-   * prototype chain), it's better to just handle cfunction objects as generic
-   * objects.
-   */
-  if (v7_is_function(obj) || v7_is_cfunction_ptr(obj)) {
-    return v7->vals.function_prototype;
-  }
-  return v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
-}
-
-V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
-  if (!v7_is_object(o) || !v7_is_object(p)) {
-    return 0;
-  }
-
-  /* walk the prototype chain */
-  for (; !v7_is_null(o); o = obj_prototype_v(v7, o)) {
-    if (obj_prototype_v(v7, o) == p) {
-      return 1;
-    }
-  }
-  return 0;
-}
-
-int v7_is_instanceof(struct v7 *v7, val_t o, const char *c) {
-  return v7_is_instanceof_v(v7, o, v7_get(v7, v7->vals.global_object, c, ~0));
-}
-
-int v7_is_instanceof_v(struct v7 *v7, val_t o, val_t c) {
-  return is_prototype_of(v7, o, v7_get(v7, c, "prototype", 9));
-}
-
-v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto) {
-  if (v7_is_generic_object(obj)) {
-    v7_val_t old_proto =
-        v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
-    obj_prototype_set(v7, v7_to_object(obj), v7_to_object(proto));
-    return old_proto;
-  } else {
-    return v7_mk_undefined();
-  }
-}
-
-/* }}} Object prototypes */
 
 /* v7 context {{{ */
 
@@ -15294,6 +14543,40 @@ static int v_find_string_in_dictionary(const char *s, size_t len) {
   return -1;
 }
 
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, val_t obj, val_t arg,
+                                       double *res) {
+  enum v7_err rcode = V7_OK;
+  size_t n;
+  val_t s = v7_mk_undefined();
+  const char *p = NULL;
+  double at = v7_to_number(arg);
+
+  *res = 0;
+
+  rcode = to_string(v7, obj, &s, NULL, 0, NULL);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  p = v7_get_string_data(v7, &s, &n);
+
+  n = utfnlen(p, n);
+  if (v7_is_number(arg) && at >= 0 && at < n) {
+    Rune r = 0;
+    p = utfnshift(p, at);
+    chartorune(&r, (char *) p);
+    *res = r;
+    goto clean;
+  } else {
+    *res = NAN;
+    goto clean;
+  }
+
+clean:
+  return rcode;
+}
+
 V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   size_t a_len, b_len;
   const char *a_ptr, *b_ptr;
@@ -15549,6 +14832,7 @@ const char *v7_to_cstring(struct v7 *v7, v7_val_t *value) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
@@ -15909,6 +15193,804 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
   return v7_array_set_throwing(v7, arr, v7_array_length(v7, arr), v, res);
 }
 #ifdef V7_MODULE_LINES
+#line 1 "./src/object.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+
+/*
+ * Default property attributes (see `v7_prop_attr_t`)
+ */
+#define V7_DEFAULT_PROPERTY_ATTRS 0
+
+V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype) {
+  struct v7_generic_object *o = new_generic_object(v7);
+  if (o == NULL) {
+    return V7_NULL;
+  }
+  (void) v7;
+  o->base.properties = NULL;
+  obj_prototype_set(v7, &o->base, v7_to_object(prototype));
+  return v7_object_to_value(&o->base);
+}
+
+v7_val_t v7_mk_object(struct v7 *v7) {
+  return mk_object(v7, v7->vals.object_prototype);
+}
+
+V7_PRIVATE val_t v7_object_to_value(struct v7_object *o) {
+  if (o == NULL) {
+    return V7_NULL;
+  } else if (o->attributes & V7_OBJ_FUNCTION) {
+    return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
+  } else {
+    return v7_pointer_to_value(o) | V7_TAG_OBJECT;
+  }
+}
+
+V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v) {
+  if (v7_is_null(v)) {
+    return NULL;
+  } else {
+    assert(v7_is_generic_object(v));
+    return (struct v7_generic_object *) v7_to_pointer(v);
+  }
+}
+
+V7_PRIVATE struct v7_object *v7_to_object(val_t v) {
+  if (v7_is_null(v)) {
+    return NULL;
+  } else {
+    assert(v7_is_object(v));
+    return (struct v7_object *) v7_to_pointer(v);
+  }
+}
+
+int v7_is_object(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_OBJECT ||
+         (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
+}
+
+V7_PRIVATE int v7_is_generic_object(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_OBJECT;
+}
+
+/* Object properties {{{ */
+
+V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7) {
+  struct v7_property *p = new_property(v7);
+  p->next = NULL;
+  p->name = v7_mk_undefined();
+  p->value = v7_mk_undefined();
+  p->attributes = 0;
+  return p;
+}
+
+V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
+                                                    const char *name,
+                                                    size_t len,
+                                                    v7_prop_attr_t attrs) {
+  struct v7_property *p;
+  struct v7_object *o;
+  val_t ss;
+  if (!v7_is_object(obj)) {
+    return NULL;
+  }
+  if (len == (size_t) ~0) {
+    len = strlen(name);
+  }
+
+  o = v7_to_object(obj);
+  /*
+   * len check is needed to allow getting the mbuf from the hidden property.
+   * TODO(mkm): however hidden properties cannot be safely represented with
+   * a zero length string anyway, so this will change.
+   */
+  if (o->attributes & V7_OBJ_DENSE_ARRAY && len > 0) {
+    int ok, has;
+    unsigned long i = cstr_to_ulong(name, len, &ok);
+    if (ok) {
+      v7->cur_dense_prop->value = v7_array_get2(v7, obj, i, &has);
+      return has ? v7->cur_dense_prop : NULL;
+    }
+  }
+
+  if (len <= 5) {
+    ss = v7_mk_string(v7, name, len, 1);
+    for (p = o->properties; p != NULL; p = p->next) {
+      if (p->name == ss && (attrs == 0 || (p->attributes & attrs))) {
+        return p;
+      }
+    }
+  } else {
+    for (p = o->properties; p != NULL; p = p->next) {
+      size_t n;
+      const char *s = v7_get_string_data(v7, &p->name, &n);
+      if (n == len && strncmp(s, name, len) == 0 &&
+          (attrs == 0 || (p->attributes & attrs))) {
+        return p;
+      }
+    }
+  }
+  return NULL;
+}
+
+V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
+                                                   const char *name,
+                                                   size_t len) {
+  return v7_get_own_property2(v7, obj, name, len, 0);
+}
+
+V7_PRIVATE struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
+                                               const char *name, size_t len) {
+  if (!v7_is_object(obj)) {
+    return NULL;
+  }
+  for (; obj != V7_NULL; obj = obj_prototype_v(v7, obj)) {
+    struct v7_property *prop;
+    if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
+      return prop;
+    }
+  }
+  return NULL;
+}
+
+V7_PRIVATE enum v7_err v7_get_property_v(struct v7 *v7, val_t obj,
+                                         v7_val_t name,
+                                         struct v7_property **res) {
+  enum v7_err rcode = V7_OK;
+  size_t name_len;
+  STATIC char buf[8];
+  const char *s = buf;
+  uint8_t fr = 0;
+
+  if (v7_is_string(name)) {
+    s = v7_get_string_data(v7, &name, &name_len);
+  } else {
+    char *stmp;
+    V7_TRY(v7_stringify_throwing(v7, name, buf, sizeof(buf),
+                                 V7_STRINGIFY_DEFAULT, &stmp));
+    s = stmp;
+    if (s != buf) {
+      fr = 1;
+    }
+    name_len = strlen(s);
+  }
+
+  *res = v7_get_property(v7, obj, s, name_len);
+
+clean:
+  if (fr) {
+    free((void *) s);
+  }
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
+                            size_t name_len, val_t *res) {
+  enum v7_err rcode = V7_OK;
+  val_t v = obj;
+  if (v7_is_string(obj)) {
+    v = v7->vals.string_prototype;
+  } else if (v7_is_number(obj)) {
+    v = v7->vals.number_prototype;
+  } else if (v7_is_boolean(obj)) {
+    v = v7->vals.boolean_prototype;
+  } else if (v7_is_undefined(obj)) {
+    rcode =
+        v7_throwf(v7, TYPE_ERROR, "cannot read property '%.*s' of undefined",
+                  (int) name_len, name);
+    goto clean;
+  } else if (v7_is_null(obj)) {
+    rcode = v7_throwf(v7, TYPE_ERROR, "cannot read property '%.*s' of null",
+                      (int) name_len, name);
+    goto clean;
+  } else if (v7_is_cfunction_ptr(obj)) {
+    v = v7->vals.function_prototype;
+  }
+
+  V7_TRY(
+      v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len), res));
+
+clean:
+  return rcode;
+}
+
+v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
+  enum v7_err rcode = V7_OK;
+  uint8_t saved_is_thrown = 0;
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
+  v7_val_t ret = v7_mk_undefined();
+
+  rcode = v7_get_throwing(v7, obj, name, name_len, &ret);
+  if (rcode != V7_OK) {
+    rcode = V7_OK;
+    if (saved_is_thrown) {
+      rcode = v7_throw(v7, saved_thrown);
+    } else {
+      v7_clear_thrown_value(v7);
+    }
+    ret = v7_mk_undefined();
+  }
+
+  return ret;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_get_throwing_v(struct v7 *v7, v7_val_t obj,
+                                         v7_val_t name, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  size_t name_len;
+  STATIC char buf[8];
+  const char *s = buf;
+  uint8_t fr = 0;
+
+  /* subscripting strings */
+  if (v7_is_string(obj)) {
+    char ch;
+    double dch = 0;
+
+    rcode = v7_char_code_at(v7, obj, name, &dch);
+    if (rcode != V7_OK) {
+      goto clean;
+    }
+
+    if (!isnan(dch)) {
+      ch = dch;
+      *res = v7_mk_string(v7, &ch, 1, 1);
+      goto clean;
+    }
+  }
+
+  if (v7_is_string(name)) {
+    s = v7_get_string_data(v7, &name, &name_len);
+  } else {
+    char *stmp;
+    V7_TRY(v7_stringify_throwing(v7, name, buf, sizeof(buf),
+                                 V7_STRINGIFY_DEFAULT, &stmp));
+    s = stmp;
+    if (s != buf) {
+      fr = 1;
+    }
+    name_len = strlen(s);
+  }
+  V7_TRY(v7_get_throwing(v7, obj, s, name_len, res));
+
+clean:
+  if (fr) {
+    free((void *) s);
+  }
+  return rcode;
+}
+
+V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
+  *p = NULL;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
+                                        val_t obj, val_t val) {
+  enum v7_err rcode = V7_OK;
+  val_t setter = prop->value, args;
+  v7_own(v7, &val);
+  args = v7_mk_dense_array(v7);
+  v7_own(v7, &args);
+  if (prop->attributes & V7_PROPERTY_GETTER) {
+    setter = v7_array_get(v7, prop->value, 1);
+  }
+  v7_array_set(v7, args, 0, val);
+  v7_disown(v7, &args);
+  v7_disown(v7, &val);
+  {
+    val_t val = v7_mk_undefined();
+    V7_TRY(b_apply(v7, setter, obj, args, 0, &val));
+  }
+
+clean:
+  return rcode;
+}
+
+static v7_prop_attr_t apply_attrs_desc(v7_prop_attr_desc_t attrs_desc,
+                                       v7_prop_attr_t old_attrs) {
+  v7_prop_attr_t ret = old_attrs;
+  if (old_attrs & V7_PROPERTY_NON_CONFIGURABLE) {
+    /*
+     * The property is non-configurable: we can only change it from being
+     * writable to non-writable
+     */
+
+    if ((attrs_desc >> _V7_DESC_SHIFT) & V7_PROPERTY_NON_WRITABLE &&
+        (attrs_desc & V7_PROPERTY_NON_WRITABLE)) {
+      ret |= V7_PROPERTY_NON_WRITABLE;
+    }
+
+  } else {
+    /* The property is configurable: we can change any attributes */
+    ret = (old_attrs & ~(attrs_desc >> _V7_DESC_SHIFT)) |
+          (attrs_desc & _V7_DESC_MASK);
+  }
+
+  return ret;
+}
+
+int v7_def(struct v7 *v7, val_t obj, const char *name, size_t len,
+           v7_prop_attr_desc_t attrs_desc, v7_val_t val) {
+  enum v7_err rcode = V7_OK;
+  uint8_t saved_is_thrown = 0;
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
+  int ret = -1;
+
+  {
+    struct v7_property *tmp = NULL;
+    rcode = def_property(v7, obj, name, len, attrs_desc, val, 0 /*not assign*/,
+                         &tmp);
+    ret = (tmp == NULL) ? -1 : 0;
+  }
+
+  if (rcode != V7_OK) {
+    rcode = V7_OK;
+    if (saved_is_thrown) {
+      rcode = v7_throw(v7, saved_thrown);
+    } else {
+      v7_clear_thrown_value(v7);
+    }
+    ret = -1;
+  }
+
+  return ret;
+}
+
+int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
+           v7_val_t val) {
+  enum v7_err rcode = V7_OK;
+  uint8_t saved_is_thrown = 0;
+  val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
+  int ret = -1;
+
+  {
+    struct v7_property *tmp = NULL;
+    rcode = set_property(v7, obj, name, len, val, &tmp);
+    ret = (tmp == NULL) ? -1 : 0;
+  }
+
+  if (rcode != V7_OK) {
+    rcode = V7_OK;
+    if (saved_is_thrown) {
+      rcode = v7_throw(v7, saved_thrown);
+    } else {
+      v7_clear_thrown_value(v7);
+    }
+    ret = -1;
+  }
+
+  return ret;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err set_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      val_t val, struct v7_property **res) {
+  return def_property_v(v7, obj, name, 0, val, 1 /*as_assign*/, res);
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err set_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_val_t val,
+                                    struct v7_property **res) {
+  return def_property(v7, obj, name, len, 0, val, 1 /*as_assign*/, res);
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      v7_prop_attr_desc_t attrs_desc, val_t val,
+                                      uint8_t as_assign,
+                                      struct v7_property **res) {
+  enum v7_err rcode = V7_OK;
+  struct v7_property *prop = NULL;
+  size_t len;
+  const char *n = v7_get_string_data(v7, &name, &len);
+
+  v7_own(v7, &name);
+  v7_own(v7, &val);
+
+  if (!v7_is_object(obj)) {
+    prop = NULL;
+    goto clean;
+  }
+
+  prop = v7_get_own_property(v7, obj, n, len);
+  if (prop == NULL) {
+    /*
+     * The own property with given `name` doesn't exist yet: try to create it,
+     * set requested `name` and `attributes`, and append to the object's
+     * properties
+     */
+
+    /* make sure the object is extensible */
+    if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
+      /*
+       * We should throw if we use `Object.defineProperty`, or if we're in
+       * strict mode.
+       */
+      if (v7->strict_mode || !as_assign) {
+        V7_THROW(v7_throwf(v7, TYPE_ERROR, "Object is not extensible"));
+      }
+      prop = NULL;
+      goto clean;
+    }
+
+    if ((prop = v7_mk_property(v7)) == NULL) {
+      prop = NULL; /* LCOV_EXCL_LINE */
+      goto clean;
+    }
+    prop->name = name;
+    prop->value = val;
+    prop->attributes = apply_attrs_desc(attrs_desc, V7_DEFAULT_PROPERTY_ATTRS);
+
+    prop->next = v7_to_object(obj)->properties;
+    v7_to_object(obj)->properties = prop;
+    goto clean;
+  } else {
+    /* Property already exists */
+
+    if (prop->attributes & V7_PROPERTY_NON_WRITABLE) {
+      /* The property is read-only */
+
+      if (as_assign) {
+        /* Plain assignment: in strict mode throw, otherwise ignore */
+        if (v7->strict_mode) {
+          V7_THROW(
+              v7_throwf(v7, TYPE_ERROR, "Cannot assign to read-only property"));
+        } else {
+          prop = NULL;
+          goto clean;
+        }
+      } else if (prop->attributes & V7_PROPERTY_NON_CONFIGURABLE) {
+        /*
+         * Use `Object.defineProperty` semantic, and the property is
+         * non-configurable: if no value is provided, or if new value is equal
+         * to the existing one, then just fall through to change attributes;
+         * otherwise, throw.
+         */
+
+        if (!(attrs_desc & V7_DESC_PRESERVE_VALUE)) {
+          uint8_t equal = 0;
+          if (v7_is_string(val) && v7_is_string(prop->value)) {
+            equal = (s_cmp(v7, val, prop->value) == 0);
+          } else {
+            equal = (val == prop->value);
+          }
+
+          if (!equal) {
+            /* Values are not equal: should throw */
+            V7_THROW(v7_throwf(v7, TYPE_ERROR,
+                               "Cannot redefine read-only property"));
+          } else {
+            /*
+             * Values are equal. Will fall through so that attributes might
+             * change.
+             */
+          }
+        } else {
+          /*
+           * No value is provided. Will fall through so that attributes might
+           * change.
+           */
+        }
+      } else {
+        /*
+         * Use `Object.defineProperty` semantic, and the property is
+         * configurable: will fall through and assign new value, effectively
+         * ignoring non-writable flag. This is the same as making a property
+         * writable, then assigning a new value, and making a property
+         * non-writable again.
+         */
+      }
+    } else if (prop->attributes & V7_PROPERTY_SETTER) {
+      /* Invoke setter */
+      V7_TRY(v7_invoke_setter(v7, prop, obj, val));
+      prop = NULL;
+      goto clean;
+    }
+
+    /* Set value and apply attrs delta */
+    if (!(attrs_desc & V7_DESC_PRESERVE_VALUE)) {
+      prop->value = val;
+    }
+    prop->attributes = apply_attrs_desc(attrs_desc, prop->attributes);
+  }
+
+clean:
+
+  if (res != NULL) {
+    *res = prop;
+  }
+
+  v7_disown(v7, &val);
+  v7_disown(v7, &name);
+
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_prop_attr_desc_t attrs_desc,
+                                    v7_val_t val, uint8_t as_assign,
+                                    struct v7_property **res) {
+  enum v7_err rcode = V7_OK;
+  val_t name_val = v7_mk_undefined();
+  /* def_property_v can trigger GC */
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
+  tmp_stack_push(&tf, &val);
+  tmp_stack_push(&tf, &name_val);
+
+  if (len == (size_t) ~0) {
+    len = strlen(name);
+  }
+
+  name_val = v7_mk_string(v7, name, len, 1);
+  V7_TRY(def_property_v(v7, obj, name_val, attrs_desc, val, as_assign, res));
+
+clean:
+  tmp_frame_cleanup(&tf);
+  return rcode;
+}
+
+V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                          v7_cfunction_t *func, int num_args) {
+  return v7_def(v7, obj, name, strlen(name), V7_DESC_ENUMERABLE(0),
+                v7_mk_function_nargs(v7, func, num_args));
+}
+
+int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                  v7_cfunction_t *func) {
+  return set_method(v7, obj, name, func, ~0);
+}
+
+V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                              v7_cfunction_t *f) {
+  return v7_def(v7, o, name, strlen(name), V7_DESC_ENUMERABLE(0),
+                v7_mk_cfunction(f));
+}
+
+/*
+ * See comments in `v7.h`
+ */
+int v7_del(struct v7 *v7, val_t obj, const char *name, size_t len) {
+  struct v7_property *prop, *prev;
+
+  if (!v7_is_object(obj)) {
+    return -1;
+  }
+  if (len == (size_t) ~0) {
+    len = strlen(name);
+  }
+  for (prev = NULL, prop = v7_to_object(obj)->properties; prop != NULL;
+       prev = prop, prop = prop->next) {
+    size_t n;
+    const char *s = v7_get_string_data(v7, &prop->name, &n);
+    if (n == len && strncmp(s, name, len) == 0) {
+      if (prev) {
+        prev->next = prop->next;
+      } else {
+        v7_to_object(obj)->properties = prop->next;
+      }
+      v7_destroy_property(&prop);
+      return 0;
+    }
+  }
+  return -1;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_property_value(struct v7 *v7, val_t obj,
+                                         struct v7_property *p, val_t *res) {
+  enum v7_err rcode = V7_OK;
+  if (p == NULL) {
+    *res = V7_UNDEFINED;
+    goto clean;
+  }
+  if (p->attributes & V7_PROPERTY_GETTER) {
+    val_t getter = p->value;
+    if (p->attributes & V7_PROPERTY_SETTER) {
+      getter = v7_array_get(v7, p->value, 0);
+    }
+    {
+      V7_TRY(b_apply(v7, getter, obj, V7_UNDEFINED, 0, res));
+      goto clean;
+    }
+  }
+
+  *res = p->value;
+  goto clean;
+
+clean:
+  return rcode;
+}
+
+void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
+                   v7_prop_attr_t *attrs) {
+  struct v7_property *p;
+  if (handle == NULL) {
+    p = v7_to_object(obj)->properties;
+  } else {
+    p = ((struct v7_property *) handle)->next;
+  }
+  if (p != NULL) {
+    if (name != NULL) *name = p->name;
+    if (value != NULL) *value = p->value;
+    if (attrs != NULL) *attrs = p->attributes;
+  }
+  return p;
+}
+
+/* }}} Object properties */
+
+/* Object prototypes {{{ */
+
+V7_PRIVATE int obj_prototype_set(struct v7 *v7, struct v7_object *obj,
+                                 struct v7_object *proto) {
+  int ret = -1;
+  (void) v7;
+
+  if (obj->attributes & V7_OBJ_FUNCTION) {
+    ret = -1;
+  } else {
+    ((struct v7_generic_object *) obj)->prototype = proto;
+    ret = 0;
+  }
+
+  return ret;
+}
+
+V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
+                                           struct v7_object *obj) {
+  if (obj->attributes & V7_OBJ_FUNCTION) {
+    return v7_to_object(v7->vals.function_prototype);
+  } else {
+    return ((struct v7_generic_object *) obj)->prototype;
+  }
+}
+
+V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj) {
+  /*
+   * NOTE: we don't use v7_is_callable() here, because it involves walking
+   * through the object's properties, which may be expensive. And it's done
+   * anyway for cfunction objects as it would for any other generic objects by
+   * the call to `obj_prototype()`.
+   *
+   * Since this function is called quite often (at least, GC walks the
+   * prototype chain), it's better to just handle cfunction objects as generic
+   * objects.
+   */
+  if (v7_is_function(obj) || v7_is_cfunction_ptr(obj)) {
+    return v7->vals.function_prototype;
+  }
+  return v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
+}
+
+V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
+  if (!v7_is_object(o) || !v7_is_object(p)) {
+    return 0;
+  }
+
+  /* walk the prototype chain */
+  for (; !v7_is_null(o); o = obj_prototype_v(v7, o)) {
+    if (obj_prototype_v(v7, o) == p) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int v7_is_instanceof(struct v7 *v7, val_t o, const char *c) {
+  return v7_is_instanceof_v(v7, o, v7_get(v7, v7->vals.global_object, c, ~0));
+}
+
+int v7_is_instanceof_v(struct v7 *v7, val_t o, val_t c) {
+  return is_prototype_of(v7, o, v7_get(v7, c, "prototype", 9));
+}
+
+v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto) {
+  if (v7_is_generic_object(obj)) {
+    v7_val_t old_proto =
+        v7_object_to_value(obj_prototype(v7, v7_to_object(obj)));
+    obj_prototype_set(v7, v7_to_object(obj), v7_to_object(proto));
+    return old_proto;
+  } else {
+    return v7_mk_undefined();
+  }
+}
+
+/* }}} Object prototypes */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/regexp.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/regexp.h" */
+/* Amalgamated: #include "v7/src/slre.h" */
+
+#if V7_ENABLE__RegExp
+enum v7_err v7_mk_regexp(struct v7 *v7, const char *re, size_t re_len,
+                         const char *flags, size_t flags_len, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  struct slre_prog *p = NULL;
+  struct v7_regexp *rp;
+
+  if (re_len == ~((size_t) 0)) re_len = strlen(re);
+
+  if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
+      p == NULL) {
+    rcode = v7_throwf(v7, TYPE_ERROR, "Invalid regex");
+    goto clean;
+  } else {
+    *res = mk_object(v7, v7->vals.regexp_prototype);
+    rp = (struct v7_regexp *) malloc(sizeof(*rp));
+    rp->regexp_string = v7_mk_string(v7, re, re_len, 1);
+    v7_own(v7, &rp->regexp_string);
+    rp->compiled_regexp = p;
+    rp->lastIndex = 0;
+
+    v7_def(v7, *res, "", 0, _V7_DESC_HIDDEN(1),
+           v7_pointer_to_value(rp) | V7_TAG_REGEXP);
+  }
+
+clean:
+  return rcode;
+}
+
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
+  struct v7_property *p;
+  int is = v7_is_regexp(v7, v);
+  (void) is;
+  assert(is == 1);
+  p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
+  assert(p != NULL);
+  return (struct v7_regexp *) v7_to_pointer(p->value);
+}
+
+int v7_is_regexp(struct v7 *v7, val_t v) {
+  struct v7_property *p;
+  if (!v7_is_generic_object(v)) return 0;
+  p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
+  if (p == NULL) return 0;
+  return (p->value & V7_TAG_MASK) == V7_TAG_REGEXP;
+}
+
+#else /* V7_ENABLE__RegExp */
+
+/*
+ * Dummy implementation when RegExp support is disabled: just return 0
+ */
+int v7_is_regexp(struct v7 *v7, val_t v) {
+  (void) v7;
+  (void) v;
+  return 0;
+}
+
+#endif /* V7_ENABLE__RegExp */
+#ifdef V7_MODULE_LINES
 #line 1 "./src/exceptions.c"
 /**/
 #endif
@@ -15924,6 +16006,7 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
   v7->vals.thrown_error = val;
@@ -16045,6 +16128,7 @@ clean:
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 #ifdef V7_TEMP_OFF
 int double_to_str(char *buf, size_t buf_size, double val, int prec);
@@ -16826,6 +16910,7 @@ clean:
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 #include <stdio.h>
 
@@ -17647,6 +17732,7 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "common/base64.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 #include <stdio.h>
 
@@ -22272,6 +22358,7 @@ clean:
 /* Amalgamated: #include "v7/src/std_regex.h" */
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/js_stdlib.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 #ifdef NO_LIBC
 void print_str(const char *str);
@@ -24597,6 +24684,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 #if V7_ENABLE__Object__getPrototypeOf
 WARN_UNUSED_RESULT
@@ -25148,6 +25236,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   /* TODO(mkm): figure out if this is an error object and which kind */
@@ -25241,6 +25330,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
@@ -25483,6 +25573,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
@@ -25523,6 +25614,7 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 struct a_sort_data {
   val_t sort_func;
@@ -26362,6 +26454,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
@@ -26462,6 +26555,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 #if V7_ENABLE__Math
 
@@ -26724,6 +26818,8 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/regexp.h" */
 
 /* Substring implementations: RegExp-based and String-based {{{ */
 
@@ -26916,40 +27012,6 @@ V7_PRIVATE enum v7_err Str_fromCharCode(struct v7 *v7, v7_val_t *res) {
     *res = s_concat(v7, *res, s);
   }
 
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, val_t obj, val_t arg,
-                                       double *res) {
-  enum v7_err rcode = V7_OK;
-  size_t n;
-  val_t s = v7_mk_undefined();
-  const char *p = NULL;
-  double at = v7_to_number(arg);
-
-  *res = 0;
-
-  rcode = to_string(v7, obj, &s, NULL, 0, NULL);
-  if (rcode != V7_OK) {
-    goto clean;
-  }
-
-  p = v7_get_string_data(v7, &s, &n);
-
-  n = utfnlen(p, n);
-  if (v7_is_number(arg) && at >= 0 && at < n) {
-    Rune r = 0;
-    p = utfnshift(p, at);
-    chartorune(&r, (char *) p);
-    *res = r;
-    goto clean;
-  } else {
-    *res = NAN;
-    goto clean;
-  }
-
-clean:
   return rcode;
 }
 
@@ -27982,6 +28044,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
@@ -29164,6 +29227,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Function_ctor(struct v7 *v7, v7_val_t *res) {
@@ -29374,6 +29438,8 @@ V7_PRIVATE void init_function(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/regexp.h" */
 
 #if V7_ENABLE__RegExp
 
