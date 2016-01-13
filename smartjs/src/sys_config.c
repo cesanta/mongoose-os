@@ -98,11 +98,6 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_str(toks, "update.server_address",
-                      &dst->update.server_address) == 0 &&
-      require_keys)
-    goto done;
-
   if (sj_conf_get_int(toks, "update.server_timeout",
                       &dst->update.server_timeout) == 0 &&
       require_keys)

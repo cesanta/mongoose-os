@@ -241,16 +241,16 @@ $(FW_METADATA_FILE) : $(FW_FILES_OUT)
 	$(eval BUILD_SHA=$(shell git rev-parse HEAD | head -c 8))
 	$(Q) sed -e 's,%VERSION%,\"$(FW_VERSION)\",' \
 	  -e 's,%NAME%,smartjs,' \
-	  -e 's,%BUILD%,$(BUILD_REF)/$(BUILD_SHA),' \
-	  -e 's,%DESCRIPTION%,,' \
-	  -e 's,%PLATFORM%,esp8266,' \
-	  -e 's,%TIMESTAMP%,$(TIMESTAMP),' \
-	  -e 's,%FW_FILE%,/updates/$(notdir $(FW_FILE_2_OUT)),' \
-	  -e 's,%FS_FILE%,/updates/$(notdir $(FW_FS_OUT)),' \
-	  -e 's,%FW_CHECKSUM%,$(shell sha1sum $(FW_FILE_2_OUT) | awk '{print $$1}'),' \
-	  -e 's,%FS_CHECKSUM%,$(shell sha1sum $(FW_FS_OUT) | awk '{print $$1}'),' \
-	  -e 's,%BOOT_FILE%,/updates/$(notdir $(FW_FILE_1_OUT)),' \
-	  -e 's,%BOOT_CHECKSUM%,$(shell sha1sum $(FW_FILE_1_OUT) | awk '{print $$1}'),' \
+		-e 's,%BUILD%,$(BUILD_REF)/$(BUILD_SHA),' \
+		-e 's,%DESCRIPTION%,,' \
+		-e 's,%PLATFORM%,esp8266,' \
+		-e 's,%TIMESTAMP%,$(TIMESTAMP),' \
+		-e 's,%FW_FILE%,$(notdir $(FW_FILE_2_OUT)),' \
+		-e 's,%FS_FILE%,$(notdir $(FW_FS_OUT)),' \
+		-e 's,%FW_CHECKSUM%,$(shell sha1sum $(FW_FILE_2_OUT) | awk '{print $$1}'),' \
+		-e 's,%FS_CHECKSUM%,$(shell sha1sum $(FW_FS_OUT) | awk '{print $$1}'),' \
+		-e 's,%BOOT_FILE%,$(notdir $(FW_FILE_1_OUT)),' \
+		-e 's,%BOOT_CHECKSUM%,$(shell sha1sum $(FW_FILE_1_OUT) | awk '{print $$1}'),' \
 	  ./user/metadata.json.in > $@
 
 # Main output product: firmware files.

@@ -74,15 +74,75 @@ uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
 }
 
-static void do_http_connect(const char *uri) {
-  static char *url;
-  asprintf(&url, "http%s://%s%s", get_cfg()->tls.enable ? "s" : "",
-           get_cfg()->update.server_address, uri);
-  LOG(LL_DEBUG, ("Full url: %s", url));
+/*
+ * Compose full url from metadata full url and FW relative url
+ *
+ * http://myserver/myfolder/metadata.json + ....
+ * /updates/blah/0x11000.bin -> myserver/updates/blah/0x11000.bin
+ * updates/blah/0x11000.bin ->
+ *                      myserver/myfolder/updates/blah/0x11000.bin
+ * //otherserver/updates/blah/0x11000.bin ->
+ *                otherserver/myfolder/updates/blah/0x11000.bin
+ */
+char *get_full_url(const char *base_url, const char *relative_url) {
+  char *ret;
+  /*
+   * some of libc implementation marks asprintf with WARN_UNUSED_RESULT
+   * this is fake attention to asprintf retval
+   */
+  int res;
+  (void) res;
+  if (strncmp(relative_url, "//", 2) == 0) {
+    /* uri is full url, just skipping `//` */
+    char *proto = NULL;
+    int proto_len = 0;
+    if (strncmp(base_url, "https", 5) == 0) {
+      proto = "https://";
+      proto_len = 8;
+    } else {
+      proto = "http://";
+      proto_len = 7;
+    }
+    res = asprintf(&ret, "%.*s%s", proto_len, proto, relative_url + 2);
+  } else if (strncmp(relative_url, "/", 1) == 0) {
+    /* /updates/blah/0x11000.bin -> myserver/updates/blah/0x11000.bin */
+    const char *start_pos = strstr(base_url, "//");
+    if (start_pos == NULL) {
+      start_pos = base_url;
+    } else {
+      start_pos += 2;
+    }
+    while (*start_pos != 0 && *start_pos != '/') {
+      start_pos++;
+    }
+    if (start_pos != 0) {
+      res = asprintf(&ret, "%.*s%s", (int) (start_pos - base_url), base_url,
+                     relative_url);
+    }
+  } else {
+    /*
+     * updates/blah/0x11000.bin ->
+     *                      myserver/myfolder/updates/blah/0x11000.bin
+     */
+    const char *server_base = base_url + strlen(base_url) - 1;
+    while (server_base != base_url && *server_base != '/') {
+      server_base--;
+    }
+    if (server_base != base_url) {
+      res = asprintf(&ret, "%.*s%s", (int) (server_base - base_url + 1),
+                     base_url, relative_url);
+    }
+  }
+
+  return ret;
+}
+
+static void do_http_connect(const char *url) {
+  LOG(LL_DEBUG, ("Url: %s", url));
   s_current_connection =
       mg_connect_http(&sj_mgr, mg_ev_handler, url, NULL, NULL);
 #ifdef SSL_KRYPTON
-  if (get_cfg()->tls.enabled) {
+  if (memcmp(url, "https", 5) == 0 && get_cfg()->tls.enabled) {
     char *ca_file = get_cfg()->tls.ca_file[0] ? get_cfg()->tls.ca_file : NULL;
     char *server_name = get_cfg()->tls.server_name;
     mg_set_ssl(s_current_connection, NULL, ca_file);
@@ -96,6 +156,12 @@ static void do_http_connect(const char *uri) {
     if (server_name != get_cfg()->update.tls_server_name) free(server_name);
   }
 #endif
+}
+
+static void do_http_connect_by_uri(const char *base_url,
+                                   const char *relative_url) {
+  char *url = get_full_url(base_url, relative_url);
+  do_http_connect(url);
   free(url);
 }
 
@@ -340,8 +406,7 @@ void update_timer_cb(void *arg) {
   switch (s_update_status) {
     case US_NOT_STARTED: {
       /* Starting with loading metadata */
-      LOG(LL_DEBUG,
-          ("Loading metadata from %s", get_cfg()->update.metadata_url));
+      LOG(LL_DEBUG, ("Loading metadata"));
       do_http_connect(s_metadata_url);
       set_update_status(US_WAITING_METADATA);
       set_download_status(DS_IN_PROGRESS);
@@ -413,7 +478,7 @@ void update_timer_cb(void *arg) {
       LOG(LL_DEBUG, ("Address to write ROM: %X", s_current_write_address));
 
       LOG(LL_INFO, ("Loading %s", s_fw_url));
-      do_http_connect(s_fw_url);
+      do_http_connect_by_uri(s_metadata_url, s_fw_url);
       set_update_status(US_DOWNLOADING_FW);
       set_download_status(DS_IN_PROGRESS);
       goto cleanup;
@@ -439,7 +504,7 @@ void update_timer_cb(void *arg) {
           LOG(LL_DEBUG, ("Loading %s", s_fs_url));
           s_file_size = s_current_received = s_area_prepared = 0;
           s_current_write_address = get_fs_addr(s_new_rom_number);
-          do_http_connect(s_fs_url);
+          do_http_connect_by_uri(s_metadata_url, s_fs_url);
           set_update_status(US_DOWNLOADING_FS);
           set_download_status(DS_IN_PROGRESS);
         }

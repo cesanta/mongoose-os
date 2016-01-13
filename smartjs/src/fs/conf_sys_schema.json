@@ -29,8 +29,7 @@
   "wifi.ap.ip": { "title": "Access Point IP address" },
 
   "update": {"title": "Firmware updater"},
-  "update.server_address": {"title": "Update server"},
-  "update.metadata_url": {"title": "Update endpoint"},
+  "update.metadata_url": {"title": "Default update endpoint"},
   "update.server_timeout" : {"title" : "Server Timeout"},
   "http": { "title": "HTTP Server" },
   "http.port": { "title": "Listening Port" },

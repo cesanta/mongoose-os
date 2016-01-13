@@ -35,7 +35,6 @@ struct sys_config {
   } wifi;
   struct sys_config_update {
     char *metadata_url;
-    char *server_address;
     int server_timeout;
   } update;
   struct sys_config_clubby {
