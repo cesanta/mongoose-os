@@ -1,936 +1,6 @@
+#include "v7.h"
 #ifdef V7_MODULE_LINES
-#line 1 "./v7.h"
-/**/
-#endif
-/*
- * Copyright (c) 2013-2014 Cesanta Software Limited
- * All rights reserved
- *
- * This software is dual-licensed: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. For the terms of this
- * license, see <http: *www.gnu.org/licenses/>.
- *
- * You are free to use this software under the terms of the GNU General
- * Public License, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * Alternatively, you can license this software under a commercial
- * license, as set out in <https://www.cesanta.com/license>.
- */
-
-/*
- * === C/C++ API
- *
- * V7 uses 64-bit `v7_val_t` type to store JavaScript values. There are
- * several families of functions V7 provides:
- *
- * - `v7_exec_*()` execute a piece of JavaScript code, put result in `v7_val_t`
- * - `v7_mk_*()` convert C/C++ values into JavaScript `v7_val_t` values
- * - `v7_to_*()` convert JavaScript `v7_val_t` values into C/C++ values
- * - `v7_is_*()` test whether JavaScript `v7_val_t` value is of given type
- * - misc functions that throw exceptions, operate on arrays & objects,
- *   call JS functions, etc
- *
- * NOTE: V7 instance is single threaded. It does not protect
- * it's data structures by mutexes. If V7 instance is shared between several
- * threads, a care should be taken to serialize accesses.
- */
-
-#ifndef V7_HEADER_INCLUDED
-#define V7_HEADER_INCLUDED
-
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200809L
-#endif
-
-#include <stddef.h> /* For size_t */
-#include <stdio.h>  /* For FILE */
-
-/*
- * TODO(dfrank) : improve amalgamation, so that we'll be able to include
- * files here, and include common/osdep.h
- *
- * For now, copy-pasting `WARN_UNUSED_RESULT` here
- */
-#ifdef __GNUC__
-#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#else
-#define WARN_UNUSED_RESULT
-#endif
-
-#define V7_VERSION "1.0"
-
-#if (defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64__)) || \
-    (defined(_MSC_VER) && _MSC_VER <= 1200)
-#define V7_WINDOWS
-#endif
-
-#ifdef V7_WINDOWS
-typedef unsigned __int64 uint64_t;
-#else
-#include <inttypes.h>
-#endif
-typedef uint64_t v7_val_t;
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-/*
- * Property attributes bitmask
- */
-typedef unsigned int v7_prop_attr_t;
-#define V7_PROPERTY_NON_WRITABLE (1 << 0)
-#define V7_PROPERTY_NON_ENUMERABLE (1 << 1)
-#define V7_PROPERTY_NON_CONFIGURABLE (1 << 2)
-#define V7_PROPERTY_GETTER (1 << 3)
-#define V7_PROPERTY_SETTER (1 << 4)
-#define _V7_PROPERTY_HIDDEN (1 << 5)
-/* property not managed by V7 HEAP */
-#define _V7_PROPERTY_OFF_HEAP (1 << 6)
-/*
- * not a property attribute, but a flag for `v7_def()`. It's here in order to
- * keep all offsets in one place
- */
-#define _V7_DESC_PRESERVE_VALUE (1 << 7)
-
-/*
- * Internal helpers for `V7_DESC_...` macros
- */
-#define _V7_DESC_SHIFT 16
-#define _V7_DESC_MASK ((1 << _V7_DESC_SHIFT) - 1)
-#define _V7_MK_DESC(v, n) \
-  (((v7_prop_attr_desc_t)(n)) << _V7_DESC_SHIFT | ((v) ? (n) : 0))
-#define _V7_MK_DESC_INV(v, n) _V7_MK_DESC(!(v), (n))
-
-/*
- * Property attribute descriptors that may be given to `v7_def()`: for each
- * attribute (`v7_prop_attr_t`), there is a corresponding macro, which takes
- * param: either 1 (set attribute) or 0 (clear attribute). If some particular
- * attribute isn't mentioned at all, it's left unchanged (or default, if the
- * property is being created)
- *
- * There is additional flag: `V7_DESC_PRESERVE_VALUE`. If it is set, the
- * property value isn't changed (or set to `undefined` if the property is being
- * created)
- */
-typedef unsigned long v7_prop_attr_desc_t;
-#define V7_DESC_WRITABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_WRITABLE)
-#define V7_DESC_ENUMERABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_ENUMERABLE)
-#define V7_DESC_CONFIGURABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_CONFIGURABLE)
-#define V7_DESC_GETTER(v) _V7_MK_DESC(v, V7_PROPERTY_GETTER)
-#define V7_DESC_SETTER(v) _V7_MK_DESC(v, V7_PROPERTY_SETTER)
-#define V7_DESC_PRESERVE_VALUE _V7_DESC_PRESERVE_VALUE
-
-#define _V7_DESC_HIDDEN(v) _V7_MK_DESC(v, _V7_PROPERTY_HIDDEN)
-#define _V7_DESC_OFF_HEAP(v) _V7_MK_DESC(v, _V7_PROPERTY_OFF_HEAP)
-
-/*
- * Object attributes bitmask
- */
-typedef unsigned char v7_obj_attr_t;
-#define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
-#define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
-#define V7_OBJ_FUNCTION (1 << 2)       /* function object */
-#define V7_OBJ_OFF_HEAP (1 << 3)       /* object not managed by V7 HEAP */
-
-/* Opaque structure. V7 engine handler. */
-struct v7;
-
-enum v7_err {
-  V7_OK,
-  V7_SYNTAX_ERROR,
-  V7_EXEC_EXCEPTION,
-  V7_STACK_OVERFLOW,
-  V7_AST_TOO_LARGE,
-  V7_INVALID_ARG,
-  V7_INTERNAL_ERROR,
-};
-
-/* JavaScript -> C call interface */
-WARN_UNUSED_RESULT
-typedef enum v7_err(v7_cfunction_t)(struct v7 *v7, v7_val_t *res);
-
-/* Create V7 instance */
-struct v7 *v7_create(void);
-
-struct v7_mk_opts {
-  size_t object_arena_size;
-  size_t function_arena_size;
-  size_t property_arena_size;
-#ifdef V7_STACK_SIZE
-  void *c_stack_base;
-#endif
-#ifdef V7_FREEZE
-  /* if not NULL, dump JS heap after init */
-  char *freeze_file;
-#endif
-};
-struct v7 *v7_mk_opt(struct v7_mk_opts opts);
-
-/* Destroy V7 instance */
-void v7_destroy(struct v7 *v7);
-
-/*
- * Execute JavaScript `js_code`. The result of evaluation is stored in
- * the `result` variable.
- *
- * Return:
- *
- *  - V7_OK on success. `result` contains the result of execution.
- *  - V7_SYNTAX_ERROR if `js_code` in not a valid code. `result` is undefined.
- *  - V7_EXEC_EXCEPTION if `js_code` threw an exception. `result` stores
- *    an exception object.
- *  - V7_AST_TOO_LARGE if `js_code` contains an AST segment longer than 16 bit.
- *    `result` is undefined. To avoid this error, build V7 with V7_LARGE_AST.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *result);
-
-/*
- * Same as `v7_exec()`, but loads source code from `path` file.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_exec_file(struct v7 *v7, const char *path, v7_val_t *result);
-
-/*
- * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
- * context.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_exec_with(struct v7 *v7, const char *js_code, v7_val_t this_obj,
-                         v7_val_t *result);
-
-/*
- * Parse `str` and store corresponding JavaScript object in `res` variable.
- * String `str` should be '\0'-terminated.
- * Return value and semantic is the same as for `v7_exec()`.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res);
-
-/*
- * Same as `v7_parse_json()`, but loads JSON string from `path`.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res);
-
-/*
- * Compile JavaScript code `js_code` into the byte code and write generated
- * byte code into opened file stream `fp`. If `generate_binary_output` is 0,
- * then generated byte code is in human-readable text format. Otherwise, it is
- * in the binary format, suitable for execution by V7 instance.
- * NOTE: `fp` must be a valid, opened, writable file stream.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_compile(const char *js_code, int generate_binary_output,
-                       int use_bcode, FILE *fp);
-
-/* Make an empty object */
-v7_val_t v7_mk_object(struct v7 *v7);
-
-/* Make an empty array object */
-v7_val_t v7_mk_array(struct v7 *v7);
-
-/*
- * Make a JS function object backed by a cfunction.
- *
- * `func` is a C callback.
- *
- * A function object is JS object having the Function prototype that holds a
- * cfunction value in a hidden property.
- *
- * The function object will have a `prototype` property holding an object that
- * will be used as the prototype of objects created when calling the function
- * with the `new` operator.
- */
-v7_val_t v7_mk_function(struct v7 *, v7_cfunction_t *func);
-
-/* Make f a JS constructor function for objects with prototype in proto. */
-v7_val_t v7_mk_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t *f);
-
-/* Make numeric primitive value */
-v7_val_t v7_mk_number(double num);
-
-/* Make boolean primitive value (either `true` or `false`) */
-v7_val_t v7_mk_boolean(int is_true);
-
-/* Make `null` primitive value */
-v7_val_t v7_mk_null(void);
-
-/* Make `undefined` primitive value */
-v7_val_t v7_mk_undefined(void);
-
-/*
- * Creates a string primitive value.
- * `str` must point to the utf8 string of length `len`.
- * If `len` is ~0, `str` is assumed to be NUL-terminated and `strlen(str)` is
- * used.
- *
- * If `copy` is non-zero, the string data is copied and owned by the GC. The
- * caller can free the string data afterwards. Otherwise (`copy` is zero), the
- * caller owns the string data, and is responsible for not freeing it while it
- * is used.
- */
-v7_val_t v7_mk_string(struct v7 *v7, const char *str, size_t len, int copy);
-
-/*
- * Make RegExp object.
- * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
- * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
- * If `regex_len` is ~0, `regex` is assumed to be NUL-terminated and
- * `strlen(regex)` is used.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_mk_regexp(struct v7 *v7, const char *regex, size_t regex_len,
-                         const char *flags, size_t flags_len, v7_val_t *res);
-
-/*
- * Make JavaScript value that holds C/C++ `void *` pointer.
- *
- * A foreign value is completely opaque and JS code cannot do anything useful
- * with it except holding it in properties and passing it around.
- * It behaves like a sealed object with no properties.
- *
- * NOTE:
- * Only valid pointers (as defined by each supported architecture) will fully
- * preserved. In particular, all supported 64-bit architectures (x86_64, ARM-64)
- * actually define a 48-bit virtual address space.
- * Foreign values will be sign-extended as required, i.e creating a foreign
- * value of something like `(void *) -1` will work as expected. This is
- * important because in some 64-bit OSs (e.g. Solaris) the user stack grows
- * downwards from the end of the address space.
- *
- * If you need to store exactly sizeof(void*) bytes of raw data where
- * `sizeof(void*)` >= 8, please use byte arrays instead.
- */
-v7_val_t v7_mk_foreign(void *ptr);
-
-/*
- * Make a JS value that holds C/C++ callback pointer.
- *
- * This is a low-level function value. It's not a real object and cannot hold
- * user defined properties. You should use `v7_mk_function` unless you know
- * what you're doing.
- */
-v7_val_t v7_mk_cfunction(v7_cfunction_t *func);
-
-/*
- * Returns true if the given value is an object or function.
- * i.e. it returns true if the value holds properties and can be
- * used as argument to `v7_get`, `v7_set` and `v7_def`.
- */
-int v7_is_object(v7_val_t v);
-
-/* Returns true if given value is a JavaScript function object */
-int v7_is_function(v7_val_t v);
-
-/* Returns true if given value is a primitive string value */
-int v7_is_string(v7_val_t v);
-
-/* Returns true if given value is a primitive boolean value */
-int v7_is_boolean(v7_val_t v);
-
-/* Returns true if given value is a primitive number value */
-int v7_is_number(v7_val_t v);
-
-/* Returns true if given value is a primitive `null` value */
-int v7_is_null(v7_val_t v);
-
-/* Returns true if given value is a primitive `undefined` value */
-int v7_is_undefined(v7_val_t v);
-
-/* Returns true if given value is a JavaScript RegExp object*/
-int v7_is_regexp(struct v7 *v7, v7_val_t v);
-
-/* Returns true if given value holds a pointer to C callback */
-int v7_is_cfunction_ptr(v7_val_t v);
-
-/* Returns true if given value holds an object which represents C callback */
-int v7_is_cfunction_obj(struct v7 *v7, v7_val_t v);
-
-/*
- * Returns true if given value is either cfunction pointer or cfunction object
- */
-int v7_is_cfunction(struct v7 *v7, v7_val_t v);
-
-/*
- * Returns true if given value is callable (i.e. it's either a JS function,
- * cfunction pointer or cfunction object)
- */
-int v7_is_callable(struct v7 *v7, v7_val_t v);
-
-/* Returns true if given value holds `void *` pointer */
-int v7_is_foreign(v7_val_t v);
-
-/* Returns true if given value is an array object */
-int v7_is_array(struct v7 *v7, v7_val_t v);
-
-/* Returns true if the object is an instance of a given constructor. */
-int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
-
-/* Returns true if the object is an instance of a given constructor. */
-int v7_is_instanceof_v(struct v7 *v7, v7_val_t o, v7_val_t c);
-
-/* Returns true if given value evaluates to true, as in `if (v)` statement. */
-int v7_is_truthy(struct v7 *v7, v7_val_t v);
-
-/*
- * Returns `void *` pointer stored in `v7_val_t`.
- *
- * Returns NULL if the value is not a foreign pointer.
- */
-void *v7_to_foreign(v7_val_t v);
-
-/*
- * Returns boolean stored in `v7_val_t`:
- *  0 for `false` or non-boolean, non-0 for `true`
- */
-int v7_to_boolean(v7_val_t v);
-
-/*
- * Returns `double` value stored in `v7_val_t`.
- *
- * Returns NaN for non-numbers.
- */
-double v7_to_number(v7_val_t v);
-
-/*
- * Returns `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
- * if given value is neither cfunction pointer nor cfunction object.
- */
-v7_cfunction_t *v7_to_cfunction(struct v7 *v7, v7_val_t v);
-
-/*
- * Returns a pointer to the string stored in `v7_val_t`.
- *
- * String length returned in `len`.
- *
- * JS strings can contain embedded NUL chars and may or may not be NUL
- * terminated.
- *
- * CAUTION: creating new JavaScript object, array, or string may kick in a
- * garbage collector, which in turn may relocate string data and invalidate
- * pointer returned by `v7_get_string_data()`.
- *
- * Short JS strings are embedded inside the `v7_val_t` value itself. This is why
- * a pointer to a `v7_val_t` is required. It also means that the string data
- * will become invalid once that `v7_val_t` value goes out of scope.
- */
-const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
-
-/*
- * Returns a pointer to the string stored in `v7_val_t`.
- *
- * Returns NULL if the value is not a string or if the string is not compatible
- * with a C string.
- *
- * C compatible strings contain exactly one NUL char, in terminal position.
- *
- * All strings owned by the V7 engine (see v7_mk_string) are guaranteed to
- * be NUL terminated.
- * Out of these, those that don't include embedded NUL chars are guaranteed to
- * be C compatible.
- */
-const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
-
-/* Return root level (`global`) object of the given V7 instance. */
-v7_val_t v7_get_global(struct v7 *v);
-
-/* Return current `this` object. */
-v7_val_t v7_get_this(struct v7 *v);
-
-/* Return current `arguments` array */
-v7_val_t v7_get_arguments(struct v7 *v);
-
-/* Return i-th argument */
-v7_val_t v7_arg(struct v7 *v, unsigned long i);
-
-/* Return the length of `arguments` */
-unsigned long v7_argc(struct v7 *v7);
-
-/*
- * Object interface.
- */
-
-/* Set object's prototype. Return old prototype or undefined on error. */
-v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
-
-/*
- * Lookup property `name` in object `obj`. If `obj` holds no such property,
- * an `undefined` value is returned.
- *
- * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
- * `strlen(name)` is used.
- */
-v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
-
-/*
- * Like `v7_get()`, but "returns" value through `res` pointer argument.
- * `res` must not be `NULL`.
- *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
-                            size_t name_len, v7_val_t *res);
-
-/*
- * Define object property, similar to JavaScript `Object.defineProperty()`.
- *
- * `name`, `name_len` specify property name, `val` is a property value.
- * `attrs_desc` is a set of flags which can affect property's attributes,
- * see comment of `v7_prop_attr_desc_t` for details.
- *
- * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
- * `strlen(name)` is used.
- *
- * Returns non-zero on success, 0 on error (e.g. out of memory).
- *
- * See also `v7_set()`.
- */
-int v7_def(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
-           v7_prop_attr_desc_t attrs_desc, v7_val_t v);
-
-/*
- * Set object property. Behaves just like JavaScript assignment.
- *
- * See also `v7_def()`.
- */
-int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t len,
-           v7_val_t val);
-
-/*
- * A helper function to define object's method backed by a C function `func`.
- * `name` must be NUL-terminated.
- *
- * Return value is the same as for `v7_set()`.
- */
-int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
-                  v7_cfunction_t *func);
-
-/*
- * Delete own property `name` of the object `obj`. Does not follow the
- * prototype chain.
- *
- * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
- * `strlen(name)` is used.
- *
- * Returns 0 on success, -1 on error.
- */
-int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
-
-/*
- * Iterate over the `obj`'s properties.
- *
- * Usage example:
- *
- *     void *h = NULL;
- *     v7_val_t name, val;
- *     unsigned int attrs;
- *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
- *       ...
- *     }
- */
-void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   v7_prop_attr_t *attrs);
-
-/*
- * Array interface.
- */
-
-/* Returns length on an array. If `arr` is not an array, 0 is returned. */
-unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
-
-/* Insert value `v` in array `arr` at the end of the array. */
-int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
-
-/*
- * Like `v7_array_push()`, but "returns" value through the `res` pointer
- * argument. `res` is allowed to be `NULL`.
- *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
-                                   int *res);
-
-/*
- * Return array member at index `index`. If `index` is out of bounds, undefined
- * is returned.
- */
-v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
-
-/* Insert value `v` into `arr` at index `index`. */
-int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
-
-/*
- * Like `v7_array_set()`, but "returns" value through the `res` pointer
- * argument. `res` is allowed to be `NULL`.
- *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
-                                  unsigned long index, v7_val_t v, int *res);
-
-/* Delete value in array `arr` at index `index`, if it exists. */
-void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
-
-/*
- * Generate string representation of the JavaScript value `val` into a buffer
- * `buf`, `len`. If `len` is too small to hold a generated string,
- * `v7_stringify()` allocates required memory. In that case, it is caller's
- * responsibility to free the allocated buffer. Generated string is guaranteed
- * to be 0-terminated.
- *
- * Available stringification modes are:
- *
- * - V7_STRINGIFY_DEFAULT:
- *   Convert JS value to string, using common JavaScript semantics:
- *   - If value is an object:
- *     - call `toString()`;
- *     - If `toString()` returned non-primitive value, call `valueOf()`;
- *     - If `valueOf()` returned non-primitive value, throw `TypeError`.
- *   - Now we have a primitive, and if it's not a string, then stringify it.
- *
- * - V7_STRINGIFY_JSON:
- *   Generate JSON output
- *
- * - V7_STRINGIFY_DEBUG:
- *   Mostly like JSON, but will not omit non-JSON objects like functions.
- *
- * Example code:
- *
- *     char buf[100], *p;
- *     p = v7_stringify(v7, obj, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
- *     printf("JSON string: [%s]\n", p);
- *     if (p != buf) {
- *       free(p);
- *     }
- */
-enum v7_stringify_mode {
-  V7_STRINGIFY_DEFAULT,
-  V7_STRINGIFY_JSON,
-  V7_STRINGIFY_DEBUG,
-};
-char *v7_stringify(struct v7 *v7, v7_val_t v, char *buf, size_t len,
-                   enum v7_stringify_mode mode);
-
-/*
- * Like `v7_stringify()`, but "returns" value through the `res` pointer
- * argument. `res` must not be `NULL`.
- *
- * Caller should check the error code returned, and if it's something other
- * than `V7_OK`, perform cleanup and return this code further.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
-                                  size_t size, enum v7_stringify_mode mode,
-                                  char **res);
-
-/*
- * A shortcut for `v7_stringify()` with `V7_STRINGIFY_JSON`
- */
-#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
-
-/* Output a string representation of the value to stdout.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_print(struct v7 *v7, v7_val_t v);
-
-/* Output a string representation of the value to stdout followed by a newline.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_println(struct v7 *v7, v7_val_t v);
-
-/* Output a string representation of the value to a file.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
-
-/* Output a string representation of the value to a file followed by a newline.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
-
-/* Output stack trace recorded in the exception `e` to file `f` */
-void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
-
-/* Output error object message and possibly stack trace to f */
-void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
-
-/*
- * Call function `func` with arguments `args`, using `this_obj` as `this`.
- * `args` should be an array containing arguments or `undefined`.
- *
- * `res` can be `NULL` if return value is not required.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                     v7_val_t args, v7_val_t *res);
-
-/* Throw an exception with an already existing value. */
-WARN_UNUSED_RESULT
-enum v7_err v7_throw(struct v7 *v7, v7_val_t v);
-
-/*
- * Throw an exception with given formatted message.
- *
- * Pass "Error" as typ for a generic error.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt, ...);
-
-/*
- * Rethrow the currently thrown object. In fact, it just returns
- * V7_EXEC_EXCEPTION.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_rethrow(struct v7 *v7);
-
-/*
- * Returns the value that is being thrown at the moment, or `undefined` if
- * nothing is being thrown. If `is_thrown` is not `NULL`, it will be set
- * to either 0 or 1, depending on whether something is thrown at the moment.
- */
-v7_val_t v7_get_thrown_value(struct v7 *v7, unsigned char *is_thrown);
-
-/* Clears currently thrown value, if any. */
-void v7_clear_thrown_value(struct v7 *v7);
-
-/* Returns last parser error message. */
-const char *v7_get_parser_error(struct v7 *v7);
-
-enum v7_heap_stat_what {
-  V7_HEAP_STAT_HEAP_SIZE,
-  V7_HEAP_STAT_HEAP_USED,
-  V7_HEAP_STAT_STRING_HEAP_RESERVED,
-  V7_HEAP_STAT_STRING_HEAP_USED,
-  V7_HEAP_STAT_OBJ_HEAP_MAX,
-  V7_HEAP_STAT_OBJ_HEAP_FREE,
-  V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE,
-  V7_HEAP_STAT_FUNC_HEAP_MAX,
-  V7_HEAP_STAT_FUNC_HEAP_FREE,
-  V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE,
-  V7_HEAP_STAT_PROP_HEAP_MAX,
-  V7_HEAP_STAT_PROP_HEAP_FREE,
-  V7_HEAP_STAT_PROP_HEAP_CELL_SIZE,
-  V7_HEAP_STAT_FUNC_AST_SIZE,
-  V7_HEAP_STAT_FUNC_BCODE_SIZE,
-  V7_HEAP_STAT_FUNC_OWNED,
-  V7_HEAP_STAT_FUNC_OWNED_MAX
-};
-
-enum v7_stack_stat_what {
-  /* max stack size consumed by `i_exec()` */
-  V7_STACK_STAT_EXEC,
-  /* max stack size consumed by `parse()` (which is called from `i_exec()`) */
-  V7_STACK_STAT_PARSER,
-
-  V7_STACK_STATS_CNT
-};
-
-#if V7_ENABLE__Memory__stats
-/* Returns a given heap statistics */
-int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
-#endif
-
-#if defined(V7_ENABLE_STACK_TRACKING)
-int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
-void v7_stack_stat_clean(struct v7 *v7);
-#endif
-
-/*
- * Set an optional C stack limit.
- *
- * It sets a flag that will cause the interpreter
- * to throw an InterruptedError.
- * It's safe to call it from signal handlers and ISRs
- * on single threaded environments.
- */
-void v7_interrupt(struct v7 *v7);
-
-/*
- * Enable or disable GC.
- *
- * Must be called before invoking v7_exec or v7_apply
- * from within a cfunction unless you know what you're doing.
- *
- * GC is disabled during execution of cfunctions in order to simplify
- * memory management of simple cfunctions.
- * However executing even small snippets of JS code causes a lot of memory
- * pressure. Enabling GC solves that but forces you to take care of the
- * reachability of your temporary V7 v7_val_t variables, as the GC needs
- * to know where they are since objects and strings can be either reclaimed
- * or relocated during a GC pass.
- */
-void v7_set_gc_enabled(struct v7 *v7, int enabled);
-
-/*
- * Tells the GC about a JS value variable/field owned
- * by C code.
- *
- * User C code should own v7_val_t variables
- * if the value's lifetime crosses any invocation
- * to the v7 runtime that creates new objects or new
- * properties and thus can potentially trigger GC.
- *
- * The registration of the variable prevents the GC from mistakenly treat
- * the object as garbage. The GC might be triggered potentially
- * allows the GC to update pointers
- *
- * User code should also explicitly disown the variables with v7_disown once
- * it goes out of scope or the structure containing the v7_val_t field is freed.
- *
- * Example:
- *
- *  ```
- *    struct v7_val cb;
- *    v7_own(v7, &cb);
- *    cb = v7_array_get(v7, args, 0);
- *    // do something with cb
- *    v7_disown(v7, &cb);
- *  ```
- */
-void v7_own(struct v7 *v7, v7_val_t *v);
-
-/*
- * Returns 1 if value is found, 0 otherwise
- */
-int v7_disown(struct v7 *v7, v7_val_t *v);
-
-/*
- * Perform garbage collection.
- * Pass true to full in order to reclaim unused heap back to the OS.
- */
-void v7_gc(struct v7 *v7, int full);
-
-int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
-            void (*fini_func)(struct v7 *));
-
-#ifdef V7_STACK_SIZE
-/* Returns lowest recorded available stack size. */
-int v7_get_stack_avail_lwm(struct v7 *v7);
-#endif
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* V7_HEADER_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/v7_features.h"
-/**/
-#endif
-#ifndef V7_FEATURES_H_INCLUDED
-#define V7_FEATURES_H_INCLUDED
-
-#define V7_BUILD_PROFILE_MINIMAL 1
-#define V7_BUILD_PROFILE_MEDIUM 2
-#define V7_BUILD_PROFILE_FULL 3
-
-#ifndef V7_BUILD_PROFILE
-#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
-#endif
-
-/* Only one will actually be used based on V7_BUILD_PROFILE. */
-/* Amalgamated: #include "v7/src/features_minimal.h" */
-/* Amalgamated: #include "v7/src/features_medium.h" */
-/* Amalgamated: #include "v7/src/features_full.h" */
-
-#endif /* V7_FEATURES_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/features_full.h"
-/**/
-#endif
-#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL
-/*
- * DO NOT EDIT.
- * This file is generated by scripts/gen-features-full.pl.
- */
-
-#define V7_ENABLE__Array__reduce 1
-#define V7_ENABLE__Blob 1
-#define V7_ENABLE__Date 1
-#define V7_ENABLE__Date__UTC 1
-#define V7_ENABLE__Date__getters 1
-#define V7_ENABLE__Date__now 1
-#define V7_ENABLE__Date__parse 1
-#define V7_ENABLE__Date__setters 1
-#define V7_ENABLE__Date__toJSON 1
-#define V7_ENABLE__Date__toLocaleString 1
-#define V7_ENABLE__Date__toString 1
-#define V7_ENABLE__File__list 1
-#define V7_ENABLE__Function__bind 1
-#define V7_ENABLE__Function__call 1
-#define V7_ENABLE__Math 1
-#define V7_ENABLE__Math__abs 1
-#define V7_ENABLE__Math__acos 1
-#define V7_ENABLE__Math__asin 1
-#define V7_ENABLE__Math__atan 1
-#define V7_ENABLE__Math__atan2 1
-#define V7_ENABLE__Math__ceil 1
-#define V7_ENABLE__Math__constants 1
-#define V7_ENABLE__Math__cos 1
-#define V7_ENABLE__Math__exp 1
-#define V7_ENABLE__Math__floor 1
-#define V7_ENABLE__Math__log 1
-#define V7_ENABLE__Math__max 1
-#define V7_ENABLE__Math__min 1
-#define V7_ENABLE__Math__pow 1
-#define V7_ENABLE__Math__random 1
-#define V7_ENABLE__Math__round 1
-#define V7_ENABLE__Math__sin 1
-#define V7_ENABLE__Math__sqrt 1
-#define V7_ENABLE__Math__tan 1
-#define V7_ENABLE__Memory__stats 1
-#define V7_ENABLE__NUMBER__NEGATIVE_INFINITY 1
-#define V7_ENABLE__NUMBER__POSITIVE_INFINITY 1
-#define V7_ENABLE__Object__create 1
-#define V7_ENABLE__Object__defineProperties 1
-#define V7_ENABLE__Object__getOwnPropertyDescriptor 1
-#define V7_ENABLE__Object__getOwnPropertyNames 1
-#define V7_ENABLE__Object__getPrototypeOf 1
-#define V7_ENABLE__Object__hasOwnProperty 1
-#define V7_ENABLE__Object__isExtensible 1
-#define V7_ENABLE__Object__isPrototypeOf 1
-#define V7_ENABLE__Object__keys 1
-#define V7_ENABLE__Object__preventExtensions 1
-#define V7_ENABLE__Object__propertyIsEnumerable 1
-#define V7_ENABLE__RegExp 1
-#define V7_ENABLE__StackTrace 1
-#define V7_ENABLE__String__localeCompare 1
-#define V7_ENABLE__String__localeLowerCase 1
-#define V7_ENABLE__String__localeUpperCase 1
-
-#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/features_medium.h"
-/**/
-#endif
-#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
-
-#define V7_ENABLE__Date 1
-#define V7_ENABLE__Date__now 1
-#define V7_ENABLE__Date__UTC 1
-#define V7_ENABLE__Math 1
-#define V7_ENABLE__Math__atan2 1
-#define V7_ENABLE__RegExp 1
-
-#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/features_minimal.h"
-/**/
-#endif
-#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
-
-/* This space is intentionally left blank. */
-
-#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/license.h"
+#line 1 "./v7/src/license.h"
 /**/
 #endif
 /*
@@ -959,208 +29,7 @@ int v7_get_stack_avail_lwm(struct v7 *v7);
 #define V7_EXTERN static
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/tokenizer.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_TOKENIZER_H_INCLUDED
-#define V7_TOKENIZER_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-enum v7_tok {
-  TOK_END_OF_INPUT,
-  TOK_NUMBER,
-  TOK_STRING_LITERAL,
-  TOK_REGEX_LITERAL,
-  TOK_IDENTIFIER,
-
-  /* Punctuators */
-  TOK_OPEN_CURLY,
-  TOK_CLOSE_CURLY,
-  TOK_OPEN_PAREN,
-  TOK_CLOSE_PAREN,
-  TOK_COMMA,
-  TOK_OPEN_BRACKET,
-  TOK_CLOSE_BRACKET,
-  TOK_DOT,
-  TOK_COLON,
-  TOK_SEMICOLON,
-
-  /* Equality ops, in this order */
-  TOK_EQ,
-  TOK_EQ_EQ,
-  TOK_NE,
-  TOK_NE_NE,
-
-  /* Assigns */
-  TOK_ASSIGN,
-  TOK_REM_ASSIGN,
-  TOK_MUL_ASSIGN,
-  TOK_DIV_ASSIGN,
-  TOK_XOR_ASSIGN,
-  TOK_PLUS_ASSIGN,
-  TOK_MINUS_ASSIGN,
-  TOK_OR_ASSIGN,
-  TOK_AND_ASSIGN,
-  TOK_LSHIFT_ASSIGN,
-  TOK_RSHIFT_ASSIGN,
-  TOK_URSHIFT_ASSIGN,
-  TOK_AND,
-  TOK_LOGICAL_OR,
-  TOK_PLUS,
-  TOK_MINUS,
-  TOK_PLUS_PLUS,
-  TOK_MINUS_MINUS,
-  TOK_LOGICAL_AND,
-  TOK_OR,
-  TOK_QUESTION,
-  TOK_TILDA,
-  TOK_REM,
-  TOK_MUL,
-  TOK_DIV,
-  TOK_XOR,
-
-  /* Relational ops, must go in this order */
-  TOK_LE,
-  TOK_LT,
-  TOK_GE,
-  TOK_GT,
-  TOK_LSHIFT,
-  TOK_RSHIFT,
-  TOK_URSHIFT,
-  TOK_NOT,
-
-  /* Keywords. must be in the same order as tokenizer.c::s_keywords array */
-  TOK_BREAK,
-  TOK_CASE,
-  TOK_CATCH,
-  TOK_CONTINUE,
-  TOK_DEBUGGER,
-  TOK_DEFAULT,
-  TOK_DELETE,
-  TOK_DO,
-  TOK_ELSE,
-  TOK_FALSE,
-  TOK_FINALLY,
-  TOK_FOR,
-  TOK_FUNCTION,
-  TOK_IF,
-  TOK_IN,
-  TOK_INSTANCEOF,
-  TOK_NEW,
-  TOK_NULL,
-  TOK_RETURN,
-  TOK_SWITCH,
-  TOK_THIS,
-  TOK_THROW,
-  TOK_TRUE,
-  TOK_TRY,
-  TOK_TYPEOF,
-  TOK_VAR,
-  TOK_VOID,
-  TOK_WHILE,
-  TOK_WITH,
-
-  /* TODO(lsm): process these reserved words too */
-  TOK_CLASS,
-  TOK_ENUM,
-  TOK_EXTENDS,
-  TOK_SUPER,
-  TOK_CONST,
-  TOK_EXPORT,
-  TOK_IMPORT,
-  TOK_IMPLEMENTS,
-  TOK_LET,
-  TOK_PRIVATE,
-  TOK_PUBLIC,
-  TOK_INTERFACE,
-  TOK_PACKAGE,
-  TOK_PROTECTED,
-  TOK_STATIC,
-  TOK_YIELD,
-
-  NUM_TOKENS
-};
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE int skip_to_next_tok(const char **ptr);
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
-V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_TOKENIZER_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/cyg_profile.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CYG_PROFILE_H_INCLUDED
-#define CYG_PROFILE_H_INCLUDED
-
-/*
- * This file contains GCC/clang instrumentation callbacks, as well as
- * accompanying code. The actual code in these callbacks depends on enabled
- * features. See cyg_profile.c for some implementation details rationale.
- */
-
-struct v7;
-
-#if defined(V7_ENABLE_STACK_TRACKING)
-
-/*
- * Stack-tracking functionality:
- *
- * The idea is that the caller should allocate `struct stack_track_ctx`
- * (typically on stack) in the function to track the stack usage of, and call
- * `v7_stack_track_start()` in the beginning.
- *
- * Before quitting current stack frame (for example, before returning from
- * function), call `v7_stack_track_end()`, which returns the maximum stack
- * consumed size.
- *
- * These calls can be nested: for example, we may track the stack usage of the
- * whole application by using these functions in `main()`, as well as track
- * stack usage of any nested functions.
- *
- * Just to stress: both `v7_stack_track_start()` / `v7_stack_track_end()`
- * should be called for the same instance of `struct stack_track_ctx` in the
- * same stack frame.
- */
-
-/* stack tracking context */
-struct stack_track_ctx {
-  struct stack_track_ctx *next;
-  void *start;
-  void *max;
-};
-
-/* see explanation above */
-void v7_stack_track_start(struct v7 *v7, struct stack_track_ctx *ctx);
-/* see explanation above */
-int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx);
-
-void v7_stack_stat_clean(struct v7 *v7);
-
-#endif /* V7_ENABLE_STACK_TRACKING */
-
-#endif /* CYG_PROFILE_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/mbuf.h"
+#line 1 "./common/mbuf.h"
 /**/
 #endif
 /*
@@ -1242,81 +111,7 @@ void mbuf_trim(struct mbuf *);
 
 #endif /* MBUF_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/utf.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef _UTF_H_
-#define _UTF_H_ 1
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-typedef unsigned char uchar;
-
-typedef unsigned short Rune; /* 16 bits */
-
-#define nelem(a) (sizeof(a) / sizeof(a)[0])
-
-enum {
-  UTFmax = 3,               /* maximum bytes per rune */
-  Runesync = 0x80,          /* cannot represent part of a UTF sequence (<) */
-  Runeself = 0x80,          /* rune and UTF sequences are the same (<) */
-  Runeerror = 0xFFFD        /* decoding error in UTF */
-  /* Runemax    = 0xFFFC */ /* maximum rune value */
-};
-
-/* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
-int chartorune(Rune *rune, const char *str);
-int fullrune(const char *str, int n);
-int isdigitrune(Rune c);
-int isnewline(Rune c);
-int iswordchar(Rune c);
-int isalpharune(Rune c);
-int islowerrune(Rune c);
-int isspacerune(Rune c);
-int isupperrune(Rune c);
-int runetochar(char *str, Rune *rune);
-Rune tolowerrune(Rune c);
-Rune toupperrune(Rune c);
-int utfnlen(const char *s, long m);
-const char *utfnshift(const char *s, long m);
-
-#if 0 /* Not implemented. */
-int istitlerune(Rune c);
-int runelen(Rune c);
-int runenlen(Rune *r, int nrune);
-Rune *runestrcat(Rune *s1, Rune *s2);
-Rune *runestrchr(Rune *s, Rune c);
-Rune *runestrcpy(Rune *s1, Rune *s2);
-Rune *runestrdup(Rune *s);
-Rune *runestrecpy(Rune *s1, Rune *es1, Rune *s2);
-int runestrcmp(Rune *s1, Rune *s2);
-long runestrlen(Rune *s);
-Rune *runestrncat(Rune *s1, Rune *s2, long n);
-int runestrncmp(Rune *s1, Rune *s2, long n);
-Rune *runestrncpy(Rune *s1, Rune *s2, long n);
-Rune *runestrrchr(Rune *s, Rune c);
-Rune *runestrstr(Rune *s1, Rune *s2);
-Rune totitlerune(Rune c);
-char *utfecpy(char *to, char *e, char *from);
-int utflen(char *s);
-char *utfrrune(char *s, long c);
-char *utfrune(char *s, long c);
-char *utfutf(char *s1, char *s2);
-#endif
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-#endif /* _UTF_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/osdep.h"
+#line 1 "./common/osdep.h"
 /**/
 #endif
 /*
@@ -1579,7 +374,81 @@ int64_t strtoll(const char *str, char **endptr, int base);
 
 #endif /* OSDEP_HEADER_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/base64.h"
+#line 1 "./common/utf.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef _UTF_H_
+#define _UTF_H_ 1
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+typedef unsigned char uchar;
+
+typedef unsigned short Rune; /* 16 bits */
+
+#define nelem(a) (sizeof(a) / sizeof(a)[0])
+
+enum {
+  UTFmax = 3,               /* maximum bytes per rune */
+  Runesync = 0x80,          /* cannot represent part of a UTF sequence (<) */
+  Runeself = 0x80,          /* rune and UTF sequences are the same (<) */
+  Runeerror = 0xFFFD        /* decoding error in UTF */
+  /* Runemax    = 0xFFFC */ /* maximum rune value */
+};
+
+/* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
+int chartorune(Rune *rune, const char *str);
+int fullrune(const char *str, int n);
+int isdigitrune(Rune c);
+int isnewline(Rune c);
+int iswordchar(Rune c);
+int isalpharune(Rune c);
+int islowerrune(Rune c);
+int isspacerune(Rune c);
+int isupperrune(Rune c);
+int runetochar(char *str, Rune *rune);
+Rune tolowerrune(Rune c);
+Rune toupperrune(Rune c);
+int utfnlen(const char *s, long m);
+const char *utfnshift(const char *s, long m);
+
+#if 0 /* Not implemented. */
+int istitlerune(Rune c);
+int runelen(Rune c);
+int runenlen(Rune *r, int nrune);
+Rune *runestrcat(Rune *s1, Rune *s2);
+Rune *runestrchr(Rune *s, Rune c);
+Rune *runestrcpy(Rune *s1, Rune *s2);
+Rune *runestrdup(Rune *s);
+Rune *runestrecpy(Rune *s1, Rune *es1, Rune *s2);
+int runestrcmp(Rune *s1, Rune *s2);
+long runestrlen(Rune *s);
+Rune *runestrncat(Rune *s1, Rune *s2, long n);
+int runestrncmp(Rune *s1, Rune *s2, long n);
+Rune *runestrncpy(Rune *s1, Rune *s2, long n);
+Rune *runestrrchr(Rune *s, Rune c);
+Rune *runestrstr(Rune *s1, Rune *s2);
+Rune totitlerune(Rune c);
+char *utfecpy(char *to, char *e, char *from);
+int utflen(char *s);
+char *utfrrune(char *s, long c);
+char *utfrune(char *s, long c);
+char *utfutf(char *s1, char *s2);
+#endif
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+#endif /* _UTF_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./common/base64.h"
 /**/
 #endif
 /*
@@ -1620,7 +489,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #endif
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/md5.h"
+#line 1 "./common/md5.h"
 /**/
 #endif
 /*
@@ -1669,7 +538,7 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/sha1.h"
+#line 1 "./common/sha1.h"
 /**/
 #endif
 /*
@@ -1703,7 +572,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #endif /* __cplusplus */
 #endif /* MG_SHA1_HEADER_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/str_util.h"
+#line 1 "./common/str_util.h"
 /**/
 #endif
 /*
@@ -1738,7 +607,7 @@ size_t strnlen(const char *s, size_t maxlen);
 #endif
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/cs_dirent.h"
+#line 1 "./common/cs_dirent.h"
 /**/
 #endif
 #ifndef DIRENT_H_INCLUDED
@@ -1769,7 +638,7 @@ struct dirent *readdir(DIR *dir);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/ubjson.h"
+#line 1 "./common/ubjson.h"
 /**/
 #endif
 /*
@@ -1809,28 +678,7 @@ void cs_ubjson_close_array(struct mbuf *buf);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/cs_file.h"
-/**/
-#endif
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-/*
- * Read whole file `path` in memory. It is responsibility of the caller
- * to `free()` allocated memory. File content is guaranteed to be
- * '\0'-terminated. File size is returned in `size` variable, which does not
- * count terminating `\0`.
- * Return: allocated memory, or NULL on error.
- */
-char *cs_read_file(const char *path, size_t *size);
-
-#ifdef CS_MMAP
-char *cs_mmap_file(const char *path, size_t *size);
-#endif
-#ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/coroutine.h"
+#line 1 "./common/coroutine.h"
 /**/
 #endif
 /*
@@ -2419,7 +1267,316 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* _COROUTINE_H */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../builtin/builtin.h"
+#line 1 "./v7/src/features_minimal.h"
+/**/
+#endif
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
+
+/* This space is intentionally left blank. */
+
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/features_medium.h"
+/**/
+#endif
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
+
+#define V7_ENABLE__Date 1
+#define V7_ENABLE__Date__now 1
+#define V7_ENABLE__Date__UTC 1
+#define V7_ENABLE__Math 1
+#define V7_ENABLE__Math__atan2 1
+#define V7_ENABLE__RegExp 1
+
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/features_full.h"
+/**/
+#endif
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL
+/*
+ * DO NOT EDIT.
+ * This file is generated by scripts/gen-features-full.pl.
+ */
+
+#define V7_ENABLE__Array__reduce 1
+#define V7_ENABLE__Blob 1
+#define V7_ENABLE__Date 1
+#define V7_ENABLE__Date__UTC 1
+#define V7_ENABLE__Date__getters 1
+#define V7_ENABLE__Date__now 1
+#define V7_ENABLE__Date__parse 1
+#define V7_ENABLE__Date__setters 1
+#define V7_ENABLE__Date__toJSON 1
+#define V7_ENABLE__Date__toLocaleString 1
+#define V7_ENABLE__Date__toString 1
+#define V7_ENABLE__File__list 1
+#define V7_ENABLE__Function__bind 1
+#define V7_ENABLE__Function__call 1
+#define V7_ENABLE__Math 1
+#define V7_ENABLE__Math__abs 1
+#define V7_ENABLE__Math__acos 1
+#define V7_ENABLE__Math__asin 1
+#define V7_ENABLE__Math__atan 1
+#define V7_ENABLE__Math__atan2 1
+#define V7_ENABLE__Math__ceil 1
+#define V7_ENABLE__Math__constants 1
+#define V7_ENABLE__Math__cos 1
+#define V7_ENABLE__Math__exp 1
+#define V7_ENABLE__Math__floor 1
+#define V7_ENABLE__Math__log 1
+#define V7_ENABLE__Math__max 1
+#define V7_ENABLE__Math__min 1
+#define V7_ENABLE__Math__pow 1
+#define V7_ENABLE__Math__random 1
+#define V7_ENABLE__Math__round 1
+#define V7_ENABLE__Math__sin 1
+#define V7_ENABLE__Math__sqrt 1
+#define V7_ENABLE__Math__tan 1
+#define V7_ENABLE__Memory__stats 1
+#define V7_ENABLE__NUMBER__NEGATIVE_INFINITY 1
+#define V7_ENABLE__NUMBER__POSITIVE_INFINITY 1
+#define V7_ENABLE__Object__create 1
+#define V7_ENABLE__Object__defineProperties 1
+#define V7_ENABLE__Object__getOwnPropertyDescriptor 1
+#define V7_ENABLE__Object__getOwnPropertyNames 1
+#define V7_ENABLE__Object__getPrototypeOf 1
+#define V7_ENABLE__Object__hasOwnProperty 1
+#define V7_ENABLE__Object__isExtensible 1
+#define V7_ENABLE__Object__isPrototypeOf 1
+#define V7_ENABLE__Object__keys 1
+#define V7_ENABLE__Object__preventExtensions 1
+#define V7_ENABLE__Object__propertyIsEnumerable 1
+#define V7_ENABLE__RegExp 1
+#define V7_ENABLE__StackTrace 1
+#define V7_ENABLE__String__localeCompare 1
+#define V7_ENABLE__String__localeLowerCase 1
+#define V7_ENABLE__String__localeUpperCase 1
+
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/v7_features.h"
+/**/
+#endif
+#ifndef V7_FEATURES_H_INCLUDED
+#define V7_FEATURES_H_INCLUDED
+
+#define V7_BUILD_PROFILE_MINIMAL 1
+#define V7_BUILD_PROFILE_MEDIUM 2
+#define V7_BUILD_PROFILE_FULL 3
+
+#ifndef V7_BUILD_PROFILE
+#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
+#endif
+
+/* Only one will actually be used based on V7_BUILD_PROFILE. */
+/* Amalgamated: #include "v7/src/features_minimal.h" */
+/* Amalgamated: #include "v7/src/features_medium.h" */
+/* Amalgamated: #include "v7/src/features_full.h" */
+
+#endif /* V7_FEATURES_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/internal.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_INTERNAL_H_INCLUDED
+#define V7_INTERNAL_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/license.h" */
+
+/* Check whether we're compiling in an environment with no filesystem */
+#if defined(ARDUINO) && (ARDUINO == 106)
+#define V7_NO_FS
+#endif
+
+#ifndef FAST
+#define FAST
+#endif
+
+#ifndef STATIC
+#define STATIC
+#endif
+
+#ifndef ENDL
+#define ENDL "\n"
+#endif
+
+/*
+ * In some compilers (watcom) NAN == NAN (and other comparisons) don't follow
+ * the rules of IEEE 754. Since we don't know a priori which compilers
+ * will generate correct code, we disable the fallback on selected platforms.
+ * TODO(mkm): selectively disable on clang/gcc once we test this out.
+ */
+#define V7_BROKEN_NAN
+
+#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+
+#include <assert.h>
+#ifndef NO_LIBC
+#include <ctype.h>
+#endif
+#include <errno.h>
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+
+/* Public API. Implemented in api.c */
+/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "common/osdep.h" */
+
+#ifdef V7_WINDOWS
+#define vsnprintf _vsnprintf
+#define snprintf _snprintf
+
+/* VS2015 Update 1 has ISO C99 `isnan` and `isinf` defined in math.h */
+#if _MSC_FULL_VER < 190023506
+#define isnan(x) _isnan(x)
+#define isinf(x) (!_finite(x))
+#endif
+
+#define __unused __pragma(warning(suppress : 4100))
+typedef __int64 int64_t;
+typedef int int32_t;
+typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
+typedef unsigned char uint8_t;
+
+/* For 64bit VisualStudio 2010 */
+#ifndef _UINTPTR_T_DEFINED
+typedef unsigned long uintptr_t;
+#endif
+
+#ifndef __func__
+#define __func__ ""
+#endif
+
+#else
+#include <stdint.h>
+#endif
+
+/* Amalgamated: #include "v7/src/v7_features.h" */
+
+/* MSVC6 doesn't have standard C math constants defined */
+#ifndef M_E
+#define M_E 2.71828182845904523536028747135266250
+#endif
+
+#ifndef M_LOG2E
+#define M_LOG2E 1.44269504088896340735992468100189214
+#endif
+
+#ifndef M_LOG10E
+#define M_LOG10E 0.434294481903251827651128918916605082
+#endif
+
+#ifndef M_LN2
+#define M_LN2 0.693147180559945309417232121458176568
+#endif
+
+#ifndef M_LN10
+#define M_LN10 2.30258509299404568401799145468436421
+#endif
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327950288
+#endif
+
+#ifndef M_SQRT2
+#define M_SQRT2 1.41421356237309504880168872420969808
+#endif
+
+#ifndef M_SQRT1_2
+#define M_SQRT1_2 0.707106781186547524400844362104849039
+#endif
+
+#ifndef NAN
+extern double _v7_nan;
+#define HAS_V7_NAN
+#define NAN (_v7_nan)
+#endif
+
+#ifndef INFINITY
+extern double _v7_infinity;
+#define HAS_V7_INFINITY
+#define INFINITY (_v7_infinity)
+#endif
+
+#ifndef EXIT_SUCCESS
+#define EXIT_SUCCESS 0
+#endif
+
+#ifndef EXIT_FAILURE
+#define EXIT_FAILURE 1
+#endif
+
+#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE) || \
+    defined(V7_ENABLE_STACK_TRACKING)
+/* Need to enable GCC/clang instrumentation */
+#define V7_CYG_PROFILE_ON
+#endif
+
+#if defined(V7_CYG_PROFILE_ON)
+extern struct v7 *v7_head;
+
+#if defined(V7_STACK_GUARD_MIN_SIZE)
+extern void *v7_sp_limit;
+#endif
+#endif
+
+/* Vector, describes some memory location pointed by 'p' with length 'len' */
+struct v7_vec {
+  const char *p;
+  size_t len;
+};
+
+#define V7_VEC(str) \
+  { (str), sizeof(str) - 1 }
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
+
+#define V7_STATIC_ASSERT(COND, MSG) \
+  typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
+
+#define BUF_LEFT(size, used) (((size_t)(used) < (size)) ? ((size) - (used)) : 0)
+
+#endif /* V7_INTERNAL_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./common/cs_file.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * Read whole file `path` in memory. It is responsibility of the caller
+ * to `free()` allocated memory. File content is guaranteed to be
+ * '\0'-terminated. File size is returned in `size` variable, which does not
+ * count terminating `\0`.
+ * Return: allocated memory, or NULL on error.
+ */
+char *cs_read_file(const char *path, size_t *size);
+
+#ifdef CS_MMAP
+char *cs_mmap_file(const char *path, size_t *size);
+#endif
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/builtin/builtin.h"
 /**/
 #endif
 /*
@@ -2566,7 +1723,142 @@ void init_ubjson(struct v7 *v7);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 1 "./src/ast.h"
+#line 1 "./v7/src/std_error.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_ERROR_H_INCLUDED
+#define STD_ERROR_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/license.h" */
+
+struct v7;
+
+/*
+ * JavaScript error types
+ */
+#define TYPE_ERROR "TypeError"
+#define SYNTAX_ERROR "SyntaxError"
+#define REFERENCE_ERROR "ReferenceError"
+#define INTERNAL_ERROR "InternalError"
+#define RANGE_ERROR "RangeError"
+#define EVAL_ERROR "EvalError"
+#define ERROR_CTOR_MAX 6
+/*
+ * TODO(mkm): EvalError is not so important, we should guard it behind
+ * something like `V7_ENABLE__EvalError`. However doing so makes it hard to
+ * keep ERROR_CTOR_MAX up to date; perhaps let's find a better way of doing it.
+ *
+ * EvalError is useful mostly because we now have ecma tests failing:
+ *
+ * 8129 FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-iii-24.js (tail -c
+ * +7600043 tests/ecmac.db|head -c 496): [{"message":"[EvalError] is not
+ * defined"}]
+ *
+ * Those tests are not EvalError specific, and they do test that the exception
+ * handling machinery works as intended.
+ */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_error(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_ERROR_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/mm.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef MM_H_INCLUDED
+#define MM_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+typedef void (*gc_cell_destructor_t)(struct v7 *v7, void *);
+
+struct gc_block {
+  struct gc_block *next;
+  struct gc_cell *base;
+  size_t size;
+};
+
+struct gc_arena {
+  struct gc_block *blocks;
+  size_t size_increment;
+  struct gc_cell *free; /* head of free list */
+  size_t cell_size;
+
+#if V7_ENABLE__Memory__stats
+  unsigned long allocations; /* cumulative counter of allocations */
+  unsigned long garbage;     /* cumulative counter of garbage */
+  unsigned long alive;       /* number of living cells */
+#endif
+
+  gc_cell_destructor_t destructor;
+
+  int verbose;
+  const char *name; /* for debugging purposes */
+};
+
+#endif /* GC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/parser.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_PARSER_H_INCLUDED
+#define V7_PARSER_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+struct v7;
+struct ast;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+struct v7_pstate {
+  const char *file_name;
+  const char *source_code;
+  const char *pc;   /* Current parsing position */
+  int line_no;      /* Line number */
+  int prev_line_no; /* Line number of previous token */
+  int inhibit_in;   /* True while `in` expressions are inhibited */
+  int in_function;  /* True if in a function */
+  int in_loop;      /* True if in a loop */
+  int in_switch;    /* True if in a switch block */
+  int in_strict;    /* True if in strict mode */
+};
+
+V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
+                             int);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_PARSER_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/ast.h"
 /**/
 #endif
 /*
@@ -2784,7 +2076,7 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
 #endif /* AST_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/parser.h"
+#line 1 "./v7/src/tokenizer.h"
 /**/
 #endif
 /*
@@ -2792,41 +2084,833 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
  * All rights reserved
  */
 
-#ifndef V7_PARSER_H_INCLUDED
-#define V7_PARSER_H_INCLUDED
+#ifndef V7_TOKENIZER_H_INCLUDED
+#define V7_TOKENIZER_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
-struct v7;
-struct ast;
+enum v7_tok {
+  TOK_END_OF_INPUT,
+  TOK_NUMBER,
+  TOK_STRING_LITERAL,
+  TOK_REGEX_LITERAL,
+  TOK_IDENTIFIER,
+
+  /* Punctuators */
+  TOK_OPEN_CURLY,
+  TOK_CLOSE_CURLY,
+  TOK_OPEN_PAREN,
+  TOK_CLOSE_PAREN,
+  TOK_COMMA,
+  TOK_OPEN_BRACKET,
+  TOK_CLOSE_BRACKET,
+  TOK_DOT,
+  TOK_COLON,
+  TOK_SEMICOLON,
+
+  /* Equality ops, in this order */
+  TOK_EQ,
+  TOK_EQ_EQ,
+  TOK_NE,
+  TOK_NE_NE,
+
+  /* Assigns */
+  TOK_ASSIGN,
+  TOK_REM_ASSIGN,
+  TOK_MUL_ASSIGN,
+  TOK_DIV_ASSIGN,
+  TOK_XOR_ASSIGN,
+  TOK_PLUS_ASSIGN,
+  TOK_MINUS_ASSIGN,
+  TOK_OR_ASSIGN,
+  TOK_AND_ASSIGN,
+  TOK_LSHIFT_ASSIGN,
+  TOK_RSHIFT_ASSIGN,
+  TOK_URSHIFT_ASSIGN,
+  TOK_AND,
+  TOK_LOGICAL_OR,
+  TOK_PLUS,
+  TOK_MINUS,
+  TOK_PLUS_PLUS,
+  TOK_MINUS_MINUS,
+  TOK_LOGICAL_AND,
+  TOK_OR,
+  TOK_QUESTION,
+  TOK_TILDA,
+  TOK_REM,
+  TOK_MUL,
+  TOK_DIV,
+  TOK_XOR,
+
+  /* Relational ops, must go in this order */
+  TOK_LE,
+  TOK_LT,
+  TOK_GE,
+  TOK_GT,
+  TOK_LSHIFT,
+  TOK_RSHIFT,
+  TOK_URSHIFT,
+  TOK_NOT,
+
+  /* Keywords. must be in the same order as tokenizer.c::s_keywords array */
+  TOK_BREAK,
+  TOK_CASE,
+  TOK_CATCH,
+  TOK_CONTINUE,
+  TOK_DEBUGGER,
+  TOK_DEFAULT,
+  TOK_DELETE,
+  TOK_DO,
+  TOK_ELSE,
+  TOK_FALSE,
+  TOK_FINALLY,
+  TOK_FOR,
+  TOK_FUNCTION,
+  TOK_IF,
+  TOK_IN,
+  TOK_INSTANCEOF,
+  TOK_NEW,
+  TOK_NULL,
+  TOK_RETURN,
+  TOK_SWITCH,
+  TOK_THIS,
+  TOK_THROW,
+  TOK_TRUE,
+  TOK_TRY,
+  TOK_TYPEOF,
+  TOK_VAR,
+  TOK_VOID,
+  TOK_WHILE,
+  TOK_WITH,
+
+  /* TODO(lsm): process these reserved words too */
+  TOK_CLASS,
+  TOK_ENUM,
+  TOK_EXTENDS,
+  TOK_SUPER,
+  TOK_CONST,
+  TOK_EXPORT,
+  TOK_IMPORT,
+  TOK_IMPLEMENTS,
+  TOK_LET,
+  TOK_PRIVATE,
+  TOK_PUBLIC,
+  TOK_INTERFACE,
+  TOK_PACKAGE,
+  TOK_PROTECTED,
+  TOK_STATIC,
+  TOK_YIELD,
+
+  NUM_TOKENS
+};
 
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
 
-struct v7_pstate {
-  const char *file_name;
-  const char *source_code;
-  const char *pc;   /* Current parsing position */
-  int line_no;      /* Line number */
-  int prev_line_no; /* Line number of previous token */
-  int inhibit_in;   /* True while `in` expressions are inhibited */
-  int in_function;  /* True if in a function */
-  int in_loop;      /* True if in a loop */
-  int in_switch;    /* True if in a switch block */
-  int in_strict;    /* True if in strict mode */
-};
-
-V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
-                             int);
+V7_PRIVATE int skip_to_next_tok(const char **ptr);
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
+V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 
-#endif /* V7_PARSER_H_INCLUDED */
+#endif /* V7_TOKENIZER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/bcode.h"
+#line 1 "./v7/src/types.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_TYPES_H_INCLUDED
+#define V7_TYPES_H_INCLUDED
+
+/* Amalgamated: #include "common/mbuf.h" */
+/* Amalgamated: #include "v7/src/std_error.h" */
+/* Amalgamated: #include "v7/src/mm.h" */
+/* Amalgamated: #include "v7/src/parser.h" */
+/* Amalgamated: #include "v7/src/tokenizer.h" */
+
+typedef uint64_t val_t;
+
+/*
+ * JavaScript value is either a primitive, or an object.
+ * There are 5 primitive types: Undefined, Null, Boolean, Number, String.
+ * Non-primitive type is an Object type. There are several classes of Objects,
+ * see description of `struct v7_generic_object` below for more details.
+ * This enumeration combines types and object classes in one enumeration.
+ * NOTE(lsm): compile with `-fshort-enums` to reduce sizeof(enum v7_type) to 1.
+ */
+enum v7_type {
+  /* Primitive types */
+  V7_TYPE_UNDEFINED,
+  V7_TYPE_NULL,
+  V7_TYPE_BOOLEAN,
+  V7_TYPE_NUMBER,
+  V7_TYPE_STRING,
+  V7_TYPE_FOREIGN,
+  V7_TYPE_CFUNCTION,
+
+  /* Different classes of Object type */
+  V7_TYPE_GENERIC_OBJECT,
+  V7_TYPE_BOOLEAN_OBJECT,
+  V7_TYPE_STRING_OBJECT,
+  V7_TYPE_NUMBER_OBJECT,
+  V7_TYPE_FUNCTION_OBJECT,
+  V7_TYPE_CFUNCTION_OBJECT,
+  V7_TYPE_REGEXP_OBJECT,
+  V7_TYPE_ARRAY_OBJECT,
+  V7_TYPE_DATE_OBJECT,
+  V7_TYPE_ERROR_OBJECT,
+  V7_TYPE_MAX_OBJECT_TYPE,
+  V7_NUM_TYPES
+};
+
+/*
+ * This structure groups together all val_t logical members
+ * of struct v7 so that GC and freeze logic can easily access all
+ * of them together. This structure must contain only val_t members.
+ */
+struct v7_vals {
+  val_t global_object;
+  val_t this_object; /* this object for current call */
+  val_t arguments;   /* arguments of current call */
+
+  val_t object_prototype;
+  val_t array_prototype;
+  val_t boolean_prototype;
+  val_t error_prototype;
+  val_t string_prototype;
+  val_t regexp_prototype;
+  val_t number_prototype;
+  val_t date_prototype;
+  val_t function_prototype;
+
+  /*
+   * Stack of execution contexts.
+   * Execution contexts are contained in two chains:
+   * - in the lexical scope via their prototype chain (to allow variable lookup)
+   * - call stack for stack traces (via the ____p hidden property)
+   *
+   * Execution contexts should be allocated on heap, because they might not be
+   * on a call stack but still referenced (closures).
+   */
+  val_t call_stack;
+
+  /*
+   * Bcode executes until it reaches `bottom_call_stack`. For top-level code,
+   * it's `global_object`, for some "inner" scripts, such as `eval`'d code,
+   * it's the `call_stack` of the `eval` statement.
+   */
+  val_t bottom_call_stack;
+
+  /*
+   * temporary register for `OP_STASH` and `OP_UNSTASH` instructions. Valid if
+   * `v7->is_stashed` is non-zero
+   */
+  val_t stash;
+
+  val_t error_objects[ERROR_CTOR_MAX];
+
+  /*
+   * Value that is being thrown. Valid if `is_thrown` is non-zero (see below)
+   */
+  val_t thrown_error;
+
+  /*
+   * value that is going to be returned. Needed when some `finally` block needs
+   * to be executed after `return my_value;` was issued. Used in bcode.
+   * See also `is_returned` below
+   */
+  val_t returned_value;
+};
+
+struct v7 {
+  struct v7_vals vals;
+
+  struct mbuf stack; /* value stack for bcode interpreter */
+
+  struct mbuf owned_strings;   /* Sequence of (varint len, char data[]) */
+  struct mbuf foreign_strings; /* Sequence of (varint len, char *data) */
+
+  struct mbuf tmp_stack; /* Stack of val_t* elements, used as root set */
+  int need_gc;           /* Set to true to trigger GC when safe */
+
+  struct gc_arena generic_object_arena;
+  struct gc_arena function_arena;
+  struct gc_arena property_arena;
+#if V7_ENABLE__Memory__stats
+  size_t function_arena_ast_size;
+  size_t function_arena_bcode_size;
+#endif
+  struct mbuf owned_values; /* buffer for GC roots owned by C code */
+
+  /*
+   * Stack of the root bcodes being executed at the moment. Note that when some
+   * regular JS function is called inside `eval_bcode()`, the function's bcode
+   * is NOT added here. Buf if some cfunction is called, which in turn calls
+   * `b_exec()` (or `b_apply()`) recursively, the new bcode is added to this
+   * stack.
+   */
+  struct mbuf act_bcodes;
+
+  char error_msg[80]; /* Exception message */
+#if 0
+#if defined(__cplusplus)
+  ::jmp_buf jmp_buf;
+#else
+  jmp_buf jmp_buf; /* Exception environment for v7_exec() */
+#endif
+#endif
+
+  struct mbuf json_visited_stack; /* Detecting cycle in to_json */
+
+  /* Parser state */
+  struct v7_pstate pstate; /* Parsing state */
+  enum v7_tok cur_tok;     /* Current token */
+  const char *tok;         /* Parsed terminal token (ident, number, string) */
+  unsigned long tok_len;   /* Length of the parsed terminal token */
+  size_t last_var_node;    /* Offset of last var node or function/script node */
+  int after_newline;       /* True if the cur_tok starts a new line */
+  double cur_tok_dbl;      /* When tokenizing, parser stores TOK_NUMBER here */
+
+  /* singleton, pointer because of amalgamation */
+  struct v7_property *cur_dense_prop;
+
+  volatile int interrupt;
+#ifdef V7_STACK_SIZE
+  void *sp_limit;
+  void *sp_lwm;
+#endif
+
+#if defined(V7_CYG_PROFILE_ON)
+  /* linked list of v7 contexts, needed by cyg_profile hooks */
+  struct v7 *next_v7;
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+  /* linked list of stack tracking contexts */
+  struct stack_track_ctx *stack_track_ctx;
+
+  int stack_stat[V7_STACK_STATS_CNT];
+#endif
+
+#endif
+
+#ifdef V7_MALLOC_GC
+  struct mbuf malloc_trace;
+#endif
+
+/*
+ * TODO(imax): remove V7_DISABLE_STR_ALLOC_SEQ knob after 2015/12/01 if there
+ * are no issues.
+ */
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+  uint16_t gc_next_asn; /* Next sequence number to use. */
+  uint16_t gc_min_asn;  /* Minimal sequence number currently in use. */
+#endif
+
+#if defined(V7_TRACK_MAX_PARSER_STACK_SIZE)
+  size_t parser_stack_data_max_size;
+  size_t parser_stack_ret_max_size;
+  size_t parser_stack_data_max_len;
+  size_t parser_stack_ret_max_len;
+#endif
+
+#ifdef V7_FREEZE
+  FILE *freeze_file;
+#endif
+
+  /*
+   * true if exception is currently being created. Needed to avoid recursive
+   * exception creation
+   */
+  unsigned int creating_exception : 1;
+  /*
+   * true if currently in strict mode
+   *
+   * TODO(dfrank) : this field is needed only for public functions like
+   * `v7_set_prop()` and `v7_array_set()`, but do we actually need to consider
+   * strict mode in these functions, and throw exceptions?
+   *
+   * If not, then we should get rid of `v7->strict_mode` whatsoever.
+   */
+  unsigned int strict_mode : 1;
+  /* true if currently running function is called as a constructor */
+  unsigned int is_constructor : 1;
+  /* while true, GC is inhibited */
+  unsigned int inhibit_gc : 1;
+  /* true if `thrown_error` is valid */
+  unsigned int is_thrown : 1;
+  /* true if `returned_value` is valid */
+  unsigned int is_returned : 1;
+  /* true if a finally block is executing while breaking */
+  unsigned int is_breaking : 1;
+  /* true when a continue OP is executed, reset by `OP_JMP_IF_CONTINUE` */
+  unsigned int is_continuing : 1;
+  /* true if some value is currently stashed (`v7->vals.stash`) */
+  unsigned int is_stashed : 1;
+  /* true if last emitted statement does not affect data stack */
+  unsigned int is_stack_neutral : 1;
+};
+
+struct v7_property {
+  struct v7_property *
+      next; /* Linkage in struct v7_generic_object::properties */
+  v7_prop_attr_t attributes;
+  val_t name;  /* Property name (a string) */
+  val_t value; /* Property value */
+};
+
+/*
+ * "base object": structure which is shared between objects and functions.
+ */
+struct v7_object {
+  /* First HIDDEN property in a chain is an internal object value */
+  struct v7_property *properties;
+  v7_obj_attr_t attributes;
+};
+
+/*
+ * An object is an unordered collection of properties.
+ * A function stored in a property of an object is called a method.
+ * A property has a name, a value, and set of attributes.
+ * Attributes are: ReadOnly, DontEnum, DontDelete, Internal.
+ *
+ * A constructor is a function that creates and initializes objects.
+ * Each constructor has an associated prototype object that is used for
+ * inheritance and shared properties. When a constructor creates an object,
+ * the new object references the constructor’s prototype.
+ *
+ * Objects could be a "generic objects" which is a collection of properties,
+ * or a "typed object" which also hold an internal value like String or Number.
+ * Those values are implicit, unnamed properties of the respective types,
+ * and can be coerced into primitive types by calling a respective constructor
+ * as a function:
+ *    var a = new Number(123);
+ *    typeof(a) == 'object';
+ *    typeof(Number(a)) == 'number';
+ */
+struct v7_generic_object {
+  /*
+   * This has to be the first field so that objects can be managed by the GC.
+   */
+  struct v7_object base;
+  struct v7_object *prototype;
+};
+
+/*
+ * Variables are function-scoped and are hoisted.
+ * Lexical scoping & closures: each function has a chain of scopes, defined
+ * by the lexicographic order of function definitions.
+ * Scope is different from the execution context.
+ * Execution context carries "variable object" which is variable/value
+ * mapping for all variables defined in a function, and `this` object.
+ * If function is not called as a method, then `this` is a global object.
+ * Otherwise, `this` is an object that contains called method.
+ * New execution context is created each time a function call is performed.
+ * Passing arguments through recursion is done using execution context, e.g.
+ *
+ *    var factorial = function(num) {
+ *      return num < 2 ? 1 : num * factorial(num - 1);
+ *    };
+ *
+ * Here, recursion calls the same function `factorial` several times. Execution
+ * contexts for each call form a stack. Each context has different variable
+ * object, `vars`, with different values of `num`.
+ */
+
+struct v7_function {
+  /*
+   * Functions are objects. This has to be the first field so that function
+   * objects can be managed by the GC.
+   */
+  struct v7_object base;
+  struct v7_generic_object *scope; /* lexical scope of the closure */
+
+  /* bytecode, might be shared between functions */
+  struct bcode *bcode;
+};
+
+struct v7_regexp {
+  val_t regexp_string;
+  struct slre_prog *compiled_regexp;
+  long lastIndex;
+};
+
+#endif /* V7_TYPES_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/vm.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef VM_H_INCLUDED
+#define VM_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_error.h" */
+/* Amalgamated: #include "v7/src/mm.h" */
+/* Amalgamated: #include "v7/src/parser.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/tokenizer.h" */
+/* Amalgamated: #include "v7/src/types.h" */
+
+/*
+ *  Double-precision floating-point number, IEEE 754
+ *
+ *  64 bit (8 bytes) in total
+ *  1  bit sign
+ *  11 bits exponent
+ *  52 bits mantissa
+ *      7         6        5        4        3        2        1        0
+ *  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
+ *
+ * If an exponent is all-1 and mantissa is all-0, then it is an INFINITY:
+ *  11111111|11110000|00000000|00000000|00000000|00000000|00000000|00000000
+ *
+ * If an exponent is all-1 and mantissa's MSB is 1, it is a quiet NaN:
+ *  11111111|11111000|00000000|00000000|00000000|00000000|00000000|00000000
+ *
+ *  V7 NaN-packing:
+ *    sign and exponent is 0xfff
+ *    4 bits specify type (tag), must be non-zero
+ *    48 bits specify value
+ *
+ *  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
+ *   NaN marker |type|  48-bit placeholder for values: pointers, strings
+ *
+ * On 64-bit platforms, pointers are really 48 bit only, so they can fit,
+ * provided they are sign extended
+ */
+
+/*
+ * A tag is made of the sign bit and the 4 lower order bits of byte 6.
+ * So in total we have 32 possible tags.
+ *
+ * Tag (1,0) however cannot hold a zero payload otherwise it's interpreted as an
+ * INFINITY; for simplicity we're just not going to use that combination.
+ */
+#define MAKE_TAG(s, t) \
+  ((uint64_t)(s) << 63 | (uint64_t) 0x7ff0 << 48 | (uint64_t)(t) << 48)
+
+#define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
+#define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
+#define V7_TAG_UNDEFINED MAKE_TAG(1, 0xD)
+#define V7_TAG_BOOLEAN MAKE_TAG(1, 0xC)
+#define V7_TAG_NAN MAKE_TAG(1, 0xB)
+#define V7_TAG_STRING_I MAKE_TAG(1, 0xA)  /* Inlined string len < 5 */
+#define V7_TAG_STRING_5 MAKE_TAG(1, 0x9)  /* Inlined string len 5 */
+#define V7_TAG_STRING_O MAKE_TAG(1, 0x8)  /* Owned string */
+#define V7_TAG_STRING_F MAKE_TAG(1, 0x7)  /* Foreign string */
+#define V7_TAG_STRING_C MAKE_TAG(1, 0x6)  /* String chunk */
+#define V7_TAG_FUNCTION MAKE_TAG(1, 0x5)  /* JavaScript function */
+#define V7_TAG_CFUNCTION MAKE_TAG(1, 0x4) /* C function */
+#define V7_TAG_STRING_D MAKE_TAG(1, 0x3)  /* Dictionary string  */
+#define V7_TAG_REGEXP MAKE_TAG(1, 0x2)    /* Regex */
+#define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
+#define V7_TAG_MASK MAKE_TAG(1, 0xF)
+
+#define V7_NULL V7_TAG_FOREIGN
+#define V7_UNDEFINED V7_TAG_UNDEFINED
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/* Returns true if given value is a number, not NaN and not Infinity. */
+V7_PRIVATE int is_finite(v7_val_t v);
+
+V7_PRIVATE val_t v7_pointer_to_value(void *p);
+V7_PRIVATE void *v7_to_pointer(val_t v);
+V7_PRIVATE val_t v7_function_to_value(struct v7_function *o);
+V7_PRIVATE struct v7_function *v7_to_function(val_t v);
+V7_PRIVATE val_t
+mk_function2(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
+V7_PRIVATE val_t mk_function(struct v7 *v7);
+
+/*
+ * Like v7_mk_function but also sets the function's `length` property.
+ *
+ * The `length` property is useful for introspection and the stdlib defines it
+ * for many core functions mostly because the ECMA test suite requires it and we
+ * don't want to skip otherwise useful tests just because the `length` property
+ * check fails early in the test. User defined functions don't need to specify
+ * the length and passing -1 is a safe choice, as it will also reduce the
+ * footprint.
+ *
+ * The subtle difference between set `length` explicitly to 0 rather than
+ * just defaulting the `0` value from the prototype is that in the former case
+ * the property cannot be change since it's read only. This again, is important
+ * only for ecma compliance and your user code might or might not find this
+ * relevant.
+ *
+ * NODO(lsm): please don't combine v7_mk_function_arg and v7_mk_function
+ * into one function. Currently `nargs` is useful only internally. External
+ * users can just use `v7_def` to set the length.
+ */
+V7_PRIVATE
+v7_val_t v7_mk_function_nargs(struct v7 *v7, v7_cfunction_t *func, int nargs);
+
+/*
+ * Like v7_mk_constructor but also sets the function's `length` property.
+ *
+ * NODO(lsm): please don't combine v7_mk_constructor_nargs and
+ * v7_mk_constructor.
+ * into one function. Currently `nargs` is useful only internally. External
+ * users can just use `v7_def` to set the length.
+ */
+V7_PRIVATE
+v7_val_t v7_mk_constructor_nargs(struct v7 *v7, v7_val_t proto,
+                                 v7_cfunction_t *f, int num_args);
+
+V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
+
+/* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
+#define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* VM_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/object.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef OBJECT_H_INCLUDED
+#define OBJECT_H_INCLUDED
+
+V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype);
+V7_PRIVATE val_t v7_object_to_value(struct v7_object *o);
+V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v);
+
+/*
+ * Returns pointer to the struct representing an object.
+ * Given value must be an object (the caller can verify it
+ * by calling `v7_is_object()`)
+ */
+V7_PRIVATE struct v7_object *v7_to_object(v7_val_t v);
+
+/*
+ * Return true if given value is a JavaScript object (will return
+ * false for function)
+ */
+V7_PRIVATE int v7_is_generic_object(v7_val_t v);
+
+V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7);
+
+V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
+                                                    const char *name,
+                                                    size_t len,
+                                                    v7_prop_attr_t attrs);
+
+V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
+                                                   const char *name,
+                                                   size_t len);
+
+/*
+ * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated
+ *
+ * Returns a pointer to the property structure, given an object and a name of
+ * the property as a pointer to string buffer and length.
+ *
+ * See also `v7_get_property_v`
+ */
+V7_PRIVATE struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
+                                               const char *name, size_t len);
+
+/*
+ * Just like `v7_get_property`, but takes name as a `v7_val_t`
+ */
+V7_PRIVATE enum v7_err v7_get_property_v(struct v7 *v7, val_t obj,
+                                         v7_val_t name,
+                                         struct v7_property **res);
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_get_throwing_v(struct v7 *v7, v7_val_t obj,
+                                         v7_val_t name, v7_val_t *res);
+
+V7_PRIVATE void v7_destroy_property(struct v7_property **p);
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
+                                        val_t obj, val_t val);
+
+/*
+ * Like `set_property`, but takes property name as a `val_t`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err set_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      val_t val, struct v7_property **res);
+
+/*
+ * Like JavaScript assignment: set a property with given `name` + `len` at
+ * the object `obj` to value `val`. Returns a property through the `res`
+ * (which may be `NULL` if return value is not required)
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err set_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_val_t val,
+                                    struct v7_property **res);
+
+/*
+ * Like `def_property()`, but takes property name as a `val_t`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
+                                      v7_prop_attr_desc_t attrs_desc, val_t val,
+                                      uint8_t as_assign,
+                                      struct v7_property **res);
+
+/*
+ * Define object property, similar to JavaScript `Object.defineProperty()`.
+ *
+ * Just like public `v7_def()`, but returns `enum v7_err`, and therefore can
+ * throw.
+ *
+ * Additionally, takes param `as_assign`: if it is non-zero, it behaves
+ * similarly to plain JavaScript assignment in terms of some exception-related
+ * corner cases.
+ *
+ * `res` may be `NULL`.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len, v7_prop_attr_desc_t attrs_desc,
+                                    v7_val_t val, uint8_t as_assign,
+                                    struct v7_property **res);
+
+V7_PRIVATE int set_method(struct v7 *v7, val_t obj, const char *name,
+                          v7_cfunction_t *func, int num_args);
+
+V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                              v7_cfunction_t *func);
+
+/* Return address of property value or NULL if the passed property is NULL */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_property_value(struct v7 *v7, val_t obj,
+                                         struct v7_property *p, val_t *res);
+
+/*
+ * Set new prototype `proto` for the given object `obj`. Returns `0` at
+ * success, `-1` at failure (it may fail if given `obj` is a function object:
+ * it's impossible to change function object's prototype)
+ */
+V7_PRIVATE int obj_prototype_set(struct v7 *v7, struct v7_object *obj,
+                                 struct v7_object *proto);
+
+/*
+ * Given a pointer to the object structure, returns a
+ * pointer to the prototype object, or `NULL` if there is
+ * no prototype.
+ */
+V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
+                                           struct v7_object *obj);
+
+V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj);
+
+V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
+
+#endif /* OBJECT_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/varint.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_VARINT_H_INCLUDED
+#define V7_VARINT_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE int encode_varint(size_t len, unsigned char *p);
+V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen);
+V7_PRIVATE int calc_llen(size_t len);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_VARINT_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/string.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_STRING_H_INCLUDED
+#define V7_STRING_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/types.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
+                                       double *res);
+V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
+V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+
+/*
+ * Convert a C string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err str_to_ulong(struct v7 *v7, val_t v, int *ok,
+                                    unsigned long *res);
+
+/*
+ * Convert a V7 string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ *
+ * Use it if only you need strong conformity of the value to an integer;
+ * otherwise, use `to_long()` or `to_number_v()` instead.
+ */
+V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok);
+
+enum embstr_flags {
+  EMBSTR_ZERO_TERM = (1 << 0),
+  EMBSTR_UNESCAPE = (1 << 1),
+};
+
+V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
+                             size_t len, uint8_t /*enum embstr_flags*/ flags);
+
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_STRING_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/bcode.h"
 /**/
 #endif
 /*
@@ -3425,7 +3509,93 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 
 #endif /* BCODE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/eval.h"
+#line 1 "./v7/src/gc.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef GC_H_INCLUDED
+#define GC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/types.h" */
+
+#define MARK(p) (((struct gc_cell *) (p))->head.word |= 1)
+#define UNMARK(p) (((struct gc_cell *) (p))->head.word &= ~1)
+#define MARKED(p) (((struct gc_cell *) (p))->head.word & 1)
+
+/*
+ * performs arithmetics on gc_cell pointers as if they were arena->cell_size
+ * bytes wide
+ */
+#define GC_CELL_OP(arena, cell, op, arg) \
+  ((struct gc_cell *) (((char *) (cell)) op((arg) * (arena)->cell_size)))
+
+struct gc_tmp_frame {
+  struct v7 *v7;
+  size_t pos;
+};
+
+struct gc_cell {
+  union {
+    struct gc_cell *link;
+    uintptr_t word;
+  } head;
+};
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE struct v7_generic_object *new_generic_object(struct v7 *);
+V7_PRIVATE struct v7_property *new_property(struct v7 *);
+V7_PRIVATE struct v7_function *new_function(struct v7 *);
+
+V7_PRIVATE void gc_mark(struct v7 *, val_t);
+
+V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, size_t,
+                              const char *);
+V7_PRIVATE void gc_arena_destroy(struct v7 *, struct gc_arena *a);
+V7_PRIVATE void gc_sweep(struct v7 *, struct gc_arena *, size_t);
+V7_PRIVATE void *gc_alloc_cell(struct v7 *, struct gc_arena *);
+
+V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *);
+V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *);
+V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
+
+V7_PRIVATE void compute_need_gc(struct v7 *);
+/* perform gc if not inhibited */
+V7_PRIVATE void maybe_gc(struct v7 *);
+
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+V7_PRIVATE uint16_t
+gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len);
+V7_PRIVATE int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n);
+V7_PRIVATE void gc_check_valid_allocation_seqn(struct v7 *v7, uint16_t n);
+#endif
+
+V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
+
+/* return 0 if v is an object/function with a bad pointer */
+V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v);
+
+/* checks whether a pointer is within the ranges of an arena */
+V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *p);
+
+#if V7_ENABLE__Memory__stats
+V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
+#endif
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* GC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/eval.h"
 /**/
 #endif
 /*
@@ -3463,7 +3633,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 
 #endif /* BCODE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/mm.h"
+#line 1 "./v7/src/array.h"
 /**/
 #endif
 /*
@@ -3471,40 +3641,58 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
  * All rights reserved
  */
 
-#ifndef MM_H_INCLUDED
-#define MM_H_INCLUDED
+#ifndef V7_ARRAY_H_INCLUDED
+#define V7_ARRAY_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/types.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE v7_val_t v7_mk_dense_array(struct v7 *v7);
+V7_PRIVATE val_t
+v7_array_get2(struct v7 *v7, v7_val_t arr, unsigned long index, int *has);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ARRAY_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/compiler.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef COMPILER_H_INCLUDED
+#define COMPILER_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/ast.h" */
 
-typedef void (*gc_cell_destructor_t)(struct v7 *v7, void *);
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
-struct gc_block {
-  struct gc_block *next;
-  struct gc_cell *base;
-  size_t size;
-};
+V7_PRIVATE enum v7_err compile_script(struct v7 *, struct ast *,
+                                      struct bcode *);
+V7_PRIVATE enum v7_err compile_function(struct v7 *, struct ast *, ast_off_t *,
+                                        struct bcode *);
+V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
+                                    ast_off_t *pos, struct bcode *bcode);
 
-struct gc_arena {
-  struct gc_block *blocks;
-  size_t size_increment;
-  struct gc_cell *free; /* head of free list */
-  size_t cell_size;
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
-#if V7_ENABLE__Memory__stats
-  unsigned long allocations; /* cumulative counter of allocations */
-  unsigned long garbage;     /* cumulative counter of garbage */
-  unsigned long alive;       /* number of living cells */
-#endif
-
-  gc_cell_destructor_t destructor;
-
-  int verbose;
-  const char *name; /* for debugging purposes */
-};
-
-#endif /* GC_H_INCLUDED */
+#endif /* COMPILER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/internal.h"
+#line 1 "./v7/src/cyg_profile.h"
 /**/
 #endif
 /*
@@ -3512,1236 +3700,58 @@ struct gc_arena {
  * All rights reserved
  */
 
-#ifndef V7_INTERNAL_H_INCLUDED
-#define V7_INTERNAL_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/license.h" */
-
-/* Check whether we're compiling in an environment with no filesystem */
-#if defined(ARDUINO) && (ARDUINO == 106)
-#define V7_NO_FS
-#endif
-
-#ifndef FAST
-#define FAST
-#endif
-
-#ifndef STATIC
-#define STATIC
-#endif
-
-#ifndef ENDL
-#define ENDL "\n"
-#endif
+#ifndef CYG_PROFILE_H_INCLUDED
+#define CYG_PROFILE_H_INCLUDED
 
 /*
- * In some compilers (watcom) NAN == NAN (and other comparisons) don't follow
- * the rules of IEEE 754. Since we don't know a priori which compilers
- * will generate correct code, we disable the fallback on selected platforms.
- * TODO(mkm): selectively disable on clang/gcc once we test this out.
+ * This file contains GCC/clang instrumentation callbacks, as well as
+ * accompanying code. The actual code in these callbacks depends on enabled
+ * features. See cyg_profile.c for some implementation details rationale.
  */
-#define V7_BROKEN_NAN
-
-#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200809L
-
-#include <assert.h>
-#ifndef NO_LIBC
-#include <ctype.h>
-#endif
-#include <errno.h>
-#include <float.h>
-#include <limits.h>
-#include <math.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <setjmp.h>
-
-/* Public API. Implemented in api.c */
-/* Amalgamated: #include "v7/v7.h" */
-/* Amalgamated: #include "common/osdep.h" */
-
-#ifdef V7_WINDOWS
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
-
-/* VS2015 Update 1 has ISO C99 `isnan` and `isinf` defined in math.h */
-#if _MSC_FULL_VER < 190023506
-#define isnan(x) _isnan(x)
-#define isinf(x) (!_finite(x))
-#endif
-
-#define __unused __pragma(warning(suppress : 4100))
-typedef __int64 int64_t;
-typedef int int32_t;
-typedef unsigned int uint32_t;
-typedef unsigned short uint16_t;
-typedef unsigned char uint8_t;
-
-/* For 64bit VisualStudio 2010 */
-#ifndef _UINTPTR_T_DEFINED
-typedef unsigned long uintptr_t;
-#endif
-
-#ifndef __func__
-#define __func__ ""
-#endif
-
-#else
-#include <stdint.h>
-#endif
-
-/* Amalgamated: #include "v7/src/v7_features.h" */
-
-/* MSVC6 doesn't have standard C math constants defined */
-#ifndef M_E
-#define M_E 2.71828182845904523536028747135266250
-#endif
-
-#ifndef M_LOG2E
-#define M_LOG2E 1.44269504088896340735992468100189214
-#endif
-
-#ifndef M_LOG10E
-#define M_LOG10E 0.434294481903251827651128918916605082
-#endif
-
-#ifndef M_LN2
-#define M_LN2 0.693147180559945309417232121458176568
-#endif
-
-#ifndef M_LN10
-#define M_LN10 2.30258509299404568401799145468436421
-#endif
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
-
-#ifndef M_SQRT2
-#define M_SQRT2 1.41421356237309504880168872420969808
-#endif
-
-#ifndef M_SQRT1_2
-#define M_SQRT1_2 0.707106781186547524400844362104849039
-#endif
-
-#ifndef NAN
-extern double _v7_nan;
-#define HAS_V7_NAN
-#define NAN (_v7_nan)
-#endif
-
-#ifndef INFINITY
-extern double _v7_infinity;
-#define HAS_V7_INFINITY
-#define INFINITY (_v7_infinity)
-#endif
-
-#ifndef EXIT_SUCCESS
-#define EXIT_SUCCESS 0
-#endif
-
-#ifndef EXIT_FAILURE
-#define EXIT_FAILURE 1
-#endif
-
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE) || \
-    defined(V7_ENABLE_STACK_TRACKING)
-/* Need to enable GCC/clang instrumentation */
-#define V7_CYG_PROFILE_ON
-#endif
-
-#if defined(V7_CYG_PROFILE_ON)
-extern struct v7 *v7_head;
-
-#if defined(V7_STACK_GUARD_MIN_SIZE)
-extern void *v7_sp_limit;
-#endif
-#endif
-
-/* Vector, describes some memory location pointed by 'p' with length 'len' */
-struct v7_vec {
-  const char *p;
-  size_t len;
-};
-
-#define V7_VEC(str) \
-  { (str), sizeof(str) - 1 }
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
-#endif
-
-#define V7_STATIC_ASSERT(COND, MSG) \
-  typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
-
-#define BUF_LEFT(size, used) (((size_t)(used) < (size)) ? ((size) - (used)) : 0)
-
-#endif /* V7_INTERNAL_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_object.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_OBJECT_H_INCLUDED
-#define STD_OBJECT_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
 
 struct v7;
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_object(struct v7 *v7);
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_OBJECT_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_string.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_STRING_H_INCLUDED
-#define STD_STRING_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-/* Max captures for String.replace() */
-#define V7_RE_MAX_REPL_SUB 20
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_string(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_STRING_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_regex.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_REGEX_H_INCLUDED
-#define STD_REGEX_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if V7_ENABLE__RegExp
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE enum v7_err Regex_ctor(struct v7 *v7, v7_val_t *res);
-V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, v7_val_t rx, v7_val_t vstr,
-                               int lind, v7_val_t *res);
-
-V7_PRIVATE void init_regex(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_ENABLE__RegExp */
-
-#endif /* STD_REGEX_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_error.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_ERROR_H_INCLUDED
-#define STD_ERROR_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/license.h" */
-
-struct v7;
-
-/*
- * JavaScript error types
- */
-#define TYPE_ERROR "TypeError"
-#define SYNTAX_ERROR "SyntaxError"
-#define REFERENCE_ERROR "ReferenceError"
-#define INTERNAL_ERROR "InternalError"
-#define RANGE_ERROR "RangeError"
-#define EVAL_ERROR "EvalError"
-#define ERROR_CTOR_MAX 6
-/*
- * TODO(mkm): EvalError is not so important, we should guard it behind
- * something like `V7_ENABLE__EvalError`. However doing so makes it hard to
- * keep ERROR_CTOR_MAX up to date; perhaps let's find a better way of doing it.
- *
- * EvalError is useful mostly because we now have ecma tests failing:
- *
- * 8129 FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-iii-24.js (tail -c
- * +7600043 tests/ecmac.db|head -c 496): [{"message":"[EvalError] is not
- * defined"}]
- *
- * Those tests are not EvalError specific, and they do test that the exception
- * handling machinery works as intended.
- */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_error(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_ERROR_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_array.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_ARRAY_H_INCLUDED
-#define STD_ARRAY_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_array(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_ARRAY_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_boolean.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_BOOLEAN_H_INCLUDED
-#define STD_BOOLEAN_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_boolean(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_BOOLEAN_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_date.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_DATE_H_INCLUDED
-#define STD_DATE_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if V7_ENABLE__Date
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_date(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_ENABLE__Date */
-#endif /* STD_DATE_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_function.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_FUNCTION_H_INCLUDED
-#define STD_FUNCTION_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_function(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_FUNCTION_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_json.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_JSON_H_INCLUDED
-#define STD_JSON_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_json(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_JSON_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_math.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_MATH_H_INCLUDED
-#define STD_MATH_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if V7_ENABLE__Math
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_math(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_ENABLE__Math */
-#endif /* STD_MATH_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/std_number.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STD_NUMBER_H_INCLUDED
-#define STD_NUMBER_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_number(struct v7 *v7);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STD_NUMBER_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/js_stdlib.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef JS_STDLIB_H_INCLUDED
-#define JS_STDLIB_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_js_stdlib(struct v7 *);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* JS_STDLIB_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/stdlib.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef STDLIB_H_INCLUDED
-#define STDLIB_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void init_stdlib(struct v7 *v7);
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
-                                int is_json, v7_val_t *res);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* STDLIB_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/types.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_TYPES_H_INCLUDED
-#define V7_TYPES_H_INCLUDED
-
-/* Amalgamated: #include "common/mbuf.h" */
-/* Amalgamated: #include "v7/src/std_error.h" */
-/* Amalgamated: #include "v7/src/mm.h" */
-/* Amalgamated: #include "v7/src/parser.h" */
-/* Amalgamated: #include "v7/src/tokenizer.h" */
-
-typedef uint64_t val_t;
-
-/*
- * JavaScript value is either a primitive, or an object.
- * There are 5 primitive types: Undefined, Null, Boolean, Number, String.
- * Non-primitive type is an Object type. There are several classes of Objects,
- * see description of `struct v7_generic_object` below for more details.
- * This enumeration combines types and object classes in one enumeration.
- * NOTE(lsm): compile with `-fshort-enums` to reduce sizeof(enum v7_type) to 1.
- */
-enum v7_type {
-  /* Primitive types */
-  V7_TYPE_UNDEFINED,
-  V7_TYPE_NULL,
-  V7_TYPE_BOOLEAN,
-  V7_TYPE_NUMBER,
-  V7_TYPE_STRING,
-  V7_TYPE_FOREIGN,
-  V7_TYPE_CFUNCTION,
-
-  /* Different classes of Object type */
-  V7_TYPE_GENERIC_OBJECT,
-  V7_TYPE_BOOLEAN_OBJECT,
-  V7_TYPE_STRING_OBJECT,
-  V7_TYPE_NUMBER_OBJECT,
-  V7_TYPE_FUNCTION_OBJECT,
-  V7_TYPE_CFUNCTION_OBJECT,
-  V7_TYPE_REGEXP_OBJECT,
-  V7_TYPE_ARRAY_OBJECT,
-  V7_TYPE_DATE_OBJECT,
-  V7_TYPE_ERROR_OBJECT,
-  V7_TYPE_MAX_OBJECT_TYPE,
-  V7_NUM_TYPES
-};
-
-/*
- * This structure groups together all val_t logical members
- * of struct v7 so that GC and freeze logic can easily access all
- * of them together. This structure must contain only val_t members.
- */
-struct v7_vals {
-  val_t global_object;
-  val_t this_object; /* this object for current call */
-  val_t arguments;   /* arguments of current call */
-
-  val_t object_prototype;
-  val_t array_prototype;
-  val_t boolean_prototype;
-  val_t error_prototype;
-  val_t string_prototype;
-  val_t regexp_prototype;
-  val_t number_prototype;
-  val_t date_prototype;
-  val_t function_prototype;
-
-  /*
-   * Stack of execution contexts.
-   * Execution contexts are contained in two chains:
-   * - in the lexical scope via their prototype chain (to allow variable lookup)
-   * - call stack for stack traces (via the ____p hidden property)
-   *
-   * Execution contexts should be allocated on heap, because they might not be
-   * on a call stack but still referenced (closures).
-   */
-  val_t call_stack;
-
-  /*
-   * Bcode executes until it reaches `bottom_call_stack`. For top-level code,
-   * it's `global_object`, for some "inner" scripts, such as `eval`'d code,
-   * it's the `call_stack` of the `eval` statement.
-   */
-  val_t bottom_call_stack;
-
-  /*
-   * temporary register for `OP_STASH` and `OP_UNSTASH` instructions. Valid if
-   * `v7->is_stashed` is non-zero
-   */
-  val_t stash;
-
-  val_t error_objects[ERROR_CTOR_MAX];
-
-  /*
-   * Value that is being thrown. Valid if `is_thrown` is non-zero (see below)
-   */
-  val_t thrown_error;
-
-  /*
-   * value that is going to be returned. Needed when some `finally` block needs
-   * to be executed after `return my_value;` was issued. Used in bcode.
-   * See also `is_returned` below
-   */
-  val_t returned_value;
-};
-
-struct v7 {
-  struct v7_vals vals;
-
-  struct mbuf stack; /* value stack for bcode interpreter */
-
-  struct mbuf owned_strings;   /* Sequence of (varint len, char data[]) */
-  struct mbuf foreign_strings; /* Sequence of (varint len, char *data) */
-
-  struct mbuf tmp_stack; /* Stack of val_t* elements, used as root set */
-  int need_gc;           /* Set to true to trigger GC when safe */
-
-  struct gc_arena generic_object_arena;
-  struct gc_arena function_arena;
-  struct gc_arena property_arena;
-#if V7_ENABLE__Memory__stats
-  size_t function_arena_ast_size;
-  size_t function_arena_bcode_size;
-#endif
-  struct mbuf owned_values; /* buffer for GC roots owned by C code */
-
-  /*
-   * Stack of the root bcodes being executed at the moment. Note that when some
-   * regular JS function is called inside `eval_bcode()`, the function's bcode
-   * is NOT added here. Buf if some cfunction is called, which in turn calls
-   * `b_exec()` (or `b_apply()`) recursively, the new bcode is added to this
-   * stack.
-   */
-  struct mbuf act_bcodes;
-
-  char error_msg[80]; /* Exception message */
-#if 0
-#if defined(__cplusplus)
-  ::jmp_buf jmp_buf;
-#else
-  jmp_buf jmp_buf; /* Exception environment for v7_exec() */
-#endif
-#endif
-
-  struct mbuf json_visited_stack; /* Detecting cycle in to_json */
-
-  /* Parser state */
-  struct v7_pstate pstate; /* Parsing state */
-  enum v7_tok cur_tok;     /* Current token */
-  const char *tok;         /* Parsed terminal token (ident, number, string) */
-  unsigned long tok_len;   /* Length of the parsed terminal token */
-  size_t last_var_node;    /* Offset of last var node or function/script node */
-  int after_newline;       /* True if the cur_tok starts a new line */
-  double cur_tok_dbl;      /* When tokenizing, parser stores TOK_NUMBER here */
-
-  /* singleton, pointer because of amalgamation */
-  struct v7_property *cur_dense_prop;
-
-  volatile int interrupt;
-#ifdef V7_STACK_SIZE
-  void *sp_limit;
-  void *sp_lwm;
-#endif
-
-#if defined(V7_CYG_PROFILE_ON)
-  /* linked list of v7 contexts, needed by cyg_profile hooks */
-  struct v7 *next_v7;
 
 #if defined(V7_ENABLE_STACK_TRACKING)
-  /* linked list of stack tracking contexts */
-  struct stack_track_ctx *stack_track_ctx;
-
-  int stack_stat[V7_STACK_STATS_CNT];
-#endif
-
-#endif
-
-#ifdef V7_MALLOC_GC
-  struct mbuf malloc_trace;
-#endif
 
 /*
- * TODO(imax): remove V7_DISABLE_STR_ALLOC_SEQ knob after 2015/12/01 if there
- * are no issues.
+ * Stack-tracking functionality:
+ *
+ * The idea is that the caller should allocate `struct stack_track_ctx`
+ * (typically on stack) in the function to track the stack usage of, and call
+ * `v7_stack_track_start()` in the beginning.
+ *
+ * Before quitting current stack frame (for example, before returning from
+ * function), call `v7_stack_track_end()`, which returns the maximum stack
+ * consumed size.
+ *
+ * These calls can be nested: for example, we may track the stack usage of the
+ * whole application by using these functions in `main()`, as well as track
+ * stack usage of any nested functions.
+ *
+ * Just to stress: both `v7_stack_track_start()` / `v7_stack_track_end()`
+ * should be called for the same instance of `struct stack_track_ctx` in the
+ * same stack frame.
  */
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
-  uint16_t gc_next_asn; /* Next sequence number to use. */
-  uint16_t gc_min_asn;  /* Minimal sequence number currently in use. */
-#endif
 
-#if defined(V7_TRACK_MAX_PARSER_STACK_SIZE)
-  size_t parser_stack_data_max_size;
-  size_t parser_stack_ret_max_size;
-  size_t parser_stack_data_max_len;
-  size_t parser_stack_ret_max_len;
-#endif
-
-#ifdef V7_FREEZE
-  FILE *freeze_file;
-#endif
-
-  /*
-   * true if exception is currently being created. Needed to avoid recursive
-   * exception creation
-   */
-  unsigned int creating_exception : 1;
-  /*
-   * true if currently in strict mode
-   *
-   * TODO(dfrank) : this field is needed only for public functions like
-   * `v7_set_prop()` and `v7_array_set()`, but do we actually need to consider
-   * strict mode in these functions, and throw exceptions?
-   *
-   * If not, then we should get rid of `v7->strict_mode` whatsoever.
-   */
-  unsigned int strict_mode : 1;
-  /* true if currently running function is called as a constructor */
-  unsigned int is_constructor : 1;
-  /* while true, GC is inhibited */
-  unsigned int inhibit_gc : 1;
-  /* true if `thrown_error` is valid */
-  unsigned int is_thrown : 1;
-  /* true if `returned_value` is valid */
-  unsigned int is_returned : 1;
-  /* true if a finally block is executing while breaking */
-  unsigned int is_breaking : 1;
-  /* true when a continue OP is executed, reset by `OP_JMP_IF_CONTINUE` */
-  unsigned int is_continuing : 1;
-  /* true if some value is currently stashed (`v7->vals.stash`) */
-  unsigned int is_stashed : 1;
-  /* true if last emitted statement does not affect data stack */
-  unsigned int is_stack_neutral : 1;
+/* stack tracking context */
+struct stack_track_ctx {
+  struct stack_track_ctx *next;
+  void *start;
+  void *max;
 };
 
-struct v7_property {
-  struct v7_property *
-      next; /* Linkage in struct v7_generic_object::properties */
-  v7_prop_attr_t attributes;
-  val_t name;  /* Property name (a string) */
-  val_t value; /* Property value */
-};
+/* see explanation above */
+void v7_stack_track_start(struct v7 *v7, struct stack_track_ctx *ctx);
+/* see explanation above */
+int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx);
 
-/*
- * "base object": structure which is shared between objects and functions.
- */
-struct v7_object {
-  /* First HIDDEN property in a chain is an internal object value */
-  struct v7_property *properties;
-  v7_obj_attr_t attributes;
-};
+void v7_stack_stat_clean(struct v7 *v7);
 
-/*
- * An object is an unordered collection of properties.
- * A function stored in a property of an object is called a method.
- * A property has a name, a value, and set of attributes.
- * Attributes are: ReadOnly, DontEnum, DontDelete, Internal.
- *
- * A constructor is a function that creates and initializes objects.
- * Each constructor has an associated prototype object that is used for
- * inheritance and shared properties. When a constructor creates an object,
- * the new object references the constructor’s prototype.
- *
- * Objects could be a "generic objects" which is a collection of properties,
- * or a "typed object" which also hold an internal value like String or Number.
- * Those values are implicit, unnamed properties of the respective types,
- * and can be coerced into primitive types by calling a respective constructor
- * as a function:
- *    var a = new Number(123);
- *    typeof(a) == 'object';
- *    typeof(Number(a)) == 'number';
- */
-struct v7_generic_object {
-  /*
-   * This has to be the first field so that objects can be managed by the GC.
-   */
-  struct v7_object base;
-  struct v7_object *prototype;
-};
+#endif /* V7_ENABLE_STACK_TRACKING */
 
-/*
- * Variables are function-scoped and are hoisted.
- * Lexical scoping & closures: each function has a chain of scopes, defined
- * by the lexicographic order of function definitions.
- * Scope is different from the execution context.
- * Execution context carries "variable object" which is variable/value
- * mapping for all variables defined in a function, and `this` object.
- * If function is not called as a method, then `this` is a global object.
- * Otherwise, `this` is an object that contains called method.
- * New execution context is created each time a function call is performed.
- * Passing arguments through recursion is done using execution context, e.g.
- *
- *    var factorial = function(num) {
- *      return num < 2 ? 1 : num * factorial(num - 1);
- *    };
- *
- * Here, recursion calls the same function `factorial` several times. Execution
- * contexts for each call form a stack. Each context has different variable
- * object, `vars`, with different values of `num`.
- */
-
-struct v7_function {
-  /*
-   * Functions are objects. This has to be the first field so that function
-   * objects can be managed by the GC.
-   */
-  struct v7_object base;
-  struct v7_generic_object *scope; /* lexical scope of the closure */
-
-  /* bytecode, might be shared between functions */
-  struct bcode *bcode;
-};
-
-struct v7_regexp {
-  val_t regexp_string;
-  struct slre_prog *compiled_regexp;
-  long lastIndex;
-};
-
-#endif /* V7_TYPES_H_INCLUDED */
+#endif /* CYG_PROFILE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/vm.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef VM_H_INCLUDED
-#define VM_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/std_error.h" */
-/* Amalgamated: #include "v7/src/mm.h" */
-/* Amalgamated: #include "v7/src/parser.h" */
-/* Amalgamated: #include "v7/src/ast.h" */
-/* Amalgamated: #include "v7/src/tokenizer.h" */
-/* Amalgamated: #include "v7/src/types.h" */
-
-/*
- *  Double-precision floating-point number, IEEE 754
- *
- *  64 bit (8 bytes) in total
- *  1  bit sign
- *  11 bits exponent
- *  52 bits mantissa
- *      7         6        5        4        3        2        1        0
- *  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
- *
- * If an exponent is all-1 and mantissa is all-0, then it is an INFINITY:
- *  11111111|11110000|00000000|00000000|00000000|00000000|00000000|00000000
- *
- * If an exponent is all-1 and mantissa's MSB is 1, it is a quiet NaN:
- *  11111111|11111000|00000000|00000000|00000000|00000000|00000000|00000000
- *
- *  V7 NaN-packing:
- *    sign and exponent is 0xfff
- *    4 bits specify type (tag), must be non-zero
- *    48 bits specify value
- *
- *  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
- *   NaN marker |type|  48-bit placeholder for values: pointers, strings
- *
- * On 64-bit platforms, pointers are really 48 bit only, so they can fit,
- * provided they are sign extended
- */
-
-/*
- * A tag is made of the sign bit and the 4 lower order bits of byte 6.
- * So in total we have 32 possible tags.
- *
- * Tag (1,0) however cannot hold a zero payload otherwise it's interpreted as an
- * INFINITY; for simplicity we're just not going to use that combination.
- */
-#define MAKE_TAG(s, t) \
-  ((uint64_t)(s) << 63 | (uint64_t) 0x7ff0 << 48 | (uint64_t)(t) << 48)
-
-#define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
-#define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
-#define V7_TAG_UNDEFINED MAKE_TAG(1, 0xD)
-#define V7_TAG_BOOLEAN MAKE_TAG(1, 0xC)
-#define V7_TAG_NAN MAKE_TAG(1, 0xB)
-#define V7_TAG_STRING_I MAKE_TAG(1, 0xA)  /* Inlined string len < 5 */
-#define V7_TAG_STRING_5 MAKE_TAG(1, 0x9)  /* Inlined string len 5 */
-#define V7_TAG_STRING_O MAKE_TAG(1, 0x8)  /* Owned string */
-#define V7_TAG_STRING_F MAKE_TAG(1, 0x7)  /* Foreign string */
-#define V7_TAG_STRING_C MAKE_TAG(1, 0x6)  /* String chunk */
-#define V7_TAG_FUNCTION MAKE_TAG(1, 0x5)  /* JavaScript function */
-#define V7_TAG_CFUNCTION MAKE_TAG(1, 0x4) /* C function */
-#define V7_TAG_STRING_D MAKE_TAG(1, 0x3)  /* Dictionary string  */
-#define V7_TAG_REGEXP MAKE_TAG(1, 0x2)    /* Regex */
-#define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
-#define V7_TAG_MASK MAKE_TAG(1, 0xF)
-
-#define V7_NULL V7_TAG_FOREIGN
-#define V7_UNDEFINED V7_TAG_UNDEFINED
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/* Returns true if given value is a number, not NaN and not Infinity. */
-V7_PRIVATE int is_finite(v7_val_t v);
-
-V7_PRIVATE val_t v7_pointer_to_value(void *p);
-V7_PRIVATE void *v7_to_pointer(val_t v);
-V7_PRIVATE val_t v7_function_to_value(struct v7_function *o);
-V7_PRIVATE struct v7_function *v7_to_function(val_t v);
-V7_PRIVATE val_t
-mk_function2(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
-V7_PRIVATE val_t mk_function(struct v7 *v7);
-
-/*
- * Like v7_mk_function but also sets the function's `length` property.
- *
- * The `length` property is useful for introspection and the stdlib defines it
- * for many core functions mostly because the ECMA test suite requires it and we
- * don't want to skip otherwise useful tests just because the `length` property
- * check fails early in the test. User defined functions don't need to specify
- * the length and passing -1 is a safe choice, as it will also reduce the
- * footprint.
- *
- * The subtle difference between set `length` explicitly to 0 rather than
- * just defaulting the `0` value from the prototype is that in the former case
- * the property cannot be change since it's read only. This again, is important
- * only for ecma compliance and your user code might or might not find this
- * relevant.
- *
- * NODO(lsm): please don't combine v7_mk_function_arg and v7_mk_function
- * into one function. Currently `nargs` is useful only internally. External
- * users can just use `v7_def` to set the length.
- */
-V7_PRIVATE
-v7_val_t v7_mk_function_nargs(struct v7 *v7, v7_cfunction_t *func, int nargs);
-
-/*
- * Like v7_mk_constructor but also sets the function's `length` property.
- *
- * NODO(lsm): please don't combine v7_mk_constructor_nargs and
- * v7_mk_constructor.
- * into one function. Currently `nargs` is useful only internally. External
- * users can just use `v7_def` to set the length.
- */
-V7_PRIVATE
-v7_val_t v7_mk_constructor_nargs(struct v7 *v7, v7_val_t proto,
-                                 v7_cfunction_t *f, int num_args);
-
-V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
-
-/* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
-#define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* VM_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/object.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef OBJECT_H_INCLUDED
-#define OBJECT_H_INCLUDED
-
-V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype);
-V7_PRIVATE val_t v7_object_to_value(struct v7_object *o);
-V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v);
-
-/*
- * Returns pointer to the struct representing an object.
- * Given value must be an object (the caller can verify it
- * by calling `v7_is_object()`)
- */
-V7_PRIVATE struct v7_object *v7_to_object(v7_val_t v);
-
-/*
- * Return true if given value is a JavaScript object (will return
- * false for function)
- */
-V7_PRIVATE int v7_is_generic_object(v7_val_t v);
-
-V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7);
-
-V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
-                                                    const char *name,
-                                                    size_t len,
-                                                    v7_prop_attr_t attrs);
-
-V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
-                                                   const char *name,
-                                                   size_t len);
-
-/*
- * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated
- *
- * Returns a pointer to the property structure, given an object and a name of
- * the property as a pointer to string buffer and length.
- *
- * See also `v7_get_property_v`
- */
-V7_PRIVATE struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
-                                               const char *name, size_t len);
-
-/*
- * Just like `v7_get_property`, but takes name as a `v7_val_t`
- */
-V7_PRIVATE enum v7_err v7_get_property_v(struct v7 *v7, val_t obj,
-                                         v7_val_t name,
-                                         struct v7_property **res);
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_get_throwing_v(struct v7 *v7, v7_val_t obj,
-                                         v7_val_t name, v7_val_t *res);
-
-V7_PRIVATE void v7_destroy_property(struct v7_property **p);
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
-                                        val_t obj, val_t val);
-
-/*
- * Like `set_property`, but takes property name as a `val_t`
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err set_property_v(struct v7 *v7, val_t obj, val_t name,
-                                      val_t val, struct v7_property **res);
-
-/*
- * Like JavaScript assignment: set a property with given `name` + `len` at
- * the object `obj` to value `val`. Returns a property through the `res`
- * (which may be `NULL` if return value is not required)
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err set_property(struct v7 *v7, val_t obj, const char *name,
-                                    size_t len, v7_val_t val,
-                                    struct v7_property **res);
-
-/*
- * Like `def_property()`, but takes property name as a `val_t`
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
-                                      v7_prop_attr_desc_t attrs_desc, val_t val,
-                                      uint8_t as_assign,
-                                      struct v7_property **res);
-
-/*
- * Define object property, similar to JavaScript `Object.defineProperty()`.
- *
- * Just like public `v7_def()`, but returns `enum v7_err`, and therefore can
- * throw.
- *
- * Additionally, takes param `as_assign`: if it is non-zero, it behaves
- * similarly to plain JavaScript assignment in terms of some exception-related
- * corner cases.
- *
- * `res` may be `NULL`.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
-                                    size_t len, v7_prop_attr_desc_t attrs_desc,
-                                    v7_val_t val, uint8_t as_assign,
-                                    struct v7_property **res);
-
-V7_PRIVATE int set_method(struct v7 *v7, val_t obj, const char *name,
-                          v7_cfunction_t *func, int num_args);
-
-V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                              v7_cfunction_t *func);
-
-/* Return address of property value or NULL if the passed property is NULL */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_property_value(struct v7 *v7, val_t obj,
-                                         struct v7_property *p, val_t *res);
-
-/*
- * Set new prototype `proto` for the given object `obj`. Returns `0` at
- * success, `-1` at failure (it may fail if given `obj` is a function object:
- * it's impossible to change function object's prototype)
- */
-V7_PRIVATE int obj_prototype_set(struct v7 *v7, struct v7_object *obj,
-                                 struct v7_object *proto);
-
-/*
- * Given a pointer to the object structure, returns a
- * pointer to the prototype object, or `NULL` if there is
- * no prototype.
- */
-V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
-                                           struct v7_object *obj);
-
-V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj);
-
-V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
-
-#endif /* OBJECT_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/regexp.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_REGEXP_H_INCLUDED
-#define V7_REGEXP_H_INCLUDED
-
-#if V7_ENABLE__RegExp
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
-#endif /* V7_ENABLE__RegExp */
-
-#endif /* V7_REGEXP_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/exec.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_EXEC_H_INCLUDED
-#define V7_EXEC_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/*
- * At the moment, all exec-related functions are public, and are declared in
- * `v7.h`
- */
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_EXEC_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/util.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_UTIL_H_INCLUDED
-#define V7_UTIL_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/*
- * At the moment, all utility functions are public, and are declared in
- * `v7.h`
- */
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_UTIL_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/exceptions.h"
+#line 1 "./v7/src/exceptions.h"
 /**/
 #endif
 /*
@@ -4836,7 +3846,7 @@ V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
 
 #endif /* EXCEPTIONS_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/conversion.h"
+#line 1 "./v7/src/conversion.h"
 /**/
 #endif
 /*
@@ -5076,243 +4086,7 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
 
 #endif /* CONVERSION_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/string.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_STRING_H_INCLUDED
-#define V7_STRING_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
-                                       double *res);
-V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
-V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
-
-/*
- * Convert a C string to to an unsigned integer.
- * `ok` will be set to true if the string conforms to
- * an unsigned long.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err str_to_ulong(struct v7 *v7, val_t v, int *ok,
-                                    unsigned long *res);
-
-/*
- * Convert a V7 string to to an unsigned integer.
- * `ok` will be set to true if the string conforms to
- * an unsigned long.
- *
- * Use it if only you need strong conformity of the value to an integer;
- * otherwise, use `to_long()` or `to_number_v()` instead.
- */
-V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok);
-
-enum embstr_flags {
-  EMBSTR_ZERO_TERM = (1 << 0),
-  EMBSTR_UNESCAPE = (1 << 1),
-};
-
-V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t len, uint8_t /*enum embstr_flags*/ flags);
-
-V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_STRING_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/array.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_ARRAY_H_INCLUDED
-#define V7_ARRAY_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE v7_val_t v7_mk_dense_array(struct v7 *v7);
-V7_PRIVATE val_t
-v7_array_get2(struct v7 *v7, v7_val_t arr, unsigned long index, int *has);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_ARRAY_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/compiler.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef COMPILER_H_INCLUDED
-#define COMPILER_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/bcode.h" */
-/* Amalgamated: #include "v7/src/ast.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE enum v7_err compile_script(struct v7 *, struct ast *,
-                                      struct bcode *);
-V7_PRIVATE enum v7_err compile_function(struct v7 *, struct ast *, ast_off_t *,
-                                        struct bcode *);
-V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
-                                    ast_off_t *pos, struct bcode *bcode);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* COMPILER_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/gc.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef GC_H_INCLUDED
-#define GC_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
-
-#define MARK(p) (((struct gc_cell *) (p))->head.word |= 1)
-#define UNMARK(p) (((struct gc_cell *) (p))->head.word &= ~1)
-#define MARKED(p) (((struct gc_cell *) (p))->head.word & 1)
-
-/*
- * performs arithmetics on gc_cell pointers as if they were arena->cell_size
- * bytes wide
- */
-#define GC_CELL_OP(arena, cell, op, arg) \
-  ((struct gc_cell *) (((char *) (cell)) op((arg) * (arena)->cell_size)))
-
-struct gc_tmp_frame {
-  struct v7 *v7;
-  size_t pos;
-};
-
-struct gc_cell {
-  union {
-    struct gc_cell *link;
-    uintptr_t word;
-  } head;
-};
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE struct v7_generic_object *new_generic_object(struct v7 *);
-V7_PRIVATE struct v7_property *new_property(struct v7 *);
-V7_PRIVATE struct v7_function *new_function(struct v7 *);
-
-V7_PRIVATE void gc_mark(struct v7 *, val_t);
-
-V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, size_t,
-                              const char *);
-V7_PRIVATE void gc_arena_destroy(struct v7 *, struct gc_arena *a);
-V7_PRIVATE void gc_sweep(struct v7 *, struct gc_arena *, size_t);
-V7_PRIVATE void *gc_alloc_cell(struct v7 *, struct gc_arena *);
-
-V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *);
-V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *);
-V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
-
-V7_PRIVATE void compute_need_gc(struct v7 *);
-/* perform gc if not inhibited */
-V7_PRIVATE void maybe_gc(struct v7 *);
-
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
-V7_PRIVATE uint16_t
-gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len);
-V7_PRIVATE int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n);
-V7_PRIVATE void gc_check_valid_allocation_seqn(struct v7 *v7, uint16_t n);
-#endif
-
-V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v);
-
-/* return 0 if v is an object/function with a bad pointer */
-V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v);
-
-/* checks whether a pointer is within the ranges of an arena */
-V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *p);
-
-#if V7_ENABLE__Memory__stats
-V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
-#endif
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* GC_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/freeze.h"
-/**/
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef FREEZE_H_INCLUDED
-#define FREEZE_H_INCLUDED
-
-#ifdef V7_FREEZE
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-struct v7_property;
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void freeze(struct v7 *v7, char *filename);
-V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v);
-V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_FREEZE */
-
-#endif /* FREEZE_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./src/slre.h"
+#line 1 "./v7/src/slre.h"
 /**/
 #endif
 /*
@@ -5406,7 +4180,7 @@ int slre_get_flags(struct slre_prog *);
 
 #endif /* SLRE_HEADER_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/varint.h"
+#line 1 "./v7/src/std_string.h"
 /**/
 #endif
 /*
@@ -5414,8 +4188,36 @@ int slre_get_flags(struct slre_prog *);
  * All rights reserved
  */
 
-#ifndef V7_VARINT_H_INCLUDED
-#define V7_VARINT_H_INCLUDED
+#ifndef STD_STRING_H_INCLUDED
+#define STD_STRING_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+/* Max captures for String.replace() */
+#define V7_RE_MAX_REPL_SUB 20
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_string(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_STRING_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/stdlib.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STDLIB_H_INCLUDED
+#define STDLIB_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -5423,15 +4225,336 @@ int slre_get_flags(struct slre_prog *);
 extern "C" {
 #endif /* __cplusplus */
 
-V7_PRIVATE int encode_varint(size_t len, unsigned char *p);
-V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen);
-V7_PRIVATE int calc_llen(size_t len);
+V7_PRIVATE void init_stdlib(struct v7 *v7);
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
+                                int is_json, v7_val_t *res);
 
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 
-#endif /* V7_VARINT_H_INCLUDED */
+#endif /* STDLIB_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/freeze.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef FREEZE_H_INCLUDED
+#define FREEZE_H_INCLUDED
+
+#ifdef V7_FREEZE
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+struct v7_property;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void freeze(struct v7 *v7, char *filename);
+V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v);
+V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_FREEZE */
+
+#endif /* FREEZE_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/regexp.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_REGEXP_H_INCLUDED
+#define V7_REGEXP_H_INCLUDED
+
+#if V7_ENABLE__RegExp
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
+#endif /* V7_ENABLE__RegExp */
+
+#endif /* V7_REGEXP_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_array.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_ARRAY_H_INCLUDED
+#define STD_ARRAY_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_array(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_ARRAY_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_boolean.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_BOOLEAN_H_INCLUDED
+#define STD_BOOLEAN_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_boolean(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_BOOLEAN_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_date.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_DATE_H_INCLUDED
+#define STD_DATE_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if V7_ENABLE__Date
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_date(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE__Date */
+#endif /* STD_DATE_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_function.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_FUNCTION_H_INCLUDED
+#define STD_FUNCTION_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_function(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_FUNCTION_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_json.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_JSON_H_INCLUDED
+#define STD_JSON_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_json(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_JSON_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_math.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_MATH_H_INCLUDED
+#define STD_MATH_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if V7_ENABLE__Math
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_math(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE__Math */
+#endif /* STD_MATH_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_number.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_NUMBER_H_INCLUDED
+#define STD_NUMBER_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_number(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_NUMBER_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_object.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_OBJECT_H_INCLUDED
+#define STD_OBJECT_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+struct v7;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_object(struct v7 *v7);
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* STD_OBJECT_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_regex.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef STD_REGEX_H_INCLUDED
+#define STD_REGEX_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if V7_ENABLE__RegExp
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE enum v7_err Regex_ctor(struct v7 *v7, v7_val_t *res);
+V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, v7_val_t rx, v7_val_t vstr,
+                               int lind, v7_val_t *res);
+
+V7_PRIVATE void init_regex(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE__RegExp */
+
+#endif /* STD_REGEX_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/js_stdlib.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef JS_STDLIB_H_INCLUDED
+#define JS_STDLIB_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void init_js_stdlib(struct v7 *);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* JS_STDLIB_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/mbuf.c"
 /**/
