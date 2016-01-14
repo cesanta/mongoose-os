@@ -1311,6 +1311,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_ENABLE__Date__toLocaleString 1
 #define V7_ENABLE__Date__toString 1
 #define V7_ENABLE__File__list 1
+#define V7_ENABLE__File__require 1
 #define V7_ENABLE__Function__bind 1
 #define V7_ENABLE__Function__call 1
 #define V7_ENABLE__Math 1
@@ -7812,6 +7813,20 @@ void init_file(struct v7 *v7) {
   v7_set_method(v7, file_proto, "read", File_read);
   v7_set_method(v7, file_proto, "readAll", File_readAll);
   v7_set_method(v7, file_proto, "write", File_write);
+
+#if V7_ENABLE__File__require
+  v7_def(v7, v7_get_global(v7), "_modcache", ~0, 0, v7_mk_object(v7));
+  if (v7_exec(v7,
+              "function require(m) { "
+              "  if (m in _modcache) { return _modcache[m]; }"
+              "  var module = {exports:{}};"
+              "  File.eval(m);"
+              "  return (_modcache[m] = module.exports)"
+              " }",
+              NULL) != V7_OK) {
+    /* TODO(mkm): percolate failure */
+  }
+#endif
 }
 #else
 void init_file(struct v7 *v7) {
