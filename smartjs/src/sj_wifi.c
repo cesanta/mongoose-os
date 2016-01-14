@@ -30,8 +30,6 @@ static enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
     permanent = v7_is_truthy(v7, v7_get(v7, extrasv, "permanent", ~0));
   }
 
-  printf("permanent = %d\n", permanent);
-
   ssid = v7_get_string_data(v7, &ssidv, &ssid_len);
   pass = v7_get_string_data(v7, &passv, &pass_len);
 
