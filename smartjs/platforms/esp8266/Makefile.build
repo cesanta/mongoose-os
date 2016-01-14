@@ -15,7 +15,7 @@ COMMON_ESP_DIR ?= $(REPO_ROOT)/common/platforms/esp8266
 
 include $(COMMON_ESP_DIR)/common.mk
 
-# For FW_VERSION, MG_FEATURES_TINY
+# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_ROOT)/smartjs/common.mk
 
 SMARTJS_PATH ?= ../..
@@ -107,7 +107,8 @@ endif
 
 SHIMS = -DNDEBUG
 
-V7_FEATURES = -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
+V7_FEATURES = $(COMMON_V7_FEATURES) \
+              -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
               -DV7_DISABLE_AST_TAG_NAMES -DDISABLE_MD5 \
               -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
               -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \

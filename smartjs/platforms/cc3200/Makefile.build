@@ -16,7 +16,7 @@ SJSJS_PATH ?= $(SMARTJS_SRC)/js
 FS_DIR = fs
 FS_BUILD_DIR = $(OBJDIR)/fs
 
-# For FW_VERSION, MG_FEATURES_TINY
+# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_ROOT)/smartjs/common.mk
 
 include ${SDK_PATH}/tools/gcc_scripts/makedefs
@@ -56,7 +56,8 @@ VPATH = ${SDK_PATH}/driverlib \
         ${V7_PATH} \
         ${MONGOOSE_PATH}
 
-V7_FEATURES = -DV7_BUILD_PROFILE=1 \
+V7_FEATURES = $(COMMON_V7_FEATURES) \
+              -DV7_BUILD_PROFILE=1 \
               -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE_COMPACTING_GC \
               -DDISABLE_MD5 \

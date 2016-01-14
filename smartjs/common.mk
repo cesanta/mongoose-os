@@ -4,6 +4,8 @@ GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
 DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
 FW_VERSION  = $(DATE)/$(GIT_REF)/$(GIT_SHA)
 
+COMMON_V7_FEATURES = -DV7_ENABLE__File__require=1
+
 MG_FEATURES_TINY = \
                    -DMG_DISABLE_MQTT \
                    -DMG_DISABLE_JSON_RPC \
