@@ -1,12 +1,20 @@
 "use strict";
 global.$ = {};
-$.extend = function(a, b) {
+$.extend = function(deep, a, b) {
+  if(typeof(deep) != 'boolean') {
+    b = a;
+    a = deep;
+    deep = false;
+  }
+
   if(a === undefined) {
     a = {};
   }
   for (var k in b) {
     if (typeof(a[k]) === 'object' && typeof(b[k]) == 'object') {
       $.extend(a[k], b[k]);
+    } else if(deep && typeof(b[k]) == 'object') {
+      a[k] = $.extend(undefined, b[k]);
     } else {
       a[k] = b[k];
     }
