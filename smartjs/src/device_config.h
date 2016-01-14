@@ -33,4 +33,10 @@ int device_init_platform(struct sys_config *);
 void device_reboot(void);
 void device_get_mac_address(uint8_t mac[6]);
 
+/*
+ * Set property in Sys.conf object pointed by path paramater (dot separated,
+ * ex: wifi.ap.mode). Return 0 on success, non zero on error
+ */
+int update_sysconf(struct v7 *v7, const char *path, v7_val_t val);
+
 #endif

@@ -5,6 +5,7 @@
 #include "sj_wifi.h"
 
 #include "v7/v7.h"
+#include "device_config.h"
 
 static v7_val_t s_wifi;
 static struct v7 *s_v7;
@@ -13,6 +14,8 @@ static enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t ssidv = v7_arg(v7, 0);
   v7_val_t passv = v7_arg(v7, 1);
+  v7_val_t extrasv = v7_arg(v7, 2);
+
   const char *ssid, *pass;
   size_t ssid_len, pass_len;
 
@@ -22,13 +25,28 @@ static enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
+  int permanent = 1;
+  if (v7_is_object(extrasv)) {
+    permanent = v7_is_truthy(v7, v7_get(v7, extrasv, "permanent", ~0));
+  }
+
+  printf("permanent = %d\n", permanent);
+
   ssid = v7_get_string_data(v7, &ssidv, &ssid_len);
   pass = v7_get_string_data(v7, &passv, &pass_len);
 
   struct sys_config_wifi_sta cfg;
   cfg.ssid = (char *) ssid;
   cfg.pass = (char *) pass;
-  *res = v7_mk_boolean(sj_wifi_setup_sta(&cfg));
+  int ret = sj_wifi_setup_sta(&cfg);
+  if (ret && permanent) {
+    update_sysconf(v7, "wifi.sta.enable", v7_mk_boolean(1));
+    update_sysconf(v7, "wifi.sta.ssid", ssidv);
+    update_sysconf(v7, "wifi.sta.pass", passv);
+  }
+
+  *res = v7_mk_boolean(ret);
+
   goto clean;
 
 clean:

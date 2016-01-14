@@ -184,3 +184,42 @@ int init_device(struct v7 *v7) {
 
   return result;
 }
+
+int update_sysconf(struct v7 *v7, const char *path, v7_val_t val) {
+  v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
+  if (!v7_is_object(sys)) {
+    return 1;
+  }
+
+  v7_val_t conf = v7_get(v7, sys, "conf", ~0);
+  if (!v7_is_object(conf)) {
+    return 1;
+  }
+
+  v7_val_t prev_obj, curr_obj;
+  prev_obj = curr_obj = conf;
+
+  const char *prev_tok, *curr_tok;
+  prev_tok = curr_tok = path;
+
+  for (;;) {
+    while (*curr_tok != 0 && *curr_tok != '.') {
+      curr_tok++;
+    }
+    curr_obj = v7_get(v7, prev_obj, prev_tok, (curr_tok - prev_tok));
+    if (v7_is_undefined(curr_obj)) {
+      return 1;
+    } else if (!v7_is_object(curr_obj)) {
+      v7_set(v7, prev_obj, prev_tok, (curr_tok - prev_tok), val);
+      return 0;
+    }
+    if (*curr_tok == 0) {
+      return 1;
+    }
+    curr_tok++;
+    prev_tok = curr_tok;
+    prev_obj = curr_obj;
+  }
+
+  return 1;
+}
