@@ -450,15 +450,6 @@ static void clubby_cb(struct clubby_event *evt) {
     }
 
     case CLUBBY_RESPONSE: {
-      LOG(LL_DEBUG,
-          ("CLUBBY_RESPONSE: id=%d status=%d "
-           "status_msg=%.*s resp=%.*s",
-           (int32_t) evt->response.id, evt->response.status,
-           evt->response.status_msg ? evt->response.status_msg->len : 0,
-           evt->response.status_msg ? evt->response.status_msg->ptr : "",
-           evt->response.resp ? evt->response.resp->len : 0,
-           evt->response.resp ? evt->response.resp->ptr : ""));
-
       clubby_call_cb(clubby, (char *) &evt->response.id,
                      sizeof(evt->response.id), evt, 1);
 
@@ -466,10 +457,6 @@ static void clubby_cb(struct clubby_event *evt) {
     }
 
     case CLUBBY_REQUEST: {
-      LOG(LL_DEBUG,
-          ("CLUBBY_REQUEST: id=%d cmd=%.*s", (int32_t) evt->request.id,
-           evt->request.cmd->len, evt->request.cmd->ptr));
-
       /* Calling global "oncmd", if any */
       clubby_call_cb(clubby, s_oncmd_cmd, sizeof(s_oncmd_cmd), evt, 0);
 
@@ -956,6 +943,7 @@ void sj_clubby_send_reply(struct clubby_event *evt, int status,
   memcpy(dst, evt->request.src->ptr, evt->request.src->len);
 
   clubby_send_resp(clubby, dst, evt->request.id, status, status_msg);
+  free(dst);
 }
 
 void sj_init_clubby(struct v7 *v7) {

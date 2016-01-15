@@ -137,8 +137,17 @@ char *get_full_url(const char *base_url, const char *relative_url) {
   return ret;
 }
 
+static void disconnect() {
+  if (s_current_connection != NULL) {
+    s_current_connection->flags |= MG_F_CLOSE_IMMEDIATELY;
+  }
+  s_current_connection = NULL;
+}
+
 static void do_http_connect(const char *url) {
   LOG(LL_DEBUG, ("Url: %s", url));
+  disconnect();
+
   s_current_connection =
       mg_connect_http(&sj_mgr, mg_ev_handler, url, NULL, NULL);
 #ifdef SSL_KRYPTON
@@ -179,9 +188,7 @@ static void set_update_status(enum update_status us) {
 static int verify_timeout() {
   if (system_get_time() - s_last_received_time >
       (uint32_t)(get_cfg()->update.server_timeout * 1000000)) {
-    if (s_current_connection != NULL) {
-      s_current_connection->flags |= MG_F_CLOSE_IMMEDIATELY;
-    }
+    disconnect();
     set_update_status(US_ERROR);
     set_download_status(DS_ERROR);
     LOG(LL_ERROR, ("Timeout"));
@@ -283,7 +290,9 @@ static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
 
     case MG_EV_CLOSE: {
-      s_current_connection = NULL;
+      if (nc == s_current_connection) {
+        s_current_connection = NULL;
+      }
       break;
     }
 
@@ -404,7 +413,8 @@ static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 void update_timer_cb(void *arg) {
   (void) arg;
   switch (s_update_status) {
-    case US_NOT_STARTED: {
+    case US_NOT_STARTED:
+    case US_INITED: {
       /* Starting with loading metadata */
       LOG(LL_DEBUG, ("Loading metadata"));
       do_http_connect(s_metadata_url);
@@ -447,7 +457,7 @@ void update_timer_cb(void *arg) {
       } else {
         LOG(LL_INFO, ("Nothing to do, exiting update"));
         set_update_status(US_NOTHING_TODO);
-        break;
+        goto cleanup;
       }
 
       s_new_rom_number = get_current_rom() == 1 ? 0 : 1;
@@ -531,6 +541,8 @@ void update_timer_cb(void *arg) {
     }
 
     case US_COMPLETED: {
+      disconnect();
+
       LOG(LL_INFO,
           ("Version %s downloaded, restarting system", s_new_fw_timestamp));
       os_timer_disarm(&s_update_timer);
@@ -546,6 +558,7 @@ void update_timer_cb(void *arg) {
     }
 
     case US_NOTHING_TODO: {
+      disconnect();
       os_timer_disarm(&s_update_timer);
       /* Leave this status to support UI stuff */
       notify_js(US_NOTHING_TODO, NULL);
@@ -553,6 +566,7 @@ void update_timer_cb(void *arg) {
     }
 
     case US_ERROR: {
+      disconnect();
       LOG(LL_ERROR, ("Update failed"));
       os_timer_disarm(&s_update_timer);
       notify_js(US_ERROR, NULL);
@@ -564,16 +578,20 @@ enum update_status update_get_status(void) {
   return s_update_status;
 }
 
+int is_in_progress() {
+  int ret = (s_update_status != US_NOT_STARTED &&
+             s_update_status != US_NOTHING_TODO && s_update_status != US_ERROR);
+  LOG(LL_DEBUG, ("In progress: %d", ret));
+  return ret;
+}
+
 void update_start(const char *metadata_url) {
-  if (s_update_status != US_NOT_STARTED && s_update_status != US_NOTHING_TODO &&
-      s_update_status != US_ERROR) {
+  if (is_in_progress()) {
     LOG(LL_INFO, ("Update already in progress"));
     return;
   }
 
-  if (s_metadata_url) {
-    free(s_metadata_url);
-  }
+  free(s_metadata_url);
 
   if (metadata_url != NULL) {
     s_metadata_url = strdup(metadata_url);
@@ -582,8 +600,9 @@ void update_start(const char *metadata_url) {
     s_metadata_url = strdup(get_cfg()->update.metadata_url);
   }
 
-  s_update_status = US_NOT_STARTED;
+  set_update_status(US_INITED);
   s_last_received_time = system_get_time();
+  os_timer_disarm(&s_update_timer);
   os_timer_setfn(&s_update_timer, update_timer_cb, NULL);
   os_timer_arm(&s_update_timer, 1000, 1);
 }
@@ -807,8 +826,8 @@ static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
    * firmware only
    */
   if (section == NULL || section->type != JSON_TYPE_STRING ||
-      memcmp(section->ptr, "firmware", section->len) != 0 || blob_url == NULL ||
-      blob_url->type != JSON_TYPE_STRING) {
+      strncmp(section->ptr, "firmware", section->len) != 0 ||
+      blob_url == NULL || blob_url->type != JSON_TYPE_STRING) {
     goto bad_request;
   }
 
@@ -825,15 +844,16 @@ static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
    * If user setup callback for updater, just call it.
    * User can start update with Sys.updater.start()
    */
-  char *metadata_url = calloc(1, blob_url->len + 1);
-  memcpy(metadata_url, blob_url->ptr, blob_url->len);
+  if (!is_in_progress()) {
+    char *metadata_url = calloc(1, blob_url->len + 1);
+    memcpy(metadata_url, blob_url->ptr, blob_url->len);
 
-  if (!notify_js(US_NOT_STARTED, metadata_url)) {
-    update_start(metadata_url);
+    if (!notify_js(US_NOT_STARTED, metadata_url)) {
+      update_start(metadata_url);
+    }
+
+    free(metadata_url);
   }
-
-  free(metadata_url);
-
   return;
 
 bad_request:
