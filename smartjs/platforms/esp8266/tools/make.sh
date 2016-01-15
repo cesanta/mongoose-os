@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# this script is useful if you install docker-toolbox on windows and don't have make
+#
 
 SRC_DIR="$(cd "$(dirname $(readlink -f $0))/../../../../" && pwd)"
 ESP_SJS_DIR="$(cd "$(dirname $(readlink -f $0))/../" && pwd)"
@@ -10,7 +13,7 @@ docker run --rm -i -v /${SRC_DIR}:/cesanta ${SDK_CAT} \
 			if [ -d /cesanta/v7 ] ; then make -C /cesanta/v7 v7.c ; fi && \
 			if [ -d /cesanta/mongoose ] ; then make -C /cesanta/mongoose mongoose.c mongoose.h ; fi && \
 			cd ${DIR} && \
-			make -f Makefile.build clean all -${MAKEFLAGS} \
+			make -f Makefile.build clean all \
 				&& python ./tools/showbreakdown.py \
 		"
 
