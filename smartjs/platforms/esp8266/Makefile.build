@@ -240,8 +240,10 @@ $(FW_METADATA_FILE) : $(FW_FILES_OUT)
 	$(vecho) GEN $(FW_METADATA_FILE)
 	$(eval BUILD_REF=$(shell git symbolic-ref HEAD | sed 's:refs/heads/::'))
 	$(eval BUILD_SHA=$(shell git rev-parse HEAD | head -c 8))
-	$(Q) sed -e 's,%VERSION%,\"$(FW_VERSION)\",' \
-	  -e 's,%NAME%,smartjs,' \
+	$(Q) sed \
+		-e 's,%FULL_VERSION%,\"$(FW_VERSION)\",' \
+		-e 's,%VERSION%,\"$(TIMESTAMP)\",' \
+		-e 's,%NAME%,smartjs,' \
 		-e 's,%BUILD%,$(BUILD_REF)/$(BUILD_SHA),' \
 		-e 's,%DESCRIPTION%,,' \
 		-e 's,%PLATFORM%,esp8266,' \

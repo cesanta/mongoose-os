@@ -5,6 +5,7 @@
   "platform": "%PLATFORM%",
   "timestamp": "%TIMESTAMP%",
   "version": %VERSION%,
+  "full_version": %FULL_VERSION%,
   "layout": "ota",
   "boot_url": "%BOOT_FILE%",
   "boot_checksum": "%BOOT_CHECKSUM%",
