@@ -3514,7 +3514,17 @@ V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
                                    bcode_off_t target);
 
 V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value);
+/*
+ * Reads varint-encoded integer from the provided pointer, and adjusts
+ * the pointer appropriately
+ */
 V7_PRIVATE size_t bcode_get_varint(uint8_t **ops);
+
+/*
+ * Decode a literal value from a string of opcodes and update the cursor to
+ * point past it
+ */
+V7_PRIVATE v7_val_t bcode_decode_lit(struct bcode *bcode, uint8_t **ops);
 
 #if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
@@ -10214,10 +10224,6 @@ V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value) {
   encode_varint(value, (unsigned char *) bcode->ops.buf + offset);
 }
 
-/*
- * Reads varint-encoded integer from the provided pointer, and adjusts
- * the pointer appropriately
- */
 V7_PRIVATE size_t bcode_get_varint(uint8_t **ops) {
   size_t ret = 0;
   int len = 0;
@@ -10237,6 +10243,12 @@ V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx) {
   val_t ret;
   memcpy(&ret, bcode->lit.buf + (size_t) idx * sizeof(ret), sizeof(ret));
   return ret;
+}
+
+V7_PRIVATE v7_val_t bcode_decode_lit(struct bcode *bcode, uint8_t **ops) {
+  size_t idx = bcode_get_varint(ops);
+  struct mbuf *mbuf = &bcode->lit;
+  return ((val_t *) mbuf->buf)[idx];
 }
 
 V7_PRIVATE void bcode_op_lit(struct bcode *bcode, enum opcode op, size_t idx) {
@@ -10847,7 +10859,6 @@ struct bcode_registers {
   struct bcode *bcode;
   uint8_t *ops;
   uint8_t *end;
-  val_t *lit;
   unsigned int need_inc_ops : 1;
 };
 
@@ -10876,7 +10887,6 @@ static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
   r->bcode = bcode;
   r->ops = (uint8_t *) bcode->ops.buf;
   r->end = r->ops + bcode->ops.len;
-  r->lit = (val_t *) bcode->lit.buf;
 
   /*
    * TODO(dfrank) : the field `v7->strict_mode` is needed only for public
@@ -11603,8 +11613,7 @@ restart:
         PUSH(v7_mk_number(1));
         break;
       case OP_PUSH_LIT: {
-        size_t arg = bcode_get_varint(&r.ops);
-        PUSH(r.lit[arg]);
+        PUSH(bcode_decode_lit(r.bcode, &r.ops));
         break;
       }
       case OP_LOGICAL_NOT:
@@ -11863,31 +11872,29 @@ restart:
       }
       case OP_GET_VAR:
       case OP_SAFE_GET_VAR: {
-        size_t arg;
         struct v7_property *p = NULL;
         assert(r.ops < r.end - 1);
-        arg = bcode_get_varint(&r.ops);
-        BTRY(v7_get_property_v(v7, v7->vals.call_stack, r.lit[arg], &p));
+        v1 = bcode_decode_lit(r.bcode, &r.ops);
+        BTRY(v7_get_property_v(v7, v7->vals.call_stack, v1, &p));
         if (p == NULL) {
           if (op == OP_SAFE_GET_VAR) {
             PUSH(v7_mk_undefined());
           } else {
             /* variable does not exist: Reference Error */
-            V7_TRY(bcode_throw_reference_error(v7, &r, r.lit[arg]));
+            V7_TRY(bcode_throw_reference_error(v7, &r, v1));
             goto op_done;
           }
           break;
         } else {
-          BTRY(v7_property_value(v7, v7->vals.call_stack, p, &v1));
-          PUSH(v1);
+          BTRY(v7_property_value(v7, v7->vals.call_stack, p, &v2));
+          PUSH(v2);
         }
         break;
       }
       case OP_SET_VAR: {
         struct v7_property *prop;
-        size_t arg = bcode_get_varint(&r.ops);
         v3 = POP();
-        v2 = r.lit[arg];
+        v2 = bcode_decode_lit(r.bcode, &r.ops);
         v1 = v7->vals.call_stack;
 
         BTRY(to_string(v7, v2, NULL, buf, sizeof(buf), NULL));
@@ -12273,11 +12280,10 @@ restart:
         bcode_perform_break(v7, &r);
         break;
       case OP_ENTER_CATCH: {
-        size_t arg = bcode_get_varint(&r.ops);
         /* pop thrown value from stack */
         v1 = POP();
         /* get the name of the thrown value */
-        v2 = r.lit[arg];
+        v2 = bcode_decode_lit(r.bcode, &r.ops);
 
         /*
          * create a new stack frame (a "private" one), and set exception
