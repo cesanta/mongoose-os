@@ -96,30 +96,27 @@ static struct log *plog = NULL;
  */
 
 static void echo_log_malloc(size_t size, void *ptr, int shim) {
-  fprintf(stderr, "hlog:{\"t\":\"malloc\",\"s\":%u,\"p\":0x%x,\"shim\":%d}\n",
-          (unsigned int) size, (unsigned int) ptr, shim);
+  fprintf(stderr, "hl{m,%u,%x,%d}\n", (unsigned int) size, (unsigned int) ptr,
+          shim);
 }
 
 static void echo_log_zalloc(size_t size, void *ptr, int shim) {
-  fprintf(stderr, "hlog:{\"t\":\"zalloc\",\"s\":%u,\"p\":0x%x,\"shim\":%d}\n",
-          (unsigned int) size, (unsigned int) ptr, shim);
+  fprintf(stderr, "hl{z,%u,%x,%d}\n", (unsigned int) size, (unsigned int) ptr,
+          shim);
 }
 
 static void echo_log_calloc(size_t size, void *ptr, int shim) {
-  fprintf(stderr, "hlog:{\"t\":\"calloc\",\"s\":%u,\"p\":0x%x,\"shim\":%d}\n",
-          (unsigned int) size, (unsigned int) ptr, shim);
+  fprintf(stderr, "hl{c,%u,%x,%d}\n", (unsigned int) size, (unsigned int) ptr,
+          shim);
 }
 
 static void echo_log_realloc(size_t size, void *old_ptr, void *ptr, int shim) {
-  fprintf(
-      stderr,
-      "hlog:{\"t\":\"realloc\",\"s\":%u,\"p2\":0x%x,\"p\":0x%x,\"shim\":%d}\n",
-      (unsigned int) size, (unsigned int) old_ptr, (unsigned int) ptr, shim);
+  fprintf(stderr, "hl{r,%u,%x,%x,%d}\n", (unsigned int) size,
+          (unsigned int) old_ptr, (unsigned int) ptr, shim);
 }
 
 static void echo_log_free(void *ptr, int shim) {
-  fprintf(stderr, "hlog:{\"t\":\"free\",\"p\":0x%x,\"shim\":%d}\n",
-          (unsigned int) ptr, shim);
+  fprintf(stderr, "hl{f,%x,%d}\n", (unsigned int) ptr, shim);
 }
 
 /*
@@ -127,6 +124,7 @@ static void echo_log_free(void *ptr, int shim) {
  */
 static void add_log_item(enum item_type type, void *ptr, size_t size,
                          int shim) {
+  uint8_t plog_allocated = 0;
   struct log_item item = {0};
   item.ptr = (unsigned int) ptr & 0xffff;
   item.size = size;
@@ -139,8 +137,8 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
   }
 
   if (plog == NULL) {
-    /* TODO(dfrank): log this call as well */
     plog = __real_pvPortCalloc(1, sizeof(*plog), NULL, 0);
+    plog_allocated = 1;
   }
 
   if (plog->items_cnt >= LOG_ITEMS_CNT) {
@@ -150,6 +148,11 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
 
   plog->items[plog->items_cnt] = item;
   plog->items_cnt++;
+
+  /* we we've just allocated `plog` buffer, log this allocation as well */
+  if (plog_allocated) {
+    add_log_item(ITEM_TYPE_CALLOC, plog, sizeof(*plog), 1);
+  }
 }
 
 /*
@@ -186,6 +189,9 @@ static void flush_log_items(void) {
   if (plog != NULL) {
     int i;
 
+    /* before we flush, we should also log that we freed `plog` buffer */
+    add_log_item(ITEM_TYPE_FREE, plog, 0, 1);
+
     if (plog->item_size_small) {
       fprintf(stderr, "struct log_item::size width is too small\n");
       abort();
@@ -194,16 +200,14 @@ static void flush_log_items(void) {
       abort();
     }
 
-    /* TODO(dfrank) : real values */
+    /* TODO(dfrank) : heap size */
     fprintf(stderr, "hlog_param:{\"heap_start\":0x%x, \"heap_end\":0x%x}\n",
-            (unsigned int) 0x3fff0000 /*_heap_start*/,
-            (unsigned int) 0x3fff7fff);
+            (unsigned int) &_heap_start, (unsigned int) 0x3fff7fff);
 
     for (i = 0; i < plog->items_cnt; i++) {
       echo_log_item(&plog->items[i]);
     }
 
-    /* TODO(dfrank): log this call as well */
     __real_vPortFree(plog, NULL, 0);
     plog = NULL;
     fprintf(stderr, "--- uart initialized ---\n");
