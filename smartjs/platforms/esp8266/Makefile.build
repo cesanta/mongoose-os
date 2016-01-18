@@ -7,6 +7,9 @@
 # SSL: if set to "Krypton" enables SSL with the krypton lib
 # OTA: if "1" enables rboot as a bootloader and generates files required for OTA
 # FREEZE: if "1" freezes the stdlib object graph into a static graph loadable in ROM
+# HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
+#           logging wrappers for malloc and friends. You can later view heap
+#           map by `tools/heaplog_viewer/heaplog_viewer.html`
 #
 
 REPO_ROOT ?= ../../..
@@ -31,6 +34,7 @@ BOOTLOADER_PATH ?= $(COMMON_ESP_DIR)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 OTA ?= 1
 FREEZE ?=
+HEAP_LOG ?=
 
 FLASH_SIZE ?= 1M
 
@@ -179,10 +183,20 @@ FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
 LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
+LD_WRAPPERS =
 
 ifeq "${FREEZE}" "1"
 FEATURES += -DV7_THAW
 APP_OBJS += $(BUILD_DIR)/fr.o
+endif
+
+ifeq "${HEAP_LOG}" "1"
+CFLAGS_EXTRA += -DESP_ENABLE_HEAP_TRACE
+LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
+               -Wl,--wrap=pvPortMalloc \
+               -Wl,--wrap=pvPortZalloc \
+               -Wl,--wrap=pvPortRealloc \
+               -Wl,--wrap=vPortFree
 endif
 
 ifneq "${OTA}" "1"
@@ -272,7 +286,7 @@ endif
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
 $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
-	$(link)
+	$(link) $(LD_WRAPPERS)
 
 # Symbol check: make sure app doesn't override SDK lib symbols.
 # A target is created that uses the same libs but no user code and symbols are

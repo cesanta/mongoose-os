@@ -34,6 +34,16 @@
 
 #endif /* RTOS_SDK */
 
+#if defined(ESP_ENABLE_HEAP_TRACE)
+int cs_heap_shim = 0;
+#define CS_HEAP_SHIM_FLAG_SET() \
+  do {                          \
+    cs_heap_shim = 1;           \
+  } while (0)
+#else
+#define CS_HEAP_SHIM_FLAG_SET()
+#endif
+
 /* #define ESP_ABORT_ON_MALLOC_FAILURE */
 
 int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
@@ -56,7 +66,9 @@ char *strerror(int errnum) {
 #ifndef RTOS_SDK
 
 void *malloc(size_t size) {
-  void *res = (void *) os_malloc(size);
+  void *res;
+  CS_HEAP_SHIM_FLAG_SET();
+  res = (void *) os_malloc(size);
 #ifdef ESP_ENABLE_MALLOC_TRACES
   os_printf("ma %p %u\n", res, size);
 #endif
@@ -67,6 +79,7 @@ void *malloc(size_t size) {
 }
 
 void free(void *ptr) {
+  CS_HEAP_SHIM_FLAG_SET();
 #ifdef ESP_ENABLE_MALLOC_TRACES
   os_printf("fr %p\n", ptr);
 #endif
@@ -75,6 +88,7 @@ void free(void *ptr) {
 
 void *realloc(void *ptr, size_t size) {
   void *res;
+  CS_HEAP_SHIM_FLAG_SET();
   /* ESP realloc is annoying - it prints an error message if reallocing to 0. */
   if (size == 0) {
     free(ptr);
@@ -95,7 +109,9 @@ void *realloc(void *ptr, size_t size) {
 }
 
 void *calloc(size_t num, size_t size) {
-  void *res = (void *) os_zalloc(num * size);
+  void *res;
+  CS_HEAP_SHIM_FLAG_SET();
+  res = (void *) os_zalloc(num * size);
 #ifdef ESP_ENABLE_MALLOC_TRACES
   os_printf("ca %p %u\n", res, num * size);
 #endif
