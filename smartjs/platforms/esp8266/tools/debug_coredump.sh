@@ -35,10 +35,9 @@
 # otherwise docker-machine (or boot2docker) won't make it available to your
 # docker VM.
 
-SDK=docker.cesanta.com:5000/esp8266-build-oss:1.5.0-cesanta-r1
-
 cd $(dirname $0)
 BASEDIR=$(dirname $PWD)
+SDK=$(cat ${BASEDIR}/sdk.version)
 DIR=$(dirname /cesanta${PWD##$BASEDIR})
 
 LOG="$1"
