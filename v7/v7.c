@@ -3444,6 +3444,11 @@ struct bcode {
   int args;          /* number of args */
 
   unsigned int strict_mode : 1;
+  /*
+   * if true this structure lives on read only memory, either
+   * mmapped or constant data section.
+   */
+  unsigned int frozen : 1;
 };
 
 enum bcode_ser_lit_tag {
@@ -10188,11 +10193,14 @@ V7_PRIVATE void bcode_free(struct bcode *bcode) {
 
 V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *b) {
   (void) v7;
-  b->refcnt++;
+  if (!b->frozen) {
+    b->refcnt++;
+  }
 }
 
 V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
   (void) v7;
+  if (b->frozen) return;
 
   assert(b->refcnt > 0);
   if (b->refcnt != 0) b->refcnt--;
@@ -10521,7 +10529,7 @@ static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
   retain_bcode(v7, bcode);
   retain_bcode(v7, bcode);
 
-  bcode->refcnt++; /* prevent freeing */
+  bcode->frozen = 1; /* prevent freeing */
 
   data += size;
 
@@ -11344,7 +11352,7 @@ static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
                         v7_get(v7, func, "prototype", 9));
   rf = to_js_function(res);
   rf->bcode = f->bcode;
-  rf->bcode->refcnt++;
+  retain_bcode(v7, rf->bcode);
   return res;
 }
 
