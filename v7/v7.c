@@ -13323,8 +13323,8 @@ static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
 #define I_STRINGIFY(x) #x
 #define I_STRINGIFY2(x) I_STRINGIFY(x)
 
-  /* don't use mmap if path is not a substring of V7_MMAP_EXEC_ONLY */
-  if (strstr("" I_STRINGIFY2(V7_MMAP_EXEC_ONLY), path) == NULL) {
+  /* use mmap only for .js files */
+  if (strlen(path) <= 3 || strcmp(path + strlen(path) - 3, ".js") != 0) {
     rd = cs_read_file;
   }
 #endif
