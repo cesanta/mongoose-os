@@ -17,6 +17,7 @@ void ets_timer_arm_new(ETSTimer *a, int b, int c, int isMstimer);
 void ets_timer_disarm(ETSTimer *a);
 void ets_timer_setfn(ETSTimer *t, ETSTimerFunc *fn, void *parg);
 void ets_wdt_disable();
+void ets_wdt_enable();
 void ets_delay_us(unsigned us);
 
 int os_printf_plus(const char *format, ...);

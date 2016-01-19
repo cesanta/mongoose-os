@@ -119,7 +119,19 @@ IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
   while (tx_fifo_len(1) > 0) {
   }
 
+#ifndef DISABLE_OTA
+  /*
+   * `_ResetVector()` as well as `system_restart()` doesn't work
+   * in exc handler if rboot is enabled, but hw wdt reboots just fine
+   * TODO(alashkin): find a better way for rebooting
+   * or prove this is the only way to reboot
+   */
+  ets_wdt_enable();
+  while (1)
+    ;
+#else
   _ResetVector();
+#endif
 }
 
 #else /* RTOS_SDK */
