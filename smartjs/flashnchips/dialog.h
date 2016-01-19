@@ -19,6 +19,7 @@
 
 #include <common/util/status.h>
 
+#include "fw_loader.h"
 #include "hal.h"
 #include "prompter.h"
 #include "settings.h"
@@ -108,6 +109,7 @@ signals:
   std::unique_ptr<QFile> console_log_;
   PrompterImpl *prompter_;
   SettingsDialog settingsDlg_;
+  QList<FirmwareInfo> fwImages_;
 
   QNetworkConfigurationManager net_mgr_;
 

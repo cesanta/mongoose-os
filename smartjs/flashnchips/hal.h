@@ -7,6 +7,7 @@
 
 #include "flasher.h"
 #include "prompter.h"
+#include "fw_loader.h"
 
 class QSerialPort;
 class QSerialPortInfo;
@@ -18,6 +19,7 @@ class HAL {
   virtual std::unique_ptr<Flasher> flasher(Prompter *prompter) const = 0;
   virtual std::string name() const = 0;
   virtual util::Status reboot(QSerialPort *) const = 0;
+  virtual std::unique_ptr<FirmwareLoader> fwLoader() const = 0;
 };
 
 #endif  // HAL_H

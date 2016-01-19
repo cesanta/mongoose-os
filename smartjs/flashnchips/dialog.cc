@@ -671,10 +671,13 @@ void MainDialog::updateFWList() {
   if (hal_ == nullptr) {
     qFatal("No HAL instance");
   }
+  auto fwloader = hal_->fwLoader();
   ui_.firmwareSelector->clear();
-  QDir dir(fwDir_.absoluteFilePath(QString::fromStdString(hal_->name())));
-  dir.setFilter(QDir::Dirs | QDir::NoDotAndDotDot);
-  ui_.firmwareSelector->addItems(dir.entryList());
+  fwImages_ = fwloader->list(
+      fwDir_.absoluteFilePath(QString::fromStdString(hal_->name())));
+  for (const FirmwareInfo &fw : fwImages_) {
+    ui_.firmwareSelector->addItem(fw.name());
+  }
 }
 
 void MainDialog::loadFirmware() {
@@ -684,8 +687,7 @@ void MainDialog::loadFirmware() {
   QString name = ui_.firmwareSelector->currentText();
   QString path;
   if (name != "") {
-    path = fwDir_.absoluteFilePath(QString::fromStdString(hal_->name()) + "/" +
-                                   name);
+    path = fwImages_[ui_.firmwareSelector->currentIndex()].location();
   } else {
     path = QFileDialog::getExistingDirectory(this,
                                              tr("Load firmware from directory"),

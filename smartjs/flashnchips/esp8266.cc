@@ -23,6 +23,7 @@
 #include <common/util/statusor.h>
 
 #include "config.h"
+#include "esp8266_fw_loader.h"
 #include "esp_flasher_client.h"
 #include "esp_rom_client.h"
 #include "fs.h"
@@ -46,7 +47,6 @@ const char kDefaultSPIFFSSize[] = "65536";
 const char kNoMinimizeWritesOption[] = "esp8266-no-minimize-writes";
 
 const int kDefaultFlashBaudRate = 230400;
-const char fwFileGlob[] = "0x*.bin";
 const ulong idBlockOffset = 0x10000;
 const ulong idBlockSizeSectors = 1;
 /* Last 16K of flash are reserved for system params. */
@@ -194,65 +194,11 @@ class FlasherImpl : public Flasher {
 
   util::Status load(const QString &path) override {
     QMutexLocker lock(&lock_);
-    images_.clear();
-    QDir dir(path, fwFileGlob, QDir::Name,
-             QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
-    if (!dir.exists()) {
-      return util::Status(util::error::FAILED_PRECONDITION,
-                          tr("Directory does not exist").toStdString());
+    auto r = fw_loader_.load(path);
+    if (!r.ok()) {
+      return r.status();
     }
-
-    const auto files = dir.entryInfoList();
-    if (files.length() == 0) {
-      return util::Status(util::error::FAILED_PRECONDITION,
-                          tr("Do files to flash").toStdString());
-    }
-    for (const auto &file : files) {
-      qInfo() << "Loading" << file.fileName();
-      bool ok = false;
-      ulong addr = file.baseName().toULong(&ok, 16);
-      if (!ok) {
-        return util::Status(
-            util::error::INVALID_ARGUMENT,
-            tr("%1 is not a valid address").arg(file.baseName()).toStdString());
-      }
-      QFile f(file.absoluteFilePath());
-      if (!f.open(QIODevice::ReadOnly)) {
-        return util::Status(
-            util::error::ABORTED,
-            tr("Failed to open %1").arg(file.absoluteFilePath()).toStdString());
-      }
-      auto bytes = f.readAll();
-      if (bytes.length() != file.size()) {
-        images_.clear();
-        return util::Status(util::error::UNAVAILABLE,
-                            tr("%1 has size %2, but readAll returned %3 bytes")
-                                .arg(file.fileName())
-                                .arg(file.size())
-                                .arg(bytes.length())
-                                .toStdString());
-      }
-      images_[addr] = bytes;
-    }
-
-    files_.clear();
-    if (dir.exists("fs")) {
-      QDir files_dir(dir.filePath("fs"), "", QDir::Name,
-                     QDir::Files | QDir::NoDotAndDotDot | QDir::Readable);
-      for (const auto &file : files_dir.entryInfoList()) {
-        qInfo() << "Loading" << file.fileName();
-        QFile f(file.absoluteFilePath());
-        if (!f.open(QIODevice::ReadOnly)) {
-          return util::Status(util::error::ABORTED,
-                              tr("Failed to open %1")
-                                  .arg(file.absoluteFilePath())
-                                  .toStdString());
-        }
-        files_.insert(file.fileName(), f.readAll());
-        f.close();
-      }
-    }
-
+    fw_ = r.MoveValueOrDie();
     return util::Status::OK;
   }
 
@@ -264,13 +210,16 @@ class FlasherImpl : public Flasher {
 
   int totalBytes() const override {
     QMutexLocker lock(&lock_);
+    if (fw_ == nullptr) {
+      return 0;
+    }
     int r = 0;
-    for (const auto &bytes : images_.values()) {
+    for (const auto &bytes : fw_->blobs().values()) {
       r += bytes.length();
     }
     // Add FS once again for reading.
-    if (merge_flash_filesystem_ && images_.contains(spiffs_offset_)) {
-      r += images_[spiffs_offset_].length();
+    if (merge_flash_filesystem_ && fw_->blobs().contains(spiffs_offset_)) {
+      r += fw_->blobs()[spiffs_offset_].length();
     }
     return r;
   }
@@ -323,6 +272,9 @@ class FlasherImpl : public Flasher {
 
  private:
   util::Status runLocked() {
+    if (fw_ == nullptr) {
+      return QS(util::error::FAILED_PRECONDITION, tr("No firmware loaded"));
+    }
     progress_ = 0;
     emit progress(progress_);
 
@@ -382,10 +334,11 @@ class FlasherImpl : public Flasher {
     }
     qInfo() << "Flash size:" << flashSize;
 
-    st = sanityCheckImages(images_, flashSize, flasher_client.kFlashSectorSize);
+    st = sanityCheckImages(fw_->blobs(), flashSize,
+                           flasher_client.kFlashSectorSize);
     if (!st.ok()) return st;
 
-    if (images_.contains(0) && images_[0].length() >= 4) {
+    if (fw_->blobs().contains(0) && fw_->blobs()[0].length() >= 4) {
       int flashParams = 0;
       if (override_flash_params_ >= 0) {
         flashParams = override_flash_params_;
@@ -398,21 +351,21 @@ class FlasherImpl : public Flasher {
             flashParamsFromString(
                 tr("dio,%1m,40m").arg(flashSize * 8 / 1048576)).ValueOrDie();
       }
-      images_[0][2] = (flashParams >> 8) & 0xff;
-      images_[0][3] = flashParams & 0xff;
+      fw_->blobs()[0][2] = (flashParams >> 8) & 0xff;
+      fw_->blobs()[0][3] = flashParams & 0xff;
       emit statusMessage(
           tr("Adjusting flash params in the image 0x0000 to 0x%1")
-              .arg(QString(images_[0].mid(2, 2).toHex())),
+              .arg(QString(fw_->blobs()[0].mid(2, 2).toHex())),
           true);
     }
 
     bool id_generated = false;
-    if (generate_id_if_none_found_ && !images_.contains(idBlockOffset)) {
+    if (generate_id_if_none_found_ && !fw_->blobs().contains(idBlockOffset)) {
       auto res = findIdLocked(&flasher_client);
       if (res.ok()) {
         if (!res.ValueOrDie()) {
           emit statusMessage(tr("Generating new ID"), true);
-          images_[idBlockOffset] = makeIDBlock(id_hostname_);
+          fw_->blobs()[idBlockOffset] = makeIDBlock(id_hostname_);
           id_generated = true;
         } else {
           emit statusMessage(tr("Existing ID found"), true);
@@ -429,13 +382,13 @@ class FlasherImpl : public Flasher {
                    .arg(spiffs_size_)
                    .arg(spiffs_offset_, 0, 16)
                    .toUtf8();
-    if (merge_flash_filesystem_ && images_.contains(spiffs_offset_)) {
+    if (merge_flash_filesystem_ && fw_->blobs().contains(spiffs_offset_)) {
       auto res = mergeFlashLocked(&flasher_client);
       if (res.ok()) {
         if (res.ValueOrDie().size() > 0) {
-          images_[spiffs_offset_] = res.ValueOrDie();
+          fw_->blobs()[spiffs_offset_] = res.ValueOrDie();
         } else {
-          images_.remove(spiffs_offset_);
+          fw_->blobs().remove(spiffs_offset_);
         }
         emit statusMessage(tr("Merged flash content"), true);
       } else {
@@ -454,8 +407,9 @@ class FlasherImpl : public Flasher {
       qInfo() << "No SPIFFS image in new firmware";
     }
 
-    auto flashImages =
-        minimize_writes_ ? dedupImages(&flasher_client, images_) : images_;
+    auto flashImages = minimize_writes_
+                           ? dedupImages(&flasher_client, fw_->blobs())
+                           : fw_->blobs();
 
     for (ulong image_addr : flashImages.keys()) {
       QByteArray data = flashImages[image_addr];
@@ -496,7 +450,7 @@ class FlasherImpl : public Flasher {
       progress_ += origLength;
     }
 
-    st = verifyImages(&flasher_client, images_);
+    st = verifyImages(&flasher_client, fw_->blobs());
     if (!st.ok()) return QSP("verification failed", st);
 
     // Ideally, we'd like to tell flasher stub to boot the firmware here,
@@ -519,7 +473,7 @@ class FlasherImpl : public Flasher {
 
   util::Status sanityCheckImages(const QMap<ulong, QByteArray> &images,
                                  quint32 flashSize, quint32 flashSectorSize) {
-    const auto keys = images_.keys();
+    const auto keys = images.keys();
     for (int i = 0; i < keys.length() - 1; i++) {
       const quint32 imageBegin = keys[i];
       const QByteArray &image = images[imageBegin];
@@ -575,6 +529,9 @@ class FlasherImpl : public Flasher {
   // or by the software update utility, while the core system uploaded by
   // the flasher should only upload a few core files.
   util::StatusOr<QByteArray> mergeFlashLocked(ESPFlasherClient *fc) {
+    if (fw_ == nullptr) {
+      return QS(util::error::FAILED_PRECONDITION, tr("No firmware loaded"));
+    }
     emit statusMessage(tr("Reading file system image (%1 @ %2)...")
                            .arg(spiffs_size_)
                            .arg(spiffs_offset_, 0, 16),
@@ -598,9 +555,9 @@ class FlasherImpl : public Flasher {
       }
     }
     auto merged =
-        mergeFilesystems(dev_fs.ValueOrDie(), images_[spiffs_offset_]);
-    if (merged.ok() && !files_.empty()) {
-      merged = mergeFiles(merged.ValueOrDie(), files_);
+        mergeFilesystems(dev_fs.ValueOrDie(), fw_->blobs()[spiffs_offset_]);
+    if (merged.ok() && !fw_->files().empty()) {
+      merged = mergeFiles(merged.ValueOrDie(), fw_->files());
     }
     if (!merged.ok()) {
       QString msg = tr("Failed to merge file system: ") +
@@ -615,7 +572,7 @@ class FlasherImpl : public Flasher {
         case 0:
           return merged.status();
         case 1:
-          return images_[spiffs_offset_];
+          return fw_->blobs()[spiffs_offset_];
         case 2:
           return QByteArray();
       }
@@ -736,9 +693,8 @@ class FlasherImpl : public Flasher {
   Prompter *prompter_;
 
   mutable QMutex lock_;
-  // A number of things depend on images_ being ordered by address.
-  QMap<ulong, QByteArray> images_;
-  QMap<QString, QByteArray> files_;
+  FirmwareLoader fw_loader_;
+  std::unique_ptr<FirmwareImage> fw_;
   QSerialPort *port_;
   std::unique_ptr<ESPROMClient> rom_;
   int progress_ = 0;
@@ -796,6 +752,10 @@ class ESP8266HAL : public HAL {
     util::Status st = rom.connect();
     if (!st.ok()) return QSP("failed to communicate to ROM", st);
     return rom.rebootIntoFirmware();
+  }
+
+  std::unique_ptr<::FirmwareLoader> fwLoader() const override {
+    return dirListingLoader();
   }
 };
 

@@ -1076,6 +1076,10 @@ class CC3200HAL : public HAL {
     return boot(ctx.get());
 #endif  // NO_LIBFTDI
   }
+
+  std::unique_ptr<FirmwareLoader> fwLoader() const override {
+    return dirListingLoader();
+  }
 };
 
 }  // namespace
