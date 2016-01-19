@@ -62,6 +62,9 @@ int main(int argc, char *argv[]) {
       "level", "1"));
   commonOpts.append(
       QCommandLineOption("log", "Redirect logging into a file.", "filename"));
+  commonOpts.append(QCommandLineOption(
+      "console-line-count",
+      "Maximum number of lines to keep in console window.", "count", "4096"));
   config.addOptions(commonOpts);
   ESP8266::addOptions(&config);
   CC3200::addOptions(&config);

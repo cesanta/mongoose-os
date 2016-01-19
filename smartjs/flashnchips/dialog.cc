@@ -941,6 +941,15 @@ void MainDialog::updateConfig(const QString &name) {
           << std::endl;
       Log::setFile(logfile);
     }
+  } else if (name == "console-line-count") {
+    bool ok = false;
+    int n = config_->value("console-line-count").toInt(&ok);
+    if (!ok) {
+      qInfo() << "Invalid value for --console-line-count:"
+              << config_->value("console-line-count");
+      n = 4096;
+    }
+    ui_.terminal->setMaximumBlockCount(n);
   }
 }
 
