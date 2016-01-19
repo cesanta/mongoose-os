@@ -239,9 +239,16 @@ CFLAGS += $(BOOTLOADER_FLAGS)
 LDFLAGS += -u Cache_Read_Enable_New
 endif
 
-all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT) $(FW_METADATA_FILE)
+ifeq "${OTA}" "1"
+all: $(FW_METADATA_FILE)
+
+METADATA_FILE_PATTERN=|$(FW_METADATA_FILE)
+endif
+
+
+all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
 	$(Q) rm -f `ls $(FW_DIR)/* \
-		| grep -vE '^($(FW_FILE_1_OUT)|$(RBOOT_EMPTY_CFG)|$(FW_FILE_2_OUT)|$(FW_FS_OUT)|$(FW_DIR)/metadata.json)$$'`
+		| grep -vE '^($(FW_FILE_1_OUT)|$(RBOOT_EMPTY_CFG)|$(FW_FILE_2_OUT)|$(FW_FS_OUT)$(METADATA_FILE_PATTERN))$$'`
 
 $(RBOOT_EMPTY_CFG):
 	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" >$(RBOOT_EMPTY_CFG)
