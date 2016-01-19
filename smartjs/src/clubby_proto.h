@@ -18,7 +18,6 @@ enum clubby_event_type {
   CLUBBY_DISCONNECT /* no params */,
   CLUBBY_REQUEST /* request */,
   CLUBBY_RESPONSE /* response */,
-  CLUBBY_FRAME /* frame */,
 };
 
 struct clubby_event {
@@ -27,9 +26,6 @@ struct clubby_event {
     struct {
       int success;
     } net_connect;
-    struct {
-      struct mg_str data;
-    } frame;
     struct {
       struct json_token *resp_body;
       int64_t id;

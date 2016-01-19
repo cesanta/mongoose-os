@@ -43,6 +43,11 @@ static struct mg_connection *s_current_connection;
 enum download_status { DS_NOT_STARTED, DS_IN_PROGRESS, DS_COMPLETED, DS_ERROR };
 static enum download_status s_download_status = DS_NOT_STARTED;
 
+static struct clubby_event *s_clubby_reply;
+static int s_clubby_upd_status;
+
+#define UPDATER_TEMP_FILE_NAME "ota_reply.conf"
+
 /* Forward declarations */
 void set_boot_params(uint8_t new_rom, uint8_t prev_rom);
 static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data);
@@ -543,6 +548,17 @@ void update_timer_cb(void *arg) {
     case US_COMPLETED: {
       disconnect();
 
+      int len;
+      char *upd_data = sj_clubby_repl_to_bytes(s_clubby_reply, &len);
+      FILE *tmp_file = fopen(UPDATER_TEMP_FILE_NAME, "w");
+      if (tmp_file == NULL || upd_data == NULL) {
+        /* There is nothing we can do */
+        LOG(LL_ERROR, ("Cannot save update status"));
+      } else {
+        fwrite(upd_data, 1, len, tmp_file);
+        fclose(tmp_file);
+      }
+
       LOG(LL_INFO,
           ("Version %s downloaded, restarting system", s_new_fw_timestamp));
       os_timer_disarm(&s_update_timer);
@@ -550,7 +566,7 @@ void update_timer_cb(void *arg) {
       set_boot_params(s_new_rom_number, rboot_get_current_rom());
 
       if (!notify_js(US_COMPLETED, NULL)) {
-        system_restart();
+        schedule_reboot();
       }
 
       set_update_status(US_NOT_STARTED);
@@ -562,6 +578,7 @@ void update_timer_cb(void *arg) {
       os_timer_disarm(&s_update_timer);
       /* Leave this status to support UI stuff */
       notify_js(US_NOTHING_TODO, NULL);
+      sj_clubby_send_reply(s_clubby_reply, 0, "Already updated");
       break;
     }
 
@@ -570,6 +587,7 @@ void update_timer_cb(void *arg) {
       LOG(LL_ERROR, ("Update failed"));
       os_timer_disarm(&s_update_timer);
       notify_js(US_ERROR, NULL);
+      sj_clubby_send_reply(s_clubby_reply, 1, "Update failed");
     }
   }
 }
@@ -691,7 +709,52 @@ exit:
   return ret;
 }
 
-static int fs_merge(uint32_t old_fs_addr) {
+static struct clubby_event *load_clubby_reply(spiffs *fs) {
+  struct clubby_event *ret = NULL;
+  spiffs_stat st;
+  char *reply_str = NULL;
+  spiffs_file upd_file = -1;
+
+  upd_file = SPIFFS_open(fs, UPDATER_TEMP_FILE_NAME, SPIFFS_RDONLY, 0);
+  if (upd_file < 0) {
+    LOG(LL_ERROR, ("Cannot open updater file"));
+    goto cleanup;
+  }
+
+  if (SPIFFS_fstat(fs, upd_file, &st) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("Cannot get size of updater"));
+    goto cleanup;
+  }
+
+  LOG(LL_ERROR, ("Updater file size = %d", st.size));
+  reply_str = malloc(st.size);
+  if (reply_str == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    goto cleanup;
+  }
+
+  if ((uint32_t) SPIFFS_read(fs, upd_file, reply_str, st.size) != st.size) {
+    LOG(LL_ERROR, ("Cannot read data from updater file"));
+    goto cleanup;
+  }
+
+  ret = sj_clubby_bytes_to_repl(reply_str, st.size);
+  if (ret == NULL) {
+    LOG(LL_ERROR, ("Cannot create clubby reply"));
+    goto cleanup;
+  }
+
+cleanup:
+  free(reply_str);
+
+  if (upd_file >= 0) {
+    SPIFFS_close(fs, upd_file);
+  }
+
+  return ret;
+}
+
+static int load_data_from_old_fs(uint32_t old_fs_addr) {
   uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
   uint8_t spiffs_fds[32 * 2];
   spiffs old_fs;
@@ -731,6 +794,10 @@ static int fs_merge(uint32_t old_fs_addr) {
   }
 
   ret = 1;
+
+  s_clubby_reply = load_clubby_reply(&old_fs);
+/* Do not rollback fw if load_clubby_reply failed */
+
 cleanup:
   if (dir_ptr != NULL) {
     SPIFFS_closedir(dir_ptr);
@@ -756,6 +823,7 @@ int finish_update() {
       LOG(LL_INFO, ("Firmware was rolled back, commiting it"));
       get_rboot_config()->is_first_boot = 0;
       rboot_set_config(get_rboot_config());
+      s_clubby_upd_status = 1; /* Once we connect wifi we send status 1 */
     }
     return 1;
   }
@@ -764,7 +832,8 @@ int finish_update() {
    * We merge FS _after_ booting to new FW, to give a chance
    * to change merge behavior in new FW
    */
-  if (fs_merge(get_fs_addr(get_rboot_config()->previous_rom)) != 0) {
+  if (load_data_from_old_fs(get_fs_addr(get_rboot_config()->previous_rom)) !=
+      0) {
     /* Ok, commiting update */
     get_rboot_config()->is_first_boot = 0;
     get_rboot_config()->fw_updated = 0;
@@ -776,14 +845,14 @@ int finish_update() {
     LOG(LL_ERROR,
         ("Failed to merge filesystem, rollback to previous firmware"));
 
-    rollback_fw();
+    schedule_reboot();
     return 0;
   }
 
   return 1;
 }
 
-void rollback_fw() {
+void schedule_reboot() {
   /*
    * For unknown reason, calling system_restart() from user_init/system_init_cb
    * couses nothing but core dump. So, arming timer for reboot
@@ -806,6 +875,30 @@ static int notify_js(enum update_status us, const char *info) {
   }
 
   return 0;
+}
+
+static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
+  (void) user_data;
+  LOG(LL_DEBUG, ("Clubby is ready"));
+
+  if (s_clubby_reply == NULL && s_clubby_upd_status != 0) {
+    /*
+     * If we are here, FW was rolled back and we have to pickup
+     * updater info from current FS
+     */
+    s_clubby_reply = load_clubby_reply(get_fs());
+    remove(UPDATER_TEMP_FILE_NAME);
+  }
+
+  if (s_clubby_reply) {
+    LOG(LL_DEBUG, ("Found reply to send"));
+    s_clubby_reply->context = evt->context;
+    sj_clubby_send_reply(
+        s_clubby_reply, s_clubby_upd_status,
+        s_clubby_upd_status == 0 ? "Updated successfully" : "Update failed");
+    sj_clubby_free_reply(s_clubby_reply);
+    s_clubby_reply = NULL;
+  };
 }
 
 static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
@@ -833,12 +926,8 @@ static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
 
   LOG(LL_DEBUG, ("metadata url: %.*s", blob_url->len, blob_url->ptr));
 
-  /*
-   * TODO(alashkin): should we send reply after upgrade?
-   * New version will be reported after reboot as labels,
-   * But it makes sense to send status != 0 if update failed
-   */
-  sj_clubby_send_reply(evt, 0, NULL);
+  sj_clubby_free_reply(s_clubby_reply);
+  s_clubby_reply = sj_clubby_create_reply(evt);
 
   /*
    * If user setup callback for updater, just call it.
@@ -941,6 +1030,9 @@ void init_updater(struct v7 *v7) {
          v7_mk_number(US_ERROR));
 
   sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_clubby_update,
+                                    NULL);
+
+  sj_clubby_register_global_command(clubby_cmd_ready, handle_clubby_ready,
                                     NULL);
 }
 

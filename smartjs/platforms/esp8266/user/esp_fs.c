@@ -68,6 +68,10 @@ static struct mmap_desc *cur_mmap_desc;
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
+spiffs *get_fs() {
+  return &fs;
+}
+
 int spiffs_get_memory_usage() {
   return sizeof(spiffs_work_buf) + sizeof(spiffs_fds);
 }

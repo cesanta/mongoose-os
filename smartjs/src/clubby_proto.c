@@ -280,8 +280,8 @@ static void clubby_proto_parse_req(struct json_token *frame,
   }
 }
 
-static void clubby_proto_handle_frame(struct mg_str data, void *context) {
-  struct json_token *frame = parse_json2(data.p, data.len);
+static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
+  struct json_token *frame = parse_json2(data, len);
 
   if (frame == NULL) {
     LOG(LL_DEBUG, ("Error parsing clubby frame"));
@@ -344,17 +344,7 @@ static void clubby_proto_handler(struct mg_connection *nc, int ev,
       struct websocket_message *wm = (struct websocket_message *) ev_data;
       LOG(LL_DEBUG,
           ("GOT FRAME (%d): %.*s", (int) wm->size, (int) wm->size, wm->data));
-      evt.frame.data.p = (char *) wm->data;
-      /*
-       * Mostly debug event, CLUBBY_REQUEST_RECEIVED and
-       * CLUBY_RESPONSE_RECEIVED will be send as well
-       */
-      evt.frame.data.len = wm->size;
-      evt.ev = CLUBBY_FRAME;
-      evt.context = nc->user_data;
-      s_clubby_cb(&evt);
-
-      clubby_proto_handle_frame(evt.frame.data, nc->user_data);
+      clubby_proto_handle_frame((char *) wm->data, wm->size, nc->user_data);
 
       break;
     }

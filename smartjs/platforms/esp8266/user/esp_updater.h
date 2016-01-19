@@ -32,7 +32,7 @@ uint32_t get_fw_addr(uint8_t rom);
 uint32_t get_fs_addr(uint8_t rom);
 uint32_t get_fs_size(uint8_t rom);
 
-void rollback_fw();
+void schedule_reboot();
 
 #endif
 

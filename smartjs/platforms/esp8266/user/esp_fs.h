@@ -32,5 +32,6 @@ extern struct mmap_desc mmap_descs[SJ_MMAP_SLOTS];
 int fs_init(uint32_t addr, uint32_t size);
 int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
              uint8_t *fds, size_t fds_size);
+spiffs *get_fs();
 
 #endif /* V7_FS_INCLUDED */
