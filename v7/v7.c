@@ -2241,6 +2241,18 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 
 typedef uint64_t val_t;
 
+#if defined(V7_ENABLE_ENTITY_IDS)
+/*
+ * Magic numbers that are stored in various objects in order to identify their
+ * type in runtime
+ */
+#define V7_ENTITY_ID_PROP 0xe9a1
+#define V7_ENTITY_ID_OBJ 0x48f4
+#define V7_ENTITY_ID_GEN_OBJ 0xd831
+#define V7_ENTITY_ID_JS_FUNC 0xf00c
+#define V7_ENTITY_ID_NONE 0xa5a5
+#endif
+
 /*
  * JavaScript value is either a primitive, or an object.
  * There are 5 primitive types: Undefined, Null, Boolean, Number, String.
@@ -2464,6 +2476,9 @@ struct v7 {
 struct v7_property {
   struct v7_property *
       next; /* Linkage in struct v7_generic_object::properties */
+#if defined(V7_ENABLE_ENTITY_IDS)
+  int entity_id;
+#endif
   v7_prop_attr_t attributes;
   val_t name;  /* Property name (a string) */
   val_t value; /* Property value */
@@ -2475,6 +2490,9 @@ struct v7_property {
 struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
+#if defined(V7_ENABLE_ENTITY_IDS)
+  int entity_id;
+#endif
   v7_obj_attr_t attributes;
 };
 
@@ -2503,6 +2521,9 @@ struct v7_generic_object {
    * This has to be the first field so that objects can be managed by the GC.
    */
   struct v7_object base;
+#if defined(V7_ENABLE_ENTITY_IDS)
+  int entity_id;
+#endif
   struct v7_object *prototype;
 };
 
@@ -2533,6 +2554,9 @@ struct v7_js_function {
    * objects can be managed by the GC.
    */
   struct v7_object base;
+#if defined(V7_ENABLE_ENTITY_IDS)
+  int entity_id;
+#endif
   struct v7_generic_object *scope; /* lexical scope of the closure */
 
   /* bytecode, might be shared between functions */
@@ -3556,9 +3580,21 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 
+/*
+ * Macros for marking reachable things: use bit 0.
+ */
 #define MARK(p) (((struct gc_cell *) (p))->head.word |= 1)
 #define UNMARK(p) (((struct gc_cell *) (p))->head.word &= ~1)
 #define MARKED(p) (((struct gc_cell *) (p))->head.word & 1)
+
+/*
+ * Similar to `MARK()` / `UNMARK()` / `MARKED()`, but `.._FREE` counterparts
+ * are intended to mark free cells (as opposed to used ones), so they use
+ * bit 1.
+ */
+#define MARK_FREE(p) (((struct gc_cell *) (p))->head.word |= 2)
+#define UNMARK_FREE(p) (((struct gc_cell *) (p))->head.word &= ~2)
+#define MARKED_FREE(p) (((struct gc_cell *) (p))->head.word & 2)
 
 /*
  * performs arithmetics on gc_cell pointers as if they were arena->cell_size
@@ -12855,8 +12891,19 @@ static val_t js_function_to_value(struct v7_js_function *o) {
 }
 
 V7_PRIVATE struct v7_js_function *to_js_function(val_t v) {
+  struct v7_js_function *ret = NULL;
   assert(is_js_function(v));
-  return (struct v7_js_function *) v7_to_pointer(v);
+  ret = (struct v7_js_function *) v7_to_pointer(v);
+#if defined(V7_ENABLE_ENTITY_IDS)
+  if (ret->entity_id != V7_ENTITY_ID_JS_FUNC) {
+    fprintf(stderr, "not a function!\n");
+    abort();
+  } else if (ret->base.entity_id != V7_ENTITY_ID_OBJ) {
+    fprintf(stderr, "not an object (but is a js func)!\n");
+    abort();
+  }
+#endif
+  return ret;
 }
 
 V7_PRIVATE
@@ -12874,6 +12921,11 @@ val_t mk_js_function2(struct v7 *v7, struct v7_generic_object *scope,
     /* fval is left `null` */
     goto cleanup;
   }
+
+#if defined(V7_ENABLE_ENTITY_IDS)
+  f->entity_id = V7_ENTITY_ID_JS_FUNC;
+  f->base.entity_id = V7_ENTITY_ID_OBJ;
+#endif
 
   fval = js_function_to_value(f);
 
@@ -13028,6 +13080,11 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
       free(abuf);
     }
   }
+
+#if defined(V7_ENABLE_ENTITY_IDS)
+  o->entity_id = V7_ENTITY_ID_NONE;
+  o->base.entity_id = V7_ENTITY_ID_NONE;
+#endif
 }
 
 static void function_destructor(struct v7 *v7, void *ptr) {
@@ -13038,7 +13095,22 @@ static void function_destructor(struct v7 *v7, void *ptr) {
   if (f->bcode != NULL) {
     release_bcode(v7, f->bcode);
   }
+
+#if defined(V7_ENABLE_ENTITY_IDS)
+  f->entity_id = V7_ENTITY_ID_NONE;
+  f->base.entity_id = V7_ENTITY_ID_NONE;
+#endif
 }
+
+#if defined(V7_ENABLE_ENTITY_IDS)
+static void property_destructor(struct v7 *v7, void *ptr) {
+  struct v7_property *p = (struct v7_property *) ptr;
+  (void) v7;
+  if (p == NULL) return;
+
+  p->entity_id = V7_ENTITY_ID_NONE;
+}
+#endif
 
 struct v7 *v7_create(void) {
   struct v7_mk_opts opts;
@@ -13094,6 +13166,9 @@ struct v7 *v7_mk_opt(struct v7_mk_opts opts) {
     v7->function_arena.destructor = function_destructor;
     gc_arena_init(&v7->property_arena, sizeof(struct v7_property),
                   opts.property_arena_size, 10, "property");
+#if defined(V7_ENABLE_ENTITY_IDS)
+    v7->property_arena.destructor = property_destructor;
+#endif
 
     /*
      * The compacting GC exploits the null terminator of the previous
@@ -14396,6 +14471,10 @@ V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype) {
     return V7_NULL;
   }
   (void) v7;
+#if defined(V7_ENABLE_ENTITY_IDS)
+  o->entity_id = V7_ENTITY_ID_GEN_OBJ;
+  o->base.entity_id = V7_ENTITY_ID_OBJ;
+#endif
   o->base.properties = NULL;
   obj_prototype_set(v7, &o->base, v7_to_object(prototype));
   return v7_object_to_value(&o->base);
@@ -14416,21 +14495,40 @@ V7_PRIVATE val_t v7_object_to_value(struct v7_object *o) {
 }
 
 V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v) {
+  struct v7_generic_object *ret = NULL;
   if (v7_is_null(v)) {
-    return NULL;
+    ret = NULL;
   } else {
     assert(v7_is_generic_object(v));
-    return (struct v7_generic_object *) v7_to_pointer(v);
+    ret = (struct v7_generic_object *) v7_to_pointer(v);
+#if defined(V7_ENABLE_ENTITY_IDS)
+    if (ret->entity_id != V7_ENTITY_ID_GEN_OBJ) {
+      fprintf(stderr, "not a generic object!\n");
+      abort();
+    } else if (ret->base.entity_id != V7_ENTITY_ID_OBJ) {
+      fprintf(stderr, "not an object (but is a generic object)!\n");
+      abort();
+    }
+#endif
   }
+  return ret;
 }
 
 V7_PRIVATE struct v7_object *v7_to_object(val_t v) {
+  struct v7_object *ret = NULL;
   if (v7_is_null(v)) {
-    return NULL;
+    ret = NULL;
   } else {
     assert(v7_is_object(v));
-    return (struct v7_object *) v7_to_pointer(v);
+    ret = (struct v7_object *) v7_to_pointer(v);
+#if defined(V7_ENABLE_ENTITY_IDS)
+    if (ret->entity_id != V7_ENTITY_ID_OBJ) {
+      fprintf(stderr, "not an object!\n");
+      abort();
+    }
+#endif
   }
+  return ret;
 }
 
 int v7_is_object(val_t v) {
@@ -14446,6 +14544,9 @@ V7_PRIVATE int v7_is_generic_object(val_t v) {
 
 V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
+#if defined(V7_ENABLE_ENTITY_IDS)
+  p->entity_id = V7_ENTITY_ID_PROP;
+#endif
   p->next = NULL;
   p->name = v7_mk_undefined();
   p->value = v7_mk_undefined();
@@ -14485,6 +14586,12 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
   if (len <= 5) {
     ss = v7_mk_string(v7, name, len, 1);
     for (p = o->properties; p != NULL; p = p->next) {
+#if defined(V7_ENABLE_ENTITY_IDS)
+      if (p->entity_id != V7_ENTITY_ID_PROP) {
+        fprintf(stderr, "not a prop!=0x%x\n", p->entity_id);
+        abort();
+      }
+#endif
       if (p->name == ss && (attrs == 0 || (p->attributes & attrs))) {
         return p;
       }
@@ -14493,6 +14600,12 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
     for (p = o->properties; p != NULL; p = p->next) {
       size_t n;
       const char *s = v7_get_string_data(v7, &p->name, &n);
+#if defined(V7_ENABLE_ENTITY_IDS)
+      if (p->entity_id != V7_ENTITY_ID_PROP) {
+        fprintf(stderr, "not a prop!=0x%x\n", p->entity_id);
+        abort();
+      }
+#endif
       if (n == len && strncmp(s, name, len) == 0 &&
           (attrs == 0 || (p->attributes & attrs))) {
         return p;
@@ -16152,27 +16265,9 @@ V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
 
 V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
   struct gc_block *b;
-  struct gc_cell *c, *next;
-
-  /*
-   * We need to sweep through all live objects and invoke their destructors.
-   * However gc_sweep assumes the arena is full (i.e. the free list is empty)
-   * and contains either live objects or garbage.
-   * This assumption is important since there is no cheap way to tell whether
-   * a cell is used or free, and we can call the destructor only on used cells.
-   * Since gc_arena_destroy can by called at any stage, even when the arena is
-   * half full, we need to consume the free list in order to reuse gc_sweep fast
-   * path and avoid code duplication for invoking the destructors.
-   */
-  for (c = a->free; c != NULL; c = next) {
-    next = c->head.link;
-    memset(c, 0, a->cell_size);
-  }
 
   if (a->blocks != NULL) {
-    if (a->destructor != NULL) {
-      gc_sweep(v7, a, 0);
-    }
+    gc_sweep(v7, a, 0);
     for (b = a->blocks; b != NULL;) {
       struct gc_block *tmp;
       tmp = b;
@@ -16280,6 +16375,22 @@ void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
 #if V7_ENABLE__Memory__stats
   a->alive = 0;
 #endif
+
+  /*
+   * Before we sweep, we should mark all free cells in a way that is
+   * distinguishable from marked used cells.
+   */
+  {
+    struct gc_cell *next;
+    for (cur = a->free; cur != NULL; cur = next) {
+      next = cur->head.link;
+      MARK_FREE(cur);
+    }
+  }
+
+  /*
+   * We'll rebuild the whole `free` list, so initially we just reset it
+   */
   a->free = NULL;
 
   for (b = a->blocks; b != NULL;) {
@@ -16295,15 +16406,33 @@ void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
          cur < GC_CELL_OP(a, b->base, +, b->size);
          cur = GC_CELL_OP(a, cur, +, 1)) {
       if (MARKED(cur)) {
+        /* The cell is used and marked  */
         UNMARK(cur);
 #if V7_ENABLE__Memory__stats
         a->alive++;
 #endif
       } else {
-        if (a->destructor != NULL) {
-          a->destructor(v7, cur);
+        /*
+         * The cell is either:
+         * - free
+         * - garbage that's about to be freed
+         */
+
+        if (MARKED_FREE(cur)) {
+          /* The cell is free, so, just unmark it */
+          UNMARK_FREE(cur);
+        } else {
+          /*
+           * The cell is used and should be freed: call the destructor and
+           * reset the memory
+           */
+          if (a->destructor != NULL) {
+            a->destructor(v7, cur);
+          }
+          memset(cur, 0, a->cell_size);
         }
-        memset(cur, 0, a->cell_size);
+
+        /* Add this cell to the `free` list */
         cur->head.link = a->free;
         a->free = cur;
         freed_in_block++;
