@@ -88,6 +88,7 @@ function MCXXX(i2c, numLines, numCols, resetPin) {
        * different time to execute at different clock speeds. 25 us should be
        * enough for all of them. */
       usleep(25);
+      Sys.wdtFeed();
     }
     i2c.stop();
     return true;
@@ -101,6 +102,7 @@ function MCXXX(i2c, numLines, numCols, resetPin) {
     for (var i = 0; i < data.length; i++) {
       if (i2c.send(data.charCodeAt(i)) != I2C.ACK) return false;
       usleep(25);
+      Sys.wdtFeed();
     }
     i2c.stop();
     return true;
