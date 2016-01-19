@@ -24,7 +24,7 @@ include $(REPO_ROOT)/smartjs/common.mk
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
-SPIFFS_PATH ?= $(SMARTJS_SRC)/spiffs
+SPIFFS_PATH ?= $(COMMON_DIR)/spiffs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
 COMMON_FS_PATH ?= $(SMARTJS_SRC)/fs
 LWIP_PATH ?= $(COMMON_ESP_DIR)/lwip
@@ -388,9 +388,9 @@ $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
 	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
 
-$(BUILD_DIR)/mkspiffs: $(COMMON_TOOLS_DIR)/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
+$(BUILD_DIR)/mkspiffs: $(SPIFFS_PATH)/tools/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
 	$(vecho) "GCC mkspiffs"
-	$(Q) gcc -I. -I$(SPIFFS_PATH) -Iuser -o $@ $^ -DNO_ESP
+	$(Q) gcc -I. -I$(SPIFFS_PATH) -I$(SPIFFS_PATH)/tools -Iuser -o $@ $^ -DNO_ESP
 
 $(V7_PATH)/v7.c:
 	make -C $(V7_PATH) v7.c

@@ -6,6 +6,7 @@ SDK_PATH ?= /cc3200-sdk
 REPO_ROOT ?= ../../..
 V7_PATH ?= $(REPO_ROOT)/v7
 SMARTJS_PATH ?= $(REPO_ROOT)/smartjs
+SPIFFS_PATH ?= $(REPO_ROOT)/common/spiffs
 MONGOOSE_PATH ?= $(REPO_ROOT)/mongoose
 OBJDIR = build
 BINDIR = firmware
@@ -41,7 +42,8 @@ IPATH = . ${SDK_PATH} \
         ${SDK_PATH}/third_party/FreeRTOS/source/include \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
         ${SMARTJS_PATH}/src \
-        ${SMARTJS_PATH}/src/spiffs \
+        ${SPIFFS_PATH} \
+        ${V7_PATH} \
         ${REPO_ROOT}
 
 VPATH = ${SDK_PATH}/driverlib \
@@ -52,7 +54,7 @@ VPATH = ${SDK_PATH}/driverlib \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/MemMang \
         ${SMARTJS_PATH}/src \
-        ${SMARTJS_PATH}/src/spiffs \
+        ${SPIFFS_PATH} \
         ${V7_PATH} \
         ${MONGOOSE_PATH}
 
