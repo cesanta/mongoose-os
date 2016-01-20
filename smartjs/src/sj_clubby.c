@@ -835,6 +835,16 @@ static enum v7_err Clubby_onopen(struct v7 *v7, v7_val_t *res) {
                              res);
 }
 
+static enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
+  DECLARE_CLUBBY();
+
+  reset_reconnect_timeout(clubby);
+  clubby_connect(clubby);
+
+  *res = v7_mk_boolean(1);
+  return V7_OK;
+}
+
 static enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
@@ -938,8 +948,11 @@ static enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_CB_PARAM(oncmd, s_oncmd_cmd);
 
   set_clubby(v7, this_obj, clubby);
-  reset_reconnect_timeout(clubby);
-  clubby_connect(clubby);
+  v7_val_t connect = v7_get(v7, arg, "connect", ~0);
+  if (v7_is_undefined(connect) || v7_is_truthy(v7, connect)) {
+    reset_reconnect_timeout(clubby);
+    clubby_connect(clubby);
+  }
 
   return V7_OK;
 }
@@ -1053,6 +1066,7 @@ void sj_init_clubby(struct v7 *v7) {
   v7_set_method(v7, clubby_proto_v, "ready", Clubby_ready);
   v7_set_method(v7, clubby_proto_v, "onopen", Clubby_onopen);
   v7_set_method(v7, clubby_proto_v, "onclose", Clubby_onclose);
+  v7_set_method(v7, clubby_proto_v, "connect", Clubby_connect);
 
   clubby_ctor_v = v7_mk_function_with_proto(v7, Clubby_ctor, clubby_proto_v);
 

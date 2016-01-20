@@ -23,18 +23,17 @@
 
 #endif /* RTOS_SDK */
 
-#include <cs_dbg.h>
+#include "common/cs_dbg.h"
 
-#include <sj_hal.h>
-#include <sj_v7_ext.h>
-#include "sj_clubby.h"
+#include "smartjs/src/sj_hal.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_clubby.h"
 #include "v7_esp.h"
-#include "util.h"
 #include "v7_esp_features.h"
 #include "esp_uart.h"
-#include "device_config.h"
-#include "sj_wifi.h"
-#include "v7.h"
+#include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_wifi.h"
+#include "v7/v7.h"
 
 static sj_wifi_scan_cb_t wifi_scan_cb;
 
@@ -140,7 +139,15 @@ int sj_wifi_disconnect() {
   return wifi_station_disconnect();
 }
 
-char *sj_wifi_get_status() {
+enum sj_wifi_status sj_wifi_get_status() {
+  if (wifi_station_get_connect_status() == STATION_GOT_IP) {
+    return SJ_WIFI_IP_ACQUIRED;
+  } else {
+    return SJ_WIFI_DISCONNECTED;
+  }
+}
+
+char *sj_wifi_get_status_str() {
   uint8 st = wifi_station_get_connect_status();
   const char *msg = NULL;
 

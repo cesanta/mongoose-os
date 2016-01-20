@@ -174,7 +174,11 @@ int sj_wifi_disconnect() {
   return (sl_WlanDisconnect() == 0);
 }
 
-char *sj_wifi_get_status() {
+enum sj_wifi_status sj_wifi_get_status() {
+  return s_wifi_sta_config.status;
+}
+
+char *sj_wifi_get_status_str() {
   const char *st = NULL;
   switch (s_wifi_sta_config.status) {
     case SJ_WIFI_DISCONNECTED:

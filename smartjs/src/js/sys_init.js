@@ -73,8 +73,10 @@ print('\nStarting Smart.js - see documentation at',
       'https://cesanta.com/developer/smartjs',
       '\n==> Sys:\n', Sys, '\n');
 
+global.clubby = new Clubby({connect:false});
+
 if (Sys.conf.clubby.connect_on_boot) {
-  global.clubby = new Clubby();
+  Wifi.ready(clubby.connect.bind(clubby))
 }
 
 File.eval('app_init.js');

@@ -6,9 +6,70 @@
 
 #include "v7/v7.h"
 #include "device_config.h"
+#include "common/cs_dbg.h"
 
 static v7_val_t s_wifi;
 static struct v7 *s_v7;
+
+struct wifi_ready_cb {
+  /*
+   * Currently we support only ready (got_ip) event, so no
+   * event_id of something like that required.
+   * TODO(alashkin): share C-event system (clubby, wifi, etc)
+   */
+  v7_val_t cb;
+
+  struct wifi_ready_cb *next;
+};
+
+static struct wifi_ready_cb *s_wifi_ready_cbs;
+
+static int add_wifi_ready_cb(struct v7 *v7, v7_val_t cb) {
+  struct wifi_ready_cb *new_wifi_event = calloc(1, sizeof(*new_wifi_event));
+  if (new_wifi_event == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return 0;
+  }
+  new_wifi_event->cb = cb;
+  v7_own(v7, &new_wifi_event->cb);
+
+  new_wifi_event->next = s_wifi_ready_cbs;
+  s_wifi_ready_cbs = new_wifi_event;
+
+  return 1;
+}
+
+static void call_wifi_ready_cbs(struct v7 *v7) {
+  struct wifi_ready_cb *wr_cbs = s_wifi_ready_cbs;
+  while (wr_cbs != NULL) {
+    sj_invoke_cb0(v7, wr_cbs->cb);
+    v7_disown(v7, &wr_cbs->cb);
+    struct wifi_ready_cb *tmp = wr_cbs;
+    wr_cbs = wr_cbs->next;
+    free(tmp);
+  }
+}
+
+static enum v7_err Wifi_ready(struct v7 *v7, v7_val_t *res) {
+  int ret = 0;
+  v7_val_t cbv = v7_arg(v7, 0);
+
+  if (!v7_is_callable(v7, cbv)) {
+    LOG(LL_ERROR, ("Invalid arguments"));
+    goto exit;
+  }
+
+  if (sj_wifi_get_status() == SJ_WIFI_IP_ACQUIRED) {
+    sj_invoke_cb0(v7, cbv);
+    ret = 1;
+  } else {
+    ret = add_wifi_ready_cb(v7, cbv);
+  }
+
+exit:
+  *res = v7_mk_boolean(ret);
+  return V7_OK;
+}
 
 static enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -64,7 +125,7 @@ static enum v7_err Wifi_disconnect(struct v7 *v7, v7_val_t *res) {
 }
 
 static enum v7_err Wifi_status(struct v7 *v7, v7_val_t *res) {
-  char *status = sj_wifi_get_status();
+  char *status = sj_wifi_get_status_str();
   if (status == NULL) {
     *res = v7_mk_undefined();
     goto clean;
@@ -111,6 +172,11 @@ clean:
 
 void sj_wifi_on_change_callback(enum sj_wifi_status event) {
   struct v7 *v7 = s_v7;
+
+  if (event == SJ_WIFI_IP_ACQUIRED) {
+    call_wifi_ready_cbs(v7);
+  }
+
   v7_val_t cb = v7_get(v7, s_wifi, "_ccb", ~0);
   if (v7_is_undefined(cb) || v7_is_null(cb)) return;
   sj_invoke_cb1(s_v7, cb, v7_mk_number(event));
@@ -197,5 +263,6 @@ void sj_wifi_init(struct v7 *v7) {
   v7_set_method(v7, s_wifi, "ip", Wifi_ip);
   v7_set_method(v7, s_wifi, "changed", Wifi_changed);
   v7_set_method(v7, s_wifi, "scan", Wifi_scan);
+  v7_set_method(v7, s_wifi, "ready", Wifi_ready);
   v7_set(v7, v7_get_global(v7), "Wifi", ~0, s_wifi);
 }

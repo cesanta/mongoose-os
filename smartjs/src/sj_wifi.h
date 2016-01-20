@@ -17,7 +17,7 @@ int sj_wifi_connect(); /* To previously _setup network. */
 int sj_wifi_disconnect();
 
 /* These return allocated strings which will be free'd. */
-char *sj_wifi_get_status();
+char *sj_wifi_get_status_str();
 char *sj_wifi_get_connected_ssid();
 char *sj_wifi_get_sta_ip();
 
@@ -32,5 +32,7 @@ enum sj_wifi_status {
   SJ_WIFI_IP_ACQUIRED = 2,
 };
 void sj_wifi_on_change_callback(enum sj_wifi_status event);
+
+enum sj_wifi_status sj_wifi_get_status();
 
 #endif /* __SMARTJS_WIFI_H_ */
