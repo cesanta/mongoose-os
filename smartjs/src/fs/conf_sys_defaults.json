@@ -39,7 +39,8 @@
     "device_id": "device_1",
     "device_psk": "psk_1",
     "backend": "//api.cesanta.com",
-    "reconnect_timeout" : 10,
+    "reconnect_timeout_min" : 10,
+    "reconnect_timeout_max" : 60,
     "cmd_timeout" : 300
   },
   "debug": {

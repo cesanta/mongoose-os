@@ -100,7 +100,7 @@ static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
 
 static void reset_reconnect_timeout(struct clubby *clubby) {
   clubby->reconnect_timeout =
-      clubby->cfg.reconnect_timeout / RECONNECT_TIMEOUT_MULTIPLY;
+      clubby->cfg.reconnect_timeout_min / RECONNECT_TIMEOUT_MULTIPLY;
 }
 
 static void reconnect_cb(void *param) {
@@ -109,6 +109,9 @@ static void reconnect_cb(void *param) {
 
 static void schedule_reconnect(struct clubby *clubby) {
   clubby->reconnect_timeout *= RECONNECT_TIMEOUT_MULTIPLY;
+  if (clubby->reconnect_timeout > clubby->cfg.reconnect_timeout_max) {
+    clubby->reconnect_timeout = clubby->cfg.reconnect_timeout_max;
+  }
   LOG(LL_DEBUG, ("Reconnect timeout: %d", clubby->reconnect_timeout));
   sj_set_c_timeout(clubby->reconnect_timeout * 1000, reconnect_cb, clubby);
 }
@@ -923,7 +926,8 @@ static enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
     return v7_throwf(v7, "Error", "Out of memory");
   }
 
-  GET_INT_PARAM(reconnect_timeout, reconnect_timeout);
+  GET_INT_PARAM(reconnect_timeout_min, reconnect_timeout_min);
+  GET_INT_PARAM(reconnect_timeout_max, reconnect_timeout_max);
   GET_INT_PARAM(cmd_timeout, timeout);
   GET_STR_PARAM(device_id, src);
   GET_STR_PARAM(device_psk, key);

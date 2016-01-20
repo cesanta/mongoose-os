@@ -47,7 +47,8 @@
   "clubby.device_id": {"title": "Device ID"},
   "clubby.device_psk": {"title": "Device password"},
   "clubby.backend" : {"title" : "Backend name" },
-  "clubby.reconnect_timeout" : {"title": "Reconnect timeout" },
+  "clubby.reconnect_timeout_min" : {"title": "Minimal reconnect timeout" },
+  "clubby.reconnect_timeout_max" : {"title": "Maximal reconnect timeout" },
   "clubby.cmd_timeout" : {"title": "Default command timeout" },
 
   "debug": { "title": "Debug Settings" },

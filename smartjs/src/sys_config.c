@@ -103,13 +103,23 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_int(toks, "clubby.reconnect_timeout",
-                      &dst->clubby.reconnect_timeout) == 0 &&
+  if (sj_conf_get_str(toks, "clubby.server_address",
+                      &dst->clubby.server_address) == 0 &&
       require_keys)
     goto done;
 
   if (sj_conf_get_str(toks, "clubby.device_psk", &dst->clubby.device_psk) ==
           0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "clubby.reconnect_timeout_min",
+                      &dst->clubby.reconnect_timeout_min) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "clubby.reconnect_timeout_max",
+                      &dst->clubby.reconnect_timeout_max) == 0 &&
       require_keys)
     goto done;
 
@@ -124,11 +134,6 @@ int parse_sys_config(const char *json, struct sys_config *dst,
     goto done;
 
   if (sj_conf_get_str(toks, "clubby.device_id", &dst->clubby.device_id) == 0 &&
-      require_keys)
-    goto done;
-
-  if (sj_conf_get_str(toks, "clubby.server_address",
-                      &dst->clubby.server_address) == 0 &&
       require_keys)
     goto done;
 

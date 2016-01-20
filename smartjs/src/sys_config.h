@@ -38,12 +38,13 @@ struct sys_config {
     int server_timeout;
   } update;
   struct sys_config_clubby {
-    int reconnect_timeout;
+    char *server_address;
     char *device_psk;
+    int reconnect_timeout_min;
+    int reconnect_timeout_max;
     int connect_on_boot;
     int cmd_timeout;
     char *device_id;
-    char *server_address;
     char *backend;
   } clubby;
   struct sys_config_debug {
