@@ -181,7 +181,8 @@ void wifi_changed_cb(System_Event_t *evt) {
       ) {
     struct station_config config;
     v7_val_t res;
-    v7_val_t conf = v7_get(v7, v7_get_global(v7), "conf", ~0);
+    v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
+    v7_val_t conf = v7_get(v7, sys, "conf", ~0);
     v7_val_t known, wifi;
 
     if (v7_is_undefined(conf)) {
@@ -207,7 +208,7 @@ void wifi_changed_cb(System_Event_t *evt) {
                         strlen((const char *) config.password), 1));
 
     {
-      enum v7_err rcode = v7_exec(v7, "conf.save()", &res);
+      enum v7_err rcode = v7_exec(v7, "Sys.conf.save(false)", &res);
       assert(rcode == V7_OK);
 #if defined(NDEBUG)
       (void) rcode;

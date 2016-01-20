@@ -41,6 +41,7 @@ Sys.conf.save = function(reboot) {
     var n = 0;
     for (var k in c1) {
       if (typeof(c1[k]) == 'object') {
+        if (typeof(c2[k]) == 'undefined') { c2[k] = {} }
         var j = deleteUnchanged(c1[k], c2[k]);
         if (j == 0) { delete c1[k]; } else { n += j };
       } else {
@@ -62,7 +63,6 @@ Sys.conf.save = function(reboot) {
 
   File.remove("conf.json");
   File.rename("conf.json.tmp", "conf.json");
-  File.remove("conf.json.tmp");
 
   if (reboot != false) {
     Sys.reboot()
