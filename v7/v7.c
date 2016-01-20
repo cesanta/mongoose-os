@@ -8636,6 +8636,10 @@ void init_ubjson(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
 /*
  * Strings in AST are encoded as tuples (length, string).
  * Length is variable-length: if high bit is set in a byte, next byte is used.
@@ -8685,6 +8689,10 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
 
   return llen;
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/tokenizer.c"
 /**/
@@ -17074,7 +17082,7 @@ V7_PRIVATE void freeze(struct v7 *v7, char *filename) {
     val_t v = ((val_t *) &v7->vals)[i];
     fprintf(v7->freeze_file,
             "{\"type\":\"global\", \"idx\":%zu, \"value\":\"%p\"}\n", i,
-            v7_is_object(v) ? v7_to_object(v) : 0x0);
+            (void *) (v7_is_object(v) ? v7_to_object(v) : 0x0));
   }
 
   /*
@@ -17089,7 +17097,7 @@ V7_PRIVATE void freeze(struct v7 *v7, char *filename) {
 }
 
 static char *freeze_mbuf(struct mbuf *mbuf) {
-  char *res = malloc(512 + mbuf->len);
+  char *res = (char *) malloc(512 + mbuf->len);
   res[0] = '"';
   cs_base64_encode((const unsigned char *) mbuf->buf, mbuf->len, &res[1]);
   strcat(res, "\"");
@@ -17113,12 +17121,14 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
     fprintf(f,
             "{\"type\":\"func\", \"addr\":\"%p\", \"props\":\"%p\", "
             "\"attrs\":%d, \"scope\":\"%p\", \"bcode\":\"%p\"}\n",
-            obj_base, (void *) ((uintptr_t) obj_base->properties & ~0x1),
-            obj_base->attributes | attrs, func->scope, bcode);
+            (void *) obj_base,
+            (void *) ((uintptr_t) obj_base->properties & ~0x1),
+            obj_base->attributes | attrs, (void *) func->scope, (void *) bcode);
     fprintf(f,
             "{\"type\":\"bcode\", \"addr\":\"%p\", \"args\":%d, "
             "\"strict_mode\": %d, \"ops\":%s, \"lit\":%s, \"names\":%s}\n",
-            bcode, bcode->args, bcode->strict_mode, jops, jlit, jnames);
+            (void *) bcode, bcode->args, bcode->strict_mode, jops, jlit,
+            jnames);
     free(jops);
     free(jlit);
     free(jnames);
@@ -17127,8 +17137,9 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
     fprintf(f,
             "{\"type\":\"obj\", \"addr\":\"%p\", \"props\":\"%p\", "
             "\"attrs\":%d, \"proto\":\"%p\"}\n",
-            obj_base, (void *) ((uintptr_t) obj_base->properties & ~0x1),
-            obj_base->attributes | attrs, gob->prototype);
+            (void *) obj_base,
+            (void *) ((uintptr_t) obj_base->properties & ~0x1),
+            obj_base->attributes | attrs, (void *) gob->prototype);
   }
 }
 
@@ -17149,8 +17160,8 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
           " \"value\":\"0x%" INT64_X_FMT
           "\","
           " \"name_str\":\"%s\"}\n",
-          prop, prop->next, prop->attributes | attrs, prop->name,
-          val_type(v7, prop->value), prop->value,
+          (void *) prop, (void *) prop->next, prop->attributes | attrs,
+          prop->name, val_type(v7, prop->value), prop->value,
           v7_to_cstring(v7, &prop->name));
 }
 
@@ -21968,6 +21979,10 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 
 #define STRINGIFY(x) #x
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
 static const char js_array_indexOf[] = STRINGIFY(
     Object.defineProperty(Array.prototype, "indexOf", {
       writable:true,
@@ -22102,6 +22117,10 @@ static const char * const js_functions[] = {
     };));
 #endif
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/slre.c"
 /**/
@@ -24637,6 +24656,10 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -24865,6 +24888,10 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   v7_def(v7, v7->vals.global_object, "isNaN", 5, V7_DESC_ENUMERABLE(0),
          v7_mk_cfunction(n_isNaN));
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_json.c"
 /**/
@@ -24879,6 +24906,10 @@ V7_PRIVATE void init_number(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
@@ -24902,6 +24933,10 @@ V7_PRIVATE void init_json(struct v7 *v7) {
   set_method(v7, o, "parse", Json_parse, 1);
   v7_def(v7, v7->vals.global_object, "JSON", 4, V7_DESC_ENUMERABLE(0), o);
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_array.c"
 /**/
@@ -24920,6 +24955,10 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 struct a_sort_data {
   val_t sort_func;
@@ -25747,6 +25786,10 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   v7_def(v7, v7->vals.array_prototype, "length", 6,
          V7_DESC_ENUMERABLE(0) | V7_DESC_GETTER(1) | V7_DESC_SETTER(1), length);
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_boolean.c"
 /**/
@@ -25762,6 +25805,10 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Boolean_ctor(struct v7 *v7, v7_val_t *res) {
@@ -25848,6 +25895,10 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
   set_cfunc_prop(v7, v7->vals.boolean_prototype, "valueOf", Boolean_valueOf);
   set_cfunc_prop(v7, v7->vals.boolean_prototype, "toString", Boolean_toString);
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_math.c"
 /**/
@@ -25863,6 +25914,10 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/object.h" */
 
 #if V7_ENABLE__Math
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 #ifdef __WATCOM__
 int matherr(struct _exception *exc) {
@@ -26100,6 +26155,10 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 
   v7_set(v7, v7->vals.global_object, "Math", 4, math);
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
 #endif /* V7_ENABLE__Math */
 #ifdef V7_MODULE_LINES
@@ -27371,6 +27430,10 @@ extern long timezone;
 #endif
 #endif
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
 typedef double etime_t; /* double is suitable type for ECMA time */
 /* inernally we have to use 64-bit integer for some operations */
 typedef int64_t etimeint_t;
@@ -28515,6 +28578,10 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   g_tzname = tzname[0];
 }
 
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
 #endif /* V7_ENABLE__Date */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_function.c"
@@ -28533,6 +28600,10 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Function_ctor(struct v7 *v7, v7_val_t *res) {
@@ -28724,6 +28795,10 @@ V7_PRIVATE void init_function(struct v7 *v7) {
          (V7_DESC_ENUMERABLE(0) | V7_DESC_GETTER(1)),
          v7_mk_cfunction(Function_name));
 }
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/std_regex.c"
 /**/
