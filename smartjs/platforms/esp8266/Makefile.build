@@ -6,7 +6,8 @@
 # STACK_GUARD: if "true" (default) enables soft stack guard
 # SSL: if set to "Krypton" enables SSL with the krypton lib
 # OTA: if "1" enables rboot as a bootloader and generates files required for OTA
-# FREEZE: if "1" freezes the stdlib object graph into a static graph loadable in ROM
+# FREEZE: if "1" (default) freezes the stdlib object graph into a static graph
+#         loadable in ROM
 # HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
 #           logging wrappers for malloc and friends. You can later view heap
 #           map by `tools/heaplog_viewer/heaplog_viewer.html`
@@ -34,7 +35,7 @@ MONGOOSE_PATH ?= ../../../mongoose
 BOOTLOADER_PATH ?= $(COMMON_ESP_DIR)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 OTA ?= 1
-FREEZE ?=
+FREEZE ?= 1
 HEAP_LOG ?=
 
 FLASH_SIZE ?= 1M
