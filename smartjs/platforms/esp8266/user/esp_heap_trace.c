@@ -95,24 +95,25 @@ static struct log *plog = NULL;
  * functions that echo heap log
  */
 
-static void echo_log_malloc(size_t size, void *ptr, int shim) {
-  fprintf(stderr, "hl{m,%u,%x,%d}\n", (unsigned int) size, (unsigned int) ptr,
-          shim);
+static void echo_log_malloc_req(size_t size, int shim) {
+  fprintf(stderr, "hl{m,%u,%d,", (unsigned int) size, shim);
 }
 
-static void echo_log_zalloc(size_t size, void *ptr, int shim) {
-  fprintf(stderr, "hl{z,%u,%x,%d}\n", (unsigned int) size, (unsigned int) ptr,
-          shim);
+static void echo_log_zalloc_req(size_t size, int shim) {
+  fprintf(stderr, "hl{z,%u,%d,", (unsigned int) size, shim);
 }
 
-static void echo_log_calloc(size_t size, void *ptr, int shim) {
-  fprintf(stderr, "hl{c,%u,%x,%d}\n", (unsigned int) size, (unsigned int) ptr,
-          shim);
+static void echo_log_calloc_req(size_t size, int shim) {
+  fprintf(stderr, "hl{c,%u,%d,", (unsigned int) size, shim);
 }
 
-static void echo_log_realloc(size_t size, void *old_ptr, void *ptr, int shim) {
-  fprintf(stderr, "hl{r,%u,%x,%x,%d}\n", (unsigned int) size,
-          (unsigned int) old_ptr, (unsigned int) ptr, shim);
+static void echo_log_realloc_req(size_t size, int shim, void *old_ptr) {
+  fprintf(stderr, "hl{r,%u,%d,%x,", (unsigned int) size, shim,
+          (unsigned int) old_ptr);
+}
+
+static void echo_log_alloc_res(void *ptr) {
+  fprintf(stderr, "%x}\n", (unsigned int) ptr);
 }
 
 static void echo_log_free(void *ptr, int shim) {
@@ -161,16 +162,16 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
 static void echo_log_item(struct log_item *item) {
   switch (item->type) {
     case ITEM_TYPE_MALLOC:
-      echo_log_malloc((unsigned int) item->size,
-                      MK_PTR((unsigned int) item->ptr), item->our_shim);
+      echo_log_malloc_req((unsigned int) item->size, item->our_shim);
+      echo_log_alloc_res(MK_PTR((unsigned int) item->ptr));
       break;
     case ITEM_TYPE_ZALLOC:
-      echo_log_zalloc((unsigned int) item->size,
-                      MK_PTR((unsigned int) item->ptr), item->our_shim);
+      echo_log_zalloc_req((unsigned int) item->size, item->our_shim);
+      echo_log_alloc_res(MK_PTR((unsigned int) item->ptr));
       break;
     case ITEM_TYPE_CALLOC:
-      echo_log_calloc((unsigned int) item->size,
-                      MK_PTR((unsigned int) item->ptr), item->our_shim);
+      echo_log_calloc_req((unsigned int) item->size, item->our_shim);
+      echo_log_alloc_res(MK_PTR((unsigned int) item->ptr));
       break;
     case ITEM_TYPE_FREE:
       echo_log_free(MK_PTR((unsigned int) item->ptr), item->our_shim);
@@ -220,11 +221,15 @@ static void flush_log_items(void) {
  */
 
 void *__wrap_pvPortRealloc(void *pv, size_t size, const char *file, int line) {
-  void *ret = __real_pvPortRealloc(pv, size, file, line);
+  void *ret = NULL;
+  if (uart_initialized) {
+    echo_log_realloc_req(size, cs_heap_shim, pv);
+  }
+  ret = __real_pvPortRealloc(pv, size, file, line);
   if (uart_initialized) {
     flush_log_items();
     sj_wdt_feed();
-    echo_log_realloc(size, pv, ret, cs_heap_shim);
+    echo_log_alloc_res(ret);
   } else {
     /* reallocs don't happen before uart is initialized */
     abort();
@@ -234,11 +239,15 @@ void *__wrap_pvPortRealloc(void *pv, size_t size, const char *file, int line) {
 }
 
 void *__wrap_pvPortMalloc(size_t xWantedSize, const char *file, int line) {
-  void *ret = __real_pvPortMalloc(xWantedSize, file, line);
+  void *ret = NULL;
+  if (uart_initialized) {
+    echo_log_malloc_req(xWantedSize, cs_heap_shim);
+  }
+  ret = __real_pvPortMalloc(xWantedSize, file, line);
   if (uart_initialized) {
     flush_log_items();
     sj_wdt_feed();
-    echo_log_malloc(xWantedSize, ret, cs_heap_shim);
+    echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_MALLOC, ret, xWantedSize, cs_heap_shim);
   }
@@ -248,11 +257,15 @@ void *__wrap_pvPortMalloc(size_t xWantedSize, const char *file, int line) {
 }
 
 void *__wrap_pvPortZalloc(size_t xWantedSize, const char *file, int line) {
-  void *ret = __real_pvPortZalloc(xWantedSize, file, line);
+  void *ret = NULL;
+  if (uart_initialized) {
+    echo_log_malloc_req(xWantedSize, cs_heap_shim);
+  }
+  ret = __real_pvPortZalloc(xWantedSize, file, line);
   if (uart_initialized) {
     flush_log_items();
     sj_wdt_feed();
-    echo_log_zalloc(xWantedSize, ret, cs_heap_shim);
+    echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_ZALLOC, ret, xWantedSize, cs_heap_shim);
   }
@@ -262,12 +275,16 @@ void *__wrap_pvPortZalloc(size_t xWantedSize, const char *file, int line) {
 
 void *__wrap_pvPortCalloc(size_t num, size_t xWantedSize, const char *file,
                           int line) {
-  void *ret = __real_pvPortCalloc(num, xWantedSize, file, line);
+  void *ret = NULL;
+  if (uart_initialized) {
+    echo_log_calloc_req(xWantedSize, cs_heap_shim);
+  }
+  ret = __real_pvPortCalloc(num, xWantedSize, file, line);
 
   if (uart_initialized) {
     flush_log_items();
     sj_wdt_feed();
-    echo_log_calloc(xWantedSize, ret, cs_heap_shim);
+    echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_CALLOC, ret, xWantedSize, cs_heap_shim);
   }

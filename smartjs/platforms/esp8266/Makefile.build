@@ -184,6 +184,7 @@ FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 APP_OUT = $(BUILD_DIR)/$(APP).out
 LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
 LD_WRAPPERS =
+HEAP_LOG_FLAGS =
 
 ifeq "${FREEZE}" "1"
 FEATURES += -DV7_THAW
@@ -191,7 +192,7 @@ APP_OBJS += $(BUILD_DIR)/fr.o
 endif
 
 ifeq "${HEAP_LOG}" "1"
-CFLAGS_EXTRA += -DESP_ENABLE_HEAP_TRACE
+HEAP_LOG_FLAGS += -DESP_ENABLE_HEAP_TRACE
 LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
                -Wl,--wrap=pvPortMalloc \
                -Wl,--wrap=pvPortZalloc \
@@ -230,7 +231,7 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFW_VERSION=\"$(FW_VERSION)\" \
           -DFW_ARCHITECTURE=\"esp8266\" \
           -DFW_TIMESTAMP=\"$(TIMESTAMP)\"\
-          $(CFLAGS_EXTRA)
+          $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS)
 
 ifneq "${OTA}" "1"
 CFLAGS += -DFS_ADDR=$(FS_ADDR) -DDISABLE_OTA
