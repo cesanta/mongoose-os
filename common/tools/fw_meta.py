@@ -56,7 +56,6 @@ def cmd_gen_build_info(args):
 
 
 def cmd_create(args):
-    print args
     meta = {
         'name': args.name,
         'platform': args.platform,

@@ -7,7 +7,7 @@
 # reasonable support of lx106. Example invocation:
 #
 # docker run -v $PWD:/cesanta -ti \
-#    docker.cesanta.com:5000/esp8266-build-oss:1.3.0-cesanta \
+#    docker.cesanta.com:5000/esp8266-build-oss:latest \
 #    xt-gdb /cesanta/smartjs/platforms/esp8266/build/smartjs.out \
 #    -ex "target remote localhost:1234"
 #
