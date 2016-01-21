@@ -44,7 +44,7 @@
     "cmd_timeout" : 300
   },
   "debug": {
-    "level": 3,
-    "mode": 1
+    "level": 2,
+    "mode": 2
   }
 }
