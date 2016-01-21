@@ -62,7 +62,7 @@ static unsigned s_system_uartno = UART_MAIN;
 static unsigned debug_enabled = 0;
 static uart_process_char_t s_custom_callback;
 
-#if defined(ESP_ENABLE_HEAP_TRACE)
+#if defined(ESP_ENABLE_HEAP_LOG)
 /*
  * global flag that is needed for heap trace: we shouldn't send anything to
  * uart until it is initialized
@@ -279,7 +279,7 @@ void uart_debug_init(unsigned periph, unsigned baud_rate) {
 
   os_install_putc1((void *) uart_system_tx_char);
 
-#if defined(ESP_ENABLE_HEAP_TRACE)
+#if defined(ESP_ENABLE_HEAP_LOG)
   uart_initialized = 1;
 #endif
 }

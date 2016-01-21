@@ -34,7 +34,7 @@
 
 #endif /* RTOS_SDK */
 
-#if defined(ESP_ENABLE_HEAP_TRACE)
+#if defined(ESP_ENABLE_HEAP_LOG)
 int cs_heap_shim = 0;
 #define CS_HEAP_SHIM_FLAG_SET() \
   do {                          \

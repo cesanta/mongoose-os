@@ -36,6 +36,7 @@
 #include "esp_fs.h"
 #include "esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
+#include "esp_umm_malloc.h"
 
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;
@@ -72,6 +73,21 @@ void start_cmd(void *dummy) {
 
 #if !defined(NO_PROMPT)
   sj_prompt_init(v7);
+#endif
+
+#ifdef ESP_UMM_ENABLE
+  /*
+   * We want to use our own heap functions instead of the ones provided by the
+   * SDK.
+   *
+   * We have marked `pvPortMalloc` and friends weak, so that we can override
+   * them with our own implementations, but to actually make it work, we have
+   * to reference any function from the file with our implementation, so that
+   * linker will not garbage-collect the whole compilation unit.
+   *
+   * So, we have a call to the no-op `esp_umm_init()` here.
+   */
+  esp_umm_init();
 #endif
 }
 

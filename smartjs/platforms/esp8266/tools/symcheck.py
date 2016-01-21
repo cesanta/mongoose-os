@@ -10,6 +10,13 @@ __wrap_user_fatal_exception_handler
 __cyg_profile_func_enter
 __cyg_profile_func_exit
 Cache_Read_Enable_New
+pvPortMalloc
+pvPortCalloc
+pvPortZalloc
+pvPortRealloc
+vPortFree
+xPortGetFreeHeapSize
+xPortWantedSizeAlign
 """.strip().split())
 
 def GetSymbols(fname):

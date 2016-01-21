@@ -32,6 +32,8 @@
 
 #endif /* RTOS_SDK */
 
+#include "esp_mem_layout.h"
+
 extern int uart_initialized;
 extern int cs_heap_shim;
 
@@ -49,7 +51,7 @@ extern void __real_vPortFree(void *pv, const char *file, int line);
 
 extern void sj_wdt_feed(void);
 
-#if defined(ESP_ENABLE_HEAP_TRACE)
+#if defined(ESP_ENABLE_HEAP_LOG)
 
 /*
  * Maximum amount of calls to malloc/free and other friends before UART is
@@ -58,7 +60,7 @@ extern void sj_wdt_feed(void);
  */
 #define LOG_ITEMS_CNT 50
 
-#define MK_PTR(v) ((void *) (0x3fff0000 | (v)))
+#define MK_PTR(v) ((void *) (0x3ffc0000 | (v)))
 
 typedef uint8_t item_type_t;
 enum item_type {
@@ -74,8 +76,8 @@ enum item_type {
  */
 struct log_item {
   /* 16 less-significant bits of pointer: no need to store the rest */
-  uint16_t ptr;
-  unsigned size : 13;
+  unsigned ptr : 18;
+  unsigned size : 11;
   enum item_type type : 2;
   unsigned our_shim : 1;
 };
@@ -85,6 +87,7 @@ struct log {
   struct log_item items[LOG_ITEMS_CNT];
   int items_cnt;
 
+  unsigned ptr_doesnt_fit : 1;
   unsigned item_size_small : 1;
   unsigned log_items_cnt_small : 1;
 };
@@ -127,10 +130,15 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
                          int shim) {
   uint8_t plog_allocated = 0;
   struct log_item item = {0};
-  item.ptr = (unsigned int) ptr & 0xffff;
+  item.ptr = (unsigned int) ptr & 0x3ffff;
   item.size = size;
   item.type = type;
   item.our_shim = shim;
+
+  if (MK_PTR(item.ptr) != ptr) {
+    /* NOTE: we can't fprintf here, since UART is not yet initialized */
+    plog->ptr_doesnt_fit = 1;
+  }
 
   if (size != item.size) {
     /* NOTE: we can't fprintf here, since UART is not yet initialized */
@@ -199,11 +207,13 @@ static void flush_log_items(void) {
     } else if (plog->log_items_cnt_small) {
       fprintf(stderr, "LOG_ITEMS_CNT is too low\n");
       abort();
+    } else if (plog->ptr_doesnt_fit) {
+      fprintf(stderr, "ptr is not suitable for MK_PTR\n");
+      abort();
     }
 
-    /* TODO(dfrank) : heap size */
     fprintf(stderr, "hlog_param:{\"heap_start\":0x%x, \"heap_end\":0x%x}\n",
-            (unsigned int) &_heap_start, (unsigned int) 0x3fff7fff);
+            (unsigned int) (&_heap_start), (unsigned int) ESP_DRAM0_END);
 
     for (i = 0; i < plog->items_cnt; i++) {
       echo_log_item(&plog->items[i]);
@@ -231,7 +241,11 @@ void *__wrap_pvPortRealloc(void *pv, size_t size, const char *file, int line) {
     sj_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
-    /* reallocs don't happen before uart is initialized */
+    /*
+     * reallocs don't happen before uart is initialized, and our pre-uart
+     * logging facility doesn't support reallocs since it needs for additional
+     * pointer.
+     */
     abort();
   }
   cs_heap_shim = 0;
@@ -305,4 +319,4 @@ void __wrap_vPortFree(void *pv, const char *file, int line) {
   cs_heap_shim = 0;
 }
 
-#endif /* ESP_ENABLE_HEAP_TRACE */
+#endif /* ESP_ENABLE_HEAP_LOG */

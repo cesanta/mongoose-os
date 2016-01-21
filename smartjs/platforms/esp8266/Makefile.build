@@ -25,6 +25,7 @@ SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
 SPIFFS_PATH ?= $(COMMON_DIR)/spiffs
+UMM_MALLOC_PATH ?= $(COMMON_DIR)/umm_malloc
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
 COMMON_FS_PATH ?= $(SMARTJS_SRC)/fs
 LWIP_PATH ?= $(COMMON_ESP_DIR)/lwip
@@ -69,7 +70,7 @@ APP = smartjs
 # SSL can be SDK or Krypton
 SSL ?= None
 
-APP_MODULES := user $(SPIFFS_PATH) $(COMMON_ESP_DIR)
+APP_MODULES := user $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_DIR)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_prompt.c v7.c sj_v7_ext.c sj_http.c sj_config.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
@@ -192,7 +193,7 @@ APP_OBJS += $(BUILD_DIR)/fr.o
 endif
 
 ifeq "${HEAP_LOG}" "1"
-HEAP_LOG_FLAGS += -DESP_ENABLE_HEAP_TRACE
+HEAP_LOG_FLAGS += -DESP_ENABLE_HEAP_LOG
 LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
                -Wl,--wrap=pvPortMalloc \
                -Wl,--wrap=pvPortZalloc \
