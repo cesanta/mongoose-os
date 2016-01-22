@@ -87,7 +87,7 @@ static struct mmap_desc *alloc_mmap_desc() {
 }
 
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
-  int pages = (len + LOG_PAGE_SIZE - 1) / LOG_PAGE_SIZE;
+  int pages = (len + SPIFFS_PAGE_DATA_SIZE - 1) / SPIFFS_PAGE_DATA_SIZE;
   struct mmap_desc *desc = alloc_mmap_desc();
   (void) addr;
   (void) prot;
