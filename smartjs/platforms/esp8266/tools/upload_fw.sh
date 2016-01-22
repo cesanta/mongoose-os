@@ -29,8 +29,8 @@ CURL=curl
 
 FW_FILE=0x11000.bin
 FS_FILE=0xe0000.bin
-METADATA_FILE=metadata.json
+MANIFEST_FILE=manifest.json
 
-for i in ${FW_DIR}/${FW_FILE} ${FW_DIR}/${FS_FILE} ${FW_DIR}/${METADATA_FILE}; do
+for i in ${FW_DIR}/${FW_FILE} ${FW_DIR}/${FS_FILE} ${FW_DIR}/${MANIFEST_FILE}; do
     $CURL -i -F filedata=@$i ${URL}
 done

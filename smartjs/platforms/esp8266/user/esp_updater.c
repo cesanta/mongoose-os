@@ -19,6 +19,11 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+/* Must be provided externally, usually auto-generated. */
+extern const char *build_id;
+extern const char *build_timestamp;
+extern const char *build_version;
+
 static int s_current_received;
 static size_t s_file_size;
 static int s_current_write_address;
@@ -30,13 +35,13 @@ static v7_val_t s_updater_notify_cb;
 static enum update_status s_update_status;
 static os_timer_t s_update_timer;
 static os_timer_t s_reboot_timer;
-static char *s_metadata;
-static char *s_metadata_url;
+static char *s_manifest;
+static char *s_manifest_url;
 static char *s_fw_url;
 static char *s_fs_url;
 static char *s_fw_checksum;
 static char *s_fs_checksum;
-static char *s_new_fw_timestamp;
+static char *s_new_fw_version;
 static int s_new_rom_number;
 static uint32_t s_last_received_time;
 static struct mg_connection *s_current_connection;
@@ -80,9 +85,9 @@ uint32_t get_fs_size(uint8_t rom) {
 }
 
 /*
- * Compose full url from metadata full url and FW relative url
+ * Compose full url from manifest full url and FW relative url
  *
- * http://myserver/myfolder/metadata.json + ....
+ * http://myserver/myfolder/manifest.json + ....
  * /updates/blah/0x11000.bin -> myserver/updates/blah/0x11000.bin
  * updates/blah/0x11000.bin ->
  *                      myserver/myfolder/updates/blah/0x11000.bin
@@ -304,9 +309,9 @@ static void mg_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_HTTP_REPLY: {
       nc->flags |= MG_F_CLOSE_IMMEDIATELY;
       struct http_message *hm = (struct http_message *) ev_data;
-      free(s_metadata);
-      s_metadata = calloc(1, hm->body.len + 1);
-      memcpy(s_metadata, hm->body.p, hm->body.len);
+      free(s_manifest);
+      s_manifest = calloc(1, hm->body.len + 1);
+      memcpy(s_manifest, hm->body.p, hm->body.len);
       LOG(LL_DEBUG, ("Metadata size: %d", (int) hm->body.len));
       set_download_status(DS_COMPLETED);
       break;
@@ -420,9 +425,9 @@ void update_timer_cb(void *arg) {
   switch (s_update_status) {
     case US_NOT_STARTED:
     case US_INITED: {
-      /* Starting with loading metadata */
-      LOG(LL_DEBUG, ("Loading metadata"));
-      do_http_connect(s_metadata_url);
+      /* Starting with loading manifest */
+      LOG(LL_DEBUG, ("Loading manifest"));
+      do_http_connect(s_manifest_url);
       set_update_status(US_WAITING_METADATA);
       set_download_status(DS_IN_PROGRESS);
       break;
@@ -440,25 +445,25 @@ void update_timer_cb(void *arg) {
     }
 
     case US_GOT_METADATA: {
-      struct json_token *toks = parse_json2(s_metadata, strlen(s_metadata));
+      struct json_token *toks = parse_json2(s_manifest, strlen(s_manifest));
       if (toks == NULL) {
-        LOG(LL_DEBUG, ("Cannot parse metadata (len=%d)\n%s", strlen(s_metadata),
-                       s_metadata));
+        LOG(LL_DEBUG, ("Cannot parse manifest (len=%d)\n%s", strlen(s_manifest),
+                       s_manifest));
         goto error;
       }
 
-      if (!sj_conf_get_str(toks, "timestamp", &s_new_fw_timestamp)) {
+      if (!sj_conf_get_str(toks, "version", &s_new_fw_version)) {
         goto error;
       }
 
       LOG(LL_INFO, ("Version %s is available, current version %s",
-                    s_new_fw_timestamp, FW_TIMESTAMP));
+                    s_new_fw_version, build_version));
       /*
-       * FW_TIMESTAMP & s_new_fw_timestamp is a date in
-       * %Y%m%d%H%M format, so, we can lex compare them
+       * build_version & s_new_fw_version is a date in
+       * %Y%m%d%H%M%S format, so, we can lex compare them
        */
-      if (strcmp(s_new_fw_timestamp, FW_TIMESTAMP) > 0) {
-        LOG(LL_INFO, ("Starting update to %s", s_new_fw_timestamp));
+      if (strcmp(s_new_fw_version, build_version) > 0) {
+        LOG(LL_INFO, ("Starting update to %s", s_new_fw_version));
       } else {
         LOG(LL_INFO, ("Nothing to do, exiting update"));
         set_update_status(US_NOTHING_TODO);
@@ -468,22 +473,22 @@ void update_timer_cb(void *arg) {
       s_new_rom_number = get_current_rom() == 1 ? 0 : 1;
       LOG(LL_DEBUG, ("ROM to write: %d", s_new_rom_number));
 
-      if (!sj_conf_get_str(toks, "fw_url", &s_fw_url)) {
+      if (!sj_conf_get_str(toks, "parts.fw.src", &s_fw_url)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FW url: %s", s_fw_url));
 
-      if (!sj_conf_get_str(toks, "fs_url", &s_fs_url)) {
+      if (!sj_conf_get_str(toks, "parts.fs.src", &s_fs_url)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FS url: %s", s_fs_url));
 
-      if (!sj_conf_get_str(toks, "fw_checksum", &s_fw_checksum)) {
+      if (!sj_conf_get_str(toks, "parts.fw.cs_sha1", &s_fw_checksum)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FW checksum: %s", s_fw_checksum));
 
-      if (!sj_conf_get_str(toks, "fs_checksum", &s_fs_checksum)) {
+      if (!sj_conf_get_str(toks, "parts.fs.cs_sha1", &s_fs_checksum)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FS checksum: %s", s_fs_checksum));
@@ -493,13 +498,13 @@ void update_timer_cb(void *arg) {
       LOG(LL_DEBUG, ("Address to write ROM: %X", s_current_write_address));
 
       LOG(LL_INFO, ("Loading %s", s_fw_url));
-      do_http_connect_by_uri(s_metadata_url, s_fw_url);
+      do_http_connect_by_uri(s_manifest_url, s_fw_url);
       set_update_status(US_DOWNLOADING_FW);
       set_download_status(DS_IN_PROGRESS);
       goto cleanup;
 
     error:
-      LOG(LL_ERROR, ("Invalid metadata file"));
+      LOG(LL_ERROR, ("Invalid manifest file"));
       set_update_status(US_ERROR);
 
     cleanup:
@@ -519,7 +524,7 @@ void update_timer_cb(void *arg) {
           LOG(LL_DEBUG, ("Loading %s", s_fs_url));
           s_file_size = s_current_received = s_area_prepared = 0;
           s_current_write_address = get_fs_addr(s_new_rom_number);
-          do_http_connect_by_uri(s_metadata_url, s_fs_url);
+          do_http_connect_by_uri(s_manifest_url, s_fs_url);
           set_update_status(US_DOWNLOADING_FS);
           set_download_status(DS_IN_PROGRESS);
         }
@@ -560,7 +565,7 @@ void update_timer_cb(void *arg) {
       }
 
       LOG(LL_INFO,
-          ("Version %s downloaded, restarting system", s_new_fw_timestamp));
+          ("Version %s downloaded, restarting system", s_new_fw_version));
       os_timer_disarm(&s_update_timer);
 
       set_boot_params(s_new_rom_number, rboot_get_current_rom());
@@ -603,19 +608,19 @@ int is_in_progress() {
   return ret;
 }
 
-void update_start(const char *metadata_url) {
+void update_start(const char *manifest_url) {
   if (is_in_progress()) {
     LOG(LL_INFO, ("Update already in progress"));
     return;
   }
 
-  free(s_metadata_url);
+  free(s_manifest_url);
 
-  if (metadata_url != NULL) {
-    s_metadata_url = strdup(metadata_url);
+  if (manifest_url != NULL) {
+    s_manifest_url = strdup(manifest_url);
   } else {
-    /* Fallback to cfg-stored metadata url. Debug only */
-    s_metadata_url = strdup(get_cfg()->update.metadata_url);
+    /* Fallback to cfg-stored manifest url. Debug only */
+    s_manifest_url = strdup(get_cfg()->update.manifest_url);
   }
 
   set_update_status(US_INITED);
@@ -924,7 +929,7 @@ static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
     goto bad_request;
   }
 
-  LOG(LL_DEBUG, ("metadata url: %.*s", blob_url->len, blob_url->ptr));
+  LOG(LL_DEBUG, ("manifest url: %.*s", blob_url->len, blob_url->ptr));
 
   sj_clubby_free_reply(s_clubby_reply);
   s_clubby_reply = sj_clubby_create_reply(evt);
@@ -934,14 +939,14 @@ static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
    * User can start update with Sys.updater.start()
    */
   if (!is_in_progress()) {
-    char *metadata_url = calloc(1, blob_url->len + 1);
-    memcpy(metadata_url, blob_url->ptr, blob_url->len);
+    char *manifest_url = calloc(1, blob_url->len + 1);
+    memcpy(manifest_url, blob_url->ptr, blob_url->len);
 
-    if (!notify_js(US_NOT_STARTED, metadata_url)) {
-      update_start(metadata_url);
+    if (!notify_js(US_NOT_STARTED, manifest_url)) {
+      update_start(manifest_url);
     }
 
-    free(metadata_url);
+    free(manifest_url);
   }
   return;
 
@@ -951,12 +956,12 @@ bad_request:
 
 static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
   LOG(LL_DEBUG, ("Starting update"));
-  v7_val_t metadata_url_v = v7_arg(v7, 0);
-  if (v7_is_undefined(metadata_url_v)) {
-    /* Using default metadata address */
+  v7_val_t manifest_url_v = v7_arg(v7, 0);
+  if (v7_is_undefined(manifest_url_v)) {
+    /* Using default manifest address */
     update_start(NULL);
-  } else if (v7_is_string(metadata_url_v)) {
-    update_start(v7_to_cstring(v7, &metadata_url_v));
+  } else if (v7_is_string(manifest_url_v)) {
+    update_start(v7_to_cstring(v7, &manifest_url_v));
   } else {
     printf("Invalid arguments\n");
     *res = v7_mk_boolean(0);

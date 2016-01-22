@@ -93,7 +93,7 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_str(toks, "update.metadata_url", &dst->update.metadata_url) ==
+  if (sj_conf_get_str(toks, "update.manifest_url", &dst->update.manifest_url) ==
           0 &&
       require_keys)
     goto done;

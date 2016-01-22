@@ -1,9 +1,3 @@
-
-GIT_REF     = $(shell git symbolic-ref HEAD | sed 's:refs/heads/::')
-GIT_SHA     = $(shell git rev-parse HEAD | head -c 8)
-DATE        = $(shell TZ=GMT date +"%Y%m%d-%H%M%S")
-FW_VERSION  = $(DATE)/$(GIT_REF)/$(GIT_SHA)
-
 COMMON_V7_FEATURES = -DV7_ENABLE__File__require=1
 
 MG_FEATURES_TINY = \

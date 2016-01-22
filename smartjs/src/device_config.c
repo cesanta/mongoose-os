@@ -13,10 +13,6 @@
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
 
-#ifndef FW_VERSION
-#define FW_VERSION "UNKNOWN_FW_VERSION"
-#endif
-
 #ifndef FW_ARCHITECTURE
 #define FW_ARCHITECTURE "UNKNOWN_ARCH"
 #endif
@@ -35,7 +31,11 @@ struct sys_config *get_cfg() {
 /* Global vars */
 struct ro_var *g_ro_vars = NULL;
 
-static const char *s_fw_version = FW_VERSION;
+/* Must be provided externally, usually auto-generated. */
+extern const char *build_id;
+extern const char *build_timestamp;
+extern const char *build_version;
+
 static const char *s_architecture = FW_ARCHITECTURE;
 static struct mg_serve_http_opts s_http_server_opts;
 static char s_mac_address[13];
@@ -252,7 +252,9 @@ int init_device(struct v7 *v7) {
   free(defaults);
   free(overrides);
 
-  REGISTER_RO_VAR(fw_version, &s_fw_version);
+  REGISTER_RO_VAR(fw_id, &build_id);
+  REGISTER_RO_VAR(fw_timestamp, &build_timestamp);
+  REGISTER_RO_VAR(fw_version, &build_version);
   REGISTER_RO_VAR(arch, &s_architecture);
 
   /* Init mac address readonly var - users may use it as device ID */

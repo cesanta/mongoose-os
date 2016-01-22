@@ -39,7 +39,6 @@ CFLAGS ?= -O2 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
           $(V7_FEATURES) \
           $(SJ_FEATURES) \
           $(MONGOOSE_FEATURES) \
-          -DFW_VERSION=\"$(FW_VERSION)\" \
           -DFW_ARCHITECTURE=\"$(PLATFORM)\" \
           $(CFLAGS_EXTRA)
 
@@ -106,15 +105,16 @@ INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-OBJS = $(APP_OBJS)
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
+BUILD_INFO_C = $(BUILD_DIR)/build_info.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(BUILD_DIR)
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/* $(SRC_PATH)/fs/*)
 
 .PHONY: all clean fs
 
 define compile
-@echo "CC $< -> $@"
+@echo "  CC $< -> $@"
 $(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
 endef
 
@@ -134,6 +134,15 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 	$(compile)
+
+$(BUILD_DIR)/build_info.o: $(BUILD_INFO_C)
+	$(compile)
+
+# Generate build info. Only regenerates if there are changes in objects.
+$(BUILD_INFO_C): $(APP_OBJS)
+	@echo "  GEN $@"
+	$(Q) $(COMMON_PATH)/tools/fw_meta.py gen_build_info \
+		--c_output=$(BUILD_INFO_C)
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 

@@ -25,7 +25,7 @@
     "enable_webdav": true
   },
   "update": {
-    "metadata_url": "http://127.0.0.1:8081/updates/metadata.json",
+    "manifest_url": "http://127.0.0.1:8081/updates/manifest.json",
     "server_timeout": 10
   },
   "tls": {

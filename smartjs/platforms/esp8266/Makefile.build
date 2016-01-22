@@ -168,17 +168,20 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
-SRCS = $(APP_SRCS)
-OBJS = $(APP_OBJS)
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
+BUILD_INFO_C = $(BUILD_DIR)/build_info.c
+BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
+
+SRCS = $(APP_SRCS) build_info.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 
 FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_FS_PATH)/*)
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
@@ -218,7 +221,8 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFS_SIZE=$(_FS_SIZE) \
                    -DFW_SIZE=$(ROM_SIZE)
 
-FW_METADATA_FILE= $(FW_DIR)/metadata.json
+FW_MANIFEST = $(FW_DIR)/manifest.json
+FW_ZIP_FILE = $(FW_DIR)/firmware.zip
 endif
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
@@ -226,13 +230,9 @@ LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 
-TIMESTAMP=$(shell TZ=GMT date +"%Y%m%d%H%M")
-
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
-          -DFW_VERSION=\"$(FW_VERSION)\" \
           -DFW_ARCHITECTURE=\"esp8266\" \
-          -DFW_TIMESTAMP=\"$(TIMESTAMP)\"\
           $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS)
 
 ifneq "${OTA}" "1"
@@ -242,42 +242,34 @@ CFLAGS += $(BOOTLOADER_FLAGS)
 LDFLAGS += -u Cache_Read_Enable_New
 endif
 
+all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
 ifeq "${OTA}" "1"
-all: $(FW_METADATA_FILE)
-
-METADATA_FILE_PATTERN=|$(FW_METADATA_FILE)
+all: $(FW_ZIP_FILE)
 endif
 
-
-all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
-	$(Q) rm -f `ls $(FW_DIR)/* \
-		| grep -vE '^($(FW_FILE_1_OUT)|$(RBOOT_EMPTY_CFG)|$(FW_FILE_2_OUT)|$(FW_FS_OUT)$(METADATA_FILE_PATTERN))$$'`
-
 $(RBOOT_EMPTY_CFG):
-	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" >$(RBOOT_EMPTY_CFG)
+	$(vecho) GEN $@
+	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" > $@
 
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
 
-$(FW_METADATA_FILE) : $(FW_FILES_OUT)
-	$(vecho) GEN $(FW_METADATA_FILE)
-	$(eval BUILD_REF=$(shell git symbolic-ref HEAD | sed 's:refs/heads/::'))
-	$(eval BUILD_SHA=$(shell git rev-parse HEAD | head -c 8))
-	$(Q) sed \
-		-e 's,%FULL_VERSION%,\"$(FW_VERSION)\",' \
-		-e 's,%VERSION%,\"$(TIMESTAMP)\",' \
-		-e 's,%NAME%,smartjs,' \
-		-e 's,%BUILD%,$(BUILD_REF)/$(BUILD_SHA),' \
-		-e 's,%DESCRIPTION%,,' \
-		-e 's,%PLATFORM%,esp8266,' \
-		-e 's,%TIMESTAMP%,$(TIMESTAMP),' \
-		-e 's,%FW_FILE%,$(notdir $(FW_FILE_2_OUT)),' \
-		-e 's,%FS_FILE%,$(notdir $(FW_FS_OUT)),' \
-		-e 's,%FW_CHECKSUM%,$(shell sha1sum $(FW_FILE_2_OUT) | awk '{print $$1}'),' \
-		-e 's,%FS_CHECKSUM%,$(shell sha1sum $(FW_FS_OUT) | awk '{print $$1}'),' \
-		-e 's,%BOOT_FILE%,$(notdir $(FW_FILE_1_OUT)),' \
-		-e 's,%BOOT_CHECKSUM%,$(shell sha1sum $(FW_FILE_1_OUT) | awk '{print $$1}'),' \
-	  ./user/metadata.json.in > $@
+$(FW_ZIP_FILE): $(FW_FILES_OUT)
+	$(vecho) GEN $(FW_MANIFEST)
+	$(Q) $(COMMON_DIR)/tools/fw_meta.py create_manifest \
+		--name=smartjs --platform=esp8266 \
+		--build_info=$(BUILD_INFO_JSON) \
+		--output=$(FW_MANIFEST) \
+		--src_dir=$(FW_DIR) \
+		boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
+		boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
+		fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
+		fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
+	$(vecho) ZIP $@
+	$(Q) $(COMMON_DIR)/tools/fw_meta.py create_fw \
+		--manifest=$(FW_MANIFEST) \
+		--src_dir=$(FW_DIR) \
+		--output=$@
 
 # Main output product: firmware files.
 #ifreq "${OTA}" "1"
@@ -340,6 +332,11 @@ $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 $(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
+# Common gathering point for all generated files.
+# Except version, which is special because it depends on objects.
+$(GENFILES_FLAG): $(LD_SCRIPT) $(BUILD_DIR)/fr.c
+	$(Q) touch $@
+
 $(BUILD_DIR)/fr.dump: $(BUILD_DIR)/v7
 	$(vecho) "FREEZE"
 	$(Q) $(BUILD_DIR)/v7 -freeze $@
@@ -352,23 +349,23 @@ $(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
 	$(vecho) "GEN fr.c"
 	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
 
-# Common gathering point for all generated files.
-# Except version, which is special because it depends on objects.
-$(GENFILES_FLAG): $(LD_SCRIPT)
-	$(Q) touch $@
-
 # Generate linker script.
 $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(eval _IROM0ADDR=$(shell printf "0x%08x" $$((0x40200000 + $(basename $(notdir $@)) + $(IMAGE_HEADER_SIZE)))))
-
 ifneq "$(OTA)" "1"
 	$(eval _IROM0SIZE=$(shell printf "0x%05x" $$(($(FS_ADDR) - $(basename $(notdir $@))))))
 else
 	$(eval _IROM0SIZE=$(ROM_SIZE))
 endif
-
 	$(vecho) "GEN $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
+
+# Generate build info. Only regenerates if there are changes in objects.
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
+	$(vecho) "GEN $@"
+	$(Q) $(COMMON_DIR)/tools/fw_meta.py gen_build_info \
+		--c_output=$(BUILD_INFO_C) \
+		--json_output=$(BUILD_INFO_JSON)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
