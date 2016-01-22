@@ -9,9 +9,8 @@ all: format
 	$(MAKE) -C platforms/posix
 
 format:
-	@/usr/bin/find flashnchips -name "*.h" -or -name "*.cc" | xargs $(CLANG_FORMAT) -i
 	@(for i in src platforms/cc3200 platforms/esp8266/user platforms/esp8266/tools; do \
-       /usr/bin/find $$i -type f -name "*.[ch]" | grep -v /spiffs/ | grep -v /lwip/ | grep -v /bootloader/; \
+       /usr/bin/find $$i -type f -name "*.[ch]" | grep -v /build/ | grep -v /lwip/ | grep -v /bootloader/; \
     done) | xargs $(CLANG_FORMAT) -i
 
 # allows CI tests and precommit hooks to ensure
