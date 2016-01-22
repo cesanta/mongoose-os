@@ -12983,12 +12983,16 @@ v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *f, int num_args) {
 V7_PRIVATE v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7,
                                                 v7_cfunction_t *f, int num_args,
                                                 v7_val_t proto) {
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
   v7_val_t res = mk_cfunction_obj(v7, f, num_args);
+
+  tmp_stack_push(&tf, &res);
 
   v7_def(v7, res, "prototype", 9, (V7_DESC_ENUMERABLE(0) | V7_DESC_WRITABLE(0) |
                                    V7_DESC_CONFIGURABLE(0)),
          proto);
   v7_def(v7, proto, "constructor", 11, V7_DESC_ENUMERABLE(0), res);
+  tmp_frame_cleanup(&tf);
   return res;
 }
 
