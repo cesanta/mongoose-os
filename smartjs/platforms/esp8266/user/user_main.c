@@ -38,11 +38,17 @@
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "esp_umm_malloc.h"
 
+#include "v7.h"
+
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;
 #endif
 
-void start_cmd(void *dummy) {
+/*
+ * SmartJS initialization; for non-RTOS env, called as an SDK timer callback
+ * (`os_timer_...()`). For RTOS env, called by the dispatcher task.
+ */
+void sjs_init(void *dummy) {
   /*
    * In order to see debug output (at least errors) during boot we have to
    * initialize debug in this point. But default we put debug to UART0 with
@@ -62,6 +68,9 @@ void start_cmd(void *dummy) {
 #endif
 
   init_v7(&dummy);
+
+  /* disable GC during further initialization */
+  v7_set_gc_enabled(v7, 0);
 
 #if !defined(NO_PROMPT)
   uart_main_init(0);
@@ -89,17 +98,25 @@ void start_cmd(void *dummy) {
    */
   esp_umm_init();
 #endif
+
+  /* SJS initialized, enable GC back, and trigger it */
+  v7_set_gc_enabled(v7, 1);
+  v7_gc(v7, 1);
 }
 
-void init_done_cb() {
+/*
+ * Called when SDK initialization is finished
+ */
+void sdk_init_done_cb() {
 #if !defined(ESP_ENABLE_HW_WATCHDOG) && !defined(RTOS_TODO)
   ets_wdt_disable();
 #endif
   pp_soft_wdt_stop();
 
 #ifndef RTOS_SDK
+  /* Schedule SJS initialization (`sjs_init()`) */
   os_timer_disarm(&startcmd_timer);
-  os_timer_setfn(&startcmd_timer, start_cmd, NULL);
+  os_timer_setfn(&startcmd_timer, sjs_init, NULL);
   os_timer_arm(&startcmd_timer, 500, 0);
 #else
   rtos_dispatch_initialize();
@@ -110,7 +127,7 @@ void init_done_cb() {
 void user_init() {
 #ifndef RTOS_TODO
   system_update_cpu_freq(SYS_CPU_160MHZ);
-  system_init_done_cb(init_done_cb);
+  system_init_done_cb(sdk_init_done_cb);
 #endif
 
   uart_div_modify(0, UART_CLK_FREQ / 115200);
@@ -130,6 +147,6 @@ void user_init() {
 
 #ifdef RTOS_TODO
   rtos_init_dispatcher();
-  init_done_cb();
+  sdk_init_done_cb();
 #endif
 }

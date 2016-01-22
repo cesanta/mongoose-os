@@ -41,7 +41,7 @@ struct rtos_event {
 };
 
 /* Add function to call declaration here */
-void start_cmd(void *dummy);
+void sjs_init(void *dummy);
 void process_rx_buf(int tail);
 int mongoose_has_connections();
 void _sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
@@ -106,7 +106,7 @@ static void disp_task(void *params) {
                       500 / portTICK_RATE_MS)) {
       switch (ev.event_id) {
         case RTE_INIT:
-          start_cmd(0);
+          sjs_init(0);
           break;
         case RTE_UART_NEWCHAR:
           process_rx_buf(ev.params.uart_rx_params.tail);

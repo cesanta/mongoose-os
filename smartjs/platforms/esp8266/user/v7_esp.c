@@ -172,6 +172,9 @@ void init_v7(void *stack_base) {
   opts.c_stack_base = stack_base;
   v7 = v7_mk_opt(opts);
 
+  /* disable GC during initialization */
+  v7_set_gc_enabled(v7, 0);
+
   srand(system_get_rtc_time());
 
   /* NOTE: init_config has to be called before first config usage */
@@ -217,6 +220,9 @@ void init_v7(void *stack_base) {
 #ifndef DISABLE_C_CLUBBY
   sj_init_clubby(v7);
 #endif
+
+  /* enable GC back */
+  v7_set_gc_enabled(v7, 1);
 
   v7_gc(v7, 1);
 }
