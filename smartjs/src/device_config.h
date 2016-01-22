@@ -32,6 +32,7 @@ int init_device(struct v7 *);
 int device_init_platform(struct sys_config *);
 void device_reboot(void);
 void device_get_mac_address(uint8_t mac[6]);
+void init_config(struct v7 *v7);
 
 /*
  * Set property in Sys.conf object pointed by path paramater (dot separated,

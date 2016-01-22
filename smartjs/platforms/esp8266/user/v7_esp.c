@@ -172,6 +172,11 @@ void init_v7(void *stack_base) {
   opts.c_stack_base = stack_base;
   v7 = v7_mk_opt(opts);
 
+  srand(system_get_rtc_time());
+
+  /* NOTE: init_config has to be called before first config usage */
+  init_config(v7);
+
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
 

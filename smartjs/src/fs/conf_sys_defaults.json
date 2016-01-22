@@ -22,7 +22,7 @@
   "http": {
     "enable": true,
     "port": "80",
-    "enable_webdav" : true
+    "enable_webdav": true
   },
   "update": {
     "metadata_url": "http://127.0.0.1:8081/updates/metadata.json",
@@ -30,18 +30,18 @@
   },
   "tls": {
     "enable": false,
-    "server_name": "nothing.here",
-    "ca_file": "nothing.pem"
+    "server_name": "",
+    "ca_file": ""
   },
   "clubby": {
     "connect_on_boot": false,
     "server_address": "127.0.0.1:8911",
-    "device_id": "device_1",
-    "device_psk": "psk_1",
+    "device_id": "",
+    "device_psk": "",
     "backend": "//api.cesanta.com",
-    "reconnect_timeout_min" : 10,
-    "reconnect_timeout_max" : 60,
-    "cmd_timeout" : 300
+    "reconnect_timeout_min": 10,
+    "reconnect_timeout_max": 60,
+    "cmd_timeout": 300
   },
   "debug": {
     "level": 2,

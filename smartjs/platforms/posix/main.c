@@ -58,6 +58,7 @@ static void pre_init(struct v7 *v7) {
   sj_init_timers(v7);
   sj_init_v7_ext(v7);
   init_smartjs(v7);
+  init_config(v7);
   init_device(v7);
   run_init_script(v7);
 }

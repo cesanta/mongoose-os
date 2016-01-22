@@ -73,6 +73,9 @@ print('\nStarting Smart.js - see documentation at',
       'https://cesanta.com/developer/smartjs',
       '\n==> Sys:\n', Sys, '\n');
 
+print('Device id:', Sys.conf.clubby.device_id)
+print('Device psk:', Sys.conf.clubby.device_psk, '\n')
+
 global.clubby = new Clubby({connect:false});
 
 if (Sys.conf.clubby.connect_on_boot) {
