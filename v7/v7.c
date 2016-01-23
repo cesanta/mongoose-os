@@ -2968,6 +2968,13 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "common/mbuf.h" */
 
+enum bcode_inline_lit_type_tag {
+  BCODE_INLINE_STRING_TYPE_TAG = 0,
+  BCODE_INLINE_NUMBER_TYPE_TAG,
+
+  BCODE_MAX_INLINE_TYPE_TAG
+};
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -2977,6 +2984,17 @@ extern "C" {
  *
  * Bytecode instructions consist of 1-byte opcode, optionally followed by N
  * bytes of arguments.
+ *
+ * Opcodes that accept an index in the literal table (PUSH_LIT, GET_VAR,
+ * SET_VAR, ...) also accept inline literals. In order to distinguish indices in
+ * the literals table and the inline literals, indices 0 and 1 are reserved as
+ * type tags for inline literals:
+ *
+ * if 0, the following bytes encode a string literal
+ * if 1, they encode a number (textual, like in the AST)
+ *
+ * (see enum bcode_inline_lit_type_tag)
+ *
  *
  * Stack diagrams follow the syntax and semantics of:
  *
@@ -3088,7 +3106,7 @@ enum opcode {
    * Pushes a value from literals table onto the stack.
    *
    * The opcode takes a varint operand interpreted as an index in the current
-   * literal table.
+   * literal table (see lit table).
    *
    * ( -- a )
    */
@@ -3530,11 +3548,21 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *, struct bcode *);
 #endif
 
+typedef struct {
+  size_t idx;
+  v7_val_t val;
+} lit_t;
+
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
-V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
+V7_PRIVATE
+lit_t bcode_add_lit(struct v7 *v7, struct bcode *bcode, v7_val_t val);
+/* disabled because of short lits */
+#if 0
 V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx);
-V7_PRIVATE void bcode_op_lit(struct bcode *bcode, enum opcode op, size_t idx);
-V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx);
+#endif
+V7_PRIVATE void bcode_op_lit(struct v7 *v7, struct bcode *bcode, enum opcode op,
+                             lit_t lit);
+V7_PRIVATE void bcode_push_lit(struct v7 *v7, struct bcode *bcode, lit_t lit);
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, v7_val_t v);
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
 V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode);
@@ -3553,7 +3581,8 @@ V7_PRIVATE size_t bcode_get_varint(uint8_t **ops);
  * Decode a literal value from a string of opcodes and update the cursor to
  * point past it
  */
-V7_PRIVATE v7_val_t bcode_decode_lit(struct bcode *bcode, uint8_t **ops);
+V7_PRIVATE
+v7_val_t bcode_decode_lit(struct v7 *v7, struct bcode *bcode, uint8_t **ops);
 
 #if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
@@ -10285,31 +10314,76 @@ V7_PRIVATE size_t bcode_get_varint(uint8_t **ops) {
   return ret;
 }
 
-V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, val_t val) {
-  size_t idx = bcode->lit.len / sizeof(val);
-  mbuf_append(&bcode->lit, &val, sizeof(val));
-  return idx;
+static int bcode_is_inline_string(struct v7 *v7, val_t val) {
+  if (v7_is_string(val)) {
+    size_t len;
+    v7_get_string_data(v7, &val, &len);
+    return len <= 5;
+  }
+  return 0;
 }
 
+V7_PRIVATE lit_t bcode_add_lit(struct v7 *v7, struct bcode *bcode, val_t val) {
+  lit_t lit;
+  memset(&lit, 0, sizeof(lit));
+  if (bcode_is_inline_string(v7, val)) {
+    lit.val = val;
+  } else {
+    lit.val = v7_mk_undefined();
+    lit.idx = bcode->lit.len / sizeof(val);
+    mbuf_append(&bcode->lit, &val, sizeof(val));
+  }
+  return lit;
+}
+
+#if 0
 V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx) {
   val_t ret;
   memcpy(&ret, bcode->lit.buf + (size_t) idx * sizeof(ret), sizeof(ret));
   return ret;
 }
+#endif
 
-V7_PRIVATE v7_val_t bcode_decode_lit(struct bcode *bcode, uint8_t **ops) {
-  size_t idx = bcode_get_varint(ops);
+V7_PRIVATE v7_val_t
+bcode_decode_lit(struct v7 *v7, struct bcode *bcode, uint8_t **ops) {
   struct mbuf *mbuf = &bcode->lit;
-  return ((val_t *) mbuf->buf)[idx];
+  size_t idx = bcode_get_varint(ops);
+  switch (idx) {
+    case BCODE_INLINE_STRING_TYPE_TAG: {
+      val_t res;
+      size_t len = bcode_get_varint(ops);
+      /* fprintf(stderr, "CREATING STRING len %zu, '%.*s'\n", len, (int) len, */
+      /*         *ops + 1); */
+      res = v7_mk_string(v7, (const char *) *ops + 1, len, 1);
+      *ops += len + 1;
+      return res;
+      break;
+    }
+    /* TODO(mkm): implement number */
+    default:
+      return ((val_t *) mbuf->buf)[idx - BCODE_MAX_INLINE_TYPE_TAG];
+  }
 }
 
-V7_PRIVATE void bcode_op_lit(struct bcode *bcode, enum opcode op, size_t idx) {
+V7_PRIVATE void bcode_op_lit(struct v7 *v7, struct bcode *bcode, enum opcode op,
+                             lit_t lit) {
   bcode_op(bcode, op);
-  bcode_add_varint(bcode, idx);
+
+  if (v7_is_string(lit.val)) {
+    size_t len;
+    const char *s = v7_get_string_data(v7, &lit.val, &len);
+    /* fprintf(stderr, "ENCODING STRING (len %zu) '%.*s'\n", len, (int) len, s);
+     */
+    bcode_add_varint(bcode, BCODE_INLINE_STRING_TYPE_TAG);
+    bcode_add_varint(bcode, len);
+    mbuf_append(&bcode->ops, s, len + 1 /* nul term */);
+  } else {
+    bcode_add_varint(bcode, lit.idx + BCODE_MAX_INLINE_TYPE_TAG);
+  }
 }
 
-V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx) {
-  bcode_op_lit(bcode, OP_PUSH_LIT, idx);
+V7_PRIVATE void bcode_push_lit(struct v7 *v7, struct bcode *bcode, lit_t lit) {
+  bcode_op_lit(v7, bcode, OP_PUSH_LIT, lit);
 }
 
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, val_t v) {
@@ -10500,12 +10574,12 @@ static const char *bcode_deserialize_lit(struct v7 *v7, struct bcode *bcode,
       val = strtod(p, NULL);
       if (p != buf) free(p);
 
-      bcode_add_lit(bcode, v7_mk_number(val));
+      bcode_add_lit(v7, bcode, v7_mk_number(val));
       break;
     }
 
     case BCODE_SER_STRING: {
-      bcode_add_lit(bcode, bcode_deserialize_string(v7, &data));
+      bcode_add_lit(v7, bcode, bcode_deserialize_string(v7, &data));
       break;
     }
 
@@ -10522,7 +10596,7 @@ static const char *bcode_deserialize_lit(struct v7 *v7, struct bcode *bcode,
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode, bcode->strict_mode);
       retain_bcode(v7, func->bcode);
-      bcode_add_lit(bcode, funv);
+      bcode_add_lit(v7, bcode, funv);
       data = bcode_deserialize_func(v7, func->bcode, data);
       break;
     }
@@ -11665,7 +11739,7 @@ restart:
         PUSH(v7_mk_number(1));
         break;
       case OP_PUSH_LIT: {
-        PUSH(bcode_decode_lit(r.bcode, &r.ops));
+        PUSH(bcode_decode_lit(v7, r.bcode, &r.ops));
         break;
       }
       case OP_LOGICAL_NOT:
@@ -11926,7 +12000,7 @@ restart:
       case OP_SAFE_GET_VAR: {
         struct v7_property *p = NULL;
         assert(r.ops < r.end - 1);
-        v1 = bcode_decode_lit(r.bcode, &r.ops);
+        v1 = bcode_decode_lit(v7, r.bcode, &r.ops);
         BTRY(v7_get_property_v(v7, v7->vals.call_stack, v1, &p));
         if (p == NULL) {
           if (op == OP_SAFE_GET_VAR) {
@@ -11946,7 +12020,7 @@ restart:
       case OP_SET_VAR: {
         struct v7_property *prop;
         v3 = POP();
-        v2 = bcode_decode_lit(r.bcode, &r.ops);
+        v2 = bcode_decode_lit(v7, r.bcode, &r.ops);
         v1 = v7->vals.call_stack;
 
         BTRY(to_string(v7, v2, NULL, buf, sizeof(buf), NULL));
@@ -12335,7 +12409,7 @@ restart:
         /* pop thrown value from stack */
         v1 = POP();
         /* get the name of the thrown value */
-        v2 = bcode_decode_lit(r.bcode, &r.ops);
+        v2 = bcode_decode_lit(v7, r.bcode, &r.ops);
 
         /*
          * create a new stack frame (a "private" one), and set exception
@@ -12584,25 +12658,25 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
      */
 
     /* call func */
-    size_t lit = 0;
+    lit_t lit;
     int args_cnt = v7_array_length(v7, args);
 
     bcode_op(bcode, OP_PUSH_UNDEFINED);
 
     /* push `this` */
-    lit = bcode_add_lit(bcode, this_object);
-    bcode_push_lit(bcode, lit);
+    lit = bcode_add_lit(v7, bcode, this_object);
+    bcode_push_lit(v7, bcode, lit);
 
     /* push func literal */
-    lit = bcode_add_lit(bcode, func);
-    bcode_push_lit(bcode, lit);
+    lit = bcode_add_lit(v7, bcode, func);
+    bcode_push_lit(v7, bcode, lit);
 
     /* push args */
     {
       int i;
       for (i = 0; i < args_cnt; i++) {
-        lit = bcode_add_lit(bcode, v7_array_get(v7, args, i));
-        bcode_push_lit(bcode, lit);
+        lit = bcode_add_lit(v7, bcode, v7_array_get(v7, args, i));
+        bcode_push_lit(v7, bcode, lit);
       }
     }
 
@@ -19937,31 +20011,41 @@ clean:
   return rcode;
 }
 
-static size_t string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         struct bcode *bcode) {
+static lit_t string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                        struct bcode *bcode) {
   size_t i, name_len;
   val_t v;
   struct mbuf *m = &bcode->lit;
   char *name = ast_get_inlined_data(a, *pos, &name_len);
 
   ast_move_to_children(a, pos);
+/* temp disabled because of short lits */
+#if 0
   for (i = 0; i < m->len / sizeof(val_t); i++) {
     v = ((val_t *) m->buf)[i];
     if (v7_is_string(v)) {
       size_t l;
       const char *s = v7_get_string_data(v7, &v, &l);
       if (name_len == l && memcmp(name, s, name_len) == 0) {
-        return i;
+        lit_t res;
+        memset(&res, 0, sizeof(res));
+        res.idx = i + bcode_max_inline_type_tag;
+        return res;
       }
     }
   }
-  return bcode_add_lit(bcode, v7_mk_string(v7, name, name_len, 1));
+#else
+  (void) i;
+  (void) v;
+  (void) m;
+#endif
+  return bcode_add_lit(v7, bcode, v7_mk_string(v7, name, name_len, 1));
 }
 
 #if V7_ENABLE__RegExp
 WARN_UNUSED_RESULT
 static enum v7_err regexp_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                              struct bcode *bcode, size_t *res) {
+                              struct bcode *bcode, lit_t *res) {
   enum v7_err rcode = V7_OK;
   size_t name_len;
   char *p;
@@ -19975,7 +20059,7 @@ static enum v7_err regexp_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
   V7_TRY(v7_mk_regexp(v7, name + 1, p - (name + 1), p + 1,
                       (name + name_len) - p - 1, &tmp));
 
-  *res = bcode_add_lit(bcode, tmp);
+  *res = bcode_add_lit(v7, bcode, tmp);
 
 clean:
   return rcode;
@@ -20033,7 +20117,7 @@ clean:
 
 static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
                                   enum ast_tag tag, struct bcode *bcode) {
-  size_t lit;
+  lit_t lit;
   enum ast_tag ntag;
   enum v7_err rcode = V7_OK;
 
@@ -20043,11 +20127,11 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_IDENT:
       lit = string_lit(v7, a, pos, bcode);
       if (tag != AST_ASSIGN) {
-        bcode_op_lit(bcode, OP_GET_VAR, lit);
+        bcode_op_lit(v7, bcode, OP_GET_VAR, lit);
       }
 
       V7_TRY(eval_assign_rhs(v7, a, pos, tag, bcode));
-      bcode_op_lit(bcode, OP_SET_VAR, lit);
+      bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
       fixup_post_op(tag, bcode);
       break;
@@ -20057,7 +20141,7 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
         case AST_MEMBER:
           lit = string_lit(v7, a, pos, bcode);
           V7_TRY(compile_expr(v7, a, pos, bcode));
-          bcode_push_lit(bcode, lit);
+          bcode_push_lit(v7, bcode, lit);
           break;
         case AST_INDEX:
           V7_TRY(compile_expr(v7, a, pos, bcode));
@@ -20097,7 +20181,7 @@ static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
   ast_off_t next, fvar_end;
   char *name;
   size_t name_len;
-  size_t lit;
+  lit_t lit;
   enum v7_err rcode = V7_OK;
 
   if (fvar != start) {
@@ -20135,7 +20219,7 @@ static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
            */
           lit = string_lit(v7, a, &fvar, bcode);
           V7_TRY(compile_expr(v7, a, &fvar, bcode));
-          bcode_op_lit(bcode, OP_SET_VAR, lit);
+          bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
           /* function declarations are stack-neutral */
           bcode_op(bcode, OP_DROP);
@@ -20178,13 +20262,13 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct v7 *v7, struct ast *a,
 
   switch (tag) {
     case AST_MEMBER: {
-      size_t lit = string_lit(v7, a, pos, bcode);
+      lit_t lit = string_lit(v7, a, pos, bcode);
       V7_TRY(compile_expr(v7, a, pos, bcode));
       if (for_call) {
         /* current TOS will be used as `this` */
         bcode_op(bcode, OP_DUP);
       }
-      bcode_push_lit(bcode, lit);
+      bcode_push_lit(v7, bcode, lit);
       bcode_op(bcode, OP_GET);
       break;
     }
@@ -20225,11 +20309,11 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
   switch (tag) {
     case AST_MEMBER: {
       /* Delete a specified property of an object */
-      size_t lit = string_lit(v7, a, pos, bcode);
+      lit_t lit = string_lit(v7, a, pos, bcode);
       /* put an object to delete property from */
       V7_TRY(compile_expr(v7, a, pos, bcode));
       /* put a property name */
-      bcode_push_lit(bcode, lit);
+      bcode_push_lit(v7, bcode, lit);
       bcode_op(bcode, OP_DELETE);
       break;
     }
@@ -20247,7 +20331,7 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
       /* Delete the scope variable (or throw an error if strict mode) */
       if (!bcode->strict_mode) {
         /* put a property name */
-        bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
+        bcode_push_lit(v7, bcode, string_lit(v7, a, pos, bcode));
         bcode_op(bcode, OP_DELETE_VAR);
       } else {
         rcode =
@@ -20327,7 +20411,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_NEG);
       break;
     case AST_IDENT:
-      bcode_op_lit(bcode, OP_GET_VAR, string_lit(v7, a, pos, bcode));
+      bcode_op_lit(v7, bcode, OP_GET_VAR, string_lit(v7, a, pos, bcode));
       break;
     case AST_MEMBER:
     case AST_INDEX:
@@ -20351,7 +20435,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       ast_off_t peek = *pos;
       if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
         *pos = peek;
-        bcode_op_lit(bcode, OP_SAFE_GET_VAR, string_lit(v7, a, pos, bcode));
+        bcode_op_lit(v7, bcode, OP_SAFE_GET_VAR, string_lit(v7, a, pos, bcode));
       } else {
         V7_TRY(compile_expr(v7, a, pos, bcode));
       }
@@ -20526,7 +20610,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
        * properties, since duplicates are not allowed
        */
       struct mbuf cur_literals;
-      size_t lit;
+      lit_t lit;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
       mbuf_init(&cur_literals, 0);
 
@@ -20538,6 +20622,9 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
           case AST_PROP:
             bcode_op(bcode, OP_DUP);
             lit = string_lit(v7, a, pos, bcode);
+
+/* disabled because we broke get_lit */
+#if 0
             if (bcode->strict_mode) {
               /*
                * In strict mode, check for duplicate property names in
@@ -20567,7 +20654,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
               }
               mbuf_append(&cur_literals, &lit, sizeof(lit));
             }
-            bcode_push_lit(bcode, lit);
+#endif
+            bcode_push_lit(v7, bcode, lit);
             V7_TRY(compile_expr(v7, a, pos, bcode));
             bcode_op(bcode, OP_SET);
             bcode_op(bcode, OP_DROP);
@@ -20635,18 +20723,18 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       break;
     }
     case AST_FUNC: {
-      size_t flit = 0;
+      lit_t flit;
       val_t funv = mk_js_function(v7);
       struct v7_js_function *func = to_js_function(funv);
       func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode, bcode->strict_mode);
       retain_bcode(v7, func->bcode);
-      flit = bcode_add_lit(bcode, funv);
+      flit = bcode_add_lit(v7, bcode, funv);
 
       *pos = pos_start;
       V7_TRY(compile_function(v7, a, pos, func->bcode));
-      bcode_push_lit(bcode, flit);
+      bcode_push_lit(v7, bcode, flit);
       bcode_op(bcode, OP_FUNC_LIT);
       break;
     }
@@ -20680,24 +20768,24 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       } else if (dv == 1) {
         bcode_op(bcode, OP_PUSH_ONE);
       } else {
-        bcode_push_lit(bcode, bcode_add_lit(bcode, v7_mk_number(dv)));
+        bcode_push_lit(v7, bcode, bcode_add_lit(v7, bcode, v7_mk_number(dv)));
       }
       break;
     }
     case AST_STRING:
-      bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
+      bcode_push_lit(v7, bcode, string_lit(v7, a, pos, bcode));
       break;
     case AST_REGEX:
 #if V7_ENABLE__RegExp
     {
-      size_t tmp = v7_mk_undefined();
+      lit_t tmp;
       rcode = regexp_lit(v7, a, pos, bcode, &tmp);
       if (rcode != V7_OK) {
         rcode = V7_SYNTAX_ERROR;
         goto clean;
       }
 
-      bcode_push_lit(bcode, tmp);
+      bcode_push_lit(v7, bcode, tmp);
     }
 #else
       rcode = v7_throwf(v7, SYNTAX_ERROR, "Regexp support is disabled");
@@ -21002,7 +21090,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
          * a variable with the thrown value there.
          * The `OP_ENTER_CATCH` opcode does just that.
          */
-        bcode_op_lit(bcode, OP_ENTER_CATCH, string_lit(v7, a, pos, bcode));
+        bcode_op_lit(v7, bcode, OP_ENTER_CATCH, string_lit(v7, a, pos, bcode));
 
         /*
          * compile statements until the end of `catch` clause
@@ -21213,7 +21301,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        */
       if (tag == AST_VAR) {
         ast_off_t fvar_end;
-        size_t lit;
+        lit_t lit;
 
         *pos = lookahead;
         fvar_end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -21231,7 +21319,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
           V7_TRY(compile_expr(v7, a, pos, bcode));
 
           /* Just like an assigment */
-          bcode_op_lit(bcode, OP_SET_VAR, lit);
+          bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
           /* INIT is stack-neutral */
           bcode_op(bcode, OP_DROP);
@@ -21324,7 +21412,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      */
     case AST_FOR_IN: {
-      size_t lit;
+      lit_t lit;
       bcode_off_t loop_label, loop_target, end_label, brend_label,
           continue_label, pop_label, continue_target;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -21381,7 +21469,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       bcode_op(bcode, OP_NEXT_PROP);
       end_label = bcode_op_target(bcode, OP_JMP_FALSE);
-      bcode_op_lit(bcode, OP_SET_VAR, lit);
+      bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
       /*
        * The stash register contains the value of the previous statement,
@@ -21482,7 +21570,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * no new variables should be created in it. A var decl thus
        * behaves as a normal assignment at runtime.
        */
-      size_t lit;
+      lit_t lit;
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       while (*pos < end) {
@@ -21507,7 +21595,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
           V7_CHECK_INTERNAL(tag == AST_VAR_DECL);
           lit = string_lit(v7, a, pos, bcode);
           V7_TRY(compile_expr(v7, a, pos, bcode));
-          bcode_op_lit(bcode, OP_SET_VAR, lit);
+          bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
           /* `var` declaration is stack-neutral */
           bcode_op(bcode, OP_DROP);
