@@ -56,16 +56,12 @@
  * ----------------------------------------------------------------------------
  */
 
-#include <stdlib.h>         /* for abort() */
-#include "esp_mem_layout.h" /* for ESP_DRAM0_END */
-
-/* Defined in linker script. */
-extern unsigned int _heap_start;
+extern char test_umm_heap[];
+extern void umm_corruption(void);
 
 /* Start and end addresses of the heap */
-#define UMM_MALLOC_CFG__HEAP_ADDR ((char *) (&_heap_start))
-#define UMM_MALLOC_CFG__HEAP_SIZE \
-  (((char *) ESP_DRAM0_END) - UMM_MALLOC_CFG__HEAP_ADDR)
+#define UMM_MALLOC_CFG__HEAP_ADDR (test_umm_heap)
+#define UMM_MALLOC_CFG__HEAP_SIZE 0x10000
 
 /* A couple of macros to make packing structures less compiler dependent */
 
@@ -73,11 +69,9 @@ extern unsigned int _heap_start;
 #define UMM_H_ATTPACKSUF __attribute__((__packed__))
 
 /*
- * UMM_HEAP_CORRUPTION_CB() :
  * Callback that is called whenever a heap corruption is detected
- * (see `UMM_INTEGRITY_CHECK`, `UMM_POISON`)
  */
-#define UMM_HEAP_CORRUPTION_CB() abort()
+#define UMM_HEAP_CORRUPTION_CB() umm_corruption();
 
 /*
  * A couple of macros to make it easier to protect the memory allocator
@@ -105,14 +99,16 @@ extern unsigned int _heap_start;
  * 4 bytes, so there might be some trailing "extra" bytes which are not checked
  * for corruption.
  */
+/*
 #define UMM_INTEGRITY_CHECK
+*/
 
 /*
  * -D UMM_POISON :
  *
  * Enables heap poisoning: add predefined value (poison) before and after each
  * allocation, and check before each heap operation that no poison is
- * corrupted. How much poison is customizable.
+ * corrupted.
  *
  * Other than the poison itself, we need to store exact user-requested length
  * for each buffer, so that overrun by just 1 byte will be always noticed.
@@ -128,17 +124,17 @@ extern unsigned int _heap_start;
  *
  * NOTE: each allocated buffer is aligned by 4 bytes. But when poisoning is
  * enabled, actual pointer returned to user is shifted by
- * `(sizeof(UMM_POISONED_BLOCK_LEN_TYPE) + UMM_POISON_SIZE_BEFORE)` bytes.
+ * `(sizeof(UMM_POISONED_BLOCK_LEN_TYPE) + UMM_POISON_SIZE_BEFORE)`.
  * It's your responsibility to make resulting pointers aligned appropriately.
  *
  * If poison corruption is detected, the message is printed and user-provided
  * callback is called: `UMM_HEAP_CORRUPTION_CB()`
  */
-#if 0
+/*
 #define UMM_POISON
-#define UMM_POISON_SIZE_BEFORE 2
-#define UMM_POISON_SIZE_AFTER 2
+*/
+#define UMM_POISON_SIZE_BEFORE 4
+#define UMM_POISON_SIZE_AFTER 4
 #define UMM_POISONED_BLOCK_LEN_TYPE short
-#endif
 
 #endif /* _UMM_MALLOC_CFG_H */

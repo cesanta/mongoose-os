@@ -27,6 +27,8 @@ UMM_HEAP_INFO;
 
 extern UMM_HEAP_INFO ummHeapInfo;
 
+void umm_init( void );
+
 void *umm_info( void *ptr, int force );
 
 void *umm_malloc( size_t size );

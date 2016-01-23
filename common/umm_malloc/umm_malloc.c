@@ -609,11 +609,10 @@ UMM_H_ATTPACKPRE typedef struct umm_block_t {
 
 /* ------------------------------------------------------------------------- */
 
-#ifndef UMM_TEST_MAIN
-
 #ifdef UMM_REDEFINE_MEM_FUNCTIONS
 #  define umm_free    free
 #  define umm_malloc  malloc
+#  define umm_calloc  calloc
 #  define umm_realloc realloc
 #endif
 
@@ -621,15 +620,6 @@ umm_block *umm_heap = NULL;
 unsigned short int umm_numblocks = 0;
 
 #define UMM_NUMBLOCKS (umm_numblocks)
-
-#else
-
-umm_block umm_heap[8192];
-const unsigned short int umm_numblocks = sizeof(umm_heap)/sizeof(umm_block);
-
-#define UMM_NUMBLOCKS (umm_numblocks)
-
-#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -640,6 +630,320 @@ const unsigned short int umm_numblocks = sizeof(umm_heap)/sizeof(umm_block);
 #define UMM_NFREE(b)  (UMM_BLOCK(b).body.free.next)
 #define UMM_PFREE(b)  (UMM_BLOCK(b).body.free.prev)
 #define UMM_DATA(b)   (UMM_BLOCK(b).body.data)
+
+/* integrity check (UMM_INTEGRITY_CHECK) {{{ */
+#if defined(UMM_INTEGRITY_CHECK)
+/*
+ * Perform integrity check of the whole heap data. Returns 1 in case of
+ * success, 0 otherwise.
+ *
+ * First of all, iterate through all free blocks, and check that all backlinks
+ * match (i.e. if block X has next free block Y, then the block Y should have
+ * previous free block set to X).
+ *
+ * Additionally, we check that each free block is correctly marked with
+ * `UMM_FREELIST_MASK` on the `next` pointer: during iteration through free
+ * list, we mark each free block by the same flag `UMM_FREELIST_MASK`, but
+ * on `prev` pointer. We'll check and unmark it later.
+ *
+ * Then, we iterate through all blocks in the heap, and similarly check that
+ * all backlinks match (i.e. if block X has next block Y, then the block Y
+ * should have previous block set to X).
+ *
+ * But before checking each backlink, we check that the `next` and `prev`
+ * pointers are both marked with `UMM_FREELIST_MASK`, or both unmarked.
+ * This way, we ensure that the free flag is in sync with the free pointers
+ * chain.
+ */
+static int integrity_check(void) {
+  int ok = 1;
+  unsigned short int prev;
+  unsigned short int cur;
+
+  if (umm_heap == NULL) {
+    umm_init();
+  }
+
+  /* Iterate through all free blocks */
+  prev = 0;
+  while(1) {
+    cur = UMM_NFREE(prev);
+
+    /* Check that next free block number is valid */
+    if (cur >= UMM_NUMBLOCKS) {
+      printf("heap integrity broken: too large next free num: %d "
+          "(in block %d, addr 0x%lx)\n", cur, prev,
+          (unsigned long)&UMM_NBLOCK(prev));
+      ok = 0;
+      goto clean;
+    }
+    if (cur == 0) {
+      /* No more free blocks */
+      break;
+    }
+
+    /* Check if prev free block number matches */
+    if (UMM_PFREE(cur) != prev) {
+      printf("heap integrity broken: free links don't match: "
+          "%d -> %d, but %d -> %d\n",
+          prev, cur, cur, UMM_PFREE(cur));
+      ok = 0;
+      goto clean;
+    }
+
+    UMM_PBLOCK(cur) |= UMM_FREELIST_MASK;
+
+    prev = cur;
+  }
+
+  /* Iterate through all blocks */
+  prev = 0;
+  while(1) {
+    cur = UMM_NBLOCK(prev) & UMM_BLOCKNO_MASK;
+
+    /* Check that next block number is valid */
+    if (cur >= UMM_NUMBLOCKS) {
+      printf("heap integrity broken: too large next block num: %d "
+          "(in block %d, addr 0x%lx)\n", cur, prev,
+          (unsigned long)&UMM_NBLOCK(prev));
+      ok = 0;
+      goto clean;
+    }
+    if (cur == 0) {
+      /* No more blocks */
+      break;
+    }
+
+    /* make sure the free mark is appropriate, and unmark it */
+    if ((UMM_NBLOCK(cur) & UMM_FREELIST_MASK)
+        != (UMM_PBLOCK(cur) & UMM_FREELIST_MASK))
+    {
+      printf("heap integrity broken: mask wrong at addr 0x%lx: n=0x%x, p=0x%x\n",
+          (unsigned long)&UMM_NBLOCK(cur),
+          (UMM_NBLOCK(cur) & UMM_FREELIST_MASK),
+          (UMM_PBLOCK(cur) & UMM_FREELIST_MASK)
+          );
+      ok = 0;
+      goto clean;
+    }
+
+    /* unmark */
+    UMM_PBLOCK(cur) &= UMM_BLOCKNO_MASK;
+
+    /* Check if prev block number matches */
+    if (UMM_PBLOCK(cur) != prev) {
+      printf("heap integrity broken: block links don't match: "
+          "%d -> %d, but %d -> %d\n",
+          prev, cur, cur, UMM_PBLOCK(cur));
+      ok = 0;
+      goto clean;
+    }
+
+    prev = cur;
+  }
+
+clean:
+  if (!ok){
+    UMM_HEAP_CORRUPTION_CB();
+  }
+  return ok;
+}
+
+#define INTEGRITY_CHECK() integrity_check()
+#else
+/*
+ * Integrity check is disabled, so just define stub macro
+ */
+#define INTEGRITY_CHECK() 1
+#endif
+/* }}} */
+
+/* poisoning (UMM_POISON) {{{ */
+#if defined(UMM_POISON)
+#define POISON_BYTE (0xa5)
+
+/*
+ * Yields a size of the poison for the block of size `s`.
+ * If `s` is 0, returns 0.
+ */
+#define POISON_SIZE(s) (                                \
+    (s) ?                                             \
+    (UMM_POISON_SIZE_BEFORE + UMM_POISON_SIZE_AFTER + \
+     sizeof(UMM_POISONED_BLOCK_LEN_TYPE)              \
+    ) : 0                                             \
+    )
+
+/*
+ * Print memory contents starting from given `ptr`
+ */
+static void dump_mem ( const unsigned char *ptr, size_t len ) {
+  while (len--) {
+    printf(" 0x%.2x", (unsigned int)(*ptr++));
+  }
+}
+
+/*
+ * Put poison data at given `ptr` and `poison_size`
+ */
+static void put_poison( unsigned char *ptr, size_t poison_size ) {
+  memset(ptr, POISON_BYTE, poison_size);
+}
+
+/*
+ * Check poison data at given `ptr` and `poison_size`. `where` is a pointer to
+ * a string, either "before" or "after", meaning, before or after the block.
+ *
+ * If poison is there, returns 1.
+ * Otherwise, prints the appropriate message, and returns 0.
+ */
+static int check_poison( const unsigned char *ptr, size_t poison_size,
+    const char *where) {
+  size_t i;
+  int ok = 1;
+
+  for (i = 0; i < poison_size; i++) {
+    if (ptr[i] != POISON_BYTE) {
+      ok = 0;
+      break;
+    }
+  }
+
+  if (!ok) {
+    printf("there is no poison %s the block. "
+        "Expected poison address: 0x%lx, actual data:",
+        where, (unsigned long)ptr);
+    dump_mem(ptr, poison_size);
+    printf("\n");
+  }
+
+  return ok;
+}
+
+/*
+ * Check if a block is properly poisoned. Must be called only for non-free
+ * blocks.
+ */
+static int check_poison_block( umm_block *pblock ) {
+  int ok = 1;
+
+  if (pblock->header.used.next & UMM_FREELIST_MASK) {
+    printf("check_poison_block is called for free block 0x%lx\n",
+        (unsigned long)pblock);
+  } else {
+    /* the block is used; let's check poison */
+    unsigned char *pc = (unsigned char *)pblock->body.data;
+    unsigned char *pc_cur;
+
+    pc_cur = pc + sizeof(UMM_POISONED_BLOCK_LEN_TYPE);
+    if (!check_poison(pc_cur, UMM_POISON_SIZE_BEFORE, "before")) {
+      UMM_HEAP_CORRUPTION_CB();
+      ok = 0;
+      goto clean;
+    }
+
+    pc_cur = pc + *((UMM_POISONED_BLOCK_LEN_TYPE *)pc) - UMM_POISON_SIZE_AFTER;
+    if (!check_poison(pc_cur, UMM_POISON_SIZE_AFTER, "after")) {
+      UMM_HEAP_CORRUPTION_CB();
+      ok = 0;
+      goto clean;
+    }
+  }
+
+clean:
+  return ok;
+}
+
+/*
+ * Iterates through all blocks in the heap, and checks poison for all used
+ * blocks.
+ */
+static int check_poison_all_blocks(void) {
+  int ok = 1;
+  unsigned short int blockNo = 0;
+
+  if (umm_heap == NULL) {
+    umm_init();
+  }
+
+  /* Now iterate through the blocks list */
+  blockNo = UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK;
+
+  while( UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK ) {
+    if ( !(UMM_NBLOCK(blockNo) & UMM_FREELIST_MASK) ) {
+      /* This is a used block (not free), so, check its poison */
+      ok = check_poison_block(&UMM_BLOCK(blockNo));
+      if (!ok){
+        break;
+      }
+    }
+
+    blockNo = UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK;
+  }
+
+  return ok;
+}
+
+/*
+ * Takes a pointer returned by actual allocator function (`_umm_malloc` or
+ * `_umm_realloc`), puts appropriate poison, and returns adjusted pointer that
+ * should be returned to the user.
+ *
+ * `size_w_poison` is a size of the whole block, including a poison.
+ */
+static void *get_poisoned( unsigned char *ptr, size_t size_w_poison ) {
+  if (size_w_poison != 0 && ptr != NULL) {
+
+    /* Put exact length of the user's chunk of memory */
+    memcpy(ptr, &size_w_poison, sizeof(UMM_POISONED_BLOCK_LEN_TYPE));
+
+    /* Poison beginning and the end of the allocated chunk */
+    put_poison(ptr + sizeof(UMM_POISONED_BLOCK_LEN_TYPE),
+        UMM_POISON_SIZE_BEFORE);
+    put_poison(ptr + size_w_poison - UMM_POISON_SIZE_AFTER,
+        UMM_POISON_SIZE_AFTER);
+
+    /* Return pointer at the first non-poisoned byte */
+    return ptr + sizeof(UMM_POISONED_BLOCK_LEN_TYPE) + UMM_POISON_SIZE_BEFORE;
+  } else {
+    return ptr;
+  }
+}
+
+/*
+ * Takes "poisoned" pointer (i.e. pointer returned from `get_poisoned()`),
+ * and checks that the poison of this particular block is still there.
+ *
+ * Returns unpoisoned pointer, i.e. actual pointer to the allocated memory.
+ */
+static void *get_unpoisoned( unsigned char *ptr ) {
+  if (ptr != NULL) {
+    unsigned short int c;
+
+    ptr -= (sizeof(UMM_POISONED_BLOCK_LEN_TYPE) + UMM_POISON_SIZE_BEFORE);
+
+    /* Figure out which block we're in. Note the use of truncated division... */
+    c = (((char *)ptr)-(char *)(&(umm_heap[0])))/sizeof(umm_block);
+
+    check_poison_block(&UMM_BLOCK(c));
+  }
+
+  return ptr;
+}
+
+#define CHECK_POISON_ALL_BLOCKS() check_poison_all_blocks()
+#define GET_POISONED(ptr, size)   get_poisoned(ptr, size)
+#define GET_UNPOISONED(ptr)       get_unpoisoned(ptr)
+
+#else
+/*
+ * Integrity check is disabled, so just define stub macros
+ */
+#define POISON_SIZE(s)            0
+#define CHECK_POISON_ALL_BLOCKS() 1
+#define GET_POISONED(ptr, size)   (ptr)
+#define GET_UNPOISONED(ptr)       (ptr)
+#endif
+/* }}} */
 
 /* ----------------------------------------------------------------------------
  * One of the coolest things about this little library is that it's VERY
@@ -673,8 +977,8 @@ void *umm_info( void *ptr, int force ) {
 
   DBG_LOG_FORCE( force, "\n\nDumping the umm_heap...\n" );
 
-  DBG_LOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
-      (unsigned int)(&UMM_BLOCK(blockNo)),
+  DBG_LOG_FORCE( force, "|0x%08lx|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
+      (unsigned long)(&UMM_BLOCK(blockNo)),
       blockNo,
       UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
       UMM_PBLOCK(blockNo),
@@ -706,12 +1010,12 @@ void *umm_info( void *ptr, int force ) {
         ummHeapInfo.maxFreeContiguousBlocks = curBlocks;
       }
 
-      DBG_LOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
-          (unsigned int)(&UMM_BLOCK(blockNo)),
+      DBG_LOG_FORCE( force, "|0x%08lx|B %5i|NB %5i|PB %5i|Z %5u|NF %5i|PF %5i|\n",
+          (unsigned long)(&UMM_BLOCK(blockNo)),
           blockNo,
           UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
           UMM_PBLOCK(blockNo),
-          curBlocks,
+          (unsigned int)curBlocks,
           UMM_NFREE(blockNo),
           UMM_PFREE(blockNo) );
 
@@ -728,12 +1032,12 @@ void *umm_info( void *ptr, int force ) {
       ++ummHeapInfo.usedEntries;
       ummHeapInfo.usedBlocks += curBlocks;
 
-      DBG_LOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|\n",
-          (unsigned int)(&UMM_BLOCK(blockNo)),
+      DBG_LOG_FORCE( force, "|0x%08lx|B %5i|NB %5i|PB %5i|Z %5u|\n",
+          (unsigned long)(&UMM_BLOCK(blockNo)),
           blockNo,
           UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
           UMM_PBLOCK(blockNo),
-          curBlocks );
+          (unsigned int)curBlocks );
     }
 
     blockNo = UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK;
@@ -754,8 +1058,8 @@ void *umm_info( void *ptr, int force ) {
     }
   }
 
-  DBG_LOG_FORCE( force, "|0x%08x|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
-      (unsigned int)(&UMM_BLOCK(blockNo)),
+  DBG_LOG_FORCE( force, "|0x%08lx|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
+      (unsigned long)(&UMM_BLOCK(blockNo)),
       blockNo,
       UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK,
       UMM_PBLOCK(blockNo),
@@ -777,61 +1081,6 @@ void *umm_info( void *ptr, int force ) {
   UMM_CRITICAL_EXIT();
 
   return( NULL );
-}
-
-/* ------------------------------------------------------------------------- */
-
-static void umm_init( void ) {
-  /* init heap pointer and size, and memset it to 0 */
-  umm_heap = (umm_block *)UMM_MALLOC_CFG__HEAP_ADDR;
-  umm_numblocks = (UMM_MALLOC_CFG__HEAP_SIZE / sizeof(umm_block));
-  memset(umm_heap, 0x00, UMM_MALLOC_CFG__HEAP_SIZE);
-
-  /* setup initial blank heap structure */
-  {
-    /* index of the 0th `umm_block` */
-    const unsigned short int block_0th = 0;
-    /* index of the 1st `umm_block` */
-    const unsigned short int block_1th = 1;
-    /* index of the latest `umm_block` */
-    const unsigned short int block_last = UMM_NUMBLOCKS - 1;
-
-    /* setup the 0th `umm_block`, which just points to the 1st */
-    UMM_NBLOCK(block_0th) = block_1th;
-    UMM_NFREE(block_0th)  = block_1th;
-
-    /*
-     * Now, we need to set the whole heap space as a huge free block. We should
-     * not touch the 0th `umm_block`, since it's special: the 0th `umm_block`
-     * is the head of the free block list. It'a a part of the heap invariant.
-     *
-     * See the detailed explanation at the beginning of the file.
-     */
-
-    /*
-     * 1th `umm_block` has pointers:
-     *
-     * - next `umm_block`: the latest one
-     * - prev `umm_block`: the 0th
-     *
-     * Plus, it's a free `umm_block`, so we need to apply `UMM_FREELIST_MASK`
-     */
-    UMM_NBLOCK(block_1th) = block_last | UMM_FREELIST_MASK;
-    UMM_NFREE(block_1th)  = block_last;
-    UMM_PBLOCK(block_1th) = block_0th;
-    UMM_PFREE(block_1th)  = block_0th;
-
-    /*
-     * latest `umm_block` has pointers:
-     *
-     * - next `umm_block`: 0 (meaning, there are no more `umm_blocks`)
-     * - prev `umm_block`: the 1st
-     */
-    UMM_NBLOCK(block_last) = 0;
-    UMM_NFREE(block_last)  = 0;
-    UMM_PBLOCK(block_last) = block_1th;
-    UMM_PFREE(block_last)  = block_1th;
-  }
 }
 
 /* ------------------------------------------------------------------------ */
@@ -929,9 +1178,66 @@ static unsigned short int umm_assimilate_down( unsigned short int c, unsigned sh
   return( UMM_PBLOCK(c) );
 }
 
+/* ------------------------------------------------------------------------- */
+
+void umm_init( void ) {
+  /* init heap pointer and size, and memset it to 0 */
+  umm_heap = (umm_block *)UMM_MALLOC_CFG__HEAP_ADDR;
+  umm_numblocks = (UMM_MALLOC_CFG__HEAP_SIZE / sizeof(umm_block));
+  memset(umm_heap, 0x00, UMM_MALLOC_CFG__HEAP_SIZE);
+
+  /* setup initial blank heap structure */
+  {
+    /* index of the 0th `umm_block` */
+    const unsigned short int block_0th = 0;
+    /* index of the 1st `umm_block` */
+    const unsigned short int block_1th = 1;
+    /* index of the latest `umm_block` */
+    const unsigned short int block_last = UMM_NUMBLOCKS - 1;
+
+    /* setup the 0th `umm_block`, which just points to the 1st */
+    UMM_NBLOCK(block_0th) = block_1th;
+    UMM_NFREE(block_0th)  = block_1th;
+
+    /*
+     * Now, we need to set the whole heap space as a huge free block. We should
+     * not touch the 0th `umm_block`, since it's special: the 0th `umm_block`
+     * is the head of the free block list. It's a part of the heap invariant.
+     *
+     * See the detailed explanation at the beginning of the file.
+     */
+
+    /*
+     * 1th `umm_block` has pointers:
+     *
+     * - next `umm_block`: the latest one
+     * - prev `umm_block`: the 0th
+     *
+     * Plus, it's a free `umm_block`, so we need to apply `UMM_FREELIST_MASK`
+     *
+     * And it's the last free block, so the next free block is 0.
+     */
+    UMM_NBLOCK(block_1th) = block_last | UMM_FREELIST_MASK;
+    UMM_NFREE(block_1th)  = 0;
+    UMM_PBLOCK(block_1th) = block_0th;
+    UMM_PFREE(block_1th)  = block_0th;
+
+    /*
+     * latest `umm_block` has pointers:
+     *
+     * - next `umm_block`: 0 (meaning, there are no more `umm_blocks`)
+     * - prev `umm_block`: the 1st
+     *
+     * It's not a free block, so we don't touch NFREE / PFREE at all.
+     */
+    UMM_NBLOCK(block_last) = 0;
+    UMM_PBLOCK(block_last) = block_1th;
+  }
+}
+
 /* ------------------------------------------------------------------------ */
 
-void umm_free( void *ptr ) {
+static void _umm_free( void *ptr ) {
 
   unsigned short int c;
 
@@ -1017,8 +1323,7 @@ void umm_free( void *ptr ) {
 
 /* ------------------------------------------------------------------------ */
 
-void *umm_malloc( size_t size ) {
-
+static void *_umm_malloc( size_t size ) {
   unsigned short int blocks;
   unsigned short int blockSize = 0;
 
@@ -1148,7 +1453,7 @@ void *umm_malloc( size_t size ) {
 
 /* ------------------------------------------------------------------------ */
 
-void *umm_realloc( void *ptr, size_t size ) {
+static void *_umm_realloc( void *ptr, size_t size ) {
 
   unsigned short int blocks;
   unsigned short int blockSize;
@@ -1172,7 +1477,7 @@ void *umm_realloc( void *ptr, size_t size ) {
   if( ((void *)NULL == ptr) ) {
     DBG_LOG_DEBUG( "realloc the NULL pointer - call malloc()\n" );
 
-    return( umm_malloc(size) );
+    return( _umm_malloc(size) );
   }
 
   /*
@@ -1184,7 +1489,7 @@ void *umm_realloc( void *ptr, size_t size ) {
   if( 0 == size ) {
     DBG_LOG_DEBUG( "realloc to 0 size, just free the block\n" );
 
-    umm_free( ptr );
+    _umm_free( ptr );
 
     return( (void *)NULL );
   }
@@ -1297,7 +1602,7 @@ void *umm_realloc( void *ptr, size_t size ) {
     DBG_LOG_DEBUG( "realloc %i to a smaller block %i, shrink and free the leftover bits\n", blockSize, blocks );
 
     umm_make_new_block( c, blocks, 0, 0 );
-    umm_free( (void *)&UMM_DATA(c+blocks) );
+    _umm_free( (void *)&UMM_DATA(c+blocks) );
   } else {
     /* New block is bigger than the old block... */
 
@@ -1306,15 +1611,15 @@ void *umm_realloc( void *ptr, size_t size ) {
     DBG_LOG_DEBUG( "realloc %i to a bigger block %i, make new, copy, and free the old\n", blockSize, blocks );
 
     /*
-     * Now umm_malloc() a new/ one, copy the old data to the new block, and
+     * Now _umm_malloc() a new/ one, copy the old data to the new block, and
      * free up the old block, but only if the malloc was sucessful!
      */
 
-    if( (ptr = umm_malloc( size )) ) {
+    if( (ptr = _umm_malloc( size )) ) {
       memcpy( ptr, oldptr, curSize );
     }
 
-    umm_free( oldptr );
+    _umm_free( oldptr );
   }
 
   /* Release the critical section... */
@@ -1325,13 +1630,98 @@ void *umm_realloc( void *ptr, size_t size ) {
 
 /* ------------------------------------------------------------------------ */
 
-void * umm_calloc( size_t num, size_t size ) {
-  size_t s = size * num;
-  void *ret = umm_malloc(s);
+void *umm_malloc( size_t size ) {
+  char *ret;
 
-  memset(ret, 0x00, s);
+  /* check poison of each blocks, if poisoning is enabled */
+  if (!CHECK_POISON_ALL_BLOCKS()) {
+    return NULL;
+  }
+
+  /* check full integrity of the heap, if this check is enabled */
+  if (!INTEGRITY_CHECK()) {
+    return NULL;
+  }
+
+  size += POISON_SIZE(size);
+
+  ret = _umm_malloc( size );
+
+  ret = GET_POISONED(ret, size);
+
   return ret;
 }
+
+/* ------------------------------------------------------------------------ */
+
+void *umm_calloc( size_t num, size_t item_size ) {
+  void *ret;
+  size_t size = item_size * num;
+
+  /* check poison of each blocks, if poisoning is enabled */
+  if (!CHECK_POISON_ALL_BLOCKS()) {
+    return NULL;
+  }
+
+  /* check full integrity of the heap, if this check is enabled */
+  if (!INTEGRITY_CHECK()) {
+    return NULL;
+  }
+
+  size += POISON_SIZE(size);
+  ret = _umm_malloc(size);
+  memset(ret, 0x00, size);
+
+  ret = GET_POISONED(ret, size);
+
+  return ret;
+}
+
+/* ------------------------------------------------------------------------ */
+
+void *umm_realloc( void *ptr, size_t size ) {
+  char *ret;
+
+  ptr = GET_UNPOISONED(ptr);
+
+  /* check poison of each blocks, if poisoning is enabled */
+  if (!CHECK_POISON_ALL_BLOCKS()) {
+    return NULL;
+  }
+
+  /* check full integrity of the heap, if this check is enabled */
+  if (!INTEGRITY_CHECK()) {
+    return NULL;
+  }
+
+  size += POISON_SIZE(size);
+  ret = _umm_realloc( ptr, size );
+
+  ret = GET_POISONED(ret, size);
+
+  return ret;
+}
+
+/* ------------------------------------------------------------------------ */
+
+void umm_free( void *ptr ) {
+
+  ptr = GET_UNPOISONED(ptr);
+
+  /* check poison of each blocks, if poisoning is enabled */
+  if (!CHECK_POISON_ALL_BLOCKS()) {
+    return;
+  }
+
+  /* check full integrity of the heap, if this check is enabled */
+  if (!INTEGRITY_CHECK()) {
+    return;
+  }
+
+  _umm_free( ptr );
+}
+
+/* ------------------------------------------------------------------------ */
 
 size_t umm_free_heap_size( void ) {
   umm_info(NULL, 0);
@@ -1339,66 +1729,3 @@ size_t umm_free_heap_size( void ) {
 }
 
 /* ------------------------------------------------------------------------ */
-
-#ifdef UMM_TEST_MAIN
-
-main() {
-
-  void * ptr_array[256];
-
-  size_t i;
-
-  int idx;
-
-  printf( "Size of umm_heap is %i\n", sizeof(umm_heap)       );
-  printf( "Size of header   is %i\n", sizeof(umm_heap[0])    );
-  printf( "Size of nblock   is %i\n", sizeof(umm_heap[0].header.used.next) );
-  printf( "Size of pblock   is %i\n", sizeof(umm_heap[0].header.used.prev) );
-  printf( "Size of nfree    is %i\n", sizeof(umm_heap[0].body.free.next)   );
-  printf( "Size of pfree    is %i\n", sizeof(umm_heap[0].body.free.prev)   );
-
-  memset( umm_heap, 0, sizeof(umm_heap) );
-
-  umm_info( NULL, 1 );
-
-  for( idx=0; idx<256; ++idx )
-    ptr_array[idx] = (void *)NULL;
-
-  for( idx=0; idx<6553500; ++idx ) {
-    i = rand()%256;
-
-    switch( rand() % 16 ) {
-
-      case  0:
-      case  1:
-      case  2:
-      case  3:
-      case  4:
-      case  5:
-      case  6: ptr_array[i] = umm_realloc(ptr_array[i], 0);
-               break;
-      case  7:
-      case  8: ptr_array[i] = umm_realloc(ptr_array[i], rand()%40 );
-               break;
-
-      case  9:
-      case 10:
-      case 11:
-      case 12: ptr_array[i] = umm_realloc(ptr_array[i], rand()%100 );
-               break;
-
-      case 13:
-      case 14: ptr_array[i] = umm_realloc(ptr_array[i], rand()%200 );
-               break;
-
-      default: ptr_array[i] = umm_realloc(ptr_array[i], rand()%400 );
-               break;
-    }
-
-  }
-
-  umm_info( NULL, 1 );
-
-}
-
-#endif
