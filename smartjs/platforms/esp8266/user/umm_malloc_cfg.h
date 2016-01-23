@@ -136,9 +136,9 @@ extern unsigned int _heap_start;
  */
 #if 0
 #define UMM_POISON
+#endif
 #define UMM_POISON_SIZE_BEFORE 2
 #define UMM_POISON_SIZE_AFTER 2
 #define UMM_POISONED_BLOCK_LEN_TYPE short
-#endif
 
 #endif /* _UMM_MALLOC_CFG_H */

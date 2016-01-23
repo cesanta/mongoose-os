@@ -1631,7 +1631,7 @@ static void *_umm_realloc( void *ptr, size_t size ) {
 /* ------------------------------------------------------------------------ */
 
 void *umm_malloc( size_t size ) {
-  char *ret;
+  void *ret;
 
   /* check poison of each blocks, if poisoning is enabled */
   if (!CHECK_POISON_ALL_BLOCKS()) {
@@ -1680,7 +1680,7 @@ void *umm_calloc( size_t num, size_t item_size ) {
 /* ------------------------------------------------------------------------ */
 
 void *umm_realloc( void *ptr, size_t size ) {
-  char *ret;
+  void *ret;
 
   ptr = GET_UNPOISONED(ptr);
 
