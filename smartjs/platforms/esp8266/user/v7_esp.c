@@ -230,9 +230,14 @@ void init_v7(void *stack_base) {
 #ifndef V7_NO_FS
 void init_smartjs() {
   v7_val_t res;
+  /* enable GC while executing sys_init_script */
+  v7_set_gc_enabled(v7, 1);
+
   if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
     printf("Init error: ");
     v7_println(v7, res);
   }
+
+  v7_set_gc_enabled(v7, 0);
 }
 #endif
