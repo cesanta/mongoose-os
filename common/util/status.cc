@@ -29,12 +29,17 @@ const Status &GetOk() {
 }
 
 const Status &GetCancelled() {
-  static const Status status(error::CANCELLED, "");
+  static const Status status(error::CANCELLED, "Cancelled");
+  return status;
+}
+
+const Status &GetUnimplemented() {
+  static const Status status(error::UNIMPLEMENTED, "Unimplemented");
   return status;
 }
 
 const Status &GetUnknown() {
-  static const Status status(error::UNKNOWN, "");
+  static const Status status(error::UNKNOWN, "Unknown");
   return status;
 }
 
@@ -60,6 +65,7 @@ Status& Status::operator=(const Status& other) {
 
 const Status& Status::OK = GetOk();
 const Status& Status::CANCELLED = GetCancelled();
+const Status& Status::UNIMPLEMENTED = GetUnimplemented();
 const Status& Status::UNKNOWN = GetUnknown();
 
 string Status::ToString() const {

@@ -490,12 +490,9 @@ typedef int mz_bool;
 
 #ifndef MINIZ_NO_ARCHIVE_APIS
 
-enum
-{
-  MZ_ZIP_MAX_IO_BUF_SIZE = 64*1024,
-  MZ_ZIP_MAX_ARCHIVE_FILENAME_SIZE = 260,
-  MZ_ZIP_MAX_ARCHIVE_FILE_COMMENT_SIZE = 256
-};
+#define MZ_ZIP_MAX_IO_BUF_SIZE (64*1024)
+#define MZ_ZIP_MAX_ARCHIVE_FILENAME_SIZE 260
+#define MZ_ZIP_MAX_ARCHIVE_FILE_COMMENT_SIZE 256
 
 typedef struct
 {
@@ -839,7 +836,14 @@ typedef mz_bool (*tdefl_put_buf_func_ptr)(const void* pBuf, int len, void *pUser
 // tdefl_compress_mem_to_output() compresses a block to an output stream. The above helpers use this function internally.
 mz_bool tdefl_compress_mem_to_output(const void *pBuf, size_t buf_len, tdefl_put_buf_func_ptr pPut_buf_func, void *pPut_buf_user, int flags);
 
-enum { TDEFL_MAX_HUFF_TABLES = 3, TDEFL_MAX_HUFF_SYMBOLS_0 = 288, TDEFL_MAX_HUFF_SYMBOLS_1 = 32, TDEFL_MAX_HUFF_SYMBOLS_2 = 19, TDEFL_LZ_DICT_SIZE = 32768, TDEFL_LZ_DICT_SIZE_MASK = TDEFL_LZ_DICT_SIZE - 1, TDEFL_MIN_MATCH_LEN = 3, TDEFL_MAX_MATCH_LEN = 258 };
+#define TDEFL_MAX_HUFF_TABLES 3
+#define TDEFL_MAX_HUFF_SYMBOLS_0 288
+#define TDEFL_MAX_HUFF_SYMBOLS_1 32
+#define TDEFL_MAX_HUFF_SYMBOLS_2 19
+#define TDEFL_LZ_DICT_SIZE 32768
+#define TDEFL_LZ_DICT_SIZE_MASK (TDEFL_LZ_DICT_SIZE - 1)
+#define TDEFL_MIN_MATCH_LEN 3
+#define TDEFL_MAX_MATCH_LEN 258
 
 // TDEFL_OUT_BUF_SIZE MUST be large enough to hold a single entire compressed output block (using static/fixed Huffman codes).
 #if TDEFL_LESS_MEMORY

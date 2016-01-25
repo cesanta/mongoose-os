@@ -38,6 +38,7 @@ class Status {
   // Some pre-defined Status objects
   static const Status& OK;             // Identical to 0-arg constructor
   static const Status& CANCELLED;
+  static const Status& UNIMPLEMENTED;
   static const Status& UNKNOWN;
 
   // Accessors

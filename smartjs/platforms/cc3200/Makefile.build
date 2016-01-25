@@ -128,8 +128,8 @@ ${FW_ZIP}: ${FW_ELF} ${FW_BIN} ${FS_IMG}
 		--build_info=$(BUILD_INFO_JSON) \
 		--output=$(FW_MANIFEST) \
 		--src_dir=$(FW_DIR) \
-		sysmcu.bin:src=$(notdir $(FW_BIN)) \
-		fs:src=$(notdir $(FS_IMG))
+		sys_mcuimg.bin:src=$(notdir $(FW_BIN)) \
+		fs.img:src=$(notdir $(FS_IMG))
 	@echo "  ZIP   $@"
 	@$(COMMON_PATH)/tools/fw_meta.py create_fw \
 		--manifest=$(FW_MANIFEST) \
