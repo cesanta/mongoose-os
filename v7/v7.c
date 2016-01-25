@@ -1267,9 +1267,37 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* _COROUTINE_H */
 #ifdef V7_MODULE_LINES
+#line 1 "./v7/src/features_profiles.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_FEATURES_H_INCLUDED
+#define V7_FEATURES_H_INCLUDED
+
+#define V7_BUILD_PROFILE_MINIMAL 1
+#define V7_BUILD_PROFILE_MEDIUM 2
+#define V7_BUILD_PROFILE_FULL 3
+
+#ifndef V7_BUILD_PROFILE
+#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
+#endif
+
+#endif /* V7_FEATURES_H_INCLUDED */
+#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/features_minimal.h"
 /**/
 #endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/features_profiles.h" */
+
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
 
 /* This space is intentionally left blank. */
@@ -1279,6 +1307,13 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #line 1 "./v7/src/features_medium.h"
 /**/
 #endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/features_profiles.h" */
+
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
 
 #define V7_ENABLE__Date 1
@@ -1293,6 +1328,13 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #line 1 "./v7/src/features_full.h"
 /**/
 #endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/features_profiles.h" */
+
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL
 /*
  * DO NOT EDIT.
@@ -1362,23 +1404,20 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #line 1 "./v7/src/v7_features.h"
 /**/
 #endif
-#ifndef V7_FEATURES_H_INCLUDED
-#define V7_FEATURES_H_INCLUDED
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
 
-#define V7_BUILD_PROFILE_MINIMAL 1
-#define V7_BUILD_PROFILE_MEDIUM 2
-#define V7_BUILD_PROFILE_FULL 3
-
-#ifndef V7_BUILD_PROFILE
-#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
-#endif
+#ifndef FEATURES_PROFILES_H_INCLUDED
+#define FEATURES_PROFILES_H_INCLUDED
 
 /* Only one will actually be used based on V7_BUILD_PROFILE. */
 /* Amalgamated: #include "v7/src/features_minimal.h" */
 /* Amalgamated: #include "v7/src/features_medium.h" */
 /* Amalgamated: #include "v7/src/features_full.h" */
 
-#endif /* V7_FEATURES_H_INCLUDED */
+#endif /* FEATURES_PROFILES_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/internal.h"
 /**/

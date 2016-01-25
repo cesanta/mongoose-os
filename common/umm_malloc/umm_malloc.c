@@ -1367,7 +1367,7 @@ static void *_umm_malloc( size_t size ) {
   bestBlock = UMM_NFREE(0);
   bestSize  = 0x7FFF;
 
-  while( UMM_NFREE(cf) ) {
+  while( cf ) {
     blockSize = (UMM_NBLOCK(cf) & UMM_BLOCKNO_MASK) - cf;
 
     DBG_LOG_TRACE( "Looking at block %6i size %6i\n", cf, blockSize );
@@ -1391,7 +1391,7 @@ static void *_umm_malloc( size_t size ) {
     blockSize = bestSize;
   }
 
-  if( UMM_NBLOCK(cf) & UMM_BLOCKNO_MASK ) {
+  if( UMM_NBLOCK(cf) & UMM_BLOCKNO_MASK && blockSize >= blocks ) {
     /*
      * This is an existing block in the memory heap, we just need to split off
      * what we need, unlink it from the free list and mark it as in use, and

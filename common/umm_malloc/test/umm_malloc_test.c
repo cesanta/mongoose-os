@@ -21,6 +21,43 @@ void umm_corruption(void) {
   corruption_cnt++;
 }
 
+#define OOM_PTRS_CNT  10
+bool test_oom_random(void) {
+  umm_init();
+  corruption_cnt = 0;
+  void *ptrs[ OOM_PTRS_CNT ];
+
+  size_t size = 100;
+
+  while(1) {
+
+    size_t i;
+    for (i = 0; i < OOM_PTRS_CNT; i++) {
+      size += rand() % 40 - 10;
+      ptrs[i] = umm_malloc(size);
+      if (ptrs[i] == NULL) {
+        goto out;
+      }
+    }
+
+    /* free some of the blocks, so we have "holes" */
+    for (i = 0; i < OOM_PTRS_CNT; i++) {
+      if ((rand() % 10) <= 2) {
+        umm_free(ptrs[i]);
+      }
+    }
+
+  }
+out:
+
+  if (corruption_cnt != 0) {
+    printf("corruption_cnt should be 0, but it is %d\n", corruption_cnt);
+    return false;
+  }
+
+  return true;
+}
+
 #if defined(UMM_POISON)
 bool test_poison(void) {
 
@@ -196,6 +233,7 @@ int main(void) {
 #endif
 
   TRY(random_stress());
+  TRY(test_oom_random());
 
   return 0;
 }
