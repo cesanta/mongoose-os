@@ -254,7 +254,7 @@ $(RBOOT_EMPTY_CFG):
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
 
-$(FW_ZIP_FILE): $(FW_FILES_OUT)
+$(FW_ZIP_FILE): $(FW_FILES_OUT) $(FW_FS_OUT)
 	$(vecho) GEN $(FW_MANIFEST)
 	$(Q) $(COMMON_DIR)/tools/fw_meta.py create_manifest \
 		--name=smartjs --platform=esp8266 \
