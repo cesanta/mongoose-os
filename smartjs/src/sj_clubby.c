@@ -194,7 +194,7 @@ static void enqueue_frame(struct clubby *clubby, struct ub_ctx *ctx,
 
   /* We have to put command to the tail */
   if (clubby->queued_frames_head == NULL) {
-    assert(clubby->queued_frames_tail != NULL);
+    assert(clubby->queued_frames_tail == NULL);
     clubby->queued_frames_tail = clubby->queued_frames_head = qc;
   } else {
     clubby->queued_frames_tail->next = qc;

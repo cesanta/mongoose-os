@@ -79,7 +79,14 @@ print('Device psk:', Sys.conf.clubby.device_psk, '\n')
 global.clubby = new Clubby({connect:false});
 
 if (Sys.conf.clubby.connect_on_boot) {
-  Wifi.ready(clubby.connect.bind(clubby))
+  if (typeof(Wifi) != "undefined") {
+    Wifi.ready(clubby.connect.bind(clubby))
+  } else {
+    // Assume, if port doesn't have Wifi object it uses
+    // external networking and if connect_on_boot=true we have
+    // connect immediately
+    clubby.connect()
+  }
 }
 
 File.eval('app_init.js');
