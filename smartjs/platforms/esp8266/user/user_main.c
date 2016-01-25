@@ -108,6 +108,8 @@ void sjs_init(void *dummy) {
  * Called when SDK initialization is finished
  */
 void sdk_init_done_cb() {
+  srand(system_get_rtc_time());
+
 #if !defined(ESP_ENABLE_HW_WATCHDOG) && !defined(RTOS_TODO)
   ets_wdt_disable();
 #endif

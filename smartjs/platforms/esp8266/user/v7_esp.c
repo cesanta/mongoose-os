@@ -175,11 +175,6 @@ void init_v7(void *stack_base) {
   /* disable GC during initialization */
   v7_set_gc_enabled(v7, 0);
 
-  srand(system_get_rtc_time());
-
-  /* NOTE: init_config has to be called before first config usage */
-  init_config(v7);
-
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
 
