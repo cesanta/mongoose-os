@@ -100,10 +100,14 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     if (v7_is_callable(ud->v7, ud->handler)) {
       /* call provided JavaScript callback with `request` and `response` */
       v7_val_t request = v7_mk_object(ud->v7);
+      v7_own(ud->v7, &request);
       v7_val_t response = v7_mk_object(ud->v7);
+      v7_own(ud->v7, &response);
       setup_request_object(ud->v7, request, ev_data);
       setup_response_object(ud->v7, response, c, request);
       sj_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
+      v7_disown(ud->v7, &request);
+      v7_disown(ud->v7, &response);
     } else {
       /*
        * no JavaScript callback provided; serve the request with the default
@@ -119,8 +123,10 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     /* if JavaScript callback was provided, call it with `response` */
     if (v7_is_callable(ud->v7, ud->handler)) {
       v7_val_t response = v7_mk_object(ud->v7);
+      v7_own(ud->v7, &response);
       setup_request_object(ud->v7, response, ev_data);
       sj_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);
+      v7_disown(ud->v7, &response);
     }
 
     if (c->flags & MG_F_CLOSE_CONNECTION_AFTER_RESPONSE) {
