@@ -143,7 +143,9 @@ width: 16em;
 
   var showMsg = function(result, error) {
     alert(error ? 'Error: ' + error :
-          'Success. Module is rebooting, please reload this page.');
+          'Success. Module is rebooting, please reload this page.\n' +
+          'Note: if you changed WiFi settings you may need to navigate ' +
+          'your browser to new device address.');
   };
 
   window.onload = function() {
