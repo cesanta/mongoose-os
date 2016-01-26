@@ -46,6 +46,7 @@
   "clubby.server_address": {"title": "Cloud server address"},
   "clubby.device_id": {"title": "Device ID"},
   "clubby.device_psk": {"title": "Device password"},
+  "clubby.device_auto_registration": {"title": "Auto-register device on Cesanta Cloud"},
   "clubby.backend" : {"title" : "Backend name" },
   "clubby.reconnect_timeout_min" : {"title": "Minimal reconnect timeout" },
   "clubby.reconnect_timeout_max" : {"title": "Maximal reconnect timeout" },

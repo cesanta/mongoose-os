@@ -73,6 +73,11 @@ print('\nStarting Smart.js - see documentation at',
       'https://cesanta.com/developer/smartjs',
       '\n==> Sys:\n', Sys, '\n');
 
+print('Device credentials: ', {
+  device_id: Sys.conf.clubby.device_id,
+  device_psk: Sys.conf.clubby.device_psk
+}, '\n');
+
 global.clubby = new Clubby({connect:false});
 
 if (Sys.conf.clubby.connect_on_boot) {
@@ -83,6 +88,24 @@ if (Sys.conf.clubby.connect_on_boot) {
     // external networking and if connect_on_boot=true we have
     // connect immediately
     clubby.connect()
+  }
+}
+
+if (!Sys.conf.clubby.device_id && Sys.conf.clubby.device_auto_registration) {
+  if (typeof(Wifi) != "undefined") {
+    Wifi.ready(function() {
+      print('Requesting device id');
+      var opts = URL.parse(Sys.conf.clubby.device_registration_url);
+      opts.method = 'POST';
+      opts.headers = {'Content-Type': 'application/x-www-form-urlencoded'};
+      Http.request(opts, function(res) {
+        var c = Sys.conf.clubby, b = JSON.parse(res.body);
+        c.device_id = b.device_id;
+        c.device_psk = b.device_psk;
+        print('Saving device id: ', b, 'and rebooting.');
+        Sys.conf.save(true);
+      }).end('fw='+Sys.ro_vars.fw_id+'&arch='+Sys.ro_vars.arch+'&mac='+Sys.ro_vars.mac_address);
+    });
   }
 }
 
