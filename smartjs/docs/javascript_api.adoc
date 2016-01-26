@@ -322,3 +322,43 @@ to be met:
   and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
 `Debug.print(...)`::
   Print information to current debug output (set by `Debug.mode`)
+
+== OTA (Over-the-air programming)
+
+Smart.js OTA is designed to work in unattended or controllable mode.
+
+By default updater module starts in unattended mode. That means, it will initiate update
+process immediately after receiving command from server. After successful update the device
+will be rebooted to use new firmware.
+
+In controllable mode updater invokes callback on different stages of update process.
+Callback set with `Sys.updater.notify()` function; its  prototype is `function (event, params)`.
+If updater gets incoming request, callback receives `Sys.updater.GOT_REQUEST`: and `params` contains URL of new firmware
+manifest file. The callback handler either can start update process with `Sys.updater.start(url)` function
+or delay this process, storing provided URL and calling `Sys.updater.start(url)` later.
+
+Once update process is finished, callback receives one of the following events:
+`Sys.updater.NOTHING_TODO`: the device already running newest firmware.
+`Sys.updater.FAILED`: update cannot be completed, callback handler can try to repeat updating by invoking
+Sys.updater.start(url) again.
+`Sys.updater.COMPLETED`: update process completed successfully. The callback handler can reboot device with
+`Sys.reboot()` to use new firmware immediately or delay reboot until suitable moment.
+
+Example:
+```
+function upd(ev, url) {
+   if (ev == Sys.updater.GOT_REQUEST) {
+      print("Starting update from", url);
+      Sys.updater.start(url);
+   }  else if(ev == Sys.updater.NOTHING_TODO) {
+      print("No need to update");
+   } else if(ev == Sys.updater.FAILED) {
+      print("Update failed");
+   } else if(ev == Sys.updater.COMPLETED) {
+     print("Update completed");
+     Sys.reboot();
+   }
+}
+
+Sys.updater.notify(upd);
+```
