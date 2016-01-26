@@ -325,24 +325,24 @@ to be met:
 
 == OTA (Over-the-air programming)
 
-Smart.js OTA is designed to work in unattended or controllable mode.
+Smart.js OTA is designed to work in either unattended or controllable mode.
 
-By default updater module starts in unattended mode. That means, it will initiate update
-process immediately after receiving command from server. After successful update the device
+By default the updater module starts in unattended mode. Which means, it will initiate the update
+process immediately after receiving a command from server. After a successful update, the device
 will be rebooted to use new firmware.
 
-In controllable mode updater invokes callback on different stages of update process.
-Callback set with `Sys.updater.notify()` function; its  prototype is `function (event, params)`.
-If updater gets incoming request, callback receives `Sys.updater.GOT_REQUEST`: and `params` contains URL of new firmware
-manifest file. The callback handler either can start update process with `Sys.updater.start(url)` function
-or delay this process, storing provided URL and calling `Sys.updater.start(url)` later.
+When in controllable mode, the updater invokes a callback on different stages of the update process.
+The callback can be set with the `Sys.updater.notify()` function; its prototype is `function (event, params)`.
+When the updater gets an incoming request, the callback receives `Sys.updater.GOT_REQUEST` and `params` contains URL of the new firmware
+manifest file. The callback handler can either start the update process with `Sys.updater.start(url)` function
+or delay this process, storing the provided URL and calling `Sys.updater.start(url)` later.
 
-Once update process is finished, callback receives one of the following events:
-`Sys.updater.NOTHING_TODO`: the device already running newest firmware.
-`Sys.updater.FAILED`: update cannot be completed, callback handler can try to repeat updating by invoking
-Sys.updater.start(url) again.
-`Sys.updater.COMPLETED`: update process completed successfully. The callback handler can reboot device with
-`Sys.reboot()` to use new firmware immediately or delay reboot until suitable moment.
+Once the update process is finished, the callback receives one of the following events:
+
+- `Sys.updater.NOTHING_TODO`: the device is already running newest firmware.
+- `Sys.updater.FAILED`: update cannot be completed, callback handler can try to repeat updating by invoking Sys.updater.start(url) again.
+- `Sys.updater.COMPLETED`: update process completed successfully. The callback handler can reboot the device with
+  `Sys.reboot()` to use new firmware immediately or delay reboot until suitable moment.
 
 Example:
 ```
