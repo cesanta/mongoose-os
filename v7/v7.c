@@ -2946,6 +2946,12 @@ V7_PRIVATE int calc_llen(size_t len);
 
 /* Amalgamated: #include "v7/src/types.h" */
 
+/*
+ * Size of the extra space for strings mbuf that is needed to avoid frequent
+ * reallocations
+ */
+#define _V7_STRING_BUF_RESERVE 500
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -14089,6 +14095,15 @@ v7_val_t v7_mk_string(struct v7 *v7, const char *p, size_t len, int copy) {
     tag = V7_TAG_STRING_D;
   } else if (copy) {
     compute_need_gc(v7);
+
+    /*
+     * Before embedding new string, check if the reallocation is needed.  If
+     * so, perform the reallocation by calling `mbuf_resize` manually, since we
+     * need to preallocate some extra space (`_V7_STRING_BUF_RESERVE`)
+     */
+    if ((m->len + len) > m->size) {
+      mbuf_resize(m, m->len + len + _V7_STRING_BUF_RESERVE);
+    }
     embed_string(m, m->len, p, len, EMBSTR_ZERO_TERM);
     tag = V7_TAG_STRING_O;
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
@@ -16324,6 +16339,7 @@ clean:
 /* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/string.h" */
 
 #include <stdio.h>
 
@@ -17116,7 +17132,15 @@ void v7_gc(struct v7 *v7, int full) {
   gc_dump_arena_stats("After GC properties", &v7->property_arena);
 
   if (full) {
-    mbuf_trim(&v7->owned_strings);
+    /*
+     * In case of full GC, we also resize strings buffer, but we still leave
+     * some extra space (at most, `_V7_STRING_BUF_RESERVE`) in order to avoid
+     * frequent reallocations
+     */
+    size_t trimmed_size = v7->owned_strings.len + _V7_STRING_BUF_RESERVE;
+    if (trimmed_size < v7->owned_strings.size) {
+      mbuf_resize(&v7->owned_strings, trimmed_size);
+    }
   }
 #endif /* V7_DISABLE_GC */
 }
