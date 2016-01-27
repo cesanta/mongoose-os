@@ -12,4 +12,12 @@
  */
 void esp_umm_init(void);
 
+/*
+ * Callback that gets called by umm_malloc in case of Out-of-memory error.
+ *
+ * `size` is the size requested by user, and `block_cnt` is a number of heap
+ * blocks that umm_malloc failed to allocate
+ */
+void esp_umm_oom_cb(size_t size, size_t blocks_cnt);
+
 #endif

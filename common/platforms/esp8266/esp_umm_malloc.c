@@ -4,6 +4,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include "common/umm_malloc/umm_malloc.h"
 #include "esp_umm_malloc.h"
 
@@ -97,6 +98,11 @@ size_t xPortWantedSizeAlign() {
 
 void esp_umm_init(void) {
   /* Nothing to do, see header for details */
+}
+
+void esp_umm_oom_cb(size_t size, size_t blocks_cnt) {
+  fprintf(stderr, "E:M %u (%u blocks)\n", (unsigned int) size,
+          (unsigned int) blocks_cnt);
 }
 
 #endif /* ESP_UMM_ENABLE */

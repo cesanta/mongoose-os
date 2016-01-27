@@ -1437,6 +1437,11 @@ static void *_umm_malloc( size_t size ) {
   } else {
     /* Out of memory */
 
+    /* If application has provided OOM-callback, call it */
+#if defined(UMM_OOM_CB)
+    UMM_OOM_CB(size, blocks);
+#endif
+
     DBG_LOG_DEBUG(  "Can't allocate %5i blocks\n", blocks );
 
     /* Release the critical section... */

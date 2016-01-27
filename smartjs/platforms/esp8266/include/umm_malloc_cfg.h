@@ -58,6 +58,7 @@
 
 #include <stdlib.h>         /* for abort() */
 #include "esp_mem_layout.h" /* for ESP_DRAM0_END */
+#include "esp_umm_malloc.h" /* for esp_umm_oom_cb() */
 
 /* Defined in linker script. */
 extern unsigned int _heap_start;
@@ -78,6 +79,8 @@ extern unsigned int _heap_start;
  * (see `UMM_INTEGRITY_CHECK`, `UMM_POISON`)
  */
 #define UMM_HEAP_CORRUPTION_CB() abort()
+
+#define UMM_OOM_CB(size, blocks_cnt) esp_umm_oom_cb(size, blocks_cnt)
 
 /*
  * A couple of macros to make it easier to protect the memory allocator
