@@ -136,6 +136,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     sj_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
   } else if (ev == MG_EV_CLOSE) {
     if (c->listener == NULL && ud != NULL) {
+      v7_set(ud->v7, ud->obj, "_c", ~0, v7_mk_undefined());
       v7_disown(ud->v7, &ud->obj);
       v7_disown(ud->v7, &ud->timeout_callback);
       free(ud);
@@ -282,8 +283,17 @@ static void Http_write_data(struct v7 *v7, struct mg_connection *c) {
   }
 }
 
+#define DECLARE_CONN()                                      \
+  struct mg_connection *c = get_mgconn(v7);                 \
+  if (c == NULL) {                                          \
+    rcode = v7_throwf(v7, "Error", "Connection is closed"); \
+    goto clean;                                             \
+  }
+
 static enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
-  struct mg_connection *c = get_mgconn(v7);
+  enum v7_err rcode = V7_OK;
+  DECLARE_CONN();
+
   if (!v7_is_truthy(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
     write_http_status(c, 200);
     mg_send(c, "\r\n", 2);
@@ -291,12 +301,14 @@ static enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
   }
   Http_write_data(v7, c);
   *res = v7_get_this(v7);
-  return V7_OK;
+
+clean:
+  return rcode;
 }
 
 static enum v7_err Http_response_end(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  struct mg_connection *c = get_mgconn(v7);
+  DECLARE_CONN();
 
   rcode = Http_response_write(v7, res);
   if (rcode != V7_OK) {
@@ -327,7 +339,8 @@ static void http_write_headers(struct v7 *v7, v7_val_t headers_obj,
 
 static enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  struct mg_connection *c = get_mgconn(v7);
+  DECLARE_CONN();
+
   unsigned long code = 200;
   v7_val_t arg0 = v7_arg(v7, 0), arg1 = v7_arg(v7, 1);
 
@@ -385,7 +398,9 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
 static enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   struct mg_serve_http_opts opts;
   struct http_message hm;
-  struct mg_connection *c = get_mgconn(v7);
+  enum v7_err rcode = V7_OK;
+  DECLARE_CONN();
+
   size_t i, n;
   v7_val_t request = v7_get(v7, v7_get_this(v7), "_r", ~0);
   v7_val_t url_v = v7_get(v7, request, "url", ~0);
@@ -409,7 +424,8 @@ static enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
 
   *res = v7_get_this(v7);
 
-  return V7_OK;
+clean:
+  return rcode;
 }
 
 static enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
@@ -439,15 +455,19 @@ clean:
 }
 
 static enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
-  struct mg_connection *c = get_mgconn(v7);
+  enum v7_err rcode = V7_OK;
+  DECLARE_CONN();
+
   Http_write_data(v7, c);
   *res = v7_get_this(v7);
-  return V7_OK;
+
+clean:
+  return rcode;
 }
 
 static enum v7_err Http_request_end(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  struct mg_connection *c = get_mgconn(v7);
+  DECLARE_CONN();
 
   rcode = Http_request_write(v7, res);
   if (rcode != V7_OK) {
@@ -463,15 +483,19 @@ clean:
 }
 
 static enum v7_err Http_request_abort(struct v7 *v7, v7_val_t *res) {
-  struct mg_connection *c = get_mgconn(v7);
+  enum v7_err rcode = V7_OK;
+  DECLARE_CONN();
   c->flags |= MG_F_CLOSE_IMMEDIATELY;
   *res = v7_get_this(v7);
 
-  return V7_OK;
+clean:
+  return rcode;
 }
 
 static enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
-  struct mg_connection *c = get_mgconn(v7);
+  enum v7_err rcode = V7_OK;
+  DECLARE_CONN();
+
   struct user_data *ud = (struct user_data *) c->user_data;
   mg_set_timer(c, time(NULL) + v7_to_number(v7_arg(v7, 0)) / 1000.0);
   ud->timeout_callback = v7_arg(v7, 1);
@@ -479,7 +503,8 @@ static enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
 
   *res = v7_get_this(v7);
 
-  return V7_OK;
+clean:
+  return rcode;
 }
 
 /*
@@ -585,6 +610,11 @@ static enum v7_err Http_get(struct v7 *v7, v7_val_t *res) {
 
   /* Prepare things to close the connection immediately after response */
   struct mg_connection *c = get_mgconn_obj(v7, *res);
+  if (c == NULL) {
+    rcode = v7_throwf(v7, "Error", "Connection is closed");
+    goto clean;
+  }
+
   mg_send_http_chunk(c, "", 0);
   c->flags |= MG_F_CLOSE_CONNECTION_AFTER_RESPONSE;
 
