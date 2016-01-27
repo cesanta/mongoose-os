@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifdef CS_ENABLE_UBJSON
 
 #include "common/ubjson.h"

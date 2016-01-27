@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 /* generated from fs/conf_sys_defaults.json - do not edit */
 #ifndef _SYS_CONFIG_H_
 #define _SYS_CONFIG_H_

@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
  * Implements mongoose platform specific sj_http_call.
  * This is common to all platforms that use mongoose as networking API
  */

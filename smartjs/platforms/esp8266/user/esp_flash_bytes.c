@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifdef ESP_FLASH_BYTES_EMUL
 
 #ifndef RTOS_SDK

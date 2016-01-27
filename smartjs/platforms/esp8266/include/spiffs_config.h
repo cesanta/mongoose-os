@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
  * spiffs_config.h
  *
  *  Created on: Jul 3, 2013

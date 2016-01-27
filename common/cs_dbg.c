@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "common/cs_dbg.h"
 
 #include <stdarg.h>

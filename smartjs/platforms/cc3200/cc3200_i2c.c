@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>

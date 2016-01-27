@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef __SMARTJS_HAL_H_
 #define __SMARTJS_HAL_H_
 

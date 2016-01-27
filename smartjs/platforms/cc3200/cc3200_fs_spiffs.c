@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 /* LIBC interface to SPIFFS inside the container. */
 
 #include "cc3200_fs_spiffs.h"

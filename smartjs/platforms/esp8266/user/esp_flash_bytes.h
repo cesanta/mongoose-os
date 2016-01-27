@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef V7_FLASH_ACCESS_EMUL
 #define V7_FLASH_ACCESS_EMUL
 

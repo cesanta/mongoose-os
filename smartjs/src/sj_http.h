@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef SJ_HTTP_INCLUDED
 #define SJ_HTTP_INCLUDED
 

@@ -610,6 +610,11 @@ size_t strnlen(const char *s, size_t maxlen);
 #line 1 "./common/cs_dirent.h"
 /**/
 #endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef DIRENT_H_INCLUDED
 #define DIRENT_H_INCLUDED
 
@@ -7250,6 +7255,11 @@ int mkdir(const char *path, mode_t mode) {
 #line 1 "./src/../../common/ubjson.c"
 /**/
 #endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifdef CS_ENABLE_UBJSON
 
 /* Amalgamated: #include "common/ubjson.h" */
@@ -8395,6 +8405,11 @@ void init_crypto(struct v7 *v7) {
 #line 1 "./src/../builtin/ubjson.c"
 /**/
 #endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 /* Amalgamated: #include "v7/builtin/builtin.h" */
 
 #ifdef V7_ENABLE_UBJSON

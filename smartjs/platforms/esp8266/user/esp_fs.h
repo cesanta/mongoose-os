@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef ESP_FS_INCLUDED
 #define ESP_FS_INCLUDED
 

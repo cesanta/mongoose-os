@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef __COMMON_UTIL_LOGGING_H_
 #define __COMMON_UTIL_LOGGING_H_
 

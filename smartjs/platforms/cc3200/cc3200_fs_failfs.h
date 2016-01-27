@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef _CC3200_FS_FAILFS_H_
 #define _CC3200_FS_FAILFS_H_
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #if defined(RTOS_SDK) && !defined(RTOS_NETWORK_TEST)
 
 #include <freertos/FreeRTOS.h>

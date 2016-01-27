@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "sj_clubby.h"
 #include "clubby_proto.h"
 #include "sj_mongoose.h"

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef DIRENT_H_INCLUDED
 #define DIRENT_H_INCLUDED
 

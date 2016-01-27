@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef _ESP_MG_NET_IF_H_
 #define _ESP_MG_NET_IF_H_
 

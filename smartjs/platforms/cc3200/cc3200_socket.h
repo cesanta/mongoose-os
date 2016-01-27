@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef __CC3200_SOCKET_H_
 #define __CC3200_SOCKET_H_
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "v7/v7.h"
 #include "smartjs/src/sj_timers.h"

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "smartjs/platforms/esp8266/user/util.h"
 #include "smartjs/platforms/esp8266/user/v7_esp_features.h"

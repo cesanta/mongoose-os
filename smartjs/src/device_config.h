@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef CONFIG_H_INCLUDED
 #define CONFIG_H_INCLUDED
 

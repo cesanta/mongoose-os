@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "smartjs/src/sj_config.h"
 
 int sj_conf_get_str(struct json_token *toks, const char *key, char **val) {

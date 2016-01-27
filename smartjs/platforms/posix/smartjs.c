@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>

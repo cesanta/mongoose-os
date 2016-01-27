@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef _ESP_MISSING_INCLUDES_
 #define _ESP_MISSING_INCLUDES_
 
