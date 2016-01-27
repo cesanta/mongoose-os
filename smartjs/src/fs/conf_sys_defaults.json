@@ -34,7 +34,7 @@
     "ca_file": ""
   },
   "clubby": {
-    "connect_on_boot": false,
+    "connect_on_boot": true,
     "server_address": "api.cesanta.com:80",
     "device_id": "",
     "device_psk": "",
