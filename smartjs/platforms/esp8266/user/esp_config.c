@@ -3,14 +3,14 @@
 #include <user_interface.h>
 #include <stdio.h>
 
-#include "mongoose.h"
-#include "sj_mongoose.h"
-#include "sj_wifi.h"
-#include "device_config.h"
-#include "cs_file.h"
-#include "cs_dbg.h"
-#include "esp_uart.h"
-#include "esp_gpio.h"
+#include "mongoose/mongoose.h"
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_wifi.h"
+#include "smartjs/src/device_config.h"
+#include "common/cs_file.h"
+#include "common/cs_dbg.h"
+#include "smartjs/platforms/esp8266/user/esp_uart.h"
+#include "smartjs/platforms/esp8266/user/esp_gpio.h"
 
 void device_reboot(void) {
   system_restart();

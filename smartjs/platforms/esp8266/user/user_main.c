@@ -8,13 +8,13 @@
 #include "os_type.h"
 #include "user_interface.h"
 #include "mem.h"
-#include "v7_esp.h"
-#include "util.h"
-#include "esp_missing_includes.h"
-#include "esp_uart.h"
-#include "esp_exc.h"
-#include "esp_uart.h"
-#include "sj_prompt.h"
+#include "smartjs/platforms/esp8266/user/v7_esp.h"
+#include "smartjs/platforms/esp8266/user/util.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/user/esp_uart.h"
+#include "smartjs/platforms/esp8266/user/esp_exc.h"
+#include "smartjs/platforms/esp8266/user/esp_uart.h"
+#include "smartjs/src/sj_prompt.h"
 
 #else
 
@@ -23,22 +23,22 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <stdio.h>
-#include "esp_missing_includes.h"
-#include "v7_esp.h"
-#include "esp_uart.h"
-#include "esp_exc.h"
-#include "sj_prompt.h"
-#include "util.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/user/v7_esp.h"
+#include "smartjs/platforms/esp8266/user/esp_uart.h"
+#include "smartjs/platforms/esp8266/user/esp_exc.h"
+#include "smartjs/src/sj_prompt.h"
+#include "smartjs/platforms/esp8266/user/util.h"
 #include "disp_task.h"
 
 #endif /* RTOS_SDK */
 
-#include "esp_fs.h"
-#include "esp_updater.h"
+#include "smartjs/platforms/esp8266/user/esp_fs.h"
+#include "smartjs/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
-#include "esp_umm_malloc.h"
+#include "common/platforms/esp8266/esp_umm_malloc.h"
 
-#include "v7.h"
+#include "v7/v7.h"
 
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;

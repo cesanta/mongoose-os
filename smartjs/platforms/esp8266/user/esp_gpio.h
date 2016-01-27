@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include <sj_gpio.h>
+#include "smartjs/src/sj_gpio.h"
 
 #ifdef RTOS_SDK
 void gpio_output_conf(uint32_t set_mask, uint32_t clear_mask,

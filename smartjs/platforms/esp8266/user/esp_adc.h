@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-#include <sj_adc.h>
+#include "smartjs/src/sj_adc.h"
 
 #endif

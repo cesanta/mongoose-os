@@ -5,7 +5,7 @@
 #define SJ_MMAP_SLOTS 16
 #endif
 
-#include "spiffs/spiffs.h"
+#include "common/spiffs/spiffs.h"
 
 /* LOG_PAGE_SIZE have to be more than SPIFFS_OBJ_NAME_LEN */
 #define LOG_PAGE_SIZE 256

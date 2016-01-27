@@ -3,8 +3,8 @@
 
 #ifdef RTOS_SDK
 
-#include <v7.h>
-#include <sj_gpio.h>
+#include "v7/v7.h"
+#include "smartjs/src/sj_gpio.h"
 
 void rtos_init_dispatcher();
 void rtos_dispatch_initialize();

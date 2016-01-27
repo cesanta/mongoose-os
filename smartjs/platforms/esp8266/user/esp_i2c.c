@@ -9,14 +9,14 @@
 
 #include <ets_sys.h>
 
-#include <v7.h>
-#include <sj_i2c.h>
+#include "v7/v7.h"
+#include "smartjs/src/sj_i2c.h"
 
-#include <cs_dbg.h>
+#include "common/cs_dbg.h"
 
 #include "esp_gpio.h"
 #include "esp_periph.h"
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 
 #ifndef RTOS_SDK
 

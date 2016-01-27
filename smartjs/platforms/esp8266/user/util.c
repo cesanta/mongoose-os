@@ -1,11 +1,11 @@
 #include <ets_sys.h>
 #include <math.h>
 #include <stdlib.h>
-#include <v7.h>
+#include "v7/v7.h"
 #include "v7_esp.h"
 #include "util.h"
 #include "esp_gpio.h"
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 
 #ifndef RTOS_SDK
 #include "osapi.h"

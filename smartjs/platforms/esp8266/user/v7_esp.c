@@ -1,23 +1,23 @@
 #include <math.h>
 #include <stdlib.h>
 #include <ets_sys.h>
-#include <v7/v7.h>
-#include <sj_timers.h>
-#include <sj_v7_ext.h>
-#include <sj_i2c_js.h>
-#include <sj_spi_js.h>
-#include <sj_gpio_js.h>
-#include <sj_adc_js.h>
+#include "v7/v7.h"
+#include "smartjs/src/sj_timers.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_i2c_js.h"
+#include "smartjs/src/sj_spi_js.h"
+#include "smartjs/src/sj_gpio_js.h"
+#include "smartjs/src/sj_adc_js.h"
 #include "v7_esp.h"
 #include "dht11.h"
 #include "esp_pwm.h"
 #include "esp_uart.h"
 #include "esp_sj_wifi.h"
-#include "sj_http.h"
-#include "sj_mongoose_ws_client.h"
+#include "smartjs/src/sj_http.h"
+#include "smartjs/src/sj_mongoose_ws_client.h"
 #include "common/sha1.h"
 #include "esp_updater.h"
-#include "sj_clubby.h"
+#include "smartjs/src/sj_clubby.h"
 
 #ifndef RTOS_SDK
 
@@ -27,8 +27,8 @@
 
 #endif /* RTOS_SDK */
 
-#include "sj_mongoose.h"
-#include "device_config.h"
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/device_config.h"
 
 struct v7 *v7;
 

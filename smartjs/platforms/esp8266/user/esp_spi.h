@@ -99,7 +99,7 @@
 */
 
 #include <ets_sys.h>
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 
 #ifndef RTOS_SDK
 
@@ -113,7 +113,7 @@
 
 #endif /* RTOS_SDK */
 
-#include <sj_spi.h>
+#include "smartjs/src/sj_spi.h"
 
 #include "esp_spi_register.h"
 

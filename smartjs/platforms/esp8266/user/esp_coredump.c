@@ -12,11 +12,11 @@
 #include "esp_exc.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "esp_uart.h"
 #include "v7_esp.h"
 
-#include "base64.h"
+#include "common/base64.h"
 
 #define ESP_COREDUMP_UART_NO 1
 #define ESP_COREDUMP_FILENO (ESP_COREDUMP_UART_NO + 1)

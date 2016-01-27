@@ -1,4 +1,4 @@
-#include "sj_config.h"
+#include "smartjs/src/sj_config.h"
 
 int sj_conf_get_str(struct json_token *toks, const char *key, char **val) {
   struct json_token *tok = find_json_token(toks, key);

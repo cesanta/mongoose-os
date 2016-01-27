@@ -32,42 +32,42 @@ global.console = { log: print };
 
 Sys.conf = File.loadJSON('conf_sys_defaults.json') || {};
 $.extend(Sys.conf, File.loadJSON('conf.json') || {});
-Sys.id = Sys.ro_vars.arch + '_' + (Sys.ro_vars.mac_address || '0');
 
-global.confLoaded = JSON.parse(JSON.stringify(Sys.conf))
+Object.defineProperty(Sys, "oconf", { value: JSON.parse(JSON.stringify(Sys.conf))});
 
-Sys.conf.save = function(reboot) {
-  var deleteUnchanged= function(c1, c2) {
-    var n = 0;
-    for (var k in c1) {
-      if (typeof(c1[k]) == 'object') {
-        if (typeof(c2[k]) == 'undefined') { c2[k] = {} }
-        var j = deleteUnchanged(c1[k], c2[k]);
-        if (j == 0) { delete c1[k]; } else { n += j };
-      } else {
-      if (c1[k] == c2[k]) { delete c1[k]; } else { n++; };
+Object.defineProperty(Sys.conf, "save", {
+  value: function(reboot) {
+    var deleteUnchanged= function(c1, c2) {
+      var n = 0;
+      for (var k in c1) {
+        if (typeof(c1[k]) == 'object') {
+          if (typeof(c2[k]) == 'undefined') { c2[k] = {} }
+          var j = deleteUnchanged(c1[k], c2[k]);
+          if (j == 0) { delete c1[k]; } else { n += j };
+        } else {
+          if (c1[k] == c2[k]) { delete c1[k]; } else { n++; };
+        }
       }
+
+      return n;
+    };
+
+    var newCfg = JSON.parse(JSON.stringify(Sys.conf));
+    delete newCfg.save;
+    deleteUnchanged(newCfg, Sys.oconf);
+    newCfg = $.extend(File.loadJSON('conf.json') || {}, newCfg);
+
+    var cfgFile = File.open("conf.json.tmp", "w");
+    cfgFile.write(JSON.stringify(newCfg));
+    cfgFile.close();
+
+    File.remove("conf.json");
+    File.rename("conf.json.tmp", "conf.json");
+
+    if (reboot != false) {
+      Sys.reboot();
     }
-
-    return n;
-  };
-
-  var newCfg = JSON.parse(JSON.stringify(Sys.conf))
-  delete newCfg.save
-  deleteUnchanged(newCfg, confLoaded);
-  newCfg = $.extend(File.loadJSON('conf.json') || {}, newCfg);
-
-  var cfgFile = File.open("conf.json.tmp", "w")
-  cfgFile.write(JSON.stringify(newCfg))
-  cfgFile.close()
-
-  File.remove("conf.json");
-  File.rename("conf.json.tmp", "conf.json");
-
-  if (reboot != false) {
-    Sys.reboot()
-  }
-}
+  }});
 
 print('\nStarting Smart.js - see documentation at',
       'https://cesanta.com/developer/smartjs',

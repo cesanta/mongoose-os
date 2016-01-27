@@ -6,8 +6,8 @@
 
 #ifndef DISABLE_OTA
 
-#include "esp_updater.h"
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/user/esp_updater.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "rboot/rboot/appcode/rboot-api.h"
 #include "smartjs/src/sj_config.h"
 #include "smartjs/src/device_config.h"
@@ -15,7 +15,7 @@
 #include "smartjs/src/sj_clubby.h"
 #include "smartjs/src/sj_v7_ext.h"
 #include "v7/v7.h"
-#include "esp_fs.h"
+#include "smartjs/platforms/esp8266/user/esp_fs.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -1014,7 +1014,7 @@ void init_updater(struct v7 *v7) {
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
   s_updater_notify_cb = v7_mk_undefined();
 
-  v7_set(v7, sys, "updater", ~0, updater);
+  v7_def(v7, sys, "updater", ~0, V7_DESC_ENUMERABLE(0), updater);
   v7_set_method(v7, updater, "start", Updater_startupdate);
   v7_set_method(v7, updater, "notify", Updater_notify);
 

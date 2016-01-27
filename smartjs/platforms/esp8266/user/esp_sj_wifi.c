@@ -5,8 +5,8 @@
 #include <gpio.h>
 #include <os_type.h>
 #include <user_interface.h>
-#include <v7.h>
-#include <sha1.h>
+#include "v7/v7.h"
+#include "common/sha1.h"
 #include <mem.h>
 #include <espconn.h>
 #include <math.h>

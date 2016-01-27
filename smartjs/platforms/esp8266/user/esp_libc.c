@@ -6,7 +6,7 @@
 #include <ctype.h>
 #include <sys/time.h>
 #include <stdint.h>
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 
 #include <math.h>
 #include <stdarg.h>

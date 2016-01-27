@@ -1,10 +1,10 @@
-#include "sj_v7_ext.h"
+#include "smartjs/src/sj_v7_ext.h"
 
 #include <string.h>
 
 #include "common/cs_dbg.h"
 #include "v7/v7.h"
-#include "sj_hal.h"
+#include "smartjs/src/sj_hal.h"
 
 static enum v7_err Sys_prof(struct v7 *v7, v7_val_t *res) {
   *res = v7_mk_object(v7);

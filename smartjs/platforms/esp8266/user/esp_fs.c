@@ -8,7 +8,7 @@
 #include <fcntl.h>
 
 #ifndef NO_V7
-#include <v7.h>
+#include "v7/v7.h"
 #endif
 
 #ifndef RTOS_SDK
@@ -30,10 +30,10 @@
 
 #ifndef V7_NO_FS
 
-#include <cs_dbg.h>
+#include "common/cs_dbg.h"
 
-#include "spiffs/spiffs.h"
-#include "spiffs/spiffs_nucleus.h"
+#include "common/spiffs/spiffs.h"
+#include "common/spiffs/spiffs_nucleus.h"
 #include "spiffs_config.h"
 #include "esp_uart.h"
 

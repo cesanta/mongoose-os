@@ -1,7 +1,7 @@
 #include <ets_sys.h>
 
 #include "esp_adc.h"
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "esp_periph.h"
 
 #ifndef RTOS_SDK

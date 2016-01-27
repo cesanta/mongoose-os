@@ -1,11 +1,11 @@
-#include "esp_missing_includes.h"
-#include <v7.h>
-#include <sj_timers.h>
-#include <sj_v7_ext.h>
-#include <sj_hal.h>
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "v7/v7.h"
+#include "smartjs/src/sj_timers.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_hal.h"
 
 #include "v7_esp.h"
-#include "sj_prompt.h"
+#include "smartjs/src/sj_prompt.h"
 #include "esp_mg_net_if.h"
 #include "esp_uart.h"
 

@@ -96,7 +96,7 @@ JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC) $(V7_PATH) $(MONGOOSE_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_DIR)
-IPATH = $(REPO_ROOT) $(COMMON_DIR) $(SMARTJS_SRC) $(VPATH) \
+IPATH = $(REPO_ROOT) include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
         $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) .
@@ -120,7 +120,9 @@ V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
               -DV7_ENABLE__Function__bind -DV7_ENABLE__File__list=1 \
               -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
-              -DV7_ENABLE__Object__getPrototypeOf \
+              -DV7_ENABLE__Object__getPrototypeOf -DV7_ENABLE__Object__isPrototypeOf \
+              -DV7_ENABLE__Object__keys \
+              -DV7_ENABLE__Object__isExtensible \
               -DV7_EXPOSE_PRIVATE \
 
 FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \

@@ -1,12 +1,12 @@
 #ifdef ESP_ENABLE_MG_LWIP_IF
-#include <mongoose.h>
+#include "mongoose/mongoose.h"
 
 #include "ets_sys.h"
 #include "osapi.h"
 #include "os_type.h"
 #include "user_interface.h"
 
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 
 #include <lwip/pbuf.h>
 #include <lwip/tcp.h>
@@ -23,11 +23,11 @@ static void mg_lwip_ssl_send(struct mg_connection *nc);
 static void mg_lwip_ssl_recv(struct mg_connection *nc);
 #endif
 
-#include "cs_dbg.h"
+#include "common/cs_dbg.h"
 
 #ifndef NO_V7
-#include <v7.h>
-#include <sj_v7_ext.h>
+#include "v7/v7.h"
+#include "smartjs/src/sj_v7_ext.h"
 
 struct v7_callback_args {
   struct v7 *v7;

@@ -1,6 +1,6 @@
-#include <esp_missing_includes.h>
-#include <util.h>
-#include "v7_esp_features.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/user/util.h"
+#include "smartjs/platforms/esp8266/user/v7_esp_features.h"
 
 #ifndef RTOS_SDK
 #include <osapi.h>

@@ -1,8 +1,8 @@
 #include <ets_sys.h>
-#include <sj_gpio.h>
+#include "smartjs/src/sj_gpio.h"
 
 #include "esp_gpio.h"
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "esp_periph.h"
 
 #ifndef RTOS_SDK

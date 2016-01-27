@@ -9,12 +9,12 @@
 #include "osapi.h"
 #include "os_type.h"
 #include "user_interface.h"
-#include "esp_missing_includes.h"
+#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 
 #include "esp_gpio.h"
 #include "esp_periph.h"
 
-#include <v7.h>
+#include "v7/v7.h"
 
 /*
  * Semi-hardware PWM - uses hardware timer 1 to generate base clock.
