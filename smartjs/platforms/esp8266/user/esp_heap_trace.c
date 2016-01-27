@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#if defined(ESP_ENABLE_HEAP_LOG)
+
 #include "v7/src/internal.h"
 
 #include <stdio.h>
@@ -50,8 +52,6 @@ extern void *__real_pvPortZalloc(size_t size, const char *file, int line);
 extern void __real_vPortFree(void *pv, const char *file, int line);
 
 extern void sj_wdt_feed(void);
-
-#if defined(ESP_ENABLE_HEAP_LOG)
 
 /*
  * Maximum amount of calls to malloc/free and other friends before UART is
