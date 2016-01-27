@@ -2510,6 +2510,8 @@ struct v7 {
   unsigned int is_stashed : 1;
   /* true if last emitted statement does not affect data stack */
   unsigned int is_stack_neutral : 1;
+  /* true if precompiling; affects compiler bcode choices */
+  unsigned int is_precompiling : 1;
 };
 
 struct v7_property {
@@ -10360,12 +10362,11 @@ V7_PRIVATE size_t bcode_get_varint(uint8_t **ops) {
 }
 
 static int bcode_is_inline_string(struct v7 *v7, val_t val) {
-  if (v7_is_string(val)) {
-    size_t len;
-    v7_get_string_data(v7, &val, &len);
-    return len <= 5;
+  uint64_t tag = val & V7_TAG_MASK;
+  if (v7->is_precompiling && v7_is_string(val)) {
+    return 1;
   }
-  return 0;
+  return tag == V7_TAG_STRING_I || tag == V7_TAG_STRING_5;
 }
 
 V7_PRIVATE lit_t bcode_add_lit(struct v7 *v7, struct bcode *bcode, val_t val) {
@@ -10397,9 +10398,7 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, uint8_t **ops) {
     case BCODE_INLINE_STRING_TYPE_TAG: {
       val_t res;
       size_t len = bcode_get_varint(ops);
-      /* fprintf(stderr, "CREATING STRING len %zu, '%.*s'\n", len, (int) len, */
-      /*         *ops + 1); */
-      res = v7_mk_string(v7, (const char *) *ops + 1, len, 1);
+      res = v7_mk_string(v7, (const char *) *ops + 1, len, !bcode->frozen);
       *ops += len + 1;
       return res;
       break;
@@ -10417,8 +10416,6 @@ V7_PRIVATE void bcode_op_lit(struct v7 *v7, struct bcode *bcode, enum opcode op,
   if (v7_is_string(lit.val)) {
     size_t len;
     const char *s = v7_get_string_data(v7, &lit.val, &len);
-    /* fprintf(stderr, "ENCODING STRING (len %zu) '%.*s'\n", len, (int) len, s);
-     */
     bcode_add_varint(bcode, BCODE_INLINE_STRING_TYPE_TAG);
     bcode_add_varint(bcode, len);
     mbuf_append(&bcode->ops, s, len + 1 /* nul term */);
@@ -13609,6 +13606,8 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
   struct v7 *v7 = v7_create();
   ast_off_t pos = 0;
   enum v7_err err;
+
+  v7->is_precompiling = 1;
 
   ast_init(&ast, 0);
   err = parse(v7, &ast, code, 1, 0);
