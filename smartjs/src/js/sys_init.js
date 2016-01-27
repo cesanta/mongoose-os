@@ -80,7 +80,7 @@ print('Device credentials: ', {
 
 global.clubby = new Clubby({connect:false});
 
-if (Sys.conf.clubby.connect_on_boot) {
+if (Sys.conf.clubby.device_id && Sys.conf.clubby.connect_on_boot) {
   if (typeof(Wifi) != "undefined") {
     Wifi.ready(clubby.connect.bind(clubby))
   } else {
