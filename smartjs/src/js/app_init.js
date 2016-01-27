@@ -9,7 +9,12 @@ function demoSendRandomData() {
                     args: {vars: [[{__name__: 'value'}, value]]}},
                 function(res) {print("demoSendRandomData:", res)})
 
-    setTimeout(send, 2000);  // Call us every 2 seconds
+    setTimeout(send_on_ready, 2000);  // Call us every 2 seconds
   }
-  send();
+
+  function send_on_ready() {
+    clubby.ready(send);
+  }
+
+  send_on_ready();
 }
