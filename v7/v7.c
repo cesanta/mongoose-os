@@ -14141,7 +14141,7 @@ int v7_is_string(val_t v) {
 /* Get a pointer to string and string length. */
 const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
-  const char *p;
+  const char *p = NULL;
   int llen;
 
   assert(v7_is_string(*v));
