@@ -5,35 +5,10 @@
 
 #if defined(ESP_ENABLE_HEAP_LOG)
 
-#include "v7/src/internal.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ets_sys.h>
-
 #include "v7/v7.h"
-#include "smartjs/src/sj_i2c.h"
-
-#include "common/cs_dbg.h"
-
-#include "esp_gpio.h"
-#include "esp_periph.h"
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
-#ifndef RTOS_SDK
-
-#include <osapi.h>
-#include <gpio.h>
-
-#else
-
-#include <gpio_register.h>
-#include <pin_mux_register.h>
-#include <eagle_soc.h>
-#include <freertos/portmacro.h>
-
-#endif /* RTOS_SDK */
-
 #include "esp_mem_layout.h"
 
 extern int uart_initialized;
