@@ -35,7 +35,7 @@
   },
   "clubby": {
     "connect_on_boot": false,
-    "server_address": "127.0.0.1:8911",
+    "server_address": "api.cesanta.com:80",
     "device_id": "",
     "device_psk": "",
     "device_auto_registration": true,
