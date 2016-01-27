@@ -940,6 +940,11 @@ static void handle_clubby_update(struct clubby_event *evt, void *user_data) {
    */
   if (!is_in_progress()) {
     char *manifest_url = calloc(1, blob_url->len + 1);
+    if (manifest_url == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      return;
+    }
+
     memcpy(manifest_url, blob_url->ptr, blob_url->len);
 
     if (!notify_js(US_NOT_STARTED, manifest_url)) {

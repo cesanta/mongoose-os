@@ -999,7 +999,7 @@ struct clubby_event *sj_clubby_create_reply_impl(char *id, int8_t id_len,
   }
 
   memcpy(&repl->request.id, id, id_len);
-  repl->request.src = malloc(sizeof(repl->request.src));
+  repl->request.src = malloc(sizeof(*repl->request.src));
   if (repl->request.src == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     goto error;
