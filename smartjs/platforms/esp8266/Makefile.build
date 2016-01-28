@@ -383,8 +383,8 @@ $(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(
     echo "CP $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
     cp $(js) $(FS_BUILD_DIR);)
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
-    echo "V7 $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)";\
-    $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT);)
+    echo "V7 $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
+    $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
 	$(vecho) "FS $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
