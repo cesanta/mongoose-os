@@ -851,10 +851,15 @@ static enum v7_err Clubby_onopen(struct v7 *v7, v7_val_t *res) {
 static enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
-  reset_reconnect_timeout(clubby);
-  clubby_connect(clubby);
+  if (!clubby_proto_is_connected(clubby->nc)) {
+    reset_reconnect_timeout(clubby);
+    clubby_connect(clubby);
 
-  *res = v7_mk_boolean(1);
+    *res = v7_mk_boolean(1);
+  } else {
+    LOG(LL_WARN, ("Clubby is already connected"));
+    *res = v7_mk_boolean(0);
+  }
   return V7_OK;
 }
 
