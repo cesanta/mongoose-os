@@ -44,7 +44,6 @@ link:https://www.youtube.com/watch?v=6DYfGsqQzCg[image:https://docs.cesanta.com/
 At the moment, Smart.js supports following hardware platforms:
 
 - Espressif ESP8266
-- Texas Instruments CC3200
 - POSIX - all POSIX compatible systems, including:
   * Raspberry PI
   * BeagleBone

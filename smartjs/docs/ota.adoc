@@ -39,3 +39,24 @@ new version.
 
 image:smartjs/ota4.png[width="75%",align="center"]
 
+One of the important features of a reliable OTA implementation is to make sure
+the device never freezes after an unsuccessful firmware update. There could be
+plenty of reasons why an update could fail, that’s why a reliable implementation
+should always roll back to the previous firmware in case of failure.
+
+We have tackled this by utilising several components on the firmware side:
+
+- Flexible boot loader
+- Firmware self-checking procedure
+
+A new firmware is loaded into a separate section (partition) on flash. Then, the
+firmware is rebooted, and a boot loader boots a new section, noting this in a
+special flag on flash drive.
+
+After the boot, the new firmware performs a self-check. A successful self-check
+means that the new firmware is working as expected, and in this case the new
+firmware updates a special flag on a flash drive.
+
+If the new firmware failed to self-check and rebooted, or if it froze and
+watchdog rebooted the module, a boot loader notes this also with a special flag
+specifying that the update was not completed and boots an old partition.

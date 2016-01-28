@@ -14,6 +14,28 @@ import git
 FW_MANIFEST_FILE_NAME = 'manifest.json'
 
 
+def get_git_repo(path):
+    # This is a temporary workaround until we get a version of python-git
+    # that supports search_parent_directories=True (1.0 and up).
+    repo_dir = path
+    repo = None
+    while repo is None:
+        try:
+            return git.Repo(repo_dir)
+        except git.exc.InvalidGitRepositoryError:
+            if repo_dir != '/':
+                repo_dir = os.path.split(repo_dir)[0]
+                continue
+            raise RuntimeError("%s doesn't look like a Git repo" % path)
+
+
+def get_tag_for_commit(repo, commit):
+    for tag in repo.tags:
+        if tag.commit == commit:
+            return tag.name
+    return None
+
+
 def cmd_gen_build_info(args):
     bi = {}
 
@@ -28,7 +50,12 @@ def cmd_gen_build_info(args):
 
     version = None
     if args.version is None:
-        version = ts.strftime('%Y%m%d%H%M%S')
+        version = None
+        if args.tag_as_version:
+            repo = get_git_repo(os.getcwd())
+            version = get_tag_for_commit(repo, repo.head.commit)
+        if version is None:
+            version = ts.strftime('%Y%m%d%H%M%S')
     elif args.version != '':
         version = args.version
     if version is not None:
@@ -36,24 +63,11 @@ def cmd_gen_build_info(args):
 
     id = None
     if args.id is None:
-        # This is a temporary workaround until we get a version of python-git
-        # that supports search_parent_directories=True (1.0 and up).
-        repo_dir = os.getcwd()
-        repo = None
-        while repo is None:
-            try:
-                repo = git.Repo(repo_dir)
-            except git.exc.InvalidGitRepositoryError:
-                if repo_dir != '/':
-                    repo_dir = os.path.split(repo_dir)[0]
-                    continue
-                raise RuntimeError("--id is not set and CWD doesn't look like a Git repo")
-        branch_or_tag = '?'
+        repo = get_git_repo(os.getcwd())
         if repo.head.is_detached:
-            # Try to find tag for the current commit.
-            for tag in repo.tags:
-                if tag.commit == repo.head.commit:
-                    branch_or_tag = tag.name
+            branch_or_tag = get_tag_for_commit(repo, repo.head.commit)
+            if branch_or_tag is None:
+                branch_or_tag = '?'
         else:
             branch_or_tag = repo.active_branch
         id = '%s/%s@%s%s' % (
@@ -84,6 +98,7 @@ const char *build_id = "%(build_id)s";
 const char *build_timestamp = "%(build_timestamp)s";
 const char *build_version = "%(build_version)s";\
 """ % bi
+
 
 def cmd_create_manifest(args):
     manifest = {
@@ -153,6 +168,7 @@ if __name__ == '__main__':
     gbi_cmd.add_argument('--timestamp', '-t')
     gbi_cmd.add_argument('--version', '-v')
     gbi_cmd.add_argument('--id', '-i')
+    gbi_cmd.add_argument('--tag_as_version', type=bool, default=False)
     gbi_cmd.add_argument('--json_output')
     gbi_cmd.add_argument('--c_output')
 

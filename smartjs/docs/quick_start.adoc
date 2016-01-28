@@ -1,22 +1,19 @@
 
 == Quick Start Guide
 
--  Download
-   link:https://github.com/cesanta/smart.js/releases[Flashnchips]
-   firmware burning tool
+-  Download flashing utility from https://github.com/cesanta/fnc/releases
+-  Download the latest version of Smart.js firmware from
+   https://github.com/cesanta/smart.js/releases
 -  Connect the board to your computer via the USB or serial interface
--  Start Flashnchips.
+-  Start Flashnchips
+-  Press `Browse`, select downloaded firmware .zip file
 -  If you are using a USB connector, and "Select port" dropdown is disabled,
    then USB-to-serial driver needs to be installed:
-   * CC3200 USB drivers:
-   link:https://backend.cesanta.com/FTDI_Driver_Mac.pkg[for MacOS], for
-   link:https://developer.mbed.org/media/downloads/drivers/mbedWinSerial_16466.exe[for Windows]
    * FTDI drivers are at
    link:http://www.ftdichip.com/Drivers/VCP.htm[FTDI website]
    * Drivers for NodeMCU v1 board is at link:https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx[Silabs CP2102 page].
 -  Restart Flashnchips after driver installation. "Select port" dropdown must
    automatically pick up a serial port to where your board is connected.
--  For CC3200 board, make sure that SOP2 pin is shorted, or wired to TCK.
 -  Press "Flash Firmware" button. That will burn Smart.js firmware on
    the flash memory.
 -  When burning is complete, Smart.js automatically connects a console
