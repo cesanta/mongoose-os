@@ -52,7 +52,7 @@ struct clubby {
   struct queued_frame *queued_frames_tail;
   uint32_t session_flags;
   struct mg_connection *nc;
-
+  int auth_ok;
   struct sys_config_clubby cfg;
 };
 
@@ -67,6 +67,7 @@ static void schedule_reconnect();
 static int register_js_callback(struct clubby *clubby, struct v7 *v7,
                                 const char *id, int8_t id_len,
                                 sj_clubby_callback_t cb, v7_val_t cbv);
+static void clubby_cb(struct clubby_event *evt);
 
 static void free_clubby(struct clubby *clubby) {
   /*
@@ -78,6 +79,10 @@ static void free_clubby(struct clubby *clubby) {
   free(clubby->cfg.server_address);
   free(clubby->cfg.backend);
   free(clubby);
+}
+
+static int clubby_is_connected(struct clubby *clubby) {
+  return clubby_proto_is_connected(clubby->nc) && clubby->auth_ok;
 }
 
 static void set_clubby(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
@@ -288,6 +293,10 @@ static void clubby_hello_resp_callback(struct clubby_event *evt,
   (void) user_data;
   LOG(LL_DEBUG,
       ("Got response for /v1/Hello, status=%d", evt->response.status));
+  if (evt->response.status == 0) {
+    evt->ev = CLUBBY_AUTH_OK;
+    clubby_cb(evt);
+  }
 }
 
 /*
@@ -297,7 +306,7 @@ static void clubby_hello_resp_callback(struct clubby_event *evt,
  */
 static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
                               ub_val_t frame) {
-  if (clubby_proto_is_connected(clubby->nc)) {
+  if (clubby_is_connected(clubby)) {
     clubby_proto_send(clubby->nc, ctx, frame);
   } else {
     /* Here we revive clubby.js behavior */
@@ -365,7 +374,16 @@ static void clubby_send_hello(struct clubby *clubby) {
   register_callback(clubby, (char *) &id, sizeof(id),
                     clubby_hello_resp_callback, NULL);
 
-  clubby_send_cmds(clubby, ctx, clubby->cfg.backend, cmds);
+  if (clubby_proto_is_connected(clubby->nc)) {
+    /* We use /v1/Hello to check auth, so it cannot be queued  */
+    ub_val_t frame = clubby_proto_create_frame_base(ctx, clubby->cfg.device_id,
+                                                    clubby->cfg.device_psk,
+                                                    clubby->cfg.backend);
+    ub_add_prop(ctx, frame, "cmds", cmds);
+    clubby_proto_send(clubby->nc, ctx, frame);
+  } else {
+    LOG(LL_ERROR, ("Clubby is disconnected"))
+  }
 }
 
 static void clubby_send_labels(struct clubby *clubby) {
@@ -434,6 +452,12 @@ static void clubby_cb(struct clubby_event *evt) {
     case CLUBBY_CONNECT: {
       LOG(LL_DEBUG, ("CLUBBY_CONNECT"));
       clubby_send_hello(clubby);
+      break;
+    }
+
+    case CLUBBY_AUTH_OK: {
+      clubby->auth_ok = 1;
+      LOG(LL_DEBUG, ("CLUBBY_AUTH_OK"));
       clubby_send_labels(clubby);
 
       /* Call "ready" handlers */
@@ -454,12 +478,13 @@ static void clubby_cb(struct clubby_event *evt) {
         clubby_proto_send(clubby->nc, qc->ctx, qc->cmd);
         free(qc);
       }
+
       break;
     }
-
     case CLUBBY_DISCONNECT: {
       LOG(LL_DEBUG, ("CLUBBY_DISCONNECT"));
       clubby->nc = NULL;
+      clubby->auth_ok = 0;
 
       /* Call "onclose" handlers */
       clubby_call_cb(clubby, clubby_cmd_onclose, sizeof(clubby_cmd_onclose),
@@ -751,8 +776,7 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   }
 
 #ifndef CLUBBY_DISABLE_MEMORY_LIMIT
-  if (!clubby_proto_is_connected(clubby->nc) &&
-      get_cfg()->clubby.memory_limit != 0 &&
+  if (!clubby_is_connected(clubby) && get_cfg()->clubby.memory_limit != 0 &&
       sj_get_free_heap_size() < (size_t) get_cfg()->clubby.memory_limit) {
     return v7_throwf(v7, "Error", "Not enough memory to enqueue packet");
   }
@@ -873,7 +897,7 @@ static enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
-  if (clubby_proto_is_connected(clubby->nc)) {
+  if (clubby_is_connected(clubby)) {
     v7_own(v7, &cbv);
     sj_invoke_cb0(v7, cbv);
     v7_disown(v7, &cbv);

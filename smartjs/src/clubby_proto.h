@@ -23,6 +23,7 @@ enum clubby_event_type {
   CLUBBY_DISCONNECT /* no params */,
   CLUBBY_REQUEST /* request */,
   CLUBBY_RESPONSE /* response */,
+  CLUBBY_AUTH_OK /* no params */
 };
 
 struct clubby_event {
