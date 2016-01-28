@@ -4705,6 +4705,7 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
 #endif /* __cplusplus */
 
 #endif /* JS_STDLIB_H_INCLUDED */
+#ifndef V7_EXPORT_INTERNAL_HEADERS
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/mbuf.c"
 /**/
@@ -29604,3 +29605,4 @@ int main(int argc, char *argv[]) {
   return v7_main(argc, argv, NULL, NULL);
 }
 #endif
+#endif /* V7_EXPORT_INTERNAL_HEADERS */

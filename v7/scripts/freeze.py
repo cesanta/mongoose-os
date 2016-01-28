@@ -179,10 +179,8 @@ for l in f:
 # generate preamble
 #
 
-print '#include "v7/src/internal.h"'
-print '#include "v7/src/vm.h"'
-print '#include "v7/src/bcode.h"'
-print '#include "v7/v7.h"'
+print '#define V7_EXPORT_INTERNAL_HEADERS'
+print '#include "v7/v7.c"'
 print '''
 #define STATIC_V7_UNDEFINED {0, 0xFFFD0000}
 
