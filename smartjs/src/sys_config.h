@@ -43,14 +43,17 @@ struct sys_config {
     int server_timeout;
   } update;
   struct sys_config_clubby {
+    int memory_limit;
     char *server_address;
     char *device_psk;
     int reconnect_timeout_min;
+    char *backend;
     int reconnect_timeout_max;
     int connect_on_boot;
     int cmd_timeout;
     char *device_id;
-    char *backend;
+    int device_auto_registration;
+    char *device_registration_url;
   } clubby;
   struct sys_config_debug {
     int mode;

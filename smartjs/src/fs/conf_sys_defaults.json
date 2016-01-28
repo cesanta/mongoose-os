@@ -43,7 +43,8 @@
     "backend": "//api.cesanta.com",
     "reconnect_timeout_min": 10,
     "reconnect_timeout_max": 60,
-    "cmd_timeout": 300
+    "cmd_timeout": 300,
+    "memory_limit": 15360
   },
   "debug": {
     "level": 2,

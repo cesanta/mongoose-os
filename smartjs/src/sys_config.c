@@ -108,6 +108,11 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
+  if (sj_conf_get_int(toks, "clubby.memory_limit", &dst->clubby.memory_limit) ==
+          0 &&
+      require_keys)
+    goto done;
+
   if (sj_conf_get_str(toks, "clubby.server_address",
                       &dst->clubby.server_address) == 0 &&
       require_keys)
@@ -120,6 +125,10 @@ int parse_sys_config(const char *json, struct sys_config *dst,
 
   if (sj_conf_get_int(toks, "clubby.reconnect_timeout_min",
                       &dst->clubby.reconnect_timeout_min) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "clubby.backend", &dst->clubby.backend) == 0 &&
       require_keys)
     goto done;
 
@@ -142,7 +151,13 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_str(toks, "clubby.backend", &dst->clubby.backend) == 0 &&
+  if (sj_conf_get_bool(toks, "clubby.device_auto_registration",
+                       &dst->clubby.device_auto_registration) == 0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_str(toks, "clubby.device_registration_url",
+                      &dst->clubby.device_registration_url) == 0 &&
       require_keys)
     goto done;
 

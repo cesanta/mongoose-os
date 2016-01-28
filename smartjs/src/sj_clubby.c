@@ -750,6 +750,14 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
+#ifndef CLUBBY_DISABLE_MEMORY_LIMIT
+  if (!clubby_proto_is_connected(clubby->nc) &&
+      get_cfg()->clubby.memory_limit != 0 &&
+      sj_get_free_heap_size() < (size_t) get_cfg()->clubby.memory_limit) {
+    return v7_throwf(v7, "Error", "Not enough memory to enqueue packet");
+  }
+#endif
+
   /* Check if id and timeout exists and put default if not */
   v7_val_t idv = v7_get(v7, cmdv, "id", 2);
   int64_t id;
