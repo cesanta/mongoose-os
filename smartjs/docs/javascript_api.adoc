@@ -307,7 +307,7 @@ to be met:
 
 === Built-in functions
 
-`usleep(num_microseconds) -> undefined`:: Cleep for `num_microseconds`
+`usleep(num_microseconds) -> undefined`:: Sleep for `num_microseconds`
 `dsleep(num_microseconds [, dsleep_option]) -> undefined`:: Deep sleep for
   `num_microseconds`. If `dsleep_option` is specified, ESP's
   `system_deep_sleep_set_option(dsleep_option)` is called prior to going to

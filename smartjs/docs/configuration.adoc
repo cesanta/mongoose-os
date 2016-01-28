@@ -66,3 +66,54 @@ user presses Save button.
 `conf_app_defaults.json` file is empty by default. Put your application
 specific configuration parameters there, the same way system parameters are
 kept in `conf_sys_defaults.json`.
+
+=== Using configuration
+
+Configuration is accesible from JS throught `Sys.conf` object. `Sys.conf` contains all values from
+`conf_sys_defaults.json` and `conf.json` files in the form of sub-objects and properties.
+For example, `Sys.conf.wifi.sta.enable` value turns on/off connection to Wifi. Value can be changed with
+usual JS expression: `Sys.conf.wifi.sta.enable=true`.
+Assignment of new values to `Sys.conf` properties is not permament, on reboot device will re-read values from
+configuation file. Function `Sys.conf.save(reboot)` saves changed configuration to `conf.json` file.
+If `reboot` parameter is set to `true` (default value) device will be rebooted after save in orders to
+reinitialize all Smart.js modules.
+
+==== Configuration parameters
+
+`wifi.sta.enable`:: Enable or disable station mode
+`wifi.sta.ssid`:: SSID of WiFi network to connect
+`wifi.sta.pass`:: Password of WiFi network to connect
+
+`wifi.ap.mode`:: Access point mode. `0` - disabled, `1` - access point mode only, `2` - access point and station mode
+`wifi.ap.trigger_on_gpio`:: GPIO number, which should be grounded to force AP mode
+`wifi.ap.ssid`:: SSID of created network
+`wifi.ap.pass`:: Password for created network
+`wifi.ap.hidden`:: Do not broadcast SSID
+`wifi.ap.hidden`:: Network channel
+`wifi.ap.ip`:: IP of the device in created network
+`wifi.ap.netmask`:: Netmask of created network
+`wifi.ap.gw`:: IP of gateway to use
+`wifi.ap.dhcp_start`:: Clients IP range start
+`wifi.ap.dhcp_end`:: Clients IP range end
+
+`http.enable`:: Enable or disable configuration web-server
+`http.port`:: Port to use for configuration web-server
+`http.enable_webdav`:: Enable access to the device via WebDAV
+
+`update.server_timeout`:: Timeout to use in network operations during update operation (seconds). Might be increased
+for slow networks.
+
+`clubby.connect_on_boot`:: Enable or disable default clubby connection on boot
+`clubby.server_address`:: Default clubby server address (including port)
+`clubby.device_id`:: The device ID used to connect clubby server
+`clubby.device_psk`:: The device PSK used to connect clubby server
+`clubby.device_auto_registration`:: Allow automatical obtaining of ID and PSK from Cesanta server
+`clubby.device_registration_url`:: Server to obtain ID and PSK
+`clubby.reconnect_timeout_min`, `clubby.reconnect_timeout_max`:: Timeouts to use in clubby network operations (seconds). Timeout grows with every
+unsuccessful connection attempt, starting from `reconnect_timeout_min`, maximum value is `clubby.reconnect_timeout_max`
+`clubby.cmd_timeout`:: Default life time for commands sent to server (seconds)
+`clubby.memory_limit`:: Clubby can enqueue commands if connection is broken and send them once connection is restored. This feature will be disabled
+if free memory amount is less than `memory_limit` value (bytes)
+
+`debug.level`:: Level of logs detail. `0` - logs are disabled, `1` - errors only, `2` - errors and warnings, `3` - debug mode, `4` - enhanced debug mode
+`debug.mode`:: Logs output. `0` - logs are disabled, `1` - primary UART, `2` - secondary UART
