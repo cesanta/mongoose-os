@@ -29452,6 +29452,7 @@ static void dump_mm_stats(struct v7 *v7) {
  */
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
             void (*fini_func)(struct v7 *)) {
+  int exit_rcode = EXIT_SUCCESS;
   struct v7 *v7;
   struct v7_mk_opts opts;
   int as_json = 0;
@@ -29538,10 +29539,12 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 
     if (show_ast || dump_bcode) {
       if (v7_compile(exprs[j], binary_ast, dump_bcode, stdout) != V7_OK) {
+        exit_rcode = EXIT_FAILURE;
         fprintf(stderr, "%s\n", "parse error");
       }
     } else if (exec(v7, exprs[j], &res) != V7_OK) {
       v7_print_error(stderr, v7, exprs[j], res);
+      exit_rcode = EXIT_FAILURE;
       res = v7_mk_undefined();
     }
   }
@@ -29552,11 +29555,13 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
       size_t size;
       char *source_code;
       if ((source_code = cs_read_file(argv[i], &size)) == NULL) {
+        exit_rcode = EXIT_FAILURE;
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
         if (v7_compile(source_code, binary_ast, dump_bcode, stdout) != V7_OK) {
           fprintf(stderr, "error: %s\n", v7->error_msg);
-          exit(1);
+          exit_rcode = EXIT_FAILURE;
+          exit(exit_rcode);
         }
         free(source_code);
       }
@@ -29590,7 +29595,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 #endif
 
   v7_destroy(v7);
-  return EXIT_SUCCESS;
+  return exit_rcode;
 }
 #endif
 
