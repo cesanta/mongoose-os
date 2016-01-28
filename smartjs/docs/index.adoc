@@ -10,11 +10,11 @@ include::overview.adoc[]
 
 include::quick_start.adoc[]
 
-include::ota.adoc[]
-
 include::flashnchips.adoc[]
 
 include::configuration.adoc[]
+
+include::ota.adoc[]
 
 include::webdav.adoc[]
 
