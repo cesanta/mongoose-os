@@ -20,7 +20,7 @@ def cmd_gen_build_info(args):
     ts = datetime.datetime.utcnow()
     timestamp = None
     if args.timestamp is None:
-        timestamp = ts.strftime('%s')
+        timestamp = ts.isoformat()
     elif args.timestamp != '':
         timestamp = args.timestamp
     if timestamp is not None:

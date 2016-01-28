@@ -1570,7 +1570,7 @@ extern double _v7_infinity;
 #endif
 
 #if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE) || \
-    defined(V7_ENABLE_STACK_TRACKING)
+    defined(V7_ENABLE_STACK_TRACKING) || defined(V7_ENABLE_CALL_TRACE)
 /* Need to enable GCC/clang instrumentation */
 #define V7_CYG_PROFILE_ON
 #endif
@@ -23998,6 +23998,38 @@ int main(int argc, char **argv) {
 
 #if defined(V7_CYG_PROFILE_ON)
 
+#if defined(V7_ENABLE_CALL_TRACE)
+
+#define CALL_TRACE_SIZE 32
+
+typedef struct {
+  uint16_t size;
+  uint16_t missed_cnt;
+  void *addresses[CALL_TRACE_SIZE];
+} call_trace_t;
+
+static call_trace_t call_trace = {0};
+
+NOINSTR
+void call_trace_print(size_t skip_cnt, size_t max_cnt) {
+  int i;
+  if (call_trace.missed_cnt > 0) {
+    fprintf(stderr, "missed calls! (%d) ", (int) call_trace.missed_cnt);
+  }
+  fprintf(stderr, "calls: ");
+  for (i = (int) call_trace.size - 1 - skip_cnt; i >= 0; i--) {
+    fprintf(stderr, " %lx", (unsigned long) call_trace.addresses[i]);
+    if (max_cnt > 0) {
+      if (--max_cnt == 0) {
+        break;
+      }
+    }
+  }
+  fprintf(stderr, "\n");
+}
+
+#endif
+
 #ifndef IRAM
 #define IRAM
 #endif
@@ -24072,6 +24104,15 @@ IRAM void __cyg_profile_func_enter(void *this_fn, void *call_site) {
     }
   }
 #endif
+
+#if defined(V7_ENABLE_CALL_TRACE)
+  if (call_trace.size < CALL_TRACE_SIZE) {
+    call_trace.addresses[call_trace.size] = this_fn;
+    call_trace.size++;
+  } else {
+    call_trace.missed_cnt++;
+  }
+#endif
 }
 
 IRAM void __cyg_profile_func_exit(void *this_fn, void *call_site) {
@@ -24120,6 +24161,26 @@ IRAM void __cyg_profile_func_exit(void *this_fn, void *call_site) {
   {
     (void) this_fn;
     (void) call_site;
+  }
+#endif
+
+#if defined(V7_ENABLE_CALL_TRACE)
+  if (call_trace.missed_cnt > 0) {
+    call_trace.missed_cnt--;
+  } else if (call_trace.size > 0) {
+    if (call_trace.addresses[call_trace.size - 1] != this_fn) {
+      abort();
+    }
+    call_trace.size--;
+  } else {
+    /*
+     * We may get here if calls to `__cyg_profile_func_exit()` and
+     * `__cyg_profile_func_enter()` are unbalanced.
+     *
+     * TODO(dfrank) understand, why in the beginning of the program execution
+     * we get here. I was sure this should be impossible.
+     */
+    /* abort(); */
   }
 #endif
 }

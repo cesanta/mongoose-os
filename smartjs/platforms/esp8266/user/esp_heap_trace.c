@@ -28,6 +28,13 @@ extern void __real_vPortFree(void *pv, const char *file, int line);
 
 extern void sj_wdt_feed(void);
 
+#if defined(V7_ENABLE_CALL_TRACE)
+extern void call_trace_print(size_t skip_cnt, size_t max_cnt);
+#if !defined(CALL_TRACE_MAX_CNT)
+#define CALL_TRACE_MAX_CNT 0 /*10*/
+#endif
+#endif
+
 /*
  * Maximum amount of calls to malloc/free and other friends before UART is
  * initialized. At the moment of writing this, there are 44 calls. Let it be
@@ -73,27 +80,48 @@ static struct log *plog = NULL;
  * functions that echo heap log
  */
 
+NOINSTR
 static void echo_log_malloc_req(size_t size, int shim) {
+#if defined(V7_ENABLE_CALL_TRACE)
+  call_trace_print(0, CALL_TRACE_MAX_CNT);
+#endif
   printf("hl{m,%u,%d,", (unsigned int) size, shim);
 }
 
+NOINSTR
 static void echo_log_zalloc_req(size_t size, int shim) {
+#if defined(V7_ENABLE_CALL_TRACE)
+  call_trace_print(0, CALL_TRACE_MAX_CNT);
+#endif
   printf("hl{z,%u,%d,", (unsigned int) size, shim);
 }
 
+NOINSTR
 static void echo_log_calloc_req(size_t size, int shim) {
+#if defined(V7_ENABLE_CALL_TRACE)
+  call_trace_print(0, CALL_TRACE_MAX_CNT);
+#endif
   printf("hl{c,%u,%d,", (unsigned int) size, shim);
 }
 
+NOINSTR
 static void echo_log_realloc_req(size_t size, int shim, void *old_ptr) {
+#if defined(V7_ENABLE_CALL_TRACE)
+  call_trace_print(0, CALL_TRACE_MAX_CNT);
+#endif
   printf("hl{r,%u,%d,%x,", (unsigned int) size, shim, (unsigned int) old_ptr);
 }
 
+NOINSTR
 static void echo_log_alloc_res(void *ptr) {
   printf("%x}\n", (unsigned int) ptr);
 }
 
+NOINSTR
 static void echo_log_free(void *ptr, int shim) {
+#if defined(V7_ENABLE_CALL_TRACE)
+  call_trace_print(0, CALL_TRACE_MAX_CNT);
+#endif
   printf("hl{f,%x,%d}\n", (unsigned int) ptr, shim);
 }
 
@@ -141,6 +169,7 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
 /*
  * echo one log item. Used before uart is initialized
  */
+NOINSTR
 static void echo_log_item(struct log_item *item) {
   switch (item->type) {
     case ITEM_TYPE_MALLOC:
