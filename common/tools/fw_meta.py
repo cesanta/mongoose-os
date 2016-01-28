@@ -72,9 +72,9 @@ def cmd_gen_build_info(args):
             out = open(args.c_output, 'w')
         print >>out, """\
 /* Auto-generated, do not edit. */
-const char *build_id = "%(build_id)s";\
+const char *build_id = "%(build_id)s";
 const char *build_timestamp = "%(build_timestamp)s";
-const char *build_version = "%(build_version)s";
+const char *build_version = "%(build_version)s";\
 """ % bi
 
 def cmd_create_manifest(args):

@@ -39,10 +39,15 @@ conf_sys_schema.json::
 conf.json::
   This file can be absent. It is created by the Web UI when user saves
   configuration, and contains only overrides to system and app config files.
+  NOTE: this file is preserved during OTA (Over-The-Air firmware update).
 index.html::
   Configuration Web UI file.
 sys_*.js::
   Various drivers.
+imp_*::
+  Files with `imp_` prefix are preserved during OTA update. Thus, if you'd
+  like some data to survive firmware update, place that data into a file
+  with prefix `imp_`.
 
 Files that are meant to be edited by developers:
 
