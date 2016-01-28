@@ -7,9 +7,10 @@ function demoSendRandomData() {
     clubby.call('//api.cesanta.com',
                 {cmd: '/v1/Metrics.Publish',
                     args: {vars: [[{__name__: 'value'}, value]]}},
-                function(res) {print("demoSendRandomData:", res)})
-
-    setTimeout(send_on_ready, 2000);  // Call us every 2 seconds
+                function(res) {
+                    print("demoSendRandomData:", res);
+                    setTimeout(send_on_ready, 2000);  // Call us in 2 seconds
+                })
   }
 
   function send_on_ready() {

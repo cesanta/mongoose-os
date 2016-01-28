@@ -48,11 +48,19 @@ def cmd_gen_build_info(args):
                     repo_dir = os.path.split(repo_dir)[0]
                     continue
                 raise RuntimeError("--id is not set and CWD doesn't look like a Git repo")
+        branch_or_tag = '?'
+        if repo.head.is_detached:
+            # Try to find tag for the current commit.
+            for tag in repo.tags:
+                if tag.commit == repo.head.commit:
+                    branch_or_tag = tag.name
+        else:
+            branch_or_tag = repo.active_branch
         id = '%s/%s@%s%s' % (
             ts.strftime('%Y%m%d-%H%M%S'),
-            repo.active_branch,
+            branch_or_tag,
             str(repo.head.commit)[:8],
-            '+' if repo.is_dirty() else '.')
+            '+' if repo.is_dirty() else '')
     elif args.id != '':
         id = args.id
     if id is not None:
