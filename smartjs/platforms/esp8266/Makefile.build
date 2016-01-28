@@ -224,7 +224,8 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW_SIZE=$(ROM_SIZE)
 
 FW_MANIFEST = $(FW_DIR)/manifest.json
-FW_ZIP_FILE = $(FW_DIR)/firmware.zip
+FW_ZIP_FILE = smartjs-esp8666-last.zip
+VERSION_CMD=cat ./build/build_info.json | grep build_version | cut -d":" -f2- | tr -d '"' | xargs
 endif
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
@@ -272,6 +273,7 @@ $(FW_ZIP_FILE): $(FW_FILES_OUT) $(FW_FS_OUT)
 		--manifest=$(FW_MANIFEST) \
 		--src_dir=$(FW_DIR) \
 		--output=$@
+	$(Q) cp $(FW_ZIP_FILE) $(FW_DIR)/smartjs-esp8266-$(shell $(VERSION_CMD)).zip
 
 # Main output product: firmware files.
 #ifreq "${OTA}" "1"
