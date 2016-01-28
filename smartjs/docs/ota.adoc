@@ -6,7 +6,7 @@ over Internet, without connecting it to computer and using Flash'n'Chips.
 In order to use the following steps the device must be registered in
 Cesanta Cloud (see Quick Start Guide for details).
 
-Open link:https://dashboard.cesanta.com/#/ota in your favourite browser.
+Open https://dashboard.cesanta.com/#/ota in your favourite browser.
 
 image:smartjs/ota1.png[width="75%",align="center"]
 
