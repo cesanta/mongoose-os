@@ -94,7 +94,6 @@ if (Sys.conf.clubby.device_id && Sys.conf.clubby.connect_on_boot) {
 }
 
 function registerDevice() {
-  print('Requesting device id');
   var opts = URL.parse(Sys.conf.clubby.device_registration_url);
   opts.method = 'POST';
   opts.headers = {'Content-Type': 'application/x-www-form-urlencoded'};
@@ -110,7 +109,8 @@ function registerDevice() {
 
 if (!Sys.conf.clubby.device_id && Sys.conf.clubby.device_auto_registration) {
   if (typeof(Wifi) != "undefined") {
-    Wifi.ready(registerDevice)
+    print('Requesting device id when WiFi is ready');
+    Wifi.ready(registerDevice);
   } else {
     print("No device id. Generate one by calling registerDevice()");
   }
