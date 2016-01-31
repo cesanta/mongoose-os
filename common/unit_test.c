@@ -43,7 +43,7 @@ static const char *run_tests(const char *filter, double *total_elapsed) {
   return NULL;
 }
 
-int __cdecl main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   const char *fail_msg;
   const char *filter = argc > 1 ? argv[1] : "";
   double total_elapsed = 0.0;

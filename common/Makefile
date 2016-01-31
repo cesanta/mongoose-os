@@ -1,5 +1,5 @@
-SOURCES = str_util.c unit_test.c test_util.c
-CFLAGS = -g $(CFLAGS_EXTRA)
+SOURCES = str_util.c cs_time.c unit_test.c test_util.c
+CFLAGS = -I.. -g $(CFLAGS_EXTRA)
 
 CLANG_FORMAT:=clang-format
 
