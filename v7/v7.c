@@ -2363,10 +2363,17 @@ struct v7_vals {
 
   /*
    * Bcode executes until it reaches `bottom_call_stack`. For top-level code,
-   * it's `global_object`, for some "inner" scripts, such as `eval`'d code,
-   * it's the `call_stack` of the `eval` statement.
+   * it's empty object created inside `v7_mk_opt()`. For some "inner" scripts,
+   * such as `eval`'d code, it's the `call_stack` of the `eval` statement.
    */
   val_t bottom_call_stack;
+
+  /*
+   * Current execution scope. Initially, it is equal to the `global_object`;
+   * and at each function call, it is augmented by the new scope object, which
+   * has the previous value as a prototype.
+   */
+  val_t scope;
 
   /*
    * temporary register for `OP_STASH` and `OP_UNSTASH` instructions. Valid if
@@ -11088,78 +11095,98 @@ static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
 }
 
 /*
- * Save some context in the current frame (`v7->vals.call_stack`). Used before
- * pushing new frame, either "function" frame or "private" frame.
+ * Create new call frame object and fill it with the details of the current
+ * state: set `____p` property, etc.
  *
  * For "function" frame, `r` must be non-NULL.
  * For "private" frame, `r` must be NULL.
+ *
+ * TODO(dfrank): avoid using `val_t` objects for this, use some regular C
+ * struct instead.
  */
-static void bcode_save_frame_details(struct v7 *v7, v7_val_t frame,
-                                     struct bcode_registers *r) {
+static val_t bcode_create_call_frame(struct v7 *v7, struct bcode_registers *r) {
+  val_t call_frame = v7_mk_object(v7);
+
+  v7_own(v7, &call_frame);
+
   /* save previous call stack */
-  v7_def(v7, frame, "____p", 5, _V7_DESC_HIDDEN(1), v7->vals.call_stack);
+  v7_def(v7, call_frame, "____p", 5, _V7_DESC_HIDDEN(1), v7->vals.call_stack);
+
+  /* current scope */
+  v7_def(v7, call_frame, "___sc", 5, _V7_DESC_HIDDEN(1), v7->vals.scope);
 
   /* "try stack" */
-  v7_def(v7, frame, "____t", 5, _V7_DESC_HIDDEN(1), v7_mk_dense_array(v7));
+  v7_def(v7, call_frame, "____t", 5, _V7_DESC_HIDDEN(1), v7_mk_dense_array(v7));
 
   /* stack size */
-  v7_def(v7, frame, "____s", 5, _V7_DESC_HIDDEN(1),
+  v7_def(v7, call_frame, "____s", 5, _V7_DESC_HIDDEN(1),
          v7_mk_number(v7->stack.len));
 
   if (r != NULL) {
     /* save bcode and the current position in it */
-    v7_def(v7, frame, "___rb", 5, _V7_DESC_HIDDEN(1), v7_mk_foreign(r->bcode));
-    v7_def(v7, frame, "___ro", 5, _V7_DESC_HIDDEN(1),
+    v7_def(v7, call_frame, "___rb", 5, _V7_DESC_HIDDEN(1),
+           v7_mk_foreign(r->bcode));
+    v7_def(v7, call_frame, "___ro", 5, _V7_DESC_HIDDEN(1),
            v7_mk_foreign(r->ops + 1));
 
     /* `this` object */
-    v7_def(v7, frame, "___th", 5, _V7_DESC_HIDDEN(1), v7_get_this(v7));
+    v7_def(v7, call_frame, "___th", 5, _V7_DESC_HIDDEN(1), v7_get_this(v7));
 
     /* is constructor */
-    v7_def(v7, frame, "____c", 5, _V7_DESC_HIDDEN(1), v7->is_constructor);
+    v7_def(v7, call_frame, "____c", 5, _V7_DESC_HIDDEN(1), v7->is_constructor);
   } else {
     /*
      * No bcode registers is provided: assume it's not going to change,
      * and create `___rb` containing a NULL-pointer. This is the way we
      * distinguish between "function" frames and "private" frames.
      */
-    v7_def(v7, frame, "___rb", 5, _V7_DESC_HIDDEN(1), v7_mk_foreign(NULL));
+    v7_def(v7, call_frame, "___rb", 5, _V7_DESC_HIDDEN(1), v7_mk_foreign(NULL));
   }
+
+  v7_disown(v7, &call_frame);
+  return call_frame;
 }
 
 /*
- * Each function frame is linked to the caller frame via ____p hidden property
- * ___rb points to the caller bcode object while ___ro points to the op address
- * of the next instruction to be performed after return.
- * ____t is a "try stack": array of offsets of active `catch` and `finally`
- * blocks, and ____s is the length of the data stack.
+ * Each function call_frame is linked to the caller call_frame via ____p hidden
+ * property ___rb points to the caller bcode object while ___ro points to the
+ * op address of the next instruction to be performed after return.  ____t is a
+ * "try stack": array of offsets of active `catch` and `finally` blocks, and
+ * ____s is the length of the data stack.
  *
  * The caller's bcode object is needed because we have to restore literals
  * and `end` registers.
  *
  * TODO(mkm): put this state on a return stack
  *
- * Caller of bcode_perform_call is responsible for owning `frame`
+ * Caller of bcode_perform_call is responsible for owning `call_frame`
  */
-static enum v7_err bcode_perform_call(struct v7 *v7, v7_val_t frame,
+static enum v7_err bcode_perform_call(struct v7 *v7, v7_val_t scope_frame,
                                       struct v7_js_function *func,
                                       struct bcode_registers *r,
                                       val_t this_object,
                                       uint8_t is_constructor) {
-  /* save context on current frame */
-  bcode_save_frame_details(v7, frame, r);
+  v7_val_t call_frame = v7_mk_undefined();
+
+  v7_own(v7, &call_frame);
+
+  /* create new `call_frame` which will replace `v7->vals.call_stack` */
+  call_frame = bcode_create_call_frame(v7, r);
 
   /* after context is saved, we can change current context */
   v7->vals.this_object = this_object;
   v7->is_constructor = is_constructor;
 
-  /* new frame will inherit from the function's scope */
-  obj_prototype_set(v7, v7_to_object(frame), &func->scope->base);
-  v7->vals.call_stack = frame;
+  /* new scope_frame will inherit from the function's scope */
+  obj_prototype_set(v7, v7_to_object(scope_frame), &func->scope->base);
+  v7->vals.scope = scope_frame;
+  v7->vals.call_stack = call_frame;
   bcode_restore_registers(v7, func->bcode, r);
 
   /* `ops` already points to the needed instruction, no need to increment it */
   r->need_inc_ops = 0;
+
+  v7_disown(v7, &call_frame);
 
   return V7_OK;
 }
@@ -11210,22 +11237,34 @@ static uint8_t unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
     v7->stack.len = saved_stack_len;
   }
 
+  /* restore scope */
+  v7->vals.scope = v7_get(v7, v7->vals.call_stack, "___sc", 5);
+
   /* finally, drop the frame which we've just unwound */
   v7->vals.call_stack = v7_get(v7, v7->vals.call_stack, "____p", 5);
 
   return is_func_frame;
 }
 
-static enum v7_err bcode_private_frame_push(struct v7 *v7, v7_val_t frame) {
-  /*
-   * save context on current frame. We pass `NULL` for `bcode_registers`
-   * because we're creating "private" frame.
-   */
-  bcode_save_frame_details(v7, frame, NULL);
+static enum v7_err bcode_private_frame_push(struct v7 *v7,
+                                            v7_val_t scope_frame) {
+  v7_val_t call_frame = v7_mk_undefined();
 
-  /* new frame will inherit from the current frame */
-  obj_prototype_set(v7, v7_to_object(frame), v7_to_object(v7->vals.call_stack));
-  v7->vals.call_stack = frame;
+  v7_own(v7, &call_frame);
+
+  /*
+   * Create new `call_frame` which will replace `v7->vals.call_stack`. We pass
+   * `NULL` for `bcode_registers` because we're creating "private" call_frame.
+   */
+  call_frame = bcode_create_call_frame(v7, NULL);
+
+  /* new scope_frame will inherit from the current scope */
+  obj_prototype_set(v7, v7_to_object(scope_frame),
+                    v7_to_object(v7->vals.scope));
+  v7->vals.scope = scope_frame;
+  v7->vals.call_stack = call_frame;
+
+  v7_disown(v7, &call_frame);
 
   return V7_OK;
 }
@@ -11530,7 +11569,7 @@ static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
   struct v7_js_function *f, *rf;
   assert(is_js_function(func));
   f = to_js_function(func);
-  res = mk_js_function(v7, v7_to_generic_object(v7->vals.call_stack),
+  res = mk_js_function(v7, v7_to_generic_object(v7->vals.scope),
                        v7_mk_object(v7));
 
   /* Copy and retain bcode */
@@ -11695,7 +11734,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
 
   val_t res = v7_mk_undefined(), v1 = v7_mk_undefined(), v2 = v7_mk_undefined(),
         v3 = v7_mk_undefined(), v4 = v7_mk_undefined(),
-        frame = v7_mk_undefined();
+        scope_frame = v7_mk_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   bcode_restore_registers(v7, bcode, &r);
@@ -11705,7 +11744,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   tmp_stack_push(&tf, &v2);
   tmp_stack_push(&tf, &v3);
   tmp_stack_push(&tf, &v4);
-  tmp_stack_push(&tf, &frame);
+  tmp_stack_push(&tf, &scope_frame);
 
   /*
    * populate local variables on current scope, making them undeletable
@@ -11717,10 +11756,9 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
     locals_end = name + (bcode->names.len / sizeof(val_t));
 
     for (; name < locals_end; ++name) {
-      /* set undeletable property on Global Object */
-      V7_TRY(def_property_v(v7, v7->vals.call_stack, *name,
-                            V7_DESC_CONFIGURABLE(0), v7_mk_undefined(),
-                            1 /*as_assign*/, NULL));
+      /* set undeletable property on current scope */
+      V7_TRY(def_property_v(v7, v7->vals.scope, *name, V7_DESC_CONFIGURABLE(0),
+                            v7_mk_undefined(), 1 /*as_assign*/, NULL));
     }
   }
 
@@ -12068,7 +12106,7 @@ restart:
         struct v7_property *p = NULL;
         assert(r.ops < r.end - 1);
         v1 = bcode_decode_lit(v7, r.bcode, &r.ops);
-        BTRY(v7_get_property_v(v7, v7->vals.call_stack, v1, &p));
+        BTRY(v7_get_property_v(v7, v7->vals.scope, v1, &p));
         if (p == NULL) {
           if (op == OP_SAFE_GET_VAR) {
             PUSH(v7_mk_undefined());
@@ -12079,7 +12117,7 @@ restart:
           }
           break;
         } else {
-          BTRY(v7_property_value(v7, v7->vals.call_stack, p, &v2));
+          BTRY(v7_property_value(v7, v7->vals.scope, p, &v2));
           PUSH(v2);
         }
         break;
@@ -12088,7 +12126,7 @@ restart:
         struct v7_property *prop;
         v3 = POP();
         v2 = bcode_decode_lit(v7, r.bcode, &r.ops);
-        v1 = v7->vals.call_stack;
+        v1 = v7->vals.scope;
 
         BTRY(to_string(v7, v2, NULL, buf, sizeof(buf), NULL));
         prop = v7_get_property(v7, v1, buf, strlen(buf));
@@ -12300,7 +12338,7 @@ restart:
               v3 = v7->vals.global_object;
             }
 
-            frame = v7_mk_object(v7);
+            scope_frame = v7_mk_object(v7);
 
             /*
              * first element of `names` is the function name (if the function
@@ -12319,16 +12357,17 @@ restart:
             assert(arg_end <= locals_end);
 
             /* populate function itself */
-            BTRY(def_property_v(v7, frame, *name++, V7_DESC_CONFIGURABLE(0), v1,
-                                0 /*not assign*/, NULL));
+            BTRY(def_property_v(v7, scope_frame, *name++,
+                                V7_DESC_CONFIGURABLE(0), v1, 0 /*not assign*/,
+                                NULL));
 
             /* populate arguments */
             {
               int arg_num;
               for (arg_num = 0; name < arg_end; ++name, ++arg_num) {
-                BTRY(def_property_v(v7, frame, *name, V7_DESC_CONFIGURABLE(0),
-                                    v7_array_get(v7, v2, arg_num),
-                                    0 /*not assign*/, NULL));
+                BTRY(def_property_v(
+                    v7, scope_frame, *name, V7_DESC_CONFIGURABLE(0),
+                    v7_array_get(v7, v2, arg_num), 0 /*not assign*/, NULL));
               }
             }
 
@@ -12343,19 +12382,21 @@ restart:
              *
              * yields 2.
              */
-            v7_def(v7, frame, "arguments", 9, V7_DESC_CONFIGURABLE(0), v2);
+            v7_def(v7, scope_frame, "arguments", 9, V7_DESC_CONFIGURABLE(0),
+                   v2);
 
             /* populate local variables */
             for (; name < locals_end; ++name) {
-              BTRY(def_property_v(v7, frame, *name, V7_DESC_CONFIGURABLE(0),
-                                  v7_mk_undefined(), 0 /*not assign*/, NULL));
+              BTRY(def_property_v(v7, scope_frame, *name,
+                                  V7_DESC_CONFIGURABLE(0), v7_mk_undefined(),
+                                  0 /*not assign*/, NULL));
             }
 
             /* transfer control to the function */
-            V7_TRY(bcode_perform_call(v7, frame, func, &r, v3 /*this*/,
+            V7_TRY(bcode_perform_call(v7, scope_frame, func, &r, v3 /*this*/,
                                       is_constructor));
 
-            frame = v7_mk_undefined();
+            scope_frame = v7_mk_undefined();
           }
         }
         break;
@@ -12379,7 +12420,7 @@ restart:
           v1 = POP();
         } else {
           /* use scope as an object to delete the property from */
-          v1 = v7->vals.call_stack;
+          v1 = v7->vals.scope;
         }
 
         if (!v7_is_object(v1)) {
@@ -12482,11 +12523,11 @@ restart:
          * create a new stack frame (a "private" one), and set exception
          * property on it
          */
-        frame = v7_mk_object(v7);
-        BTRY(set_property_v(v7, frame, v2, v1, NULL));
+        scope_frame = v7_mk_object(v7);
+        BTRY(set_property_v(v7, scope_frame, v2, v1, NULL));
 
         /* Push this "private" frame on the call stack */
-        bcode_private_frame_push(v7, frame);
+        bcode_private_frame_push(v7, scope_frame);
         break;
       }
       case OP_EXIT_CATCH: {
@@ -12550,7 +12591,7 @@ restart:
     goto restart;
   } else {
 #ifdef V7_BCODE_TRACE
-    const char *s = (v7->vals.call_stack != v7->vals.global_object)
+    const char *s = (v7->vals.scope != v7->vals.global_object)
                         ? "not global object"
                         : "global object";
     fprintf(stderr, "reached bottom_call_stack (%s)\n", s);
@@ -13348,7 +13389,9 @@ struct v7 *v7_mk_opt(struct v7_mk_opts opts) {
       obj->base.attributes &= ~(V7_OBJ_NOT_EXTENSIBLE | V7_OBJ_OFF_HEAP);
       v7_set(v7, v7->vals.global_object, "global", 6, v7->vals.global_object);
 
-      v7->vals.call_stack = v7->vals.global_object;
+      v7->vals.call_stack = v7_mk_object(v7);
+      v7->vals.bottom_call_stack = v7_mk_undefined();
+      v7->vals.scope = v7->vals.global_object;
       v7->vals.this_object = v7->vals.global_object;
     }
 #else
@@ -22106,11 +22149,13 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->vals.number_prototype = v7_mk_object(v7);
   v7->vals.error_prototype = v7_mk_object(v7);
   v7->vals.global_object = v7_mk_object(v7);
-  v7->vals.call_stack = v7->vals.global_object;
-  v7->vals.bottom_call_stack = v7->vals.call_stack;
-  v7->vals.this_object = v7->vals.global_object;
   v7->vals.date_prototype = v7_mk_object(v7);
   v7->vals.function_prototype = v7_mk_object(v7);
+
+  v7->vals.call_stack = v7_mk_object(v7);
+  v7->vals.bottom_call_stack = v7_mk_undefined();
+  v7->vals.scope = v7->vals.global_object;
+  v7->vals.this_object = v7->vals.global_object;
 
   set_method(v7, v7->vals.global_object, "eval", Std_eval, 1);
   set_method(v7, v7->vals.global_object, "print", Std_print, 1);
