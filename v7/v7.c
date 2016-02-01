@@ -2705,8 +2705,7 @@ V7_PRIVATE val_t pointer_to_value(void *p);
 V7_PRIVATE void *v7_to_pointer(val_t v);
 V7_PRIVATE struct v7_js_function *to_js_function(val_t v);
 V7_PRIVATE val_t
-mk_js_function2(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
-V7_PRIVATE val_t mk_js_function(struct v7 *v7);
+mk_js_function(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
 V7_PRIVATE int is_js_function(val_t v);
 V7_PRIVATE v7_val_t mk_cfunction_lite(v7_cfunction_t *f);
 
@@ -10648,9 +10647,15 @@ static const char *bcode_deserialize_lit(struct v7 *v7, struct bcode *bcode,
     }
 
     case BCODE_SER_FUNCTION: {
-      val_t funv = mk_js_function(v7);
+      /*
+       * Create half-done function: without scope and prototype. The real
+       * function will be created from this one during bcode evaluation: see
+       * `bcode_instantiate_function()`.
+       */
+      val_t funv = mk_js_function(v7, NULL, v7_mk_undefined());
+
+      /* Create bcode in this half-done function */
       struct v7_js_function *func = to_js_function(funv);
-      func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode, bcode->strict_mode);
       retain_bcode(v7, func->bcode);
@@ -11515,7 +11520,8 @@ static enum v7_err bcode_throw_reference_error(struct v7 *v7,
 }
 
 /*
- * Copy a function literal prototype and binds it to the current scope.
+ * Copy a half-done function from literal, bind the new function to the current
+ * scope, and set a new empty prototype object
  *
  * Assumes `func` is owned by the caller.
  */
@@ -11524,11 +11530,14 @@ static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
   struct v7_js_function *f, *rf;
   assert(is_js_function(func));
   f = to_js_function(func);
-  res = mk_js_function2(v7, v7_to_generic_object(v7->vals.call_stack),
-                        v7_get(v7, func, "prototype", 9));
+  res = mk_js_function(v7, v7_to_generic_object(v7->vals.call_stack),
+                       v7_mk_object(v7));
+
+  /* Copy and retain bcode */
   rf = to_js_function(res);
   rf->bcode = f->bcode;
   retain_bcode(v7, rf->bcode);
+
   return res;
 }
 
@@ -13047,8 +13056,8 @@ V7_PRIVATE struct v7_js_function *to_js_function(val_t v) {
 }
 
 V7_PRIVATE
-val_t mk_js_function2(struct v7 *v7, struct v7_generic_object *scope,
-                      val_t proto) {
+val_t mk_js_function(struct v7 *v7, struct v7_generic_object *scope,
+                     val_t proto) {
   struct v7_js_function *f;
   val_t fval = v7_mk_null();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -13080,17 +13089,15 @@ val_t mk_js_function2(struct v7 *v7, struct v7_generic_object *scope,
   f->base.attributes |= V7_OBJ_FUNCTION;
 
   /* TODO(mkm): lazily create these properties on first access */
-  v7_def(v7, proto, "constructor", 11, V7_DESC_ENUMERABLE(0), fval);
-  v7_def(v7, fval, "prototype", 9,
-         V7_DESC_ENUMERABLE(0) | V7_DESC_CONFIGURABLE(0), proto);
+  if (v7_is_object(proto)) {
+    v7_def(v7, proto, "constructor", 11, V7_DESC_ENUMERABLE(0), fval);
+    v7_def(v7, fval, "prototype", 9,
+           V7_DESC_ENUMERABLE(0) | V7_DESC_CONFIGURABLE(0), proto);
+  }
 
 cleanup:
   tmp_frame_cleanup(&tf);
   return fval;
-}
-
-V7_PRIVATE val_t mk_js_function(struct v7 *v7) {
-  return mk_js_function2(v7, NULL, v7_mk_object(v7));
 }
 
 V7_PRIVATE int is_js_function(val_t v) {
@@ -20802,9 +20809,16 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     }
     case AST_FUNC: {
       lit_t flit;
-      val_t funv = mk_js_function(v7);
+
+      /*
+       * Create half-done function: without scope and prototype. The real
+       * function will be created from this one during bcode evaluation: see
+       * `bcode_instantiate_function()`.
+       */
+      val_t funv = mk_js_function(v7, NULL, v7_mk_undefined());
+
+      /* Create bcode in this half-done function */
       struct v7_js_function *func = to_js_function(funv);
-      func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode, bcode->strict_mode);
       retain_bcode(v7, func->bcode);
