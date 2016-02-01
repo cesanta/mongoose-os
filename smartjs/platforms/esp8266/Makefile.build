@@ -258,27 +258,27 @@ $(RBOOT_EMPTY_CFG):
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
 
-$(FW_MANIFEST): $(FW_FILES_OUT) $(FW_FS_OUT)
-	$(vecho) GEN $(FW_MANIFEST)
-	$(Q) $(FW_META_CMD) create_manifest \
-		--name=$(APP) --platform=$(APP_PLATFORM) \
-		--build_info=$(BUILD_INFO_JSON) \
-		--output=$(FW_MANIFEST) \
-		--src_dir=$(FW_DIR) \
-		boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
-		boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
-		fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
-		fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
-
+# Main output product: firmware files.
 $(FW_ZIP_FILE): $(FW_FILES_OUT) $(FW_FS_OUT) $(FW_MANIFEST)
 	$(vecho) ZIP $@
 	$(Q) $(FW_META_CMD) create_fw \
-		--manifest=$(FW_MANIFEST) \
-		--src_dir=$(FW_DIR) \
-		--output=$@
+	  --manifest=$(FW_MANIFEST) \
+	  --src_dir=$(FW_DIR) \
+	  --output=$@
 	$(Q) cp $(FW_ZIP_FILE) $(FW_DIR)/$(APP)-$(APP_PLATFORM)-$(shell $(FW_META_CMD) get $(FW_MANIFEST) version).zip
 
-# Main output product: firmware files.
+$(FW_MANIFEST): $(FW_FILES_OUT) $(FW_FS_OUT)
+	$(vecho) GEN $(FW_MANIFEST)
+	$(Q) $(FW_META_CMD) create_manifest \
+	  --name=$(APP) --platform=$(APP_PLATFORM) \
+	  --build_info=$(BUILD_INFO_JSON) \
+	  --output=$(FW_MANIFEST) \
+	  --src_dir=$(FW_DIR) \
+	  boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
+	  boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
+	  fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
+	  fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
+
 #ifreq "${OTA}" "1"
 $(FW_FILES_OUT): $(APP_OUT)
 #else
@@ -371,8 +371,8 @@ endif
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
 	$(vecho) "GEN $@"
 	$(Q) $(FW_META_CMD) gen_build_info \
-		--c_output=$(BUILD_INFO_C) \
-		--json_output=$(BUILD_INFO_JSON)
+	  --c_output=$(BUILD_INFO_C) \
+	  --json_output=$(BUILD_INFO_JSON)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
