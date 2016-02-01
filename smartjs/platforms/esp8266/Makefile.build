@@ -224,7 +224,7 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW_SIZE=$(ROM_SIZE)
 
 FW_MANIFEST = $(FW_DIR)/manifest.json
-FW_ZIP_FILE = smartjs-esp8666-last.zip
+FW_ZIP_FILE = smartjs-esp8266-last.zip
 VERSION_CMD=cat ./build/build_info.json | grep build_version | cut -d":" -f2- | tr -d '"' | xargs
 endif
 
