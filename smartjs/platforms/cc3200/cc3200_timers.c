@@ -17,7 +17,14 @@ extern struct v7 *s_v7;
 static void sj_timer_callback(TimerHandle_t t) {
   v7_val_t *cb = (v7_val_t *) pvTimerGetTimerID(t);
   xTimerDelete(t, 0);
+
+  /* Schedule the callback invocation ASAP */
   sj_invoke_cb0(s_v7, *cb);
+
+  /*
+   * Disown and free the callback value which was allocated and owned in
+   * `global_set_timeout()`
+   */
   v7_disown(s_v7, cb);
   free(cb);
 }

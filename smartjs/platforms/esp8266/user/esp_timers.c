@@ -39,9 +39,22 @@ struct timer_info {
 static void sj_timer_callback(xTimerHandle t) {
   struct timer_info *ti = (struct timer_info *) t;
   xTimerDelete(ti->t, 0);
+
+  /*
+   * Invoke the timer callback (depending on the build options, it might not be
+   * actually invoked immediately, but might be scheduled for the invocation
+   * asap instead; see `sj_invoke_cb()`)
+   */
   sj_invoke_cb0(v7, *ti->cb);
+
+  /*
+   * Disown and free the callback value which was allocated and owned in
+   * `global_set_timeout()`
+   */
   v7_disown(v7, ti->cb);
   free(ti->cb);
+
+  /* Also free `timer_info` which was allocated in `sj_set_timeout()` */
   free(ti);
 }
 

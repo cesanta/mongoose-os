@@ -100,14 +100,27 @@ void sj_usleep(int usecs) {
 
 #ifndef _WIN32
 void posix_timer_callback(int sig, siginfo_t *si, void *uc) {
+  v7_val_t *cb = NULL;
+
   (void) sig;
   (void) uc;
   (void) si;
+
 #ifdef __APPLE__
-  sj_invoke_cb0(v7, *bsd_timer_cb);
+  cb = bsd_timer_cb;
 #else
-  sj_invoke_cb0(v7, *((v7_val_t *) si->si_value.sival_ptr));
+  cb = (v7_val_t *) si->si_value.sival_ptr;
 #endif
+
+  /* Invoke the timer callback */
+  sj_invoke_cb0(v7, *cb);
+
+  /*
+   * Disown and free the callback value which was allocated and owned in
+   * `global_set_timeout()`
+   */
+  v7_disown(v7, cb);
+  free(cb);
 }
 #else
 struct timer_callback_params {
