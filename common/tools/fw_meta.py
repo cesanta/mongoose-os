@@ -161,7 +161,19 @@ def cmd_create_fw(args):
         zf.writestr(manifest_arc_name, json.dumps(manifest, indent=2, sort_keys=True))
 
 
+def cmd_get(args):
+    o = json.load(open(args.json_file))
+    for key in args.keys:
+        d = o
+        parts = key.split('.')
+        for p in parts:
+            v = d[p]
+            d = v
+        print v
+
+
 if __name__ == '__main__':
+    handlers = {}
     parser = argparse.ArgumentParser(description='FW metadata tool', prog='fw_manifest')
     cmd = parser.add_subparsers(dest='cmd')
     gbi_cmd = cmd.add_parser('gen_build_info')
@@ -171,6 +183,7 @@ if __name__ == '__main__':
     gbi_cmd.add_argument('--tag_as_version', type=bool, default=False)
     gbi_cmd.add_argument('--json_output')
     gbi_cmd.add_argument('--c_output')
+    handlers['gen_build_info'] = cmd_gen_build_info
 
     cm_cmd = cmd.add_parser('create_manifest')
     cm_cmd.add_argument('--name', '-n', required=True)
@@ -181,16 +194,18 @@ if __name__ == '__main__':
     cm_cmd.add_argument('--src_dir')
     cm_cmd.add_argument('--output', '-o')
     cm_cmd.add_argument('parts', nargs='+')
+    handlers['create_manifest'] = cmd_create_manifest
 
     cf_cmd = cmd.add_parser('create_fw')
     cf_cmd.add_argument('--manifest', '-m', required=True)
     cf_cmd.add_argument('--output', '-o', required=True)
     cf_cmd.add_argument('--src_dir')
+    handlers['create_fw'] = cmd_create_fw
+
+    get_cmd = cmd.add_parser('get')
+    get_cmd.add_argument('json_file')
+    get_cmd.add_argument('keys', nargs='+')
+    handlers['get'] = cmd_get
 
     args = parser.parse_args()
-    if args.cmd == 'gen_build_info':
-        cmd_gen_build_info(args)
-    elif args.cmd == 'create_manifest':
-        cmd_create_manifest(args)
-    elif args.cmd == 'create_fw':
-        cmd_create_fw(args)
+    handlers[args.cmd](args)

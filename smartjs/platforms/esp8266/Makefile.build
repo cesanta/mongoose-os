@@ -68,6 +68,7 @@ FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
 
 APP = smartjs
+APP_PLATFORM = esp8266
 # SSL can be SDK or Krypton
 SSL ?= None
 
@@ -224,18 +225,18 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW_SIZE=$(ROM_SIZE)
 
 FW_MANIFEST = $(FW_DIR)/manifest.json
-FW_ZIP_FILE = smartjs-esp8266-last.zip
-VERSION_CMD=cat ./build/build_info.json | grep build_version | cut -d":" -f2- | tr -d '"' | xargs
+FW_ZIP_FILE = $(FW_DIR)/$(APP)-$(APP_PLATFORM)-last.zip
 endif
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+FW_META_CMD = $(COMMON_DIR)/tools/fw_meta.py
 
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
-          -DFW_ARCHITECTURE=\"esp8266\" \
+          -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
           $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS)
 
 ifneq "${OTA}" "1"
@@ -257,10 +258,10 @@ $(RBOOT_EMPTY_CFG):
 $(BUILD_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
 
-$(FW_ZIP_FILE): $(FW_FILES_OUT) $(FW_FS_OUT)
+$(FW_MANIFEST): $(FW_FILES_OUT) $(FW_FS_OUT)
 	$(vecho) GEN $(FW_MANIFEST)
-	$(Q) $(COMMON_DIR)/tools/fw_meta.py create_manifest \
-		--name=smartjs --platform=esp8266 \
+	$(Q) $(FW_META_CMD) create_manifest \
+		--name=$(APP) --platform=$(APP_PLATFORM) \
 		--build_info=$(BUILD_INFO_JSON) \
 		--output=$(FW_MANIFEST) \
 		--src_dir=$(FW_DIR) \
@@ -268,12 +269,14 @@ $(FW_ZIP_FILE): $(FW_FILES_OUT) $(FW_FS_OUT)
 		boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
 		fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
 		fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
+
+$(FW_ZIP_FILE): $(FW_FILES_OUT) $(FW_FS_OUT) $(FW_MANIFEST)
 	$(vecho) ZIP $@
-	$(Q) $(COMMON_DIR)/tools/fw_meta.py create_fw \
+	$(Q) $(FW_META_CMD) create_fw \
 		--manifest=$(FW_MANIFEST) \
 		--src_dir=$(FW_DIR) \
 		--output=$@
-	$(Q) cp $(FW_ZIP_FILE) $(FW_DIR)/smartjs-esp8266-$(shell $(VERSION_CMD)).zip
+	$(Q) cp $(FW_ZIP_FILE) $(FW_DIR)/$(APP)-$(APP_PLATFORM)-$(shell $(FW_META_CMD) get $(FW_MANIFEST) version).zip
 
 # Main output product: firmware files.
 #ifreq "${OTA}" "1"
@@ -367,7 +370,7 @@ endif
 # Generate build info. Only regenerates if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
 	$(vecho) "GEN $@"
-	$(Q) $(COMMON_DIR)/tools/fw_meta.py gen_build_info \
+	$(Q) $(FW_META_CMD) gen_build_info \
 		--c_output=$(BUILD_INFO_C) \
 		--json_output=$(BUILD_INFO_JSON)
 
