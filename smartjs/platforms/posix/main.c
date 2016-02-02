@@ -15,37 +15,40 @@
 #include "smartjs/src/sj_v7_ext.h"
 #include "common/cs_dbg.h"
 #include "smartjs.h"
-#include "device_config.h"
+#include "smartjs/src/device_config.h"
 
 #ifndef JS_FS_ROOT
 #define JS_FS_ROOT "."
 #endif
 
-static const char *s_argv0;
 int sj_please_quit;
 
-static void run_init_script(struct v7 *v7) {
-  static const char *init_files[] = {"sys_init.js"};
-  const char *dir = s_argv0 + strlen(s_argv0) - 1;
+static void set_workdir(const char *argv0) {
+  const char *dir = argv0 + strlen(argv0) - 1;
   char path[512];
-  size_t i;
-  v7_val_t res;
 
   /*
    * Point `dir` to the right-most directory separator of the smartjs binary.
    * Thus string between `s_argv0` and `dir` pointers would contain a directory
    * name where our executable lives.
    */
-  while (dir > s_argv0 && *dir != '/' && *dir != '\\') {
+  while (dir > argv0 && *dir != '/' && *dir != '\\') {
     dir--;
   }
 
-  snprintf(path, sizeof(path), "%.*s/%s", (int) (dir - s_argv0), s_argv0,
+  snprintf(path, sizeof(path), "%.*s/%s", (int) (dir - argv0), argv0,
            JS_FS_ROOT);
   /* All the files, conf, JS, etc are addressed relative to the current dir */
   if (chdir(path) != 0) {
     fprintf(stderr, "cannot chdir to %s\n", path);
   }
+}
+
+static void run_init_script(struct v7 *v7) {
+  static const char *init_files[] = {"sys_init.js"};
+  size_t i;
+  v7_val_t res;
+
 
   /*
    * Run startup scripts from the directory JS_DIR_NAME.
@@ -98,6 +101,6 @@ void device_get_mac_address(uint8_t mac[6]) {
 }
 
 int main(int argc, char *argv[]) {
-  s_argv0 = argv[0];
+  set_workdir(argv[0]);
   return v7_main(argc, argv, pre_init, post_init);
 }
