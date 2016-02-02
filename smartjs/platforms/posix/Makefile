@@ -111,6 +111,20 @@ VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(BUILD_DIR)
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/* $(SRC_PATH)/fs/*)
 
+# Custom conf.json : by default, it is empty, so that the one from `fs` is
+# used. NOTE: if the custom one is provided, the file should anyway be named
+# `conf.json`
+CONF_JSON ?= ""
+
+# If custom conf.json was provided, use it
+ifneq ($(CONF_JSON),"")
+  # Note: instead of substituting one with another one, we separately remove
+  # the old one, and add a new one, to make it work even if `fs` does not
+  # contain `conf.json`.
+  FS_FILES := $(subst $(SRC_PATH)/fs/conf.json,,$(FS_FILES))
+  FS_FILES += $(CONF_JSON)
+endif
+
 .PHONY: all clean fs
 
 define compile
