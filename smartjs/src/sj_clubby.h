@@ -12,6 +12,8 @@
 
 #ifndef DISABLE_C_CLUBBY
 
+#define TIMEOUT_CHECK_PERIOD 30000
+
 extern const char clubby_cmd_ready[];
 extern const char clubby_cmd_onopen[];
 extern const char clubby_cmd_onclose[];
