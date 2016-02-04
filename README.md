@@ -39,3 +39,5 @@ source license requirements,
 [Cesanta](https://www.cesanta.com) offers a full,
 royalty-free commercial license and professional support
 without any of the GPL restrictions.
+
+[Enquire about commercial licensing here] (https://www.cesanta.com/contact)
