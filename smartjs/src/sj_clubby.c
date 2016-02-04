@@ -709,6 +709,11 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   v7_val_t cb_param;
   enum v7_err res;
 
+  if (v7_is_undefined(*cbp)) {
+    LOG(LL_DEBUG, ("Callback is not set for id=%d", (int) evt->response.id));
+    goto clean;
+  }
+
   if (evt->ev == CLUBBY_TIMEOUT) {
     /*
      * if event is CLUBBY_TIMEOUT we don't have actual answer
@@ -740,11 +745,11 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   }
 
   v7_own(s_v7, &cb_param);
-  v7_disown(s_v7, &cb_param);
   sj_invoke_cb1(s_v7, *cbp, cb_param);
   v7_disown(s_v7, &cb_param);
-  v7_disown(s_v7, cbp);
 
+clean:
+  v7_disown(s_v7, cbp);
   free(cbp);
 }
 
@@ -918,7 +923,8 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   v7_val_t cmdv = v7_arg(v7, 1);
   v7_val_t cbv = v7_arg(v7, 2);
 
-  if (!v7_is_string(dstv) || !v7_is_object(cmdv) || !v7_is_callable(v7, cbv)) {
+  if (!v7_is_string(dstv) || !v7_is_object(cmdv) ||
+      (!v7_is_undefined(cbv) && !v7_is_callable(v7, cbv))) {
     printf("Invalid arguments\n");
     goto error;
   }
@@ -959,6 +965,10 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   ub_val_t cmds = ub_create_array(ctx);
   ub_array_push(ctx, cmds, obj_to_ubj(v7, ctx, cmdv));
 
+  /*
+   * TODO(alashkin): do not register callback is cbv is undefined
+   * Now it is required to track timeout
+   */
   if (!register_js_callback(clubby, v7, (char *) &id, sizeof(id),
                             clubby_resp_cb, cbv, timeout)) {
     goto error;
