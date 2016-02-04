@@ -15,6 +15,7 @@
 
 #define MAX_COMMAND_NAME_LENGTH 30
 #define RECONNECT_TIMEOUT_MULTIPLY 1.3
+#define TIMEOUT_CHECK_PERIOD 30000
 
 static struct v7 *s_v7;
 
@@ -40,7 +41,7 @@ struct clubby_cb_info {
 struct queued_frame {
   struct ub_ctx *ctx;
   ub_val_t cmd;
-
+  int64_t id;
   struct queued_frame *next;
 };
 
@@ -73,6 +74,7 @@ static int register_js_callback(struct clubby *clubby, struct v7 *v7,
                                 sj_clubby_callback_t cb, v7_val_t cbv,
                                 uint32_t timeout);
 static void clubby_cb(struct clubby_event *evt);
+static void delete_queued_frame(struct clubby *clubby, int64_t id);
 
 struct clubby *create_clubby() {
   struct clubby *ret = calloc(1, sizeof(*ret));
@@ -180,7 +182,7 @@ static int register_callback(struct clubby *clubby, const char *id,
   new_cb_info->id_len = id_len;
   new_cb_info->cb = cb;
   new_cb_info->user_data = user_data;
-  new_cb_info->expire_time = time(NULL) + timeout;
+  new_cb_info->expire_time = timeout ? time(NULL) + timeout : 0;
   clubby->resp_cbs = new_cb_info;
 
   return 1;
@@ -193,16 +195,19 @@ static void verify_timeouts(struct clubby *clubby) {
   time_t now = time(NULL);
 
   while (cb_info != NULL) {
-    if (cb_info->expire_time <= now) {
+    if (cb_info->expire_time != 0 && cb_info->expire_time <= now) {
       struct clubby_event evt;
       evt.context = clubby;
       evt.ev = CLUBBY_TIMEOUT;
       memcpy(&evt.response.id, cb_info->id, sizeof(evt.response.id));
 
       /* TODO(alashkin): remove enqueued frame (if any) as well */
-      LOG(LL_DEBUG, ("Removing expired item. id=%d", (int) evt.response.id));
+      LOG(LL_DEBUG, ("Removing expired item. id=%d, expire_time=%d",
+                     cb_info->expire_time, (int) evt.response.id));
 
       cb_info->cb(&evt, cb_info->user_data);
+
+      delete_queued_frame(clubby, evt.response.id);
 
       if (prev == NULL) {
         clubby->resp_cbs = cb_info->next;
@@ -276,12 +281,13 @@ static struct clubby_cb_info *find_cbinfo(struct clubby *clubby,
   return current;
 }
 
-static void enqueue_frame(struct clubby *clubby, struct ub_ctx *ctx,
+static void enqueue_frame(struct clubby *clubby, struct ub_ctx *ctx, int64_t id,
                           ub_val_t cmd) {
   /* TODO(alashkin): limit queue size! */
   struct queued_frame *qc = calloc(1, sizeof(*qc));
   qc->cmd = cmd;
   qc->ctx = ctx;
+  qc->id = id;
 
   /* We have to put command to the tail */
   if (clubby->queued_frames_head == NULL) {
@@ -290,6 +296,33 @@ static void enqueue_frame(struct clubby *clubby, struct ub_ctx *ctx,
   } else {
     clubby->queued_frames_tail->next = qc;
     clubby->queued_frames_tail = qc;
+  }
+}
+
+static void delete_queued_frame(struct clubby *clubby, int64_t id) {
+  struct queued_frame *current = clubby->queued_frames_head;
+  struct queued_frame *prev = NULL;
+
+  while (current != NULL) {
+    if (current->id == id) {
+      LOG(LL_DEBUG, ("Removing queued frame, id=%d", (int) id));
+
+      if (prev == NULL) {
+        clubby->queued_frames_head = current->next;
+      } else {
+        prev->next = current->next;
+      }
+
+      if (clubby->queued_frames_tail == current) {
+        clubby->queued_frames_tail = prev;
+      }
+
+      free(current);
+      break;
+    }
+
+    prev = current;
+    current = current->next;
   }
 }
 
@@ -389,13 +422,13 @@ static void clubby_hello_resp_callback(struct clubby_event *evt,
  * unserialized state
  */
 static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
-                              ub_val_t frame) {
+                              int64_t id, ub_val_t frame) {
   if (clubby_is_connected(clubby)) {
     clubby_proto_send(clubby->nc, ctx, frame);
   } else {
     /* Here we revive clubby.js behavior */
     LOG(LL_DEBUG, ("Enqueueing frame"));
-    enqueue_frame(clubby, ctx, frame);
+    enqueue_frame(clubby, ctx, id, frame);
   }
 }
 
@@ -405,12 +438,12 @@ static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
  * and each element should represent one command (created by `ub_create_object`)
  */
 static void clubby_send_cmds(struct clubby *clubby, struct ub_ctx *ctx,
-                             const char *dst, ub_val_t cmds) {
+                             int64_t id, const char *dst, ub_val_t cmds) {
   ub_val_t frame = clubby_proto_create_frame_base(ctx, clubby->cfg.device_id,
                                                   clubby->cfg.device_psk, dst);
   ub_add_prop(ctx, frame, "cmds", cmds);
 
-  clubby_send_frame(clubby, ctx, frame);
+  clubby_send_frame(clubby, ctx, id, frame);
 }
 
 static void clubby_send_resp(struct clubby *clubby, const char *dst, int64_t id,
@@ -491,7 +524,7 @@ static void clubby_send_labels(struct clubby *clubby) {
   ub_add_prop(ctx, args, "labels", labels);
 
   /* We don't intrested in resp, so, using default resp handler */
-  clubby_send_cmds(clubby, ctx, clubby->cfg.backend, cmds);
+  clubby_send_cmds(clubby, ctx, id, clubby->cfg.backend, cmds);
 }
 
 static int clubby_call_cb_impl(struct clubby *clubby, const char *id,
@@ -686,7 +719,6 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
                              "resp: \"Deadline exceeded\"}";
     char reply[sizeof(reply_fmt) + 17];
     c_snprintf(reply, sizeof(reply), reply_fmt, evt->response.id);
-    LOG(LL_DEBUG, ("reply=%s", reply));
 
     res = v7_parse_json(s_v7, reply, &cb_param);
   } else {
@@ -932,7 +964,7 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
-  clubby_send_cmds(clubby, ctx, v7_to_cstring(v7, &dstv), cmds);
+  clubby_send_cmds(clubby, ctx, id, v7_to_cstring(v7, &dstv), cmds);
   *res = v7_mk_boolean(1);
 
   return V7_OK;
