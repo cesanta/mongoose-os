@@ -53,6 +53,7 @@ struct clubby {
   int reconnect_timeout;
   struct queued_frame *queued_frames_head;
   struct queued_frame *queued_frames_tail;
+  int queue_len;
   uint32_t session_flags;
   struct mg_connection *nc;
   int auth_ok;
@@ -75,6 +76,8 @@ static int register_js_callback(struct clubby *clubby, struct v7 *v7,
                                 uint32_t timeout);
 static void clubby_cb(struct clubby_event *evt);
 static void delete_queued_frame(struct clubby *clubby, int64_t id);
+static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
+                   struct clubby_event *evt, int remove_after_call);
 
 struct clubby *create_clubby() {
   struct clubby *ret = calloc(1, sizeof(*ret));
@@ -117,6 +120,11 @@ static void free_clubby(struct clubby *clubby) {
   free(clubby);
 }
 
+static int clubby_is_overcrowded(struct clubby *clubby) {
+  return (clubby->cfg.max_queue_size != 0 &&
+          clubby->queue_len >= clubby->cfg.max_queue_size);
+}
+
 static int clubby_is_connected(struct clubby *clubby) {
   return clubby_proto_is_connected(clubby->nc) && clubby->auth_ok;
 }
@@ -125,6 +133,12 @@ static void set_clubby(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
   v7_def(v7, obj, s_clubby_prop, sizeof(s_clubby_prop),
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0) | _V7_DESC_HIDDEN(1)),
          v7_mk_foreign(clubby));
+}
+
+static void call_ready_cbs(struct clubby *clubby, struct clubby_event *evt) {
+  if (!clubby_is_overcrowded(clubby)) {
+    call_cb(clubby, clubby_cmd_ready, sizeof(clubby_cmd_ready), evt, 1);
+  }
 }
 
 static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
@@ -184,6 +198,7 @@ static int register_callback(struct clubby *clubby, const char *id,
   new_cb_info->user_data = user_data;
   new_cb_info->expire_time = timeout ? time(NULL) + timeout : 0;
   clubby->resp_cbs = new_cb_info;
+  clubby->queue_len++;
 
   return 1;
 }
@@ -217,6 +232,7 @@ static void verify_timeouts(struct clubby *clubby) {
 
       struct clubby_cb_info *tmp = cb_info->next;
       free(cb_info);
+      clubby->queue_len--;
 
       cb_info = tmp;
     } else {
@@ -232,6 +248,9 @@ static void verify_timeouts_cb(void *arg) {
   struct clubby *clubby = s_clubbies;
   while (clubby != NULL) {
     verify_timeouts(clubby);
+    if (clubby_is_connected(clubby) && !clubby_is_overcrowded(clubby)) {
+      call_ready_cbs(clubby, NULL);
+    }
     clubby = clubby->next;
   }
 
@@ -253,6 +272,7 @@ static struct clubby_cb_info *remove_cbinfo(struct clubby *clubby,
       }
 
       ret = current->next;
+      clubby->queue_len--;
 
       free(current);
       break;
@@ -527,9 +547,8 @@ static void clubby_send_labels(struct clubby *clubby) {
   clubby_send_cmds(clubby, ctx, id, clubby->cfg.backend, cmds);
 }
 
-static int clubby_call_cb_impl(struct clubby *clubby, const char *id,
-                               int8_t id_len, struct clubby_event *evt,
-                               int remove_after_call) {
+static int call_cb_impl(struct clubby *clubby, const char *id, int8_t id_len,
+                        struct clubby_event *evt, int remove_after_call) {
   int ret = 0;
 
   struct clubby_cb_info *cb_info = NULL;
@@ -545,11 +564,10 @@ static int clubby_call_cb_impl(struct clubby *clubby, const char *id,
   return ret;
 }
 
-static int clubby_call_cb(struct clubby *clubby, const char *id, int8_t id_len,
-                          struct clubby_event *evt, int remove_after_call) {
-  int ret = clubby_call_cb_impl(clubby, id, id_len, evt, remove_after_call);
-  ret |=
-      clubby_call_cb_impl(&s_global_clubby, id, id_len, evt, remove_after_call);
+static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
+                   struct clubby_event *evt, int remove_after_call) {
+  int ret = call_cb_impl(clubby, id, id_len, evt, remove_after_call);
+  ret |= call_cb_impl(&s_global_clubby, id, id_len, evt, remove_after_call);
   return ret;
 }
 
@@ -582,17 +600,16 @@ static void clubby_cb(struct clubby_event *evt) {
        * TODO(alashkin): check, if there aren't too many not answered
        * requests and wait until queue drains it needed
        */
-      clubby_call_cb(clubby, clubby_cmd_ready, sizeof(clubby_cmd_ready), evt,
-                     1);
+
+      call_ready_cbs(clubby, evt);
+
       /* Call "onopen" handlers */
-      clubby_call_cb(clubby, clubby_cmd_onopen, sizeof(clubby_cmd_onopen), evt,
-                     0);
+      call_cb(clubby, clubby_cmd_onopen, sizeof(clubby_cmd_onopen), evt, 0);
 
       /*
        * Send stored commands
        * TODO(alashkin):
-       * 1. Handle command timeout
-       * 2. Handle throttling (i.e. we need make pause between sendings
+       * Handle throttling (i.e. we need make pause between sendings)
        */
       struct queued_frame *qc;
       while ((qc = pop_queued_frame(clubby)) != NULL) {
@@ -608,8 +625,7 @@ static void clubby_cb(struct clubby_event *evt) {
       clubby->auth_ok = 0;
 
       /* Call "onclose" handlers */
-      clubby_call_cb(clubby, clubby_cmd_onclose, sizeof(clubby_cmd_onclose),
-                     evt, 0);
+      call_cb(clubby, clubby_cmd_onclose, sizeof(clubby_cmd_onclose), evt, 0);
 
       if (!(clubby->session_flags & SF_MANUAL_DISCONNECT)) {
         schedule_reconnect(clubby);
@@ -618,18 +634,18 @@ static void clubby_cb(struct clubby_event *evt) {
     }
 
     case CLUBBY_RESPONSE: {
-      clubby_call_cb(clubby, (char *) &evt->response.id,
-                     sizeof(evt->response.id), evt, 1);
+      call_cb(clubby, (char *) &evt->response.id, sizeof(evt->response.id), evt,
+              1);
 
       break;
     }
 
     case CLUBBY_REQUEST: {
       /* Calling global "oncmd", if any */
-      clubby_call_cb(clubby, s_oncmd_cmd, sizeof(s_oncmd_cmd), evt, 0);
+      call_cb(clubby, s_oncmd_cmd, sizeof(s_oncmd_cmd), evt, 0);
 
-      if (!clubby_call_cb(clubby, evt->request.cmd->ptr, evt->request.cmd->len,
-                          evt, 0)) {
+      if (!call_cb(clubby, evt->request.cmd->ptr, evt->request.cmd->len, evt,
+                   0)) {
         LOG(LL_WARN, ("Unregistered command"));
       }
 
@@ -659,14 +675,13 @@ static void clubby_disconnect(struct clubby *clubby) {
   clubby_proto_disconnect(clubby->nc);
 }
 
-static void clubby_simple_cb(struct clubby_event *evt, void *user_data) {
+static void simple_cb(struct clubby_event *evt, void *user_data) {
   (void) evt;
   v7_val_t *cbp = (v7_val_t *) user_data;
   sj_invoke_cb0(s_v7, *cbp);
 }
 
-static void clubby_simple_cb_run_once(struct clubby_event *evt,
-                                      void *user_data) {
+static void simple_cb_run_once(struct clubby_event *evt, void *user_data) {
   (void) evt;
   v7_val_t *cbp = (v7_val_t *) user_data;
   sj_invoke_cb0(s_v7, *cbp);
@@ -674,8 +689,8 @@ static void clubby_simple_cb_run_once(struct clubby_event *evt,
   free(cbp);
 }
 
-static enum v7_err clubby_set_on_event(const char *eventid, int8_t eventid_len,
-                                       struct v7 *v7, v7_val_t *res) {
+static enum v7_err set_on_event(const char *eventid, int8_t eventid_len,
+                                struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   v7_val_t cbv = v7_arg(v7, 0);
@@ -685,8 +700,8 @@ static enum v7_err clubby_set_on_event(const char *eventid, int8_t eventid_len,
     goto error;
   }
 
-  if (!register_js_callback(clubby, v7, eventid, eventid_len, clubby_simple_cb,
-                            cbv, 0)) {
+  if (!register_js_callback(clubby, v7, eventid, eventid_len, simple_cb, cbv,
+                            0)) {
     goto error;
   }
 
@@ -936,6 +951,10 @@ static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   }
 #endif
 
+  if (clubby_is_overcrowded(clubby)) {
+    return v7_throwf(v7, "Error", "Too manu unanswered packets, try later");
+  }
+
   /* Check if id and timeout exists and put default if not */
   v7_val_t idv = v7_get(v7, cmdv, "id", 2);
   int64_t id;
@@ -999,7 +1018,7 @@ static enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
      * setup global `oncmd` handler
      */
     if (!register_js_callback(clubby, v7, s_oncmd_cmd, sizeof(s_oncmd_cmd),
-                              clubby_simple_cb_run_once, arg1, 0)) {
+                              simple_cb_run_once, arg1, 0)) {
       goto error;
     }
   } else if (v7_is_string(arg1) && v7_is_callable(v7, arg2)) {
@@ -1026,13 +1045,11 @@ error:
 }
 
 static enum v7_err Clubby_onclose(struct v7 *v7, v7_val_t *res) {
-  return clubby_set_on_event(clubby_cmd_onclose, sizeof(clubby_cmd_onclose), v7,
-                             res);
+  return set_on_event(clubby_cmd_onclose, sizeof(clubby_cmd_onclose), v7, res);
 }
 
 static enum v7_err Clubby_onopen(struct v7 *v7, v7_val_t *res) {
-  return clubby_set_on_event(clubby_cmd_onopen, sizeof(clubby_cmd_onopen), v7,
-                             res);
+  return set_on_event(clubby_cmd_onopen, sizeof(clubby_cmd_onopen), v7, res);
 }
 
 static enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
@@ -1066,8 +1083,8 @@ static enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     v7_disown(v7, &cbv);
   } else {
     if (!register_js_callback(clubby, v7, clubby_cmd_ready,
-                              sizeof(clubby_cmd_ready),
-                              clubby_simple_cb_run_once, cbv, 0)) {
+                              sizeof(clubby_cmd_ready), simple_cb_run_once, cbv,
+                              0)) {
       goto error;
     }
   }
@@ -1114,18 +1131,18 @@ error:
     }                                                                   \
   }
 
-#define GET_CB_PARAM(name1, name2)                                             \
-  {                                                                            \
-    v7_val_t tmp = v7_get(v7, arg, #name1, ~0);                                \
-    if (v7_is_callable(v7, tmp)) {                                             \
-      register_js_callback(clubby, v7, name2, sizeof(name2), clubby_simple_cb, \
-                           tmp, 0);                                            \
-    } else if (!v7_is_undefined(tmp)) {                                        \
-      free_clubby(clubby);                                                     \
-      LOG(LL_ERROR, ("Invalid type for %s, expected function", #name1));       \
-      return v7_throwf(v7, "TypeError",                                        \
-                       "Invalid type for %s, expected function", #name1);      \
-    }                                                                          \
+#define GET_CB_PARAM(name1, name2)                                           \
+  {                                                                          \
+    v7_val_t tmp = v7_get(v7, arg, #name1, ~0);                              \
+    if (v7_is_callable(v7, tmp)) {                                           \
+      register_js_callback(clubby, v7, name2, sizeof(name2), simple_cb, tmp, \
+                           0);                                               \
+    } else if (!v7_is_undefined(tmp)) {                                      \
+      free_clubby(clubby);                                                   \
+      LOG(LL_ERROR, ("Invalid type for %s, expected function", #name1));     \
+      return v7_throwf(v7, "TypeError",                                      \
+                       "Invalid type for %s, expected function", #name1);    \
+    }                                                                        \
   }
 
 static enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
@@ -1148,6 +1165,7 @@ static enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_INT_PARAM(reconnect_timeout_min, reconnect_timeout_min);
   GET_INT_PARAM(reconnect_timeout_max, reconnect_timeout_max);
   GET_INT_PARAM(cmd_timeout, timeout);
+  GET_INT_PARAM(max_queue_size, max_queue_size);
   GET_STR_PARAM(device_id, src);
   GET_STR_PARAM(device_psk, key);
   GET_STR_PARAM(server_address, url);

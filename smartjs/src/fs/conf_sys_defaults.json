@@ -44,7 +44,8 @@
     "reconnect_timeout_min": 10,
     "reconnect_timeout_max": 60,
     "cmd_timeout": 300,
-    "memory_limit": 15360
+    "memory_limit": 15360,
+    "max_queue_size": 10
   },
   "debug": {
     "level": 2,

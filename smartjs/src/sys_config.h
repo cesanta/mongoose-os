@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2014-2016 Cesanta Software Limited
- * All rights reserved
- */
-
 /* generated from fs/conf_sys_defaults.json - do not edit */
 #ifndef _SYS_CONFIG_H_
 #define _SYS_CONFIG_H_
@@ -51,6 +46,7 @@ struct sys_config {
     int reconnect_timeout_max;
     int connect_on_boot;
     int cmd_timeout;
+    int max_queue_size;
     char *device_id;
     int device_auto_registration;
     char *device_registration_url;

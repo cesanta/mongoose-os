@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2014-2016 Cesanta Software Limited
- * All rights reserved
- */
-
 /* generated from fs/conf_sys_defaults.json - do not edit */
 #include "mongoose/mongoose.h"
 #include "smartjs/src/sys_config.h"
@@ -144,6 +139,11 @@ int parse_sys_config(const char *json, struct sys_config *dst,
 
   if (sj_conf_get_int(toks, "clubby.cmd_timeout", &dst->clubby.cmd_timeout) ==
           0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "clubby.max_queue_size",
+                      &dst->clubby.max_queue_size) == 0 &&
       require_keys)
     goto done;
 
