@@ -164,7 +164,7 @@ struct v7_mk_opts {
   char *freeze_file;
 #endif
 };
-struct v7 *v7_mk_opt(struct v7_mk_opts opts);
+struct v7 *v7_create_opt(struct v7_mk_opts opts);
 
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *v7);

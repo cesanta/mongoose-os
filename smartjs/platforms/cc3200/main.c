@@ -52,7 +52,7 @@ struct v7 *init_v7(void *stack_base) {
   opts.property_arena_size = 400;
   opts.c_stack_base = stack_base;
 
-  return v7_mk_opt(opts);
+  return v7_create_opt(opts);
 }
 
 static void blinkenlights_task(void *arg) {

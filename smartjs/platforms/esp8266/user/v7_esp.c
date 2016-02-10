@@ -175,7 +175,7 @@ void init_v7(void *stack_base) {
   opts.property_arena_size = 400;
 #endif
   opts.c_stack_base = stack_base;
-  v7 = v7_mk_opt(opts);
+  v7 = v7_create_opt(opts);
 
   /* disable GC during initialization */
   v7_set_gc_enabled(v7, 0);
