@@ -12,15 +12,14 @@ SSL ?= OpenSSL
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_ROOT)/smartjs/common.mk
 
-V7_FEATURES = $(COMMON_V7_FEATURES) \
+V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
               -DV7_ENABLE_COMPACTING_GC \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
-              -DMG_ENABLE_THREADS -DSJ_PROMPT_DISABLE_ECHO \
-              -DCS_ENABLE_UBJSON -DV7_ENABLE_UBJSON
+              -DV7_ENABLE_UBJSON
 
-SJ_FEATURES =
-MONGOOSE_FEATURES = -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS
+SJ_FEATURES = -DCS_ENABLE_UBJSON -DSJ_PROMPT_DISABLE_ECHO
+MONGOOSE_FEATURES = -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS 
 
 INCLUDES = $(REPO_ROOT) $(SRC_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
@@ -28,7 +27,7 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 			sj_mongoose_ws_client.c sj_gpio_js.c \
 			sj_prompt.c sj_timers.c sj_uart.c sj_http.c \
 			sj_config.c sys_config.c device_config.c \
-			clubby_proto.c ubjserializer.c sj_clubby.c
+			clubby_proto.c ubjserializer.c sj_clubby.c sj_common.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
@@ -125,7 +124,7 @@ ifneq ($(CONF_JSON),"")
   FS_FILES += $(CONF_JSON)
 endif
 
-.PHONY: all clean fs
+.PHONY: all clean fs $(V7_PATH)/v7.c
 
 define compile
 @echo "  CC $< -> $@"
@@ -163,7 +162,7 @@ $(BUILD_INFO_C): $(APP_OBJS)
 $(V7_PATH)/v7.c:
 	@make -C $(V7_PATH) v7.c
 
-$(BIN_DIR)/$(OUTAPP): $(OBJS)
+$(BIN_DIR)/$(OUTAPP): $(V7_PATH)/v7.c $(OBJS)
 	@echo "LD $@"
 	$(Q) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 

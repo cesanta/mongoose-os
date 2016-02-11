@@ -4367,38 +4367,6 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
 
 #endif /* STDLIB_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/freeze.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef FREEZE_H_INCLUDED
-#define FREEZE_H_INCLUDED
-
-#ifdef V7_FREEZE
-
-/* Amalgamated: #include "v7/src/internal.h" */
-
-struct v7_property;
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE void freeze(struct v7 *v7, char *filename);
-V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v);
-V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_FREEZE */
-
-#endif /* FREEZE_H_INCLUDED */
-#ifdef V7_MODULE_LINES
 #line 0 "./v7/src/heapusage.h"
 #endif
 /*
@@ -4459,6 +4427,38 @@ V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
 #endif /* V7_ENABLE__RegExp */
 
 #endif /* V7_REGEXP_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 0 "./v7/src/freeze.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef FREEZE_H_INCLUDED
+#define FREEZE_H_INCLUDED
+
+#ifdef V7_FREEZE
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+struct v7_property;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE void freeze(struct v7 *v7, char *filename);
+V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v);
+V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_FREEZE */
+
+#endif /* FREEZE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 0 "./v7/src/std_array.h"
 #endif
@@ -12905,7 +12905,6 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
-/* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/heapusage.h" */
@@ -13369,11 +13368,6 @@ struct v7 *v7_create_opt(struct v7_mk_opts opts) {
 #endif
 
     v7->inhibit_gc = 0;
-#ifdef V7_FREEZE
-    if (opts.freeze_file != NULL) {
-      freeze(v7, opts.freeze_file);
-    }
-#endif
   }
 
   return v7;
@@ -13843,6 +13837,7 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("prototype"),
     V7_VEC("random"),
     V7_VEC("readAll"),
+    V7_VEC("reboot"),  /* sjs */
     V7_VEC("recvAll"),
     V7_VEC("reduce"),
     V7_VEC("remove"),
@@ -13855,11 +13850,13 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("setDate"),
     V7_VEC("setFullYear"),
     V7_VEC("setHours"),
+    V7_VEC("setLogLevel"),  /* sjs */
     V7_VEC("setMilliseconds"),
     V7_VEC("setMinutes"),
     V7_VEC("setMonth"),
     V7_VEC("setSeconds"),
     V7_VEC("setTime"),
+    V7_VEC("setTimeout"),  /* sjs */
     V7_VEC("setUTCDate"),
     V7_VEC("setUTCFullYear"),
     V7_VEC("setUTCHours"),
@@ -13890,7 +13887,9 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("toTimeString"),
     V7_VEC("toUTCString"),
     V7_VEC("toUpperCase"),
+    V7_VEC("usleep"),  /* sjs */
     V7_VEC("valueOf"),
+    V7_VEC("wdtFeed"),  /* sjs */
     V7_VEC("writable"),
 };
 /* clang-format on */
@@ -29589,6 +29588,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
+/* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/cs_file.h" */
 
@@ -29649,13 +29649,8 @@ static void dump_mm_stats(struct v7 *v7) {
 }
 #endif
 
-/*
- * V7 executable main function.
- * `init_func()` is an optional intialization function, aimed to export any
- * extra functionality into vanilla v7 engine.
- */
-int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
-            void (*fini_func)(struct v7 *)) {
+int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
+            void (*pre_init)(struct v7 *), void (*post_init)(struct v7 *)) {
   int exit_rcode = EXIT_SUCCESS;
   struct v7 *v7;
   struct v7_mk_opts opts;
@@ -29714,14 +29709,19 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 
   v7 = v7_create_opt(opts);
 
+  if (pre_freeze_init != NULL) {
+    pre_freeze_init(v7);
+  }
+
 #ifdef V7_FREEZE
   if (opts.freeze_file != NULL) {
+    freeze(v7, opts.freeze_file);
     exit(0);
   }
 #endif
 
-  if (init_func != NULL) {
-    init_func(v7);
+  if (pre_init != NULL) {
+    pre_init(v7);
   }
 
 #if V7_ENABLE__Memory__stats > 0 && !defined(V7_DISABLE_GC)
@@ -29785,8 +29785,8 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
     }
   }
 
-  if (fini_func != NULL) {
-    fini_func(v7);
+  if (post_init != NULL) {
+    post_init(v7);
   }
 
 #if V7_ENABLE__Memory__stats
@@ -29805,7 +29805,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
 
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
-  return v7_main(argc, argv, NULL, NULL);
+  return v7_main(argc, argv, NULL, NULL, NULL);
 }
 #endif
 #endif /* V7_EXPORT_INTERNAL_HEADERS */

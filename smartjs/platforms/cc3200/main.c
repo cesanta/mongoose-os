@@ -102,6 +102,7 @@ static void v7_task(void *arg) {
   v7 = s_v7 = init_v7(&v7);
   sj_init_timers(v7);
   sj_init_v7_ext(v7);
+  sj_init_sys(v7);
   init_wifi(v7);
   if (init_fs(v7) != 0) {
     fprintf(stderr, "FS initialization failed.\n");

@@ -13,6 +13,7 @@
 #include "smartjs/src/sj_spi_js.h"
 #include "smartjs/src/sj_gpio_js.h"
 #include "smartjs/src/sj_adc_js.h"
+#include "smartjs/src/sj_common.h"
 #include "v7_esp.h"
 #include "dht11.h"
 #include "esp_pwm.h"
@@ -180,6 +181,11 @@ void init_v7(void *stack_base) {
   /* disable GC during initialization */
   v7_set_gc_enabled(v7, 0);
 
+#if !defined(V7_THAW)
+  sj_init_common(v7);
+#endif
+  sj_init_sys(v7);
+
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
 
@@ -195,9 +201,6 @@ void init_v7(void *stack_base) {
   v7_set(v7, v7_get_global(v7), "Debug", 5, debug);
   v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);
-
-  sj_init_timers(v7);
-  sj_init_v7_ext(v7);
 
   init_gpiojs(v7);
   init_adcjs(v7);
@@ -228,7 +231,12 @@ void init_v7(void *stack_base) {
 }
 
 #ifndef V7_NO_FS
-void init_smartjs() {
+/*
+ * TODO(dfrank): probably use the implementation of posix? Currently, this one
+ * enables/disables GC, and I'm not sure if it's a good idea because it might
+ * be a surprise for the caller
+ */
+void run_init_script() {
   v7_val_t res;
   /* enable GC while executing sys_init_script */
   v7_set_gc_enabled(v7, 1);

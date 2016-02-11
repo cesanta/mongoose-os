@@ -10,7 +10,7 @@
 #include "sj_v7_ext.h"
 
 /* Currently can only handle one timer */
-static enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
+enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
   v7_val_t msecsv = v7_arg(v7, 1);
   int msecs;
   (void) res;

@@ -11,6 +11,9 @@
 /* Initialize objects and functions provided by v7_ext */
 void sj_init_v7_ext(struct v7 *v7);
 
+/* Initialize `Sys.*` */
+void sj_init_sys(struct v7 *v7);
+
 /* Initialize simple http client */
 void sj_init_simple_http_client(struct v7 *v7);
 void sj_http_error_callback(struct v7 *v7, v7_val_t cb, int err_no);

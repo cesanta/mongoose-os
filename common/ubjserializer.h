@@ -8,6 +8,8 @@
 
 #include <stdlib.h>
 
+#ifdef CS_ENABLE_UBJSON
+
 /* incremental UBJSON serializer */
 
 /* data model */
@@ -68,4 +70,5 @@ void ub_array_push(struct ub_ctx *ctx, ub_val_t a, ub_val_t val);
 /* invoke this from the ub_bin_cb_t to send more chunks of the bin */
 void ub_bin_send(struct ub_ctx *ctx, void *d, size_t n);
 
+#endif /* CS_ENABLE_UBJSON */
 #endif /* C_UB_H */

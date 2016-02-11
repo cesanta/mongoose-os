@@ -13,6 +13,7 @@
 #include "smartjs/src/sj_prompt.h"
 #include "smartjs/src/sj_timers.h"
 #include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_common.h"
 #include "common/cs_dbg.h"
 #include "smartjs.h"
 #include "smartjs/src/device_config.h"
@@ -62,9 +63,13 @@ static void run_init_script(struct v7 *v7) {
   }
 }
 
+static void pre_freeze_init(struct v7 *v7) {
+  sj_init_common(v7);
+}
+
 static void pre_init(struct v7 *v7) {
-  sj_init_timers(v7);
-  sj_init_v7_ext(v7);
+  sj_init_sys(v7);
+
   init_smartjs(v7);
   init_device(v7);
   run_init_script(v7);
@@ -102,5 +107,5 @@ void device_get_mac_address(uint8_t mac[6]) {
 
 int main(int argc, char *argv[]) {
   set_workdir(argv[0]);
-  return v7_main(argc, argv, pre_init, post_init);
+  return v7_main(argc, argv, pre_freeze_init, pre_init, post_init);
 }

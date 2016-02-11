@@ -778,8 +778,22 @@ int v7_disown(struct v7 *v7, v7_val_t *v);
  */
 void v7_gc(struct v7 *v7, int full);
 
-int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *),
-            void (*fini_func)(struct v7 *));
+/*
+ * V7 executable main function.
+ *
+ * There are various callbacks available:
+ *
+ * `pre_freeze_init()` and `pre_init()` are optional intialization functions,
+ * aimed to export any extra functionality into vanilla v7 engine. They are
+ * called after v7 initialization, before executing given files or inline
+ * expressions. `pre_freeze_init()` is called before "freezing" v7 state;
+ * whereas `pre_init` called afterwards.
+ *
+ * `post_init()`, if provided, is called after executing files and expressions,
+ * before destroying v7 instance and exiting.
+ */
+int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
+            void (*pre_init)(struct v7 *), void (*post_init)(struct v7 *));
 
 #ifdef V7_STACK_SIZE
 /* Returns lowest recorded available stack size. */

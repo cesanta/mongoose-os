@@ -10,6 +10,8 @@
 #include "common/ubjserializer.h"
 #include "common/cs_dbg.h"
 
+#ifdef CS_ENABLE_UBJSON
+
 struct link {
   struct link *next;
   /* arrays need a finalizer; don't bother using tagged pointers */
@@ -384,3 +386,5 @@ int main() {
   ub_bin_send(ctx, "mox", 3);
 }
 #endif
+
+#endif /* CS_ENABLE_UBJSON */

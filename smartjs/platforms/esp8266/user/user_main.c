@@ -82,7 +82,7 @@ void sjs_init(void *dummy) {
 #endif
 
 #ifndef V7_NO_FS
-  init_smartjs();
+  run_init_script();
 #endif
 
 #if !defined(NO_PROMPT)

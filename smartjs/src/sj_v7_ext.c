@@ -60,7 +60,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
+enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
   v7_val_t usecsv = v7_arg(v7, 0);
   int usecs;
   (void) res;
@@ -87,7 +87,7 @@ static enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
  * propnfree: number of free property slots in js heap
  * funcnfree: number of free function slots in js heap
  */
-static enum v7_err GC_stat(struct v7 *v7, v7_val_t *res) {
+enum v7_err GC_stat(struct v7 *v7, v7_val_t *res) {
   /* take a snapshot of the stats that would change as we populate the result */
   size_t sysfree = sj_get_free_heap_size();
   size_t jssize = v7_heap_stat(v7, V7_HEAP_STAT_HEAP_SIZE);
@@ -126,7 +126,7 @@ static enum v7_err GC_stat(struct v7 *v7, v7_val_t *res) {
 /*
  * Force a pass of the garbage collector.
  */
-static enum v7_err GC_gc(struct v7 *v7, v7_val_t *res) {
+enum v7_err GC_gc(struct v7 *v7, v7_val_t *res) {
   (void) res;
   v7_gc(v7, 1);
   return V7_OK;
@@ -222,7 +222,7 @@ void sj_invoke_cb2(struct v7 *v7, v7_val_t cb, v7_val_t arg1, v7_val_t arg2) {
 }
 
 void sj_init_v7_ext(struct v7 *v7) {
-  v7_val_t gc, sys;
+  v7_val_t gc;
 
   v7_set_method(v7, v7_get_global(v7), "usleep", global_usleep);
 
@@ -230,6 +230,10 @@ void sj_init_v7_ext(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), "GC", ~0, gc);
   v7_set_method(v7, gc, "stat", GC_stat);
   v7_set_method(v7, gc, "gc", GC_gc);
+}
+
+void sj_init_sys(struct v7 *v7) {
+  v7_val_t sys;
 
   sys = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Sys", ~0, sys);

@@ -22,6 +22,9 @@ include $(COMMON_ESP_DIR)/common.mk
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_ROOT)/smartjs/common.mk
 
+SJS_POSIX_SRC ?= ../posix
+SJS_POSIX_BIN ?= $(BUILD_DIR)/posix_sjs_bin
+SJS_POSIX_BUILD ?= $(BUILD_DIR)/posix_sjs_build
 SMARTJS_PATH ?= ../..
 KRYPTON_PATH ?= ../../../krypton
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
@@ -78,7 +81,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_gpio_js.c sj_timers.c \
             sj_adc_js.c mongoose.c sj_mongoose.c sj_mongoose_ws_client.c \
             device_config.c sys_config.c ubjserializer.c clubby_proto.c \
-            sj_clubby.c
+            sj_clubby.c sj_common.c
 
 ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
@@ -116,7 +119,7 @@ SHIMS = -DNDEBUG
 
 V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
-              -DV7_DISABLE_AST_TAG_NAMES -DDISABLE_MD5 \
+              -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
               -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
               -DV7_ENABLE__Function__bind -DV7_ENABLE__File__list=1 \
@@ -128,7 +131,7 @@ V7_FEATURES = $(COMMON_V7_FEATURES) \
 
 FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
-           -DNO_BSD_SOCKETS \
+           -DNO_BSD_SOCKETS -DDISABLE_MD5 \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON -DESP_UMM_ENABLE \
@@ -344,13 +347,13 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 $(GENFILES_FLAG): $(LD_SCRIPT) $(BUILD_DIR)/fr.c
 	$(Q) touch $@
 
-$(BUILD_DIR)/fr.dump: $(BUILD_DIR)/v7
+$(BUILD_DIR)/fr.dump: $(SJS_POSIX_BIN)/smartjs
 	$(vecho) "FREEZE"
-	$(Q) $(BUILD_DIR)/v7 -freeze $@
+	$(Q) $(SJS_POSIX_BIN)/smartjs -freeze $@
 
-$(BUILD_DIR)/fr.sym: $(BUILD_DIR)/v7
-	$(vecho) "$(BUILD_DIR)/v7"
-	$(Q) @nm $(BUILD_DIR)/v7 > $@
+$(BUILD_DIR)/fr.sym: $(SJS_POSIX_BIN)/smartjs
+	$(vecho) "$(SJS_POSIX_BIN)/smartjs"
+	$(Q) @nm $(SJS_POSIX_BIN)/smartjs > $@
 
 $(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
 	$(vecho) "GEN fr.c"
@@ -405,6 +408,12 @@ $(V7_PATH)/v7.c:
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC v7"
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+
+# TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
+# appropriate
+$(SJS_POSIX_BIN)/smartjs:
+	make -C $(SJS_POSIX_SRC) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(SJS_POSIX_BIN) BUILD_DIR=$(SJS_POSIX_BUILD) CFLAGS_EXTRA='-DV7_FREEZE'
+
 # Target specific warning inhibitions
 
 build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
