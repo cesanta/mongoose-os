@@ -7,7 +7,7 @@
 body {
 width: 100%;
 color: #777;
-font-family: "Open Sans", Arial, sans-serif;
+font-family: Arial, sans-serif;
 line-height: 22px;
 font-size: 13px;
 overflow-x: hidden;
@@ -15,9 +15,11 @@ overflow-y: scroll;
 }
 * { outline: none; }
 h1 { font-size: 140%; }
+fieldset { border: 1px solid #3795d0; margin-bottom: 2em; }
+legend { zfont-size: 120%; color: #3795d0; }
 .row {
 position: relative;
-width: 80%;
+width: 480px;
 border: 1px solid transparent;
 margin-bottom: 1em;
 margin-left: auto;
@@ -39,7 +41,7 @@ vertical-align: middle;
 touch-action: manipulation;
 border: 1px solid transparent;
 white-space: nowrap;
-padding: 0.5em 1em;
+padding: 0.3em 1em;
 font-size: 110%;
 border-radius: 0.4em;
 -webkit-user-select: none;
@@ -66,7 +68,7 @@ min-width: 13em;
 display: inline-block;
 text-align: right;
 margin: 0.2em 1em 0 0;
-font-size: 12px;
+font-size: 13px;
 padding: 0.2em 0;
 }
 select {
@@ -75,7 +77,7 @@ line-height: 2em;
 height: 2em;
 background: #fff;
 padding: 1em;
-width: 17em;
+width: 22em;
 color: #555;
 }
 input[disabled] { background: #e0e0e0; }
@@ -86,7 +88,7 @@ padding: 0.4em;
 color: #555;
 border: 1px solid #cccccc;
 border-radius: 0.4em;
-width: 16em;
+width: 21em;
 }
 </style>
 <script type="text/javascript">
@@ -181,6 +183,11 @@ width: 16em;
       ajax('/factory_reset', showMsg);
     };
 
+    var in2 = document.getElementById('fw_select_input2');
+    in2.onfocus = in2.onclick = function() {
+      document.getElementById('fw_select_input').click();
+    };
+
     var renderConfig = function(c, schema) {
       var html = [];
       var walk = function(c, p) {
@@ -191,7 +198,8 @@ width: 16em;
           var val = c[k];
           if (typeof(val) == 'object') {
             if (!d.hide) {
-              html.push('<h1>', d.title || path, '</h1>\n');
+              //html.push('<h1>', d.title || path, '</h1>\n');
+              html.push('</fieldset><fieldset><legend>', d.title || path, '</legend>\n');
             }
             walk(val, path);
           } else {
@@ -227,7 +235,6 @@ width: 16em;
       walk(c, '');
       document.getElementById('config').innerHTML = html.join('');
     };
-
 
     // Load configuration and update the UI
     ajax('/conf_sys_defaults.json', function(obj, error) {
@@ -265,6 +272,22 @@ width: 16em;
     <span id="fw_version"></span>
     <input id="btn_save" type="button" value="Save Settings"
     class="button btn-save"/>
+  </div>
+
+  <div class="row">
+    <fieldset>
+      <legend>Upload new firmware</legend>
+
+<form id="fw_upload_form">
+  <input placeholder="Select .zip firmware archive ..."
+    id="fw_select_input2" type="text">
+  <input type="file" id="fw_select_input" accept=".zip" style="display: none">
+  <button class="button orange" id="fw_upload_button" type="submit">
+    Upload
+  </button>
+</form>
+
+    </fieldset>
   </div>
 
 </body>

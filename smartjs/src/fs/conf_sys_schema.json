@@ -51,6 +51,8 @@
   "clubby.reconnect_timeout_min" : {"title": "Minimal reconnect timeout" },
   "clubby.reconnect_timeout_max" : {"title": "Maximal reconnect timeout" },
   "clubby.cmd_timeout" : {"title": "Default command timeout" },
+  "clubby.memory_limit" : {"title": "Memory Limit" },
+  "clubby.device_registration_url" : {"title": "Device registration URL" },
 
   "debug": { "title": "Debug Settings" },
   "debug.level": {
