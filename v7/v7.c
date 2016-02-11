@@ -7052,6 +7052,11 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
       } else if (ch == 'd' && len_mod == 'l') {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, long), 10, flags,
                     field_width);
+#ifdef SSIZE_MAX
+      } else if (ch == 'd' && len_mod == 'z') {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, ssize_t), 10, flags,
+                    field_width);
+#endif
       } else if (ch == 'd' && len_mod == 'q') {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, int64_t), 10, flags,
                     field_width);
@@ -7060,6 +7065,9 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
                     ch == 'x' ? 16 : 10, flags, field_width);
       } else if ((ch == 'x' || ch == 'u') && len_mod == 'l') {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, unsigned long),
+                    ch == 'x' ? 16 : 10, flags, field_width);
+      } else if ((ch == 'x' || ch == 'u') && len_mod == 'z') {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, size_t),
                     ch == 'x' ? 16 : 10, flags, field_width);
       } else if (ch == 'p') {
         unsigned long num = (unsigned long) va_arg(ap, void *);
@@ -12098,8 +12106,25 @@ restart:
         BTRY(to_string(v7, v2, NULL, buf, sizeof(buf), NULL));
         prop = v7_get_property(v7, v1, buf, strlen(buf));
         if (prop != NULL) {
-          prop->value = v3;
+          /* Property already exists: update its value */
+          /*
+           * TODO(dfrank): currently we can't use `def_property_v()` here,
+           * because if the property was already found somewhere in the
+           * prototype chain, then it should be updated, instead of creating a
+           * new one on the top of the scope.
+           *
+           * Probably we need to make `def_property_v()` more generic and
+           * use it here; or split `def_property_v()` into smaller pieces and
+           * use one of them here.
+           */
+          if (!(prop->attributes & V7_PROPERTY_NON_WRITABLE)) {
+            prop->value = v3;
+          }
         } else if (!r.bcode->strict_mode) {
+          /*
+           * Property does not exist: since we're not in strict mode, let's
+           * create new property at Global Object
+           */
           BTRY(set_property_v(v7, v7_get_global(v7), v2, v3, NULL));
         } else {
           /*

@@ -162,6 +162,11 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
       } else if (ch == 'd' && len_mod == 'l') {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, long), 10, flags,
                     field_width);
+#ifdef SSIZE_MAX
+      } else if (ch == 'd' && len_mod == 'z') {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, ssize_t), 10, flags,
+                    field_width);
+#endif
       } else if (ch == 'd' && len_mod == 'q') {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, int64_t), 10, flags,
                     field_width);
@@ -170,6 +175,9 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
                     ch == 'x' ? 16 : 10, flags, field_width);
       } else if ((ch == 'x' || ch == 'u') && len_mod == 'l') {
         i += c_itoa(buf + i, buf_size - i, va_arg(ap, unsigned long),
+                    ch == 'x' ? 16 : 10, flags, field_width);
+      } else if ((ch == 'x' || ch == 'u') && len_mod == 'z') {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, size_t),
                     ch == 'x' ? 16 : 10, flags, field_width);
       } else if (ch == 'p') {
         unsigned long num = (unsigned long) va_arg(ap, void *);
