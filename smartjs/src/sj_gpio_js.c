@@ -5,6 +5,7 @@
 
 #include "v7/v7.h"
 #include "sj_gpio.h"
+#include "sj_common.h"
 
 #ifndef SJ_DISABLE_GPIO
 
@@ -36,7 +37,7 @@ static void gpio_intr_handler_proxy(int pin, int level) {
   }
 }
 
-static enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t pinv = v7_arg(v7, 0);
   v7_val_t typev = v7_arg(v7, 1);
@@ -90,7 +91,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err GPIO_setmode(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err GPIO_setmode(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   v7_val_t modev = v7_arg(v7, 1);
   v7_val_t pullv = v7_arg(v7, 2);
@@ -109,7 +110,7 @@ static enum v7_err GPIO_setmode(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-static enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   v7_val_t valv = v7_arg(v7, 1);
   int pin, val;
@@ -132,7 +133,7 @@ static enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-static enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   int pin;
 
@@ -147,7 +148,7 @@ static enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-void init_gpiojs(struct v7 *v7) {
+void sj_gpio_api_setup(struct v7 *v7) {
   s_v7 = v7;
   v7_val_t gpio = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "GPIO", ~0, gpio);
@@ -159,7 +160,7 @@ void init_gpiojs(struct v7 *v7) {
 
 #else
 
-void init_gpiojs(struct v7 *v7) {
+void sj_gpio_api_setup(struct v7 *v7) {
   (void) v7;
 }
 

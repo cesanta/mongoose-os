@@ -7,6 +7,6 @@
 #define SJ_HTTP_INCLUDED
 
 #include "v7/v7.h"
-void sj_init_http(struct v7 *);
+void sj_http_api_setup(struct v7 *);
 
 #endif

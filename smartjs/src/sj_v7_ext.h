@@ -9,7 +9,7 @@
 #include "v7/v7.h"
 
 /* Initialize objects and functions provided by v7_ext */
-void sj_init_v7_ext(struct v7 *v7);
+void sj_v7_ext_api_setup(struct v7 *v7);
 
 /* Initialize `Sys.*` */
 void sj_init_sys(struct v7 *v7);

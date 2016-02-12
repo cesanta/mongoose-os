@@ -6,6 +6,6 @@
 #ifndef SJ_ADC_JS
 #define SJ_ADC_JS
 
-void init_adcjs(struct v7 *v7);
+void sj_adc_api_setup(struct v7 *v7);
 
 #endif

@@ -9,7 +9,7 @@
 #include "v7/v7.h"
 
 typedef void (*timer_callback)(void *param);
-void sj_init_timers(struct v7 *v7);
+void sj_timers_api_setup(struct v7 *v7);
 
 /* HAL */
 

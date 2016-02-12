@@ -9,6 +9,7 @@
 
 #include "sj_hal.h"
 #include "sj_i2c.h"
+#include "sj_common.h"
 
 #ifndef SJ_DISABLE_I2C
 
@@ -106,7 +107,7 @@
 
 static const char s_i2c_conn_prop[] = "_conn";
 
-static enum v7_err i2cjs_ctor(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   i2c_connection conn = NULL;
@@ -137,7 +138,7 @@ i2c_connection i2cjs_get_conn(struct v7 *v7, v7_val_t this_obj) {
       v7_get(v7, this_obj, s_i2c_conn_prop, sizeof(s_i2c_conn_prop) - 1));
 }
 
-static enum v7_err i2cjs_start(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_start(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   uint16_t addr;
   enum i2c_rw mode;
@@ -163,7 +164,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err i2cjs_stop(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_stop(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   i2c_connection conn;
   v7_val_t this_obj = v7_get_this(v7);
@@ -179,7 +180,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err i2cjs_send(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_send(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t data_val = v7_arg(v7, 0);
   size_t len;
@@ -208,7 +209,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err i2cjs_readByte(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_readByte(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   enum i2c_ack_type ack_type = I2C_ACK;
@@ -238,7 +239,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err i2cjs_readString(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_readString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   i2c_connection conn;
@@ -278,7 +279,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err i2cjs_sendAck(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_sendAck(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   i2c_connection conn;
@@ -303,7 +304,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err i2cjs_close(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err i2cjs_close(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   i2c_connection conn;
@@ -323,13 +324,13 @@ clean:
 
 #ifdef ENABLE_IC2_EEPROM_TEST
 
-static enum v7_err i2cjs_test(struct v7 *v7, v7_val_t *res) {
+enum v7_err i2cjs_test(struct v7 *v7, v7_val_t *res) {
   i2c_eeprom_test();
   return V7_OK;
 }
 #endif
 
-void init_i2cjs(struct v7 *v7) {
+void sj_i2c_api_setup(struct v7 *v7) {
   v7_val_t i2c_proto, i2c_ctor;
 
   v7_prop_attr_desc_t const_attrs =
@@ -361,7 +362,7 @@ void init_i2cjs(struct v7 *v7) {
 
 #else
 
-void init_i2cjs(struct v7 *v7) {
+void sj_i2c_api_setup(struct v7 *v7) {
   (void) v7;
 }
 

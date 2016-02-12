@@ -7039,9 +7039,12 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
           C_SNPRINTF_APPEND_CHAR(' ');
         }
 
-        /* Ignore negative and 0 precisions */
-        for (j = 0; (precision <= 0 || j < precision) && s[j] != '\0'; j++) {
-          C_SNPRINTF_APPEND_CHAR(s[j]);
+        /* `s` may be NULL in case of %.*s */
+        if (s != NULL) {
+          /* Ignore negative and 0 precisions */
+          for (j = 0; (precision <= 0 || j < precision) && s[j] != '\0'; j++) {
+            C_SNPRINTF_APPEND_CHAR(s[j]);
+          }
         }
       } else if (ch == 'c') {
         ch = va_arg(ap, int); /* Always fetch parameter */
@@ -13774,6 +13777,8 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
 static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC(" is not a function"),
     V7_VEC("Boolean"),
+    V7_VEC("CLOSED"),  /* sjs */
+    V7_VEC("Clubby"),  /* sjs */
     V7_VEC("Crypto"),
     V7_VEC("EvalError"),
     V7_VEC("Function"),
@@ -13795,6 +13800,7 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("SyntaxError"),
     V7_VEC("TypeError"),
     V7_VEC("UBJSON"),
+    V7_VEC("WebSocket"),  /* sjs */
     V7_VEC("_modcache"),
     V7_VEC("accept"),
     V7_VEC("arguments"),
@@ -13808,6 +13814,7 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("connect"),
     V7_VEC("constructor"),
     V7_VEC("create"),
+    V7_VEC("createServer"),  /* sjs */
     V7_VEC("defineProperties"),
     V7_VEC("defineProperty"),
     V7_VEC("every"),
@@ -13855,6 +13862,8 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("module"),
     V7_VEC("multiline"),
     V7_VEC("number"),
+    V7_VEC("onclose"),  /* sjs */
+    V7_VEC("onopen"),  /* sjs */
     V7_VEC("parseFloat"),
     V7_VEC("parseInt"),
     V7_VEC("preventExtensions"),
@@ -13862,6 +13871,10 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("prototype"),
     V7_VEC("random"),
     V7_VEC("readAll"),
+    V7_VEC("readByte"),  /* sjs */
+    V7_VEC("readString"),  /* sjs */
+    V7_VEC("readVoltage"),  /* sjs */
+    V7_VEC("readyState"),  /* sjs */
     V7_VEC("reboot"),  /* sjs */
     V7_VEC("recvAll"),
     V7_VEC("reduce"),
@@ -13869,9 +13882,12 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("rename"),
     V7_VEC("render"),
     V7_VEC("replace"),
+    V7_VEC("request"),  /* sjs */
     V7_VEC("require"),
     V7_VEC("reverse"),
+    V7_VEC("sayHello"),  /* sjs */
     V7_VEC("search"),
+    V7_VEC("sendAck"),  /* sjs */
     V7_VEC("setDate"),
     V7_VEC("setFullYear"),
     V7_VEC("setHours"),
@@ -13889,6 +13905,8 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("setUTCMinutes"),
     V7_VEC("setUTCMonth"),
     V7_VEC("setUTCSeconds"),
+    V7_VEC("setisr"),  /* sjs */
+    V7_VEC("setmode"),  /* sjs */
     V7_VEC("sha1_hex"),
     V7_VEC("source"),
     V7_VEC("splice"),
@@ -13916,6 +13934,7 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("valueOf"),
     V7_VEC("wdtFeed"),  /* sjs */
     V7_VEC("writable"),
+    V7_VEC("writeHead"),  /* sjs */
 };
 /* clang-format on */
 

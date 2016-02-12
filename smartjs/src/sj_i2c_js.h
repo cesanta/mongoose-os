@@ -6,6 +6,6 @@
 
 struct v7;
 
-void init_i2cjs(struct v7 *v7);
+void sj_i2c_api_setup(struct v7 *v7);
 
 #endif

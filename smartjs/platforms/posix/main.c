@@ -14,6 +14,10 @@
 #include "smartjs/src/sj_timers.h"
 #include "smartjs/src/sj_v7_ext.h"
 #include "smartjs/src/sj_common.h"
+#include "smartjs/src/sj_http.h"
+#include "smartjs/src/sj_uart.h"
+#include "smartjs/src/sj_clubby.h"
+#include "smartjs/src/sj_spi_js.h"
 #include "common/cs_dbg.h"
 #include "smartjs.h"
 #include "smartjs/src/device_config.h"
@@ -71,6 +75,11 @@ static void pre_init(struct v7 *v7) {
   sj_init_sys(v7);
 
   init_smartjs(v7);
+  sj_http_api_setup(v7);
+
+  mongoose_init();
+  sj_init_uart(v7);
+
   init_device(v7);
   run_init_script(v7);
 }

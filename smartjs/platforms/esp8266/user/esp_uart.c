@@ -10,6 +10,7 @@
 #include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "esp_uart.h"
 #include "esp_gpio.h"
+#include "smartjs/src/sj_debug.h"
 
 #ifndef RTOS_SDK
 
@@ -234,16 +235,22 @@ static void uart_system_tx_char(char ch) {
   }
 }
 
-int uart_redirect_debug(int mode) {
+int uart_redirect_debug(enum debug_mode mode) {
   switch (mode) {
-    case 0:
+    case DEBUG_MODE_OFF:
       debug_enabled = 0;
       break;
-    case 1:
-    case 2:
+
+    case DEBUG_MODE_STDOUT:
       debug_enabled = 1;
-      s_system_uartno = mode - 1;
+      s_system_uartno = 0;
       break;
+
+    case DEBUG_MODE_STDERR:
+      debug_enabled = 1;
+      s_system_uartno = 1;
+      break;
+
     default:
       return -1;
   }

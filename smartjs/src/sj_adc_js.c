@@ -5,10 +5,11 @@
 
 #include "v7/v7.h"
 #include "sj_adc.h"
+#include "sj_common.h"
 
 #ifndef SJ_DISABLE_ADC
 
-static enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   int pin;
 
@@ -23,7 +24,7 @@ static enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-static enum v7_err ADC_readVoltage(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err ADC_readVoltage(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   int pin;
 
@@ -38,7 +39,7 @@ static enum v7_err ADC_readVoltage(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-void init_adcjs(struct v7 *v7) {
+void sj_adc_api_setup(struct v7 *v7) {
   v7_val_t adc = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "ADC", ~0, adc);
   v7_set_method(v7, adc, "read", ADC_read);
@@ -47,7 +48,7 @@ void init_adcjs(struct v7 *v7) {
 
 #else
 
-void init_gpiojs(struct v7 *v7) {
+void sj_adc_api_setup(struct v7 *v7) {
   (void) v7;
 }
 

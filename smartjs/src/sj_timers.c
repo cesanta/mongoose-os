@@ -8,9 +8,10 @@
 #include <stdlib.h>
 
 #include "sj_v7_ext.h"
+#include "sj_common.h"
 
 /* Currently can only handle one timer */
-enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
   v7_val_t msecsv = v7_arg(v7, 1);
   int msecs;
   (void) res;
@@ -39,6 +40,6 @@ enum v7_err global_set_timeout(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-void sj_init_timers(struct v7 *v7) {
+void sj_timers_api_setup(struct v7 *v7) {
   v7_set_method(v7, v7_get_global(v7), "setTimeout", global_set_timeout);
 }

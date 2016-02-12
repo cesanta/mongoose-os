@@ -100,16 +100,16 @@ static void v7_task(void *arg) {
   sl_Start(NULL, NULL, NULL);
 
   v7 = s_v7 = init_v7(&v7);
-  sj_init_timers(v7);
-  sj_init_v7_ext(v7);
+  sj_timers_api_setup(v7);
+  sj_v7_ext_api_setup(v7);
   sj_init_sys(v7);
   init_wifi(v7);
   if (init_fs(v7) != 0) {
     fprintf(stderr, "FS initialization failed.\n");
   }
   mongoose_init();
-  sj_init_http(v7);
-  init_i2cjs(v7);
+  sj_http_api_setup(v7);
+  sj_i2c_api_setup(v7);
 
   /* Common config infrastructure. Mongoose & v7 must be initialized. */
   init_device(v7);

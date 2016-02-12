@@ -18,7 +18,8 @@ extern const char clubby_cmd_onclose[];
 
 typedef void (*sj_clubby_callback_t)(struct clubby_event *evt, void *user_data);
 
-void sj_init_clubby(struct v7 *v7);
+void sj_clubby_api_setup(struct v7 *v7);
+void sj_clubby_init(struct v7 *v7);
 
 void sj_clubby_send_reply(struct clubby_event *evt, int status,
                           const char *status_msg);

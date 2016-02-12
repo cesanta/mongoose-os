@@ -12,6 +12,7 @@
 #include "smartjs/src/sj_hal.h"
 #include "smartjs/src/sj_v7_ext.h"
 #include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_common.h"
 
 #define WEBSOCKET_OPEN v7_mk_number(1)
 #define WEBSOCKET_CLOSED v7_mk_number(2)
@@ -115,7 +116,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 * }
 *
 */
-static enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
+enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   struct mg_connection *nc;
   struct user_data *ud;
@@ -251,7 +252,7 @@ static void _WebSocket_send_string(struct v7 *v7, struct mg_connection *nc,
   mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
 }
 
-static enum v7_err WebSocket_send(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err WebSocket_send(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t datav = v7_arg(v7, 0);
@@ -291,7 +292,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err WebSocket_close(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err WebSocket_close(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   struct mg_connection *nc;
@@ -306,7 +307,7 @@ static enum v7_err WebSocket_close(struct v7 *v7, v7_val_t *res) {
   return rcode;
 }
 
-static enum v7_err WebSocket_readyState(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err WebSocket_readyState(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t ncv = v7_get(v7, this_obj, "_nc", ~0);
   if (v7_is_undefined(ncv)) {
@@ -318,7 +319,7 @@ static enum v7_err WebSocket_readyState(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-void sj_init_ws_client(struct v7 *v7) {
+void sj_ws_client_api_setup(struct v7 *v7) {
   v7_val_t ws_proto = v7_mk_object(v7);
   v7_val_t ws = v7_mk_function_with_proto(v7, sj_ws_ctor, ws_proto);
   v7_own(v7, &ws);

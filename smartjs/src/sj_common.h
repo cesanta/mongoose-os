@@ -5,6 +5,12 @@
 
 #include "v7/v7.h"
 
+#if defined(V7_THAW)
+#define SJ_PRIVATE /* nothing */
+#else
+#define SJ_PRIVATE static
+#endif
+
 /*
  * Smart.js initialization common for all platforms
  */

@@ -10,6 +10,7 @@
 #include "sj_timers.h"
 #include "sj_v7_ext.h"
 #include "sys_config.h"
+#include "sj_common.h"
 
 #ifndef DISABLE_C_CLUBBY
 
@@ -920,7 +921,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
   }
 }
 
-static enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   clubby_send_hello(clubby);
@@ -930,7 +931,7 @@ static enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
 }
 
 /* clubby.call(dst: string, cmd: object, callback(resp): function) */
-static enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   struct ub_ctx *ctx = NULL;
@@ -1006,7 +1007,7 @@ error:
   return V7_OK;
 }
 
-static enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   v7_val_t arg1 = v7_arg(v7, 0);
@@ -1044,15 +1045,15 @@ error:
   return V7_OK;
 }
 
-static enum v7_err Clubby_onclose(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_onclose(struct v7 *v7, v7_val_t *res) {
   return set_on_event(clubby_cmd_onclose, sizeof(clubby_cmd_onclose), v7, res);
 }
 
-static enum v7_err Clubby_onopen(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_onopen(struct v7 *v7, v7_val_t *res) {
   return set_on_event(clubby_cmd_onopen, sizeof(clubby_cmd_onopen), v7, res);
 }
 
-static enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   if (!clubby_proto_is_connected(clubby->nc)) {
@@ -1067,7 +1068,7 @@ static enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-static enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   v7_val_t cbv = v7_arg(v7, 0);
@@ -1145,7 +1146,7 @@ error:
     }                                                                        \
   }
 
-static enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   (void) res;
 
   v7_val_t arg = v7_arg(v7, 0);
@@ -1281,10 +1282,9 @@ void sj_clubby_send_reply(struct clubby_event *evt, int status,
   free(dst);
 }
 
-void sj_init_clubby(struct v7 *v7) {
-  s_v7 = v7;
-
+void sj_clubby_api_setup(struct v7 *v7) {
   v7_val_t clubby_proto_v, clubby_ctor_v;
+
   clubby_proto_v = v7_mk_object(v7);
   v7_own(v7, &clubby_proto_v);
 
@@ -1300,12 +1300,16 @@ void sj_init_clubby(struct v7 *v7) {
 
   v7_set(v7, v7_get_global(v7), "Clubby", ~0, clubby_ctor_v);
 
+  v7_disown(v7, &clubby_proto_v);
+}
+
+void sj_clubby_init(struct v7 *v7) {
+  s_v7 = v7;
+
   clubby_proto_init(clubby_cb);
 
   sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
                                     NULL);
-
-  v7_disown(v7, &clubby_proto_v);
 
   sj_set_c_timeout(TIMEOUT_CHECK_PERIOD, verify_timeouts_cb, NULL);
 

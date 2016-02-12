@@ -8,6 +8,7 @@
 #include "mongoose/mongoose.h"
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_v7_ext.h"
+#include "sj_common.h"
 
 /*
  * Mongoose connection's user data that is used by the JavaScript HTTP
@@ -21,7 +22,7 @@ struct user_data {
    * - request (prototype: `sj_http_request_proto`)
    * - response (prototype: `sj_http_response_proto`)
    *
-   * See `sj_init_http()`, which initializes those prototypes.
+   * See `sj_http_api_setup()`, which initializes those prototypes.
    */
   v7_val_t obj;
 
@@ -42,7 +43,7 @@ static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
 static v7_val_t sj_http_request_proto;
 
-static enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
 
@@ -597,11 +598,11 @@ clean:
   return rcode;
 }
 
-static enum v7_err Http_createClient(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_createClient(struct v7 *v7, v7_val_t *res) {
   return sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1), res);
 }
 
-static enum v7_err Http_get(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_get(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   rcode = sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1), res);
   if (rcode != V7_OK) {
@@ -622,11 +623,11 @@ clean:
   return rcode;
 }
 
-static enum v7_err URL_parse(struct v7 *v7, v7_val_t *res) {
+enum v7_err URL_parse(struct v7 *v7, v7_val_t *res) {
   return sj_url_parse(v7, v7_arg(v7, 0), res);
 }
 
-void sj_init_http(struct v7 *v7) {
+void sj_http_api_setup(struct v7 *v7) {
   v7_own(v7, &sj_http_server_proto);
   v7_own(v7, &sj_http_response_proto);
   v7_own(v7, &sj_http_request_proto);
