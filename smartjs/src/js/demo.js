@@ -41,6 +41,6 @@ function demo() {
 };
 
 function startDemo() {
-  print("Starting temperature push demo in background, type Debug.mode(1) to see activity");
+  print("Starting temperature push demo in background, type Debug.mode(Debug.OUT) to see activity");
   demo();
 }

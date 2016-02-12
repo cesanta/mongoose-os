@@ -60,4 +60,8 @@ void sj_debug_api_setup(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), "Debug", 5, debug);
   v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);
+
+  v7_set(v7, debug, "OFF", 3, v7_mk_number(DEBUG_MODE_OFF));
+  v7_set(v7, debug, "OUT", 3, v7_mk_number(DEBUG_MODE_STDOUT));
+  v7_set(v7, debug, "ERR", 3, v7_mk_number(DEBUG_MODE_STDERR));
 }
