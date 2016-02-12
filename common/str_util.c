@@ -218,7 +218,8 @@ int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
 }
 
 #ifdef _WIN32
-void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
+int to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
+  int ret;
   char buf[MAX_PATH * 2], buf2[MAX_PATH * 2], *p;
 
   strncpy(buf, path, sizeof(buf));
@@ -228,17 +229,21 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
   p = buf + strlen(buf) - 1;
   while (p > buf && p[-1] != ':' && (p[0] == '\\' || p[0] == '/')) *p-- = '\0';
 
-  /*
-   * Convert to Unicode and back. If doubly-converted string does not
-   * match the original, something is fishy, reject.
-   */
   memset(wbuf, 0, wbuf_len * sizeof(wchar_t));
-  MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, (int) wbuf_len);
+  ret = MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, (int) wbuf_len);
+
+  /*
+   * Convert back to Unicode. If doubly-converted string does not match the
+   * original, something is fishy, reject.
+   */
   WideCharToMultiByte(CP_UTF8, 0, wbuf, (int) wbuf_len, buf2, sizeof(buf2),
                       NULL, NULL);
   if (strcmp(buf, buf2) != 0) {
     wbuf[0] = L'\0';
+    ret = 0;
   }
+
+  return ret;
 }
 #endif /* _WIN32 */
 

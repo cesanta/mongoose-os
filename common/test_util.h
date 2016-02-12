@@ -99,4 +99,15 @@ void _strfail(const char *a, const char *e, int len);
     }                                                                \
   } while (0)
 
+#define ASSERT_MG_STREQ(actual, expected)                            \
+  do {                                                               \
+    num_tests++;                                                     \
+    if (actual.len != strlen(expected) ||                            \
+        memcmp(actual.p, expected, actual.len) != 0) {               \
+      printf("'%.*s' (%d) != '%s'\n", (int) actual.len, actual.p,    \
+             (int) actual.len, expected);                            \
+      FAIL("ASSERT_MG_STREQ(" #actual ", " #expected ")", __LINE__); \
+    }                                                                \
+  } while (0)
+
 #endif /* MG_TEST_UTIL_HEADER_INCLUDED */

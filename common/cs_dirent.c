@@ -63,7 +63,7 @@ int closedir(DIR *dir) {
 }
 
 struct dirent *readdir(DIR *dir) {
-  struct dirent *result = 0;
+  struct dirent *result = NULL;
 
   if (dir) {
     if (dir->handle != INVALID_HANDLE_VALUE) {

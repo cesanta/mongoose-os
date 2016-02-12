@@ -319,7 +319,8 @@ to be met:
   arguments to the command prompt
 `GC.stat() -> stats_object`:: Return current memory usage
 `Debug.mode(mode) -> status_number`:: Set redirection for system
-  and custom (stderr) error logging: 0 = /dev/null, 1 = uart0, 2 = uart1
+  and custom (stderr) error logging: `Debug.OFF` or `0` = /dev/null;
+  `Debug.OUT` or `1` = uart0, `Debug.ERR` or `2` = uart1
 `Debug.print(...)`::
   Print information to current debug output (set by `Debug.mode`)
 
