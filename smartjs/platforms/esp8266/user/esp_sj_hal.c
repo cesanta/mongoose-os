@@ -36,7 +36,8 @@ void sj_wdt_feed() {
   pp_soft_wdt_restart();
 }
 
-void sj_system_restart() {
+void sj_system_restart(int exit_code) {
+  (void) exit_code;
   system_restart();
 }
 

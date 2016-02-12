@@ -148,7 +148,7 @@ static void v7_task(void *arg) {
 extern void (*const g_pfnVectors[])(void);
 
 void device_reboot(void) {
-  sj_system_restart();
+  sj_system_restart(0);
 }
 
 int main() {

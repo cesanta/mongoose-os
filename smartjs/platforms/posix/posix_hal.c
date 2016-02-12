@@ -80,9 +80,9 @@ void sj_wdt_feed() {
   /* Currently do nothing. For compatibility only. */
 }
 
-void sj_system_restart() {
+void sj_system_restart(int exit_code) {
   /* An external supervisor can restart us */
-  exit(0);
+  exit(exit_code);
 }
 
 size_t sj_get_fs_memory_usage() {

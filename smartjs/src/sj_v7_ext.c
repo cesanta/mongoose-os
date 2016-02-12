@@ -32,9 +32,17 @@ static enum v7_err Sys_wdtFeed(struct v7 *v7, v7_val_t *res) {
 }
 
 static enum v7_err Sys_reboot(struct v7 *v7, v7_val_t *res) {
+  int exit_code = 0;
+
   (void) v7;
   (void) res;
-  sj_system_restart();
+
+  v7_val_t code_v = v7_arg(v7, 0);
+  if (v7_is_number(code_v)) {
+    exit_code = v7_to_number(code_v);
+  }
+
+  sj_system_restart(exit_code);
 
   /* Unreachable */
   return V7_OK;

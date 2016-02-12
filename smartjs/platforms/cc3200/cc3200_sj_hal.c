@@ -59,7 +59,8 @@ void sj_wdt_feed() {
   /* TODO */
 }
 
-void sj_system_restart() {
+void sj_system_restart(int exit_code) {
+  (void) exit_code;
   /* Turns out to be not that easy. In particular, using *Reset functions is
    * not a good idea.
    * https://e2e.ti.com/support/wireless_connectivity/f/968/p/424736/1516404

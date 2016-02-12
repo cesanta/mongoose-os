@@ -52,7 +52,7 @@ size_t sj_get_fs_memory_usage();
 void sj_wdt_feed();
 
 /* Restart system */
-void sj_system_restart();
+void sj_system_restart(int exit_code);
 
 /* Delay usecs */
 void sj_usleep(int usecs);
