@@ -15,6 +15,7 @@ enum cs_log_level s_cs_log_level =
     LL_ERROR;
 #endif
 
+#ifndef CS_DISABLE_STDIO
 void cs_log_printf(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -23,6 +24,7 @@ void cs_log_printf(const char *fmt, ...) {
   fputc('\n', stderr);
   fflush(stderr);
 }
+#endif /* !CS_DISABLE_STDIO */
 
 void cs_log_set_level(enum cs_log_level level) {
   s_cs_log_level = level;

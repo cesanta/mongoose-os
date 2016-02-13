@@ -3,10 +3,19 @@
  * All rights reserved
  */
 
-#ifndef __CC3200_SOCKET_H_
-#define __CC3200_SOCKET_H_
+#ifndef _CS_PLATFORM_CC3200_H_
+#define _CS_PLATFORM_CC3200_H_
+#if CS_PLATFORM == CS_P_CC3200
 
-#include "simplelink.h"
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <time.h>
+
+#include <simplelink.h>
 
 #define SOMAXCONN 8
 
@@ -140,6 +149,18 @@
 #define ntohs                               sl_Ntohs
 /* clang-format on */
 
+typedef int sock_t;
+#define INVALID_SOCKET (-1)
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
+
+#define closesocket(x) close(x)
+
 /* Some functions we implement for Mongoose. */
 
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
@@ -160,4 +181,7 @@ struct hostent *gethostbyname(const char *name);
 struct timeval;
 int gettimeofday(struct timeval *t, void *tz);
 
-#endif /* __CC3200_SOCKET_H_ */
+long int random(void);
+
+#endif /* CS_PLATFORM == CS_P_CC3200 */
+#endif /* _CS_PLATFORM_CC3200_H_ */

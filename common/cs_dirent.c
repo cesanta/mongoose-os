@@ -5,7 +5,6 @@
 
 #ifndef EXCLUDE_COMMON
 
-#include "common/osdep.h"
 #include "common/cs_dirent.h"
 
 /*

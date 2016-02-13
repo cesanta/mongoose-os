@@ -16,12 +16,9 @@
 
 /* clang-format off */
 
-#ifndef NO_LIBC
-#include <ctype.h>
-#endif
 #include <stdarg.h>
 #include <string.h>
-#include "common/osdep.h"
+#include "common/platform.h"
 #include "common/utf.h"
 
 #if CS_ENABLE_UTF8

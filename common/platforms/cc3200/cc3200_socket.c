@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "cc3200_socket.h"
+#include "common/platform.h"
 
 #include "netapp.h"
 

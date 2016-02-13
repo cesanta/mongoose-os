@@ -5,7 +5,7 @@
 
 #ifndef EXCLUDE_COMMON
 
-#include "common/osdep.h"
+#include "common/platform.h"
 #include "common/str_util.h"
 
 #ifdef _MG_PROVIDE_STRNLEN

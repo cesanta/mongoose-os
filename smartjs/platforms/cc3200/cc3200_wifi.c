@@ -10,7 +10,7 @@
 #include "netapp.h"
 #include "wlan.h"
 
-#include "cc3200_socket.h"
+#include "common/platform.h"
 #include "sj_wifi.h"
 #include "v7/v7.h"
 #include "config.h"

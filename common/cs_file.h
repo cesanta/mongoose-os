@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include "common/platform.h"
+
 /*
  * Read whole file `path` in memory. It is responsibility of the caller
  * to `free()` allocated memory. File content is guaranteed to be

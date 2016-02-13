@@ -534,8 +534,7 @@ int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
   return 0;
 }
 
-#ifndef RTOS_SDK
+unsigned long os_random(void);
 long int random(void) {
   return os_random();
 }
-#endif

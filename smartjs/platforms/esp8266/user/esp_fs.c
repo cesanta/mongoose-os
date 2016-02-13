@@ -38,7 +38,7 @@
 #include "esp_uart.h"
 
 #include "esp_fs.h"
-#include "common/osdep.h"
+#include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
 

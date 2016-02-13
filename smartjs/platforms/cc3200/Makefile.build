@@ -57,6 +57,7 @@ VPATH = ${SDK_PATH}/driverlib \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/MemMang \
         ${SMARTJS_PATH}/src \
+        ${COMMON_PATH}/platforms/cc3200 \
         ${SPIFFS_PATH} \
         ${V7_PATH} \
         ${MONGOOSE_PATH}
@@ -66,7 +67,7 @@ V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE_COMPACTING_GC \
               -DDISABLE_MD5 \
-              -DNO_BSD_SOCKETS \
+              -DMG_NO_BSD_SOCKETS \
               -DV7_ENABLE__Math \
               -DV7_ENABLE__Math__random \
               -DV7_ENABLE__Memory__stats \
@@ -96,6 +97,7 @@ CFLAGS += -Os -Wall -Werror -DNDEBUG -DCS_NDEBUG \
           -I$(REPO_ROOT) \
           $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} \
           -DFW_ARCHITECTURE=\"cc3200\" \
+          -DCS_PLATFORM=4 \
           ${MONGOOSE_FEATURES} ${CFLAGS_EXTRA}
 # CFLAGS += -DCC3200_FS_DEBUG
 

@@ -12,7 +12,7 @@
 #include <string.h>
 
 #include "v7/v7.h"
-#include "common/osdep.h"
+#include "common/platform.h"
 
 #define RX_BUFSIZE 512
 #define SIGINT_CHAR 0x03

@@ -6,7 +6,7 @@
 #if !defined(MG_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
 #define MG_SHA1_HEADER_INCLUDED
 
-#include "common/osdep.h"
+#include "common/platform.h"
 
 #ifdef __cplusplus
 extern "C" {

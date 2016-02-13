@@ -121,6 +121,7 @@ void cs_base64_encode(const unsigned char *src, int src_len, char *dst) {
 #undef BASE64_OUT
 #undef BASE64_FLUSH
 
+#ifndef CS_DISABLE_STDIO
 #define BASE64_OUT(ch)      \
   do {                      \
     fprintf(f, "%c", (ch)); \
@@ -135,6 +136,7 @@ void cs_fprint_base64(FILE *f, const unsigned char *src, int src_len) {
 
 #undef BASE64_OUT
 #undef BASE64_FLUSH
+#endif /* !CS_DISABLE_STDIO */
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
 static unsigned char from_b64(unsigned char ch) {

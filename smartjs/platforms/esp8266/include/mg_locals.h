@@ -11,16 +11,7 @@
  * necessary for Mongoose core to work w/o BSD socket headers.
  */
 
-#include <sys/time.h>
-
-/* We'll bring our own timeval, than you very much. */
-#define LWIP_TIMEVAL_PRIVATE 0
-
 #ifndef RTOS_SDK
-
-/* Various structs and functions, such as in_addr_t are provided by LWIP. */
-#include <lwip/ip_addr.h>
-#include <lwip/inet.h>
 
 /*
  * ESP LWIP is compiled w/o socket support but we need a few declarations
@@ -30,11 +21,13 @@
 #error "Did not expect LWIP_SOCKET to be enabled."
 #endif
 
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 1
-#include <lwip/sockets.h>
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 0
+/*
+ * We really want the definitions from sockets.h for Mongoose,
+ * so we include them even if LWIP_SOCKET is disabled.
+ */
+#ifdef __LWIP_SOCKETS_H__
+#undef __LWIP_SOCKETS_H__
+#endif
 
 /* Implemented in libc_replacements */
 long int random(void);

@@ -13,9 +13,8 @@
 #ifndef _COROUTINE_H
 #define _COROUTINE_H
 
-#include "common/osdep.h"
-
 #include "common/mbuf.h"
+#include "common/platform.h"
 
 /* user-defined union, this module only operates on the pointer */
 union user_arg_ret;

@@ -61,6 +61,7 @@ CFLAGS := -W -Wall -Werror -Wno-comment -Wno-variadic-macros -Wpointer-arith \
           -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
           -Wno-parentheses -DIRAM='__attribute__((section(".fast.text")))' \
           -DNOINSTR='__attribute__((no_instrument_function))' \
+          -DCS_PLATFORM=3 \
           -ffunction-sections
 
 # linker flags used to generate the main object file

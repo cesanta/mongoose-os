@@ -21,6 +21,8 @@ enum cs_log_level {
 extern enum cs_log_level s_cs_log_level;
 void cs_log_set_level(enum cs_log_level level);
 
+#ifndef CS_DISABLE_STDIO
+
 void cs_log_printf(const char *fmt, ...);
 
 #define LOG(l, x)                        \
@@ -39,6 +41,13 @@ void cs_log_printf(const char *fmt, ...);
 
 #else /* NDEBUG */
 
+#define DBG(x)
+
+#endif
+
+#else /* CS_DISABLE_STDIO */
+
+#define LOG(l, x)
 #define DBG(x)
 
 #endif
