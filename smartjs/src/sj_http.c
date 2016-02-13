@@ -291,7 +291,7 @@ static void Http_write_data(struct v7 *v7, struct mg_connection *c) {
     goto clean;                                             \
   }
 
-static enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
 
@@ -307,7 +307,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err Http_response_end(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_response_end(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
 
@@ -338,7 +338,7 @@ static void http_write_headers(struct v7 *v7, v7_val_t headers_obj,
   }
 }
 
-static enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
 
@@ -396,7 +396,7 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
   }
 }
 
-static enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   struct mg_serve_http_opts opts;
   struct http_message hm;
   enum v7_err rcode = V7_OK;
@@ -429,7 +429,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   char buf[50], *p = buf;
   v7_val_t this_obj = v7_get_this(v7);
@@ -455,7 +455,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
 
@@ -466,7 +466,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err Http_request_end(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_request_end(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
 
@@ -483,7 +483,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err Http_request_abort(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_request_abort(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
   c->flags |= MG_F_CLOSE_IMMEDIATELY;
@@ -493,7 +493,7 @@ clean:
   return rcode;
 }
 
-static enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
 
@@ -538,6 +538,9 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
    * Let's retrieve needed properties
    */
   v7_val_t v_h = v7_get(v7, opts, "hostname", ~0);
+  if (v7_is_undefined(v_h)) {
+    v_h = v7_get(v7, opts, "host", ~0);
+  }
   v7_val_t v_p = v7_get(v7, opts, "port", ~0);
   v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
   v7_val_t v_m = v7_get(v7, opts, "method", ~0);
@@ -628,16 +631,35 @@ enum v7_err URL_parse(struct v7 *v7, v7_val_t *res) {
 }
 
 void sj_http_api_setup(struct v7 *v7) {
+  v7_val_t Http = v7_mk_undefined();
+  v7_val_t URL = v7_mk_undefined();
+
+  sj_http_server_proto = v7_mk_undefined();
+  sj_http_response_proto = v7_mk_undefined();
+  sj_http_request_proto = v7_mk_undefined();
+
+  /*
+   * All values are owned temporarily: static values like
+   * `sj_http_server_proto` will be owned later forever, in `sj_http_init()`.
+   *
+   * This is needed to support freezing
+   */
+  v7_own(v7, &Http);
+  v7_own(v7, &URL);
   v7_own(v7, &sj_http_server_proto);
   v7_own(v7, &sj_http_response_proto);
   v7_own(v7, &sj_http_request_proto);
+
   sj_http_server_proto = v7_mk_object(v7);
   sj_http_response_proto = v7_mk_object(v7);
   sj_http_request_proto = v7_mk_object(v7);
 
   /* NOTE(lsm): setting Http to globals immediately to avoid gc-ing it */
-  v7_val_t Http = v7_mk_object(v7);
+  Http = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Http", ~0, Http);
+  v7_set(v7, Http, "_serv", ~0, sj_http_server_proto);
+  v7_set(v7, Http, "_resp", ~0, sj_http_response_proto);
+  v7_set(v7, Http, "_req", ~0, sj_http_request_proto);
 
   v7_set_method(v7, Http, "createServer", Http_createServer);
   v7_set_method(v7, Http, "get", Http_get);
@@ -659,7 +681,37 @@ void sj_http_api_setup(struct v7 *v7) {
   v7_set_method(v7, sj_http_request_proto, "setTimeout",
                 Http_request_set_timeout);
 
-  v7_val_t URL = v7_mk_object(v7);
+  URL = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "URL", ~0, URL);
   v7_set_method(v7, URL, "parse", URL_parse);
+
+  v7_disown(v7, &sj_http_request_proto);
+  v7_disown(v7, &sj_http_response_proto);
+  v7_disown(v7, &sj_http_server_proto);
+  v7_disown(v7, &URL);
+  v7_disown(v7, &Http);
+}
+
+void sj_http_init(struct v7 *v7) {
+  v7_val_t Http = v7_mk_undefined();
+
+  sj_http_server_proto = v7_mk_undefined();
+  sj_http_response_proto = v7_mk_undefined();
+  sj_http_request_proto = v7_mk_undefined();
+
+  /* own temporary Http var */
+  v7_own(v7, &Http);
+
+  /* other values are owned forever */
+  v7_own(v7, &sj_http_server_proto);
+  v7_own(v7, &sj_http_response_proto);
+  v7_own(v7, &sj_http_request_proto);
+
+  Http = v7_get(v7, v7_get_global(v7), "Http", ~0);
+
+  sj_http_server_proto = v7_get(v7, Http, "_serv", ~0);
+  sj_http_response_proto = v7_get(v7, Http, "_resp", ~0);
+  sj_http_request_proto = v7_get(v7, Http, "_req", ~0);
+
+  v7_disown(v7, &Http);
 }

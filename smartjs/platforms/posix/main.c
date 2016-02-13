@@ -75,7 +75,6 @@ static void pre_init(struct v7 *v7) {
   sj_init_sys(v7);
 
   init_smartjs(v7);
-  sj_http_api_setup(v7);
 
   mongoose_init();
   sj_init_uart(v7);

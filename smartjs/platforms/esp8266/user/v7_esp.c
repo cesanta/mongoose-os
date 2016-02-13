@@ -136,8 +136,6 @@ void init_v7(void *stack_base) {
   sj_init_common(v7);
   sj_init_sys(v7);
 
-  sj_http_api_setup(v7);
-
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
 

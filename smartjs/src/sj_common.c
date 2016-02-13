@@ -29,6 +29,7 @@ void sj_init_common(struct v7 *v7) {
   sj_ws_client_api_setup(v7);
 
   sj_debug_api_setup(v7);
+  sj_http_api_setup(v7);
 
 #ifndef DISABLE_C_CLUBBY
   sj_clubby_api_setup(v7);
@@ -38,7 +39,9 @@ void sj_init_common(struct v7 *v7) {
   (void) v7;
 #endif
 
-/* Perform some active initialization */
+  /* Perform some active initialization */
+
+  sj_http_init(v7);
 
 #ifndef DISABLE_C_CLUBBY
   sj_clubby_init(v7);
