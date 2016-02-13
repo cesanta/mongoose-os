@@ -19,7 +19,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_UBJSON
 
 SJ_FEATURES = -DCS_ENABLE_UBJSON -DSJ_PROMPT_DISABLE_ECHO
-MONGOOSE_FEATURES = -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS 
+MONGOOSE_FEATURES = -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS
 
 INCLUDES = $(REPO_ROOT) $(SRC_PATH)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
@@ -33,7 +33,7 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
 CFLAGS ?= -O2 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
-          -D_BSD_SOURCE \
+          -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \
           $(V7_FEATURES) \
           $(SJ_FEATURES) \
