@@ -182,6 +182,7 @@ BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
+GENFILES_LIST = $(LD_SCRIPT)
 FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
@@ -200,6 +201,7 @@ HEAP_LOG_FLAGS =
 ifeq "${FREEZE}" "1"
 FEATURES += -DV7_THAW
 APP_OBJS += $(BUILD_DIR)/fr.o
+GENFILES_LIST += $(BUILD_DIR)/fr.c
 endif
 
 ifeq "${HEAP_LOG}" "1"
@@ -344,7 +346,7 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 
 # Common gathering point for all generated files.
 # Except version, which is special because it depends on objects.
-$(GENFILES_FLAG): $(LD_SCRIPT) $(BUILD_DIR)/fr.c
+$(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
 $(BUILD_DIR)/fr.dump: $(SJS_POSIX_BIN)/smartjs
