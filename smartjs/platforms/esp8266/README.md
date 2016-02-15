@@ -16,7 +16,8 @@ at the examples at `user/v7_cmd.c`.
 
 Smartjs release provides pre-built firmare, so you might just download
 it from the
-[Smartjs release page](https://github.com/cesanta/smart.js/releases) and
+[Smartjs release page](https://github.com/cesanta/smart.js/releases) or
+[developer builds](https://backend.cesanta.com/devel/smartjs-esp8266-last.zip) and
 skip to the next step. For those who want to build/customize the firmware,
 make sure you have docker installed and running. Then,
 

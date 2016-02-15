@@ -12,13 +12,13 @@ Take a look at 2 minute video that shows Smart.js in action:
 
 # Documentation and Downloads
 
+- [Release](https://github.com/cesanta/smart.js/releases/latest) - released firmware builds
+- [Flashnchips](https://github.com/cesanta/fnc/releases/latest) - multiplatform device flashing tool
 - [Smart.js Developer Centre](https://docs.cesanta.com/smartjs) - User Guide and API reference
 - [Support Forum](http://forum.cesanta.com/index.php?p=/categories/smart-js) -
   Ask your technical questions here
-- Current development Smart.js firmware biulds:
-   - [smartjs\_devel\_win.zip](https://backend.cesanta.com/devel/smartjs_devel_win.zip) - Windows build
-   - [smartjs\_devel\_mac.zip](https://backend.cesanta.com/devel/smartjs_devel_mac.zip) - MacOS build
-- [Releases](https://github.com/cesanta/smart.js/releases) - stable released firmware builds
+- Current development Smart.js firmware builds:
+   - [smartjs-esp8266-last.zip](https://backend.cesanta.com/devel/smartjs-esp8266-last.zip)
 
 # Contributions
 
