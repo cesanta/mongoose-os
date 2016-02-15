@@ -227,9 +227,8 @@ int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   return 1;
 }
 
-void init_wifi(struct v7 *v7) {
+void sj_wifi_hal_init(struct v7 *v7) {
   _u32 scan_interval = WIFI_SCAN_INTERVAL_SECONDS;
   sl_WlanPolicySet(SL_POLICY_SCAN, 1 /* enable */, (_u8 *) &scan_interval,
                    sizeof(scan_interval));
-  sj_wifi_init(v7);
 }

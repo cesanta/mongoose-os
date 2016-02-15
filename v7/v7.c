@@ -14039,6 +14039,7 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("base64_decode"),
     V7_VEC("base64_encode"),
     V7_VEC("boolean"),
+    V7_VEC("changed"),  /* sjs */
     V7_VEC("charAt"),
     V7_VEC("charCodeAt"),
     V7_VEC("concat"),
@@ -14049,6 +14050,7 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("createServer"),  /* sjs */
     V7_VEC("defineProperties"),
     V7_VEC("defineProperty"),
+    V7_VEC("disconnect"),  /* sjs */
     V7_VEC("every"),
     V7_VEC("exports"),
     V7_VEC("filter"),
@@ -14142,6 +14144,7 @@ static const struct v7_vec v_dictionary_strings[] = {
     V7_VEC("sha1_hex"),
     V7_VEC("source"),
     V7_VEC("splice"),
+    V7_VEC("status"),  /* sjs */
     V7_VEC("string"),
     V7_VEC("stringify"),
     V7_VEC("substr"),

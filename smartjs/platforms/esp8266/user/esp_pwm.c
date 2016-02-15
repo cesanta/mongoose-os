@@ -143,32 +143,18 @@ static void pwm_configure_timer() {
   ETS_FRC1_INTR_ENABLE();
 }
 
-static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
+int sj_pwm_set(int pin, int period, int duty) {
   struct pwm_info *p;
-  v7_val_t pinv = v7_arg(v7, 0);
-  v7_val_t periodv = v7_arg(v7, 1);
-  v7_val_t dutyv = v7_arg(v7, 2);
-  int pin, period, duty;
 
-  if (!v7_is_number(pinv) || !v7_is_number(periodv) || !v7_is_number(dutyv)) {
-    rcode = v7_throwf(v7, "Error", "Numeric argument expected");
-    goto clean;
-  }
-
-  pin = v7_to_number(pinv);
   if (pin != 16 && get_gpio_info(pin) == NULL) {
-    rcode = v7_throwf(v7, "Error", "Invalid pin number");
-    goto clean;
+    fprintf(stderr, "Invalid pin number\n");
+    return 0;
   }
-
-  period = v7_to_number(periodv);
-  duty = v7_to_number(dutyv);
 
   if (period != 0 &&
       (period < PWM_BASE_RATE_US * 2 || duty < 0 || duty > period)) {
-    rcode = v7_throwf(v7, "Error", "Invalid period / duty value");
-    goto clean;
+    fprintf(stderr, "Invalid period / duty value\n");
+    return 0;
   }
 
   period /= PWM_BASE_RATE_US;
@@ -176,8 +162,7 @@ static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
 
   p = find_or_create_pwm_info(pin, (period > 0 && duty >= 0));
   if (p == NULL) {
-    rcode = v7_throwf(v7, "Error", "OOM");
-    goto clean;
+    return 0;
   }
 
   if (period == 0) {
@@ -186,13 +171,11 @@ static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
       pwm_configure_timer();
       sj_gpio_write(pin, 0);
     }
-    *res = v7_mk_boolean(1);
-    goto clean;
+    return 1;
   }
 
   if (p->period == (uint32_t) period && p->duty == (uint32_t) duty) {
-    *res = v7_mk_boolean(1);
-    goto clean;
+    return 1;
   }
 
   sj_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
@@ -212,11 +195,7 @@ static enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
   }
 
   pwm_configure_timer();
-  *res = v7_mk_boolean(1);
-  goto clean;
-
-clean:
-  return rcode;
+  return 1;
 }
 
 IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
@@ -262,17 +241,14 @@ IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
   RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
 }
 
-void init_pwm(struct v7 *v7) {
-  v7_val_t pwm = v7_mk_object(v7);
-  v7_set(v7, v7_get_global(v7), "PWM", ~0, pwm);
-  v7_set_method(v7, pwm, "set", PWM_set);
-}
-
 #else /* RTOS */
 
-struct v7;
+int sj_pwm_set(int pin, int period, int duty) {
+  (void) pin;
+  (void) period;
+  (void) duty;
 
-void init_pwm(struct v7 *v7) {
+  return 0;
 }
 
 #endif

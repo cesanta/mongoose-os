@@ -134,17 +134,17 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   return 1;
 }
 
-int sj_wifi_connect() {
+int sj_wifi_connect(void) {
   return wifi_station_connect();
 }
 
-int sj_wifi_disconnect() {
+int sj_wifi_disconnect(void) {
   /* disable any AP mode */
   wifi_set_opmode_current(0x1);
   return wifi_station_disconnect();
 }
 
-enum sj_wifi_status sj_wifi_get_status() {
+enum sj_wifi_status sj_wifi_get_status(void) {
   if (wifi_station_get_connect_status() == STATION_GOT_IP) {
     return SJ_WIFI_IP_ACQUIRED;
   } else {
@@ -152,7 +152,7 @@ enum sj_wifi_status sj_wifi_get_status() {
   }
 }
 
-char *sj_wifi_get_status_str() {
+char *sj_wifi_get_status_str(void) {
   uint8 st = wifi_station_get_connect_status();
   const char *msg = NULL;
 
@@ -248,13 +248,13 @@ void wifi_changed_cb(System_Event_t *evt) {
   if (sj_ev >= 0) sj_wifi_on_change_callback(sj_ev);
 }
 
-char *sj_wifi_get_connected_ssid() {
+char *sj_wifi_get_connected_ssid(void) {
   struct station_config conf;
   if (!wifi_station_get_config(&conf)) return NULL;
   return strdup((const char *) conf.ssid);
 }
 
-char *sj_wifi_get_sta_ip() {
+char *sj_wifi_get_sta_ip(void) {
   struct ip_info info;
   char *ip;
   if (!wifi_get_ip_info(0, &info) || info.ip.addr == 0) return NULL;
@@ -289,9 +289,10 @@ int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   return wifi_station_scan(NULL, wifi_scan_done);
 }
 
-void init_wifi(struct v7 *v7) {
+void sj_wifi_hal_init(struct v7 *v7) {
+  (void) v7;
+
   /* avoid entering AP mode on boot */
   wifi_set_opmode_current(0x1);
   wifi_set_event_handler_cb(wifi_changed_cb);
-  sj_wifi_init(v7);
 }

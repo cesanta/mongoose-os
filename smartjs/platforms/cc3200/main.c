@@ -32,13 +32,13 @@
 #include "sj_prompt.h"
 #include "sj_timers.h"
 #include "sj_v7_ext.h"
+#include "sj_wifi_js.h"
 #include "sj_wifi.h"
 #include "v7/v7.h"
 #include "config.h"
 #include "cc3200_fs.h"
 #include "cc3200_leds.h"
 #include "cc3200_sj_hal.h"
-#include "cc3200_wifi.h"
 #include "device_config.h"
 
 struct v7 *s_v7;
@@ -103,7 +103,8 @@ static void v7_task(void *arg) {
   sj_timers_api_setup(v7);
   sj_v7_ext_api_setup(v7);
   sj_init_sys(v7);
-  init_wifi(v7);
+  sj_wifi_api_setup(v7);
+  sj_wifi_init(v7);
   if (init_fs(v7) != 0) {
     fprintf(stderr, "FS initialization failed.\n");
   }

@@ -14,4 +14,6 @@
 /*
  * Smart.js initialization common for all platforms
  */
-void sj_init_common(struct v7 *v7);
+void sj_common_api_setup(struct v7 *v7);
+
+void sj_common_init(struct v7 *v7);

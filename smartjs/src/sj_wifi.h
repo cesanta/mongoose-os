@@ -3,16 +3,12 @@
  * All rights reserved
  */
 
-#ifndef __SMARTJS_WIFI_H_
-#define __SMARTJS_WIFI_H_
+#ifndef _SJ_WIFI_H_INCLUDED
+#define _SJ_WIFI_H_INCLUDED
 
 #include "v7/v7.h"
 
 #include "smartjs/src/sys_config.h"
-
-void sj_wifi_init(struct v7 *v7);
-
-/* HAL */
 
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
 
@@ -40,4 +36,6 @@ void sj_wifi_on_change_callback(enum sj_wifi_status event);
 
 enum sj_wifi_status sj_wifi_get_status();
 
-#endif /* __SMARTJS_WIFI_H_ */
+void sj_wifi_hal_init(struct v7 *v7);
+
+#endif /* _SJ_WIFI_H_INCLUDED */

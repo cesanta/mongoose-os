@@ -4,16 +4,18 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 
-#include "sj_hal.h"
+#include "sj_common.h"
 #include "sj_v7_ext.h"
 #include "sj_wifi.h"
+#include "sj_wifi_js.h"
 
 #include "v7/v7.h"
 #include "device_config.h"
 #include "common/cs_dbg.h"
 
-static v7_val_t s_wifi;
+static v7_val_t wifi_private;
 static struct v7 *s_v7;
 
 struct wifi_ready_cb {
@@ -55,7 +57,7 @@ static void call_wifi_ready_cbs(struct v7 *v7) {
   }
 }
 
-static enum v7_err Wifi_ready(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_ready(struct v7 *v7, v7_val_t *res) {
   int ret = 0;
   v7_val_t cbv = v7_arg(v7, 0);
 
@@ -76,7 +78,7 @@ exit:
   return V7_OK;
 }
 
-static enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t ssidv = v7_arg(v7, 0);
   v7_val_t passv = v7_arg(v7, 1);
@@ -117,19 +119,19 @@ clean:
   return rcode;
 }
 
-static enum v7_err Wifi_connect(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_connect(struct v7 *v7, v7_val_t *res) {
   (void) v7;
   *res = v7_mk_boolean(sj_wifi_connect());
   return V7_OK;
 }
 
-static enum v7_err Wifi_disconnect(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_disconnect(struct v7 *v7, v7_val_t *res) {
   (void) v7;
   *res = v7_mk_boolean(sj_wifi_disconnect());
   return V7_OK;
 }
 
-static enum v7_err Wifi_status(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_status(struct v7 *v7, v7_val_t *res) {
   char *status = sj_wifi_get_status_str();
   if (status == NULL) {
     *res = v7_mk_undefined();
@@ -144,7 +146,7 @@ clean:
   return V7_OK;
 }
 
-static enum v7_err Wifi_show(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_show(struct v7 *v7, v7_val_t *res) {
   char *ssid = sj_wifi_get_connected_ssid();
   if (ssid == NULL) {
     *res = v7_mk_undefined();
@@ -159,7 +161,7 @@ clean:
   return V7_OK;
 }
 
-static enum v7_err Wifi_ip(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_ip(struct v7 *v7, v7_val_t *res) {
   char *ip = sj_wifi_get_sta_ip();
   if (ip == NULL) {
     *res = v7_mk_undefined();
@@ -182,20 +184,20 @@ void sj_wifi_on_change_callback(enum sj_wifi_status event) {
     call_wifi_ready_cbs(v7);
   }
 
-  v7_val_t cb = v7_get(v7, s_wifi, "_ccb", ~0);
+  v7_val_t cb = v7_get(v7, wifi_private, "_ccb", ~0);
   if (v7_is_undefined(cb) || v7_is_null(cb)) return;
   sj_invoke_cb1(s_v7, cb, v7_mk_number(event));
 }
 
-static enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
   if (!v7_is_callable(v7, cb)) {
     *res = v7_mk_boolean(0);
     goto clean;
   }
-  v7_def(v7, s_wifi, "_ccb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
-         cb);
+  v7_def(v7, wifi_private, "_ccb", ~0,
+         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), cb);
   *res = v7_mk_boolean(1);
   goto clean;
 
@@ -205,7 +207,7 @@ clean:
 
 void sj_wifi_scan_done(const char **ssids) {
   struct v7 *v7 = s_v7;
-  v7_val_t cb = v7_get(v7, s_wifi, "_scb", ~0);
+  v7_val_t cb = v7_get(v7, wifi_private, "_scb", ~0);
   v7_val_t res = v7_mk_undefined();
   const char **p;
   if (!v7_is_callable(v7, cb)) return;
@@ -223,15 +225,15 @@ void sj_wifi_scan_done(const char **ssids) {
   sj_invoke_cb1(v7, cb, res);
 
   v7_disown(v7, &res);
-  v7_def(v7, s_wifi, "_scb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
-         v7_mk_undefined());
+  v7_def(v7, wifi_private, "_scb", ~0,
+         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), v7_mk_undefined());
 }
 
 /* Call the callback with a list of ssids found in the air. */
-static enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int r;
-  v7_val_t cb = v7_get(v7, s_wifi, "_scb", ~0);
+  v7_val_t cb = v7_get(v7, wifi_private, "_scb", ~0);
   if (v7_is_callable(v7, cb)) {
     fprintf(stderr, "scan in progress");
     *res = v7_mk_boolean(0);
@@ -244,12 +246,12 @@ static enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_boolean(0);
     goto clean;
   }
-  v7_def(v7, s_wifi, "_scb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
-         cb);
+  v7_def(v7, wifi_private, "_scb", ~0,
+         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), cb);
 
   r = sj_wifi_scan(sj_wifi_scan_done);
-  v7_def(v7, s_wifi, "_scb", ~0, (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)),
-         v7_mk_undefined());
+  v7_def(v7, wifi_private, "_scb", ~0,
+         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), v7_mk_undefined());
   *res = v7_mk_boolean(r);
   goto clean;
 
@@ -257,9 +259,11 @@ clean:
   return rcode;
 }
 
-void sj_wifi_init(struct v7 *v7) {
-  s_v7 = v7;
-  s_wifi = v7_mk_object(v7);
+void sj_wifi_api_setup(struct v7 *v7) {
+  v7_val_t s_wifi = v7_mk_object(v7);
+
+  v7_own(v7, &s_wifi);
+
   v7_set_method(v7, s_wifi, "setup", sj_Wifi_setup);
   v7_set_method(v7, s_wifi, "connect", Wifi_connect);
   v7_set_method(v7, s_wifi, "disconnect", Wifi_disconnect);
@@ -270,4 +274,15 @@ void sj_wifi_init(struct v7 *v7) {
   v7_set_method(v7, s_wifi, "scan", Wifi_scan);
   v7_set_method(v7, s_wifi, "ready", Wifi_ready);
   v7_set(v7, v7_get_global(v7), "Wifi", ~0, s_wifi);
+
+  v7_disown(v7, &s_wifi);
+}
+
+void sj_wifi_init(struct v7 *v7) {
+  s_v7 = v7;
+  wifi_private = v7_mk_object(v7);
+  v7_def(v7, v7_get_global(v7), "_Wifi", ~0,
+         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), wifi_private);
+
+  sj_wifi_hal_init(v7);
 }

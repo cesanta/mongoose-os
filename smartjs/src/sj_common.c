@@ -14,8 +14,11 @@
 #include "smartjs/src/sj_mongoose_ws_client.h"
 #include "smartjs/src/sj_clubby.h"
 #include "smartjs/src/sj_debug_js.h"
+#include "smartjs/src/sj_pwm_js.h"
+#include "smartjs/src/sj_wifi_js.h"
+#include "smartjs/src/sj_wifi.h"
 
-void sj_init_common(struct v7 *v7) {
+void sj_common_api_setup(struct v7 *v7) {
 /* Setup JS API */
 #if !defined(V7_THAW)
   sj_timers_api_setup(v7);
@@ -31,6 +34,9 @@ void sj_init_common(struct v7 *v7) {
   sj_debug_api_setup(v7);
   sj_http_api_setup(v7);
 
+  sj_pwm_api_setup(v7);
+  sj_wifi_api_setup(v7);
+
 #ifndef DISABLE_C_CLUBBY
   sj_clubby_api_setup(v7);
 #endif
@@ -38,10 +44,13 @@ void sj_init_common(struct v7 *v7) {
 #else
   (void) v7;
 #endif
+}
 
+void sj_common_init(struct v7 *v7) {
   /* Perform some active initialization */
 
   sj_http_init(v7);
+  sj_wifi_init(v7);
 
 #ifndef DISABLE_C_CLUBBY
   sj_clubby_init(v7);

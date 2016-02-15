@@ -68,10 +68,11 @@ static void run_init_script(struct v7 *v7) {
 }
 
 static void pre_freeze_init(struct v7 *v7) {
-  sj_init_common(v7);
+  sj_common_api_setup(v7);
 }
 
 static void pre_init(struct v7 *v7) {
+  sj_common_init(v7);
   sj_init_sys(v7);
 
   init_smartjs(v7);

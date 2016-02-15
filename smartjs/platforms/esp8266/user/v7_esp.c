@@ -17,7 +17,6 @@
 #include "dht11.h"
 #include "esp_pwm.h"
 #include "esp_uart.h"
-#include "esp_sj_wifi.h"
 #include "smartjs/src/sj_http.h"
 #include "smartjs/src/sj_mongoose_ws_client.h"
 #include "common/sha1.h"
@@ -133,7 +132,9 @@ void init_v7(void *stack_base) {
   /* disable GC during initialization */
   v7_set_gc_enabled(v7, 0);
 
-  sj_init_common(v7);
+  sj_common_api_setup(v7);
+  sj_common_init(v7);
+
   sj_init_sys(v7);
 
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
@@ -146,9 +147,6 @@ void init_v7(void *stack_base) {
 #else
   (void) dht11;
 #endif /* V7_ESP_ENABLE__DHT11 */
-
-  init_pwm(v7);
-  init_wifi(v7);
 
   mongoose_init();
 
