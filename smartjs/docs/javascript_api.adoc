@@ -262,7 +262,7 @@ lockups. This timer is periodically reset by the OS, or can be explicitly
 "fed" by user code. Failure to do so will cause the device to be reset.
 The current default watchdog timer period is about 1 minute.
 
-`OS.wdt_feed()`:: delay restart of the device for 1 minute. This function
+`Sys.wdtFeed()`:: delay restart of the device for 1 minute. This function
   has to be called inside long loops, or other long operations to
   prevent device reset.
 
@@ -343,7 +343,7 @@ Once the update process is finished, the callback receives one of the following 
 - `Sys.updater.NOTHING_TODO`: the device is already running newest firmware.
 - `Sys.updater.FAILED`: update cannot be completed, callback handler can try to repeat updating by invoking Sys.updater.start(url) again.
 - `Sys.updater.COMPLETED`: update process completed successfully. The callback handler can reboot the device with
-  `Sys.reboot()` to use new firmware immediately or delay reboot until suitable moment.
+  `Sys.exit()` to use new firmware immediately or delay reboot until suitable moment.
 
 Example:
 ```
