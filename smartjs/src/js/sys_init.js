@@ -83,12 +83,14 @@ if (Sys.conf.clubby.device_id) {
 global.clubby = new Clubby({connect:false});
 
 if (Sys.conf.clubby.device_id && Sys.conf.clubby.connect_on_boot) {
-  if (typeof(Wifi) != "undefined") {
+  if (Wifi.status() !== undefined) {
+    // Wifi has some well-defined status; therefore, Wifi is usable at the
+    // current platform
     Wifi.ready(clubby.connect.bind(clubby))
   } else {
-    // Assume, if port doesn't have Wifi object it uses
-    // external networking and if connect_on_boot=true we have
-    // connect immediately
+    // Wifi management is not supported at the current platform: assume it uses
+    // external networking and if connect_on_boot=true we can connect
+    // immediately
     clubby.connect()
   }
 }
@@ -108,7 +110,7 @@ function registerDevice() {
 }
 
 if (!Sys.conf.clubby.device_id && Sys.conf.clubby.device_auto_registration) {
-  if (typeof(Wifi) != "undefined") {
+  if (Wifi.status() !== undefined) {
     print('Requesting device id when WiFi is ready');
     Wifi.ready(registerDevice);
   } else {

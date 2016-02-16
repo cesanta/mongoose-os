@@ -490,6 +490,7 @@
 #include <string.h>
 
 #include "umm_malloc.h"
+#include "umm_malloc_internal.h"
 
 #include "umm_malloc_cfg.h"   /* user-dependent */
 
@@ -620,10 +621,8 @@ umm_block *umm_heap = NULL;
 /* Total number of blocks in the heap */
 unsigned short int umm_numblocks = 0;
 
-/* Current number of free blocks, updated at each heap operation */
-unsigned short int free_blocks_cnt = 0;
-/* Minimal number of free blocks, updated at each heap operation */
-unsigned short int min_free_blocks_cnt = ~0;
+/* Heap statistics which is updated incrementally at each heap operation */
+UMM_STAT umm_stat;
 
 #define UMM_NUMBLOCKS (umm_numblocks)
 
@@ -1140,30 +1139,31 @@ static void umm_disconnect_from_free_list( unsigned short int c ) {
 
 /* ------------------------------------------------------------------------ */
 
+/*
+ * The caller should ensure that the next block is a free block, so this
+ * function will assimilate up and remove it from the free list
+ */
 static void umm_assimilate_up( unsigned short int c ) {
 
-  if( UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_FREELIST_MASK ) {
-    /*
-     * The next block is a free block, so assimilate up and remove it from
-     * the free list
-     */
+  umm_stat.free_entries_cnt--;
 
-    DBG_LOG_DEBUG( "Assimilate up to next block, which is FREE\n" );
+  DBG_LOG_DEBUG( "Assimilate up to next block, which is FREE\n" );
 
-    /* Disconnect the next block from the FREE list */
+  /* Disconnect the next block from the FREE list */
 
-    umm_disconnect_from_free_list( UMM_NBLOCK(c) );
+  umm_disconnect_from_free_list( UMM_NBLOCK(c) );
 
-    /* Assimilate the next block with this one */
+  /* Assimilate the next block with this one */
 
-    UMM_PBLOCK(UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_BLOCKNO_MASK) = c;
-    UMM_NBLOCK(c) = UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_BLOCKNO_MASK;
-  } 
+  UMM_PBLOCK(UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_BLOCKNO_MASK) = c;
+  UMM_NBLOCK(c) = UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_BLOCKNO_MASK;
 }
 
 /* ------------------------------------------------------------------------ */
 
 static unsigned short int umm_assimilate_down( unsigned short int c, unsigned short int freemask ) {
+
+  umm_stat.free_entries_cnt--;
 
   UMM_NBLOCK(UMM_PBLOCK(c)) = UMM_NBLOCK(c) | freemask;
   UMM_PBLOCK(UMM_NBLOCK(c)) = UMM_PBLOCK(c);
@@ -1174,8 +1174,8 @@ static unsigned short int umm_assimilate_down( unsigned short int c, unsigned sh
 /* ------------------------------------------------------------------------- */
 
 static void umm_account_free_blocks_cnt(void) {
-  if (min_free_blocks_cnt > free_blocks_cnt) {
-    min_free_blocks_cnt = free_blocks_cnt;
+  if (umm_stat.min_free_blocks_cnt > umm_stat.free_blocks_cnt) {
+    umm_stat.min_free_blocks_cnt = umm_stat.free_blocks_cnt;
   }
 }
 
@@ -1235,7 +1235,9 @@ void umm_init( void ) {
     UMM_PBLOCK(block_last) = block_1th;
 
     /* Set initial free blocks count */
-    free_blocks_cnt = block_last - block_1th;
+    umm_stat.free_blocks_cnt = block_last - block_1th;
+    umm_stat.free_entries_cnt = 1;
+    umm_stat.min_free_blocks_cnt = umm_stat.free_blocks_cnt;
     umm_account_free_blocks_cnt();
   }
 }
@@ -1272,14 +1274,18 @@ static void _umm_free( void *ptr ) {
 
   {
     unsigned short originalBlockSize = ((UMM_NBLOCK(c) & ~UMM_FREELIST_MASK) - c);
-    free_blocks_cnt += originalBlockSize;
+    umm_stat.free_blocks_cnt += originalBlockSize;
   }
+
+  umm_stat.free_entries_cnt++;
 
   DBG_LOG_DEBUG( "Freeing block %6i\n", c );
 
   /* Now let's assimilate this block with the next one if possible. */
 
-  umm_assimilate_up( c );
+  if( UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_FREELIST_MASK ) {
+    umm_assimilate_up( c );
+  }
 
   /* Then assimilate with the previous block if possible */
 
@@ -1416,6 +1422,7 @@ static void *_umm_malloc( size_t size ) {
       /* Disconnect this block from the FREE list */
 
       umm_disconnect_from_free_list( cf );
+      umm_stat.free_entries_cnt--;
 
     } else {
       /* It's not an exact fit and we need to split off a block. */
@@ -1446,7 +1453,7 @@ static void *_umm_malloc( size_t size ) {
 
     }
 
-    free_blocks_cnt -= blocks;
+    umm_stat.free_blocks_cnt -= blocks;
   } else {
     /* Out of memory */
 
@@ -1566,7 +1573,7 @@ static void *_umm_realloc( void *ptr, size_t size ) {
   if( UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_FREELIST_MASK ) {
     unsigned short originalBlockSize =
       ((UMM_NBLOCK(UMM_NBLOCK(c)) & ~UMM_FREELIST_MASK) - UMM_NBLOCK(c));
-    free_blocks_cnt -= originalBlockSize;
+    umm_stat.free_blocks_cnt -= originalBlockSize;
     umm_assimilate_up( c );
   }
 
@@ -1590,7 +1597,7 @@ static void *_umm_realloc( void *ptr, size_t size ) {
     {
       unsigned short originalBlockSize =
         ((UMM_NBLOCK(UMM_PBLOCK(c)) & ~UMM_FREELIST_MASK) - UMM_PBLOCK(c));
-      free_blocks_cnt -= originalBlockSize;
+      umm_stat.free_blocks_cnt -= originalBlockSize;
     }
 
 
@@ -1762,11 +1769,23 @@ void umm_free( void *ptr ) {
 /* ------------------------------------------------------------------------ */
 
 size_t umm_free_heap_size( void ) {
-  return (size_t)free_blocks_cnt * sizeof(umm_block);
+  /*
+   * To calculate free heap size, we take a number of free blocks
+   * `umm_stat.free_blocks_cnt` and multiply it by the size of the block.
+   *
+   * We also take into account the allocation overhead: next/prev indexes pair
+   * (`umm_ptr`) per allocation.
+   */
+  return ((size_t)umm_stat.free_blocks_cnt * sizeof(umm_block))
+         - (umm_stat.free_entries_cnt * sizeof(umm_ptr));
 }
 
 size_t umm_min_free_heap_size( void ) {
-  return (size_t)min_free_blocks_cnt * sizeof(umm_block);
+  return (size_t)umm_stat.min_free_blocks_cnt * sizeof(umm_block);
+}
+
+int umm_free_entries_cnt( void ) {
+  return umm_stat.free_entries_cnt;
 }
 
 /* ------------------------------------------------------------------------ */

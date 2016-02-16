@@ -10,6 +10,7 @@
 #include <assert.h>
 
 #include "umm_malloc.h"
+#include "umm_malloc_internal.h"
 
 #define TRY(v)                           \
   do {                                   \
@@ -33,13 +34,26 @@ void umm_corruption(void) {
  */
 static void free_blocks_check(void) {
   umm_info(NULL, 0);
-  size_t actual = ummHeapInfo.freeBlocks * ummHeapInfo.blockSize;
-  size_t calculated = umm_free_heap_size();
-  if (actual != calculated) {
-    fprintf(stderr, "free blocks mismatch: actual=%d, calculated=%d\n",
-        actual, calculated
-        );
-    exit(1);
+  {
+    size_t actual = ummHeapInfo.freeBlocks;
+    size_t calculated = umm_stat.free_blocks_cnt;
+    if (actual != calculated) {
+      fprintf(stderr, "free blocks mismatch: actual=%d, calculated=%d\n",
+          actual, calculated
+          );
+      exit(1);
+    }
+  }
+
+  {
+    int actual = ummHeapInfo.freeEntries;
+    int calculated = umm_free_entries_cnt();
+    if (actual != calculated) {
+      fprintf(stderr, "free entries mismatch: actual=%d, calculated=%d\n",
+          actual, calculated
+          );
+      exit(1);
+    }
   }
 }
 

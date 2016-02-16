@@ -1,5 +1,6 @@
 SOURCES = str_util.c cs_time.c unit_test.c test_util.c
 CFLAGS = -I.. -g $(CFLAGS_EXTRA)
+UMM_MALLOC_TEST_PATH = umm_malloc/test
 
 CLANG_FORMAT:=clang-format
 
@@ -11,7 +12,8 @@ endif
 
 all: unit_test
 
-unit_test: $(SOURCES)
+unit_test:
+	make -C $(UMM_MALLOC_TEST_PATH)
 	cc $(SOURCES) -o $@ $(CFLAGS)
 	./$@
 

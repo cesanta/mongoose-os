@@ -39,6 +39,7 @@ void umm_free( void *ptr );
 
 size_t umm_free_heap_size( void );
 size_t umm_min_free_heap_size( void );
+int umm_free_entries_cnt( void );
 
 
 /* ------------------------------------------------------------------------ */

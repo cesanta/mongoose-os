@@ -37,7 +37,6 @@ enum sj_wifi_status sj_wifi_get_status(void) {
 }
 
 char *sj_wifi_get_status_str(void) {
-  print_error();
   return NULL;
 }
 
