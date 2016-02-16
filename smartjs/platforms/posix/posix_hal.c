@@ -226,13 +226,18 @@ static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
 }
 
 void sj_prompt_init_hal() {
-  int fds[2];
-  if (!mg_socketpair((sock_t *) fds, SOCK_STREAM)) {
-    printf("cannot create a socketpair\n");
-    exit(1);
+  if (isatty(fileno(stdin))) {
+    /* stdin is a tty, so, init prompt */
+    int fds[2];
+    if (!mg_socketpair((sock_t *) fds, SOCK_STREAM)) {
+      printf("cannot create a socketpair\n");
+      exit(1);
+    }
+    mg_start_thread(stdin_thread, (void *) (uintptr_t) fds[1]);
+    mg_add_sock(&sj_mgr, fds[0], prompt_handler);
+  } else {
+    /* in case of a non-tty stdin, don't init prompt */
   }
-  mg_start_thread(stdin_thread, (void *) (uintptr_t) fds[1]);
-  mg_add_sock(&sj_mgr, fds[0], prompt_handler);
 }
 
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
