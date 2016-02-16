@@ -14,7 +14,7 @@
 #include "osapi.h"
 #include "os_type.h"
 #include "user_interface.h"
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 
 #include "esp_gpio.h"
 #include "esp_periph.h"

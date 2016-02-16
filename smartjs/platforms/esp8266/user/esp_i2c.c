@@ -16,7 +16,7 @@
 
 #include "esp_gpio.h"
 #include "esp_periph.h"
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 
 #ifndef RTOS_SDK
 

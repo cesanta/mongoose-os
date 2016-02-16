@@ -13,7 +13,7 @@
 #include "os_type.h"
 #include "user_interface.h"
 
-#include "esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 #include "mongoose.h"
 
 uint32 last_ts;

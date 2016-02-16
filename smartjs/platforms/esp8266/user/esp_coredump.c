@@ -14,10 +14,11 @@
 #include <espressif/esp_system.h>
 #endif
 
+#include "common/platforms/esp8266/esp_missing_includes.h"
+
 #include "esp_exc.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "esp_uart.h"
 #include "v7_esp.h"
 

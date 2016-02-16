@@ -27,7 +27,7 @@
 #include "esp_exc.h"
 #include "xtensa/corebits.h"
 #include "esp_hw.h"
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 
 /*
  * Only the L32I, L32I.N, and L32R load instructions can access InstRAM

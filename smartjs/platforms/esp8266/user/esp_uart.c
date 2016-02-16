@@ -7,7 +7,7 @@
 #include <ets_sys.h>
 #include <string.h>
 
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 #include "esp_uart.h"
 #include "esp_gpio.h"
 #include "smartjs/src/sj_debug.h"

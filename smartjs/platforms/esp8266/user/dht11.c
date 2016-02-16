@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 #include "smartjs/platforms/esp8266/user/util.h"
 #include "smartjs/platforms/esp8266/user/v7_esp_features.h"
 

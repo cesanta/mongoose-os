@@ -9,7 +9,7 @@
 #include "smartjs/src/sj_timers.h"
 #include "smartjs/src/sj_v7_ext.h"
 
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 #include "v7_esp.h"
 
 #ifndef RTOS_SDK

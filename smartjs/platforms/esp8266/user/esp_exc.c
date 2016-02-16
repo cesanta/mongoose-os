@@ -11,16 +11,16 @@
 #include <xtensa/corebits.h>
 #include <stdint.h>
 
+#include "common/base64.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
+
 #include "esp_coredump.h"
 #include "esp_flash_bytes.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
 #include "esp_uart.h"
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "esp_uart.h"
 #include "v7_esp.h"
-
-#include "common/base64.h"
 
 #ifndef RTOS_SDK
 

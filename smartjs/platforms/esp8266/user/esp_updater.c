@@ -6,8 +6,8 @@
 
 #ifndef DISABLE_OTA
 
+#include "common/platforms/esp8266/esp_missing_includes.h"
 #include "smartjs/platforms/esp8266/user/esp_updater.h"
-#include "smartjs/platforms/esp8266/include/esp_missing_includes.h"
 #include "rboot/rboot/appcode/rboot-api.h"
 #include "smartjs/src/sj_config.h"
 #include "smartjs/src/device_config.h"
