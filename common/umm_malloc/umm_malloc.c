@@ -617,7 +617,13 @@ UMM_H_ATTPACKPRE typedef struct umm_block_t {
 #endif
 
 umm_block *umm_heap = NULL;
+/* Total number of blocks in the heap */
 unsigned short int umm_numblocks = 0;
+
+/* Current number of free blocks, updated at each heap operation */
+unsigned short int free_blocks_cnt = 0;
+/* Minimal number of free blocks, updated at each heap operation */
+unsigned short int min_free_blocks_cnt = ~0;
 
 #define UMM_NUMBLOCKS (umm_numblocks)
 
@@ -975,6 +981,8 @@ void *umm_info( void *ptr, int force ) {
    */
   memset( &ummHeapInfo, 0, sizeof( ummHeapInfo ) );
 
+  ummHeapInfo.blockSize = sizeof(umm_block);
+
   DBG_LOG_FORCE( force, "\n\nDumping the umm_heap...\n" );
 
   DBG_LOG_FORCE( force, "|0x%08lx|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
@@ -1041,21 +1049,6 @@ void *umm_info( void *ptr, int force ) {
     }
 
     blockNo = UMM_NBLOCK(blockNo) & UMM_BLOCKNO_MASK;
-  }
-
-  /*
-   * Update the accounting totals with information from the last block, the
-   * rest must be free!
-   */
-
-  {
-    size_t curBlocks = UMM_NUMBLOCKS-blockNo;
-    ummHeapInfo.freeBlocks  += curBlocks;
-    ummHeapInfo.totalBlocks += curBlocks;
-
-    if (ummHeapInfo.maxFreeContiguousBlocks < curBlocks) {
-      ummHeapInfo.maxFreeContiguousBlocks = curBlocks;
-    }
   }
 
   DBG_LOG_FORCE( force, "|0x%08lx|B %5i|NB %5i|PB %5i|Z %5i|NF %5i|PF %5i|\n",
@@ -1180,6 +1173,14 @@ static unsigned short int umm_assimilate_down( unsigned short int c, unsigned sh
 
 /* ------------------------------------------------------------------------- */
 
+static void umm_account_free_blocks_cnt(void) {
+  if (min_free_blocks_cnt > free_blocks_cnt) {
+    min_free_blocks_cnt = free_blocks_cnt;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+
 void umm_init( void ) {
   /* init heap pointer and size, and memset it to 0 */
   umm_heap = (umm_block *)UMM_MALLOC_CFG__HEAP_ADDR;
@@ -1232,6 +1233,10 @@ void umm_init( void ) {
      */
     UMM_NBLOCK(block_last) = 0;
     UMM_PBLOCK(block_last) = block_1th;
+
+    /* Set initial free blocks count */
+    free_blocks_cnt = block_last - block_1th;
+    umm_account_free_blocks_cnt();
   }
 }
 
@@ -1264,6 +1269,11 @@ static void _umm_free( void *ptr ) {
   /* Figure out which block we're in. Note the use of truncated division... */
 
   c = (((char *)ptr)-(char *)(&(umm_heap[0])))/sizeof(umm_block);
+
+  {
+    unsigned short originalBlockSize = ((UMM_NBLOCK(c) & ~UMM_FREELIST_MASK) - c);
+    free_blocks_cnt += originalBlockSize;
+  }
 
   DBG_LOG_DEBUG( "Freeing block %6i\n", c );
 
@@ -1433,7 +1443,10 @@ static void *_umm_malloc( size_t size ) {
       /* next free block */
       UMM_PFREE( UMM_NFREE(cf) ) = cf + blocks;
       UMM_NFREE( cf + blocks ) = UMM_NFREE(cf);
+
     }
+
+    free_blocks_cnt -= blocks;
   } else {
     /* Out of memory */
 
@@ -1550,7 +1563,12 @@ static void *_umm_realloc( void *ptr, size_t size ) {
    * assimilation step later in free :-)
    */
 
-  umm_assimilate_up( c );
+  if( UMM_NBLOCK(UMM_NBLOCK(c)) & UMM_FREELIST_MASK ) {
+    unsigned short originalBlockSize =
+      ((UMM_NBLOCK(UMM_NBLOCK(c)) & ~UMM_FREELIST_MASK) - UMM_NBLOCK(c));
+    free_blocks_cnt -= originalBlockSize;
+    umm_assimilate_up( c );
+  }
 
   /*
    * Now check if it might help to assimilate down, but don't actually
@@ -1569,6 +1587,12 @@ static void *_umm_realloc( void *ptr, size_t size ) {
     /* Disconnect the previous block from the FREE list */
 
     umm_disconnect_from_free_list( UMM_PBLOCK(c) );
+    {
+      unsigned short originalBlockSize =
+        ((UMM_NBLOCK(UMM_PBLOCK(c)) & ~UMM_FREELIST_MASK) - UMM_PBLOCK(c));
+      free_blocks_cnt -= originalBlockSize;
+    }
+
 
     /*
      * Connect the previous block to the next block ... and then
@@ -1608,6 +1632,7 @@ static void *_umm_realloc( void *ptr, size_t size ) {
 
     umm_make_new_block( c, blocks, 0, 0 );
     _umm_free( (void *)&UMM_DATA(c+blocks) );
+
   } else {
     /* New block is bigger than the old block... */
 
@@ -1622,9 +1647,9 @@ static void *_umm_realloc( void *ptr, size_t size ) {
 
     if( (ptr = _umm_malloc( size )) ) {
       memcpy( ptr, oldptr, curSize );
+      _umm_free( oldptr );
     }
 
-    _umm_free( oldptr );
   }
 
   /* Release the critical section... */
@@ -1654,6 +1679,8 @@ void *umm_malloc( size_t size ) {
 
   ret = GET_POISONED(ret, size);
 
+  umm_account_free_blocks_cnt();
+
   return ret;
 }
 
@@ -1678,6 +1705,8 @@ void *umm_calloc( size_t num, size_t item_size ) {
   memset(ret, 0x00, size);
 
   ret = GET_POISONED(ret, size);
+
+  umm_account_free_blocks_cnt();
 
   return ret;
 }
@@ -1704,6 +1733,8 @@ void *umm_realloc( void *ptr, size_t size ) {
 
   ret = GET_POISONED(ret, size);
 
+  umm_account_free_blocks_cnt();
+
   return ret;
 }
 
@@ -1724,13 +1755,18 @@ void umm_free( void *ptr ) {
   }
 
   _umm_free( ptr );
+
+  umm_account_free_blocks_cnt();
 }
 
 /* ------------------------------------------------------------------------ */
 
 size_t umm_free_heap_size( void ) {
-  umm_info(NULL, 0);
-  return (size_t)ummHeapInfo.freeBlocks * sizeof(umm_block);
+  return (size_t)free_blocks_cnt * sizeof(umm_block);
+}
+
+size_t umm_min_free_heap_size( void ) {
+  return (size_t)min_free_blocks_cnt * sizeof(umm_block);
 }
 
 /* ------------------------------------------------------------------------ */

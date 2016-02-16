@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include "umm_malloc.h"
 
@@ -26,6 +27,61 @@ void umm_corruption(void) {
   corruption_cnt++;
 }
 
+/*
+ * Checks that the incrementally calculated free heap size is equal to the
+ * actual free heap size (calculated by calling `umm_info()`)
+ */
+static void free_blocks_check(void) {
+  umm_info(NULL, 0);
+  size_t actual = ummHeapInfo.freeBlocks * ummHeapInfo.blockSize;
+  size_t calculated = umm_free_heap_size();
+  if (actual != calculated) {
+    fprintf(stderr, "free blocks mismatch: actual=%d, calculated=%d\n",
+        actual, calculated
+        );
+    exit(1);
+  }
+}
+
+/*
+ * Wrapper for `umm_malloc()` which performs additional checks
+ */
+static void *wrap_malloc( size_t size ) {
+  free_blocks_check();
+  void *ret = umm_malloc(size);
+  free_blocks_check();
+  return ret;
+}
+
+/*
+ * Wrapper for `umm_calloc()` which performs additional checks
+ */
+static void *wrap_calloc( size_t num, size_t size ) {
+  free_blocks_check();
+  void *ret = umm_calloc(num, size);
+  free_blocks_check();
+  return ret;
+}
+
+/*
+ * Wrapper for `umm_realloc()` which performs additional checks
+ */
+static void *wrap_realloc( void *ptr, size_t size ) {
+  free_blocks_check();
+  void *ret = umm_realloc(ptr, size);
+  free_blocks_check();
+  return ret;
+}
+
+/*
+ * Wrapper for `umm_free()` which performs additional checks
+ */
+static void wrap_free( void *ptr ) {
+  free_blocks_check();
+  umm_free(ptr);
+  free_blocks_check();
+}
+
 #define OOM_PTRS_CNT 10
 bool test_oom_random(void) {
   umm_init();
@@ -38,7 +94,7 @@ bool test_oom_random(void) {
     size_t i;
     for (i = 0; i < OOM_PTRS_CNT; i++) {
       size += rand() % 40 - 10;
-      ptrs[i] = umm_malloc(size);
+      ptrs[i] = wrap_malloc(size);
       if (ptrs[i] == NULL) {
         goto out;
       }
@@ -47,7 +103,7 @@ bool test_oom_random(void) {
     /* free some of the blocks, so we have "holes" */
     for (i = 0; i < OOM_PTRS_CNT; i++) {
       if ((rand() % 10) <= 2) {
-        umm_free(ptrs[i]);
+        wrap_free(ptrs[i]);
       }
     }
   }
@@ -68,10 +124,10 @@ bool test_poison(void) {
     {
       umm_init();
       corruption_cnt = 0;
-      char *ptr = umm_malloc(size);
+      char *ptr = wrap_malloc(size);
       ptr[size]++;
 
-      umm_free(ptr);
+      wrap_free(ptr);
 
       if (corruption_cnt == 0) {
         printf("corruption_cnt should not be 0, but it is\n");
@@ -82,10 +138,10 @@ bool test_poison(void) {
     {
       umm_init();
       corruption_cnt = 0;
-      char *ptr = umm_calloc(1, size);
+      char *ptr = wrap_calloc(1, size);
       ptr[-1]++;
 
-      umm_free(ptr);
+      wrap_free(ptr);
 
       if (corruption_cnt == 0) {
         printf("corruption_cnt should not be 0, but it is\n");
@@ -105,9 +161,14 @@ bool test_integrity_check(void) {
     {
       umm_init();
       corruption_cnt = 0;
-      char *ptr = umm_malloc(size);
+      char *ptr = wrap_malloc(size);
       memset(ptr, 0xfe, size + 8 /* size of umm_block*/);
 
+      /*
+       * NOTE: we don't use wrap_free here, because we've just corrupted the
+       * heap, and gathering of the umm info on corrupted heap can cause
+       * segfault
+       */
       umm_free(ptr);
 
       if (corruption_cnt == 0) {
@@ -119,9 +180,14 @@ bool test_integrity_check(void) {
     {
       umm_init();
       corruption_cnt = 0;
-      char *ptr = umm_calloc(1, size);
+      char *ptr = wrap_calloc(1, size);
       ptr[-1]++;
 
+      /*
+       * NOTE: we don't use wrap_free here, because we've just corrupted the
+       * heap, and gathering of the umm info on corrupted heap can cause
+       * segfault
+       */
       umm_free(ptr);
 
       if (corruption_cnt == 0) {
@@ -153,6 +219,16 @@ bool random_stress(void) {
   for (idx = 0; idx < 100000; ++idx) {
     i = rand() % 256;
 
+    /* try to realloc some pointer to deliberately too large value */
+    {
+      void *tmp = wrap_realloc(ptr_array[i], UMM_MALLOC_CFG__HEAP_SIZE);
+      if (tmp != NULL) {
+        printf("realloc to too large buffer should return NULL");
+        return false;
+      }
+    }
+
+
     switch (rand() % 16) {
       case 0:
       case 1:
@@ -161,13 +237,13 @@ bool random_stress(void) {
       case 4:
       case 5:
       case 6: {
-        ptr_array[i] = umm_realloc(ptr_array[i], 0);
+        ptr_array[i] = wrap_realloc(ptr_array[i], 0);
         break;
       }
       case 7:
       case 8: {
         size_t size = rand() % 40;
-        ptr_array[i] = umm_realloc(ptr_array[i], size);
+        ptr_array[i] = wrap_realloc(ptr_array[i], size);
         memset(ptr_array[i], 0xfe, size);
         break;
       }
@@ -177,7 +253,7 @@ bool random_stress(void) {
       case 11:
       case 12: {
         size_t size = rand() % 100;
-        ptr_array[i] = umm_realloc(ptr_array[i], size);
+        ptr_array[i] = wrap_realloc(ptr_array[i], size);
         memset(ptr_array[i], 0xfe, size);
         break;
       }
@@ -185,8 +261,8 @@ bool random_stress(void) {
       case 13:
       case 14: {
         size_t size = rand() % 200;
-        umm_free(ptr_array[i]);
-        ptr_array[i] = umm_calloc(1, size);
+        wrap_free(ptr_array[i]);
+        ptr_array[i] = wrap_calloc(1, size);
         if (ptr_array[i] != NULL) {
           int a;
           for (a = 0; a < size; a++) {
@@ -202,12 +278,13 @@ bool random_stress(void) {
 
       default: {
         size_t size = rand() % 400;
-        umm_free(ptr_array[i]);
-        ptr_array[i] = umm_malloc(size);
+        wrap_free(ptr_array[i]);
+        ptr_array[i] = wrap_malloc(size);
         memset(ptr_array[i], 0xfe, size);
         break;
       }
     }
+
   }
 
   return (corruption_cnt == 0);

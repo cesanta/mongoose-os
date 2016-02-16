@@ -45,6 +45,9 @@ void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg);
 /* Get system free memory. */
 size_t sj_get_free_heap_size();
 
+/* Get minimal watermark of the system free memory. */
+size_t sj_get_min_free_heap_size();
+
 /* Get filesystem memory usage */
 size_t sj_get_fs_memory_usage();
 

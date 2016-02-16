@@ -76,6 +76,11 @@ size_t sj_get_free_heap_size() {
 #endif
 }
 
+size_t sj_get_min_free_heap_size() {
+  /* Not supported */
+  return 0;
+}
+
 void sj_wdt_feed() {
   /* Currently do nothing. For compatibility only. */
 }

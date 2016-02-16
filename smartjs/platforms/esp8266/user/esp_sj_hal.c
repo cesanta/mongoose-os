@@ -13,6 +13,7 @@
 #include "smartjs/src/sj_prompt.h"
 #include "esp_mg_net_if.h"
 #include "esp_uart.h"
+#include "common/umm_malloc/umm_malloc.h"
 
 #ifndef RTOS_SDK
 
@@ -30,6 +31,15 @@
 
 size_t sj_get_free_heap_size() {
   return system_get_free_heap_size();
+}
+
+size_t sj_get_min_free_heap_size() {
+#if defined(ESP_UMM_ENABLE)
+  return umm_min_free_heap_size();
+#else
+  /* Not supported */
+  return 0;
+#endif
 }
 
 void sj_wdt_feed() {

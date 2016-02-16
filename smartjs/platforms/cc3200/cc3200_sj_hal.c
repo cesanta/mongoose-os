@@ -51,6 +51,11 @@ size_t sj_get_free_heap_size() {
   return avail;
 }
 
+size_t sj_get_min_free_heap_size() {
+  /* Not supported */
+  return 0;
+}
+
 size_t sj_get_fs_memory_usage() {
   return 0; /* Not even sure if it's possible to tell. */
 }
