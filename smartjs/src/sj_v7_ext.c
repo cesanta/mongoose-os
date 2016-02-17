@@ -15,12 +15,12 @@
 static enum v7_err Sys_prof(struct v7 *v7, v7_val_t *res) {
   *res = v7_mk_object(v7);
 
-  v7_set(v7, *res, "sysfree", 7, v7_mk_number(sj_get_free_heap_size()));
-  v7_set(v7, *res, "min_sysfree", 11,
+  v7_set(v7, *res, "sysfree", ~0, v7_mk_number(sj_get_free_heap_size()));
+  v7_set(v7, *res, "min_sysfree", ~0,
          v7_mk_number(sj_get_min_free_heap_size()));
-  v7_set(v7, *res, "used_by_js", 10,
+  v7_set(v7, *res, "used_by_js", ~0,
          v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
-  v7_set(v7, *res, "used_by_fs", 10, v7_mk_number(sj_get_fs_memory_usage()));
+  v7_set(v7, *res, "used_by_fs", ~0, v7_mk_number(sj_get_fs_memory_usage()));
 
   return V7_OK;
 }
