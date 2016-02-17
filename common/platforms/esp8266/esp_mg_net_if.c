@@ -658,7 +658,13 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   v7_own(v7, &cba->func);
   v7_own(v7, &cba->this_obj);
   v7_own(v7, &cba->args);
-  system_os_post(MG_TASK_PRIORITY, MG_SIG_V7_CALLBACK, (uint32_t) cba);
+  if (!system_os_post(MG_TASK_PRIORITY, MG_SIG_V7_CALLBACK, (uint32_t) cba)) {
+    LOG(LL_ERROR, ("MG queue overflow"));
+    v7_disown(v7, &cba->func);
+    v7_disown(v7, &cba->this_obj);
+    v7_disown(v7, &cba->args);
+    free(cba);
+  }
 }
 #endif
 
