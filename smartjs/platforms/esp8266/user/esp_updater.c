@@ -161,18 +161,13 @@ static void do_http_connect(const char *url) {
   s_current_connection =
       mg_connect_http(&sj_mgr, mg_ev_handler, url, NULL, NULL);
 #ifdef SSL_KRYPTON
-  if (memcmp(url, "https", 5) == 0 && get_cfg()->tls.enabled) {
-    char *ca_file = get_cfg()->tls.ca_file[0] ? get_cfg()->tls.ca_file : NULL;
+  if (memcmp(url, "https", 5) == 0 && get_cfg()->tls.enable) {
+    char *ca_file = get_cfg()->tls.ca_file;
     char *server_name = get_cfg()->tls.server_name;
     mg_set_ssl(s_current_connection, NULL, ca_file);
-    if (server_name[0] == '\0') {
-      char *p;
-      server_name = strdup(get_cfg()->update.server_address);
-      p = strchr(server_name, ':');
-      if (p != NULL) *p = '\0';
+    if (server_name != NULL) {
+      SSL_CTX_kr_set_verify_name(s_current_connection->ssl_ctx, server_name);
     }
-    SSL_CTX_kr_set_verify_name(s_current_connection->ssl_ctx, server_name);
-    if (server_name != get_cfg()->update.tls_server_name) free(server_name);
   }
 #endif
 }

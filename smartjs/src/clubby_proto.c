@@ -53,19 +53,13 @@ struct mg_connection *clubby_proto_connect(struct mg_mgr *mgr,
    * TODO(alashkin): here we use TLS settings from configuration
    * probably we have to move it to clubby local configuration
    */
-  if (s_cfg->tls_ena) {
-    char *ca_file =
-        get_cfg()->tls->tls_ca_file[0] ? get_cfg()->tls->tls_ca_file : NULL;
-    char *server_name = get_cfg()->tls->tls_server_name;
-    mg_set_ssl(s_clubby_conn, NULL, ca_file);
-    if (server_name[0] == '\0') {
-      char *p;
-      server_name = strdup(get_cfg()->tls->server_address);
-      p = strchr(server_name, ':');
-      if (p != NULL) *p = '\0';
+  if (get_cfg()->tls.enable) {
+    char *ca_file = get_cfg()->tls.ca_file;
+    char *server_name = get_cfg()->tls.server_name;
+    mg_set_ssl(nc, NULL, ca_file);
+    if (server_name != NULL) {
+      SSL_CTX_kr_set_verify_name(nc->ssl_ctx, server_name);
     }
-    SSL_CTX_kr_set_verify_name(s_clubby_conn->ssl_ctx, server_name);
-    if (server_name != get_cfg()->tls->tls_server_name) free(server_name);
   }
 #endif
 

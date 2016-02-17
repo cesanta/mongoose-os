@@ -13,7 +13,7 @@
 #include <lwip/tcp_impl.h>
 #include <lwip/udp.h>
 
-#ifdef ESP_SSL_KRYPTON
+#ifdef SSL_KRYPTON
 #include "krypton.h"
 
 #define MG_LWIP_SSL_READ_SIZE 1024
@@ -86,7 +86,7 @@ static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
   }
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   cs->err = err;
-#ifdef ESP_SSL_KRYPTON
+#ifdef SSL_KRYPTON
   if (err == 0 && nc->ssl != NULL) {
     SSL_set_fd(nc->ssl, (intptr_t) nc);
     mg_lwip_ssl_do_hs(nc);
@@ -143,7 +143,7 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
     pbuf_chain(cs->rx_chain, p);
   }
 
-#ifdef ESP_SSL_KRYPTON
+#ifdef SSL_KRYPTON
   if (nc->ssl != NULL) {
     if (nc->flags & MG_F_SSL_HANDSHAKE_DONE) {
       mg_lwip_ssl_recv(nc);
@@ -544,7 +544,7 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
       mg_close_conn(nc);
       continue;
     }
-#ifdef ESP_SSL_KRYPTON
+#ifdef SSL_KRYPTON
     if (nc->ssl != NULL && cs != NULL && cs->pcb.tcp->state == ESTABLISHED) {
       if (((nc->flags & MG_F_WANT_WRITE) || nc->send_mbuf.len > 0) &&
           cs->pcb.tcp->snd_buf > 0) {
@@ -563,7 +563,7 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
         }
       }
     } else
-#endif /* ESP_SSL_KRYPTON */
+#endif /* SSL_KRYPTON */
     {
       if (!(nc->flags & (MG_F_CONNECTING | MG_F_UDP))) {
         if (nc->send_mbuf.len > 0) mg_lwip_send_more(nc);
@@ -687,7 +687,7 @@ int mg_is_suspended() {
   return s_suspended;
 }
 
-#ifdef ESP_SSL_KRYPTON
+#ifdef SSL_KRYPTON
 
 static void mg_lwip_ssl_do_hs(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
@@ -775,6 +775,7 @@ ssize_t kr_send(int fd, const void *buf, size_t len, int flags) {
   struct mg_connection *nc = (struct mg_connection *) fd;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   int ret = mg_lwip_tcp_write(cs->pcb.tcp, buf, len);
+  (void) flags;
   DBG(("mg_lwip_tcp_write %u = %d", len, ret));
   if (ret <= 0) {
     errno = ret == 0 ? EWOULDBLOCK : EIO;
@@ -787,6 +788,7 @@ ssize_t kr_recv(int fd, void *buf, size_t len, int flags) {
   struct mg_connection *nc = (struct mg_connection *) fd;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct pbuf *seg = cs->rx_chain;
+  (void) flags;
   if (seg == NULL) {
     DBG(("%u - nothing to read", len));
     errno = EWOULDBLOCK;
