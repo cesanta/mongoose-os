@@ -8,6 +8,7 @@
 
 #include "smartjs/src/sys_config.h"
 #include "v7/v7.h"
+#include "mongoose/mongoose.h"
 
 #define OVERRIDES_JSON_FILE "conf.json"
 
@@ -37,6 +38,8 @@ int init_device(struct v7 *);
 int device_init_platform(struct sys_config *);
 void device_reboot(void);
 void device_get_mac_address(uint8_t mac[6]);
+
+void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);
 
 /*
  * Set property in Sys.conf object pointed by path paramater (dot separated,

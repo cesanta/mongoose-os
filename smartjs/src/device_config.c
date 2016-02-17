@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "mongoose/mongoose.h"
 #include "common/cs_file.h"
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/device_config.h"
@@ -45,6 +44,7 @@ static const char *s_architecture = FW_ARCHITECTURE;
 static struct mg_serve_http_opts s_http_server_opts;
 static char s_mac_address[13];
 static const char *mac_address_ptr = s_mac_address;
+static struct mg_connection *listen_conn;
 
 static void export_read_only_vars_to_v7(struct v7 *v7) {
   struct ro_var *rv;
@@ -72,10 +72,44 @@ void expand_mac_address_placeholders(char *str) {
   }
 }
 
-static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
-  const char *json_headers =
-      "Connection: close\r\nContent-Type: application/json";
+#define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
 
+static void reboot_handler(struct mg_connection *c, int ev, void *p) {
+  (void) ev;
+  (void) p;
+  LOG(LL_DEBUG, ("Reboot requested"));
+  mg_send_head(c, 200, 0, JSON_HEADERS);
+  c->flags |= (MG_F_SEND_AND_CLOSE | MG_F_RELOAD_CONFIG);
+}
+
+static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
+  (void) ev;
+  (void) p;
+  LOG(LL_DEBUG, ("RO-vars requested"));
+  /* Reply with JSON object that contains read-only variables */
+  mg_send_head(c, 200, -1, JSON_HEADERS);
+  mg_printf_http_chunk(c, "{");
+  struct ro_var *rv;
+  for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
+    mg_printf_http_chunk(c, "%s\n  \"%s\": \"%s\"", rv == g_ro_vars ? "" : ",",
+                         rv->name, *rv->ptr);
+  }
+  mg_printf_http_chunk(c, "\n}\n");
+  mg_printf_http_chunk(c, ""); /* Zero chunk - end of response */
+  c->flags |= MG_F_SEND_AND_CLOSE;
+}
+
+static void factory_reset_handler(struct mg_connection *c, int ev, void *p) {
+  (void) ev;
+  (void) p;
+  LOG(LL_DEBUG, ("Factory reset requested"));
+  remove("conf.json");
+  c->flags |= (MG_F_SEND_AND_CLOSE | MG_F_RELOAD_CONFIG);
+  mg_send_head(c, 200, 0, JSON_HEADERS);
+  c->flags |= MG_F_SEND_AND_CLOSE;
+}
+
+static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   LOG(LL_VERBOSE_DEBUG,
       ("%s: %p ev %d, fl %lx l %lu %lu", __func__, p, ev, c->flags,
        (unsigned long) c->recv_mbuf.len, (unsigned long) c->send_mbuf.len));
@@ -83,36 +117,12 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
     case MG_EV_HTTP_REQUEST: {
       struct http_message *hm = (struct http_message *) p;
-      char *buf = NULL;
-
-      if (mg_vcmp(&hm->uri, "/reboot") == 0) {
-        c->flags |= MG_F_RELOAD_CONFIG;
-        mg_send_head(c, 200, 0, json_headers);
-      } else if (mg_vcmp(&hm->uri, "/ro_vars") == 0) {
-        /* Reply with JSON object that contains read-only variables */
-        mg_send_head(c, 200, -1, json_headers);
-        mg_printf_http_chunk(c, "{");
-        struct ro_var *rv;
-        for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
-          mg_printf_http_chunk(c, "%s\n  \"%s\": \"%s\"",
-                               rv == g_ro_vars ? "" : ",", rv->name, *rv->ptr);
-        }
-        mg_printf_http_chunk(c, "\n}\n");
-        mg_printf_http_chunk(c, ""); /* Zero chunk - end of response */
-      } else if (mg_vcmp(&hm->uri, "/factory_reset") == 0) {
-        remove("conf.json");
-        c->flags |= MG_F_RELOAD_CONFIG;
-        mg_send_head(c, 200, 0, json_headers);
-      } else {
-        mg_serve_http(c, p, s_http_server_opts);
-      }
-
       LOG(LL_DEBUG,
           ("[%.*s] -> [%.*s]\n", (int) ((hm->body.p - 1) - hm->message.p),
            hm->message.p, (int) c->send_mbuf.len, c->send_mbuf.buf));
 
+      mg_serve_http(c, p, s_http_server_opts);
       c->flags |= MG_F_SEND_AND_CLOSE;
-      free(buf);
       break;
     }
     case MG_EV_CLOSE:
@@ -123,6 +133,11 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
       }
       break;
   }
+}
+
+void device_register_http_endpoint(const char *uri,
+                                   mg_event_handler_t handler) {
+  mg_register_http_endpoint(listen_conn, uri, handler);
 }
 
 static int init_web_server(const struct sys_config *cfg) {
@@ -137,13 +152,17 @@ static int init_web_server(const struct sys_config *cfg) {
     s_http_server_opts.dav_document_root = ".";
   }
 
-  struct mg_connection *conn;
-  conn = mg_bind(&sj_mgr, cfg->http.port, mongoose_ev_handler);
-  if (!conn) {
+  listen_conn = mg_bind(&sj_mgr, cfg->http.port, mongoose_ev_handler);
+  if (!listen_conn) {
     LOG(LL_ERROR, ("Error binding to port [%s]", cfg->http.port));
     return 0;
   } else {
-    mg_set_protocol_http_websocket(conn);
+    mg_register_http_endpoint(listen_conn, "/reboot", reboot_handler);
+    mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
+    mg_register_http_endpoint(listen_conn, "/factory_reset",
+                              factory_reset_handler);
+
+    mg_set_protocol_http_websocket(listen_conn);
     LOG(LL_INFO, ("HTTP server started on port [%s]", cfg->http.port));
   }
   return 1;

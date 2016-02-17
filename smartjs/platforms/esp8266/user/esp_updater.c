@@ -1013,6 +1013,13 @@ static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
+static void handle_update_req(struct mg_connection *c, int ev, void *p) {
+  (void) c;
+  (void) ev;
+  (void) p;
+  LOG(LL_DEBUG, ("Incoming update request"));
+}
+
 void init_updater(struct v7 *v7) {
   s_v7 = v7;
   v7_val_t updater = v7_mk_object(v7);
@@ -1044,6 +1051,8 @@ void init_updater(struct v7 *v7) {
 
   sj_clubby_register_global_command(clubby_cmd_ready, handle_clubby_ready,
                                     NULL);
+
+  device_register_http_endpoint("/update", handle_update_req);
 }
 
 #endif /* DISABLE_OTA */
