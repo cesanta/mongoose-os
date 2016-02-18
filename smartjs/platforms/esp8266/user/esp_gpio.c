@@ -266,8 +266,8 @@ enum gpio_level sj_gpio_read(int pin) {
  * So, while user holds key we don't have any interruption.
  * 7. And so on, and so on.
 */
-static void v7_gpio_process_on_click(int pin, int level,
-                                     f_gpio_intr_handler_t callback) {
+IRAM static void v7_gpio_process_on_click(int pin, int level,
+                                          f_gpio_intr_handler_t callback) {
   if (GPIO_PIN_INTR_HILEVEL - (int_map[pin] & 0xF) != level) {
     /*
      * In order to a avoid false positive, waiting
@@ -300,7 +300,7 @@ static void v7_gpio_process_on_click(int pin, int level,
   }
 }
 
-static void v7_gpio_intr_dispatcher(void *arg) {
+IRAM static void v7_gpio_intr_dispatcher(void *arg) {
   f_gpio_intr_handler_t callback = (f_gpio_intr_handler_t) arg;
   uint8_t i, level;
 
