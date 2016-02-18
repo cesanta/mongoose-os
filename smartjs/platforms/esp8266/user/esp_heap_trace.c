@@ -40,9 +40,32 @@ extern void call_trace_print(size_t skip_cnt, size_t max_cnt);
  * initialized. At the moment of writing this, there are 44 calls. Let it be
  * 50. (if actual amount exceeds, we'll abort)
  */
-#define LOG_ITEMS_CNT 100
+#define LOG_ITEMS_CNT 50
 
-#define MK_PTR(v) ((void *) (0x3ffc0000 | (v)))
+/*
+ * Special value to be saved into `struct log_item::ptr`, meaning NULL pointer
+ * (we can't use real NULL here because it would mean `0x3ffc0000`, see
+ * `PTR_DEFLATE()` / `PTR_INFLATE()`)
+ */
+#define NULL_FLAG 0x01
+
+/*
+ * Takes a pointer and yields a truncated value to be saved into `struct
+ * log_item::ptr`
+ *
+ * See `PTR_INFLATE()`
+ */
+#define PTR_DEFLATE(ptr) \
+  ((ptr) ? ((unsigned int) (ptr) &0x0003ffff) : NULL_FLAG)
+
+/*
+ * Takes a truncated pointer value stored into `struct log_item::ptr`, and
+ * yields a real pointer
+ *
+ * See `PTR_DEFLATE()`
+ */
+#define PTR_INFLATE(v) \
+  (((v) != NULL_FLAG) ? ((void *) (0x3ffc0000 | (v))) : NULL)
 
 typedef uint8_t item_type_t;
 enum item_type {
@@ -133,12 +156,12 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
                          int shim) {
   uint8_t plog_allocated = 0;
   struct log_item item = {0};
-  item.ptr = (unsigned int) ptr & 0x3ffff;
+  item.ptr = PTR_DEFLATE(ptr);
   item.size = size;
   item.type = type;
   item.our_shim = shim;
 
-  if (MK_PTR(item.ptr) != ptr) {
+  if (PTR_INFLATE(item.ptr) != ptr) {
     /* NOTE: we can't printf here, since UART is not yet initialized */
     plog->ptr_doesnt_fit = 1;
   }
@@ -175,18 +198,18 @@ static void echo_log_item(struct log_item *item) {
   switch (item->type) {
     case ITEM_TYPE_MALLOC:
       echo_log_malloc_req((unsigned int) item->size, item->our_shim);
-      echo_log_alloc_res(MK_PTR((unsigned int) item->ptr));
+      echo_log_alloc_res(PTR_INFLATE((unsigned int) item->ptr));
       break;
     case ITEM_TYPE_ZALLOC:
       echo_log_zalloc_req((unsigned int) item->size, item->our_shim);
-      echo_log_alloc_res(MK_PTR((unsigned int) item->ptr));
+      echo_log_alloc_res(PTR_INFLATE((unsigned int) item->ptr));
       break;
     case ITEM_TYPE_CALLOC:
       echo_log_calloc_req((unsigned int) item->size, item->our_shim);
-      echo_log_alloc_res(MK_PTR((unsigned int) item->ptr));
+      echo_log_alloc_res(PTR_INFLATE((unsigned int) item->ptr));
       break;
     case ITEM_TYPE_FREE:
-      echo_log_free(MK_PTR((unsigned int) item->ptr), item->our_shim);
+      echo_log_free(PTR_INFLATE((unsigned int) item->ptr), item->our_shim);
       break;
     default:
       abort();
@@ -212,7 +235,7 @@ static void flush_log_items(void) {
       fprintf(stderr, "LOG_ITEMS_CNT is too low\n");
       abort();
     } else if (plog->ptr_doesnt_fit) {
-      fprintf(stderr, "ptr is not suitable for MK_PTR\n");
+      fprintf(stderr, "ptr is not suitable for PTR_INFLATE\n");
       abort();
     }
 
