@@ -77,7 +77,7 @@ extern "C" {
 /*
  * Property attributes bitmask
  */
-typedef unsigned int v7_prop_attr_t;
+typedef unsigned short v7_prop_attr_t;
 #define V7_PROPERTY_NON_WRITABLE (1 << 0)
 #define V7_PROPERTY_NON_ENUMERABLE (1 << 1)
 #define V7_PROPERTY_NON_CONFIGURABLE (1 << 2)

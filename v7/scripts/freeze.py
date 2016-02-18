@@ -198,6 +198,7 @@ union u_val {
 struct v7_fr_property {
   struct v7_fr_property *next;
   v7_prop_attr_t attributes;
+  entity_id_t entity_id;
   val_t name;  /* Property name (a string) */
   union u_val v;
 };
@@ -229,8 +230,10 @@ def name(prefix, n):
     return "%s_%s" % (prefix, n)
 
 def base_obj(o):
-    return "{(struct v7_property *) %(name)s, %(attrs)s}" % dict(
+    return "{(struct v7_property *) %(name)s, %(attrs)s, %(entity_id_base)s, %(entity_id_spec)s}" % dict(
         name = ref("fprop", o["props"], opt=True),
+        entity_id_base = o["entity_id_base"],
+        entity_id_spec = o["entity_id_spec"],
         attrs = o["attrs"],
     )
 
@@ -356,9 +359,10 @@ for f in funcs:
 for p in props:
     value = gen_uvalue(p["value_type"], p["value"])
     print ("static const struct v7_fr_property fprop_%(addr)s"
-           " = {(struct v7_fr_property *) %(next_ref)s, %(attrs)s,"
+           " = {(struct v7_fr_property *) %(next_ref)s, %(attrs)s, %(entity_id)s,"
            " %(name)s, %(value)s}; /* %(name_str)s */") % dict(
         addr = p["addr"],
+        entity_id = p["entity_id"],
         next_ref = ref("fprop", p["next"], opt=True),
         attrs = p["attrs"],
         name = p["name"],

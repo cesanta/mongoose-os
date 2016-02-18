@@ -2493,15 +2493,22 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 typedef uint64_t val_t;
 
 #if defined(V7_ENABLE_ENTITY_IDS)
+
+typedef unsigned short entity_id_t;
+typedef unsigned char entity_id_part_t;
+
 /*
  * Magic numbers that are stored in various objects in order to identify their
  * type in runtime
  */
 #define V7_ENTITY_ID_PROP 0xe9a1
-#define V7_ENTITY_ID_OBJ 0x48f4
-#define V7_ENTITY_ID_GEN_OBJ 0xd831
-#define V7_ENTITY_ID_JS_FUNC 0xf00c
+#define V7_ENTITY_ID_PART_OBJ 0x57
+#define V7_ENTITY_ID_PART_GEN_OBJ 0x31
+#define V7_ENTITY_ID_PART_JS_FUNC 0x0d
+
 #define V7_ENTITY_ID_NONE 0xa5a5
+#define V7_ENTITY_ID_PART_NONE 0xa5
+
 #endif
 
 /*
@@ -2750,10 +2757,10 @@ struct v7 {
 struct v7_property {
   struct v7_property *
       next; /* Linkage in struct v7_generic_object::properties */
-#if defined(V7_ENABLE_ENTITY_IDS)
-  int entity_id;
-#endif
   v7_prop_attr_t attributes;
+#if defined(V7_ENABLE_ENTITY_IDS)
+  entity_id_t entity_id;
+#endif
   val_t name;  /* Property name (a string) */
   val_t value; /* Property value */
 };
@@ -2764,10 +2771,11 @@ struct v7_property {
 struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
-#if defined(V7_ENABLE_ENTITY_IDS)
-  int entity_id;
-#endif
   v7_obj_attr_t attributes;
+#if defined(V7_ENABLE_ENTITY_IDS)
+  entity_id_part_t entity_id_base;
+  entity_id_part_t entity_id_spec;
+#endif
 };
 
 /*
@@ -2795,9 +2803,6 @@ struct v7_generic_object {
    * This has to be the first field so that objects can be managed by the GC.
    */
   struct v7_object base;
-#if defined(V7_ENABLE_ENTITY_IDS)
-  int entity_id;
-#endif
   struct v7_object *prototype;
 };
 
@@ -2828,9 +2833,6 @@ struct v7_js_function {
    * objects can be managed by the GC.
    */
   struct v7_object base;
-#if defined(V7_ENABLE_ENTITY_IDS)
-  int entity_id;
-#endif
   struct v7_generic_object *scope; /* lexical scope of the closure */
 
   /* bytecode, might be shared between functions */
@@ -13309,11 +13311,11 @@ V7_PRIVATE struct v7_js_function *to_js_function(val_t v) {
   assert(is_js_function(v));
   ret = (struct v7_js_function *) v7_to_pointer(v);
 #if defined(V7_ENABLE_ENTITY_IDS)
-  if (ret->entity_id != V7_ENTITY_ID_JS_FUNC) {
-    fprintf(stderr, "not a function!\n");
+  if (ret->base.entity_id_spec != V7_ENTITY_ID_PART_JS_FUNC) {
+    fprintf(stderr, "entity_id: not a function!\n");
     abort();
-  } else if (ret->base.entity_id != V7_ENTITY_ID_OBJ) {
-    fprintf(stderr, "not an object (but is a js func)!\n");
+  } else if (ret->base.entity_id_base != V7_ENTITY_ID_PART_OBJ) {
+    fprintf(stderr, "entity_id: not an object!\n");
     abort();
   }
 #endif
@@ -13337,8 +13339,8 @@ val_t mk_js_function(struct v7 *v7, struct v7_generic_object *scope,
   }
 
 #if defined(V7_ENABLE_ENTITY_IDS)
-  f->entity_id = V7_ENTITY_ID_JS_FUNC;
-  f->base.entity_id = V7_ENTITY_ID_OBJ;
+  f->base.entity_id_base = V7_ENTITY_ID_PART_OBJ;
+  f->base.entity_id_spec = V7_ENTITY_ID_PART_JS_FUNC;
 #endif
 
   fval = js_function_to_value(f);
@@ -13498,8 +13500,8 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
   }
 
 #if defined(V7_ENABLE_ENTITY_IDS)
-  o->entity_id = V7_ENTITY_ID_NONE;
-  o->base.entity_id = V7_ENTITY_ID_NONE;
+  o->base.entity_id_base = V7_ENTITY_ID_PART_NONE;
+  o->base.entity_id_spec = V7_ENTITY_ID_PART_NONE;
 #endif
 }
 
@@ -13513,8 +13515,8 @@ static void function_destructor(struct v7 *v7, void *ptr) {
   }
 
 #if defined(V7_ENABLE_ENTITY_IDS)
-  f->entity_id = V7_ENTITY_ID_NONE;
-  f->base.entity_id = V7_ENTITY_ID_NONE;
+  f->base.entity_id_base = V7_ENTITY_ID_PART_NONE;
+  f->base.entity_id_spec = V7_ENTITY_ID_PART_NONE;
 #endif
 }
 
@@ -14924,8 +14926,8 @@ V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype) {
   }
   (void) v7;
 #if defined(V7_ENABLE_ENTITY_IDS)
-  o->entity_id = V7_ENTITY_ID_GEN_OBJ;
-  o->base.entity_id = V7_ENTITY_ID_OBJ;
+  o->base.entity_id_base = V7_ENTITY_ID_PART_OBJ;
+  o->base.entity_id_spec = V7_ENTITY_ID_PART_GEN_OBJ;
 #endif
   o->base.properties = NULL;
   obj_prototype_set(v7, &o->base, v7_to_object(prototype));
@@ -14954,10 +14956,10 @@ V7_PRIVATE struct v7_generic_object *v7_to_generic_object(val_t v) {
     assert(v7_is_generic_object(v));
     ret = (struct v7_generic_object *) v7_to_pointer(v);
 #if defined(V7_ENABLE_ENTITY_IDS)
-    if (ret->entity_id != V7_ENTITY_ID_GEN_OBJ) {
+    if (ret->base.entity_id_base != V7_ENTITY_ID_PART_OBJ) {
       fprintf(stderr, "not a generic object!\n");
       abort();
-    } else if (ret->base.entity_id != V7_ENTITY_ID_OBJ) {
+    } else if (ret->base.entity_id_spec != V7_ENTITY_ID_PART_GEN_OBJ) {
       fprintf(stderr, "not an object (but is a generic object)!\n");
       abort();
     }
@@ -14974,7 +14976,7 @@ V7_PRIVATE struct v7_object *v7_to_object(val_t v) {
     assert(v7_is_object(v));
     ret = (struct v7_object *) v7_to_pointer(v);
 #if defined(V7_ENABLE_ENTITY_IDS)
-    if (ret->entity_id != V7_ENTITY_ID_OBJ) {
+    if (ret->entity_id_base != V7_ENTITY_ID_PART_OBJ) {
       fprintf(stderr, "not an object!\n");
       abort();
     }
@@ -17589,10 +17591,19 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
     char *jnames = freeze_mbuf(&bcode->names);
     fprintf(f,
             "{\"type\":\"func\", \"addr\":\"%p\", \"props\":\"%p\", "
-            "\"attrs\":%d, \"scope\":\"%p\", \"bcode\":\"%p\"}\n",
+            "\"attrs\":%d, \"scope\":\"%p\", \"bcode\":\"%p\""
+#if defined(V7_ENABLE_ENTITY_IDS)
+            ", \"entity_id_base\":%d, \"entity_id_spec\":\"%d\" "
+#endif
+            "}\n",
             (void *) obj_base,
             (void *) ((uintptr_t) obj_base->properties & ~0x1),
-            obj_base->attributes | attrs, (void *) func->scope, (void *) bcode);
+            obj_base->attributes | attrs, (void *) func->scope, (void *) bcode
+#if defined(V7_ENABLE_ENTITY_IDS)
+            ,
+            obj_base->entity_id_base, obj_base->entity_id_spec
+#endif
+            );
     fprintf(f,
             "{\"type\":\"bcode\", \"addr\":\"%p\", \"args\":%d, "
             "\"strict_mode\": %d, \"ops\":%s, \"lit\":%s, \"names\":%s}\n",
@@ -17605,10 +17616,19 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
     struct v7_generic_object *gob = v7_to_generic_object(v);
     fprintf(f,
             "{\"type\":\"obj\", \"addr\":\"%p\", \"props\":\"%p\", "
-            "\"attrs\":%d, \"proto\":\"%p\"}\n",
+            "\"attrs\":%d, \"proto\":\"%p\""
+#if defined(V7_ENABLE_ENTITY_IDS)
+            ", \"entity_id_base\":%d, \"entity_id_spec\":\"%d\" "
+#endif
+            "}\n",
             (void *) obj_base,
             (void *) ((uintptr_t) obj_base->properties & ~0x1),
-            obj_base->attributes | attrs, (void *) gob->prototype);
+            obj_base->attributes | attrs, (void *) gob->prototype
+#if defined(V7_ENABLE_ENTITY_IDS)
+            ,
+            obj_base->entity_id_base, obj_base->entity_id_spec
+#endif
+            );
   }
 }
 
@@ -17628,10 +17648,19 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
           " \"value_type\":%d,"
           " \"value\":\"0x%" INT64_X_FMT
           "\","
-          " \"name_str\":\"%s\"}\n",
+          " \"name_str\":\"%s\""
+#if defined(V7_ENABLE_ENTITY_IDS)
+          ", \"entity_id\":\"%d\""
+#endif
+          "}\n",
           (void *) prop, (void *) prop->next, prop->attributes | attrs,
           prop->name, val_type(v7, prop->value), prop->value,
-          v7_to_cstring(v7, &prop->name));
+          v7_to_cstring(v7, &prop->name)
+#if defined(V7_ENABLE_ENTITY_IDS)
+              ,
+          prop->entity_id
+#endif
+          );
 }
 
 #endif
