@@ -18,7 +18,8 @@ void device_get_mac_address(uint8_t mac[6]) {
   sl_NetCfgGet(SL_MAC_ADDRESS_GET, NULL, &mac_len, mac);
 }
 
-int device_init_platform(struct sys_config *cfg) {
+int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
+  (void) v7;
   if (cfg->wifi.sta.enable) {
     if (!sj_wifi_setup_sta(&cfg->wifi.sta)) {
       return 0;

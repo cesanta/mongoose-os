@@ -35,7 +35,7 @@ struct sys_config *get_cfg();
 int init_device(struct v7 *);
 
 /* Common init calls this API: must be implemented by each platform */
-int device_init_platform(struct sys_config *);
+int device_init_platform(struct v7 *v7, struct sys_config *);
 void device_reboot(void);
 void device_get_mac_address(uint8_t mac[6]);
 

@@ -11,7 +11,7 @@
 
 #include "v7_esp.h"
 #include "smartjs/src/sj_prompt.h"
-#include "esp_mg_net_if.h"
+#include "common/platforms/esp8266/esp_mg_net_if.h"
 #include "esp_uart.h"
 #include "common/umm_malloc/umm_malloc.h"
 
@@ -67,9 +67,7 @@ void sj_usleep(int usecs) {
 
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
-#ifdef MG_SYNC_CALLBACKS
-  _sj_invoke_cb(v7, func, this_obj, args);
-#elif !defined(RTOS_SDK)
+#if !defined(RTOS_SDK)
   mg_dispatch_v7_callback(v7, func, this_obj, args);
 #else
   rtos_dispatch_callback(v7, func, this_obj, args);
@@ -78,8 +76,4 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 
 void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
-#if !defined(NO_PROMPT)
-  uart_process_char = sj_prompt_process_char;
-  uart_interrupt_cb = sj_prompt_process_char;
-#endif
 }

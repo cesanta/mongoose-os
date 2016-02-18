@@ -52,7 +52,9 @@ struct sys_config {
     char *device_registration_url;
   } clubby;
   struct sys_config_debug {
-    int mode;
+    int stdout_uart;
+    int stderr_uart;
+    int enable_prompt;
     int level;
   } debug;
 };

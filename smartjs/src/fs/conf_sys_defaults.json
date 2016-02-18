@@ -49,6 +49,8 @@
   },
   "debug": {
     "level": 2,
-    "mode": 2
+    "stdout_uart": 0,
+    "stderr_uart": 1,
+    "enable_prompt": 1
   }
 }

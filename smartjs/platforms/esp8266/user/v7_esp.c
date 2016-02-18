@@ -12,11 +12,8 @@
 #include "smartjs/src/sj_i2c_js.h"
 #include "smartjs/src/sj_gpio_js.h"
 #include "smartjs/src/sj_adc_js.h"
-#include "smartjs/src/sj_common.h"
 #include "v7_esp.h"
-#include "dht11.h"
 #include "esp_pwm.h"
-#include "esp_uart.h"
 #include "smartjs/src/sj_http.h"
 #include "smartjs/src/sj_mongoose_ws_client.h"
 #include "common/sha1.h"
@@ -30,38 +27,7 @@
 
 #endif /* RTOS_SDK */
 
-#include "smartjs/src/sj_mongoose.h"
-#include "smartjs/src/device_config.h"
-
 struct v7 *v7;
-
-#if V7_ESP_ENABLE__DHT11
-
-static enum v7_err DHT11_read(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-  int pin, temp, rh;
-  v7_val_t pinv = v7_arg(v7, 0);
-
-  if (!v7_is_number(pinv)) {
-    printf("non-numeric pin\n");
-    *res = v7_mk_undefined();
-    goto clean;
-  }
-  pin = v7_to_number(pinv);
-
-  if (!dht11_read(pin, &temp, &rh)) {
-    *res = v7_mk_null();
-    goto clean;
-  }
-
-  *res = v7_mk_object(v7);
-  v7_set(v7, *res, "temp", 4, v7_mk_number(temp));
-  v7_set(v7, *res, "rh", 2, v7_mk_number(rh));
-
-clean:
-  return rcode;
-}
-#endif /* V7_ESP_ENABLE__DHT11 */
 
 /*
  * dsleep(time_us[, option])
@@ -115,7 +81,6 @@ static enum v7_err crash(struct v7 *v7, v7_val_t *res) {
 
 void init_v7(void *stack_base) {
   struct v7_mk_opts opts;
-  v7_val_t dht11;
 
 #ifdef V7_THAW
   opts.object_arena_size = 85;
@@ -129,56 +94,17 @@ void init_v7(void *stack_base) {
   opts.c_stack_base = stack_base;
   v7 = v7_create_opt(opts);
 
-  /* disable GC during initialization */
-  v7_set_gc_enabled(v7, 0);
-
-  sj_common_api_setup(v7);
-  sj_common_init(v7);
-
-  sj_init_sys(v7);
-
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
-
-#if V7_ESP_ENABLE__DHT11
-  dht11 = v7_mk_object(v7);
-  v7_set(v7, v7_get_global(v7), "DHT11", 5, dht11);
-  v7_set_method(v7, dht11, "read", DHT11_read);
-#else
-  (void) dht11;
-#endif /* V7_ESP_ENABLE__DHT11 */
-
-  mongoose_init();
-
-  /* NOTE(lsm): must be done after mongoose_init(). */
-  init_device(v7);
-
-#ifndef DISABLE_OTA
-  init_updater(v7);
-#endif
-
-  /* enable GC back */
-  v7_set_gc_enabled(v7, 1);
-
-  v7_gc(v7, 1);
 }
 
 #ifndef V7_NO_FS
-/*
- * TODO(dfrank): probably use the implementation of posix? Currently, this one
- * enables/disables GC, and I'm not sure if it's a good idea because it might
- * be a surprise for the caller
- */
 void run_init_script() {
   v7_val_t res;
-  /* enable GC while executing sys_init_script */
-  v7_set_gc_enabled(v7, 1);
 
   if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
     printf("Init error: ");
     v7_println(v7, res);
   }
-
-  v7_set_gc_enabled(v7, 0);
 }
 #endif

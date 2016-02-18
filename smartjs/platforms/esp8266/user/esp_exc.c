@@ -13,6 +13,7 @@
 
 #include "common/base64.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_uart.h"
 
 #include "esp_coredump.h"
 #include "esp_flash_bytes.h"
@@ -59,7 +60,7 @@ IRAM NOINSTR static void handle_exception(struct regfile *regs) {
 
 #if defined(ESP_COREDUMP) && !defined(ESP_COREDUMP_NOAUTO)
   printf("Dumping core to debug output\n");
-  esp_dump_core(-1, regs);
+  esp_dump_core(regs);
 #else
   printf("if you want to dump core, type 'y'");
 #ifdef ESP_GDB_SERVER
@@ -78,7 +79,7 @@ IRAM NOINSTR static void handle_exception(struct regfile *regs) {
       system_soft_wdt_feed();
 #endif
       if (ch == 'y') {
-        esp_dump_core(1, regs);
+        esp_dump_core(regs);
       } else if (ch == '$') {
         /* we got a GDB packet, speed up retransmission by nacking */
         printf("-");
@@ -106,7 +107,8 @@ IRAM NOINSTR static void handle_exception(struct regfile *regs) {
 IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
-  printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
+  fprintf(stderr, "\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc,
+          (void *) vaddr);
   memcpy(&regs.a[2], frame->a, sizeof(frame->a));
 
   regs.a[0] = frame->a0;
@@ -118,11 +120,9 @@ IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
 
   handle_exception(&regs);
 
-  uart_write(1, "rebooting\n", 10);
-  while (tx_fifo_len(0) > 0) {
-  }
-  while (tx_fifo_len(1) > 0) {
-  }
+  fprintf(stderr, "rebooting\n");
+  esp_uart_flush(0);
+  esp_uart_flush(1);
 
   /*
    * Documented `system_restart` does a lot of things (cleanup) which (seems)
@@ -137,7 +137,8 @@ IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
 IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
   uint32_t cause = RSR(EXCCAUSE);
   uint32_t vaddr = RSR(EXCVADDR);
-  printf("\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc, (void *) vaddr);
+  fprintf(stderr, "\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc,
+          (void *) vaddr);
 
   memcpy(&regs.a[0], frame->a, sizeof(frame->a));
   regs.pc = frame->pc;

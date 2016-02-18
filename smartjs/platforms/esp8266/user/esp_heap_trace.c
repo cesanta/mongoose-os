@@ -40,7 +40,7 @@ extern void call_trace_print(size_t skip_cnt, size_t max_cnt);
  * initialized. At the moment of writing this, there are 44 calls. Let it be
  * 50. (if actual amount exceeds, we'll abort)
  */
-#define LOG_ITEMS_CNT 50
+#define LOG_ITEMS_CNT 100
 
 #define MK_PTR(v) ((void *) (0x3ffc0000 | (v)))
 
@@ -85,7 +85,7 @@ static void echo_log_malloc_req(size_t size, int shim) {
 #if defined(V7_ENABLE_CALL_TRACE)
   call_trace_print(0, CALL_TRACE_MAX_CNT);
 #endif
-  printf("hl{m,%u,%d,", (unsigned int) size, shim);
+  fprintf(stderr, "hl{m,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
@@ -93,7 +93,7 @@ static void echo_log_zalloc_req(size_t size, int shim) {
 #if defined(V7_ENABLE_CALL_TRACE)
   call_trace_print(0, CALL_TRACE_MAX_CNT);
 #endif
-  printf("hl{z,%u,%d,", (unsigned int) size, shim);
+  fprintf(stderr, "hl{z,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
@@ -101,7 +101,7 @@ static void echo_log_calloc_req(size_t size, int shim) {
 #if defined(V7_ENABLE_CALL_TRACE)
   call_trace_print(0, CALL_TRACE_MAX_CNT);
 #endif
-  printf("hl{c,%u,%d,", (unsigned int) size, shim);
+  fprintf(stderr, "hl{c,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
@@ -109,12 +109,13 @@ static void echo_log_realloc_req(size_t size, int shim, void *old_ptr) {
 #if defined(V7_ENABLE_CALL_TRACE)
   call_trace_print(0, CALL_TRACE_MAX_CNT);
 #endif
-  printf("hl{r,%u,%d,%x,", (unsigned int) size, shim, (unsigned int) old_ptr);
+  fprintf(stderr, "hl{r,%u,%d,%x,", (unsigned int) size, shim,
+          (unsigned int) old_ptr);
 }
 
 NOINSTR
 static void echo_log_alloc_res(void *ptr) {
-  printf("%x}\n", (unsigned int) ptr);
+  fprintf(stderr, "%x}\n", (unsigned int) ptr);
 }
 
 NOINSTR
@@ -122,7 +123,7 @@ static void echo_log_free(void *ptr, int shim) {
 #if defined(V7_ENABLE_CALL_TRACE)
   call_trace_print(0, CALL_TRACE_MAX_CNT);
 #endif
-  printf("hl{f,%x,%d}\n", (unsigned int) ptr, shim);
+  fprintf(stderr, "hl{f,%x,%d}\n", (unsigned int) ptr, shim);
 }
 
 /*
@@ -205,18 +206,18 @@ static void flush_log_items(void) {
     add_log_item(ITEM_TYPE_FREE, plog, 0, 1);
 
     if (plog->item_size_small) {
-      printf("struct log_item::size width is too small\n");
+      fprintf(stderr, "struct log_item::size width is too small\n");
       abort();
     } else if (plog->log_items_cnt_small) {
-      printf("LOG_ITEMS_CNT is too low\n");
+      fprintf(stderr, "LOG_ITEMS_CNT is too low\n");
       abort();
     } else if (plog->ptr_doesnt_fit) {
-      printf("ptr is not suitable for MK_PTR\n");
+      fprintf(stderr, "ptr is not suitable for MK_PTR\n");
       abort();
     }
 
-    printf("hlog_param:{\"heap_start\":0x%x, \"heap_end\":0x%x}\n",
-           (unsigned int) (&_heap_start), (unsigned int) ESP_DRAM0_END);
+    fprintf(stderr, "\nhlog_param:{\"heap_start\":0x%x, \"heap_end\":0x%x}\n",
+            (unsigned int) (&_heap_start), (unsigned int) ESP_DRAM0_END);
 
     for (i = 0; i < plog->items_cnt; i++) {
       echo_log_item(&plog->items[i]);
@@ -224,7 +225,7 @@ static void flush_log_items(void) {
 
     __real_vPortFree(plog, NULL, 0);
     plog = NULL;
-    printf("--- uart initialized ---\n");
+    fprintf(stderr, "--- uart initialized ---\n");
     sj_wdt_feed();
   }
 }

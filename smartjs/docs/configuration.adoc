@@ -129,4 +129,6 @@ unsuccessful connection attempt, starting from `reconnect_timeout_min`, maximum 
 if free memory amount is less than `memory_limit` value (bytes)
 
 `debug.level`:: Level of logs detail. `0` - logs are disabled, `1` - errors only, `2` - errors and warnings, `3` - debug mode, `4` - enhanced debug mode
-`debug.mode`:: Logs output. `0` - logs are disabled, `1` - primary UART, `2` - secondary UART
+`debug.stdout_uart`:: Where to send normal (stdout) output. `0` - UART0, `1` - UART`, `-1` - /dev/null. Default: `0`.
+`debug.stderr_uart`:: Where to send diagnostic (stderr) output. `0` - UART0, `1` - UART`, `-1` - /dev/null. Default: `1`.
+`debug.enable_prompt`:: Whether to enable interactive JavaScript prompt. Default: `true`.

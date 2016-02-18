@@ -7,6 +7,9 @@
 
 #include <stdio.h>
 
+#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_uart.h"
+
 #include "ets_sys.h"
 #include "osapi.h"
 #include "gpio.h"
@@ -15,11 +18,7 @@
 #include "mem.h"
 #include "smartjs/platforms/esp8266/user/v7_esp.h"
 #include "smartjs/platforms/esp8266/user/util.h"
-#include "common/platforms/esp8266/esp_missing_includes.h"
-#include "smartjs/platforms/esp8266/user/esp_uart.h"
 #include "smartjs/platforms/esp8266/user/esp_exc.h"
-#include "smartjs/platforms/esp8266/user/esp_uart.h"
-#include "smartjs/src/sj_prompt.h"
 
 #else
 
@@ -32,13 +31,19 @@
 #include "smartjs/platforms/esp8266/user/v7_esp.h"
 #include "smartjs/platforms/esp8266/user/esp_uart.h"
 #include "smartjs/platforms/esp8266/user/esp_exc.h"
-#include "smartjs/src/sj_prompt.h"
 #include "smartjs/platforms/esp8266/user/util.h"
 #include "disp_task.h"
 
 #endif /* RTOS_SDK */
 
+#include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_common.h"
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_prompt.h"
+#include "smartjs/src/sj_v7_ext.h"
+
 #include "smartjs/platforms/esp8266/user/esp_fs.h"
+#include "smartjs/platforms/esp8266/user/esp_sj_uart.h"
 #include "smartjs/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
@@ -47,6 +52,18 @@
 
 #ifndef RTOS_SDK
 os_timer_t startcmd_timer;
+#endif
+
+#ifndef ESP_DEBUG_UART
+#define ESP_DEBUG_UART 1
+#endif
+
+#ifdef ESP_ENABLE_HEAP_LOG
+/*
+ * global flag that is needed for heap trace: we shouldn't send anything to
+ * uart until it is initialized
+ */
+int uart_initialized = 0;
 #endif
 
 /*
@@ -59,9 +76,25 @@ void sjs_init(void *dummy) {
    * initialize debug in this point. But default we put debug to UART0 with
    * level=LL_ERROR, then configuration is loaded this settings are overridden
    */
-  uart_debug_init(0, 0);
-  uart_redirect_debug(1);
-  cs_log_set_level(LL_ERROR);
+  {
+    esp_uart_init(esp_sj_uart_default_config(0));
+    struct esp_uart_config *u1cfg = esp_sj_uart_default_config(1);
+    /* UART1 has no RX pin, no point in allocating a buffer. */
+    u1cfg->rx_buf_size = 0;
+    esp_uart_init(u1cfg);
+    fs_set_stdout_uart(0);
+    fs_set_stderr_uart(ESP_DEBUG_UART);
+    cs_log_set_level(LL_ERROR);
+#ifdef ESP_ENABLE_HEAP_LOG
+    uart_initialized = 1;
+#endif
+  }
+
+  init_v7(&dummy);
+  /* disable GC during further initialization */
+  v7_set_gc_enabled(v7, 0);
+
+  esp_sj_uart_init(v7);
 
 #ifndef V7_NO_FS
 #ifndef DISABLE_OTA
@@ -72,22 +105,36 @@ void sjs_init(void *dummy) {
 #endif
 #endif
 
-  init_v7(&dummy);
+  sj_common_api_setup(v7);
+  sj_common_init(v7);
 
-  /* disable GC during further initialization */
-  v7_set_gc_enabled(v7, 0);
+  sj_init_sys(v7);
 
-#if !defined(NO_PROMPT)
-  uart_main_init(0);
+  mongoose_init();
+
+  /* NOTE(lsm): must be done after mongoose_init(). */
+  init_device(v7);
+
+#ifndef DISABLE_OTA
+  init_updater(v7);
 #endif
+
+  /* SJS initialized, enable GC back, and trigger it */
+  v7_set_gc_enabled(v7, 1);
+  v7_gc(v7, 1);
+  LOG(LL_INFO, ("init done"));
 
 #ifndef V7_NO_FS
   run_init_script();
 #endif
 
-#if !defined(NO_PROMPT)
-  sj_prompt_init(v7);
-#endif
+  /* Install prompt if enabled in the config and user's app has not installed
+   * a custom RX handler. */
+  if (get_cfg()->debug.enable_prompt &&
+      v7_is_undefined(esp_sj_uart_get_recv_handler(0))) {
+    sj_prompt_init(v7);
+    esp_sj_uart_set_prompt(0);
+  }
 
 #ifdef ESP_UMM_ENABLE
   /*
@@ -103,10 +150,6 @@ void sjs_init(void *dummy) {
    */
   esp_umm_init();
 #endif
-
-  /* SJS initialized, enable GC back, and trigger it */
-  v7_set_gc_enabled(v7, 1);
-  v7_gc(v7, 1);
 }
 
 /*
@@ -124,7 +167,7 @@ void sdk_init_done_cb() {
   /* Schedule SJS initialization (`sjs_init()`) */
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, sjs_init, NULL);
-  os_timer_arm(&startcmd_timer, 500, 0);
+  os_timer_arm(&startcmd_timer, 100, 0);
 #else
   rtos_dispatch_initialize();
 #endif
@@ -137,7 +180,7 @@ void user_init() {
   system_init_done_cb(sdk_init_done_cb);
 #endif
 
-  uart_div_modify(0, UART_CLK_FREQ / 115200);
+  uart_div_modify(ESP_DEBUG_UART, UART_CLK_FREQ / 115200);
 
 #ifndef RTOS_TODO
   system_set_os_print(0);

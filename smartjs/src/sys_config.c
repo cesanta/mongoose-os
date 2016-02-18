@@ -161,7 +161,18 @@ int parse_sys_config(const char *json, struct sys_config *dst,
       require_keys)
     goto done;
 
-  if (sj_conf_get_int(toks, "debug.mode", &dst->debug.mode) == 0 &&
+  if (sj_conf_get_int(toks, "debug.stdout_uart", &dst->debug.stdout_uart) ==
+          0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "debug.stderr_uart", &dst->debug.stderr_uart) ==
+          0 &&
+      require_keys)
+    goto done;
+
+  if (sj_conf_get_int(toks, "debug.enable_prompt", &dst->debug.enable_prompt) ==
+          0 &&
       require_keys)
     goto done;
 

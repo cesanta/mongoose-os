@@ -35,7 +35,6 @@
 #include "smartjs/src/sj_clubby.h"
 #include "v7_esp.h"
 #include "v7_esp_features.h"
-#include "esp_uart.h"
 #include "smartjs/src/device_config.h"
 #include "smartjs/src/sj_wifi.h"
 #include "v7/v7.h"

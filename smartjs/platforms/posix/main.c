@@ -96,7 +96,9 @@ static void post_init(struct v7 *v7) {
   mongoose_destroy();
 }
 
-int device_init_platform(struct sys_config *cfg) {
+int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
+  (void) v7;
+
   cs_log_set_level(cfg->debug.level);
 
   return 1;

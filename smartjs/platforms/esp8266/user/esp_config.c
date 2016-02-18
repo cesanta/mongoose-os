@@ -14,7 +14,7 @@
 #include "smartjs/src/device_config.h"
 #include "common/cs_file.h"
 #include "common/cs_dbg.h"
-#include "smartjs/platforms/esp8266/user/esp_uart.h"
+#include "smartjs/platforms/esp8266/user/esp_fs.h"
 #include "smartjs/platforms/esp8266/user/esp_gpio.h"
 
 void device_reboot(void) {
@@ -56,10 +56,21 @@ void device_get_mac_address(uint8_t mac[6]) {
   wifi_get_macaddr(SOFTAP_IF, mac);
 }
 
-int device_init_platform(struct sys_config *cfg) {
-  /* Initialize debug first */
-  uart_debug_init(0, 0);
-  uart_redirect_debug(cfg->debug.mode);
+int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
+  (void) v7;
+
+  /* Negative values mean "disable". */
+  if (cfg->debug.stdout_uart < 2) {
+    fs_set_stdout_uart(cfg->debug.stdout_uart);
+  } else {
+    return 0;
+  }
+  if (cfg->debug.stderr_uart < 2) {
+    fs_set_stderr_uart(cfg->debug.stderr_uart);
+  } else {
+    return 0;
+  }
+
   cs_log_set_level(cfg->debug.level);
 
   return do_wifi(cfg);

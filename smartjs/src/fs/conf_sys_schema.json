@@ -67,13 +67,13 @@
       {"value": 4, "title": "VERBOSE_DEBUG"}
     ]
   },
-  "debug.mode": {
-    "title": "Output Destination",
-    "type": "select",
-    "values": [
-      {"value": 0, "title": "no debug output"},
-      {"value": 1, "title": "UART0"},
-      {"value": 2, "title": "UART1"}
-    ]
+  "debug.stdout_uart": {
+    "title": "UART to send standard output to; -1 = /dev/null"
+  },
+  "debug.stderr_uart": {
+    "title": "UART to send standard error (debug) output to; -1 = /dev/null"
+  },
+  "debug.enable_prompt": {
+    "title": "Enable interactive JavaScript prompt on UART0"
   }
 }

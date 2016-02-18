@@ -202,7 +202,7 @@ int init_device(struct v7 *v7) {
     expand_mac_address_placeholders((char *) get_cfg()->wifi.ap.ssid);
   }
 
-  if (result && (result = device_init_platform(get_cfg())) != 0 &&
+  if (result && (result = device_init_platform(v7, get_cfg())) != 0 &&
       get_cfg()->http.enable) {
     result = init_web_server(get_cfg());
   }
