@@ -3,8 +3,6 @@
  * All rights reserved
  */
 
-#ifndef RTOS_SDK
-
 #include <ets_sys.h>
 #include <osapi.h>
 #include <gpio.h>
@@ -16,17 +14,6 @@
 #include <espconn.h>
 #include <math.h>
 #include <stdlib.h>
-
-#else
-
-#include <c_types.h>
-#include <string.h>
-#include <lwip/ip_addr.h>
-#include <esp_wifi.h>
-#include <esp_sta.h>
-#include <esp_misc.h>
-
-#endif /* RTOS_SDK */
 
 #include "common/cs_dbg.h"
 
@@ -183,13 +170,7 @@ void wifi_changed_cb(System_Event_t *evt) {
   enum sj_wifi_status sj_ev = -1;
 
   /* TODO(rojer): Share this logic between platforms. */
-  if (wifi_setting_up &&
-#ifndef RTOS_SDK
-      evt->event == EVENT_STAMODE_GOT_IP
-#else
-      evt->event_id == EVENT_STAMODE_GOT_IP
-#endif
-      ) {
+  if (wifi_setting_up && evt->event == EVENT_STAMODE_GOT_IP) {
     struct station_config config;
     v7_val_t res;
     v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
@@ -228,11 +209,7 @@ void wifi_changed_cb(System_Event_t *evt) {
     wifi_setting_up = 0;
   }
 
-#ifndef RTOS_SDK
   switch (evt->event) {
-#else
-  switch (evt->event_id) {
-#endif
     case EVENT_STAMODE_DISCONNECTED:
       sj_ev = SJ_WIFI_DISCONNECTED;
       break;

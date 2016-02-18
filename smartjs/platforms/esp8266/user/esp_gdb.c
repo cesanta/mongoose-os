@@ -18,10 +18,6 @@
 #include "esp_uart.h"
 #include "v7_esp.h"
 
-#ifdef RTOS_SDK
-void system_soft_wdt_feed();
-#endif
-
 #define ESP_GDB_UART_NO 0
 #define ESP_GDB_FILENO (ESP_GDB_UART_NO + 1)
 
@@ -210,9 +206,6 @@ void gdb_server(struct regfile *regs) {
    */
 
   for (;;) {
-#ifdef RTOS_SDK
-    system_soft_wdt_feed();
-#endif
     int ch = blocking_read_uart();
     if (ch != -1) gdb_handle_char(regs, ch);
   }

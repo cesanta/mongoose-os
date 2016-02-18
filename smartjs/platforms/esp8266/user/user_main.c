@@ -3,8 +3,6 @@
  * All rights reserved
  */
 
-#ifndef RTOS_SDK
-
 #include <stdio.h>
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
@@ -20,22 +18,6 @@
 #include "smartjs/platforms/esp8266/user/util.h"
 #include "smartjs/platforms/esp8266/user/esp_exc.h"
 
-#else
-
-#include <stdlib.h>
-#include <eagle_soc.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <stdio.h>
-#include "common/platforms/esp8266/esp_missing_includes.h"
-#include "smartjs/platforms/esp8266/user/v7_esp.h"
-#include "smartjs/platforms/esp8266/user/esp_uart.h"
-#include "smartjs/platforms/esp8266/user/esp_exc.h"
-#include "smartjs/platforms/esp8266/user/util.h"
-#include "disp_task.h"
-
-#endif /* RTOS_SDK */
-
 #include "smartjs/src/device_config.h"
 #include "smartjs/src/sj_common.h"
 #include "smartjs/src/sj_mongoose.h"
@@ -50,9 +32,7 @@
 
 #include "v7/v7.h"
 
-#ifndef RTOS_SDK
 os_timer_t startcmd_timer;
-#endif
 
 #ifndef ESP_DEBUG_UART
 #define ESP_DEBUG_UART 1
@@ -67,8 +47,7 @@ int uart_initialized = 0;
 #endif
 
 /*
- * SmartJS initialization; for non-RTOS env, called as an SDK timer callback
- * (`os_timer_...()`). For RTOS env, called by the dispatcher task.
+ * SmartJS initialization, called as an SDK timer callback (`os_timer_...()`).
  */
 void sjs_init(void *dummy) {
   /*
@@ -158,45 +137,30 @@ void sjs_init(void *dummy) {
 void sdk_init_done_cb() {
   srand(system_get_rtc_time());
 
-#if !defined(ESP_ENABLE_HW_WATCHDOG) && !defined(RTOS_TODO)
+#if !defined(ESP_ENABLE_HW_WATCHDOG)
   ets_wdt_disable();
 #endif
   pp_soft_wdt_stop();
 
-#ifndef RTOS_SDK
   /* Schedule SJS initialization (`sjs_init()`) */
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, sjs_init, NULL);
   os_timer_arm(&startcmd_timer, 100, 0);
-#else
-  rtos_dispatch_initialize();
-#endif
 }
 
 /* Init function */
 void user_init() {
-#ifndef RTOS_TODO
   system_update_cpu_freq(SYS_CPU_160MHZ);
   system_init_done_cb(sdk_init_done_cb);
-#endif
 
   uart_div_modify(ESP_DEBUG_UART, UART_CLK_FREQ / 115200);
 
-#ifndef RTOS_TODO
   system_set_os_print(0);
-#endif
 
   setvbuf(stdout, NULL, _IONBF, 0);
   setvbuf(stderr, NULL, _IONBF, 0);
 
   esp_exception_handler_init();
 
-#ifndef RTOS_TODO
   gpio_init();
-#endif
-
-#ifdef RTOS_TODO
-  rtos_init_dispatcher();
-  sdk_init_done_cb();
-#endif
 }

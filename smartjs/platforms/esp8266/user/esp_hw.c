@@ -6,9 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#ifndef RTOS_SDK
 #include "user_interface.h"
-#endif
 
 #include "esp_hw.h"
 #include "esp_fs.h"

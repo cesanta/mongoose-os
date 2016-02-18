@@ -5,23 +5,7 @@
 
 #ifdef ESP_FLASH_BYTES_EMUL
 
-#ifndef RTOS_SDK
 #include "user_interface.h"
-#else
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <c_types.h>
-#include <stdio.h>
-#include <freertos/xtensa_rtos.h>
-
-/*
- * If we leave this out it crashes, WTF?!
- * It's weird since printfs here are only invoked on exception
- * and by defining this macro we boot fine without exceptions
- */
-#define printf printf_broken
-
-#endif
 
 #include <stdio.h>
 #include "esp_exc.h"
@@ -115,22 +99,13 @@ IRAM NOINSTR void flash_emul_exception_handler(
     return;
   }
 
-#ifndef RTOS_SDK
   /* a0 and a1 are never used as scratch registers */
   frame->a[at - 2] = val;
-#else
-  frame->a[at] = val;
-#endif
   frame->pc += 3;
-
-#ifdef RTOS_SDK
-  taskYIELD();
-#endif
 
   // printf("PC FIXED UP RETURNING to %p\n", (void *) frame->pc);
 }
 
-#ifndef RTOS_SDK
 NOINSTR void flash_emul_init() {
   _xtos_set_exception_handler(EXCCAUSE_LOAD_STORE_ERROR,
                               flash_emul_exception_handler);
@@ -138,9 +113,5 @@ NOINSTR void flash_emul_init() {
   _xtos_set_exception_handler(EXCCAUSE_LOAD_PROHIBITED,
                               flash_emul_exception_handler);
 }
-#else
-void flash_emul_init() {
-}
-#endif /* RTOS_SDK */
 
 #endif /* ESP_FLASH_BYTES_EMUL */

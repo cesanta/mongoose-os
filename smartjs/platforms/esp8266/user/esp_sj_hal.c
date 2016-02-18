@@ -15,19 +15,8 @@
 #include "esp_uart.h"
 #include "common/umm_malloc/umm_malloc.h"
 
-#ifndef RTOS_SDK
-
 #include <osapi.h>
 #include <os_type.h>
-
-#else
-
-#include <eagle_soc.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/timers.h>
-#include "disp_task.h"
-
-#endif /* RTOS_SDK */
 
 size_t sj_get_free_heap_size() {
   return system_get_free_heap_size();
@@ -67,11 +56,7 @@ void sj_usleep(int usecs) {
 
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
-#if !defined(RTOS_SDK)
   mg_dispatch_v7_callback(v7, func, this_obj, args);
-#else
-  rtos_dispatch_callback(v7, func, this_obj, args);
-#endif
 }
 
 void sj_prompt_init_hal(struct v7 *v7) {

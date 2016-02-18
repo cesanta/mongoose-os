@@ -3,8 +3,6 @@
  * All rights reserved
  */
 
-#ifndef RTOS_TODO
-
 #include "esp_pwm.h"
 
 #include <stdlib.h>
@@ -240,15 +238,3 @@ IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
   }
   RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
 }
-
-#else /* RTOS */
-
-int sj_pwm_set(int pin, int period, int duty) {
-  (void) pin;
-  (void) period;
-  (void) duty;
-
-  return 0;
-}
-
-#endif

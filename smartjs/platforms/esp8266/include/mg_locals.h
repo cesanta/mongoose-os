@@ -11,7 +11,6 @@
  * necessary for Mongoose core to work w/o BSD socket headers.
  */
 
-#ifndef RTOS_SDK
 
 /*
  * ESP LWIP is compiled w/o socket support but we need a few declarations
@@ -32,6 +31,5 @@
 /* Implemented in libc_replacements */
 long int random(void);
 
-#endif
 
 #endif /* MG_LOCALS_INCLUDED */

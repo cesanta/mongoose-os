@@ -19,14 +19,6 @@
 #include "common/sha1.h"
 #include "esp_updater.h"
 
-#ifndef RTOS_SDK
-
-#else
-
-#include <esp_system.h>
-
-#endif /* RTOS_SDK */
-
 struct v7 *v7;
 
 /*

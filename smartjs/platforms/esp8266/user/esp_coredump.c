@@ -10,9 +10,6 @@
 #include <ets_sys.h>
 #include <xtensa/corebits.h>
 #include <stdint.h>
-#ifdef RTOS_SDK
-#include <espressif/esp_system.h>
-#endif
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/esp_uart.h"
@@ -28,9 +25,6 @@ static uint32_t last_char_ts = 0;
 
 static NOINSTR void core_dump_emit_char(char c, void *user_data) {
   int *col_counter = (int *) user_data;
-#ifdef RTOS_SDK
-  system_soft_wdt_feed();
-#endif
   /* Since we have may have no flow control on dbg uart, limit the speed
    * the we emit the chars at. It's important to deliver core dumps intact. */
   uint32_t now;

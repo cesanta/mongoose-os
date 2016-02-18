@@ -14,8 +14,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifndef RTOS_SDK
-
 #include <stddef.h>
 #include <stdio.h>
 #include <limits.h>
@@ -27,12 +25,6 @@
 #include <mem.h>
 #include <user_interface.h>
 #include <errno.h>
-
-#else
-
-#include <espressif/esp_system.h>
-
-#endif /* RTOS_SDK */
 
 #if defined(ESP_ENABLE_HEAP_LOG)
 int cs_heap_shim = 0;
@@ -62,8 +54,6 @@ char *strerror(int errnum) {
   buf[sizeof(buf) - 1] = 0;
   return buf;
 }
-
-#ifndef RTOS_SDK
 
 void *malloc(size_t size) {
   void *res;
@@ -172,20 +162,6 @@ void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
   (void) r;
   return realloc(ptr, size);
 }
-
-#else /* !RTOS_SDK */
-
-int printf(const char *format, ...) {
-  va_list arglist;
-  int ret;
-
-  va_start(arglist, format);
-  ret = vfprintf(stdout, format, arglist);
-  va_end(arglist);
-  return ret;
-}
-
-#endif /* !RTOS_SDK */
 
 /*
  * TODO(alashkin): remove this code

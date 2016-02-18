@@ -11,8 +11,6 @@
 #include "v7/v7.h"
 #endif
 
-#ifndef RTOS_SDK
-
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
@@ -20,13 +18,6 @@
 #include "mem.h"
 #include <errno.h>
 #include <fcntl.h>
-
-#else
-
-#include <c_types.h>
-#include <spi_flash.h>
-
-#endif /* RTOS_SDK */
 
 #ifndef V7_NO_FS
 

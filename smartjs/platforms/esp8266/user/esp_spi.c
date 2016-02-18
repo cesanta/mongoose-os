@@ -27,10 +27,6 @@
 #include "esp_spi.h"
 #include <stdlib.h>
 
-#ifdef RTOS_SDK
-#include <eagle_soc.h>
-#endif
-
 struct esp_spi_connection {
   uint8_t spi_no;
 };

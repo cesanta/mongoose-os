@@ -28,8 +28,6 @@
 #define ESP_LOWER_VALID_ADDRESS 0x20000000
 #define ESP_UPPER_VALID_ADDRESS 0x60000000
 
-#ifndef RTOS_SDK
-
 /*
  * Constructed by xtos.
  *
@@ -44,19 +42,6 @@ struct xtensa_stack_frame {
   uint32_t a0;    /* when __XTENSA_CALL0_ABI__ is true */
   uint32_t a[16]; /* a2 - a15 */
 };
-
-#else
-
-/* from <freertos/xtensa_context.h> */
-struct xtensa_stack_frame {
-  uint32_t exit;  /* (offset 0) exit point for dispatch */
-  uint32_t pc;    /* return address */
-  uint32_t ps;    /* at level 1 ps.excm is set here */
-  uint32_t a[16]; /* a[1] is stack ptr before interrupt */
-  uint32_t sar;
-};
-
-#endif
 
 /*
  * Register file in the format lx106 gdb port expects it.

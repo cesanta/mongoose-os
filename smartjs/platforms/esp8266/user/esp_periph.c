@@ -8,16 +8,8 @@
 #include <stdint.h>
 #include "esp_periph.h"
 
-#ifndef RTOS_SDK
-
 #include <osapi.h>
 #include <gpio.h>
-
-#else
-
-#include <pin_mux_register.h>
-
-#endif /* RTOS_SDK */
 
 /*
 * Map gpio -> { mux reg, func }

@@ -18,19 +18,8 @@
 #include "esp_periph.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#ifndef RTOS_SDK
-
 #include <osapi.h>
 #include <gpio.h>
-
-#else
-
-#include <gpio_register.h>
-#include <pin_mux_register.h>
-#include <eagle_soc.h>
-#include <freertos/portmacro.h>
-
-#endif /* RTOS_SDK */
 
 /* #define ESP_I2C_DEBUG */
 /* #define ENABLE_IC2_EEPROM_TEST */

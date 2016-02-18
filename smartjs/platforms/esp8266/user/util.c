@@ -12,13 +12,11 @@
 #include "esp_gpio.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#ifndef RTOS_SDK
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
 #include "user_interface.h"
 #include "mem.h"
-#endif
 
 void set_gpio(int g, int v) {
 #define GPIO_SET(pin) gpio_output_set(1 << pin, 0, 1 << pin, 0);

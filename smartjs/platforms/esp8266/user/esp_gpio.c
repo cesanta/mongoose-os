@@ -10,23 +10,10 @@
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "esp_periph.h"
 
-#ifndef RTOS_SDK
-
 #include <osapi.h>
 #include <gpio.h>
 #include <os_type.h>
 #include <user_interface.h>
-
-#else
-
-#include <stdlib.h>
-#include <eagle_soc.h>
-#include <pin_mux_register.h>
-#include <gpio_register.h>
-#include <freertos/portmacro.h>
-#include <disp_task.h>
-
-#endif /* RTOS_SDK */
 
 /* These declarations are missing in SDK headers since ~1.0 */
 #define PERIPHS_IO_MUX_PULLDWN BIT6
@@ -39,61 +26,11 @@
 
 static uint16_t int_map[GPIO_PIN_COUNT] = {0};
 
-#ifndef RTOS_TODO
 #define GPIO_TASK_QUEUE_LEN 25
-#endif
-
-#ifndef RTOS_SDK
 
 static os_event_t gpio_task_queue[GPIO_TASK_QUEUE_LEN];
 /* TODO(alashkin): introduce some kind of tasks priority registry */
 #define TASK_PRIORITY 2
-
-#else /* RTOS */
-
-#define GPIO_OUTPUT_SET(gpio_no, bit_value)                                   \
-  gpio_output_set((bit_value) << gpio_no, ((~(bit_value)) & 0x01) << gpio_no, \
-                  1 << gpio_no, 0)
-#define GPIO_DIS_OUTPUT(gpio_no) gpio_output_set(0, 0, 0, 1 << gpio_no)
-#define GPIO_INPUT_GET(gpio_no) ((gpio_input_get() >> gpio_no) & BIT0)
-
-#define GPIO_PIN_ADDR(i) (GPIO_PIN0_ADDRESS + i * 4)
-
-typedef enum {
-  GPIO_PIN_INTR_DISABLE = 0,
-  GPIO_PIN_INTR_POSEDGE = 1,
-  GPIO_PIN_INTR_NEGEDGE = 2,
-  GPIO_PIN_INTR_ANYEDGE = 3,
-  GPIO_PIN_INTR_LOLEVEL = 4,
-  GPIO_PIN_INTR_HILEVEL = 5
-} GPIO_INT_TYPE;
-
-void gpio_output_conf(uint32_t set_mask, uint32_t clear_mask,
-                      uint32_t enable_mask, uint32_t disable_mask) {
-  GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, set_mask);
-  GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, clear_mask);
-  GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, enable_mask);
-  GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, disable_mask);
-}
-
-void gpio_pin_intr_state_set(uint32 i, GPIO_INT_TYPE intr_state) {
-  uint32 pin_reg;
-
-  portENTER_CRITICAL();
-
-  pin_reg = GPIO_REG_READ(GPIO_PIN_ADDR(i));
-  pin_reg &= (~GPIO_PIN_INT_TYPE_MASK);
-  pin_reg |= (intr_state << GPIO_PIN_INT_TYPE_LSB);
-  GPIO_REG_WRITE(GPIO_PIN_ADDR(i), pin_reg);
-
-  portEXIT_CRITICAL();
-}
-
-uint32_t gpio_input_get() {
-  return GPIO_REG_READ(GPIO_IN_ADDRESS);
-}
-
-#endif /* RTOS_SDK */
 
 #define GPIO_TASK_SIG 0x123
 
@@ -202,16 +139,10 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_DIS_OUTPUT(pin);
 
-#ifndef RTOS_SDK
       gpio_register_set(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)),
                         GPIO_PIN_INT_TYPE_SET(GPIO_PIN_INTR_DISABLE) |
                             GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_DISABLE) |
                             GPIO_PIN_SOURCE_SET(GPIO_AS_PIN_SOURCE));
-#else
-      GPIO_REG_WRITE(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)),
-                     GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(pin))) &
-                         (~GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_ENABLE)));
-#endif
 
       EXIT_CRITICAL(ETS_GPIO_INUM);
       return -1;
@@ -290,13 +221,9 @@ IRAM static void v7_gpio_process_on_click(int pin, int level,
      */
     int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 |
                    (GPIO_PIN_INTR_HILEVEL - level);
-#ifndef RTOS_SDK
     system_os_post(TASK_PRIORITY,
                    (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level,
                    (os_param_t) callback);
-#else
-    rtos_dispatch_gpio_callback(callback, pin, level);
-#endif
   }
 }
 
@@ -316,13 +243,9 @@ IRAM static void v7_gpio_intr_dispatcher(void *arg) {
         /* this is "on click" handler */
         v7_gpio_process_on_click(i, level, callback);
       } else {
-#ifndef RTOS_SDK
         system_os_post(TASK_PRIORITY,
                        (uint32_t) GPIO_TASK_SIG << 16 | i << 8 | level,
                        (os_param_t) callback);
-#else
-        rtos_dispatch_gpio_callback(callback, i, level);
-#endif
       }
 
       gpio_pin_intr_state_set(GPIO_ID_PIN(i), int_map[i] & 0xF);
@@ -330,7 +253,6 @@ IRAM static void v7_gpio_intr_dispatcher(void *arg) {
   }
 }
 
-#ifndef RTOS_SDK
 void v7_gpio_task(os_event_t *event) {
   if (event->sig >> 16 != GPIO_TASK_SIG) {
     return;
@@ -339,19 +261,11 @@ void v7_gpio_task(os_event_t *event) {
   ((f_gpio_intr_handler_t) event->par)((event->sig & 0xFFFF) >> 8,
                                        (event->sig & 0xFF));
 }
-#endif
 
 void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
-#ifndef RTOS_TODO
   system_os_task(v7_gpio_task, TASK_PRIORITY, gpio_task_queue,
                  GPIO_TASK_QUEUE_LEN);
   ETS_GPIO_INTR_ATTACH(v7_gpio_intr_dispatcher, cb);
-#else
-  portENTER_CRITICAL();
-  _xt_isr_attach(ETS_GPIO_INUM, v7_gpio_intr_dispatcher, cb);
-  _xt_isr_unmask(1 << ETS_GPIO_INUM);
-  portEXIT_CRITICAL();
-#endif
 }
 
 static void v7_setup_on_click(int pin) {

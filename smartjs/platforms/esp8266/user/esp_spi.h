@@ -101,17 +101,8 @@
 #include <ets_sys.h>
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#ifndef RTOS_SDK
-
 #include <osapi.h>
 #include <os_type.h>
-
-#else
-
-#include <eagle_soc.h>
-#include <pin_mux_register.h>
-
-#endif /* RTOS_SDK */
 
 #include "smartjs/src/sj_spi.h"
 
