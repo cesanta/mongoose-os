@@ -39,3 +39,5 @@ source license requirements,
 [Cesanta](https://www.cesanta.com) offers a full,
 royalty-free commercial license and professional support
 without any of the GPL restrictions.
+
+[![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/smart.js)
