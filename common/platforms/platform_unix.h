@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <math.h>
 #include <netdb.h>
 #include <netinet/in.h>

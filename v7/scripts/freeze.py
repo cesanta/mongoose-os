@@ -329,7 +329,7 @@ for b in bcodes:
     names = mbuf("fnames", a, b["names"])
     print ("static const struct bcode fbcode_%(addr)s"
            " = {%(ops)s, %(lits)s, %(names)s,"
-           " 666, %(args)s, %(strict_mode)s, 1};") % dict(
+           " 666, %(args)s, %(strict_mode)s, 1, 0, 0};") % dict(
         addr = b["addr"],
         ops = ops,
         lits = lits,

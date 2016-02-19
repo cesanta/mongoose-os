@@ -126,6 +126,12 @@ SJ_PRIVATE enum v7_err GC_stat(struct v7 *v7, v7_val_t *res) {
          v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE)));
   v7_set(v7, *res, "astsize", ~0,
          v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
+  v7_set(v7, *res, "bcode_ops", ~0,
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_BCODE_OPS_SIZE)));
+  v7_set(v7, *res, "bcode_lit_total", ~0,
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_BCODE_LIT_TOTAL_SIZE)));
+  v7_set(v7, *res, "bcode_lit_deser", ~0,
+         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_BCODE_LIT_DESER_SIZE)));
   v7_set(v7, *res, "owned", ~0,
          v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED)));
   v7_set(v7, *res, "owned_max", ~0,

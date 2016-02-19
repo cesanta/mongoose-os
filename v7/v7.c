@@ -109,6 +109,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -244,6 +245,7 @@ struct dirent *readdir(DIR *dir);
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <math.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -2640,7 +2642,9 @@ struct v7 {
   struct gc_arena property_arena;
 #if V7_ENABLE__Memory__stats
   size_t function_arena_ast_size;
-  size_t function_arena_bcode_size;
+  size_t bcode_ops_size;
+  size_t bcode_lit_total_size;
+  size_t bcode_lit_deser_size;
 #endif
   struct mbuf owned_values; /* buffer for GC roots owned by C code */
 
@@ -3767,6 +3771,11 @@ struct bcode {
    * mmapped or constant data section.
    */
   unsigned int frozen : 1;
+
+  /* if set, `ops.buf` points to ROM, so we shouldn't free it */
+  unsigned int ops_in_rom : 1;
+  /* set for deserialized bcode. Used for metrics only */
+  unsigned int deserialized : 1;
 };
 
 enum bcode_ser_lit_tag {
@@ -3777,7 +3786,7 @@ enum bcode_ser_lit_tag {
 };
 
 V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode);
-V7_PRIVATE void bcode_free(struct bcode *);
+V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *);
 V7_PRIVATE void release_bcode(struct v7 *, struct bcode *);
 V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *b);
 
@@ -3829,7 +3838,7 @@ typedef struct {
   v7_val_t val;
 } lit_t;
 
-V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
+V7_PRIVATE void bcode_op(struct v7 *v7, struct bcode *bcode, uint8_t op);
 V7_PRIVATE
 lit_t bcode_add_lit(struct v7 *v7, struct bcode *bcode, v7_val_t val);
 /* disabled because of short lits */
@@ -3841,12 +3850,14 @@ V7_PRIVATE void bcode_op_lit(struct v7 *v7, struct bcode *bcode, enum opcode op,
 V7_PRIVATE void bcode_push_lit(struct v7 *v7, struct bcode *bcode, lit_t lit);
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, v7_val_t v);
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
-V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode);
-V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *, uint8_t op);
+V7_PRIVATE bcode_off_t bcode_add_target(struct v7 *v7, struct bcode *bcode);
+V7_PRIVATE bcode_off_t
+bcode_op_target(struct v7 *v7, struct bcode *, uint8_t op);
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
                                    bcode_off_t target);
 
-V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value);
+V7_PRIVATE void bcode_add_varint(struct v7 *v7, struct bcode *bcode,
+                                 size_t value);
 /*
  * Reads varint-encoded integer from the provided pointer, and adjusts
  * the pointer appropriately
@@ -10497,6 +10508,20 @@ static const char *op_names[] = {
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 #endif
 
+static size_t bcode_ops_append(struct v7 *v7, struct bcode *bcode,
+                               const void *buf, size_t len) {
+  size_t ret;
+  (void) v7;
+#if V7_ENABLE__Memory__stats
+  v7->bcode_ops_size -= bcode->ops.size;
+#endif
+  ret = mbuf_append(&bcode->ops, buf, len);
+#if V7_ENABLE__Memory__stats
+  v7->bcode_ops_size += bcode->ops.size;
+#endif
+  return ret;
+}
+
 #if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
                         uint8_t **ops) {
@@ -10562,8 +10587,22 @@ V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode) {
   bcode->strict_mode = strict_mode;
 }
 
-V7_PRIVATE void bcode_free(struct bcode *bcode) {
-  mbuf_free(&bcode->ops);
+V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode) {
+  (void) v7;
+#if V7_ENABLE__Memory__stats
+  if (!bcode->ops_in_rom) {
+    v7->bcode_ops_size -= bcode->ops.size;
+  }
+
+  v7->bcode_lit_total_size -= bcode->lit.size;
+  if (bcode->deserialized) {
+    v7->bcode_lit_deser_size -= bcode->lit.size;
+  }
+#endif
+
+  if (!bcode->ops_in_rom) {
+    mbuf_free(&bcode->ops);
+  }
   mbuf_free(&bcode->lit);
   mbuf_free(&bcode->names);
   bcode->refcnt = 0;
@@ -10584,27 +10623,25 @@ V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
   if (b->refcnt != 0) b->refcnt--;
 
   if (b->refcnt == 0) {
-#if V7_ENABLE__Memory__stats
-    v7->function_arena_bcode_size -= b->ops.size + b->lit.size;
-#endif
-    bcode_free(b);
+    bcode_free(v7, b);
     free(b);
   }
 }
 
-V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op) {
-  mbuf_append(&bcode->ops, &op, 1);
+V7_PRIVATE void bcode_op(struct v7 *v7, struct bcode *bcode, uint8_t op) {
+  bcode_ops_append(v7, bcode, &op, 1);
 }
 
 /*
  * Appends varint-encoded integer to the `ops` mbuf
  */
-V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value) {
+V7_PRIVATE void bcode_add_varint(struct v7 *v7, struct bcode *bcode,
+                                 size_t value) {
   int k = calc_llen(value); /* Calculate how many bytes length takes */
   int offset = bcode->ops.len;
 
   /* Allocate buffer */
-  mbuf_append(&bcode->ops, NULL, k);
+  bcode_ops_append(v7, bcode, NULL, k);
 
   /* Write value */
   encode_varint(value, (unsigned char *) bcode->ops.buf + offset);
@@ -10635,7 +10672,22 @@ V7_PRIVATE lit_t bcode_add_lit(struct v7 *v7, struct bcode *bcode, val_t val) {
   } else {
     lit.val = v7_mk_undefined();
     lit.idx = bcode->lit.len / sizeof(val);
+
+#if V7_ENABLE__Memory__stats
+    v7->bcode_lit_total_size -= bcode->lit.size;
+    if (bcode->deserialized) {
+      v7->bcode_lit_deser_size -= bcode->lit.size;
+    }
+#endif
+
     mbuf_append(&bcode->lit, &val, sizeof(val));
+
+#if V7_ENABLE__Memory__stats
+    v7->bcode_lit_total_size += bcode->lit.size;
+    if (bcode->deserialized) {
+      v7->bcode_lit_deser_size += bcode->lit.size;
+    }
+#endif
   }
   return lit;
 }
@@ -10669,16 +10721,16 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, uint8_t **ops) {
 
 V7_PRIVATE void bcode_op_lit(struct v7 *v7, struct bcode *bcode, enum opcode op,
                              lit_t lit) {
-  bcode_op(bcode, op);
+  bcode_op(v7, bcode, op);
 
   if (v7_is_string(lit.val)) {
     size_t len;
     const char *s = v7_get_string_data(v7, &lit.val, &len);
-    bcode_add_varint(bcode, BCODE_INLINE_STRING_TYPE_TAG);
-    bcode_add_varint(bcode, len);
-    mbuf_append(&bcode->ops, s, len + 1 /* nul term */);
+    bcode_add_varint(v7, bcode, BCODE_INLINE_STRING_TYPE_TAG);
+    bcode_add_varint(v7, bcode, len);
+    bcode_ops_append(v7, bcode, s, len + 1 /* nul term */);
   } else {
-    bcode_add_varint(bcode, lit.idx + BCODE_MAX_INLINE_TYPE_TAG);
+    bcode_add_varint(v7, bcode, lit.idx + BCODE_MAX_INLINE_TYPE_TAG);
   }
 }
 
@@ -10699,17 +10751,18 @@ V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode) {
  * This location can be updated with bcode_patch_target.
  * To be issued following a JMP_* bytecode
  */
-V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode) {
+V7_PRIVATE bcode_off_t bcode_add_target(struct v7 *v7, struct bcode *bcode) {
   bcode_off_t pos = bcode_pos(bcode);
   bcode_off_t zero = 0;
-  mbuf_append(&bcode->ops, &zero, sizeof(bcode_off_t));
+  bcode_ops_append(v7, bcode, &zero, sizeof(bcode_off_t));
   return pos;
 }
 
 /* Appends an op requiring a branch target. See bcode_add_target. */
-V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *bcode, uint8_t op) {
-  bcode_op(bcode, op);
-  return bcode_add_target(bcode);
+V7_PRIVATE bcode_off_t
+bcode_op_target(struct v7 *v7, struct bcode *bcode, uint8_t op) {
+  bcode_op(v7, bcode, op);
+  return bcode_add_target(v7, bcode);
 }
 
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
@@ -10919,6 +10972,12 @@ static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
                                           const char *data) {
   size_t size;
 
+  /*
+   * before deserializing, set the corresponding flag, so that metrics will be
+   * updated accordingly
+   */
+  bcode->deserialized = 1;
+
   /* get number of literals */
   size = bcode_deserialize_varint(&data);
   /* deserialize all literals */
@@ -10943,17 +11002,7 @@ static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
   bcode->ops.size = size;
   bcode->ops.len = size;
 
-  /*
-   * prevent freeing of this bcode by "retaining" it multiple times, since it's
-   * actually backed by the buffer that is managed differently.
-   *
-   * TODO(dfrank) : this looks like a total hack, we need to find better
-   * solution
-   */
-  retain_bcode(v7, bcode);
-  retain_bcode(v7, bcode);
-
-  bcode->frozen = 1; /* prevent freeing */
+  bcode->ops_in_rom = 1;
 
   data += size;
 
@@ -12998,7 +13047,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
     lit_t lit;
     int args_cnt = v7_array_length(v7, args);
 
-    bcode_op(bcode, OP_PUSH_UNDEFINED);
+    bcode_op(v7, bcode, OP_PUSH_UNDEFINED);
 
     /* push `this` */
     lit = bcode_add_lit(v7, bcode, this_object);
@@ -13017,11 +13066,11 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
       }
     }
 
-    bcode_op(bcode, OP_CALL);
+    bcode_op(v7, bcode, OP_CALL);
     /* TODO(dfrank): check if args <= 0x7f */
-    bcode_op(bcode, (uint8_t) args_cnt);
+    bcode_op(v7, bcode, (uint8_t) args_cnt);
 
-    bcode_op(bcode, OP_SWAP_DROP);
+    bcode_op(v7, bcode, OP_SWAP_DROP);
   } else if (is_cfunction_lite(func) || is_cfunction_obj(v7, func)) {
     /* call cfunction */
     V7_TRY(call_cfunction(v7, func, this_object, args, 0 /* not a ctor */, &r));
@@ -13921,7 +13970,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 #endif
       }
     cleanup_bcode:
-      bcode_free(&bcode);
+      bcode_free(v7, &bcode);
     } else {
       if (binary) {
         fwrite(BIN_AST_SIGNATURE, sizeof(BIN_AST_SIGNATURE), 1, fp);
@@ -17074,8 +17123,12 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
       return v7->property_arena.cell_size;
     case V7_HEAP_STAT_FUNC_AST_SIZE:
       return v7->function_arena_ast_size;
-    case V7_HEAP_STAT_FUNC_BCODE_SIZE:
-      return v7->function_arena_bcode_size;
+    case V7_HEAP_STAT_BCODE_OPS_SIZE:
+      return v7->bcode_ops_size;
+    case V7_HEAP_STAT_BCODE_LIT_TOTAL_SIZE:
+      return v7->bcode_lit_total_size;
+    case V7_HEAP_STAT_BCODE_LIT_DESER_SIZE:
+      return v7->bcode_lit_deser_size;
     case V7_HEAP_STAT_FUNC_OWNED:
       return v7->owned_values.len / sizeof(val_t *);
     case V7_HEAP_STAT_FUNC_OWNED_MAX:
@@ -20412,7 +20465,7 @@ V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
       rcode = v7_throwf(v7, SYNTAX_ERROR, "unknown binary ast node");
       V7_THROW(V7_SYNTAX_ERROR);
   }
-  bcode_op(bcode, op);
+  bcode_op(v7, bcode, op);
 clean:
   return rcode;
 }
@@ -20489,9 +20542,10 @@ clean:
  *
  * Call this before updating the lhs.
  */
-static void fixup_post_op(enum ast_tag tag, struct bcode *bcode) {
+static void fixup_post_op(struct v7 *v7, enum ast_tag tag,
+                          struct bcode *bcode) {
   if (tag == AST_POSTINC || tag == AST_POSTDEC) {
-    bcode_op(bcode, OP_UNSTASH);
+    bcode_op(v7, bcode, OP_UNSTASH);
   }
 }
 
@@ -20505,10 +20559,10 @@ static enum v7_err eval_assign_rhs(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   /* a++ and a-- need to preserve initial value. */
   if (tag == AST_POSTINC || tag == AST_POSTDEC) {
-    bcode_op(bcode, OP_STASH);
+    bcode_op(v7, bcode, OP_STASH);
   }
   if (tag >= AST_PREINC && tag <= AST_POSTDEC) {
-    bcode_op(bcode, OP_PUSH_ONE);
+    bcode_op(v7, bcode, OP_PUSH_ONE);
   } else {
     V7_TRY(compile_expr(v7, a, pos, bcode));
   }
@@ -20516,11 +20570,11 @@ static enum v7_err eval_assign_rhs(struct v7 *v7, struct ast *a, ast_off_t *pos,
   switch (tag) {
     case AST_PREINC:
     case AST_POSTINC:
-      bcode_op(bcode, OP_ADD);
+      bcode_op(v7, bcode, OP_ADD);
       break;
     case AST_PREDEC:
     case AST_POSTDEC:
-      bcode_op(bcode, OP_SUB);
+      bcode_op(v7, bcode, OP_SUB);
       break;
     case AST_ASSIGN:
       /* no operation */
@@ -20551,7 +20605,7 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
       V7_TRY(eval_assign_rhs(v7, a, pos, tag, bcode));
       bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
-      fixup_post_op(tag, bcode);
+      fixup_post_op(v7, tag, bcode);
       break;
     case AST_MEMBER:
     case AST_INDEX:
@@ -20570,14 +20624,14 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
           V7_THROW(V7_SYNTAX_ERROR);
       }
       if (tag != AST_ASSIGN) {
-        bcode_op(bcode, OP_2DUP);
-        bcode_op(bcode, OP_GET);
+        bcode_op(v7, bcode, OP_2DUP);
+        bcode_op(v7, bcode, OP_GET);
       }
 
       V7_TRY(eval_assign_rhs(v7, a, pos, tag, bcode));
-      bcode_op(bcode, OP_SET);
+      bcode_op(v7, bcode, OP_SET);
 
-      fixup_post_op(tag, bcode);
+      fixup_post_op(v7, tag, bcode);
       break;
     default:
       /* We end up here on expressions like `1 = 2;`, it's a ReferenceError */
@@ -20640,7 +20694,7 @@ static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
           bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
           /* function declarations are stack-neutral */
-          bcode_op(bcode, OP_DROP);
+          bcode_op(v7, bcode, OP_DROP);
           /*
            * Note: the `is_stack_neutral` flag will be set by `compile_stmt`
            * later, when it encounters `AST_FUNC_DECL` again.
@@ -20684,10 +20738,10 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct v7 *v7, struct ast *a,
       V7_TRY(compile_expr(v7, a, pos, bcode));
       if (for_call) {
         /* current TOS will be used as `this` */
-        bcode_op(bcode, OP_DUP);
+        bcode_op(v7, bcode, OP_DUP);
       }
       bcode_push_lit(v7, bcode, lit);
-      bcode_op(bcode, OP_GET);
+      bcode_op(v7, bcode, OP_GET);
       break;
     }
 
@@ -20695,10 +20749,10 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct v7 *v7, struct ast *a,
       V7_TRY(compile_expr(v7, a, pos, bcode));
       if (for_call) {
         /* current TOS will be used as `this` */
-        bcode_op(bcode, OP_DUP);
+        bcode_op(v7, bcode, OP_DUP);
       }
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_GET);
+      bcode_op(v7, bcode, OP_GET);
       break;
 
     default:
@@ -20707,7 +20761,7 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct v7 *v7, struct ast *a,
          * `this` will be an `undefined` (but it may change to Global Object
          * at runtime)
          */
-        bcode_op(bcode, OP_PUSH_UNDEFINED);
+        bcode_op(v7, bcode, OP_PUSH_UNDEFINED);
       }
       *pos = pos_start;
       V7_TRY(compile_expr(v7, a, pos, bcode));
@@ -20732,7 +20786,7 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
       V7_TRY(compile_expr(v7, a, pos, bcode));
       /* put a property name */
       bcode_push_lit(v7, bcode, lit);
-      bcode_op(bcode, OP_DELETE);
+      bcode_op(v7, bcode, OP_DELETE);
       break;
     }
 
@@ -20742,7 +20796,7 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
       V7_TRY(compile_expr(v7, a, pos, bcode));
       /* put a property name */
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_DELETE);
+      bcode_op(v7, bcode, OP_DELETE);
       break;
 
     case AST_IDENT:
@@ -20750,7 +20804,7 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
       if (!bcode->strict_mode) {
         /* put a property name */
         bcode_push_lit(v7, bcode, string_lit(v7, a, pos, bcode));
-        bcode_op(bcode, OP_DELETE_VAR);
+        bcode_op(v7, bcode, OP_DELETE_VAR);
       } else {
         rcode =
             v7_throwf(v7, SYNTAX_ERROR,
@@ -20764,7 +20818,7 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
        * `undefined` should actually be an undeletable property of the Global
        * Object, so, trying to delete it just yields `false`
        */
-      bcode_op(bcode, OP_PUSH_FALSE);
+      bcode_op(v7, bcode, OP_PUSH_FALSE);
       break;
 
     default:
@@ -20774,8 +20828,8 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
        */
       *pos = pos_start;
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_DROP);
-      bcode_op(bcode, OP_PUSH_TRUE);
+      bcode_op(v7, bcode, OP_DROP);
+      bcode_op(v7, bcode, OP_PUSH_TRUE);
       break;
   }
 
@@ -20814,19 +20868,19 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       break;
     case AST_LOGICAL_NOT:
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_LOGICAL_NOT);
+      bcode_op(v7, bcode, OP_LOGICAL_NOT);
       break;
     case AST_NOT:
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_NOT);
+      bcode_op(v7, bcode, OP_NOT);
       break;
     case AST_POSITIVE:
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_POS);
+      bcode_op(v7, bcode, OP_POS);
       break;
     case AST_NEGATIVE:
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_NEG);
+      bcode_op(v7, bcode, OP_NEG);
       break;
     case AST_IDENT:
       bcode_op_lit(v7, bcode, OP_GET_VAR, string_lit(v7, a, pos, bcode));
@@ -20847,7 +20901,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     case AST_IN:
       V7_TRY(compile_expr(v7, a, pos, bcode));
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_IN);
+      bcode_op(v7, bcode, OP_IN);
       break;
     case AST_TYPEOF: {
       ast_off_t peek = *pos;
@@ -20857,7 +20911,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       } else {
         V7_TRY(compile_expr(v7, a, pos, bcode));
       }
-      bcode_op(bcode, OP_TYPEOF);
+      bcode_op(v7, bcode, OP_TYPEOF);
       break;
     }
     case AST_ASSIGN:
@@ -20895,9 +20949,9 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       */
       bcode_off_t false_label, end_label;
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      false_label = bcode_op_target(bcode, OP_JMP_FALSE);
+      false_label = bcode_op_target(v7, bcode, OP_JMP_FALSE);
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      end_label = bcode_op_target(bcode, OP_JMP);
+      end_label = bcode_op_target(v7, bcode, OP_JMP);
       bcode_patch_target(bcode, false_label, bcode_pos(bcode));
       V7_TRY(compile_expr(v7, a, pos, bcode));
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
@@ -20919,10 +20973,10 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
        */
       bcode_off_t end_label;
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_DUP);
+      bcode_op(v7, bcode, OP_DUP);
       end_label = bcode_op_target(
-          bcode, tag == AST_LOGICAL_AND ? OP_JMP_FALSE : OP_JMP_TRUE);
-      bcode_op(bcode, OP_DROP);
+          v7, bcode, tag == AST_LOGICAL_AND ? OP_JMP_FALSE : OP_JMP_TRUE);
+      bcode_op(v7, bcode, OP_DROP);
       V7_TRY(compile_expr(v7, a, pos, bcode));
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       break;
@@ -20944,7 +20998,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       while (*pos < end) {
         V7_TRY(compile_expr(v7, a, pos, bcode));
         if (*pos < end) {
-          bcode_op(bcode, OP_DROP);
+          bcode_op(v7, bcode, OP_DROP);
         }
       }
       break;
@@ -20994,12 +21048,12 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       for (args = 0; *pos < end; args++) {
         V7_TRY(compile_expr(v7, a, pos, bcode));
       }
-      bcode_op(bcode, (tag == AST_CALL ? OP_CALL : OP_NEW));
+      bcode_op(v7, bcode, (tag == AST_CALL ? OP_CALL : OP_NEW));
       if (args > 0x7f) {
         rcode = v7_throwf(v7, SYNTAX_ERROR, "too many arguments");
         V7_THROW(V7_SYNTAX_ERROR);
       }
-      bcode_op(bcode, (uint8_t) args);
+      bcode_op(v7, bcode, (uint8_t) args);
       break;
     }
     case AST_DELETE: {
@@ -21033,12 +21087,12 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       mbuf_init(&cur_literals, 0);
 
       ast_move_to_children(a, pos);
-      bcode_op(bcode, OP_CREATE_OBJ);
+      bcode_op(v7, bcode, OP_CREATE_OBJ);
       while (*pos < end) {
         tag = ast_fetch_tag(a, pos);
         switch (tag) {
           case AST_PROP:
-            bcode_op(bcode, OP_DUP);
+            bcode_op(v7, bcode, OP_DUP);
             lit = string_lit(v7, a, pos, bcode);
 
 /* disabled because we broke get_lit */
@@ -21075,8 +21129,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 #endif
             bcode_push_lit(v7, bcode, lit);
             V7_TRY(compile_expr(v7, a, pos, bcode));
-            bcode_op(bcode, OP_SET);
-            bcode_op(bcode, OP_DROP);
+            bcode_op(v7, bcode, OP_SET);
+            bcode_op(v7, bcode, OP_DROP);
             break;
           default:
             rcode = v7_throwf(v7, SYNTAX_ERROR, "not implemented");
@@ -21121,23 +21175,23 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
        */
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
-      bcode_op(bcode, OP_CREATE_ARR);
-      bcode_op(bcode, OP_PUSH_ZERO);
+      bcode_op(v7, bcode, OP_CREATE_ARR);
+      bcode_op(v7, bcode, OP_PUSH_ZERO);
       while (*pos < end) {
         ast_off_t lookahead = *pos;
         tag = ast_fetch_tag(a, &lookahead);
         if (tag != AST_NOP) {
-          bcode_op(bcode, OP_2DUP);
+          bcode_op(v7, bcode, OP_2DUP);
           V7_TRY(compile_expr(v7, a, pos, bcode));
-          bcode_op(bcode, OP_SET);
-          bcode_op(bcode, OP_DROP);
+          bcode_op(v7, bcode, OP_SET);
+          bcode_op(v7, bcode, OP_DROP);
         } else {
           *pos = lookahead; /* skip nop */
         }
-        bcode_op(bcode, OP_PUSH_ONE);
-        bcode_op(bcode, OP_ADD);
+        bcode_op(v7, bcode, OP_PUSH_ONE);
+        bcode_op(v7, bcode, OP_ADD);
       }
-      bcode_op(bcode, OP_DROP);
+      bcode_op(v7, bcode, OP_DROP);
       break;
     }
     case AST_FUNC: {
@@ -21160,38 +21214,38 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       *pos = pos_start;
       V7_TRY(compile_function(v7, a, pos, func->bcode));
       bcode_push_lit(v7, bcode, flit);
-      bcode_op(bcode, OP_FUNC_LIT);
+      bcode_op(v7, bcode, OP_FUNC_LIT);
       break;
     }
     case AST_THIS:
-      bcode_op(bcode, OP_PUSH_THIS);
+      bcode_op(v7, bcode, OP_PUSH_THIS);
       break;
     case AST_VOID:
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_DROP);
-      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      bcode_op(v7, bcode, OP_DROP);
+      bcode_op(v7, bcode, OP_PUSH_UNDEFINED);
       break;
     case AST_NULL:
-      bcode_op(bcode, OP_PUSH_NULL);
+      bcode_op(v7, bcode, OP_PUSH_NULL);
       break;
     case AST_NOP:
     case AST_UNDEFINED:
-      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      bcode_op(v7, bcode, OP_PUSH_UNDEFINED);
       break;
     case AST_TRUE:
-      bcode_op(bcode, OP_PUSH_TRUE);
+      bcode_op(v7, bcode, OP_PUSH_TRUE);
       break;
     case AST_FALSE:
-      bcode_op(bcode, OP_PUSH_FALSE);
+      bcode_op(v7, bcode, OP_PUSH_FALSE);
       break;
     case AST_NUM: {
       double dv;
       ast_get_num(a, *pos, &dv);
       ast_move_to_children(a, pos);
       if (dv == 0) {
-        bcode_op(bcode, OP_PUSH_ZERO);
+        bcode_op(v7, bcode, OP_PUSH_ZERO);
       } else if (dv == 1) {
-        bcode_op(bcode, OP_PUSH_ONE);
+        bcode_op(v7, bcode, OP_PUSH_ONE);
       } else {
         bcode_push_lit(v7, bcode, bcode_add_lit(v7, bcode, v7_mk_number(dv)));
       }
@@ -21253,7 +21307,7 @@ V7_PRIVATE enum v7_err compile_stmts(struct v7 *v7, struct ast *a,
   while (*pos < end) {
     V7_TRY(compile_stmt(v7, a, pos, bcode));
     if (!v7->is_stack_neutral) {
-      bcode_op(bcode, OP_SWAP_DROP);
+      bcode_op(v7, bcode, OP_SWAP_DROP);
     } else {
       v7->is_stack_neutral = 0;
     }
@@ -21306,14 +21360,14 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       ast_move_to_children(a, pos);
 
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      if_false_label = bcode_op_target(bcode, OP_JMP_FALSE);
+      if_false_label = bcode_op_target(v7, bcode, OP_JMP_FALSE);
 
       /* body if true */
       V7_TRY(compile_stmts(v7, a, pos, if_false, bcode));
 
       if (if_false != end) {
         /* `else` branch is present */
-        end_label = bcode_op_target(bcode, OP_JMP);
+        end_label = bcode_op_target(v7, bcode, OP_JMP);
 
         /* will jump here if `false` */
         bcode_patch_target(bcode, if_false_label, bcode_pos(bcode));
@@ -21360,13 +21414,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       cond = *pos;
       ast_skip_tree(a, pos);
 
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
+      end_label = bcode_op_target(v7, bcode, OP_TRY_PUSH_LOOP);
 
       /*
        * Condition check is at the end of the loop, this layout
        * reduces the number of jumps in the steady state.
        */
-      cond_label = bcode_op_target(bcode, OP_JMP);
+      cond_label = bcode_op_target(v7, bcode, OP_JMP);
       body_target = bcode_pos(bcode);
 
       V7_TRY(compile_stmts(v7, a, pos, end, bcode));
@@ -21375,22 +21429,22 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, cond_label, continue_target);
 
       V7_TRY(compile_expr(v7, a, &cond, bcode));
-      body_label = bcode_op_target(bcode, OP_JMP_TRUE);
+      body_label = bcode_op_target(v7, bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
 
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
-      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      continue_label = bcode_op_target(v7, bcode, OP_JMP_IF_CONTINUE);
       bcode_patch_target(bcode, continue_label, continue_target);
-      bcode_op(bcode, OP_TRY_POP);
+      bcode_op(v7, bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
     }
     case AST_BREAK:
-      bcode_op(bcode, OP_BREAK);
+      bcode_op(v7, bcode, OP_BREAK);
       break;
     case AST_CONTINUE:
-      bcode_op(bcode, OP_CONTINUE);
+      bcode_op(v7, bcode, OP_CONTINUE);
       break;
     /*
      * Frame objects (`v7->vals.call_stack`) contain one more hidden property:
@@ -21472,12 +21526,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       if (afinally != end) {
         /* `finally` clause is present: push its offset */
-        finally_label = bcode_op_target(bcode, OP_TRY_PUSH_FINALLY);
+        finally_label = bcode_op_target(v7, bcode, OP_TRY_PUSH_FINALLY);
       }
 
       if (acatch != afinally) {
         /* `catch` clause is present: push its offset */
-        catch_label = bcode_op_target(bcode, OP_TRY_PUSH_CATCH);
+        catch_label = bcode_op_target(v7, bcode, OP_TRY_PUSH_CATCH);
       }
 
       /* compile statements of `try` block */
@@ -21491,8 +21545,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
          * pop offset pushed by OP_TRY_PUSH_CATCH, and jump over the `catch`
          * block
          */
-        bcode_op(bcode, OP_TRY_POP);
-        after_catch_label = bcode_op_target(bcode, OP_JMP);
+        bcode_op(v7, bcode, OP_TRY_POP);
+        after_catch_label = bcode_op_target(v7, bcode, OP_JMP);
 
         /* --- catch --- */
 
@@ -21500,7 +21554,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_patch_target(bcode, catch_label, bcode_pos(bcode));
 
         /* pop offset pushed by OP_TRY_PUSH_CATCH */
-        bcode_op(bcode, OP_TRY_POP);
+        bcode_op(v7, bcode, OP_TRY_POP);
 
         /*
          * retrieve identifier where to store thrown error, and make sure
@@ -21525,7 +21579,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         V7_TRY(compile_stmts(v7, a, pos, afinally, bcode));
 
         /* pop private frame */
-        bcode_op(bcode, OP_EXIT_CATCH);
+        bcode_op(v7, bcode, OP_EXIT_CATCH);
 
         bcode_patch_target(bcode, after_catch_label, bcode_pos(bcode));
       }
@@ -21539,12 +21593,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_patch_target(bcode, finally_label, bcode_pos(bcode));
 
         /* pop offset pushed by OP_TRY_PUSH_FINALLY */
-        bcode_op(bcode, OP_TRY_POP);
+        bcode_op(v7, bcode, OP_TRY_POP);
 
         /* compile statements until the end of `finally` clause */
         V7_TRY(compile_stmts(v7, a, pos, end, bcode));
 
-        bcode_op(bcode, OP_AFTER_FINALLY);
+        bcode_op(v7, bcode, OP_AFTER_FINALLY);
       }
 
       v7->is_stack_neutral = 1;
@@ -21553,7 +21607,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
     case AST_THROW: {
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_THROW);
+      bcode_op(v7, bcode, OP_THROW);
       break;
     }
 
@@ -21609,7 +21663,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
 
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_SWITCH);
+      end_label = bcode_op_target(v7, bcode, OP_TRY_PUSH_SWITCH);
 
       V7_TRY(compile_expr(v7, a, pos, bcode));
 
@@ -21628,10 +21682,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
             break;
           case AST_CASE: {
             bcode_off_t case_label;
-            bcode_op(bcode, OP_DUP);
+            bcode_op(v7, bcode, OP_DUP);
             V7_TRY(compile_expr(v7, a, pos, bcode));
-            bcode_op(bcode, OP_EQ);
-            case_label = bcode_op_target(bcode, OP_JMP_TRUE_DROP);
+            bcode_op(v7, bcode, OP_EQ);
+            case_label = bcode_op_target(v7, bcode, OP_JMP_TRUE_DROP);
             cases++;
             mbuf_append(&case_labels, &case_label, sizeof(case_label));
             break;
@@ -21643,8 +21697,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
 
       /* jmp table epilogue: unconditional jump to default case */
-      bcode_op(bcode, OP_DROP);
-      dfl_label = bcode_op_target(bcode, OP_JMP);
+      bcode_op(v7, bcode, OP_DROP);
+      dfl_label = bcode_op_target(v7, bcode, OP_JMP);
 
       *pos = case_start;
       /* second pass: emit case bodies and patch jump table */
@@ -21683,7 +21737,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
 
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
-      bcode_op(bcode, OP_TRY_POP);
+      bcode_op(v7, bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
@@ -21747,28 +21801,28 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
           bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
           /* INIT is stack-neutral */
-          bcode_op(bcode, OP_DROP);
+          bcode_op(v7, bcode, OP_DROP);
         }
       } else {
         /* normal expression in INIT (not `var` declaration) */
         V7_TRY(compile_expr(v7, a, pos, bcode));
         /* INIT is stack-neutral */
-        bcode_op(bcode, OP_DROP);
+        bcode_op(v7, bcode, OP_DROP);
       }
       cond = *pos;
       ast_skip_tree(a, pos);
       iter = *pos;
       *pos = body;
 
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
-      cond_label = bcode_op_target(bcode, OP_JMP);
+      end_label = bcode_op_target(v7, bcode, OP_TRY_PUSH_LOOP);
+      cond_label = bcode_op_target(v7, bcode, OP_JMP);
       body_target = bcode_pos(bcode);
       V7_TRY(compile_stmts(v7, a, pos, end, bcode));
 
       continue_target = bcode_pos(bcode);
 
       V7_TRY(compile_expr(v7, a, &iter, bcode));
-      bcode_op(bcode, OP_DROP);
+      bcode_op(v7, bcode, OP_DROP);
 
       bcode_patch_target(bcode, cond_label, bcode_pos(bcode));
 
@@ -21778,19 +21832,19 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       lookahead = cond;
       tag = ast_fetch_tag(a, &lookahead);
       if (tag == AST_NOP) {
-        bcode_op(bcode, OP_JMP);
+        bcode_op(v7, bcode, OP_JMP);
       } else {
         V7_TRY(compile_expr(v7, a, &cond, bcode));
-        bcode_op(bcode, OP_JMP_TRUE);
+        bcode_op(v7, bcode, OP_JMP_TRUE);
       }
-      body_label = bcode_add_target(bcode);
+      body_label = bcode_add_target(v7, bcode);
       bcode_patch_target(bcode, body_label, body_target);
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
 
-      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      continue_label = bcode_op_target(v7, bcode, OP_JMP_IF_CONTINUE);
       bcode_patch_target(bcode, continue_label, continue_target);
 
-      bcode_op(bcode, OP_TRY_POP);
+      bcode_op(v7, bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
@@ -21870,19 +21924,19 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * register instead of copying it. The current behaviour has been
        * optimized for the `assign` use case which seems more common.
        */
-      bcode_op(bcode, OP_DUP);
+      bcode_op(v7, bcode, OP_DUP);
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_SWAP);
-      bcode_op(bcode, OP_STASH);
-      bcode_op(bcode, OP_DROP);
+      bcode_op(v7, bcode, OP_SWAP);
+      bcode_op(v7, bcode, OP_STASH);
+      bcode_op(v7, bcode, OP_DROP);
 
       /*
        * OP_NEXT_PROP keeps the current position in an opaque handler.
        * Feeding a null as initial value.
        */
-      bcode_op(bcode, OP_PUSH_NULL);
+      bcode_op(v7, bcode, OP_PUSH_NULL);
 
-      brend_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
+      brend_label = bcode_op_target(v7, bcode, OP_TRY_PUSH_LOOP);
 
       /* loop: */
       loop_target = bcode_pos(bcode);
@@ -21892,8 +21946,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * `( S:v o h )`
        */
 
-      bcode_op(bcode, OP_NEXT_PROP);
-      end_label = bcode_op_target(bcode, OP_JMP_FALSE);
+      bcode_op(v7, bcode, OP_NEXT_PROP);
+      end_label = bcode_op_target(v7, bcode, OP_JMP_FALSE);
       bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
       /*
@@ -21902,7 +21956,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * the previous iteration. We move it to the data stack. It will
        * be replaced by the values of the body statements as usual.
        */
-      bcode_op(bcode, OP_UNSTASH);
+      bcode_op(v7, bcode, OP_UNSTASH);
 
       /*
        * This node is always a NOP, for compatibility
@@ -21918,32 +21972,32 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * Save the last body statement. If next evaluation of NEXT_PROP returns
        * false, we'll unstash it.
        */
-      bcode_op(bcode, OP_STASH);
-      bcode_op(bcode, OP_DROP);
+      bcode_op(v7, bcode, OP_STASH);
+      bcode_op(v7, bcode, OP_DROP);
 
-      loop_label = bcode_op_target(bcode, OP_JMP);
+      loop_label = bcode_op_target(v7, bcode, OP_JMP);
       bcode_patch_target(bcode, loop_label, loop_target);
 
       /* end: */
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
-      bcode_op(bcode, OP_UNSTASH);
+      bcode_op(v7, bcode, OP_UNSTASH);
 
-      pop_label = bcode_op_target(bcode, OP_JMP);
+      pop_label = bcode_op_target(v7, bcode, OP_JMP);
 
       /* brend: */
       bcode_patch_target(bcode, brend_label, bcode_pos(bcode));
 
-      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      continue_label = bcode_op_target(v7, bcode, OP_JMP_IF_CONTINUE);
       bcode_patch_target(bcode, continue_label, continue_target);
 
-      bcode_op(bcode, OP_SWAP_DROP);
-      bcode_op(bcode, OP_SWAP_DROP);
-      bcode_op(bcode, OP_SWAP_DROP);
+      bcode_op(v7, bcode, OP_SWAP_DROP);
+      bcode_op(v7, bcode, OP_SWAP_DROP);
+      bcode_op(v7, bcode, OP_SWAP_DROP);
 
       /* try_pop: */
       bcode_patch_target(bcode, pop_label, bcode_pos(bcode));
 
-      bcode_op(bcode, OP_TRY_POP);
+      bcode_op(v7, bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
@@ -21970,19 +22024,19 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_off_t end_label, continue_label, continue_target;
       end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
       ast_move_to_children(a, pos);
-      end_label = bcode_op_target(bcode, OP_TRY_PUSH_LOOP);
+      end_label = bcode_op_target(v7, bcode, OP_TRY_PUSH_LOOP);
       body_target = bcode_pos(bcode);
       V7_TRY(compile_stmts(v7, a, pos, end, bcode));
 
       continue_target = bcode_pos(bcode);
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      body_label = bcode_op_target(bcode, OP_JMP_TRUE);
+      body_label = bcode_op_target(v7, bcode, OP_JMP_TRUE);
       bcode_patch_target(bcode, body_label, body_target);
 
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
-      continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
+      continue_label = bcode_op_target(v7, bcode, OP_JMP_IF_CONTINUE);
       bcode_patch_target(bcode, continue_label, continue_target);
-      bcode_op(bcode, OP_TRY_POP);
+      bcode_op(v7, bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
       break;
@@ -22023,19 +22077,19 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
           bcode_op_lit(v7, bcode, OP_SET_VAR, lit);
 
           /* `var` declaration is stack-neutral */
-          bcode_op(bcode, OP_DROP);
+          bcode_op(v7, bcode, OP_DROP);
           v7->is_stack_neutral = 1;
         }
       }
       break;
     }
     case AST_RETURN:
-      bcode_op(bcode, OP_PUSH_UNDEFINED);
-      bcode_op(bcode, OP_RET);
+      bcode_op(v7, bcode, OP_PUSH_UNDEFINED);
+      bcode_op(v7, bcode, OP_RET);
       break;
     case AST_VALUE_RETURN:
       V7_TRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_RET);
+      bcode_op(v7, bcode, OP_RET);
       break;
     default:
       *pos = pos_start;
@@ -22066,7 +22120,7 @@ static enum v7_err compile_body(struct v7 *v7, struct ast *a,
 #endif
 
   /* put initial value for the function body execution */
-  bcode_op(bcode, OP_PUSH_UNDEFINED);
+  bcode_op(v7, bcode, OP_PUSH_UNDEFINED);
 
   /*
    * fill `bcode->names` with function's local vars. Note that we should do
