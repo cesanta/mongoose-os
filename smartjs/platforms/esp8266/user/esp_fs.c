@@ -395,7 +395,7 @@ int _fstat_r(struct _reent *r, int fd, struct stat *s) {
   set_errno(res);
   if (res < 0) return res;
   s->st_ino = ss.obj_id;
-  s->st_mode = 0666;
+  s->st_mode = S_IFREG | 0666;
   s->st_nlink = 1;
   s->st_size = ss.size;
   return 0;
@@ -409,7 +409,8 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
    * spiffs has no directories, simulating statting root directory;
    * required for mg_send_http_file.
    */
-  if ((strcmp(path, "./") == 0) || (strcmp(path, "/") == 0)) {
+  if ((strcmp(path, ".") == 0) || (strcmp(path, "/") == 0) ||
+      (strcmp(path, "./") == 0)) {
     memset(s, 0, sizeof(*s));
     s->st_mode = S_IFDIR;
     return 0;
