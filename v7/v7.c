@@ -10667,7 +10667,7 @@ static int bcode_is_inline_string(struct v7 *v7, val_t val) {
 V7_PRIVATE lit_t bcode_add_lit(struct v7 *v7, struct bcode *bcode, val_t val) {
   lit_t lit;
   memset(&lit, 0, sizeof(lit));
-  if (bcode_is_inline_string(v7, val)) {
+  if (bcode_is_inline_string(v7, val) || v7_is_number(val)) {
     lit.val = val;
   } else {
     lit.val = v7_mk_undefined();
@@ -10713,7 +10713,13 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, uint8_t **ops) {
       return res;
       break;
     }
-    /* TODO(mkm): implement number */
+    case BCODE_INLINE_NUMBER_TYPE_TAG: {
+      val_t res;
+      memcpy(&res, *ops + 1, sizeof(res));
+      *ops += sizeof(res);
+      return res;
+      break;
+    }
     default:
       return ((val_t *) mbuf->buf)[idx - BCODE_MAX_INLINE_TYPE_TAG];
   }
@@ -10729,6 +10735,17 @@ V7_PRIVATE void bcode_op_lit(struct v7 *v7, struct bcode *bcode, enum opcode op,
     bcode_add_varint(v7, bcode, BCODE_INLINE_STRING_TYPE_TAG);
     bcode_add_varint(v7, bcode, len);
     bcode_ops_append(v7, bcode, s, len + 1 /* nul term */);
+  } else if (v7_is_number(lit.val)) {
+    bcode_add_varint(v7, bcode, BCODE_INLINE_NUMBER_TYPE_TAG);
+    /*
+     * TODO(dfrank): we can save some ROM by storing string representation of a
+     * number here, instead of wasting 8 bytes for each number.
+     *
+     * Alternatively, we can add more tags for integers, like
+     * `BCODE_INLINE_S08_TYPE_TAG`, `BCODE_INLINE_S16_TYPE_TAG`, etc,
+     * since integers are the most common numbers for sure.
+     */
+    bcode_ops_append(v7, bcode, &lit.val, sizeof(lit.val));
   } else {
     bcode_add_varint(v7, bcode, lit.idx + BCODE_MAX_INLINE_TYPE_TAG);
   }
