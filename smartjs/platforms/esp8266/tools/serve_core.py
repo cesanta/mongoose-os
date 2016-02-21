@@ -19,6 +19,7 @@ import argparse
 import base64
 import json
 import os
+import struct
 import sys
 
 IRAM_BASE=0x40100000
@@ -27,7 +28,7 @@ ROM_BASE= 0x40000000
 
 parser = argparse.ArgumentParser(description='Serve ESP core dump to GDB')
 parser.add_argument('--port', dest='port', default=1234, type=int, help='listening port')
-parser.add_argument('--iram', dest='iram', required=True, help='iram firmware section')
+parser.add_argument('--iram', dest='iram', help='iram firmware section')
 parser.add_argument('--iram_addr', dest='iram_addr',
                     type=lambda x: int(x,16), help='iram firmware section')
 parser.add_argument('--irom', dest='irom', required=True, help='irom firmware section')
@@ -48,10 +49,11 @@ class Core(object):
     def __init__(self, filename):
         dump = self._read(filename)
         self.mem = self._map_core(dump)
-        self.mem.append(self._map_firmware(args.iram_addr, args.iram, IRAM_BASE))
-        self.mem.append(self._map_firmware(args.irom_addr, args.irom, IROM_BASE))
+        if args.iram:
+            self.mem.extend(self._map_firmware(args.iram_addr, args.iram, IRAM_BASE))
+        self.mem.extend(self._map_firmware(args.irom_addr, args.irom, IROM_BASE))
         if args.rom_addr:
-            self.mem.append(self._map_firmware(args.rom_addr, args.rom, ROM_BASE))
+            self.mem.extend(self._map_firmware(args.rom_addr, args.rom, ROM_BASE))
         self.regs = base64.decodestring(dump['REGS']['data'])
 
     def _search_backwards(self, f, start_offset, pattern):
@@ -84,7 +86,6 @@ class Core(object):
             print >>sys.stderr, "Found core at %d - %d" % (start_pos, end_pos)
             f.seek(start_pos)
             core_json = f.read(end_pos - start_pos)
-            print >>sys.stderr, "%s ... %s" % (core_json[:25], core_json[-25:])
             return json.loads(core_json.replace('\n', '').replace('\r', ''))
 
     def _map_core(self, core):
@@ -93,7 +94,7 @@ class Core(object):
             if not isinstance(v, dict) or k == 'REGS':
                 continue
             data = base64.decodestring(v["data"])
-            print >>sys.stderr, "Mapping {0} at {1:#02x}".format(k, v["addr"])
+            print >>sys.stderr, "Mapping {0}: {1} @ {2:#02x}".format(k, len(data), v["addr"])
             mem.append((v["addr"], v["addr"] + len(data), data))
         return mem
 
@@ -103,13 +104,35 @@ class Core(object):
             addr = base + int(name, 16)
         with open(filename) as f:
             data = f.read()
-            # ea 04 is the magic number number for new format ESP image files
-            # as produced by rboot or esp-specific OTA enabled build scripts.
-            # The new image format contains code relocated 16 bytes ahead.
-            if ord(data[0]) == 0xea and ord(data[1]) == 0x04:
-                addr += 0x10
-            print >>sys.stderr, "Mapping {0} at {1:#02x}".format(filename, addr)
-            return (addr, addr + len(data), data)
+            result = []
+            i = 0
+            magic, count = struct.unpack('<BB', data[i:i+2])
+            if magic == 0xea and count == 0x04:
+                # This is a V2 image, IRAM will be inside.
+                (magic, count, f1, f2, entry, _, irom_len) = struct.unpack('<BBBBIII', data[i:i+16])
+                i += 16
+                addr += 16
+                result.append((addr, addr + irom_len, data[i:i+irom_len]))
+                print >>sys.stderr, "Mapping IROM: {0} @ {1:#02x}".format(irom_len, addr)
+                i += irom_len
+                # Now normal ROM header
+                (magic, count, f1, f2, entry) = struct.unpack('<BBBBI', data[i:i+8])
+                assert magic == 0xe9
+                i += 8
+                # Process other sections
+                for _ in range(count):
+                    addr, l = struct.unpack('<II', data[i:i+8])
+                    i += 8
+                    # We are only interested in IRAM and skip DRAM sections
+                    # (we'll take them from the core).
+                    if addr > 0x40000000:
+                        print >>sys.stderr, "Mapping IRAM: {0} @ {1:#02x}".format(l, addr)
+                        result.append((addr, addr + l, data[i:i+l]))
+                    i += l
+            else:
+                print >>sys.stderr, "Mapping {0} at {1:#02x}".format(filename, addr)
+                result.append((addr, addr + len(data), data))
+            return result
 
     def read(self, addr, size):
         for base, end, data in self.mem:
