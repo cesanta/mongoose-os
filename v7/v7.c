@@ -3762,8 +3762,8 @@ struct bcode {
   struct mbuf ops;   /* instruction opcode */
   struct mbuf lit;   /* literal table */
   struct mbuf names; /* function name, `args` arg names, local names */
-  int refcnt;        /* reference count */
-  int args;          /* number of args */
+  uint8_t refcnt;    /* reference count */
+  uint8_t args;      /* number of args */
 
   unsigned int strict_mode : 1;
   /*
