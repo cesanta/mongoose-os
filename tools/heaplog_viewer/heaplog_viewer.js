@@ -8,6 +8,9 @@
 
   var cellData;
 
+  /* Enables additional checks that affect performance */
+  var DEBUG = false;
+
   var BYTES_PER_ROW = 1024;
   var CELLS_PER_ROW = 128;
   var BYTES_PER_CELL = (BYTES_PER_ROW / CELLS_PER_ROW);
@@ -370,7 +373,10 @@
 
   function createLogger(heapStart, heapEnd, logItems, statTotal) {
     var curItemIdx = 0;
-    var allocMap = createAllocMap(heapStart, heapEnd, false);
+    var allocMap = createAllocMap(heapStart, heapEnd, {
+      calcStat: false,
+      checkAddresses: DEBUG,
+    });
     var i;
 
     return {
@@ -420,22 +426,16 @@
     function forward() {
       curItemIdx++;
       var item = logItems[curItemIdx];
-      applyItem(item);
-    }
 
-    function backward() {
-      var item = logItems[curItemIdx];
-      applyItem(item.reverseItem());
-      curItemIdx--;
-    }
-
-    function applyItem(item) {
       if (item.type == ItemType.MALLOC) {
         guiDeltaItems.push(
           allocMap.malloc(item.addr, item.size, item.shim, item)
         );
       } else if (item.type == ItemType.REALLOC) {
-        guiDeltaItems.push(allocMap.free(item.addr_old, item));
+        // `item` given to `free` is needed for statistics only, and since
+        // the `free` is an intermediary step during realloc, we should pass
+        // `undefined` here.
+        guiDeltaItems.push(allocMap.free(item.addr_old, undefined));
         guiDeltaItems.push(
           allocMap.malloc(item.addr_new, item.size_new, item.shim_new, item)
         );
@@ -447,11 +447,43 @@
         throw Error("wrong item type");
       }
     }
+
+    function backward() {
+      var item = logItems[curItemIdx];
+
+      if (item.type == ItemType.MALLOC) {
+        guiDeltaItems.push(
+          allocMap.free(item.addr, item)
+        );
+      } else if (item.type == ItemType.REALLOC) {
+        // `item` given to `free` is needed for statistics only, and since
+        // the `free` is an intermediary step during realloc, we should pass
+        // `undefined` here.
+        guiDeltaItems.push(allocMap.free(item.addr_new, undefined));
+        guiDeltaItems.push(
+          allocMap.malloc(item.addr_old, item.size_old, item.shim_old, item.itemWhichAllocated)
+        );
+      } else if (item.type == ItemType.FREE) {
+        guiDeltaItems.push(
+          allocMap.malloc(item.addr, item.size, item.shim, item.itemWhichAllocated)
+        );
+      } else if (item.type == ItemType.NONE) {
+        /* do nothing */
+      } else {
+        throw Error("wrong item type");
+      }
+
+      curItemIdx--;
+    }
   }
 
   function parseLogLines(lines) {
 
-    var allocMap = createAllocMap(0, 0, true);
+    var emptyArray = [];
+    var allocMap = createAllocMap(0, 0, {
+      calcStat: true,
+      checkAddresses: true,
+    });
     var logItems = [];
     var heapStart = 0;
     var heapEnd = 0;
@@ -460,6 +492,20 @@
     var i;
     var hlog_regexp = new RegExp('hl\{(m|c|z|r|f)\,([a-zA-Z0-9_,]+)\}');
     var hlog_param_regexp = new RegExp('hlog_param\:(\{[^}]+\})');
+    var hlog_calls_regexp = new RegExp('hcs\{([a-zA-Z0-9_ ]*)\}');
+    var curCallsArray = emptyArray;
+
+    /*
+     * Return call stack for an item, prepended by a comma (to be used in
+     * `toString()`)
+     */
+    var callStack = function(item) {
+      if (item.calls.length > 0) {
+        return ", calls: " + item.calls.join(" ← ");
+      } else {
+        return "";
+      }
+    }
 
     /* push initial item */
     var item = new LogItemNone("--- init ---");
@@ -470,19 +516,15 @@
       toString: function() {
         return "#" + this.idx + " " + this.comment;
       },
-      reverseItem: function() {
-        return new LogItemNone();
-      },
     };
 
     LogItemMalloc.prototype = {
       toString: function() {
         return "#" + this.idx + " " +
           "Alloc: 0x" + this.addr.toString(16) + ", size: " + this.size +
-          ", shim: " + this.shim;
-      },
-      reverseItem: function() {
-        return new LogItemFree(this.addr, this.size, this.shim, this);
+          ", shim: " + this.shim
+          + callStack(this)
+        ;
       },
     };
 
@@ -497,17 +539,8 @@
         + " -> "
         + "0x" + this.addr_new.toString(16) + ", size: " + this.size_new + ", "
         + "shim: " + this.shim_new
+        + callStack(this)
         ;
-      },
-      reverseItem: function() {
-        var ret = new LogItemRealloc(
-          this.addr_new, this.size_new, this.shim_new, this,
-          this.addr_old, this.size_old, this.shim_old
-        );
-        if (this.itemWhichAllocated) {
-          ret.idx = this.itemWhichAllocated.idx;
-        }
-        return ret;
       },
     };
 
@@ -518,14 +551,9 @@
         + "shim: " + this.shim
         + (this.itemWhichAllocated
           ? " (by #" + this.itemWhichAllocated.idx + ")"
-          : "");
-      },
-      reverseItem: function() {
-        var ret = new LogItemMalloc(this.addr, this.size, this.shim);
-        if (this.itemWhichAllocated) {
-          ret.idx = this.itemWhichAllocated.idx;
-        }
-        return ret;
+          : "")
+        + callStack(this)
+        ;
       },
     };
 
@@ -585,6 +613,7 @@
       var item = new LogItemNone();
 
       var match = line.match(hlog_regexp);
+      var callsMatch = line.match(hlog_calls_regexp);
       if (match) {
         /* heap log item */
 
@@ -609,11 +638,12 @@
             ptr_old: parseInt(dataArr[2], 16),
             ptr: parseInt(dataArr[3], 16),
           };
+          var oldAlloc = allocMap.getAllocByAddr(data.ptr_old);
           item = new LogItemRealloc(
             data.ptr_old,
-            allocMap.getAllocByAddr(data.ptr_old).size,
-            allocMap.getAllocByAddr(data.ptr_old).shim,
-            allocMap.getAllocByAddr(data.ptr_old).item,
+            oldAlloc.size,
+            oldAlloc.shim,
+            oldAlloc.item,
             data.ptr, data.size, data.shim
           );
 
@@ -629,11 +659,12 @@
             ptr: parseInt(dataArr[0], 16),
             shim: parseInt(dataArr[1]),
           };
+          var alloc = allocMap.getAllocByAddr(data.ptr);
           item = new LogItemFree(
             data.ptr,
-            allocMap.getAllocByAddr(data.ptr).size,
-            allocMap.getAllocByAddr(data.ptr).shim,
-            allocMap.getAllocByAddr(data.ptr).item
+            alloc.size,
+            alloc.shim,
+            alloc.item
           );
           delta = allocMap.free(data.ptr, item);
         } else {
@@ -665,13 +696,24 @@
         allocMap.setHeapStartEnd(heapStart, heapEnd);
 
         item.comment = line;
+      } else if (callsMatch){
+        /* remember call stack, it will be set to the next heaplog item */
+        curCallsArray = callsMatch[1].split(' ');
+        curCallsArray = curCallsArray.filter(function(n){ return n != ''; });
+
+        /* prevent adding current item to the array */
+        item = undefined;
       } else {
         item.comment = line;
       }
 
-      item.stat = JSON.parse(JSON.stringify(curStat));
+      if (item) {
+        item.stat = JSON.parse(JSON.stringify(curStat));
+        item.calls = curCallsArray;
+        curCallsArray = emptyArray;
 
-      logItems.push(item);
+        logItems.push(item);
+      }
     }
   }
 
@@ -729,7 +771,7 @@
     this.maxChunkSize = 0;
   }
 
-  function createAllocMap (_heapStart, _heapEnd, calcStat) {
+  function createAllocMap (_heapStart, _heapEnd, param) {
     var curAllocs = [];
     var heapStart, heapEnd, heapSize;
 
@@ -740,6 +782,15 @@
     var statCur = new StatLocal();
 
     return {
+
+      /*
+       * - `addr`, `size`: allocated buffer
+       * - `shim`: whether the allocation goes through Cesanta's shim
+       * - `item`: item which caused allocation to exist. It will be used by
+       *   the GUI to display relevant information when user interacts with
+       *   the map, or whatever. If `param.calcStat` is `true`, `item` is also
+       *   used for the statistics calculation.
+       */
       malloc: function(addr, size, shim, item) {
         var ret = {
           action: AllocAction.ALLOC,
@@ -750,10 +801,17 @@
             item: item  // item that caused allocation to exist
           },
         };
-        checkFree(addr, size);
+
+        // make sure the memory area determined by `addr` and `size` is free
+        if (param.checkAddresses) {
+          checkFree(addr, size);
+        }
+
+        // remember new allocated buffer
         curAllocs[addr] = ret.alloc;
 
-        if (calcStat) {
+        // if needed, calculate statistics
+        if (param.calcStat) {
           statCur.heapUsage += size;
           statCur.heapUsageWOvh += (size + OVERHEAD_BYTES_PER_ALLOC);
           if (size != 0) {
@@ -767,16 +825,27 @@
         return ret;
       },
 
+      /*
+       * - `addr`: address to free
+       * - `item`: item which caused freeing. It is used if only
+       *   `param.calcStat` is `true`: it is used for the statistics
+       *   calculation.
+       */
       free: function(addr, item) {
         var ret = {
           action: AllocAction.FREE,
           alloc: curAllocs[addr],
         };
-        checkAllocated(addr);
+
+        // make sure there is known buffer allocated at the given address
+        if (param.checkAddresses) {
+          checkAllocated(addr);
+        }
 
         var size = getCurAlloc(addr).size;
 
-        if (calcStat) {
+        // if needed, calculate statistics
+        if (param.calcStat) {
           statCur.heapUsage -= size;
           statCur.heapUsageWOvh -= (size + OVERHEAD_BYTES_PER_ALLOC);
           if (size != 0) {
@@ -787,13 +856,16 @@
           ret.stat = JSON.parse(JSON.stringify(statCur));
         }
 
+        // delete allocated buffer
         delete curAllocs[addr];
 
         return ret;
       },
 
       getAllocByAddr: function(addr) {
-        checkAllocated(addr);
+        if (param.checkAddresses) {
+          checkAllocated(addr);
+        }
         return getCurAlloc(addr);
       },
 

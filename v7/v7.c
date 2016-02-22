@@ -24753,12 +24753,15 @@ typedef struct {
 static call_trace_t call_trace = {0};
 
 NOINSTR
-void call_trace_print(size_t skip_cnt, size_t max_cnt) {
+void call_trace_print(const char *prefix, const char *suffix, size_t skip_cnt,
+                      size_t max_cnt) {
   int i;
   if (call_trace.missed_cnt > 0) {
     fprintf(stderr, "missed calls! (%d) ", (int) call_trace.missed_cnt);
   }
-  fprintf(stderr, "calls: ");
+  if (prefix != NULL) {
+    fprintf(stderr, "%s", prefix);
+  }
   for (i = (int) call_trace.size - 1 - skip_cnt; i >= 0; i--) {
     fprintf(stderr, " %lx", (unsigned long) call_trace.addresses[i]);
     if (max_cnt > 0) {
@@ -24766,6 +24769,9 @@ void call_trace_print(size_t skip_cnt, size_t max_cnt) {
         break;
       }
     }
+  }
+  if (suffix != NULL) {
+    fprintf(stderr, "%s", suffix);
   }
   fprintf(stderr, "\n");
 }
