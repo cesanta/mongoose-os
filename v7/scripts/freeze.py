@@ -46,7 +46,7 @@
 #
 # The input object graph is a sequence of JSON objects one per line.  Each JSON
 # object represents a JS entity on the heap: objects, JS functions, properties,
-# bcode structures, byte arrays with bcode mbuf contents (literals, opcodes,
+# bcode structures, byte arrays with bcode vec contents (literals, opcodes,
 # names).
 #
 # Each heap entity is identified by its address in the address space of the
@@ -280,16 +280,15 @@ for f in funcs:
 # definitions
 #
 
-def mbuf_initializer(prefix, addr, data):
-    return "{(char *) %(ref)s, %(len)s, %(size)s}" % dict(
+def vec_initializer(prefix, addr, data):
+    return "{(char *) %(ref)s, %(len)s}" % dict(
         ref = ref(prefix, addr),
         len = len(data),
-        size = len(data),
     )
 
-def mbuf(prefix, addr, buf):
+def vec(prefix, addr, buf):
     '''
-    Dump a mbuf as a char array containing hex numbers.
+    Dump a vec as a char array containing hex numbers.
     '''
     data = base64.decodestring(buf);
     print "static const char %(prefix)s_%(addr)s[] = {%(values)s};" % dict(
@@ -297,9 +296,9 @@ def mbuf(prefix, addr, buf):
         addr = addr,
         values = ','.join(hex(ord(i)) for i in data),
     )
-    return mbuf_initializer(prefix, addr, data)
+    return vec_initializer(prefix, addr, data)
 
-def lit_mbuf(prefix, addr, buf):
+def lit_vec(prefix, addr, buf):
     '''
     Dump a literals buffer as a u_val array containing either verbatim val_t
     values or tagged references to function structures.
@@ -320,13 +319,13 @@ def lit_mbuf(prefix, addr, buf):
         addr = addr,
         values = ','.join(u_val(i) for i in vals(data)),
     )
-    return mbuf_initializer(prefix, addr, data)
+    return vec_initializer(prefix, addr, data)
 
 for b in bcodes:
     a = b["addr"]
-    ops = mbuf("fops", a, b["ops"])
-    lits = lit_mbuf("flits", a, b["lit"])
-    names = mbuf("fnames", a, b["names"])
+    ops = vec("fops", a, b["ops"])
+    lits = lit_vec("flits", a, b["lit"])
+    names = vec("fnames", a, b["names"])
     print ("static const struct bcode fbcode_%(addr)s"
            " = {%(ops)s, %(lits)s, %(names)s,"
            " 0xff, %(args)s, %(strict_mode)s, 1, 0, 0};") % dict(

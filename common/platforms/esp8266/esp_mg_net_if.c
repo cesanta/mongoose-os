@@ -328,11 +328,11 @@ static int mg_lwip_tcp_write(struct tcp_pcb *tpcb, const void *data,
 
 static void mg_lwip_send_more(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-  struct tcp_pcb *tpcb = cs->pcb.tcp;
-  if (nc->sock == INVALID_SOCKET) {
+  if (nc->sock == INVALID_SOCKET || cs->pcb.tcp == NULL) {
     DBG(("%p invalid socket", nc));
     return;
   }
+  struct tcp_pcb *tpcb = cs->pcb.tcp;
   int num_written =
       mg_lwip_tcp_write(tpcb, nc->send_mbuf.buf, nc->send_mbuf.len);
   DBG(("%p mg_lwip_tcp_write %u = %d", nc, nc->send_mbuf.len, num_written));
@@ -370,6 +370,10 @@ void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
 void mg_if_recved(struct mg_connection *nc, size_t len) {
   if (nc->flags & MG_F_UDP) return;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  if (nc->sock == INVALID_SOCKET || cs->pcb.tcp == NULL) {
+    DBG(("%p invalid socket", nc));
+    return;
+  }
   DBG(("%p %p %u", nc, cs->pcb.tcp, len));
   /* Currently SSL acknowledges data immediately.
    * TODO(rojer): Find a way to propagate mg_if_recved. */
