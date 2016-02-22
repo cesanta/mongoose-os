@@ -63,6 +63,12 @@ IRAM NOINSTR void flash_emul_exception_handler(
   uint8_t at = (instr >> 4) & 0xf;
   uint32_t val = 0;
 
+  /* Address is obviously invalid, punt. */
+  if (vaddr < 0x30000000) {
+    esp_exception_handler(frame);
+    return;
+  }
+
   //  printf("READING INSTRUCTION FROM %p\n", (void *) frame->pc);
   //  printf("AT register %d\n", at);
 
@@ -94,7 +100,8 @@ IRAM NOINSTR void flash_emul_exception_handler(
       frame->pc -= 1; /* this instruction is only 2 bytes wide */
     }
   } else {
-    printf("cannot emulate flash mem instr at pc = %p\n", (void *) frame->pc);
+    fprintf(stderr, "cannot emulate flash mem instr at pc = %p\n",
+            (void *) frame->pc);
     esp_exception_handler(frame);
     return;
   }
