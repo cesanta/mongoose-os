@@ -29,13 +29,20 @@ struct esp_uart_config {
   int swap_rxtx_ctsrts;
 
   int status_interval_ms;
+
+  /* Note: this is executed in ISR context, almost nothing can be done here. */
+  void (*dispatch_cb)(int uart_no);
 };
 
 struct esp_uart_stats {
   uint32_t ints;
+
+  uint32_t rx_ints;
   uint32_t rx_bytes;
   uint32_t rx_overflows;
   uint32_t rx_linger_conts;
+
+  uint32_t tx_ints;
   uint32_t tx_bytes;
   uint32_t tx_throttles;
 };
@@ -50,9 +57,5 @@ cs_rbuf_t *esp_uart_rx_buf(int uart_no);
 cs_rbuf_t *esp_uart_tx_buf(int uart_no);
 
 void esp_uart_flush(int uart_no);
-
-/* Implementation must provide this.
- * Note: this is executed in ISR context, almost nothing can be done here. */
-void esp_uart_dispatch_signal_from_isr(int uart_no);
 
 #endif /* _ESP_UART_H_ */

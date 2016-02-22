@@ -13,14 +13,6 @@ AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
 LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
 
-V ?= $(VERBOSE)
-ifeq ("$(V)","1")
-Q :=
-else
-Q := @
-endif
-vecho := @echo " "
-
 define link
 $(vecho) "LD $@"
 $(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $< $(LIBS) $1 \

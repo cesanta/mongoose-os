@@ -118,4 +118,4 @@ if (!Sys.conf.clubby.device_id && Sys.conf.clubby.device_auto_registration) {
   }
 }
 
-File.eval('app_init.js');
+File.eval('app.js');

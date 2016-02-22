@@ -13,36 +13,35 @@
 #           map by `tools/heaplog_viewer/heaplog_viewer.html`
 #
 
-REPO_ROOT ?= ../../..
-COMMON_DIR ?= $(REPO_ROOT)/common
-COMMON_ESP_DIR ?= $(REPO_ROOT)/common/platforms/esp8266
+APP ?= smartjs
+APP_PLATFORM = esp8266
+APP_MODULES ?=
 
-include $(COMMON_ESP_DIR)/common.mk
+REPO_PATH ?= ../../..
+COMMON_PATH ?= $(REPO_PATH)/common
+SJS_PATH ?= $(REPO_PATH)/smartjs
+KRYPTON_PATH ?= $(REPO_PATH)/krypton
+MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
+V7_PATH ?= $(REPO_PATH)/v7
+FS_PATH ?= fs
 
-# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
-include $(REPO_ROOT)/smartjs/common.mk
-
-SJS_POSIX_SRC ?= ../posix
-SJS_POSIX_BIN ?= $(BUILD_DIR)/posix_sjs_bin
-SJS_POSIX_BUILD ?= $(BUILD_DIR)/posix_sjs_build
-SMARTJS_PATH ?= ../..
-KRYPTON_PATH ?= ../../../krypton
-ESP_SJS_USER_PATH ?= ./user
-SMARTJS_SRC ?= $(SMARTJS_PATH)/src
-SPIFFS_PATH ?= $(COMMON_DIR)/spiffs
-UMM_MALLOC_PATH ?= $(COMMON_DIR)/umm_malloc
+COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
+SJS_ESP_PATH ?= $(SJS_PATH)/platforms/esp8266
+SJS_POSIX_PATH ?= $(SJS_PATH)/platforms/posix
+SMARTJS_SRC ?= $(SJS_PATH)/src
+SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
+UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
 COMMON_FS_PATH ?= $(SMARTJS_SRC)/fs
-LWIP_PATH ?= $(COMMON_ESP_DIR)/lwip
-V7_PATH ?= ../../../v7
-MONGOOSE_PATH ?= ../../../mongoose
-BOOTLOADER_PATH ?= $(COMMON_ESP_DIR)/rboot
+LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
+BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 OTA ?= 1
 FREEZE ?= 1
 HEAP_LOG ?=
 
 FLASH_SIZE ?= 1M
+
 
 ifeq "${OTA}" "1"
 FS_SIZE ?= 128K
@@ -59,37 +58,40 @@ ifeq "${OTA}" "1"
 FW2_FILE_2_ADDR=$(shell printf "0x%08x" $$(($(FW_FILE_2_ADDR) + 0x100000)))
 endif
 
-BUILD_DIR = $(CURDIR)/build
+BUILD_DIR ?= $(CURDIR)/build
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
-TOOLS_DIR = tools
-COMMON_TOOLS_DIR ?= ../../tools
+SJS_POSIX_BIN = $(BUILD_DIR)/posix_sjs_bin
+SJS_POSIX_BUILD = $(BUILD_DIR)/posix_sjs_build
 FW_DIR = firmware
 
-FS_DIR = fs
 FS_BUILD_DIR = $(BUILD_DIR)/fs
 RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
 
-APP = smartjs
-APP_PLATFORM = esp8266
 # SSL can be SDK or Krypton
 SSL ?= None
 
-APP_MODULES := user $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_DIR)
+include $(COMMON_ESP_PATH)/common.mk
+
+# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
+include $(REPO_PATH)/smartjs/common.mk
+
+SJS_ESP_USER_DIR = $(SJS_ESP_PATH)/user
+APP_MODULES += $(SJS_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http.c sj_config.c \
+            cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
             sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
-            sj_mongoose_ws_client.c device_config.c sys_config.c \
-            ubjserializer.c clubby_proto.c sj_clubby.c sj_common.c
+            sj_mongoose_ws_client.c ubjserializer.c clubby_proto.c \
+            sj_clubby.c sj_common.c
 
 ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
 endif
 
 JSBIN_SRCS := $(SJSJS_PATH)/sys_init.js \
-              $(SJSJS_PATH)/app_init.js \
+              $(SJSJS_PATH)/app.js \
               $(SJSJS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
 JS_SRCS    :=
@@ -100,13 +102,13 @@ JS_SRCS    :=
 JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(SMARTJS_SRC) $(V7_PATH) $(MONGOOSE_PATH) \
-        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_DIR)
-IPATH = $(REPO_ROOT) include $(SPIFFS_PATH) \
+        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH)
+IPATH = $(REPO_PATH) $(SJS_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
-        $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_DIR) \
-        $(ESP_SJS_USER_PATH) .
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip/ $(ESP_SJS_USER_PATH)/
+        $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
+        $(SJS_ESP_USER_DIR) .
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(SJS_ESP_USER_DIR)
 
 # libraries used in this project, mainly provided by the SDK
 APP_LIBS = c crypto gcc hal pp phy net80211 wpa
@@ -169,7 +171,7 @@ CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWI
 
 FW_FS_OUT = $(FW_DIR)/$(FS_ADDR).bin
 
-LD_SCRIPT_TEMPL = ld/smartjs.ld
+LD_SCRIPT_TEMPL = $(SJS_ESP_PATH)/ld/smartjs.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
@@ -185,7 +187,7 @@ BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(LD_SCRIPT)
+GENFILES_LIST = $(LD_SCRIPT) $(BUILD_DIR)/sys_config.c
 FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
@@ -193,7 +195,7 @@ IMAGE_HEADER_SIZE = 0
 SRCS = $(APP_SRCS) build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 
-FS_FILES = $(wildcard $(FS_DIR)/*) $(wildcard $(COMMON_FS_PATH)/*)
+FS_FILES = $(wildcard $(FS_PATH)/*) $(wildcard $(COMMON_FS_PATH)/*)
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
@@ -240,7 +242,7 @@ INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
-FW_META_CMD = $(COMMON_DIR)/tools/fw_meta.py
+FW_META_CMD = $(COMMON_PATH)/tools/fw_meta.py
 
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
@@ -258,6 +260,8 @@ all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
 ifeq "${OTA}" "1"
 all: $(FW_ZIP_FILE)
 endif
+
+include $(REPO_PATH)/smartjs/src/sys_config.mk
 
 $(RBOOT_EMPTY_CFG):
 	$(vecho) GEN $@
@@ -310,7 +314,7 @@ $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
 # checked against main app library to make sure there's no overlap.
 $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
 	$(vecho) "SYMCHECK $(SYMCHECK_OUT) vs $(APP_AR)"
-	$(Q) python $(TOOLS_DIR)/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+	$(Q) python $(SJS_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
 	$(Q) touch $@
 
 $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
@@ -334,7 +338,7 @@ $(APP_AR): $(OBJS)
 
 # LWIP.
 $(LWIP_AR): $(LWIP_PATH)
-	$(Q) $(MAKE) --no-print-directory -C $(LWIP_PATH) -j3 all BUILD_DIR=$(LWIP_BUILD_DIR)
+	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all APP=liblwip_cs BUILD_DIR=$(LWIP_BUILD_DIR)
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
@@ -348,7 +352,7 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
 # Common gathering point for all generated files.
-# Except version, which is special because it depends on objects.
+# Except build info, which is special because it depends on objects.
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
@@ -417,7 +421,7 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
 $(SJS_POSIX_BIN)/smartjs:
-	make -C $(SJS_POSIX_SRC) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(SJS_POSIX_BIN) BUILD_DIR=$(SJS_POSIX_BUILD) CFLAGS_EXTRA='-DV7_FREEZE'
+	make -C $(SJS_POSIX_PATH) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(SJS_POSIX_BIN) BUILD_DIR=$(SJS_POSIX_BUILD) CFLAGS_EXTRA='-DV7_FREEZE'
 
 # Target specific warning inhibitions
 

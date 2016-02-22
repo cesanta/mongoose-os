@@ -1,5 +1,5 @@
-REPO_ROOT ?= ../../..
-COMMON_PATH = $(REPO_ROOT)/common
+REPO_PATH ?= ../../..
+COMMON_PATH = $(REPO_PATH)/common
 SRC_PATH ?= ../../src
 V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
@@ -10,7 +10,7 @@ VERBOSE ?= 0
 SSL ?= OpenSSL
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
-include $(REPO_ROOT)/smartjs/common.mk
+include $(REPO_PATH)/smartjs/common.mk
 
 V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
@@ -21,13 +21,12 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 SJ_FEATURES = -DCS_ENABLE_UBJSON -DSJ_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS
 
-INCLUDES = $(REPO_ROOT) $(SRC_PATH)
+INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 			mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
 			sj_mongoose_ws_client.c sj_gpio_js.c sj_adc_js.c \
 			sj_prompt.c sj_timers.c sj_uart.c sj_http.c sj_debug_js.c sj_pwm_js.c \
-			sj_wifi_js.c sj_config.c sys_config.c device_config.c \
-			clubby_proto.c ubjserializer.c sj_clubby.c sj_common.c
+			sj_wifi_js.c clubby_proto.c ubjserializer.c sj_clubby.c sj_common.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
@@ -84,12 +83,6 @@ ifeq ($(PLATFORM), "WIN")
   ADD_LIBS += ws2_32
 endif
 
-ifeq ($(VERBOSE),1)
-Q :=
-else
-Q := @
-endif
-
 ifeq ($(GC_CHECK),1)
 CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions -DV7_ENABLE_GC_CHECK
 endif
@@ -106,7 +99,9 @@ LIBS = $(addprefix -l,$(ADD_LIBS))
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(BUILD_DIR)
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
+GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
+GENFILES_LIST = $(LD_SCRIPT) $(BUILD_DIR)/sys_config.c
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/* $(SRC_PATH)/fs/*)
 
@@ -133,23 +128,30 @@ endef
 
 all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP) fs
 
-$(BIN_DIR):
+include $(REPO_PATH)/smartjs/src/sys_config.mk
+
+$(BIN_DIR) $(BUILD_DIR):
+	$(vecho) MKDIR $@
 	$(Q) mkdir -p $@
 
-$(BUILD_DIR):
-	$(Q) mkdir -p $@
+# This rule is for normal (pre-existing) sources from VPATH.
+$(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
+	$(compile)
 
-$(BUILD_DIR)/%.o: %.c
+# This one is for generated sources in build directory.
+$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 	$(compile)
 
 $(BUILD_DIR)/mongoose.o: mongoose.c
 	$(compile) -DEXCLUDE_COMMON
 
-$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
-	$(compile)
-
 $(BUILD_DIR)/build_info.o: $(BUILD_INFO_C)
 	$(compile)
+
+# Common gathering point for all generated files.
+# Except build info, which is special because it depends on objects.
+$(GENFILES_FLAG): $(GENFILES_LIST)
+	$(Q) touch $@
 
 # Generate build info. Only regenerates if there are changes in objects.
 $(BUILD_INFO_C): $(APP_OBJS)
@@ -162,7 +164,7 @@ $(BUILD_INFO_C): $(APP_OBJS)
 $(V7_PATH)/v7.c:
 	@make -C $(V7_PATH) v7.c
 
-$(BIN_DIR)/$(OUTAPP): $(V7_PATH)/v7.c $(OBJS)
+$(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(V7_PATH)/v7.c $(OBJS)
 	@echo "LD $@"
 	$(Q) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 

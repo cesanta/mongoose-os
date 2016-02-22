@@ -3,14 +3,16 @@
  * All rights reserved
  */
 
-#ifndef CONFIG_H_INCLUDED
-#define CONFIG_H_INCLUDED
+#ifndef _DEVICE_CONFIG_H_
+#define _DEVICE_CONFIG_H_
 
-#include "smartjs/src/sys_config.h"
 #include "v7/v7.h"
 #include "mongoose/mongoose.h"
+#include "sys_config.h"
 
-#define OVERRIDES_JSON_FILE "conf.json"
+#define CONF_SYS_DEFAULTS_FILE "conf_sys_defaults.json"
+#define CONF_APP_DEFAULTS_FILE "conf_app_defaults.json"
+#define CONF_FILE "conf.json"
 
 /* Read-only firmware setting */
 struct ro_var {
@@ -42,9 +44,9 @@ void device_get_mac_address(uint8_t mac[6]);
 void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);
 
 /*
- * Set property in Sys.conf object pointed by path paramater (dot separated,
- * ex: wifi.ap.mode). Return 0 on success, non zero on error
+ * Set property in Sys.conf object pointed by path parameter (dot separated,
+ * e.g.: wifi.ap.mode). Return 0 on success, non zero on error
  */
 int update_sysconf(struct v7 *v7, const char *path, v7_val_t val);
 
-#endif
+#endif /* _DEVICE_CONFIG_H_ */

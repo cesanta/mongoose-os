@@ -51,7 +51,7 @@ imp_*::
 
 Files that are meant to be edited by developers:
 
-app_init.js::
+app.js::
   Application-specific file. This file is called by `sys_init.js`.
   User code must go here.
 conf_app_defaults.json::

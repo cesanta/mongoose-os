@@ -8,7 +8,7 @@
 
 #include "v7/v7.h"
 
-#include "smartjs/src/sys_config.h"
+#include "sys_config.h"
 
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
 

@@ -104,6 +104,9 @@ SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
   struct sys_config_wifi_sta cfg;
   cfg.ssid = (char *) ssid;
   cfg.pass = (char *) pass;
+
+  LOG(LL_INFO, ("WiFi: connecting to '%s'", ssid));
+
   int ret = sj_wifi_setup_sta(&cfg);
   if (ret && permanent) {
     update_sysconf(v7, "wifi.sta.enable", v7_mk_boolean(1));
@@ -180,8 +183,17 @@ clean:
 void sj_wifi_on_change_callback(enum sj_wifi_status event) {
   struct v7 *v7 = s_v7;
 
-  if (event == SJ_WIFI_IP_ACQUIRED) {
-    call_wifi_ready_cbs(v7);
+  switch (event) {
+    case SJ_WIFI_DISCONNECTED:
+      LOG(LL_INFO, ("Wifi: disconnected"));
+      break;
+    case SJ_WIFI_CONNECTED:
+      LOG(LL_INFO, ("Wifi: connected"));
+      break;
+    case SJ_WIFI_IP_ACQUIRED:
+      LOG(LL_INFO, ("WiFi: ready, IP %s", sj_wifi_get_sta_ip()));
+      call_wifi_ready_cbs(v7);
+      break;
   }
 
   v7_val_t cb = v7_get(v7, wifi_private, "_ccb", ~0);

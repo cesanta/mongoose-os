@@ -9,9 +9,12 @@
 #ifndef RTOS_SDK
 
 #include "v7/v7.h"
+#include "mongoose/mongoose.h"
 
 void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                              v7_val_t args);
+
+void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr);
 
 /* TODO(alashkin): Should we move these functions to mongoose interface? */
 void mg_suspend();

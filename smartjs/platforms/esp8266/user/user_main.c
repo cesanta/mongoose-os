@@ -19,6 +19,7 @@
 #include "smartjs/platforms/esp8266/user/esp_exc.h"
 
 #include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_app.h"
 #include "smartjs/src/sj_common.h"
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_prompt.h"
@@ -63,7 +64,9 @@ void sjs_init(void *dummy) {
     esp_uart_init(u1cfg);
     fs_set_stdout_uart(0);
     fs_set_stderr_uart(ESP_DEBUG_UART);
-    cs_log_set_level(LL_ERROR);
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+    cs_log_set_level(LL_DEBUG);
 #ifdef ESP_ENABLE_HEAP_LOG
     uart_initialized = 1;
 #endif
@@ -92,16 +95,25 @@ void sjs_init(void *dummy) {
   mongoose_init();
 
   /* NOTE(lsm): must be done after mongoose_init(). */
-  init_device(v7);
+  if (!init_device(v7)) {
+    LOG(LL_ERROR, ("init_device failed"));
+    abort();
+  }
 
 #ifndef DISABLE_OTA
   init_updater(v7);
 #endif
+  LOG(LL_INFO, ("Sys init done"));
+
+  if (!sj_app_init(v7)) {
+    LOG(LL_ERROR, ("App init failed"));
+    abort();
+  }
+  LOG(LL_INFO, ("App init done"));
 
   /* SJS initialized, enable GC back, and trigger it */
   v7_set_gc_enabled(v7, 1);
   v7_gc(v7, 1);
-  LOG(LL_INFO, ("init done"));
 
 #ifndef V7_NO_FS
   run_init_script();
@@ -145,7 +157,7 @@ void sdk_init_done_cb() {
   /* Schedule SJS initialization (`sjs_init()`) */
   os_timer_disarm(&startcmd_timer);
   os_timer_setfn(&startcmd_timer, sjs_init, NULL);
-  os_timer_arm(&startcmd_timer, 100, 0);
+  os_timer_arm(&startcmd_timer, 0, 0);
 }
 
 /* Init function */
@@ -156,9 +168,6 @@ void user_init() {
   uart_div_modify(ESP_DEBUG_UART, UART_CLK_FREQ / 115200);
 
   system_set_os_print(0);
-
-  setvbuf(stdout, NULL, _IONBF, 0);
-  setvbuf(stderr, NULL, _IONBF, 0);
 
   esp_exception_handler_init();
 

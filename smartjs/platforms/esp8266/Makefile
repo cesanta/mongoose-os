@@ -1,7 +1,10 @@
-SRC_DIR ?= $(realpath ../../..)
-DIR = $(subst $(SRC_DIR),/cesanta,$(CURDIR))
+APP ?= smartjs
+REPO_PATH ?= ../../..
+SJS_ESP_PATH = $(REPO_PATH)/smartjs/platforms/esp8266
+SDK_VERSION ?= $(shell cat $(SJS_ESP_PATH)/sdk.version)
 
-SDK_CAT = $(shell cat sdk.version)
+REPO_ABS_PATH = $(realpath $(REPO_PATH))
+APP_PATH = $(subst $(REPO_ABS_PATH),/cesanta,$(CURDIR))
 
 .PHONY: all clean
 
@@ -15,13 +18,26 @@ SDK_CAT = $(shell cat sdk.version)
 MAKEFLAGS += w
 
 all clean:
-	@docker run --rm -i -v /$(SRC_DIR):/cesanta $(SDK_CAT) \
+	@docker run --rm -i -v $(REPO_ABS_PATH):/cesanta $(SDK_VERSION) \
 		//bin/bash -c "\
 			if [ -d /cesanta/v7 ] ; then make -C /cesanta/v7 v7.c ; fi && \
 			if [ -d /cesanta/mongoose ] ; then make -C /cesanta/mongoose mongoose.c mongoose.h ; fi && \
-			cd $(DIR) && \
-			make -f Makefile.build $@ -$(MAKEFLAGS) \
-				&& python ./tools/showbreakdown.py \
+			cd $(APP_PATH) && \
+			make -f Makefile.build APP=$(APP) REPO_PATH=$(REPO_PATH) $@ -$(MAKEFLAGS) \
+				&& python $(SJS_ESP_PATH)/tools/showbreakdown.py \
 		"
 
-
+debug_coredump:
+ifndef CONSOLE_LOG
+	$(error Please set CONSOLE_LOG)
+endif
+	docker run --rm -it -v $(REPO_ABS_PATH):/cesanta -v $(CONSOLE_LOG):/console.log $(SDK_VERSION) /bin/bash -c \
+	  "cd $(APP_PATH); \
+      $(SJS_ESP_PATH)/tools/serve_core.py \
+        --irom firmware/0x11000.bin \
+        --rom $(SJS_ESP_PATH)/tools/rom.bin \
+        /console.log & \
+      xt-gdb build/$(APP).out \
+        -ex 'target remote 127.0.0.1:1234' \
+        -ex 'set confirm off' \
+        -ex 'add-symbol-file $(SJS_ESP_PATH)/tools/romsyms 0x40000000'"

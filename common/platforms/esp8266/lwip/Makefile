@@ -1,5 +1,13 @@
 include ./../common.mk
 
+V ?= $(VERBOSE)
+ifeq ("$(V)","1")
+Q :=
+else
+Q := @
+endif
+vecho := @echo " "
+
 BUILD_DIR ?= ../build/lwip
 LWIP_PATH = .
 APP = liblwip_cs

@@ -70,7 +70,7 @@ struct mg_lwip_conn_state {
 
 static void mg_lwip_task(os_event_t *e);
 
-static void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
+void IRAM mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   if (poll_scheduled) return;
   system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) mgr);
   poll_scheduled = 1;
@@ -335,7 +335,7 @@ static void mg_lwip_send_more(struct mg_connection *nc) {
   }
   int num_written =
       mg_lwip_tcp_write(tpcb, nc->send_mbuf.buf, nc->send_mbuf.len);
-  DBG(("%p mg_lwip_tcp_write %u = %d", nc->send_mbuf.len, num_written));
+  DBG(("%p mg_lwip_tcp_write %u = %d", nc, nc->send_mbuf.len, num_written));
   if (num_written == 0) return;
   if (num_written < 0) {
     system_os_post(MG_TASK_PRIORITY, MG_SIG_CLOSE_CONN, (uint32_t) nc);

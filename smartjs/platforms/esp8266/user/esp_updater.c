@@ -773,7 +773,7 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
    */
 
   /* Copy predefined overrides files */
-  if (!file_copy(&old_fs, OVERRIDES_JSON_FILE)) {
+  if (!file_copy(&old_fs, CONF_FILE)) {
     goto cleanup;
   }
 

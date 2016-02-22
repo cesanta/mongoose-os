@@ -12,8 +12,6 @@
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/device_config.h"
 
-#define SYSTEM_DEFAULT_JSON_FILE "conf_sys_defaults.json"
-
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
 
@@ -103,7 +101,7 @@ static void factory_reset_handler(struct mg_connection *c, int ev, void *p) {
   (void) ev;
   (void) p;
   LOG(LL_DEBUG, ("Factory reset requested"));
-  remove("conf.json");
+  remove(CONF_FILE);
   c->flags |= (MG_F_SEND_AND_CLOSE | MG_F_RELOAD_CONFIG);
   mg_send_head(c, 200, 0, JSON_HEADERS);
   c->flags |= MG_F_SEND_AND_CLOSE;
@@ -168,23 +166,32 @@ static int init_web_server(const struct sys_config *cfg) {
   return 1;
 }
 
-int init_device(struct v7 *v7) {
-  char *defaults = NULL, *overrides = NULL;
+static int load_config_file(const char *filename, struct sys_config *cfg,
+                            int required) {
+  char *data;
   size_t size;
-  int result = 0;
+  int result = 1;
+  LOG(LL_DEBUG, ("=== Loading %s", filename));
+  data = cs_read_file(filename, &size);
+  if (data == NULL || !parse_sys_config(data, cfg, required)) {
+    LOG(required ? LL_ERROR : LL_INFO, ("Failed to load %s", filename));
+    result = 0;
+  }
+  free(data);
+  return result;
+}
+
+int init_device(struct v7 *v7) {
+  int result = 1;
   uint8_t mac[6] = "";
 
   /* Load system defaults - mandatory */
   memset(&s_cfg, 0, sizeof(s_cfg));
-  if ((defaults = cs_read_file(SYSTEM_DEFAULT_JSON_FILE, &size)) != NULL &&
-      parse_sys_config(defaults, &s_cfg, 1)) {
-    /* Successfully loaded system config. Try overrides - they are optional. */
-    overrides = cs_read_file(OVERRIDES_JSON_FILE, &size);
-    parse_sys_config(overrides, &s_cfg, 0);
-    result = 1;
-  }
-  free(defaults);
-  free(overrides);
+  /* TODO(rojer): Figure out what to do about merging two different defaults. */
+  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, &s_cfg, 0)) return 0;
+  if (!load_config_file(CONF_APP_DEFAULTS_FILE, &s_cfg, 0)) return 0;
+  /* Successfully loaded system config. Try overrides - they are optional. */
+  load_config_file(CONF_FILE, &s_cfg, 0);
 
   REGISTER_RO_VAR(fw_id, &build_id);
   REGISTER_RO_VAR(fw_timestamp, &build_timestamp);
@@ -196,15 +203,19 @@ int init_device(struct v7 *v7) {
   snprintf(s_mac_address, sizeof(s_mac_address), "%02X%02X%02X%02X%02X%02X",
            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   REGISTER_RO_VAR(mac_address, &mac_address_ptr);
-  LOG(LL_INFO, ("MAC: %s\n", s_mac_address));
+  LOG(LL_INFO, ("MAC: %s", s_mac_address));
 
   if (get_cfg()->wifi.ap.ssid != NULL) {
     expand_mac_address_placeholders((char *) get_cfg()->wifi.ap.ssid);
   }
 
-  if (result && (result = device_init_platform(v7, get_cfg())) != 0 &&
-      get_cfg()->http.enable) {
-    result = init_web_server(get_cfg());
+  result = device_init_platform(v7, get_cfg());
+  if (result != 0) {
+    if (get_cfg()->http.enable) {
+      result = init_web_server(get_cfg());
+    }
+  } else {
+    LOG(LL_ERROR, ("Platform init failed"));
   }
 
   /* NOTE(lsm): must be done last */

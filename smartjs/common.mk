@@ -17,3 +17,11 @@ MG_FEATURES_TINY = \
                    -DMG_MAX_PATH=40 \
                    -DMG_MAX_HTTP_SEND_IOBUF=1024 \
                    -DMG_NO_BSD_SOCKETS
+
+V ?= $(VERBOSE)
+ifeq ("$(V)","1")
+Q :=
+else
+Q := @
+endif
+vecho := @echo " "

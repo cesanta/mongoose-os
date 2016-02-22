@@ -3,13 +3,13 @@
 # It can be used without container too if SDK_PATH and V7_PATH are configured.
 
 SDK_PATH ?= /cc3200-sdk
-REPO_ROOT ?= ../../..
-V7_PATH ?= $(REPO_ROOT)/v7
-SMARTJS_PATH ?= $(REPO_ROOT)/smartjs
-COMMON_PATH ?= $(REPO_ROOT)/common
+REPO_PATH ?= ../../..
+V7_PATH ?= $(REPO_PATH)/v7
+SMARTJS_PATH ?= $(REPO_PATH)/smartjs
+COMMON_PATH ?= $(REPO_PATH)/common
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
-MONGOOSE_PATH ?= $(REPO_ROOT)/mongoose
-OBJDIR = build
+MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
+BUILD_DIR ?= ./build
 FW_DIR = firmware
 FW_FS_SIZE = 65536
 SMARTJS_SRC ?= $(SMARTJS_PATH)/src
@@ -19,9 +19,10 @@ FS_DIR = fs
 FS_BUILD_DIR = $(OBJDIR)/fs
 
 BINDIR = ${FW_DIR}
+OBJDIR = ${BUILD_DIR}
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
-include $(REPO_ROOT)/smartjs/common.mk
+include $(REPO_PATH)/smartjs/common.mk
 
 include ${SDK_PATH}/tools/gcc_scripts/makedefs
 
@@ -31,12 +32,12 @@ PROG = smartjs
 
 JS_SRCS    := ./clubby.js \
               $(SJSJS_PATH)/sys_init.js \
-              $(SJSJS_PATH)/app_init.js
+              $(SJSJS_PATH)/app.js
 
 JSBIN_EXT := js
 JS_EXT := js
 
-IPATH = . ${SDK_PATH} \
+IPATH = . ${OBJDIR} ${SDK_PATH} \
         ${SDK_PATH}/inc \
         ${SDK_PATH}/driverlib \
         ${SDK_PATH}/oslib \
@@ -47,7 +48,7 @@ IPATH = . ${SDK_PATH} \
         ${SMARTJS_PATH}/src \
         ${SPIFFS_PATH} \
         ${V7_PATH} \
-        ${REPO_ROOT}
+        ${REPO_PATH}
 
 VPATH = ${SDK_PATH}/driverlib \
         ${SDK_PATH}/oslib \
@@ -94,7 +95,7 @@ SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 DISABLED_SDK_WARNINGS = -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses -Wno-unused-variable
 
 CFLAGS += -Os -Wall -Werror -DNDEBUG -DCS_NDEBUG \
-          -I$(REPO_ROOT) \
+          -I$(REPO_PATH) \
           $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} \
           -DFW_ARCHITECTURE=\"cc3200\" \
           -DCS_PLATFORM=4 \
@@ -106,21 +107,24 @@ FW_BIN = ${FW_DIR}/${PROG}.bin
 FS_IMG = ${FW_DIR}/fs.img
 FW_MANIFEST = ${FW_DIR}/manifest.json
 FW_ZIP = ${FW_DIR}/firmware.zip
+SYS_CONFIG_C = ${OBJDIR}/sys_config.c
 BUILD_INFO_C = ${OBJDIR}/build_info.c
 BUILD_INFO_JSON = ${OBJDIR}/build_info.json
 
 .PHONY: all clean flash
 
-all: ${OBJDIR} ${FW_DIR} ${FW_ZIP}
+all: ${OBJDIR} ${SYS_CONFIG_C} ${FW_DIR} ${FW_ZIP}
 
 clean:
 	@rm -rf ${OBJDIR} ${wildcard *~}
 	@rm -rf ${FW_DIR} ${wildcard *~}
 
 ${OBJDIR}:
+	@echo "  MKDIR $@"
 	@mkdir -p ${OBJDIR} ${FS_BUILD_DIR}
 
 ${FW_DIR}:
+	@echo "  MKDIR $@"
 	@mkdir -p ${FW_DIR}
 
 ${FW_ZIP}: ${FW_ELF} ${FW_BIN} ${FS_IMG}
@@ -160,6 +164,7 @@ APP_OBJS = ${OBJDIR}/main.o \
            ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/i2c.o ${OBJDIR}/interrupt.o ${OBJDIR}/pin.o ${OBJDIR}/prcm.o ${OBJDIR}/spi.o ${OBJDIR}/uart.o ${OBJDIR}/udma.o ${OBJDIR}/utils.o
 
 BUILD_INFO_O = $(patsubst %.c,%.o,$(BUILD_INFO_C))
+SYS_CONFIG_O = $(patsubst %.c,%.o,$(SYS_CONFIG_C))
 
 # Generate build info. Only regenerates if there are changes in objects.
 ${BUILD_INFO_C}: ${APP_OBJS}
@@ -189,6 +194,8 @@ $(V7_PATH)/v7.c:
 $(OBJDIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	@echo "  CC    $^"
 	$(Q) gcc -DV7_EXE -DV7_EXPOSE_PRIVATE $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+
+include $(REPO_PATH)/smartjs/src/sys_config.mk
 
 # Target specific warning inhibitions
 

@@ -8,7 +8,7 @@
 
 #include "v7/v7.h"
 
-#include "smartjs/src/sys_config.h"
+#include "sys_config.h"
 
 void sj_wifi_api_setup(struct v7 *v7);
 void sj_wifi_init(struct v7 *v7);
