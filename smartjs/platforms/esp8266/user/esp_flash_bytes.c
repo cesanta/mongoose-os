@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include "esp_exc.h"
+#include "esp_fs.h"
 #include "xtensa/corebits.h"
 #include "esp_hw.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
@@ -64,7 +65,7 @@ IRAM NOINSTR void flash_emul_exception_handler(
   uint32_t val = 0;
 
   /* Address is obviously invalid, punt. */
-  if (vaddr < 0x30000000) {
+  if ((void *) vaddr < MMAP_BASE) {
     esp_exception_handler(frame);
     return;
   }

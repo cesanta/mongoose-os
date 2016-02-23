@@ -16,6 +16,8 @@
 #define LOG_PAGE_SIZE 256
 #define SPIFFS_PAGE_HEADER_SIZE 5
 #define SPIFFS_PAGE_DATA_SIZE ((LOG_PAGE_SIZE) - (SPIFFS_PAGE_HEADER_SIZE))
+/* If for whatever reason MMAP_BASE is moved past 0x40000000,
+ * a check in flash_emul_exception_handler will need to be adjusted. */
 #define MMAP_BASE ((void *) 0x10000000)
 #define MMAP_END ((void *) 0x20000000)
 #define MMAP_DESC_BITS 24
