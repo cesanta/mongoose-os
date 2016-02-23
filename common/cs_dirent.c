@@ -130,3 +130,6 @@ int mkdir(const char *path, mode_t mode) {
 #endif /* CS_ENABLE_SPIFFS */
 
 #endif /* EXCLUDE_COMMON */
+
+/* ISO C requires a translation unit to contain at least one declaration */
+typedef int cs_dirent_dummy;
