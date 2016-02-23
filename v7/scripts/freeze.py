@@ -325,15 +325,14 @@ for b in bcodes:
     a = b["addr"]
     ops = vec("fops", a, b["ops"])
     lits = lit_vec("flits", a, b["lit"])
-    names = vec("fnames", a, b["names"])
     print ("static const struct bcode fbcode_%(addr)s"
-           " = {%(ops)s, %(lits)s, %(names)s,"
-           " 0xff, %(args)s, %(strict_mode)s, 1, 0, 0};") % dict(
+           " = {%(ops)s, %(lits)s,"
+           " 0xff, %(names_cnt)s, %(args_cnt)s, %(strict_mode)s, 1, 1, 0};") % dict(
         addr = b["addr"],
         ops = ops,
         lits = lits,
-        names = names,
-        args = b["args"],
+        args_cnt = b["args_cnt"],
+        names_cnt = b["names_cnt"],
         strict_mode = b["strict_mode"],
     )
 
