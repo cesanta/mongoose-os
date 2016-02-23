@@ -60,7 +60,7 @@ IRAM static int cts(int uart_no) {
   return (READ_PERI_REG(UART_STATUS(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
-IRAM static int rx_fifo_len(int uart_no) {
+IRAM int rx_fifo_len(int uart_no) {
   return READ_PERI_REG(UART_STATUS(uart_no)) & 0xff;
 }
 
@@ -68,7 +68,7 @@ IRAM static int rx_byte(int uart_no) {
   return READ_PERI_REG(UART_FIFO(uart_no)) & 0xff;
 }
 
-IRAM static int tx_fifo_len(int uart_no) {
+IRAM int tx_fifo_len(int uart_no) {
   return (READ_PERI_REG(UART_STATUS(uart_no)) >> 16) & 0xff;
 }
 
@@ -146,7 +146,7 @@ IRAM int esp_uart_dispatch_rx_top(int uart_no) {
   }
   int rfl = rx_fifo_len(uart_no);
   if (rfl < us->cfg->rx_fifo_full_thresh) {
-    WRITE_PERI_REG(UART_INT_CLR(uart_no), UART_RX_INTS);
+    CLEAR_PERI_REG_MASK(UART_INT_CLR(uart_no), UART_RX_INTS);
   }
   return rfl == 0;
 }
@@ -213,8 +213,9 @@ void esp_uart_print_status(void *arg) {
       us->rx_buf.used, rx_fifo_len(us->cfg->uart_no),
       s->rx_overflows - ps->rx_overflows,
       s->rx_linger_conts - ps->rx_linger_conts, s->tx_bytes - ps->tx_bytes,
-      us->tx_buf.used, tx_fifo_len(us->cfg->uart_no), s->tx_throttles,
-      system_get_free_heap_size(), READ_PERI_REG(UART_INT_RAW(uart_no)),
+      us->tx_buf.used, tx_fifo_len(us->cfg->uart_no),
+      s->tx_throttles - ps->tx_throttles, system_get_free_heap_size(),
+      READ_PERI_REG(UART_INT_RAW(uart_no)),
       READ_PERI_REG(UART_INT_ENA(uart_no)), cts(uart_no));
   memcpy(ps, s, sizeof(*s));
 }

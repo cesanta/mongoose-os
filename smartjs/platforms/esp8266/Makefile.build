@@ -16,6 +16,7 @@
 APP ?= smartjs
 APP_PLATFORM = esp8266
 APP_MODULES ?=
+APP_CFLAGS ?=
 
 REPO_PATH ?= ../../..
 COMMON_PATH ?= $(REPO_PATH)/common
@@ -23,7 +24,7 @@ SJS_PATH ?= $(REPO_PATH)/smartjs
 KRYPTON_PATH ?= $(REPO_PATH)/krypton
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
 V7_PATH ?= $(REPO_PATH)/v7
-FS_PATH ?= fs
+APP_FS_PATH ?= fs
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
 SJS_ESP_PATH ?= $(SJS_PATH)/platforms/esp8266
@@ -195,7 +196,7 @@ IMAGE_HEADER_SIZE = 0
 SRCS = $(APP_SRCS) build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 
-FS_FILES = $(wildcard $(FS_PATH)/*) $(wildcard $(COMMON_FS_PATH)/*)
+FS_FILES = $(wildcard $(APP_FS_PATH)/*) $(wildcard $(COMMON_FS_PATH)/*)
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
@@ -247,7 +248,7 @@ FW_META_CMD = $(COMMON_PATH)/tools/fw_meta.py
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS)
+          $(APP_CFLAGS) $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS)
 
 ifneq "${OTA}" "1"
 CFLAGS += -DFS_ADDR=$(FS_ADDR) -DDISABLE_OTA

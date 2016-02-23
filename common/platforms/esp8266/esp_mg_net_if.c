@@ -251,16 +251,20 @@ void mg_if_connect_udp(struct mg_connection *nc) {
   system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
 }
 
+void mg_lwip_accept_conn(struct mg_connection *nc, struct tcp_pcb *tpcb) {
+  union socket_address sa;
+  sa.sin.sin_addr.s_addr = tpcb->remote_ip.addr;
+  sa.sin.sin_port = htons(tpcb->remote_port);
+  mg_if_accept_tcp_cb(nc, &sa, sizeof(sa.sin));
+}
+
 #ifndef SJ_DISABLE_LISTENER
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
-  struct mg_connection *lc = (struct mg_connection *) arg, *nc;
-  union socket_address sa;
+  struct mg_connection *lc = (struct mg_connection *) arg;
   (void) err;
   DBG(("%p conn %p from %s:%u", lc, newtpcb, ipaddr_ntoa(&newtpcb->remote_ip),
        newtpcb->remote_port));
-  sa.sin.sin_addr.s_addr = newtpcb->remote_ip.addr;
-  sa.sin.sin_port = htons(newtpcb->remote_port);
-  nc = mg_if_accept_tcp_cb(lc, &sa, sizeof(sa.sin));
+  struct mg_connection *nc = mg_if_accept_new_conn(lc);
   if (nc == NULL) {
     tcp_abort(newtpcb);
     return ERR_ABRT;
@@ -271,6 +275,18 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   tcp_err(newtpcb, mg_lwip_tcp_error_cb);
   tcp_sent(newtpcb, mg_lwip_tcp_sent_cb);
   tcp_recv(newtpcb, mg_lwip_tcp_recv_cb);
+#ifdef SSL_KRYPTON
+  if (lc->ssl_ctx != NULL) {
+    nc->ssl = SSL_new(lc->ssl_ctx);
+    if (nc->ssl == NULL || SSL_set_fd(nc->ssl, (intptr_t) nc) != 1) {
+      LOG(LL_ERROR, ("SSL error"));
+      tcp_close(newtpcb);
+    }
+  } else
+#endif
+  {
+    mg_lwip_accept_conn(nc, newtpcb);
+  }
   return ERR_OK;
 }
 
@@ -549,7 +565,8 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
       continue;
     }
 #ifdef SSL_KRYPTON
-    if (nc->ssl != NULL && cs != NULL && cs->pcb.tcp->state == ESTABLISHED) {
+    if (nc->ssl != NULL && cs != NULL && cs->pcb.tcp != NULL &&
+        cs->pcb.tcp->state == ESTABLISHED) {
       if (((nc->flags & MG_F_WANT_WRITE) || nc->send_mbuf.len > 0) &&
           cs->pcb.tcp->snd_buf > 0) {
         /* Can write more. */
@@ -580,7 +597,6 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
 
 static void mg_lwip_task(os_event_t *e) {
   struct mg_mgr *mgr = NULL;
-  DBG(("sig %d", e->sig));
   poll_scheduled = 0;
   switch ((enum mg_sig_type) e->sig) {
     case MG_SIG_TOMBSTONE:
@@ -725,7 +741,9 @@ static void mg_lwip_ssl_do_hs(struct mg_connection *nc) {
     cs->err = 0;
     nc->flags &= ~MG_F_WANT_WRITE;
     nc->flags |= MG_F_SSL_HANDSHAKE_DONE;
-    if (!server_side) {
+    if (server_side) {
+      mg_lwip_accept_conn(nc, cs->pcb.tcp);
+    } else {
       system_os_post(MG_TASK_PRIORITY, MG_SIG_CONNECT_RESULT, (uint32_t) nc);
     }
   }

@@ -103,7 +103,7 @@ void sjs_init(void *dummy) {
 #ifndef DISABLE_OTA
   init_updater(v7);
 #endif
-  LOG(LL_INFO, ("Sys init done"));
+  LOG(LL_INFO, ("Sys init done, SDK %s", system_get_sdk_version()));
 
   if (!sj_app_init(v7)) {
     LOG(LL_ERROR, ("App init failed"));

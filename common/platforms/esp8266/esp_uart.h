@@ -56,6 +56,9 @@ void esp_uart_dispatch_bottom(int uart_no);
 cs_rbuf_t *esp_uart_rx_buf(int uart_no);
 cs_rbuf_t *esp_uart_tx_buf(int uart_no);
 
+int rx_fifo_len(int uart_no);
+int tx_fifo_len(int uart_no);
+
 void esp_uart_flush(int uart_no);
 
 #endif /* _ESP_UART_H_ */
