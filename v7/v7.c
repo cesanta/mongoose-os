@@ -10853,7 +10853,7 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, char **ops) {
     case BCODE_INLINE_STRING_TYPE_TAG: {
       val_t res;
       size_t len = bcode_get_varint(ops);
-      res = v7_mk_string(v7, (const char *) *ops + 1, len, !bcode->frozen);
+      res = v7_mk_string(v7, (const char *) *ops + 1, len, !bcode->ops_in_rom);
       *ops += len + 1;
       return res;
       break;
