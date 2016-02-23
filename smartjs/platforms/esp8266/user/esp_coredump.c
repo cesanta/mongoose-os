@@ -38,6 +38,7 @@ static NOINSTR void core_dump_emit_char(char c, void *user_data) {
     fputc('\n', stderr);
     (*col_counter) = 0;
   }
+  last_char_ts = now;
 }
 
 /* address must be aligned to 4 and size must be multiple of 4 */
