@@ -3272,6 +3272,7 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 enum bcode_inline_lit_type_tag {
   BCODE_INLINE_STRING_TYPE_TAG = 0,
   BCODE_INLINE_NUMBER_TYPE_TAG,
+  BCODE_INLINE_FUNC_TYPE_TAG,
 
   BCODE_MAX_INLINE_TYPE_TAG
 };
@@ -10574,6 +10575,14 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 
+/*
+ * TODO(dfrank): implement `bcode_serialize_*` more generically, so that they
+ * can write to buffer instead of a `FILE`. Then, remove a need for mmap here.
+ */
+#if CS_PLATFORM == CS_P_UNIX
+#include <sys/mman.h>
+#endif
+
 #if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 /* clang-format off */
 static const char *op_names[] = {
@@ -10653,6 +10662,8 @@ static const char *op_names[] = {
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 #endif
+
+static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode, FILE *out);
 
 static size_t bcode_ops_append(struct bcode_builder *bbuilder, const void *buf,
                                size_t len) {
@@ -10845,11 +10856,16 @@ static int bcode_is_inline_string(struct v7 *v7, val_t val) {
   return tag == V7_TAG_STRING_I || tag == V7_TAG_STRING_5;
 }
 
+static int bcode_is_inline_func(struct v7 *v7, val_t val) {
+  return (v7->is_precompiling && is_js_function(val));
+}
+
 V7_PRIVATE lit_t bcode_add_lit(struct bcode_builder *bbuilder, val_t val) {
   lit_t lit;
   memset(&lit, 0, sizeof(lit));
 
-  if (bcode_is_inline_string(bbuilder->v7, val) || v7_is_number(val)) {
+  if (bcode_is_inline_string(bbuilder->v7, val) ||
+      bcode_is_inline_func(bbuilder->v7, val) || v7_is_number(val)) {
     /* literal should be inlined (it's `bcode_op_lit()` who does this) */
     lit.mode = LIT_MODE__INLINED;
     lit.inline_val = val;
@@ -10892,6 +10908,9 @@ V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx) {
 }
 #endif
 
+static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
+                                          const char *data);
+
 V7_PRIVATE v7_val_t
 bcode_decode_lit(struct v7 *v7, struct bcode *bcode, char **ops) {
   struct v7_vec *vec = &bcode->lit;
@@ -10900,15 +10919,45 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, char **ops) {
     case BCODE_INLINE_STRING_TYPE_TAG: {
       val_t res;
       size_t len = bcode_get_varint(ops);
-      res = v7_mk_string(v7, (const char *) *ops + 1, len, !bcode->ops_in_rom);
+      res = v7_mk_string(
+          v7, (const char *) *ops + 1 /*skip BCODE_INLINE_STRING_TYPE_TAG*/,
+          len, !bcode->ops_in_rom);
       *ops += len + 1;
       return res;
       break;
     }
     case BCODE_INLINE_NUMBER_TYPE_TAG: {
       val_t res;
-      memcpy(&res, *ops + 1, sizeof(res));
+      memcpy(&res, *ops + 1 /*skip BCODE_INLINE_NUMBER_TYPE_TAG*/, sizeof(res));
       *ops += sizeof(res);
+      return res;
+      break;
+    }
+    case BCODE_INLINE_FUNC_TYPE_TAG: {
+      /*
+       * Create half-done function: without scope but _with_ prototype. Scope
+       * will be set by `bcode_instantiate_function()`.
+       *
+       * The fact that the prototype is already set will make
+       * `bcode_instantiate_function()` just set scope on this function,
+       * instead of creating a new one.
+       */
+      val_t res = mk_js_function(v7, NULL, v7_mk_object(v7));
+
+      /* Create bcode in this half-done function */
+      struct v7_js_function *func = to_js_function(res);
+
+      func->bcode = (struct bcode *) calloc(1, sizeof(*func->bcode));
+      bcode_init(func->bcode, bcode->strict_mode);
+      retain_bcode(v7, func->bcode);
+
+      /* deserialize the function's bcode from `ops` */
+      *ops = (char *) bcode_deserialize_func(
+          v7, func->bcode, *ops + 1 /*skip BCODE_INLINE_FUNC_TYPE_TAG*/);
+
+      /* decrement *ops, because it will be incremented by `eval_bcode` soon */
+      *ops -= 1;
+
       return res;
       break;
     }
@@ -10945,6 +10994,36 @@ V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
          * integers are the most common numbers for sure.
          */
         bcode_ops_append(bbuilder, &lit.inline_val, sizeof(lit.inline_val));
+      } else if (is_js_function(lit.inline_val)) {
+/*
+ * TODO(dfrank): implement `bcode_serialize_*` more generically, so
+ * that they can write to buffer instead of a `FILE`. Then, remove this
+ * workaround with `CS_PLATFORM == CS_P_UNIX`, `tmpfile()`, etc.
+ */
+#if CS_PLATFORM == CS_P_UNIX
+        struct v7_js_function *func;
+        FILE *fp = tmpfile();
+        long len = 0;
+        char *p;
+
+        func = to_js_function(lit.inline_val);
+
+        /* we inline functions if only we're precompiling */
+        assert(bbuilder->v7->is_precompiling);
+
+        bcode_add_varint(bbuilder, BCODE_INLINE_FUNC_TYPE_TAG);
+        bcode_serialize_func(bbuilder->v7, func->bcode, fp);
+
+        fflush(fp);
+
+        len = ftell(fp);
+
+        p = (char *) mmap(NULL, len, PROT_WRITE, MAP_PRIVATE, fileno(fp), 0);
+
+        bcode_ops_append(bbuilder, p, len);
+
+        fclose(fp);
+#endif
       } else {
         /* invalid type of inlined value */
         abort();
@@ -11104,8 +11183,6 @@ static void bcode_serialize_emit_type_tag(enum bcode_ser_lit_tag tag,
   fwrite(&t, 1, 1, out);
 }
 
-static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode, FILE *out);
-
 static void bcode_serialize_string(struct v7 *v7, val_t v, FILE *out) {
   size_t len;
   const char *s = v7_get_string_data(v7, &v, &len);
@@ -11200,31 +11277,23 @@ static size_t bcode_deserialize_varint(const char **data) {
   return ret;
 }
 
-static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
-                                          const char *data);
-
 static const char *bcode_deserialize_lit(struct bcode_builder *bbuilder,
                                          const char *data) {
   enum bcode_ser_lit_tag lit_tag;
 
+  (void) bbuilder;
+
   lit_tag = (enum bcode_ser_lit_tag) * data++;
 
   switch (lit_tag) {
-    case BCODE_SER_NUMBER: {
+    case BCODE_SER_NUMBER:
+    case BCODE_SER_STRING:
+    case BCODE_SER_FUNCTION: {
       /*
-       * All numbers should be inlined into `ops` during serialization (see
-       * `bcode_add_lit()`, `bcode_op_lit()`), so we should never encounter
-       * numbers here
-       */
-      assert(0);
-      break;
-    }
-
-    case BCODE_SER_STRING: {
-      /*
-       * All strings should be inlined into `ops` during serialization (see
-       * `bcode_add_lit()`, `bcode_is_inline_string()`, `bcode_op_lit()`), so
-       * we should never encounter strings here
+       * All numbers, strings and functions should be inlined into `ops` during
+       * serialization (see `bcode_add_lit()`, `bcode_is_inline_string()`,
+       * `bcode_is_inline_func()`, `bcode_op_lit()`), so we should never
+       * encounter them here
        */
       assert(0);
       break;
@@ -11233,25 +11302,6 @@ static const char *bcode_deserialize_lit(struct bcode_builder *bbuilder,
     case BCODE_SER_REGEX: {
       /* TODO */
       assert(0);
-      break;
-    }
-
-    case BCODE_SER_FUNCTION: {
-      /*
-       * Create half-done function: without scope and prototype. The real
-       * function will be created from this one during bcode evaluation: see
-       * `bcode_instantiate_function()`.
-       */
-      val_t funv = mk_js_function(bbuilder->v7, NULL, v7_mk_undefined());
-
-      /* Create bcode in this half-done function */
-      struct v7_js_function *func = to_js_function(funv);
-      func->bcode = (struct bcode *) calloc(1, sizeof(*func->bcode));
-      bcode_init(func->bcode, bbuilder->bcode->strict_mode);
-      retain_bcode(bbuilder->v7, func->bcode);
-
-      bcode_add_lit(bbuilder, funv);
-      data = bcode_deserialize_func(bbuilder->v7, func->bcode, data);
       break;
     }
 
@@ -12120,23 +12170,47 @@ static enum v7_err bcode_throw_reference_error(struct v7 *v7,
 }
 
 /*
- * Copy a half-done function from literal, bind the new function to the current
- * scope, and set a new empty prototype object
+ * Takes a half-done function (either from literal table or deserialized from
+ * `ops` inlined data), and returns a ready-to-use function.
+ *
+ * The actual behaviour depends on whether the half-done function has
+ * `prototype` defined. If there's no prototype (i.e. it's `undefined`), then
+ * the new function is created, with bcode from a given one. If, however,
+ * the prototype is defined, it means that the function was just deserialized
+ * from `ops`, so we only need to set `scope` on it.
  *
  * Assumes `func` is owned by the caller.
  */
 static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
   val_t res;
-  struct v7_js_function *f, *rf;
+  struct v7_js_function *f;
   assert(is_js_function(func));
   f = to_js_function(func);
-  res = mk_js_function(v7, v7_to_generic_object(v7->vals.scope),
-                       v7_mk_object(v7));
 
-  /* Copy and retain bcode */
-  rf = to_js_function(res);
-  rf->bcode = f->bcode;
-  retain_bcode(v7, rf->bcode);
+  if (v7_is_undefined(v7_get(v7, func, "prototype", 9))) {
+    /*
+     * Function's `prototype` is `undefined`: it means that the function is
+     * created by the compiler and is stored in the literal table. We have to
+     * create completely new function
+     */
+    struct v7_js_function *rf;
+
+    res = mk_js_function(v7, v7_to_generic_object(v7->vals.scope),
+                         v7_mk_object(v7));
+
+    /* Copy and retain bcode */
+    rf = to_js_function(res);
+    rf->bcode = f->bcode;
+    retain_bcode(v7, rf->bcode);
+  } else {
+    /*
+     * Function's `prototype` is NOT `undefined`: it means that the function is
+     * deserialized from inline `ops` data, and we just need to set scope on
+     * it.
+     */
+    res = func;
+    f->scope = v7_to_generic_object(v7->vals.scope);
+  }
 
   return res;
 }
