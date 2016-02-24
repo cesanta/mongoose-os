@@ -3890,26 +3890,69 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *, struct bcode *);
 #endif
 
-typedef struct {
-  /*
-   * May be an inline tag (see `enum bcode_inline_lit_type_tag`) or an index
-   * in bcode literals table plus `BCODE_MAX_INLINE_TYPE_TAG`
-   */
-  size_t idx;
+/* mode of literal storage: in literal table or inlined in `ops` */
+enum lit_mode {
+  /* literal stored in table, index is in `lit_t::lit_idx` */
+  LIT_MODE__TABLE,
+  /* literal should be inlined in `ops`, value is in `lit_t::inline_val` */
+  LIT_MODE__INLINED,
+};
 
-  /* Literal value */
-  v7_val_t val;
+/*
+ * Result of the addition of literal value to bcode (see `bcode_add_lit()`).
+ * There are two possible cases:
+ *
+ * - Literal is added to the literal table. In this case, `mode ==
+ *   LIT_MODE__TABLE`, and the index of the literal is stored in `lit_idx`
+ * - Literal is not added anywhere, and should be inlined into `ops`. In this
+ *   case, `mode == LIT_MODE__INLINED`, and the value to inline is stored in
+ *   `inline_val`.
+ *
+ * It's `bcode_op_lit()` who handles both of these cases.
+ */
+typedef struct {
+  union {
+    /*
+     * index in literal table;
+     * NOTE: valid if only `mode == LIT_MODE__TABLE`
+     */
+    size_t lit_idx;
+
+    /*
+     * value to be inlined into `ops`;
+     * NOTE: valid if only `mode == LIT_MODE__INLINED`
+     */
+    v7_val_t inline_val;
+  };
+
+  /* mode of literal storage (see `enum lit_mode`) */
+  enum lit_mode mode : 1;
 } lit_t;
 
 V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op);
+
+/*
+ * Add a literal to the bcode literal table, or just decide that the literal
+ * should be inlined into `ops`. See `lit_t` for details.
+ */
 V7_PRIVATE
 lit_t bcode_add_lit(struct bcode_builder *bbuilder, v7_val_t val);
+
 /* disabled because of short lits */
 #if 0
 V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx);
 #endif
+
+/*
+ * Emit an opcode `op`, and handle the literal `lit` (see `bcode_add_lit()`,
+ * `lit_t`). Depending on the literal storage mode (see `enum lit_mode`), this
+ * function either emits literal table index or inlines the literal directly
+ * into `ops.`
+ */
 V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
                              lit_t lit);
+
+/* Helper function, equivalent of `bcode_op_lit(bbuilder, OP_PUSH_LIT, lit)` */
 V7_PRIVATE void bcode_push_lit(struct bcode_builder *bbuilder, lit_t lit);
 
 /*
@@ -10805,11 +10848,15 @@ static int bcode_is_inline_string(struct v7 *v7, val_t val) {
 V7_PRIVATE lit_t bcode_add_lit(struct bcode_builder *bbuilder, val_t val) {
   lit_t lit;
   memset(&lit, 0, sizeof(lit));
+
   if (bcode_is_inline_string(bbuilder->v7, val) || v7_is_number(val)) {
-    lit.val = val;
+    /* literal should be inlined (it's `bcode_op_lit()` who does this) */
+    lit.mode = LIT_MODE__INLINED;
+    lit.inline_val = val;
   } else {
-    lit.val = v7_mk_undefined();
-    lit.idx = bbuilder->lit.len / sizeof(val);
+    /* literal will now be added to the literal table */
+    lit.mode = LIT_MODE__TABLE;
+    lit.lit_idx = bbuilder->lit.len / sizeof(val);
 
 #if V7_ENABLE__Memory__stats
     bbuilder->v7->bcode_lit_total_size -= bbuilder->lit.len;
@@ -10874,25 +10921,40 @@ V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
                              lit_t lit) {
   bcode_op(bbuilder, op);
 
-  if (v7_is_string(lit.val)) {
-    size_t len;
-    const char *s = v7_get_string_data(bbuilder->v7, &lit.val, &len);
-    bcode_add_varint(bbuilder, BCODE_INLINE_STRING_TYPE_TAG);
-    bcode_add_varint(bbuilder, len);
-    bcode_ops_append(bbuilder, s, len + 1 /* nul term */);
-  } else if (v7_is_number(lit.val)) {
-    bcode_add_varint(bbuilder, BCODE_INLINE_NUMBER_TYPE_TAG);
-    /*
-     * TODO(dfrank): we can save some ROM by storing string representation of a
-     * number here, instead of wasting 8 bytes for each number.
-     *
-     * Alternatively, we can add more tags for integers, like
-     * `BCODE_INLINE_S08_TYPE_TAG`, `BCODE_INLINE_S16_TYPE_TAG`, etc,
-     * since integers are the most common numbers for sure.
-     */
-    bcode_ops_append(bbuilder, &lit.val, sizeof(lit.val));
-  } else {
-    bcode_add_varint(bbuilder, lit.idx + BCODE_MAX_INLINE_TYPE_TAG);
+  switch (lit.mode) {
+    case LIT_MODE__TABLE:
+      bcode_add_varint(bbuilder, lit.lit_idx + BCODE_MAX_INLINE_TYPE_TAG);
+      break;
+
+    case LIT_MODE__INLINED:
+      if (v7_is_string(lit.inline_val)) {
+        size_t len;
+        const char *s = v7_get_string_data(bbuilder->v7, &lit.inline_val, &len);
+        bcode_add_varint(bbuilder, BCODE_INLINE_STRING_TYPE_TAG);
+        bcode_add_varint(bbuilder, len);
+        bcode_ops_append(bbuilder, s, len + 1 /* nul term */);
+      } else if (v7_is_number(lit.inline_val)) {
+        bcode_add_varint(bbuilder, BCODE_INLINE_NUMBER_TYPE_TAG);
+        /*
+         * TODO(dfrank): we can save some memory by storing string
+         * representation of a number here, instead of wasting 8 bytes for each
+         * number.
+         *
+         * Alternatively, we can add more tags for integers, like
+         * `BCODE_INLINE_S08_TYPE_TAG`, `BCODE_INLINE_S16_TYPE_TAG`, etc, since
+         * integers are the most common numbers for sure.
+         */
+        bcode_ops_append(bbuilder, &lit.inline_val, sizeof(lit.inline_val));
+      } else {
+        /* invalid type of inlined value */
+        abort();
+      }
+      break;
+
+    default:
+      /* invalid literal mode */
+      abort();
+      break;
   }
 }
 
@@ -11141,46 +11203,30 @@ static size_t bcode_deserialize_varint(const char **data) {
 static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
                                           const char *data);
 
-static val_t bcode_deserialize_string(struct bcode_builder *bbuilder,
-                                      const char **data) {
-  val_t v;
-  size_t lit_len = 0;
-  lit_len = bcode_deserialize_varint(data);
-  v = v7_mk_string(bbuilder->v7, *data, lit_len, 0);
-  *data += lit_len + 1 /*NULL-terminator*/;
-
-  return v;
-}
-
 static const char *bcode_deserialize_lit(struct bcode_builder *bbuilder,
                                          const char *data) {
   enum bcode_ser_lit_tag lit_tag;
-  size_t lit_len = 0;
 
   lit_tag = (enum bcode_ser_lit_tag) * data++;
 
   switch (lit_tag) {
     case BCODE_SER_NUMBER: {
-      double val;
-      char buf[12];
-      char *p = buf;
-      lit_len = bcode_deserialize_varint(&data);
-
-      if (lit_len > sizeof(buf) - 1) {
-        p = (char *) malloc(lit_len + 1);
-      }
-      strncpy(p, data, lit_len);
-      data += lit_len;
-      p[lit_len] = '\0';
-      val = strtod(p, NULL);
-      if (p != buf) free(p);
-
-      bcode_add_lit(bbuilder, v7_mk_number(val));
+      /*
+       * All numbers should be inlined into `ops` during serialization (see
+       * `bcode_add_lit()`, `bcode_op_lit()`), so we should never encounter
+       * numbers here
+       */
+      assert(0);
       break;
     }
 
     case BCODE_SER_STRING: {
-      bcode_add_lit(bbuilder, bcode_deserialize_string(bbuilder, &data));
+      /*
+       * All strings should be inlined into `ops` during serialization (see
+       * `bcode_add_lit()`, `bcode_is_inline_string()`, `bcode_op_lit()`), so
+       * we should never encounter strings here
+       */
+      assert(0);
       break;
     }
 
