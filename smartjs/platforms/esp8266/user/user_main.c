@@ -38,6 +38,9 @@ os_timer_t startcmd_timer;
 #ifndef ESP_DEBUG_UART
 #define ESP_DEBUG_UART 1
 #endif
+#ifndef ESP_DEBUG_UART_BAUD_RATE
+#define ESP_DEBUG_UART_BAUD_RATE 115200
+#endif
 
 #ifdef ESP_ENABLE_HEAP_LOG
 /*
@@ -57,10 +60,17 @@ void sjs_init(void *dummy) {
    * level=LL_ERROR, then configuration is loaded this settings are overridden
    */
   {
-    esp_uart_init(esp_sj_uart_default_config(0));
+    struct esp_uart_config *u0cfg = esp_sj_uart_default_config(0);
+#if ESP_DEBUG_UART == 0
+    u0cfg->baud_rate = ESP_DEBUG_UART_BAUD_RATE;
+#endif
+    esp_uart_init(u0cfg);
     struct esp_uart_config *u1cfg = esp_sj_uart_default_config(1);
     /* UART1 has no RX pin, no point in allocating a buffer. */
     u1cfg->rx_buf_size = 0;
+#if ESP_DEBUG_UART == 1
+    u1cfg->baud_rate = ESP_DEBUG_UART_BAUD_RATE;
+#endif
     esp_uart_init(u1cfg);
     fs_set_stdout_uart(0);
     fs_set_stderr_uart(ESP_DEBUG_UART);

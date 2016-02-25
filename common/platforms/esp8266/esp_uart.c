@@ -244,9 +244,7 @@ int esp_uart_validate_config(struct esp_uart_config *c) {
 }
 
 int esp_uart_init(struct esp_uart_config *cfg) {
-  static int int_attached = 0;
   if (cfg == NULL || !esp_uart_validate_config(cfg)) return 0;
-  WRITE_PERI_REG(UART_INT_ENA(cfg->uart_no), 0);
 
   struct esp_uart_state *us = s_us[cfg->uart_no];
   if (us != NULL) {
@@ -259,6 +257,7 @@ int esp_uart_init(struct esp_uart_config *cfg) {
   cs_rbuf_init(&us->rx_buf, cfg->rx_buf_size);
   cs_rbuf_init(&us->tx_buf, cfg->tx_buf_size);
 
+  ETS_INTR_DISABLE(ETS_UART_INUM);
   uart_div_modify(cfg->uart_no, UART_CLK_FREQ / cfg->baud_rate);
 
   if (cfg->uart_no == 0) {
@@ -308,20 +307,13 @@ int esp_uart_init(struct esp_uart_config *cfg) {
     os_timer_arm(&us->status_timer, cfg->status_interval_ms, 1 /* repeat */);
   }
 
+  s_us[cfg->uart_no] = us;
+
   /* Start with TX and RX ints disabled. */
   WRITE_PERI_REG(UART_INT_ENA(cfg->uart_no), UART_INFO_INTS);
 
-  s_us[cfg->uart_no] = us;
-  if (!int_attached) {
-#ifdef RTOS_SDK
-    _xt_isr_attach(ETS_UART_INUM, (void *) esp_uart_isr, NULL);
-    _xt_isr_unmask(1 << ETS_UART_INUM);
-#else
-    ETS_UART_INTR_ATTACH(esp_uart_isr, NULL);
-    ETS_INTR_ENABLE(ETS_UART_INUM);
-#endif
-    int_attached = 1;
-  }
+  ETS_UART_INTR_ATTACH(esp_uart_isr, NULL);
+  ETS_INTR_ENABLE(ETS_UART_INUM);
   return 1;
 }
 
