@@ -184,9 +184,15 @@ width: 21em;
     };
 
     var in2 = document.getElementById('fw_select_input2');
-    in2.onfocus = in2.onclick = function() {
+    in2.onclick = function() {
       document.getElementById('fw_select_input').click();
     };
+
+    var in3 = document.getElementById('fw_select_input');
+    in3.onchange = function() {
+      document.getElementById('fw_select_input2').placeholder =
+                        document.getElementById('fw_select_input').value;
+    }
 
     var renderConfig = function(c, schema) {
       var html = [];
@@ -278,10 +284,11 @@ width: 21em;
     <fieldset>
       <legend>Upload new firmware</legend>
 
-<form id="fw_upload_form">
+<form id="fw_upload_form" method="POST" action="/update"
+   enctype="multipart/form-data">
   <input placeholder="Select .zip firmware archive ..."
     id="fw_select_input2" type="text">
-  <input type="file" id="fw_select_input" accept=".zip" style="display: none">
+  <input type="file" id="fw_select_input" name="file" accept=".zip" style="display: none">
   <button class="button orange" id="fw_upload_button" type="submit">
     Upload
   </button>
