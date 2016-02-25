@@ -21,6 +21,7 @@ all clean:
 	@docker run --rm -i -v $(REPO_ABS_PATH):/cesanta $(SDK_VERSION) \
 		//bin/bash -c "\
 			if [ -d /cesanta/v7 ] ; then make -C /cesanta/v7 v7.c ; fi && \
+			if [ -d /cesanta/krypton ] ; then make -C /cesanta/krypton krypton.c ; fi && \
 			if [ -d /cesanta/mongoose ] ; then make -C /cesanta/mongoose mongoose.c mongoose.h ; fi && \
 			cd $(APP_PATH) && \
 			make -f Makefile.build APP=$(APP) REPO_PATH=$(REPO_PATH) $@ -$(MAKEFLAGS) \
