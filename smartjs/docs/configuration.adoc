@@ -93,11 +93,12 @@ reinitialize all Smart.js modules.
 
 ==== Configuration parameters
 
-`wifi.sta.enable`:: Enable or disable station mode
+`wifi.sta.enable`:: Enable or disable station. Enabling station disables AP unless `wifi.ap.keep_enabled` is set
 `wifi.sta.ssid`:: SSID of WiFi network to connect
 `wifi.sta.pass`:: Password of WiFi network to connect
 
-`wifi.ap.mode`:: Access point mode. `0` - disabled, `1` - access point mode only, `2` - access point and station mode
+`wifi.ap.enable`:: Enable or disable AP
+`wifi.ap.keep_enabled`:: Keep AP enabled when station is on (if supported by the platform, e.g. ESP8266). Normally AP is turned off once station is configured
 `wifi.ap.trigger_on_gpio`:: GPIO number, which should be grounded to force AP mode
 `wifi.ap.ssid`:: SSID of created network
 `wifi.ap.pass`:: Password for created network

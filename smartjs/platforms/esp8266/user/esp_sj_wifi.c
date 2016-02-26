@@ -34,12 +34,13 @@ int wifi_setting_up = 0;
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   int res;
   struct station_config sta_cfg;
-  /* Switch to station mode if not already in it. */
-  if (wifi_get_opmode() != 0x1) {
-    wifi_set_opmode_current(0x1);
+  /* If in AP-only mode, switch to station. If in STA or AP+STA, keep it. */
+  if (wifi_get_opmode() == SOFTAP_MODE) {
+    wifi_set_opmode_current(STATION_MODE);
   }
   wifi_station_disconnect();
 
+  memset(&sta_cfg, 0, sizeof(sta_cfg));
   sta_cfg.bssid_set = 0;
   strncpy((char *) &sta_cfg.ssid, cfg->ssid, 32);
   strncpy((char *) &sta_cfg.password, cfg->pass, 64);
@@ -50,7 +51,7 @@ int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     return 0;
   }
 
-  LOG(LL_DEBUG, ("Joining %s", sta_cfg.ssid));
+  LOG(LL_INFO, ("WiFi STA: Joining %s", sta_cfg.ssid));
   res = wifi_station_connect();
   if (res) {
     wifi_setting_up = 1;
@@ -62,8 +63,6 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   struct softap_config ap_cfg;
   struct ip_info info;
   struct dhcps_lease dhcps;
-
-  memset(&ap_cfg, 0, sizeof(ap_cfg));
 
   size_t pass_len = strlen(cfg->pass);
   size_t ssid_len = strlen(cfg->ssid);
@@ -82,6 +81,12 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
     return 0;
   }
 
+  /* If in STA-only mode, switch to AP. If in AP or AP+STA, keep it. */
+  if (wifi_get_opmode() == STATION_MODE) {
+    wifi_set_opmode_current(SOFTAP_MODE);
+  }
+
+  memset(&ap_cfg, 0, sizeof(ap_cfg));
   strncpy((char *) ap_cfg.ssid, cfg->ssid, sizeof(ap_cfg.ssid));
   strncpy((char *) ap_cfg.password, cfg->pass, sizeof(ap_cfg.password));
   ap_cfg.ssid_len = ssid_len;
@@ -111,11 +116,17 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   dhcps.start_ip.addr = ipaddr_addr(cfg->dhcp_start);
   dhcps.end_ip.addr = ipaddr_addr(cfg->dhcp_end);
   wifi_softap_set_dhcps_lease(&dhcps);
+  /* Do not offer self as a router, we're not one. */
+  {
+    int off = 0;
+    wifi_softap_set_dhcps_offer_option(OFFER_ROUTER, &off);
+  }
 
   wifi_softap_dhcps_start();
 
   wifi_get_ip_info(SOFTAP_IF, &info);
-  LOG(LL_INFO, ("AP address is " IPSTR "", IP2STR(&info.ip)));
+  LOG(LL_INFO, ("WiFi AP: SSID %s, channel %d, IP " IPSTR "", ap_cfg.ssid,
+                ap_cfg.channel, IP2STR(&info.ip)));
 
   return 1;
 }
