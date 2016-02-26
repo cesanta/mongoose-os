@@ -126,12 +126,27 @@ ssize_t fs_failfs_write(int fd, const void *buf, size_t count) {
   return set_errno(sl_fs_to_errno(r));
 }
 
+int fs_failfs_stat(const char *pathname, struct stat *s) {
+  SlFsFileInfo_t sl_fi;
+  _i32 r = sl_FsGetInfo((const _u8 *) pathname, 0, &sl_fi);
+  memset(s, 0, sizeof(*s));
+  if (r == SL_FS_OK) {
+    s->st_ino = 0;
+    s->st_mode = S_IFREG | 0666;
+    s->st_nlink = 1;
+    s->st_size = sl_fi.FileLen;
+    return 0;
+  }
+  return set_errno(sl_fs_to_errno(r));
+}
+
 int fs_failfs_fstat(int fd, struct stat *s) {
   struct ti_fd_info *fi = &s_ti_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   memset(s, 0, sizeof(*s));
   s->st_ino = 0;
   s->st_mode = 0666;
+  s->st_mode = S_IFREG | 0666;
   s->st_nlink = 1;
   s->st_size = fi->size;
   return 0;

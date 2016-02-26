@@ -66,6 +66,17 @@ int _open(const char *pathname, int flags, mode_t mode) {
   return fd;
 }
 
+int _stat(const char *pathname, struct stat *st) {
+  int res;
+  if (is_ti_fname(pathname)) {
+    res = fs_failfs_stat(ti_fname(pathname), st);
+  } else {
+    res = fs_spiffs_stat(pathname, st);
+  }
+  dprintf(("stat(%s) = %d\n", pathname, res));
+  return res;
+}
+
 int _close(int fd) {
   int r = -1;
   switch (fd_type(fd)) {

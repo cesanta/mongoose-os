@@ -79,6 +79,21 @@ ssize_t fs_spiffs_write(int fd, const void *buf, size_t count) {
   return set_spiffs_errno(m, SPIFFS_write(&m->fs, fd, (void *) buf, count));
 }
 
+int fs_spiffs_stat(const char *pathname, struct stat *s) {
+  int res;
+  spiffs_stat ss;
+  struct mount_info *m = &s_fsm;
+  memset(s, 0, sizeof(*s));
+  if (!m->valid) return set_errno(EBADF);
+  res = SPIFFS_stat(&m->fs, (char *) pathname, &ss);
+  if (res < 0) return set_spiffs_errno(m, res);
+  s->st_ino = ss.obj_id;
+  s->st_mode = S_IFREG | 0666;
+  s->st_nlink = 1;
+  s->st_size = ss.size;
+  return 0;
+}
+
 int fs_spiffs_fstat(int fd, struct stat *s) {
   int res;
   spiffs_stat ss;
@@ -88,7 +103,7 @@ int fs_spiffs_fstat(int fd, struct stat *s) {
   res = SPIFFS_fstat(&m->fs, fd, &ss);
   if (res < 0) return set_spiffs_errno(m, res);
   s->st_ino = ss.obj_id;
-  s->st_mode = 0666;
+  s->st_mode = S_IFREG | 0666;
   s->st_nlink = 1;
   s->st_size = ss.size;
   return 0;

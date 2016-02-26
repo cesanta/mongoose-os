@@ -18,6 +18,7 @@ int fs_spiffs_open(const char *pathname, int flags, mode_t mode);
 int fs_spiffs_close(int fd);
 ssize_t fs_spiffs_read(int fd, void *buf, size_t count);
 ssize_t fs_spiffs_write(int fd, const void *buf, size_t count);
+int fs_spiffs_stat(const char *pathname, struct stat *s);
 int fs_spiffs_fstat(int fd, struct stat *s);
 off_t fs_spiffs_lseek(int fd, off_t offset, int whence);
 int fs_spiffs_unlink(const char *filename);

@@ -8136,6 +8136,24 @@ clean:
 }
 
 WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err File_exists(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  v7_val_t arg0 = v7_arg(v7, 0);
+
+  *res = v7_mk_boolean(0);
+
+  if (v7_is_string(arg0)) {
+    const char *fname = v7_to_cstring(v7, &arg0);
+    if (fname != NULL) {
+      struct stat st;
+      if (stat(fname, &st) == 0) *res = v7_mk_boolean(1);
+    }
+  }
+
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
 static enum v7_err f_read(struct v7 *v7, int all, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
@@ -8372,6 +8390,7 @@ void init_file(struct v7 *v7) {
   v7_set(v7, file_obj, "prototype", 9, file_proto);
 
   v7_set_method(v7, file_obj, "eval", File_eval);
+  v7_set_method(v7, file_obj, "exists", File_exists);
   v7_set_method(v7, file_obj, "remove", File_remove);
   v7_set_method(v7, file_obj, "rename", File_rename);
   v7_set_method(v7, file_obj, "open", File_open);
@@ -14516,6 +14535,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("defineProperty"),
     V7_VEC("disconnect"),  /* sjs */
     V7_VEC("every"),
+    V7_VEC("exists"),
     V7_VEC("exports"),
     V7_VEC("filter"),
     V7_VEC("forEach"),
