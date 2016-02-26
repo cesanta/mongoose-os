@@ -247,4 +247,22 @@ int to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 }
 #endif /* _WIN32 */
 
+/* The simplest O(mn) algorithm. Better implementation are GPLed */
+const char *c_strnstr(const char *s, const char *find, size_t slen) {
+  size_t find_length = strlen(find);
+  size_t i;
+
+  for (i = 0; i < slen; i++) {
+    if (i + find_length > slen) {
+      return NULL;
+    }
+
+    if (strncmp(&s[i], find, find_length) == 0) {
+      return &s[i];
+    }
+  }
+
+  return NULL;
+}
+
 #endif /* EXCLUDE_COMMON */

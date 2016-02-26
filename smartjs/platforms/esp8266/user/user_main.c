@@ -50,6 +50,10 @@ os_timer_t startcmd_timer;
 int uart_initialized = 0;
 #endif
 
+void dbg_putc(char c) {
+  fputc(c, stderr);
+}
+
 /*
  * SmartJS initialization, called as an SDK timer callback (`os_timer_...()`).
  */
@@ -77,6 +81,8 @@ void sjs_init(void *dummy) {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
     cs_log_set_level(LL_DEBUG);
+    os_install_putc1(dbg_putc);
+    system_set_os_print(1);
 #ifdef ESP_ENABLE_HEAP_LOG
     uart_initialized = 1;
 #endif
@@ -176,8 +182,6 @@ void user_init() {
   system_init_done_cb(sdk_init_done_cb);
 
   uart_div_modify(ESP_DEBUG_UART, UART_CLK_FREQ / 115200);
-
-  system_set_os_print(0);
 
   esp_exception_handler_init();
 
