@@ -2,14 +2,14 @@
   "ro_vars": { "title": "Sys.ro_vars", "read_only": true },
   "wifi": { "hide": true },
 
-  "wifi.sta.enable": { "title": "Enable or disable station. Enabling station disables AP unless wifi.ap.keep_enabled is set" },
+  "wifi.sta.enable": { "title": "Enable or disable station" },
   "wifi.sta.ssid": { "title": "SSID" },
   "wifi.sta.pass": { "title": "Password", "type": "password" },
   "wifi.sta": { "title": "Connect To Existing WiFi" },
 
   "wifi.ap": { "title": "WiFi Access Point" },
   "wifi.ap.enable": { "title": "Enable or disable AP" },
-  "wifi.ap.keep_enabled": { "title": "Keep AP enabled when station is on (if supported by the platform, e.g. ESP8266). Normally AP is turned off once station is configured" },
+  "wifi.ap.keep_enabled": { "title": "Keep AP enabled when station is on" },
   "wifi.ap.trigger_on_gpio": { "title": "Trigger AP on high GPIO" },
   "wifi.ap.ssid": { "title": "SSID" },
   "wifi.ap.pass": { "title": "Password" },
