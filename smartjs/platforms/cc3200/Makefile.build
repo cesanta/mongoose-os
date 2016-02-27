@@ -32,7 +32,7 @@ PROG = smartjs
 
 JS_SRCS    := ./clubby.js \
               $(SJSJS_PATH)/sys_init.js \
-              $(SJSJS_PATH)/app.js
+              $(SJSJS_PATH)/demo.js
 
 JSBIN_EXT := js
 JS_EXT := js

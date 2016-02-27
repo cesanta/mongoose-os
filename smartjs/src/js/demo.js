@@ -1,46 +1,22 @@
-if (typeof(Debug) == 'undefined') {
-  // This is stub for CC3200
-  var Debug = {};
+print('\r\nThis is Smart.JS ' + Sys.ro_vars.fw_version + ' (' + Sys.ro_vars.arch + ')\r\n');
+print('Below you should see a JS prompt, feel free to play with it.');
+print('sendRandomData() will send some random data to the cloud.');
 
-  Debug.print = function(a,b) {
-    print(a, b);
+function sendRandomData() {
+  function send() {
+    var value  = 20 + Math.random() * 20;  // Simulate sensor data
+    clubby.call('//api.cesanta.com',
+                {cmd: '/v1/Metrics.Publish',
+                    args: {vars: [[{__name__: 'value'}, value]]}},
+                function(res) {
+                    print("demoSendRandomData:", res);
+                    setTimeout(send_on_ready, 2000);  // Call us in 2 seconds
+                })
   }
-}
 
-if (!conf){
-  var conf = {};
-}
-
-if (typeof(conf.user) == 'undefined') {
-  print("Initializing demo data source")
-  var t = {};
-  t.getTemp = function() { return 20+Math.random()*20 };
-} else if (conf.user.demo == 'MCP9808') {
-  File.eval('I2C.js');
-  File.eval('MCP9808.js');
-  var t = new MCP9808(new I2C(14,12), MCP9808.addr(1,1,1));
-} else if (conf.user.demo == 'MC24FC') {
-  File.eval('I2C.js');
-  File.eval('MC24FC.js');
-  File.eval('MC24FC_test.js');
-}
-
-function push(n, cb) {
-  Cloud.store("temperature", n, {labels: {"sensor": "1"}, cb: cb});
-}
-
-function demo() {
-  Debug.print("Pushing metric")
-  push(t.getTemp(), function(d, e) {
-  if (e) {
-    Debug.print("Error sending to the cloud:", e);
-  } else {
-    Debug.print("Cloud reply:", d);
+  function send_on_ready() {
+    clubby.ready(send);
   }
-  setTimeout(demo, 2000)});
-};
 
-function startDemo() {
-  print("Starting temperature push demo in background, type Debug.mode(Debug.OUT) to see activity");
-  demo();
+  send_on_ready();
 }

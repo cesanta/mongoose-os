@@ -118,4 +118,9 @@ if (!Sys.conf.clubby.device_id && Sys.conf.clubby.device_auto_registration) {
   }
 }
 
-File.eval('app.js');
+if (File.exists('app.js')) {
+  File.eval('app.js');
+} else if (File.exists('demo.js')) {
+  print('No app.js, running demo...');
+  File.eval('demo.js');
+}

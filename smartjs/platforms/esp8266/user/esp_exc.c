@@ -13,10 +13,10 @@
 
 #include "common/base64.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
-#include "common/platforms/esp8266/esp_uart.h"
 
 #include "esp_coredump.h"
 #include "esp_flash_bytes.h"
+#include "esp_fs.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
 #include "esp_uart.h"
@@ -41,7 +41,7 @@ IRAM NOINSTR static void handle_exception(struct regfile *regs) {
   xthal_set_intenable(0);
 
 #if defined(ESP_COREDUMP) && !defined(ESP_COREDUMP_NOAUTO)
-  printf("Dumping core to debug output\n");
+  fprintf(stderr, "Dumping core\n");
   esp_dump_core(regs);
 #else
   printf("if you want to dump core, type 'y'");
@@ -99,8 +99,7 @@ IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
   handle_exception(&regs);
 
   fprintf(stderr, "rebooting\n");
-  esp_uart_flush(0);
-  esp_uart_flush(1);
+  fs_flush_stderr();
 
   /*
    * Documented `system_restart` does a lot of things (cleanup) which (seems)

@@ -92,7 +92,7 @@ APP_SRCS += rboot-bigflash.c rboot-api.c
 endif
 
 JSBIN_SRCS := $(SJSJS_PATH)/sys_init.js \
-              $(SJSJS_PATH)/app.js \
+              $(SJSJS_PATH)/demo.js \
               $(SJSJS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
 JS_SRCS    :=
@@ -392,10 +392,8 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
 
 # -- Filesystem.
 
-$(FS_BUILD_DIR):
-	@mkdir -p $(FS_BUILD_DIR)
-
-$(FW_FS_OUT): $(FS_BUILD_DIR) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+	$(Q) rm -rf $(FS_BUILD_DIR) && mkdir -p $(FS_BUILD_DIR)
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
     echo "CP $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
