@@ -15,7 +15,7 @@ overflow-y: scroll;
 }
 * { outline: none; }
 h1 { font-size: 140%; }
-fieldset { border: 1px solid #3795d0; margin-bottom: 2em; }
+fieldset { border: 1px solid #3795d0; margin-top: 1em; }
 legend { zfont-size: 120%; color: #3795d0; }
 .row {
 position: relative;
@@ -183,17 +183,6 @@ width: 21em;
       ajax('/factory_reset', showMsg);
     };
 
-    var in2 = document.getElementById('fw_select_input2');
-    in2.onclick = function() {
-      document.getElementById('fw_select_input').click();
-    };
-
-    var in3 = document.getElementById('fw_select_input');
-    in3.onchange = function() {
-      document.getElementById('fw_select_input2').placeholder =
-                        document.getElementById('fw_select_input').value;
-    }
-
     var renderConfig = function(c, schema) {
       var html = [];
       var walk = function(c, p) {
@@ -259,6 +248,14 @@ width: 21em;
       });
     });
   };
+
+  function connectFileInputs(fnId, ffId) {
+    var fni = document.getElementById(fnId);
+    var ffi = document.getElementById(ffId);
+    fni.onclick = function() { ffi.click(); };
+    ffi.onchange = function() { fni.placeholder = ffi.value; };
+    if (ffi.value != "") fni.placeholder = ffi.value;
+  }
 </script>
 </head>
 <body>
@@ -282,19 +279,42 @@ width: 21em;
 
   <div class="row">
     <fieldset>
-      <legend>Upload new firmware</legend>
+      <legend>Upload a file</legend>
 
-<form id="fw_upload_form" method="POST" action="/update"
-   enctype="multipart/form-data">
-  <input placeholder="Select .zip firmware archive ..."
-    id="fw_select_input2" type="text">
-  <input type="file" id="fw_select_input" name="file" accept=".zip" style="display: none">
-  <button class="button orange" id="fw_upload_button" type="submit">
-    Upload
-  </button>
-</form>
+      <form id="file_upload_form" method="POST" action="/upload"
+         enctype="multipart/form-data">
+        <input placeholder="Select a file to upload ..."
+          id="file_select_name" type="text">
+        <input type="file" id="file_select_file" name="file" style="display: none">
+        <button class="button orange" id="file_upload_button" type="submit">
+          Upload
+        </button>
+      </form>
 
     </fieldset>
+    <script type="text/javascript">
+      connectFileInputs('file_select_name', 'file_select_file');
+    </script>
+  </div>
+
+  <div class="row">
+    <fieldset>
+      <legend>Upload new firmware</legend>
+
+      <form id="fw_upload_form" method="POST" action="/update"
+         enctype="multipart/form-data">
+        <input placeholder="Select .zip firmware archive ..."
+          id="fw_select_name" type="text">
+        <input type="file" id="fw_select_file" name="file" accept=".zip" style="display: none">
+        <button class="button orange" id="fw_upload_button" type="submit">
+          Upload
+        </button>
+      </form>
+
+    </fieldset>
+    <script type="text/javascript">
+      connectFileInputs('fw_select_name', 'fw_select_file');
+    </script>
   </div>
 
 </body>

@@ -107,6 +107,83 @@ static void factory_reset_handler(struct mg_connection *c, int ev, void *p) {
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
 
+static void upload_handler(struct mg_connection *c, int ev, void *p) {
+  switch (ev) {
+    case MG_EV_HTTP_MULTIPART_REQUEST: {
+      break;
+    }
+    case MG_EV_HTTP_PART_BEGIN: {
+      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
+      LOG(LL_DEBUG, ("%p Begin receiving file: %s", c, mp->file_name));
+      FILE *fp = fopen(mp->file_name, "w");
+      if (fp == NULL) {
+        mg_printf(c,
+                  "HTTP/1.1 500 Internal Server Error\r\n"
+                  "Content-Type: text/plain\r\n"
+                  "Connection: close\r\n\r\n");
+        LOG(LL_ERROR, ("Failed to open %s: %d\n", mp->file_name, errno));
+        mg_printf(c, "Failed to open %s: %d\r\n", mp->file_name, errno);
+        c->flags |= MG_F_SEND_AND_CLOSE;
+        return;
+      }
+      c->user_data = (void *) fp;
+      break;
+    }
+    case MG_EV_HTTP_PART_DATA: {
+      FILE *fp = (FILE *) c->user_data;
+      if (fp == NULL) break;
+      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
+      LOG(LL_DEBUG, ("%p rec'd %d bytes", c, (int) mp->data.len));
+      if (fwrite(mp->data.p, 1, mp->data.len, fp) != mp->data.len) {
+        LOG(LL_ERROR, ("Failed to write to %s: %d, wrote %d", mp->file_name,
+                       errno, (int) ftell(fp)));
+        if (errno == ENOSPC
+#ifdef SPIFFS_ERR_FULL
+            || errno == SPIFFS_ERR_FULL
+#endif
+            ) {
+          mg_printf(c,
+                    "HTTP/1.1 413 Payload Too Large\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: close\r\n\r\n");
+          mg_printf(c, "Failed to write to %s: no space left; wrote %d\r\n",
+                    mp->file_name, (int) ftell(fp));
+        } else {
+          mg_printf(c,
+                    "HTTP/1.1 500 Internal Server Error\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: close\r\n\r\n");
+          mg_printf(c, "Failed to write to %s: %d, wrote %d", mp->file_name,
+                    errno, (int) ftell(fp));
+        }
+        fclose(fp);
+        remove(mp->file_name);
+        c->user_data = NULL;
+        c->flags |= MG_F_SEND_AND_CLOSE;
+        return;
+      }
+      break;
+    }
+    case MG_EV_HTTP_PART_END: {
+      FILE *fp = (FILE *) c->user_data;
+      if (fp == NULL) break;
+      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
+      LOG(LL_INFO,
+          ("%p Stored %s, %d bytes", c, mp->file_name, (int) ftell(fp)));
+      mg_printf(c,
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n"
+                "Connection: close\r\n\r\n"
+                "Ok, %s - %d bytes.\r\n",
+                mp->file_name, (int) ftell(fp));
+      fclose(fp);
+      c->user_data = NULL;
+      c->flags |= MG_F_SEND_AND_CLOSE;
+      break;
+    }
+  }
+}
+
 static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   LOG(LL_VERBOSE_DEBUG,
       ("%s: %p ev %d, fl %lx l %lu %lu", __func__, p, ev, c->flags,
@@ -159,6 +236,7 @@ static int init_web_server(const struct sys_config *cfg) {
     mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
     mg_register_http_endpoint(listen_conn, "/factory_reset",
                               factory_reset_handler);
+    mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
 
     mg_set_protocol_http_websocket(listen_conn);
     LOG(LL_INFO, ("HTTP server started on port [%s]", cfg->http.port));

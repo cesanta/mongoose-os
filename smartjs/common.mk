@@ -12,6 +12,7 @@ MG_FEATURES_TINY = \
                    -DMG_DISABLE_DAV_AUTH \
                    -DMG_DISABLE_CGI \
                    -DMG_DISABLE_SSI \
+                   -DMG_ENABLE_HTTP_STREAMING_MULTIPART \
                    -DMG_MAX_HTTP_HEADERS=20 \
                    -DMG_MAX_HTTP_REQUEST_SIZE=1024 \
                    -DMG_MAX_PATH=40 \
