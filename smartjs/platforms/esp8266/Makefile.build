@@ -406,9 +406,8 @@ $(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
 	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
 
-$(BUILD_DIR)/mkspiffs: $(SPIFFS_PATH)/tools/mkspiffs.c $(wildcard $(SPIFFS_PATH)/*.c)
-	$(vecho) "GCC mkspiffs"
-	$(Q) gcc -I. -I$(SPIFFS_PATH) -I$(SPIFFS_PATH)/tools -Iuser -o $@ $^ -DNO_ESP
+$(BUILD_DIR)/mkspiffs:
+	$(MAKE) -C $(REPO_PATH)/common/spiffs/tools $(BUILD_DIR)/mkspiffs BUILD_DIR=$(BUILD_DIR)
 
 $(V7_PATH)/v7.c:
 	make -C $(V7_PATH) v7.c
