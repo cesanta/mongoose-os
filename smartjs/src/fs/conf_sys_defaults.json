@@ -11,7 +11,7 @@
       "trigger_on_gpio": -1,
       "ssid": "SMARTJS_??????",
       "pass": "Elduderino",
-      "hidden": 0,
+      "hidden": false,
       "channel": 6,
       "ip": "192.168.4.1",
       "netmask": "255.255.255.0",
@@ -53,5 +53,6 @@
     "stdout_uart": 0,
     "stderr_uart": 1,
     "enable_prompt": true
-  }
+  },
+  "conf_acl": "+*"
 }

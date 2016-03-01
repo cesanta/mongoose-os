@@ -1,54 +1,54 @@
-{
-  "ro_vars": { "title": "Sys.ro_vars", "read_only": true },
-  "wifi": { "hide": true },
+[
+  ["wifi", "o", {"hide": true}],
 
-  "wifi.sta.enable": { "title": "Enable or disable station" },
-  "wifi.sta.ssid": { "title": "SSID" },
-  "wifi.sta.pass": { "title": "Password", "type": "password" },
-  "wifi.sta": { "title": "Connect To Existing WiFi" },
+  ["wifi.sta", "o", {"title": "Connect To Existing WiFi"}],
+  ["wifi.sta.enable", "b", {"title": "Enable or disable station"}],
+  ["wifi.sta.ssid", "s", {"title": "SSID"}],
+  ["wifi.sta.pass", "s", {"title": "Password", "type": "password"}],
 
-  "wifi.ap": { "title": "WiFi Access Point" },
-  "wifi.ap.enable": { "title": "Enable or disable AP" },
-  "wifi.ap.keep_enabled": { "title": "Keep AP enabled when station is on" },
-  "wifi.ap.trigger_on_gpio": { "title": "Trigger AP on high GPIO" },
-  "wifi.ap.ssid": { "title": "SSID" },
-  "wifi.ap.pass": { "title": "Password" },
-  "wifi.ap.hidden": { "title": "Hide SSID" },
-  "wifi.ap.channel": { "title": "Channel" },
-  "wifi.ap.dhcp_start": { "title": "DHCP Start Address" },
-  "wifi.ap.dhcp_end": { "title": "DHCP End Address" },
-  "wifi.ap.netmask": { "title": "DHCP Network Mask" },
-  "wifi.ap.gw": { "title": "Default Gateway" },
-  "wifi.ap.ip": { "title": "Access Point IP address" },
+  ["wifi.ap", "o", {"title": "WiFi Access Point"}],
+  ["wifi.ap.enable", "b", {"title": "Enable or disable AP"}],
+  ["wifi.ap.keep_enabled", "b", {"title": "Keep AP enabled when station is on"}],
+  ["wifi.ap.trigger_on_gpio", "i", {"title": "Trigger AP on high GPIO"}],
+  ["wifi.ap.ssid", "s", {"title": "SSID"}],
+  ["wifi.ap.pass", "s", {"title": "Password"}],
+  ["wifi.ap.hidden", "b", {"title": "Hide SSID"}],
+  ["wifi.ap.channel", "i", {"title": "Channel"}],
+  ["wifi.ap.dhcp_start", "s", {"title": "DHCP Start Address"}],
+  ["wifi.ap.dhcp_end", "s", {"title": "DHCP End Address"}],
+  ["wifi.ap.netmask", "s", {"title": "DHCP Network Mask"}],
+  ["wifi.ap.gw", "s", {"title": "Default Gateway"}],
+  ["wifi.ap.ip", "s", {"title": "Access Point IP address"}],
 
-  "update": {"title": "Firmware updater"},
-  "update.manifest_url": {"title": "Default update endpoint"},
-  "update.server_timeout" : {"title" : "Server Timeout"},
-  "http": { "title": "HTTP Server" },
-  "http.port": { "title": "Listening Port" },
-  "http.enable": { "title": "Enable HTTP Server" },
-  "http.enable_webdav": { "title": "Enable WebDAV access" },
+  ["update", "o", {"title": "Firmware updater"}],
+  ["update.manifest_url", "s", {"title": "Default update endpoint"}],
+  ["update.server_timeout", "i", {"title" : "Server Timeout"}],
 
-  "tls": {"title": "TLS settings"},
-  "tls.enable": {"title" : "Enable TLS"},
-  "tls.server_name": {"title" : "TLS server name"},
-  "tls.ca_file": {"title" : "TLS CA file"},
+  ["http", "o", {"title": "HTTP Server"}],
+  ["http.port", "i", {"title": "Listening Port"}],
+  ["http.enable", "b", {"title": "Enable HTTP Server"}],
+  ["http.enable_webdav", "b", {"title": "Enable WebDAV access"}],
 
-  "clubby": {"title": "Cloud settings"},
-  "clubby.connect_on_boot": {"title": "Connect cloud on startup" },
-  "clubby.server_address": {"title": "Cloud server address"},
-  "clubby.device_id": {"title": "Device ID"},
-  "clubby.device_psk": {"title": "Device password"},
-  "clubby.device_auto_registration": {"title": "Auto-register device on Cesanta Cloud"},
-  "clubby.backend" : {"title" : "Backend name" },
-  "clubby.reconnect_timeout_min" : {"title": "Minimal reconnect timeout" },
-  "clubby.reconnect_timeout_max" : {"title": "Maximal reconnect timeout" },
-  "clubby.cmd_timeout" : {"title": "Default command timeout" },
-  "clubby.memory_limit" : {"title": "Memory Limit" },
-  "clubby.device_registration_url" : {"title": "Device registration URL" },
+  ["tls", "o", {"title": "TLS settings"}],
+  ["tls.enable", "b", {"title" : "Enable TLS"}],
+  ["tls.server_name", "s", {"title" : "TLS server name"}],
+  ["tls.ca_file", "s", {"title" : "TLS CA file"}],
 
-  "debug": { "title": "Debug Settings" },
-  "debug.level": {
+  ["clubby", "o", {"title": "Cloud settings"}],
+  ["clubby.connect_on_boot", "b", {"title": "Connect cloud on startup"}],
+  ["clubby.server_address", "s", {"title": "Cloud server address"}],
+  ["clubby.device_id", "s", {"title": "Device ID"}],
+  ["clubby.device_psk", "s", {"title": "Device password"}],
+  ["clubby.device_auto_registration", "b", {"title": "Auto-register device on Cesanta Cloud"}],
+  ["clubby.backend", "s", {"title" : "Backend name"}],
+  ["clubby.reconnect_timeout_min", "i", {"title": "Minimal reconnect timeout"}],
+  ["clubby.reconnect_timeout_max", "i", {"title": "Maximal reconnect timeout"}],
+  ["clubby.cmd_timeout", "i", {"title": "Default command timeout"}],
+  ["clubby.memory_limit", "i", {"title": "Memory Limit"}],
+  ["clubby.device_registration_url", "s", {"title": "Device registration URL"}],
+
+  ["debug", "o", {"title": "Debug Settings"}],
+  ["debug.level", "i", {
     "title": "Level",
     "type": "select",
     "values": [
@@ -59,14 +59,14 @@
       {"value": 3, "title": "DEBUG"},
       {"value": 4, "title": "VERBOSE_DEBUG"}
     ]
-  },
-  "debug.stdout_uart": {
-    "title": "UART to send standard output to; -1 = /dev/null"
-  },
-  "debug.stderr_uart": {
-    "title": "UART to send standard error (debug) output to; -1 = /dev/null"
-  },
-  "debug.enable_prompt": {
-    "title": "Enable interactive JavaScript prompt on UART0"
-  }
-}
+  }],
+  ["debug.stdout_uart", "i", {"title": "UART to send standard output to; -1 = /dev/null"}],
+  ["debug.stderr_uart", "i", {"title": "UART to send standard error (debug) output to; -1 = /dev/null"}],
+  ["debug.enable_prompt", "b", {"title": "Enable interactive JavaScript prompt on UART0"}],
+  ["ro_vars", "o", {"title": "Sys.ro_vars", "read_only": true}],
+  ["ro_vars.mac_address", "s", {"title": "MAC address", "read_only": true}],
+  ["ro_vars.arch", "s", {"title": "Platform", "read_only": true}],
+  ["ro_vars.fw_version", "s", {"title": "FW version", "read_only": true}],
+  ["ro_vars.fw_timestamp", "s", {"title": "Build timestamp", "read_only": true}],
+  ["ro_vars.fw_id", "s", {"title": "Build ID", "read_only": true}]
+]

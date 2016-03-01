@@ -12,6 +12,7 @@
 
 #define CONF_SYS_DEFAULTS_FILE "conf_sys_defaults.json"
 #define CONF_APP_DEFAULTS_FILE "conf_app_defaults.json"
+#define CONF_VENDOR_FILE "conf_vendor.json"
 #define CONF_FILE "conf.json"
 
 /* Read-only firmware setting */

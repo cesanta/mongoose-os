@@ -93,13 +93,18 @@ width: 21em;
 </style>
 <script type="text/javascript">
   var DEFAULTS = {};  // System defaults config
-  var CONFIG = {};  // Configuration object. Gets set up on window load
+  var CURRENT = {};  // Configuration object. Gets set up on window load
+  var SCHEMA = [];
 
   var merge = function(_a, _b) {
     var a = JSON.parse(JSON.stringify(_a));  // make a copy
     var b = JSON.parse(JSON.stringify(_b));  // make a copy
+    if (typeof(a[0]) !== 'undefined' && typeof(b[0]) !== 'undefined') {
+      // Arrays
+      return a.concat(b);
+    }
     for (k in b) {
-      if (typeof(a[k]) === 'object' && typeof(b[k]) == 'object') {
+      if (typeof(a[k]) === 'object' && typeof(b[k]) === 'object') {
         a[k] = merge(a[k], b[k]);
       } else {
         a[k] = b[k];
@@ -133,7 +138,7 @@ width: 21em;
   };
 
   var getElementValue = function(el) {
-    if (!el) return '';
+    if (!el) return undefined;
     if (el.type == 'checkbox') return el.checked ? true : false;
     return el.value;
   };
@@ -150,31 +155,76 @@ width: 21em;
           'your browser to new device address.');
   };
 
+  function confLookup(c, p) {
+    var result, i;
+    var parts = p.split('.');
+    for (i = 0; i < parts.length && typeof(c) === 'object'; i++) {
+      c = c[parts[i]];
+    }
+    if (i < parts.length) c = undefined;
+    return c;
+  }
+
+  function confSet(c, p, v) {
+    var result, i;
+    var parts = p.split('.');
+    var o, k;
+    for (i = 0; i < parts.length && typeof(c) === 'object'; i++) {
+      k = parts[i];
+      o = c;
+      c = c[k];
+      if (typeof(c) === 'undefined' && i < parts.length - 1) {
+        o[k] = {};
+        c = o[k];
+      } else if (typeof(c) !== 'object' && i < parts.length - 1) {
+        return;
+      }
+    }
+    console.debug('set', p, v);
+    o[k] = v;
+  }
+
+  function buildConfig(schema, defaults, current) {
+    var cfg = {};
+    for (var i in schema) {
+      var entry = schema[i];
+      var ep = entry[0], et = entry[1], ed = entry[2];
+      if (et === 'o') continue;  // Only process leaf nodes.
+      if (ed.read_only) continue;  // No point in setting them anyway
+      var defaultVal = confLookup(defaults, ep);
+      var currentVal = confLookup(current, ep);
+      var newVal = getElementValue(document.getElementById(ep));
+      // console.debug(ep, defaultVal, currentVal, newVal);
+      if (newVal !== undefined) {
+        switch (et) {
+          case 'b': newVal = !!newVal; break;
+          case 's': break;  // No conversion necessary;
+          case 'i': {
+            newVal = parseInt(newVal);
+            if (isNaN(newVal)) throw('invalid integer value for ' + ep);
+            break;
+          }
+          default: throw('unsupported type ' + et + ' for ' + ep);
+        }
+        if (newVal != defaultVal) confSet(cfg, ep, newVal);
+      } else if (currentVal !== undefined && currentVal !== defaultVal) {
+        confSet(cfg, ep, currentVal);
+      }
+    }
+    return cfg;
+  }
+
   window.onload = function() {
     document.getElementById('btn_reboot').onclick = function() {
       ajax('/reboot', showMsg);
     };
 
     document.getElementById('btn_save').onclick = function() {
-      var c = merge({}, DEFAULTS);
-      delete c.ro_vars;
-      var walk = function(c1, c2, p) {
-        var n = 0;
-        for (var k in c1) {
-          var path = p ? p + '.' + k : k;
-          if (typeof(c1[k]) == 'object') {
-            var j = walk(c1[k], c2[k], path);
-            if (j == 0) { delete c1[k]; } else { n += j };
-          } else {
-            c1[k] = getElementValue(document.getElementById(path));
-            if (c1[k] == c2[k]) { delete c1[k]; } else { n++; };
-          }
-        }
-        return n;
-      };
-      walk(c, DEFAULTS, '');
+      var c = buildConfig(SCHEMA, DEFAULTS, CURRENT);
+      console.log('saving', c);
+
       var text = JSON.stringify(c, null, 2);
-      ajax('/conf.json', function() {
+      ajax('/conf/save', function() {
         ajax('/reboot', showMsg);
       }, text);
     };
@@ -183,68 +233,107 @@ width: 21em;
       ajax('/factory_reset', showMsg);
     };
 
-    var renderConfig = function(c, schema) {
+    /*
+     * Device will do this as well, this is just to give a hint to the user.
+     * It should be kept in sync with sj_conf_check_access in sj_config.c.
+     */
+    function sj_conf_check_access(key, acl) {
+      if (acl === null || acl === undefined) return true;
+      var entries = acl.split(',');
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        if (e === "") continue;
+        var result = (e[0] !== '-');
+        var re = e.substr(1)
+            .replace(/\./g, '\\.')
+            .replace(/\?/g, '.')
+            .replace(/\*/g, '.*');
+        var matched = ((new RegExp(re)).exec(key) !== null);
+        // console.debug(' ', e, re, matched);
+        if (matched) return result;
+      }
+      return false;
+    }
+
+    var renderConfig = function(schema, cfg) {
       var html = [];
-      var walk = function(c, p) {
-        for (var k in c) {
-          var path = p ? p + '.' + k : k;
-          var d = schema[path] || {}; // UI descriptor for that config param
-          var parent_d = schema[p] || {};
-          var val = c[k];
-          if (typeof(val) == 'object') {
-            if (!d.hide) {
-              //html.push('<h1>', d.title || path, '</h1>\n');
-              html.push('</fieldset><fieldset><legend>', d.title || path, '</legend>\n');
-            }
-            walk(val, path);
-          } else {
-            html.push('<div class="param">',
-                      '<label for="', path, '">', d.title || k, '</label>');
-
-            // Look if the element should be disabled.
-            var extra_attrs = '';
-            if (d.read_only || parent_d.read_only) {
-              extra_attrs = ' disabled ';
-            }
-
-            if (typeof(val) == 'boolean') {
-              html.push('<input type="checkbox" id="', path,
-                        '" ', extra_attrs, val ? ' checked' : '', '/>');
-            } else if (d.type == 'select') {
-              html.push('<select ', extra_attrs, 'id="', path, '">');
-              for (var i = 0; d.values && i < d.values.length; i++) {
-                var o = d.values[i];
-                html.push('<option value="', o.value, '" ', extra_attrs,
-                          o.value == val ? 'selected' : '', '>',
-                          o.title, '</option>');
-              }
-              html.push('</select>');
-            } else {
-              html.push('<input ', extra_attrs, 'type="text" id="', path,
-                        '" value="', val, '"/>');
-            }
-            html.push('</div>\n');
+      var currentObject = null;
+      for (var i in schema) {
+        var entry = schema[i];
+        var ep = entry[0], et = entry[1], ed = entry[2];
+        var val = confLookup(cfg, ep);
+        var k = ep.split('.').pop();
+        if (typeof(val) !== 'object') console.debug(ep, et, typeof(val), val);
+        if (et === 'o' && typeof(val) === 'object') {
+          if (currentObject) html.push('</fieldset>')
+          currentObject = ep;
+          if (!ed.hide) {
+            html.push('<fieldset><legend>', ed.title || ep, '</legend>\n');
           }
+        } else if (!ed.hide) {
+          html.push('<div class="param">',
+                    '<label for="', ep, '">', ed.title || k, '</label>');
+
+          // Look if the element should be disabled.
+          var extra_attrs = '';
+          if (ed.read_only || !sj_conf_check_access(ep, CURRENT['conf_acl'])) {
+            extra_attrs = ' disabled ';
+          }
+
+          if (et == 'b') {
+            html.push('<input type="checkbox" id="', ep,
+                      '" ', extra_attrs, val ? ' checked' : '', '/>');
+          } else if (ed.type == 'select') {
+            html.push('<select ', extra_attrs, 'id="', ep, '">');
+            for (var i = 0; ed.values && i < ed.values.length; i++) {
+              var o = ed.values[i];
+              html.push('<option value="', o.value, '" ', extra_attrs,
+                        o.value == val ? 'selected' : '', '>',
+                        o.title, '</option>');
+            }
+            html.push('</select>');
+          } else {
+            html.push('<input ', extra_attrs, 'type="text" id="', ep,
+                      '" value="', val, '"/>');
+          }
+          html.push('</div>\n');
         }
-      };
-      walk(c, '');
+      }
       document.getElementById('config').innerHTML = html.join('');
     };
 
+    var toLoad = 5;
+    function loaded() {
+      if (--toLoad == 0) {
+        console.log('All data loaded');
+        setTimeout(function(){renderConfig(SCHEMA, merge(DEFAULTS, CURRENT))}, 100);
+      }
+    }
     // Load configuration and update the UI
-    ajax('/conf_sys_defaults.json', function(obj, error) {
-      DEFAULTS = obj;
-      ajax('/conf_app_defaults.json', function(obj, error) {
-        DEFAULTS = merge(DEFAULTS, obj || {});
-        ajax('/conf.json', function(obj, error) {
-          CONFIG = merge(DEFAULTS, obj || {});
-          ajax('/ro_vars', function(obj, error) {
-            CONFIG = merge(CONFIG, { ro_vars: obj || {} });
-            ajax('/conf_sys_schema.json', function(obj, error) {
-              renderConfig(CONFIG, obj || {});
-            });
-          });
-        });
+    ajax('/conf/defaults', function(obj, error) {
+      console.log('Defaults loaded' + (error ? ', err ' + error : ''));
+      DEFAULTS = merge(DEFAULTS, obj || {});
+      loaded();
+    });
+    ajax('/conf/current', function(obj, error) {
+      console.log('Config loaded' + (error ? ', err ' + error : ''));
+      CURRENT = merge(CURRENT, obj || {});
+      loaded();
+    });
+    ajax('/ro_vars', function(obj, error) {
+      console.log('Vars loaded' + (error ? ', err ' + error : ''));
+      CURRENT = merge(CURRENT, { ro_vars: obj || {} });
+      loaded();
+    });
+    /* For schema, order matters. */
+    ajax('/conf_sys_schema.json', function(obj, error) {
+      console.log('Sys schema loaded' + (error ? ', err ' + error : ''));
+      SCHEMA = merge(SCHEMA, obj || {});
+      loaded();
+      ajax('/conf_app_schema.json', function(obj, error) {
+        console.log('App schema loaded' + (error ? ', err ' + error : ''));
+        SCHEMA = merge(SCHEMA, obj || {});
+        loaded();
       });
     });
   };

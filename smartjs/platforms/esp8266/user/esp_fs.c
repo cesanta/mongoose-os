@@ -368,11 +368,21 @@ int _close_r(struct _reent *r, int fd) {
 }
 
 int _rename_r(struct _reent *r, const char *from, const char *to) {
-  int res =
-      SPIFFS_rename(&fs, get_fixed_filename(from), get_fixed_filename(to));
+  /*
+   * POSIX rename requires that in case "to" exists, it be atomically replaced
+   * with "from". The atomic part we can't do, but at least we can do replace.
+   */
+  int res;
+  {
+    spiffs_stat ss;
+    res = SPIFFS_stat(&fs, (char *) to, &ss);
+    if (res == 0) {
+      SPIFFS_remove(&fs, (char *) to);
+    }
+  }
+  res = SPIFFS_rename(&fs, get_fixed_filename(from), get_fixed_filename(to));
   (void) r;
   set_errno(res);
-
   return res;
 }
 

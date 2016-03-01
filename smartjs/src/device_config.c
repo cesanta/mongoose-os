@@ -44,6 +44,9 @@ static char s_mac_address[13];
 static const char *mac_address_ptr = s_mac_address;
 static struct mg_connection *listen_conn;
 
+static int load_config_file(const char *filename, int required,
+                            struct sys_config *cfg);
+
 static void export_read_only_vars_to_v7(struct v7 *v7) {
   struct ro_var *rv;
   if (v7 == NULL) return;
@@ -70,7 +73,74 @@ void expand_mac_address_placeholders(char *str) {
   }
 }
 
+static int load_config_defaults(struct sys_config *cfg) {
+  /* TODO(rojer): Figure out what to do about merging two different defaults. */
+  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, 0, cfg)) return 0;
+  if (!load_config_file(CONF_APP_DEFAULTS_FILE, 0, cfg)) return 0;
+  if (!load_config_file(CONF_VENDOR_FILE, 0, cfg)) return 0;
+  return 1;
+}
+
 #define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
+
+static int save_json(const struct mg_str *data, const char *file_name) {
+  FILE *fp;
+  int len = parse_json(data->p, data->len, NULL, 0);
+  if (len <= 0) {
+    LOG(LL_ERROR, ("%s\n", "Invalid JSON string"));
+    return 0;
+  }
+  fp = fopen("tmp", "w");
+  if (fp == NULL) {
+    LOG(LL_ERROR, ("Error opening file for writing\n"));
+    return 0;
+  }
+  if (fwrite(data->p, 1, len, fp) != (size_t) len) {
+    LOG(LL_ERROR, ("Error writing file\n"));
+    fclose(fp);
+    return 0;
+  }
+  if (fclose(fp) != 0) {
+    LOG(LL_ERROR, ("Error closing file\n"));
+    return 0;
+  }
+  if (rename("tmp", file_name) != 0) {
+    LOG(LL_ERROR, ("Error renaming file to %s\n", file_name));
+    return 0;
+  }
+  return 1;
+}
+
+static void conf_handler(struct mg_connection *c, int ev, void *p) {
+  struct http_message *hm = (struct http_message *) p;
+  if (ev != MG_EV_HTTP_REQUEST) return;
+  LOG(LL_DEBUG, ("[%.*s] requested", (int) hm->uri.len, hm->uri.p));
+  char *json = NULL;
+  if (mg_vcmp(&hm->uri, "/conf/defaults") == 0) {
+    struct sys_config cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    if (load_config_defaults(&cfg)) {
+      json = emit_sys_config(&cfg);
+    }
+  } else if (mg_vcmp(&hm->uri, "/conf/current") == 0) {
+    json = emit_sys_config(&s_cfg);
+  } else if (mg_vcmp(&hm->uri, "/conf/save") == 0) {
+    int status = save_json(&hm->body, CONF_FILE);
+    if (asprintf(&json, "{status: %d, \"msg\": \"%s\"}\n", status,
+                 (status ? "Ok" : "error")) < 0) {
+      json = NULL;
+    }
+  }
+  if (json != NULL) {
+    int len = strlen(json);
+    mg_send_head(c, 200, len, JSON_HEADERS);
+    mg_send(c, json, len);
+    free(json);
+  } else {
+    mg_send_head(c, 500, 0, JSON_HEADERS);
+  }
+  c->flags |= MG_F_SEND_AND_CLOSE;
+}
 
 static void reboot_handler(struct mg_connection *c, int ev, void *p) {
   (void) ev;
@@ -186,7 +256,7 @@ static void upload_handler(struct mg_connection *c, int ev, void *p) {
 
 static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   LOG(LL_VERBOSE_DEBUG,
-      ("%s: %p ev %d, fl %lx l %lu %lu", __func__, p, ev, c->flags,
+      ("%p ev %d p %p fl %lx l %lu %lu", c, ev, p, c->flags,
        (unsigned long) c->recv_mbuf.len, (unsigned long) c->send_mbuf.len));
 
   switch (ev) {
@@ -232,6 +302,7 @@ static int init_web_server(const struct sys_config *cfg) {
     LOG(LL_ERROR, ("Error binding to port [%s]", cfg->http.port));
     return 0;
   } else {
+    mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
     mg_register_http_endpoint(listen_conn, "/reboot", reboot_handler);
     mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
     mg_register_http_endpoint(listen_conn, "/factory_reset",
@@ -244,18 +315,21 @@ static int init_web_server(const struct sys_config *cfg) {
   return 1;
 }
 
-static int load_config_file(const char *filename, struct sys_config *cfg,
-                            int required) {
-  char *data;
+static int load_config_file(const char *filename, int required,
+                            struct sys_config *cfg) {
+  char *data, *acl = NULL;
   size_t size;
   int result = 1;
   LOG(LL_DEBUG, ("=== Loading %s", filename));
   data = cs_read_file(filename, &size);
-  if (data == NULL || !parse_sys_config(data, cfg, required)) {
+  /* Make a temporary copy, in case it gets overridden while loading. */
+  acl = (cfg->conf_acl != NULL ? strdup(cfg->conf_acl) : NULL);
+  if (data == NULL || !parse_sys_config(data, acl, required, cfg)) {
     LOG(required ? LL_ERROR : LL_INFO, ("Failed to load %s", filename));
     result = 0;
   }
   free(data);
+  free(acl);
   return result;
 }
 
@@ -265,11 +339,9 @@ int init_device(struct v7 *v7) {
 
   /* Load system defaults - mandatory */
   memset(&s_cfg, 0, sizeof(s_cfg));
-  /* TODO(rojer): Figure out what to do about merging two different defaults. */
-  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, &s_cfg, 0)) return 0;
-  if (!load_config_file(CONF_APP_DEFAULTS_FILE, &s_cfg, 0)) return 0;
+  if (!load_config_defaults(&s_cfg)) return 0;
   /* Successfully loaded system config. Try overrides - they are optional. */
-  load_config_file(CONF_FILE, &s_cfg, 0);
+  load_config_file(CONF_FILE, 0, &s_cfg);
 
   REGISTER_RO_VAR(fw_id, &build_id);
   REGISTER_RO_VAR(fw_timestamp, &build_timestamp);

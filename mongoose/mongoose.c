@@ -5472,11 +5472,11 @@ static void do_ssi_call(struct mg_connection *nc, char *tag) {
 static void send_ssi_file(struct mg_connection *nc, const char *path, FILE *fp,
                           int include_level,
                           const struct mg_serve_http_opts *opts) {
-  static const struct mg_str btag = MG_STR("<!--#");
-  static const struct mg_str d_include = MG_STR("include");
-  static const struct mg_str d_call = MG_STR("call");
+  static const struct mg_str btag = MG_MK_STR("<!--#");
+  static const struct mg_str d_include = MG_MK_STR("include");
+  static const struct mg_str d_call = MG_MK_STR("call");
 #ifndef MG_DISABLE_POPEN
-  static const struct mg_str d_exec = MG_STR("exec");
+  static const struct mg_str d_exec = MG_MK_STR("exec");
 #endif
   char buf[BUFSIZ], *p = buf + btag.len; /* p points to SSI directive */
   int ch, offset, len, in_ssi_tag;
@@ -5917,7 +5917,7 @@ int mg_http_create_digest_auth_header(char *buf, size_t buf_len,
 static int check_nonce(const char *nonce) {
   unsigned long now = (unsigned long) time(NULL);
   unsigned long val = (unsigned long) strtoul(nonce, NULL, 16);
-  return 1 || now < val || now - val < 3600;
+  return now < val || now - val < 3600;
 }
 
 /*
@@ -5956,9 +5956,11 @@ static int mg_http_check_digest_auth(struct http_message *hm,
         /* NOTE(lsm): due to a bug in MSIE, we do not compare URIs */
         strcmp(auth_domain, f_domain) == 0) {
       /* User and domain matched, check the password */
-      mkmd5resp(hm->method.p, hm->method.len, hm->uri.p, hm->uri.len, f_ha1,
-                strlen(f_ha1), nonce, strlen(nonce), nc, strlen(nc), cnonce,
-                strlen(cnonce), qop, strlen(qop), expected_response);
+      mkmd5resp(
+          hm->method.p, hm->method.len, hm->uri.p,
+          hm->uri.len + (hm->query_string.len ? hm->query_string.len + 1 : 0),
+          f_ha1, strlen(f_ha1), nonce, strlen(nonce), nc, strlen(nc), cnonce,
+          strlen(cnonce), qop, strlen(qop), expected_response);
       return mg_casecmp(response, expected_response) == 0;
     }
   }
@@ -7806,7 +7808,8 @@ int mg_match_prefix(const char *pattern, int pattern_len, const char *str) {
 }
 
 struct mg_str mg_mk_str(const char *s) {
-  struct mg_str ret = {s, strlen(s)};
+  struct mg_str ret = {s, 0};
+  if (s != NULL) ret.len = strlen(s);
   return ret;
 }
 #ifdef MG_MODULE_LINES

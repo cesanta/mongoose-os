@@ -447,7 +447,7 @@ void update_timer_cb(void *arg) {
         goto error;
       }
 
-      if (!sj_conf_get_str(toks, "version", &s_new_fw_version)) {
+      if (!sj_conf_get_str(toks, "version", NULL, &s_new_fw_version)) {
         goto error;
       }
 
@@ -468,22 +468,22 @@ void update_timer_cb(void *arg) {
       s_new_rom_number = get_current_rom() == 1 ? 0 : 1;
       LOG(LL_DEBUG, ("ROM to write: %d", s_new_rom_number));
 
-      if (!sj_conf_get_str(toks, "parts.fw.src", &s_fw_url)) {
+      if (!sj_conf_get_str(toks, "parts.fw.src", NULL, &s_fw_url)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FW url: %s", s_fw_url));
 
-      if (!sj_conf_get_str(toks, "parts.fs.src", &s_fs_url)) {
+      if (!sj_conf_get_str(toks, "parts.fs.src", NULL, &s_fs_url)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FS url: %s", s_fs_url));
 
-      if (!sj_conf_get_str(toks, "parts.fw.cs_sha1", &s_fw_checksum)) {
+      if (!sj_conf_get_str(toks, "parts.fw.cs_sha1", NULL, &s_fw_checksum)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FW checksum: %s", s_fw_checksum));
 
-      if (!sj_conf_get_str(toks, "parts.fs.cs_sha1", &s_fs_checksum)) {
+      if (!sj_conf_get_str(toks, "parts.fs.cs_sha1", NULL, &s_fs_checksum)) {
         goto error;
       }
       LOG(LL_DEBUG, ("FS checksum: %s", s_fs_checksum));
