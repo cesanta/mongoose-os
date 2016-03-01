@@ -16,7 +16,7 @@ MG_FEATURES_TINY = \
                    -DMG_MAX_HTTP_HEADERS=20 \
                    -DMG_MAX_HTTP_REQUEST_SIZE=1024 \
                    -DMG_MAX_PATH=40 \
-                   -DMG_MAX_HTTP_SEND_IOBUF=1024 \
+                   -DMG_MAX_HTTP_SEND_MBUF=1024 \
                    -DMG_NO_BSD_SOCKETS
 
 V ?= $(VERBOSE)
