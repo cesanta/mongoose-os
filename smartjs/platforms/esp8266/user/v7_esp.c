@@ -13,7 +13,6 @@
 #include "smartjs/src/sj_gpio_js.h"
 #include "smartjs/src/sj_adc_js.h"
 #include "v7_esp.h"
-#include "esp_pwm.h"
 #include "smartjs/src/sj_http.h"
 #include "smartjs/src/sj_mongoose_ws_client.h"
 #include "common/sha1.h"
