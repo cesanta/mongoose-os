@@ -23,7 +23,9 @@
   "http": {
     "enable": true,
     "port": "80",
-    "enable_webdav": true
+    "enable_webdav": true,
+    "upload_acl": "*",
+    "hidden_files": ""
   },
   "update": {
     "manifest_url": "http://127.0.0.1:8081/updates/manifest.json",
@@ -54,5 +56,5 @@
     "stderr_uart": 1,
     "enable_prompt": true
   },
-  "conf_acl": "+*"
+  "conf_acl": "*"
 }

@@ -11,6 +11,7 @@
 #include "common/cs_file.h"
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_config.h"
 
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
@@ -44,7 +45,7 @@ static char s_mac_address[13];
 static const char *mac_address_ptr = s_mac_address;
 static struct mg_connection *listen_conn;
 
-static int load_config_file(const char *filename, int required,
+static int load_config_file(const char *filename, const char *acl, int required,
                             struct sys_config *cfg);
 
 static void export_read_only_vars_to_v7(struct v7 *v7) {
@@ -75,9 +76,10 @@ void expand_mac_address_placeholders(char *str) {
 
 static int load_config_defaults(struct sys_config *cfg) {
   /* TODO(rojer): Figure out what to do about merging two different defaults. */
-  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, 0, cfg)) return 0;
-  if (!load_config_file(CONF_APP_DEFAULTS_FILE, 0, cfg)) return 0;
-  if (!load_config_file(CONF_VENDOR_FILE, 0, cfg)) return 0;
+  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, "*", 0, cfg)) return 0;
+  if (!load_config_file(CONF_APP_DEFAULTS_FILE, cfg->conf_acl, 0, cfg))
+    return 0;
+  if (!load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, 0, cfg)) return 0;
   return 1;
 }
 
@@ -180,10 +182,23 @@ static void factory_reset_handler(struct mg_connection *c, int ev, void *p) {
 static void upload_handler(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
     case MG_EV_HTTP_MULTIPART_REQUEST: {
+      c->user_data = NULL;
       break;
     }
     case MG_EV_HTTP_PART_BEGIN: {
       struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
+
+      if (!sj_conf_check_access(mp->file_name, get_cfg()->http.upload_acl)) {
+        LOG(LL_ERROR, ("%p Not allowed to upload %s", c, mp->file_name));
+        mg_printf(c,
+                  "HTTP/1.1 403 Not Allowed\r\n"
+                  "Content-Type: text/plain\r\n"
+                  "Connection: close\r\n\r\n"
+                  "Not allowed to upload %s\r\n",
+                  mp->file_name);
+        c->flags |= MG_F_SEND_AND_CLOSE;
+        return;
+      }
       LOG(LL_DEBUG, ("%p Begin receiving file: %s", c, mp->file_name));
       FILE *fp = fopen(mp->file_name, "w");
       if (fp == NULL) {
@@ -260,11 +275,17 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
        (unsigned long) c->recv_mbuf.len, (unsigned long) c->send_mbuf.len));
 
   switch (ev) {
+    case MG_EV_ACCEPT: {
+      char addr[32];
+      mg_sock_addr_to_str(&c->sa, addr, sizeof(addr),
+                          MG_SOCK_STRINGIFY_IP | MG_SOCK_STRINGIFY_PORT);
+      LOG(LL_INFO, ("%p HTTP connection from %s", c, addr));
+      break;
+    }
     case MG_EV_HTTP_REQUEST: {
       struct http_message *hm = (struct http_message *) p;
-      LOG(LL_DEBUG,
-          ("[%.*s] -> [%.*s]\n", (int) ((hm->body.p - 1) - hm->message.p),
-           hm->message.p, (int) c->send_mbuf.len, c->send_mbuf.buf));
+      LOG(LL_INFO, ("%p %.*s %.*s", c, (int) hm->method.len, hm->method.p,
+                    (int) hm->uri.len, hm->uri.p));
 
       mg_serve_http(c, p, s_http_server_opts);
       c->flags |= MG_F_SEND_AND_CLOSE;
@@ -296,6 +317,9 @@ static int init_web_server(const struct sys_config *cfg) {
   if (cfg->http.enable_webdav) {
     s_http_server_opts.dav_document_root = ".";
   }
+  if (cfg->http.hidden_files) {
+    s_http_server_opts.hidden_file_pattern = strdup(cfg->http.hidden_files);
+  }
 
   listen_conn = mg_bind(&sj_mgr, cfg->http.port, mongoose_ev_handler);
   if (!listen_conn) {
@@ -315,21 +339,21 @@ static int init_web_server(const struct sys_config *cfg) {
   return 1;
 }
 
-static int load_config_file(const char *filename, int required,
+static int load_config_file(const char *filename, const char *acl, int required,
                             struct sys_config *cfg) {
-  char *data, *acl = NULL;
+  char *data, *acl_copy;
   size_t size;
   int result = 1;
   LOG(LL_DEBUG, ("=== Loading %s", filename));
   data = cs_read_file(filename, &size);
   /* Make a temporary copy, in case it gets overridden while loading. */
-  acl = (cfg->conf_acl != NULL ? strdup(cfg->conf_acl) : NULL);
-  if (data == NULL || !parse_sys_config(data, acl, required, cfg)) {
+  acl_copy = (acl != NULL ? strdup(acl) : NULL);
+  if (data == NULL || !parse_sys_config(data, acl_copy, required, cfg)) {
     LOG(required ? LL_ERROR : LL_INFO, ("Failed to load %s", filename));
     result = 0;
   }
   free(data);
-  free(acl);
+  free(acl_copy);
   return result;
 }
 
@@ -341,7 +365,7 @@ int init_device(struct v7 *v7) {
   memset(&s_cfg, 0, sizeof(s_cfg));
   if (!load_config_defaults(&s_cfg)) return 0;
   /* Successfully loaded system config. Try overrides - they are optional. */
-  load_config_file(CONF_FILE, 0, &s_cfg);
+  load_config_file(CONF_FILE, s_cfg.conf_acl, 0, &s_cfg);
 
   REGISTER_RO_VAR(fw_id, &build_id);
   REGISTER_RO_VAR(fw_timestamp, &build_timestamp);

@@ -47,7 +47,7 @@ int sj_conf_get_bool(struct json_token *toks, const char *key, const char *acl,
     LOG(LL_ERROR, ("key [%s] is not boolean", key));
   } else {
     *val = tok->type == JSON_TYPE_TRUE ? 1 : 0;
-    LOG(LL_DEBUG, ("Loaded: %s=%d", key, *val));
+    LOG(LL_DEBUG, ("Loaded: %s=%s", key, (*val ? "true" : "false")));
     result = 1;
   }
   return result;
@@ -88,13 +88,17 @@ void sj_conf_emit_int(struct mbuf *b, int v) {
 int sj_conf_check_access(const char *key, const char *acl) {
   int key_len;
   struct mg_str entry;
-  if (acl == NULL) return 1;
+  if (acl == NULL) return 0;
   key_len = strlen(key);
   while ((acl = mg_next_comma_list_entry(acl, &entry, NULL)) != NULL) {
     int result;
     if (entry.len == 0) continue;
     result = (entry.p[0] != '-');
-    if (mg_match_prefix(entry.p + 1, entry.len - 1, key) == key_len) {
+    if (entry.p[0] == '-' || entry.p[0] == '+') {
+      entry.p++;
+      entry.len--;
+    }
+    if (mg_match_prefix(entry.p, entry.len, key) == key_len) {
       return result;
     }
   }

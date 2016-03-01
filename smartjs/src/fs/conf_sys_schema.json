@@ -28,6 +28,8 @@
   ["http.port", "i", {"title": "Listening Port"}],
   ["http.enable", "b", {"title": "Enable HTTP Server"}],
   ["http.enable_webdav", "b", {"title": "Enable WebDAV access"}],
+  ["http.upload_acl", "s", {"title": "Upload file ACL"}],
+  ["http.hidden_files", "s", {"title": "Hidden file pattern"}],
 
   ["tls", "o", {"title": "TLS settings"}],
   ["tls.enable", "b", {"title" : "Enable TLS"}],
