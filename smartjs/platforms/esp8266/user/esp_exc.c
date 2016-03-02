@@ -136,26 +136,30 @@ NOINSTR void esp_exception_handler_init() {
 void esp_print_reset_info() {
   struct rst_info *ri = system_get_rst_info();
   const char *reason_str;
+  int print_exc_info = 0;
   switch (ri->reason) {
-    case 0:
+    case REASON_DEFAULT_RST:
       reason_str = "power on";
       break;
-    case 1:
+    case REASON_WDT_RST:
       reason_str = "HW WDT";
+      print_exc_info = 1;
       break;
-    case 2:
+    case REASON_EXCEPTION_RST:
       reason_str = "exception";
+      print_exc_info = 1;
       break;
-    case 3:
+    case REASON_SOFT_WDT_RST:
       reason_str = "SW WDT";
+      print_exc_info = 1;
       break;
-    case 4:
+    case REASON_SOFT_RESTART:
       reason_str = "soft reset";
       break;
-    case 5:
+    case REASON_DEEP_SLEEP_AWAKE:
       reason_str = "deep sleep wake";
       break;
-    case 6:
+    case REASON_EXT_SYS_RST:
       reason_str = "sys reset";
       break;
     default:
@@ -163,8 +167,10 @@ void esp_print_reset_info() {
       break;
   }
   LOG(LL_INFO, ("Reset cause: %u (%s)", ri->reason, reason_str));
-  LOG(LL_INFO,
-      ("Exc info: cause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x vaddr=0x%08x "
-       "depc=0x%08x",
-       ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
+  if (print_exc_info) {
+    LOG(LL_INFO,
+        ("Exc info: cause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x vaddr=0x%08x "
+         "depc=0x%08x",
+         ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
+  }
 }
