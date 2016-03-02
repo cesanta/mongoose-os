@@ -713,6 +713,23 @@ int mg_is_suspended() {
   return s_suspended;
 }
 
+void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
+                                  int interval, int count) {
+  if (nc->sock == INVALID_SOCKET || nc->flags & MG_F_UDP) {
+    return;
+  }
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  struct tcp_pcb *tpcb = cs->pcb.tcp;
+  if (idle > 0 && interval > 0 && count > 0) {
+    tpcb->keep_idle = idle * 1000;
+    tpcb->keep_intvl = interval * 1000;
+    tpcb->keep_cnt = count;
+    tpcb->so_options |= SOF_KEEPALIVE;
+  } else {
+    tpcb->so_options &= ~SOF_KEEPALIVE;
+  }
+}
+
 #ifdef SSL_KRYPTON
 
 static void mg_lwip_ssl_do_hs(struct mg_connection *nc) {

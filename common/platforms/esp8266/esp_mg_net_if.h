@@ -16,6 +16,9 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr);
 
+void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
+                                  int interval, int count);
+
 /* TODO(alashkin): Should we move these functions to mongoose interface? */
 void mg_suspend();
 void mg_resume();

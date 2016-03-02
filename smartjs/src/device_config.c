@@ -79,7 +79,8 @@ static int load_config_defaults(struct sys_config *cfg) {
   if (!load_config_file(CONF_SYS_DEFAULTS_FILE, "*", 0, cfg)) return 0;
   if (!load_config_file(CONF_APP_DEFAULTS_FILE, cfg->conf_acl, 0, cfg))
     return 0;
-  if (!load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, 0, cfg)) return 0;
+  /* Vendor config is optional. */
+  load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, 0, cfg);
   return 1;
 }
 
@@ -363,7 +364,10 @@ int init_device(struct v7 *v7) {
 
   /* Load system defaults - mandatory */
   memset(&s_cfg, 0, sizeof(s_cfg));
-  if (!load_config_defaults(&s_cfg)) return 0;
+  if (!load_config_defaults(&s_cfg)) {
+    LOG(LL_ERROR, ("Failed to load config defaults"));
+    return 0;
+  }
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_FILE, s_cfg.conf_acl, 0, &s_cfg);
 
