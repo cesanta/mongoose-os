@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 #include "common/base64.h"
+#include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
 #include "esp_coredump.h"
@@ -19,7 +20,6 @@
 #include "esp_fs.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
-#include "esp_uart.h"
 #include "esp_uart.h"
 #include "v7_esp.h"
 
@@ -131,4 +131,40 @@ NOINSTR void esp_exception_handler_init() {
 #endif
 
 #endif
+}
+
+void esp_print_reset_info() {
+  struct rst_info *ri = system_get_rst_info();
+  const char *reason_str;
+  switch (ri->reason) {
+    case 0:
+      reason_str = "power on";
+      break;
+    case 1:
+      reason_str = "HW WDT";
+      break;
+    case 2:
+      reason_str = "exception";
+      break;
+    case 3:
+      reason_str = "SW WDT";
+      break;
+    case 4:
+      reason_str = "soft reset";
+      break;
+    case 5:
+      reason_str = "deep sleep wake";
+      break;
+    case 6:
+      reason_str = "sys reset";
+      break;
+    default:
+      reason_str = "???";
+      break;
+  }
+  LOG(LL_INFO, ("Reset cause: %u (%s)", ri->reason, reason_str));
+  LOG(LL_INFO,
+      ("Exc info: cause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x vaddr=0x%08x "
+       "depc=0x%08x",
+       ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
 }

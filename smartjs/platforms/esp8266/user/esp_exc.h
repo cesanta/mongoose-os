@@ -61,5 +61,6 @@ struct regfile {
 
 void esp_exception_handler(struct xtensa_stack_frame *frame);
 void esp_exception_handler_init();
+void esp_print_reset_info();
 
 #endif /* ESP_EXC_INCLUDED */

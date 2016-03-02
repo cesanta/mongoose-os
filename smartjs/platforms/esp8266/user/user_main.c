@@ -116,6 +116,8 @@ void sjs_init(void *dummy) {
     abort();
   }
 
+  esp_print_reset_info();
+
 #ifndef DISABLE_OTA
   init_updater(v7);
 #endif
