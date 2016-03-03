@@ -125,7 +125,7 @@ static enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
     NUM_PROP(tx_fifo_empty_thresh);
     NUM_PROP(tx_fifo_full_thresh);
 
-    BOOL_PROP(swap_rxtx_ctsrts);
+    BOOL_PROP(swap_rxcts_txrts);
 
     NUM_PROP(status_interval_ms);
   }

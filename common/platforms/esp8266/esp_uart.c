@@ -263,7 +263,7 @@ int esp_uart_init(struct esp_uart_config *cfg) {
   if (cfg->uart_no == 0) {
     PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
-    if (cfg->swap_rxtx_ctsrts) {
+    if (cfg->swap_rxcts_txrts) {
       SET_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
                         PERI_IO_UART0_PIN_SWAP);
     } else {
@@ -273,7 +273,7 @@ int esp_uart_init(struct esp_uart_config *cfg) {
   } else {
     PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO2_U);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_U1TXD_BK);
-    if (cfg->swap_rxtx_ctsrts) {
+    if (cfg->swap_rxcts_txrts) {
       SET_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
                         PERI_IO_UART1_PIN_SWAP);
     } else {

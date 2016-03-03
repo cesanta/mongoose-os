@@ -119,6 +119,8 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("[%.*s] requested", (int) hm->uri.len, hm->uri.p));
   char *json = NULL;
+  int status = -1;
+  int rc = 200;
   if (mg_vcmp(&hm->uri, "/conf/defaults") == 0) {
     struct sys_config cfg;
     memset(&cfg, 0, sizeof(cfg));
@@ -128,19 +130,31 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
   } else if (mg_vcmp(&hm->uri, "/conf/current") == 0) {
     json = emit_sys_config(&s_cfg);
   } else if (mg_vcmp(&hm->uri, "/conf/save") == 0) {
-    int status = save_json(&hm->body, CONF_FILE);
-    if (asprintf(&json, "{status: %d, \"msg\": \"%s\"}\n", status,
-                 (status ? "Ok" : "error")) < 0) {
-      json = NULL;
+    status = (save_json(&hm->body, CONF_FILE) != 1);
+    if (status == 0) c->flags |= MG_F_RELOAD_CONFIG;
+  } else if (mg_vcmp(&hm->uri, "/conf/reset") == 0) {
+    struct stat st;
+    if (stat(CONF_FILE, &st) == 0) {
+      status = remove(CONF_FILE);
+    } else {
+      status = 0;
+    }
+    if (status == 0) c->flags |= MG_F_RELOAD_CONFIG;
+  }
+
+  if (json == NULL) {
+    if (asprintf(&json, "{\"status\": %d}\n", status) < 0) {
+      json = "{\"status\": -1}";
+    } else {
+      rc = (status == 0 ? 200 : 500);
     }
   }
-  if (json != NULL) {
+
+  {
     int len = strlen(json);
-    mg_send_head(c, 200, len, JSON_HEADERS);
+    mg_send_head(c, rc, len, JSON_HEADERS);
     mg_send(c, json, len);
     free(json);
-  } else {
-    mg_send_head(c, 500, 0, JSON_HEADERS);
   }
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
@@ -167,16 +181,6 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
   }
   mg_printf_http_chunk(c, "\n}\n");
   mg_printf_http_chunk(c, ""); /* Zero chunk - end of response */
-  c->flags |= MG_F_SEND_AND_CLOSE;
-}
-
-static void factory_reset_handler(struct mg_connection *c, int ev, void *p) {
-  (void) ev;
-  (void) p;
-  LOG(LL_DEBUG, ("Factory reset requested"));
-  remove(CONF_FILE);
-  c->flags |= (MG_F_SEND_AND_CLOSE | MG_F_RELOAD_CONFIG);
-  mg_send_head(c, 200, 0, JSON_HEADERS);
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
 
@@ -330,8 +334,6 @@ static int init_web_server(const struct sys_config *cfg) {
     mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
     mg_register_http_endpoint(listen_conn, "/reboot", reboot_handler);
     mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
-    mg_register_http_endpoint(listen_conn, "/factory_reset",
-                              factory_reset_handler);
     mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
 
     mg_set_protocol_http_websocket(listen_conn);

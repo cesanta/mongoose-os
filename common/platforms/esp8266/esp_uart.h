@@ -26,7 +26,7 @@ struct esp_uart_config {
   int tx_fifo_empty_thresh;
   int tx_fifo_full_thresh;
 
-  int swap_rxtx_ctsrts;
+  int swap_rxcts_txrts;
 
   int status_interval_ms;
 

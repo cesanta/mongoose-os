@@ -272,7 +272,7 @@ This object has the following methods:
     - `rx_fc_ena`: Enable hardware receive flow control (RTS) [`false`].
     - `tx_buf_size`: Transmit buffer size [`256`].
     - `tx_fc_ena`: Enable hardware transmit full control (CTS) [`false`].
-    - `swap_rxtx_ctsrts`: Swap `RX`/`CTS` and `TX`/`RTS` pins [`false`].
+    - `swap_rxcts_txrts`: Swap `RX`/`CTS` and `TX`/`RTS` pins [`false`].
 
 All fields are optional and defaults will be used for the missing ones.
 
