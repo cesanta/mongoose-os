@@ -251,6 +251,7 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
   cfg.hal_erase_f = esp_spiffs_erase;
 
   if (SPIFFS_mount(spf, &cfg, workbuf, fds, fds_size, 0, 0, 0) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("SPIFFS_mount failed: %d", SPIFFS_errno(spf)));
     return SPIFFS_errno(spf);
   }
 
