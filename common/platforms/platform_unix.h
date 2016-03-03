@@ -50,6 +50,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/*
+ * osx correctly avoids defining strtoll when compiling in strict ansi mode.
+ * We require strtoll, and if your embedded pre-c99 compiler lacks one, please
+ * implement a shim.
+ */
+#if !(defined(__DARWIN_C_LEVEL) && __DARWIN_C_LEVEL >= 200809L)
+long long strtoll(const char *, char **, int);
+#endif
+
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
 #define SIZE_T_FMT "zu"

@@ -1,6 +1,6 @@
 #include "v7.h"
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/license.h"
+#line 1 "./v7/src/license.h"
 #endif
 /*
  * Copyright (c) 2013-2014 Cesanta Software Limited
@@ -28,7 +28,7 @@
 #define V7_EXTERN static
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./common/platform.h"
+#line 1 "./common/platform.h"
 #endif
 #ifndef _CS_PLATFORM_H_
 #define _CS_PLATFORM_H_
@@ -83,7 +83,7 @@
 
 #endif /* _CS_PLATFORM_H_ */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/platforms/platform_windows.h"
+#line 1 "./common/platforms/platform_windows.h"
 #endif
 #ifndef _CS_PLATFORM_WINDOWS_H_
 #define _CS_PLATFORM_WINDOWS_H_
@@ -208,7 +208,7 @@ struct dirent *readdir(DIR *dir);
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* _CS_PLATFORM_WINDOWS_H_ */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/platforms/platform_unix.h"
+#line 1 "./common/platforms/platform_unix.h"
 #endif
 #ifndef _CS_PLATFORM_UNIX_H_
 #define _CS_PLATFORM_UNIX_H_
@@ -262,6 +262,15 @@ struct dirent *readdir(DIR *dir);
 #include <sys/types.h>
 #include <unistd.h>
 
+/*
+ * osx correctly avoids defining strtoll when compiling in strict ansi mode.
+ * We require strtoll, and if your embedded pre-c99 compiler lacks one, please
+ * implement a shim.
+ */
+#if !(defined(__DARWIN_C_LEVEL) && __DARWIN_C_LEVEL >= 200809L)
+long long strtoll(const char *, char **, int);
+#endif
+
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
 #define SIZE_T_FMT "zu"
@@ -285,7 +294,7 @@ typedef struct stat cs_stat_t;
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* _CS_PLATFORM_UNIX_H_ */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/platforms/platform_esp_lwip.h"
+#line 1 "./common/platforms/platform_esp_lwip.h"
 #endif
 #ifndef _CS_PLATFORM_ESP_LWIP_H_
 #define _CS_PLATFORM_ESP_LWIP_H_
@@ -333,7 +342,7 @@ typedef struct stat cs_stat_t;
 #endif /* CS_PLATFORM == CS_P_ESP_LWIP */
 #endif /* _CS_PLATFORM_ESP_LWIP_H_ */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/mbuf.h"
+#line 1 "./common/mbuf.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -414,7 +423,7 @@ void mbuf_trim(struct mbuf *);
 
 #endif /* MBUF_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/platforms/platform_cc3200.h"
+#line 1 "./common/platforms/platform_cc3200.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -604,7 +613,7 @@ long int random(void);
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* _CS_PLATFORM_CC3200_H_ */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/utf.h"
+#line 1 "./common/utf.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -677,7 +686,7 @@ char *utfutf(char *s1, char *s2);
 #endif /* __cplusplus */
 #endif /* _UTF_H_ */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/base64.h"
+#line 1 "./common/base64.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -717,7 +726,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #endif
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./common/md5.h"
+#line 1 "./common/md5.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -765,7 +774,7 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./common/sha1.h"
+#line 1 "./common/sha1.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -798,7 +807,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #endif /* __cplusplus */
 #endif /* MG_SHA1_HEADER_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/str_util.h"
+#line 1 "./common/str_util.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -838,7 +847,7 @@ size_t strnlen(const char *s, size_t maxlen);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./common/cs_dirent.h"
+#line 1 "./common/cs_dirent.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -873,7 +882,7 @@ struct dirent *readdir(DIR *dir);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./common/ubjson.h"
+#line 1 "./common/ubjson.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -912,7 +921,7 @@ void cs_ubjson_close_array(struct mbuf *buf);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./common/coroutine.h"
+#line 1 "./common/coroutine.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -1499,7 +1508,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* _COROUTINE_H */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/features_profiles.h"
+#line 1 "./v7/src/features_profiles.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1519,7 +1528,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* V7_FEATURES_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/features_minimal.h"
+#line 1 "./v7/src/features_minimal.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1534,7 +1543,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/features_medium.h"
+#line 1 "./v7/src/features_medium.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1554,7 +1563,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/features_full.h"
+#line 1 "./v7/src/features_full.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1629,7 +1638,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/v7_features.h"
+#line 1 "./v7/src/v7_features.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1646,7 +1655,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* FEATURES_PROFILES_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/internal.h"
+#line 1 "./v7/src/internal.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1815,7 +1824,7 @@ extern void *v7_sp_limit;
 
 #endif /* V7_INTERNAL_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/cs_file.h"
+#line 1 "./common/cs_file.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -1837,7 +1846,7 @@ char *cs_read_file(const char *path, size_t *size);
 char *cs_mmap_file(const char *path, size_t *size);
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/builtin/builtin.h"
+#line 1 "./v7/builtin/builtin.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -1983,7 +1992,7 @@ void init_ubjson(struct v7 *v7);
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_error.h"
+#line 1 "./v7/src/std_error.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -2034,7 +2043,7 @@ V7_PRIVATE void init_error(struct v7 *v7);
 
 #endif /* STD_ERROR_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/mm.h"
+#line 1 "./v7/src/mm.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -2074,7 +2083,7 @@ struct gc_arena {
 
 #endif /* GC_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/parser.h"
+#line 1 "./v7/src/parser.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -2115,7 +2124,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
 
 #endif /* V7_PARSER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/ast.h"
+#line 1 "./v7/src/ast.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -2332,7 +2341,7 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
 #endif /* AST_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/tokenizer.h"
+#line 1 "./v7/src/tokenizer.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -2473,7 +2482,7 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 
 #endif /* V7_TOKENIZER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/types.h"
+#line 1 "./v7/src/types.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -2866,7 +2875,7 @@ struct v7_vec_const {
 
 #endif /* V7_TYPES_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/vm.h"
+#line 1 "./v7/src/vm.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -3016,7 +3025,7 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
 
 #endif /* VM_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/object.h"
+#line 1 "./v7/src/object.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -3159,7 +3168,7 @@ V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
 
 #endif /* OBJECT_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/varint.h"
+#line 1 "./v7/src/varint.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -3185,7 +3194,7 @@ V7_PRIVATE int calc_llen(size_t len);
 
 #endif /* V7_VARINT_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/string.h"
+#line 1 "./v7/src/string.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -3248,7 +3257,7 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 #endif /* V7_STRING_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/bcode.h"
+#line 1 "./v7/src/bcode.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -3930,7 +3939,7 @@ typedef struct {
      * NOTE: valid if only `mode == LIT_MODE__INLINED`
      */
     v7_val_t inline_val;
-  };
+  } v; /* anonymous unions are a c11 feature */
 
   /* mode of literal storage (see `enum lit_mode`) */
   enum lit_mode mode : 1;
@@ -4031,7 +4040,7 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 
 #endif /* BCODE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/exceptions.h"
+#line 1 "./v7/src/exceptions.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4126,7 +4135,7 @@ V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
 
 #endif /* EXCEPTIONS_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/gc.h"
+#line 1 "./v7/src/gc.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4223,7 +4232,7 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
 #endif /* GC_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/eval.h"
+#line 1 "./v7/src/eval.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4260,7 +4269,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 
 #endif /* BCODE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/array.h"
+#line 1 "./v7/src/array.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4286,7 +4295,7 @@ v7_array_get2(struct v7 *v7, v7_val_t arr, unsigned long index, int *has);
 
 #endif /* V7_ARRAY_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/compiler.h"
+#line 1 "./v7/src/compiler.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4316,7 +4325,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 
 #endif /* COMPILER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/cyg_profile.h"
+#line 1 "./v7/src/cyg_profile.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4374,7 +4383,7 @@ void v7_stack_stat_clean(struct v7 *v7);
 
 #endif /* CYG_PROFILE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/conversion.h"
+#line 1 "./v7/src/conversion.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4613,7 +4622,7 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
 
 #endif /* CONVERSION_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/slre.h"
+#line 1 "./v7/src/slre.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4706,7 +4715,7 @@ int slre_get_flags(struct slre_prog *);
 
 #endif /* SLRE_HEADER_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_string.h"
+#line 1 "./v7/src/std_string.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4733,7 +4742,7 @@ V7_PRIVATE void init_string(struct v7 *v7);
 
 #endif /* STD_STRING_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/stdlib.h"
+#line 1 "./v7/src/stdlib.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4761,7 +4770,7 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
 
 #endif /* STDLIB_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/heapusage.h"
+#line 1 "./v7/src/heapusage.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -4806,7 +4815,7 @@ size_t heapusage_allocs_cnt(void);
 
 #endif /* _HEAPUSAGE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/regexp.h"
+#line 1 "./v7/src/regexp.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4822,7 +4831,7 @@ V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
 
 #endif /* V7_REGEXP_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/freeze.h"
+#line 1 "./v7/src/freeze.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4854,7 +4863,7 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
 
 #endif /* FREEZE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_array.h"
+#line 1 "./v7/src/std_array.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4878,7 +4887,7 @@ V7_PRIVATE void init_array(struct v7 *v7);
 
 #endif /* STD_ARRAY_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_boolean.h"
+#line 1 "./v7/src/std_boolean.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4902,7 +4911,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7);
 
 #endif /* STD_BOOLEAN_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_date.h"
+#line 1 "./v7/src/std_date.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4929,7 +4938,7 @@ V7_PRIVATE void init_date(struct v7 *v7);
 #endif /* V7_ENABLE__Date */
 #endif /* STD_DATE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_function.h"
+#line 1 "./v7/src/std_function.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4953,7 +4962,7 @@ V7_PRIVATE void init_function(struct v7 *v7);
 
 #endif /* STD_FUNCTION_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_json.h"
+#line 1 "./v7/src/std_json.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4977,7 +4986,7 @@ V7_PRIVATE void init_json(struct v7 *v7);
 
 #endif /* STD_JSON_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_math.h"
+#line 1 "./v7/src/std_math.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5004,7 +5013,7 @@ V7_PRIVATE void init_math(struct v7 *v7);
 #endif /* V7_ENABLE__Math */
 #endif /* STD_MATH_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_number.h"
+#line 1 "./v7/src/std_number.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5028,7 +5037,7 @@ V7_PRIVATE void init_number(struct v7 *v7);
 
 #endif /* STD_NUMBER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_object.h"
+#line 1 "./v7/src/std_object.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5057,7 +5066,7 @@ V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res);
 
 #endif /* STD_OBJECT_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/std_regex.h"
+#line 1 "./v7/src/std_regex.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5089,7 +5098,7 @@ V7_PRIVATE void init_regex(struct v7 *v7);
 
 #endif /* STD_REGEX_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./v7/src/js_stdlib.h"
+#line 1 "./v7/src/js_stdlib.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5114,7 +5123,7 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
 #endif /* JS_STDLIB_H_INCLUDED */
 #ifndef V7_EXPORT_INTERNAL_HEADERS
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/mbuf.c"
+#line 1 "./src/../../common/mbuf.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5211,7 +5220,7 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/utf.c"
+#line 1 "./src/../../common/utf.c"
 #endif
 /*
  * The authors of this software are Rob Pike and Ken Thompson.
@@ -6575,7 +6584,7 @@ const char *utfnshift(const char *s, long m) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/base64.c"
+#line 1 "./src/../../common/base64.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -6778,7 +6787,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/md5.c"
+#line 1 "./src/../../common/md5.c"
 #endif
 /*
  * This code implements the MD5 message-digest algorithm.
@@ -7025,7 +7034,7 @@ char *cs_md5(char buf[33], ...) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/sha1.c"
+#line 1 "./src/../../common/sha1.c"
 #endif
 /* Copyright(c) By Steve Reid <steve@edmweb.com> */
 /* 100% Public Domain */
@@ -7279,7 +7288,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t keylen,
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/str_util.c"
+#line 1 "./src/../../common/str_util.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -7550,7 +7559,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/cs_dirent.c"
+#line 1 "./src/../../common/cs_dirent.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -7688,7 +7697,7 @@ int mkdir(const char *path, mode_t mode) {
 /* ISO C requires a translation unit to contain at least one declaration */
 typedef int cs_dirent_dummy;
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/ubjson.c"
+#line 1 "./src/../../common/ubjson.c"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -7856,7 +7865,7 @@ void cs_ubjson_close_array(struct mbuf *buf) {
 void cs_ubjson_dummy();
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/cs_file.c"
+#line 1 "./src/../../common/cs_file.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -7908,7 +7917,7 @@ char *cs_mmap_file(const char *path, size_t *size) {
 }
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../../common/coroutine.c"
+#line 1 "./src/../../common/coroutine.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -8074,7 +8083,7 @@ void cr_context_free(struct cr_ctx *p_ctx) {
   mbuf_free(&p_ctx->stack_ret);
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../builtin/file.c"
+#line 1 "./src/../builtin/file.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -8424,7 +8433,7 @@ void init_file(struct v7 *v7) {
 }
 #endif /* NO_LIBC */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../builtin/socket.c"
+#line 1 "./src/../builtin/socket.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -8690,7 +8699,7 @@ void init_socket(struct v7 *v7) {
 }
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../builtin/crypto.c"
+#line 1 "./src/../builtin/crypto.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -8850,7 +8859,7 @@ void init_crypto(struct v7 *v7) {
 #endif
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/../builtin/ubjson.c"
+#line 1 "./src/../builtin/ubjson.c"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -9164,7 +9173,7 @@ void init_ubjson(struct v7 *v7) {
 }
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/varint.c"
+#line 1 "./src/varint.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -9231,7 +9240,7 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
 }
 #endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/tokenizer.c"
+#line 1 "./src/tokenizer.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -9705,7 +9714,7 @@ int main(void) {
 }
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/ast.c"
+#line 1 "./src/ast.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -10604,7 +10613,7 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
   }
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/bcode.c"
+#line 1 "./src/bcode.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -10911,11 +10920,11 @@ V7_PRIVATE lit_t bcode_add_lit(struct bcode_builder *bbuilder, val_t val) {
       bcode_is_inline_func(bbuilder->v7, val) || v7_is_number(val)) {
     /* literal should be inlined (it's `bcode_op_lit()` who does this) */
     lit.mode = LIT_MODE__INLINED;
-    lit.inline_val = val;
+    lit.v.inline_val = val;
   } else {
     /* literal will now be added to the literal table */
     lit.mode = LIT_MODE__TABLE;
-    lit.lit_idx = bbuilder->lit.len / sizeof(val);
+    lit.v.lit_idx = bbuilder->lit.len / sizeof(val);
 
 #if V7_ENABLE__Memory__stats
     bbuilder->v7->bcode_lit_total_size -= bbuilder->lit.len;
@@ -11015,17 +11024,18 @@ V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
 
   switch (lit.mode) {
     case LIT_MODE__TABLE:
-      bcode_add_varint(bbuilder, lit.lit_idx + BCODE_MAX_INLINE_TYPE_TAG);
+      bcode_add_varint(bbuilder, lit.v.lit_idx + BCODE_MAX_INLINE_TYPE_TAG);
       break;
 
     case LIT_MODE__INLINED:
-      if (v7_is_string(lit.inline_val)) {
+      if (v7_is_string(lit.v.inline_val)) {
         size_t len;
-        const char *s = v7_get_string_data(bbuilder->v7, &lit.inline_val, &len);
+        const char *s =
+            v7_get_string_data(bbuilder->v7, &lit.v.inline_val, &len);
         bcode_add_varint(bbuilder, BCODE_INLINE_STRING_TYPE_TAG);
         bcode_add_varint(bbuilder, len);
         bcode_ops_append(bbuilder, s, len + 1 /* nul term */);
-      } else if (v7_is_number(lit.inline_val)) {
+      } else if (v7_is_number(lit.v.inline_val)) {
         bcode_add_varint(bbuilder, BCODE_INLINE_NUMBER_TYPE_TAG);
         /*
          * TODO(dfrank): we can save some memory by storing string
@@ -11036,8 +11046,8 @@ V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
          * `BCODE_INLINE_S08_TYPE_TAG`, `BCODE_INLINE_S16_TYPE_TAG`, etc, since
          * integers are the most common numbers for sure.
          */
-        bcode_ops_append(bbuilder, &lit.inline_val, sizeof(lit.inline_val));
-      } else if (is_js_function(lit.inline_val)) {
+        bcode_ops_append(bbuilder, &lit.v.inline_val, sizeof(lit.v.inline_val));
+      } else if (is_js_function(lit.v.inline_val)) {
 /*
  * TODO(dfrank): implement `bcode_serialize_*` more generically, so
  * that they can write to buffer instead of a `FILE`. Then, remove this
@@ -11049,7 +11059,7 @@ V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
         long len = 0;
         char *p;
 
-        func = to_js_function(lit.inline_val);
+        func = to_js_function(lit.v.inline_val);
 
         /* we inline functions if only we're precompiling */
         assert(bbuilder->v7->is_precompiling);
@@ -11404,7 +11414,7 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/eval.c"
+#line 1 "./src/eval.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -13625,7 +13635,7 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   return b_exec(v7, NULL, 0, func, args, this_obj, 0, 0, is_constructor, res);
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/vm.c"
+#line 1 "./src/vm.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -14259,7 +14269,7 @@ int v7_is_truthy(struct v7 *v7, val_t v) {
 
 /* }}} Helpers */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/exec.c"
+#line 1 "./src/exec.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -14418,7 +14428,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 }
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/util.c"
+#line 1 "./src/util.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -14466,7 +14476,7 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
   }
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/string.c"
+#line 1 "./src/string.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -15014,7 +15024,7 @@ const char *v7_to_cstring(struct v7 *v7, v7_val_t *value) {
   return s;
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/array.c"
+#line 1 "./src/array.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -15386,7 +15396,7 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
   return v7_array_set_throwing(v7, arr, v7_array_length(v7, arr), v, res);
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/object.c"
+#line 1 "./src/object.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -16147,7 +16157,7 @@ v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto) {
 
 /* }}} Object prototypes */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/regexp.c"
+#line 1 "./src/regexp.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -16220,7 +16230,7 @@ int v7_is_regexp(struct v7 *v7, val_t v) {
 
 #endif /* V7_ENABLE__RegExp */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/exceptions.c"
+#line 1 "./src/exceptions.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -16339,7 +16349,7 @@ clean:
   return rcode;
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/conversion.c"
+#line 1 "./src/conversion.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -17123,7 +17133,7 @@ clean:
   return rcode;
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/gc.c"
+#line 1 "./src/gc.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -18005,7 +18015,7 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
 #endif
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/freeze.c"
+#line 1 "./src/freeze.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -18167,7 +18177,7 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
 
 #endif
 #ifdef V7_MODULE_LINES
-#line 0 "./src/parser.c"
+#line 1 "./src/parser.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -20757,7 +20767,7 @@ const char *v7_get_parser_error(struct v7 *v7) {
   return v7->error_msg;
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/compiler.c"
+#line 1 "./src/compiler.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -22730,7 +22740,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
   return rcode;
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/stdlib.c"
+#line 1 "./src/stdlib.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -23043,7 +23053,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_js_stdlib(v7);
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/js_stdlib.c"
+#line 1 "./src/js_stdlib.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -23202,7 +23212,7 @@ static const char * const js_functions[] = {
 }
 #endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/slre.c"
+#line 1 "./src/slre.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -24882,7 +24892,7 @@ int main(int argc, char **argv) {
 
 #endif /* V7_ENABLE__RegExp */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/heapusage.c"
+#line 1 "./src/heapusage.c"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -25053,7 +25063,7 @@ size_t heapusage_allocs_cnt(void) {
 
 #endif /* V7_HEAPUSAGE_ENABLE */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/cyg_profile.c"
+#line 1 "./src/cyg_profile.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -25308,7 +25318,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 #endif /* V7_ENABLE_STACK_TRACKING */
 #endif /* V7_CYG_PROFILE_ON */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_object.c"
+#line 1 "./src/std_object.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -25861,7 +25871,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, v7->vals.object_prototype, "valueOf", Obj_valueOf);
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_error.c"
+#line 1 "./src/std_error.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -25961,7 +25971,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
   }
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_number.c"
+#line 1 "./src/std_number.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -26212,7 +26222,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_json.c"
+#line 1 "./src/std_json.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -26256,7 +26266,7 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_array.c"
+#line 1 "./src/std_array.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -27108,7 +27118,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_boolean.c"
+#line 1 "./src/std_boolean.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -27216,7 +27226,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_math.c"
+#line 1 "./src/std_math.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -27477,7 +27487,7 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 
 #endif /* V7_ENABLE__Math */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_string.c"
+#line 1 "./src/std_string.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -28710,7 +28720,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
          v7_mk_cfunction(Str_blen));
 }
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_date.c"
+#line 1 "./src/std_date.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -29897,7 +29907,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 
 #endif /* V7_ENABLE__Date */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_function.c"
+#line 1 "./src/std_function.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -30116,7 +30126,7 @@ V7_PRIVATE void init_function(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/std_regex.c"
+#line 1 "./src/std_regex.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -30460,7 +30470,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 
 #endif /* V7_ENABLE__RegExp */
 #ifdef V7_MODULE_LINES
-#line 0 "./src/main.c"
+#line 1 "./src/main.c"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
