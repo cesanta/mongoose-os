@@ -85,7 +85,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_i2c_js.c sj_spi_js.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
             sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
             sj_mongoose_ws_client.c ubjserializer.c clubby_proto.c \
-            sj_clubby.c sj_common.c
+            sj_clubby.c sj_common.c miniz.c
 
 ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
@@ -140,6 +140,10 @@ FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON -DESP_UMM_ENABLE \
+
+MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
+              -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
+              -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 
 MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP
 
@@ -248,7 +252,8 @@ FW_META_CMD = $(COMMON_PATH)/tools/fw_meta.py
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          $(APP_CFLAGS) $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS)
+          $(APP_CFLAGS) $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS) \
+          $(MINIZ_FLAGS)
 
 ifneq "${OTA}" "1"
 CFLAGS += -DFS_ADDR=$(FS_ADDR) -DDISABLE_OTA

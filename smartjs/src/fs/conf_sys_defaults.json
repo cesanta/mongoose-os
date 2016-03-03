@@ -30,7 +30,8 @@
   },
   "update": {
     "manifest_url": "http://127.0.0.1:8081/updates/manifest.json",
-    "server_timeout": 10
+    "server_timeout": 10,
+    "update_to_any_version" : false
   },
   "tls": {
     "enable": false,

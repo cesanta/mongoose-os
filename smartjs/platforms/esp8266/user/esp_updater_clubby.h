@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef ESP_UPDATER_H_INCLUDED
-#define ESP_UPDATER_H_INCLUDED
+#ifndef ESP_UPDATER_CLUBBY_H_INCLUDED
+#define ESP_UPDATER_CLUBBY_H_INCLUDED
 
 #ifndef DISABLE_OTA
 
@@ -25,7 +25,7 @@ enum update_status {
   US_NOTHING_TODO
 };
 
-void init_updater(struct v7 *v7);
+void init_updater_clubby(struct v7 *v7);
 
 void update_start(const char *metadata_url);
 

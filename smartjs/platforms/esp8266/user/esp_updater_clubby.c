@@ -7,8 +7,8 @@
 #ifndef DISABLE_OTA
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
-#include "smartjs/platforms/esp8266/user/esp_updater.h"
-#include "rboot/rboot/appcode/rboot-api.h"
+#include "smartjs/platforms/esp8266/user/esp_updater_clubby.h"
+#include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 #include "smartjs/src/sj_config.h"
 #include "smartjs/src/device_config.h"
 #include "smartjs/src/sj_mongoose.h"
@@ -1008,14 +1008,7 @@ static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-static void handle_update_req(struct mg_connection *c, int ev, void *p) {
-  (void) c;
-  (void) ev;
-  (void) p;
-  LOG(LL_DEBUG, ("Incoming update request"));
-}
-
-void init_updater(struct v7 *v7) {
+void init_updater_clubby(struct v7 *v7) {
   s_v7 = v7;
   v7_val_t updater = v7_mk_object(v7);
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
@@ -1046,8 +1039,6 @@ void init_updater(struct v7 *v7) {
 
   sj_clubby_register_global_command(clubby_cmd_ready, handle_clubby_ready,
                                     NULL);
-
-  device_register_http_endpoint("/update", handle_update_req);
 }
 
 #endif /* DISABLE_OTA */

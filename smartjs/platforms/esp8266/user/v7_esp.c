@@ -16,7 +16,6 @@
 #include "smartjs/src/sj_http.h"
 #include "smartjs/src/sj_mongoose_ws_client.h"
 #include "common/sha1.h"
-#include "esp_updater.h"
 
 struct v7 *v7;
 

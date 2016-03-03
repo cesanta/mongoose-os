@@ -146,7 +146,9 @@ def cmd_create_manifest(args):
 def cmd_create_fw(args):
     manifest = json.load(open(args.manifest))
     arc_dir = '%s-%s' % (manifest['name'], manifest['version'])
-    with zipfile.ZipFile(args.output, 'w', zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(args.output, 'w', zipfile.ZIP_STORED) as zf:
+        manifest_arc_name = os.path.join(arc_dir, FW_MANIFEST_FILE_NAME)
+        zf.writestr(manifest_arc_name, json.dumps(manifest, indent=2, sort_keys=True))
         for _, part in manifest['parts'].items():
             if 'src' not in part:
                 continue
@@ -157,8 +159,6 @@ def cmd_create_fw(args):
             arc_file = os.path.join(arc_dir, os.path.basename(src_file))
             zf.write(src_file, arc_file)
             part['src'] = os.path.basename(arc_file)
-        manifest_arc_name = os.path.join(arc_dir, FW_MANIFEST_FILE_NAME)
-        zf.writestr(manifest_arc_name, json.dumps(manifest, indent=2, sort_keys=True))
 
 
 def cmd_get(args):

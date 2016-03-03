@@ -9,7 +9,7 @@
 // OTA code based on SDK sample from Espressif.
 //////////////////////////////////////////////////
 
-#include <rboot.h>
+#include "../rboot.h"
 
 #ifdef __cplusplus
 extern "C" {
