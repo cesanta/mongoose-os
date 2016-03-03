@@ -37,12 +37,14 @@
  */
 static struct regfile regs;
 
-IRAM NOINSTR static void handle_exception(struct regfile *regs) {
+/* This is system_restart_local, renamed so we can intercept WDT. */
+void system_restart_local_sdk();
+
+IRAM NOINSTR static void handle_exception(int cause, struct regfile *regs) {
   xthal_set_intenable(0);
 
 #if defined(ESP_COREDUMP) && !defined(ESP_COREDUMP_NOAUTO)
-  fprintf(stderr, "Dumping core\n");
-  esp_dump_core(regs);
+  esp_dump_core(cause, regs);
 #else
   printf("if you want to dump core, type 'y'");
 #ifdef ESP_GDB_SERVER
@@ -82,21 +84,40 @@ IRAM NOINSTR static void handle_exception(struct regfile *regs) {
  * user stack. This might be different in other execution modes on the
  * quite variegated xtensa platform family, but that's how it works on ESP8266.
  */
-IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
-  uint32_t cause = RSR(EXCCAUSE);
-  uint32_t vaddr = RSR(EXCVADDR);
-  fprintf(stderr, "\nTrap %d: pc=%p va=%p\n", cause, (void *) frame->pc,
-          (void *) vaddr);
-  memcpy(&regs.a[2], frame->a, sizeof(frame->a));
 
+NOINSTR void regs_from_xtos_frame(UserFrame *frame) {
   regs.a[0] = frame->a0;
-  regs.a[1] = (uint32_t) frame + ESP_EXC_SP_OFFSET;
+  regs.a[1] = (uint32_t) frame + ESF_TOTALSIZE;
+  regs.a[2] = frame->a2;
+  regs.a[3] = frame->a3;
+  regs.a[4] = frame->a4;
+  regs.a[5] = frame->a5;
+  regs.a[6] = frame->a6;
+  regs.a[7] = frame->a7;
+  regs.a[8] = frame->a8;
+  regs.a[9] = frame->a9;
+  regs.a[10] = frame->a10;
+  regs.a[11] = frame->a11;
+  regs.a[12] = frame->a12;
+  regs.a[13] = frame->a13;
+  regs.a[14] = frame->a14;
+  regs.a[15] = frame->a15;
   regs.pc = frame->pc;
   regs.sar = frame->sar;
-  regs.ps = frame->ps;
   regs.litbase = RSR(LITBASE);
+  regs.sr176 = 0;
+  regs.sr208 = 0;
+  regs.ps = frame->ps;
+}
 
-  handle_exception(&regs);
+NOINSTR void esp_exception_handler(UserFrame *frame) {
+  /* Not soted in the frame's fields for some reason. */
+  uint32_t cause = RSR(EXCCAUSE);
+  uint32_t vaddr = RSR(EXCVADDR);
+  fprintf(stderr, "\nTrap %u: pc=%p va=%p\n", cause, (void *) frame->pc,
+          (void *) vaddr);
+  regs_from_xtos_frame(frame);
+  handle_exception(cause, &regs);
 
   fprintf(stderr, "rebooting\n");
   fs_flush_stderr();
@@ -106,7 +127,7 @@ IRAM NOINSTR void esp_exception_handler(struct xtensa_stack_frame *frame) {
    * cannot be done from exc handler and only after cleanup it calls
    * `system_restart_local`.
    */
-  system_restart_local();
+  system_restart_local_sdk();
 }
 
 NOINSTR void esp_exception_handler_init() {
@@ -173,4 +194,50 @@ void esp_print_reset_info() {
          "depc=0x%08x",
          ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
   }
+}
+
+NOINSTR void system_restart_local() {
+  struct rst_info ri;
+  system_rtc_mem_read(0, &ri, sizeof(ri));
+  if (ri.reason == REASON_SOFT_WDT_RST) {
+    LOG(LL_INFO,
+        ("WDT reset, info: exccause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x "
+         "vaddr=0x%08x depc=0x%08x",
+         ri.exccause, ri.epc1, ri.epc2, ri.epc3, ri.excvaddr, ri.depc));
+#ifdef ESP_COREDUMP
+    /* So, here's how we got here:
+     *  0) system_restart_local (that's us!) - 64 byte frame.
+     *  1) pp_soft_wdt_feed_local - 32 bytes.
+     *  2) static local function in the SDK, probably wDev_something - 16 bytes.
+     *  3) wDev_ProcessFiq - 48 bytes.
+     *  4) _xtos_l1int_handler - in ROM, ret 0x4000050c, no stack of its own
+     *  5) XTOS user vector mode exception stack frame,
+     *     aka struct UserFrame - 256 bytes (ESF_TOTALSIZE)
+     *  6) ... pre-interrupt stack.
+     *
+     * Needless to say, stack frame sizes are less than reliable. So we try to
+     * make our code more robust in the face of SDK changes by:
+     *  1) Searching the stack for 0x4000050c first. This is the return address
+     *     of the int handler in ROM, it will not change. This we will find in
+     *     wDev_ProcessFiq's stack frame (note: it is compiled with something
+     *     other than GCC and return address is not at the end of the frame but
+     *     in the middle).
+     *  2) Searching for the epc1 value from reset info, which is the PC value
+     *     which is the first field of the UserFrame struct. wDev_ProcessFiq
+     *     seems to be something generic enough that it doesn't care about PC,
+     *     so it's unlikely that it will appear on its stack.
+     * We assume that stack frames are 32-bit aligned, which seems reasonabe.
+     */
+    uint32_t *sp = (uint32_t *) &ri;
+    while (sp < (uint32_t *) 0x40000000 && *sp != 0x4000050c) sp++;
+    while (sp < (uint32_t *) 0x40000000 && *sp != ri.epc1) sp++;
+    if (sp < (uint32_t *) 0x40000000) {
+      regs_from_xtos_frame((UserFrame *) sp);
+      esp_dump_core(100 /* not really an exception */, &regs);
+    }
+#endif
+  }
+  fprintf(stderr, "rebooting\n");
+  fs_flush_stderr();
+  system_restart_local_sdk();
 }

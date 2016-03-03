@@ -46,7 +46,7 @@ static NOINSTR void emit_core_dump_section(const char *name, uint32_t addr,
                                            uint32_t size) {
   struct cs_base64_ctx ctx;
   int col_counter = 0;
-  fprintf(stderr, ",\"%s\": {\"addr\": %u, \"data\": \"", name, addr);
+  fprintf(stderr, ", \"%s\": {\"addr\": %u, \"data\": \"", name, addr);
   cs_base64_init(&ctx, core_dump_emit_char, &col_counter);
 
   uint32_t end = addr + size;
@@ -60,8 +60,12 @@ static NOINSTR void emit_core_dump_section(const char *name, uint32_t addr,
   fprintf(stderr, "\"}\n");
 }
 
-NOINSTR void esp_dump_core(struct regfile *regs) {
-  fprintf(stderr, "--- BEGIN CORE DUMP ---\n{\"arch\": \"ESP8266\"");
+NOINSTR void esp_dump_core(int cause, struct regfile *regs) {
+  fprintf(stderr,
+          "Dumping core\n"
+          "--- BEGIN CORE DUMP ---\n"
+          "{\"arch\": \"ESP8266\", \"cause\": %d",
+          cause);
   emit_core_dump_section("REGS", (uintptr_t) regs, sizeof(*regs));
   emit_core_dump_section("DRAM", 0x3FFE8000, 0x18000);
   /* rtos relocates vectors here */

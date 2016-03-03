@@ -308,6 +308,9 @@ endif
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
 $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
+# Rename system_restart_local so it can be overridden to intercept WDT.
+	$(Q) $(OBJCOPY) --redefine-sym system_restart_local=system_restart_local_sdk \
+	  /opt/Espressif/ESP8266_SDK/lib/libmain_ota.a
 	$(link) $(LD_WRAPPERS)
 
 # Symbol check: make sure app doesn't override SDK lib symbols.
@@ -335,7 +338,6 @@ $(APP_AR): $(OBJS)
 # Move strings to flash too, we have the handler.
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
 	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
-
 
 # LWIP.
 $(LWIP_AR): $(LWIP_PATH)

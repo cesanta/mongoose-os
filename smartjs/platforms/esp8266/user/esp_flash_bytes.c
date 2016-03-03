@@ -25,8 +25,7 @@
  * target register, patches up the program counter to point to the next
  * instruction and resumes execution.
  */
-IRAM NOINSTR void flash_emul_exception_handler(
-    struct xtensa_stack_frame *frame) {
+IRAM NOINSTR void flash_emul_exception_handler(UserFrame *frame) {
   uint32_t vaddr = RSR(EXCVADDR);
 
   /*
@@ -70,9 +69,6 @@ IRAM NOINSTR void flash_emul_exception_handler(
     return;
   }
 
-  //  printf("READING INSTRUCTION FROM %p\n", (void *) frame->pc);
-  //  printf("AT register %d\n", at);
-
   if ((instr & 0xf00f) == 0x2) {
     /* l8ui at, as, imm       r = 0 */
     val = read_unaligned_byte((uint8_t *) vaddr);
@@ -107,11 +103,12 @@ IRAM NOINSTR void flash_emul_exception_handler(
     return;
   }
 
-  /* a0 and a1 are never used as scratch registers */
-  frame->a[at - 2] = val;
+  /*
+   * a0 and a1 are never used as scratch registers.
+   * Here we assume that a2...15 are laid out contiguously in the struct.
+   */
+  *(&frame->a2 + at - 2) = val;
   frame->pc += 3;
-
-  // printf("PC FIXED UP RETURNING to %p\n", (void *) frame->pc);
 }
 
 NOINSTR void flash_emul_init() {

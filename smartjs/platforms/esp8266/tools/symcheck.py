@@ -14,6 +14,7 @@ pvPortMalloc
 pvPortCalloc
 pvPortZalloc
 pvPortRealloc
+system_restart_local
 vPortFree
 xPortGetFreeHeapSize
 xPortWantedSizeAlign
