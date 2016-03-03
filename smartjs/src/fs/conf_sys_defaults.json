@@ -13,6 +13,7 @@
       "pass": "Elduderino",
       "hidden": false,
       "channel": 6,
+      "max_connections": 10,
       "ip": "192.168.4.1",
       "netmask": "255.255.255.0",
       "gw": "192.168.4.1",

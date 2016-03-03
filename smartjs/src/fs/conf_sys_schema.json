@@ -14,6 +14,7 @@
   ["wifi.ap.pass", "s", {"title": "Password"}],
   ["wifi.ap.hidden", "b", {"title": "Hide SSID"}],
   ["wifi.ap.channel", "i", {"title": "Channel"}],
+  ["wifi.ap.max_connections", "i", {"title": "Max connections"}],
   ["wifi.ap.dhcp_start", "s", {"title": "DHCP Start Address"}],
   ["wifi.ap.dhcp_end", "s", {"title": "DHCP End Address"}],
   ["wifi.ap.netmask", "s", {"title": "DHCP Network Mask"}],
