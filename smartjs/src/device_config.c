@@ -308,7 +308,9 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
 
 void device_register_http_endpoint(const char *uri,
                                    mg_event_handler_t handler) {
-  mg_register_http_endpoint(listen_conn, uri, handler);
+  if (listen_conn != NULL) {
+    mg_register_http_endpoint(listen_conn, uri, handler);
+  }
 }
 
 static int init_web_server(const struct sys_config *cfg) {
