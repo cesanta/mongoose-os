@@ -101,7 +101,7 @@ var server = Http.createServer(function(req, res) {
   } else {
     res.serve();
   }
-}).listen(80);
+}).listen(8080);
 
 ```
 - Upload files to the device: start FlashNChips, go to File/Upload,
@@ -110,7 +110,7 @@ var server = Http.createServer(function(req, res) {
   and password of your WiFi network.
 - After couple of seconds, type `Wifi.ip()`. Notice the IP address given.
 - InIn the FlashNChips console, type `File.eval('http_server_1.js')`.
-- Start web browser, point to the module's IP address
+- Start web browser, point to the module's IP address and port 8080, eg: 192.168.1.148:8080
 
 image:smartjs/http_server_1.png[width="800"]
 
@@ -123,3 +123,11 @@ image:smartjs/http_server_2.png[]
 - Notice HTTP server messages in the console log
 
 image:smartjs/http_server_3.png[]
+
+- Note: if you want to create a server on port 80, you have to make sure the
+  config web server is off (by unchecking the `Enable HTTP Server` config setting) or moved to another port.
+  You can do this from the serial promp itself with:
+```
+Sys.conf.http.enable = false;
+Sys.conf.save(true);
+```
