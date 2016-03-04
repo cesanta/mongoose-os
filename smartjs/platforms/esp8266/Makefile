@@ -18,7 +18,7 @@ APP_PATH = $(subst $(REPO_ABS_PATH),/cesanta,$(CURDIR))
 MAKEFLAGS += w
 
 all clean:
-	@docker run --rm -i -v $(REPO_ABS_PATH):/cesanta $(SDK_VERSION) \
+	@docker run --rm -i -v $(REPO_ABS_PATH):/cesanta $(DOCKER_EXTRA) $(SDK_VERSION) \
 		//bin/bash -c "\
 			if [ -d /cesanta/v7 ] ; then make -C /cesanta/v7 v7.c ; fi && \
 			if [ -d /cesanta/krypton ] ; then make -C /cesanta/krypton krypton.c ; fi && \
