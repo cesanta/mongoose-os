@@ -151,7 +151,10 @@ width: 21em;
       document.getElementById('config').innerHTML = html.join('');
     };
 
-    confLoad(function() {
+    confLoad(function(schema, defaults, current) {
+      SCHEMA = schema;
+      DEFAULTS = defaults;
+      CURRENT = current;
       document.getElementById('loading').style.display = 'none';
       renderConfig(SCHEMA, merge(DEFAULTS, CURRENT));
     });
