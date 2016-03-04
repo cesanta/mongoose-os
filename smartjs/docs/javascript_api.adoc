@@ -113,8 +113,6 @@ what is supported for client and server:
 
 === WebSocket
 
-
-
 Smart.js's provides WebSocket client functionality. The API follows the
 standard - the same way it works in any browser.  Please refer to the
 link:https://developer.mozilla.org/en-US/docs/Web/API/WebSocket[API Reference]
@@ -132,6 +130,27 @@ ws.onmessage = function(ev) {
   ws.close();
 };
 
+```
+
+=== MQTT
+
+Smart.js provides a simple MQTT client. The API is modeled after
+the popular JS MQTT client https://www.npmjs.com/package/mqtt.
+
+Usage example:
+
+```
+var client = MQTT.connect('mqtt://test.mosquitto.org');
+
+client.on('connect', function() {
+   client.subscribe('/foo');
+   client.publish('/bar', 'Hello mqtt');
+});
+
+client.on('message', function(topic, message) {
+   console.log("got", message);
+   client.publish("/baz", message);
+});
 ```
 
 === GPIO

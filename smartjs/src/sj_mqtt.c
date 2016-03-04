@@ -111,7 +111,6 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
  *
  * client.on('message', function (topic, message) {
  *   console.log(message);
- *   client.end();
  * });
  *
  * The API is modeled after https://www.npmjs.com/package/mqtt.
@@ -190,11 +189,47 @@ clean:
   return rcode;
 }
 
+/*
+ * Publishes a message to a topic.
+ *
+ * Args:
+ * - `topic`: topic, string.
+ * - `message`: message, string.
+ *
+ * Only QOS 0 is implemented at the moment.
+ */
 enum v7_err MQTT_publish(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  (void) v7;
+  struct user_data *ud;
+  struct mg_connection *nc;
+  const char *topic;
+  const char *message;
+  size_t message_len;
+  v7_val_t topicv = v7_arg(v7, 0), messagev = v7_arg(v7, 1);
   (void) res;
-  rcode = v7_throwf(v7, "Error", "not implemented yet");
+
+  topic = v7_to_cstring(v7, &topicv);
+  if (topic == NULL || strlen(topic) == 0) {
+    rcode = v7_throwf(v7, "TypeError", "invalid topic");
+    goto clean;
+  }
+
+  if (!v7_is_string(messagev)) {
+    rcode = v7_throwf(v7, "TypeError", "invalid message");
+    goto clean;
+  }
+  message = v7_get_string_data(v7, &messagev, &message_len);
+
+  nc = v7_to_foreign(v7_get(v7, v7_get_this(v7), "_nc", ~0));
+  if (nc == NULL) {
+    rcode = v7_throwf(v7, "Error", "invalid connection");
+    goto clean;
+  }
+  ud = (struct user_data *) nc->user_data;
+
+  mg_mqtt_publish(nc, topic, ud->msgid++, MG_MQTT_QOS(0), message, message_len);
+
+clean:
   return rcode;
 }
 
