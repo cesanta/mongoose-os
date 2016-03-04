@@ -14597,6 +14597,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("preventExtensions"),
     V7_VEC("propertyIsEnumerable"),
     V7_VEC("prototype"),
+    V7_VEC("publish"),  /* sjs */
     V7_VEC("random"),
     V7_VEC("readAll"),
     V7_VEC("readByte"),  /* sjs */
@@ -14641,6 +14642,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("status"),  /* sjs */
     V7_VEC("string"),
     V7_VEC("stringify"),
+    V7_VEC("subscribe"),  /* sjs */
     V7_VEC("substr"),
     V7_VEC("substring"),
     V7_VEC("toDateString"),

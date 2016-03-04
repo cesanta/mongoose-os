@@ -155,6 +155,7 @@ APP_OBJS = ${OBJDIR}/main.o \
            ${OBJDIR}/sj_i2c_js.o ${OBJDIR}/cc3200_i2c.o \
            ${OBJDIR}/sj_wifi_js.o ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_http.o \
            ${OBJDIR}/sj_mongoose.o ${OBJDIR}/sj_mongoose_http_client.o ${OBJDIR}/sj_timers.o ${OBJDIR}/sj_v7_ext.o \
+           ${OBJDIR}/sj_mqtt.o ${OBJDIR}/sj_mongoose_ws_client.o \
            ${OBJDIR}/device_config.o ${OBJDIR}/sys_config.o \
            ${OBJDIR}/spiffs_cache.o ${OBJDIR}/spiffs_check.o ${OBJDIR}/spiffs_gc.o ${OBJDIR}/spiffs_hydrogen.o ${OBJDIR}/spiffs_nucleus.o \
            ${OBJDIR}/mongoose.o \

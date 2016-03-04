@@ -1,7 +1,6 @@
 COMMON_V7_FEATURES = -DV7_ENABLE__File__require=1
 
 MG_FEATURES_TINY = \
-                   -DMG_DISABLE_MQTT \
                    -DMG_DISABLE_JSON_RPC \
                    -DMG_DISABLE_COAP \
                    -DMG_DISABLE_SYNC_RESOLVER \

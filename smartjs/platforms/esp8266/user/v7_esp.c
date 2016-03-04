@@ -7,15 +7,7 @@
 #include <stdlib.h>
 #include <ets_sys.h>
 #include "v7/v7.h"
-#include "smartjs/src/sj_timers.h"
-#include "smartjs/src/sj_v7_ext.h"
-#include "smartjs/src/sj_i2c_js.h"
-#include "smartjs/src/sj_gpio_js.h"
-#include "smartjs/src/sj_adc_js.h"
-#include "v7_esp.h"
-#include "smartjs/src/sj_http.h"
-#include "smartjs/src/sj_mongoose_ws_client.h"
-#include "common/sha1.h"
+#include "smartjs/platforms/esp8266/user/v7_esp.h"
 
 struct v7 *v7;
 

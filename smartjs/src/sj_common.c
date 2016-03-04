@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "sj_common.h"
+#include "smartjs/src/sj_common.h"
 #include "smartjs/src/sj_timers.h"
 #include "smartjs/src/sj_v7_ext.h"
 #include "smartjs/src/sj_gpio_js.h"
@@ -12,6 +12,7 @@
 #include "smartjs/src/sj_spi_js.h"
 #include "smartjs/src/sj_http.h"
 #include "smartjs/src/sj_mongoose_ws_client.h"
+#include "smartjs/src/sj_mqtt.h"
 #include "smartjs/src/sj_clubby.h"
 #include "smartjs/src/sj_debug_js.h"
 #include "smartjs/src/sj_pwm_js.h"
@@ -30,6 +31,7 @@ void sj_common_api_setup(struct v7 *v7) {
   sj_spi_api_setup(v7);
 
   sj_ws_client_api_setup(v7);
+  sj_mqtt_api_setup(v7);
 
   sj_debug_api_setup(v7);
   sj_http_api_setup(v7);

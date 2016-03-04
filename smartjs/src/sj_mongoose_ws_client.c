@@ -128,7 +128,7 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
   (void) res;
 
   if (!v7_is_string(urlv)) {
-    rcode = v7_throwf(v7, "Error", "invalid ws url string");
+    rcode = v7_throwf(v7, "Error", "invalid url string");
     goto clean;
   }
 
@@ -142,7 +142,7 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
 
     if (mg_parse_uri(mg_mk_str(url), &scheme, NULL, &host, &port, NULL, NULL,
                      NULL) < 0) {
-      rcode = v7_throwf(v7, "Error", "invalid ws url string");
+      rcode = v7_throwf(v7, "Error", "invalid url string");
       goto clean;
     }
 
