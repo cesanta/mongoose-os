@@ -4,12 +4,14 @@ PORT ?= auto
 
 .PHONY: all clean
 
+MAKEFLAGS += w
+
 all clean:
-	docker run --rm -it -v $(SRC_DIR):/src $(SDK) \
+	docker run --rm -i -v $(SRC_DIR):/src $(SDK) \
 		/bin/bash -c "\
 			make -C /src/v7 v7.c && \
 			make -C /src/mongoose mongoose.c mongoose.h && \
-			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ $(MAKEFLAGS) \
+			make -C /src/smartjs/platforms/cc3200 -f Makefile.build $@ -$(MAKEFLAGS) \
 		"
 
 ifeq ("$(PORT)", "auto")
