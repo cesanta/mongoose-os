@@ -640,7 +640,7 @@ void set_boot_params(uint8_t new_rom, uint8_t prev_rom) {
 }
 
 static int file_copy(spiffs *old_fs, char *file_name) {
-  LOG(LL_DEBUG, ("Copying %s", file_name));
+  LOG(LL_INFO, ("Copying %s", file_name));
   int ret = 0;
   FILE *f = NULL;
   spiffs_stat stat;
@@ -772,12 +772,6 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
    * old one
    */
 
-  /* Copy predefined overrides files */
-  if (!file_copy(&old_fs, CONF_FILE)) {
-    goto cleanup;
-  }
-
-  /* Copy files with name started with FILE_UPDATE_PREF ("imp_" by default) */
   dir_ptr = SPIFFS_opendir(&old_fs, ".", &dir);
   if (dir_ptr == NULL) {
     LOG(LL_ERROR, ("Failed to open root directory"));
@@ -786,8 +780,11 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
 
   struct spiffs_dirent de, *de_ptr;
   while ((de_ptr = SPIFFS_readdir(dir_ptr, &de)) != NULL) {
-    if (memcmp(de_ptr->name, FILE_UPDATE_PREF, strlen(FILE_UPDATE_PREF)) == 0) {
+    struct stat st;
+    if (stat((const char *) de_ptr->name, &st) != 0) {
+      /* File not found on the new fs, copy. */
       if (!file_copy(&old_fs, (char *) de_ptr->name)) {
+        LOG(LL_ERROR, ("Error copying!"));
         goto cleanup;
       }
     }
