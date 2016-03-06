@@ -16,7 +16,17 @@
 #ifdef SSL_KRYPTON
 #include "krypton.h"
 
-#define MG_LWIP_SSL_READ_SIZE 1024
+#ifndef MG_LWIP_SSL_IO_SIZE
+#define MG_LWIP_SSL_IO_SIZE 1024
+#endif
+
+/*
+ * Stop processing incoming SSL traffic when recv_mbuf.size is this big.
+ * It'a a uick solution for SSL recv pushback.
+ */
+#ifndef MG_LWIP_SSL_RECV_MBUF_LIMIT
+#define MG_LWIP_SSL_RECV_MBUF_LIMIT 3072
+#endif
 
 static void mg_lwip_ssl_do_hs(struct mg_connection *nc);
 static void mg_lwip_ssl_send(struct mg_connection *nc);
@@ -66,6 +76,7 @@ struct mg_lwip_conn_state {
   size_t num_sent;
   struct pbuf *rx_chain;
   size_t rx_offset;
+  int last_ssl_write_size;
 };
 
 static void mg_lwip_task(os_event_t *e);
@@ -140,6 +151,17 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
     cs->rx_chain = p;
     cs->rx_offset = 0;
   } else {
+    if (pbuf_clen(cs->rx_chain) >= 4) {
+      /* ESP SDK has a limited pool of 5 pbufs. We must not hog them all or RX
+       * will be completely blocked. We already have at least 4 in the chain,
+       * this one is, so we have to make a copy and release this one. */
+      struct pbuf *np = pbuf_alloc(PBUF_RAW, p->tot_len, PBUF_RAM);
+      if (np != NULL) {
+        pbuf_copy(np, p);
+        pbuf_free(p);
+        p = np;
+      }
+    }
     pbuf_chain(cs->rx_chain, p);
   }
 
@@ -337,7 +359,7 @@ static int mg_lwip_tcp_write(struct tcp_pcb *tpcb, const void *data,
      * We ignore ERR_MEM because memory will be freed up when the data is sent
      * and we'll retry.
      */
-    return err == ERR_MEM ? 0 : -1;
+    return (err == ERR_MEM ? 0 : -1);
   }
   return len;
 }
@@ -576,7 +598,7 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
           mg_lwip_ssl_do_hs(nc);
         }
       }
-      if (cs->rx_chain != NULL) {
+      if (cs->rx_chain != NULL || (nc->flags & MG_F_WANT_READ)) {
         if (nc->flags & MG_F_SSL_HANDSHAKE_DONE) {
           if (!(nc->flags & MG_F_CONNECTING)) mg_lwip_ssl_recv(nc);
         } else {
@@ -771,13 +793,23 @@ static void mg_lwip_ssl_send(struct mg_connection *nc) {
     DBG(("%p invalid socket", nc));
     return;
   }
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   /* It's ok if the buffer is empty. Return value of 0 may also be valid. */
-  int ret = SSL_write(nc->ssl, nc->send_mbuf.buf, nc->send_mbuf.len);
+  int len = cs->last_ssl_write_size;
+  if (len == 0) {
+    len = MIN(MG_LWIP_SSL_IO_SIZE, nc->send_mbuf.len);
+  }
+  int ret = SSL_write(nc->ssl, nc->send_mbuf.buf, len);
   int err = SSL_get_error(nc->ssl, ret);
-  DBG(("%p SSL_write %u = %d, %d", nc, nc->send_mbuf.len, ret, err));
+  DBG(("%p SSL_write %u = %d, %d", nc, len, ret, err));
   if (ret > 0) {
     mbuf_remove(&nc->send_mbuf, ret);
     mbuf_trim(&nc->send_mbuf);
+    cs->last_ssl_write_size = 0;
+  } else if (ret < 0) {
+    /* This is tricky. We must remember the exact data we were sending to retry
+     * exactly the same send next time. */
+    cs->last_ssl_write_size = len;
   }
   if (err == SSL_ERROR_NONE) {
     nc->flags &= ~MG_F_WANT_WRITE;
@@ -791,12 +823,14 @@ static void mg_lwip_ssl_send(struct mg_connection *nc) {
 
 static void mg_lwip_ssl_recv(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-  while (1) {
-    char *buf = (char *) malloc(MG_LWIP_SSL_READ_SIZE);
+  /* Don't deliver data before connect callback */
+  if (nc->flags & MG_F_CONNECTING) return;
+  while (nc->recv_mbuf.len < MG_LWIP_SSL_RECV_MBUF_LIMIT) {
+    char *buf = (char *) malloc(MG_LWIP_SSL_IO_SIZE);
     if (buf == NULL) return;
-    int ret = SSL_read(nc->ssl, buf, MG_LWIP_SSL_READ_SIZE);
+    int ret = SSL_read(nc->ssl, buf, MG_LWIP_SSL_IO_SIZE);
     int err = SSL_get_error(nc->ssl, ret);
-    DBG(("%p SSL_read %u = %d, %d", nc, MG_LWIP_SSL_READ_SIZE, ret, err));
+    DBG(("%p SSL_read %u = %d, %d", nc, MG_LWIP_SSL_IO_SIZE, ret, err));
     if (ret <= 0) {
       free(buf);
       if (err == SSL_ERROR_WANT_WRITE) {
@@ -814,6 +848,11 @@ static void mg_lwip_ssl_recv(struct mg_connection *nc) {
       mg_if_recv_tcp_cb(nc, buf, ret); /* callee takes over data */
     }
   }
+  if (nc->recv_mbuf.len >= MG_LWIP_SSL_RECV_MBUF_LIMIT) {
+    nc->flags |= MG_F_WANT_READ;
+  } else {
+    nc->flags &= ~MG_F_WANT_READ;
+  }
 }
 
 ssize_t kr_send(int fd, const void *buf, size_t len, int flags) {
@@ -823,7 +862,7 @@ ssize_t kr_send(int fd, const void *buf, size_t len, int flags) {
   (void) flags;
   DBG(("mg_lwip_tcp_write %u = %d", len, ret));
   if (ret <= 0) {
-    errno = ret == 0 ? EWOULDBLOCK : EIO;
+    errno = (ret == 0 ? EWOULDBLOCK : EIO);
     ret = -1;
   }
   return ret;
