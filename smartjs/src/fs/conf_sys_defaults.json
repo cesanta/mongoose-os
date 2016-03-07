@@ -10,7 +10,7 @@
       "keep_enabled": false,
       "trigger_on_gpio": -1,
       "ssid": "SMARTJS_??????",
-      "pass": "Elduderino",
+      "pass": "Smart.js",
       "hidden": false,
       "channel": 6,
       "max_connections": 10,
