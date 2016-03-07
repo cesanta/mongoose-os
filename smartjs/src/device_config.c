@@ -12,6 +12,7 @@
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/device_config.h"
 #include "smartjs/src/sj_config.h"
+#include "smartjs/src/sj_gpio.h"
 
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
@@ -381,6 +382,23 @@ int init_device(struct v7 *v7) {
     LOG(LL_ERROR, ("Failed to load config defaults"));
     return 0;
   }
+
+  /*
+   * Check factory reset GPIO. We intentionally do it before loading CONF_FILE
+   * so that it cannot be overridden by the end user.
+   */
+  if (s_cfg.debug.factory_reset_gpio >= 0) {
+    int gpio = s_cfg.debug.factory_reset_gpio;
+    sj_gpio_set_mode(gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP);
+    if (sj_gpio_read(gpio) == GPIO_LEVEL_LOW) {
+      LOG(LL_WARN, ("Factory reset requested via GPIO%d", gpio));
+      if (remove(CONF_FILE) == 0) {
+        LOG(LL_WARN, ("Removed %s", CONF_FILE));
+      }
+      /* Continue as if nothing happened, no reboot necessary. */
+    }
+  }
+
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_FILE, s_cfg.conf_acl, 0, &s_cfg);
 

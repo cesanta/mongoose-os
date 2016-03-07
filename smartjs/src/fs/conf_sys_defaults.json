@@ -56,7 +56,8 @@
     "level": 2,
     "stdout_uart": 0,
     "stderr_uart": 1,
-    "enable_prompt": true
+    "enable_prompt": true,
+    "factory_reset_gpio": -1
   },
   "conf_acl": "*"
 }

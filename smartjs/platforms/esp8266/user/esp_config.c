@@ -32,7 +32,7 @@ static int do_wifi(const struct sys_config *cfg) {
 
   if (gpio >= 0) {
     sj_gpio_set_mode(gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP);
-    trigger_ap = (sj_gpio_read(gpio) == GPIO_LEVEL_HIGH);
+    trigger_ap = (sj_gpio_read(gpio) == GPIO_LEVEL_LOW);
   }
 
   if (trigger_ap || (cfg->wifi.ap.enable && !cfg->wifi.sta.enable)) {

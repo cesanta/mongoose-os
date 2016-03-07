@@ -133,3 +133,4 @@ if free memory amount is less than `memory_limit` value (bytes)
 `debug.stdout_uart`:: Where to send normal (stdout) output. `0` - UART0, `1` - UART`, `-1` - /dev/null. Default: `0`.
 `debug.stderr_uart`:: Where to send diagnostic (stderr) output. `0` - UART0, `1` - UART`, `-1` - /dev/null. Default: `1`.
 `debug.enable_prompt`:: Whether to enable interactive JavaScript prompt. Default: `true`.
+`debug.factory_reset_gpio`:: GPIO number that will trigger a factory reset if held low during boot. Default: `-1`.
