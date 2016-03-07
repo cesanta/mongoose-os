@@ -70,8 +70,8 @@ RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
 
-# SSL can be SDK or Krypton
-SSL ?= None
+# SSL can be None or Krypton
+SSL ?= Krypton
 
 include $(COMMON_ESP_PATH)/common.mk
 
