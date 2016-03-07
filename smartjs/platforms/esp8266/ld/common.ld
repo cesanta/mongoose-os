@@ -189,3 +189,4 @@ SECTIONS
 
 /* get ROM code address */
 INCLUDE "../ld/eagle.rom.addr.v6.ld"
+PROVIDE ( rijndaelDecrypt = 0x40008ecc );

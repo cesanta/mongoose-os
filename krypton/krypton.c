@@ -76,6 +76,18 @@ int SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type);
 
 void SSL_CTX_free(SSL_CTX *);
 
+typedef struct {
+  unsigned char block_len;
+  unsigned char key_len;
+  unsigned char iv_len;
+  void *(*new_ctx)();
+  void (*setup_enc)(void *ctx, const unsigned char *key);
+  void (*setup_dec)(void *ctx, const unsigned char *key);
+  void (*encrypt)(void *ctx, const unsigned char *msg, int len, unsigned char *out);
+  void (*decrypt)(void *ctx, const unsigned char *msg, int len, unsigned char *out);
+  void (*free_ctx)(void *ctx);
+} kr_cipher_info;
+
 #endif /* _KRYPTON_H */
 #ifdef KR_MODULE_LINES
 #line 0 "src/src/ktypes.h"
@@ -303,7 +315,7 @@ typedef struct _bigint bigint; /**< An alias for _bigint */
 #define _TLSPROTO_H
 
 /* set to number of null ciphers */
-#define ALLOW_NULL_CIPHERS 0
+#define KR_ALLOW_NULL_CIPHERS 0
 
 /* just count non-NULL ciphers */
 #define NUM_CIPHER_SUITES 4
@@ -362,7 +374,7 @@ struct tls_cl_hello {
   struct tls_random random;
   uint8_t sess_id_len;
   uint16_t cipher_suites_len;
-  uint16_t cipher_suite[NUM_CIPHER_SUITES + ALLOW_NULL_CIPHERS + 1];
+  uint16_t cipher_suite[NUM_CIPHER_SUITES + KR_ALLOW_NULL_CIPHERS + 1];
   uint8_t num_compressors;
   uint8_t compressor[NUM_COMPRESSORS];
   uint16_t ext_len;
@@ -474,7 +486,7 @@ enum TLS_SignatureAlgorithm {
  */
 
 typedef enum {
-#if ALLOW_NULL_CIPHERS
+#if KR_ALLOW_NULL_CIPHERS
   TLS_RSA_WITH_NULL_MD5 = 0x0001,
 #endif
   TLS_RSA_WITH_RC4_128_MD5 = 0x0004,
@@ -636,21 +648,18 @@ NS_INTERNAL void kr_hmac_v(kr_hash_func_t hash_func, const uint8_t *key,
                            const uint8_t *msgs[], const size_t *msg_lens,
                            uint8_t *digest, size_t digest_len);
 
-typedef struct {
-  uint8_t block_len;
-  uint8_t key_len;
-  uint8_t iv_len;
-} kr_cipher_info;
-
 NS_INTERNAL const kr_cipher_info *kr_cipher_get_info(kr_cs_id cs);
-NS_INTERNAL void *kr_cipher_setup(kr_cs_id cs, int decrypt, const uint8_t *key,
-                                  const uint8_t *iv);
-NS_INTERNAL void kr_cipher_ctx_free(kr_cs_id cs, void *ctx);
-NS_INTERNAL void kr_cipher_set_iv(kr_cs_id cs, void *ctx, const uint8_t *iv);
-NS_INTERNAL void kr_cipher_encrypt(kr_cs_id cs, void *ctx, const uint8_t *msg,
-                                   int len, uint8_t *out);
-NS_INTERNAL void kr_cipher_decrypt(kr_cs_id cs, void *ctx, const uint8_t *msg,
-                                   int len, uint8_t *out);
+
+NS_INTERNAL void kr_cbc_encrypt(const kr_cipher_info *ci, void *cctx,
+                                const uint8_t *msg, int len, const uint8_t *iv,
+                                uint8_t *out);
+NS_INTERNAL void kr_cbc_decrypt(const kr_cipher_info *ci, void *cctx,
+                                const uint8_t *msg, int len, const uint8_t *iv,
+                                uint8_t *out);
+
+const kr_cipher_info *kr_rc4_cs_info();
+const kr_cipher_info *kr_aes128_cs_info();
+
 #endif /* _CRYPTO_H */
 #ifdef KR_MODULE_LINES
 #line 0 "src/src/bigint_impl.h"
@@ -3102,7 +3111,7 @@ void hex_dumpf(FILE *f, const void *buf, size_t len, size_t llen) {
       line = llen;
     }
 
-    fprintf(f, " | %05zx : ", j);
+    fprintf(f, " | %05u : ", (unsigned int) j);
 
     for (i = 0; i < line; i++) {
       if (isprint(tmp[i])) {
@@ -3114,7 +3123,7 @@ void hex_dumpf(FILE *f, const void *buf, size_t len, size_t llen) {
 
     for (; i < llen; i++) fprintf(f, " ");
 
-    for (i = 0; i < line; i++) fprintf(f, " %02x", tmp[i]);
+    for (i = 0; i < line; i++) fprintf(f, "%02x", tmp[i]);
 
     fprintf(f, "\n");
   }
@@ -4333,7 +4342,7 @@ static void kr_hmac_sha256_v(const uint8_t *key, size_t key_len,
 
 NS_INTERNAL int kr_hmac_len(kr_cs_id cs) {
   switch (cs) {
-#if ALLOW_NULL_CIPHERS
+#if KR_ALLOW_NULL_CIPHERS
     case TLS_RSA_WITH_NULL_MD5:
 #endif
     case TLS_RSA_WITH_RC4_128_MD5:
@@ -4393,7 +4402,7 @@ NS_INTERNAL void kr_ssl_hmac(SSL *ssl, int cs, size_t num_msgs,
   const uint8_t *key =
       (cs == KR_CLIENT_MAC ? ssl->cur->keys : ssl->cur->keys + mac_len);
   switch ((kr_cs_id) ssl->cur->cipher_suite) {
-#if ALLOW_NULL_CIPHERS
+#if KR_ALLOW_NULL_CIPHERS
     case TLS_RSA_WITH_NULL_MD5:
 #endif
     case TLS_RSA_WITH_RC4_128_MD5:
@@ -4790,6 +4799,8 @@ int get_random_nonzero(uint8_t *out, size_t len) {
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef KR_EXT_AES
+
 /**
  * AES implementation - this is a small code version. There are much faster
  * versions around but they are much larger in size (i.e. they use large
@@ -4800,8 +4811,6 @@ int get_random_nonzero(uint8_t *out, size_t len) {
 
 #define AES_BLOCK_SIZE 16
 
-#ifndef KR_EXT_AES
-
 #include <string.h>
 
 #define AES_MAX_ROUNDS 14
@@ -4810,8 +4819,7 @@ typedef struct aes_key_st {
   uint16_t rounds;
   uint16_t key_size;
   uint32_t ks[(AES_MAX_ROUNDS + 1) * 8];
-  uint8_t iv[AES_IV_SIZE];
-} AES_CTX;
+} kr_aes_ctx;
 
 typedef enum { AES_MODE_128, AES_MODE_256 } AES_MODE;
 
@@ -4903,21 +4911,16 @@ static const unsigned char Rcon[30] = {
     0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91,
 };
 
-/* ----- static functions ----- */
-static void AES_encrypt(const AES_CTX *ctx, uint32_t *data);
-static void AES_decrypt(const AES_CTX *ctx, uint32_t *data);
-
 /* Perform doubling in Galois Field GF(2^8) using the irreducible polynomial
    x^8+x^4+x^3+x+1 */
-static unsigned char AES_xtime(uint32_t x) {
+static unsigned char kr_aes_xtime(uint32_t x) {
   return (x & 0x80) ? (x << 1) ^ 0x1b : x << 1;
 }
 
 /**
  * Set up AES with the key/iv and cipher size.
  */
-void AES_set_key(AES_CTX *ctx, const uint8_t *key, const uint8_t *iv,
-                 AES_MODE mode) {
+void kr_aes_set_key(kr_aes_ctx *ctx, const uint8_t *key, AES_MODE mode) {
   int i, ii;
   uint32_t *W, tmp, tmp2;
   const unsigned char *ip;
@@ -4973,15 +4976,12 @@ void AES_set_key(AES_CTX *ctx, const uint8_t *key, const uint8_t *iv,
 
     W[i] = W[i - words] ^ tmp;
   }
-
-  /* copy the iv across */
-  memcpy(ctx->iv, iv, 16);
 }
 
 /**
  * Change a key for decryption.
  */
-void AES_convert_key(AES_CTX *ctx) {
+void kr_aes_convert_key(kr_aes_ctx *ctx) {
   int i;
   uint32_t *k, w, t1, t2, t3, t4;
 
@@ -4996,81 +4996,10 @@ void AES_convert_key(AES_CTX *ctx) {
 }
 
 /**
- * Encrypt a byte sequence (with a block size 16) using the AES cipher.
- */
-void AES_cbc_encrypt(AES_CTX *ctx, const uint8_t *msg, uint8_t *out,
-                     int length) {
-  int i;
-  uint32_t tin[4], tout[4], iv[4];
-
-  memcpy(iv, ctx->iv, AES_IV_SIZE);
-  for (i = 0; i < 4; i++) tout[i] = be32toh(iv[i]);
-
-  for (length -= AES_BLOCK_SIZE; length >= 0; length -= AES_BLOCK_SIZE) {
-    uint32_t msg_32[4];
-    uint32_t out_32[4];
-    memcpy(msg_32, msg, AES_BLOCK_SIZE);
-    msg += AES_BLOCK_SIZE;
-
-    for (i = 0; i < 4; i++) tin[i] = be32toh(msg_32[i]) ^ tout[i];
-
-    AES_encrypt(ctx, tin);
-
-    for (i = 0; i < 4; i++) {
-      tout[i] = tin[i];
-      out_32[i] = htobe32(tout[i]);
-    }
-
-    memcpy(out, out_32, AES_BLOCK_SIZE);
-    out += AES_BLOCK_SIZE;
-  }
-
-  for (i = 0; i < 4; i++) iv[i] = htobe32(tout[i]);
-  memcpy(ctx->iv, iv, AES_IV_SIZE);
-}
-
-/**
- * Decrypt a byte sequence (with a block size 16) using the AES cipher.
- */
-void AES_cbc_decrypt(AES_CTX *ctx, const uint8_t *msg, uint8_t *out,
-                     int length) {
-  int i;
-  uint32_t tin[4], xor[4], tout[4], data[4], iv[4];
-
-  memcpy(iv, ctx->iv, AES_IV_SIZE);
-  for (i = 0; i < 4; i++) xor[i] = be32toh(iv[i]);
-
-  for (length -= 16; length >= 0; length -= 16) {
-    uint32_t msg_32[4];
-    uint32_t out_32[4];
-    memcpy(msg_32, msg, AES_BLOCK_SIZE);
-    msg += AES_BLOCK_SIZE;
-
-    for (i = 0; i < 4; i++) {
-      tin[i] = be32toh(msg_32[i]);
-      data[i] = tin[i];
-    }
-
-    AES_decrypt(ctx, data);
-
-    for (i = 0; i < 4; i++) {
-      tout[i] = data[i] ^ xor[i];
-      xor[i] = tin[i];
-      out_32[i] = htobe32(tout[i]);
-    }
-
-    memcpy(out, out_32, AES_BLOCK_SIZE);
-    out += AES_BLOCK_SIZE;
-  }
-
-  for (i = 0; i < 4; i++) iv[i] = htobe32 (xor[i]);
-  memcpy(ctx->iv, iv, AES_IV_SIZE);
-}
-
-/**
  * Encrypt a single block (16 bytes) of data
  */
-static void AES_encrypt(const AES_CTX *ctx, uint32_t *data) {
+static void kr_aes_encrypt_block(const kr_aes_ctx *ctx, const uint32_t *in,
+                                 uint32_t *out) {
   /* To make this code smaller, generate the sbox entries on the fly.
    * This will have a really heavy effect upon performance.
    */
@@ -5081,25 +5010,25 @@ static void AES_encrypt(const AES_CTX *ctx, uint32_t *data) {
   const uint32_t *k = ctx->ks;
 
   /* Pre-round key addition */
-  for (row = 0; row < 4; row++) data[row] ^= *(k++);
+  for (row = 0; row < 4; row++) out[row] = be32toh(in[row]) ^ *(k++);
 
   /* Encrypt one block. */
   for (curr_rnd = 0; curr_rnd < rounds; curr_rnd++) {
     /* Perform ByteSub and ShiftRow operations together */
     for (row = 0; row < 4; row++) {
-      a0 = (uint32_t) aes_sbox[(data[row % 4] >> 24) & 0xFF];
-      a1 = (uint32_t) aes_sbox[(data[(row + 1) % 4] >> 16) & 0xFF];
-      a2 = (uint32_t) aes_sbox[(data[(row + 2) % 4] >> 8) & 0xFF];
-      a3 = (uint32_t) aes_sbox[(data[(row + 3) % 4]) & 0xFF];
+      a0 = (uint32_t) aes_sbox[(out[row % 4] >> 24) & 0xFF];
+      a1 = (uint32_t) aes_sbox[(out[(row + 1) % 4] >> 16) & 0xFF];
+      a2 = (uint32_t) aes_sbox[(out[(row + 2) % 4] >> 8) & 0xFF];
+      a3 = (uint32_t) aes_sbox[(out[(row + 3) % 4]) & 0xFF];
 
       /* Perform MixColumn iff not last round */
       if (curr_rnd < (rounds - 1)) {
         tmp1 = a0 ^ a1 ^ a2 ^ a3;
         old_a0 = a0;
-        a0 ^= tmp1 ^ AES_xtime(a0 ^ a1);
-        a1 ^= tmp1 ^ AES_xtime(a1 ^ a2);
-        a2 ^= tmp1 ^ AES_xtime(a2 ^ a3);
-        a3 ^= tmp1 ^ AES_xtime(a3 ^ old_a0);
+        a0 ^= tmp1 ^ kr_aes_xtime(a0 ^ a1);
+        a1 ^= tmp1 ^ kr_aes_xtime(a1 ^ a2);
+        a2 ^= tmp1 ^ kr_aes_xtime(a2 ^ a3);
+        a3 ^= tmp1 ^ kr_aes_xtime(a3 ^ old_a0);
       }
 
       tmp[row] = ((a0 << 24) | (a1 << 16) | (a2 << 8) | a3);
@@ -5107,14 +5036,17 @@ static void AES_encrypt(const AES_CTX *ctx, uint32_t *data) {
 
     /* KeyAddition - note that it is vital that this loop is separate from
        the MixColumn operation, which must be atomic...*/
-    for (row = 0; row < 4; row++) data[row] = tmp[row] ^ *(k++);
+    for (row = 0; row < 4; row++) out[row] = tmp[row] ^ *(k++);
   }
+
+  for (row = 0; row < 4; row++) out[row] = htobe32(out[row]);
 }
 
 /**
  * Decrypt a single block (16 bytes) of data
  */
-static void AES_decrypt(const AES_CTX *ctx, uint32_t *data) {
+static void kr_aes_decrypt_block(const kr_aes_ctx *ctx, const uint32_t *in,
+                                 uint32_t *out) {
   uint32_t tmp[4];
   uint32_t xt0, xt1, xt2, xt3, xt4, xt5, xt6;
   uint32_t a0, a1, a2, a3, row;
@@ -5123,29 +5055,29 @@ static void AES_decrypt(const AES_CTX *ctx, uint32_t *data) {
   const uint32_t *k = ctx->ks + ((rounds + 1) * 4);
 
   /* pre-round key addition */
-  for (row = 4; row > 0; row--) data[row - 1] ^= *(--k);
+  for (row = 4; row > 0; row--) out[row - 1] = be32toh(in[row - 1]) ^ *(--k);
 
   /* Decrypt one block */
   for (curr_rnd = 0; curr_rnd < rounds; curr_rnd++) {
     /* Perform ByteSub and ShiftRow operations together */
     for (row = 4; row > 0; row--) {
-      a0 = aes_isbox[(data[(row + 3) % 4] >> 24) & 0xFF];
-      a1 = aes_isbox[(data[(row + 2) % 4] >> 16) & 0xFF];
-      a2 = aes_isbox[(data[(row + 1) % 4] >> 8) & 0xFF];
-      a3 = aes_isbox[(data[row % 4]) & 0xFF];
+      a0 = aes_isbox[(out[(row + 3) % 4] >> 24) & 0xFF];
+      a1 = aes_isbox[(out[(row + 2) % 4] >> 16) & 0xFF];
+      a2 = aes_isbox[(out[(row + 1) % 4] >> 8) & 0xFF];
+      a3 = aes_isbox[(out[row % 4]) & 0xFF];
 
       /* Perform MixColumn iff not last round */
       if (curr_rnd < (rounds - 1)) {
         /* The MDS cofefficients (0x09, 0x0B, 0x0D, 0x0E)
            are quite large compared to encryption; this
            operation slows decryption down noticeably. */
-        xt0 = AES_xtime(a0 ^ a1);
-        xt1 = AES_xtime(a1 ^ a2);
-        xt2 = AES_xtime(a2 ^ a3);
-        xt3 = AES_xtime(a3 ^ a0);
-        xt4 = AES_xtime(xt0 ^ xt1);
-        xt5 = AES_xtime(xt1 ^ xt2);
-        xt6 = AES_xtime(xt4 ^ xt5);
+        xt0 = kr_aes_xtime(a0 ^ a1);
+        xt1 = kr_aes_xtime(a1 ^ a2);
+        xt2 = kr_aes_xtime(a2 ^ a3);
+        xt3 = kr_aes_xtime(a3 ^ a0);
+        xt4 = kr_aes_xtime(xt0 ^ xt1);
+        xt5 = kr_aes_xtime(xt1 ^ xt2);
+        xt6 = kr_aes_xtime(xt4 ^ xt5);
 
         xt0 ^= a1 ^ a2 ^ a3 ^ xt4 ^ xt6;
         xt1 ^= a0 ^ a2 ^ a3 ^ xt5 ^ xt6;
@@ -5156,15 +5088,61 @@ static void AES_decrypt(const AES_CTX *ctx, uint32_t *data) {
         tmp[row - 1] = ((a0 << 24) | (a1 << 16) | (a2 << 8) | a3);
     }
 
-    for (row = 4; row > 0; row--) data[row - 1] = tmp[row - 1] ^ *(--k);
+    for (row = 4; row > 0; row--) out[row - 1] = tmp[row - 1] ^ *(--k);
+  }
+
+  for (row = 0; row < 4; row++) out[row] = htobe32(out[row]);
+}
+
+NS_INTERNAL void kr_aes_setup_enc(void *ctxv, const uint8_t *key) {
+  kr_aes_ctx *ctx = (kr_aes_ctx *) ctxv;
+  kr_aes_set_key(ctx, key, AES_MODE_128);
+}
+
+NS_INTERNAL void kr_aes_setup_dec(void *ctxv, const uint8_t *key) {
+  kr_aes_ctx *ctx = (kr_aes_ctx *) ctxv;
+  kr_aes_set_key(ctx, key, AES_MODE_128);
+  kr_aes_convert_key(ctx);
+}
+
+NS_INTERNAL void kr_aes_encrypt(void *ctxv, const uint8_t *in, int len,
+                                uint8_t *out) {
+  const kr_aes_ctx *ctx = (const kr_aes_ctx *) ctxv;
+  while (len > 0) {
+    kr_aes_encrypt_block(ctx, (const uint32_t *) in, (uint32_t *) out);
+    in += AES_BLOCK_SIZE;
+    out += AES_BLOCK_SIZE;
+    len -= AES_BLOCK_SIZE;
   }
 }
 
-NS_INTERNAL void *kr_aes_ctx_new() {
-  return calloc(1, sizeof(AES_CTX));
+NS_INTERNAL void kr_aes_decrypt(void *ctxv, const uint8_t *in, int len,
+                                uint8_t *out) {
+  const kr_aes_ctx *ctx = (const kr_aes_ctx *) ctxv;
+  while (len > 0) {
+    kr_aes_decrypt_block(ctx, (const uint32_t *) in, (uint32_t *) out);
+    in += AES_BLOCK_SIZE;
+    out += AES_BLOCK_SIZE;
+    len -= AES_BLOCK_SIZE;
+  }
 }
 
-#endif
+NS_INTERNAL void *kr_aes_new_ctx() {
+  return calloc(1, sizeof(kr_aes_ctx));
+}
+
+NS_INTERNAL void kr_aes_free_ctx(void *ctxv) {
+  free(ctxv);
+}
+
+const kr_cipher_info *kr_aes128_cs_info() {
+  static const kr_cipher_info aes128_cs_info = {
+      AES_BLOCK_SIZE, AES128_KEY_SIZE, 16, kr_aes_new_ctx, kr_aes_setup_enc,
+      kr_aes_setup_dec, kr_aes_encrypt, kr_aes_decrypt, kr_aes_free_ctx};
+  return &aes128_cs_info;
+}
+
+#endif /* !KR_EXT_AES */
 #ifdef KR_MODULE_LINES
 #line 0 "src/src/rc4.c"
 #endif
@@ -5198,6 +5176,8 @@ NS_INTERNAL void *kr_aes_ctx_new() {
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef KR_EXT_RC4
+
 /**
  * An implementation of the RC4/ARC4 algorithm.
  * Originally written by Christophe Devine.
@@ -5210,10 +5190,12 @@ typedef struct {
   uint8_t m[256];
 } kr_rc4_ctx;
 
-/**
- * Get ready for an encrypt/decrypt operation
- */
-void kr_rc4_setup(kr_rc4_ctx *ctx, const uint8_t *key, int length) {
+NS_INTERNAL void *kr_rc4_new_ctx() {
+  return calloc(1, sizeof(kr_rc4_ctx));
+}
+
+NS_INTERNAL void kr_rc4_setup(void *ctxv, const uint8_t *key) {
+  kr_rc4_ctx *ctx = (kr_rc4_ctx *) ctxv;
   int i, j = 0, k = 0, a;
   uint8_t *m;
 
@@ -5229,26 +5211,28 @@ void kr_rc4_setup(kr_rc4_ctx *ctx, const uint8_t *key, int length) {
     m[i] = m[j];
     m[j] = a;
 
-    if (++k >= length) k = 0;
+    if (++k >= RC4_KEY_SIZE) k = 0;
   }
 }
 
 /**
  * Perform the encrypt/decrypt operation (can use it for either since
  * this is a stream cipher).
- * NOTE: *msg and *out must be the same pointer (performance tweak)
  */
-void kr_rc4_crypt(kr_rc4_ctx *ctx, const uint8_t *msg, uint8_t *out,
-                  int length) {
+NS_INTERNAL void kr_rc4_crypt(void *ctxv, const uint8_t *msg, int len,
+                              uint8_t *out) {
+  kr_rc4_ctx *ctx = (kr_rc4_ctx *) ctxv;
   int i;
   uint8_t *m, x, y, a, b;
 
+  /* NOTE: *msg and *out must be the same pointer (performance tweak) */
+  assert(msg == out);
   (void) msg;
   x = ctx->x;
   y = ctx->y;
   m = ctx->m;
 
-  for (i = 0; i < length; i++) {
+  for (i = 0; i < len; i++) {
     a = m[++x];
     y += a;
     m[x] = b = m[y];
@@ -5260,9 +5244,17 @@ void kr_rc4_crypt(kr_rc4_ctx *ctx, const uint8_t *msg, uint8_t *out,
   ctx->y = y;
 }
 
-NS_INTERNAL void *kr_rc4_ctx_new() {
-  return calloc(1, sizeof(kr_rc4_ctx));
+NS_INTERNAL void kr_rc4_free_ctx(void *ctxv) {
+  free(ctxv);
 }
+
+const kr_cipher_info *kr_rc4_cs_info() {
+  static const kr_cipher_info rc4_cs_info = {
+      1, RC4_KEY_SIZE, 0, kr_rc4_new_ctx, kr_rc4_setup, kr_rc4_setup,
+      kr_rc4_crypt, kr_rc4_crypt, kr_rc4_free_ctx};
+  return &rc4_cs_info;
+}
+#endif /* !KR_EXT_RC4 */
 #ifdef KR_MODULE_LINES
 #line 0 "src/src/cipher.c"
 #endif
@@ -5273,123 +5265,96 @@ NS_INTERNAL void *kr_rc4_ctx_new() {
 
 /* Amalgamated: #include "ktypes.h" */
 
-#if ALLOW_NULL_CIPHERS
-static const kr_cipher_info null_cs_info = {1, 0, 0};
+#if KR_ALLOW_NULL_CIPHERS
+
+NS_INTERNAL void *kr_null_new_ctx() {
+  return NULL;
+}
+
+NS_INTERNAL void kr_null_setup(void *ctxv, const uint8_t *key) {
+  (void) ctxv;
+  (void) key;
+}
+
+NS_INTERNAL void kr_null_crypt(void *ctxv, const uint8_t *msg, int len,
+                               uint8_t *out) {
+  (void) ctxv;
+  memmove(out, msg, len);
+}
+
+NS_INTERNAL void kr_null_free_ctx(void *ctxv) {
+  (void) ctxv;
+}
+
+static const kr_cipher_info null_cs_info = {
+    1, 0, 0, kr_null_new_ctx, kr_null_setup, kr_null_setup, kr_null_crypt,
+    kr_null_crypt, kr_null_free_ctx};
 #endif
-static const kr_cipher_info rc4_cs_info = {1, RC4_KEY_SIZE, 0};
-static const kr_cipher_info aes128_cs_info = {16, AES128_KEY_SIZE, 16};
 
 NS_INTERNAL const kr_cipher_info *kr_cipher_get_info(kr_cs_id cs) {
   switch (cs) {
-#if ALLOW_NULL_CIPHERS
+#if KR_ALLOW_NULL_CIPHERS
     case TLS_RSA_WITH_NULL_MD5:
-      return NULL;
+      return &null_cs_info;
 #endif
     case TLS_RSA_WITH_RC4_128_MD5:
     case TLS_RSA_WITH_RC4_128_SHA:
-      return &rc4_cs_info;
+      return kr_rc4_cs_info();
     case TLS_RSA_WITH_AES_128_CBC_SHA:
     case TLS_RSA_WITH_AES_128_CBC_SHA256:
-      return &aes128_cs_info;
+      return kr_aes128_cs_info();
   }
   return NULL;
 }
 
-NS_INTERNAL void *kr_cipher_setup(kr_cs_id cs, int decrypt, const uint8_t *key,
-                                  const uint8_t *iv) {
-  switch (cs) {
-#if ALLOW_NULL_CIPHERS
-    case TLS_RSA_WITH_NULL_MD5:
-      return NULL;
-#endif
-    case TLS_RSA_WITH_RC4_128_MD5:
-    case TLS_RSA_WITH_RC4_128_SHA: {
-      kr_rc4_ctx *ctx = kr_rc4_ctx_new();
-      kr_rc4_setup(ctx, key, RC4_KEY_SIZE);
-      return ctx;
-    }
-    case TLS_RSA_WITH_AES_128_CBC_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA256: {
-      AES_CTX *ctx = kr_aes_ctx_new();
-      AES_set_key(ctx, key, iv, AES_MODE_128);
-      if (decrypt) AES_convert_key(ctx);
-      return ctx;
-    }
-  }
-  dprintf(("unsupported cipher suite: %d\n", cs));
-  abort();
-  return NULL;
-}
+NS_INTERNAL void kr_cbc_encrypt(const kr_cipher_info *ci, void *cctx,
+                                const uint8_t *in, int len, const uint8_t *iv,
+                                uint8_t *out) {
+  int i;
+  uint32_t d32[4], xor[4];
 
-NS_INTERNAL void kr_cipher_set_iv(kr_cs_id cs, void *ctx, const uint8_t *iv) {
-  switch (cs) {
-#if ALLOW_NULL_CIPHERS
-    case TLS_RSA_WITH_NULL_MD5:
-#endif
-    case TLS_RSA_WITH_RC4_128_MD5:
-    case TLS_RSA_WITH_RC4_128_SHA:
-      return;
-    case TLS_RSA_WITH_AES_128_CBC_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA256:
-      memcpy(((AES_CTX *) ctx)->iv, iv, AES_IV_SIZE);
-      return;
+  assert(ci->iv_len == 16);
+  assert(ci->block_len == 16);
+
+  memcpy (xor, iv, ci->iv_len);
+
+  for (len -= ci->block_len; len >= 0; len -= ci->block_len) {
+    memcpy(d32, in, ci->block_len);
+    in += ci->block_len;
+
+    for (i = 0; i < 4; i++) d32[i] ^= xor[i];
+
+    ci->encrypt(cctx, (const uint8_t *) d32, ci->block_len, (uint8_t *) d32);
+
+    memcpy (xor, d32, ci->block_len);
+    memcpy(out, d32, ci->block_len);
+    out += ci->block_len;
   }
 }
 
-NS_INTERNAL void kr_cipher_encrypt(kr_cs_id cs, void *ctx, const uint8_t *msg,
-                                   int len, uint8_t *out) {
-  switch (cs) {
-#if ALLOW_NULL_CIPHERS
-    case TLS_RSA_WITH_NULL_MD5:
-      memmove(out, msg, len);
-      return;
-#endif
-    case TLS_RSA_WITH_RC4_128_MD5:
-    case TLS_RSA_WITH_RC4_128_SHA:
-      kr_rc4_crypt((kr_rc4_ctx *) ctx, msg, out, len);
-      return;
-    case TLS_RSA_WITH_AES_128_CBC_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA256:
-      AES_cbc_encrypt((AES_CTX *) ctx, msg, out, len);
-      return;
-  }
-  abort();
-}
+NS_INTERNAL void kr_cbc_decrypt(const kr_cipher_info *ci, void *cctx,
+                                const uint8_t *in, int len, const uint8_t *iv,
+                                uint8_t *out) {
+  int i;
+  uint32_t d32[4], xor[4];
 
-NS_INTERNAL void kr_cipher_decrypt(kr_cs_id cs, void *ctx, const uint8_t *msg,
-                                   int len, uint8_t *out) {
-  switch (cs) {
-#if ALLOW_NULL_CIPHERS
-    case TLS_RSA_WITH_NULL_MD5:
-      memmove(out, msg, len);
-      return;
-#endif
-    case TLS_RSA_WITH_RC4_128_MD5:
-    case TLS_RSA_WITH_RC4_128_SHA:
-      kr_rc4_crypt((kr_rc4_ctx *) ctx, msg, out, len);
-      return;
-    case TLS_RSA_WITH_AES_128_CBC_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA256:
-      AES_cbc_decrypt((AES_CTX *) ctx, msg, out, len);
-      return;
-  }
-  abort();
-}
+  assert(ci->iv_len == 16);
+  assert(ci->block_len == 16);
+  memcpy (xor, iv, ci->iv_len);
 
-NS_INTERNAL void kr_cipher_ctx_free(kr_cs_id cs, void *ctx) {
-  switch (cs) {
-#if ALLOW_NULL_CIPHERS
-    case TLS_RSA_WITH_NULL_MD5:
-      return;
-#endif
-    case TLS_RSA_WITH_RC4_128_MD5:
-    case TLS_RSA_WITH_RC4_128_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA256:
-      free(ctx);
-      return;
+  for (len -= ci->block_len; len >= 0; len -= ci->block_len) {
+    memcpy(d32, in, ci->block_len);
+
+    ci->decrypt(cctx, (const uint8_t *) d32, ci->block_len, (uint8_t *) d32);
+
+    for (i = 0; i < 4; i++) d32[i] ^= xor[i];
+
+    memcpy (xor, in, ci->block_len);
+    in += ci->block_len;
+
+    memcpy(out, d32, ci->block_len);
+    out += ci->block_len;
   }
-  /* Do not panic, we may not have negotiated a cipher at all. */
 }
 #ifdef KR_MODULE_LINES
 #line 0 "src/src/rsa.c"
@@ -6220,9 +6185,10 @@ NS_INTERNAL tls_sec_t tls_new_security(void) {
 
 NS_INTERNAL void tls_free_security(tls_sec_t sec) {
   if (sec) {
+    const kr_cipher_info *ci = kr_cipher_get_info(sec->cipher_suite);
     RSA_free(sec->svr_key);
-    kr_cipher_ctx_free(sec->cipher_suite, sec->server_write_ctx);
-    kr_cipher_ctx_free(sec->cipher_suite, sec->client_write_ctx);
+    if (sec->server_write_ctx != NULL) ci->free_ctx(sec->server_write_ctx);
+    if (sec->client_write_ctx != NULL) ci->free_ctx(sec->client_write_ctx);
     free(sec);
   }
 }
@@ -6327,12 +6293,15 @@ NS_INTERNAL void tls_generate_keys(tls_sec_t sec, int is_server) {
   prf(sec->master_secret, sizeof(sec->master_secret), buf, sizeof(buf),
       sec->keys, sizeof(sec->keys));
 
-  sec->client_write_ctx =
-      kr_cipher_setup(sec->cipher_suite, is_server, sec->keys + 2 * mac_len,
-                      sec->keys + 2 * mac_len + 2 * ci->key_len);
-  sec->server_write_ctx = kr_cipher_setup(
-      sec->cipher_suite, !is_server, sec->keys + 2 * mac_len + ci->key_len,
-      sec->keys + 2 * mac_len + 2 * ci->key_len + ci->iv_len);
+  sec->client_write_ctx = ci->new_ctx();
+  sec->server_write_ctx = ci->new_ctx();
+  if (is_server) {
+    ci->setup_dec(sec->client_write_ctx, sec->keys + 2 * mac_len);
+    ci->setup_enc(sec->server_write_ctx, sec->keys + 2 * mac_len + ci->key_len);
+  } else {
+    ci->setup_enc(sec->client_write_ctx, sec->keys + 2 * mac_len);
+    ci->setup_dec(sec->server_write_ctx, sec->keys + 2 * mac_len + ci->key_len);
+  }
 }
 
 NS_INTERNAL int tls_tx_push(SSL *ssl, const void *data, size_t len) {
@@ -6372,6 +6341,7 @@ NS_INTERNAL int tls_send_enc(SSL *ssl, uint8_t type, const void *buf,
   void *cctx =
       ssl->is_server ? ssl->cur->server_write_ctx : ssl->cur->client_write_ctx;
   uint8_t pad_len = 0;
+  uint8_t iv[MAX_IV_SIZE];
 
   if (len > max) len = max;
 
@@ -6389,11 +6359,9 @@ NS_INTERNAL int tls_send_enc(SSL *ssl, uint8_t type, const void *buf,
 
   /* Explicit IV for CBC mode. */
   if (is_cbc) {
-    uint8_t iv[MAX_KEY_SIZE];
     /* Seed with system PRNG and mix in our state. */
     kr_get_random(iv, ci->iv_len);
     prf(iv, ci->iv_len, (uint8_t *) ssl, sizeof(*ssl), iv, ci->iv_len);
-    kr_cipher_set_iv(ssl->cur->cipher_suite, cctx, iv);
     if (!tls_tx_push(ssl, iv, ci->iv_len)) return 0;
     hdr.len += ci->iv_len;
   }
@@ -6440,8 +6408,13 @@ NS_INTERNAL int tls_send_enc(SSL *ssl, uint8_t type, const void *buf,
   }
 
   /* Encryption. */
-  kr_cipher_encrypt(ssl->cur->cipher_suite, cctx, ssl->tx_buf + enc_offset,
-                    enc_len, ssl->tx_buf + enc_offset);
+  if (is_cbc) {
+    kr_cbc_encrypt(ci, cctx, ssl->tx_buf + enc_offset, enc_len, iv,
+                   ssl->tx_buf + enc_offset);
+  } else {
+    ci->encrypt(cctx, ssl->tx_buf + enc_offset, enc_len,
+                ssl->tx_buf + enc_offset);
+  }
 
   hdr.len = htobe16(hdr.len + enc_len);
   memcpy(ssl->tx_buf + hdr_offset, &hdr, sizeof(hdr));
@@ -6577,7 +6550,7 @@ NS_INTERNAL int tls_cl_hello(SSL *ssl) {
     return 0;
   }
   hello.sess_id_len = 0;
-#if ALLOW_NULL_CIPHERS
+#if KR_ALLOW_NULL_CIPHERS
   /* if we allow them, it's for testing reasons, so NULL comes first */
   hello.cipher_suite[i++] = htobe16(TLS_RSA_WITH_NULL_MD5);
   hello.cipher_suite[i++] = htobe16(TLS_RSA_WITH_AES_128_CBC_SHA256);
@@ -7381,12 +7354,13 @@ static int decrypt_and_vrfy(SSL *ssl, const struct tls_hdr *hdr, uint8_t *buf,
   }
 
   if (is_cbc) {
-    kr_cipher_set_iv(ssl->cur->cipher_suite, cctx, buf);
+    uint8_t *iv = buf;
     buf += ci->iv_len;
     len -= ci->iv_len;
+    kr_cbc_decrypt(ci, cctx, buf, len, iv, buf);
+  } else {
+    ci->decrypt(cctx, buf, len, buf);
   }
-
-  kr_cipher_decrypt(ssl->cur->cipher_suite, cctx, buf, len, buf);
 
   out->ptr = buf;
   out->len = len;
@@ -7445,6 +7419,7 @@ static int decrypt_and_vrfy(SSL *ssl, const struct tls_hdr *hdr, uint8_t *buf,
     tls_alert(ssl, ALERT_LEVEL_FATAL, alert);
     return 0;
   }
+
   return 1;
 }
 

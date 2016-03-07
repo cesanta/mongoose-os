@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifdef ESP_ENABLE_MG_LWIP_IF
 #include "mongoose/mongoose.h"
 
@@ -14,7 +19,7 @@
 #include <lwip/udp.h>
 
 #ifdef SSL_KRYPTON
-#include "krypton.h"
+#include "krypton/krypton.h"
 
 #ifndef MG_LWIP_SSL_IO_SIZE
 #define MG_LWIP_SSL_IO_SIZE 1024
@@ -891,26 +896,5 @@ ssize_t kr_recv(int fd, void *buf, size_t len, int flags) {
   }
   return len;
 }
-
-/* Defined in ROM, come from wpa_supplicant. */
-extern int md5_vector(size_t num_msgs, const u8 *msgs[], const size_t *msg_lens,
-                      uint8_t *digest);
-extern int sha1_vector(size_t num_msgs, const u8 *msgs[],
-                       const size_t *msg_lens, uint8_t *digest);
-
-void kr_hash_md5_v(size_t num_msgs, const uint8_t *msgs[],
-                   const size_t *msg_lens, uint8_t *digest) {
-  (void) md5_vector(num_msgs, msgs, msg_lens, digest);
-}
-
-void kr_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
-                    const size_t *msg_lens, uint8_t *digest) {
-  (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
-}
-
-int kr_get_random(uint8_t *out, size_t len) {
-  return os_get_random(out, len) == 0;
-}
-#endif
-
+#endif /* SSL_KRYPTON */
 #endif /* ESP_ENABLE_MG_LWIP_IF */

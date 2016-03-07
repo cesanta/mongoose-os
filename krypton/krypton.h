@@ -73,4 +73,16 @@ int SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type);
 
 void SSL_CTX_free(SSL_CTX *);
 
+typedef struct {
+  unsigned char block_len;
+  unsigned char key_len;
+  unsigned char iv_len;
+  void *(*new_ctx)();
+  void (*setup_enc)(void *ctx, const unsigned char *key);
+  void (*setup_dec)(void *ctx, const unsigned char *key);
+  void (*encrypt)(void *ctx, const unsigned char *msg, int len, unsigned char *out);
+  void (*decrypt)(void *ctx, const unsigned char *msg, int len, unsigned char *out);
+  void (*free_ctx)(void *ctx);
+} kr_cipher_info;
+
 #endif /* _KRYPTON_H */
