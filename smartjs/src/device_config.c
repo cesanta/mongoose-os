@@ -160,16 +160,16 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
 }
 
 static void reboot_handler(struct mg_connection *c, int ev, void *p) {
-  (void) ev;
   (void) p;
+  if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("Reboot requested"));
   mg_send_head(c, 200, 0, JSON_HEADERS);
   c->flags |= (MG_F_SEND_AND_CLOSE | MG_F_RELOAD_CONFIG);
 }
 
 static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
-  (void) ev;
   (void) p;
+  if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("RO-vars requested"));
   /* Reply with JSON object that contains read-only variables */
   mg_send_head(c, 200, -1, JSON_HEADERS);
@@ -258,14 +258,22 @@ static void upload_handler(struct mg_connection *c, int ev, void *p) {
       FILE *fp = (FILE *) c->user_data;
       if (fp == NULL) break;
       struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
-      LOG(LL_INFO,
-          ("%p Stored %s, %d bytes", c, mp->file_name, (int) ftell(fp)));
-      mg_printf(c,
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/plain\r\n"
-                "Connection: close\r\n\r\n"
-                "Ok, %s - %d bytes.\r\n",
-                mp->file_name, (int) ftell(fp));
+      if (mp->status >= 0) {
+        LOG(LL_INFO,
+            ("%p Stored %s, %d bytes", c, mp->file_name, (int) ftell(fp)));
+        mg_printf(c,
+                  "HTTP/1.1 200 OK\r\n"
+                  "Content-Type: text/plain\r\n"
+                  "Connection: close\r\n\r\n"
+                  "Ok, %s - %d bytes.\r\n",
+                  mp->file_name, (int) ftell(fp));
+      } else {
+        LOG(LL_ERROR, ("Failed to store %s", mp->file_name));
+        /*
+         * mp->status < 0 means connection was terminated, so no reason to send
+         * HTTP reply
+         */
+      }
       fclose(fp);
       c->user_data = NULL;
       c->flags |= MG_F_SEND_AND_CLOSE;
@@ -296,13 +304,14 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
       c->flags |= MG_F_SEND_AND_CLOSE;
       break;
     }
-    case MG_EV_CLOSE:
+    case MG_EV_CLOSE: {
       /* If we've sent the reply to the server, and should reboot, reboot */
       if (c->flags & MG_F_RELOAD_CONFIG) {
         c->flags &= ~MG_F_RELOAD_CONFIG;
         device_reboot();
       }
       break;
+    }
   }
 }
 
