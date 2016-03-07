@@ -23,7 +23,7 @@
   },
   "http": {
     "enable": true,
-    "port": "80",
+    "listen_addr": "80",
     "enable_webdav": true,
     "upload_acl": "*",
     "hidden_files": ""

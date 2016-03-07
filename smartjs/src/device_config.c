@@ -338,9 +338,9 @@ static int init_web_server(const struct sys_config *cfg) {
     s_http_server_opts.hidden_file_pattern = strdup(cfg->http.hidden_files);
   }
 
-  listen_conn = mg_bind(&sj_mgr, cfg->http.port, mongoose_ev_handler);
+  listen_conn = mg_bind(&sj_mgr, cfg->http.listen_addr, mongoose_ev_handler);
   if (!listen_conn) {
-    LOG(LL_ERROR, ("Error binding to port [%s]", cfg->http.port));
+    LOG(LL_ERROR, ("Error binding to [%s]", cfg->http.listen_addr));
     return 0;
   } else {
     mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
@@ -349,7 +349,7 @@ static int init_web_server(const struct sys_config *cfg) {
     mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
 
     mg_set_protocol_http_websocket(listen_conn);
-    LOG(LL_INFO, ("HTTP server started on port [%s]", cfg->http.port));
+    LOG(LL_INFO, ("HTTP server started on [%s]", cfg->http.listen_addr));
   }
   return 1;
 }

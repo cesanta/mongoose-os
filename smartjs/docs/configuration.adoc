@@ -111,7 +111,7 @@ reinitialize all Smart.js modules.
 `wifi.ap.dhcp_end`:: Clients IP range end
 
 `http.enable`:: Enable or disable configuration web-server
-`http.port`:: Port to use for configuration web-server
+`http.listen_addr`:: Listen address for configuration web-server
 `http.enable_webdav`:: Enable access to the device via WebDAV
 
 `update.server_timeout`:: Timeout to use in network operations during update operation (seconds). Might be increased
