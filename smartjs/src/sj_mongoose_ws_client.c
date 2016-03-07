@@ -20,9 +20,6 @@
 struct user_data {
   struct v7 *v7;
   v7_val_t ws;
-  char *host;
-  char *proto;
-  char *extra_headers;
 };
 
 static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
@@ -41,23 +38,7 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
   switch (ev) {
     case MG_EV_CONNECT:
-      if (*(int *) ev_data == 0) {
-        char buf[100] = {'\0'};
-        if (ud->proto != NULL || ud->extra_headers != NULL ||
-            ud->host != NULL) {
-          snprintf(buf, sizeof(buf), "%s%s%s%s%s%s%s",
-                   ud->proto ? "Sec-WebSocket-Protocol: " : "",
-                   ud->proto ? ud->proto : "", ud->proto ? "\r\n" : "",
-                   ud->host ? "Host: " : "", ud->host ? ud->host : "",
-                   ud->host ? "\r\n" : "",
-                   ud->extra_headers ? ud->extra_headers : "");
-          free(ud->proto);
-          free(ud->extra_headers);
-          free(ud->proto);
-          ud->proto = ud->extra_headers = NULL;
-        }
-        mg_send_websocket_handshake(nc, "/", buf);
-      } else {
+      if (*(int *) ev_data != 0) {
         invoke_cb(ud, "onerror", v7_mk_null());
       }
       break;
@@ -81,8 +62,6 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_undefined());
       v7_disown(v7, &ud->ws);
       /* Free strings here in case if connect failed */
-      free(ud->proto);
-      free(ud->extra_headers);
       free(ud);
       break;
     case MG_EV_SEND:
@@ -133,71 +112,28 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_object(this_obj) && this_obj != v7_get_global(v7)) {
-    int use_ssl = 0;
-    size_t len;
-    const char *url = v7_get_string_data(v7, &urlv, &len);
+    const char *url = v7_to_cstring(v7, &urlv);
+    const char *proto = NULL, *extra_headers = NULL;
 
-    struct mg_str host, scheme;
-    unsigned int port;
-
-    if (mg_parse_uri(mg_mk_str(url), &scheme, NULL, &host, &port, NULL, NULL,
-                     NULL) < 0) {
-      rcode = v7_throwf(v7, "Error", "invalid url string");
-      goto clean;
+    if (v7_is_string(subprotov)) {
+      proto = v7_get_string_data(v7, &subprotov, &n);
     }
 
-    if (mg_vcmp(&scheme, "ws") == 0) {
-      url += 5;
-    } else if (mg_vcmp(&scheme, "wss") == 0) {
-      url += 6;
-      use_ssl = 1;
-    }
-    char *host_str = calloc(1, host.len + 1);
-    if (host_str == NULL) {
-      rcode = v7_throwf(v7, "Error", "Out of memory");
-      goto clean;
-    }
-    memcpy(host_str, host.p, host.len);
-
-    char *url_with_port = NULL;
-    if (port == 0) {
-      /* mg_connect doesn't support user info, skip it */
-      int ret = asprintf(&url_with_port, "%.*s%s%s", (int) host.len, host.p,
-                         use_ssl ? ":443" : ":80", host.p + host.len);
-      (void) ret;
+    if (v7_is_string(ehv)) {
+      extra_headers = v7_get_string_data(v7, &ehv, &n);
     }
 
-    nc =
-        mg_connect(&sj_mgr, url_with_port ? url_with_port : url, ws_ev_handler);
-    free(url_with_port);
-
+    nc = mg_connect_ws(&sj_mgr, ws_ev_handler, url, proto, extra_headers);
     if (nc == NULL) {
-      rcode = v7_throwf(v7, "Error", "error creating the connection");
+      rcode = v7_throwf(v7, "Error", "cannot create connection");
       goto clean;
     }
-#ifdef MG_ENABLE_SSL
-    if (use_ssl) {
-      mg_set_ssl(nc, NULL, NULL);
-    }
-#endif
-
-    (void) use_ssl;
-    mg_set_protocol_http_websocket(nc);
 
     ud = calloc(1, sizeof(*ud));
     ud->v7 = v7;
     ud->ws = this_obj;
     nc->user_data = ud;
-    ud->host = host_str;
     v7_own(v7, &ud->ws);
-
-    if (v7_is_string(subprotov)) {
-      ud->proto = strdup(v7_get_string_data(v7, &subprotov, &n));
-    }
-
-    if (v7_is_string(ehv)) {
-      ud->extra_headers = strdup(v7_get_string_data(v7, &ehv, &n));
-    }
   } else {
     rcode = v7_throwf(v7, "Error", "WebSocket ctor called without new");
     goto clean;

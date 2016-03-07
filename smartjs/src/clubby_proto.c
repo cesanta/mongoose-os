@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "clubby_proto.h"
+#include "smartjs/src/clubby_proto.h"
 #include "smartjs/src/device_config.h"
 #include "common/ubjserializer.h"
 
@@ -37,7 +37,9 @@ struct mg_connection *clubby_proto_connect(struct mg_mgr *mgr,
   LOG(LL_DEBUG, ("Connecting to %s", server_address));
 
   struct mg_connection *nc =
-      mg_connect(mgr, server_address, clubby_proto_handler);
+      mg_connect_ws(mgr, clubby_proto_handler, server_address, WS_PROTOCOL,
+                    "Sec-WebSocket-Extensions: " WS_PROTOCOL
+                    "-encoding; in=json; out=ubjson\r\n");
   if (nc == NULL) {
     LOG(LL_DEBUG, ("Cannot connect to %s", server_address));
     struct clubby_event evt;
@@ -64,7 +66,6 @@ struct mg_connection *clubby_proto_connect(struct mg_mgr *mgr,
 #endif
 
   nc->user_data = context;
-  mg_set_protocol_http_websocket(nc);
 
   return nc;
 }
@@ -315,18 +316,6 @@ static void clubby_proto_handler(struct mg_connection *nc, int ev,
       LOG(LL_DEBUG, ("CONNECT (%d)", evt.net_connect.success));
 
       s_clubby_cb(&evt);
-
-      if (evt.net_connect.success) {
-        char *proto = NULL;
-        int dummy = asprintf(
-            &proto,
-            "Sec-WebSocket-Protocol: %s\r\n"
-            "Sec-WebSocket-Extensions: %s-encoding; in=json; out=ubjson\r\n",
-            WS_PROTOCOL, WS_PROTOCOL);
-        (void) dummy;
-        mg_send_websocket_handshake(nc, "/", proto);
-        free(proto);
-      }
       break;
     }
 
