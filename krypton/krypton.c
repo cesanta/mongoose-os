@@ -1,5 +1,5 @@
 #ifdef KR_MODULE_LINES
-#line 0 "src/krypton.h"
+#line 1 "src/krypton.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -90,7 +90,7 @@ typedef struct {
 
 #endif /* _KRYPTON_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/ktypes.h"
+#line 1 "src/src/ktypes.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -304,7 +304,7 @@ typedef struct _bigint bigint; /**< An alias for _bigint */
 
 #endif /* _KTYPES_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/tlsproto.h"
+#line 1 "src/src/tlsproto.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -501,7 +501,7 @@ typedef enum {
 
 #endif /* _TLSPROTO_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/kexterns.h"
+#line 1 "src/src/kexterns.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -551,7 +551,7 @@ extern void kr_hash_sha256_v(size_t num_msgs, const uint8_t *msgs[],
 
 #endif /* _KEXTERNS_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/crypto.h"
+#line 1 "src/src/crypto.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -662,7 +662,7 @@ const kr_cipher_info *kr_aes128_cs_info();
 
 #endif /* _CRYPTO_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/bigint_impl.h"
+#line 1 "src/src/bigint_impl.h"
 #endif
 /*
  * Copyright (c) 2007, Cameron Rich
@@ -794,7 +794,7 @@ typedef struct _BI_CTX BI_CTX;
 
 #endif
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/bigint.h"
+#line 1 "src/src/bigint.h"
 #endif
 /*
  * Copyright (c) 2007, Cameron Rich
@@ -894,7 +894,7 @@ NS_INTERNAL bigint *bi_crt(BI_CTX *ctx, bigint *bi, bigint *dP, bigint *dQ,
 
 #endif
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/tls.h"
+#line 1 "src/src/tls.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -973,7 +973,7 @@ NS_INTERNAL void tls_compute_master_secret(tls_sec_t sec,
 
 #endif /* _TLS_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/ber.h"
+#line 1 "src/src/ber.h"
 #endif
 /*
  * Copyright (c) 2010 Gianni Tedesco <gianni@scaramanga.co.uk>
@@ -1014,7 +1014,7 @@ int ber_dumpf(FILE *f, const uint8_t *ptr, size_t len);
 
 #endif /* _GBER_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/pem.h"
+#line 1 "src/src/pem.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -1058,7 +1058,7 @@ NS_INTERNAL int b64_decode(const uint8_t *buf, size_t len, uint8_t *out,
 
 #endif /* _PEM_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/x509.h"
+#line 1 "src/src/x509.h"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -1108,7 +1108,7 @@ NS_INTERNAL int kr_match_domain_name(struct ro_vec pat, struct ro_vec dom);
 
 #endif /* _X509_H */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/b64.c"
+#line 1 "src/src/b64.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -1246,7 +1246,7 @@ int main(int argc, char **argv) {
 }
 #endif
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/ber.c"
+#line 1 "src/src/ber.c"
 #endif
 /*
  * Copyright (c) 2010 Gianni Tedesco <gianni@scaramanga.co.uk>
@@ -1414,7 +1414,7 @@ NS_INTERNAL const uint8_t *ber_decode_tag(struct gber_tag *tag,
   return ptr;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/bigint.c"
+#line 1 "src/src/bigint.c"
 #endif
 /*
  * Copyright (c) 2007, Cameron Rich
@@ -2791,7 +2791,7 @@ NS_INTERNAL bigint *bi_crt(BI_CTX *ctx, bigint *bi, bigint *dP, bigint *dQ,
 }
 /** @} */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/ctx.c"
+#line 1 "src/src/ctx.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -3084,7 +3084,7 @@ void SSL_CTX_free(SSL_CTX *ctx) {
   free(ctx);
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/hexdump.c"
+#line 1 "src/src/hexdump.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -3135,7 +3135,7 @@ void hex_dump(const void *ptr, size_t len, size_t llen) {
 }
 #endif
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/md5.c"
+#line 1 "src/src/md5.c"
 #endif
 /*
  * Copyright (c) 2007, Cameron Rich
@@ -3441,7 +3441,7 @@ static void kr_hash_md5_v(size_t num_msgs, const uint8_t *msgs[],
 }
 #endif /* !KR_EXT_MD5 */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/sha1.c"
+#line 1 "src/src/sha1.c"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
@@ -3705,7 +3705,7 @@ static void kr_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
 }
 #endif /* !KR_EXT_SHA1 */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/sha256.c"
+#line 1 "src/src/sha256.c"
 #endif
 /*
  * FILE:	sha2.c
@@ -4333,7 +4333,7 @@ static void kr_hmac_sha256_v(const uint8_t *key, size_t key_len,
             SHA256_SIZE);
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/hmac.c"
+#line 1 "src/src/hmac.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -4419,7 +4419,7 @@ NS_INTERNAL void kr_ssl_hmac(SSL *ssl, int cs, size_t num_msgs,
   kr_hmac_v(hf, key, mac_len, num_msgs, msgs, msg_lens, digest, mac_len);
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/meth.c"
+#line 1 "src/src/meth.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -4452,7 +4452,7 @@ const SSL_METHOD *SSLv23_client_method(void) {
   return &cl_meth;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/pem.c"
+#line 1 "src/src/pem.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -4673,7 +4673,7 @@ void pem_free(PEM *p) {
   }
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/prf.c"
+#line 1 "src/src/prf.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -4712,7 +4712,7 @@ NS_INTERNAL void prf(const uint8_t *sec, size_t sec_len, const uint8_t *seed,
   }
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/random.c"
+#line 1 "src/src/random.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -4767,7 +4767,7 @@ int get_random_nonzero(uint8_t *out, size_t len) {
   return 1;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/aes.c"
+#line 1 "src/src/aes.c"
 #endif
 /*
  * Copyright (c) 2007, Cameron Rich
@@ -5144,7 +5144,7 @@ const kr_cipher_info *kr_aes128_cs_info() {
 
 #endif /* !KR_EXT_AES */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/rc4.c"
+#line 1 "src/src/rc4.c"
 #endif
 /*
  * Copyright (c) 2007, Cameron Rich
@@ -5256,7 +5256,7 @@ const kr_cipher_info *kr_rc4_cs_info() {
 }
 #endif /* !KR_EXT_RC4 */
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/cipher.c"
+#line 1 "src/src/cipher.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -5357,7 +5357,7 @@ NS_INTERNAL void kr_cbc_decrypt(const kr_cipher_info *ci, void *cctx,
   }
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/rsa.c"
+#line 1 "src/src/rsa.c"
 #endif
 /*
  * Copyright (c) 2007-2014, Cameron Rich
@@ -5621,7 +5621,7 @@ int RSA_encrypt(const RSA_CTX *ctx, const uint8_t *in_data, uint16_t in_len,
   return byte_size;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/ssl.c"
+#line 1 "src/src/ssl.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -6163,7 +6163,7 @@ void ssl_err(SSL *ssl, int err) {
   ssl->err = err;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/tls.c"
+#line 1 "src/src/tls.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -6521,7 +6521,7 @@ NS_INTERNAL int tls_close_notify(SSL *ssl) {
   return tls_alert(ssl, ALERT_LEVEL_WARNING, ALERT_CLOSE_NOTIFY);
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/tls_cl.c"
+#line 1 "src/src/tls_cl.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -6681,7 +6681,7 @@ NS_INTERNAL int tls_cl_finish(SSL *ssl) {
   return 1;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/tls_recv.c"
+#line 1 "src/src/tls_recv.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -7526,7 +7526,7 @@ out:
   return ret;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/tls_sv.c"
+#line 1 "src/src/tls_sv.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -7600,7 +7600,7 @@ NS_INTERNAL int tls_sv_finish(SSL *ssl) {
   return tls_send(ssl, TLS_HANDSHAKE, &finished, sizeof(finished));
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/x509.c"
+#line 1 "src/src/x509.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
@@ -8093,7 +8093,7 @@ NS_INTERNAL int X509_verify_name(X509 *cert, const char *name) {
   return 0;
 }
 #ifdef KR_MODULE_LINES
-#line 0 "src/src/x509_verify.c"
+#line 1 "src/src/x509_verify.c"
 #endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
