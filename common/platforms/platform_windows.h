@@ -20,14 +20,17 @@
 #endif
 
 #include <assert.h>
+#include <direct.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <io.h>
 #include <limits.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #define random() rand()
 #ifdef _MSC_VER
@@ -53,6 +56,7 @@
 #define to64(x) _atoi64(x)
 #define popen(x, y) _popen((x), (y))
 #define pclose(x) _pclose(x)
+#define rmdir _rmdir
 #if defined(_MSC_VER) && _MSC_VER >= 1400
 #define fseeko(x, y, z) _fseeki64((x), (y), (z))
 #else

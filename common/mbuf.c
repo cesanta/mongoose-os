@@ -65,14 +65,15 @@ size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
     }
     a->len += len;
   } else if ((p = (char *) MBUF_REALLOC(
-                  a->buf, (a->len + len) * MBUF_SIZE_MULTIPLIER)) != NULL) {
+                  a->buf, (size_t)((a->len + len) * MBUF_SIZE_MULTIPLIER))) !=
+             NULL) {
     a->buf = p;
     memmove(a->buf + off + len, a->buf + off, a->len - off);
     if (buf != NULL) {
       memcpy(a->buf + off, buf, len);
     }
     a->len += len;
-    a->size = a->len * MBUF_SIZE_MULTIPLIER;
+    a->size = (size_t)(a->len * MBUF_SIZE_MULTIPLIER);
   } else {
     len = 0;
   }

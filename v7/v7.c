@@ -107,14 +107,17 @@
 #endif
 
 #include <assert.h>
+#include <direct.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <io.h>
 #include <limits.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #define random() rand()
 #ifdef _MSC_VER
@@ -140,6 +143,7 @@
 #define to64(x) _atoi64(x)
 #define popen(x, y) _popen((x), (y))
 #define pclose(x) _pclose(x)
+#define rmdir _rmdir
 #if defined(_MSC_VER) && _MSC_VER >= 1400
 #define fseeko(x, y, z) _fseeki64((x), (y), (z))
 #else
@@ -835,8 +839,8 @@ const char *c_strnstr(const char *s, const char *find, size_t slen);
 #if (!(defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) &&           \
      !(defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L) &&   \
      !(defined(__DARWIN_C_LEVEL) && __DARWIN_C_LEVEL >= 200809L) && \
-     !defined(RTOS_SDK)) ||                                         \
-    (defined(_MSC_VER) && _MSC_VER < 1600 /*Visual Studio 2010*/)
+     !defined(RTOS_SDK)) &&                                         \
+    !(defined(_MSC_VER) && _MSC_VER >= 1600 /* MSVC2010+ has strnlen */)
 #define _MG_PROVIDE_STRNLEN
 size_t strnlen(const char *s, size_t maxlen);
 #endif
@@ -5192,14 +5196,15 @@ size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
     }
     a->len += len;
   } else if ((p = (char *) MBUF_REALLOC(
-                  a->buf, (a->len + len) * MBUF_SIZE_MULTIPLIER)) != NULL) {
+                  a->buf, (size_t)((a->len + len) * MBUF_SIZE_MULTIPLIER))) !=
+             NULL) {
     a->buf = p;
     memmove(a->buf + off + len, a->buf + off, a->len - off);
     if (buf != NULL) {
       memcpy(a->buf + off, buf, len);
     }
     a->len += len;
-    a->size = a->len * MBUF_SIZE_MULTIPLIER;
+    a->size = (size_t)(a->len * MBUF_SIZE_MULTIPLIER);
   } else {
     len = 0;
   }
