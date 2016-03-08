@@ -113,6 +113,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   info.gw.addr = ipaddr_addr(cfg->gw);
   wifi_set_ip_info(SOFTAP_IF, &info);
 
+  dhcps.enable = true;
   dhcps.start_ip.addr = ipaddr_addr(cfg->dhcp_start);
   dhcps.end_ip.addr = ipaddr_addr(cfg->dhcp_end);
   wifi_softap_set_dhcps_lease(&dhcps);
