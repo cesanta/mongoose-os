@@ -113,6 +113,9 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
  *   console.log(message);
  * });
  *
+ * TLS can be enabled by choosing the `mqtts://` protocol. In that
+ * case the default port is 8883 as defined by IANA.
+ *
  * The API is modeled after https://www.npmjs.com/package/mqtt.
  *
  */
@@ -125,6 +128,7 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *nc;
   struct user_data *ud;
   char *url_with_port = NULL;
+  int use_ssl = 0;
   v7_val_t urlv = v7_arg(v7, 0), opts = v7_arg(v7, 1);
   v7_val_t client_id;
   v7_val_t proto =
@@ -143,11 +147,15 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  if (mg_vcmp(&scheme, "mqtt") != 0) {
+  if (mg_vcmp(&scheme, "mqtt") == 0) {
+    url += sizeof("mqtt://") - 1;
+  } else if (mg_vcmp(&scheme, "mqtts") == 0) {
+    url += sizeof("mqtts://") - 1;
+    use_ssl = 1;
+  } else {
     rcode = v7_throwf(v7, "Error", "unsupported protocol");
     goto clean;
   }
-  url += sizeof("mqtt://") - 1;
 
   client_id = v7_get(v7, opts, "clientId", ~0);
   if (v7_is_undefined(client_id)) {
@@ -158,8 +166,8 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   }
 
   if (port == 0) {
-    int ret =
-        asprintf(&url_with_port, "%.*s%s", (int) host.len, host.p, ":1883");
+    int ret = asprintf(&url_with_port, "%.*s%s", (int) host.len, host.p,
+                       (use_ssl ? ":8883" : ":1883"));
     (void) ret;
   }
 
@@ -168,6 +176,15 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   if (nc == NULL) {
     rcode = v7_throwf(v7, "Error", "cannot create connection");
     goto clean;
+  }
+
+  if (use_ssl) {
+#ifdef MG_ENABLE_SSL
+    mg_set_ssl(nc, NULL, NULL);
+#else
+    rcode = v7_throwf(v7, "Error", "SSL not enabled");
+    goto clean;
+#endif
   }
   mg_set_protocol_mqtt(nc);
 
