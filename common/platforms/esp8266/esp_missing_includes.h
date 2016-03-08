@@ -26,6 +26,7 @@ void ets_wdt_enable();
 void ets_delay_us(unsigned us);
 void system_restart_local();
 int os_printf_plus(const char *format, ...);
+int SPIEraseBlock(uint32_t block);
 
 void _xtos_set_exception_handler();
 void xthal_set_intenable();

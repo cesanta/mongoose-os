@@ -105,6 +105,7 @@ struct update_context {
   struct part_info fs_part;
   struct part_info *current_part;
   uint32_t current_write_address;
+  uint32_t erased_till;
 
   char version[14];
 
@@ -374,6 +375,33 @@ error:
   return -1;
 }
 
+static int prepare_flash(struct update_context *ctx, uint32_t bytes_to_write) {
+  while (ctx->current_write_address + bytes_to_write > ctx->erased_till) {
+    uint32_t sec_no = ctx->erased_till / FLASH_SECTOR_SIZE;
+
+    if ((ctx->erased_till % FLASH_ERASE_BLOCK_SIZE) == 0 &&
+        ctx->current_part->addr + ctx->current_part->real_size >=
+            ctx->erased_till + FLASH_ERASE_BLOCK_SIZE) {
+      LOG(LL_DEBUG, ("Erasing block @sector %X", sec_no));
+      uint32_t block_no = ctx->erased_till / FLASH_ERASE_BLOCK_SIZE;
+      if (SPIEraseBlock(block_no) != 0) {
+        LOG(LL_ERROR, ("Failed to erase flash block %X", block_no));
+        return -1;
+      }
+      ctx->erased_till = (block_no + 1) * FLASH_ERASE_BLOCK_SIZE;
+    } else {
+      LOG(LL_DEBUG, ("Erasing sector %X", sec_no));
+      if (spi_flash_erase_sector(sec_no) != 0) {
+        LOG(LL_ERROR, ("Failed to erase flash sector %X", sec_no));
+        return -1;
+      }
+      ctx->erased_till = (sec_no + 1) * FLASH_SECTOR_SIZE;
+    }
+  }
+
+  return 1;
+}
+
 static int process_file_data(struct update_context *ctx, int ignore_data) {
   uint32_t bytes_to_write =
       ctx->file_info.file_size - ctx->file_info.file_received_bytes;
@@ -390,6 +418,11 @@ static int process_file_data(struct update_context *ctx, int ignore_data) {
    * if ignore_data=0 we have to write data to flash
    */
   if (!ignore_data) {
+    if (prepare_flash(ctx, bytes_to_write) < 0) {
+      ctx->status_msg = "Failed to erase flash";
+      return -1;
+    }
+
     /* Write buffer size must be aligned to 4 */
     uint32_t bytes_to_write_aligned = bytes_to_write & -4;
     LOG(LL_DEBUG, ("Aligned size=%u", bytes_to_write_aligned));
@@ -422,12 +455,12 @@ static int process_file_data(struct update_context *ctx, int ignore_data) {
       LOG(LL_DEBUG, ("Writing 4 bytes @%X", ctx->current_write_address));
       if (spi_flash_write(ctx->current_write_address, (uint32_t *) align_buf,
                           4) != 0) {
-        ctx->file_info.crc_current =
-            mz_crc32(ctx->file_info.crc_current, ctx->data, rest);
         LOG(LL_ERROR, ("Failed to write to flash"));
         ctx->status_msg = "Failed to write to flash";
         return -1;
       }
+      ctx->file_info.crc_current =
+          mz_crc32(ctx->file_info.crc_current, ctx->data, rest);
 
       ctx->file_info.file_received_bytes += rest;
       context_remove_data(ctx, rest);
@@ -505,26 +538,10 @@ static int verify_checksum(uint32_t addr, size_t len,
 
 static int prepare_to_write(struct update_context *ctx,
                             struct part_info *part) {
-  int sector_no = part->addr / FLASH_SECTOR_SIZE;
-  int size = ctx->file_info.file_size;
-
-  LOG(LL_DEBUG, ("Erasing flash, sector=%X, size=%d", sector_no, size));
-  while (size >= 0) {
-    if (spi_flash_erase_sector(sector_no) != 0) {
-      LOG(LL_ERROR, ("Cannot erase sector %X", sector_no));
-      ctx->status_msg = "Failed to erase flash";
-      return -1;
-    }
-
-    pp_soft_wdt_restart();
-
-    size -= FLASH_SECTOR_SIZE;
-    sector_no++;
-  }
-
   ctx->current_part = part;
   ctx->current_part->real_size = ctx->file_info.file_size;
   ctx->current_write_address = part->addr;
+  ctx->erased_till = ctx->current_write_address;
 
   return 1;
 }
