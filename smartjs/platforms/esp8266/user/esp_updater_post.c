@@ -24,22 +24,22 @@
 #define SHA1SUM_LEN 40
 
 /*
-* --- Zip file local header structure ---
-*                                             size  offset
-* local file header signature   (0x04034b50)   4      0
-* version needed to extract                    2      4
-* general purpose bit flag                     2      6
-* compression method                           2      8
-* last mod file time                           2      10
-* last mod file date                           2      12
-* crc-32                                       4      14
-* compressed size                              4      18
-* uncompressed size                            4      22
-* file name length                             2      26
-* extra field length                           2      28
-* file name (variable size)                    v      30
-* extra field (variable size)                  v
-*/
+ * --- Zip file local header structure ---
+ *                                             size  offset
+ * local file header signature   (0x04034b50)   4      0
+ * version needed to extract                    2      4
+ * general purpose bit flag                     2      6
+ * compression method                           2      8
+ * last mod file time                           2      10
+ * last mod file date                           2      12
+ * crc-32                                       4      14
+ * compressed size                              4      18
+ * uncompressed size                            4      22
+ * file name length                             2      26
+ * extra field length                           2      28
+ * file name (variable size)                    v      30
+ * extra field (variable size)                  v
+ */
 
 #define ZIP_LOCAL_HDR_SIZE 30U
 #define ZIP_GENFLAG_OFFSET 6U
@@ -59,6 +59,12 @@ uint32_t mz_crc32(uint32_t crc, const char *ptr, size_t buf_len);
 
 /* Must be provided externally, usually auto-generated. */
 extern const char *build_version;
+
+/*
+ * Using static variable (not only c->user_data), it allows to check if update
+ * already in progress when another request arrives
+ */
+static struct update_context *s_ctx = NULL;
 
 enum update_status {
   US_INITED,
@@ -105,6 +111,7 @@ struct update_context {
   int parts_written;
 
   int slot_to_write;
+  int need_reboot;
 };
 
 static void context_init(struct update_context *ctx) {
@@ -121,13 +128,13 @@ static void context_release(struct update_context *ctx) {
 }
 
 /*
-* During its work, updater requires requires to store some data.
-* For example, manifest file, zip header - must be received fully, while
-* content FW/FS files can be flashed directly from recv_mbuf
-* To avoid extra memory usage, context contains plain pointer (*data)
-* and mbuf (unprocessed); data is storing in memory only if where is no way
-* to process it right now.
-*/
+ * During its work, updater requires requires to store some data.
+ * For example, manifest file, zip header - must be received fully, while
+ * content FW/FS files can be flashed directly from recv_mbuf
+ * To avoid extra memory usage, context contains plain pointer (*data)
+ * and mbuf (unprocessed); data is storing in memory only if where is no way
+ * to process it right now.
+ */
 static void context_update(struct update_context *ctx, const char *data,
                            size_t len) {
   if (ctx->unprocessed.len != 0) {
@@ -668,6 +675,7 @@ static int updater_process(struct update_context *ctx, const char *data,
 
         if (ret > 0) {
           update_rboot_config(ctx);
+          ctx->need_reboot = 1;
           set_status(ctx, US_FINISHED);
         } else {
           set_status(ctx, US_WAITING_FILE_HEADER);
@@ -724,38 +732,48 @@ static void schedule_reboot() {
   os_timer_arm(&reboot_timer, 1000, 0);
 }
 
-static void handle_update_req(struct mg_connection *c, int ev, void *p) {
-  /*
-   * At the moment, mongoose doesn't deliver MG_EV_CLOSE event to
-   * endpoint handler and in order to avoid memory leak we use this static
-   * variable, instead of calloc-ated. It is not bad itself but still:
-   * TODO(alashkin): take a look on this once MG_EV_CLOSE problem is fixed
-   */
-  static struct update_context *s_ctx;
-  if (s_ctx == NULL) {
-    s_ctx = calloc(1, sizeof(*s_ctx));
-  }
+static int update_finished(struct update_context *ctx) {
+  return ctx->update_status == US_FINISHED;
+}
 
+static void finish_update_session(struct update_context *ctx) {
+  ctx->update_status = US_FINISHED;
+}
+
+static int reboot_requred(struct update_context *ctx) {
+  return ctx->need_reboot;
+}
+
+static void handle_update_req(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
     case MG_EV_HTTP_MULTIPART_REQUEST: {
-      LOG(LL_INFO, ("Updating FW"));
-      context_release(s_ctx);
-      context_init(s_ctx);
-      c->user_data = s_ctx;
+      if (s_ctx != 0) {
+        mg_printf(c,
+                  "HTTP/1.1 400 Bad request\r\n"
+                  "Content-Type: text/plain\r\n"
+                  "Connection: close\r\n\r\n"
+                  "Update already in progress\r\n");
+        LOG(LL_ERROR, ("Update already in progress"));
+        c->flags |= MG_F_SEND_AND_CLOSE;
+      } else {
+        LOG(LL_INFO, ("Updating FW"));
+        s_ctx = calloc(1, sizeof(*s_ctx));
+        context_init(s_ctx);
+        c->user_data = s_ctx;
+      }
       break;
     }
     case MG_EV_HTTP_PART_DATA: {
-      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
       struct update_context *ctx = (struct update_context *) c->user_data;
+      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
       LOG(LL_DEBUG, ("Got %u bytes", mp->data.len))
 
       /*
        * We can have NULL here if client sends data after completion of
        * update process
        */
-      if (ctx != NULL) {
-        int ret = updater_process((struct update_context *) c->user_data,
-                                  mp->data.p, mp->data.len);
+      if (ctx != NULL && !update_finished(ctx)) {
+        int ret = updater_process(ctx, mp->data.p, mp->data.len);
         LOG(LL_DEBUG, ("updater_process res: %d", ret));
         if (ret < 0) {
           /* Error */
@@ -767,7 +785,7 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
                     ctx->status_msg ? ctx->status_msg : "Unknown error");
           LOG(LL_ERROR, ("Update failed: %s",
                          ctx->status_msg ? ctx->status_msg : "Unknown error"));
-        } else if (ret > 0 && ctx->update_status != US_FINISHED) {
+        } else if (ret > 0 && !update_finished(ctx)) {
           /* Update is not completed, but not because of error */
           mg_printf(c,
                     "HTTP/1.1 200 OK\r\n"
@@ -777,7 +795,7 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
                     ctx->status_msg ? ctx->status_msg : "Unknown reason");
           LOG(LL_INFO, ("Update declined: %s",
                         ctx->status_msg ? ctx->status_msg : "Unknown reason"));
-        } else if (ret > 0 && ctx->update_status == US_FINISHED) {
+        } else if (ret > 0 && update_finished(ctx)) {
           /* Update completed */
           mg_printf(c,
                     "HTTP/1.1 200 OK\r\n"
@@ -785,25 +803,35 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
                     "Connection: close\r\n\r\n"
                     "Update completed successfully");
           LOG(LL_INFO, ("Update completed successfully"));
-          /*
-          * POST update was explicitly initiated by user, do not delay reboot
-          * At this point endpoint handler doesn't receive
-          * MG_EV_CLOSE event, and we have to use timer to delay reboot
-          * It can be fixed in mongoose, by introducing per-connection
-          * state.
-          * TODO(alashkin): after proto_data refactor do not use
-          * schedule_reboot here
-          */
-          schedule_reboot();
         }
 
         if (ret != 0) {
           c->flags |= MG_F_SEND_AND_CLOSE;
-          context_release(ctx);
-          c->user_data = NULL;
+          finish_update_session(ctx);
         }
-      } else { /* ctx == NULL */
+      } else { /* another connection or rest of previous POST */
         LOG(LL_DEBUG, ("Skipping %d bytes", mp->data.len));
+      }
+      break;
+    }
+    case MG_EV_HTTP_PART_END: {
+      struct update_context *ctx = (struct update_context *) c->user_data;
+      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
+      LOG(LL_DEBUG, ("MG_EV_HTTP_PART_END: %p %p %d", ctx, mp, mp->status));
+
+      if (ctx != NULL) {
+        if (mp->status < 0 && !update_finished(ctx)) {
+          /* mp->status < 0 means connection is dead, do not send reply */
+          LOG(LL_ERROR, ("Update terminated unexpectedly"));
+        } else if (reboot_requred(ctx)) {
+          LOG(LL_INFO, ("Rebooting device"));
+          schedule_reboot();
+        }
+
+        context_release(ctx);
+        free(ctx);
+        s_ctx = NULL;
+        c->user_data = NULL;
       }
       break;
     }
