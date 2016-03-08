@@ -127,8 +127,7 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
 
 ssize_t kr_send(int fd, const void *buf, size_t len, int flags) {
   struct mg_connection *nc = (struct mg_connection *) fd;
-  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-  int ret = mg_lwip_tcp_write(cs->pcb.tcp, buf, len);
+  int ret = mg_lwip_tcp_write(nc, buf, len);
   (void) flags;
   DBG(("mg_lwip_tcp_write %u = %d", len, ret));
   if (ret <= 0) {

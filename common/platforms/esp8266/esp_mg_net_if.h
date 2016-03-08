@@ -24,16 +24,35 @@ int mg_is_suspended();
 
 /* Internal stuff below */
 
+#define MG_TCP_RTT_NUM_SAMPLES 10 /* NB: may overflow sum if set too large. */
+#define MG_TCP_INITIAL_REXMIT_TIMEOUT_MS 200
+#define MG_TCP_MAX_REXMIT_TIMEOUT_STEP_MS 5
+#define MG_TCP_MAX_REXMIT_TIMEOUT_MS 10000
+
 struct mg_lwip_conn_state {
   union {
     struct tcp_pcb *tcp;
     struct udp_pcb *udp;
   } pcb;
   err_t err;
-  size_t num_sent;
-  struct pbuf *rx_chain;
-  size_t rx_offset;
+  size_t num_sent; /* Number of acknowledged bytes to be reported to the core */
+  struct pbuf *rx_chain; /* Chain of incoming data segments. */
+  size_t rx_offset; /* Offset within the first pbuf (if partially consumed) */
+  /* Last SSL write size, for retries. */
   int last_ssl_write_size;
+
+  uint32_t bytes_written; /* Counter of bytes sent on this connection */
+  uint32_t sent_up_to;    /* How many bytes have been acknowledged */
+  /* The following two variables are used to compute RTT */
+  uint32_t send_started_bytes;  /* What was the bytes_written counter */
+  uint32_t send_started_micros; /* What was the wall time */
+  /* Last MG_TCP_RTT_NUM_SAMPLES RTT samples + next sample index. */
+  uint32_t rtt_samples_micros[MG_TCP_RTT_NUM_SAMPLES];
+  uint8_t rtt_sample_index;
+  /* What was the last rexmit timeout value we set. */
+  uint32_t rexmit_timeout_micros;
+  /* When the next rexmit is due. */
+  uint32_t next_rexmit_ts_micros;
 };
 
 enum mg_sig_type {
@@ -49,6 +68,6 @@ void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc);
 
 struct tcp_pcb;
 void mg_lwip_accept_conn(struct mg_connection *nc, struct tcp_pcb *tpcb);
-int mg_lwip_tcp_write(struct tcp_pcb *tpcb, const void *data, uint16_t len);
+int mg_lwip_tcp_write(struct mg_connection *nc, const void *data, uint16_t len);
 
 #endif /* _ESP_MG_NET_IF_H_ */

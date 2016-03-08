@@ -48,6 +48,8 @@ static os_event_t s_mg_task_queue[MG_TASK_QUEUE_LEN];
 static int poll_scheduled = 0;
 static int s_suspended = 0;
 
+static void mg_lwip_sched_rexmit(struct mg_connection *nc);
+
 static void mg_lwip_task(os_event_t *e);
 void IRAM mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc) {
   system_os_post(MG_TASK_PRIORITY, sig, (uint32_t) nc);
@@ -57,6 +59,26 @@ void IRAM mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   if (poll_scheduled) return;
   system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) mgr);
   poll_scheduled = 1;
+}
+
+static uint32_t time_left_micros(uint32_t now, uint32_t future) {
+  if (now < future) {
+    if (future - now < 0x80000000) {
+      return (future - now);
+    } else {
+      /* Now wrapped around, future is now in the past. */
+      return 0;
+    }
+  } else if (now > future) {
+    if (now - future < 0x80000000) {
+      return 0;
+    } else {
+      /* Future is after now wraps. */
+      return (~now + future);
+    }
+  } else {
+    return 0;
+  }
 }
 
 static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
@@ -182,6 +204,19 @@ static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
   }
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   cs->num_sent += num_sent;
+
+  cs->sent_up_to += num_sent;
+  if (cs->send_started_bytes > 0 && cs->sent_up_to >= cs->send_started_bytes) {
+    uint32_t now = system_get_time();
+    uint32_t send_time_micros = time_left_micros(cs->send_started_micros, now);
+    cs->rtt_samples_micros[cs->rtt_sample_index] = send_time_micros;
+    cs->rtt_sample_index = (cs->rtt_sample_index + 1) % MG_TCP_RTT_NUM_SAMPLES;
+    cs->send_started_bytes = cs->send_started_micros = 0;
+  }
+  if (tpcb->unacked == NULL) {
+    cs->next_rexmit_ts_micros = cs->rexmit_timeout_micros = 0;
+  }
+
   mg_lwip_post_signal(MG_SIG_SENT_CB, nc);
   return ERR_OK;
 }
@@ -314,7 +349,10 @@ int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   return -1;
 }
 
-int mg_lwip_tcp_write(struct tcp_pcb *tpcb, const void *data, uint16_t len) {
+int mg_lwip_tcp_write(struct mg_connection *nc, const void *data,
+                      uint16_t len) {
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  struct tcp_pcb *tpcb = cs->pcb.tcp;
   len = MIN(tpcb->mss, MIN(len, tpcb->snd_buf));
   if (len == 0) {
     DBG(("%p no buf avail %u %u %u %p %p", tpcb, tpcb->acked, tpcb->snd_buf,
@@ -332,6 +370,13 @@ int mg_lwip_tcp_write(struct tcp_pcb *tpcb, const void *data, uint16_t len) {
      */
     return (err == ERR_MEM ? 0 : -1);
   }
+  cs->bytes_written += len;
+  if (cs->send_started_bytes == 0) {
+    cs->send_started_bytes = cs->bytes_written;
+    cs->send_started_micros = system_get_time();
+    cs->rexmit_timeout_micros = cs->next_rexmit_ts_micros = 0;
+    mg_lwip_sched_rexmit(nc);
+  }
   return len;
 }
 
@@ -341,9 +386,7 @@ static void mg_lwip_send_more(struct mg_connection *nc) {
     DBG(("%p invalid socket", nc));
     return;
   }
-  struct tcp_pcb *tpcb = cs->pcb.tcp;
-  int num_written =
-      mg_lwip_tcp_write(tpcb, nc->send_mbuf.buf, nc->send_mbuf.len);
+  int num_written = mg_lwip_tcp_write(nc, nc->send_mbuf.buf, nc->send_mbuf.len);
   DBG(("%p mg_lwip_tcp_write %u = %d", nc, nc->send_mbuf.len, num_written));
   if (num_written == 0) return;
   if (num_written < 0) {
@@ -461,42 +504,90 @@ void mg_if_get_conn_addr(struct mg_connection *nc, int remote,
   }
 }
 
-#if MG_LWIP_REXMIT_INTERVAL_MS > 0
-/*
- * This is pretty a pretty dumb retry mechanism. It doesn't account for RTT
- * variability, but it's simple and it does help. So it'll do for now.
- * TODO(rojer): Port the fancy RTT-tracking logic from TCPUART.
- */
+static uint32_t mg_lwip_get_avg_rtt_micros(struct mg_lwip_conn_state *cs) {
+  if (cs->rtt_samples_micros[cs->rtt_sample_index] == 0) {
+    /* Not enough samples. */
+    return 0;
+  }
+  uint32_t i, sum = 0;
+  for (i = 0; i < MG_TCP_RTT_NUM_SAMPLES; i++) {
+    sum += cs->rtt_samples_micros[i];
+  }
+  return (sum / MG_TCP_RTT_NUM_SAMPLES);
+}
 
 /* From LWIP. */
 void tcp_rexmit_rto(struct tcp_pcb *pcb);
 
 static os_timer_t s_rexmit_tmr;
 
-static void mg_lwip_maybe_rexmit(struct mg_connection *nc) {
-  uint16_t saved_nrtx;
-  if (nc->sock == INVALID_SOCKET || nc->flags & MG_F_UDP ||
-      nc->flags & MG_F_LISTENING) {
-    return;
-  }
+static void mg_lwip_sched_rexmit(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-  struct tcp_pcb *tpcb = cs->pcb.tcp;
-  if (tpcb == NULL || tpcb->unacked == NULL) return;
-  /* We do not want this rexmit to interfere with slow timer's backoff. */
-  saved_nrtx = tpcb->nrtx;
-  DBG(("%p rexmit %u", nc, tpcb->unacked->len));
-  tcp_rexmit_rto(tpcb);
-  tpcb->nrtx = saved_nrtx;
+  uint32_t avg_rtt_micros = 0;
+  if (cs->rexmit_timeout_micros == 0) {
+    avg_rtt_micros = mg_lwip_get_avg_rtt_micros(cs);
+    if (avg_rtt_micros > 0) {
+      cs->rexmit_timeout_micros = (avg_rtt_micros + avg_rtt_micros / 2);
+      if (cs->rexmit_timeout_micros < 3000) cs->rexmit_timeout_micros = 3000;
+    } else {
+      cs->rexmit_timeout_micros = MG_TCP_INITIAL_REXMIT_TIMEOUT_MS * 1000;
+    }
+  } else {
+    cs->rexmit_timeout_micros += (MG_TCP_MAX_REXMIT_TIMEOUT_STEP_MS * 1000);
+  }
+  cs->rexmit_timeout_micros =
+      MIN(cs->rexmit_timeout_micros, MG_TCP_MAX_REXMIT_TIMEOUT_MS * 1000);
+  cs->next_rexmit_ts_micros = system_get_time() + cs->rexmit_timeout_micros;
+  if (cs->next_rexmit_ts_micros == 0) cs->next_rexmit_ts_micros++;
 }
 
-static void mg_lwip_rexmit_timer_cb(void *arg) {
-  struct mg_mgr *mgr = (struct mg_mgr *) arg;
-  struct mg_connection *nc;
-  for (nc = mgr->active_connections; nc != NULL; nc = nc->next) {
-    mg_lwip_maybe_rexmit(nc);
+static void mg_lwip_rexmit(struct mg_connection *nc) {
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  struct tcp_pcb *tpcb = cs->pcb.tcp;
+  if (tpcb->unacked != NULL) {
+    /* We do not want this rexmit to interfere with slow timer's backoff. */
+    uint16_t saved_nrtx = tpcb->nrtx;
+    uint16_t num_unacked = tpcb->unacked->len;
+    tcp_rexmit_rto(tpcb);
+    tpcb->nrtx = saved_nrtx;
+    mg_lwip_sched_rexmit(nc);
+    LOG(LL_DEBUG,
+        ("%p rexmit %u, next in %u", nc, num_unacked,
+         time_left_micros(system_get_time(), cs->next_rexmit_ts_micros)));
+  } else {
+    cs->next_rexmit_ts_micros = cs->rexmit_timeout_micros = 0;
   }
 }
-#endif
+
+static void mg_lwip_check_rexmit(void *arg) {
+  struct mg_mgr *mgr = (struct mg_mgr *) arg;
+  struct mg_connection *nc;
+  uint32_t now = system_get_time();
+  uint32_t next_rexmit_in_micros = ~0;
+  for (nc = mgr->active_connections; nc != NULL; nc = nc->next) {
+    struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+    if (nc->sock == INVALID_SOCKET || nc->flags & MG_F_UDP ||
+        nc->flags & MG_F_LISTENING || cs->pcb.tcp == NULL) {
+      continue;
+    }
+    if (cs->next_rexmit_ts_micros > 0 &&
+        time_left_micros(now, cs->next_rexmit_ts_micros) == 0) {
+      mg_lwip_rexmit(nc);
+    }
+    if (cs->next_rexmit_ts_micros > 0) {
+      uint32_t time_left = time_left_micros(now, cs->next_rexmit_ts_micros);
+      next_rexmit_in_micros = MIN(next_rexmit_in_micros, time_left);
+    }
+  }
+  if (next_rexmit_in_micros != ~0U) {
+    uint32_t delay_millis = 1;
+    delay_millis = next_rexmit_in_micros / 1000;
+    if (delay_millis == 0) delay_millis = 1;
+    os_timer_disarm(&s_rexmit_tmr);
+    os_timer_setfn(&s_rexmit_tmr, mg_lwip_check_rexmit, mgr);
+    os_timer_arm(&s_rexmit_tmr, delay_millis, 0 /* no repeat */);
+  }
+}
 
 void mg_poll_timer_cb(void *arg) {
   struct mg_mgr *mgr = (struct mg_mgr *) arg;
@@ -510,18 +601,12 @@ void mg_ev_mgr_init(struct mg_mgr *mgr) {
                  MG_TASK_QUEUE_LEN);
   os_timer_setfn(&s_poll_tmr, mg_poll_timer_cb, mgr);
   os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 1 /* repeat */);
-#if MG_LWIP_REXMIT_INTERVAL_MS
-  os_timer_setfn(&s_rexmit_tmr, mg_lwip_rexmit_timer_cb, mgr);
-  os_timer_arm(&s_rexmit_tmr, MG_LWIP_REXMIT_INTERVAL_MS, 1 /* repeat */);
-#endif
 }
 
 void mg_ev_mgr_free(struct mg_mgr *mgr) {
   (void) mgr;
   os_timer_disarm(&s_poll_tmr);
-#if MG_LWIP_REXMIT_INTERVAL_MS > 0
   os_timer_disarm(&s_rexmit_tmr);
-#endif
 }
 
 void mg_ev_mgr_add_conn(struct mg_connection *nc) {
@@ -647,10 +732,10 @@ static void mg_lwip_task(os_event_t *e) {
 
       if (can_suspend) {
         os_timer_disarm(&s_poll_tmr);
-#if MG_LWIP_REXMIT_INTERVAL_MS > 0
         os_timer_disarm(&s_rexmit_tmr);
-#endif
       }
+    } else {
+      mg_lwip_check_rexmit(mgr);
     }
   }
 }
@@ -697,9 +782,6 @@ void mg_resume() {
   s_suspended = 0;
 
   os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 1 /* repeat */);
-#if MG_LWIP_REXMIT_INTERVAL_MS
-  os_timer_arm(&s_rexmit_tmr, MG_LWIP_REXMIT_INTERVAL_MS, 1 /* repeat */);
-#endif
 }
 
 int mg_is_suspended() {
