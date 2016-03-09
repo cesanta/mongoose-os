@@ -113,6 +113,8 @@ struct update_context {
 
   int slot_to_write;
   int need_reboot;
+
+  int result;
 };
 
 static void context_init(struct update_context *ctx) {
@@ -465,6 +467,10 @@ static int process_file_data(struct update_context *ctx, int ignore_data) {
       ctx->file_info.file_received_bytes += rest;
       context_remove_data(ctx, rest);
     }
+    if (ctx->file_info.file_received_bytes == ctx->file_info.file_size) {
+      LOG(LL_INFO, ("Wrote %s (%u bytes)", ctx->file_info.file_name,
+                    ctx->file_info.file_size))
+    }
   } else {
     LOG(LL_DEBUG, ("Skipping %u bytes", bytes_to_write));
     ctx->file_info.file_received_bytes += bytes_to_write;
@@ -639,8 +645,8 @@ static int updater_process(struct update_context *ctx, const char *data,
         if (strncmp(ctx->version, build_version, sizeof(ctx->version)) <= 0) {
           /* Running the same of higher version */
           if (get_cfg()->update.update_to_any_version == 0) {
-            LOG(LL_INFO, ("Device has already more recent version"));
-            ctx->status_msg = "Device has already more recent version";
+            ctx->status_msg = "Device has the same or more recent version";
+            LOG(LL_INFO, (ctx->status_msg));
             return 1; /* Not an error */
           } else {
             LOG(LL_WARN, ("Downgrade, but update to any version enabled"));
@@ -693,6 +699,7 @@ static int updater_process(struct update_context *ctx, const char *data,
         if (ret > 0) {
           update_rboot_config(ctx);
           ctx->need_reboot = 1;
+          ctx->status_msg = "Update completed successfully";
           set_status(ctx, US_FINISHED);
         } else {
           set_status(ctx, US_WAITING_FILE_HEADER);
@@ -753,10 +760,6 @@ static int update_finished(struct update_context *ctx) {
   return ctx->update_status == US_FINISHED;
 }
 
-static void finish_update_session(struct update_context *ctx) {
-  ctx->update_status = US_FINISHED;
-}
-
 static int reboot_requred(struct update_context *ctx) {
   return ctx->need_reboot;
 }
@@ -790,44 +793,12 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
        * update process
        */
       if (ctx != NULL && !update_finished(ctx)) {
-        int ret = updater_process(ctx, mp->data.p, mp->data.len);
-        LOG(LL_DEBUG, ("updater_process res: %d", ret));
-        if (ret < 0) {
-          /* Error */
-          mg_printf(c,
-                    "HTTP/1.1 400 Bad request\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: close\r\n\r\n"
-                    "%s\r\n",
-                    ctx->status_msg ? ctx->status_msg : "Unknown error");
-          LOG(LL_ERROR, ("Update failed: %s",
-                         ctx->status_msg ? ctx->status_msg : "Unknown error"));
-        } else if (ret > 0 && !update_finished(ctx)) {
-          /* Update is not completed, but not because of error */
-          mg_printf(c,
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: close\r\n\r\n"
-                    "Update declined: %s\r\n",
-                    ctx->status_msg ? ctx->status_msg : "Unknown reason");
-          LOG(LL_INFO, ("Update declined: %s",
-                        ctx->status_msg ? ctx->status_msg : "Unknown reason"));
-        } else if (ret > 0 && update_finished(ctx)) {
-          /* Update completed */
-          mg_printf(c,
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: close\r\n\r\n"
-                    "Update completed successfully");
-          LOG(LL_INFO, ("Update completed successfully"));
+        ctx->result = updater_process(ctx, mp->data.p, mp->data.len);
+        LOG(LL_DEBUG, ("updater_process res: %d", ctx->result));
+        if (ctx->result != 0) {
+          set_status(ctx, US_FINISHED);
+          /* Don't close connection just yet, not all borowsers like that. */
         }
-
-        if (ret != 0) {
-          c->flags |= MG_F_SEND_AND_CLOSE;
-          finish_update_session(ctx);
-        }
-      } else { /* another connection or rest of previous POST */
-        LOG(LL_DEBUG, ("Skipping %d bytes", mp->data.len));
       }
       break;
     }
@@ -835,23 +806,45 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
       struct update_context *ctx = (struct update_context *) c->user_data;
       struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
       LOG(LL_DEBUG, ("MG_EV_HTTP_PART_END: %p %p %d", ctx, mp, mp->status));
+      /* Whatever happens, this is the last thing we do. */
+      c->flags |= MG_F_SEND_AND_CLOSE;
 
-      if (ctx != NULL) {
-        if (mp->status < 0 && !update_finished(ctx)) {
-          /* mp->status < 0 means connection is dead, do not send reply */
-          LOG(LL_ERROR, ("Update terminated unexpectedly"));
-        } else if (reboot_requred(ctx)) {
-          LOG(LL_INFO, ("Rebooting device"));
-          schedule_reboot();
+      if (ctx == NULL) break;
+      if (mp->status < 0) {
+        /* mp->status < 0 means connection is dead, do not send reply */
+        LOG(LL_ERROR, ("Update terminated unexpectedly"));
+        break;
+      } else {
+        if (update_finished(ctx)) {
+          mg_printf(c,
+                    "HTTP/1.1 %s\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: close\r\n\r\n"
+                    "%s\r\n",
+                    ctx->result > 0 ? "200 OK" : "400 Bad request",
+                    ctx->status_msg ? ctx->status_msg : "Unknown error");
+          LOG(LL_ERROR, ("Update result: %d %s", ctx->result,
+                         ctx->status_msg ? ctx->status_msg : "Unknown error"));
+          if (reboot_requred(ctx)) {
+            LOG(LL_INFO, ("Rebooting device"));
+            schedule_reboot();
+          }
+        } else {
+          mg_printf(c,
+                    "HTTP/1.1 500 Internal Server Error\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Connection: close\r\n\r\n"
+                    "%s\n",
+                    "Reached the end without finishing update");
+          LOG(LL_ERROR, ("Reached the end without finishing update"));
         }
-
-        context_release(ctx);
-        free(ctx);
-        s_ctx = NULL;
-        c->user_data = NULL;
       }
-      break;
-    }
+
+      context_release(ctx);
+      free(ctx);
+      s_ctx = NULL;
+      c->user_data = NULL;
+    } break;
   }
 }
 
