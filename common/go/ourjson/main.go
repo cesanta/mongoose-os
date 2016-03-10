@@ -132,6 +132,13 @@ type delayMarshaling struct {
 }
 
 func (m delayMarshaling) MarshalJSON() ([]byte, error) {
+	if b, ok := m.val.([]byte); ok {
+		v := make([]uint16, len(b))
+		for i, n := range b {
+			v[i] = uint16(n)
+		}
+		return json.Marshal(v)
+	}
 	return json.Marshal(m.val)
 }
 
