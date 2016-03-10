@@ -27,7 +27,7 @@
 
 #include "smartjs/platforms/esp8266/user/esp_fs.h"
 #include "smartjs/platforms/esp8266/user/esp_sj_uart.h"
-#include "smartjs/platforms/esp8266/user/esp_updater_post.h"
+#include "smartjs/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 

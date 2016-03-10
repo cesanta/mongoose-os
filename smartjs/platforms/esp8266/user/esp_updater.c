@@ -3,7 +3,7 @@
 * All rights reserved
 */
 
-#include "esp_updater_post.h"
+#include "esp_updater.h"
 
 #include <stdint.h>
 

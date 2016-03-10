@@ -3,8 +3,8 @@
 * All rights reserved
 */
 
-#ifndef ESP_UPDATER_POST_H_INCLUDED
-#define ESP_UPDATER_POST_H_INCLUDED
+#ifndef ESP_UPDATER_H_INCLUDED
+#define ESP_UPDATER_H_INCLUDED
 
 #include "v7/v7.h"
 
