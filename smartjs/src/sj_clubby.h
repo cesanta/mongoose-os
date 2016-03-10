@@ -32,7 +32,7 @@ struct clubby_event *sj_clubby_create_reply(struct clubby_event *evt);
 void sj_clubby_free_reply(struct clubby_event *reply);
 
 char *sj_clubby_repl_to_bytes(struct clubby_event *reply, int *len);
-struct clubby_event *sj_clubby_bytes_to_repl(char *buf, int len);
+struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len);
 
 /* TODO(alashkin): add more sending functions to header */
 #endif /* DISABLE_C_CLUBBY */

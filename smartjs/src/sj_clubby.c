@@ -1245,7 +1245,7 @@ error:
   return NULL;
 }
 
-struct clubby_event *sj_clubby_bytes_to_repl(char *buf, int len) {
+struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len) {
   struct clubby_event *repl = sj_clubby_create_reply_impl(
       buf, sizeof(repl->request.id), buf + sizeof(repl->request.id),
       len - sizeof(repl->request.id));

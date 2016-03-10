@@ -28,7 +28,6 @@
 #include "smartjs/platforms/esp8266/user/esp_fs.h"
 #include "smartjs/platforms/esp8266/user/esp_sj_uart.h"
 #include "smartjs/platforms/esp8266/user/esp_updater_post.h"
-#include "smartjs/platforms/esp8266/user/esp_updater_clubby.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
@@ -120,8 +119,7 @@ void sjs_init(void *dummy) {
   esp_print_reset_info();
 
 #ifndef DISABLE_OTA
-  init_updater();
-  init_updater_clubby(v7);
+  init_updater(v7);
 #endif
   LOG(LL_INFO, ("Sys init done, SDK %s", system_get_sdk_version()));
 

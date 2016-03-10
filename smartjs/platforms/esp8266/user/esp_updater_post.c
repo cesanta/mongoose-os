@@ -15,13 +15,16 @@
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 #include "esp_fs.h"
 #include "smartjs/src/sj_v7_ext.h"
-
+#include "smartjs/src/sj_clubby.h"
 #include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_mongoose.h"
 #include "mongoose/mongoose.h"
 
 #define MANIFEST_FILENAME "manifest.json"
 #define FW_SLOT_SIZE 0x100000
 #define SHA1SUM_LEN 40
+#define UPDATER_TEMP_FILE_NAME "ota_reply.conf"
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 /*
  * --- Zip file local header structure ---
@@ -54,6 +57,11 @@
 
 static const uint32_t c_zip_header_signature = 0x04034b50;
 
+static v7_val_t s_updater_notify_cb;
+static struct v7 *s_v7;
+static struct clubby_event *s_clubby_reply;
+static int s_clubby_upd_status;
+
 /* From miniz */
 uint32_t mz_crc32(uint32_t crc, const char *ptr, size_t buf_len);
 
@@ -75,6 +83,13 @@ enum update_status {
   US_SKIPPING_DATA,
   US_SKIPPING_DESCRIPTOR,
   US_FINISHED
+};
+
+enum js_update_status {
+  UJS_GOT_REQUEST,
+  UJS_COMPLETED,
+  UJS_NOTHING_TODO,
+  UJS_ERROR
 };
 
 struct part_info {
@@ -115,13 +130,39 @@ struct update_context {
   int need_reboot;
 
   int result;
+  int archive_size;
 };
 
+rboot_config *get_rboot_config() {
+  static rboot_config *cfg = NULL;
+  if (cfg == NULL) {
+    cfg = malloc(sizeof(*cfg));
+    *cfg = rboot_get_config();
+  }
+
+  return cfg;
+}
+
+uint8_t get_current_rom() {
+  return get_rboot_config()->current_rom;
+}
+
+uint32_t get_fw_addr(uint8_t rom) {
+  return get_rboot_config()->roms[rom];
+}
+
+uint32_t get_fs_addr(uint8_t rom) {
+  return get_rboot_config()->fs_addresses[rom];
+}
+
+uint32_t get_fs_size(uint8_t rom) {
+  return get_rboot_config()->fs_sizes[rom];
+}
+
 static void context_init(struct update_context *ctx) {
-  rboot_config cfg = rboot_get_config();
   memset(ctx, 0, sizeof(*ctx));
 
-  ctx->slot_to_write = cfg.current_rom == 0 ? 1 : 0;
+  ctx->slot_to_write = get_rboot_config()->current_rom == 0 ? 1 : 0;
   LOG(LL_DEBUG,
       ("Initializing updater, slot to write: %d", ctx->slot_to_write));
 }
@@ -167,6 +208,8 @@ static void context_save_unprocessed(struct update_context *ctx) {
 }
 
 static void context_remove_data(struct update_context *ctx, size_t len) {
+  LOG(LL_DEBUG, ("Removing %d bytes", len));
+
   if (ctx->unprocessed.len != 0) {
     /* Consumed data from unprocessed*/
     mbuf_remove(&ctx->unprocessed, len);
@@ -184,6 +227,17 @@ static void context_remove_data(struct update_context *ctx, size_t len) {
 
 static void context_clear_file_info(struct update_context *ctx) {
   memset(&ctx->file_info, 0, sizeof(ctx->file_info));
+}
+
+struct update_context *context_create() {
+  if (s_ctx != NULL) {
+    return NULL;
+  }
+
+  s_ctx = calloc(1, sizeof(*s_ctx));
+  context_init(s_ctx);
+
+  return s_ctx;
 }
 
 static int fill_zip_header(struct update_context *ctx) {
@@ -263,6 +317,8 @@ static int fill_zip_header(struct update_context *ctx) {
     ctx->status_msg = "Malformed archive";
     return -1;
   }
+
+  LOG(LL_DEBUG, ("File size: %d", ctx->file_info.file_size));
 
   uint16_t gen_flag;
   memcpy(&gen_flag, ctx->data + ZIP_GENFLAG_OFFSET, sizeof(gen_flag));
@@ -577,25 +633,25 @@ static int finalize_write(struct update_context *ctx) {
 }
 
 void update_rboot_config(struct update_context *ctx) {
-  rboot_config cfg = rboot_get_config();
-  cfg.previous_rom = cfg.current_rom;
-  cfg.current_rom = ctx->slot_to_write;
-  cfg.fs_addresses[cfg.current_rom] = ctx->fs_part.addr;
-  cfg.fs_sizes[cfg.current_rom] = ctx->fs_part.real_size;
-  cfg.roms[cfg.current_rom] = ctx->fw_part.addr;
-  cfg.roms_sizes[cfg.current_rom] = ctx->fw_part.real_size;
-  cfg.is_first_boot = 1;
-  cfg.fw_updated = 1;
-  cfg.boot_attempts = 0;
-  rboot_set_config(&cfg);
+  rboot_config *cfg = get_rboot_config();
+  cfg->previous_rom = cfg->current_rom;
+  cfg->current_rom = ctx->slot_to_write;
+  cfg->fs_addresses[cfg->current_rom] = ctx->fs_part.addr;
+  cfg->fs_sizes[cfg->current_rom] = ctx->fs_part.real_size;
+  cfg->roms[cfg->current_rom] = ctx->fw_part.addr;
+  cfg->roms_sizes[cfg->current_rom] = ctx->fw_part.real_size;
+  cfg->is_first_boot = 1;
+  cfg->fw_updated = 1;
+  cfg->boot_attempts = 0;
+  rboot_set_config(cfg);
 
   LOG(LL_DEBUG,
       ("New rboot config: "
        "prev_rom: %d, current_room: %d current_rom addr: %X, "
        "current_rom size: %d, current_fs addr: %X, current_fs size: %d",
-       (int) cfg.previous_rom, (int) cfg.current_rom, cfg.roms[cfg.current_rom],
-       cfg.roms_sizes[cfg.current_rom], cfg.fs_addresses[cfg.current_rom],
-       cfg.fs_sizes[cfg.current_rom]));
+       (int) cfg->previous_rom, (int) cfg->current_rom,
+       cfg->roms[cfg->current_rom], cfg->roms_sizes[cfg->current_rom],
+       cfg->fs_addresses[cfg->current_rom], cfg->fs_sizes[cfg->current_rom]));
 }
 
 static int updater_process(struct update_context *ctx, const char *data,
@@ -641,7 +697,13 @@ static int updater_process(struct update_context *ctx, const char *data,
           ctx->status_msg = "Invalid CRC";
           return -1;
         }
-        fill_manifest(ctx);
+
+        if (fill_manifest(ctx) < 0) {
+          LOG(LL_ERROR, ("Invalid manifiest"));
+          ctx->status_msg = "Invalid manifest";
+          return -1;
+        }
+
         if (strncmp(ctx->version, build_version, sizeof(ctx->version)) <= 0) {
           /* Running the same of higher version */
           if (get_cfg()->update.update_to_any_version == 0) {
@@ -756,18 +818,22 @@ static void schedule_reboot() {
   os_timer_arm(&reboot_timer, 1000, 0);
 }
 
-static int update_finished(struct update_context *ctx) {
+static int is_update_finished(struct update_context *ctx) {
   return ctx->update_status == US_FINISHED;
 }
 
-static int reboot_requred(struct update_context *ctx) {
+static int is_reboot_requred(struct update_context *ctx) {
   return ctx->need_reboot;
 }
 
-static void handle_update_req(struct mg_connection *c, int ev, void *p) {
+static int is_update_in_progress() {
+  return s_ctx != NULL;
+}
+
+static void handle_update_post_req(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
     case MG_EV_HTTP_MULTIPART_REQUEST: {
-      if (s_ctx != 0) {
+      if (is_update_in_progress()) {
         mg_printf(c,
                   "HTTP/1.1 400 Bad request\r\n"
                   "Content-Type: text/plain\r\n"
@@ -777,9 +843,7 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
         c->flags |= MG_F_SEND_AND_CLOSE;
       } else {
         LOG(LL_INFO, ("Updating FW"));
-        s_ctx = calloc(1, sizeof(*s_ctx));
-        context_init(s_ctx);
-        c->user_data = s_ctx;
+        c->user_data = context_create();
       }
       break;
     }
@@ -792,12 +856,12 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
        * We can have NULL here if client sends data after completion of
        * update process
        */
-      if (ctx != NULL && !update_finished(ctx)) {
+      if (ctx != NULL && !is_update_finished(ctx)) {
         ctx->result = updater_process(ctx, mp->data.p, mp->data.len);
         LOG(LL_DEBUG, ("updater_process res: %d", ctx->result));
         if (ctx->result != 0) {
           set_status(ctx, US_FINISHED);
-          /* Don't close connection just yet, not all borowsers like that. */
+          /* Don't close connection just yet, not all browsers like that. */
         }
       }
       break;
@@ -815,7 +879,7 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
         LOG(LL_ERROR, ("Update terminated unexpectedly"));
         break;
       } else {
-        if (update_finished(ctx)) {
+        if (is_update_finished(ctx)) {
           mg_printf(c,
                     "HTTP/1.1 %s\r\n"
                     "Content-Type: text/plain\r\n"
@@ -825,7 +889,7 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
                     ctx->status_msg ? ctx->status_msg : "Unknown error");
           LOG(LL_ERROR, ("Update result: %d %s", ctx->result,
                          ctx->status_msg ? ctx->status_msg : "Unknown error"));
-          if (reboot_requred(ctx)) {
+          if (is_reboot_requred(ctx)) {
             LOG(LL_INFO, ("Rebooting device"));
             schedule_reboot();
           }
@@ -848,6 +912,533 @@ static void handle_update_req(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-void init_updater() {
-  device_register_http_endpoint("/update", handle_update_req);
+static int notify_js(enum js_update_status us, const char *info) {
+  if (!v7_is_undefined(s_updater_notify_cb)) {
+    if (info == NULL) {
+      sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_mk_number(us));
+    } else {
+      sj_invoke_cb2(s_v7, s_updater_notify_cb, v7_mk_number(us),
+                    v7_mk_string(s_v7, info, ~0, 1));
+    };
+
+    return 1;
+  }
+
+  return 0;
+}
+
+static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
+  struct mbuf *io = &c->recv_mbuf;
+  struct update_context *ctx = (struct update_context *) c->user_data;
+  (void) p;
+
+  switch (ev) {
+    case MG_EV_RECV: {
+      if (ctx->archive_size == 0) {
+        LOG(LL_DEBUG, ("Looking for HTTP header"));
+        struct http_message hm;
+        int parsed = mg_parse_http(io->buf, io->len, &hm, 0);
+        if (parsed < 0) {
+          return;
+        }
+        if (hm.body.len != 0) {
+          LOG(LL_DEBUG, ("HTTP header: file size: %d", (int) hm.body.len));
+          if (hm.body.len == (size_t) ~0) {
+            LOG(LL_ERROR, ("Invalid content-length, perhaps chunked-encoding"));
+            ctx->status_msg =
+                "Invalid content-length, perhaps chunked-encoding";
+            c->flags |= MG_F_CLOSE_IMMEDIATELY;
+            break;
+          } else {
+            ctx->archive_size = hm.body.len;
+          }
+
+          mbuf_remove(io, parsed);
+        }
+      }
+
+      if (io->len != 0) {
+        int res = updater_process(ctx, io->buf, io->len);
+        LOG(LL_DEBUG, ("Processed %d bytes, result: %d", (int) io->len, res));
+
+        mbuf_remove(io, io->len);
+
+        if (res == 0) {
+          /* Need more data, everything is OK */
+          break;
+        }
+
+        if (res > 0) {
+          if (!is_update_finished(ctx)) {
+            /* Update terminated, but not because of error */
+            notify_js(UJS_NOTHING_TODO, NULL);
+            sj_clubby_send_reply(s_clubby_reply, 0, ctx->status_msg);
+          } else {
+            /* update ok */
+            int len;
+            char *upd_data = sj_clubby_repl_to_bytes(s_clubby_reply, &len);
+            FILE *tmp_file = fopen(UPDATER_TEMP_FILE_NAME, "w");
+            if (tmp_file == NULL || upd_data == NULL) {
+              /* There is nothing we can do */
+              LOG(LL_ERROR, ("Cannot save update status"));
+            } else {
+              fwrite(upd_data, 1, len, tmp_file);
+              fclose(tmp_file);
+            }
+            LOG(LL_INFO, ("Update completed successfully"));
+          }
+        } else if (res < 0) {
+          /* Error */
+          notify_js(UJS_ERROR, NULL);
+          sj_clubby_send_reply(s_clubby_reply, 1, ctx->status_msg);
+        }
+
+        set_status(ctx, US_FINISHED);
+        c->flags |= MG_F_CLOSE_IMMEDIATELY;
+      }
+      break;
+    }
+    case MG_EV_CLOSE: {
+      if (ctx != NULL) {
+        if (!is_update_finished(ctx)) {
+          /* Connection was terminated by server */
+          notify_js(UJS_ERROR, NULL);
+          sj_clubby_send_reply(s_clubby_reply, 1, "Update failed");
+        } else if (is_reboot_requred(ctx) && !notify_js(UJS_COMPLETED, NULL)) {
+          /*
+           * Conection is closed by updater, rebooting if required
+           * and allowed (by JS)
+           */
+          LOG(LL_INFO, ("Rebooting device"));
+          schedule_reboot();
+        }
+
+        if (s_clubby_reply) {
+          sj_clubby_free_reply(s_clubby_reply);
+          s_clubby_reply = NULL;
+        }
+
+        context_release(ctx);
+        free(ctx);
+        s_ctx = NULL;
+        c->user_data = NULL;
+      }
+
+      break;
+    }
+  }
+}
+
+static int do_http_connect(const char *url) {
+  LOG(LL_DEBUG, ("Connecting to: %s", url));
+
+  struct mg_connection *c =
+      mg_connect_http(&sj_mgr, fw_download_ev_handler, url, NULL, NULL);
+
+  if (c == NULL) {
+    LOG(LL_ERROR, ("Failed to connect to %s", url));
+    return -1;
+  }
+
+  c->user_data = s_ctx;
+
+#ifdef SSL_KRYPTON
+  if (memcmp(url, "https", 5) == 0 && get_cfg()->tls.enable) {
+    char *ca_file = get_cfg()->tls.ca_file;
+    char *server_name = get_cfg()->tls.server_name;
+    mg_set_ssl(c, NULL, ca_file);
+    if (server_name != NULL) {
+      SSL_CTX_kr_set_verify_name(c->ssl_ctx, server_name);
+    }
+  }
+#endif
+
+  return 1;
+}
+
+static int file_copy(spiffs *old_fs, char *file_name) {
+  LOG(LL_INFO, ("Copying %s", file_name));
+  int ret = 0;
+  FILE *f = NULL;
+  spiffs_stat stat;
+
+  spiffs_file fd = SPIFFS_open(old_fs, file_name, SPIFFS_RDONLY, 0);
+  if (fd < 0) {
+    int err = SPIFFS_errno(old_fs);
+    if (err == SPIFFS_ERR_NOT_FOUND) {
+      LOG(LL_WARN, ("File %s not found, skipping", file_name));
+      return 1;
+    } else {
+      LOG(LL_ERROR, ("Failed to open %s, error %d", file_name, err));
+      return 0;
+    }
+  }
+
+  if (SPIFFS_fstat(old_fs, fd, &stat) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)", file_name,
+                   SPIFFS_errno(old_fs)));
+    goto exit;
+  }
+
+  LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
+
+  f = fopen(file_name, "w");
+  if (f == NULL) {
+    LOG(LL_ERROR, ("Failed to open %s", file_name));
+    goto exit;
+  }
+
+  char buf[512];
+  int32_t readen, to_read = 0, total = 0;
+  to_read = MIN(sizeof(buf), stat.size);
+
+  while (to_read != 0) {
+    if ((readen = SPIFFS_read(old_fs, fd, buf, to_read)) < 0) {
+      LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d", to_read,
+                     file_name, SPIFFS_errno(old_fs)));
+      goto exit;
+    }
+
+    if (fwrite(buf, 1, readen, f) != (size_t) readen) {
+      LOG(LL_ERROR, ("Failed to write %d bytes to %s", readen, file_name));
+      goto exit;
+    }
+
+    total += readen;
+    LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
+
+    to_read = MIN(sizeof(buf), (stat.size - total));
+  }
+
+  LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
+
+  ret = 1;
+
+exit:
+  if (fd >= 0) {
+    SPIFFS_close(old_fs, fd);
+  }
+
+  if (f != NULL) {
+    fclose(f);
+  }
+
+  return ret;
+}
+
+static struct clubby_event *load_clubby_reply(spiffs *fs) {
+  struct clubby_event *ret = NULL;
+  spiffs_stat st;
+  char *reply_str = NULL;
+  spiffs_file upd_file = -1;
+
+  upd_file = SPIFFS_open(fs, UPDATER_TEMP_FILE_NAME, SPIFFS_RDONLY, 0);
+  if (upd_file < 0) {
+    LOG(LL_ERROR, ("Cannot open updater file"));
+    goto cleanup;
+  }
+
+  if (SPIFFS_fstat(fs, upd_file, &st) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("Cannot get size of updater"));
+    goto cleanup;
+  }
+
+  LOG(LL_ERROR, ("Updater file size = %d", st.size));
+  reply_str = malloc(st.size);
+  if (reply_str == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    goto cleanup;
+  }
+
+  if ((uint32_t) SPIFFS_read(fs, upd_file, reply_str, st.size) != st.size) {
+    LOG(LL_ERROR, ("Cannot read data from updater file"));
+    goto cleanup;
+  }
+
+  ret = sj_clubby_bytes_to_reply(reply_str, st.size);
+  if (ret == NULL) {
+    LOG(LL_ERROR, ("Cannot create clubby reply"));
+    goto cleanup;
+  }
+
+cleanup:
+  free(reply_str);
+
+  if (upd_file >= 0) {
+    SPIFFS_close(fs, upd_file);
+  }
+
+  return ret;
+}
+
+static int load_data_from_old_fs(uint32_t old_fs_addr) {
+  uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
+  uint8_t spiffs_fds[32 * 2];
+  spiffs old_fs;
+  int ret = 0;
+  spiffs_DIR dir, *dir_ptr = NULL;
+  LOG(LL_DEBUG, ("Mounting fs %d @ 0x%x", FS_SIZE, old_fs_addr));
+  if (fs_mount(&old_fs, old_fs_addr, FS_SIZE, spiffs_work_buf, spiffs_fds,
+               sizeof(spiffs_fds))) {
+    LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
+    return 1;
+  }
+  /*
+   * here we can use fread & co to read
+   * current fs and SPIFFs functions to read
+   * old one
+   */
+
+  dir_ptr = SPIFFS_opendir(&old_fs, ".", &dir);
+  if (dir_ptr == NULL) {
+    LOG(LL_ERROR, ("Failed to open root directory"));
+    goto cleanup;
+  }
+
+  struct spiffs_dirent de, *de_ptr;
+  while ((de_ptr = SPIFFS_readdir(dir_ptr, &de)) != NULL) {
+    struct stat st;
+    if (stat((const char *) de_ptr->name, &st) != 0) {
+      /* File not found on the new fs, copy. */
+      if (!file_copy(&old_fs, (char *) de_ptr->name)) {
+        LOG(LL_ERROR, ("Error copying!"));
+        goto cleanup;
+      }
+    }
+  }
+
+  ret = 1;
+
+  s_clubby_reply = load_clubby_reply(&old_fs);
+/* Do not rollback fw if load_clubby_reply failed */
+
+cleanup:
+  if (dir_ptr != NULL) {
+    SPIFFS_closedir(dir_ptr);
+  }
+
+  SPIFFS_unmount(&old_fs);
+
+  return ret;
+}
+
+int finish_update() {
+  if (!get_rboot_config()->fw_updated) {
+    if (get_rboot_config()->is_first_boot != 0) {
+      LOG(LL_INFO, ("Firmware was rolled back, commiting it"));
+      get_rboot_config()->is_first_boot = 0;
+      rboot_set_config(get_rboot_config());
+      s_clubby_upd_status = 1; /* Once we connect wifi we send status 1 */
+    }
+    return 1;
+  }
+
+  /*
+   * We merge FS _after_ booting to new FW, to give a chance
+   * to change merge behavior in new FW
+   */
+  if (load_data_from_old_fs(get_fs_addr(get_rboot_config()->previous_rom)) !=
+      0) {
+    /* Ok, commiting update */
+    get_rboot_config()->is_first_boot = 0;
+    get_rboot_config()->fw_updated = 0;
+    rboot_set_config(get_rboot_config());
+    LOG(LL_DEBUG, ("Firmware commited"));
+
+    return 1;
+  } else {
+    LOG(LL_ERROR,
+        ("Failed to merge filesystem, rollback to previous firmware"));
+
+    schedule_reboot();
+    return 0;
+  }
+
+  return 1;
+}
+
+/*
+ * Example of notification function:
+ * function upd(ev, url) {
+ *      if (ev == Sys.updater.GOT_REQUEST) {
+ *         print("Starting update from", url);
+ *         Sys.updater.start(url);
+ *       }  else if(ev == Sys.updater.NOTHING_TODO) {
+ *         print("No need to update");
+ *       } else if(ev == Sys.updater.FAILED) {
+ *         print("Update failed");
+ *       } else if(ev == Sys.updater.COMPLETED) {
+ *         print("Update completed");
+ *         Sys.reboot();
+ *       }
+ * }
+ */
+
+static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
+  v7_val_t cb = v7_arg(v7, 0);
+  if (!v7_is_callable(v7, cb)) {
+    printf("Invalid arguments\n");
+    *res = v7_mk_boolean(0);
+    return V7_OK;
+  }
+
+  s_updater_notify_cb = cb;
+
+  *res = v7_mk_boolean(1);
+  return V7_OK;
+}
+
+int start_update_download(struct update_context *ctx, const char *url) {
+  LOG(LL_INFO, ("Updating FW"));
+
+  if (do_http_connect(url) < 0) {
+    ctx->status_msg = "Failed to connect update server";
+    return -1;
+  }
+
+  return 1;
+}
+
+static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+
+  v7_val_t manifest_url_v = v7_arg(v7, 0);
+  if (!v7_is_string(manifest_url_v)) {
+    rcode = v7_throwf(v7, "Error", "URL is not a string");
+  } else {
+    struct update_context *ctx = context_create();
+    if (ctx == NULL) {
+      rcode = v7_throwf(v7, "Error", "Failed to init updater");
+    }
+    if (start_update_download(ctx, v7_to_cstring(v7, &manifest_url_v)) < 0) {
+      rcode = v7_throwf(v7, "Error", ctx->status_msg);
+    }
+  }
+
+  *res = v7_mk_boolean(rcode == V7_OK);
+  return rcode;
+}
+
+static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
+  (void) user_data;
+  LOG(LL_DEBUG, ("Clubby is ready"));
+
+  if (s_clubby_reply == NULL && s_clubby_upd_status != 0) {
+    /*
+     * If we are here, FW was rolled back and we have to pickup
+     * updater info from current FS
+     */
+    s_clubby_reply = load_clubby_reply(get_fs());
+    remove(UPDATER_TEMP_FILE_NAME);
+  }
+
+  if (s_clubby_reply) {
+    LOG(LL_DEBUG, ("Found reply to send"));
+    s_clubby_reply->context = evt->context;
+    sj_clubby_send_reply(
+        s_clubby_reply, s_clubby_upd_status,
+        s_clubby_upd_status == 0 ? "Updated successfully" : "Update failed");
+    sj_clubby_free_reply(s_clubby_reply);
+    s_clubby_reply = NULL;
+  };
+}
+
+static void handle_update_req(struct clubby_event *evt, void *user_data) {
+  (void) user_data;
+  LOG(LL_DEBUG, ("Command received: %.*s", evt->request.cmd_body->len,
+                 evt->request.cmd_body->ptr));
+
+  const char *reply = "Malformed request";
+
+  struct json_token *args = find_json_token(evt->request.cmd_body, "args");
+  if (args == NULL || args->type != JSON_TYPE_OBJECT) {
+    goto bad_request;
+  }
+
+  struct json_token *section = find_json_token(args, "section");
+  struct json_token *blob_url = find_json_token(args, "blob_url");
+
+  /*
+   * TODO(alashkin): enable update for another files, not
+   * firmware only
+   */
+  if (section == NULL || section->type != JSON_TYPE_STRING ||
+      strncmp(section->ptr, "firmware", section->len) != 0 ||
+      blob_url == NULL || blob_url->type != JSON_TYPE_STRING) {
+    goto bad_request;
+  }
+
+  LOG(LL_DEBUG, ("zip url: %.*s", blob_url->len, blob_url->ptr));
+
+  sj_clubby_free_reply(s_clubby_reply);
+  s_clubby_reply = sj_clubby_create_reply(evt);
+
+  /*
+   * If user setup callback for updater, just call it.
+   * User can start update with Sys.updater.start()
+   */
+  if (is_update_in_progress()) {
+    reply = "Update already in progress";
+  }
+
+  char *zip_url = calloc(1, blob_url->len + 1);
+  if (zip_url == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
+
+  memcpy(zip_url, blob_url->ptr, blob_url->len);
+
+  if (!notify_js(UJS_GOT_REQUEST, zip_url)) {
+    struct update_context *ctx = context_create();
+    if (ctx == NULL) {
+      reply = "Failed init updater";
+    } else if (start_update_download(ctx, zip_url) < 0) {
+      reply = ctx->status_msg;
+    }
+  }
+
+  free(zip_url);
+
+  return;
+
+bad_request:
+  LOG(LL_ERROR, ("Failed to start update: %s", reply));
+  sj_clubby_send_reply(evt, 1, reply);
+}
+
+void init_updater(struct v7 *v7) {
+  s_v7 = v7;
+  v7_val_t updater = v7_mk_object(v7);
+  v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
+  s_updater_notify_cb = v7_mk_undefined();
+  v7_own(v7, &s_updater_notify_cb);
+
+  v7_def(v7, sys, "updater", ~0, V7_DESC_ENUMERABLE(0), updater);
+  v7_set_method(v7, updater, "notify", Updater_notify);
+  v7_set_method(v7, updater, "start", Updater_startupdate);
+
+  v7_def(s_v7, updater, "GOT_REQUEST", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
+         v7_mk_number(UJS_GOT_REQUEST));
+
+  v7_def(s_v7, updater, "COMPLETED", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
+         v7_mk_number(UJS_COMPLETED));
+
+  v7_def(s_v7, updater, "NOTHING_TODO", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
+         v7_mk_number(UJS_NOTHING_TODO));
+
+  v7_def(s_v7, updater, "FAILED", ~0,
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
+         v7_mk_number(UJS_ERROR));
+
+  sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_update_req,
+                                    NULL);
+
+  sj_clubby_register_global_command(clubby_cmd_ready, handle_clubby_ready,
+                                    NULL);
+
+  device_register_http_endpoint("/update", handle_update_post_req);
 }
