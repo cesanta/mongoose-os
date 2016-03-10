@@ -8,9 +8,9 @@ import (
 	"github.com/juju/errors"
 )
 
-type RawMessage struct {
-	value rawMessage
-}
+// RawMessage must be a slice in order for `omitempty` flag to work properly.
+
+type RawMessage []rawMessage
 
 type rawMessage interface {
 	MarshalJSON() ([]byte, error)
@@ -20,51 +20,55 @@ type rawMessage interface {
 }
 
 func (m RawMessage) MarshalJSON() ([]byte, error) {
-	if m.value == nil {
+	if len(m) == 0 {
 		return nil, errors.New("not initialized")
 	}
-	b, err := m.value.MarshalJSON()
+	b, err := m[0].MarshalJSON()
 	return b, errors.Trace(err)
 }
 
 func (m *RawMessage) UnmarshalJSON(data []byte) error {
-	m.value = jsonRawMessage(data)
+	*m = []rawMessage{jsonRawMessage(data)}
 	return nil
 }
 
 func (m RawMessage) MarshalUBJSON() ([]byte, error) {
-	if m.value == nil {
+	if len(m) == 0 {
 		return nil, errors.New("not initialized")
 	}
-	b, err := m.value.MarshalUBJSON()
+	b, err := m[0].MarshalUBJSON()
 	return b, errors.Trace(err)
 }
 
 func (m *RawMessage) UnmarshalUBJSON(data []byte) error {
-	m.value = ubjsonRawMessage(data)
+	*m = []rawMessage{ubjsonRawMessage(data)}
 	return nil
 }
 
 func (m RawMessage) UnmarshalInto(v interface{}) error {
-	if m.value == nil {
+	if len(m) == 0 {
 		return errors.New("not initialized")
 	}
-	return errors.Trace(m.value.UnmarshalInto(v))
+	return errors.Trace(m[0].UnmarshalInto(v))
 }
 
 func (m RawMessage) String() string {
-	if m.value == nil {
+	if len(m) == 0 {
 		return "uninitialized"
 	}
-	return m.value.String()
+	return m[0].String()
 }
 
 func RawJSON(data []byte) RawMessage {
-	return RawMessage{value: jsonRawMessage(data)}
+	return RawMessage{jsonRawMessage(data)}
 }
 
 func RawUBJSON(data []byte) RawMessage {
-	return RawMessage{value: ubjsonRawMessage(data)}
+	return RawMessage{ubjsonRawMessage(data)}
+}
+
+func DelayMarshaling(v interface{}) RawMessage {
+	return RawMessage{delayMarshaling{v}}
 }
 
 /// JSON
@@ -86,6 +90,9 @@ func (m jsonRawMessage) UnmarshalInto(v interface{}) error {
 }
 
 func (m jsonRawMessage) String() string {
+	if len(m) > 128 {
+		return fmt.Sprintf("JSON: %#v... (%d)", string(m[:128]), len(m))
+	}
 	return fmt.Sprintf("JSON: %#v", string(m))
 }
 
@@ -112,5 +119,30 @@ func (m ubjsonRawMessage) UnmarshalInto(v interface{}) error {
 }
 
 func (m ubjsonRawMessage) String() string {
+	if len(m) > 128 {
+		return fmt.Sprintf("UBJSON: %#v... (%d)", string(m[:128]), len(m))
+	}
 	return fmt.Sprintf("UBJSON: %#v", string(m))
+}
+
+/// Delayed marshaling
+
+type delayMarshaling struct {
+	val interface{}
+}
+
+func (m delayMarshaling) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.val)
+}
+
+func (m delayMarshaling) MarshalUBJSON() ([]byte, error) {
+	return ubjson.Marshal(m.val)
+}
+
+func (m delayMarshaling) UnmarshalInto(v interface{}) error {
+	return errors.New("cannot unmarshal delayed marshaler")
+}
+
+func (m delayMarshaling) String() string {
+	return fmt.Sprintf("Delayed marshaler: %#v", m.val)
 }
