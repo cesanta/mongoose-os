@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
         }
 
         SPIFFS_close(&fs, in);
-        free(buf);
         fwrite(buf, de.size, 1, out);
+        free(buf);
         fclose(out);
       }
     }
