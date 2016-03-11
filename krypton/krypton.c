@@ -7259,8 +7259,14 @@ static int handle_appdata(SSL *ssl, struct vec *vec, uint8_t *out, size_t len) {
   uint8_t *rptr;
   size_t rlen;
 
-  if (NULL == out) {
-    printf("%d bytes of appdata ignored\n", (int) vec->len);
+  if (out == NULL) {
+    if (ssl->extra_appdata.ptr == NULL) {
+      ssl->extra_appdata.ptr = vec->ptr;
+      ssl->extra_appdata.len = vec->len;
+      dprintf(("%d bytes of appdata stashed\n", (int) vec->len));
+    } else {
+      fprintf(stderr, "%d bytes of appdata dropped\n", (int) vec->len);
+    }
     return 1;
   }
 
