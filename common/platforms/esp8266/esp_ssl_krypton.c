@@ -49,7 +49,11 @@ void mg_lwip_ssl_do_hs(struct mg_connection *nc) {
   } else {
     cs->err = 0;
     nc->flags &= ~MG_F_WANT_WRITE;
-    nc->flags |= MG_F_SSL_HANDSHAKE_DONE;
+    /*
+     * Handshake is done. Schedule a read immediately to consume app data
+     * which may already be waiting.
+     */
+    nc->flags |= (MG_F_SSL_HANDSHAKE_DONE | MG_F_WANT_READ);
     if (server_side) {
       mg_lwip_accept_conn(nc, cs->pcb.tcp);
     } else {
