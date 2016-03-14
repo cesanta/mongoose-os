@@ -71,11 +71,16 @@ def cmd_gen_build_info(args):
                 branch_or_tag = '?'
         else:
             branch_or_tag = repo.active_branch
+
+        if args.dirty == "auto":
+            dirty = repo.is_dirty()
+        else:
+            dirty = args.dirty == "true"
         id = '%s/%s@%s%s' % (
             ts.strftime('%Y%m%d-%H%M%S'),
             branch_or_tag,
             str(repo.head.commit)[:8],
-            '+' if repo.is_dirty() else '')
+            '+' if dirty else '')
     elif args.id != '':
         id = args.id
     if id is not None:
@@ -181,6 +186,7 @@ if __name__ == '__main__':
     gbi_cmd.add_argument('--timestamp', '-t')
     gbi_cmd.add_argument('--version', '-v')
     gbi_cmd.add_argument('--id', '-i')
+    gbi_cmd.add_argument('--dirty', default="auto", choices=["auto", "true", "false"])
     gbi_cmd.add_argument('--tag_as_version', type=bool, default=False)
     gbi_cmd.add_argument('--json_output')
     gbi_cmd.add_argument('--c_output')

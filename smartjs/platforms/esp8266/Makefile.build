@@ -391,8 +391,9 @@ endif
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
 	$(vecho) "GEN $@"
 	$(Q) $(FW_META_CMD) gen_build_info \
-	  --c_output=$(BUILD_INFO_C) \
-	  --json_output=$(BUILD_INFO_JSON)
+    --c_output=$(BUILD_INFO_C) \
+    --json_output=$(BUILD_INFO_JSON) \
+    $(GEN_BUILD_INFO_EXTRA)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
