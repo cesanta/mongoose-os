@@ -3,8 +3,10 @@
  * All rights reserved
  */
 
-#if !defined(BASE64_H_INCLUDED) && !defined(DISABLE_BASE64)
-#define BASE64_H_INCLUDED
+#ifndef CS_COMMON_BASE64_H_
+#define CS_COMMON_BASE64_H_
+
+#ifndef DISABLE_BASE64
 
 #include <stdio.h>
 
@@ -34,4 +36,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif /* DISABLE_BASE64 */
+
+#endif /* CS_COMMON_BASE64_H_ */

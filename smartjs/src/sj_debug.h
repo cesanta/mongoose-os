@@ -4,8 +4,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_DEBUG_H_INCLUDED
-#define SJ_DEBUG_H_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_DEBUG_H_
+#define CS_SMARTJS_SRC_SJ_DEBUG_H_
 
 /*
  * Debug modes.
@@ -21,4 +21,4 @@ enum debug_mode {
 
 int sj_debug_redirect(enum debug_mode mode);
 
-#endif /* SJ_DEBUG_H_INCLUDED */
+#endif /* CS_SMARTJS_SRC_SJ_DEBUG_H_ */

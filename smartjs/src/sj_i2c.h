@@ -3,8 +3,8 @@
  *
  * i2c low-level API for ESP8266
  */
-#ifndef SJ_I2C_INCLUDED
-#define SJ_I2C_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_I2C_H_
+#define CS_SMARTJS_SRC_SJ_I2C_H_
 
 #include <stdint.h>
 
@@ -86,4 +86,4 @@ enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res);
 /* Close i2c connection and free resources */
 void sj_i2c_close(i2c_connection conn);
 
-#endif /* SJ_I2C_INCLUDED */
+#endif /* CS_SMARTJS_SRC_SJ_I2C_H_ */

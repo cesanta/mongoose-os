@@ -1,5 +1,5 @@
-#ifndef _CS_PLATFORM_WINDOWS_H_
-#define _CS_PLATFORM_WINDOWS_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_
 #if CS_PLATFORM == CS_P_WINDOWS
 
 /*
@@ -123,4 +123,4 @@ struct dirent *readdir(DIR *dir);
 #endif
 
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
-#endif /* _CS_PLATFORM_WINDOWS_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */

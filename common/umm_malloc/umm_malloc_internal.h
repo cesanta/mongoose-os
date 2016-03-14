@@ -7,8 +7,8 @@
  * ----------------------------------------------------------------------------
  */
 
-#ifndef UMM_MALLOC_INTERNAL_H
-#define UMM_MALLOC_INTERNAL_H
+#ifndef CS_COMMON_UMM_MALLOC_UMM_MALLOC_INTERNAL_H_
+#define CS_COMMON_UMM_MALLOC_UMM_MALLOC_INTERNAL_H_
 
 /* ------------------------------------------------------------------------ */
 
@@ -30,4 +30,4 @@ typedef struct {
 
 extern UMM_STAT umm_stat;
 
-#endif /* UMM_MALLOC_INTERNAL_H */
+#endif /* CS_COMMON_UMM_MALLOC_UMM_MALLOC_INTERNAL_H_ */

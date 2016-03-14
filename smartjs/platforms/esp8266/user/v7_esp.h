@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef V7_ESP_INCLUDED
-#define V7_ESP_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_V7_ESP_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_V7_ESP_H_
 
 #include "user_interface.h"
 
@@ -21,4 +21,4 @@ void run_init_script();
 void wifi_changed_cb(System_Event_t *evt);
 void pp_soft_wdt_restart();
 
-#endif /* V7_ESP_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_V7_ESP_H_ */

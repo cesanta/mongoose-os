@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef __SMARTJS_HAL_H_
-#define __SMARTJS_HAL_H_
+#ifndef CS_SMARTJS_SRC_SJ_HAL_H_
+#define CS_SMARTJS_SRC_SJ_HAL_H_
 
 /*
  * Interfaces that need to be implemented for each devices.
@@ -26,4 +26,4 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
  */
 void sj_invoke_cb(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
 
-#endif /* __SMARTJS_HAL_H_ */
+#endif /* CS_SMARTJS_SRC_SJ_HAL_H_ */

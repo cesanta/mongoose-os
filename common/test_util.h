@@ -15,8 +15,8 @@
  * license, as set out in <https://www.cesanta.com/license>.
  */
 
-#ifndef MG_TEST_UTIL_HEADER_INCLUDED
-#define MG_TEST_UTIL_HEADER_INCLUDED
+#ifndef CS_COMMON_TEST_UTIL_H_
+#define CS_COMMON_TEST_UTIL_H_
 
 #include <string.h>
 #include <stdio.h>
@@ -130,4 +130,4 @@ void _strfail(const char *a, const char *e, int len);
     }                                                                \
   } while (0)
 
-#endif /* MG_TEST_UTIL_HEADER_INCLUDED */
+#endif /* CS_COMMON_TEST_UTIL_H_ */

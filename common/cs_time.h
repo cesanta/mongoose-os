@@ -3,10 +3,10 @@
  * All rights reserved
  */
 
-#ifndef _CS_TIME_H_
-#define _CS_TIME_H_
+#ifndef CS_COMMON_CS_TIME_H_
+#define CS_COMMON_CS_TIME_H_
 
 /* Sub-second granularity time(). */
 double cs_time();
 
-#endif /* _CS_TIME_H_ */
+#endif /* CS_COMMON_CS_TIME_H_ */

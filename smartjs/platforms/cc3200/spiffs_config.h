@@ -10,8 +10,8 @@
  *      Author: petera
  */
 
-#ifndef SPIFFS_CONFIG_H_
-#define SPIFFS_CONFIG_H_
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_SPIFFS_CONFIG_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_SPIFFS_CONFIG_H_
 
 #include "simplelink.h"
 
@@ -24,4 +24,4 @@ typedef _u8 u8_t;
 
 #include "spiffs_config_common.h"
 
-#endif /* SPIFFS_CONFIG_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_SPIFFS_CONFIG_H_ */

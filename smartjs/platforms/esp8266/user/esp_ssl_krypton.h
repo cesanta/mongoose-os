@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef ESP_SSL_KRYPTON_INCLUDED
-#define ESP_SSL_KRYPTON_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_SSL_KRYPTON_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_SSL_KRYPTON_H_
 
 #include "os_type.h"
 #include "espconn.h"
@@ -17,4 +17,4 @@
 sint8 kr_secure_connect(struct espconn *ec);
 sint8 kr_secure_sent(struct espconn *ec, uint8 *psent, uint16 length);
 
-#endif /* ESP_SSL_KRYPTON_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_SSL_KRYPTON_H_ */

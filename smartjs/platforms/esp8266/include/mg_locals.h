@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef MG_LOCALS_INCLUDED
-#define MG_LOCALS_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_MG_LOCALS_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_MG_LOCALS_H_
 
 /*
  * This file is included by mongoose.h and provides the definitions
@@ -32,4 +32,4 @@
 long int random(void);
 
 
-#endif /* MG_LOCALS_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_MG_LOCALS_H_ */

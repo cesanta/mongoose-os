@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_CONFIG_H
-#define SJ_CONFIG_H
+#ifndef CS_SMARTJS_SRC_SJ_CONFIG_H_
+#define CS_SMARTJS_SRC_SJ_CONFIG_H_
 
 #include "mongoose/mongoose.h"
 
@@ -36,4 +36,4 @@ void sj_conf_emit_int(struct mbuf *b, int v);
 
 int sj_conf_check_access(const char *key, const char *acl);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_CONFIG_H_ */

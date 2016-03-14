@@ -3,8 +3,8 @@
  *
  * platform independent UART support.
  */
-#ifndef SJ_UART_INCLUDED
-#define SJ_UART_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_UART_H_
+#define CS_SMARTJS_SRC_SJ_UART_H_
 
 #include "v7/v7.h"
 
@@ -50,4 +50,4 @@ size_t sj_uart_recv_cb(void *ctx, const char *d, size_t len);
 
 void sj_init_uart(struct v7 *);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_UART_H_ */

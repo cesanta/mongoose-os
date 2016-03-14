@@ -3,8 +3,10 @@
  * All rights reserved
  */
 
-#if !defined(MG_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
-#define MG_SHA1_HEADER_INCLUDED
+#ifndef CS_COMMON_SHA1_H_
+#define CS_COMMON_SHA1_H_
+
+#ifndef DISABLE_SHA1
 
 #include "common/platform.h"
 
@@ -27,4 +29,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-#endif /* MG_SHA1_HEADER_INCLUDED */
+
+#endif /* DISABLE_SHA1 */
+
+#endif /* CS_COMMON_SHA1_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef DIRENT_H_INCLUDED
-#define DIRENT_H_INCLUDED
+#ifndef CS_COMMON_CS_DIRENT_H_
+#define CS_COMMON_CS_DIRENT_H_
 
 #ifdef CS_ENABLE_SPIFFS
 
@@ -29,4 +29,4 @@ int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 #endif
 
-#endif
+#endif /* CS_COMMON_CS_DIRENT_H_ */

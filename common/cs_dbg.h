@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _CS_DBG_H_
-#define _CS_DBG_H_
+#ifndef CS_COMMON_CS_DBG_H_
+#define CS_COMMON_CS_DBG_H_
 
 enum cs_log_level {
   LL_NONE = -1,
@@ -56,4 +56,4 @@ void cs_log_printf(const char *fmt, ...);
 
 #endif
 
-#endif /* _CS_DBG_H_ */
+#endif /* CS_COMMON_CS_DBG_H_ */

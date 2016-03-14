@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef SJ_ADC_JS
-#define SJ_ADC_JS
+#ifndef CS_SMARTJS_SRC_SJ_ADC_JS_H_
+#define CS_SMARTJS_SRC_SJ_ADC_JS_H_
 
 void sj_adc_api_setup(struct v7 *v7);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_ADC_JS_H_ */

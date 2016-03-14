@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef ESP_HW_INCLUDED
-#define ESP_HW_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_HW_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_HW_H_
 
 #define __stringify_1(x...) #x
 #define __stringify(x...) __stringify_1(x)
@@ -17,4 +17,4 @@
 
 uint8_t read_unaligned_byte(uint8_t *addr);
 
-#endif
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_HW_H_ */

@@ -4,9 +4,9 @@
  * All rights reserved
  */
 
-#ifndef SJ_DEBUG_JS_H_INCLUDED
-#define SJ_DEBUG_JS_H_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_DEBUG_JS_H_
+#define CS_SMARTJS_SRC_SJ_DEBUG_JS_H_
 
 void sj_debug_api_setup(struct v7 *v7);
 
-#endif /* SJ_DEBUG_JS_H_INCLUDED */
+#endif /* CS_SMARTJS_SRC_SJ_DEBUG_JS_H_ */

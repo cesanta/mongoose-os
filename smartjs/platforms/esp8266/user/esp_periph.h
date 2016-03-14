@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef ESP_PERIPH_INCLUDED
-#define ESP_PERIPH_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_PERIPH_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_PERIPH_H_
 
 #include <stdint.h>
 
@@ -16,4 +16,4 @@ struct gpio_info {
 
 struct gpio_info *get_gpio_info(uint8_t gpio_no);
 
-#endif /* ESP_PERIPH_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_PERIPH_H_ */

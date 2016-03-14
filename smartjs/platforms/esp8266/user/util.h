@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef V7_UTIL_INCLUDED
-#define V7_UTIL_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_UTIL_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_UTIL_H_
 
 /* Puts GPIO#g into output mode and outputs v. */
 void set_gpio(int g, int v);
@@ -21,4 +21,4 @@ int await_change(int g, int *max_cycles);
 
 void v7_run_startup();
 
-#endif /* V7_UTIL_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_UTIL_H_ */

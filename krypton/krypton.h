@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _KRYPTON_H
-#define _KRYPTON_H
+#ifndef CS_KRYPTON_KRYPTON_H_
+#define CS_KRYPTON_KRYPTON_H_
 
 #ifdef KR_LOCALS
 #include <kr_locals.h>
@@ -85,4 +85,4 @@ typedef struct {
   void (*free_ctx)(void *ctx);
 } kr_cipher_info;
 
-#endif /* _KRYPTON_H */
+#endif /* CS_KRYPTON_KRYPTON_H_ */

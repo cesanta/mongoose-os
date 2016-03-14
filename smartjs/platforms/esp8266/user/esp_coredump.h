@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef ESP_COREDUMP_INCLUDED
-#define ESP_COREDUMP_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_COREDUMP_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_COREDUMP_H_
 
 void esp_dump_core(int cause, struct regfile *);
 
-#endif /* ESP_COREDUMP_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_COREDUMP_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef __CONFIG_H_
-#define __CONFIG_H_
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_CONFIG_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_CONFIG_H_
 
 #include "hw_types.h"
 #include "pin.h"
@@ -33,4 +33,4 @@
 #define V7_POLL_LENGTH_MS 2
 #define MONGOOSE_POLL_LENGTH_MS 2
 
-#endif /* __CONFIG_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_CONFIG_H_ */

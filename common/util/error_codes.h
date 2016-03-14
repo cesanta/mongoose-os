@@ -15,8 +15,8 @@
 // Note: This is based on Google's util/task/codes.proto, but converted to
 // simple enum to avoid pulling in protobufs as a dependency.
 
-#ifndef __COMMON_UTIL_ERROR_CODES_H_
-#define __COMMON_UTIL_ERROR_CODES_H_
+#ifndef CS_COMMON_UTIL_ERROR_CODES_H_
+#define CS_COMMON_UTIL_ERROR_CODES_H_
 
 #include <string>
 
@@ -117,4 +117,4 @@ std::string ToString(Code error_code);
 }  // namespace error
 }  // namespace util
 
-#endif  // __COMMON_UTIL_ERROR_CODES_H_
+#endif /* CS_COMMON_UTIL_ERROR_CODES_H_ */

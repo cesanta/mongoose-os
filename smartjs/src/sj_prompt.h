@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef __SMARTJS_PROMPT_H_
-#define __SMARTJS_PROMPT_H_
+#ifndef CS_SMARTJS_SRC_SJ_PROMPT_H_
+#define CS_SMARTJS_SRC_SJ_PROMPT_H_
 
 struct v7;
 
@@ -23,4 +23,4 @@ void sj_prompt_process_char(char ch);
 /* initialize hooks that send chars to prompt handler */
 void sj_prompt_init_hal();
 
-#endif /* __SMARTJS_PROMPT_H_ */
+#endif /* CS_SMARTJS_SRC_SJ_PROMPT_H_ */

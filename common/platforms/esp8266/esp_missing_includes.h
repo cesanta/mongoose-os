@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _ESP_MISSING_INCLUDES_
-#define _ESP_MISSING_INCLUDES_
+#ifndef CS_COMMON_PLATFORMS_ESP8266_ESP_MISSING_INCLUDES_H_
+#define CS_COMMON_PLATFORMS_ESP8266_ESP_MISSING_INCLUDES_H_
 
 void pp_soft_wdt_stop();
 void uart_div_modify(int no, unsigned int freq);
@@ -50,4 +50,4 @@ int printf_broken(const char *format, ...);
 
 void _ResetVector();
 
-#endif /* _ESP_MISSING_INCLUDES_ */
+#endif /* CS_COMMON_PLATFORMS_ESP8266_ESP_MISSING_INCLUDES_H_ */

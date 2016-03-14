@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef __COMMON_UTIL_LOGGING_H_
-#define __COMMON_UTIL_LOGGING_H_
+#ifndef CS_COMMON_UTIL_LOGGING_H_
+#define CS_COMMON_UTIL_LOGGING_H_
 
 #include <iostream>
 
@@ -68,4 +68,4 @@ class LogMessageAndDie : public LogMessage {
 
 }  // namespace util
 
-#endif  // __COMMON_UTIL_LOGGING_H_
+#endif /* CS_COMMON_UTIL_LOGGING_H_ */

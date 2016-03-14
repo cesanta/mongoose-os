@@ -1,5 +1,5 @@
-#ifndef __RBOOT_H__
-#define __RBOOT_H__
+#ifndef CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_H_
+#define CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_H_
 
 //////////////////////////////////////////////////
 // rBoot open source boot loader for ESP8266.
@@ -73,4 +73,4 @@ typedef struct {
 }
 #endif
 
-#endif
+#endif /* CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_H_ */

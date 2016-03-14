@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef ESP_GPIO_INCLUDED
-#define ESP_GPIO_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_GPIO_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_GPIO_H_
 
 #include <stdint.h>
 
@@ -16,4 +16,4 @@
 int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull);
 int sj_gpio_write(int pin, enum gpio_level level);
 
-#endif
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_GPIO_H_ */

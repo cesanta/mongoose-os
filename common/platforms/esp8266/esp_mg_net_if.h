@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _ESP_MG_NET_IF_H_
-#define _ESP_MG_NET_IF_H_
+#ifndef CS_COMMON_PLATFORMS_ESP8266_ESP_MG_NET_IF_H_
+#define CS_COMMON_PLATFORMS_ESP8266_ESP_MG_NET_IF_H_
 
 #include "v7/v7.h"
 #include "mongoose/mongoose.h"
@@ -70,4 +70,4 @@ struct tcp_pcb;
 void mg_lwip_accept_conn(struct mg_connection *nc, struct tcp_pcb *tpcb);
 int mg_lwip_tcp_write(struct mg_connection *nc, const void *data, uint16_t len);
 
-#endif /* _ESP_MG_NET_IF_H_ */
+#endif /* CS_COMMON_PLATFORMS_ESP8266_ESP_MG_NET_IF_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _SJ_WIFI_JS_H_INCLUDED
-#define _SJ_WIFI_JS_H_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_WIFI_JS_H_
+#define CS_SMARTJS_SRC_SJ_WIFI_JS_H_
 
 #include "v7/v7.h"
 
@@ -13,4 +13,4 @@
 void sj_wifi_api_setup(struct v7 *v7);
 void sj_wifi_init(struct v7 *v7);
 
-#endif /* _SJ_WIFI_JS_H_INCLUDED */
+#endif /* CS_SMARTJS_SRC_SJ_WIFI_JS_H_ */

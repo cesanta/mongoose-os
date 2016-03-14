@@ -19,8 +19,8 @@
 *
 **********************************************************************************/
 
-#ifndef ESPTOOL2_H
-#define ESPTOOL2_H
+#ifndef CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ESPTOOL2_H_
+#define CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ESPTOOL2_H_
 
 #ifdef WIN32
 typedef signed __int8     int8_t;
@@ -41,4 +41,4 @@ void debug( const char* format, ... );
 void print( const char* format, ... );
 void error( const char* format, ... );
 
-#endif
+#endif /* CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ESPTOOL2_H_ */

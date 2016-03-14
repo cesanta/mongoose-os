@@ -3,8 +3,8 @@
 * All rights reserved
 */
 
-#ifndef ESP_UPDATER_H_INCLUDED
-#define ESP_UPDATER_H_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_
 
 #include "v7/v7.h"
 
@@ -16,4 +16,4 @@ uint32_t get_fw_addr(uint8_t rom);
 uint32_t get_fs_addr(uint8_t rom);
 uint32_t get_fs_size(uint8_t rom);
 
-#endif
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _MMAN_H_
-#define _MMAN_H_
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_
 
 #define MAP_PRIVATE 1
 #define PROT_READ 1
@@ -12,4 +12,4 @@
 
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
 
-#endif
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_ */

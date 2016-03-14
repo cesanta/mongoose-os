@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _CC3200_FS_SPIFFS_H_
-#define _CC3200_FS_SPIFFS_H_
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_
 
 #include <stdio.h>
 #include <unistd.h>
@@ -24,4 +24,4 @@ off_t fs_spiffs_lseek(int fd, off_t offset, int whence);
 int fs_spiffs_unlink(const char *filename);
 int fs_spiffs_rename(const char *from, const char *to);
 
-#endif /* _CC3200_FS_SPIFFS_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_ */

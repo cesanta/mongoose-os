@@ -3,11 +3,11 @@
  * All rights reserved
  */
 
-#ifndef _CC3200_WIFI_H_
-#define _CC3200_WIFI_H_
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_CC3200_WIFI_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_CC3200_WIFI_H_
 
 struct v7;
 
 void sj_wifi_init(struct v7 *v7);
 
-#endif /* _CC3200_WIFI_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_WIFI_H_ */

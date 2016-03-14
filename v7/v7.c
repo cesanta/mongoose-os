@@ -26,12 +26,12 @@
 #else
 #define V7_PRIVATE static
 #define V7_EXTERN static
-#endif
+#endif /* CS_V7_SRC_LICENSE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/platform.h"
 #endif
-#ifndef _CS_PLATFORM_H_
-#define _CS_PLATFORM_H_
+#ifndef CS_COMMON_PLATFORM_H_
+#define CS_COMMON_PLATFORM_H_
 
 /*
  * For the "custom" platform, includes and dependencies can be
@@ -81,12 +81,12 @@
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#endif /* _CS_PLATFORM_H_ */
+#endif /* CS_COMMON_PLATFORM_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/platforms/platform_windows.h"
 #endif
-#ifndef _CS_PLATFORM_WINDOWS_H_
-#define _CS_PLATFORM_WINDOWS_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_
 #if CS_PLATFORM == CS_P_WINDOWS
 
 /*
@@ -210,12 +210,12 @@ struct dirent *readdir(DIR *dir);
 #endif
 
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
-#endif /* _CS_PLATFORM_WINDOWS_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/platforms/platform_unix.h"
 #endif
-#ifndef _CS_PLATFORM_UNIX_H_
-#define _CS_PLATFORM_UNIX_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_
 #if CS_PLATFORM == CS_P_UNIX
 
 #ifndef _XOPEN_SOURCE
@@ -296,12 +296,12 @@ typedef struct stat cs_stat_t;
 #define closesocket(x) close(x)
 
 #endif /* CS_PLATFORM == CS_P_UNIX */
-#endif /* _CS_PLATFORM_UNIX_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/platforms/platform_esp_lwip.h"
 #endif
-#ifndef _CS_PLATFORM_ESP_LWIP_H_
-#define _CS_PLATFORM_ESP_LWIP_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
 #if CS_PLATFORM == CS_P_ESP_LWIP
 
 #include <assert.h>
@@ -344,7 +344,7 @@ typedef struct stat cs_stat_t;
 #define __cdecl
 
 #endif /* CS_PLATFORM == CS_P_ESP_LWIP */
-#endif /* _CS_PLATFORM_ESP_LWIP_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/mbuf.h"
 #endif
@@ -362,8 +362,8 @@ typedef struct stat cs_stat_t;
  * needed.
  */
 
-#ifndef MBUF_H_INCLUDED
-#define MBUF_H_INCLUDED
+#ifndef CS_COMMON_MBUF_H_
+#define CS_COMMON_MBUF_H_
 
 #if defined(__cplusplus)
 extern "C" {
@@ -425,7 +425,7 @@ void mbuf_trim(struct mbuf *);
 }
 #endif /* __cplusplus */
 
-#endif /* MBUF_H_INCLUDED */
+#endif /* CS_COMMON_MBUF_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/platforms/platform_cc3200.h"
 #endif
@@ -434,8 +434,8 @@ void mbuf_trim(struct mbuf *);
  * All rights reserved
  */
 
-#ifndef _CS_PLATFORM_CC3200_H_
-#define _CS_PLATFORM_CC3200_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
 #if CS_PLATFORM == CS_P_CC3200
 
 #include <assert.h>
@@ -615,7 +615,7 @@ int gettimeofday(struct timeval *t, void *tz);
 long int random(void);
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
-#endif /* _CS_PLATFORM_CC3200_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/utf.h"
 #endif
@@ -624,8 +624,8 @@ long int random(void);
  * All rights reserved
  */
 
-#ifndef _UTF_H_
-#define _UTF_H_ 1
+#ifndef CS_COMMON_UTF_H_
+#define CS_COMMON_UTF_H_
 
 #if defined(__cplusplus)
 extern "C" {
@@ -688,7 +688,7 @@ char *utfutf(char *s1, char *s2);
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
-#endif /* _UTF_H_ */
+#endif /* CS_COMMON_UTF_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/base64.h"
 #endif
@@ -697,8 +697,10 @@ char *utfutf(char *s1, char *s2);
  * All rights reserved
  */
 
-#if !defined(BASE64_H_INCLUDED) && !defined(DISABLE_BASE64)
-#define BASE64_H_INCLUDED
+#ifndef CS_COMMON_BASE64_H_
+#define CS_COMMON_BASE64_H_
+
+#ifndef DISABLE_BASE64
 
 #include <stdio.h>
 
@@ -728,7 +730,10 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #ifdef __cplusplus
 }
 #endif
-#endif
+
+#endif /* DISABLE_BASE64 */
+
+#endif /* CS_COMMON_BASE64_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/md5.h"
 #endif
@@ -737,8 +742,8 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
  * All rights reserved
  */
 
-#ifndef MD5_HEADER_DEFINED
-#define MD5_HEADER_DEFINED
+#ifndef CS_COMMON_MD5_H_
+#define CS_COMMON_MD5_H_
 
 /* Amalgamated: #include "common/platform.h" */
 
@@ -776,7 +781,7 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 }
 #endif /* __cplusplus */
 
-#endif
+#endif /* CS_COMMON_MD5_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/sha1.h"
 #endif
@@ -785,8 +790,10 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
  * All rights reserved
  */
 
-#if !defined(MG_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
-#define MG_SHA1_HEADER_INCLUDED
+#ifndef CS_COMMON_SHA1_H_
+#define CS_COMMON_SHA1_H_
+
+#ifndef DISABLE_SHA1
 
 /* Amalgamated: #include "common/platform.h" */
 
@@ -809,7 +816,10 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-#endif /* MG_SHA1_HEADER_INCLUDED */
+
+#endif /* DISABLE_SHA1 */
+
+#endif /* CS_COMMON_SHA1_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/str_util.h"
 #endif
@@ -818,8 +828,8 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
  * All rights reserved
  */
 
-#ifndef STR_UTIL_H
-#define STR_UTIL_H
+#ifndef CS_COMMON_STR_UTIL_H_
+#define CS_COMMON_STR_UTIL_H_
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -849,7 +859,7 @@ size_t strnlen(const char *s, size_t maxlen);
 }
 #endif
 
-#endif
+#endif /* CS_COMMON_STR_UTIL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/cs_dirent.h"
 #endif
@@ -858,8 +868,8 @@ size_t strnlen(const char *s, size_t maxlen);
  * All rights reserved
  */
 
-#ifndef DIRENT_H_INCLUDED
-#define DIRENT_H_INCLUDED
+#ifndef CS_COMMON_CS_DIRENT_H_
+#define CS_COMMON_CS_DIRENT_H_
 
 #ifdef CS_ENABLE_SPIFFS
 
@@ -884,7 +894,7 @@ int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 #endif
 
-#endif
+#endif /* CS_COMMON_CS_DIRENT_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/ubjson.h"
 #endif
@@ -893,8 +903,8 @@ struct dirent *readdir(DIR *dir);
  * All rights reserved
  */
 
-#ifndef CS_UBJSON_H_INCLUDED
-#define CS_UBJSON_H_INCLUDED
+#ifndef CS_COMMON_UBJSON_H_
+#define CS_COMMON_UBJSON_H_
 
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "common/platform.h" */
@@ -923,7 +933,7 @@ void cs_ubjson_close_object(struct mbuf *buf);
 void cs_ubjson_open_array(struct mbuf *buf);
 void cs_ubjson_close_array(struct mbuf *buf);
 
-#endif
+#endif /* CS_COMMON_UBJSON_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/coroutine.h"
 #endif
@@ -939,8 +949,8 @@ void cs_ubjson_close_array(struct mbuf *buf);
  * More info: see the design doc: https://goo.gl/kfcG61
  */
 
-#ifndef _COROUTINE_H
-#define _COROUTINE_H
+#ifndef CS_COMMON_COROUTINE_H_
+#define CS_COMMON_COROUTINE_H_
 
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "common/platform.h" */
@@ -1510,7 +1520,7 @@ void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
  */
 void cr_context_free(struct cr_ctx *p_ctx);
 
-#endif /* _COROUTINE_H */
+#endif /* CS_COMMON_COROUTINE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/features_profiles.h"
 #endif
@@ -1519,8 +1529,8 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * All rights reserved
  */
 
-#ifndef V7_FEATURES_H_INCLUDED
-#define V7_FEATURES_H_INCLUDED
+#ifndef CS_V7_SRC_FEATURES_PROFILES_H_
+#define CS_V7_SRC_FEATURES_PROFILES_H_
 
 #define V7_BUILD_PROFILE_MINIMAL 1
 #define V7_BUILD_PROFILE_MEDIUM 2
@@ -1530,7 +1540,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
 #endif
 
-#endif /* V7_FEATURES_H_INCLUDED */
+#endif /* CS_V7_SRC_FEATURES_PROFILES_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/features_minimal.h"
 #endif
@@ -1545,7 +1555,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 /* This space is intentionally left blank. */
 
-#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL */
+#endif /* CS_V7_SRC_FEATURES_MINIMAL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/features_medium.h"
 #endif
@@ -1565,7 +1575,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_ENABLE__Math__atan2 1
 #define V7_ENABLE__RegExp 1
 
-#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
+#endif /* CS_V7_SRC_FEATURES_MEDIUM_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/features_full.h"
 #endif
@@ -1581,8 +1591,8 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * DO NOT EDIT.
  * This file is generated by scripts/gen-features-full.pl.
  */
-#ifndef CS_ENABLE_UTF8
-#define CS_ENABLE_UTF8 1
+#ifndef CS_V7_SRC_FEATURES_FULL_H_
+#define CS_V7_SRC_FEATURES_FULL_H_
 #endif
 
 #define V7_ENABLE__Array__reduce 1
@@ -1640,7 +1650,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_ENABLE__String__localeLowerCase 1
 #define V7_ENABLE__String__localeUpperCase 1
 
-#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
+#endif /* CS_V7_SRC_FEATURES_FULL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/v7_features.h"
 #endif
@@ -1649,15 +1659,15 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * All rights reserved
  */
 
-#ifndef FEATURES_PROFILES_H_INCLUDED
-#define FEATURES_PROFILES_H_INCLUDED
+#ifndef CS_V7_SRC_V7_FEATURES_H_
+#define CS_V7_SRC_V7_FEATURES_H_
 
 /* Only one will actually be used based on V7_BUILD_PROFILE. */
 /* Amalgamated: #include "v7/src/features_minimal.h" */
 /* Amalgamated: #include "v7/src/features_medium.h" */
 /* Amalgamated: #include "v7/src/features_full.h" */
 
-#endif /* FEATURES_PROFILES_H_INCLUDED */
+#endif /* CS_V7_SRC_V7_FEATURES_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/internal.h"
 #endif
@@ -1666,8 +1676,8 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * All rights reserved
  */
 
-#ifndef V7_INTERNAL_H_INCLUDED
-#define V7_INTERNAL_H_INCLUDED
+#ifndef CS_V7_SRC_INTERNAL_H_
+#define CS_V7_SRC_INTERNAL_H_
 
 /* Amalgamated: #include "v7/src/license.h" */
 
@@ -1825,7 +1835,7 @@ extern void *v7_sp_limit;
 
 #define BUF_LEFT(size, used) (((size_t)(used) < (size)) ? ((size) - (used)) : 0)
 
-#endif /* V7_INTERNAL_H_INCLUDED */
+#endif /* CS_V7_SRC_INTERNAL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/core_public.h"
 #endif
@@ -1838,8 +1848,8 @@ extern void *v7_sp_limit;
  * === Core
  */
 
-#ifndef CORE_PUBLIC_H_INCLUDED
-#define CORE_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_CORE_PUBLIC_H_
+#define CS_V7_SRC_CORE_PUBLIC_H_
 
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
@@ -2030,7 +2040,7 @@ int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
 void v7_stack_stat_clean(struct v7 *v7);
 #endif
 
-#endif /* CORE_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_CORE_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_error.h"
 #endif
@@ -2039,8 +2049,8 @@ void v7_stack_stat_clean(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_ERROR_H_INCLUDED
-#define STD_ERROR_H_INCLUDED
+#ifndef CS_V7_SRC_STD_ERROR_H_
+#define CS_V7_SRC_STD_ERROR_H_
 
 /* Amalgamated: #include "v7/src/license.h" */
 
@@ -2081,7 +2091,7 @@ V7_PRIVATE void init_error(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_ERROR_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_ERROR_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/mm.h"
 #endif
@@ -2090,8 +2100,8 @@ V7_PRIVATE void init_error(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef MM_H_INCLUDED
-#define MM_H_INCLUDED
+#ifndef CS_V7_SRC_MM_H_
+#define CS_V7_SRC_MM_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -2121,7 +2131,7 @@ struct gc_arena {
   const char *name; /* for debugging purposes */
 };
 
-#endif /* GC_H_INCLUDED */
+#endif /* CS_V7_SRC_MM_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/parser.h"
 #endif
@@ -2130,8 +2140,8 @@ struct gc_arena {
  * All rights reserved
  */
 
-#ifndef V7_PARSER_H_INCLUDED
-#define V7_PARSER_H_INCLUDED
+#ifndef CS_V7_SRC_PARSER_H_
+#define CS_V7_SRC_PARSER_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core_public.h" */
@@ -2163,7 +2173,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
 }
 #endif /* __cplusplus */
 
-#endif /* V7_PARSER_H_INCLUDED */
+#endif /* CS_V7_SRC_PARSER_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/object_public.h"
 #endif
@@ -2176,8 +2186,8 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
  * === Objects
  */
 
-#ifndef V7_OBJECT_PUBLIC_H_INCLUDED
-#define V7_OBJECT_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_OBJECT_PUBLIC_H_
+#define CS_V7_SRC_OBJECT_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -2337,7 +2347,7 @@ int v7_is_instanceof_v(struct v7 *v7, v7_val_t o, v7_val_t c);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_OBJECT_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_OBJECT_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/tokenizer.h"
 #endif
@@ -2346,8 +2356,8 @@ int v7_is_instanceof_v(struct v7 *v7, v7_val_t o, v7_val_t c);
  * All rights reserved
  */
 
-#ifndef V7_TOKENIZER_H_INCLUDED
-#define V7_TOKENIZER_H_INCLUDED
+#ifndef CS_V7_SRC_TOKENIZER_H_
+#define CS_V7_SRC_TOKENIZER_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -2478,7 +2488,7 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_TOKENIZER_H_INCLUDED */
+#endif /* CS_V7_SRC_TOKENIZER_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/core.h"
 #endif
@@ -2487,8 +2497,8 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
  * All rights reserved
  */
 
-#ifndef CORE_H_INCLUDED
-#define CORE_H_INCLUDED
+#ifndef CS_V7_SRC_CORE_H_
+#define CS_V7_SRC_CORE_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -2949,7 +2959,7 @@ struct v7_vec_const {
 }
 #endif /* __cplusplus */
 
-#endif /* CORE_H_INCLUDED */
+#endif /* CS_V7_SRC_CORE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/primitive_public.h"
 #endif
@@ -2966,8 +2976,8 @@ struct v7_vec_const {
  * "foreign" values are also here, see `v7_mk_foreign()`.
  */
 
-#ifndef V7_PRIMITIVE_PUBLIC_H_INCLUDED
-#define V7_PRIMITIVE_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_PRIMITIVE_PUBLIC_H_
+#define CS_V7_SRC_PRIMITIVE_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -3047,7 +3057,7 @@ int v7_is_foreign(v7_val_t v);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_PRIMITIVE_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_PRIMITIVE_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/primitive.h"
 #endif
@@ -3056,8 +3066,8 @@ int v7_is_foreign(v7_val_t v);
  * All rights reserved
  */
 
-#ifndef PRIMITIVE_H_INCLUDED
-#define PRIMITIVE_H_INCLUDED
+#ifndef CS_V7_SRC_PRIMITIVE_H_
+#define CS_V7_SRC_PRIMITIVE_H_
 
 /* Amalgamated: #include "v7/src/primitive_public.h" */
 
@@ -3069,7 +3079,7 @@ V7_PRIVATE int is_finite(v7_val_t v);
 V7_PRIVATE val_t pointer_to_value(void *p);
 V7_PRIVATE void *v7_to_pointer(val_t v);
 
-#endif /* PRIMITIVE_H_INCLUDED */
+#endif /* CS_V7_SRC_PRIMITIVE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/string_public.h"
 #endif
@@ -3082,8 +3092,8 @@ V7_PRIVATE void *v7_to_pointer(val_t v);
  * === Strings
  */
 
-#ifndef V7_STRING_PUBLIC_H_INCLUDED
-#define V7_STRING_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_STRING_PUBLIC_H_
+#define CS_V7_SRC_STRING_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -3144,7 +3154,7 @@ const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_STRING_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_STRING_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/string.h"
 #endif
@@ -3153,8 +3163,8 @@ const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
  * All rights reserved
  */
 
-#ifndef V7_STRING_H_INCLUDED
-#define V7_STRING_H_INCLUDED
+#ifndef CS_V7_SRC_STRING_H_
+#define CS_V7_SRC_STRING_H_
 
 /* Amalgamated: #include "v7/src/string_public.h" */
 
@@ -3209,7 +3219,7 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_STRING_H_INCLUDED */
+#endif /* CS_V7_SRC_STRING_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/exceptions_public.h"
 #endif
@@ -3222,8 +3232,8 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
  * === Exceptions
  */
 
-#ifndef V7_EXCEPTIONS_PUBLIC_H_INCLUDED
-#define V7_EXCEPTIONS_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_EXCEPTIONS_PUBLIC_H_
+#define CS_V7_SRC_EXCEPTIONS_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -3264,7 +3274,7 @@ void v7_clear_thrown_value(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_EXCEPTIONS_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_EXCEPTIONS_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/exceptions.h"
 #endif
@@ -3273,8 +3283,8 @@ void v7_clear_thrown_value(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef EXCEPTIONS_H_INCLUDED
-#define EXCEPTIONS_H_INCLUDED
+#ifndef CS_V7_SRC_EXCEPTIONS_H_
+#define CS_V7_SRC_EXCEPTIONS_H_
 
 /* Amalgamated: #include "v7/src/exceptions_public.h" */
 
@@ -3361,7 +3371,7 @@ V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
 }
 #endif /* __cplusplus */
 
-#endif /* EXCEPTIONS_H_INCLUDED */
+#endif /* CS_V7_SRC_EXCEPTIONS_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/object.h"
 #endif
@@ -3370,8 +3380,8 @@ V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
  * All rights reserved
  */
 
-#ifndef OBJECT_H_INCLUDED
-#define OBJECT_H_INCLUDED
+#ifndef CS_V7_SRC_OBJECT_H_
+#define CS_V7_SRC_OBJECT_H_
 
 /* Amalgamated: #include "v7/src/object_public.h" */
 
@@ -3509,7 +3519,7 @@ V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj);
 
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
 
-#endif /* OBJECT_H_INCLUDED */
+#endif /* CS_V7_SRC_OBJECT_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/exec_public.h"
 #endif
@@ -3522,8 +3532,8 @@ V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
  * === Execution of JavaScript code
  */
 
-#ifndef V7_EXEC_PUBLIC_H_INCLUDED
-#define V7_EXEC_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_EXEC_PUBLIC_H_
+#define CS_V7_SRC_EXEC_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -3592,7 +3602,7 @@ WARN_UNUSED_RESULT
 enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                      v7_val_t args, v7_val_t *res);
 
-#endif /* V7_EXEC_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_EXEC_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/exec.h"
 #endif
@@ -3601,8 +3611,8 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
  * All rights reserved
  */
 
-#ifndef V7_EXEC_H_INCLUDED
-#define V7_EXEC_H_INCLUDED
+#ifndef CS_V7_SRC_EXEC_H_
+#define CS_V7_SRC_EXEC_H_
 
 /* Amalgamated: #include "v7/src/exec_public.h" */
 
@@ -3621,7 +3631,7 @@ extern "C" {
 }
 #endif /* __cplusplus */
 
-#endif /* V7_EXEC_H_INCLUDED */
+#endif /* CS_V7_SRC_EXEC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/array_public.h"
 #endif
@@ -3634,8 +3644,8 @@ extern "C" {
  * === Arrays
  */
 
-#ifndef V7_ARRAY_PUBLIC_H_INLUCDED
-#define V7_ARRAY_PUBLIC_H_INLUCDED
+#ifndef CS_V7_SRC_ARRAY_PUBLIC_H_
+#define CS_V7_SRC_ARRAY_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -3693,7 +3703,7 @@ void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_ARRAY_PUBLIC_H_INLUCDED */
+#endif /* CS_V7_SRC_ARRAY_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/array.h"
 #endif
@@ -3702,8 +3712,8 @@ void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
  * All rights reserved
  */
 
-#ifndef V7_ARRAY_H_INCLUDED
-#define V7_ARRAY_H_INCLUDED
+#ifndef CS_V7_SRC_ARRAY_H_
+#define CS_V7_SRC_ARRAY_H_
 
 /* Amalgamated: #include "v7/src/array_public.h" */
 
@@ -3721,7 +3731,7 @@ v7_array_get2(struct v7 *v7, v7_val_t arr, unsigned long index, int *has);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_ARRAY_H_INCLUDED */
+#endif /* CS_V7_SRC_ARRAY_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/cs_file.h"
 #endif
@@ -3743,7 +3753,7 @@ char *cs_read_file(const char *path, size_t *size);
 
 #ifdef CS_MMAP
 char *cs_mmap_file(const char *path, size_t *size);
-#endif
+#endif /* CS_COMMON_CS_FILE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/conversion_public.h"
 #endif
@@ -3756,8 +3766,8 @@ char *cs_mmap_file(const char *path, size_t *size);
  * === Conversion
  */
 
-#ifndef V7_CONVERSION_PUBLIC_H_INCLUDED
-#define V7_CONVERSION_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_CONVERSION_PUBLIC_H_
+#define CS_V7_SRC_CONVERSION_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -3831,7 +3841,7 @@ int v7_is_truthy(struct v7 *v7, v7_val_t v);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_CONVERSION_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_CONVERSION_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/conversion.h"
 #endif
@@ -3840,8 +3850,8 @@ int v7_is_truthy(struct v7 *v7, v7_val_t v);
  * All rights reserved
  */
 
-#ifndef CONVERSION_H_INCLUDED
-#define CONVERSION_H_INCLUDED
+#ifndef CS_V7_SRC_CONVERSION_H_
+#define CS_V7_SRC_CONVERSION_H_
 
 /* Amalgamated: #include "v7/src/conversion_public.h" */
 
@@ -4074,7 +4084,7 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
 }
 #endif /* __cplusplus */
 
-#endif /* CONVERSION_H_INCLUDED */
+#endif /* CS_V7_SRC_CONVERSION_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/builtin/builtin.h"
 #endif
@@ -4209,8 +4219,8 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
  *    var reply = s.recv();
  */
 
-#ifndef BUILTIN_HEADER_DEFINED
-#define BUILTIN_HEADER_DEFINED
+#ifndef CS_V7_BUILTIN_BUILTIN_H_
+#define CS_V7_BUILTIN_BUILTIN_H_
 
 struct v7;
 
@@ -4220,7 +4230,7 @@ void init_crypto(struct v7 *);
 void init_ubjson(struct v7 *);
 void init_ubjson(struct v7 *v7);
 
-#endif
+#endif /* CS_V7_BUILTIN_BUILTIN_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/util_public.h"
 #endif
@@ -4233,8 +4243,8 @@ void init_ubjson(struct v7 *v7);
  * === Utility functions
  */
 
-#ifndef V7_UTIL_PUBLIC_H_INCLUDED
-#define V7_UTIL_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_UTIL_PUBLIC_H_
+#define CS_V7_SRC_UTIL_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -4268,7 +4278,7 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_UTIL_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_UTIL_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/util.h"
 #endif
@@ -4277,8 +4287,8 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
  * All rights reserved
  */
 
-#ifndef V7_UTIL_H_INCLUDED
-#define V7_UTIL_H_INCLUDED
+#ifndef CS_V7_SRC_UTIL_H_
+#define CS_V7_SRC_UTIL_H_
 
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/util_public.h" */
@@ -4290,7 +4300,7 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
  * `util_public.h`
  */
 
-#endif /* V7_UTIL_H_INCLUDED */
+#endif /* CS_V7_SRC_UTIL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/function_public.h"
 #endif
@@ -4303,8 +4313,8 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
  * === Functions
  */
 
-#ifndef V7_FUNCTION_PUBLIC_H_INCLUDED
-#define V7_FUNCTION_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_FUNCTION_PUBLIC_H_
+#define CS_V7_SRC_FUNCTION_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -4352,7 +4362,7 @@ int v7_is_callable(struct v7 *v7, v7_val_t v);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_FUNCTION_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_FUNCTION_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/function.h"
 #endif
@@ -4361,8 +4371,8 @@ int v7_is_callable(struct v7 *v7, v7_val_t v);
  * All rights reserved
  */
 
-#ifndef FUNCTION_H_INCLUDED
-#define FUNCTION_H_INCLUDED
+#ifndef CS_V7_SRC_FUNCTION_H_
+#define CS_V7_SRC_FUNCTION_H_
 
 /* Amalgamated: #include "v7/src/function_public.h" */
 
@@ -4431,7 +4441,7 @@ v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7, v7_cfunction_t *f,
 }
 #endif /* __cplusplus */
 
-#endif /* FUNCTION_H_INCLUDED */
+#endif /* CS_V7_SRC_FUNCTION_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/varint.h"
 #endif
@@ -4440,8 +4450,8 @@ v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7, v7_cfunction_t *f,
  * All rights reserved
  */
 
-#ifndef V7_VARINT_H_INCLUDED
-#define V7_VARINT_H_INCLUDED
+#ifndef CS_V7_SRC_VARINT_H_
+#define CS_V7_SRC_VARINT_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -4457,7 +4467,7 @@ V7_PRIVATE int calc_llen(size_t len);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_VARINT_H_INCLUDED */
+#endif /* CS_V7_SRC_VARINT_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/ast.h"
 #endif
@@ -4466,8 +4476,8 @@ V7_PRIVATE int calc_llen(size_t len);
  * All rights reserved
  */
 
-#ifndef AST_H_INCLUDED
-#define AST_H_INCLUDED
+#ifndef CS_V7_SRC_AST_H_
+#define CS_V7_SRC_AST_H_
 
 #include <stdio.h>
 /* Amalgamated: #include "common/mbuf.h" */
@@ -4675,7 +4685,7 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 }
 #endif /* __cplusplus */
 
-#endif /* AST_H_INCLUDED */
+#endif /* CS_V7_SRC_AST_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/bcode.h"
 #endif
@@ -4684,8 +4694,8 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
  * All rights reserved
  */
 
-#ifndef BCODE_H_INCLUDED
-#define BCODE_H_INCLUDED
+#ifndef CS_V7_SRC_BCODE_H_
+#define CS_V7_SRC_BCODE_H_
 
 #define BIN_BCODE_SIGNATURE "V\007BCODE:"
 
@@ -5461,7 +5471,7 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 }
 #endif /* __cplusplus */
 
-#endif /* BCODE_H_INCLUDED */
+#endif /* CS_V7_SRC_BCODE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/gc_public.h"
 #endif
@@ -5474,8 +5484,8 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
  * === Garbage Collector
  */
 
-#ifndef V7_GC_PUBLIC_H_INCLUDED
-#define V7_GC_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_GC_PUBLIC_H_
+#define CS_V7_SRC_GC_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -5522,7 +5532,7 @@ void v7_gc(struct v7 *v7, int full);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_GC_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_GC_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/gc.h"
 #endif
@@ -5531,8 +5541,8 @@ void v7_gc(struct v7 *v7, int full);
  * All rights reserved
  */
 
-#ifndef GC_H_INCLUDED
-#define GC_H_INCLUDED
+#ifndef CS_V7_SRC_GC_H_
+#define CS_V7_SRC_GC_H_
 
 /* Amalgamated: #include "v7/src/gc_public.h" */
 
@@ -5621,7 +5631,7 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 }
 #endif /* __cplusplus */
 
-#endif /* GC_H_INCLUDED */
+#endif /* CS_V7_SRC_GC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/eval.h"
 #endif
@@ -5630,8 +5640,8 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
  * All rights reserved
  */
 
-#ifndef EVAL_H_INCLUDED
-#define EVAL_H_INCLUDED
+#ifndef CS_V7_SRC_EVAL_H_
+#define CS_V7_SRC_EVAL_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
@@ -5658,7 +5668,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 }
 #endif /* __cplusplus */
 
-#endif /* BCODE_H_INCLUDED */
+#endif /* CS_V7_SRC_EVAL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/compiler.h"
 #endif
@@ -5667,8 +5677,8 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
  * All rights reserved
  */
 
-#ifndef COMPILER_H_INCLUDED
-#define COMPILER_H_INCLUDED
+#ifndef CS_V7_SRC_COMPILER_H_
+#define CS_V7_SRC_COMPILER_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
@@ -5688,7 +5698,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 }
 #endif /* __cplusplus */
 
-#endif /* COMPILER_H_INCLUDED */
+#endif /* CS_V7_SRC_COMPILER_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/cyg_profile.h"
 #endif
@@ -5697,8 +5707,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
  * All rights reserved
  */
 
-#ifndef CYG_PROFILE_H_INCLUDED
-#define CYG_PROFILE_H_INCLUDED
+#ifndef CS_V7_SRC_CYG_PROFILE_H_
+#define CS_V7_SRC_CYG_PROFILE_H_
 
 /*
  * This file contains GCC/clang instrumentation callbacks, as well as
@@ -5746,7 +5756,7 @@ void v7_stack_stat_clean(struct v7 *v7);
 
 #endif /* V7_ENABLE_STACK_TRACKING */
 
-#endif /* CYG_PROFILE_H_INCLUDED */
+#endif /* CS_V7_SRC_CYG_PROFILE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/slre.h"
 #endif
@@ -5768,8 +5778,8 @@ void v7_stack_stat_clean(struct v7 *v7);
  * license, as set out in <https://www.cesanta.com/license>.
  */
 
-#ifndef SLRE_HEADER_INCLUDED
-#define SLRE_HEADER_INCLUDED
+#ifndef CS_V7_SRC_SLRE_H_
+#define CS_V7_SRC_SLRE_H_
 
 /* Return codes for slre_compile() */
 enum slre_error {
@@ -5839,7 +5849,7 @@ int slre_get_flags(struct slre_prog *);
 
 #endif /* V7_ENABLE__RegExp */
 
-#endif /* SLRE_HEADER_INCLUDED */
+#endif /* CS_V7_SRC_SLRE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/stdlib.h"
 #endif
@@ -5848,8 +5858,8 @@ int slre_get_flags(struct slre_prog *);
  * All rights reserved
  */
 
-#ifndef STDLIB_H_INCLUDED
-#define STDLIB_H_INCLUDED
+#ifndef CS_V7_SRC_STDLIB_H_
+#define CS_V7_SRC_STDLIB_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
@@ -5868,7 +5878,7 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
 }
 #endif /* __cplusplus */
 
-#endif /* STDLIB_H_INCLUDED */
+#endif /* CS_V7_SRC_STDLIB_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/heapusage.h"
 #endif
@@ -5877,8 +5887,8 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
  * All rights reserved
  */
 
-#ifndef _HEAPUSAGE_H_INCLUDED
-#define _HEAPUSAGE_H_INCLUDED
+#ifndef CS_V7_SRC_HEAPUSAGE_H_
+#define CS_V7_SRC_HEAPUSAGE_H_
 
 #if defined(V7_HEAPUSAGE_ENABLE)
 
@@ -5913,7 +5923,7 @@ size_t heapusage_allocs_cnt(void);
 
 #endif /* V7_HEAPUSAGE_ENABLE */
 
-#endif /* _HEAPUSAGE_H_INCLUDED */
+#endif /* CS_V7_SRC_HEAPUSAGE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/regexp_public.h"
 #endif
@@ -5926,8 +5936,8 @@ size_t heapusage_allocs_cnt(void);
  * === RegExp
  */
 
-#ifndef V7_REGEXP_PUBLIC_H_INCLUDED
-#define V7_REGEXP_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_REGEXP_PUBLIC_H_
+#define CS_V7_SRC_REGEXP_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -5953,7 +5963,7 @@ int v7_is_regexp(struct v7 *v7, v7_val_t v);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_REGEXP_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_REGEXP_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/regexp.h"
 #endif
@@ -5962,8 +5972,8 @@ int v7_is_regexp(struct v7 *v7, v7_val_t v);
  * All rights reserved
  */
 
-#ifndef V7_REGEXP_H_INCLUDED
-#define V7_REGEXP_H_INCLUDED
+#ifndef CS_V7_SRC_REGEXP_H_
+#define CS_V7_SRC_REGEXP_H_
 
 /* Amalgamated: #include "v7/src/regexp_public.h" */
 
@@ -5973,7 +5983,7 @@ int v7_is_regexp(struct v7 *v7, v7_val_t v);
 V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
 #endif /* V7_ENABLE__RegExp */
 
-#endif /* V7_REGEXP_H_INCLUDED */
+#endif /* CS_V7_SRC_REGEXP_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/freeze.h"
 #endif
@@ -5982,8 +5992,8 @@ V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
  * All rights reserved
  */
 
-#ifndef FREEZE_H_INCLUDED
-#define FREEZE_H_INCLUDED
+#ifndef CS_V7_SRC_FREEZE_H_
+#define CS_V7_SRC_FREEZE_H_
 
 #ifdef V7_FREEZE
 
@@ -6005,7 +6015,7 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
 
 #endif /* V7_FREEZE */
 
-#endif /* FREEZE_H_INCLUDED */
+#endif /* CS_V7_SRC_FREEZE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_array.h"
 #endif
@@ -6014,8 +6024,8 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
  * All rights reserved
  */
 
-#ifndef STD_ARRAY_H_INCLUDED
-#define STD_ARRAY_H_INCLUDED
+#ifndef CS_V7_SRC_STD_ARRAY_H_
+#define CS_V7_SRC_STD_ARRAY_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6029,7 +6039,7 @@ V7_PRIVATE void init_array(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_ARRAY_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_ARRAY_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_boolean.h"
 #endif
@@ -6038,8 +6048,8 @@ V7_PRIVATE void init_array(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_BOOLEAN_H_INCLUDED
-#define STD_BOOLEAN_H_INCLUDED
+#ifndef CS_V7_SRC_STD_BOOLEAN_H_
+#define CS_V7_SRC_STD_BOOLEAN_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6053,7 +6063,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_BOOLEAN_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_BOOLEAN_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_date.h"
 #endif
@@ -6062,8 +6072,8 @@ V7_PRIVATE void init_boolean(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_DATE_H_INCLUDED
-#define STD_DATE_H_INCLUDED
+#ifndef CS_V7_SRC_STD_DATE_H_
+#define CS_V7_SRC_STD_DATE_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6080,7 +6090,7 @@ V7_PRIVATE void init_date(struct v7 *v7);
 #endif /* __cplusplus */
 
 #endif /* V7_ENABLE__Date */
-#endif /* STD_DATE_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_DATE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_function.h"
 #endif
@@ -6089,8 +6099,8 @@ V7_PRIVATE void init_date(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_FUNCTION_H_INCLUDED
-#define STD_FUNCTION_H_INCLUDED
+#ifndef CS_V7_SRC_STD_FUNCTION_H_
+#define CS_V7_SRC_STD_FUNCTION_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6104,7 +6114,7 @@ V7_PRIVATE void init_function(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_FUNCTION_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_FUNCTION_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_json.h"
 #endif
@@ -6113,8 +6123,8 @@ V7_PRIVATE void init_function(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_JSON_H_INCLUDED
-#define STD_JSON_H_INCLUDED
+#ifndef CS_V7_SRC_STD_JSON_H_
+#define CS_V7_SRC_STD_JSON_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6128,7 +6138,7 @@ V7_PRIVATE void init_json(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_JSON_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_JSON_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_math.h"
 #endif
@@ -6137,8 +6147,8 @@ V7_PRIVATE void init_json(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_MATH_H_INCLUDED
-#define STD_MATH_H_INCLUDED
+#ifndef CS_V7_SRC_STD_MATH_H_
+#define CS_V7_SRC_STD_MATH_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6155,7 +6165,7 @@ V7_PRIVATE void init_math(struct v7 *v7);
 #endif /* __cplusplus */
 
 #endif /* V7_ENABLE__Math */
-#endif /* STD_MATH_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_MATH_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_number.h"
 #endif
@@ -6164,8 +6174,8 @@ V7_PRIVATE void init_math(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_NUMBER_H_INCLUDED
-#define STD_NUMBER_H_INCLUDED
+#ifndef CS_V7_SRC_STD_NUMBER_H_
+#define CS_V7_SRC_STD_NUMBER_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6179,7 +6189,7 @@ V7_PRIVATE void init_number(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_NUMBER_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_NUMBER_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_object.h"
 #endif
@@ -6188,8 +6198,8 @@ V7_PRIVATE void init_number(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_OBJECT_H_INCLUDED
-#define STD_OBJECT_H_INCLUDED
+#ifndef CS_V7_SRC_STD_OBJECT_H_
+#define CS_V7_SRC_STD_OBJECT_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
@@ -6209,7 +6219,7 @@ V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_OBJECT_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_OBJECT_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_regex.h"
 #endif
@@ -6218,8 +6228,8 @@ V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res);
  * All rights reserved
  */
 
-#ifndef STD_REGEX_H_INCLUDED
-#define STD_REGEX_H_INCLUDED
+#ifndef CS_V7_SRC_STD_REGEX_H_
+#define CS_V7_SRC_STD_REGEX_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
@@ -6242,7 +6252,7 @@ V7_PRIVATE void init_regex(struct v7 *v7);
 
 #endif /* V7_ENABLE__RegExp */
 
-#endif /* STD_REGEX_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_REGEX_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_string.h"
 #endif
@@ -6251,8 +6261,8 @@ V7_PRIVATE void init_regex(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef STD_STRING_H_INCLUDED
-#define STD_STRING_H_INCLUDED
+#ifndef CS_V7_SRC_STD_STRING_H_
+#define CS_V7_SRC_STD_STRING_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
@@ -6270,7 +6280,7 @@ V7_PRIVATE void init_string(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* STD_STRING_H_INCLUDED */
+#endif /* CS_V7_SRC_STD_STRING_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/js_stdlib.h"
 #endif
@@ -6279,8 +6289,8 @@ V7_PRIVATE void init_string(struct v7 *v7);
  * All rights reserved
  */
 
-#ifndef JS_STDLIB_H_INCLUDED
-#define JS_STDLIB_H_INCLUDED
+#ifndef CS_V7_SRC_JS_STDLIB_H_
+#define CS_V7_SRC_JS_STDLIB_H_
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
@@ -6294,7 +6304,7 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
 }
 #endif /* __cplusplus */
 
-#endif /* JS_STDLIB_H_INCLUDED */
+#endif /* CS_V7_SRC_JS_STDLIB_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/main_public.h"
 #endif
@@ -6307,8 +6317,8 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
  * === v7 main()
  */
 
-#ifndef V7_MAIN_PUBLIC_H_INCLUDED
-#define V7_MAIN_PUBLIC_H_INCLUDED
+#ifndef CS_V7_SRC_MAIN_PUBLIC_H_
+#define CS_V7_SRC_MAIN_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
@@ -6337,7 +6347,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
 }
 #endif /* __cplusplus */
 
-#endif /* V7_MAIN_PUBLIC_H_INCLUDED */
+#endif /* CS_V7_SRC_MAIN_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/main.h"
 #endif
@@ -6346,12 +6356,12 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
  * All rights reserved
  */
 
-#ifndef MAIN_H_INCLUDED
-#define MAIN_H_INCLUDED
+#ifndef CS_V7_SRC_MAIN_H_
+#define CS_V7_SRC_MAIN_H_
 
 /* Amalgamated: #include "v7/src/main_public.h" */
 
-#endif /* MAIN_H_INCLUDED */
+#endif /* CS_V7_SRC_MAIN_H_ */
 #ifndef V7_EXPORT_INTERNAL_HEADERS
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/mbuf.c"

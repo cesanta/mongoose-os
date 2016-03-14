@@ -19,8 +19,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ELF_H
-#define ELF_H
+#ifndef CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ELF_H_
+#define CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ELF_H_
 
 typedef uint32_t Elf32_Addr; // Program address
 typedef uint32_t Elf32_Off;  // File offset
@@ -73,4 +73,4 @@ typedef struct {
 	Elf32_Word sh_entsize;   // Size of records contained within the section
 } Elf32_Shdr;
 
-#endif
+#endif /* CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ELF_H_ */

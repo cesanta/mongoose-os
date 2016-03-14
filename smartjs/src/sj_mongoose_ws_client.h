@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef SJ_MONGOOSE_WS_CLIENT_INCLUDED
-#define SJ_MONGOOSE_WS_CLIENT_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_MONGOOSE_WS_CLIENT_H_
+#define CS_SMARTJS_SRC_SJ_MONGOOSE_WS_CLIENT_H_
 
 void sj_ws_client_api_setup(struct v7 *);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_MONGOOSE_WS_CLIENT_H_ */

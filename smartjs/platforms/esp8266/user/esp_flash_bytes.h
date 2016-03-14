@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef V7_FLASH_ACCESS_EMUL
-#define V7_FLASH_ACCESS_EMUL
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_FLASH_BYTES_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_FLASH_BYTES_H_
 
 #include "esp_gdb.h"
 
@@ -14,4 +14,4 @@
  */
 void flash_emul_init();
 
-#endif /* V7_FLASH_ACCESS_EMUL */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_FLASH_BYTES_H_ */

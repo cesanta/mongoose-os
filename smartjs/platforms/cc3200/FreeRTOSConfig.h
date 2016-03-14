@@ -67,8 +67,8 @@
     1 tab == 4 spaces!
 */
 
-#ifndef FREERTOS_CONFIG_H
-#define FREERTOS_CONFIG_H
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_FREERTOSCONFIG_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_FREERTOSCONFIG_H_
 
 /*-----------------------------------------------------------
  * Application specific definitions.
@@ -151,4 +151,4 @@ version. */
                                                     }
 #endif
 
-#endif /* FREERTOS_CONFIG_H */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_FREERTOSCONFIG_H_ */

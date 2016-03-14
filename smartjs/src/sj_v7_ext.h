@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_V7_EXT_INCLUDED
-#define SJ_V7_EXT_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_V7_EXT_H_
+#define CS_SMARTJS_SRC_SJ_V7_EXT_H_
 
 #include "v7/v7.h"
 
@@ -60,4 +60,4 @@ void sj_system_restart(int exit_code);
 /* Delay usecs */
 void sj_usleep(int usecs);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_V7_EXT_H_ */

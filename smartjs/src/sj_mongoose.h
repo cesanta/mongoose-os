@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_MONGOOSE_INCLUDED
-#define SJ_MONGOOSE_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_MONGOOSE_H_
+#define CS_SMARTJS_SRC_SJ_MONGOOSE_H_
 
 #include "mongoose/mongoose.h"
 
@@ -14,4 +14,4 @@ void mongoose_init();
 int mongoose_poll(int ms);
 void mongoose_destroy();
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_MONGOOSE_H_ */

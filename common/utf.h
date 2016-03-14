@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _UTF_H_
-#define _UTF_H_ 1
+#ifndef CS_COMMON_UTF_H_
+#define CS_COMMON_UTF_H_
 
 #if defined(__cplusplus)
 extern "C" {
@@ -67,4 +67,4 @@ char *utfutf(char *s1, char *s2);
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
-#endif /* _UTF_H_ */
+#endif /* CS_COMMON_UTF_H_ */

@@ -3,11 +3,11 @@
  * All rights reserved
  */
 
-#ifndef SJ_HTTP_INCLUDED
-#define SJ_HTTP_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_HTTP_H_
+#define CS_SMARTJS_SRC_SJ_HTTP_H_
 
 #include "v7/v7.h"
 void sj_http_api_setup(struct v7 *);
 void sj_http_init(struct v7 *v7);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_HTTP_H_ */

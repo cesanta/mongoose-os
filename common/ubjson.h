@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_UBJSON_H_INCLUDED
-#define CS_UBJSON_H_INCLUDED
+#ifndef CS_COMMON_UBJSON_H_
+#define CS_COMMON_UBJSON_H_
 
 #include "common/mbuf.h"
 #include "common/platform.h"
@@ -33,4 +33,4 @@ void cs_ubjson_close_object(struct mbuf *buf);
 void cs_ubjson_open_array(struct mbuf *buf);
 void cs_ubjson_close_array(struct mbuf *buf);
 
-#endif
+#endif /* CS_COMMON_UBJSON_H_ */

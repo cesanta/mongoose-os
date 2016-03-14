@@ -12,8 +12,8 @@
  * needed.
  */
 
-#ifndef MBUF_H_INCLUDED
-#define MBUF_H_INCLUDED
+#ifndef CS_COMMON_MBUF_H_
+#define CS_COMMON_MBUF_H_
 
 #if defined(__cplusplus)
 extern "C" {
@@ -75,4 +75,4 @@ void mbuf_trim(struct mbuf *);
 }
 #endif /* __cplusplus */
 
-#endif /* MBUF_H_INCLUDED */
+#endif /* CS_COMMON_MBUF_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef __SMARTJS_TIMERS_H_
-#define __SMARTJS_TIMERS_H_
+#ifndef CS_SMARTJS_SRC_SJ_TIMERS_H_
+#define CS_SMARTJS_SRC_SJ_TIMERS_H_
 
 #include "v7/v7.h"
 
@@ -20,4 +20,4 @@ void sj_timers_api_setup(struct v7 *v7);
 void sj_set_timeout(int msecs, v7_val_t *cb);
 void sj_set_c_timeout(int msecs, timer_callback cb, void *param);
 
-#endif /* __SMARTJS_TIMERS_H_ */
+#endif /* CS_SMARTJS_SRC_SJ_TIMERS_H_ */

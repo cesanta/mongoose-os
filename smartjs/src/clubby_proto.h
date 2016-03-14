@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CLUBBY_PROTO_H
-#define CLUBBY_PROTO_H
+#ifndef CS_SMARTJS_SRC_CLUBBY_PROTO_H_
+#define CS_SMARTJS_SRC_CLUBBY_PROTO_H_
 
 #include "mongoose/mongoose.h"
 #include "common/ubjserializer.h"
@@ -83,4 +83,4 @@ int64_t clubby_proto_get_new_id();
 
 #endif /* DISABLE_C_CLUBBY */
 
-#endif /* CLUBBY_PROTO_H */
+#endif /* CS_SMARTJS_SRC_CLUBBY_PROTO_H_ */

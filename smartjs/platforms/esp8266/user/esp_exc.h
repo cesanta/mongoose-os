@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef ESP_EXC_INCLUDED
-#define ESP_EXC_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_EXC_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_EXC_H_
 
 #include <stdint.h>
 #include <xtensa/xtruntime-frames.h>
@@ -35,4 +35,4 @@ void esp_exception_handler(UserFrame *frame);
 void esp_exception_handler_init();
 void esp_print_reset_info();
 
-#endif /* ESP_EXC_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_EXC_H_ */

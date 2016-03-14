@@ -1,5 +1,5 @@
-#ifndef _ROM_FUNCTIONS_H_
-#define _ROM_FUNCTIONS_H_
+#ifndef CS_COMMON_PLATFORMS_ESP8266_STUBS_ROM_FUNCTIONS_H_
+#define CS_COMMON_PLATFORMS_ESP8266_STUBS_ROM_FUNCTIONS_H_
 
 #include <inttypes.h>
 
@@ -70,4 +70,4 @@ void MD5Init(struct MD5Context *ctx);
 void MD5Update(struct MD5Context *ctx, void *buf, uint32_t len);
 void MD5Final(uint8_t digest[16], struct MD5Context *ctx);
 
-#endif /* _ROM_FUNCTIONS_H_ */
+#endif /* CS_COMMON_PLATFORMS_ESP8266_STUBS_ROM_FUNCTIONS_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_GPIO_H_INCLUDED
-#define SJ_GPIO_H_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_GPIO_H_
+#define CS_SMARTJS_SRC_SJ_GPIO_H_
 
 enum gpio_mode {
   GPIO_MODE_INOUT = 0,
@@ -42,4 +42,4 @@ int sj_gpio_write(int pin, enum gpio_level level);
 enum gpio_level sj_gpio_read(int pin);
 void sj_gpio_intr_init(f_gpio_intr_handler_t cb);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_GPIO_H_ */

@@ -1,5 +1,5 @@
-#ifndef _CS_PLATFORM_H_
-#define _CS_PLATFORM_H_
+#ifndef CS_COMMON_PLATFORM_H_
+#define CS_COMMON_PLATFORM_H_
 
 /*
  * For the "custom" platform, includes and dependencies can be
@@ -49,4 +49,4 @@
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#endif /* _CS_PLATFORM_H_ */
+#endif /* CS_COMMON_PLATFORM_H_ */

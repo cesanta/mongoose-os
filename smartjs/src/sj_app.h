@@ -1,5 +1,5 @@
-#ifndef _SJ_APP_H_
-#define _SJ_APP_H_
+#ifndef CS_SMARTJS_SRC_SJ_APP_H_
+#define CS_SMARTJS_SRC_SJ_APP_H_
 
 struct v7;
 
@@ -7,4 +7,4 @@ struct v7;
  * which can be overridden by the user. */
 int sj_app_init(struct v7 *v7);
 
-#endif /* _SJ_APP_H_ */
+#endif /* CS_SMARTJS_SRC_SJ_APP_H_ */

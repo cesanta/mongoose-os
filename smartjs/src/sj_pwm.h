@@ -3,11 +3,11 @@
  * All rights reserved
  */
 
-#ifndef _SJ_PWM_H_INCLUDED
-#define _SJ_PWM_H_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_PWM_H_
+#define CS_SMARTJS_SRC_SJ_PWM_H_
 
 struct v7;
 
 int sj_pwm_set(int pin, int period, int duty);
 
-#endif /* _SJ_PWM_H_INCLUDED */
+#endif /* CS_SMARTJS_SRC_SJ_PWM_H_ */

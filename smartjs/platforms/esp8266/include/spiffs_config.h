@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SPIFFS_CONFIG_H_
-#define SPIFFS_CONFIG_H_
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_SPIFFS_CONFIG_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_SPIFFS_CONFIG_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,4 +21,4 @@ typedef uint8_t u8_t;
 
 #include "spiffs_config_common.h"
 
-#endif /* SPIFFS_CONFIG_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_SPIFFS_CONFIG_H_ */

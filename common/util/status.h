@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef __COMMON_UTIL_STATUS_H_
-#define __COMMON_UTIL_STATUS_H_
+#ifndef CS_COMMON_UTIL_STATUS_H_
+#define CS_COMMON_UTIL_STATUS_H_
 
 #include <string>
 
@@ -71,4 +71,4 @@ extern ::std::ostream& operator<<(::std::ostream& os, const Status& status);
 
 }  // namespace util
 
-#endif  // __COMMON_UTIL_STATUS_H_
+#endif /* CS_COMMON_UTIL_STATUS_H_ */

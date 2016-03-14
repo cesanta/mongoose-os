@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _ESP_UART_H_
-#define _ESP_UART_H_
+#ifndef CS_COMMON_PLATFORMS_ESP8266_ESP_UART_H_
+#define CS_COMMON_PLATFORMS_ESP8266_ESP_UART_H_
 
 #include <inttypes.h>
 
@@ -61,4 +61,4 @@ int tx_fifo_len(int uart_no);
 
 void esp_uart_flush(int uart_no);
 
-#endif /* _ESP_UART_H_ */
+#endif /* CS_COMMON_PLATFORMS_ESP8266_ESP_UART_H_ */

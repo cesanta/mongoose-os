@@ -10,8 +10,8 @@
  * More info: see the design doc: https://goo.gl/kfcG61
  */
 
-#ifndef _COROUTINE_H
-#define _COROUTINE_H
+#ifndef CS_COMMON_COROUTINE_H_
+#define CS_COMMON_COROUTINE_H_
 
 #include "common/mbuf.h"
 #include "common/platform.h"
@@ -581,4 +581,4 @@ void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
  */
 void cr_context_free(struct cr_ctx *p_ctx);
 
-#endif /* _COROUTINE_H */
+#endif /* CS_COMMON_COROUTINE_H_ */

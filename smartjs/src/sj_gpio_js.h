@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef SJ_GPIO_JS
-#define SJ_GPIO_JS
+#ifndef CS_SMARTJS_SRC_SJ_GPIO_JS_H_
+#define CS_SMARTJS_SRC_SJ_GPIO_JS_H_
 
 void sj_gpio_api_setup(struct v7 *v7);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_GPIO_JS_H_ */

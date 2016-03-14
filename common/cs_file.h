@@ -16,4 +16,4 @@ char *cs_read_file(const char *path, size_t *size);
 
 #ifdef CS_MMAP
 char *cs_mmap_file(const char *path, size_t *size);
-#endif
+#endif /* CS_COMMON_CS_FILE_H_ */

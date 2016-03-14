@@ -5,8 +5,8 @@
  * ----------------------------------------------------------------------------
  */
 
-#ifndef UMM_MALLOC_H
-#define UMM_MALLOC_H
+#ifndef CS_COMMON_UMM_MALLOC_UMM_MALLOC_H_
+#define CS_COMMON_UMM_MALLOC_UMM_MALLOC_H_
 
 /* ------------------------------------------------------------------------ */
 
@@ -44,4 +44,4 @@ int umm_free_entries_cnt( void );
 
 /* ------------------------------------------------------------------------ */
 
-#endif /* UMM_MALLOC_H */
+#endif /* CS_COMMON_UMM_MALLOC_UMM_MALLOC_H_ */

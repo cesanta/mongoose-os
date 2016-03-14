@@ -19,8 +19,8 @@
 *
 **********************************************************************************/
 
-#ifndef ESPTOOL2_ELF_H
-#define ESPTOOL2_ELF_H
+#ifndef CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ESPTOOL2_ELF_H_
+#define CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ESPTOOL2_ELF_H_
 
 #include <stdio.h>
 
@@ -45,4 +45,4 @@ void UnloadElf(MyElf_File *e_object);
 MyElf_Section* GetElfSection(MyElf_File *e_object, char *name);
 unsigned char* GetElfSectionData(MyElf_File *e_object, MyElf_Section *section);
 
-#endif
+#endif /* CS_COMMON_PLATFORMS_ESP8266_RBOOT_ESPTOOL2_ESPTOOL2_ELF_H_ */

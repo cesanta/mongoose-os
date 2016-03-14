@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _CC3200_FS_FAILFS_H_
-#define _CC3200_FS_FAILFS_H_
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_FAILFS_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_FAILFS_H_
 
 #include <stdio.h>
 #include <unistd.h>
@@ -22,4 +22,4 @@ int fs_failfs_fstat(int fd, struct stat *s);
 off_t fs_failfs_lseek(int fd, off_t offset, int whence);
 int fs_failfs_unlink(const char *filename);
 
-#endif /* _CC3200_FS_FAILFS_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_FAILFS_H_ */

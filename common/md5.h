@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef MD5_HEADER_DEFINED
-#define MD5_HEADER_DEFINED
+#ifndef CS_COMMON_MD5_H_
+#define CS_COMMON_MD5_H_
 
 #include "common/platform.h"
 
@@ -42,4 +42,4 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 }
 #endif /* __cplusplus */
 
-#endif
+#endif /* CS_COMMON_MD5_H_ */

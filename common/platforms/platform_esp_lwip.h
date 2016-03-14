@@ -1,5 +1,5 @@
-#ifndef _CS_PLATFORM_ESP_LWIP_H_
-#define _CS_PLATFORM_ESP_LWIP_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
 #if CS_PLATFORM == CS_P_ESP_LWIP
 
 #include <assert.h>
@@ -42,4 +42,4 @@ typedef struct stat cs_stat_t;
 #define __cdecl
 
 #endif /* CS_PLATFORM == CS_P_ESP_LWIP */
-#endif /* _CS_PLATFORM_ESP_LWIP_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */

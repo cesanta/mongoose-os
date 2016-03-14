@@ -3,10 +3,10 @@
  * All rights reserved
  */
 
-#ifndef _KR_LOCALS_H_
-#define _KR_LOCALS_H_
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_KR_LOCALS_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_KR_LOCALS_H_
 
 /* For hton{l,s} / ntoh{l,s} */
 #include <lwip/def.h>
 
-#endif /* _KR_LOCALS_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_KR_LOCALS_H_ */

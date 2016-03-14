@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef ESP_GDB_INCLUDED
-#define ESP_GDB_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_GDB_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_GDB_H_
 
 void gdb_server();
 
-#endif /* ESP_GDB_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_GDB_H_ */

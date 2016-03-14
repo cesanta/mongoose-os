@@ -1,5 +1,5 @@
-#ifndef __RBOOT_API_H__
-#define __RBOOT_API_H__
+#ifndef CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_APPCODE_RBOOT_API_H_
+#define CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_APPCODE_RBOOT_API_H_
 
 //////////////////////////////////////////////////
 // rBoot OTA and config API for ESP8266.
@@ -35,4 +35,4 @@ bool ICACHE_FLASH_ATTR rboot_write_flash(rboot_write_status *status, uint8 *data
 }
 #endif
 
-#endif
+#endif /* CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_APPCODE_RBOOT_API_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _CC3200_FS_SPIFFS_CONTAINER_H_
-#define _CC3200_FS_SPIFFS_CONTAINER_H_
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_
 
 #include "cc3200_fs.h"
 
@@ -27,4 +27,4 @@ struct mount_info {
 extern struct mount_info s_fsm;
 void fs_close_container(struct mount_info *m);
 
-#endif /* _CC3200_FS_SPIFFS_CONTAINER_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_ */

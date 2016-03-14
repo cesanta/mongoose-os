@@ -4,8 +4,8 @@
  *
  */
 
-#ifndef UART_REGISTER_H_
-#define UART_REGISTER_H_
+#ifndef CS_COMMON_PLATFORMS_ESP8266_UART_REGISTER_H_
+#define CS_COMMON_PLATFORMS_ESP8266_UART_REGISTER_H_
 
 #define REG_UART_BASE(i)                (0x60000000 + (i)*0xf00)
 //version value:32'h062000
@@ -133,4 +133,4 @@
 #define UART_DATE(i)                    (REG_UART_BASE(i) + 0x78)
 #define UART_ID(i)                      (REG_UART_BASE(i) + 0x7C)
 
-#endif // UART_REGISTER_H_INCLUDED
+#endif /* CS_COMMON_PLATFORMS_ESP8266_UART_REGISTER_H_ */

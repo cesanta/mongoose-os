@@ -6,8 +6,8 @@
  * All rights reserved
  */
 
-#ifndef _KRYPTON_H
-#define _KRYPTON_H
+#ifndef CS_KRYPTON_KRYPTON_H_
+#define CS_KRYPTON_KRYPTON_H_
 
 #ifdef KR_LOCALS
 #include <kr_locals.h>
@@ -88,7 +88,7 @@ typedef struct {
   void (*free_ctx)(void *ctx);
 } kr_cipher_info;
 
-#endif /* _KRYPTON_H */
+#endif /* CS_KRYPTON_KRYPTON_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/ktypes.h"
 #endif
@@ -97,8 +97,8 @@ typedef struct {
  * All rights reserved
  */
 
-#ifndef _KTYPES_H
-#define _KTYPES_H
+#ifndef CS_KRYPTON_SRC_KTYPES_H_
+#define CS_KRYPTON_SRC_KTYPES_H_
 
 #define _FILE_OFFSET_BITS 64
 #define _GNU_SOURCE
@@ -302,7 +302,7 @@ typedef struct _bigint bigint; /**< An alias for _bigint */
 /* Amalgamated: #include "ber.h" */
 /* Amalgamated: #include "x509.h" */
 
-#endif /* _KTYPES_H */
+#endif /* CS_KRYPTON_SRC_KTYPES_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/tlsproto.h"
 #endif
@@ -311,8 +311,8 @@ typedef struct _bigint bigint; /**< An alias for _bigint */
  * All rights reserved
  */
 
-#ifndef _TLSPROTO_H
-#define _TLSPROTO_H
+#ifndef CS_KRYPTON_SRC_TLSPROTO_H_
+#define CS_KRYPTON_SRC_TLSPROTO_H_
 
 /* set to number of null ciphers */
 #define KR_ALLOW_NULL_CIPHERS 0
@@ -499,7 +499,7 @@ typedef enum {
 
 #define COMPRESSOR_NULL 0x00
 
-#endif /* _TLSPROTO_H */
+#endif /* CS_KRYPTON_SRC_TLSPROTO_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/kexterns.h"
 #endif
@@ -508,8 +508,8 @@ typedef enum {
  * All rights reserved
  */
 
-#ifndef _KEXTERNS_H
-#define _KEXTERNS_H
+#ifndef CS_KRYPTON_SRC_KEXTERNS_H_
+#define CS_KRYPTON_SRC_KEXTERNS_H_
 
 #ifdef KR_EXT_IO
 extern ssize_t kr_send(int fd, const void *buf, size_t len, int flags);
@@ -549,7 +549,7 @@ extern void kr_hash_sha256_v(size_t num_msgs, const uint8_t *msgs[],
 #endif
 #endif
 
-#endif /* _KEXTERNS_H */
+#endif /* CS_KRYPTON_SRC_KEXTERNS_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/crypto.h"
 #endif
@@ -558,8 +558,8 @@ extern void kr_hash_sha256_v(size_t num_msgs, const uint8_t *msgs[],
  * All rights reserved
  */
 
-#ifndef _CRYPTO_H
-#define _CRYPTO_H
+#ifndef CS_KRYPTON_SRC_CRYPTO_H_
+#define CS_KRYPTON_SRC_CRYPTO_H_
 
 NS_INTERNAL int get_random_nonzero(uint8_t *out, size_t len);
 
@@ -660,7 +660,7 @@ NS_INTERNAL void kr_cbc_decrypt(const kr_cipher_info *ci, void *cctx,
 const kr_cipher_info *kr_rc4_cs_info();
 const kr_cipher_info *kr_aes128_cs_info();
 
-#endif /* _CRYPTO_H */
+#endif /* CS_KRYPTON_SRC_CRYPTO_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/bigint_impl.h"
 #endif
@@ -694,8 +694,8 @@ const kr_cipher_info *kr_aes128_cs_info();
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BIGINT_IMPL_HEADER
-#define BIGINT_IMPL_HEADER
+#ifndef CS_KRYPTON_SRC_BIGINT_IMPL_H_
+#define CS_KRYPTON_SRC_BIGINT_IMPL_H_
 
 /* Maintain a number of precomputed variables when doing reduction */
 #define BIGINT_M_OFFSET 0 /**< Normal modulo offset. */
@@ -792,7 +792,7 @@ typedef struct _BI_CTX BI_CTX;
 
 #define PERMANENT 0x7FFF55AA /**< A magic number for permanents. */
 
-#endif
+#endif /* CS_KRYPTON_SRC_BIGINT_IMPL_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/bigint.h"
 #endif
@@ -826,8 +826,8 @@ typedef struct _BI_CTX BI_CTX;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BIGINT_HEADER
-#define BIGINT_HEADER
+#ifndef CS_KRYPTON_SRC_BIGINT_H_
+#define CS_KRYPTON_SRC_BIGINT_H_
 
 NS_INTERNAL BI_CTX *bi_initialize(void);
 NS_INTERNAL void bi_terminate(BI_CTX *ctx);
@@ -892,7 +892,7 @@ NS_INTERNAL bigint *bi_square(BI_CTX *ctx, bigint *bi);
 NS_INTERNAL bigint *bi_crt(BI_CTX *ctx, bigint *bi, bigint *dP, bigint *dQ,
                            bigint *p, bigint *q, bigint *qInv);
 
-#endif
+#endif /* CS_KRYPTON_SRC_BIGINT_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/tls.h"
 #endif
@@ -901,8 +901,8 @@ NS_INTERNAL bigint *bi_crt(BI_CTX *ctx, bigint *bi, bigint *dP, bigint *dQ,
  * All rights reserved
  */
 
-#ifndef _TLS_H
-#define _TLS_H
+#ifndef CS_KRYPTON_SRC_TLS_H_
+#define CS_KRYPTON_SRC_TLS_H_
 
 typedef struct tls_security {
   /*
@@ -971,7 +971,7 @@ NS_INTERNAL void tls_generate_server_finished(tls_sec_t sec, uint8_t *vrfy,
 NS_INTERNAL void tls_compute_master_secret(tls_sec_t sec,
                                            struct tls_premaster_secret *pre);
 
-#endif /* _TLS_H */
+#endif /* CS_KRYPTON_SRC_TLS_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/ber.h"
 #endif
@@ -980,8 +980,8 @@ NS_INTERNAL void tls_compute_master_secret(tls_sec_t sec,
  * Released under the MIT license.
  */
 
-#ifndef _GBER_H
-#define _GBER_H
+#ifndef CS_KRYPTON_SRC_BER_H_
+#define CS_KRYPTON_SRC_BER_H_
 
 typedef uint16_t gber_tag_t;
 
@@ -1012,7 +1012,7 @@ int ber_dump(const uint8_t *ptr, size_t len);
 int ber_dumpf(FILE *f, const uint8_t *ptr, size_t len);
 #endif
 
-#endif /* _GBER_H */
+#endif /* CS_KRYPTON_SRC_BER_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/pem.h"
 #endif
@@ -1021,8 +1021,8 @@ int ber_dumpf(FILE *f, const uint8_t *ptr, size_t len);
  * All rights reserved
  */
 
-#ifndef _PEM_H
-#define _PEM_H
+#ifndef CS_KRYPTON_SRC_PEM_H_
+#define CS_KRYPTON_SRC_PEM_H_
 
 struct pem_st {
   unsigned int tot_len;
@@ -1056,7 +1056,7 @@ NS_INTERNAL void pem_free(struct pem_st *p);
 NS_INTERNAL int b64_decode(const uint8_t *buf, size_t len, uint8_t *out,
                            size_t *obytes);
 
-#endif /* _PEM_H */
+#endif /* CS_KRYPTON_SRC_PEM_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/x509.h"
 #endif
@@ -1065,8 +1065,8 @@ NS_INTERNAL int b64_decode(const uint8_t *buf, size_t len, uint8_t *out,
  * All rights reserved
  */
 
-#ifndef _X509_H
-#define _X509_H
+#ifndef CS_KRYPTON_SRC_X509_H_
+#define CS_KRYPTON_SRC_X509_H_
 
 #define X509_ENC_ALG_UNKNOWN 0
 #define X509_ENC_ALG_RSA 1
@@ -1106,7 +1106,7 @@ NS_INTERNAL int X509_verify_name(X509 *cert, const char *name);
 
 NS_INTERNAL int kr_match_domain_name(struct ro_vec pat, struct ro_vec dom);
 
-#endif /* _X509_H */
+#endif /* CS_KRYPTON_SRC_X509_H_ */
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/b64.c"
 #endif

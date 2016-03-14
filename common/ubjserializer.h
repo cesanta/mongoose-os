@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef C_UB_H
-#define C_UB_H
+#ifndef CS_COMMON_UBJSERIALIZER_H_
+#define CS_COMMON_UBJSERIALIZER_H_
 
 #include <stdlib.h>
 
@@ -71,4 +71,4 @@ void ub_array_push(struct ub_ctx *ctx, ub_val_t a, ub_val_t val);
 void ub_bin_send(struct ub_ctx *ctx, void *d, size_t n);
 
 #endif /* CS_ENABLE_UBJSON */
-#endif /* C_UB_H */
+#endif /* CS_COMMON_UBJSERIALIZER_H_ */

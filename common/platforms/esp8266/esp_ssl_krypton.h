@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _ESP_SSL_KRYPON_H_
-#define _ESP_SSL_KRYPON_H_
+#ifndef CS_COMMON_PLATFORMS_ESP8266_ESP_SSL_KRYPTON_H_
+#define CS_COMMON_PLATFORMS_ESP8266_ESP_SSL_KRYPTON_H_
 
 #include "krypton/krypton.h"
 
@@ -14,4 +14,4 @@ void mg_lwip_ssl_do_hs(struct mg_connection *nc);
 void mg_lwip_ssl_send(struct mg_connection *nc);
 void mg_lwip_ssl_recv(struct mg_connection *nc);
 
-#endif /* _ESP_SSL_KRYPON_H_ */
+#endif /* CS_COMMON_PLATFORMS_ESP8266_ESP_SSL_KRYPTON_H_ */

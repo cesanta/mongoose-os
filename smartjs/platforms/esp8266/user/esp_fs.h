@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef ESP_FS_INCLUDED
-#define ESP_FS_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_FS_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_FS_H_
 
 #ifndef SJ_MMAP_SLOTS
 #define SJ_MMAP_SLOTS 16
@@ -47,4 +47,4 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
              uint8_t *fds, size_t fds_size);
 spiffs *get_fs();
 
-#endif /* V7_FS_INCLUDED */
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_FS_H_ */

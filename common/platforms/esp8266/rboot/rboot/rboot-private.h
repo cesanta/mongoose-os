@@ -1,5 +1,5 @@
-#ifndef __RBOOT_PRIVATE_H__
-#define __RBOOT_PRIVATE_H__
+#ifndef CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_PRIVATE_H_
+#define CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_PRIVATE_H_
 
 //////////////////////////////////////////////////
 // rBoot open source boot loader for ESP8266.
@@ -74,4 +74,4 @@ typedef struct {
 	uint32 len; // length of irom section
 } rom_header_new;
 
-#endif
+#endif /* CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_PRIVATE_H_ */

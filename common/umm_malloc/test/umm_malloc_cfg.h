@@ -7,8 +7,8 @@
  * Smartjs-specific configuration for umm_malloc
  */
 
-#ifndef _UMM_MALLOC_CFG_H
-#define _UMM_MALLOC_CFG_H
+#ifndef CS_COMMON_UMM_MALLOC_TEST_UMM_MALLOC_CFG_H_
+#define CS_COMMON_UMM_MALLOC_TEST_UMM_MALLOC_CFG_H_
 
 /*
  * There are a number of defines you can set at compile time that affect how
@@ -137,4 +137,4 @@ extern void umm_corruption(void);
 #define UMM_POISON_SIZE_AFTER 4
 #define UMM_POISONED_BLOCK_LEN_TYPE short
 
-#endif /* _UMM_MALLOC_CFG_H */
+#endif /* CS_COMMON_UMM_MALLOC_TEST_UMM_MALLOC_CFG_H_ */

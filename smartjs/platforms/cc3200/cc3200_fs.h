@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _CC3200_FS_H_
-#define _CC3200_FS_H_
+#ifndef CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_H_
+#define CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_H_
 
 #include <stdio.h>
 #include <unistd.h>
@@ -22,4 +22,4 @@ int set_errno(int e);
 #define dprintf(x)
 #endif
 
-#endif /* _CC3200_FS_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_H_ */

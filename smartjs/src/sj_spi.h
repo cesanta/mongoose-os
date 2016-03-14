@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_SPI_INCLUDED
-#define SJ_SPI_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_SPI_H_
+#define CS_SMARTJS_SRC_SJ_SPI_H_
 
 #include <stdint.h>
 #include "v7/v7.h"
@@ -43,4 +43,4 @@ enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res);
 /* Close SPI connection and free resources */
 void sj_spi_close(spi_connection conn);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_SPI_H_ */

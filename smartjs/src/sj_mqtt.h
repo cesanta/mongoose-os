@@ -3,11 +3,11 @@
  * All rights reserved
  */
 
-#ifndef SJ_MQTT_INCLUDED
-#define SJ_MQTT_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_MQTT_H_
+#define CS_SMARTJS_SRC_SJ_MQTT_H_
 
 struct v7;
 
 void sj_mqtt_api_setup(struct v7 *);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_MQTT_H_ */

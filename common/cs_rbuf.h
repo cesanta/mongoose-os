@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _CS_RBUF_H_
-#define _CS_RBUF_H_
+#ifndef CS_COMMON_CS_RBUF_H_
+#define CS_COMMON_CS_RBUF_H_
 
 /* Ring buffer structure */
 
@@ -27,4 +27,4 @@ void cs_rbuf_consume(cs_rbuf_t *b, uint16_t len);
 uint16_t cs_rbuf_contig_tail_space(cs_rbuf_t *b, uint8_t **data);
 void cs_rbuf_advance_tail(cs_rbuf_t *b, uint16_t len);
 
-#endif /* _CS_RBUF_H_ */
+#endif /* CS_COMMON_CS_RBUF_H_ */

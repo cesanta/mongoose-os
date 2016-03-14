@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef STR_UTIL_H
-#define STR_UTIL_H
+#ifndef CS_COMMON_STR_UTIL_H_
+#define CS_COMMON_STR_UTIL_H_
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -34,4 +34,4 @@ size_t strnlen(const char *s, size_t maxlen);
 }
 #endif
 
-#endif
+#endif /* CS_COMMON_STR_UTIL_H_ */

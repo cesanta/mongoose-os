@@ -1,5 +1,5 @@
-#ifndef _CS_PLATFORM_UNIX_H_
-#define _CS_PLATFORM_UNIX_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_
 #if CS_PLATFORM == CS_P_UNIX
 
 #ifndef _XOPEN_SOURCE
@@ -80,4 +80,4 @@ typedef struct stat cs_stat_t;
 #define closesocket(x) close(x)
 
 #endif /* CS_PLATFORM == CS_P_UNIX */
-#endif /* _CS_PLATFORM_UNIX_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */

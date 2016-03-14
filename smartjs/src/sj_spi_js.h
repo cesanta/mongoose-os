@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef SJ_SPI_JS_INCLUDED
-#define SJ_SPI_JS_INCLUDED
+#ifndef CS_SMARTJS_SRC_SJ_SPI_JS_H_
+#define CS_SMARTJS_SRC_SJ_SPI_JS_H_
 
 void sj_spi_api_setup(struct v7 *v7);
 
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_SPI_JS_H_ */

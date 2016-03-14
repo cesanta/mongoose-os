@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef _DEVICE_CONFIG_H_
-#define _DEVICE_CONFIG_H_
+#ifndef CS_SMARTJS_SRC_DEVICE_CONFIG_H_
+#define CS_SMARTJS_SRC_DEVICE_CONFIG_H_
 
 #include "v7/v7.h"
 #include "mongoose/mongoose.h"
@@ -50,4 +50,4 @@ void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);
  */
 int update_sysconf(struct v7 *v7, const char *path, v7_val_t val);
 
-#endif /* _DEVICE_CONFIG_H_ */
+#endif /* CS_SMARTJS_SRC_DEVICE_CONFIG_H_ */

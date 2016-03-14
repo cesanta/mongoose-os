@@ -9,7 +9,7 @@
 #define SJ_PRIVATE /* nothing */
 #else
 #define SJ_PRIVATE static
-#endif
+#endif /* CS_SMARTJS_SRC_SJ_COMMON_H_ */
 
 /*
  * Smart.js initialization common for all platforms

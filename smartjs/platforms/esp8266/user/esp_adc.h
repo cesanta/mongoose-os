@@ -3,11 +3,11 @@
  * All rights reserved
  */
 
-#ifndef ESP_ADC_INCLUDED
-#define ESP_ADC_INCLUDED
+#ifndef CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_ADC_H_
+#define CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_ADC_H_
 
 #include <stdint.h>
 
 #include "smartjs/src/sj_adc.h"
 
-#endif
+#endif /* CS_SMARTJS_PLATFORMS_ESP8266_USER_ESP_ADC_H_ */
