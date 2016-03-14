@@ -62,7 +62,7 @@ static enum v7_err crash(struct v7 *v7, v7_val_t *res) {
 }
 
 void init_v7(void *stack_base) {
-  struct v7_mk_opts opts;
+  struct v7_create_opts opts;
 
 #ifdef V7_THAW
   opts.object_arena_size = 85;

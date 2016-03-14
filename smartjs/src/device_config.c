@@ -383,6 +383,7 @@ int init_device(struct v7 *v7) {
     return 0;
   }
 
+#ifndef SJ_DISABLE_GPIO
   /*
    * Check factory reset GPIO. We intentionally do it before loading CONF_FILE
    * so that it cannot be overridden by the end user.
@@ -398,6 +399,7 @@ int init_device(struct v7 *v7) {
       /* Continue as if nothing happened, no reboot necessary. */
     }
   }
+#endif
 
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_FILE, s_cfg.conf_acl, 0, &s_cfg);

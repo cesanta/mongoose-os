@@ -8,7 +8,8 @@ import os
 import sys
 import zipfile
 
-# Debian/Ubuntu: python-git
+# Debian/Ubuntu: apt-get install python-git
+# PIP: pip install GitPython
 import git
 
 FW_MANIFEST_FILE_NAME = 'manifest.json'

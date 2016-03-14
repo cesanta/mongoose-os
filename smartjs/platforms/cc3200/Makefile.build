@@ -17,6 +17,7 @@ COMMON_FS_PATH ?= $(SMARTJS_SRC)/fs
 SJSJS_PATH ?= $(SMARTJS_SRC)/js
 FS_DIR = fs
 FS_BUILD_DIR = $(OBJDIR)/fs
+GENERATED_SOURCES = $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 
 BINDIR = ${FW_DIR}
 OBJDIR = ${BUILD_DIR}
@@ -177,7 +178,7 @@ ${BUILD_INFO_C}: ${APP_OBJS}
 
 ${BUILD_INFO_O}: ${BUILD_INFO_C}
 
-${FW_ELF}: ${APP_OBJS} ${BUILD_INFO_O}
+${FW_ELF}: ${GENERATED_SOURCES} ${APP_OBJS} ${BUILD_INFO_O}
 
 SCATTERgcc_${PROG} = ${PROG}.ld
 ENTRY_${PROG} = ResetISR
@@ -193,7 +194,10 @@ ${FS_IMG}: ${wildcard $(COMMON_FS_PATH)/*} $(JS_SRCS)
 $(V7_PATH)/v7.c:
 	make -C $(V7_PATH) v7.c
 
-$(OBJDIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+$(V7_PATH)/v7.h:
+	make -C $(V7_PATH) v7.h
+
+$(OBJDIR)/v7: $(GENERATED_SOURCES)
 	@echo "  CC    $^"
 	$(Q) gcc -DV7_EXE -DV7_EXPOSE_PRIVATE $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 

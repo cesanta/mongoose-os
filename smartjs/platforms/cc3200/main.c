@@ -45,7 +45,7 @@ struct v7 *s_v7;
 const char *sj_version = "TODO";
 
 struct v7 *init_v7(void *stack_base) {
-  struct v7_mk_opts opts;
+  struct v7_create_opts opts;
 
   opts.object_arena_size = 164;
   opts.function_arena_size = 26;

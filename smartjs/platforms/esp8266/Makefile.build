@@ -419,6 +419,9 @@ $(BUILD_DIR)/mkspiffs:
 $(V7_PATH)/v7.c:
 	make -C $(V7_PATH) v7.c
 
+$(V7_PATH)/v7.h:
+	make -C $(V7_PATH) v7.h
+
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC v7"
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7

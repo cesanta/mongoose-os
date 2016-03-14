@@ -75,10 +75,30 @@ void _strfail(const char *a, const char *e, int len);
 #define ASSERT_EQ(actual, expected)                                 \
   do {                                                              \
     num_tests++;                                                    \
-    if (!(actual == expected)) {                                    \
+    if (!((actual) == (expected))) {                                \
       printf("%f != %f\n", AS_DOUBLE(actual), AS_DOUBLE(expected)); \
       FAIL(#actual " == " #expected, __LINE__);                     \
     }                                                               \
+  } while (0)
+
+/* "Less than" assertion. */
+#define ASSERT_LT(a, b)                                 \
+  do {                                                  \
+    num_tests++;                                        \
+    if (!((a) < (b))) {                                 \
+      printf("%f >= %f\n", AS_DOUBLE(a), AS_DOUBLE(b)); \
+      FAIL(#a " < " #b, __LINE__);                      \
+    }                                                   \
+  } while (0)
+
+/* "Greater than" assertion. */
+#define ASSERT_GT(a, b)                                 \
+  do {                                                  \
+    num_tests++;                                        \
+    if (!((a) > (b))) {                                 \
+      printf("%f <= %f\n", AS_DOUBLE(a), AS_DOUBLE(b)); \
+      FAIL(#a " > " #b, __LINE__);                      \
+    }                                                   \
   } while (0)
 
 /* Assert that actual == expected, where both are NUL-terminated. */
