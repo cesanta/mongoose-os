@@ -61,13 +61,22 @@ enum stub_cmd {
   CMD_FLASH_READ_CHIP_ID = 4,
 
   /*
+   * Zap the whole chip at once.
+   *
+   * Args: None.
+   * Input: None.
+   * Output: None.
+   */
+  CMD_FLASH_ERASE_CHIP = 5,
+
+  /*
    * Boots the firmware from flash.
    *
    * Args: None.
    * Input: None.
    * Output: None.
    */
-  CMD_BOOT_FW = 5,
+  CMD_BOOT_FW = 6,
 
   /*
    * Reboot the CPU.
@@ -78,7 +87,7 @@ enum stub_cmd {
    * Input: None.
    * Output: None.
    */
-  CMD_REBOOT = 6,
+  CMD_REBOOT = 7,
 };
 
 #endif /* _STUB_FLASHER_H_ */

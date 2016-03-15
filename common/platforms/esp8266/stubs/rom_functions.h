@@ -21,6 +21,7 @@ uint32_t SPILock();
 uint32_t SPIUnlock();
 uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
 uint32_t SPIWrite(uint32_t addr, const uint8_t *src, uint32_t size);
+uint32_t SPIEraseChip();
 uint32_t SPIEraseBlock(uint32_t block_num);
 uint32_t SPIEraseSector(uint32_t sector_num);
 uint32_t SPI_read_status();

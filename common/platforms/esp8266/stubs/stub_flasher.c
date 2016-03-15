@@ -41,12 +41,12 @@ uint32_t params[1] __attribute__((section(".params")));
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 
 /* From spi_register.h */
-#define REG_SPI_BASE(i)     (0x60000200 - i*0x100)
+#define REG_SPI_BASE(i) (0x60000200 - i * 0x100)
 
-#define SPI_CMD(i)          (REG_SPI_BASE(i) + 0x0)
-#define SPI_RDID            (BIT(28))
+#define SPI_CMD(i) (REG_SPI_BASE(i) + 0x0)
+#define SPI_RDID (BIT(28))
 
-#define SPI_W0(i)         (REG_SPI_BASE(i) + 0x40)
+#define SPI_W0(i) (REG_SPI_BASE(i) + 0x40)
 
 int do_flash_erase(uint32_t addr, uint32_t len) {
   if (addr % FLASH_SECTOR_SIZE != 0) return 0x32;
@@ -99,18 +99,13 @@ void uart_isr(void *arg) {
 int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
   struct uart_buf ub;
   uint8_t digest[16];
-  uint32_t num_written = 0;
+  uint32_t num_written = 0, num_erased = 0;
   struct MD5Context ctx;
   MD5Init(&ctx);
 
   if (addr % FLASH_SECTOR_SIZE != 0) return 0x32;
   if (len % FLASH_SECTOR_SIZE != 0) return 0x33;
   if (SPIUnlock() != 0) return 0x34;
-
-  if (erase) {
-    int ret = do_flash_erase(addr, len);
-    if (ret != 0) return ret;
-  }
 
   ub.nr = 0;
   ub.pr = ub.pw = ub.data;
@@ -122,10 +117,23 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
 
   while (num_written < len) {
     volatile uint32_t *nr = &ub.nr;
+    /* Prepare the space ahead. */
+    while (erase && num_erased < num_written + SPI_WRITE_SIZE) {
+      const uint32_t num_left = (len - num_erased);
+      if (num_left > FLASH_BLOCK_SIZE && addr % FLASH_BLOCK_SIZE == 0) {
+        if (SPIEraseBlock(addr / FLASH_BLOCK_SIZE) != 0) return 0x35;
+        num_erased += FLASH_BLOCK_SIZE;
+      } else {
+        /* len % FLASH_SECTOR_SIZE == 0 is enforced, no further checks needed */
+        if (SPIEraseSector(addr / FLASH_SECTOR_SIZE) != 0) return 0x36;
+        num_erased += FLASH_SECTOR_SIZE;
+      }
+    }
+    /* Wait for data to arrive. */
     while (*nr < SPI_WRITE_SIZE) {
     }
     MD5Update(&ctx, ub.pr, SPI_WRITE_SIZE);
-    if (SPIWrite(addr, ub.pr, SPI_WRITE_SIZE) != 0) return 0x35;
+    if (SPIWrite(addr, ub.pr, SPI_WRITE_SIZE) != 0) return 0x37;
     ets_intr_lock();
     *nr -= SPI_WRITE_SIZE;
     ets_intr_unlock();
@@ -197,7 +205,8 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
 int do_flash_read_chip_id() {
   uint32_t chip_id = 0;
   WRITE_PERI_REG(SPI_CMD(0), SPI_RDID);
-  while (READ_PERI_REG(SPI_CMD(0)) & SPI_RDID) {}
+  while (READ_PERI_REG(SPI_CMD(0)) & SPI_RDID) {
+  }
   chip_id = READ_PERI_REG(SPI_W0(0)) & 0xFFFFFF;
   send_packet(&chip_id, sizeof(chip_id));
   return 0;
@@ -256,6 +265,10 @@ uint8_t cmd_loop() {
         resp = do_flash_read_chip_id();
         break;
       }
+      case CMD_FLASH_ERASE_CHIP: {
+        resp = SPIEraseChip();
+        break;
+      }
       case CMD_BOOT_FW:
       case CMD_REBOOT: {
         resp = 0;
@@ -307,8 +320,8 @@ void stub_main() {
      * epilogue, including return address loading, is added after our stack
      * patching.
      */
-    __asm volatile ("nop.n");
-    return;  /* To 0x400010a8 */
+    __asm volatile("nop.n");
+    return; /* To 0x400010a8 */
   } else {
     _ResetVector();
   }
