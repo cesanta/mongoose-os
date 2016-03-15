@@ -29,7 +29,7 @@ Devices that run Smart.js can use any cloud infrastructure. Usual tasks include
 reporting some measurements from devices to the cloud, visualizing that data,
 and device management & remote software update. Cesanta offers ready-to-go
 cloud infrastructure for all that, available as a cloud service
-at link:cloud.cesanta.com[], or as a software that can be run privately.
+at link:https://cloud.cesanta.com[], or as a software that can be run privately.
 A quick start guide below shows simple steps on how to bootstrap an IoT
 device running Smart.js firmware, and hook it to the cloud service.
 
