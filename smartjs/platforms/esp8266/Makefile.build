@@ -313,9 +313,6 @@ endif
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
 $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
-# Rename system_restart_local so it can be overridden to intercept WDT.
-	$(Q) $(OBJCOPY) --redefine-sym system_restart_local=system_restart_local_sdk \
-	  /opt/Espressif/ESP8266_SDK/lib/libmain_ota.a
 	$(link) $(LD_WRAPPERS)
 
 # Symbol check: make sure app doesn't override SDK lib symbols.
@@ -329,9 +326,10 @@ $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
 $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
 	$(link)
 
-$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) Makefile
+$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) Makefile.build
 	$(vecho) "GEN $@"
 	$(Q) echo "void user_init(void){}; " \
+            "void system_restart_local(){};" \
             "void __wrap_user_fatal_exception_handler(){}; " \
             "void __cyg_profile_func_enter(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" \
             "void __cyg_profile_func_exit(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" > $@
