@@ -41,8 +41,9 @@
 #include "cc3200_sj_hal.h"
 #include "device_config.h"
 
+const char *build_id;
+
 struct v7 *s_v7;
-const char *sj_version = "TODO";
 
 struct v7 *init_v7(void *stack_base) {
   struct v7_create_opts opts;
@@ -92,7 +93,7 @@ void sj_prompt_init_hal(struct v7 *v7) {
 
 static void v7_task(void *arg) {
   struct v7 *v7 = s_v7;
-  printf("\n\nSmart.JS for CC3200\n");
+  printf("\n\nSmart.js %s\n", build_id);
 
   osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct prompt_event), 32 /* len */);
   osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
@@ -120,6 +121,10 @@ static void v7_task(void *arg) {
     fprintf(stderr, "Error: ");
     v7_fprint(stderr, v7, res);
   }
+
+  fprintf(stderr, "RAM: %d total, %d free\n", sj_get_heap_size(),
+          sj_get_free_heap_size());
+
   sj_prompt_init(v7);
 
   while (1) {

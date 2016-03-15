@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include "spiffs.h"
 
+#include <common/platform.h>
+
 #include "cc3200_fs.h"
 
 /* libc interface */
@@ -23,5 +25,11 @@ int fs_spiffs_fstat(int fd, struct stat *s);
 off_t fs_spiffs_lseek(int fd, off_t offset, int whence);
 int fs_spiffs_unlink(const char *filename);
 int fs_spiffs_rename(const char *from, const char *to);
+
+DIR *fs_spiffs_opendir(const char *dir_name);
+struct dirent *fs_spiffs_readdir(DIR *dir);
+int fs_spiffs_closedir(DIR *dir);
+int fs_spiffs_rmdir(const char *path);
+int fs_spiffs_mkdir(const char *path, mode_t mode);
 
 #endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_ */

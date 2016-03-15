@@ -43,8 +43,12 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 extern unsigned long _heap;
 extern unsigned long _eheap;
 
+size_t sj_get_heap_size() {
+  return ((char *) &_eheap - (char *) &_heap);
+}
+
 size_t sj_get_free_heap_size() {
-  size_t avail = ((char *) &_eheap - (char *) &_heap);
+  size_t avail = sj_get_heap_size();
   struct mallinfo mi = mallinfo();
   avail -= mi.arena;    /* Claimed by allocator. */
   avail += mi.fordblks; /* Free in the area claimed by allocator. */

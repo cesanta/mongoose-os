@@ -165,13 +165,22 @@ static s32_t failfs_read(u32_t addr, u32_t size, u8_t *dst) {
            (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid,
            m->rw));
   if (!m->valid) return SPIFFS_ERR_NOT_READABLE;
-  if (m->fh < 0) {
-    r = sl_FsOpen(container_fname(m->cidx), FS_MODE_OPEN_READ, NULL, &m->fh);
-    dprintf(("fopen %d\n", (int) r));
-    if (r < 0) return SPIFFS_ERR_NOT_READABLE;
-  }
-  r = sl_FsRead(m->fh, addr, dst, size);
-  dprintf(("read %d\n", (int) r));
+  do {
+    if (m->fh < 0) {
+      r = sl_FsOpen(container_fname(m->cidx), FS_MODE_OPEN_READ, NULL, &m->fh);
+      dprintf(("fopen %d\n", (int) r));
+      if (r < 0) return SPIFFS_ERR_NOT_READABLE;
+    }
+    r = sl_FsRead(m->fh, addr, dst, size);
+    dprintf(("read %d\n", (int) r));
+    if (r == SL_FS_ERR_INVALID_HANDLE) {
+      /*
+       * This happens when SimpleLink is reinitialized - all file handles are
+       * invalidated. SL has to be reinitialized to e.g. configure WiFi.
+       */
+      m->fh = -1;
+    }
+  } while (m->fh < 0);
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_READABLE;
 }
 

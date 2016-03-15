@@ -10,7 +10,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include "spiffs_nucleus.h"
+#include <stdlib.h>
+
+#include <common/spiffs/spiffs_nucleus.h>
 
 static int spiffs_err_to_errno(int r) {
   switch (r) {
@@ -44,11 +46,11 @@ int fs_spiffs_open(const char *pathname, int flags, mode_t mode) {
   if (flags & O_CREAT) sm |= SPIFFS_CREAT;
   if (flags & O_TRUNC) sm |= SPIFFS_TRUNC;
   if (flags & O_APPEND) sm |= SPIFFS_APPEND;
-  /* Supported in newer versions of SPIFFS. */
-  /* if (flags && O_EXCL) sm |= SPIFFS_EXCL; */
-  /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
+  if (flags & O_EXCL) sm |= SPIFFS_EXCL;
 
-  return set_spiffs_errno(m, SPIFFS_open(&m->fs, (char *) pathname, sm, 0));
+  int res = SPIFFS_open(&m->fs, (char *) pathname, sm, 0);
+  if (res < 0) set_spiffs_errno(m, res);
+  return res;
 }
 
 int fs_spiffs_close(int fd) {
@@ -129,4 +131,63 @@ int fs_spiffs_unlink(const char *filename) {
   int res = SPIFFS_remove(&m->fs, (char *) filename);
   if (res == SPIFFS_OK) fs_close_container(m);
   return set_spiffs_errno(m, res);
+}
+
+DIR *fs_spiffs_opendir(const char *dir_name) {
+  DIR *dir = NULL;
+  struct mount_info *m = &s_fsm;
+  if (!m->valid) {
+    set_errno(EBADF);
+    return NULL;
+  }
+
+  if (dir_name == NULL) {
+    set_errno(ENOTDIR);
+    return NULL;
+  }
+
+  dir = (DIR *) calloc(1, sizeof(*dir));
+  if (dir == NULL) {
+    set_errno(ENOMEM);
+    return NULL;
+  }
+
+  if (SPIFFS_opendir(&m->fs, (char *) dir_name, &dir->dh) == NULL) {
+    free(dir);
+    dir = NULL;
+  }
+
+  return dir;
+}
+
+struct dirent *fs_spiffs_readdir(DIR *dir) {
+  struct mount_info *m = &s_fsm;
+  if (!m->valid || dir->dh.fs != &m->fs) {
+    set_errno(EBADF);
+    return NULL;
+  }
+  struct dirent *res = SPIFFS_readdir(&dir->dh, &dir->de);
+  if (res == NULL) set_spiffs_errno(m, -1);
+  return res;
+}
+
+int fs_spiffs_closedir(DIR *dir) {
+  if (dir != NULL) {
+    SPIFFS_closedir(&dir->dh);
+    free(dir);
+  }
+  return 0;
+}
+
+/* SPIFFs doesn't support directory operations */
+int fs_spiffs_rmdir(const char *path) {
+  (void) path;
+  return ENOTDIR;
+}
+
+int fs_spiffs_mkdir(const char *path, mode_t mode) {
+  (void) path;
+  (void) mode;
+  /* for spiffs supports only root dir, which comes from mongoose as '.' */
+  return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
 }
