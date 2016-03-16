@@ -128,6 +128,7 @@ ${FW_DIR}:
 	@mkdir -p ${FW_DIR}
 
 ${FW_ZIP}: ${FW_ELF} ${FW_BIN} ${FS_IMG}
+	@echo "    Code size: $(shell ls -l ${FW_BIN} | awk '{print $$5}')"
 	@echo "  GEN   ${FW_MANIFEST}"
 	@$(COMMON_PATH)/tools/fw_meta.py create_manifest \
 		--name=smartjs --platform=$(PLATFORM) \
@@ -150,10 +151,10 @@ APP_OBJS = ${OBJDIR}/main.o \
            ${OBJDIR}/sys_config.o ${OBJDIR}/cc3200_config.o ${OBJDIR}/device_config.o ${OBJDIR}/sj_config.o \
            ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o ${OBJDIR}/cc3200_fs_failfs.o \
            ${OBJDIR}/cc3200_gpio.o \
-           ${OBJDIR}/cc3200_leds.o ${OBJDIR}/cc3200_libc.o \
+           ${OBJDIR}/cc3200_libc.o \
            ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJDIR}/cc3200_timers.o ${OBJDIR}/cc3200_wifi.o \
            ${OBJDIR}/v7.o \
-           ${OBJDIR}/sj_i2c_js.o ${OBJDIR}/cc3200_i2c.o \
+           ${OBJDIR}/sj_gpio_js.o ${OBJDIR}/sj_i2c_js.o ${OBJDIR}/cc3200_i2c.o \
            ${OBJDIR}/sj_wifi_js.o ${OBJDIR}/sj_prompt.o ${OBJDIR}/sj_http.o \
            ${OBJDIR}/sj_mongoose.o ${OBJDIR}/sj_mongoose_http_client.o ${OBJDIR}/sj_timers.o ${OBJDIR}/sj_v7_ext.o \
            ${OBJDIR}/sj_mqtt.o ${OBJDIR}/sj_mongoose_ws_client.o \
@@ -163,7 +164,7 @@ APP_OBJS = ${OBJDIR}/main.o \
            ${OBJDIR}/startup_gcc.o \
            ${OBJDIR}/timers.o ${OBJDIR}/list.o ${OBJDIR}/queue.o ${OBJDIR}/tasks.o ${OBJDIR}/port.o ${OBJDIR}/heap_3.o ${OBJDIR}/osi_freertos.o \
            ${OBJDIR}/socket.o ${OBJDIR}/wlan.o ${OBJDIR}/driver.o ${OBJDIR}/device.o ${OBJDIR}/netapp.o ${OBJDIR}/netcfg.o ${OBJDIR}/cc_pal.o ${OBJDIR}/fs.o \
-           ${OBJDIR}/cpu.o ${OBJDIR}/gpio.o ${OBJDIR}/i2c.o ${OBJDIR}/interrupt.o ${OBJDIR}/pin.o ${OBJDIR}/prcm.o ${OBJDIR}/spi.o ${OBJDIR}/uart.o ${OBJDIR}/udma.o ${OBJDIR}/utils.o
+           ${OBJDIR}/cpu.o ${OBJDIR}/i2c.o ${OBJDIR}/interrupt.o ${OBJDIR}/pin.o ${OBJDIR}/prcm.o ${OBJDIR}/spi.o ${OBJDIR}/uart.o ${OBJDIR}/udma.o ${OBJDIR}/utils.o
 
 BUILD_INFO_O = $(patsubst %.c,%.o,$(BUILD_INFO_C))
 SYS_CONFIG_O = $(patsubst %.c,%.o,$(SYS_CONFIG_C))

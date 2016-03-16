@@ -14,7 +14,7 @@ static int s_gpio_intr_installed = 0;
 /* TODO(alashkin): use the same v7 pointer in all files/ports */
 static struct v7 *s_v7;
 
-static void gpio_intr_handler_proxy(int pin, int level) {
+static void gpio_intr_handler_proxy(int pin, enum gpio_level level) {
   char prop_name[15];
   int len;
   v7_val_t res, args;

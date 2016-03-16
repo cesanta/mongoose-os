@@ -28,6 +28,7 @@
 
 #include "sj_mongoose.h"
 #include "sj_http.h"
+#include "sj_gpio_js.h"
 #include "sj_i2c_js.h"
 #include "sj_prompt.h"
 #include "sj_timers.h"
@@ -37,7 +38,6 @@
 #include "v7/v7.h"
 #include "config.h"
 #include "cc3200_fs.h"
-#include "cc3200_leds.h"
 #include "cc3200_sj_hal.h"
 #include "device_config.h"
 
@@ -56,16 +56,8 @@ struct v7 *init_v7(void *stack_base) {
   return v7_create_opt(opts);
 }
 
-static void blinkenlights_task(void *arg) {
-  while (1) {
-    cc3200_leds(GREEN, TOGGLE);
-    osi_Sleep(500);
-  }
-}
-
 /* These are FreeRTOS hooks for various life situations. */
 void vApplicationMallocFailedHook() {
-  cc3200_leds(RED, ON);
   fprintf(stderr, "malloc failed\n");
   _exit(123);
 }
@@ -75,7 +67,6 @@ void vApplicationIdleHook() {
 }
 
 void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
-  cc3200_leds(RED, ON);
 }
 
 OsiMsgQ_t s_v7_q;
@@ -110,6 +101,8 @@ static void v7_task(void *arg) {
     fprintf(stderr, "FS initialization failed.\n");
   }
   mongoose_init();
+
+  sj_gpio_api_setup(v7);
   sj_http_api_setup(v7);
   sj_i2c_api_setup(v7);
 
@@ -167,8 +160,6 @@ int main() {
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
 
-  cc3200_leds_init();
-
   /* Console UART init. */
   MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
   MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
@@ -186,8 +177,6 @@ int main() {
   VStartSimpleLinkSpawnTask(8);
   osi_TaskCreate(v7_task, (const signed char *) "v7", V7_STACK_SIZE + 256, NULL,
                  3, NULL);
-  osi_TaskCreate(blinkenlights_task, (const signed char *) "blink", 256, NULL,
-                 9, NULL);
   osi_start();
 
   return 0;
