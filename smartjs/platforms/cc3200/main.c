@@ -81,10 +81,10 @@ void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
 OsiMsgQ_t s_v7_q;
 
 static void uart_int() {
-  int c = UARTCharGet(CONSOLE_UART);
-  struct prompt_event pe = {.type = PROMPT_CHAR_EVENT, .data = (void *) c};
+  struct prompt_event pe = {.type = PROMPT_CHAR_EVENT, .data = NULL};
+  MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+  MAP_UARTIntDisable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   osi_MsgQWrite(&s_v7_q, &pe, OSI_NO_WAIT);
-  MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX);
 }
 
 void sj_prompt_init_hal(struct v7 *v7) {
@@ -97,7 +97,7 @@ static void v7_task(void *arg) {
 
   osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct prompt_event), 32 /* len */);
   osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
-  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX);
+  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   sl_Start(NULL, NULL, NULL);
 
   v7 = s_v7 = init_v7(&v7);
@@ -129,11 +129,15 @@ static void v7_task(void *arg) {
 
   while (1) {
     struct prompt_event pe;
-    mongoose_poll(MONGOOSE_POLL_LENGTH_MS);
+    mongoose_poll(0);
     if (osi_MsgQRead(&s_v7_q, &pe, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (pe.type) {
       case PROMPT_CHAR_EVENT: {
-        sj_prompt_process_char((char) ((int) pe.data));
+        long c;
+        while ((c = UARTCharGetNonBlocking(CONSOLE_UART)) >= 0) {
+          sj_prompt_process_char(c);
+        }
+        MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
         break;
       }
       case V7_INVOKE_EVENT: {
@@ -173,7 +177,8 @@ int main() {
       CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
       CONSOLE_BAUD_RATE,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  MAP_UARTFIFODisable(CONSOLE_UART);
+  MAP_UARTFIFOLevelSet(CONSOLE_UART, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
+  MAP_UARTFIFOEnable(CONSOLE_UART);
 
   setvbuf(stdout, NULL, _IONBF, 0);
   setvbuf(stderr, NULL, _IONBF, 0);
