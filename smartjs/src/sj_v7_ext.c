@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "common/cs_dbg.h"
+#include "common/cs_time.h"
 #include "v7/v7.h"
 #include "smartjs/src/sj_hal.h"
 #include "sj_common.h"
@@ -22,14 +23,6 @@ static enum v7_err Sys_prof(struct v7 *v7, v7_val_t *res) {
          v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
   v7_set(v7, *res, "used_by_fs", ~0, v7_mk_number(sj_get_fs_memory_usage()));
 
-  return V7_OK;
-}
-
-static enum v7_err Sys_wdtFeed(struct v7 *v7, v7_val_t *res) {
-  (void) v7;
-  sj_wdt_feed();
-
-  *res = v7_mk_boolean(1);
   return V7_OK;
 }
 
@@ -69,6 +62,20 @@ static enum v7_err Sys_setLogLevel(struct v7 *v7, v7_val_t *res) {
 
 clean:
   return rcode;
+}
+
+static enum v7_err Sys_time(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
+  *res = v7_mk_number(cs_time());
+  return V7_OK;
+}
+
+static enum v7_err Sys_wdtFeed(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
+  sj_wdt_feed();
+
+  *res = v7_mk_boolean(1);
+  return V7_OK;
 }
 
 SJ_PRIVATE enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
@@ -255,7 +262,8 @@ void sj_init_sys(struct v7 *v7) {
   sys = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Sys", ~0, sys);
   v7_set_method(v7, sys, "prof", Sys_prof);
-  v7_set_method(v7, sys, "wdtFeed", Sys_wdtFeed);
   v7_set_method(v7, sys, "reboot", Sys_reboot);
   v7_set_method(v7, sys, "setLogLevel", Sys_setLogLevel);
+  v7_set_method(v7, sys, "time", Sys_time);
+  v7_set_method(v7, sys, "wdtFeed", Sys_wdtFeed);
 }

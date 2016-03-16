@@ -12,6 +12,7 @@
 
 #include "hw_types.h"
 #include "hw_memmap.h"
+#include "prcm.h"
 #include "rom.h"
 #include "rom_map.h"
 #include "uart.h"
@@ -20,10 +21,18 @@
 #include "cc3200_fs.h"
 #include "config.h"
 
-/* FIXME */
 int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
-  tp->tv_sec = 42;
-  tp->tv_usec = 123;
+  unsigned long long r1 = 0, r2;
+  /* Achieve two consecutive reads of the same value. */
+  do {
+    r2 = r1;
+    r1 = PRCMSlowClkCtrFastGet();
+  } while (r1 != r2);
+  /* This is a 32768 Hz counter. */
+  tp->tv_sec = (r1 >> 15);
+  /* 1/32768-th of a second is 30.517578125 microseconds, approx. 31,
+   * but we round down so it doesn't overflow at 32767 */
+  tp->tv_usec = (r1 & 0x7FFF) * 30;
   return 0;
 }
 

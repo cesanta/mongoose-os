@@ -420,6 +420,11 @@ to be met:
 `Debug.print(...)`::
   Print information to current debug output (set by `Debug.mode`)
 
+
+=== Sys
+
+`Sys.time() -> number`:: Returns system time, as a floating point number, in seconds.
+
 === OTA (Over-the-air programming)
 
 Smart.js OTA is designed to work in either unattended or controllable mode.
