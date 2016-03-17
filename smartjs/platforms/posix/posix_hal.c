@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
-#include "smartjs/src/sj_timers.h"
 #include "smartjs/src/sj_v7_ext.h"
 #ifdef __APPLE__
 #include <sys/time.h>
@@ -103,98 +102,6 @@ void sj_usleep(int usecs) {
 #endif
 }
 
-#ifndef _WIN32
-void posix_timer_callback(int sig, siginfo_t *si, void *uc) {
-  v7_val_t *cb = NULL;
-
-  (void) sig;
-  (void) uc;
-  (void) si;
-
-#ifdef __APPLE__
-  cb = bsd_timer_cb;
-#else
-  cb = (v7_val_t *) si->si_value.sival_ptr;
-#endif
-
-  /* Invoke the timer callback */
-  sj_invoke_cb0(v7, *cb);
-
-  /*
-   * Disown and free the callback value which was allocated and owned in
-   * `global_set_timeout()`
-   */
-  v7_disown(v7, cb);
-  free(cb);
-}
-#else
-struct timer_callback_params {
-  v7_val_t *cb;
-  HANDLE timer;
-};
-
-VOID CALLBACK win32_timer_callback(PVOID param, BOOLEAN timeout) {
-  struct timer_callback_params *p = (struct timer_callback_params *) param;
-  sj_invoke_cb0(v7, *p->cb);
-  DeleteTimerQueueTimer(NULL, p->timer, NULL);
-  free(p);
-}
-#endif
-
-void sj_set_timeout(int msecs, v7_val_t *cb) {
-#if defined(SA_SIGINFO) && defined(CLOCK_REALTIME)
-  struct sigaction sa;
-  struct sigevent te;
-  struct itimerspec its;
-  timer_t timer_id;
-
-  sa.sa_flags = SA_SIGINFO;
-  sa.sa_sigaction = posix_timer_callback;
-  sigemptyset(&sa.sa_mask);
-
-  sigaction(SIGRTMIN, &sa, NULL);
-
-  te.sigev_notify = SIGEV_SIGNAL;
-  te.sigev_signo = SIGRTMIN;
-  te.sigev_value.sival_ptr = cb;
-
-  timer_create(CLOCK_REALTIME, &te, &timer_id);
-
-  its.it_interval.tv_sec = 0;
-  its.it_interval.tv_nsec = 0;
-  its.it_value.tv_sec = msecs / 1000;
-  its.it_value.tv_nsec = (msecs % 1000) * 1000000;
-
-  timer_settime(timer_id, 0, &its, NULL);
-
-#elif defined(__APPLE__)
-  struct sigaction sa;
-  struct itimerval tv;
-
-  bsd_timer_cb = cb;
-
-  tv.it_interval.tv_sec = 0;
-  tv.it_interval.tv_usec = 0;
-  tv.it_value.tv_sec = msecs / 1000;
-  tv.it_value.tv_usec = (msecs % 1000) * 1000;
-
-  sa.sa_flags = SA_SIGINFO;
-  sa.sa_sigaction = posix_timer_callback;
-  sigemptyset(&sa.sa_mask);
-
-  sigaction(SIGALRM, &sa, NULL);
-
-  setitimer(ITIMER_REAL, &tv, NULL);
-
-#elif defined(_WIN32)
-  struct timer_callback_params *params = malloc(sizeof(*params));
-  params->cb = cb;
-  CreateTimerQueueTimer(&params->timer, NULL, win32_timer_callback,
-                        (void *) params, msecs, 0,
-                        WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE);
-#endif
-}
-
 static void *stdin_thread(void *param) {
   int ch, sock = (int) (uintptr_t) param;
   while ((ch = getchar()) != EOF) {
@@ -243,34 +150,4 @@ void sj_prompt_init_hal() {
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
   _sj_invoke_cb(v7, func, this_obj, args);
-}
-
-/*
- * Not smart, but simple and cross-platform implementation of c-timeouts
- * JS timers aren't suitable because Apple's version offers
- * only one timer, while C-code (like clubby implementation might
- * need several.
- */
-struct c_timeout_param {
-  timer_callback cb;
-  void *data;
-  int msecs;
-};
-
-void *c_timeout_cb(void* param) {
-  struct c_timeout_param *p = (struct c_timeout_param *)param;
-  usleep(p->msecs * 1000);
-  p->cb(p->data);
-
-  free(p);
-  return NULL;
-}
-
-void sj_set_c_timeout(int msecs, timer_callback cb, void *param) {
-  struct c_timeout_param *p = malloc(sizeof(*p));
-  p->cb = cb;
-  p->data = param;
-  p->msecs = msecs;
-
-  mg_start_thread(c_timeout_cb, p);
 }

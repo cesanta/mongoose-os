@@ -600,7 +600,7 @@ void mg_ev_mgr_init(struct mg_mgr *mgr) {
   system_os_task(mg_lwip_task, MG_TASK_PRIORITY, s_mg_task_queue,
                  MG_TASK_QUEUE_LEN);
   os_timer_setfn(&s_poll_tmr, mg_poll_timer_cb, mgr);
-  os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 1 /* repeat */);
+  os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 0 /* no repeat */);
 }
 
 void mg_ev_mgr_free(struct mg_mgr *mgr) {
@@ -621,11 +621,12 @@ extern struct v7 *v7;
 
 time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   int n = 0;
-  time_t now = time(NULL);
+  double now = mg_time();
   struct mg_connection *nc, *tmp;
-  (void) timeout_ms;
-  DBG(("begin poll, now=%u, hf=%u, sf lwm=%u", (unsigned int) now,
-       system_get_free_heap_size(), 0U));
+  double min_timer = 0;
+  int num_timers = 0;
+  DBG(("begin poll @%u, hf=%u", (unsigned int) (now * 1000),
+       system_get_free_heap_size()));
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
     (void) cs;
@@ -668,8 +669,27 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
         if (nc->send_mbuf.len > 0) mg_lwip_send_more(nc);
       }
     }
+    if (nc->ev_timer_time > 0) {
+      if (num_timers == 0 || nc->ev_timer_time < min_timer) {
+        min_timer = nc->ev_timer_time;
+      }
+      num_timers++;
+    }
   }
-  DBG(("end poll, %d conns", n));
+  now = mg_time();
+  timeout_ms = MG_POLL_INTERVAL_MS;
+  if (num_timers > 0) {
+    double timer_timeout_ms = (min_timer - now) * 1000 + 1 /* rounding */;
+    if (timer_timeout_ms < timeout_ms) {
+      timeout_ms = timer_timeout_ms;
+    }
+  }
+  if (timeout_ms <= 0) timeout_ms = 1;
+  DBG(("end poll @%u, %d conns, %d timers (min %u), next in %d ms",
+       (unsigned int) (now * 1000), n, num_timers,
+       (unsigned int) (min_timer * 1000), timeout_ms));
+  os_timer_disarm(&s_poll_tmr);
+  os_timer_arm(&s_poll_tmr, timeout_ms, 0 /* no repeat */);
   return now;
 }
 
@@ -780,8 +800,7 @@ void mg_resume() {
   }
 
   s_suspended = 0;
-
-  os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 1 /* repeat */);
+  os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 0 /* no repeat */);
 }
 
 int mg_is_suspended() {
@@ -803,5 +822,9 @@ void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
   } else {
     tpcb->so_options &= ~SOF_KEEPALIVE;
   }
+}
+
+void mg_sock_set(struct mg_connection *nc, sock_t sock) {
+  nc->sock = sock;
 }
 #endif /* ESP_ENABLE_MG_LWIP_IF */

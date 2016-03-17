@@ -15838,6 +15838,8 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("changed"),  /* sjs */
     V7_VEC("charAt"),
     V7_VEC("charCodeAt"),
+    V7_VEC("clearInterval"),  /* sjs */
+    V7_VEC("clearTimeout"),  /* sjs */
     V7_VEC("concat"),
     V7_VEC("configurable"),
     V7_VEC("connect"),
@@ -15923,6 +15925,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("setDate"),
     V7_VEC("setFullYear"),
     V7_VEC("setHours"),
+    V7_VEC("setInterval"),  /* sjs */
     V7_VEC("setLogLevel"),  /* sjs */
     V7_VEC("setMilliseconds"),
     V7_VEC("setMinutes"),

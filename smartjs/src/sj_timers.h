@@ -13,11 +13,14 @@ void sj_timers_api_setup(struct v7 *v7);
 
 /* HAL */
 
-/* Setup timer with msecs timeout and cb as a callback
- * cb is a v7_own()ed, heap-allocated pointer and must be disowned and freed
- * (after invocation).
+/* Setup timer with msecs timeout and cb as a callback.
+ * cb is not owned, callee must own it to prevent premature GC.
  */
-void sj_set_timeout(int msecs, v7_val_t *cb);
-void sj_set_c_timeout(int msecs, timer_callback cb, void *param);
+
+#define SJ_INVALID_TIMER_ID 0
+typedef uint32_t sj_timer_id;
+sj_timer_id sj_set_js_timer(int msecs, int repeat, struct v7 *v7, v7_val_t cb);
+sj_timer_id sj_set_c_timer(int msecs, int repeat, timer_callback cb, void *arg);
+void sj_clear_timer(sj_timer_id id);
 
 #endif /* CS_SMARTJS_SRC_SJ_TIMERS_H_ */

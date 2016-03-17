@@ -174,7 +174,7 @@ static void schedule_reconnect(struct clubby *clubby) {
     clubby->reconnect_timeout = clubby->cfg.reconnect_timeout_max;
   }
   LOG(LL_DEBUG, ("Reconnect timeout: %d", clubby->reconnect_timeout));
-  sj_set_c_timeout(clubby->reconnect_timeout * 1000, reconnect_cb, clubby);
+  sj_set_c_timer(clubby->reconnect_timeout * 1000, 0, reconnect_cb, clubby);
 }
 
 static int register_callback(struct clubby *clubby, const char *id,
@@ -255,7 +255,7 @@ static void verify_timeouts_cb(void *arg) {
     clubby = clubby->next;
   }
 
-  sj_set_c_timeout(TIMEOUT_CHECK_PERIOD, verify_timeouts_cb, NULL);
+  sj_set_c_timer(TIMEOUT_CHECK_PERIOD, 0, verify_timeouts_cb, NULL);
 }
 
 static struct clubby_cb_info *remove_cbinfo(struct clubby *clubby,
@@ -1311,7 +1311,7 @@ void sj_clubby_init(struct v7 *v7) {
   sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
                                     NULL);
 
-  sj_set_c_timeout(TIMEOUT_CHECK_PERIOD, verify_timeouts_cb, NULL);
+  sj_set_c_timer(TIMEOUT_CHECK_PERIOD, 0, verify_timeouts_cb, NULL);
 
   /* TODO(alashkin): remove or expose functions below */
   (void) clubby_disconnect;
