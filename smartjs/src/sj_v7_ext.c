@@ -78,6 +78,37 @@ static enum v7_err Sys_wdtFeed(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
+static enum v7_err Sys_wdtEnable(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
+  sj_wdt_enable();
+
+  *res = v7_mk_boolean(1);
+  return V7_OK;
+}
+
+static enum v7_err Sys_wdtDisable(struct v7 *v7, v7_val_t *res) {
+  (void) v7;
+  sj_wdt_disable();
+
+  *res = v7_mk_boolean(1);
+  return V7_OK;
+}
+
+static enum v7_err Sys_wdtSetTimeout(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+
+  v7_val_t timeoutv = v7_arg(v7, 0);
+  if (!v7_is_number(timeoutv)) {
+    rcode = v7_throwf(v7, "Error", "Timeout should be a number");
+  } else {
+    sj_wdt_set_timeout(v7_to_number(timeoutv));
+  }
+
+  *res = v7_mk_boolean(rcode == V7_OK);
+
+  return V7_OK;
+}
+
 SJ_PRIVATE enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
   v7_val_t usecsv = v7_arg(v7, 0);
   int usecs;
@@ -266,4 +297,7 @@ void sj_init_sys(struct v7 *v7) {
   v7_set_method(v7, sys, "setLogLevel", Sys_setLogLevel);
   v7_set_method(v7, sys, "time", Sys_time);
   v7_set_method(v7, sys, "wdtFeed", Sys_wdtFeed);
+  v7_set_method(v7, sys, "wdtSetTimeout", Sys_wdtSetTimeout);
+  v7_set_method(v7, sys, "wdtEnable", Sys_wdtEnable);
+  v7_set_method(v7, sys, "wdtDisable", Sys_wdtDisable);
 }

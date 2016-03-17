@@ -68,6 +68,18 @@ void sj_wdt_feed() {
   /* TODO */
 }
 
+void sj_wdt_set_timeout(int secs) {
+  /* TODO */
+}
+
+void sj_wdt_enable() {
+  /* TODO */
+}
+
+void sj_wdt_disable() {
+  /* TODO */
+}
+
 void sj_system_restart(int exit_code) {
   (void) exit_code;
   /* Turns out to be not that easy. In particular, using *Reset functions is

@@ -159,6 +159,8 @@ void sjs_init(void *dummy) {
    */
   esp_umm_init();
 #endif
+
+  sj_wdt_set_timeout(get_cfg()->sys.wdt_timeout);
 }
 
 /*
@@ -170,7 +172,7 @@ void sdk_init_done_cb() {
 #if !defined(ESP_ENABLE_HW_WATCHDOG)
   ets_wdt_disable();
 #endif
-  pp_soft_wdt_stop();
+  system_soft_wdt_stop(); /* give 60 sec for initialization */
 
   /* Schedule SJS initialization (`sjs_init()`) */
   os_timer_disarm(&startcmd_timer);

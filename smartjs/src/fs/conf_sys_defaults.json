@@ -59,5 +59,8 @@
     "enable_prompt": true,
     "factory_reset_gpio": -1
   },
+  "sys": {
+    "wdt_timeout" : 10
+  },
   "conf_acl": "*"
 }

@@ -54,6 +54,15 @@ size_t sj_get_fs_memory_usage();
 /* Feed watchdog */
 void sj_wdt_feed();
 
+/* Set watchdog timeout*/
+void sj_wdt_set_timeout(int secs);
+
+/* Enable watchdog */
+void sj_wdt_enable();
+
+/* Disable watchdog */
+void sj_wdt_disable();
+
 /* Restart system */
 void sj_system_restart(int exit_code);
 

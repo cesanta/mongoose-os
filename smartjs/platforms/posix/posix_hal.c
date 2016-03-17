@@ -80,8 +80,18 @@ size_t sj_get_min_free_heap_size() {
   return 0;
 }
 
+/* WDT-functinos for compatibility only. */
 void sj_wdt_feed() {
-  /* Currently do nothing. For compatibility only. */
+}
+
+void sj_wdt_set_timeout(int secs) {
+  (void) secs;
+}
+
+void sj_wdt_enable() {
+}
+
+void sj_wdt_disable() {
 }
 
 void sj_system_restart(int exit_code) {

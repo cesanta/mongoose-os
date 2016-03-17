@@ -31,8 +31,33 @@ size_t sj_get_min_free_heap_size() {
 #endif
 }
 
+extern uint32_t soft_wdt_interval;
+/* Should be initialized in user_main by calling sj_wdt_set_timeout */
+static uint32_t s_saved_soft_wdt_interval;
+#define WDT_MAGIC_TIME 500000
+
+void sj_wdt_disable() {
+  /*
+   * poor's man version: delays wdt for several hours, but
+   * technically wdt is not disabled
+   */
+  s_saved_soft_wdt_interval = soft_wdt_interval;
+  soft_wdt_interval = 0xFFFFFFFF;
+  system_soft_wdt_restart();
+}
+
+void sj_wdt_enable() {
+  soft_wdt_interval = s_saved_soft_wdt_interval;
+  system_soft_wdt_restart();
+}
+
 void sj_wdt_feed() {
-  pp_soft_wdt_restart();
+  system_soft_wdt_feed();
+}
+
+void sj_wdt_set_timeout(int secs) {
+  s_saved_soft_wdt_interval = soft_wdt_interval = secs * WDT_MAGIC_TIME;
+  system_soft_wdt_restart();
 }
 
 void sj_system_restart(int exit_code) {
