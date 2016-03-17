@@ -1,0 +1,10 @@
+{
+  "items": [
+    { "type": "markdown", "name": "intro.md" },
+    { "type": "markdown", "name": "conf-infrastructure.md" },
+    { "type": "markdown", "name": "filesystem.md" },
+    { "type": "markdown", "name": "firmware-startup.md" },
+    { "type": "markdown", "name": "using-conf.md" },
+    { "type": "markdown", "name": "conf-params.md" }
+  ]
+}

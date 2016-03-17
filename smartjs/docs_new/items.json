@@ -1,0 +1,7 @@
+{
+  "items": [
+    { "type": "section", "name": "overview" },
+    { "type": "section", "name": "quick-start" },
+    { "type": "section", "name": "smartjs-firmware" }
+  ]
+}
