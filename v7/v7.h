@@ -222,11 +222,25 @@ typedef unsigned __int64 uint64_t;
 #else
 #include <inttypes.h>
 #endif
+/* 64-bit value, used to store JS values */
 typedef uint64_t v7_val_t;
 
+/* This if-0 is a dirty workaround to force etags to pick `struct v7` */
+#if 0
 /* Opaque structure. V7 engine context. */
+struct v7 {
+  /* ... */
+};
+#endif
+
 struct v7;
 
+/*
+ * Code which is returned by some of the v7 functions. If something other than
+ * `V7_OK` is returned from some function, it usually means that some
+ * exception, and the caller function typically should immediately cleanup and
+ * return the code further, or handle the exception.
+ */
 enum v7_err {
   V7_OK,
   V7_SYNTAX_ERROR,
@@ -428,11 +442,25 @@ typedef unsigned __int64 uint64_t;
 #else
 #include <inttypes.h>
 #endif
+/* 64-bit value, used to store JS values */
 typedef uint64_t v7_val_t;
 
+/* This if-0 is a dirty workaround to force etags to pick `struct v7` */
+#if 0
 /* Opaque structure. V7 engine context. */
+struct v7 {
+  /* ... */
+};
+#endif
+
 struct v7;
 
+/*
+ * Code which is returned by some of the v7 functions. If something other than
+ * `V7_OK` is returned from some function, it usually means that some
+ * exception, and the caller function typically should immediately cleanup and
+ * return the code further, or handle the exception.
+ */
 enum v7_err {
   V7_OK,
   V7_SYNTAX_ERROR,
@@ -745,10 +773,9 @@ const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
  *
  * C compatible strings contain exactly one NUL char, in terminal position.
  *
- * All strings owned by the V7 engine (see v7_mk_string) are guaranteed to
- * be NUL terminated.
- * Out of these, those that don't include embedded NUL chars are guaranteed to
- * be C compatible.
+ * All strings owned by the V7 engine (see `v7_mk_string()`) are guaranteed to
+ * be NUL terminated. Out of these, those that don't include embedded NUL chars
+ * are guaranteed to be C compatible.
  */
 const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
 
