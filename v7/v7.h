@@ -939,7 +939,7 @@ int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
  *
  *     void *h = NULL;
  *     v7_val_t name, val;
- *     unsigned int attrs;
+ *     v7_prop_attr_t attrs;
  *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
  *       ...
  *     }
