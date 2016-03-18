@@ -10,7 +10,8 @@
 
 #define PROMPT_CHAR_EVENT 0
 #define V7_INVOKE_EVENT 1
-struct prompt_event {
+#define GPIO_INT_EVENT 2
+struct sj_event {
   int type;
   void *data;
 };

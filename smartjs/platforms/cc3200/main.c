@@ -28,6 +28,7 @@
 
 #include "sj_mongoose.h"
 #include "sj_http.h"
+#include "sj_gpio.h"
 #include "sj_gpio_js.h"
 #include "sj_i2c_js.h"
 #include "sj_prompt.h"
@@ -72,21 +73,27 @@ void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
 OsiMsgQ_t s_v7_q;
 
 static void uart_int() {
-  struct prompt_event pe = {.type = PROMPT_CHAR_EVENT, .data = NULL};
+  struct sj_event e = {.type = PROMPT_CHAR_EVENT, .data = NULL};
   MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   MAP_UARTIntDisable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
-  osi_MsgQWrite(&s_v7_q, &pe, OSI_NO_WAIT);
+  osi_MsgQWrite(&s_v7_q, &e, OSI_NO_WAIT);
 }
 
 void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
 }
 
+static f_gpio_intr_handler_t s_gpio_js_handler;
+
+void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
+  s_gpio_js_handler = cb;
+}
+
 static void v7_task(void *arg) {
   struct v7 *v7 = s_v7;
   printf("\n\nSmart.js %s\n", build_id);
 
-  osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct prompt_event), 32 /* len */);
+  osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct sj_event), 32 /* len */);
   osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
   MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   sl_Start(NULL, NULL, NULL);
@@ -121,10 +128,10 @@ static void v7_task(void *arg) {
   sj_prompt_init(v7);
 
   while (1) {
-    struct prompt_event pe;
+    struct sj_event e;
     mongoose_poll(0);
-    if (osi_MsgQRead(&s_v7_q, &pe, V7_POLL_LENGTH_MS) != OSI_OK) continue;
-    switch (pe.type) {
+    if (osi_MsgQRead(&s_v7_q, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
+    switch (e.type) {
       case PROMPT_CHAR_EVENT: {
         long c;
         while ((c = UARTCharGetNonBlocking(CONSOLE_UART)) >= 0) {
@@ -135,12 +142,18 @@ static void v7_task(void *arg) {
       }
       case V7_INVOKE_EVENT: {
         struct v7_invoke_event_data *ied =
-            (struct v7_invoke_event_data *) pe.data;
+            (struct v7_invoke_event_data *) e.data;
         _sj_invoke_cb(v7, ied->func, ied->this_obj, ied->args);
         v7_disown(v7, &ied->args);
         v7_disown(v7, &ied->this_obj);
         v7_disown(v7, &ied->func);
         free(ied);
+        break;
+      }
+      case GPIO_INT_EVENT: {
+        int pin = ((intptr_t) e.data) >> 1;
+        int val = ((intptr_t) e.data) & 1;
+        if (s_gpio_js_handler != NULL) s_gpio_js_handler(pin, val);
         break;
       }
     }

@@ -26,7 +26,7 @@ extern OsiMsgQ_t s_v7_q;
 
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
-  struct prompt_event pe;
+  struct sj_event e;
   struct v7_invoke_event_data *ied = calloc(1, sizeof(*ied));
   ied->func = func;
   ied->this_obj = this_obj;
@@ -34,9 +34,9 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   v7_own(v7, &ied->func);
   v7_own(v7, &ied->this_obj);
   v7_own(v7, &ied->args);
-  pe.type = V7_INVOKE_EVENT;
-  pe.data = ied;
-  osi_MsgQWrite(&s_v7_q, &pe, OSI_WAIT_FOREVER);
+  e.type = V7_INVOKE_EVENT;
+  e.data = ied;
+  osi_MsgQWrite(&s_v7_q, &e, OSI_WAIT_FOREVER);
 }
 
 /* Defined in linker script. */
