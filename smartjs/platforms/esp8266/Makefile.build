@@ -229,8 +229,8 @@ FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_F
 else
 IMAGE_HEADER_SIZE = 0x10
 ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
-FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE)))")
-FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE)))")
+FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
+FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
 RBOOT_EMPTY_CFG=$(FW_DIR)/0x01000.bin
 PREREQ = rboot $(RBOOT_EMPTY_CFG)
 BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
