@@ -8,8 +8,13 @@ title: Built-in functions
   `system_deep_sleep_set_option(dsleep_option)` is called prior to going to
   sleep. The most useful seems to be 4 (keep RF off on wake up, reduces power
   consumption).
-- `setTimeout(callback, num_milliseconds) -> undefined`: Schedule function call
-  after `num_milliseconds`.
+- `setTimeout(callback, ms) -> id`: Schedule function call after `ms`
+  milliseconds. `id` can be passed to `clearTimeout` to cancel the call.
+- `setInterval(callback, ms) -> id`: Schedule function to be repeatedly invoked
+  every `ms` milliseconds. `id` can be passed to `clearInterval` to cancel the
+  call.
+- `clearTimeout(id), clearInterval(id) -> undefined`: Stops timers created by
+  `setTimeout` and `setInterval`.
 - `print(arg1, ...) -> undefined`: Stringify and print arguments to the command
   prompt
 - `GC.stat() -> stats_object`: Return current memory usage
