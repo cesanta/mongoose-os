@@ -1,0 +1,22 @@
+{
+  "items": [
+    { "type": "markdown", "name": "intro.md" },
+    { "type": "markdown", "name": "string.md" },
+    { "type": "markdown", "name": "file.md" },
+    { "type": "markdown", "name": "http.md" },
+    { "type": "markdown", "name": "websocket.md" },
+    { "type": "markdown", "name": "mqtt.md" },
+    { "type": "markdown", "name": "gpio.md" },
+    { "type": "markdown", "name": "adc.md" },
+    { "type": "markdown", "name": "spi.md" },
+    { "type": "markdown", "name": "i2c.md" },
+    { "type": "markdown", "name": "pwm.md" },
+    { "type": "markdown", "name": "uart.md" },
+    { "type": "markdown", "name": "wdt.md" },
+    { "type": "markdown", "name": "wifi.md" },
+    { "type": "markdown", "name": "cloud.md" },
+    { "type": "markdown", "name": "builtin.md" },
+    { "type": "markdown", "name": "sys.md" },
+    { "type": "markdown", "name": "ota.md" }
+  ]
+}
