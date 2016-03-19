@@ -1349,7 +1349,7 @@ Rune toupperrune(Rune c) {
 }
 int utfnlen(const char *s, long m) {
   (void) s;
-  return (int) strnlen(s, (size_t) m);
+  return (int) c_strnlen(s, (size_t) m);
 }
 
 const char *utfnshift(const char *s, long m) {
