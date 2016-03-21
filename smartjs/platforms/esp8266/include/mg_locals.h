@@ -28,8 +28,4 @@
 #undef __LWIP_SOCKETS_H__
 #endif
 
-/* Implemented in libc_replacements */
-long int random(void);
-
-
 #endif /* CS_SMARTJS_PLATFORMS_ESP8266_INCLUDE_MG_LOCALS_H_ */
