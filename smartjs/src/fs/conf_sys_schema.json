@@ -26,7 +26,7 @@
   ["update.server_timeout", "i", {"title" : "Server Timeout"}],
 
   ["http", "o", {"title": "HTTP Server"}],
-  ["http.port", "i", {"title": "Listening Port"}],
+  ["http.listen_addr", "s", {"title": "Listening port / address"}],
   ["http.enable", "b", {"title": "Enable HTTP Server"}],
   ["http.enable_webdav", "b", {"title": "Enable WebDAV access"}],
   ["http.upload_acl", "s", {"title": "Upload file ACL"}],
