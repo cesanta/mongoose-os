@@ -295,8 +295,10 @@ void stub_main() {
   if (baud_rate > 0) {
     ets_delay_us(1000);
     uart_div_modify(0, UART_CLKDIV_26MHZ(baud_rate));
-    ets_delay_us(10000);
   }
+
+  /* Give host time to get ready too. */
+  ets_delay_us(10000);
 
   SLIP_send(&greeting, 4);
 
