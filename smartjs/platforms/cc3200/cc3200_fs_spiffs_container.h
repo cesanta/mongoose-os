@@ -7,6 +7,8 @@
 #define CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_
 
 #include "cc3200_fs.h"
+#include "cc3200_fs_spiffs.h"
+#include "spiffs.h"
 
 typedef unsigned long long _u64;
 

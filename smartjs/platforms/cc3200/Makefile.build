@@ -44,6 +44,7 @@ IPATH = . ${OBJDIR} ${SDK_PATH} \
         ${SDK_PATH}/simplelink/include \
         ${SDK_PATH}/third_party/FreeRTOS/source/include \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
+        ${COMMON_PATH}/platforms/cc3200 \
         ${SMARTJS_PATH}/src \
         ${SPIFFS_PATH} \
         ${V7_PATH} \
@@ -56,8 +57,8 @@ VPATH = ${SDK_PATH}/driverlib \
         ${SDK_PATH}/third_party/FreeRTOS/source \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
         ${SDK_PATH}/third_party/FreeRTOS/source/portable/MemMang \
-        ${SMARTJS_PATH}/src \
         ${COMMON_PATH}/platforms/cc3200 \
+        ${SMARTJS_PATH}/src \
         ${SPIFFS_PATH} \
         ${V7_PATH} \
         ${MONGOOSE_PATH}
@@ -98,7 +99,7 @@ CFLAGS += -Os -Wall -Werror -DNDEBUG -DCS_NDEBUG \
           -I$(REPO_PATH) \
           $(SDK_FLAGS) ${V7_FEATURES} ${V7_MEMORY_FLAGS} \
           -DFW_ARCHITECTURE=\"$(PLATFORM)\" \
-          -DCS_PLATFORM=4 -DCC3200_ENABLE_SPIFFS \
+          -DCS_PLATFORM=4 -DCC3200_FS_SLFS -DCC3200_FS_SPIFFS \
           ${MONGOOSE_FEATURES} ${CFLAGS_EXTRA}
 # CFLAGS += -DCC3200_FS_DEBUG
 
@@ -149,7 +150,7 @@ ${OBJDIR}/mongoose.o: ${MONGOOSE_PATH}/mongoose.c
 
 APP_OBJS = ${OBJDIR}/main.o \
            ${OBJDIR}/sys_config.o ${OBJDIR}/cc3200_config.o ${OBJDIR}/device_config.o ${OBJDIR}/sj_config.o \
-           ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o ${OBJDIR}/cc3200_fs_failfs.o \
+           ${OBJDIR}/cc3200_fs.o ${OBJDIR}/cc3200_fs_spiffs.o ${OBJDIR}/cc3200_fs_spiffs_container.o ${OBJDIR}/cc3200_fs_slfs.o \
            ${OBJDIR}/cc3200_gpio.o \
            ${OBJDIR}/cc3200_libc.o \
            ${OBJDIR}/cc3200_sj_hal.o ${OBJDIR}/cc3200_socket.o ${OBJDIR}/cc3200_wifi.o \

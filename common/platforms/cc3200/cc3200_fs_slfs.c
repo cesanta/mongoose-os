@@ -5,15 +5,20 @@
 
 /* LIBC interface to TI FailFS. */
 
-#include "cc3200_fs_failfs.h"
-#include "config.h"
+#include "cc3200_fs_slfs.h"
 
 #include <errno.h>
 #include <fcntl.h>
 
+#include <common/cs_dbg.h>
+
 #include "hw_types.h"
 #include "simplelink.h"
 #include "fs.h"
+
+extern int set_errno(int e);  /* From cc3200_fs.c */
+
+#define dprintf(x)
 
 struct ti_fd_info {
   _i32 fh;
@@ -21,10 +26,10 @@ struct ti_fd_info {
   size_t size;
 };
 
-static struct ti_fd_info s_ti_fds[MAX_OPEN_FAILFS_FILES];
+static struct ti_fd_info s_ti_fds[MAX_OPEN_SLFS_FILES];
 
 static int sl_fs_to_errno(_i32 r) {
-  dprintf(("SL error: %d\n", (int) r));
+  DBG(("SL error: %d", (int) r));
   switch (r) {
     case SL_FS_OK:
       return 0;
@@ -45,12 +50,12 @@ static int sl_fs_to_errno(_i32 r) {
   return ENXIO;
 }
 
-int fs_failfs_open(const char *pathname, int flags, mode_t mode) {
+int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
   int fd;
-  for (fd = 0; fd < MAX_OPEN_FAILFS_FILES; fd++) {
+  for (fd = 0; fd < MAX_OPEN_SLFS_FILES; fd++) {
     if (s_ti_fds[fd].fh <= 0) break;
   }
-  if (fd >= MAX_OPEN_FAILFS_FILES) return set_errno(ENOMEM);
+  if (fd >= MAX_OPEN_SLFS_FILES) return set_errno(ENOMEM);
   struct ti_fd_info *fi = &s_ti_fds[fd];
 
   _u32 am = 0;
@@ -76,7 +81,7 @@ int fs_failfs_open(const char *pathname, int flags, mode_t mode) {
     }
   }
   _i32 r = sl_FsOpen((_u8 *) pathname, am, NULL, &fi->fh);
-  dprintf(("sl_FsOpen(%s, 0x%x) = %d, %d\n", pathname, (int) am, (int) r,
+  DBG(("sl_FsOpen(%s, 0x%x) = %d, %d", pathname, (int) am, (int) r,
            (int) fi->fh));
   if (r == SL_FS_OK) {
     fi->pos = 0;
@@ -88,23 +93,23 @@ int fs_failfs_open(const char *pathname, int flags, mode_t mode) {
   return r;
 }
 
-int fs_failfs_close(int fd) {
+int fs_slfs_close(int fd) {
   struct ti_fd_info *fi = &s_ti_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   _i32 r = sl_FsClose(fi->fh, NULL, NULL, 0);
-  dprintf(("sl_FsClose(%d) = %d\n", (int) fi->fh, (int) r));
+  DBG(("sl_FsClose(%d) = %d", (int) fi->fh, (int) r));
   s_ti_fds[fd].fh = -1;
   return set_errno(sl_fs_to_errno(r));
 }
 
-ssize_t fs_failfs_read(int fd, void *buf, size_t count) {
+ssize_t fs_slfs_read(int fd, void *buf, size_t count) {
   struct ti_fd_info *fi = &s_ti_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   /* Simulate EOF. sl_FsRead @ file_size return SL_FS_ERR_OFFSET_OUT_OF_RANGE.
    */
   if (fi->size >= 0 && fi->pos == fi->size) return 0;
   _i32 r = sl_FsRead(fi->fh, fi->pos, buf, count);
-  dprintf(("sl_FsRead(%d, %d, %d) = %d\n", (int) fi->fh, (int) fi->pos,
+  DBG(("sl_FsRead(%d, %d, %d) = %d", (int) fi->fh, (int) fi->pos,
            (int) count, (int) r));
   if (r >= 0) {
     fi->pos += r;
@@ -113,11 +118,11 @@ ssize_t fs_failfs_read(int fd, void *buf, size_t count) {
   return set_errno(sl_fs_to_errno(r));
 }
 
-ssize_t fs_failfs_write(int fd, const void *buf, size_t count) {
+ssize_t fs_slfs_write(int fd, const void *buf, size_t count) {
   struct ti_fd_info *fi = &s_ti_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   _i32 r = sl_FsWrite(fi->fh, fi->pos, (_u8 *) buf, count);
-  dprintf(("sl_FsWrite(%d, %d, %d) = %d\n", (int) fi->fh, (int) fi->pos,
+  DBG(("sl_FsWrite(%d, %d, %d) = %d", (int) fi->fh, (int) fi->pos,
            (int) count, (int) r));
   if (r >= 0) {
     fi->pos += r;
@@ -126,12 +131,10 @@ ssize_t fs_failfs_write(int fd, const void *buf, size_t count) {
   return set_errno(sl_fs_to_errno(r));
 }
 
-int fs_failfs_stat(const char *pathname, struct stat *s) {
+int fs_slfs_stat(const char *pathname, struct stat *s) {
   SlFsFileInfo_t sl_fi;
   _i32 r = sl_FsGetInfo((const _u8 *) pathname, 0, &sl_fi);
-  memset(s, 0, sizeof(*s));
   if (r == SL_FS_OK) {
-    s->st_ino = 0;
     s->st_mode = S_IFREG | 0666;
     s->st_nlink = 1;
     s->st_size = sl_fi.FileLen;
@@ -140,11 +143,9 @@ int fs_failfs_stat(const char *pathname, struct stat *s) {
   return set_errno(sl_fs_to_errno(r));
 }
 
-int fs_failfs_fstat(int fd, struct stat *s) {
+int fs_slfs_fstat(int fd, struct stat *s) {
   struct ti_fd_info *fi = &s_ti_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
-  memset(s, 0, sizeof(*s));
-  s->st_ino = 0;
   s->st_mode = 0666;
   s->st_mode = S_IFREG | 0666;
   s->st_nlink = 1;
@@ -152,7 +153,7 @@ int fs_failfs_fstat(int fd, struct stat *s) {
   return 0;
 }
 
-off_t fs_failfs_lseek(int fd, off_t offset, int whence) {
+off_t fs_slfs_lseek(int fd, off_t offset, int whence) {
   if (s_ti_fds[fd].fh <= 0) return set_errno(EBADF);
   switch (whence) {
     case SEEK_SET:
@@ -167,6 +168,6 @@ off_t fs_failfs_lseek(int fd, off_t offset, int whence) {
   return 0;
 }
 
-int fs_failfs_unlink(const char *filename) {
+int fs_slfs_unlink(const char *filename) {
   return set_errno(sl_fs_to_errno(sl_FsDel((const _u8 *) filename, 0)));
 }

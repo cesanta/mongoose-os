@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include "spiffs.h"
 
 struct v7;
 

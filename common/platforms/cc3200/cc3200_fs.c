@@ -16,67 +16,119 @@
 #include "rom_map.h"
 #include "uart.h"
 
+#include <common/cs_dbg.h>
 #include <common/platform.h>
 
-#include "config.h"
-#include "cc3200_fs.h"
+#ifdef CC3200_FS_SPIFFS
 #include "cc3200_fs_spiffs.h"
-#include "cc3200_fs_failfs.h"
+#endif
+
+#ifdef CC3200_FS_SLFS
+#include "cc3200_fs_slfs.h"
+#endif
 
 #define NUM_SYS_FDS 3
 #define SPIFFS_FD_BASE 10
-#define FAILFS_FD_BASE 100
+#define SLFS_FD_BASE 100
 
-#if SPIFFS_FD_BASE + MAX_OPEN_SPIFFS_FILES >= FAILFS_FD_BASE
-#error Too many MAX_OPEN_SPIFFS_FILES
-#endif
+#define CONSOLE_UART UARTA0_BASE
 
 int set_errno(int e) {
   errno = e;
   return -e;
 }
 
-static int is_ti_fname(const char *fname) {
-  return strncmp(fname, "/ti/", 4) == 0;
+int is_sl_fname(const char *fname) {
+#if defined(CC3200_FS_SPIFFS) && defined(CC3200_FS_SLFS)
+  return strncmp(fname, "sl/", 3) == 0;
+#else
+#  if defined(CC3200_FS_SLFS)
+     return 1;
+#  else
+     return 0;
+#  endif
+#endif
 }
 
-static const char *ti_fname(const char *fname) {
-  return fname + 4;
+const char *ti_fname(const char *fname) {
+#if defined(CC3200_FS_SPIFFS) && defined(CC3200_FS_SLFS)
+  return fname + 3;
+#else
+  return fname;
+#endif
 }
 
-enum fd_type { FD_INVALID, FD_SYS, FD_SPIFFS, FD_FAILFS };
+const char *drop_dir(const char *fname) {
+  if (*fname == '.') fname++;
+  if (*fname == '/') fname++;
+  return fname;
+}
+
+enum fd_type {
+  FD_INVALID,
+  FD_SYS,
+#ifdef CC3200_FS_SPIFFS
+  FD_SPIFFS,
+#endif
+#ifdef CC3200_FS_SLFS
+  FD_SLFS
+#endif
+};
 static int fd_type(int fd) {
   if (fd >= 0 && fd < NUM_SYS_FDS) return FD_SYS;
+#ifdef CC3200_FS_SPIFFS
   if (fd >= SPIFFS_FD_BASE && fd < SPIFFS_FD_BASE + MAX_OPEN_SPIFFS_FILES) {
     return FD_SPIFFS;
   }
-  if (fd >= FAILFS_FD_BASE && fd < FAILFS_FD_BASE + MAX_OPEN_FAILFS_FILES) {
-    return FD_FAILFS;
+#endif
+#ifdef CC3200_FS_SLFS
+  if (fd >= SLFS_FD_BASE && fd < SLFS_FD_BASE + MAX_OPEN_SLFS_FILES) {
+    return FD_SLFS;
   }
+#endif
   return FD_INVALID;
 }
 
 int _open(const char *pathname, int flags, mode_t mode) {
-  int fd;
-  if (is_ti_fname(pathname)) {
-    fd = fs_failfs_open(ti_fname(pathname), flags, mode);
-    if (fd >= 0) fd += FAILFS_FD_BASE;
+  int fd = -1;
+  pathname = drop_dir(pathname);
+  if (is_sl_fname(pathname)) {
+#ifdef CC3200_FS_SLFS
+    fd = fs_slfs_open(ti_fname(pathname), flags, mode);
+    if (fd >= 0) fd += SLFS_FD_BASE;
+#endif
   } else {
+#ifdef CC3200_FS_SPIFFS
     fd = fs_spiffs_open(pathname, flags, mode);
     if (fd >= 0) fd += SPIFFS_FD_BASE;
+#endif
   }
-  dprintf(("open(%s, 0x%x) = %d\n", pathname, flags, fd));
+  DBG(("open(%s, 0x%x) = %d", pathname, flags, fd));
   return fd;
 }
 
 int _stat(const char *pathname, struct stat *st) {
-  int res;
-  if (is_ti_fname(pathname)) {
-    res = fs_failfs_stat(ti_fname(pathname), st);
-  } else {
-    res = fs_spiffs_stat(pathname, st);
+  int res = -1;
+  pathname = drop_dir(pathname);
+  memset(st, 0, sizeof(*st));
+  /* Simulate statting the root directory. */
+  if (strcmp(pathname, "") == 0) {
+    st->st_ino = 0;
+    st->st_mode = S_IFDIR | 0777;
+    st->st_nlink = 1;
+    st->st_size = 0;
+    return 0;
   }
-  dprintf(("stat(%s) = %d\n", pathname, res));
+  if (is_sl_fname(pathname)) {
+#ifdef CC3200_FS_SLFS
+    res = fs_slfs_stat(ti_fname(pathname), st);
+#endif
+  } else {
+#ifdef CC3200_FS_SPIFFS
+    res = fs_spiffs_stat(pathname, st);
+#endif
+  }
+  DBG(("stat(%s) = %d", pathname, res));
   return res;
 }
 
@@ -89,14 +141,18 @@ int _close(int fd) {
     case FD_SYS:
       r = set_errno(EACCES);
       break;
+#ifdef CC3200_FS_SPIFFS
     case FD_SPIFFS:
       r = fs_spiffs_close(fd - SPIFFS_FD_BASE);
       break;
-    case FD_FAILFS:
-      r = fs_failfs_close(fd - FAILFS_FD_BASE);
+#endif
+#ifdef CC3200_FS_SLFS
+    case FD_SLFS:
+      r = fs_slfs_close(fd - SLFS_FD_BASE);
       break;
+#endif
   }
-  dprintf(("close(%d) = %d\n", fd, r));
+  DBG(("close(%d) = %d", fd, r));
   return r;
 }
 
@@ -109,19 +165,24 @@ off_t _lseek(int fd, off_t offset, int whence) {
     case FD_SYS:
       r = set_errno(ESPIPE);
       break;
+#ifdef CC3200_FS_SPIFFS
     case FD_SPIFFS:
       r = fs_spiffs_lseek(fd - SPIFFS_FD_BASE, offset, whence);
       break;
-    case FD_FAILFS:
-      r = fs_failfs_lseek(fd - FAILFS_FD_BASE, offset, whence);
+#endif
+#ifdef CC3200_FS_SLFS
+    case FD_SLFS:
+      r = fs_slfs_lseek(fd - SLFS_FD_BASE, offset, whence);
       break;
+#endif
   }
-  dprintf(("lseek(%d, %d, %d) = %d\n", fd, (int) offset, whence, r));
+  DBG(("lseek(%d, %d, %d) = %d", fd, (int) offset, whence, r));
   return r;
 }
 
 int _fstat(int fd, struct stat *s) {
   int r = -1;
+  memset(s, 0, sizeof(*s));
   switch (fd_type(fd)) {
     case FD_INVALID:
       r = set_errno(EBADF);
@@ -135,14 +196,18 @@ int _fstat(int fd, struct stat *s) {
       r = 0;
       break;
     }
+#ifdef CC3200_FS_SPIFFS
     case FD_SPIFFS:
       r = fs_spiffs_fstat(fd - SPIFFS_FD_BASE, s);
       break;
-    case FD_FAILFS:
-      r = fs_failfs_fstat(fd - FAILFS_FD_BASE, s);
+#endif
+#ifdef CC3200_FS_SLFS
+    case FD_SLFS:
+      r = fs_slfs_fstat(fd - SLFS_FD_BASE, s);
       break;
+#endif
   }
-  dprintf(("fstat(%d) = %d\n", fd, r));
+  DBG(("fstat(%d) = %d", fd, r));
   return r;
 }
 
@@ -161,14 +226,18 @@ ssize_t _read(int fd, void *buf, size_t count) {
       r = set_errno(ENOTSUP);
       break;
     }
+#ifdef CC3200_FS_SPIFFS
     case FD_SPIFFS:
       r = fs_spiffs_read(fd - SPIFFS_FD_BASE, buf, count);
       break;
-    case FD_FAILFS:
-      r = fs_failfs_read(fd - FAILFS_FD_BASE, buf, count);
+#endif
+#ifdef CC3200_FS_SLFS
+    case FD_SLFS:
+      r = fs_slfs_read(fd - SLFS_FD_BASE, buf, count);
       break;
+#endif
   }
-  dprintf(("read(%d, %u) = %d\n", fd, count, r));
+  DBG(("read(%d, %u) = %d", fd, count, r));
   return r;
 }
 
@@ -191,64 +260,78 @@ ssize_t _write(int fd, const void *buf, size_t count) {
       r = count;
       break;
     }
+#ifdef CC3200_FS_SPIFFS
     case FD_SPIFFS:
       r = fs_spiffs_write(fd - SPIFFS_FD_BASE, buf, count);
       break;
-    case FD_FAILFS:
-      r = fs_failfs_write(fd - FAILFS_FD_BASE, buf, count);
+#endif
+#ifdef CC3200_FS_SLFS
+    case FD_SLFS:
+      r = fs_slfs_write(fd - SLFS_FD_BASE, buf, count);
       break;
+#endif
   }
   return r;
 }
 
 int _rename(const char *from, const char *to) {
-  int r;
-  if (is_ti_fname(from) || is_ti_fname(to)) {
+  int r = -1;
+  from = drop_dir(from);
+  to = drop_dir(to);
+  if (is_sl_fname(from) || is_sl_fname(to)) {
     r = set_errno(ENOTSUP);
   } else {
+#ifdef CC3200_FS_SPIFFS
     r = fs_spiffs_rename(from, to);
+#endif
   }
-  dprintf(("rename(%s, %s) = %d\n", from, to, r));
+  DBG(("rename(%s, %s) = %d", from, to, r));
   return r;
 }
 
 int _link(const char *from, const char *to) {
-  dprintf(("link(%s, %s)\n", from, to));
+  DBG(("link(%s, %s)", from, to));
   return set_errno(ENOTSUP);
 }
 
 int _unlink(const char *filename) {
-  int r;
-  if (is_ti_fname(filename)) {
-    r = fs_failfs_unlink(ti_fname(filename));
+  int r = -1;
+  filename = drop_dir(filename);
+  if (is_sl_fname(filename)) {
+#ifdef CC3200_FS_SLFS
+    r = fs_slfs_unlink(ti_fname(filename));
+#endif
   } else {
+#ifdef CC3200_FS_SPIFFS
     r = fs_spiffs_unlink(filename);
+#endif
   }
-  dprintf(("unlink(%s) = %d\n", filename, r));
+  DBG(("unlink(%s) = %d", filename, r));
   return r;
 }
 
+#ifdef CC3200_FS_SPIFFS /* FailFS does not support listing files. */
 DIR *opendir(const char *dir_name) {
   DIR *r = NULL;
-  if (is_ti_fname(dir_name)) {
+  if (is_sl_fname(dir_name)) {
     r = NULL;
     set_errno(ENOTSUP);
   } else {
     r = fs_spiffs_opendir(dir_name);
   }
-  dprintf(("opendir(%s) = %p\n", dir_name, r));
+  DBG(("opendir(%s) = %p", dir_name, r));
   return r;
 }
 
 struct dirent *readdir(DIR *dir) {
   struct dirent *res = fs_spiffs_readdir(dir);
-  dprintf(("readdir(%p) = %p\n", dir, res));
+  DBG(("readdir(%p) = %p", dir, res));
   return res;
 }
 
 int closedir(DIR *dir) {
   int res = fs_spiffs_closedir(dir);
-  dprintf(("closedir(%p) = %d\n", dir, res));
+  DBG(("closedir(%p) = %d", dir, res));
   return res;
 }
 
@@ -262,3 +345,4 @@ int mkdir(const char *path, mode_t mode) {
   /* for spiffs supports only root dir, which comes from mongoose as '.' */
   return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
 }
+#endif

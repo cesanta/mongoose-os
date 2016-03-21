@@ -13,7 +13,7 @@
 
 #include <common/platform.h>
 
-#include "cc3200_fs.h"
+#define MAX_OPEN_SPIFFS_FILES 8
 
 /* libc interface */
 int fs_spiffs_open(const char *pathname, int flags, mode_t mode);

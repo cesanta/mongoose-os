@@ -18,8 +18,7 @@
 #include "uart.h"
 #include "utils.h"
 
-#include "cc3200_fs.h"
-#include "config.h"
+#define CONSOLE_UART UARTA0_BASE
 
 int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
   unsigned long long r1 = 0, r2;

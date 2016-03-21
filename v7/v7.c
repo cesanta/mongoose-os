@@ -624,7 +624,7 @@ int gettimeofday(struct timeval *t, void *tz);
 
 long int random(void);
 
-#ifdef CC3200_ENABLE_SPIFFS
+#ifdef CC3200_FS_SPIFFS
 #include <common/spiffs/spiffs.h>
 
 typedef struct {
@@ -638,7 +638,7 @@ typedef struct {
 DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
-#endif
+#endif /* CC3200_FS_SPIFFS */
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
