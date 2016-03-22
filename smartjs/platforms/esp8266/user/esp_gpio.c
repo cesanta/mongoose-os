@@ -145,7 +145,7 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
                             GPIO_PIN_SOURCE_SET(GPIO_AS_PIN_SOURCE));
 
       EXIT_CRITICAL(ETS_GPIO_INUM);
-      return -1;
+      break;
   }
 
   return 0;

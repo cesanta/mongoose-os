@@ -24,6 +24,7 @@
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_prompt.h"
 #include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_gpio_js.h"
 
 #include "smartjs/platforms/esp8266/user/esp_fs.h"
 #include "smartjs/platforms/esp8266/user/esp_sj_uart.h"
@@ -92,6 +93,7 @@ void sjs_init(void *dummy) {
   /* disable GC during further initialization */
   v7_set_gc_enabled(v7, 0);
 
+  sj_gpio_api_setup(v7);
   esp_sj_uart_init(v7);
 
 #ifndef V7_NO_FS

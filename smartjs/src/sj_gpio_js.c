@@ -6,6 +6,7 @@
 #include "v7/v7.h"
 #include "sj_gpio.h"
 #include "sj_common.h"
+#include "sj_v7_ext.h"
 
 #ifndef SJ_DISABLE_GPIO
 
@@ -17,7 +18,6 @@ static struct v7 *s_v7;
 static void gpio_intr_handler_proxy(int pin, enum gpio_level level) {
   char prop_name[15];
   int len;
-  v7_val_t res, args;
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
 
@@ -27,14 +27,7 @@ static void gpio_intr_handler_proxy(int pin, enum gpio_level level) {
     return;
   }
 
-  args = v7_mk_array(s_v7);
-  v7_array_push(s_v7, args, v7_mk_number(pin));
-  v7_array_push(s_v7, args, v7_mk_number(level));
-
-  if (v7_apply(s_v7, cb, v7_mk_undefined(), args, &res) != V7_OK) {
-    /* TODO(mkm): make it print stack trace */
-    fprintf(stderr, "cb threw an exception\n");
-  }
+  sj_invoke_cb2(s_v7, cb, v7_mk_number(pin), v7_mk_number(level));
 }
 
 SJ_PRIVATE enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
