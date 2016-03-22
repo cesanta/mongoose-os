@@ -109,6 +109,7 @@ static void v7_task(void *arg) {
   }
   mongoose_init();
 
+  sj_gpio_init(v7);
   sj_gpio_api_setup(v7);
   sj_http_api_setup(v7);
   sj_i2c_api_setup(v7);

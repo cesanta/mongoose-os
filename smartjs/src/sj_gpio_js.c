@@ -141,8 +141,11 @@ SJ_PRIVATE enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-void sj_gpio_api_setup(struct v7 *v7) {
+void sj_gpio_init(struct v7 *v7) {
   s_v7 = v7;
+}
+
+void sj_gpio_api_setup(struct v7 *v7) {
   v7_val_t gpio = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "GPIO", ~0, gpio);
   v7_set_method(v7, gpio, "setmode", GPIO_setmode);

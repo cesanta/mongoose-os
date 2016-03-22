@@ -93,7 +93,7 @@ void sjs_init(void *dummy) {
   /* disable GC during further initialization */
   v7_set_gc_enabled(v7, 0);
 
-  sj_gpio_api_setup(v7);
+  sj_gpio_init(v7);
   esp_sj_uart_init(v7);
 
 #ifndef V7_NO_FS
