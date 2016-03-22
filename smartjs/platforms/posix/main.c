@@ -96,6 +96,16 @@ static void post_init(struct v7 *v7) {
   mongoose_destroy();
 }
 
+static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data) {
+  (void) nc;
+  (void) ev;
+  (void) ev_data;
+}
+
+void mongoose_schedule_poll() {
+  mg_broadcast(&sj_mgr, dummy_handler, NULL, 0);
+}
+
 int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
   (void) v7;
 

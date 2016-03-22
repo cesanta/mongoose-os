@@ -10,6 +10,7 @@
 #include "smartjs/src/sj_hal.h"
 
 #include "v7_esp.h"
+#include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_prompt.h"
 #include "common/platforms/esp8266/esp_mg_net_if.h"
 #include "esp_uart.h"
@@ -86,4 +87,8 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 
 void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
+}
+
+void mongoose_schedule_poll() {
+  mg_lwip_mgr_schedule_poll(&sj_mgr);
 }

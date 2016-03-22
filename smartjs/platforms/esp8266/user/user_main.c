@@ -59,6 +59,7 @@ void dbg_putc(char c) {
  * SmartJS initialization, called as an SDK timer callback (`os_timer_...()`).
  */
 void sjs_init(void *dummy) {
+  mongoose_init();
   /*
    * In order to see debug output (at least errors) during boot we have to
    * initialize debug in this point. But default we put debug to UART0 with
@@ -109,8 +110,6 @@ void sjs_init(void *dummy) {
   sj_common_init(v7);
 
   sj_init_sys(v7);
-
-  mongoose_init();
 
   /* NOTE(lsm): must be done after mongoose_init(). */
   if (!init_device(v7)) {

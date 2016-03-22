@@ -14,4 +14,7 @@ void mongoose_init();
 int mongoose_poll(int ms);
 void mongoose_destroy();
 
+/* Schedule MG poll ASAP. */
+void mongoose_schedule_poll();
+
 #endif /* CS_SMARTJS_SRC_SJ_MONGOOSE_H_ */

@@ -57,8 +57,9 @@ void IRAM mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc) {
 
 void IRAM mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   if (poll_scheduled) return;
-  system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) mgr);
-  poll_scheduled = 1;
+  if (system_os_post(MG_TASK_PRIORITY, MG_SIG_POLL, (uint32_t) mgr)) {
+    poll_scheduled = 1;
+  }
 }
 
 static uint32_t time_left_micros(uint32_t now, uint32_t future) {
@@ -591,12 +592,12 @@ static void mg_lwip_check_rexmit(void *arg) {
 
 void mg_poll_timer_cb(void *arg) {
   struct mg_mgr *mgr = (struct mg_mgr *) arg;
-  DBG(("poll tmr %p", s_mg_task_queue));
+  DBG(("poll tmr %p %p", s_mg_task_queue, mgr));
   mg_lwip_mgr_schedule_poll(mgr);
 }
 
 void mg_ev_mgr_init(struct mg_mgr *mgr) {
-  DBG(("%p Mongoose init, tq %p", mgr, s_mg_task_queue));
+  LOG(LL_INFO, ("%p Mongoose init, tq %p", mgr, s_mg_task_queue));
   system_os_task(mg_lwip_task, MG_TASK_PRIORITY, s_mg_task_queue,
                  MG_TASK_QUEUE_LEN);
   os_timer_setfn(&s_poll_tmr, mg_poll_timer_cb, mgr);

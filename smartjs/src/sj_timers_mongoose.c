@@ -67,6 +67,7 @@ sj_timer_id sj_set_timer(struct timer_info *ti, int msecs, int repeat) {
     return 0;
   }
   c->ev_timer_time = mg_time() + (msecs / 1000.0);
+  mongoose_schedule_poll();
   return 1;
 }
 

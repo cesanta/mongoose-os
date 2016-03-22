@@ -98,6 +98,7 @@ static void v7_task(void *arg) {
   MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   sl_Start(NULL, NULL, NULL);
 
+  mongoose_init();
   v7 = s_v7 = init_v7(&v7);
   sj_timers_api_setup(v7);
   sj_v7_ext_api_setup(v7);
@@ -107,7 +108,6 @@ static void v7_task(void *arg) {
   if (init_fs(v7) != 0) {
     fprintf(stderr, "FS initialization failed.\n");
   }
-  mongoose_init();
 
   sj_gpio_init(v7);
   sj_gpio_api_setup(v7);
@@ -155,6 +155,10 @@ static void v7_task(void *arg) {
         int pin = ((intptr_t) e.data) >> 1;
         int val = ((intptr_t) e.data) & 1;
         if (s_gpio_js_handler != NULL) s_gpio_js_handler(pin, val);
+        break;
+      }
+      case MG_POLL_EVENT: {
+        /* Nothing to do, we poll on every iteration anyway. */
         break;
       }
     }

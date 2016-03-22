@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include "cc3200_sj_hal.h"
+
 #include <malloc.h>
 #include <string.h>
 
@@ -14,13 +16,11 @@
 #include "simplelink.h"
 #include "device.h"
 
-#include "cc3200_sj_hal.h"
-#include "sj_hal.h"
-#include "sj_timers.h"
-#include "sj_v7_ext.h"
-#include "v7/v7.h"
-
 #include "oslib/osi.h"
+
+#include "smartjs/src/sj_hal.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "v7/v7.h"
 
 extern OsiMsgQ_t s_v7_q;
 
@@ -95,4 +95,10 @@ void sj_system_restart(int exit_code) {
 
 void sj_usleep(int usecs) {
   osi_Sleep(usecs / 1000 /* ms */);
+}
+
+void mongoose_schedule_poll() {
+  struct sj_event e;
+  e.type = MG_POLL_EVENT;
+  osi_MsgQWrite(&s_v7_q, &e, OSI_WAIT_FOREVER);
 }

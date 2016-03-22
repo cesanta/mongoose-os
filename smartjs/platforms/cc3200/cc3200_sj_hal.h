@@ -11,6 +11,7 @@
 #define PROMPT_CHAR_EVENT 0
 #define V7_INVOKE_EVENT 1
 #define GPIO_INT_EVENT 2
+#define MG_POLL_EVENT 3
 struct sj_event {
   int type;
   void *data;
