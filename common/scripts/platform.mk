@@ -1,3 +1,4 @@
+OS?=
 CLANG:=clang
 CLANG_FORMAT:=clang-format
 CLANG_TIDY:=clang-tidy
