@@ -40,7 +40,7 @@ automation, healthcare, automotive, home automation, or other.
 
 Take a look at 2 minute video that shows Smart.js in action:
 
-[ ![Smart.js](../../static/img/smartjs/Smart.js.clip.png) ](https://www.youtube.com/watch?v=6DYfGsqQzCg)
+[ ![Smart.js](Smart.js.clip.png) ](https://www.youtube.com/watch?v=6DYfGsqQzCg)
 
 At the moment, Smart.js supports following hardware platforms:
 

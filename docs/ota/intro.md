@@ -10,13 +10,13 @@ Cesanta Cloud (see Quick Start Guide for details).
 
 Open https://dashboard.cesanta.com/#/ota in your favourite browser.
 
-<img src="../../static/img/smartjs/ota1.png" align="center"/>
+<img src="ota1.png" align="center"/>
 
 Then press "select .zip archive", point zip-file with new firmware and then
 press "Upload new firmware".
 The firmware will be uploaded to server, it may take a while.
 
-<img src="../../static/img/smartjs/ota2.png" align="center"/>
+<img src="ota2.png" align="center"/>
 
 Next step is a creation of rollout. Rollout is a set of devices, which
 must use the same firmware.
@@ -25,7 +25,7 @@ Fill "Rollout name", then choose firmware from dropdown list, and fill
 esp8266 in the project, use `arch=esp8266` as a filter.
 Press "Add new rollout".
 
-<img src="../../static/img/smartjs/ota3.png" align="center"/>
+<img src="ota3.png" align="center"/>
 
 Once rollout is created, server starts to send notification about new firmware
 to devices. The device can be offline, at the rollout creation moment, it will
@@ -39,7 +39,7 @@ Once `State` becomes `finished` you can open https://dashboard.cesanta.com/#/dev
 click link in `Id` column and check if `fw_version` field contains
 new version.
 
-<img src="../../static/img/smartjs/ota4.png" align="center"/>
+<img src="ota4.png" align="center"/>
 
 One of the important features of a reliable OTA implementation is to make sure
 the device never freezes after an unsuccessful firmware update. There could be

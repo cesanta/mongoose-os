@@ -2,7 +2,7 @@
 title: "Architecture"
 ---
 
-<img src="../../static/img/smartjs/smartjs_diagram.png" align="center" width="100%"/>
+<img src="smartjs_diagram.png" align="center" width="100%"/>
 
 Smart.js firmware on a device side:
 

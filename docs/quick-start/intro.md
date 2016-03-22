@@ -23,12 +23,12 @@ title: Quick Start Guide
    and shows an interactive JavaScript prompt. Notice the unique
    "device_id" in the configuration - it will be needed to talk to the cloud.
    Smart.js
-   ![](../../static/img/smartjs/fc2.png)
+   ![](fc2.png)
 -  Two numbers shown by prompt
    are available free memory, and memory taken by Smart.js
 -  Type some JavaScript expression to the console and press enter.
    Smart.js evaluates the expression and prints evaluation result:
-   [<img src="../../static/img/smartjs/fc3.png" width="75%" />](../../static/img/smartjs/fc3.png)
+   [<img src="fc3.png" width="75%" />](../../static/img/smartjs/fc3.png)
 -  Configure Wifi. This is not needed on POSIX platforms like RPI, where
    networking is already configured. Note that Smart.js provides flexible
    configuration infrastructure, described in the next section. Here,
@@ -44,4 +44,4 @@ title: Quick Start Guide
 -  Click on "Devices" tab, copy/paste device ID. Leave PSK field blank.
    Press "Add Device" button.
 -  Switch to the "Dashboard" tab, and see real-time graph updated:
-   ![](../../static/img/smartjs/dash1.png)
+   ![](dash1.png)

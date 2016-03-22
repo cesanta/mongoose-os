@@ -17,11 +17,11 @@ Then, use Windows Explorer or Mac Finder to mount the device. For Mac Finder,
 start Finder, choose "Go -> Connect To Server" menu, and enter the IP address
 of the device with `http://` prefix:
 
-<img src="../../static/img/smartjs/dav1.png" align="center"/>
+<img src="dav1.png" align="center"/>
 
 When done, device's filesystem is accessible as an external disk:
 
-<img src="../../static/img/smartjs/dav2.png" align="center"/>
+<img src="dav2.png" align="center"/>
 
 It is possible to add, remove, edit, rename files as usual, or work with them
 with your favorite editor or IDE. The best experience we've seen is with

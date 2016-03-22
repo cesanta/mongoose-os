@@ -60,17 +60,17 @@ var server = Http.createServer(function(req, res) {
 - Start web browser, point to the module's IP address and port 8080, eg:
   192.168.1.148:8080
 
-<img src="../../static/img/smartjs/http_server_1.png" align="center"/>
+<img src="http_server_1.png" align="center"/>
 
 - Attach LED to GPIO pin 5
 - Choose pin 5 number and value 1, press Set
 - Notice the LED is set
 
-<img src="../../static/img/smartjs/http_server_2.png" align="center"/>
+<img src="http_server_2.png" align="center"/>
 
 - Notice HTTP server messages in the console log
 
-<img src="../../static/img/smartjs/http_server_3.png" align="center"/>
+<img src="http_server_3.png" align="center"/>
 
 - Note: if you want to create a server on port 80, you have to make sure the
   config web server is off (by unchecking the `Enable HTTP Server` config
