@@ -92,6 +92,7 @@ static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
   }
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   cs->err = err;
+  if (err == 0) mg_lwip_set_keepalive_params(nc, 60, 10, 6);
 #ifdef SSL_KRYPTON
   if (err == 0 && nc->ssl != NULL) {
     SSL_set_fd(nc->ssl, (intptr_t) nc);
@@ -305,6 +306,7 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   tcp_err(newtpcb, mg_lwip_tcp_error_cb);
   tcp_sent(newtpcb, mg_lwip_tcp_sent_cb);
   tcp_recv(newtpcb, mg_lwip_tcp_recv_cb);
+  mg_lwip_set_keepalive_params(nc, 60, 10, 6);
 #ifdef SSL_KRYPTON
   if (lc->ssl_ctx != NULL) {
     nc->ssl = SSL_new(lc->ssl_ctx);
