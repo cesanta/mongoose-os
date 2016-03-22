@@ -17291,11 +17291,10 @@ V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
                                     struct v7_property **res) {
   enum v7_err rcode = V7_OK;
   val_t name_val = v7_mk_undefined();
-  /* def_property_v can trigger GC */
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
 
-  tmp_stack_push(&tf, &val);
-  tmp_stack_push(&tf, &name_val);
+  v7_own(v7, &obj);
+  v7_own(v7, &val);
+  v7_own(v7, &name_val);
 
   if (len == (size_t) ~0) {
     len = strlen(name);
@@ -17305,7 +17304,10 @@ V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
   V7_TRY(def_property_v(v7, obj, name_val, attrs_desc, val, as_assign, res));
 
 clean:
-  tmp_frame_cleanup(&tf);
+  v7_disown(v7, &name_val);
+  v7_disown(v7, &val);
+  v7_disown(v7, &obj);
+
   return rcode;
 }
 
