@@ -18,7 +18,7 @@ typedef char bool;
 #include "rom.h"
 #include "rom_map.h"
 
-#include "sj_i2c.h"
+#include "smartjs/src/sj_i2c.h"
 #include "v7/v7.h"
 #include "config.h"
 

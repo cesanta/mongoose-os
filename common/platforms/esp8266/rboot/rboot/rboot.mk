@@ -5,6 +5,9 @@
 
 ESPTOOL2 ?= ../../build/esptool2
 SDK_BASE ?= /opt/Espressif/ESP8266_SDK
+SPI_SIZE ?=
+RBOOT_INTEGRATION ?=
+RBOOT_EXTRA_INCDIR ?=
 
 # RBOOT_BUILD_BASE should be provided via makefile parameters
 RBOOT_BUILD_BASE ?=

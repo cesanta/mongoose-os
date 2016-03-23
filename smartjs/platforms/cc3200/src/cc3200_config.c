@@ -8,8 +8,8 @@
 #include "simplelink.h"
 #include "netcfg.h"
 
-#include "device_config.h"
-#include "sj_wifi.h"
+#include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_wifi.h"
 
 #include "config.h"
 

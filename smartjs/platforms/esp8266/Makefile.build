@@ -1,6 +1,6 @@
 # -*- mode: makefile -*-
 #
-# ESP8266 Smart.js
+# Smart.js for ESP8266
 #
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
@@ -12,6 +12,7 @@
 #           logging wrappers for malloc and friends. You can later view heap
 #           map by `tools/heaplog_viewer/heaplog_viewer.html`
 #
+MAKEFLAGS += --warn-undefined-variables
 
 APP ?= smartjs
 APP_PLATFORM = esp8266
@@ -86,7 +87,9 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_timers_mongoose.c \
             sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
             sj_mongoose_ws_client.c sj_mqtt.c ubjserializer.c clubby_proto.c \
-            sj_clubby.c sj_common.c miniz.c
+            sj_clubby.c sj_common.c sys_config.c \
+            sj_config.c device_config.c sys_config.c \
+            miniz.c
 
 ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
@@ -188,12 +191,13 @@ APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
+SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(LD_SCRIPT) $(BUILD_DIR)/sys_config.c
+GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C)
 FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
@@ -241,14 +245,12 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW_SIZE=$(ROM_SIZE)
 
 FW_MANIFEST = $(FW_DIR)/manifest.json
-FW_ZIP_FILE = $(FW_DIR)/$(APP)-$(APP_PLATFORM)-last.zip
 endif
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
-FW_META_CMD = $(COMMON_PATH)/tools/fw_meta.py
 
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
@@ -264,46 +266,32 @@ LDFLAGS += -u Cache_Read_Enable_New
 endif
 
 all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
-ifeq "${OTA}" "1"
-all: $(FW_ZIP_FILE)
-endif
-
-include $(REPO_PATH)/smartjs/src/sys_config.mk
 
 $(RBOOT_EMPTY_CFG):
-	$(vecho) GEN $@
+	$(vecho) "GEN   $@"
 	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" > $@
 
 $(BUILD_DIR) $(FW_DIR):
+	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
 # Main output product: firmware files.
-$(FW_ZIP_FILE): $(FW_FILES_OUT) $(FW_FS_OUT) $(FW_MANIFEST)
-	$(vecho) ZIP $@
-	$(Q) $(FW_META_CMD) create_fw \
-	  --manifest=$(FW_MANIFEST) \
-	  --src_dir=$(FW_DIR) \
-	  --output=$@
-	$(Q) cp $(FW_ZIP_FILE) $(FW_DIR)/$(APP)-$(APP_PLATFORM)-$(shell $(FW_META_CMD) get $(FW_MANIFEST) version).zip
-
-$(FW_MANIFEST): $(FW_FILES_OUT) $(FW_FS_OUT)
-	$(vecho) GEN $(FW_MANIFEST)
-	$(Q) $(FW_META_CMD) create_manifest \
-	  --name=$(APP) --platform=$(APP_PLATFORM) \
-	  --build_info=$(BUILD_INFO_JSON) \
-	  --output=$(FW_MANIFEST) \
-	  --src_dir=$(FW_DIR) \
-	  boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
-	  boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
-	  fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
-	  fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
+FW_PARTS = boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
+           boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
+           fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
+           fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
+           fs.img:src=$(notdir $(FS_IMG))
+include $(REPO_PATH)/common/scripts/fw_meta.mk
+ifeq "${OTA}" "1"
+all: $(FW_ZIP)
+endif
 
 #ifreq "${OTA}" "1"
 $(FW_FILES_OUT): $(APP_OUT)
 #else
 $(FW_FILE_2_OUT) : $(APP_OUT)
 #endif
-	$(vecho) "FW $(APP_OUT) -> $(FW_DIR)"
+	$(vecho) "FW    $(APP_OUT) -> $(FW_DIR)"
 ifneq "$(OTA)" "1"
 	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 else
@@ -314,21 +302,21 @@ endif
 
 # Link the main ELF output file. Performs symbol clash check beforehand.
 $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
-	$(link) $(LD_WRAPPERS)
+	$(call link,$(LD_WRAPPERS))
 
 # Symbol check: make sure app doesn't override SDK lib symbols.
 # A target is created that uses the same libs but no user code and symbols are
 # checked against main app library to make sure there's no overlap.
 $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
-	$(vecho) "SYMCHECK $(SYMCHECK_OUT) vs $(APP_AR)"
+	$(vecho) "SYMCK $(SYMCHECK_OUT) vs $(APP_AR)"
 	$(Q) python $(SJS_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
 	$(Q) touch $@
 
 $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
-	$(link)
+	$(call link,)
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(SJS_ESP_PATH)/Makefile.build
-	$(vecho) "GEN $@"
+	$(vecho) "GEN   $@"
 	$(Q) echo "void user_init(void){}; " \
             "void system_restart_local(){};" \
             "void __wrap_user_fatal_exception_handler(){}; " \
@@ -337,7 +325,7 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(SJS_ESP_PATH)/Makefile.build
 
 # Main app lib.
 $(APP_AR): $(OBJS)
-	$(vecho) "AR $@"
+	$(vecho) "AR    $@"
 	$(Q) $(AR) cru $@ $^
 # Move strings to flash too, we have the handler.
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
@@ -372,7 +360,7 @@ $(BUILD_DIR)/fr.sym: $(SJS_POSIX_BIN)/smartjs
 	$(Q) @nm $(SJS_POSIX_BIN)/smartjs > $@
 
 $(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
-	$(vecho) "GEN fr.c"
+	$(vecho) "GEN   fr.c"
 	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
 
 # Generate linker script.
@@ -383,16 +371,11 @@ ifneq "$(OTA)" "1"
 else
 	$(eval _IROM0SIZE=$(ROM_SIZE))
 endif
-	$(vecho) "GEN $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
+	$(vecho) "GEN   $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
-# Generate build info. Only regenerates if there are changes in objects.
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
-	$(vecho) "GEN $@"
-	$(Q) $(FW_META_CMD) gen_build_info \
-    --c_output=$(BUILD_INFO_C) \
-    --json_output=$(BUILD_INFO_JSON) \
-    $(GEN_BUILD_INFO_EXTRA)
+include $(REPO_PATH)/common/scripts/build_info.mk
+include $(REPO_PATH)/smartjs/src/sys_config.mk
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
@@ -403,13 +386,14 @@ $(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD
 	$(Q) rm -rf $(FS_BUILD_DIR) && mkdir -p $(FS_BUILD_DIR)
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
-    echo "CP $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
+    echo "  CP    $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
     cp $(js) $(FS_BUILD_DIR);)
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
-    echo "V7 $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
+    echo "  V7C   $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
     $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
+	$(vecho) "RSYNC -> $(FS_BUILD_DIR)/"
 	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
-	$(vecho) "FS $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
+	$(vecho) "FS    $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
 	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
 
@@ -423,7 +407,7 @@ $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) v7.h
 
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-	$(vecho) "GCC v7"
+	$(vecho) "GCC   v7"
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
@@ -457,18 +441,3 @@ endif
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
-
-flash: $(FW_OUT) $(FW_FS_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
-                  $(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
-                  $(FW_FILE_2_ADDR) $(FW_FILE_2_OUT) \
-                  $(FS_ADDR) $(FW_FS_OUT)
-
-flash_no_fs: $(FW_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
-                  $(FW_FILE_1_ADDR) $(FW_FILE_1_OUT) \
-                  $(FW_FILE_2_ADDR) $(FW_FILE_2_OUT)
-
-flash_fs: $(FW_FS_OUT)
-	$(Q) $(ESPTOOL) --port $(ESPPORT) --baud $(ESPSPEED) write_flash $(ESPFLASHARGS) \
-                  $(FS_ADDR) $(FW_FS_OUT)

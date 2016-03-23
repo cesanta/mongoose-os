@@ -26,21 +26,22 @@
 
 #include "oslib/osi.h"
 
-#include "sj_mongoose.h"
-#include "sj_http.h"
-#include "sj_gpio.h"
-#include "sj_gpio_js.h"
-#include "sj_i2c_js.h"
-#include "sj_prompt.h"
-#include "sj_timers.h"
-#include "sj_v7_ext.h"
-#include "sj_wifi_js.h"
-#include "sj_wifi.h"
+#include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_mongoose.h"
+#include "smartjs/src/sj_http.h"
+#include "smartjs/src/sj_gpio.h"
+#include "smartjs/src/sj_gpio_js.h"
+#include "smartjs/src/sj_i2c_js.h"
+#include "smartjs/src/sj_prompt.h"
+#include "smartjs/src/sj_timers.h"
+#include "smartjs/src/sj_v7_ext.h"
+#include "smartjs/src/sj_wifi_js.h"
+#include "smartjs/src/sj_wifi.h"
 #include "v7/v7.h"
+
 #include "config.h"
 #include "cc3200_fs.h"
 #include "cc3200_sj_hal.h"
-#include "device_config.h"
 
 const char *build_id;
 

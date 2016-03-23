@@ -1,3 +1,9 @@
+# -*- mode: makefile -*-
+#
+# Smart.js for POSIX
+
+MAKEFLAGS += --warn-undefined-variables
+
 REPO_PATH ?= ../../..
 COMMON_PATH = $(REPO_PATH)/common
 SRC_PATH ?= ../../src
@@ -29,7 +35,8 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
             sj_mongoose_ws_client.c sj_mqtt.c sj_gpio_js.c sj_adc_js.c \
             sj_prompt.c sj_timers.c sj_timers_mongoose.c sj_uart.c sj_http.c \
             sj_debug_js.c sj_pwm_js.c sj_wifi_js.c clubby_proto.c \
-            ubjserializer.c sj_clubby.c sj_common.c
+            ubjserializer.c sj_clubby.c sj_common.c \
+            sj_config.c device_config.c sys_config.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
@@ -86,10 +93,12 @@ ifeq ($(PLATFORM), "WIN")
   ADD_LIBS += ws2_32
 endif
 
+GC_CHECK ?=
 ifeq ($(GC_CHECK),1)
 CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions -DV7_ENABLE_GC_CHECK
 endif
 
+ASAN ?=
 ifeq ($(ASAN),1)
   CFLAGS += -fsanitize=address -fcolor-diagnostics -fno-common
   LDFLAGS += -fsanitize=address
@@ -100,11 +109,12 @@ INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
+SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(LD_SCRIPT) $(BUILD_DIR)/sys_config.c
+GENFILES_LIST = $(BUILD_DIR)/sys_config.c
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/* $(SRC_PATH)/fs/*)
 
@@ -125,7 +135,7 @@ endif
 .PHONY: all clean fs $(V7_PATH)/v7.c
 
 define compile
-@echo "  CC $< -> $@"
+$(vecho) "CC    $< -> $@"
 $(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
 endef
 
@@ -139,17 +149,17 @@ $(BIN_DIR) $(BUILD_DIR):
 
 # This rule is for normal (pre-existing) sources from VPATH.
 $(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
-	$(compile)
+	$(call compile,)
 
 # This one is for generated sources in build directory.
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
-	$(compile)
+	$(call compile,)
 
 $(BUILD_DIR)/mongoose.o: mongoose.c
-	$(compile) -DEXCLUDE_COMMON
+	$(call compile,-DEXCLUDE_COMMON)
 
 $(BUILD_DIR)/build_info.o: $(BUILD_INFO_C)
-	$(compile)
+	$(call compile,)
 
 # Common gathering point for all generated files.
 # Except build info, which is special because it depends on objects.
@@ -157,10 +167,7 @@ $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
 # Generate build info. Only regenerates if there are changes in objects.
-$(BUILD_INFO_C): $(APP_OBJS)
-	@echo "  GEN $@"
-	$(Q) $(COMMON_PATH)/tools/fw_meta.py gen_build_info \
-		--c_output=$(BUILD_INFO_C)
+include $(REPO_PATH)/common/scripts/build_info.mk
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 

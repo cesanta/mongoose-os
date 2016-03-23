@@ -15,7 +15,6 @@
 
 #include "simplelink.h"
 #include "device.h"
-
 #include "oslib/osi.h"
 
 #include "smartjs/src/sj_hal.h"

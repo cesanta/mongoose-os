@@ -1,3 +1,5 @@
+CFLAGS_EXTRA ?=
+
 COMMON_V7_FEATURES = -DV7_ENABLE__File__require=1
 
 MG_FEATURES_TINY = \
@@ -18,7 +20,7 @@ MG_FEATURES_TINY = \
                    -DMG_MAX_HTTP_SEND_MBUF=1024 \
                    -DMG_NO_BSD_SOCKETS
 
-V ?= $(VERBOSE)
+V ?=
 ifeq ("$(V)","1")
 Q :=
 else

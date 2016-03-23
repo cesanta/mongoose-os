@@ -11,8 +11,9 @@
 #include "wlan.h"
 
 #include "common/platform.h"
-#include "sj_wifi.h"
+#include "smartjs/src/sj_wifi.h"
 #include "v7/v7.h"
+
 #include "config.h"
 
 struct cc3200_wifi_config {

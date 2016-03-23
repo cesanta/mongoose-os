@@ -1,8 +1,10 @@
+CFLAGS_EXTRA ?=
+
 XTENSA_TOOLS_ROOT ?= /opt/Espressif/crosstool-NG/builds/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
-ESPTOOL	?= esptool.py
-ESPPORT	?= /dev/ttyACM0
-ESPSPEED	?= 230400
+ESPTOOL ?= esptool.py
+ESPPORT ?= /dev/ttyACM0
+ESPSPEED ?= 230400
 # For flash = > 16Mbit
 ESPFLASHARGS = --flash_mode dio --flash_size 32m
 
@@ -14,13 +16,13 @@ LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
 
 define link
-$(vecho) "LD $@"
-$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $< $(LIBS) $1 \
--Wl,--end-group -o $@
+$(vecho) "LD    $@"
+$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -o $@ \
+-Wl,--start-group $< $(LIBS) $1 -Wl,--end-group
 endef
 
 define compile_params
-$(vecho) "CC $1 -> $2"
+$(vecho) "CC    $1 -> $2"
 $(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $1 -o $2
 endef
 
