@@ -533,6 +533,7 @@ DE2A0C0F2A0DB860D00000001F4FFC00000204220E71240F7921C22610201EFFFC0000052A0DC48\
 
     CMD_FLASH_WRITE = 1
     CMD_BOOT_FW = 6
+    DEFAULT_FLASH_BAUD = 921600   # 0 means do not change baud rate
 
     def __init__(self, esp, baud_rate):
         if baud_rate > 0:
@@ -824,7 +825,7 @@ if __name__ == '__main__':
         flash_size_freq += {'40m':0, '26m':1, '20m':2, '80m': 0xf}[args.flash_freq]
         flash_info = struct.pack('BB', flash_mode, flash_size_freq)
 
-        flash_baud = args.flash_baud and args.flash_baud or 0  # 0 means do not change baud rate
+        flash_baud = args.flash_baud and args.flash_baud or CesantaFlasher.DEFAULT_FLASH_BAUD
         flasher = CesantaFlasher(esp, flash_baud)
 
         while args.addr_filename:
