@@ -6,15 +6,11 @@
         },
         {
             "type": "markdown",
-            "name": "blobstore.service.yaml.md"
-        },
-        {
-            "type": "markdown",
             "name": "auth.service.yaml.md"
         },
         {
             "type": "markdown",
-            "name": "logstore.service.yaml.md"
+            "name": "blobstore.service.yaml.md"
         },
         {
             "type": "markdown",
@@ -22,27 +18,11 @@
         },
         {
             "type": "markdown",
-            "name": "fwbuild.service.yaml.md"
-        },
-        {
-            "type": "markdown",
             "name": "firmware.service.yaml.md"
         },
         {
             "type": "markdown",
-            "name": "project.service.yaml.md"
-        },
-        {
-            "type": "markdown",
-            "name": "workspace.service.yaml.md"
-        },
-        {
-            "type": "markdown",
-            "name": "rollout.service.yaml.md"
-        },
-        {
-            "type": "markdown",
-            "name": "sw_update.service.yaml.md"
+            "name": "fwbuild.service.yaml.md"
         },
         {
             "type": "markdown",
@@ -50,15 +30,19 @@
         },
         {
             "type": "markdown",
-            "name": "metrics.service.yaml.md"
-        },
-        {
-            "type": "markdown",
             "name": "label.service.yaml.md"
         },
         {
             "type": "markdown",
-            "name": "user.service.yaml.md"
+            "name": "logstore.service.yaml.md"
+        },
+        {
+            "type": "markdown",
+            "name": "metrics.service.yaml.md"
+        },
+        {
+            "type": "markdown",
+            "name": "project.service.yaml.md"
         },
         {
             "type": "markdown",
@@ -66,7 +50,23 @@
         },
         {
             "type": "markdown",
+            "name": "rollout.service.yaml.md"
+        },
+        {
+            "type": "markdown",
             "name": "services.service.yaml.md"
+        },
+        {
+            "type": "markdown",
+            "name": "sw_update.service.yaml.md"
+        },
+        {
+            "type": "markdown",
+            "name": "user.service.yaml.md"
+        },
+        {
+            "type": "markdown",
+            "name": "workspace.service.yaml.md"
         }
     ]
 }
