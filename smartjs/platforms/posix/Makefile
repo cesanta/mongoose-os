@@ -18,6 +18,8 @@ SSL ?= OpenSSL
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/smartjs/common.mk
 
+LDFLAGS ?=
+
 V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
               -DV7_ENABLE_COMPACTING_GC \
