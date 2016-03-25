@@ -22,6 +22,10 @@
         },
         {
             "type": "markdown",
+            "name": "frontend.service.yaml.md"
+        },
+        {
+            "type": "markdown",
             "name": "fwbuild.service.yaml.md"
         },
         {
