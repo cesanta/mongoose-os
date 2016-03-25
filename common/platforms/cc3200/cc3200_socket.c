@@ -13,13 +13,13 @@
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
   int res;
   struct in_addr *in = (struct in_addr *) src;
-  if (af != AF_INET || size != sizeof(struct in_addr)) {
+  if (af != AF_INET) {
     errno = EAFNOSUPPORT;
     return NULL;
   }
-  res = sprintf(dst, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(in->s_addr, 0),
-                SL_IPV4_BYTE(in->s_addr, 1), SL_IPV4_BYTE(in->s_addr, 2),
-                SL_IPV4_BYTE(in->s_addr, 3));
+  res = snprintf(dst, size, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(in->s_addr, 0),
+                 SL_IPV4_BYTE(in->s_addr, 1), SL_IPV4_BYTE(in->s_addr, 2),
+                 SL_IPV4_BYTE(in->s_addr, 3));
   return res > 0 ? dst : NULL;
 }
 
