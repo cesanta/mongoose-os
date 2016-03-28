@@ -50,18 +50,3 @@ void cc3200_set_non_blocking_mode(int fd) {
   opt.NonblockingEnabled = 1;
   sl_SetSockOpt(fd, SL_SOL_SOCKET, SL_SO_NONBLOCKING, &opt, sizeof(opt));
 }
-
-struct hostent *gethostbyname(const char *name) {
-  static _u32 ip;
-  static struct hostent he;
-
-  int err = sl_NetAppDnsGetHostByName((_i8 *) name, strlen(name), &ip, AF_INET);
-  if (err != 0) return NULL;
-  ip = htonl(ip);
-  he.h_name = (char *) &ip;
-  he.h_aliases = NULL;
-  he.h_addrtype = AF_INET;
-  he.h_length = 1;
-  he.h_addr_list = &he.h_name;
-  return &he;
-}

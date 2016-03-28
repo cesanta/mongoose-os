@@ -191,7 +191,6 @@ int _fstat(int fd, struct stat *s) {
       /* Create barely passable stats for STD{IN,OUT,ERR}. */
       memset(s, 0, sizeof(*s));
       s->st_ino = fd;
-      s->st_rdev = fd;
       s->st_mode = S_IFCHR | 0666;
       r = 0;
       break;
@@ -243,6 +242,7 @@ ssize_t _read(int fd, void *buf, size_t count) {
 
 ssize_t _write(int fd, const void *buf, size_t count) {
   int r = -1;
+  size_t i;
   switch (fd_type(fd)) {
     case FD_INVALID:
       r = set_errno(EBADF);
@@ -252,7 +252,7 @@ ssize_t _write(int fd, const void *buf, size_t count) {
         r = set_errno(EACCES);
         break;
       }
-      for (size_t i = 0; i < count; i++) {
+      for (i = 0; i < count; i++) {
         const char c = ((const char *) buf)[i];
         if (c == '\n') MAP_UARTCharPut(CONSOLE_UART, '\r');
         MAP_UARTCharPut(CONSOLE_UART, c);
