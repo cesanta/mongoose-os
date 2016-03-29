@@ -26,8 +26,9 @@ NOTE: for Mac users:
 
 - Only `/Users` is mapped into docker's VM by default, so put cloned repo to `Users` subfolder
 
-Dependencies:
-- [Docker](https://www.docker.com)
-- `make`:
+NOTE: for Linux users:
+
+- Some minimal distribution installs don't ship with `make`. If you don't have it you can install it with:
   - ubuntu: `apt-get install make`
-  - osx: pre-installed
+  - centos: `yum install make`
+  - arch: `pacman -S make`
