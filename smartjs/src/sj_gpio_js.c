@@ -91,7 +91,7 @@ SJ_PRIVATE enum v7_err GPIO_setmode(struct v7 *v7, v7_val_t *res) {
   int pin, mode, pull;
 
   if (!v7_is_number(pinv) || !v7_is_number(modev) || !v7_is_number(pullv)) {
-    printf("Invalid arguments");
+    printf("Invalid arguments\n");
     *res = v7_mk_undefined();
   } else {
     pin = v7_to_number(pinv);
