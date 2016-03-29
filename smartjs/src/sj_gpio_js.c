@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include <stdlib.h>
+
 #include "v7/v7.h"
 #include "sj_gpio.h"
 #include "sj_common.h"
@@ -152,6 +154,11 @@ void sj_gpio_api_setup(struct v7 *v7) {
   v7_set_method(v7, gpio, "read", GPIO_read);
   v7_set_method(v7, gpio, "write", GPIO_write);
   v7_set_method(v7, gpio, "setisr", GPIO_setisr);
+
+  if (v7_exec_file(v7, "gpio.js", NULL) != V7_OK) {
+    /* TODO(mkm): make setup functions return an error code */
+    abort();
+  }
 }
 
 #else

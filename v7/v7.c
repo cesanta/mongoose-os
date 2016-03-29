@@ -15937,6 +15937,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("module"),
     V7_VEC("multiline"),
     V7_VEC("number"),
+    V7_VEC("onclick"),  /* sjs */
     V7_VEC("onclose"),  /* sjs */
     V7_VEC("onopen"),  /* sjs */
     V7_VEC("parseFloat"),
