@@ -463,6 +463,8 @@ void mbuf_trim(struct mbuf *);
 #define MG_SOCKET_SIMPLELINK 1
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
+#define MG_DISABLE_POPEN 1
+#define MG_DISABLE_CGI 1
 
 #include <simplelink.h>
 
@@ -608,6 +610,8 @@ typedef struct stat cs_stat_t;
 #define __cdecl
 
 #define closesocket(x) sl_Close(x)
+
+#define fileno(x) -1
 
 /* Some functions we implement for Mongoose. */
 
