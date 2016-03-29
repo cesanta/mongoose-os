@@ -155,6 +155,28 @@ void sj_gpio_api_setup(struct v7 *v7) {
   v7_set_method(v7, gpio, "write", GPIO_write);
   v7_set_method(v7, gpio, "setisr", GPIO_setisr);
 
+  v7_set(v7, gpio, "INOUT", ~0, v7_mk_number(GPIO_MODE_INOUT));
+  v7_set(v7, gpio, "IN", ~0, v7_mk_number(GPIO_MODE_INPUT));
+  v7_set(v7, gpio, "OUT", ~0, v7_mk_number(GPIO_MODE_OUTPUT));
+  v7_set(v7, gpio, "INT", ~0, v7_mk_number(GPIO_MODE_INT));
+
+  v7_set(v7, gpio, "FLOAT", ~0, v7_mk_number(GPIO_PULL_FLOAT));
+  v7_set(v7, gpio, "PULLUP", ~0, v7_mk_number(GPIO_PULL_PULLUP));
+  v7_set(v7, gpio, "PULLDOWN", ~0, v7_mk_number(GPIO_PULL_PULLDOWN));
+
+  v7_set(v7, gpio, "OFF", ~0, v7_mk_number(GPIO_INTR_OFF));
+  v7_set(v7, gpio, "POSEDGE", ~0, v7_mk_number(GPIO_INTR_POSEDGE));
+  v7_set(v7, gpio, "NEGEDGE", ~0, v7_mk_number(GPIO_INTR_NEGEDGE));
+  v7_set(v7, gpio, "ANYEDGE", ~0, v7_mk_number(GPIO_INTR_ANYEDGE));
+  v7_set(v7, gpio, "LOLEVEL", ~0, v7_mk_number(GPIO_INTR_LOLEVEL));
+  v7_set(v7, gpio, "HILEVEL", ~0, v7_mk_number(GPIO_INTR_HILEVEL));
+  /*
+   * TODO(mkm): figure out what to do with this "esp specific" mode.
+   * It's not really ESP specific, but the soft debouncer is currently
+   * implemented in esp8266 platform code.
+   */
+  v7_set(v7, gpio, "CLICK", ~0, v7_mk_number(6 /* GPIO_INTR_TYPE_ONCLICK */));
+
   if (v7_exec_file(v7, "gpio.js", NULL) != V7_OK) {
     /* TODO(mkm): make setup functions return an error code */
     abort();

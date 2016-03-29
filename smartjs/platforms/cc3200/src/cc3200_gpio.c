@@ -163,7 +163,7 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
 
   HWREG(port_base + GPIO_O_GPIO_IM) &= ~port_bit_mask;
   switch (type) {
-    case GPIO_INTR_DISABLE:
+    case GPIO_INTR_OFF:
       break;
     case GPIO_INTR_POSEDGE:
     case GPIO_INTR_NEGEDGE:
@@ -189,7 +189,7 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
       }
       break;
   }
-  if (type != GPIO_INTR_DISABLE) {
+  if (type != GPIO_INTR_OFF) {
     P_OSI_INTR_ENTRY handlers[4] = {gpio_a0_int_handler, gpio_a1_int_handler,
                                     gpio_a2_int_handler, gpio_a3_int_handler};
     int int_no = (INT_GPIOA0 + port_no);

@@ -299,7 +299,7 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
 }
 
 int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
-  if (type == GPIO_INTR_DISABLE) {
+  if (type == GPIO_INTR_OFF) {
     gpio_remove_handler(pin);
     return 0;
   }
