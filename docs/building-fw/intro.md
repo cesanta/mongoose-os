@@ -10,7 +10,7 @@ instruction on how to do that:
 
 ```
 $ git clone https://github.com/cesanta/smart.js.git
-$ cd smart.js/platforms/esp8266
+$ cd smart.js/smartjs/platforms/esp8266
 $ make
 ```
 
@@ -19,9 +19,15 @@ Fish'n'chips's `firmware/esp8266/` directory, and it'll be ready to flash!
 
 NOTE: for Windows users:
 
-- Operations above should be performed from `boot2docker` console, not from `cmd.exe`
+- Operations above should be performed from `Docker QuickStart terminal` console, not from `cmd.exe`
 - Only `C:\Users` is mapped into docker's VM by default, so put cloned repo to `Users` subfolder
 
 NOTE: for Mac users:
 
 - Only `/Users` is mapped into docker's VM by default, so put cloned repo to `Users` subfolder
+
+Dependencies:
+- [Docker](https://www.docker.com)
+- `make`:
+  - ubuntu: `apt-get install make`
+  - osx: pre-installed
