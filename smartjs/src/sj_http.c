@@ -396,6 +396,19 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
   }
 }
 
+/*
+ * Serve static files.
+ *
+ * Takes an object containing mongoose http server options.
+ * Commonly used properties:
+ * - `document_root`: Path to the web root directory
+ * - `enable_directory_listing`: Set to "no" to disable directory listing.
+ *   Enabled by default.
+ * - `extra_headers`: Extra HTTP headers to add to each server response.
+ *
+ * For the full option object definition see:
+ * https://docs.cesanta.com/mongoose/dev/index.html#/c-api/http.h/struct_mg_serve_http_opts/
+ */
 SJ_PRIVATE enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   struct mg_serve_http_opts opts;
   struct http_message hm;

@@ -29,16 +29,17 @@ var client = Http.request({
 
 
 - `Http.createServer(function(req, res) {}) -> server_obj`: Create HTTP server
-  instance
+  instance.
 - `server_obj.listen(address) -> server_obj`: Start listening on given address.
   Address could be a port number, or a `IP_ADDRESS:PORT_NUMBER` string.
 - `response_obj.writeHead(code, headers) -> null`: Write response status line
   and HTTP headers
 - `response_obj.write(data) -> null`: Write HTTP body data. Could be called
   multiple times.
-- `response_obj.end(optional_data) -> null`: Finish sending HTTP body
+- `response_obj.end(optional_data) -> null`: Finish sending HTTP body.
+- `response_obj.serve(optional_conf_obj) -> null: Serve static files via mongoose.
 
 
-- `Http.request(options_obj, callback) -> client_obj`: Create HTTP client
-- `client_obj.end(optional_post_data) -> client_obj`: Finish sending HTTP body
+- `Http.request(options_obj, callback) -> client_obj`: Create HTTP client.
+- `client_obj.end(optional_post_data) -> client_obj`: Finish sending HTTP body.
 
