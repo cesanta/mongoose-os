@@ -14,7 +14,9 @@
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
 
-#if defined(__unix__) || defined(__APPLE__)
+#ifdef cc3200
+#define CS_PLATFORM CS_P_CC3200
+#elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS

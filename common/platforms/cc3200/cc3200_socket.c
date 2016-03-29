@@ -44,9 +44,3 @@ int inet_pton(int af, const char *src, void *dst) {
   *(db + 3) = a0;
   return 1;
 }
-
-void cc3200_set_non_blocking_mode(int fd) {
-  SlSockNonblocking_t opt;
-  opt.NonblockingEnabled = 1;
-  sl_SetSockOpt(fd, SL_SOL_SOCKET, SL_SO_NONBLOCKING, &opt, sizeof(opt));
-}

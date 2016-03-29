@@ -48,9 +48,7 @@ V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_ENABLE__File__list=1
 
 MONGOOSE_FEATURES = $(MG_FEATURES_TINY) \
-                    -DMG_DISABLE_FILESYSTEM \
-                    -DMG_NO_BSD_SOCKETS \
-                    -DMG_CC3200
+                    -DMG_DISABLE_FILESYSTEM
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
                   -DV7_STACK_SIZE=8192-64 \

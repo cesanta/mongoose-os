@@ -17,6 +17,10 @@
 #include <stdint.h>
 #include <time.h>
 
+#define MG_SOCKET_SIMPLELINK 1
+#define MG_DISABLE_SOCKETPAIR 1
+#define MG_DISABLE_SYNC_RESOLVER 1
+
 #include <simplelink.h>
 
 #define SOMAXCONN 8
@@ -167,8 +171,6 @@ typedef struct stat cs_stat_t;
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 char *inet_ntoa(struct in_addr in);
 int inet_pton(int af, const char *src, void *dst);
-
-void cc3200_set_non_blocking_mode(int fd);
 
 struct timeval;
 int gettimeofday(struct timeval *t, void *tz);

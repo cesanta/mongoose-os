@@ -46,7 +46,9 @@
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
 
-#if defined(__unix__) || defined(__APPLE__)
+#ifdef cc3200
+#define CS_PLATFORM CS_P_CC3200
+#elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
@@ -458,6 +460,10 @@ void mbuf_trim(struct mbuf *);
 #include <stdint.h>
 #include <time.h>
 
+#define MG_SOCKET_SIMPLELINK 1
+#define MG_DISABLE_SOCKETPAIR 1
+#define MG_DISABLE_SYNC_RESOLVER 1
+
 #include <simplelink.h>
 
 #define SOMAXCONN 8
@@ -608,8 +614,6 @@ typedef struct stat cs_stat_t;
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 char *inet_ntoa(struct in_addr in);
 int inet_pton(int af, const char *src, void *dst);
-
-void cc3200_set_non_blocking_mode(int fd);
 
 struct timeval;
 int gettimeofday(struct timeval *t, void *tz);
