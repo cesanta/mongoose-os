@@ -131,7 +131,8 @@ V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_DISABLE_AST_TAG_NAMES \
               -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
               -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
-              -DV7_ENABLE__Function__bind -DV7_ENABLE__File__list=1 \
+              -DV7_ENABLE__Function__bind -DV7_ENABLE__Function__call \
+              -DV7_ENABLE__File__list=1 \
               -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
               -DV7_ENABLE__Object__getPrototypeOf -DV7_ENABLE__Object__isPrototypeOf \
               -DV7_ENABLE__Object__keys \
