@@ -29,7 +29,7 @@ GENERATED_SOURCES = $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/smartjs/common.mk
 
-JS_SRCS :=
+JS_SRCS := $(SJSJS_PATH)/gpio.js
 JSBIN_EXT := js
 JS_EXT := js
 
