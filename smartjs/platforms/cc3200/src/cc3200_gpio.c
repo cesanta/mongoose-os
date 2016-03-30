@@ -175,7 +175,7 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
         HWREG(port_base + GPIO_O_GPIO_IEV) &= ~port_bit_mask; /* Falling */
       }
       break;
-    case GPIO_INTR_ANYEGDE:
+    case GPIO_INTR_ANYEDGE:
       HWREG(port_base + GPIO_O_GPIO_IS) &= ~port_bit_mask; /* Edge */
       HWREG(port_base + GPIO_O_GPIO_IBE) |= port_bit_mask; /* Any */
       break;
