@@ -345,12 +345,29 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
 }
 #endif
 
+#ifndef SJ_DISABLE_LISTENER
+int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  struct udp_pcb *upcb = udp_new();
+  ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
+  u16_t port = ntohs(sa->sin.sin_port);
+  cs->err = udp_bind(upcb, ip, port);
+  DBG(("%p udb_bind(%s:%u) = %d", nc, ipaddr_ntoa(ip), port, cs->err));
+  if (cs->err != ERR_OK) {
+    udp_remove(upcb);
+    return -1;
+  }
+  udp_recv(upcb, mg_lwip_udp_recv_cb, nc);
+  cs->pcb.udp = upcb;
+  return 0;
+}
+#else
 int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   (void) nc;
   (void) sa;
-  /* TODO(rojer) */
   return -1;
 }
+#endif
 
 int mg_lwip_tcp_write(struct mg_connection *nc, const void *data,
                       uint16_t len) {
