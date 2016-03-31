@@ -13,13 +13,15 @@ int main(int argc, char **argv) {
   FILE *fp;
   const char *filename = NULL;
   int i;
-  int list = 0;
+  int list = 0, vis = 0;
   const char *extDir = ".";
 
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
       extDir = argv[i + 1];
       i++;
+    } else if (strcmp(argv[i], "-v") == 0) {
+      vis = 1;
     } else if (strcmp(argv[i], "-l") == 0) {
       list = 1;
     } else if (strcmp(argv[i], "-h") == 0) {
@@ -49,6 +51,8 @@ int main(int argc, char **argv) {
   }
 
   mem_spiffs_mount();
+
+  if (vis) SPIFFS_vis(&fs);
 
   {
     spiffs_DIR d;

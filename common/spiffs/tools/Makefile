@@ -3,7 +3,7 @@ include ../../../smartjs/common.mk
 BUILD_DIR ?= .
 SPIFFS_PATH ?= $(CURDIR)/..
 
-SPIFFS_TOOLS_CFLAGS=-DNO_ESP -g
+SPIFFS_TOOLS_CFLAGS=-DNO_ESP -DSPIFFS_TEST_VISUALISATION -g
 
 all: $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/unspiffs
 
