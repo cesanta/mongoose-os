@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-/* LIBC interface to TI FailFS. */
+/* Standard libc interface to TI SimpleLink FS. */
 
 #include "cc3200_fs_slfs.h"
 
@@ -18,15 +18,21 @@
 
 extern int set_errno(int e);  /* From cc3200_fs.c */
 
-#define dprintf(x)
+/*
+ * With SLFS, you have to pre-declare max file size. Yes. Really.
+ * 64K should be enough for everyone. Right?
+ */
+#ifndef FS_SLFS_MAX_FILE_SIZE
+#define FS_SLFS_MAX_FILE_SIZE (64 * 1024)
+#endif
 
-struct ti_fd_info {
+struct sl_fd_info {
   _i32 fh;
   _off_t pos;
   size_t size;
 };
 
-static struct ti_fd_info s_ti_fds[MAX_OPEN_SLFS_FILES];
+static struct sl_fd_info s_sl_fds[MAX_OPEN_SLFS_FILES];
 
 static int sl_fs_to_errno(_i32 r) {
   DBG(("SL error: %d", (int) r));
@@ -53,10 +59,10 @@ static int sl_fs_to_errno(_i32 r) {
 int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
   int fd;
   for (fd = 0; fd < MAX_OPEN_SLFS_FILES; fd++) {
-    if (s_ti_fds[fd].fh <= 0) break;
+    if (s_sl_fds[fd].fh <= 0) break;
   }
   if (fd >= MAX_OPEN_SLFS_FILES) return set_errno(ENOMEM);
-  struct ti_fd_info *fi = &s_ti_fds[fd];
+  struct sl_fd_info *fi = &s_sl_fds[fd];
 
   _u32 am = 0;
   fi->size = -1;
@@ -76,7 +82,7 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
       return set_errno(ENOTSUP);
     }
     if (flags & O_CREAT) {
-      am = FS_MODE_OPEN_CREATE(8192, 0);
+      am = FS_MODE_OPEN_CREATE(FS_SLFS_MAX_FILE_SIZE, 0);
     } else {
       am = FS_MODE_OPEN_WRITE;
     }
@@ -95,16 +101,16 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
 }
 
 int fs_slfs_close(int fd) {
-  struct ti_fd_info *fi = &s_ti_fds[fd];
+  struct sl_fd_info *fi = &s_sl_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   _i32 r = sl_FsClose(fi->fh, NULL, NULL, 0);
   DBG(("sl_FsClose(%d) = %d", (int) fi->fh, (int) r));
-  s_ti_fds[fd].fh = -1;
+  s_sl_fds[fd].fh = -1;
   return set_errno(sl_fs_to_errno(r));
 }
 
 ssize_t fs_slfs_read(int fd, void *buf, size_t count) {
-  struct ti_fd_info *fi = &s_ti_fds[fd];
+  struct sl_fd_info *fi = &s_sl_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   /* Simulate EOF. sl_FsRead @ file_size return SL_FS_ERR_OFFSET_OUT_OF_RANGE.
    */
@@ -120,7 +126,7 @@ ssize_t fs_slfs_read(int fd, void *buf, size_t count) {
 }
 
 ssize_t fs_slfs_write(int fd, const void *buf, size_t count) {
-  struct ti_fd_info *fi = &s_ti_fds[fd];
+  struct sl_fd_info *fi = &s_sl_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   _i32 r = sl_FsWrite(fi->fh, fi->pos, (_u8 *) buf, count);
   DBG(("sl_FsWrite(%d, %d, %d) = %d", (int) fi->fh, (int) fi->pos,
@@ -145,7 +151,7 @@ int fs_slfs_stat(const char *pathname, struct stat *s) {
 }
 
 int fs_slfs_fstat(int fd, struct stat *s) {
-  struct ti_fd_info *fi = &s_ti_fds[fd];
+  struct sl_fd_info *fi = &s_sl_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   s->st_mode = 0666;
   s->st_mode = S_IFREG | 0666;
@@ -155,13 +161,13 @@ int fs_slfs_fstat(int fd, struct stat *s) {
 }
 
 off_t fs_slfs_lseek(int fd, off_t offset, int whence) {
-  if (s_ti_fds[fd].fh <= 0) return set_errno(EBADF);
+  if (s_sl_fds[fd].fh <= 0) return set_errno(EBADF);
   switch (whence) {
     case SEEK_SET:
-      s_ti_fds[fd].pos = offset;
+      s_sl_fds[fd].pos = offset;
       break;
     case SEEK_CUR:
-      s_ti_fds[fd].pos += offset;
+      s_sl_fds[fd].pos += offset;
       break;
     case SEEK_END:
       return set_errno(ENOTSUP);
