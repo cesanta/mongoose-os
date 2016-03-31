@@ -185,103 +185,17 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
 
-static void upload_handler(struct mg_connection *c, int ev, void *p) {
-  switch (ev) {
-    case MG_EV_HTTP_MULTIPART_REQUEST: {
-      c->user_data = NULL;
-      break;
-    }
-    case MG_EV_HTTP_PART_BEGIN: {
-      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
-
-      if (!sj_conf_check_access(mg_mk_str(mp->file_name),
-                                get_cfg()->http.upload_acl)) {
-        LOG(LL_ERROR, ("%p Not allowed to upload %s", c, mp->file_name));
-        mg_printf(c,
-                  "HTTP/1.1 403 Not Allowed\r\n"
-                  "Content-Type: text/plain\r\n"
-                  "Connection: close\r\n\r\n"
-                  "Not allowed to upload %s\r\n",
-                  mp->file_name);
-        c->flags |= MG_F_SEND_AND_CLOSE;
-        return;
-      }
-      LOG(LL_DEBUG, ("%p Begin receiving file: %s", c, mp->file_name));
-      FILE *fp = fopen(mp->file_name, "w");
-      if (fp == NULL) {
-        mg_printf(c,
-                  "HTTP/1.1 500 Internal Server Error\r\n"
-                  "Content-Type: text/plain\r\n"
-                  "Connection: close\r\n\r\n");
-        LOG(LL_ERROR, ("Failed to open %s: %d\n", mp->file_name, errno));
-        mg_printf(c, "Failed to open %s: %d\r\n", mp->file_name, errno);
-        c->flags |= MG_F_SEND_AND_CLOSE;
-        return;
-      }
-      c->user_data = (void *) fp;
-      break;
-    }
-    case MG_EV_HTTP_PART_DATA: {
-      FILE *fp = (FILE *) c->user_data;
-      if (fp == NULL) break;
-      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
-      LOG(LL_DEBUG, ("%p rec'd %d bytes", c, (int) mp->data.len));
-      if (fwrite(mp->data.p, 1, mp->data.len, fp) != mp->data.len) {
-        LOG(LL_ERROR, ("Failed to write to %s: %d, wrote %d", mp->file_name,
-                       errno, (int) ftell(fp)));
-        if (errno == ENOSPC
-#ifdef SPIFFS_ERR_FULL
-            || errno == SPIFFS_ERR_FULL
-#endif
-            ) {
-          mg_printf(c,
-                    "HTTP/1.1 413 Payload Too Large\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: close\r\n\r\n");
-          mg_printf(c, "Failed to write to %s: no space left; wrote %d\r\n",
-                    mp->file_name, (int) ftell(fp));
-        } else {
-          mg_printf(c,
-                    "HTTP/1.1 500 Internal Server Error\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: close\r\n\r\n");
-          mg_printf(c, "Failed to write to %s: %d, wrote %d", mp->file_name,
-                    errno, (int) ftell(fp));
-        }
-        fclose(fp);
-        remove(mp->file_name);
-        c->user_data = NULL;
-        c->flags |= MG_F_SEND_AND_CLOSE;
-        return;
-      }
-      break;
-    }
-    case MG_EV_HTTP_PART_END: {
-      FILE *fp = (FILE *) c->user_data;
-      if (fp == NULL) break;
-      struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
-      if (mp->status >= 0) {
-        LOG(LL_INFO,
-            ("%p Stored %s, %d bytes", c, mp->file_name, (int) ftell(fp)));
-        mg_printf(c,
-                  "HTTP/1.1 200 OK\r\n"
-                  "Content-Type: text/plain\r\n"
-                  "Connection: close\r\n\r\n"
-                  "Ok, %s - %d bytes.\r\n",
-                  mp->file_name, (int) ftell(fp));
-      } else {
-        LOG(LL_ERROR, ("Failed to store %s", mp->file_name));
-        /*
-         * mp->status < 0 means connection was terminated, so no reason to send
-         * HTTP reply
-         */
-      }
-      fclose(fp);
-      c->user_data = NULL;
-      c->flags |= MG_F_SEND_AND_CLOSE;
-      break;
-    }
+struct mg_str upload_fname(struct mg_connection *nc, struct mg_str fname) {
+  struct mg_str res = {NULL, 0};
+  if (sj_conf_check_access(fname, get_cfg()->http.upload_acl)) {
+    res = fname;
   }
+  return res;
+  (void) nc;
+}
+
+static void upload_handler(struct mg_connection *c, int ev, void *p) {
+  mg_file_upload_handler(c, ev, p, upload_fname);
 }
 
 static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
