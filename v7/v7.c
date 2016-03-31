@@ -15887,6 +15887,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("WebSocket"),  /* sjs */
     V7_VEC("_modcache"),
     V7_VEC("accept"),
+    V7_VEC("address"), /* sjs */
     V7_VEC("arguments"),
     V7_VEC("base64_decode"),
     V7_VEC("base64_encode"),
@@ -15901,9 +15902,12 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("connect"),
     V7_VEC("constructor"),
     V7_VEC("create"),
+    V7_VEC("createConnection"),  /* sjs */
     V7_VEC("createServer"),  /* sjs */
+    V7_VEC("createSocket"),  /* sjs */
     V7_VEC("defineProperties"),
     V7_VEC("defineProperty"),
+    V7_VEC("destroy"), /* sjs */
     V7_VEC("disconnect"),  /* sjs */
     V7_VEC("every"),
     V7_VEC("exists"),
@@ -15912,6 +15916,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("forEach"),
     V7_VEC("fromCharCode"),
     V7_VEC("function"),
+    V7_VEC("getConnections"), /* sjs */
     V7_VEC("getDate"),
     V7_VEC("getDay"),
     V7_VEC("getFullYear"),
@@ -15975,6 +15980,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("replace"),
     V7_VEC("request"),  /* sjs */
     V7_VEC("require"),
+    V7_VEC("resume"), /* sjs */
     V7_VEC("reverse"),
     V7_VEC("sayHello"),  /* sjs */
     V7_VEC("search"),
@@ -16028,7 +16034,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("valueOf"),
     V7_VEC("wdtFeed"),  /* sjs */
     V7_VEC("writable"),
-    V7_VEC("writeHead"),  /* sjs */
+    V7_VEC("writeHead")  /* sjs */
 };
 /* clang-format on */
 
