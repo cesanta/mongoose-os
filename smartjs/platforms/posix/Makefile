@@ -44,6 +44,7 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
 CFLAGS ?= -O2 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
+          -Wno-missing-field-initializers \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \
           $(V7_FEATURES) \
