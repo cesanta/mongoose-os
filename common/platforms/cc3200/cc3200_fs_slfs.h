@@ -7,8 +7,10 @@
 #define CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SLFS_H_
 
 #include <stdio.h>
+#ifndef __TI_COMPILER_VERSION__
 #include <unistd.h>
 #include <sys/stat.h>
+#endif
 
 #define MAX_OPEN_SLFS_FILES 8
 
@@ -21,5 +23,6 @@ int fs_slfs_stat(const char *pathname, struct stat *s);
 int fs_slfs_fstat(int fd, struct stat *s);
 off_t fs_slfs_lseek(int fd, off_t offset, int whence);
 int fs_slfs_unlink(const char *filename);
+int fs_slfs_rename(const char *from, const char *to);
 
 #endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SLFS_H_ */

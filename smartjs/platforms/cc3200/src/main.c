@@ -190,8 +190,9 @@ int main() {
   MAP_UARTFIFOLevelSet(CONSOLE_UART, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
   MAP_UARTFIFOEnable(CONSOLE_UART);
 
-  setvbuf(stdout, NULL, _IONBF, 0);
-  setvbuf(stderr, NULL, _IONBF, 0);
+  setvbuf(stdout, NULL, _IOLBF, 0);
+  setvbuf(stderr, NULL, _IOLBF, 0);
+  cs_log_set_level(LL_INFO);
 
   VStartSimpleLinkSpawnTask(8);
   osi_TaskCreate(v7_task, (const signed char *) "v7", V7_STACK_SIZE + 256, NULL,

@@ -7,8 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#ifdef __TI_COMPILER_VERSION__
+#include <file.h>
+#endif
 
 #include "hw_types.h"
 #include "hw_memmap.h"
@@ -38,27 +39,15 @@ int set_errno(int e) {
   return -e;
 }
 
-int is_sl_fname(const char *fname) {
-#if defined(CC3200_FS_SPIFFS) && defined(CC3200_FS_SLFS)
-  return strncmp(fname, "sl/", 3) == 0;
-#else
-#  if defined(CC3200_FS_SLFS)
-     return 1;
-#  else
-     return 0;
-#  endif
-#endif
+static int is_sl_fname(const char *fname) {
+  return strncmp(fname, "SL:", 3) == 0;
 }
 
-const char *ti_fname(const char *fname) {
-#if defined(CC3200_FS_SPIFFS) && defined(CC3200_FS_SLFS)
+static const char *sl_fname(const char *fname) {
   return fname + 3;
-#else
-  return fname;
-#endif
 }
 
-const char *drop_dir(const char *fname) {
+static const char *drop_dir(const char *fname) {
   if (*fname == '.') fname++;
   if (*fname == '/') fname++;
   return fname;
@@ -94,7 +83,7 @@ int _open(const char *pathname, int flags, mode_t mode) {
   pathname = drop_dir(pathname);
   if (is_sl_fname(pathname)) {
 #ifdef CC3200_FS_SLFS
-    fd = fs_slfs_open(ti_fname(pathname), flags, mode);
+    fd = fs_slfs_open(sl_fname(pathname), flags, mode);
     if (fd >= 0) fd += SLFS_FD_BASE;
 #endif
   } else {
@@ -109,26 +98,29 @@ int _open(const char *pathname, int flags, mode_t mode) {
 
 int _stat(const char *pathname, struct stat *st) {
   int res = -1;
-  pathname = drop_dir(pathname);
+  const char *fname = pathname;
+  int is_sl = is_sl_fname(pathname);
+  if (is_sl) fname = sl_fname(pathname);
+  fname = drop_dir(fname);
   memset(st, 0, sizeof(*st));
   /* Simulate statting the root directory. */
-  if (strcmp(pathname, "") == 0) {
+  if (strcmp(fname, "") == 0) {
     st->st_ino = 0;
     st->st_mode = S_IFDIR | 0777;
     st->st_nlink = 1;
     st->st_size = 0;
     return 0;
   }
-  if (is_sl_fname(pathname)) {
+  if (is_sl) {
 #ifdef CC3200_FS_SLFS
-    res = fs_slfs_stat(ti_fname(pathname), st);
+    res = fs_slfs_stat(fname, st);
 #endif
   } else {
 #ifdef CC3200_FS_SPIFFS
-    res = fs_spiffs_stat(pathname, st);
+    res = fs_spiffs_stat(fname, st);
 #endif
   }
-  DBG(("stat(%s) = %d", pathname, res));
+  DBG(("stat(%s) = %d; fname = %s", pathname, res, fname));
   return res;
 }
 
@@ -279,7 +271,9 @@ int _rename(const char *from, const char *to) {
   from = drop_dir(from);
   to = drop_dir(to);
   if (is_sl_fname(from) || is_sl_fname(to)) {
-    r = set_errno(ENOTSUP);
+#ifdef CC3200_FS_SLFS
+    r = fs_slfs_rename(sl_fname(from), sl_fname(to));
+#endif
   } else {
 #ifdef CC3200_FS_SPIFFS
     r = fs_spiffs_rename(from, to);
@@ -299,7 +293,7 @@ int _unlink(const char *filename) {
   filename = drop_dir(filename);
   if (is_sl_fname(filename)) {
 #ifdef CC3200_FS_SLFS
-    r = fs_slfs_unlink(ti_fname(filename));
+    r = fs_slfs_unlink(sl_fname(filename));
 #endif
   } else {
 #ifdef CC3200_FS_SPIFFS
@@ -346,3 +340,14 @@ int mkdir(const char *path, mode_t mode) {
   return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
 }
 #endif
+
+
+int cc3200_fs_init() {
+#ifdef __TI_COMPILER_VERSION__
+#ifdef CC3200_FS_SLFS
+  return add_device("SL", _MSA, fs_slfs_open, fs_slfs_close, fs_slfs_read, fs_slfs_write, fs_slfs_lseek, fs_slfs_unlink, fs_slfs_rename) == 0;
+#endif
+#else
+  return 1;
+#endif
+}
