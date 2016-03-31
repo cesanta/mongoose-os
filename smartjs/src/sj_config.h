@@ -34,6 +34,6 @@ void sj_conf_emit_str(struct mbuf *b, const char *prefix, const char *s,
                       const char *suffix);
 void sj_conf_emit_int(struct mbuf *b, int v);
 
-int sj_conf_check_access(const char *key, const char *acl);
+int sj_conf_check_access(const struct mg_str key, const char *acl);
 
 #endif /* CS_SMARTJS_SRC_SJ_CONFIG_H_ */

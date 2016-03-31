@@ -194,7 +194,8 @@ static void upload_handler(struct mg_connection *c, int ev, void *p) {
     case MG_EV_HTTP_PART_BEGIN: {
       struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
 
-      if (!sj_conf_check_access(mp->file_name, get_cfg()->http.upload_acl)) {
+      if (!sj_conf_check_access(mg_mk_str(mp->file_name),
+                                get_cfg()->http.upload_acl)) {
         LOG(LL_ERROR, ("%p Not allowed to upload %s", c, mp->file_name));
         mg_printf(c,
                   "HTTP/1.1 403 Not Allowed\r\n"

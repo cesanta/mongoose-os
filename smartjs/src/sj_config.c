@@ -11,7 +11,7 @@ int sj_conf_get_str(struct json_token *toks, const char *key, const char *acl,
   int result = 0;
   if (tok == NULL) {
     LOG(LL_VERBOSE_DEBUG, ("key [%s] not found", key));
-  } else if (!sj_conf_check_access(key, acl)) {
+  } else if (!sj_conf_check_access(mg_mk_str(key), acl)) {
     LOG(LL_ERROR, ("Setting key [%s] is not allowed", key));
   } else {
     if (*val != NULL) {
@@ -41,7 +41,7 @@ int sj_conf_get_bool(struct json_token *toks, const char *key, const char *acl,
   int result = 0;
   if (tok == NULL) {
     LOG(LL_VERBOSE_DEBUG, ("key [%s] not found", key));
-  } else if (!sj_conf_check_access(key, acl)) {
+  } else if (!sj_conf_check_access(mg_mk_str(key), acl)) {
     LOG(LL_ERROR, ("Setting key [%s] is not allowed", key));
   } else if (tok->type != JSON_TYPE_TRUE && tok->type != JSON_TYPE_FALSE) {
     LOG(LL_ERROR, ("key [%s] is not boolean", key));
@@ -59,7 +59,7 @@ int sj_conf_get_int(struct json_token *toks, const char *key, const char *acl,
   int result = 0;
   if (tok == NULL) {
     LOG(LL_VERBOSE_DEBUG, ("key [%s] not found", key));
-  } else if (!sj_conf_check_access(key, acl)) {
+  } else if (!sj_conf_check_access(mg_mk_str(key), acl)) {
     LOG(LL_ERROR, ("Setting key [%s] is not allowed", key));
   } else if (tok->type != JSON_TYPE_NUMBER) {
     LOG(LL_ERROR, ("key [%s] is not numeric", key));
@@ -85,11 +85,9 @@ void sj_conf_emit_int(struct mbuf *b, int v) {
   if (n > 0) mbuf_append(b, s, n);
 }
 
-int sj_conf_check_access(const char *key, const char *acl) {
-  int key_len;
+int sj_conf_check_access(const struct mg_str key, const char *acl) {
   struct mg_str entry;
   if (acl == NULL) return 0;
-  key_len = strlen(key);
   while ((acl = mg_next_comma_list_entry(acl, &entry, NULL)) != NULL) {
     int result;
     if (entry.len == 0) continue;
@@ -98,7 +96,7 @@ int sj_conf_check_access(const char *key, const char *acl) {
       entry.p++;
       entry.len--;
     }
-    if (mg_match_prefix(entry.p, entry.len, key) == key_len) {
+    if (mg_match_prefix_n(entry, key) == (int) key.len) {
       return result;
     }
   }
