@@ -480,15 +480,18 @@ void mg_if_destroy_conn(struct mg_connection *nc) {
         cs->rx_chain = pbuf_dechain(cs->rx_chain);
         pbuf_free(seg);
       }
-    } else {
+      memset(cs, 0, sizeof(*cs));
+      free(cs);
+    } else if (nc->listener == NULL) {
+      /* Only close outgoing UDP pcb or listeners. */
       struct udp_pcb *upcb = cs->pcb.udp;
       if (upcb != NULL) {
         DBG(("%p udp_remove %p", nc, upcb));
         udp_remove(upcb);
       }
+      memset(cs, 0, sizeof(*cs));
+      free(cs);
     }
-    memset(cs, 0, sizeof(*cs));
-    free(cs);
     nc->sock = INVALID_SOCKET;
   }
   /* Walk the queue and null-out further signals for this conn. */
