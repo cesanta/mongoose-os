@@ -10,7 +10,7 @@ all: format
 
 format:
 	@(for i in src platforms/cc3200 platforms/esp8266/user platforms/esp8266/tools; do \
-       /usr/bin/find $$i -type f -name "*.[ch]" | grep -v /build/; \
+       /usr/bin/find $$i -type f -name "*.[ch]" | grep -v /\.build/; \
     done) | xargs $(CLANG_FORMAT) -i
 
 # allows CI tests and precommit hooks to ensure

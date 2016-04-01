@@ -60,7 +60,7 @@ ifeq "${OTA}" "1"
 FW2_FILE_2_ADDR=$(shell printf "0x%08x" $$(($(FW_FILE_2_ADDR) + 0x100000)))
 endif
 
-BUILD_DIR ?= $(CURDIR)/build
+BUILD_DIR ?= $(CURDIR)/.build
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
 SJS_POSIX_BIN = $(BUILD_DIR)/posix_sjs_bin
 SJS_POSIX_BUILD = $(BUILD_DIR)/posix_sjs_build

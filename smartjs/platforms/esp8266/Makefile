@@ -38,7 +38,7 @@ endif
         --irom firmware/0x11000.bin \
         --rom $(SJS_ESP_PATH)/tools/rom.bin \
         /console.log & \
-      xt-gdb build/$(APP).out \
+      xt-gdb .build/$(APP).out \
         -ex 'target remote 127.0.0.1:1234' \
         -ex 'set confirm off' \
         -ex 'add-symbol-file $(SJS_ESP_PATH)/tools/romsyms 0x40000000'"
