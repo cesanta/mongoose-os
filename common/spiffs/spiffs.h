@@ -5,8 +5,6 @@
  *      Author: petera
  */
 
-
-
 #ifndef SPIFFS_H_
 #define SPIFFS_H_
 #if defined(__cplusplus)
@@ -51,6 +49,13 @@ extern "C" {
 
 #define SPIFFS_ERR_FILE_EXISTS          -10030
 
+#define SPIFFS_ERR_NOT_A_FILE           -10031
+#define SPIFFS_ERR_RO_NOT_IMPL          -10032
+#define SPIFFS_ERR_RO_ABORTED_OPERATION -10033
+#define SPIFFS_ERR_PROBE_TOO_FEW_BLOCKS -10034
+#define SPIFFS_ERR_PROBE_NOT_A_FS       -10035
+#define SPIFFS_ERR_NAME_TOO_LONG        -10036
+
 #define SPIFFS_ERR_INTERNAL             -10050
 
 #define SPIFFS_ERR_TEST                 -10100
@@ -65,8 +70,9 @@ typedef u16_t spiffs_mode;
 // object type
 typedef u8_t spiffs_obj_type;
 
-#if SPIFFS_HAL_CALLBACK_EXTRA
 struct spiffs_t;
+
+#if SPIFFS_HAL_CALLBACK_EXTRA
 
 /* spi read call function type */
 typedef s32_t (*spiffs_read)(struct spiffs_t *fs, u32_t addr, u32_t size, u8_t *dst);
@@ -112,6 +118,19 @@ typedef void (*spiffs_check_callback)(spiffs_check_type type, spiffs_check_repor
     u32_t arg1, u32_t arg2);
 #endif // SPIFFS_HAL_CALLBACK_EXTRA
 
+/* file system listener callback operation */
+typedef enum {
+  /* the file has been created */
+  SPIFFS_CB_CREATED = 0,
+  /* the file has been updated or moved to another page */
+  SPIFFS_CB_UPDATED,
+  /* the file has been deleted */
+  SPIFFS_CB_DELETED,
+} spiffs_fileop_type;
+
+/* file system listener callback function */
+typedef void (*spiffs_file_callback)(struct spiffs_t *fs, spiffs_fileop_type op, spiffs_obj_id obj_id, spiffs_page_ix pix);
+
 #ifndef SPIFFS_DBG
 #define SPIFFS_DBG(...) \
     print(__VA_ARGS__)
@@ -128,20 +147,28 @@ typedef void (*spiffs_check_callback)(spiffs_check_type type, spiffs_check_repor
 
 /* Any write to the filehandle is appended to end of the file */
 #define SPIFFS_APPEND                   (1<<0)
+#define SPIFFS_O_APPEND                 SPIFFS_APPEND
 /* If the opened file exists, it will be truncated to zero length before opened */
 #define SPIFFS_TRUNC                    (1<<1)
+#define SPIFFS_O_TRUNC                  SPIFFS_TRUNC
 /* If the opened file does not exist, it will be created before opened */
 #define SPIFFS_CREAT                    (1<<2)
+#define SPIFFS_O_CREAT                  SPIFFS_CREAT
 /* The opened file may only be read */
 #define SPIFFS_RDONLY                   (1<<3)
-/* The opened file may only be writted */
+#define SPIFFS_O_RDONLY                 SPIFFS_RDONLY
+/* The opened file may only be written */
 #define SPIFFS_WRONLY                   (1<<4)
-/* The opened file may be both read and writted */
+#define SPIFFS_O_WRONLY                 SPIFFS_WRONLY
+/* The opened file may be both read and written */
 #define SPIFFS_RDWR                     (SPIFFS_RDONLY | SPIFFS_WRONLY)
-/* Any writes to the filehandle will never be cached */
+#define SPIFFS_O_RDWR                   SPIFFS_RDWR
+/* Any writes to the filehandle will never be cached but flushed directly */
 #define SPIFFS_DIRECT                   (1<<5)
-/* If SPIFFS_CREAT and SPIFFS_EXCL are set, SPIFFS_open() shall fail if the file exists */
+#define SPIFFS_O_DIRECT                 SPIFFS_DIRECT
+/* If SPIFFS_O_CREAT and SPIFFS_O_EXCL are set, SPIFFS_open() shall fail if the file exists */
 #define SPIFFS_EXCL                     (1<<6)
+#define SPIFFS_O_EXCL                   SPIFFS_EXCL
 
 #define SPIFFS_SEEK_SET                 (0)
 #define SPIFFS_SEEK_CUR                 (1)
@@ -249,7 +276,8 @@ typedef struct spiffs_t {
 
   // check callback function
   spiffs_check_callback check_cb_f;
-
+  // file callback function
+  spiffs_file_callback file_cb_f;
   // mounted flag
   u8_t mounted;
   // user data
@@ -263,6 +291,7 @@ typedef struct {
   spiffs_obj_id obj_id;
   u32_t size;
   spiffs_obj_type type;
+  spiffs_page_ix pix;
   u8_t name[SPIFFS_OBJ_NAME_LEN];
 } spiffs_stat;
 
@@ -281,6 +310,40 @@ typedef struct {
 } spiffs_DIR;
 
 // functions
+
+#if SPIFFS_USE_MAGIC && SPIFFS_USE_MAGIC_LENGTH && SPIFFS_SINGLETON==0
+/**
+ * Special function. This takes a spiffs config struct and returns the number
+ * of blocks this file system was formatted with. This function relies on
+ * that following info is set correctly in given config struct:
+ *
+ * phys_addr, log_page_size, and log_block_size.
+ *
+ * Also, hal_read_f must be set in the config struct.
+ *
+ * One must be sure of the correct page size and that the physical address is
+ * correct in the probed file system when calling this function. It is not
+ * checked if the phys_addr actually points to the start of the file system,
+ * so one might get a false positive if entering a phys_addr somewhere in the
+ * middle of the file system at block boundary. In addition, it is not checked
+ * if the page size is actually correct. If it is not, weird file system sizes
+ * will be returned.
+ *
+ * If this function detects a file system it returns the assumed file system
+ * size, which can be used to set the phys_size.
+ *
+ * Otherwise, it returns an error indicating why it is not regarded as a file
+ * system.
+ *
+ * Note: this function is not protected with SPIFFS_LOCK and SPIFFS_UNLOCK
+ * macros. It returns the error code directly, instead of as read by
+ * SPIFFS_errno.
+ *
+ * @param config        essential parts of the physical and logical
+ *                      configuration of the file system.
+ */
+s32_t SPIFFS_probe_fs(spiffs_config *config);
+#endif // SPIFFS_USE_MAGIC && SPIFFS_USE_MAGIC_LENGTH && SPIFFS_SINGLETON==0
 
 /**
  * Initializes the file system dynamic parameters and mounts the filesystem.
@@ -315,19 +378,18 @@ void SPIFFS_unmount(spiffs *fs);
  * @param path          the path of the new file
  * @param mode          ignored, for posix compliance
  */
-s32_t SPIFFS_creat(spiffs *fs, char *path, spiffs_mode mode);
+s32_t SPIFFS_creat(spiffs *fs, const char *path, spiffs_mode mode);
 
 /**
  * Opens/creates a file.
  * @param fs            the file system struct
  * @param path          the path of the new file
  * @param flags         the flags for the open command, can be combinations of
- *                      SPIFFS_APPEND, SPIFFS_TRUNC, SPIFFS_CREAT, SPIFFS_RD_ONLY,
- *                      SPIFFS_WR_ONLY, SPIFFS_RDWR, SPIFFS_DIRECT
+ *                      SPIFFS_O_APPEND, SPIFFS_O_TRUNC, SPIFFS_O_CREAT, SPIFFS_O_RDONLY,
+ *                      SPIFFS_O_WRONLY, SPIFFS_O_RDWR, SPIFFS_O_DIRECT, SPIFFS_O_EXCL
  * @param mode          ignored, for posix compliance
  */
-spiffs_file SPIFFS_open(spiffs *fs, char *path, spiffs_flags flags, spiffs_mode mode);
-
+spiffs_file SPIFFS_open(spiffs *fs, const char *path, spiffs_flags flags, spiffs_mode mode);
 
 /**
  * Opens a file by given dir entry.
@@ -335,7 +397,7 @@ spiffs_file SPIFFS_open(spiffs *fs, char *path, spiffs_flags flags, spiffs_mode 
  * a normal SPIFFS_open would need to traverse the filesystem again to find
  * the file, whilst SPIFFS_open_by_dirent already knows where the file resides.
  * @param fs            the file system struct
- * @param path          the dir entry to the file
+ * @param e             the dir entry to the file
  * @param flags         the flags for the open command, can be combinations of
  *                      SPIFFS_APPEND, SPIFFS_TRUNC, SPIFFS_CREAT, SPIFFS_RD_ONLY,
  *                      SPIFFS_WR_ONLY, SPIFFS_RDWR, SPIFFS_DIRECT.
@@ -343,6 +405,22 @@ spiffs_file SPIFFS_open(spiffs *fs, char *path, spiffs_flags flags, spiffs_mode 
  * @param mode          ignored, for posix compliance
  */
 spiffs_file SPIFFS_open_by_dirent(spiffs *fs, struct spiffs_dirent *e, spiffs_flags flags, spiffs_mode mode);
+
+/**
+ * Opens a file by given page index.
+ * Optimization purposes, opens a file by directly pointing to the page
+ * index in the spi flash.
+ * If the page index does not point to a file header SPIFFS_ERR_NOT_A_FILE
+ * is returned.
+ * @param fs            the file system struct
+ * @param page_ix       the page index
+ * @param flags         the flags for the open command, can be combinations of
+ *                      SPIFFS_APPEND, SPIFFS_TRUNC, SPIFFS_CREAT, SPIFFS_RD_ONLY,
+ *                      SPIFFS_WR_ONLY, SPIFFS_RDWR, SPIFFS_DIRECT.
+ *                      SPIFFS_CREAT will have no effect in this case.
+ * @param mode          ignored, for posix compliance
+ */
+spiffs_file SPIFFS_open_by_page(spiffs *fs, spiffs_page_ix page_ix, spiffs_flags flags, spiffs_mode mode);
 
 /**
  * Reads from given filehandle.
@@ -381,7 +459,7 @@ s32_t SPIFFS_lseek(spiffs *fs, spiffs_file fh, s32_t offs, int whence);
  * @param fs            the file system struct
  * @param path          the path of the file to remove
  */
-s32_t SPIFFS_remove(spiffs *fs, char *path);
+s32_t SPIFFS_remove(spiffs *fs, const char *path);
 
 /**
  * Removes a file by filehandle
@@ -396,7 +474,7 @@ s32_t SPIFFS_fremove(spiffs *fs, spiffs_file fh);
  * @param path          the path of the file to stat
  * @param s             the stat struct to populate
  */
-s32_t SPIFFS_stat(spiffs *fs, char *path, spiffs_stat *s);
+s32_t SPIFFS_stat(spiffs *fs, const char *path, spiffs_stat *s);
 
 /**
  * Gets file status by filehandle
@@ -426,7 +504,7 @@ s32_t SPIFFS_close(spiffs *fs, spiffs_file fh);
  * @param old           path of file to rename
  * @param newPath       new path of file
  */
-s32_t SPIFFS_rename(spiffs *fs, char *old, char *newPath);
+s32_t SPIFFS_rename(spiffs *fs, const char *old, const char *newPath);
 
 /**
  * Returns last error of last file operation.
@@ -449,7 +527,7 @@ void SPIFFS_clearerr(spiffs *fs);
  * @param name          the name of the directory
  * @param d             pointer the directory stream to be populated
  */
-spiffs_DIR *SPIFFS_opendir(spiffs *fs, char *name, spiffs_DIR *d);
+spiffs_DIR *SPIFFS_opendir(spiffs *fs, const char *name, spiffs_DIR *d);
 
 /**
  * Closes a directory stream
@@ -549,6 +627,36 @@ s32_t SPIFFS_gc_quick(spiffs *fs, u16_t max_free_pages);
  * @param size          amount of bytes that should be freed
  */
 s32_t SPIFFS_gc(spiffs *fs, u32_t size);
+
+/**
+ * Check if EOF reached.
+ * @param fs            the file system struct
+ * @param fh            the filehandle of the file to check
+ */
+s32_t SPIFFS_eof(spiffs *fs, spiffs_file fh);
+
+/**
+ * Get position in file.
+ * @param fs            the file system struct
+ * @param fh            the filehandle of the file to check
+ */
+s32_t SPIFFS_tell(spiffs *fs, spiffs_file fh);
+
+/**
+ * Registers a callback function that keeps track on operations on file
+ * headers. Do note, that this callback is called from within internal spiffs
+ * mechanisms. Any operations on the actual file system being callbacked from
+ * in this callback will mess things up for sure - do not do this.
+ * This can be used to track where files are and move around during garbage
+ * collection, which in turn can be used to build location tables in ram.
+ * Used in conjuction with SPIFFS_open_by_page this may improve performance
+ * when opening a lot of files.
+ * Must be invoked after mount.
+ *
+ * @param fs            the file system struct
+ * @param cb_func       the callback on file operations
+ */
+s32_t SPIFFS_set_file_callback_func(spiffs *fs, spiffs_file_callback cb_func);
 
 #if SPIFFS_TEST_VISUALISATION
 /**

@@ -19,9 +19,11 @@
  *      Author: petera
  */
 
+
 #include "spiffs.h"
 #include "spiffs_nucleus.h"
 
+#if !SPIFFS_READ_ONLY
 
 #if SPIFFS_HAL_CALLBACK_EXTRA
 #define CHECK_CB(_fs, _type, _rep, _arg1, _arg2) \
@@ -106,6 +108,7 @@ static s32_t spiffs_rewrite_index(spiffs *fs, spiffs_obj_id obj_id, spiffs_span_
   } else {
     // calc entry in index
     entry = SPIFFS_OBJ_IX_ENTRY(fs, data_spix);
+
   }
   // load index
   res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
@@ -440,9 +443,9 @@ static s32_t spiffs_lookup_check_validate(spiffs *fs, spiffs_obj_id lu_obj_id, s
 }
 
 static s32_t spiffs_lookup_check_v(spiffs *fs, spiffs_obj_id obj_id, spiffs_block_ix cur_block, int cur_entry,
-    u32_t user_data, void *user_p) {
-  (void)user_data;
-  (void)user_p;
+    const void *user_const_p, void *user_var_p) {
+  (void)user_const_p;
+  (void)user_var_p;
   s32_t res = SPIFFS_OK;
   spiffs_page_header p_hdr;
   spiffs_page_ix cur_pix = SPIFFS_OBJ_LOOKUP_ENTRY_TO_PIX(fs, cur_block, cur_entry);
@@ -873,11 +876,11 @@ static int spiffs_object_index_search(spiffs *fs, spiffs_obj_id obj_id) {
 }
 
 static s32_t spiffs_object_index_consistency_check_v(spiffs *fs, spiffs_obj_id obj_id, spiffs_block_ix cur_block,
-    int cur_entry, u32_t user_data, void *user_p) {
-  (void)user_data;
+    int cur_entry, const void *user_const_p, void *user_var_p) {
+  (void)user_const_p;
   s32_t res_c = SPIFFS_VIS_COUNTINUE;
   s32_t res = SPIFFS_OK;
-  u32_t *log_ix = (u32_t *)user_p;
+  u32_t *log_ix = (u32_t*)user_var_p;
   spiffs_obj_id *obj_table = (spiffs_obj_id *)fs->work;
 
   CHECK_CB(fs, SPIFFS_CHECK_INDEX, SPIFFS_CHECK_PROGRESS,
@@ -977,8 +980,8 @@ s32_t spiffs_object_index_consistency_check(spiffs *fs) {
   memset(fs->work, 0, SPIFFS_CFG_LOG_PAGE_SZ(fs));
   u32_t obj_id_log_ix = 0;
   CHECK_CB(fs, SPIFFS_CHECK_INDEX, SPIFFS_CHECK_PROGRESS, 0, 0);
-  res = spiffs_obj_lu_find_entry_visitor(fs, 0, 0, 0, 0, spiffs_object_index_consistency_check_v, 0, &obj_id_log_ix,
-      0, 0);
+  res = spiffs_obj_lu_find_entry_visitor(fs, 0, 0, 0, 0, spiffs_object_index_consistency_check_v, &obj_id_log_ix,
+      0, 0, 0);
   if (res == SPIFFS_VIS_END) {
     res = SPIFFS_OK;
   }
@@ -989,3 +992,4 @@ s32_t spiffs_object_index_consistency_check(spiffs *fs) {
   return res;
 }
 
+#endif // !SPIFFS_READ_ONLY
