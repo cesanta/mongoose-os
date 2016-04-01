@@ -208,6 +208,7 @@ static void trigger_event(struct v7 *v7, struct cb_info_holder *list,
   struct cb_info *cb = list->head, *prev = NULL;
   while (cb != NULL) {
     if (strcmp(cb->name, name) == 0) {
+      LOG(LL_VERBOSE_DEBUG, ("Triggered `%s`", name));
       sj_invoke_cb2(v7, cb->cbv, arg1, arg2);
 
       if (cb->trigger_once) {
@@ -240,7 +241,6 @@ static void free_obj_cb_info_chain(struct v7 *v7, v7_val_t obj) {
 
 static void free_conn_user_data(struct conn_user_data *ud) {
   if (!v7_is_undefined(ud->sock_obj)) {
-    free_obj_cb_info_chain(ud->v7, ud->sock_obj);
     v7_disown(ud->v7, &ud->sock_obj);
   }
 
@@ -488,20 +488,15 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
        * Accepted connection shares user_data with listener, that isn't
        * suitable for us in case of TCP
        */
-      LOG(LL_DEBUG, ("New connection: %p", c));
+      LOG(LL_VERBOSE_DEBUG, ("New connection: %p", c));
       if (c->flags & MG_F_UDP) {
-/*
- * Mongoose emits MG_EV_ACCEPT for UDP "connection"
- * if there isn't existing "connection" for this sender
- * But right after it sends MG_EV_RECV, so, do nothing here
- * Also, it is unclear when we have to close this connection
- * TODO(alashkin): find the way to close that connection and
- * don't break mongoose. After that enable close below.
- */
-#if 0
+        /*
+         * Mongoose emits MG_EV_ACCEPT for UDP "connection"
+         * if there isn't existing "connection" for this sender
+         * But right after it sends MG_EV_RECV, so, here we just copy user_data
+         */
         c->user_data =
             create_conn_user_data(ud->v7, ud->sock_obj, UD_F_NO_OBJECT_CONN, 0);
-#endif
       } else {
         /*
          * For TCP we create new Socket object and send it to callback
@@ -517,7 +512,7 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     }
     case MG_EV_SEND: {
       if (ud->flags & UD_F_FOREIGN_SOCK) {
-        LOG(LL_DEBUG, ("Restoring socket for conn %p", c));
+        LOG(LL_VERBOSE_DEBUG, ("Restoring socket for conn %p", c));
         c->sock = ud->original_sock;
         ((struct conn_user_data *) c->listener->user_data)->child_count--;
         c->listener = NULL;
@@ -544,6 +539,7 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         v7_set(ud->v7, rinfo, "address", ~0, v7_mk_string(ud->v7, addr, ~0, 1));
         v7_set(ud->v7, rinfo, "port", ~0,
                v7_mk_number(ntohs(c->sa.sin.sin_port)));
+        LOG(LL_VERBOSE_DEBUG, ("Triggering `message`"));
         trigger_event(
             ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_message,
             v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1), rinfo);
@@ -556,10 +552,17 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
       mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
       ud->last_accessed = time(NULL);
+      if (ud->flags & UD_F_NO_OBJECT_CONN) {
+        /*
+         * This is "fake" incoming udp connection, so close it. It decreases
+         * performance, but decreases memory footprint as well
+         */
+        c->flags |= MG_F_SEND_AND_CLOSE;
+      }
       break;
     }
     case MG_EV_CLOSE: {
-      LOG(LL_DEBUG, ("Conn %p is closed", c));
+      LOG(LL_VERBOSE_DEBUG, ("Conn %p is closed", c));
       if (!(ud->flags & (UD_F_NO_OBJECT_CONN | UD_F_FOREIGN_SOCK))) {
         /*
          * Temporary connections shouldn't trigger `close` on close
@@ -574,6 +577,7 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                         v7_mk_undefined(), v7_mk_undefined());
         }
 
+        free_obj_cb_info_chain(ud->v7, ud->sock_obj);
         v7_set(ud->v7, ud->sock_obj, s_conn_prop, ~0, v7_mk_undefined());
       }
 
@@ -633,7 +637,7 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   int tmp = asprintf(&addr, "tcp://%s:%d", host, port);
   (void) tmp; /* Shutup compiler */
 
-  LOG(LL_DEBUG, ("Trying to connect to %s", addr));
+  LOG(LL_VERBOSE_DEBUG, ("Trying to connect to %s", addr));
 
   c = mg_connect(&sj_mgr, addr, mg_ev_handler);
   if (c == NULL) {
@@ -682,6 +686,7 @@ clean:
   }
 
   if (ud != NULL) {
+    free_obj_cb_info_chain(ud->v7, ud->sock_obj);
     free_conn_user_data(ud);
   }
 
@@ -768,6 +773,7 @@ clean:
   }
 
   if (ud != NULL) {
+    free_obj_cb_info_chain(ud->v7, ud->sock_obj);
     free_conn_user_data(ud);
   }
 
@@ -874,6 +880,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
   int tmp = asprintf(&mg_addr, "udp://%s:%d", address, port);
   (void) tmp; /* Shut up compiler about asprintf */
 
+  LOG(LL_DEBUG, ("Connecting to %s", mg_addr));
   c = mg_connect(&sj_mgr, mg_addr, mg_ev_handler);
 
   if (c == NULL) {
@@ -912,8 +919,9 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
     c->sock = parent_c->sock;
     c->listener = parent_c;
     ((struct conn_user_data *) parent_c->user_data)->child_count++;
-    LOG(LL_DEBUG, ("Created temp conn %p (parent %p)", c, parent_c));
+    LOG(LL_VERBOSE_DEBUG, ("Created temp conn %p (parent %p)", c, parent_c));
   } else {
+    LOG(LL_VERBOSE_DEBUG, ("Using connection %p", c));
     ud = create_conn_user_data(v7, v7_get_this(v7), 0, 0);
     v7_set(v7, v7_get_this(v7), s_conn_prop, ~0, v7_mk_foreign(c));
   }
@@ -924,9 +932,6 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
   if (rcode != V7_OK) {
     goto clean;
   }
-
-  (void) offset;
-  (void) usr_len;
 
   mg_send(c, (char *) buf + offset, usr_len ? usr_len : size);
 
