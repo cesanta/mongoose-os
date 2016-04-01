@@ -5,16 +5,17 @@
 
 /* Standard libc interface to TI SimpleLink FS. */
 
+#if CS_PLATFORM == CS_P_CC3200 && defined(CC3200_FS_SLFS)
+
 #include "cc3200_fs_slfs.h"
 
 #include <errno.h>
-#include <fcntl.h>
 
-#include <common/cs_dbg.h>
+#include <inc/hw_types.h>
+#include <simplelink/include/simplelink.h>
+#include <simplelink/include/fs.h>
 
-#include "hw_types.h"
-#include "simplelink.h"
-#include "fs.h"
+#include "common/cs_dbg.h"
 
 extern int set_errno(int e);  /* From cc3200_fs.c */
 
@@ -182,3 +183,5 @@ int fs_slfs_unlink(const char *filename) {
 int fs_slfs_rename(const char *from, const char *to) {
   return set_errno(ENOTSUP);
 }
+
+#endif /* CS_PLATFORM == CS_P_CC3200 && defined(CC3200_FS_SLFS) */

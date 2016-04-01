@@ -47,7 +47,7 @@ V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE \
               -DV7_ENABLE__File__list=1
 
-MONGOOSE_FEATURES = $(MG_FEATURES_TINY) \
+MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_LOCALS \
                     -DMG_DISABLE_FILESYSTEM
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
@@ -80,9 +80,6 @@ SJ_SRCS = sj_gpio_js.c \
           v7.c
 VPATH += $(SMARTJS_PATH)/src $(V7_PATH)
 
-CC3200_PLATFORM_SRCS = cc3200_fs.c cc3200_fs_slfs.c cc3200_libc.c cc3200_socket.c
-VPATH += $(COMMON_PATH)/platforms/cc3200
-
 SPIFFS_SRCS = $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 IPATH += $(SPIFFS_PATH)
 VPATH += $(SPIFFS_PATH)
@@ -101,8 +98,7 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
 
 APP_SRCS = $(notdir $(wildcard src/*.c)) mongoose.c \
-           $(SJ_SRCS) $(CC3200_PLATFORM_SRCS) $(SPIFFS_SRCS) \
-           $(SDK_SRCS)
+           $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS)
 
 clean:
 	@rm -rf $(BUILD_DIR) $(wildcard *~)

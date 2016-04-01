@@ -3,24 +3,33 @@
  * All rights reserved
  */
 
-#include <reent.h>
+#if CS_PLATFORM == CS_P_CC3200
+
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+
+#ifndef __TI_COMPILER_VERSION__
+#include <reent.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <unistd.h>
+#endif
 
-#include "hw_types.h"
-#include "hw_memmap.h"
-#include "prcm.h"
-#include "rom.h"
-#include "rom_map.h"
-#include "uart.h"
-#include "utils.h"
+#include <inc/hw_types.h>
+#include <inc/hw_memmap.h>
+#include <driverlib/prcm.h>
+#include <driverlib/rom.h>
+#include <driverlib/rom_map.h>
+#include <driverlib/uart.h>
+#include <driverlib/utils.h>
 
 #define CONSOLE_UART UARTA0_BASE
 
+#ifndef __TI_COMPILER_VERSION__
 int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
+#else
+int gettimeofday(struct timeval *tp, void *tzp) {
+#endif
   unsigned long long r1 = 0, r2;
   /* Achieve two consecutive reads of the same value. */
   do {
@@ -76,3 +85,5 @@ int _isatty(int fd) {
   /* 0, 1 and 2 are TTYs. */
   return fd < 2;
 }
+
+#endif /* CS_PLATFORM == CS_P_CC3200 */

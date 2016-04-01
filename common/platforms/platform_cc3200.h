@@ -10,12 +10,14 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-#ifndef __TI_COMPILER_VERSION__
-#include <fcntl.h>
-#endif
 #include <inttypes.h>
 #include <stdint.h>
 #include <time.h>
+
+#ifndef __TI_COMPILER_VERSION__
+#include <fcntl.h>
+#include <sys/time.h>
+#endif
 
 #define MG_SOCKET_SIMPLELINK 1
 #define MG_DISABLE_SOCKETPAIR 1
@@ -23,7 +25,7 @@
 #define MG_DISABLE_POPEN 1
 #define MG_DISABLE_CGI 1
 
-#include <simplelink.h>
+#include <simplelink/include/simplelink.h>
 
 #define SOMAXCONN 8
 
@@ -120,7 +122,9 @@
 #define IP_DROP_MEMBERSHIP                  SL_IP_DROP_MEMBERSHIP
 
 #define socklen_t                           SlSocklen_t
+#ifdef __TI_COMPILER_VERSION__
 #define timeval                             SlTimeval_t
+#endif
 #define sockaddr                            SlSockAddr_t
 #define in6_addr                            SlIn6Addr_t
 #define sockaddr_in6                        SlSockAddrIn6_t
@@ -181,6 +185,9 @@ int gettimeofday(struct timeval *t, void *tz);
 
 long int random(void);
 
+#undef select
+#define select(nfds, rfds, wfds, efds, tout) \
+  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *) (tout))
 
 /* TI's libc does not have stat & friends, add them. */
 #ifdef __TI_COMPILER_VERSION__

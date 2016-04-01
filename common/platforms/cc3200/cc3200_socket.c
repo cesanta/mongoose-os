@@ -3,12 +3,14 @@
  * All rights reserved
  */
 
+#if CS_PLATFORM == CS_P_CC3200
+
 #include <errno.h>
 #include <stdio.h>
 
 #include "common/platform.h"
 
-#include "netapp.h"
+#include <simplelink/include/netapp.h>
 
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
   int res;
@@ -44,3 +46,5 @@ int inet_pton(int af, const char *src, void *dst) {
   *(db + 3) = a0;
   return 1;
 }
+
+#endif /* CS_PLATFORM == CS_P_CC3200 */

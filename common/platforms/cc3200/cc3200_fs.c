@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#if CS_PLATFORM == CS_P_CC3200
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,14 +13,14 @@
 #include <file.h>
 #endif
 
-#include "hw_types.h"
-#include "hw_memmap.h"
-#include "rom.h"
-#include "rom_map.h"
-#include "uart.h"
+#include <inc/hw_types.h>
+#include <inc/hw_memmap.h>
+#include <driverlib/rom.h>
+#include <driverlib/rom_map.h>
+#include <driverlib/uart.h>
 
-#include <common/cs_dbg.h>
-#include <common/platform.h>
+#include "common/cs_dbg.h"
+#include "common/platform.h"
 
 #ifdef CC3200_FS_SPIFFS
 #include "cc3200_fs_spiffs.h"
@@ -351,3 +353,5 @@ int cc3200_fs_init() {
   return 1;
 #endif
 }
+
+#endif /* CS_PLATFORM == CS_P_CC3200 */
