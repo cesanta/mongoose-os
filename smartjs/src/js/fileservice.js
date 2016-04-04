@@ -6,12 +6,6 @@ var FileService = function(clubby) {
     if (cmd.args.name === undefined) {
       throw "Need name";
     }
-    var f = File.open(cmd.args.name);
-    if (f === null) {
-      throw "Failed to open";
-    }
-    var data = f.readAll();
-    f.close();
-    return data;
+    return File.read(cmd.args.name);
   });
 };

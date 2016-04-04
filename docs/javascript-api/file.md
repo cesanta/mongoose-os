@@ -10,13 +10,14 @@ File API is a wrapper around standard C calls `fopen()`, `fclose()`,
   not specified, mode `rb` is used, i.e. file is opened in read-only mode.
   Return an opened file object, or null on error. Example: `var f =
   File.open('/etc/passwd'); f.close();`
+- `File.read(file_name) -> string`: Reads a whole file into a string.
+- `File.write(file_name, body) -> boolean`: Writes a string into a new file,
+  creating if it doesn't exist, or truncating it otherwise.
 - `file_obj.close() -> undefined`: Close opened file object.  NOTE: it is
   user's responsibility to close all opened file streams. V7 does not do that
   automatically.
 - `file_obj.read() -> string`: Read portion of data from an opened file stream.
   Return string with data, or empty string on EOF or error.
-- `file_obj.readAll() -> string`: Same as `read()`, but keeps reading data
-  until EOF.
 - `file_obj.write(str) -> num_bytes_written`: Write string `str` to the opened
   file object. Return number of bytes written.
 - `File.rename(old_name, new_name) -> errno`: Rename file `old_name` to

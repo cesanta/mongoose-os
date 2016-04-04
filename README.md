@@ -1,6 +1,6 @@
 # Smart.js platform
 
-[Smart.js] (http://hubs.ly/H02z5Hl0) is a generic, hardware independent, full-stack Internet of Things software platform. It comprises of both firmware and a cloud component. Smart.js solves problems of reliability, scalability, security and remote management which are common to all verticals, be it industrial automation, healthcare, automotive, home automation and others.
+Smart.js is a generic, hardware independent, full-stack Internet of Things software platform. It comprises of both firmware and a cloud component. Smart.js solves problems of reliability, scalability, security and remote management which are common to all verticals, be it industrial automation, healthcare, automotive, home automation and others.
 Smart.js is available now for ESP8266 and allows you to code in JavaScript or C/C++.
 
 Take a look at 2 minute video that shows Smart.js in action:
@@ -11,17 +11,16 @@ Take a look at 2 minute video that shows Smart.js in action:
 
 # Documentation and Downloads
 
-- [Smart.js Developer Centre - User Guide and API reference](https://docs.cesanta.com/smartjs/latest/)
+- [Smart.js Developer Centre - User Guide and API reference](https://docs.cesanta.com/smartjs)
 - [Release - released firmware builds](https://github.com/cesanta/smart.js/releases/latest)
 - [Flashnchips - multiplatform device flashing tool](https://github.com/cesanta/fnc/releases/latest)
 - Current development Smart.js firmware builds:
    - [smartjs-esp8266-last.zip](https://backend.cesanta.com/devel/smartjs-esp8266-last.zip)
-   - or [download here] (http://hubs.ly/H02z5Hs0)
 
 # Support
 - [Support Forum - Ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/smart-js)
 - [Chat - Visit www.cesanta.com for our live chat] (https://www.cesanta.com/)
-- [Commercial one-to-one support] (https://www.cesanta.com/services-support) - Available to all commercial license holders
+- [Commercial one-to-one support - Available to all commercial license holders
 
 
 # Licensing
@@ -29,7 +28,7 @@ Take a look at 2 minute video that shows Smart.js in action:
 Smart.js is released under commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
 
 Commercial Projects:
-Once your project becomes commercialised GPLv2 licensing dictates that you need to either open your source fully or purchase a commercial license. Cesanta offer full, royalty-free commercial licenses without any GPL restrictions. If your needs require a custom license, we’d be happy to work on a solution with you. [Contact us for pricing.] (http://hubs.ly/H02z61W0)
+Once your project becomes commercialised GPLv2 licensing dictates that you need to either open your source fully or purchase a commercial license. Cesanta offer full, royalty-free commercial licenses without any GPL restrictions. If your needs require a custom license, we’d be happy to work on a solution with you. [Contact us for pricing.] (https://www.cesanta.com/contact)
 
 Prototyping:
 While your project is still in prototyping stage and not for sale, you can use Smart.js’ open source code without license restrictions.
