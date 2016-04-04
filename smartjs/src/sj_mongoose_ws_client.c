@@ -13,6 +13,7 @@
 #include "smartjs/src/sj_v7_ext.h"
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_common.h"
+#include "smartjs/src/sj_utils.h"
 
 #define WEBSOCKET_OPEN v7_mk_number(1)
 #define WEBSOCKET_CLOSED v7_mk_number(2)
@@ -76,8 +77,13 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 * url: url where to connect to
 * protocol: websocket subprotocol
 *
-* Example:
-* ws = new WebSocket('wss://localhost:1234', 'my_protocol', 'ExtraHdr: hi\n');
+* Examples:
+* ws = new WebSocket('ws://localhost:1234', 'my_protocol',
+*                    'ExtraHdr: hi\n');
+*
+* wss = new WebSocket('wss://localhost:1234', 'my_protocol',
+*                    'ExtraHdr: hi\n, {ssl_ca_file='my_ca.pem'});
+*
 * ws.onopen = function(ev) {
 *     print("ON OPEN", ev);
 * }
@@ -99,15 +105,28 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   struct mg_connection *nc;
   struct user_data *ud;
+  struct mg_connect_opts copts;
+#ifdef MG_ENABLE_SSL
+  int force_ssl;
+#endif
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t urlv = v7_arg(v7, 0);
   v7_val_t subprotov = v7_arg(v7, 1);
   v7_val_t ehv = v7_arg(v7, 2);
+  v7_val_t opts = v7_arg(v7, 3);
+
   size_t n;
   (void) res;
 
+  memset(&opts, 0, sizeof(opts));
+
   if (!v7_is_string(urlv)) {
     rcode = v7_throwf(v7, "Error", "invalid url string");
+    goto clean;
+  }
+
+  if (!v7_is_undefined(opts) && !v7_is_object(opts)) {
+    rcode = v7_throwf(v7, "TypeError", "options must be an object");
     goto clean;
   }
 
@@ -123,7 +142,15 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
       extra_headers = v7_get_string_data(v7, &ehv, &n);
     }
 
-    nc = mg_connect_ws(&sj_mgr, ws_ev_handler, url, proto, extra_headers);
+#ifdef MG_ENABLE_SSL
+    force_ssl = (strlen(url) > 6) && (strncmp(url, "wss://", 6) == 0);
+    if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
+      goto clean;
+    }
+#endif
+
+    nc = mg_connect_ws_opt(&sj_mgr, ws_ev_handler, copts, url, proto,
+                           extra_headers);
     if (nc == NULL) {
       rcode = v7_throwf(v7, "Error", "cannot create connection");
       goto clean;

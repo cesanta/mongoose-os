@@ -77,7 +77,7 @@ SJ_SRCS = sj_gpio_js.c \
           sj_v7_ext.c \
           sj_wifi_js.c \
           device_config.c sj_config.c $(notdir $(SYS_CONFIG_C)) \
-          v7.c
+          v7.c sj_utils.c
 VPATH += $(SMARTJS_PATH)/src $(V7_PATH)
 
 SPIFFS_SRCS = $(notdir $(wildcard $(SPIFFS_PATH)/*.c))

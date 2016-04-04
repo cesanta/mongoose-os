@@ -8,8 +8,9 @@
 #include "mongoose/mongoose.h"
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_v7_ext.h"
-#include "sj_common.h"
-#include "device_config.h"
+#include "smartjs/src/sj_common.h"
+#include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_utils.h"
 
 /*
  * Mongoose connection's user data that is used by the JavaScript HTTP
@@ -570,6 +571,9 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   struct mg_connection *c;
   struct user_data *ud;
   struct mg_connect_opts copts;
+#ifdef MG_ENABLE_SSL
+  int force_ssl;
+#endif
 
   memset(&copts, 0, sizeof(copts));
   /*
@@ -598,10 +602,6 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
   v7_val_t v_m = v7_get(v7, opts, "method", ~0);
   v7_val_t v_hdrs = v7_get(v7, opts, "headers", ~0);
-  v7_val_t v_use_ssl = v7_get(v7, opts, "use_ssl", ~0);
-  v7_val_t v_ca_cert = v7_get(v7, opts, "ssl_ca_cert", ~0);
-  v7_val_t v_cert = v7_get(v7, opts, "ssl_cert", ~0);
-  v7_val_t v_server_name = v7_get(v7, opts, "ssl_server_name", ~0);
 
   /* Perform options validation and set defaults if needed */
   int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
@@ -609,28 +609,13 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   const char *uri = v7_is_string(v_uri) ? v7_to_cstring(v7, &v_uri) : "/";
   const char *method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
 
-  if (!v7_is_undefined(v_ca_cert) && !v7_is_string(v_ca_cert)) {
-    rcode = v7_throwf(v7, "TypeError", "ssl_ca_cert must be a string");
+#ifdef MG_ENABLE_SSL
+  force_ssl = (strlen(host) > 8) && (strncmp(host, "https://", 8) == 0);
+  if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
     goto clean;
   }
-  if (!v7_is_undefined(v_cert) && !v7_is_string(v_cert)) {
-    rcode = v7_throwf(v7, "TypeError", "ssl_cert must be a string");
-    goto clean;
-  }
-  if (!v7_is_undefined(v_server_name) && !v7_is_string(v_server_name)) {
-    rcode = v7_throwf(v7, "TypeError", "ssl_cerver_name must be a string");
-    goto clean;
-  }
+#endif
 
-  copts.ssl_ca_cert = v7_to_cstring(v7, &v_ca_cert);
-  copts.ssl_cert = v7_to_cstring(v7, &v_cert);
-  copts.ssl_server_name = v7_to_cstring(v7, &v_server_name);
-
-  if (v7_is_boolean(v_use_ssl) && v7_to_boolean(v_use_ssl) != 0 &&
-      copts.ssl_ca_cert == NULL) {
-    /* Defaults to configuration */
-    copts.ssl_ca_cert = get_cfg()->tls.ca_file;
-  }
   /* Compose address like host:port */
   snprintf(addr, sizeof(addr), "%s:%d", host, port);
 
