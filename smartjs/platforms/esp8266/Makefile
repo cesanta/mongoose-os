@@ -24,7 +24,7 @@ all clean:
 			if [ -d /cesanta/krypton ] ; then make -C /cesanta/krypton krypton.c ; fi && \
 			if [ -d /cesanta/mongoose ] ; then make -C /cesanta/mongoose mongoose.c mongoose.h ; fi && \
 			cd $(APP_PATH) && \
-			make -f Makefile.build APP=$(APP) REPO_PATH=$(REPO_PATH) $@ -$(MAKEFLAGS) \
+			make -f Makefile.build APP=$(APP) REPO_PATH=/cesanta $@ -$(MAKEFLAGS) \
 				&& python $(SJS_ESP_PATH)/tools/showbreakdown.py \
 		"
 
