@@ -9,6 +9,7 @@
 #include "smartjs/src/sj_mongoose.h"
 #include "smartjs/src/sj_v7_ext.h"
 #include "sj_common.h"
+#include "device_config.h"
 
 /*
  * Mongoose connection's user data that is used by the JavaScript HTTP
@@ -147,12 +148,19 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 }
 
 static enum v7_err start_http_server(struct v7 *v7, const char *addr,
-                                     v7_val_t obj) {
+                                     v7_val_t obj, const char *ca_cert,
+                                     const char *cert) {
   enum v7_err rcode = V7_OK;
   struct mg_connection *c;
   struct user_data *ud;
+  struct mg_bind_opts opts;
 
-  c = mg_bind(&sj_mgr, addr, http_ev_handler);
+  memset(&opts, 0, sizeof(opts));
+
+  opts.ssl_ca_cert = ca_cert;
+  opts.ssl_cert = cert;
+
+  c = mg_bind_opt(&sj_mgr, addr, http_ev_handler, opts);
   if (c == NULL) {
     rcode = v7_throwf(v7, "Error", "Cannot bind");
     goto clean;
@@ -182,7 +190,7 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
   const char *url;
 
   if (!v7_is_string(url_v)) {
-    rcode = v7_throwf(v7, "Error", "URL must be a string");
+    rcode = v7_throwf(v7, "TypeError", "URL must be a string");
     goto clean;
   }
 
@@ -442,19 +450,49 @@ clean:
   return rcode;
 }
 
+/* JS signature: listen(addr, [options]) */
 SJ_PRIVATE enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   char buf[50], *p = buf;
+  const char *ca_cert = NULL, *cert = NULL;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t arg0 = v7_arg(v7, 0);
+  v7_val_t opts = v7_arg(v7, 1);
 
   if (!v7_is_number(arg0) && !v7_is_string(arg0)) {
-    rcode = v7_throwf(v7, "Error", "Function expected");
+    rcode = v7_throwf(v7, "TypeError", "Function expected");
     goto clean;
   }
 
+  if (!v7_is_undefined(opts) && !v7_is_object(opts)) {
+    rcode = v7_throwf(v7, "TypeError", "Options must be an object");
+    goto clean;
+  }
+
+  if (!v7_is_undefined(opts)) {
+    v7_val_t ca_cert_v = v7_get(v7, opts, "ssl_ca_cert", ~0);
+    v7_val_t cert_v = v7_get(v7, opts, "ssl_cert", ~0);
+    if (!v7_is_undefined(ca_cert_v) && !v7_is_string(ca_cert_v)) {
+      rcode = v7_throwf(v7, "TypeError", "ca_cert must be a string");
+      goto clean;
+    }
+
+    if (!v7_is_undefined(cert_v) && !v7_is_string(cert_v)) {
+      rcode = v7_throwf(v7, "TypeError", "cert must be a string");
+      goto clean;
+    }
+
+    if (!v7_is_undefined(ca_cert_v)) {
+      ca_cert = v7_to_cstring(v7, &ca_cert_v);
+    }
+
+    if (!v7_is_undefined(cert_v)) {
+      cert = v7_to_cstring(v7, &cert_v);
+    }
+  }
+
   p = v7_stringify(v7, arg0, buf, sizeof(buf), 0);
-  rcode = start_http_server(v7, p, this_obj);
+  rcode = start_http_server(v7, p, this_obj, ca_cert, cert);
   if (rcode != V7_OK) {
     goto clean;
   }
@@ -531,7 +569,9 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   char addr[200];
   struct mg_connection *c;
   struct user_data *ud;
+  struct mg_connect_opts copts;
 
+  memset(&copts, 0, sizeof(copts));
   /*
    * Determine type of provided `opts`, and if it's a string, then parse
    * it to object
@@ -558,6 +598,10 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
   v7_val_t v_m = v7_get(v7, opts, "method", ~0);
   v7_val_t v_hdrs = v7_get(v7, opts, "headers", ~0);
+  v7_val_t v_use_ssl = v7_get(v7, opts, "use_ssl", ~0);
+  v7_val_t v_ca_cert = v7_get(v7, opts, "ssl_ca_cert", ~0);
+  v7_val_t v_cert = v7_get(v7, opts, "ssl_cert", ~0);
+  v7_val_t v_server_name = v7_get(v7, opts, "ssl_server_name", ~0);
 
   /* Perform options validation and set defaults if needed */
   int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
@@ -565,14 +609,37 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   const char *uri = v7_is_string(v_uri) ? v7_to_cstring(v7, &v_uri) : "/";
   const char *method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
 
+  if (!v7_is_undefined(v_ca_cert) && !v7_is_string(v_ca_cert)) {
+    rcode = v7_throwf(v7, "TypeError", "ssl_ca_cert must be a string");
+    goto clean;
+  }
+  if (!v7_is_undefined(v_cert) && !v7_is_string(v_cert)) {
+    rcode = v7_throwf(v7, "TypeError", "ssl_cert must be a string");
+    goto clean;
+  }
+  if (!v7_is_undefined(v_server_name) && !v7_is_string(v_server_name)) {
+    rcode = v7_throwf(v7, "TypeError", "ssl_cerver_name must be a string");
+    goto clean;
+  }
+
+  copts.ssl_ca_cert = v7_to_cstring(v7, &v_ca_cert);
+  copts.ssl_cert = v7_to_cstring(v7, &v_cert);
+  copts.ssl_server_name = v7_to_cstring(v7, &v_server_name);
+
+  if (v7_is_boolean(v_use_ssl) && v7_to_boolean(v_use_ssl) != 0 &&
+      copts.ssl_ca_cert == NULL) {
+    /* Defaults to configuration */
+    copts.ssl_ca_cert = get_cfg()->tls.ca_file;
+  }
   /* Compose address like host:port */
   snprintf(addr, sizeof(addr), "%s:%d", host, port);
 
   /*
    * Try to connect, passing `http_ev_handler` as the callback, which will
    * call provided JavaScript function (we'll set it in user data below).
+   * TODO(alashkin): change mg_connect_opt to mg_connect_http_opt
    */
-  if ((c = mg_connect(&sj_mgr, addr, http_ev_handler)) == NULL) {
+  if ((c = mg_connect_opt(&sj_mgr, addr, http_ev_handler, copts)) == NULL) {
     rcode = v7_throwf(v7, "Error", "Cannot connect");
     goto clean;
   }
