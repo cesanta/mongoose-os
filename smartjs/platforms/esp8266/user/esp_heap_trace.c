@@ -243,6 +243,12 @@ static void flush_log_items(void) {
     fprintf(stderr, "\nhlog_param:{\"heap_start\":0x%x, \"heap_end\":0x%x}\n",
             (unsigned int) (&_heap_start), (unsigned int) ESP_DRAM0_END);
 
+    /* fprintf above may have use malloc and already flushed the log.
+     * Ideally, we should not be touching heap while flushing the log,
+     * but this will do as a workaround.
+     * As a reasult, the header is printed twice. */
+    if (plog == NULL) return;
+
     for (i = 0; i < plog->items_cnt; i++) {
       echo_log_item(&plog->items[i]);
     }
