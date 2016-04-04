@@ -750,7 +750,7 @@ int v7_is_string(v7_val_t v);
 /*
  * Returns a pointer to the string stored in `v7_val_t`.
  *
- * String length returned in `len`.
+ * String length returned in `len`. Returns NULL if the value is not a string.
  *
  * JS strings can contain embedded NUL chars and may or may not be NUL
  * terminated.

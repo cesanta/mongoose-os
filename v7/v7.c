@@ -3229,7 +3229,7 @@ int v7_is_string(v7_val_t v);
 /*
  * Returns a pointer to the string stored in `v7_val_t`.
  *
- * String length returned in `len`.
+ * String length returned in `len`. Returns NULL if the value is not a string.
  *
  * JS strings can contain embedded NUL chars and may or may not be NUL
  * terminated.
@@ -16411,7 +16411,10 @@ const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
   const char *p = NULL;
   int llen;
 
-  assert(v7_is_string(*v));
+  if (!v7_is_string(*v)) {
+    *sizep = 0;
+    return NULL;
+  }
 
   if (tag == V7_TAG_STRING_I) {
     p = GET_VAL_NAN_PAYLOAD(*v) + 1;
@@ -16470,6 +16473,7 @@ const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
 const char *v7_to_cstring(struct v7 *v7, v7_val_t *value) {
   size_t size;
   const char *s = v7_get_string_data(v7, value, &size);
+  if (s == NULL) return NULL;
   if (s[size] != 0 || strlen(s) != size) {
     return NULL;
   }
