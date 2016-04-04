@@ -91,7 +91,8 @@ void sjs_init(void *dummy) {
   }
 
   init_v7(&dummy);
-  /* disable GC during further initialization */
+
+  /* Disable GC during JS API initialization. */
   v7_set_gc_enabled(v7, 0);
 
   sj_gpio_init(v7);
@@ -130,7 +131,7 @@ void sjs_init(void *dummy) {
   }
   LOG(LL_INFO, ("App init done"));
 
-  /* SJS initialized, enable GC back, and trigger it */
+  /* SJS initialized, enable GC back, and trigger it. */
   v7_set_gc_enabled(v7, 1);
   v7_gc(v7, 1);
 

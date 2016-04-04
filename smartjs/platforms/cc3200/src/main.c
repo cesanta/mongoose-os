@@ -101,6 +101,10 @@ static void v7_task(void *arg) {
 
   mongoose_init();
   v7 = s_v7 = init_v7(&v7);
+
+  /* Disable GC during JS API initialization. */
+  v7_set_gc_enabled(v7, 0);
+
   sj_timers_api_setup(v7);
   sj_v7_ext_api_setup(v7);
   sj_init_sys(v7);
@@ -117,6 +121,10 @@ static void v7_task(void *arg) {
 
   /* Common config infrastructure. Mongoose & v7 must be initialized. */
   init_device(v7);
+
+  /* SJS initialized, enable GC back, and trigger it */
+  v7_set_gc_enabled(v7, 1);
+  v7_gc(v7, 1);
 
   v7_val_t res;
   if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {

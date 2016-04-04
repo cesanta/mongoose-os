@@ -68,6 +68,9 @@ static void run_init_script(struct v7 *v7) {
 }
 
 static void pre_freeze_init(struct v7 *v7) {
+  /* Disable GC during JS API initialization. */
+  v7_set_gc_enabled(v7, 0);
+
   sj_common_api_setup(v7);
 }
 
@@ -81,6 +84,11 @@ static void pre_init(struct v7 *v7) {
   sj_init_uart(v7);
 
   init_device(v7);
+
+  /* SJS initialized, enable GC back, and trigger it. */
+  v7_set_gc_enabled(v7, 1);
+  v7_gc(v7, 1);
+
   run_init_script(v7);
 }
 
