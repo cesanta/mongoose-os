@@ -1032,8 +1032,23 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
 static int do_http_connect(const char *url) {
   LOG(LL_DEBUG, ("Connecting to: %s", url));
 
-  struct mg_connection *c =
-      mg_connect_http(&sj_mgr, fw_download_ev_handler, url, NULL, NULL);
+  struct mg_connect_opts opts;
+  memset(&opts, 0, sizeof(opts));
+
+#ifdef MG_ENABLE_SSL
+  if (strlen(url) > 8 && strncmp(url, "https://", 8) == 0) {
+    opts.ssl_server_name = get_cfg()->update.ssl_server_name;
+    opts.ssl_ca_cert = get_cfg()->update.ssl_ca_file;
+    if (opts.ssl_ca_cert == NULL) {
+      /* Use global CA file if updater specific one is not set */
+      opts.ssl_ca_cert = get_cfg()->tls.ca_file;
+    }
+    opts.ssl_cert = get_cfg()->update.ssl_client_cert_file;
+  }
+#endif
+
+  struct mg_connection *c = mg_connect_http_opt(&sj_mgr, fw_download_ev_handler,
+                                                opts, url, NULL, NULL);
 
   if (c == NULL) {
     LOG(LL_ERROR, ("Failed to connect to %s", url));
@@ -1041,17 +1056,6 @@ static int do_http_connect(const char *url) {
   }
 
   c->user_data = s_ctx;
-
-#ifdef SSL_KRYPTON
-  if (memcmp(url, "https", 5) == 0 && get_cfg()->tls.enable) {
-    char *ca_file = get_cfg()->tls.ca_file;
-    char *server_name = get_cfg()->tls.server_name;
-    mg_set_ssl(c, NULL, ca_file);
-    if (server_name != NULL) {
-      SSL_CTX_kr_set_verify_name(c->ssl_ctx, server_name);
-    }
-  }
-#endif
 
   return 1;
 }

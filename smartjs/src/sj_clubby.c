@@ -114,6 +114,9 @@ static void free_clubby(struct clubby *clubby) {
    * TODO(alashkin): free queues, responses etc and find the way
    * to invoke free_clubby on Clubby object destruction
    */
+  free(clubby->cfg.ssl_server_name);
+  free(clubby->cfg.ssl_ca_file);
+  free(clubby->cfg.ssl_client_cert_file);
   free(clubby->cfg.device_psk);
   free(clubby->cfg.device_id);
   free(clubby->cfg.server_address);
@@ -662,8 +665,9 @@ static void clubby_cb(struct clubby_event *evt) {
 
 static void clubby_connect(struct clubby *clubby) {
   clubby->session_flags &= ~SF_MANUAL_DISCONNECT;
-  struct mg_connection *nc =
-      clubby_proto_connect(&sj_mgr, clubby->cfg.server_address, clubby);
+  struct mg_connection *nc = clubby_proto_connect(
+      &sj_mgr, clubby->cfg.server_address, clubby->cfg.ssl_server_name,
+      clubby->cfg.ssl_ca_file, clubby->cfg.ssl_client_cert_file, clubby);
   if (nc == NULL) {
     schedule_reconnect(clubby);
   }
@@ -1174,6 +1178,9 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_CB_PARAM(onopen, clubby_cmd_onopen);
   GET_CB_PARAM(onclose, clubby_cmd_onclose);
   GET_CB_PARAM(oncmd, s_oncmd_cmd);
+  GET_STR_PARAM(ssl_server_name, ssl_server_name);
+  GET_STR_PARAM(ssl_ca_file, ssl_ca_file);
+  GET_STR_PARAM(ssl_client_cert_file, ssl_client_cert_file);
 
   set_clubby(v7, this_obj, clubby);
   v7_val_t connect = v7_get(v7, arg, "connect", ~0);

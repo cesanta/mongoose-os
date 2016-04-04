@@ -29,13 +29,13 @@
     "hidden_files": ""
   },
   "update": {
-    "manifest_url": "http://127.0.0.1:8081/updates/manifest.json",
     "server_timeout": 10,
-    "update_to_any_version" : false
+    "update_to_any_version" : false,
+    "ssl_server_name": "",
+    "ssl_ca_file": "",
+    "ssl_client_cert_file": ""
   },
   "tls": {
-    "enable": false,
-    "server_name": "",
     "ca_file": ""
   },
   "clubby": {
@@ -50,7 +50,10 @@
     "reconnect_timeout_max": 60,
     "cmd_timeout": 300,
     "memory_limit": 15360,
-    "max_queue_size": 10
+    "max_queue_size": 10,
+    "ssl_server_name": "",
+    "ssl_ca_file": "",
+    "ssl_client_cert_file": ""
   },
   "debug": {
     "level": 2,

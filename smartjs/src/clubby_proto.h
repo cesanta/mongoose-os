@@ -71,9 +71,9 @@ void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
 
 void clubby_proto_init(clubby_proto_callback_t cb);
 
-struct mg_connection *clubby_proto_connect(struct mg_mgr *mgr,
-                                           const char *server_address,
-                                           void *context);
+struct mg_connection *clubby_proto_connect(
+    struct mg_mgr *mgr, const char *server_address, const char *ssl_server_name,
+    const char *ssl_ca_file, const char *ssl_client_cert_file, void *context);
 
 void clubby_proto_disconnect(struct mg_connection *nc);
 

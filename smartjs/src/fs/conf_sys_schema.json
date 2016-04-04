@@ -22,8 +22,10 @@
   ["wifi.ap.ip", "s", {"title": "Access Point IP address"}],
 
   ["update", "o", {"title": "Firmware updater"}],
-  ["update.manifest_url", "s", {"title": "Default update endpoint"}],
   ["update.server_timeout", "i", {"title" : "Server Timeout"}],
+  ["update.ssl_server_name", "s", {"title" : "TLS Server Name"}],
+  ["update.ssl_ca_file", "s", {"title" : "TLS CA file"}],
+  ["update.ssl_client_cert_file", "s", {"TLS client cert file"}],
 
   ["http", "o", {"title": "HTTP Server"}],
   ["http.listen_addr", "s", {"title": "Listening port / address"}],
@@ -33,9 +35,7 @@
   ["http.hidden_files", "s", {"title": "Hidden file pattern"}],
 
   ["tls", "o", {"title": "TLS settings"}],
-  ["tls.enable", "b", {"title" : "Enable TLS"}],
-  ["tls.server_name", "s", {"title" : "TLS server name"}],
-  ["tls.ca_file", "s", {"title" : "TLS CA file"}],
+  ["tls.ca_file", "s", {"title" : "Default TLS CA file"}],
 
   ["clubby", "o", {"title": "Cloud settings"}],
   ["clubby.connect_on_boot", "b", {"title": "Connect cloud on startup"}],
@@ -49,6 +49,9 @@
   ["clubby.cmd_timeout", "i", {"title": "Default command timeout"}],
   ["clubby.memory_limit", "i", {"title": "Memory Limit"}],
   ["clubby.device_registration_url", "s", {"title": "Device registration URL"}],
+  ["clubby.ssl_server_name", "s", {"title" : "TLS Server Name"}],
+  ["clubby.ssl_ca_file", "s", {"title" : "TLS CA file"}],
+  ["clubby.ssl_client_cert_file", "s", {"TLS client cert file"}],
 
   ["debug", "o", {"title": "Debug Settings"}],
   ["debug.level", "i", {
