@@ -74,7 +74,6 @@ static void process_here(int argc, char *argv[], unsigned int param) {
   (void) argc;
   (void) argv;
   (void) param;
-  printf("Terminate input with: EOF\n");
   s_sjp.pos = 0;
   s_sjp.char_processor = process_here_char;
 }
