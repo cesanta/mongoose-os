@@ -158,8 +158,13 @@ static enum v7_err start_http_server(struct v7 *v7, const char *addr,
 
   memset(&opts, 0, sizeof(opts));
 
+#ifdef MG_ENABLE_SSL
   opts.ssl_ca_cert = ca_cert;
   opts.ssl_cert = cert;
+#else
+  (void) ca_cert;
+  (void) cert;
+#endif
 
   c = mg_bind_opt(&sj_mgr, addr, http_ev_handler, opts);
   if (c == NULL) {
