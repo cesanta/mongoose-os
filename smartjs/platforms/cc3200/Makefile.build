@@ -100,6 +100,8 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
 APP_SRCS = $(notdir $(wildcard src/*.c)) mongoose.c \
            $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS)
 
+.DEFAULT_GOAL := all
+
 clean:
 	@rm -rf $(BUILD_DIR) $(wildcard *~)
 	@rm -rf $(FW_DIR) $(wildcard *~)
