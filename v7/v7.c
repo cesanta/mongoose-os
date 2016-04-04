@@ -4245,6 +4245,14 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
  * Throws an exception if the file doesn't exist, cannot be parsed or if the
  * script throws any exception.
  *
+ * ==== File.read(file_name) -> string or undefined
+ * Read file `file_name` and return a string with a file content.
+ * On any error, return `undefined` as a result.
+ *
+ * ==== File.write(file_name, str) -> true or false
+ * Write string `str` to a file `file_name`. Return `true` on success,
+ * `false` on error.
+ *
  * ==== File.open(file_name [, mode]) -> file_object or null
  * Open a file `path`. For
  * list of valid `mode` values, see `fopen()` documentation. If `mode` is
@@ -4261,9 +4269,6 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
  * Read portion of data from
  * an opened file stream. Return string with data, or empty string on EOF
  * or error.
- *
- * ==== file_obj.readAll() -> string
- * Same as `read()`, but keeps reading data until EOF.
  *
  * ==== file_obj.write(str) -> num_bytes_written
  * Write string `str` to the opened file object. Return number of bytes written.
@@ -9549,17 +9554,12 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err File_readAll(struct v7 *v7, v7_val_t *res) {
-  return f_read(v7, 1, res);
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err File_read(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_obj_read(struct v7 *v7, v7_val_t *res) {
   return f_read(v7, 0, res);
 }
 
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_obj_write(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
@@ -9580,7 +9580,7 @@ V7_PRIVATE enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
 }
 
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err File_close(struct v7 *v7, v7_val_t *res) {
+V7_PRIVATE enum v7_err File_obj_close(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t prop = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
@@ -9632,6 +9632,45 @@ V7_PRIVATE enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
 
 clean:
   return rcode;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err File_read(struct v7 *v7, v7_val_t *res) {
+  v7_val_t arg0 = v7_arg(v7, 0);
+
+  if (v7_is_string(arg0)) {
+    const char *path = v7_to_cstring(v7, &arg0);
+    size_t size = 0;
+    char *data = cs_read_file(path, &size);
+    if (data != NULL) {
+      *res = v7_mk_string(v7, data, size, 1);
+      free(data);
+    }
+  }
+
+  return V7_OK;
+}
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
+  v7_val_t arg0 = v7_arg(v7, 0);
+  v7_val_t arg1 = v7_arg(v7, 1);
+  *res = v7_mk_boolean(0);
+
+  if (v7_is_string(arg0) && v7_is_string(arg1)) {
+    const char *path = v7_to_cstring(v7, &arg0);
+    size_t len;
+    const char *buf = v7_get_string_data(v7, &arg1, &len);
+    FILE *fp = fopen(path, "wb+");
+    if (fp != NULL) {
+      if (fwrite(buf, 1, len, fp) == len) {
+        *res = v7_mk_boolean(1);
+      }
+      fclose(fp);
+    }
+  }
+
+  return V7_OK;
 }
 
 WARN_UNUSED_RESULT
@@ -9751,15 +9790,16 @@ void init_file(struct v7 *v7) {
   v7_set_method(v7, file_obj, "remove", File_remove);
   v7_set_method(v7, file_obj, "rename", File_rename);
   v7_set_method(v7, file_obj, "open", File_open);
+  v7_set_method(v7, file_obj, "read", File_read);
+  v7_set_method(v7, file_obj, "write", File_write);
   v7_set_method(v7, file_obj, "loadJSON", File_loadJSON);
 #if V7_ENABLE__File__list
   v7_set_method(v7, file_obj, "list", File_list);
 #endif
 
-  v7_set_method(v7, file_proto, "close", File_close);
-  v7_set_method(v7, file_proto, "read", File_read);
-  v7_set_method(v7, file_proto, "readAll", File_readAll);
-  v7_set_method(v7, file_proto, "write", File_write);
+  v7_set_method(v7, file_proto, "close", File_obj_close);
+  v7_set_method(v7, file_proto, "read", File_obj_read);
+  v7_set_method(v7, file_proto, "write", File_obj_write);
 
 #if V7_ENABLE__File__require
   v7_def(v7, v7_get_global(v7), "_modcache", ~0, 0, v7_mk_object(v7));
