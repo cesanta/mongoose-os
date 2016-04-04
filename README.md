@@ -1,6 +1,6 @@
 # Smart.js platform
 
-Smart.js is a generic, hardware independent, full-stack Internet of Things software platform. It comprises of both firmware and a cloud component. Smart.js solves problems of reliability, scalability, security and remote management which are common to all verticals, be it industrial automation, healthcare, automotive, home automation and others.
+[Smart.js] (http://hubs.ly/H02z5Hl0) is a generic, hardware independent, full-stack Internet of Things software platform. It comprises of both firmware and a cloud component. Smart.js solves problems of reliability, scalability, security and remote management which are common to all verticals, be it industrial automation, healthcare, automotive, home automation and others.
 Smart.js is available now for ESP8266 and allows you to code in JavaScript or C/C++.
 
 Take a look at 2 minute video that shows Smart.js in action:
