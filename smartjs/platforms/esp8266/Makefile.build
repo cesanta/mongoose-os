@@ -285,6 +285,8 @@ FW_PARTS = boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 ifeq "${OTA}" "1"
 all: $(FW_ZIP)
+
+$(FW_MANIFEST): $(FW_FS_OUT) $(FW_FILES_OUT)
 endif
 
 #ifreq "${OTA}" "1"
