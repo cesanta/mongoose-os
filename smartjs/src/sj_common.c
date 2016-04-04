@@ -29,6 +29,9 @@ void sj_common_api_setup(struct v7 *v7) {
   sj_gpio_api_setup(v7);
   sj_adc_api_setup(v7);
   sj_i2c_api_setup(v7);
+  if (v7_exec_file(v7, "I2C.js", NULL) != V7_OK) {
+    fprintf(stderr, "Error evaluating I2C.js\n");
+  }
   sj_spi_api_setup(v7);
 
   sj_ws_client_api_setup(v7);

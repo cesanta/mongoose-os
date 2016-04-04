@@ -15962,6 +15962,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("UBJSON"),
     V7_VEC("WebSocket"),  /* sjs */
     V7_VEC("_modcache"),
+    V7_VEC("_writeRegAddr"),  /* sjs */
     V7_VEC("accept"),
     V7_VEC("address"), /* sjs */
     V7_VEC("arguments"),
@@ -16031,6 +16032,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("md5_hex"),
     V7_VEC("module"),
     V7_VEC("multiline"),
+    V7_VEC("nbytes"),  /* sjs */
     V7_VEC("number"),
     V7_VEC("onclick"),  /* sjs */
     V7_VEC("onclose"),  /* sjs */
@@ -16043,6 +16045,8 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("publish"),  /* sjs */
     V7_VEC("random"),
     V7_VEC("readByte"),  /* sjs */
+    V7_VEC("readRegB"),  /* sjs */
+    V7_VEC("readRegW"),  /* sjs */
     V7_VEC("readString"),  /* sjs */
     V7_VEC("readVoltage"),  /* sjs */
     V7_VEC("readyState"),  /* sjs */
@@ -16109,7 +16113,9 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("valueOf"),
     V7_VEC("wdtFeed"),  /* sjs */
     V7_VEC("writable"),
-    V7_VEC("writeHead")  /* sjs */
+    V7_VEC("writeHead"),  /* sjs */
+    V7_VEC("writeRegB"),  /* sjs */
+    V7_VEC("writeRegW")  /* sjs */
 };
 /* clang-format on */
 
