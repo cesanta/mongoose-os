@@ -10,6 +10,7 @@
 #include "sj_v7_ext.h"
 #include "sj_common.h"
 #include "sj_timers.h"
+#include "device_config.h"
 
 static const char *s_dgram_global_object = "dgram";
 static const char *s_dgram_socket_proto = "_dgrm";
@@ -41,6 +42,12 @@ static const char *s_ev_sent = "sent";              /* Fake event */
   if (!v7_is_number(val)) {                  \
     LOG_AND_THROW(#name " must be a number") \
     goto clean;                              \
+  }
+
+#define CHECK_NUM_OPT(val, name)                     \
+  if (!v7_is_undefined(val) && !v7_is_number(val)) { \
+    LOG_AND_THROW(#name " must be a number")         \
+    goto clean;                                      \
   }
 
 #define CHECK_STR_REQ(val, name)             \
@@ -94,22 +101,27 @@ struct async_event_params {
 /* Forwards */
 static v7_val_t create_tcp_socket(struct v7 *v7, v7_val_t conn);
 
-static void parse_args(struct v7 *v7, int argc, const char *names[],
-                       int plain_last_arg, v7_val_t *args) {
+static void parse_args(struct v7 *v7, int plain_argc, const char *names[],
+                       int names_count, int plain_last_arg, v7_val_t *args) {
   int i;
   v7_val_t arg_0 = v7_arg(v7, 0);
+  for (i = 0; i < names_count; i++) {
+    args[i] = v7_mk_undefined();
+  }
   if (v7_is_object(arg_0)) {
-    for (i = 0; i < argc; i++) {
+    for (i = 0; i < names_count; i++) {
       args[i] = v7_get(v7, arg_0, names[i], ~0);
     }
+    if (plain_last_arg) {
+      args[plain_argc] = v7_arg(v7, 1);
+    }
   } else {
-    for (i = 0; i < argc; i++) {
+    for (i = 0; i < plain_argc; i++) {
       args[i] = v7_arg(v7, i);
     }
-  }
-
-  if (plain_last_arg) {
-    args[i] = v7_arg(v7, i);
+    if (plain_last_arg) {
+      args[plain_argc] = v7_arg(v7, plain_argc);
+    }
   }
 }
 
@@ -609,20 +621,59 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
                                v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  const char *args_names[] = {"port", "host"}, *host;
-  v7_val_t args[3];
-  enum connect_params { PORT, HOST, CALLBACK };
+  const char *args_names[] = {"port", "host", "", "use_ssl", "ssl_ca_cert",
+                              "ssl_cert", "ssl_server_name"},
+             *host;
+  v7_val_t args[ARRAY_SIZE(args_names)];
+  enum connect_params {
+    PORT,
+    HOST,
+    CB,
+    USE_SSL,
+    CA_CERT,
+    CLNT_CERT,
+    SERVER_NAME
+  };
   char *addr = NULL;
   struct mg_connection *c = NULL;
-  int port;
+  int port, use_ssl;
   struct conn_user_data *ud = NULL;
+  struct mg_connect_opts conn_opts;
 
-  parse_args(v7, 2, args_names, 1, args);
+  memset(&conn_opts, 0, sizeof(conn_opts));
+  parse_args(v7, 2, args_names, ARRAY_SIZE(args_names), 1, args);
 
-  CHECK_NUM_REQ(args[PORT], "Port");
+  CHECK_NUM_REQ(args[PORT], "port");
   port = v7_to_number(args[PORT]);
 
-  CHECK_STR_OPT(args[HOST], "Host");
+  CHECK_STR_OPT(args[HOST], "host");
+
+  CHECK_NUM_OPT(args[USE_SSL], "use_ssl");
+  CHECK_STR_OPT(args[CA_CERT], "ssl_ca_sert");
+  CHECK_STR_OPT(args[CLNT_CERT], "ssl_cert");
+  CHECK_STR_OPT(args[SERVER_NAME], "ssl_server_name");
+
+  use_ssl =
+      !v7_is_undefined(args[USE_SSL]) || !v7_is_undefined(args[CA_CERT]) ||
+      !v7_is_undefined(args[CLNT_CERT]) || !v7_is_undefined(args[SERVER_NAME]);
+
+  if (use_ssl) {
+    /* ssl_ca_cert defaults to CA stored in configuration */
+    conn_opts.ssl_ca_cert = v7_is_undefined(args[CA_CERT])
+                                ? get_cfg()->tls.ca_file
+                                : v7_to_cstring(v7, &args[CA_CERT]);
+    /* ssl_cert defaults to NULL */
+    if (!v7_is_undefined(args[CLNT_CERT])) {
+      conn_opts.ssl_cert = v7_to_cstring(v7, &args[CLNT_CERT]);
+    }
+    /*
+     * server name default to host name (it is filled in
+     * mg_connect_opt, here we keep NULL in this field
+     */
+    if (!v7_is_undefined(args[SERVER_NAME])) {
+      conn_opts.ssl_server_name = v7_to_cstring(v7, &args[SERVER_NAME]);
+    }
+  }
 
   if (v7_is_string(args[HOST])) {
     host = v7_to_cstring(v7, &args[HOST]);
@@ -639,7 +690,14 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
 
   LOG(LL_VERBOSE_DEBUG, ("Trying to connect to %s", addr));
 
-  c = mg_connect(&sj_mgr, addr, mg_ev_handler);
+  c = mg_connect_opt(&sj_mgr, addr, mg_ev_handler, conn_opts);
+  if (use_ssl && c->ssl_ctx == NULL) {
+    /*
+     * Something wrong with parameters, unsecured session established
+     */
+    LOG_AND_THROW("Failed to initialize secure connection");
+    goto clean;
+  }
   if (c == NULL) {
     /*
      * We should not throw exeption here
@@ -668,9 +726,9 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   if (c != NULL) {
     c->user_data = ud;
 
-    if (!v7_is_undefined(args[CALLBACK])) {
+    if (!v7_is_undefined(args[CB])) {
       add_cb_info(v7, get_cb_info_holder(v7, ud->sock_obj), s_ev_connect,
-                  args[CALLBACK], 1);
+                  args[CB], 1);
     }
   }
 
@@ -696,15 +754,18 @@ clean:
 /* Starts listen for incoming udp (messages) or tcp (connections) */
 static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
                                         const char *protocol, v7_val_t port_v,
-                                        v7_val_t addr_v, v7_val_t cb) {
+                                        v7_val_t addr_v, v7_val_t cb,
+                                        v7_val_t ca_cert_v, v7_val_t cert_v) {
   enum v7_err rcode = V7_OK;
   char *bind_addr = NULL;
   struct mg_connection *c = NULL;
   struct conn_user_data *ud = NULL;
   int port = -1;
   const char *address = NULL;
-
+  struct mg_bind_opts opts;
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), "s_conn_prop", ~0);
+
+  memset(&opts, 0, sizeof(opts));
 
   if (!v7_is_undefined(conn_v)) {
     LOG_AND_THROW("Socket already active");
@@ -724,14 +785,27 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
     goto clean;
   }
 
+  /* Leave SSL initialization to mg_bind_opt */
+  CHECK_STR_OPT(cert_v, "cert");
+  if (!v7_is_undefined(cert_v)) {
+    opts.ssl_cert = v7_to_cstring(v7, &cert_v);
+  }
+
+  CHECK_STR_OPT(ca_cert_v, "ca_sert");
+  if (!v7_is_undefined(ca_cert_v)) {
+    opts.ssl_ca_cert = v7_to_cstring(v7, &ca_cert_v);
+  }
+
   int tmp = asprintf(&bind_addr, "%s://%s:%d", protocol, address ? address : "",
                      port);
   (void) tmp; /* Shut up compiler about asprintf */
 
   LOG(LL_DEBUG, ("Starting listening on %s", bind_addr));
 
-  c = mg_bind(&sj_mgr, bind_addr, mg_ev_handler);
+  c = mg_bind_opt(&sj_mgr, bind_addr, mg_ev_handler, opts);
+
   free(bind_addr);
+  bind_addr = NULL;
 
   if (c == NULL) {
     LOG(LL_ERROR, ("Cannot bind to port %d", port));
@@ -786,18 +860,16 @@ clean:
  */
 SJ_PRIVATE enum v7_err DGRAM_createSocket(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  const char *arg_names[] = {"port"};
-  v7_val_t args[2];
-  enum create_args { TYPE, CALLBACK };
+  const char *args_names[] = {"port", ""};
+  v7_val_t args[ARRAY_SIZE(args_names)];
+  enum create_args { TYPE, CB };
 
   /*
    * This API assumes, that bind/connect are invoked later
    * So now just creating empty Socket object
    */
-  v7_val_t type_v = v7_arg(v7, 0);
-  v7_val_t cb_v = v7_arg(v7, 1);
 
-  parse_args(v7, ARRAY_SIZE(arg_names), arg_names, 1, args);
+  parse_args(v7, 1, args_names, ARRAY_SIZE(args_names), 1, args);
   /*
    * Type can be either string ("udp4") or object with "type"
    * field, which should contain "udp4" value
@@ -805,21 +877,21 @@ SJ_PRIVATE enum v7_err DGRAM_createSocket(struct v7 *v7, v7_val_t *res) {
 
   CHECK_STR_REQ(args[TYPE], "Type");
 
-  if (strcmp(v7_to_cstring(v7, &type_v), "udp4") != 0) {
+  if (strcmp(v7_to_cstring(v7, &args[TYPE]), "udp4") != 0) {
     /* Node.js supports udp6, while smart.js - doesn't */
     LOG_AND_THROW("Only udp4 is supported");
     goto clean;
   };
 
-  if (!v7_is_undefined(cb_v) && !v7_is_callable(v7, cb_v)) {
+  if (!v7_is_undefined(args[CB]) && !v7_is_callable(v7, args[CB])) {
     LOG_AND_THROW("Callback must be a function");
     goto clean;
   }
 
   *res = create_udp_socket(v7, v7_mk_undefined());
 
-  if (!v7_is_undefined(cb_v)) {
-    add_cb_info(v7, get_cb_info_holder(v7, *res), s_ev_message, cb_v, 0);
+  if (!v7_is_undefined(args[CB])) {
+    add_cb_info(v7, get_cb_info_holder(v7, *res), s_ev_message, args[CB], 0);
   }
 
 clean:
@@ -957,13 +1029,13 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_close(struct v7 *v7, v7_val_t *res) {
  * socket.bind(options[, callback])
  */
 SJ_PRIVATE enum v7_err DGRAM_Socket_bind(struct v7 *v7, v7_val_t *res) {
-  enum bind_args { PORT, ADDRESS, CALLBACK };
-  const char *args_names[] = {"port", "address"};
-  v7_val_t args[3];
-  parse_args(v7, ARRAY_SIZE(args_names), args_names, 1, args);
+  enum bind_args { PORT, ADDRESS, CB };
+  const char *args_names[] = {"port", "address", ""};
+  v7_val_t args[ARRAY_SIZE(args_names)];
+  parse_args(v7, 2, args_names, ARRAY_SIZE(args_names), 1, args);
 
   return udp_tcp_start_listen(v7, res, "udp", args[PORT], args[ADDRESS],
-                              args[CALLBACK]);
+                              args[CB], v7_mk_undefined(), v7_mk_undefined());
 }
 
 /* emitter.on(event, listener) */
@@ -1071,13 +1143,14 @@ SJ_PRIVATE enum v7_err TCP_Server_listen(struct v7 *v7, v7_val_t *res) {
    * It is unclear how to implement it via mongoose API
    * (no access to sockets)
    */
-  enum bind_args { PORT, ADDRESS, BACKLOG, CALLBACK };
-  const char *args_names[] = {"port", "address", "backlog"};
-  v7_val_t args[5];
-  parse_args(v7, ARRAY_SIZE(args_names), args_names, 1, args);
+  enum bind_args { PORT, ADDRESS, BACKLOG, CB, CA_CERT, SRV_CERT };
+  const char *args_names[] = {"port", "address", "backlog",
+                              "",     "ca_cert", "cert"};
+  v7_val_t args[ARRAY_SIZE(args_names)];
+  parse_args(v7, 3, args_names, ARRAY_SIZE(args_names), 1, args);
 
   return udp_tcp_start_listen(v7, res, "tcp", args[PORT], args[ADDRESS],
-                              args[CALLBACK]);
+                              args[CB], args[CA_CERT], args[SRV_CERT]);
 }
 
 /* emitter.on(event, listener) */
