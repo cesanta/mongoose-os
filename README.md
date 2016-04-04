@@ -16,6 +16,7 @@ Take a look at 2 minute video that shows Smart.js in action:
 - [Flashnchips - multiplatform device flashing tool](https://github.com/cesanta/fnc/releases/latest)
 - Current development Smart.js firmware builds:
    - [smartjs-esp8266-last.zip](https://backend.cesanta.com/devel/smartjs-esp8266-last.zip)
+   - or [download here] (http://hubs.ly/H02z5Hs0)
 
 # Support
 - [Support Forum - Ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/smart-js)
