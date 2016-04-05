@@ -10,6 +10,7 @@
 #include "netapp.h"
 #include "wlan.h"
 
+#include "common/cs_dbg.h"
 #include "common/platform.h"
 #include "smartjs/src/sj_wifi.h"
 #include "v7/v7.h"
@@ -79,42 +80,44 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   SlNetAppDhcpServerBasicOpt_t dhcpcfg;
 
   if ((ret = sl_WlanSetMode(ROLE_AP)) != 0) {
-    fprintf(stderr, "sl_WlanSetMode: %d\n", ret);
+    LOG(LL_ERROR, ("sl_WlanSetMode: %d", ret));
     return 0;
   }
 
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SSID, strlen(cfg->ssid),
                         (const uint8_t *) cfg->ssid)) != 0) {
-    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_SSID): %d\n", ret);
+    LOG(LL_ERROR, ("sl_WlanSet(WLAN_AP_OPT_SSID): %d", ret));
     return 0;
   }
 
   v = strlen(cfg->pass) > 0 ? SL_SEC_TYPE_WPA : SL_SEC_TYPE_OPEN;
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SECURITY_TYPE, 1, &v)) !=
       0) {
-    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_SECURITY_TYPE): %d\n", ret);
+    LOG(LL_ERROR, ("sl_WlanSet(WLAN_AP_OPT_SECURITY_TYPE): %d", ret));
     return 0;
   }
   if (v == SL_SEC_TYPE_WPA &&
       (ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_PASSWORD,
                         strlen(cfg->pass), (const uint8_t *) cfg->pass)) != 0) {
-    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_PASSWORD): %d\n", ret);
+    LOG(LL_ERROR, ("sl_WlanSet(WLAN_AP_OPT_PASSWORD): %d", ret));
     return 0;
   }
 
   v = cfg->channel;
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_CHANNEL, 1,
                         (uint8_t *) &v)) != 0) {
-    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_CHANNEL): %d\n", ret);
+    LOG(LL_ERROR, ("sl_WlanSet(WLAN_AP_OPT_CHANNEL): %d", ret));
     return 0;
   }
 
   v = cfg->hidden;
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_HIDDEN_SSID, 1,
                         (uint8_t *) &v)) != 0) {
-    fprintf(stderr, "sl_WlanSet(WLAN_AP_OPT_HIDDEN_SSID): %d\n", ret);
+    LOG(LL_ERROR, ("sl_WlanSet(WLAN_AP_OPT_HIDDEN_SSID): %d", ret));
     return 0;
   }
+
+  sl_NetAppStop(SL_NET_APP_DHCP_SERVER_ID);
 
   memset(&ipcfg, 0, sizeof(ipcfg));
   if (!inet_pton(AF_INET, cfg->ip, &ipcfg.ipV4) ||
@@ -124,7 +127,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
       (ret = sl_NetCfgSet(SL_IPV4_AP_P2P_GO_STATIC_ENABLE,
                           IPCONFIG_MODE_ENABLE_IPV4, sizeof(ipcfg),
                           (uint8_t *) &ipcfg)) != 0) {
-    fprintf(stderr, "sl_NetCfgSet(IPCONFIG_MODE_ENABLE_IPV4): %d\n", ret);
+    LOG(LL_ERROR, ("sl_NetCfgSet(IPCONFIG_MODE_ENABLE_IPV4): %d", ret));
     return 0;
   }
 
@@ -135,7 +138,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
       (ret = sl_NetAppSet(SL_NET_APP_DHCP_SERVER_ID,
                           NETAPP_SET_DHCP_SRV_BASIC_OPT, sizeof(dhcpcfg),
                           (uint8_t *) &dhcpcfg)) != 0) {
-    fprintf(stderr, "sl_NetCfgSet(NETAPP_SET_DHCP_SRV_BASIC_OPT): %d\n", ret);
+    LOG(LL_ERROR, ("sl_NetCfgSet(NETAPP_SET_DHCP_SRV_BASIC_OPT): %d", ret));
     return 0;
   }
 
@@ -145,9 +148,11 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   /* Turning the device off and on for the change to take effect. */
   sl_Stop(0);
   sl_Start(NULL, NULL, NULL);
-  osi_Sleep(100);
+  if ((ret = sl_NetAppStart(SL_NET_APP_DHCP_SERVER_ID)) != 0) {
+    LOG(LL_ERROR, ("DHCP server failed to start: %d", ret));
+  }
 
-  fprintf(stderr, "AP %s configured\n", cfg->ssid);
+  LOG(LL_INFO, ("AP %s configured", cfg->ssid));
 
   return 1;
 }
@@ -170,9 +175,12 @@ int sj_wifi_connect() {
   ret = sl_WlanConnect((const _i8 *) s_wifi_sta_config.ssid,
                        strlen(s_wifi_sta_config.ssid), 0, &sp, 0);
   if (ret != 0) {
-    fprintf(stderr, "WlanConnect error: %d\n", ret);
+    LOG(LL_ERROR, ("WlanConnect error: %d", ret));
     return 0;
   }
+
+  LOG(LL_INFO, ("Connecting to %s", s_wifi_sta_config.ssid));
+
   return 1;
 }
 
