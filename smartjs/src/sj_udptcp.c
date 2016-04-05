@@ -11,6 +11,7 @@
 #include "sj_common.h"
 #include "sj_timers.h"
 #include "device_config.h"
+#include "common/queue.h"
 
 static const char *s_dgram_global_object = "dgram";
 static const char *s_dgram_socket_proto = "_dgrm";
@@ -63,14 +64,15 @@ static const char *s_ev_sent = "sent";              /* Fake event */
   }
 
 struct cb_info {
-  struct cb_info *next;
+  SLIST_ENTRY(cb_info) entries;
+
   const char *name;
   v7_val_t cbv;
   int trigger_once;
 };
 
 struct cb_info_holder {
-  struct cb_info *head;
+  SLIST_HEAD(cb_infos, cb_info) head;
 };
 
 #define UD_F_PAUSED (1 << 0)
@@ -193,14 +195,11 @@ static void free_cb_info(struct v7 *v7, struct cb_info *cb_info) {
 }
 
 static void free_cb_info_chain(struct v7 *v7, struct cb_info_holder *list) {
-  struct cb_info *cbi = list->head;
-  while (cbi != NULL) {
-    struct cb_info *next = cbi->next;
-    free_cb_info(v7, cbi);
-    cbi = next;
+  while (!SLIST_EMPTY(&list->head)) {
+    struct cb_info *elem = SLIST_FIRST(&list->head);
+    SLIST_REMOVE_HEAD(&list->head, entries);
+    free_cb_info(v7, elem);
   }
-
-  list->head = NULL;
 }
 
 static void add_cb_info(struct v7 *v7, struct cb_info_holder *list,
@@ -211,34 +210,21 @@ static void add_cb_info(struct v7 *v7, struct cb_info_holder *list,
   new_cb_info->trigger_once = trigger_once;
   v7_own(v7, &new_cb_info->cbv);
 
-  new_cb_info->next = list->head;
-  list->head = new_cb_info;
+  SLIST_INSERT_HEAD(&list->head, new_cb_info, entries);
 }
 
 static void trigger_event(struct v7 *v7, struct cb_info_holder *list,
                           const char *name, v7_val_t arg1, v7_val_t arg2) {
-  struct cb_info *cb = list->head, *prev = NULL;
-  while (cb != NULL) {
+  struct cb_info *cb, *cb_temp;
+  SLIST_FOREACH_SAFE(cb, &list->head, entries, cb_temp) {
     if (strcmp(cb->name, name) == 0) {
       LOG(LL_VERBOSE_DEBUG, ("Triggered `%s`", name));
       sj_invoke_cb2(v7, cb->cbv, arg1, arg2);
-
       if (cb->trigger_once) {
-        if (prev == NULL) {
-          list->head = cb->next;
-        } else {
-          prev->next = cb->next;
-        }
-
-        struct cb_info *tmp = cb->next;
+        SLIST_REMOVE(&list->head, cb, cb_info, entries);
         free_cb_info(v7, cb);
-        cb = tmp;
-        continue;
       }
     }
-
-    prev = cb;
-    cb = cb->next;
   }
 }
 
