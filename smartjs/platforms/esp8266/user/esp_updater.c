@@ -972,7 +972,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           if (!is_update_finished(ctx)) {
             /* Update terminated, but not because of error */
             notify_js(UJS_NOTHING_TODO, NULL);
-            sj_clubby_send_reply(s_clubby_reply, 0, ctx->status_msg);
+            sj_clubby_send_reply(s_clubby_reply, 0, ctx->status_msg,
+                                 v7_mk_undefined());
           } else {
             /* update ok */
             int len;
@@ -990,7 +991,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         } else if (res < 0) {
           /* Error */
           notify_js(UJS_ERROR, NULL);
-          sj_clubby_send_reply(s_clubby_reply, 1, ctx->status_msg);
+          sj_clubby_send_reply(s_clubby_reply, 1, ctx->status_msg,
+                               v7_mk_undefined());
         }
 
         set_status(ctx, US_FINISHED);
@@ -1003,7 +1005,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         if (!is_update_finished(ctx)) {
           /* Connection was terminated by server */
           notify_js(UJS_ERROR, NULL);
-          sj_clubby_send_reply(s_clubby_reply, 1, "Update failed");
+          sj_clubby_send_reply(s_clubby_reply, 1, "Update failed",
+                               v7_mk_undefined());
         } else if (is_reboot_requred(ctx) && !notify_js(UJS_COMPLETED, NULL)) {
           /*
            * Conection is closed by updater, rebooting if required
@@ -1341,7 +1344,8 @@ static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
     s_clubby_reply->context = evt->context;
     sj_clubby_send_reply(
         s_clubby_reply, s_clubby_upd_status,
-        s_clubby_upd_status == 0 ? "Updated successfully" : "Update failed");
+        s_clubby_upd_status == 0 ? "Updated successfully" : "Update failed",
+        v7_mk_undefined());
     sj_clubby_free_reply(s_clubby_reply);
     s_clubby_reply = NULL;
   };
@@ -1408,7 +1412,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
 
 bad_request:
   LOG(LL_ERROR, ("Failed to start update: %s", reply));
-  sj_clubby_send_reply(evt, 1, reply);
+  sj_clubby_send_reply(evt, 1, reply, v7_mk_undefined());
 }
 
 void init_updater(struct v7 *v7) {

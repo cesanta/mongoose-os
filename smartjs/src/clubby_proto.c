@@ -132,7 +132,8 @@ ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
 ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
                                   const char *device_psk, const char *dst,
                                   int64_t id, int status,
-                                  const char *status_msg) {
+                                  const char *status_msg,
+                                  ub_val_t *resp_value) {
   ub_val_t frame =
       clubby_proto_create_frame_base(ctx, device_id, device_psk, dst);
   ub_val_t resp = ub_create_array(ctx);
@@ -144,6 +145,10 @@ ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
 
   if (status_msg != 0) {
     ub_add_prop(ctx, respv, "status_msg", ub_create_string(ctx, status_msg));
+  }
+
+  if (resp_value != 0) {
+    ub_add_prop(ctx, respv, "resp", *resp_value);
   }
 
   return frame;

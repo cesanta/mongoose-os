@@ -22,7 +22,7 @@ void sj_clubby_api_setup(struct v7 *v7);
 void sj_clubby_init(struct v7 *v7);
 
 void sj_clubby_send_reply(struct clubby_event *evt, int status,
-                          const char *status_msg);
+                          const char *status_msg, v7_val_t resp);
 
 int sj_clubby_register_global_command(const char *cmd, sj_clubby_callback_t cb,
                                       void *user_data);
