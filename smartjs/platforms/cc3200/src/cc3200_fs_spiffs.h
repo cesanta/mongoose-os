@@ -9,9 +9,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include "spiffs.h"
 
 #include <common/platform.h>
+
+#include "spiffs.h"
 
 #define MAX_OPEN_SPIFFS_FILES 8
 

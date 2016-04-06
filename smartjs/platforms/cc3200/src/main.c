@@ -21,6 +21,8 @@
 #include "uart.h"
 #include "utils.h"
 
+#include "common/platform.h"
+
 #include "simplelink.h"
 #include "device.h"
 
@@ -69,6 +71,9 @@ void vApplicationIdleHook() {
 }
 
 void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
+}
+
+void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *e) {
 }
 
 OsiMsgQ_t s_v7_q;

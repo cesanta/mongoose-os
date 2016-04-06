@@ -6,6 +6,8 @@
 #include <malloc.h>
 #include <stdio.h>
 
+#include <common/platform.h>
+
 #include "simplelink.h"
 #include "netapp.h"
 #include "wlan.h"

@@ -343,15 +343,16 @@ int mkdir(const char *path, mode_t mode) {
 }
 #endif
 
-
 int cc3200_fs_init() {
+  int ret = 1;
 #ifdef __TI_COMPILER_VERSION__
 #ifdef CC3200_FS_SLFS
-  return add_device("SL", _MSA, fs_slfs_open, fs_slfs_close, fs_slfs_read, fs_slfs_write, fs_slfs_lseek, fs_slfs_unlink, fs_slfs_rename) == 0;
+  ret = (add_device("SL", _MSA, fs_slfs_open, fs_slfs_close, fs_slfs_read,
+                    fs_slfs_write, fs_slfs_lseek, fs_slfs_unlink,
+                    fs_slfs_rename) == 0);
 #endif
-#else
-  return 1;
 #endif
+  return ret;
 }
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */

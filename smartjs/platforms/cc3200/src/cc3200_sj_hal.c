@@ -13,6 +13,8 @@
 #include "rom.h"
 #include "rom_map.h"
 
+#include <common/platform.h>
+
 #include "simplelink.h"
 #include "device.h"
 #include "oslib/osi.h"

@@ -13,14 +13,15 @@
 #ifndef CS_SMARTJS_PLATFORMS_CC3200_SPIFFS_CONFIG_H_
 #define CS_SMARTJS_PLATFORMS_CC3200_SPIFFS_CONFIG_H_
 
-#include "simplelink.h"
+#include <stdint.h>
+#include <string.h>
 
-typedef _i32 s32_t;
-typedef _u32 u32_t;
-typedef _i16 s16_t;
-typedef _u16 u16_t;
-typedef _i8 s8_t;
-typedef _u8 u8_t;
+typedef int32_t s32_t;
+typedef uint32_t u32_t;
+typedef int16_t s16_t;
+typedef uint16_t u16_t;
+typedef int8_t s8_t;
+typedef uint8_t u8_t;
 
 #include "spiffs_config_common.h"
 

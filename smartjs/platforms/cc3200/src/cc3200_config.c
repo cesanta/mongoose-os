@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 
+#include "common/platform.h"
+
 #include "simplelink.h"
 #include "netcfg.h"
 
