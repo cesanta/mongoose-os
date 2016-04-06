@@ -45,6 +45,11 @@ void cs_log_printf(const char *fmt, ...) {
   fputc('\n', cs_log_file);
   fflush(cs_log_file);
 }
+
+void cs_log_set_file(FILE *file) {
+  cs_log_file = file;
+}
+
 #endif /* !CS_DISABLE_STDIO */
 
 void cs_log_set_level(enum cs_log_level level) {
@@ -52,8 +57,4 @@ void cs_log_set_level(enum cs_log_level level) {
 #if defined(CS_LOG_TS_DIFF) && !defined(CS_DISABLE_STDIO)
   cs_log_ts = cs_time();
 #endif
-}
-
-void cs_log_set_file(FILE *file) {
-  cs_log_file = file;
 }
