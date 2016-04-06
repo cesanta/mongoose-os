@@ -118,8 +118,9 @@ Records a log entry associated with the src id. If not provided stream defaults 
 
 Arguments:
 - `msg`: Message to log.
-- `timestamp`: Timestamp of a message in milliseconds since Epoch.
+- `src`: Override src id. Used to log on behalf of another source, if permitted.
 - `stream`: Log stream name. Defaults to `"console"`.
+- `timestamp`: Timestamp of a message in milliseconds since Epoch.
 
 
 Definition:
@@ -136,13 +137,17 @@ Definition:
       ],
       "keep_as_json": true
     },
-    "timestamp": {
-      "doc": "Timestamp of a message in milliseconds since Epoch.",
-      "type": "integer"
+    "src": {
+      "doc": "Override src id. Used to log on behalf of another source, if permitted.",
+      "type": "string"
     },
     "stream": {
       "doc": "Log stream name. Defaults to `\"console\"`.",
       "type": "string"
+    },
+    "timestamp": {
+      "doc": "Timestamp of a message in milliseconds since Epoch.",
+      "type": "integer"
     }
   },
   "required_args": [
