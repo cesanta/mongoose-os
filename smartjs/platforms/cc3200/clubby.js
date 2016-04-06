@@ -1,6 +1,15 @@
 // Copyright (c) 2015 Cesanta Software Limited
 // All rights reserved
 
+function ClubbyError(message, status) {
+  this.name = "ClubbyError";
+  this.message = message;
+  this.status = status;
+  this.stack = (new Error()).stack;
+}
+ClubbyError.prototype = Object.create(Error.prototype);
+ClubbyError.prototype.constructor = ClubbyError;
+
 var Clubby = function(arg) {
   // arg is a map:
   //  {
@@ -182,11 +191,27 @@ Clubby.prototype._send = function(req) {
 }
 
 Clubby.prototype.call = function(dst, cmd, callback) {
+  var cb;
+  var p;
+  if (callback === undefined) {
+    p = new Promise(function(resolve, reject) {
+    cb = function cb(req) {
+      if (req.status == 0) {
+        resolve(req.resp);
+      } else {
+        reject(new ClubbyError(req.status_msg, req.status));
+      }
+    };
+    });
+  } else {
+    cb = callback;
+  }
+
   var c = this.config;
   var id = c.next_req_id++;
   var req = { v: 1, dst: dst, src: c.src, key: c.key };
   req.cmds = [ $.extend({ id: id, timeout: c.timeout }, cmd) ];
-  c.map[id] = callback; // Store callback for the given message ID
+  c.map[id] = cb; // Store callback for the given message ID
   var msg = JSON.stringify(req);
   if (c.onstart) {
     c.onstart(msg);
@@ -198,6 +223,8 @@ Clubby.prototype.call = function(dst, cmd, callback) {
     c.queue.push(req);
     c.ws.close();
   }
+
+  return p;
 };
 
 Clubby.prototype.oncmd = function(cmd, cb) {
