@@ -28,8 +28,6 @@ $.each = function(a, f) {
   });
 };
 
-global.console = { log: print };
-
 Sys.conf = File.loadJSON('conf_sys_defaults.json') || {};
 $.extend(Sys.conf, File.loadJSON('conf.json') || {});
 
@@ -81,6 +79,7 @@ if (Sys.conf.clubby.device_id) {
 }
 
 global.clubby = new Clubby({connect:false});
+global.console = new Console(clubby);
 
 if (Sys.conf.clubby.device_id && Sys.conf.clubby.connect_on_boot) {
   if (Wifi.status() !== undefined) {

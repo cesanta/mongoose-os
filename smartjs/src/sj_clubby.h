@@ -9,6 +9,7 @@
 #include "v7/v7.h"
 #include "common/ubjserializer.h"
 #include "clubby_proto.h"
+#include "common/queue.h"
 
 #ifndef DISABLE_C_CLUBBY
 
@@ -17,6 +18,7 @@ extern const char clubby_cmd_onopen[];
 extern const char clubby_cmd_onclose[];
 
 typedef void (*sj_clubby_callback_t)(struct clubby_event *evt, void *user_data);
+typedef void *clubby_handle_t;
 
 void sj_clubby_api_setup(struct v7 *v7);
 void sj_clubby_init(struct v7 *v7);
@@ -33,6 +35,11 @@ void sj_clubby_free_reply(struct clubby_event *reply);
 
 char *sj_clubby_repl_to_bytes(struct clubby_event *reply, int *len);
 struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len);
+
+clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v);
+
+int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
+                   struct ub_ctx *ctx, ub_val_t args);
 
 /* TODO(alashkin): add more sending functions to header */
 #endif /* DISABLE_C_CLUBBY */

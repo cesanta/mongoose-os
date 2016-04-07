@@ -15841,6 +15841,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("Boolean"),
     V7_VEC("CLOSED"),  /* sjs */
     V7_VEC("Clubby"),  /* sjs */
+    V7_VEC("Console"), /* sjs */
     V7_VEC("Crypto"),
     V7_VEC("EvalError"),
     V7_VEC("Function"),

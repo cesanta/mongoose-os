@@ -9,7 +9,6 @@
 #include "device_config.h"
 #include "sj_timers.h"
 #include "sj_v7_ext.h"
-#include "sys_config.h"
 #include "sj_common.h"
 
 #ifndef DISABLE_C_CLUBBY
@@ -152,6 +151,10 @@ static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
   }
 
   return v7_to_foreign(clubbyv);
+}
+
+clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v) {
+  return get_clubby(v7, clubby_v);
 }
 
 #define DECLARE_CLUBBY()                                   \
@@ -563,6 +566,23 @@ static void clubby_send_labels(struct clubby *clubby) {
 
   /* We don't intrested in resp, so, using default resp handler */
   clubby_send_cmds(clubby, ctx, id, clubby->cfg.backend, cmds);
+}
+
+/* TODO(alashkin): merge Clubby_call and sj_clubby_send_command */
+int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
+                   struct ub_ctx *ctx, ub_val_t args) {
+  struct clubby *clubby = (struct clubby *) handle;
+  ub_val_t cmds = ub_create_array(ctx);
+  ub_val_t cmdv = ub_create_object(ctx);
+  ub_array_push(ctx, cmds, cmdv);
+  ub_add_prop(ctx, cmdv, "cmd", ub_create_string(ctx, command));
+  int64_t id = clubby_proto_get_new_id();
+  ub_add_prop(ctx, cmdv, "id", ub_create_number(id));
+  ub_add_prop(ctx, cmdv, "args", args);
+
+  clubby_send_cmds(clubby, ctx, id, dst ? dst : clubby->cfg.backend, cmds);
+
+  return 0;
 }
 
 static int call_cb_impl(struct clubby *clubby, const char *id, int8_t id_len,
