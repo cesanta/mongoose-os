@@ -146,7 +146,7 @@ var Clubby = function(arg) {
         } else {
           setTimeout(function(){
             try {
-              done(h(cmd));
+              Promise.resolve(h(cmd)).then(done, function(e) { done(e, 1); });
             } catch(e) {
               error(JSON.stringify(e));
             }
