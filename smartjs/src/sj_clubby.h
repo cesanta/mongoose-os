@@ -39,8 +39,9 @@ struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len);
 clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v);
 
 int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
-                   struct ub_ctx *ctx, ub_val_t args);
+                   struct ub_ctx *ctx, ub_val_t args, int enqueue);
 
+int sj_clubby_can_send(clubby_handle_t handle);
 /* TODO(alashkin): add more sending functions to header */
 #endif /* DISABLE_C_CLUBBY */
 

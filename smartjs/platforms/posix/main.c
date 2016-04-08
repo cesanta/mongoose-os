@@ -21,6 +21,7 @@
 #include "common/cs_dbg.h"
 #include "smartjs.h"
 #include "smartjs/src/device_config.h"
+#include "smartjs/src/sj_console.h"
 
 #ifndef JS_FS_ROOT
 #define JS_FS_ROOT "."

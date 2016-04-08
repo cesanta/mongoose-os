@@ -568,9 +568,8 @@ static void clubby_send_labels(struct clubby *clubby) {
   clubby_send_cmds(clubby, ctx, id, clubby->cfg.backend, cmds);
 }
 
-/* TODO(alashkin): merge Clubby_call and sj_clubby_send_command */
 int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
-                   struct ub_ctx *ctx, ub_val_t args) {
+                   struct ub_ctx *ctx, ub_val_t args, int enqueue) {
   struct clubby *clubby = (struct clubby *) handle;
   ub_val_t cmds = ub_create_array(ctx);
   ub_val_t cmdv = ub_create_object(ctx);
@@ -580,7 +579,15 @@ int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
   ub_add_prop(ctx, cmdv, "id", ub_create_number(id));
   ub_add_prop(ctx, cmdv, "args", args);
 
-  clubby_send_cmds(clubby, ctx, id, dst ? dst : clubby->cfg.backend, cmds);
+  if (enqueue) {
+    clubby_send_cmds(clubby, ctx, id, dst ? dst : clubby->cfg.backend, cmds);
+  } else {
+    ub_val_t frame = clubby_proto_create_frame_base(
+        ctx, clubby->cfg.device_id, clubby->cfg.device_psk,
+        dst ? dst : clubby->cfg.backend);
+    ub_add_prop(ctx, frame, "cmds", cmds);
+    clubby_proto_send(clubby->nc, ctx, frame);
+  }
 
   return 0;
 }
@@ -955,6 +962,11 @@ SJ_PRIVATE enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
   *res = v7_mk_boolean(1);
 
   return V7_OK;
+}
+
+int sj_clubby_can_send(clubby_handle_t handle) {
+  struct clubby *clubby = (struct clubby *) handle;
+  return clubby_is_connected(clubby) && !clubby_is_overcrowded(clubby);
 }
 
 /* clubby.call(dst: string, cmd: object, callback(resp): function) */
