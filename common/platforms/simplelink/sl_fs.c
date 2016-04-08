@@ -3,7 +3,8 @@
  * All rights reserved
  */
 
-#if CS_PLATFORM == CS_P_CC3200
+#if defined(MG_SOCKET_SIMPLELINK) && \
+    (defined(MG_FS_SLFS) || defined(MG_FS_SPIFFS))
 
 #include <errno.h>
 #include <stdio.h>
@@ -13,11 +14,13 @@
 #include <file.h>
 #endif
 
+#if CS_PLATFORM == CS_P_CC3200
 #include <inc/hw_types.h>
 #include <inc/hw_memmap.h>
 #include <driverlib/rom.h>
 #include <driverlib/rom_map.h>
 #include <driverlib/uart.h>
+#endif
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
@@ -26,8 +29,8 @@
 #include "cc3200_fs_spiffs.h"
 #endif
 
-#ifdef CC3200_FS_SLFS
-#include "cc3200_fs_slfs.h"
+#ifdef MG_FS_SLFS
+#include "sl_fs_slfs.h"
 #endif
 
 #define NUM_SYS_FDS 3
@@ -61,7 +64,7 @@ enum fd_type {
 #ifdef CC3200_FS_SPIFFS
   FD_SPIFFS,
 #endif
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
   FD_SLFS
 #endif
 };
@@ -72,7 +75,7 @@ static int fd_type(int fd) {
     return FD_SPIFFS;
   }
 #endif
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
   if (fd >= SLFS_FD_BASE && fd < SLFS_FD_BASE + MAX_OPEN_SLFS_FILES) {
     return FD_SLFS;
   }
@@ -84,7 +87,7 @@ int _open(const char *pathname, int flags, mode_t mode) {
   int fd = -1;
   pathname = drop_dir(pathname);
   if (is_sl_fname(pathname)) {
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     fd = fs_slfs_open(sl_fname(pathname), flags, mode);
     if (fd >= 0) fd += SLFS_FD_BASE;
 #endif
@@ -114,7 +117,7 @@ int _stat(const char *pathname, struct stat *st) {
     return 0;
   }
   if (is_sl) {
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     res = fs_slfs_stat(fname, st);
 #endif
   } else {
@@ -140,7 +143,7 @@ int _close(int fd) {
       r = fs_spiffs_close(fd - SPIFFS_FD_BASE);
       break;
 #endif
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     case FD_SLFS:
       r = fs_slfs_close(fd - SLFS_FD_BASE);
       break;
@@ -164,7 +167,7 @@ off_t _lseek(int fd, off_t offset, int whence) {
       r = fs_spiffs_lseek(fd - SPIFFS_FD_BASE, offset, whence);
       break;
 #endif
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     case FD_SLFS:
       r = fs_slfs_lseek(fd - SLFS_FD_BASE, offset, whence);
       break;
@@ -194,7 +197,7 @@ int _fstat(int fd, struct stat *s) {
       r = fs_spiffs_fstat(fd - SPIFFS_FD_BASE, s);
       break;
 #endif
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     case FD_SLFS:
       r = fs_slfs_fstat(fd - SLFS_FD_BASE, s);
       break;
@@ -224,7 +227,7 @@ ssize_t _read(int fd, void *buf, size_t count) {
       r = fs_spiffs_read(fd - SPIFFS_FD_BASE, buf, count);
       break;
 #endif
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     case FD_SLFS:
       r = fs_slfs_read(fd - SLFS_FD_BASE, buf, count);
       break;
@@ -246,11 +249,13 @@ ssize_t _write(int fd, const void *buf, size_t count) {
         r = set_errno(EACCES);
         break;
       }
+#if CS_PLATFORM == CS_P_CC3200
       for (i = 0; i < count; i++) {
         const char c = ((const char *) buf)[i];
         if (c == '\n') MAP_UARTCharPut(CONSOLE_UART, '\r');
         MAP_UARTCharPut(CONSOLE_UART, c);
       }
+#endif
       r = count;
       break;
     }
@@ -259,7 +264,7 @@ ssize_t _write(int fd, const void *buf, size_t count) {
       r = fs_spiffs_write(fd - SPIFFS_FD_BASE, buf, count);
       break;
 #endif
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     case FD_SLFS:
       r = fs_slfs_write(fd - SLFS_FD_BASE, buf, count);
       break;
@@ -273,7 +278,7 @@ int _rename(const char *from, const char *to) {
   from = drop_dir(from);
   to = drop_dir(to);
   if (is_sl_fname(from) || is_sl_fname(to)) {
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     r = fs_slfs_rename(sl_fname(from), sl_fname(to));
 #endif
   } else {
@@ -294,7 +299,7 @@ int _unlink(const char *filename) {
   int r = -1;
   filename = drop_dir(filename);
   if (is_sl_fname(filename)) {
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
     r = fs_slfs_unlink(sl_fname(filename));
 #endif
   } else {
@@ -346,7 +351,7 @@ int mkdir(const char *path, mode_t mode) {
 int cc3200_fs_init() {
   int ret = 1;
 #ifdef __TI_COMPILER_VERSION__
-#ifdef CC3200_FS_SLFS
+#ifdef MG_FS_SLFS
   ret = (add_device("SL", _MSA, fs_slfs_open, fs_slfs_close, fs_slfs_read,
                     fs_slfs_write, fs_slfs_lseek, fs_slfs_unlink,
                     fs_slfs_rename) == 0);
@@ -355,4 +360,5 @@ int cc3200_fs_init() {
   return ret;
 }
 
-#endif /* CS_PLATFORM == CS_P_CC3200 */
+#endif /* defined(MG_SOCKET_SIMPLELINK) && (defined(MG_FS_SLFS) || \
+          defined(MG_FS_SPIFFS)) */

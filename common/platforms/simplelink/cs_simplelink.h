@@ -1,0 +1,98 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
+#define CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
+
+/* If simplelink.h is already included, all bets are off. */
+#if defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__)
+
+#ifndef __TI_COMPILER_VERSION__
+#undef __CONCAT
+#undef FD_CLR
+#undef FD_ISSET
+#undef FD_SET
+#undef FD_SETSIZE
+#undef FD_ZERO
+#undef fd_set
+#endif
+
+/* We want to disable SL_INC_STD_BSD_API_NAMING, so we include user.h ourselves
+ * and undef it. */
+#define PROVISIONING_API_H_
+#include <simplelink/user.h>
+#undef PROVISIONING_API_H_
+#undef SL_INC_STD_BSD_API_NAMING
+
+#include <simplelink/include/simplelink.h>
+
+/* Now define only the subset of the BSD API that we use.
+ * Notably, close(), read() and write() are not defined. */
+#define AF_INET SL_AF_INET
+
+#define socklen_t SlSocklen_t
+#define sockaddr SlSockAddr_t
+#define sockaddr_in SlSockAddrIn_t
+#define in_addr SlInAddr_t
+
+#define SOCK_STREAM SL_SOCK_STREAM
+#define SOCK_DGRAM SL_SOCK_DGRAM
+
+#define FD_SET SL_FD_SET
+#define FD_CLR SL_FD_CLR
+#define FD_ISSET SL_FD_ISSET
+#define FD_ZERO SL_FD_ZERO
+#define fd_set SlFdSet_t
+
+#define htonl sl_Htonl
+#define ntohl sl_Ntohl
+#define htons sl_Htons
+#define ntohs sl_Ntohs
+
+#define accept sl_Accept
+#define closesocket sl_Close
+#define bind sl_Bind
+#define connect sl_Connect
+#define listen sl_Listen
+#define recv sl_Recv
+#define recvfrom sl_RecvFrom
+#define send sl_Send
+#define sendto sl_SendTo
+#define socket sl_Socket
+
+#define select(nfds, rfds, wfds, efds, tout) \
+  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *)(tout))
+
+#ifndef EACCES
+#define EACCES SL_EACCES
+#endif
+#ifndef EAFNOSUPPORT
+#define EAFNOSUPPORT SL_EAFNOSUPPORT
+#endif
+#ifndef EAGAIN
+#define EAGAIN SL_EAGAIN
+#endif
+#ifndef EBADF
+#define EBADF SL_EBADF
+#endif
+#ifndef EINVAL
+#define EINVAL SL_EINVAL
+#endif
+#ifndef ENOMEM
+#define ENOMEM SL_ENOMEM
+#endif
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK SL_EWOULDBLOCK
+#endif
+
+#define SOMAXCONN 8
+
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+char *inet_ntoa(struct in_addr in);
+int inet_pton(int af, const char *src, void *dst);
+
+#endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
+
+#endif /* CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_ */

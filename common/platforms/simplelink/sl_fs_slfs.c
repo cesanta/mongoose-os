@@ -5,19 +5,21 @@
 
 /* Standard libc interface to TI SimpleLink FS. */
 
-#if CS_PLATFORM == CS_P_CC3200 && defined(CC3200_FS_SLFS)
+#if defined(MG_FS_SLFS) || defined(CC3200_FS_SLFS)
 
-#include "cc3200_fs_slfs.h"
+#include "common/platforms/simplelink/sl_fs_slfs.h"
 
 #include <errno.h>
 
+#if CS_PLATFORM == CS_P_CC3200
 #include <inc/hw_types.h>
+#endif
 #include <simplelink/include/simplelink.h>
 #include <simplelink/include/fs.h>
 
 #include "common/cs_dbg.h"
 
-extern int set_errno(int e); /* From cc3200_fs.c */
+extern int set_errno(int e); /* From sl_fs.c */
 
 /*
  * With SLFS, you have to pre-declare max file size. Yes. Really.
@@ -184,4 +186,4 @@ int fs_slfs_rename(const char *from, const char *to) {
   return set_errno(ENOTSUP);
 }
 
-#endif /* CS_PLATFORM == CS_P_CC3200 && defined(CC3200_FS_SLFS) */
+#endif /* defined(MG_FS_SLFS) || defined(CC3200_FS_SLFS) */

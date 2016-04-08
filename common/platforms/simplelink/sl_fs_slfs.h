@@ -3,10 +3,10 @@
  * All rights reserved
  */
 
-#ifndef CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SLFS_H_
-#define CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SLFS_H_
+#ifndef CS_SMARTJS_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_
+#define CS_SMARTJS_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_
 
-#if CS_PLATFORM == CS_P_CC3200 && defined(CC3200_FS_SLFS)
+#if defined(MG_FS_SLFS)
 
 #include <stdio.h>
 #ifndef __TI_COMPILER_VERSION__
@@ -27,6 +27,6 @@ off_t fs_slfs_lseek(int fd, off_t offset, int whence);
 int fs_slfs_unlink(const char *filename);
 int fs_slfs_rename(const char *from, const char *to);
 
-#endif /* CS_PLATFORM == CS_P_CC3200 && defined(CC3200_FS_SLFS) */
+#endif /* defined(MG_FS_SLFS) */
 
-#endif /* CS_SMARTJS_PLATFORMS_CC3200_CC3200_FS_SLFS_H_ */
+#endif /* CS_SMARTJS_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_ */

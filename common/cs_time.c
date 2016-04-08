@@ -5,7 +5,8 @@
 
 #ifndef _WIN32
 #include <stddef.h>
-#if !defined(CS_PLATFORM) || CS_PLATFORM != CS_P_CC3200
+#if !defined(CS_PLATFORM) || \
+    (CS_PLATFORM != CS_P_CC3200 && CS_PLATFORM != CS_P_MSP432)
 #include <sys/time.h>
 #endif
 #else

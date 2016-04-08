@@ -42,11 +42,15 @@
 #define CS_P_WINDOWS 2
 #define CS_P_ESP_LWIP 3
 #define CS_P_CC3200 4
+#define CS_P_MSP432 5
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
 
-#ifdef cc3200
+#if defined(TARGET_IS_MSP432P4XX) || defined(__MSP432P401R__)
+
+#define CS_PLATFORM CS_P_MSP432
+#elif defined(cc3200)
 #define CS_PLATFORM CS_P_CC3200
 #elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
@@ -463,43 +467,18 @@ void mbuf_trim(struct mbuf *);
 
 #endif /* CS_COMMON_MBUF_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./common/platforms/platform_cc3200.h"
+#line 1 "./common/platforms/simplelink/cs_simplelink.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#if CS_PLATFORM == CS_P_CC3200
-
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <stdint.h>
-#include <string.h>
-#include <time.h>
-
-#ifndef __TI_COMPILER_VERSION__
-#include <fcntl.h>
-#include <sys/time.h>
-#endif
-
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
-/* Only SPIFFS supports directories, SLFS does not. */
-#ifndef CC3200_FS_SPIFFS
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
-#endif
+#ifndef CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
+#define CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
 
 /* If simplelink.h is already included, all bets are off. */
-#ifndef __SIMPLELINK_H__
+#if defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__)
 
 #ifndef __TI_COMPILER_VERSION__
 #undef __CONCAT
@@ -550,10 +529,12 @@ void mbuf_trim(struct mbuf *);
 #define listen sl_Listen
 #define recv sl_Recv
 #define recvfrom sl_RecvFrom
-#define select sl_Select
 #define send sl_Send
 #define sendto sl_SendTo
 #define socket sl_Socket
+
+#define select(nfds, rfds, wfds, efds, tout) \
+  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *)(tout))
 
 #ifndef EACCES
 #define EACCES SL_EACCES
@@ -579,7 +560,50 @@ void mbuf_trim(struct mbuf *);
 
 #define SOMAXCONN 8
 
-#endif /* !__SIMPLELINK_H__ */
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+char *inet_ntoa(struct in_addr in);
+int inet_pton(int af, const char *src, void *dst);
+
+#endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
+
+#endif /* CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./common/platforms/platform_cc3200.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
+#if CS_PLATFORM == CS_P_CC3200
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#ifndef __TI_COMPILER_VERSION__
+#include <fcntl.h>
+#include <sys/time.h>
+#endif
+
+#define MG_SOCKET_SIMPLELINK 1
+#define MG_DISABLE_SOCKETPAIR 1
+#define MG_DISABLE_SYNC_RESOLVER 1
+#define MG_DISABLE_POPEN 1
+#define MG_DISABLE_CGI 1
+/* Only SPIFFS supports directories, SLFS does not. */
+#ifndef CC3200_FS_SPIFFS
+#define MG_DISABLE_DAV 1
+#define MG_DISABLE_DIRECTORY_LISTING 1
+#endif
+
+/* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
 
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
@@ -595,22 +619,13 @@ typedef struct stat cs_stat_t;
 
 /* Some functions we implement for Mongoose. */
 
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
-char *inet_ntoa(struct in_addr in);
-int inet_pton(int af, const char *src, void *dst);
-
 #ifdef __TI_COMPILER_VERSION__
+struct SlTimeval_t;
 #define timeval SlTimeval_t
 int gettimeofday(struct timeval *t, void *tz);
-#else
-#undef timeval
 #endif
 
 long int random(void);
-
-#undef select
-#define select(nfds, rfds, wfds, efds, tout) \
-  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *)(tout))
 
 /* TI's libc does not have stat & friends, add them. */
 #ifdef __TI_COMPILER_VERSION__
@@ -666,6 +681,10 @@ DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 #endif /* CC3200_FS_SPIFFS */
+
+#ifdef CC3200_FS_SLFS
+#define MG_FS_SLFS
+#endif
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */

@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#if CS_PLATFORM == CS_P_CC3200
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_MSP432_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_MSP432_H_
+#if CS_PLATFORM == CS_P_MSP432
 
 #include <assert.h>
 #include <ctype.h>
@@ -25,11 +25,8 @@
 #define MG_DISABLE_SYNC_RESOLVER 1
 #define MG_DISABLE_POPEN 1
 #define MG_DISABLE_CGI 1
-/* Only SPIFFS supports directories, SLFS does not. */
-#ifndef CC3200_FS_SPIFFS
 #define MG_DISABLE_DAV 1
 #define MG_DISABLE_DIRECTORY_LISTING 1
-#endif
 
 #include "common/platforms/simplelink/cs_simplelink.h"
 
@@ -94,25 +91,5 @@ int _stat(const char *pathname, struct stat *st);
 
 #endif /* __TI_COMPILER_VERSION__ */
 
-#ifdef CC3200_FS_SPIFFS
-#include <common/spiffs/spiffs.h>
-
-typedef struct {
-  spiffs_DIR dh;
-  struct spiffs_dirent de;
-} DIR;
-
-#define d_name name
-#define dirent spiffs_dirent
-
-DIR *opendir(const char *dir_name);
-int closedir(DIR *dir);
-struct dirent *readdir(DIR *dir);
-#endif /* CC3200_FS_SPIFFS */
-
-#ifdef CC3200_FS_SLFS
-#define MG_FS_SLFS
-#endif
-
-#endif /* CS_PLATFORM == CS_P_CC3200 */
-#endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
+#endif /* CS_PLATFORM == CS_P_MSP432 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_MSP432_H_ */

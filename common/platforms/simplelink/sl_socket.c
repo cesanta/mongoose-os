@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if CS_PLATFORM == CS_P_CC3200
+#ifdef MG_SOCKET_SIMPLELINK
 
 #include <errno.h>
 #include <stdio.h>
@@ -47,4 +47,4 @@ int inet_pton(int af, const char *src, void *dst) {
   return 1;
 }
 
-#endif /* CS_PLATFORM == CS_P_CC3200 */
+#endif /* MG_SOCKET_SIMPLELINK */
