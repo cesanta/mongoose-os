@@ -191,6 +191,21 @@ def cmd_get(args):
         print v
 
 
+def cmd_set(args):
+    o = json.load(open(args.json_file))
+    for key_value in args.key_values:
+        key, value = key_value.split("=")
+        d = o
+        parts = key.split('.')
+        for p in parts[:-1]:
+            v = d[p]
+            d = v
+        d[parts[-1]] = value
+    if args.inplace:
+        json.dump(o, open(args.json_file, "w"))
+    else:
+        print json.dumps(o)
+
 if __name__ == '__main__':
     handlers = {}
     parser = argparse.ArgumentParser(description='FW metadata tool', prog='fw_manifest')
@@ -237,6 +252,13 @@ if __name__ == '__main__':
     get_cmd.add_argument('json_file')
     get_cmd.add_argument('keys', nargs='+')
     handlers['get'] = cmd_get
+
+    set_desc = "Modify keys in a JSON file"
+    set_cmd = cmd.add_parser('set', help=set_desc, description=set_desc)
+    set_cmd.add_argument('--inplace', '-i', action='store_true')
+    set_cmd.add_argument('json_file')
+    set_cmd.add_argument('key_values', nargs='+')
+    handlers['set'] = cmd_set
 
     args = parser.parse_args()
     handlers[args.cmd](args)
