@@ -16,7 +16,6 @@
 #include "common/cs_dbg.h"
 
 static v7_val_t wifi_private;
-static struct v7 *s_v7;
 
 struct wifi_ready_cb {
   /*
@@ -180,9 +179,7 @@ clean:
   return V7_OK;
 }
 
-void sj_wifi_on_change_callback(enum sj_wifi_status event) {
-  struct v7 *v7 = s_v7;
-
+void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event) {
   switch (event) {
     case SJ_WIFI_DISCONNECTED:
       LOG(LL_INFO, ("Wifi: disconnected"));
@@ -198,7 +195,7 @@ void sj_wifi_on_change_callback(enum sj_wifi_status event) {
 
   v7_val_t cb = v7_get(v7, wifi_private, "_ccb", ~0);
   if (v7_is_undefined(cb) || v7_is_null(cb)) return;
-  sj_invoke_cb1(s_v7, cb, v7_mk_number(event));
+  sj_invoke_cb1(v7, cb, v7_mk_number(event));
 }
 
 SJ_PRIVATE enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
@@ -217,8 +214,7 @@ clean:
   return rcode;
 }
 
-void sj_wifi_scan_done(const char **ssids) {
-  struct v7 *v7 = s_v7;
+void sj_wifi_scan_done(struct v7 *v7, const char **ssids) {
   v7_val_t cb = v7_get(v7, wifi_private, "_scb", ~0);
   v7_val_t res = v7_mk_undefined();
   const char **p;
@@ -291,7 +287,6 @@ void sj_wifi_api_setup(struct v7 *v7) {
 }
 
 void sj_wifi_init(struct v7 *v7) {
-  s_v7 = v7;
   wifi_private = v7_mk_object(v7);
   v7_def(v7, v7_get_global(v7), "_Wifi", ~0,
          (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), wifi_private);

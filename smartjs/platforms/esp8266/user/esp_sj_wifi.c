@@ -233,7 +233,7 @@ void wifi_changed_cb(System_Event_t *evt) {
       break;
   }
 
-  if (sj_ev >= 0) sj_wifi_on_change_callback(sj_ev);
+  if (sj_ev >= 0) sj_wifi_on_change_callback(v7, sj_ev);
 }
 
 char *sj_wifi_get_connected_ssid(void) {
@@ -264,11 +264,11 @@ void wifi_scan_done(void *arg, STATUS status) {
     STAILQ_FOREACH(p, info, next) {
       ssids[n++] = (const char *) p->ssid;
     }
-    wifi_scan_cb(ssids);
+    wifi_scan_cb(v7, ssids);
     free(ssids);
   } else {
     LOG(LL_ERROR, ("wifi scan failed: %d", status));
-    wifi_scan_cb(NULL);
+    wifi_scan_cb(v7, NULL);
   }
 }
 

@@ -19,6 +19,8 @@
 
 #include "config.h"
 
+extern struct v7 *s_v7;
+
 struct cc3200_wifi_config {
   int status;
   char *ssid;
@@ -42,7 +44,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
       break;
     }
   }
-  if (ev >= 0) sj_wifi_on_change_callback(ev);
+  if (ev >= 0) sj_wifi_on_change_callback(s_v7, ev);
 }
 
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
@@ -52,7 +54,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = SJ_WIFI_IP_ACQUIRED;
-    sj_wifi_on_change_callback(SJ_WIFI_IP_ACQUIRED);
+    sj_wifi_on_change_callback(s_v7, SJ_WIFI_IP_ACQUIRED);
   }
 }
 
@@ -234,11 +236,12 @@ int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
     ssids[i] = (char *) info[i].ssid;
   }
   ssids[i] = NULL;
-  cb(ssids);
+  cb(s_v7, ssids);
   return 1;
 }
 
 void sj_wifi_hal_init(struct v7 *v7) {
+  (void) v7;
   _u32 scan_interval = WIFI_SCAN_INTERVAL_SECONDS;
   sl_WlanPolicySet(SL_POLICY_SCAN, 1 /* enable */, (_u8 *) &scan_interval,
                    sizeof(scan_interval));

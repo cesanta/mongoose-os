@@ -23,7 +23,7 @@ char *sj_wifi_get_connected_ssid();
 char *sj_wifi_get_sta_ip();
 
 /* Caller owns SSIDS, they are not freed by the callee. */
-typedef void (*sj_wifi_scan_cb_t)(const char **ssids);
+typedef void (*sj_wifi_scan_cb_t)(struct v7 *v7, const char **ssids);
 int sj_wifi_scan(sj_wifi_scan_cb_t cb);
 
 /* Invoke this when Wifi connection state changes. */
@@ -32,7 +32,7 @@ enum sj_wifi_status {
   SJ_WIFI_CONNECTED = 1,
   SJ_WIFI_IP_ACQUIRED = 2,
 };
-void sj_wifi_on_change_callback(enum sj_wifi_status event);
+void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event);
 
 enum sj_wifi_status sj_wifi_get_status();
 
