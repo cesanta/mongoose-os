@@ -17,8 +17,6 @@
 #define RECONNECT_TIMEOUT_MULTIPLY 1.3
 #define TIMEOUT_CHECK_PERIOD 30000
 
-static struct v7 *s_v7;
-
 /* Commands exposed to C */
 const char clubby_cmd_ready[] = "_$conn_ready$_";
 const char clubby_cmd_onopen[] = "_$conn_onopen$_";
@@ -58,6 +56,7 @@ struct clubby {
   struct mg_connection *nc;
   int auth_ok;
   struct sys_config_clubby cfg;
+  struct v7 *v7;
 };
 
 static struct clubby *s_clubbies;
@@ -79,7 +78,7 @@ static void delete_queued_frame(struct clubby *clubby, int64_t id);
 static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
                    struct clubby_event *evt, int remove_after_call);
 
-struct clubby *create_clubby() {
+struct clubby *create_clubby(struct v7 *v7) {
   struct clubby *ret = calloc(1, sizeof(*ret));
   if (ret == NULL) {
     return NULL;
@@ -88,6 +87,7 @@ struct clubby *create_clubby() {
   ret->next = s_clubbies;
   s_clubbies = ret;
 
+  ret->v7 = v7;
   return ret;
 }
 
@@ -489,7 +489,7 @@ static void clubby_send_response(struct clubby *clubby, const char *dst,
 
   struct ub_ctx *ctx = ub_ctx_new();
   if (!v7_is_undefined(resp_v)) {
-    ubj = obj_to_ubj(s_v7, ctx, resp_v);
+    ubj = obj_to_ubj(clubby->v7, ctx, resp_v);
   }
 
   clubby_proto_send(
@@ -722,16 +722,16 @@ static void clubby_disconnect(struct clubby *clubby) {
 }
 
 static void simple_cb(struct clubby_event *evt, void *user_data) {
-  (void) evt;
+  struct clubby *clubby = (struct clubby *) evt->context;
   v7_val_t *cbp = (v7_val_t *) user_data;
-  sj_invoke_cb0(s_v7, *cbp);
+  sj_invoke_cb0(clubby->v7, *cbp);
 }
 
 static void simple_cb_run_once(struct clubby_event *evt, void *user_data) {
-  (void) evt;
+  struct clubby *clubby = (struct clubby *) evt->context;
   v7_val_t *cbp = (v7_val_t *) user_data;
-  sj_invoke_cb0(s_v7, *cbp);
-  v7_disown(s_v7, cbp);
+  sj_invoke_cb0(clubby->v7, *cbp);
+  v7_disown(clubby->v7, cbp);
   free(cbp);
 }
 
@@ -766,6 +766,7 @@ error:
 int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...);
 
 static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
+  struct clubby *clubby = (struct clubby *) evt->context;
   v7_val_t *cbp = (v7_val_t *) user_data;
   v7_val_t cb_param;
   enum v7_err res;
@@ -786,13 +787,13 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
     char reply[sizeof(reply_fmt) + 17];
     c_snprintf(reply, sizeof(reply), reply_fmt, evt->response.id);
 
-    res = v7_parse_json(s_v7, reply, &cb_param);
+    res = v7_parse_json(clubby->v7, reply, &cb_param);
   } else {
     /* v7_parse_json wants null terminated string */
     char *obj_str = calloc(1, evt->response.resp_body->len + 1);
     memcpy(obj_str, evt->response.resp_body->ptr, evt->response.resp_body->len);
 
-    res = v7_parse_json(s_v7, obj_str, &cb_param);
+    res = v7_parse_json(clubby->v7, obj_str, &cb_param);
     free(obj_str);
   }
 
@@ -805,12 +806,12 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
     cb_param = v7_mk_undefined();
   }
 
-  v7_own(s_v7, &cb_param);
-  sj_invoke_cb1(s_v7, *cbp, cb_param);
-  v7_disown(s_v7, &cb_param);
+  v7_own(clubby->v7, &cb_param);
+  sj_invoke_cb1(clubby->v7, *cbp, cb_param);
+  v7_disown(clubby->v7, &cb_param);
 
 clean:
-  v7_disown(s_v7, cbp);
+  v7_disown(clubby->v7, cbp);
   free(cbp);
 }
 
@@ -834,7 +835,7 @@ static enum v7_err done_func(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_undefined(cb_err)) {
     clubby_send_response(ctx->clubby, ctx->dst, ctx->id, 1,
-                         v7_to_cstring(s_v7, &cb_err), v7_mk_undefined());
+                         v7_to_cstring(v7, &cb_err), v7_mk_undefined());
   } else {
     clubby_send_response(ctx->clubby, ctx->dst, ctx->id, 0, NULL, cb_res);
   }
@@ -847,8 +848,8 @@ static enum v7_err done_func(struct v7 *v7, v7_val_t *res) {
 }
 
 static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
-  v7_val_t *cbv = (v7_val_t *) user_data;
   struct clubby *clubby = (struct clubby *) evt->context;
+  v7_val_t *cbv = (v7_val_t *) user_data;
 
   struct json_token *obj_tok = evt->request.cmd_body;
 
@@ -857,7 +858,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
   memcpy(obj_str, obj_tok->ptr, obj_tok->len);
 
   v7_val_t clubby_param;
-  enum v7_err res = v7_parse_json(s_v7, obj_str, &clubby_param);
+  enum v7_err res = v7_parse_json(clubby->v7, obj_str, &clubby_param);
   free(obj_str);
 
   if (res != V7_OK) {
@@ -868,7 +869,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
     clubby_param = v7_mk_undefined();
   }
 
-  v7_val_t argcv = v7_get(s_v7, *cbv, "length", ~0);
+  v7_val_t argcv = v7_get(clubby->v7, *cbv, "length", ~0);
   /* Must be verified before */
   assert(!v7_is_undefined(argcv));
   int argc = v7_to_number(argcv);
@@ -888,15 +889,15 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
      */
     enum v7_err cb_res;
     v7_val_t args;
-    args = v7_mk_array(s_v7);
-    v7_array_push(s_v7, args, clubby_param);
+    args = v7_mk_array(clubby->v7);
+    v7_array_push(clubby->v7, args, clubby_param);
     v7_val_t res;
-    cb_res = v7_apply(s_v7, *cbv, v7_get_global(s_v7), args, &res);
+    cb_res = v7_apply(clubby->v7, *cbv, v7_get_global(clubby->v7), args, &res);
     if (cb_res == V7_OK) {
       clubby_send_response(clubby, dst, evt->request.id, 0, NULL, res);
     } else {
       clubby_send_response(clubby, dst, evt->request.id, 1,
-                           v7_to_cstring(s_v7, &res), v7_mk_undefined());
+                           v7_to_cstring(clubby->v7, &res), v7_mk_undefined());
     }
     free(dst);
     return;
@@ -919,37 +920,38 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
     ctx->id = evt->request.id;
     ctx->clubby = clubby;
 
-    v7_own(s_v7, &clubby_param);
+    v7_own(clubby->v7, &clubby_param);
 
     v7_val_t done_func_v = v7_mk_cfunction(done_func);
-    v7_val_t bind_args = v7_mk_array(s_v7);
-    v7_array_push(s_v7, bind_args, v7_mk_foreign(ctx));
+    v7_val_t bind_args = v7_mk_array(clubby->v7);
+    v7_array_push(clubby->v7, bind_args, v7_mk_foreign(ctx));
     v7_val_t donevb;
-    res = v7_apply(s_v7, v7_get(s_v7, done_func_v, "bind", ~0), done_func_v,
-                   bind_args, &donevb);
+    res = v7_apply(clubby->v7, v7_get(clubby->v7, done_func_v, "bind", ~0),
+                   done_func_v, bind_args, &donevb);
 
     if (res != V7_OK) {
       LOG(LL_ERROR, ("Bind invocation error"));
       goto cleanup;
     }
 
-    v7_val_t cb_args = v7_mk_array(s_v7);
-    v7_array_push(s_v7, cb_args, clubby_param);
-    v7_array_push(s_v7, cb_args, donevb);
+    v7_val_t cb_args = v7_mk_array(clubby->v7);
+    v7_array_push(clubby->v7, cb_args, clubby_param);
+    v7_array_push(clubby->v7, cb_args, donevb);
 
     v7_val_t cb_res;
-    res = v7_apply(s_v7, *cbv, v7_get_global(s_v7), cb_args, &cb_res);
+    res =
+        v7_apply(clubby->v7, *cbv, v7_get_global(clubby->v7), cb_args, &cb_res);
 
     if (res != V7_OK) {
       LOG(LL_ERROR, ("Callback invocation error"));
       goto cleanup;
     }
 
-    v7_disown(s_v7, &clubby_param);
+    v7_disown(clubby->v7, &clubby_param);
     return;
 
   cleanup:
-    v7_disown(s_v7, &clubby_param);
+    v7_disown(clubby->v7, &clubby_param);
     free(ctx->dst);
     free(ctx);
   }
@@ -1196,7 +1198,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   }
 
   v7_val_t this_obj = v7_get_this(v7);
-  struct clubby *clubby = create_clubby();
+  struct clubby *clubby = create_clubby(v7);
   if (clubby == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return v7_throwf(v7, "Error", "Out of memory");
@@ -1345,9 +1347,7 @@ void sj_clubby_api_setup(struct v7 *v7) {
   v7_disown(v7, &clubby_proto_v);
 }
 
-void sj_clubby_init(struct v7 *v7) {
-  s_v7 = v7;
-
+void sj_clubby_init() {
   clubby_proto_init(clubby_cb);
 
   sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
