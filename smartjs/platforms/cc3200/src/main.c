@@ -90,9 +90,11 @@ void sj_prompt_init_hal(struct v7 *v7) {
 }
 
 static f_gpio_intr_handler_t s_gpio_js_handler;
+static void *s_gpio_js_handler_arg;
 
-void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
+void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
   s_gpio_js_handler = cb;
+  s_gpio_js_handler_arg = arg;
 }
 
 static void v7_task(void *arg) {
@@ -119,7 +121,6 @@ static void v7_task(void *arg) {
     fprintf(stderr, "FS initialization failed.\n");
   }
 
-  sj_gpio_init(v7);
   sj_gpio_api_setup(v7);
   sj_http_api_setup(v7);
   sj_i2c_api_setup(v7);
@@ -168,7 +169,8 @@ static void v7_task(void *arg) {
       case GPIO_INT_EVENT: {
         int pin = ((intptr_t) e.data) >> 1;
         int val = ((intptr_t) e.data) & 1;
-        if (s_gpio_js_handler != NULL) s_gpio_js_handler(pin, val);
+        if (s_gpio_js_handler != NULL)
+          s_gpio_js_handler(pin, val, s_gpio_js_handler_arg);
         break;
       }
       case MG_POLL_EVENT: {

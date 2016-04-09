@@ -122,12 +122,11 @@ int gpio_set_edge(int gpio_no, enum gpio_int_mode edge) {
 #define HANDLER_MAX_COUNT 10
 #define POLL_TIMEOUT 100
 
-typedef void (*gpio_callback)(int pin, int level);
-
 struct gpio_event {
   int gpio_no;
-  gpio_callback callback;
+  f_gpio_intr_handler_t callback;
   int fd;
+  void *arg;
   struct gpio_event *next;
 };
 
@@ -166,7 +165,7 @@ void gpio_remove_handler(int gpio_no) {
   }
 }
 
-int gpio_set_handler(int gpio_no, gpio_callback callback) {
+int gpio_set_handler(int gpio_no, f_gpio_intr_handler_t callback, void *arg) {
   int fd, res;
   char tmp, buf[50];
   struct gpio_event *new_ev;
@@ -200,6 +199,7 @@ int gpio_set_handler(int gpio_no, gpio_callback callback) {
   new_ev->callback = callback;
   new_ev->next = s_events;
   new_ev->fd = fd;
+  new_ev->arg = arg;
   s_events = new_ev;
 
   return 0;
@@ -244,7 +244,8 @@ int gpio_poll() {
     if ((fdset[i].revents & POLLIN) != 0) {
       lseek(fdset[i].fd, 0, SEEK_SET);
       res = read(fdset[i].fd, &val, sizeof(val));
-      events_tmp[i]->callback(events_tmp[i]->gpio_no, val == '0' ? 0 : 1);
+      events_tmp[i]->callback(events_tmp[i]->gpio_no, val == '0' ? 0 : 1,
+                              events_tmp[i]->arg);
     }
   }
 
@@ -293,10 +294,12 @@ enum gpio_level sj_gpio_read(int pin) {
   return gpio_get_value(pin);
 }
 
-static f_gpio_intr_handler_t proxy_handler;
+static f_gpio_intr_handler_t s_proxy_handler;
+static void *s_proxy_handler_arg;
 
-void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
-  proxy_handler = cb;
+void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
+  s_proxy_handler = cb;
+  s_proxy_handler_arg = arg;
 }
 
 int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
@@ -309,7 +312,7 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
     return -1;
   }
 
-  return gpio_set_handler(pin, proxy_handler);
+  return gpio_set_handler(pin, s_proxy_handler, s_proxy_handler_arg);
 }
 
 #else

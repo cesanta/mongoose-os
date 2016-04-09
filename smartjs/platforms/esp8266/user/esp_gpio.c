@@ -14,6 +14,12 @@
 #include <gpio.h>
 #include <os_type.h>
 #include <user_interface.h>
+#include <stdlib.h>
+
+struct intr_disp_params {
+  f_gpio_intr_handler_t cb;
+  void *cb_arg;
+};
 
 /* These declarations are missing in SDK headers since ~1.0 */
 #define PERIPHS_IO_MUX_PULLDWN BIT6
@@ -228,7 +234,7 @@ IRAM static void v7_gpio_process_on_click(int pin, int level,
 }
 
 IRAM static void v7_gpio_intr_dispatcher(void *arg) {
-  f_gpio_intr_handler_t callback = (f_gpio_intr_handler_t) arg;
+  struct intr_disp_params *params = (struct intr_disp_params *) arg;
   uint8_t i, level;
 
   uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
@@ -241,11 +247,11 @@ IRAM static void v7_gpio_intr_dispatcher(void *arg) {
 
       if ((int_map[i] & 0xF0) == 0xF0) {
         /* this is "on click" handler */
-        v7_gpio_process_on_click(i, level, callback);
+        v7_gpio_process_on_click(i, level, params->cb);
       } else {
         system_os_post(TASK_PRIORITY,
                        (uint32_t) GPIO_TASK_SIG << 16 | i << 8 | level,
-                       (os_param_t) callback);
+                       (os_param_t) params);
       }
 
       gpio_pin_intr_state_set(GPIO_ID_PIN(i), int_map[i] & 0xF);
@@ -258,14 +264,23 @@ void v7_gpio_task(os_event_t *event) {
     return;
   }
 
-  ((f_gpio_intr_handler_t) event->par)((event->sig & 0xFFFF) >> 8,
-                                       (event->sig & 0xFF));
+  struct intr_disp_params *params = (struct intr_disp_params *) event->par;
+  params->cb((event->sig & 0xFFFF) >> 8, event->sig & 0xFF, params->cb_arg);
 }
 
-void sj_gpio_intr_init(f_gpio_intr_handler_t cb) {
+void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
+  static struct intr_disp_params *p = NULL;
+
+  if (p == NULL) {
+    p = malloc(sizeof(*p));
+  }
+
+  p->cb_arg = arg;
+  p->cb = cb;
+
   system_os_task(v7_gpio_task, TASK_PRIORITY, gpio_task_queue,
                  GPIO_TASK_QUEUE_LEN);
-  ETS_GPIO_INTR_ATTACH(v7_gpio_intr_dispatcher, cb);
+  ETS_GPIO_INTR_ATTACH(v7_gpio_intr_dispatcher, p);
 }
 
 static void v7_setup_on_click(int pin) {
