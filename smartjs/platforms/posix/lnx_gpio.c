@@ -275,14 +275,6 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
     return -1;
   }
 
-  if (mode == GPIO_MODE_INT) {
-    /*
-     * GPIO should be in "IN" mode
-     * for using /sys/edge
-     */
-    mode = GPIO_MODE_INPUT;
-  }
-
   return gpio_set_direction(pin, mode);
 }
 

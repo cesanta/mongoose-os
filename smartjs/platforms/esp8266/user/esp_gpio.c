@@ -139,19 +139,6 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
 
       EXIT_CRITICAL(ETS_GPIO_INUM);
       break;
-
-    case GPIO_MODE_INT:
-      ENTER_CRITICAL(ETS_GPIO_INUM);
-      PIN_FUNC_SELECT(gi->periph, gi->func);
-      GPIO_DIS_OUTPUT(pin);
-
-      gpio_register_set(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)),
-                        GPIO_PIN_INT_TYPE_SET(GPIO_PIN_INTR_DISABLE) |
-                            GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_DISABLE) |
-                            GPIO_PIN_SOURCE_SET(GPIO_AS_PIN_SOURCE));
-
-      EXIT_CRITICAL(ETS_GPIO_INUM);
-      break;
   }
 
   return 0;

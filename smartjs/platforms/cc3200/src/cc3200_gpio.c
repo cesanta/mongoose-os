@@ -69,7 +69,6 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return -1;
   if (mode == GPIO_MODE_INOUT) return -1; /* CC3200 does not support in+out. */
-  if (mode == GPIO_MODE_INT) return -1;   /* TODO(rojer) */
 
   uint32_t port_no = (gpio_no / 8); /* A0 - A4 */
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
