@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_SMARTJS_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_
-#define CS_SMARTJS_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_
+#ifndef CS_COMMON_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_
+#define CS_COMMON_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_
 
 #if defined(MG_FS_SLFS)
 
@@ -29,4 +29,4 @@ int fs_slfs_rename(const char *from, const char *to);
 
 #endif /* defined(MG_FS_SLFS) */
 
-#endif /* CS_SMARTJS_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_ */
+#endif /* CS_COMMON_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_ */

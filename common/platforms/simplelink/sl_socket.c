@@ -47,4 +47,4 @@ int inet_pton(int af, const char *src, void *dst) {
   return 1;
 }
 
-#endif /* MG_SOCKET_SIMPLELINK */
+#endif /* CS_COMMON_PLATFORMS_SIMPLELINK_SL_SOCKET_C_ */

@@ -239,7 +239,7 @@ ssize_t _read(int fd, void *buf, size_t count) {
 
 ssize_t _write(int fd, const void *buf, size_t count) {
   int r = -1;
-  size_t i;
+  size_t i = 0;
   switch (fd_type(fd)) {
     case FD_INVALID:
       r = set_errno(EBADF);
@@ -255,6 +255,8 @@ ssize_t _write(int fd, const void *buf, size_t count) {
         if (c == '\n') MAP_UARTCharPut(CONSOLE_UART, '\r');
         MAP_UARTCharPut(CONSOLE_UART, c);
       }
+#else
+      (void) i;
 #endif
       r = count;
       break;
@@ -348,7 +350,7 @@ int mkdir(const char *path, mode_t mode) {
 }
 #endif
 
-int cc3200_fs_init() {
+int sl_fs_init() {
   int ret = 1;
 #ifdef __TI_COMPILER_VERSION__
 #ifdef MG_FS_SLFS

@@ -5,10 +5,13 @@
 
 #if CS_PLATFORM == CS_P_MSP432
 
+#include <ti/sysbios/BIOS.h>
+#include <ti/sysbios/knl/Clock.h>
+
 int gettimeofday(struct timeval *tp, void *tzp) {
-  /* FIXME */
-  tp->tv_sec = 42;
-  tp->tv_usec = 123;
+  uint32_t ticks = Clock_getTicks();
+  tp->tv_sec = ticks / 1000;
+  tp->tv_usec = (ticks % 1000) * 1000;
   return 0;
 }
 

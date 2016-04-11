@@ -68,7 +68,7 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
   struct sl_fd_info *fi = &s_sl_fds[fd];
 
   _u32 am = 0;
-  fi->size = -1;
+  fi->size = (size_t) -1;
   if (pathname[0] == '/') pathname++;
   int rw = (flags & 3);
   if (rw == O_RDONLY) {
@@ -117,7 +117,7 @@ ssize_t fs_slfs_read(int fd, void *buf, size_t count) {
   if (fi->fh <= 0) return set_errno(EBADF);
   /* Simulate EOF. sl_FsRead @ file_size return SL_FS_ERR_OFFSET_OUT_OF_RANGE.
    */
-  if (fi->size >= 0 && fi->pos == fi->size) return 0;
+  if (fi->pos == fi->size) return 0;
   _i32 r = sl_FsRead(fi->fh, fi->pos, buf, count);
   DBG(("sl_FsRead(%d, %d, %d) = %d", (int) fi->fh, (int) fi->pos, (int) count,
        (int) r));
