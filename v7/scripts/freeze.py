@@ -101,9 +101,10 @@
 #
 
 import argparse
-import json
-import sys
 import base64
+import json
+import string
+import sys
 
 parser = argparse.ArgumentParser(
     description = 'Generate C code for a V7 freeze dump'
@@ -136,9 +137,11 @@ V7_TYPE_ERROR_OBJECT,\
 V7_TYPE_MAX_OBJECT_TYPE,\
 V7_NUM_TYPES = range(19)
 
-V7_TAG_OBJECT    = "0xFFFF0000"
-V7_TAG_FUNCTION  = "0xFFF50000"
-V7_TAG_CFUNCTION = "0xFFF40000"
+V7_TAG_OBJECT    = "0xFFFF"
+V7_TAG_FUNCTION  = "0xFFF5"
+V7_TAG_CFUNCTION = "0xFFF4"
+V7_TAG_STRING_O  = "0xFFF8"
+V7_TAG_STRING_F  = "0xFFF7"
 
 #
 # load input data
@@ -182,13 +185,16 @@ for l in f:
 print '#define V7_EXPORT_INTERNAL_HEADERS'
 print '#include "v7/v7.c"'
 print '''
-#define STATIC_V7_UNDEFINED {0, 0xFFFD0000}
+#define STATIC_V7_UNDEFINED {0, 0, 0xFFFD}
 
 /* little endian */
 struct static_val {
   const void *p;
-  uint32_t tag;
+  uint16_t hi;
+  uint16_t tag;
 };
+
+V7_STATIC_ASSERT(sizeof(struct static_val) == sizeof(uint64_t), ONLY_32_BIT_ARCH);
 
 union u_val {
   struct static_val svalue; /* Property value */
@@ -199,7 +205,7 @@ struct v7_fr_property {
   struct v7_fr_property *next;
   v7_prop_attr_t attributes;
   entity_id_t entity_id;
-  val_t name;  /* Property name (a string) */
+  union u_val name;  /* Property name (a string) */
   union u_val v;
 };
 
@@ -212,22 +218,28 @@ struct v7_fr_property {
 def is_null(v):
     return v == "0x0" or v == "(nil)"
 
+
 def num(v):
     return int(v, 16)
+
 
 def untag(v):
     return int(num(v) & 0xFFFFFFFFFFFF)
 
+
 def get_tag(v):
-    return int(num(v)) >> 32
+    return int(num(v)) >> 48
+
 
 def ref(prefix, r, opt=False):
     if opt and is_null(r):
         return "0x0"
     return "&%s_%s" % (prefix, r)
 
+
 def name(prefix, n):
     return "%s_%s" % (prefix, n)
+
 
 def base_obj(o):
     return "{(struct v7_property *) %(name)s, %(attrs)s, %(entity_id_base)s, %(entity_id_spec)s}" % dict(
@@ -237,17 +249,38 @@ def base_obj(o):
         attrs = o["attrs"],
     )
 
+
+def check_value(v):
+    if get_tag(v) in [num(V7_TAG_STRING_O), num(V7_TAG_STRING_F)]:
+        print >>sys.stderr, "Unhandled owned string during freezing. Please add it to string dictionary in v7/src/string.c"
+        print >>sys.stderr, "(Sorry I can't tell you which string it is, otherwise I would have handled it in the first place)"
+        sys.exit(1)
+
+
 def gen_svalue(tag, exp):
     '''
     a static value is a workaround for C's inability to treat
     `0xFFFF000000000000 | (uint64_t)some_uint32` as a constant expression
     '''
-    return "{.svalue = {%s, %s}}" % (exp, tag)
+    return "{.svalue = {%s, 0, %s}}" % (exp, tag)
+
+
+def gen_fstr(s):
+    '''
+    a static value is a workaround for C's inability to construct
+    constant expressions via bitwise ops
+    '''
+    assert len(s) <= 0xFFFF
+    return "{.svalue = {%s, %s, %s}}" % ('"%s"' % (escape_c_str(s),), len(s), V7_TAG_STRING_F)
+
 
 def gen_value(v):
+    check_value(v)
     return "{.value = %s}" % (v,)
 
+
 def gen_uvalue(typ, v):
+    check_value(v)
     if typ == V7_TYPE_CFUNCTION:
         return gen_svalue(V7_TAG_CFUNCTION, syms[untag(v)])
     elif typ == V7_TYPE_FUNCTION_OBJECT:
@@ -256,6 +289,18 @@ def gen_uvalue(typ, v):
         return gen_svalue(V7_TAG_OBJECT, ref("fobj", hex(untag(v))))
     else:
         return gen_value(v)
+
+
+# possibly escape a python character using the C string literal rules
+def escape_c_char(ch):
+    if ch not in string.printable:
+        return "\\" + oct(ord(ch))[1:].zfill(3)
+    return ch
+
+# escape a python string using the C string string literal rules
+def escape_c_str(s):
+    return "".join(escape_c_char(i) for i in s)
+
 
 #
 # forward declarations
@@ -286,6 +331,7 @@ def vec_initializer(prefix, addr, data):
         len = len(data),
     )
 
+
 def vec(prefix, addr, buf):
     '''
     Dump a vec as a char array containing hex numbers.
@@ -297,6 +343,7 @@ def vec(prefix, addr, buf):
         values = ','.join(hex(ord(i)) for i in data),
     )
     return vec_initializer(prefix, addr, data)
+
 
 def lit_vec(prefix, addr, buf):
     '''
@@ -320,6 +367,7 @@ def lit_vec(prefix, addr, buf):
         values = ','.join(u_val(i) for i in vals(data)),
     )
     return vec_initializer(prefix, addr, data)
+
 
 for b in bcodes:
     a = b["addr"]
@@ -356,6 +404,11 @@ for f in funcs:
 
 for p in props:
     value = gen_uvalue(p["value_type"], p["value"])
+    if get_tag(p["name"]) not in [num(V7_TAG_STRING_O), num(V7_TAG_STRING_F)]:
+        name = gen_value(p["name"])
+    else:
+        name = gen_fstr(p["name_str"])
+
     print ("static const struct v7_fr_property fprop_%(addr)s"
            " = {(struct v7_fr_property *) %(next_ref)s, %(attrs)s, %(entity_id)s,"
            " %(name)s, %(value)s}; /* %(name_str)s */") % dict(
@@ -363,7 +416,7 @@ for p in props:
         entity_id = p["entity_id"],
         next_ref = ref("fprop", p["next"], opt=True),
         attrs = p["attrs"],
-        name = p["name"],
+        name = name,
         value = value,
         name_str = p["name_str"],
     )
@@ -377,7 +430,7 @@ for g in glob:
     if is_null(g["value"]):
         print "  STATIC_V7_UNDEFINED,"
     else:
-        print "  {%s, %s}," % (ref("fobj", g["value"]), V7_TAG_OBJECT)
+        print "  {%s, 0, %s}," % (ref("fobj", g["value"]), V7_TAG_OBJECT)
 print "};"
 
 print ("V7_STATIC_ASSERT(sizeof(fr_v7_vals)"

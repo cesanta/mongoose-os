@@ -15898,29 +15898,19 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
 /* clang-format off */
 static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC(" is not a function"),
-    V7_VEC("ANYEDGE"),  /* sjs */
     V7_VEC("Boolean"),
-    V7_VEC("CLOSED"),  /* sjs */
-    V7_VEC("Clubby"),  /* sjs */
-    V7_VEC("Console"), /* sjs */
     V7_VEC("Crypto"),
     V7_VEC("EvalError"),
     V7_VEC("Function"),
-    V7_VEC("HILEVEL"),  /* sjs */
     V7_VEC("Infinity"),
     V7_VEC("InternalError"),
     V7_VEC("LOG10E"),
-    V7_VEC("LOLEVEL"),  /* sjs */
     V7_VEC("MAX_VALUE"),
     V7_VEC("MIN_VALUE"),
     V7_VEC("NEGATIVE_INFINITY"),
-    V7_VEC("NEGEDGE"),  /* sjs */
     V7_VEC("Number"),
     V7_VEC("Object"),
-    V7_VEC("POSEDGE"),  /* sjs */
     V7_VEC("POSITIVE_INFINITY"),
-    V7_VEC("PULLDOWN"),  /* sjs */
-    V7_VEC("PULLUP"),  /* sjs */
     V7_VEC("RangeError"),
     V7_VEC("ReferenceError"),
     V7_VEC("RegExp"),
@@ -15930,32 +15920,23 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("SyntaxError"),
     V7_VEC("TypeError"),
     V7_VEC("UBJSON"),
-    V7_VEC("WebSocket"),  /* sjs */
     V7_VEC("_modcache"),
-    V7_VEC("_writeRegAddr"),  /* sjs */
+    V7_VEC("_writeRegAddr"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("accept"),
-    V7_VEC("address"), /* sjs */
+    V7_VEC("address"), /* cannot be frozen yet: see #3279 */
     V7_VEC("arguments"),
     V7_VEC("base64_decode"),
     V7_VEC("base64_encode"),
     V7_VEC("boolean"),
-    V7_VEC("changed"),  /* sjs */
     V7_VEC("charAt"),
     V7_VEC("charCodeAt"),
-    V7_VEC("clearInterval"),  /* sjs */
-    V7_VEC("clearTimeout"),  /* sjs */
     V7_VEC("concat"),
     V7_VEC("configurable"),
     V7_VEC("connect"),
     V7_VEC("constructor"),
     V7_VEC("create"),
-    V7_VEC("createConnection"),  /* sjs */
-    V7_VEC("createServer"),  /* sjs */
-    V7_VEC("createSocket"),  /* sjs */
     V7_VEC("defineProperties"),
     V7_VEC("defineProperty"),
-    V7_VEC("destroy"), /* sjs */
-    V7_VEC("disconnect"),  /* sjs */
     V7_VEC("every"),
     V7_VEC("exists"),
     V7_VEC("exports"),
@@ -15963,7 +15944,6 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("forEach"),
     V7_VEC("fromCharCode"),
     V7_VEC("function"),
-    V7_VEC("getConnections"), /* sjs */
     V7_VEC("getDate"),
     V7_VEC("getDay"),
     V7_VEC("getFullYear"),
@@ -16002,49 +15982,37 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("md5_hex"),
     V7_VEC("module"),
     V7_VEC("multiline"),
-    V7_VEC("nbytes"),  /* sjs */
+    V7_VEC("nbytes"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("number"),
-    V7_VEC("onclick"),  /* sjs */
-    V7_VEC("onclose"),  /* sjs */
-    V7_VEC("onopen"),  /* sjs */
     V7_VEC("parseFloat"),
     V7_VEC("parseInt"),
     V7_VEC("preventExtensions"),
     V7_VEC("propertyIsEnumerable"),
     V7_VEC("prototype"),
-    V7_VEC("publish"),  /* sjs */
     V7_VEC("random"),
-    V7_VEC("readByte"),  /* sjs */
-    V7_VEC("readRegB"),  /* sjs */
-    V7_VEC("readRegW"),  /* sjs */
-    V7_VEC("readString"),  /* sjs */
-    V7_VEC("readVoltage"),  /* sjs */
-    V7_VEC("readyState"),  /* sjs */
-    V7_VEC("reboot"),  /* sjs */
+    V7_VEC("readByte"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readRegB"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readRegW"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readString"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readVoltage"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readyState"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("recvAll"),
     V7_VEC("reduce"),
     V7_VEC("remove"),
     V7_VEC("rename"),
     V7_VEC("render"),
     V7_VEC("replace"),
-    V7_VEC("request"),  /* sjs */
     V7_VEC("require"),
-    V7_VEC("resume"), /* sjs */
     V7_VEC("reverse"),
-    V7_VEC("sayHello"),  /* sjs */
     V7_VEC("search"),
-    V7_VEC("sendAck"),  /* sjs */
     V7_VEC("setDate"),
     V7_VEC("setFullYear"),
     V7_VEC("setHours"),
-    V7_VEC("setInterval"),  /* sjs */
-    V7_VEC("setLogLevel"),  /* sjs */
     V7_VEC("setMilliseconds"),
     V7_VEC("setMinutes"),
     V7_VEC("setMonth"),
     V7_VEC("setSeconds"),
     V7_VEC("setTime"),
-    V7_VEC("setTimeout"),  /* sjs */
     V7_VEC("setUTCDate"),
     V7_VEC("setUTCFullYear"),
     V7_VEC("setUTCHours"),
@@ -16052,15 +16020,13 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("setUTCMinutes"),
     V7_VEC("setUTCMonth"),
     V7_VEC("setUTCSeconds"),
-    V7_VEC("setisr"),  /* sjs */
-    V7_VEC("setmode"),  /* sjs */
+    V7_VEC("setisr"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("setmode"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("sha1_hex"),
     V7_VEC("source"),
     V7_VEC("splice"),
-    V7_VEC("status"),  /* sjs */
     V7_VEC("string"),
     V7_VEC("stringify"),
-    V7_VEC("subscribe"),  /* sjs */
     V7_VEC("substr"),
     V7_VEC("substring"),
     V7_VEC("toDateString"),
@@ -16079,13 +16045,8 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("toTimeString"),
     V7_VEC("toUTCString"),
     V7_VEC("toUpperCase"),
-    V7_VEC("usleep"),  /* sjs */
     V7_VEC("valueOf"),
-    V7_VEC("wdtFeed"),  /* sjs */
     V7_VEC("writable"),
-    V7_VEC("writeHead"),  /* sjs */
-    V7_VEC("writeRegB"),  /* sjs */
-    V7_VEC("writeRegW")  /* sjs */
 };
 /* clang-format on */
 
@@ -19130,7 +19091,7 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   val_t h, tmp = 0;
   char *s;
 
-/* clang-format off */
+  /* clang-format off */
 
   /*
    * If a value points to an unmarked string we shall:
@@ -19153,22 +19114,17 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *  Note: 64-bit pointers can be represented with 48-bits
    */
 
-/* clang-format on */
-
-/*
- * Freeze.
- */
-#ifdef V7_FREEZE
-  if (v7->freeze_file != NULL && (*v & V7_TAG_MASK) == V7_TAG_STRING_O) {
-    printf("Cannot freeze unless all strings are STRING_D or STRING_F:");
-    v7_println(v7, *v);
-    abort();
-  }
-#endif
+  /* clang-format on */
 
   if ((*v & V7_TAG_MASK) != V7_TAG_STRING_O) {
     return;
   }
+
+#ifdef V7_FREEZE
+  if (v7->freeze_file != NULL) {
+    return;
+  }
+#endif
 
 #ifdef V7_GC_VERBOSE
   {
