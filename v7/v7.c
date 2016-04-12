@@ -1715,7 +1715,9 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_ENABLE__Object__getPrototypeOf 1
 #define V7_ENABLE__Object__hasOwnProperty 1
 #define V7_ENABLE__Object__isExtensible 1
+#define V7_ENABLE__Object__isFrozen 1
 #define V7_ENABLE__Object__isPrototypeOf 1
+#define V7_ENABLE__Object__isSealed 1
 #define V7_ENABLE__Object__keys 1
 #define V7_ENABLE__Object__preventExtensions 1
 #define V7_ENABLE__Object__propertyIsEnumerable 1
@@ -27331,6 +27333,56 @@ clean:
 }
 #endif
 
+#if V7_ENABLE__Object__isFrozen || V7_ENABLE__Object__isSealed
+static enum v7_err is_rigid(struct v7 *v7, v7_val_t *res, int is_frozen) {
+  enum v7_err rcode = V7_OK;
+  val_t arg = v7_arg(v7, 0);
+
+  if (!v7_is_object(arg)) {
+    rcode = v7_throwf(v7, TYPE_ERROR, "Object expected");
+    goto clean;
+  }
+
+  *res = v7_mk_boolean(0);
+
+  if (v7_to_object(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
+    void *h = NULL;
+    v7_prop_attr_t attrs;
+    while ((h = v7_next_prop(h, arg, NULL, NULL, &attrs)) != NULL) {
+      if (!(attrs & V7_PROPERTY_NON_CONFIGURABLE)) {
+        goto clean;
+      }
+      if (is_frozen) {
+        if (!(attrs & V7_PROPERTY_SETTER) &&
+            !(attrs & V7_PROPERTY_NON_WRITABLE)) {
+          goto clean;
+        }
+      }
+    }
+
+    *res = v7_mk_boolean(1);
+    goto clean;
+  }
+
+clean:
+  return rcode;
+}
+#endif
+
+#if V7_ENABLE__Object__isSealed
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err Obj_isSealed(struct v7 *v7, v7_val_t *res) {
+  return is_rigid(v7, res, 0 /* is_frozen */);
+}
+#endif
+
+#if V7_ENABLE__Object__isFrozen
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err Obj_isFrozen(struct v7 *v7, v7_val_t *res) {
+  return is_rigid(v7, res, 1 /* is_frozen */);
+}
+#endif
+
 static const char js_function_Object[] =
     "function Object(v) {"
     "if (typeof v === 'boolean') return new Boolean(v);"
@@ -27383,6 +27435,12 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 #endif
 #if V7_ENABLE__Object__isExtensible
   set_method(v7, object, "isExtensible", Obj_isExtensible, 1);
+#endif
+#if V7_ENABLE__Object__isSealed
+  set_method(v7, object, "isSealed", Obj_isSealed, 1);
+#endif
+#if V7_ENABLE__Object__isFrozen
+  set_method(v7, object, "isFrozen", Obj_isFrozen, 1);
 #endif
 
 #if V7_ENABLE__Object__propertyIsEnumerable

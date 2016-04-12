@@ -145,7 +145,9 @@
 #define V7_ENABLE__Object__getPrototypeOf 1
 #define V7_ENABLE__Object__hasOwnProperty 1
 #define V7_ENABLE__Object__isExtensible 1
+#define V7_ENABLE__Object__isFrozen 1
 #define V7_ENABLE__Object__isPrototypeOf 1
+#define V7_ENABLE__Object__isSealed 1
 #define V7_ENABLE__Object__keys 1
 #define V7_ENABLE__Object__preventExtensions 1
 #define V7_ENABLE__Object__propertyIsEnumerable 1
