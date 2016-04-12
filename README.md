@@ -11,7 +11,7 @@ Take a look at 2 minute video that shows Smart.js in action:
 
 # Documentation and Downloads
 
-- [Smart.js Developer Centre - User Guide and API reference](https://docs.cesanta.com/smartjs)
+- [Smart.js Developer Centre - User Guide and API reference](https://docs.cesanta.com/smartjs/latest)
 - [Release - released firmware builds](https://github.com/cesanta/smart.js/releases/latest)
 - [Flashnchips - multiplatform device flashing tool](https://github.com/cesanta/fnc/releases/latest)
 - Current development Smart.js firmware builds:
