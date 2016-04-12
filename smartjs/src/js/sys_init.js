@@ -28,8 +28,20 @@ $.each = function(a, f) {
   });
 };
 
-Sys.conf = File.loadJSON('conf_sys_defaults.json') || {};
-$.extend(Sys.conf, File.loadJSON('conf.json') || {});
+function loadCfg(filename) {
+  var ret = File.loadJSON(filename);
+  // if File.loadJSON failed it still returns object
+  // Use fragile verification
+  if(typeof(ret.message) == 'string') {
+    print("Failed to load configuration from:", filename, "Error:", ret);
+    return {};
+  } else {
+    return ret;
+  }
+}
+
+Sys.conf = loadCfg('conf_sys_defaults.json');
+$.extend(Sys.conf, loadCfg('conf.json'));
 
 Object.defineProperty(Sys, "oconf", { value: JSON.parse(JSON.stringify(Sys.conf))});
 

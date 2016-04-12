@@ -271,17 +271,26 @@ static int init_web_server(const struct sys_config *cfg) {
 
 static int load_config_file(const char *filename, const char *acl, int required,
                             struct sys_config *cfg) {
-  char *data, *acl_copy;
+  char *data = NULL, *acl_copy = NULL;
   size_t size;
   int result = 1;
   LOG(LL_DEBUG, ("=== Loading %s", filename));
   data = cs_read_file(filename, &size);
-  /* Make a temporary copy, in case it gets overridden while loading. */
-  acl_copy = (acl != NULL ? strdup(acl) : NULL);
-  if (data == NULL || !parse_sys_config(data, acl_copy, required, cfg)) {
+  if (data == NULL) {
+    /* File not found or read error */
     LOG(required ? LL_ERROR : LL_INFO, ("Failed to load %s", filename));
     result = 0;
+    goto clean;
   }
+  /* Make a temporary copy, in case it gets overridden while loading. */
+  acl_copy = (acl != NULL ? strdup(acl) : NULL);
+  if (!parse_sys_config(data, acl_copy, required, cfg)) {
+    /* Malformed file, this is an error even if file is not required */
+    LOG(LL_ERROR, ("Failed to parse %s", filename));
+    result = 0;
+    goto clean;
+  }
+clean:
   free(data);
   free(acl_copy);
   return result;
