@@ -15,7 +15,7 @@
 #include "device_config.h"
 #include "common/cs_dbg.h"
 
-static v7_val_t wifi_private;
+static v7_val_t s_wifi_private;
 
 struct wifi_ready_cb {
   /*
@@ -193,7 +193,7 @@ void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event) {
       break;
   }
 
-  v7_val_t cb = v7_get(v7, wifi_private, "_ccb", ~0);
+  v7_val_t cb = v7_get(v7, s_wifi_private, "_ccb", ~0);
   if (v7_is_undefined(cb) || v7_is_null(cb)) return;
   sj_invoke_cb1(v7, cb, v7_mk_number(event));
 }
@@ -205,7 +205,7 @@ SJ_PRIVATE enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_boolean(0);
     goto clean;
   }
-  v7_def(v7, wifi_private, "_ccb", ~0,
+  v7_def(v7, s_wifi_private, "_ccb", ~0,
          (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), cb);
   *res = v7_mk_boolean(1);
   goto clean;
@@ -215,7 +215,7 @@ clean:
 }
 
 void sj_wifi_scan_done(struct v7 *v7, const char **ssids) {
-  v7_val_t cb = v7_get(v7, wifi_private, "_scb", ~0);
+  v7_val_t cb = v7_get(v7, s_wifi_private, "_scb", ~0);
   v7_val_t res = v7_mk_undefined();
   const char **p;
   if (!v7_is_callable(v7, cb)) return;
@@ -233,7 +233,7 @@ void sj_wifi_scan_done(struct v7 *v7, const char **ssids) {
   sj_invoke_cb1(v7, cb, res);
 
   v7_disown(v7, &res);
-  v7_def(v7, wifi_private, "_scb", ~0,
+  v7_def(v7, s_wifi_private, "_scb", ~0,
          (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), v7_mk_undefined());
 }
 
@@ -241,7 +241,7 @@ void sj_wifi_scan_done(struct v7 *v7, const char **ssids) {
 SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int r;
-  v7_val_t cb = v7_get(v7, wifi_private, "_scb", ~0);
+  v7_val_t cb = v7_get(v7, s_wifi_private, "_scb", ~0);
   if (v7_is_callable(v7, cb)) {
     fprintf(stderr, "scan in progress");
     *res = v7_mk_boolean(0);
@@ -254,12 +254,11 @@ SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_boolean(0);
     goto clean;
   }
-  v7_def(v7, wifi_private, "_scb", ~0,
+  v7_def(v7, s_wifi_private, "_scb", ~0,
          (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), cb);
 
   r = sj_wifi_scan(sj_wifi_scan_done);
-  v7_def(v7, wifi_private, "_scb", ~0,
-         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), v7_mk_undefined());
+
   *res = v7_mk_boolean(r);
   goto clean;
 
@@ -287,9 +286,10 @@ void sj_wifi_api_setup(struct v7 *v7) {
 }
 
 void sj_wifi_init(struct v7 *v7) {
-  wifi_private = v7_mk_object(v7);
+  s_wifi_private = v7_mk_object(v7);
   v7_def(v7, v7_get_global(v7), "_Wifi", ~0,
-         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), wifi_private);
+         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), s_wifi_private);
+  v7_own(v7, &s_wifi_private);
 
   sj_wifi_hal_init(v7);
 }
