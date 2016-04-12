@@ -2,12 +2,12 @@
   ["wifi", "o", {"hide": true}],
 
   ["wifi.sta", "o", {"title": "Connect To Existing WiFi"}],
-  ["wifi.sta.enable", "b", {"title": "Enable or disable station"}],
+  ["wifi.sta.enable", "b", {"title": "Enable station"}],
   ["wifi.sta.ssid", "s", {"title": "SSID"}],
   ["wifi.sta.pass", "s", {"title": "Password", "type": "password"}],
 
   ["wifi.ap", "o", {"title": "WiFi Access Point"}],
-  ["wifi.ap.enable", "b", {"title": "Enable or disable AP"}],
+  ["wifi.ap.enable", "b", {"title": "Enable AP"}],
   ["wifi.ap.keep_enabled", "b", {"title": "Keep AP enabled when station is on"}],
   ["wifi.ap.trigger_on_gpio", "i", {"title": "Trigger AP on low GPIO"}],
   ["wifi.ap.ssid", "s", {"title": "SSID"}],
@@ -25,7 +25,7 @@
   ["update.server_timeout", "i", {"title" : "Server Timeout"}],
   ["update.ssl_server_name", "s", {"title" : "TLS Server Name"}],
   ["update.ssl_ca_file", "s", {"title" : "TLS CA file"}],
-  ["update.ssl_client_cert_file", "s", {"TLS client cert file"}],
+  ["update.ssl_client_cert_file", "s", {"title": "TLS client cert file"}],
 
   ["http", "o", {"title": "HTTP Server"}],
   ["http.listen_addr", "s", {"title": "Listening port / address"}],
@@ -51,7 +51,7 @@
   ["clubby.device_registration_url", "s", {"title": "Device registration URL"}],
   ["clubby.ssl_server_name", "s", {"title" : "TLS Server Name"}],
   ["clubby.ssl_ca_file", "s", {"title" : "TLS CA file"}],
-  ["clubby.ssl_client_cert_file", "s", {"TLS client cert file"}],
+  ["clubby.ssl_client_cert_file", "s", {"title": "TLS client cert file"}],
 
   ["debug", "o", {"title": "Debug Settings"}],
   ["debug.level", "i", {
