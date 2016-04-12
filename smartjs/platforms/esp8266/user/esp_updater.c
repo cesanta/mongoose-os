@@ -938,7 +938,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         LOG(LL_DEBUG, ("Looking for HTTP header"));
         struct http_message hm;
         int parsed = mg_parse_http(io->buf, io->len, &hm, 0);
-        if (parsed < 0) {
+        if (parsed <= 0) {
           return;
         }
         if (hm.body.len != 0) {
