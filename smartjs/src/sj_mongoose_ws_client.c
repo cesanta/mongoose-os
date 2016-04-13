@@ -118,7 +118,7 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
   size_t n;
   (void) res;
 
-  memset(&opts, 0, sizeof(opts));
+  memset(&copts, 0, sizeof(copts));
 
   if (!v7_is_string(urlv)) {
     rcode = v7_throwf(v7, "Error", "invalid url string");
