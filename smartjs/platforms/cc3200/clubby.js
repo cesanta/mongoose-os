@@ -10,6 +10,40 @@ function ClubbyError(message, status) {
 ClubbyError.prototype = Object.create(Error.prototype);
 ClubbyError.prototype.constructor = ClubbyError;
 
+// I didn't figure out how to import jquery in es6+babel
+// let's just make a shim of the couple of minor features we use;
+// curtesy of smartjs/src/js/sys_init.js
+if (typeof($) === 'undefined') {
+  global.$ = {};
+  $.extend = function(deep, a, b) {
+    if(typeof(deep) !== 'boolean') {
+      b = a;
+      a = deep;
+      deep = false;
+    }
+
+    if(a === undefined) {
+      a = {};
+    }
+    for (var k in b) {
+      if (typeof(a[k]) === 'object' && typeof(b[k]) === 'object') {
+        $.extend(a[k], b[k]);
+      } else if(deep && typeof(b[k]) === 'object') {
+        a[k] = $.extend(undefined, b[k]);
+      } else {
+        a[k] = b[k];
+      }
+    }
+    return a;
+  };
+
+  $.each = function(a, f) {
+    a.forEach(function(v, i) {
+      f(i, v);
+    });
+  };
+}
+
 var Clubby = function(arg) {
   // arg is a map:
   //  {
@@ -238,4 +272,9 @@ Clubby.prototype.ready = function(cb) {
   } else {
     c.rdy.push(cb);
   }
+}
+
+if (typeof(module) !== 'undefined') {
+  module.exports.Clubby = Clubby;
+  module.exports.ClubbyError = ClubbyError;
 }
