@@ -14,21 +14,17 @@
 #include "v7/v7.h"
 #include "device_config.h"
 #include "common/cs_dbg.h"
+#include "common/queue.h"
 
 static v7_val_t s_wifi_private;
 
 struct wifi_ready_cb {
-  /*
-   * Currently we support only ready (got_ip) event, so no
-   * event_id of something like that required.
-   * TODO(alashkin): share C-event system (clubby, wifi, etc)
-   */
-  v7_val_t cb;
+  SLIST_ENTRY(wifi_ready_cb) entries;
 
-  struct wifi_ready_cb *next;
+  v7_val_t cb;
 };
 
-static struct wifi_ready_cb *s_wifi_ready_cbs;
+SLIST_HEAD(wifi_ready_cbs, wifi_ready_cb) s_wifi_ready_cbs;
 
 static int add_wifi_ready_cb(struct v7 *v7, v7_val_t cb) {
   struct wifi_ready_cb *new_wifi_event = calloc(1, sizeof(*new_wifi_event));
@@ -39,20 +35,18 @@ static int add_wifi_ready_cb(struct v7 *v7, v7_val_t cb) {
   new_wifi_event->cb = cb;
   v7_own(v7, &new_wifi_event->cb);
 
-  new_wifi_event->next = s_wifi_ready_cbs;
-  s_wifi_ready_cbs = new_wifi_event;
+  SLIST_INSERT_HEAD(&s_wifi_ready_cbs, new_wifi_event, entries);
 
   return 1;
 }
 
 static void call_wifi_ready_cbs(struct v7 *v7) {
-  struct wifi_ready_cb *wr_cbs = s_wifi_ready_cbs;
-  while (wr_cbs != NULL) {
-    sj_invoke_cb0(v7, wr_cbs->cb);
-    v7_disown(v7, &wr_cbs->cb);
-    struct wifi_ready_cb *tmp = wr_cbs;
-    wr_cbs = wr_cbs->next;
-    free(tmp);
+  while (!SLIST_EMPTY(&s_wifi_ready_cbs)) {
+    struct wifi_ready_cb *elem = SLIST_FIRST(&s_wifi_ready_cbs);
+    SLIST_REMOVE_HEAD(&s_wifi_ready_cbs, entries);
+    sj_invoke_cb0(v7, elem->cb);
+    v7_disown(v7, &elem->cb);
+    free(elem);
   }
 }
 
