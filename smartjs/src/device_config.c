@@ -246,9 +246,6 @@ static int init_web_server(const struct sys_config *cfg) {
    * in `mg_bind` function. But it is not clear, for what we have to
    * provide IP address in case of ESP
    */
-  if (cfg->http.enable_webdav) {
-    s_http_server_opts.dav_document_root = ".";
-  }
   if (cfg->http.hidden_files) {
     s_http_server_opts.hidden_file_pattern = strdup(cfg->http.hidden_files);
   }

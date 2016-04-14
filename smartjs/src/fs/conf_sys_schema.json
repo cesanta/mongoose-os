@@ -30,7 +30,6 @@
   ["http", "o", {"title": "HTTP Server"}],
   ["http.listen_addr", "s", {"title": "Listening port / address"}],
   ["http.enable", "b", {"title": "Enable HTTP Server"}],
-  ["http.enable_webdav", "b", {"title": "Enable WebDAV access"}],
   ["http.upload_acl", "s", {"title": "Upload file ACL"}],
   ["http.hidden_files", "s", {"title": "Hidden file pattern"}],
 

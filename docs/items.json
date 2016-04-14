@@ -4,7 +4,6 @@
     { "type": "section", "name": "quick-start" },
     { "type": "section", "name": "smartjs-firmware" },
     { "type": "section", "name": "ota" },
-    { "type": "section", "name": "webdav" },
     { "type": "section", "name": "examples" },
     { "type": "section", "name": "javascript-api" },
     { "type": "section", "name": "arch" },
