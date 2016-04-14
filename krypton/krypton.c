@@ -8115,7 +8115,7 @@ static int get_sig_digest(RSA_CTX *rsa, struct vec *sig, uint8_t *digest,
   const uint8_t *ptr, *end;
   int ret;
 
-  assert(sig->len < sizeof(buf)); /* TODO(lsm): fix this */
+  assert(sig->len <= sizeof(buf)); /* TODO(lsm): fix this */
 
   ret = RSA_decrypt(rsa, sig->ptr, buf, sig->len, 0);
   if (ret <= 0) {
@@ -8184,7 +8184,7 @@ again:
       expected_len = SHA256_SIZE;
       break;
     default:
-      dprintf(("Unsupported hash alg\n"));
+      dprintf(("Unsupported hash alg %d\n", nxt->hash_alg));
       return 0;
   }
 #if DEBUG_VERIFY
