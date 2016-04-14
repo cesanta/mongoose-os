@@ -60,7 +60,7 @@ void sj_common_init(struct v7 *v7) {
 
   sj_http_init(v7);
   sj_wifi_init(v7);
-  sj_console_init();
+  sj_console_init(v7);
 
 #ifndef DISABLE_C_CLUBBY
   sj_clubby_init();

@@ -11,25 +11,46 @@
 #include "common/queue.h"
 #include "sj_timers.h"
 
-static const char s_console_proto_prop[] = "_cnsl";
-static const char s_clubby_prop[] = "_clby";
-static const char s_cache_prop[] = "_cahe";
+static const char s_clubby_prop[] = "_cons";
+
+#define LOG_FILENAME_BASE "console.log."
+
+#define FILE_ID_LEN 8
+/* TODO(alashkin): move these defines to configuration */
+#define MAX_CACHE_SIZE 256
+
+typedef int64_t file_id_t;
 
 struct cache {
-  SLIST_ENTRY(cache) entries;
-
-  struct v7 *v7;
-  v7_val_t console_obj;
   struct mbuf logs;
+  struct mbuf file_numbers;
 };
 
-static SLIST_HEAD(caches, cache) s_caches;
+static struct cache s_cache;
+/* TODO(alashkin): init on boot */
+static file_id_t s_last_file_id = 1;
+static int s_waiting_for_resp;
 
-SJ_PRIVATE enum v7_err Console_ctor(struct v7 *v7, v7_val_t *res) {
+static void console_process_data(struct v7 *v7);
+
+clubby_handle_t console_get_current_clubby(struct v7 *v7) {
+  v7_val_t clubby_v = v7_get(v7, v7_get_global(v7), s_clubby_prop, ~0);
+  if (!v7_is_object(clubby_v)) {
+    LOG(LL_ERROR, ("Clubby is not set"));
+    return NULL;
+  }
+
+  clubby_handle_t ret = sj_clubby_get_handle(v7, clubby_v);
+  LOG(LL_DEBUG, ("clubby handle: %p", ret));
+
+  return ret;
+}
+
+SJ_PRIVATE enum v7_err Console_setClubby(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
 
   v7_val_t clubby_v = v7_arg(v7, 0);
-  if (!v7_is_object(clubby_v) || sj_clubby_get_handle(v7, clubby_v) == NULL) {
+  if (!v7_is_object(clubby_v) || (sj_clubby_get_handle(v7, clubby_v)) == NULL) {
     /*
      * We can try to look for global clubby object, but seems
      * it is not really nessesary
@@ -38,87 +59,175 @@ SJ_PRIVATE enum v7_err Console_ctor(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  v7_val_t console_proto_v =
-      v7_get(v7, v7_get_global(v7), s_console_proto_prop, ~0);
-  *res = v7_mk_object(v7);
-  v7_set(v7, *res, s_clubby_prop, ~0, clubby_v);
-
-  v7_set_proto(v7, *res, console_proto_v);
+  *res = v7_mk_boolean(1);
+  v7_set(v7, v7_get_global(v7), s_clubby_prop, ~0, clubby_v);
 
 clean:
   return rcode;
 }
 
-static void console_make_clubby_call(clubby_handle_t clubby_h,
-                                     struct mbuf *msg) {
+static void clubby_cb(struct clubby_event *evt, void *user_data) {
+  (void) evt;
+  s_waiting_for_resp = 0;
+  console_process_data((struct v7 *) user_data);
+}
+
+static void console_make_clubby_call(struct v7 *v7, char *logs) {
+  clubby_handle_t clubby_h = console_get_current_clubby(v7);
   struct ub_ctx *ctx = ub_ctx_new();
   ub_val_t log_cmd_args = ub_create_object(ctx);
   /*
    * TODO(alashkin): we need ub_create_string_n for non-zero terminated
    * strings
    */
-  mbuf_append(msg, "\0", 1);
-  ub_add_prop(ctx, log_cmd_args, "msg", ub_create_string(ctx, msg->buf));
-  sj_clubby_call(clubby_h, NULL, "/v1/Log.Log", ctx, log_cmd_args, 0);
-  mbuf_free(msg);
+  ub_add_prop(ctx, log_cmd_args, "msg", ub_create_string(ctx, logs));
+  /* TODO(alashkin): set command timeout */
+  s_waiting_for_resp = 1;
+  sj_clubby_call(clubby_h, NULL, "/v1/Log.Log", ctx, log_cmd_args, 0, clubby_cb,
+                 v7);
+}
+
+static void console_make_clubby_call_mbuf(struct v7 *v7, struct mbuf *logs) {
+  mbuf_append(logs, "\0", 1);
+  console_make_clubby_call(v7, logs->buf);
+  mbuf_free(logs);
+}
+
+static int console_send_file(struct v7 *v7, struct cache *cache) {
+  FILE *file = NULL;
+  int ret = 0;
+  if (cache->file_numbers.len != 0) {
+    char file_name[sizeof(LOG_FILENAME_BASE) + FILE_ID_LEN];
+    char logs[MAX_CACHE_SIZE + 1] = {0};
+    file_id_t id;
+    memcpy(&id, cache->file_numbers.buf, sizeof(id));
+    LOG(LL_DEBUG, ("Sending file %d", (int) id));
+    c_snprintf(file_name, sizeof(file_name), "%s%lld", LOG_FILENAME_BASE, id);
+    file = fopen(file_name, "r");
+    if (file == NULL) {
+      LOG(LL_ERROR, ("Failed to open %s", file_name));
+      ret = -1;
+      goto clean;
+    }
+
+    if (fread(logs, 1, MAX_CACHE_SIZE, file) == 0) {
+      LOG(LL_ERROR, ("Failed to read from %s", file_name));
+      ret = -1;
+      goto clean;
+    }
+
+    console_make_clubby_call(v7, logs);
+
+    fclose(file);
+    file = NULL;
+
+    remove(file_name);
+    mbuf_remove(&cache->file_numbers, sizeof(id));
+  }
+
+clean:
+  if (file != NULL) {
+    fclose(file);
+  }
+
+  return ret;
+}
+
+static void console_process_data(struct v7 *v7) {
+  clubby_handle_t clubby_h;
+  if ((clubby_h = console_get_current_clubby(v7)) == NULL) {
+    LOG(LL_DEBUG, ("Clubby is not set"));
+    return;
+  }
+  if (sj_clubby_can_send(clubby_h)) {
+    if (s_cache.file_numbers.len != 0) {
+      /* There are unsent files, send them first */
+      console_send_file(v7, &s_cache);
+    } else if (s_cache.logs.len != 0) {
+      /* No stored files, just send */
+      console_make_clubby_call_mbuf(v7, &s_cache.logs);
+    }
+  }
 }
 
 static void console_handle_clubby_ready(struct clubby_event *evt,
                                         void *user_data) {
   (void) evt;
-  (void) user_data;
-  /*
-   * In theory, it is possible to map clubby_event::context -> cache
-   * In practice, it's not worth it, it is simpler to iterate through list
-   */
-  struct cache *cache;
-  SLIST_FOREACH(cache, &s_caches, entries) {
-    clubby_handle_t clubby_h = sj_clubby_get_handle(
-        cache->v7, v7_get(cache->v7, cache->console_obj, s_clubby_prop, ~0));
-    if (cache->logs.len != 0 && sj_clubby_can_send(clubby_h)) {
-      console_make_clubby_call(clubby_h, &cache->logs);
-    }
+  if (!s_waiting_for_resp) {
+    console_process_data((struct v7 *) user_data);
   }
 }
 
-static struct mbuf *console_get_cache(struct v7 *v7, v7_val_t console_obj) {
-  struct cache *cache;
-  v7_val_t cache_v = v7_get(v7, console_obj, s_cache_prop, ~0);
-  if (!v7_is_foreign(cache_v)) {
-    /*
-     * We don't have destructors, and to keep all this construction safe
-     * we use a lot of v7_own
-     */
-    cache = calloc(1, sizeof(*cache));
-    cache->v7 = v7;
-    cache->console_obj = console_obj;
-    v7_own(v7, &cache->console_obj);
-    v7_set(v7, console_obj, s_cache_prop, ~0, v7_mk_foreign(cache));
+static int console_flush_buffer(struct cache *cache) {
+  LOG(LL_DEBUG, ("file id=%d", (int) s_last_file_id));
+  int ret = 0;
+  FILE *file = NULL;
 
-    SLIST_INSERT_HEAD(&s_caches, cache, entries);
-  } else {
-    cache = v7_to_foreign(cache_v);
+  char file_name[sizeof(LOG_FILENAME_BASE) + FILE_ID_LEN];
+  c_snprintf(file_name, sizeof(file_name), "%s%lld", LOG_FILENAME_BASE,
+             s_last_file_id);
+
+  file = fopen(file_name, "w");
+  if (file == NULL) {
+    LOG(LL_ERROR, ("Failed to open %s", file_name));
+    ret = -1;
+    goto clean;
   }
 
-  return &cache->logs;
+  /* Put data */
+  if (fwrite(cache->logs.buf, 1, cache->logs.len, file) != cache->logs.len) {
+    LOG(LL_ERROR,
+        ("Failed to write %d bytes to %s", (int) cache->logs.len, file_name));
+    ret = -1;
+    goto clean;
+  }
+
+  /* Using mbuf here instead of list to avoid memory overhead */
+  mbuf_append(&cache->file_numbers, &s_last_file_id, sizeof(s_last_file_id));
+  mbuf_free(&cache->logs);
+
+  s_last_file_id++;
+clean:
+  if (file != NULL) {
+    fclose(file);
+  }
+  return ret;
 }
 
-static void console_send_to_cloud(struct v7 *v7, v7_val_t console_obj,
-                                  clubby_handle_t clubby_h, struct mbuf *msg) {
+static void console_add_to_cache(struct cache *cache, struct mbuf *msg) {
+  if (cache->logs.len + msg->len > MAX_CACHE_SIZE) {
+    LOG(LL_DEBUG, ("Flushing buf (%d bytes)", cache->logs.len));
+    console_flush_buffer(cache);
+  }
+
+  mbuf_append(&cache->logs, msg->buf, msg->len);
+  LOG(LL_DEBUG, ("Cached %d bytes, total cache size is %d bytes",
+                 (int) msg->len - 1, (int) cache->logs.len));
+}
+
+static int console_must_cache(struct cache *cache) {
+  LOG(LL_DEBUG, ("wfr: %d logs_len: %d file_num_len: %d", s_waiting_for_resp,
+                 (int) cache->logs.len, (int) cache->file_numbers.len));
+  return s_waiting_for_resp || cache->logs.len != 0 ||
+         cache->file_numbers.len != 0;
+}
+
+static void console_send_to_cloud(struct v7 *v7, struct mbuf *msg) {
   /*
    * 1. If clubby is disconnected (or overcrowded) - put data in the cache
    * 2. If cache is not empty - do not send new message, even if
    *    clubby is able to send now;  we have to to keep msgs order
    * 3. Don't use internal clubby caching, we are going to cache text,
    *    not packets
+   * 4. If we have packet in flight - wait for response, otherwise
+   *    we'll break an order
    */
-  struct mbuf *cache = console_get_cache(v7, console_obj);
-  if (cache->len != 0 || !sj_clubby_can_send(clubby_h)) {
-    mbuf_append(cache, msg->buf, msg->len);
-    LOG(LL_DEBUG, ("Cached %d bytes, total cache size is %d bytes",
-                   (int) msg->len - 1, (int) cache->len));
+  clubby_handle_t clubby_h = console_get_current_clubby(v7);
+  if (clubby_h == NULL || console_must_cache(&s_cache) ||
+      !sj_clubby_can_send(clubby_h)) {
+    console_add_to_cache(&s_cache, msg);
   } else {
-    console_make_clubby_call(clubby_h, msg);
+    console_make_clubby_call_mbuf(v7, msg);
   }
 }
 
@@ -127,20 +236,8 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
 
   int i, argc = v7_argc(v7);
   struct mbuf msg;
-  clubby_handle_t clubby_h;
 
   mbuf_init(&msg, 0);
-
-  v7_val_t clubby_v = v7_get(v7, v7_get_this(v7), s_clubby_prop, ~0);
-  clubby_h = sj_clubby_get_handle(v7, clubby_v);
-  if (clubby_h == NULL) {
-    /*
-     * In theory, we can just print here, or cache data, but
-     * this sutuation is [internal] error, indeed. Seems exception is better.
-     */
-    rcode = v7_throwf(v7, "Error", "Clubby is not initialized");
-    goto clean;
-  }
 
   /* Put everything into one message */
   for (i = 0; i < argc; i++) {
@@ -168,33 +265,27 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   /* Send msg to local console */
   printf("%.*s", (int) msg.len, msg.buf);
 
-  console_send_to_cloud(v7, v7_get_this(v7), clubby_h, &msg);
+  console_send_to_cloud(v7, &msg);
 
   *res = v7_mk_undefined(); /* like JS print */
 
-clean:
   mbuf_free(&msg);
   return rcode;
 }
 
-void sj_console_init() {
+void sj_console_init(struct v7 *v7) {
   sj_clubby_register_global_command(clubby_cmd_onopen,
-                                    console_handle_clubby_ready, NULL);
+                                    console_handle_clubby_ready, v7);
 }
 
 void sj_console_api_setup(struct v7 *v7) {
   v7_val_t console_v = v7_mk_object(v7);
-  v7_val_t console_proto_v = v7_mk_object(v7);
   v7_own(v7, &console_v);
-  v7_own(v7, &console_proto_v);
 
-  v7_set_method(v7, console_proto_v, "log", Console_log);
+  v7_set_method(v7, console_v, "log", Console_log);
+  v7_set_method(v7, console_v, "setClubby", Console_setClubby);
 
-  v7_val_t console_ctor_v =
-      v7_mk_function_with_proto(v7, Console_ctor, console_v);
-  v7_set(v7, v7_get_global(v7), "Console", ~0, console_ctor_v);
-  v7_set(v7, v7_get_global(v7), s_console_proto_prop, ~0, console_proto_v);
+  v7_set(v7, v7_get_global(v7), "console", ~0, console_v);
 
-  v7_disown(v7, &console_proto_v);
   v7_disown(v7, &console_v);
 }

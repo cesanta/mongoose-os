@@ -569,7 +569,8 @@ static void clubby_send_labels(struct clubby *clubby) {
 }
 
 int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
-                   struct ub_ctx *ctx, ub_val_t args, int enqueue) {
+                   struct ub_ctx *ctx, ub_val_t args, int enqueue,
+                   sj_clubby_callback_t cb, void *cb_userdata) {
   struct clubby *clubby = (struct clubby *) handle;
   ub_val_t cmds = ub_create_array(ctx);
   ub_val_t cmdv = ub_create_object(ctx);
@@ -578,6 +579,10 @@ int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
   int64_t id = clubby_proto_get_new_id();
   ub_add_prop(ctx, cmdv, "id", ub_create_number(id));
   ub_add_prop(ctx, cmdv, "args", args);
+
+  if (cb != NULL) {
+    register_callback(clubby, (char *) &id, sizeof(id), cb, cb_userdata, 0);
+  }
 
   if (enqueue) {
     clubby_send_cmds(clubby, ctx, id, dst ? dst : clubby->cfg.backend, cmds);
