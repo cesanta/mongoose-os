@@ -615,7 +615,9 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   const char *method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
 
 #ifdef MG_ENABLE_SSL
-  force_ssl = (strlen(host) > 8) && (strncmp(host, "https://", 8) == 0);
+  v7_val_t v_pr = v7_get(v7, opts, "protocol", ~0);
+  const char *protocol = v7_is_string(v_pr) ? v7_to_cstring(v7, &v_pr) : "";
+  force_ssl = (strcasecmp(protocol, "https") == 0);
   if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
     goto clean;
   }

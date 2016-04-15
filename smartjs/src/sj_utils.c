@@ -25,7 +25,7 @@ enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
     goto clean;
   }
   if (!v7_is_undefined(v_server_name) && !v7_is_string(v_server_name)) {
-    rcode = v7_throwf(v7, "TypeError", "ssl_cerver_name must be a string");
+    rcode = v7_throwf(v7, "TypeError", "ssl_server_name must be a string");
     goto clean;
   }
 

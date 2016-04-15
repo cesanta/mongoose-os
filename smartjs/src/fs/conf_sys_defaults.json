@@ -35,7 +35,7 @@
     "ssl_client_cert_file": ""
   },
   "tls": {
-    "ca_file": ""
+    "ca_file": "ca.pem"
   },
   "clubby": {
     "connect_on_boot": true,
