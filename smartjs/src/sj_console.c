@@ -3,27 +3,34 @@
  * All rights reserved
  */
 
+#include <stdlib.h>
 #include "smartjs/src/sj_console.h"
 #include "smartjs/src/sj_common.h"
 #include "common/cs_dbg.h"
 #include "smartjs/src/sj_clubby.h"
 #include "mongoose/mongoose.h"
 #include "common/queue.h"
+#include "common/cs_file.h"
 #include "sj_timers.h"
+#include "smartjs/src/device_config.h"
+#include "common/cs_dirent.h"
 
 static const char s_clubby_prop[] = "_cons";
 
 #define LOG_FILENAME_BASE "console.log."
 
-#define FILE_ID_LEN 8
-/* TODO(alashkin): move these defines to configuration */
-#define MAX_CACHE_SIZE 256
+#define FILE_ID_LEN 10
+#define FILENAME_PATTERN "%s%010u"
+#define FILENAME_LEN (sizeof(LOG_FILENAME_BASE) + FILE_ID_LEN)
 
-typedef int64_t file_id_t;
+static const char s_out_of_space_msg[] =
+    "Warning: buffer is full, truncating logs\n";
+
+typedef uint32_t file_id_t;
 
 struct cache {
   struct mbuf logs;
-  struct mbuf file_numbers;
+  struct mbuf file_names;
 };
 
 static struct cache s_cache;
@@ -44,26 +51,6 @@ clubby_handle_t console_get_current_clubby(struct v7 *v7) {
   LOG(LL_DEBUG, ("clubby handle: %p", ret));
 
   return ret;
-}
-
-SJ_PRIVATE enum v7_err Console_setClubby(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-
-  v7_val_t clubby_v = v7_arg(v7, 0);
-  if (!v7_is_object(clubby_v) || (sj_clubby_get_handle(v7, clubby_v)) == NULL) {
-    /*
-     * We can try to look for global clubby object, but seems
-     * it is not really nessesary
-     */
-    rcode = v7_throwf(v7, "Error", "Invalid argument");
-    goto clean;
-  }
-
-  *res = v7_mk_boolean(1);
-  v7_set(v7, v7_get_global(v7), s_clubby_prop, ~0, clubby_v);
-
-clean:
-  return rcode;
 }
 
 static void clubby_cb(struct clubby_event *evt, void *user_data) {
@@ -94,40 +81,26 @@ static void console_make_clubby_call_mbuf(struct v7 *v7, struct mbuf *logs) {
 }
 
 static int console_send_file(struct v7 *v7, struct cache *cache) {
-  FILE *file = NULL;
   int ret = 0;
-  if (cache->file_numbers.len != 0) {
-    char file_name[sizeof(LOG_FILENAME_BASE) + FILE_ID_LEN];
-    char logs[MAX_CACHE_SIZE + 1] = {0};
-    file_id_t id;
-    memcpy(&id, cache->file_numbers.buf, sizeof(id));
-    LOG(LL_DEBUG, ("Sending file %d", (int) id));
-    c_snprintf(file_name, sizeof(file_name), "%s%lld", LOG_FILENAME_BASE, id);
-    file = fopen(file_name, "r");
-    if (file == NULL) {
-      LOG(LL_ERROR, ("Failed to open %s", file_name));
-      ret = -1;
-      goto clean;
-    }
-
-    if (fread(logs, 1, MAX_CACHE_SIZE, file) == 0) {
-      LOG(LL_ERROR, ("Failed to read from %s", file_name));
+  char *logs = NULL;
+  size_t size = 0;
+  if (cache->file_names.len != 0) {
+    logs = cs_read_file(cache->file_names.buf, &size);
+    if (logs == NULL) {
+      LOG(LL_ERROR, ("Failed to read from %s", cache->file_names.buf));
       ret = -1;
       goto clean;
     }
 
     console_make_clubby_call(v7, logs);
 
-    fclose(file);
-    file = NULL;
-
-    remove(file_name);
-    mbuf_remove(&cache->file_numbers, sizeof(id));
+    remove(cache->file_names.buf);
+    mbuf_remove(&cache->file_names, FILENAME_LEN);
   }
 
 clean:
-  if (file != NULL) {
-    fclose(file);
+  if (logs != NULL) {
+    free(logs);
   }
 
   return ret;
@@ -140,7 +113,7 @@ static void console_process_data(struct v7 *v7) {
     return;
   }
   if (sj_clubby_can_send(clubby_h)) {
-    if (s_cache.file_numbers.len != 0) {
+    if (s_cache.file_names.len != 0) {
       /* There are unsent files, send them first */
       console_send_file(v7, &s_cache);
     } else if (s_cache.logs.len != 0) {
@@ -160,12 +133,34 @@ static void console_handle_clubby_ready(struct clubby_event *evt,
 
 static int console_flush_buffer(struct cache *cache) {
   LOG(LL_DEBUG, ("file id=%d", (int) s_last_file_id));
-  int ret = 0;
+  int ret = 0, fn_len, files_count;
   FILE *file = NULL;
 
+  files_count = cache->file_names.len / FILENAME_LEN;
+  if (files_count >= get_cfg()->console.file_cache_max) {
+    LOG(LL_ERROR, ("Out of space"));
+
+    ret = -1;
+    /* Game is over, no space to flash buffer */
+    if (files_count == get_cfg()->console.file_cache_max) {
+      mbuf_free(&cache->logs);
+      mbuf_append(&cache->logs, s_out_of_space_msg,
+                  sizeof(s_out_of_space_msg) - 1);
+      /* Let write last phrase */
+    } else {
+      goto clean;
+    }
+  }
+
   char file_name[sizeof(LOG_FILENAME_BASE) + FILE_ID_LEN];
-  c_snprintf(file_name, sizeof(file_name), "%s%lld", LOG_FILENAME_BASE,
-             s_last_file_id);
+  fn_len = c_snprintf(file_name, sizeof(file_name), FILENAME_PATTERN,
+                      LOG_FILENAME_BASE, s_last_file_id);
+
+  if (fn_len != FILENAME_LEN - 1) {
+    LOG(LL_ERROR, ("Wrong file name")); /* Internal error, should not happen */
+    ret = -1;
+    goto clean;
+  }
 
   file = fopen(file_name, "w");
   if (file == NULL) {
@@ -183,7 +178,7 @@ static int console_flush_buffer(struct cache *cache) {
   }
 
   /* Using mbuf here instead of list to avoid memory overhead */
-  mbuf_append(&cache->file_numbers, &s_last_file_id, sizeof(s_last_file_id));
+  mbuf_append(&cache->file_names, file_name, FILENAME_LEN);
   mbuf_free(&cache->logs);
 
   s_last_file_id++;
@@ -194,22 +189,118 @@ clean:
   return ret;
 }
 
-static void console_add_to_cache(struct cache *cache, struct mbuf *msg) {
-  if (cache->logs.len + msg->len > MAX_CACHE_SIZE) {
-    LOG(LL_DEBUG, ("Flushing buf (%d bytes)", cache->logs.len));
-    console_flush_buffer(cache);
+static int compare_file_name(const void *name1, const void *name2) {
+  return strcmp(*(const char **) name1, *(const char **) name2);
+}
+
+static int console_init_file_cache() {
+  struct dirent *dp = NULL;
+  DIR *dirp = NULL;
+  int ret = 0;
+  struct cache_file {
+    SLIST_ENTRY(cache_file) entries;
+    char *file_name;
+  };
+
+  SLIST_HEAD(cache_files, cache_file) files = SLIST_HEAD_INITIALIZER(&files);
+  struct cache_file *it;
+  size_t i = 0, files_count = 0;
+  char **files_array = NULL;
+
+  if ((dirp = (opendir("."))) == NULL) {
+    LOG(LL_ERROR, ("Failed to open dir"));
+    ret = -1;
+    goto clean;
   }
 
-  mbuf_append(&cache->logs, msg->buf, msg->len);
-  LOG(LL_DEBUG, ("Cached %d bytes, total cache size is %d bytes",
-                 (int) msg->len - 1, (int) cache->logs.len));
+  while ((dp = readdir(dirp)) != NULL) {
+    if (strncmp((const char *) dp->d_name, LOG_FILENAME_BASE,
+                sizeof(LOG_FILENAME_BASE) - 1) != 0 ||
+        strlen((const char *) dp->d_name) != FILENAME_LEN - 1) {
+      continue;
+    }
+
+    LOG(LL_DEBUG, ("Found cache file: %s", dp->d_name));
+    struct cache_file *file = malloc(sizeof(*file));
+    file->file_name = strdup((const char *) dp->d_name);
+    SLIST_INSERT_HEAD(&files, file, entries);
+  }
+
+  /* We need to sort files from old to new */
+  SLIST_FOREACH(it, &files, entries) {
+    files_count++;
+  }
+
+  if (files_count == 0) {
+    goto clean; /* No cache, ok */
+  }
+
+  files_array = calloc(files_count, sizeof(*files_array));
+  SLIST_FOREACH(it, &files, entries) {
+    files_array[i++] = it->file_name;
+  }
+
+  qsort(&files_array[0], files_count, sizeof(files_array[0]),
+        compare_file_name);
+
+  /* Initializing cache */
+  for (i = 0; i < files_count; i++) {
+    mbuf_append(&s_cache.file_names, files_array[i], FILENAME_LEN);
+  }
+
+  char *ptr =
+      files_array[files_count - 1] + strlen(files_array[files_count - 1]);
+
+  while (*ptr != '.' && ptr != files_array[files_count - 1]) {
+    ptr--;
+  }
+
+  ptr++;
+
+  s_last_file_id = strtol(ptr, NULL, 10);
+  if (s_last_file_id == 0) {
+    LOG(LL_ERROR, ("Invalid file id")); /* Internal error, should not happen */
+    ret = -1;
+    goto clean;
+  }
+
+  s_last_file_id++;
+clean:
+  while (!SLIST_EMPTY(&files)) {
+    it = SLIST_FIRST(&files);
+    SLIST_REMOVE_HEAD(&files, entries);
+    free(it->file_name);
+    free(it);
+  }
+
+  if (files_array != NULL) {
+    free(files_array);
+  }
+
+  if (dirp != NULL) {
+    closedir(dirp);
+  }
+
+  return ret;
+}
+
+static void console_add_to_cache(struct cache *cache, struct mbuf *msg) {
+  int flush_res = 0;
+  if (cache->logs.len + msg->len > (size_t) get_cfg()->console.mem_cache_size) {
+    LOG(LL_DEBUG, ("Flushing buf (%d bytes)", cache->logs.len));
+    flush_res = console_flush_buffer(cache);
+  }
+
+  if (flush_res == 0) {
+    mbuf_append(&cache->logs, msg->buf, msg->len);
+    LOG(LL_DEBUG, ("Cached %d bytes, total cache size is %d bytes",
+                   (int) msg->len - 1, (int) cache->logs.len));
+  }
 }
 
 static int console_must_cache(struct cache *cache) {
-  LOG(LL_DEBUG, ("wfr: %d logs_len: %d file_num_len: %d", s_waiting_for_resp,
-                 (int) cache->logs.len, (int) cache->file_numbers.len));
   return s_waiting_for_resp || cache->logs.len != 0 ||
-         cache->file_numbers.len != 0;
+         cache->file_names.len != 0;
 }
 
 static void console_send_to_cloud(struct v7 *v7, struct mbuf *msg) {
@@ -265,7 +356,9 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   /* Send msg to local console */
   printf("%.*s", (int) msg.len, msg.buf);
 
-  console_send_to_cloud(v7, &msg);
+  if (get_cfg()->console.send_to_cloud) {
+    console_send_to_cloud(v7, &msg);
+  }
 
   *res = v7_mk_undefined(); /* like JS print */
 
@@ -273,7 +366,28 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   return rcode;
 }
 
+SJ_PRIVATE enum v7_err Console_setClubby(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+
+  v7_val_t clubby_v = v7_arg(v7, 0);
+  if (!v7_is_object(clubby_v) || (sj_clubby_get_handle(v7, clubby_v)) == NULL) {
+    /*
+     * We can try to look for global clubby object, but seems
+     * it is not really nessesary
+     */
+    rcode = v7_throwf(v7, "Error", "Invalid argument");
+    goto clean;
+  }
+
+  *res = v7_mk_boolean(1);
+  v7_set(v7, v7_get_global(v7), s_clubby_prop, ~0, clubby_v);
+
+clean:
+  return rcode;
+}
+
 void sj_console_init(struct v7 *v7) {
+  console_init_file_cache();
   sj_clubby_register_global_command(clubby_cmd_onopen,
                                     console_handle_clubby_ready, v7);
 }

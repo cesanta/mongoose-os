@@ -64,5 +64,11 @@
   "sys": {
     "wdt_timeout" : 10
   },
+  "console": {
+    "send_to_cloud" : true,
+    "timeout" : 10,
+    "mem_cache_size" : 256,
+    "file_cache_max" : 25
+  },
   "conf_acl": "*"
 }
