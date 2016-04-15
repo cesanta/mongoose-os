@@ -1,3 +1,4 @@
+/* clang-format off */
 /* ----------------------------------------------------------------------------
  * umm_malloc.c - a memory allocator for embedded systems (microcontrollers)
  *
@@ -676,9 +677,11 @@ static int integrity_check(void) {
 
     /* Check that next free block number is valid */
     if (cur >= UMM_NUMBLOCKS) {
+#ifndef UMM_DISABLE_VERBOSE_INTEGRITY_CHECK
       printf("heap integrity broken: too large next free num: %d "
           "(in block %d, addr 0x%lx)\n", cur, prev,
           (unsigned long)&UMM_NBLOCK(prev));
+#endif
       ok = 0;
       goto clean;
     }
@@ -689,9 +692,11 @@ static int integrity_check(void) {
 
     /* Check if prev free block number matches */
     if (UMM_PFREE(cur) != prev) {
+#ifndef UMM_DISABLE_VERBOSE_INTEGRITY_CHECK
       printf("heap integrity broken: free links don't match: "
           "%d -> %d, but %d -> %d\n",
           prev, cur, cur, UMM_PFREE(cur));
+#endif
       ok = 0;
       goto clean;
     }
@@ -708,9 +713,11 @@ static int integrity_check(void) {
 
     /* Check that next block number is valid */
     if (cur >= UMM_NUMBLOCKS) {
+#ifndef UMM_DISABLE_VERBOSE_INTEGRITY_CHECK
       printf("heap integrity broken: too large next block num: %d "
           "(in block %d, addr 0x%lx)\n", cur, prev,
           (unsigned long)&UMM_NBLOCK(prev));
+#endif
       ok = 0;
       goto clean;
     }
@@ -721,13 +728,14 @@ static int integrity_check(void) {
 
     /* make sure the free mark is appropriate, and unmark it */
     if ((UMM_NBLOCK(cur) & UMM_FREELIST_MASK)
-        != (UMM_PBLOCK(cur) & UMM_FREELIST_MASK))
-    {
+        != (UMM_PBLOCK(cur) & UMM_FREELIST_MASK)) {
+#ifndef UMM_DISABLE_VERBOSE_INTEGRITY_CHECK
       printf("heap integrity broken: mask wrong at addr 0x%lx: n=0x%x, p=0x%x\n",
           (unsigned long)&UMM_NBLOCK(cur),
           (UMM_NBLOCK(cur) & UMM_FREELIST_MASK),
           (UMM_PBLOCK(cur) & UMM_FREELIST_MASK)
           );
+#endif
       ok = 0;
       goto clean;
     }
@@ -737,9 +745,11 @@ static int integrity_check(void) {
 
     /* Check if prev block number matches */
     if (UMM_PBLOCK(cur) != prev) {
+#ifndef UMM_DISABLE_VERBOSE_INTEGRITY_CHECK
       printf("heap integrity broken: block links don't match: "
           "%d -> %d, but %d -> %d\n",
           prev, cur, cur, UMM_PBLOCK(cur));
+#endif
       ok = 0;
       goto clean;
     }
@@ -813,6 +823,7 @@ static int check_poison( const unsigned char *ptr, size_t poison_size,
     }
   }
 
+#ifndef UMM_DISABLE_VERBOSE_INTEGRITY_CHECK
   if (!ok) {
     printf("there is no poison %s the block. "
         "Expected poison address: 0x%lx, actual data:",
@@ -820,6 +831,7 @@ static int check_poison( const unsigned char *ptr, size_t poison_size,
     dump_mem(ptr, poison_size);
     printf("\n");
   }
+#endif
 
   return ok;
 }
@@ -832,8 +844,10 @@ static int check_poison_block( umm_block *pblock ) {
   int ok = 1;
 
   if (pblock->header.used.next & UMM_FREELIST_MASK) {
+#ifndef UMM_DISABLE_VERBOSE_INTEGRITY_CHECK
     printf("check_poison_block is called for free block 0x%lx\n",
         (unsigned long)pblock);
+#endif
   } else {
     /* the block is used; let's check poison */
     unsigned char *pc = (unsigned char *)pblock->body.data;
