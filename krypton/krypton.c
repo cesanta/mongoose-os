@@ -231,17 +231,19 @@ struct ssl_ctx_st {
   char *verify_name;
 };
 
-#define STATE_INITIAL 0
-#define STATE_CL_HELLO_SENT 1
-#define STATE_CL_HELLO_WAIT 2
-#define STATE_CL_HELLO_RCVD 3
-#define STATE_SV_HELLO_SENT 4
-#define STATE_SV_HELLO_RCVD 5
-#define STATE_SV_CERT_RCVD 6
-#define STATE_SV_DONE_RCVD 7
-#define STATE_CLIENT_FINISHED 8
-#define STATE_ESTABLISHED 9
-#define STATE_CLOSING 10
+enum kr_state {
+  STATE_INITIAL = 0,
+  STATE_CL_HELLO_SENT,
+  STATE_CL_HELLO_WAIT,
+  STATE_CL_HELLO_RCVD,
+  STATE_SV_HELLO_SENT,
+  STATE_SV_HELLO_RCVD,
+  STATE_SV_CERT_RCVD,
+  STATE_SV_DONE_RCVD,
+  STATE_CLIENT_FINISHED,
+  STATE_ESTABLISHED,
+  STATE_CLOSING,
+};
 
 struct ssl_st {
   struct ssl_ctx_st *ctx;
@@ -267,7 +269,7 @@ struct ssl_st {
   struct vec extra_appdata;
   uint8_t *appdata_eom;
 
-  uint8_t state;
+  enum kr_state state;
 
   uint8_t vrfy_result;
 
@@ -283,6 +285,7 @@ struct ssl_st {
 };
 
 NS_INTERNAL void ssl_err(struct ssl_st *ssl, int err);
+NS_INTERNAL void kr_set_state(struct ssl_st *ssl, enum kr_state new_state);
 
 #if KRYPTON_DEBUG
 void hex_dumpf(FILE *f, const void *buf, size_t len, size_t llen);
@@ -5750,6 +5753,7 @@ static int do_recv(SSL *ssl, uint8_t *out, size_t out_len) {
   ssize_t ret;
   size_t len;
 
+  dprintf(("do_recv %d %d\n", (int) ssl->rx_len, (int) ssl->rx_max_len));
   if (NULL == ssl->rx_buf) {
     ssl->rx_buf = malloc(RX_INITIAL_BUF);
     if (NULL == ssl->rx_buf) {
@@ -5846,7 +5850,7 @@ int SSL_accept(SSL *ssl) {
     case STATE_INITIAL:
       ssl->is_server = 1;
       ssl->mode_defined = 1;
-      ssl->state = STATE_CL_HELLO_WAIT;
+      kr_set_state(ssl, STATE_CL_HELLO_WAIT);
 
     /* fall through */
     case STATE_CL_HELLO_WAIT:
@@ -5862,7 +5866,7 @@ int SSL_accept(SSL *ssl) {
         return 0;
       }
 
-      ssl->state = STATE_SV_HELLO_SENT;
+      kr_set_state(ssl, STATE_SV_HELLO_SENT);
       if (!do_send(ssl)) return -1;
 
     /* fall through */
@@ -5879,7 +5883,7 @@ int SSL_accept(SSL *ssl) {
         return 0;
       }
 
-      ssl->state = STATE_ESTABLISHED;
+      kr_set_state(ssl, STATE_ESTABLISHED);
       if (!do_send(ssl)) return -1;
 
     /* fall through */
@@ -5931,7 +5935,7 @@ int SSL_connect(SSL *ssl) {
         return -1;
       }
 
-      ssl->state = STATE_CL_HELLO_SENT;
+      kr_set_state(ssl, STATE_CL_HELLO_SENT);
       if (!do_send(ssl)) return -1;
 
     /* fall through */
@@ -5968,7 +5972,7 @@ int SSL_connect(SSL *ssl) {
         return -1;
       }
 
-      ssl->state = STATE_CLIENT_FINISHED;
+      kr_set_state(ssl, STATE_CLIENT_FINISHED);
       if (!do_send(ssl)) return -1;
 
     /* fall through */
@@ -6114,7 +6118,7 @@ int SSL_shutdown(SSL *ssl) {
           return -1;
         }
 
-        ssl->state = STATE_CLOSING;
+        kr_set_state(ssl, STATE_CLOSING);
         if (!do_send(ssl)) return -1;
       /* fall through */
 
@@ -6160,7 +6164,13 @@ void ssl_err(SSL *ssl, int err) {
     default:
       abort();
   }
+  dprintf(("ssl_err = %d\n", err));
   ssl->err = err;
+}
+
+NS_INTERNAL void kr_set_state(struct ssl_st *ssl, enum kr_state new_state) {
+  dprintf(("state %d -> %d\n", ssl->state, new_state));
+  ssl->state = new_state;
 }
 #ifdef KR_MODULE_LINES
 #line 1 "src/src/tls.c"
@@ -6703,21 +6713,6 @@ static int check_compressor(uint8_t compressor) {
   }
 }
 
-static void cipher_suite_negotiate(SSL *ssl, kr_cs_id cs) {
-  if (ssl->nxt->cipher_negotiated) return;
-  switch (cs) {
-#if ALLOW_NULL_CIPHERS
-    case TLS_RSA_WITH_NULL_MD5:
-#endif
-    case TLS_RSA_WITH_RC4_128_MD5:
-    case TLS_RSA_WITH_RC4_128_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA:
-    case TLS_RSA_WITH_AES_128_CBC_SHA256:
-      ssl->nxt->cipher_suite = cs;
-      ssl->nxt->cipher_negotiated = 1;
-  }
-}
-
 static void compressor_negotiate(SSL *ssl, uint8_t compressor) {
   if (ssl->nxt->compressor_negotiated) return;
   switch (compressor) {
@@ -6778,7 +6773,7 @@ static int handle_hello(SSL *ssl, const struct tls_hdr *hdr, const uint8_t *buf,
 
   if (proto != TLS_1_2_PROTO && proto != TLS_1_1_PROTO &&
       proto != TLS_1_0_PROTO && proto != SSL_3_0_PROTO) {
-    dprintf(("bad prot version: %04x\n", proto));
+    dprintf(("bad proto version: %04x\n", proto));
     goto bad_vers;
   }
 
@@ -6894,16 +6889,15 @@ static int handle_hello(SSL *ssl, const struct tls_hdr *hdr, const uint8_t *buf,
 
   for (i = 0; i < num_ciphers; i++) {
     uint16_t suite = be16toh(cipher_suites[i]);
-    dprintf((" + %s cipher_suite[%u]: 0x%.4x\n",
-             (ssl->is_server) ? "server" : "client", i, suite));
-    if (ssl->is_server) {
-      cipher_suite_negotiate(ssl, suite);
-    } else {
-      if (check_cipher(suite)) {
-        ssl->nxt->cipher_suite = suite;
-        ssl->nxt->cipher_negotiated = 1;
-      }
+    int selected = 0;
+    if (!ssl->nxt->cipher_negotiated && check_cipher(suite)) {
+      ssl->nxt->cipher_suite = suite;
+      ssl->nxt->cipher_negotiated = 1;
+      selected = 1;
     }
+    dprintf(("%s %s cipher_suite[%u]: 0x%.4x\n", (selected ? " +" : " -"),
+             (ssl->is_server) ? "server" : "client", i, suite));
+    (void) selected;
   }
   for (i = 0; i < num_compressions; i++) {
     uint8_t compressor = compressions[i];
@@ -6922,6 +6916,8 @@ static int handle_hello(SSL *ssl, const struct tls_hdr *hdr, const uint8_t *buf,
   if (!ssl->nxt->cipher_negotiated || !ssl->nxt->compressor_negotiated) {
     dprintf(("Faled to negotiate cipher\n"));
     goto bad_param;
+  } else {
+    dprintf(("cipher: 0x%.4x\n", ssl->nxt->cipher_suite));
   }
   if (ssl->is_server) {
     memcpy(&ssl->nxt->cl_rnd, rand, sizeof(ssl->nxt->cl_rnd));
@@ -6929,10 +6925,10 @@ static int handle_hello(SSL *ssl, const struct tls_hdr *hdr, const uint8_t *buf,
       dprintf(("Impossible session resume\n"));
       goto bad_param;
     }
-    ssl->state = STATE_CL_HELLO_RCVD;
+    kr_set_state(ssl, STATE_CL_HELLO_RCVD);
   } else {
     memcpy(&ssl->nxt->sv_rnd, rand, sizeof(ssl->nxt->sv_rnd));
-    ssl->state = STATE_SV_HELLO_RCVD;
+    kr_set_state(ssl, STATE_SV_HELLO_RCVD);
   }
 
   return 1;
@@ -7010,7 +7006,7 @@ static int handle_certificate(SSL *ssl, const struct tls_hdr *hdr,
   if (!chain) goto err;
 
   if (!ssl->is_server) {
-    ssl->state = STATE_SV_CERT_RCVD;
+    kr_set_state(ssl, STATE_SV_CERT_RCVD);
   }
 
   if (ssl->ctx->verify_name != NULL) {
@@ -7113,10 +7109,10 @@ static int handle_finished(SSL *ssl, const struct tls_hdr *hdr,
 
   if (ssl->is_server) {
     ret = tls_check_client_finished(ssl->cur, buf, len);
-    ssl->state = STATE_CLIENT_FINISHED;
+    kr_set_state(ssl, STATE_CLIENT_FINISHED);
   } else {
     ret = tls_check_server_finished(ssl->cur, buf, len);
-    ssl->state = STATE_ESTABLISHED;
+    kr_set_state(ssl, STATE_ESTABLISHED);
   }
   if (!ret) {
     tls_alert(ssl, ALERT_LEVEL_FATAL, ALERT_DECRYPT_ERROR);
@@ -7208,7 +7204,7 @@ static int handle_cl_handshake(SSL *ssl, const struct tls_hdr *hdr,
         break;
       case HANDSHAKE_SERVER_HELLO_DONE:
         dprintf(("hello done\n"));
-        ssl->state = STATE_SV_DONE_RCVD;
+        kr_set_state(ssl, STATE_SV_DONE_RCVD);
         break;
       case HANDSHAKE_FINISHED:
         ret = handle_finished(ssl, hdr, buf, end);
@@ -7502,6 +7498,8 @@ int tls_handle_recv(SSL *ssl, uint8_t *out, size_t out_len) {
         iret = 0;
         break;
     }
+
+    dprintf(("iret = %d\n", iret));
 
     if (!iret) {
       ssl->rx_len = 0;
