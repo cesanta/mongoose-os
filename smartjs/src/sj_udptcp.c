@@ -573,6 +573,11 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                             ? s_ev_close
                             : s_ev_end,
                         v7_mk_undefined(), v7_mk_undefined());
+          /* For TCP we have to trigger 'close' as well here */
+          if (!(c->flags & MG_F_UDP)) {
+            trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+                          s_ev_close, v7_mk_boolean(0), v7_mk_undefined());
+          }
         }
 
         free_obj_cb_info_chain(ud->v7, ud->sock_obj);
