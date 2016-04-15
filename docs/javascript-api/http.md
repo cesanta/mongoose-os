@@ -37,9 +37,30 @@ var client = Http.request({
 - `response_obj.write(data) -> null`: Write HTTP body data. Could be called
   multiple times.
 - `response_obj.end(optional_data) -> null`: Finish sending HTTP body.
-- `response_obj.serve(optional_conf_obj) -> null: Serve static files via mongoose.
+- `response_obj.serve(optional_conf_obj) -> null`: Serve static files.
+This is a non-standard method that utilizes underlying Mongoose engine.
+The `optional_conf_obj` controls Mongoose behavior for static file serving,
+for example `{ ip_acl: "-0.0.0.0/0,+192.168/16" }`. Full list of options
+is referenced in Mongoose documentation at
+https://docs.cesanta.com/mongoose/latest/#/c-api/http.h/struct_mg_serve_http_opts/
 
 
 - `Http.request(options_obj, callback) -> client_obj`: Create HTTP client.
+- `Http.request(url, callback) -> client_obj`: Create HTTP client.
 - `client_obj.end(optional_post_data) -> client_obj`: Finish sending HTTP body.
 
+
+### Using HTTPS
+
+In order to use HTTPS, specify `https` as a protocol, e.g.
+
+```
+Http.request('https://google.com', function() { print(arguments); });
+```
+
+Note that Smart.js uses
+[ca.pem](https://github.com/cesanta/smart.js/blob/master/smartjs/src/fs/ca.pem)
+file which holds root CA certificates
+for verifying server certificates. Most popular certificate providers are
+already added to that file. If there are problems with making HTTPS requests,
+add respective CA to the `ca.pem` file.
