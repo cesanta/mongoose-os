@@ -26,7 +26,6 @@ static void sj_timer_handler(struct mg_connection *c, int ev, void *p) {
       if (ti->cb != NULL) ti->cb(ti->arg);
       if (ti->interval_ms > 0) {
         c->ev_timer_time = mg_time() + ti->interval_ms / 1000.0;
-        LOG(LL_INFO, ("next timer at %d", (int) (c->ev_timer_time * 1000)));
       } else {
         c->flags |= MG_F_CLOSE_IMMEDIATELY;
       }
