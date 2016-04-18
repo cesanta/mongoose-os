@@ -545,7 +545,7 @@ extern void kr_hash_sha256_v(size_t num_msgs, const uint8_t *msgs[],
 #endif
 
 #if !defined(KR_EXT_RANDOM)
-#if defined(_POSIX_VERSION)
+#if defined(__unix__)
 #define KR_RANDOM_SOURCE_FILE "/dev/urandom"
 #else
 #define KR_USE_RAND
