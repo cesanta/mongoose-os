@@ -4736,6 +4736,8 @@ int kr_get_random(uint8_t *out, size_t len) {
 
   if (fp != NULL) {
     ret = fread(out, 1, len, fp);
+  } else {
+    dprintf(("failed to open %s\n", KR_RANDOM_SOURCE_FILE));
   }
 
   return ret == len;
