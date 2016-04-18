@@ -9,6 +9,10 @@
 #include "common/mbuf.h"
 #include "common/platform.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 void cs_ubjson_emit_null(struct mbuf *buf);
 void cs_ubjson_emit_boolean(struct mbuf *buf, int v);
 
@@ -32,5 +36,9 @@ void cs_ubjson_close_object(struct mbuf *buf);
 
 void cs_ubjson_open_array(struct mbuf *buf);
 void cs_ubjson_close_array(struct mbuf *buf);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_COMMON_UBJSON_H_ */

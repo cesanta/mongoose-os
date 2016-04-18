@@ -10,6 +10,10 @@
 
 #ifdef CS_ENABLE_UBJSON
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* incremental UBJSON serializer */
 
 /* data model */
@@ -69,6 +73,10 @@ void ub_array_push(struct ub_ctx *ctx, ub_val_t a, ub_val_t val);
 
 /* invoke this from the ub_bin_cb_t to send more chunks of the bin */
 void ub_bin_send(struct ub_ctx *ctx, void *d, size_t n);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_ENABLE_UBJSON */
 #endif /* CS_COMMON_UBJSERIALIZER_H_ */

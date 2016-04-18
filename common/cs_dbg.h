@@ -6,6 +6,14 @@
 #ifndef CS_COMMON_CS_DBG_H_
 #define CS_COMMON_CS_DBG_H_
 
+#ifndef CS_DISABLE_STDIO
+#include <stdio.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 enum cs_log_level {
   LL_NONE = -1,
   LL_ERROR = 0,
@@ -21,8 +29,6 @@ enum cs_log_level {
 void cs_log_set_level(enum cs_log_level level);
 
 #ifndef CS_DISABLE_STDIO
-
-#include <stdio.h>
 
 void cs_log_set_file(FILE *file);
 
@@ -56,5 +62,9 @@ void cs_log_printf(const char *fmt, ...);
 #define DBG(x)
 
 #endif
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_COMMON_CS_DBG_H_ */

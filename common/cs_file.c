@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include "common/cs_file.h"
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>

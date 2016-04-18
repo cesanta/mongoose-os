@@ -6,6 +6,10 @@
 #ifndef CS_COMMON_CS_DIRENT_H_
 #define CS_COMMON_CS_DIRENT_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifdef CS_ENABLE_SPIFFS
 
 #include <spiffs.h>
@@ -28,5 +32,9 @@ DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 #endif
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_COMMON_CS_DIRENT_H_ */

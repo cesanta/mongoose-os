@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include "common/cs_time.h"
+
 #ifndef _WIN32
 #include <stddef.h>
 #if !defined(CS_PLATFORM) || \

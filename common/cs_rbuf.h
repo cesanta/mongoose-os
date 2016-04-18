@@ -10,6 +10,10 @@
 
 #include <inttypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 typedef struct cs_rbuf {
   uint16_t size, used, in_flight, avail;
   uint8_t *begin, *end;
@@ -26,5 +30,9 @@ uint16_t cs_rbuf_get(cs_rbuf_t *b, uint16_t max, uint8_t **data);
 void cs_rbuf_consume(cs_rbuf_t *b, uint16_t len);
 uint16_t cs_rbuf_contig_tail_space(cs_rbuf_t *b, uint8_t **data);
 void cs_rbuf_advance_tail(cs_rbuf_t *b, uint16_t len);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_COMMON_CS_RBUF_H_ */
