@@ -377,6 +377,23 @@ static v7_val_t create_tcp_socket(struct v7 *v7, v7_val_t conn) {
   return create_socket(v7, conn, s_tcp_global_object, s_tcp_socket_proto);
 }
 
+static void set_connection(struct v7 *v7, v7_val_t obj,
+                           struct mg_connection *c) {
+  v7_val_t conn_v = v7_get(v7, obj, s_conn_prop, ~0);
+  if (v7_is_foreign(conn_v)) {
+    struct conn_user_data *ud;
+    struct mg_connection *old_c = v7_to_foreign(conn_v);
+    if (old_c != NULL) {
+      old_c->flags |= MG_F_CLOSE_IMMEDIATELY;
+      ud = (struct conn_user_data *) c->user_data;
+      if (ud != NULL) {
+        ud->flags |= UD_F_NO_OBJECT_CONN;
+      }
+    }
+  }
+  v7_set(v7, obj, s_conn_prop, ~0, v7_mk_foreign(c));
+}
+
 static enum v7_err get_connection(struct v7 *v7, v7_val_t obj,
                                   struct mg_connection **c) {
   enum v7_err rcode = V7_OK;
@@ -630,6 +647,7 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   int port, use_ssl;
   struct conn_user_data *ud = NULL;
   struct mg_connect_opts conn_opts;
+  v7_val_t sock_obj;
 
   memset(&conn_opts, 0, sizeof(conn_opts));
   parse_args(v7, 2, args_names, ARRAY_SIZE(args_names), 1, args);
@@ -705,10 +723,15 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
 
   free(addr);
 
-  ud = create_conn_user_data(v7, v7_is_undefined(this_obj)
-                                     ? create_tcp_socket(v7, v7_mk_foreign(c))
-                                     : this_obj,
-                             0, 0);
+  if (v7_is_undefined(this_obj)) {
+    sock_obj = create_tcp_socket(v7, v7_mk_foreign(c));
+  } else {
+    sock_obj = this_obj;
+    set_connection(v7, sock_obj, c);
+  }
+
+  ud = create_conn_user_data(v7, sock_obj, 0, 0);
+
   if (ud == NULL) {
     LOG_AND_THROW("Out of memory");
     goto clean;
