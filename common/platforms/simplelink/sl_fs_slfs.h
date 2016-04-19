@@ -27,6 +27,8 @@ off_t fs_slfs_lseek(int fd, off_t offset, int whence);
 int fs_slfs_unlink(const char *filename);
 int fs_slfs_rename(const char *from, const char *to);
 
+void fs_slfs_set_new_file_size(const char *name, size_t size);
+
 #endif /* defined(MG_FS_SLFS) */
 
 #endif /* CS_COMMON_PLATFORMS_SIMPLELINK_SL_FS_SLFS_H_ */
