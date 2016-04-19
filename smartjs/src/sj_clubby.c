@@ -894,9 +894,11 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
      */
     enum v7_err cb_res;
     v7_val_t args;
+    v7_val_t res;
+
+    v7_own(clubby->v7, &clubby_param);
     args = v7_mk_array(clubby->v7);
     v7_array_push(clubby->v7, args, clubby_param);
-    v7_val_t res;
     cb_res = v7_apply(clubby->v7, *cbv, v7_get_global(clubby->v7), args, &res);
     if (cb_res == V7_OK) {
       clubby_send_response(clubby, dst, evt->request.id, 0, NULL, res);
@@ -904,6 +906,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
       clubby_send_response(clubby, dst, evt->request.id, 1,
                            v7_to_cstring(clubby->v7, &res), v7_mk_undefined());
     }
+    v7_disown(clubby->v7, &clubby_param);
     free(dst);
     return;
   } else {
@@ -929,10 +932,12 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
 
     v7_val_t done_func_v = v7_mk_cfunction(done_func);
     v7_val_t bind_args = v7_mk_array(clubby->v7);
-    v7_array_push(clubby->v7, bind_args, v7_mk_foreign(ctx));
     v7_val_t donevb;
+
+    v7_array_push(clubby->v7, bind_args, v7_mk_foreign(ctx));
     res = v7_apply(clubby->v7, v7_get(clubby->v7, done_func_v, "bind", ~0),
                    done_func_v, bind_args, &donevb);
+    v7_own(clubby->v7, &donevb);
 
     if (res != V7_OK) {
       LOG(LL_ERROR, ("Bind invocation error"));
@@ -952,10 +957,12 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
       goto cleanup;
     }
 
+    v7_disown(clubby->v7, &donevb);
     v7_disown(clubby->v7, &clubby_param);
     return;
 
   cleanup:
+    v7_disown(clubby->v7, &donevb);
     v7_disown(clubby->v7, &clubby_param);
     free(ctx->dst);
     free(ctx);
