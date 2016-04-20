@@ -253,7 +253,8 @@ def base_obj(o):
 def check_value(v):
     if get_tag(v) in [num(V7_TAG_STRING_O), num(V7_TAG_STRING_F)]:
         print >>sys.stderr, "Unhandled owned string during freezing. Please add it to string dictionary in v7/src/string.c"
-        print >>sys.stderr, "(Sorry I can't tell you which string it is, otherwise I would have handled it in the first place)"
+        print >>sys.stderr, "(Sorry I can't tell you which string it is, otherwise I would have handled it in the first place,"
+        print >>sys.stderr, "but I have a hunch it might be a literal in a frozen JS lib)"
         sys.exit(1)
 
 

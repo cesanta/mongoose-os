@@ -16234,8 +16234,10 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("setDate"),
     V7_VEC("setFullYear"),
     V7_VEC("setHours"),
+    V7_VEC("setISR"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("setMilliseconds"),
     V7_VEC("setMinutes"),
+    V7_VEC("setMode"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("setMonth"),
     V7_VEC("setSeconds"),
     V7_VEC("setTime"),
@@ -16246,8 +16248,6 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("setUTCMinutes"),
     V7_VEC("setUTCMonth"),
     V7_VEC("setUTCSeconds"),
-    V7_VEC("setisr"),  /* cannot be frozen yet: see #3279 */
-    V7_VEC("setmode"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("sha1_hex"),
     V7_VEC("source"),
     V7_VEC("splice"),

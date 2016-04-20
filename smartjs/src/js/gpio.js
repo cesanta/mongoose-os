@@ -7,6 +7,6 @@
 //   if (level==1) print("Button pressed"); };
 // GPIO.onclick(gpio, button_pressed);
 GPIO.onclick = function(pin, func) {
-  GPIO.setmode(pin, 3, 2);
-  GPIO.setisr(pin, 6, func);
+  GPIO.setMode(pin, 3, 2);
+  GPIO.setISR(pin, 6, func);
 }

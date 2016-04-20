@@ -40,7 +40,7 @@ var server = Http.createServer(function(req, res) {
   if (req.url == '/gpio') {
     var query = parse(req.body);
     var pin = parseInt(query.pin), value = parseInt(query.value);
-    GPIO.setmode(pin, 0, 0);
+    GPIO.setMode(pin, 0, 0);
     GPIO.write(pin, value);
     res.writeHead(302, {'Location': '/'});
     res.end();

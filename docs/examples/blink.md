@@ -10,7 +10,7 @@ This example shows how to blink an LED.
 function blink(pin) {
   pin = pin || 0;
   var level = GPIO.read(pin);
-  GPIO.setmode(pin, 0, 0);
+  GPIO.setMode(pin, 0, 0);
   GPIO.write(pin, !level);
   console.log("pin:", pin, ", level:", level);
   setTimeout(function() { blink(pin); }, 500);

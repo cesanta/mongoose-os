@@ -30,7 +30,7 @@ static void gpio_intr_handler_proxy(int pin, enum gpio_level level, void *arg) {
   sj_invoke_cb2(v7, cb, v7_mk_number(pin), v7_mk_number(level));
 }
 
-SJ_PRIVATE enum v7_err GPIO_setisr(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t pinv = v7_arg(v7, 0);
   v7_val_t typev = v7_arg(v7, 1);
@@ -84,7 +84,7 @@ clean:
   return rcode;
 }
 
-SJ_PRIVATE enum v7_err GPIO_setmode(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err GPIO_setMode(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   v7_val_t modev = v7_arg(v7, 1);
   v7_val_t pullv = v7_arg(v7, 2);
@@ -144,10 +144,10 @@ SJ_PRIVATE enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
 void sj_gpio_api_setup(struct v7 *v7) {
   v7_val_t gpio = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "GPIO", ~0, gpio);
-  v7_set_method(v7, gpio, "setMode", GPIO_setmode);
+  v7_set_method(v7, gpio, "setMode", GPIO_setMode);
   v7_set_method(v7, gpio, "read", GPIO_read);
   v7_set_method(v7, gpio, "write", GPIO_write);
-  v7_set_method(v7, gpio, "setISR", GPIO_setisr);
+  v7_set_method(v7, gpio, "setISR", GPIO_setISR);
 
   v7_set(v7, gpio, "INOUT", ~0, v7_mk_number(GPIO_MODE_INOUT));
   v7_set(v7, gpio, "IN", ~0, v7_mk_number(GPIO_MODE_INPUT));

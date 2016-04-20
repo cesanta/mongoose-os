@@ -9,7 +9,7 @@ function MCXXX(i2c, numLines, numCols, resetPin) {
 
   this.init = function(display_on, cursor_on, cursor_blink, contrast) {
     if (resetPin !== undefined) {
-      GPIO.setmode(resetPin, 2, 0);
+      GPIO.setMode(resetPin, 2, 0);
       GPIO.write(resetPin, 0);
       GPIO.write(resetPin, 1);
     }
