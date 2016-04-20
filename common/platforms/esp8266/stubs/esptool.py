@@ -47,6 +47,8 @@ class ESPROM(object):
     ESP_RAM_BLOCK   = 0x1800
     ESP_FLASH_BLOCK = 0x400
 
+    ESP_FLASH_SECTOR = 0x1000
+
     # Default baudrate. The ROM auto-bauds, so we can use more or less whatever we want.
     ESP_ROM_BAUD    = 115200
 
@@ -140,7 +142,6 @@ class ESPROM(object):
         self.command(ESPROM.ESP_SYNC, '\x07\x07\x12\x20' + 32 * '\x55')
         for i in xrange(7):
             self.command()
-        self.in_bootloader = True
 
     """ Try connecting repeatedly until successful, or giving up """
     def connect(self):
@@ -202,7 +203,6 @@ class ESPROM(object):
         if self.command(ESPROM.ESP_MEM_END,
                         struct.pack('<II', int(entrypoint == 0), entrypoint))[1] != "\0\0":
             raise FatalError('Failed to leave RAM download mode')
-        self.in_bootloader = False
 
     """ Start downloading to Flash (performs an erase) """
     def flash_begin(self, size, offset):
@@ -246,7 +246,6 @@ class ESPROM(object):
         pkt = struct.pack('<I', int(not reboot))
         if self.command(ESPROM.ESP_FLASH_END, pkt)[1] != "\0\0":
             raise FatalError('Failed to leave Flash mode')
-        self.in_bootloader = False
 
     """ Run application code in flash """
     def run(self, reboot=False):
@@ -631,11 +630,13 @@ entry": 1074792180, "num_params": 1, "params_start": 1074790400, "data": "FE0510
 """
     # FLASHER_STUB = open('build/stub_flasher.json').read()
 
+    # From stub_flasher.h
     CMD_FLASH_WRITE = 1
     CMD_FLASH_READ = 2
+    CMD_FLASH_DIGEST = 3
     CMD_BOOT_FW = 6
 
-    def __init__(self, esp, baud_rate):
+    def __init__(self, esp, baud_rate=0):
         if baud_rate > 0:
             print 'Running Cesanta flasher (speed %d)...' % baud_rate
         else:
@@ -649,10 +650,11 @@ entry": 1074792180, "num_params": 1, "params_start": 1074790400, "data": "FE0510
         if p != 'OHAI':
             raise FatalError('Faild to connect to the flasher (got %s)' % hexify(p))
 
-    def flash_write(self, addr, data):
+    def flash_write(self, addr, data, show_progress=False):
         assert addr % 4096 == 0, 'Address must be sector-aligned'
         assert len(data) % 4096 == 0, 'Length must be sector-aligned'
         sys.stdout.write('Writing %d @ 0x%x... ' % (len(data), addr))
+        sys.stdout.flush()
         self._esp.write(struct.pack('<B', self.CMD_FLASH_WRITE))
         self._esp.write(struct.pack('<III', addr, len(data), 1))
         num_sent, num_written = 0, 0
@@ -666,9 +668,10 @@ entry": 1074792180, "num_params": 1, "params_start": 1074790400, "data": "FE0510
                 raise FatalError('Write failure, status: %x' % status_code)
             else:
                 raise FatalError('Unexpected packet while writing: %s' % hexify(p))
-            progress = '%d (%d %%)' % (num_written, num_written * 100.0 / len(data))
-            sys.stdout.write(progress + '\b' * len(progress))
-            sys.stdout.flush()
+            if show_progress:
+                progress = '%d (%d %%)' % (num_written, num_written * 100.0 / len(data))
+                sys.stdout.write(progress + '\b' * len(progress))
+                sys.stdout.flush()
             while num_sent - num_written < 5120:
                 self._esp._port.write(data[num_sent:num_sent+1024])
                 num_sent += 1024
@@ -687,8 +690,9 @@ entry": 1074792180, "num_params": 1, "params_start": 1074790400, "data": "FE0510
         if status_code != 0:
             raise FatalError('Write failure, status: %x' % status_code)
 
-    def flash_read(self, addr, length):
+    def flash_read(self, addr, length, show_progress=False):
         sys.stdout.write('Reading %d @ 0x%x... ' % (length, addr))
+        sys.stdout.flush()
         self._esp.write(struct.pack('<B', self.CMD_FLASH_READ))
         # USB may not be able to keep up with the read rate, especially at
         # higher speeds. Since we don't have flow control, this will result in
@@ -702,7 +706,7 @@ entry": 1074792180, "num_params": 1, "params_start": 1074790400, "data": "FE0510
             p = self._esp.read()
             data += p
             self._esp.write(struct.pack('<I', len(data)))
-            if len(data) % 1024 == 0 or len(data) == length:
+            if show_progress and (len(data) % 1024 == 0 or len(data) == length):
                 progress = '%d (%d %%)' % (len(data), len(data) * 100.0 / length)
                 sys.stdout.write(progress + '\b' * len(progress))
                 sys.stdout.flush()
@@ -725,6 +729,23 @@ entry": 1074792180, "num_params": 1, "params_start": 1074790400, "data": "FE0510
         if status_code != 0:
             raise FatalError('Write failure, status: %x' % status_code)
         return data
+
+    def flash_digest(self, addr, length, digest_block_size=0):
+        self._esp.write(struct.pack('<B', self.CMD_FLASH_DIGEST))
+        self._esp.write(struct.pack('<III', addr, length, digest_block_size))
+        digests = []
+        while True:
+            p = self._esp.read()
+            if len(p) == 16:
+                digests.append(p)
+            elif len(p) == 1:
+                status_code = struct.unpack('<B', p)[0]
+                if status_code != 0:
+                    raise FatalError('Write failure, status: %x' % status_code)
+                break
+            else:
+                raise FatalError('Unexpected packet: %s' % hexify(p))
+        return digests[-1], digests[:-1]
 
     def boot_fw(self):
         self._esp.write(struct.pack('<B', self.CMD_BOOT_FW))
@@ -845,36 +866,33 @@ def dump_mem(esp, args):
 
 
 def write_flash(esp, args):
-    assert len(args.addr_filename) % 2 == 0
-
     flash_mode = {'qio':0, 'qout':1, 'dio':2, 'dout': 3}[args.flash_mode]
     flash_size_freq = {'4m':0x00, '2m':0x10, '8m':0x20, '16m':0x30, '32m':0x40, '16m-c1': 0x50, '32m-c1':0x60, '32m-c2':0x70}[args.flash_size]
     flash_size_freq += {'40m':0, '26m':1, '20m':2, '80m': 0xf}[args.flash_freq]
-    flash_info = struct.pack('BB', flash_mode, flash_size_freq)
+    flash_params = struct.pack('BB', flash_mode, flash_size_freq)
 
     flash_baud = args.flash_baud and args.flash_baud or 0
     flasher = CesantaFlasher(esp, flash_baud)
 
-    while args.addr_filename:
-        address = int(args.addr_filename[0], 0)
-        filename = args.addr_filename[1]
-        args.addr_filename = args.addr_filename[2:]
-        image = file(filename, 'rb').read()
+    for address, argfile in args.addr_filename:
+        image = argfile.read()
+        argfile.seek(0)  # rewind in case we need it again
         # Fix sflash config data.
         if address == 0 and image[0] == '\xe9':
-            image = image[0:2] + flash_info + image[4:]
+            print 'Flash params set to 0x%02x%02x' % (flash_mode, flash_size_freq)
+            image = image[0:2] + flash_params + image[4:]
         # Pad to sector size, which is the minimum unit of writing (erasing really).
-        if len(image) % 4096 != 0:
-            image += '\xff' * (4096 - (len(image) % 4096))
+        if len(image) % esp.ESP_FLASH_SECTOR != 0:
+            image += '\xff' * (esp.ESP_FLASH_SECTOR - (len(image) % esp.ESP_FLASH_SECTOR))
         t = time.time()
-        flasher.flash_write(address, image)
+        flasher.flash_write(address, image, args.progress)
         t = time.time() - t
         print ('\rWrote %d bytes at 0x%x in %.1f seconds (%.1f kbit/s)...'
                % (len(image), address, t, len(image) / t * 8 / 1000))
     print 'Leaving...'
     if args.verify:
         print 'Verifying just-written flash...'
-        verify_flash(esp, args, header_block)
+        _verify_flash(flasher, args, flash_params)
     flasher.boot_fw()
 
 
@@ -971,25 +989,31 @@ def read_flash(esp, args):
     flash_baud = args.flash_baud and args.flash_baud or 0
     flasher = CesantaFlasher(esp, flash_baud)
     t = time.time()
-    data = flasher.flash_read(args.address, args.size)
+    data = flasher.flash_read(args.address, args.size, args.progress)
     t = time.time() - t
     print ('\rRead %d bytes at 0x%x in %.1f seconds (%.1f kbit/s)...'
            % (len(data), args.address, t, len(data) / t * 8 / 1000))
     file(args.filename, 'wb').write(data)
 
 
-def verify_flash(esp, args, header_block=None):
+def _verify_flash(flasher, args, flash_params=None):
     differences = False
     for address, argfile in args.addr_filename:
-        if not esp.in_bootloader:
-            esp.connect()
         image = argfile.read()
-        if address == 0 and header_block is not None and image[:esp.ESP_FLASH_BLOCK] != header_block:
-            image = header_block + image[esp.ESP_FLASH_BLOCK:]
         argfile.seek(0)  # rewind in case we need it again
+        if address == 0 and image[0] == '\xe9' and flash_params is not None:
+            image = image[0:2] + flash_params + image[4:]
         image_size = len(image)
         print 'Verifying 0x%x (%d) bytes @ 0x%08x in flash against %s...' % (image_size, image_size, address, argfile.name)
-        flash = esp.flash_read(address, 1024, div_roundup(image_size, 1024))[:image_size]
+        # Try digest first, only read if there are differences.
+        digest, _ = flasher.flash_digest(address, image_size)
+        digest = hexify(digest).upper()
+        expected_digest = hashlib.md5(image).hexdigest().upper()
+        if digest == expected_digest:
+            print '-- verify OK (digest matched)'
+            continue
+
+        flash = flasher.flash_read(address, image_size)
         if flash == image:
             print '-- verify OK'
         else:
@@ -1004,6 +1028,11 @@ def verify_flash(esp, args, header_block=None):
                 pass  # if performing write_flash --verify, there is no .diff attribute
     if differences:
         raise FatalError("Verify failed.")
+
+
+def verify_flash(esp, args, flash_params=None):
+    flasher = CesantaFlasher(esp)
+    _verify_flash(flasher, args, flash_params)
 
 
 def wrap_stub(args):
@@ -1109,8 +1138,9 @@ def main():
         help='Write a binary blob to flash')
     parser_write_flash.add_argument('addr_filename', metavar='<address> <filename>', help='Address followed by binary filename, separated by space',
                                     action=AddrFilenamePairAction)
-    parser_write_flash.add_argument('--flash_baud', help = 'Baud rate to use while flashing', type = arg_auto_int)
+    parser_write_flash.add_argument('--flash_baud', help='Baud rate to use while flashing', type=arg_auto_int)
     add_spi_flash_subparsers(parser_write_flash)
+    parser_write_flash.add_argument('--progress', '-p', help='Show progress', action="store_true")
     parser_write_flash.add_argument('--verify', help='Verify just-written data (only necessary if very cautious, data is already CRCed', action='store_true')
 
     subparsers.add_parser(
@@ -1156,7 +1186,8 @@ def main():
     parser_read_flash.add_argument('address', help='Start address', type=arg_auto_int)
     parser_read_flash.add_argument('size', help='Size of region to dump', type=arg_auto_int)
     parser_read_flash.add_argument('filename', help='Name of binary dump')
-    parser_read_flash.add_argument('--progress', '-p', help='Show progression', action="store_true")
+    parser_read_flash.add_argument('--flash_baud', help='Baud rate to use while reading', type=arg_auto_int)
+    parser_read_flash.add_argument('--progress', '-p', help='Show progress', action="store_true")
 
     parser_verify_flash = subparsers.add_parser(
         'verify_flash',
@@ -1170,15 +1201,11 @@ def main():
         'erase_flash',
         help='Perform Chip Erase on SPI flash')
 
-    parser_wrap_stub = subparsers.add_parser(
-            'wrap_stub',
-            help = 'Wrap stub and output a JSON object')
+    parser_wrap_stub = subparsers.add_parser('wrap_stub', help='Wrap stub and output a JSON object')
     parser_wrap_stub.add_argument('input')
     parser_wrap_stub.add_argument('--entry', default='stub_main')
 
-    parser_run_stub = subparsers.add_parser(
-            'run_stub',
-            help = 'Run stub on a device')
+    parser_run_stub = subparsers.add_parser('run_stub', help='Run stub on a device')
     parser_run_stub.add_argument('--entry', default='stub_main')
     parser_run_stub.add_argument('input')
     parser_run_stub.add_argument('params', nargs='*', type=arg_auto_int)
