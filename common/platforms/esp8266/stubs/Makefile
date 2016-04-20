@@ -11,7 +11,7 @@ PORT = /dev/ttyUSB0
 BUILD_DIR = build
 STUB_ELF = $(BUILD_DIR)/$(patsubst %.c,%.elf,$(STUB))
 STUB_JSON = $(BUILD_DIR)/$(patsubst %.c,%.json,$(STUB))
-SDK = docker.cesanta.com:5000/esp8266-build-oss:1.5.0-r4
+SDK = docker.cesanta.com:5000/esp8266-build-oss:1.5.2-r2
 XT_CC = xtensa-lx106-elf-gcc
 
 .PHONY: all clean run wrap

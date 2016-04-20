@@ -59,14 +59,6 @@ class ESPROM(object):
     ESP_OTP_MAC0    = 0x3ff00050
     ESP_OTP_MAC1    = 0x3ff00054
 
-    # Sflash stub: an assembly routine to read from spi flash and send to host
-    SFLASH_STUB = (
-        "\x80\x3c\x00\x40\x1c\x4b\x00\x40\x21\x11\x00\x40\x00\x80" \
-        "\xfe\x3f\xc1\xfb\xff\xd1\xf8\xff\x2d\x0d\x31\xfd\xff\x41\xf7\xff\x4a" \
-        "\xdd\x51\xf9\xff\xc0\x05\x00\x21\xf9\xff\x31\xf3\xff\x41\xf5\xff\xc0" \
-        "\x04\x00\x0b\xcc\x56\xec\xfd\x06\xff\xff\x00\x00",
-        0x40100000, 0x4010001c)
-
     def __init__(self, port = 0, baud = ESP_ROM_BAUD):
         self._port = serial.Serial(port)
         # setting baud rate in a separate step is a workaround for
@@ -97,10 +89,8 @@ class ESPROM(object):
         while True:
             c = self._port.read(1)
             if c != '\xc0':
-                print 'Invalid head of packet (%s)' % repr(c)
-                continue
+                raise Exception('Invalid head of packet (%s)' % repr(c))
             break
-             #   raise Exception('Invalid head of packet (%s)' % repr(c))
         while True:
             c = self._port.read(1)
             if c == '\xc0':
@@ -285,32 +275,6 @@ class ESPROM(object):
         self.flash_finish(False)
         return flash_id
 
-    """ Read SPI flash """
-    def flash_read(self, offset, size, count = 1):
-        # Create a custom stub
-        stub = struct.pack('<III', offset, size, count) + self.SFLASH_STUB[0]
-
-        # Trick ROM to initialize SFlash
-        self.flash_begin(0, 0)
-
-        # Download stub
-        self.mem_begin(len(stub), 1, len(stub), 0x40100000)
-        self.mem_block(stub, 0)
-        self.mem_finish(0x4010001c)
-
-        # Fetch the data
-        data = ''
-        for _ in xrange(count):
-            if self._port.read(1) != '\xc0':
-                raise Exception('Invalid head of packet (sflash read)')
-
-            data += self.read(size)
-
-            if self._port.read(1) != chr(0xc0):
-                raise Exception('Invalid end of packet (sflash read)')
-
-        return data
-
     """ Abuse the loader protocol to force flash to be left in write mode """
     def flash_unlock_dio(self):
         # Enable flash write mode
@@ -476,74 +440,79 @@ class ELFFile:
 
 class CesantaFlasher(object):
     # This is "wrapped" stub_flasher.c, to  be loaded using run_stub.
-    FLASHER_STUB = """
-    {"code_start": 1074790404, "code": "080000601C000060000000601000006031FCFF7\
-1FCFF81FCFFC02000680332D210C020004807404074DCC48608005823C0200098081BA5A9239245\
-0058031B555903582337350129230B446604DFC6F3FF21EEFFC0200069020DF0000000010078480\
-040004A0040B449004012C1F0C921D911E901DD0209312020B4ED033C2C56C2073020B43C3C5642\
-0701F5FFC000003C4C569206CD0EEADD860300202C4101F1FFC0000056A204C2DCF0C02DC0CC6CC\
-AE2D1EAFF0606002030F456D3FD86FBFF00002020F501E8FFC00000EC82D0CCC0C02EC0C73DEB2A\
-DC460300202C4101E1FFC00000DC42C2DCF0C02DC056BCFEC602003C5C8601003C6C4600003C7C0\
-8312D0CD811C821E80112C1100DF0000C100000140010400C000060741000006410000080100000\
-8C10000084100000881000009010000018980040880F0040A80F0040349800404C4A0040740F004\
-0800F0040980F00400099004012C1E091F5FFC961CD0221EFFFE941F9310971D9519011C01A2239\
-02E2D1100C02226E1D21E4FF31E9FF2AF11A332D0F42630001EAFFC00000C030B43C2256A31621E\
-1FF1A2228022030B43C3256B31501ADFFC00000DD023C4256ED1431D6FF4D010C52D90E192E126E\
-0101DDFFC0000021D2FF32A101C020004802303420C0200039022C0201D7FFC0000046330000003\
-1CDFF1A333803D023C03199FF27B31ADC7F31CBFF1A3328030198FFC0000056C20E2193FF2ADD06\
-0E000031C6FF1A3328030191FFC0000056820DD2DD10460800000021BEFF1A2228029CE231BCFFC\
-020F51A33290331BBFFC02C411A332903C0F0F4222E1D22D204273D9332A3FFC02000280E27B3F7\
-21ABFF381E1A2242A40001B5FFC00000381E2D0C42A40001B3FFC0000056120801B2FFC00000C02\
-000280EC2DC0422D2FCC02000290E01ADFFC00000222E1D22D204226E1D281E22D204E7B204291E\
-860000126E012198FF32A0042A210543003198FF222E1D1A33380337B202C6D6FF2C02019FFFC00\
-0002191FF318CFF1A223A31019CFFC00000218DFF1C031A220540000C02060300003C528601003C\
-624600003C72918BFF9A110871C861D851E841F83112C1200DF00010000058100000B01000001C4\
-B0040803C004012C1E0C96191FBFFCD0331F8FFD951E9410971F931DD029011C0ED045C22473370\
-21F3FF20F180F02F200177FFC00000C60F00000175FFC00000FD0CC7BE01FD0E2D0D3D014D0F01E\
-CFFC000008C425C32460F000021E6FF3D011A224D0F016DFFC000002D013D0F01E5FFC00000FADD\
-F0CCC022D11056ACFB31DDFF303180016AFFC0000022D1101C0301DCFFC000002D0C91D8FF9A110\
-871C861D851E841F83112C1200DF00000C0100000D010000012C1E091FEFFC961D951E9410971F9\
-31CD039011C0ED02DD0431C8FF9C1422A06247B302062D0021F4FF1A22490286010021F1FF1A223\
-90221C2FF2AF12D0F0146FFC00000461C0022D1100143FFC0000021E9FFFD0C1A222802C7B20621\
-E6FF1A22F8022D0E3D014D0F01B7FFC000008C5222A063C618000021B1FF3D01102280F04F20013\
-8FFC00000AC7D22D1103D014D0F0134FFC0000021AAFF32D1101022800135FFC0000021A7FF1C03\
-1A2201A7FFC00000FAEEF0CCC056ACF821A1FF31A0FF1A223A31012CFFC00000219DFF1C031A220\
-19EFFC000002D0C91C8FF9A110871C861D851E841F83112C1200DF0000200600000001040020060\
-FFFFFF0012C1E00C02290131FAFF21FAFF026107C961C02000226300C02000C80320CC10564CFF2\
-1F5FFC02000380221F4FF20231029010C432D010185FFC0000008712D0CC86112C1200DF00080FE\
-3F8449004012C1D0C9A109B17CFC22C1110C13C51C00261202463000220111C24110B68202462B0\
-031F5FF3022A02802A002002D011C03851A0066820B2801322101C5AFFF060700003C1286050000\
-10212032A01085180066A20F22210038114821C5BCFF224110861A004C1206FDFF10212032A0108\
-5160066A20C2221003811482105D8FFC6F6FF5C1286F5FF0010212032A01085140066A20D222100\
-3811482105E1FF06EFFF0022A06146EDFF45F0FFC6EBFF000001D2FFC0000006E9FF000C0222411\
-00C1322C110C50F00220111060600000022C1100C13C50E0022011132C2FA303074B6230206C8FF\
-08B1C8A112C1300DF0000000000010404F484149007519031027000000110040A8100040BC0F004\
-0583F0040CC2E00401CE20040D83900408000004021F4FF12C1E0C961C80221F2FF097129010C02\
-D951C91101F4FFC0000001F3FFC00000AC2C22A3E801F2FFC0000021EAFFC031412A233D0C01EFF\
-FC000003D0222A00001EDFFC00000C1E4FF2D0C01E8FFC000002D0132A004450400C5E7FFDD022D\
-0C01E3FFC00000666D1F4B2131DCFF4600004B22C0200048023794F531D9FFC0200039023DF0860\
-1000001DCFFC000000871C861D85112C1200DF000000012C1F0026103010CFFC00000083112C110\
-0DF000643B004012C1D0E98109B1C9A1D991F97129013911E2A0C001FAFFC00000CD02E792F40C0\
-DE2A0C0F2A0DB860D00000001F4FFC00000204220E71240F7921C22610201EFFFC0000052A0DC48\
-2157120952A0DD571205460500004D0C3801DA234242001BDD3811379DC5C6000000000C0DC2A0C\
-001E3FFC00000C792F608B12D0DC8A1D891E881F87112C1300DF00000", \
-"entry": 1074792024, "num_params": 1, "params_start": 1074790400, \
-"data": "620510407E0510409F051040BE051040DE051040E6051040F0051040F0051040", \
-"data_start": 1073643520}"""
+    FLASHER_STUB = """\
+{"code_start": 1074790404, "code": "080000601C000060000000601000006031FCFF71FCFF\
+81FCFFC02000680332D218C020004807404074DCC48608005823C0200098081BA5A9239245005803\
+1B555903582337350129230B446604DFC6F3FF21EEFFC0200069020DF0000000010078480040004A\
+0040B449004012C1F0C921D911E901DD0209312020B4ED033C2C56C2073020B43C3C56420701F5FF\
+C000003C4C569206CD0EEADD860300202C4101F1FFC0000056A204C2DCF0C02DC0CC6CCAE2D1EAFF\
+0606002030F456D3FD86FBFF00002020F501E8FFC00000EC82D0CCC0C02EC0C73DEB2ADC46030020\
+2C4101E1FFC00000DC42C2DCF0C02DC056BCFEC602003C5C8601003C6C4600003C7C08312D0CD811\
+C821E80112C1100DF0000C180000140010400C0000607418000064180000801800008C1800008418\
+0000881800009018000018980040880F0040A80F0040349800404C4A0040740F0040800F0040980F\
+00400099004012C1E091F5FFC961CD0221EFFFE941F9310971D9519011C01A223902E2D1180C0222\
+6E1D21E4FF31E9FF2AF11A332D0F42630001EAFFC00000C030B43C2256A31621E1FF1A2228022030\
+B43C3256B31501ADFFC00000DD023C4256ED1431D6FF4D010C52D90E192E126E0101DDFFC0000021\
+D2FF32A101C020004802303420C0200039022C0201D7FFC00000463300000031CDFF1A333803D023\
+C03199FF27B31ADC7F31CBFF1A3328030198FFC0000056C20E2193FF2ADD060E000031C6FF1A3328\
+030191FFC0000056820DD2DD10460800000021BEFF1A2228029CE231BCFFC020F51A33290331BBFF\
+C02C411A332903C0F0F4222E1D22D204273D9332A3FFC02000280E27B3F721ABFF381E1A2242A400\
+01B5FFC00000381E2D0C42A40001B3FFC0000056120801B2FFC00000C02000280EC2DC0422D2FCC0\
+2000290E01ADFFC00000222E1D22D204226E1D281E22D204E7B204291E860000126E012198FF32A0\
+042A21C54C003198FF222E1D1A33380337B202C6D6FF2C02019FFFC000002191FF318CFF1A223A31\
+019CFFC00000218DFF1C031A22C549000C02060300003C528601003C624600003C72918BFF9A1108\
+71C861D851E841F83112C1200DF00010000068100000581000007010000074100000781000007C10\
+0000801000001C4B0040803C004091FDFF12C1E061F7FFC961E941F9310971D9519011C01A662906\
+21F3FFC2D1101A22390231F2FF0C0F1A33590331EAFFF26C1AED045C2247B3028636002D0C016DFF\
+C0000021E5FF41EAFF2A611A4469040622000021E4FF1A222802F0D2C0D7BE01DD0E31E0FF4D0D1A\
+3328033D0101E2FFC00000561209D03D2010212001DFFFC000004D0D2D0C3D01015DFFC0000041D5\
+FFDAFF1A444804D0648041D2FF1A4462640061D1FF106680622600673F1331D0FF10338028030C43\
+853A002642164613000041CAFF222C1A1A444804202FC047328006F6FF222C1A273F3861C2FF222C\
+1A1A6668066732B921BDFF3D0C1022800148FFC0000021BAFF1C031A2201BFFFC000000C02460300\
+5C3206020000005C424600005C5291B7FF9A110871C861D851E841F83112C1200DF0B0100000C010\
+0000D010000012C1E091FEFFC961D951E9410971F931CD039011C0ED02DD0431A1FF9C1422A06247\
+B302062D0021F4FF1A22490286010021F1FF1A223902219CFF2AF12D0F011FFFC00000461C0022D1\
+10011CFFC0000021E9FFFD0C1A222802C7B20621E6FF1A22F8022D0E3D014D0F0195FFC000008C52\
+22A063C6180000218BFF3D01102280F04F200111FFC00000AC7D22D1103D014D0F010DFFC0000021\
+D6FF32D110102280010EFFC0000021D3FF1C031A220185FFC00000FAEEF0CCC056ACF821CDFF317A\
+FF1A223A310105FFC0000021C9FF1C031A22017CFFC000002D0C91C8FF9A110871C861D851E841F8\
+3112C1200DF0000200600000001040020060FFFFFF0012C1E00C02290131FAFF21FAFF026107C961\
+C02000226300C02000C80320CC10564CFF21F5FFC02000380221F4FF20231029010C432D010163FF\
+C0000008712D0CC86112C1200DF00080FE3F8449004012C1D0C9A109B17CFC22C1110C13C51C0026\
+1202463000220111C24110B68202462B0031F5FF3022A02802A002002D011C03851A0066820A2801\
+32210105A6FF0607003C12C60500000010212032A01085180066A20F2221003811482105B3FF2241\
+10861A004C1206FDFF2D011C03C5160066B20E280138114821583185CFFF06F7FF005C1286F5FF00\
+10212032A01085140066A20D2221003811482105E1FF06EFFF0022A06146EDFF45F0FFC6EBFF0000\
+01D2FFC0000006E9FF000C022241100C1322C110C50F00220111060600000022C1100C13C50E0022\
+011132C2FA303074B6230206C8FF08B1C8A112C1300DF0000000000010404F484149007519031027\
+000000110040A8100040BC0F0040583F0040CC2E00401CE20040D83900408000004021F4FF12C1E0\
+C961C80221F2FF097129010C02D951C91101F4FFC0000001F3FFC00000AC2C22A3E801F2FFC00000\
+21EAFFC031412A233D0C01EFFFC000003D0222A00001EDFFC00000C1E4FF2D0C01E8FFC000002D01\
+32A004450400C5E7FFDD022D0C01E3FFC00000666D1F4B2131DCFF4600004B22C0200048023794F5\
+31D9FFC0200039023DF08601000001DCFFC000000871C861D85112C1200DF000000012C1F0026103\
+01EAFEC00000083112C1100DF000643B004012C1D0E98109B1C9A1D991F97129013911E2A0C001FA\
+FFC00000CD02E792F40C0DE2A0C0F2A0DB860D00000001F4FFC00000204220E71240F7921C226102\
+01EFFFC0000052A0DC482157120952A0DD571205460500004D0C3801DA234242001BDD3811379DC5\
+C6000000000C0DC2A0C001E3FFC00000C792F608B12D0DC8A1D891E881F87112C1300DF00000", "\
+entry": 1074792180, "num_params": 1, "params_start": 1074790400, "data": "FE0510\
+401A0610403B0610405A0610407A061040820610408C0610408C061040", "data_start": 10736\
+43520}
+"""
+    # FLASHER_STUB = open('build/stub_flasher.json').read()
 
     CMD_FLASH_WRITE = 1
+    CMD_FLASH_READ = 2
     CMD_BOOT_FW = 6
-    DEFAULT_FLASH_BAUD = 921600   # 0 means do not change baud rate
 
     def __init__(self, esp, baud_rate):
         if baud_rate > 0:
             print 'Running Cesanta flasher (speed %d)...' % baud_rate
         else:
-            print 'Running Cesanta flasher...'
+            print 'Running Cesanta flasher (using default speed %d, try --flash_baud)...' % esp._port.baudrate
         self._esp = esp
-        esp.run_stub(json.loads(self.FLASHER_STUB), [flash_baud], read_output=False)
-        if flash_baud > 0:
-            esp._port.baudrate = flash_baud
+        esp.run_stub(json.loads(self.FLASHER_STUB), [baud_rate], read_output=False)
+        if baud_rate > 0:
+            esp._port.baudrate = baud_rate
         # Read the greeting.
         p = esp.read_packet()
         if p != 'OHAI':
@@ -569,7 +538,7 @@ DE2A0C0F2A0DB860D00000001F4FFC00000204220E71240F7921C22610201EFFFC0000052A0DC48\
             progress = '%d (%d %%)' % (num_written, num_written * 100.0 / len(data))
             sys.stdout.write(progress + '\b' * len(progress))
             sys.stdout.flush()
-            while num_sent - num_written < 3072:
+            while num_sent - num_written < 5120:
                 self._esp._port.write(data[num_sent:num_sent+1024])
                 num_sent += 1024
         p = self._esp.read_packet()
@@ -586,6 +555,45 @@ DE2A0C0F2A0DB860D00000001F4FFC00000204220E71240F7921C22610201EFFFC0000052A0DC48\
         status_code = struct.unpack('<B', p)[0]
         if status_code != 0:
             raise Exception('Write failure, status: %x' % status_code)
+
+    def flash_read(self, addr, length):
+        sys.stdout.write('Reading %d @ 0x%x... ' % (length, addr))
+        self._esp.write(struct.pack('<B', self.CMD_FLASH_READ))
+        # USB may not be able to keep up with the read rate, especially at
+        # higher speeds. Since we don't have flow control, this will result in
+        # data loss. Hence, we use small packet size and only allow small
+        # number of bytes in flight, which we can reasonably expect to fit in
+        # the on-chip FIFO. max_in_flight = 64 works for CH340G, other chips may
+        # have longer FIFOs and could benefit from increasing max_in_flight.
+        self._esp.write(struct.pack('<IIII', addr, length, 32, 64))
+        data = ''
+        while True:
+            p = self._esp.read_packet()
+            data += p
+            self._esp.write(struct.pack('<I', len(data)))
+            if len(data) % 1024 == 0 or len(data) == length:
+                progress = '%d (%d %%)' % (len(data), len(data) * 100.0 / length)
+                sys.stdout.write(progress + '\b' * len(progress))
+                sys.stdout.flush()
+            if len(data) == length:
+                break
+            if len(data) > length:
+                raise Exception('Read more than expected')
+        p = self._esp.read_packet()
+        if len(p) != 16:
+            raise Exception('Expected digest, got: %s' % hexify(p))
+        expected_digest = hexify(p).upper()
+        digest = hashlib.md5(data).hexdigest().upper()
+        print
+        if digest != expected_digest:
+            raise Exception('Digest mismatch: expected %s, got %s' % (expected_digest, digest))
+        p = self._esp.read_packet()
+        if len(p) != 1:
+            raise Exception('Expected status, got: %s' % hexify(p))
+        status_code = struct.unpack('<B', p)[0]
+        if status_code != 0:
+            raise Exception('Write failure, status: %x' % status_code)
+        return data
 
     def boot_fw(self):
         self._esp.write(struct.pack('<B', self.CMD_BOOT_FW))
@@ -711,6 +719,14 @@ if __name__ == '__main__':
             choices = ['4m', '2m', '8m', '16m', '32m', '16m-c1', '32m-c1', '32m-c2'], default = '4m')
     parser_write_flash.add_argument('--flash_baud', help = 'Baud rate to use while flashing', type = arg_auto_int)
 
+    parser_read_flash = subparsers.add_parser(
+            'read_flash',
+            help = 'Read SPI flash content')
+    parser_read_flash.add_argument('--flash_baud', help = 'Baud rate to use while reading', type = arg_auto_int)
+    parser_read_flash.add_argument('address', help = 'Start address', type = arg_auto_int)
+    parser_read_flash.add_argument('size', help = 'Size of region to dump', type = arg_auto_int)
+    parser_read_flash.add_argument('filename', help = 'Name of binary dump')
+
     parser_run = subparsers.add_parser(
             'run',
             help = 'Run application code in flash')
@@ -747,13 +763,6 @@ if __name__ == '__main__':
     parser_flash_id = subparsers.add_parser(
             'flash_id',
             help = 'Read SPI flash manufacturer and device ID')
-
-    parser_read_flash = subparsers.add_parser(
-            'read_flash',
-            help = 'Read SPI flash content')
-    parser_read_flash.add_argument('address', help = 'Start address', type = arg_auto_int)
-    parser_read_flash.add_argument('size', help = 'Size of region to dump', type = arg_auto_int)
-    parser_read_flash.add_argument('filename', help = 'Name of binary dump')
 
     parser_erase_flash = subparsers.add_parser(
             'erase_flash',
@@ -825,7 +834,7 @@ if __name__ == '__main__':
         flash_size_freq += {'40m':0, '26m':1, '20m':2, '80m': 0xf}[args.flash_freq]
         flash_info = struct.pack('BB', flash_mode, flash_size_freq)
 
-        flash_baud = args.flash_baud and args.flash_baud or CesantaFlasher.DEFAULT_FLASH_BAUD
+        flash_baud = args.flash_baud and args.flash_baud or 0
         flasher = CesantaFlasher(esp, flash_baud)
 
         while args.addr_filename:
@@ -842,10 +851,20 @@ if __name__ == '__main__':
             t = time.time()
             flasher.flash_write(address, image)
             t = time.time() - t
-            print ('\rWrote %d bytes at 0x%08x in %.1f seconds (%.1f kbit/s)...'
+            print ('\rWrote %d bytes at 0x%x in %.1f seconds (%.1f kbit/s)...'
                    % (len(image), address, t, len(image) / t * 8 / 1000))
         print 'Leaving...'
         flasher.boot_fw()
+
+    elif args.operation == 'read_flash':
+        flash_baud = args.flash_baud and args.flash_baud or 0
+        flasher = CesantaFlasher(esp, flash_baud)
+        t = time.time()
+        data = flasher.flash_read(args.address, args.size)
+        t = time.time() - t
+        print ('\rRead %d bytes at 0x%x in %.1f seconds (%.1f kbit/s)...'
+               % (len(data), args.address, t, len(data) / t * 8 / 1000))
+        file(args.filename, 'wb').write(data)
 
     elif args.operation == 'run':
         esp.run()
@@ -904,10 +923,6 @@ if __name__ == '__main__':
         flash_id = esp.flash_id()
         print 'Manufacturer: %02x' % (flash_id & 0xff)
         print 'Device: %02x%02x' % ((flash_id >> 8) & 0xff, (flash_id >> 16) & 0xff)
-
-    elif args.operation == 'read_flash':
-        print 'Please wait...'
-        file(args.filename, 'wb').write(esp.flash_read(args.address, 1024, div_roundup(args.size, 1024))[:args.size])
 
     elif args.operation == 'erase_flash':
         esp.flash_erase()

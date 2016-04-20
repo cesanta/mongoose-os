@@ -35,7 +35,7 @@ uint32_t params[1] __attribute__((section(".params")));
 #define FLASH_BLOCK_SIZE 65536
 #define UART_CLKDIV_26MHZ(B) (52000000 + B / 2) / B
 
-#define UART_BUF_SIZE 4096
+#define UART_BUF_SIZE 6144
 #define SPI_WRITE_SIZE 1024
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
@@ -152,22 +152,28 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
   return 0;
 }
 
-int do_flash_read(uint32_t addr, uint32_t len, uint32_t block_size) {
+int do_flash_read(uint32_t addr, uint32_t len, uint32_t block_size,
+                  uint32_t max_in_flight) {
   uint8_t buf[FLASH_SECTOR_SIZE];
   uint8_t digest[16];
   struct MD5Context ctx;
+  uint32_t num_sent = 0, num_acked = 0;
   if (block_size > sizeof(buf)) return 0x52;
   MD5Init(&ctx);
-  while (len > 0) {
-    uint32_t n = len;
-    struct MD5Context block_ctx;
-    MD5Init(&block_ctx);
-    if (n > block_size) n = block_size;
-    if (SPIRead(addr, buf, n) != 0) return 0x53;
-    MD5Update(&ctx, buf, n);
-    send_packet(buf, n);
-    addr += n;
-    len -= n;
+  while (num_acked < len) {
+    while (num_sent < len && num_sent - num_acked < max_in_flight) {
+      uint32_t n = len - num_sent;
+      if (n > block_size) n = block_size;
+      if (SPIRead(addr, buf, n) != 0) return 0x53;
+      send_packet(buf, n);
+      MD5Update(&ctx, buf, n);
+      addr += n;
+      num_sent += n;
+    }
+    {
+      if (SLIP_recv(&num_acked, sizeof(num_acked)) != 4) return 0x54;
+      if (num_acked > num_sent) return 0x55;
+    }
   }
   MD5Final(digest, &ctx);
   send_packet(digest, sizeof(digest));
@@ -243,9 +249,10 @@ uint8_t cmd_loop() {
       }
       case CMD_FLASH_READ: {
         len = SLIP_recv(args, sizeof(args));
-        if (len == 12) {
+        if (len == 16) {
           resp = do_flash_read(args[0] /* addr */, args[1], /* len */
-                               args[2] /* block_size */);
+                               args[2] /* block_size */,
+                               args[3] /* max_in_flight */);
         } else {
           resp = 0x51;
         }
