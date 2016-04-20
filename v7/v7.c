@@ -21534,9 +21534,14 @@ fid_parse_expression :
 {
   L->pos = a->mbuf.len;
   L->group = 0;
-  do {
+  while (1) {
     CALL_PARSE_ASSIGN(fid_p_expr_1);
-  } while (ACCEPT(TOK_COMMA) && (L->group = 1));
+    if (ACCEPT(TOK_COMMA)) {
+      L->group = 1;
+    } else {
+      break;
+    }
+  }
   if (L->group) {
     ast_insert_node(a, L->pos, AST_SEQ);
   }
