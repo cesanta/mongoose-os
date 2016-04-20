@@ -5,13 +5,13 @@
 
 #include "common/cs_file.h"
 
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #ifdef CS_MMAP
+#include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #endif
 
 char *cs_read_file(const char *path, size_t *size) {

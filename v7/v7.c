@@ -3466,7 +3466,7 @@ struct v7 {
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
 
-  volatile int interrupt;
+  volatile int interrupted;
 #ifdef V7_STACK_SIZE
   void *sp_limit;
   void *sp_lwm;
@@ -9311,13 +9311,13 @@ void cs_ubjson_dummy();
 
 /* Amalgamated: #include "common/cs_file.h" */
 
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #ifdef CS_MMAP
+#include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #endif
 
 char *cs_read_file(const char *path, size_t *size) {
@@ -11059,7 +11059,6 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
         case TOK_IDENTIFIER:
         case TOK_NUMBER:
           return punct1(s, '=', TOK_DIV_ASSIGN, TOK_DIV);
-          break;
         default:
           /* Not a division - this is a regex. Scan until closing slash */
           for (p++; *p != '\0' && *p != '\n'; p++) {
@@ -11168,9 +11167,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
     default: {
       /* Handle unicode variables */
       Rune r;
-      int n;
-
-      if ((n = chartorune(&r, *s)) > 1 && isalpharune(r)) {
+      if (chartorune(&r, *s) > 1 && isalpharune(r)) {
         ident(s);
         return TOK_IDENTIFIER;
       }
@@ -12464,14 +12461,12 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, char **ops) {
           len, !bcode->ops_in_rom);
       *ops += len + 1;
       return res;
-      break;
     }
     case BCODE_INLINE_NUMBER_TYPE_TAG: {
       val_t res;
       memcpy(&res, *ops + 1 /*skip BCODE_INLINE_NUMBER_TYPE_TAG*/, sizeof(res));
       *ops += sizeof(res);
       return res;
-      break;
     }
     case BCODE_INLINE_FUNC_TYPE_TAG: {
       /*
@@ -12499,7 +12494,6 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, char **ops) {
       *ops -= 1;
 
       return res;
-      break;
     }
     default:
       return ((val_t *) vec->p)[idx - BCODE_MAX_INLINE_TYPE_TAG];
@@ -13127,10 +13121,8 @@ static double b_int_bin_op(enum opcode op, double a, double b) {
       return ia & ib;
     default:
       assert(0);
-#if defined(NDEBUG)
-      return 0;
-#endif
   }
+  return 0;
 }
 
 static double b_num_bin_op(enum opcode op, double a, double b) {
@@ -13179,10 +13171,8 @@ static double b_num_bin_op(enum opcode op, double a, double b) {
       return b_int_bin_op(op, a, b);
     default:
       assert(0);
-#if defined(NDEBUG)
-      return 0;
-#endif
   }
+  return 0;
 }
 
 static int b_bool_bin_op(enum opcode op, double a, double b) {
@@ -13207,10 +13197,8 @@ static int b_bool_bin_op(enum opcode op, double a, double b) {
       return a >= b;
     default:
       assert(0);
-#if defined(NDEBUG)
-      return 0;
-#endif
   }
+  return 0;
 }
 
 static bcode_off_t bcode_get_target(char **ops) {
@@ -14291,7 +14279,7 @@ restart:
         v2 = POP();
         v1 = POP();
         BTRY(to_string(v7, v1, NULL, buf, sizeof(buf), NULL));
-        prop = v7_get_property(v7, v2, buf, -1);
+        prop = v7_get_property(v7, v2, buf, ~0);
         PUSH(v7_mk_boolean(prop != NULL));
       } break;
       case OP_GET:
@@ -14379,7 +14367,6 @@ restart:
            */
           V7_TRY(bcode_throw_reference_error(v7, &r, v2));
           goto op_done;
-          break;
         }
         PUSH(v3);
         break;
@@ -14538,7 +14525,6 @@ restart:
         if (SP() < (args + 1 /*func*/ + 1 /*this*/)) {
           BTRY(v7_throwf(v7, INTERNAL_ERROR, "stack underflow"));
           goto op_done;
-          break;
         } else {
           v2 = v7_mk_dense_array(v7);
           while (args > 0) {
@@ -14785,7 +14771,6 @@ restart:
           V7_TRY(
               bcode_perform_throw(v7, &r, 0 /*don't take value from stack*/));
           goto op_done;
-          break;
         } else if (v7->is_returned) {
           V7_TRY(
               bcode_perform_return(v7, &r, 0 /*don't take value from stack*/));
@@ -14797,7 +14782,6 @@ restart:
       case OP_THROW:
         V7_TRY(bcode_perform_throw(v7, &r, 1 /*take thrown value*/));
         goto op_done;
-        break;
       case OP_BREAK:
         bcode_perform_break(v7, &r);
         break;
@@ -14836,7 +14820,6 @@ restart:
       default:
         BTRY(v7_throwf(v7, INTERNAL_ERROR, "Unknown opcode: %d", (int) op));
         goto op_done;
-        break;
     }
 
   op_done:
@@ -15508,7 +15491,7 @@ void v7_set_gc_enabled(struct v7 *v7, int enabled) {
 }
 
 void v7_interrupt(struct v7 *v7) {
-  v7->interrupt = 1;
+  v7->interrupted = 1;
 }
 
 const char *v7_get_parser_error(struct v7 *v7) {
@@ -22041,8 +22024,6 @@ fid_parse_memberexpr :
         CR_RETURN_VOID();
     }
   }
-  /* not necessary, but let it be anyway */
-  CR_RETURN_VOID();
 }
 
 /* static enum v7_err parse_var(struct v7 *v7, struct ast *a) */
@@ -22647,8 +22628,8 @@ clean:
 
 static lit_t string_lit(struct bcode_builder *bbuilder, struct ast *a,
                         ast_off_t *pos) {
-  size_t i, name_len;
-  val_t v;
+  size_t i = 0, name_len;
+  val_t v = v7_mk_undefined();
   struct mbuf *m = &bbuilder->lit;
   char *name = ast_get_inlined_data(a, *pos, &name_len);
 
@@ -23447,24 +23428,22 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       }
 
       bcode_push_lit(bbuilder, tmp);
+      break;
     }
 #else
       rcode =
           v7_throwf(bbuilder->v7, SYNTAX_ERROR, "Regexp support is disabled");
       V7_THROW(V7_SYNTAX_ERROR);
 #endif
-    break;
     case AST_LABEL:
     case AST_LABELED_BREAK:
     case AST_LABELED_CONTINUE:
       /* TODO(dfrank): implement */
       rcode = v7_throwf(bbuilder->v7, SYNTAX_ERROR, "not implemented");
       V7_THROW(V7_SYNTAX_ERROR);
-      break;
     case AST_WITH:
       rcode = v7_throwf(bbuilder->v7, SYNTAX_ERROR, "not implemented");
       V7_THROW(V7_SYNTAX_ERROR);
-      break;
     default:
       /*
        * We end up here if the AST is broken.
