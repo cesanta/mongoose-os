@@ -43,7 +43,6 @@ Definition:
   },
   "required_args": [
     "projectid",
-    "manifest",
     "version"
   ]
 }
