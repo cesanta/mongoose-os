@@ -61,6 +61,7 @@ class ESPROM(object):
     # OTP ROM addresses
     ESP_OTP_MAC0    = 0x3ff00050
     ESP_OTP_MAC1    = 0x3ff00054
+    ESP_OTP_MAC3    = 0x3ff0005c
 
     def __init__(self, port=0, baud=ESP_ROM_BAUD):
         self._port = serial.Serial(port)
