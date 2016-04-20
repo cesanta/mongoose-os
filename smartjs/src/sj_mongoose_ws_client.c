@@ -58,9 +58,13 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       break;
     }
     case MG_EV_CLOSE:
-      invoke_cb(ud, "onclose", v7_mk_null());
       nc->user_data = NULL;
       v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_undefined());
+      /*
+       * Invoke callback after `_nc`resetting, so `readyState` in `onclose`
+       * will return CLOSED
+       */
+      invoke_cb(ud, "onclose", v7_mk_null());
       v7_disown(v7, &ud->ws);
       /* Free strings here in case if connect failed */
       free(ud);
