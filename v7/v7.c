@@ -15328,7 +15328,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
 
   if (opts.object_arena_size == 0) opts.object_arena_size = 200;
   if (opts.function_arena_size == 0) opts.function_arena_size = 100;
-  if (opts.property_arena_size == 0) opts.property_arena_size = 4000;
+  if (opts.property_arena_size == 0) opts.property_arena_size = 400;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #ifdef V7_STACK_SIZE
