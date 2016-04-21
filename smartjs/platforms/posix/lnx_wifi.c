@@ -50,10 +50,26 @@ char *sj_wifi_get_sta_ip(void) {
   return NULL;
 }
 
+uint8_t sj_wifi_set_ip_info(uint8_t inet,const char* ip,const char* gw)
+{
+    (void) inet;
+    (void) ip;
+    (void) gw;
+    print_error();  
+    return 0;
+}
+
 int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   (void) cb;
   print_error();
   return 0;
+}
+
+uint8_t sj_wifi_set_opmode(uint8_t state)
+{
+ (void) state;
+ print_error();
+ return 0;
 }
 
 void sj_wifi_hal_init(struct v7 *v7) {

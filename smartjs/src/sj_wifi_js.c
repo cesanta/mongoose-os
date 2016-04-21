@@ -71,45 +71,52 @@ exit:
   return V7_OK;
 }
 
-SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err sj_Wifi_sta_config(struct v7 *v7, v7_val_t *res)
+{
   enum v7_err rcode = V7_OK;
-  v7_val_t ssidv = v7_arg(v7, 0);
-  v7_val_t passv = v7_arg(v7, 1);
-  v7_val_t extrasv = v7_arg(v7, 2);
+  v7_val_t ssidv = v7_arg(v7,0);
+  v7_val_t passv = v7_arg(v7,1);
+  v7_val_t ipv = v7_arg(v7,2);
+  v7_val_t gwv = v7_arg(v7,3);
 
-  const char *ssid, *pass;
-  size_t ssid_len, pass_len;
+  const char *ssid, *pass, *ip = "DHCP", *gw = "192.168.1.1";
+  size_t ssid_len, pass_len, ip_len, gw_len;
 
-  if (!v7_is_string(ssidv) || !v7_is_string(passv)) {
+  if (!v7_is_string(ssidv) || !v7_is_string(passv))
+    {
     printf("ssid/pass are not strings\n");
     *res = v7_mk_undefined();
     goto clean;
-  }
-
-  int permanent = 1;
-  if (v7_is_object(extrasv)) {
-    permanent = v7_is_truthy(v7, v7_get(v7, extrasv, "permanent", ~0));
-  }
+    }
 
   ssid = v7_get_string_data(v7, &ssidv, &ssid_len);
   pass = v7_get_string_data(v7, &passv, &pass_len);
 
-  struct sys_config_wifi_sta cfg;
-  cfg.ssid = (char *) ssid;
-  cfg.pass = (char *) pass;
+  if(v7_is_string(ipv))
+    {
+    ip = v7_get_string_data(v7, &ipv, &ip_len);
+    }
+  if(v7_is_string(gwv))
+    {
+    gw = v7_get_string_data(v7, &gwv, &gw_len);
+    }
 
-  LOG(LL_INFO, ("WiFi: connecting to '%s'", ssid));
+  printf("STA.ip = %s;\r\nSTA.gw = %s\r\n",ip,gw);
 
-  int ret = sj_wifi_setup_sta(&cfg);
-  if (ret && permanent) {
-    update_sysconf(v7, "wifi.sta.enable", v7_mk_boolean(1));
-    update_sysconf(v7, "wifi.sta.ssid", ssidv);
-    update_sysconf(v7, "wifi.sta.pass", passv);
-  }
+  if(!sj_wifi_set_ip_info(0,ip,gw))
+        {
+        printf("IP or GW not valid -> [%s ; %s]\n",ip,gw);
+        *res = v7_mk_undefined();
+        goto clean;
+        }
 
-  *res = v7_mk_boolean(ret);
-
-  goto clean;
+ struct sys_config_wifi_sta cfg;
+ cfg.ssid = (char *) ssid;
+ cfg.pass = (char *) pass;
+ LOG(LL_INFO, ("WiFi: connecting to '%s'", ssid));
+ int ret = sj_wifi_setup_sta(&cfg);
+ *res = v7_mk_boolean(ret);
+ goto clean;
 
 clean:
   return rcode;
@@ -260,12 +267,115 @@ clean:
   return rcode;
 }
 
+
+SJ_PRIVATE enum v7_err esp_set_wifi_mode(struct v7 *v7, v7_val_t *res)
+{
+    enum v7_err rcode = V7_OK;
+    v7_val_t state_v = v7_arg(v7, 0);
+    int state = 0;
+    if(!v7_is_number(state_v))
+        {
+        rcode = v7_throwf(v7, "Error", "Numeric argument expected");
+        goto clean;
+        }
+
+   state = v7_to_number(state_v);
+    if((state > 3)||(!state))
+        {
+        rcode = v7_throwf(v7, "Error", "1 - station, 2 - AP, 3 - STA+AP");
+        goto clean;
+        }
+
+  *res = v7_mk_boolean(sj_wifi_set_opmode(state));
+
+clean:
+  return rcode;
+}
+
+SJ_PRIVATE enum v7_err sj_wifi_ap_setup(struct v7 *v7, v7_val_t *res)
+    {
+    enum v7_err rcode = V7_OK;
+    v7_val_t ssidv = v7_arg(v7, 0);
+    v7_val_t passv = v7_arg(v7, 1);
+    v7_val_t channel_v = v7_arg(v7, 2);
+    v7_val_t ip_v = v7_arg(v7, 3);
+    v7_val_t netmask_v = v7_arg(v7, 4);
+    v7_val_t gw_v = v7_arg(v7, 5);
+    v7_val_t dhcp_start_v = v7_arg(v7, 6);
+    v7_val_t dhcp_end_v = v7_arg(v7, 7);
+
+    struct sys_config_wifi_ap cfg;
+    const char *ssid, *pass, *ip = "192.168.1.128",*netmask = "255.255.255.0",*gw="192.168.1.1",*dhcp_start="192.168.1.10",*dhcp_end="192.168.1.20";
+    size_t ssid_len, pass_len, ip_len,netmask_len,gw_len,dhcp_start_len,dhcp_end_len;
+    uint8_t channel = 2;
+
+    if (!v7_is_string(ssidv) || !v7_is_string(passv))
+    	{
+    	printf("ssid/pass are not strings\n");
+    	*res = v7_mk_undefined();
+    	goto clean;
+    	}
+    ssid = v7_get_string_data(v7, &ssidv, &ssid_len);
+    pass = v7_get_string_data(v7, &passv, &pass_len);
+
+    if (v7_is_number(channel_v))
+    	{
+    	channel = v7_to_number(channel_v);
+    	}
+    if (v7_is_string(ip_v))
+    	{
+      ip = v7_get_string_data(v7, &ip_v, &ip_len);
+    	}
+    if (v7_is_string(netmask_v))
+    	{
+      netmask = v7_get_string_data(v7, &netmask_v, &netmask_len);
+    	}
+     if (v7_is_string(gw_v))
+  	  {
+      gw = v7_get_string_data(v7, &gw_v, &gw_len);
+  	  }
+    if (v7_is_string(dhcp_start_v))
+  	  {
+  	  dhcp_start = v7_get_string_data(v7, &dhcp_start_v, &dhcp_start_len);
+  	  }
+    if (v7_is_string(dhcp_end_v))
+      {
+  	  dhcp_end = v7_get_string_data(v7, &dhcp_end_v, &dhcp_end_len);
+  	  }
+
+    cfg.enable = 0;
+    cfg.trigger_on_gpio = 0;
+    cfg.ssid = (char *) ssid;
+    cfg.pass = (char *) pass;
+    cfg.hidden = 0;
+    cfg.channel = channel;
+    cfg.max_connections = 10;
+    cfg.ip = (char*) ip;
+    cfg.netmask = (char*) netmask;
+    cfg.gw = (char*) gw;
+    cfg.dhcp_start = (char*) dhcp_start;
+    cfg.dhcp_end = (char*) dhcp_end;
+
+    (void)cfg;
+
+  printf("Set SOFTAP { ssid: %s , pwd: %s, channel: %i, ip: %s, netmask: %s, gw: %s, dhcp_start: %s, dhcp_end %s } ",
+        cfg.ssid,cfg.pass,cfg.channel,cfg.ip,cfg.netmask,cfg.gw,cfg.dhcp_start,cfg.dhcp_end);
+
+  int ret = sj_wifi_setup_ap(&cfg);
+  *res = v7_mk_boolean(ret);
+  goto clean;
+
+ clean:
+  return rcode;
+}
+
+
 void sj_wifi_api_setup(struct v7 *v7) {
   v7_val_t s_wifi = v7_mk_object(v7);
 
   v7_own(v7, &s_wifi);
 
-  v7_set_method(v7, s_wifi, "setup", sj_Wifi_setup);
+  v7_set_method(v7, s_wifi, "sta_config", sj_Wifi_sta_config);
   v7_set_method(v7, s_wifi, "connect", Wifi_connect);
   v7_set_method(v7, s_wifi, "disconnect", Wifi_disconnect);
   v7_set_method(v7, s_wifi, "status", Wifi_status);
@@ -273,6 +383,8 @@ void sj_wifi_api_setup(struct v7 *v7) {
   v7_set_method(v7, s_wifi, "ip", Wifi_ip);
   v7_set_method(v7, s_wifi, "changed", Wifi_changed);
   v7_set_method(v7, s_wifi, "scan", Wifi_scan);
+  v7_set_method(v7, s_wifi, "mode", esp_set_wifi_mode);
+  v7_set_method(v7, s_wifi, "ap_config", sj_wifi_ap_setup);
   v7_set_method(v7, s_wifi, "ready", Wifi_ready);
   v7_set(v7, v7_get_global(v7), "Wifi", ~0, s_wifi);
 

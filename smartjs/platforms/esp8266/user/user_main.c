@@ -17,6 +17,7 @@
 #include "smartjs/platforms/esp8266/user/v7_esp.h"
 #include "smartjs/platforms/esp8266/user/util.h"
 #include "smartjs/platforms/esp8266/user/esp_exc.h"
+#include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 
 #include "smartjs/src/device_config.h"
 #include "smartjs/src/sj_app.h"
@@ -28,7 +29,6 @@
 
 #include "smartjs/platforms/esp8266/user/esp_fs.h"
 #include "smartjs/platforms/esp8266/user/esp_sj_uart.h"
-#include "smartjs/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
@@ -54,6 +54,34 @@ int uart_initialized = 0;
 void dbg_putc(char c) {
   fputc(c, stderr);
 }
+
+
+rboot_config *get_rboot_config() {
+  static rboot_config *cfg = NULL;
+  if (cfg == NULL) {
+    cfg = malloc(sizeof(*cfg));
+    *cfg = rboot_get_config();
+  }
+
+  return cfg;
+}
+
+uint8_t get_current_rom() {
+  return get_rboot_config()->current_rom;
+}
+
+uint32_t get_fw_addr(uint8_t rom) {
+  return get_rboot_config()->roms[rom];
+}
+
+uint32_t get_fs_addr(uint8_t rom) {
+  return get_rboot_config()->fs_addresses[rom];
+}
+
+uint32_t get_fs_size(uint8_t rom) {
+  return get_rboot_config()->fs_sizes[rom];
+}
+
 
 /*
  * SmartJS initialization, called as an SDK timer callback (`os_timer_...()`).
@@ -100,7 +128,6 @@ void sjs_init(void *dummy) {
 #ifndef V7_NO_FS
 #ifndef DISABLE_OTA
   fs_init(get_fs_addr(get_current_rom()), get_fs_size(get_current_rom()));
-  finish_update();
 #else
   fs_init(FS_ADDR, FS_SIZE);
 #endif
@@ -120,7 +147,6 @@ void sjs_init(void *dummy) {
   esp_print_reset_info();
 
 #ifndef DISABLE_OTA
-  init_updater(v7);
 #endif
   LOG(LL_INFO, ("Sys init done, SDK %s", system_get_sdk_version()));
 

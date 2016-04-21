@@ -16133,6 +16133,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("_writeRegAddr"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("accept"),
     V7_VEC("address"), /* cannot be frozen yet: see #3279 */
+    V7_VEC("ap_config"),
     V7_VEC("arguments"),
     V7_VEC("base64_decode"),
     V7_VEC("base64_encode"),
@@ -16234,6 +16235,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("sha1_hex"),
     V7_VEC("source"),
     V7_VEC("splice"),
+    V7_VEC("sta_config"),
     V7_VEC("string"),
     V7_VEC("stringify"),
     V7_VEC("substr"),

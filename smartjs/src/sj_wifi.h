@@ -12,6 +12,9 @@
 
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
 
+uint8_t sj_wifi_set_opmode(uint8_t state);
+uint8_t sj_wifi_set_ip_info(uint8_t inet,const char* ip,const char* gw);
+
 int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg);
 
 int sj_wifi_connect(); /* To previously _setup network. */

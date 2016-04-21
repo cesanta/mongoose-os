@@ -19,7 +19,6 @@
 
 #include "smartjs/src/sj_hal.h"
 #include "smartjs/src/sj_v7_ext.h"
-#include "smartjs/src/sj_clubby.h"
 #include "v7_esp.h"
 #include "v7_esp_features.h"
 #include "smartjs/src/device_config.h"
@@ -67,7 +66,8 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   size_t pass_len = strlen(cfg->pass);
   size_t ssid_len = strlen(cfg->ssid);
 
-  if (ssid_len > sizeof(ap_cfg.ssid) || pass_len > sizeof(ap_cfg.password)) {
+  if (ssid_len > sizeof(ap_cfg.ssid) || pass_len > sizeof(ap_cfg.password))
+  {
     LOG(LL_ERROR, ("AP SSID or PASS too long"));
     return 0;
   }
@@ -75,7 +75,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   if (pass_len != 0 && pass_len < 8) {
     /*
      * If we don't check pwd len here and it will be less than 8 chars
-     * esp will setup _open_ wifi with name ESP_<mac address here>
+     * esp will setup _open_ wifi with name ESPh_<mac address here>
      */
     LOG(LL_ERROR, ("AP password too short"));
     return 0;
@@ -142,6 +142,16 @@ int sj_wifi_disconnect(void) {
   return wifi_station_disconnect();
 }
 
+char *sj_wifi_get_sta_ip(void) {
+  struct ip_info info;
+  char *ip;
+  if (!wifi_get_ip_info(0, &info) || info.ip.addr == 0) return NULL;
+  if (asprintf(&ip, IPSTR, IP2STR(&info.ip)) < 0) {
+    return NULL;
+  }
+  return ip;
+}
+
 enum sj_wifi_status sj_wifi_get_status(void) {
   if (wifi_station_get_connect_status() == STATION_GOT_IP) {
     return SJ_WIFI_IP_ACQUIRED;
@@ -173,6 +183,8 @@ char *sj_wifi_get_status_str(void) {
     case STATION_GOT_IP:
       msg = "got ip";
       break;
+    default:
+      sprintf((char*)msg,"=> %i",st);
   }
   if (msg != NULL) return strdup(msg);
   return NULL;
@@ -242,7 +254,7 @@ char *sj_wifi_get_connected_ssid(void) {
   return strdup((const char *) conf.ssid);
 }
 
-char *sj_wifi_get_sta_ip(void) {
+char *sj_wifi_t_ip(void) {
   struct ip_info info;
   char *ip;
   if (!wifi_get_ip_info(0, &info) || info.ip.addr == 0) return NULL;
@@ -283,4 +295,27 @@ void sj_wifi_hal_init(struct v7 *v7) {
   /* avoid entering AP mode on boot */
   wifi_set_opmode_current(0x1);
   wifi_set_event_handler_cb(wifi_changed_cb);
+}
+
+uint8_t sj_wifi_set_opmode(uint8_t state)
+ {
+     return wifi_set_opmode_current(state);
+ }
+
+uint8_t sj_wifi_set_ip_info(uint8_t inet,const char* ip,const char* gw)
+{
+if(!strncmp(ip,"DHCP",4))
+  {
+  return wifi_station_dhcpc_start();
+  }
+else
+  {
+  struct ip_info info;
+  info.ip.addr = ipaddr_addr(ip);
+  info.netmask.addr = ipaddr_addr("255.255.255.0");
+  info.gw.addr = ipaddr_addr(gw);
+  if((info.ip.addr == 0xffffffff)||(info.gw.addr ==0xffffffff))
+    return 0;
+  return (wifi_station_dhcpc_stop() & wifi_set_ip_info(inet, &info));
+  }
 }

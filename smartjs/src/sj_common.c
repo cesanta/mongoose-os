@@ -13,13 +13,11 @@
 #include "smartjs/src/sj_http.h"
 #include "smartjs/src/sj_mongoose_ws_client.h"
 #include "smartjs/src/sj_mqtt.h"
-#include "smartjs/src/sj_clubby.h"
 #include "smartjs/src/sj_debug_js.h"
 #include "smartjs/src/sj_pwm_js.h"
 #include "smartjs/src/sj_wifi_js.h"
 #include "smartjs/src/sj_wifi.h"
 #include "smartjs/src/sj_udptcp.h"
-#include "smartjs/src/sj_console.h"
 
 void sj_common_api_setup(struct v7 *v7) {
 /* Setup JS API */
@@ -44,11 +42,6 @@ void sj_common_api_setup(struct v7 *v7) {
   sj_pwm_api_setup(v7);
   sj_wifi_api_setup(v7);
   sj_udp_tcp_api_setup(v7);
-  sj_console_api_setup(v7);
-
-#ifndef DISABLE_C_CLUBBY
-  sj_clubby_api_setup(v7);
-#endif
 
 #else
   (void) v7;
@@ -60,9 +53,4 @@ void sj_common_init(struct v7 *v7) {
 
   sj_http_init(v7);
   sj_wifi_init(v7);
-  sj_console_init(v7);
-
-#ifndef DISABLE_C_CLUBBY
-  sj_clubby_init();
-#endif
 }

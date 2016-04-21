@@ -86,20 +86,23 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_i2c_js.c sj_spi_js.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
             sj_timers_mongoose.c \
             sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
-            sj_mongoose_ws_client.c sj_mqtt.c ubjserializer.c clubby_proto.c \
-            sj_clubby.c sj_common.c sys_config.c \
+            sj_mongoose_ws_client.c sj_mqtt.c ubjserializer.c \
+            sj_common.c sys_config.c \
             sj_config.c device_config.c sys_config.c \
-            miniz.c sj_udptcp.c sj_utils.c sj_console.c
+            miniz.c sj_udptcp.c sj_utils.c 
 
 ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
 endif
 
 JSBIN_SRCS := $(SJSJS_PATH)/sys_init.js \
-              $(SJSJS_PATH)/demo.js \
-              $(SJSJS_PATH)/I2C.js \
+              $(SJSJS_PATH)/main.js \
               $(JSBIN_EXTRA)
-JS_SRCS    :=
+
+JS_SRCS    :=  $(SJSJS_PATH)/client.js \
+	       $(SJSJS_PATH)/main.css \
+	       $(SJSJS_PATH)/main.json \
+	       $(SJSJS_PATH)/main.html \
 
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
@@ -150,7 +153,7 @@ MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
               -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 
-MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_DISABLE_DAV
+MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
                -DV7_STACK_SIZE=8192-64

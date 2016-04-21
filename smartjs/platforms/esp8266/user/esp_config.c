@@ -30,29 +30,38 @@ static int do_wifi(const struct sys_config *cfg) {
   wifi_station_set_auto_connect(0);
   wifi_station_disconnect();
 
-  if (gpio >= 0) {
+  if (gpio >= 0) 
+    {
     sj_gpio_set_mode(gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP);
     trigger_ap = (sj_gpio_read(gpio) == GPIO_LEVEL_LOW);
-  }
+    }
 
-  if (trigger_ap || (cfg->wifi.ap.enable && !cfg->wifi.sta.enable)) {
+  if (trigger_ap || (cfg->wifi.ap.enable && !cfg->wifi.sta.enable)) 
+    {
     LOG(LL_INFO, ("WiFi mode: AP%s", (trigger_ap ? " (triggered" : "")));
     wifi_set_opmode_current(SOFTAP_MODE);
     result = sj_wifi_setup_ap(&cfg->wifi.ap);
-  } else if (cfg->wifi.ap.enable && cfg->wifi.sta.enable &&
-             cfg->wifi.ap.keep_enabled) {
-    LOG(LL_INFO, ("WiFi mode: AP+STA"));
-    wifi_set_opmode_current(STATIONAP_MODE);
-    result = sj_wifi_setup_ap(&cfg->wifi.ap);
-    result = result && sj_wifi_setup_sta(&cfg->wifi.sta);
-  } else if (cfg->wifi.sta.enable) {
-    LOG(LL_INFO, ("WiFi mode: STA"));
-    wifi_set_opmode_current(STATION_MODE);
-    result = sj_wifi_setup_sta(&cfg->wifi.sta);
-  } else {
-    LOG(LL_INFO, ("WiFi mode: disabled"));
-    sj_wifi_disconnect();
-  }
+    } 
+ else 
+    if (cfg->wifi.ap.enable && cfg->wifi.sta.enable && cfg->wifi.ap.keep_enabled) 
+	{
+        LOG(LL_INFO, ("WiFi mode: AP+STA"));
+	wifi_set_opmode_current(STATIONAP_MODE);
+	result = sj_wifi_setup_ap(&cfg->wifi.ap);
+	result = result && sj_wifi_setup_sta(&cfg->wifi.sta);
+	} 
+    else 
+	if (cfg->wifi.sta.enable) 
+	    {
+	    LOG(LL_INFO, ("WiFi mode: STA"));
+	    wifi_set_opmode_current(STATION_MODE);
+	    result = sj_wifi_setup_sta(&cfg->wifi.sta);
+	    } 
+	else 
+	    {
+	    LOG(LL_INFO, ("WiFi mode: disabled"));
+    	    sj_wifi_disconnect();
+	     }
 
   return result;
 }

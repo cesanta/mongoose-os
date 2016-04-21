@@ -7,23 +7,24 @@
     },
     "ap": {
       "enable": true,
-      "keep_enabled": false,
+      "keep_enabled": true,
       "trigger_on_gpio": -1,
-      "ssid": "SMARTJS_??????",
-      "pass": "Smart.js",
+      "ssid": "Smart_dimmer_??????",
+      "pass": "smart_dimmer",
       "hidden": false,
-      "channel": 6,
+      "channel": 13,
       "max_connections": 10,
-      "ip": "192.168.4.1",
+      "ip": "192.168.1.1",
       "netmask": "255.255.255.0",
-      "gw": "192.168.4.1",
-      "dhcp_start": "192.168.4.2",
-      "dhcp_end": "192.168.4.200"
+      "gw": "192.168.1.1",
+      "dhcp_start": "192.168.1.2",
+      "dhcp_end": "192.168.1.200"
     }
   },
   "http": {
     "enable": true,
-    "listen_addr": "80",
+    "listen_addr": "81",
+    "enable_webdav": true,
     "upload_acl": "*",
     "hidden_files": ""
   },
@@ -35,7 +36,7 @@
     "ssl_client_cert_file": ""
   },
   "tls": {
-    "ca_file": "ca.pem"
+    "ca_file": ""
   },
   "clubby": {
     "connect_on_boot": true,
@@ -63,12 +64,6 @@
   },
   "sys": {
     "wdt_timeout" : 10
-  },
-  "console": {
-    "send_to_cloud" : true,
-    "timeout" : 10,
-    "mem_cache_size" : 256,
-    "file_cache_max" : 25
   },
   "conf_acl": "*"
 }
