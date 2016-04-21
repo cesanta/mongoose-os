@@ -346,28 +346,31 @@ def vec(prefix, addr, buf):
     return vec_initializer(prefix, addr, data)
 
 
-def lit_vec(prefix, addr, buf):
-    '''
-    Dump a literals buffer as a u_val array containing either verbatim val_t
-    values or tagged references to function structures.
-    '''
-    def vals(data):
-        return ['0x'+''.join("{0:02x}".format(ord(j))
-                             for j in reversed(data[i:i+8]))
-                for i in xrange(0,len(data),8)]
+def lit_vec(prefix, addr, records):
+    def val(r):
+        if 'val' in r:
+            return u_val(r['val'])
+        elif 'str' in r:
+            return gen_fstr(r['str'])
+        else:
+            raise Exception("invalid value")
 
     def u_val(v):
         if get_tag(v) == int(V7_TAG_FUNCTION, 16):
             return gen_svalue(V7_TAG_FUNCTION, ref("ffunc", hex(untag(v))))
         return gen_value(v)
 
-    data = base64.decodestring(buf);
+    vals = [val(i) for i in records]
+
     print "static const union u_val %(prefix)s_%(addr)s[] = {%(values)s};" % dict(
         prefix = prefix,
         addr = addr,
-        values = ','.join(u_val(i) for i in vals(data)),
+        values = ','.join(vals),
     )
-    return vec_initializer(prefix, addr, data)
+    return "{(char *) %(ref)s, %(len)s * sizeof(v7_val_t)}" % dict(
+        ref = ref(prefix, addr),
+        len = len(records),
+    )
 
 
 for b in bcodes:

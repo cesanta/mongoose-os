@@ -6204,7 +6204,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 V7_PRIVATE void freeze(struct v7 *v7, char *filename);
-V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v);
+V7_PRIVATE void freeze_obj(struct v7 *v7, FILE *f, v7_val_t v);
 V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop);
 
 #if defined(__cplusplus)
@@ -16130,9 +16130,7 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("TypeError"),
     V7_VEC("UBJSON"),
     V7_VEC("_modcache"),
-    V7_VEC("_writeRegAddr"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("accept"),
-    V7_VEC("address"), /* cannot be frozen yet: see #3279 */
     V7_VEC("arguments"),
     V7_VEC("base64_decode"),
     V7_VEC("base64_encode"),
@@ -16191,7 +16189,6 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("md5_hex"),
     V7_VEC("module"),
     V7_VEC("multiline"),
-    V7_VEC("nbytes"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("number"),
     V7_VEC("parseFloat"),
     V7_VEC("parseInt"),
@@ -16199,12 +16196,6 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("propertyIsEnumerable"),
     V7_VEC("prototype"),
     V7_VEC("random"),
-    V7_VEC("readByte"),  /* cannot be frozen yet: see #3279 */
-    V7_VEC("readRegB"),  /* cannot be frozen yet: see #3279 */
-    V7_VEC("readRegW"),  /* cannot be frozen yet: see #3279 */
-    V7_VEC("readString"),  /* cannot be frozen yet: see #3279 */
-    V7_VEC("readVoltage"),  /* cannot be frozen yet: see #3279 */
-    V7_VEC("readyState"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("recvAll"),
     V7_VEC("reduce"),
     V7_VEC("remove"),
@@ -16217,10 +16208,8 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("setDate"),
     V7_VEC("setFullYear"),
     V7_VEC("setHours"),
-    V7_VEC("setISR"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("setMilliseconds"),
     V7_VEC("setMinutes"),
-    V7_VEC("setMode"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("setMonth"),
     V7_VEC("setSeconds"),
     V7_VEC("setTime"),
@@ -19163,7 +19152,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
 #ifdef V7_FREEZE
   if (v7->freeze_file != NULL) {
-    freeze_obj(v7->freeze_file, v);
+    freeze_obj(v7, v7->freeze_file, v);
   }
 #endif
 
@@ -19772,7 +19761,7 @@ static char *freeze_vec(struct v7_vec *vec) {
   return res;
 }
 
-V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
+V7_PRIVATE void freeze_obj(struct v7 *v7, FILE *f, v7_val_t v) {
   struct v7_object *obj_base = v7_to_object(v);
   unsigned int attrs = V7_OBJ_OFF_HEAP;
 
@@ -19784,7 +19773,8 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
     struct v7_js_function *func = to_js_function(v);
     struct bcode *bcode = func->bcode;
     char *jops = freeze_vec(&bcode->ops);
-    char *jlit = freeze_vec(&bcode->lit);
+    int i;
+
     fprintf(f,
             "{\"type\":\"func\", \"addr\":\"%p\", \"props\":\"%p\", "
             "\"attrs\":%d, \"scope\":\"%p\", \"bcode\":\"%p\""
@@ -19803,11 +19793,28 @@ V7_PRIVATE void freeze_obj(FILE *f, v7_val_t v) {
     fprintf(f,
             "{\"type\":\"bcode\", \"addr\":\"%p\", \"args_cnt\":%d, "
             "\"names_cnt\":%d, "
-            "\"strict_mode\": %d, \"ops\":%s, \"lit\":%s}\n",
+            "\"strict_mode\": %d, \"ops\":%s, \"lit\": [",
             (void *) bcode, bcode->args_cnt, bcode->names_cnt,
-            bcode->strict_mode, jops, jlit);
+            bcode->strict_mode, jops);
+
+    for (i = 0; (size_t) i < bcode->lit.len / sizeof(val_t); i++) {
+      val_t v = ((val_t *) bcode->lit.p)[i];
+      const char *str;
+
+      if (((v & V7_TAG_MASK) == V7_TAG_STRING_O ||
+           (v & V7_TAG_MASK) == V7_TAG_STRING_F) &&
+          (str = v7_to_cstring(v7, &v)) != NULL) {
+        fprintf(f, "{\"str\": \"%s\"}", str);
+      } else {
+        fprintf(f, "{\"val\": \"0x%" INT64_X_FMT "\"}", v);
+      }
+      if ((size_t) i != bcode->lit.len / sizeof(val_t) - 1) {
+        fprintf(f, ",");
+      }
+    }
+
+    fprintf(f, "]}\n");
     free(jops);
-    free(jlit);
   } else {
     struct v7_generic_object *gob = v7_to_generic_object(v);
     fprintf(f,
