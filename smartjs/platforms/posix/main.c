@@ -16,12 +16,10 @@
 #include "smartjs/src/sj_common.h"
 #include "smartjs/src/sj_http.h"
 #include "smartjs/src/sj_uart.h"
-#include "smartjs/src/sj_clubby.h"
 #include "smartjs/src/sj_spi_js.h"
 #include "common/cs_dbg.h"
 #include "smartjs.h"
 #include "smartjs/src/device_config.h"
-#include "smartjs/src/sj_console.h"
 
 #ifndef JS_FS_ROOT
 #define JS_FS_ROOT "."

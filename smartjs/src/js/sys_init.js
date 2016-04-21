@@ -1,7 +1,7 @@
 "use strict";
 global.$ = {};
 $.extend = function(deep, a, b) {
-  if(typeof(deep) !== 'boolean') {
+  if(typeof(deep) != 'boolean') {
     b = a;
     a = deep;
     deep = false;
@@ -11,9 +11,9 @@ $.extend = function(deep, a, b) {
     a = {};
   }
   for (var k in b) {
-    if (typeof(a[k]) === 'object' && typeof(b[k]) === 'object') {
+    if (typeof(a[k]) === 'object' && typeof(b[k]) == 'object') {
       $.extend(a[k], b[k]);
-    } else if(deep && typeof(b[k]) === 'object') {
+    } else if(deep && typeof(b[k]) == 'object') {
       a[k] = $.extend(undefined, b[k]);
     } else {
       a[k] = b[k];
@@ -24,24 +24,12 @@ $.extend = function(deep, a, b) {
 
 $.each = function(a, f) {
   a.forEach(function(v, i) {
-    f(i, v);
+    f(i, v)
   });
 };
 
-function loadCfg(filename) {
-  var ret = File.loadJSON(filename);
-  // if File.loadJSON failed it still returns object
-  // Use fragile verification
-  if(typeof(ret.message) == 'string') {
-    print("Failed to load configuration from:", filename, "Error:", ret);
-    return {};
-  } else {
-    return ret;
-  }
-}
-
-Sys.conf = loadCfg('conf_sys_defaults.json');
-$.extend(Sys.conf, loadCfg('conf.json'));
+Sys.conf = File.loadJSON('conf_sys_defaults.json') || {};
+$.extend(Sys.conf, File.loadJSON('conf.json') || {});
 
 Object.defineProperty(Sys, "oconf", { value: JSON.parse(JSON.stringify(Sys.conf))});
 
@@ -79,59 +67,8 @@ Object.defineProperty(Sys.conf, "save", {
     }
   }});
 
-print('\nStarting Smart.js - see documentation at',
-      'https://cesanta.com/developer/smartjs',
-      '\n==> Sys:\n', Sys, '\n');
+print('Sys:\n', Sys, '\n');
 
-if (Sys.conf.clubby.device_id) {
-    print('Device credentials: ', {
-      device_psk: Sys.conf.clubby.device_psk,
-      device_id: Sys.conf.clubby.device_id,
-    }, '\n');
-}
-
-global.clubby = new Clubby({connect:false});
-console.setClubby(clubby);
-
-if (Sys.conf.clubby.device_id && Sys.conf.clubby.connect_on_boot) {
-  if (Wifi.status() !== undefined) {
-    // Wifi has some well-defined status; therefore, Wifi is usable at the
-    // current platform
-    Wifi.ready(clubby.connect.bind(clubby))
-  } else {
-    // Wifi management is not supported at the current platform: assume it uses
-    // external networking and if connect_on_boot=true we can connect
-    // immediately
-    clubby.connect()
-  }
-}
-
-function registerDevice() {
-  var opts = URL.parse(Sys.conf.clubby.device_registration_url);
-  opts.method = 'POST';
-  opts.headers = {'Content-Type': 'application/x-www-form-urlencoded'};
-  Http.request(opts, function(res) {
-    var c = Sys.conf.clubby, b = JSON.parse(res.body);
-    c.device_id = b.device_id;
-    c.device_psk = b.device_psk;
-    print('Saving device id: ', b, 'and rebooting.');
-    Sys.conf.save(true);
-  }).end('fw='+Sys.ro_vars.fw_id+'&arch='+Sys.ro_vars.arch+'&mac='
-         +Sys.ro_vars.mac_address);
-}
-
-if (!Sys.conf.clubby.device_id && Sys.conf.clubby.device_auto_registration) {
-  if (Wifi.status() !== undefined) {
-    print('Requesting device id when WiFi is ready');
-    Wifi.ready(registerDevice);
-  } else {
-    print("No device id. Generate one by calling registerDevice()");
-  }
-}
-
-if (File.exists('app.js')) {
-  File.eval('app.js');
-} else if (File.exists('demo.js')) {
-  print('No app.js, running demo...');
-  File.eval('demo.js');
+if (File.exists('main.js')) {
+  File.eval('main.js');
 }
