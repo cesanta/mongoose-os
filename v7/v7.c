@@ -32374,15 +32374,20 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
   }
 
 #ifdef V7_FREEZE
-  if (opts.freeze_file != NULL) {
-    freeze(v7, opts.freeze_file);
-    exit(0);
-  }
+  /*
+   * Skip pre_init if freezing, but still execute cmdline expressions.
+   * This makes it easier to add custom code when freezing from cmdline.
+   */
+  if (opts.freeze_file == NULL) {
 #endif
 
-  if (pre_init != NULL) {
-    pre_init(v7);
+    if (pre_init != NULL) {
+      pre_init(v7);
+    }
+
+#ifdef V7_FREEZE
   }
+#endif
 
 #if V7_ENABLE__Memory__stats > 0 && !defined(V7_DISABLE_GC)
   if (dump_stats) {
@@ -32434,6 +32439,13 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
       res = v7_mk_undefined();
     }
   }
+
+#ifdef V7_FREEZE
+  if (opts.freeze_file != NULL) {
+    freeze(v7, opts.freeze_file);
+    exit(0);
+  }
+#endif
 
   if (!(show_ast || dump_bcode)) {
     char buf[2000];
