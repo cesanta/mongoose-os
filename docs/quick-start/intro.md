@@ -3,8 +3,8 @@ title: Quick Start Guide
 ---
 
 -  Download flashing utility from https://github.com/cesanta/fnc/releases
--  Download the latest version of Smart.js firmware from
-   https://github.com/cesanta/smart.js/releases
+-  Download the latest version of Mongoose IoT firmware from
+   https://github.com/cesanta/iot/releases
 -  Connect the board to your computer via the USB or serial interface
 -  Start Flashnchips
 -  Press `Browse`, select downloaded firmware .zip file
@@ -16,21 +16,21 @@ title: Quick Start Guide
    [Silabs CP2102 page](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx).
 -  Restart Flashnchips after driver installation. "Select port" dropdown must
    automatically pick up a serial port to where your board is connected.
--  Press "Flash Firmware" button. That will burn Smart.js firmware on
+-  Press "Flash Firmware" button. That will burn Mongoose IoT firmware on
    the flash memory.
--  When burning is complete, Smart.js automatically connects a console
+-  When burning is complete, Mongoose IoT automatically connects a console
    to the device, prints device configuration, boot messages,
    and shows an interactive JavaScript prompt. Notice the unique
    "device_id" in the configuration - it will be needed to talk to the cloud.
-   Smart.js
+   Mongoose IoT
    ![](fc2.png)
 -  Two numbers shown by prompt
-   are available free memory, and memory taken by Smart.js
+   are available free memory, and memory taken by Mongoose IoT
 -  Type some JavaScript expression to the console and press enter.
-   Smart.js evaluates the expression and prints evaluation result:
-   [<img src="fc3.png" width="75%" />](../../static/img/smartjs/fc3.png)
+   Mongoose IoT evaluates the expression and prints evaluation result:
+   [<img src="fc3.png" width="75%" />](../../static/img/fw/fc3.png)
 -  Configure Wifi. This is not needed on POSIX platforms like RPI, where
-   networking is already configured. Note that Smart.js provides flexible
+   networking is already configured. Note that Mongoose IoT provides flexible
    configuration infrastructure, described in the next section. Here,
    we use quick ad-hoc way to configure.
 -  Enter `Wifi.setup('WifiNetworkName', 'WifiPassword')` to the console

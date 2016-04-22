@@ -35,7 +35,7 @@
  * - vPortInitialiseBlocks()
  *
  * So when we replace all the rest (`pvPortMalloc`, etc), we can check with
- * `objdump` that resulting binary (for SJ, it's `smartjs.out`) doesn't contain
+ * `objdump` that resulting binary (for SJ, it's `fw.out`) doesn't contain
  * any of the "internal" functions.
  *
  * ------------------------------------

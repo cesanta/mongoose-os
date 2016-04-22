@@ -1,4 +1,4 @@
-include ../../../smartjs/common.mk
+include ../../../fw/common.mk
 
 BUILD_DIR ?= .
 SPIFFS_PATH ?= $(CURDIR)/..

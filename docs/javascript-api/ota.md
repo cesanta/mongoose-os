@@ -2,7 +2,7 @@
 title: OTA (Over-the-air programming)
 ---
 
-Smart.js OTA is designed to work in either unattended or controllable mode.
+Mongoose IoT OTA is designed to work in either unattended or controllable mode.
 
 By default the updater module starts in unattended mode. Which means, it will
 initiate the update process immediately after receiving a command from server.

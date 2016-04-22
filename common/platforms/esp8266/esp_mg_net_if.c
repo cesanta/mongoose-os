@@ -27,7 +27,7 @@
 
 #ifndef NO_V7
 #include "v7/v7.h"
-#include "smartjs/src/sj_v7_ext.h"
+#include "fw/src/sj_v7_ext.h"
 
 struct v7_callback_args {
   struct v7 *v7;

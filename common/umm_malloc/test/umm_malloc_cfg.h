@@ -4,7 +4,7 @@
  */
 
 /*
- * Smartjs-specific configuration for umm_malloc
+ * Mongoose-FW-specific configuration for umm_malloc
  */
 
 #ifndef CS_COMMON_UMM_MALLOC_TEST_UMM_MALLOC_CFG_H_

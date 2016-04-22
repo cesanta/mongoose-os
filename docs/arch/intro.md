@@ -2,9 +2,9 @@
 title: "Architecture"
 ---
 
-<img src="smartjs_diagram.png" align="center" width="100%"/>
+<img src="fw_diagram.png" align="center" width="100%"/>
 
-Smart.js firmware on a device side:
+Mongoose IoT firmware on a device side:
 
 - Allows scripting for fast and safe development & firmware update. We do that
   by developing [V7 - the world's smallest JavaScript

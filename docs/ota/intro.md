@@ -2,7 +2,7 @@
 title: "OTA (over-the-air programming)"
 ---
 
-Smart.js OTA is designed to provide ability to update firmware on the device
+Mongoose IoT OTA is designed to provide ability to update firmware on the device
 over Internet, without connecting it to computer and using Flash'n'Chips.
 
 In order to use the following steps the device must be registered in

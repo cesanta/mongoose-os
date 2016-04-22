@@ -1,4 +1,4 @@
 ---
-title: Smart.js firmware
+title: Mongoose IoT firmware
 ---
 

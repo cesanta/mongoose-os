@@ -2,7 +2,7 @@
 title: HTTP
 ---
 
-Smart.js implements a subset of node.js HTTP API. This snippet demonstrates
+Mongoose IoT implements a subset of node.js HTTP API. This snippet demonstrates
 what is supported for client and server:
 
 ```javascript
@@ -58,8 +58,8 @@ In order to use HTTPS, specify `https` as a protocol, e.g.
 Http.request('https://google.com', function() { print(arguments); });
 ```
 
-Note that Smart.js uses
-[ca.pem](https://github.com/cesanta/smart.js/blob/master/smartjs/src/fs/ca.pem)
+Note that Mongoose IoT uses
+[ca.pem](https://github.com/cesanta/iot/blob/master/fw/src/fs/ca.pem)
 file which holds root CA certificates
 for verifying server certificates. Most popular certificate providers are
 already added to that file. If there are problems with making HTTPS requests,

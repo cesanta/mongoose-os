@@ -1,0 +1,446 @@
+# -*- mode: makefile -*-
+#
+# Mongoose IoT for ESP8266
+#
+# GC_DEBUG: if "true" (default) enables string ASN checks
+# STACK_GUARD: if "true" (default) enables soft stack guard
+# SSL: if set to "Krypton" enables SSL with the krypton lib
+# OTA: if "1" enables rboot as a bootloader and generates files required for OTA
+# FREEZE: if "1" (default) freezes the stdlib object graph into a static graph
+#         loadable in ROM
+# HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
+#           logging wrappers for malloc and friends. You can later view heap
+#           map by `tools/heaplog_viewer/heaplog_viewer.html`
+#
+MAKEFLAGS += --warn-undefined-variables
+
+APP ?= fw
+APP_PLATFORM = esp8266
+APP_MODULES ?=
+APP_CFLAGS ?=
+
+REPO_PATH ?= ../../..
+COMMON_PATH ?= $(REPO_PATH)/common
+SJS_PATH ?= $(REPO_PATH)/fw
+KRYPTON_PATH ?= $(REPO_PATH)/krypton
+MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
+V7_PATH ?= $(REPO_PATH)/v7
+APP_FS_PATH ?= fs
+
+COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
+SJS_ESP_PATH ?= $(SJS_PATH)/platforms/esp8266
+SJS_POSIX_PATH ?= $(SJS_PATH)/platforms/posix
+FW_SRC ?= $(SJS_PATH)/src
+SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
+UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
+SJSJS_PATH ?= $(FW_SRC)/js
+COMMON_FS_PATH ?= $(FW_SRC)/fs
+LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
+BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
+ESPTOOL2 = $(BUILD_DIR)/esptool2
+OTA ?= 1
+FREEZE ?= 1
+HEAP_LOG ?=
+
+FLASH_SIZE ?= 1M
+
+
+ifeq "${OTA}" "1"
+FS_SIZE ?= 128K
+else
+FS_SIZE ?= 64K
+endif
+
+SYS_PARAM_SIZE = 0x4000
+
+FW_FILE_1_ADDR = 0
+FW_FILE_2_ADDR = 0x11000
+
+ifeq "${OTA}" "1"
+FW2_FILE_2_ADDR=$(shell printf "0x%08x" $$(($(FW_FILE_2_ADDR) + 0x100000)))
+endif
+
+BUILD_DIR ?= $(CURDIR)/.build
+LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
+SJS_POSIX_BIN = $(BUILD_DIR)/posix_sjs_bin
+SJS_POSIX_BUILD = $(BUILD_DIR)/posix_sjs_build
+FW_DIR = firmware
+
+FS_BUILD_DIR = $(BUILD_DIR)/fs
+RBOOT_FW_NAME = 0x00000.bin
+FW_SECTS = .text .data .rodata
+FW_USER_ARGS  = -quiet -bin -boot2
+
+# SSL can be None or Krypton
+SSL ?= Krypton
+
+include $(COMMON_ESP_PATH)/common.mk
+
+# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
+include $(REPO_PATH)/fw/common.mk
+
+SJS_ESP_USER_DIR = $(SJS_ESP_PATH)/user
+APP_MODULES += $(SJS_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
+            cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http.c \
+            sj_i2c_js.c sj_spi_js.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
+            sj_timers_mongoose.c \
+            sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
+            sj_mongoose_ws_client.c sj_mqtt.c ubjserializer.c clubby_proto.c \
+            sj_clubby.c sj_common.c sys_config.c \
+            sj_config.c device_config.c sys_config.c \
+            miniz.c sj_udptcp.c sj_utils.c sj_console.c
+
+ifeq "${OTA}" "1"
+APP_SRCS += rboot-bigflash.c rboot-api.c
+endif
+
+JSBIN_SRCS := $(SJSJS_PATH)/sys_init.js \
+              $(SJSJS_PATH)/demo.js \
+              $(SJSJS_PATH)/I2C.js \
+              $(JSBIN_EXTRA)
+JS_SRCS    :=
+
+# In order to keep compatibility
+# with shared JS-files, which can call "File.eval(....)"
+# using JS as extension
+JSBIN_EXT := js
+JS_EXT := js
+VPATH = $(APP_MODULES) $(FW_SRC) $(V7_PATH) $(MONGOOSE_PATH) \
+        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH)
+IPATH = $(REPO_PATH) $(SJS_ESP_PATH)/include $(SPIFFS_PATH) \
+        $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
+        $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
+        $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
+        $(SJS_ESP_USER_DIR) .
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(SJS_ESP_USER_DIR)
+
+# libraries used in this project, mainly provided by the SDK
+APP_LIBS = c crypto gcc hal pp phy net80211 wpa
+
+ifneq "${OTA}" "1"
+APP_LIBS += main
+else
+APP_LIBS += main_ota
+endif
+
+SHIMS = -DNDEBUG
+
+V7_FEATURES = $(COMMON_V7_FEATURES) \
+              -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
+              -DV7_DISABLE_AST_TAG_NAMES \
+              -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
+              -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
+              -DV7_ENABLE__Function__bind -DV7_ENABLE__Function__call \
+              -DV7_ENABLE__File__list=1 \
+              -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
+              -DV7_ENABLE__Object__getPrototypeOf -DV7_ENABLE__Object__isPrototypeOf \
+              -DV7_ENABLE__Object__keys \
+              -DV7_ENABLE__Object__isExtensible \
+              -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS \
+
+FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
+           -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
+           -DMG_NO_BSD_SOCKETS -DDISABLE_MD5 \
+           $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
+           -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
+           -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON -DESP_UMM_ENABLE \
+
+MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
+              -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
+              -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
+
+MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_DISABLE_DAV
+
+MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
+               -DV7_STACK_SIZE=8192-64
+
+GC_DEBUG ?= true
+ifneq "$(GC_DEBUG)" "true"
+MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
+endif
+
+STACK_GUARD ?= true
+ifeq "$(STACK_GUARD)" "true"
+MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
+endif
+
+ifeq "$(SSL)" "Krypton"
+IPATH += $(KRYPTON_PATH)
+VPATH += $(KRYPTON_PATH)
+APP_SRCS += krypton.c esp_crypto.c esp_ssl_krypton.c
+FEATURES += -DMG_ENABLE_SSL -DMG_DISABLE_PFS -DSSL_KRYPTON \
+            -DKR_LOCALS -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 \
+            -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
+endif
+
+.PHONY: all clean
+
+APP_LIBS += m lwip_cs
+CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWIP_IF
+
+FW_FS_OUT = $(FW_DIR)/$(FS_ADDR).bin
+
+LD_SCRIPT_TEMPL = $(SJS_ESP_PATH)/ld/fw.ld
+
+_FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
+   sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
+_FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
+   sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
+
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
+LIBS = $(addprefix -l,$(APP_LIBS))
+APP_AR = $(BUILD_DIR)/$(APP).a
+LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
+SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
+BUILD_INFO_C = $(BUILD_DIR)/build_info.c
+BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
+SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
+SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
+GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
+GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C)
+FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
+FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
+IMAGE_HEADER_SIZE = 0
+
+SRCS = $(APP_SRCS) build_info.c
+OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
+
+FS_FILES = $(wildcard $(APP_FS_PATH)/*) $(wildcard $(COMMON_FS_PATH)/*)
+FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
+
+APP_OUT = $(BUILD_DIR)/$(APP).out
+LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
+LD_WRAPPERS =
+HEAP_LOG_FLAGS =
+
+ifeq "${FREEZE}" "1"
+FEATURES += -DV7_THAW
+APP_OBJS += $(BUILD_DIR)/fr.o
+GENFILES_LIST += $(BUILD_DIR)/fr.c
+endif
+
+ifeq "${HEAP_LOG}" "1"
+HEAP_LOG_FLAGS += -DESP_ENABLE_HEAP_LOG
+LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
+               -Wl,--wrap=pvPortMalloc \
+               -Wl,--wrap=pvPortZalloc \
+               -Wl,--wrap=pvPortRealloc \
+               -Wl,--wrap=vPortFree
+endif
+
+ifneq "${OTA}" "1"
+FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
+else
+IMAGE_HEADER_SIZE = 0x10
+ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
+FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
+FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
+RBOOT_EMPTY_CFG=$(FW_DIR)/0x01000.bin
+PREREQ = rboot $(RBOOT_EMPTY_CFG)
+BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
+                   -DFW2_ADDR=$(FW2_FILE_2_ADDR) \
+                   -DFW1_FS_ADDR=$(FS_ADDR) \
+                   -DFW2_FS_ADDR=$(FS2_ADDR) \
+                   -DFS_SIZE=$(_FS_SIZE) \
+                   -DFW_SIZE=$(ROM_SIZE)
+
+FW_MANIFEST = $(FW_DIR)/manifest.json
+endif
+
+INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
+LIBDIRS = $(addprefix -L,$(LPATH))
+
+ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+
+CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
+          -DFS_SIZE=$(_FS_SIZE) \
+          -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
+          $(APP_CFLAGS) $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS) \
+          $(MINIZ_FLAGS)
+
+ifneq "${OTA}" "1"
+CFLAGS += -DFS_ADDR=$(FS_ADDR) -DDISABLE_OTA
+else
+CFLAGS += $(BOOTLOADER_FLAGS)
+LDFLAGS += -u Cache_Read_Enable_New
+endif
+
+all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
+
+$(RBOOT_EMPTY_CFG):
+	$(vecho) "GEN   $@"
+	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" > $@
+
+$(BUILD_DIR) $(FW_DIR):
+	$(vecho) "MKDIR $@"
+	$(Q) mkdir -p $@
+
+# Main output product: firmware files.
+FW_PARTS = boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
+           boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
+           fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
+           fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
+           fs.img:src=$(notdir $(FS_IMG))
+include $(REPO_PATH)/common/scripts/fw_meta.mk
+ifeq "${OTA}" "1"
+all: $(FW_ZIP)
+
+$(FW_MANIFEST): $(FW_FS_OUT) $(FW_FILES_OUT)
+endif
+
+#ifreq "${OTA}" "1"
+$(FW_FILES_OUT): $(APP_OUT)
+#else
+$(FW_FILE_2_OUT) : $(APP_OUT)
+#endif
+	$(vecho) "FW    $(APP_OUT) -> $(FW_DIR)"
+ifneq "$(OTA)" "1"
+	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+else
+	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $(APP_OUT) $@ $(FW_SECTS)
+endif
+
+# -- Linking.
+
+# Link the main ELF output file. Performs symbol clash check beforehand.
+$(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
+	$(call link,$(LD_WRAPPERS))
+
+# Symbol check: make sure app doesn't override SDK lib symbols.
+# A target is created that uses the same libs but no user code and symbols are
+# checked against main app library to make sure there's no overlap.
+$(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
+	$(vecho) "SYMCK $(SYMCHECK_OUT) vs $(APP_AR)"
+	$(Q) python $(SJS_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+	$(Q) touch $@
+
+$(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
+	$(call link,)
+
+$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(SJS_ESP_PATH)/Makefile.build
+	$(vecho) "GEN   $@"
+	$(Q) echo "void user_init(void){}; " \
+            "void system_restart_local(){};" \
+            "void __wrap_user_fatal_exception_handler(){}; " \
+            "void __cyg_profile_func_enter(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" \
+            "void __cyg_profile_func_exit(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" > $@
+
+# Main app lib.
+$(APP_AR): $(OBJS)
+	$(vecho) "AR    $@"
+	$(Q) $(AR) cru $@ $^
+# Move strings to flash too, we have the handler.
+	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
+	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
+
+# LWIP.
+$(LWIP_AR): $(LWIP_PATH)
+	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all APP=liblwip_cs BUILD_DIR=$(LWIP_BUILD_DIR)
+
+# This rule is for normal (pre-existing) sources from VPATH.
+$(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
+	$(compile)
+
+# This one is for generated sources in build directory.
+$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
+	$(compile)
+
+$(BUILD_DIR)/mongoose.o: mongoose.c
+	$(compile) -DEXCLUDE_COMMON
+
+# Common gathering point for all generated files.
+# Except build info, which is special because it depends on objects.
+$(GENFILES_FLAG): $(GENFILES_LIST)
+	$(Q) touch $@
+
+$(BUILD_DIR)/fr.dump: $(SJS_POSIX_BIN)/fw
+	$(vecho) "FREEZE"
+	$(Q) $(SJS_POSIX_BIN)/fw -freeze $@
+
+$(BUILD_DIR)/fr.sym: $(SJS_POSIX_BIN)/fw
+	$(vecho) "$(SJS_POSIX_BIN)/fw"
+	$(Q) @nm $(SJS_POSIX_BIN)/fw > $@
+
+$(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
+	$(vecho) "GEN   fr.c"
+	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
+
+# Generate linker script.
+$(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
+	$(eval _IROM0ADDR=$(shell printf "0x%08x" $$((0x40200000 + $(basename $(notdir $@)) + $(IMAGE_HEADER_SIZE)))))
+ifneq "$(OTA)" "1"
+	$(eval _IROM0SIZE=$(shell printf "0x%05x" $$(($(FS_ADDR) - $(basename $(notdir $@))))))
+else
+	$(eval _IROM0SIZE=$(ROM_SIZE))
+endif
+	$(vecho) "GEN   $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
+	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
+
+include $(REPO_PATH)/common/scripts/build_info.mk
+include $(REPO_PATH)/fw/src/sys_config.mk
+
+# Pull in auto-generated .c dependencies (if any).
+-include $(wildcard $(BUILD_DIR)/*.d)
+
+# -- Filesystem.
+
+$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+	$(Q) rm -rf $(FS_BUILD_DIR) && mkdir -p $(FS_BUILD_DIR)
+# OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
+	$(Q) $(foreach js,$(JS_SRCS), \
+    echo "  CP    $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
+    cp $(js) $(FS_BUILD_DIR);)
+	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
+    echo "  V7C   $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
+    $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
+	$(vecho) "RSYNC -> $(FS_BUILD_DIR)/"
+	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
+	$(vecho) "FS    $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
+	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
+	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
+
+$(BUILD_DIR)/mkspiffs:
+	$(MAKE) -C $(REPO_PATH)/common/spiffs/tools $(BUILD_DIR)/mkspiffs BUILD_DIR=$(BUILD_DIR)
+
+$(V7_PATH)/v7.c:
+	make -C $(V7_PATH) v7.c
+
+$(V7_PATH)/v7.h:
+	make -C $(V7_PATH) v7.h
+
+$(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+	$(vecho) "GCC   v7"
+	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+
+# TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
+# appropriate
+$(SJS_POSIX_BIN)/fw:
+	make -C $(SJS_POSIX_PATH) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(SJS_POSIX_BIN) BUILD_DIR=$(SJS_POSIX_BUILD) CFLAGS_EXTRA='-DV7_FREEZE'
+
+# Target specific warning inhibitions
+
+build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
+
+#
+# Auxiliary targets.
+#
+
+ifeq "$(OTA)" "1"
+
+rboot: $(BUILD_DIR)/esptool2 $(BUILD_DIR)/rboot.bin $(FW_DIR)/$(RBOOT_FW_NAME)
+
+$(ESPTOOL2):
+	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/esptool2 BUILD_DIR=$(BUILD_DIR)
+
+$(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
+	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) \
+    ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
+
+$(FW_DIR)/$(RBOOT_FW_NAME) : $(BUILD_DIR)/rboot.bin
+	$(Q) cp $(BUILD_DIR)/rboot.bin $(FW_DIR)/$(RBOOT_FW_NAME)
+
+endif
+
+clean:
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)

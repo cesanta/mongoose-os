@@ -119,7 +119,7 @@ void free_{name}(struct {name} *cfg);
     sf.write('''\
 /* generated from {origin} - do not edit */
 #include "mongoose/mongoose.h"
-#include "smartjs/src/sj_config.h"
+#include "fw/src/sj_config.h"
 #include "{name}.h"
 
 int parse_{name}(const char *json, const char *acl, int require_keys,

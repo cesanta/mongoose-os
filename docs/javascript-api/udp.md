@@ -2,7 +2,7 @@
 title: UDP
 ---
 
-Smart.js implements a subset of Node.js UDP API. This snippet demonstrates
+Mongoose IoT implements a subset of Node.js UDP API. This snippet demonstrates
 what is supported for client and server:
 
 ```javascript

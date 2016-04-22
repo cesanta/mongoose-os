@@ -2,7 +2,7 @@
 #include "spiffs_nucleus.h"
 
 /*
- * Smart.js specific; added by mkm@cesanta.com - 2015/11/03
+ * Mongoose IoT specific; added by mkm@cesanta.com - 2015/11/03
  *
  * We need know when spiffs moves data under the hood
  * because we keep a mapping of logical file positions to
@@ -737,7 +737,7 @@ s32_t spiffs_page_move(
   // mark source deleted
   res = spiffs_page_delete(fs, src_pix);
 /*
- * Smart.js specific; added by mkm@cesanta.com - 2015/11/03
+ * Mongoose IoT specific; added by mkm@cesanta.com - 2015/11/03
  *
  * We need know when spiffs moves data under the hood
  */
