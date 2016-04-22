@@ -17,6 +17,7 @@
     { "type": "markdown", "name": "builtin.md" },
     { "type": "markdown", "name": "sys.md" },
     { "type": "markdown", "name": "ota.md" },
-    { "type": "markdown", "name": "udp.md" }
+    { "type": "markdown", "name": "udp.md" },
+    { "type": "markdown", "name": "tcp.md" }
   ]
 }
