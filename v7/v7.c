@@ -198,21 +198,6 @@ typedef struct _stati64 cs_stat_t;
 #endif
 #define DIRSEP '\\'
 
-/* POSIX opendir/closedir/readdir API for Windows. */
-struct dirent {
-  char d_name[MAX_PATH];
-};
-
-typedef struct DIR {
-  HANDLE handle;
-  WIN32_FIND_DATAW info;
-  struct dirent result;
-} DIR;
-
-DIR *opendir(const char *name);
-int closedir(DIR *dir);
-struct dirent *readdir(DIR *dir);
-
 #ifndef va_copy
 #ifdef __va_copy
 #define va_copy __va_copy
@@ -967,6 +952,18 @@ typedef struct {
 int rmdir(const char *path);
 int mkdir(const char *path, mode_t mode);
 
+#endif
+
+#if defined(_WIN32)
+struct dirent {
+  char d_name[MAX_PATH];
+};
+
+typedef struct DIR {
+  HANDLE handle;
+  WIN32_FIND_DATAW info;
+  struct dirent result;
+} DIR;
 #endif
 
 #if defined(_WIN32) || defined(CS_ENABLE_SPIFFS)

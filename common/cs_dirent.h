@@ -27,6 +27,18 @@ int mkdir(const char *path, mode_t mode);
 
 #endif
 
+#if defined(_WIN32)
+struct dirent {
+  char d_name[MAX_PATH];
+};
+
+typedef struct DIR {
+  HANDLE handle;
+  WIN32_FIND_DATAW info;
+  struct dirent result;
+} DIR;
+#endif
+
 #if defined(_WIN32) || defined(CS_ENABLE_SPIFFS)
 DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
