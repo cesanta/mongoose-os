@@ -202,3 +202,8 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
   }
   return 0;
 }
+
+void sj_reenable_intr(int pin) {
+  (void) pin;
+  /* TODO(alashkin or rojer): implement */
+}

@@ -13,6 +13,24 @@
 #ifndef SJ_DISABLE_GPIO
 
 static int s_gpio_intr_installed = 0;
+static v7_val_t s_isr_cb_proxy_v;
+
+static enum v7_err isr_cb_proxy(struct v7 *v7, v7_val_t *res) {
+  v7_val_t cb = v7_arg(v7, 0);
+  v7_val_t args = v7_arg(v7, 1);
+
+  v7_own(v7, &cb);
+  v7_own(v7, &args);
+
+  enum v7_err ret = v7_apply(v7, cb, v7_get_global(v7), args, res);
+
+  sj_reenable_intr(v7_to_number(v7_array_get(v7, args, 0)));
+
+  v7_disown(v7, &args);
+  v7_disown(v7, &cb);
+
+  return ret;
+}
 
 static void gpio_intr_handler_proxy(int pin, enum gpio_level level, void *arg) {
   struct v7 *v7 = (struct v7 *) arg;
@@ -27,7 +45,11 @@ static void gpio_intr_handler_proxy(int pin, enum gpio_level level, void *arg) {
     return;
   }
 
-  sj_invoke_cb2(v7, cb, v7_mk_number(pin), v7_mk_number(level));
+  /* Forwarding call to common cbs queue */
+  v7_val_t args = v7_mk_array(v7);
+  v7_array_push(v7, args, v7_mk_number(pin));
+  v7_array_push(v7, args, v7_mk_number(level));
+  sj_invoke_cb2(v7, s_isr_cb_proxy_v, cb, args);
 }
 
 SJ_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
@@ -74,9 +96,10 @@ SJ_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
 
   if (type != 0 && !s_gpio_intr_installed) {
     sj_gpio_intr_init(gpio_intr_handler_proxy, v7);
+    s_isr_cb_proxy_v = v7_mk_cfunction(isr_cb_proxy);
+    v7_own(v7, &s_isr_cb_proxy_v);
     s_gpio_intr_installed = 1;
   }
-
   *res = v7_mk_boolean(sj_gpio_intr_set(pin, type) == 0);
   goto clean;
 

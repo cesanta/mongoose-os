@@ -217,6 +217,8 @@ IRAM static void v7_gpio_process_on_click(int pin, int level,
     system_os_post(TASK_PRIORITY,
                    (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level,
                    (os_param_t) callback);
+  } else {
+    sj_reenable_intr(pin);
   }
 }
 
@@ -241,9 +243,16 @@ IRAM static void v7_gpio_intr_dispatcher(void *arg) {
                        (os_param_t) params);
       }
 
-      gpio_pin_intr_state_set(GPIO_ID_PIN(i), int_map[i] & 0xF);
+      /*
+       * NOTE: callback must reenable interruptions by
+       * calling sj_reenable_intr
+       */
     }
   }
+}
+
+void sj_reenable_intr(int pin) {
+  gpio_pin_intr_state_set(GPIO_ID_PIN(pin), int_map[pin] & 0xF);
 }
 
 void v7_gpio_task(os_event_t *event) {

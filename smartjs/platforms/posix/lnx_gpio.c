@@ -128,6 +128,7 @@ struct gpio_event {
   int fd;
   void *arg;
   struct gpio_event *next;
+  int enabled;
 };
 
 static struct gpio_event *s_events = NULL;
@@ -200,6 +201,7 @@ int gpio_set_handler(int gpio_no, f_gpio_intr_handler_t callback, void *arg) {
   new_ev->next = s_events;
   new_ev->fd = fd;
   new_ev->arg = arg;
+  new_ev->enabled = 1;
   s_events = new_ev;
 
   return 0;
@@ -220,11 +222,12 @@ int gpio_poll() {
 
   memset(&fdset, 0, sizeof(fdset));
   while (ev != NULL) {
-    fdset[fd_count].fd = ev->fd;
-    fdset[fd_count].events = POLLPRI;
-    events_tmp[fd_count] = ev;
-    fd_count++;
-
+    if (ev->enabled) {
+      fdset[fd_count].fd = ev->fd;
+      fdset[fd_count].events = POLLPRI;
+      events_tmp[fd_count] = ev;
+      fd_count++;
+    }
     ev = ev->next;
   }
 
@@ -244,6 +247,7 @@ int gpio_poll() {
     if ((fdset[i].revents & POLLIN) != 0) {
       lseek(fdset[i].fd, 0, SEEK_SET);
       res = read(fdset[i].fd, &val, sizeof(val));
+      events_tmp[i]->enabled = 0;
       events_tmp[i]->callback(events_tmp[i]->gpio_no, val == '0' ? 0 : 1,
                               events_tmp[i]->arg);
     }
@@ -292,6 +296,11 @@ static void *s_proxy_handler_arg;
 void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
   s_proxy_handler = cb;
   s_proxy_handler_arg = arg;
+}
+
+void sj_reenable_intr(int pin) {
+  struct gpio_event *ev = get_gpio_event(pin);
+  ev->enabled = 1;
 }
 
 int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
