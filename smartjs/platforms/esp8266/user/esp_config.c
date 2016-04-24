@@ -27,7 +27,7 @@ static int do_wifi(const struct sys_config *cfg) {
   int trigger_ap = 0;
 
   wifi_set_opmode_current(STATION_MODE);
-  wifi_station_set_auto_connect(0);
+//  wifi_station_set_auto_connect(0);
   wifi_station_disconnect();
 
   if (gpio >= 0) 

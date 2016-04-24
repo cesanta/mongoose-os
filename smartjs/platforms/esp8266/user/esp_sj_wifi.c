@@ -304,18 +304,14 @@ uint8_t sj_wifi_set_opmode(uint8_t state)
 
 uint8_t sj_wifi_set_ip_info(uint8_t inet,const char* ip,const char* gw)
 {
-if(!strncmp(ip,"DHCP",4))
-  {
-  return wifi_station_dhcpc_start();
-  }
-else
-  {
   struct ip_info info;
   info.ip.addr = ipaddr_addr(ip);
   info.netmask.addr = ipaddr_addr("255.255.255.0");
   info.gw.addr = ipaddr_addr(gw);
   if((info.ip.addr == 0xffffffff)||(info.gw.addr ==0xffffffff))
     return 0;
-  return (wifi_station_dhcpc_stop() & wifi_set_ip_info(inet, &info));
-  }
+
+  uint8_t res = wifi_station_dhcpc_stop();
+  res = res && wifi_set_ip_info(inet, &info);
+  return res;
 }

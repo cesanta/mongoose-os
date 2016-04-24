@@ -170,10 +170,10 @@ void sj_gpio_api_setup(struct v7 *v7) {
    */
   v7_set(v7, gpio, "CLICK", ~0, v7_mk_number(6 /* GPIO_INTR_TYPE_ONCLICK */));
 
-  if (v7_exec_file(v7, "gpio.js", NULL) != V7_OK) {
+  //if (v7_exec_file(v7, "gpio.js", NULL) != V7_OK) {
     /* TODO(mkm): make setup functions return an error code */
-    abort();
-  }
+    //abort();
+  //}
 }
 
 #else

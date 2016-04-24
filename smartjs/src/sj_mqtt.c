@@ -85,6 +85,13 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       free(ud->client_id);
       free(ud);
       break;
+
+      case MG_EV_MQTT_PINGREQ:
+      {
+        printf("pingreq recied, pingresp send");
+        mg_mqtt_pong(nc);
+      }; break;
+
   }
 }
 

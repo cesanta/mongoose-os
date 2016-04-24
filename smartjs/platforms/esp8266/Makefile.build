@@ -102,7 +102,7 @@ JSBIN_SRCS := $(SJSJS_PATH)/sys_init.js \
 JS_SRCS    :=  $(SJSJS_PATH)/client.js \
 	       $(SJSJS_PATH)/main.css \
 	       $(SJSJS_PATH)/main.json \
-	       $(SJSJS_PATH)/main.html \
+	       $(SJSJS_PATH)/main.html 
 
 # In order to keep compatibility
 # with shared JS-files, which can call "File.eval(....)"
