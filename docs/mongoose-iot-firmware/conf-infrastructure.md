@@ -2,9 +2,9 @@
 title: Configuration infrastructure
 ---
 
-After boot, Smart.js creates a WiFi Access Point (AP) called `SMARTJS_??????`,
+After boot, Mongoose IoT creates a WiFi Access Point (AP) called `SMARTJS_??????`,
 where `??` are replaced by the hex numbers from device's MAC address.
-On that AP, Smart.js runs a web server on address `192.168.4.1` with
+On that AP, Mongoose IoT runs a web server on address `192.168.4.1` with
 a configuration interface:
 
 ![](cfg.png)

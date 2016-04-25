@@ -2,7 +2,7 @@
 title: HTTP
 ---
 
-Smart.js implements a subset of node.js HTTP API. This snippet demonstrates
+Mongoose IoT implements a subset of node.js HTTP API. This snippet demonstrates
 what is supported for client and server:
 
 ```javascript

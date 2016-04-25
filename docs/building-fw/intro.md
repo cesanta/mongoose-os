@@ -1,16 +1,16 @@
 ---
-title: "Building Smart.js firmware"
+title: "Building Mongoose IoT firmware"
 ---
 
-For those who want to build Smart.js firmware themselves, here is an
+For those who want to build Mongoose IoT firmware themselves, here is an
 instruction on how to do that:
 
 1. Make sure you have [Docker](https://www.docker.com/) installed and running
 2. Execute the following:
 
 ```
-$ git clone https://github.com/cesanta/smart.js.git
-$ cd smart.js/platforms/esp8266
+$ git clone https://github.com/cesanta/mongoose-iot.git
+$ cd mongoose-iot/platforms/esp8266
 $ make
 ```
 

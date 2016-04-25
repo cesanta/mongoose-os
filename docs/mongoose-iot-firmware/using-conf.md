@@ -11,4 +11,4 @@ expression: `Sys.conf.wifi.sta.enable=true`.  Assignment of new values to
 from configuation file. Function `Sys.conf.save(reboot)` saves changed
 configuration to `conf.json` file.  If `reboot` parameter is set to `true`
 (default value) device will be rebooted after save in orders to reinitialize
-all Smart.js modules.
+all Mongoose IoT modules.

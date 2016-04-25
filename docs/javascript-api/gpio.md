@@ -20,6 +20,6 @@ title: GPIO
   * 5 - on high level
   * 6 - button mode + `func` is callback to be called on interrupt, its
     prototype is `function myisr(pin, level)`. See [button
-    helper](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/gpio.js)
+    helper](https://github.com/cesanta/mongoose-iot/blob/master/platforms/esp8266/fs/gpio.js)
     for `button mode` usage example.
 

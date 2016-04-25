@@ -1,4 +1,0 @@
----
-title: Smart.js firmware
----
-

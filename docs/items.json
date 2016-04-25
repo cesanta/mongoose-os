@@ -2,7 +2,7 @@
   "items": [
     { "type": "section", "name": "overview" },
     { "type": "section", "name": "quick-start" },
-    { "type": "section", "name": "smartjs-firmware" },
+    { "type": "section", "name": "mongoose-iot-firmware" },
     { "type": "section", "name": "ota" },
     { "type": "section", "name": "webdav" },
     { "type": "section", "name": "examples" },

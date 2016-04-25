@@ -57,9 +57,9 @@ High-level API:
     * `ackType` for the last byte written doesn't match what was expected.
 
 There is a detailed description of this API in
-[sj_i2c_js.c](https://github.com/cesanta/smart.js/blob/master/src/sj_i2c_js.c).
+[sj_i2c_js.c](https://github.com/cesanta/mongoose-iot/blob/master/src/sj_i2c_js.c).
 See [temperature sensor
-driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MCP9808.js)
+driver](https://github.com/cesanta/mongoose-iot/blob/master/platforms/esp8266/fs/MCP9808.js)
 and [EEPROM
-driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MC24FC.js)
+driver](https://github.com/cesanta/mongoose-iot/blob/master/platforms/esp8266/fs/MC24FC.js)
 for usage example.

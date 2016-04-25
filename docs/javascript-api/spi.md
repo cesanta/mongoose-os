@@ -15,9 +15,9 @@ title: SPI
   example, 9bit data, 7bit address, 3bit command etc.
 
 There is a detailed description in
-[`sj_spi_js.c`](https://github.com/cesanta/smart.js/blob/master/src/sj_spi_js.c).
+[`sj_spi_js.c`](https://github.com/cesanta/mongoose-iot/blob/master/src/sj_spi_js.c).
 
 See [barometer
-driver](https://github.com/cesanta/smart.js/blob/master/platforms/esp8266/fs/MPL115A1.js)
+driver](https://github.com/cesanta/mongoose-iot/blob/master/platforms/esp8266/fs/MPL115A1.js)
 for the usage example.
 
