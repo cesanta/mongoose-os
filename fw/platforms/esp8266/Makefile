@@ -1,4 +1,4 @@
-APP ?= fw
+APP ?= mongoose-iot
 REPO_PATH ?= ../../..
 SJS_ESP_PATH = $(REPO_PATH)/fw/platforms/esp8266
 SDK_VERSION ?= $(shell cat $(SJS_ESP_PATH)/sdk.version)

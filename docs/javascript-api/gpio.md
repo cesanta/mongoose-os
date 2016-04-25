@@ -19,6 +19,6 @@ title: GPIO
   * `GPIO.HILEVEL` - on high level
   * `GPIO.CLICK` - button mode
   `func` is callback to be called on interrupt, its prototype is `function myisr(pin, level)`.
-  See [button helper](https://github.com/cesanta/iot/blob/master/fw/src/js/gpio.js)
+  See [button helper](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/js/gpio.js)
   for `button mode` usage example.
 

@@ -9,8 +9,8 @@ instruction on how to do that:
 2. Execute the following:
 
 ```
-$ git clone https://github.com/cesanta/iot.git
-$ cd Mongoose IoT/fw/platforms/esp8266
+$ git clone https://github.com/cesanta/mongoose-iot.git
+$ cd mongoose-iot/fw/platforms/esp8266
 $ make
 ```
 

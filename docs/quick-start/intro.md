@@ -4,7 +4,7 @@ title: Quick Start Guide
 
 -  Download flashing utility from https://github.com/cesanta/fnc/releases
 -  Download the latest version of Mongoose IoT firmware from
-   https://github.com/cesanta/iot/releases
+   https://github.com/cesanta/mongoose-iot/releases
 -  Connect the board to your computer via the USB or serial interface
 -  Start Flashnchips
 -  Press `Browse`, select downloaded firmware .zip file

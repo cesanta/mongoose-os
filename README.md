@@ -12,7 +12,7 @@ Take a look at 2 minute video that shows Mongoose IoT in action:
 # Documentation and Downloads
 
 - [Mongoose IoT Developer Centre - User Guide and API reference](https://docs.cesanta.com/fw/latest)
-- [Release - released firmware builds](https://github.com/cesanta/iot/releases/latest)
+- [Release - released firmware builds](https://github.com/cesanta/mongoose-iot/releases/latest)
 - [Flashnchips - multiplatform device flashing tool](https://github.com/cesanta/fnc/releases/latest)
 - Current development Mongoose IoT firmware builds:
    - [fw-esp8266-last.zip](https://backend.cesanta.com/devel/fw-esp8266-last.zip)
@@ -41,4 +41,4 @@ can make contributions. Note that the CLA isn't a copyright
 _assigment_ but rather a copyright _license_.
 You retain the copyright on your contributions.
 
-[![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/iot)
+[![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/mongoose-iot)

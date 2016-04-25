@@ -6,8 +6,8 @@
 # It can be used without container too if SDK_PATH and V7_PATH are configured.
 MAKEFLAGS += --warn-undefined-variables
 
-APP ?= fw
-APP_PLATFORM = CC3200
+APP ?= mongoose-iot
+APP_PLATFORM = cc3200
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
@@ -149,7 +149,7 @@ CFLAGSgcc = -Os -Wall -Werror -DNDEBUG -DCS_NDEBUG \
             $(MONGOOSE_FEATURES) $(CFLAGS_EXTRA)
 LDFLAGSgcc =
 LDFLAGSgcc_$(PROG) =
-SCATTERgcc_$(PROG) = $(APP).ld
+SCATTERgcc_$(PROG) = src/$(APP).ld
 LNK_SCP = $(APP).ld
 ENTRY_$(PROG) = ResetISR  # From startup_gcc.c
 VERBOSE = $(V)

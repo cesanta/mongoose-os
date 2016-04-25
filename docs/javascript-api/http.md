@@ -59,7 +59,7 @@ Http.request('https://google.com', function() { print(arguments); });
 ```
 
 Note that Mongoose IoT uses
-[ca.pem](https://github.com/cesanta/iot/blob/master/fw/src/fs/ca.pem)
+[ca.pem](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/fs/ca.pem)
 file which holds root CA certificates
 for verifying server certificates. Most popular certificate providers are
 already added to that file. If there are problems with making HTTPS requests,

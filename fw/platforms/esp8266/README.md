@@ -16,8 +16,8 @@ at the examples at `user/v7_cmd.c`.
 
 Mongoose IoT release provides pre-built firmare, so you might just download
 it from the
-[Mongoose IoT release page](https://github.com/cesanta/iot/releases) or
-[developer builds](https://backend.cesanta.com/devel/fw-esp8266-last.zip) and
+[Mongoose IoT release page](https://github.com/cesanta/mongoose-iot/releases) or
+[developer builds](https://backend.cesanta.com/devel/mongoose-iot-esp8266-last.zip) and
 skip to the next step. For those who want to build/customize the firmware,
 make sure you have docker installed and running. Then,
 
