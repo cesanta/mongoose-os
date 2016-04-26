@@ -79,7 +79,7 @@ Object.defineProperty(Sys.conf, "save", {
     }
   }});
 
-print('\nStarting Mongoose IoT - see documentation at',
+print('\nMongoose IoT Firmware - see documentation at',
       'https://cesanta.com/developer/fw',
       '\n==> Sys:\n', Sys, '\n');
 

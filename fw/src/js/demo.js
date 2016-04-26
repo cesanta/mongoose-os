@@ -1,4 +1,4 @@
-print('\r\nThis is Mongoose IoT ' + Sys.ro_vars.fw_version + ' (' + Sys.ro_vars.arch + ')\r\n');
+print('\r\nThis is Mongoose IoT Firmware ' + Sys.ro_vars.fw_version + ' (' + Sys.ro_vars.arch + ')\r\n');
 print('Below you should see a JS prompt, feel free to play with it.');
 print('sendRandomData() will send some random data to the cloud.');
 

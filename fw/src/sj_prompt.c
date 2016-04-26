@@ -40,7 +40,7 @@ static void show_prompt(void) {
    */
 
   /* TODO RTOS(alashkin): RTOS printf doesn't support %lu */
-  printf("fw %u/%d$ ", (unsigned int) sj_get_free_heap_size(),
+  printf("[%u/%d] $ ", (unsigned int) sj_get_free_heap_size(),
          (int) v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_SIZE) -
              (int) v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_USED));
 
