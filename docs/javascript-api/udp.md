@@ -34,10 +34,10 @@ clientSocket.send("hello", 17000, "127.0.0.1", function() {
 - `socket_obj.bind(port, optional_address[, callback])`, `socket.bind(options[, callback])`: Causes the dgram.Socket to listen for datagram messages on a named port and addres
 - `socket_obj.send(msg, optional_offset, optional_length, port, address, optional_callback])`: Sends a datagram to the destination port and address.
 - `socket_obj.on(event, callback)`: Register event hanlder. The following events are supported:<br>
-  * 'error':  emitted whenever any error occurs<br>
-  * 'message': emitted when a new datagram is available on a socket<br>
-  * 'close': emitted after a socket is closed<br>
-  * 'listening': emitted whenever a socket begins listening for datagram messages<br>
+  * `error`:  emitted whenever any error occurs<br>
+  * `message`: emitted when a new datagram is available on a socket<br>
+  * `close`: emitted after a socket is closed<br>
+  * `listening`: emitted whenever a socket begins listening for datagram messages<br>
 
 
 

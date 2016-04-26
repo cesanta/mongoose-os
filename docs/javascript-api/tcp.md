@@ -34,9 +34,9 @@ client.on("data", function(data) {
 });
 ```
 
-- `net.connect(options, optional_callback) -> socket_obj`,  `net.connect(port, host, optional_callback) ->socket_obj`,<br>
-  `net.createConnection(options, optional_callback) -> socket_obj`, `net.createConnection(port, host, optional_callback) -> socket_obj`: Return a new net.Socket and automatically connects to the supplied port and host
-- `net.createServer(optinal_options, optional_callback) -> server_obj`: Create a new server
+- `tcp.connect(options, optional_callback) -> socket_obj`,  `tcp.connect(port, host, optional_callback) ->socket_obj`,<br>
+  `tcp.createConnection(options, optional_callback) -> socket_obj`, `tcp.createConnection(port, host, optional_callback) -> socket_obj`: Return a new tcp.Socket and automatically connects to the supplied port and host
+- `tcp.createServer(optinal_options, optional_callback) -> server_obj`: Create a new server
 - `server_obj.close(optional_callback])`: Stop the server from accepting new connections and keeps existing connections
 - `server_obj.getConnections(callback)` : Asynchronously get the number of concurrent connections on the server
 - `server.listen(options, optinal_callback])`, `server.listen(port, hostname, optinal_backlog, optinal_callback)`: Begin accepting connections on the specified port and hostname.
@@ -45,7 +45,7 @@ client.on("data", function(data) {
   * `close`: emitted after a server is closed<br>
   * `connection`: emitted when a new connection is made<br>
   * `listening`: emitted when the server has been bound after calling `server_obj.listen`
-- `new net.Socket(options) -> socket_obj`: Construct a new socket object
+- `new tcp.Socket(options) -> socket_obj`: Construct a new socket object
 - `socket_obj.connect(options, optional_callback])`, `socket_obj.connect(port, host, optional_callback)`: Open the connection for a given socket
 - `socket_obj.write(data, optional_encoding, optional_callback])`: Send data on the socket
 - `socket_obj.end(optional_data, optional_encoding])`: Close the socket. If data is specified, it is equivalent to calling socket.write(data, encoding) followed by socket.end().
