@@ -195,7 +195,7 @@ void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event) {
 SJ_PRIVATE enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
-  if (!v7_is_callable(v7, cb)) {
+  if (!v7_is_callable(v7, cb) && !v7_is_null(cb)) {
     *res = v7_mk_boolean(0);
     goto clean;
   }
@@ -275,6 +275,10 @@ void sj_wifi_api_setup(struct v7 *v7) {
   v7_set_method(v7, s_wifi, "scan", Wifi_scan);
   v7_set_method(v7, s_wifi, "ready", Wifi_ready);
   v7_set(v7, v7_get_global(v7), "Wifi", ~0, s_wifi);
+
+  v7_set(v7, s_wifi, "CONNECTED", ~0, v7_mk_number(SJ_WIFI_CONNECTED));
+  v7_set(v7, s_wifi, "DISCONNECTED", ~0, v7_mk_number(SJ_WIFI_DISCONNECTED));
+  v7_set(v7, s_wifi, "GOTIP", ~0, v7_mk_number(SJ_WIFI_IP_ACQUIRED));
 
   v7_disown(v7, &s_wifi);
 }
