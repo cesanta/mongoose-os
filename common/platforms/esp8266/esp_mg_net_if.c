@@ -423,6 +423,15 @@ void mg_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
 
 void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  if (nc->sock == INVALID_SOCKET || cs->pcb.udp == NULL) {
+    /*
+     * In case of UDP, this usually means, what
+     * async DNS resolve is still in progress and connection
+     * is not ready yet
+     */
+    DBG(("%p socket is not connected", nc));
+    return;
+  }
   struct udp_pcb *upcb = cs->pcb.udp;
   struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, len, PBUF_RAM);
   ip_addr_t *ip = (ip_addr_t *) &nc->sa.sin.sin_addr.s_addr;
