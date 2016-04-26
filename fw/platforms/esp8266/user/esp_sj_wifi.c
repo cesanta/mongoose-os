@@ -179,7 +179,7 @@ char *sj_wifi_get_status_str(void) {
 }
 
 void wifi_changed_cb(System_Event_t *evt) {
-  enum sj_wifi_status sj_ev = -1;
+  int sj_ev = -1;
 
   /* TODO(rojer): Share this logic between platforms. */
   if (wifi_setting_up && evt->event == EVENT_STAMODE_GOT_IP) {
