@@ -7,7 +7,7 @@
     },
     "ap": {
       "enable": true,
-      "keep_enabled": false,
+      "keep_enabled": true,
       "trigger_on_gpio": -1,
       "ssid": "Mongoose_??????",
       "pass": "Mongoose",
