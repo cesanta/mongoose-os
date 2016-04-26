@@ -17,3 +17,4 @@ function adcExample() {
 }
 ```
 
+*Note: On ESP8266 only TOUT pin (GPIO 6) be used as analog input. `Pin` parameter is ignored on this platform.*
