@@ -5,7 +5,7 @@ Mongoose IoT is available now for ESP8266 and allows you to code in JavaScript o
 
 Take a look at 2 minute video that shows Mongoose IoT in action:
 
-[![Mongoose IoT in action](https://docs.cesanta.com/images/Mongoose_IoT.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
+[![Mongoose IoT in action](https://docs.cesanta.com/mongoose-iot/latest/Mongoose_IoT.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
 
 > “We looked for a sustainable solution that would allow us to grow and expand upon. There simply wasn’t a solution until we found Mongoose IoT. It has all the necessary functionality for right now and future expansion.” [Quantex GmbH] (https://www.cesanta.com/use-cases/quantex-iot-connectivity)
 
@@ -15,7 +15,7 @@ Take a look at 2 minute video that shows Mongoose IoT in action:
 - [Release - released firmware builds](https://github.com/cesanta/mongoose-iot/releases/latest)
 - [Flashnchips - multiplatform device flashing tool](https://github.com/cesanta/fnc/releases/latest)
 - Current development Mongoose IoT firmware builds:
-   - [fw-esp8266-last.zip](https://backend.cesanta.com/devel/fw-esp8266-last.zip)
+   - [fw-esp8266-last.zip](https://backend.cesanta.com/devel/mongoose-iot-esp8266-last.zip)
 
 # Support
 - [Support Forum - Ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/smart-js)
