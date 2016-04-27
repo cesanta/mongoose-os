@@ -871,10 +871,11 @@ clean:
 /*
  * dgram.createSocket(options[, callback])
  * dgram.createSocket(type[, callback])
+ * dgram.createSocket([callback])
  */
 SJ_PRIVATE enum v7_err DGRAM_createSocket(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  const char *args_names[] = {"port", ""};
+  const char *args_names[] = {"type", ""};
   v7_val_t args[ARRAY_SIZE(args_names)];
   enum create_args { TYPE, CB };
 
@@ -889,13 +890,22 @@ SJ_PRIVATE enum v7_err DGRAM_createSocket(struct v7 *v7, v7_val_t *res) {
    * field, which should contain "udp4" value
    */
 
-  CHECK_STR_REQ(args[TYPE], "Type");
+  CHECK_STR_OPT(args[TYPE], "Type");
 
-  if (strcmp(v7_to_cstring(v7, &args[TYPE]), "udp4") != 0) {
+  if (v7_is_string(args[TYPE]) &&
+      strcmp(v7_to_cstring(v7, &args[TYPE]), "udp4") != 0) {
     /* Node.js supports udp6, while Mongoose IoT - doesn't */
     LOG_AND_THROW("Only udp4 is supported");
     goto clean;
   };
+
+  /*
+   * Node.js requires "type" argument, but MG/ESP doesn't
+   * support udp6 for now, so, let's make it optional
+   */
+  if (v7_argc(v7) == 1 && v7_is_callable(v7, v7_arg(v7, 0))) {
+    args[CB] = v7_arg(v7, 0);
+  }
 
   if (!v7_is_undefined(args[CB]) && !v7_is_callable(v7, args[CB])) {
     LOG_AND_THROW("Callback must be a function");
