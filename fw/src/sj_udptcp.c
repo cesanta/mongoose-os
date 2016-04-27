@@ -3,7 +3,7 @@
  * All rights reserved
  */
 #include <stdio.h>
-
+#include <math.h>
 #include "sj_udptcp.h"
 #include "v7/v7.h"
 #include "sj_mongoose.h"
@@ -1309,7 +1309,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_setTimeout(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *c;
   v7_val_t timeout_v = v7_arg(v7, 0);
   v7_val_t cb = v7_arg(v7, 1);
-
+  struct conn_user_data *ud;
   CHECK_NUM_REQ(timeout_v, "Timeout");
 
   if (!v7_is_undefined(cb) && !v7_is_callable(v7, cb)) {
@@ -1322,9 +1322,12 @@ SJ_PRIVATE enum v7_err TCP_Socket_setTimeout(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
+  ud = (struct conn_user_data *) c->user_data;
   /* Node.js uses msec for timeout, we round it to secs */
-  ((struct conn_user_data *) c->user_data)->timeout =
-      v7_to_number(timeout_v) / 1000;
+  ud->timeout = round(v7_to_number(timeout_v) / 1000);
+  if (ud->timeout == 0) {
+    ud->timeout = 1;
+  }
 
   if (!v7_is_undefined(cb)) {
     struct cb_info_holder *cih = get_cb_info_holder(v7, v7_get_this(v7));

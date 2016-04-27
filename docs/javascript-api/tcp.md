@@ -52,7 +52,7 @@ client.on("data", function(data) {
 - `socket_obj.destroy()`: Close the socket
 - `socket_obj.pause()`: Pause the reading of data
 - `socket_obj.resume()`: Resume reading after a call to pause().
-- `socket_obj.setTimeout(timeout, optinal_callback])`: Set the socket to timeout after timeout milliseconds of inactivity on the socket.
+- `socket_obj.setTimeout(timeout, optional_callback])`: Set the socket to timeout after timeout milliseconds of inactivity on the socket. 1000ms is the minimum supported and any number given will be rounded to the nearest multiple of 1000.
 - `socket_obj.on(event, callback)`: Register event hanlder. The following events are supported:<br>
   * `error`:  emitted whenever any error occurs<br>
   * `close`: emitted after a socket is closed<br>
