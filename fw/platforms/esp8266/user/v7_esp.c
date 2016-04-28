@@ -8,6 +8,7 @@
 #include <ets_sys.h>
 #include "v7/v7.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
+#include "fw/src/sj_v7_ext.h"
 
 struct v7 *v7;
 
@@ -85,8 +86,7 @@ void run_init_script() {
   v7_val_t res;
 
   if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
-    printf("Init error: ");
-    v7_println(v7, res);
+    sj_print_exception(v7, res, "Init error");
   }
 }
 #endif

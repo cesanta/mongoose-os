@@ -378,14 +378,22 @@ for b in bcodes:
     ops = vec("fops", a, b["ops"])
     lits = lit_vec("flits", a, b["lit"])
     print ("static const struct bcode fbcode_%(addr)s"
-           " = {%(ops)s, %(lits)s,"
-           " 0xff, %(names_cnt)s, %(args_cnt)s, %(strict_mode)s, 1, 1, 0};") % dict(
+           " = {%(ops)s, %(lits)s\n"
+           "#if defined(V7_ENABLE_FILENAMES)\n"
+           ", NULL\n"
+           "#endif\n"
+           ", 0xff, %(names_cnt)s, %(args_cnt)s, %(strict_mode)s, 1, 1, 0, %(func_name_present)s\n"
+           "#if defined(V7_ENABLE_FILENAMES)\n"
+           ", 0\n"
+           "#endif\n"
+           "};") % dict(
         addr = b["addr"],
         ops = ops,
         lits = lits,
         args_cnt = b["args_cnt"],
         names_cnt = b["names_cnt"],
         strict_mode = b["strict_mode"],
+        func_name_present = b["func_name_present"],
     )
 
 for o in objs:

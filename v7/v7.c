@@ -3180,6 +3180,8 @@ enum opcode {
   OP_MAX,
 };
 
+#define _OP_LINE_NO 0x80
+
 #endif /* CS_V7_SRC_OPCODES_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/core.h"
@@ -3338,6 +3340,7 @@ struct v7_call_frame {
     val_t try_stack;
     val_t this_obj;
   } vals;
+  unsigned int line_no : 16;
   unsigned is_constructor : 1;
 };
 
@@ -3395,6 +3398,11 @@ struct v7_vals {
 
 struct v7 {
   struct v7_vals vals;
+
+  /*
+   * Currently executing bcode
+   */
+  struct bcode *bcode;
 
   /*
    * Stack of execution contexts.
@@ -3462,6 +3470,18 @@ struct v7 {
   size_t last_var_node;    /* Offset of last var node or function/script node */
   int after_newline;       /* True if the cur_tok starts a new line */
   double cur_tok_dbl;      /* When tokenizing, parser stores TOK_NUMBER here */
+
+  /*
+   * Current linenumber. Currently it is used by parser, compiler and bcode
+   * evaluator.
+   *
+   * - Parser: it's the last line_no emitted to AST
+   * - Compiler: it's the last line_no emitted to bcode
+   * - Bcode: it's the line number of the currently evaluating bcode.
+   *   TODO(dfrank): make v7->call_frame to represent current frame, not the
+   *   previous one, and then, this field won't be used by bcode.
+   */
+  int line_no;
 
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
@@ -4032,13 +4052,13 @@ void v7_clear_thrown_value(struct v7 *v7);
  * TODO(dfrank): it would be good to have formatted string: then, we can
  * specify file and line.
  */
-#define V7_CHECK_INTERNAL2(cond, clean_label)                       \
-  do {                                                              \
-    if (!(cond)) {                                                  \
-      enum v7_err rcode = v7_throwf(v7, "Error", "Internal error"); \
-      (void) rcode;                                                 \
-      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                    \
-    }                                                               \
+#define V7_CHECK_INTERNAL2(cond, clean_label)                         \
+  do {                                                                \
+    if (!(cond)) {                                                    \
+      enum v7_err __rcode = v7_throwf(v7, "Error", "Internal error"); \
+      (void) __rcode;                                                 \
+      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                      \
+    }                                                                 \
   } while (0)
 
 /*
@@ -4256,18 +4276,37 @@ WARN_UNUSED_RESULT
 enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *result);
 
 /*
+ * Options for `v7_exec_opt()`. To get default options, like `v7_exec()` uses,
+ * just zero out this struct.
+ */
+struct v7_exec_opts {
+  /* Filename, used for stack traces only */
+  const char *filename;
+
+  /*
+   * Object to be used as `this`. Note: when it is zeroed out, i.e. it's a
+   * number `0`, the `undefined` value is assumed. It means that it's
+   * impossible to actually use the number `0` as `this` object, but it makes
+   * little sense anyway.
+   */
+  v7_val_t this_obj;
+
+  /* Whether the given `js_code` should be interpreted as JSON, not JS code */
+  unsigned is_json : 1;
+};
+
+/*
+ * Customizable version of `v7_exec()`: allows to specify various options, see
+ * `struct v7_exec_opts`.
+ */
+enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
+                        const struct v7_exec_opts *opts, v7_val_t *res);
+
+/*
  * Same as `v7_exec()`, but loads source code from `path` file.
  */
 WARN_UNUSED_RESULT
 enum v7_err v7_exec_file(struct v7 *v7, const char *path, v7_val_t *result);
-
-/*
- * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
- * context.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_exec_with(struct v7 *v7, const char *js_code, v7_val_t this_obj,
-                         v7_val_t *result);
 
 /*
  * Parse `str` and store corresponding JavaScript object in `res` variable.
@@ -4978,7 +5017,13 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/util_public.h" */
 
+struct bcode;
+
 V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b);
+#endif
 
 /*
  * At the moment, all other utility functions are public, and are declared in
@@ -5147,6 +5192,26 @@ extern "C" {
 V7_PRIVATE int encode_varint(size_t len, unsigned char *p);
 V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen);
 V7_PRIVATE int calc_llen(size_t len);
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+/*
+ * ..._ext() functions allow to specify how much bits of the first byte can be
+ * used for varint. E.g.:
+ *
+ * - 8: the same as `encode_varint`
+ * - 7: MSB will not be touched, the rest bits are used
+ * etc.
+ *
+ * Note that it affects only the first byte; in all the rest bytes, 8 bits
+ * will be used, as usually.
+ */
+
+V7_PRIVATE int encode_varint_ext(size_t len, unsigned char *p,
+                                 int first_byte_bits);
+V7_PRIVATE size_t
+decode_varint_ext(const unsigned char *p, int *llen, int first_byte_bits);
+V7_PRIVATE int calc_llen_ext(size_t len, int first_byte_bits);
+#endif
 
 #if defined(__cplusplus)
 }
@@ -5344,27 +5409,136 @@ enum ast_which_skip {
 V7_PRIVATE void ast_init(struct ast *, size_t);
 V7_PRIVATE void ast_optimize(struct ast *);
 V7_PRIVATE void ast_free(struct ast *);
-V7_PRIVATE ast_off_t ast_add_node(struct ast *, enum ast_tag);
-V7_PRIVATE ast_off_t ast_insert_node(struct ast *, ast_off_t, enum ast_tag);
-V7_PRIVATE ast_off_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
-V7_PRIVATE ast_off_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
+
+/*
+ * Begins an AST node by inserting a tag to the AST at the given offset.
+ *
+ * It also allocates space for the fixed_size payload and the space for
+ * the skips.
+ *
+ * The caller is responsible for appending children.
+ *
+ * Returns the offset of the node payload (one byte after the tag).
+ * This offset can be passed to `ast_set_skip`.
+ */
+V7_PRIVATE ast_off_t
+ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag);
+
+/*
+ * Modify tag which is already added to buffer. Keeps `AST_TAG_LINENO_PRESENT`
+ * flag.
+ */
+V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
+                               enum ast_tag tag);
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+/*
+ * Add line_no varint after all skips of the tag at the offset `tag_off`, and
+ * marks the tag byte.
+ *
+ * Byte at the offset `tag_off` should be a valid tag.
+ */
+V7_PRIVATE void ast_add_line_no(struct ast *a, ast_off_t tag_off, int line_no);
+#endif
+
+/*
+ * Patches a given skip slot for an already emitted node with the
+ * current write cursor position (e.g. AST length).
+ *
+ * This is intended to be invoked when a node with a variable number
+ * of child subtrees is closed, or when the consumers need a shortcut
+ * to the next sibling.
+ *
+ * Each node type has a different number and semantic for skips,
+ * all of them defined in the `ast_which_skip` enum.
+ * All nodes having a variable number of child subtrees must define
+ * at least the `AST_END_SKIP` skip, which effectively skips a node
+ * boundary.
+ *
+ * Every tree reader can assume this and safely skip unknown nodes.
+ *
+ * `start` should be an offset of the byte right after a tag.
+ */
+V7_PRIVATE ast_off_t
+ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip);
+
+/*
+ * Patches a given skip slot for an already emitted node with the value
+ * (stored as delta relative to the `start` node) of the `where` argument.
+ */
 V7_PRIVATE ast_off_t
 ast_modify_skip(struct ast *, ast_off_t, ast_off_t, enum ast_which_skip);
-V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
-V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
-V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *,
-                                     size_t);
-V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
-                                        const char *, size_t);
+/*
+ * Returns the offset in AST to which the given `skip` points.
+ *
+ * `start` should be an offset of the byte right after a tag.
+ */
+V7_PRIVATE ast_off_t
+ast_get_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip);
 
-V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, size_t *);
-V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
-V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
+/*
+ * Returns the tag from the offset `pos`, and shifts `pos` by 1.
+ */
+V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos);
 
-V7_PRIVATE void ast_dump_tree(FILE *, struct ast *, ast_off_t *, int depth);
+/*
+ * Moves the cursor to the tag's varint and inlined data (if there are any, see
+ * `struct ast_node_def::has_varint` and `struct ast_node_def::has_inlined`).
+ *
+ * Technically, it skips node's "skips" and line number data, if either is
+ * present.
+ *
+ * Assumes a cursor (`pos`) positioned right after a tag.
+ */
+V7_PRIVATE void ast_move_to_inlined_data(struct ast *a, ast_off_t *pos);
 
-V7_PRIVATE void release_ast(struct v7 *, struct ast *);
+/*
+ * Moves the cursor to the tag's subtrees (if there are any,
+ * see `struct ast_node_def::num_subtrees`), or to the next node in case the
+ * current node has no subtrees.
+ *
+ * Technically, it skips node's "skips", line number data, and inlined data, if
+ * either is present.
+ *
+ * Assumes a cursor (`pos`) positioned right after a tag.
+ */
+V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos);
+
+/* Helper to add a node with inlined data. */
+V7_PRIVATE ast_off_t ast_insert_inlined_node(struct ast *, ast_off_t,
+                                             enum ast_tag, const char *,
+                                             size_t);
+
+/*
+ * Returns the line number encoded in the node, or `0` in case of none is
+ * encoded.
+ *
+ * `pos` should be an offset of the byte right after a tag.
+ */
+V7_PRIVATE int ast_get_line_no(struct ast *a, ast_off_t pos);
+
+/*
+ * `pos` should be an offset of the byte right after a tag
+ */
+V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n);
+
+/*
+ * Returns the `double` number inlined in the node
+ */
+V7_PRIVATE double ast_get_num(struct ast *a, ast_off_t pos);
+
+/*
+ * Skips the node and all its subnodes.
+ *
+ * `pos` should be an offset of the tag byte.
+ */
+V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos);
+
+V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
+                              int depth);
+
+V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a);
 
 #if defined(__cplusplus)
 }
@@ -5443,6 +5617,11 @@ struct bcode {
   /* Literal table */
   struct v7_vec lit;
 
+#ifdef V7_ENABLE_FILENAMES
+  /* Name of the file from which this bcode was generated (used for debug) */
+  void *filename;
+#endif
+
   /* Reference count */
   uint8_t refcnt;
 
@@ -5463,6 +5642,14 @@ struct bcode {
   unsigned int ops_in_rom : 1;
   /* Set for deserialized bcode. Used for metrics only */
   unsigned int deserialized : 1;
+
+  /* Set when `ops` contains function name as the first `name` */
+  unsigned int func_name_present : 1;
+
+#ifdef V7_ENABLE_FILENAMES
+  /* If set, `filename` points to ROM, so we shouldn't free it */
+  unsigned int filename_in_rom : 1;
+#endif
 };
 
 /*
@@ -5489,10 +5676,39 @@ V7_PRIVATE void bcode_builder_init(struct v7 *v7,
                                    struct bcode *bcode);
 V7_PRIVATE void bcode_builder_finalize(struct bcode_builder *bbuilder);
 
-V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode);
+/*
+ * Note: `filename` must be either:
+ *
+ * - `NULL`. In this case, `filename_in_rom` is ignored.
+ * - A pointer to ROM (or to any other unmanaged memory). `filename_in_rom`
+ *   must be set to 1.
+ * - A pointer returned by `shdata_create()`, i.e. a pointer to shared data.
+ *
+ * If you need to copy filename from another bcode, just pass NULL initially,
+ * and after bcode is initialized, call `bcode_copy_filename_from()`.
+ *
+ * To get later a proper null-terminated filename string from bcode, use
+ * `bcode_get_filename()`.
+ */
+V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode,
+                           void *filename, uint8_t filename_in_rom);
 V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode);
 V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *bcode);
 V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *bcode);
+
+#ifdef V7_ENABLE_FILENAMES
+/*
+ * Return a pointer to null-terminated filename string
+ */
+V7_PRIVATE const char *bcode_get_filename(struct bcode *bcode);
+#endif
+
+/*
+ * Copy filename from `src` to `dst`. If source filename is a pointer to ROM,
+ * then just the pointer is copied; otherwise, appropriate shdata pointer is
+ * retained.
+ */
+V7_PRIVATE void bcode_copy_filename_from(struct bcode *dst, struct bcode *src);
 
 #ifndef V7_NO_FS
 /*
@@ -5578,6 +5794,11 @@ typedef struct {
 
 V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op);
 
+#ifdef V7_ENABLE_LINE_NUMBERS
+V7_PRIVATE void bcode_append_lineno(struct bcode_builder *bbuilder,
+                                    int line_no);
+#endif
+
 /*
  * Add a literal to the bcode literal table, or just decide that the literal
  * should be inlined into `ops`. See `lit_t` for details.
@@ -5652,6 +5873,12 @@ V7_PRIVATE void bcode_add_varint(struct bcode_builder *bbuilder, size_t value);
  * the pointer appropriately
  */
 V7_PRIVATE size_t bcode_get_varint(char **ops);
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+V7_PRIVATE void bcode_add_varint_ext(struct bcode_builder *bbuilder,
+                                     size_t value, int first_byte_bits);
+V7_PRIVATE size_t bcode_get_varint_ext(char **ops, int first_byte_bits);
+#endif
 
 /*
  * Decode a literal value from a string of opcodes and update the cursor to
@@ -5831,6 +6058,61 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
 #endif /* CS_V7_SRC_GC_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "./v7/src/shdata.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * shdata (stands for "shared data") is a simple module that allows to have
+ * reference count for an arbitrary payload data, which will be freed as
+ * necessary. A poor man's shared_ptr.
+ */
+
+#ifndef CS_V7_SRC_SHDATA_H_
+#define CS_V7_SRC_SHDATA_H_
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+struct shdata {
+  /* Reference count */
+  uint8_t refcnt;
+
+  /*
+   * Note: we'd use `unsigned char payload[];` here, but we can't, since this
+   * feature was introduced in C99 only
+   */
+};
+
+/*
+ * Allocate memory chunk of appropriate size, copy given `payload` data there,
+ * retain (`shdata_retain()`), and return it.
+ */
+V7_PRIVATE struct shdata *shdata_create(const void *payload, size_t size);
+
+V7_PRIVATE struct shdata *shdata_create_from_string(const char *src);
+
+/*
+ * Increment reference count for the given shared data
+ */
+V7_PRIVATE void shdata_retain(struct shdata *p);
+
+/*
+ * Decrement reference count for the given shared data
+ */
+V7_PRIVATE void shdata_release(struct shdata *p);
+
+/*
+ * Get payload data
+ */
+V7_PRIVATE void *shdata_get_payload(struct shdata *p);
+
+#endif
+#endif /* CS_V7_SRC_SHDATA_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/eval.h"
 #endif
 /*
@@ -5858,9 +6140,9 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
-                              v7_val_t func, v7_val_t args,
-                              v7_val_t this_object, int is_json, int fr,
-                              uint8_t is_constructor, v7_val_t *res);
+                              const char *filename, val_t func, val_t args,
+                              val_t this_object, int is_json, int fr,
+                              uint8_t is_constructor, val_t *res);
 
 #if defined(__cplusplus)
 }
@@ -10667,6 +10949,7 @@ void init_ubjson(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/varint.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -10721,6 +11004,78 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
 
   return llen;
 }
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+V7_PRIVATE size_t
+decode_varint_ext(const unsigned char *p, int *llen, int first_byte_bits) {
+  size_t i = 0, string_len = 0;
+
+  unsigned char order = first_byte_bits - 1;
+  unsigned char data_mask, flag_mask;
+  unsigned char adj = (7 - order);
+
+  do {
+    data_mask = (1 << order) - 1;
+    flag_mask = (1 << order);
+    order = 7;
+
+    /*
+     * First byte of varint contains `(first_byte_bits - 1)`, the rest
+     * contain 7 bits, in little endian order.
+     * MSB is a continuation bit: it tells whether next byte is used.
+     */
+    {
+      int shift = order * i;
+      if (i > 0) {
+        shift -= adj;
+      }
+      string_len |= (p[i] & data_mask) << shift;
+    }
+    /*
+     * First we increment i, then check whether it is within boundary and
+     * whether decoded byte had continuation bit set.
+     */
+
+  } while (++i < sizeof(size_t) && (p[i - 1] & flag_mask));
+  *llen = i;
+
+  return string_len;
+}
+
+/* Return number of bytes to store length */
+V7_PRIVATE int calc_llen_ext(size_t len, int first_byte_bits) {
+  int n = 0;
+  unsigned char order = first_byte_bits - 1;
+
+  do {
+    if (n > 0) {
+      order = 7;
+    }
+    n++;
+  } while (len >>= order);
+
+  assert(n <= (int) sizeof(len));
+
+  return n;
+}
+
+V7_PRIVATE int encode_varint_ext(size_t len, unsigned char *p,
+                                 int first_byte_bits) {
+  unsigned char order = first_byte_bits - 1;
+  int i, llen = calc_llen_ext(len, first_byte_bits);
+  unsigned char data_mask, flag_mask;
+
+  for (i = 0; i < llen; i++) {
+    data_mask = (1 << order) - 1;
+    flag_mask = (1 << order);
+    p[i] = (len & data_mask) | (i < llen - 1 ? flag_mask : 0);
+    len >>= order;
+    order = 7;
+  }
+
+  return llen;
+}
+#endif
 
 #if defined(__cplusplus)
 }
@@ -11786,8 +12141,15 @@ const struct ast_node_def ast_node_defs[] = {
     AST_ENTRY("USE_STRICT", 0, 0, 0, 0), /* struct {} */
 };
 
+/*
+ * A flag which is used to mark node's tag byte if the node has line number
+ * data encoded (varint after skips). See `ast_get_line_no()`.
+ */
+#define AST_TAG_LINENO_PRESENT 0x80
+
 V7_STATIC_ASSERT(AST_MAX_TAG < 256, ast_tag_should_fit_in_char);
 V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
+V7_STATIC_ASSERT(AST_MAX_TAG <= AST_TAG_LINENO_PRESENT, bad_AST_LINE_NO);
 
 #if V7_ENABLE_FOOTPRINT_REPORT
 const size_t ast_node_defs_size = sizeof(ast_node_defs);
@@ -11795,36 +12157,40 @@ const size_t ast_node_defs_count = ARRAY_SIZE(ast_node_defs);
 #endif
 
 /*
- * Begins an AST node by appending a tag to the AST.
+ * Converts a given byte `t` (which should be read from the AST data buffer)
+ * into `enum ast_tag`. This function is needed because tag might be marked
+ * with the `AST_TAG_LINENO_PRESENT` flag; the returned tag is always unmarked,
+ * and if the flag was indeed set, `lineno_present` is set to 1; otherwise
+ * it is set to 0.
  *
- * It also allocates space for the fixed_size payload and the space for
- * the skips.
- *
- * The caller is responsible for appending children.
- *
- * Returns the offset of the node payload (one byte after the tag).
- * This offset can be passed to `ast_set_skip`.
+ * `lineno_present` is allowed to be NULL, if the caller doesn't care of the
+ * line number presence.
  */
-V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
-  ast_off_t start = a->mbuf.len;
-  uint8_t t = (uint8_t) tag;
-  const struct ast_node_def *d = &ast_node_defs[tag];
-
-  assert(tag < AST_MAX_TAG);
-  mbuf_append(&a->mbuf, (char *) &t, sizeof(t));
-  mbuf_append(&a->mbuf, NULL, sizeof(ast_skip_t) * d->num_skips);
-  return start + 1;
+static enum ast_tag uint8_to_tag(uint8_t t, uint8_t *lineno_present) {
+  if (t & AST_TAG_LINENO_PRESENT) {
+    t &= ~AST_TAG_LINENO_PRESENT;
+    if (lineno_present != NULL) {
+      *lineno_present = 1;
+    }
+  } else if (lineno_present != NULL) {
+    *lineno_present = 0;
+  }
+  return (enum ast_tag) t;
 }
 
 V7_PRIVATE ast_off_t
 ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
+  ast_off_t cur = start;
 
   assert(tag < AST_MAX_TAG);
 
-  mbuf_insert(&a->mbuf, start, NULL, sizeof(ast_skip_t) * d->num_skips);
-  mbuf_insert(&a->mbuf, start, (char *) &t, sizeof(t));
+  mbuf_insert(&a->mbuf, cur, (char *) &t, sizeof(t));
+  cur += sizeof(t);
+
+  mbuf_insert(&a->mbuf, cur, NULL, sizeof(ast_skip_t) * d->num_skips);
+  cur += sizeof(ast_skip_t) * d->num_skips;
 
   if (d->num_skips) {
     ast_set_skip(a, start + 1, AST_END_SKIP);
@@ -11833,38 +12199,39 @@ ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
   return start + 1;
 }
 
-/*
- * Patches a given skip slot for an already emitted node with the
- * current write cursor position (e.g. AST length).
- *
- * This is intended to be invoked when a node with a variable number
- * of child subtrees is closed, or when the consumers need a shortcut
- * to the next sibling.
- *
- * Each node type has a different number and semantic for skips,
- * all of them defined in the `ast_which_skip` enum.
- * All nodes having a variable number of child subtrees must define
- * at least the `AST_END_SKIP` skip, which effectively skips a node
- * boundary.
- *
- * Every tree reader can assume this and safely skip unknown nodes.
- */
+V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
+                               enum ast_tag tag) {
+  a->mbuf.buf[tag_off] = tag | (a->mbuf.buf[tag_off] & 0x80);
+}
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+V7_PRIVATE void ast_add_line_no(struct ast *a, ast_off_t tag_off, int line_no) {
+  uint8_t t = a->mbuf.buf[tag_off];
+  assert(t < AST_MAX_TAG);
+  {
+    const struct ast_node_def *d = &ast_node_defs[t];
+    int llen = calc_llen(line_no);
+    ast_off_t ln_off = tag_off + 1 /*tag*/ + d->num_skips * sizeof(ast_skip_t);
+
+    mbuf_insert(&a->mbuf, ln_off, NULL, llen);
+    encode_varint(line_no, (unsigned char *) (a->mbuf.buf + ln_off));
+    a->mbuf.buf[tag_off] |= AST_TAG_LINENO_PRESENT;
+  }
+}
+#endif
+
 V7_PRIVATE ast_off_t
 ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
   return ast_modify_skip(a, start, a->mbuf.len, skip);
 }
 
-/*
- * Patches a given skip slot for an already emitted node with the value
- * (stored as delta relative to the `start` node) of the `where` argument.
- */
 V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
                                      ast_off_t where,
                                      enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
   ast_skip_t delta = where - start;
 #ifndef NDEBUG
-  enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
+  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + start - 1), NULL);
   const struct ast_node_def *def = &ast_node_defs[tag];
 #endif
   assert(start <= where);
@@ -11905,19 +12272,22 @@ ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
 }
 
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
+  enum ast_tag ret;
   assert(*pos < a->mbuf.len);
-  return (enum ast_tag)(uint8_t) * (a->mbuf.buf + (*pos)++);
+
+  ret = uint8_to_tag(*(a->mbuf.buf + (*pos)++), NULL);
+
+  return ret;
 }
 
-/*
- * Assumes a cursor positioned right after a tag.
- *
- * TODO(mkm): add doc, find better name.
- */
 V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
-  enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + *pos - 1);
+  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + *pos - 1), NULL);
   const struct ast_node_def *def = &ast_node_defs[tag];
   assert(*pos - 1 < a->mbuf.len);
+
+  ast_move_to_inlined_data(a, pos);
+
+  /* skip varint + inline data, if present */
   if (def->has_varint) {
     int llen;
     size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
@@ -11926,34 +12296,83 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
       *pos += slen;
     }
   }
-
-  *pos += def->num_skips * sizeof(ast_skip_t);
 }
 
-/* Helper to add a node with inlined data. */
-V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
-                                     const char *name, size_t len) {
-  assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_add_node(a, tag), name, len, EMBSTR_UNESCAPE);
-}
+V7_PRIVATE ast_off_t ast_insert_inlined_node(struct ast *a, ast_off_t start,
+                                             enum ast_tag tag, const char *name,
+                                             size_t len) {
+  const struct ast_node_def *d = &ast_node_defs[tag];
 
-/* Helper to add a node with inlined data. */
-V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
-                                        enum ast_tag tag, const char *name,
-                                        size_t len) {
-  assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len,
+  ast_off_t offset = ast_insert_node(a, start, tag);
+
+  assert(d->has_inlined);
+
+  embed_string(&a->mbuf, offset + sizeof(ast_skip_t) * d->num_skips, name, len,
                EMBSTR_UNESCAPE);
+
+  return offset;
+}
+
+V7_PRIVATE int ast_get_line_no(struct ast *a, ast_off_t pos) {
+  /*
+   * by default we'll return 0, meaning that the AST node does not contain line
+   * number data
+   */
+  int ret = 0;
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+  uint8_t lineno_present;
+  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + pos - 1), &lineno_present);
+
+  if (lineno_present) {
+    /* line number is present, so, let's decode it */
+    int llen;
+
+    /* skip skips */
+    pos += ast_node_defs[tag].num_skips * sizeof(ast_skip_t);
+
+    /* get line number */
+    ret = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
+  }
+#else
+  (void) a;
+  (void) pos;
+#endif
+
+  return ret;
+}
+
+V7_PRIVATE void ast_move_to_inlined_data(struct ast *a, ast_off_t *pos) {
+  uint8_t lineno_present = 0;
+  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + *pos - 1), &lineno_present);
+  const struct ast_node_def *def = &ast_node_defs[tag];
+  assert(*pos - 1 < a->mbuf.len);
+
+  /* skip skips */
+  *pos += def->num_skips * sizeof(ast_skip_t);
+
+  /* skip line_no, if present */
+  if (lineno_present) {
+    int llen;
+    int line_no = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
+    *pos += llen;
+
+    (void) line_no;
+  }
 }
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
   assert(pos < a->mbuf.len);
+
+  ast_move_to_inlined_data(a, &pos);
+
   *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
-V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
+V7_PRIVATE double ast_get_num(struct ast *a, ast_off_t pos) {
+  double ret;
   char *str;
   size_t str_len;
   char buf[12];
@@ -11966,8 +12385,9 @@ V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
   }
   strncpy(p, str, str_len);
   p[str_len] = '\0';
-  *val = strtod(p, NULL);
+  ret = strtod(p, NULL);
   if (p != buf) free(p);
+  return ret;
 }
 
 #ifndef NO_LIBC
@@ -11997,7 +12417,7 @@ V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
     ast_skip_tree(a, pos);
   }
 
-  if (ast_node_defs[tag].num_skips) {
+  if (def->num_skips > AST_END_SKIP) {
     ast_off_t end = ast_get_skip(a, skips, AST_END_SKIP);
 
     while (*pos < end) {
@@ -12026,8 +12446,11 @@ V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
 #endif
 
   if (def->has_inlined) {
-    slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
-    fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + *pos + llen);
+    ast_off_t pos_tmp = *pos;
+    ast_move_to_inlined_data(a, &pos_tmp);
+
+    slen = decode_varint((unsigned char *) a->mbuf.buf + pos_tmp, &llen);
+    fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + pos_tmp + llen);
   } else {
     fprintf(fp, "\n");
   }
@@ -12110,6 +12533,7 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/shdata.h" */
 
 /*
  * TODO(dfrank): implement `bcode_serialize_*` more generically, so that they
@@ -12198,6 +12622,7 @@ static const char *op_names[] = {
 /* clang-format on */
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
+V7_STATIC_ASSERT(OP_MAX <= _OP_LINE_NO, bad_OP_LINE_NO);
 #endif
 
 static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode, FILE *out);
@@ -12307,11 +12732,19 @@ V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *f, struct bcode *bcode) {
 }
 #endif
 
-V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode) {
+V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode,
+                           void *filename, uint8_t filename_in_rom) {
   memset(bcode, 0x00, sizeof(*bcode));
   bcode->refcnt = 0;
   bcode->args_cnt = 0;
   bcode->strict_mode = strict_mode;
+#ifdef V7_ENABLE_FILENAMES
+  bcode->filename = filename;
+  bcode->filename_in_rom = filename_in_rom;
+#else
+  (void) filename;
+  (void) filename_in_rom;
+#endif
 }
 
 V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode) {
@@ -12334,6 +12767,13 @@ V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode) {
 
   free(bcode->lit.p);
   memset(&bcode->lit, 0x00, sizeof(bcode->lit));
+
+#ifdef V7_ENABLE_FILENAMES
+  if (!bcode->filename_in_rom && bcode->filename != NULL) {
+    shdata_release((struct shdata *) bcode->filename);
+    bcode->filename = NULL;
+  }
+#endif
 
   bcode->refcnt = 0;
 }
@@ -12358,9 +12798,45 @@ V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
   }
 }
 
+#ifdef V7_ENABLE_FILENAMES
+V7_PRIVATE const char *bcode_get_filename(struct bcode *bcode) {
+  const char *ret = NULL;
+  if (bcode->filename_in_rom) {
+    ret = (const char *) bcode->filename;
+  } else if (bcode->filename != NULL) {
+    ret = (const char *) shdata_get_payload((struct shdata *) bcode->filename);
+  }
+  return ret;
+}
+#endif
+
+V7_PRIVATE void bcode_copy_filename_from(struct bcode *dst, struct bcode *src) {
+#ifdef V7_ENABLE_FILENAMES
+  dst->filename_in_rom = src->filename_in_rom;
+  dst->filename = src->filename;
+
+  if (src->filename != NULL && !src->filename_in_rom) {
+    shdata_retain((struct shdata *) dst->filename);
+  }
+#else
+  (void) dst;
+  (void) src;
+#endif
+}
+
 V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op) {
   bcode_ops_append(bbuilder, &op, 1);
 }
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+V7_PRIVATE void bcode_append_lineno(struct bcode_builder *bbuilder,
+                                    int line_no) {
+  int offset = bbuilder->ops.len;
+  bcode_add_varint(bbuilder, (line_no << 1) | 1);
+  bbuilder->ops.buf[offset] = msb_lsb_swap(bbuilder->ops.buf[offset]);
+  assert(bbuilder->ops.buf[offset] & _OP_LINE_NO);
+}
+#endif
 
 /*
  * Appends varint-encoded integer to the `ops` mbuf
@@ -12384,6 +12860,34 @@ V7_PRIVATE size_t bcode_get_varint(char **ops) {
   *ops += len - 1;
   return ret;
 }
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+/*
+ * Appends varint-encoded integer to the `ops` mbuf
+ */
+V7_PRIVATE void bcode_add_varint_ext(struct bcode_builder *bbuilder,
+                                     size_t value, int first_byte_bits) {
+  int k = calc_llen_ext(
+      value, first_byte_bits); /* Calculate how many bytes length takes */
+  int offset = bbuilder->ops.len;
+
+  /* Allocate buffer */
+  bcode_ops_append(bbuilder, NULL, k);
+
+  /* Write value */
+  encode_varint_ext(value, (unsigned char *) bbuilder->ops.buf + offset,
+                    first_byte_bits);
+}
+
+V7_PRIVATE size_t bcode_get_varint_ext(char **ops, int first_byte_bits) {
+  size_t ret = 0;
+  int len = 0;
+  (*ops)++;
+  ret = decode_varint_ext((unsigned char *) *ops, &len, first_byte_bits);
+  *ops += len - 1;
+  return ret;
+}
+#endif
 
 static int bcode_is_inline_string(struct v7 *v7, val_t val) {
   uint64_t tag = val & V7_TAG_MASK;
@@ -12483,7 +12987,9 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, char **ops) {
       struct v7_js_function *func = to_js_function(res);
 
       func->bcode = (struct bcode *) calloc(1, sizeof(*func->bcode));
-      bcode_init(func->bcode, bcode->strict_mode);
+      bcode_init(func->bcode, bcode->strict_mode, NULL /* will be set below */,
+                 0);
+      bcode_copy_filename_from(func->bcode, bcode);
       retain_bcode(v7, func->bcode);
 
       /* deserialize the function's bcode from `ops` */
@@ -12591,7 +13097,7 @@ V7_PRIVATE enum v7_err bcode_add_name(struct bcode_builder *bbuilder,
     len = strlen(p);
   }
 
-  /* if index at which to put name is not provided, we'll append at the end */
+  /* index at which to put name. If not provided, we'll append at the end */
   if (idx != NULL) {
     ops_index = *idx;
   } else {
@@ -12786,6 +13292,9 @@ static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode,
   /* names_cnt */
   bcode_serialize_varint(bcode->names_cnt, out);
 
+  /* func_name_present */
+  bcode_serialize_varint(bcode->func_name_present, out);
+
   /*
    * bcode:
    * <varint> // opcodes length
@@ -12874,6 +13383,9 @@ static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
   /* get number of names */
   bcode->names_cnt = bcode_deserialize_varint(&data);
 
+  /* get whether the function name is present in `names` */
+  bcode->func_name_present = bcode_deserialize_varint(&data);
+
   /* get opcode size */
   size = bcode_deserialize_varint(&data);
 
@@ -12915,8 +13427,10 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/shdata.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/varint.h" */
 
 /*
  * Bcode offsets in "try stack" are stored in JS numbers, i.e.  in `double`s.
@@ -13262,8 +13776,9 @@ static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
  * TODO(dfrank): avoid using `val_t` objects for this, use some regular C
  * struct instead.
  */
-static struct v7_call_frame *bcode_create_call_frame(
-    struct v7 *v7, struct bcode_registers *r) {
+static struct v7_call_frame *bcode_create_call_frame(struct v7 *v7,
+                                                     struct bcode *bcode,
+                                                     char *ops) {
   struct v7_call_frame *call_frame =
       (struct v7_call_frame *) calloc(1, sizeof(*call_frame));
 
@@ -13280,16 +13795,19 @@ static struct v7_call_frame *bcode_create_call_frame(
   /* stack size */
   call_frame->stack_size = v7->stack.len;
 
-  if (r != NULL) {
+  if (bcode != NULL) {
     /* save bcode and the current position in it */
-    call_frame->bcode = r->bcode;
-    call_frame->bcode_ops = r->ops + 1;
+    call_frame->bcode = bcode;
+    call_frame->bcode_ops = ops;
 
     /* `this` object */
     call_frame->vals.this_obj = v7_get_this(v7);
 
     /* is constructor */
     call_frame->is_constructor = v7->is_constructor;
+
+    /* current line number */
+    call_frame->line_no = v7->line_no;
   } else {
     /*
      * No bcode registers is provided: assume it's not going to change, and
@@ -13317,7 +13835,7 @@ static enum v7_err bcode_perform_call(struct v7 *v7, v7_val_t scope_frame,
   struct v7_call_frame *call_frame = NULL;
 
   /* create new `call_frame` which will replace `v7->call_stack` */
-  call_frame = bcode_create_call_frame(v7, r);
+  call_frame = bcode_create_call_frame(v7, r->bcode, r->ops + 1);
 
   /* after context is saved, we can change current context */
   v7->vals.this_object = this_object;
@@ -13328,6 +13846,7 @@ static enum v7_err bcode_perform_call(struct v7 *v7, v7_val_t scope_frame,
   v7->vals.scope = scope_frame;
   v7->call_stack = call_frame;
   bcode_restore_registers(v7, func->bcode, r);
+  v7->bcode = func->bcode;
 
   /* adjust `ops` since names were already read from it */
   r->ops = ops;
@@ -13372,6 +13891,12 @@ static uint8_t unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
 
     /* restore `is_constructor` */
     v7->is_constructor = v7->call_stack->is_constructor;
+
+    /* restore bcode */
+    v7->bcode = v7->call_stack->bcode;
+
+    /* restore line number */
+    v7->line_no = v7->call_stack->line_no;
   }
 
   /* adjust data stack length (restore saved) */
@@ -13399,7 +13924,7 @@ static enum v7_err bcode_private_frame_push(struct v7 *v7,
    * Create new `call_frame` which will replace `v7->call_stack`. We pass
    * `NULL` for `bcode_registers` because we're creating "private" call_frame.
    */
-  call_frame = bcode_create_call_frame(v7, NULL);
+  call_frame = bcode_create_call_frame(v7, NULL, NULL);
 
   /* new scope_frame will inherit from the current scope */
   obj_prototype_set(v7, v7_to_object(scope_frame),
@@ -13911,6 +14436,7 @@ static void reset_last_name(struct v7 *v7) {
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
   struct bcode_registers r;
+  struct bcode *saved_bcode = v7->bcode;
   enum v7_err rcode = V7_OK;
 
   /*
@@ -13925,6 +14451,8 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
         v3 = v7_mk_undefined(), v4 = v7_mk_undefined(),
         scope_frame = v7_mk_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
+
+  v7->bcode = bcode;
 
   bcode_restore_registers(v7, bcode, &r);
 
@@ -13953,6 +14481,28 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
 restart:
   while (r.ops < r.end && rcode == V7_OK) {
     enum opcode op = (enum opcode) * r.ops;
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+    if ((uint8_t) op >= _OP_LINE_NO) {
+      unsigned char buf[sizeof(size_t)];
+      int len;
+
+      /*
+       * before we decode varint, we'll have to swap MSB and LSB, but we can't
+       * do it in place since we're decoding from constant memory, so, we also
+       * have to copy the data to the temp buffer first. 4 bytes should be
+       * enough for everyone's line number.
+       */
+      memcpy(buf, r.ops, sizeof(buf));
+      buf[0] = msb_lsb_swap(buf[0]);
+
+      v7->line_no = decode_varint(buf, &len) >> 1;
+      assert((size_t) len <= sizeof(buf));
+      r.ops += len;
+
+      continue;
+    }
+#endif
 
     push_bcode_history(v7, op);
 
@@ -14589,8 +15139,49 @@ restart:
               v3 = v7->vals.global_object;
             }
 
-            BTRY(call_cfunction(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/,
-                                is_constructor, &v4));
+/*
+ * For the stack trace to be complete, we have to create a frame
+ * when calling cfunction, and a dummy bcode.
+ *
+ * TODO(dfrank): improve that. Probably we have to invent "light"
+ * stack frames, without bcode.
+ */
+#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+            v7->call_stack = bcode_create_call_frame(v7, r.bcode, r.ops);
+            {
+              struct bcode *bcode_tmp =
+                  (struct bcode *) calloc(1, sizeof(*bcode));
+#if !defined(V7_FILENAMES_SUPPRESS_CFUNC_ADDR)
+              v7_cfunction_t *cfunc = to_cfunction(v7, v1);
+              int len = snprintf(NULL, 0, "cfunc_%p", cfunc) + 1 /*null-term*/;
+              struct shdata *sd = shdata_create(NULL, len);
+              snprintf((char *) shdata_get_payload(sd), len, "cfunc_%p", cfunc);
+#else
+              /*
+               * We need this mode only for ecma test reporting, so that the
+               * report is not different from one run to another
+               *
+               * TODO(dfrank): avoid code duplication
+               */
+              int len = snprintf(NULL, 0, "cfunc") + 1 /*null-term*/;
+              struct shdata *sd = shdata_create(NULL, len);
+              snprintf((char *) shdata_get_payload(sd), len, "cfunc");
+#endif
+
+              bcode_init(bcode_tmp, 0, sd, 0);
+              retain_bcode(v7, bcode_tmp);
+              v7->bcode = bcode_tmp;
+              v7->line_no = 0;
+#endif
+
+              BTRY(call_cfunction(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/,
+                                  is_constructor, &v4));
+
+#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+              release_bcode(v7, bcode_tmp);
+            }
+            unwind_stack_1level(v7, &r);
+#endif
 
             /* push value returned from C function to bcode stack */
             PUSH(v4);
@@ -14874,6 +15465,7 @@ restart:
   }
 
 clean:
+  v7->bcode = saved_bcode;
   tmp_frame_cleanup(&tf);
   return rcode;
 }
@@ -14913,9 +15505,9 @@ clean:
  * it suck less.
  */
 V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
-                              val_t func, val_t args, val_t this_object,
-                              int is_json, int fr, uint8_t is_constructor,
-                              val_t *res) {
+                              const char *filename, val_t func, val_t args,
+                              val_t this_object, int is_json, int fr,
+                              uint8_t is_constructor, val_t *res) {
 #if defined(V7_BCODE_TRACE_SRC)
   fprintf(stderr, "src:'%s'\n", src);
 #endif
@@ -14926,14 +15518,17 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
   struct v7_call_frame *saved_bottom_call_stack = v7->bottom_call_stack;
   val_t saved_try_stack = v7_mk_undefined();
   size_t saved_stack_len = v7->stack.len;
+  int saved_line_no = v7->line_no;
   enum v7_err rcode = V7_OK;
-  val_t r = v7_mk_undefined();
+  val_t _res = v7_mk_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   uint8_t noopt = 0;
   struct bcode *bcode = NULL;
 #if defined(V7_ENABLE_STACK_TRACKING)
   struct stack_track_ctx stack_track_ctx;
 #endif
+
+  (void) filename;
 
 #if defined(V7_ENABLE_STACK_TRACKING)
   v7_stack_track_start(v7, &stack_track_ctx);
@@ -14944,15 +15539,24 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
   tmp_stack_push(&tf, &func);
   tmp_stack_push(&tf, &args);
   tmp_stack_push(&tf, &this_object);
-  tmp_stack_push(&tf, &r);
+  tmp_stack_push(&tf, &_res);
 
   /* init new bcode */
   bcode = (struct bcode *) calloc(1, sizeof(*bcode));
+
+  bcode_init(bcode,
 #ifndef V7_FORCE_STRICT_MODE
-  bcode_init(bcode, 0);
+             0,
 #else
-  bcode_init(bcode, 1);
+             1,
 #endif
+#ifdef V7_ENABLE_FILENAMES
+             filename ? shdata_create_from_string(filename) : NULL,
+#else
+             NULL,
+#endif
+             0 /*filename not in ROM*/
+             );
 
   retain_bcode(v7, bcode);
   own_bcode(v7, bcode);
@@ -14976,6 +15580,9 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 
   if (src != NULL) {
     /* Caller provided some source code, so, handle it somehow */
+
+    /* Reset line number to 1 */
+    v7->line_no = 1;
 
     if (src_len >= sizeof(BIN_BCODE_SIGNATURE) &&
         strncmp(BIN_BCODE_SIGNATURE, src, sizeof(BIN_BCODE_SIGNATURE)) == 0) {
@@ -15072,7 +15679,9 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
     bcode_builder_finalize(&bbuilder);
   } else if (is_cfunction_lite(func) || is_cfunction_obj(v7, func)) {
     /* call cfunction */
-    V7_TRY(call_cfunction(v7, func, this_object, args, 0 /* not a ctor */, &r));
+    /* TODO(dfrank): set bcode filename to cfunc_xxxxxx */
+    V7_TRY(
+        call_cfunction(v7, func, this_object, args, 0 /* not a ctor */, &_res));
     goto clean;
   } else {
     /* value is not a function */
@@ -15103,7 +15712,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 #endif
 
   /* get the value returned from the evaluated script */
-  r = POP();
+  _res = POP();
 
 clean:
 
@@ -15125,7 +15734,7 @@ clean:
 
   if (rcode != V7_OK) {
     /* some exception happened. */
-    r = v7->vals.thrown_error;
+    _res = v7->vals.thrown_error;
 
     /*
      * if this is a top-level bcode, clear thrown error from the v7 context
@@ -15165,17 +15774,19 @@ clean:
 
   v7->call_stack->vals.try_stack = saved_try_stack;
 
+  v7->line_no = saved_line_no;
+
   if (a != NULL) {
     release_ast(v7, a);
     a = NULL;
   }
 
-  if (is_constructor && !v7_is_object(r)) {
+  if (is_constructor && !v7_is_object(_res)) {
     /* constructor returned non-object: replace it with `this` */
-    r = v7->vals.this_object;
+    _res = v7->vals.this_object;
   }
   if (res != NULL) {
-    *res = r;
+    *res = _res;
   }
   v7->vals.this_object = saved_this;
 
@@ -15196,7 +15807,8 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                                v7_val_t args, uint8_t is_constructor,
                                v7_val_t *res) {
-  return b_exec(v7, NULL, 0, func, args, this_obj, 0, 0, is_constructor, res);
+  return b_exec(v7, NULL, 0, NULL, func, args, this_obj, 0, 0, is_constructor,
+                res);
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/core.c"
@@ -15828,29 +16440,26 @@ int v7_is_callable(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 
-/*
- * TODO(alashkin): we need src_len only in case of
- * binary AST-file, i.e. for exec_file & Co
- * To keep v7_exec_xxxx signatures unchanged
- * providing 0 as src_len.
- * That is a dirty workaround.
- */
-enum v7_err v7_exec_with(struct v7 *v7, const char *src, val_t t, val_t *res) {
-  return b_exec(v7, src, 0, v7_mk_undefined(), v7_mk_undefined(), t, 0, 0, 0,
-                res);
-}
-
-enum v7_err v7_exec(struct v7 *v7, const char *src, val_t *res) {
-  return b_exec(v7, src, 0, v7_mk_undefined(), v7_mk_undefined(),
+enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *res) {
+  return b_exec(v7, js_code, 0, NULL, v7_mk_undefined(), v7_mk_undefined(),
                 v7_mk_undefined(), 0, 0, 0, res);
 }
 
-enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *res) {
-  return b_exec(v7, str, 0, v7_mk_undefined(), v7_mk_undefined(),
+enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
+                        const struct v7_exec_opts *opts, v7_val_t *res) {
+  return b_exec(v7, js_code, 0, opts->filename, v7_mk_undefined(),
+                v7_mk_undefined(),
+                (opts->this_obj == 0 ? v7_mk_undefined() : opts->this_obj),
+                opts->is_json, 0, 0, res);
+}
+
+enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res) {
+  return b_exec(v7, str, 0, NULL, v7_mk_undefined(), v7_mk_undefined(),
                 v7_mk_undefined(), 1, 0, 0, res);
 }
 
@@ -15893,7 +16502,7 @@ static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
 #else
     int fr = 0;
 #endif
-    rcode = b_exec(v7, p, file_size, v7_mk_undefined(), v7_mk_undefined(),
+    rcode = b_exec(v7, p, file_size, path, v7_mk_undefined(), v7_mk_undefined(),
                    v7_mk_undefined(), is_json, fr, 0, res);
     if (rcode != V7_OK) {
       goto clean;
@@ -15943,7 +16552,13 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
   if (err == V7_OK) {
     if (use_bcode) {
       struct bcode bcode;
-      bcode_init(&bcode, 0);
+      /*
+       * We don't set filename here, because the bcode will be just serialized
+       * and then freed. We don't currently serialize filename. If we ever do,
+       * we'll have to make `v7_compile()` to also take a filename argument,
+       * and use it here.
+       */
+      bcode_init(&bcode, 0, NULL, 0);
       err = compile_script(v7, &ast, &bcode);
       if (err != V7_OK) {
         goto cleanup_bcode;
@@ -15987,6 +16602,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/primitive.h" */
 
@@ -16011,20 +16627,12 @@ void v7_fprintln(FILE *f, struct v7 *v7, val_t v) {
 }
 
 void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
-  val_t frame, func, args;
-
-  /*
-   * TODO(dfrank): since `struct v7_call_frame` is introduced, the stack
-   * trace is broken. Fix it.
-   */
-  for (frame = v7_get(v7, e, "stack", ~0); v7_is_object(frame);
-       frame = v7_get(v7, frame, "____p", ~0)) {
-    args = v7_get(v7, frame, "arguments", ~0);
-    if (v7_is_object(args)) {
-      func = v7_get(v7, args, "callee", ~0);
-      fprintf(f, "   at: ");
-      v7_fprintln(f, v7, func);
-    }
+  size_t s;
+  val_t strace_v = v7_get(v7, e, "stack", ~0);
+  const char *strace = NULL;
+  if (v7_is_string(strace_v)) {
+    strace = v7_get_string_data(v7, &strace_v, &s);
+    fprintf(f, "%s\n", strace);
   }
 }
 
@@ -16077,6 +16685,15 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
       return V7_TYPE_UNDEFINED;
   }
 }
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b) {
+  if ((b & 0x01) != (b >> 7)) {
+    b ^= 0x81;
+  }
+  return b;
+}
+#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/string.c"
 #endif
@@ -18807,6 +19424,49 @@ int v7_is_truthy(struct v7 *v7, val_t v) {
   return v7_to_boolean(to_boolean_v(v7, v));
 }
 #ifdef V7_MODULE_LINES
+#line 1 "./src/shdata.c"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/shdata.h" */
+
+#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+V7_PRIVATE struct shdata *shdata_create(const void *payload, size_t size) {
+  struct shdata *ret =
+      (struct shdata *) calloc(1, sizeof(struct shdata) + size);
+  shdata_retain(ret);
+  if (payload != NULL) {
+    memcpy((char *) shdata_get_payload(ret), (char *) payload, size);
+  }
+  return ret;
+}
+
+V7_PRIVATE struct shdata *shdata_create_from_string(const char *src) {
+  return shdata_create(src, strlen(src) + 1 /*null-term*/);
+}
+
+V7_PRIVATE void shdata_retain(struct shdata *p) {
+  p->refcnt++;
+  assert(p->refcnt > 0);
+}
+
+V7_PRIVATE void shdata_release(struct shdata *p) {
+  assert(p->refcnt > 0);
+  p->refcnt--;
+  if (p->refcnt == 0) {
+    free(p);
+  }
+}
+
+V7_PRIVATE void *shdata_get_payload(struct shdata *p) {
+  return (char *) p + sizeof(*p);
+}
+#endif
+#ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
 #endif
 /*
@@ -19793,9 +20453,10 @@ V7_PRIVATE void freeze_obj(struct v7 *v7, FILE *f, v7_val_t v) {
     fprintf(f,
             "{\"type\":\"bcode\", \"addr\":\"%p\", \"args_cnt\":%d, "
             "\"names_cnt\":%d, "
-            "\"strict_mode\": %d, \"ops\":%s, \"lit\": [",
+            "\"strict_mode\": %d, \"func_name_present\": %d, \"ops\":%s, "
+            "\"lit\": [",
             (void *) bcode, bcode->args_cnt, bcode->names_cnt,
-            bcode->strict_mode, jops);
+            bcode->strict_mode, bcode->func_name_present, jops);
 
     for (i = 0; (size_t) i < bcode->lit.len / sizeof(val_t); i++) {
       val_t v = ((val_t *) bcode->lit.p)[i];
@@ -19898,9 +20559,9 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
 #define PARSE_WITH_OPT_ARG(tag, arg_tag, arg_parser, label) \
   do {                                                      \
     if (end_of_statement(v7) == V7_OK) {                    \
-      ast_add_node(a, (tag));                               \
+      add_node(v7, a, (tag));                               \
     } else {                                                \
-      ast_add_node(a, (arg_tag));                           \
+      add_node(v7, a, (arg_tag));                           \
       arg_parser(label);                                    \
     }                                                       \
   } while (0)
@@ -21130,6 +21791,59 @@ static enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
+#ifdef V7_ENABLE_LINE_NUMBERS
+/*
+ * Assumes `offset` points to the byte right after a tag
+ */
+static void insert_line_no_if_changed(struct v7 *v7, struct ast *a,
+                                      ast_off_t offset) {
+  if (v7->pstate.prev_line_no != v7->line_no) {
+    v7->line_no = v7->pstate.prev_line_no;
+    ast_add_line_no(a, offset - 1, v7->line_no);
+  } else {
+#if V7_AST_FORCE_LINE_NUMBERS
+    /*
+     * This mode is needed for debug only: to make sure AST consumers correctly
+     * consume all nodes with line numbers data encoded
+     */
+    ast_add_line_no(a, offset - 1, 0);
+#endif
+  }
+}
+#else
+static void insert_line_no_if_changed(struct v7 *v7, struct ast *a,
+                                      ast_off_t offset) {
+  (void) v7;
+  (void) a;
+  (void) offset;
+}
+#endif
+
+static ast_off_t insert_node(struct v7 *v7, struct ast *a, ast_off_t start,
+                             enum ast_tag tag) {
+  ast_off_t ret = ast_insert_node(a, start, tag);
+  insert_line_no_if_changed(v7, a, ret);
+  return ret;
+}
+
+static ast_off_t add_node(struct v7 *v7, struct ast *a, enum ast_tag tag) {
+  return insert_node(v7, a, a->mbuf.len, tag);
+}
+
+static ast_off_t insert_inlined_node(struct v7 *v7, struct ast *a,
+                                     ast_off_t start, enum ast_tag tag,
+                                     const char *name, size_t len) {
+  ast_off_t ret = ast_insert_inlined_node(a, start, tag, name, len);
+  insert_line_no_if_changed(v7, a, ret);
+  return ret;
+}
+
+static ast_off_t add_inlined_node(struct v7 *v7, struct ast *a,
+                                  enum ast_tag tag, const char *name,
+                                  size_t len) {
+  return insert_inlined_node(v7, a, a->mbuf.len, tag, name, len);
+}
+
 static unsigned long get_column(const char *code, const char *pos) {
   const char *p = pos;
   while (p > code && *p != '\n') {
@@ -21164,7 +21878,7 @@ static int parse_optional(struct v7 *v7, struct ast *a,
   if (v7->cur_tok != terminator) {
     return 1;
   }
-  ast_add_node(a, AST_NOP);
+  add_node(v7, a, AST_NOP);
   return 0;
 }
 
@@ -21367,7 +22081,7 @@ fid_parse_script :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_script_locals_t)
 {
-  L->start = ast_add_node(a, AST_SCRIPT);
+  L->start = add_node(v7, a, AST_SCRIPT);
   L->outer_last_var_node = v7->last_var_node;
   L->saved_in_strict = v7->pstate.in_strict;
 
@@ -21399,7 +22113,7 @@ fid_parse_use_strict :
       (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
        strncmp(v7->tok, "'use strict'", v7->tok_len) == 0)) {
     next_tok(v7);
-    ast_add_node(a, AST_USE_STRICT);
+    add_node(v7, a, AST_USE_STRICT);
     CR_RETURN_VOID();
   } else {
     CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
@@ -21419,12 +22133,12 @@ fid_parse_body :
       if (v7->cur_tok != TOK_IDENTIFIER) {
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
       }
-      L->start = ast_add_node(a, AST_VAR);
+      L->start = add_node(v7, a, AST_VAR);
       ast_modify_skip(a, v7->last_var_node, L->start, AST_FUNC_FIRST_VAR_SKIP);
       /* zero out var node pointer */
       ast_modify_skip(a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
       v7->last_var_node = L->start;
-      ast_add_inlined_node(a, AST_FUNC_DECL, v7->tok, v7->tok_len);
+      add_inlined_node(v7, a, AST_FUNC_DECL, v7->tok, v7->tok_len);
 
       CALL_PARSE_FUNCDECL(1, 0, fid_p_body_1);
       ast_set_skip(a, L->start, AST_END_SKIP);
@@ -21503,12 +22217,12 @@ fid_parse_statement :
       break;
     case TOK_THROW:
       next_tok(v7);
-      ast_add_node(a, AST_THROW);
+      add_node(v7, a, AST_THROW);
       CALL_PARSE_EXPRESSION(fid_p_stat_2);
       break;
     case TOK_DEBUGGER:
       next_tok(v7);
-      ast_add_node(a, AST_DEBUGGER);
+      add_node(v7, a, AST_DEBUGGER);
       break;
     case TOK_VAR:
       next_tok(v7);
@@ -21516,7 +22230,7 @@ fid_parse_statement :
       break;
     case TOK_IDENTIFIER:
       if (lookahead(v7) == TOK_COLON) {
-        ast_add_inlined_node(a, AST_LABEL, v7->tok, v7->tok_len);
+        add_inlined_node(v7, a, AST_LABEL, v7->tok, v7->tok_len);
         next_tok(v7);
         EXPECT(TOK_COLON);
         CR_RETURN_VOID();
@@ -21550,7 +22264,7 @@ fid_parse_expression :
     }
   }
   if (L->group) {
-    ast_insert_node(a, L->pos, AST_SEQ);
+    insert_node(v7, a, L->pos, AST_SEQ);
   }
   CR_RETURN_VOID();
 }
@@ -21604,15 +22318,15 @@ fid_parse_binary :
           CALL_PARSE_ASSIGN(fid_p_binary_2);
           EXPECT(TOK_COLON);
           CALL_PARSE_ASSIGN(fid_p_binary_3);
-          ast_insert_node(a, CUR_POS, AST_COND);
+          insert_node(v7, a, CUR_POS, AST_COND);
           CR_RETURN_VOID();
         } else if (ACCEPT(L->tok)) {
           if (levels[L->level].left_to_right) {
-            ast_insert_node(a, CUR_POS, (enum ast_tag) L->ast);
+            insert_node(v7, a, CUR_POS, (enum ast_tag) L->ast);
             CALL_PARSE_BINARY(L->level, CUR_POS, fid_p_binary_4);
           } else {
             CALL_PARSE_BINARY(L->level, a->mbuf.len, fid_p_binary_5);
-            ast_insert_node(a, CUR_POS, (enum ast_tag) L->ast);
+            insert_node(v7, a, CUR_POS, (enum ast_tag) L->ast);
           }
         }
       } while (L->ast = (enum ast_tag)(L->ast + 1),
@@ -21635,39 +22349,39 @@ fid_parse_prefix :
     switch (v7->cur_tok) {
       case TOK_PLUS:
         next_tok(v7);
-        ast_add_node(a, AST_POSITIVE);
+        add_node(v7, a, AST_POSITIVE);
         break;
       case TOK_MINUS:
         next_tok(v7);
-        ast_add_node(a, AST_NEGATIVE);
+        add_node(v7, a, AST_NEGATIVE);
         break;
       case TOK_PLUS_PLUS:
         next_tok(v7);
-        ast_add_node(a, AST_PREINC);
+        add_node(v7, a, AST_PREINC);
         break;
       case TOK_MINUS_MINUS:
         next_tok(v7);
-        ast_add_node(a, AST_PREDEC);
+        add_node(v7, a, AST_PREDEC);
         break;
       case TOK_TILDA:
         next_tok(v7);
-        ast_add_node(a, AST_NOT);
+        add_node(v7, a, AST_NOT);
         break;
       case TOK_NOT:
         next_tok(v7);
-        ast_add_node(a, AST_LOGICAL_NOT);
+        add_node(v7, a, AST_LOGICAL_NOT);
         break;
       case TOK_VOID:
         next_tok(v7);
-        ast_add_node(a, AST_VOID);
+        add_node(v7, a, AST_VOID);
         break;
       case TOK_DELETE:
         next_tok(v7);
-        ast_add_node(a, AST_DELETE);
+        add_node(v7, a, AST_DELETE);
         break;
       case TOK_TYPEOF:
         next_tok(v7);
-        ast_add_node(a, AST_TYPEOF);
+        add_node(v7, a, AST_TYPEOF);
         break;
       default:
         CALL_PARSE_POSTFIX(fid_p_prefix_1);
@@ -21690,11 +22404,11 @@ fid_parse_postfix :
   switch (v7->cur_tok) {
     case TOK_PLUS_PLUS:
       next_tok(v7);
-      ast_insert_node(a, L->pos, AST_POSTINC);
+      insert_node(v7, a, L->pos, AST_POSTINC);
       break;
     case TOK_MINUS_MINUS:
       next_tok(v7);
-      ast_insert_node(a, L->pos, AST_POSTDEC);
+      insert_node(v7, a, L->pos, AST_POSTDEC);
       break;
     default:
       break; /* nothing */
@@ -21720,7 +22434,7 @@ fid_parse_callexpr :
         next_tok(v7);
         CALL_PARSE_ARGLIST(fid_p_callexpr_2);
         EXPECT(TOK_CLOSE_PAREN);
-        ast_insert_node(a, L->pos, AST_CALL);
+        insert_node(v7, a, L->pos, AST_CALL);
         break;
       default:
         CR_RETURN_VOID();
@@ -21736,7 +22450,7 @@ fid_parse_newexpr :
   switch (v7->cur_tok) {
     case TOK_NEW:
       next_tok(v7);
-      L->start = ast_add_node(a, AST_NEW);
+      L->start = add_node(v7, a, AST_NEW);
       CALL_PARSE_MEMBEREXPR(fid_p_newexpr_3);
       if (ACCEPT(TOK_OPEN_PAREN)) {
         CALL_PARSE_ARGLIST(fid_p_newexpr_4);
@@ -21768,11 +22482,11 @@ fid_parse_terminal :
       break;
     case TOK_OPEN_BRACKET:
       next_tok(v7);
-      L->start = ast_add_node(a, AST_ARRAY);
+      L->start = add_node(v7, a, AST_ARRAY);
       while (v7->cur_tok != TOK_CLOSE_BRACKET) {
         if (v7->cur_tok == TOK_COMMA) {
           /* Array literals allow missing elements, e.g. [,,1,] */
-          ast_add_node(a, AST_NOP);
+          add_node(v7, a, AST_NOP);
         } else {
           CALL_PARSE_ASSIGN(fid_p_terminal_2);
         }
@@ -21783,7 +22497,7 @@ fid_parse_terminal :
       break;
     case TOK_OPEN_CURLY:
       next_tok(v7);
-      L->start = ast_add_node(a, AST_OBJECT);
+      L->start = add_node(v7, a, AST_OBJECT);
       if (v7->cur_tok != TOK_CLOSE_CURLY) {
         do {
           if (v7->cur_tok == TOK_CLOSE_CURLY) {
@@ -21797,35 +22511,35 @@ fid_parse_terminal :
       break;
     case TOK_THIS:
       next_tok(v7);
-      ast_add_node(a, AST_THIS);
+      add_node(v7, a, AST_THIS);
       break;
     case TOK_TRUE:
       next_tok(v7);
-      ast_add_node(a, AST_TRUE);
+      add_node(v7, a, AST_TRUE);
       break;
     case TOK_FALSE:
       next_tok(v7);
-      ast_add_node(a, AST_FALSE);
+      add_node(v7, a, AST_FALSE);
       break;
     case TOK_NULL:
       next_tok(v7);
-      ast_add_node(a, AST_NULL);
+      add_node(v7, a, AST_NULL);
       break;
     case TOK_STRING_LITERAL:
-      ast_add_inlined_node(a, AST_STRING, v7->tok + 1, v7->tok_len - 2);
+      add_inlined_node(v7, a, AST_STRING, v7->tok + 1, v7->tok_len - 2);
       next_tok(v7);
       break;
     case TOK_NUMBER:
-      ast_add_inlined_node(a, AST_NUM, v7->tok, v7->tok_len);
+      add_inlined_node(v7, a, AST_NUM, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_REGEX_LITERAL:
-      ast_add_inlined_node(a, AST_REGEX, v7->tok, v7->tok_len);
+      add_inlined_node(v7, a, AST_REGEX, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_IDENTIFIER:
       if (v7->tok_len == 9 && strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
-        ast_add_node(a, AST_UNDEFINED);
+        add_node(v7, a, AST_UNDEFINED);
         next_tok(v7);
         break;
       }
@@ -21852,7 +22566,7 @@ fid_parse_if :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_if_locals_t)
 {
-  L->start = ast_add_node(a, AST_IF);
+  L->start = add_node(v7, a, AST_IF);
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_EXPRESSION(fid_p_if_1);
   EXPECT(TOK_CLOSE_PAREN);
@@ -21870,7 +22584,7 @@ fid_parse_while :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_while_locals_t)
 {
-  L->start = ast_add_node(a, AST_WHILE);
+  L->start = add_node(v7, a, AST_WHILE);
   L->saved_in_loop = v7->pstate.in_loop;
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_EXPRESSION(fid_p_while_1);
@@ -21888,7 +22602,7 @@ fid_parse_ident :
 #define L CR_CUR_LOCALS_PT(fid_parse_ident_locals_t)
 {
   if (v7->cur_tok == TOK_IDENTIFIER) {
-    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
+    add_inlined_node(v7, a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
     CR_RETURN_VOID();
   }
@@ -21906,7 +22620,7 @@ fid_parse_ident_allow_reserved_words :
 {
   /* Allow reserved words as property names. */
   if (is_reserved_word_token(v7->cur_tok)) {
-    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
+    add_inlined_node(v7, a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
   } else {
     CALL_PARSE_IDENT(fid_p_ident_arw_1);
@@ -21919,7 +22633,7 @@ fid_parse_funcdecl :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_funcdecl_locals_t)
 {
-  L->start = ast_add_node(a, AST_FUNC);
+  L->start = add_node(v7, a, AST_FUNC);
   L->outer_last_var_node = v7->last_var_node;
   L->saved_in_function = v7->pstate.in_function;
   L->saved_in_strict = v7->pstate.in_strict;
@@ -21942,7 +22656,7 @@ fid_parse_funcdecl :
       CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
     } else {
       /* it's ok not to have a function name, just insert NOP */
-      ast_add_node(a, AST_NOP);
+      add_node(v7, a, AST_NOP);
     }
   }
   CR_ENDCATCH(fid_p_funcdecl_3);
@@ -21998,8 +22712,8 @@ fid_parse_member :
       /* Allow reserved words as member identifiers */
       if (is_reserved_word_token(v7->cur_tok) ||
           v7->cur_tok == TOK_IDENTIFIER) {
-        ast_insert_inlined_node(a, L->arg.pos, AST_MEMBER, v7->tok,
-                                v7->tok_len);
+        insert_inlined_node(v7, a, L->arg.pos, AST_MEMBER, v7->tok,
+                            v7->tok_len);
         next_tok(v7);
       } else {
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
@@ -22009,7 +22723,7 @@ fid_parse_member :
       next_tok(v7);
       CALL_PARSE_EXPRESSION(fid_p_member_1);
       EXPECT(TOK_CLOSE_BRACKET);
-      ast_insert_node(a, L->arg.pos, AST_INDEX);
+      insert_node(v7, a, L->arg.pos, AST_INDEX);
       break;
     default:
       CR_RETURN_VOID();
@@ -22043,18 +22757,18 @@ fid_parse_var :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_var_locals_t)
 {
-  L->start = ast_add_node(a, AST_VAR);
+  L->start = add_node(v7, a, AST_VAR);
   ast_modify_skip(a, v7->last_var_node, L->start, AST_FUNC_FIRST_VAR_SKIP);
   /* zero out var node pointer */
   ast_modify_skip(a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
   v7->last_var_node = L->start;
   do {
-    ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
+    add_inlined_node(v7, a, AST_VAR_DECL, v7->tok, v7->tok_len);
     EXPECT(TOK_IDENTIFIER);
     if (ACCEPT(TOK_ASSIGN)) {
       CALL_PARSE_ASSIGN(fid_p_var_1);
     } else {
-      ast_add_node(a, AST_NOP);
+      add_node(v7, a, AST_NOP);
     }
   } while (ACCEPT(TOK_COMMA));
   ast_set_skip(a, L->start, AST_END_SKIP);
@@ -22070,7 +22784,7 @@ fid_parse_prop :
   if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
     next_tok(v7);
-    ast_add_node(a, AST_GETTER);
+    add_node(v7, a, AST_GETTER);
     CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_1_getter);
   } else
 #endif
@@ -22082,16 +22796,16 @@ fid_parse_prop :
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
     next_tok(v7);
-    ast_add_node(a, AST_SETTER);
+    add_node(v7, a, AST_SETTER);
     CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_3_setter);
 #endif
   } else {
     /* Allow reserved words as property names. */
     if (is_reserved_word_token(v7->cur_tok) || v7->cur_tok == TOK_IDENTIFIER ||
         v7->cur_tok == TOK_NUMBER) {
-      ast_add_inlined_node(a, AST_PROP, v7->tok, v7->tok_len);
+      add_inlined_node(v7, a, AST_PROP, v7->tok, v7->tok_len);
     } else if (v7->cur_tok == TOK_STRING_LITERAL) {
-      ast_add_inlined_node(a, AST_PROP, v7->tok + 1, v7->tok_len - 2);
+      add_inlined_node(v7, a, AST_PROP, v7->tok + 1, v7->tok_len - 2);
     } else {
       CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
     }
@@ -22107,7 +22821,7 @@ fid_parse_dowhile :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_dowhile_locals_t)
 {
-  L->start = ast_add_node(a, AST_DOWHILE);
+  L->start = add_node(v7, a, AST_DOWHILE);
   L->saved_in_loop = v7->pstate.in_loop;
 
   v7->pstate.in_loop = 1;
@@ -22133,7 +22847,7 @@ fid_parse_for :
   int saved_in_loop;
   */
 
-  L->start = ast_add_node(a, AST_FOR);
+  L->start = add_node(v7, a, AST_FOR);
   L->saved_in_loop = v7->pstate.in_loop;
 
   EXPECT(TOK_OPEN_PAREN);
@@ -22153,13 +22867,13 @@ fid_parse_for :
 
     if (ACCEPT(TOK_IN)) {
       CALL_PARSE_EXPRESSION(fid_p_for_3);
-      ast_add_node(a, AST_NOP);
+      add_node(v7, a, AST_NOP);
       /*
        * Assumes that for and for in have the same AST format which is
        * suboptimal but avoids the need of fixing up the var offset chain.
        * TODO(mkm) improve this
        */
-      a->mbuf.buf[L->start - 1] = AST_FOR_IN;
+      ast_modify_tag(a, L->start - 1, AST_FOR_IN);
       goto for_loop_body;
     }
   }
@@ -22188,7 +22902,7 @@ fid_parse_try :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_try_locals_t)
 {
-  L->start = ast_add_node(a, AST_TRY);
+  L->start = add_node(v7, a, AST_TRY);
   L->catch_or_finally = 0;
   CALL_PARSE_BLOCK(fid_p_try_1);
   ast_set_skip(a, L->start, AST_TRY_CATCH_SKIP);
@@ -22219,7 +22933,7 @@ fid_parse_switch :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_switch_locals_t)
 {
-  L->start = ast_add_node(a, AST_SWITCH);
+  L->start = add_node(v7, a, AST_SWITCH);
   L->saved_in_switch = v7->pstate.in_switch;
 
   ast_set_skip(a, L->start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
@@ -22232,7 +22946,7 @@ fid_parse_switch :
     switch (v7->cur_tok) {
       case TOK_CASE:
         next_tok(v7);
-        L->case_start = ast_add_node(a, AST_CASE);
+        L->case_start = add_node(v7, a, AST_CASE);
         CALL_PARSE_EXPRESSION(fid_p_switch_2);
         EXPECT(TOK_COLON);
         while (v7->cur_tok != TOK_CASE && v7->cur_tok != TOK_DEFAULT &&
@@ -22245,7 +22959,7 @@ fid_parse_switch :
         next_tok(v7);
         EXPECT(TOK_COLON);
         ast_set_skip(a, L->start, AST_SWITCH_DEFAULT_SKIP);
-        L->case_start = ast_add_node(a, AST_DEFAULT);
+        L->case_start = add_node(v7, a, AST_DEFAULT);
         while (v7->cur_tok != TOK_CASE && v7->cur_tok != TOK_DEFAULT &&
                v7->cur_tok != TOK_CLOSE_CURLY) {
           CALL_PARSE_STATEMENT(fid_p_switch_4);
@@ -22267,7 +22981,7 @@ fid_parse_with :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_with_locals_t)
 {
-  L->start = ast_add_node(a, AST_WITH);
+  L->start = add_node(v7, a, AST_WITH);
   if (v7->pstate.in_strict) {
     CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
   }
@@ -22294,6 +23008,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 #if defined(V7_ENABLE_STACK_TRACKING)
   struct stack_track_ctx stack_track_ctx;
 #endif
+  int saved_line_no = v7->line_no;
 
 #if defined(V7_ENABLE_STACK_TRACKING)
   v7_stack_track_start(v7, &stack_track_ctx);
@@ -22305,6 +23020,14 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   v7->pstate.in_function = 0;
   v7->pstate.in_loop = 0;
   v7->pstate.in_switch = 0;
+
+  /*
+   * TODO(dfrank): `v7->parser.line_no` vs `v7->line_no` is confusing.  probaby
+   * we need to refactor it.
+   *
+   * See comment for v7->line_no in core.h for some details.
+   */
+  v7->line_no = 1;
 
   next_tok(v7);
   /*
@@ -22453,7 +23176,9 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
                       v7->tok - col, (int) col - 1, "");
     V7_THROW(V7_SYNTAX_ERROR);
   }
+
 clean:
+  v7->line_no = saved_line_no;
   return rcode;
 }
 #ifdef V7_MODULE_LINES
@@ -22638,14 +23363,16 @@ clean:
   return rcode;
 }
 
+/*
+ * `pos` should be an offset of the byte right after a tag
+ */
 static lit_t string_lit(struct bcode_builder *bbuilder, struct ast *a,
-                        ast_off_t *pos) {
+                        ast_off_t pos) {
   size_t i = 0, name_len;
   val_t v = v7_mk_undefined();
   struct mbuf *m = &bbuilder->lit;
-  char *name = ast_get_inlined_data(a, *pos, &name_len);
+  char *name = ast_get_inlined_data(a, pos, &name_len);
 
-  ast_move_to_children(a, pos);
 /* temp disabled because of short lits */
 #if 0
   for (i = 0; i < m->len / sizeof(val_t); i++) {
@@ -22672,15 +23399,13 @@ static lit_t string_lit(struct bcode_builder *bbuilder, struct ast *a,
 #if V7_ENABLE__RegExp
 WARN_UNUSED_RESULT
 static enum v7_err regexp_lit(struct bcode_builder *bbuilder, struct ast *a,
-                              ast_off_t *pos, lit_t *res) {
+                              ast_off_t pos, lit_t *res) {
   enum v7_err rcode = V7_OK;
   size_t name_len;
   char *p;
-  char *name = ast_get_inlined_data(a, *pos, &name_len);
+  char *name = ast_get_inlined_data(a, pos, &name_len);
   val_t tmp = v7_mk_undefined();
   struct v7 *v7 = bbuilder->v7;
-
-  ast_move_to_children(a, pos);
 
   for (p = name + name_len - 1; *p != '/';) p--;
 
@@ -22693,6 +23418,39 @@ clean:
   return rcode;
 }
 #endif
+
+#ifdef V7_ENABLE_LINE_NUMBERS
+static void append_lineno_if_changed(struct v7 *v7,
+                                     struct bcode_builder *bbuilder,
+                                     int line_no) {
+  (void) v7;
+  if (line_no != 0 && line_no != v7->line_no) {
+    v7->line_no = line_no;
+    bcode_append_lineno(bbuilder, line_no);
+  }
+}
+#else
+static void append_lineno_if_changed(struct v7 *v7,
+                                     struct bcode_builder *bbuilder,
+                                     int line_no) {
+  (void) v7;
+  (void) bbuilder;
+  (void) line_no;
+}
+#endif
+
+static enum ast_tag fetch_tag(struct v7 *v7, struct bcode_builder *bbuilder,
+                              struct ast *a, ast_off_t *pos,
+                              ast_off_t *pos_after_tag) {
+  enum ast_tag ret = ast_fetch_tag(a, pos);
+  int line_no = ast_get_line_no(a, *pos);
+  append_lineno_if_changed(v7, bbuilder, line_no);
+  if (pos_after_tag != NULL) {
+    *pos_after_tag = *pos;
+  }
+  ast_move_to_children(a, pos);
+  return ret;
+}
 
 /*
  * a++ and a-- need to ignore the updated value.
@@ -22751,12 +23509,13 @@ static enum v7_err compile_assign(struct bcode_builder *bbuilder, struct ast *a,
   enum ast_tag ntag;
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
+  ast_off_t pos_after_tag;
 
-  ntag = ast_fetch_tag(a, pos);
+  ntag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
 
   switch (ntag) {
     case AST_IDENT:
-      lit = string_lit(bbuilder, a, pos);
+      lit = string_lit(bbuilder, a, pos_after_tag);
       if (tag != AST_ASSIGN) {
         bcode_op_lit(bbuilder, OP_GET_VAR, lit);
       }
@@ -22770,7 +23529,7 @@ static enum v7_err compile_assign(struct bcode_builder *bbuilder, struct ast *a,
     case AST_INDEX:
       switch (ntag) {
         case AST_MEMBER:
-          lit = string_lit(bbuilder, a, pos);
+          lit = string_lit(bbuilder, a, pos_after_tag);
           V7_TRY(compile_expr_builder(bbuilder, a, pos));
           bcode_push_lit(bbuilder, lit);
           break;
@@ -22816,6 +23575,7 @@ static enum v7_err compile_local_vars(struct bcode_builder *bbuilder,
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
   size_t names_end = 0;
+  ast_off_t pos_after_tag;
 
   /* calculate `names_end`: offset at which names in `bcode->ops` end */
   names_end =
@@ -22825,37 +23585,36 @@ static enum v7_err compile_local_vars(struct bcode_builder *bbuilder,
   if (fvar != start) {
     /* iterate all `AST_VAR`s in the current scope */
     do {
-      V7_CHECK_INTERNAL(ast_fetch_tag(a, &fvar) == AST_VAR);
+      V7_CHECK_INTERNAL(fetch_tag(v7, bbuilder, a, &fvar, &pos_after_tag) ==
+                        AST_VAR);
 
-      next = ast_get_skip(a, fvar, AST_VAR_NEXT_SKIP);
-      if (next == fvar) {
+      next = ast_get_skip(a, pos_after_tag, AST_VAR_NEXT_SKIP);
+      if (next == pos_after_tag) {
         next = 0;
       }
 
-      fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
-      ast_move_to_children(a, &fvar);
+      fvar_end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
       /*
        * iterate all `AST_VAR_DECL`s and `AST_FUNC_DECL`s in the current
        * `AST_VAR`
        */
       while (fvar < fvar_end) {
-        enum ast_tag tag = ast_fetch_tag(a, &fvar);
+        enum ast_tag tag = fetch_tag(v7, bbuilder, a, &fvar, &pos_after_tag);
         V7_CHECK_INTERNAL(tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
-        name = ast_get_inlined_data(a, fvar, &name_len);
+        name = ast_get_inlined_data(a, pos_after_tag, &name_len);
         if (tag == AST_VAR_DECL) {
           /*
            * it's a `var` declaration, so, skip the value for now, it'll be set
            * to `undefined` initially
            */
-          ast_move_to_children(a, &fvar);
           ast_skip_tree(a, &fvar);
         } else {
           /*
            * tag is an AST_FUNC_DECL: since functions in JS are hoisted,
            * we compile it and put `OP_SET_VAR` directly here
            */
-          lit = string_lit(bbuilder, a, &fvar);
+          lit = string_lit(bbuilder, a, pos_after_tag);
           V7_TRY(compile_expr_builder(bbuilder, a, &fvar));
           bcode_op_lit(bbuilder, OP_SET_VAR, lit);
 
@@ -22895,14 +23654,14 @@ clean:
 V7_PRIVATE enum v7_err compile_expr_ext(struct bcode_builder *bbuilder,
                                         struct ast *a, ast_off_t *pos,
                                         uint8_t for_call) {
-  ast_off_t pos_start = *pos;
-  enum ast_tag tag = ast_fetch_tag(a, pos);
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
+  ast_off_t pos_after_tag;
+  enum ast_tag tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
 
   switch (tag) {
     case AST_MEMBER: {
-      lit_t lit = string_lit(bbuilder, a, pos);
+      lit_t lit = string_lit(bbuilder, a, pos_after_tag);
       V7_TRY(compile_expr_builder(bbuilder, a, pos));
       if (for_call) {
         /* current TOS will be used as `this` */
@@ -22931,7 +23690,7 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct bcode_builder *bbuilder,
          */
         bcode_op(bbuilder, OP_PUSH_UNDEFINED);
       }
-      *pos = pos_start;
+      *pos = pos_after_tag - 1;
       V7_TRY(compile_expr_builder(bbuilder, a, pos));
       break;
   }
@@ -22942,15 +23701,15 @@ clean:
 
 V7_PRIVATE enum v7_err compile_delete(struct bcode_builder *bbuilder,
                                       struct ast *a, ast_off_t *pos) {
-  ast_off_t pos_start = *pos;
-  enum ast_tag tag = ast_fetch_tag(a, pos);
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
+  ast_off_t pos_after_tag;
+  enum ast_tag tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
 
   switch (tag) {
     case AST_MEMBER: {
       /* Delete a specified property of an object */
-      lit_t lit = string_lit(bbuilder, a, pos);
+      lit_t lit = string_lit(bbuilder, a, pos_after_tag);
       /* put an object to delete property from */
       V7_TRY(compile_expr_builder(bbuilder, a, pos));
       /* put a property name */
@@ -22972,7 +23731,7 @@ V7_PRIVATE enum v7_err compile_delete(struct bcode_builder *bbuilder,
       /* Delete the scope variable (or throw an error if strict mode) */
       if (!bbuilder->bcode->strict_mode) {
         /* put a property name */
-        bcode_push_lit(bbuilder, string_lit(bbuilder, a, pos));
+        bcode_push_lit(bbuilder, string_lit(bbuilder, a, pos_after_tag));
         bcode_op(bbuilder, OP_DELETE_VAR);
       } else {
         rcode =
@@ -22995,7 +23754,7 @@ V7_PRIVATE enum v7_err compile_delete(struct bcode_builder *bbuilder,
        * For all other cases, we evaluate the expression given to `delete`
        * for side effects, then drop the result, and yield `true`
        */
-      *pos = pos_start;
+      *pos = pos_after_tag - 1;
       V7_TRY(compile_expr_builder(bbuilder, a, pos));
       bcode_op(bbuilder, OP_DROP);
       bcode_op(bbuilder, OP_PUSH_TRUE);
@@ -23008,10 +23767,10 @@ clean:
 
 V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
                                             struct ast *a, ast_off_t *pos) {
-  ast_off_t pos_start = *pos;
-  enum ast_tag tag = ast_fetch_tag(a, pos);
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
+  ast_off_t pos_after_tag;
+  enum ast_tag tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
 
   switch (tag) {
     case AST_ADD:
@@ -23053,7 +23812,8 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       bcode_op(bbuilder, OP_NEG);
       break;
     case AST_IDENT:
-      bcode_op_lit(bbuilder, OP_GET_VAR, string_lit(bbuilder, a, pos));
+      bcode_op_lit(bbuilder, OP_GET_VAR,
+                   string_lit(bbuilder, a, pos_after_tag));
       break;
     case AST_MEMBER:
     case AST_INDEX:
@@ -23065,7 +23825,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
        * First of all, restore starting AST position, and then call extended
        * function.
        */
-      *pos = pos_start;
+      *pos = pos_after_tag - 1;
       V7_TRY(compile_expr_ext(bbuilder, a, pos, 0 /*not for call*/));
       break;
     case AST_IN:
@@ -23074,10 +23834,12 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       bcode_op(bbuilder, OP_IN);
       break;
     case AST_TYPEOF: {
-      ast_off_t peek = *pos;
-      if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
-        *pos = peek;
-        bcode_op_lit(bbuilder, OP_SAFE_GET_VAR, string_lit(bbuilder, a, pos));
+      ast_off_t lookahead = *pos;
+      tag = fetch_tag(v7, bbuilder, a, &lookahead, &pos_after_tag);
+      if (tag == AST_IDENT) {
+        *pos = lookahead;
+        bcode_op_lit(bbuilder, OP_SAFE_GET_VAR,
+                     string_lit(bbuilder, a, pos_after_tag));
       } else {
         V7_TRY(compile_expr_builder(bbuilder, a, pos));
       }
@@ -23163,8 +23925,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
      * <C>
      */
     case AST_SEQ: {
-      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
-      ast_move_to_children(a, pos);
+      ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       while (*pos < end) {
         V7_TRY(compile_expr_builder(bbuilder, a, pos));
         if (*pos < end) {
@@ -23215,8 +23976,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
        *
        */
       int args;
-      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
-      ast_move_to_children(a, pos);
+      ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
       V7_TRY(compile_expr_ext(bbuilder, a, pos, 1 /*for call*/));
       bcode_op(bbuilder, OP_CHECK_CALL);
@@ -23232,7 +23992,6 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       break;
     }
     case AST_DELETE: {
-      ast_move_to_children(a, pos);
       V7_TRY(compile_delete(bbuilder, a, pos));
       break;
     }
@@ -23258,17 +24017,16 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
        */
       struct mbuf cur_literals;
       lit_t lit;
-      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       mbuf_init(&cur_literals, 0);
 
-      ast_move_to_children(a, pos);
       bcode_op(bbuilder, OP_CREATE_OBJ);
       while (*pos < end) {
-        tag = ast_fetch_tag(a, pos);
+        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
         switch (tag) {
           case AST_PROP:
             bcode_op(bbuilder, OP_DUP);
-            lit = string_lit(bbuilder, a, pos);
+            lit = string_lit(bbuilder, a, pos_after_tag);
 
 /* disabled because we broke get_lit */
 #if 0
@@ -23348,13 +24106,12 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
        * that uses a special marker value for missing array elements
        * (which are not the same as undefined btw)
        */
-      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
-      ast_move_to_children(a, pos);
+      ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       bcode_op(bbuilder, OP_CREATE_ARR);
       bcode_op(bbuilder, OP_PUSH_ZERO);
       while (*pos < end) {
         ast_off_t lookahead = *pos;
-        tag = ast_fetch_tag(a, &lookahead);
+        tag = fetch_tag(v7, bbuilder, a, &lookahead, &pos_after_tag);
         if (tag != AST_NOP) {
           bcode_op(bbuilder, OP_2DUP);
           V7_TRY(compile_expr_builder(bbuilder, a, pos));
@@ -23382,11 +24139,13 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       /* Create bcode in this half-done function */
       struct v7_js_function *func = to_js_function(funv);
       func->bcode = (struct bcode *) calloc(1, sizeof(*bbuilder->bcode));
-      bcode_init(func->bcode, bbuilder->bcode->strict_mode);
+      bcode_init(func->bcode, bbuilder->bcode->strict_mode,
+                 NULL /* will be set below */, 0);
+      bcode_copy_filename_from(func->bcode, bbuilder->bcode);
       retain_bcode(bbuilder->v7, func->bcode);
       flit = bcode_add_lit(bbuilder, funv);
 
-      *pos = pos_start;
+      *pos = pos_after_tag - 1;
       V7_TRY(compile_function(v7, a, pos, func->bcode));
       bcode_push_lit(bbuilder, flit);
       bcode_op(bbuilder, OP_FUNC_LIT);
@@ -23414,9 +24173,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       bcode_op(bbuilder, OP_PUSH_FALSE);
       break;
     case AST_NUM: {
-      double dv;
-      ast_get_num(a, *pos, &dv);
-      ast_move_to_children(a, pos);
+      double dv = ast_get_num(a, pos_after_tag);
       if (dv == 0) {
         bcode_op(bbuilder, OP_PUSH_ZERO);
       } else if (dv == 1) {
@@ -23427,13 +24184,13 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       break;
     }
     case AST_STRING:
-      bcode_push_lit(bbuilder, string_lit(bbuilder, a, pos));
+      bcode_push_lit(bbuilder, string_lit(bbuilder, a, pos_after_tag));
       break;
     case AST_REGEX:
 #if V7_ENABLE__RegExp
     {
       lit_t tmp;
-      rcode = regexp_lit(bbuilder, a, pos, &tmp);
+      rcode = regexp_lit(bbuilder, a, pos_after_tag, &tmp);
       if (rcode != V7_OK) {
         rcode = V7_SYNTAX_ERROR;
         goto clean;
@@ -23497,14 +24254,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
                                     struct ast *a, ast_off_t *pos) {
   ast_off_t end;
   enum ast_tag tag;
-  ast_off_t cond, pos_start;
+  ast_off_t cond, pos_after_tag;
   bcode_off_t body_target, body_label, cond_label;
   struct mbuf case_labels;
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
 
-  pos_start = *pos;
-  tag = ast_fetch_tag(a, pos);
+  tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
 
   mbuf_init(&case_labels, 0);
 
@@ -23533,9 +24289,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
     case AST_IF: {
       ast_off_t if_false;
       bcode_off_t end_label, if_false_label;
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      if_false = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
-      ast_move_to_children(a, pos);
+      end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
+      if_false = ast_get_skip(a, pos_after_tag, AST_END_IF_TRUE_SKIP);
 
       V7_TRY(compile_expr_builder(bbuilder, a, pos));
       if_false_label = bcode_op_target(bbuilder, OP_JMP_FALSE);
@@ -23587,8 +24342,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
     case AST_WHILE: {
       bcode_off_t end_label, continue_label, continue_target;
 
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      ast_move_to_children(a, pos);
+      end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       cond = *pos;
       ast_skip_tree(a, pos);
 
@@ -23697,10 +24451,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       ast_off_t acatch, afinally;
       bcode_off_t finally_label, catch_label;
 
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
-      afinally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
-      ast_move_to_children(a, pos);
+      end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
+      acatch = ast_get_skip(a, pos_after_tag, AST_TRY_CATCH_SKIP);
+      afinally = ast_get_skip(a, pos_after_tag, AST_TRY_FINALLY_SKIP);
 
       if (afinally != end) {
         /* `finally` clause is present: push its offset */
@@ -23738,7 +24491,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
          * retrieve identifier where to store thrown error, and make sure
          * it is actually an indentifier (AST_IDENT)
          */
-        tag = ast_fetch_tag(a, pos);
+        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
         V7_CHECK(tag == AST_IDENT, V7_SYNTAX_ERROR);
 
         /*
@@ -23747,7 +24500,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
          * a variable with the thrown value there.
          * The `OP_ENTER_CATCH` opcode does just that.
          */
-        bcode_op_lit(bbuilder, OP_ENTER_CATCH, string_lit(bbuilder, a, pos));
+        bcode_op_lit(bbuilder, OP_ENTER_CATCH,
+                     string_lit(bbuilder, a, pos_after_tag));
 
         /*
          * compile statements until the end of `catch` clause
@@ -23838,8 +24592,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       enum ast_tag case_tag;
       int i, has_default = 0, cases = 0;
 
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      ast_move_to_children(a, pos);
+      end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
       end_label = bcode_op_target(bbuilder, OP_TRY_PUSH_SWITCH);
 
@@ -23848,11 +24601,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       case_start = *pos;
       /* first pass: evaluate case expression and generate jump table */
       while (*pos < end) {
-        case_tag = ast_fetch_tag(a, pos);
+        case_tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
         assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
 
-        case_end = ast_get_skip(a, *pos, AST_END_SKIP);
-        ast_move_to_children(a, pos);
+        case_end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
         switch (case_tag) {
           case AST_DEFAULT:
@@ -23882,12 +24634,11 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       /* second pass: emit case bodies and patch jump table */
 
       for (i = 0; *pos < end;) {
-        case_tag = ast_fetch_tag(a, pos);
+        case_tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
         assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
         assert(i <= cases);
 
-        case_end = ast_get_skip(a, *pos, AST_END_SKIP);
-        ast_move_to_children(a, pos);
+        case_end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
         switch (case_tag) {
           case AST_DEFAULT:
@@ -23947,12 +24698,11 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
     case AST_FOR: {
       ast_off_t iter, body, lookahead;
       bcode_off_t end_label, continue_label, continue_target;
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      body = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
-      ast_move_to_children(a, pos);
+      end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
+      body = ast_get_skip(a, pos_after_tag, AST_FOR_BODY_SKIP);
 
       lookahead = *pos;
-      tag = ast_fetch_tag(a, &lookahead);
+      tag = fetch_tag(v7, bbuilder, a, &lookahead, &pos_after_tag);
       /*
        * Support for `var` declaration in INIT
        */
@@ -23961,18 +24711,17 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
         lit_t lit;
 
         *pos = lookahead;
-        fvar_end = ast_get_skip(a, *pos, AST_END_SKIP);
-        ast_move_to_children(a, pos);
+        fvar_end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
         /*
          * Iterate through all vars in the given `var` declaration: they are
          * just like assigments here
          */
         while (*pos < fvar_end) {
-          tag = ast_fetch_tag(a, pos);
+          tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
           /* Only var declarations are allowed (not function declarations) */
           V7_CHECK_INTERNAL(tag == AST_VAR_DECL);
-          lit = string_lit(bbuilder, a, pos);
+          lit = string_lit(bbuilder, a, pos_after_tag);
           V7_TRY(compile_expr_builder(bbuilder, a, pos));
 
           /* Just like an assigment */
@@ -24008,7 +24757,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
        * Handle for(INIT;;ITER)
        */
       lookahead = cond;
-      tag = ast_fetch_tag(a, &lookahead);
+      tag = fetch_tag(v7, bbuilder, a, &lookahead, &pos_after_tag);
       if (tag == AST_NOP) {
         bcode_op(bbuilder, OP_JMP);
       } else {
@@ -24072,21 +24821,18 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       lit_t lit;
       bcode_off_t loop_label, loop_target, end_label, brend_label,
           continue_label, pop_label, continue_target;
-      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
-      ast_move_to_children(a, pos);
-
-      tag = ast_fetch_tag(a, pos);
+      tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
       /* TODO(mkm) accept any l-value */
       if (tag == AST_VAR) {
-        ast_move_to_children(a, pos);
-        tag = ast_fetch_tag(a, pos);
+        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
         V7_CHECK_INTERNAL(tag == AST_VAR_DECL);
-        lit = string_lit(bbuilder, a, pos);
+        lit = string_lit(bbuilder, a, pos_after_tag);
         ast_skip_tree(a, pos);
       } else {
         V7_CHECK_INTERNAL(tag == AST_IDENT);
-        lit = string_lit(bbuilder, a, pos);
+        lit = string_lit(bbuilder, a, pos_after_tag);
       }
 
       /*
@@ -24200,8 +24946,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
      */
     case AST_DOWHILE: {
       bcode_off_t end_label, continue_label, continue_target;
-      end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
-      ast_move_to_children(a, pos);
+      end = ast_get_skip(a, pos_after_tag, AST_DO_WHILE_COND_SKIP);
       end_label = bcode_op_target(bbuilder, OP_TRY_PUSH_LOOP);
       body_target = bcode_pos(bbuilder);
       V7_TRY(compile_stmts(bbuilder, a, pos, end));
@@ -24228,10 +24973,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
        * behaves as a normal assignment at runtime.
        */
       lit_t lit;
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      ast_move_to_children(a, pos);
+      end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       while (*pos < end) {
-        tag = ast_fetch_tag(a, pos);
+        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
         if (tag == AST_FUNC_DECL) {
           /*
            * function declarations are already set during hoisting (see
@@ -24240,7 +24984,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
            * Plus, they are stack-neutral, so don't forget to set
            * `is_stack_neutral`.
            */
-          ast_move_to_children(a, pos);
           ast_skip_tree(a, pos);
           bbuilder->v7->is_stack_neutral = 1;
         } else {
@@ -24250,7 +24993,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
            * stack-neutral: `1; var a = 5;` yields `1`, not `5`.
            */
           V7_CHECK_INTERNAL(tag == AST_VAR_DECL);
-          lit = string_lit(bbuilder, a, pos);
+          lit = string_lit(bbuilder, a, pos_after_tag);
           V7_TRY(compile_expr_builder(bbuilder, a, pos));
           bcode_op_lit(bbuilder, OP_SET_VAR, lit);
 
@@ -24270,7 +25013,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       bcode_op(bbuilder, OP_RET);
       break;
     default:
-      *pos = pos_start;
+      *pos = pos_after_tag - 1;
       V7_TRY(compile_expr_builder(bbuilder, a, pos));
   }
 
@@ -24289,7 +25032,7 @@ static enum v7_err compile_body(struct bcode_builder *bbuilder, struct ast *a,
   /* check 'use strict' */
   if (*pos < end) {
     ast_off_t tmp_pos = body;
-    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
+    if (fetch_tag(v7, bbuilder, a, &tmp_pos, NULL) == AST_USE_STRICT) {
       bbuilder->bcode->strict_mode = 1;
       /* move `body` offset, effectively removing `AST_USE_STRICT` from it */
       body = tmp_pos;
@@ -24303,8 +25046,8 @@ static enum v7_err compile_body(struct bcode_builder *bbuilder, struct ast *a,
   /*
    * populate `bcode->ops` with function's local variable names. Note that we
    * should do this *after* `OP_PUSH_UNDEFINED`, since `compile_local_vars`
-   * emits code that assign the hoisted functions to local variables, and those
-   * statements assume that the stack contains `undefined`.
+   * emits code that assigns the hoisted functions to local variables, and
+   * those statements assume that the stack contains `undefined`.
    */
   V7_TRY(compile_local_vars(bbuilder, a, start, fvar));
 
@@ -24322,24 +25065,26 @@ clean:
  */
 V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
                                       struct bcode *bcode) {
-  ast_off_t start, end, fvar, pos = 0;
-  enum ast_tag tag = ast_fetch_tag(a, &pos);
+  ast_off_t pos_after_tag, end, fvar, pos = 0;
+  int saved_line_no = v7->line_no;
   enum v7_err rcode = V7_OK;
   struct bcode_builder bbuilder;
+  enum ast_tag tag;
 
   bcode_builder_init(v7, &bbuilder, bcode);
+  v7->line_no = 1;
 
-  (void) tag;
+  tag = fetch_tag(v7, &bbuilder, a, &pos, &pos_after_tag);
 
   /* first tag should always be AST_SCRIPT */
   assert(tag == AST_SCRIPT);
+  (void) tag;
 
-  start = pos - 1;
-  end = ast_get_skip(a, pos, AST_END_SKIP);
-  fvar = ast_get_skip(a, pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
-  ast_move_to_children(a, &pos);
+  end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
+  fvar = ast_get_skip(a, pos_after_tag, AST_FUNC_FIRST_VAR_SKIP) - 1;
 
-  V7_TRY(compile_body(&bbuilder, a, start, end, pos /* body */, fvar, &pos));
+  V7_TRY(compile_body(&bbuilder, a, pos_after_tag - 1, end, pos /* body */,
+                      fvar, &pos));
 
 clean:
 
@@ -24352,6 +25097,8 @@ clean:
   }
 #endif
 
+  v7->line_no = saved_line_no;
+
   return rcode;
 }
 
@@ -24361,33 +25108,33 @@ clean:
  */
 V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
                                         ast_off_t *pos, struct bcode *bcode) {
-  ast_off_t start, end, body, fvar;
-  enum ast_tag tag = ast_fetch_tag(a, pos);
+  ast_off_t pos_after_tag, start, end, body, fvar;
   const char *name;
   size_t name_len;
   size_t args_cnt;
   enum v7_err rcode = V7_OK;
   struct bcode_builder bbuilder;
+  enum ast_tag tag;
+  size_t names_end = 0;
   bcode_builder_init(v7, &bbuilder, bcode);
+  tag = fetch_tag(v7, &bbuilder, a, pos, &pos_after_tag);
+  start = pos_after_tag - 1;
 
   (void) tag;
   assert(tag == AST_FUNC);
-  start = *pos - 1;
-  end = ast_get_skip(a, *pos, AST_END_SKIP);
-  body = ast_get_skip(a, *pos, AST_FUNC_BODY_SKIP);
-  fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
-  ast_move_to_children(a, pos);
+  end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
+  body = ast_get_skip(a, pos_after_tag, AST_FUNC_BODY_SKIP);
+  fvar = ast_get_skip(a, pos_after_tag, AST_FUNC_FIRST_VAR_SKIP) - 1;
 
   /* retrieve function name */
-  tag = ast_fetch_tag(a, pos);
+  tag = fetch_tag(v7, &bbuilder, a, pos, &pos_after_tag);
   if (tag == AST_IDENT) {
     /* function name is provided */
-    name = ast_get_inlined_data(a, *pos, &name_len);
-    ast_move_to_children(a, pos);
-    V7_TRY(bcode_add_name(&bbuilder, name, name_len, NULL));
+    name = ast_get_inlined_data(a, pos_after_tag, &name_len);
+    V7_TRY(bcode_add_name(&bbuilder, name, name_len, &names_end));
   } else {
     /* no name: anonymous function */
-    V7_TRY(bcode_add_name(&bbuilder, "", 0, NULL));
+    V7_TRY(bcode_add_name(&bbuilder, "", 0, &names_end));
   }
 
   /* retrieve function's argument names */
@@ -24398,14 +25145,18 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
       V7_THROW(V7_SYNTAX_ERROR);
     }
 
-    tag = ast_fetch_tag(a, pos);
+    tag = fetch_tag(v7, &bbuilder, a, pos, &pos_after_tag);
+    /*
+     * TODO(dfrank): it's not actually an internal error, we get here if
+     * we compile e.g. the following: (function(1){})
+     */
     V7_CHECK_INTERNAL(tag == AST_IDENT);
-    name = ast_get_inlined_data(a, *pos, &name_len);
-    ast_move_to_children(a, pos);
-    V7_TRY(bcode_add_name(&bbuilder, name, name_len, NULL));
+    name = ast_get_inlined_data(a, pos_after_tag, &name_len);
+    V7_TRY(bcode_add_name(&bbuilder, name, name_len, &names_end));
   }
 
   bcode->args_cnt = args_cnt;
+  bcode->func_name_present = 1;
 
   V7_TRY(compile_body(&bbuilder, a, start, end, body, fvar, pos));
 
@@ -24426,12 +25177,15 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode) {
   enum v7_err rcode = V7_OK;
   struct bcode_builder bbuilder;
+  int saved_line_no = v7->line_no;
 
   bcode_builder_init(v7, &bbuilder, bcode);
+  v7->line_no = 1;
 
   rcode = compile_expr_builder(&bbuilder, a, pos);
 
   bcode_builder_finalize(&bbuilder);
+  v7->line_no = saved_line_no;
   return rcode;
 }
 #ifdef V7_MODULE_LINES
@@ -24497,6 +25251,9 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, val_t this_obj,
                                 int is_json, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   char buf[100], *p = buf;
+  struct v7_exec_opts opts;
+  memset(&opts, 0x00, sizeof(opts));
+  opts.filename = "Eval'd code";
 
   if (arg != V7_UNDEFINED) {
     size_t len;
@@ -24517,10 +25274,11 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, val_t this_obj,
 
     v7_set_gc_enabled(v7, 1);
     if (is_json) {
-      rcode = v7_parse_json(v7, p, res);
+      opts.is_json = 1;
     } else {
-      rcode = v7_exec_with(v7, p, this_obj, res);
+      opts.this_obj = this_obj;
     }
+    rcode = v7_exec_opt(v7, p, &opts, res);
     if (rcode != V7_OK) {
       goto clean;
     }
@@ -27633,8 +28391,54 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/util.h" */
+
+/*
+ * TODO(dfrank): make the top of v7->call_frame to represent the current
+ * frame, and thus get rid of the `CUR_LINENO()`
+ */
+#ifdef V7_ENABLE_LINE_NUMBERS
+#define CALLFRAME_LINENO(call_frame) ((call_frame)->line_no)
+#define CUR_LINENO() (v7->line_no)
+#else
+#define CALLFRAME_LINENO(call_frame) 0
+#define CUR_LINENO() 0
+#endif
+
+#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+static int printf_stack_line(char *p, size_t len, struct bcode *bcode,
+                             int line_no, const char *leading) {
+  int ret;
+  const char *fn = bcode_get_filename(bcode);
+  if (fn == NULL) {
+    fn = "<no filename>";
+  }
+
+  if (bcode->func_name_present) {
+    /* this is a function's bcode: let's show the function's name as well */
+    char *funcname;
+
+    /*
+     * read first name from the bcode ops, which is the function name,
+     * since `func_name_present` is set
+     */
+    bcode_next_name(bcode->ops.p, &funcname, NULL);
+
+    /* Check if it's an anonymous function */
+    if (funcname[0] == '\0') {
+      funcname = (char *) "<anonymous>";
+    }
+    ret =
+        snprintf(p, len, "%s    at %s (%s:%d)", leading, funcname, fn, line_no);
+  } else {
+    /* it's a file's bcode: show only filename and line number */
+    ret = snprintf(p, len, "%s    at %s:%d", leading, fn, line_no);
+  }
+  return ret;
+}
+#endif
 
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   /* TODO(mkm): figure out if this is an error object and which kind */
@@ -27649,9 +28453,7 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   }
   fprintf(f, "Exec error [%s]: ", ctx);
   v7_fprintln(f, v7, msg);
-#if V7_ENABLE__StackTrace
   v7_fprint_stack_trace(f, v7, e);
-#endif
 }
 
 WARN_UNUSED_RESULT
@@ -27667,12 +28469,58 @@ V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
   }
   /* TODO(mkm): set non enumerable but provide toString method */
   v7_set(v7, *res, "message", 7, arg0);
-/*
- * TODO(dfrank): call stack is broken since we introduced
- * `struct v7_call_frame`
- */
-#if 0
-  v7_def(v7, *res, "stack", 5, V7_DESC_ENUMERABLE(0), v7->call_stack);
+
+#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+  /* Save the stack trace */
+  {
+    size_t len = 0;
+    char *st = NULL;
+    char *stcur = NULL;
+    val_t st_v = v7_mk_undefined();
+    struct v7_call_frame *call_frame = v7->call_stack;
+
+    v7_own(v7, &st_v);
+
+    if (v7->bcode != NULL) {
+      /* First of all, calculate how much it would take */
+      len += printf_stack_line(NULL, 0, v7->bcode, CUR_LINENO(), "");
+#if V7_ENABLE__StackTrace
+      while (call_frame != NULL) {
+        if (call_frame->bcode != NULL) {
+          len += printf_stack_line(NULL, 0, call_frame->bcode,
+                                   CALLFRAME_LINENO(call_frame), "\n");
+        }
+        call_frame = call_frame->prev;
+      }
+#endif
+
+      if (len > 0) {
+        /* Now, create a placeholder for string */
+        st_v = v7_mk_string(v7, NULL, len, 1);
+        stcur = st = (char *) v7_get_string_data(v7, &st_v, &len);
+        len += 1 /*null-term*/;
+
+        /* And fill it with actual data */
+        stcur += printf_stack_line(stcur, len - (stcur - st), v7->bcode,
+                                   CUR_LINENO(), "");
+#if V7_ENABLE__StackTrace
+        call_frame = v7->call_stack;
+        while (call_frame != NULL) {
+          if (call_frame->bcode != NULL) {
+            stcur +=
+                printf_stack_line(stcur, len - (stcur - st), call_frame->bcode,
+                                  CALLFRAME_LINENO(call_frame), "\n");
+          }
+          call_frame = call_frame->prev;
+        }
+#endif
+
+        v7_set(v7, *res, "stack", ~0, st_v);
+      }
+    }
+
+    v7_disown(v7, &st_v);
+  }
 #endif
 
   return rcode;

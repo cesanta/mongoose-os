@@ -195,6 +195,7 @@ void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
    */
   FILE *fs[] = {stdout, stderr};
   size_t i;
+  v7_val_t msg_v = v7_mk_undefined();
 
   /*
    * own because the exception could be a string,
@@ -202,15 +203,21 @@ void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
    * an unrelocated argument an ASN violation.
    */
   v7_own(v7, &exc);
+  v7_own(v7, &msg_v);
+
+  msg_v = v7_get(v7, exc, "message", ~0);
 
   for (i = 0; i < sizeof(fs) / sizeof(fs[0]); i++) {
     fprintf(fs[i], "%s: ", msg);
-    v7_fprintln(fs[i], v7, exc);
-#if V7_ENABLE__StackTrace
+    if (!v7_is_undefined(msg_v)) {
+      v7_fprintln(fs[i], v7, msg_v);
+    } else {
+      v7_fprintln(fs[i], v7, exc);
+    }
     v7_fprint_stack_trace(fs[i], v7, exc);
-#endif
   }
 
+  v7_disown(v7, &msg_v);
   v7_disown(v7, &exc);
 }
 

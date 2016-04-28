@@ -85,8 +85,15 @@ static void interrupt_char_processor(char ch) {
 static void process_js(char *cmd) {
   s_sjp.char_processor = interrupt_char_processor;
   v7_val_t res;
-  enum v7_err err = v7_exec(s_sjp.v7, cmd, &res);
+  enum v7_err err;
   struct v7 *v7 = s_sjp.v7;
+
+  {
+    struct v7_exec_opts opts;
+    memset(&opts, 0, sizeof(opts));
+    opts.filename = "repl";
+    err = v7_exec_opt(s_sjp.v7, cmd, &opts, &res);
+  }
 
   if (err == V7_SYNTAX_ERROR) {
     printf("Syntax error: %s\n", v7_get_parser_error(v7));

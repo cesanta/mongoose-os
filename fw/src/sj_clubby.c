@@ -1006,7 +1006,7 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
 #endif
 
   if (clubby_is_overcrowded(clubby)) {
-    return v7_throwf(v7, "Error", "Too manu unanswered packets, try later");
+    return v7_throwf(v7, "Error", "Too many unanswered packets, try later");
   }
 
   /* Check if id and timeout exists and put default if not */
