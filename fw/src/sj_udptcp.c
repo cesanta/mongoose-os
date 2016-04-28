@@ -81,6 +81,7 @@ struct cb_info_holder {
 #define UD_F_SERVER (1 << 3)
 #define UD_F_FOREIGN_SOCK (1 << 4)
 #define UD_F_CLOSE (1 << 5)
+#define UD_F_FORCE_RECV (1 << 6)
 
 struct conn_user_data {
   struct v7 *v7;
@@ -416,17 +417,21 @@ static enum v7_err get_connection(struct v7 *v7, v7_val_t obj,
 static enum v7_err set_paused(struct v7 *v7, v7_val_t *res, int paused) {
   enum v7_err rcode = V7_OK;
   struct mg_connection *c;
+  struct conn_user_data *ud;
   rcode = get_connection(v7, v7_get_this(v7), &c);
   if (rcode != V7_OK) {
     return rcode;
   }
 
+  ud = (struct conn_user_data *) c->user_data;
   *res = v7_get_this(v7);
   if (paused) {
-    ((struct conn_user_data *) c->user_data)->flags |= UD_F_PAUSED;
+    ud->flags |= UD_F_PAUSED;
   } else {
-    ((struct conn_user_data *) c->user_data)->flags &= ~UD_F_PAUSED;
+    ud->flags &= ~UD_F_PAUSED;
+    ud->flags |= UD_F_FORCE_RECV;
   }
+
   return V7_OK;
 }
 
@@ -496,6 +501,15 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       if (ud->flags & UD_F_CLOSE && ud->child_count == 0) {
         c->flags |= MG_F_SEND_AND_CLOSE;
       }
+
+      if (ud->flags & UD_F_FORCE_RECV && c->recv_mbuf.len != 0) {
+        trigger_event(
+            ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_data,
+            v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
+            v7_mk_undefined());
+        mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
+        ud->flags &= ~UD_F_FORCE_RECV;
+      }
       break;
     }
     case MG_EV_ACCEPT: {
@@ -544,9 +558,11 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       break;
     }
     case MG_EV_RECV: {
-      if (ud->flags & UD_F_PAUSED) {
+      if (ud->flags & UD_F_PAUSED || c->recv_mbuf.len == 0) {
         return;
       }
+
+      ud->flags &= ~UD_F_FORCE_RECV;
 
       if (c->flags & MG_F_UDP) {
         char *addr = inet_ntoa(c->sa.sin.sin_addr);
