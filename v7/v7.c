@@ -5037,7 +5037,7 @@ struct bcode;
 
 V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b);
 #endif
 
@@ -5208,26 +5208,6 @@ extern "C" {
 V7_PRIVATE int encode_varint(size_t len, unsigned char *p);
 V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen);
 V7_PRIVATE int calc_llen(size_t len);
-
-#ifdef V7_ENABLE_LINE_NUMBERS
-/*
- * ..._ext() functions allow to specify how much bits of the first byte can be
- * used for varint. E.g.:
- *
- * - 8: the same as `encode_varint`
- * - 7: MSB will not be touched, the rest bits are used
- * etc.
- *
- * Note that it affects only the first byte; in all the rest bytes, 8 bits
- * will be used, as usually.
- */
-
-V7_PRIVATE int encode_varint_ext(size_t len, unsigned char *p,
-                                 int first_byte_bits);
-V7_PRIVATE size_t
-decode_varint_ext(const unsigned char *p, int *llen, int first_byte_bits);
-V7_PRIVATE int calc_llen_ext(size_t len, int first_byte_bits);
-#endif
 
 #if defined(__cplusplus)
 }
@@ -5447,7 +5427,7 @@ ast_insert_node(struct ast *a, ast_off_t pos, enum ast_tag tag);
 V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
                                enum ast_tag tag);
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 /*
  * Add line_no varint after all skips of the tag at the offset `tag_off`, and
  * marks the tag byte.
@@ -5633,7 +5613,7 @@ struct bcode {
   /* Literal table */
   struct v7_vec lit;
 
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
   /* Name of the file from which this bcode was generated (used for debug) */
   void *filename;
 #endif
@@ -5662,7 +5642,7 @@ struct bcode {
   /* Set when `ops` contains function name as the first `name` */
   unsigned int func_name_present : 1;
 
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
   /* If set, `filename` points to ROM, so we shouldn't free it */
   unsigned int filename_in_rom : 1;
 #endif
@@ -5712,7 +5692,7 @@ V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode);
 V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *bcode);
 V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *bcode);
 
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
 /*
  * Return a pointer to null-terminated filename string
  */
@@ -5810,7 +5790,7 @@ typedef struct {
 
 V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op);
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE void bcode_append_lineno(struct bcode_builder *bbuilder,
                                     int line_no);
 #endif
@@ -5889,12 +5869,6 @@ V7_PRIVATE void bcode_add_varint(struct bcode_builder *bbuilder, size_t value);
  * the pointer appropriately
  */
 V7_PRIVATE size_t bcode_get_varint(char **ops);
-
-#ifdef V7_ENABLE_LINE_NUMBERS
-V7_PRIVATE void bcode_add_varint_ext(struct bcode_builder *bbuilder,
-                                     size_t value, int first_byte_bits);
-V7_PRIVATE size_t bcode_get_varint_ext(char **ops, int first_byte_bits);
-#endif
 
 /*
  * Decode a literal value from a string of opcodes and update the cursor to
@@ -6092,7 +6066,7 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
-#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
 struct shdata {
   /* Reference count */
   uint8_t refcnt;
@@ -11021,78 +10995,6 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
   return llen;
 }
 
-#ifdef V7_ENABLE_LINE_NUMBERS
-V7_PRIVATE size_t
-decode_varint_ext(const unsigned char *p, int *llen, int first_byte_bits) {
-  size_t i = 0, string_len = 0;
-
-  unsigned char order = first_byte_bits - 1;
-  unsigned char data_mask, flag_mask;
-  unsigned char adj = (7 - order);
-
-  do {
-    data_mask = (1 << order) - 1;
-    flag_mask = (1 << order);
-    order = 7;
-
-    /*
-     * First byte of varint contains `(first_byte_bits - 1)`, the rest
-     * contain 7 bits, in little endian order.
-     * MSB is a continuation bit: it tells whether next byte is used.
-     */
-    {
-      int shift = order * i;
-      if (i > 0) {
-        shift -= adj;
-      }
-      string_len |= (p[i] & data_mask) << shift;
-    }
-    /*
-     * First we increment i, then check whether it is within boundary and
-     * whether decoded byte had continuation bit set.
-     */
-
-  } while (++i < sizeof(size_t) && (p[i - 1] & flag_mask));
-  *llen = i;
-
-  return string_len;
-}
-
-/* Return number of bytes to store length */
-V7_PRIVATE int calc_llen_ext(size_t len, int first_byte_bits) {
-  int n = 0;
-  unsigned char order = first_byte_bits - 1;
-
-  do {
-    if (n > 0) {
-      order = 7;
-    }
-    n++;
-  } while (len >>= order);
-
-  assert(n <= (int) sizeof(len));
-
-  return n;
-}
-
-V7_PRIVATE int encode_varint_ext(size_t len, unsigned char *p,
-                                 int first_byte_bits) {
-  unsigned char order = first_byte_bits - 1;
-  int i, llen = calc_llen_ext(len, first_byte_bits);
-  unsigned char data_mask, flag_mask;
-
-  for (i = 0; i < llen; i++) {
-    data_mask = (1 << order) - 1;
-    flag_mask = (1 << order);
-    p[i] = (len & data_mask) | (i < llen - 1 ? flag_mask : 0);
-    len >>= order;
-    order = 7;
-  }
-
-  return llen;
-}
-#endif
-
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -12220,7 +12122,7 @@ V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
   a->mbuf.buf[tag_off] = tag | (a->mbuf.buf[tag_off] & 0x80);
 }
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE void ast_add_line_no(struct ast *a, ast_off_t tag_off, int line_no) {
   ast_off_t ln_off = tag_off + 1 /* tag byte */;
   int llen = calc_llen(line_no);
@@ -12334,7 +12236,7 @@ V7_PRIVATE int ast_get_line_no(struct ast *a, ast_off_t pos) {
    */
   int ret = 0;
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
   uint8_t lineno_present;
   enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + pos - 1), &lineno_present);
 
@@ -12752,7 +12654,7 @@ V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode,
   bcode->refcnt = 0;
   bcode->args_cnt = 0;
   bcode->strict_mode = strict_mode;
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
   bcode->filename = filename;
   bcode->filename_in_rom = filename_in_rom;
 #else
@@ -12782,7 +12684,7 @@ V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode) {
   free(bcode->lit.p);
   memset(&bcode->lit, 0x00, sizeof(bcode->lit));
 
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
   if (!bcode->filename_in_rom && bcode->filename != NULL) {
     shdata_release((struct shdata *) bcode->filename);
     bcode->filename = NULL;
@@ -12812,7 +12714,7 @@ V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
   }
 }
 
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
 V7_PRIVATE const char *bcode_get_filename(struct bcode *bcode) {
   const char *ret = NULL;
   if (bcode->filename_in_rom) {
@@ -12825,7 +12727,7 @@ V7_PRIVATE const char *bcode_get_filename(struct bcode *bcode) {
 #endif
 
 V7_PRIVATE void bcode_copy_filename_from(struct bcode *dst, struct bcode *src) {
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
   dst->filename_in_rom = src->filename_in_rom;
   dst->filename = src->filename;
 
@@ -12842,7 +12744,7 @@ V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op) {
   bcode_ops_append(bbuilder, &op, 1);
 }
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE void bcode_append_lineno(struct bcode_builder *bbuilder,
                                     int line_no) {
   int offset = bbuilder->ops.len;
@@ -12874,34 +12776,6 @@ V7_PRIVATE size_t bcode_get_varint(char **ops) {
   *ops += len - 1;
   return ret;
 }
-
-#ifdef V7_ENABLE_LINE_NUMBERS
-/*
- * Appends varint-encoded integer to the `ops` mbuf
- */
-V7_PRIVATE void bcode_add_varint_ext(struct bcode_builder *bbuilder,
-                                     size_t value, int first_byte_bits) {
-  int k = calc_llen_ext(
-      value, first_byte_bits); /* Calculate how many bytes length takes */
-  int offset = bbuilder->ops.len;
-
-  /* Allocate buffer */
-  bcode_ops_append(bbuilder, NULL, k);
-
-  /* Write value */
-  encode_varint_ext(value, (unsigned char *) bbuilder->ops.buf + offset,
-                    first_byte_bits);
-}
-
-V7_PRIVATE size_t bcode_get_varint_ext(char **ops, int first_byte_bits) {
-  size_t ret = 0;
-  int len = 0;
-  (*ops)++;
-  ret = decode_varint_ext((unsigned char *) *ops, &len, first_byte_bits);
-  *ops += len - 1;
-  return ret;
-}
-#endif
 
 static int bcode_is_inline_string(struct v7 *v7, val_t val) {
   uint64_t tag = val & V7_TAG_MASK;
@@ -14496,7 +14370,7 @@ restart:
   while (r.ops < r.end && rcode == V7_OK) {
     enum opcode op = (enum opcode) * r.ops;
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
     if ((uint8_t) op >= _OP_LINE_NO) {
       unsigned char buf[sizeof(size_t)];
       int len;
@@ -15160,7 +15034,7 @@ restart:
  * TODO(dfrank): improve that. Probably we have to invent "light"
  * stack frames, without bcode.
  */
-#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
             v7->call_stack = bcode_create_call_frame(v7, r.bcode, r.ops);
             {
               struct bcode *bcode_tmp =
@@ -15191,7 +15065,7 @@ restart:
               BTRY(call_cfunction(v7, v1 /*func*/, v3 /*this*/, v2 /*args*/,
                                   is_constructor, &v4));
 
-#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
               release_bcode(v7, bcode_tmp);
             }
             unwind_stack_1level(v7, &r);
@@ -15564,7 +15438,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 #else
              1,
 #endif
-#ifdef V7_ENABLE_FILENAMES
+#ifndef V7_DISABLE_FILENAMES
              filename ? shdata_create_from_string(filename) : NULL,
 #else
              NULL,
@@ -16700,7 +16574,7 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
   }
 }
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b) {
   if ((b & 0x01) != (b >> 7)) {
     b ^= 0x81;
@@ -19448,7 +19322,7 @@ int v7_is_truthy(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/shdata.h" */
 
-#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
 V7_PRIVATE struct shdata *shdata_create(const void *payload, size_t size) {
   struct shdata *ret =
       (struct shdata *) calloc(1, sizeof(struct shdata) + size);
@@ -21805,7 +21679,7 @@ static enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 /*
  * Assumes `offset` points to the byte right after a tag
  */
@@ -23433,7 +23307,7 @@ clean:
 }
 #endif
 
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 static void append_lineno_if_changed(struct v7 *v7,
                                      struct bcode_builder *bbuilder,
                                      int line_no) {
@@ -28413,7 +28287,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
  * TODO(dfrank): make the top of v7->call_frame to represent the current
  * frame, and thus get rid of the `CUR_LINENO()`
  */
-#ifdef V7_ENABLE_LINE_NUMBERS
+#ifndef V7_DISABLE_LINE_NUMBERS
 #define CALLFRAME_LINENO(call_frame) ((call_frame)->line_no)
 #define CUR_LINENO() (v7->line_no)
 #else
@@ -28421,7 +28295,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 #define CUR_LINENO() 0
 #endif
 
-#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
 static int printf_stack_line(char *p, size_t len, struct bcode *bcode,
                              int line_no, const char *leading) {
   int ret;
@@ -28484,7 +28358,7 @@ V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
   /* TODO(mkm): set non enumerable but provide toString method */
   v7_set(v7, *res, "message", 7, arg0);
 
-#if defined(V7_ENABLE_FILENAMES) || defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
   /* Save the stack trace */
   {
     size_t len = 0;
