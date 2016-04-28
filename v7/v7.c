@@ -620,6 +620,10 @@ typedef struct stat cs_stat_t;
 
 /* Some functions we implement for Mongoose. */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef __TI_COMPILER_VERSION__
 struct SlTimeval_t;
 #define timeval SlTimeval_t
@@ -685,6 +689,10 @@ struct dirent *readdir(DIR *dir);
 
 #ifdef CC3200_FS_SLFS
 #define MG_FS_SLFS
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
