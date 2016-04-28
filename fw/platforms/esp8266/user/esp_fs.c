@@ -177,7 +177,6 @@ static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
 #ifdef CS_MMAP
   if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
     if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
-      LOG(LL_DEBUG, ("mmap spiffs prep read: %x %u %p", addr, size, dst));
 #ifndef DISABLE_OTA
       /*
        * If FW uses OTA (and flash mapping) addr might be > 0x100000
