@@ -14374,6 +14374,12 @@ restart:
     if ((uint8_t) op >= _OP_LINE_NO) {
       unsigned char buf[sizeof(size_t)];
       int len;
+      size_t max_llen = sizeof(buf);
+
+      /* ASAN doesn't like out of bound reads */
+      if (r.ops + max_llen > r.end) {
+        max_llen = r.end - r.ops;
+      }
 
       /*
        * before we decode varint, we'll have to swap MSB and LSB, but we can't
@@ -14381,7 +14387,7 @@ restart:
        * have to copy the data to the temp buffer first. 4 bytes should be
        * enough for everyone's line number.
        */
-      memcpy(buf, r.ops, sizeof(buf));
+      memcpy(buf, r.ops, max_llen);
       buf[0] = msb_lsb_swap(buf[0]);
 
       v7->line_no = decode_varint(buf, &len) >> 1;
