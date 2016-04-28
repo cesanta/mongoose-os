@@ -5438,7 +5438,7 @@ V7_PRIVATE void ast_free(struct ast *);
  * This offset can be passed to `ast_set_skip`.
  */
 V7_PRIVATE ast_off_t
-ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag);
+ast_insert_node(struct ast *a, ast_off_t pos, enum ast_tag tag);
 
 /*
  * Modify tag which is already added to buffer. Keeps `AST_TAG_LINENO_PRESENT`
@@ -5473,30 +5473,30 @@ V7_PRIVATE void ast_add_line_no(struct ast *a, ast_off_t tag_off, int line_no);
  *
  * Every tree reader can assume this and safely skip unknown nodes.
  *
- * `start` should be an offset of the byte right after a tag.
+ * `pos` should be an offset of the byte right after a tag.
  */
 V7_PRIVATE ast_off_t
-ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip);
+ast_set_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip);
 
 /*
  * Patches a given skip slot for an already emitted node with the value
- * (stored as delta relative to the `start` node) of the `where` argument.
+ * (stored as delta relative to the `pos` node) of the `where` argument.
  */
-V7_PRIVATE ast_off_t
-ast_modify_skip(struct ast *, ast_off_t, ast_off_t, enum ast_which_skip);
+V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t pos,
+                                     ast_off_t where, enum ast_which_skip skip);
 
 /*
  * Returns the offset in AST to which the given `skip` points.
  *
- * `start` should be an offset of the byte right after a tag.
+ * `pos` should be an offset of the byte right after a tag.
  */
 V7_PRIVATE ast_off_t
-ast_get_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip);
+ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip);
 
 /*
- * Returns the tag from the offset `pos`, and shifts `pos` by 1.
+ * Returns the tag from the offset `ppos`, and shifts `ppos` by 1.
  */
-V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos);
+V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *ppos);
 
 /*
  * Moves the cursor to the tag's varint and inlined data (if there are any, see
@@ -5505,9 +5505,9 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos);
  * Technically, it skips node's "skips" and line number data, if either is
  * present.
  *
- * Assumes a cursor (`pos`) positioned right after a tag.
+ * Assumes a cursor (`ppos`) positioned right after a tag.
  */
-V7_PRIVATE void ast_move_to_inlined_data(struct ast *a, ast_off_t *pos);
+V7_PRIVATE void ast_move_to_inlined_data(struct ast *a, ast_off_t *ppos);
 
 /*
  * Moves the cursor to the tag's subtrees (if there are any,
@@ -5517,14 +5517,14 @@ V7_PRIVATE void ast_move_to_inlined_data(struct ast *a, ast_off_t *pos);
  * Technically, it skips node's "skips", line number data, and inlined data, if
  * either is present.
  *
- * Assumes a cursor (`pos`) positioned right after a tag.
+ * Assumes a cursor (`ppos`) positioned right after a tag.
  */
-V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos);
+V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *ppos);
 
 /* Helper to add a node with inlined data. */
-V7_PRIVATE ast_off_t ast_insert_inlined_node(struct ast *, ast_off_t,
-                                             enum ast_tag, const char *,
-                                             size_t);
+V7_PRIVATE ast_off_t ast_insert_inlined_node(struct ast *a, ast_off_t pos,
+                                             enum ast_tag tag, const char *name,
+                                             size_t len);
 
 /*
  * Returns the line number encoded in the node, or `0` in case of none is
@@ -5547,11 +5547,11 @@ V7_PRIVATE double ast_get_num(struct ast *a, ast_off_t pos);
 /*
  * Skips the node and all its subnodes.
  *
- * `pos` should be an offset of the tag byte.
+ * Cursor (`ppos`) should be at the tag byte
  */
-V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos);
+V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *ppos);
 
-V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
+V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *ppos,
                               int depth);
 
 V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a);
@@ -6188,7 +6188,7 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
                                       struct bcode *bcode);
 
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
-                                    ast_off_t *pos, struct bcode *bcode);
+                                    ast_off_t *ppos, struct bcode *bcode);
 
 #if defined(__cplusplus)
 }
@@ -12195,10 +12195,10 @@ static enum ast_tag uint8_to_tag(uint8_t t, uint8_t *lineno_present) {
 }
 
 V7_PRIVATE ast_off_t
-ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
+ast_insert_node(struct ast *a, ast_off_t pos, enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
-  ast_off_t cur = start;
+  ast_off_t cur = pos;
 
   assert(tag < AST_MAX_TAG);
 
@@ -12209,10 +12209,10 @@ ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
   cur += sizeof(ast_skip_t) * d->num_skips;
 
   if (d->num_skips) {
-    ast_set_skip(a, start + 1, AST_END_SKIP);
+    ast_set_skip(a, pos + 1, AST_END_SKIP);
   }
 
-  return start + 1;
+  return pos + 1;
 }
 
 V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
@@ -12235,24 +12235,24 @@ V7_PRIVATE void ast_add_line_no(struct ast *a, ast_off_t tag_off, int line_no) {
 #endif
 
 V7_PRIVATE ast_off_t
-ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
-  return ast_modify_skip(a, start, a->mbuf.len, skip);
+ast_set_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
+  return ast_modify_skip(a, pos, a->mbuf.len, skip);
 }
 
-V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
+V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t pos,
                                      ast_off_t where,
                                      enum ast_which_skip skip) {
-  uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
-  ast_skip_t delta = where - start;
+  uint8_t *p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
+  ast_skip_t delta = where - pos;
 #ifndef NDEBUG
-  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + start - 1), NULL);
+  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + pos - 1), NULL);
   const struct ast_node_def *def = &ast_node_defs[tag];
 #endif
-  assert(start <= where);
+  assert(pos <= where);
 
 #ifndef V7_LARGE_AST
   /* the value of delta overflowed, therefore the ast is not useable */
-  if (where - start > AST_SKIP_MAX) {
+  if (where - pos > AST_SKIP_MAX) {
     a->has_overflow = 1;
   }
 #endif
@@ -12285,39 +12285,39 @@ ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
 #endif
 }
 
-V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
+V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *ppos) {
   enum ast_tag ret;
-  assert(*pos < a->mbuf.len);
+  assert(*ppos < a->mbuf.len);
 
-  ret = uint8_to_tag(*(a->mbuf.buf + (*pos)++), NULL);
+  ret = uint8_to_tag(*(a->mbuf.buf + (*ppos)++), NULL);
 
   return ret;
 }
 
-V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
-  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + *pos - 1), NULL);
+V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *ppos) {
+  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + *ppos - 1), NULL);
   const struct ast_node_def *def = &ast_node_defs[tag];
-  assert(*pos - 1 < a->mbuf.len);
+  assert(*ppos - 1 < a->mbuf.len);
 
-  ast_move_to_inlined_data(a, pos);
+  ast_move_to_inlined_data(a, ppos);
 
   /* skip varint + inline data, if present */
   if (def->has_varint) {
     int llen;
-    size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
-    *pos += llen;
+    size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *ppos, &llen);
+    *ppos += llen;
     if (def->has_inlined) {
-      *pos += slen;
+      *ppos += slen;
     }
   }
 }
 
-V7_PRIVATE ast_off_t ast_insert_inlined_node(struct ast *a, ast_off_t start,
+V7_PRIVATE ast_off_t ast_insert_inlined_node(struct ast *a, ast_off_t pos,
                                              enum ast_tag tag, const char *name,
                                              size_t len) {
   const struct ast_node_def *d = &ast_node_defs[tag];
 
-  ast_off_t offset = ast_insert_node(a, start, tag);
+  ast_off_t offset = ast_insert_node(a, pos, tag);
 
   assert(d->has_inlined);
 
@@ -12356,20 +12356,20 @@ V7_PRIVATE int ast_get_line_no(struct ast *a, ast_off_t pos) {
   return ret;
 }
 
-V7_PRIVATE void ast_move_to_inlined_data(struct ast *a, ast_off_t *pos) {
+V7_PRIVATE void ast_move_to_inlined_data(struct ast *a, ast_off_t *ppos) {
   uint8_t lineno_present = 0;
-  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + *pos - 1), &lineno_present);
+  enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + *ppos - 1), &lineno_present);
   const struct ast_node_def *def = &ast_node_defs[tag];
-  assert(*pos - 1 < a->mbuf.len);
+  assert(*ppos - 1 < a->mbuf.len);
 
   /* skip skips */
-  *pos += def->num_skips * sizeof(ast_skip_t);
+  *ppos += def->num_skips * sizeof(ast_skip_t);
 
   /* skip line_no, if present */
   if (lineno_present) {
     int llen;
-    int line_no = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
-    *pos += llen;
+    int line_no = decode_varint((unsigned char *) a->mbuf.buf + *ppos, &llen);
+    *ppos += llen;
 
     (void) line_no;
   }
@@ -12420,32 +12420,32 @@ static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
 }
 #endif
 
-V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
-  enum ast_tag tag = ast_fetch_tag(a, pos);
+V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *ppos) {
+  enum ast_tag tag = ast_fetch_tag(a, ppos);
   const struct ast_node_def *def = &ast_node_defs[tag];
-  ast_off_t skips = *pos;
+  ast_off_t skips = *ppos;
   int i;
-  ast_move_to_children(a, pos);
+  ast_move_to_children(a, ppos);
 
   for (i = 0; i < def->num_subtrees; i++) {
-    ast_skip_tree(a, pos);
+    ast_skip_tree(a, ppos);
   }
 
   if (def->num_skips > AST_END_SKIP) {
     ast_off_t end = ast_get_skip(a, skips, AST_END_SKIP);
 
-    while (*pos < end) {
-      ast_skip_tree(a, pos);
+    while (*ppos < end) {
+      ast_skip_tree(a, ppos);
     }
   }
 }
 
 #ifndef NO_LIBC
-V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
+V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *ppos,
                               int depth) {
-  enum ast_tag tag = ast_fetch_tag(a, pos);
+  enum ast_tag tag = ast_fetch_tag(a, ppos);
   const struct ast_node_def *def = &ast_node_defs[tag];
-  ast_off_t skips = *pos;
+  ast_off_t skips = *ppos;
   size_t slen;
   int i, llen;
 
@@ -12460,7 +12460,7 @@ V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
 #endif
 
   if (def->has_inlined) {
-    ast_off_t pos_tmp = *pos;
+    ast_off_t pos_tmp = *ppos;
     ast_move_to_inlined_data(a, &pos_tmp);
 
     slen = decode_varint((unsigned char *) a->mbuf.buf + pos_tmp, &llen);
@@ -12469,10 +12469,10 @@ V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
     fprintf(fp, "\n");
   }
 
-  ast_move_to_children(a, pos);
+  ast_move_to_children(a, ppos);
 
   for (i = 0; i < def->num_subtrees; i++) {
-    ast_dump_tree(fp, a, pos, depth + 1);
+    ast_dump_tree(fp, a, ppos, depth + 1);
   }
 
   if (ast_node_defs[tag].num_skips) {
@@ -12484,15 +12484,15 @@ V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
     ast_off_t end = ast_get_skip(a, skips, AST_END_SKIP);
 
     comment_at_depth(fp, "...", depth + 1);
-    while (*pos < end) {
+    while (*ppos < end) {
       int s;
       for (s = ast_node_defs[tag].num_skips - 1; s > 0; s--) {
-        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip) s)) {
+        if (*ppos == ast_get_skip(a, skips, (enum ast_which_skip) s)) {
           comment_at_depth(fp, "%d ->", depth + 1, s);
           break;
         }
       }
-      ast_dump_tree(fp, a, pos, depth + 1);
+      ast_dump_tree(fp, a, ppos, depth + 1);
     }
   }
 }
@@ -23283,10 +23283,10 @@ extern void dump_bcode(struct v7 *v7, FILE *f, struct bcode *bcode);
 #endif
 
 V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
-                                            struct ast *a, ast_off_t *pos);
+                                            struct ast *a, ast_off_t *ppos);
 
 V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
-                                        ast_off_t *pos, struct bcode *bcode);
+                                        ast_off_t *ppos, struct bcode *bcode);
 
 V7_PRIVATE enum v7_err binary_op(struct bcode_builder *bbuilder,
                                  enum ast_tag tag) {
@@ -23365,12 +23365,12 @@ clean:
 }
 
 V7_PRIVATE enum v7_err compile_binary(struct bcode_builder *bbuilder,
-                                      struct ast *a, ast_off_t *pos,
+                                      struct ast *a, ast_off_t *ppos,
                                       enum ast_tag tag) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
-  V7_TRY(compile_expr_builder(bbuilder, a, pos));
-  V7_TRY(compile_expr_builder(bbuilder, a, pos));
+  V7_TRY(compile_expr_builder(bbuilder, a, ppos));
+  V7_TRY(compile_expr_builder(bbuilder, a, ppos));
 
   V7_TRY(binary_op(bbuilder, tag));
 clean:
@@ -23454,15 +23454,15 @@ static void append_lineno_if_changed(struct v7 *v7,
 #endif
 
 static enum ast_tag fetch_tag(struct v7 *v7, struct bcode_builder *bbuilder,
-                              struct ast *a, ast_off_t *pos,
-                              ast_off_t *pos_after_tag) {
-  enum ast_tag ret = ast_fetch_tag(a, pos);
-  int line_no = ast_get_line_no(a, *pos);
+                              struct ast *a, ast_off_t *ppos,
+                              ast_off_t *ppos_after_tag) {
+  enum ast_tag ret = ast_fetch_tag(a, ppos);
+  int line_no = ast_get_line_no(a, *ppos);
   append_lineno_if_changed(v7, bbuilder, line_no);
-  if (pos_after_tag != NULL) {
-    *pos_after_tag = *pos;
+  if (ppos_after_tag != NULL) {
+    *ppos_after_tag = *ppos;
   }
-  ast_move_to_children(a, pos);
+  ast_move_to_children(a, ppos);
   return ret;
 }
 
@@ -23482,7 +23482,7 @@ static void fixup_post_op(struct bcode_builder *bbuilder, enum ast_tag tag) {
  * ++a and a++ are equivalent to a+=1
  */
 static enum v7_err eval_assign_rhs(struct bcode_builder *bbuilder,
-                                   struct ast *a, ast_off_t *pos,
+                                   struct ast *a, ast_off_t *ppos,
                                    enum ast_tag tag) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
@@ -23494,7 +23494,7 @@ static enum v7_err eval_assign_rhs(struct bcode_builder *bbuilder,
   if (tag >= AST_PREINC && tag <= AST_POSTDEC) {
     bcode_op(bbuilder, OP_PUSH_ONE);
   } else {
-    V7_TRY(compile_expr_builder(bbuilder, a, pos));
+    V7_TRY(compile_expr_builder(bbuilder, a, ppos));
   }
 
   switch (tag) {
@@ -23518,14 +23518,14 @@ clean:
 }
 
 static enum v7_err compile_assign(struct bcode_builder *bbuilder, struct ast *a,
-                                  ast_off_t *pos, enum ast_tag tag) {
+                                  ast_off_t *ppos, enum ast_tag tag) {
   lit_t lit;
   enum ast_tag ntag;
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
   ast_off_t pos_after_tag;
 
-  ntag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+  ntag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
 
   switch (ntag) {
     case AST_IDENT:
@@ -23534,7 +23534,7 @@ static enum v7_err compile_assign(struct bcode_builder *bbuilder, struct ast *a,
         bcode_op_lit(bbuilder, OP_GET_VAR, lit);
       }
 
-      V7_TRY(eval_assign_rhs(bbuilder, a, pos, tag));
+      V7_TRY(eval_assign_rhs(bbuilder, a, ppos, tag));
       bcode_op_lit(bbuilder, OP_SET_VAR, lit);
 
       fixup_post_op(bbuilder, tag);
@@ -23544,12 +23544,12 @@ static enum v7_err compile_assign(struct bcode_builder *bbuilder, struct ast *a,
       switch (ntag) {
         case AST_MEMBER:
           lit = string_lit(bbuilder, a, pos_after_tag);
-          V7_TRY(compile_expr_builder(bbuilder, a, pos));
+          V7_TRY(compile_expr_builder(bbuilder, a, ppos));
           bcode_push_lit(bbuilder, lit);
           break;
         case AST_INDEX:
-          V7_TRY(compile_expr_builder(bbuilder, a, pos));
-          V7_TRY(compile_expr_builder(bbuilder, a, pos));
+          V7_TRY(compile_expr_builder(bbuilder, a, ppos));
+          V7_TRY(compile_expr_builder(bbuilder, a, ppos));
           break;
         default:
           /* unreachable, compilers are dumb */
@@ -23560,7 +23560,7 @@ static enum v7_err compile_assign(struct bcode_builder *bbuilder, struct ast *a,
         bcode_op(bbuilder, OP_GET);
       }
 
-      V7_TRY(eval_assign_rhs(bbuilder, a, pos, tag));
+      V7_TRY(eval_assign_rhs(bbuilder, a, ppos, tag));
       bcode_op(bbuilder, OP_SET);
 
       fixup_post_op(bbuilder, tag);
@@ -23666,17 +23666,17 @@ clean:
  * see `OP_CALL` handling in `eval_bcode()`.
  */
 V7_PRIVATE enum v7_err compile_expr_ext(struct bcode_builder *bbuilder,
-                                        struct ast *a, ast_off_t *pos,
+                                        struct ast *a, ast_off_t *ppos,
                                         uint8_t for_call) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
   ast_off_t pos_after_tag;
-  enum ast_tag tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+  enum ast_tag tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
 
   switch (tag) {
     case AST_MEMBER: {
       lit_t lit = string_lit(bbuilder, a, pos_after_tag);
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       if (for_call) {
         /* current TOS will be used as `this` */
         bcode_op(bbuilder, OP_DUP);
@@ -23687,12 +23687,12 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct bcode_builder *bbuilder,
     }
 
     case AST_INDEX:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       if (for_call) {
         /* current TOS will be used as `this` */
         bcode_op(bbuilder, OP_DUP);
       }
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_GET);
       break;
 
@@ -23704,8 +23704,8 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct bcode_builder *bbuilder,
          */
         bcode_op(bbuilder, OP_PUSH_UNDEFINED);
       }
-      *pos = pos_after_tag - 1;
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      *ppos = pos_after_tag - 1;
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       break;
   }
 
@@ -23714,18 +23714,18 @@ clean:
 }
 
 V7_PRIVATE enum v7_err compile_delete(struct bcode_builder *bbuilder,
-                                      struct ast *a, ast_off_t *pos) {
+                                      struct ast *a, ast_off_t *ppos) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
   ast_off_t pos_after_tag;
-  enum ast_tag tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+  enum ast_tag tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
 
   switch (tag) {
     case AST_MEMBER: {
       /* Delete a specified property of an object */
       lit_t lit = string_lit(bbuilder, a, pos_after_tag);
       /* put an object to delete property from */
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       /* put a property name */
       bcode_push_lit(bbuilder, lit);
       bcode_op(bbuilder, OP_DELETE);
@@ -23735,9 +23735,9 @@ V7_PRIVATE enum v7_err compile_delete(struct bcode_builder *bbuilder,
     case AST_INDEX:
       /* Delete a specified property of an object */
       /* put an object to delete property from */
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       /* put a property name */
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_DELETE);
       break;
 
@@ -23768,8 +23768,8 @@ V7_PRIVATE enum v7_err compile_delete(struct bcode_builder *bbuilder,
        * For all other cases, we evaluate the expression given to `delete`
        * for side effects, then drop the result, and yield `true`
        */
-      *pos = pos_after_tag - 1;
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      *ppos = pos_after_tag - 1;
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_DROP);
       bcode_op(bbuilder, OP_PUSH_TRUE);
       break;
@@ -23780,11 +23780,11 @@ clean:
 }
 
 V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
-                                            struct ast *a, ast_off_t *pos) {
+                                            struct ast *a, ast_off_t *ppos) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
   ast_off_t pos_after_tag;
-  enum ast_tag tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+  enum ast_tag tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
 
   switch (tag) {
     case AST_ADD:
@@ -23807,22 +23807,22 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
     case AST_GT:
     case AST_GE:
     case AST_INSTANCEOF:
-      V7_TRY(compile_binary(bbuilder, a, pos, tag));
+      V7_TRY(compile_binary(bbuilder, a, ppos, tag));
       break;
     case AST_LOGICAL_NOT:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_LOGICAL_NOT);
       break;
     case AST_NOT:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_NOT);
       break;
     case AST_POSITIVE:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_POS);
       break;
     case AST_NEGATIVE:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_NEG);
       break;
     case AST_IDENT:
@@ -23839,23 +23839,23 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
        * First of all, restore starting AST position, and then call extended
        * function.
        */
-      *pos = pos_after_tag - 1;
-      V7_TRY(compile_expr_ext(bbuilder, a, pos, 0 /*not for call*/));
+      *ppos = pos_after_tag - 1;
+      V7_TRY(compile_expr_ext(bbuilder, a, ppos, 0 /*not for call*/));
       break;
     case AST_IN:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_IN);
       break;
     case AST_TYPEOF: {
-      ast_off_t lookahead = *pos;
+      ast_off_t lookahead = *ppos;
       tag = fetch_tag(v7, bbuilder, a, &lookahead, &pos_after_tag);
       if (tag == AST_IDENT) {
-        *pos = lookahead;
+        *ppos = lookahead;
         bcode_op_lit(bbuilder, OP_SAFE_GET_VAR,
                      string_lit(bbuilder, a, pos_after_tag));
       } else {
-        V7_TRY(compile_expr_builder(bbuilder, a, pos));
+        V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       }
       bcode_op(bbuilder, OP_TYPEOF);
       break;
@@ -23876,7 +23876,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
     case AST_LSHIFT_ASSIGN:
     case AST_RSHIFT_ASSIGN:
     case AST_URSHIFT_ASSIGN:
-      V7_TRY(compile_assign(bbuilder, a, pos, tag));
+      V7_TRY(compile_assign(bbuilder, a, ppos, tag));
       break;
     case AST_COND: {
       /*
@@ -23894,12 +23894,12 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       *
       */
       bcode_off_t false_label, end_label;
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       false_label = bcode_op_target(bbuilder, OP_JMP_FALSE);
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       end_label = bcode_op_target(bbuilder, OP_JMP);
       bcode_patch_target(bbuilder, false_label, bcode_pos(bbuilder));
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_patch_target(bbuilder, end_label, bcode_pos(bbuilder));
       break;
     }
@@ -23918,12 +23918,12 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
        *
        */
       bcode_off_t end_label;
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_DUP);
       end_label = bcode_op_target(
           bbuilder, tag == AST_LOGICAL_AND ? OP_JMP_FALSE : OP_JMP_TRUE);
       bcode_op(bbuilder, OP_DROP);
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_patch_target(bbuilder, end_label, bcode_pos(bbuilder));
       break;
     }
@@ -23940,9 +23940,9 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
      */
     case AST_SEQ: {
       ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
-      while (*pos < end) {
-        V7_TRY(compile_expr_builder(bbuilder, a, pos));
-        if (*pos < end) {
+      while (*ppos < end) {
+        V7_TRY(compile_expr_builder(bbuilder, a, ppos));
+        if (*ppos < end) {
           bcode_op(bbuilder, OP_DROP);
         }
       }
@@ -23992,10 +23992,10 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       int args;
       ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
-      V7_TRY(compile_expr_ext(bbuilder, a, pos, 1 /*for call*/));
+      V7_TRY(compile_expr_ext(bbuilder, a, ppos, 1 /*for call*/));
       bcode_op(bbuilder, OP_CHECK_CALL);
-      for (args = 0; *pos < end; args++) {
-        V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      for (args = 0; *ppos < end; args++) {
+        V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       }
       bcode_op(bbuilder, (tag == AST_CALL ? OP_CALL : OP_NEW));
       if (args > 0x7f) {
@@ -24006,7 +24006,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       break;
     }
     case AST_DELETE: {
-      V7_TRY(compile_delete(bbuilder, a, pos));
+      V7_TRY(compile_delete(bbuilder, a, ppos));
       break;
     }
     case AST_OBJECT: {
@@ -24035,8 +24035,8 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       mbuf_init(&cur_literals, 0);
 
       bcode_op(bbuilder, OP_CREATE_OBJ);
-      while (*pos < end) {
-        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+      while (*ppos < end) {
+        tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
         switch (tag) {
           case AST_PROP:
             bcode_op(bbuilder, OP_DUP);
@@ -24075,7 +24075,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
             }
 #endif
             bcode_push_lit(bbuilder, lit);
-            V7_TRY(compile_expr_builder(bbuilder, a, pos));
+            V7_TRY(compile_expr_builder(bbuilder, a, ppos));
             bcode_op(bbuilder, OP_SET);
             bcode_op(bbuilder, OP_DROP);
             break;
@@ -24123,16 +24123,16 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       bcode_op(bbuilder, OP_CREATE_ARR);
       bcode_op(bbuilder, OP_PUSH_ZERO);
-      while (*pos < end) {
-        ast_off_t lookahead = *pos;
+      while (*ppos < end) {
+        ast_off_t lookahead = *ppos;
         tag = fetch_tag(v7, bbuilder, a, &lookahead, &pos_after_tag);
         if (tag != AST_NOP) {
           bcode_op(bbuilder, OP_2DUP);
-          V7_TRY(compile_expr_builder(bbuilder, a, pos));
+          V7_TRY(compile_expr_builder(bbuilder, a, ppos));
           bcode_op(bbuilder, OP_SET);
           bcode_op(bbuilder, OP_DROP);
         } else {
-          *pos = lookahead; /* skip nop */
+          *ppos = lookahead; /* skip nop */
         }
         bcode_op(bbuilder, OP_PUSH_ONE);
         bcode_op(bbuilder, OP_ADD);
@@ -24159,8 +24159,8 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       retain_bcode(bbuilder->v7, func->bcode);
       flit = bcode_add_lit(bbuilder, funv);
 
-      *pos = pos_after_tag - 1;
-      V7_TRY(compile_function(v7, a, pos, func->bcode));
+      *ppos = pos_after_tag - 1;
+      V7_TRY(compile_function(v7, a, ppos, func->bcode));
       bcode_push_lit(bbuilder, flit);
       bcode_op(bbuilder, OP_FUNC_LIT);
       break;
@@ -24169,7 +24169,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       bcode_op(bbuilder, OP_PUSH_THIS);
       break;
     case AST_VOID:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_DROP);
       bcode_op(bbuilder, OP_PUSH_UNDEFINED);
       break;
@@ -24244,16 +24244,16 @@ clean:
 }
 
 V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
-                                    struct ast *a, ast_off_t *pos);
+                                    struct ast *a, ast_off_t *ppos);
 
 V7_PRIVATE enum v7_err compile_stmts(struct bcode_builder *bbuilder,
-                                     struct ast *a, ast_off_t *pos,
+                                     struct ast *a, ast_off_t *ppos,
                                      ast_off_t end) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
 
-  while (*pos < end) {
-    V7_TRY(compile_stmt(bbuilder, a, pos));
+  while (*ppos < end) {
+    V7_TRY(compile_stmt(bbuilder, a, ppos));
     if (!bbuilder->v7->is_stack_neutral) {
       bcode_op(bbuilder, OP_SWAP_DROP);
     } else {
@@ -24265,7 +24265,7 @@ clean:
 }
 
 V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
-                                    struct ast *a, ast_off_t *pos) {
+                                    struct ast *a, ast_off_t *ppos) {
   ast_off_t end;
   enum ast_tag tag;
   ast_off_t cond, pos_after_tag;
@@ -24274,7 +24274,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
 
-  tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+  tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
 
   mbuf_init(&case_labels, 0);
 
@@ -24306,11 +24306,11 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       if_false = ast_get_skip(a, pos_after_tag, AST_END_IF_TRUE_SKIP);
 
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       if_false_label = bcode_op_target(bbuilder, OP_JMP_FALSE);
 
       /* body if true */
-      V7_TRY(compile_stmts(bbuilder, a, pos, if_false));
+      V7_TRY(compile_stmts(bbuilder, a, ppos, if_false));
 
       if (if_false != end) {
         /* `else` branch is present */
@@ -24320,7 +24320,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
         bcode_patch_target(bbuilder, if_false_label, bcode_pos(bbuilder));
 
         /* body if false */
-        V7_TRY(compile_stmts(bbuilder, a, pos, end));
+        V7_TRY(compile_stmts(bbuilder, a, ppos, end));
 
         bcode_patch_target(bbuilder, end_label, bcode_pos(bbuilder));
       } else {
@@ -24357,8 +24357,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       bcode_off_t end_label, continue_label, continue_target;
 
       end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
-      cond = *pos;
-      ast_skip_tree(a, pos);
+      cond = *ppos;
+      ast_skip_tree(a, ppos);
 
       end_label = bcode_op_target(bbuilder, OP_TRY_PUSH_LOOP);
 
@@ -24369,7 +24369,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       cond_label = bcode_op_target(bbuilder, OP_JMP);
       body_target = bcode_pos(bbuilder);
 
-      V7_TRY(compile_stmts(bbuilder, a, pos, end));
+      V7_TRY(compile_stmts(bbuilder, a, ppos, end));
 
       continue_target = bcode_pos(bbuilder);
       bcode_patch_target(bbuilder, cond_label, continue_target);
@@ -24480,7 +24480,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       }
 
       /* compile statements of `try` block */
-      V7_TRY(compile_stmts(bbuilder, a, pos, acatch));
+      V7_TRY(compile_stmts(bbuilder, a, ppos, acatch));
 
       if (acatch != afinally) {
         /* `catch` clause is present: compile it */
@@ -24505,7 +24505,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
          * retrieve identifier where to store thrown error, and make sure
          * it is actually an indentifier (AST_IDENT)
          */
-        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+        tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
         V7_CHECK(tag == AST_IDENT, V7_SYNTAX_ERROR);
 
         /*
@@ -24522,7 +24522,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
          * (`afinally` points to the end of the `catch` clause independently
          * of whether the `finally` clause is present)
          */
-        V7_TRY(compile_stmts(bbuilder, a, pos, afinally));
+        V7_TRY(compile_stmts(bbuilder, a, ppos, afinally));
 
         /* pop private frame */
         bcode_op(bbuilder, OP_EXIT_CATCH);
@@ -24542,7 +24542,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
         bcode_op(bbuilder, OP_TRY_POP);
 
         /* compile statements until the end of `finally` clause */
-        V7_TRY(compile_stmts(bbuilder, a, pos, end));
+        V7_TRY(compile_stmts(bbuilder, a, ppos, end));
 
         bcode_op(bbuilder, OP_AFTER_FINALLY);
       }
@@ -24552,7 +24552,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
     }
 
     case AST_THROW: {
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_THROW);
       break;
     }
@@ -24610,12 +24610,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
 
       end_label = bcode_op_target(bbuilder, OP_TRY_PUSH_SWITCH);
 
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
 
-      case_start = *pos;
+      case_start = *ppos;
       /* first pass: evaluate case expression and generate jump table */
-      while (*pos < end) {
-        case_tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+      while (*ppos < end) {
+        case_tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
         assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
 
         case_end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
@@ -24627,7 +24627,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
           case AST_CASE: {
             bcode_off_t case_label;
             bcode_op(bbuilder, OP_DUP);
-            V7_TRY(compile_expr_builder(bbuilder, a, pos));
+            V7_TRY(compile_expr_builder(bbuilder, a, ppos));
             bcode_op(bbuilder, OP_EQ);
             case_label = bcode_op_target(bbuilder, OP_JMP_TRUE_DROP);
             cases++;
@@ -24637,18 +24637,18 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
           default:
             assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
         }
-        *pos = case_end;
+        *ppos = case_end;
       }
 
       /* jmp table epilogue: unconditional jump to default case */
       bcode_op(bbuilder, OP_DROP);
       dfl_label = bcode_op_target(bbuilder, OP_JMP);
 
-      *pos = case_start;
+      *ppos = case_start;
       /* second pass: emit case bodies and patch jump table */
 
-      for (i = 0; *pos < end;) {
-        case_tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+      for (i = 0; *ppos < end;) {
+        case_tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
         assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
         assert(i <= cases);
 
@@ -24658,20 +24658,20 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
           case AST_DEFAULT:
             has_default = 1;
             bcode_patch_target(bbuilder, dfl_label, bcode_pos(bbuilder));
-            V7_TRY(compile_stmts(bbuilder, a, pos, case_end));
+            V7_TRY(compile_stmts(bbuilder, a, ppos, case_end));
             break;
           case AST_CASE: {
             bcode_off_t case_label = ((bcode_off_t *) case_labels.buf)[i++];
             bcode_patch_target(bbuilder, case_label, bcode_pos(bbuilder));
-            ast_skip_tree(a, pos);
-            V7_TRY(compile_stmts(bbuilder, a, pos, case_end));
+            ast_skip_tree(a, ppos);
+            V7_TRY(compile_stmts(bbuilder, a, ppos, case_end));
             break;
           }
           default:
             assert(case_tag == AST_DEFAULT || case_tag == AST_CASE);
         }
 
-        *pos = case_end;
+        *ppos = case_end;
       }
       mbuf_free(&case_labels);
 
@@ -24715,7 +24715,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
       body = ast_get_skip(a, pos_after_tag, AST_FOR_BODY_SKIP);
 
-      lookahead = *pos;
+      lookahead = *ppos;
       tag = fetch_tag(v7, bbuilder, a, &lookahead, &pos_after_tag);
       /*
        * Support for `var` declaration in INIT
@@ -24724,19 +24724,19 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
         ast_off_t fvar_end;
         lit_t lit;
 
-        *pos = lookahead;
+        *ppos = lookahead;
         fvar_end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
         /*
          * Iterate through all vars in the given `var` declaration: they are
          * just like assigments here
          */
-        while (*pos < fvar_end) {
-          tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+        while (*ppos < fvar_end) {
+          tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
           /* Only var declarations are allowed (not function declarations) */
           V7_CHECK_INTERNAL(tag == AST_VAR_DECL);
           lit = string_lit(bbuilder, a, pos_after_tag);
-          V7_TRY(compile_expr_builder(bbuilder, a, pos));
+          V7_TRY(compile_expr_builder(bbuilder, a, ppos));
 
           /* Just like an assigment */
           bcode_op_lit(bbuilder, OP_SET_VAR, lit);
@@ -24746,19 +24746,19 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
         }
       } else {
         /* normal expression in INIT (not `var` declaration) */
-        V7_TRY(compile_expr_builder(bbuilder, a, pos));
+        V7_TRY(compile_expr_builder(bbuilder, a, ppos));
         /* INIT is stack-neutral */
         bcode_op(bbuilder, OP_DROP);
       }
-      cond = *pos;
-      ast_skip_tree(a, pos);
-      iter = *pos;
-      *pos = body;
+      cond = *ppos;
+      ast_skip_tree(a, ppos);
+      iter = *ppos;
+      *ppos = body;
 
       end_label = bcode_op_target(bbuilder, OP_TRY_PUSH_LOOP);
       cond_label = bcode_op_target(bbuilder, OP_JMP);
       body_target = bcode_pos(bbuilder);
-      V7_TRY(compile_stmts(bbuilder, a, pos, end));
+      V7_TRY(compile_stmts(bbuilder, a, ppos, end));
 
       continue_target = bcode_pos(bbuilder);
 
@@ -24837,13 +24837,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
           continue_label, pop_label, continue_target;
       ast_off_t end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
 
-      tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+      tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
       /* TODO(mkm) accept any l-value */
       if (tag == AST_VAR) {
-        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+        tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
         V7_CHECK_INTERNAL(tag == AST_VAR_DECL);
         lit = string_lit(bbuilder, a, pos_after_tag);
-        ast_skip_tree(a, pos);
+        ast_skip_tree(a, ppos);
       } else {
         V7_CHECK_INTERNAL(tag == AST_IDENT);
         lit = string_lit(bbuilder, a, pos_after_tag);
@@ -24863,7 +24863,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
        * optimized for the `assign` use case which seems more common.
        */
       bcode_op(bbuilder, OP_DUP);
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_SWAP);
       bcode_op(bbuilder, OP_STASH);
       bcode_op(bbuilder, OP_DROP);
@@ -24900,9 +24900,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
        * This node is always a NOP, for compatibility
        * with the layout of the AST_FOR node.
        */
-      ast_skip_tree(a, pos);
+      ast_skip_tree(a, ppos);
 
-      V7_TRY(compile_stmts(bbuilder, a, pos, end));
+      V7_TRY(compile_stmts(bbuilder, a, ppos, end));
 
       continue_target = bcode_pos(bbuilder);
 
@@ -24963,10 +24963,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       end = ast_get_skip(a, pos_after_tag, AST_DO_WHILE_COND_SKIP);
       end_label = bcode_op_target(bbuilder, OP_TRY_PUSH_LOOP);
       body_target = bcode_pos(bbuilder);
-      V7_TRY(compile_stmts(bbuilder, a, pos, end));
+      V7_TRY(compile_stmts(bbuilder, a, ppos, end));
 
       continue_target = bcode_pos(bbuilder);
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       body_label = bcode_op_target(bbuilder, OP_JMP_TRUE);
       bcode_patch_target(bbuilder, body_label, body_target);
 
@@ -24988,8 +24988,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
        */
       lit_t lit;
       end = ast_get_skip(a, pos_after_tag, AST_END_SKIP);
-      while (*pos < end) {
-        tag = fetch_tag(v7, bbuilder, a, pos, &pos_after_tag);
+      while (*ppos < end) {
+        tag = fetch_tag(v7, bbuilder, a, ppos, &pos_after_tag);
         if (tag == AST_FUNC_DECL) {
           /*
            * function declarations are already set during hoisting (see
@@ -24998,7 +24998,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
            * Plus, they are stack-neutral, so don't forget to set
            * `is_stack_neutral`.
            */
-          ast_skip_tree(a, pos);
+          ast_skip_tree(a, ppos);
           bbuilder->v7->is_stack_neutral = 1;
         } else {
           /*
@@ -25008,7 +25008,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
            */
           V7_CHECK_INTERNAL(tag == AST_VAR_DECL);
           lit = string_lit(bbuilder, a, pos_after_tag);
-          V7_TRY(compile_expr_builder(bbuilder, a, pos));
+          V7_TRY(compile_expr_builder(bbuilder, a, ppos));
           bcode_op_lit(bbuilder, OP_SET_VAR, lit);
 
           /* `var` declaration is stack-neutral */
@@ -25023,12 +25023,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       bcode_op(bbuilder, OP_RET);
       break;
     case AST_VALUE_RETURN:
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
       bcode_op(bbuilder, OP_RET);
       break;
     default:
-      *pos = pos_after_tag - 1;
-      V7_TRY(compile_expr_builder(bbuilder, a, pos));
+      *ppos = pos_after_tag - 1;
+      V7_TRY(compile_expr_builder(bbuilder, a, ppos));
   }
 
 clean:
@@ -25038,13 +25038,13 @@ clean:
 
 static enum v7_err compile_body(struct bcode_builder *bbuilder, struct ast *a,
                                 ast_off_t start, ast_off_t end, ast_off_t body,
-                                ast_off_t fvar, ast_off_t *pos) {
+                                ast_off_t fvar, ast_off_t *ppos) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = bbuilder->v7;
 
 #ifndef V7_FORCE_STRICT_MODE
   /* check 'use strict' */
-  if (*pos < end) {
+  if (*ppos < end) {
     ast_off_t tmp_pos = body;
     if (fetch_tag(v7, bbuilder, a, &tmp_pos, NULL) == AST_USE_STRICT) {
       bbuilder->bcode->strict_mode = 1;
@@ -25066,8 +25066,8 @@ static enum v7_err compile_body(struct bcode_builder *bbuilder, struct ast *a,
   V7_TRY(compile_local_vars(bbuilder, a, start, fvar));
 
   /* compile body */
-  *pos = body;
-  V7_TRY(compile_stmts(bbuilder, a, pos, end));
+  *ppos = body;
+  V7_TRY(compile_stmts(bbuilder, a, ppos, end));
 
 clean:
   return rcode;
@@ -25121,7 +25121,7 @@ clean:
  * The AST must contain an AST_FUNC node at offset ast_off.
  */
 V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
-                                        ast_off_t *pos, struct bcode *bcode) {
+                                        ast_off_t *ppos, struct bcode *bcode) {
   ast_off_t pos_after_tag, start, end, body, fvar;
   const char *name;
   size_t name_len;
@@ -25131,7 +25131,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   enum ast_tag tag;
   size_t names_end = 0;
   bcode_builder_init(v7, &bbuilder, bcode);
-  tag = fetch_tag(v7, &bbuilder, a, pos, &pos_after_tag);
+  tag = fetch_tag(v7, &bbuilder, a, ppos, &pos_after_tag);
   start = pos_after_tag - 1;
 
   (void) tag;
@@ -25141,7 +25141,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   fvar = ast_get_skip(a, pos_after_tag, AST_FUNC_FIRST_VAR_SKIP) - 1;
 
   /* retrieve function name */
-  tag = fetch_tag(v7, &bbuilder, a, pos, &pos_after_tag);
+  tag = fetch_tag(v7, &bbuilder, a, ppos, &pos_after_tag);
   if (tag == AST_IDENT) {
     /* function name is provided */
     name = ast_get_inlined_data(a, pos_after_tag, &name_len);
@@ -25152,14 +25152,14 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   }
 
   /* retrieve function's argument names */
-  for (args_cnt = 0; *pos < body; args_cnt++) {
+  for (args_cnt = 0; *ppos < body; args_cnt++) {
     if (args_cnt > V7_ARGS_CNT_MAX) {
       /* too many arguments */
       rcode = v7_throwf(v7, SYNTAX_ERROR, "Too many arguments");
       V7_THROW(V7_SYNTAX_ERROR);
     }
 
-    tag = fetch_tag(v7, &bbuilder, a, pos, &pos_after_tag);
+    tag = fetch_tag(v7, &bbuilder, a, ppos, &pos_after_tag);
     /*
      * TODO(dfrank): it's not actually an internal error, we get here if
      * we compile e.g. the following: (function(1){})
@@ -25172,7 +25172,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   bcode->args_cnt = args_cnt;
   bcode->func_name_present = 1;
 
-  V7_TRY(compile_body(&bbuilder, a, start, end, body, fvar, pos));
+  V7_TRY(compile_body(&bbuilder, a, start, end, body, fvar, ppos));
 
 clean:
   bcode_builder_finalize(&bbuilder);
@@ -25188,7 +25188,7 @@ clean:
 }
 
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
-                                    ast_off_t *pos, struct bcode *bcode) {
+                                    ast_off_t *ppos, struct bcode *bcode) {
   enum v7_err rcode = V7_OK;
   struct bcode_builder bbuilder;
   int saved_line_no = v7->line_no;
@@ -25196,7 +25196,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
   bcode_builder_init(v7, &bbuilder, bcode);
   v7->line_no = 1;
 
-  rcode = compile_expr_builder(&bbuilder, a, pos);
+  rcode = compile_expr_builder(&bbuilder, a, ppos);
 
   bcode_builder_finalize(&bbuilder);
   v7->line_no = saved_line_no;
