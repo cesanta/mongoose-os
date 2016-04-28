@@ -101,7 +101,9 @@ typedef struct {
 #define CS_KRYPTON_SRC_KTYPES_H_
 
 #define _FILE_OFFSET_BITS 64
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #undef WIN32_LEAN_AND_MEAN  // Let windows.h always include winsock2.h
 
 #ifndef NS_INTERNAL

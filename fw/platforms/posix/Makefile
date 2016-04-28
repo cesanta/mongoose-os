@@ -11,9 +11,11 @@ V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
+KRYPTON_PATH ?= $(REPO_PATH)/krypton
 OUTAPP ?= fw
 VERBOSE ?= 0
-SSL ?= OpenSSL
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
+SSL ?= Krypton
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
@@ -83,7 +85,6 @@ endif
 # Non Windows
 ifneq ($(PLATFORM), "WIN")
   ADD_LIBS += m pthread
-  V7_FEATURES += -DCS_ENABLE_NATIVE_MD5  # Mongoose uses cs_md5
 endif
 
 # Linux
@@ -95,6 +96,13 @@ endif
 ifeq ($(PLATFORM), "WIN")
   CFLAGS += -D_WIN32_WINNT=0x0500
   ADD_LIBS += ws2_32
+endif
+
+ifeq "$(SSL)" "Krypton"
+INCLUDES += $(KRYPTON_PATH)
+VPATH += $(KRYPTON_PATH)
+APP_SRCS += krypton.c
+CFLAGS += -DMG_ENABLE_SSL -DMG_DISABLE_PFS -DSSL_KRYPTON
 endif
 
 GC_CHECK ?=
@@ -116,7 +124,6 @@ APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(BUILD_DIR)/sys_config.c
 
