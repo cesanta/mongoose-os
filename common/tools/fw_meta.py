@@ -1,4 +1,33 @@
 #!/usr/bin/env python
+#
+# Firmware metadata management script.
+#
+# Generally, executed 3 times:
+# 1) To extract build info from Git repo and produce build info .c and/or .json:
+#    fw_meta.py gen_build_info \
+#      --c_output=build_info.c \
+#      --json_output=build_info.json
+#    This assumes that the script is run from within a Git repo.
+# 2) Once firmware parts are ready, to create the firmware contents manifest:
+#    fw_meta.py create_manifest \
+#      --name=MyApp --platform=MyPlatform \
+#      --build_info=build_info.json \
+#      --output=manifest.json \
+#      --src_dir=/path/to/where/fw/parts/are/located \
+#      $(FW_PARTS)
+#    FW_PARTS is a list of firmware "parts", each defined by name:k=v,k=v,...
+#    entry. Exact key and values are dependent on platform, also for some
+#    platforms names may have special meaning. For parts that have the "src"
+#    attribute, the script will interpret it as a file relative to --src_dir
+#    and will compute SHA1 checksum for it and add as a "cs_sha1".
+# 3) To create firmware from parts and manifest:
+#    fw_meta.py create_fw \
+#      --manifest=manifest.json \
+#      --src_dir=/path/to/where/fw/parts/are/located \
+#      --output=firmware.zip
+#    This will roll a ZIP archive with the firmware.
+#    ZIP file will nclude the manifest and any files mentioned in "src"
+#    attributes of the parts.
 
 import argparse
 import datetime
