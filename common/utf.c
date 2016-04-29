@@ -1306,7 +1306,8 @@ int chartorune(Rune *rune, const char *str) {
   return 1;
 }
 
-int fullrune(const char *str UNUSED, int n) {
+int fullrune(const char *str, int n) {
+  (void) str;
   return (n <= 0) ? 0 : 1;
 }
 

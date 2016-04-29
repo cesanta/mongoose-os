@@ -73,12 +73,10 @@
 
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
-#define UNUSED __attribute__((unused))
 #define NOINLINE __attribute__((noinline))
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #define NORETURN
-#define UNUSED
 #define NOINLINE
 #define WARN_UNUSED_RESULT
 #endif /* __GNUC__ */
@@ -8510,7 +8508,8 @@ int chartorune(Rune *rune, const char *str) {
   return 1;
 }
 
-int fullrune(const char *str UNUSED, int n) {
+int fullrune(const char *str, int n) {
+  (void) str;
   return (n <= 0) ? 0 : 1;
 }
 
@@ -30147,10 +30146,12 @@ static int subs_string_exec(struct _str_split_ctx *ctx, const char *start,
 
 #if V7_ENABLE__RegExp
 /* String-based implementation of `p_add_caps` in `struct _str_split_ctx` */
-static long subs_string_split_add_caps(struct _str_split_ctx UNUSED *ctx,
-                                       val_t UNUSED res, long elem,
-                                       long UNUSED limit) {
+static long subs_string_split_add_caps(struct _str_split_ctx *ctx, val_t res,
+                                       long elem, long limit) {
   /* this is a stub function */
+  (void) ctx;
+  (void) res;
+  (void) limit;
   return elem;
 }
 #endif
