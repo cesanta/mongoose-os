@@ -214,19 +214,23 @@ static void add_cb_info(struct v7 *v7, struct cb_info_holder *list,
   SLIST_INSERT_HEAD(&list->head, new_cb_info, entries);
 }
 
-static void trigger_event(struct v7 *v7, struct cb_info_holder *list,
-                          const char *name, v7_val_t arg1, v7_val_t arg2) {
+static int trigger_event(struct v7 *v7, struct cb_info_holder *list,
+                         const char *name, v7_val_t arg1, v7_val_t arg2) {
+  int ret = 0;
   struct cb_info *cb, *cb_temp;
   SLIST_FOREACH_SAFE(cb, &list->head, entries, cb_temp) {
     if (strcmp(cb->name, name) == 0) {
       LOG(LL_VERBOSE_DEBUG, ("Triggered `%s`", name));
       sj_invoke_cb2(v7, cb->cbv, arg1, arg2);
+      ret = 1;
       if (cb->trigger_once) {
         SLIST_REMOVE(&list->head, cb, cb_info, entries);
         free_cb_info(v7, cb);
       }
     }
   }
+
+  return ret;
 }
 
 static void free_obj_cb_info_chain(struct v7 *v7, v7_val_t obj) {
@@ -312,6 +316,7 @@ static enum v7_err setup_event(struct v7 *v7, const char *valid_events[],
   }
 
   event_name = v7_to_cstring(v7, &event_name_v);
+  LOG(LL_VERBOSE_DEBUG, ("Set event: %s", event_name));
 
   for (i = 0; i < valid_events_count; i++) {
     if (strcmp(event_name, valid_events[i]) == 0) {
@@ -488,6 +493,8 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
   switch (ev) {
     case MG_EV_POLL: {
+      LOG(LL_VERBOSE_DEBUG, ("Poll %p, flags %X recvbuf:%d", c, ud->flags,
+                             (int) c->recv_mbuf.len));
       if (ud->timeout != 0 && ud->last_accessed != 0 &&
           !v7_is_undefined(ud->sock_obj)) {
         time_t now = time(NULL);
@@ -503,12 +510,14 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       }
 
       if (ud->flags & UD_F_FORCE_RECV && c->recv_mbuf.len != 0) {
-        trigger_event(
-            ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_data,
-            v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
-            v7_mk_undefined());
-        mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
-        ud->flags &= ~UD_F_FORCE_RECV;
+        LOG(LL_VERBOSE_DEBUG, ("Forcing recv for conn %p", c));
+        if (trigger_event(
+                ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_data,
+                v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
+                v7_mk_undefined())) {
+          mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
+          ud->flags &= ~UD_F_FORCE_RECV;
+        }
       }
       break;
     }
@@ -558,6 +567,8 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       break;
     }
     case MG_EV_RECV: {
+      int event_triggered;
+      LOG(LL_VERBOSE_DEBUG, ("RECV %p", c));
       if (ud->flags & UD_F_PAUSED || c->recv_mbuf.len == 0) {
         return;
       }
@@ -571,25 +582,34 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         v7_set(ud->v7, rinfo, "port", ~0,
                v7_mk_number(ntohs(c->sa.sin.sin_port)));
         LOG(LL_VERBOSE_DEBUG, ("Triggering `message`"));
-        trigger_event(
+        event_triggered = trigger_event(
             ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_message,
             v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1), rinfo);
       } else {
-        trigger_event(
+        event_triggered = trigger_event(
             ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_data,
             v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
             v7_mk_undefined());
       }
 
-      mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
-      ud->last_accessed = time(NULL);
-      if (ud->flags & UD_F_NO_OBJECT_CONN) {
+      LOG(LL_VERBOSE_DEBUG, ("Triggered: %d", event_triggered));
+
+      if (event_triggered) {
         /*
-         * This is "fake" incoming udp connection, so close it. It decreases
-         * performance, but decreases memory footprint as well
+         * Removing data/closing connection only if event was
+         * successfully trigered, otherwise received data will be lost
          */
-        c->flags |= MG_F_SEND_AND_CLOSE;
+        mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
+        if (ud->flags & UD_F_NO_OBJECT_CONN) {
+          /*
+           * This is "fake" incoming udp connection, so close it. It decreases
+           * performance, but decreases memory footprint as well
+           */
+          c->flags |= MG_F_SEND_AND_CLOSE;
+        }
       }
+
+      ud->last_accessed = time(NULL);
       break;
     }
     case MG_EV_CLOSE: {
@@ -830,7 +850,7 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
                      port);
   (void) tmp; /* Shut up compiler about asprintf */
 
-  LOG(LL_DEBUG, ("Starting listening on %s", bind_addr));
+  LOG(LL_VERBOSE_DEBUG, ("Starting listening on %s", bind_addr));
 
   c = mg_bind_opt(&sj_mgr, bind_addr, mg_ev_handler, opts);
 
@@ -992,7 +1012,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
   int tmp = asprintf(&mg_addr, "udp://%s:%d", address, port);
   (void) tmp; /* Shut up compiler about asprintf */
 
-  LOG(LL_DEBUG, ("Connecting to %s", mg_addr));
+  LOG(LL_VERBOSE_DEBUG, ("Connecting to %s", mg_addr));
   c = mg_connect(&sj_mgr, mg_addr, mg_ev_handler);
 
   if (c == NULL) {
@@ -1362,6 +1382,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_on(struct v7 *v7, v7_val_t *res) {
                                 s_ev_data,   s_ev_drain,  s_ev_end,
                                 s_ev_lookup, s_ev_timeout};
   int event_idx;
+  struct mg_connection *c = NULL;
   enum v7_err rcode =
       setup_event(v7, valid_events, ARRAY_SIZE(valid_events),
                   get_cb_info_holder(v7, v7_get_this(v7)), res, &event_idx);
@@ -1370,17 +1391,26 @@ SJ_PRIVATE enum v7_err TCP_Socket_on(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  /*
-   * if socket is an error state after creation, we need to trigger
-   * EV_ERROR once it is set
-   * But we do that aync in order to avoid recursion
-   */
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
-  if (v7_is_foreign(conn_v) && v7_to_foreign(conn_v) == NULL &&
-      event_idx == 0 /* EV_ERROR was set up*/) {
+  c = v7_to_foreign(conn_v);
+  if (c == NULL && event_idx == 0 /* EV_ERROR was set up*/) {
+    /*
+     * if socket is an error state after creation, we need to trigger
+     * EV_ERROR once it is set
+     * But we do that aync in order to avoid recursion
+     */
     async_trigger_event(v7, v7_get_this(v7), "error",
                         create_error(v7, "Failed to open connection"),
                         v7_mk_undefined());
+  } else if (c->recv_mbuf.len != 0 && event_idx == 3 /* data */) {
+    LOG(LL_VERBOSE_DEBUG, ("Forcing recv, len=%d", (int) c->recv_mbuf.len));
+    /*
+     * We have received data and have to force on "data" event
+     * (due to async nature of "connect" event it is possible, what
+     * "data" handler is set after receiving of data)
+     */
+    struct conn_user_data *ud = (struct conn_user_data *) c->user_data;
+    ud->flags |= UD_F_FORCE_RECV;
   }
 
 clean:
