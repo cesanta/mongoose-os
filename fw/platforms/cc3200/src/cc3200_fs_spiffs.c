@@ -9,7 +9,6 @@
 #include "cc3200_fs_spiffs_container.h"
 
 #include <errno.h>
-#include <fcntl.h>
 #include <stdlib.h>
 
 #include <common/spiffs/spiffs_nucleus.h>
@@ -46,7 +45,9 @@ int fs_spiffs_open(const char *pathname, int flags, mode_t mode) {
   if (flags & O_CREAT) sm |= SPIFFS_CREAT;
   if (flags & O_TRUNC) sm |= SPIFFS_TRUNC;
   if (flags & O_APPEND) sm |= SPIFFS_APPEND;
+#ifdef O_EXCL
   if (flags & O_EXCL) sm |= SPIFFS_EXCL;
+#endif
 
   int res = SPIFFS_open(&m->fs, (char *) pathname, sm, 0);
   if (res < 0) set_spiffs_errno(m, res);

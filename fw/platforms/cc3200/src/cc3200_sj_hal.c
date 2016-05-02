@@ -5,7 +5,10 @@
 
 #include "cc3200_sj_hal.h"
 
+#ifndef __TI_COMPILER_VERSION__
 #include <malloc.h>
+#endif
+#include <stdlib.h>
 #include <string.h>
 
 #include "hw_types.h"
@@ -40,6 +43,17 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   osi_MsgQWrite(&s_v7_q, &e, OSI_WAIT_FOREVER);
 }
 
+#ifdef __TI_COMPILER_VERSION__
+size_t sj_get_heap_size() {
+  return 0; /* TODO(rojer) */
+}
+
+size_t sj_get_free_heap_size() {
+  return 0; /* TODO(rojer) */
+}
+
+#else
+
 /* Defined in linker script. */
 extern unsigned long _heap;
 extern unsigned long _eheap;
@@ -55,6 +69,7 @@ size_t sj_get_free_heap_size() {
   avail += mi.fordblks; /* Free in the area claimed by allocator. */
   return avail;
 }
+#endif
 
 size_t sj_get_min_free_heap_size() {
   /* Not supported */

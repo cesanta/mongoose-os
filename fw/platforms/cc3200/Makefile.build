@@ -8,6 +8,7 @@ MAKEFLAGS += --warn-undefined-variables
 
 APP ?= mongoose-iot
 APP_PLATFORM = cc3200
+TOOLCHAIN = gcc
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
@@ -34,7 +35,7 @@ JSBIN_EXT := js
 JS_EXT := js
 
 IPATH = src $(BUILD_DIR) $(REPO_PATH)
-VPATH = src $(BUILD_DIR)
+VPATH = src tools $(BUILD_DIR)
 
 V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_BUILD_PROFILE=1 \
@@ -59,7 +60,7 @@ V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
 
 SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
-APP_ELF = $(FW_DIR)/$(APP).axf
+APP_ELF = $(BUILD_DIR)/$(APP).axf
 APP_BIN = $(FW_DIR)/$(APP).bin
 FS_IMG = $(FW_DIR)/fs.img
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
@@ -87,23 +88,21 @@ IPATH += $(SPIFFS_PATH)
 VPATH += $(SPIFFS_PATH)
 
 FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c heap_3.c osi_freertos.c
-DRIVER_SRCS = cpu.c i2c.c interrupt.c pin.c prcm.c spi.c uart.c udma.c utils.c
+DRIVER_SRCS = cpu.c flash.c i2c.c interrupt.c pin.c prcm.c spi.c uart.c udma.c utils.c
 SL_SRCS = socket.c wlan.c driver.c device.c netapp.c netcfg.c network_common.c \
           cc_pal.c fs.c
 SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(SL_SRCS)
 IPATH += $(SDK_PATH) $(SDK_PATH)/inc $(SDK_PATH)/driverlib $(SDK_PATH)/oslib \
          $(SDK_PATH)/simplelink $(SDK_PATH)/simplelink/include \
          $(SDK_PATH)/simplelink_extlib/provisioninglib \
-         $(SDK_PATH)/third_party/FreeRTOS/source/include \
-         $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
+         $(SDK_PATH)/third_party/FreeRTOS/source/include
 VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
          $(SDK_PATH)/example/common \
          $(SDK_PATH)/simplelink/source $(SDK_PATH)/third_party/FreeRTOS/source \
-         $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4 \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
 
-APP_SRCS = $(notdir $(wildcard src/*.c)) mongoose.c \
-           $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS)
+APP_SRCS = $(notdir $(wildcard src/*.c))
+SRCS = $(APP_SRCS) mongoose.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS)
 
 .DEFAULT_GOAL := all
 
@@ -119,47 +118,14 @@ FW_PARTS = sys_mcuimg.bin:src=$(notdir $(APP_BIN)) \
            fs.img:src=$(notdir $(FS_IMG))
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
-APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
+OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
 VPATH += $(MONGOOSE_PATH)
-
-all: $(BUILD_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
-
-$(FW_MANIFEST): $(APP_ELF) $(APP_BIN) $(FS_IMG)
-
-$(APP_ELF): $(FW_DIR) $(APP_OBJS) $(BUILD_INFO_O)
-
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
-
-$(BUILD_INFO_O): $(BUILD_INFO_C)
 
 include $(REPO_PATH)/common/scripts/build_info.mk
 include $(REPO_PATH)/fw/src/sys_config.mk
 
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 $(BUILD_DIR)/v7.o: $(GENERATED_SOURCES)
-
-# Bulk of the work is done by SDK-provided makefile.
-
-PROG = $(APP)
-OBJDIR = $(BUILD_DIR)
-BINDIR = $(FW_DIR)
-CFLAGSgcc = -Os -Wall -Werror -DNDEBUG -DCS_NDEBUG \
-            -I$(REPO_PATH) \
-            $(SDK_FLAGS) $(V7_FEATURES) $(V7_MEMORY_FLAGS) \
-            -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-            -DCS_PLATFORM=4 -DMG_FS_SLFS -DCC3200_FS_SPIFFS \
-            $(MONGOOSE_FEATURES) $(CFLAGS_EXTRA)
-LDFLAGSgcc =
-LDFLAGSgcc_$(PROG) =
-SCATTERgcc_$(PROG) = src/$(APP).ld
-LNK_SCP = $(APP).ld
-ENTRY_$(PROG) = ResetISR  # From startup_gcc.c
-VERBOSE = $(V)
-TARGET_ARCH =
-ROOT =
-FPU =
-include $(SDK_PATH)/tools/gcc_scripts/makedefs
-
 
 $(FS_IMG): $(wildcard $(COMMON_FS_PATH)/*) $(JS_SRCS) $(wildcard $(FS_DIR)/*)
 	@$(foreach js,$^, \
@@ -171,10 +137,36 @@ $(FS_IMG): $(wildcard $(COMMON_FS_PATH)/*) $(JS_SRCS) $(wildcard $(FS_DIR)/*)
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) v7.c v7.h
 
-# Disable certain warnings on SDK sources, we have no control over them anyway.
-# We aloc force-include platform.h which resolves some symbol conflicts
-# between system includes and simplelink.h
-
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
-$(SDK_OBJS): CFLAGS += -include common/platform.h -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses -Wno-unused-variable -Wno-builtin-macro-redefined
-$(BUILD_DIR)/cc_pal.o: CFLAGS += -Wno-error
+
+APP_CFLAGS = -DNDEBUG -DCS_NDEBUG \
+             $(SDK_FLAGS) $(V7_FEATURES) $(V7_MEMORY_FLAGS) \
+             -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
+             -Dcc3200 -DMG_FS_SLFS -DCC3200_FS_SPIFFS \
+             $(MONGOOSE_FEATURES) $(CFLAGS_EXTRA)
+
+OBJCOPY = arm-none-eabi-objcopy
+
+ifeq "$(TOOLCHAIN)" "gcc"
+include tools/gcc.mk
+else
+include tools/ti.mk
+endif
+
+CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
+CFLAGS += $(APP_CFLAGS)
+
+all: $(BUILD_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
+
+$(FW_MANIFEST): $(APP_BIN) $(FS_IMG)
+
+$(APP_BIN): $(APP_ELF)
+	$(vecho) "BIN  $< -> $@"
+	$(Q) $(OBJCOPY) -O binary $< $@
+	@echo "    Code size: $$(ls -l $@ | awk '{print $$5}')"
+
+$(APP_ELF): $(FW_DIR) $(OBJS) $(BUILD_INFO_O)
+
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
+
+$(BUILD_INFO_O): $(BUILD_INFO_C)

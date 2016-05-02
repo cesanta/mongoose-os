@@ -4,9 +4,8 @@
  */
 
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "common/cs_file.h"
 #include "fw/src/sj_mongoose.h"

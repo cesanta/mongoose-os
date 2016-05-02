@@ -37,7 +37,7 @@
  */
 
 /* clang-format off */
-static char s_pin_to_gpio_map[64] = {
+static signed char s_pin_to_gpio_map[64] = {
   10, 11, 12, 13, 14, 15, 16, 17, -1, -1,
   -1, -1, -1, -1, 22, 23, 24, 28, -1, -1,
   25, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -46,7 +46,7 @@ static char s_pin_to_gpio_map[64] = {
   -1, -1, 30, -1,  1, -1,  2,  3,  4,  5,
    6,  7,  8,  9
 };
-static char s_gpio_to_pin_map[32] = {
+static signed char s_gpio_to_pin_map[32] = {
   50, 55, 57, 58, 59, 60, 61, 62, 63, 64,
    1,  2,  3,  4,  5,  6,  7,  8, -1, -1,
   -1, -1, 15, 16, 17, 21, -1, -1, 18, -1,

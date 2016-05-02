@@ -3,15 +3,16 @@
  * All rights reserved
  */
 
-#include <malloc.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "oslib/osi.h"
 
 #include "hw_types.h"
 #include "hw_memmap.h"
 #include "hw_i2c.h"
-typedef char bool;
 #include "i2c.h"
 #include "pin.h"
 #include "prcm.h"
@@ -71,7 +72,7 @@ void sj_i2c_close(i2c_connection conn) {
 }
 
 /* Sends command to the I2C module and waits for it to be processed. */
-static int i2c_command(struct i2c_state *c, uint32_t cmd) {
+static enum i2c_ack_type i2c_command(struct i2c_state *c, uint32_t cmd) {
   I2CMasterIntClear(c->base);
   I2CMasterTimeoutSet(c->base, 0x20); /* 5 ms @ 100 KHz */
   I2CMasterControl(c->base, cmd);

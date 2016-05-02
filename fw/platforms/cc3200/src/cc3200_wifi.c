@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#include <malloc.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <common/platform.h>
 

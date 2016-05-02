@@ -8,6 +8,8 @@
 #ifndef SPIFFS_CONFIG_COMMON_H_
 #define SPIFFS_CONFIG_COMMON_H_
 
+#include <stddef.h>
+
 // compile time switches
 
 // Set generic spiffs debug output call.

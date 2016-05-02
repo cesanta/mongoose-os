@@ -3,10 +3,12 @@
  * All rights reserved
  */
 
-#include <malloc.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#ifndef __TI_COMPILER_VERSION__
 #include <unistd.h>
+#endif
 
 /* Driverlib includes */
 #include "hw_types.h"
@@ -45,7 +47,7 @@
 #include "cc3200_fs.h"
 #include "cc3200_sj_hal.h"
 
-const char *build_id;
+extern const char *build_id;
 
 struct v7 *s_v7;
 
@@ -215,4 +217,11 @@ int main() {
   osi_start();
 
   return 0;
+}
+
+/* FreeRTOS assert() hook. */
+void vAssertCalled(const char *pcFile, unsigned long ulLine) {
+  // Handle Assert here
+  while (1) {
+  }
 }

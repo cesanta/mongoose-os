@@ -7,8 +7,6 @@
 #define CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_
 
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
 #include <common/platform.h>
 

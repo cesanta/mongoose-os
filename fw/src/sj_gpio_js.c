@@ -100,7 +100,7 @@ SJ_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
     v7_own(v7, &s_isr_cb_proxy_v);
     s_gpio_intr_installed = 1;
   }
-  *res = v7_mk_boolean(sj_gpio_intr_set(pin, type) == 0);
+  *res = v7_mk_boolean(sj_gpio_intr_set(pin, (enum gpio_int_mode) type) == 0);
   goto clean;
 
 clean:
@@ -120,7 +120,8 @@ SJ_PRIVATE enum v7_err GPIO_setMode(struct v7 *v7, v7_val_t *res) {
     pin = v7_to_number(pinv);
     mode = v7_to_number(modev);
     pull = v7_to_number(pullv);
-    *res = v7_mk_boolean(sj_gpio_set_mode(pin, mode, pull) == 0);
+    *res = v7_mk_boolean(sj_gpio_set_mode(pin, (enum gpio_mode) mode,
+                                          (enum gpio_pull_type) pull) == 0);
   }
 
   return V7_OK;
@@ -143,7 +144,8 @@ SJ_PRIVATE enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
      */
     val = !!v7_is_truthy(v7, valv);
 
-    *res = v7_mk_boolean(sj_gpio_write(pin, val) == 0);
+    *res = v7_mk_boolean(
+        sj_gpio_write(pin, val ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW) == 0);
   }
 
   return V7_OK;

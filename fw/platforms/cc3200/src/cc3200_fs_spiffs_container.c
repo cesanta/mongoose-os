@@ -2,7 +2,7 @@
 
 #include "cc3200_fs_spiffs_container.h"
 
-#include <malloc.h>
+#include <stdlib.h>
 
 #include "hw_types.h"
 #include "simplelink.h"
@@ -233,7 +233,7 @@ static int fs_get_info(int cidx, struct fs_info *info) {
     r = -201;
     goto out_close;
   }
-  if (meta.info.seq > INITIAL_SEQ || meta.info.fs_size < 0) {
+  if (meta.info.seq > INITIAL_SEQ || meta.info.fs_size == ~0) {
     r = -202;
     goto out_close;
   }
