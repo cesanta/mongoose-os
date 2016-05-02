@@ -3604,16 +3604,6 @@ struct v7 {
    * exception creation
    */
   unsigned int creating_exception : 1;
-  /*
-   * true if currently in strict mode
-   *
-   * TODO(dfrank) : this field is needed only for public functions like
-   * `v7_set_prop()` and `v7_array_set()`, but do we actually need to consider
-   * strict mode in these functions, and throw exceptions?
-   *
-   * If not, then we should get rid of `v7->strict_mode` whatsoever.
-   */
-  unsigned int strict_mode : 1;
   /* while true, GC is inhibited */
   unsigned int inhibit_gc : 1;
   /* true if `thrown_error` is valid */
@@ -3749,6 +3739,11 @@ struct v7_vec_const {
  * See comment for `struct v7_call_frame_private::vals::scope`
  */
 V7_PRIVATE v7_val_t get_scope(struct v7 *v7);
+
+/*
+ * Returns 1 if currently executing bcode in the "strict mode", 0 otherwise
+ */
+V7_PRIVATE uint8_t is_strict_mode(struct v7 *v7);
 
 #if defined(__cplusplus)
 }
@@ -13724,14 +13719,7 @@ static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
   r->ops = bcode->ops.p;
   r->end = r->ops + bcode->ops.len;
 
-  /*
-   * TODO(dfrank) : the field `v7->strict_mode` is needed only for public
-   * functions like `v7_set_prop()` and `v7_array_set()`, but do we actually
-   * need to consider strict mode in these functions, and throw exceptions?
-   *
-   * If not, then we should get rid of `v7->strict_mode` whatsoever.
-   */
-  v7->strict_mode = bcode->strict_mode;
+  (void) v7;
 }
 
 V7_PRIVATE struct v7_call_frame_base *find_call_frame(struct v7 *v7,
@@ -16004,10 +15992,6 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
      */
     mbuf_append(&v7->owned_strings, &z, 1);
 
-#ifdef V7_FORCE_STRICT_MODE
-    v7->strict_mode = 1;
-#endif
-
     v7->inhibit_gc = 1;
     v7->vals.thrown_error = v7_mk_undefined();
 
@@ -16109,6 +16093,19 @@ V7_PRIVATE v7_val_t get_scope(struct v7 *v7) {
   } else {
     /* No active call frame, return global object */
     return v7->vals.global_object;
+  }
+}
+
+V7_PRIVATE uint8_t is_strict_mode(struct v7 *v7) {
+  struct v7_call_frame_bcode *call_frame =
+      (struct v7_call_frame_bcode *) find_call_frame(v7,
+                                                     V7_CALL_FRAME_MASK_BCODE);
+
+  if (call_frame != NULL) {
+    return call_frame->bcode->strict_mode;
+  } else {
+    /* No active call frame, assume no strict mode */
+    return 0;
   }
 }
 
@@ -17596,7 +17593,7 @@ enum v7_err v7_array_set_throwing(struct v7 *v7, val_t arr, unsigned long index,
       abuf = (struct mbuf *) v7_to_foreign(p->value);
 
       if (v7_to_object(arr)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
-        if (v7->strict_mode) {
+        if (is_strict_mode(v7)) {
           rcode = v7_throwf(v7, TYPE_ERROR, "Object is not extensible");
           goto clean;
         }
@@ -18133,7 +18130,7 @@ V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
        * We should throw if we use `Object.defineProperty`, or if we're in
        * strict mode.
        */
-      if (v7->strict_mode || !as_assign) {
+      if (is_strict_mode(v7) || !as_assign) {
         V7_THROW(v7_throwf(v7, TYPE_ERROR, "Object is not extensible"));
       }
       prop = NULL;
@@ -18159,7 +18156,7 @@ V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
 
       if (as_assign) {
         /* Plain assignment: in strict mode throw, otherwise ignore */
-        if (v7->strict_mode) {
+        if (is_strict_mode(v7)) {
           V7_THROW(
               v7_throwf(v7, TYPE_ERROR, "Cannot assign to read-only property"));
         } else {
