@@ -10396,6 +10396,11 @@ V7_PRIVATE enum v7_err Socket_accept(struct v7 *v7, v7_val_t *res) {
     sock_t fd = accept(sock, (struct sockaddr *) &sin, &len);
     if (fd != INVALID_SOCKET) {
       rcode = s_fd_to_sock_obj(v7, fd, res);
+      if (rcode == V7_OK) {
+        char *remote_host = inet_ntoa(sin.sin_addr);
+        v7_set(v7, *res, "remoteHost", ~0,
+               v7_mk_string(v7, remote_host, ~0, 1));
+      }
       goto clean;
     }
   }
