@@ -2,16 +2,21 @@
  * Copyright (c) 2016 Cesanta Software Limited
  * All rights reserved
  */
+
+#include "fw/src/sj_udptcp.h"
+
 #include <stdio.h>
 #include <math.h>
-#include "sj_udptcp.h"
-#include "v7/v7.h"
-#include "sj_mongoose.h"
-#include "sj_v7_ext.h"
-#include "sj_common.h"
-#include "sj_timers.h"
-#include "device_config.h"
+
+#ifndef CS_DISABLE_JS
+
 #include "common/queue.h"
+#include "fw/src/device_config.h"
+#include "fw/src/sj_common.h"
+#include "fw/src/sj_mongoose.h"
+#include "fw/src/sj_timers.h"
+#include "fw/src/sj_v7_ext.h"
+#include "v7/v7.h"
 
 static const char *s_dgram_global_object = "dgram";
 static const char *s_dgram_socket_proto = "_dgrm";
@@ -1510,3 +1515,10 @@ void sj_udp_tcp_api_setup(struct v7 *v7) {
   v7_disown(v7, &tcp_socket_proto);
   v7_disown(v7, &tcp);
 }
+#else /* CS_DISABLE_JS */
+
+void sj_udp_tcp_api_setup(struct v7 *v7) {
+  (void) v7;
+}
+
+#endif /* CS_DISABLE_JS */

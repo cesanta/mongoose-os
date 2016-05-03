@@ -4,6 +4,8 @@
  * I2C low-level API
  */
 
+#ifndef CS_DISABLE_JS
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -288,6 +290,8 @@ void sj_i2c_close(i2c_connection conn) {
   free(conn);
 }
 
+#endif /* CS_DISABLE_JS */
+
 /*
  * Low-level API usage example (write & read "Hello, world!" from EEPROM
  * Tested on MICROCHIP 24FC1025-I/P.
@@ -360,4 +364,4 @@ void i2c_eeprom_test() {
   os_printf("Finished\n\n");
 }
 
-#endif
+#endif /* ENABLE_IC2_EEPROM_TEST */

@@ -6,9 +6,9 @@
 #ifndef CS_FW_SRC_SJ_WIFI_H_
 #define CS_FW_SRC_SJ_WIFI_H_
 
-#include "v7/v7.h"
-
-#include "sys_config.h"
+struct v7;
+struct sys_config_wifi_sta;
+struct sys_config_wifi_ap;
 
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
 

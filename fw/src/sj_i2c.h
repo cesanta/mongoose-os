@@ -8,9 +8,8 @@
 
 #include <stdint.h>
 
-#include "v7/v7.h"
-
 typedef void *i2c_connection;
+struct v7;
 
 /*
  * I2C_ACK - positive answer

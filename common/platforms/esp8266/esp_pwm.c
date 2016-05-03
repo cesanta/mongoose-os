@@ -3,19 +3,20 @@
  * All rights reserved
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 
-#include "ets_sys.h"
-#include "gpio.h"
-#include "osapi.h"
-#include "os_type.h"
-#include "user_interface.h"
+#include <ets_sys.h>
+#include <gpio.h>
+#include <osapi.h>
+#include <os_type.h>
+#include <user_interface.h>
+
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#include "esp_gpio.h"
-#include "esp_periph.h"
-
-#include "v7/v7.h"
+/* TODO(mkm): either move this back to non common, or move deps to common */
+#include "fw/platforms/esp8266/user/esp_gpio.h"
+#include "fw/platforms/esp8266/user/esp_periph.h"
 
 /*
  * Semi-hardware PWM - uses hardware timer 1 to generate base clock.

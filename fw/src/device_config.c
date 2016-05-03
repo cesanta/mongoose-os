@@ -48,6 +48,7 @@ static struct mg_connection *listen_conn;
 static int load_config_file(const char *filename, const char *acl, int required,
                             struct sys_config *cfg);
 
+#ifndef CS_DISABLE_JS
 static void export_read_only_vars_to_v7(struct v7 *v7) {
   struct ro_var *rv;
   if (v7 == NULL) return;
@@ -58,6 +59,7 @@ static void export_read_only_vars_to_v7(struct v7 *v7) {
   v7_val_t Sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
   v7_set(v7, Sys, "ro_vars", ~0, obj);
 }
+#endif
 
 void expand_mac_address_placeholders(char *str) {
   int num_placeholders = 0;
@@ -349,12 +351,15 @@ int init_device(struct v7 *v7) {
     LOG(LL_ERROR, ("Platform init failed"));
   }
 
+#ifndef CS_DISABLE_JS
   /* NOTE(lsm): must be done last */
   export_read_only_vars_to_v7(v7);
+#endif
 
   return result;
 }
 
+#ifndef CS_DISABLE_JS
 int update_sysconf(struct v7 *v7, const char *path, v7_val_t val) {
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
   if (!v7_is_object(sys)) {
@@ -393,3 +398,4 @@ int update_sysconf(struct v7 *v7, const char *path, v7_val_t val) {
 
   return 1;
 }
+#endif /* CS_DISABLE_JS */

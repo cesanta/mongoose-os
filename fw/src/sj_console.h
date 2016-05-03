@@ -6,9 +6,13 @@
 #ifndef SJ_CONSOLE_H
 #define SJ_CONSOLE_H
 
-#include "v7/v7.h"
+#ifndef CS_DISABLE_JS
 
-void sj_console_init();
+struct v7;
+
+void sj_console_init(struct v7 *v7);
 void sj_console_api_setup(struct v7 *v7);
+
+#endif /* CS_DISABLE_JS */
 
 #endif /* SJ_CONSOLE_H */

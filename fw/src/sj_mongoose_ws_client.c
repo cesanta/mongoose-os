@@ -3,6 +3,10 @@
  * All rights reserved
  */
 
+#include "fw/src/sj_mongoose_ws_client.h"
+
+#ifndef CS_DISABLE_JS
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -302,3 +306,11 @@ void sj_ws_client_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &ws);
 }
+
+#else /* CS_DISABLE_JS */
+
+void sj_ws_client_api_setup(struct v7 *v7) {
+  (void) v7;
+}
+
+#endif /* CS_DISABLE_JS */

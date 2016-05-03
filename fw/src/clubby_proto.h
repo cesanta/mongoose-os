@@ -9,7 +9,7 @@
 #include "mongoose/mongoose.h"
 #include "common/ubjserializer.h"
 
-#ifndef DISABLE_C_CLUBBY
+#if !defined(DISABLE_C_CLUBBY) && defined(CS_ENABLE_UBJSON)
 
 /*
  * Here are low-level clubby functions

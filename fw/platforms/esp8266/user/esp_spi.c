@@ -24,8 +24,13 @@
 * Modified by Cesanta Software, 2015
 */
 
-#include "esp_spi.h"
+/* depends on v7 because of v7_err only */
+#ifndef CS_DISABLE_JS
+
 #include <stdlib.h>
+
+#include "v7/v7.h"
+#include "fw/platforms/esp8266/user/esp_spi.h"
 
 struct esp_spi_connection {
   uint8_t spi_no;
@@ -261,6 +266,8 @@ void sj_spi_close(spi_connection conn) {
   free(conn);
 }
 
+#endif /* CS_DISABLE_JS */
+
 #ifdef MPL115A1_EXAMPLE_ENABLED
 
 /*
@@ -314,4 +321,4 @@ void test_MPL115A1() {
   printf("Pressure=%d\n", (int) (pressure * 10));
 }
 
-#endif
+#endif /* MPL115A1_EXAMPLE_ENABLED */

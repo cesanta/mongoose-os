@@ -23,16 +23,20 @@
 #include "fw/src/sj_common.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
+#include "fw/src/sj_hal.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_gpio_js.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_sj_uart.h"
+#include "fw/platforms/esp8266/user/esp_sj_uart_js.h"
 #include "fw/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
+#ifndef CS_DISABLE_JS
 #include "v7/v7.h"
+#endif
 
 os_timer_t startcmd_timer;
 
@@ -91,17 +95,23 @@ void sjs_init(void *dummy) {
 #endif
   }
 
+#ifndef CS_DISABLE_JS
   init_v7(&dummy);
 
   /* Disable GC during JS API initialization. */
   v7_set_gc_enabled(v7, 0);
+#else
+  (void) dummy;
+#endif
 
   esp_sj_uart_init(v7);
 
 #ifndef V7_NO_FS
 #ifndef DISABLE_OTA
   fs_init(get_fs_addr(get_current_rom()), get_fs_size(get_current_rom()));
+#ifndef CS_DISABLE_CLUBBY_UPDATER
   finish_update();
+#endif
 #else
   fs_init(FS_ADDR, FS_SIZE);
 #endif
@@ -131,14 +141,17 @@ void sjs_init(void *dummy) {
   }
   LOG(LL_INFO, ("App init done"));
 
+#ifndef CS_DISABLE_JS
   /* SJS initialized, enable GC back, and trigger it. */
   v7_set_gc_enabled(v7, 1);
   v7_gc(v7, 1);
+#endif
 
-#ifndef V7_NO_FS
+#if !defined(V7_NO_FS) && !defined(CS_DISABLE_JS)
   run_init_script();
 #endif
 
+#ifndef CS_DISABLE_JS
   /* Install prompt if enabled in the config and user's app has not installed
    * a custom RX handler. */
   if (get_cfg()->debug.enable_prompt &&
@@ -146,6 +159,7 @@ void sjs_init(void *dummy) {
     sj_prompt_init(v7);
     esp_sj_uart_set_prompt(0);
   }
+#endif
 
 #ifdef ESP_UMM_ENABLE
   /*

@@ -6,6 +6,8 @@
 #ifndef CS_FW_SRC_SJ_MONGOOSE_WS_CLIENT_H_
 #define CS_FW_SRC_SJ_MONGOOSE_WS_CLIENT_H_
 
-void sj_ws_client_api_setup(struct v7 *);
+struct v7;
+
+void sj_ws_client_api_setup(struct v7 *v7);
 
 #endif /* CS_FW_SRC_SJ_MONGOOSE_WS_CLIENT_H_ */

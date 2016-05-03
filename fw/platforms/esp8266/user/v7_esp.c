@@ -3,14 +3,19 @@
  * All rights reserved
  */
 
+/* TODO(mkm): remove any reference to the v7 context when building without v7 */
+struct v7;
+struct v7 *v7;
+
+#ifndef CS_DISABLE_JS
+
 #include <math.h>
 #include <stdlib.h>
 #include <ets_sys.h>
+
 #include "v7/v7.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
 #include "fw/src/sj_v7_ext.h"
-
-struct v7 *v7;
 
 /*
  * dsleep(time_us[, option])
@@ -89,4 +94,5 @@ void run_init_script() {
     sj_print_exception(v7, res, "Init error");
   }
 }
-#endif
+#endif /* V7_NO_FS */
+#endif /* CS_DISABLE_JS */

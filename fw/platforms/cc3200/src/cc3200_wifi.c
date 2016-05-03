@@ -18,6 +18,7 @@
 #include "v7/v7.h"
 
 #include "config.h"
+#include "sys_config.h"
 
 extern struct v7 *s_v7;
 

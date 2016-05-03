@@ -3,13 +3,13 @@
  * All rights reserved
  */
 
-#include "v7/v7.h"
-
 #if defined(V7_THAW)
 #define SJ_PRIVATE /* nothing */
 #else
 #define SJ_PRIVATE static
 #endif /* CS_FW_SRC_SJ_COMMON_H_ */
+
+struct v7;
 
 /*
  * Mongoose IoT initialization common for all platforms

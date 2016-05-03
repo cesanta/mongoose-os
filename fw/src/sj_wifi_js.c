@@ -6,15 +6,17 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "sj_common.h"
-#include "sj_v7_ext.h"
-#include "sj_wifi.h"
-#include "sj_wifi_js.h"
+#include "fw/src/sj_common.h"
+#include "fw/src/sj_v7_ext.h"
+#include "fw/src/sj_wifi.h"
+#include "fw/src/sj_wifi_js.h"
 
 #include "v7/v7.h"
-#include "device_config.h"
+#include "fw/src/device_config.h"
 #include "common/cs_dbg.h"
 #include "common/queue.h"
+
+#ifndef CS_DISABLE_JS
 
 static v7_val_t s_wifi_private;
 
@@ -282,12 +284,15 @@ void sj_wifi_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &s_wifi);
 }
+#endif /* CS_DISABLE_JS */
 
 void sj_wifi_init(struct v7 *v7) {
+#ifndef CS_DISABLE_JS
   s_wifi_private = v7_mk_object(v7);
   v7_def(v7, v7_get_global(v7), "_Wifi", ~0,
          (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), s_wifi_private);
   v7_own(v7, &s_wifi_private);
+#endif /* CS_DISABLE_JS */
 
   sj_wifi_hal_init(v7);
 }

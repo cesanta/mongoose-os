@@ -5,6 +5,8 @@
 
 #include "fw/src/sj_wifi.h"
 
+#include <stdio.h>
+
 static void print_error(void) {
   fprintf(stderr, "Wifi management is not supported at this platform\n");
 }

@@ -7,9 +7,10 @@
 #define CS_FW_SRC_SJ_SPI_H_
 
 #include <stdint.h>
-#include "v7/v7.h"
 
 typedef void *spi_connection;
+struct v7;
+enum v7_err;
 
 /* Initialize SPI */
 int spi_init(spi_connection conn);

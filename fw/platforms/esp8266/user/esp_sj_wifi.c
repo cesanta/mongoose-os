@@ -8,7 +8,6 @@
 #include <gpio.h>
 #include <os_type.h>
 #include <user_interface.h>
-#include "v7/v7.h"
 #include "common/sha1.h"
 #include <mem.h>
 #include <espconn.h>
@@ -20,11 +19,14 @@
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_clubby.h"
-#include "v7_esp.h"
-#include "v7_esp_features.h"
+#include "fw/platforms/esp8266/user/v7_esp.h"
+#include "fw/platforms/esp8266/user/v7_esp_features.h"
 #include "fw/src/device_config.h"
 #include "fw/src/sj_wifi.h"
+
+#ifndef CS_DISABLE_JS
 #include "v7/v7.h"
+#endif
 
 static sj_wifi_scan_cb_t wifi_scan_cb;
 
@@ -113,7 +115,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   info.gw.addr = ipaddr_addr(cfg->gw);
   wifi_set_ip_info(SOFTAP_IF, &info);
 
-  dhcps.enable = true;
+  dhcps.enable = 1;
   dhcps.start_ip.addr = ipaddr_addr(cfg->dhcp_start);
   dhcps.end_ip.addr = ipaddr_addr(cfg->dhcp_end);
   wifi_softap_set_dhcps_lease(&dhcps);
@@ -178,9 +180,8 @@ char *sj_wifi_get_status_str(void) {
   return NULL;
 }
 
+#ifndef CS_DISABLE_JS
 void wifi_changed_cb(System_Event_t *evt) {
-  int sj_ev = -1;
-
   /* TODO(rojer): Share this logic between platforms. */
   if (wifi_setting_up && evt->event == EVENT_STAMODE_GOT_IP) {
     struct station_config config;
@@ -221,6 +222,7 @@ void wifi_changed_cb(System_Event_t *evt) {
     wifi_setting_up = 0;
   }
 
+  int sj_ev = -1;
   switch (evt->event) {
     case EVENT_STAMODE_DISCONNECTED:
       sj_ev = SJ_WIFI_DISCONNECTED;
@@ -235,6 +237,7 @@ void wifi_changed_cb(System_Event_t *evt) {
 
   if (sj_ev >= 0) sj_wifi_on_change_callback(v7, sj_ev);
 }
+#endif
 
 char *sj_wifi_get_connected_ssid(void) {
   struct station_config conf;
@@ -282,5 +285,7 @@ void sj_wifi_hal_init(struct v7 *v7) {
 
   /* avoid entering AP mode on boot */
   wifi_set_opmode_current(0x1);
+#ifndef CS_DISABLE_JS
   wifi_set_event_handler_cb(wifi_changed_cb);
+#endif
 }

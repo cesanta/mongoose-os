@@ -10,6 +10,7 @@
 #include "sj_v7_ext.h"
 #include "sj_common.h"
 
+#ifndef CS_DISABLE_JS
 SJ_PRIVATE enum v7_err sj_set_interval_or_timeout(struct v7 *v7, v7_val_t *res,
                                                   int repeat) {
   v7_val_t msecsv = v7_arg(v7, 1);
@@ -54,3 +55,4 @@ void sj_timers_api_setup(struct v7 *v7) {
   v7_set_method(v7, v7_get_global(v7), "clearInterval",
                 global_clearTimeoutOrInterval);
 }
+#endif /* CS_DISABLE_JS */

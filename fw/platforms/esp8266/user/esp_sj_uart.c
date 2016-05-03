@@ -1,4 +1,8 @@
 #include "fw/platforms/esp8266/user/esp_sj_uart.h"
+#ifndef CS_DISABLE_JS
+#include "fw/platforms/esp8266/user/esp_sj_uart_js.h"
+#include "v7/v7.h"
+#endif
 
 #include "ets_sys.h"
 #include "gpio.h"
@@ -11,9 +15,9 @@
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/esp_mg_net_if.h"
 
-#include "v7/v7.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_prompt.h"
+#include "fw/src/sj_v7_ext.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -25,8 +29,10 @@ struct esp_sj_uart_state {
 
   os_timer_t timer;
 
+#ifndef CS_DISABLE_JS
   struct v7 *v7;
   v7_val_t obj;
+#endif
 };
 
 static struct esp_sj_uart_state sj_us[2];
@@ -45,12 +51,18 @@ IRAM void esp_uart_dispatch_signal_from_isr(int uart_no) {
 void esp_sj_uart_dispatcher(void *arg) {
   int uart_no = (int) arg;
   struct esp_sj_uart_state *us = &sj_us[uart_no];
-  cs_rbuf_t *rxb = esp_uart_rx_buf(uart_no);
   cs_rbuf_t *txb = esp_uart_tx_buf(uart_no);
   us->dispatch_pending = 0;
   esp_uart_dispatch_rx_top(uart_no);
   uint16_t tx_used_before = txb->used;
+
+  /* ignore unused because of CS_DISABLE_JS below */
+  (void) tx_used_before;
+
   esp_uart_dispatch_tx_top(uart_no);
+#ifndef CS_DISABLE_JS
+  cs_rbuf_t *rxb = esp_uart_rx_buf(uart_no);
+
   if (us->v7 != NULL) {
     /* Detect the edge of TX buffer becoming empty. */
     if (tx_used_before > 0 && txb->used == 0) {
@@ -80,9 +92,11 @@ void esp_sj_uart_dispatcher(void *arg) {
       }
     }
   }
+#endif
   esp_uart_dispatch_bottom(uart_no);
 }
 
+#ifndef CS_DISABLE_JS
 static v7_val_t s_uart_proto;
 
 static enum v7_err esp_sj_uart_get_state(struct v7 *v7,
@@ -261,6 +275,19 @@ void esp_sj_uart_init(struct v7 *v7) {
   v7_own(v7, &sj_us[1].obj);
 }
 
+v7_val_t esp_sj_uart_get_recv_handler(int uart_no) {
+  if (uart_no < 0 || uart_no > 1) return v7_mk_undefined();
+  return v7_get(sj_us[uart_no].v7, sj_us[uart_no].obj, "_rxcb", 5);
+}
+
+#else /* CS_DISABLE_JS */
+
+void esp_sj_uart_init(struct v7 *v7) {
+  (void) v7;
+}
+
+#endif /* CS_DISABLE_JS */
+
 void esp_sj_uart_set_prompt(int uart_no) {
   sj_us[0].prompt = sj_us[1].prompt = 0;
   if (uart_no >= 0 && uart_no <= 1) {
@@ -268,11 +295,6 @@ void esp_sj_uart_set_prompt(int uart_no) {
     esp_uart_set_rx_enabled(uart_no, 1);
     esp_sj_uart_schedule_dispatcher(uart_no);
   }
-}
-
-v7_val_t esp_sj_uart_get_recv_handler(int uart_no) {
-  if (uart_no < 0 || uart_no > 1) return v7_mk_undefined();
-  return v7_get(sj_us[uart_no].v7, sj_us[uart_no].obj, "_rxcb", 5);
 }
 
 size_t esp_sj_uart_write(int uart_no, const void *buf, size_t len) {

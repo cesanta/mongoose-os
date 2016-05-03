@@ -6,8 +6,9 @@
 #ifndef CS_FW_SRC_SJ_HTTP_H_
 #define CS_FW_SRC_SJ_HTTP_H_
 
-#include "v7/v7.h"
-void sj_http_api_setup(struct v7 *);
+struct v7;
+
+void sj_http_api_setup(struct v7 *v7);
 void sj_http_init(struct v7 *v7);
 
 #endif /* CS_FW_SRC_SJ_HTTP_H_ */

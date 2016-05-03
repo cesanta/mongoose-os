@@ -19,6 +19,4 @@ int read_gpio_pin(int g);
  * */
 int await_change(int g, int *max_cycles);
 
-void v7_run_startup();
-
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_UTIL_H_ */

@@ -3,17 +3,19 @@
  * All rights reserved
  */
 
+#ifndef CS_DISABLE_JS
+
 #include <stdlib.h>
-#include "fw/src/sj_console.h"
-#include "fw/src/sj_common.h"
 #include "common/cs_dbg.h"
-#include "fw/src/sj_clubby.h"
-#include "mongoose/mongoose.h"
-#include "common/queue.h"
-#include "common/cs_file.h"
-#include "sj_timers.h"
-#include "fw/src/device_config.h"
 #include "common/cs_dirent.h"
+#include "common/cs_file.h"
+#include "common/queue.h"
+#include "fw/src/device_config.h"
+#include "fw/src/sj_clubby_js.h"
+#include "fw/src/sj_common.h"
+#include "fw/src/sj_console.h"
+#include "mongoose/mongoose.h"
+#include "sj_timers.h"
 
 static const char s_clubby_prop[] = "_cons";
 
@@ -403,3 +405,5 @@ void sj_console_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &console_v);
 }
+
+#endif /* CS_DISABLE_JS */

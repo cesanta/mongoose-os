@@ -25,7 +25,7 @@
 
 #include "common/cs_dbg.h"
 
-#ifndef NO_V7
+#ifndef CS_DISABLE_JS
 #include "v7/v7.h"
 #include "fw/src/sj_v7_ext.h"
 
@@ -758,7 +758,7 @@ static void mg_lwip_task(os_event_t *e) {
       break;
     }
     case MG_SIG_V7_CALLBACK: {
-#ifndef NO_V7
+#ifndef CS_DISABLE_JS
       struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
       _sj_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
       v7_disown(cba->v7, &cba->func);
@@ -792,7 +792,7 @@ static void mg_lwip_task(os_event_t *e) {
   }
 }
 
-#ifndef NO_V7
+#ifndef CS_DISABLE_JS
 void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                              v7_val_t args) {
   struct v7_callback_args *cba =

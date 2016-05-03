@@ -6,7 +6,7 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_V7_ESP_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_V7_ESP_H_
 
-#include "user_interface.h"
+#include <user_interface.h>
 
 #define V7_DEV_CONF_BASE ((char *) 0x40210000)
 #define V7_DEV_CONF_SHA1 V7_DEV_CONF_BASE

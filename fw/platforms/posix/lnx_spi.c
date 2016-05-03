@@ -16,7 +16,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include <sj_spi.h>
+#include "fw/src/sj_spi.h"
+#include "v7/v7.h"
 
 struct lnx_spi_connection {
   int spi_no;
@@ -128,7 +129,8 @@ enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res) {
   ;
 
   if (!v7_is_number(spi_no_val) || spi_no < 0) {
-    rcode = v7_throwf(v7, "Error", "Missing arguments for SPI number or wrong type.");
+    rcode = v7_throwf(v7, "Error",
+                      "Missing arguments for SPI number or wrong type.");
     goto clean;
   } else {
     conn = malloc(sizeof(*conn));

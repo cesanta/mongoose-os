@@ -5,6 +5,8 @@
 
 #include "fw/src/sj_v7_ext.h"
 
+#ifndef CS_DISABLE_JS
+
 #include <string.h>
 
 #include "common/cs_dbg.h"
@@ -308,3 +310,15 @@ void sj_init_sys(struct v7 *v7) {
   v7_set_method(v7, sys, "wdtEnable", Sys_wdtEnable);
   v7_set_method(v7, sys, "wdtDisable", Sys_wdtDisable);
 }
+
+#else /* CS_DISABLE_JS */
+
+void sj_init_sys(struct v7 *v7) {
+  (void) v7;
+}
+
+void sj_v7_ext_api_setup(struct v7 *v7) {
+  (void) v7;
+}
+
+#endif /* CS_DISABLE_JS */

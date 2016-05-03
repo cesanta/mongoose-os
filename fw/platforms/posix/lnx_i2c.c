@@ -17,6 +17,7 @@
 #include <stdint.h>
 
 #include "fw/src/sj_hal.h"
+#include "v7/v7.h"
 #include <sj_i2c.h>
 
 struct lnx_i2c_connection {

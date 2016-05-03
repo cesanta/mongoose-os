@@ -11,19 +11,32 @@
  */
 
 #include <stdlib.h>
-#include "v7/v7.h"
-#include "sj_i2c.h"
 
-/* Make HTTP call, 0/1 - error/success */
-int sj_http_call(struct v7 *v7, const char *url, const char *body,
-                 size_t body_len, const char *method, v7_val_t cb);
+/* Get system free memory. */
+size_t sj_get_free_heap_size();
 
-/*
- * Invokes a callback and prints a stack trace in case of exception.
- *
- * Port specific implementation have to make sure it's executed in the
- * main v7 thread.
- */
-void sj_invoke_cb(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
+/* Get minimal watermark of the system free memory. */
+size_t sj_get_min_free_heap_size();
+
+/* Get filesystem memory usage */
+size_t sj_get_fs_memory_usage();
+
+/* Feed watchdog */
+void sj_wdt_feed();
+
+/* Set watchdog timeout*/
+void sj_wdt_set_timeout(int secs);
+
+/* Enable watchdog */
+void sj_wdt_enable();
+
+/* Disable watchdog */
+void sj_wdt_disable();
+
+/* Restart system */
+void sj_system_restart(int exit_code);
+
+/* Delay usecs */
+void sj_usleep(int usecs);
 
 #endif /* CS_FW_SRC_SJ_HAL_H_ */

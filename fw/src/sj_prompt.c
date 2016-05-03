@@ -2,7 +2,11 @@
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
  */
+
 #include "sj_prompt.h"
+
+#ifndef CS_DISABLE_JS
+
 #include "sj_v7_ext.h"
 #include "sj_hal.h"
 #include "sj_v7_ext.h"
@@ -221,3 +225,4 @@ void sj_prompt_process_char(char ch) {
   s_sjp.buf[s_sjp.pos] = '\0';
   s_sjp.char_processor(ch);
 }
+#endif /* CS_DISABLE_JS */

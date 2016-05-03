@@ -12,6 +12,7 @@
 #include "fw/src/device_config.h"
 #include "fw/src/sj_utils.h"
 
+#ifndef CS_DISABLE_JS
 /*
  * Mongoose connection's user data that is used by the JavaScript HTTP
  * bindings.
@@ -787,3 +788,14 @@ void sj_http_init(struct v7 *v7) {
 
   v7_disown(v7, &Http);
 }
+
+#else /* CS_DISABLE_JS */
+
+void sj_http_api_setup(struct v7 *v7) {
+  (void) v7;
+}
+void sj_http_init(struct v7 *v7) {
+  (void) v7;
+}
+
+#endif /* CS_DISABLE_JS */

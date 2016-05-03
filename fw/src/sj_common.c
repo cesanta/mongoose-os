@@ -21,9 +21,17 @@
 #include "fw/src/sj_udptcp.h"
 #include "fw/src/sj_console.h"
 
+#ifndef CS_DISABLE_JS
+#include "fw/src/sj_clubby_js.h"
+#endif
+
 void sj_common_api_setup(struct v7 *v7) {
+  (void) v7;
+
 /* Setup JS API */
 #if !defined(V7_THAW)
+#ifndef CS_DISABLE_JS
+
   sj_timers_api_setup(v7);
   sj_v7_ext_api_setup(v7);
 
@@ -45,8 +53,9 @@ void sj_common_api_setup(struct v7 *v7) {
   sj_wifi_api_setup(v7);
   sj_udp_tcp_api_setup(v7);
   sj_console_api_setup(v7);
+#endif /* CS_DISABLE_JS */
 
-#ifndef DISABLE_C_CLUBBY
+#if !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS)
   sj_clubby_api_setup(v7);
 #endif
 
@@ -60,7 +69,9 @@ void sj_common_init(struct v7 *v7) {
 
   sj_http_init(v7);
   sj_wifi_init(v7);
+#ifndef CS_DISABLE_JS
   sj_console_init(v7);
+#endif
 
 #ifndef DISABLE_C_CLUBBY
   sj_clubby_init();

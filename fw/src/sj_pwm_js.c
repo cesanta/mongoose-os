@@ -3,8 +3,11 @@
  * All rights reserved
  */
 
-#include "sj_common.h"
-#include "sj_pwm.h"
+#ifndef CS_DISABLE_JS
+
+#include "fw/src/sj_common.h"
+#include "fw/src/sj_pwm.h"
+#include "v7/v7.h"
 
 SJ_PRIVATE enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -37,3 +40,4 @@ void sj_pwm_api_setup(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), "PWM", ~0, pwm);
   v7_set_method(v7, pwm, "set", PWM_set);
 }
+#endif /* CS_DISABLE_JS */

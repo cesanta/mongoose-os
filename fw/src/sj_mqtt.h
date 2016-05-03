@@ -8,6 +8,6 @@
 
 struct v7;
 
-void sj_mqtt_api_setup(struct v7 *);
+void sj_mqtt_api_setup(struct v7 *v7);
 
 #endif /* CS_FW_SRC_SJ_MQTT_H_ */

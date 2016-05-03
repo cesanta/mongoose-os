@@ -6,13 +6,19 @@
 #ifndef CS_FW_SRC_SJ_V7_EXT_H_
 #define CS_FW_SRC_SJ_V7_EXT_H_
 
-#include "v7/v7.h"
+#include "fw/src/sj_hal_js.h"
+
+struct v7;
 
 /* Initialize objects and functions provided by v7_ext */
 void sj_v7_ext_api_setup(struct v7 *v7);
 
 /* Initialize `Sys.*` */
 void sj_init_sys(struct v7 *v7);
+
+#ifndef CS_DISABLE_JS
+
+#include "v7/v7.h"
 
 /* Initialize simple http client */
 void sj_init_simple_http_client(struct v7 *v7);
@@ -40,33 +46,6 @@ void sj_invoke_cb2_this(struct v7 *v7, v7_val_t, v7_val_t, v7_val_t, v7_val_t);
 /* Prints an exception to stdout or stderr depending on debug mode */
 void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg);
 
-/* HAL */
-
-/* Get system free memory. */
-size_t sj_get_free_heap_size();
-
-/* Get minimal watermark of the system free memory. */
-size_t sj_get_min_free_heap_size();
-
-/* Get filesystem memory usage */
-size_t sj_get_fs_memory_usage();
-
-/* Feed watchdog */
-void sj_wdt_feed();
-
-/* Set watchdog timeout*/
-void sj_wdt_set_timeout(int secs);
-
-/* Enable watchdog */
-void sj_wdt_enable();
-
-/* Disable watchdog */
-void sj_wdt_disable();
-
-/* Restart system */
-void sj_system_restart(int exit_code);
-
-/* Delay usecs */
-void sj_usleep(int usecs);
+#endif /* CS_DISABLE_JS */
 
 #endif /* CS_FW_SRC_SJ_V7_EXT_H_ */

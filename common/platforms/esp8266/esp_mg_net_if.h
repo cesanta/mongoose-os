@@ -6,11 +6,15 @@
 #ifndef CS_COMMON_PLATFORMS_ESP8266_ESP_MG_NET_IF_H_
 #define CS_COMMON_PLATFORMS_ESP8266_ESP_MG_NET_IF_H_
 
-#include "v7/v7.h"
 #include "mongoose/mongoose.h"
+
+#ifndef CS_DISABLE_JS
+
+#include "v7/v7.h"
 
 void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                              v7_val_t args);
+#endif
 
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr);
 

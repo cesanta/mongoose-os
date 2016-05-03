@@ -6,17 +6,16 @@
 #include <ets_sys.h>
 #include <math.h>
 #include <stdlib.h>
-#include "v7/v7.h"
-#include "v7_esp.h"
-#include "util.h"
-#include "esp_gpio.h"
-#include "common/platforms/esp8266/esp_missing_includes.h"
 
-#include "osapi.h"
-#include "gpio.h"
-#include "os_type.h"
-#include "user_interface.h"
-#include "mem.h"
+#include <osapi.h>
+#include <gpio.h>
+#include <os_type.h>
+#include <user_interface.h>
+#include <mem.h>
+
+#include "fw/platforms/esp8266/user/util.h"
+#include "fw/platforms/esp8266/user/esp_gpio.h"
+#include "common/platforms/esp8266/esp_missing_includes.h"
 
 void set_gpio(int g, int v) {
 #define GPIO_SET(pin) gpio_output_set(1 << pin, 0, 1 << pin, 0);

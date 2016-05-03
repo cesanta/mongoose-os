@@ -38,6 +38,7 @@
 #include "fw/src/sj_i2c_js.h"
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_timers.h"
+#include "fw/src/sj_hal.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_wifi_js.h"
 #include "fw/src/sj_wifi.h"

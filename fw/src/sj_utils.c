@@ -3,8 +3,10 @@
  * All rights reserved
  */
 
-#include "sj_uart.h"
-#include "device_config.h"
+#include "fw/src/sj_uart.h"
+#include "fw/src/device_config.h"
+
+#ifndef CS_DISABLE_JS
 
 #ifdef MG_ENABLE_SSL
 enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
@@ -43,4 +45,6 @@ enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
 clean:
   return rcode;
 }
-#endif
+#endif /* MG_ENABLE_SSL */
+
+#endif /* CS_DISABLE_JS */

@@ -4,7 +4,6 @@
  */
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
-#include "v7/v7.h"
 #include "fw/src/sj_timers.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_hal.h"
@@ -13,8 +12,12 @@
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
 #include "common/platforms/esp8266/esp_mg_net_if.h"
-#include "esp_uart.h"
+#include "common/platforms/esp8266/esp_uart.h"
 #include "common/umm_malloc/umm_malloc.h"
+
+#ifndef CS_DISABLE_JS
+#include "v7/v7.h"
+#endif
 
 #include <osapi.h>
 #include <os_type.h>
@@ -80,6 +83,11 @@ void sj_usleep(int usecs) {
   os_delay_us(usecs);
 }
 
+void mongoose_schedule_poll() {
+  mg_lwip_mgr_schedule_poll(&sj_mgr);
+}
+
+#ifndef CS_DISABLE_JS
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
   mg_dispatch_v7_callback(v7, func, this_obj, args);
@@ -88,7 +96,4 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
 }
-
-void mongoose_schedule_poll() {
-  mg_lwip_mgr_schedule_poll(&sj_mgr);
-}
+#endif

@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#ifndef NO_V7
+#ifndef CS_DISABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -449,7 +449,7 @@ void fs_flush_stderr() {
   if (s_stderr_uart >= 0) esp_uart_flush(s_stderr_uart);
 }
 
-#ifndef NO_V7
+#ifndef CS_DISABLE_JS
 int v7_val_to_file(v7_val_t val) {
   return (int) v7_to_number(val);
 }
