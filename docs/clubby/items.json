@@ -4,7 +4,6 @@
     { "type": "markdown", "name": "frame-structure.md" },
     { "type": "markdown", "name": "addressing.md" },
     { "type": "markdown", "name": "commands-and-responses.md" },
-    { "type": "markdown", "name": "example-comm.md" },
-    { "type": "markdown", "name": "api.md" }
+    { "type": "markdown", "name": "example-comm.md" }
   ]
 }

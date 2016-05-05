@@ -1,0 +1,9 @@
+{
+  "items": [
+    { "type": "markdown", "name": "intro.md" },
+    { "type": "markdown", "name": "auth.md" },
+    { "type": "markdown", "name": "init.md" },
+    { "type": "markdown", "name": "cloud_req.md" },
+    { "type": "markdown", "name": "custom_msg.md" }
+  ]
+}

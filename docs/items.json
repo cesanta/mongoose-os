@@ -9,6 +9,7 @@
     { "type": "section", "name": "arch" },
     { "type": "section", "name": "building-fw" },
     { "type": "section", "name": "clubby" },
+    { "type": "section", "name": "clubby_lib" },
     { "type": "section", "name": "services" },
     { "type": "section", "name": "faq" }
   ]
