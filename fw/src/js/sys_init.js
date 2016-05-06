@@ -30,10 +30,8 @@ $.each = function(a, f) {
 
 function loadCfg(filename) {
   var ret = File.loadJSON(filename);
-  // if File.loadJSON failed it still returns object
-  // Use fragile verification
-  if(typeof(ret.message) == 'string') {
-    print("Failed to load configuration from:", filename, "Error:", ret);
+  if(ret == undefined) {
+    print("Failed to load configuration from:", filename);
     return {};
   } else {
     return ret;

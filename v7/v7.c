@@ -10149,7 +10149,9 @@ V7_PRIVATE enum v7_err File_loadJSON(struct v7 *v7, v7_val_t *res) {
     rcode = v7_parse_json_file(v7, file_name, res);
     if (rcode != V7_OK) {
       /* swallow exception and return undefined */
+      v7_clear_thrown_value(v7);
       rcode = V7_OK;
+      *res = v7_mk_undefined();
     }
   }
 
