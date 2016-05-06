@@ -5839,8 +5839,14 @@ typedef struct {
     v7_val_t inline_val;
   } v; /* anonymous unions are a c11 feature */
 
-  /* mode of literal storage (see `enum lit_mode`) */
-  enum lit_mode mode : 1;
+  /*
+   * mode of literal storage (see `enum lit_mode`)
+   * NOTE: we need one more bit, because enum can be signed
+   * on some compilers (e.g. msvc) and thus will get signextended
+   * when moved to a `enum lit_mode` variable basically corrupting
+   * the value. See https://github.com/cesanta/v7/issues/551
+   */
+  enum lit_mode mode : 2;
 } lit_t;
 
 V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op);
