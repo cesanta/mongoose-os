@@ -16,6 +16,9 @@ type lazyJSON struct {
 }
 
 func (l lazyJSON) String() string {
+	if rm, ok := l.v.(*RawMessage); ok && (rm == nil || len(*rm) == 0) {
+		return ""
+	}
 	b, err := json.Marshal(l.v)
 	if err != nil {
 		return err.Error()
