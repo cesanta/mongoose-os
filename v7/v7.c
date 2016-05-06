@@ -19201,6 +19201,7 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
       if (buf < limit) *buf++ = specials[*s - '\b'];
       continue;
     } else if ((unsigned char) *s < '\b' || (*s > '\r' && *s < ' ')) {
+      i += 6 /* \uXXXX */;
       if (buf < limit) *buf++ = '\\';
       buf = append_hex(buf, limit, (uint8_t) *s);
       continue;
