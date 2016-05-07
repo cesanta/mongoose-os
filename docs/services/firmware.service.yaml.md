@@ -11,8 +11,8 @@ Arguments:
 - `projectid`: ID of the project to register firmware for.
 - `version`: Firmware version number. Encoded as a string due to limitations of JavaScript.
 - `name`: Human-readable name for this firmware.
-- `zip`: URL of the .zip archive suitable for flashing.
-- `manifest`: URL of the firmware metadata file. Must be accessible by the devices that will get this firmware.
+- `zip`: URL of the .zip archive suitable for flashing. Must be present if manifest is not present. The zip contains the manifest.
+- `manifest`: URL of the firmware metadata file. Must be accessible by the devices that will get this firmware. Must be present if zip is not present.
 
 
 Definition:
@@ -33,11 +33,11 @@ Definition:
       "type": "string"
     },
     "zip": {
-      "doc": "URL of the .zip archive suitable for flashing.",
+      "doc": "URL of the .zip archive suitable for flashing. Must be present if manifest is not present. The zip contains the manifest.",
       "type": "string"
     },
     "manifest": {
-      "doc": "URL of the firmware metadata file. Must be accessible by the devices that will get this firmware.",
+      "doc": "URL of the firmware metadata file. Must be accessible by the devices that will get this firmware. Must be present if zip is not present.",
       "type": "string"
     }
   },
