@@ -3911,7 +3911,8 @@ int v7_is_string(v7_val_t v);
 /*
  * Returns a pointer to the string stored in `v7_val_t`.
  *
- * String length returned in `len`. Returns NULL if the value is not a string.
+ * String length returned in `len`, which is allowed to be NULL. Returns NULL
+ * if the value is not a string.
  *
  * JS strings can contain embedded NUL chars and may or may not be NUL
  * terminated.
@@ -17231,21 +17232,21 @@ const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
   const char *p = NULL;
   int llen;
+  size_t size = 0;
 
   if (!v7_is_string(*v)) {
-    *sizep = 0;
-    return NULL;
+    goto clean;
   }
 
   if (tag == V7_TAG_STRING_I) {
     p = GET_VAL_NAN_PAYLOAD(*v) + 1;
-    *sizep = p[-1];
+    size = p[-1];
   } else if (tag == V7_TAG_STRING_5) {
     p = GET_VAL_NAN_PAYLOAD(*v);
-    *sizep = 5;
+    size = 5;
   } else if (tag == V7_TAG_STRING_D) {
     int index = ((unsigned char *) GET_VAL_NAN_PAYLOAD(*v))[0];
-    *sizep = v_dictionary_strings[index].len;
+    size = v_dictionary_strings[index].len;
     p = v_dictionary_strings[index].p;
   } else if (tag == V7_TAG_STRING_O) {
     size_t offset = (size_t) gc_string_val_to_offset(*v);
@@ -17255,7 +17256,7 @@ const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
     gc_check_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF);
 #endif
 
-    *sizep = decode_varint((uint8_t *) s, &llen);
+    size = decode_varint((uint8_t *) s, &llen);
     p = s + llen;
   } else if (tag == V7_TAG_STRING_F) {
     /*
@@ -17275,19 +17276,23 @@ const char *v7_get_string_data(struct v7 *v7, val_t *v, size_t *sizep) {
      */
     uint16_t len = (*v >> 32) & 0xFFFF;
     if (sizeof(void *) <= 4 && len != 0) {
-      *sizep = (size_t) len;
+      size = (size_t) len;
       p = (const char *) (uintptr_t) *v;
     } else {
       size_t offset = (size_t) gc_string_val_to_offset(*v);
       char *s = v7->foreign_strings.buf + offset;
 
-      *sizep = decode_varint((uint8_t *) s, &llen);
+      size = decode_varint((uint8_t *) s, &llen);
       memcpy(&p, s + llen, sizeof(p));
     }
   } else {
     assert(0);
   }
 
+clean:
+  if (sizep != NULL) {
+    *sizep = size;
+  }
   return p;
 }
 
@@ -28642,7 +28647,7 @@ V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
       len += 1 /*null-term*/;
 
       /* And fill it with actual data */
-      print_stack_trace((char *) v7_get_string_data(v7, &st_v, &len), len,
+      print_stack_trace((char *) v7_get_string_data(v7, &st_v, NULL), len,
                         v7->call_stack);
 
       v7_set(v7, *res, "stack", ~0, st_v);
