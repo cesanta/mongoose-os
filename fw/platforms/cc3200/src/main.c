@@ -66,7 +66,7 @@ struct v7 *init_v7(void *stack_base) {
 /* These are FreeRTOS hooks for various life situations. */
 void vApplicationMallocFailedHook() {
   fprintf(stderr, "malloc failed\n");
-  _exit(123);
+  exit(123);
 }
 
 void vApplicationIdleHook() {
@@ -171,7 +171,8 @@ static void v7_task(void *arg) {
       }
       case GPIO_INT_EVENT: {
         int pin = ((intptr_t) e.data) >> 1;
-        int val = ((intptr_t) e.data) & 1;
+        enum gpio_level val =
+            ((intptr_t) e.data) & 1 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW;
         if (s_gpio_js_handler != NULL)
           s_gpio_js_handler(pin, val, s_gpio_js_handler_arg);
         break;

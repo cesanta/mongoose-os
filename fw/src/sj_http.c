@@ -291,7 +291,7 @@ static void Http_write_data(struct v7 *v7, struct mg_connection *c) {
   v7_val_t arg0 = v7_arg(v7, 0);
   if (!v7_is_undefined(arg0)) {
     char buf[50], *p = buf;
-    p = v7_stringify(v7, arg0, buf, sizeof(buf), 0);
+    p = v7_stringify(v7, arg0, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
     mg_send_http_chunk(c, p, strlen(p));
     if (p != buf) {
       free(p);
@@ -355,10 +355,9 @@ static void http_write_headers(struct v7 *v7, v7_val_t headers_obj,
 
 SJ_PRIVATE enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  DECLARE_CONN();
-
   unsigned long code = 200;
   v7_val_t arg0 = v7_arg(v7, 0), arg1 = v7_arg(v7, 1);
+  DECLARE_CONN();
 
   if (v7_is_truthy(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
     rcode = v7_throwf(v7, "Error", "Headers already sent");
@@ -428,13 +427,13 @@ SJ_PRIVATE enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   struct mg_serve_http_opts opts;
   struct http_message hm;
   enum v7_err rcode = V7_OK;
-  DECLARE_CONN();
-
   size_t i, n;
   v7_val_t request = v7_get(v7, v7_get_this(v7), "_r", ~0);
   v7_val_t url_v = v7_get(v7, request, "url", ~0);
   const char *url = v7_get_string_data(v7, &url_v, &n);
   const char *quest = strchr(url, '?');
+
+  DECLARE_CONN();
 
   memset(&opts, 0, sizeof(opts));
   memset(&hm, 0, sizeof(hm));
@@ -498,7 +497,7 @@ SJ_PRIVATE enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  p = v7_stringify(v7, arg0, buf, sizeof(buf), 0);
+  p = v7_stringify(v7, arg0, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
   rcode = start_http_server(v7, p, this_obj, ca_cert, cert);
   if (rcode != V7_OK) {
     goto clean;
@@ -553,9 +552,9 @@ clean:
 
 SJ_PRIVATE enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
+  struct user_data *ud;
   DECLARE_CONN();
-
-  struct user_data *ud = (struct user_data *) c->user_data;
+  ud = (struct user_data *) c->user_data;
   mg_set_timer(c, time(NULL) + v7_to_number(v7_arg(v7, 0)) / 1000.0);
   ud->timeout_callback = v7_arg(v7, 1);
   v7_own(v7, &ud->timeout_callback);
@@ -577,8 +576,12 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   struct mg_connection *c;
   struct user_data *ud;
   struct mg_connect_opts copts;
+  v7_val_t v_h, v_p, v_uri, v_m, v_hdrs;
+  const char *host, *uri, *method;
+  int port;
 #ifdef MG_ENABLE_SSL
   int force_ssl;
+  const char *protocol;
 #endif
 
   memset(&copts, 0, sizeof(copts));
@@ -600,24 +603,24 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
    * Now, `opts` is guaranteed to be an object.
    * Let's retrieve needed properties
    */
-  v7_val_t v_h = v7_get(v7, opts, "hostname", ~0);
+  v_h = v7_get(v7, opts, "hostname", ~0);
   if (v7_is_undefined(v_h)) {
     v_h = v7_get(v7, opts, "host", ~0);
   }
-  v7_val_t v_p = v7_get(v7, opts, "port", ~0);
-  v7_val_t v_uri = v7_get(v7, opts, "path", ~0);
-  v7_val_t v_m = v7_get(v7, opts, "method", ~0);
-  v7_val_t v_hdrs = v7_get(v7, opts, "headers", ~0);
+  v_p = v7_get(v7, opts, "port", ~0);
+  v_uri = v7_get(v7, opts, "path", ~0);
+  v_m = v7_get(v7, opts, "method", ~0);
+  v_hdrs = v7_get(v7, opts, "headers", ~0);
 
   /* Perform options validation and set defaults if needed */
-  int port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
-  const char *host = v7_is_string(v_h) ? v7_to_cstring(v7, &v_h) : "";
-  const char *uri = v7_is_string(v_uri) ? v7_to_cstring(v7, &v_uri) : "/";
-  const char *method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
+  port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
+  host = v7_is_string(v_h) ? v7_to_cstring(v7, &v_h) : "";
+  uri = v7_is_string(v_uri) ? v7_to_cstring(v7, &v_uri) : "/";
+  method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
 
 #ifdef MG_ENABLE_SSL
   v7_val_t v_pr = v7_get(v7, opts, "protocol", ~0);
-  const char *protocol = v7_is_string(v_pr) ? v7_to_cstring(v7, &v_pr) : "";
+  protocol = v7_is_string(v_pr) ? v7_to_cstring(v7, &v_pr) : "";
   force_ssl = (strcasecmp(protocol, "https") == 0);
   if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
     goto clean;
@@ -679,6 +682,7 @@ SJ_PRIVATE enum v7_err Http_createClient(struct v7 *v7, v7_val_t *res) {
 }
 
 SJ_PRIVATE enum v7_err Http_get(struct v7 *v7, v7_val_t *res) {
+  struct mg_connection *c;
   enum v7_err rcode = V7_OK;
   rcode = sj_http_request_common(v7, v7_arg(v7, 0), v7_arg(v7, 1), res);
   if (rcode != V7_OK) {
@@ -686,7 +690,7 @@ SJ_PRIVATE enum v7_err Http_get(struct v7 *v7, v7_val_t *res) {
   }
 
   /* Prepare things to close the connection immediately after response */
-  struct mg_connection *c = get_mgconn_obj(v7, *res);
+  c = get_mgconn_obj(v7, *res);
   if (c == NULL) {
     rcode = v7_throwf(v7, "Error", "Connection is closed");
     goto clean;

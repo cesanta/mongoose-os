@@ -188,11 +188,11 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
 
 struct mg_str upload_fname(struct mg_connection *nc, struct mg_str fname) {
   struct mg_str res = {NULL, 0};
+  (void) nc;
   if (sj_conf_check_access(fname, get_cfg()->http.upload_acl)) {
     res = fname;
   }
   return res;
-  (void) nc;
 }
 
 static void upload_handler(struct mg_connection *c, int ev, void *p) {
@@ -395,7 +395,5 @@ int update_sysconf(struct v7 *v7, const char *path, v7_val_t val) {
     prev_tok = curr_tok;
     prev_obj = curr_obj;
   }
-
-  return 1;
 }
 #endif /* CS_DISABLE_JS */

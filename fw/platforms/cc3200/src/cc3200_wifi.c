@@ -23,7 +23,7 @@
 extern struct v7 *s_v7;
 
 struct cc3200_wifi_config {
-  int status;
+  enum sj_wifi_status status;
   char *ssid;
   char *pass;
   char *ip;
@@ -32,7 +32,7 @@ struct cc3200_wifi_config {
 static struct cc3200_wifi_config s_wifi_sta_config;
 
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
-  enum sj_wifi_status ev = -1;
+  enum sj_wifi_status ev;
   switch (e->Event) {
     case SL_WLAN_CONNECT_EVENT: {
       s_wifi_sta_config.status = ev = SJ_WIFI_CONNECTED;
@@ -44,8 +44,10 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
       s_wifi_sta_config.ip = NULL;
       break;
     }
+    default:
+      return;
   }
-  if (ev >= 0) sj_wifi_on_change_callback(s_v7, ev);
+  sj_wifi_on_change_callback(s_v7, ev);
 }
 
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
@@ -216,6 +218,8 @@ char *sj_wifi_get_status_str() {
 
 char *sj_wifi_get_connected_ssid() {
   switch (s_wifi_sta_config.status) {
+    case SJ_WIFI_DISCONNECTED:
+      break;
     case SJ_WIFI_CONNECTED:
     case SJ_WIFI_IP_ACQUIRED:
       return strdup(s_wifi_sta_config.ssid);

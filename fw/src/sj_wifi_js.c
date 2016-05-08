@@ -81,6 +81,7 @@ SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
 
   const char *ssid, *pass;
   size_t ssid_len, pass_len;
+  int permanent = 1, ret = 0;
 
   if (!v7_is_string(ssidv) || !v7_is_string(passv)) {
     printf("ssid/pass are not strings\n");
@@ -88,7 +89,6 @@ SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  int permanent = 1;
   if (v7_is_object(extrasv)) {
     permanent = v7_is_truthy(v7, v7_get(v7, extrasv, "permanent", ~0));
   }
@@ -102,7 +102,7 @@ SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
 
   LOG(LL_INFO, ("WiFi: connecting to '%s'", ssid));
 
-  int ret = sj_wifi_setup_sta(&cfg);
+  ret = sj_wifi_setup_sta(&cfg);
   if (ret && permanent) {
     update_sysconf(v7, "wifi.sta.enable", v7_mk_boolean(1));
     update_sysconf(v7, "wifi.sta.ssid", ssidv);
