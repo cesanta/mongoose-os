@@ -62,8 +62,9 @@ endif
 
 BUILD_DIR ?= $(CURDIR)/.build
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
-SJS_POSIX_BIN = $(BUILD_DIR)/posix_sjs_bin
-SJS_POSIX_BUILD = $(BUILD_DIR)/posix_sjs_build
+SJS_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
+SJS_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
+SJS_POSIX_BIN = $(SJS_POSIX_BIN_DIR)/mongoose-iot
 FW_DIR = firmware
 
 FS_BUILD_DIR = $(BUILD_DIR)/fs
@@ -354,13 +355,13 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(BUILD_DIR)/fr.dump: $(SJS_POSIX_BIN)/fw
+$(BUILD_DIR)/fr.dump: $(SJS_POSIX_BIN)
 	$(vecho) "FREEZE"
-	$(Q) $(SJS_POSIX_BIN)/fw -freeze $@
+	$(Q) $(SJS_POSIX_BIN) -freeze $@
 
-$(BUILD_DIR)/fr.sym: $(SJS_POSIX_BIN)/fw
-	$(vecho) "$(SJS_POSIX_BIN)/fw"
-	$(Q) @nm $(SJS_POSIX_BIN)/fw > $@
+$(BUILD_DIR)/fr.sym: $(SJS_POSIX_BIN)
+	$(vecho) "$(SJS_POSIX_BIN)"
+	$(Q) @nm $(SJS_POSIX_BIN) > $@
 
 $(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
 	$(vecho) "GEN   fr.c"
@@ -415,8 +416,8 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
-$(SJS_POSIX_BIN)/fw:
-	make -C $(SJS_POSIX_PATH) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(SJS_POSIX_BIN) BUILD_DIR=$(SJS_POSIX_BUILD) CFLAGS_EXTRA='-DV7_FREEZE'
+$(SJS_POSIX_BIN):
+	make -C $(SJS_POSIX_PATH) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(SJS_POSIX_BIN_DIR) BUILD_DIR=$(SJS_POSIX_BUILD_DIR) CFLAGS_EXTRA='-DV7_FREEZE'
 
 # Target specific warning inhibitions
 
