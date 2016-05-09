@@ -20489,19 +20489,6 @@ V7_PRIVATE void freeze(struct v7 *v7, char *filename) {
    * living on the heap.
    */
   v7_del(v7, v7->vals.global_object, "global", 6);
-
-  /*
-   * evaluator leaves this trash which we have to remove
-   * otherwise the evaluator will find those properties
-   * but they will be readonly.
-   */
-  v7_del(v7, v7->vals.global_object, "____p", 5);
-  v7_del(v7, v7->vals.global_object, "____t", 5);
-  v7_del(v7, v7->vals.global_object, "____s", 5);
-  v7_del(v7, v7->vals.global_object, "___rb", 5);
-  v7_del(v7, v7->vals.global_object, "___ro", 5);
-  v7_del(v7, v7->vals.global_object, "___th", 5);
-  v7_del(v7, v7->vals.global_object, "____c", 5);
 #endif
 
   for (i = 0; i < sizeof(v7->vals) / sizeof(val_t); i++) {
