@@ -3348,6 +3348,21 @@ enum v7_type {
   V7_NUM_TYPES
 };
 
+/*
+ * Call frame type mask: we have a "class hierarchy" of the call frames, see
+ * `struct v7_call_frame_base`, and the `type_mask` field represents the exact
+ * frame type.
+ *
+ * Possible values are:
+ *
+ * - `V7_CALL_FRAME_MASK_PRIVATE | V7_CALL_FRAME_MASK_BCODE`: the most popular
+ *   frame type: call frame for bcode execution, either top-level code or JS
+ *   function.
+ * - `V7_CALL_FRAME_MASK_PRIVATE`: used for `catch` clauses only: the variables
+ *   we create in `catch` clause should not be visible from the outside of the
+ *   clause, so we have to create a separate scope object for it.
+ * - `V7_CALL_FRAME_MASK_CFUNC`: call frame for C function.
+ */
 typedef uint8_t v7_call_frame_mask_t;
 #define V7_CALL_FRAME_MASK_BCODE (1 << 0)
 #define V7_CALL_FRAME_MASK_PRIVATE (1 << 1)
@@ -3370,6 +3385,7 @@ typedef uint8_t v7_call_frame_mask_t;
 struct v7_call_frame_base {
   struct v7_call_frame_base *prev;
 
+  /* See comment for `v7_call_frame_mask_t` */
   v7_call_frame_mask_t type_mask : 3;
 
   /* Belongs to `struct v7_call_frame_private` */
@@ -3381,7 +3397,8 @@ struct v7_call_frame_base {
 
 /*
  * "private" call frame, used in `catch` blocks, merely for using a separate
- * scope object there.
+ * scope object there. It is also a "base class" for the bcode call frame,
+ * see `struct v7_call_frame_bcode`.
  *
  * TODO(dfrank): probably implement it differently, so that we can get rid of
  * the separate "private" frames whatsoever (and just include it into struct
@@ -3478,10 +3495,13 @@ struct v7 {
   struct v7_vals vals;
 
   /*
-   * Stack of execution contexts.
+   * Stack of call frames.
+   *
    * Execution contexts are contained in two chains:
-   * - in the lexical scope via their prototype chain (to allow variable lookup)
-   * - call stack for stack traces (via the `v7->call_stack`)
+   * - Stack of call frames: to allow returning, throwing, and stack trace
+   *   generation;
+   * - In the lexical scope via their prototype chain (to allow variable
+   *   lookup), see `struct v7_call_frame_private::scope`.
    *
    * Execution contexts should be allocated on heap, because they might not be
    * on a call stack but still referenced (closures).
@@ -3491,6 +3511,10 @@ struct v7 {
    * function or C function (although the call frame types are different for
    * JS functions and cfunctions, see `struct v7_call_frame_base` and its
    * sub-structures)
+   *
+   * When no code is being evaluated at the moment, `call_stack` is `NULL`.
+   *
+   * See comment for `struct v7_call_frame_base` for some more details.
    */
   struct v7_call_frame_base *call_stack;
 
@@ -3548,9 +3572,6 @@ struct v7 {
    *
    * - Parser: it's the last line_no emitted to AST
    * - Compiler: it's the last line_no emitted to bcode
-   * - Bcode: it's the line number of the currently evaluating bcode.
-   *   TODO(dfrank): make v7->call_frame to represent current frame, not the
-   *   previous one, and then, this field won't be used by bcode.
    */
   int line_no;
 
