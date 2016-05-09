@@ -2048,17 +2048,14 @@ struct v7;
 
 /*
  * Code which is returned by some of the v7 functions. If something other than
- * `V7_OK` is returned from some function, it usually means that some
- * exception, and the caller function typically should immediately cleanup and
- * return the code further, or handle the exception.
+ * `V7_OK` is returned from some function, the caller function typically should
+ * either immediately cleanup and return the code further, or handle the error.
  */
 enum v7_err {
   V7_OK,
   V7_SYNTAX_ERROR,
   V7_EXEC_EXCEPTION,
-  V7_STACK_OVERFLOW,
   V7_AST_TOO_LARGE,
-  V7_INVALID_ARG,
   V7_INTERNAL_ERROR,
 };
 
@@ -2328,8 +2325,8 @@ struct v7_pstate {
   int in_strict;    /* True if in strict mode */
 };
 
-V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
-                             int);
+V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
+                             int is_json);
 
 #if defined(__cplusplus)
 }
@@ -15682,7 +15679,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
         }
       } else {
         /* we have regular JavaScript source, so, parse it */
-        V7_TRY(parse(v7, a, src, 1, is_json));
+        V7_TRY(parse(v7, a, src, is_json));
       }
 
       /* we now have binary AST, let's compile it */
@@ -16629,7 +16626,7 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
   v7->is_precompiling = 1;
 
   ast_init(&ast, 0);
-  err = parse(v7, &ast, code, 1, 0);
+  err = parse(v7, &ast, code, 0);
   if (err == V7_OK) {
     if (use_bcode) {
       struct bcode bcode;
@@ -20873,10 +20870,6 @@ enum my_fid {
 enum parser_exc_id {
   PARSER_EXC_ID__NONE = CR_EXC_ID__NONE,
   PARSER_EXC_ID__SYNTAX_ERROR = CR_EXC_ID__USER,
-  PARSER_EXC_ID__EXEC_EXCEPTION,
-  PARSER_EXC_ID__STACK_OVERFLOW,
-  PARSER_EXC_ID__AST_TOO_LARGE,
-  PARSER_EXC_ID__INVALID_ARG,
 };
 
 /* structures with locals and args {{{ */
@@ -21967,13 +21960,6 @@ static unsigned long get_column(const char *code, const char *pos) {
     p--;
   }
   return p == code ? pos - p : pos - (p + 1);
-}
-
-static const char *get_err_name(enum v7_err err) {
-  static const char *err_names[] = {"", "syntax error", "exception",
-                                    "stack overflow", "script too large"};
-  return (err < sizeof(err_names) / sizeof(err_names[0])) ? err_names[err]
-                                                          : "internal error";
 }
 
 static enum v7_err end_of_statement(struct v7 *v7) {
@@ -23116,8 +23102,9 @@ fid_none:
 }
 
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
-                             int verbose, int is_json) {
+                             int is_json) {
   enum v7_err rcode;
+  const char *error_msg = NULL;
   const char *p;
   struct cr_ctx cr_ctx;
   union user_arg_ret arg_retval;
@@ -23184,34 +23171,18 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
       switch ((enum parser_exc_id) CR_THROWN_C(&cr_ctx)) {
         case PARSER_EXC_ID__SYNTAX_ERROR:
           rcode = V7_SYNTAX_ERROR;
-          break;
-        case PARSER_EXC_ID__EXEC_EXCEPTION:
-          rcode = V7_EXEC_EXCEPTION;
-          break;
-        case PARSER_EXC_ID__STACK_OVERFLOW:
-          rcode = V7_STACK_OVERFLOW;
-          break;
-        case PARSER_EXC_ID__AST_TOO_LARGE:
-          rcode = V7_AST_TOO_LARGE;
-          break;
-        case PARSER_EXC_ID__INVALID_ARG:
-          rcode = V7_INVALID_ARG;
+          error_msg = "Syntax error";
           break;
 
         default:
           rcode = V7_INTERNAL_ERROR;
-#ifndef NO_LIBC
-          fprintf(stderr, "internal error: no exception id set\n");
-#endif
+          error_msg = "Internal error: no exception id set";
           break;
       }
       break;
     default:
       rcode = V7_INTERNAL_ERROR;
-#ifndef NO_LIBC
-      fprintf(stderr, "internal error: parser coroutine return code: %d\n",
-              (int) rc);
-#endif
+      error_msg = "Internal error: unexpected parser coroutine return code";
       break;
   }
 
@@ -23266,17 +23237,24 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   }
 #endif
 
+  /* Check if AST was overflown */
   if (a->has_overflow) {
     rcode = v7_throwf(v7, SYNTAX_ERROR,
-                      "script too large (try V7_LARGE_AST build option)");
+                      "Script too large (try V7_LARGE_AST build option)");
     V7_THROW(V7_AST_TOO_LARGE);
   }
+
   if (rcode == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
     rcode = V7_SYNTAX_ERROR;
+    error_msg = "Syntax error";
   }
-  if (verbose && rcode != V7_OK) {
+
+  if (rcode != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
     int line_len = 0;
+
+    assert(error_msg != NULL);
+
     for (p = v7->tok - col; *p != '\0' && *p != '\n'; p++) {
       line_len++;
     }
@@ -23288,10 +23266,23 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
       }
     }
 
-    rcode = v7_throwf(v7, SYNTAX_ERROR, "%s at line %d col %lu:\n%.*s\n%*s^",
-                      get_err_name(rcode), v7->pstate.line_no, col, line_len,
-                      v7->tok - col, (int) col - 1, "");
-    V7_THROW(V7_SYNTAX_ERROR);
+    /*
+     * We already have a proper `rcode`, that's why we discard returned value
+     * of `v7_throwf()`, which is always `V7_EXEC_EXCEPTION`.
+     *
+     * TODO(dfrank): probably get rid of distinct error types, and use just
+     * `V7_JS_EXCEPTION`. However it would be good to have a way to get exact
+     * error type, so probably error object should contain some property with
+     * error code, but it would make exceptions even more expensive, etc, etc.
+     */
+    {
+      enum v7_err _tmp;
+      _tmp = v7_throwf(v7, SYNTAX_ERROR, "%s at line %d col %lu:\n%.*s\n%*s^",
+                       error_msg, v7->pstate.line_no, col, line_len,
+                       v7->tok - col, (int) col - 1, "");
+      (void) _tmp;
+    }
+    V7_THROW(rcode);
   }
 
 clean:

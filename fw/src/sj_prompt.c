@@ -101,8 +101,6 @@ static void process_js(char *cmd) {
 
   if (err == V7_SYNTAX_ERROR) {
     printf("Syntax error: %s\n", v7_get_parser_error(v7));
-  } else if (err == V7_STACK_OVERFLOW) {
-    printf("Stack overflow: %s\n", v7_get_parser_error(v7));
   } else if (err == V7_EXEC_EXCEPTION) {
     sj_print_exception(v7, res, "Exec error");
   } else {
