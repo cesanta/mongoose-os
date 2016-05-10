@@ -1,0 +1,47 @@
+---
+title: Quick Start Guide
+---
+
+-  Download flashing utility from https://github.com/cesanta/fnc/releases
+-  Download the latest version of Mongoose IoT firmware from
+   https://github.com/cesanta/mongoose-iot/releases
+-  Connect the board to your computer via the USB or serial interface
+-  Start Flashnchips
+-  Press `Browse`, select downloaded firmware .zip file
+-  If you are using a USB connector, and "Select port" dropdown is disabled,
+   then USB-to-serial driver needs to be installed:
+   * FTDI drivers are at
+   [FTDI website](http://www.ftdichip.com/Drivers/VCP.htm)
+   * Drivers for NodeMCU v1 board is at
+   [Silabs CP2102 page](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx).
+-  Restart Flashnchips after driver installation. "Select port" dropdown must
+   automatically pick up a serial port to where your board is connected.
+-  Press "Flash Firmware" button. That will burn Mongoose IoT firmware on
+   the flash memory.
+-  When burning is complete, Mongoose IoT automatically connects a console
+   to the device, prints device configuration, boot messages,
+   and shows an interactive JavaScript prompt. Notice the unique
+   "device_id" in the configuration - it will be needed to talk to the cloud.
+   Mongoose IoT
+   ![](fc2.png)
+-  Two numbers shown by prompt
+   are available free memory, and memory taken by Mongoose IoT
+-  Type some JavaScript expression to the console and press enter.
+   Mongoose IoT evaluates the expression and prints evaluation result:
+   [<img src="fc3.png" width="75%" />](../../static/img/fw/fc3.png)
+-  Configure Wifi. This is not needed on POSIX platforms like RPI, where
+   networking is already configured. Note that Mongoose IoT provides flexible
+   configuration infrastructure, described in the next section. Here,
+   we use quick ad-hoc way to configure.
+-  Enter `Wifi.setup('WifiNetworkName', 'WifiPassword')` to the console
+-  Using your mouse, copy the value of device ID printed earlier
+-  Enter `demoSendRandomData()` to start sending random numbers
+   to `cloud.cesanta.com` every second, simulating real sensor data.
+   `cloud.cesanta.com` however will reject that data, because it doesn't
+   accept data from unregistered devices
+-  Register the device on the cloud: login to
+   https://cloud.cesanta.com/#/devices
+-  Click on "Devices" tab, copy/paste device ID. Leave PSK field blank.
+   Press "Add Device" button.
+-  Switch to the "Dashboard" tab, and see real-time graph updated:
+   ![](dash1.png)
