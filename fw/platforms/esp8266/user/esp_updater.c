@@ -22,7 +22,9 @@
 #define MANIFEST_FILENAME "manifest.json"
 #define FW_SLOT_SIZE 0x100000
 #define SHA1SUM_LEN 40
-
+#ifndef UPDATER_MIN_BLOCK_SIZE
+#define UPDATER_MIN_BLOCK_SIZE 2048
+#endif
 /*
  * --- Zip file local header structure ---
  *                                             size  offset
@@ -114,17 +116,21 @@ void updater_context_release(struct update_context *ctx) {
  */
 static void context_update(struct update_context *ctx, const char *data,
                            size_t len) {
+#ifndef UPDATER_MIN_BLOCK_SIZE
   if (ctx->unprocessed.len != 0) {
-    /* We have unprocessed data, concatenate them with arrived */
+/* We have unprocessed data, concatenate them with arrived */
+#endif
     mbuf_append(&ctx->unprocessed, data, len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
     LOG(LL_DEBUG, ("Added %u bytes to cached data", len));
+#ifndef UPDATER_MIN_BLOCK_SIZE
   } else {
     /* No unprocessed, trying to process directly received data */
     ctx->data = data;
     ctx->data_len = len;
   }
+#endif
 
   LOG(LL_DEBUG, ("Data size: %u bytes", ctx->data_len));
 }
@@ -752,6 +758,16 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
   if (len != 0) {
     context_update(ctx, data, len);
   }
+
+#ifdef UPDATER_MIN_BLOCK_SIZE
+  LOG(LL_DEBUG, ("ctx::dl=%d fi::fs=%d fi::fr=%d", (int) ctx->data_len,
+                 (int) ctx->file_info.file_size,
+                 (int) ctx->file_info.file_received_bytes));
+  if (ctx->data_len < 2048 && ctx->file_info.file_size != 0 &&
+      ctx->file_info.file_size - ctx->file_info.file_received_bytes > 2048) {
+    return 0;
+  }
+#endif
 
   while (true) {
     switch (ctx->update_status) {
