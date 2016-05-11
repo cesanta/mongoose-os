@@ -449,6 +449,7 @@ static enum v7_err udp_tcp_close_conn(struct v7 *v7, v7_val_t *res,
                                       const char *ev_name) {
   enum v7_err rcode = V7_OK;
   struct mg_connection *c;
+  struct conn_user_data *ud;
 
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
   if (!v7_is_foreign(conn_v)) {
@@ -467,6 +468,8 @@ static enum v7_err udp_tcp_close_conn(struct v7 *v7, v7_val_t *res,
     goto exit;
   }
 
+  ud = (struct conn_user_data *) c->user_data;
+
   if (!v7_is_undefined(cb)) {
     add_cb_info(v7, get_cb_info_holder(v7, v7_get_this(v7)), ev_name, cb, 0);
   }
@@ -477,10 +480,12 @@ static enum v7_err udp_tcp_close_conn(struct v7 *v7, v7_val_t *res,
    * have these "temporary connections". So, we use manual refcounting
    * and closing in MG_EV_POLL. Sad, but true.
    */
-  if (((struct conn_user_data *) c->user_data)->child_count == 0) {
+
+  if (!(c->flags & MG_F_UDP) ||
+      ((c->flags & MG_F_UDP) && ud->child_count == 0)) {
     c->flags |= MG_F_SEND_AND_CLOSE;
   } else {
-    ((struct conn_user_data *) c->user_data)->flags = UD_F_CLOSE;
+    ud->flags = UD_F_CLOSE;
   }
 
   *res = v7_get_this(v7);
@@ -625,17 +630,16 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
          */
 
         if (!(ud->flags & UD_F_ERROR)) {
-          /* Do not send `end`/`close` if we've sent `error` earlier */
-          trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
-                        ((c->flags & MG_F_UDP) || (ud->flags & UD_F_SERVER))
-                            ? s_ev_close
-                            : s_ev_end,
-                        v7_mk_undefined(), v7_mk_undefined());
-          /* For TCP we have to trigger 'close' as well here */
-          if (!(c->flags & MG_F_UDP)) {
+          /* Do not send `end` and `close` if we've sent `error` earlier */
+
+          /* For TCP client we have to send `end` event */
+          if (!(c->flags & MG_F_UDP) && c->listener == NULL) {
             trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
-                          s_ev_close, v7_mk_boolean(0), v7_mk_undefined());
+                          s_ev_end, v7_mk_undefined(), v7_mk_undefined());
           }
+          /* 'close' event must be sent in any case */
+          trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+                        s_ev_close, v7_mk_boolean(0), v7_mk_undefined());
         }
 
         free_obj_cb_info_chain(ud->v7, ud->sock_obj);
