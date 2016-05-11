@@ -223,12 +223,17 @@ static int trigger_event(struct v7 *v7, struct cb_info_holder *list,
                          const char *name, v7_val_t arg1, v7_val_t arg2) {
   int ret = 0;
   struct cb_info *cb, *cb_temp;
+  if (list == NULL) {
+    return 0;
+  }
+
   SLIST_FOREACH_SAFE(cb, &list->head, entries, cb_temp) {
     if (strcmp(cb->name, name) == 0) {
       LOG(LL_VERBOSE_DEBUG, ("Triggered `%s`", name));
       sj_invoke_cb2(v7, cb->cbv, arg1, arg2);
       ret = 1;
       if (cb->trigger_once) {
+        LOG(LL_VERBOSE_DEBUG, ("Removing event `%s`", name));
         SLIST_REMOVE(&list->head, cb, cb_info, entries);
         free_cb_info(v7, cb);
       }
@@ -268,9 +273,20 @@ static struct cb_info_holder *get_cb_info_holder(struct v7 *v7, v7_val_t obj) {
   return ret;
 }
 
+static struct cb_info_holder *get_cb_info_holder_or_null(struct v7 *v7,
+                                                         v7_val_t obj) {
+  v7_val_t cbs = v7_get(v7, obj, s_callbacks_prop, ~0);
+  struct cb_info_holder *ret = NULL;
+  if (!v7_is_undefined(cbs)) {
+    ret = v7_to_foreign(cbs);
+  }
+
+  return ret;
+}
+
 static void async_trigger_event_cb(void *param) {
   struct async_event_params *params = (struct async_event_params *) param;
-  trigger_event(params->v7, get_cb_info_holder(params->v7, params->obj),
+  trigger_event(params->v7, get_cb_info_holder_or_null(params->v7, params->obj),
                 params->ev_name, params->arg1, params->arg2);
   v7_disown(params->v7, &params->arg1);
   v7_disown(params->v7, &params->arg2);
@@ -418,7 +434,8 @@ static enum v7_err get_connection(struct v7 *v7, v7_val_t obj,
      * "error" event (basically, "error" was triggered if connection
      * failed, so, seems here we can throw an exception
      */
-    LOG_AND_THROW("Socket is not connected");
+    rcode = v7_throwf(v7, "Error", "Socket is not connected");
+    LOG(LL_DEBUG, ("Socket is closed (by server?)"));
   }
 
   return rcode;
@@ -503,13 +520,12 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
   switch (ev) {
     case MG_EV_POLL: {
-      LOG(LL_VERBOSE_DEBUG, ("Poll %p, flags %X recvbuf:%d", c, ud->flags,
-                             (int) c->recv_mbuf.len));
       if (ud->timeout != 0 && ud->last_accessed != 0 &&
           !v7_is_undefined(ud->sock_obj)) {
         time_t now = time(NULL);
         if (now - ud->last_accessed > ud->timeout) {
-          trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+          trigger_event(ud->v7,
+                        get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                         s_ev_timeout, v7_mk_undefined(), v7_mk_undefined());
           ud->last_accessed = now;
         }
@@ -522,13 +538,15 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       if (ud->flags & UD_F_FORCE_RECV && c->recv_mbuf.len != 0) {
         LOG(LL_VERBOSE_DEBUG, ("Forcing recv for conn %p", c));
         if (trigger_event(
-                ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_data,
+                ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
+                s_ev_data,
                 v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
                 v7_mk_undefined())) {
           mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
           ud->flags &= ~UD_F_FORCE_RECV;
         }
       }
+
       break;
     }
     case MG_EV_ACCEPT: {
@@ -550,10 +568,11 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
          * For TCP we create new Socket object and send it to callback
          * The rest depends on user
          */
-        struct conn_user_data *new_ud = c->user_data = create_conn_user_data(
-            ud->v7, create_tcp_socket(ud->v7, v7_mk_foreign(c)), 0, 0);
-
-        trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+        v7_val_t new_sock_obj = create_tcp_socket(ud->v7, v7_mk_foreign(c));
+        struct conn_user_data *new_ud =
+            create_conn_user_data(ud->v7, new_sock_obj, 0, 0);
+        c->user_data = new_ud;
+        trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                       s_ev_connection, new_ud->sock_obj, v7_mk_undefined());
       }
       break;
@@ -567,10 +586,10 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         c->flags |= MG_F_CLOSE_IMMEDIATELY;
         return;
       }
-      trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_sent,
-                    v7_mk_undefined(), v7_mk_undefined());
+      trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
+                    s_ev_sent, v7_mk_undefined(), v7_mk_undefined());
       if (c->send_mbuf.len == 0) {
-        trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+        trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                       s_ev_drain, v7_mk_undefined(), v7_mk_undefined());
       }
       ud->last_accessed = time(NULL);
@@ -593,11 +612,12 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                v7_mk_number(ntohs(c->sa.sin.sin_port)));
         LOG(LL_VERBOSE_DEBUG, ("Triggering `message`"));
         event_triggered = trigger_event(
-            ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_message,
+            ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
+            s_ev_message,
             v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1), rinfo);
       } else {
         event_triggered = trigger_event(
-            ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj), s_ev_data,
+            ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj), s_ev_data,
             v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
             v7_mk_undefined());
       }
@@ -632,13 +652,15 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         if (!(ud->flags & UD_F_ERROR)) {
           /* Do not send `end` and `close` if we've sent `error` earlier */
 
-          /* For TCP client we have to send `end` event */
-          if (!(c->flags & MG_F_UDP) && c->listener == NULL) {
-            trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+          /* For TCP client connections we have to send `end` event */
+          if (!(c->flags & (MG_F_UDP | MG_F_LISTENING))) {
+            trigger_event(ud->v7,
+                          get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                           s_ev_end, v7_mk_undefined(), v7_mk_undefined());
           }
           /* 'close' event must be sent in any case */
-          trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+          trigger_event(ud->v7,
+                        get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                         s_ev_close, v7_mk_boolean(0), v7_mk_undefined());
         }
 
@@ -648,7 +670,6 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
 
       free_conn_user_data(ud);
       c->user_data = NULL;
-
       break;
     }
     case MG_EV_CONNECT: {
@@ -657,13 +678,13 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       }
 
       if (*(int *) ev_data != 0) {
-        trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+        trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                       s_ev_error, create_error(ud->v7, "Failed to connect"),
                       v7_mk_undefined());
         LOG(LL_ERROR, ("Failed to connect"));
         ud->flags |= UD_F_ERROR;
       } else {
-        trigger_event(ud->v7, get_cb_info_holder(ud->v7, ud->sock_obj),
+        trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                       s_ev_connect, v7_mk_undefined(), v7_mk_undefined());
       }
       break;
@@ -859,9 +880,9 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
                      port);
   (void) tmp; /* Shut up compiler about asprintf */
 
-  LOG(LL_VERBOSE_DEBUG, ("Starting listening on %s", bind_addr));
-
   c = mg_bind_opt(&sj_mgr, bind_addr, mg_ev_handler, opts);
+
+  LOG(LL_VERBOSE_DEBUG, ("Starting listening on %s, conn %p", bind_addr, c));
 
   free(bind_addr);
   bind_addr = NULL;
@@ -1335,7 +1356,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_destroy(struct v7 *v7, v7_val_t *res) {
   *res = v7_get_this(v7);
 
 clean:
-  return rcode;
+  return V7_OK; /* Always return V7_OK, even if socket was already closed */
 }
 
 /* socket.pause() */

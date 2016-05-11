@@ -333,9 +333,9 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
     tcp_close(tpcb);
     return -1;
   }
-  cs->pcb.tcp = tpcb;
   tcp_arg(tpcb, nc);
   tpcb = tcp_listen(tpcb);
+  cs->pcb.tcp = tpcb;
   tcp_accept(tpcb, mg_lwip_accept_cb);
   return 0;
 }
