@@ -12,6 +12,7 @@ Arguments:
 - `after`: Continuation token. Put here an `id` of the last entry returned by the previous call.
 - `limit`: Maximum number of entries to return.
 - `stream`: Log stream name.
+- `follow`: Whether this call will block until there are some logs to be returned.
 
 Result `array`: 
 
@@ -35,6 +36,10 @@ Definition:
     "stream": {
       "doc": "Log stream name.",
       "type": "string"
+    },
+    "follow": {
+      "doc": "Whether this call will block until there are some logs to be returned.",
+      "type": "boolean"
     }
   },
   "required_args": [

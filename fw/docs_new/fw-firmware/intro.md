@@ -1,4 +1,0 @@
----
-title: Mongoose IoT firmware
----
-
