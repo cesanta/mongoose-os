@@ -470,7 +470,8 @@ static enum v7_err udp_tcp_close_conn(struct v7 *v7, v7_val_t *res,
 
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
   if (!v7_is_foreign(conn_v)) {
-    LOG_AND_THROW("Socket is not opened");
+    /* Return V7_OK if socket is closed */
+    LOG(LL_DEBUG, ("Socket is not opened"));
     goto exit;
   }
 
@@ -889,7 +890,16 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
 
   if (c == NULL) {
     LOG(LL_ERROR, ("Cannot bind to port %d", port));
-    rcode = v7_throwf(v7, "Error", "Cannot bind to port %d", port);
+    /*
+     * According docs, if we have "on error" handler we have to trigger
+     * it, otherwise - throw an exception
+     */
+    if (!trigger_event(v7, get_cb_info_holder_or_null(v7, v7_get_this(v7)),
+                       s_ev_error, create_error(v7, "Cannot bind to port"),
+                       v7_mk_undefined())) {
+      rcode = v7_throwf(v7, "Error", "Cannot bind to port %d", port);
+    }
+
     goto clean;
   }
 
