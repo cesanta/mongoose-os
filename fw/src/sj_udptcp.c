@@ -435,7 +435,7 @@ static enum v7_err get_connection(struct v7 *v7, v7_val_t obj,
      * failed, so, seems here we can throw an exception
      */
     rcode = v7_throwf(v7, "Error", "Socket is not connected");
-    LOG(LL_DEBUG, ("Socket is closed (by server?)"));
+    LOG(LL_VERBOSE_DEBUG, ("Socket is closed (by server?)"));
   }
 
   return rcode;
@@ -471,7 +471,7 @@ static enum v7_err udp_tcp_close_conn(struct v7 *v7, v7_val_t *res,
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
   if (!v7_is_foreign(conn_v)) {
     /* Return V7_OK if socket is closed */
-    LOG(LL_DEBUG, ("Socket is not opened"));
+    LOG(LL_VERBOSE_DEBUG, ("Socket is not opened"));
     goto exit;
   }
 
@@ -917,9 +917,10 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
      */
     add_cb_info(v7, get_cb_info_holder(v7, v7_get_this(v7)), s_ev_listening, cb,
                 1);
-    async_trigger_event(v7, v7_get_this(v7), s_ev_listening, v7_mk_undefined(),
-                        v7_mk_undefined());
   }
+
+  async_trigger_event(v7, v7_get_this(v7), s_ev_listening, v7_mk_undefined(),
+                      v7_mk_undefined());
 
   c->user_data = ud;
 
