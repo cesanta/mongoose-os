@@ -63,7 +63,7 @@ Object.defineProperty(Sys.conf, "save", {
     var newCfg = JSON.parse(JSON.stringify(Sys.conf));
     delete newCfg.save;
     deleteUnchanged(newCfg, Sys.oconf);
-    newCfg = $.extend(File.loadJSON('conf.json') || {}, newCfg);
+    newCfg = $.extend(loadCfg('conf.json'), newCfg);
 
     var cfgFile = File.open("conf.json.tmp", "w");
     cfgFile.write(JSON.stringify(newCfg));
