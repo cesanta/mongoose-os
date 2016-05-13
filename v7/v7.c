@@ -28575,10 +28575,11 @@ static int printf_stack_line_cfunc(char *p, size_t len, v7_cfunction_t *cfunc,
   int ret = 0;
 
 #if !defined(V7_FILENAMES_SUPPRESS_CFUNC_ADDR)
-  int name_len = snprintf(NULL, 0, "cfunc_%p", cfunc) + 1 /*null-term*/;
+  int name_len =
+      snprintf(NULL, 0, "cfunc_%p", (void *) cfunc) + 1 /*null-term*/;
   char *buf = (char *) malloc(name_len);
 
-  snprintf(buf, name_len, "cfunc_%p", cfunc);
+  snprintf(buf, name_len, "cfunc_%p", (void *) cfunc);
 #else
   /*
    * We need this mode only for ecma test reporting, so that the
