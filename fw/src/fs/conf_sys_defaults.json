@@ -62,7 +62,7 @@
     "factory_reset_gpio": -1
   },
   "sys": {
-    "wdt_timeout" : 10
+    "wdt_timeout" : 15
   },
   "console": {
     "send_to_cloud" : true,

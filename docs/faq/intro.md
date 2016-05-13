@@ -11,3 +11,11 @@ title: F.A.Q.
      You can do it either by command line (`--esp8266-flash-size=...`, run `FNC --help` for details)
      or you can use `Settings->Advanced settings` menu option. Check `esp8266-flash-size` in dialog appeared
      and put flash size in this field.
+<br><br>
+#####Q: My ESP device is rebooted by watch dog<br>
+  A: If your device permamently reboots because of watchdog, you have several options:
+     1. If the device is rebooted during long loop in JS code, it is better to use
+     `Sys.wdtFeed()` call inside this loop.
+     2. If the device is rebooted during some internal operation (like SSL handshake),
+     you can change WDT timeout, by using `Sys.wdtSetTimeout(timeout)` (will be effective
+     until reboot) or by changing `sys.wdt_timeout` (seconds) configuration parameter.
