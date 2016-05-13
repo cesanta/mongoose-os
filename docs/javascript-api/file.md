@@ -17,7 +17,8 @@ File API is a wrapper around standard C calls `fopen()`, `fclose()`,
   user's responsibility to close all opened file streams. V7 does not do that
   automatically.
 - `file_obj.read() -> string`: Read portion of data from an opened file stream.
-  Return string with data, or empty string on EOF or error.
+  Return string with data, or empty string on EOF or error. The portion size is
+  platform dependent and cannot be changed through File API.
 - `file_obj.write(str) -> num_bytes_written`: Write string `str` to the opened
   file object. Return number of bytes written.
 - `File.rename(old_name, new_name) -> errno`: Rename file `old_name` to
