@@ -27884,6 +27884,7 @@ int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx) {
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
+/* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/array.h" */
@@ -28291,32 +28292,50 @@ V7_PRIVATE enum v7_err Obj_toString(struct v7 *v7, v7_val_t *res) {
   val_t ctor, name, this_obj = v7_get_this(v7);
   char buf[20];
   const char *str = "Object";
-  size_t name_len = 6;
+  size_t name_len = ~0;
 
-  rcode = v7_get_throwing(v7, this_obj, "constructor", ~0, &ctor);
-  if (rcode != V7_OK) {
-    goto clean;
-  }
-
-  if (!v7_is_undefined(ctor)) {
-    rcode = v7_get_throwing(v7, ctor, "name", ~0, &name);
+  if (v7_is_undefined(this_obj)) {
+    str = "Undefined";
+  } else if (v7_is_null(this_obj)) {
+    str = "Null";
+  } else if (v7_is_number(this_obj)) {
+    str = "Number";
+  } else if (v7_is_boolean(this_obj)) {
+    str = "Boolean";
+  } else if (v7_is_string(this_obj)) {
+    str = "String";
+  } else if (v7_is_callable(v7, this_obj)) {
+    str = "Function";
+  } else {
+    rcode = v7_get_throwing(v7, this_obj, "constructor", ~0, &ctor);
     if (rcode != V7_OK) {
       goto clean;
     }
 
-    if (!v7_is_undefined(name)) {
-      size_t tmp_len;
-      const char *tmp_str;
-      tmp_str = v7_get_string_data(v7, &name, &tmp_len);
-      /*
-       * objects constructed with an anonymous constructor are represented as
-       * Object, ch11/11.1/11.1.1/S11.1.1_A4.2.js
-       */
-      if (tmp_len > 0) {
-        str = tmp_str;
-        name_len = tmp_len;
+    if (!v7_is_undefined(ctor)) {
+      rcode = v7_get_throwing(v7, ctor, "name", ~0, &name);
+      if (rcode != V7_OK) {
+        goto clean;
+      }
+
+      if (!v7_is_undefined(name)) {
+        size_t tmp_len;
+        const char *tmp_str;
+        tmp_str = v7_get_string_data(v7, &name, &tmp_len);
+        /*
+         * objects constructed with an anonymous constructor are represented as
+         * Object, ch11/11.1/11.1.1/S11.1.1_A4.2.js
+         */
+        if (tmp_len > 0) {
+          str = tmp_str;
+          name_len = tmp_len;
+        }
       }
     }
+  }
+
+  if (name_len == (size_t) ~0) {
+    name_len = strlen(str);
   }
 
   c_snprintf(buf, sizeof(buf), "[object %.*s]", (int) name_len, str);
