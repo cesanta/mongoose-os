@@ -161,7 +161,7 @@ static enum v7_err val_to_void(struct v7 *v7, v7_val_t *val, void **buf,
 
   if (v7_is_string(*val)) {
     /* In case of string, just return pointer */
-    *buf = (void *) v7_to_cstring(v7, val);
+    *buf = (void *) v7_get_cstring(v7, val);
     *len = strlen((char *) *buf);
     *free_after_use = 0;
   } else if (v7_is_array(v7, *val)) {
@@ -174,7 +174,7 @@ static enum v7_err val_to_void(struct v7 *v7, v7_val_t *val, void **buf,
       v7_val_t elem = v7_array_get(v7, *val, i);
       double elem_val = -1;
       if (v7_is_number(elem)) {
-        elem_val = v7_to_number(elem);
+        elem_val = v7_get_double(elem);
       }
       if (elem_val < 0 || elem_val != (uint8_t) elem_val) {
         rcode = v7_throwf(v7, "Error", "Only byte arrays are supported");
@@ -246,7 +246,7 @@ static int trigger_event(struct v7 *v7, struct cb_info_holder *list,
 static void free_obj_cb_info_chain(struct v7 *v7, v7_val_t obj) {
   v7_val_t cbh_v = v7_get(v7, obj, s_callbacks_prop, ~0);
   if (!v7_is_undefined(cbh_v)) {
-    struct cb_info_holder *cbh = v7_to_foreign(cbh_v);
+    struct cb_info_holder *cbh = v7_get_ptr(cbh_v);
     free_cb_info_chain(v7, cbh);
     v7_set(v7, obj, s_callbacks_prop, ~0, v7_mk_undefined());
   }
@@ -267,7 +267,7 @@ static struct cb_info_holder *get_cb_info_holder(struct v7 *v7, v7_val_t obj) {
     ret = calloc(1, sizeof(*ret));
     v7_set(v7, obj, s_callbacks_prop, ~0, v7_mk_foreign(ret));
   } else {
-    ret = v7_to_foreign(cbs);
+    ret = v7_get_ptr(cbs);
   }
 
   return ret;
@@ -278,7 +278,7 @@ static struct cb_info_holder *get_cb_info_holder_or_null(struct v7 *v7,
   v7_val_t cbs = v7_get(v7, obj, s_callbacks_prop, ~0);
   struct cb_info_holder *ret = NULL;
   if (!v7_is_undefined(cbs)) {
-    ret = v7_to_foreign(cbs);
+    ret = v7_get_ptr(cbs);
   }
 
   return ret;
@@ -336,7 +336,7 @@ static enum v7_err setup_event(struct v7 *v7, const char *valid_events[],
     goto clean;
   }
 
-  event_name = v7_to_cstring(v7, &event_name_v);
+  event_name = v7_get_cstring(v7, &event_name_v);
   LOG(LL_VERBOSE_DEBUG, ("Set event: %s", event_name));
 
   for (i = 0; i < valid_events_count; i++) {
@@ -409,7 +409,7 @@ static void set_connection(struct v7 *v7, v7_val_t obj,
   v7_val_t conn_v = v7_get(v7, obj, s_conn_prop, ~0);
   if (v7_is_foreign(conn_v)) {
     struct conn_user_data *ud;
-    struct mg_connection *old_c = v7_to_foreign(conn_v);
+    struct mg_connection *old_c = v7_get_ptr(conn_v);
     if (old_c != NULL) {
       old_c->flags |= MG_F_CLOSE_IMMEDIATELY;
       ud = (struct conn_user_data *) c->user_data;
@@ -428,7 +428,7 @@ static enum v7_err get_connection(struct v7 *v7, v7_val_t obj,
   v7_val_t conn_v = v7_get(v7, obj, s_conn_prop, ~0);
 
   if (!v7_is_foreign(conn_v) ||
-      (*c = (struct mg_connection *) v7_to_foreign(conn_v)) == NULL) {
+      (*c = (struct mg_connection *) v7_get_ptr(conn_v)) == NULL) {
     /*
      * "It is unclear, should we return error here or trigger
      * "error" event (basically, "error" was triggered if connection
@@ -720,7 +720,7 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   parse_args(v7, 2, args_names, ARRAY_SIZE(args_names), 1, args);
 
   CHECK_NUM_REQ(args[PORT], "port");
-  port = v7_to_number(args[PORT]);
+  port = v7_get_double(args[PORT]);
 
   CHECK_STR_OPT(args[HOST], "host");
 
@@ -737,22 +737,22 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
     /* ssl_ca_cert defaults to CA stored in configuration */
     conn_opts.ssl_ca_cert = v7_is_undefined(args[CA_CERT])
                                 ? get_cfg()->tls.ca_file
-                                : v7_to_cstring(v7, &args[CA_CERT]);
+                                : v7_get_cstring(v7, &args[CA_CERT]);
     /* ssl_cert defaults to NULL */
     if (!v7_is_undefined(args[CLNT_CERT])) {
-      conn_opts.ssl_cert = v7_to_cstring(v7, &args[CLNT_CERT]);
+      conn_opts.ssl_cert = v7_get_cstring(v7, &args[CLNT_CERT]);
     }
     /*
      * server name default to host name (it is filled in
      * mg_connect_opt, here we keep NULL in this field
      */
     if (!v7_is_undefined(args[SERVER_NAME])) {
-      conn_opts.ssl_server_name = v7_to_cstring(v7, &args[SERVER_NAME]);
+      conn_opts.ssl_server_name = v7_get_cstring(v7, &args[SERVER_NAME]);
     }
   }
 
   if (v7_is_string(args[HOST])) {
-    host = v7_to_cstring(v7, &args[HOST]);
+    host = v7_get_cstring(v7, &args[HOST]);
   } else {
     /*
      * Node.js uses localhost as default; actually, it makes sence only
@@ -854,11 +854,11 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
   }
 
   CHECK_NUM_REQ(port_v, "Port");
-  port = v7_to_number(port_v);
+  port = v7_get_double(port_v);
 
   CHECK_STR_OPT(addr_v, "Address");
   if (!v7_is_undefined(addr_v)) {
-    address = v7_to_cstring(v7, &addr_v);
+    address = v7_get_cstring(v7, &addr_v);
   }
 
   if (!v7_is_undefined(cb) && !v7_is_callable(v7, cb)) {
@@ -869,12 +869,12 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
   /* Leave SSL initialization to mg_bind_opt */
   CHECK_STR_OPT(cert_v, "cert");
   if (!v7_is_undefined(cert_v)) {
-    opts.ssl_cert = v7_to_cstring(v7, &cert_v);
+    opts.ssl_cert = v7_get_cstring(v7, &cert_v);
   }
 
   CHECK_STR_OPT(ca_cert_v, "ca_sert");
   if (!v7_is_undefined(ca_cert_v)) {
-    opts.ssl_ca_cert = v7_to_cstring(v7, &ca_cert_v);
+    opts.ssl_ca_cert = v7_get_cstring(v7, &ca_cert_v);
   }
 
   int tmp = asprintf(&bind_addr, "%s://%s:%d", protocol, address ? address : "",
@@ -970,7 +970,7 @@ SJ_PRIVATE enum v7_err DGRAM_createSocket(struct v7 *v7, v7_val_t *res) {
   CHECK_STR_OPT(args[TYPE], "Type");
 
   if (v7_is_string(args[TYPE]) &&
-      strcmp(v7_to_cstring(v7, &args[TYPE]), "udp4") != 0) {
+      strcmp(v7_get_cstring(v7, &args[TYPE]), "udp4") != 0) {
     /* Node.js supports udp6, while Mongoose IoT - doesn't */
     LOG_AND_THROW("Only udp4 is supported");
     goto clean;
@@ -1013,7 +1013,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
 
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
   if (v7_is_foreign(conn_v)) {
-    parent_c = v7_to_foreign(conn_v);
+    parent_c = v7_get_ptr(conn_v);
     if (parent_c == NULL) {
       /* Socket was explicitly closed, don't want to send */
       LOG_AND_THROW("Socket is closed");
@@ -1031,22 +1031,22 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
   if (v7_argc(v7) > 3) {
     v7_val_t v = v7_arg(v7, 1);
     CHECK_NUM_REQ(v, "Offset");
-    offset = v7_to_number(v);
+    offset = v7_get_double(v);
 
     v = v7_arg(v7, 2);
     CHECK_NUM_REQ(v, "Len");
-    usr_len = v7_to_number(v);
+    usr_len = v7_get_double(v);
 
     port_idx = 3;
   }
 
   port_v = v7_arg(v7, port_idx);
   CHECK_NUM_REQ(port_v, "Port");
-  port = v7_to_number(port_v);
+  port = v7_get_double(port_v);
 
   addr_v = v7_arg(v7, port_idx + 1);
   CHECK_STR_REQ(addr_v, "Address");
-  address = v7_to_cstring(v7, &addr_v);
+  address = v7_get_cstring(v7, &addr_v);
 
   cb = v7_arg(v7, port_idx + 2);
 
@@ -1401,7 +1401,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_setTimeout(struct v7 *v7, v7_val_t *res) {
 
   ud = (struct conn_user_data *) c->user_data;
   /* Node.js uses msec for timeout, we round it to secs */
-  ud->timeout = round(v7_to_number(timeout_v) / 1000);
+  ud->timeout = round(v7_get_double(timeout_v) / 1000);
   if (ud->timeout == 0) {
     ud->timeout = 1;
   }
@@ -1433,7 +1433,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_on(struct v7 *v7, v7_val_t *res) {
   }
 
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
-  c = v7_to_foreign(conn_v);
+  c = v7_get_ptr(conn_v);
   if (c == NULL && event_idx == 0 /* EV_ERROR was set up*/) {
     /*
      * if socket is an error state after creation, we need to trigger

@@ -59,7 +59,7 @@ static enum v7_err UART_ctor(struct v7 *v7, v7_val_t *res) {
   ud->cb = v7_mk_undefined();
   v7_own(v7, &ud->cb);
 
-  name = v7_get_string_data(v7, &dev, &len);
+  name = v7_get_string(v7, &dev, &len);
   uart = sj_hal_open_uart(name, (void *) ud);
   if (uart == NULL) {
     rcode = v7_throwf(v7, "Error", "cannot open uart");
@@ -77,12 +77,12 @@ static enum v7_err UART_write(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_get(v7, this_obj, "_dev", ~0), data = v7_arg(v7, 0);
   size_t len;
-  const char *d = v7_get_string_data(v7, &data, &len);
+  const char *d = v7_get_string(v7, &data, &len);
 
   (void) v7;
   (void) this_obj;
 
-  sj_hal_write_uart(v7_to_foreign(dev), d, len);
+  sj_hal_write_uart(v7_get_ptr(dev), d, len);
   *res = v7_mk_boolean(1);
 
   return V7_OK;
@@ -95,8 +95,8 @@ static enum v7_err UART_write(struct v7 *v7, v7_val_t *res) {
 static enum v7_err UART_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t dev = v7_get(v7, this_obj, "_dev", ~0), maxv = v7_arg(v7, 0);
-  size_t max = v7_is_number(maxv) ? (size_t) v7_to_number(maxv) : (size_t) ~0;
-  *res = sj_hal_read_uart(v7, v7_to_foreign(dev), max);
+  size_t max = v7_is_number(maxv) ? (size_t) v7_get_double(maxv) : (size_t) ~0;
+  *res = sj_hal_read_uart(v7, v7_get_ptr(dev), max);
 
   return V7_OK;
 }
@@ -111,9 +111,9 @@ static enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   v7_val_t wantv = v7_arg(v7, 1);
   v7_val_t udv = v7_get(v7, this_obj, "_ud", ~0);
   size_t want =
-      v7_is_number(wantv) ? (size_t) v7_to_number(wantv) : (size_t) ~0;
+      v7_is_number(wantv) ? (size_t) v7_get_double(wantv) : (size_t) ~0;
 
-  struct user_data *ud = (struct user_data *) v7_to_foreign(udv);
+  struct user_data *ud = (struct user_data *) v7_get_ptr(udv);
   ud->cb = cb;
   v7_own(v7, &ud->cb);
   ud->want = want;

@@ -145,7 +145,7 @@ enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res) {
   enum v7_err rcode = V7_OK;
   struct lnx_i2c_connection *conn = NULL;
   v7_val_t bus_no_val = v7_arg(v7, 0);
-  double bus_no = v7_to_number(bus_no_val);
+  double bus_no = v7_get_double(bus_no_val);
 
   if (!v7_is_number(bus_no) || bus_no < 0) {
     rcode = v7_throwf(v7, "Error", "Missing bus number argument.");

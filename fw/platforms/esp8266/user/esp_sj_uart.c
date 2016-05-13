@@ -101,7 +101,7 @@ static v7_val_t s_uart_proto;
 
 static enum v7_err esp_sj_uart_get_state(struct v7 *v7,
                                          struct esp_sj_uart_state **us) {
-  int uart_no = v7_to_number(v7_get(v7, v7_get_this(v7), "_u", 2));
+  int uart_no = v7_get_double(v7_get(v7, v7_get_this(v7), "_u", 2));
   if (uart_no < 0 || uart_no > 1) {
     return v7_throwf(v7, "Error", "Invalid UART number");
   }
@@ -120,10 +120,10 @@ static enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
     v7_val_t v;
 #define NUM_PROP(p)             \
   v = v7_get(v7, cobj, #p, ~0); \
-  if (v7_is_number(v)) cfg->p = v7_to_number(v);
+  if (v7_is_number(v)) cfg->p = v7_get_double(v);
 #define BOOL_PROP(p)            \
   v = v7_get(v7, cobj, #p, ~0); \
-  if (!v7_is_undefined(v)) cfg->p = v7_to_boolean(v);
+  if (!v7_is_undefined(v)) cfg->p = v7_get_bool(v);
 
     NUM_PROP(baud_rate);
 
@@ -174,7 +174,7 @@ static enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   if (ret != V7_OK) return ret;
 
   cs_rbuf_t *rxb = esp_uart_rx_buf(us->uart_no);
-  size_t len = MIN((size_t) v7_to_number(v7_arg(v7, 0)), rxb->used);
+  size_t len = MIN((size_t) v7_get_double(v7_arg(v7, 0)), rxb->used);
   uint8_t *data;
   len = cs_rbuf_get(rxb, len, &data);
   *res = v7_mk_string(v7, (const char *) data, len, 1 /* copy */);
@@ -225,7 +225,7 @@ static enum v7_err UART_send(struct v7 *v7, v7_val_t *res) {
     return v7_throwf(v7, "Error", "String arg required");
   }
   size_t len = 0;
-  const char *data = v7_get_string_data(v7, &arg0, &len);
+  const char *data = v7_get_string(v7, &arg0, &len);
   if (data != NULL && len > 0) {
     cs_rbuf_t *txb = esp_uart_tx_buf(us->uart_no);
     len = MIN(len, txb->avail);
@@ -239,7 +239,7 @@ static enum v7_err UART_send(struct v7 *v7, v7_val_t *res) {
 static enum v7_err UART_get(struct v7 *v7, v7_val_t *res) {
   enum v7_err ret = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
-  int uart_no = v7_to_number(arg0);
+  int uart_no = v7_get_double(arg0);
   if (v7_is_number(arg0) && (uart_no == 0 || uart_no == 1)) {
     *res = sj_us[uart_no].obj;
   } else {

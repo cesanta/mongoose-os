@@ -143,7 +143,7 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  url = v7_get_string_data(v7, &urlv, &len);
+  url = v7_get_string(v7, &urlv, &len);
 
   if (mg_parse_uri(mg_mk_str(url), &scheme, NULL, &host, &port, NULL, NULL,
                    NULL) < 0) {
@@ -198,7 +198,7 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   ud = calloc(1, sizeof(*ud));
   ud->v7 = v7;
   ud->client = *res;
-  ud->client_id = strdup(v7_to_cstring(v7, &client_id));
+  ud->client_id = strdup(v7_get_cstring(v7, &client_id));
   nc->user_data = ud;
   v7_own(v7, &ud->client);
 
@@ -229,7 +229,7 @@ enum v7_err MQTT_publish(struct v7 *v7, v7_val_t *res) {
   v7_val_t topicv = v7_arg(v7, 0), messagev = v7_arg(v7, 1);
   (void) res;
 
-  topic = v7_to_cstring(v7, &topicv);
+  topic = v7_get_cstring(v7, &topicv);
   if (topic == NULL || strlen(topic) == 0) {
     rcode = v7_throwf(v7, "TypeError", "invalid topic");
     goto clean;
@@ -239,9 +239,9 @@ enum v7_err MQTT_publish(struct v7 *v7, v7_val_t *res) {
     rcode = v7_throwf(v7, "TypeError", "invalid message");
     goto clean;
   }
-  message = v7_get_string_data(v7, &messagev, &message_len);
+  message = v7_get_string(v7, &messagev, &message_len);
 
-  nc = v7_to_foreign(v7_get(v7, v7_get_this(v7), "_nc", ~0));
+  nc = v7_get_ptr(v7_get(v7, v7_get_this(v7), "_nc", ~0));
   if (nc == NULL) {
     rcode = v7_throwf(v7, "Error", "invalid connection");
     goto clean;
@@ -265,14 +265,14 @@ enum v7_err MQTT_subscribe(struct v7 *v7, v7_val_t *res) {
   v7_val_t topicv = v7_arg(v7, 0);
   const char *topic;
 
-  nc = v7_to_foreign(v7_get(v7, v7_get_this(v7), "_nc", ~0));
+  nc = v7_get_ptr(v7_get(v7, v7_get_this(v7), "_nc", ~0));
   if (nc == NULL) {
     rcode = v7_throwf(v7, "Error", "unsupported protocol");
     goto clean;
   }
   ud = (struct user_data *) nc->user_data;
 
-  topic = v7_to_cstring(v7, &topicv);
+  topic = v7_get_cstring(v7, &topicv);
   if (topic == NULL || strlen(topic) == 0) {
     rcode = v7_throwf(v7, "TypeError", "invalid topic");
     goto clean;
@@ -303,7 +303,7 @@ enum v7_err MQTT_on(struct v7 *v7, v7_val_t *res) {
   v7_val_t cb = v7_arg(v7, 1);
   const char *ev, *key = NULL;
 
-  ev = v7_to_cstring(v7, &evv);
+  ev = v7_get_cstring(v7, &evv);
   if (strcmp(ev, "connect") == 0) {
     key = SJ_MQTT_CONNECT_CB;
   } else if (strcmp(ev, "message") == 0) {

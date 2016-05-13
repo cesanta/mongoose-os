@@ -31,12 +31,12 @@ enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
     goto clean;
   }
 
-  copts->ssl_ca_cert = v7_to_cstring(v7, &v_ca_cert);
-  copts->ssl_cert = v7_to_cstring(v7, &v_cert);
-  copts->ssl_server_name = v7_to_cstring(v7, &v_server_name);
+  copts->ssl_ca_cert = v7_get_cstring(v7, &v_ca_cert);
+  copts->ssl_cert = v7_get_cstring(v7, &v_cert);
+  copts->ssl_server_name = v7_get_cstring(v7, &v_server_name);
 
   if ((force_ssl ||
-       (v7_is_boolean(v_use_ssl) && v7_to_boolean(v_use_ssl) != 0)) &&
+       (v7_is_boolean(v_use_ssl) && v7_get_bool(v_use_ssl) != 0)) &&
       copts->ssl_ca_cert == NULL) {
     /* Defaults to configuration */
     copts->ssl_ca_cert = get_cfg()->tls.ca_file;

@@ -250,7 +250,7 @@ static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
     if (ctx == NULL) {
       rcode = v7_throwf(v7, "Error", "Failed to init updater");
     }
-    if (start_update_download(ctx, v7_to_cstring(v7, &manifest_url_v)) < 0) {
+    if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v)) < 0) {
       rcode = v7_throwf(v7, "Error", ctx->status_msg);
     }
   }

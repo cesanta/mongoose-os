@@ -26,7 +26,7 @@ SJ_PRIVATE enum v7_err Debug_mode(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  mode = v7_to_number(output_val);
+  mode = v7_get_double(output_val);
 
   ires = sj_debug_redirect(mode);
 

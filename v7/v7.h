@@ -641,7 +641,7 @@ v7_val_t v7_mk_number(double num);
  *
  * Returns NaN for non-numbers.
  */
-double v7_to_number(v7_val_t v);
+double v7_get_double(v7_val_t v);
 
 /* Returns true if given value is a primitive number value */
 int v7_is_number(v7_val_t v);
@@ -653,7 +653,7 @@ v7_val_t v7_mk_boolean(int is_true);
  * Returns boolean stored in `v7_val_t`:
  *  0 for `false` or non-boolean, non-0 for `true`
  */
-int v7_to_boolean(v7_val_t v);
+int v7_get_bool(v7_val_t v);
 
 /* Returns true if given value is a primitive boolean value */
 int v7_is_boolean(v7_val_t v);
@@ -696,7 +696,7 @@ v7_val_t v7_mk_foreign(void *ptr);
  *
  * Returns NULL if the value is not a foreign pointer.
  */
-void *v7_to_foreign(v7_val_t v);
+void *v7_get_ptr(v7_val_t v);
 
 /* Returns true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t v);
@@ -754,13 +754,13 @@ int v7_is_string(v7_val_t v);
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
  * garbage collector, which in turn may relocate string data and invalidate
- * pointer returned by `v7_get_string_data()`.
+ * pointer returned by `v7_get_string()`.
  *
  * Short JS strings are embedded inside the `v7_val_t` value itself. This is why
  * a pointer to a `v7_val_t` is required. It also means that the string data
  * will become invalid once that `v7_val_t` value goes out of scope.
  */
-const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
+const char *v7_get_string(struct v7 *v7, v7_val_t *v, size_t *len);
 
 /*
  * Returns a pointer to the string stored in `v7_val_t`.
@@ -774,7 +774,7 @@ const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
  * be NUL terminated. Out of these, those that don't include embedded NUL chars
  * are guaranteed to be C compatible.
  */
-const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
+const char *v7_get_cstring(struct v7 *v7, v7_val_t *v);
 
 #if defined(__cplusplus)
 }

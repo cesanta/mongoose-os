@@ -451,7 +451,7 @@ void fs_flush_stderr() {
 
 #ifndef CS_DISABLE_JS
 int v7_val_to_file(v7_val_t val) {
-  return (int) v7_to_number(val);
+  return (int) v7_get_double(val);
 }
 
 v7_val_t v7_file_to_val(int fd) {

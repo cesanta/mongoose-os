@@ -24,7 +24,7 @@ static enum v7_err isr_cb_proxy(struct v7 *v7, v7_val_t *res) {
 
   enum v7_err ret = v7_apply(v7, cb, v7_get_global(v7), args, res);
 
-  sj_reenable_intr(v7_to_number(v7_array_get(v7, args, 0)));
+  sj_reenable_intr(v7_get_double(v7_array_get(v7, args, 0)));
 
   v7_disown(v7, &args);
   v7_disown(v7, &cb);
@@ -68,8 +68,8 @@ SJ_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  pin = v7_to_number(pinv);
-  type = v7_to_number(typev);
+  pin = v7_get_double(pinv);
+  type = v7_get_double(typev);
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
   current_cb = v7_get(v7, v7_get_global(v7), prop_name, len);
@@ -117,9 +117,9 @@ SJ_PRIVATE enum v7_err GPIO_setMode(struct v7 *v7, v7_val_t *res) {
     printf("Invalid arguments\n");
     *res = v7_mk_undefined();
   } else {
-    pin = v7_to_number(pinv);
-    mode = v7_to_number(modev);
-    pull = v7_to_number(pullv);
+    pin = v7_get_double(pinv);
+    mode = v7_get_double(modev);
+    pull = v7_get_double(pullv);
     *res = v7_mk_boolean(sj_gpio_set_mode(pin, (enum gpio_mode) mode,
                                           (enum gpio_pull_type) pull) == 0);
   }
@@ -136,7 +136,7 @@ SJ_PRIVATE enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
     printf("non-numeric pin\n");
     *res = v7_mk_undefined();
   } else {
-    pin = v7_to_number(pinv);
+    pin = v7_get_double(pinv);
 
     /*
      * We assume 0 if the value is "falsy",
@@ -159,7 +159,7 @@ SJ_PRIVATE enum v7_err GPIO_read(struct v7 *v7, v7_val_t *res) {
     printf("non-numeric pin\n");
     *res = v7_mk_undefined();
   } else {
-    pin = v7_to_number(pinv);
+    pin = v7_get_double(pinv);
     *res = v7_mk_number(sj_gpio_read(pin));
   }
 

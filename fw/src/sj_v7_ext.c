@@ -36,7 +36,7 @@ static enum v7_err Sys_reboot(struct v7 *v7, v7_val_t *res) {
 
   v7_val_t code_v = v7_arg(v7, 0);
   if (v7_is_number(code_v)) {
-    exit_code = v7_to_number(code_v);
+    exit_code = v7_get_double(code_v);
   }
 
   sj_system_restart(exit_code);
@@ -53,7 +53,7 @@ static enum v7_err Sys_setLogLevel(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_boolean(0);
     goto clean;
   }
-  ll = v7_to_number(llv);
+  ll = v7_get_double(llv);
   if (ll <= _LL_MIN || ll >= _LL_MAX) {
     *res = v7_mk_boolean(0);
     goto clean;
@@ -103,7 +103,7 @@ static enum v7_err Sys_wdtSetTimeout(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_number(timeoutv)) {
     rcode = v7_throwf(v7, "Error", "Timeout should be a number");
   } else {
-    sj_wdt_set_timeout(v7_to_number(timeoutv));
+    sj_wdt_set_timeout(v7_get_double(timeoutv));
   }
 
   *res = v7_mk_boolean(rcode == V7_OK);
@@ -119,7 +119,7 @@ SJ_PRIVATE enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_number(usecsv)) {
     printf("usecs is not a double\n\r");
   } else {
-    usecs = v7_to_number(usecsv);
+    usecs = v7_get_double(usecsv);
     sj_usleep(usecs);
   }
 

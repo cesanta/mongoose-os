@@ -337,7 +337,7 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
     v7_val_t arg = v7_arg(v7, i);
     if (v7_is_string(arg)) {
       size_t len;
-      const char *str = v7_get_string_data(v7, &arg, &len);
+      const char *str = v7_get_string(v7, &arg, &len);
       mbuf_append(&msg, str, len);
     } else {
       char buf[100], *p;

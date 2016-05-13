@@ -201,7 +201,7 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
     goto clean;
   }
 
-  url = v7_get_string_data(v7, &url_v, &len);
+  url = v7_get_string(v7, &url_v, &len);
   opts = v7_mk_object(v7);
   for (i = j = 0; j < len; j++) {
     switch (state) {
@@ -220,7 +220,7 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
           if (j == len - 1 && url[j] != '/' && url[j] != ':') hl++;
           v7_set(v7, opts, "hostname", ~0, v7_mk_string(v7, url + i, hl, 1));
           if (url[j] == '/' || j == len - 1) {
-            const char *protocol = v7_to_cstring(v7, &protocol_v);
+            const char *protocol = v7_get_cstring(v7, &protocol_v);
             int port = strcasecmp(protocol, "https") == 0 ? 443 : 80;
             v7_set(v7, opts, "port", ~0, v7_mk_number(port));
             i = j;
@@ -268,7 +268,7 @@ clean:
  */
 static struct mg_connection *get_mgconn_obj(struct v7 *v7, v7_val_t obj) {
   v7_val_t _c = v7_get(v7, obj, "_c", ~0);
-  return (struct mg_connection *) v7_to_foreign(_c);
+  return (struct mg_connection *) v7_get_ptr(_c);
 }
 
 /*
@@ -346,8 +346,8 @@ static void http_write_headers(struct v7 *v7, v7_val_t headers_obj,
     v7_prop_attr_t attrs;
     while ((h = v7_next_prop(h, headers_obj, &name, &value, &attrs)) != NULL) {
       size_t n1, n2;
-      const char *s1 = v7_get_string_data(v7, &name, &n1);
-      const char *s2 = v7_get_string_data(v7, &value, &n2);
+      const char *s1 = v7_get_string(v7, &name, &n1);
+      const char *s2 = v7_get_string(v7, &value, &n2);
       mg_printf(c, "%.*s: %.*s\r\n", (int) n1, s1, (int) n2, s2);
     }
   }
@@ -365,7 +365,7 @@ SJ_PRIVATE enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_number(arg0)) {
-    code = v7_to_number(arg0);
+    code = v7_get_double(arg0);
   }
 
   write_http_status(c, code);
@@ -404,7 +404,7 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
     v7_val_t v = v7_get(v7, obj, s_map[i].name, ~0);
     if (v7_is_string(v)) {
       size_t n;
-      const char *str = v7_get_string_data(v7, &v, &n);
+      const char *str = v7_get_string(v7, &v, &n);
       *(char **) ((char *) opts + s_map[i].offset) = strdup(str);
     }
   }
@@ -430,7 +430,7 @@ SJ_PRIVATE enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   size_t i, n;
   v7_val_t request = v7_get(v7, v7_get_this(v7), "_r", ~0);
   v7_val_t url_v = v7_get(v7, request, "url", ~0);
-  const char *url = v7_get_string_data(v7, &url_v, &n);
+  const char *url = v7_get_string(v7, &url_v, &n);
   const char *quest = strchr(url, '?');
 
   DECLARE_CONN();
@@ -489,11 +489,11 @@ SJ_PRIVATE enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
     }
 
     if (!v7_is_undefined(ca_cert_v)) {
-      ca_cert = v7_to_cstring(v7, &ca_cert_v);
+      ca_cert = v7_get_cstring(v7, &ca_cert_v);
     }
 
     if (!v7_is_undefined(cert_v)) {
-      cert = v7_to_cstring(v7, &cert_v);
+      cert = v7_get_cstring(v7, &cert_v);
     }
   }
 
@@ -555,7 +555,7 @@ SJ_PRIVATE enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
   struct user_data *ud;
   DECLARE_CONN();
   ud = (struct user_data *) c->user_data;
-  mg_set_timer(c, time(NULL) + v7_to_number(v7_arg(v7, 0)) / 1000.0);
+  mg_set_timer(c, time(NULL) + v7_get_double(v7_arg(v7, 0)) / 1000.0);
   ud->timeout_callback = v7_arg(v7, 1);
   v7_own(v7, &ud->timeout_callback);
 
@@ -613,14 +613,14 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   v_hdrs = v7_get(v7, opts, "headers", ~0);
 
   /* Perform options validation and set defaults if needed */
-  port = v7_is_number(v_p) ? v7_to_number(v_p) : 80;
-  host = v7_is_string(v_h) ? v7_to_cstring(v7, &v_h) : "";
-  uri = v7_is_string(v_uri) ? v7_to_cstring(v7, &v_uri) : "/";
-  method = v7_is_string(v_m) ? v7_to_cstring(v7, &v_m) : "GET";
+  port = v7_is_number(v_p) ? v7_get_double(v_p) : 80;
+  host = v7_is_string(v_h) ? v7_get_cstring(v7, &v_h) : "";
+  uri = v7_is_string(v_uri) ? v7_get_cstring(v7, &v_uri) : "/";
+  method = v7_is_string(v_m) ? v7_get_cstring(v7, &v_m) : "GET";
 
 #ifdef MG_ENABLE_SSL
   v7_val_t v_pr = v7_get(v7, opts, "protocol", ~0);
-  protocol = v7_is_string(v_pr) ? v7_to_cstring(v7, &v_pr) : "";
+  protocol = v7_is_string(v_pr) ? v7_get_cstring(v7, &v_pr) : "";
   force_ssl = (strcasecmp(protocol, "https") == 0);
   if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
     goto clean;

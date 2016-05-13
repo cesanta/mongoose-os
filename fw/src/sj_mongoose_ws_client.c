@@ -139,15 +139,15 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_object(this_obj) && this_obj != v7_get_global(v7)) {
-    const char *url = v7_to_cstring(v7, &urlv);
+    const char *url = v7_get_cstring(v7, &urlv);
     const char *proto = NULL, *extra_headers = NULL;
 
     if (v7_is_string(subprotov)) {
-      proto = v7_get_string_data(v7, &subprotov, &n);
+      proto = v7_get_string(v7, &subprotov, &n);
     }
 
     if (v7_is_string(ehv)) {
-      extra_headers = v7_get_string_data(v7, &ehv, &n);
+      extra_headers = v7_get_string(v7, &ehv, &n);
     }
 
 #ifdef MG_ENABLE_SSL
@@ -209,7 +209,7 @@ static void _WebSocket_send_blob(struct v7 *v7, struct mg_connection *nc,
      * TODO(mkm): find a better API.
      */
     if (!v7_is_undefined(chunk)) {
-      data = v7_get_string_data(v7, &chunk, &len);
+      data = v7_get_string(v7, &chunk, &len);
       mg_send_websocket_frame(nc, op | flag, data, len);
     }
   }
@@ -219,7 +219,7 @@ static void _WebSocket_send_string(struct v7 *v7, struct mg_connection *nc,
                                    v7_val_t s) {
   const char *data;
   size_t len;
-  data = v7_get_string_data(v7, &s, &len);
+  data = v7_get_string(v7, &s, &len);
   mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, data, len);
 }
 
@@ -244,7 +244,7 @@ SJ_PRIVATE enum v7_err WebSocket_send(struct v7 *v7, v7_val_t *res) {
   }
 
   if (!v7_is_foreign(ncv) ||
-      (nc = (struct mg_connection *) v7_to_foreign(ncv)) == NULL) {
+      (nc = (struct mg_connection *) v7_get_ptr(ncv)) == NULL) {
     rcode = v7_throwf(v7, "Error", "ws not connected");
     goto clean;
   }
@@ -271,7 +271,7 @@ SJ_PRIVATE enum v7_err WebSocket_close(struct v7 *v7, v7_val_t *res) {
   (void) res;
 
   if (v7_is_foreign(ncv) &&
-      (nc = (struct mg_connection *) v7_to_foreign(ncv)) != NULL) {
+      (nc = (struct mg_connection *) v7_get_ptr(ncv)) != NULL) {
     nc->flags |= MG_F_CLOSE_IMMEDIATELY;
   }
 

@@ -22,9 +22,9 @@ SJ_PRIVATE enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  pin = v7_to_number(pinv);
-  period = v7_to_number(periodv);
-  duty = v7_to_number(dutyv);
+  pin = v7_get_double(pinv);
+  period = v7_get_double(periodv);
+  duty = v7_get_double(dutyv);
 
   ires = sj_pwm_set(pin, period, duty);
 

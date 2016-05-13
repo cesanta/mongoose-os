@@ -57,7 +57,7 @@ clean:
 }
 
 spi_connection spijs_get_conn(struct v7 *v7, v7_val_t this_obj) {
-  return v7_to_foreign(
+  return v7_get_ptr(
       v7_get(v7, this_obj, s_spi_conn_prop, sizeof(s_spi_conn_prop) - 1));
 }
 /*
@@ -82,7 +82,7 @@ SJ_PRIVATE enum v7_err spi_js_txn(struct v7 *v7, v7_val_t *res) {
       *res = v7_mk_number(-1);
       goto clean;
     }
-    params[i] = v7_to_number(tmp);
+    params[i] = v7_get_double(tmp);
   }
 
   ires = spi_txn(conn, params[0], params[1], params[2], params[3], params[4],
@@ -121,7 +121,7 @@ SJ_PRIVATE enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  dout_data = v7_to_number(tmp_val);
+  dout_data = v7_get_double(tmp_val);
   if (dout_data > 0xFFFFFFFF) {
     *res = v7_mk_number(-1);
     goto clean;
@@ -131,7 +131,7 @@ SJ_PRIVATE enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
   /* bytes to receive */
   tmp_val = v7_arg(v7, 1);
   if (v7_is_number(tmp_val)) {
-    din_bits = v7_to_number(tmp_val) * 8;
+    din_bits = v7_get_double(tmp_val) * 8;
     if (din_bits > 32) {
       *res = v7_mk_number(-1);
       goto clean;
@@ -141,13 +141,13 @@ SJ_PRIVATE enum v7_err spi_js_tran(struct v7 *v7, v7_val_t *res) {
   /* command */
   tmp_val = v7_arg(v7, 2);
   if (v7_is_number(tmp_val)) {
-    cmd_bits = v7_to_number(tmp_val);
+    cmd_bits = v7_get_double(tmp_val);
   }
 
   /* address */
   tmp_val = v7_arg(v7, 3);
   if (v7_is_number(tmp_val)) {
-    addr_data = v7_to_number(tmp_val);
+    addr_data = v7_get_double(tmp_val);
     if (addr_data > 0xFFFFFFFF) {
       *res = v7_mk_number(-1);
       goto clean;
