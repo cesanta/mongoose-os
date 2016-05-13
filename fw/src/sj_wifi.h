@@ -21,6 +21,7 @@ int sj_wifi_disconnect();
 char *sj_wifi_get_status_str();
 char *sj_wifi_get_connected_ssid();
 char *sj_wifi_get_sta_ip();
+char *sj_wifi_get_ap_ip();
 
 /* Caller owns SSIDS, they are not freed by the callee. */
 typedef void (*sj_wifi_scan_cb_t)(struct v7 *v7, const char **ssids);

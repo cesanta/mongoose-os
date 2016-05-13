@@ -232,6 +232,11 @@ char *sj_wifi_get_sta_ip() {
   return strdup(s_wifi_sta_config.ip);
 }
 
+char *sj_wifi_get_ap_ip() {
+  /* TODO(rojer?) : implement if applicable */
+  return NULL;
+}
+
 int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   const char *ssids[21];
   Sl_WlanNetworkEntry_t info[20];

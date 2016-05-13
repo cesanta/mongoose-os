@@ -160,7 +160,10 @@ clean:
 }
 
 SJ_PRIVATE enum v7_err Wifi_ip(struct v7 *v7, v7_val_t *res) {
-  char *ip = sj_wifi_get_sta_ip();
+  v7_val_t arg0 = v7_arg(v7, 0);
+  char *ip = NULL;
+  ip = v7_is_number(arg0) && v7_to_number(arg0) == 1 ? sj_wifi_get_ap_ip()
+                                                     : sj_wifi_get_sta_ip();
   if (ip == NULL) {
     *res = v7_mk_undefined();
     goto clean;

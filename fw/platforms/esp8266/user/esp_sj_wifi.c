@@ -245,14 +245,22 @@ char *sj_wifi_get_connected_ssid(void) {
   return strdup((const char *) conf.ssid);
 }
 
-char *sj_wifi_get_sta_ip(void) {
+static char *sj_wifi_get_ip(int if_no) {
   struct ip_info info;
   char *ip;
-  if (!wifi_get_ip_info(0, &info) || info.ip.addr == 0) return NULL;
+  if (!wifi_get_ip_info(if_no, &info) || info.ip.addr == 0) return NULL;
   if (asprintf(&ip, IPSTR, IP2STR(&info.ip)) < 0) {
     return NULL;
   }
   return ip;
+}
+
+char *sj_wifi_get_ap_ip() {
+  return sj_wifi_get_ip(1);
+}
+
+char *sj_wifi_get_sta_ip(void) {
+  return sj_wifi_get_ip(0);
 }
 
 void wifi_scan_done(void *arg, STATUS status) {

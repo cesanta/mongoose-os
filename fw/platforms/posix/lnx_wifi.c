@@ -52,6 +52,11 @@ char *sj_wifi_get_sta_ip(void) {
   return NULL;
 }
 
+char *sj_wifi_get_ap_ip(void) {
+  print_error();
+  return NULL;
+}
+
 int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   (void) cb;
   print_error();
