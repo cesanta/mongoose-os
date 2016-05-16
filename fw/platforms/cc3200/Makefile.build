@@ -161,7 +161,7 @@ all: $(BUILD_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
 $(FW_MANIFEST): $(APP_BIN) $(FS_IMG)
 
 $(APP_BIN): $(APP_ELF)
-	$(vecho) "BIN  $< -> $@"
+	$(vecho) "BIN   $< -> $@"
 	$(Q) $(OBJCOPY) -O binary $< $@
 	@echo "    Code size: $$(ls -l $@ | awk '{print $$5}')"
 
