@@ -151,6 +151,11 @@ ifeq "$(TOOLCHAIN)" "gcc"
 include tools/gcc.mk
 else
 include tools/ti.mk
+# Selectively inhibit warnings in external code.
+$(BUILD_DIR)/spiffs_gc.o: CFLAGS += --diag_suppress=1944
+$(BUILD_DIR)/spiffs_hydrogen.o: CFLAGS += --diag_suppress=770,1944
+$(BUILD_DIR)/port.o: CFLAGS += --diag_suppress=193,225
+$(BUILD_DIR)/tasks.o: CFLAGS += --diag_suppress=225
 endif
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))

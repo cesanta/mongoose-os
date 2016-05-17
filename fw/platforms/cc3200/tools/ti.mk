@@ -3,8 +3,8 @@ VPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/CCS/ARM_CM3
 
 CC = $(TOOLCHAIN)/bin/armcl
 CFLAGS = -mv7M4 --code_state=16 --float_support=vfplib --abi=eabi -me -O4 --opt_for_speed=0 \
-         --diag_wrap=off --display_error_number --c99 --gen_func_subsections=on -Dccs
-#        --emit_warnings_as_errors
+         --diag_wrap=off --display_error_number --c99 --gen_func_subsections=on -Dccs \
+         --emit_warnings_as_errors
 CFLAGS += -I$(TOOLCHAIN)/include
 
 OBJS += $(BUILD_DIR)/startup_ccs.o
