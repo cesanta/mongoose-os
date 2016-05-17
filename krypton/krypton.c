@@ -4555,7 +4555,7 @@ PEM *pem_load(const char *fn, pem_filter_fn flt, void *flt_arg) {
   unsigned int state, cur, i;
   char buf[128];
   size_t der_max_len = 0;
-  uint8_t got;
+  uint8_t got = 0;
   PEM *p;
   FILE *f;
 
