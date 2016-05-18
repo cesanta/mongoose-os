@@ -84,7 +84,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         sj_invoke_cb0(v7, cb);
       }
 
-      v7_def(v7, ud->client, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_undefined());
+      v7_def(v7, ud->client, "_nc", ~0, _V7_DESC_HIDDEN(1), V7_UNDEFINED);
       v7_disown(v7, &ud->client);
       free(ud->client_id);
       free(ud);
@@ -202,7 +202,7 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   nc->user_data = ud;
   v7_own(v7, &ud->client);
 
-  v7_def(v7, *res, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_foreign(nc));
+  v7_def(v7, *res, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_foreign(v7, nc));
 
 clean:
   free(url_with_port);
@@ -241,7 +241,7 @@ enum v7_err MQTT_publish(struct v7 *v7, v7_val_t *res) {
   }
   message = v7_get_string(v7, &messagev, &message_len);
 
-  nc = v7_get_ptr(v7_get(v7, v7_get_this(v7), "_nc", ~0));
+  nc = v7_get_ptr(v7, v7_get(v7, v7_get_this(v7), "_nc", ~0));
   if (nc == NULL) {
     rcode = v7_throwf(v7, "Error", "invalid connection");
     goto clean;
@@ -265,7 +265,7 @@ enum v7_err MQTT_subscribe(struct v7 *v7, v7_val_t *res) {
   v7_val_t topicv = v7_arg(v7, 0);
   const char *topic;
 
-  nc = v7_get_ptr(v7_get(v7, v7_get_this(v7), "_nc", ~0));
+  nc = v7_get_ptr(v7, v7_get(v7, v7_get_this(v7), "_nc", ~0));
   if (nc == NULL) {
     rcode = v7_throwf(v7, "Error", "unsupported protocol");
     goto clean;
@@ -282,7 +282,7 @@ enum v7_err MQTT_subscribe(struct v7 *v7, v7_val_t *res) {
   expr.qos = 0;
   mg_mqtt_subscribe(nc, &expr, 1, ud->msgid++);
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
 clean:
   return rcode;
 }

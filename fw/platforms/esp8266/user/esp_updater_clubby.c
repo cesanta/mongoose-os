@@ -35,9 +35,9 @@ int s_clubby_upd_status;
 static int notify_js(enum js_update_status us, const char *info) {
   if (!v7_is_undefined(s_updater_notify_cb)) {
     if (info == NULL) {
-      sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_mk_number(us));
+      sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_mk_number(s_v7, us));
     } else {
-      sj_invoke_cb2(s_v7, s_updater_notify_cb, v7_mk_number(us),
+      sj_invoke_cb2(s_v7, s_updater_notify_cb, v7_mk_number(s_v7, us),
                     v7_mk_string(s_v7, info, ~0, 1));
     };
 
@@ -93,7 +93,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
             /* Update terminated, but not because of error */
             notify_js(UJS_NOTHING_TODO, NULL);
             sj_clubby_send_reply(s_clubby_reply, 0, ctx->status_msg,
-                                 v7_mk_undefined());
+                                 V7_UNDEFINED);
           } else {
             /* update ok */
             int len;
@@ -112,7 +112,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           /* Error */
           notify_js(UJS_ERROR, NULL);
           sj_clubby_send_reply(s_clubby_reply, 1, ctx->status_msg,
-                               v7_mk_undefined());
+                               V7_UNDEFINED);
         }
 
         updater_set_status(ctx, US_FINISHED);
@@ -126,7 +126,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           /* Connection was terminated by server */
           notify_js(UJS_ERROR, NULL);
           sj_clubby_send_reply(s_clubby_reply, 1, "Update failed",
-                               v7_mk_undefined());
+                               V7_UNDEFINED);
         } else if (is_reboot_requred(ctx) && !notify_js(UJS_COMPLETED, NULL)) {
           /*
            * Conection is closed by updater, rebooting if required
@@ -255,7 +255,7 @@ static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_boolean(rcode == V7_OK);
+  *res = v7_mk_boolean(v7, rcode == V7_OK);
   return rcode;
 }
 
@@ -278,7 +278,7 @@ static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
     sj_clubby_send_reply(
         s_clubby_reply, s_clubby_upd_status,
         s_clubby_upd_status == 0 ? "Updated successfully" : "Update failed",
-        v7_mk_undefined());
+        V7_UNDEFINED);
     sj_clubby_free_reply(s_clubby_reply);
     s_clubby_reply = NULL;
   };
@@ -345,7 +345,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
 
 bad_request:
   LOG(LL_ERROR, ("Failed to start update: %s", reply));
-  sj_clubby_send_reply(evt, 1, reply, v7_mk_undefined());
+  sj_clubby_send_reply(evt, 1, reply, V7_UNDEFINED);
 }
 
 /*
@@ -369,13 +369,13 @@ static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   v7_val_t cb = v7_arg(v7, 0);
   if (!v7_is_callable(v7, cb)) {
     printf("Invalid arguments\n");
-    *res = v7_mk_boolean(0);
+    *res = v7_mk_boolean(v7, 0);
     return V7_OK;
   }
 
   s_updater_notify_cb = cb;
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 }
 
@@ -383,7 +383,7 @@ void init_updater_clubby(struct v7 *v7) {
   s_v7 = v7;
   v7_val_t updater = v7_mk_object(v7);
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
-  s_updater_notify_cb = v7_mk_undefined();
+  s_updater_notify_cb = V7_UNDEFINED;
   v7_own(v7, &s_updater_notify_cb);
 
   v7_def(v7, sys, "updater", ~0, V7_DESC_ENUMERABLE(0), updater);
@@ -392,19 +392,19 @@ void init_updater_clubby(struct v7 *v7) {
 
   v7_def(s_v7, updater, "GOT_REQUEST", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(UJS_GOT_REQUEST));
+         v7_mk_number(v7, UJS_GOT_REQUEST));
 
   v7_def(s_v7, updater, "COMPLETED", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(UJS_COMPLETED));
+         v7_mk_number(v7, UJS_COMPLETED));
 
   v7_def(s_v7, updater, "NOTHING_TODO", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(UJS_NOTHING_TODO));
+         v7_mk_number(v7, UJS_NOTHING_TODO));
 
   v7_def(s_v7, updater, "FAILED", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(UJS_ERROR));
+         v7_mk_number(v7, UJS_ERROR));
 
   sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_update_req,
                                     NULL);

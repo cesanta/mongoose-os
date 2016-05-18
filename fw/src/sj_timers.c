@@ -23,8 +23,8 @@ SJ_PRIVATE enum v7_err sj_set_interval_or_timeout(struct v7 *v7, v7_val_t *res,
     printf("msecs is not a number\n");
   } else {
     v7_val_t cb = v7_arg(v7, 0);
-    msecs = v7_get_double(msecsv);
-    *res = v7_mk_number(sj_set_js_timer(msecs, repeat, v7, cb));
+    msecs = v7_get_double(v7, msecsv);
+    *res = v7_mk_number(v7, sj_set_js_timer(msecs, repeat, v7, cb));
   }
 
   return V7_OK;
@@ -42,7 +42,7 @@ SJ_PRIVATE enum v7_err global_clearTimeoutOrInterval(struct v7 *v7,
                                                      v7_val_t *res) {
   (void) res;
   if (v7_is_number(v7_arg(v7, 0))) {
-    sj_clear_timer(v7_get_double(v7_arg(v7, 0)));
+    sj_clear_timer(v7_get_double(v7, v7_arg(v7, 0)));
   }
   return V7_OK;
 }

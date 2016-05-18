@@ -18,12 +18,13 @@
 static enum v7_err Sys_prof(struct v7 *v7, v7_val_t *res) {
   *res = v7_mk_object(v7);
 
-  v7_set(v7, *res, "sysfree", ~0, v7_mk_number(sj_get_free_heap_size()));
+  v7_set(v7, *res, "sysfree", ~0, v7_mk_number(v7, sj_get_free_heap_size()));
   v7_set(v7, *res, "min_sysfree", ~0,
-         v7_mk_number(sj_get_min_free_heap_size()));
+         v7_mk_number(v7, sj_get_min_free_heap_size()));
   v7_set(v7, *res, "used_by_js", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
-  v7_set(v7, *res, "used_by_fs", ~0, v7_mk_number(sj_get_fs_memory_usage()));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_HEAP_USED)));
+  v7_set(v7, *res, "used_by_fs", ~0,
+         v7_mk_number(v7, sj_get_fs_memory_usage()));
 
   return V7_OK;
 }
@@ -36,7 +37,7 @@ static enum v7_err Sys_reboot(struct v7 *v7, v7_val_t *res) {
 
   v7_val_t code_v = v7_arg(v7, 0);
   if (v7_is_number(code_v)) {
-    exit_code = v7_get_double(code_v);
+    exit_code = v7_get_double(v7, code_v);
   }
 
   sj_system_restart(exit_code);
@@ -50,16 +51,16 @@ static enum v7_err Sys_setLogLevel(struct v7 *v7, v7_val_t *res) {
   v7_val_t llv = v7_arg(v7, 0);
   int ll;
   if (!v7_is_number(llv)) {
-    *res = v7_mk_boolean(0);
+    *res = v7_mk_boolean(v7, 0);
     goto clean;
   }
-  ll = v7_get_double(llv);
+  ll = v7_get_double(v7, llv);
   if (ll <= _LL_MIN || ll >= _LL_MAX) {
-    *res = v7_mk_boolean(0);
+    *res = v7_mk_boolean(v7, 0);
     goto clean;
   }
   cs_log_set_level((enum cs_log_level) ll);
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   goto clean;
 
 clean:
@@ -68,7 +69,7 @@ clean:
 
 static enum v7_err Sys_time(struct v7 *v7, v7_val_t *res) {
   (void) v7;
-  *res = v7_mk_number(cs_time());
+  *res = v7_mk_number(v7, cs_time());
   return V7_OK;
 }
 
@@ -76,7 +77,7 @@ static enum v7_err Sys_wdtFeed(struct v7 *v7, v7_val_t *res) {
   (void) v7;
   sj_wdt_feed();
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 }
 
@@ -84,7 +85,7 @@ static enum v7_err Sys_wdtEnable(struct v7 *v7, v7_val_t *res) {
   (void) v7;
   sj_wdt_enable();
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 }
 
@@ -92,7 +93,7 @@ static enum v7_err Sys_wdtDisable(struct v7 *v7, v7_val_t *res) {
   (void) v7;
   sj_wdt_disable();
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 }
 
@@ -103,10 +104,10 @@ static enum v7_err Sys_wdtSetTimeout(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_number(timeoutv)) {
     rcode = v7_throwf(v7, "Error", "Timeout should be a number");
   } else {
-    sj_wdt_set_timeout(v7_get_double(timeoutv));
+    sj_wdt_set_timeout(v7_get_double(v7, timeoutv));
   }
 
-  *res = v7_mk_boolean(rcode == V7_OK);
+  *res = v7_mk_boolean(v7, rcode == V7_OK);
 
   return V7_OK;
 }
@@ -119,7 +120,7 @@ SJ_PRIVATE enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_number(usecsv)) {
     printf("usecs is not a double\n\r");
   } else {
-    usecs = v7_get_double(usecsv);
+    usecs = v7_get_double(v7, usecsv);
     sj_usleep(usecs);
   }
 
@@ -149,33 +150,33 @@ SJ_PRIVATE enum v7_err GC_stat(struct v7 *v7, v7_val_t *res) {
   size_t propnfree = v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_FREE);
   *res = v7_mk_object(v7);
 
-  v7_set(v7, *res, "sysfree", ~0, v7_mk_number(sysfree));
-  v7_set(v7, *res, "jssize", ~0, v7_mk_number(jssize));
-  v7_set(v7, *res, "jsfree", ~0, v7_mk_number(jsfree));
-  v7_set(v7, *res, "strres", ~0, v7_mk_number(strres));
-  v7_set(v7, *res, "struse", ~0, v7_mk_number(struse));
-  v7_set(v7, *res, "objfree", ~0, v7_mk_number(objfree));
+  v7_set(v7, *res, "sysfree", ~0, v7_mk_number(v7, sysfree));
+  v7_set(v7, *res, "jssize", ~0, v7_mk_number(v7, jssize));
+  v7_set(v7, *res, "jsfree", ~0, v7_mk_number(v7, jsfree));
+  v7_set(v7, *res, "strres", ~0, v7_mk_number(v7, strres));
+  v7_set(v7, *res, "struse", ~0, v7_mk_number(v7, struse));
+  v7_set(v7, *res, "objfree", ~0, v7_mk_number(v7, objfree));
   v7_set(v7, *res, "objncell", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE)));
-  v7_set(v7, *res, "propnfree", ~0, v7_mk_number(propnfree));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE)));
+  v7_set(v7, *res, "propnfree", ~0, v7_mk_number(v7, propnfree));
   v7_set(v7, *res, "propncell", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_CELL_SIZE)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_PROP_HEAP_CELL_SIZE)));
   v7_set(v7, *res, "funcnfree", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_FREE)));
   v7_set(v7, *res, "funcncell", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE)));
   v7_set(v7, *res, "astsize", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_FUNC_AST_SIZE)));
   v7_set(v7, *res, "bcode_ops", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_BCODE_OPS_SIZE)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_BCODE_OPS_SIZE)));
   v7_set(v7, *res, "bcode_lit_total", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_BCODE_LIT_TOTAL_SIZE)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_BCODE_LIT_TOTAL_SIZE)));
   v7_set(v7, *res, "bcode_lit_deser", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_BCODE_LIT_DESER_SIZE)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_BCODE_LIT_DESER_SIZE)));
   v7_set(v7, *res, "owned", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED)));
   v7_set(v7, *res, "owned_max", ~0,
-         v7_mk_number(v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED_MAX)));
+         v7_mk_number(v7, v7_heap_stat(v7, V7_HEAP_STAT_FUNC_OWNED_MAX)));
 
   return V7_OK;
 }
@@ -197,7 +198,7 @@ void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
    */
   FILE *fs[] = {stdout, stderr};
   size_t i;
-  v7_val_t msg_v = v7_mk_undefined();
+  v7_val_t msg_v = V7_UNDEFINED;
 
   /*
    * own because the exception could be a string,

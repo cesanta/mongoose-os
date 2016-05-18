@@ -24,7 +24,7 @@ static int register_js_callback(struct clubby *clubby, struct v7 *v7,
 static void set_clubby(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
   v7_def(v7, obj, s_clubby_prop, sizeof(s_clubby_prop),
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0) | _V7_DESC_HIDDEN(1)),
-         v7_mk_foreign(clubby));
+         v7_mk_foreign(v7, clubby));
 }
 
 static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
@@ -33,7 +33,7 @@ static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
     return 0;
   }
 
-  return v7_get_ptr(clubbyv);
+  return v7_get_ptr(v7, clubbyv);
 }
 
 clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v) {
@@ -44,7 +44,7 @@ clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v) {
   struct clubby *clubby = get_clubby(v7, v7_get_this(v7)); \
   if (clubby == NULL) {                                    \
     LOG(LL_ERROR, ("Invalid call"));                       \
-    *res = v7_mk_boolean(0);                               \
+    *res = v7_mk_boolean(v7, 0);                           \
     return V7_OK;                                          \
   }
 
@@ -56,7 +56,7 @@ static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
   LOG(LL_VERBOSE_DEBUG, ("enter"));
 
   if (v7_is_number(obj)) {
-    double n = v7_get_double(obj);
+    double n = v7_get_double(v7, obj);
     LOG(LL_VERBOSE_DEBUG, ("type=number val=%d", (int) n))
     return ub_create_number(n);
   } else if (v7_is_string(obj)) {
@@ -157,7 +157,7 @@ static void clubby_hello_req_callback(struct clubby_event *evt,
            clubby->cfg.device_id);
 
   clubby_send_response(clubby, src, evt->request.id, 0, status_msg,
-                       v7_mk_undefined());
+                       V7_UNDEFINED);
 }
 #endif
 
@@ -191,11 +191,11 @@ static enum v7_err set_on_event(const char *eventid, int8_t eventid_len,
     goto error;
   }
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 
 error:
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
   return V7_OK;
 }
 
@@ -243,7 +243,7 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
      * answer of just skip it?
      */
     LOG(LL_ERROR, ("Unable to parse reply"));
-    cb_param = v7_mk_undefined();
+    cb_param = V7_UNDEFINED;
   }
 
   v7_own(clubby->v7, &cb_param);
@@ -265,21 +265,21 @@ static enum v7_err done_func(struct v7 *v7, v7_val_t *res) {
   v7_val_t me = v7_get_this(v7);
   if (!v7_is_foreign(me)) {
     LOG(LL_ERROR, ("Internal error"));
-    *res = v7_mk_boolean(0);
+    *res = v7_mk_boolean(v7, 0);
     return V7_OK;
   }
 
-  struct done_func_context *ctx = v7_get_ptr(me);
+  struct done_func_context *ctx = v7_get_ptr(v7, me);
   v7_val_t cb_res = v7_arg(v7, 0);
   v7_val_t cb_err = v7_arg(v7, 1);
 
   if (!v7_is_undefined(cb_err)) {
     clubby_send_response(ctx->clubby, ctx->dst, ctx->id, 1,
-                         v7_get_cstring(v7, &cb_err), v7_mk_undefined());
+                         v7_get_cstring(v7, &cb_err), V7_UNDEFINED);
   } else {
     clubby_send_response(ctx->clubby, ctx->dst, ctx->id, 0, NULL, cb_res);
   }
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
 
   free(ctx->dst);
   free(ctx);
@@ -306,13 +306,13 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
      * TODO(alashkin): do we need to report in case of malformed
      * answer of just skip it?
      */
-    clubby_param = v7_mk_undefined();
+    clubby_param = V7_UNDEFINED;
   }
 
   v7_val_t argcv = v7_get(clubby->v7, *cbv, "length", ~0);
   /* Must be verified before */
   assert(!v7_is_undefined(argcv));
-  int argc = v7_get_double(argcv);
+  int argc = v7_get_double(clubby->v7, argcv);
 
   char *dst = calloc(1, evt->request.src->len + 1);
   if (dst == NULL) {
@@ -339,7 +339,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
       clubby_send_response(clubby, dst, evt->request.id, 0, NULL, res);
     } else {
       clubby_send_response(clubby, dst, evt->request.id, 1,
-                           v7_get_cstring(clubby->v7, &res), v7_mk_undefined());
+                           v7_get_cstring(clubby->v7, &res), V7_UNDEFINED);
     }
     v7_disown(clubby->v7, &clubby_param);
     free(dst);
@@ -369,7 +369,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
     v7_val_t bind_args = v7_mk_array(clubby->v7);
     v7_val_t donevb;
 
-    v7_array_push(clubby->v7, bind_args, v7_mk_foreign(ctx));
+    v7_array_push(clubby->v7, bind_args, v7_mk_foreign(clubby->v7, ctx));
     res = v7_apply(clubby->v7, v7_get(clubby->v7, done_func_v, "bind", ~0),
                    done_func_v, bind_args, &donevb);
     v7_own(clubby->v7, &donevb);
@@ -408,7 +408,7 @@ SJ_PRIVATE enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   clubby_send_hello(clubby);
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
 
   return V7_OK;
 }
@@ -445,20 +445,20 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(idv)) {
     id = clubby_proto_get_new_id();
-    v7_set(v7, cmdv, "id", 2, v7_mk_number(id));
+    v7_set(v7, cmdv, "id", 2, v7_mk_number(v7, id));
   } else {
-    id = v7_get_double(idv);
+    id = v7_get_double(v7, idv);
   }
 
   v7_val_t timeoutv = v7_get(v7, cmdv, "timeout", 7);
   uint32_t timeout;
   if (v7_is_number(timeoutv)) {
-    timeout = v7_get_double(timeoutv);
+    timeout = v7_get_double(v7, timeoutv);
   } else {
     timeout = clubby->cfg.cmd_timeout;
   }
 
-  v7_set(v7, cmdv, "timeout", 7, v7_mk_number(timeout));
+  v7_set(v7, cmdv, "timeout", 7, v7_mk_number(v7, timeout));
 
   /*
    * NOTE: Propably, we don't need UBJSON it is flower's legacy
@@ -478,7 +478,7 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   }
 
   clubby_send_cmds(clubby, ctx, id, v7_get_cstring(v7, &dstv), cmds);
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
 
   return V7_OK;
 
@@ -486,7 +486,7 @@ error:
   if (ctx != NULL) {
     ub_ctx_free(ctx);
   }
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
   return V7_OK;
 }
 
@@ -520,11 +520,11 @@ SJ_PRIVATE enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 
 error:
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
   return V7_OK;
 }
 
@@ -543,10 +543,10 @@ SJ_PRIVATE enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
     reset_reconnect_timeout(clubby);
     clubby_connect(clubby);
 
-    *res = v7_mk_boolean(1);
+    *res = v7_mk_boolean(v7, 1);
   } else {
     LOG(LL_WARN, ("Clubby is already connected"));
-    *res = v7_mk_boolean(0);
+    *res = v7_mk_boolean(v7, 0);
   }
   return V7_OK;
 }
@@ -573,11 +573,11 @@ SJ_PRIVATE enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 
 error:
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
   return V7_OK;
 }
 
@@ -587,7 +587,7 @@ error:
     if (v7_is_undefined(tmp)) {                                         \
       clubby->cfg.name1 = get_cfg()->clubby.name1;                      \
     } else if (v7_is_number(tmp)) {                                     \
-      clubby->cfg.name1 = v7_get_double(tmp);                           \
+      clubby->cfg.name1 = v7_get_double(v7, tmp);                       \
     } else {                                                            \
       free_clubby(clubby);                                              \
       LOG(LL_ERROR, ("Invalid type for %s, expected number", #name2));  \

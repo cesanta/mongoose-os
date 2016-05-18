@@ -450,12 +450,13 @@ void fs_flush_stderr() {
 }
 
 #ifndef CS_DISABLE_JS
-int v7_val_to_file(v7_val_t val) {
-  return (int) v7_get_double(val);
+int v7_val_to_file(struct v7 *v7, v7_val_t val) {
+  return (int) v7_get_double(v7, val);
 }
 
-v7_val_t v7_file_to_val(int fd) {
-  return v7_mk_number(fd);
+v7_val_t v7_file_to_val(struct v7 *v7, int fd) {
+  (void) v7;
+  return v7_mk_number(v7, fd);
 }
 
 int v7_is_file_type(v7_val_t val) {

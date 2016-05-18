@@ -15,10 +15,10 @@ SJ_PRIVATE enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    *res = v7_mk_undefined();
+    *res = V7_UNDEFINED;
   } else {
-    pin = v7_get_double(pinv);
-    *res = v7_mk_number(sj_adc_read(pin));
+    pin = v7_get_double(v7, pinv);
+    *res = v7_mk_number(v7, sj_adc_read(pin));
   }
 
   return V7_OK;
@@ -30,10 +30,10 @@ SJ_PRIVATE enum v7_err ADC_readVoltage(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(pinv)) {
     printf("non-numeric pin\n");
-    *res = v7_mk_undefined();
+    *res = V7_UNDEFINED;
   } else {
-    pin = v7_get_double(pinv);
-    *res = v7_mk_number(sj_adc_read_voltage(pin));
+    pin = v7_get_double(v7, pinv);
+    *res = v7_mk_number(v7, sj_adc_read_voltage(pin));
   }
 
   return V7_OK;

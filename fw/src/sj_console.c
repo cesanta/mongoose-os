@@ -362,7 +362,7 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
     console_send_to_cloud(v7, &msg);
   }
 
-  *res = v7_mk_undefined(); /* like JS print */
+  *res = V7_UNDEFINED; /* like JS print */
 
   mbuf_free(&msg);
   return rcode;
@@ -381,7 +381,7 @@ SJ_PRIVATE enum v7_err Console_setClubby(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
   v7_set(v7, v7_get_global(v7), s_clubby_prop, ~0, clubby_v);
 
 clean:

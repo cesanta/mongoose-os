@@ -75,10 +75,12 @@
 #define NORETURN __attribute__((noreturn))
 #define NOINLINE __attribute__((noinline))
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#define NOINSTR __attribute__((no_instrument_function))
 #else
 #define NORETURN
 #define NOINLINE
 #define WARN_UNUSED_RESULT
+#define NOINSTR
 #endif /* __GNUC__ */
 
 #ifndef ARRAY_SIZE
@@ -2021,8 +2023,10 @@ extern void *v7_sp_limit;
  */
 #ifdef __GNUC__
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#define NOINSTR __attribute__((no_instrument_function))
 #else
 #define WARN_UNUSED_RESULT
+#define NOINSTR
 #endif
 
 #define V7_VERSION "1.0"
@@ -2039,6 +2043,12 @@ typedef unsigned __int64 uint64_t;
 #endif
 /* 64-bit value, used to store JS values */
 typedef uint64_t v7_val_t;
+
+/* JavaScript `null` value */
+#define V7_NULL ((uint64_t) 0xfffe << 48)
+
+/* JavaScript `undefined` value */
+#define V7_UNDEFINED ((uint64_t) 0xfffd << 48)
 
 /* This if-0 is a dirty workaround to force etags to pick `struct v7` */
 #if 0
@@ -3303,8 +3313,11 @@ typedef unsigned char entity_id_part_t;
 #define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
 #define V7_TAG_MASK MAKE_TAG(1, 0xF)
 
-#define V7_NULL V7_TAG_FOREIGN
-#define V7_UNDEFINED V7_TAG_UNDEFINED
+#define _V7_NULL V7_TAG_FOREIGN
+#define _V7_UNDEFINED V7_TAG_UNDEFINED
+
+V7_STATIC_ASSERT(_V7_NULL == V7_NULL, public_V7_NULL_is_wrong);
+V7_STATIC_ASSERT(_V7_UNDEFINED == V7_UNDEFINED, public_V7_UNDEFINED_is_wrong);
 
 /*
  * Object attributes bitmask
@@ -3786,7 +3799,7 @@ V7_PRIVATE uint8_t is_strict_mode(struct v7 *v7);
  *
  * All primitive values but strings.
  *
- * "foreign" values are also here, see `v7_mk_foreign()`.
+ * "foreign" values are also here, see `v7_mk_foreign(v7, )`.
  */
 
 #ifndef CS_V7_SRC_PRIMITIVE_PUBLIC_H_
@@ -3799,38 +3812,56 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Make numeric primitive value */
-v7_val_t v7_mk_number(double num);
+NOINSTR v7_val_t v7_mk_number(struct v7 *v7, double num);
 
 /*
- * Returns `double` value stored in `v7_val_t`.
+ * Returns number value stored in `v7_val_t` as `double`.
  *
  * Returns NaN for non-numbers.
  */
-double v7_get_double(v7_val_t v);
+NOINSTR double v7_get_double(struct v7 *v7, v7_val_t v);
+
+/*
+ * Returns number value stored in `v7_val_t` as `int`. If the number value is
+ * not an integer, the fraction part will be discarded.
+ *
+ * If the given value is a non-number, or NaN, the result is undefined.
+ */
+NOINSTR int v7_get_int(struct v7 *v7, v7_val_t v);
 
 /* Returns true if given value is a primitive number value */
 int v7_is_number(v7_val_t v);
 
 /* Make boolean primitive value (either `true` or `false`) */
-v7_val_t v7_mk_boolean(int is_true);
+NOINSTR v7_val_t v7_mk_boolean(struct v7 *v7, int is_true);
 
 /*
  * Returns boolean stored in `v7_val_t`:
  *  0 for `false` or non-boolean, non-0 for `true`
  */
-int v7_get_bool(v7_val_t v);
+NOINSTR int v7_get_bool(struct v7 *v7, v7_val_t v);
 
 /* Returns true if given value is a primitive boolean value */
 int v7_is_boolean(v7_val_t v);
 
-/* Make `null` primitive value */
-v7_val_t v7_mk_null(void);
+/*
+ * Make `null` primitive value.
+ *
+ * NOTE: this function is deprecated and will be removed in future releases.
+ * Use `V7_NULL` instead.
+ */
+NOINSTR v7_val_t v7_mk_null(void);
 
 /* Returns true if given value is a primitive `null` value */
 int v7_is_null(v7_val_t v);
 
-/* Make `undefined` primitive value */
-v7_val_t v7_mk_undefined(void);
+/*
+ * Make `undefined` primitive value.
+ *
+ * NOTE: this function is deprecated and will be removed in future releases.
+ * Use `V7_UNDEFINED` instead.
+ */
+NOINSTR v7_val_t v7_mk_undefined(void);
 
 /* Returns true if given value is a primitive `undefined` value */
 int v7_is_undefined(v7_val_t v);
@@ -3854,14 +3885,14 @@ int v7_is_undefined(v7_val_t v);
  * If you need to store exactly sizeof(void*) bytes of raw data where
  * `sizeof(void*)` >= 8, please use byte arrays instead.
  */
-v7_val_t v7_mk_foreign(void *ptr);
+NOINSTR v7_val_t v7_mk_foreign(struct v7 *v7, void *ptr);
 
 /*
  * Returns `void *` pointer stored in `v7_val_t`.
  *
  * Returns NULL if the value is not a foreign pointer.
  */
-void *v7_get_ptr(v7_val_t v);
+NOINSTR void *v7_get_ptr(struct v7 *v7, v7_val_t v);
 
 /* Returns true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t v);
@@ -3887,7 +3918,7 @@ int v7_is_foreign(v7_val_t v);
 /* Amalgamated: #include "v7/src/core.h" */
 
 /* Returns true if given value is a number, not NaN and not Infinity. */
-V7_PRIVATE int is_finite(v7_val_t v);
+V7_PRIVATE int is_finite(struct v7 *v7, v7_val_t v);
 
 V7_PRIVATE val_t pointer_to_value(void *p);
 V7_PRIVATE void *get_ptr(val_t v);
@@ -4734,7 +4765,7 @@ extern "C" {
  * ----------------------------------------------------------------------------
  *
  * TODO(dfrank):
- *   - Rename functions like `v7_get_double()`, `get_object_struct()` to
+ *   - Rename functions like `v7_get_double(v7, )`, `get_object_struct()` to
  *something
  *     that will clearly identify that they convert to some C entity, not
  *     `v7_val_t`
@@ -9920,20 +9951,22 @@ void cr_context_free(struct cr_ctx *p_ctx) {
 static const char s_fd_prop[] = "__fd";
 
 #ifndef NO_LIBC
-static FILE *v7_val_to_file(v7_val_t val) {
-  return (FILE *) v7_get_ptr(val);
+static FILE *v7_val_to_file(struct v7 *v7, v7_val_t val) {
+  (void) v7;
+  return (FILE *) v7_get_ptr(v7, val);
 }
 
-static v7_val_t v7_file_to_val(FILE *file) {
-  return v7_mk_foreign(file);
+static v7_val_t v7_file_to_val(struct v7 *v7, FILE *file) {
+  (void) v7;
+  return v7_mk_foreign(v7, file);
 }
 
 static int v7_is_file_type(v7_val_t val) {
   return v7_is_foreign(val);
 }
 #else
-FILE *v7_val_to_file(v7_val_t val);
-v7_val_t v7_file_to_val(FILE *file);
+FILE *v7_val_to_file(struct v7 *v7, v7_val_t val);
+v7_val_t v7_file_to_val(struct v7 *v7, FILE *file);
 int v7_is_file_type(v7_val_t val);
 #endif
 
@@ -9942,7 +9975,7 @@ V7_PRIVATE enum v7_err File_eval(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   if (v7_is_string(arg0)) {
     const char *s = v7_get_cstring(v7, &arg0);
@@ -9967,13 +10000,13 @@ V7_PRIVATE enum v7_err File_exists(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
 
   if (v7_is_string(arg0)) {
     const char *fname = v7_get_cstring(v7, &arg0);
     if (fname != NULL) {
       struct stat st;
-      if (stat(fname, &st) == 0) *res = v7_mk_boolean(1);
+      if (stat(fname, &st) == 0) *res = v7_mk_boolean(v7, 1);
     }
   }
 
@@ -9990,7 +10023,7 @@ static enum v7_err f_read(struct v7 *v7, int all, v7_val_t *res) {
     struct mbuf m;
     char buf[BUFSIZ];
     int n;
-    FILE *fp = v7_val_to_file(arg0);
+    FILE *fp = v7_val_to_file(v7, arg0);
 
     /* Read file contents into mbuf */
     mbuf_init(&m, 0);
@@ -10028,13 +10061,13 @@ V7_PRIVATE enum v7_err File_obj_write(struct v7 *v7, v7_val_t *res) {
 
   if (v7_is_file_type(arg0) && v7_is_string(arg1)) {
     const char *s = v7_get_string(v7, &arg1, &len);
-    FILE *fp = v7_val_to_file(arg0);
+    FILE *fp = v7_val_to_file(v7, arg0);
     while (sent < len && (n = fwrite(s + sent, 1, len - sent, fp)) > 0) {
       sent += n;
     }
   }
 
-  *res = v7_mk_number(sent);
+  *res = v7_mk_number(v7, sent);
 
   return rcode;
 }
@@ -10047,10 +10080,10 @@ V7_PRIVATE enum v7_err File_obj_close(struct v7 *v7, v7_val_t *res) {
   int ires = -1;
 
   if (v7_is_file_type(prop)) {
-    ires = fclose(v7_val_to_file(prop));
+    ires = fclose(v7_val_to_file(v7, prop));
   }
 
-  *res = v7_mk_number(ires);
+  *res = v7_mk_number(v7, ires);
 
   return rcode;
 }
@@ -10071,7 +10104,7 @@ V7_PRIVATE enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
     }
 
     if (s1 == NULL || s2 == NULL) {
-      *res = v7_mk_null();
+      *res = V7_NULL;
       goto clean;
     }
 
@@ -10082,13 +10115,13 @@ V7_PRIVATE enum v7_err File_open(struct v7 *v7, v7_val_t *res) {
           v7, v7_get(v7, v7_get_global(v7), "File", ~0), "prototype", ~0);
       v7_set_proto(v7, obj, file_proto);
       v7_def(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_DESC_ENUMERABLE(0),
-             v7_file_to_val(fp));
+             v7_file_to_val(v7, fp));
       *res = obj;
       goto clean;
     }
   }
 
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10115,7 +10148,7 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
   v7_val_t arg0 = v7_arg(v7, 0);
   v7_val_t arg1 = v7_arg(v7, 1);
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
 
   if (v7_is_string(arg0) && v7_is_string(arg1)) {
     const char *path = v7_get_cstring(v7, &arg0);
@@ -10124,7 +10157,7 @@ V7_PRIVATE enum v7_err File_write(struct v7 *v7, v7_val_t *res) {
     FILE *fp = fopen(path, "wb+");
     if (fp != NULL) {
       if (fwrite(buf, 1, len, fp) == len) {
-        *res = v7_mk_boolean(1);
+        *res = v7_mk_boolean(v7, 1);
       }
       fclose(fp);
     }
@@ -10144,14 +10177,14 @@ V7_PRIVATE enum v7_err File_rename(struct v7 *v7, v7_val_t *res) {
     const char *from = v7_get_cstring(v7, &arg0);
     const char *to = v7_get_cstring(v7, &arg1);
     if (from == NULL || to == NULL) {
-      *res = v7_mk_number(ENOENT);
+      *res = v7_mk_number(v7, ENOENT);
       goto clean;
     }
 
     ires = rename(from, to);
   }
 
-  *res = v7_mk_number(ires == 0 ? 0 : errno);
+  *res = v7_mk_number(v7, ires == 0 ? 0 : errno);
 
 clean:
   return rcode;
@@ -10162,7 +10195,7 @@ V7_PRIVATE enum v7_err File_loadJSON(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   if (v7_is_string(arg0)) {
     const char *file_name = v7_get_cstring(v7, &arg0);
@@ -10175,7 +10208,7 @@ V7_PRIVATE enum v7_err File_loadJSON(struct v7 *v7, v7_val_t *res) {
       /* swallow exception and return undefined */
       v7_clear_thrown_value(v7);
       rcode = V7_OK;
-      *res = v7_mk_undefined();
+      *res = V7_UNDEFINED;
     }
   }
 
@@ -10192,12 +10225,12 @@ V7_PRIVATE enum v7_err File_remove(struct v7 *v7, v7_val_t *res) {
   if (v7_is_string(arg0)) {
     const char *path = v7_get_cstring(v7, &arg0);
     if (path == NULL) {
-      *res = v7_mk_number(ENOENT);
+      *res = v7_mk_number(v7, ENOENT);
       goto clean;
     }
     ires = remove(path);
   }
-  *res = v7_mk_number(ires == 0 ? 0 : errno);
+  *res = v7_mk_number(v7, ires == 0 ? 0 : errno);
 
 clean:
   return rcode;
@@ -10209,7 +10242,7 @@ V7_PRIVATE enum v7_err File_list(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   if (v7_is_string(arg0)) {
     const char *path = v7_get_cstring(v7, &arg0);
@@ -10327,7 +10360,7 @@ static enum v7_err s_fd_to_sock_obj(struct v7 *v7, sock_t fd, v7_val_t *res) {
   *res = v7_mk_object(v7);
   v7_set_proto(v7, *res, sock_proto);
   v7_def(v7, *res, s_sock_prop, sizeof(s_sock_prop) - 1, V7_DESC_ENUMERABLE(0),
-         v7_mk_number(fd));
+         v7_mk_number(v7, fd));
 
   return rcode;
 }
@@ -10347,7 +10380,7 @@ V7_PRIVATE enum v7_err Socket_connect(struct v7 *v7, v7_val_t *res) {
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = s_resolve(v7, arg0);
-    sin.sin_port = htons((uint16_t) v7_get_double(arg1));
+    sin.sin_port = htons((uint16_t) v7_get_double(v7, arg1));
     if (connect(sock, (struct sockaddr *) &sin, sizeof(sin)) != 0) {
       closesocket(sock);
     } else {
@@ -10356,7 +10389,7 @@ V7_PRIVATE enum v7_err Socket_connect(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10377,7 +10410,7 @@ V7_PRIVATE enum v7_err Socket_listen(struct v7 *v7, v7_val_t *res) {
         socket(AF_INET, v7_is_truthy(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
-    sin.sin_port = htons((uint16_t) v7_get_double(arg0));
+    sin.sin_port = htons((uint16_t) v7_get_double(v7, arg0));
     if (v7_is_string(arg1)) {
       sin.sin_addr.s_addr = s_resolve(v7, arg1);
     }
@@ -10409,7 +10442,7 @@ V7_PRIVATE enum v7_err Socket_listen(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10424,7 +10457,7 @@ V7_PRIVATE enum v7_err Socket_accept(struct v7 *v7, v7_val_t *res) {
   if (v7_is_number(prop)) {
     struct sockaddr_in sin;
     socklen_t len = sizeof(sin);
-    sock_t sock = (sock_t) v7_get_double(prop);
+    sock_t sock = (sock_t) v7_get_double(v7, prop);
     sock_t fd = accept(sock, (struct sockaddr *) &sin, &len);
     if (fd != INVALID_SOCKET) {
       rcode = s_fd_to_sock_obj(v7, fd, res);
@@ -10436,7 +10469,7 @@ V7_PRIVATE enum v7_err Socket_accept(struct v7 *v7, v7_val_t *res) {
       goto clean;
     }
   }
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10448,7 +10481,7 @@ V7_PRIVATE enum v7_err Socket_close(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
-  *res = v7_mk_number(closesocket((sock_t) v7_get_double(prop)));
+  *res = v7_mk_number(v7, closesocket((sock_t) v7_get_double(v7, prop)));
 
   return rcode;
 }
@@ -10462,7 +10495,7 @@ static enum v7_err s_recv(struct v7 *v7, int all, v7_val_t *res) {
 
   if (v7_is_number(prop)) {
     char buf[RECV_BUF_SIZE];
-    sock_t sock = (sock_t) v7_get_double(prop);
+    sock_t sock = (sock_t) v7_get_double(v7, prop);
     struct mbuf m;
     int n;
 
@@ -10477,7 +10510,7 @@ static enum v7_err s_recv(struct v7 *v7, int all, v7_val_t *res) {
     if (n <= 0) {
       closesocket(sock);
       v7_def(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1,
-             V7_DESC_ENUMERABLE(0), v7_mk_number(INVALID_SOCKET));
+             V7_DESC_ENUMERABLE(0), v7_mk_number(v7, INVALID_SOCKET));
     }
 
     if (m.len > 0) {
@@ -10487,7 +10520,7 @@ static enum v7_err s_recv(struct v7 *v7, int all, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10513,7 +10546,7 @@ V7_PRIVATE enum v7_err Socket_send(struct v7 *v7, v7_val_t *res) {
 
   if (v7_is_number(prop) && v7_is_string(arg0)) {
     const char *s = v7_get_string(v7, &arg0, &len);
-    sock_t sock = (sock_t) v7_get_double(prop);
+    sock_t sock = (sock_t) v7_get_double(v7, prop);
     int n;
 
     while (sent < len && (n = send(sock, s + sent, len - sent, 0)) > 0) {
@@ -10521,7 +10554,7 @@ V7_PRIVATE enum v7_err Socket_send(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_number(sent);
+  *res = v7_mk_number(v7, sent);
 
   return rcode;
 }
@@ -10586,7 +10619,7 @@ static enum v7_err b64_transform(struct v7 *v7, b64_func_t func, double mult,
                                  v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   if (v7_is_string(arg0)) {
     size_t n;
@@ -10640,7 +10673,7 @@ V7_PRIVATE enum v7_err Crypto_md5(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10660,7 +10693,7 @@ V7_PRIVATE enum v7_err Crypto_md5_hex(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_string(v7, buf, sizeof(buf) - 1, 1);
     goto clean;
   }
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10679,7 +10712,7 @@ V7_PRIVATE enum v7_err Crypto_sha1(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_string(v7, buf, sizeof(buf), 1);
     goto clean;
   }
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10699,7 +10732,7 @@ V7_PRIVATE enum v7_err Crypto_sha1_hex(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_string(v7, buf, sizeof(buf) - 1, 1);
     goto clean;
   }
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -10771,7 +10804,7 @@ static void _ubjson_call_cb(struct v7 *v7, struct ubjson_ctx *ctx) {
 
   if (ctx->out.buf == NULL) {
     /* signal end of stream */
-    v7_array_push(v7, args, v7_mk_undefined());
+    v7_array_push(v7, args, V7_UNDEFINED);
     cb = ctx->errb;
   } else if (ctx->out.len > 0) {
     v7_array_push(v7, args, v7_mk_string(v7, ctx->out.buf, ctx->out.len, 1));
@@ -10782,7 +10815,7 @@ static void _ubjson_call_cb(struct v7 *v7, struct ubjson_ctx *ctx) {
     goto cleanup;
   }
 
-  if (v7_apply(v7, cb, v7_mk_undefined(), args, &res) != V7_OK) {
+  if (v7_apply(v7, cb, V7_UNDEFINED, args, &res) != V7_OK) {
     fprintf(stderr, "Got error while calling ubjson cb: ");
     v7_fprintln(stderr, v7, res);
   }
@@ -10816,7 +10849,7 @@ static struct ubjson_ctx *ubjson_ctx_new(struct v7 *v7, val_t cb, val_t errb) {
   mbuf_init(&ctx->stack, 0);
   ctx->cb = cb;
   ctx->errb = errb;
-  ctx->bin = v7_mk_undefined();
+  ctx->bin = V7_UNDEFINED;
   v7_own(v7, &ctx->cb);
   v7_own(v7, &ctx->errb);
   v7_own(v7, &ctx->bin);
@@ -10829,7 +10862,7 @@ static void ubjson_ctx_free(struct v7 *v7, struct ubjson_ctx *ctx) {
    * callback.
    */
   if (!v7_is_undefined(ctx->bin)) {
-    v7_set(v7, ctx->bin, "ctx", ~0, v7_mk_undefined());
+    v7_set(v7, ctx->bin, "ctx", ~0, V7_UNDEFINED);
   }
   v7_disown(v7, &ctx->bin);
   v7_disown(v7, &ctx->errb);
@@ -10861,9 +10894,9 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
     } else if (v7_is_null(obj)) {
       cs_ubjson_emit_null(buf);
     } else if (v7_is_boolean(obj)) {
-      cs_ubjson_emit_boolean(buf, v7_get_bool(obj));
+      cs_ubjson_emit_boolean(buf, v7_get_bool(v7, obj));
     } else if (v7_is_number(obj)) {
-      cs_ubjson_emit_autonumber(buf, v7_get_double(obj));
+      cs_ubjson_emit_autonumber(buf, v7_get_double(v7, obj));
     } else if (v7_is_string(obj)) {
       size_t n;
       const char *s = v7_get_string(v7, &obj, &n);
@@ -10890,13 +10923,13 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
       const char *s;
 
       if (obj_prototype_v(v7, obj) == gen_proto) {
-        ctx->bytes_left = v7_get_double(v7_get(v7, obj, "size", ~0));
+        ctx->bytes_left = v7_get_double(v7, v7_get(v7, obj, "size", ~0));
         cs_ubjson_emit_bin_header(buf, ctx->bytes_left);
         ctx->bin = obj;
-        v7_set(v7, obj, "ctx", ~0, v7_mk_foreign(ctx));
+        v7_set(v7, obj, "ctx", ~0, v7_mk_foreign(v7, ctx));
         pop_visit(stack);
-        rcode = v7_apply(v7, v7_get(v7, obj, "user", ~0), obj,
-                         v7_mk_undefined(), NULL);
+        rcode =
+            v7_apply(v7, v7_get(v7, obj, "user", ~0), obj, V7_UNDEFINED, NULL);
         if (rcode != V7_OK) {
           goto clean;
         }
@@ -10918,7 +10951,7 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
       if (cur->v.p == NULL) {
         cs_ubjson_close_object(buf);
       } else {
-        v7_val_t tmp = v7_mk_undefined();
+        v7_val_t tmp = V7_UNDEFINED;
         s = v7_get_string(v7, &name, &n);
         cs_ubjson_emit_object_key(buf, s, n);
 
@@ -10985,7 +11018,7 @@ V7_PRIVATE enum v7_err Bin_send(struct v7 *v7, v7_val_t *res) {
   (void) res;
 
   arg = v7_arg(v7, 0);
-  ctx = (struct ubjson_ctx *) v7_get_ptr(v7_get(v7, this_obj, "ctx", ~0));
+  ctx = (struct ubjson_ctx *) v7_get_ptr(v7, v7_get(v7, this_obj, "ctx", ~0));
   if (ctx == NULL) {
     rcode = v7_throwf(v7, "Error", "UBJSON context closed\n");
     goto clean;
@@ -13231,7 +13264,7 @@ static void bcode_serialize_lit(struct v7 *v7, val_t v, FILE *out) {
   int t = val_type(v7, v);
   switch (t) {
     case V7_TYPE_NUMBER: {
-      double num = v7_get_double(v);
+      double num = v7_get_double(v7, v);
       char buf[18];
       const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
       size_t len = snprintf(buf, sizeof(buf), fmt, num);
@@ -13740,7 +13773,7 @@ static void bcode_adjust_retval(struct v7 *v7, uint8_t is_explicit_return) {
   if (!is_explicit_return) {
     /* returning implicitly: set return value to `undefined` */
     POP();
-    PUSH(v7_mk_undefined());
+    PUSH(V7_UNDEFINED);
   }
 
   if (v7->call_stack->is_constructor && !v7_is_object(TOS())) {
@@ -13821,7 +13854,7 @@ static void init_call_frame_private(struct v7 *v7,
   /* fill the new frame with data */
   call_frame->vals.scope = scope;
   /* `try_stack` will be lazily created in `eval_try_push()`*/
-  call_frame->vals.try_stack = v7_mk_undefined();
+  call_frame->vals.try_stack = V7_UNDEFINED;
 }
 
 static void init_call_frame_bcode(struct v7 *v7,
@@ -14023,7 +14056,7 @@ static v7_call_frame_mask_t unwind_stack_1level(struct v7 *v7,
 static enum local_block unwind_local_blocks_stack(
     struct v7 *v7, struct bcode_registers *r, unsigned int wanted_blocks_mask,
     uint8_t restore_stack_size) {
-  val_t arr = v7_mk_undefined();
+  val_t arr = V7_UNDEFINED;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   enum local_block found_block = LOCAL_BLOCK_NONE;
   unsigned long length;
@@ -14038,7 +14071,7 @@ static enum local_block unwind_local_blocks_stack(
      */
     while ((length = v7_array_length(v7, arr)) > 0) {
       /* get latest offset from the "try stack" */
-      int64_t offset = v7_get_double(v7_array_get(v7, arr, length - 1));
+      int64_t offset = v7_get_double(v7, v7_array_get(v7, arr, length - 1));
       enum local_block cur_block = LOCAL_BLOCK_NONE;
 
       /* get id of the current block type */
@@ -14167,7 +14200,7 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
      * thrown at the moment as well
      */
     v7->is_thrown = 0;
-    v7->vals.thrown_error = v7_mk_undefined();
+    v7->vals.thrown_error = V7_UNDEFINED;
   }
 
   /*
@@ -14189,7 +14222,7 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
          */
         PUSH(v7->vals.returned_value);
         v7->is_returned = 0;
-        v7->vals.returned_value = v7_mk_undefined();
+        v7->vals.returned_value = V7_UNDEFINED;
 
         break;
       }
@@ -14231,7 +14264,7 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
 
     /* Throwing dismisses any pending return values */
     v7->is_returned = 0;
-    v7->vals.returned_value = v7_mk_undefined();
+    v7->vals.returned_value = V7_UNDEFINED;
   }
 
   while ((found = unwind_local_blocks_stack(
@@ -14260,7 +14293,7 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
      */
     PUSH(v7->vals.thrown_error);
     v7->is_thrown = 0;
-    v7->vals.thrown_error = v7_mk_undefined();
+    v7->vals.thrown_error = V7_UNDEFINED;
   }
 
   /* `ops` already points to the needed instruction, no need to increment it */
@@ -14350,7 +14383,7 @@ static enum v7_err call_cfunction(struct v7 *v7, val_t func, val_t this_object,
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   v7_cfunction_t *cfunc = get_cfunction_ptr(v7, func);
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   tmp_stack_push(&tf, &saved_arguments);
 
@@ -14389,7 +14422,7 @@ clean:
  */
 static void eval_try_push(struct v7 *v7, enum opcode op,
                           struct bcode_registers *r) {
-  val_t arr = v7_mk_undefined();
+  val_t arr = V7_UNDEFINED;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   bcode_off_t target;
   int64_t offset_tag = 0;
@@ -14424,8 +14457,8 @@ static void eval_try_push(struct v7 *v7, enum opcode op,
       break;
   }
   target = bcode_get_target(&r->ops);
-  v7_array_push(v7, arr, v7_mk_number(LBLOCK_ITEM_CREATE(target, offset_tag,
-                                                         v7->stack.len)));
+  v7_array_push(v7, arr, v7_mk_number(v7, LBLOCK_ITEM_CREATE(target, offset_tag,
+                                                             v7->stack.len)));
 
   tmp_frame_cleanup(&tf);
 }
@@ -14435,7 +14468,7 @@ static void eval_try_push(struct v7 *v7, enum opcode op,
  */
 static enum v7_err eval_try_pop(struct v7 *v7) {
   enum v7_err rcode = V7_OK;
-  val_t arr = v7_mk_undefined();
+  val_t arr = V7_UNDEFINED;
   unsigned long length;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
@@ -14491,8 +14524,8 @@ static void push_bcode_history(struct v7 *v7, enum opcode op) {
 
 #ifndef V7_DISABLE_CALL_ERROR_CONTEXT
 static void reset_last_name(struct v7 *v7) {
-  v7->vals.last_name[0] = v7_mk_undefined();
-  v7->vals.last_name[1] = v7_mk_undefined();
+  v7->vals.last_name[0] = V7_UNDEFINED;
+  v7->vals.last_name[1] = V7_UNDEFINED;
 }
 #else
 static void reset_last_name(struct v7 *v7) {
@@ -14522,9 +14555,8 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode,
 
   char buf[512];
 
-  val_t res = v7_mk_undefined(), v1 = v7_mk_undefined(), v2 = v7_mk_undefined(),
-        v3 = v7_mk_undefined(), v4 = v7_mk_undefined(),
-        scope_frame = v7_mk_undefined();
+  val_t res = V7_UNDEFINED, v1 = V7_UNDEFINED, v2 = V7_UNDEFINED,
+        v3 = V7_UNDEFINED, v4 = V7_UNDEFINED, scope_frame = V7_UNDEFINED;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   append_call_frame_bcode(v7, NULL, bcode, this_object, get_scope(v7), 0);
@@ -14559,7 +14591,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode,
 
       /* set undeletable property on current scope */
       V7_TRY(def_property_v(v7, get_scope(v7), v1, V7_DESC_CONFIGURABLE(0),
-                            v7_mk_undefined(), 1 /*as_assign*/, NULL));
+                            V7_UNDEFINED, 1 /*as_assign*/, NULL));
     }
   }
 
@@ -14643,7 +14675,7 @@ restart:
         assert(v7->is_stashed);
         POP();
         PUSH(v7->vals.stash);
-        v7->vals.stash = v7_mk_undefined();
+        v7->vals.stash = V7_UNDEFINED;
         v7->is_stashed = 0;
         break;
 
@@ -14654,29 +14686,29 @@ restart:
         break;
 
       case OP_PUSH_UNDEFINED:
-        PUSH(v7_mk_undefined());
+        PUSH(V7_UNDEFINED);
         break;
       case OP_PUSH_NULL:
-        PUSH(v7_mk_null());
+        PUSH(V7_NULL);
         break;
       case OP_PUSH_THIS:
         PUSH(v7_get_this(v7));
         reset_last_name(v7);
         break;
       case OP_PUSH_TRUE:
-        PUSH(v7_mk_boolean(1));
+        PUSH(v7_mk_boolean(v7, 1));
         reset_last_name(v7);
         break;
       case OP_PUSH_FALSE:
-        PUSH(v7_mk_boolean(0));
+        PUSH(v7_mk_boolean(v7, 0));
         reset_last_name(v7);
         break;
       case OP_PUSH_ZERO:
-        PUSH(v7_mk_number(0));
+        PUSH(v7_mk_number(v7, 0));
         reset_last_name(v7);
         break;
       case OP_PUSH_ONE:
-        PUSH(v7_mk_number(1));
+        PUSH(v7_mk_number(v7, 1));
         reset_last_name(v7);
         break;
       case OP_PUSH_LIT: {
@@ -14691,18 +14723,18 @@ restart:
       }
       case OP_LOGICAL_NOT:
         v1 = POP();
-        PUSH(v7_mk_boolean(!v7_is_truthy(v7, v1)));
+        PUSH(v7_mk_boolean(v7, !v7_is_truthy(v7, v1)));
         break;
       case OP_NOT: {
         v1 = POP();
         BTRY(to_number_v(v7, v1, &v1));
-        PUSH(v7_mk_number(~(int32_t) v7_get_double(v1)));
+        PUSH(v7_mk_number(v7, ~(int32_t) v7_get_double(v7, v1)));
         break;
       }
       case OP_NEG: {
         v1 = POP();
         BTRY(to_number_v(v7, v1, &v1));
-        PUSH(v7_mk_number(-v7_get_double(v1)));
+        PUSH(v7_mk_number(v7, -v7_get_double(v7, v1)));
         break;
       }
       case OP_POS: {
@@ -14736,8 +14768,8 @@ restart:
           BTRY(primitive_to_number(v7, v1, &v1));
           BTRY(primitive_to_number(v7, v2, &v2));
 
-          PUSH(v7_mk_number(
-              b_num_bin_op(op, v7_get_double(v1), v7_get_double(v2))));
+          PUSH(v7_mk_number(v7, b_num_bin_op(op, v7_get_double(v7, v1),
+                                             v7_get_double(v7, v2))));
         }
         break;
       }
@@ -14757,19 +14789,19 @@ restart:
         BTRY(to_number_v(v7, v1, &v1));
         BTRY(to_number_v(v7, v2, &v2));
 
-        PUSH(v7_mk_number(
-            b_num_bin_op(op, v7_get_double(v1), v7_get_double(v2))));
+        PUSH(v7_mk_number(v7, b_num_bin_op(op, v7_get_double(v7, v1),
+                                           v7_get_double(v7, v2))));
         break;
       }
       case OP_EQ_EQ: {
         v2 = POP();
         v1 = POP();
         if (v7_is_string(v1) && v7_is_string(v2)) {
-          res = v7_mk_boolean(s_cmp(v7, v1, v2) == 0);
+          res = v7_mk_boolean(v7, s_cmp(v7, v1, v2) == 0);
         } else if (v1 == v2 && v1 == V7_TAG_NAN) {
-          res = v7_mk_boolean(0);
+          res = v7_mk_boolean(v7, 0);
         } else {
-          res = v7_mk_boolean(v1 == v2);
+          res = v7_mk_boolean(v7, v1 == v2);
         }
         PUSH(res);
         break;
@@ -14778,11 +14810,11 @@ restart:
         v2 = POP();
         v1 = POP();
         if (v7_is_string(v1) && v7_is_string(v2)) {
-          res = v7_mk_boolean(s_cmp(v7, v1, v2) != 0);
+          res = v7_mk_boolean(v7, s_cmp(v7, v1, v2) != 0);
         } else if (v1 == v2 && v1 == V7_TAG_NAN) {
-          res = v7_mk_boolean(1);
+          res = v7_mk_boolean(v7, 1);
         } else {
-          res = v7_mk_boolean(v1 != v2);
+          res = v7_mk_boolean(v7, v1 != v2);
         }
         PUSH(res);
         break;
@@ -14796,17 +14828,17 @@ restart:
          * the p. 4.9 of The Definitive Guide (page 71)
          */
         if (((v7_is_object(v1) || v7_is_object(v2)) && v1 == v2)) {
-          res = v7_mk_boolean(op == OP_EQ);
+          res = v7_mk_boolean(v7, op == OP_EQ);
           PUSH(res);
           break;
         } else if (v7_is_undefined(v1) || v7_is_null(v1)) {
-          res = v7_mk_boolean((op != OP_EQ) ^
-                              (v7_is_undefined(v2) || v7_is_null(v2)));
+          res = v7_mk_boolean(
+              v7, (op != OP_EQ) ^ (v7_is_undefined(v2) || v7_is_null(v2)));
           PUSH(res);
           break;
         } else if (v7_is_undefined(v2) || v7_is_null(v2)) {
-          res = v7_mk_boolean((op != OP_EQ) ^
-                              (v7_is_undefined(v1) || v7_is_null(v1)));
+          res = v7_mk_boolean(
+              v7, (op != OP_EQ) ^ (v7_is_undefined(v1) || v7_is_null(v1)));
           PUSH(res);
           break;
         }
@@ -14815,10 +14847,10 @@ restart:
           int cmp = s_cmp(v7, v1, v2);
           switch (op) {
             case OP_EQ:
-              res = v7_mk_boolean(cmp == 0);
+              res = v7_mk_boolean(v7, cmp == 0);
               break;
             case OP_NE:
-              res = v7_mk_boolean(cmp != 0);
+              res = v7_mk_boolean(v7, cmp != 0);
               break;
             default:
               /* should never be here */
@@ -14830,8 +14862,8 @@ restart:
           BTRY(to_number_v(v7, v1, &v1));
           BTRY(to_number_v(v7, v2, &v2));
 
-          res = v7_mk_boolean(
-              b_bool_bin_op(op, v7_get_double(v1), v7_get_double(v2)));
+          res = v7_mk_boolean(v7, b_bool_bin_op(op, v7_get_double(v7, v1),
+                                                v7_get_double(v7, v2)));
         }
         PUSH(res);
         break;
@@ -14849,16 +14881,16 @@ restart:
           int cmp = s_cmp(v7, v1, v2);
           switch (op) {
             case OP_LT:
-              res = v7_mk_boolean(cmp < 0);
+              res = v7_mk_boolean(v7, cmp < 0);
               break;
             case OP_LE:
-              res = v7_mk_boolean(cmp <= 0);
+              res = v7_mk_boolean(v7, cmp <= 0);
               break;
             case OP_GT:
-              res = v7_mk_boolean(cmp > 0);
+              res = v7_mk_boolean(v7, cmp > 0);
               break;
             case OP_GE:
-              res = v7_mk_boolean(cmp >= 0);
+              res = v7_mk_boolean(v7, cmp >= 0);
               break;
             default:
               /* should never be here */
@@ -14870,8 +14902,8 @@ restart:
           BTRY(to_number_v(v7, v1, &v1));
           BTRY(to_number_v(v7, v2, &v2));
 
-          res = v7_mk_boolean(
-              b_bool_bin_op(op, v7_get_double(v1), v7_get_double(v2)));
+          res = v7_mk_boolean(v7, b_bool_bin_op(op, v7_get_double(v7, v1),
+                                                v7_get_double(v7, v2)));
         }
         PUSH(res);
         break;
@@ -14885,7 +14917,7 @@ restart:
           goto op_done;
         } else {
           PUSH(v7_mk_boolean(
-              is_prototype_of(v7, v1, v7_get(v7, v2, "prototype", 9))));
+              v7, is_prototype_of(v7, v1, v7_get(v7, v2, "prototype", 9))));
         }
         break;
       }
@@ -14921,7 +14953,7 @@ restart:
         v1 = POP();
         BTRY(to_string(v7, v1, NULL, buf, sizeof(buf), NULL));
         prop = v7_get_property(v7, v2, buf, ~0);
-        PUSH(v7_mk_boolean(prop != NULL));
+        PUSH(v7_mk_boolean(v7, prop != NULL));
       } break;
       case OP_GET:
         v2 = POP();
@@ -14955,7 +14987,7 @@ restart:
         BTRY(v7_get_property_v(v7, get_scope(v7), v1, &p));
         if (p == NULL) {
           if (op == OP_SAFE_GET_VAR) {
-            PUSH(v7_mk_undefined());
+            PUSH(V7_UNDEFINED);
           } else {
             /* variable does not exist: Reference Error */
             V7_TRY(bcode_throw_reference_error(v7, &r, v1));
@@ -14968,7 +15000,7 @@ restart:
         }
 #ifndef V7_DISABLE_CALL_ERROR_CONTEXT
         v7->vals.last_name[0] = v1;
-        v7->vals.last_name[1] = v7_mk_undefined();
+        v7->vals.last_name[1] = V7_UNDEFINED;
 #endif
         break;
       }
@@ -15064,7 +15096,7 @@ restart:
         v2 = POP(); /* object */
 
         if (!v7_is_null(v1)) {
-          h = v7_get_ptr(v1);
+          h = v7_get_ptr(v7, v1);
         }
 
         if (v7_is_object(v2)) {
@@ -15084,12 +15116,12 @@ restart:
         }
 
         if (h == NULL) {
-          PUSH(v7_mk_boolean(0));
+          PUSH(v7_mk_boolean(v7, 0));
         } else {
           PUSH(v2);
-          PUSH(v7_mk_foreign(h));
+          PUSH(v7_mk_foreign(v7, h));
           PUSH(res);
-          PUSH(v7_mk_boolean(1));
+          PUSH(v7_mk_boolean(v7, 1));
         }
         break;
       }
@@ -15210,7 +15242,7 @@ restart:
 
             /* create an object with given prototype */
             v3 = mk_object(v7, v4 /*prototype*/);
-            v4 = v7_mk_undefined();
+            v4 = V7_UNDEFINED;
           }
 
           if (!v7_is_callable(v7, v1)) {
@@ -15306,7 +15338,7 @@ restart:
               for (loc_num = 0; loc_num < loc_cnt; ++loc_num) {
                 ops = bcode_next_name_v(v7, func->bcode, ops, &v4);
                 BTRY(def_property_v(v7, scope_frame, v4,
-                                    V7_DESC_CONFIGURABLE(0), v7_mk_undefined(),
+                                    V7_DESC_CONFIGURABLE(0), V7_UNDEFINED,
                                     0 /*not assign*/, NULL));
               }
             }
@@ -15315,7 +15347,7 @@ restart:
             V7_TRY(bcode_perform_call(v7, scope_frame, func, &r, v3 /*this*/,
                                       ops, is_constructor));
 
-            scope_frame = v7_mk_undefined();
+            scope_frame = V7_UNDEFINED;
           }
         }
         break;
@@ -15329,7 +15361,7 @@ restart:
         size_t name_len;
         struct v7_property *prop;
 
-        res = v7_mk_boolean(1);
+        res = v7_mk_boolean(v7, 1);
 
         /* pop property name to delete */
         v2 = POP();
@@ -15367,7 +15399,7 @@ restart:
            * return `false`; otherwise, we throw.
            */
           if (!r.bcode->strict_mode) {
-            res = v7_mk_boolean(0);
+            res = v7_mk_boolean(v7, 0);
           } else {
             BTRY(v7_throwf(v7, TYPE_ERROR, "Cannot delete property '%s'", buf));
             goto op_done;
@@ -15601,7 +15633,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   size_t saved_stack_len = v7->stack.len;
   enum v7_err rcode = V7_OK;
-  val_t _res = v7_mk_undefined();
+  val_t _res = V7_UNDEFINED;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   struct bcode *bcode = NULL;
 #if defined(V7_ENABLE_STACK_TRACKING)
@@ -15804,7 +15836,7 @@ clean:
      * to clear the error, and sometimes we do, which is confusing.
      */
     if (v7->act_bcodes.len == 0) {
-      v7->vals.thrown_error = v7_mk_undefined();
+      v7->vals.thrown_error = V7_UNDEFINED;
       v7->is_thrown = 0;
     }
   }
@@ -15913,7 +15945,8 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
 #endif
 
   if (o->base.attributes & V7_OBJ_DENSE_ARRAY) {
-    if (p != NULL && ((abuf = (struct mbuf *) v7_get_ptr(p->value)) != NULL)) {
+    if (p != NULL &&
+        ((abuf = (struct mbuf *) v7_get_ptr(v7, p->value)) != NULL)) {
       mbuf_free(abuf);
       free(abuf);
     }
@@ -15924,8 +15957,9 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
     for (p = o->base.properties; p != NULL; p = p->next) {
       if (p->attributes & _V7_PROPERTY_USER_DATA_AND_DESTRUCTOR) {
         if (v7_is_foreign(p->name)) {
-          v7_destructor_cb_t *cb = (v7_destructor_cb_t *) v7_get_ptr(p->name);
-          cb(v7_get_ptr(p->value));
+          v7_destructor_cb_t *cb =
+              (v7_destructor_cb_t *) v7_get_ptr(v7, p->name);
+          cb(v7_get_ptr(v7, p->value));
         }
         break;
       }
@@ -16028,7 +16062,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     mbuf_append(&v7->owned_strings, &z, 1);
 
     v7->inhibit_gc = 1;
-    v7->vals.thrown_error = v7_mk_undefined();
+    v7->vals.thrown_error = V7_UNDEFINED;
 
     v7->call_stack = NULL;
     v7->bottom_call_frame = NULL;
@@ -16216,7 +16250,7 @@ void v7_stack_stat_clean(struct v7 *v7) {
 
 /* Number {{{ */
 
-v7_val_t v7_mk_number(double v) {
+NOINSTR static v7_val_t mk_number(double v) {
   val_t res;
   /* not every NaN is a JS NaN */
   if (isnan(v)) {
@@ -16232,7 +16266,7 @@ v7_val_t v7_mk_number(double v) {
   return res;
 }
 
-double v7_get_double(val_t v) {
+NOINSTR static double get_double(val_t v) {
   union {
     double d;
     val_t v;
@@ -16242,28 +16276,53 @@ double v7_get_double(val_t v) {
   return u.d;
 }
 
-int v7_is_number(val_t v) {
-  return v == V7_TAG_NAN || !isnan(v7_get_double(v));
+NOINSTR static v7_val_t mk_boolean(int v) {
+  return (!!v) | V7_TAG_BOOLEAN;
 }
 
-V7_PRIVATE int is_finite(val_t v) {
-  return v7_is_number(v) && v != V7_TAG_NAN && !isinf(v7_get_double(v));
+NOINSTR static int get_bool(val_t v) {
+  if (v7_is_boolean(v)) {
+    return v & 1;
+  } else {
+    return 0;
+  }
+}
+
+NOINSTR v7_val_t v7_mk_number(struct v7 *v7, double v) {
+  (void) v7;
+  return mk_number(v);
+}
+
+NOINSTR double v7_get_double(struct v7 *v7, v7_val_t v) {
+  (void) v7;
+  return get_double(v);
+}
+
+NOINSTR int v7_get_int(struct v7 *v7, v7_val_t v) {
+  (void) v7;
+  return (int) get_double(v);
+}
+
+int v7_is_number(val_t v) {
+  return v == V7_TAG_NAN || !isnan(get_double(v));
+}
+
+V7_PRIVATE int is_finite(struct v7 *v7, val_t v) {
+  return v7_is_number(v) && v != V7_TAG_NAN && !isinf(v7_get_double(v7, v));
 }
 
 /* }}} Number */
 
 /* Boolean {{{ */
 
-v7_val_t v7_mk_boolean(int v) {
-  return (!!v) | V7_TAG_BOOLEAN;
+NOINSTR v7_val_t v7_mk_boolean(struct v7 *v7, int v) {
+  (void) v7;
+  return mk_boolean(v);
 }
 
-int v7_get_bool(val_t v) {
-  if (v7_is_boolean(v)) {
-    return v & 1;
-  } else {
-    return 0;
-  }
+NOINSTR int v7_get_bool(struct v7 *v7, val_t v) {
+  (void) v7;
+  return get_bool(v);
 }
 
 int v7_is_boolean(val_t v) {
@@ -16274,7 +16333,7 @@ int v7_is_boolean(val_t v) {
 
 /* null {{{ */
 
-v7_val_t v7_mk_null(void) {
+NOINSTR v7_val_t v7_mk_null(void) {
   return V7_NULL;
 }
 
@@ -16286,7 +16345,7 @@ int v7_is_null(val_t v) {
 
 /* undefined {{{ */
 
-v7_val_t v7_mk_undefined(void) {
+NOINSTR v7_val_t v7_mk_undefined(void) {
   return V7_UNDEFINED;
 }
 
@@ -16309,14 +16368,16 @@ V7_PRIVATE void *get_ptr(val_t v) {
   return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-void *v7_get_ptr(val_t v) {
+NOINSTR void *v7_get_ptr(struct v7 *v7, val_t v) {
+  (void) v7;
   if (!v7_is_foreign(v)) {
     return NULL;
   }
   return get_ptr(v);
 }
 
-v7_val_t v7_mk_foreign(void *p) {
+NOINSTR v7_val_t v7_mk_foreign(struct v7 *v7, void *p) {
+  (void) v7;
   return pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
@@ -16364,7 +16425,7 @@ V7_PRIVATE
 val_t mk_js_function(struct v7 *v7, struct v7_generic_object *scope,
                      val_t proto) {
   struct v7_js_function *f;
-  val_t fval = v7_mk_null();
+  val_t fval = V7_NULL;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &proto);
   tmp_stack_push(&tf, &fval);
@@ -16418,7 +16479,7 @@ v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *f, int num_args) {
   if (num_args >= 0) {
     v7_def(v7, obj, "length", 6, (V7_DESC_ENUMERABLE(0) | V7_DESC_WRITABLE(0) |
                                   V7_DESC_CONFIGURABLE(0)),
-           v7_mk_number(num_args));
+           v7_mk_number(v7, num_args));
   }
   tmp_frame_cleanup(&tf);
   return obj;
@@ -16526,21 +16587,20 @@ int v7_is_callable(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/exceptions.h" */
 
 enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *res) {
-  return b_exec(v7, js_code, 0, NULL, v7_mk_undefined(), v7_mk_undefined(),
-                v7_mk_undefined(), 0, 0, 0, res);
+  return b_exec(v7, js_code, 0, NULL, V7_UNDEFINED, V7_UNDEFINED, V7_UNDEFINED,
+                0, 0, 0, res);
 }
 
 enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
                         const struct v7_exec_opts *opts, v7_val_t *res) {
-  return b_exec(v7, js_code, 0, opts->filename, v7_mk_undefined(),
-                v7_mk_undefined(),
-                (opts->this_obj == 0 ? v7_mk_undefined() : opts->this_obj),
+  return b_exec(v7, js_code, 0, opts->filename, V7_UNDEFINED, V7_UNDEFINED,
+                (opts->this_obj == 0 ? V7_UNDEFINED : opts->this_obj),
                 opts->is_json, 0, 0, res);
 }
 
 enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res) {
-  return b_exec(v7, str, 0, NULL, v7_mk_undefined(), v7_mk_undefined(),
-                v7_mk_undefined(), 1, 0, 0, res);
+  return b_exec(v7, str, 0, NULL, V7_UNDEFINED, V7_UNDEFINED, V7_UNDEFINED, 1,
+                0, 0, res);
 }
 
 #ifndef V7_NO_FS
@@ -16582,8 +16642,8 @@ static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
 #else
     int fr = 0;
 #endif
-    rcode = b_exec(v7, p, file_size, path, v7_mk_undefined(), v7_mk_undefined(),
-                   v7_mk_undefined(), is_json, fr, 0, res);
+    rcode = b_exec(v7, p, file_size, path, V7_UNDEFINED, V7_UNDEFINED,
+                   V7_UNDEFINED, is_json, fr, 0, res);
     if (rcode != V7_OK) {
       goto clean;
     }
@@ -17031,9 +17091,9 @@ V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, val_t obj, val_t arg,
                                        double *res) {
   enum v7_err rcode = V7_OK;
   size_t n;
-  val_t s = v7_mk_undefined();
+  val_t s = V7_UNDEFINED;
   const char *p = NULL;
-  double at = v7_get_double(arg);
+  double at = v7_get_double(v7, arg);
 
   *res = 0;
 
@@ -17418,21 +17478,21 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
       struct mbuf *abuf = NULL;
       unsigned long len;
       if (p != NULL) {
-        abuf = (struct mbuf *) v7_get_ptr(p->value);
+        abuf = (struct mbuf *) v7_get_ptr(v7, p->value);
       }
       if (abuf == NULL) {
-        res = v7_mk_undefined();
+        res = V7_UNDEFINED;
         goto clean;
       }
       len = abuf->len / sizeof(val_t);
       if (index >= len) {
-        res = v7_mk_undefined();
+        res = V7_UNDEFINED;
         goto clean;
       } else {
         memcpy(&res, abuf->buf + index * sizeof(val_t), sizeof(val_t));
         if (has != NULL && res != V7_TAG_NOVALUE) *has = 1;
         if (res == V7_TAG_NOVALUE) {
-          res = v7_mk_undefined();
+          res = V7_UNDEFINED;
         }
         goto clean;
       }
@@ -17446,7 +17506,7 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
       goto clean;
     }
   } else {
-    res = v7_mk_undefined();
+    res = V7_UNDEFINED;
     goto clean;
   }
 
@@ -17490,7 +17550,7 @@ void *v7_next_prop(struct v7 *v7, val_t obj, void *h, val_t *name, val_t *val,
     struct mbuf *abuf = NULL;
     unsigned long len, idx;
     if (hp != NULL) {
-      abuf = (struct mbuf *) v7_get_ptr(hp->value);
+      abuf = (struct mbuf *) v7_get_ptr(v7, hp->value);
     }
     if (abuf == NULL) return NULL;
     len = abuf->len / sizeof(val_t);
@@ -17538,14 +17598,14 @@ V7_PRIVATE enum v7_err v7_iter_get_index(struct v7 *v7, struct v7_property *p,
   int ok;
   unsigned long res;
   if (IS_PACKED_ITER(p)) {
-    *res = v7_mk_number(UNPACK_ITER_IDX(p));
+    *res = v7_mk_number(v7, UNPACK_ITER_IDX(p));
     goto clean;
   }
   V7_TRY(str_to_ulong(v7, p->name, &ok, &res));
   if (!ok || res >= UINT32_MAX) {
     goto clean;
   }
-  *res = v7_mk_number(res);
+  *res = v7_mk_number(v7, res);
   goto clean;
 
 clean:
@@ -17573,7 +17633,7 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
       len = 0;
       goto clean;
     }
-    abuf = (struct mbuf *) v7_get_ptr(p->value);
+    abuf = (struct mbuf *) v7_get_ptr(v7, p->value);
     if (abuf == NULL) {
       len = 0;
       goto clean;
@@ -17629,7 +17689,7 @@ enum v7_err v7_array_set_throwing(struct v7 *v7, val_t arr, unsigned long index,
       struct mbuf *abuf;
       unsigned long len;
       assert(p != NULL);
-      abuf = (struct mbuf *) v7_get_ptr(p->value);
+      abuf = (struct mbuf *) v7_get_ptr(v7, p->value);
 
       if (get_object_struct(arr)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
         if (is_strict_mode(v7)) {
@@ -17643,7 +17703,7 @@ enum v7_err v7_array_set_throwing(struct v7 *v7, val_t arr, unsigned long index,
       if (abuf == NULL) {
         abuf = (struct mbuf *) malloc(sizeof(*abuf));
         mbuf_init(abuf, sizeof(val_t) * (index + 1));
-        p->value = v7_mk_foreign(abuf);
+        p->value = v7_mk_foreign(v7, abuf);
       }
       len = abuf->len / sizeof(val_t);
       /* TODO(mkm): possibly promote to sparse array */
@@ -17805,8 +17865,8 @@ V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7) {
   p->entity_id = V7_ENTITY_ID_PROP;
 #endif
   p->next = NULL;
-  p->name = v7_mk_undefined();
-  p->value = v7_mk_undefined();
+  p->name = V7_UNDEFINED;
+  p->value = V7_UNDEFINED;
   p->attributes = 0;
   return p;
 }
@@ -17958,7 +18018,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   enum v7_err rcode = V7_OK;
   uint8_t saved_is_thrown = 0;
   val_t saved_thrown = v7_get_thrown_value(v7, &saved_is_thrown);
-  v7_val_t ret = v7_mk_undefined();
+  v7_val_t ret = V7_UNDEFINED;
 
   rcode = v7_get_throwing(v7, obj, name, name_len, &ret);
   if (rcode != V7_OK) {
@@ -17968,7 +18028,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     } else {
       v7_clear_thrown_value(v7);
     }
-    ret = v7_mk_undefined();
+    ret = V7_UNDEFINED;
   }
 
   return ret;
@@ -18040,7 +18100,7 @@ V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_disown(v7, &args);
   v7_disown(v7, &val);
   {
-    val_t val = v7_mk_undefined();
+    val_t val = V7_UNDEFINED;
     V7_TRY(b_apply(v7, setter, obj, args, 0, &val));
   }
 
@@ -18275,7 +18335,7 @@ V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
                                     v7_val_t val, uint8_t as_assign,
                                     struct v7_property **res) {
   enum v7_err rcode = V7_OK;
-  val_t name_val = v7_mk_undefined();
+  val_t name_val = V7_UNDEFINED;
 
   v7_own(v7, &obj);
   v7_own(v7, &val);
@@ -18458,7 +18518,7 @@ v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto) {
     obj_prototype_set(v7, get_object_struct(obj), get_object_struct(proto));
     return old_proto;
   } else {
-    return v7_mk_undefined();
+    return V7_UNDEFINED;
   }
 }
 
@@ -18505,14 +18565,14 @@ static struct v7_property *get_or_create_user_data_property(struct v7 *v7,
 void v7_set_user_data(struct v7 *v7, v7_val_t obj, void *ud) {
   struct v7_property *p = get_or_create_user_data_property(v7, obj);
   if (p == NULL) return;
-  p->value = v7_mk_foreign(ud);
+  p->value = v7_mk_foreign(v7, ud);
 }
 
 void *v7_get_user_data(struct v7 *v7, v7_val_t obj) {
   struct v7_property *p = get_user_data_property(obj);
   (void) v7;
   if (p == NULL) return NULL;
-  return v7_get_ptr(p->value);
+  return v7_get_ptr(v7, p->value);
 }
 
 void v7_set_destructor_cb(struct v7 *v7, v7_val_t obj, v7_destructor_cb_t *d) {
@@ -18529,10 +18589,10 @@ void v7_set_destructor_cb(struct v7 *v7, v7_val_t obj, v7_destructor_cb_t *d) {
   if (d != NULL) {
     o->attributes |= V7_OBJ_HAS_DESTRUCTOR;
     fu.f = d;
-    p->name = v7_mk_foreign(fu.v);
+    p->name = v7_mk_foreign(v7, fu.v);
   } else {
     o->attributes &= ~V7_OBJ_HAS_DESTRUCTOR;
-    p->name = v7_mk_undefined();
+    p->name = V7_UNDEFINED;
   }
 }
 
@@ -18638,7 +18698,7 @@ enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
 }
 
 void v7_clear_thrown_value(struct v7 *v7) {
-  v7->vals.thrown_error = v7_mk_undefined();
+  v7->vals.thrown_error = V7_UNDEFINED;
   v7->is_thrown = 0;
 }
 
@@ -18647,7 +18707,7 @@ enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt,
   /* TODO(dfrank) : get rid of v7->error_msg, allocate mem right here */
   enum v7_err rcode = V7_OK;
   va_list ap;
-  val_t e = v7_mk_undefined();
+  val_t e = V7_UNDEFINED;
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
@@ -18688,12 +18748,12 @@ V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
                                         const char *msg, val_t *res) {
   enum v7_err rcode = V7_OK;
   uint8_t saved_creating_exception = v7->creating_exception;
-  val_t ctor_args = v7_mk_undefined(), ctor_func = v7_mk_undefined();
+  val_t ctor_args = V7_UNDEFINED, ctor_func = V7_UNDEFINED;
 #if 0
   assert(v7_is_undefined(v7->vals.thrown_error));
 #endif
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   v7_own(v7, &ctor_args);
   v7_own(v7, &ctor_func);
@@ -18834,7 +18894,7 @@ V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
       save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
       goto clean;
     case V7_TYPE_BOOLEAN:
-      if (v7_get_bool(v)) {
+      if (v7_get_bool(v7, v)) {
         strncpy(tmp_buf, "true", sizeof(tmp_buf) - 1);
         save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
         goto clean;
@@ -18849,7 +18909,7 @@ V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
         save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, -1, res_len);
         goto clean;
       }
-      num = v7_get_double(v);
+      num = v7_get_double(v7, v);
       if (isinf(num)) {
         if (num < 0.0) {
           strncpy(tmp_buf, "-Infinity", sizeof(tmp_buf) - 1);
@@ -18888,8 +18948,8 @@ V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
       goto clean;
 #endif
     case V7_TYPE_FOREIGN:
-      wanted_len =
-          c_snprintf(tmp_buf, sizeof(tmp_buf), "[foreign_%p]", v7_get_ptr(v));
+      wanted_len = c_snprintf(tmp_buf, sizeof(tmp_buf), "[foreign_%p]",
+                              v7_get_ptr(v7, v));
       save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
                res_len);
       goto clean;
@@ -18921,17 +18981,17 @@ V7_PRIVATE enum v7_err primitive_to_number(struct v7 *v7, val_t v, val_t *res) {
   }
 
   if (v7_is_null(*res)) {
-    *res = v7_mk_number(0.0);
+    *res = v7_mk_number(v7, 0.0);
     goto clean;
   }
 
   if (v7_is_boolean(*res)) {
-    *res = v7_mk_number(!!v7_get_bool(v));
+    *res = v7_mk_number(v7, !!v7_get_bool(v7, v));
     goto clean;
   }
 
   if (is_cfunction_lite(*res)) {
-    *res = v7_mk_number(0.0);
+    *res = v7_mk_number(v7, 0.0);
     goto clean;
   }
 
@@ -18951,7 +19011,7 @@ V7_PRIVATE enum v7_err primitive_to_number(struct v7 *v7, val_t v, val_t *res) {
       /* empty string: convert to 0 */
       d = 0.0;
     }
-    *res = v7_mk_number(d);
+    *res = v7_mk_number(v7, d);
     goto clean;
   }
 
@@ -19096,7 +19156,7 @@ V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
    * Conversion to number succeeded, so, convert it to long
    */
 
-  d = v7_get_double(v);
+  d = v7_get_double(v7, v);
   /* We want to return LONG_MAX if d is positive Inf, thus d < 0 check */
   if (isnan(d) || (isinf(d) && d < 0)) {
     *res = 0;
@@ -19114,7 +19174,7 @@ clean:
 
 V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t func_valueOf = v7_mk_undefined();
+  val_t func_valueOf = V7_UNDEFINED;
 
   v7_own(v7, &func_valueOf);
   v7_own(v7, &v);
@@ -19133,7 +19193,7 @@ V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res) {
   V7_TRY(v7_get_throwing(v7, v, "valueOf", 7, &func_valueOf));
 
   if (v7_is_callable(v7, func_valueOf)) {
-    V7_TRY(b_apply(v7, func_valueOf, v, v7_mk_undefined(), 0, res));
+    V7_TRY(b_apply(v7, func_valueOf, v, V7_UNDEFINED, 0, res));
   }
 
 clean:
@@ -19153,7 +19213,7 @@ clean:
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t to_string_func = v7_mk_undefined();
+  val_t to_string_func = V7_UNDEFINED;
 
   /* Caller should ensure that `v` is an object */
   assert(v7_is_object(v));
@@ -19167,7 +19227,7 @@ V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res) {
    */
   V7_TRY(v7_get_throwing(v7, v, "toString", 8, &to_string_func));
   if (v7_is_callable(v7, to_string_func)) {
-    V7_TRY(b_apply(v7, to_string_func, v, v7_mk_undefined(), 0, res));
+    V7_TRY(b_apply(v7, to_string_func, v, V7_UNDEFINED, 0, res));
   } else {
     *res = v;
   }
@@ -19327,7 +19387,7 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
     }
 
     case V7_TYPE_DATE_OBJECT: {
-      v7_val_t func = v7_mk_undefined(), val = v7_mk_undefined();
+      v7_val_t func = V7_UNDEFINED, val = V7_UNDEFINED;
       V7_TRY(v7_get_throwing(v7, v, "toString", 8, &func));
 #if V7_ENABLE__Date__toJSON
       if (!is_debug) {
@@ -19347,7 +19407,7 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
       /* TODO(imax): make it return the desired size of the buffer */
       char *b = buf;
       void *h = NULL;
-      v7_val_t name = v7_mk_undefined(), val = v7_mk_undefined();
+      v7_val_t name = V7_UNDEFINED, val = V7_UNDEFINED;
       v7_prop_attr_t attrs;
 
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
@@ -19439,13 +19499,13 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v) {
   size_t len;
   int is_truthy;
 
-  is_truthy = ((v7_is_boolean(v) && v7_get_bool(v)) ||
-               (v7_is_number(v) && v7_get_double(v) != 0.0) ||
+  is_truthy = ((v7_is_boolean(v) && v7_get_bool(v7, v)) ||
+               (v7_is_number(v) && v7_get_double(v7, v) != 0.0) ||
                (v7_is_string(v) && v7_get_string(v7, &v, &len) && len > 0) ||
                (v7_is_object(v))) &&
               v != V7_TAG_NAN;
 
-  return v7_mk_boolean(is_truthy);
+  return v7_mk_boolean(v7, is_truthy);
 }
 
 /*
@@ -19520,7 +19580,7 @@ clean:
 }
 
 int v7_is_truthy(struct v7 *v7, val_t v) {
-  return v7_get_bool(to_boolean_v(v7, v));
+  return v7_get_bool(v7, to_boolean_v(v7, v));
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/shdata.c"
@@ -19867,7 +19927,7 @@ V7_PRIVATE void gc_mark_dense_array(struct v7 *v7,
   v = v7_get(v7, v7_object_to_value(&obj->base), "", 0);
 #endif
 
-  mbuf = (struct mbuf *) v7_get_ptr(v);
+  mbuf = (struct mbuf *) v7_get_ptr(v7, v);
 
   /* function scope pointer is aliased to the object's prototype pointer */
   gc_mark(v7, v7_object_to_value(obj_prototype(v7, &obj->base)));
@@ -23477,7 +23537,7 @@ clean:
 static lit_t string_lit(struct bcode_builder *bbuilder, struct ast *a,
                         ast_off_t pos) {
   size_t i = 0, name_len;
-  val_t v = v7_mk_undefined();
+  val_t v = V7_UNDEFINED;
   struct mbuf *m = &bbuilder->lit;
   char *name = ast_get_inlined_data(a, pos, &name_len);
 
@@ -23512,7 +23572,7 @@ static enum v7_err regexp_lit(struct bcode_builder *bbuilder, struct ast *a,
   size_t name_len;
   char *p;
   char *name = ast_get_inlined_data(a, pos, &name_len);
-  val_t tmp = v7_mk_undefined();
+  val_t tmp = V7_UNDEFINED;
   struct v7 *v7 = bbuilder->v7;
 
   for (p = name + name_len - 1; *p != '/';) p--;
@@ -24242,7 +24302,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
        * function will be created from this one during bcode evaluation: see
        * `bcode_instantiate_function()`.
        */
-      val_t funv = mk_js_function(bbuilder->v7, NULL, v7_mk_undefined());
+      val_t funv = mk_js_function(bbuilder->v7, NULL, V7_UNDEFINED);
 
       /* Create bcode in this half-done function */
       struct v7_js_function *func = get_js_function_struct(funv);
@@ -24287,7 +24347,7 @@ V7_PRIVATE enum v7_err compile_expr_builder(struct bcode_builder *bbuilder,
       } else if (dv == 1) {
         bcode_op(bbuilder, OP_PUSH_ONE);
       } else {
-        bcode_push_lit(bbuilder, bcode_add_lit(bbuilder, v7_mk_number(dv)));
+        bcode_push_lit(bbuilder, bcode_add_lit(bbuilder, v7_mk_number(v7, dv)));
       }
       break;
     }
@@ -25410,8 +25470,8 @@ V7_PRIVATE enum v7_err Std_eval(struct v7 *v7, v7_val_t *res) {
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Std_parseInt(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  v7_val_t arg0 = v7_mk_undefined();
-  v7_val_t arg1 = v7_mk_undefined();
+  v7_val_t arg0 = V7_UNDEFINED;
+  v7_val_t arg1 = V7_UNDEFINED;
   long sign = 1, base, n;
   char buf[20], *p = buf, *end;
 
@@ -25430,8 +25490,8 @@ V7_PRIVATE enum v7_err Std_parseInt(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  if (is_finite(arg1)) {
-    base = v7_get_double(arg1);
+  if (is_finite(v7, arg1)) {
+    base = v7_get_double(v7, arg1);
   } else {
     base = 0;
   }
@@ -25470,7 +25530,7 @@ V7_PRIVATE enum v7_err Std_parseInt(struct v7 *v7, v7_val_t *res) {
 
   n = strtol(p, &end, base);
 
-  *res = (p == end) ? V7_TAG_NAN : v7_mk_number(n * sign);
+  *res = (p == end) ? V7_TAG_NAN : v7_mk_number(v7, n * sign);
 
 clean:
   return rcode;
@@ -25479,7 +25539,7 @@ clean:
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Std_parseFloat(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  v7_val_t arg0 = v7_mk_undefined();
+  v7_val_t arg0 = V7_UNDEFINED;
   char buf[20], *p = buf, *end;
   double result;
 
@@ -25505,7 +25565,7 @@ V7_PRIVATE enum v7_err Std_parseFloat(struct v7 *v7, v7_val_t *res) {
 
   result = strtod(p, &end);
 
-  *res = (p == end) ? V7_TAG_NAN : v7_mk_number(result);
+  *res = (p == end) ? V7_TAG_NAN : v7_mk_number(v7, result);
 
 clean:
   return rcode;
@@ -25520,7 +25580,7 @@ V7_PRIVATE enum v7_err Std_isNaN(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = v7_mk_boolean(isnan(v7_get_double(arg0)));
+  *res = v7_mk_boolean(v7, isnan(v7_get_double(v7, arg0)));
 
 clean:
   return rcode;
@@ -25536,7 +25596,7 @@ V7_PRIVATE enum v7_err Std_isFinite(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = v7_mk_boolean(is_finite(arg0));
+  *res = v7_mk_boolean(v7, is_finite(v7, arg0));
 
 clean:
   return rcode;
@@ -25591,7 +25651,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   set_method(v7, v7->vals.global_object, "isFinite", Std_isFinite, 1);
 
   v7_def(v7, v7->vals.global_object, "Infinity", 8, attr_internal,
-         v7_mk_number(INFINITY));
+         v7_mk_number(v7, INFINITY));
   v7_set(v7, v7->vals.global_object, "global", 6, v7->vals.global_object);
 
   init_object(v7);
@@ -27916,7 +27976,7 @@ V7_PRIVATE enum v7_err Obj_isPrototypeOf(struct v7 *v7, v7_val_t *res) {
   val_t obj = v7_arg(v7, 0);
   val_t proto = v7_get_this(v7);
 
-  *res = v7_mk_boolean(is_prototype_of(v7, obj, proto));
+  *res = v7_mk_boolean(v7, is_prototype_of(v7, obj, proto));
 
   return rcode;
 }
@@ -28016,12 +28076,12 @@ V7_PRIVATE enum v7_err Obj_getOwnPropertyDescriptor(struct v7 *v7,
   desc = v7_mk_object(v7);
   v7_set(v7, desc, "value", 5, prop->value);
   v7_set(v7, desc, "writable", 8,
-         v7_mk_boolean(!(prop->attributes & V7_PROPERTY_NON_WRITABLE)));
+         v7_mk_boolean(v7, !(prop->attributes & V7_PROPERTY_NON_WRITABLE)));
   v7_set(v7, desc, "enumerable", 10,
-         v7_mk_boolean(!(prop->attributes &
-                         (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE))));
+         v7_mk_boolean(v7, !(prop->attributes & (_V7_PROPERTY_HIDDEN |
+                                                 V7_PROPERTY_NON_ENUMERABLE))));
   v7_set(v7, desc, "configurable", 12,
-         v7_mk_boolean(!(prop->attributes & V7_PROPERTY_NON_CONFIGURABLE)));
+         v7_mk_boolean(v7, !(prop->attributes & V7_PROPERTY_NON_CONFIGURABLE)));
 
   *res = desc;
 
@@ -28037,7 +28097,7 @@ static enum v7_err o_set_attr(struct v7 *v7, val_t desc, const char *name,
                               v7_prop_attr_desc_t flag_false) {
   enum v7_err rcode = V7_OK;
 
-  val_t v = v7_mk_undefined();
+  val_t v = V7_UNDEFINED;
   rcode = v7_get_throwing(v7, desc, name, n, &v);
   if (rcode != V7_OK) {
     goto clean;
@@ -28058,7 +28118,7 @@ static enum v7_err _Obj_defineProperty(struct v7 *v7, val_t obj,
                                        const char *name, int name_len,
                                        val_t desc, val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t val = v7_mk_undefined();
+  val_t val = V7_UNDEFINED;
   v7_prop_attr_desc_t attrs_desc = 0;
 
   /*
@@ -28174,7 +28234,7 @@ clean:
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Obj_defineProperties(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t descs = v7_mk_undefined();
+  val_t descs = V7_UNDEFINED;
 
   *res = v7_arg(v7, 0);
   descs = v7_arg(v7, 1);
@@ -28226,10 +28286,11 @@ V7_PRIVATE enum v7_err Obj_propertyIsEnumerable(struct v7 *v7, v7_val_t *res) {
   }
 
   if (prop == NULL) {
-    *res = v7_mk_boolean(0);
+    *res = v7_mk_boolean(v7, 0);
   } else {
-    *res = v7_mk_boolean(!(prop->attributes &
-                           (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)));
+    *res =
+        v7_mk_boolean(v7, !(prop->attributes & (_V7_PROPERTY_HIDDEN |
+                                                V7_PROPERTY_NON_ENUMERABLE)));
   }
 
   goto clean;
@@ -28252,7 +28313,7 @@ V7_PRIVATE enum v7_err Obj_hasOwnProperty(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = v7_mk_boolean(ptmp != NULL);
+  *res = v7_mk_boolean(v7, ptmp != NULL);
   goto clean;
 
 clean:
@@ -28371,7 +28432,7 @@ V7_PRIVATE enum v7_err Obj_isExtensible(struct v7 *v7, v7_val_t *res) {
   }
 
   *res = v7_mk_boolean(
-      !(get_object_struct(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE));
+      v7, !(get_object_struct(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE));
 
 clean:
   return rcode;
@@ -28388,7 +28449,7 @@ static enum v7_err is_rigid(struct v7 *v7, v7_val_t *res, int is_frozen) {
     goto clean;
   }
 
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
 
   if (get_object_struct(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
     void *h = NULL;
@@ -28405,7 +28466,7 @@ static enum v7_err is_rigid(struct v7 *v7, v7_val_t *res, int is_frozen) {
       }
     }
 
-    *res = v7_mk_boolean(1);
+    *res = v7_mk_boolean(v7, 1);
     goto clean;
   }
 
@@ -28655,7 +28716,7 @@ V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
   /* Save the stack trace */
   {
     size_t len = 0;
-    val_t st_v = v7_mk_undefined();
+    val_t st_v = V7_UNDEFINED;
 
     v7_own(v7, &st_v);
 
@@ -28749,7 +28810,7 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Number_ctor(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  val_t arg0 = v7_argc(v7) == 0 ? v7_mk_number(0.0) : v7_arg(v7, 0);
+  val_t arg0 = v7_argc(v7) == 0 ? v7_mk_number(v7, 0.0) : v7_arg(v7, 0);
 
   if (v7_is_number(arg0)) {
     *res = arg0;
@@ -28788,8 +28849,8 @@ V7_PRIVATE enum v7_err n_to_str(struct v7 *v7, const char *format, val_t *res) {
     goto clean;
   }
 
-  if (v7_get_double(arg0) > 0) {
-    digits = (int) v7_get_double(arg0);
+  if (v7_get_double(v7, arg0) > 0) {
+    digits = (int) v7_get_double(v7, arg0);
   }
 
   /*
@@ -28803,7 +28864,7 @@ V7_PRIVATE enum v7_err n_to_str(struct v7 *v7, const char *format, val_t *res) {
   }
 
   snprintf(fmt, sizeof(fmt), format, digits);
-  len = snprintf(buf, sizeof(buf), fmt, v7_get_double(this_obj));
+  len = snprintf(buf, sizeof(buf), fmt, v7_get_double(v7, this_obj));
 
   *res = v7_mk_string(v7, buf, len, 1);
 
@@ -28916,12 +28977,12 @@ V7_PRIVATE enum v7_err Number_toString(struct v7 *v7, v7_val_t *res) {
     if (rcode != V7_OK) {
       goto clean;
     }
-    radix = v7_get_double(radixv);
+    radix = v7_get_double(v7, radixv);
   } else {
     radix = 10.0;
   }
 
-  d = v7_get_double(this_obj);
+  d = v7_get_double(v7, this_obj);
   if (!isnan(d) && (int64_t) d == d && radix >= 2) {
     cs_itoa(d, buf, radix);
     *res = v7_mk_string(v7, buf, strlen(buf), 1);
@@ -28939,7 +29000,7 @@ clean:
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err n_isNaN(struct v7 *v7, v7_val_t *res) {
   val_t arg0 = v7_arg(v7, 0);
-  *res = v7_mk_boolean(!v7_is_number(arg0) || arg0 == V7_TAG_NAN);
+  *res = v7_mk_boolean(v7, !v7_is_number(arg0) || arg0 == V7_TAG_NAN);
   return V7_OK;
 }
 
@@ -28959,13 +29020,15 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   set_cfunc_prop(v7, v7->vals.number_prototype, "toString", Number_toString);
 
   v7_def(v7, num, "MAX_VALUE", 9, attrs_desc,
-         v7_mk_number(1.7976931348623157e+308));
-  v7_def(v7, num, "MIN_VALUE", 9, attrs_desc, v7_mk_number(5e-324));
+         v7_mk_number(v7, 1.7976931348623157e+308));
+  v7_def(v7, num, "MIN_VALUE", 9, attrs_desc, v7_mk_number(v7, 5e-324));
 #if V7_ENABLE__NUMBER__NEGATIVE_INFINITY
-  v7_def(v7, num, "NEGATIVE_INFINITY", 17, attrs_desc, v7_mk_number(-INFINITY));
+  v7_def(v7, num, "NEGATIVE_INFINITY", 17, attrs_desc,
+         v7_mk_number(v7, -INFINITY));
 #endif
 #if V7_ENABLE__NUMBER__POSITIVE_INFINITY
-  v7_def(v7, num, "POSITIVE_INFINITY", 17, attrs_desc, v7_mk_number(INFINITY));
+  v7_def(v7, num, "POSITIVE_INFINITY", 17, attrs_desc,
+         v7_mk_number(v7, INFINITY));
 #endif
   v7_def(v7, num, "NaN", 3, attrs_desc, V7_TAG_NAN);
 
@@ -29010,7 +29073,7 @@ V7_PRIVATE enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Json_parse(struct v7 *v7, v7_val_t *res) {
   v7_val_t arg = v7_arg(v7, 0);
-  return std_eval(v7, arg, v7_mk_undefined(), 1, res);
+  return std_eval(v7, arg, V7_UNDEFINED, 1, res);
 }
 
 V7_PRIVATE void init_json(struct v7 *v7) {
@@ -29080,7 +29143,7 @@ V7_PRIVATE enum v7_err Array_push(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int i, len = v7_argc(v7);
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   for (i = 0; i < len; i++) {
     *res = v7_arg(v7, i);
@@ -29109,7 +29172,7 @@ V7_PRIVATE enum v7_err Array_get_length(struct v7 *v7, v7_val_t *res) {
   if (is_prototype_of(v7, this_obj, v7->vals.array_prototype)) {
     len = v7_array_length(v7, this_obj);
   }
-  *res = v7_mk_number(len);
+  *res = v7_mk_number(v7, len);
 
   return rcode;
 }
@@ -29130,8 +29193,8 @@ V7_PRIVATE enum v7_err Array_set_length(struct v7 *v7, v7_val_t *res) {
     rcode = v7_throwf(v7, TYPE_ERROR, "Array expected");
     goto clean;
   } else if (new_len < 0 ||
-             (v7_is_number(arg0) &&
-              (isnan(v7_get_double(arg0)) || isinf(v7_get_double(arg0))))) {
+             (v7_is_number(arg0) && (isnan(v7_get_double(v7, arg0)) ||
+                                     isinf(v7_get_double(v7, arg0))))) {
     rcode = v7_throwf(v7, RANGE_ERROR, "Invalid array length");
     goto clean;
   } else {
@@ -29161,7 +29224,7 @@ V7_PRIVATE enum v7_err Array_set_length(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_number(new_len);
+  *res = v7_mk_number(v7, new_len);
 
 clean:
   return rcode;
@@ -29176,7 +29239,7 @@ static enum v7_err a_cmp(struct v7 *v7, void *user_data, const void *pa,
 
   if (v7_is_callable(v7, func)) {
     int saved_inhibit_gc = v7->inhibit_gc;
-    val_t vres = v7_mk_undefined(), args = v7_mk_dense_array(v7);
+    val_t vres = V7_UNDEFINED, args = v7_mk_dense_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     v7->inhibit_gc = 0;
@@ -29185,7 +29248,7 @@ static enum v7_err a_cmp(struct v7 *v7, void *user_data, const void *pa,
       goto clean;
     }
     v7->inhibit_gc = saved_inhibit_gc;
-    *res = (int) -v7_get_double(vres);
+    *res = (int) -v7_get_double(v7, vres);
     goto clean;
   } else {
     char sa[100], sb[100];
@@ -29351,7 +29414,7 @@ V7_PRIVATE enum v7_err Array_join(struct v7 *v7, v7_val_t *res) {
   size_t sep_size = 0;
   const char *sep = NULL;
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   /* Get pointer to the separator string */
   if (!v7_is_string(arg0)) {
@@ -29474,7 +29537,7 @@ static enum v7_err a_splice(struct v7 *v7, int mutate, v7_val_t *res) {
     if (p == NULL) {
       goto clean;
     }
-    abuf = (struct mbuf *) v7_get_ptr(p->value);
+    abuf = (struct mbuf *) v7_get_ptr(v7, p->value);
     if (abuf == NULL) {
       goto clean;
     }
@@ -29578,7 +29641,7 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Array_forEach(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  val_t v = v7_mk_undefined(), cb = v7_arg(v7, 0);
+  val_t v = V7_UNDEFINED, cb = v7_arg(v7, 0);
   unsigned long len, i;
   int has;
   /* a_prep2 uninhibits GC when calling cb */
@@ -29601,7 +29664,7 @@ V7_PRIVATE enum v7_err Array_forEach(struct v7 *v7, v7_val_t *res) {
     v = v7_array_get2(v7, this_obj, i, &has);
     if (!has) continue;
 
-    rcode = a_prep2(v7, cb, v, v7_mk_number(i), this_obj, res);
+    rcode = a_prep2(v7, cb, v, v7_mk_number(v7, i), this_obj, res);
     if (rcode != V7_OK) {
       goto clean;
     }
@@ -29637,7 +29700,7 @@ V7_PRIVATE enum v7_err Array_map(struct v7 *v7, v7_val_t *res) {
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
       if (!has) continue;
-      rcode = a_prep2(v7, arg0, v, v7_mk_number(i), arg1, &el);
+      rcode = a_prep2(v7, arg0, v, v7_mk_number(v7, i), arg1, &el);
       if (rcode != V7_OK) {
         goto clean;
       }
@@ -29664,7 +29727,7 @@ V7_PRIVATE enum v7_err Array_every(struct v7 *v7, v7_val_t *res) {
   /* a_prep2 uninhibits GC when calling cb */
   struct gc_tmp_frame vf = new_tmp_frame(v7);
 
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
 
   if (!v7_is_object(this_obj)) {
     rcode = v7_throwf(v7, TYPE_ERROR, "Array expected");
@@ -29680,18 +29743,18 @@ V7_PRIVATE enum v7_err Array_every(struct v7 *v7, v7_val_t *res) {
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
       if (!has) continue;
-      rcode = a_prep2(v7, arg0, v, v7_mk_number(i), arg1, &el);
+      rcode = a_prep2(v7, arg0, v, v7_mk_number(v7, i), arg1, &el);
       if (rcode != V7_OK) {
         goto clean;
       }
       if (!v7_is_truthy(v7, el)) {
-        *res = v7_mk_boolean(0);
+        *res = v7_mk_boolean(v7, 0);
         goto clean;
       }
     }
   }
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
 
 clean:
   tmp_frame_cleanup(&vf);
@@ -29708,7 +29771,7 @@ V7_PRIVATE enum v7_err Array_some(struct v7 *v7, v7_val_t *res) {
   /* a_prep2 uninhibits GC when calling cb */
   struct gc_tmp_frame vf = new_tmp_frame(v7);
 
-  *res = v7_mk_boolean(1);
+  *res = v7_mk_boolean(v7, 1);
 
   if (!v7_is_object(this_obj)) {
     rcode = v7_throwf(v7, TYPE_ERROR, "Array expected");
@@ -29724,18 +29787,18 @@ V7_PRIVATE enum v7_err Array_some(struct v7 *v7, v7_val_t *res) {
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
       if (!has) continue;
-      rcode = a_prep2(v7, arg0, v, v7_mk_number(i), arg1, &el);
+      rcode = a_prep2(v7, arg0, v, v7_mk_number(v7, i), arg1, &el);
       if (rcode != V7_OK) {
         goto clean;
       }
       if (v7_is_truthy(v7, el)) {
-        *res = v7_mk_boolean(1);
+        *res = v7_mk_boolean(v7, 1);
         goto clean;
       }
     }
   }
 
-  *res = v7_mk_boolean(0);
+  *res = v7_mk_boolean(v7, 0);
 
 clean:
   tmp_frame_cleanup(&vf);
@@ -29767,7 +29830,7 @@ V7_PRIVATE enum v7_err Array_filter(struct v7 *v7, v7_val_t *res) {
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
       if (!has) continue;
-      rcode = a_prep2(v7, arg0, v, v7_mk_number(i), arg1, &el);
+      rcode = a_prep2(v7, arg0, v, v7_mk_number(v7, i), arg1, &el);
       if (rcode != V7_OK) {
         goto clean;
       }
@@ -29807,7 +29870,7 @@ V7_PRIVATE enum v7_err Array_concat(struct v7 *v7, v7_val_t *res) {
    * from a cfunction.
    */
   saved_args = v7->vals.arguments;
-  v7->vals.arguments = v7_mk_undefined();
+  v7->vals.arguments = V7_UNDEFINED;
   rcode = a_splice(v7, 1, res);
   if (rcode != V7_OK) {
     goto clean;
@@ -29839,7 +29902,7 @@ clean:
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Array_isArray(struct v7 *v7, v7_val_t *res) {
   val_t arg0 = v7_arg(v7, 0);
-  *res = v7_mk_boolean(v7_is_array(v7, arg0));
+  *res = v7_mk_boolean(v7, v7_is_array(v7, arg0));
   return V7_OK;
 }
 
@@ -29947,7 +30010,7 @@ V7_PRIVATE enum v7_err Boolean_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
 
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
 
   if (this_obj == v7->vals.boolean_prototype) {
     *res = v7_mk_string(v7, "false", 5, 1);
@@ -30025,14 +30088,14 @@ WARN_UNUSED_RESULT
 static enum v7_err m_one_arg(struct v7 *v7, double (*f)(double), val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t arg0 = v7_arg(v7, 0);
-  double d0 = v7_get_double(arg0);
+  double d0 = v7_get_double(v7, arg0);
 #ifdef V7_BROKEN_NAN
   if (isnan(d0)) {
     *res = V7_TAG_NAN;
     goto clean;
   }
 #endif
-  *res = v7_mk_number(f(d0));
+  *res = v7_mk_number(v7, f(d0));
   goto clean;
 
 clean:
@@ -30047,8 +30110,8 @@ static enum v7_err m_two_arg(struct v7 *v7, double (*f)(double, double),
   enum v7_err rcode = V7_OK;
   val_t arg0 = v7_arg(v7, 0);
   val_t arg1 = v7_arg(v7, 1);
-  double d0 = v7_get_double(arg0);
-  double d1 = v7_get_double(arg1);
+  double d0 = v7_get_double(v7, arg0);
+  double d1 = v7_get_double(v7, arg1);
 #ifdef V7_BROKEN_NAN
   /* pow(NaN,0) == 1, doesn't fix atan2, but who cares */
   if (isnan(d1)) {
@@ -30056,7 +30119,7 @@ static enum v7_err m_two_arg(struct v7 *v7, double (*f)(double, double),
     goto clean;
   }
 #endif
-  *res = v7_mk_number(f(d0, d1));
+  *res = v7_mk_number(v7, f(d0, d1));
   goto clean;
 
 clean:
@@ -30128,7 +30191,7 @@ DEFINE_WRAPPER(tan, m_one_arg)
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Math_random(struct v7 *v7, v7_val_t *res) {
   (void) v7;
-  *res = v7_mk_number((double) rand() / RAND_MAX);
+  *res = v7_mk_number(v7, (double) rand() / RAND_MAX);
   return V7_OK;
 }
 #endif /* V7_ENABLE__Math__random */
@@ -30141,13 +30204,13 @@ static enum v7_err min_max(struct v7 *v7, int is_min, val_t *res) {
   int i, len = v7_argc(v7);
 
   for (i = 0; i < len; i++) {
-    double v = v7_get_double(v7_arg(v7, i));
+    double v = v7_get_double(v7, v7_arg(v7, i));
     if (isnan(dres) || (is_min && v < dres) || (!is_min && v > dres)) {
       dres = v;
     }
   }
 
-  *res = v7_mk_number(dres);
+  *res = v7_mk_number(v7, dres);
 
   return rcode;
 }
@@ -30231,14 +30294,14 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 #endif
 
 #if V7_ENABLE__Math__constants
-  v7_set(v7, math, "E", 1, v7_mk_number(M_E));
-  v7_set(v7, math, "PI", 2, v7_mk_number(M_PI));
-  v7_set(v7, math, "LN2", 3, v7_mk_number(M_LN2));
-  v7_set(v7, math, "LN10", 4, v7_mk_number(M_LN10));
-  v7_set(v7, math, "LOG2E", 5, v7_mk_number(M_LOG2E));
-  v7_set(v7, math, "LOG10E", 6, v7_mk_number(M_LOG10E));
-  v7_set(v7, math, "SQRT1_2", 7, v7_mk_number(M_SQRT1_2));
-  v7_set(v7, math, "SQRT2", 5, v7_mk_number(M_SQRT2));
+  v7_set(v7, math, "E", 1, v7_mk_number(v7, M_E));
+  v7_set(v7, math, "PI", 2, v7_mk_number(v7, M_PI));
+  v7_set(v7, math, "LN2", 3, v7_mk_number(v7, M_LN2));
+  v7_set(v7, math, "LN10", 4, v7_mk_number(v7, M_LN10));
+  v7_set(v7, math, "LOG2E", 5, v7_mk_number(v7, M_LOG2E));
+  v7_set(v7, math, "LOG10E", 6, v7_mk_number(v7, M_LOG10E));
+  v7_set(v7, math, "SQRT1_2", 7, v7_mk_number(v7, M_SQRT1_2));
+  v7_set(v7, math, "SQRT2", 5, v7_mk_number(v7, M_SQRT2));
 #endif
 
   v7_set(v7, v7->vals.global_object, "Math", 4, math);
@@ -30361,7 +30424,7 @@ static long subs_regexp_split_add_caps(struct _str_split_ctx *ctx, val_t res,
         (ctx->impl.regexp.loot.caps[i].start != NULL)
             ? v7_mk_string(ctx->v7, ctx->impl.regexp.loot.caps[i].start,
                            cap_len, 1)
-            : v7_mk_undefined());
+            : V7_UNDEFINED);
     elem++;
   }
   return elem;
@@ -30458,7 +30521,7 @@ V7_PRIVATE enum v7_err Str_fromCharCode(struct v7 *v7, v7_val_t *res) {
   for (i = 0; i < num_args; i++) {
     char buf[10];
     val_t arg = v7_arg(v7, i);
-    double d = v7_get_double(arg);
+    double d = v7_get_double(v7, arg);
     Rune r = (Rune)((int32_t)(isnan(d) || isinf(d) ? 0 : d) & 0xffff);
     int n = runetochar(buf, &r);
     val_t s = v7_mk_string(v7, buf, n, 1);
@@ -30483,7 +30546,7 @@ V7_PRIVATE enum v7_err Str_charCodeAt(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = v7_mk_number(dnum);
+  *res = v7_mk_number(v7, dnum);
 
 clean:
   return rcode;
@@ -30523,7 +30586,7 @@ V7_PRIVATE enum v7_err Str_concat(struct v7 *v7, v7_val_t *res) {
   }
 
   for (i = 0; i < num_args; i++) {
-    val_t str = v7_mk_undefined();
+    val_t str = V7_UNDEFINED;
 
     rcode = to_string(v7, v7_arg(v7, i), &str, NULL, 0, NULL);
     if (rcode != V7_OK) {
@@ -30548,7 +30611,7 @@ static enum v7_err s_index_of(struct v7 *v7, int last, val_t *res) {
   if (!v7_is_undefined(arg0)) {
     const char *p1, *p2, *end;
     size_t i, len1, len2, bytecnt1, bytecnt2;
-    val_t sub = v7_mk_undefined();
+    val_t sub = V7_UNDEFINED;
 
     rcode = to_string(v7, arg0, &sub, NULL, 0, NULL);
     if (rcode != V7_OK) {
@@ -30577,7 +30640,7 @@ static enum v7_err s_index_of(struct v7 *v7, int last, val_t *res) {
           if (rcode != V7_OK) {
             goto clean;
           }
-          d = v7_get_double(arg);
+          d = v7_get_double(v7, arg);
         }
         if (isnan(d) || d < 0) {
           d = 0.0;
@@ -30609,7 +30672,7 @@ static enum v7_err s_index_of(struct v7 *v7, int last, val_t *res) {
     }
   }
   if (!last && dres >= 0) dres += fromIndex;
-  *res = v7_mk_number(dres);
+  *res = v7_mk_number(v7, dres);
 
 clean:
   return rcode;
@@ -30650,8 +30713,8 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Str_localeCompare(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  val_t arg0 = v7_mk_undefined();
-  val_t s = v7_mk_undefined();
+  val_t arg0 = V7_UNDEFINED;
+  val_t s = V7_UNDEFINED;
 
   rcode = to_string(v7, v7_arg(v7, 0), &arg0, NULL, 0, NULL);
   if (rcode != V7_OK) {
@@ -30663,7 +30726,7 @@ V7_PRIVATE enum v7_err Str_localeCompare(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = v7_mk_number(s_cmp(v7, s, arg0));
+  *res = v7_mk_number(v7, s_cmp(v7, s, arg0));
 
 clean:
   return rcode;
@@ -30725,12 +30788,12 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Str_match(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  val_t so = v7_mk_undefined(), ro = v7_mk_undefined();
+  val_t so = V7_UNDEFINED, ro = V7_UNDEFINED;
   long previousLastIndex = 0;
   int lastMatch = 1, n = 0, flag_g;
   struct v7_regexp *rxp;
 
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
   rcode = to_string(v7, this_obj, &so, NULL, 0, NULL);
   if (rcode != V7_OK) {
@@ -30793,7 +30856,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7 *v7, v7_val_t *res) {
   }
 
   if (n == 0) {
-    *res = v7_mk_null();
+    *res = V7_NULL;
     goto clean;
   }
 
@@ -30822,7 +30885,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
     const char *const str_end = s + s_len;
     char *p = (char *) s;
     uint32_t out_sub_num = 0;
-    val_t ro = v7_mk_undefined(), str_func = v7_mk_undefined();
+    val_t ro = V7_UNDEFINED, str_func = V7_UNDEFINED;
     struct slre_prog *prog;
     struct slre_cap out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
     struct slre_loot loot;
@@ -30878,7 +30941,8 @@ V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
           }
         }
         rcode = v7_array_push_throwing(
-            v7, arr, v7_mk_number(utfnlen(s, loot.caps[0].start - s)), NULL);
+            v7, arr, v7_mk_number(v7, utfnlen(s, loot.caps[0].start - s)),
+            NULL);
         if (rcode != V7_OK) {
           goto clean;
         }
@@ -30889,7 +30953,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
         }
 
         {
-          val_t val = v7_mk_undefined();
+          val_t val = V7_UNDEFINED;
 
           rcode = b_apply(v7, str_func, this_obj, arr, 0, &val);
           if (rcode != V7_OK) {
@@ -30961,7 +31025,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7 *v7, v7_val_t *res) {
   if (v7_argc(v7) > 0) {
     size_t s_len;
     struct slre_loot sub;
-    val_t so = v7_mk_undefined(), ro = v7_mk_undefined();
+    val_t so = V7_UNDEFINED, ro = V7_UNDEFINED;
     const char *s;
 
     rcode = obj_value_of(v7, v7_arg(v7, 0), &ro);
@@ -30990,7 +31054,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7 *v7, v7_val_t *res) {
     utf_shift = 0;
   }
 
-  *res = v7_mk_number(utf_shift);
+  *res = v7_mk_number(v7, utf_shift);
 
 clean:
   return rcode;
@@ -31004,7 +31068,7 @@ V7_PRIVATE enum v7_err Str_slice(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   long from = 0, to = 0;
   size_t len;
-  val_t so = v7_mk_undefined();
+  val_t so = V7_UNDEFINED;
   const char *begin, *end;
   int num_args = v7_argc(v7);
 
@@ -31055,7 +31119,7 @@ WARN_UNUSED_RESULT
 static enum v7_err s_transform(struct v7 *v7, val_t obj, Rune (*func)(Rune),
                                val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t s = v7_mk_undefined();
+  val_t s = V7_UNDEFINED;
   size_t i, n, len;
   const char *p2, *p;
 
@@ -31103,7 +31167,7 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Str_trim(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  val_t s = v7_mk_undefined();
+  val_t s = V7_UNDEFINED;
   size_t i, n, len, start = 0, end, state = 0;
   const char *p;
   Rune r;
@@ -31134,7 +31198,7 @@ V7_PRIVATE enum v7_err Str_length(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   size_t len = 0;
-  val_t s = v7_mk_undefined();
+  val_t s = V7_UNDEFINED;
 
   rcode = obj_value_of(v7, this_obj, &s);
   if (rcode != V7_OK) {
@@ -31146,7 +31210,7 @@ V7_PRIVATE enum v7_err Str_length(struct v7 *v7, v7_val_t *res) {
     len = utfnlen(p, len);
   }
 
-  *res = v7_mk_number(len);
+  *res = v7_mk_number(v7, len);
 clean:
   return rcode;
 }
@@ -31156,7 +31220,7 @@ V7_PRIVATE enum v7_err Str_at(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   long arg0;
-  val_t s = v7_mk_undefined();
+  val_t s = V7_UNDEFINED;
 
   rcode = to_long(v7, v7_arg(v7, 0), -1, &arg0);
   if (rcode != V7_OK) {
@@ -31172,12 +31236,12 @@ V7_PRIVATE enum v7_err Str_at(struct v7 *v7, v7_val_t *res) {
     size_t n;
     const unsigned char *p = (unsigned char *) v7_get_string(v7, &s, &n);
     if (arg0 >= 0 && (size_t) arg0 < n) {
-      *res = v7_mk_number(p[arg0]);
+      *res = v7_mk_number(v7, p[arg0]);
       goto clean;
     }
   }
 
-  *res = v7_mk_number(NAN);
+  *res = v7_mk_number(v7, NAN);
 
 clean:
   return rcode;
@@ -31188,7 +31252,7 @@ V7_PRIVATE enum v7_err Str_blen(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
   size_t len = 0;
-  val_t s = v7_mk_undefined();
+  val_t s = V7_UNDEFINED;
 
   rcode = obj_value_of(v7, this_obj, &s);
   if (rcode != V7_OK) {
@@ -31199,7 +31263,7 @@ V7_PRIVATE enum v7_err Str_blen(struct v7 *v7, v7_val_t *res) {
     v7_get_string(v7, &s, &len);
   }
 
-  *res = v7_mk_number(len);
+  *res = v7_mk_number(v7, len);
 
 clean:
   return rcode;
@@ -31320,7 +31384,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7 *v7, v7_val_t *res) {
       goto clean;
     }
   } else {
-    val_t ro = v7_mk_undefined();
+    val_t ro = V7_UNDEFINED;
     long elem, limit;
     size_t lookup_idx = 0, substr_idx = 0;
     struct _str_split_ctx ctx;
@@ -31791,7 +31855,7 @@ typedef void (*fbreaktime_t)(const etime_t *, struct timeparts *);
     V7_ENABLE__Date__toJSON
 static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
   enum v7_err rcode = V7_OK;
-  val_t ret = v7_mk_undefined();
+  val_t ret = V7_UNDEFINED;
 
   rcode = obj_value_of(v7, obj, &ret);
   if (rcode != V7_OK) {
@@ -32035,7 +32099,7 @@ static etime_t d_time_number_from_arr(struct v7 *v7, int start_pos,
   etime_t ret_time = INVALID_TIME;
   long cargs;
 
-  val_t objtime = v7_mk_undefined();
+  val_t objtime = V7_UNDEFINED;
   rcode = obj_value_of(v7, this_obj, &objtime);
   if (rcode != V7_OK) {
     goto clean;
@@ -32056,7 +32120,7 @@ static etime_t d_time_number_from_arr(struct v7 *v7, int start_pos,
         if (rcode != V7_OK) {
           goto clean;
         }
-        new_part = v7_get_double(arg);
+        new_part = v7_get_double(v7, arg);
       }
 
       if (isnan(new_part)) {
@@ -32067,7 +32131,7 @@ static etime_t d_time_number_from_arr(struct v7 *v7, int start_pos,
     }
 
     if (!isnan(new_part)) {
-      etime_t current_time = v7_get_double(objtime);
+      etime_t current_time = v7_get_double(v7, objtime);
       ret_time =
           d_changepartoftime(&current_time, &a, breaktimefunc, maketimefunc);
     }
@@ -32112,7 +32176,7 @@ V7_PRIVATE enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
         if (rcode != V7_OK) {
           goto clean;
         }
-        ret_time = v7_get_double(arg);
+        ret_time = v7_get_double(v7, arg);
         if (rcode != V7_OK) {
           goto clean;
         }
@@ -32130,7 +32194,7 @@ V7_PRIVATE enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
         if (rcode != V7_OK) {
           goto clean;
         }
-        a.args[i] = v7_get_double(arg);
+        a.args[i] = v7_get_double(v7, arg);
         if (isnan(a.args[i])) {
           break;
         }
@@ -32160,7 +32224,7 @@ V7_PRIVATE enum v7_err Date_ctor(struct v7 *v7, v7_val_t *res) {
     obj_prototype_set(v7, get_object_struct(this_obj),
                       get_object_struct(v7->vals.date_prototype));
 
-    v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), v7_mk_number(ret_time));
+    v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), v7_mk_number(v7, ret_time));
     /*
      * implicitly returning `this`: `call_cfunction()` in bcode.c will do
      * that for us
@@ -32225,7 +32289,7 @@ V7_PRIVATE enum v7_err Date_toISOString(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  time = v7_get_double(d_trytogetobjforstring(v7, this_obj));
+  time = v7_get_double(v7, d_trytogetobjforstring(v7, this_obj));
   len = d_timetoISOstr(&time, buf, sizeof(buf));
   if (len > (int) (sizeof(buf) - 1 /*null-term*/)) {
     len = (int) (sizeof(buf) - 1 /*null-term*/);
@@ -32252,7 +32316,7 @@ static enum v7_err d_tostring(struct v7 *v7, val_t obj,
   char buf[100];
   etime_t time;
 
-  time = v7_get_double(d_trytogetobjforstring(v7, obj));
+  time = v7_get_double(v7, d_trytogetobjforstring(v7, obj));
 
   breaktimefunc(&time, &tp);
   len = tostringfunc(&tp, buf, addtz);
@@ -32336,7 +32400,7 @@ static enum v7_err d_tolocalestr(struct v7 *v7, val_t obj, const char *frm,
   struct d_locale prev_locale;
   struct timeparts tp;
 
-  time = v7_get_double(d_trytogetobjforstring(v7, obj));
+  time = v7_get_double(v7, d_trytogetobjforstring(v7, obj));
 
   d_getcurrentlocale(&prev_locale);
   d_setlocale(0);
@@ -32392,31 +32456,32 @@ clean:
 }
 
 #if V7_ENABLE__Date__getters
-static struct timeparts *d_getTimePart(val_t val, struct timeparts *tp,
+static struct timeparts *d_getTimePart(struct v7 *v7, val_t val,
+                                       struct timeparts *tp,
                                        fbreaktime_t breaktimefunc) {
   etime_t time;
-  time = v7_get_double(val);
+  time = v7_get_double(v7, val);
   breaktimefunc(&time, tp);
   return tp;
 }
 
-#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                     \
-  WARN_UNUSED_RESULT                                                           \
-  V7_PRIVATE enum v7_err Date_get##funcName(struct v7 *v7, v7_val_t *res) {    \
-    enum v7_err rcode = V7_OK;                                                 \
-    val_t v = v7_mk_undefined();                                               \
-    struct timeparts tp;                                                       \
-    val_t this_obj = v7_get_this(v7);                                          \
-                                                                               \
-    rcode = obj_value_of(v7, this_obj, &v);                                    \
-    if (rcode != V7_OK) {                                                      \
-      goto clean;                                                              \
-    }                                                                          \
-    *res = v7_mk_number(v == V7_TAG_NAN                                        \
-                            ? NAN                                              \
-                            : d_getTimePart(v, &tp, breaktimefunc)->tpmember); \
-  clean:                                                                       \
-    return rcode;                                                              \
+#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                   \
+  WARN_UNUSED_RESULT                                                         \
+  V7_PRIVATE enum v7_err Date_get##funcName(struct v7 *v7, v7_val_t *res) {  \
+    enum v7_err rcode = V7_OK;                                               \
+    val_t v = V7_UNDEFINED;                                                  \
+    struct timeparts tp;                                                     \
+    val_t this_obj = v7_get_this(v7);                                        \
+                                                                             \
+    rcode = obj_value_of(v7, this_obj, &v);                                  \
+    if (rcode != V7_OK) {                                                    \
+      goto clean;                                                            \
+    }                                                                        \
+    *res = v7_mk_number(                                                     \
+        v7, v == V7_TAG_NAN ? NAN : d_getTimePart(v7, v, &tp, breaktimefunc) \
+                                        ->tpmember);                         \
+  clean:                                                                     \
+    return rcode;                                                            \
   }
 
 #define DEF_GET_TP(funcName, tpmember)               \
@@ -32440,7 +32505,7 @@ V7_PRIVATE enum v7_err Date_getTime(struct v7 *v7, v7_val_t *res) {
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Date_getTimezoneOffset(struct v7 *v7, v7_val_t *res) {
   (void) v7;
-  *res = v7_mk_number(g_gmtoffms / msPerMinute);
+  *res = v7_mk_number(v7, g_gmtoffms / msPerMinute);
   return V7_OK;
 }
 #endif /* V7_ENABLE__Date__getters */
@@ -32455,7 +32520,7 @@ static enum v7_err d_setTimePart(struct v7 *v7, int start_pos,
   etime_t ret_time =
       d_time_number_from_arr(v7, start_pos, breaktimefunc, maketimefunc);
 
-  *res = v7_mk_number(ret_time);
+  *res = v7_mk_number(v7, ret_time);
   v7_def(v7, this_obj, "", 0, _V7_DESC_HIDDEN(1), *res);
 
   return rcode;
@@ -32513,7 +32578,7 @@ V7_PRIVATE enum v7_err Date_now(struct v7 *v7, v7_val_t *res) {
 
   d_gettime(&ret_time);
 
-  *res = v7_mk_number(ret_time);
+  *res = v7_mk_number(v7, ret_time);
   return V7_OK;
 }
 #endif /* V7_ENABLE__Date__now */
@@ -32540,7 +32605,7 @@ V7_PRIVATE enum v7_err Date_parse(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  *res = v7_mk_number(ret_time);
+  *res = v7_mk_number(v7, ret_time);
 
 clean:
   return rcode;
@@ -32560,7 +32625,7 @@ V7_PRIVATE enum v7_err Date_UTC(struct v7 *v7, v7_val_t *res) {
   }
 
   ret_time = d_time_number_from_arr(v7, tpyear, 0, d_gmktime);
-  *res = v7_mk_number(ret_time);
+  *res = v7_mk_number(v7, ret_time);
 
 clean:
   return rcode;
@@ -32758,13 +32823,13 @@ V7_PRIVATE enum v7_err Function_length(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
   if (!is_js_function(this_obj)) {
-    *res = v7_mk_number(0);
+    *res = v7_mk_number(v7, 0);
     goto clean;
   }
 
   func = get_js_function_struct(this_obj);
 
-  *res = v7_mk_number(func->bcode->args_cnt);
+  *res = v7_mk_number(v7, func->bcode->args_cnt);
 
 clean:
   return rcode;
@@ -32977,7 +33042,7 @@ V7_PRIVATE enum v7_err Regex_global(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int flags = 0;
   val_t this_obj = v7_get_this(v7);
-  val_t r = v7_mk_undefined();
+  val_t r = V7_UNDEFINED;
   rcode = obj_value_of(v7, this_obj, &r);
   if (rcode != V7_OK) {
     goto clean;
@@ -32987,7 +33052,7 @@ V7_PRIVATE enum v7_err Regex_global(struct v7 *v7, v7_val_t *res) {
     flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
   }
 
-  *res = v7_mk_boolean(flags & SLRE_FLAG_G);
+  *res = v7_mk_boolean(v7, flags & SLRE_FLAG_G);
 
 clean:
   return rcode;
@@ -32998,7 +33063,7 @@ V7_PRIVATE enum v7_err Regex_ignoreCase(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int flags = 0;
   val_t this_obj = v7_get_this(v7);
-  val_t r = v7_mk_undefined();
+  val_t r = V7_UNDEFINED;
   rcode = obj_value_of(v7, this_obj, &r);
   if (rcode != V7_OK) {
     goto clean;
@@ -33008,7 +33073,7 @@ V7_PRIVATE enum v7_err Regex_ignoreCase(struct v7 *v7, v7_val_t *res) {
     flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
   }
 
-  *res = v7_mk_boolean(flags & SLRE_FLAG_I);
+  *res = v7_mk_boolean(v7, flags & SLRE_FLAG_I);
 
 clean:
   return rcode;
@@ -33019,7 +33084,7 @@ V7_PRIVATE enum v7_err Regex_multiline(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   int flags = 0;
   val_t this_obj = v7_get_this(v7);
-  val_t r = v7_mk_undefined();
+  val_t r = V7_UNDEFINED;
   rcode = obj_value_of(v7, this_obj, &r);
   if (rcode != V7_OK) {
     goto clean;
@@ -33029,7 +33094,7 @@ V7_PRIVATE enum v7_err Regex_multiline(struct v7 *v7, v7_val_t *res) {
     flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
   }
 
-  *res = v7_mk_boolean(flags & SLRE_FLAG_M);
+  *res = v7_mk_boolean(v7, flags & SLRE_FLAG_M);
 
 clean:
   return rcode;
@@ -33039,7 +33104,7 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Regex_source(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t this_obj = v7_get_this(v7);
-  val_t r = v7_mk_undefined();
+  val_t r = V7_UNDEFINED;
   const char *buf = 0;
   size_t len = 0;
 
@@ -33068,7 +33133,7 @@ V7_PRIVATE enum v7_err Regex_get_lastIndex(struct v7 *v7, v7_val_t *res) {
     lastIndex = v7_to_regexp(v7, this_obj)->lastIndex;
   }
 
-  *res = v7_mk_number(lastIndex);
+  *res = v7_mk_number(v7, lastIndex);
 
   return rcode;
 }
@@ -33087,7 +33152,7 @@ V7_PRIVATE enum v7_err Regex_set_lastIndex(struct v7 *v7, v7_val_t *res) {
     v7_to_regexp(v7, this_obj)->lastIndex = lastIndex;
   }
 
-  *res = v7_mk_number(lastIndex);
+  *res = v7_mk_number(v7, lastIndex);
 
 clean:
   return rcode;
@@ -33098,7 +33163,7 @@ V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, val_t rx, val_t vstr, int lind,
                                val_t *res) {
   enum v7_err rcode = V7_OK;
   if (v7_is_regexp(v7, rx)) {
-    val_t s = v7_mk_undefined();
+    val_t s = V7_UNDEFINED;
     size_t len;
     struct slre_loot sub;
     struct slre_cap *ptok = sub.caps;
@@ -33132,7 +33197,7 @@ V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, val_t rx, val_t vstr, int lind,
       }
       if (flag_g) rp->lastIndex = utfnlen(str, sub.caps->end + rel - str);
       v7_def(v7, arr, "index", 5, V7_DESC_WRITABLE(0),
-             v7_mk_number(utfnlen(str + rel, sub.caps->start - str)));
+             v7_mk_number(v7, utfnlen(str + rel, sub.caps->start - str)));
       *res = arr;
       goto clean;
     } else {
@@ -33140,7 +33205,7 @@ V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, val_t rx, val_t vstr, int lind,
     }
   }
 
-  *res = v7_mk_null();
+  *res = V7_NULL;
 
 clean:
   return rcode;
@@ -33157,7 +33222,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7 *v7, v7_val_t *res) {
       goto clean;
     }
   } else {
-    *res = v7_mk_null();
+    *res = V7_NULL;
   }
 
 clean:
@@ -33167,14 +33232,14 @@ clean:
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Regex_test(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t tmp = v7_mk_undefined();
+  val_t tmp = V7_UNDEFINED;
 
   rcode = Regex_exec(v7, &tmp);
   if (rcode != V7_OK) {
     goto clean;
   }
 
-  *res = v7_mk_boolean(!v7_is_null(tmp));
+  *res = v7_mk_boolean(v7, !v7_is_null(tmp));
 
 clean:
   return rcode;
@@ -33326,7 +33391,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
   struct v7_create_opts opts;
   int as_json = 0;
   int i, j, show_ast = 0, binary_ast = 0, dump_bcode = 0, dump_stats = 0;
-  val_t res = v7_mk_undefined();
+  val_t res;
   int nexprs = 0;
   const char *exprs[16];
 
@@ -33378,6 +33443,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
 #endif
 
   v7 = v7_create_opt(opts);
+  res = V7_UNDEFINED;
 
   if (pre_freeze_init != NULL) {
     pre_freeze_init(v7);
@@ -33424,7 +33490,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
     } else if (exec(v7, exprs[j], &res) != V7_OK) {
       v7_print_error(stderr, v7, exprs[j], res);
       exit_rcode = EXIT_FAILURE;
-      res = v7_mk_undefined();
+      res = V7_UNDEFINED;
     }
   }
 
@@ -33446,7 +33512,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
       }
     } else if (v7_exec_file(v7, argv[i], &res) != V7_OK) {
       v7_print_error(stderr, v7, argv[i], res);
-      res = v7_mk_undefined();
+      res = V7_UNDEFINED;
     }
   }
 

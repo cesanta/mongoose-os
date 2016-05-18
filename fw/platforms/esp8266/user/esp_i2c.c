@@ -263,9 +263,9 @@ enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res) {
   enum v7_err rcode = V7_OK;
   struct esp_i2c_connection *conn = NULL;
   v7_val_t sda_val = v7_arg(v7, 0);
-  double sda = v7_get_double(sda_val);
+  double sda = v7_get_double(v7, sda_val);
   v7_val_t scl_val = v7_arg(v7, 1);
-  double scl = v7_get_double(scl_val);
+  double scl = v7_get_double(v7, scl_val);
 
   if (!v7_is_number(sda_val) || sda < 0 || sda > 16 || !v7_is_number(scl_val) ||
       scl < 0 || scl > 16) {

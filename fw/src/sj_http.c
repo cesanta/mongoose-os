@@ -88,7 +88,7 @@ static void setup_request_object(struct v7 *v7, v7_val_t request,
 static void setup_response_object(struct v7 *v7, v7_val_t response,
                                   struct mg_connection *c, v7_val_t request) {
   v7_set_proto(v7, response, sj_http_response_proto);
-  v7_set(v7, response, "_c", ~0, v7_mk_foreign(c));
+  v7_set(v7, response, "_c", ~0, v7_mk_foreign(v7, c));
   v7_set(v7, response, "_r", ~0, request);
 }
 
@@ -140,7 +140,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     sj_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
   } else if (ev == MG_EV_CLOSE) {
     if (c->listener == NULL && ud != NULL) {
-      v7_set(ud->v7, ud->obj, "_c", ~0, v7_mk_undefined());
+      v7_set(ud->v7, ud->obj, "_c", ~0, V7_UNDEFINED);
       v7_disown(ud->v7, &ud->obj);
       v7_disown(ud->v7, &ud->timeout_callback);
       free(ud);
@@ -222,7 +222,7 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
           if (url[j] == '/' || j == len - 1) {
             const char *protocol = v7_get_cstring(v7, &protocol_v);
             int port = strcasecmp(protocol, "https") == 0 ? 443 : 80;
-            v7_set(v7, opts, "port", ~0, v7_mk_number(port));
+            v7_set(v7, opts, "port", ~0, v7_mk_number(v7, port));
             i = j;
             if (j == len - 1) j--;
             state = 3;
@@ -240,7 +240,7 @@ static enum v7_err sj_url_parse(struct v7 *v7, v7_val_t url_v, v7_val_t *res) {
           if (l > sizeof(ps) - 1) l = sizeof(ps) - 1;
           memcpy(ps, url + i, l);
           ps[l] = '\0';
-          v7_set(v7, opts, "port", ~0, v7_mk_number(atoi(ps)));
+          v7_set(v7, opts, "port", ~0, v7_mk_number(v7, atoi(ps)));
           i = j;
           if (j == len - 1) j--;
           state = 3;
@@ -268,7 +268,7 @@ clean:
  */
 static struct mg_connection *get_mgconn_obj(struct v7 *v7, v7_val_t obj) {
   v7_val_t _c = v7_get(v7, obj, "_c", ~0);
-  return (struct mg_connection *) v7_get_ptr(_c);
+  return (struct mg_connection *) v7_get_ptr(v7, _c);
 }
 
 /*
@@ -313,7 +313,7 @@ SJ_PRIVATE enum v7_err Http_response_write(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_truthy(v7, v7_get(v7, v7_get_this(v7), "_whd", ~0))) {
     write_http_status(c, 200);
     mg_send(c, "\r\n", 2);
-    v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_mk_boolean(1));
+    v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_mk_boolean(v7, 1));
   }
   Http_write_data(v7, c);
   *res = v7_get_this(v7);
@@ -365,13 +365,13 @@ SJ_PRIVATE enum v7_err Http_response_writeHead(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_number(arg0)) {
-    code = v7_get_double(arg0);
+    code = v7_get_double(v7, arg0);
   }
 
   write_http_status(c, code);
   http_write_headers(v7, arg1, c);
   mg_send(c, "\r\n", 2);
-  v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_mk_boolean(1));
+  v7_set(v7, v7_get_this(v7), "_whd", ~0, v7_mk_boolean(v7, 1));
   *res = v7_get_this(v7);
 
 clean:
@@ -555,7 +555,7 @@ SJ_PRIVATE enum v7_err Http_request_set_timeout(struct v7 *v7, v7_val_t *res) {
   struct user_data *ud;
   DECLARE_CONN();
   ud = (struct user_data *) c->user_data;
-  mg_set_timer(c, time(NULL) + v7_get_double(v7_arg(v7, 0)) / 1000.0);
+  mg_set_timer(c, time(NULL) + v7_get_double(v7, v7_arg(v7, 0)) / 1000.0);
   ud->timeout_callback = v7_arg(v7, 1);
   v7_own(v7, &ud->timeout_callback);
 
@@ -613,7 +613,7 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   v_hdrs = v7_get(v7, opts, "headers", ~0);
 
   /* Perform options validation and set defaults if needed */
-  port = v7_is_number(v_p) ? v7_get_double(v_p) : 80;
+  port = v7_is_number(v_p) ? v7_get_double(v7, v_p) : 80;
   host = v7_is_string(v_h) ? v7_get_cstring(v7, &v_h) : "";
   uri = v7_is_string(v_uri) ? v7_get_cstring(v7, &v_uri) : "/";
   method = v7_is_string(v_m) ? v7_get_cstring(v7, &v_m) : "GET";
@@ -666,7 +666,7 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   v7_set_proto(v7, ud->obj, sj_http_request_proto);
 
   /* internal property: mongoose connection */
-  v7_set(v7, ud->obj, "_c", ~0, v7_mk_foreign(c));
+  v7_set(v7, ud->obj, "_c", ~0, v7_mk_foreign(v7, c));
 
   /* internal property: callback function that was passed as an argument */
   v7_set(v7, ud->obj, "_cb", ~0, ud->handler);
@@ -708,12 +708,12 @@ enum v7_err URL_parse(struct v7 *v7, v7_val_t *res) {
 }
 
 void sj_http_api_setup(struct v7 *v7) {
-  v7_val_t Http = v7_mk_undefined();
-  v7_val_t URL = v7_mk_undefined();
+  v7_val_t Http = V7_UNDEFINED;
+  v7_val_t URL = V7_UNDEFINED;
 
-  sj_http_server_proto = v7_mk_undefined();
-  sj_http_response_proto = v7_mk_undefined();
-  sj_http_request_proto = v7_mk_undefined();
+  sj_http_server_proto = V7_UNDEFINED;
+  sj_http_response_proto = V7_UNDEFINED;
+  sj_http_request_proto = V7_UNDEFINED;
 
   /*
    * All values are owned temporarily: static values like
@@ -770,11 +770,11 @@ void sj_http_api_setup(struct v7 *v7) {
 }
 
 void sj_http_init(struct v7 *v7) {
-  v7_val_t Http = v7_mk_undefined();
+  v7_val_t Http = V7_UNDEFINED;
 
-  sj_http_server_proto = v7_mk_undefined();
-  sj_http_response_proto = v7_mk_undefined();
-  sj_http_request_proto = v7_mk_undefined();
+  sj_http_server_proto = V7_UNDEFINED;
+  sj_http_response_proto = V7_UNDEFINED;
+  sj_http_request_proto = V7_UNDEFINED;
 
   /* own temporary Http var */
   v7_own(v7, &Http);

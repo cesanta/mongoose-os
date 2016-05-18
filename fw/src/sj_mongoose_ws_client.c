@@ -19,8 +19,8 @@
 #include "fw/src/sj_common.h"
 #include "fw/src/sj_utils.h"
 
-#define WEBSOCKET_OPEN v7_mk_number(1)
-#define WEBSOCKET_CLOSED v7_mk_number(2)
+#define WEBSOCKET_OPEN v7_mk_number(v7, 1)
+#define WEBSOCKET_CLOSED v7_mk_number(v7, 2)
 
 struct user_data {
   struct v7 *v7;
@@ -44,12 +44,12 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   switch (ev) {
     case MG_EV_CONNECT:
       if (*(int *) ev_data != 0) {
-        invoke_cb(ud, "onerror", v7_mk_null());
+        invoke_cb(ud, "onerror", V7_NULL);
       }
       break;
     case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
-      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_foreign(nc));
-      invoke_cb(ud, "onopen", v7_mk_null());
+      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_foreign(v7, nc));
+      invoke_cb(ud, "onopen", V7_NULL);
       break;
     case MG_EV_WEBSOCKET_FRAME: {
       v7_val_t ev, data;
@@ -63,18 +63,18 @@ static void ws_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
     case MG_EV_CLOSE:
       nc->user_data = NULL;
-      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), v7_mk_undefined());
+      v7_def(v7, ud->ws, "_nc", ~0, _V7_DESC_HIDDEN(1), V7_UNDEFINED);
       /*
        * Invoke callback after `_nc`resetting, so `readyState` in `onclose`
        * will return CLOSED
        */
-      invoke_cb(ud, "onclose", v7_mk_null());
+      invoke_cb(ud, "onclose", V7_NULL);
       v7_disown(v7, &ud->ws);
       /* Free strings here in case if connect failed */
       free(ud);
       break;
     case MG_EV_SEND:
-      invoke_cb(ud, "onsend", v7_mk_number(nc->send_mbuf.len));
+      invoke_cb(ud, "onsend", v7_mk_number(v7, nc->send_mbuf.len));
       break;
   }
 }
@@ -244,7 +244,7 @@ SJ_PRIVATE enum v7_err WebSocket_send(struct v7 *v7, v7_val_t *res) {
   }
 
   if (!v7_is_foreign(ncv) ||
-      (nc = (struct mg_connection *) v7_get_ptr(ncv)) == NULL) {
+      (nc = (struct mg_connection *) v7_get_ptr(v7, ncv)) == NULL) {
     rcode = v7_throwf(v7, "Error", "ws not connected");
     goto clean;
   }
@@ -257,7 +257,7 @@ SJ_PRIVATE enum v7_err WebSocket_send(struct v7 *v7, v7_val_t *res) {
 
   /* notify that the buffer size changed */
   ud = (struct user_data *) nc->user_data;
-  invoke_cb(ud, "onsend", v7_mk_number(nc->send_mbuf.len));
+  invoke_cb(ud, "onsend", v7_mk_number(v7, nc->send_mbuf.len));
 
 clean:
   return rcode;
@@ -271,7 +271,7 @@ SJ_PRIVATE enum v7_err WebSocket_close(struct v7 *v7, v7_val_t *res) {
   (void) res;
 
   if (v7_is_foreign(ncv) &&
-      (nc = (struct mg_connection *) v7_get_ptr(ncv)) != NULL) {
+      (nc = (struct mg_connection *) v7_get_ptr(v7, ncv)) != NULL) {
     nc->flags |= MG_F_CLOSE_IMMEDIATELY;
   }
 

@@ -68,7 +68,7 @@ void esp_sj_uart_dispatcher(void *arg) {
     if (tx_used_before > 0 && txb->used == 0) {
       v7_val_t txcb = v7_get(us->v7, us->obj, "_txcb", 5);
       if (v7_is_callable(us->v7, txcb)) {
-        sj_invoke_cb(us->v7, txcb, us->obj, v7_mk_undefined());
+        sj_invoke_cb(us->v7, txcb, us->obj, V7_UNDEFINED);
       }
     }
     if (rxb->used > 0) {
@@ -77,7 +77,7 @@ void esp_sj_uart_dispatcher(void *arg) {
       if (v7_is_callable(us->v7, rxcb)) {
         if (!us->recv_pending) {
           us->recv_pending = 1;
-          sj_invoke_cb(us->v7, rxcb, us->obj, v7_mk_undefined());
+          sj_invoke_cb(us->v7, rxcb, us->obj, V7_UNDEFINED);
           /* Note: Callback has not run yet, it has been scheduled. */
         }
       } else if (us->prompt) {
@@ -101,7 +101,7 @@ static v7_val_t s_uart_proto;
 
 static enum v7_err esp_sj_uart_get_state(struct v7 *v7,
                                          struct esp_sj_uart_state **us) {
-  int uart_no = v7_get_double(v7_get(v7, v7_get_this(v7), "_u", 2));
+  int uart_no = v7_get_double(v7, v7_get(v7, v7_get_this(v7), "_u", 2));
   if (uart_no < 0 || uart_no > 1) {
     return v7_throwf(v7, "Error", "Invalid UART number");
   }
@@ -120,10 +120,10 @@ static enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
     v7_val_t v;
 #define NUM_PROP(p)             \
   v = v7_get(v7, cobj, #p, ~0); \
-  if (v7_is_number(v)) cfg->p = v7_get_double(v);
+  if (v7_is_number(v)) cfg->p = v7_get_double(v7, v);
 #define BOOL_PROP(p)            \
   v = v7_get(v7, cobj, #p, ~0); \
-  if (!v7_is_undefined(v)) cfg->p = v7_get_bool(v);
+  if (!v7_is_undefined(v)) cfg->p = v7_get_bool(v7, v);
 
     NUM_PROP(baud_rate);
 
@@ -146,10 +146,10 @@ static enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
 
   if (esp_uart_init(cfg)) {
     esp_sj_uart_schedule_dispatcher(cfg->uart_no);
-    *res = v7_mk_boolean(1);
+    *res = v7_mk_boolean(v7, 1);
   } else {
     free(cfg);
-    *res = v7_mk_boolean(0);
+    *res = v7_mk_boolean(v7, 0);
   }
   return V7_OK;
 }
@@ -164,7 +164,7 @@ static enum v7_err UART_onRecv(struct v7 *v7, v7_val_t *res) {
   if (v7_is_callable(v7, v7_arg(v7, 0))) {
     esp_sj_uart_schedule_dispatcher(us->uart_no);
   }
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
   return V7_OK;
 }
 
@@ -174,7 +174,7 @@ static enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   if (ret != V7_OK) return ret;
 
   cs_rbuf_t *rxb = esp_uart_rx_buf(us->uart_no);
-  size_t len = MIN((size_t) v7_get_double(v7_arg(v7, 0)), rxb->used);
+  size_t len = MIN((size_t) v7_get_double(v7, v7_arg(v7, 0)), rxb->used);
   uint8_t *data;
   len = cs_rbuf_get(rxb, len, &data);
   *res = v7_mk_string(v7, (const char *) data, len, 1 /* copy */);
@@ -192,7 +192,7 @@ static enum v7_err UART_setRXEnabled(struct v7 *v7, v7_val_t *res) {
   if (ret != V7_OK) return ret;
   esp_uart_set_rx_enabled(us->uart_no, v7_is_truthy(v7, v7_arg(v7, 0)));
   esp_sj_uart_schedule_dispatcher(us->uart_no);
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
   return V7_OK;
 }
 static enum v7_err UART_onTXEmpty(struct v7 *v7, v7_val_t *res) {
@@ -203,7 +203,7 @@ static enum v7_err UART_onTXEmpty(struct v7 *v7, v7_val_t *res) {
   if (v7_is_callable(v7, v7_arg(v7, 0))) {
     esp_sj_uart_schedule_dispatcher(us->uart_no);
   }
-  *res = v7_mk_undefined();
+  *res = V7_UNDEFINED;
   return V7_OK;
 }
 
@@ -211,7 +211,7 @@ static enum v7_err UART_sendAvail(struct v7 *v7, v7_val_t *res) {
   struct esp_sj_uart_state *us;
   enum v7_err ret = esp_sj_uart_get_state(v7, &us);
   if (ret != V7_OK) return ret;
-  *res = v7_mk_number(esp_uart_tx_buf(us->uart_no)->avail);
+  *res = v7_mk_number(v7, esp_uart_tx_buf(us->uart_no)->avail);
   return V7_OK;
 }
 
@@ -232,14 +232,14 @@ static enum v7_err UART_send(struct v7 *v7, v7_val_t *res) {
     cs_rbuf_append(txb, (uint8_t *) data, len);
     esp_sj_uart_schedule_dispatcher(us->uart_no);
   }
-  *res = v7_mk_number(len);
+  *res = v7_mk_number(v7, len);
   return V7_OK;
 }
 
 static enum v7_err UART_get(struct v7 *v7, v7_val_t *res) {
   enum v7_err ret = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
-  int uart_no = v7_get_double(arg0);
+  int uart_no = v7_get_double(v7, arg0);
   if (v7_is_number(arg0) && (uart_no == 0 || uart_no == 1)) {
     *res = sj_us[uart_no].obj;
   } else {
@@ -265,18 +265,18 @@ void esp_sj_uart_init(struct v7 *v7) {
   sj_us[0].uart_no = 0;
   sj_us[0].obj = v7_mk_object(v7);
   v7_set_proto(v7, sj_us[0].obj, s_uart_proto);
-  v7_set(v7, sj_us[0].obj, "_u", ~0, v7_mk_number(0));
+  v7_set(v7, sj_us[0].obj, "_u", ~0, v7_mk_number(v7, 0));
   v7_own(v7, &sj_us[0].obj);
 
   sj_us[1].uart_no = 1;
   sj_us[1].obj = v7_mk_object(v7);
   v7_set_proto(v7, sj_us[1].obj, s_uart_proto);
-  v7_set(v7, sj_us[1].obj, "_u", ~0, v7_mk_number(1));
+  v7_set(v7, sj_us[1].obj, "_u", ~0, v7_mk_number(v7, 1));
   v7_own(v7, &sj_us[1].obj);
 }
 
 v7_val_t esp_sj_uart_get_recv_handler(int uart_no) {
-  if (uart_no < 0 || uart_no > 1) return v7_mk_undefined();
+  if (uart_no < 0 || uart_no > 1) return V7_UNDEFINED;
   return v7_get(sj_us[uart_no].v7, sj_us[uart_no].obj, "_rxcb", 5);
 }
 

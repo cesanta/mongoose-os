@@ -22,15 +22,15 @@ SJ_PRIVATE enum v7_err Debug_mode(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(output_val)) {
     printf("Output is not a number\n");
-    *res = v7_mk_undefined();
+    *res = V7_UNDEFINED;
     goto clean;
   }
 
-  mode = v7_get_double(output_val);
+  mode = v7_get_double(v7, output_val);
 
   ires = sj_debug_redirect(mode);
 
-  *res = v7_mk_number(ires < 0 ? ires : mode);
+  *res = v7_mk_number(v7, ires < 0 ? ires : mode);
   goto clean;
 
 clean:
@@ -61,7 +61,7 @@ void sj_debug_api_setup(struct v7 *v7) {
   v7_set_method(v7, debug, "mode", Debug_mode);
   v7_set_method(v7, debug, "print", Debug_print);
 
-  v7_set(v7, debug, "OFF", 3, v7_mk_number(DEBUG_MODE_OFF));
-  v7_set(v7, debug, "OUT", 3, v7_mk_number(DEBUG_MODE_STDOUT));
-  v7_set(v7, debug, "ERR", 3, v7_mk_number(DEBUG_MODE_STDERR));
+  v7_set(v7, debug, "OFF", 3, v7_mk_number(v7, DEBUG_MODE_OFF));
+  v7_set(v7, debug, "OUT", 3, v7_mk_number(v7, DEBUG_MODE_STDOUT));
+  v7_set(v7, debug, "ERR", 3, v7_mk_number(v7, DEBUG_MODE_STDERR));
 }

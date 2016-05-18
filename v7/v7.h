@@ -208,8 +208,10 @@
  */
 #ifdef __GNUC__
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#define NOINSTR __attribute__((no_instrument_function))
 #else
 #define WARN_UNUSED_RESULT
+#define NOINSTR
 #endif
 
 #define V7_VERSION "1.0"
@@ -226,6 +228,12 @@ typedef unsigned __int64 uint64_t;
 #endif
 /* 64-bit value, used to store JS values */
 typedef uint64_t v7_val_t;
+
+/* JavaScript `null` value */
+#define V7_NULL ((uint64_t) 0xfffe << 48)
+
+/* JavaScript `undefined` value */
+#define V7_UNDEFINED ((uint64_t) 0xfffd << 48)
 
 /* This if-0 is a dirty workaround to force etags to pick `struct v7` */
 #if 0
@@ -425,8 +433,10 @@ void v7_stack_stat_clean(struct v7 *v7);
  */
 #ifdef __GNUC__
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#define NOINSTR __attribute__((no_instrument_function))
 #else
 #define WARN_UNUSED_RESULT
+#define NOINSTR
 #endif
 
 #define V7_VERSION "1.0"
@@ -443,6 +453,12 @@ typedef unsigned __int64 uint64_t;
 #endif
 /* 64-bit value, used to store JS values */
 typedef uint64_t v7_val_t;
+
+/* JavaScript `null` value */
+#define V7_NULL ((uint64_t) 0xfffe << 48)
+
+/* JavaScript `undefined` value */
+#define V7_UNDEFINED ((uint64_t) 0xfffd << 48)
 
 /* This if-0 is a dirty workaround to force etags to pick `struct v7` */
 #if 0
@@ -621,7 +637,7 @@ void v7_stack_stat_clean(struct v7 *v7);
  *
  * All primitive values but strings.
  *
- * "foreign" values are also here, see `v7_mk_foreign()`.
+ * "foreign" values are also here, see `v7_mk_foreign(v7, )`.
  */
 
 #ifndef CS_V7_SRC_PRIMITIVE_PUBLIC_H_
@@ -634,38 +650,56 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Make numeric primitive value */
-v7_val_t v7_mk_number(double num);
+NOINSTR v7_val_t v7_mk_number(struct v7 *v7, double num);
 
 /*
- * Returns `double` value stored in `v7_val_t`.
+ * Returns number value stored in `v7_val_t` as `double`.
  *
  * Returns NaN for non-numbers.
  */
-double v7_get_double(v7_val_t v);
+NOINSTR double v7_get_double(struct v7 *v7, v7_val_t v);
+
+/*
+ * Returns number value stored in `v7_val_t` as `int`. If the number value is
+ * not an integer, the fraction part will be discarded.
+ *
+ * If the given value is a non-number, or NaN, the result is undefined.
+ */
+NOINSTR int v7_get_int(struct v7 *v7, v7_val_t v);
 
 /* Returns true if given value is a primitive number value */
 int v7_is_number(v7_val_t v);
 
 /* Make boolean primitive value (either `true` or `false`) */
-v7_val_t v7_mk_boolean(int is_true);
+NOINSTR v7_val_t v7_mk_boolean(struct v7 *v7, int is_true);
 
 /*
  * Returns boolean stored in `v7_val_t`:
  *  0 for `false` or non-boolean, non-0 for `true`
  */
-int v7_get_bool(v7_val_t v);
+NOINSTR int v7_get_bool(struct v7 *v7, v7_val_t v);
 
 /* Returns true if given value is a primitive boolean value */
 int v7_is_boolean(v7_val_t v);
 
-/* Make `null` primitive value */
-v7_val_t v7_mk_null(void);
+/*
+ * Make `null` primitive value.
+ *
+ * NOTE: this function is deprecated and will be removed in future releases.
+ * Use `V7_NULL` instead.
+ */
+NOINSTR v7_val_t v7_mk_null(void);
 
 /* Returns true if given value is a primitive `null` value */
 int v7_is_null(v7_val_t v);
 
-/* Make `undefined` primitive value */
-v7_val_t v7_mk_undefined(void);
+/*
+ * Make `undefined` primitive value.
+ *
+ * NOTE: this function is deprecated and will be removed in future releases.
+ * Use `V7_UNDEFINED` instead.
+ */
+NOINSTR v7_val_t v7_mk_undefined(void);
 
 /* Returns true if given value is a primitive `undefined` value */
 int v7_is_undefined(v7_val_t v);
@@ -689,14 +723,14 @@ int v7_is_undefined(v7_val_t v);
  * If you need to store exactly sizeof(void*) bytes of raw data where
  * `sizeof(void*)` >= 8, please use byte arrays instead.
  */
-v7_val_t v7_mk_foreign(void *ptr);
+NOINSTR v7_val_t v7_mk_foreign(struct v7 *v7, void *ptr);
 
 /*
  * Returns `void *` pointer stored in `v7_val_t`.
  *
  * Returns NULL if the value is not a foreign pointer.
  */
-void *v7_get_ptr(v7_val_t v);
+NOINSTR void *v7_get_ptr(struct v7 *v7, v7_val_t v);
 
 /* Returns true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t v);

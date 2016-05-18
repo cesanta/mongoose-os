@@ -31,24 +31,24 @@ struct v7 *v7;
 static enum v7_err dsleep(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t time_v = v7_arg(v7, 0);
-  double time = v7_get_double(time_v);
+  double time = v7_get_double(v7, time_v);
   v7_val_t flags_v = v7_arg(v7, 1);
-  uint8 flags = v7_get_double(flags_v);
+  uint8 flags = v7_get_double(v7, flags_v);
 
   if (!v7_is_number(time_v) || time < 0) {
-    *res = v7_mk_boolean(false);
+    *res = v7_mk_boolean(v7, false);
     goto clean;
   }
   if (v7_is_number(flags_v)) {
     if (!system_deep_sleep_set_option(flags)) {
-      *res = v7_mk_boolean(false);
+      *res = v7_mk_boolean(v7, false);
       goto clean;
     }
   }
 
   system_deep_sleep((uint32_t) time);
 
-  *res = v7_mk_boolean(true);
+  *res = v7_mk_boolean(v7, true);
   goto clean;
 
 clean:

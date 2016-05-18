@@ -22,13 +22,13 @@ SJ_PRIVATE enum v7_err PWM_set(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  pin = v7_get_double(pinv);
-  period = v7_get_double(periodv);
-  duty = v7_get_double(dutyv);
+  pin = v7_get_double(v7, pinv);
+  period = v7_get_double(v7, periodv);
+  duty = v7_get_double(v7, dutyv);
 
   ires = sj_pwm_set(pin, period, duty);
 
-  *res = v7_mk_boolean(ires);
+  *res = v7_mk_boolean(v7, ires);
   goto clean;
 
 clean:

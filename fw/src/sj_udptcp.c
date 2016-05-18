@@ -114,7 +114,7 @@ static void parse_args(struct v7 *v7, int plain_argc, const char *names[],
   int i;
   v7_val_t arg_0 = v7_arg(v7, 0);
   for (i = 0; i < names_count; i++) {
-    args[i] = v7_mk_undefined();
+    args[i] = V7_UNDEFINED;
   }
   if (v7_is_object(arg_0)) {
     for (i = 0; i < names_count; i++) {
@@ -174,7 +174,7 @@ static enum v7_err val_to_void(struct v7 *v7, v7_val_t *val, void **buf,
       v7_val_t elem = v7_array_get(v7, *val, i);
       double elem_val = -1;
       if (v7_is_number(elem)) {
-        elem_val = v7_get_double(elem);
+        elem_val = v7_get_double(v7, elem);
       }
       if (elem_val < 0 || elem_val != (uint8_t) elem_val) {
         rcode = v7_throwf(v7, "Error", "Only byte arrays are supported");
@@ -246,9 +246,9 @@ static int trigger_event(struct v7 *v7, struct cb_info_holder *list,
 static void free_obj_cb_info_chain(struct v7 *v7, v7_val_t obj) {
   v7_val_t cbh_v = v7_get(v7, obj, s_callbacks_prop, ~0);
   if (!v7_is_undefined(cbh_v)) {
-    struct cb_info_holder *cbh = v7_get_ptr(cbh_v);
+    struct cb_info_holder *cbh = v7_get_ptr(v7, cbh_v);
     free_cb_info_chain(v7, cbh);
-    v7_set(v7, obj, s_callbacks_prop, ~0, v7_mk_undefined());
+    v7_set(v7, obj, s_callbacks_prop, ~0, V7_UNDEFINED);
   }
 }
 
@@ -265,9 +265,9 @@ static struct cb_info_holder *get_cb_info_holder(struct v7 *v7, v7_val_t obj) {
   struct cb_info_holder *ret;
   if (v7_is_undefined(cbs)) {
     ret = calloc(1, sizeof(*ret));
-    v7_set(v7, obj, s_callbacks_prop, ~0, v7_mk_foreign(ret));
+    v7_set(v7, obj, s_callbacks_prop, ~0, v7_mk_foreign(v7, ret));
   } else {
-    ret = v7_get_ptr(cbs);
+    ret = v7_get_ptr(v7, cbs);
   }
 
   return ret;
@@ -278,7 +278,7 @@ static struct cb_info_holder *get_cb_info_holder_or_null(struct v7 *v7,
   v7_val_t cbs = v7_get(v7, obj, s_callbacks_prop, ~0);
   struct cb_info_holder *ret = NULL;
   if (!v7_is_undefined(cbs)) {
-    ret = v7_get_ptr(cbs);
+    ret = v7_get_ptr(v7, cbs);
   }
 
   return ret;
@@ -385,7 +385,7 @@ static v7_val_t create_object_from_proto(struct v7 *v7,
   return obj;
 
 clean:
-  return v7_mk_undefined();
+  return V7_UNDEFINED;
 }
 
 static v7_val_t create_socket(struct v7 *v7, v7_val_t conn,
@@ -409,7 +409,7 @@ static void set_connection(struct v7 *v7, v7_val_t obj,
   v7_val_t conn_v = v7_get(v7, obj, s_conn_prop, ~0);
   if (v7_is_foreign(conn_v)) {
     struct conn_user_data *ud;
-    struct mg_connection *old_c = v7_get_ptr(conn_v);
+    struct mg_connection *old_c = v7_get_ptr(v7, conn_v);
     if (old_c != NULL) {
       old_c->flags |= MG_F_CLOSE_IMMEDIATELY;
       ud = (struct conn_user_data *) c->user_data;
@@ -418,7 +418,7 @@ static void set_connection(struct v7 *v7, v7_val_t obj,
       }
     }
   }
-  v7_set(v7, obj, s_conn_prop, ~0, v7_mk_foreign(c));
+  v7_set(v7, obj, s_conn_prop, ~0, v7_mk_foreign(v7, c));
 }
 
 static enum v7_err get_connection(struct v7 *v7, v7_val_t obj,
@@ -428,7 +428,7 @@ static enum v7_err get_connection(struct v7 *v7, v7_val_t obj,
   v7_val_t conn_v = v7_get(v7, obj, s_conn_prop, ~0);
 
   if (!v7_is_foreign(conn_v) ||
-      (*c = (struct mg_connection *) v7_get_ptr(conn_v)) == NULL) {
+      (*c = (struct mg_connection *) v7_get_ptr(v7, conn_v)) == NULL) {
     /*
      * "It is unclear, should we return error here or trigger
      * "error" event (basically, "error" was triggered if connection
@@ -527,7 +527,7 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         if (now - ud->last_accessed > ud->timeout) {
           trigger_event(ud->v7,
                         get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
-                        s_ev_timeout, v7_mk_undefined(), v7_mk_undefined());
+                        s_ev_timeout, V7_UNDEFINED, V7_UNDEFINED);
           ud->last_accessed = now;
         }
       }
@@ -542,7 +542,7 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
                 ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                 s_ev_data,
                 v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
-                v7_mk_undefined())) {
+                V7_UNDEFINED)) {
           mbuf_remove(&c->recv_mbuf, c->recv_mbuf.len);
           ud->flags &= ~UD_F_FORCE_RECV;
         }
@@ -569,12 +569,13 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
          * For TCP we create new Socket object and send it to callback
          * The rest depends on user
          */
-        v7_val_t new_sock_obj = create_tcp_socket(ud->v7, v7_mk_foreign(c));
+        v7_val_t new_sock_obj =
+            create_tcp_socket(ud->v7, v7_mk_foreign(ud->v7, c));
         struct conn_user_data *new_ud =
             create_conn_user_data(ud->v7, new_sock_obj, 0, 0);
         c->user_data = new_ud;
         trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
-                      s_ev_connection, new_ud->sock_obj, v7_mk_undefined());
+                      s_ev_connection, new_ud->sock_obj, V7_UNDEFINED);
       }
       break;
     }
@@ -588,10 +589,10 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         return;
       }
       trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
-                    s_ev_sent, v7_mk_undefined(), v7_mk_undefined());
+                    s_ev_sent, V7_UNDEFINED, V7_UNDEFINED);
       if (c->send_mbuf.len == 0) {
         trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
-                      s_ev_drain, v7_mk_undefined(), v7_mk_undefined());
+                      s_ev_drain, V7_UNDEFINED, V7_UNDEFINED);
       }
       ud->last_accessed = time(NULL);
       break;
@@ -610,7 +611,7 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         v7_val_t rinfo = v7_mk_object(ud->v7);
         v7_set(ud->v7, rinfo, "address", ~0, v7_mk_string(ud->v7, addr, ~0, 1));
         v7_set(ud->v7, rinfo, "port", ~0,
-               v7_mk_number(ntohs(c->sa.sin.sin_port)));
+               v7_mk_number(ud->v7, ntohs(c->sa.sin.sin_port)));
         LOG(LL_VERBOSE_DEBUG, ("Triggering `message`"));
         event_triggered = trigger_event(
             ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
@@ -620,7 +621,7 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         event_triggered = trigger_event(
             ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj), s_ev_data,
             v7_mk_string(ud->v7, c->recv_mbuf.buf, c->recv_mbuf.len, 1),
-            v7_mk_undefined());
+            V7_UNDEFINED);
       }
 
       LOG(LL_VERBOSE_DEBUG, ("Triggered: %d", event_triggered));
@@ -657,16 +658,16 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
           if (!(c->flags & (MG_F_UDP | MG_F_LISTENING))) {
             trigger_event(ud->v7,
                           get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
-                          s_ev_end, v7_mk_undefined(), v7_mk_undefined());
+                          s_ev_end, V7_UNDEFINED, V7_UNDEFINED);
           }
           /* 'close' event must be sent in any case */
           trigger_event(ud->v7,
                         get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
-                        s_ev_close, v7_mk_boolean(0), v7_mk_undefined());
+                        s_ev_close, v7_mk_boolean(ud->v7, 0), V7_UNDEFINED);
         }
 
         free_obj_cb_info_chain(ud->v7, ud->sock_obj);
-        v7_set(ud->v7, ud->sock_obj, s_conn_prop, ~0, v7_mk_undefined());
+        v7_set(ud->v7, ud->sock_obj, s_conn_prop, ~0, V7_UNDEFINED);
       }
 
       free_conn_user_data(ud);
@@ -681,12 +682,12 @@ static void mg_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       if (*(int *) ev_data != 0) {
         trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
                       s_ev_error, create_error(ud->v7, "Failed to connect"),
-                      v7_mk_undefined());
+                      V7_UNDEFINED);
         LOG(LL_ERROR, ("Failed to connect"));
         ud->flags |= UD_F_ERROR;
       } else {
         trigger_event(ud->v7, get_cb_info_holder_or_null(ud->v7, ud->sock_obj),
-                      s_ev_connect, v7_mk_undefined(), v7_mk_undefined());
+                      s_ev_connect, V7_UNDEFINED, V7_UNDEFINED);
       }
       break;
     }
@@ -720,7 +721,7 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   parse_args(v7, 2, args_names, ARRAY_SIZE(args_names), 1, args);
 
   CHECK_NUM_REQ(args[PORT], "port");
-  port = v7_get_double(args[PORT]);
+  port = v7_get_double(v7, args[PORT]);
 
   CHECK_STR_OPT(args[HOST], "host");
 
@@ -791,7 +792,7 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   free(addr);
 
   if (v7_is_undefined(this_obj)) {
-    sock_obj = create_tcp_socket(v7, v7_mk_foreign(c));
+    sock_obj = create_tcp_socket(v7, v7_mk_foreign(v7, c));
   } else {
     sock_obj = this_obj;
     set_connection(v7, sock_obj, c);
@@ -854,7 +855,7 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
   }
 
   CHECK_NUM_REQ(port_v, "Port");
-  port = v7_get_double(port_v);
+  port = v7_get_double(v7, port_v);
 
   CHECK_STR_OPT(addr_v, "Address");
   if (!v7_is_undefined(addr_v)) {
@@ -896,7 +897,7 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
      */
     if (!trigger_event(v7, get_cb_info_holder_or_null(v7, v7_get_this(v7)),
                        s_ev_error, create_error(v7, "Cannot bind to port"),
-                       v7_mk_undefined())) {
+                       V7_UNDEFINED)) {
       rcode = v7_throwf(v7, "Error", "Cannot bind to port %d", port);
     }
 
@@ -919,12 +920,12 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
                 1);
   }
 
-  async_trigger_event(v7, v7_get_this(v7), s_ev_listening, v7_mk_undefined(),
-                      v7_mk_undefined());
+  async_trigger_event(v7, v7_get_this(v7), s_ev_listening, V7_UNDEFINED,
+                      V7_UNDEFINED);
 
   c->user_data = ud;
 
-  v7_set(v7, v7_get_this(v7), s_conn_prop, ~0, v7_mk_foreign(c));
+  v7_set(v7, v7_get_this(v7), s_conn_prop, ~0, v7_mk_foreign(v7, c));
 
   *res = v7_get_this(v7);
 
@@ -989,7 +990,7 @@ SJ_PRIVATE enum v7_err DGRAM_createSocket(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  *res = create_udp_socket(v7, v7_mk_undefined());
+  *res = create_udp_socket(v7, V7_UNDEFINED);
 
   if (!v7_is_undefined(args[CB])) {
     add_cb_info(v7, get_cb_info_holder(v7, *res), s_ev_message, args[CB], 0);
@@ -1013,7 +1014,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
 
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
   if (v7_is_foreign(conn_v)) {
-    parent_c = v7_get_ptr(conn_v);
+    parent_c = v7_get_ptr(v7, conn_v);
     if (parent_c == NULL) {
       /* Socket was explicitly closed, don't want to send */
       LOG_AND_THROW("Socket is closed");
@@ -1031,18 +1032,18 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
   if (v7_argc(v7) > 3) {
     v7_val_t v = v7_arg(v7, 1);
     CHECK_NUM_REQ(v, "Offset");
-    offset = v7_get_double(v);
+    offset = v7_get_double(v7, v);
 
     v = v7_arg(v7, 2);
     CHECK_NUM_REQ(v, "Len");
-    usr_len = v7_get_double(v);
+    usr_len = v7_get_double(v7, v);
 
     port_idx = 3;
   }
 
   port_v = v7_arg(v7, port_idx);
   CHECK_NUM_REQ(port_v, "Port");
-  port = v7_get_double(port_v);
+  port = v7_get_double(v7, port_v);
 
   addr_v = v7_arg(v7, port_idx + 1);
   CHECK_STR_REQ(addr_v, "Address");
@@ -1071,7 +1072,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
 
     async_trigger_event(v7, v7_get_this(v7), s_ev_error,
                         create_error(v7, "Failed to send datagram"),
-                        v7_mk_undefined());
+                        V7_UNDEFINED);
     goto clean;
   }
 
@@ -1087,8 +1088,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
    */
 
   if (parent_c != NULL) {
-    ud =
-        create_conn_user_data(0, v7_mk_undefined(), UD_F_FOREIGN_SOCK, c->sock);
+    ud = create_conn_user_data(0, V7_UNDEFINED, UD_F_FOREIGN_SOCK, c->sock);
     c->sock = parent_c->sock;
     c->listener = parent_c;
     ((struct conn_user_data *) parent_c->user_data)->child_count++;
@@ -1096,7 +1096,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
   } else {
     LOG(LL_VERBOSE_DEBUG, ("Using connection %p", c));
     ud = create_conn_user_data(v7, v7_get_this(v7), 0, 0);
-    v7_set(v7, v7_get_this(v7), s_conn_prop, ~0, v7_mk_foreign(c));
+    v7_set(v7, v7_get_this(v7), s_conn_prop, ~0, v7_mk_foreign(v7, c));
   }
 
   c->user_data = ud;
@@ -1136,7 +1136,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_bind(struct v7 *v7, v7_val_t *res) {
   parse_args(v7, 2, args_names, ARRAY_SIZE(args_names), 1, args);
 
   return udp_tcp_start_listen(v7, res, "udp", args[PORT], args[ADDRESS],
-                              args[CB], v7_mk_undefined(), v7_mk_undefined());
+                              args[CB], V7_UNDEFINED, V7_UNDEFINED);
 }
 
 /* emitter.on(event, listener) */
@@ -1153,7 +1153,7 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_on(struct v7 *v7, v7_val_t *res) {
  * net.connect(port[, host][, connectListener])
  */
 SJ_PRIVATE enum v7_err TCP_connect(struct v7 *v7, v7_val_t *res) {
-  return tcp_connect(v7, v7_mk_undefined(), res);
+  return tcp_connect(v7, V7_UNDEFINED, res);
 }
 
 /* net.createServer([options][, connectionListener]) */
@@ -1183,7 +1183,7 @@ exit:
  * net.createConnection(port[, host][, connectListener])
  */
 SJ_PRIVATE enum v7_err TCP_createConnection(struct v7 *v7, v7_val_t *res) {
-  return tcp_connect(v7, v7_mk_undefined(), res);
+  return tcp_connect(v7, V7_UNDEFINED, res);
 }
 
 /* server.close([callback]) */
@@ -1224,8 +1224,8 @@ SJ_PRIVATE enum v7_err TCP_Server_getConnections(struct v7 *v7, v7_val_t *res) {
    */
   add_cb_info(v7, get_cb_info_holder(v7, v7_get_this(v7)), s_ev_conn_count, cb,
               1);
-  async_trigger_event(v7, v7_get_this(v7), s_ev_conn_count, v7_mk_undefined(),
-                      v7_mk_number(conn_count));
+  async_trigger_event(v7, v7_get_this(v7), s_ev_conn_count, V7_UNDEFINED,
+                      v7_mk_number(v7, conn_count));
 
   *res = v7_get_this(v7);
 
@@ -1269,7 +1269,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_ctor(struct v7 *v7, v7_val_t *res) {
    * options for parameter fd (i.e. raw handle)
    * https://nodejs.org/api/net.html#net_new_net_socket_options
    */
-  *res = create_tcp_socket(v7, v7_mk_undefined());
+  *res = create_tcp_socket(v7, V7_UNDEFINED);
   return V7_OK;
 }
 
@@ -1401,7 +1401,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_setTimeout(struct v7 *v7, v7_val_t *res) {
 
   ud = (struct conn_user_data *) c->user_data;
   /* Node.js uses msec for timeout, we round it to secs */
-  ud->timeout = round(v7_get_double(timeout_v) / 1000);
+  ud->timeout = round(v7_get_double(v7, timeout_v) / 1000);
   if (ud->timeout == 0) {
     ud->timeout = 1;
   }
@@ -1433,7 +1433,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_on(struct v7 *v7, v7_val_t *res) {
   }
 
   v7_val_t conn_v = v7_get(v7, v7_get_this(v7), s_conn_prop, ~0);
-  c = v7_get_ptr(conn_v);
+  c = v7_get_ptr(v7, conn_v);
   if (c == NULL && event_idx == 0 /* EV_ERROR was set up*/) {
     /*
      * if socket is an error state after creation, we need to trigger
@@ -1442,7 +1442,7 @@ SJ_PRIVATE enum v7_err TCP_Socket_on(struct v7 *v7, v7_val_t *res) {
      */
     async_trigger_event(v7, v7_get_this(v7), "error",
                         create_error(v7, "Failed to open connection"),
-                        v7_mk_undefined());
+                        V7_UNDEFINED);
   } else if (c->recv_mbuf.len != 0 && event_idx == 3 /* data */) {
     LOG(LL_VERBOSE_DEBUG, ("Forcing recv, len=%d", (int) c->recv_mbuf.len));
     /*
