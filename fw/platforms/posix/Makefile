@@ -16,6 +16,7 @@ OUTAPP ?= mongoose-iot
 VERBOSE ?= 0
 VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
 SSL ?= Krypton
+DEBUG ?= 0
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
@@ -46,7 +47,7 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -O2 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
+CFLAGS ?= -fno-inline -W -Wall -Werror -g -Wno-unused-function \
           -Wno-missing-field-initializers \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \
@@ -55,6 +56,12 @@ CFLAGS ?= -O2 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
           $(MONGOOSE_FEATURES) \
           -DFW_ARCHITECTURE=\"$(PLATFORM)\" \
           $(CFLAGS_EXTRA)
+
+ifeq "$(DEBUG)" "1"
+CFLAGS += -O0
+else
+CFLAGS += -O2
+endif
 
 include $(COMMON_PATH)/scripts/platform.mk
 
