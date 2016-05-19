@@ -631,8 +631,8 @@ SJ_PRIVATE enum v7_err Http_on(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  if (!v7_is_callable(v7, cb_v)) {
-    rcode = v7_throwf(v7, "TypeError", "Callback must be a function");
+  if (!v7_is_null(cb_v) && !v7_is_callable(v7, cb_v)) {
+    rcode = v7_throwf(v7, "TypeError", "Callback must be a function or null");
     goto clean;
   }
 
