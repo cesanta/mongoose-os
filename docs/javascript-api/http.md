@@ -32,6 +32,10 @@ var client = Http.request({
   instance.
 - `server_obj.listen(address) -> server_obj`: Start listening on given address.
   Address could be a port number, or a `IP_ADDRESS:PORT_NUMBER` string.
+- `server_obj.on(event, function(id) {})` -> Register event hanlder. The following events are supported:<br>
+  * `close`: emitted after a connection is closed
+  * `connection`: emitted when a new connection is made
+  NOTE: The callback function has non-standard signature, it has `id` parameter, which is a number, but not an object.
 - `response_obj.writeHead(code, headers) -> null`: Write response status line
   and HTTP headers
 - `response_obj.write(data) -> null`: Write HTTP body data. Could be called
