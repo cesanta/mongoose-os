@@ -3799,7 +3799,7 @@ V7_PRIVATE uint8_t is_strict_mode(struct v7 *v7);
  *
  * All primitive values but strings.
  *
- * "foreign" values are also here, see `v7_mk_foreign(v7, )`.
+ * "foreign" values are also here, see `v7_mk_foreign()`.
  */
 
 #ifndef CS_V7_SRC_PRIMITIVE_PUBLIC_H_
