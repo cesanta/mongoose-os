@@ -36,6 +36,7 @@ var client = Http.request({
   * `close`: emitted after a connection is closed
   * `connection`: emitted when a new connection is made
   NOTE: The callback function has non-standard signature, it has `id` parameter, which is a number, but not an object.
+- `server_obj.destroy`: Disconnect all clients and close the server. Non-standart method.
 - `response_obj.writeHead(code, headers) -> null`: Write response status line
   and HTTP headers
 - `response_obj.write(data) -> null`: Write HTTP body data. Could be called
