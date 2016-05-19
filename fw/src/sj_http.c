@@ -156,7 +156,8 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     sj_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
   } else if (ev == MG_EV_CLOSE) {
     if (ud != NULL) {
-      trigger_event(ud->v7, ud->obj, HTTP_EVENT_CLOSE, c);
+      trigger_event(ud->v7, ud->obj, HTTP_EVENT_CLOSE,
+                    c->listener == NULL ? 0 : c);
       if (c->listener == NULL) {
         v7_set(ud->v7, ud->obj, "_c", ~0, V7_UNDEFINED);
         v7_disown(ud->v7, &ud->obj);
@@ -192,11 +193,12 @@ static enum v7_err start_http_server(struct v7 *v7, const char *addr,
     goto clean;
   }
   mg_set_protocol_http_websocket(c);
-  c->user_data = ud = (struct user_data *) malloc(sizeof(*ud));
+  c->user_data = ud = (struct user_data *) calloc(1, sizeof(*ud));
   ud->v7 = v7;
   ud->obj = obj;
   ud->handler = v7_get(v7, obj, "_cb", 3);
   v7_own(v7, &ud->obj);
+  v7_set(v7, obj, "_c", ~0, v7_mk_foreign(v7, c));
 
 clean:
   return rcode;
@@ -542,6 +544,26 @@ clean:
   return rcode;
 }
 
+SJ_PRIVATE enum v7_err Http_Server_destroy(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  struct mg_connection *i = NULL;
+
+  DECLARE_CONN();
+
+  /* Closing listening connection and all accepted from it */
+  for (i = mg_next(&sj_mgr, NULL); i != NULL; i = mg_next(&sj_mgr, i)) {
+    if (i->listener == c) {
+      i->flags |= MG_F_CLOSE_IMMEDIATELY;
+    }
+  }
+
+  c->flags |= MG_F_CLOSE_IMMEDIATELY;
+
+  *res = v7_mk_boolean(v7, 1);
+clean:
+  return rcode;
+}
+
 SJ_PRIVATE enum v7_err Http_request_end(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
@@ -801,6 +823,7 @@ void sj_http_api_setup(struct v7 *v7) {
 
   v7_set_method(v7, sj_http_server_proto, "listen", Http_Server_listen);
   v7_set_method(v7, sj_http_server_proto, "on", Http_on);
+  v7_set_method(v7, sj_http_server_proto, "destroy", Http_Server_destroy);
 
   /* Initialize response prototype */
   v7_set_method(v7, sj_http_response_proto, "writeHead",
