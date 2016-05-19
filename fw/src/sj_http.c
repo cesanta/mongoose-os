@@ -13,6 +13,10 @@
 #include "fw/src/sj_utils.h"
 
 #ifndef CS_DISABLE_JS
+
+/* Forwards */
+SJ_PRIVATE enum v7_err Http_on(struct v7 *v7, v7_val_t *res);
+
 /*
  * Mongoose connection's user data that is used by the JavaScript HTTP
  * bindings.
@@ -41,6 +45,8 @@ struct user_data {
  * Used in `Http.get()`.
  */
 #define MG_F_CLOSE_CONNECTION_AFTER_RESPONSE MG_F_USER_1
+#define HTTP_EVENT_CLOSE "on_close"
+#define HTTP_EVENT_CONNECTION "on_connection"
 
 static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
@@ -92,13 +98,23 @@ static void setup_response_object(struct v7 *v7, v7_val_t response,
   v7_set(v7, response, "_r", ~0, request);
 }
 
+static void trigger_event(struct v7 *v7, v7_val_t obj, const char *ev_name,
+                          struct mg_connection *c) {
+  v7_val_t cb = v7_get(v7, obj, ev_name, ~0);
+  if (v7_is_callable(v7, cb)) {
+    sj_invoke_cb1_this(v7, cb, obj, v7_mk_number(v7, (size_t) c));
+  }
+}
+
 /*
  * Mongoose event handler. If JavaScript callback was provided, call it
  */
 static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   struct user_data *ud = (struct user_data *) c->user_data;
 
-  if (ev == MG_EV_HTTP_REQUEST) {
+  if (ev == MG_EV_ACCEPT) {
+    trigger_event(ud->v7, ud->obj, HTTP_EVENT_CONNECTION, c);
+  } else if (ev == MG_EV_HTTP_REQUEST) {
     /* HTTP request has arrived */
 
     if (v7_is_callable(ud->v7, ud->handler)) {
@@ -139,12 +155,15 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   } else if (ev == MG_EV_TIMER) {
     sj_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
   } else if (ev == MG_EV_CLOSE) {
-    if (c->listener == NULL && ud != NULL) {
-      v7_set(ud->v7, ud->obj, "_c", ~0, V7_UNDEFINED);
-      v7_disown(ud->v7, &ud->obj);
-      v7_disown(ud->v7, &ud->timeout_callback);
-      free(ud);
-      c->user_data = NULL;
+    if (ud != NULL) {
+      trigger_event(ud->v7, ud->obj, HTTP_EVENT_CLOSE, c);
+      if (c->listener == NULL) {
+        v7_set(ud->v7, ud->obj, "_c", ~0, V7_UNDEFINED);
+        v7_disown(ud->v7, &ud->obj);
+        v7_disown(ud->v7, &ud->timeout_callback);
+        free(ud);
+        c->user_data = NULL;
+      }
     }
   }
 }
@@ -565,6 +584,44 @@ clean:
   return rcode;
 }
 
+SJ_PRIVATE enum v7_err Http_on(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  v7_val_t ev_name_v, cb_v;
+  const char *supported_events[] = {HTTP_EVENT_CLOSE, HTTP_EVENT_CONNECTION};
+  const char *ev_name = NULL;
+
+  ev_name_v = v7_arg(v7, 0);
+  cb_v = v7_arg(v7, 1);
+
+  if (v7_is_string(ev_name_v)) {
+    size_t i, ev_name_len;
+    const char *tmp = v7_get_string(v7, &ev_name_v, &ev_name_len);
+    for (i = 0; i < ARRAY_SIZE(supported_events); i++) {
+      if (strcmp(tmp, supported_events[i] + 3 /* on_ */) == 0) {
+        ev_name = supported_events[i];
+        break;
+      }
+    }
+  }
+
+  if (ev_name == NULL) {
+    rcode = v7_throwf(v7, "Error", "Invalid event name");
+    goto clean;
+  }
+
+  if (!v7_is_callable(v7, cb_v)) {
+    rcode = v7_throwf(v7, "TypeError", "Callback must be a function");
+    goto clean;
+  }
+
+  v7_def(v7, v7_get_this(v7), ev_name, ~0, V7_DESC_ENUMERABLE(0), cb_v);
+
+  *res = v7_get_this(v7);
+
+clean:
+  return rcode;
+}
+
 /*
  * Create request object, used by `Http.request()` and `Http.get()`
  */
@@ -743,6 +800,7 @@ void sj_http_api_setup(struct v7 *v7) {
   v7_set_method(v7, Http, "request", Http_createClient);
 
   v7_set_method(v7, sj_http_server_proto, "listen", Http_Server_listen);
+  v7_set_method(v7, sj_http_server_proto, "on", Http_on);
 
   /* Initialize response prototype */
   v7_set_method(v7, sj_http_response_proto, "writeHead",
