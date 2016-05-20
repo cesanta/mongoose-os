@@ -47,6 +47,7 @@ struct user_data {
 #define MG_F_CLOSE_CONNECTION_AFTER_RESPONSE MG_F_USER_1
 #define HTTP_EVENT_CLOSE "on_close"
 #define HTTP_EVENT_CONNECTION "on_connection"
+#define HTTP_EVENT_ERROR "on_error"
 
 static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
@@ -112,60 +113,67 @@ static void trigger_event(struct v7 *v7, v7_val_t obj, const char *ev_name,
 static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   struct user_data *ud = (struct user_data *) c->user_data;
 
-  if (ev == MG_EV_ACCEPT) {
-    trigger_event(ud->v7, ud->obj, HTTP_EVENT_CONNECTION, c);
-  } else if (ev == MG_EV_HTTP_REQUEST) {
-    /* HTTP request has arrived */
-
-    if (v7_is_callable(ud->v7, ud->handler)) {
-      /* call provided JavaScript callback with `request` and `response` */
-      v7_val_t request = v7_mk_object(ud->v7);
-      v7_own(ud->v7, &request);
-      v7_val_t response = v7_mk_object(ud->v7);
-      v7_own(ud->v7, &response);
-      setup_request_object(ud->v7, request, ev_data);
-      setup_response_object(ud->v7, response, c, request);
-      sj_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
-      v7_disown(ud->v7, &request);
-      v7_disown(ud->v7, &response);
-    } else {
-      /*
-       * no JavaScript callback provided; serve the request with the default
-       * options by `mg_serve_http()`
-       */
-      struct mg_serve_http_opts opts;
-      memset(&opts, 0, sizeof(opts));
-      mg_serve_http(c, ev_data, opts);
-    }
-  } else if (ev == MG_EV_HTTP_REPLY) {
-    /* HTTP response has arrived */
-
-    /* if JavaScript callback was provided, call it with `response` */
-    if (v7_is_callable(ud->v7, ud->handler)) {
-      v7_val_t response = v7_mk_object(ud->v7);
-      v7_own(ud->v7, &response);
-      setup_request_object(ud->v7, response, ev_data);
-      sj_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);
-      v7_disown(ud->v7, &response);
-    }
-
-    if (c->flags & MG_F_CLOSE_CONNECTION_AFTER_RESPONSE) {
-      c->flags |= MG_F_CLOSE_IMMEDIATELY;
-    }
-  } else if (ev == MG_EV_TIMER) {
-    sj_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
-  } else if (ev == MG_EV_CLOSE) {
-    if (ud != NULL) {
-      trigger_event(ud->v7, ud->obj, HTTP_EVENT_CLOSE,
-                    c->listener == NULL ? 0 : c);
-      if (c->listener == NULL) {
-        v7_set(ud->v7, ud->obj, "_c", ~0, V7_UNDEFINED);
-        v7_disown(ud->v7, &ud->obj);
-        v7_disown(ud->v7, &ud->timeout_callback);
-        free(ud);
-        c->user_data = NULL;
+  switch (ev) {
+    case MG_EV_CONNECT:
+      if (*(int *) ev_data != 0) {
+        trigger_event(ud->v7, ud->obj, HTTP_EVENT_ERROR, c);
       }
-    }
+      break;
+    case MG_EV_ACCEPT:
+      trigger_event(ud->v7, ud->obj, HTTP_EVENT_CONNECTION, c);
+      break;
+    case MG_EV_HTTP_REQUEST:
+      if (v7_is_callable(ud->v7, ud->handler)) {
+        /* call provided JavaScript callback with `request` and `response` */
+        v7_val_t request = v7_mk_object(ud->v7);
+        v7_own(ud->v7, &request);
+        v7_val_t response = v7_mk_object(ud->v7);
+        v7_own(ud->v7, &response);
+        setup_request_object(ud->v7, request, ev_data);
+        setup_response_object(ud->v7, response, c, request);
+        sj_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
+        v7_disown(ud->v7, &request);
+        v7_disown(ud->v7, &response);
+      } else {
+        /*
+         * no JavaScript callback provided; serve the request with the default
+         * options by `mg_serve_http()`
+         */
+        struct mg_serve_http_opts opts;
+        memset(&opts, 0, sizeof(opts));
+        mg_serve_http(c, ev_data, opts);
+      }
+      break;
+    case MG_EV_HTTP_REPLY:
+      /* if JavaScript callback was provided, call it with `response` */
+      if (v7_is_callable(ud->v7, ud->handler)) {
+        v7_val_t response = v7_mk_object(ud->v7);
+        v7_own(ud->v7, &response);
+        setup_request_object(ud->v7, response, ev_data);
+        sj_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);
+        v7_disown(ud->v7, &response);
+      }
+
+      if (c->flags & MG_F_CLOSE_CONNECTION_AFTER_RESPONSE) {
+        c->flags |= MG_F_CLOSE_IMMEDIATELY;
+      }
+      break;
+    case MG_EV_TIMER:
+      sj_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
+      break;
+    case MG_EV_CLOSE:
+      if (ud != NULL) {
+        trigger_event(ud->v7, ud->obj, HTTP_EVENT_CLOSE,
+                      c->listener == NULL ? 0 : c);
+        if (c->listener == NULL) {
+          v7_set(ud->v7, ud->obj, "_c", ~0, V7_UNDEFINED);
+          v7_disown(ud->v7, &ud->obj);
+          v7_disown(ud->v7, &ud->timeout_callback);
+          free(ud);
+          c->user_data = NULL;
+        }
+      }
+      break;
   }
 }
 
@@ -609,7 +617,8 @@ clean:
 SJ_PRIVATE enum v7_err Http_on(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t ev_name_v, cb_v;
-  const char *supported_events[] = {HTTP_EVENT_CLOSE, HTTP_EVENT_CONNECTION};
+  const char *supported_events[] = {HTTP_EVENT_CLOSE, HTTP_EVENT_CONNECTION,
+                                    HTTP_EVENT_ERROR};
   const char *ev_name = NULL;
 
   ev_name_v = v7_arg(v7, 0);
@@ -838,6 +847,7 @@ void sj_http_api_setup(struct v7 *v7) {
   v7_set_method(v7, sj_http_request_proto, "abort", Http_request_abort);
   v7_set_method(v7, sj_http_request_proto, "setTimeout",
                 Http_request_set_timeout);
+  v7_set_method(v7, sj_http_request_proto, "on", Http_on);
 
   URL = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "URL", ~0, URL);
