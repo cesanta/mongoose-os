@@ -39,4 +39,7 @@ void sj_system_restart(int exit_code);
 /* Delay usecs */
 void sj_usleep(int usecs);
 
+/* Get storage free space, bytes */
+int64_t sj_get_storage_free_space();
+
 #endif /* CS_FW_SRC_SJ_HAL_H_ */

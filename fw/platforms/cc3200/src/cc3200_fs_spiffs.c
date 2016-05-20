@@ -192,3 +192,12 @@ int fs_spiffs_mkdir(const char *path, mode_t mode) {
   /* for spiffs supports only root dir, which comes from mongoose as '.' */
   return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
 }
+
+int64_t sj_get_storage_free_space() {
+  struct mount_info *m = &s_fsm;
+  uint32_t total, used;
+  if (!m->valid) return set_errno(EBADF);
+
+  SPIFFS_info(&m->fs, &total, &used);
+  return total - used;
+}

@@ -465,4 +465,10 @@ int v7_is_file_type(v7_val_t val) {
 }
 #endif
 
+int64_t sj_get_storage_free_space() {
+  uint32_t total, used;
+  SPIFFS_info(&fs, &total, &used);
+  return total - used;
+}
+
 #endif

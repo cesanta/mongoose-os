@@ -161,3 +161,8 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
   _sj_invoke_cb(v7, func, this_obj, args);
 }
+
+int64_t sj_get_storage_free_space() {
+  /* TODO(alashkin): think about implementation */
+  return -1;
+}

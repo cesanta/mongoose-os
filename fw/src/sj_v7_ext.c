@@ -127,6 +127,11 @@ SJ_PRIVATE enum v7_err global_usleep(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
+SJ_PRIVATE enum v7_err Sys_fs_getFreeSpace(struct v7 *v7, v7_val_t *res) {
+  *res = v7_mk_number(v7, sj_get_storage_free_space());
+  return V7_OK;
+}
+
 /*
  * Returns an object describing the free memory.
  *
@@ -298,7 +303,7 @@ void sj_v7_ext_api_setup(struct v7 *v7) {
 }
 
 void sj_init_sys(struct v7 *v7) {
-  v7_val_t sys;
+  v7_val_t sys, fs;
 
   sys = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Sys", ~0, sys);
@@ -310,6 +315,9 @@ void sj_init_sys(struct v7 *v7) {
   v7_set_method(v7, sys, "wdtSetTimeout", Sys_wdtSetTimeout);
   v7_set_method(v7, sys, "wdtEnable", Sys_wdtEnable);
   v7_set_method(v7, sys, "wdtDisable", Sys_wdtDisable);
+  fs = v7_mk_object(v7);
+  v7_set(v7, sys, "fs", ~0, fs);
+  v7_set_method(v7, fs, "free", Sys_fs_getFreeSpace);
 }
 
 #else /* CS_DISABLE_JS */
