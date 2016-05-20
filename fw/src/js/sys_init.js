@@ -41,7 +41,7 @@ function loadCfg(filename) {
 Sys.conf = loadCfg('conf_sys_defaults.json');
 $.extend(Sys.conf, loadCfg('conf.json'));
 
-Object.defineProperty(Sys, "oconf", { value: JSON.parse(JSON.stringify(Sys.conf))});
+Object.defineProperty(Sys, "oconf", { value: $.extend(true, {}, Sys.conf)});
 
 Object.defineProperty(Sys.conf, "save", {
   value: function(reboot) {
@@ -60,7 +60,7 @@ Object.defineProperty(Sys.conf, "save", {
       return n;
     };
 
-    var newCfg = JSON.parse(JSON.stringify(Sys.conf));
+    var newCfg = $.extend(true, {}, Sys.conf);
     delete newCfg.save;
     deleteUnchanged(newCfg, Sys.oconf);
     newCfg = $.extend(File.loadJSON('conf.json') || {}, newCfg);
