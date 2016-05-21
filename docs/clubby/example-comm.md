@@ -6,59 +6,42 @@ Device submits data to the cloud with `/v1/Metrics.Publish` command:
 
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com/d/123",
   "dst": "//api.cesanta.com/p/123",
-  "cmds": [
-    {
-      "cmd": "/v1/Metrics.Publish",
-      "id": 1237648172,
-      "args": {
-        "vars": [
-          [{"__name__": "temperature", "sensor": "1"}, 28]
-        ]
-      }
-    }
-  ]
+  "id": 1237648172,
+  "method": "/v1/Metrics.Publish",
+  "args": {
+    "vars": [
+      [{"__name__": "temperature", "sensor": "1"}, 28]
+    ]
+  }
 }
 ```
 
-Cloud sends back a response and a command for the device:
+Cloud sends back a response:
 
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com/p/123",
   "dst": "//api.cesanta.com/d/123",
-  "resp": [
-    {
-      "id": 1237648172,
-      "status": 0
-    }
-  ],
-  "cmds": [
-    {
-      "cmd": "/v1/LED.IsOn",
-      "id": 214232345
-    }
-  ]
+  "id": 1237648172
 }
+
+There is no result and no error, meaning invocation completed successfuly.
 ```
 
-Device responds back:
-
+An error would be returned like this:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/d/123",
-  "dst": "//api.cesanta.com/p/123",
-  "resp": [
-    {
-      "id": 214232345,
-      "status": 0,
-      "response": true
-    }
-  ]
+  "v": 2,
+  "src": "//api.cesanta.com/p/123",
+  "dst": "//api.cesanta.com/d/123",
+  "id": 1237648172,
+  "error": {
+    "code": 123,
+    "message": "Something went wrong"
+  }
 }
 ```
-
