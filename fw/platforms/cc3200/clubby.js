@@ -221,13 +221,13 @@ Clubby.prototype.call = function(dst, cmd, callback) {
   var p;
   if (callback === undefined) {
     p = new Promise(function(resolve, reject) {
-    cb = function cb(req) {
-      if (req.status == 0) {
-        resolve(req.resp);
-      } else {
-        reject(new ClubbyError(req.status_msg, req.status));
-      }
-    };
+      cb = function cb(req) {
+        if (req.error === undefined) {
+          resolve(req.resp);
+        } else {
+          reject(new ClubbyError(req.error.message, req.error.code));
+        }
+      };
     });
   } else {
     cb = callback;
