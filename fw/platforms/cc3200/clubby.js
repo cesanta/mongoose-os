@@ -152,10 +152,10 @@ var Clubby = function(arg) {
         var done = function(val, st) {
           if (val !== undefined) frame.result = val;
           if (st !== undefined) {
-            if (typeof(st) == "object") {
+            if (typeof st == "object") {
               frame.error = st;
             } else {
-              frame.error = {code: st, message: val};
+              frame.error = {code: st, message: String(val)};
             }
           }
           me._send(frame);
