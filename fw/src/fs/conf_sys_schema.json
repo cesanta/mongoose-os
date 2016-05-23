@@ -1,8 +1,8 @@
 [
   ["wifi", "o", {"hide": true}],
 
-  ["wifi.sta", "o", {"title": "Connect To Existing WiFi"}],
-  ["wifi.sta.enable", "b", {"title": "Enable station"}],
+  ["wifi.sta", "o", {"title": "WiFi Station"}],
+  ["wifi.sta.enable", "b", {"title": "Connect to existing WiFi"}],
   ["wifi.sta.ssid", "s", {"title": "SSID"}],
   ["wifi.sta.pass", "s", {"title": "Password", "type": "password"}],
 
@@ -65,10 +65,10 @@
       {"value": 4, "title": "VERBOSE_DEBUG"}
     ]
   }],
-  ["debug.stdout_uart", "i", {"title": "UART to send standard output to; -1 = /dev/null"}],
-  ["debug.stderr_uart", "i", {"title": "UART to send standard error (debug) output to; -1 = /dev/null"}],
+  ["debug.stdout_uart", "i", {"title": "STDOUT UART (-1 to disable)"}],
+  ["debug.stderr_uart", "i", {"title": "STDERR UART (-1 to disable)"}],
   ["debug.enable_prompt", "b", {"title": "Enable interactive JavaScript prompt on UART0"}],
-  ["debug.factory_reset_gpio", "i", {"title": "Factory reset GPIO (if low on boot)"}],
+  ["debug.factory_reset_gpio", "i", {"title": "Factory reset GPIO (low on boot)"}],
   ["ro_vars", "o", {"title": "Sys.ro_vars", "read_only": true}],
   ["ro_vars.mac_address", "s", {"title": "MAC address", "read_only": true}],
   ["ro_vars.arch", "s", {"title": "Platform", "read_only": true}],
