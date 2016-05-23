@@ -126,6 +126,8 @@ var Clubby = function(arg) {
         if (frame.error) {
           resp.status = frame.error.code;
           resp.status_msg = frame.error.message;
+        } else {
+          resp.status = 0;
         }
         if (frame.result !== undefined) resp.resp = frame.result;
         config.map[frame.id](resp);
@@ -222,10 +224,10 @@ Clubby.prototype.call = function(dst, cmd, callback) {
   if (callback === undefined) {
     p = new Promise(function(resolve, reject) {
       cb = function cb(req) {
-        if (req.error === undefined) {
+        if (req.status == 0) {
           resolve(req.resp);
         } else {
-          reject(new ClubbyError(req.error.message, req.error.code));
+          reject(new ClubbyError(req.status_msg, req.status));
         }
       };
     });
