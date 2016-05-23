@@ -110,7 +110,6 @@ var Clubby = function(arg) {
     ws.onmessage = function(ev) {
       // Dispatch responses to the correct callback
       log('received: ', ev.data);
-      var numKeys = 0;
       var frame;
       try {
         frame = JSON.parse(ev.data);
@@ -119,53 +118,46 @@ var Clubby = function(arg) {
         return;
       }
 
-      if (frame.cmds !== undefined) {
-        $.each(frame.cmds, function(i, v) {
-          setTimeout(function() { handleCmd(v, frame.src) }, 0);
-        });
+      if (frame.method !== undefined) {
+        var cmd = {id: frame.id, cmd: frame.method, args: frame.args};
+        setTimeout(function() { handleReq(cmd, frame.src) }, 0);
+      } else if (frame.id in config.map) {
+        var resp = {id: frame.id};
+        if (frame.error) {
+          resp.status = frame.error.code;
+          resp.status_msg = frame.error.message;
+        }
+        if (frame.result !== undefined) resp.resp = frame.result;
+        config.map[frame.id](resp);
+        delete config.map[frame.id];
       }
-
-      if (frame.resp !== undefined) {
-        $.each(frame.resp, function(i, v) {
-          numKeys++;
-          if (v.id in config.map) {
-            config.map[v.id](v);
-            delete config.map[v.id];
-            numKeys--;
-          }
-        });
-      }
-      if (config.onstop && numKeys == 0) {
+      if (config.onstop && $.isEmptyObject(config.map)) {
         config.onstop();
       }
       // TODO(lsm): cleanup old, stale callbacks from the map.
     };
 
-    function handleCmd(cmd, src) {
+    function handleReq(cmd, src) {
       log('handling', cmd);
       var val, h = config.hnd[cmd.cmd];
-      var res = {id: cmd.id};
-      var frame = {v: 1, dst: src, src: config.src, key: config.key, resp: [res]};
+      var frame = {v: 2, dst: src, src: config.src, key: config.key, id: cmd.id};
 
       var error = function(e) {
-        res.status = 1;
-        res.status_msg = e;
+        frame.error = {code: 1, message: e};
         log("sending error", frame);
         ws.send(JSON.stringify(frame));
       };
 
       if (h) {
         var done = function(val, st) {
-          var rk = "resp";
-          res.status = st || 0;
+          if (val !== undefined) frame.result = val;
           if (st !== undefined) {
-            rk = "status_msg";
+            if (typeof(st) == "object") {
+              frame.error = st;
+            } else {
+              frame.error = {code: st, message: val};
+            }
           }
-          res[rk] = val;
-          if (val === undefined) {
-            delete res[rk];
-          }
-          log("sending", frame);
           me._send(frame);
         };
 
@@ -243,8 +235,12 @@ Clubby.prototype.call = function(dst, cmd, callback) {
 
   var c = this.config;
   var id = c.next_req_id++;
-  var req = { v: 1, dst: dst, src: c.src, key: c.key };
-  req.cmds = [ $.extend({ id: id, timeout: c.timeout }, cmd) ];
+  var req = {
+      v: 2, dst: dst, src: c.src, key: c.key,
+      id: id, method: cmd.cmd, args: cmd.args,
+      deadline: cmd.deadline, timeout: cmd.timeout,
+  };
+  if (req.timeout === undefined) req.timeout = c.timeout;
   c.map[id] = cb; // Store callback for the given message ID
   var msg = JSON.stringify(req);
   if (c.onstart) {
@@ -253,7 +249,7 @@ Clubby.prototype.call = function(dst, cmd, callback) {
   if (c.ws.readyState == WebSocket.OPEN) {
     this._send(req);
   } else {
-    if (this.config.log) console.log('queuing: ', msg);
+    if (this.config.log) console.log('queuing: ', req);
     c.queue.push(req);
     c.ws.close();
   }
