@@ -12,9 +12,9 @@ $.extend = function(deep, a, b) {
   }
   for (var k in b) {
     if (typeof(a[k]) === 'object' && typeof(b[k]) === 'object') {
-      $.extend(a[k], b[k]);
+      $.extend(deep, a[k], b[k]);
     } else if(deep && typeof(b[k]) === 'object') {
-      a[k] = $.extend(undefined, b[k]);
+      a[k] = $.extend(deep, undefined, b[k]);
     } else {
       a[k] = b[k];
     }
@@ -28,20 +28,18 @@ $.each = function(a, f) {
   });
 };
 
-function loadCfg(filename) {
-  var ret = File.loadJSON(filename);
+function loadCfg() {
+  var ret = File.loadJSON('conf_sys_defaults.json');
   if(ret == undefined) {
-    print("Failed to load configuration from:", filename);
+    print("Failed to load configuration from conf_sys_defaults.json");
     return {};
   } else {
+    $.extend(ret, File.loadJSON('conf.json'));
     return ret;
   }
 }
 
-Sys.conf = loadCfg('conf_sys_defaults.json');
-$.extend(Sys.conf, loadCfg('conf.json'));
-
-Object.defineProperty(Sys, "oconf", { value: $.extend(true, {}, Sys.conf)});
+Sys.conf = loadCfg();
 
 Object.defineProperty(Sys.conf, "save", {
   value: function(reboot) {
@@ -60,9 +58,10 @@ Object.defineProperty(Sys.conf, "save", {
       return n;
     };
 
-    var newCfg = $.extend(true, {}, Sys.conf);
+    var newCfg = $.extend(true, undefined, Sys.conf);
     delete newCfg.save;
-    deleteUnchanged(newCfg, Sys.oconf);
+    deleteUnchanged(newCfg, loadCfg());
+
     newCfg = $.extend(File.loadJSON('conf.json') || {}, newCfg);
 
     var cfgFile = File.open("conf.json.tmp", "w");
