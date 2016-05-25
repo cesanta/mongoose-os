@@ -1,5 +1,7 @@
 ---
 title: "Building Mongoose IoT firmware"
+items:
+  - { type: file, name: extending-sjs.md }
 ---
 
 For those who want to build Mongoose IoT firmware themselves, here is an

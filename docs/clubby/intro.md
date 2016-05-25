@@ -1,5 +1,10 @@
 ---
 title: "Clubby protocol"
+items:
+  - { type: file, name: frame-structure.md }
+  - { type: file, name: addressing.md }
+  - { type: file, name: commands-and-responses.md }
+  - { type: file, name: example-comm.md }
 ---
 
 We use a special JSON-based protocol to communicate with the cloud: clubby.

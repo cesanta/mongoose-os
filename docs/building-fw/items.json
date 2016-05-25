@@ -1,6 +1,0 @@
-{
-  "items": [
-    { "type": "markdown", "name": "intro.md" },
-    { "type": "markdown", "name": "extending-sjs.md" }
-  ]
-}

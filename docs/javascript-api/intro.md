@@ -1,4 +1,22 @@
 ---
 title: "JavaScript API reference"
+items:
+  - { type: file, name: string.md }
+  - { type: file, name: file.md }
+  - { type: file, name: http.md }
+  - { type: file, name: websocket.md }
+  - { type: file, name: mqtt.md }
+  - { type: file, name: gpio.md }
+  - { type: file, name: adc.md }
+  - { type: file, name: spi.md }
+  - { type: file, name: i2c.md }
+  - { type: file, name: pwm.md }
+  - { type: file, name: uart.md }
+  - { type: file, name: wdt.md }
+  - { type: file, name: wifi.md }
+  - { type: file, name: builtin.md }
+  - { type: file, name: sys.md }
+  - { type: file, name: ota.md }
+  - { type: file, name: udp.md }
+  - { type: file, name: tcp.md }
 ---
-
