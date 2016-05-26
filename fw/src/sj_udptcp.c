@@ -220,11 +220,21 @@ static void add_cb_info(struct v7 *v7, struct cb_info_holder *list,
     return;
   }
   new_cb_info->name = strdup(name);
+  if (new_cb_info->name == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    goto clean;
+  }
   new_cb_info->cbv = cbv;
   new_cb_info->trigger_once = trigger_once;
   v7_own(v7, &new_cb_info->cbv);
 
   SLIST_INSERT_HEAD(&list->head, new_cb_info, entries);
+
+  return;
+
+clean:
+  free(new_cb_info);
+  free((void *) new_cb_info->name);
 }
 
 static int trigger_event(struct v7 *v7, struct cb_info_holder *list,
@@ -779,8 +789,10 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
     host = "localhost";
   }
 
-  int tmp = asprintf(&addr, "tcp://%s:%d", host, port);
-  (void) tmp; /* Shutup compiler */
+  if (asprintf(&addr, "tcp://%s:%d", host, port) < 0) {
+    LOG(LL_ERROR, ("Out of memory"));
+    goto clean;
+  }
 
   LOG(LL_VERBOSE_DEBUG, ("Trying to connect to %s", addr));
 
@@ -895,9 +907,11 @@ static enum v7_err udp_tcp_start_listen(struct v7 *v7, v7_val_t *res,
     opts.ssl_ca_cert = v7_get_cstring(v7, &ca_cert_v);
   }
 
-  int tmp = asprintf(&bind_addr, "%s://%s:%d", protocol, address ? address : "",
-                     port);
-  (void) tmp; /* Shut up compiler about asprintf */
+  if (asprintf(&bind_addr, "%s://%s:%d", protocol, address ? address : "",
+               port) < 0) {
+    LOG(LL_ERROR, ("Out of memory"));
+    goto clean;
+  }
 
   c = mg_bind_opt(&sj_mgr, bind_addr, mg_ev_handler, opts);
 
@@ -1068,8 +1082,10 @@ SJ_PRIVATE enum v7_err DGRAM_Socket_send(struct v7 *v7, v7_val_t *res) {
 
   cb = v7_arg(v7, port_idx + 2);
 
-  int tmp = asprintf(&mg_addr, "udp://%s:%d", address, port);
-  (void) tmp; /* Shut up compiler about asprintf */
+  if (asprintf(&mg_addr, "udp://%s:%d", address, port) < 0) {
+    LOG(LL_ERROR, ("Out of memory"));
+    goto clean;
+  }
 
   LOG(LL_VERBOSE_DEBUG, ("Connecting to %s", mg_addr));
   c = mg_connect(&sj_mgr, mg_addr, mg_ev_handler);

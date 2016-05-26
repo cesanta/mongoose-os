@@ -249,6 +249,10 @@ static int init_web_server(const struct sys_config *cfg) {
    */
   if (cfg->http.hidden_files) {
     s_http_server_opts.hidden_file_pattern = strdup(cfg->http.hidden_files);
+    if (s_http_server_opts.hidden_file_pattern == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      return 0;
+    }
   }
 
   listen_conn = mg_bind(&sj_mgr, cfg->http.listen_addr, mongoose_ev_handler);

@@ -170,9 +170,11 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   }
 
   if (port == 0) {
-    int ret = asprintf(&url_with_port, "%.*s%s", (int) host.len, host.p,
-                       (use_ssl ? ":8883" : ":1883"));
-    (void) ret;
+    if (asprintf(&url_with_port, "%.*s%s", (int) host.len, host.p,
+                 (use_ssl ? ":8883" : ":1883")) < 0) {
+      rcode = v7_throwf(v7, "Error", "Out of memory");
+      goto clean;
+    }
   }
 
   nc =
@@ -203,6 +205,11 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   ud->v7 = v7;
   ud->client = *res;
   ud->client_id = strdup(v7_get_cstring(v7, &client_id));
+  if (ud->client_id == NULL) {
+    free(ud);
+    rcode = v7_throwf(v7, "Error", "Out of memory");
+    goto clean;
+  }
   nc->user_data = ud;
   v7_own(v7, &ud->client);
 

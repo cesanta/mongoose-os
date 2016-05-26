@@ -230,6 +230,11 @@ static int console_init_file_cache() {
       goto clean;
     }
     file->file_name = strdup((const char *) dp->d_name);
+    if (file->file_name == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      ret = -1;
+      goto clean;  // `file` is freed in clean section
+    }
     SLIST_INSERT_HEAD(&files, file, entries);
   }
 

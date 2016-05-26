@@ -610,11 +610,21 @@ error:
     if (v7_is_undefined(tmp)) {                                         \
       if (get_cfg()->clubby.name1 != NULL) {                            \
         clubby->cfg.name1 = strdup(get_cfg()->clubby.name1);            \
+        if (clubby->cfg.name1 == NULL) {                                \
+          LOG(LL_ERROR, ("Out of memory"));                             \
+          rcode = v7_throwf(v7, "Error", "Out of memory");              \
+          goto clean;                                                   \
+        }                                                               \
       } else {                                                          \
         clubby->cfg.name1 = "";                                         \
       }                                                                 \
     } else if (v7_is_string(tmp)) {                                     \
       clubby->cfg.name1 = strdup(v7_get_cstring(v7, &tmp));             \
+      if (clubby->cfg.name1 == NULL) {                                  \
+        LOG(LL_ERROR, ("Out of memory"));                               \
+        rcode = v7_throwf(v7, "Error", "Out of memory");                \
+        goto clean;                                                     \
+      }                                                                 \
     } else {                                                            \
       free_clubby(clubby);                                              \
       LOG(LL_ERROR, ("Invalid type for %s, expected string", #name2));  \
@@ -639,7 +649,7 @@ error:
 
 SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   (void) res;
-
+  enum v7_err rcode = V7_OK;
   v7_val_t arg = v7_arg(v7, 0);
 
   if (!v7_is_undefined(arg) && !v7_is_object(arg)) {
@@ -676,7 +686,11 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
     clubby_connect(clubby);
   }
 
-  return V7_OK;
+  return rcode;
+
+clean:
+  free_clubby(clubby);
+  return rcode;
 }
 
 void sj_clubby_send_reply(struct clubby_event *evt, int status,
