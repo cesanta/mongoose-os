@@ -8,6 +8,7 @@
 
 #include "esp_gpio.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
+#include "common/cs_dbg.h"
 #include "esp_periph.h"
 
 #include <osapi.h>
@@ -269,6 +270,10 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
 
   if (p == NULL) {
     p = malloc(sizeof(*p));
+    if (p == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      return;
+    }
   }
 
   p->cb_arg = arg;

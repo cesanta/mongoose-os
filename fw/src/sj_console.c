@@ -224,6 +224,11 @@ static int console_init_file_cache() {
 
     LOG(LL_DEBUG, ("Found cache file: %s", dp->d_name));
     struct cache_file *file = malloc(sizeof(*file));
+    if (file == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      ret = -1;
+      goto clean;
+    }
     file->file_name = strdup((const char *) dp->d_name);
     SLIST_INSERT_HEAD(&files, file, entries);
   }
@@ -389,9 +394,10 @@ clean:
 }
 
 void sj_console_init(struct v7 *v7) {
-  console_init_file_cache();
-  sj_clubby_register_global_command(clubby_cmd_onopen,
-                                    console_handle_clubby_ready, v7);
+  if (console_init_file_cache() == 0) {
+    sj_clubby_register_global_command(clubby_cmd_onopen,
+                                      console_handle_clubby_ready, v7);
+  }
 }
 
 void sj_console_api_setup(struct v7 *v7) {

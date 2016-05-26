@@ -274,6 +274,10 @@ enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res) {
     goto clean;
   } else {
     conn = malloc(sizeof(*conn));
+    if (conn == NULL) {
+      rcode = v7_throwf(v7, "Error", "Out of memory.");
+      goto clean;
+    }
     conn->sda_gpio = sda;
     conn->scl_gpio = scl;
     conn->started = 0;

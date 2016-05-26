@@ -169,6 +169,10 @@ static enum v7_err val_to_void(struct v7 *v7, v7_val_t *val, void **buf,
     int i;
     *len = v7_array_length(v7, *val);
     *buf = malloc(*len);
+    if (*buf == NULL) {
+      LOG_AND_THROW("Out of memory");
+      goto clean;
+    }
     *free_after_use = 1;
     for (i = 0; i < *len; i++) {
       v7_val_t elem = v7_array_get(v7, *val, i);

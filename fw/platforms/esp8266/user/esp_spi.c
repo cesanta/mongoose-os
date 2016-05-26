@@ -252,8 +252,9 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
 enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res) {
   /* Support HSPI only */
   struct esp_spi_connection *conn = malloc(sizeof(*conn));
-
-  (void) v7;
+  if (conn == NULL) {
+    return v7_throwf(v7, "Error", "Out of memory");
+  }
 
   conn->spi_no = HSPI;
 

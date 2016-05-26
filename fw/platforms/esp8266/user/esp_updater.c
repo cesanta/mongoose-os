@@ -72,6 +72,10 @@ rboot_config *get_rboot_config() {
   static rboot_config *cfg = NULL;
   if (cfg == NULL) {
     cfg = malloc(sizeof(*cfg));
+    if (cfg == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      return NULL;
+    }
     *cfg = rboot_get_config();
   }
 
@@ -94,12 +98,16 @@ uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
 }
 
-static void context_init(struct update_context *ctx) {
+static int context_init(struct update_context *ctx) {
   memset(ctx, 0, sizeof(*ctx));
-
-  ctx->slot_to_write = get_rboot_config()->current_rom == 0 ? 1 : 0;
+  rboot_config *cfg = get_rboot_config();
+  if (cfg == NULL) {
+    return -1;
+  }
+  ctx->slot_to_write = cfg->current_rom == 0 ? 1 : 0;
   LOG(LL_DEBUG,
       ("Initializing updater, slot to write: %d", ctx->slot_to_write));
+  return 0;
 }
 
 void updater_context_release(struct update_context *ctx) {
@@ -174,7 +182,11 @@ struct update_context *updater_context_create() {
   }
 
   s_ctx = calloc(1, sizeof(*s_ctx));
-  context_init(s_ctx);
+  if (context_init(s_ctx) != 0) {
+    LOG(LL_ERROR, ("Failed to init context"));
+    free(s_ctx);
+    s_ctx = NULL;
+  }
 
   return s_ctx;
 }
