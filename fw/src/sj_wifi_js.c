@@ -259,6 +259,11 @@ SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
 
   r = sj_wifi_scan(sj_wifi_scan_done);
 
+  if (!r) {
+    v7_def(v7, s_wifi_private, "_scb", ~0,
+           (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), V7_UNDEFINED);
+  }
+
   *res = v7_mk_boolean(v7, r);
   goto clean;
 

@@ -289,6 +289,10 @@ void wifi_scan_done(void *arg, STATUS status) {
 
 int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   wifi_scan_cb = cb;
+  /* Scanning requires station. If in AP-only mode, switch to AP+STA. */
+  if (wifi_get_opmode() == SOFTAP_MODE) {
+    wifi_set_opmode_current(STATIONAP_MODE);
+  }
   return wifi_station_scan(NULL, wifi_scan_done);
 }
 
