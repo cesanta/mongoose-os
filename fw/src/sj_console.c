@@ -243,6 +243,11 @@ static int console_init_file_cache() {
   }
 
   files_array = calloc(files_count, sizeof(*files_array));
+  if (files_array == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    ret = -1;
+    goto clean;
+  }
   SLIST_FOREACH(it, &files, entries) {
     files_array[i++] = it->file_name;
   }

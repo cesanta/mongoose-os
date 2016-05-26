@@ -202,6 +202,12 @@ static enum v7_err start_http_server(struct v7 *v7, const char *addr,
   }
   mg_set_protocol_http_websocket(c);
   c->user_data = ud = (struct user_data *) calloc(1, sizeof(*ud));
+  if (ud == NULL) {
+    rcode = v7_throwf(v7, "Error", "Out of memory");
+    c->flags |= MG_F_CLOSE_IMMEDIATELY;
+    goto clean;
+  }
+
   ud->v7 = v7;
   ud->obj = obj;
   ud->handler = v7_get(v7, obj, "_cb", 3);
@@ -745,6 +751,11 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
    * prototype `sj_http_request_proto`), and set provided callback function.
    */
   c->user_data = ud = (struct user_data *) calloc(1, sizeof(*ud));
+  if (ud == NULL) {
+    rcode = v7_throwf(v7, "Error", "Out of memory");
+    c->flags |= MG_F_CLOSE_IMMEDIATELY;
+    goto clean;
+  }
 
   ud->v7 = v7;
   ud->obj = v7_mk_object(v7);

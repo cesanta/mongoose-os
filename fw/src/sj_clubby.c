@@ -264,6 +264,10 @@ static void enqueue_frame(struct clubby *clubby, struct ub_ctx *ctx, int64_t id,
                           ub_val_t cmd) {
   /* TODO(alashkin): limit queue size! */
   struct queued_frame *qc = calloc(1, sizeof(*qc));
+  if (qc == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
   qc->cmd = cmd;
   qc->ctx = ctx;
   qc->id = id;

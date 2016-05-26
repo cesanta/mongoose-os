@@ -99,6 +99,10 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
   cur_mmap_desc = desc;
   desc->pages = 0;
   desc->blocks = (uint32_t *) calloc(sizeof(uint32_t), pages);
+  if (desc->blocks == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return MAP_FAILED;
+  }
   desc->base = MMAP_ADDR_FROM_DESC(desc);
   SPIFFS_read(&fs, fd - NUM_SYS_FD, DUMMY_MMAP_BUFFER_START, len);
   /*

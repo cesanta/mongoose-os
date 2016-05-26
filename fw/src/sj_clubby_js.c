@@ -231,6 +231,10 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   } else {
     /* v7_parse_json wants null terminated string */
     char *obj_str = calloc(1, evt->response.resp_body->len + 1);
+    if (obj_str == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      goto clean;
+    }
     memcpy(obj_str, evt->response.resp_body->ptr, evt->response.resp_body->len);
 
     res = v7_parse_json(clubby->v7, obj_str, &cb_param);
@@ -295,6 +299,10 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
 
   /* v7_parse_json wants null terminated string */
   char *obj_str = calloc(1, obj_tok->len + 1);
+  if (obj_str == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
   memcpy(obj_str, obj_tok->ptr, obj_tok->len);
 
   v7_val_t clubby_param;
@@ -681,6 +689,10 @@ void sj_clubby_send_reply(struct clubby_event *evt, int status,
 
   /* TODO(alashkin): add `len` parameter to ubjserializer */
   char *dst = calloc(1, evt->request.src->len + 1);
+  if (dst == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
   memcpy(dst, evt->request.src->ptr, evt->request.src->len);
 
   clubby_send_response(clubby, dst, evt->request.id, status, status_msg, resp);

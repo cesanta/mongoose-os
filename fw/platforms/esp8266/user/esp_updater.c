@@ -73,7 +73,7 @@ rboot_config *get_rboot_config() {
   if (cfg == NULL) {
     cfg = malloc(sizeof(*cfg));
     if (cfg == NULL) {
-      LOG(LL_ERROR, ("Out of memory"));
+      LOG(LL_DEBUG, ("Out of memory"));
       return NULL;
     }
     *cfg = rboot_get_config();
@@ -182,6 +182,11 @@ struct update_context *updater_context_create() {
   }
 
   s_ctx = calloc(1, sizeof(*s_ctx));
+  if (s_ctx == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return NULL;
+  }
+
   if (context_init(s_ctx) != 0) {
     LOG(LL_ERROR, ("Failed to init context"));
     free(s_ctx);

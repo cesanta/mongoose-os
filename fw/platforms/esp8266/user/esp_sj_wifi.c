@@ -271,6 +271,10 @@ void wifi_scan_done(void *arg, STATUS status) {
     int n = 0;
     STAILQ_FOREACH(p, info, next) n++;
     ssids = calloc(n + 1, sizeof(*ssids));
+    if (ssids == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      return;
+    }
     n = 0;
     STAILQ_FOREACH(p, info, next) {
       ssids[n++] = (const char *) p->ssid;

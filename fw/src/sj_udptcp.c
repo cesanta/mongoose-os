@@ -215,6 +215,10 @@ static void free_cb_info_chain(struct v7 *v7, struct cb_info_holder *list) {
 static void add_cb_info(struct v7 *v7, struct cb_info_holder *list,
                         const char *name, v7_val_t cbv, int trigger_once) {
   struct cb_info *new_cb_info = calloc(1, sizeof(*new_cb_info));
+  if (new_cb_info == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
   new_cb_info->name = strdup(name);
   new_cb_info->cbv = cbv;
   new_cb_info->trigger_once = trigger_once;
@@ -269,11 +273,16 @@ static struct cb_info_holder *get_cb_info_holder(struct v7 *v7, v7_val_t obj) {
   struct cb_info_holder *ret;
   if (v7_is_undefined(cbs)) {
     ret = calloc(1, sizeof(*ret));
+    if (ret == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      goto clean;
+    }
     v7_set(v7, obj, s_callbacks_prop, ~0, v7_mk_foreign(v7, ret));
   } else {
     ret = v7_get_ptr(v7, cbs);
   }
 
+clean:
   return ret;
 }
 
@@ -304,6 +313,10 @@ static void async_trigger_event(struct v7 *v7, v7_val_t obj,
                                 v7_val_t arg2) {
   struct async_event_params *params =
       (struct async_event_params *) calloc(1, sizeof(*params));
+  if (params == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
   params->v7 = v7;
   params->obj = obj;
   v7_own(v7, &params->obj);

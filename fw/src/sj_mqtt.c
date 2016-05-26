@@ -196,6 +196,10 @@ enum v7_err sj_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   v7_set_proto(v7, *res, proto);
 
   ud = calloc(1, sizeof(*ud));
+  if (ud == NULL) {
+    rcode = v7_throwf(v7, "Error", "Out of memory");
+    goto clean;
+  }
   ud->v7 = v7;
   ud->client = *res;
   ud->client_id = strdup(v7_get_cstring(v7, &client_id));

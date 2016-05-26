@@ -165,6 +165,11 @@ enum v7_err sj_ws_ctor(struct v7 *v7, v7_val_t *res) {
     }
 
     ud = calloc(1, sizeof(*ud));
+    if (ud == NULL) {
+      nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+      rcode = v7_throwf(v7, "Error", "Out of memory");
+      goto clean;
+    }
     ud->v7 = v7;
     ud->ws = this_obj;
     nc->user_data = ud;

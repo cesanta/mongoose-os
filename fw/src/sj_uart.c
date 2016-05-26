@@ -54,6 +54,10 @@ static enum v7_err UART_ctor(struct v7 *v7, v7_val_t *res) {
   }
 
   ud = (struct user_data *) calloc(1, sizeof(struct user_data));
+  if (ud == NULL) {
+    rcode = v7_throwf(v7, "Error", "Out of memory");
+    goto clean;
+  }
   ud->v7 = v7;
   ud->want = 0;
   ud->cb = V7_UNDEFINED;

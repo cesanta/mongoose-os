@@ -69,6 +69,12 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
   }
 
   ud = calloc(1, sizeof(*ud));
+  if (ud == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+    return 0;
+  }
+
   ud->v7 = v7;
   ud->cb = cb;
   v7_own(v7, &ud->cb);

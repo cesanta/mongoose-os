@@ -115,6 +115,10 @@ static enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
   if (ret != V7_OK) return ret;
 
   struct esp_uart_config *cfg = esp_sj_uart_default_config(us->uart_no);
+  if (cfg == NULL) {
+    return v7_throwf(v7, "Error", "Out of memory");
+  }
+
   v7_val_t cobj = v7_arg(v7, 0);
   if (v7_is_object(cobj)) {
     v7_val_t v;
@@ -314,6 +318,10 @@ size_t esp_sj_uart_write(int uart_no, const void *buf, size_t len) {
 
 struct esp_uart_config *esp_sj_uart_default_config(int uart_no) {
   struct esp_uart_config *cfg = calloc(1, sizeof(*cfg));
+  if (cfg == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return NULL;
+  }
   cfg->uart_no = uart_no;
   cfg->dispatch_cb = esp_uart_dispatch_signal_from_isr;
   cfg->baud_rate = 115200;
