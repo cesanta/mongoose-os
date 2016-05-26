@@ -2,7 +2,7 @@
 title: "Architecture"
 ---
 
-<img src="Mongoose_IoT_diagram.png" align="center" width="100%"/>
+<img src="media/Mongoose_IoT_diagram.png" align="center" width="100%"/>
 
 Mongoose IoT firmware on a device side:
 

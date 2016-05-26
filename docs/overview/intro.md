@@ -40,7 +40,7 @@ automation, healthcare, automotive, home automation, or other.
 
 Take a look at 2 minute video that shows Mongoose IoT in action:
 
-[ ![Mongoose IoT](Mongoose_IoT.clip.png) ](https://www.youtube.com/watch?v=6DYfGsqQzCg)
+[ ![Mongoose IoT](media/Mongoose_IoT.clip.png) ](https://www.youtube.com/watch?v=6DYfGsqQzCg)
 
 At the moment, Mongoose IoT supports following hardware platforms:
 

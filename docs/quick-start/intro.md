@@ -23,12 +23,12 @@ title: Quick Start Guide
    and shows an interactive JavaScript prompt. Notice the unique
    "device_id" in the configuration - it will be needed to talk to the cloud.
    Mongoose IoT
-   ![](fc2.png)
+   ![](media/fc2.png)
 -  Two numbers shown by prompt
    are available free memory, and memory taken by Mongoose IoT
 -  Type some JavaScript expression to the console and press enter.
    Mongoose IoT evaluates the expression and prints evaluation result:
-   [<img src="fc3.png" width="75%" />](../../static/img/fw/fc3.png)
+   [<img src="media/fc3.png" width="75%" />](media/fc3.png)
 -  Configure Wifi. This is not needed on POSIX platforms like RPI, where
    networking is already configured. Note that Mongoose IoT provides flexible
    configuration infrastructure, described in the next section. Here,
@@ -44,4 +44,4 @@ title: Quick Start Guide
 -  Click on "Devices" tab, copy/paste device ID. Leave PSK field blank.
    Press "Add Device" button.
 -  Switch to the "Dashboard" tab, and see real-time graph updated:
-   ![](dash1.png)
+   ![](media/dash1.png)

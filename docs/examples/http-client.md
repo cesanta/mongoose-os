@@ -29,5 +29,4 @@ report();
   `http_client_1.js`
 - In the FlashNChips console, connect to WiFi and execute the file
 
-<img src="http_client_1.png" align="center"/>
-
+<img src="media/http_client_1.png" align="center"/>
