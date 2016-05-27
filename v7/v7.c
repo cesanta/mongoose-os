@@ -16634,7 +16634,7 @@ static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
      * TODO(dfrank): probably change API: clients can use
      *`v7_get_thrown_value()` now.
      */
-    *res = v7_get_thrown_value(v7, NULL);
+    if (res != NULL) *res = v7_get_thrown_value(v7, NULL);
     goto clean;
   } else {
 #ifndef V7_MMAP_EXEC
