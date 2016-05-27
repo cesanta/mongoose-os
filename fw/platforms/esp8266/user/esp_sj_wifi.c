@@ -141,7 +141,7 @@ int sj_wifi_connect(void) {
 
 int sj_wifi_disconnect(void) {
   /* disable any AP mode */
-  wifi_set_opmode_current(0x1);
+  wifi_set_opmode_current(STATION_MODE);
   return wifi_station_disconnect();
 }
 
@@ -278,7 +278,12 @@ void wifi_scan_done(void *arg, STATUS status) {
     }
     n = 0;
     STAILQ_FOREACH(p, info, next) {
-      ssids[n++] = (const char *) p->ssid;
+      int i;
+      /* Remove duplicates */
+      for (i = 0; i < n; i++) {
+        if (strcmp(ssids[i], (const char *) p->ssid) == 0) break;
+      }
+      if (i == n) ssids[n++] = (const char *) p->ssid;
     }
     wifi_scan_cb(v7, ssids);
     free(ssids);
