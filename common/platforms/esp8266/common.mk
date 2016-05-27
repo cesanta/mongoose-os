@@ -49,9 +49,10 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
              -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
              -fno-tree-pre -fno-tree-vrp
 
-CFLAGS := -W -Wall -Werror -Wno-comment -Wno-variadic-macros -Wpointer-arith \
+CFLAGS := -std=c99 -W -Wall -Werror -Wno-comment -Wno-variadic-macros -Wpointer-arith \
           -Os $(NO_Os_FLAGS) -g3 \
           -Wl,-EL -fno-inline-functions \
+          -D_XOPEN_SOURCE=500 \
           -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
           -Wno-parentheses -DIRAM='__attribute__((section(".fast.text")))' \
           -DNOINSTR='__attribute__((no_instrument_function))' \

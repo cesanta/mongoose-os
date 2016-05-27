@@ -47,7 +47,7 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -fno-inline -W -Wall -Werror -g -Wno-unused-function \
+CFLAGS ?= -std=c99 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
           -Wno-missing-field-initializers \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \

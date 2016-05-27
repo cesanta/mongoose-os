@@ -13,6 +13,7 @@
 #include <espconn.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "common/cs_dbg.h"
 
