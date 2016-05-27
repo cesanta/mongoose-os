@@ -468,6 +468,8 @@ SJ_PRIVATE enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   const char *url = v7_get_string(v7, &url_v, &n);
   const char *quest = strchr(url, '?');
 
+  LOG(LL_DEBUG, ("Requested url: %s", url));
+
   DECLARE_CONN();
 
   memset(&opts, 0, sizeof(opts));
