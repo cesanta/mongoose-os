@@ -2,6 +2,6 @@
 title: Sys
 ---
 
-- `Sys.time() -> number`: Returns system time, as a floating point number, in
+- `Sys.time() -> number`: Return system time, as a floating point number, in
   seconds.
-- `Sys.fs.free() -> number`:  Returns free space on the device storage, in bytes.
+- `Sys.fs.free() -> number`:  Return free space on the device storage, in bytes.
