@@ -199,7 +199,6 @@ void sj_gpio_api_setup(struct v7 *v7) {
 
   if (v7_exec_file(v7, "gpio.js", NULL) != V7_OK) {
     /* TODO(mkm): make setup functions return an error code */
-    abort();
   }
 }
 
