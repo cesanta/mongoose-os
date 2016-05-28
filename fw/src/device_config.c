@@ -330,6 +330,10 @@ int init_device(struct v7 *v7) {
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_FILE, s_cfg.conf_acl, 0, &s_cfg);
 
+  if (s_cfg.debug.level > _LL_MIN && s_cfg.debug.level < _LL_MAX) {
+    cs_log_set_level((enum cs_log_level) s_cfg.debug.level);
+  }
+
   REGISTER_RO_VAR(fw_id, &build_id);
   REGISTER_RO_VAR(fw_timestamp, &build_timestamp);
   REGISTER_RO_VAR(fw_version, &build_version);

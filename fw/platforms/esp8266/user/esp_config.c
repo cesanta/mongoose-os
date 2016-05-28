@@ -76,7 +76,5 @@ int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
     return 0;
   }
 
-  cs_log_set_level(cfg->debug.level);
-
   return do_wifi(cfg);
 }
