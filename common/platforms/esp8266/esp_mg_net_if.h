@@ -64,7 +64,9 @@ enum mg_sig_type {
   MG_SIG_CONNECT_RESULT = 2, /* struct mg_connection* */
   MG_SIG_SENT_CB = 4,        /* struct mg_connection* */
   MG_SIG_CLOSE_CONN = 5,     /* struct mg_connection* */
-  MG_SIG_V7_CALLBACK = 10,   /* struct v7_callback_args* */
+#ifndef CS_DISABLE_JS
+  MG_SIG_V7_CALLBACK = 10, /* struct v7_callback_args* */
+#endif
   MG_SIG_TOMBSTONE = 0xffff,
 };
 

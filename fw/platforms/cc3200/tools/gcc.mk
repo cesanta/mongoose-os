@@ -29,7 +29,7 @@ $(BUILD_DIR)/%.o: %.c
 
 $(APP_ELF):
 	$(vecho) "LD    $@"
-	$(Q) $(LD) --script=src/$(APP).ld --entry=ResetISR \
+	$(Q) $(LD) --script=$(APP_LD_SCRIPT) --entry=ResetISR \
 	           --gc-sections -o $@ $(filter %.o %.a, $^) \
 	           $(LIBM) $(LIBC) $(LIBGCC)
 

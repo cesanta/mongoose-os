@@ -4,7 +4,7 @@ SJS_ESP_PATH = $(REPO_PATH)/fw/platforms/esp8266
 SDK_VERSION ?= $(shell cat $(SJS_ESP_PATH)/sdk.version)
 
 REPO_ABS_PATH = $(realpath $(REPO_PATH))
-APP_PATH = $(subst $(REPO_ABS_PATH),/cesanta,$(CURDIR))
+APP_PATH = $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
 
 .PHONY: all clean
 
@@ -18,21 +18,21 @@ APP_PATH = $(subst $(REPO_ABS_PATH),/cesanta,$(CURDIR))
 MAKEFLAGS += w
 
 all clean:
-	@docker run --rm -i -v $(REPO_ABS_PATH):/cesanta $(DOCKER_EXTRA) $(SDK_VERSION) \
-		//bin/bash -c "\
-			if [ -d /cesanta/v7 ] ; then make -C /cesanta/v7 v7.c ; fi && \
-			if [ -d /cesanta/krypton ] ; then make -C /cesanta/krypton krypton.c ; fi && \
-			if [ -d /cesanta/mongoose ] ; then make -C /cesanta/mongoose mongoose.c mongoose.h ; fi && \
-			cd $(APP_PATH) && \
-			make -f Makefile.build APP=$(APP) REPO_PATH=/cesanta $@ -$(MAKEFLAGS) \
-				&& python $(SJS_ESP_PATH)/tools/showbreakdown.py \
-		"
+	@docker run --rm -i -v $(REPO_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
+	  //bin/bash -c "\
+	    if [ -d /src/v7 ] ; then make -C /src/v7 v7.c ; fi && \
+	    if [ -d /src/krypton ] ; then make -C /src/krypton krypton.c ; fi && \
+	    if [ -d /src/mongoose ] ; then make -C /src/mongoose mongoose.c mongoose.h ; fi && \
+	    cd $(APP_PATH) && \
+	    make -f Makefile.build APP=$(APP) REPO_PATH=/src $@ -$(MAKEFLAGS) \
+	    && python $(SJS_ESP_PATH)/tools/showbreakdown.py \
+	  "
 
 debug_coredump:
 ifndef CONSOLE_LOG
 	$(error Please set CONSOLE_LOG)
 endif
-	docker run --rm -it -v $(REPO_ABS_PATH):/cesanta -v $(CONSOLE_LOG):/console.log $(SDK_VERSION) /bin/bash -c \
+	docker run --rm -it -v $(REPO_ABS_PATH):/src -v $(CONSOLE_LOG):/console.log $(SDK_VERSION) /bin/bash -c \
 	  "cd $(APP_PATH); \
       $(SJS_ESP_PATH)/tools/serve_core.py \
         --irom firmware/0x11000.bin \

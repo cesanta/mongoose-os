@@ -757,17 +757,17 @@ static void mg_lwip_task(os_event_t *e) {
       cs->num_sent = 0;
       break;
     }
-    case MG_SIG_V7_CALLBACK: {
 #ifndef CS_DISABLE_JS
+    case MG_SIG_V7_CALLBACK: {
       struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
       _sj_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
       v7_disown(cba->v7, &cba->func);
       v7_disown(cba->v7, &cba->this_obj);
       v7_disown(cba->v7, &cba->args);
       free(cba);
-#endif
       break;
     }
+#endif
   }
   if (mgr != NULL) {
     mg_mgr_poll(mgr, 0);

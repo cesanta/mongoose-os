@@ -25,5 +25,5 @@ $(APP_ELF):
 	  -i $(TOOLCHAIN)/lib \
 	  --reread_libs --warn_sections --display_error_number --rom_model \
 	  --unused_section_elimination=on \
-	  -o $@ $(filter %.o %.a, $^) tools/cc3200v1p32.cmd -l libc.a
+	  -o $@ $(filter %.o %.a, $^) $(APP_LD_SCRIPT) -l libc.a
 

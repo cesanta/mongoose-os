@@ -47,7 +47,11 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
     default:
       return;
   }
+#ifndef CS_DISABLE_JS
   sj_wifi_on_change_callback(s_v7, ev);
+#else
+  (void) ev;
+#endif
 }
 
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
@@ -57,7 +61,9 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = SJ_WIFI_IP_ACQUIRED;
+#ifndef CS_DISABLE_JS
     sj_wifi_on_change_callback(s_v7, SJ_WIFI_IP_ACQUIRED);
+#endif
   }
 }
 

@@ -31,6 +31,7 @@
 #include "oslib/osi.h"
 
 #include "fw/src/device_config.h"
+#include "fw/src/sj_app.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_http.h"
 #include "fw/src/sj_gpio.h"
@@ -81,12 +82,14 @@ void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *e) {
 
 OsiMsgQ_t s_v7_q;
 
+#ifndef CS_DISABLE_JS
 static void uart_int() {
   struct sj_event e = {.type = PROMPT_CHAR_EVENT, .data = NULL};
   MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   MAP_UARTIntDisable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   osi_MsgQWrite(&s_v7_q, &e, OSI_NO_WAIT);
 }
+#endif
 
 void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
@@ -102,35 +105,36 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
 
 static void v7_task(void *arg) {
   struct v7 *v7 = s_v7;
-  printf("\n\nMongoose IoT %s\n", build_id);
+  fprintf(stderr, "\n\nMongoose IoT %s\n", build_id);
 
   osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct sj_event), 32 /* len */);
-  osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
-  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   sl_Start(NULL, NULL, NULL);
-
   mongoose_init();
+
+#ifndef CS_DISABLE_JS
   v7 = s_v7 = init_v7(&v7);
 
   /* Disable GC during JS API initialization. */
   v7_set_gc_enabled(v7, 0);
-
+  sj_gpio_api_setup(v7);
+  sj_i2c_api_setup(v7);
+  sj_wifi_api_setup(v7);
   sj_timers_api_setup(v7);
+#endif
+
   sj_v7_ext_api_setup(v7);
   sj_init_sys(v7);
-  sj_wifi_api_setup(v7);
   sj_wifi_init(v7);
   if (init_fs(v7) != 0) {
     fprintf(stderr, "FS initialization failed.\n");
   }
 
-  sj_gpio_api_setup(v7);
   sj_http_api_setup(v7);
-  sj_i2c_api_setup(v7);
 
   /* Common config infrastructure. Mongoose & v7 must be initialized. */
   init_device(v7);
 
+#ifndef CS_DISABLE_JS
   /* SJS initialized, enable GC back, and trigger it */
   v7_set_gc_enabled(v7, 1);
   v7_gc(v7, 1);
@@ -140,17 +144,29 @@ static void v7_task(void *arg) {
     fprintf(stderr, "Error: ");
     v7_fprint(stderr, v7, res);
   }
+#endif
 
-  fprintf(stderr, "RAM: %d total, %d free\n", sj_get_heap_size(),
-          sj_get_free_heap_size());
+  LOG(LL_INFO, ("Sys init done, RAM: %d total, %d free", sj_get_heap_size(),
+                sj_get_free_heap_size()));
 
+  if (!sj_app_init(v7)) {
+    LOG(LL_ERROR, ("App init failed"));
+    abort();
+  }
+  LOG(LL_INFO, ("App init done"));
+
+#ifndef CS_DISABLE_JS
+  osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
+  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   sj_prompt_init(v7);
+#endif
 
   while (1) {
     struct sj_event e;
     mongoose_poll(0);
     if (osi_MsgQRead(&s_v7_q, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (e.type) {
+#ifndef CS_DISABLE_JS
       case PROMPT_CHAR_EVENT: {
         long c;
         while ((c = UARTCharGetNonBlocking(CONSOLE_UART)) >= 0) {
@@ -169,6 +185,7 @@ static void v7_task(void *arg) {
         free(ied);
         break;
       }
+#endif
       case GPIO_INT_EVENT: {
         int pin = ((intptr_t) e.data) >> 1;
         enum gpio_level val =
@@ -226,4 +243,10 @@ void vAssertCalled(const char *pcFile, unsigned long ulLine) {
   // Handle Assert here
   while (1) {
   }
+}
+
+int sj_app_init(struct v7 *v7) __attribute__((weak));
+int sj_app_init(struct v7 *v7) {
+  (void) v7;
+  return 1;
 }
