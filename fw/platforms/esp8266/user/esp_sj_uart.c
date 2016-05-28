@@ -288,6 +288,8 @@ v7_val_t esp_sj_uart_get_recv_handler(int uart_no) {
 
 void esp_sj_uart_init(struct v7 *v7) {
   (void) v7;
+  os_timer_setfn(&sj_us[0].timer, esp_sj_uart_dispatcher, (void *) 0);
+  os_timer_setfn(&sj_us[1].timer, esp_sj_uart_dispatcher, (void *) 1);
 }
 
 #endif /* CS_DISABLE_JS */
