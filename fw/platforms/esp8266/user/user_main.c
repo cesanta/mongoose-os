@@ -109,9 +109,7 @@ void sjs_init(void *dummy) {
 #ifndef V7_NO_FS
 #ifndef DISABLE_OTA
   fs_init(get_fs_addr(get_current_rom()), get_fs_size(get_current_rom()));
-#ifndef CS_DISABLE_CLUBBY_UPDATER
   finish_update();
-#endif
 #else
   fs_init(FS_ADDR, FS_SIZE);
 #endif

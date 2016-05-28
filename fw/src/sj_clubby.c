@@ -655,6 +655,30 @@ struct clubby_event *sj_clubby_create_reply(struct clubby_event *evt) {
   return repl;
 }
 
+void sj_clubby_send_status_resp(struct clubby_event *evt, int status,
+                                const char *status_msg) {
+  if (evt == NULL) {
+    LOG(LL_WARN, ("Unable to send clubby reply"));
+    return;
+  }
+  struct clubby *clubby = (struct clubby *) evt->context;
+  struct ub_ctx *ctx = ub_ctx_new();
+
+  /* TODO(alashkin): add `len` parameter to ubjserializer */
+  char *dst = calloc(1, evt->request.src->len + 1);
+  if (dst == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
+  memcpy(dst, evt->request.src->ptr, evt->request.src->len);
+
+  clubby_proto_send(clubby->nc, ctx,
+                    clubby_proto_create_resp(
+                        ctx, clubby->cfg.device_id, clubby->cfg.device_psk, dst,
+                        evt->request.id, status, status_msg, NULL));
+  free(dst);
+}
+
 void sj_clubby_init() {
   clubby_proto_init(clubby_cb);
 

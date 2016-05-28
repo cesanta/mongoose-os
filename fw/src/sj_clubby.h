@@ -65,6 +65,8 @@ int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *command,
 
 int sj_clubby_can_send(clubby_handle_t handle);
 
+void sj_clubby_send_status_resp(struct clubby_event *evt, int status,
+                                const char *status_msg);
 /*
  * Sends an array of clubby commands.
  * cmds parameter must be an ubjson array (created by `ub_create_array`)

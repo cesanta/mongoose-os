@@ -6,12 +6,6 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_
 
-#ifndef CS_DISABLE_CLUBBY_UPDATER
-#if defined(DISABLE_C_CLUBBY) || defined(CS_DISABLE_JS) || defined(DISABLE_OTA)
-#define CS_DISABLE_CLUBBY_UPDATER
-#endif
-#endif
-
 #include <stdint.h>
 
 struct v7;

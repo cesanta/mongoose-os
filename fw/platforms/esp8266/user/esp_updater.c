@@ -5,9 +5,7 @@
 
 #include "fw/platforms/esp8266/user/esp_updater.h"
 #include "fw/platforms/esp8266/user/esp_updater_private.h"
-#ifndef CS_DISABLE_CLUBBY_UPDATER
 #include "fw/platforms/esp8266/user/esp_updater_clubby.h"
-#endif
 
 #include <stdint.h>
 #include <user_interface.h>
@@ -603,9 +601,7 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
 
   ret = 1;
 
-#ifndef CS_DISABLE_CLUBBY_UPDATER
   s_clubby_reply = load_clubby_reply(&old_fs);
-#endif
 /* Do not rollback fw if load_clubby_reply failed */
 
 cleanup:
@@ -624,9 +620,7 @@ int finish_update() {
       LOG(LL_INFO, ("Firmware was rolled back, commiting it"));
       get_rboot_config()->is_first_boot = 0;
       rboot_set_config(get_rboot_config());
-#ifndef CS_DISABLE_CLUBBY_UPDATER
       s_clubby_upd_status = 1; /* Once we connect wifi we send status 1 */
-#endif
     }
     return 1;
   }
@@ -1038,10 +1032,6 @@ static void handle_update_post_req(struct mg_connection *c, int ev, void *p) {
 }
 
 void init_updater(struct v7 *v7) {
-#ifndef CS_DISABLE_CLUBBY_UPDATER
   init_updater_clubby(v7);
-#else
-  (void) v7;
-#endif
   device_register_http_endpoint("/update", handle_update_post_req);
 }
