@@ -1,5 +1,5 @@
 ---
-title: "JavaScript API reference"
+title: "Firmware API"
 items:
   - { type: file, name: string.md }
   - { type: file, name: file.md }

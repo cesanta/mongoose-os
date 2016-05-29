@@ -1,5 +1,5 @@
 ---
-title: Extending Mongoose IoT firmware
+title: Extend firmware
 ---
 
 It is trivial to add more API functions to the Mongoose IoT firmware.  Mongoose IoT is
