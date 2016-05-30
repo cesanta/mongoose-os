@@ -51,7 +51,7 @@
   ["clubby.ssl_server_name", "s", {"title" : "TLS Server Name"}],
   ["clubby.ssl_ca_file", "s", {"title" : "TLS CA file"}],
   ["clubby.ssl_client_cert_file", "s", {"title": "TLS client cert file"}],
-
+  ["console.send_to_cloud", "b", {"title": "Send ouput of console.log to the cloud"}],
   ["debug", "o", {"title": "Debug Settings"}],
   ["debug.level", "i", {
     "title": "Level",
