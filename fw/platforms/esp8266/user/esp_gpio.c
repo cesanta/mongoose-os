@@ -123,7 +123,7 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
 
     case GPIO_MODE_INPUT:
       PIN_FUNC_SELECT(gi->periph, gi->func);
-      GPIO_DIS_OUTPUT(pin);
+      GPIO_DIS_OUTPUT(GPIO_ID_PIN(pin));
       break;
 
     case GPIO_MODE_OUTPUT:
