@@ -18,7 +18,7 @@
 /* Commands exposed to C */
 const char clubby_cmd_ready[] = CLUBBY_CMD_READY;
 const char clubby_cmd_onopen[] = CLUBBY_CMD_ONOPEN;
-const char clubby_cmd_onclose[] = CLUBBY_CMD_ONOPEN;
+const char clubby_cmd_onclose[] = CLUBBY_CMD_ONCLOSE;
 const char s_oncmd_cmd[] = S_ONCMD_CMD;
 
 struct clubby_cb_info {
