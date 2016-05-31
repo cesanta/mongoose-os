@@ -132,7 +132,9 @@ static void schedule_reconnect(struct clubby *clubby) {
     clubby->reconnect_timeout = clubby->cfg.reconnect_timeout_max;
   }
   LOG(LL_DEBUG, ("Reconnect timeout: %d", clubby->reconnect_timeout));
-  sj_set_c_timer(clubby->reconnect_timeout * 1000, 0, reconnect_cb, clubby);
+  if (clubby->reconnect_timeout > 0) {
+    sj_set_c_timer(clubby->reconnect_timeout * 1000, 0, reconnect_cb, clubby);
+  }
 }
 
 int sj_clubby_register_callback(struct clubby *clubby, const char *id,
