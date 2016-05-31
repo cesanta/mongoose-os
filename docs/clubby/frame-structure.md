@@ -13,7 +13,7 @@ Each frame is a JSON object with a predefined set of keys:
 
 For requests:
 - `method`: method name.
-- `args`: method arguments, type and format are method-dependent.
+- `args`: method arguments, type and format are method-dependent.<br>
 Timeout can be specified in two ways:
 - `deadline`: as an absolute UNIX timestamp, or
 - `timeout`: as a number of seconds (will be converted to `deadline` by the dispatcher)
