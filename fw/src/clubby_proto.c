@@ -16,6 +16,8 @@
 #define MG_F_WS_FRAGMENTED MG_F_USER_6
 #define MG_F_CLUBBY_CONNECTED MG_F_USER_5
 
+const ub_val_t CLUBBY_UNDEFINED = {.kind = UBJSON_TYPE_UNDEFINED};
+
 /* Dispatcher callback */
 static clubby_proto_callback_t s_clubby_cb;
 
@@ -118,48 +120,59 @@ static void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
 }
 
 ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
+                                        ub_val_t frame_proto,
                                         const char *device_id,
                                         const char *device_psk,
                                         const char *dst) {
-  ub_val_t frame = ub_create_object(ctx);
-  ub_add_prop(ctx, frame, "src", ub_create_string(ctx, device_id));
-  ub_add_prop(ctx, frame, "key", ub_create_string(ctx, device_psk));
-  ub_add_prop(ctx, frame, "dst", ub_create_string(ctx, dst));
+  ub_val_t ret;
+  if (frame_proto.kind == UBJSON_TYPE_UNDEFINED) {
+    ret = ub_create_object(ctx);
+  } else {
+    ret = frame_proto;
+  }
 
-  return frame;
+  ub_add_prop(ctx, ret, "v", ub_create_number(2));
+  ub_add_prop(ctx, ret, "src", ub_create_string(ctx, device_id));
+  ub_add_prop(ctx, ret, "key", ub_create_string(ctx, device_psk));
+  ub_add_prop(ctx, ret, "dst", ub_create_string(ctx, dst));
+
+  return ret;
 }
 
 ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
                                   const char *device_psk, const char *dst,
-                                  int64_t id, int status,
-                                  const char *status_msg,
-                                  ub_val_t *resp_value) {
-  ub_val_t frame =
-      clubby_proto_create_frame_base(ctx, device_id, device_psk, dst);
-  ub_val_t resp = ub_create_array(ctx);
-  ub_add_prop(ctx, frame, "resp", resp);
-  ub_val_t respv = ub_create_object(ctx);
-  ub_array_push(ctx, resp, respv);
-  ub_add_prop(ctx, respv, "id", ub_create_number(id));
-  ub_add_prop(ctx, respv, "status", ub_create_number(status));
-
-  if (status_msg != 0) {
-    ub_add_prop(ctx, respv, "status_msg", ub_create_string(ctx, status_msg));
+                                  int64_t id, ub_val_t result, ub_val_t error) {
+  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED,
+                                                  device_id, device_psk, dst);
+  if (result.kind != UBJSON_TYPE_UNDEFINED) {
+    ub_add_prop(ctx, frame, "result", result);
   }
 
-  if (resp_value != 0) {
-    ub_add_prop(ctx, respv, "resp", *resp_value);
+  if (error.kind != UBJSON_TYPE_UNDEFINED) {
+    ub_add_prop(ctx, frame, "error", error);
   }
+
+  ub_add_prop(ctx, frame, "id", ub_create_number(id));
 
   return frame;
 }
 
 ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *device_id,
                                    const char *device_psk, const char *dst,
-                                   ub_val_t cmds) {
-  ub_val_t frame =
-      clubby_proto_create_frame_base(ctx, device_id, device_psk, dst);
-  ub_add_prop(ctx, frame, "cmds", cmds);
+                                   const char *method, ub_val_t args,
+                                   uint32_t timeout, time_t deadline) {
+  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED,
+                                                  device_id, device_psk, dst);
+  ub_add_prop(ctx, frame, "method", ub_create_string(ctx, method));
+  ub_add_prop(ctx, frame, "args", args);
+
+  if (timeout != 0) {
+    ub_add_prop(ctx, frame, "timeout", ub_create_number(timeout));
+  }
+
+  if (deadline != 0) {
+    ub_add_prop(ctx, frame, "deadline", ub_create_number(deadline));
+  }
 
   return frame;
 }
@@ -169,132 +182,34 @@ void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
   ub_render(ctx, frame, clubby_proto_ws_emit, nc);
 }
 
-static void clubby_proto_parse_resp(struct json_token *resp_arr,
-                                    void *context) {
-  struct clubby_event evt;
+static void clubby_proto_parse_resp(struct json_token *result_tok,
+                                    struct json_token *error_tok,
+                                    struct clubby_event *evt) {
+  evt->ev = CLUBBY_RESPONSE;
+  evt->response.result = result_tok;
 
-  evt.ev = CLUBBY_RESPONSE;
-  evt.context = context;
-
-  if (resp_arr->type != JSON_TYPE_ARRAY || resp_arr->num_desc == 0) {
-    LOG(LL_ERROR, ("No resp in resp"));
-    return;
-  }
-
-  /*
-   * Frozen's API for working with arrays is nonexistent, so what we do here
-   * looks kinda funny.
-   * Things to note: resp_arr->len is length of the array in characters, not
-   * elements.
-   * tok->num_desc includes all the tokens inside array, not just elements.
-   * There is basically no way to tell number of elements upfront.
-   */
-  struct json_token *resp = NULL;
-  const char *resp_arr_end = resp_arr->ptr + resp_arr->len;
-  for (resp = resp_arr + 1;
-       resp->type != JSON_TYPE_EOF && resp->ptr < resp_arr_end;) {
-    if (resp->type != JSON_TYPE_OBJECT) {
-      LOG(LL_ERROR, ("Response array contains %d instead of object: |%.*s|",
-                     resp->type, resp->len, resp->ptr));
-      break;
+  if (error_tok != NULL) {
+    evt->response.error.error_obj = error_tok;
+    struct json_token *error_code_tok = find_json_token(error_tok, "code");
+    if (error_code_tok == NULL) {
+      LOG(LL_ERROR, ("No error code in error object"));
+      return;
     }
-
-    evt.response.resp_body = resp;
-
-    struct json_token *id_tok = find_json_token(resp, "id");
-    if (id_tok == NULL || id_tok->type != JSON_TYPE_NUMBER) {
-      LOG(LL_ERROR, ("No id in response |%.*s|", resp->len, resp->ptr));
-      break;
-    }
-    /*
-     * Any number inside a JSON message will have non-number character.
-     * Hence, no need to have it explicitly nul-terminated.
-     */
-    evt.response.id = to64(id_tok->ptr);
-
-    struct json_token *status_tok = find_json_token(resp, "status");
-    if (status_tok == NULL || status_tok->type != JSON_TYPE_NUMBER) {
-      LOG(LL_ERROR, ("No status in response |%.*s|", resp->len, resp->ptr));
-      break;
-    }
-
-    evt.response.status = strtol(status_tok->ptr, NULL, 10);
-
-    evt.response.status_msg = find_json_token(resp, "status_msg");
-    evt.response.resp = find_json_token(resp, "resp");
-
-    s_clubby_cb(&evt);
-
-    const char *resp_end = resp->ptr + resp->len;
-    struct json_token *next = resp + 1;
-    while (next->type != JSON_TYPE_EOF && next->ptr < resp_end) {
-      next++;
-    }
-    resp = next;
+    evt->response.error.error_code = to64(error_code_tok->ptr);
+    evt->response.error.error_message = find_json_token(error_tok, "message");
   }
 }
 
-static void clubby_proto_parse_req(struct json_token *frame,
-                                   struct json_token *cmds_arr, void *context) {
-  if (cmds_arr->type != JSON_TYPE_ARRAY || cmds_arr->num_desc == 0) {
-    /* Just for debugging - there _is_ cmds field but it is empty */
-    LOG(LL_ERROR, ("No cmd in cmds"));
-    return;
-  }
-
-  struct json_token *cmd = NULL;
-  struct clubby_event evt;
-
-  evt.ev = CLUBBY_REQUEST;
-  evt.context = context;
-  evt.request.src = find_json_token(frame, "src");
-  if (evt.request.src == NULL || evt.request.src->type != JSON_TYPE_STRING) {
-    LOG(LL_ERROR, ("Invalid src |%.*s|", frame->len, frame->ptr));
-    return;
-  }
-
-  /*
-   * If any required field is missing we stop processing of the whole package
-   * It looks simpler & safer
-   */
-  const char *cmds_arr_end = cmds_arr->ptr + cmds_arr->len;
-  for (cmd = cmds_arr + 1;
-       cmd->type != JSON_TYPE_EOF && cmd->ptr < cmds_arr_end;) {
-    if (cmd->type != JSON_TYPE_OBJECT) {
-      LOG(LL_ERROR, ("Commands array contains %d instead of object: |%.*s|",
-                     cmd->type, cmd->len, cmd->ptr));
-      break;
-    }
-
-    evt.request.cmd_body = cmd;
-
-    evt.request.cmd = find_json_token(cmd, "cmd");
-    if (evt.request.cmd == NULL || evt.request.cmd->type != JSON_TYPE_STRING) {
-      LOG(LL_ERROR, ("Invalid command |%.*s|", cmd->len, cmd->ptr));
-      break;
-    }
-
-    struct json_token *id_tok = find_json_token(cmd, "id");
-    if (id_tok == NULL || id_tok->type != JSON_TYPE_NUMBER) {
-      LOG(LL_ERROR, ("No id command |%.*s|", cmd->len, cmd->ptr));
-      break;
-    }
-
-    evt.request.id = to64(id_tok->ptr);
-
-    s_clubby_cb(&evt);
-
-    const char *cmd_end = cmd->ptr + cmd->len;
-    struct json_token *next = cmd + 1;
-    while (next->type != JSON_TYPE_EOF && next->ptr < cmd_end) {
-      next++;
-    }
-
-    cmd = next;
-  }
+static void clubby_proto_parse_req(struct json_token *method,
+                                   struct json_token *frame,
+                                   struct clubby_event *evt) {
+  evt->ev = CLUBBY_REQUEST;
+  evt->request.method = method;
+  evt->request.args = find_json_token(frame, "args");
 }
 
 static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
+  struct clubby_event evt;
   struct json_token *frame = parse_json2(data, len);
 
   if (frame == NULL) {
@@ -302,18 +217,61 @@ static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
     return;
   }
 
-  struct json_token *tmp;
-
-  tmp = find_json_token(frame, "resp");
-  if (tmp != NULL) {
-    clubby_proto_parse_resp(tmp, context);
+  struct json_token *v_tok = find_json_token(frame, "v");
+  if (v_tok == NULL || *v_tok->ptr != '2') {
+    LOG(LL_ERROR, ("Only clubby v2 is supported (received: %.*s)",
+                   v_tok ? 0 : v_tok->len, v_tok->ptr));
+    goto clean;
   }
 
-  tmp = find_json_token(frame, "cmds");
-  if (tmp != NULL) {
-    clubby_proto_parse_req(frame, tmp, context);
+  memset(&evt, 0, sizeof(evt));
+  evt.frame = frame;
+  evt.context = context;
+
+  struct json_token *id_tok = find_json_token(frame, "id");
+  if (id_tok == NULL) {
+    LOG(LL_ERROR, ("No id in frame"));
+    goto clean;
   }
 
+  evt.id = to64(id_tok->ptr);
+  if (evt.id == 0) {
+    LOG(LL_ERROR, ("Wrong id"));
+    goto clean;
+  }
+
+  /* Allow empty dst */
+  evt.dst = find_json_token(frame, "dst");
+
+  evt.src = find_json_token(frame, "src");
+  if (evt.src == NULL) {
+    LOG(LL_ERROR, ("No src in frame"));
+    goto clean;
+  }
+
+  struct json_token *method_tok = find_json_token(frame, "method");
+  struct json_token *result_tok = find_json_token(frame, "result");
+  struct json_token *error_tok = find_json_token(frame, "error");
+
+  /*
+   * if none of required token exist - this is positive response
+   * if `method` and `error` (or `result`) are in the same
+   * frame - this is an error
+   */
+  if (method_tok != NULL && (result_tok != NULL || error_tok != NULL)) {
+    LOG(LL_ERROR, ("Malformed frame"));
+    goto clean;
+  }
+
+  if (method_tok != NULL) {
+    clubby_proto_parse_req(method_tok, frame, &evt);
+  } else {
+    clubby_proto_parse_resp(result_tok, error_tok, &evt);
+  }
+
+  s_clubby_cb(&evt);
+
+clean:
   free(frame);
 }
 

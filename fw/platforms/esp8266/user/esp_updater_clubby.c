@@ -292,18 +292,18 @@ static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
 
 static void handle_update_req(struct clubby_event *evt, void *user_data) {
   (void) user_data;
-  LOG(LL_DEBUG, ("Command received: %.*s", evt->request.cmd_body->len,
-                 evt->request.cmd_body->ptr));
+  LOG(LL_DEBUG, ("Update request received: %.*s", evt->request.args->len,
+                 evt->request.args->ptr));
 
   const char *reply = "Malformed request";
 
-  struct json_token *args = find_json_token(evt->request.cmd_body, "args");
-  if (args == NULL || args->type != JSON_TYPE_OBJECT) {
+  if (evt->request.args == NULL ||
+      evt->request.args->type != JSON_TYPE_OBJECT) {
     goto bad_request;
   }
 
-  struct json_token *section = find_json_token(args, "section");
-  struct json_token *blob_url = find_json_token(args, "blob_url");
+  struct json_token *section = find_json_token(evt->request.args, "section");
+  struct json_token *blob_url = find_json_token(evt->request.args, "blob_url");
 
   /*
    * TODO(alashkin): enable update for another files, not

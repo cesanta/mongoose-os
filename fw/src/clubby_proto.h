@@ -12,10 +12,12 @@
 #if !defined(DISABLE_C_CLUBBY) && defined(CS_ENABLE_UBJSON)
 
 /*
- * Here are low-level clubby functions
+ * Here are low-level clubby functions and constants
  * They ARE NOT intended for using anywhere but `sj_clubby.c`
  * Use functions from 'sj_clubby.h` instead
  */
+
+extern const ub_val_t CLUBBY_UNDEFINED;
 
 enum clubby_event_type {
   CLUBBY_NET_CONNECT /* net_connect in `clubby_event` struct */,
@@ -34,19 +36,22 @@ struct clubby_event {
       int success;
     } net_connect;
     struct {
-      struct json_token *resp_body;
-      int64_t id;
-      int status;
-      struct json_token *status_msg;
-      struct json_token *resp;
+      struct {
+        int error_code;
+        struct json_token *error_message;
+        struct json_token *error_obj;
+      } error;
+      struct json_token *result;
     } response;
     struct {
-      struct json_token *cmd_body;
-      int64_t id;
-      struct json_token *cmd;
-      struct json_token *src;
+      struct json_token *method;
+      struct json_token *args;
     } request;
   };
+  struct json_token *frame;
+  struct json_token *src;
+  struct json_token *dst;
+  int64_t id;
   void *context;
 };
 
@@ -54,17 +59,18 @@ typedef void (*clubby_proto_callback_t)(struct clubby_event *evt);
 
 ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
                                   const char *device_psk, const char *dst,
-                                  int64_t id, int status,
-                                  const char *status_msg, ub_val_t *resp_value);
+                                  int64_t id, ub_val_t result, ub_val_t error);
 
 ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
+                                        ub_val_t frame_proto,
                                         const char *device_id,
                                         const char *device_psk,
                                         const char *dst);
 
 ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *device_id,
                                    const char *device_psk, const char *dst,
-                                   ub_val_t cmds);
+                                   const char *method, ub_val_t args,
+                                   uint32_t timeout, time_t deadline);
 
 void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
                        ub_val_t frame);

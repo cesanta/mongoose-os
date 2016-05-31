@@ -116,24 +116,28 @@ static int register_js_callback(struct clubby *clubby, struct v7 *v7,
  */
 
 static void clubby_send_response(struct clubby *clubby, const char *dst,
-                                 int64_t id, int status, const char *status_msg,
-                                 v7_val_t resp_v) {
+                                 int64_t id, int status, const char *error_msg,
+                                 v7_val_t result_v) {
   /*
    * Do not queueing responses. Work like clubby.js
    * TODO(alashkin): is it good?
    */
-  ub_val_t ubj;
+  ub_val_t result_ubj = CLUBBY_UNDEFINED;
+  ub_val_t error_ubj = CLUBBY_UNDEFINED;
 
   struct ub_ctx *ctx = ub_ctx_new();
-  if (!v7_is_undefined(resp_v)) {
-    ubj = obj_to_ubj(clubby->v7, ctx, resp_v);
+  if (!v7_is_undefined(result_v)) {
+    result_ubj = obj_to_ubj(clubby->v7, ctx, result_v);
   }
 
-  clubby_proto_send(
-      clubby->nc, ctx,
-      clubby_proto_create_resp(
-          ctx, clubby->cfg.device_id, clubby->cfg.device_psk, dst, id, status,
-          status_msg, v7_is_undefined(resp_v) ? NULL : &ubj));
+  if (status != 0) {
+    error_ubj = sj_clubby_create_error(ctx, status, error_msg);
+  }
+
+  clubby_proto_send(clubby->nc, ctx,
+                    clubby_proto_create_resp(ctx, clubby->cfg.device_id,
+                                             clubby->cfg.device_psk, dst, id,
+                                             result_ubj, error_ubj));
 }
 
 /* TODO(alashkin): see hello cmd */
@@ -208,11 +212,11 @@ int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...);
 static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   struct clubby *clubby = (struct clubby *) evt->context;
   v7_val_t *cbp = (v7_val_t *) user_data;
-  v7_val_t cb_param;
-  enum v7_err res;
+  v7_val_t resp_obj = V7_UNDEFINED;
+  enum v7_err res = V7_OK;
 
   if (v7_is_undefined(*cbp)) {
-    LOG(LL_DEBUG, ("Callback is not set for id=%d", (int) evt->response.id));
+    LOG(LL_DEBUG, ("Callback is not set for id=%d", (int) evt->id));
     goto clean;
   }
 
@@ -225,20 +229,29 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
                              ",\"status\":1,"
                              "resp: \"Deadline exceeded\"}";
     char reply[sizeof(reply_fmt) + 17];
-    c_snprintf(reply, sizeof(reply), reply_fmt, evt->response.id);
+    c_snprintf(reply, sizeof(reply), reply_fmt, evt->id);
 
-    res = v7_parse_json(clubby->v7, reply, &cb_param);
-  } else {
+    res = v7_parse_json(clubby->v7, reply, &resp_obj);
+  } else if (evt->response.result != NULL ||
+             evt->response.error.error_obj != NULL) {
+    struct json_token *cb_param_tok = evt->response.result
+                                          ? evt->response.result
+                                          : evt->response.error.error_obj;
     /* v7_parse_json wants null terminated string */
-    char *obj_str = calloc(1, evt->response.resp_body->len + 1);
-    if (obj_str == NULL) {
-      LOG(LL_ERROR, ("Out of memory"));
-      goto clean;
-    }
-    memcpy(obj_str, evt->response.resp_body->ptr, evt->response.resp_body->len);
+    if (cb_param_tok->type == JSON_TYPE_OBJECT) {
+      char *obj_str = calloc(1, cb_param_tok->len + 1);
+      if (obj_str == NULL) {
+        LOG(LL_ERROR, ("Out of memory"));
+        goto clean;
+      }
+      memcpy(obj_str, cb_param_tok->ptr, cb_param_tok->len);
 
-    res = v7_parse_json(clubby->v7, obj_str, &cb_param);
-    free(obj_str);
+      res = v7_parse_json(clubby->v7, obj_str, &resp_obj);
+      free(obj_str);
+    } else {
+      resp_obj =
+          v7_mk_string(clubby->v7, cb_param_tok->ptr, cb_param_tok->len, 1);
+    }
   }
 
   if (res != V7_OK) {
@@ -247,13 +260,19 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
      * answer of just skip it?
      */
     LOG(LL_ERROR, ("Unable to parse reply"));
-    cb_param = V7_UNDEFINED;
+    resp_obj = V7_UNDEFINED;
   }
 
+  v7_own(clubby->v7, &resp_obj);
+  v7_val_t cb_param = v7_mk_object(clubby->v7);
   v7_own(clubby->v7, &cb_param);
+  if (!v7_is_undefined(resp_obj)) {
+    v7_set(clubby->v7, cb_param, evt->response.result ? "result" : "error", ~0,
+           resp_obj);
+  }
   sj_invoke_cb1(clubby->v7, *cbp, cb_param);
+  v7_disown(clubby->v7, &resp_obj);
   v7_disown(clubby->v7, &cb_param);
-
 clean:
   v7_disown(clubby->v7, cbp);
   free(cbp);
@@ -294,27 +313,25 @@ static enum v7_err done_func(struct v7 *v7, v7_val_t *res) {
 static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
   struct clubby *clubby = (struct clubby *) evt->context;
   v7_val_t *cbv = (v7_val_t *) user_data;
+  v7_val_t args_v = V7_UNDEFINED, clubby_param;
+  enum v7_err res = V7_OK;
 
-  struct json_token *obj_tok = evt->request.cmd_body;
+  if (evt->request.args != NULL) {
+    /* v7_parse_json wants null terminated string */
+    char *obj_str = calloc(1, evt->request.args->len + 1);
+    if (obj_str == NULL) {
+      LOG(LL_ERROR, ("Out of memory"));
+      return;
+    }
+    memcpy(obj_str, evt->request.args->ptr, evt->request.args->len);
 
-  /* v7_parse_json wants null terminated string */
-  char *obj_str = calloc(1, obj_tok->len + 1);
-  if (obj_str == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
-    return;
+    res = v7_parse_json(clubby->v7, obj_str, &args_v);
+    free(obj_str);
   }
-  memcpy(obj_str, obj_tok->ptr, obj_tok->len);
-
-  v7_val_t clubby_param;
-  enum v7_err res = v7_parse_json(clubby->v7, obj_str, &clubby_param);
-  free(obj_str);
 
   if (res != V7_OK) {
-    /*
-     * TODO(alashkin): do we need to report in case of malformed
-     * answer of just skip it?
-     */
-    clubby_param = V7_UNDEFINED;
+    LOG(LL_ERROR, ("Failed to parse arguments"));
+    return;
   }
 
   v7_val_t argcv = v7_get(clubby->v7, *cbv, "length", ~0);
@@ -322,13 +339,13 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
   assert(!v7_is_undefined(argcv));
   int argc = v7_get_double(clubby->v7, argcv);
 
-  char *dst = calloc(1, evt->request.src->len + 1);
+  char *dst = calloc(1, evt->src->len + 1);
   if (dst == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return;
   }
 
-  memcpy(dst, evt->request.src->ptr, evt->request.src->len);
+  memcpy(dst, evt->src->ptr, evt->src->len);
 
   if (argc < 2) {
     /*
@@ -339,17 +356,21 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
     v7_val_t args;
     v7_val_t res;
 
+    v7_own(clubby->v7, &args_v);
+    clubby_param = v7_mk_object(clubby->v7);
     v7_own(clubby->v7, &clubby_param);
+    v7_set(clubby->v7, clubby_param, "args", ~0, args_v);
     args = v7_mk_array(clubby->v7);
     v7_array_push(clubby->v7, args, clubby_param);
     cb_res = v7_apply(clubby->v7, *cbv, v7_get_global(clubby->v7), args, &res);
     if (cb_res == V7_OK) {
-      clubby_send_response(clubby, dst, evt->request.id, 0, NULL, res);
+      clubby_send_response(clubby, dst, evt->id, 0, NULL, res);
     } else {
-      clubby_send_response(clubby, dst, evt->request.id, 1,
+      clubby_send_response(clubby, dst, evt->id, 1,
                            v7_get_cstring(clubby->v7, &res), V7_UNDEFINED);
     }
     v7_disown(clubby->v7, &clubby_param);
+    v7_disown(clubby->v7, &args_v);
     free(dst);
     return;
   } else {
@@ -368,10 +389,13 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
       return;
     }
     ctx->dst = dst;
-    ctx->id = evt->request.id;
+    ctx->id = evt->id;
     ctx->clubby = clubby;
 
+    v7_own(clubby->v7, &args_v);
+    clubby_param = v7_mk_object(clubby->v7);
     v7_own(clubby->v7, &clubby_param);
+    v7_set(clubby->v7, clubby_param, "args", ~0, args_v);
 
     v7_val_t done_func_v = v7_mk_cfunction(done_func);
     v7_val_t bind_args = v7_mk_array(clubby->v7);
@@ -402,11 +426,13 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
 
     v7_disown(clubby->v7, &donevb);
     v7_disown(clubby->v7, &clubby_param);
+    v7_disown(clubby->v7, &args_v);
     return;
 
   cleanup:
     v7_disown(clubby->v7, &donevb);
     v7_disown(clubby->v7, &clubby_param);
+    v7_disown(clubby->v7, &args_v);
     free(ctx->dst);
     free(ctx);
   }
@@ -426,12 +452,12 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   struct ub_ctx *ctx = NULL;
-  v7_val_t dstv = v7_arg(v7, 0);
-  v7_val_t cmdv = v7_arg(v7, 1);
-  v7_val_t cbv = v7_arg(v7, 2);
+  v7_val_t dst_v = v7_arg(v7, 0);
+  v7_val_t request_v = v7_arg(v7, 1);
+  v7_val_t cb_v = v7_arg(v7, 2);
 
-  if (!v7_is_string(dstv) || !v7_is_object(cmdv) ||
-      (!v7_is_undefined(cbv) && !v7_is_callable(v7, cbv))) {
+  if (!v7_is_string(dst_v) || !v7_is_object(request_v) ||
+      (!v7_is_undefined(cb_v) && !v7_is_callable(v7, cb_v))) {
     printf("Invalid arguments\n");
     goto error;
   }
@@ -448,44 +474,43 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   }
 
   /* Check if id and timeout exists and put default if not */
-  v7_val_t idv = v7_get(v7, cmdv, "id", 2);
+  v7_val_t id_v = v7_get(v7, request_v, "id", 2);
   int64_t id;
 
-  if (!v7_is_number(idv)) {
+  if (!v7_is_number(id_v)) {
     id = clubby_proto_get_new_id();
-    v7_set(v7, cmdv, "id", 2, v7_mk_number(v7, id));
+    v7_set(v7, request_v, "id", ~0, v7_mk_number(v7, id));
   } else {
-    id = v7_get_double(v7, idv);
+    id = v7_get_double(v7, id_v);
   }
 
-  v7_val_t timeoutv = v7_get(v7, cmdv, "timeout", 7);
-  uint32_t timeout;
-  if (v7_is_number(timeoutv)) {
-    timeout = v7_get_double(v7, timeoutv);
+  v7_val_t timeout_v = v7_get(v7, request_v, "timeout", 7);
+  uint32_t timeout = 0;
+  if (v7_is_number(timeout_v)) {
+    timeout = v7_get_double(v7, timeout_v);
   } else {
-    timeout = clubby->cfg.cmd_timeout;
+    timeout = clubby->cfg.request_timeout;
   }
 
-  v7_set(v7, cmdv, "timeout", 7, v7_mk_number(v7, timeout));
+  v7_set(v7, request_v, "timeout", 7, v7_mk_number(v7, timeout));
 
   /*
    * NOTE: Propably, we don't need UBJSON it is flower's legacy
    * TODO(alashkin): think about replacing ubjserializer with frozen
    */
   ctx = ub_ctx_new();
-  ub_val_t cmds = ub_create_array(ctx);
-  ub_array_push(ctx, cmds, obj_to_ubj(v7, ctx, cmdv));
 
   /*
    * TODO(alashkin): do not register callback is cbv is undefined
    * Now it is required to track timeout
    */
   if (!register_js_callback(clubby, v7, (char *) &id, sizeof(id),
-                            clubby_resp_cb, cbv, timeout)) {
+                            clubby_resp_cb, cb_v, timeout)) {
     goto error;
   }
 
-  clubby_send_cmds(clubby, ctx, id, v7_get_cstring(v7, &dstv), cmds);
+  clubby_send_request(clubby, ctx, id, v7_get_cstring(v7, &dst_v),
+                      obj_to_ubj(v7, ctx, request_v));
   *res = v7_mk_boolean(v7, 1);
 
   return V7_OK;
@@ -666,7 +691,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
 
   GET_INT_PARAM(reconnect_timeout_min, reconnect_timeout_min);
   GET_INT_PARAM(reconnect_timeout_max, reconnect_timeout_max);
-  GET_INT_PARAM(cmd_timeout, timeout);
+  GET_INT_PARAM(request_timeout, timeout);
   GET_INT_PARAM(max_queue_size, max_queue_size);
   GET_STR_PARAM(device_id, src);
   GET_STR_PARAM(device_psk, key);
@@ -694,7 +719,7 @@ clean:
 }
 
 void sj_clubby_send_reply(struct clubby_event *evt, int status,
-                          const char *status_msg, v7_val_t resp) {
+                          const char *error_msg, v7_val_t result_v) {
   if (evt == NULL) {
     LOG(LL_WARN, ("Unable to send clubby reply"));
     return;
@@ -702,14 +727,14 @@ void sj_clubby_send_reply(struct clubby_event *evt, int status,
   struct clubby *clubby = (struct clubby *) evt->context;
 
   /* TODO(alashkin): add `len` parameter to ubjserializer */
-  char *dst = calloc(1, evt->request.src->len + 1);
+  char *dst = calloc(1, evt->dst->len + 1);
   if (dst == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return;
   }
-  memcpy(dst, evt->request.src->ptr, evt->request.src->len);
+  memcpy(dst, evt->dst->ptr, evt->dst->len);
 
-  clubby_send_response(clubby, dst, evt->request.id, status, status_msg, resp);
+  clubby_send_response(clubby, dst, evt->id, status, error_msg, result_v);
   free(dst);
 }
 
