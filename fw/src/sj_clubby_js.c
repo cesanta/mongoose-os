@@ -221,13 +221,12 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
      * if event is CLUBBY_TIMEOUT we don't have actual answer
      * and we need to compose it
      */
-    const char reply_fmt[] = "{\"id\":%" INT64_FMT
-                             ",\"status\":1,"
-                             "resp: \"Deadline exceeded\"}";
-    char reply[sizeof(reply_fmt) + 17];
-    c_snprintf(reply, sizeof(reply), reply_fmt, evt->id);
-
-    res = v7_parse_json(clubby->v7, reply, &resp_obj);
+    resp_obj = v7_mk_object(clubby->v7);
+    v7_set(
+        clubby->v7, resp_obj, "message", ~0,
+        v7_mk_string(clubby->v7, "Delivery deadline reached (local)", ~0, 1));
+    /* clubby server responses with error 504 on timeout */
+    v7_set(clubby->v7, resp_obj, "code", ~0, v7_mk_number(clubby->v7, 504));
   } else if (evt->response.result != NULL ||
              evt->response.error.error_obj != NULL) {
     struct json_token *cb_param_tok = evt->response.result

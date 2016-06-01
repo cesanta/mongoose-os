@@ -13,7 +13,6 @@
 
 #define MAX_COMMAND_NAME_LENGTH 30
 #define RECONNECT_TIMEOUT_MULTIPLY 1.3
-#define TIMEOUT_CHECK_PERIOD 30000
 
 /* Commands exposed to C */
 const char clubby_cmd_ready[] = CLUBBY_CMD_READY;
@@ -173,11 +172,13 @@ static void verify_timeouts(struct clubby *clubby) {
   while (cb_info != NULL) {
     if (cb_info->expire_time != 0 && cb_info->expire_time <= now) {
       struct clubby_event evt;
+      memset(&evt, 0, sizeof(evt));
+
       evt.context = clubby;
       evt.ev = CLUBBY_TIMEOUT;
+
       memcpy(&evt.id, cb_info->id, sizeof(evt.id));
 
-      /* TODO(alashkin): remove enqueued frame (if any) as well */
       LOG(LL_DEBUG, ("Removing expired item. id=%d, expire_time=%d",
                      cb_info->expire_time, (int) evt.id));
 
@@ -205,17 +206,21 @@ static void verify_timeouts(struct clubby *clubby) {
 
 static void verify_timeouts_cb(void *arg) {
   (void) arg;
+  struct clubby_event evt;
+  memset(&evt, 0, sizeof(evt));
 
   struct clubby *clubby = s_clubbies;
   while (clubby != NULL) {
     verify_timeouts(clubby);
     if (sj_clubby_is_connected(clubby) && !sj_clubby_is_overcrowded(clubby)) {
-      call_ready_cbs(clubby, NULL);
+      evt.context = clubby;
+      call_ready_cbs(clubby, &evt);
     }
     clubby = clubby->next;
   }
 
-  sj_set_c_timer(TIMEOUT_CHECK_PERIOD, 0, verify_timeouts_cb, NULL);
+  sj_set_c_timer(get_cfg()->clubby.verify_timeouts_period * 1000, 0,
+                 verify_timeouts_cb, NULL);
 }
 
 static struct clubby_cb_info *remove_cbinfo(struct clubby *clubby,
@@ -690,7 +695,8 @@ void sj_clubby_init() {
                                     NULL);
 #endif
 
-  sj_set_c_timer(TIMEOUT_CHECK_PERIOD, 0, verify_timeouts_cb, NULL);
+  sj_set_c_timer(get_cfg()->clubby.verify_timeouts_period * 1000, 0,
+                 verify_timeouts_cb, NULL);
 
   /* TODO(alashkin): remove or expose functions below */
   (void) clubby_disconnect;

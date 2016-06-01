@@ -52,7 +52,8 @@
     "max_queue_size": 10,
     "ssl_server_name": "",
     "ssl_ca_file": "",
-    "ssl_client_cert_file": ""
+    "ssl_client_cert_file": "",
+    "verify_timeouts_period": 30
   },
   "debug": {
     "level": 2,
