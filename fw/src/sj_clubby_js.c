@@ -48,10 +48,6 @@ clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v) {
     return V7_OK;                                          \
   }
 
-/*
- * TODO(alashkin): try to move this function to ubjsetializer.c
- * (or something like ubjsetializer_ex.c
- */
 static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
   LOG(LL_VERBOSE_DEBUG, ("enter"));
 
@@ -441,7 +437,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
 SJ_PRIVATE enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
-  clubby_send_hello(clubby);
+  sj_clubby_send_hello(clubby);
   *res = v7_mk_boolean(v7, 1);
 
   return V7_OK;
@@ -463,13 +459,13 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   }
 
 #ifndef CLUBBY_DISABLE_MEMORY_LIMIT
-  if (!clubby_is_connected(clubby) && get_cfg()->clubby.memory_limit != 0 &&
+  if (!sj_clubby_is_connected(clubby) && get_cfg()->clubby.memory_limit != 0 &&
       sj_get_free_heap_size() < (size_t) get_cfg()->clubby.memory_limit) {
     return v7_throwf(v7, "Error", "Not enough memory to enqueue packet");
   }
 #endif
 
-  if (clubby_is_overcrowded(clubby)) {
+  if (sj_clubby_is_overcrowded(clubby)) {
     return v7_throwf(v7, "Error", "Too many unanswered packets, try later");
   }
 
@@ -509,8 +505,8 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
-  clubby_send_request(clubby, ctx, id, v7_get_cstring(v7, &dst_v),
-                      obj_to_ubj(v7, ctx, request_v));
+  sj_clubby_send_request(clubby, ctx, id, v7_get_cstring(v7, &dst_v),
+                         obj_to_ubj(v7, ctx, request_v));
   *res = v7_mk_boolean(v7, 1);
 
   return V7_OK;
@@ -573,8 +569,8 @@ SJ_PRIVATE enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   if (!clubby_proto_is_connected(clubby->nc)) {
-    reset_reconnect_timeout(clubby);
-    clubby_connect(clubby);
+    sj_reset_reconnect_timeout(clubby);
+    sj_clubby_connect(clubby);
 
     *res = v7_mk_boolean(v7, 1);
   } else {
@@ -594,7 +590,7 @@ SJ_PRIVATE enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
-  if (clubby_is_connected(clubby)) {
+  if (sj_clubby_is_connected(clubby)) {
     v7_own(v7, &cbv);
     sj_invoke_cb0(v7, cbv);
     v7_disown(v7, &cbv);
@@ -622,7 +618,7 @@ error:
     } else if (v7_is_number(tmp)) {                                     \
       clubby->cfg.name1 = v7_get_double(v7, tmp);                       \
     } else {                                                            \
-      free_clubby(clubby);                                              \
+      sj_free_clubby(clubby);                                           \
       LOG(LL_ERROR, ("Invalid type for %s, expected number", #name2));  \
       return v7_throwf(v7, "TypeError",                                 \
                        "Invalid type for %s, expected number", #name2); \
@@ -651,7 +647,7 @@ error:
         goto clean;                                                     \
       }                                                                 \
     } else {                                                            \
-      free_clubby(clubby);                                              \
+      sj_free_clubby(clubby);                                           \
       LOG(LL_ERROR, ("Invalid type for %s, expected string", #name2));  \
       return v7_throwf(v7, "TypeError",                                 \
                        "Invalid type for %s, expected string", #name2); \
@@ -665,7 +661,7 @@ error:
       register_js_callback(clubby, v7, name2, sizeof(name2), simple_cb, tmp, \
                            0);                                               \
     } else if (!v7_is_undefined(tmp)) {                                      \
-      free_clubby(clubby);                                                   \
+      sj_free_clubby(clubby);                                                \
       LOG(LL_ERROR, ("Invalid type for %s, expected function", #name1));     \
       return v7_throwf(v7, "TypeError",                                      \
                        "Invalid type for %s, expected function", #name1);    \
@@ -683,7 +679,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   }
 
   v7_val_t this_obj = v7_get_this(v7);
-  struct clubby *clubby = create_clubby(v7);
+  struct clubby *clubby = sj_create_clubby(v7);
   if (clubby == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return v7_throwf(v7, "Error", "Out of memory");
@@ -707,14 +703,14 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   set_clubby(v7, this_obj, clubby);
   v7_val_t connect = v7_get(v7, arg, "connect", ~0);
   if (v7_is_undefined(connect) || v7_is_truthy(v7, connect)) {
-    reset_reconnect_timeout(clubby);
-    clubby_connect(clubby);
+    sj_reset_reconnect_timeout(clubby);
+    sj_clubby_connect(clubby);
   }
 
   return rcode;
 
 clean:
-  free_clubby(clubby);
+  sj_free_clubby(clubby);
   return rcode;
 }
 

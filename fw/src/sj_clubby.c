@@ -55,7 +55,7 @@ static void delete_queued_frame(struct clubby *clubby, int64_t id);
 static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
                    struct clubby_event *evt, int remove_after_call);
 
-struct clubby *create_clubby(struct v7 *v7) {
+struct clubby *sj_create_clubby(struct v7 *v7) {
   struct clubby *ret = calloc(1, sizeof(*ret));
   if (ret == NULL) {
     return NULL;
@@ -70,7 +70,7 @@ struct clubby *create_clubby(struct v7 *v7) {
   return ret;
 }
 
-void free_clubby(struct clubby *clubby) {
+void sj_free_clubby(struct clubby *clubby) {
   struct clubby *current = s_clubbies;
   struct clubby *prev = NULL;
 
@@ -102,28 +102,28 @@ void free_clubby(struct clubby *clubby) {
   free(clubby);
 }
 
-int clubby_is_overcrowded(struct clubby *clubby) {
+int sj_clubby_is_overcrowded(struct clubby *clubby) {
   return (clubby->cfg.max_queue_size != 0 &&
           clubby->queue_len >= clubby->cfg.max_queue_size);
 }
 
-int clubby_is_connected(struct clubby *clubby) {
+int sj_clubby_is_connected(struct clubby *clubby) {
   return clubby_proto_is_connected(clubby->nc) && clubby->auth_ok;
 }
 
 static void call_ready_cbs(struct clubby *clubby, struct clubby_event *evt) {
-  if (!clubby_is_overcrowded(clubby)) {
+  if (!sj_clubby_is_overcrowded(clubby)) {
     call_cb(clubby, clubby_cmd_ready, sizeof(clubby_cmd_ready), evt, 1);
   }
 }
 
-void reset_reconnect_timeout(struct clubby *clubby) {
+void sj_reset_reconnect_timeout(struct clubby *clubby) {
   clubby->reconnect_timeout =
       clubby->cfg.reconnect_timeout_min / RECONNECT_TIMEOUT_MULTIPLY;
 }
 
 static void reconnect_cb(void *param) {
-  clubby_connect((struct clubby *) param);
+  sj_clubby_connect((struct clubby *) param);
 }
 
 static void schedule_reconnect(struct clubby *clubby) {
@@ -209,7 +209,7 @@ static void verify_timeouts_cb(void *arg) {
   struct clubby *clubby = s_clubbies;
   while (clubby != NULL) {
     verify_timeouts(clubby);
-    if (clubby_is_connected(clubby) && !clubby_is_overcrowded(clubby)) {
+    if (sj_clubby_is_connected(clubby) && !sj_clubby_is_overcrowded(clubby)) {
       call_ready_cbs(clubby, NULL);
     }
     clubby = clubby->next;
@@ -350,7 +350,7 @@ static void clubby_hello_resp_callback(struct clubby_event *evt,
  */
 static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
                               int64_t id, ub_val_t frame) {
-  if (clubby_is_connected(clubby)) {
+  if (sj_clubby_is_connected(clubby)) {
     clubby_proto_send(clubby->nc, ctx, frame);
   } else {
     /* Here we revive clubby.js behavior */
@@ -359,20 +359,19 @@ static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
   }
 }
 
-void clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx, int64_t id,
-                         const char *dst, ub_val_t request) {
+void sj_clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx,
+                            int64_t id, const char *dst, ub_val_t request) {
   ub_val_t frame = clubby_proto_create_frame_base(
-      ctx, request, clubby->cfg.device_id, clubby->cfg.device_psk, dst);
-  ub_add_prop(ctx, frame, "id", ub_create_number(id));
+      ctx, request, id, clubby->cfg.device_id, clubby->cfg.device_psk, dst);
   clubby_send_frame(clubby, ctx, id, frame);
 }
 
 int sj_clubby_can_send(clubby_handle_t handle) {
   struct clubby *clubby = (struct clubby *) handle;
-  return clubby_is_connected(clubby) && !clubby_is_overcrowded(clubby);
+  return sj_clubby_is_connected(clubby) && !sj_clubby_is_overcrowded(clubby);
 }
 
-void clubby_send_hello(struct clubby *clubby) {
+void sj_clubby_send_hello(struct clubby *clubby) {
   struct ub_ctx *ctx = ub_ctx_new();
   int64_t id = clubby_proto_get_new_id();
   sj_clubby_register_callback(clubby, (char *) &id, sizeof(id),
@@ -381,11 +380,10 @@ void clubby_send_hello(struct clubby *clubby) {
 
   if (clubby_proto_is_connected(clubby->nc)) {
     /* We use /v1/Hello to check auth, so it cannot be queued  */
-    ub_val_t frame = clubby_proto_create_frame_base(
-        ctx, CLUBBY_UNDEFINED, clubby->cfg.device_id, clubby->cfg.device_psk,
-        clubby->cfg.backend);
-    ub_add_prop(ctx, frame, "id", ub_create_number(id));
-    ub_add_prop(ctx, frame, "method", ub_create_string(ctx, "/v1/Hello"));
+    ub_val_t frame = clubby_proto_create_frame(
+        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk,
+        clubby->cfg.backend, "/v1/Hello", CLUBBY_UNDEFINED,
+        clubby->cfg.request_timeout, 0);
     clubby_proto_send(clubby->nc, ctx, frame);
   } else {
     LOG(LL_ERROR, ("Clubby is disconnected"))
@@ -403,11 +401,11 @@ static void clubby_send_labels(struct clubby *clubby) {
   ub_val_t args = ub_create_object(ctx);
   ub_add_prop(ctx, args, "labels", labels);
 
-  ub_val_t frame = clubby_proto_create_frame(
-      ctx, clubby->cfg.device_id, clubby->cfg.device_psk, clubby->cfg.backend,
-      "/v1/Label.Set", args, clubby->cfg.request_timeout, 0);
   int64_t id = clubby_proto_get_new_id();
-  ub_add_prop(ctx, frame, "id", ub_create_number(id));
+  ub_val_t frame = clubby_proto_create_frame(
+      ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk,
+      clubby->cfg.backend, "/v1/Label.Set", args, clubby->cfg.request_timeout,
+      0);
 
   /* We don't intrested in resp, so, using default resp handler */
   clubby_send_frame(clubby, ctx, id, frame);
@@ -428,11 +426,11 @@ int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
     ub_val_t request = ub_create_object(ctx);
     ub_add_prop(ctx, request, "method", ub_create_string(ctx, method));
     ub_add_prop(ctx, request, "args", args);
-    clubby_send_request(clubby, ctx, id, dst ? dst : clubby->cfg.backend,
-                        request);
+    sj_clubby_send_request(clubby, ctx, id, dst ? dst : clubby->cfg.backend,
+                           request);
   } else {
     ub_val_t frame = clubby_proto_create_frame(
-        ctx, clubby->cfg.device_id, clubby->cfg.device_psk,
+        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk,
         dst ? dst : clubby->cfg.backend, method, args,
         clubby->cfg.request_timeout, 0);
     clubby_proto_send(clubby->nc, ctx, frame);
@@ -474,13 +472,13 @@ static void clubby_cb(struct clubby_event *evt) {
           ("CLUBBY_NET_CONNECT success=%d", evt->net_connect.success));
       if (evt->net_connect.success) {
         /* Network is ok, let's use small timeout */
-        reset_reconnect_timeout(clubby);
+        sj_reset_reconnect_timeout(clubby);
       }
       break;
     }
     case CLUBBY_CONNECT: {
       LOG(LL_DEBUG, ("CLUBBY_CONNECT"));
-      clubby_send_hello(clubby);
+      sj_clubby_send_hello(clubby);
       break;
     }
 
@@ -552,7 +550,7 @@ static void clubby_cb(struct clubby_event *evt) {
   }
 }
 
-void clubby_connect(struct clubby *clubby) {
+void sj_clubby_connect(struct clubby *clubby) {
   clubby->session_flags &= ~SF_MANUAL_DISCONNECT;
   struct mg_connection *nc = clubby_proto_connect(
       &sj_mgr, clubby->cfg.server_address, clubby->cfg.ssl_server_name,
@@ -596,9 +594,9 @@ char *sj_clubby_repl_to_bytes(struct clubby_event *reply, int *len) {
   return ret;
 }
 
-struct clubby_event *sj_clubby_create_reply_impl(char *id, int8_t id_len,
-                                                 const char *dst,
-                                                 size_t dst_len) {
+static struct clubby_event *clubby_create_reply_impl(char *id, int8_t id_len,
+                                                     const char *dst,
+                                                     size_t dst_len) {
   struct clubby_event *repl = calloc(1, sizeof(*repl));
   if (repl == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
@@ -623,14 +621,14 @@ error:
 }
 
 struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len) {
-  struct clubby_event *repl = sj_clubby_create_reply_impl(
+  struct clubby_event *repl = clubby_create_reply_impl(
       buf, sizeof(repl->id), buf + sizeof(repl->id), len - sizeof(repl->id));
 
   return repl;
 }
 
 struct clubby_event *sj_clubby_create_reply(struct clubby_event *evt) {
-  struct clubby_event *repl = sj_clubby_create_reply_impl(
+  struct clubby_event *repl = clubby_create_reply_impl(
       (char *) &evt->id, sizeof(evt->id), evt->src->ptr, evt->src->len);
   if (repl == NULL) {
     LOG(LL_ERROR, ("Out of memory"));

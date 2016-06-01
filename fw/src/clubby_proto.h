@@ -57,20 +57,21 @@ struct clubby_event {
 
 typedef void (*clubby_proto_callback_t)(struct clubby_event *evt);
 
-ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
-                                  const char *device_psk, const char *dst,
-                                  int64_t id, ub_val_t result, ub_val_t error);
-
 ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
-                                        ub_val_t frame_proto,
+                                        ub_val_t frame_proto, int64_t id,
                                         const char *device_id,
                                         const char *device_psk,
                                         const char *dst);
 
-ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *device_id,
+ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, int64_t id,
+                                   const char *device_id,
                                    const char *device_psk, const char *dst,
                                    const char *method, ub_val_t args,
                                    uint32_t timeout, time_t deadline);
+
+ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
+                                  const char *device_psk, const char *dst,
+                                  int64_t id, ub_val_t result, ub_val_t error);
 
 void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
                        ub_val_t frame);

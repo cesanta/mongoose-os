@@ -43,11 +43,11 @@ typedef void (*sj_clubby_callback_t)(struct clubby_event *evt, void *user_data);
 typedef void *clubby_handle_t;
 
 void sj_clubby_init();
-struct clubby *create_clubby(struct v7 *v7);
-void free_clubby(struct clubby *clubby);
+struct clubby *sj_create_clubby(struct v7 *v7);
+void sj_free_clubby(struct clubby *clubby);
 
-void clubby_connect(struct clubby *clubby);
-void reset_reconnect_timeout(struct clubby *clubby);
+void sj_clubby_connect(struct clubby *clubby);
+void sj_reset_reconnect_timeout(struct clubby *clubby);
 
 int sj_clubby_register_global_command(const char *cmd, sj_clubby_callback_t cb,
                                       void *user_data);
@@ -59,33 +59,27 @@ void sj_clubby_free_reply(struct clubby_event *reply);
 char *sj_clubby_repl_to_bytes(struct clubby_event *reply, int *len);
 struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len);
 
-int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
-                   struct ub_ctx *ctx, ub_val_t args, int enqueue,
-                   sj_clubby_callback_t cb, void *cb_userdata);
+ub_val_t sj_clubby_create_error(struct ub_ctx *ctx, int code, const char *msg);
 
 int sj_clubby_can_send(clubby_handle_t handle);
 
 void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
                                 const char *error_msg);
+void sj_clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx,
+                            int64_t id, const char *dst, ub_val_t request);
 
-ub_val_t sj_clubby_create_error(struct ub_ctx *ctx, int code, const char *msg);
-
-/*
- * Sends an array of clubby commands.
- * cmds parameter must be an ubjson array (created by `ub_create_array`)
- * and each element should represent one command (created by `ub_create_object`)
- */
-void clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx, int64_t id,
-                         const char *dst, ub_val_t request);
+int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
+                   struct ub_ctx *ctx, ub_val_t args, int enqueue,
+                   sj_clubby_callback_t cb, void *cb_userdata);
 
 int sj_clubby_register_callback(struct clubby *clubby, const char *id,
                                 int8_t id_len, sj_clubby_callback_t cb,
                                 void *user_data, uint32_t timeout);
 
-void clubby_send_hello(struct clubby *clubby);
+void sj_clubby_send_hello(struct clubby *clubby);
 
-int clubby_is_overcrowded(struct clubby *clubby);
-int clubby_is_connected(struct clubby *clubby);
+int sj_clubby_is_overcrowded(struct clubby *clubby);
+int sj_clubby_is_connected(struct clubby *clubby);
 
 /* TODO(alashkin): add more sending functions to header */
 #endif /* DISABLE_C_CLUBBY */

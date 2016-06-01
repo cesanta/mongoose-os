@@ -120,7 +120,7 @@ static void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
 }
 
 ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
-                                        ub_val_t frame_proto,
+                                        ub_val_t frame_proto, int64_t id,
                                         const char *device_id,
                                         const char *device_psk,
                                         const char *dst) {
@@ -135,14 +135,14 @@ ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
   ub_add_prop(ctx, ret, "src", ub_create_string(ctx, device_id));
   ub_add_prop(ctx, ret, "key", ub_create_string(ctx, device_psk));
   ub_add_prop(ctx, ret, "dst", ub_create_string(ctx, dst));
-
+  ub_add_prop(ctx, ret, "id", ub_create_number(id));
   return ret;
 }
 
 ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
                                   const char *device_psk, const char *dst,
                                   int64_t id, ub_val_t result, ub_val_t error) {
-  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED,
+  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED, id,
                                                   device_id, device_psk, dst);
   if (result.kind != UBJSON_TYPE_UNDEFINED) {
     ub_add_prop(ctx, frame, "result", result);
@@ -152,19 +152,21 @@ ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
     ub_add_prop(ctx, frame, "error", error);
   }
 
-  ub_add_prop(ctx, frame, "id", ub_create_number(id));
-
   return frame;
 }
 
-ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, const char *device_id,
+ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, int64_t id,
+                                   const char *device_id,
                                    const char *device_psk, const char *dst,
                                    const char *method, ub_val_t args,
                                    uint32_t timeout, time_t deadline) {
-  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED,
+  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED, id,
                                                   device_id, device_psk, dst);
   ub_add_prop(ctx, frame, "method", ub_create_string(ctx, method));
-  ub_add_prop(ctx, frame, "args", args);
+
+  if (args.kind != UBJSON_TYPE_UNDEFINED) {
+    ub_add_prop(ctx, frame, "args", args);
+  }
 
   if (timeout != 0) {
     ub_add_prop(ctx, frame, "timeout", ub_create_number(timeout));
