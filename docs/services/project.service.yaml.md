@@ -4,6 +4,47 @@ title: "Project service"
 
 Provides methods to manage projects.
 
+#### GetDevice
+Gets device information.
+
+Arguments:
+- `deviceid`: ID of the device.
+
+Result `object`: 
+
+Definition:
+```json
+{
+  "doc": "Gets device information.",
+  "args": {
+    "deviceid": {
+      "doc": "ID of the device.",
+      "type": "string"
+    }
+  },
+  "required_args": [
+    "deviceid"
+  ],
+  "result": {
+    "type": "object",
+    "properties": {
+      "psk": {
+        "doc": "Pre-shared key that device will use for authentication.",
+        "type": "string"
+      },
+      "deviceid": {
+        "doc": "ID of the device.",
+        "type": "string"
+      },
+      "projectid": {
+        "doc": "Optional ID of the project to add device to.",
+        "type": "string"
+      }
+    }
+  }
+}
+```
+
 #### ListDevicesWithMetadata
 Deprecated method. Returns a list of devices in a project along with registration and last successful authentication timestamps.
 
@@ -303,6 +344,41 @@ Response:
 
 ```
 
+#### ClaimDevice
+Claim an unclaimed device using a token.
+
+Arguments:
+- `projectid`: ID of the project.
+- `token`: Auth token based on PSK.
+- `deviceid`: ID of the device.
+
+
+Definition:
+```json
+{
+  "doc": "Claim an unclaimed device using a token.",
+  "args": {
+    "projectid": {
+      "doc": "ID of the project.",
+      "type": "string"
+    },
+    "token": {
+      "doc": "Auth token based on PSK.",
+      "type": "string"
+    },
+    "deviceid": {
+      "doc": "ID of the device.",
+      "type": "string"
+    }
+  },
+  "required_args": [
+    "deviceid",
+    "projectid",
+    "token"
+  ]
+}
+```
+
 #### ListDevices
 Returns a list of devices in a given project.
 
@@ -514,35 +590,35 @@ Response:
 ```
 
 #### AddDevice
-Adds a new device to the project.
+Adds a new device.
 
 Arguments:
-- `projectid`: ID of the project.
-- `deviceid`: ID of the device.
 - `psk`: Pre-shared key that device will use for authentication.
+- `deviceid`: ID of the device.
+- `projectid`: Optional ID of the project to add device to.
 
 
 Definition:
 ```json
 {
-  "doc": "Adds a new device to the project.",
+  "doc": "Adds a new device.",
   "args": {
-    "projectid": {
-      "doc": "ID of the project.",
+    "psk": {
+      "doc": "Pre-shared key that device will use for authentication.",
       "type": "string"
     },
     "deviceid": {
       "doc": "ID of the device.",
       "type": "string"
     },
-    "psk": {
-      "doc": "Pre-shared key that device will use for authentication.",
+    "projectid": {
+      "doc": "Optional ID of the project to add device to.",
       "type": "string"
     }
   },
   "required_args": [
-    "projectid",
-    "deviceid"
+    "deviceid",
+    "psk"
   ]
 }
 ```
