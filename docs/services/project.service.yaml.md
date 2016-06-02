@@ -660,6 +660,29 @@ Response:
 
 ```
 
+#### Delete
+Deletes a project
+
+Arguments:
+- `id`: ID of the project to be deleted.
+
+
+Definition:
+```json
+{
+  "doc": "Deletes a project",
+  "args": {
+    "id": {
+      "doc": "ID of the project to be deleted.",
+      "type": "string"
+    }
+  },
+  "required_args": [
+    "id"
+  ]
+}
+```
+
 #### CheckAccess
 Checks if a given user has a specified level of access to a given project.
 
