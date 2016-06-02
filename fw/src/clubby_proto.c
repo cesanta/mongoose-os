@@ -134,7 +134,9 @@ ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
   ub_add_prop(ctx, ret, "v", ub_create_number(2));
   ub_add_prop(ctx, ret, "src", ub_create_string(ctx, device_id));
   ub_add_prop(ctx, ret, "key", ub_create_string(ctx, device_psk));
-  ub_add_prop(ctx, ret, "dst", ub_create_string(ctx, dst));
+  if (dst != NULL) {
+    ub_add_prop(ctx, ret, "dst", ub_create_string(ctx, dst));
+  }
   ub_add_prop(ctx, ret, "id", ub_create_number(id));
   return ret;
 }

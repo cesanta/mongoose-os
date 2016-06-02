@@ -688,10 +688,9 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_INT_PARAM(reconnect_timeout_max, reconnect_timeout_max);
   GET_INT_PARAM(request_timeout, timeout);
   GET_INT_PARAM(max_queue_size, max_queue_size);
-  GET_STR_PARAM(device_id, src);
-  GET_STR_PARAM(device_psk, key);
-  GET_STR_PARAM(server_address, url);
-  GET_STR_PARAM(backend, backend);
+  GET_STR_PARAM(device_id, device_id);
+  GET_STR_PARAM(device_psk, device_psk);
+  GET_STR_PARAM(server_address, server_address);
   GET_CB_PARAM(onopen, CLUBBY_CMD_ONOPEN);
   GET_CB_PARAM(onclose, CLUBBY_CMD_ONCLOSE);
   GET_CB_PARAM(oncmd, S_ONCMD_CMD);

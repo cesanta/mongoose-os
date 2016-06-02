@@ -97,7 +97,6 @@ void sj_free_clubby(struct clubby *clubby) {
   free(clubby->cfg.device_psk);
   free(clubby->cfg.device_id);
   free(clubby->cfg.server_address);
-  free(clubby->cfg.backend);
   free(clubby);
 }
 
@@ -386,9 +385,8 @@ void sj_clubby_send_hello(struct clubby *clubby) {
   if (clubby_proto_is_connected(clubby->nc)) {
     /* We use /v1/Hello to check auth, so it cannot be queued  */
     ub_val_t frame = clubby_proto_create_frame(
-        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk,
-        clubby->cfg.backend, "/v1/Hello", CLUBBY_UNDEFINED,
-        clubby->cfg.request_timeout, 0);
+        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, NULL,
+        "/v1/Hello", CLUBBY_UNDEFINED, clubby->cfg.request_timeout, 0);
     clubby_proto_send(clubby->nc, ctx, frame);
   } else {
     LOG(LL_ERROR, ("Clubby is disconnected"))
@@ -408,9 +406,8 @@ static void clubby_send_labels(struct clubby *clubby) {
 
   int64_t id = clubby_proto_get_new_id();
   ub_val_t frame = clubby_proto_create_frame(
-      ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk,
-      clubby->cfg.backend, "/v1/Label.Set", args, clubby->cfg.request_timeout,
-      0);
+      ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, NULL,
+      "/v1/Label.Set", args, clubby->cfg.request_timeout, 0);
 
   /* We don't intrested in resp, so, using default resp handler */
   clubby_send_frame(clubby, ctx, id, frame);
@@ -431,13 +428,11 @@ int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
     ub_val_t request = ub_create_object(ctx);
     ub_add_prop(ctx, request, "method", ub_create_string(ctx, method));
     ub_add_prop(ctx, request, "args", args);
-    sj_clubby_send_request(clubby, ctx, id, dst ? dst : clubby->cfg.backend,
-                           request);
+    sj_clubby_send_request(clubby, ctx, id, dst, request);
   } else {
     ub_val_t frame = clubby_proto_create_frame(
-        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk,
-        dst ? dst : clubby->cfg.backend, method, args,
-        clubby->cfg.request_timeout, 0);
+        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, dst, method,
+        args, clubby->cfg.request_timeout, 0);
     clubby_proto_send(clubby->nc, ctx, frame);
   }
 

@@ -42,7 +42,6 @@
   ["clubby.device_id", "s", {"title": "Device ID"}],
   ["clubby.device_psk", "s", {"title": "Device password"}],
   ["clubby.device_auto_registration", "b", {"title": "Auto-register device on Cesanta Cloud"}],
-  ["clubby.backend", "s", {"title" : "Backend name"}],
   ["clubby.reconnect_timeout_min", "i", {"title": "Minimal reconnect timeout"}],
   ["clubby.reconnect_timeout_max", "i", {"title": "Maximal reconnect timeout"}],
   ["clubby.cmd_timeout", "i", {"title": "Default command timeout"}],

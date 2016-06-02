@@ -39,12 +39,11 @@
   },
   "clubby": {
     "connect_on_boot": true,
-    "server_address": "api.cesanta.com:80",
+    "server_address": "api.cesanta.com",
     "device_id": "",
     "device_psk": "",
     "device_auto_registration": true,
     "device_registration_url": "http://cloud.cesanta.com/register_device",
-    "backend": "//api.cesanta.com",
     "reconnect_timeout_min": 10,
     "reconnect_timeout_max": 60,
     "request_timeout": 300,
