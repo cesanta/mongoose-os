@@ -451,7 +451,8 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   v7_val_t request_v = v7_arg(v7, 1);
   v7_val_t cb_v = v7_arg(v7, 2);
 
-  if (!v7_is_string(dst_v) || !v7_is_object(request_v) ||
+  if ((!v7_is_null(dst_v) && !v7_is_string(dst_v) && !v7_is_undefined(dst_v)) ||
+      !v7_is_object(request_v) ||
       (!v7_is_undefined(cb_v) && !v7_is_callable(v7, cb_v))) {
     printf("Invalid arguments\n");
     goto error;
