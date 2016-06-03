@@ -143,6 +143,41 @@ Response:
 
 ```
 
+#### Get
+Returns project info for a given project
+
+Arguments:
+- `id`: ID of the project to be retreived
+
+Result `object`: 
+
+Definition:
+```json
+{
+  "doc": "Returns project info for a given project",
+  "args": {
+    "id": {
+      "doc": "ID of the project to be retreived",
+      "type": "string"
+    }
+  },
+  "required_args": [
+    "id"
+  ],
+  "result": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      }
+    }
+  }
+}
+```
+
 #### Create
 Creates a new project.
 
