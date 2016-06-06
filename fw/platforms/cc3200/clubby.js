@@ -253,7 +253,6 @@ Clubby.prototype.call = function(dst, cmd, callback) {
   } else {
     if (this.config.log) console.log('queuing: ', req);
     c.queue.push(req);
-    c.ws.close();
   }
 
   return p;
