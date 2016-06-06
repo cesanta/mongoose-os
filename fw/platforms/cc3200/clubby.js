@@ -216,10 +216,14 @@ if (typeof UBJSON !== "undefined") {
 Clubby.prototype._send = function(req) {
   if (this.config.log) console.log('sending: ', req);
   this.config.ws.send(JSON.stringify(req));
-}
+};
 
-Clubby.prototype.call = function(dst, cmd, callback) {
-  var cb;
+Clubby.prototype.call = function(method, args, opts) {
+  opts = opts || {};
+
+  var callback = opts.cb; // user callback, if empty return a promise
+
+  var cb; // internal callback
   var p;
   if (callback === undefined) {
     p = new Promise(function(resolve, reject) {
@@ -238,9 +242,9 @@ Clubby.prototype.call = function(dst, cmd, callback) {
   var c = this.config;
   var id = c.next_req_id++;
   var req = {
-      v: 2, dst: dst, src: c.src, key: c.key,
-      id: id, method: cmd.cmd, args: cmd.args,
-      deadline: cmd.deadline, timeout: cmd.timeout,
+      v: 2, dst: opts.dst, src: c.src, key: c.key,
+      id: id, method: method, args: args,
+      deadline: opts.deadline, timeout: opts.timeout
   };
   if (req.timeout === undefined) req.timeout = c.timeout;
   c.map[id] = cb; // Store callback for the given message ID
