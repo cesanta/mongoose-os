@@ -38,5 +38,5 @@ int sj_app_init(struct v7 *v7) {
   }
 
   (void) v7;
-  return 1;
+  return MG_APP_INIT_SUCCESS;
 }

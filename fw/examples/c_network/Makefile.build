@@ -1,0 +1,7 @@
+APP = c_network
+REPO_PATH = ../../..
+APP_MODULES = src
+APP_CFLAGS = -DCS_DISABLE_JS
+FREEZE = 0
+
+include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
