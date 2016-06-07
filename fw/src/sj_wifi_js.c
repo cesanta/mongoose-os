@@ -97,6 +97,7 @@ SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
   pass = v7_get_string(v7, &passv, &pass_len);
 
   struct sys_config_wifi_sta cfg;
+  memset(&cfg, 0, sizeof(cfg));
   cfg.ssid = (char *) ssid;
   cfg.pass = (char *) pass;
 

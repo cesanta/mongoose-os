@@ -5,6 +5,9 @@
   ["wifi.sta.enable", "b", {"title": "Connect to existing WiFi"}],
   ["wifi.sta.ssid", "s", {"title": "SSID"}],
   ["wifi.sta.pass", "s", {"title": "Password", "type": "password"}],
+  ["wifi.sta.ip", "s", {"title": "Static IP Address"}],
+  ["wifi.sta.netmask", "s", {"title": "Static Netmask"}],
+  ["wifi.sta.gw", "s", {"title": "Static Default Gateway"}],
 
   ["wifi.ap", "o", {"title": "WiFi Access Point"}],
   ["wifi.ap.enable", "b", {"title": "Enable AP"}],
@@ -17,9 +20,9 @@
   ["wifi.ap.max_connections", "i", {"title": "Max connections"}],
   ["wifi.ap.dhcp_start", "s", {"title": "DHCP Start Address"}],
   ["wifi.ap.dhcp_end", "s", {"title": "DHCP End Address"}],
+  ["wifi.ap.ip", "s", {"title": "Access Point IP address"}],
   ["wifi.ap.netmask", "s", {"title": "DHCP Network Mask"}],
   ["wifi.ap.gw", "s", {"title": "Default Gateway"}],
-  ["wifi.ap.ip", "s", {"title": "Access Point IP address"}],
 
   ["update", "o", {"title": "Firmware updater"}],
   ["update.server_timeout", "i", {"title" : "Server Timeout"}],

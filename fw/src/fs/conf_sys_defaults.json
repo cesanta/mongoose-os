@@ -3,7 +3,10 @@
     "sta": {
       "enable": false,
       "ssid": "",
-      "pass": ""
+      "pass": "",
+      "ip": "",
+      "netmask": "",
+      "gw": ""
     },
     "ap": {
       "enable": true,
@@ -18,7 +21,7 @@
       "netmask": "255.255.255.0",
       "gw": "192.168.4.1",
       "dhcp_start": "192.168.4.2",
-      "dhcp_end": "192.168.4.200"
+      "dhcp_end": "192.168.4.100"
     }
   },
   "http": {

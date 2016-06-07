@@ -54,6 +54,18 @@ int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     return 0;
   }
 
+  if (cfg->ip != NULL && cfg->netmask != NULL) {
+    struct ip_info info;
+    memset(&info, 0, sizeof(info));
+    info.ip.addr = ipaddr_addr(cfg->ip);
+    info.netmask.addr = ipaddr_addr(cfg->netmask);
+    if (cfg->gw != NULL) info.gw.addr = ipaddr_addr(cfg->gw);
+    wifi_station_dhcpc_stop();
+    wifi_set_ip_info(STATION_IF, &info);
+    LOG(LL_INFO, ("WiFi STA IP config: %s %s %s", cfg->ip, cfg->netmask,
+                  (cfg->gw ? cfg->ip : "")));
+  }
+
   LOG(LL_INFO, ("WiFi STA: Joining %s", sta_cfg.ssid));
   res = wifi_station_connect();
   if (res) {
