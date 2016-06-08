@@ -63,7 +63,7 @@ var Clubby = function(arg) {
   // This is a random component part which will be added to the
   // source for all outgoing commands, to make this client unique.
   var randomString = '.' + Math.random().toString(36).substring(7);
-  var defaultUrl = 'wss://api.cesanta.com:444';
+  var defaultUrl = 'wss://api.cesanta.com:443';
 
   var config = this.config = $.extend(arg, {
     next_req_id: 1, // Auto-incrementing command ID
