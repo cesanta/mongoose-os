@@ -1,5 +1,5 @@
 ---
-title: "Metrics service"
+title: "Timeseries service"
 ---
 
 Metrics service provides timeseries storage.
@@ -57,45 +57,7 @@ Definition:
 }
 ```
 
-Request:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Metrics.Query",
-      "id": 123,
-      "args": {
-        "query": "{id=\"//api.cesanta.com/device_123\"}"
-      }
-    }
-  ]
-}
-
-```
-
-Response:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": [
-        [{"__name__": "temperature", "sensor": "1"}, [[1453395062, 28]]]
-      ]
-    }
-  ]
-}
-
-```
-
-#### Publish
+#### ReportMany
 Publish adds new values to the storage. Label 'src' is implicitly added to each timeseries.
 
 Arguments:
@@ -138,42 +100,6 @@ Definition:
       }
     }
   }
-}
-```
-
-Request:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Metrics.Publish",
-      "id": 1237648172,
-      "args": {
-        "vars": [
-          [{"__name__": "temperature", "sensor": "1"}, 28]
-        ]
-      }
-    }
-  ]
-}
-
-```
-
-Response:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
 }
 ```
 
