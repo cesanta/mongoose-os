@@ -5,7 +5,7 @@ title: "Workspace service"
 A workspace is a place where the user stores her code. The Cloud IDE and Build services operate on workspaces. The actual content of the workspace is stored in the blobstore. The Workspace service provides operation for creating, listing and downloading workspaces, which are the core operations that an IDE an a build worker need.
 
 #### Download
-Pack the workspace in a zip and provide the raw bytes
+Pack the workspace (or a workspace subdirectory) in a zip and provide the raw bytes
 
 Arguments:
 - `path`: 
@@ -15,7 +15,7 @@ Result `['array', 'string']`: ZIP. As binary blob
 Definition:
 ```json
 {
-  "doc": "Pack the workspace in a zip and provide the raw bytes",
+  "doc": "Pack the workspace (or a workspace subdirectory) in a zip and provide the raw bytes",
   "args": {
     "path": {
       "items": {
