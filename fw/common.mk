@@ -1,5 +1,5 @@
 CFLAGS_EXTRA ?=
-
+PYTHON ?= python
 COMMON_V7_FEATURES = -DV7_ENABLE__File__require=1
 
 MG_FEATURES_TINY = \

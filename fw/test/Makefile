@@ -8,8 +8,9 @@ TEST_SOURCES = unit_test.c \
                ../../common/test_util.c
 INCS = -I../src -I../../common $(CFLAGS_EXTRA)
 CFLAGS = -W -Wall -Werror -g -O0 -Wno-multichar $(INCS)
+PYTHON ?= PYTHON
 
 include ../../mongoose/test/test.mk
 
 sys_conf.c: data/defaults.json
-	python ../../tools/json_to_c_config.py $< sys_conf
+	$(PYTHON) ../../tools/json_to_c_config.py $< sys_conf

@@ -5,6 +5,7 @@ SDK_VERSION ?= $(shell cat $(SJS_ESP_PATH)/sdk.version)
 
 REPO_ABS_PATH = $(realpath $(REPO_PATH))
 APP_PATH = $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
+PYTHON ?= python
 
 .PHONY: all clean
 
@@ -25,7 +26,7 @@ all clean:
 	    if [ -d /src/mongoose ] ; then make -C /src/mongoose mongoose.c mongoose.h ; fi && \
 	    cd $(APP_PATH) && \
 	    make -f Makefile.build APP=$(APP) REPO_PATH=/src $@ -$(MAKEFLAGS) \
-	    && python $(SJS_ESP_PATH)/tools/showbreakdown.py \
+	    && $(PYTHON) $(SJS_ESP_PATH)/tools/showbreakdown.py \
 	  "
 
 debug_coredump:

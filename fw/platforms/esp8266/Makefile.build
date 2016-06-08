@@ -313,7 +313,7 @@ $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
 # checked against main app library to make sure there's no overlap.
 $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
 	$(vecho) "SYMCK $(SYMCHECK_OUT) vs $(APP_AR)"
-	$(Q) python $(SJS_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+	$(Q) $(PYTHON) $(SJS_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
 	$(Q) touch $@
 
 $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
