@@ -3,6 +3,7 @@ title: "Services"
 symbol_kind: "intro"
 decl_name: "services"
 items:
+  - { type: file, name: account.service.yaml.md }
   - { type: file, name: auth.service.yaml.md }
   - { type: file, name: blobstore.service.yaml.md }
   - { type: file, name: dispatcher.service.yaml.md }
@@ -18,7 +19,6 @@ items:
   - { type: file, name: rollout.service.yaml.md }
   - { type: file, name: services.service.yaml.md }
   - { type: file, name: sw_update.service.yaml.md }
-  - { type: file, name: user.service.yaml.md }
   - { type: file, name: workspace.service.yaml.md }
 ---
 

@@ -1,10 +1,10 @@
 ---
-title: "User service"
+title: "Account service"
 ---
 
 Provides methods for managing users. Used by the frontend.
 
-#### Create
+#### CreateUser
 Creates a new user. Can only be called by the frontend.
 
 Arguments:
@@ -42,45 +42,7 @@ Definition:
 }
 ```
 
-Request:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com/cloud.frontend",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/User.Create",
-      "id": 123,
-      "args": {
-        "id": "//api.cesanta.com/user_123",
-        "password": "asdf",
-        "email": "user123@example.com",
-        "name": "John Doe"
-      }
-    }
-  ]
-}
-
-```
-
-Response:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/cloud.frontend",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
-}
-
-```
-
-#### Get
+#### GetInfo
 Retrieves info about an existing user.
 
 Arguments:
@@ -114,45 +76,6 @@ Definition:
     }
   }
 }
-```
-
-Request:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com/cloud.frontend",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/User.Get",
-      "id": 123,
-      "args": {
-        "id": "//api.cesanta.com/user_123"
-      }
-    }
-  ]
-}
-
-```
-
-Response:
-```json
-{
-  "v": 1,
-  "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/cloud.frontend",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": {
-        "name": "John Doe",
-        "email": "user123@example.com"
-      }
-    }
-  ]
-}
-
 ```
 
 
