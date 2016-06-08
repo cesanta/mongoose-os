@@ -4,7 +4,6 @@ symbol_kind: "intro"
 decl_name: "services"
 items:
   - { type: file, name: auth.service.yaml.md }
-  - { type: file, name: authtoken.service.yaml.md }
   - { type: file, name: blobstore.service.yaml.md }
   - { type: file, name: dispatcher.service.yaml.md }
   - { type: file, name: firmware.service.yaml.md }
