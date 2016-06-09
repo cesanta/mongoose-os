@@ -6,6 +6,7 @@ items:
   - { type: file, name: account.service.yaml.md }
   - { type: file, name: auth.service.yaml.md }
   - { type: file, name: blobstore.service.yaml.md }
+  - { type: file, name: device.service.yaml.md }
   - { type: file, name: dispatcher.service.yaml.md }
   - { type: file, name: firmware.service.yaml.md }
   - { type: file, name: frontend.service.yaml.md }
