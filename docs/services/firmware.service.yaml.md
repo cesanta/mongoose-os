@@ -14,40 +14,6 @@ Arguments:
 - `zip`: URL of the .zip archive suitable for flashing. Must be present if manifest is not present. The zip contains the manifest.
 - `manifest`: URL of the firmware metadata file. Must be accessible by the devices that will get this firmware. Must be present if zip is not present.
 
-
-Definition:
-```json
-{
-  "doc": "Registers a new firmware image.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project to register firmware for.",
-      "type": "string"
-    },
-    "version": {
-      "doc": "Firmware version number. Encoded as a string due to limitations of JavaScript.",
-      "type": "string"
-    },
-    "name": {
-      "doc": "Human-readable name for this firmware.",
-      "type": "string"
-    },
-    "zip": {
-      "doc": "URL of the .zip archive suitable for flashing. Must be present if manifest is not present. The zip contains the manifest.",
-      "type": "string"
-    },
-    "manifest": {
-      "doc": "URL of the firmware metadata file. Must be accessible by the devices that will get this firmware. Must be present if zip is not present.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "version"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -94,51 +60,6 @@ Arguments:
 - `id`: ID of the firmware image. IDs are assigned by the backend, use `List` command to get the it initially.
 
 Result `object`: 
-
-Definition:
-```json
-{
-  "doc": "Returns information about a given firmware.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "id": {
-      "doc": "ID of the firmware image. IDs are assigned by the backend, use `List` command to get the it initially.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "id"
-  ],
-  "result": {
-    "type": "object",
-    "properties": {
-      "version": {
-        "type": "string"
-      },
-      "name": {
-        "type": "string"
-      },
-      "zip": {
-        "type": "string"
-      },
-      "created": {
-        "type": "string"
-      },
-      "id": {
-        "type": "string"
-      },
-      "manifest": {
-        "type": "string"
-      }
-    }
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -189,49 +110,6 @@ Arguments:
 - `projectid`: ID of the project.
 
 Result `array`: 
-
-Definition:
-```json
-{
-  "doc": "Returns a list of firmware images registered in a given project.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid"
-  ],
-  "result": {
-    "items": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "zip": {
-          "type": "string"
-        },
-        "created": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "manifest": {
-          "type": "string"
-        }
-      }
-    },
-    "type": "array"
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -284,32 +162,6 @@ Arguments:
 - `id`: ID of the firmware image.
 - `name`: New name for the firmware image.
 
-
-Definition:
-```json
-{
-  "doc": "Allows to change the name of the firmware image.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "id": {
-      "doc": "ID of the firmware image.",
-      "type": "string"
-    },
-    "name": {
-      "doc": "New name for the firmware image.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "id"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -353,28 +205,6 @@ Deletes the firmware image from the database.
 Arguments:
 - `projectid`: ID of the project.
 - `id`: ID of the firmware image.
-
-
-Definition:
-```json
-{
-  "doc": "Deletes the firmware image from the database.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "id": {
-      "doc": "ID of the firmware image.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "id"
-  ]
-}
-```
 
 Request:
 ```json

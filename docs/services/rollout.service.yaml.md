@@ -12,54 +12,6 @@ Arguments:
 - `rolloutid`: ID of the rollout.
 
 Result `object`: 
-
-Definition:
-```json
-{
-  "doc": "Returns info about a particular rollout.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "rolloutid": {
-      "doc": "ID of the rollout.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "rolloutid"
-  ],
-  "result": {
-    "type": "object",
-    "properties": {
-      "deviceFilter": {
-        "type": "string"
-      },
-      "state": {
-        "enum": [
-          "init",
-          "inProgress",
-          "paused",
-          "finished"
-        ],
-        "type": "string"
-      },
-      "id": {
-        "type": "string"
-      },
-      "firmwareid": {
-        "type": "string"
-      },
-      "name": {
-        "type": "string"
-      }
-    }
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -112,37 +64,6 @@ Arguments:
 - `name`: Human-readable name for the rollout.
 - `firmwareid`: ID of the firmware image.
 
-
-Definition:
-```json
-{
-  "doc": "Creates new rollout.",
-  "args": {
-    "deviceFilter": {
-      "doc": "Filter expression, currently only 'labelname=labelvalue' supported.",
-      "type": "string"
-    },
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "name": {
-      "doc": "Human-readable name for the rollout.",
-      "type": "string"
-    },
-    "firmwareid": {
-      "doc": "ID of the firmware image.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "firmwareid",
-    "deviceFilter"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -189,57 +110,6 @@ Arguments:
 - `state`: If present, only rollouts in specified state will be returned.
 
 Result `array`: List of objects describing matching rollouts.
-
-Definition:
-```json
-{
-  "doc": "Returns info about rollouts. If `projectid` and/or `state` are specified, only matching rollouts will be returned.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "state": {
-      "doc": "If present, only rollouts in specified state will be returned.",
-      "type": "string"
-    }
-  },
-  "result": {
-    "doc": "List of objects describing matching rollouts.",
-    "type": "array",
-    "items": {
-      "type": "object",
-      "properties": {
-        "deviceFilter": {
-          "type": "string"
-        },
-        "state": {
-          "enum": [
-            "init",
-            "inProgress",
-            "paused",
-            "finished"
-          ],
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "projectid": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "firmwareid": {
-          "type": "string"
-        }
-      }
-    }
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -293,36 +163,6 @@ Arguments:
 - `devices`: List of the device IDs.
 - `rolloutid`: ID of the rollout.
 
-
-Definition:
-```json
-{
-  "doc": "Adds devices to the rollout. Mostly used by the backend.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "devices": {
-      "doc": "List of the device IDs.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "rolloutid": {
-      "doc": "ID of the rollout.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "rolloutid",
-    "devices"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -367,39 +207,6 @@ Arguments:
 - `projectid`: ID of the project.
 - `state`: Target state.
 - `rolloutid`: ID of the rollout.
-
-
-Definition:
-```json
-{
-  "doc": "Changes state of the rollout.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "state": {
-      "doc": "Target state.",
-      "enum": [
-        "init",
-        "inProgress",
-        "paused",
-        "finished"
-      ],
-      "type": "string"
-    },
-    "rolloutid": {
-      "doc": "ID of the rollout.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "rolloutid",
-    "state"
-  ]
-}
-```
 
 Request:
 ```json
@@ -446,51 +253,6 @@ Arguments:
 - `rolloutid`: ID of the rollout.
 
 Result `array`: 
-
-Definition:
-```json
-{
-  "doc": "Returns the list of devices previously added to the rollout.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "rolloutid": {
-      "doc": "ID of the rollout.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "rolloutid"
-  ],
-  "result": {
-    "items": {
-      "type": "object",
-      "properties": {
-        "state": {
-          "enum": [
-            "init",
-            "started",
-            "succeeded",
-            "failed"
-          ],
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "updateCommandId": {
-          "type": "string"
-        }
-      }
-    },
-    "type": "array"
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -544,45 +306,6 @@ Arguments:
 - `updateCommandId`: 
 - `rolloutid`: ID of the rollout.
 
-
-Definition:
-```json
-{
-  "doc": "Changes the state of the device in rollout. Used by the backend.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "state": {
-      "doc": "Target state.",
-      "enum": [
-        "init",
-        "started",
-        "succeeded",
-        "failed"
-      ],
-      "type": "string"
-    },
-    "deviceid": {
-      "doc": "ID of the device.",
-      "type": "string"
-    },
-    "updateCommandId": "string",
-    "rolloutid": {
-      "doc": "ID of the rollout.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "rolloutid",
-    "deviceid",
-    "state"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -627,28 +350,6 @@ Deletes the rollout.
 Arguments:
 - `projectid`: ID of the project.
 - `rolloutid`: ID of the rollout.
-
-
-Definition:
-```json
-{
-  "doc": "Deletes the rollout.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "rolloutid": {
-      "doc": "ID of the rollout.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "rolloutid"
-  ]
-}
-```
 
 Request:
 ```json

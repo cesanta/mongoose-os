@@ -8,14 +8,6 @@ Commands provided by the dispatcher on the cloud backend.
 A simple echo service.
 
 
-
-Definition:
-```json
-{
-  "doc": "A simple echo service."
-}
-```
-
 Request:
 ```json
 {
@@ -56,59 +48,6 @@ Arguments:
 - `ids`: List of ids to query
 
 Result `object`: 
-
-Definition:
-```json
-{
-  "doc": "Gets channel stats for one or more IDs.",
-  "args": {
-    "ids": {
-      "doc": "List of ids to query",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    }
-  },
-  "required_args": [
-    "ids"
-  ],
-  "result": {
-    "additionalProperties": {
-      "required": [
-        "created",
-        "lastUsed",
-        "numSent",
-        "channels"
-      ],
-      "type": "object",
-      "properties": {
-        "channels": {
-          "doc": "Channels associated with this route",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "created": {
-          "doc": "When the route was created (timestamp, seconds)",
-          "type": "integer"
-        },
-        "numSent": {
-          "doc": "Number of frames sent to the route",
-          "type": "integer"
-        },
-        "lastUsed": {
-          "doc": "When the route was last used (frame sent of received; timestamp, seconds)",
-          "type": "integer"
-        }
-      }
-    },
-    "type": "object"
-  }
-}
-```
-
 Request:
 ```json
 {

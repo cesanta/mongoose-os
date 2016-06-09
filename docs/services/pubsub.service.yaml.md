@@ -11,47 +11,6 @@ Arguments:
 - `subscription`: Name of the subscription.
 
 Result `array`: 
-
-Definition:
-```json
-{
-  "doc": "Pull messages from a subscription.",
-  "args": {
-    "subscription": {
-      "doc": "Name of the subscription.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "subscription"
-  ],
-  "result": {
-    "items": {
-      "type": "object",
-      "properties": {
-        "ackID": {
-          "type": "string"
-        },
-        "message": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "string"
-              ],
-              "keep_as_json": true
-            }
-          }
-        }
-      }
-    },
-    "type": "array"
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -101,23 +60,6 @@ Creates a new topic.
 Arguments:
 - `name`: Name of the topic.
 
-
-Definition:
-```json
-{
-  "doc": "Creates a new topic.",
-  "args": {
-    "name": {
-      "doc": "Name of the topic.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "name"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -158,31 +100,6 @@ Acknowledge one or more messages.
 Arguments:
 - `ids`: List of message IDs to acknowledge.
 - `subscription`: Name of the subscription.
-
-
-Definition:
-```json
-{
-  "doc": "Acknowledge one or more messages.",
-  "args": {
-    "ids": {
-      "doc": "List of message IDs to acknowledge.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "subscription": {
-      "doc": "Name of the subscription.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "subscription",
-    "ids"
-  ]
-}
-```
 
 Request:
 ```json
@@ -227,33 +144,6 @@ Arguments:
 - `deadline`: Deadline in seconds for message delivery.
 - `name`: Name of subscription.
 
-
-Definition:
-```json
-{
-  "doc": "Creates a new subscription to a given topic. If messages are not acknowledged in `deadline` seconds they will be resent.",
-  "args": {
-    "topic": {
-      "doc": "Name of the topic.",
-      "type": "string"
-    },
-    "deadline": {
-      "doc": "Deadline in seconds for message delivery.",
-      "type": "number"
-    },
-    "name": {
-      "doc": "Name of subscription.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "name",
-    "topic",
-    "deadline"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -296,33 +186,6 @@ Publish a message to a topic.
 Arguments:
 - `topic`: Name of the topic.
 - `data`: Message to publish.
-
-
-Definition:
-```json
-{
-  "doc": "Publish a message to a topic.",
-  "args": {
-    "topic": {
-      "doc": "Name of the topic.",
-      "type": "string"
-    },
-    "data": {
-      "doc": "Message to publish.",
-      "type": [
-        "object",
-        "array",
-        "string"
-      ],
-      "keep_as_json": true
-    }
-  },
-  "required_args": [
-    "topic",
-    "data"
-  ]
-}
-```
 
 Request:
 ```json
@@ -367,31 +230,6 @@ Arguments:
 - `ids`: List of message IDs to extend deadline for.
 - `subscription`: Name of the subscription.
 
-
-Definition:
-```json
-{
-  "doc": "Extend ack deadline for one or more messages. The new deadline is measured relative the this command. The deadline, measured in seconds, must be >= 0.",
-  "args": {
-    "deadline": {
-      "doc": "Number of seconds since now for the new deadline.",
-      "type": "number"
-    },
-    "ids": {
-      "doc": "List of message IDs to extend deadline for.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "subscription": {
-      "doc": "Name of the subscription.",
-      "type": "string"
-    }
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -434,23 +272,6 @@ Deletes a new subscription.
 Arguments:
 - `name`: Name of the subscription.
 
-
-Definition:
-```json
-{
-  "doc": "Deletes a new subscription.",
-  "args": {
-    "name": {
-      "doc": "Name of the subscription.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "name"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -490,23 +311,6 @@ Deletes a topic.
 
 Arguments:
 - `name`: Name of the topic.
-
-
-Definition:
-```json
-{
-  "doc": "Deletes a topic.",
-  "args": {
-    "name": {
-      "doc": "Name of the topic.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "name"
-  ]
-}
-```
 
 Request:
 ```json

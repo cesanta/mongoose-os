@@ -11,40 +11,6 @@ Arguments:
 - `deviceid`: ID of the device.
 
 Result `object`: 
-
-Definition:
-```json
-{
-  "doc": "Gets device information.",
-  "args": {
-    "deviceid": {
-      "doc": "ID of the device.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "deviceid"
-  ],
-  "result": {
-    "type": "object",
-    "properties": {
-      "psk": {
-        "doc": "Pre-shared key that device will use for authentication.",
-        "type": "string"
-      },
-      "deviceid": {
-        "doc": "ID of the device.",
-        "type": "string"
-      },
-      "projectid": {
-        "doc": "Optional ID of the project to add device to.",
-        "type": "string"
-      }
-    }
-  }
-}
-```
-
 #### ListDevicesWithMetadata
 Deprecated method. Returns a list of devices in a project along with registration and last successful authentication timestamps.
 
@@ -53,54 +19,6 @@ Arguments:
 - `extra_metadata`: List of extra fields that you want to get back. Accepted values are: "lastAuthTimestamp" and "registrationTimestamp".
 
 Result `array`: 
-
-Definition:
-```json
-{
-  "doc": "Deprecated method. Returns a list of devices in a project along with registration and last successful authentication timestamps.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "extra_metadata": {
-      "doc": "List of extra fields that you want to get back. Accepted values are: \"lastAuthTimestamp\" and \"registrationTimestamp\".",
-      "type": "array",
-      "items": {
-        "enum": [
-          "lastAuthTimestamp",
-          "registrationTimestamp"
-        ],
-        "type": "string"
-      }
-    }
-  },
-  "required_args": [
-    "projectid"
-  ],
-  "result": {
-    "items": {
-      "required": [
-        "id"
-      ],
-      "type": "object",
-      "properties": {
-        "registrationTimestamp": {
-          "type": "integer"
-        },
-        "lastAuthTimestamp": {
-          "type": "integer"
-        },
-        "id": {
-          "type": "string"
-        }
-      }
-    },
-    "type": "array"
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -150,34 +68,6 @@ Arguments:
 - `id`: ID of the project to be retreived
 
 Result `object`: 
-
-Definition:
-```json
-{
-  "doc": "Returns project info for a given project",
-  "args": {
-    "id": {
-      "doc": "ID of the project to be retreived",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "id"
-  ],
-  "result": {
-    "type": "object",
-    "properties": {
-      "id": {
-        "type": "string"
-      },
-      "name": {
-        "type": "string"
-      }
-    }
-  }
-}
-```
-
 #### Create
 Creates a new project.
 
@@ -187,32 +77,6 @@ Arguments:
 - `name`: Human-readable name for the project.
 
 Result `string`: Project id.
-
-Definition:
-```json
-{
-  "doc": "Creates a new project.",
-  "args": {
-    "owner": {
-      "doc": "ID of the owner for the new project. Set to ID of the caller by default.",
-      "type": "string"
-    },
-    "id": {
-      "doc": "ID of a project. Assigned automatically if not specified.",
-      "type": "string"
-    },
-    "name": {
-      "doc": "Human-readable name for the project.",
-      "type": "string"
-    }
-  },
-  "result": {
-    "doc": "Project id.",
-    "type": "string"
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -254,28 +118,6 @@ Returns a list of projects the caller has access to.
 
 
 Result `array`: 
-
-Definition:
-```json
-{
-  "doc": "Returns a list of projects the caller has access to.",
-  "result": {
-    "items": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        }
-      }
-    },
-    "type": "array"
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -321,28 +163,6 @@ Arguments:
 - `projectid`: ID of the project.
 - `deviceid`: ID of the device.
 
-
-Definition:
-```json
-{
-  "doc": "Removes the devices from the project.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "deviceid": {
-      "doc": "ID of the device.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "deviceid"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -387,33 +207,6 @@ Arguments:
 - `token`: Auth token based on PSK.
 - `deviceid`: ID of the device.
 
-
-Definition:
-```json
-{
-  "doc": "Claim an unclaimed device using a token.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "token": {
-      "doc": "Auth token based on PSK.",
-      "type": "string"
-    },
-    "deviceid": {
-      "doc": "ID of the device.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "deviceid",
-    "projectid",
-    "token"
-  ]
-}
-```
-
 #### ListDevices
 Returns a list of devices in a given project.
 
@@ -422,33 +215,6 @@ Arguments:
 - `projectid`: ID of the project.
 
 Result `array`: 
-
-Definition:
-```json
-{
-  "doc": "Returns a list of devices in a given project.",
-  "args": {
-    "filter": {
-      "doc": "Filter expression, currently only 'labelname=labelvalue' supported.",
-      "type": "string"
-    },
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid"
-  ],
-  "result": {
-    "items": {
-      "type": "string"
-    },
-    "type": "array"
-  }
-}
-```
-
 Request:
 ```json
 {
@@ -495,33 +261,6 @@ Arguments:
 - `userid`: ID of the user.
 - `level`: Access level. Currently defined levels are: 0 - no access, 10 - read access (e.g. can list devices, but not modify anything), 20 - write access (e.g. can add devices, upload firmware images, create rollouts), 30 - manage access (can grant and revoke privileges for other users).
 
-
-Definition:
-```json
-{
-  "doc": "Sets access level to the project for the user.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "userid": {
-      "doc": "ID of the user.",
-      "type": "string"
-    },
-    "level": {
-      "doc": "Access level. Currently defined levels are: 0 - no access, 10 - read access (e.g. can list devices, but not modify anything), 20 - write access (e.g. can add devices, upload firmware images, create rollouts), 30 - manage access (can grant and revoke privileges for other users).",
-      "type": "integer"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "userid",
-    "level"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -565,28 +304,6 @@ Revokes access to the project for a given user.
 Arguments:
 - `projectid`: ID of the project.
 - `userid`: ID of the user.
-
-
-Definition:
-```json
-{
-  "doc": "Revokes access to the project for a given user.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "userid": {
-      "doc": "ID of the user.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "userid"
-  ]
-}
-```
 
 Request:
 ```json
@@ -632,32 +349,6 @@ Arguments:
 - `deviceid`: ID of the device.
 - `projectid`: Optional ID of the project to add device to.
 
-
-Definition:
-```json
-{
-  "doc": "Adds a new device.",
-  "args": {
-    "psk": {
-      "doc": "Pre-shared key that device will use for authentication.",
-      "type": "string"
-    },
-    "deviceid": {
-      "doc": "ID of the device.",
-      "type": "string"
-    },
-    "projectid": {
-      "doc": "Optional ID of the project to add device to.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "deviceid",
-    "psk"
-  ]
-}
-```
-
 Request:
 ```json
 {
@@ -701,23 +392,6 @@ Deletes a project
 Arguments:
 - `id`: ID of the project to be deleted.
 
-
-Definition:
-```json
-{
-  "doc": "Deletes a project",
-  "args": {
-    "id": {
-      "doc": "ID of the project to be deleted.",
-      "type": "string"
-    }
-  },
-  "required_args": [
-    "id"
-  ]
-}
-```
-
 #### CheckAccess
 Checks if a given user has a specified level of access to a given project.
 
@@ -727,37 +401,6 @@ Arguments:
 - `level`: Access level you want to confirm.
 
 Result `boolean`: `true` if the user was granted a given access level, `false` otherwise.
-
-Definition:
-```json
-{
-  "doc": "Checks if a given user has a specified level of access to a given project.",
-  "args": {
-    "projectid": {
-      "doc": "ID of the project.",
-      "type": "string"
-    },
-    "userid": {
-      "doc": "ID of the user.",
-      "type": "string"
-    },
-    "level": {
-      "doc": "Access level you want to confirm.",
-      "type": "integer"
-    }
-  },
-  "required_args": [
-    "projectid",
-    "userid",
-    "level"
-  ],
-  "result": {
-    "doc": "`true` if the user was granted a given access level, `false` otherwise.",
-    "type": "boolean"
-  }
-}
-```
-
 Request:
 ```json
 {
