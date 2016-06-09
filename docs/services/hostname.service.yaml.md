@@ -1,5 +1,5 @@
 ---
-title: "Hostname service"
+title: "Hostname"
 ---
 
 Hostname service allows to control mapping between hostnames and blobstore key prefixes used as web-server root directories.

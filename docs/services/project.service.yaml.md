@@ -1,5 +1,5 @@
 ---
-title: "Project service"
+title: "Project"
 ---
 
 Provides methods to manage projects.

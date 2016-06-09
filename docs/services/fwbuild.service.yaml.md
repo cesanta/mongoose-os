@@ -1,5 +1,5 @@
 ---
-title: "Build service"
+title: "Build"
 ---
 
 The Build service allows to build a SJS project living in a Workspace.

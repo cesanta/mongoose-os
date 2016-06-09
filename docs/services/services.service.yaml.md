@@ -1,5 +1,5 @@
 ---
-title: "Services service"
+title: "Services"
 ---
 
 Services service provides support for introspection.

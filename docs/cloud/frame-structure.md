@@ -1,5 +1,5 @@
 ---
-title: Frame structure
+title: Clubby frame format
 ---
 
 Each frame is a JSON object with a predefined set of keys:

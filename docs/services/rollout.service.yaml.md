@@ -1,5 +1,5 @@
 ---
-title: "Rollout service"
+title: "Rollout"
 ---
 
 Rollout service stores info about firmware rollouts.

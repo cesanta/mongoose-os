@@ -1,5 +1,5 @@
 ---
-title: "Dispatcher service"
+title: "Dispatcher"
 ---
 
 Commands provided by the dispatcher on the cloud backend.

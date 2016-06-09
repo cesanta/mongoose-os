@@ -1,5 +1,5 @@
 ---
-title: "Firmware service"
+title: "Firmware"
 ---
 
 Firmware service provides means for managing a set of firmware images.

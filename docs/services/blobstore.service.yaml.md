@@ -1,5 +1,5 @@
 ---
-title: "Blob service"
+title: "Blob"
 ---
 
 Blob service provides basic key-value store. Keys are arrays of strings. First component of the key must be either your ID or ID of a project you have access to.

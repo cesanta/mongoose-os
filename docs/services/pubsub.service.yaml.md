@@ -1,5 +1,5 @@
 ---
-title: "PubSub service"
+title: "PubSub"
 ---
 
 PubSub service.

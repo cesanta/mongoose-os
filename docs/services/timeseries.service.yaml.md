@@ -1,5 +1,5 @@
 ---
-title: "Timeseries service"
+title: "Timeseries"
 ---
 
 Metrics service provides timeseries storage.

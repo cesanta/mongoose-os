@@ -1,5 +1,5 @@
 ---
-title: "Account service"
+title: "Account"
 ---
 
 Provides methods for managing users. Used by the frontend.

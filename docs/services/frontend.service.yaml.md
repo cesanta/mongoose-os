@@ -1,5 +1,5 @@
 ---
-title: "Frontend service"
+title: "Frontend"
 ---
 
 Misc APIs provided by the HTTP frontend.

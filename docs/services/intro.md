@@ -1,5 +1,5 @@
 ---
-title: "Services"
+title: "Cloud API"
 symbol_kind: "intro"
 decl_name: "services"
 items:

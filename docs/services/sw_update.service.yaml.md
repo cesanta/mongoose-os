@@ -1,5 +1,5 @@
 ---
-title: "SWUpdate service"
+title: "SWUpdate"
 ---
 
 SWUpdate service provides a way to update device's software.

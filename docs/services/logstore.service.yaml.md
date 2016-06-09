@@ -1,5 +1,5 @@
 ---
-title: "Log service"
+title: "Log"
 ---
 
 Log service allows clients to log events

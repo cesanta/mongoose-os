@@ -1,5 +1,5 @@
 ---
-title: "Label service"
+title: "Label"
 ---
 
 Allows to manage arbitrary string labels for devices.

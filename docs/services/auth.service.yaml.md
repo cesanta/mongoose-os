@@ -1,5 +1,5 @@
 ---
-title: "Auth service"
+title: "Auth"
 ---
 
 Auth service performs authentication and authorization of devices and commands. Can only be used by the cloud backend.
