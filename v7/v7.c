@@ -11123,8 +11123,6 @@ V7_PRIVATE int calc_llen(size_t len) {
     n++;
   } while (len >>= 7);
 
-  assert(n <= (int) sizeof(len));
-
   return n;
 }
 
