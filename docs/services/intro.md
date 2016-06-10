@@ -9,7 +9,6 @@ items:
   - { type: file, name: device.service.yaml.md }
   - { type: file, name: dispatcher.service.yaml.md }
   - { type: file, name: frontend.service.yaml.md }
-  - { type: file, name: hostname.service.yaml.md }
   - { type: file, name: label.service.yaml.md }
   - { type: file, name: logstore.service.yaml.md }
   - { type: file, name: project.service.yaml.md }
