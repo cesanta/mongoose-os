@@ -36,10 +36,8 @@ While your project is still in prototyping stage and not for sale, you can use M
 
 # Contributions
 
-People who have agreed to the
+To submit contributions, sign
 [Cesanta CLA](https://docs.cesanta.com/contributors_la.shtml)
-can make contributions. Note that the CLA isn't a copyright
-_assigment_ but rather a copyright _license_.
-You retain the copyright on your contributions.
+and send GitHub pull request. You retain the copyright on your contributions.
 
 [![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/mongoose-iot)
