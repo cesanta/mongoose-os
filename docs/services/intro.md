@@ -4,6 +4,7 @@ symbol_kind: "intro"
 decl_name: "services"
 items:
   - { type: file, name: account.service.yaml.md }
+  - { type: file, name: app.service.yaml.md }
   - { type: file, name: auth.service.yaml.md }
   - { type: file, name: blobstore.service.yaml.md }
   - { type: file, name: device.service.yaml.md }
