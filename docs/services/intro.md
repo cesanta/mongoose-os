@@ -8,18 +8,13 @@ items:
   - { type: file, name: blobstore.service.yaml.md }
   - { type: file, name: device.service.yaml.md }
   - { type: file, name: dispatcher.service.yaml.md }
-  - { type: file, name: firmware.service.yaml.md }
   - { type: file, name: frontend.service.yaml.md }
-  - { type: file, name: fwbuild.service.yaml.md }
   - { type: file, name: hostname.service.yaml.md }
   - { type: file, name: label.service.yaml.md }
   - { type: file, name: logstore.service.yaml.md }
   - { type: file, name: project.service.yaml.md }
   - { type: file, name: pubsub.service.yaml.md }
-  - { type: file, name: rollout.service.yaml.md }
   - { type: file, name: services.service.yaml.md }
-  - { type: file, name: sw_update.service.yaml.md }
   - { type: file, name: timeseries.service.yaml.md }
-  - { type: file, name: workspace.service.yaml.md }
 ---
 
