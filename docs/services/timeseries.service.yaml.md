@@ -4,6 +4,14 @@ title: "Timeseries"
 
 Metrics service provides timeseries storage.
 
+#### Report
+Report adds new value to the storage. Label 'src' is implicitly added.
+
+Arguments:
+- `timestamp`: Timestamp.
+- `labels`: Label set.
+- `value`: Value.
+
 #### Query
 Query returns the result of executing `query` on the data stored. `query` uses Prometheus query language.
 
@@ -12,7 +20,7 @@ Arguments:
 
 Result `array`: 
 #### ReportMany
-Publish adds new values to the storage. Label 'src' is implicitly added to each timeseries.
+ReportMany adds new values to the storage. Label 'src' is implicitly added to each timeseries.
 
 Arguments:
 - `timestamp`: Timestamp.
