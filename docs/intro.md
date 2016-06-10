@@ -3,13 +3,13 @@ title: Mongoose IoT Platform
 color: '#F05B40'
 repo: https://github.com/cesanta/mongoose-iot
 items:
-  - { type: dir, name: overview }
-  - { type: file, name: hardware.md }
-  - { type: dir, name: quick-start }
-  - { type: dir, name: fw-firmware }
-  - { type: dir, name: javascript-api }
-  - { type: dir, name: cloud }
-  - { type: dir, name: services }
-  - { type: dir, name: arch }
-  - { type: dir, name: faq }
+  - { name: overview.md }
+  - { name: hardware.md }
+  - { name: quickstart.md }
+  - { name: fw-firmware }
+  - { name: javascript-api }
+  - { name: cloud }
+  - { name: services }
+  - { name: arch.md }
+  - { name: faq.md }
 ---

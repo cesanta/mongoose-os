@@ -1,5 +1,5 @@
 ---
-title: Addressing
+title: Clubby addresses
 ---
 
 Address is a subset of URL. Only the host and URI parts are used, the rest
@@ -26,4 +26,3 @@ ID = "//" host "/" path-rootless
 One exception: last path segment cannot contain "." (unless it's
 percent-encoded). Also note that it can be partially percent-encoded and the
 implementation must decode it before comparing with another address.
-

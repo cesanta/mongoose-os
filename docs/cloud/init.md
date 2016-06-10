@@ -2,6 +2,15 @@
 title: Library initialization
 ---
 
+In order to make development of client applications even easier, we maintain
+Clubby and Cloud libraries in a number of languages.
+
+For generated API documentation, please follow:
+
+- [Generated JavaDoc for Cloud library](/cloud_java/latest). Cloud library
+  includes the Clubby implementation, plus the helper stubs for accessing the
+  cloud. More on that later.
+
 Now that we have id and psk, we can create and initialize clubby instance:
 
 ```cs_examples_begin
@@ -45,4 +54,3 @@ clubby.connect();
 
 Having that done, we can use `clubby` instance to talk to the cloud and other
 devices.
-
