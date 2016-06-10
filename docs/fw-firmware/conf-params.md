@@ -37,9 +37,6 @@ title: Configuration parameters
 - `clubby.server_address`: Default clubby server address (including port)
 - `clubby.device_id`: The device ID used to connect clubby server
 - `clubby.device_psk`: The device PSK used to connect clubby server
-- `clubby.device_auto_registration`: Allow automatical obtaining of ID and PSK
-  from Cesanta server
-- `clubby.device_registration_url`: Server to obtain ID and PSK
 - `clubby.reconnect_timeout_min`, `clubby.reconnect_timeout_max`: Timeouts to
   use in clubby network operations (seconds). Timeout grows with every
   unsuccessful connection attempt, starting from `reconnect_timeout_min`,

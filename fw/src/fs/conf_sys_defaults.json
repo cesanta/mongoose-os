@@ -45,8 +45,6 @@
     "server_address": "api.cesanta.com",
     "device_id": "",
     "device_psk": "",
-    "device_auto_registration": true,
-    "device_registration_url": "http://cloud.cesanta.com/register_device",
     "reconnect_timeout_min": 10,
     "reconnect_timeout_max": 60,
     "request_timeout": 300,
