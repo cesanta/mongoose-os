@@ -18,20 +18,17 @@ Result `array`:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Log.List",
-      "id": 123,
-      "args": {
-        "src": "//api.cesanta.com/device_123",
-        "limit": 10,
-        "stream": "console"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Log.List",
+  "args": {
+    "after": "VALUE PLACEHOLDER",
+    "follow": "VALUE PLACEHOLDER",
+    "limit": "VALUE PLACEHOLDER",
+    "src": "VALUE PLACEHOLDER",
+    "stream": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -39,23 +36,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": [
-        {
-          "stream": "console",
-          "msg": "hello world!",
-          "timestamp": 1453395062123,
-          "id": "msg123"
-        }
-      ]
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -72,18 +57,16 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Log.Log",
-      "id": 123,
-      "args": {
-        "msg": "hello world!"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Log.Log",
+  "args": {
+    "msg": "VALUE PLACEHOLDER",
+    "src": "VALUE PLACEHOLDER",
+    "stream": "VALUE PLACEHOLDER",
+    "timestamp": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -91,16 +74,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 

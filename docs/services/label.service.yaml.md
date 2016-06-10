@@ -15,19 +15,14 @@ Result `array`:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Label.Get",
-      "id": 123,
-      "args": {
-        "ids": ["//api.cesanta.com/device_123"],
-        "labels": ["location"]
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Label.Get",
+  "args": {
+    "ids": "VALUE PLACEHOLDER",
+    "labels": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -35,23 +30,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": [
-        {
-          "id": "//api.cesanta.com/device_123",
-          "labels": {
-            "location": "Bathroom"
-          }
-        }
-      ]
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -66,21 +49,14 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Label.Set",
-      "id": 123,
-      "args": {
-        "ids": ["//api.cesanta.com/device_123"],
-        "labels": {
-          "location": "Bathroom"
-        }
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Label.Set",
+  "args": {
+    "ids": "VALUE PLACEHOLDER",
+    "labels": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -88,15 +64,10 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
 
 ```
@@ -111,19 +82,14 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Label.Delete",
-      "id": 123,
-      "args": {
-        "ids": ["//api.cesanta.com/device_123"],
-        "labels": ["location"]
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Label.Delete",
+  "args": {
+    "ids": "VALUE PLACEHOLDER",
+    "labels": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -131,15 +97,10 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
 
 ```

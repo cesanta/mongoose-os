@@ -12,18 +12,13 @@ Result `['object', 'array', 'string']`: Value stored with a given key.
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Blob.Get",
-      "id": 123,
-      "args": {
-        "key": ["//api.cesanta.com/device_123", "some", "stuff"]
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Blob.Get",
+  "args": {
+    "key": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -31,18 +26,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": {
-        "last_file": "/etc/passwd"
-      }
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -58,21 +46,15 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Blob.Set",
-      "id": 123,
-      "args": {
-        "key": ["//api.cesanta.com/device_123", "some", "stuff"],
-        "value": {
-          "last_file": "/etc/passwd"
-        }
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Blob.Set",
+  "args": {
+    "binary": "VALUE PLACEHOLDER",
+    "key": "VALUE PLACEHOLDER",
+    "value": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -80,16 +62,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 #### List
@@ -106,19 +84,17 @@ Result `array`: List of matched keys currently present in the blobstore.
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Blob.List",
-      "id": 123,
-      "args": {
-        "prefix": ["//api.cesanta.com/device_123", "some"],
-        "limit": 10
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Blob.List",
+  "args": {
+    "end": "VALUE PLACEHOLDER",
+    "inclusive": "VALUE PLACEHOLDER",
+    "limit": "VALUE PLACEHOLDER",
+    "prefix": "VALUE PLACEHOLDER",
+    "start": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -126,18 +102,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": [
-        ["//api.cesanta.com/device_123", "some", "stuff"]
-      ]
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -147,5 +116,30 @@ Deletes the given keys.
 
 Arguments:
 - `keys`: Keys to delete.
+
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Blob.Delete",
+  "args": {
+    "keys": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
 
 

@@ -14,18 +14,13 @@ Result `array`:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.Pull",
-      "id": 123,
-      "args": {
-        "subscription": "sub1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.Pull",
+  "args": {
+    "subscription": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -33,23 +28,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": [
-        {
-          "ackID": "msg123",
-          "message": {
-            "data": "hello world!"
-          }
-        }
-      ]
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -63,18 +46,13 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.CreateTopic",
-      "id": 123,
-      "args": {
-        "name": "topic1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.CreateTopic",
+  "args": {
+    "name": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -82,16 +60,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 #### Ack
@@ -104,19 +78,14 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.Ack",
-      "id": 123,
-      "args": {
-        "ids": "msg123",
-        "subscription": "sub1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.Ack",
+  "args": {
+    "ids": "VALUE PLACEHOLDER",
+    "subscription": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -124,16 +93,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 #### CreateSubscription
@@ -147,20 +112,15 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.CreateSubscription",
-      "id": 123,
-      "args": {
-        "deadline": 300,
-        "name": "sub1",
-        "topic": "topic1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.CreateSubscription",
+  "args": {
+    "deadline": "VALUE PLACEHOLDER",
+    "name": "VALUE PLACEHOLDER",
+    "topic": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -168,16 +128,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 #### Publish
@@ -190,19 +146,14 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.Publish",
-      "id": 123,
-      "args": {
-        "data": "hello world!",
-        "topic": "topic1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.Publish",
+  "args": {
+    "data": "VALUE PLACEHOLDER",
+    "topic": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -210,16 +161,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 #### ExtendDeadline
@@ -233,20 +180,15 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.ExtendDeadline",
-      "id": 123,
-      "args": {
-        "deadline": 300,
-        "ids": ["msg123"],
-        "subscription": "sub1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.ExtendDeadline",
+  "args": {
+    "deadline": "VALUE PLACEHOLDER",
+    "ids": "VALUE PLACEHOLDER",
+    "subscription": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -254,16 +196,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 #### DeleteSubscription
@@ -275,18 +213,13 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.DeleteSubscription",
-      "id": 123,
-      "args": {
-        "name": "sub1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.DeleteSubscription",
+  "args": {
+    "name": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -294,16 +227,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 #### DeleteTopic
@@ -315,18 +244,13 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/PubSub.DeleteTopic",
-      "id": 123,
-      "args": {
-        "name": "topic1"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/PubSub.DeleteTopic",
+  "args": {
+    "name": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -334,16 +258,12 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/device_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
+
 ```
 
 

@@ -16,20 +16,15 @@ Result `boolean`: `true` if the user was granted a given access level, `false` o
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/cloud.blobstore",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Project.CheckAccess",
-      "id": 123,
-      "args": {
-        "projectid": "//api.cesanta.com/project_123",
-        "userid": "//api.cesanta.com/user_123",
-        "level": 10
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Project.CheckAccess",
+  "args": {
+    "level": "VALUE PLACEHOLDER",
+    "projectid": "VALUE PLACEHOLDER",
+    "userid": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -37,16 +32,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/cloud.blobstore",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": true
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -58,6 +48,32 @@ Arguments:
 - `id`: ID of the project to be retreived
 
 Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Project.Get",
+  "args": {
+    "id": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### RevokeAccess
 Revokes access to the project for a given user.
 
@@ -68,19 +84,14 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Project.RevokeAccess",
-      "id": 123,
-      "args": {
-        "projectid": "//api.cesanta.com/project_123",
-        "userid": "//api.cesanta.com/user_456"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Project.RevokeAccess",
+  "args": {
+    "projectid": "VALUE PLACEHOLDER",
+    "userid": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -88,15 +99,10 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
 
 ```
@@ -113,19 +119,15 @@ Result `string`: Project id.
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Project.Create",
-      "id": 123,
-      "args": {
-        "id": "//api.cesanta.com/project_123",
-        "name": "Default"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Project.Create",
+  "args": {
+    "id": "VALUE PLACEHOLDER",
+    "name": "VALUE PLACEHOLDER",
+    "owner": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -133,15 +135,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -157,20 +155,15 @@ Arguments:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Project.GrantAccess",
-      "id": 123,
-      "args": {
-        "level": 20,
-        "projectid": "//api.cesanta.com/project_123",
-        "userid": "//api.cesanta.com/user_456"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Project.GrantAccess",
+  "args": {
+    "level": "VALUE PLACEHOLDER",
+    "projectid": "VALUE PLACEHOLDER",
+    "userid": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -178,15 +171,10 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0
-    }
-  ]
+  "dst": "device_123",
+  "id": 123
 }
 
 ```
@@ -199,15 +187,11 @@ Result `array`:
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/user_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Project.List",
-      "id": 123
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Project.List",
+  "args": {}
 }
 
 ```
@@ -215,21 +199,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
+  "v": 2,
   "src": "//api.cesanta.com",
-  "dst": "//api.cesanta.com/user_123",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": [
-        {
-          "id": "//api.cesanta.com/project_123",
-          "name": "Default"
-        }
-      ]
-    }
-  ]
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -239,5 +213,30 @@ Deletes a project
 
 Arguments:
 - `id`: ID of the project to be deleted.
+
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Project.Delete",
+  "args": {
+    "id": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
 
 

@@ -12,15 +12,23 @@ Result `object`: Property names are full service names (prefixed with namespace)
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/device_123",
-  "dst": "//api.cesanta.com",
-  "cmds": [
-    {
-      "cmd": "/v1/Services.List",
-      "id": 123
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Services.List",
+  "args": {}
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```

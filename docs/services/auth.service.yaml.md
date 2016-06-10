@@ -11,6 +11,32 @@ Arguments:
 - `host`: Hostname of the app.
 
 Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.GenerateToken",
+  "args": {
+    "host": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### Authenticate
 Authenticate returns true if `id` is verified to have valid credentials.
 
@@ -22,21 +48,14 @@ Result `boolean`: `true` if credentials are valid, `false` otherwise.
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/cloud.dispatcher",
-  "dst": "//api.cesanta.com/cloud.registry",
-  "cmds": [
-    {
-      "cmd": "/v1/Auth.Authenticate",
-      "id": 123,
-      "args": {
-        "id": "//api.cesanta.com/device_123",
-        "credentials": {
-          "psk": "qwerty"
-        }
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.Authenticate",
+  "args": {
+    "credentials": "VALUE PLACEHOLDER",
+    "id": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -44,16 +63,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/cloud.registry",
-  "dst": "//api.cesanta.com/cloud.dispatcher",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": true
-    }
-  ]
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -63,6 +77,30 @@ Returns the list of apps for which tokens were generated.
 
 
 Result `array`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.ListToken",
+  "args": {}
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### AuthorizeCommand
 AuthorizeCommand returns true if `src` is allowed to send a given command to `dst`.
 
@@ -75,20 +113,15 @@ Result `boolean`: `true` if the command is allowed, `false` otherwise.
 Request:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/cloud.dispatcher",
-  "dst": "//api.cesanta.com/cloud.registry",
-  "cmds": [
-    {
-      "cmd": "/v1/Auth.AuthorizeCommand",
-      "id": 123,
-      "args": {
-        "cmd": "/v1/Nuke.Launch",
-        "dst": "//api.cesanta.com/misslecontrol",
-        "src": "//api.cesanta.com/device_123"
-      }
-    }
-  ]
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.AuthorizeCommand",
+  "args": {
+    "cmd": "VALUE PLACEHOLDER",
+    "dst": "VALUE PLACEHOLDER",
+    "src": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -96,16 +129,11 @@ Request:
 Response:
 ```json
 {
-  "v": 1,
-  "src": "//api.cesanta.com/cloud.registry",
-  "dst": "//api.cesanta.com/cloud.dispatcher",
-  "resp": [
-    {
-      "id": 123,
-      "status": 0,
-      "resp": false
-    }
-  ]
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -116,6 +144,31 @@ Revokes auth token for the given app.
 Arguments:
 - `host`: Hostname of the app.
 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.RevokeToken",
+  "args": {
+    "host": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
+
 #### GetToken
 Returns auth token for the given app.
 
@@ -123,4 +176,30 @@ Arguments:
 - `host`: Hostname of the app.
 
 Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.GetToken",
+  "args": {
+    "host": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 
