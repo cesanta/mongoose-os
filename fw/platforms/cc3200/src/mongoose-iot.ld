@@ -36,9 +36,6 @@
 *
 ******************************************************************************/
 
-
-HEAP_SIZE = 0xA800;
-
 MEMORY
 {
     /* SRAM size of 240KB for cc3200 ES 1.33 device onward */
@@ -85,7 +82,7 @@ SECTIONS
     .heap :
     {
         _heap = .;
-        . = . + HEAP_SIZE;
+        . = . + (LENGTH(SRAM) - SIZEOF(.text) - SIZEOF(.ARM) - SIZEOF(.data) - SIZEOF(.bss));
         . = ALIGN(8);
         _eheap = .;
 
