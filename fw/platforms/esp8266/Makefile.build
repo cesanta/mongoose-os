@@ -21,20 +21,20 @@ APP_CFLAGS ?=
 
 REPO_PATH ?= ../../..
 COMMON_PATH ?= $(REPO_PATH)/common
-SJS_PATH ?= $(REPO_PATH)/fw
+MGIOT_PATH ?= $(REPO_PATH)/fw
 KRYPTON_PATH ?= $(REPO_PATH)/krypton
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
 V7_PATH ?= $(REPO_PATH)/v7
 APP_FS_PATH ?= fs
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
-SJS_ESP_PATH ?= $(SJS_PATH)/platforms/esp8266
-SJS_POSIX_PATH ?= $(SJS_PATH)/platforms/posix
-FW_SRC ?= $(SJS_PATH)/src
+MGIOT_ESP_PATH ?= $(MGIOT_PATH)/platforms/esp8266
+MGIOT_POSIX_PATH ?= $(MGIOT_PATH)/platforms/posix
+MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
-SJSJS_PATH ?= $(FW_SRC)/js
-COMMON_FS_PATH ?= $(FW_SRC)/fs
+MGIOTJS_PATH ?= $(MGIOT_SRC_PATH)/js
+COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
@@ -62,9 +62,9 @@ endif
 
 BUILD_DIR ?= $(CURDIR)/.build
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
-SJS_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
-SJS_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
-SJS_POSIX_BIN = $(SJS_POSIX_BIN_DIR)/mongoose-iot
+MGIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
+MGIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
+MGIOT_POSIX_BIN = $(MGIOT_POSIX_BIN_DIR)/mongoose-iot
 FW_DIR = firmware
 
 FS_BUILD_DIR = $(BUILD_DIR)/fs
@@ -80,8 +80,8 @@ include $(COMMON_ESP_PATH)/common.mk
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
 
-SJS_ESP_USER_DIR = $(SJS_ESP_PATH)/user
-APP_MODULES += $(SJS_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
+MGIOT_ESP_USER_DIR = $(MGIOT_ESP_PATH)/user
+APP_MODULES += $(MGIOT_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http.c \
             sj_i2c_js.c sj_spi_js.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
@@ -96,9 +96,9 @@ ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
 endif
 
-JSBIN_SRCS := $(SJSJS_PATH)/sys_init.js \
-              $(SJSJS_PATH)/demo.js \
-              $(SJSJS_PATH)/I2C.js \
+JSBIN_SRCS := $(MGIOTJS_PATH)/sys_init.js \
+              $(MGIOTJS_PATH)/demo.js \
+              $(MGIOTJS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
 JS_SRCS    :=
 
@@ -107,14 +107,14 @@ JS_SRCS    :=
 # using JS as extension
 JSBIN_EXT := js
 JS_EXT := js
-VPATH = $(APP_MODULES) $(FW_SRC) $(V7_PATH) $(MONGOOSE_PATH) \
+VPATH = $(APP_MODULES) $(MGIOT_SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH)
-IPATH = $(APP_MODULES) $(REPO_PATH) $(SJS_ESP_PATH)/include $(SPIFFS_PATH) \
+IPATH = $(APP_MODULES) $(REPO_PATH) $(MGIOT_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
         $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
-        $(SJS_ESP_USER_DIR) .
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(SJS_ESP_USER_DIR)
+        $(MGIOT_ESP_USER_DIR) .
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGIOT_ESP_USER_DIR)
 
 # libraries used in this project, mainly provided by the SDK
 APP_LIBS = c crypto gcc hal pp phy net80211 wpa
@@ -182,7 +182,7 @@ CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF -DESP_ENABLE_MG_LWI
 
 FW_FS_OUT = $(FW_DIR)/$(FS_ADDR).bin
 
-LD_SCRIPT_TEMPL = $(SJS_ESP_PATH)/ld/fw.ld
+LD_SCRIPT_TEMPL = $(MGIOT_ESP_PATH)/ld/fw.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
@@ -313,13 +313,13 @@ $(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
 # checked against main app library to make sure there's no overlap.
 $(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
 	$(vecho) "SYMCK $(SYMCHECK_OUT) vs $(APP_AR)"
-	$(Q) $(PYTHON) $(SJS_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
+	$(Q) $(PYTHON) $(MGIOT_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
 	$(Q) touch $@
 
 $(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
 	$(call link,)
 
-$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(SJS_ESP_PATH)/Makefile.build
+$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGIOT_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
 	$(Q) echo "void user_init(void){}; " \
             "void system_restart_local(){};" \
@@ -355,13 +355,13 @@ $(BUILD_DIR)/mongoose.o: mongoose.c
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(BUILD_DIR)/fr.dump: $(SJS_POSIX_BIN)
+$(BUILD_DIR)/fr.dump: $(MGIOT_POSIX_BIN)
 	$(vecho) "FREEZE"
-	$(Q) $(SJS_POSIX_BIN) -freeze $@
+	$(Q) $(MGIOT_POSIX_BIN) -freeze $@
 
-$(BUILD_DIR)/fr.sym: $(SJS_POSIX_BIN)
-	$(vecho) "$(SJS_POSIX_BIN)"
-	$(Q) @nm $(SJS_POSIX_BIN) > $@
+$(BUILD_DIR)/fr.sym: $(MGIOT_POSIX_BIN)
+	$(vecho) "$(MGIOT_POSIX_BIN)"
+	$(Q) @nm $(MGIOT_POSIX_BIN) > $@
 
 $(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
 	$(vecho) "GEN   fr.c"
@@ -416,8 +416,8 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
-$(SJS_POSIX_BIN):
-	make -C $(SJS_POSIX_PATH) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(SJS_POSIX_BIN_DIR) BUILD_DIR=$(SJS_POSIX_BUILD_DIR) CFLAGS_EXTRA='-DV7_FREEZE'
+$(MGIOT_POSIX_BIN):
+	make -C $(MGIOT_POSIX_PATH) V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' BIN_DIR=$(MGIOT_POSIX_BIN_DIR) BUILD_DIR=$(MGIOT_POSIX_BUILD_DIR) CFLAGS_EXTRA='-DV7_FREEZE'
 
 # Target specific warning inhibitions
 

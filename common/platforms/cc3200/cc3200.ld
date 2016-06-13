@@ -1,7 +1,6 @@
 /*****************************************************************************
-* fw.ld
 *
-* GCC Linker script for Mongoose IoT. Based on TI's example "blinky.ld".
+* GCC Linker script for CC3200. Based on TI's example "blinky.ld".
 *
 * Copyright (C) 2014 Texas Instruments Incorporated - http://www.ti.com/ 
 * 

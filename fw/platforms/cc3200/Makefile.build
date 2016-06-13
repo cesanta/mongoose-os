@@ -15,17 +15,18 @@ TOOLCHAIN = gcc
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
 V7_PATH ?= $(REPO_PATH)/v7
-FW_PATH ?= $(REPO_PATH)/fw
 COMMON_PATH ?= $(REPO_PATH)/common
+MGIOT_PATH ?= $(REPO_PATH)/fw
+MGIOT_CC3200_PATH ?= $(REPO_PATH)/fw/platforms/cc3200
+COMMON_CC3200_PATH ?= $(REPO_PATH)/common/platforms/cc3200
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
-SJS_CC3200_PATH ?= $(REPO_PATH)/fw/platforms/cc3200
 BUILD_DIR ?= ./.build
 FW_DIR = ./firmware
 FW_FS_SIZE = 131072
-FW_SRC ?= $(FW_PATH)/src
-COMMON_FS_PATH ?= $(FW_SRC)/fs
-SJSJS_PATH ?= $(FW_SRC)/js
+MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
+COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
+MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
 FS_DIR = fs
 FS_BUILD_DIR = $(BUILD_DIR)/fs
 GENERATED_SOURCES = $(V7_PATH)/v7.c $(V7_PATH)/v7.h
@@ -33,12 +34,12 @@ GENERATED_SOURCES = $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
 
-JS_SRCS := $(SJSJS_PATH)/gpio.js
+JS_SRCS := $(MGIOT_JS_PATH)/gpio.js
 JSBIN_EXT := js
 JS_EXT := js
 
-APP_MODULES += $(SJS_CC3200_PATH)/src
-VPATH = $(APP_MODULES) $(SJS_CC3200_PATH)/tools $(BUILD_DIR)
+APP_MODULES += $(MGIOT_CC3200_PATH)/src
+VPATH = $(APP_MODULES) $(MGIOT_CC3200_PATH)/tools $(BUILD_DIR)
 IPATH = $(APP_MODULES) $(BUILD_DIR) $(REPO_PATH)
 
 V7_FEATURES = $(COMMON_V7_FEATURES) \
@@ -85,7 +86,7 @@ SJ_SRCS = sj_gpio_js.c \
           sj_wifi_js.c \
           device_config.c sj_config.c $(notdir $(SYS_CONFIG_C)) \
           v7.c sj_utils.c
-VPATH += $(FW_PATH)/src $(V7_PATH)
+VPATH += $(MGIOT_PATH)/src $(V7_PATH)
 
 SPIFFS_SRCS = $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 IPATH += $(SPIFFS_PATH)
@@ -146,11 +147,11 @@ SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 OBJCOPY = arm-none-eabi-objcopy
 
 ifeq "$(TOOLCHAIN)" "gcc"
-APP_LD_SCRIPT ?= $(SJS_CC3200_PATH)/src/mongoose-iot.ld
-include $(SJS_CC3200_PATH)/tools/gcc.mk
+APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200.ld
+include $(COMMON_CC3200_PATH)/gcc.mk
 else
-APP_LD_SCRIPT ?= $(SJS_CC3200_PATH)/tools/cc3200v1p32.cmd
-include $(SJS_CC3200_PATH)/tools/ti.mk
+APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200v1p32.cmd
+include $(COMMON_CC3200_PATH)/ti.mk
 # Selectively inhibit warnings in external code.
 $(BUILD_DIR)/spiffs_gc.o: CFLAGS += --diag_suppress=1944
 $(BUILD_DIR)/spiffs_hydrogen.o: CFLAGS += --diag_suppress=770,1944
