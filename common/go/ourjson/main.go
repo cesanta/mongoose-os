@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/cesanta/ubjson"
-	"github.com/juju/errors"
+	"github.com/cesanta/errors"
 )
 
 // RawMessage must be a slice in order for `omitempty` flag to work properly.
