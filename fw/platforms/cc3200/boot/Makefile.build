@@ -1,0 +1,97 @@
+# -*- mode: makefile -*-
+#
+# Mongoose IoT Firmware boot loader for CC3200
+#
+MAKEFLAGS += --warn-undefined-variables
+
+APP ?= mg-boot
+APP_PLATFORM = cc3200
+APP_MODULES = src
+TOOLCHAIN = gcc
+
+SDK_PATH ?= /cc3200-sdk
+REPO_PATH ?= ../../../..
+BUILD_DIR ?= ./.build
+FW_DIR = ./firmware
+COMMON_CC3200_PATH ?= $(REPO_PATH)/common/platforms/cc3200
+
+include $(REPO_PATH)/fw/common.mk
+
+VPATH = $(APP_MODULES) $(BUILD_DIR)
+IPATH = $(APP_MODULES) $(BUILD_DIR) $(REPO_PATH)
+
+SDK_FLAGS = -DTARGET_IS_CC3200
+
+APP_ELF = $(BUILD_DIR)/$(APP).axf
+APP_BIN = $(FW_DIR)/$(APP).bin
+BUILD_INFO_C = $(BUILD_DIR)/build_info.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.o
+BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
+
+.PHONY: all clean flash
+
+DRIVER_SRCS = cpu.c flash.c interrupt.c pin.c prcm.c spi.c uart.c utils.c
+SL_SRCS = cc_pal.c device.c driver.c fs.c nonos.c socket.c netapp.c
+SDK_SRCS = $(DRIVER_SRCS) $(SL_SRCS)
+IPATH += $(SDK_PATH) $(SDK_PATH)/inc $(SDK_PATH)/driverlib $(SDK_PATH)/oslib \
+         $(SDK_PATH)/simplelink $(SDK_PATH)/simplelink/include \
+         $(SDK_PATH)/simplelink_extlib/provisioninglib
+VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
+         $(SDK_PATH)/example/common \
+         $(SDK_PATH)/simplelink/source
+
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
+SRCS = $(APP_SRCS) $(SDK_SRCS)
+
+.DEFAULT_GOAL := all
+
+clean:
+	@rm -rf $(BUILD_DIR) $(wildcard *~)
+	@rm -rf $(FW_DIR) $(wildcard *~)
+
+$(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR):
+	$(vecho) "MKDIR $@"
+	@mkdir -p $@
+
+FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(APP_BIN))
+include $(REPO_PATH)/common/scripts/fw_meta.mk
+
+OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
+
+include $(REPO_PATH)/common/scripts/build_info.mk
+include $(REPO_PATH)/fw/src/sys_config.mk
+
+SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
+
+OBJCOPY = arm-none-eabi-objcopy
+
+ifeq "$(TOOLCHAIN)" "gcc"
+APP_LD_SCRIPT ?= src/boot.ld
+include $(COMMON_CC3200_PATH)/gcc.mk
+else
+APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200v1p32.cmd
+include $(COMMON_CC3200_PATH)/ti.mk
+endif
+
+CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
+CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=4 \
+          $(SDK_FLAGS) $(CFLAGS_EXTRA)
+
+all: $(BUILD_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
+
+$(FW_MANIFEST): $(APP_BIN) $(FS_IMG)
+
+$(APP_BIN): $(APP_ELF)
+	$(vecho) "BIN   $< -> $@"
+	$(Q) $(OBJCOPY) -O binary $< $@
+	$(Q) $(OBJCOPY) -O binary --only-section=.relocator $< $@.reloc.bin
+	$(Q) $(OBJCOPY) -O binary --remove-section=.relocator $< $@.main.bin
+	$(Q) cat $@.reloc.bin $@.main.bin > $@
+	$(Q) rm $@.reloc.bin $@.main.bin
+	@echo "    Code size: $$(ls -l $@ | awk '{print $$5}')"
+
+$(APP_ELF): $(FW_DIR) $(OBJS) $(BUILD_INFO_O)
+
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
+
+$(BUILD_INFO_O): $(BUILD_INFO_C)
