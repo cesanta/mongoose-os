@@ -219,9 +219,14 @@ Clubby.prototype._send = function(req) {
 };
 
 Clubby.prototype.call = function(method, args, opts) {
-  opts = opts || {};
+  var callback;
 
-  var callback = opts.cb; // user callback, if empty return a promise
+  if (typeof opts == 'function') {
+    callback = opts;
+  } else {
+    opts = opts || {};
+    callback = opts.cb; // user callback, if empty return a promise
+  }
 
   var cb; // internal callback
   var p;
