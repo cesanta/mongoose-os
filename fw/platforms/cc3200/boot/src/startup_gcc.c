@@ -22,13 +22,10 @@ static void IntDefaultHandler(void) {
   }
 }
 
-static uint32_t stack[64];
-
 /* clang-format off */
 __attribute__ ((section(".intvecs")))
 void (* const int_vectors[256])(void) = {
-  (void (*)(void))((uint32_t)stack + sizeof(stack)),
-                                          /* The initial stack pointer */
+  (void (*)(void)) &int_vectors,          /* The initial stack pointer */
   ResetISR,                               /* The reset handler */
   IntDefaultHandler,                      /* The NMI handler */
   IntDefaultHandler,                      /* The hard fault handler */

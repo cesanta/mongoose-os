@@ -4,6 +4,7 @@
  */
 
 #include <inttypes.h>
+#include <stdlib.h>
 
 /* Driverlib includes */
 #include "hw_types.h"
@@ -33,6 +34,8 @@
 #include "device.h"
 #include "fs.h"
 
+#include "boot.h"
+
 #define SYS_CLK 80000000
 #define CONSOLE_BAUD_RATE 115200
 #define CONSOLE_UART UARTA0_BASE
@@ -42,21 +45,60 @@
 /* Int vector table, defined in startup_gcc.c */
 extern void (*const int_vectors[])(void);
 
-void read_file(const char *fn) {
+void abort() {
+  MAP_UARTCharPut(CONSOLE_UART, 'X');
+  while (1) {
+  }
+}
+
+void uart_puts(const char *s) {
+  for (; *s != '\0'; s++) {
+    MAP_UARTCharPut(CONSOLE_UART, *s);
+  }
+}
+
+int read_cfg(const char *fn, struct boot_cfg *cfg) {
+  memset(cfg, 0, sizeof(*cfg));
+  _i32 fh;
+  _i32 r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
+  if (r != 0) return r;
+  r = sl_FsRead(fh, 0, (_u8 *) cfg, sizeof(*cfg));
+  r = (r == sizeof(*cfg) ? 0 : -1000);
+  sl_FsClose(fh, NULL, NULL, 0);
+  return r;
+}
+
+int load_image(const char *fn, _u8 *dst) {
   _i32 fh;
   SlFsFileInfo_t fi;
-  _i32 r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
-  _u8 buf[128];
-  if (r != 0) return;
-  r = sl_FsGetInfo((const _u8 *) fn, 0, &fi);
-  if (r != 0) return;
-  r = sl_FsRead(fh, 0, buf, sizeof(buf));
-  if (r != 0) return;
+  _i32 r = sl_FsGetInfo((const _u8 *) fn, 0, &fi);
+  MAP_UARTCharPut(CONSOLE_UART, (r == 0 ? '+' : '-'));
+  if (r != 0) return r;
+  {
+    char buf[20];
+    __utoa(fi.FileLen, buf, 10);
+    uart_puts(buf);
+  }
+  r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
+  MAP_UARTCharPut(CONSOLE_UART, (r == 0 ? '+' : '-'));
+  if (r != 0) return r;
+  r = sl_FsRead(fh, 0, dst, fi.FileLen);
+  if (r != fi.FileLen) return r;
+  sl_FsClose(fh, NULL, NULL, 0);
+  return 0;
+}
+
+void run(uint32_t base) {
+  __asm(
+      "ldr sp, [r0]\n"
+      "add r0, r0, #4\n"
+      "ldr r1, [r0]\n"
+      "bx  r1");
+  /* Not reached. */
 }
 
 int main() {
   MAP_IntVTableBaseSet((unsigned long) &int_vectors[0]);
-  MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
 
@@ -71,13 +113,47 @@ int main() {
   MAP_UARTFIFOLevelSet(CONSOLE_UART, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
   MAP_UARTFIFODisable(CONSOLE_UART);
 
-  MAP_UARTCharPut(CONSOLE_UART, '?');
-  sl_Start(NULL, NULL, NULL);
-  MAP_UARTCharPut(CONSOLE_UART, '!');
+  MAP_UARTCharPut(CONSOLE_UART, 's');
+  if (sl_Start(NULL, NULL, NULL) < 0) abort();
+  MAP_UARTCharPut(CONSOLE_UART, 'S');
 
-  read_file("test.json");
+  struct boot_cfg cfg0, cfg1, *cfg;
+  read_cfg(BOOT_CFG_0, &cfg0);
+  read_cfg(BOOT_CFG_1, &cfg1);
+  if (cfg0.seq > 0 && cfg1.seq > 0) {
+    cfg = (cfg0.seq < cfg1.seq ? &cfg0 : &cfg1);
+  } else if (cfg0.seq > 0) {
+    cfg = &cfg0;
+  } else if (cfg1.seq > 0) {
+    cfg = &cfg1;
+  } else {
+    abort();
+  }
+  MAP_UARTCharPut(CONSOLE_UART, (cfg == &cfg0 ? '0' : '1'));
 
-  return 0;
+  uart_puts(cfg->image_file);
+  MAP_UARTCharPut(CONSOLE_UART, '@');
+  {
+    char buf[20];
+    __utoa(cfg->base_address, buf, 16);
+    uart_puts(buf);
+  }
+
+  if (load_image(cfg->image_file, (_u8 *) cfg->base_address) != 0) abort();
+
+  MAP_UARTCharPut(CONSOLE_UART, '.');
+
+  sl_Stop(0);
+
+  MAP_UARTCharPut(CONSOLE_UART, '\r');
+  MAP_UARTCharPut(CONSOLE_UART, '\n');
+
+  MAP_IntMasterDisable();
+  MAP_IntVTableBaseSet(cfg->base_address);
+
+  run(cfg->base_address); /* Does not return. */
+
+  return 0; /* not reached */
 }
 
 void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *e) {

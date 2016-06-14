@@ -10,7 +10,9 @@ APP ?= mongoose-iot
 APP_PLATFORM = cc3200
 APP_MODULES ?=
 APP_CFLAGS ?=
-TOOLCHAIN = gcc
+TOOLCHAIN ?= gcc
+APP_ORG = 0x20000000
+RAM_SIZE = 0x40000
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
@@ -21,8 +23,12 @@ MGIOT_CC3200_PATH ?= $(REPO_PATH)/fw/platforms/cc3200
 COMMON_CC3200_PATH ?= $(REPO_PATH)/common/platforms/cc3200
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
-BUILD_DIR ?= ./.build
-FW_DIR = ./firmware
+BOOT_PATH ?= $(MGIOT_CC3200_PATH)/boot
+
+BUILD_DIR ?= $(CURDIR)/.build
+FW_DIR = $(CURDIR)/firmware
+BOOT_BUILD_DIR = $(BUILD_DIR)/boot
+BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
 FW_FS_SIZE = 131072
 MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
@@ -67,11 +73,15 @@ SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
 APP_ELF = $(BUILD_DIR)/$(APP).axf
 APP_BIN = $(FW_DIR)/$(APP).bin
+BOOT_BIN = $(FW_DIR)/mg-boot.bin
+MKCFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(FW_DIR)/fs.img
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
+BOOT_CFG_0 = $(FW_DIR)/mg-boot.cfg.0
+BOOT_CFG_1 = $(FW_DIR)/mg-boot.cfg.1
 
 .PHONY: all clean flash
 
@@ -119,7 +129,10 @@ $(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR):
 	$(vecho) "MKDIR $@"
 	@mkdir -p $@
 
-FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(APP_BIN)) \
+FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(BOOT_BIN)) \
+           $(notdir $(BOOT_CFG_0)):src=$(notdir $(BOOT_CFG_0)) \
+           $(notdir $(BOOT_CFG_1)):src=$(notdir $(BOOT_CFG_1)) \
+           $(notdir $(APP_BIN)):src=$(notdir $(APP_BIN)) \
            fs.img:src=$(notdir $(FS_IMG))
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
@@ -147,7 +160,8 @@ SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 OBJCOPY = arm-none-eabi-objcopy
 
 ifeq "$(TOOLCHAIN)" "gcc"
-APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200.ld
+APP_LDFLAGS ?= --defsym=ORG=$(APP_ORG) --defsym=RAM_SIZE=$(RAM_SIZE) \
+               -T $(COMMON_CC3200_PATH)/cc3200.ld --entry=ResetISR
 include $(COMMON_CC3200_PATH)/gcc.mk
 else
 APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200v1p32.cmd
@@ -166,9 +180,26 @@ CFLAGS += -DNDEBUG -DCS_NDEBUG \
           -Dcc3200 -DMG_FS_SLFS -DCC3200_FS_SPIFFS \
           $(MONGOOSE_FEATURES) $(APP_CFLAGS) $(CFLAGS_EXTRA)
 
-all: $(BUILD_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
+all: $(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP_BIN) $(FS_IMG)
+$(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) $(APP_BIN) $(FS_IMG)
+
+$(BOOT_BIN) $(MKCFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
+                          $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
+	$(vecho) "MAKE  $@"
+	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build APP=mg-boot TOOLCHAIN=gcc \
+	             BUILD_DIR=$(BOOT_BUILD_DIR) FW_DIR=$(BOOT_FW_DIR) \
+	             CREATE_ZIP=0
+	$(vecho) "CP    $(BOOT_FW_DIR)/mg-boot.bin $(BOOT_BIN)"
+	$(Q) cp $(BOOT_FW_DIR)/mg-boot.bin $(BOOT_BIN)
+
+$(BOOT_CFG_0): $(MKCFG_BIN)
+	$(vecho) "MKCFG $@"
+	$(Q) $(MKCFG_BIN) $(notdir $(APP_BIN)) $(APP_ORG) > $@
+
+$(BOOT_CFG_1): $(MKCFG_BIN)
+	$(vecho) "MKCFG $@"
+	$(Q) $(MKCFG_BIN) "" 0 0 > $@
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"

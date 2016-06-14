@@ -8,34 +8,6 @@ MEMORY {
 }
 
 SECTIONS {
-  .text 0x20000000 :
-  {
-      _text_start = .;
-      KEEP(*(.intvecs))
-      *(.text*)
-      *(.rodata*)
-      *(.ARM.extab* .gnu.linkonce.armextab.*)
-      . = ALIGN(8);
-  } > SRAM
-
-  .ARM : {
-    *(.ARM.exidx*)
-  } > SRAM
-
-  .data :
-  {
-      *(.data*)
-      . = ALIGN (8);
-  } > SRAM
-
-  .bss :
-  {
-      _bss_start = .;
-      *(.bss*)
-      *(COMMON)
-      _bss_end = .;
-  } > SRAM
-
   .relocator 0x20004000 : {
     KEEP(*(.myrelocints))
     . = ALIGN (4);
@@ -43,4 +15,26 @@ SECTIONS {
     . = ALIGN(4);
     _reloc_end = .;
   }
+
+  .text 0x20000000 + (LENGTH(SRAM) - 0x4000) : {
+    _text_start = .;
+    KEEP(*(.intvecs))
+    *(.text*)
+    *(.rodata*)
+    *(.ARM.extab* .gnu.linkonce.armextab.*)
+    . = ALIGN(8);
+  } > SRAM
+
+  .data : {
+    *(.data*)
+    . = ALIGN (8);
+  } > SRAM
+
+  .bss : {
+    _bss_start = .;
+    *(.bss*)
+    *(COMMON)
+    _bss_end = .;
+  } > SRAM
+
 }

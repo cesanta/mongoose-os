@@ -1,3 +1,4 @@
+APP_LDFLAGS ?=
 CC = arm-none-eabi-gcc
 
 IPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
@@ -13,7 +14,6 @@ $(SDK_OBJS): CFLAGS += -include common/platform.h
 AR = arm-none-eabi-ar
 LD = arm-none-eabi-ld
 OBJCOPY = arm-none-eabi-objcopy
-LDFLAGS = --gc-sections
 LIBGCC := ${shell ${CC} -mthumb ${CFLAGS} -print-libgcc-file-name}
 LIBC := ${shell ${CC} ${CFLAGS} -print-file-name=libc.a}
 LIBM := ${shell ${CC} ${CFLAGS} -print-file-name=libm.a}
@@ -29,7 +29,7 @@ $(BUILD_DIR)/%.o: %.c
 
 $(APP_ELF):
 	$(vecho) "LD    $@"
-	$(Q) $(LD) --script=$(APP_LD_SCRIPT) --entry=ResetISR \
+	$(Q) $(LD) ${APP_LDFLAGS} \
 	           --gc-sections -o $@ $(filter %.o %.a, $^) \
 	           $(LIBM) $(LIBC) $(LIBGCC)
 

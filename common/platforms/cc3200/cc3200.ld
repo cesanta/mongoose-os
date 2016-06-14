@@ -35,10 +35,13 @@
 *
 ******************************************************************************/
 
+ORG = DEFINED(ORG) ? ORG : 0x20004000;
+RAM_SIZE = DEFINED(RAM_SIZE) ? RAM_SIZE : 0x3C000;
+
 MEMORY
 {
     /* SRAM size of 240KB for cc3200 ES 1.33 device onward */
-    SRAM (rwx) : ORIGIN = 0x20004000, LENGTH = 0x3C000
+    SRAM (rwx) : ORIGIN = ORG, LENGTH = RAM_SIZE
 }
 
 SECTIONS

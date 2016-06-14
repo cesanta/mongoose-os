@@ -4,15 +4,16 @@
 #
 MAKEFLAGS += --warn-undefined-variables
 
-APP ?= mg-boot
+APP = mg-boot
 APP_PLATFORM = cc3200
 APP_MODULES = src
 TOOLCHAIN = gcc
+CREATE_ZIP ?= 1
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../../..
-BUILD_DIR ?= ./.build
-FW_DIR = ./firmware
+BUILD_DIR ?= $(CURDIR)/.build
+FW_DIR ?= $(CURDIR)/firmware
 COMMON_CC3200_PATH ?= $(REPO_PATH)/common/platforms/cc3200
 
 include $(REPO_PATH)/fw/common.mk
@@ -24,6 +25,7 @@ SDK_FLAGS = -DTARGET_IS_CC3200
 
 APP_ELF = $(BUILD_DIR)/$(APP).axf
 APP_BIN = $(FW_DIR)/$(APP).bin
+MKCFG_BIN = $(BUILD_DIR)/mkcfg
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
@@ -48,25 +50,27 @@ SRCS = $(APP_SRCS) $(SDK_SRCS)
 clean:
 	@rm -rf $(BUILD_DIR) $(wildcard *~)
 	@rm -rf $(FW_DIR) $(wildcard *~)
+	@rm -f $(MKCFG_BIN)
 
-$(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR):
+$(BUILD_DIR) $(FW_DIR):
 	$(vecho) "MKDIR $@"
 	@mkdir -p $@
 
+ifeq "$(CREATE_ZIP)" "1"
 FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(APP_BIN))
 include $(REPO_PATH)/common/scripts/fw_meta.mk
+endif
 
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
 
 include $(REPO_PATH)/common/scripts/build_info.mk
-include $(REPO_PATH)/fw/src/sys_config.mk
 
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 
 OBJCOPY = arm-none-eabi-objcopy
 
 ifeq "$(TOOLCHAIN)" "gcc"
-APP_LD_SCRIPT ?= src/boot.ld
+APP_LDFLAGS ?= -T src/boot.ld --entry=ResetISR
 include $(COMMON_CC3200_PATH)/gcc.mk
 else
 APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200v1p32.cmd
@@ -77,9 +81,14 @@ CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=4 \
           $(SDK_FLAGS) $(CFLAGS_EXTRA)
 
-all: $(BUILD_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
+all: $(BUILD_DIR) $(BUILD_INFO_C) $(MKCFG_BIN)
 
-$(FW_MANIFEST): $(APP_BIN) $(FS_IMG)
+ifeq "$(CREATE_ZIP)" "1"
+all: $(FW_ZIP)
+$(FW_MANIFEST): $(APP_BIN)
+else
+all: $(APP_BIN)
+endif
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"
@@ -95,3 +104,7 @@ $(APP_ELF): $(FW_DIR) $(OBJS) $(BUILD_INFO_O)
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 
 $(BUILD_INFO_O): $(BUILD_INFO_C)
+
+$(MKCFG_BIN): tools/mkcfg.c src/boot.h
+	$(vecho) "GCC   $< -> $@"
+	$(Q) gcc -Wall -Werror -o $@ $^
