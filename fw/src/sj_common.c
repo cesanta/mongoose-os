@@ -76,4 +76,9 @@ void sj_common_init(struct v7 *v7) {
 #ifndef DISABLE_C_CLUBBY
   sj_clubby_init();
 #endif
+
+/* NOTE: sj_clubby_js_init should be called after sj_clubby_init */
+#ifndef CS_DISABLE_JS
+  sj_clubby_js_init();
+#endif
 }

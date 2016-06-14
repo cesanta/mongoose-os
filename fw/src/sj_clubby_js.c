@@ -136,30 +136,25 @@ static void clubby_send_response(struct clubby *clubby, const char *dst,
                                              result_ubj, error_ubj));
 }
 
-/* TODO(alashkin): see hello cmd */
-#if 0
 static void clubby_hello_req_callback(struct clubby_event *evt,
                                       void *user_data) {
   struct clubby *clubby = (struct clubby *) evt->context;
   (void) user_data;
 
-  LOG(LL_DEBUG,
-      ("Incoming /v1/Hello received, id=%d", (int32_t) evt->request.id));
+  LOG(LL_DEBUG, ("Incoming /v1/Hello received, id=%d", (int32_t) evt->id));
   char src[512] = {0};
-  if ((size_t) evt->request.src->len > sizeof(src)) {
-    LOG(LL_ERROR, ("src too long, len=%d", evt->request.src->len));
+  if ((size_t) evt->src->len > sizeof(src)) {
+    LOG(LL_ERROR, ("src too long, len=%d", evt->src->len));
     return;
   }
-  memcpy(src, evt->request.src->ptr, evt->request.src->len);
+  memcpy(src, evt->src->ptr, evt->src->len);
 
   char status_msg[100];
   snprintf(status_msg, sizeof(status_msg) - 1, "Hello, this is %s",
            clubby->cfg.device_id);
 
-  clubby_send_response(clubby, src, evt->request.id, 0, status_msg,
-                       V7_UNDEFINED);
+  clubby_send_response(clubby, src, evt->id, 0, status_msg, V7_UNDEFINED);
 }
-#endif
 
 static void simple_cb(struct clubby_event *evt, void *user_data) {
   struct clubby *clubby = (struct clubby *) evt->context;
@@ -754,6 +749,10 @@ void sj_clubby_api_setup(struct v7 *v7) {
   v7_disown(v7, &clubby_proto_v);
 }
 
+void sj_clubby_js_init() {
+  sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
+                                    NULL);
+}
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

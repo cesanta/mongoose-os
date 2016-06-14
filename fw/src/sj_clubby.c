@@ -681,15 +681,6 @@ void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
 void sj_clubby_init() {
   clubby_proto_init(clubby_cb);
 
-/*
- * C callbacks depend on V7
- * TODO(alashkin): please fix
- */
-#if 0
-  sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
-                                    NULL);
-#endif
-
   sj_set_c_timer(get_cfg()->clubby.verify_timeouts_period * 1000, 0,
                  verify_timeouts_cb, NULL);
 

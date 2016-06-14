@@ -23,6 +23,8 @@ void sj_clubby_send_reply(struct clubby_event *evt, int status,
 
 clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v);
 
+void sj_clubby_js_init();
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
