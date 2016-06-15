@@ -8,6 +8,7 @@
 #include "fw/platforms/esp8266/user/esp_updater_clubby.h"
 
 #include <stdint.h>
+#include <strings.h>
 #include <user_interface.h>
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
@@ -699,7 +700,7 @@ static int verify_checksum(uint32_t addr, size_t len,
       ("Written FW checksum: %.*s Provided checksum: %.*s", SHA1SUM_LEN,
        written_checksum, SHA1SUM_LEN, provided_checksum));
 
-  if (strncmp(written_checksum, provided_checksum, SHA1SUM_LEN) != 0) {
+  if (strncasecmp(written_checksum, provided_checksum, SHA1SUM_LEN) != 0) {
     LOG(LL_ERROR, ("Checksum verification failed"));
     return -1;
   } else {
