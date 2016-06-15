@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "common/platform.h"
+#include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_gpio.h"
 #include "fw/src/sj_mongoose.h"
@@ -42,9 +43,18 @@ static int init_listener(struct mg_mgr *mgr) {
   return 1;
 }
 
+static void handle_index(struct mg_connection *nc, int ev, void *ev_data) {
+  struct http_message *hm = (struct http_message *) ev_data;
+  mg_printf(nc, "HTTP/1.0 200 OK\r\n\r\nHello!\r\n\r\nURI: %.*s\r\n",
+            (int) hm->uri.len, hm->uri.p);
+  nc->flags |= MG_F_SEND_AND_CLOSE;
+  (void) ev;
+}
+
 /* This will work w/o V7 too (-DCS_DISABLE_JS) */
 int sj_app_init(struct v7 *v7) {
   if (!init_listener(&sj_mgr)) return MG_APP_INIT_ERROR;
+  device_register_http_endpoint("/*" /* Handle all requests */, handle_index);
   (void) v7;
   return MG_APP_INIT_SUCCESS;
 }
