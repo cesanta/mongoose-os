@@ -437,20 +437,40 @@ SJ_PRIVATE enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-/* clubby.call(dst: string, cmd: object, callback(resp): function) */
+/* clubby.call(method: string {dst, atgs, etc}: object, callback(resp):
+ * function) */
 SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   struct ub_ctx *ctx = NULL;
-  v7_val_t dst_v = v7_arg(v7, 0);
-  v7_val_t request_v = v7_arg(v7, 1);
-  v7_val_t cb_v = v7_arg(v7, 2);
+  v7_val_t method_v = v7_arg(v7, 0);
+  v7_val_t args = v7_arg(v7, 1);
+  v7_val_t arg_3 = v7_arg(v7, 2);
+  v7_val_t arg_4 = v7_arg(v7, 3);
+  v7_val_t cb_v = V7_UNDEFINED;
+  v7_val_t opts_v = V7_UNDEFINED;
+  v7_val_t clubby_request_v = V7_UNDEFINED;
 
-  if ((!v7_is_null(dst_v) && !v7_is_string(dst_v) && !v7_is_undefined(dst_v)) ||
-      !v7_is_object(request_v) ||
-      (!v7_is_undefined(cb_v) && !v7_is_callable(v7, cb_v))) {
-    printf("Invalid arguments\n");
-    goto error;
+  if (v7_is_callable(v7, arg_3)) {
+    /* if arg #3 is callback, then opts == UNDEFINED */
+    cb_v = arg_3;
+  } else if (v7_is_object(arg_3)) {
+    /* if arg #3 are opts then arg #4 might be callback */
+    opts_v = arg_3;
+    cb_v = arg_4;
+  };
+
+  if (v7_is_undefined(cb_v)) {
+    /*
+     * If callback is still UNDEFINED, it might be
+     * `cb` property of opts
+     */
+    cb_v = v7_get(v7, opts_v, "cb", ~0);
+  }
+
+  if (!v7_is_string(method_v)) {
+    LOG(LL_ERROR, ("Invalid arguments"));
+    return v7_throwf(v7, "TypeError", "Method should be a string");
   }
 
 #ifndef CLUBBY_DISABLE_MEMORY_LIMIT
@@ -464,44 +484,49 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
     return v7_throwf(v7, "Error", "Too many unanswered packets, try later");
   }
 
-  /* Check if id and timeout exists and put default if not */
-  v7_val_t id_v = v7_get(v7, request_v, "id", 2);
+  clubby_request_v = v7_mk_object(v7);
+  v7_own(v7, &clubby_request_v);
+
+  /* set id */
+  v7_val_t id_v = v7_get(v7, opts_v, "id", ~0);
   int64_t id;
 
   if (!v7_is_number(id_v)) {
     id = clubby_proto_get_new_id();
-    v7_set(v7, request_v, "id", ~0, v7_mk_number(v7, id));
   } else {
-    id = v7_get_double(v7, id_v);
+    id = v7_get_double(v7, opts_v);
   }
 
-  v7_val_t timeout_v = v7_get(v7, request_v, "timeout", 7);
+  /* set timeout */
+  v7_val_t timeout_v = v7_get(v7, opts_v, "timeout", ~0);
   uint32_t timeout = 0;
   if (v7_is_number(timeout_v)) {
-    timeout = v7_get_double(v7, timeout_v);
+    timeout = v7_get_double(v7, opts_v);
   } else {
     timeout = clubby->cfg.request_timeout;
   }
 
-  v7_set(v7, request_v, "timeout", 7, v7_mk_number(v7, timeout));
+  v7_set(v7, clubby_request_v, "timeout", ~0, v7_mk_number(v7, timeout));
 
-  /*
-   * NOTE: Propably, we don't need UBJSON it is flower's legacy
-   * TODO(alashkin): think about replacing ubjserializer with frozen
-   */
+  /* set method */
+  v7_set(v7, clubby_request_v, "method", ~0, method_v);
+
+  /* set argumens */
+  if (!v7_is_undefined(args)) {
+    v7_set(v7, clubby_request_v, "args", ~0, args);
+  }
   ctx = ub_ctx_new();
 
-  /*
-   * TODO(alashkin): do not register callback is cbv is undefined
-   * Now it is required to track timeout
-   */
   if (!register_js_callback(clubby, v7, (char *) &id, sizeof(id),
                             clubby_resp_cb, cb_v, timeout)) {
     goto error;
   }
 
+  v7_val_t dst_v = v7_get(v7, opts_v, "dst", ~0);
   sj_clubby_send_request(clubby, ctx, id, v7_get_cstring(v7, &dst_v),
-                         obj_to_ubj(v7, ctx, request_v));
+                         obj_to_ubj(v7, ctx, clubby_request_v));
+
+  v7_disown(v7, &clubby_request_v);
   *res = v7_mk_boolean(v7, 1);
 
   return V7_OK;
@@ -510,6 +535,7 @@ error:
   if (ctx != NULL) {
     ub_ctx_free(ctx);
   }
+  v7_disown(v7, &clubby_request_v);
   *res = v7_mk_boolean(v7, 0);
   return V7_OK;
 }
