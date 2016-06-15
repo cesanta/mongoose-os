@@ -9,13 +9,12 @@
 #if CS_PLATFORM == CS_P_ESP_LWIP
 #define GPIO 12
 #elif CS_PLATFORM == CS_P_CC3200
-#define GPIO 64  /* The red LED on LAUNCHXL */
+#define GPIO 64 /* The red LED on LAUNCHXL */
 #else
 #error Unknown platform
 #endif
 
 int sj_app_init(struct v7 *v7) {
-
   { /* Print a message using a value from config. */
     printf("Hello, %s!\n", get_cfg()->hello.who);
   }
