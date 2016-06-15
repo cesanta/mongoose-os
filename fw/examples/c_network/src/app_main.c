@@ -45,8 +45,16 @@ static int init_listener(struct mg_mgr *mgr) {
 
 static void handle_index(struct mg_connection *nc, int ev, void *ev_data) {
   struct http_message *hm = (struct http_message *) ev_data;
-  mg_printf(nc, "HTTP/1.0 200 OK\r\n\r\nHello!\r\n\r\nURI: %.*s\r\n",
-            (int) hm->uri.len, hm->uri.p);
+  char addr[32];
+  mg_sock_addr_to_str(&nc->sa, addr, sizeof(addr),
+                      MG_SOCK_STRINGIFY_IP | MG_SOCK_STRINGIFY_PORT);
+  mg_printf(nc,
+            "HTTP/1.0 200 OK\r\n"
+            "Content-Type: text/plain\r\n"
+            "\r\n"
+            "Hello %s!\r\n"
+            "You asked for %.*s\r\n\r\n",
+            addr, (int) hm->uri.len, hm->uri.p);
   nc->flags |= MG_F_SEND_AND_CLOSE;
   (void) ev;
 }
