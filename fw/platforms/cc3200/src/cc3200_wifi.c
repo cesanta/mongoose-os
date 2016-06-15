@@ -191,6 +191,9 @@ int sj_wifi_connect() {
   }
   if (ret != 0) return 0;
 
+  /* We don't need TI's web server. */
+  sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
+
   /* Turning the device off and on for the role change to take effect. */
   sl_Stop(0);
   sl_Start(NULL, NULL, NULL);
