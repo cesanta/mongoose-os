@@ -190,6 +190,7 @@ $(BOOT_BIN) $(MKCFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                           $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
 	$(vecho) "MAKE  $@"
 	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build APP=mg-boot TOOLCHAIN=gcc \
+	             SDK_PATH=$(SDK_PATH) PYTHON=$(PYTHON) \
 	             BUILD_DIR=$(BOOT_BUILD_DIR) FW_DIR=$(BOOT_FW_DIR) \
 	             CREATE_ZIP=0
 	$(vecho) "CP    $(BOOT_FW_DIR)/mg-boot.bin $(BOOT_BIN)"
