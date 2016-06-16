@@ -3,15 +3,14 @@
 * All rights reserved
 */
 
-#include "fw/platforms/esp8266/user/esp_updater.h"
 #include "fw/platforms/esp8266/user/esp_updater_clubby.h"
-#include "fw/platforms/esp8266/user/esp_updater_private.h"
 
 #include "common/cs_dbg.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_clubby_js.h"
 #include "fw/src/sj_mongoose.h"
+#include "fw/src/sj_updater_common.h"
 #include "fw/src/sj_v7_ext.h"
 
 #ifndef CS_DISABLE_JS
@@ -117,11 +116,11 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           }
         } else if (res < 0) {
           /* Error */
+          LOG(LL_ERROR, ("Update error: %d %s", ctx->result, ctx->status_msg));
           notify_js(UJS_ERROR, NULL);
           sj_clubby_send_status_resp(s_clubby_reply, 1, ctx->status_msg);
         }
-
-        updater_set_status(ctx, US_FINISHED);
+        updater_finish(ctx);
         c->flags |= MG_F_CLOSE_IMMEDIATELY;
       }
       break;
@@ -132,13 +131,13 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           /* Connection was terminated by server */
           notify_js(UJS_ERROR, NULL);
           sj_clubby_send_status_resp(s_clubby_reply, 1, "Update failed");
-        } else if (is_reboot_requred(ctx) && !notify_js(UJS_COMPLETED, NULL)) {
+        } else if (is_reboot_required(ctx) && !notify_js(UJS_COMPLETED, NULL)) {
           /*
            * Conection is closed by updater, rebooting if required
            * and allowed (by JS)
            */
           LOG(LL_INFO, ("Rebooting device"));
-          schedule_reboot();
+          updater_schedule_reboot(100);
         }
 
         if (s_clubby_reply) {
@@ -146,9 +145,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           s_clubby_reply = NULL;
         }
 
-        updater_context_release(ctx);
-        free(ctx);
-        s_ctx = NULL;
+        updater_finish(ctx);
         c->user_data = NULL;
       }
 
@@ -157,7 +154,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-static int do_http_connect(const char *url) {
+static int do_http_connect(struct update_context *ctx, const char *url) {
   LOG(LL_DEBUG, ("Connecting to: %s", url));
 
   struct mg_connect_opts opts;
@@ -183,7 +180,7 @@ static int do_http_connect(const char *url) {
     return -1;
   }
 
-  c->user_data = s_ctx;
+  c->user_data = ctx;
 
   return 1;
 }
@@ -191,7 +188,7 @@ static int do_http_connect(const char *url) {
 static int start_update_download(struct update_context *ctx, const char *url) {
   LOG(LL_INFO, ("Updating FW"));
 
-  if (do_http_connect(url) < 0) {
+  if (do_http_connect(ctx, url) < 0) {
     ctx->status_msg = "Failed to connect update server";
     return -1;
   }
@@ -255,8 +252,8 @@ static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
     struct update_context *ctx = updater_context_create();
     if (ctx == NULL) {
       rcode = v7_throwf(v7, "Error", "Failed to init updater");
-    }
-    if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v)) < 0) {
+    } else if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v)) <
+               0) {
       rcode = v7_throwf(v7, "Error", ctx->status_msg);
     }
   }
@@ -324,9 +321,6 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
    * If user setup callback for updater, just call it.
    * User can start update with Sys.updater.start()
    */
-  if (is_update_in_progress()) {
-    reply = "Update already in progress";
-  }
 
   char *zip_url = calloc(1, blob_url->len + 1);
   if (zip_url == NULL) {
@@ -339,7 +333,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
   if (!notify_js(UJS_GOT_REQUEST, zip_url)) {
     struct update_context *ctx = updater_context_create();
     if (ctx == NULL) {
-      reply = "Failed init updater";
+      reply = "Failed to init updater";
     } else if (start_update_download(ctx, zip_url) < 0) {
       reply = ctx->status_msg;
     }

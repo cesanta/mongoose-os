@@ -40,6 +40,7 @@
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_timers.h"
 #include "fw/src/sj_hal.h"
+#include "fw/src/sj_updater_post.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_wifi_js.h"
 #include "fw/src/sj_wifi.h"
@@ -145,6 +146,8 @@ static void v7_task(void *arg) {
     v7_fprint(stderr, v7, res);
   }
 #endif
+
+  sj_updater_post_init(v7);
 
   LOG(LL_INFO, ("Sys init done, RAM: %d total, %d free", sj_get_heap_size(),
                 sj_get_free_heap_size()));

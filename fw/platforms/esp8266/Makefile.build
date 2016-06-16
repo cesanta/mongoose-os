@@ -90,7 +90,8 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_mongoose_ws_client.c sj_mqtt.c ubjserializer.c clubby_proto.c \
             sj_clubby.c sj_clubby_js.c sj_common.c sys_config.c \
             sj_config.c device_config.c sys_config.c \
-            miniz.c sj_udptcp.c sj_utils.c sj_console.c
+            miniz.c sj_udptcp.c sj_utils.c sj_console.c \
+            sj_updater_common.c sj_updater_post.c
 
 ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
@@ -380,6 +381,9 @@ endif
 
 include $(REPO_PATH)/common/scripts/build_info.mk
 include $(REPO_PATH)/fw/src/sys_config.mk
+
+# Regenerate build info if there are changes in objects.
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
