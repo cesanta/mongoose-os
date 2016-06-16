@@ -1,22 +1,7 @@
 # Mongoose IoT Platform
 
-Mongoose IoT Platform is a generic, hardware independent, full-stack Internet of Things software platform. It comprises of both firmware and a cloud component. Mongoose IoT Platform solves problems of reliability, scalability, security a
-nd remote management which are common to all verticals, be it industrial automation, healthcare, automotive, home automation and others.
-Mongoose IoT Platform is available now for ESP8266 and allows you to code in JavaScript or C/C++.
-
-Take a look at 2 minute video that shows Mongoose IoT Platform in action:
-
-[![Mongoose IoT Platform in action](https://docs.cesanta.com/mongoose-iot/latest/Mongoose_IoT.clip.png)](https://www.youtube.com/watch?v=6DYfGsqQzCg)
-
-> “We looked for a sustainable solution that would allow us to grow and expand upon. There simply wasn’t a solution until we found Mongoose IoT Platform. It has all the necessary functionality for right now and future expansion.” [Quantex GmbH] (https://www.cesanta.com/use-cases/quantex-iot-connectivity)
-
-# Documentation and Downloads
-
-- [Mongoose IoT Platform Developer Centre - User Guide and API reference](https://docs.cesanta.com/mongoose-iot/latest/)
-- [Release - released firmware builds](https://github.com/cesanta/mongoose-iot/releases/latest)
-- [Flashnchips - multiplatform device flashing tool](https://github.com/cesanta/fnc/releases/latest)
-- Current development Mongoose IoT Firmware builds:
-   - [mongoose-iot-esp8266-last.zip](https://backend.cesanta.com/devel/mongoose-iot-esp8266-last.zip)
+- [Mongoose IoT Overview](https://docs.cesanta.com/mongoose-iot/)
+- [Mongoose Flashing Tool download](https://github.com/cesanta/fnc/releases/latest)
 
 # Support
 - [Support Forum - Ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
