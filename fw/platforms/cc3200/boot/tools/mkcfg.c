@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../src/boot.h"
+#include "../lib/boot.h"
 
 int main(int argc, char **argv) {
   struct boot_cfg cfg;
