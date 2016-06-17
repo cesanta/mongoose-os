@@ -523,3 +523,12 @@ void updater_schedule_reboot(int delay_ms) {
   LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
   sj_set_c_timer(delay_ms, 0, reboot_timer_cb, NULL);
 }
+
+void bin2hex(const uint8_t *src, int src_len, char *dst) {
+  int i = 0;
+  for (i = 0; i < src_len; i++) {
+    sprintf(dst, "%02x", (int) *src);
+    dst += 2;
+    src += 1;
+  }
+}

@@ -45,8 +45,9 @@ JSBIN_EXT := js
 JS_EXT := js
 
 APP_MODULES += $(MGIOT_CC3200_PATH)/src
-VPATH = $(APP_MODULES) $(MGIOT_CC3200_PATH)/tools $(BUILD_DIR)
-IPATH = $(APP_MODULES) $(BUILD_DIR) $(REPO_PATH)
+VPATH = $(APP_MODULES) $(MGIOT_CC3200_PATH)/tools \
+        $(BOOT_PATH)/lib $(BUILD_DIR)
+IPATH = $(APP_MODULES) $(BOOT_PATH)/lib $(BUILD_DIR) $(REPO_PATH)
 
 V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_BUILD_PROFILE=1 \
@@ -95,7 +96,7 @@ SJ_SRCS = sj_gpio_js.c \
           sj_v7_ext.c \
           sj_wifi_js.c \
           device_config.c sj_config.c $(notdir $(SYS_CONFIG_C)) \
-          miniz.c sj_updater_common.c sj_updater_post.c \
+          miniz.c sj_updater_common.c sj_updater_post.c boot.c \
           v7.c sj_utils.c
 VPATH += $(MGIOT_PATH)/src $(V7_PATH) $(COMMON_PATH)
 
@@ -130,11 +131,11 @@ $(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR):
 	$(vecho) "MKDIR $@"
 	@mkdir -p $@
 
-FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(BOOT_BIN)) \
-           $(notdir $(BOOT_CFG_0)):src=$(notdir $(BOOT_CFG_0)) \
-           $(notdir $(BOOT_CFG_1)):src=$(notdir $(BOOT_CFG_1)) \
-           $(notdir $(APP_BIN)):src=$(notdir $(APP_BIN)) \
-           fs.img:src=$(notdir $(FS_IMG))
+FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(BOOT_BIN)),type=boot \
+           $(notdir $(BOOT_CFG_0)):src=$(notdir $(BOOT_CFG_0)),type=boot_cfg \
+           $(notdir $(BOOT_CFG_1)):src=$(notdir $(BOOT_CFG_1)),type=boot_cfg \
+           $(notdir $(APP_BIN)):src=$(notdir $(APP_BIN)),type=app \
+           fs.img:src=$(notdir $(FS_IMG)),type=fs
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))

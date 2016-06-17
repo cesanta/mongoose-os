@@ -57,17 +57,6 @@ void uart_puts(const char *s) {
   }
 }
 
-int read_cfg(const char *fn, struct boot_cfg *cfg) {
-  memset(cfg, 0, sizeof(*cfg));
-  _i32 fh;
-  _i32 r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
-  if (r != 0) return r;
-  r = sl_FsRead(fh, 0, (_u8 *) cfg, sizeof(*cfg));
-  r = (r == sizeof(*cfg) ? 0 : -1000);
-  sl_FsClose(fh, NULL, NULL, 0);
-  return r;
-}
-
 int load_image(const char *fn, _u8 *dst) {
   _i32 fh;
   SlFsFileInfo_t fi;
@@ -117,29 +106,20 @@ int main() {
   if (sl_Start(NULL, NULL, NULL) < 0) abort();
   MAP_UARTCharPut(CONSOLE_UART, 'S');
 
-  struct boot_cfg cfg0, cfg1, *cfg;
-  read_cfg(BOOT_CFG_0, &cfg0);
-  read_cfg(BOOT_CFG_1, &cfg1);
-  if (cfg0.seq > 0 && cfg1.seq > 0) {
-    cfg = (cfg0.seq < cfg1.seq ? &cfg0 : &cfg1);
-  } else if (cfg0.seq > 0) {
-    cfg = &cfg0;
-  } else if (cfg1.seq > 0) {
-    cfg = &cfg1;
-  } else {
-    abort();
-  }
-  MAP_UARTCharPut(CONSOLE_UART, (cfg == &cfg0 ? '0' : '1'));
+  struct boot_cfg cfg;
+  int cidx = get_active_boot_cfg(&cfg);
+  if (cidx < 0) abort();
+  MAP_UARTCharPut(CONSOLE_UART, '0' + cidx);
 
-  uart_puts(cfg->image_file);
+  uart_puts(cfg.image_file);
   MAP_UARTCharPut(CONSOLE_UART, '@');
   {
     char buf[20];
-    __utoa(cfg->base_address, buf, 16);
+    __utoa(cfg.base_address, buf, 16);
     uart_puts(buf);
   }
 
-  if (load_image(cfg->image_file, (_u8 *) cfg->base_address) != 0) abort();
+  if (load_image(cfg.image_file, (_u8 *) cfg.base_address) != 0) abort();
 
   MAP_UARTCharPut(CONSOLE_UART, '.');
 
@@ -149,9 +129,9 @@ int main() {
   MAP_UARTCharPut(CONSOLE_UART, '\n');
 
   MAP_IntMasterDisable();
-  MAP_IntVTableBaseSet(cfg->base_address);
+  MAP_IntVTableBaseSet(cfg.base_address);
 
-  run(cfg->base_address); /* Does not return. */
+  run(cfg.base_address); /* Does not return. */
 
   return 0; /* not reached */
 }

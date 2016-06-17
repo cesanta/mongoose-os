@@ -6,7 +6,7 @@ MAKEFLAGS += --warn-undefined-variables
 
 APP = mg-boot
 APP_PLATFORM = cc3200
-APP_MODULES = src
+APP_MODULES = src lib
 TOOLCHAIN = gcc
 CREATE_ZIP ?= 1
 
@@ -105,6 +105,6 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 
 $(BUILD_INFO_O): $(BUILD_INFO_C)
 
-$(MKCFG_BIN): tools/mkcfg.c src/boot.h
+$(MKCFG_BIN): tools/mkcfg.c lib/boot.h
 	$(vecho) "GCC   $< -> $@"
 	$(Q) gcc -Wall -Werror -o $@ $^

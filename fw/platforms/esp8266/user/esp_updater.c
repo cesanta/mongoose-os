@@ -158,15 +158,7 @@ int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts) {
   return 1;
 }
 
-static void bin2hex(const uint8_t *src, int src_len, char *dst) {
-  /* TODO(alashkin) : try to use mg_hexdump */
-  int i = 0;
-  for (i = 0; i < src_len; i++) {
-    sprintf(dst, "%02x", (int) *src);
-    dst += 2;
-    src += 1;
-  }
-}
+void bin2hex(const uint8_t *src, int src_len, char *dst);
 
 int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
   uint8_t read_buf[4 * 100];
