@@ -29,7 +29,10 @@ BUILD_DIR ?= $(CURDIR)/.build
 FW_DIR = $(CURDIR)/firmware
 BOOT_BUILD_DIR = $(BUILD_DIR)/boot
 BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
-FW_FS_SIZE = 131072
+FS_SIZE = 131072
+FS_BLOCK_SIZE = 4096
+FS_PAGE_SIZE = 256
+FS_ERASE_SIZE = 4096
 MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
@@ -135,7 +138,7 @@ FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(BOOT_BIN)),type=boot \
            $(notdir $(BOOT_CFG_0)):src=$(notdir $(BOOT_CFG_0)),type=boot_cfg \
            $(notdir $(BOOT_CFG_1)):src=$(notdir $(BOOT_CFG_1)),type=boot_cfg \
            $(notdir $(APP_BIN)):src=$(notdir $(APP_BIN)),type=app \
-           fs.img:src=$(notdir $(FS_IMG)),type=fs
+           fs.img:src=$(notdir $(FS_IMG)),type=fs,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
@@ -153,7 +156,7 @@ $(FS_IMG): $(wildcard $(COMMON_FS_PATH)/*) $(JS_SRCS) $(wildcard $(FS_DIR)/*)
 	  echo "  CP    $(js) -> $(FS_BUILD_DIR)"; \
 	  cp $(js) $(FS_BUILD_DIR);)
 	@echo "  MKFS  $@"
-	@/usr/local/bin/mkspiffs $(FW_FS_SIZE) $(FS_BUILD_DIR) > $@
+	@/usr/local/bin/mkspiffs $(FS_SIZE) $(FS_BUILD_DIR) > $@
 
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) v7.c v7.h

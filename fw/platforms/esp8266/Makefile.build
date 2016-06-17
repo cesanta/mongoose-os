@@ -50,6 +50,9 @@ FS_SIZE ?= 128K
 else
 FS_SIZE ?= 64K
 endif
+FS_BLOCK_SIZE = 4096
+FS_PAGE_SIZE = 256
+FS_ERASE_SIZE = 4096
 
 SYS_PARAM_SIZE = 0x4000
 
@@ -282,8 +285,7 @@ $(BUILD_DIR) $(FW_DIR):
 FW_PARTS = boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
            boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
            fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
-           fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR)
-           fs.img:src=$(notdir $(FS_IMG))
+           fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 ifeq "${OTA}" "1"
 all: $(FW_ZIP)

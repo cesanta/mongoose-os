@@ -34,6 +34,7 @@ import datetime
 import hashlib
 import json
 import os
+import re
 import sys
 import zipfile
 
@@ -148,6 +149,16 @@ def cmd_get_build_info(args):
 
     _write_build_info(bi, args)
 
+
+def unquote_string(qs):
+    if len(qs) < 2 or qs[0] != qs[-1]:
+        raise ValueError("unmatched quote")
+    q = qs[0]
+    s = qs[1:-1]
+    s = s.replace(r'\%s' % q, q)
+    return s
+
+
 def cmd_create_manifest(args):
     manifest = {
         'name': args.name,
@@ -171,6 +182,20 @@ def cmd_create_manifest(args):
         part = {}
         for kv in attrs.split(','):
             k, v = kv.split('=', 2)
+            if v == '':
+                pass
+            elif v[0] == "'" or v[0] == '"':
+                v = unquote_string(v)
+            elif v in ('true', 'false'):
+                v = (v == 'true')
+            else:
+                try:
+                    v = int(v, 0)  # Parses ints, including 0x
+                except ValueError:
+                    try:
+                        v = float(v)
+                    except ValueError:
+                        pass  # Ok, leave as string.
             part[k] = v
         if args.checksums and 'src' in part:
             # TODO(rojer): Support non-local sources.
