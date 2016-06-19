@@ -2,19 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../lib/boot.h"
+#include "../lib/boot_meta.h"
 
 int main(int argc, char **argv) {
-  struct boot_cfg cfg;
-  if (argc < 3) return 1;
-  memset(&cfg, 0, sizeof(cfg));
-  strcpy(cfg.image_file, argv[1]);
-  cfg.base_address = strtol(argv[2], NULL, 0);
-  if (argc == 4) {
-    cfg.seq = strtoll(argv[3], NULL, 0);
+  if (argc < 4) return 1;
+  union boot_cfg_meta meta;
+  memset(&meta, 0, sizeof(meta));
+  meta.cfg.flags = 0;
+  strcpy(meta.cfg.app_image_file, argv[1]);
+  meta.cfg.app_load_addr = strtol(argv[2], NULL, 0);
+  strcpy(meta.cfg.fs_container_prefix, argv[3]);
+  if (argc == 5) {
+    meta.cfg.seq = strtoull(argv[4], NULL, 0);
   } else {
-    cfg.seq = BOOT_CFG_INITIAL_SEQ;
+    meta.cfg.seq = BOOT_CFG_INITIAL_SEQ;
   }
-  fwrite(&cfg, sizeof(cfg), 1, stdout);
+  fwrite(&meta, sizeof(meta), 1, stdout);
   return 0;
 }

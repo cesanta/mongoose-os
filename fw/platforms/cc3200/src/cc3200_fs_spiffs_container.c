@@ -1,6 +1,7 @@
 /* Low-level FS interface, SPIFFS-on-FailFS container. */
 
 #include "cc3200_fs_spiffs_container.h"
+#include "cc3200_fs_spiffs_container_meta.h"
 
 #include <stdlib.h>
 
@@ -9,47 +10,21 @@
 #include "device.h"
 #include "fs.h"
 
-#include "v7/v7.h"
+#include "common/cs_dbg.h"
+#include "fw/platforms/cc3200/boot/lib/boot.h"
+
 #include "config.h"
 #include "spiffs_nucleus.h"
-
-#define INITIAL_SEQ (~(0ULL) - 1ULL)
-
-/* TI recommends rounding to nearest multiple of 4K - 512 bytes.
- * However, experiments have shown that you need to leave 1024 bytes at the end
- * otherwise additional 4K is allocated (compare AllocatedLen vs FileLen). */
-#define FS_CONTAINER_SIZE(fs_size) (((((fs_size) >> 12) + 1) << 12) - 1024)
-
-struct fs_info {
-  _u64 seq;
-  _u32 fs_size;
-  _u32 fs_block_size;
-  _u32 fs_page_size;
-} info;
-
-union fs_meta {
-  struct fs_info info;
-  _u8 padding[64];
-};
-
-struct mount_info s_fsm;
 
 #define MAX_FS_CONTAINER_FNAME_LEN (MAX_FS_CONTAINER_PREFIX_LEN + 3)
 void fs_container_fname(const char *cpfx, int cidx, _u8 *fname) {
   int l = 0;
-  if (cpfx == NULL) {
-    /* Old names, for backward compatibility */
-    fname[l++] = '0' + cidx;
-    memcpy(fname + l, ".fs", 3);
-    l += 3;
-  } else {
-    while (cpfx[l] != '\0' && l < MAX_FS_CONTAINER_PREFIX_LEN) {
-      fname[l] = cpfx[l];
-      l++;
-    }
-    fname[l++] = '.';
-    fname[l++] = '0' + cidx;
+  while (cpfx[l] != '\0' && l < MAX_FS_CONTAINER_PREFIX_LEN) {
+    fname[l] = cpfx[l];
+    l++;
   }
+  fname[l++] = '.';
+  fname[l++] = '0' + cidx;
   fname[l] = '\0';
 }
 
@@ -59,34 +34,36 @@ _i32 fs_create_container(const char *cpfx, int cidx, _u32 fs_size) {
   _u32 fsize = FS_CONTAINER_SIZE(fs_size);
   fs_container_fname(cpfx, cidx, fname);
   int r = sl_FsDel(fname, 0);
-  dprintf(("del %s -> %d\n", fname, r));
+  DBG(("del %s -> %d", fname, r));
   r = sl_FsOpen(fname, FS_MODE_OPEN_CREATE(fsize, 0), NULL, &fh);
-  dprintf(("open %s %d -> %d %d\n", fname, (int) fsize, (int) r, (int) fh));
+  DBG(("open %s %d -> %d %d", fname, (int) fsize, (int) r, (int) fh));
   if (r != 0) return r;
   return fh;
 }
 
 _i32 fs_write_meta(_i32 fh, _u64 seq, _u32 fs_size, _u32 fs_block_size,
-                   _u32 fs_page_size) {
+                   _u32 fs_page_size, _u32 fs_erase_size) {
   int r;
   _u32 offset;
-  union fs_meta meta;
+  union fs_container_meta meta;
   memset(&meta, 0xff, sizeof(meta));
   meta.info.seq = seq;
   meta.info.fs_size = fs_size;
   meta.info.fs_block_size = fs_block_size;
   meta.info.fs_page_size = fs_page_size;
+  meta.info.fs_erase_size = fs_erase_size;
 
   offset = FS_CONTAINER_SIZE(meta.info.fs_size) - sizeof(meta);
   r = sl_FsWrite(fh, offset, (_u8 *) &meta, sizeof(meta));
-  dprintf(("write meta %llu @ %d: %d\n", seq, (int) offset, (int) r));
+  DBG(("write meta %llu @ %d: %d", seq, (int) offset, (int) r));
   if (r == sizeof(meta)) r = 0;
   return r;
 }
 
 static _i32 fs_write_mount_meta(struct mount_info *m) {
   return fs_write_meta(m->fh, m->seq, m->fs.cfg.phys_size,
-                       m->fs.cfg.log_block_size, m->fs.cfg.log_page_size);
+                       m->fs.cfg.log_block_size, m->fs.cfg.log_page_size,
+                       m->fs.cfg.phys_erase_block);
 }
 
 static _u8 *get_buf(_u32 *size) {
@@ -106,12 +83,12 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
   _i32 old_fh = m->fh, new_fh;
   _u8 *buf;
   _u32 offset, len, buf_size;
-  dprintf(("switch %s %d -> %d\n", m->cpfx, m->cidx, new_cidx));
+  DBG(("switch %s %d -> %d", m->cpfx, m->cidx, new_cidx));
   if (old_fh < 0) {
     _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
     fs_container_fname(m->cpfx, m->cidx, fname);
     r = sl_FsOpen(fname, FS_MODE_OPEN_READ, NULL, &old_fh);
-    dprintf(("fopen %s %d\n", m->cpfx, r));
+    DBG(("fopen %s %d", m->cpfx, r));
     if (r < 0) {
       r = SPIFFS_ERR_NOT_READABLE;
       goto out_close_old;
@@ -140,7 +117,7 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
     if (offset + len > m->fs.cfg.phys_size) {
       len = m->fs.cfg.phys_size - offset;
     }
-    dprintf(("copy %d @ %d\n", (int) len, (int) offset));
+    DBG(("copy %d @ %d", (int) len, (int) offset));
     if (len > 0) {
       r = sl_FsRead(old_fh, offset, buf, len);
       if (r != len) {
@@ -170,35 +147,34 @@ out_close_new:
   if (new_fh > 0) sl_FsClose(new_fh, NULL, NULL, 0);
 out_close_old:
   sl_FsClose(old_fh, NULL, NULL, 0);
-  dprintf(("switch: %d\n", r));
+  DBG(("switch: %d", r));
   return r;
 }
 
 void fs_close_container(struct mount_info *m) {
   if (!m->valid || !m->rw) return;
-  dprintf(("closing fh %d\n", (int) m->fh));
+  DBG(("closing fh %d", (int) m->fh));
   sl_FsClose(m->fh, NULL, NULL, 0);
   m->fh = -1;
   m->rw = 0;
 }
 
-static s32_t failfs_read(u32_t addr, u32_t size, u8_t *dst) {
-  struct mount_info *m = &s_fsm;
+static s32_t failfs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
+  struct mount_info *m = (struct mount_info *) fs->user_data;
   _i32 r;
-  dprintf(("failfs_read %d @ %d, cidx %u # %llu, fh %d, valid %d, rw %d\n",
-           (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid,
-           m->rw));
+  DBG(("failfs_read %d @ %d, cidx %u # %llu, fh %d, valid %d, rw %d",
+       (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
   if (!m->valid) return SPIFFS_ERR_NOT_READABLE;
   do {
     if (m->fh < 0) {
       _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
       fs_container_fname(m->cpfx, m->cidx, fname);
       r = sl_FsOpen(fname, FS_MODE_OPEN_READ, NULL, &m->fh);
-      dprintf(("fopen %d\n", (int) r));
+      DBG(("fopen %d", (int) r));
       if (r < 0) return SPIFFS_ERR_NOT_READABLE;
     }
     r = sl_FsRead(m->fh, addr, dst, size);
-    dprintf(("read %d\n", (int) r));
+    DBG(("read %d", (int) r));
     if (r == SL_FS_ERR_INVALID_HANDLE) {
       /*
        * This happens when SimpleLink is reinitialized - all file handles are
@@ -210,65 +186,63 @@ static s32_t failfs_read(u32_t addr, u32_t size, u8_t *dst) {
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_READABLE;
 }
 
-static s32_t failfs_write(u32_t addr, u32_t size, u8_t *src) {
-  struct mount_info *m = &s_fsm;
+static s32_t failfs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
+  struct mount_info *m = (struct mount_info *) fs->user_data;
   _i32 r;
-  dprintf(("failfs_write %d @ %d, cidx %d # %llu, fh %d, valid %d, rw %d\n",
-           (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid,
-           m->rw));
+  DBG(("failfs_write %d @ %d, cidx %d # %llu, fh %d, valid %d, rw %d",
+       (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
   if (!m->valid) return SPIFFS_ERR_NOT_WRITABLE;
   if (!m->rw) {
     /* Remount rw. */
     if (fs_switch_container(m, 0, 0) != 0) return SPIFFS_ERR_NOT_WRITABLE;
   }
   r = sl_FsWrite(m->fh, addr, src, size);
-  dprintf(("write %d\n", (int) r));
+  DBG(("write %d", (int) r));
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_WRITABLE;
 }
 
-static s32_t failfs_erase(u32_t addr, u32_t size) {
-  struct mount_info *m = &s_fsm;
-  dprintf(("failfs_erase %d @ %d\n", (int) size, (int) addr));
-  if (m->formatting) {
-    /* During formatting, the file is brand new and has just been erased. */
-    return SPIFFS_OK;
-  }
+static s32_t failfs_erase(spiffs *fs, u32_t addr, u32_t size) {
+  struct mount_info *m = (struct mount_info *) fs->user_data;
+  DBG(("failfs_erase %d @ %d", (int) size, (int) addr));
   return fs_switch_container(m, addr, size) == 0 ? SPIFFS_OK
                                                  : SPIFFS_ERR_ERASE_FAIL;
 }
 
-static int fs_get_info(const char *cpfx, int cidx, struct fs_info *info) {
+static int fs_get_info(const char *cpfx, int cidx,
+                       struct fs_container_info *info) {
   _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
-  union fs_meta meta;
+  union fs_container_meta meta;
   SlFsFileInfo_t fi;
   _i32 fh;
   _u32 offset;
   fs_container_fname(cpfx, cidx, fname);
   _i32 r = sl_FsGetInfo(fname, 0, &fi);
-  dprintf(("finfo %s %d %d %d\n", fname, (int) r, (int) fi.FileLen,
-           (int) fi.AllocatedLen));
+  DBG(("finfo %s %d %d %d", fname, (int) r, (int) fi.FileLen,
+       (int) fi.AllocatedLen));
   if (r != 0) return r;
   if (fi.AllocatedLen < sizeof(meta)) return -200;
   r = sl_FsOpen(fname, FS_MODE_OPEN_READ, NULL, &fh);
-  dprintf(("fopen %s %d\n", fname, (int) r));
+  DBG(("fopen %s %d", fname, (int) r));
   if (r != 0) return r;
 
   offset = fi.FileLen - sizeof(meta);
   r = sl_FsRead(fh, offset, (_u8 *) &meta, sizeof(meta));
-  dprintf(("read meta @ %d: %d\n", (int) offset, (int) r));
+  DBG(("read meta @ %d: %d", (int) offset, (int) r));
 
   if (r != sizeof(meta)) {
     r = -201;
     goto out_close;
   }
-  if (meta.info.seq > INITIAL_SEQ || meta.info.fs_size == ~0) {
+  if (meta.info.seq > FS_INITIAL_SEQ || meta.info.seq == 0 ||
+      meta.info.fs_size == ~0UL) {
     r = -202;
     goto out_close;
   }
 
   memcpy(info, &meta.info, sizeof(*info));
-  dprintf(("found fs: %llu %d %d %d\n", info->seq, (int) info->fs_size,
-           (int) info->fs_block_size, (int) info->fs_page_size));
+  DBG(("found fs: %llu %d %d %d %d", info->seq, (int) info->fs_size,
+       (int) info->fs_block_size, (int) info->fs_page_size,
+       (int) info->fs_erase_size));
   r = 0;
 
 out_close:
@@ -277,7 +251,7 @@ out_close:
 }
 
 static _i32 fs_mount_spiffs(struct mount_info *m, _u32 fs_size, _u32 block_size,
-                            _u32 page_size) {
+                            _u32 page_size, _u32 erase_size) {
   int r;
   spiffs_config cfg;
   cfg.hal_read_f = failfs_read;
@@ -285,12 +259,13 @@ static _i32 fs_mount_spiffs(struct mount_info *m, _u32 fs_size, _u32 block_size,
   cfg.hal_erase_f = failfs_erase;
   cfg.phys_size = fs_size;
   cfg.phys_addr = 0;
-  cfg.phys_erase_block = block_size;
+  cfg.phys_erase_block = erase_size;
   cfg.log_block_size = block_size;
   cfg.log_page_size = page_size;
   m->work = calloc(2, page_size);
   m->fds_size = MAX_OPEN_SPIFFS_FILES * sizeof(spiffs_fd);
   m->fds = calloc(1, m->fds_size);
+  m->fs.user_data = m;
   r = SPIFFS_mount(&m->fs, &cfg, m->work, m->fds, m->fds_size, NULL, 0, NULL);
   if (r != SPIFFS_OK) {
     free(m->work);
@@ -300,65 +275,32 @@ static _i32 fs_mount_spiffs(struct mount_info *m, _u32 fs_size, _u32 block_size,
   return r;
 }
 
-static int fs_format(const char *cpfx, int cidx) {
-  s32_t r;
-  struct mount_info *m = &s_fsm;
-  _u32 fsc_size = FS_CONTAINER_SIZE(FS_SIZE);
-  dprintf(("formatting %d s=%u, cs=%d\n", cidx, FS_SIZE, (int) fsc_size));
-
-  m->cidx = cidx;
-  r = fs_create_container(cpfx, cidx, FS_SIZE);
-  if (r < 0) goto out;
-  m->fh = r;
-  m->valid = m->rw = m->formatting = 1;
-  /* Touch a byte at the end to open a "hole". */
-  r = sl_FsWrite(m->fh, fsc_size - 1, (_u8 *) "\xff", 1);
-  dprintf(("write 1 @ %d %d\n", (int) (fsc_size - 1), (int) r));
-  if (r != 1) goto out_close;
-
-  /* There must be a mount attempt before format. It'll fail and that's ok. */
-  r = fs_mount_spiffs(m, FS_SIZE, FS_BLOCK_SIZE, FS_PAGE_SIZE);
-  dprintf(("mount: %d %d\n", (int) r, (int) SPIFFS_errno(&m->fs)));
-  r = SPIFFS_format(&m->fs);
-  dprintf(("format: %d\n", (int) r));
-  if (r != SPIFFS_OK) goto out_close;
-
-  m->seq = INITIAL_SEQ;
-  r = fs_write_mount_meta(m);
-
-out_close:
-  sl_FsClose(m->fh, NULL, NULL, 0);
-out:
-  m->fh = -1;
-  m->valid = m->formatting = m->rw = 0;
-  return r;
-}
-
-static int fs_mount(const char *cpfx, int cidx, struct mount_info *m) {
+static int fs_mount_idx(const char *cpfx, int cidx, struct mount_info *m) {
   int r;
-  struct fs_info fsi;
+  struct fs_container_info fsi;
   memset(m, 0, sizeof(*m));
   m->fh = -1;
-  dprintf(("mounting %d\n", cidx));
+  DBG(("mounting %d", cidx));
   m->cidx = cidx;
   r = fs_get_info(cpfx, cidx, &fsi);
   if (r != 0) return r;
   m->cpfx = cpfx ? strdup(cpfx) : NULL;
   m->seq = fsi.seq;
   m->valid = 1;
-  r = fs_mount_spiffs(m, FS_SIZE, FS_BLOCK_SIZE, FS_PAGE_SIZE);
-  dprintf(("mount %d: %d %d\n", cidx, (int) r, (int) SPIFFS_errno(&m->fs)));
+  r = fs_mount_spiffs(m, fsi.fs_size, fsi.fs_block_size, fsi.fs_page_size,
+                      fsi.fs_erase_size);
+  DBG(("mount %d: %d %d", cidx, (int) r, (int) SPIFFS_errno(&m->fs)));
   return r;
 }
 
-int init_fs(struct v7 *v7) {
-  struct fs_info fs0, fs1;
+_i32 fs_mount(const char *container_prefix, struct mount_info *m) {
+  struct fs_container_info fs0, fs1;
   int r, r0, r1;
 
-  r0 = fs_get_info(NULL, 0, &fs0);
-  r1 = fs_get_info(NULL, 1, &fs1);
+  r0 = fs_get_info(container_prefix, 0, &fs0);
+  r1 = fs_get_info(container_prefix, 1, &fs1);
 
-  dprintf(("r0 = %d, r1 = %d\n", r0, r1));
+  DBG(("r0 = %d, r1 = %d", r0, r1));
 
   if (r0 == 0 && r1 == 0) {
     if (fs0.seq < fs1.seq) {
@@ -368,14 +310,11 @@ int init_fs(struct v7 *v7) {
     }
   }
   if (r0 == 0) {
-    r = fs_mount(NULL, 0, &s_fsm);
+    r = fs_mount_idx(container_prefix, 0, m);
   } else if (r1 == 0) {
-    r = fs_mount(NULL, 1, &s_fsm);
+    r = fs_mount_idx(container_prefix, 1, m);
   } else {
-    r = fs_format(NULL, 0);
-    if (r != 0) return r;
-    r = fs_mount(NULL, 0, &s_fsm);
+    r = -1000;
   }
-
   return r;
 }

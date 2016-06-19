@@ -8,9 +8,7 @@
 
 #include <stdio.h>
 
-struct v7;
-
-int init_fs(struct v7 *v7);
+int init_fs(const char *container_prefix);
 int set_errno(int e);
 
 #ifdef CC3200_FS_DEBUG

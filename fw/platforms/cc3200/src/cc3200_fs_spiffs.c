@@ -13,6 +13,8 @@
 
 #include <common/spiffs/spiffs_nucleus.h>
 
+struct mount_info s_fsm;
+
 static int spiffs_err_to_errno(int r) {
   switch (r) {
     case SPIFFS_OK:
@@ -200,4 +202,8 @@ int64_t sj_get_storage_free_space() {
 
   SPIFFS_info(&m->fs, &total, &used);
   return total - used;
+}
+
+int init_fs(const char *container_prefix) {
+  return fs_mount(container_prefix, &s_fsm);
 }

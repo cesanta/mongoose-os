@@ -486,7 +486,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
         }
         ret = 1;
         ctx->need_reboot = 1;
-        ctx->status_msg = "Update completed successfully";
+        ctx->status_msg = "Update applied, finalizing";
         updater_set_status(ctx, US_FINISHED);
       } /* fall through */
       case US_FINISHED: {

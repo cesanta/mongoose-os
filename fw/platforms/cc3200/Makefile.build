@@ -29,7 +29,14 @@ BUILD_DIR ?= $(CURDIR)/.build
 FW_DIR = $(CURDIR)/firmware
 BOOT_BUILD_DIR = $(BUILD_DIR)/boot
 BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
-FS_SIZE = 131072
+# When sizing filesystem consider that SFLASH should have enough space for:
+#  + boot loader
+#  + 2 boot loader configs
+#  + 2 app images
+#  + 4 fs containers
+#  + NWP service pack
+# 96K is the practical maximum for 8Mbit flash chips (installed on CC3200MOD).
+FS_SIZE = 98304
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
@@ -78,14 +85,16 @@ SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 APP_ELF = $(BUILD_DIR)/$(APP).axf
 APP_BIN = $(FW_DIR)/$(APP).bin
 BOOT_BIN = $(FW_DIR)/mg-boot.bin
-MKCFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
+MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(FW_DIR)/fs.img
+FS_EMPTY_IMG = $(FW_DIR)/fs_empty.img
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 BOOT_CFG_0 = $(FW_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(FW_DIR)/mg-boot.cfg.1
+MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
 
 .PHONY: all clean flash
 
@@ -137,8 +146,9 @@ $(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR):
 FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(BOOT_BIN)),type=boot \
            $(notdir $(BOOT_CFG_0)):src=$(notdir $(BOOT_CFG_0)),type=boot_cfg \
            $(notdir $(BOOT_CFG_1)):src=$(notdir $(BOOT_CFG_1)),type=boot_cfg \
-           $(notdir $(APP_BIN)):src=$(notdir $(APP_BIN)),type=app \
-           fs.img:src=$(notdir $(FS_IMG)),type=fs,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+           $(notdir $(APP_BIN)).0:src=$(notdir $(APP_BIN)),type=app,load_addr=$(APP_ORG),falloc=244736 \
+           spiffs.img.0.0:src=$(notdir $(FS_IMG)),type=fs,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
+           spiffs.img.0.1:src=$(notdir $(FS_EMPTY_IMG))
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
@@ -151,12 +161,21 @@ $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 $(BUILD_DIR)/v7.o: $(GENERATED_SOURCES)
 
-$(FS_IMG): $(wildcard $(COMMON_FS_PATH)/*) $(JS_SRCS) $(wildcard $(FS_DIR)/*)
-	@$(foreach js,$^, \
+FS_FILES = $(wildcard $(COMMON_FS_PATH)/*) $(JS_SRCS) $(wildcard $(FS_DIR)/*)
+
+$(FS_IMG): $(FS_FILES) $(MK_FS_META_BIN)
+	@$(foreach js,$(FS_FILES), \
 	  echo "  CP    $(js) -> $(FS_BUILD_DIR)"; \
 	  cp $(js) $(FS_BUILD_DIR);)
-	@echo "  MKFS  $@"
-	@/usr/local/bin/mkspiffs $(FS_SIZE) $(FS_BUILD_DIR) > $@
+	$(vecho) "MKFS  $@"
+	$(Q) /usr/local/bin/mkspiffs $(FS_SIZE) $(FS_BUILD_DIR) > $@
+	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
+
+$(FS_EMPTY_IMG): $(MK_FS_META_BIN)
+	$(vecho) "GEN   $@"
+	$(Q) dd if=/dev/zero of=$@ bs=$(FS_BLOCK_SIZE) \
+	        count=$(shell echo $$(($(FS_SIZE) / $(FS_BLOCK_SIZE)))) > $@ 2>/dev/null
+	$(Q) $(MK_FS_META_BIN) 0 0 0 0 0 >> $@
 
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) v7.c v7.h
@@ -184,14 +203,23 @@ CFLAGS += -DNDEBUG -DCS_NDEBUG \
           $(SDK_FLAGS) $(V7_FEATURES) $(V7_MEMORY_FLAGS) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
           -Dcc3200 -DMG_FS_SLFS -DCC3200_FS_SPIFFS \
+          -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
           $(MONGOOSE_FEATURES) $(APP_CFLAGS) $(CFLAGS_EXTRA)
 
-all: $(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
+$(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
+    CFLAGS += -DDEFAULT_FS_SIZE=$(FS_SIZE) \
+              -DDEFAULT_FS_BLOCK_SIZE=$(FS_BLOCK_SIZE) \
+              -DDEFAULT_FS_PAGE_SIZE=$(FS_PAGE_SIZE) \
+              -DDEFAULT_FS_ERASE_SIZE=$(FS_ERASE_SIZE)
 
-$(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) $(APP_BIN) $(FS_IMG)
+all: $(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR) $(SYS_CONFIG_C) \
+     $(BUILD_INFO_C) $(FW_ZIP)
 
-$(BOOT_BIN) $(MKCFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
-                          $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
+$(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
+                $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG)
+
+$(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
+                                $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
 	$(vecho) "MAKE  $@"
 	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build APP=mg-boot TOOLCHAIN=gcc \
 	             SDK_PATH=$(SDK_PATH) PYTHON=$(PYTHON) \
@@ -200,13 +228,13 @@ $(BOOT_BIN) $(MKCFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
 	$(vecho) "CP    $(BOOT_FW_DIR)/mg-boot.bin $(BOOT_BIN)"
 	$(Q) cp $(BOOT_FW_DIR)/mg-boot.bin $(BOOT_BIN)
 
-$(BOOT_CFG_0): $(MKCFG_BIN)
+$(BOOT_CFG_0): $(MK_BOOT_CFG_BIN)
 	$(vecho) "MKCFG $@"
-	$(Q) $(MKCFG_BIN) $(notdir $(APP_BIN)) $(APP_ORG) > $@
+	$(Q) $(MK_BOOT_CFG_BIN) $(notdir $(APP_BIN)).0 $(APP_ORG) spiffs.img.0 > $@
 
-$(BOOT_CFG_1): $(MKCFG_BIN)
+$(BOOT_CFG_1): $(MK_BOOT_CFG_BIN)
 	$(vecho) "MKCFG $@"
-	$(Q) $(MKCFG_BIN) "" 0 0 > $@
+	$(Q) $(MK_BOOT_CFG_BIN) "" 0 "" 0 > $@
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"
@@ -218,6 +246,10 @@ $(APP_ELF): $(FW_DIR) $(OBJS) $(BUILD_INFO_O)
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 
 $(BUILD_INFO_O): $(BUILD_INFO_C)
+
+$(MK_FS_META_BIN): $(MGIOT_CC3200_PATH)/tools/mkfsmeta.c
+	$(vecho) "GCC   $< -> $@"
+	$(Q) gcc -Wall -Werror -I$(MGIOT_CC3200_PATH) -o $@ $^
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

@@ -33,25 +33,14 @@
 #include "fs.h"
 
 #include "boot.h"
+#include "boot_meta.h"
 
-#define BOOT_CFG_0 "mg-boot.cfg.0"
-#define BOOT_CFG_1 "mg-boot.cfg.1"
+#define BOOT_CFG_FNAME_PREFIX "mg-boot.cfg"
 
-static int read_cfg(const char *fn, struct boot_cfg *cfg) {
-  memset(cfg, 0, sizeof(*cfg));
-  _i32 fh;
-  _i32 r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
-  if (r != 0) return r;
-  r = sl_FsRead(fh, 0, (_u8 *) cfg, sizeof(*cfg));
-  r = (r == sizeof(*cfg) ? 0 : -1000);
-  sl_FsClose(fh, NULL, NULL, 0);
-  return r;
-}
-
-int get_active_boot_cfg(struct boot_cfg *cfg) {
+int get_active_boot_cfg_idx() {
   struct boot_cfg cfg0, cfg1, *c;
-  read_cfg(BOOT_CFG_0, &cfg0);
-  read_cfg(BOOT_CFG_1, &cfg1);
+  read_boot_cfg(0, &cfg0);
+  read_boot_cfg(1, &cfg1);
   if (cfg0.seq > 0 && cfg1.seq > 0) {
     c = (cfg0.seq < cfg1.seq ? &cfg0 : &cfg1);
   } else if (cfg0.seq > 0) {
@@ -61,14 +50,64 @@ int get_active_boot_cfg(struct boot_cfg *cfg) {
   } else {
     return -1;
   }
-  if (cfg != NULL) memcpy(cfg, c, sizeof(*cfg));
-  return (c == &cfg1);
+  return (c == &cfg0 ? 0 : 1);
 }
 
 int get_inactive_boot_cfg_idx() {
-  int active = get_active_boot_cfg(NULL);
+  int active = get_active_boot_cfg_idx();
   if (active < 0) {
     return 0; /* Nothing is configured? Oh well, use 0 then. */
   }
   return (active == 0 ? 1 : 0);
+}
+
+static int read_cfg(const _u8 *fn, struct boot_cfg *cfg) {
+  union boot_cfg_meta meta;
+  memset(cfg, 0, sizeof(*cfg));
+  _i32 fh;
+  _i32 r = sl_FsOpen(fn, FS_MODE_OPEN_READ, NULL, &fh);
+  if (r != 0) return r;
+  r = sl_FsRead(fh, 0, (_u8 *) &meta, sizeof(meta));
+  if (r == sizeof(meta)) {
+    memcpy(cfg, &meta.cfg, sizeof(*cfg));
+    r = 0;
+  } else {
+    r = -1;
+  }
+  sl_FsClose(fh, NULL, NULL, 0);
+  return r;
+}
+
+static void cfg_fname(int idx, _u8 *fname) {
+  int l = strlen(BOOT_CFG_FNAME_PREFIX);
+  memcpy(fname, BOOT_CFG_FNAME_PREFIX, l);
+  fname[l++] = '.';
+  fname[l++] = '0' + idx;
+  fname[l++] = '\0';
+}
+
+int read_boot_cfg(int idx, struct boot_cfg *cfg) {
+  _u8 fname[15];
+  cfg_fname(idx, fname);
+  return read_cfg(fname, cfg);
+}
+
+int write_boot_cfg(const struct boot_cfg *cfg, int idx) {
+  union boot_cfg_meta meta;
+  memset(&meta, 0, sizeof(meta));
+  memcpy(&meta.cfg, cfg, sizeof(*cfg));
+  _u8 fname[15];
+  cfg_fname(idx, fname);
+  sl_FsDel(fname, 0);
+  _i32 fh;
+  _i32 r = sl_FsOpen(fname, FS_MODE_OPEN_CREATE(sizeof(meta), 0), NULL, &fh);
+  if (r < 0) return r;
+  r = sl_FsWrite(fh, 0, (_u8 *) &meta, sizeof(meta));
+  if (r == sizeof(meta)) {
+    r = 0;
+  } else {
+    r = -1;
+  }
+  sl_FsClose(fh, NULL, NULL, 0);
+  return r;
 }

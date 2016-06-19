@@ -81,7 +81,7 @@ CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=4 \
           $(SDK_FLAGS) $(CFLAGS_EXTRA)
 
-all: $(BUILD_DIR) $(BUILD_INFO_C) $(MKCFG_BIN)
+all: $(BUILD_DIR) $(FW_DIR) $(BUILD_INFO_C) $(MKCFG_BIN)
 
 ifeq "$(CREATE_ZIP)" "1"
 all: $(FW_ZIP)
@@ -99,12 +99,12 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) rm $@.reloc.bin $@.main.bin
 	@echo "    Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(FW_DIR) $(OBJS) $(BUILD_INFO_O)
+$(APP_ELF): $(OBJS) $(BUILD_INFO_O)
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 
 $(BUILD_INFO_O): $(BUILD_INFO_C)
 
-$(MKCFG_BIN): tools/mkcfg.c lib/boot.h
+$(MKCFG_BIN): tools/mkcfg.c lib/boot_meta.h
 	$(vecho) "GCC   $< -> $@"
 	$(Q) gcc -Wall -Werror -o $@ $^

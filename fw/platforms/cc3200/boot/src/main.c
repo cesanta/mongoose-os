@@ -86,6 +86,12 @@ void run(uint32_t base) {
   /* Not reached. */
 }
 
+static void crlflf() {
+  MAP_UARTCharPut(CONSOLE_UART, '\r');
+  MAP_UARTCharPut(CONSOLE_UART, '\n');
+  MAP_UARTCharPut(CONSOLE_UART, '\n');
+}
+
 int main() {
   MAP_IntVTableBaseSet((unsigned long) &int_vectors[0]);
   MAP_IntMasterEnable();
@@ -102,36 +108,41 @@ int main() {
   MAP_UARTFIFOLevelSet(CONSOLE_UART, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
   MAP_UARTFIFODisable(CONSOLE_UART);
 
-  MAP_UARTCharPut(CONSOLE_UART, 's');
+  crlflf();
+
   if (sl_Start(NULL, NULL, NULL) < 0) abort();
   MAP_UARTCharPut(CONSOLE_UART, 'S');
 
-  struct boot_cfg cfg;
-  int cidx = get_active_boot_cfg(&cfg);
+  int cidx = get_active_boot_cfg_idx();
   if (cidx < 0) abort();
   MAP_UARTCharPut(CONSOLE_UART, '0' + cidx);
+  struct boot_cfg cfg;
+  if (read_boot_cfg(cidx, &cfg) < 0) abort();
 
-  uart_puts(cfg.image_file);
+  uart_puts(cfg.app_image_file);
   MAP_UARTCharPut(CONSOLE_UART, '@');
   {
     char buf[20];
-    __utoa(cfg.base_address, buf, 16);
+    __utoa(cfg.app_load_addr, buf, 16);
     uart_puts(buf);
   }
 
-  if (load_image(cfg.image_file, (_u8 *) cfg.base_address) != 0) abort();
+  if (load_image(cfg.app_image_file, (_u8 *) cfg.app_load_addr) != 0) {
+    abort();
+  }
 
   MAP_UARTCharPut(CONSOLE_UART, '.');
 
   sl_Stop(0);
 
-  MAP_UARTCharPut(CONSOLE_UART, '\r');
-  MAP_UARTCharPut(CONSOLE_UART, '\n');
+  crlflf();
 
   MAP_IntMasterDisable();
-  MAP_IntVTableBaseSet(cfg.base_address);
+  MAP_IntVTableBaseSet(cfg.app_load_addr);
 
-  run(cfg.base_address); /* Does not return. */
+  run(cfg.app_load_addr); /* Does not return. */
+
+  abort();
 
   return 0; /* not reached */
 }

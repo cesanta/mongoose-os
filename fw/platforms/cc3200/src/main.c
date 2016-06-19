@@ -46,9 +46,11 @@
 #include "fw/src/sj_wifi.h"
 #include "v7/v7.h"
 
-#include "config.h"
-#include "cc3200_fs.h"
-#include "cc3200_sj_hal.h"
+#include "fw/platforms/cc3200/boot/lib/boot.h"
+#include "fw/platforms/cc3200/src/config.h"
+#include "fw/platforms/cc3200/src/cc3200_fs.h"
+#include "fw/platforms/cc3200/src/cc3200_sj_hal.h"
+#include "fw/platforms/cc3200/src/cc3200_updater.h"
 
 extern const char *build_id;
 
@@ -104,12 +106,50 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
   s_gpio_js_handler_arg = arg;
 }
 
-static void v7_task(void *arg) {
+static void main_task(void *arg) {
   struct v7 *v7 = s_v7;
-  fprintf(stderr, "\n\nMongoose IoT %s\n", build_id);
+
+  cs_log_set_level(LL_INFO);
+  LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
+  LOG(LL_INFO,
+      ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
 
   osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct sj_event), 32 /* len */);
+
   sl_Start(NULL, NULL, NULL);
+
+  int boot_cfg_idx = get_active_boot_cfg_idx();
+  if (boot_cfg_idx < 0) return;
+  struct boot_cfg boot_cfg;
+  if (read_boot_cfg(boot_cfg_idx, &boot_cfg) < 0) return;
+
+  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", boot_cfg_idx,
+                boot_cfg.seq, boot_cfg.flags, boot_cfg.app_image_file,
+                boot_cfg.app_load_addr, boot_cfg.fs_container_prefix));
+
+  uint64_t saved_seq = 0;
+  if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
+    /* Tombstone the current config. If anything goes wrong between now and
+     * commit, next boot will use the old one. */
+    saved_seq = boot_cfg.seq;
+    boot_cfg.seq = BOOT_CFG_TOMBSTONE_SEQ;
+    write_boot_cfg(&boot_cfg, boot_cfg_idx);
+  }
+
+  int r = init_fs(boot_cfg.fs_container_prefix);
+  if (r < 0) {
+    LOG(LL_ERROR, ("FS init error: %d", r));
+    if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
+      revert_update(boot_cfg_idx, &boot_cfg);
+    }
+    return;
+  }
+
+  if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
+    /* May modify boot_cfg and/or reboot in case of rollback. */
+    apply_update(boot_cfg_idx, &boot_cfg);
+  }
+
   mongoose_init();
 
 #ifndef CS_DISABLE_JS
@@ -126,9 +166,6 @@ static void v7_task(void *arg) {
   sj_v7_ext_api_setup(v7);
   sj_init_sys(v7);
   sj_wifi_init(v7);
-  if (init_fs(v7) != 0) {
-    fprintf(stderr, "FS initialization failed.\n");
-  }
 
   sj_http_api_setup(v7);
 
@@ -149,14 +186,18 @@ static void v7_task(void *arg) {
 
   sj_updater_post_init(v7);
 
-  LOG(LL_INFO, ("Sys init done, RAM: %d total, %d free", sj_get_heap_size(),
-                sj_get_free_heap_size()));
+  LOG(LL_INFO, ("Sys init done, RAM: %d free", sj_get_free_heap_size()));
 
   if (!sj_app_init(v7)) {
     LOG(LL_ERROR, ("App init failed"));
     abort();
   }
   LOG(LL_INFO, ("App init done"));
+
+  if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
+    boot_cfg.seq = saved_seq;
+    commit_update(boot_cfg_idx, &boot_cfg);
+  }
 
 #ifndef CS_DISABLE_JS
   osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
@@ -234,8 +275,8 @@ int main() {
   cs_log_set_level(LL_INFO);
 
   VStartSimpleLinkSpawnTask(8);
-  osi_TaskCreate(v7_task, (const signed char *) "v7", V7_STACK_SIZE + 256, NULL,
-                 3, NULL);
+  osi_TaskCreate(main_task, (const signed char *) "main", V7_STACK_SIZE + 256,
+                 NULL, 3, NULL);
   osi_start();
 
   return 0;
