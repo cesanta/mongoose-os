@@ -6232,7 +6232,7 @@ int v7_is_regexp(struct v7 *v7, v7_val_t v);
 
 struct v7_regexp;
 
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
+V7_PRIVATE struct v7_regexp *v7_get_regexp_struct(struct v7 *, v7_val_t);
 
 /*
  * Generates a string containing regexp flags, e.g. "gi".
@@ -13146,7 +13146,8 @@ V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
 #endif
       } else if (v7_is_regexp(bbuilder->v7, lit.v.inline_val)) {
 #if V7_ENABLE__RegExp
-        struct v7_regexp *rp = v7_to_regexp(bbuilder->v7, lit.v.inline_val);
+        struct v7_regexp *rp =
+            v7_get_regexp_struct(bbuilder->v7, lit.v.inline_val);
         bcode_add_varint(bbuilder, BCODE_INLINE_REGEXP_TYPE_TAG);
 
         /* append regexp source */
@@ -18714,7 +18715,7 @@ clean:
   return rcode;
 }
 
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
+V7_PRIVATE struct v7_regexp *v7_get_regexp_struct(struct v7 *v7, val_t v) {
   struct v7_property *p;
   int is = v7_is_regexp(v7, v);
   (void) is;
@@ -30483,7 +30484,7 @@ struct _str_split_ctx {
 static void subs_regexp_init(struct _str_split_ctx *ctx, struct v7 *v7,
                              val_t sep) {
   ctx->v7 = v7;
-  ctx->impl.regexp.prog = v7_to_regexp(v7, sep)->compiled_regexp;
+  ctx->impl.regexp.prog = v7_get_regexp_struct(v7, sep)->compiled_regexp;
 }
 
 /* RegExp-based implementation of `p_exec` in `struct _str_split_ctx` */
@@ -30905,7 +30906,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7 *v7, v7_val_t *res) {
     }
   }
 
-  rxp = v7_to_regexp(v7, ro);
+  rxp = v7_get_regexp_struct(v7, ro);
   flag_g = slre_get_flags(rxp->compiled_regexp) & SLRE_FLAG_G;
   if (!flag_g) {
     rcode = rx_exec(v7, ro, so, 0, res);
@@ -31000,7 +31001,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
         goto clean;
       }
     }
-    prog = v7_to_regexp(v7, ro)->compiled_regexp;
+    prog = v7_get_regexp_struct(v7, ro)->compiled_regexp;
     flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
 
     if (!v7_is_callable(v7, str_func)) {
@@ -31149,8 +31150,8 @@ V7_PRIVATE enum v7_err Str_search(struct v7 *v7, v7_val_t *res) {
 
     s = v7_get_string(v7, &so, &s_len);
 
-    if (!slre_exec(v7_to_regexp(v7, ro)->compiled_regexp, 0, s, s + s_len,
-                   &sub))
+    if (!slre_exec(v7_get_regexp_struct(v7, ro)->compiled_regexp, 0, s,
+                   s + s_len, &sub))
       utf_shift = utfnlen(s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else {
     utf_shift = 0;
@@ -33151,7 +33152,7 @@ V7_PRIVATE enum v7_err Regex_global(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_regexp(v7, r)) {
-    flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
+    flags = slre_get_flags(v7_get_regexp_struct(v7, r)->compiled_regexp);
   }
 
   *res = v7_mk_boolean(v7, flags & SLRE_FLAG_G);
@@ -33172,7 +33173,7 @@ V7_PRIVATE enum v7_err Regex_ignoreCase(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_regexp(v7, r)) {
-    flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
+    flags = slre_get_flags(v7_get_regexp_struct(v7, r)->compiled_regexp);
   }
 
   *res = v7_mk_boolean(v7, flags & SLRE_FLAG_I);
@@ -33193,7 +33194,7 @@ V7_PRIVATE enum v7_err Regex_multiline(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_regexp(v7, r)) {
-    flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
+    flags = slre_get_flags(v7_get_regexp_struct(v7, r)->compiled_regexp);
   }
 
   *res = v7_mk_boolean(v7, flags & SLRE_FLAG_M);
@@ -33216,7 +33217,7 @@ V7_PRIVATE enum v7_err Regex_source(struct v7 *v7, v7_val_t *res) {
   }
 
   if (v7_is_regexp(v7, r)) {
-    buf = v7_get_string(v7, &v7_to_regexp(v7, r)->regexp_string, &len);
+    buf = v7_get_string(v7, &v7_get_regexp_struct(v7, r)->regexp_string, &len);
   }
 
   *res = v7_mk_string(v7, buf, len, 1);
@@ -33232,7 +33233,7 @@ V7_PRIVATE enum v7_err Regex_get_lastIndex(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
 
   if (v7_is_regexp(v7, this_obj)) {
-    lastIndex = v7_to_regexp(v7, this_obj)->lastIndex;
+    lastIndex = v7_get_regexp_struct(v7, this_obj)->lastIndex;
   }
 
   *res = v7_mk_number(v7, lastIndex);
@@ -33251,7 +33252,7 @@ V7_PRIVATE enum v7_err Regex_set_lastIndex(struct v7 *v7, v7_val_t *res) {
     if (rcode != V7_OK) {
       goto clean;
     }
-    v7_to_regexp(v7, this_obj)->lastIndex = lastIndex;
+    v7_get_regexp_struct(v7, this_obj)->lastIndex = lastIndex;
   }
 
   *res = v7_mk_number(v7, lastIndex);
@@ -33272,7 +33273,7 @@ V7_PRIVATE enum v7_err rx_exec(struct v7 *v7, val_t rx, val_t vstr, int lind,
     const char *str = NULL;
     const char *end = NULL;
     const char *begin = NULL;
-    struct v7_regexp *rp = v7_to_regexp(v7, rx);
+    struct v7_regexp *rp = v7_get_regexp_struct(v7, rx);
     int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
 
     rcode = to_string(v7, vstr, &s, NULL, 0, NULL);
@@ -33352,7 +33353,7 @@ V7_PRIVATE enum v7_err Regex_flags(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   char buf[3] = {0};
   val_t this_obj = v7_get_this(v7);
-  struct v7_regexp *rp = v7_to_regexp(v7, this_obj);
+  struct v7_regexp *rp = v7_get_regexp_struct(v7, this_obj);
   size_t n = get_regexp_flags_str(v7, rp, buf);
   *res = v7_mk_string(v7, buf, n, 1);
 
@@ -33379,7 +33380,7 @@ V7_PRIVATE enum v7_err Regex_toString(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  rp = v7_to_regexp(v7, this_obj);
+  rp = v7_get_regexp_struct(v7, this_obj);
   s1 = v7_get_string(v7, &rp->regexp_string, &n1);
   n2 = get_regexp_flags_str(v7, rp, s2);
 
