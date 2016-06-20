@@ -131,18 +131,18 @@ endif
 
 SHIMS = -DNDEBUG
 
-V7_FEATURES = $(COMMON_V7_FEATURES) \
-              -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
-              -DV7_DISABLE_AST_TAG_NAMES \
-              -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
-              -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
-              -DV7_ENABLE__Function__bind -DV7_ENABLE__Function__call \
-              -DV7_ENABLE__File__list=1 \
-              -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
-              -DV7_ENABLE__Object__getPrototypeOf -DV7_ENABLE__Object__isPrototypeOf \
-              -DV7_ENABLE__Object__keys \
-              -DV7_ENABLE__Object__isExtensible \
-              -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS \
+V7_FEATURES ?= $(COMMON_V7_FEATURES) \
+               -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
+               -DV7_DISABLE_AST_TAG_NAMES \
+               -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
+               -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
+               -DV7_ENABLE__Function__bind -DV7_ENABLE__Function__call \
+               -DV7_ENABLE__File__list=1 \
+               -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
+               -DV7_ENABLE__Object__getPrototypeOf -DV7_ENABLE__Object__isPrototypeOf \
+               -DV7_ENABLE__Object__keys \
+               -DV7_ENABLE__Object__isExtensible \
+               -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS \
 
 FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
@@ -155,7 +155,7 @@ MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
               -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 
-MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_DISABLE_DAV
+MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_DISABLE_DAV
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
                -DV7_STACK_SIZE=8192-64
@@ -258,7 +258,7 @@ LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
 
-CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MONGOOSE_FEATURES) \
+CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MG_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
           $(APP_CFLAGS) $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS) \
