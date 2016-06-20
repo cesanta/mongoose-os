@@ -17,7 +17,7 @@ RAM_SIZE = 0x40000
 BOOT_LOADER_SIZE = 0x4000
 # SLFS being what it is, we always produce code image of maximum size
 # to ensure OTA works when code size increases.
-PADDED_IMAGE_SIZE = $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x2800)))
+CC3200_PADDED_IMAGE_SIZE ?= $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x2800)))
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
@@ -263,7 +263,7 @@ $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"
 	$(Q) $(OBJCOPY) -O binary $< $@.tmp
 	$(Q) CODE_SIZE=$$(ls -l $@.tmp | awk '{print $$5}') && \
-	  PADDING_SIZE=$$(($(PADDED_IMAGE_SIZE) - $$CODE_SIZE)) && \
+	  PADDING_SIZE=$$(($(CC3200_PADDED_IMAGE_SIZE) - $$CODE_SIZE)) && \
 	  echo "     Code size: $$CODE_SIZE, padding size: $$PADDING_SIZE" && \
 	  dd if=/dev/zero bs=1024 count=$$(($$PADDING_SIZE / 1024)) >> $@.tmp 2>/dev/null && \
 	  dd if=/dev/zero bs=1 count=$$(($$PADDING_SIZE % 1024)) >> $@.tmp 2>/dev/null
