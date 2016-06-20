@@ -5690,6 +5690,7 @@ enum bcode_inline_lit_type_tag {
   BCODE_INLINE_STRING_TYPE_TAG = 0,
   BCODE_INLINE_NUMBER_TYPE_TAG,
   BCODE_INLINE_FUNC_TYPE_TAG,
+  BCODE_INLINE_REGEXP_TYPE_TAG,
 
   BCODE_MAX_INLINE_TYPE_TAG
 };
@@ -6167,6 +6168,84 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
 #endif /* CS_V7_SRC_GC_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "./v7/src/regexp_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === RegExp
+ */
+
+#ifndef CS_V7_SRC_REGEXP_PUBLIC_H_
+#define CS_V7_SRC_REGEXP_PUBLIC_H_
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Make RegExp object.
+ * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
+ * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
+ * If `regex_len` is ~0, `regex` is assumed to be NUL-terminated and
+ * `strlen(regex)` is used.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_mk_regexp(struct v7 *v7, const char *regex, size_t regex_len,
+                         const char *flags, size_t flags_len, v7_val_t *res);
+
+/* Returns true if given value is a JavaScript RegExp object*/
+int v7_is_regexp(struct v7 *v7, v7_val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* CS_V7_SRC_REGEXP_PUBLIC_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/regexp.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_V7_SRC_REGEXP_H_
+#define CS_V7_SRC_REGEXP_H_
+
+/* Amalgamated: #include "v7/src/regexp_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
+
+#if V7_ENABLE__RegExp
+
+/*
+ * Maximum number of flags returned by get_regexp_flags_str().
+ * NOTE: does not include null-terminate byte.
+ */
+#define _V7_REGEXP_MAX_FLAGS_LEN 3
+
+struct v7_regexp;
+
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
+
+/*
+ * Generates a string containing regexp flags, e.g. "gi".
+ *
+ * `buf` should point to a buffer of minimum `_V7_REGEXP_MAX_FLAGS_LEN` bytes.
+ * Returns length of the resulted string (saved into `buf`)
+ */
+V7_PRIVATE size_t
+get_regexp_flags_str(struct v7 *v7, struct v7_regexp *rp, char *buf);
+#endif /* V7_ENABLE__RegExp */
+
+#endif /* CS_V7_SRC_REGEXP_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/shdata.h"
 #endif
 /*
@@ -6528,66 +6607,6 @@ size_t heapusage_allocs_cnt(void);
 #endif /* V7_HEAPUSAGE_ENABLE */
 
 #endif /* CS_V7_SRC_HEAPUSAGE_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/regexp_public.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-/*
- * === RegExp
- */
-
-#ifndef CS_V7_SRC_REGEXP_PUBLIC_H_
-#define CS_V7_SRC_REGEXP_PUBLIC_H_
-
-/* Amalgamated: #include "v7/src/core_public.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/*
- * Make RegExp object.
- * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
- * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
- * If `regex_len` is ~0, `regex` is assumed to be NUL-terminated and
- * `strlen(regex)` is used.
- */
-WARN_UNUSED_RESULT
-enum v7_err v7_mk_regexp(struct v7 *v7, const char *regex, size_t regex_len,
-                         const char *flags, size_t flags_len, v7_val_t *res);
-
-/* Returns true if given value is a JavaScript RegExp object*/
-int v7_is_regexp(struct v7 *v7, v7_val_t v);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* CS_V7_SRC_REGEXP_PUBLIC_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/regexp.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CS_V7_SRC_REGEXP_H_
-#define CS_V7_SRC_REGEXP_H_
-
-/* Amalgamated: #include "v7/src/regexp_public.h" */
-
-/* Amalgamated: #include "v7/src/core.h" */
-
-#if V7_ENABLE__RegExp
-V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
-#endif /* V7_ENABLE__RegExp */
-
-#endif /* CS_V7_SRC_REGEXP_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/freeze.h"
 #endif
@@ -12589,6 +12608,7 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/regexp.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/util.h" */
 /* Amalgamated: #include "v7/src/shdata.h" */
@@ -12931,12 +12951,17 @@ static int bcode_is_inline_func(struct v7 *v7, val_t val) {
   return (v7->is_precompiling && is_js_function(val));
 }
 
+static int bcode_is_inline_regexp(struct v7 *v7, val_t val) {
+  return (v7->is_precompiling && v7_is_regexp(v7, val));
+}
+
 V7_PRIVATE lit_t bcode_add_lit(struct bcode_builder *bbuilder, val_t val) {
   lit_t lit;
   memset(&lit, 0, sizeof(lit));
 
   if (bcode_is_inline_string(bbuilder->v7, val) ||
-      bcode_is_inline_func(bbuilder->v7, val) || v7_is_number(val)) {
+      bcode_is_inline_func(bbuilder->v7, val) || v7_is_number(val) ||
+      bcode_is_inline_regexp(bbuilder->v7, val)) {
     /* literal should be inlined (it's `bcode_op_lit()` who does this) */
     lit.mode = LIT_MODE__INLINED;
     lit.v.inline_val = val;
@@ -13031,6 +13056,31 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, char **ops) {
 
       return res;
     }
+    case BCODE_INLINE_REGEXP_TYPE_TAG: {
+#if V7_ENABLE__RegExp
+      enum v7_err rcode = V7_OK;
+      val_t res;
+      size_t len_src, len_flags;
+      char *buf_src, *buf_flags;
+
+      len_src = bcode_get_varint(ops);
+      buf_src = *ops + 1;
+      *ops += len_src + 1 /* nul term */;
+
+      len_flags = bcode_get_varint(ops);
+      buf_flags = *ops + 1;
+      *ops += len_flags + 1 /* nul term */;
+
+      rcode = v7_mk_regexp(v7, buf_src, len_src, buf_flags, len_flags, &res);
+      assert(rcode == V7_OK);
+      (void) rcode;
+
+      return res;
+#else
+      fprintf(stderr, "Firmware is built without -DV7_ENABLE__RegExp\n");
+      abort();
+#endif
+    }
     default:
       return ((val_t *) vec->p)[idx - BCODE_MAX_INLINE_TYPE_TAG];
   }
@@ -13093,6 +13143,31 @@ V7_PRIVATE void bcode_op_lit(struct bcode_builder *bbuilder, enum opcode op,
         bcode_ops_append(bbuilder, p, len);
 
         fclose(fp);
+#endif
+      } else if (v7_is_regexp(bbuilder->v7, lit.v.inline_val)) {
+#if V7_ENABLE__RegExp
+        struct v7_regexp *rp = v7_to_regexp(bbuilder->v7, lit.v.inline_val);
+        bcode_add_varint(bbuilder, BCODE_INLINE_REGEXP_TYPE_TAG);
+
+        /* append regexp source */
+        {
+          size_t len;
+          const char *buf =
+              v7_get_string(bbuilder->v7, &rp->regexp_string, &len);
+          bcode_add_varint(bbuilder, len);
+          bcode_ops_append(bbuilder, buf, len + 1 /* nul term */);
+        }
+
+        /* append regexp flags */
+        {
+          char buf[_V7_REGEXP_MAX_FLAGS_LEN + 1 /* nul term */];
+          size_t len = get_regexp_flags_str(bbuilder->v7, rp, buf);
+          bcode_add_varint(bbuilder, len);
+          bcode_ops_append(bbuilder, buf, len + 1 /* nul term */);
+        }
+#else
+        fprintf(stderr, "Firmware is built without -DV7_ENABLE__RegExp\n");
+        abort();
 #endif
       } else {
         /* invalid type of inlined value */
@@ -13361,19 +13436,14 @@ static const char *bcode_deserialize_lit(struct bcode_builder *bbuilder,
   switch (lit_tag) {
     case BCODE_SER_NUMBER:
     case BCODE_SER_STRING:
-    case BCODE_SER_FUNCTION: {
+    case BCODE_SER_FUNCTION:
+    case BCODE_SER_REGEX: {
       /*
        * All numbers, strings and functions should be inlined into `ops` during
        * serialization (see `bcode_add_lit()`, `bcode_is_inline_string()`,
        * `bcode_is_inline_func()`, `bcode_op_lit()`), so we should never
        * encounter them here
        */
-      assert(0);
-      break;
-    }
-
-    case BCODE_SER_REGEX: {
-      /* TODO */
       assert(0);
       break;
     }
@@ -18662,6 +18732,21 @@ int v7_is_regexp(struct v7 *v7, val_t v) {
   p = v7_get_own_property2(v7, v, "", 0, _V7_PROPERTY_HIDDEN);
   if (p == NULL) return 0;
   return (p->value & V7_TAG_MASK) == V7_TAG_REGEXP;
+}
+
+V7_PRIVATE size_t
+get_regexp_flags_str(struct v7 *v7, struct v7_regexp *rp, char *buf) {
+  int re_flags = slre_get_flags(rp->compiled_regexp);
+  size_t n = 0;
+
+  (void) v7;
+  if (re_flags & SLRE_FLAG_G) buf[n++] = 'g';
+  if (re_flags & SLRE_FLAG_I) buf[n++] = 'i';
+  if (re_flags & SLRE_FLAG_M) buf[n++] = 'm';
+
+  assert(n <= _V7_REGEXP_MAX_FLAGS_LEN);
+
+  return n;
 }
 
 #else /* V7_ENABLE__RegExp */
@@ -30871,6 +30956,14 @@ V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   const char *s;
   size_t s_len;
+  /*
+   * Buffer of temporary strings returned by the replacement funciton.  Will be
+   * allocated below if only the replacement is a function.  We need to store
+   * each string in a separate `val_t`, because string data of length <= 5 is
+   * stored right in `val_t`, so if there's more than one replacement,
+   * each subsequent replacement will overwrite the previous one.
+   */
+  val_t *tmp_str_buf = NULL;
   val_t out_str_o;
   char *old_owned_mbuf_base = v7->owned_strings.buf;
   char *old_owned_mbuf_end = v7->owned_strings.buf + v7->owned_strings.len;
@@ -30961,12 +31054,16 @@ V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
             goto clean;
           }
 
-          rcode = to_string(v7, val, &out_str_o, NULL, 0, NULL);
+          if (tmp_str_buf == NULL) {
+            tmp_str_buf = (val_t *) calloc(sizeof(val_t), V7_RE_MAX_REPL_SUB);
+          }
+
+          rcode = to_string(v7, val, &tmp_str_buf[out_sub_num], NULL, 0, NULL);
           if (rcode != V7_OK) {
             goto clean;
           }
         }
-        rez_str = v7_get_string(v7, &out_str_o, &rez_len);
+        rez_str = v7_get_string(v7, &tmp_str_buf[out_sub_num], &rez_len);
         if (rez_len) {
           ptok->start = rez_str;
           ptok->end = rez_str + rez_len;
@@ -31014,6 +31111,10 @@ V7_PRIVATE enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
   *res = this_obj;
 
 clean:
+  if (tmp_str_buf != NULL) {
+    free(tmp_str_buf);
+    tmp_str_buf = NULL;
+  }
   return rcode;
 }
 
@@ -33247,6 +33348,18 @@ clean:
 }
 
 WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err Regex_flags(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  char buf[3] = {0};
+  val_t this_obj = v7_get_this(v7);
+  struct v7_regexp *rp = v7_to_regexp(v7, this_obj);
+  size_t n = get_regexp_flags_str(v7, rp, buf);
+  *res = v7_mk_string(v7, buf, n, 1);
+
+  return rcode;
+}
+
+WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Regex_toString(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   size_t n1, n2 = 0;
@@ -33255,7 +33368,6 @@ V7_PRIVATE enum v7_err Regex_toString(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   struct v7_regexp *rp;
   const char *s1;
-  int re_flags;
 
   rcode = obj_value_of(v7, this_obj, &this_obj);
   if (rcode != V7_OK) {
@@ -33269,11 +33381,8 @@ V7_PRIVATE enum v7_err Regex_toString(struct v7 *v7, v7_val_t *res) {
 
   rp = v7_to_regexp(v7, this_obj);
   s1 = v7_get_string(v7, &rp->regexp_string, &n1);
-  re_flags = slre_get_flags(rp->compiled_regexp);
+  n2 = get_regexp_flags_str(v7, rp, s2);
 
-  if (re_flags & SLRE_FLAG_G) s2[n2++] = 'g';
-  if (re_flags & SLRE_FLAG_I) s2[n2++] = 'i';
-  if (re_flags & SLRE_FLAG_M) s2[n2++] = 'm';
   c_snprintf(buf, sizeof(buf), "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
 
   *res = v7_mk_string(v7, buf, strlen(buf), 1);
@@ -33301,6 +33410,8 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
          v7_mk_cfunction(Regex_multiline));
   v7_def(v7, v7->vals.regexp_prototype, "source", 6, V7_DESC_GETTER(1),
          v7_mk_cfunction(Regex_source));
+  v7_def(v7, v7->vals.regexp_prototype, "flags", 5, V7_DESC_GETTER(1),
+         v7_mk_cfunction(Regex_flags));
 
   v7_array_set(v7, lastIndex, 0, v7_mk_cfunction(Regex_get_lastIndex));
   v7_array_set(v7, lastIndex, 1, v7_mk_cfunction(Regex_set_lastIndex));
