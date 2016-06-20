@@ -98,7 +98,7 @@ static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
    * we can use strtol for non-null terminated string here, we have
    * symbols immediately after address which will  stop number parsing
    */
-  pi->addr = strtol(addr_tok->ptr, NULL, 16);
+  pi->addr = strtol(addr_tok->ptr, NULL, 0);
   if (pi->addr == 0) {
     /* Only rboot can has addr = 0, but we do not update rboot now */
     LOG(LL_ERROR, ("Invalid address in manifest"));
