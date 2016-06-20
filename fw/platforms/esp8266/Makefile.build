@@ -44,7 +44,6 @@ HEAP_LOG ?=
 
 FLASH_SIZE ?= 1M
 
-
 ifeq "${OTA}" "1"
 FS_SIZE ?= 128K
 else
@@ -138,7 +137,8 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
                -DV7_ENABLE__Function__bind -DV7_ENABLE__Function__call \
                -DV7_ENABLE__File__list=1 \
-               -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=0 \
+               -DV7_ENABLE__RegExp=1 \
+               -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=1 \
                -DV7_ENABLE__Object__getPrototypeOf -DV7_ENABLE__Object__isPrototypeOf \
                -DV7_ENABLE__Object__keys \
                -DV7_ENABLE__Object__isExtensible \
