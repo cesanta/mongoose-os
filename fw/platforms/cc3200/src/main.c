@@ -146,8 +146,10 @@ static void main_task(void *arg) {
   }
 
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
-    /* May modify boot_cfg and/or reboot in case of rollback. */
-    apply_update(boot_cfg_idx, &boot_cfg);
+    LOG(LL_INFO, ("Applying update"));
+    if (apply_update(boot_cfg_idx, &boot_cfg) < 0) {
+      revert_update(boot_cfg_idx, &boot_cfg);
+    }
   }
 
   mongoose_init();

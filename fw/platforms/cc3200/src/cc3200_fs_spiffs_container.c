@@ -152,9 +152,9 @@ out_close_old:
 }
 
 void fs_close_container(struct mount_info *m) {
-  if (!m->valid || !m->rw) return;
+  if (!m->valid) return;
   DBG(("closing fh %d", (int) m->fh));
-  sl_FsClose(m->fh, NULL, NULL, 0);
+  if (m->fh != -1) sl_FsClose(m->fh, NULL, NULL, 0);
   m->fh = -1;
   m->rw = 0;
 }
@@ -280,25 +280,28 @@ static int fs_mount_idx(const char *cpfx, int cidx, struct mount_info *m) {
   struct fs_container_info fsi;
   memset(m, 0, sizeof(*m));
   m->fh = -1;
-  DBG(("mounting %d", cidx));
+  LOG(LL_DEBUG, ("Mounting %s.%d", cpfx, cidx));
   m->cidx = cidx;
   r = fs_get_info(cpfx, cidx, &fsi);
   if (r != 0) return r;
-  m->cpfx = cpfx ? strdup(cpfx) : NULL;
+  m->cpfx = cpfx;
   m->seq = fsi.seq;
   m->valid = 1;
   r = fs_mount_spiffs(m, fsi.fs_size, fsi.fs_block_size, fsi.fs_page_size,
                       fsi.fs_erase_size);
   DBG(("mount %d: %d %d", cidx, (int) r, (int) SPIFFS_errno(&m->fs)));
+  if (r < 0) {
+    LOG(LL_ERROR, ("Mount failed: %d", r));
+  }
   return r;
 }
 
-_i32 fs_mount(const char *container_prefix, struct mount_info *m) {
+_i32 fs_mount(const char *cpfx, struct mount_info *m) {
   struct fs_container_info fs0, fs1;
   int r, r0, r1;
 
-  r0 = fs_get_info(container_prefix, 0, &fs0);
-  r1 = fs_get_info(container_prefix, 1, &fs1);
+  r0 = fs_get_info(cpfx, 0, &fs0);
+  r1 = fs_get_info(cpfx, 1, &fs1);
 
   DBG(("r0 = %d, r1 = %d", r0, r1));
 
@@ -310,11 +313,20 @@ _i32 fs_mount(const char *container_prefix, struct mount_info *m) {
     }
   }
   if (r0 == 0) {
-    r = fs_mount_idx(container_prefix, 0, m);
+    r = fs_mount_idx(cpfx, 0, m);
   } else if (r1 == 0) {
-    r = fs_mount_idx(container_prefix, 1, m);
+    r = fs_mount_idx(cpfx, 1, m);
   } else {
     r = -1000;
   }
   return r;
+}
+
+_i32 fs_umount(struct mount_info *m) {
+  LOG(LL_DEBUG, ("Unmounting %s.%d", m->cpfx, m->cidx));
+  SPIFFS_unmount(&m->fs);
+  free(m->work);
+  free(m->fds);
+  fs_close_container(m);
+  return 1;
 }

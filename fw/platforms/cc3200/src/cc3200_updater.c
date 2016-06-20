@@ -14,6 +14,7 @@
 #include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_updater_hal.h"
+#include "fw/src/sj_updater_util.h"
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
@@ -200,7 +201,6 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
   struct mg_str type = get_part_type(ctx->cur_part);
   const char *fname = NULL;
   uint32_t falloc = get_num_value(ctx->cur_part, "falloc");
-  ;
   if (falloc == 0) falloc = fi->size;
   if (mg_vcmp(&type, "app") == 0) {
     create_fname(part_name, ctx->new_boot_cfg_idx, ctx->app_image_file,
@@ -248,6 +248,10 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
     } else {
       ret = (r > 0 ? SJ_UPDATER_PROCESS_FILE : SJ_UPDATER_SKIP_FILE);
     }
+  }
+  if (ret == SJ_UPDATER_SKIP_FILE) {
+    LOG(LL_INFO,
+        ("Skipping %s %.*s", fi->name, (int) part_name.len, part_name.p));
   }
   return ret;
 }
@@ -354,7 +358,16 @@ void commit_update(int boot_cfg_idx, struct boot_cfg *cfg) {
 
 int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
   if (cfg->flags & BOOT_F_MERGE_SPIFFS) {
-    /* TODO(rojer): Add SPIFFS merging */
+    int old_boot_cfg_idx = (boot_cfg_idx == 0 ? 1 : 0);
+    struct boot_cfg old_boot_cfg;
+    int r = read_boot_cfg(old_boot_cfg_idx, &old_boot_cfg);
+    if (r < 0) return r;
+    struct mount_info old_fs;
+    r = fs_mount(old_boot_cfg.fs_container_prefix, &old_fs);
+    if (r < 0) return r;
+    r = sj_upd_merge_spiffs(&old_fs.fs);
+    if (r < 0) return r;
+    fs_umount(&old_fs);
     cfg->flags &= ~(BOOT_F_MERGE_SPIFFS);
   }
   return 1;

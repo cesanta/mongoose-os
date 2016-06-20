@@ -10,9 +10,14 @@ APP ?= mongoose-iot
 APP_PLATFORM = cc3200
 APP_MODULES ?=
 APP_CFLAGS ?=
+APP_FS_PATH ?= $(MGIOT_CC3200_PATH)/fs
 TOOLCHAIN ?= gcc
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
+BOOT_LOADER_SIZE = 0x4000
+# SLFS being what it is, we always produce code image of maximum size
+# to ensure OTA works when code size increases.
+PADDED_IMAGE_SIZE = $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x800)))
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
@@ -43,7 +48,6 @@ FS_ERASE_SIZE = 4096
 MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
-FS_DIR = fs
 FS_BUILD_DIR = $(BUILD_DIR)/fs
 GENERATED_SOURCES = $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 
@@ -146,9 +150,12 @@ $(BUILD_DIR) $(FW_DIR) $(FS_BUILD_DIR):
 FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(BOOT_BIN)),type=boot \
            $(notdir $(BOOT_CFG_0)):src=$(notdir $(BOOT_CFG_0)),type=boot_cfg \
            $(notdir $(BOOT_CFG_1)):src=$(notdir $(BOOT_CFG_1)),type=boot_cfg \
-           $(notdir $(APP_BIN)).0:src=$(notdir $(APP_BIN)),type=app,load_addr=$(APP_ORG),falloc=244736 \
+           $(notdir $(APP_BIN)).0:src=$(notdir $(APP_BIN)),type=app,load_addr=$(APP_ORG) \
            spiffs.img.0.0:src=$(notdir $(FS_IMG)),type=fs,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
-           spiffs.img.0.1:src=$(notdir $(FS_EMPTY_IMG))
+           spiffs.img.0.1:src=$(notdir $(FS_EMPTY_IMG)) \
+           $(notdir $(APP_BIN)).1:src=$(notdir $(APP_BIN)) \
+           spiffs.img.1.0:src=$(notdir $(FS_EMPTY_IMG)) \
+           spiffs.img.1.1:src=$(notdir $(FS_EMPTY_IMG))
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
@@ -161,10 +168,12 @@ $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 $(BUILD_DIR)/v7.o: $(GENERATED_SOURCES)
 
-FS_FILES = $(wildcard $(COMMON_FS_PATH)/*) $(JS_SRCS) $(wildcard $(FS_DIR)/*)
+FS_FILES = $(wildcard $(COMMON_FS_PATH)/*) $(JS_SRCS) \
+           $(wildcard $(APP_FS_PATH)/*)
 
-$(FS_IMG): $(FS_FILES) $(MK_FS_META_BIN)
-	@$(foreach js,$(FS_FILES), \
+$(FS_IMG): $(FS_DIR) $(APP_FS_PATH) $(FS_FILES) $(MK_FS_META_BIN)
+	$(Q) rm -f $(FS_BUILD_DIR)/*
+	$(Q) $(foreach js,$(FS_FILES), \
 	  echo "  CP    $(js) -> $(FS_BUILD_DIR)"; \
 	  cp $(js) $(FS_BUILD_DIR);)
 	$(vecho) "MKFS  $@"
@@ -238,10 +247,15 @@ $(BOOT_CFG_1): $(MK_BOOT_CFG_BIN)
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"
-	$(Q) $(OBJCOPY) -O binary $< $@
-	@echo "    Code size: $$(ls -l $@ | awk '{print $$5}')"
+	$(Q) $(OBJCOPY) -O binary $< $@.tmp
+	$(Q) CODE_SIZE=$$(ls -l $@.tmp | awk '{print $$5}') && \
+	  PADDING_SIZE=$$(($(PADDED_IMAGE_SIZE) - $$CODE_SIZE)) && \
+	  echo "     Code size: $$CODE_SIZE, padding size: $$PADDING_SIZE" && \
+	  dd if=/dev/zero bs=1024 count=$$(($$PADDING_SIZE / 1024)) >> $@.tmp 2>/dev/null && \
+	  dd if=/dev/zero bs=1 count=$$(($$PADDING_SIZE % 1024)) >> $@.tmp 2>/dev/null
+	$(Q) mv $@.tmp $@
 
-$(APP_ELF): $(FW_DIR) $(OBJS) $(BUILD_INFO_O)
+$(APP_ELF): $(OBJS) $(BUILD_INFO_O)
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 

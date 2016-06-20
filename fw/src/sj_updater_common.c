@@ -2,6 +2,8 @@
 
 #include <strings.h>
 
+#include "common/spiffs/spiffs.h"
+
 #include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_timers.h"
@@ -17,9 +19,6 @@ extern const char *build_version;
 
 #define MANIFEST_FILENAME "manifest.json"
 #define SHA1SUM_LEN 40
-#ifndef UPDATER_MIN_BLOCK_SIZE
-#define UPDATER_MIN_BLOCK_SIZE 2048
-#endif
 /*
  * --- Zip file local header structure ---
  *                                             size  offset
@@ -102,20 +101,16 @@ void updater_set_status(struct update_context *ctx, enum update_status st) {
  */
 static void context_update(struct update_context *ctx, const char *data,
                            size_t len) {
-#ifndef UPDATER_MIN_BLOCK_SIZE
   if (ctx->unprocessed.len != 0) {
-/* We have unprocessed data, concatenate them with arrived */
-#endif
+    /* We have unprocessed data, concatenate them with arrived */
     mbuf_append(&ctx->unprocessed, data, len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
-#ifndef UPDATER_MIN_BLOCK_SIZE
   } else {
     /* No unprocessed, trying to process directly received data */
     ctx->data = data;
     ctx->data_len = len;
   }
-#endif
 
   LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
 }
@@ -306,16 +301,6 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
     context_update(ctx, data, len);
   }
 
-#ifdef UPDATER_MIN_BLOCK_SIZE
-  LOG(LL_DEBUG,
-      ("ctx::dl=%d fi::fs=%d fi::fr=%d", (int) ctx->data_len,
-       (int) ctx->current_file.fi.size, (int) ctx->current_file.fi.processed));
-  if (ctx->data_len < 2048 && ctx->current_file.fi.size != 0 &&
-      ctx->current_file.fi.size - ctx->current_file.fi.processed > 2048) {
-    return 0;
-  }
-#endif
-
   while (true) {
     switch (ctx->update_status) {
       case US_INITED: {
@@ -343,6 +328,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
          * otherwise we need streaming json-parser
          */
         if (ctx->data_len < ctx->current_file.fi.size) {
+          context_save_unprocessed(ctx);
           return 0;
         }
 
@@ -531,4 +517,105 @@ void bin2hex(const uint8_t *src, int src_len, char *dst) {
     dst += 2;
     src += 1;
   }
+}
+
+static int file_copy(spiffs *old_fs, char *file_name) {
+  int ret = 0;
+  FILE *f = NULL;
+  spiffs_stat stat;
+  int32_t readen, to_read = 0, total = 0;
+
+  LOG(LL_INFO, ("Copying %s", file_name));
+
+  spiffs_file fd = SPIFFS_open(old_fs, file_name, SPIFFS_RDONLY, 0);
+  if (fd < 0) {
+    int err = SPIFFS_errno(old_fs);
+    if (err == SPIFFS_ERR_NOT_FOUND) {
+      LOG(LL_WARN, ("File %s not found, skipping", file_name));
+      return 1;
+    } else {
+      LOG(LL_ERROR, ("Failed to open %s, error %d", file_name, err));
+      return 0;
+    }
+  }
+
+  if (SPIFFS_fstat(old_fs, fd, &stat) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)", file_name,
+                   SPIFFS_errno(old_fs)));
+    goto exit;
+  }
+
+  LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
+
+  f = fopen(file_name, "w");
+  if (f == NULL) {
+    LOG(LL_ERROR, ("Failed to open %s", file_name));
+    goto exit;
+  }
+
+  char buf[512];
+  to_read = MIN(sizeof(buf), stat.size);
+
+  while (to_read != 0) {
+    if ((readen = SPIFFS_read(old_fs, fd, buf, to_read)) < 0) {
+      LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d", to_read,
+                     file_name, SPIFFS_errno(old_fs)));
+      goto exit;
+    }
+
+    if (fwrite(buf, 1, readen, f) != (size_t) readen) {
+      LOG(LL_ERROR, ("Failed to write %d bytes to %s", readen, file_name));
+      goto exit;
+    }
+
+    total += readen;
+    LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
+
+    to_read = MIN(sizeof(buf), (stat.size - total));
+  }
+
+  LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
+
+  ret = 1;
+
+exit:
+  if (fd >= 0) SPIFFS_close(old_fs, fd);
+  if (f != NULL) fclose(f);
+
+  return ret;
+}
+
+int sj_upd_merge_spiffs(spiffs *old_fs) {
+  int ret = -1;
+  /*
+   * here we can use fread & co to read
+   * current fs and SPIFFs functions to read
+   * old one
+   */
+
+  spiffs_DIR dir;
+  spiffs_DIR *dir_ptr = SPIFFS_opendir(old_fs, ".", &dir);
+  if (dir_ptr == NULL) {
+    LOG(LL_ERROR, ("Failed to open root directory"));
+    goto cleanup;
+  }
+
+  struct spiffs_dirent de, *de_ptr;
+  while ((de_ptr = SPIFFS_readdir(dir_ptr, &de)) != NULL) {
+    struct stat st;
+    if (stat((const char *) de_ptr->name, &st) != 0) {
+      /* File not found on the new fs, copy. */
+      if (!file_copy(old_fs, (char *) de_ptr->name)) {
+        LOG(LL_ERROR, ("Error copying!"));
+        goto cleanup;
+      }
+    }
+  }
+
+  ret = 1;
+
+cleanup:
+  if (dir_ptr != NULL) SPIFFS_closedir(dir_ptr);
+
+  return ret;
 }

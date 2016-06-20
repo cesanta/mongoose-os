@@ -35,13 +35,16 @@ struct mount_info {
 #define MAX_FS_CONTAINER_FNAME_LEN (MAX_FS_CONTAINER_PREFIX_LEN + 3)
 void fs_container_fname(const char *cpfx, int cidx, _u8 *fname);
 
-_i32 fs_mount(const char *prefix, struct mount_info *m);
+_i32 fs_create_container(const char *cpfx, int cidx, _u32 fs_size);
 
-_i32 fs_create_container(const char *prefix, int cidx, _u32 fs_size);
+/* NB: cpfx must outlive the mount. */
+_i32 fs_mount(const char *cpfx, struct mount_info *m);
 
 _i32 fs_write_meta(_i32 fh, _u64 seq, _u32 fs_size, _u32 fs_block_size,
                    _u32 fs_page_size, _u32 fs_erase_size);
 
 void fs_close_container(struct mount_info *m);
+
+_i32 fs_umount(struct mount_info *m);
 
 #endif /* CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_ */
