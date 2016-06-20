@@ -390,7 +390,8 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
       char fname[MAX_FS_CONTAINER_FNAME_LEN];
       int inactive_idx = (old_fs.cidx == 0 ? 1 : 0);
       fs_container_fname(old_fs.cpfx, inactive_idx, (_u8 *) fname);
-      LOG(LL_INFO, ("Deleting %s", fname));
+      LOG(LL_DEBUG, ("Deleting %s", fname));
+      sl_FsDel((const _u8 *) fname, 0);
     }
     r = sj_upd_merge_spiffs(&old_fs.fs);
     if (r < 0) return r;
