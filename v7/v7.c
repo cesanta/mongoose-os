@@ -1739,6 +1739,9 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * All rights reserved
  */
 
+#ifndef CS_V7_SRC_FEATURES_FULL_H_
+#define CS_V7_SRC_FEATURES_FULL_H_
+
 /* Amalgamated: #include "v7/src/features_profiles.h" */
 
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL
@@ -1808,6 +1811,8 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_ENABLE__String__localeUpperCase 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
+
+#endif /* CS_V7_SRC_FEATURES_FULL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/v7_features.h"
 #endif

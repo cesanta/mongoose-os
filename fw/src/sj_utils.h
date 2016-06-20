@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_UTILS_H
-#define SJ_UTILS_H
+#ifndef CS_FW_SRC_SJ_UTILS_H_
+#define CS_FW_SRC_SJ_UTILS_H_
 
 #ifndef CS_DISABLE_JS
 
@@ -15,4 +15,4 @@ enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
                                   struct mg_connect_opts *copts);
 
 #endif /* CS_DISABLE_JS */
-#endif /* SJ_UTILS_H */
+#endif /* CS_FW_SRC_SJ_UTILS_H_ */

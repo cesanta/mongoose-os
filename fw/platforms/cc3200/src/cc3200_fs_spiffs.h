@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_
-#define CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_
+#ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_H_
+#define CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_H_
 
 #include <stdio.h>
 
@@ -31,4 +31,4 @@ int fs_spiffs_closedir(DIR *dir);
 int fs_spiffs_rmdir(const char *path);
 int fs_spiffs_mkdir(const char *path, mode_t mode);
 
-#endif /* CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_H_ */
+#endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_H_ */

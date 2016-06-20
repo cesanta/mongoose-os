@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef SJ_CONSOLE_H
-#define SJ_CONSOLE_H
+#ifndef CS_FW_SRC_SJ_CONSOLE_H_
+#define CS_FW_SRC_SJ_CONSOLE_H_
 
 #ifndef CS_DISABLE_JS
 
@@ -15,4 +15,4 @@ void sj_console_api_setup(struct v7 *v7);
 
 #endif /* CS_DISABLE_JS */
 
-#endif /* SJ_CONSOLE_H */
+#endif /* CS_FW_SRC_SJ_CONSOLE_H_ */

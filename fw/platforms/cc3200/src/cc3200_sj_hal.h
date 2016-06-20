@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_CC3200_CC3200_SJ_HAL_H_
-#define CS_FW_PLATFORMS_CC3200_CC3200_SJ_HAL_H_
+#ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_SJ_HAL_H_
+#define CS_FW_PLATFORMS_CC3200_SRC_CC3200_SJ_HAL_H_
 
 #include "v7/v7.h"
 
@@ -25,4 +25,4 @@ struct v7_invoke_event_data {
 
 size_t sj_get_heap_size();
 
-#endif /* CS_FW_PLATFORMS_CC3200_CC3200_SJ_HAL_H_ */
+#endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_SJ_HAL_H_ */

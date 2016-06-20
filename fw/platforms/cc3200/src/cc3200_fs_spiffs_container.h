@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_
-#define CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_
+#ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_H_
+#define CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_H_
 
 #include "boot_cfg.h"
 #include "cc3200_fs.h"
@@ -47,4 +47,4 @@ void fs_close_container(struct mount_info *m);
 
 _i32 fs_umount(struct mount_info *m);
 
-#endif /* CS_FW_PLATFORMS_CC3200_CC3200_FS_SPIFFS_CONTAINER_H_ */
+#endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_H_ */

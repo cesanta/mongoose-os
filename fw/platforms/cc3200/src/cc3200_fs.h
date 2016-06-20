@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_CC3200_CC3200_FS_H_
-#define CS_FW_PLATFORMS_CC3200_CC3200_FS_H_
+#ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_H_
+#define CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_H_
 
 #include <stdio.h>
 
@@ -17,4 +17,4 @@ int set_errno(int e);
 #define dprintf(x)
 #endif
 
-#endif /* CS_FW_PLATFORMS_CC3200_CC3200_FS_H_ */
+#endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_H_ */

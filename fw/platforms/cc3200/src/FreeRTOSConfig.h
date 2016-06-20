@@ -67,8 +67,8 @@
     1 tab == 4 spaces!
 */
 
-#ifndef CS_FW_PLATFORMS_CC3200_FREERTOSCONFIG_H_
-#define CS_FW_PLATFORMS_CC3200_FREERTOSCONFIG_H_
+#ifndef CS_FW_PLATFORMS_CC3200_SRC_FREERTOSCONFIG_H_
+#define CS_FW_PLATFORMS_CC3200_SRC_FREERTOSCONFIG_H_
 
 /*-----------------------------------------------------------
  * Application specific definitions.
@@ -151,4 +151,4 @@ version. */
                                                     }
 #endif
 
-#endif /* CS_FW_PLATFORMS_CC3200_FREERTOSCONFIG_H_ */
+#endif /* CS_FW_PLATFORMS_CC3200_SRC_FREERTOSCONFIG_H_ */

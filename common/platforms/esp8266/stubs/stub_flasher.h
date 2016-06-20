@@ -1,5 +1,5 @@
-#ifndef _STUB_FLASHER_H_
-#define _STUB_FLASHER_H_
+#ifndef CS_COMMON_PLATFORMS_ESP8266_STUBS_STUB_FLASHER_H_
+#define CS_COMMON_PLATFORMS_ESP8266_STUBS_STUB_FLASHER_H_
 
 enum stub_cmd {
   /*
@@ -90,4 +90,4 @@ enum stub_cmd {
   CMD_REBOOT = 7,
 };
 
-#endif /* _STUB_FLASHER_H_ */
+#endif /* CS_COMMON_PLATFORMS_ESP8266_STUBS_STUB_FLASHER_H_ */

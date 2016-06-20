@@ -10,8 +10,8 @@
  *      Author: petera
  */
 
-#ifndef CS_FW_PLATFORMS_CC3200_SPIFFS_CONFIG_H_
-#define CS_FW_PLATFORMS_CC3200_SPIFFS_CONFIG_H_
+#ifndef CS_FW_PLATFORMS_CC3200_SRC_SPIFFS_CONFIG_H_
+#define CS_FW_PLATFORMS_CC3200_SRC_SPIFFS_CONFIG_H_
 
 #include <stdint.h>
 #include <string.h>
@@ -25,4 +25,4 @@ typedef uint8_t u8_t;
 
 #include "spiffs_config_common.h"
 
-#endif /* CS_FW_PLATFORMS_CC3200_SPIFFS_CONFIG_H_ */
+#endif /* CS_FW_PLATFORMS_CC3200_SRC_SPIFFS_CONFIG_H_ */
