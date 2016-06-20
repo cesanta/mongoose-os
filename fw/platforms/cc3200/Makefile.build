@@ -17,7 +17,7 @@ RAM_SIZE = 0x40000
 BOOT_LOADER_SIZE = 0x4000
 # SLFS being what it is, we always produce code image of maximum size
 # to ensure OTA works when code size increases.
-PADDED_IMAGE_SIZE = $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x800)))
+PADDED_IMAGE_SIZE = $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x2800)))
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
@@ -41,10 +41,20 @@ BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
 #  + 4 fs containers
 #  + NWP service pack
 # 96K is the practical maximum for 8Mbit flash chips (installed on CC3200MOD).
-FS_SIZE = 98304
-FS_BLOCK_SIZE = 4096
-FS_PAGE_SIZE = 256
-FS_ERASE_SIZE = 4096
+FS_SIZE ?= 98304
+FS_BLOCK_SIZE ?= 4096
+FS_PAGE_SIZE ?= 256
+FS_ERASE_SIZE ?= 4096
+
+# With safe code update, new code image is written to a different file on update
+# making it possible to safely revert tghe update. Why it defaults to false you
+# may ask? Because CC3200MOD only has 1 MB of SFLASH.
+# Without service pack, it fits, if only just about, but service pack with its
+# 66 blocks of usage (yes, 66) blows it out of the water.
+# It may be possible to enable safe updates by squeezing FS a little more.
+# 1 padded code image uses 60 blocks.
+CC3200_SAFE_CODE_UPDATE ?= 0
+
 MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
@@ -77,7 +87,7 @@ V7_FEATURES = $(COMMON_V7_FEATURES) \
               -DV7_DISABLE_FILENAMES
 
 MONGOOSE_FEATURES = $(MG_FEATURES_TINY) -DMG_LOCALS \
-                    -DMG_DISABLE_FILESYSTEM -DMG_DISABLE_DAV
+                    -DMG_DISABLE_FILESYSTEM -DMG_DISABLE_DAV -DMG_FS_SLFS
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
                   -DV7_STACK_SIZE=8192-64 \
@@ -137,6 +147,9 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
 SRCS = $(APP_SRCS) mongoose.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS)
 
+MGIOT_CFLAGS = -DCC3200_FS_SPIFFS -Dcc3200 -DCC3200_FS_SPIFFS \
+               -DSPIFFS_HAL_CALLBACK_EXTRA=1
+
 .DEFAULT_GOAL := all
 
 clean:
@@ -153,9 +166,12 @@ FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(BOOT_BIN)),type=boot \
            $(notdir $(APP_BIN)).0:src=$(notdir $(APP_BIN)),type=app,load_addr=$(APP_ORG) \
            spiffs.img.0.0:src=$(notdir $(FS_IMG)),type=fs,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            spiffs.img.0.1:src=$(notdir $(FS_EMPTY_IMG)) \
-           $(notdir $(APP_BIN)).1:src=$(notdir $(APP_BIN)) \
-           spiffs.img.1.0:src=$(notdir $(FS_EMPTY_IMG)) \
-           spiffs.img.1.1:src=$(notdir $(FS_EMPTY_IMG))
+           spiffs.img.1.0:src=$(notdir $(FS_EMPTY_IMG))
+
+ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"
+FW_PARTS += $(notdir $(APP_BIN)).1:src=$(notdir $(APP_BIN))
+MGIOT_CFLAGS += -DCC3200_SAFE_CODE_UPDATE=1
+endif
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
@@ -211,9 +227,7 @@ CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG \
           $(SDK_FLAGS) $(V7_FEATURES) $(V7_MEMORY_FLAGS) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          -Dcc3200 -DMG_FS_SLFS -DCC3200_FS_SPIFFS \
-          -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
-          $(MONGOOSE_FEATURES) $(APP_CFLAGS) $(CFLAGS_EXTRA)
+          $(MONGOOSE_FEATURES) $(MGIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
 
 $(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
     CFLAGS += -DDEFAULT_FS_SIZE=$(FS_SIZE) \

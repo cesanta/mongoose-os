@@ -203,8 +203,26 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
   uint32_t falloc = get_num_value(ctx->cur_part, "falloc");
   if (falloc == 0) falloc = fi->size;
   if (mg_vcmp(&type, "app") == 0) {
+#if CC3200_SAFE_CODE_UPDATE
+    /*
+     * When safe code update is enabled, we write code to a new file.
+     * Otherwise we write to the same slot we're using currently, which is
+     * unsafe, makes reverting coide update not possible, but saves space.
+     */
     create_fname(part_name, ctx->new_boot_cfg_idx, ctx->app_image_file,
                  sizeof(ctx->app_image_file));
+#else
+    {
+      struct boot_cfg cur_cfg;
+      int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
+      if (r < 0) {
+        ctx->status_msg = "Could not read current boot cfg";
+        return SJ_UPDATER_ABORT;
+      }
+      strncpy(ctx->app_image_file, cur_cfg.app_image_file,
+              sizeof(ctx->app_image_file));
+    }
+#endif
     ctx->app_load_addr = get_num_value(ctx->cur_part, "load_addr");
     if (ctx->app_load_addr >= 0x20000000) {
       fname = ctx->app_image_file;
@@ -250,8 +268,7 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
     }
   }
   if (ret == SJ_UPDATER_SKIP_FILE) {
-    LOG(LL_INFO,
-        ("Skipping %s %.*s", fi->name, (int) part_name.len, part_name.p));
+    DBG(("Skipping %s %.*s", fi->name, (int) part_name.len, part_name.p));
   }
   return ret;
 }
@@ -365,6 +382,16 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
     struct mount_info old_fs;
     r = fs_mount(old_boot_cfg.fs_container_prefix, &old_fs);
     if (r < 0) return r;
+    /*
+     * Delete the inactive old fs container image to free up space
+     * for container switch that is likely to happen during merge.
+     */
+    {
+      char fname[MAX_FS_CONTAINER_FNAME_LEN];
+      int inactive_idx = (old_fs.cidx == 0 ? 1 : 0);
+      fs_container_fname(old_fs.cpfx, inactive_idx, (_u8 *) fname);
+      LOG(LL_INFO, ("Deleting %s", fname));
+    }
     r = sj_upd_merge_spiffs(&old_fs.fs);
     if (r < 0) return r;
     fs_umount(&old_fs);

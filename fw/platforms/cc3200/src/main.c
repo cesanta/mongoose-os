@@ -106,6 +106,23 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
   s_gpio_js_handler_arg = arg;
 }
 
+int start_nwp() {
+  int r = sl_Start(NULL, NULL, NULL);
+  if (r < 0) return r;
+  SlVersionFull ver;
+  unsigned char opt = SL_DEVICE_GENERAL_VERSION;
+  unsigned char len = sizeof(ver);
+
+  memset(&ver, 0, sizeof(ver));
+  sl_DevGet(SL_DEVICE_GENERAL_CONFIGURATION, &opt, &len,
+            (unsigned char *) (&ver));
+  LOG(LL_INFO, ("NWP v%d.%d.%d.%d started, host driver v%d.%d.%d.%d",
+                ver.NwpVersion[0], ver.NwpVersion[1], ver.NwpVersion[2],
+                ver.NwpVersion[3], SL_MAJOR_VERSION_NUM, SL_MINOR_VERSION_NUM,
+                SL_VERSION_NUM, SL_SUB_VERSION_NUM));
+  return 0;
+}
+
 static void main_task(void *arg) {
   struct v7 *v7 = s_v7;
 
@@ -114,9 +131,13 @@ static void main_task(void *arg) {
   LOG(LL_INFO,
       ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
 
-  osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct sj_event), 32 /* len */);
+  int r = start_nwp();
+  if (r < 0) {
+    LOG(LL_ERROR, ("Failed to start NWP: %d", r));
+    return;
+  }
 
-  sl_Start(NULL, NULL, NULL);
+  osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct sj_event), 32 /* len */);
 
   int boot_cfg_idx = get_active_boot_cfg_idx();
   if (boot_cfg_idx < 0) return;
@@ -136,7 +157,7 @@ static void main_task(void *arg) {
     write_boot_cfg(&boot_cfg, boot_cfg_idx);
   }
 
-  int r = init_fs(boot_cfg.fs_container_prefix);
+  r = init_fs(boot_cfg.fs_container_prefix);
   if (r < 0) {
     LOG(LL_ERROR, ("FS init error: %d", r));
     if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
