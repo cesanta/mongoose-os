@@ -14,4 +14,4 @@ that talks to devices without leaving a browser window.
 To enable web app publishing, go to the project's settings
 page and click "Enable" button:
 
-![](media/over_webapp.png)
+<img src="media/over_webapp.png" width="100%">

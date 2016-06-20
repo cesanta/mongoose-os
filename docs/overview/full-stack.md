@@ -9,4 +9,4 @@ Mongoose Firmware. On a cloud part, there is Mongoose Cloud.
 Cesanta runs [Mongoose Cloud](https://mongoose-iot.com)
 as a public service. Also, Mongoose Cloud can be run privately.
 
-![](media/over_full_stack.png)
+<img src="media/over_full_stack.png" width="100%">

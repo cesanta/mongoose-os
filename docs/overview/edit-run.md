@@ -20,4 +20,4 @@ You might want to use
 [Mongoose Flashing tool](https://github.com/cesanta/fnc/releases)
 once to flash the firmware for the first time on a stock device.
 
-![](media/over_edit.png)
+<img src="media/over_edit.png" width="100%">

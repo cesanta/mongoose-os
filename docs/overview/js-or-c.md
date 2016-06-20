@@ -8,4 +8,4 @@ JavaScript ([API reference](#/javascript-api/)),
 thanks to our world smallest
 [V7 JavaScript Engine](https://github.com/cesanta/v7).
 
-![](media/over_js-or-c.png)
+<img src="media/over_js-or-c.png" width="100%">

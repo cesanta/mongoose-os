@@ -16,4 +16,4 @@ MUDL (Mobile UI Definition Language) is a YAML description
 of the user interface we have developed to simplify app creation
 for prototypes and proof of concepts.
 
-![](media/over_mobile.png)
+<img src="media/over_mobile.png" width="480">
