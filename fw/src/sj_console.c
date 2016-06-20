@@ -181,8 +181,11 @@ static int console_flush_buffer(struct cache *cache) {
 
   /* Using mbuf here instead of list to avoid memory overhead */
   mbuf_append(&cache->file_names, file_name, FILENAME_LEN);
-  mbuf_free(&cache->logs);
-
+  /*
+   * Instead of mbuf_free(&cache->logs); set len to zero
+   * to avoid reallocations
+   */
+  cache->logs.len = 0;
   s_last_file_id++;
 clean:
   if (file != NULL) {
