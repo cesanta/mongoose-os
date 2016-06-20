@@ -5779,13 +5779,6 @@ struct bcode_builder {
   struct mbuf lit; /* literal table */
 };
 
-enum bcode_ser_lit_tag {
-  BCODE_SER_NUMBER,
-  BCODE_SER_STRING,
-  BCODE_SER_REGEX,
-  BCODE_SER_FUNCTION,
-};
-
 V7_PRIVATE void bcode_builder_init(struct v7 *v7,
                                    struct bcode_builder *bbuilder,
                                    struct bcode *bcode);
@@ -5829,35 +5822,10 @@ V7_PRIVATE void bcode_copy_filename_from(struct bcode *dst, struct bcode *src);
 /*
  * Serialize a bcode structure.
  *
- * Serialization format:
+ * All literals, including functions, are inlined into `ops` data; see
+ * the serialization logic in `bcode_op_lit()`.
  *
- * Top level:
- * <magic number>
- * <bcode> // root bcode
- *
- * Root bcode:
- * <varint>  // number of literals
- * <bcode_ser_literal>*
- * <varint>  // number of names
- * <string>* // names
- * <varint>  // number of args
- * <varint>  // opcode lenght
- * <bcode_op>*
- *
- * bcode literals are encoded as:
- *
- * <enum bcode_ser_literal_tag>
- * <type specific payload>
- *
- * BCODE_SER_NUMBER:
- * BCODE_SER_STRING:
- * BCODE_SER_REGEX:
- * <varint> // length
- * <stringdata> // like AST
- *
- * BCODE_SER_FUNCTION:
- * <bcode> // recursively
- *
+ * The root bcode looks just like a regular function.
  */
 V7_PRIVATE void bcode_serialize(struct v7 *v7, struct bcode *bcode, FILE *f);
 V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
@@ -13328,73 +13296,16 @@ static void bcode_serialize_varint(int n, FILE *out) {
   fwrite(buf, k, 1, out);
 }
 
-static void bcode_serialize_emit_type_tag(enum bcode_ser_lit_tag tag,
-                                          FILE *out) {
-  uint8_t t = (uint8_t) tag;
-  fwrite(&t, 1, 1, out);
-}
-
-static void bcode_serialize_string(struct v7 *v7, val_t v, FILE *out) {
-  size_t len;
-  const char *s = v7_get_string(v7, &v, &len);
-
-  bcode_serialize_varint(len, out);
-  fwrite(s, len + 1 /* NUL char */, 1, out);
-}
-
-static void bcode_serialize_lit(struct v7 *v7, val_t v, FILE *out) {
-  int t = val_type(v7, v);
-  switch (t) {
-    case V7_TYPE_NUMBER: {
-      double num = v7_get_double(v7, v);
-      char buf[18];
-      const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
-      size_t len = snprintf(buf, sizeof(buf), fmt, num);
-
-      bcode_serialize_emit_type_tag(BCODE_SER_NUMBER, out);
-      bcode_serialize_varint(len, out);
-      fwrite(buf, len, 1, out);
-      break;
-    }
-    case V7_TYPE_STRING: {
-      bcode_serialize_emit_type_tag(BCODE_SER_STRING, out);
-      bcode_serialize_string(v7, v, out);
-      break;
-    }
-    /* TODO(mkm):
-     * case V7_TYPE_REGEXP_OBJECT:
-     */
-    case V7_TYPE_FUNCTION_OBJECT: {
-      struct v7_js_function *func;
-      func = get_js_function_struct(v);
-      assert(func->bcode != NULL);
-
-      bcode_serialize_emit_type_tag(BCODE_SER_FUNCTION, out);
-      bcode_serialize_func(v7, func->bcode, out);
-      break;
-    }
-    default:
-      fprintf(stderr, "Unhandled type: %d", t);
-      assert(1 == 0);
-  }
-}
-
 static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode,
                                  FILE *out) {
-  val_t *vp;
   struct v7_vec *vec;
   (void) v7;
 
   /*
-   * literals table:
-   * <varint> // number of literals
-   * <bcode_ser_literal>*
+   * All literals should be inlined into `ops`, so we expect literals table
+   * to be empty here
    */
-  vec = &bcode->lit;
-  bcode_serialize_varint(vec->len / sizeof(val_t), out);
-  for (vp = (val_t *) vec->p; (char *) vp < vec->p + vec->len; vp++) {
-    bcode_serialize_lit(v7, *vp, out);
-  }
+  assert(bcode->lit.len == 0);
 
   /* args_cnt */
   bcode_serialize_varint(bcode->args_cnt, out);
@@ -13431,37 +13342,6 @@ static size_t bcode_deserialize_varint(const char **data) {
   return ret;
 }
 
-static const char *bcode_deserialize_lit(struct bcode_builder *bbuilder,
-                                         const char *data) {
-  enum bcode_ser_lit_tag lit_tag;
-
-  (void) bbuilder;
-
-  lit_tag = (enum bcode_ser_lit_tag) * data++;
-
-  switch (lit_tag) {
-    case BCODE_SER_NUMBER:
-    case BCODE_SER_STRING:
-    case BCODE_SER_FUNCTION:
-    case BCODE_SER_REGEX: {
-      /*
-       * All numbers, strings and functions should be inlined into `ops` during
-       * serialization (see `bcode_add_lit()`, `bcode_is_inline_string()`,
-       * `bcode_is_inline_func()`, `bcode_op_lit()`), so we should never
-       * encounter them here
-       */
-      assert(0);
-      break;
-    }
-
-    default:
-      assert(0);
-      break;
-  }
-
-  return data;
-}
-
 static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
                                           const char *data) {
   size_t size;
@@ -13475,12 +13355,10 @@ static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
    */
   bcode->deserialized = 1;
 
-  /* get number of literals */
-  size = bcode_deserialize_varint(&data);
-  /* deserialize all literals */
-  for (; size > 0; --size) {
-    data = bcode_deserialize_lit(&bbuilder, data);
-  }
+  /*
+   * In serialized functions, all literals are inlined into `ops`, so we don't
+   * deserialize them here in any way
+   */
 
   /* get number of args */
   bcode->args_cnt = bcode_deserialize_varint(&data);
