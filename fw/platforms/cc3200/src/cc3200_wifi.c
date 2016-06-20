@@ -177,7 +177,13 @@ int sj_wifi_connect() {
   int ret;
   SlSecParams_t sp;
 
-  if (sl_WlanSetMode(ROLE_STA) != 0) return 0;
+  if (sl_WlanSetMode(ROLE_STA) != ROLE_STA) return 0;
+  /*
+   * In case we're changing from AP to STA we have to stop/start
+   * before doing anything else, otherwise NetCfg below calls will hang.
+   */
+  sl_Stop(0);
+  sl_Start(NULL, NULL, NULL);
 
   if (s_wifi_sta_config.static_ip.ipV4 != 0) {
     ret = sl_NetCfgSet(SL_IPV4_STA_P2P_CL_STATIC_ENABLE,
