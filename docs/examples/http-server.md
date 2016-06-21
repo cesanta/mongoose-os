@@ -1,11 +1,12 @@
 ---
-title: HTTP server example
+title: JS example - HTTP server
 ---
 
 This example shows how to start an HTTP server, serve an HTML form that allows
 to write 0 or 1 to any GPIO pin.
 
-- Store this JavaScript snippet into a file `index.html`
+- Login to the cloud IDE
+- Copy/paste the following code into the file `gpio.html`
 
 ```html
 <html>
@@ -22,7 +23,7 @@ to write 0 or 1 to any GPIO pin.
 </html>
 ```
 
-- Store this JavaScript snippet into a file `http_server_1.js`
+- Copy/paste the following code into the file `app.js`
 
 ```javascript
 var parse = function(query) {
@@ -51,13 +52,9 @@ var server = Http.createServer(function(req, res) {
 
 ```
 
-- Upload files to the device: start FlashNChips, go to File/Upload, choose
-  `http_server_1.js` then `index.html`
-- In the FlashNChips console, type `Wifi.setup('SSID', 'PASSWORD')`. Use SSID
-  and password of your WiFi network.
-- After couple of seconds, type `Wifi.ip()`. Notice the IP address given.
-- InIn the FlashNChips console, type `File.eval('http_server_1.js')`.
-- Start web browser, point to the module's IP address and port 8080, eg:
+- Attach an LED to GPIO 2 and GND pins
+- Build and Flash firmware to the device
+- Start the web browser, point to the device's IP address and port 8080, eg:
   192.168.1.148:8080
 
 <img src="media/http_server_1.png" align="center"/>
@@ -65,15 +62,9 @@ var server = Http.createServer(function(req, res) {
 - Attach LED to GPIO pin 5
 - Choose pin 5 number and value 1, press Set
 - Notice the LED is set
-
-<img src="media/http_server_2.png" align="center"/>
-
 - Notice HTTP server messages in the console log
-
-<img src="media/http_server_3.png" align="center"/>
-
 - Note: if you want to create a server on port 80, you have to make sure the
-  config web server is off (by unchecking the `Enable HTTP Server` config
+  system web server is off (by unchecking the `Enable HTTP Server` config
   setting) or moved to another port.  You can do this from the serial promp
   itself with:
 

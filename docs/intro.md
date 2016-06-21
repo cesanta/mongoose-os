@@ -5,7 +5,7 @@ repo: https://github.com/cesanta/mongoose-iot
 items:
   - { name: overview }
   - { name: quickstart.md }
-  - { name: fw-firmware }
+  - { name: firmware }
   - { name: javascript-api }
   - { name: cloud }
   - { name: services }

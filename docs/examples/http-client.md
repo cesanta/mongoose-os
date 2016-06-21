@@ -1,11 +1,12 @@
 ---
-title: HTTP client example
+title: JS example - HTTP client
 ---
 
 This example shows how to send periodic measurements to some external
 wev server.
 
-- Store this JavaScript snippet into a file `http_client_1.js`
+- Login to the cloud IDE
+- Copy/paste the following code into the `app.js`
 
 ```javascript
 function report() {
@@ -25,8 +26,5 @@ function report() {
 report();
 ```
 
-- Upload file to the device: start FlashNChips, go to File/Upload, choose
-  `http_client_1.js`
-- In the FlashNChips console, connect to WiFi and execute the file
-
-<img src="media/http_client_1.png" align="center"/>
+- Make sure that the device is connected to the Internet
+- Build and Flash firmware to the device

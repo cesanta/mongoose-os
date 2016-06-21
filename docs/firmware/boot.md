@@ -1,5 +1,5 @@
 ---
-title: Firmware startup process
+title: Boot process
 ---
 
 Upon reboot or power on, Mongoose Firmware performs following steps:
@@ -8,12 +8,19 @@ Upon reboot or power on, Mongoose Firmware performs following steps:
 
 2. Filesystem initialization
 
-4. If system configuration has web server enabled (`Sys.conf.http.enable`
+3. If system configuration has WiFi Access Point (AP) enabled
+  (`Sys.conf.wifi.ap.enable`, enabled by default), a WiFi Access Point
+  with the name `Mongoose_??????` is created. Question marks
+  are replaced by the hex numbers from device's MAC address.
+  On that Access Point, firmware runs a web server (covered in the next step)
+  on IP address `192.168.4.1` with a configuration interface.
+
+4. If system configuration has web server enabled  (`Sys.conf.http.enable`
   option, enabled by default), a listening HTTP/Websocket server starts on
   port `Sys.conf.http.listen_addr` (80 by default).
 
   A web server uses `index.html` file on the filesystem to show a
-  configuration UI.
+  configuration UI, and runs on IP address 192.168.4.1
 
   Also, users can programmatically add specific URI handlers to this
   server to implement remote control.

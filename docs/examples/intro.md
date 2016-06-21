@@ -1,7 +1,12 @@
 ---
 title: Examples
 items:
-  - { type: file, name: blink.md }
-  - { type: file, name: http-client.md }
-  - { type: file, name: http-server.md }
+  - { name: blink.md }
+  - { name: http-client.md }
+  - { name: http-server.md }
 ---
+
+Firmware boot process executes `sys_init.js` file, which in turn executes
+`app.js` file. The `app.js` file is empty by default, and it is supposed to
+have custom device logic. Use Firmware JS API (below) section to see what
+API is available to the firmware. Few examples are below.
