@@ -1,10 +1,11 @@
 // Copyright (c) 2015 Cesanta Software Limited
 // All rights reserved
 
-function ClubbyError(message, status) {
+function ClubbyError(message, status, call) {
   this.name = "ClubbyError";
-  this.message = message;
+  this.message = call.method + ': '+ message;
   this.status = status;
+  this.call = call;
   this.stack = (new Error()).stack;
 }
 ClubbyError.prototype = Object.create(Error.prototype);
@@ -236,7 +237,11 @@ Clubby.prototype.call = function(method, args, opts) {
         if (req.status == 0) {
           resolve(req.resp);
         } else {
-          reject(new ClubbyError(req.status_msg, req.status));
+          reject(new ClubbyError(req.status_msg, req.status, {
+            method: method,
+            args: args,
+            opts: opts
+          }));
         }
       };
     });
