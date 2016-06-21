@@ -101,16 +101,20 @@ void updater_set_status(struct update_context *ctx, enum update_status st) {
  */
 static void context_update(struct update_context *ctx, const char *data,
                            size_t len) {
+#ifndef UPDATER_MIN_BLOCK_SIZE
   if (ctx->unprocessed.len != 0) {
-    /* We have unprocessed data, concatenate them with arrived */
+/* We have unprocessed data, concatenate them with arrived */
+#endif
     mbuf_append(&ctx->unprocessed, data, len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
+#ifndef UPDATER_MIN_BLOCK_SIZE
   } else {
     /* No unprocessed, trying to process directly received data */
     ctx->data = data;
     ctx->data_len = len;
   }
+#endif
 
   LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
 }
@@ -300,6 +304,19 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
   if (len != 0) {
     context_update(ctx, data, len);
   }
+
+#ifdef UPDATER_MIN_BLOCK_SIZE
+  LOG(LL_DEBUG,
+      ("ctx::dl=%d fi::fs=%d fi::fr=%d", (int) ctx->data_len,
+       (int) ctx->current_file.fi.size, (int) ctx->current_file.fi.processed));
+
+  if (ctx->data_len < UPDATER_MIN_BLOCK_SIZE &&
+      ctx->current_file.fi.size != 0 &&
+      ctx->current_file.fi.size - ctx->current_file.fi.processed >
+          UPDATER_MIN_BLOCK_SIZE) {
+    return 0;
+  }
+#endif
 
   while (true) {
     switch (ctx->update_status) {
