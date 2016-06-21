@@ -87,14 +87,14 @@ var Clubby = function(arg) {
     log('reconnecting to [' + url + ']');
     var ws = config.ws = new WebSocket(url, 'clubby.cesanta.com', config.eh);
 
-    ws.onclose = function(ev) {
+    ws.onclose = function() {
       log('ws closed');
       // Schedule a reconnect after 1 second
       if (config.onclose) config.onclose();
       setTimeout(reconnect, 1000);
     };
 
-    ws.onopen = function(ev) {
+    ws.onopen = function() {
       log('connected');
       if (config.onopen) config.onopen();
       $.each(config.rdy, function(i, r) { r() });
@@ -141,7 +141,7 @@ var Clubby = function(arg) {
 
     function handleReq(cmd, src) {
       log('handling', cmd);
-      var val, h = config.hnd[cmd.cmd];
+      var h = config.hnd[cmd.cmd];
       var frame = {v: 2, dst: src, src: config.src, key: config.key, id: cmd.id};
 
       var error = function(e) {
