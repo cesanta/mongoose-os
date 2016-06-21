@@ -17,7 +17,7 @@ files, not supposed to be edited:
 - `conf_sys_defaults.json`: System configuration parameters. Can be
   overridden in `conf.json`.
 - `conf_sys_schema.json`: Contains description of the system configuration,
-  used by the Web UI to render configuration page.
+  used by the Web UI to render the configuration page.
 - `conf.json`: This file can be absent. It is created
   when user calls `Sys.conf.save()` function, or by the Web UI when user
   saves configuration. `conf.json` contains only overrides to system

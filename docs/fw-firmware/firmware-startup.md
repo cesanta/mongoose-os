@@ -15,7 +15,7 @@ Upon reboot or power on, Mongoose Firmware performs following steps:
   A web server uses `index.html` file on the filesystem to show a
   configuration UI.
 
-  Also, user can programmatically add specific URI handlers to this
+  Also, users can programmatically add specific URI handlers to this
   server to implement remote control.
 
   Note that the web server uses
@@ -24,15 +24,15 @@ Upon reboot or power on, Mongoose Firmware performs following steps:
   instance to send or receive requests in plain TCP, UDP, HTPP, Websocket,
   MQTT, CoAP protocols.
 
-3. (optional, if JavaSript support is enabled).
+3. (optional, if JavaScript support is enabled).
   Initialization of the global JavaScript instance, `struct v7 *s_v7`.
 
   This instance is passed to the user-specific initialization function,
   in order to provide a way to initialize any custom objects in the
   JavaScript environment.
 
-5. (optional, if JavaSript support is enabled).
-  C code transfers control to the JavaScript by calling `sys_init.js` file.
+5. (optional, if JavaScript support is enabled).
+  C code transfers control to the JavaScript by calling the `sys_init.js` file.
   That file:
    - Loads config files into the `Sys.conf` variable. This is done by
     loading `conf_sys_defaults.json`, then applying `conf_app_defaults.json`
