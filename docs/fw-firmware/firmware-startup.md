@@ -2,18 +2,45 @@
 title: Firmware startup process
 ---
 
-When Mongoose IoT starts, it reads `conf_sys_defaults.json`, merges it with,
-`conf_app_defaults.json`, and subsequently merges with `conf.json`.
-Therefore, in order to override any setting from the default config files,
-put the override into `conf.json` - that's exactly what Web UI is doing when
-user presses Save button.
+Upon reboot or power on, Mongoose Firmware performs following steps:
 
-`conf_app_defaults.json` file is empty by default. Put your application
-specific configuration parameters there, the same way system parameters are
-kept in `conf_sys_defaults.json`.
+1. System specific SDK initialization
 
-When firmware starts, it automatically connects to the cloud, which provides
-services like OTA updates, device registry, time-series database,
-PubSub (publish-subscribe), etc. That could be switched off in a respective
-setting in the configuration file (`clubby.connect_on_boot`),
-programmatically or using the Web UI.
+2. Filesystem initialization
+
+4. If system configuration has web server enabled (`Sys.conf.http.enable`
+  option, enabled by default), a listening HTTP/Websocket server starts on
+  port `Sys.conf.http.listen_addr` (80 by default).
+
+  A web server uses `index.html` file on the filesystem to show a
+  configuration UI.
+
+  Also, user can programmatically add specific URI handlers to this
+  server to implement remote control.
+
+  Note that the web server uses
+  [Mongoose Engine](https://github.com/cesanta/mongoose) as a networking engine.
+  Mongoose supports many protocols. That means, a developer can use system
+  instance to send or receive requests in plain TCP, UDP, HTPP, Websocket,
+  MQTT, CoAP protocols.
+
+3. (optional, if JavaSript support is enabled).
+  Initialization of the global JavaScript instance, `struct v7 *s_v7`.
+
+  This instance is passed to the user-specific initialization function,
+  in order to provide a way to initialize any custom objects in the
+  JavaScript environment.
+
+5. (optional, if JavaSript support is enabled).
+  C code transfers control to the JavaScript by calling `sys_init.js` file.
+  That file:
+   - Loads config files into the `Sys.conf` variable. This is done by
+    loading `conf_sys_defaults.json`, then applying `conf_app_defaults.json`
+    on top of it, then applying `conf.json` on top of it.
+   - Initializes connection to cloud if required
+    (`Sys.conf.clubby.connect_on_boot` option). That allows talking
+      to devices from anywhere, as cloud relays messages to the connected
+      devices.
+   - Calls user-specific `app.js` file, which contains custom logic.
+
+6. Systems executes infinite event loop.

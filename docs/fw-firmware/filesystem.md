@@ -7,28 +7,28 @@ SPIFFS is a flat filesystem, i.e. it has no directories. To provide the same
 look at feel on all platforms, Mongoose IoT uses flat filesystem on all
 architectures.
 
-Below there is a quick description of the files and their meaning.  System
+Below there is a description of the files and their meaning.  System
 files, not supposed to be edited:
 
-- `sys_init.js`: Main system initialization file. This file is the only file
-  called by the C firmware code.
-- `conf_sys_defaults.json`: System configuration.
+- `sys_init.js`: This file is called by the C code
+  on firmware startup.
+  In turn, this file calls `app.js` file which
+  contains user-defined code.
+- `conf_sys_defaults.json`: System configuration parameters. Can be
+  overridden in `conf.json`.
 - `conf_sys_schema.json`: Contains description of the system configuration,
-  used by the Web UI to render controls.
-- `conf.json`: This file can be absent. It is created by the Web UI when user
-  saves configuration, and contains only overrides to system and app config
-  files.  NOTE: this file is preserved during OTA (Over-The-Air firmware
-  update).
+  used by the Web UI to render configuration page.
+- `conf.json`: This file can be absent. It is created
+  when user calls `Sys.conf.save()` function, or by the Web UI when user
+  saves configuration. `conf.json` contains only overrides to system
+  and app config files.
 - `index.html`: Configuration Web UI file.
 - `sys_*.js`: Various drivers.
-- `imp_*`: Files with `imp_` prefix are preserved during OTA update. Thus, if
-  you'd like some data to survive firmware update, place that data into a file
-  with prefix `imp_`.
 
 Files that are meant to be edited by developers:
 
-- `app.js`: Application-specific file. This file is called by `sys_init.js`.
-  User code must go here.
+- `app.js`: Application-specific initialization file.
+  This file is called by `sys_init.js`. User code must go here.
 - `conf_app_defaults.json`: Application-specific configuration file. Initially
   empty.  If application wants to show it's own config parameters on the
   configuration Web UI, those parameters should go in this file.
