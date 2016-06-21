@@ -20,6 +20,7 @@
 
 #define SHA1SUM_LEN 40
 #define FW_SLOT_SIZE 0x100000
+#define UPDATER_MIN_BLOCK_SIZE 2048
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -265,6 +266,10 @@ int sj_upd_file_data(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi,
                      struct mg_str data) {
   LOG(LL_DEBUG, ("File size: %u, received: %u to_write: %u", fi->size,
                  fi->processed, data.len));
+  if (data.len < UPDATER_MIN_BLOCK_SIZE &&
+      fi->size - fi->processed > UPDATER_MIN_BLOCK_SIZE) {
+    return 0;
+  }
 
   if (prepare_flash(ctx, data.len) < 0) {
     ctx->status_msg = "Failed to erase flash";

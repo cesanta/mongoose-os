@@ -101,20 +101,16 @@ void updater_set_status(struct update_context *ctx, enum update_status st) {
  */
 static void context_update(struct update_context *ctx, const char *data,
                            size_t len) {
-#ifndef UPDATER_MIN_BLOCK_SIZE
   if (ctx->unprocessed.len != 0) {
-/* We have unprocessed data, concatenate them with arrived */
-#endif
+    /* We have unprocessed data, concatenate them with arrived */
     mbuf_append(&ctx->unprocessed, data, len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
-#ifndef UPDATER_MIN_BLOCK_SIZE
   } else {
     /* No unprocessed, trying to process directly received data */
     ctx->data = data;
     ctx->data_len = len;
   }
-#endif
 
   LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
 }
@@ -305,19 +301,6 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
     context_update(ctx, data, len);
   }
 
-#ifdef UPDATER_MIN_BLOCK_SIZE
-  LOG(LL_DEBUG,
-      ("ctx::dl=%d fi::fs=%d fi::fr=%d", (int) ctx->data_len,
-       (int) ctx->current_file.fi.size, (int) ctx->current_file.fi.processed));
-
-  if (ctx->data_len < UPDATER_MIN_BLOCK_SIZE &&
-      ctx->current_file.fi.size != 0 &&
-      ctx->current_file.fi.size - ctx->current_file.fi.processed >
-          UPDATER_MIN_BLOCK_SIZE) {
-    return 0;
-  }
-#endif
-
   while (true) {
     switch (ctx->update_status) {
       case US_INITED: {
@@ -422,20 +405,18 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
 
         int num_processed =
             sj_upd_file_data(ctx->dev_ctx, &ctx->current_file.fi, to_process);
-        if (num_processed <= 0) {
-          if (num_processed < 0) {
-            ctx->status_msg = sj_upd_get_status_msg(ctx->dev_ctx);
-            LOG(LL_ERROR, ("%s", ctx->status_msg));
-          }
-          return ret;
+        if (num_processed < 0) {
+          ctx->status_msg = sj_upd_get_status_msg(ctx->dev_ctx);
+          return num_processed;
+        } else if (num_processed > 0) {
+          ctx->current_file.crc_current = mz_crc32(
+              ctx->current_file.crc_current, to_process.p, num_processed);
+          context_remove_data(ctx, num_processed);
+          ctx->current_file.fi.processed += num_processed;
         }
-
-        ctx->current_file.crc_current = mz_crc32(ctx->current_file.crc_current,
-                                                 to_process.p, num_processed);
-        context_remove_data(ctx, num_processed);
-        ctx->current_file.fi.processed += num_processed;
-        LOG(LL_DEBUG, ("Processed %d, up to %u", num_processed,
-                       ctx->current_file.fi.processed));
+        LOG(LL_DEBUG,
+            ("Processed %d, up to %u, %u left in the buffer", num_processed,
+             ctx->current_file.fi.processed, ctx->data_len));
 
         if (ctx->current_file.fi.processed < ctx->current_file.fi.size) {
           context_save_unprocessed(ctx);
