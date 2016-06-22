@@ -2,46 +2,30 @@
 title: Quick Start Guide
 ---
 
--  Download flashing utility from https://github.com/cesanta/fnc/releases
--  Download the latest version of Mongoose IoT firmware from
-   https://github.com/cesanta/mongoose-iot/releases
--  Connect the board to your computer via the USB or serial interface
--  Start Flashnchips
--  Press `Browse`, select downloaded firmware .zip file
--  If you are using a USB connector, and "Select port" dropdown is disabled,
-   then USB-to-serial driver needs to be installed:
-   * FTDI drivers are at
-   [FTDI website](http://www.ftdichip.com/Drivers/VCP.htm)
-   * Drivers for NodeMCU v1 board is at
-   [Silabs CP2102 page](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx).
--  Restart Flashnchips after driver installation. "Select port" dropdown must
-   automatically pick up a serial port to where your board is connected.
--  Press "Flash Firmware" button. That will burn Mongoose IoT firmware on
-   the flash memory.
--  When burning is complete, Mongoose IoT automatically connects a console
-   to the device, prints device configuration, boot messages,
-   and shows an interactive JavaScript prompt. Notice the unique
-   "device_id" in the configuration - it will be needed to talk to the cloud.
-   Mongoose IoT
-   ![](media/fc2.png)
--  Two numbers shown by prompt
-   are available free memory, and memory taken by Mongoose IoT
--  Type some JavaScript expression to the console and press enter.
-   Mongoose IoT evaluates the expression and prints evaluation result:
-   [<img src="media/fc3.png" width="75%" />](media/fc3.png)
--  Configure Wifi. This is not needed on POSIX platforms like RPI, where
-   networking is already configured. Note that Mongoose IoT provides flexible
-   configuration infrastructure, described in the next section. Here,
-   we use quick ad-hoc way to configure.
--  Enter `Wifi.setup('WifiNetworkName', 'WifiPassword')` to the console
--  Using your mouse, copy the value of device ID printed earlier
--  Enter `demoSendRandomData()` to start sending random numbers
-   to `cloud.cesanta.com` every second, simulating real sensor data.
-   `cloud.cesanta.com` however will reject that data, because it doesn't
-   accept data from unregistered devices
--  Register the device on the cloud: login to
-   https://cloud.cesanta.com/#/devices
--  Click on "Devices" tab, copy/paste device ID. Leave PSK field blank.
-   Press "Add Device" button.
--  Switch to the "Dashboard" tab, and see real-time graph updated:
-   ![](media/dash1.png)
+- Login to the [Mongoose IoT Cloud](https://mongoose-iot.com)
+- Navigate to Smart Light example project
+- Read the summary page
+- Find and install Mongoose Mobile app on Google Play. This app will
+  demonstrate how to control remote device via the Mongoose Mobile app
+- Click on the "clone project" stripe at the top right. This clones this
+  example project into your own private copy which you can modify
+- Navigate to DEVICES tab
+- If you don't have a real device,
+    - Click on "Add Device" button.
+    - Select virtual device and click Add
+- If you do have a real device,
+    - Download flashing tool from https://github.com/cesanta/mft/releases
+    - Follow Mongoose Flashing tool wizard to flash Mongoose firmware
+      to your device and connect it to Mongoose Cloud
+    - Connect an LED to GND and GPIO5 pins
+    - FTDI USB drivers are at
+    [FTDI website](http://www.ftdichip.com/Drivers/VCP.htm)
+    - Drivers for NodeMCU v1 board is at
+      [Silabs CP2102 page](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)
+- New device should appear in the device list. Copy it's ID to the clipboard
+- Navigate to the IDE tab
+- Click on `mobile_app/config.yaml` to edit mobile configuration - substitute
+  DEVICE_ID with the device ID from the clipboard
+- If you're using real device, click on Flash button to build and flash
+  Smart Light firmware to your device
+- Open Mongoose Mobile app. Use the UI to switch LED on/off.
