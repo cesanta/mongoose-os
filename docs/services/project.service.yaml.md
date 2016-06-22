@@ -184,6 +184,8 @@ Response:
 #### List
 Returns a list of projects the caller has access to.
 
+Arguments:
+- `filter`: 
 
 Result `array`: 
 Request:
@@ -193,7 +195,9 @@ Request:
   "src": "device_123",
   "id": 123,
   "method": "/v1/Project.List",
-  "args": {}
+  "args": {
+    "filter": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
