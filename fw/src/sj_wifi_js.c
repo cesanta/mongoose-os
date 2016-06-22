@@ -16,6 +16,8 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
+static sj_wifi_changed_t s_fn;
+
 #ifndef CS_DISABLE_JS
 
 static v7_val_t s_wifi_private;
@@ -180,25 +182,6 @@ clean:
   return V7_OK;
 }
 
-void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event) {
-  switch (event) {
-    case SJ_WIFI_DISCONNECTED:
-      LOG(LL_INFO, ("Wifi: disconnected"));
-      break;
-    case SJ_WIFI_CONNECTED:
-      LOG(LL_INFO, ("Wifi: connected"));
-      break;
-    case SJ_WIFI_IP_ACQUIRED:
-      LOG(LL_INFO, ("WiFi: ready, IP %s", sj_wifi_get_sta_ip()));
-      call_wifi_ready_cbs(v7);
-      break;
-  }
-
-  v7_val_t cb = v7_get(v7, s_wifi_private, "_ccb", ~0);
-  if (v7_is_undefined(cb) || v7_is_null(cb)) return;
-  sj_invoke_cb1(v7, cb, v7_mk_number(v7, event));
-}
-
 SJ_PRIVATE enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
@@ -296,6 +279,39 @@ void sj_wifi_api_setup(struct v7 *v7) {
   v7_disown(v7, &s_wifi);
 }
 #endif /* CS_DISABLE_JS */
+
+void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event) {
+  switch (event) {
+    case SJ_WIFI_DISCONNECTED:
+      LOG(LL_INFO, ("Wifi: disconnected"));
+      break;
+    case SJ_WIFI_CONNECTED:
+      LOG(LL_INFO, ("Wifi: connected"));
+      break;
+    case SJ_WIFI_IP_ACQUIRED:
+      LOG(LL_INFO, ("WiFi: ready, IP %s", sj_wifi_get_sta_ip()));
+#ifndef CS_DISABLE_JS
+      call_wifi_ready_cbs(v7);
+#endif
+      break;
+  }
+
+#ifndef CS_DISABLE_JS
+  v7_val_t cb = v7_get(v7, s_wifi_private, "_ccb", ~0);
+  if (v7_is_undefined(cb) || v7_is_null(cb)) return;
+  sj_invoke_cb1(v7, cb, v7_mk_number(v7, event));
+#else
+  (void) v7;
+#endif
+
+  if (s_fn != NULL) {
+    s_fn(event);
+  }
+}
+
+void sj_wifi_set_on_change_cb(sj_wifi_changed_t fn) {
+  s_fn = fn;
+}
 
 void sj_wifi_init(struct v7 *v7) {
 #ifndef CS_DISABLE_JS

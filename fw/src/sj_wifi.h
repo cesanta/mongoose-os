@@ -39,4 +39,7 @@ enum sj_wifi_status sj_wifi_get_status();
 
 void sj_wifi_hal_init(struct v7 *v7);
 
+typedef void (*sj_wifi_changed_t)(enum sj_wifi_status status);
+void sj_wifi_set_on_change_cb(sj_wifi_changed_t fn);
+
 #endif /* CS_FW_SRC_SJ_WIFI_H_ */

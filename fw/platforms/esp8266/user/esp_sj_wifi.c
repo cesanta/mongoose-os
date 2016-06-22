@@ -193,8 +193,8 @@ char *sj_wifi_get_status_str(void) {
   return NULL;
 }
 
-#ifndef CS_DISABLE_JS
 void wifi_changed_cb(System_Event_t *evt) {
+#ifndef CS_DISABLE_JS
   /* TODO(rojer): Share this logic between platforms. */
   if (wifi_setting_up && evt->event == EVENT_STAMODE_GOT_IP) {
     struct station_config config;
@@ -234,6 +234,7 @@ void wifi_changed_cb(System_Event_t *evt) {
     }
     wifi_setting_up = 0;
   }
+#endif
 
   int sj_ev = -1;
   switch (evt->event) {
@@ -250,7 +251,6 @@ void wifi_changed_cb(System_Event_t *evt) {
 
   if (sj_ev >= 0) sj_wifi_on_change_callback(v7, sj_ev);
 }
-#endif
 
 char *sj_wifi_get_connected_ssid(void) {
   struct station_config conf;
@@ -319,7 +319,5 @@ void sj_wifi_hal_init(struct v7 *v7) {
 
   /* avoid entering AP mode on boot */
   wifi_set_opmode_current(0x1);
-#ifndef CS_DISABLE_JS
   wifi_set_event_handler_cb(wifi_changed_cb);
-#endif
 }
