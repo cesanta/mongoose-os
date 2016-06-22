@@ -288,12 +288,15 @@ void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event) {
     case SJ_WIFI_CONNECTED:
       LOG(LL_INFO, ("Wifi: connected"));
       break;
-    case SJ_WIFI_IP_ACQUIRED:
-      LOG(LL_INFO, ("WiFi: ready, IP %s", sj_wifi_get_sta_ip()));
+    case SJ_WIFI_IP_ACQUIRED: {
+      char *ip = sj_wifi_get_sta_ip();
+      LOG(LL_INFO, ("WiFi: ready, IP %s", ip));
+      free(ip);
 #ifndef CS_DISABLE_JS
       call_wifi_ready_cbs(v7);
 #endif
       break;
+    }
   }
 
 #ifndef CS_DISABLE_JS
