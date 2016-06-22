@@ -50,6 +50,15 @@ int asprintf(char **strp, const char *fmt, ...) {
 
   return len;
 }
+
+#if MG_TI_NO_HOST_INTERFACE
+time_t HOSTtime() {
+  struct timeval tp;
+  gettimeofday(&tp, NULL);
+  return tp.tv_sec;
+}
+#endif
+
 #endif /* __TI_COMPILER_VERSION__ */
 
 #ifndef __TI_COMPILER_VERSION__

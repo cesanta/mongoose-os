@@ -26,6 +26,8 @@
 #include "fw/src/sj_v7_ext.h"
 #include "v7/v7.h"
 
+#include "common/umm_malloc/umm_malloc.h"
+
 extern OsiMsgQ_t s_v7_q;
 
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
@@ -45,11 +47,11 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 
 #ifdef __TI_COMPILER_VERSION__
 size_t sj_get_heap_size() {
-  return 0; /* TODO(rojer) */
+  return UMM_MALLOC_CFG__HEAP_SIZE;
 }
 
 size_t sj_get_free_heap_size() {
-  return 0; /* TODO(rojer) */
+  return umm_free_heap_size();
 }
 
 #else

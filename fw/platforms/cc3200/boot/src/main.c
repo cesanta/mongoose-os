@@ -57,6 +57,12 @@ void uart_puts(const char *s) {
   }
 }
 
+static void print_addr(uint32_t addr) {
+  char buf[10];
+  __utoa(addr, buf, 16);
+  uart_puts(buf);
+}
+
 int load_image(const char *fn, _u8 *dst) {
   _i32 fh;
   SlFsFileInfo_t fi;
@@ -121,11 +127,7 @@ int main() {
 
   uart_puts(cfg.app_image_file);
   MAP_UARTCharPut(CONSOLE_UART, '@');
-  {
-    char buf[20];
-    __utoa(cfg.app_load_addr, buf, 16);
-    uart_puts(buf);
-  }
+  print_addr(cfg.app_load_addr);
 
   if (load_image(cfg.app_image_file, (_u8 *) cfg.app_load_addr) != 0) {
     abort();
@@ -134,7 +136,7 @@ int main() {
   MAP_UARTCharPut(CONSOLE_UART, '.');
 
   sl_Stop(0);
-
+  print_addr(*(((uint32_t *) cfg.app_load_addr) + 1));
   crlflf();
 
   MAP_IntMasterDisable();

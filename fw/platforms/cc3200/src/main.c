@@ -209,13 +209,13 @@ static void main_task(void *arg) {
 
   sj_updater_post_init(v7);
 
-  LOG(LL_INFO, ("Sys init done, RAM: %d free", sj_get_free_heap_size()));
+  LOG(LL_INFO, ("%s init done, RAM: %d free", "Sys", sj_get_free_heap_size()));
 
   if (!sj_app_init(v7)) {
     LOG(LL_ERROR, ("App init failed"));
     abort();
   }
-  LOG(LL_INFO, ("App init done"));
+  LOG(LL_INFO, ("%s init done, RAM: %d free", "App", sj_get_free_heap_size()));
 
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
@@ -276,11 +276,20 @@ void device_reboot(void) {
   sj_system_restart(0);
 }
 
+#ifdef __TI_COMPILER_VERSION__
+__attribute__((section(".heap_start"))) uint32_t _heap_start;
+__attribute__((section(".heap_end"))) uint32_t _heap_end;
+#endif
+
 int main() {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
+
+#ifdef __TI_COMPILER_VERSION__
+  memset(&_heap_start, 0, (char *) &_heap_end - (char *) &_heap_start);
+#endif
 
   /* Console UART init. */
   MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);

@@ -21,9 +21,9 @@ $(BUILD_DIR)/%.o: %.asm
 $(APP_ELF):
 	$(vecho) "TILD  $@"
 	$(Q) $(CC) -mv7M4 --code_state=16 --float_support=vfplib --abi=eabi --little_endian \
-	  --run_linker --map_file=$(BUILD_DIR)/$(APP).map --heap_size=0xB000 --stack_size=0x100 \
+	  --run_linker --map_file=$(BUILD_DIR)/$(APP).map \
 	  -i $(TOOLCHAIN)/lib \
-	  --reread_libs --warn_sections --display_error_number --rom_model \
+	  --reread_libs --warn_sections --display_error_number \
+	  --ram_model --cinit_compression=off --copy_compression=off \
 	  --unused_section_elimination=on \
-	  -o $@ $(filter %.o %.a, $^) $(APP_LD_SCRIPT) -l libc.a
-
+	  -o $@ $(filter %.o %.a, $^) $(APP_LDFLAGS)

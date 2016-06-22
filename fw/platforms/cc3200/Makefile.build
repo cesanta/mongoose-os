@@ -11,7 +11,7 @@ APP_PLATFORM = cc3200
 APP_MODULES ?=
 APP_CFLAGS ?=
 APP_FS_PATH ?= $(MGIOT_CC3200_PATH)/fs
-TOOLCHAIN ?= gcc
+TOOLCHAIN ?= /opt/ti-cgt-arm_5.2.7
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
 BOOT_LOADER_SIZE = 0x4000
@@ -69,7 +69,8 @@ JSBIN_EXT := js
 JS_EXT := js
 
 APP_MODULES += $(MGIOT_CC3200_PATH)/src
-VPATH = $(APP_MODULES) $(MGIOT_CC3200_PATH)/tools \
+VPATH = $(APP_MODULES) \
+        $(MGIOT_CC3200_PATH)/tools \
         $(BOOT_PATH)/lib $(BUILD_DIR)
 IPATH = $(APP_MODULES) $(BOOT_PATH)/lib $(BUILD_DIR) $(REPO_PATH)
 
@@ -125,6 +126,10 @@ SJ_SRCS = sj_gpio_js.c \
           miniz.c sj_updater_common.c sj_updater_post.c boot.c \
           v7.c sj_utils.c
 VPATH += $(MGIOT_PATH)/src $(V7_PATH) $(COMMON_PATH)
+ifneq "$(TOOLCHAIN)" "gcc"
+SJ_SRCS += umm_malloc.c
+VPATH += $(COMMON_PATH)/umm_malloc
+endif
 
 SPIFFS_SRCS = $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 IPATH += $(SPIFFS_PATH)
@@ -210,17 +215,26 @@ SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 OBJCOPY = arm-none-eabi-objcopy
 
 ifeq "$(TOOLCHAIN)" "gcc"
+
 APP_LDFLAGS ?= --defsym=ORG=$(APP_ORG) --defsym=RAM_SIZE=$(RAM_SIZE) \
                -T $(COMMON_CC3200_PATH)/cc3200.ld --entry=ResetISR
 include $(COMMON_CC3200_PATH)/gcc.mk
+
 else
-APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200v1p32.cmd
+
+APP_LD_SCRIPT ?= $(MGIOT_CC3200_PATH)/src/cc3200_mgiot.cmd
+APP_LDFLAGS ?= $(APP_LD_SCRIPT) --heap_size=0 --stack_size=0x100 \
+               --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 include $(COMMON_CC3200_PATH)/ti.mk
+$(APP_ELF): $(APP_LD_SCRIPT)
 # Selectively inhibit warnings in external code.
 $(BUILD_DIR)/spiffs_gc.o: CFLAGS += --diag_suppress=1944
 $(BUILD_DIR)/spiffs_hydrogen.o: CFLAGS += --diag_suppress=770,1944
 $(BUILD_DIR)/port.o: CFLAGS += --diag_suppress=193,225
 $(BUILD_DIR)/tasks.o: CFLAGS += --diag_suppress=225
+
+MGIOT_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
+
 endif
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
