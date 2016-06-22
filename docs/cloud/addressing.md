@@ -2,27 +2,34 @@
 title: Clubby addresses
 ---
 
-Address is a subset of URL. Only the host and URI parts are used, the rest
-(scheme, user, query and fragment) must be empty.  From the protocol point of
-view addresses are composed of 2 pieces: ID and component. They are separated
-by "." in the URI part of the address.  Only one component is allowed (i.e. no
-more than one dot in the URI part of the address). ID part is used for
-authentication and full address is used for routing. This done like that so
-there can be multiple processes sharing the same credentials and representing
-different aspects of the same entity in the cloud, and at the same time
-commands and responses can be routed easily between them.
+In essence, Clubby is a very generic RPC protocol. It allows any two parties
+with unique IDs to communicate. Thus, any device can talk to any
+other device, or to any other entity (e.g. a cloud backend service).
 
-Addresses are entirely opaque to the routing logic, structure is imposed only
-for convenience of authentication and to allow infering address for the
-underlying transport if not given explicitly.
+When Clubby frame is constructed, `src` and `dst` fields specify source
+and destination address, respectively. An address is an ID with
+optional `.component` suffix. Component is sometimes needed to differentiate
+separate communicating entities with the same ID - for example, image a user
+logs in to Mongoose Cloud from two different machines. Her ID is a user ID,
+but two browsers need separate addresses when talking to the cloud. Different
+components are appended to the authenticated user ID to achieve that.
 
-In terms of RFC 3986:
+Architecturally, a central component of Mongoose IoT Cloud is a Dispatcher
+service. Dispatcher listens on HTTPS and WSS ports for clubby frames,
+looks inside each frame for the source and destination address,
+asks Registry service to authenticate the request, and routes Clubby frames
+to the correct destination.
 
-```
-address = ID ["." component]
-ID = "//" host "/" path-rootless
-```
+When Mongoose Firmware boots, it creates a persistent secure Websocket
+connection with the Dispatcher, making Dispatcher insert devices's ID
+into the routing table. From that point on, any authenticated entity
+can send commands to that device by connecting to the cloud (Dispatcher) and
+crafting a Clubby request with device's ID as a destination address.
 
-One exception: last path segment cannot contain "." (unless it's
-percent-encoded). Also note that it can be partially percent-encoded and the
-implementation must decode it before comparing with another address.
+When a cloud backend service starts, it does the same - creates a persistent
+connection with the Dispatcher, letting Dispatcher know its ID. A cloud
+backend service also let Dispatcher know about methods it implements.
+This makes it possible to omit destination address in the Clubby request.
+If destination address is not present, then it is assumed to be one of the
+cloud backend services. Dispatcher will figure out the destination address
+by the method name.

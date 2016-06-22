@@ -2,19 +2,24 @@
 title: Clubby frame format
 ---
 
-The communication with Mongoose IoT Cloud can be carried
-by multiple protocols: raw TCP, HTTP, WebSocket, MQTT,
-and so on.
-
-Regardless of what transport protocol is used, data is
-transferred as sequence of requests and responses.
-Requests and responses are
+Mongoose IoT provides framing format called Clubby that makes
+IoT communication simple and secure. Clubby is very similar to JSON-RPC.
+It defines a format for requests and responses. Requests and responses are
 encoded as human-readable [JSON](http://www.json.org/)
-or size-efficient
-[Universal Binary JSON](http://ubjson.org/) frames.
-We call this framing protocol **Clubby**.
+or size-efficient [Universal Binary JSON](http://ubjson.org/) frames.
 
-Here is an example of JSON-ecoded Clubby request/response sequence:
+Clubby frames can be carried by any transport protocol, like raw TCP, UDP,
+HTTP, Websocket, MQTT, and so on. At this moment, Mongoose Cloud listens
+on HTTPS and secure Websocket (WSS) ports.
+
+Every Clubby frame has source, destination, and frame ID. Frame ID is used
+to match requests with responses, as responses may arrive out-of-order.
+All Clubby requests have `method` field which tells which method is called,
+together with `args` field that specifies method's arguments. All Clubby
+responses have `result` field, and `error` field in case if method call
+failed.
+
+Here is an example of JSON-ecoded Clubby request:
 
 ```json
 {
@@ -26,8 +31,9 @@ Here is an example of JSON-ecoded Clubby request/response sequence:
     "value": 36.6
   }
 }
-
 ```
+
+A corresponding response:
 
 ```json
 {
@@ -57,7 +63,7 @@ Requests-specific fields:
   Type and format are method-dependent.
 <br>Optional timeout can be specified in two ways:
 - `deadline`: as an absolute UNIX timestamp, a positive integer, OR
-- `timeout`: as a number of seconds, an positive integer
+- `timeout`: as a number of seconds, a positive integer
 
 Response-specific fields:
 - `result`: optional JSON object, a result of the method invocation.

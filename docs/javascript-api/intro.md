@@ -1,5 +1,5 @@
 ---
-title: "Firmware API"
+title: "Firmware JS API"
 items:
   - { type: file, name: string.md }
   - { type: file, name: file.md }

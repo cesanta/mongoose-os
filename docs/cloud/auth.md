@@ -1,12 +1,60 @@
 ---
-title: Clubby authentication
+title: Overview
 ---
 
-First of all, we'll need to ensure we have the credentials to log into the
-cloud.
+Mongoose IoT is organized in a following way:
 
-TODO: explain authentication flow
+- Accounts
+   - Users. Indivual users can be authenti
+   - Organizations. A way to group Users.
+- Devices
+- Projects
+   - Source code
+   - Repository
+   - Per user-working copy (for the IDE)
+   - Built firmware
+   - Deployed and preview webapps mounted on hostnames
+   - All devices that are running fw built from this project
 
-As a quick and dirty way to obtain id and psk, we can register the device at
-[https://cloud.cesanta.com/](https://cloud.cesanta.com/). Obviously, the
-application then will act on behalf of this device.
+When the user accesses Mongoose Cloud for the first time, we create a user
+account for her. This account identifies her and her only. A user can also
+create organizations. User and organizations are accounts.
+
+A device can be owned by only one account at a given time.
+The ownership of a device can be transferred from one account to another.
+
+A user can create a project. A project belongs to an account and one account
+only. It can thus belong to either a user or to an organization.
+
+Each project logically contains a code repository that hosts the sources
+for the various apps, such as device firmware(s), webapp(s), mobile app(s).
+That repository contains all the code necessary to build a project.
+
+Mongoose Cloud offers an IDE that allows the user to work on code stored
+in the repository. The IDE provides each user with a working copy of a
+repository.
+
+The code repository and thus the working copy, contain a bunch of files and
+directories. The IDE editor edits code in a working copy.
+The IDE will provide a way push the changes back into the repository.
+
+Webapp preview is served live from the working copy used by the IDE.
+The frontend serves deployed webapps also from a working copy.
+
+Firmware is built from code living in a working copy.
+
+A built firmware metadata mentions the project ID. Devices running that FW
+will report it to the cloud. The UI can thus show all devices that implement
+that project.
+
+Authorization is performed at the level of accounts (users or organizations).
+A device can switch projects merely by being reflashed with a FW belonging to
+another project.
+
+Projects can be published and appear in a app stores.
+Other users can fork those projects, like they are used to do on GitHub.
+
+When a new device is onboarded to the cloud via
+[Mongoose Flashing tool](https://github.com/cesanta/mft), it is assigned
+ID and password (also called a Pre-Shared Key, PSK). Device's ID is
+globally unique.
