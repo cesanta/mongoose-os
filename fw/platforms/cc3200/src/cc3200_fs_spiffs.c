@@ -75,7 +75,12 @@ int fs_spiffs_close(int fd) {
 ssize_t fs_spiffs_read(int fd, void *buf, size_t count) {
   struct mount_info *m = &s_fsm;
   if (!m->valid) return set_errno(EBADF);
-  return set_spiffs_errno(m, SPIFFS_read(&m->fs, fd, buf, count));
+  int n = SPIFFS_read(&m->fs, fd, buf, count);
+  if (n < 0 && SPIFFS_errno(&m->fs) == SPIFFS_ERR_END_OF_OBJECT) {
+    /* EOF */
+    return 0;
+  }
+  return set_spiffs_errno(m, n);
 }
 
 ssize_t fs_spiffs_write(int fd, const void *buf, size_t count) {
