@@ -106,26 +106,22 @@ static struct mg_str get_part_checksum(struct json_token *part) {
 }
 
 typedef int (*read_file_cb_t)(_u8 *data, int len, void *arg);
-static int read_file(const char *fn, read_file_cb_t cb, void *arg) {
+static int read_file(const char *fn, int offset, int len, read_file_cb_t cb,
+                     void *arg) {
   _i32 fh;
-  SlFsFileInfo_t fi;
-  _i32 r = sl_FsGetInfo((const _u8 *) fn, 0, &fi);
+  int r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
   if (r < 0) return r;
-  DBG(("%s %u %u", fn, fi.FileLen, fi.AllocatedLen));
-  r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
-  if (r < 0) return r;
-  _u32 offset = 0;
-  while (fi.FileLen > 0) {
+  while (len > 0) {
     _u8 buf[512];
-    _u32 to_read = MIN(fi.FileLen, sizeof(buf));
+    int to_read = MIN(len, sizeof(buf));
     r = sl_FsRead(fh, offset, buf, to_read);
     if (r != to_read) break;
     if (cb(buf, to_read, arg) != to_read) break;
     offset += to_read;
-    fi.FileLen -= to_read;
+    len -= to_read;
   }
   sl_FsClose(fh, NULL, NULL, 0);
-  return (fi.FileLen == 0 ? 0 : -1);
+  return (len == 0 ? 0 : -1);
 }
 
 static int sha1_update_cb(_u8 *data, int len, void *arg) {
@@ -135,23 +131,23 @@ static int sha1_update_cb(_u8 *data, int len, void *arg) {
 
 void bin2hex(const uint8_t *src, int src_len, char *dst);
 
-int verify_checksum(const char *fn, struct mg_str expected) {
+int verify_checksum(const char *fn, int fs, struct mg_str expected) {
   int r;
 
   if (expected.len != 40) return -1;
 
   cs_sha1_ctx ctx;
   cs_sha1_init(&ctx);
-  if ((r = read_file(fn, sha1_update_cb, &ctx)) < 0) return r;
+  if ((r = read_file(fn, 0, fs, sha1_update_cb, &ctx)) < 0) return r;
   _u8 digest[20];
   cs_sha1_final(digest, &ctx);
 
-  char digest_str[40];
+  char digest_str[41];
   bin2hex(digest, 20, digest_str);
 
   DBG(("%s: have %.*s, want %.*s", fn, 40, digest_str, 40, expected.p));
 
-  return (strncasecmp(expected.p, digest_str, 40) == 0 ? 1 : -1);
+  return (strncasecmp(expected.p, digest_str, 40) == 0 ? 1 : 0);
 }
 
 /* Create file name by appending ".$idx" to prefix. */
@@ -168,7 +164,7 @@ static int prepare_to_write(struct sj_upd_ctx *ctx,
                             const char *fname, uint32_t falloc,
                             struct json_token *part) {
   struct mg_str expected_sha1 = get_part_checksum(part);
-  if (verify_checksum(fname, expected_sha1) > 0) {
+  if (verify_checksum(fname, fi->size, expected_sha1) > 0) {
     LOG(LL_INFO, ("Digest matched for %s %u (%.*s)", fname, fi->size,
                   (int) expected_sha1.len, expected_sha1.p));
     return 0;
@@ -298,8 +294,14 @@ int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
   }
   if (sl_FsClose(ctx->cur_fh, NULL, NULL, 0) != 0) {
     ctx->status_msg = "Close failed";
-    ctx->cur_fh = -1;
     r = -1;
+  } else {
+    r = verify_checksum((const char *) ctx->cur_fn, fi->size,
+                        get_part_checksum(ctx->cur_part));
+    if (r <= 0) {
+      ctx->status_msg = "Checksum mismatch";
+      r = -1;
+    }
   }
   ctx->cur_fh = -1;
   ctx->cur_fn = NULL;
