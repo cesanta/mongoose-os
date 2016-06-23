@@ -15,12 +15,12 @@ make PLATFORM=cc3200
 
 Firmware files will be stored in the `firmware` directory.
 
-To flash the firmware you can use [Flash 'n Chips](https://github.com/cesanta/fnc):
+To flash the firmware you can use [Mongoose Flashing Tool](https://github.com/cesanta/mft):
 
 ```
-  FNC --platform=esp8266 --port=/dev/ttyUSB0 --flash-baud-rate=1500000 --flash firmware/*-last.zip --console
+  MFT --platform=esp8266 --port=/dev/ttyUSB0 --flash-baud-rate=1500000 --flash firmware/*-last.zip --console
 ```
 or
 ```
-  FNC --platform=cc3200 --port=/dev/ttyUSB1 --flash firmware/*-last.zip --console
+  MFT --platform=cc3200 --port=/dev/ttyUSB1 --flash firmware/*-last.zip --console
 ```

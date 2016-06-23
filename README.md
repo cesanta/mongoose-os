@@ -1,7 +1,7 @@
 # Mongoose IoT Platform
 
 - [Mongoose IoT Overview](https://docs.cesanta.com/mongoose-iot/)
-- [Mongoose Flashing Tool download](https://github.com/cesanta/fnc/releases/latest)
+- [Mongoose Flashing Tool download](https://github.com/cesanta/mft/releases/latest)
 
 # Support
 - [Support Forum - Ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
