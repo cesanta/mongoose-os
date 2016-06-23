@@ -113,6 +113,7 @@ Creates a new project.
 Arguments:
 - `owner`: ID of the owner for the new project. Set to ID of the caller by default.
 - `name`: Unique name. The format is owner/project-name, only alphanumerical characters, dashes and underscores are allowed Will be prefixed with the owner account name. If the owner prefix is present, this method will check whether it matches the one specified via the owner argument.
+- `cloneFrom`: Unique name of the project to clone from, in a format "owner/project-name".
 - `summary`: Human-readable name for the project.
 
 Result `string`: Project id.
@@ -124,6 +125,7 @@ Request:
   "id": 123,
   "method": "/v1/Project.Create",
   "args": {
+    "cloneFrom": "VALUE PLACEHOLDER",
     "name": "VALUE PLACEHOLDER",
     "owner": "VALUE PLACEHOLDER",
     "summary": "VALUE PLACEHOLDER"
