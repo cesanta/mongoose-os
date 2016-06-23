@@ -8,7 +8,7 @@ Provides methods to manage devices.
 Claim an unclaimed device using a token.
 
 Arguments:
-- `projectid`: ID of the project.
+- `owner`: Name of the account that will own the device. Defaults to the identity of the caller
 - `token`: Auth token based on PSK.
 - `deviceid`: ID of the device.
 
@@ -21,7 +21,7 @@ Request:
   "method": "/v1/Device.Claim",
   "args": {
     "deviceid": "VALUE PLACEHOLDER",
-    "projectid": "VALUE PLACEHOLDER",
+    "owner": "VALUE PLACEHOLDER",
     "token": "VALUE PLACEHOLDER"
   }
 }
@@ -43,9 +43,9 @@ Response:
 Adds a new device.
 
 Arguments:
+- `owner`: Optional name of the account to add device to.
 - `psk`: Pre-shared key that device will use for authentication.
 - `deviceid`: ID of the device.
-- `projectid`: Optional ID of the project to add device to.
 
 Request:
 ```json
@@ -56,7 +56,7 @@ Request:
   "method": "/v1/Device.Add",
   "args": {
     "deviceid": "VALUE PLACEHOLDER",
-    "projectid": "VALUE PLACEHOLDER",
+    "owner": "VALUE PLACEHOLDER",
     "psk": "VALUE PLACEHOLDER"
   }
 }
@@ -108,11 +108,11 @@ Response:
 ```
 
 #### List
-Returns a list of devices in a given project.
+Returns the list of owned devices
 
 Arguments:
 - `filter`: Filter expression, currently only 'labelname=labelvalue' supported.
-- `projectid`: ID of the project.
+- `account`: name of account
 
 Result `array`: 
 Request:
@@ -123,8 +123,8 @@ Request:
   "id": 123,
   "method": "/v1/Device.List",
   "args": {
-    "filter": "VALUE PLACEHOLDER",
-    "projectid": "VALUE PLACEHOLDER"
+    "account": "VALUE PLACEHOLDER",
+    "filter": "VALUE PLACEHOLDER"
   }
 }
 
@@ -143,10 +143,9 @@ Response:
 ```
 
 #### Delete
-Removes the devices from the project.
+Unregisters the device
 
 Arguments:
-- `projectid`: ID of the project.
 - `deviceid`: ID of the device.
 
 Request:
@@ -157,8 +156,7 @@ Request:
   "id": 123,
   "method": "/v1/Device.Delete",
   "args": {
-    "deviceid": "VALUE PLACEHOLDER",
-    "projectid": "VALUE PLACEHOLDER"
+    "deviceid": "VALUE PLACEHOLDER"
   }
 }
 
