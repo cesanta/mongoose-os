@@ -15,10 +15,6 @@
 #define CONSOLE_UART_INT INT_UARTA0
 #define CONSOLE_UART_PERIPH PRCM_UARTA0
 
-/* TODO(rojer): Make runtime-configurable. */
-#define I2C_SDA_PIN PIN_02
-#define I2C_SCL_PIN PIN_01
-
 #define WIFI_SCAN_INTERVAL_SECONDS 15
 
 #define V7_POLL_LENGTH_MS 2

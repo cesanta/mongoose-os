@@ -33,15 +33,17 @@
 
 struct i2c_state {
   unsigned long base;
-  unsigned long sda_pin, sda_pin_mode, sda_pin_strength, sda_pin_type;
-  unsigned long scl_pin, scl_pin_mode, scl_pin_strength, scl_pin_type;
+  unsigned long sda_pin;
+  unsigned long scl_pin;
   uint8_t first : 1;
 };
 
 enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res) {
   struct i2c_state *c = calloc(1, sizeof(struct i2c_state));
-  c->sda_pin = I2C_SDA_PIN;
-  c->scl_pin = I2C_SCL_PIN;
+  c->sda_pin = v7_get_double(v7, v7_arg(v7, 0)) - 1;
+  if (c->sda_pin <= 0) c->sda_pin = PIN_02;
+  c->scl_pin = v7_get_double(v7, v7_arg(v7, 1)) - 1;
+  if (c->scl_pin <= 0) c->scl_pin = PIN_01;
   *res = c;
   return V7_OK;
 }
@@ -49,12 +51,30 @@ enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res) {
 int i2c_init(i2c_connection conn) {
   struct i2c_state *c = (struct i2c_state *) conn;
   c->base = I2CA0_BASE;
-  c->sda_pin_mode = MAP_PinModeGet(c->scl_pin);
-  MAP_PinConfigGet(c->sda_pin, &c->sda_pin_strength, &c->sda_pin_type);
-  MAP_PinTypeI2C(c->sda_pin, PIN_MODE_1); /* SDA */
-  c->scl_pin_mode = MAP_PinModeGet(c->scl_pin);
-  MAP_PinConfigGet(c->scl_pin, &c->scl_pin_strength, &c->scl_pin_type);
-  MAP_PinTypeI2C(c->scl_pin, PIN_MODE_1); /* SCL */
+
+  int mode;
+  if (c->scl_pin == PIN_01) {
+    mode = PIN_MODE_1;
+  } else if (c->scl_pin == PIN_03 || c->sda_pin == PIN_05) {
+    mode = PIN_MODE_5;
+  } else if (c->sda_pin == PIN_16) {
+    mode = PIN_MODE_9;
+  } else {
+    return -1;
+  }
+  MAP_PinTypeI2C(c->scl_pin, mode);
+
+  if (c->sda_pin == PIN_02) {
+    mode = PIN_MODE_1;
+  } else if (c->sda_pin == PIN_04 || c->sda_pin == PIN_06) {
+    mode = PIN_MODE_5;
+  } else if (c->sda_pin == PIN_17) {
+    mode = PIN_MODE_9;
+  } else {
+    return -1;
+  }
+  MAP_PinTypeI2C(c->sda_pin, mode);
+
   MAP_PRCMPeripheralClkEnable(PRCM_I2CA0, PRCM_RUN_MODE_CLK);
   MAP_PRCMPeripheralReset(PRCM_I2CA0);
   MAP_I2CMasterInitExpClk(c->base, SYS_CLK, 0 /* 100 KHz */);
@@ -64,10 +84,6 @@ int i2c_init(i2c_connection conn) {
 void sj_i2c_close(i2c_connection conn) {
   struct i2c_state *c = (struct i2c_state *) conn;
   MAP_PRCMPeripheralClkDisable(PRCM_I2CA0, PRCM_RUN_MODE_CLK);
-  MAP_PinModeSet(c->sda_pin, c->sda_pin_mode);
-  MAP_PinConfigSet(c->sda_pin, c->sda_pin_strength, c->sda_pin_type);
-  MAP_PinModeSet(c->scl_pin, c->scl_pin_mode);
-  MAP_PinConfigSet(c->scl_pin, c->scl_pin_strength, c->scl_pin_type);
   free(c);
 }
 
