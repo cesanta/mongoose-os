@@ -9,6 +9,5 @@ items:
   - { name: javascript-api }
   - { name: cloud }
   - { name: services }
-  - { name: arch.md }
   - { name: faq.md }
 ---

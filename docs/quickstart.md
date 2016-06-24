@@ -16,7 +16,8 @@ title: Quick Start Guide
 - If you do have a real device,
     - Download flashing tool from https://github.com/cesanta/mft/releases
     - Follow Mongoose Flashing tool wizard to flash Mongoose firmware
-      to your device and connect it to Mongoose Cloud
+      to your device and connect it to Mongoose Cloud<br>
+      <img src="media/quicktart_mft.png" width="100%">
     - Connect an LED to GND and GPIO5 pins
     - FTDI USB drivers are at
     [FTDI website](http://www.ftdichip.com/Drivers/VCP.htm)
