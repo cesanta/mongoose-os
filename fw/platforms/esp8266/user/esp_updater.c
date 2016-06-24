@@ -328,7 +328,7 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
   uint8_t spiffs_fds[32 * 2];
   spiffs old_fs;
   int ret = 0;
-  LOG(LL_DEBUG, ("Mounting old FS %d @ 0x%x", FS_SIZE, old_fs_addr));
+  LOG(LL_INFO, ("Mounting old FS: %d @ 0x%x", FS_SIZE, old_fs_addr));
   if (fs_mount(&old_fs, old_fs_addr, FS_SIZE, spiffs_work_buf, spiffs_fds,
                sizeof(spiffs_fds))) {
     LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
@@ -348,7 +348,7 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
 int finish_update() {
   if (!get_rboot_config()->fw_updated) {
     if (get_rboot_config()->is_first_boot != 0) {
-      LOG(LL_INFO, ("Firmware was rolled back, commiting it"));
+      LOG(LL_INFO, ("Firmware was rolled back, committing it"));
       get_rboot_config()->is_first_boot = 0;
       rboot_set_config(get_rboot_config());
       s_clubby_upd_status = 1; /* Once we connect wifi we send status 1 */

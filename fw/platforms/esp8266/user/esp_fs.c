@@ -239,7 +239,7 @@ static s32_t esp_spiffs_erase(u32_t addr, u32_t size) {
 
 int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
              uint8_t *fds, size_t fds_size) {
-  LOG(LL_DEBUG, ("Mount %d@%X", size, addr));
+  LOG(LL_INFO, ("Mounting FS: %d @ 0x%x", size, addr));
   spiffs_config cfg;
 
   cfg.phys_addr = addr;
