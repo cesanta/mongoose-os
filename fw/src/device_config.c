@@ -200,8 +200,7 @@ static void upload_handler(struct mg_connection *c, int ev, void *p) {
 }
 
 static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
-  LOG(LL_VERBOSE_DEBUG,
-      ("%p ev %d p %p fl %lx l %lu %lu", c, ev, p, c->flags,
+  DBG(("%p ev %d p %p fl %lx l %lu %lu", c, ev, p, c->flags,
        (unsigned long) c->recv_mbuf.len, (unsigned long) c->send_mbuf.len));
 
   switch (ev) {

@@ -672,13 +672,10 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   struct mg_connection *c;
   struct user_data *ud;
   struct mg_connect_opts copts;
-  v7_val_t v_h, v_p, v_uri, v_m, v_hdrs;
-  const char *host, *uri, *method;
+  v7_val_t v_pr, v_h, v_p, v_uri, v_m, v_hdrs;
+  const char *protocol, *host, *uri, *method;
   int port;
-#ifdef MG_ENABLE_SSL
   int force_ssl;
-  const char *protocol;
-#endif
 
   memset(&copts, 0, sizeof(copts));
   /*
@@ -714,11 +711,16 @@ static enum v7_err sj_http_request_common(struct v7 *v7, v7_val_t opts,
   uri = v7_is_string(v_uri) ? v7_get_cstring(v7, &v_uri) : "/";
   method = v7_is_string(v_m) ? v7_get_cstring(v7, &v_m) : "GET";
 
-#ifdef MG_ENABLE_SSL
-  v7_val_t v_pr = v7_get(v7, opts, "protocol", ~0);
+  v_pr = v7_get(v7, opts, "protocol", ~0);
   protocol = v7_is_string(v_pr) ? v7_get_cstring(v7, &v_pr) : "";
   force_ssl = (strcasecmp(protocol, "https") == 0);
+#ifdef MG_ENABLE_SSL
   if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
+    goto clean;
+  }
+#else
+  if (force_ssl) {
+    rcode = v7_throwf(v7, "Error", "SSL is not supported");
     goto clean;
   }
 #endif
