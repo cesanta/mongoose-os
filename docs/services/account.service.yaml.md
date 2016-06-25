@@ -4,6 +4,57 @@ title: "Account"
 
 Provides methods for managing users. Used by the frontend.
 
+#### CreateToken
+Generate a personal access token that can be passed in GET parameters instead user/psk pair
+
+Arguments:
+- `description`: displayed when listing the tokens
+
+Result `string`: 
+#### ListTokens
+List tokens
+
+
+Result `array`: 
+#### GetInfo
+Retrieves info about an existing user.
+
+Arguments:
+- `id`: ID of the user.
+
+Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.GetInfo",
+  "args": {
+    "id": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
+#### RevokeToken
+Delete the token
+
+Arguments:
+- `token`: 
+
 #### CreateUser
 Creates a new user. Can only be called by the frontend.
 
@@ -41,37 +92,11 @@ Response:
 
 ```
 
-#### GetInfo
-Retrieves info about an existing user.
+#### ValidateToken
+validates a token and returns the user ID associated with it
 
 Arguments:
-- `id`: ID of the user.
+- `token`: 
 
 Result `object`: 
-Request:
-```json
-{
-  "v": 2,
-  "src": "device_123",
-  "id": 123,
-  "method": "/v1/Account.GetInfo",
-  "args": {
-    "id": "VALUE PLACEHOLDER"
-  }
-}
-
-```
-
-Response:
-```json
-{
-  "v": 2,
-  "src": "//api.cesanta.com",
-  "dst": "device_123",
-  "id": 123,
-  "result": "VALUE PLACEHOLDER"
-}
-
-```
-
 
