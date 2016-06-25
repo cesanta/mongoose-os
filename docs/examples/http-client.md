@@ -1,5 +1,5 @@
 ---
-title: JS example - HTTP client
+title: HTTP client
 ---
 
 This example shows how to send periodic measurements to some external

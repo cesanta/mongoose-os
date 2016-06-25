@@ -1,5 +1,5 @@
 ---
-title: JS example - Blink
+title: Blink
 ---
 
 This example shows how to blink an LED.

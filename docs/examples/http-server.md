@@ -1,5 +1,5 @@
 ---
-title: JS example - HTTP server
+title: HTTP server
 ---
 
 This example shows how to start an HTTP server, serve an HTML form that allows

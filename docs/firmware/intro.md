@@ -5,5 +5,4 @@ items:
   - { name: boot.md }
   - { name: configuration.md }
   - { name: build.md }
-  - { type: flat, name: ../examples }
 ---
