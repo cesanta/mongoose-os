@@ -15,7 +15,7 @@ $(BUILD_DIR)/%.o: %.c
 	$(Q) $(CC) $(CFLAGS) -c --output_file $@ $<
 
 $(BUILD_DIR)/%.o: %.asm
-	$(vecho) "TIAS  $< -> $@"
+	$(vecho) "TIASM $< -> $@"
 	$(Q) $(CC) $(CFLAGS) -c --output_file $@ $<
 
 $(APP_ELF):
@@ -26,4 +26,5 @@ $(APP_ELF):
 	  --reread_libs --warn_sections --display_error_number \
 	  --ram_model --cinit_compression=off --copy_compression=off \
 	  --unused_section_elimination=on \
-	  -o $@ $(filter %.o %.a, $^) $(APP_LDFLAGS)
+	  -o $@ --map_file=$@.map --xml_link_info=$@.map.xml \
+	  $(filter %.o %.a, $^) $(APP_LDFLAGS)

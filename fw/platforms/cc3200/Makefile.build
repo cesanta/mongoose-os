@@ -145,7 +145,6 @@ IPATH += $(SDK_PATH) $(SDK_PATH)/inc $(SDK_PATH)/driverlib $(SDK_PATH)/oslib \
          $(SDK_PATH)/simplelink_extlib/provisioninglib \
          $(SDK_PATH)/third_party/FreeRTOS/source/include
 VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
-         $(SDK_PATH)/example/common \
          $(SDK_PATH)/simplelink/source $(SDK_PATH)/third_party/FreeRTOS/source \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
 
@@ -234,6 +233,9 @@ $(BUILD_DIR)/port.o: CFLAGS += --diag_suppress=193,225
 $(BUILD_DIR)/tasks.o: CFLAGS += --diag_suppress=225
 
 MGIOT_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
+
+VPATH += $(MGIOT_CC3200_PATH)/src/ti
+OBJS += $(BUILD_DIR)/exc_handler_top.o
 
 endif
 

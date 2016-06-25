@@ -105,7 +105,7 @@ void sj_system_restart(int exit_code) {
    * https://e2e.ti.com/support/wireless_connectivity/f/968/p/424736/1516404
    * Instead, the recommended way is to enter hibernation with immediate wakeup.
    */
-  sl_Stop(50 /* ms */);
+  if (exit_code != 100) sl_Stop(50 /* ms */);
   MAP_PRCMHibernateIntervalSet(328 /* 32KHz ticks, 100 ms */);
   MAP_PRCMHibernateWakeupSourceEnable(PRCM_HIB_SLOW_CLK_CTR);
   MAP_PRCMHibernateEnter();
