@@ -16,45 +16,6 @@ List tokens
 
 
 Result `array`: 
-#### GetInfo
-Retrieves info about an existing user.
-
-Arguments:
-- `id`: ID of the user.
-
-Result `object`: 
-Request:
-```json
-{
-  "v": 2,
-  "src": "device_123",
-  "id": 123,
-  "method": "/v1/Account.GetInfo",
-  "args": {
-    "id": "VALUE PLACEHOLDER"
-  }
-}
-
-```
-
-Response:
-```json
-{
-  "v": 2,
-  "src": "//api.cesanta.com",
-  "dst": "device_123",
-  "id": 123,
-  "result": "VALUE PLACEHOLDER"
-}
-
-```
-
-#### RevokeToken
-Delete the token
-
-Arguments:
-- `token`: 
-
 #### CreateUser
 Creates a new user. Can only be called by the frontend.
 
@@ -92,6 +53,55 @@ Response:
 
 ```
 
+#### GetInfo
+Retrieves info about an existing user. If id is present, info is fetched by id. Otherwise, if name is present, info is fetched by name. Otherwise, it's an error.
+
+Arguments:
+- `id`: ID of the user.
+- `name`: Name of the user.
+
+Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.GetInfo",
+  "args": {
+    "id": "VALUE PLACEHOLDER",
+    "name": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
+#### RevokeToken
+Delete the token
+
+Arguments:
+- `token`: 
+
+#### UserExists
+Returns whether the user exists
+
+Arguments:
+- `id`: ID of the user.
+- `name`: Name of the user.
+
+Result `object`: 
 #### ValidateToken
 validates a token and returns the user ID associated with it
 

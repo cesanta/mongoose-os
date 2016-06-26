@@ -42,10 +42,11 @@ Response:
 ```
 
 #### Get
-Returns project info for a given project
+Returns project info for a given project. If id is given, it is used. Otherwise, name is used. Otherwise, it's an error.
 
 Arguments:
 - `id`: ID of the project to be retreived
+- `name`: Name of the project to be retreived
 
 Result `object`: 
 Request:
@@ -56,7 +57,8 @@ Request:
   "id": 123,
   "method": "/v1/Project.Get",
   "args": {
-    "id": "VALUE PLACEHOLDER"
+    "id": "VALUE PLACEHOLDER",
+    "name": "VALUE PLACEHOLDER"
   }
 }
 
@@ -112,8 +114,9 @@ Creates a new project.
 
 Arguments:
 - `owner`: ID of the owner for the new project. Set to ID of the caller by default.
-- `name`: Unique name. The format is owner/project-name, only alphanumerical characters, dashes and underscores are allowed Will be prefixed with the owner account name. If the owner prefix is present, this method will check whether it matches the one specified via the owner argument.
 - `cloneFrom`: Unique name of the project to clone from, in a format "owner/project-name".
+- `name`: Unique name. The format is owner/project-name, only alphanumerical characters, dashes and underscores are allowed Will be prefixed with the owner account name. If the owner prefix is present, this method will check whether it matches the one specified via the owner argument.
+- `template`: Optional skeleton template
 - `summary`: Human-readable name for the project.
 
 Result `string`: Project id.
@@ -128,7 +131,8 @@ Request:
     "cloneFrom": "VALUE PLACEHOLDER",
     "name": "VALUE PLACEHOLDER",
     "owner": "VALUE PLACEHOLDER",
-    "summary": "VALUE PLACEHOLDER"
+    "summary": "VALUE PLACEHOLDER",
+    "template": "VALUE PLACEHOLDER"
   }
 }
 
