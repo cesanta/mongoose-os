@@ -48,6 +48,7 @@
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/config.h"
+#include "fw/platforms/cc3200/src/cc3200_exc.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_sj_hal.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
@@ -283,6 +284,8 @@ __attribute__((section(".heap_end"))) uint32_t _heap_end;
 
 int main() {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
+  cc3200_exc_init();
+
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
