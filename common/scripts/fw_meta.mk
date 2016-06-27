@@ -17,6 +17,7 @@ $(FW_ZIP): $(FW_MANIFEST)
 	  --src_dir=$(FW_DIR) \
 	  --output=$@
 	$(Q) cp $@ $(FW_DIR)/$(APP)-$(APP_PLATFORM)-$(shell $(FW_META_CMD) get $(FW_MANIFEST) version).zip
+	$(vecho) "   Built version $(shell $(FW_META_CMD) get $(FW_MANIFEST) version)"
 
 $(FW_MANIFEST):
 	$(vecho) GEN $(FW_MANIFEST)
