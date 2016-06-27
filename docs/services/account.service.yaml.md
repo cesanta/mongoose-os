@@ -142,7 +142,7 @@ Response:
 Delete the token
 
 Arguments:
-- `token`: 
+- `id`: 
 
 Request:
 ```json
@@ -152,7 +152,7 @@ Request:
   "id": 123,
   "method": "/v1/Account.RevokeToken",
   "args": {
-    "token": "VALUE PLACEHOLDER"
+    "id": "VALUE PLACEHOLDER"
   }
 }
 
