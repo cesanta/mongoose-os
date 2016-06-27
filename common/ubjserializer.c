@@ -272,7 +272,8 @@ ub_val_t ub_create_boolean(int n) {
 }
 
 ub_val_t ub_create_null() {
-  ub_val_t res = {UBJSON_TYPE_NULL, {}};
+  ub_val_t res;
+  res.kind = UBJSON_TYPE_NULL;
   return res;
 }
 
