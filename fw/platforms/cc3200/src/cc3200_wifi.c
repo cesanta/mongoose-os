@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include "sys_config.h"
+#include "cc3200_main_task.h"
 
 extern struct v7 *s_v7;
 
@@ -32,27 +33,32 @@ struct cc3200_wifi_config {
 
 static struct cc3200_wifi_config s_wifi_sta_config;
 
+static void free_wifi_config() {
+  s_wifi_sta_config.status = SJ_WIFI_DISCONNECTED;
+  free(s_wifi_sta_config.ssid);
+  free(s_wifi_sta_config.pass);
+  free(s_wifi_sta_config.ip);
+  s_wifi_sta_config.ssid = s_wifi_sta_config.pass = s_wifi_sta_config.ip = NULL;
+}
+
+void invoke_wifi_on_change_cb(void *arg) {
+  sj_wifi_on_change_cb(s_v7, (enum sj_wifi_status)(int) arg);
+}
+
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
-  enum sj_wifi_status ev;
   switch (e->Event) {
     case SL_WLAN_CONNECT_EVENT: {
-      s_wifi_sta_config.status = ev = SJ_WIFI_CONNECTED;
+      s_wifi_sta_config.status = SJ_WIFI_CONNECTED;
       break;
     }
     case SL_WLAN_DISCONNECT_EVENT: {
-      s_wifi_sta_config.status = ev = SJ_WIFI_DISCONNECTED;
-      free(s_wifi_sta_config.ip);
-      s_wifi_sta_config.ip = NULL;
+      free_wifi_config();
       break;
     }
     default:
       return;
   }
-#ifndef CS_DISABLE_JS
-  sj_wifi_on_change_callback(s_v7, ev);
-#else
-  (void) ev;
-#endif
+  invoke_cb(invoke_wifi_on_change_cb, (void *) s_wifi_sta_config.status);
 }
 
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
@@ -62,7 +68,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = SJ_WIFI_IP_ACQUIRED;
-    sj_wifi_on_change_callback(s_v7, SJ_WIFI_IP_ACQUIRED);
+    invoke_cb(invoke_wifi_on_change_cb, (void *) s_wifi_sta_config.status);
   }
 }
 
@@ -74,13 +80,9 @@ void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
 }
 
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
-  s_wifi_sta_config.status = SJ_WIFI_DISCONNECTED;
-  free(s_wifi_sta_config.ssid);
-  free(s_wifi_sta_config.pass);
-  free(s_wifi_sta_config.ip);
+  free_wifi_config();
   s_wifi_sta_config.ssid = strdup(cfg->ssid);
   s_wifi_sta_config.pass = strdup(cfg->pass);
-  s_wifi_sta_config.ip = NULL;
   memset(&s_wifi_sta_config.static_ip, 0, sizeof(s_wifi_sta_config.static_ip));
   if (cfg->ip != NULL && cfg->netmask != NULL) {
     SlNetCfgIpV4Args_t *ipcfg = &s_wifi_sta_config.static_ip;

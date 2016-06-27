@@ -23,7 +23,7 @@
 
 #include "oslib/osi.h"
 
-#include "cc3200_sj_hal.h"
+#include "cc3200_main_task.h"
 
 /*
  * pin is a literal pin number, as that seems to be the custom in TI land.
@@ -54,6 +54,8 @@ static signed char s_gpio_to_pin_map[32] = {
 };
 /* clang-format on */
 
+static f_gpio_intr_handler_t s_gpio_js_handler;
+static void *s_gpio_js_handler_arg;
 uint32_t s_enabled_ints = 0;
 
 int pin_to_gpio_no(int pin) {
@@ -117,7 +119,7 @@ int sj_gpio_write(int pin, enum gpio_level level) {
   return 0;
 }
 
-extern OsiMsgQ_t s_v7_q;
+static void gpio_int_cb(void *arg);
 
 static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
   uint32_t ints =
@@ -129,10 +131,16 @@ static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
     if (!(ints & 1)) continue;
     int pin = s_gpio_to_pin_map[gpio_no];
     if (pin < 0) continue;
-    struct sj_event e = {
-        .type = GPIO_INT_EVENT, .data = (void *) ((pin << 1) | (vals & 1)),
-    };
-    osi_MsgQWrite(&s_v7_q, &e, OSI_NO_WAIT);
+    invoke_cb(gpio_int_cb, (void *) ((pin << 1) | (vals & 1)));
+  }
+}
+
+static void gpio_int_cb(void *arg) {
+  intptr_t d = (intptr_t) arg;
+  int pin = (d >> 1);
+  enum gpio_level val = (d & 1 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
+  if (s_gpio_js_handler != NULL) {
+    s_gpio_js_handler(pin, val, s_gpio_js_handler_arg);
   }
 }
 
@@ -150,6 +158,11 @@ static void gpio_a2_int_handler() {
 
 static void gpio_a3_int_handler() {
   gpio_common_int_handler(GPIOA3_BASE, 24);
+}
+
+void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
+  s_gpio_js_handler = cb;
+  s_gpio_js_handler_arg = arg;
 }
 
 int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {

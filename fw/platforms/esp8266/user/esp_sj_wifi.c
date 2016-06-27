@@ -249,7 +249,7 @@ void wifi_changed_cb(System_Event_t *evt) {
       break;
   }
 
-  if (sj_ev >= 0) sj_wifi_on_change_callback(v7, sj_ev);
+  if (sj_ev >= 0) sj_wifi_on_change_cb(v7, sj_ev);
 }
 
 char *sj_wifi_get_connected_ssid(void) {

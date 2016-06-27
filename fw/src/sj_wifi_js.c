@@ -280,7 +280,7 @@ void sj_wifi_api_setup(struct v7 *v7) {
 }
 #endif /* CS_DISABLE_JS */
 
-void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event) {
+void sj_wifi_on_change_cb(struct v7 *v7, enum sj_wifi_status event) {
   switch (event) {
     case SJ_WIFI_DISCONNECTED:
       LOG(LL_INFO, ("Wifi: disconnected"));

@@ -33,7 +33,7 @@ enum sj_wifi_status {
   SJ_WIFI_CONNECTED = 1,
   SJ_WIFI_IP_ACQUIRED = 2,
 };
-void sj_wifi_on_change_callback(struct v7 *v7, enum sj_wifi_status event);
+void sj_wifi_on_change_cb(struct v7 *v7, enum sj_wifi_status event);
 
 enum sj_wifi_status sj_wifi_get_status();
 

@@ -26,24 +26,42 @@
 #include "fw/src/sj_v7_ext.h"
 #include "v7/v7.h"
 
+#include "fw/platforms/cc3200/src/cc3200_main_task.h"
+
 #include "common/umm_malloc/umm_malloc.h"
 
-extern OsiMsgQ_t s_v7_q;
+#ifndef CS_DISABLE_JS
+static void sj_invoke_cb_cb(void *arg);
+
+struct v7_invoke_event_data {
+  struct v7 *v7;
+  v7_val_t func;
+  v7_val_t this_obj;
+  v7_val_t args;
+};
 
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
-  struct sj_event e;
   struct v7_invoke_event_data *ied = calloc(1, sizeof(*ied));
+  ied->v7 = v7;
   ied->func = func;
   ied->this_obj = this_obj;
   ied->args = args;
   v7_own(v7, &ied->func);
   v7_own(v7, &ied->this_obj);
   v7_own(v7, &ied->args);
-  e.type = V7_INVOKE_EVENT;
-  e.data = ied;
-  osi_MsgQWrite(&s_v7_q, &e, OSI_WAIT_FOREVER);
+  invoke_cb(sj_invoke_cb_cb, ied);
 }
+
+static void sj_invoke_cb_cb(void *arg) {
+  struct v7_invoke_event_data *ied = (struct v7_invoke_event_data *) arg;
+  _sj_invoke_cb(ied->v7, ied->func, ied->this_obj, ied->args);
+  v7_disown(ied->v7, &ied->args);
+  v7_disown(ied->v7, &ied->this_obj);
+  v7_disown(ied->v7, &ied->func);
+  free(ied);
+}
+#endif
 
 #ifdef __TI_COMPILER_VERSION__
 size_t sj_get_heap_size() {
@@ -115,8 +133,13 @@ void sj_usleep(int usecs) {
   osi_Sleep(usecs / 1000 /* ms */);
 }
 
+static void mongoose_poll_cb(void *arg);
+
 void mongoose_schedule_poll() {
-  struct sj_event e;
-  e.type = MG_POLL_EVENT;
-  osi_MsgQWrite(&s_v7_q, &e, OSI_WAIT_FOREVER);
+  invoke_cb(mongoose_poll_cb, NULL);
+}
+
+static void mongoose_poll_cb(void *arg) {
+  (void) arg;
+  /* Nothing to do, we poll on every iteration anyway. */
 }

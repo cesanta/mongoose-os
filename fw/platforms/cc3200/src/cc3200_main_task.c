@@ -1,32 +1,14 @@
-/*
- * Copyright (c) 2014-2016 Cesanta Software Limited
- * All rights reserved
- */
+#include "fw/platforms/cc3200/src/cc3200_main_task.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#ifndef __TI_COMPILER_VERSION__
-#include <unistd.h>
-#endif
-
-/* Driverlib includes */
-#include "hw_types.h"
-
-#include "hw_ints.h"
-#include "hw_memmap.h"
-#include "interrupt.h"
-#include "pin.h"
-#include "prcm.h"
-#include "rom.h"
-#include "rom_map.h"
-#include "uart.h"
-#include "utils.h"
+#include "inc/hw_types.h"
+#include "inc/hw_ints.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/uart.h"
 
 #include "common/platform.h"
-
-#include "simplelink.h"
-#include "device.h"
 
 #include "oslib/osi.h"
 
@@ -48,14 +30,28 @@
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/config.h"
-#include "fw/platforms/cc3200/src/cc3200_exc.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_sj_hal.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
 
-extern const char *build_id;
+#define CB_ADDR_MASK 0xe0000000
+#define CB_ADDR_PREFIX 0x20000000
+
+#define PROMPT_CHAR_EVENT 0
+#define INVOKE_CB_EVENT 1
+struct sj_event {
+  /*
+   * We exploit the fact that all callback addresses have to be in SRAM and
+   * start with CB_ADDR_PREFIX and use the 3 upper bits to store message type.
+   */
+  unsigned type : 3;
+  unsigned cb : 29;
+  void *data;
+};
 
 struct v7 *s_v7;
+OsiMsgQ_t s_main_queue;
+extern const char *build_id;
 
 struct v7 *init_v7(void *stack_base) {
   struct v7_create_opts opts;
@@ -66,45 +62,6 @@ struct v7 *init_v7(void *stack_base) {
   opts.c_stack_base = stack_base;
 
   return v7_create_opt(opts);
-}
-
-/* These are FreeRTOS hooks for various life situations. */
-void vApplicationMallocFailedHook() {
-  fprintf(stderr, "malloc failed\n");
-  exit(123);
-}
-
-void vApplicationIdleHook() {
-  /* Ho-hum. Twiddling our thumbs. */
-}
-
-void vApplicationStackOverflowHook(OsiTaskHandle *th, signed char *tn) {
-}
-
-void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *e) {
-}
-
-OsiMsgQ_t s_v7_q;
-
-#ifndef CS_DISABLE_JS
-static void uart_int() {
-  struct sj_event e = {.type = PROMPT_CHAR_EVENT, .data = NULL};
-  MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
-  MAP_UARTIntDisable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
-  osi_MsgQWrite(&s_v7_q, &e, OSI_NO_WAIT);
-}
-#endif
-
-void sj_prompt_init_hal(struct v7 *v7) {
-  (void) v7;
-}
-
-static f_gpio_intr_handler_t s_gpio_js_handler;
-static void *s_gpio_js_handler_arg;
-
-void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
-  s_gpio_js_handler = cb;
-  s_gpio_js_handler_arg = arg;
 }
 
 int start_nwp() {
@@ -124,7 +81,22 @@ int start_nwp() {
   return 0;
 }
 
-static void main_task(void *arg) {
+#ifndef CS_DISABLE_JS
+static void uart_int() {
+  struct sj_event e = {.type = PROMPT_CHAR_EVENT, .data = NULL};
+  MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+  MAP_UARTIntDisable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+  osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT);
+}
+
+void sj_prompt_init_hal(struct v7 *v7) {
+  (void) v7;
+  osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
+  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+}
+#endif
+
+static int sj_init() {
   struct v7 *v7 = s_v7;
 
   cs_log_set_level(LL_INFO);
@@ -135,17 +107,17 @@ static void main_task(void *arg) {
   int r = start_nwp();
   if (r < 0) {
     LOG(LL_ERROR, ("Failed to start NWP: %d", r));
-    return;
+    return 0;
   }
 
-  osi_MsgQCreate(&s_v7_q, "V7", sizeof(struct sj_event), 32 /* len */);
+  osi_MsgQCreate(&s_main_queue, "V7", sizeof(struct sj_event), 32 /* len */);
 
   int boot_cfg_idx = get_active_boot_cfg_idx();
-  if (boot_cfg_idx < 0) return;
+  if (boot_cfg_idx < 0) return 0;
   struct boot_cfg boot_cfg;
-  if (read_boot_cfg(boot_cfg_idx, &boot_cfg) < 0) return;
+  if (read_boot_cfg(boot_cfg_idx, &boot_cfg) < 0) return 0;
 
-  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", boot_cfg_idx,
+  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s %p", boot_cfg_idx,
                 boot_cfg.seq, boot_cfg.flags, boot_cfg.app_image_file,
                 boot_cfg.app_load_addr, boot_cfg.fs_container_prefix));
 
@@ -164,7 +136,7 @@ static void main_task(void *arg) {
     if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
       revert_update(boot_cfg_idx, &boot_cfg);
     }
-    return;
+    return 0;
   }
 
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
@@ -224,15 +196,24 @@ static void main_task(void *arg) {
   }
 
 #ifndef CS_DISABLE_JS
-  osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
-  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
   sj_prompt_init(v7);
 #endif
+  return 1;
+}
+
+void main_task(void *arg) {
+  (void) arg;
+
+  if (!sj_init()) {
+    LOG(LL_ERROR, ("Init failed"));
+    sj_system_restart(0);
+    return;
+  }
 
   while (1) {
     struct sj_event e;
     mongoose_poll(0);
-    if (osi_MsgQRead(&s_v7_q, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
+    if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (e.type) {
 #ifndef CS_DISABLE_JS
       case PROMPT_CHAR_EVENT: {
@@ -243,89 +224,21 @@ static void main_task(void *arg) {
         MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
         break;
       }
-      case V7_INVOKE_EVENT: {
-        struct v7_invoke_event_data *ied =
-            (struct v7_invoke_event_data *) e.data;
-        _sj_invoke_cb(v7, ied->func, ied->this_obj, ied->args);
-        v7_disown(v7, &ied->args);
-        v7_disown(v7, &ied->this_obj);
-        v7_disown(v7, &ied->func);
-        free(ied);
-        break;
-      }
 #endif
-      case GPIO_INT_EVENT: {
-        int pin = ((intptr_t) e.data) >> 1;
-        enum gpio_level val =
-            ((intptr_t) e.data) & 1 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW;
-        if (s_gpio_js_handler != NULL)
-          s_gpio_js_handler(pin, val, s_gpio_js_handler_arg);
-        break;
-      }
-      case MG_POLL_EVENT: {
-        /* Nothing to do, we poll on every iteration anyway. */
+      case INVOKE_CB_EVENT: {
+        cb_t cb = (cb_t)(e.cb | CB_ADDR_PREFIX);
+        cb(e.data);
         break;
       }
     }
   }
 }
 
-/* Int vector table, defined in startup_gcc.c */
-extern void (*const g_pfnVectors[])(void);
-
-void device_reboot(void) {
-  sj_system_restart(0);
-}
-
-#ifdef __TI_COMPILER_VERSION__
-__attribute__((section(".heap_start"))) uint32_t _heap_start;
-__attribute__((section(".heap_end"))) uint32_t _heap_end;
-#endif
-
-int main() {
-  MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
-  cc3200_exc_init();
-
-  MAP_IntEnable(FAULT_SYSTICK);
-  MAP_IntMasterEnable();
-  PRCMCC3200MCUInit();
-
-#ifdef __TI_COMPILER_VERSION__
-  memset(&_heap_start, 0, (char *) &_heap_end - (char *) &_heap_start);
-#endif
-
-  /* Console UART init. */
-  MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
-  MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
-  MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* PIN_57 -> UART0_RX */
-  MAP_UARTConfigSetExpClk(
-      CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
-      CONSOLE_BAUD_RATE,
-      (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  MAP_UARTFIFOLevelSet(CONSOLE_UART, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
-  MAP_UARTFIFOEnable(CONSOLE_UART);
-
-  setvbuf(stdout, NULL, _IOLBF, 0);
-  setvbuf(stderr, NULL, _IOLBF, 0);
-  cs_log_set_level(LL_INFO);
-
-  VStartSimpleLinkSpawnTask(8);
-  osi_TaskCreate(main_task, (const signed char *) "main", V7_STACK_SIZE + 256,
-                 NULL, 3, NULL);
-  osi_start();
-
-  return 0;
-}
-
-/* FreeRTOS assert() hook. */
-void vAssertCalled(const char *pcFile, unsigned long ulLine) {
-  // Handle Assert here
-  while (1) {
-  }
-}
-
-int sj_app_init(struct v7 *v7) __attribute__((weak));
-int sj_app_init(struct v7 *v7) {
-  (void) v7;
-  return 1;
+void invoke_cb(cb_t cb, void *arg) {
+  assert(cb & CB_ADDR_MASK == 0);
+  struct sj_event e;
+  e.type = INVOKE_CB_EVENT;
+  e.cb = (unsigned) cb;
+  e.data = arg;
+  osi_MsgQWrite(&s_main_queue, &e, OSI_WAIT_FOREVER);
 }
