@@ -3,12 +3,9 @@ title: Quick Start Guide
 ---
 
 - Login to the [Mongoose Cloud](https://mongoose-iot.com)
-- Navigate to Smart Light example project
-- Read the summary page
-- Find and install Mongoose Mobile app on Google Play. This app will
-  demonstrate how to control remote device via the Mongoose Mobile app
-- Click on the "clone project" stripe at the top right. This clones this
-  example project into your own private copy which you can modify
+- Click Smart Light example project. A dialog to clone a project appears, click
+  "Add".
+- A private clone of the Smart Light project appears, click on it.
 - Navigate to DEVICES tab
 - If you don't have a real device,
     - Click on "Add Device" button.
@@ -30,4 +27,6 @@ title: Quick Start Guide
   DEVICE_ID with the device ID from the clipboard
 - If you're using real device, click on Flash button to build and flash
   Smart Light firmware to your device
+- Find and install Mongoose Mobile app on Google Play. This app will
+  demonstrate how to control remote device via the Mongoose Mobile app
 - Open Mongoose Mobile app. Use the UI to switch LED on/off.
