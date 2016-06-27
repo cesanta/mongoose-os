@@ -2337,18 +2337,19 @@ extern "C" {
 struct v7_pstate {
   const char *file_name;
   const char *source_code;
-  const char *pc;   /* Current parsing position */
-  int line_no;      /* Line number */
-  int prev_line_no; /* Line number of previous token */
-  int inhibit_in;   /* True while `in` expressions are inhibited */
-  int in_function;  /* True if in a function */
-  int in_loop;      /* True if in a loop */
-  int in_switch;    /* True if in a switch block */
-  int in_strict;    /* True if in strict mode */
+  const char *pc;      /* Current parsing position */
+  const char *src_end; /* End of source code */
+  int line_no;         /* Line number */
+  int prev_line_no;    /* Line number of previous token */
+  int inhibit_in;      /* True while `in` expressions are inhibited */
+  int in_function;     /* True if in a function */
+  int in_loop;         /* True if in a loop */
+  int in_switch;       /* True if in a switch block */
+  int in_strict;       /* True if in strict mode */
 };
 
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
-                             int is_json);
+                             size_t src_len, int is_json);
 
 #if defined(__cplusplus)
 }
@@ -2704,8 +2705,9 @@ enum v7_tok {
 extern "C" {
 #endif /* __cplusplus */
 
-V7_PRIVATE int skip_to_next_tok(const char **ptr);
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
+V7_PRIVATE int skip_to_next_tok(const char **ptr, const char *src_end);
+V7_PRIVATE enum v7_tok get_tok(const char **s, const char *src_end, double *n,
+                               enum v7_tok prev_tok);
 V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 
 #if defined(__cplusplus)
@@ -4500,6 +4502,10 @@ extern "C" {
  * At the moment, all exec-related functions are public, and are declared in
  * `exec_public.h`
  */
+
+WARN_UNUSED_RESULT
+enum v7_err _v7_compile(const char *js_code, size_t js_code_size,
+                        int generate_binary_output, int use_bcode, FILE *fp);
 
 #if defined(__cplusplus)
 }
@@ -11394,23 +11400,24 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
  * Move ptr to the next token, skipping comments and whitespaces.
  * Return number of new line characters detected.
  */
-V7_PRIVATE int skip_to_next_tok(const char **ptr) {
+V7_PRIVATE int skip_to_next_tok(const char **ptr, const char *src_end) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
-  while (s != p && *s != '\0' && (isspace((unsigned char) *s) || *s == '/')) {
+  while (s != p && s < src_end && *s != '\0' &&
+         (isspace((unsigned char) *s) || *s == '/')) {
     p = s;
-    while (*s != '\0' && isspace((unsigned char) *s)) {
+    while (s < src_end && *s != '\0' && isspace((unsigned char) *s)) {
       if (*s == '\n') num_lines++;
       s++;
     }
-    if (s[0] == '/' && s[1] == '/') {
+    if ((s + 1) < src_end && s[0] == '/' && s[1] == '/') {
       s += 2;
-      while (s[0] != '\0' && s[0] != '\n') s++;
+      while (s < src_end && s[0] != '\0' && s[0] != '\n') s++;
     }
-    if (s[0] == '/' && s[1] == '*') {
+    if ((s + 1) < src_end && s[0] == '/' && s[1] == '*') {
       s += 2;
-      while (s[0] != '\0' && !(s[-1] == '/' && s[-2] == '*')) {
+      while (s < src_end && s[0] != '\0' && !(s[-1] == '/' && s[-2] == '*')) {
         if (s[0] == '\n') num_lines++;
         s++;
       }
@@ -11422,20 +11429,26 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
 }
 
 /* Advance `s` pointer to the end of identifier  */
-static void ident(const char **s) {
+static void ident(const char **s, const char *src_end) {
   const unsigned char *p = (unsigned char *) *s;
   int n;
   Rune r;
 
-  while (p[0] != '\0') {
+  while ((const char *) p < src_end && p[0] != '\0') {
     if (p[0] == '$' || p[0] == '_' || isalnum(p[0])) {
       /* $, _, or any alphanumeric are valid identifier characters */
       p++;
-    } else if (p[0] == '\\' && p[1] == 'u' && isxdigit(p[2]) &&
-               isxdigit(p[3]) && isxdigit(p[4]) && isxdigit(p[5])) {
+    } else if ((const char *) (p + 5) < src_end && p[0] == '\\' &&
+               p[1] == 'u' && isxdigit(p[2]) && isxdigit(p[3]) &&
+               isxdigit(p[4]) && isxdigit(p[5])) {
       /* Unicode escape, \uXXXX . Could be used like "var \u0078 = 1;" */
       p += 6;
     } else if ((n = chartorune(&r, (char *) p)) > 1 && isalpharune(r)) {
+      /*
+       * TODO(dfrank): the chartorune() call above can read `p` past the
+       * src_end, so it might crash on incorrect code. The solution would be
+       * to modify `chartorune()` to accept src_end argument as well.
+       */
       /* Unicode alphanumeric character */
       p += n;
     } else {
@@ -11458,10 +11471,10 @@ static enum v7_tok kw(const char *s, size_t len, int ntoks, enum v7_tok tok) {
   return i == ntoks ? TOK_IDENTIFIER : (enum v7_tok)(tok + i);
 }
 
-static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
-                          enum v7_tok tok2) {
+static enum v7_tok punct1(const char **s, const char *src_end, int ch1,
+                          enum v7_tok tok1, enum v7_tok tok2) {
   (*s)++;
-  if (s[0][0] == ch1) {
+  if (*s < src_end && **s == ch1) {
     (*s)++;
     return tok1;
   } else {
@@ -11469,40 +11482,47 @@ static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
   }
 }
 
-static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1, int ch2,
-                          enum v7_tok tok2, enum v7_tok tok3) {
-  if (s[0][1] == ch1 && s[0][2] == ch2) {
+static enum v7_tok punct2(const char **s, const char *src_end, int ch1,
+                          enum v7_tok tok1, int ch2, enum v7_tok tok2,
+                          enum v7_tok tok3) {
+  if ((*s + 2) < src_end && s[0][1] == ch1 && s[0][2] == ch2) {
     (*s) += 3;
     return tok2;
   }
 
-  return punct1(s, ch1, tok1, tok3);
+  return punct1(s, src_end, ch1, tok1, tok3);
 }
 
-static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
-                          enum v7_tok tok2, enum v7_tok tok3) {
+static enum v7_tok punct3(const char **s, const char *src_end, int ch1,
+                          enum v7_tok tok1, int ch2, enum v7_tok tok2,
+                          enum v7_tok tok3) {
   (*s)++;
-  if (s[0][0] == ch1) {
-    (*s)++;
-    return tok1;
-  } else if (s[0][0] == ch2) {
-    (*s)++;
-    return tok2;
-  } else {
-    return tok3;
+  if (*s < src_end) {
+    if (**s == ch1) {
+      (*s)++;
+      return tok1;
+    } else if (**s == ch2) {
+      (*s)++;
+      return tok2;
+    }
   }
+  return tok3;
 }
 
 static void parse_number(const char *s, const char **end, double *num) {
   *num = cs_strtod(s, (char **) end);
 }
 
-static enum v7_tok parse_str_literal(const char **p) {
+static enum v7_tok parse_str_literal(const char **p, const char *src_end) {
   const char *s = *p;
-  int quote = *s++;
+  int quote = '\0';
+
+  if (s < src_end) {
+    quote = *s++;
+  }
 
   /* Scan string literal, handle escape sequences */
-  for (; *s != quote && *s != '\0'; s++) {
+  for (; s < src_end && *s != '\0' && *s != quote; s++) {
     if (*s == '\\') {
       switch (s[1]) {
         case 'b':
@@ -11521,7 +11541,7 @@ static enum v7_tok parse_str_literal(const char **p) {
     }
   }
 
-  if (*s == quote) {
+  if (s < src_end && *s == quote) {
     s++;
     *p = s;
     return TOK_STRING_LITERAL;
@@ -11546,73 +11566,77 @@ static enum v7_tok parse_str_literal(const char **p) {
  * NOTE(lsm): `prev_tok` is a previously parsed token. It is needed for
  * correctly parsing regex literals.
  */
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
+V7_PRIVATE enum v7_tok get_tok(const char **s, const char *src_end, double *n,
                                enum v7_tok prev_tok) {
   const char *p = *s;
+
+  if (p >= src_end) {
+    return TOK_END_OF_INPUT;
+  }
 
   switch (*p) {
     /* Letters */
     case 'a':
-      ident(s);
+      ident(s, src_end);
       return TOK_IDENTIFIER;
     case 'b':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 1, TOK_BREAK);
     case 'c':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 3, TOK_CASE);
     case 'd':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 4, TOK_DEBUGGER);
     case 'e':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 1, TOK_ELSE);
     case 'f':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 4, TOK_FALSE);
     case 'g':
     case 'h':
-      ident(s);
+      ident(s, src_end);
       return TOK_IDENTIFIER;
     case 'i':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 3, TOK_IF);
     case 'j':
     case 'k':
     case 'l':
     case 'm':
-      ident(s);
+      ident(s, src_end);
       return TOK_IDENTIFIER;
     case 'n':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 2, TOK_NEW);
     case 'o':
     case 'p':
     case 'q':
-      ident(s);
+      ident(s, src_end);
       return TOK_IDENTIFIER;
     case 'r':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 1, TOK_RETURN);
     case 's':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 1, TOK_SWITCH);
     case 't':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 5, TOK_THIS);
     case 'u':
-      ident(s);
+      ident(s, src_end);
       return TOK_IDENTIFIER;
     case 'v':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 2, TOK_VAR);
     case 'w':
-      ident(s);
+      ident(s, src_end);
       return kw(p, *s - p, 2, TOK_WHILE);
     case 'x':
     case 'y':
     case 'z':
-      ident(s);
+      ident(s, src_end);
       return TOK_IDENTIFIER;
 
     case '_':
@@ -11644,7 +11668,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
     case 'Y':
     case 'Z':
     case '\\': /* Identifier may start with unicode escape sequence */
-      ident(s);
+      ident(s, src_end);
       return TOK_IDENTIFIER;
 
     /* Numbers */
@@ -11664,18 +11688,18 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
     /* String literals */
     case '\'':
     case '"':
-      return parse_str_literal(s);
+      return parse_str_literal(s, src_end);
 
     /* Punctuators */
     case '=':
-      return punct2(s, '=', TOK_EQ, '=', TOK_EQ_EQ, TOK_ASSIGN);
+      return punct2(s, src_end, '=', TOK_EQ, '=', TOK_EQ_EQ, TOK_ASSIGN);
     case '!':
-      return punct2(s, '=', TOK_NE, '=', TOK_NE_NE, TOK_NOT);
+      return punct2(s, src_end, '=', TOK_NE, '=', TOK_NE_NE, TOK_NOT);
 
     case '%':
-      return punct1(s, '=', TOK_REM_ASSIGN, TOK_REM);
+      return punct1(s, src_end, '=', TOK_REM_ASSIGN, TOK_REM);
     case '*':
-      return punct1(s, '=', TOK_MUL_ASSIGN, TOK_MUL);
+      return punct1(s, src_end, '=', TOK_MUL_ASSIGN, TOK_MUL);
     case '/':
       /*
        * TOK_DIV, TOK_DIV_ASSIGN, and TOK_REGEX_LITERAL start with `/` char.
@@ -11691,10 +11715,10 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
         case TOK_CLOSE_BRACKET:
         case TOK_IDENTIFIER:
         case TOK_NUMBER:
-          return punct1(s, '=', TOK_DIV_ASSIGN, TOK_DIV);
+          return punct1(s, src_end, '=', TOK_DIV_ASSIGN, TOK_DIV);
         default:
           /* Not a division - this is a regex. Scan until closing slash */
-          for (p++; *p != '\0' && *p != '\n'; p++) {
+          for (p++; p < src_end && *p != '\0' && *p != '\n'; p++) {
             if (*p == '\\') {
               /* Skip escape sequence */
               p++;
@@ -11711,39 +11735,46 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
           }
           break;
       }
-      return punct1(s, '=', TOK_DIV_ASSIGN, TOK_DIV);
+      return punct1(s, src_end, '=', TOK_DIV_ASSIGN, TOK_DIV);
     case '^':
-      return punct1(s, '=', TOK_XOR_ASSIGN, TOK_XOR);
+      return punct1(s, src_end, '=', TOK_XOR_ASSIGN, TOK_XOR);
 
     case '+':
-      return punct3(s, '+', TOK_PLUS_PLUS, '=', TOK_PLUS_ASSIGN, TOK_PLUS);
+      return punct3(s, src_end, '+', TOK_PLUS_PLUS, '=', TOK_PLUS_ASSIGN,
+                    TOK_PLUS);
     case '-':
-      return punct3(s, '-', TOK_MINUS_MINUS, '=', TOK_MINUS_ASSIGN, TOK_MINUS);
+      return punct3(s, src_end, '-', TOK_MINUS_MINUS, '=', TOK_MINUS_ASSIGN,
+                    TOK_MINUS);
     case '&':
-      return punct3(s, '&', TOK_LOGICAL_AND, '=', TOK_AND_ASSIGN, TOK_AND);
+      return punct3(s, src_end, '&', TOK_LOGICAL_AND, '=', TOK_AND_ASSIGN,
+                    TOK_AND);
     case '|':
-      return punct3(s, '|', TOK_LOGICAL_OR, '=', TOK_OR_ASSIGN, TOK_OR);
+      return punct3(s, src_end, '|', TOK_LOGICAL_OR, '=', TOK_OR_ASSIGN,
+                    TOK_OR);
 
     case '<':
-      if (s[0][1] == '=') {
+      if (*s + 1 < src_end && s[0][1] == '=') {
         (*s) += 2;
         return TOK_LE;
       }
-      return punct2(s, '<', TOK_LSHIFT, '=', TOK_LSHIFT_ASSIGN, TOK_LT);
+      return punct2(s, src_end, '<', TOK_LSHIFT, '=', TOK_LSHIFT_ASSIGN,
+                    TOK_LT);
     case '>':
-      if (s[0][1] == '=') {
+      if (*s + 1 < src_end && s[0][1] == '=') {
         (*s) += 2;
         return TOK_GE;
       }
-      if (s[0][1] == '>' && s[0][2] == '>' && s[0][3] == '=') {
+      if (*s + 3 < src_end && s[0][1] == '>' && s[0][2] == '>' &&
+          s[0][3] == '=') {
         (*s) += 4;
         return TOK_URSHIFT_ASSIGN;
       }
-      if (s[0][1] == '>' && s[0][2] == '>') {
+      if (*s + 2 < src_end && s[0][1] == '>' && s[0][2] == '>') {
         (*s) += 3;
         return TOK_URSHIFT;
       }
-      return punct2(s, '>', TOK_RSHIFT, '=', TOK_RSHIFT_ASSIGN, TOK_GT);
+      return punct2(s, src_end, '>', TOK_RSHIFT, '=', TOK_RSHIFT_ASSIGN,
+                    TOK_GT);
 
     case '{':
       (*s)++;
@@ -11801,7 +11832,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
       /* Handle unicode variables */
       Rune r;
       if (chartorune(&r, *s) > 1 && isalpharune(r)) {
-        ident(s);
+        ident(s, src_end);
         return TOK_IDENTIFIER;
       }
       return TOK_END_OF_INPUT;
@@ -11814,14 +11845,15 @@ int main(void) {
   const char *src =
       "for (var fo++ = -1; /= <= 1.17; x<<) { == <<=, 'x')} "
       "Infinity %=x<<=2";
+  const char *src_end = src + strlen(src);
   enum v7_tok tok;
   double num;
   const char *p = src;
 
-  skip_to_next_tok(&src);
-  while ((tok = get_tok(&src, &num)) != TOK_END_OF_INPUT) {
+  skip_to_next_tok(&src, src_end);
+  while ((tok = get_tok(&src, src_end, &num)) != TOK_END_OF_INPUT) {
     printf("%d [%.*s]\n", tok, (int) (src - p), p);
-    skip_to_next_tok(&src);
+    skip_to_next_tok(&src, src_end);
     p = src;
   }
   printf("%d [%.*s]\n", tok, (int) (src - p), p);
@@ -15898,7 +15930,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
         }
       } else {
         /* we have regular JavaScript source, so, parse it */
-        V7_TRY(parse(v7, a, src, is_json));
+        V7_TRY(parse(v7, a, src, src_len, is_json));
       }
 
       /* we now have binary AST, let's compile it */
@@ -16770,20 +16802,21 @@ int v7_is_callable(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/exceptions.h" */
 
 enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *res) {
-  return b_exec(v7, js_code, 0, NULL, V7_UNDEFINED, V7_UNDEFINED, V7_UNDEFINED,
-                0, 0, 0, res);
+  return b_exec(v7, js_code, strlen(js_code), NULL, V7_UNDEFINED, V7_UNDEFINED,
+                V7_UNDEFINED, 0, 0, 0, res);
 }
 
 enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
                         const struct v7_exec_opts *opts, v7_val_t *res) {
-  return b_exec(v7, js_code, 0, opts->filename, V7_UNDEFINED, V7_UNDEFINED,
+  return b_exec(v7, js_code, strlen(js_code), opts->filename, V7_UNDEFINED,
+                V7_UNDEFINED,
                 (opts->this_obj == 0 ? V7_UNDEFINED : opts->this_obj),
                 opts->is_json, 0, 0, res);
 }
 
 enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res) {
-  return b_exec(v7, str, 0, NULL, V7_UNDEFINED, V7_UNDEFINED, V7_UNDEFINED, 1,
-                0, 0, res);
+  return b_exec(v7, str, strlen(str), NULL, V7_UNDEFINED, V7_UNDEFINED,
+                V7_UNDEFINED, 1, 0, 0, res);
 }
 
 #ifndef V7_NO_FS
@@ -16851,18 +16884,8 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 }
 
 #ifndef NO_LIBC
-/*
- * Compile a given JS source into a given output representation.
- *
- * if `bcode` is 0 it will enerate Abstract Syntax Tree (AST), otherwise
- *
- * If `binary` is 0, then generated dump is in text format, otherwise it is
- * in the binary format. Binary AST / BODE is self-sufficient and can be
- * executed by V7 with no extra input.
- *
- * `fp` must be an opened writable file stream to write compiled AST/bcode to.
- */
-enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
+enum v7_err _v7_compile(const char *src, size_t js_code_size, int binary,
+                        int use_bcode, FILE *fp) {
   struct ast ast;
   struct v7 *v7 = v7_create();
   ast_off_t pos = 0;
@@ -16871,14 +16894,14 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
   v7->is_precompiling = 1;
 
   ast_init(&ast, 0);
-  err = parse(v7, &ast, code, 0);
+  err = parse(v7, &ast, src, js_code_size, 0);
   if (err == V7_OK) {
     if (use_bcode) {
       struct bcode bcode;
       /*
        * We don't set filename here, because the bcode will be just serialized
        * and then freed. We don't currently serialize filename. If we ever do,
-       * we'll have to make `v7_compile()` to also take a filename argument,
+       * we'll have to make `_v7_compile()` to also take a filename argument,
        * and use it here.
        */
       bcode_init(&bcode, 0, NULL, 0);
@@ -16911,6 +16934,10 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
   ast_free(&ast);
   v7_destroy(v7);
   return err;
+}
+
+enum v7_err v7_compile(const char *src, int binary, int use_bcode, FILE *fp) {
+  return _v7_compile(src, strlen(src), binary, use_bcode, fp);
 }
 #endif
 #ifdef V7_MODULE_LINES
@@ -22149,12 +22176,13 @@ union user_arg_ret {
 static enum v7_tok next_tok(struct v7 *v7) {
   int prev_line_no = v7->pstate.prev_line_no;
   v7->pstate.prev_line_no = v7->pstate.line_no;
-  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc, v7->pstate.src_end);
   v7->after_newline = prev_line_no != v7->pstate.line_no;
   v7->tok = v7->pstate.pc;
-  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl, v7->cur_tok);
+  v7->cur_tok = get_tok(&v7->pstate.pc, v7->pstate.src_end, &v7->cur_tok_dbl,
+                        v7->cur_tok);
   v7->tok_len = v7->pstate.pc - v7->tok;
-  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc, v7->pstate.src_end);
   return v7->cur_tok;
 }
 
@@ -22230,7 +22258,7 @@ static enum v7_err end_of_statement(struct v7 *v7) {
 static enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
   double d;
-  return get_tok(&s, &d, v7->cur_tok);
+  return get_tok(&s, v7->pstate.src_end, &d, v7->cur_tok);
 }
 
 static int parse_optional(struct v7 *v7, struct ast *a,
@@ -23359,7 +23387,7 @@ fid_none:
 }
 
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
-                             int is_json) {
+                             size_t src_len, int is_json) {
   enum v7_err rcode;
   const char *error_msg = NULL;
   const char *p;
@@ -23376,6 +23404,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 #endif
 
   v7->pstate.source_code = v7->pstate.pc = src;
+  v7->pstate.src_end = src + src_len;
   v7->pstate.file_name = "<stdin>";
   v7->pstate.line_no = 1;
   v7->pstate.in_function = 0;
@@ -23512,7 +23541,8 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 
     assert(error_msg != NULL);
 
-    for (p = v7->tok - col; *p != '\0' && *p != '\n'; p++) {
+    for (p = v7->tok - col; p < v7->pstate.src_end && *p != '\0' && *p != '\n';
+         p++) {
       line_len++;
     }
 
@@ -33728,7 +33758,8 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
         exit_rcode = EXIT_FAILURE;
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
-        if (v7_compile(source_code, binary_ast, dump_bcode, stdout) != V7_OK) {
+        if (_v7_compile(source_code, size, binary_ast, dump_bcode, stdout) !=
+            V7_OK) {
           fprintf(stderr, "error: %s\n", v7->error_msg);
           exit_rcode = EXIT_FAILURE;
           exit(exit_rcode);
