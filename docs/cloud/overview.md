@@ -55,6 +55,6 @@ Projects can be published and appear in a app stores.
 Other users can fork those projects, like they are used to do on GitHub.
 
 When a new device is onboarded to the cloud via
-[Mongoose Flashing tool](https://github.com/cesanta/mft), it is assigned
+[Mongoose Flashing Tool](https://github.com/cesanta/mft), it is assigned
 ID and password (also called a Pre-Shared Key, PSK). Device's ID is
 globally unique.

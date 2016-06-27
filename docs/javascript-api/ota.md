@@ -1,5 +1,5 @@
 ---
-title: OTA (Over-the-air programming)
+title: Over The Air updates (OTA)
 ---
 
 Mongoose IoT OTA is designed to work in either unattended or controllable mode.

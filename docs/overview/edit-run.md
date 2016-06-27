@@ -17,7 +17,7 @@ firmware can also be downloaded and flashed separately.
 Our IDE allows to build a completely custom firmware with no
 need to install any complicated toolchain one your machine.
 You might want to use
-[Mongoose Flashing tool](https://github.com/cesanta/mft/releases)
+[Mongoose Flashing Tool](https://github.com/cesanta/mft/releases)
 once to flash the firmware for the first time on a stock device.
 
 <img src="media/over_edit.png" width="100%">

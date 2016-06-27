@@ -2,12 +2,18 @@
 title: Blink
 ---
 
-This example shows how to blink an LED.
+This example shows how to blink an LED. It's a traditional "hellow world"
+application in embedded world. It does not contain any logic to communicate
+data to/from the outside world though - for those, take a look at
+subsequent tutorials.
 
-- Login to the cloud IDE
+- Login to [Mongoose Cloud](https://mongoose-iot.com)
+- Create a new project, call it `blink`
+- Swith to the IDE tab
 - Copy/paste the following code into the `app.js`
 
     ```javascript
+    console.log('Hello from blink example');
     function blink(pin) {
       pin = pin || 0;
       var level = GPIO.read(pin);
@@ -16,10 +22,10 @@ This example shows how to blink an LED.
       console.log("pin:", pin, ", level:", level);
       setTimeout(function() { blink(pin); }, 500);
     }
-
     blink(2);
     ```
 
+- In the IDC (Interactive Device Console), choose your target device
 - Attach an LED to GPIO 2 and GND pins
-- Build and Flash firmware to the device
+- Click Flash button, and wait until hello message appears in the device log
 - LED will start to blink each 500ms

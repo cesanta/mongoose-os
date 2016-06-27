@@ -14,7 +14,8 @@ logs in to Mongoose Cloud from two different machines. Her ID is a user ID,
 but two browsers need separate addresses when talking to the cloud. Different
 components are appended to the authenticated user ID to achieve that.
 
-Architecturally, a central component of Mongoose IoT Cloud is a Dispatcher
+Architecturally, a central component of
+[Mongoose Cloud](https://mongoose-iot.com) is a Dispatcher
 service. Dispatcher listens on HTTPS and WSS ports for clubby frames,
 looks inside each frame for the source and destination address,
 asks Registry service to authenticate the request, and routes Clubby frames

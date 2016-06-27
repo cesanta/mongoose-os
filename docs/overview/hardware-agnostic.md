@@ -7,8 +7,7 @@ Currently supported:
 
 - Texas Instruments CC3200 ([buy hardware](http://www.aliexpress.com/af/nodemcu.html?SearchText=launchxl))
 - Espressif ESP8266 ([buy hardware](http://www.aliexpress.com/af/nodemcu.html?SearchText=nodemcu))
-- Virtual device on [Cesanta IoT cloud service](http://mongoose-iot.com)
-  for prototyping
+- Virtual device on [Mongoose Cloud](http://mongoose-iot.com) for prototyping
 - All POSIX compatible systems, including Raspberry PI, BeagleBone,
   OpenWRT, Linux, Windows, MacOS
 

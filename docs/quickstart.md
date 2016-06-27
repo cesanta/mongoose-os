@@ -2,7 +2,7 @@
 title: Quick Start Guide
 ---
 
-- Login to the [Mongoose IoT Cloud](https://mongoose-iot.com)
+- Login to the [Mongoose Cloud](https://mongoose-iot.com)
 - Navigate to Smart Light example project
 - Read the summary page
 - Find and install Mongoose Mobile app on Google Play. This app will
@@ -14,9 +14,10 @@ title: Quick Start Guide
     - Click on "Add Device" button.
     - Select virtual device and click Add
 - If you do have a real device,
-    - Download flashing tool from https://github.com/cesanta/mft/releases
-    - Follow Mongoose Flashing tool wizard to flash Mongoose firmware
-      to your device and connect it to Mongoose Cloud<br>
+    - Download [Mongoose Flashing Tool](https://github.com/cesanta/mft/releases)
+    - Follow the Mongoose Flashing Tool wizard to flash Mongoose Firmware
+      to your device and connect it to the
+      [Mongoose Cloud](https://mongoose-iot.com)<br>
       <img src="media/quicktart_mft.png" width="100%">
     - Connect an LED to GND and GPIO5 pins
     - FTDI USB drivers are at
