@@ -3,17 +3,28 @@
  * All rights reserved
  */
 
-#ifndef CS_DISABLE_JS
-
-#include <stdlib.h>
 #include "common/cs_dbg.h"
+#include "fw/src/sj_console.h"
+#include "common/str_util.h"
+#include <stdlib.h>
+#include <stdarg.h>
+
+/*
+ * This is workaround to not have v7* param
+ * in sj_console_log C-api
+ * TODO(alashkin): remove this static var
+ */
+static struct v7 *s_v7;
+static int s_waiting_for_resp;
+
+#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON)
+
 #include "common/cs_dirent.h"
 #include "common/cs_file.h"
 #include "common/queue.h"
 #include "fw/src/device_config.h"
 #include "fw/src/sj_clubby_js.h"
 #include "fw/src/sj_common.h"
-#include "fw/src/sj_console.h"
 #include "mongoose/mongoose.h"
 #include "sj_timers.h"
 
@@ -38,7 +49,6 @@ struct cache {
 static struct cache s_cache;
 /* TODO(alashkin): init on boot */
 static file_id_t s_last_file_id = 1;
-static int s_waiting_for_resp;
 
 static void console_process_data(struct v7 *v7);
 
@@ -411,6 +421,7 @@ void sj_console_init(struct v7 *v7) {
     sj_clubby_register_global_command(clubby_cmd_onopen,
                                       console_handle_clubby_ready, v7);
   }
+  s_v7 = v7; /* TODO(alashkin): remove s_v7 */
 }
 
 void sj_console_api_setup(struct v7 *v7) {
@@ -426,3 +437,47 @@ void sj_console_api_setup(struct v7 *v7) {
 }
 
 #endif /* CS_DISABLE_JS */
+
+void sj_console_cloud_log(const char *fmt, ...) {
+  static char *buf = NULL;
+  static int buf_size = 0;
+  if (buf == NULL) {
+#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON)
+    buf_size = get_cfg()->console.mem_cache_size;
+#else
+    buf_size = 256;
+#endif
+    buf = calloc(1, buf_size);
+  }
+
+  va_list ap;
+  va_start(ap, fmt);
+  int len = c_vsnprintf(buf, buf_size, fmt, ap);
+  va_end(ap);
+  if (len > buf_size) {
+    len = buf_size;
+  }
+
+#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON)
+  if (get_cfg()->console.send_to_cloud && s_v7 != NULL) {
+    struct mbuf tmp;
+    /*
+     * Unfortunatelly, we cannot use fake mbuf here
+     * because it is changed later
+     * TODO(alashkin): fix it and use memory buffer
+     */
+    mbuf_init(&tmp, len);
+    mbuf_append(&tmp, buf, len);
+    mbuf_append(&tmp, " \n", 2);
+    console_send_to_cloud(s_v7, &tmp);
+    mbuf_free(&tmp);
+  }
+#else
+  (void) s_v7;
+  (void) len;
+#endif
+}
+
+int sj_console_is_waiting_for_resp() {
+  return s_waiting_for_resp;
+}

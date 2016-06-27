@@ -7,7 +7,7 @@
 #include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_timers.h"
-
+#include "fw/src/sj_console.h"
 /*
  * Using static variable (not only c->user_data), it allows to check if update
  * already in progress when another request arrives
@@ -50,6 +50,7 @@ extern const char *build_version;
 
 static const uint32_t c_zip_file_header_magic = 0x04034b50;
 static const uint32_t c_zip_cdir_magic = 0x02014b50;
+static int s_reboot_timer_id;
 
 enum update_status {
   US_INITED,
@@ -70,24 +71,25 @@ uint32_t mz_crc32(uint32_t crc, const char *ptr, size_t buf_len);
 
 struct update_context *updater_context_create() {
   if (s_ctx != NULL) {
-    LOG(LL_ERROR, ("Update already in progress"));
+    CONSOLE_LOG(LL_ERROR, ("Update already in progress"));
     return NULL;
   }
 
   s_ctx = calloc(1, sizeof(*s_ctx));
   if (s_ctx == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
+    CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     return NULL;
   }
 
   s_ctx->dev_ctx = sj_upd_ctx_create();
 
-  LOG(LL_INFO, ("Starting update"));
+  CONSOLE_LOG(LL_INFO, ("Starting update"));
   return s_ctx;
 }
 
 void updater_set_status(struct update_context *ctx, enum update_status st) {
-  LOG(LL_DEBUG, ("Update status %d -> %d", (int) ctx->update_status, (int) st));
+  CONSOLE_LOG(LL_DEBUG,
+              ("Update status %d -> %d", (int) ctx->update_status, (int) st));
   ctx->update_status = st;
 }
 
@@ -112,7 +114,7 @@ static void context_update(struct update_context *ctx, const char *data,
     ctx->data_len = len;
   }
 
-  LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
+  CONSOLE_LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
 }
 
 static void context_save_unprocessed(struct update_context *ctx) {
@@ -120,7 +122,7 @@ static void context_save_unprocessed(struct update_context *ctx) {
     mbuf_append(&ctx->unprocessed, ctx->data, ctx->data_len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
-    LOG(LL_DEBUG, ("Added %d bytes to cached data", ctx->data_len));
+    CONSOLE_LOG(LL_DEBUG, ("Added %d bytes to cached data", ctx->data_len));
   }
 }
 
@@ -136,7 +138,7 @@ void context_remove_data(struct update_context *ctx, size_t len) {
     ctx->data_len -= len;
   }
 
-  LOG(LL_DEBUG, ("Consumed %u, %u left", len, ctx->data_len));
+  CONSOLE_LOG(LL_DEBUG, ("Consumed %u, %u left", len, ctx->data_len));
 }
 
 static void context_clear_current_file(struct update_context *ctx) {
@@ -153,7 +155,7 @@ int is_reboot_required(struct update_context *ctx) {
 
 static int parse_zip_file_header(struct update_context *ctx) {
   if (ctx->data_len < ZIP_LOCAL_HDR_SIZE) {
-    LOG(LL_DEBUG, ("Zip header is incomplete"));
+    CONSOLE_LOG(LL_DEBUG, ("Zip header is incomplete"));
     /* Need more data*/
     return 0;
   }
@@ -168,8 +170,8 @@ static int parse_zip_file_header(struct update_context *ctx) {
          sizeof(file_name_len));
   memcpy(&extras_len, ctx->data + ZIP_EXTRAS_LEN_OFFSET, sizeof(extras_len));
 
-  LOG(LL_DEBUG, ("Filename len = %d bytes, extras len = %d bytes",
-                 (int) file_name_len, (int) extras_len));
+  CONSOLE_LOG(LL_DEBUG, ("Filename len = %d bytes, extras len = %d bytes",
+                         (int) file_name_len, (int) extras_len));
   if (ctx->data_len < ZIP_LOCAL_HDR_SIZE + file_name_len + extras_len) {
     /* Still need mode data */
     return 0;
@@ -179,19 +181,19 @@ static int parse_zip_file_header(struct update_context *ctx) {
   memcpy(&compression_method, ctx->data + ZIP_COMPRESSION_METHOD_OFFSET,
          sizeof(compression_method));
 
-  LOG(LL_DEBUG, ("Compression method=%d", (int) compression_method));
+  CONSOLE_LOG(LL_DEBUG, ("Compression method=%d", (int) compression_method));
   if (compression_method != 0) {
     /* Do not support compressed archives */
     ctx->status_msg = "File is compressed";
-    LOG(LL_ERROR, ("File is compressed)"));
+    CONSOLE_LOG(LL_ERROR, ("File is compressed)"));
     return -1;
   }
 
   int i;
   char *nodir_file_name = (char *) ctx->data + ZIP_FILENAME_OFFSET;
   uint16_t nodir_file_name_len = file_name_len;
-  LOG(LL_DEBUG,
-      ("File name: %.*s", (int) nodir_file_name_len, nodir_file_name));
+  CONSOLE_LOG(LL_DEBUG,
+              ("File name: %.*s", (int) nodir_file_name_len, nodir_file_name));
 
   for (i = 0; i < file_name_len; i++) {
     /* archive may contain folder, but we skip it, using filenames only */
@@ -202,12 +204,12 @@ static int parse_zip_file_header(struct update_context *ctx) {
     }
   }
 
-  LOG(LL_DEBUG,
-      ("File name to use: %.*s", (int) nodir_file_name_len, nodir_file_name));
+  CONSOLE_LOG(LL_DEBUG, ("File name to use: %.*s", (int) nodir_file_name_len,
+                         nodir_file_name));
 
   if (nodir_file_name_len >= sizeof(ctx->current_file.fi.name)) {
     /* We are in charge of file names, right? */
-    LOG(LL_ERROR, ("Too long file name"));
+    CONSOLE_LOG(LL_ERROR, ("Too long file name"));
     ctx->status_msg = "Too long file name";
     return -1;
   }
@@ -222,23 +224,23 @@ static int parse_zip_file_header(struct update_context *ctx) {
 
   if (ctx->current_file.fi.size != uncompressed_size) {
     /* Probably malformed archive*/
-    LOG(LL_ERROR, ("Malformed archive"));
+    CONSOLE_LOG(LL_ERROR, ("Malformed archive"));
     ctx->status_msg = "Malformed archive";
     return -1;
   }
 
-  LOG(LL_DEBUG, ("File size: %d", ctx->current_file.fi.size));
+  CONSOLE_LOG(LL_DEBUG, ("File size: %d", ctx->current_file.fi.size));
 
   uint16_t gen_flag;
   memcpy(&gen_flag, ctx->data + ZIP_GENFLAG_OFFSET, sizeof(gen_flag));
   ctx->current_file.has_descriptor = gen_flag & (1 << 3);
 
-  LOG(LL_DEBUG, ("General flag=%d", (int) gen_flag));
+  CONSOLE_LOG(LL_DEBUG, ("General flag=%d", (int) gen_flag));
 
   memcpy(&ctx->current_file.crc, ctx->data + ZIP_CRC32_OFFSET,
          sizeof(ctx->current_file.crc));
 
-  LOG(LL_DEBUG, ("CRC32: 0x%08x", ctx->current_file.crc));
+  CONSOLE_LOG(LL_DEBUG, ("CRC32: 0x%08x", ctx->current_file.crc));
 
   context_remove_data(ctx, ZIP_LOCAL_HDR_SIZE + file_name_len + extras_len);
 
@@ -269,9 +271,10 @@ static int parse_manifest(struct update_context *ctx) {
     return -1;
   }
 
-  LOG(LL_INFO, ("FW: %.*s %.*s %s -> %.*s", (int) ctx->name->len,
-                ctx->name->ptr, (int) ctx->platform->len, ctx->platform->ptr,
-                build_version, (int) ctx->version->len, ctx->version->ptr));
+  CONSOLE_LOG(LL_INFO,
+              ("FW: %.*s %.*s %s -> %.*s", (int) ctx->name->len, ctx->name->ptr,
+               (int) ctx->platform->len, ctx->platform->ptr, build_version,
+               (int) ctx->version->len, ctx->version->ptr));
 
   context_remove_data(ctx, ctx->current_file.fi.size);
 
@@ -280,8 +283,9 @@ static int parse_manifest(struct update_context *ctx) {
 
 static int finalize_write(struct update_context *ctx) {
   if (ctx->current_file.crc != ctx->current_file.crc_current) {
-    LOG(LL_ERROR, ("Invalid CRC, want 0x%x, got 0x%x", ctx->current_file.crc,
-                   ctx->current_file.crc_current));
+    CONSOLE_LOG(LL_ERROR,
+                ("Invalid CRC, want 0x%x, got 0x%x", ctx->current_file.crc,
+                 ctx->current_file.crc_current));
     ctx->status_msg = "Invalid CRC";
     return -1;
   }
@@ -316,8 +320,8 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
         if (strncmp(ctx->current_file.fi.name, MANIFEST_FILENAME,
                     sizeof(MANIFEST_FILENAME)) != 0) {
           /* We've got file header, but it isn't not metadata */
-          LOG(LL_ERROR, ("Get %s instead of %s", ctx->current_file.fi.name,
-                         MANIFEST_FILENAME));
+          CONSOLE_LOG(LL_ERROR, ("Get %s instead of %s",
+                                 ctx->current_file.fi.name, MANIFEST_FILENAME));
           return -1;
         }
         updater_set_status(ctx, US_WAITING_MANIFEST);
@@ -351,17 +355,17 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           /* Running the same of higher version */
           if (get_cfg()->update.update_to_any_version == 0) {
             ctx->status_msg = "Device has the same or more recent version";
-            LOG(LL_INFO, (ctx->status_msg));
+            CONSOLE_LOG(LL_INFO, (ctx->status_msg));
             return 1; /* Not an error */
           } else {
-            LOG(LL_WARN, ("Same or older version "
-                          "but update_to_any_version is set."));
+            CONSOLE_LOG(LL_WARN, ("Same or older version "
+                                  "but update_to_any_version is set."));
           }
         }
 
         if ((ret = sj_upd_begin(ctx->dev_ctx, ctx->parts)) < 0) {
           ctx->status_msg = sj_upd_get_status_msg(ctx->dev_ctx);
-          LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
+          CONSOLE_LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
           return ret;
         }
 
@@ -374,7 +378,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           return 0;
         }
         if (memcmp(ctx->data, &c_zip_cdir_magic, 4) == 0) {
-          LOG(LL_DEBUG, ("Reached end of archive, finalizing update"));
+          CONSOLE_LOG(LL_DEBUG, ("Reached end of archive, finalizing update"));
           updater_set_status(ctx, US_FINALIZE);
           break;
         }
@@ -414,9 +418,9 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           context_remove_data(ctx, num_processed);
           ctx->current_file.fi.processed += num_processed;
         }
-        LOG(LL_DEBUG,
-            ("Processed %d, up to %u, %u left in the buffer", num_processed,
-             ctx->current_file.fi.processed, ctx->data_len));
+        CONSOLE_LOG(LL_DEBUG, ("Processed %d, up to %u, %u left in the buffer",
+                               num_processed, ctx->current_file.fi.processed,
+                               ctx->data_len));
 
         if (ctx->current_file.fi.processed < ctx->current_file.fi.size) {
           context_save_unprocessed(ctx);
@@ -435,8 +439,8 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
             MIN(ctx->data_len,
                 ctx->current_file.fi.size - ctx->current_file.fi.processed);
         ctx->current_file.fi.processed += to_skip;
-        LOG(LL_DEBUG, ("Skipping %u bytes, %u total", to_skip,
-                       ctx->current_file.fi.processed));
+        CONSOLE_LOG(LL_DEBUG, ("Skipping %u bytes, %u total", to_skip,
+                               ctx->current_file.fi.processed));
         context_remove_data(ctx, to_skip);
 
         if (ctx->current_file.fi.processed < ctx->current_file.fi.size) {
@@ -449,7 +453,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
       } /* fall through */
       case US_SKIPPING_DESCRIPTOR: {
         int has_descriptor = ctx->current_file.has_descriptor;
-        LOG(LL_DEBUG, ("Has descriptor : %d", has_descriptor));
+        CONSOLE_LOG(LL_DEBUG, ("Has descriptor : %d", has_descriptor));
         context_clear_current_file(ctx);
         ctx->current_file.has_descriptor = 0;
         if (has_descriptor) {
@@ -488,7 +492,7 @@ void updater_finish(struct update_context *ctx) {
 
 void updater_context_free(struct update_context *ctx) {
   if (!is_update_finished(ctx)) {
-    LOG(LL_ERROR, ("Update terminated unexpectedly"));
+    CONSOLE_LOG(LL_ERROR, ("Update terminated unexpectedly"));
   }
   sj_upd_ctx_free(s_ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
@@ -499,13 +503,17 @@ void updater_context_free(struct update_context *ctx) {
 }
 
 static void reboot_timer_cb(void *param) {
-  sj_system_restart(0);
+  static int cycles = 0;
+  if (!sj_console_is_waiting_for_resp() || cycles++ > 100 /* 10 sec */) {
+    sj_clear_timer(s_reboot_timer_id);
+    sj_system_restart(0);
+  }
   (void) param;
 }
 
 void updater_schedule_reboot(int delay_ms) {
-  LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
-  sj_set_c_timer(delay_ms, 0, reboot_timer_cb, NULL);
+  CONSOLE_LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
+  s_reboot_timer_id = sj_set_c_timer(delay_ms, 1, reboot_timer_cb, NULL);
 }
 
 void bin2hex(const uint8_t *src, int src_len, char *dst) {
@@ -523,31 +531,31 @@ static int file_copy(spiffs *old_fs, char *file_name) {
   spiffs_stat stat;
   int32_t readen, to_read = 0, total = 0;
 
-  LOG(LL_INFO, ("Copying %s", file_name));
+  CONSOLE_LOG(LL_INFO, ("Copying %s", file_name));
 
   spiffs_file fd = SPIFFS_open(old_fs, file_name, SPIFFS_RDONLY, 0);
   if (fd < 0) {
     int err = SPIFFS_errno(old_fs);
     if (err == SPIFFS_ERR_NOT_FOUND) {
-      LOG(LL_WARN, ("File %s not found, skipping", file_name));
+      CONSOLE_LOG(LL_WARN, ("File %s not found, skipping", file_name));
       return 1;
     } else {
-      LOG(LL_ERROR, ("Failed to open %s, error %d", file_name, err));
+      CONSOLE_LOG(LL_ERROR, ("Failed to open %s, error %d", file_name, err));
       return 0;
     }
   }
 
   if (SPIFFS_fstat(old_fs, fd, &stat) != SPIFFS_OK) {
-    LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)", file_name,
-                   SPIFFS_errno(old_fs)));
+    CONSOLE_LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)",
+                           file_name, SPIFFS_errno(old_fs)));
     goto exit;
   }
 
-  LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
+  CONSOLE_LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
 
   f = fopen(file_name, "w");
   if (f == NULL) {
-    LOG(LL_ERROR, ("Failed to open %s", file_name));
+    CONSOLE_LOG(LL_ERROR, ("Failed to open %s", file_name));
     goto exit;
   }
 
@@ -556,23 +564,24 @@ static int file_copy(spiffs *old_fs, char *file_name) {
 
   while (to_read != 0) {
     if ((readen = SPIFFS_read(old_fs, fd, buf, to_read)) < 0) {
-      LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d", to_read,
-                     file_name, SPIFFS_errno(old_fs)));
+      CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d",
+                             to_read, file_name, SPIFFS_errno(old_fs)));
       goto exit;
     }
 
     if (fwrite(buf, 1, readen, f) != (size_t) readen) {
-      LOG(LL_ERROR, ("Failed to write %d bytes to %s", readen, file_name));
+      CONSOLE_LOG(LL_ERROR,
+                  ("Failed to write %d bytes to %s", readen, file_name));
       goto exit;
     }
 
     total += readen;
-    LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
+    CONSOLE_LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
 
     to_read = MIN(sizeof(buf), (stat.size - total));
   }
 
-  LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
+  CONSOLE_LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
 
   ret = 1;
 
@@ -594,7 +603,7 @@ int sj_upd_merge_spiffs(spiffs *old_fs) {
   spiffs_DIR dir;
   spiffs_DIR *dir_ptr = SPIFFS_opendir(old_fs, ".", &dir);
   if (dir_ptr == NULL) {
-    LOG(LL_ERROR, ("Failed to open root directory"));
+    CONSOLE_LOG(LL_ERROR, ("Failed to open root directory"));
     goto cleanup;
   }
 
@@ -604,7 +613,7 @@ int sj_upd_merge_spiffs(spiffs *old_fs) {
     if (stat((const char *) de_ptr->name, &st) != 0) {
       /* File not found on the new fs, copy. */
       if (!file_copy(old_fs, (char *) de_ptr->name)) {
-        LOG(LL_ERROR, ("Error copying!"));
+        CONSOLE_LOG(LL_ERROR, ("Error copying!"));
         goto cleanup;
       }
     }

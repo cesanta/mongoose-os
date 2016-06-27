@@ -14,6 +14,7 @@
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
+#include "fw/src/sj_console.h"
 #include "fw/src/sj_updater_hal.h"
 #include "fw/src/sj_updater_util.h"
 #include "fw/platforms/esp8266/user/esp_updater_clubby.h"
@@ -85,13 +86,13 @@ static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
   struct json_token *part_tok = find_json_token(parts_tok, part_name);
 
   if (part_tok == NULL) {
-    LOG(LL_ERROR, ("Part %s not found", part_name));
+    CONSOLE_LOG(LL_ERROR, ("Part %s not found", part_name));
     return -1;
   }
 
   struct json_token *addr_tok = find_json_token(part_tok, "addr");
   if (addr_tok == NULL) {
-    LOG(LL_ERROR, ("Addr token not found in manifest"));
+    CONSOLE_LOG(LL_ERROR, ("Addr token not found in manifest"));
     return -1;
   }
 
@@ -102,7 +103,7 @@ static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
   pi->addr = strtol(addr_tok->ptr, NULL, 0);
   if (pi->addr == 0) {
     /* Only rboot can has addr = 0, but we do not update rboot now */
-    LOG(LL_ERROR, ("Invalid address in manifest"));
+    CONSOLE_LOG(LL_ERROR, ("Invalid address in manifest"));
     return -1;
   }
 
@@ -117,7 +118,7 @@ static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
   struct json_token *sha1sum_tok = find_json_token(part_tok, "cs_sha1");
   if (sha1sum_tok == NULL || sha1sum_tok->type != JSON_TYPE_STRING ||
       sha1sum_tok->len != sizeof(pi->sha1sum)) {
-    LOG(LL_ERROR, ("cs_sha1 token not found in manifest"));
+    CONSOLE_LOG(LL_ERROR, ("cs_sha1 token not found in manifest"));
     return -1;
   }
   memcpy(pi->sha1sum, sha1sum_tok->ptr, sizeof(pi->sha1sum));
@@ -125,7 +126,7 @@ static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
   struct json_token *file_name_tok = find_json_token(part_tok, "src");
   if (file_name_tok == NULL || file_name_tok->type != JSON_TYPE_STRING ||
       (size_t) file_name_tok->len > sizeof(pi->file_name) - 1) {
-    LOG(LL_ERROR, ("src token not found in manifest"));
+    CONSOLE_LOG(LL_ERROR, ("src token not found in manifest"));
     return -1;
   }
 
@@ -178,7 +179,7 @@ int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
     }
 
     if (spi_flash_read(addr, (uint32_t *) read_buf, to_read) != 0) {
-      LOG(LL_ERROR, ("Failed to read %d bytes from %X", to_read, addr));
+      CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %X", to_read, addr));
       return -1;
     }
 
@@ -210,13 +211,14 @@ static int prepare_to_write(struct sj_upd_ctx *ctx,
   ctx->erased_till = part->addr;
   /* See if current content is the same. */
   if (verify_checksum(part->addr, fi->size, part->sha1sum) == 1) {
-    LOG(LL_INFO, ("Digest matched, skipping %s %u @ 0x%x (%.*s)", fi->name,
-                  fi->size, part->addr, SHA1SUM_LEN, part->sha1sum));
+    CONSOLE_LOG(LL_INFO,
+                ("Digest matched, skipping %s %u @ 0x%x (%.*s)", fi->name,
+                 fi->size, part->addr, SHA1SUM_LEN, part->sha1sum));
     part->done = 1;
     return 0;
   }
-  LOG(LL_INFO, ("Writing %s %u @ 0x%x (%.*s)", fi->name, fi->size, part->addr,
-                SHA1SUM_LEN, part->sha1sum));
+  CONSOLE_LOG(LL_INFO, ("Writing %s %u @ 0x%x (%.*s)", fi->name, fi->size,
+                        part->addr, SHA1SUM_LEN, part->sha1sum));
   return 1;
 }
 
@@ -245,14 +247,14 @@ static int prepare_flash(struct sj_upd_ctx *ctx, uint32_t bytes_to_write) {
       LOG(LL_DEBUG, ("Erasing block @sector %X", sec_no));
       uint32_t block_no = ctx->erased_till / FLASH_ERASE_BLOCK_SIZE;
       if (SPIEraseBlock(block_no) != 0) {
-        LOG(LL_ERROR, ("Failed to erase flash block %X", block_no));
+        CONSOLE_LOG(LL_ERROR, ("Failed to erase flash block %X", block_no));
         return -1;
       }
       ctx->erased_till = (block_no + 1) * FLASH_ERASE_BLOCK_SIZE;
     } else {
       LOG(LL_DEBUG, ("Erasing sector %X", sec_no));
       if (spi_flash_erase_sector(sec_no) != 0) {
-        LOG(LL_ERROR, ("Failed to erase flash sector %X", sec_no));
+        CONSOLE_LOG(LL_ERROR, ("Failed to erase flash sector %X", sec_no));
         return -1;
       }
       ctx->erased_till = (sec_no + 1) * FLASH_SECTOR_SIZE;
@@ -328,10 +330,10 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
   uint8_t spiffs_fds[32 * 2];
   spiffs old_fs;
   int ret = 0;
-  LOG(LL_INFO, ("Mounting old FS: %d @ 0x%x", FS_SIZE, old_fs_addr));
+  CONSOLE_LOG(LL_INFO, ("Mounting old FS: %d @ 0x%x", FS_SIZE, old_fs_addr));
   if (fs_mount(&old_fs, old_fs_addr, FS_SIZE, spiffs_work_buf, spiffs_fds,
                sizeof(spiffs_fds))) {
-    LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
+    CONSOLE_LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
     return -1;
   }
 
@@ -348,7 +350,7 @@ static int load_data_from_old_fs(uint32_t old_fs_addr) {
 int finish_update() {
   if (!get_rboot_config()->fw_updated) {
     if (get_rboot_config()->is_first_boot != 0) {
-      LOG(LL_INFO, ("Firmware was rolled back, committing it"));
+      CONSOLE_LOG(LL_INFO, ("Firmware was rolled back, committing it"));
       get_rboot_config()->is_first_boot = 0;
       rboot_set_config(get_rboot_config());
       s_clubby_upd_status = 1; /* Once we connect wifi we send status 1 */
@@ -370,8 +372,8 @@ int finish_update() {
 
     return 1;
   } else {
-    LOG(LL_ERROR,
-        ("Failed to merge filesystem, rollback to previous firmware"));
+    CONSOLE_LOG(LL_ERROR,
+                ("Failed to merge filesystem, rollback to previous firmware"));
 
     sj_system_restart(0);
     return 0;
@@ -402,7 +404,8 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   cfg->boot_attempts = 0;
   rboot_set_config(cfg);
 
-  LOG(LL_DEBUG,
+  CONSOLE_LOG(
+      LL_DEBUG,
       ("New rboot config: "
        "prev_rom: %d, current_rom: %d current_rom addr: %X, "
        "current_rom size: %d, current_fs addr: %X, current_fs size: %d",

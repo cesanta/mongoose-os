@@ -8,6 +8,7 @@
 #include "common/cs_dbg.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/src/sj_clubby.h"
+#include "fw/src/sj_console.h"
 #include "fw/src/sj_clubby_js.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_updater_common.h"
@@ -71,7 +72,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         if (hm.body.len != 0) {
           LOG(LL_DEBUG, ("HTTP header: file size: %d", (int) hm.body.len));
           if (hm.body.len == (size_t) ~0) {
-            LOG(LL_ERROR, ("Invalid content-length, perhaps chunked-encoding"));
+            CONSOLE_LOG(LL_ERROR,
+                        ("Invalid content-length, perhaps chunked-encoding"));
             ctx->status_msg =
                 "Invalid content-length, perhaps chunked-encoding";
             c->flags |= MG_F_CLOSE_IMMEDIATELY;
@@ -107,16 +109,17 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
             FILE *tmp_file = fopen(UPDATER_TEMP_FILE_NAME, "w");
             if (tmp_file == NULL || upd_data == NULL) {
               /* There is nothing we can do */
-              LOG(LL_ERROR, ("Cannot save update status"));
+              CONSOLE_LOG(LL_ERROR, ("Cannot save update status"));
             } else {
               fwrite(upd_data, 1, len, tmp_file);
               fclose(tmp_file);
             }
-            LOG(LL_INFO, ("Update completed successfully"));
+            CONSOLE_LOG(LL_INFO, ("Update completed successfully"));
           }
         } else if (res < 0) {
           /* Error */
-          LOG(LL_ERROR, ("Update error: %d %s", ctx->result, ctx->status_msg));
+          CONSOLE_LOG(LL_ERROR,
+                      ("Update error: %d %s", ctx->result, ctx->status_msg));
           notify_js(UJS_ERROR, NULL);
           sj_clubby_send_status_resp(s_clubby_reply, 1, ctx->status_msg);
         }
@@ -136,7 +139,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
            * Conection is closed by updater, rebooting if required
            * and allowed (by JS)
            */
-          LOG(LL_INFO, ("Rebooting device"));
+          CONSOLE_LOG(LL_INFO, ("Rebooting device"));
           updater_schedule_reboot(100);
         }
 
@@ -176,7 +179,7 @@ static int do_http_connect(struct update_context *ctx, const char *url) {
                                                 opts, url, NULL, NULL);
 
   if (c == NULL) {
-    LOG(LL_ERROR, ("Failed to connect to %s", url));
+    CONSOLE_LOG(LL_ERROR, ("Failed to connect to %s", url));
     return -1;
   }
 
@@ -186,7 +189,7 @@ static int do_http_connect(struct update_context *ctx, const char *url) {
 }
 
 static int start_update_download(struct update_context *ctx, const char *url) {
-  LOG(LL_INFO, ("Updating FW"));
+  CONSOLE_LOG(LL_INFO, ("Updating FW"));
 
   if (do_http_connect(ctx, url) < 0) {
     ctx->status_msg = "Failed to connect update server";
@@ -204,30 +207,30 @@ struct clubby_event *load_clubby_reply(spiffs *fs) {
 
   upd_file = SPIFFS_open(fs, UPDATER_TEMP_FILE_NAME, SPIFFS_RDONLY, 0);
   if (upd_file < 0) {
-    LOG(LL_ERROR, ("Cannot open updater file"));
+    CONSOLE_LOG(LL_ERROR, ("Cannot open updater file"));
     goto cleanup;
   }
 
   if (SPIFFS_fstat(fs, upd_file, &st) != SPIFFS_OK) {
-    LOG(LL_ERROR, ("Cannot get size of updater"));
+    CONSOLE_LOG(LL_ERROR, ("Cannot get size of updater"));
     goto cleanup;
   }
 
-  LOG(LL_ERROR, ("Updater file size = %d", st.size));
+  CONSOLE_LOG(LL_ERROR, ("Updater file size = %d", st.size));
   reply_str = malloc(st.size);
   if (reply_str == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
+    CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     goto cleanup;
   }
 
   if ((uint32_t) SPIFFS_read(fs, upd_file, reply_str, st.size) != st.size) {
-    LOG(LL_ERROR, ("Cannot read data from updater file"));
+    CONSOLE_LOG(LL_ERROR, ("Cannot read data from updater file"));
     goto cleanup;
   }
 
   ret = sj_clubby_bytes_to_reply(reply_str, st.size);
   if (ret == NULL) {
-    LOG(LL_ERROR, ("Cannot create clubby reply"));
+    CONSOLE_LOG(LL_ERROR, ("Cannot create clubby reply"));
     goto cleanup;
   }
 
@@ -324,7 +327,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
 
   char *zip_url = calloc(1, blob_url->len + 1);
   if (zip_url == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
+    CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     return;
   }
 
@@ -344,7 +347,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
   return;
 
 bad_request:
-  LOG(LL_ERROR, ("Failed to start update: %s", reply));
+  CONSOLE_LOG(LL_ERROR, ("Failed to start update: %s", reply));
   sj_clubby_send_status_resp(evt, 1, reply);
 }
 

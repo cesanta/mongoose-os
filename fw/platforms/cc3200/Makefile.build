@@ -124,7 +124,8 @@ SJ_SRCS = sj_gpio_js.c \
           sj_wifi_js.c \
           device_config.c sj_config.c $(notdir $(SYS_CONFIG_C)) \
           miniz.c sj_updater_common.c sj_updater_post.c boot.c \
-          v7.c sj_utils.c
+          v7.c sj_utils.c \
+          sj_console.c
 VPATH += $(MGIOT_PATH)/src $(V7_PATH) $(COMMON_PATH)
 ifneq "$(TOOLCHAIN)" "gcc"
 SJ_SRCS += umm_malloc.c
