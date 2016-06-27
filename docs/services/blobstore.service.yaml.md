@@ -27,7 +27,7 @@ Response:
 ```json
 {
   "v": 2,
-  "src": "//api.cesanta.com",
+  "src": "//api.mongoose-iot.com",
   "dst": "device_123",
   "id": 123,
   "result": "VALUE PLACEHOLDER"
@@ -63,7 +63,7 @@ Response:
 ```json
 {
   "v": 2,
-  "src": "//api.cesanta.com",
+  "src": "//api.mongoose-iot.com",
   "dst": "device_123",
   "id": 123
 }
@@ -103,7 +103,7 @@ Response:
 ```json
 {
   "v": 2,
-  "src": "//api.cesanta.com",
+  "src": "//api.mongoose-iot.com",
   "dst": "device_123",
   "id": 123,
   "result": "VALUE PLACEHOLDER"
@@ -135,7 +135,7 @@ Response:
 ```json
 {
   "v": 2,
-  "src": "//api.cesanta.com",
+  "src": "//api.mongoose-iot.com",
   "dst": "device_123",
   "id": 123
 }
