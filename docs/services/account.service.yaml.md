@@ -11,11 +11,61 @@ Arguments:
 - `description`: displayed when listing the tokens
 
 Result `string`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.CreateToken",
+  "args": {
+    "description": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### ListTokens
 List tokens
 
 
 Result `array`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.ListTokens",
+  "args": {}
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### CreateUser
 Creates a new user. Can only be called by the frontend.
 
@@ -94,6 +144,31 @@ Delete the token
 Arguments:
 - `token`: 
 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.RevokeToken",
+  "args": {
+    "token": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
+
 #### UserExists
 Returns whether the user exists
 
@@ -109,4 +184,30 @@ Arguments:
 - `token`: 
 
 Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.ValidateToken",
+  "args": {
+    "token": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.cesanta.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 
