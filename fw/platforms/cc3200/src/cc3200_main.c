@@ -64,6 +64,12 @@ __attribute__((section(".heap_start"))) uint32_t _heap_start;
 __attribute__((section(".heap_end"))) uint32_t _heap_end;
 #endif
 
+void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
+  (void) blocks_cnt;
+  LOG(LL_ERROR, ("Failed to allocate %u", size));
+  abort();
+}
+
 int main() {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
   cc3200_exc_init();

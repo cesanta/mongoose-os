@@ -36,7 +36,8 @@ extern unsigned int _heap_end;
  */
 #define UMM_HEAP_CORRUPTION_CB() abort()
 
-#define UMM_OOM_CB(size, blocks_cnt)
+void umm_oom_cb(size_t size, unsigned short int blocks_cnt);
+#define UMM_OOM_CB(size, blocks_cnt) umm_oom_cb(size, blocks_cnt)
 
 /*
  * A couple of macros to make it easier to protect the memory allocator
