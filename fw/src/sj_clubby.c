@@ -394,15 +394,23 @@ void sj_clubby_send_hello(struct clubby *clubby) {
 }
 
 static void clubby_send_labels(struct clubby *clubby) {
+  LOG(LL_DEBUG, ("Senging labels:"));
   struct ub_ctx *ctx = ub_ctx_new();
 
+  ub_val_t args = ub_create_object(ctx);
   ub_val_t labels = ub_create_object(ctx);
   struct ro_var *rv;
   for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
     ub_add_prop(ctx, labels, rv->name, ub_create_string(ctx, *rv->ptr));
+    LOG(LL_DEBUG, ("%s: %s", rv->name, *rv->ptr));
   }
-  ub_val_t args = ub_create_object(ctx);
+
   ub_add_prop(ctx, args, "labels", labels);
+
+  ub_val_t ids = ub_create_array(ctx);
+  ub_array_push(ctx, ids, ub_create_string(ctx, clubby->cfg.device_id));
+
+  ub_add_prop(ctx, args, "ids", ids);
 
   int64_t id = clubby_proto_get_new_id();
   ub_val_t frame = clubby_proto_create_frame(
