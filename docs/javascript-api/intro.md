@@ -1,22 +1,22 @@
 ---
 title: "Firmware JS API"
 items:
-  - { type: file, name: string.md }
-  - { type: file, name: file.md }
-  - { type: file, name: http.md }
-  - { type: file, name: websocket.md }
-  - { type: file, name: mqtt.md }
-  - { type: file, name: gpio.md }
-  - { type: file, name: adc.md }
-  - { type: file, name: spi.md }
-  - { type: file, name: i2c.md }
-  - { type: file, name: pwm.md }
-  - { type: file, name: uart.md }
-  - { type: file, name: wdt.md }
-  - { type: file, name: wifi.md }
-  - { type: file, name: builtin.md }
-  - { type: file, name: sys.md }
-  - { type: file, name: ota.md }
-  - { type: file, name: udp.md }
-  - { type: file, name: tcp.md }
+  - { name: string.md }
+  - { name: file.md }
+  - { name: http.md }
+  - { name: websocket.md }
+  - { name: mqtt.md }
+  - { name: gpio.md }
+  - { name: adc.md }
+  - { name: spi.md }
+  - { name: i2c.md }
+  - { name: pwm.md }
+  - { name: uart.md }
+  - { name: wdt.md }
+  - { name: wifi.md }
+  - { name: builtin.md }
+  - { name: sys.md }
+  - { name: ota.md }
+  - { name: udp.md }
+  - { name: tcp.md }
 ---

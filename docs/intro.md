@@ -8,6 +8,7 @@ items:
   - { name: examples }
   - { name: firmware }
   - { name: javascript-api }
+  - { name: c-api }
   - { name: cloud }
   - { name: services }
   - { name: faq.md }
