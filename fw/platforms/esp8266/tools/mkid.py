@@ -4,7 +4,7 @@
 mkid creates a configuration segment for Mongoose IoT ESP8266,
 meant to be flashed at addr 0x10000. This tool is intended to be used
 when you want to have control on the actual ID and/or you cannot use
-flashnchips for some reason (e.g. paleolithic debian on ARM).
+MFT for some reason (e.g. paleolithic debian on ARM).
 '''
 
 import sys

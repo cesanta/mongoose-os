@@ -30,7 +30,7 @@ Summary:
 * GPIO0 - ground or serial DTR
 * RESET - leave unconnected or serial RTS
 
-## Flash’n’Chips
+## Mongoose Flashing Tool
 
 If you have DTR and RTS connected properly, pressing "Load firmware" button
 should reboot the device automatically. Otherwise, just connect GPIO0 to ground
@@ -46,10 +46,10 @@ you want to connect the device to our cloud. To do this invoke `mkid.py` script:
 ```
 
 Replace `${ID}` with a few random characters and `${PSK}` with a password unique
-to this device. Alternatively, you can generate a random ID with Flash’N’Chips:
+to this device. Alternatively, you can generate a random ID with MFT:
 
 ```
-flashnchips --generate-id 0x10000.bin
+MFT --generate-id 0x10000.bin
 ```
 
 After that just flash `0x10000.bin` at offset 0x10000 along with other pieces:

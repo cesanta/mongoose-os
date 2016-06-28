@@ -39,7 +39,7 @@ static void process_prompt_char(char ch);
 
 static void show_prompt(void) {
   /*
-   * Flashnchips relies on prompt ending with "$ " to detect when it's okay
+   * MFT relies on prompt ending with "$ " to detect when it's okay
    * to send the next line during file upload.
    */
 
