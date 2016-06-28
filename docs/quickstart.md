@@ -17,7 +17,7 @@ title: Quick Start Guide
       to your device and connect it to the
       [Mongoose Cloud](https://mongoose-iot.com)<br>
       <img src="media/quicktart_mft.png" width="100%">
-    - Connect an LED to GND and GPIO4 pins
+    - Connect an LED to GND and GPIO14 pins
     - FTDI USB drivers are available on the
     [FTDI website](http://www.ftdichip.com/Drivers/VCP.htm)
     - Drivers for NodeMCU v1 board are available on the
