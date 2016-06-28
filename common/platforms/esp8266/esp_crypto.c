@@ -35,6 +35,10 @@ void kr_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
                     const size_t *msg_lens, uint8_t *digest) {
   (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
 }
+void mg_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
+                    const size_t *msg_lens, uint8_t *digest) {
+  (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
+}
 #endif
 
 #ifdef KR_EXT_AES
