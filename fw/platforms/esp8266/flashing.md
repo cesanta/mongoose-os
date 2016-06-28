@@ -10,6 +10,8 @@ Mac OS X, it should be shipped with the OS, for Windows drivers see
 NodeMCU v2 boards come with Silabs CP2102 USB-to-serial chip for which you can
 get driver from [here](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx).
 
+NodeMCU 0.9 and some other borad use the CH34x chip, Win7 driver can be found [here](http://www.wch.cn/download/CH341SER_EXE.html).
+
 ## Wiring
 
 At the bare minimum, you need to have serial TX & RX connected to the RX and TX
