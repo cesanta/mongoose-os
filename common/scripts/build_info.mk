@@ -8,6 +8,7 @@ GEN_BUILD_INFO_EXTRA ?=
 $(BUILD_INFO_C) $(BUILD_INFO_JSON):
 	$(vecho) "GEN   $@"
 	$(Q) $(PYTHON) $(FW_META_CMD) gen_build_info \
+	  --tag_as_version=true \
 	  --c_output=$(BUILD_INFO_C) \
 	  --json_output=$(BUILD_INFO_JSON) \
 	  $(GEN_BUILD_INFO_EXTRA)
