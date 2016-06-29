@@ -15,7 +15,7 @@ No needs to fight hours and days with toolchain setup. Built
 firmware can also be downloaded and flashed separately.
 
 Our IDE allows to build a completely custom firmware with no
-need to install any complicated toolchain one your machine.
+need to install any complicated toolchain on your machine.
 You might want to use
 [Mongoose Flashing Tool](https://github.com/cesanta/mft/releases)
 once to flash the firmware for the first time on a stock device.
