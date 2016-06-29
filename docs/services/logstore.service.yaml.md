@@ -82,4 +82,11 @@ Response:
 
 ```
 
+#### Delete
+Delete all logs in the given stream
+
+Arguments:
+- `src`: Override src id. Used to delete logs on behalf of another source, if permitted.
+- `stream`: Log stream name. Defaults to `"console"`.
+
 
