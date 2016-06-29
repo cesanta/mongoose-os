@@ -9,6 +9,7 @@
 #include "v7/v7.h"
 
 size_t sj_get_heap_size();
+size_t sj_get_free_heap_size();
 
 void sj_system_restart(int exit_code);
 

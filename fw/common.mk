@@ -1,6 +1,16 @@
 CFLAGS_EXTRA ?=
 PYTHON ?= python
-COMMON_V7_FEATURES = -DV7_ENABLE__File__require=1
+COMMON_V7_FEATURES = \
+    -DV7_ENABLE__File__list=1 \
+    -DV7_ENABLE__File__require=1 \
+    -DV7_ENABLE__Function__bind=1 \
+    -DV7_ENABLE__Function__call=1 \
+    -DV7_ENABLE__Math=1 \
+    -DV7_ENABLE__Math__max=1 \
+    -DV7_ENABLE__Math__min=1 \
+    -DV7_ENABLE__Math__random=1 \
+    -DV7_ENABLE__Math__round \
+    -DV7_ENABLE__Memory__stats=1
 
 MG_FEATURES_TINY = \
                    -DMG_DISABLE_JSON_RPC \

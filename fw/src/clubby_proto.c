@@ -215,6 +215,7 @@ static void clubby_proto_parse_req(struct json_token *method,
 static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
   struct clubby_event evt;
   struct json_token *frame = parse_json2(data, len);
+  struct json_token *id_tok, *method_tok, *result_tok, *error_tok;
 
   if (frame == NULL) {
     LOG(LL_DEBUG, ("Error parsing clubby frame"));
@@ -232,7 +233,7 @@ static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
   evt.frame = frame;
   evt.context = context;
 
-  struct json_token *id_tok = find_json_token(frame, "id");
+  id_tok = find_json_token(frame, "id");
   if (id_tok == NULL) {
     LOG(LL_ERROR, ("No id in frame"));
     goto clean;
@@ -253,9 +254,9 @@ static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
     goto clean;
   }
 
-  struct json_token *method_tok = find_json_token(frame, "method");
-  struct json_token *result_tok = find_json_token(frame, "result");
-  struct json_token *error_tok = find_json_token(frame, "error");
+  method_tok = find_json_token(frame, "method");
+  result_tok = find_json_token(frame, "result");
+  error_tok = find_json_token(frame, "error");
 
   /*
    * if none of required token exist - this is positive response

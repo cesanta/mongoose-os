@@ -7,7 +7,13 @@
 #include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_timers.h"
+
+#ifdef SJ_ENABLE_UPDATER_CONSOLE_LOGGING
 #include "fw/src/sj_console.h"
+#else
+#define CONSOLE_LOG LOG
+#endif
+
 /*
  * Using static variable (not only c->user_data), it allows to check if update
  * already in progress when another request arrives
@@ -503,11 +509,12 @@ void updater_context_free(struct update_context *ctx) {
 }
 
 static void reboot_timer_cb(void *param) {
+#ifdef SJ_ENABLE_UPDATER_CONSOLE_LOGGING
   static int cycles = 0;
-  if (!sj_console_is_waiting_for_resp() || cycles++ > 100 /* 10 sec */) {
-    sj_clear_timer(s_reboot_timer_id);
-    sj_system_restart(0);
-  }
+  if (sj_console_is_waiting_for_resp() && cycles++ < 100 /* 10 sec */) return;
+#endif
+  sj_clear_timer(s_reboot_timer_id);
+  sj_system_restart(0);
   (void) param;
 }
 

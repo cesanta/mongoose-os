@@ -88,7 +88,8 @@ if (Sys.conf.clubby.device_id) {
 }
 
 global.clubby = new Clubby({connect:false});
-console.setClubby(clubby);
+
+if (typeof console !== "undefined") console.setClubby(clubby);
 
 if (Sys.conf.clubby.device_id && Sys.conf.clubby.connect_on_boot) {
   if (Wifi.status() !== undefined) {

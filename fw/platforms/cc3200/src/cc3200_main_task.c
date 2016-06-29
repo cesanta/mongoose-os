@@ -14,14 +14,18 @@
 
 #include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
-#include "fw/src/sj_mongoose.h"
-#include "fw/src/sj_http.h"
+#include "fw/src/sj_clubby.h"
+#ifndef CS_DISABLE_JS
+#include "fw/src/sj_clubby_js.h"
+#endif
 #include "fw/src/sj_gpio.h"
 #include "fw/src/sj_gpio_js.h"
+#include "fw/src/sj_hal.h"
+#include "fw/src/sj_http.h"
 #include "fw/src/sj_i2c_js.h"
+#include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_timers.h"
-#include "fw/src/sj_hal.h"
 #include "fw/src/sj_updater_post.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_wifi_js.h"
@@ -163,11 +167,20 @@ static int sj_init() {
   sj_v7_ext_api_setup(v7);
   sj_init_sys(v7);
   sj_wifi_init(v7);
+#ifndef DISABLE_C_CLUBBY
+  sj_clubby_init();
+#endif
 
   sj_http_api_setup(v7);
 
+#if !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS)
+  sj_clubby_api_setup(v7);
+#endif
+
   /* Common config infrastructure. Mongoose & v7 must be initialized. */
   init_device(v7);
+
+  sj_updater_post_init(v7);
 
 #ifndef CS_DISABLE_JS
   /* SJS initialized, enable GC back, and trigger it */
@@ -180,8 +193,6 @@ static int sj_init() {
     v7_fprint(stderr, v7, res);
   }
 #endif
-
-  sj_updater_post_init(v7);
 
   LOG(LL_INFO, ("%s init done, RAM: %d free", "Sys", sj_get_free_heap_size()));
 

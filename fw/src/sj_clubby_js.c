@@ -205,6 +205,7 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   v7_val_t *cbp = (v7_val_t *) user_data;
   v7_val_t resp_obj = V7_UNDEFINED;
   enum v7_err res = V7_OK;
+  v7_val_t cb_param;
 
   if (v7_is_undefined(*cbp)) {
     LOG(LL_DEBUG, ("Callback is not set for id=%d", (int) evt->id));
@@ -254,7 +255,7 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   }
 
   v7_own(clubby->v7, &resp_obj);
-  v7_val_t cb_param = v7_mk_object(clubby->v7);
+  cb_param = v7_mk_object(clubby->v7);
   v7_own(clubby->v7, &cb_param);
   if (!v7_is_undefined(resp_obj)) {
     v7_set(clubby->v7, cb_param, evt->response.result ? "result" : "error", ~0,
@@ -373,6 +374,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
      */
 
     enum v7_err res;
+    v7_val_t cb_args;
     struct done_func_context *ctx = malloc(sizeof(*ctx));
     if (ctx == NULL) {
       LOG(LL_ERROR, ("Out of memory"));
@@ -401,7 +403,7 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
       goto cleanup;
     }
 
-    v7_val_t cb_args = v7_mk_array(clubby->v7);
+    cb_args = v7_mk_array(clubby->v7);
     v7_array_push(clubby->v7, cb_args, clubby_param);
     v7_array_push(clubby->v7, cb_args, donevb);
 
@@ -450,6 +452,7 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   v7_val_t cb_v = V7_UNDEFINED;
   v7_val_t opts_v = V7_UNDEFINED;
   v7_val_t clubby_request_v = V7_UNDEFINED;
+  v7_val_t dst_v;
 
   if (v7_is_callable(v7, arg_3)) {
     /* if arg #3 is callback, then opts == UNDEFINED */
@@ -522,7 +525,7 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
     goto error;
   }
 
-  v7_val_t dst_v = v7_get(v7, opts_v, "dst", ~0);
+  dst_v = v7_get(v7, opts_v, "dst", ~0);
   sj_clubby_send_request(clubby, ctx, id, v7_get_cstring(v7, &dst_v),
                          obj_to_ubj(v7, ctx, clubby_request_v));
 
@@ -693,6 +696,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   (void) res;
   enum v7_err rcode = V7_OK;
   v7_val_t arg = v7_arg(v7, 0);
+  v7_val_t connect;
 
   if (!v7_is_undefined(arg) && !v7_is_object(arg)) {
     LOG(LL_ERROR, ("Invalid arguments"));
@@ -721,7 +725,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_STR_PARAM(ssl_client_cert_file, ssl_client_cert_file);
 
   set_clubby(v7, this_obj, clubby);
-  v7_val_t connect = v7_get(v7, arg, "connect", ~0);
+  connect = v7_get(v7, arg, "connect", ~0);
   if (v7_is_undefined(connect) || v7_is_truthy(v7, connect)) {
     sj_reset_reconnect_timeout(clubby);
     sj_clubby_connect(clubby);

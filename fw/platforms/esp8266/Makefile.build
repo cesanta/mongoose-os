@@ -33,7 +33,7 @@ MGIOT_POSIX_PATH ?= $(MGIOT_PATH)/platforms/posix
 MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
-MGIOTJS_PATH ?= $(MGIOT_SRC_PATH)/js
+MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
@@ -100,9 +100,9 @@ ifeq "${OTA}" "1"
 APP_SRCS += rboot-bigflash.c rboot-api.c
 endif
 
-JSBIN_SRCS := $(MGIOTJS_PATH)/sys_init.js \
-              $(MGIOTJS_PATH)/demo.js \
-              $(MGIOTJS_PATH)/I2C.js \
+JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
+              $(MGIOT_JS_PATH)/demo.js \
+              $(MGIOT_JS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
 JS_SRCS    :=
 
@@ -134,13 +134,10 @@ SHIMS = -DNDEBUG
 V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
                -DV7_DISABLE_AST_TAG_NAMES \
-               -DV7_ENABLE__Math -DV7_ENABLE__Math__max -DV7_ENABLE__Math__min \
-               -DV7_ENABLE__Math__random -DV7_ENABLE__Math__round \
-               -DV7_ENABLE__Function__bind -DV7_ENABLE__Function__call \
-               -DV7_ENABLE__File__list=1 \
                -DV7_ENABLE__RegExp=1 \
-               -DV7_ENABLE__Memory__stats -DV7_ENABLE__StackTrace=1 \
-               -DV7_ENABLE__Object__getPrototypeOf -DV7_ENABLE__Object__isPrototypeOf \
+               -DV7_ENABLE__StackTrace=1 \
+               -DV7_ENABLE__Object__getPrototypeOf \
+               -DV7_ENABLE__Object__isPrototypeOf \
                -DV7_ENABLE__Object__keys \
                -DV7_ENABLE__Object__isExtensible \
                -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS \
@@ -151,6 +148,9 @@ FEATURES = $(V7_FEATURES) -DV7_TEMP_OFF \
            $(FEATURES_EXTRA) -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
            -DCS_MMAP -DV7_MMAP_EXEC -DCS_ENABLE_UBJSON -DESP_UMM_ENABLE \
+           -DSJ_ENABLE_UPDATER_CONSOLE_LOGGING \
+           -DSJ_ENABLE_WEB_CONFIG \
+           -DSJ_ENABLE_FILE_UPLOAD
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \

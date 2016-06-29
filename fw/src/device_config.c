@@ -86,6 +86,8 @@ static int load_config_defaults(struct sys_config *cfg) {
   return 1;
 }
 
+#ifdef SJ_ENABLE_WEB_CONFIG
+
 #define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
 
 static int save_json(const struct mg_str *data, const char *file_name) {
@@ -185,8 +187,11 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
   mg_printf_http_chunk(c, ""); /* Zero chunk - end of response */
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
+#endif /* SJ_ENABLE_WEB_CONFIG */
 
-struct mg_str upload_fname(struct mg_connection *nc, struct mg_str fname) {
+#ifdef SJ_ENABLE_FILE_UPLOAD
+static struct mg_str upload_fname(struct mg_connection *nc,
+                                  struct mg_str fname) {
   struct mg_str res = {NULL, 0};
   (void) nc;
   if (sj_conf_check_access(fname, get_cfg()->http.upload_acl)) {
@@ -198,6 +203,7 @@ struct mg_str upload_fname(struct mg_connection *nc, struct mg_str fname) {
 static void upload_handler(struct mg_connection *c, int ev, void *p) {
   mg_file_upload_handler(c, ev, p, upload_fname);
 }
+#endif
 
 static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   DBG(("%p ev %d p %p fl %lx l %lu %lu", c, ev, p, c->flags,
@@ -259,10 +265,14 @@ static int init_web_server(const struct sys_config *cfg) {
     LOG(LL_ERROR, ("Error binding to [%s]", cfg->http.listen_addr));
     return 0;
   } else {
+#ifdef SJ_ENABLE_WEB_CONFIG
     mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
     mg_register_http_endpoint(listen_conn, "/reboot", reboot_handler);
     mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
+#endif
+#ifdef SJ_ENABLE_FILE_UPLOAD
     mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
+#endif
 
     mg_set_protocol_http_websocket(listen_conn);
     LOG(LL_INFO, ("HTTP server started on [%s]", cfg->http.listen_addr));

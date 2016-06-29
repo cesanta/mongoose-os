@@ -129,7 +129,6 @@ static void schedule_reconnect(struct clubby *clubby) {
   if (clubby->reconnect_timeout > clubby->cfg.reconnect_timeout_max) {
     clubby->reconnect_timeout = clubby->cfg.reconnect_timeout_max;
   }
-  LOG(LL_DEBUG, ("Reconnect timeout: %d", clubby->reconnect_timeout));
   if (clubby->reconnect_timeout > 0) {
     sj_set_c_timer(clubby->reconnect_timeout * 1000, 0, reconnect_cb, clubby);
   }
@@ -492,7 +491,7 @@ static void clubby_cb(struct clubby_event *evt) {
 
     case CLUBBY_AUTH_OK: {
       clubby->auth_ok = 1;
-      LOG(LL_DEBUG, ("CLUBBY_AUTH_OK"));
+      LOG(LL_INFO, ("connected"));
       clubby_send_labels(clubby);
 
       /*
@@ -560,6 +559,8 @@ static void clubby_cb(struct clubby_event *evt) {
 
 void sj_clubby_connect(struct clubby *clubby) {
   clubby->session_flags &= ~SF_MANUAL_DISCONNECT;
+  LOG(LL_INFO, ("%s, SSL? %d", clubby->cfg.server_address,
+                (clubby->cfg.ssl_ca_file != NULL)));
   struct mg_connection *nc = clubby_proto_connect(
       &sj_mgr, clubby->cfg.server_address, clubby->cfg.ssl_server_name,
       clubby->cfg.ssl_ca_file, clubby->cfg.ssl_client_cert_file, clubby);
