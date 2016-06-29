@@ -16,6 +16,7 @@
 #include "fw/src/sj_updater_hal.h"
 #include "fw/src/sj_updater_util.h"
 #include "fw/platforms/cc3200/boot/lib/boot.h"
+#include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
@@ -125,7 +126,7 @@ static int read_file(const char *fn, int offset, int len, read_file_cb_t cb,
 }
 
 static int sha1_update_cb(_u8 *data, int len, void *arg) {
-  cs_sha1_update((cs_sha1_ctx *) arg, data, len);
+  cc3200_hash_update((struct cc3200_hash_ctx *) arg, data, len);
   return len;
 }
 
@@ -136,11 +137,11 @@ int verify_checksum(const char *fn, int fs, struct mg_str expected) {
 
   if (expected.len != 40) return -1;
 
-  cs_sha1_ctx ctx;
-  cs_sha1_init(&ctx);
+  struct cc3200_hash_ctx ctx;
+  cc3200_hash_init(&ctx, CC3200_HASH_ALGO_SHA1);
   if ((r = read_file(fn, 0, fs, sha1_update_cb, &ctx)) < 0) return r;
   _u8 digest[20];
-  cs_sha1_final(digest, &ctx);
+  cc3200_hash_final(&ctx, digest);
 
   char digest_str[41];
   bin2hex(digest, 20, digest_str);
@@ -257,7 +258,7 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
   if (fname != NULL) {
     int r = prepare_to_write(ctx, fi, fname, falloc, ctx->cur_part);
     if (r < 0) {
-      LOG(LL_INFO, ("err = %d", r));
+      LOG(LL_ERROR, ("err = %d", r));
       ret = SJ_UPDATER_ABORT;
     } else {
       ret = (r > 0 ? SJ_UPDATER_PROCESS_FILE : SJ_UPDATER_SKIP_FILE);
@@ -282,8 +283,6 @@ int sj_upd_file_data(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi,
 int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
   int r = 1;
   if (ctx->cur_fn == (_u8 *) ctx->fs_container_file) {
-    LOG(LL_INFO, ("Writing FS meta: %u %u %u %u", ctx->fs_size,
-                  ctx->fs_block_size, ctx->fs_page_size, ctx->fs_erase_size));
     int ret = fs_write_meta(ctx->cur_fh, FS_INITIAL_SEQ, ctx->fs_size,
                             ctx->fs_block_size, ctx->fs_page_size,
                             ctx->fs_erase_size);
