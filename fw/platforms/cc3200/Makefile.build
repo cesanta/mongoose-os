@@ -12,6 +12,8 @@ APP_MODULES ?=
 APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_SLFS_PATH ?=
+APP_EXTRA_SRCS ?=
+
 TOOLCHAIN ?= /opt/ti-cgt-arm_5.2.7
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
@@ -152,7 +154,7 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
-SRCS = $(APP_SRCS) mongoose.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS)
+SRCS = $(APP_SRCS) mongoose.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS) $(APP_EXTRA_SRCS)
 
 MGIOT_CFLAGS = -DCC3200_FS_SPIFFS -Dcc3200 -DCC3200_FS_SPIFFS \
                -DSPIFFS_HAL_CALLBACK_EXTRA=1 \

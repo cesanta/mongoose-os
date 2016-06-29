@@ -18,6 +18,8 @@ APP ?= mongoose-iot
 APP_PLATFORM = esp8266
 APP_MODULES ?=
 APP_CFLAGS ?=
+APP_FS_PATH ?=
+APP_EXTRA_SRCS ?=
 
 REPO_PATH ?= ../../..
 COMMON_PATH ?= $(REPO_PATH)/common
@@ -25,7 +27,6 @@ MGIOT_PATH ?= $(REPO_PATH)/fw
 KRYPTON_PATH ?= $(REPO_PATH)/krypton
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
 V7_PATH ?= $(REPO_PATH)/v7
-APP_FS_PATH ?=
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MGIOT_ESP_PATH ?= $(MGIOT_PATH)/platforms/esp8266
@@ -210,7 +211,7 @@ FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
 
-SRCS = $(APP_SRCS) build_info.c
+SRCS = $(APP_SRCS) $(APP_EXTRA_SRCS) build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 
 FS_FILES = $(wildcard $(COMMON_FS_PATH)/*)
