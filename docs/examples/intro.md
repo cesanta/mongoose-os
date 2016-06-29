@@ -6,7 +6,6 @@ items:
   - { name: send-cloud.md }
   - { name: send-restful.md }
   - { name: send-mqtt.md }
-  - { name: http-server.md }
 ---
 
 Firmware boot process executes `sys_init.js` file, which in turn executes

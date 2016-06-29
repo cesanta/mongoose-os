@@ -26,20 +26,14 @@ See "Cloud Overview" section for more information.
 
 - In the IDC (Interactive Device Console), choose your target device
 - Click Flash button, and wait until hello message appears in the device log
-- Open a new browser tab with the account information
-- Copy your Mongoose Cloud authentication token to the clipboard
-- Open terminal and enter the following `curl` command:
+- Click on the user image on the top menu, open Profile in a new brower tab
+- Open the terminal and copy/paste a `curl` command. Add arguments and
+  prepend device ID to the destination:
 
     ```sh
-      curl -d '{
-        "src":"YOUR_LOGIN",
-        "key": "YOUR_AUTH_TOKEN",
-        "dst": "DEVICE_ID",
-        "method": "Command1",
-        "args": {"param1": 123}
-      }' https://api.mongoose-iot.com
+    curl -u xxx -d '{"foo":123}' https://DEVICE_ID.api.mongoose-iot.com/Command1
     ```
 
 - Switch back to the IDE browser tab, notice the log message from the device:
 
-  TODO(lsm): display log output
+<img src="media/tut_control.png" width="100%">

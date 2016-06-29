@@ -48,8 +48,6 @@ We are sending an amount of free RAM every 5 seconds:
 - Copy your Mongoose Cloud authentication token to the clipboard
 - Open terminal and enter the following `curl` command:
 
-  TODO(lsm): fix args
-
     ```sh
       curl -d '{
         "src":"YOUR_LOGIN",
