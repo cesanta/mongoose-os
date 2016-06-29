@@ -25,7 +25,7 @@ MGIOT_PATH ?= $(REPO_PATH)/fw
 KRYPTON_PATH ?= $(REPO_PATH)/krypton
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
 V7_PATH ?= $(REPO_PATH)/v7
-APP_FS_PATH ?= fs
+APP_FS_PATH ?=
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MGIOT_ESP_PATH ?= $(MGIOT_PATH)/platforms/esp8266
@@ -67,9 +67,10 @@ LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
 MGIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
 MGIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
 MGIOT_POSIX_BIN = $(MGIOT_POSIX_BIN_DIR)/mongoose-iot
-FW_DIR = firmware
+FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
+FW_DIR = $(CURDIR)/firmware
 
-FS_BUILD_DIR = $(BUILD_DIR)/fs
+FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
 RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
@@ -185,7 +186,7 @@ APP_LIBS += m lwip_cs
 CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
           -DESP_ENABLE_MG_LWIP_IF
 
-FW_FS_OUT = $(FW_DIR)/$(FS_ADDR).bin
+FW_FS_OUT = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 
 LD_SCRIPT_TEMPL = $(MGIOT_ESP_PATH)/ld/fw.ld
 
@@ -205,14 +206,17 @@ SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C)
-FW_FILE_1_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
-FW_FILE_2_OUT = $(FW_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
+FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
+FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
 
 SRCS = $(APP_SRCS) build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 
-FS_FILES = $(wildcard $(APP_FS_PATH)/*) $(wildcard $(COMMON_FS_PATH)/*)
+FS_FILES = $(wildcard $(COMMON_FS_PATH)/*)
+ifneq "$(APP_FS_PATH)" ""
+FS_FILES += $(wildcard $(APP_FS_PATH)/*)
+endif
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
@@ -242,7 +246,7 @@ IMAGE_HEADER_SIZE = 0x10
 ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
 FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
 FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
-RBOOT_EMPTY_CFG=$(FW_DIR)/0x01000.bin
+RBOOT_EMPTY_CFG=$(FW_STAGING_DIR)/0x01000.bin
 PREREQ = rboot $(RBOOT_EMPTY_CFG)
 BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW2_ADDR=$(FW2_FILE_2_ADDR) \
@@ -251,13 +255,13 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFS_SIZE=$(_FS_SIZE) \
                    -DFW_SIZE=$(ROM_SIZE)
 
-FW_MANIFEST = $(FW_DIR)/manifest.json
+FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
 endif
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
-ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
 
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MG_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
@@ -272,21 +276,21 @@ CFLAGS += $(BOOTLOADER_FLAGS)
 LDFLAGS += -u Cache_Read_Enable_New
 endif
 
-all: $(FW_DIR) $(BUILD_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
+all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
 
 $(RBOOT_EMPTY_CFG):
 	$(vecho) "GEN   $@"
 	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" > $@
 
-$(BUILD_DIR) $(FW_DIR):
+$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
 # Main output product: firmware files.
-FW_PARTS = boot:src=$(notdir $(FW_FILE_1_OUT)),addr=0 \
-           boot_cfg:src=$(notdir $(RBOOT_EMPTY_CFG)),addr=0x1000 \
-           fw:src=$(notdir $(FW_FILE_2_OUT)),addr=$(FW_FILE_2_ADDR) \
-           fs:src=$(notdir $(FW_FS_OUT)),addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
+           boot_cfg:src=$(RBOOT_EMPTY_CFG),addr=0x1000 \
+           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR) \
+           fs:src=$(FW_FS_OUT),addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 ifeq "${OTA}" "1"
 all: $(FW_ZIP)
@@ -299,9 +303,9 @@ $(FW_FILES_OUT): $(APP_OUT)
 #else
 $(FW_FILE_2_OUT) : $(APP_OUT)
 #endif
-	$(vecho) "FW    $(APP_OUT) -> $(FW_DIR)"
+	$(vecho) "FW    $(APP_OUT) -> $(FW_STAGING_DIR)"
 ifneq "$(OTA)" "1"
-	$(Q) $(ESPTOOL) elf2image -o $(FW_DIR)/ $(APP_OUT)
+	$(Q) $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
 else
 	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $(APP_OUT) $@ $(FW_SECTS)
 endif
@@ -394,18 +398,18 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
 # -- Filesystem.
 
 $(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
-	$(Q) rm -rf $(FS_BUILD_DIR) && mkdir -p $(FS_BUILD_DIR)
+	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
 # OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
-    echo "  CP    $(js) -> $(FS_BUILD_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
-    cp $(js) $(FS_BUILD_DIR);)
+    echo "  CP    $(js) -> $(FS_STAGING_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
+    cp $(js) $(FS_STAGING_DIR);)
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
-    echo "  V7C   $(jsbin) -> $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
-    $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_BUILD_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
-	$(vecho) "RSYNC -> $(FS_BUILD_DIR)/"
-	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_BUILD_DIR)/
-	$(vecho) "FS    $(FS_BUILD_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
-	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_BUILD_DIR) > $@
+    echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
+    $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
+	$(vecho) "RSYNC -> $(FS_STAGING_DIR)/"
+	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_STAGING_DIR)/
+	$(vecho) "FS    $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
+	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_STAGING_DIR) > $@
 	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
 
 $(BUILD_DIR)/mkspiffs:
@@ -436,7 +440,7 @@ build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 
 ifeq "$(OTA)" "1"
 
-rboot: $(BUILD_DIR)/esptool2 $(BUILD_DIR)/rboot.bin $(FW_DIR)/$(RBOOT_FW_NAME)
+rboot: $(BUILD_DIR)/esptool2 $(BUILD_DIR)/rboot.bin $(FW_STAGING_DIR)/$(RBOOT_FW_NAME)
 
 $(ESPTOOL2):
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/esptool2 BUILD_DIR=$(BUILD_DIR)
@@ -445,8 +449,8 @@ $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) \
     ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
 
-$(FW_DIR)/$(RBOOT_FW_NAME) : $(BUILD_DIR)/rboot.bin
-	$(Q) cp $(BUILD_DIR)/rboot.bin $(FW_DIR)/$(RBOOT_FW_NAME)
+$(FW_STAGING_DIR)/$(RBOOT_FW_NAME) : $(BUILD_DIR)/rboot.bin
+	$(Q) cp $< $@
 
 endif
 

@@ -18,8 +18,9 @@
 #    FW_PARTS is a list of firmware "parts", each defined by name:k=v,k=v,...
 #    entry. Exact key and values are dependent on platform, also for some
 #    platforms names may have special meaning. For parts that have the "src"
-#    attribute, the script will interpret it as a file relative to --src_dir
-#    and will compute SHA1 checksum for it and add as a "cs_sha1".
+#    attribute, the script will interpret it as a file and will compute SHA1
+#    checksum for it and add as a "cs_sha1". If file name is relative, it is
+#    based in --src_dir. If --staging_dir is set, files are copied there.
 # 3) To create firmware from parts and manifest:
 #    fw_meta.py create_fw \
 #      --manifest=manifest.json \
@@ -200,12 +201,19 @@ def cmd_create_manifest(args):
         if args.checksums and 'src' in part:
             # TODO(rojer): Support non-local sources.
             src_file = part['src']
-            if args.src_dir:
+            if not os.path.isabs(src_file) and not os.path.exists(src_file):
                 src_file = os.path.join(args.src_dir, src_file)
+            part['src'] = os.path.basename(src_file)
             with open(src_file) as f:
+                data = f.read()
+                if args.staging_dir:
+                    staging_file = os.path.join(args.staging_dir,
+                                                os.path.basename(src_file))
+                    with open(staging_file, 'w') as sf:
+                        sf.write(data)
                 for algo in args.checksums.split(','):
                     h = hashlib.new(algo)
-                    h.update(f.read())
+                    h.update(data)
                     part['cs_%s' % algo] = h.hexdigest()
         manifest.setdefault('parts', {})[name] = part
 
@@ -234,6 +242,7 @@ def cmd_create_fw(args):
             if arc_file not in added:
                 zf.write(src_file, arc_file)
                 added[arc_file] = True
+                print >>sys.stderr, '     Add %s' % src_file
             part['src'] = os.path.basename(arc_file)
 
 
@@ -293,6 +302,7 @@ if __name__ == '__main__':
     cm_cmd.add_argument('--description', '-d')
     cm_cmd.add_argument('--checksums', default='sha1')
     cm_cmd.add_argument('--src_dir')
+    cm_cmd.add_argument('--staging_dir')
     cm_cmd.add_argument('--output', '-o')
     cm_cmd.add_argument('parts', nargs='+')
     handlers['create_manifest'] = cmd_create_manifest
