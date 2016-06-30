@@ -44,12 +44,7 @@ FREEZE ?= 1
 HEAP_LOG ?=
 
 FLASH_SIZE ?= 1M
-
-ifeq "${OTA}" "1"
 FS_SIZE ?= 128K
-else
-FS_SIZE ?= 64K
-endif
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
@@ -58,10 +53,7 @@ SYS_PARAM_SIZE = 0x4000
 
 FW_FILE_1_ADDR = 0
 FW_FILE_2_ADDR = 0x11000
-
-ifeq "${OTA}" "1"
 FW2_FILE_2_ADDR=$(shell printf "0x%08x" $$(($(FW_FILE_2_ADDR) + 0x100000)))
-endif
 
 BUILD_DIR ?= $(CURDIR)/.build
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
@@ -95,11 +87,8 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             sj_clubby.c sj_clubby_js.c sj_common.c sys_config.c \
             sj_config.c device_config.c sys_config.c \
             miniz.c sj_udptcp.c sj_utils.c sj_console.c \
-            sj_updater_common.c sj_updater_post.c str_util.c
-
-ifeq "${OTA}" "1"
-APP_SRCS += rboot-bigflash.c rboot-api.c
-endif
+            sj_updater_common.c sj_updater_post.c str_util.c \
+            rboot-bigflash.c rboot-api.c
 
 JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
               $(MGIOT_JS_PATH)/demo.js \
@@ -122,13 +111,7 @@ IPATH = $(APP_MODULES) $(REPO_PATH) $(MGIOT_ESP_PATH)/include $(SPIFFS_PATH) \
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGIOT_ESP_USER_DIR)
 
 # libraries used in this project, mainly provided by the SDK
-APP_LIBS = c crypto gcc hal pp phy net80211 wpa
-
-ifneq "${OTA}" "1"
-APP_LIBS += main
-else
-APP_LIBS += main_ota
-endif
+APP_LIBS = c crypto gcc hal pp phy net80211 wpa main_ota
 
 SHIMS = -DNDEBUG
 
@@ -240,9 +223,6 @@ LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
                -Wl,--wrap=vPortFree
 endif
 
-ifneq "${OTA}" "1"
-FS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAM_SIZE) - $(_FS_SIZE)))")
-else
 IMAGE_HEADER_SIZE = 0x10
 ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
 FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
@@ -257,7 +237,6 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW_SIZE=$(ROM_SIZE)
 
 FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
-endif
 
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
@@ -268,14 +247,9 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MG_FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
           $(APP_CFLAGS) $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS) \
-          $(MINIZ_FLAGS)
+          $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
 
-ifneq "${OTA}" "1"
-CFLAGS += -DFS_ADDR=$(FS_ADDR) -DDISABLE_OTA
-else
-CFLAGS += $(BOOTLOADER_FLAGS)
 LDFLAGS += -u Cache_Read_Enable_New
-endif
 
 all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
 
@@ -293,17 +267,12 @@ FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR) \
            fs:src=$(FW_FS_OUT),addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 include $(REPO_PATH)/common/scripts/fw_meta.mk
-ifeq "${OTA}" "1"
+
 all: $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FS_OUT) $(FW_FILES_OUT)
-endif
 
-#ifreq "${OTA}" "1"
 $(FW_FILES_OUT): $(APP_OUT)
-#else
-$(FW_FILE_2_OUT) : $(APP_OUT)
-#endif
 	$(vecho) "FW    $(APP_OUT) -> $(FW_STAGING_DIR)"
 ifneq "$(OTA)" "1"
 	$(Q) $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
