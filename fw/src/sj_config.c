@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include <stdio.h>
+
 #include "common/mbuf.h"
 #include "fw/src/sj_config.h"
 
@@ -113,14 +115,22 @@ void sj_conf_parse_cb(void *data, const char *path,
   LOG(LL_DEBUG, ("Set [%s] = [%.*s]", path, (int) tok->len, tok->ptr));
 }
 
-bool sj_conf_parse(const char *json, const char *acl,
+bool sj_conf_parse(const struct mg_str json, const char *acl,
                    const struct sj_conf_entry *schema, void *cfg) {
   struct parse_ctx ctx = {
       .schema = schema, .acl = acl, .cfg = cfg, .result = true};
-  int json_len = strlen(json);
-  return (json_parse(json, json_len, sj_conf_parse_cb, &ctx) >= 0 &&
+  return (json_parse(json.p, json.len, sj_conf_parse_cb, &ctx) >= 0 &&
           ctx.result == true);
 }
+
+struct emit_ctx {
+  const void *cfg;
+  const void *base;
+  bool pretty;
+  struct mbuf *out;
+  sj_conf_emit_cb_t cb;
+  void *cb_param;
+};
 
 static void sj_conf_emit_str(struct mbuf *b, const char *s) {
   mbuf_append(b, "\"", 1);
@@ -163,35 +173,35 @@ static bool sj_conf_value_eq(const void *cfg, const void *base,
   return false;
 }
 
-static void sj_conf_emit_obj(const void *cfg, const void *base,
+static void sj_conf_emit_obj(struct emit_ctx *ctx,
                              const struct sj_conf_entry *schema,
-                             int num_entries, int indent, struct mbuf *result) {
-  mbuf_append(result, "{", 1);
+                             int num_entries, int indent) {
+  mbuf_append(ctx->out, "{", 1);
   bool first = true;
   for (int i = 0; i < num_entries;) {
     const struct sj_conf_entry *e = schema + i;
-    if (sj_conf_value_eq(cfg, base, e)) {
+    if (sj_conf_value_eq(ctx->cfg, ctx->base, e)) {
       i += (e->type == CONF_TYPE_OBJECT ? e->num_desc : 1);
       continue;
     }
     if (!first) {
-      mbuf_append(result, ",", 1);
+      mbuf_append(ctx->out, ",", 1);
     } else {
       first = false;
     }
-    sj_emit_indent(result, indent);
-    sj_conf_emit_str(result, e->key);
-    mbuf_append(result, ": ", 2);
+    if (ctx->pretty) sj_emit_indent(ctx->out, indent);
+    sj_conf_emit_str(ctx->out, e->key);
+    mbuf_append(ctx->out, ": ", (ctx->pretty ? 2 : 1));
     switch (e->type) {
       case CONF_TYPE_INT: {
         char buf[20];
         int len = snprintf(buf, sizeof(buf), "%d",
-                           *((int *) (((char *) cfg) + e->offset)));
-        mbuf_append(result, buf, len);
+                           *((int *) (((char *) ctx->cfg) + e->offset)));
+        mbuf_append(ctx->out, buf, len);
         break;
       }
       case CONF_TYPE_BOOL: {
-        int v = *((int *) (((char *) cfg) + e->offset));
+        int v = *((int *) (((char *) ctx->cfg) + e->offset));
         const char *s;
         int len;
         if (v != 0) {
@@ -201,34 +211,75 @@ static void sj_conf_emit_obj(const void *cfg, const void *base,
           s = "false";
           len = 5;
         }
-        mbuf_append(result, s, len);
+        mbuf_append(ctx->out, s, len);
         break;
       }
       case CONF_TYPE_STRING: {
-        const char *v = *((char **) (((char *) cfg) + e->offset));
-        sj_conf_emit_str(result, v);
+        const char *v = *((char **) (((char *) ctx->cfg) + e->offset));
+        sj_conf_emit_str(ctx->out, v);
         break;
       }
       case CONF_TYPE_OBJECT: {
-        sj_conf_emit_obj(cfg, base, schema + i + 1, e->num_desc, indent + 2,
-                         result);
+        sj_conf_emit_obj(ctx, schema + i + 1, e->num_desc, indent + 2);
         break;
       }
     }
     i++;
     if (e->type == CONF_TYPE_OBJECT) i += e->num_desc;
+    if (ctx->cb != NULL) ctx->cb(ctx->out, ctx->cb_param);
   }
-  sj_emit_indent(result, indent - 2);
-  mbuf_append(result, "}", 1);
+  if (ctx->pretty) sj_emit_indent(ctx->out, indent - 2);
+  mbuf_append(ctx->out, "}", 1);
 }
 
-char *sj_conf_emit(const void *cfg, const void *base,
-                   const struct sj_conf_entry *schema) {
-  struct mbuf result;
-  mbuf_init(&result, 200);
-  sj_conf_emit_obj(cfg, base, schema + 1, schema->num_desc, 2, &result);
-  mbuf_append(&result, "", 1); /* NUL */
-  return result.buf;
+void sj_conf_emit_cb(const void *cfg, const void *base,
+                     const struct sj_conf_entry *schema, bool pretty,
+                     struct mbuf *out, sj_conf_emit_cb_t cb, void *cb_param) {
+  struct mbuf m;
+  mbuf_init(&m, 0);
+  if (out == NULL) out = &m;
+  struct emit_ctx ctx = {.cfg = cfg,
+                         .base = base,
+                         .pretty = pretty,
+                         .out = out,
+                         .cb = cb,
+                         .cb_param = cb_param};
+  sj_conf_emit_obj(&ctx, schema + 1, schema->num_desc, 2);
+  mbuf_append(out, "", 1); /* NUL */
+  if (cb != NULL) cb(out, cb_param);
+  if (out == &m) mbuf_free(out);
+}
+
+void sj_conf_emit_f_cb(struct mbuf *data, void *param) {
+  FILE **fp = (FILE **) param;
+  if (*fp != NULL && fwrite(data->buf, 1, data->len, *fp) != data->len) {
+    LOG(LL_ERROR, ("Error writing file\n"));
+    fclose(*fp);
+    *fp = NULL;
+  }
+  fwrite(data->buf, 1, data->len, stdout);
+  mbuf_remove(data, data->len);
+}
+
+bool sj_conf_emit_f(const void *cfg, const void *base,
+                    const struct sj_conf_entry *schema, bool pretty,
+                    const char *fname) {
+  FILE *fp = fopen("tmp", "w");
+  if (fp == NULL) {
+    LOG(LL_ERROR, ("Error opening file for writing\n"));
+    return false;
+  }
+  sj_conf_emit_cb(cfg, base, schema, pretty, NULL, sj_conf_emit_f_cb, &fp);
+  if (fp == NULL) return false;
+  if (fclose(fp) != 0) {
+    LOG(LL_ERROR, ("Error closing file\n"));
+    return false;
+  }
+  if (rename("tmp", fname) != 0) {
+    LOG(LL_ERROR, ("Error renaming file to %s\n", fname));
+    return false;
+  }
+  return true;
 }
 
 void sj_conf_free(const struct sj_conf_entry *schema, void *cfg) {

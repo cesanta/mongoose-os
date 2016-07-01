@@ -100,8 +100,8 @@ function buildConfig(schema, defaults, current) {
         }
         default: throw('unsupported type ' + et + ' for ' + ep);
       }
-      if (newVal != defaultVal) confSet(cfg, ep, newVal);
-    } else if (currentVal !== undefined && currentVal !== defaultVal) {
+      confSet(cfg, ep, newVal);
+    } else if (currentVal !== undefined) {
       confSet(cfg, ep, currentVal);
     }
   }

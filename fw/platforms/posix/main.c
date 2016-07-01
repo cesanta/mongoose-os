@@ -123,10 +123,6 @@ int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
   return 1;
 }
 
-void device_reboot(void) {
-  exit(0);
-}
-
 void device_get_mac_address(uint8_t mac[6]) {
   int i;
   srand(time(NULL));

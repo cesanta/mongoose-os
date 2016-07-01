@@ -55,10 +55,6 @@ void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *e) {
 /* Int vector table, defined in startup_gcc.c */
 extern void (*const g_pfnVectors[])(void);
 
-void device_reboot(void) {
-  sj_system_restart(0);
-}
-
 #ifdef __TI_COMPILER_VERSION__
 __attribute__((section(".heap_start"))) uint32_t _heap_start;
 __attribute__((section(".heap_end"))) uint32_t _heap_end;

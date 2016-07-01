@@ -17,10 +17,6 @@
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_gpio.h"
 
-void device_reboot(void) {
-  system_restart();
-}
-
 static int do_wifi(const struct sys_config *cfg) {
   int result = 1;
   int gpio = cfg->wifi.ap.trigger_on_gpio;

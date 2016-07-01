@@ -37,9 +37,15 @@ extern struct ro_var *g_ro_vars;
     g_ro_vars = &v;                  \
   } while (0)
 
+/* Returns global instance of the config. */
 struct sys_config *get_cfg();
 
-void device_reboot(void);
+/*
+ * Save config. Performs diff against defaults and only saves diffs.
+ * Reboot is required to reload the config.
+ */
+int save_cfg(struct sys_config *cfg);
+
 void device_get_mac_address(uint8_t mac[6]);
 
 void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);

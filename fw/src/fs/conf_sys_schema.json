@@ -46,7 +46,6 @@
   ["clubby.device_psk", "s", {"title": "Device password"}],
   ["clubby.reconnect_timeout_min", "i", {"title": "Minimal reconnect timeout"}],
   ["clubby.reconnect_timeout_max", "i", {"title": "Maximal reconnect timeout"}],
-  ["clubby.cmd_timeout", "i", {"title": "Default command timeout"}],
   ["clubby.memory_limit", "i", {"title": "Memory Limit"}],
   ["clubby.ssl_server_name", "s", {"title" : "TLS Server Name"}],
   ["clubby.ssl_ca_file", "s", {"title" : "TLS CA file"}],

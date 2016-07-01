@@ -3,6 +3,7 @@
  * All rights reserved
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #include "fw/src/device_config.h"
 #include "fw/src/sj_config.h"
 #include "fw/src/sj_gpio.h"
+#include "fw/src/sj_hal.h"
 
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
@@ -86,36 +88,33 @@ static int load_config_defaults(struct sys_config *cfg) {
   return 1;
 }
 
+int save_cfg(struct sys_config *cfg) {
+  struct sys_config defaults;
+  memset(&defaults, 0, sizeof(defaults));
+  if (!load_config_defaults(&defaults)) return -1;
+  int result = 0;
+  if (sj_conf_emit_f(cfg, &defaults, sys_config_schema(), true /* pretty */,
+                     CONF_FILE)) {
+    LOG(LL_INFO, ("Saved config to %s", CONF_FILE));
+  } else {
+    result = -2;
+  }
+  sj_conf_free(sys_config_schema(), &defaults);
+  return result;
+}
+
 #ifdef SJ_ENABLE_WEB_CONFIG
 
 #define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
 
-static int save_json(const struct mg_str *data, const char *file_name) {
-  FILE *fp;
-  int len = parse_json(data->p, data->len, NULL, 0);
-  if (len <= 0) {
-    LOG(LL_ERROR, ("%s\n", "Invalid JSON string"));
-    return 0;
-  }
-  fp = fopen("tmp", "w");
-  if (fp == NULL) {
-    LOG(LL_ERROR, ("Error opening file for writing\n"));
-    return 0;
-  }
-  if (fwrite(data->p, 1, len, fp) != (size_t) len) {
-    LOG(LL_ERROR, ("Error writing file\n"));
-    fclose(fp);
-    return 0;
-  }
-  if (fclose(fp) != 0) {
-    LOG(LL_ERROR, ("Error closing file\n"));
-    return 0;
-  }
-  if (rename("tmp", file_name) != 0) {
-    LOG(LL_ERROR, ("Error renaming file to %s\n", file_name));
-    return 0;
-  }
-  return 1;
+static void send_cfg(const struct sys_config *cfg, struct http_message *hm,
+                     struct mg_connection *c) {
+  mg_send_response_line(c, 200, JSON_HEADERS);
+  mg_send(c, "\r\n", 2);
+  bool pretty = (mg_vcmp(&hm->query_string, "pretty") == 0);
+  sj_conf_emit_cb(cfg, NULL, sys_config_schema(), pretty, &c->send_mbuf, NULL,
+                  NULL);
+  c->send_mbuf.len--; /* Remove NUL */
 }
 
 static void conf_handler(struct mg_connection *c, int ev, void *p) {
@@ -128,12 +127,28 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
   if (mg_vcmp(&hm->uri, "/conf/defaults") == 0) {
     struct sys_config cfg;
     if (load_config_defaults(&cfg)) {
-      json = emit_sys_config(&cfg, NULL);
+      send_cfg(&cfg, hm, c);
+      sj_conf_free(sys_config_schema(), &cfg);
+      status = 0;
     }
   } else if (mg_vcmp(&hm->uri, "/conf/current") == 0) {
-    json = emit_sys_config(&s_cfg, NULL);
+    send_cfg(&s_cfg, hm, c);
+    status = 0;
   } else if (mg_vcmp(&hm->uri, "/conf/save") == 0) {
-    status = (save_json(&hm->body, CONF_FILE) != 1);
+    struct sys_config tmp;
+    memset(&tmp, 0, sizeof(tmp));
+    if (load_config_defaults(&tmp)) {
+      char *acl_copy = (tmp.conf_acl == NULL ? NULL : strdup(tmp.conf_acl));
+      if (sj_conf_parse(hm->body, acl_copy, sys_config_schema(), &tmp)) {
+        status = save_cfg(&tmp);
+      } else {
+        status = -11;
+      }
+      free(acl_copy);
+    } else {
+      status = -10;
+    }
+    sj_conf_free(sys_config_schema(), &tmp);
     if (status == 0) c->flags |= MG_F_RELOAD_CONFIG;
   } else if (mg_vcmp(&hm->uri, "/conf/reset") == 0) {
     struct stat st;
@@ -145,7 +160,7 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
     if (status == 0) c->flags |= MG_F_RELOAD_CONFIG;
   }
 
-  if (json == NULL) {
+  if (json == NULL && status != 0) {
     if (asprintf(&json, "{\"status\": %d}\n", status) < 0) {
       json = "{\"status\": -1}";
     } else {
@@ -153,7 +168,7 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
     }
   }
 
-  {
+  if (json != NULL) {
     int len = strlen(json);
     mg_send_head(c, rc, len, JSON_HEADERS);
     mg_send(c, json, len);
@@ -229,7 +244,7 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
       /* If we've sent the reply to the server, and should reboot, reboot */
       if (c->flags & MG_F_RELOAD_CONFIG) {
         c->flags &= ~MG_F_RELOAD_CONFIG;
-        device_reboot();
+        sj_system_restart(0);
       }
       break;
     }
@@ -288,13 +303,12 @@ static int load_config_file(const char *filename, const char *acl,
   data = cs_read_file(filename, &size);
   if (data == NULL) {
     /* File not found or read error */
-    LOG(LL_INFO, ("Failed to load %s", filename));
     result = 0;
     goto clean;
   }
   /* Make a temporary copy, in case it gets overridden while loading. */
   acl_copy = (acl != NULL ? strdup(acl) : NULL);
-  if (!parse_sys_config(data, acl_copy, cfg)) {
+  if (!sj_conf_parse(mg_mk_str(data), acl_copy, sys_config_schema(), cfg)) {
     LOG(LL_ERROR, ("Failed to parse %s", filename));
     result = 0;
     goto clean;

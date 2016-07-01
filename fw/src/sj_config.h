@@ -7,6 +7,8 @@
 #define CS_FW_SRC_SJ_CONFIG_H_
 
 #include <stdbool.h>
+
+#include "common/mbuf.h"
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
@@ -48,7 +50,7 @@ struct sj_conf_entry {
  * Parses config in 'json' into 'cfg' according to rules defined in 'schema' and
  * checking keys against 'acl'.
  */
-bool sj_conf_parse(const char *json, const char *acl,
+bool sj_conf_parse(const struct mg_str json, const char *acl,
                    const struct sj_conf_entry *schema, void *cfg);
 
 /*
@@ -56,8 +58,13 @@ bool sj_conf_parse(const char *json, const char *acl,
  * Keys are only emitted if their values are different from 'base'.
  * If 'base' is NULL then all keys are emitted.
  */
-char *sj_conf_emit(const void *cfg, const void *base,
-                   const struct sj_conf_entry *schema);
+typedef void (*sj_conf_emit_cb_t)(struct mbuf *data, void *param);
+void sj_conf_emit_cb(const void *cfg, const void *base,
+                     const struct sj_conf_entry *schema, bool pretty,
+                     struct mbuf *out, sj_conf_emit_cb_t cb, void *cb_param);
+bool sj_conf_emit_f(const void *cfg, const void *base,
+                    const struct sj_conf_entry *schema, bool pretty,
+                    const char *fname);
 
 /*
  * Frees any resources allocated in 'cfg'.

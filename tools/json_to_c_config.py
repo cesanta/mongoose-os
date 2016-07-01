@@ -121,18 +121,20 @@ if __name__ == '__main__':
     first_file = False
   schema.insert(0, tuple(['CONF_TYPE_OBJECT', '', '.num_desc = %d' % len(schema)]))
 
-  hdr.insert(0, '''/* generated from {origin} - do not edit */
+  hdr.insert(0, '''\
+/* generated from {origin} - do not edit */
+
 #ifndef _{name_uc}_H_
 #define _{name_uc}_H_
+
+#include "mongoose/mongoose.h"  /* For mg_str only */
 
 struct {name} {{\
 '''.format(name=name, name_uc=name.upper(), origin=origin))
   hdr.append('''\
 }};
 
-int parse_{name}(const char *json, const char *acl, struct {name} *cfg);
-char *emit_{name}(const struct {name} *cfg, const struct {name} *base);
-void free_{name}(struct {name} *cfg);
+const struct sj_conf_entry *{name}_schema();
 
 #endif /* _{name_uc}_H_ */
 '''.format(name=name, name_uc=name.upper()))
@@ -146,21 +148,14 @@ void free_{name}(struct {name} *cfg);
 #include "fw/src/sj_config.h"
 #include "{name}.h"
 
-struct sj_conf_entry {name}_schema[{num_entries}] = {{
+const struct sj_conf_entry {name}_schema_[{num_entries}] = {{
 {schema}
 }};
 
-int parse_{name}(const char *json, const char *acl, struct {name} *cfg) {{
-  return sj_conf_parse(json, acl, {name}_schema, cfg);
+const struct sj_conf_entry *{name}_schema() {{
+  return {name}_schema_;
 }}
 
-char *emit_{name}(const struct {name} *cfg, const struct {name} *base) {{
-  return sj_conf_emit(cfg, base, {name}_schema);
-}}
-
-void free_{name}(struct {name} *cfg) {{
-  sj_conf_free({name}_schema, cfg);
-}}
 '''.format(origin=origin, name=name,
            schema='\n'.join('  {.type = %s, .key = "%s", %s},' % i for i in schema),
            num_entries=len(schema)))

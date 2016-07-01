@@ -36,7 +36,7 @@ endif
 	docker run --rm -it -v $(REPO_ABS_PATH):/src -v $(CONSOLE_LOG):/console.log $(SDK_VERSION) /bin/bash -c \
 	  "cd $(APP_PATH); \
       $(SJS_ESP_PATH)/tools/serve_core.py \
-        --irom firmware/0x11000.bin \
+        --irom .build/fw_temp/0x11000.bin \
         --rom $(SJS_ESP_PATH)/tools/rom.bin \
         /console.log & \
       xt-gdb .build/$(APP).out \
