@@ -104,7 +104,6 @@ void sj_prompt_init_hal(struct v7 *v7) {
 static int sj_init() {
   struct v7 *v7 = s_v7;
 
-  cs_log_set_level(LL_INFO);
   LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
   LOG(LL_INFO,
       ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));

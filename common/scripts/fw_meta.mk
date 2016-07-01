@@ -10,7 +10,7 @@ FW_MANIFEST ?= $(FW_STAGING_DIR)/manifest.json
 FW_ZIP ?= $(FW_DIR)/$(APP)-$(APP_PLATFORM)-last.zip
 FW_META_CMD ?= $(REPO_PATH)/common/tools/fw_meta.py
 
-$(FW_ZIP): $(FW_MANIFEST)
+$(FW_ZIP): $(FW_MANIFEST) $(FW_META_CMD)
 	$(vecho) "ZIP    $@"
 	$(Q) $(FW_META_CMD) create_fw \
 	  --manifest=$(FW_MANIFEST) \
@@ -19,7 +19,7 @@ $(FW_ZIP): $(FW_MANIFEST)
 	$(Q) cp $@ $(FW_DIR)/$(APP)-$(APP_PLATFORM)-$(shell $(FW_META_CMD) get $(FW_MANIFEST) version).zip
 	$(vecho) "Built version $(shell $(FW_META_CMD) get $(FW_MANIFEST) version)"
 
-$(FW_MANIFEST):
+$(FW_MANIFEST): $(FW_META_CMD)
 	$(vecho) "GEN    $(FW_MANIFEST)"
 	$(Q) $(FW_META_CMD) create_manifest \
 	  --name=$(APP) --platform=$(APP_PLATFORM) \

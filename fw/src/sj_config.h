@@ -6,6 +6,8 @@
 #ifndef CS_FW_SRC_SJ_CONFIG_H_
 #define CS_FW_SRC_SJ_CONFIG_H_
 
+#include <stdbool.h>
+
 #include "mongoose/mongoose.h"
 
 /*
@@ -24,16 +26,42 @@
  * See ../test/unit_test.c for an example.
  */
 
-int sj_conf_get_str(struct json_token *toks, const char *key, const char *acl,
-                    char **val);
-int sj_conf_get_int(struct json_token *toks, const char *key, const char *acl,
-                    int *val);
-int sj_conf_get_bool(struct json_token *toks, const char *key, const char *acl,
-                     int *val);
-void sj_conf_emit_str(struct mbuf *b, const char *prefix, const char *s,
-                      const char *suffix);
-void sj_conf_emit_int(struct mbuf *b, int v);
+bool sj_conf_check_access(const struct mg_str key, const char *acl);
 
-int sj_conf_check_access(const struct mg_str key, const char *acl);
+enum sj_conf_type {
+  CONF_TYPE_INT = 0,
+  CONF_TYPE_BOOL = 1,
+  CONF_TYPE_STRING = 2,
+  CONF_TYPE_OBJECT = 3,
+};
+
+struct sj_conf_entry {
+  enum sj_conf_type type;
+  const char *key;
+  union {
+    int offset;
+    int num_desc;
+  };
+};
+
+/*
+ * Parses config in 'json' into 'cfg' according to rules defined in 'schema' and
+ * checking keys against 'acl'.
+ */
+bool sj_conf_parse(const char *json, const char *acl, int require_keys,
+                   const struct sj_conf_entry *schema, void *cfg);
+
+/*
+ * Emit config in 'cfg' according to rules in 'schema'.
+ * Keys are only emitted if their values are different from 'base'.
+ * If 'base' is NULL then all keys are emitted.
+ */
+char *sj_conf_emit(const void *cfg, const void *base,
+                   const struct sj_conf_entry *schema);
+
+/*
+ * Frees any resources allocated in 'cfg'.
+ */
+void sj_conf_free(const struct sj_conf_entry *schema, void *cfg);
 
 #endif /* CS_FW_SRC_SJ_CONFIG_H_ */

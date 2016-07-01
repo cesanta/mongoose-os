@@ -129,10 +129,10 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
     struct sys_config cfg;
     memset(&cfg, 0, sizeof(cfg));
     if (load_config_defaults(&cfg)) {
-      json = emit_sys_config(&cfg);
+      json = emit_sys_config(&cfg, NULL);
     }
   } else if (mg_vcmp(&hm->uri, "/conf/current") == 0) {
-    json = emit_sys_config(&s_cfg);
+    json = emit_sys_config(&s_cfg, NULL);
   } else if (mg_vcmp(&hm->uri, "/conf/save") == 0) {
     status = (save_json(&hm->body, CONF_FILE) != 1);
     if (status == 0) c->flags |= MG_F_RELOAD_CONFIG;
