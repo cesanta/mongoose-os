@@ -7,7 +7,7 @@
 #define CS_FW_SRC_SJ_CONFIG_H_
 
 #include <stdbool.h>
-
+#include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
 /*

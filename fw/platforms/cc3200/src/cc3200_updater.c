@@ -9,6 +9,7 @@
 #include <strings.h>
 
 #include "common/platform.h"
+#include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
 #include "fw/src/device_config.h"

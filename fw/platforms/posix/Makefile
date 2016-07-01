@@ -12,9 +12,10 @@ MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
 KRYPTON_PATH ?= $(REPO_PATH)/krypton
+FROZEN_PATH ?= $(REPO_PATH)/frozen
 OUTAPP ?= mongoose-iot
 VERBOSE ?= 0
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(COMMON_PATH)
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH)
 SSL ?= Krypton
 DEBUG ?= 0
 
@@ -36,7 +37,7 @@ MONGOOSE_FEATURES = \
 
 INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
 APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
-            mongoose.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
+            mongoose.c frozen.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
             sj_mongoose_ws_client.c sj_mqtt.c sj_gpio_js.c sj_adc_js.c \
             sj_prompt.c sj_timers.c sj_timers_mongoose.c sj_uart.c sj_http.c \
             sj_debug_js.c sj_pwm_js.c sj_wifi_js.c clubby_proto.c \
@@ -204,4 +205,3 @@ fs: $(BIN_DIR) $(FS_FILES)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
-

@@ -7,6 +7,7 @@
 #define CS_FW_SRC_CLUBBY_PROTO_H_
 
 #include "mongoose/mongoose.h"
+#include "frozen/frozen.h"
 #include "common/ubjserializer.h"
 
 #if !defined(DISABLE_C_CLUBBY) && defined(CS_ENABLE_UBJSON)
