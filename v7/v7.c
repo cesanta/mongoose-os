@@ -15995,8 +15995,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
   } else if (is_cfunction_lite(func) || is_cfunction_obj(v7, func)) {
     /* call cfunction */
 
-    V7_TRY(
-        call_cfunction(v7, func, this_object, args, 0 /* not a ctor */, &_res));
+    V7_TRY(call_cfunction(v7, func, this_object, args, is_constructor, &_res));
 
     goto clean;
   } else {
