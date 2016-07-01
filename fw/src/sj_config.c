@@ -23,97 +23,103 @@ bool sj_conf_check_access(const struct mg_str key, const char *acl) {
   return false;
 }
 
-static bool sj_conf_parse_obj(char *path, const struct sj_conf_entry *schema,
-                              int num_entries, struct json_token *toks,
-                              const char *acl, int require_keys, void *cfg) {
-  int path_len = strlen(path);
-  for (int i = 0; i < num_entries;) {
-    const struct sj_conf_entry *e = schema + i;
-    strcpy(path + path_len, e->key);
-    struct json_token *tok = find_json_token(toks, path);
-    char *vp = (((char *) cfg) + e->offset);
-    if (tok == NULL) {
-      if (require_keys) {
-        LOG(LL_ERROR, ("Key [%s] not found", path));
-        return false;
-      }
-      i++;
-      continue;
+struct parse_ctx {
+  const struct sj_conf_entry *schema;
+  const char *acl;
+  void *cfg;
+  bool result;
+};
+
+const struct sj_conf_entry *find_entry(const char *path,
+                                       const struct sj_conf_entry *obj) {
+  const char *sep = strchr(path, '.');
+  int kl = (sep == 0 ? (int) strlen(path) : (sep - path));
+  for (int i = 1; i <= obj->num_desc; i++) {
+    const struct sj_conf_entry *e = obj + i;
+    if (strncmp(path, e->key, kl) == 0 && ((int) strlen(e->key) == kl)) {
+      if (path[kl] == '\0') return e;
+      if (e->type != CONF_TYPE_OBJECT) return NULL;
+      return find_entry(path + kl + 1, e);
     }
-    if (!sj_conf_check_access(mg_mk_str(path), acl)) {
-      LOG(LL_ERROR, ("Setting key [%s] is not allowed", path));
-      return false;
-    }
-    switch (e->type) {
-      case CONF_TYPE_INT: {
-        if (tok->type != JSON_TYPE_NUMBER) {
-          LOG(LL_ERROR, ("Key [%s] is not a number", path));
-          return false;
-        }
-        *((int *) vp) = strtod(tok->ptr, NULL);
-        break;
-      }
-      case CONF_TYPE_BOOL: {
-        if (tok->type != JSON_TYPE_TRUE && tok->type != JSON_TYPE_FALSE) {
-          LOG(LL_ERROR, ("Key [%s] is not a boolean", path));
-          return false;
-        }
-        *((int *) vp) = (tok->type == JSON_TYPE_TRUE);
-        break;
-      }
-      case CONF_TYPE_STRING: {
-        if (tok->type != JSON_TYPE_STRING) {
-          LOG(LL_ERROR, ("Key [%s] is not a string", path));
-          return false;
-        }
-        char **sp = (char **) vp;
-        char *s = NULL;
-        if (*sp != NULL) free(*sp);
-        if (tok->len > 0) {
-          s = (char *) malloc(tok->len + 1);
-          if (s == NULL) return 0;
-          /* TODO(rojer): Unescape the string. */
-          memcpy(s, tok->ptr, tok->len);
-          s[tok->len] = '\0';
-        } else {
-          /* Empty string - keep value as NULL. */
-        }
-        *sp = s;
-        break;
-      }
-      case CONF_TYPE_OBJECT: {
-        int pl = strlen(path);
-        path[pl] = '.';
-        path[pl + 1] = '\0';
-        if (!sj_conf_parse_obj(path, schema + i + 1, e->num_desc, toks, acl,
-                               require_keys, cfg)) {
-          return false;
-        }
-        i += e->num_desc;
-        continue;
-      }
-    }
-    LOG(LL_DEBUG, ("Set [%s] = [%.*s]", path, (int) tok->len, tok->ptr));
-    i++;
   }
-  return true;
+  return NULL;
 }
 
-bool sj_conf_parse(const char *json, const char *acl, int require_keys,
+void sj_conf_parse_cb(void *data, const char *path,
+                      const struct json_token *tok) {
+  struct parse_ctx *ctx = (struct parse_ctx *) data;
+  if (!ctx->result) return;
+  if (path[0] != '.') {
+    if (path[0] == '\0') return; /* Last entry, the entire object */
+    LOG(LL_ERROR, ("Not an object"));
+    ctx->result = false;
+    return;
+  }
+  path++;
+  const struct sj_conf_entry *e = find_entry(path, ctx->schema);
+  if (e == NULL) {
+    LOG(LL_INFO, ("Extra key: [%s]", path));
+    return;
+  }
+  char *vp = (((char *) ctx->cfg) + e->offset);
+  switch (e->type) {
+    case CONF_TYPE_INT: {
+      if (tok->type != JSON_TYPE_NUMBER) {
+        LOG(LL_ERROR, ("[%s] is not a number", path));
+        ctx->result = false;
+        return;
+      }
+      *((int *) vp) = strtod(tok->ptr, NULL);
+      break;
+    }
+    case CONF_TYPE_BOOL: {
+      if (tok->type != JSON_TYPE_TRUE && tok->type != JSON_TYPE_FALSE) {
+        LOG(LL_ERROR, ("[%s] is not a boolean", path));
+        ctx->result = false;
+        return;
+      }
+      *((int *) vp) = (tok->type == JSON_TYPE_TRUE);
+      break;
+    }
+    case CONF_TYPE_STRING: {
+      if (tok->type != JSON_TYPE_STRING) {
+        LOG(LL_ERROR, ("[%s] is not a string", path));
+        ctx->result = false;
+        return;
+      }
+      char **sp = (char **) vp;
+      char *s = NULL;
+      if (*sp != NULL) free(*sp);
+      if (tok->len > 0) {
+        s = (char *) malloc(tok->len + 1);
+        if (s == NULL) {
+          ctx->result = false;
+          return;
+        }
+        /* TODO(rojer): Unescape the string. */
+        memcpy(s, tok->ptr, tok->len);
+        s[tok->len] = '\0';
+      } else {
+        /* Empty string - keep value as NULL. */
+      }
+      *sp = s;
+      break;
+    }
+    case CONF_TYPE_OBJECT: {
+      /* Ignore */
+      return;
+    }
+  }
+  LOG(LL_DEBUG, ("Set [%s] = [%.*s]", path, (int) tok->len, tok->ptr));
+}
+
+bool sj_conf_parse(const char *json, const char *acl,
                    const struct sj_conf_entry *schema, void *cfg) {
-  char key[50] = {0};
-  struct json_token *toks = NULL;
-  bool result = false;
-
-  if (json == NULL) goto done;
-  if ((toks = parse_json2(json, strlen(json))) == NULL) goto done;
-
-  result = sj_conf_parse_obj(key, schema + 1, schema->num_desc, toks, acl,
-                             require_keys, cfg);
-
-done:
-  free(toks);
-  return result;
+  struct parse_ctx ctx = {
+      .schema = schema, .acl = acl, .cfg = cfg, .result = true};
+  int json_len = strlen(json);
+  return (json_parse(json, json_len, sj_conf_parse_cb, &ctx) >= 0 &&
+          ctx.result == true);
 }
 
 static void sj_conf_emit_str(struct mbuf *b, const char *s) {
@@ -226,7 +232,7 @@ char *sj_conf_emit(const void *cfg, const void *base,
 }
 
 void sj_conf_free(const struct sj_conf_entry *schema, void *cfg) {
-  for (int i = 0; i < schema->num_desc; i++) {
+  for (int i = 0; i <= schema->num_desc; i++) {
     const struct sj_conf_entry *e = schema + i;
     if (e->type == CONF_TYPE_STRING) {
       char **sp = ((char **) (((char *) cfg) + e->offset));

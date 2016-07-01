@@ -48,7 +48,7 @@ struct sj_conf_entry {
  * Parses config in 'json' into 'cfg' according to rules defined in 'schema' and
  * checking keys against 'acl'.
  */
-bool sj_conf_parse(const char *json, const char *acl, int require_keys,
+bool sj_conf_parse(const char *json, const char *acl,
                    const struct sj_conf_entry *schema, void *cfg);
 
 /*

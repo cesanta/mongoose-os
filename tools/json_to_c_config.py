@@ -130,8 +130,7 @@ struct {name} {{\
   hdr.append('''\
 }};
 
-int parse_{name}(const char *json, const char *acl, int require_keys,
-                 struct {name} *cfg);
+int parse_{name}(const char *json, const char *acl, struct {name} *cfg);
 char *emit_{name}(const struct {name} *cfg, const struct {name} *base);
 void free_{name}(struct {name} *cfg);
 
@@ -151,9 +150,8 @@ struct sj_conf_entry {name}_schema[{num_entries}] = {{
 {schema}
 }};
 
-int parse_{name}(const char *json, const char *acl, int require_keys,
-                 struct {name} *cfg) {{
-  return sj_conf_parse(json, acl, require_keys, {name}_schema, cfg);
+int parse_{name}(const char *json, const char *acl, struct {name} *cfg) {{
+  return sj_conf_parse(json, acl, {name}_schema, cfg);
 }}
 
 char *emit_{name}(const struct {name} *cfg, const struct {name} *base) {{

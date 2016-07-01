@@ -45,7 +45,7 @@ static char s_mac_address[13];
 static const char *mac_address_ptr = s_mac_address;
 static struct mg_connection *listen_conn;
 
-static int load_config_file(const char *filename, const char *acl, int required,
+static int load_config_file(const char *filename, const char *acl,
                             struct sys_config *cfg);
 
 #ifndef CS_DISABLE_JS
@@ -77,12 +77,12 @@ void expand_mac_address_placeholders(char *str) {
 }
 
 static int load_config_defaults(struct sys_config *cfg) {
+  memset(cfg, 0, sizeof(*cfg));
   /* TODO(rojer): Figure out what to do about merging two different defaults. */
-  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, "*", 0, cfg)) return 0;
-  if (!load_config_file(CONF_APP_DEFAULTS_FILE, cfg->conf_acl, 0, cfg))
-    return 0;
+  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, "*", cfg)) return 0;
+  if (!load_config_file(CONF_APP_DEFAULTS_FILE, cfg->conf_acl, cfg)) return 0;
   /* Vendor config is optional. */
-  load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, 0, cfg);
+  load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, cfg);
   return 1;
 }
 
@@ -127,7 +127,6 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
   int rc = 200;
   if (mg_vcmp(&hm->uri, "/conf/defaults") == 0) {
     struct sys_config cfg;
-    memset(&cfg, 0, sizeof(cfg));
     if (load_config_defaults(&cfg)) {
       json = emit_sys_config(&cfg, NULL);
     }
@@ -280,7 +279,7 @@ static int init_web_server(const struct sys_config *cfg) {
   return 1;
 }
 
-static int load_config_file(const char *filename, const char *acl, int required,
+static int load_config_file(const char *filename, const char *acl,
                             struct sys_config *cfg) {
   char *data = NULL, *acl_copy = NULL;
   size_t size;
@@ -289,14 +288,13 @@ static int load_config_file(const char *filename, const char *acl, int required,
   data = cs_read_file(filename, &size);
   if (data == NULL) {
     /* File not found or read error */
-    LOG(required ? LL_ERROR : LL_INFO, ("Failed to load %s", filename));
+    LOG(LL_INFO, ("Failed to load %s", filename));
     result = 0;
     goto clean;
   }
   /* Make a temporary copy, in case it gets overridden while loading. */
   acl_copy = (acl != NULL ? strdup(acl) : NULL);
-  if (!parse_sys_config(data, acl_copy, required, cfg)) {
-    /* Malformed file, this is an error even if file is not required */
+  if (!parse_sys_config(data, acl_copy, cfg)) {
     LOG(LL_ERROR, ("Failed to parse %s", filename));
     result = 0;
     goto clean;
@@ -312,7 +310,6 @@ int init_device(struct v7 *v7) {
   uint8_t mac[6] = "";
 
   /* Load system defaults - mandatory */
-  memset(&s_cfg, 0, sizeof(s_cfg));
   if (!load_config_defaults(&s_cfg)) {
     LOG(LL_ERROR, ("Failed to load config defaults"));
     return 0;
@@ -337,7 +334,7 @@ int init_device(struct v7 *v7) {
 #endif
 
   /* Successfully loaded system config. Try overrides - they are optional. */
-  load_config_file(CONF_FILE, s_cfg.conf_acl, 0, &s_cfg);
+  load_config_file(CONF_FILE, s_cfg.conf_acl, &s_cfg);
 
   if (s_cfg.debug.level > _LL_MIN && s_cfg.debug.level < _LL_MAX) {
     cs_log_set_level((enum cs_log_level) s_cfg.debug.level);
