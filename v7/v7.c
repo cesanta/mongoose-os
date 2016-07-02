@@ -1804,6 +1804,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_ENABLE__Object__keys 1
 #define V7_ENABLE__Object__preventExtensions 1
 #define V7_ENABLE__Object__propertyIsEnumerable 1
+#define V7_ENABLE__Proxy 1
 #define V7_ENABLE__RegExp 1
 #define V7_ENABLE__StackTrace 1
 #define V7_ENABLE__String__localeCompare 1
@@ -3338,6 +3339,7 @@ typedef unsigned char v7_obj_attr_t;
 #define V7_OBJ_FUNCTION (1 << 2)       /* function object */
 #define V7_OBJ_OFF_HEAP (1 << 3)       /* object not managed by V7 HEAP */
 #define V7_OBJ_HAS_DESTRUCTOR (1 << 4) /* has user data */
+#define V7_OBJ_PROXY (1 << 5)          /* it's a Proxy object */
 
 /*
  * JavaScript value is either a primitive, or an object.
@@ -3489,6 +3491,7 @@ struct v7_vals {
   val_t number_prototype;
   val_t date_prototype;
   val_t function_prototype;
+  val_t proxy_prototype;
 
   /*
    * temporary register for `OP_STASH` and `OP_UNSTASH` instructions. Valid if
@@ -5138,6 +5141,25 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 /* Output error object message and possibly stack trace to f */
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
 
+/* Handler for `v7_mk_proxy()`; each item is a cfunction */
+typedef struct {
+  v7_cfunction_t *get;
+  v7_cfunction_t *set;
+} v7_proxy_hnd_t;
+
+/*
+ * Create a Proxy object, see:
+ * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+ *
+ * Only two traps are implemented so far: `get()` and `set()`. Note that
+ * `Object.defineProperty()` bypasses the `set()` trap.
+ *
+ * If `target` is not an object, the empty object will be used, so it's safe
+ * to pass `V7_UNDEFINED` as `target`.
+ */
+v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
+                     const v7_proxy_hnd_t *handler);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -6600,6 +6622,46 @@ size_t heapusage_allocs_cnt(void);
 #endif /* V7_HEAPUSAGE_ENABLE */
 
 #endif /* CS_V7_SRC_HEAPUSAGE_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/std_proxy.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_V7_SRC_STD_PROXY_H_
+#define CS_V7_SRC_STD_PROXY_H_
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+
+#if V7_ENABLE__Proxy
+
+#define _V7_PROXY_TARGET_NAME "__tgt"
+#define _V7_PROXY_HANDLER_NAME "__hnd"
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE enum v7_err Proxy_ctor(struct v7 *v7, v7_val_t *res);
+
+V7_PRIVATE void init_proxy(struct v7 *v7);
+
+/*
+ * Returns whether the given name is one of the special Proxy names
+ * (_V7_PROXY_TARGET_NAME or _V7_PROXY_HANDLER_NAME)
+ */
+V7_PRIVATE int is_special_proxy_name(const char *name, size_t name_len);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ENABLE__Proxy */
+
+#endif /* CS_V7_SRC_STD_PROXY_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/freeze.h"
 #endif
@@ -16952,8 +17014,12 @@ enum v7_err v7_compile(const char *src, int binary, int use_bcode, FILE *fp) {
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/util.h" */
 /* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/std_proxy.h" */
 
 void v7_print(struct v7 *v7, v7_val_t v) {
   v7_fprint(stdout, v7, v);
@@ -16999,6 +17065,54 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   fprintf(f, "Exec error [%s]: ", ctx);
   v7_fprintln(f, v7, msg);
   v7_fprint_stack_trace(f, v7, e);
+}
+
+v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
+                     const v7_proxy_hnd_t *handler) {
+  enum v7_err rcode = V7_OK;
+  v7_val_t res = V7_UNDEFINED;
+  v7_val_t args = V7_UNDEFINED;
+  v7_val_t handler_v = V7_UNDEFINED;
+
+  v7_own(v7, &res);
+  v7_own(v7, &args);
+  v7_own(v7, &handler_v);
+  v7_own(v7, &target);
+
+  /* if target is not an object, create one */
+  if (!v7_is_object(target)) {
+    target = v7_mk_object(v7);
+  }
+
+  /* prepare handler object with necessary properties */
+  handler_v = v7_mk_object(v7);
+  if (handler->get != NULL) {
+    set_cfunc_prop(v7, handler_v, "get", handler->get);
+  }
+  if (handler->set != NULL) {
+    set_cfunc_prop(v7, handler_v, "set", handler->set);
+  }
+
+  /* prepare args */
+  args = v7_mk_dense_array(v7);
+  v7_array_set(v7, args, 0, target);
+  v7_array_set(v7, args, 1, handler_v);
+
+  /* call Proxy constructor */
+  V7_TRY(b_apply(v7, v7_get(v7, v7->vals.global_object, "Proxy", ~0),
+                 v7_mk_object(v7), args, 1 /* as ctor */, &res));
+
+clean:
+  if (rcode != V7_OK) {
+    fprintf(stderr, "error during v7_mk_proxy()");
+    res = V7_UNDEFINED;
+  }
+
+  v7_disown(v7, &target);
+  v7_disown(v7, &handler_v);
+  v7_disown(v7, &args);
+  v7_disown(v7, &res);
+  return res;
 }
 
 V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
@@ -17985,6 +18099,7 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/std_proxy.h" */
 
 /*
  * Default property attributes (see `v7_prop_attr_t`)
@@ -18197,6 +18312,9 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
                             size_t name_len, val_t *res) {
   enum v7_err rcode = V7_OK;
   val_t v = obj;
+
+  v7_own(v7, &v);
+
   if (v7_is_string(obj)) {
     v = v7->vals.string_prototype;
   } else if (v7_is_number(obj)) {
@@ -18216,10 +18334,77 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
     v = v7->vals.function_prototype;
   }
 
+#if V7_ENABLE__Proxy
+  {
+    struct v7_object *o = NULL;
+    if (v7_is_object(obj)) {
+      o = get_object_struct(obj);
+    }
+
+    if (o != NULL && (o->attributes & V7_OBJ_PROXY) &&
+        !is_special_proxy_name(name, name_len)) {
+      /* we need to access the target object through a proxy */
+
+      val_t target_v = V7_UNDEFINED;
+      val_t handler_v = V7_UNDEFINED;
+      val_t name_v = V7_UNDEFINED;
+      val_t get_v = V7_UNDEFINED;
+      val_t get_args_v = V7_UNDEFINED;
+
+      v7_own(v7, &target_v);
+      v7_own(v7, &handler_v);
+      v7_own(v7, &name_v);
+      v7_own(v7, &get_v);
+      v7_own(v7, &get_args_v);
+
+      V7_TRY2(v7_get_throwing(v7, obj, _V7_PROXY_TARGET_NAME, ~0, &target_v),
+              clean_proxy);
+      V7_TRY2(v7_get_throwing(v7, obj, _V7_PROXY_HANDLER_NAME, ~0, &handler_v),
+              clean_proxy);
+      V7_TRY2(v7_get_throwing(v7, handler_v, "get", ~0, &get_v), clean_proxy);
+
+      if (v7_is_callable(v7, get_v)) {
+        /* The `get` callback is actually callable, so, use it */
+
+        /* prepare arguments for the callback */
+        get_args_v = v7_mk_dense_array(v7);
+        /*
+         * TODO(dfrank): don't copy string in case we already have val_t (we
+         * need some generic function which will take both `const char *` and
+         * val_t)
+         */
+        v7_array_set(v7, get_args_v, 0, target_v);
+        v7_array_set(v7, get_args_v, 1, v7_mk_string(v7, name, name_len, 1));
+
+        /* call `get` callback */
+        V7_TRY2(b_apply(v7, get_v, V7_UNDEFINED, get_args_v, 0, res),
+                clean_proxy);
+      } else {
+        /*
+         * there's no `get` callback: then, get property from the target object
+         * (not from the proxy object)
+         */
+        V7_TRY2(v7_get_throwing(v7, target_v, name, name_len, res),
+                clean_proxy);
+      }
+
+    clean_proxy:
+      v7_disown(v7, &get_args_v);
+      v7_disown(v7, &get_v);
+      v7_disown(v7, &name_v);
+      v7_disown(v7, &handler_v);
+      v7_disown(v7, &target_v);
+      goto clean;
+    }
+  }
+#endif
+
+  /* regular (non-proxy) property access */
   V7_TRY(
       v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len), res));
 
 clean:
+  v7_disown(v7, &v);
   return rcode;
 }
 
@@ -18424,6 +18609,79 @@ V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
     goto clean;
   }
 
+#if V7_ENABLE__Proxy
+  if ((get_object_struct(obj)->attributes & V7_OBJ_PROXY) &&
+      !is_special_proxy_name(n, len)) {
+    /* we need to access the target object through a proxy */
+
+    val_t target_v = V7_UNDEFINED;
+    val_t handler_v = V7_UNDEFINED;
+    val_t set_v = V7_UNDEFINED;
+    val_t set_args_v = V7_UNDEFINED;
+
+    v7_own(v7, &target_v);
+    v7_own(v7, &handler_v);
+    v7_own(v7, &set_v);
+    v7_own(v7, &set_args_v);
+
+    V7_TRY2(v7_get_throwing(v7, obj, _V7_PROXY_TARGET_NAME, ~0, &target_v),
+            clean_proxy);
+    V7_TRY2(v7_get_throwing(v7, obj, _V7_PROXY_HANDLER_NAME, ~0, &handler_v),
+            clean_proxy);
+    /*
+     * We'll consult "set" property in case of the plain assignment only;
+     * Object.defineProperty() has its own trap `defineProperty` which is not
+     * yet implemented in v7
+     */
+    if (as_assign) {
+      V7_TRY2(v7_get_throwing(v7, handler_v, "set", ~0, &set_v), clean_proxy);
+    }
+
+    if (v7_is_callable(v7, set_v)) {
+      /* The `set` callback is actually callable, so, use it */
+
+      /* prepare arguments for the callback */
+      set_args_v = v7_mk_dense_array(v7);
+      /*
+       * TODO(dfrank): don't copy string in case we already have val_t
+       * (we need some generic function which will take both const char * and
+       * val_t for that)
+       */
+      v7_array_set(v7, set_args_v, 0, target_v);
+      v7_array_set(v7, set_args_v, 1, name);
+      v7_array_set(v7, set_args_v, 2, val);
+
+      /* call `set` callback */
+      V7_TRY2(b_apply(v7, set_v, V7_UNDEFINED, set_args_v, 0, &val),
+              clean_proxy);
+
+      /* in strict mode, we should throw if trap returned falsy value */
+      if (is_strict_mode(v7) && !v7_is_truthy(v7, val)) {
+        V7_THROW(v7_throwf(v7, TYPE_ERROR,
+                           "Trap returned falsy for property '%s'",
+                           v7_get_string(v7, &name, NULL)));
+      }
+
+    } else {
+      /*
+       * there's no `set` callback: then, set property on the target object
+       * (not on the proxy object)
+       */
+      V7_TRY2(
+          def_property_v(v7, target_v, name, attrs_desc, val, as_assign, res),
+          clean_proxy);
+    }
+
+  clean_proxy:
+    v7_disown(v7, &set_args_v);
+    v7_disown(v7, &set_v);
+    v7_disown(v7, &handler_v);
+    v7_disown(v7, &target_v);
+    goto clean;
+  }
+#endif
+
+  /* regular (non-proxy) property access */
   prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
     /*
@@ -25608,6 +25866,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/std_regex.h" */
 /* Amalgamated: #include "v7/src/std_string.h" */
+/* Amalgamated: #include "v7/src/std_proxy.h" */
 /* Amalgamated: #include "v7/src/js_stdlib.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/string.h" */
@@ -25867,6 +26126,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->vals.global_object = v7_mk_object(v7);
   v7->vals.date_prototype = v7_mk_object(v7);
   v7->vals.function_prototype = v7_mk_object(v7);
+  v7->vals.proxy_prototype = v7_mk_object(v7);
 
   set_method(v7, v7->vals.global_object, "eval", Std_eval, 1);
   set_method(v7, v7->vals.global_object, "print", Std_print, 1);
@@ -25900,6 +26160,10 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 #endif
   init_function(v7);
   init_js_stdlib(v7);
+
+#if V7_ENABLE__Proxy
+  init_proxy(v7);
+#endif
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/js_stdlib.c"
@@ -33562,6 +33826,91 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 }
 
 #endif /* V7_ENABLE__RegExp */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/std_proxy.c"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/std_object.h" */
+/* Amalgamated: #include "v7/src/std_proxy.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/function.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+#if V7_ENABLE__Proxy
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err Proxy_ctor(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  val_t this_obj = v7_get_this(v7);
+  val_t target_v = v7_arg(v7, 0);
+  val_t handler_v = v7_arg(v7, 1);
+  struct v7_object *t = NULL;
+  v7_prop_attr_desc_t attrs_desc =
+      (V7_DESC_WRITABLE(0) | V7_DESC_ENUMERABLE(0) | V7_DESC_CONFIGURABLE(0));
+
+  if (this_obj == v7_get_global(v7) || !v7_is_object(this_obj)) {
+    rcode = v7_throwf(v7, TYPE_ERROR, "Wrong 'this' object for Proxy ctor");
+    goto clean;
+  }
+
+  if (!v7_is_object(target_v) || !v7_is_object(handler_v)) {
+    rcode =
+        v7_throwf(v7, TYPE_ERROR,
+                  "Cannot create proxy with a non-object as target or handler");
+    goto clean;
+  }
+
+  t = get_object_struct(this_obj);
+  t->attributes |= V7_OBJ_PROXY;
+
+  v7_def(v7, this_obj, _V7_PROXY_TARGET_NAME, ~0, attrs_desc, target_v);
+  v7_def(v7, this_obj, _V7_PROXY_HANDLER_NAME, ~0, attrs_desc, handler_v);
+
+  (void) res;
+
+clean:
+  return rcode;
+}
+
+V7_PRIVATE void init_proxy(struct v7 *v7) {
+  /*v7_prop_attr_desc_t attrs_desc =*/
+  /*(V7_DESC_WRITABLE(0) | V7_DESC_ENUMERABLE(0) | V7_DESC_CONFIGURABLE(0));*/
+  val_t proxy =
+      mk_cfunction_obj_with_proto(v7, Proxy_ctor, 1, v7->vals.proxy_prototype);
+
+  v7_def(v7, v7->vals.global_object, "Proxy", ~0, V7_DESC_ENUMERABLE(0), proxy);
+}
+
+V7_PRIVATE int is_special_proxy_name(const char *name, size_t name_len) {
+  int ret = 0;
+  if (name_len == (size_t) ~0) {
+    name_len = strlen(name);
+  }
+  if (name_len == 5 && (memcmp(name, _V7_PROXY_TARGET_NAME, name_len) == 0 ||
+                        memcmp(name, _V7_PROXY_HANDLER_NAME, name_len) == 0)) {
+    ret = 1;
+  }
+  return ret;
+}
+
+#endif /* V7_ENABLE__Proxy */
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/main.c"
 #endif

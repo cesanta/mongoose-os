@@ -154,6 +154,7 @@
 #define V7_ENABLE__Object__keys 1
 #define V7_ENABLE__Object__preventExtensions 1
 #define V7_ENABLE__Object__propertyIsEnumerable 1
+#define V7_ENABLE__Proxy 1
 #define V7_ENABLE__RegExp 1
 #define V7_ENABLE__StackTrace 1
 #define V7_ENABLE__String__localeCompare 1
@@ -1559,6 +1560,25 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 
 /* Output error object message and possibly stack trace to f */
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
+
+/* Handler for `v7_mk_proxy()`; each item is a cfunction */
+typedef struct {
+  v7_cfunction_t *get;
+  v7_cfunction_t *set;
+} v7_proxy_hnd_t;
+
+/*
+ * Create a Proxy object, see:
+ * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+ *
+ * Only two traps are implemented so far: `get()` and `set()`. Note that
+ * `Object.defineProperty()` bypasses the `set()` trap.
+ *
+ * If `target` is not an object, the empty object will be used, so it's safe
+ * to pass `V7_UNDEFINED` as `target`.
+ */
+v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
+                     const v7_proxy_hnd_t *handler);
 
 #if defined(__cplusplus)
 }
