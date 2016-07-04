@@ -18,9 +18,11 @@
 #    FW_PARTS is a list of firmware "parts", each defined by name:k=v,k=v,...
 #    entry. Exact key and values are dependent on platform, also for some
 #    platforms names may have special meaning. For parts that have the "src"
-#    attribute, the script will interpret it as a file and will compute SHA1
-#    checksum for it and add as a "cs_sha1". If file name is relative, it is
-#    based in --src_dir. If --staging_dir is set, files are copied there.
+#    attribute, the script will interpret it as a file or directory and will
+#    compute SHA1 checksum for it and add as a "cs_sha1". If src is a file name
+#    and is relative, it is based in --src_dir. If --staging_dir is set,
+#    files are copied there. If src is a directory, "src" element in manifest
+#    will be an object, with files as subobjects (and cs_sha1 as attribute)
 # 3) To create firmware from parts and manifest:
 #    fw_meta.py create_fw \
 #      --manifest=manifest.json \
@@ -159,6 +161,18 @@ def unquote_string(qs):
     s = s.replace(r'\%s' % q, q)
     return s
 
+def stage_file_and_calc_digest(args, part, fname, staging_dir):
+    with open(fname) as f:
+        data = f.read()
+        if staging_dir:
+            staging_file = os.path.join(staging_dir,
+                                        os.path.basename(fname))
+            with open(staging_file, 'w') as sf:
+                sf.write(data)
+        for algo in args.checksums.split(','):
+            h = hashlib.new(algo)
+            h.update(data)
+            part['cs_%s' % algo] = h.hexdigest()
 
 def cmd_create_manifest(args):
     manifest = {
@@ -200,21 +214,26 @@ def cmd_create_manifest(args):
             part[k] = v
         if args.checksums and 'src' in part:
             # TODO(rojer): Support non-local sources.
-            src_file = part['src']
-            if not os.path.isabs(src_file) and not os.path.exists(src_file):
-                src_file = os.path.join(args.src_dir, src_file)
-            part['src'] = os.path.basename(src_file)
-            with open(src_file) as f:
-                data = f.read()
-                if args.staging_dir:
-                    staging_file = os.path.join(args.staging_dir,
-                                                os.path.basename(src_file))
-                    with open(staging_file, 'w') as sf:
-                        sf.write(data)
-                for algo in args.checksums.split(','):
-                    h = hashlib.new(algo)
-                    h.update(data)
-                    part['cs_%s' % algo] = h.hexdigest()
+            src = part['src']
+            if not os.path.isabs(src) and not os.path.exists(src):
+                src = os.path.join(args.src_dir, src)
+            if os.path.isfile(src):
+                part['src'] = os.path.basename(src)
+                stage_file_and_calc_digest(args, part, src, args.staging_dir)
+            else:
+                files = {}
+                staging_dir = os.path.join(args.staging_dir, name)
+                if not os.path.exists(staging_dir):
+                    os.makedirs(staging_dir)
+                for fname in os.listdir(src):
+                    file_attrs = {}
+                    stage_file_and_calc_digest(args, file_attrs,
+                                               os.path.join(src, fname),
+                                               staging_dir)
+                    files[fname] = file_attrs
+                del part['src']
+                part['src'] = files
+
         manifest.setdefault('parts', {})[name] = part
 
     if args.output:
