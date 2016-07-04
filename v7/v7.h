@@ -1561,6 +1561,8 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 /* Output error object message and possibly stack trace to f */
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
 
+#if V7_ENABLE__Proxy
+
 /* Handler for `v7_mk_proxy()`; each item is a cfunction */
 typedef struct {
   v7_cfunction_t *get;
@@ -1579,6 +1581,8 @@ typedef struct {
  */
 v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
                      const v7_proxy_hnd_t *handler);
+
+#endif /* V7_ENABLE__Proxy */
 
 #if defined(__cplusplus)
 }

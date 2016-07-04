@@ -5141,6 +5141,8 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
 /* Output error object message and possibly stack trace to f */
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
 
+#if V7_ENABLE__Proxy
+
 /* Handler for `v7_mk_proxy()`; each item is a cfunction */
 typedef struct {
   v7_cfunction_t *get;
@@ -5159,6 +5161,8 @@ typedef struct {
  */
 v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
                      const v7_proxy_hnd_t *handler);
+
+#endif /* V7_ENABLE__Proxy */
 
 #if defined(__cplusplus)
 }
@@ -6645,6 +6649,8 @@ size_t heapusage_allocs_cnt(void);
 extern "C" {
 #endif /* __cplusplus */
 
+#if V7_ENABLE__Proxy
+
 V7_PRIVATE enum v7_err Proxy_ctor(struct v7 *v7, v7_val_t *res);
 
 V7_PRIVATE void init_proxy(struct v7 *v7);
@@ -6654,6 +6660,8 @@ V7_PRIVATE void init_proxy(struct v7 *v7);
  * (_V7_PROXY_TARGET_NAME or _V7_PROXY_HANDLER_NAME)
  */
 V7_PRIVATE int is_special_proxy_name(const char *name, size_t name_len);
+
+#endif
 
 #if defined(__cplusplus)
 }
@@ -17067,6 +17075,8 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   v7_fprint_stack_trace(f, v7, e);
 }
 
+#if V7_ENABLE__Proxy
+
 v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
                      const v7_proxy_hnd_t *handler) {
   enum v7_err rcode = V7_OK;
@@ -17114,6 +17124,8 @@ clean:
   v7_disown(v7, &res);
   return res;
 }
+
+#endif /* V7_ENABLE__Proxy */
 
 V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
