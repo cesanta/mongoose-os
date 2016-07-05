@@ -32,6 +32,7 @@ struct cc3200_wifi_config {
 };
 
 static struct cc3200_wifi_config s_wifi_sta_config;
+static int s_current_role = -1;
 
 static void free_wifi_config() {
   s_wifi_sta_config.status = SJ_WIFI_DISCONNECTED;
@@ -43,6 +44,22 @@ static void free_wifi_config() {
 
 void invoke_wifi_on_change_cb(void *arg) {
   sj_wifi_on_change_cb(s_v7, (enum sj_wifi_status)(int) arg);
+}
+
+static int restart_nwp() {
+  sl_Stop(0);
+  s_current_role = sl_Start(NULL, NULL, NULL);
+  return (s_current_role >= 0);
+}
+
+static int ensure_role_sta() {
+  if (s_current_role == ROLE_STA) return 1;
+  if (sl_WlanSetMode(ROLE_STA) != 0) return 0;
+  if (!restart_nwp()) return 0;
+  _u32 scan_interval = WIFI_SCAN_INTERVAL_SECONDS;
+  sl_WlanPolicySet(SL_POLICY_SCAN, 1 /* enable */, (_u8 *) &scan_interval,
+                   sizeof(scan_interval));
+  return 1;
 }
 
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
@@ -162,8 +179,8 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
 
   /* Turning the device off and on for the change to take effect. */
-  sl_Stop(0);
-  sl_Start(NULL, NULL, NULL);
+  if (!restart_nwp()) return 0;
+
   if ((ret = sl_NetAppStart(SL_NET_APP_DHCP_SERVER_ID)) != 0) {
     LOG(LL_ERROR, ("DHCP server failed to start: %d", ret));
   }
@@ -177,13 +194,7 @@ int sj_wifi_connect() {
   int ret;
   SlSecParams_t sp;
 
-  if (sl_WlanSetMode(ROLE_STA) != ROLE_STA) return 0;
-  /*
-   * In case we're changing from AP to STA we have to stop/start
-   * before doing anything else, otherwise NetCfg below calls will hang.
-   */
-  sl_Stop(0);
-  sl_Start(NULL, NULL, NULL);
+  if (!ensure_role_sta()) return 0;
 
   if (s_wifi_sta_config.static_ip.ipV4 != 0) {
     ret = sl_NetCfgSet(SL_IPV4_STA_P2P_CL_STATIC_ENABLE,
@@ -201,8 +212,7 @@ int sj_wifi_connect() {
   sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
 
   /* Turning the device off and on for the role change to take effect. */
-  sl_Stop(0);
-  sl_Start(NULL, NULL, NULL);
+  if (!restart_nwp()) return 0;
 
   sp.Key = (_i8 *) s_wifi_sta_config.pass;
   sp.KeyLen = strlen(s_wifi_sta_config.pass);
@@ -266,8 +276,12 @@ char *sj_wifi_get_ap_ip() {
 int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
   const char *ssids[21];
   Sl_WlanNetworkEntry_t info[20];
-  int i, n = sl_WlanGetNetworkList(0, 20, info);
+
+  if (!ensure_role_sta()) return 0;
+
+  int n = sl_WlanGetNetworkList(0, 20, info);
   if (n < 0) return 0;
+  int i;
   for (i = 0; i < n; i++) {
     ssids[i] = (char *) info[i].ssid;
   }
@@ -278,7 +292,4 @@ int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
 
 void sj_wifi_hal_init(struct v7 *v7) {
   (void) v7;
-  _u32 scan_interval = WIFI_SCAN_INTERVAL_SECONDS;
-  sl_WlanPolicySet(SL_POLICY_SCAN, 1 /* enable */, (_u8 *) &scan_interval,
-                   sizeof(scan_interval));
 }
