@@ -114,8 +114,6 @@ static int sj_init() {
     return 0;
   }
 
-  osi_MsgQCreate(&s_main_queue, "V7", sizeof(struct sj_event), 32 /* len */);
-
   int boot_cfg_idx = get_active_boot_cfg_idx();
   if (boot_cfg_idx < 0) return 0;
   struct boot_cfg boot_cfg;
@@ -214,6 +212,7 @@ static int sj_init() {
 
 void main_task(void *arg) {
   (void) arg;
+  osi_MsgQCreate(&s_main_queue, "main", sizeof(struct sj_event), 32 /* len */);
 
   if (!sj_init()) {
     LOG(LL_ERROR, ("Init failed"));
