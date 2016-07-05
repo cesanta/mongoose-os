@@ -243,6 +243,15 @@ def cmd_create_manifest(args):
     json.dump(manifest, out, indent=2, sort_keys=True)
 
 
+def add_file_to_arc(args, part, arc_dir, src_file, added, zf):
+    if args.src_dir:
+        src_file = os.path.join(args.src_dir, src_file)
+    arc_file = os.path.join(arc_dir, os.path.basename(src_file))
+    if arc_file not in added:
+        zf.write(src_file, arc_file)
+        added[arc_file] = True
+        print >>sys.stderr, '     Add %s' % src_file
+
 def cmd_create_fw(args):
     manifest = json.load(open(args.manifest))
     arc_dir = '%s-%s' % (manifest['name'], manifest['version'])
@@ -250,19 +259,19 @@ def cmd_create_fw(args):
     with zipfile.ZipFile(args.output, 'w', zipfile.ZIP_STORED) as zf:
         manifest_arc_name = os.path.join(arc_dir, FW_MANIFEST_FILE_NAME)
         zf.writestr(manifest_arc_name, json.dumps(manifest, indent=2, sort_keys=True))
-        for _, part in manifest['parts'].items():
+        for part_name, part in manifest['parts'].items():
             if 'src' not in part:
                 continue
             # TODO(rojer): Support non-local sources.
-            src_file = part['src']
-            if args.src_dir:
-                src_file = os.path.join(args.src_dir, src_file)
-            arc_file = os.path.join(arc_dir, os.path.basename(src_file))
-            if arc_file not in added:
-                zf.write(src_file, arc_file)
-                added[arc_file] = True
-                print >>sys.stderr, '     Add %s' % src_file
-            part['src'] = os.path.basename(arc_file)
+            src = part['src']
+            if isinstance(src, basestring):
+                add_file_to_arc(args, part, arc_dir, src, added, zf)
+            else:
+            # src is object with files as a keys
+                for fname, _ in src.items():
+                    add_file_to_arc(args, part,
+                                    os.path.join(arc_dir, part_name),
+                                    os.path.join(part_name, fname), added, zf)
 
 
 def cmd_get(args):

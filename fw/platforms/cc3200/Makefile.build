@@ -188,6 +188,7 @@ FW_PARTS = /sys/mcuimg.bin:src=$(BOOT_BIN),type=boot \
            spiffs.img.0.0:src=$(FS_IMG),type=fs,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            spiffs.img.0.1:src=$(FS_EMPTY_IMG) \
            spiffs.img.1.0:src=$(FS_EMPTY_IMG) \
+           fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):src=$(f))
 
 ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"

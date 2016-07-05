@@ -44,6 +44,9 @@ OTA ?= 1
 FREEZE ?= 1
 HEAP_LOG ?=
 
+CREATE_SPIFFS_FS ?= 1
+CREATE_RAW_FS ?= 0
+
 FLASH_SIZE ?= 1M
 FS_SIZE ?= 128K
 FS_BLOCK_SIZE = 4096
@@ -171,7 +174,9 @@ APP_LIBS += m lwip_cs
 CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
           -DESP_ENABLE_MG_LWIP_IF
 
+ifeq "${CREATE_SPIFFS_FS}" "1"
 FW_FS_OUT = $(FW_STAGING_DIR)/$(FS_ADDR).bin
+endif
 
 LD_SCRIPT_TEMPL = $(MGIOT_ESP_PATH)/ld/fw.ld
 
@@ -252,7 +257,7 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) $(MG_FEATURES) \
 
 LDFLAGS += -u Cache_Read_Enable_New
 
-all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_FILES_OUT) $(FW_FS_OUT)
+all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_FILES_OUT) $(FS_STAGING_DIR) $(FW_FS_OUT)
 
 $(RBOOT_EMPTY_CFG):
 	$(vecho) "GEN   $@"
@@ -265,8 +270,16 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR):
 # Main output product: firmware files.
 FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            boot_cfg:src=$(RBOOT_EMPTY_CFG),addr=0x1000 \
-           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR) \
-           fs:src=$(FW_FS_OUT),addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR)
+
+ifeq "$(CREATE_SPIFFS_FS)" "1"
+FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+endif
+
+ifeq "$(CREATE_RAW_FS)" "1"
+FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+endif
+
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 all: $(FW_ZIP)
@@ -368,9 +381,9 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
 
 # -- Filesystem.
 
-$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+$(FS_STAGING_DIR): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
-# OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
+	# OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
     echo "  CP    $(js) -> $(FS_STAGING_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
     cp $(js) $(FS_STAGING_DIR);)
@@ -379,6 +392,8 @@ $(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD
     $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 	$(vecho) "RSYNC -> $(FS_STAGING_DIR)/"
 	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_STAGING_DIR)/
+
+$(FW_FS_OUT): $(FS_STAGING_DIR) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
 	$(vecho) "FS    $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_STAGING_DIR) > $@
 	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
