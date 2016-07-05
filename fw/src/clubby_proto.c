@@ -214,7 +214,10 @@ static void clubby_proto_parse_req(struct json_token *method,
 static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
   struct clubby_event evt;
   int version = 2;
-  struct json_token method, result, error, args;
+  struct json_token method = JSON_INVALID_TOKEN;
+  struct json_token result = JSON_INVALID_TOKEN;
+  struct json_token error = JSON_INVALID_TOKEN;
+  struct json_token args = JSON_INVALID_TOKEN;
 
   memset(&evt, 0, sizeof(evt));
   evt.context = context;
