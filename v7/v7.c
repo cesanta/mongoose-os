@@ -18363,6 +18363,18 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
       val_t get_v = V7_UNDEFINED;
       val_t get_args_v = V7_UNDEFINED;
 
+      /*
+       * we need to create a copy of the name, because the given `name` might
+       * be returned by v7_get_string(), and any object creation might
+       * invalidate this pointer. Below, we're going to create some objects.
+       *
+       * It would probably be cleaner to always create a copy before calling
+       * v7_get_throwing if the name was returned by v7_get_string(), but that
+       * would cause additional pressure on the heap, so let's not do that
+       */
+      char *name_copy = (char *) calloc(1, name_len + 1 /* null-term */);
+      memcpy(name_copy, name, name_len);
+
       v7_own(v7, &target_v);
       v7_own(v7, &handler_v);
       v7_own(v7, &name_v);
@@ -18386,7 +18398,8 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
          * val_t)
          */
         v7_array_set(v7, get_args_v, 0, target_v);
-        v7_array_set(v7, get_args_v, 1, v7_mk_string(v7, name, name_len, 1));
+        v7_array_set(v7, get_args_v, 1,
+                     v7_mk_string(v7, name_copy, name_len, 1));
 
         /* call `get` callback */
         V7_TRY2(b_apply(v7, get_v, V7_UNDEFINED, get_args_v, 0, res),
@@ -18396,11 +18409,14 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
          * there's no `get` callback: then, get property from the target object
          * (not from the proxy object)
          */
-        V7_TRY2(v7_get_throwing(v7, target_v, name, name_len, res),
+        V7_TRY2(v7_get_throwing(v7, target_v, name_copy, name_len, res),
                 clean_proxy);
       }
 
     clean_proxy:
+
+      free(name_copy);
+
       v7_disown(v7, &get_args_v);
       v7_disown(v7, &get_v);
       v7_disown(v7, &name_v);
