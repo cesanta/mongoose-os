@@ -293,20 +293,19 @@ static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
 static void handle_update_req(struct clubby_event *evt, void *user_data) {
   struct json_token section = JSON_INVALID_TOKEN;
   struct json_token blob_url = JSON_INVALID_TOKEN;
-  struct json_token *args = evt->request.args;
+  struct json_token args = evt->request.args;
 
   (void) user_data;
-  LOG(LL_DEBUG, ("Update request received: %.*s", evt->request.args->len,
-                 evt->request.args->ptr));
+  LOG(LL_DEBUG, ("Update request received: %.*s", evt->request.args.len,
+                 evt->request.args.ptr));
 
   const char *reply = "Malformed request";
 
-  if (evt->request.args == NULL ||
-      evt->request.args->type != JSON_TYPE_OBJECT) {
+  if (evt->request.args.type != JSON_TYPE_OBJECT) {
     goto bad_request;
   }
 
-  json_scanf(args->ptr, args->len, "{section: %T, blob_url: %T}", &section,
+  json_scanf(args.ptr, args.len, "{section: %T, blob_url: %T}", &section,
              &blob_url);
 
   /*

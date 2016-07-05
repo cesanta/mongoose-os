@@ -341,8 +341,8 @@ static void clubby_hello_resp_callback(struct clubby_event *evt,
   } else {
     LOG(LL_ERROR,
         ("Got negative /v1/Hello response %d %.*s",
-         evt->response.error.error_code, evt->response.error.error_message->len,
-         evt->response.error.error_message->ptr));
+         evt->response.error.error_code, evt->response.error.error_message.len,
+         evt->response.error.error_message.ptr));
   }
 }
 
@@ -542,7 +542,7 @@ static void clubby_cb(struct clubby_event *evt) {
       /* Calling global "oncmd", if any */
       call_cb(clubby, s_oncmd_cmd, sizeof(s_oncmd_cmd), evt, 0);
 
-      if (!call_cb(clubby, evt->request.method->ptr, evt->request.method->len,
+      if (!call_cb(clubby, evt->request.method.ptr, evt->request.method.len,
                    evt, 0)) {
         LOG(LL_WARN, ("Unregistered command"));
       }

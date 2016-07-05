@@ -223,25 +223,26 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
         v7_mk_string(clubby->v7, "Delivery deadline reached (local)", ~0, 1));
     /* clubby server responses with error 504 on timeout */
     v7_set(clubby->v7, resp_obj, "code", ~0, v7_mk_number(clubby->v7, 504));
-  } else if (evt->response.result != NULL ||
-             evt->response.error.error_obj != NULL) {
-    struct json_token *cb_param_tok = evt->response.result
-                                          ? evt->response.result
-                                          : evt->response.error.error_obj;
+  } else if (evt->response.result.type != JSON_TYPE_INVALID ||
+             evt->response.error.error_obj.type != JSON_TYPE_INVALID) {
+    struct json_token cb_param_tok =
+        evt->response.result.type != JSON_TYPE_INVALID
+            ? evt->response.result
+            : evt->response.error.error_obj;
     /* v7_parse_json wants null terminated string */
-    if (cb_param_tok->type == JSON_TYPE_OBJECT) {
-      char *obj_str = calloc(1, cb_param_tok->len + 1);
+    if (cb_param_tok.type == JSON_TYPE_OBJECT) {
+      char *obj_str = calloc(1, cb_param_tok.len + 1);
       if (obj_str == NULL) {
         LOG(LL_ERROR, ("Out of memory"));
         goto clean;
       }
-      memcpy(obj_str, cb_param_tok->ptr, cb_param_tok->len);
+      memcpy(obj_str, cb_param_tok.ptr, cb_param_tok.len);
 
       res = v7_parse_json(clubby->v7, obj_str, &resp_obj);
       free(obj_str);
     } else {
       resp_obj =
-          v7_mk_string(clubby->v7, cb_param_tok->ptr, cb_param_tok->len, 1);
+          v7_mk_string(clubby->v7, cb_param_tok.ptr, cb_param_tok.len, 1);
     }
   }
 
@@ -258,8 +259,9 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   cb_param = v7_mk_object(clubby->v7);
   v7_own(clubby->v7, &cb_param);
   if (!v7_is_undefined(resp_obj)) {
-    v7_set(clubby->v7, cb_param, evt->response.result ? "result" : "error", ~0,
-           resp_obj);
+    v7_set(clubby->v7, cb_param,
+           evt->response.result.type != JSON_TYPE_INVALID ? "result" : "error",
+           ~0, resp_obj);
   }
   sj_invoke_cb1(clubby->v7, *cbp, cb_param);
   v7_disown(clubby->v7, &resp_obj);
@@ -307,14 +309,14 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
   v7_val_t args_v = V7_UNDEFINED, clubby_param;
   enum v7_err res = V7_OK;
 
-  if (evt->request.args != NULL) {
+  if (evt->request.args.type != JSON_TYPE_INVALID) {
     /* v7_parse_json wants null terminated string */
-    char *obj_str = calloc(1, evt->request.args->len + 1);
+    char *obj_str = calloc(1, evt->request.args.len + 1);
     if (obj_str == NULL) {
       LOG(LL_ERROR, ("Out of memory"));
       return;
     }
-    memcpy(obj_str, evt->request.args->ptr, evt->request.args->len);
+    memcpy(obj_str, evt->request.args.ptr, evt->request.args.len);
 
     res = v7_parse_json(clubby->v7, obj_str, &args_v);
     free(obj_str);

@@ -190,10 +190,10 @@ static void clubby_proto_parse_resp(struct json_token *result_tok,
                                     struct json_token *error_tok,
                                     struct clubby_event *evt) {
   evt->ev = CLUBBY_RESPONSE;
-  evt->response.result = result_tok;
+  evt->response.result = *result_tok;
 
-  if (error_tok->len != 0) {
-    evt->response.error.error_obj = error_tok;
+  if (error_tok->type != JSON_TYPE_INVALID) {
+    evt->response.error.error_obj = *error_tok;
     if (json_scanf(error_tok->ptr, error_tok->len, "{code: %d, message: %T}",
                    &evt->response.error.error_code,
                    &evt->response.error.error_message) < 1) {
@@ -207,8 +207,8 @@ static void clubby_proto_parse_req(struct json_token *method,
                                    struct json_token *args,
                                    struct clubby_event *evt) {
   evt->ev = CLUBBY_REQUEST;
-  evt->request.method = method;
-  evt->request.args = args;
+  evt->request.method = *method;
+  evt->request.args = *args;
 }
 
 static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
@@ -247,8 +247,13 @@ static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
     if (method.len != 0) {
       clubby_proto_parse_req(&method, &args, &evt);
     } else {
+      LOG(LL_DEBUG, ("before clubby_proto_parse_resp %d %d", (int) result.type,
+                     (int) error.type));
       clubby_proto_parse_resp(&result, &error, &evt);
+      LOG(LL_DEBUG, ("after clubby_proto_parse_resp %d %d", (int) result.type,
+                     (int) error.type));
     }
+    LOG(LL_DEBUG, ("Error: %p", evt.response.error.error_obj));
     s_clubby_cb(&evt);
   }
 }

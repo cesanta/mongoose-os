@@ -393,8 +393,7 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   cfg->boot_attempts = 0;
   rboot_set_config(cfg);
 
-  CONSOLE_LOG(
-      LL_DEBUG,
+  LOG(LL_DEBUG,
       ("New rboot config: "
        "prev_rom: %d, current_rom: %d current_rom addr: %X, "
        "current_rom size: %d, current_fs addr: %X, current_fs size: %d",

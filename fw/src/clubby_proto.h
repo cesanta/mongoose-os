@@ -39,14 +39,14 @@ struct clubby_event {
     struct {
       struct {
         int error_code;
-        struct json_token *error_message;
-        struct json_token *error_obj;
+        struct json_token error_message;
+        struct json_token error_obj;
       } error;
-      struct json_token *result;
+      struct json_token result;
     } response;
     struct {
-      struct json_token *method;
-      struct json_token *args;
+      struct json_token method;
+      struct json_token args;
     } request;
   };
   struct json_token src;
