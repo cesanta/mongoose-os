@@ -181,6 +181,8 @@ else
 SLFS_FILES =
 endif
 
+CREATE_RAW_FS ?= 0
+
 FW_PARTS = /sys/mcuimg.bin:src=$(BOOT_BIN),type=boot \
            $(notdir $(BOOT_CFG_0)):src=$(BOOT_CFG_0),type=boot_cfg \
            $(notdir $(BOOT_CFG_1)):src=$(BOOT_CFG_1),type=boot_cfg \
@@ -188,8 +190,11 @@ FW_PARTS = /sys/mcuimg.bin:src=$(BOOT_BIN),type=boot \
            spiffs.img.0.0:src=$(FS_IMG),type=fs,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            spiffs.img.0.1:src=$(FS_EMPTY_IMG) \
            spiffs.img.1.0:src=$(FS_EMPTY_IMG) \
-           fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):src=$(f))
+
+ifeq "$(CREATE_RAW_FS)" "1"
+FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+endif
 
 ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"
 FW_PARTS += $(notdir $(APP_BIN)).1:src=$(APP_BIN)
