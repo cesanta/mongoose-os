@@ -379,7 +379,8 @@ static void http_write_headers(struct v7 *v7, v7_val_t headers_obj,
     void *h = NULL;
     v7_val_t name, value;
     v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(h, headers_obj, &name, &value, &attrs)) != NULL) {
+    while ((h = v7_next_prop(v7, h, headers_obj, &name, &value, &attrs)) !=
+           NULL) {
       size_t n1, n2;
       const char *s1 = v7_get_string(v7, &name, &n1);
       const char *s2 = v7_get_string(v7, &value, &n2);

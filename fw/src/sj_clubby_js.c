@@ -74,7 +74,7 @@ static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
     void *h = NULL;
     v7_val_t name, val;
     v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
+    while ((h = v7_next_prop(v7, h, obj, &name, &val, &attrs)) != NULL) {
       LOG(LL_VERBOSE_DEBUG, ("propname=%s", v7_get_cstring(v7, &name)));
       ub_add_prop(ctx, ub_obj, v7_get_cstring(v7, &name),
                   obj_to_ubj(v7, ctx, val));

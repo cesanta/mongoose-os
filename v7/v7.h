@@ -982,12 +982,12 @@ int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
  *     void *h = NULL;
  *     v7_val_t name, val;
  *     v7_prop_attr_t attrs;
- *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
+ *     while ((h = v7_next_prop(v7, h, obj, &name, &val, &attrs)) != NULL) {
  *       ...
  *     }
  */
-void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   v7_prop_attr_t *attrs);
+void *v7_next_prop(struct v7 *v7, void *handle, v7_val_t obj, v7_val_t *name,
+                   v7_val_t *value, v7_prop_attr_t *attrs);
 
 /* Returns true if the object is an instance of a given constructor. */
 int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);

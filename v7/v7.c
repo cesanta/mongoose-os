@@ -2518,12 +2518,12 @@ int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
  *     void *h = NULL;
  *     v7_val_t name, val;
  *     v7_prop_attr_t attrs;
- *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
+ *     while ((h = v7_next_prop(v7, h, obj, &name, &val, &attrs)) != NULL) {
  *       ...
  *     }
  */
-void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   v7_prop_attr_t *attrs);
+void *v7_next_prop(struct v7 *v7, void *handle, v7_val_t obj, v7_val_t *name,
+                   v7_val_t *value, v7_prop_attr_t *attrs);
 
 /* Returns true if the object is an instance of a given constructor. */
 int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
@@ -4355,6 +4355,19 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_property_value(struct v7 *v7, val_t obj,
                                          struct v7_property *p, val_t *res);
+
+/*
+ * Like public function `v7_next_prop()`, but it takes additional argument
+ * `proxy_transp`; if it is zero, and the given `obj` is a Proxy, it will
+ * iterate the properties of the proxy itself, not the Proxy's target.
+ *
+ * This function also differs from v7_next_prop in that it returns next handle
+ * through the `res_handle` pointer arg.
+ */
+WARN_UNUSED_RESULT
+enum v7_err next_prop(struct v7 *v7, void *handle, v7_val_t obj,
+                      int proxy_transp, v7_val_t *name, v7_val_t *value,
+                      v7_prop_attr_t *attrs, void **res_handle);
 
 /*
  * Set new prototype `proto` for the given object `obj`. Returns `0` at
@@ -11241,7 +11254,7 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
         cs_ubjson_open_object(buf);
       }
 
-      cur->v.p = v7_next_prop(cur->v.p, obj, &name, NULL, NULL);
+      cur->v.p = v7_next_prop(v7, cur->v.p, obj, &name, NULL, NULL);
 
       if (cur->v.p == NULL) {
         cs_ubjson_close_object(buf);
@@ -15389,7 +15402,8 @@ restart:
           do {
             /* iterate properties until we find a non-hidden enumerable one */
             do {
-              h = v7_next_prop(h, v2, &res, NULL, &attrs);
+              V7_TRY(next_prop(v7, h, v2, 1 /*proxy-transparent*/, &res, NULL,
+                               &attrs, &h));
             } while (h != NULL && (attrs & (_V7_PROPERTY_HIDDEN |
                                             V7_PROPERTY_NON_ENUMERABLE)));
 
@@ -18327,6 +18341,10 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
 
   v7_own(v7, &v);
 
+  if (name_len == (size_t) ~0) {
+    name_len = strlen(name);
+  }
+
   if (v7_is_string(obj)) {
     v = v7->vals.string_prototype;
   } else if (v7_is_number(obj)) {
@@ -18923,11 +18941,43 @@ clean:
   return rcode;
 }
 
-void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   v7_prop_attr_t *attrs) {
-  struct v7_property *p;
+void *v7_next_prop(struct v7 *v7, void *handle, v7_val_t obj, v7_val_t *name,
+                   v7_val_t *value, v7_prop_attr_t *attrs) {
+  void *ret = NULL;
+  enum v7_err rcode = next_prop(v7, handle, obj, 1, name, value, attrs, &ret);
+  if (rcode != V7_OK) {
+    fprintf(stderr, "next_prop rcode=%d\n", (int) rcode);
+    ret = NULL;
+  }
+  return ret;
+}
+
+WARN_UNUSED_RESULT
+enum v7_err next_prop(struct v7 *v7, void *handle, v7_val_t obj,
+                      int proxy_transp, v7_val_t *name, v7_val_t *value,
+                      v7_prop_attr_t *attrs, void **res_handle) {
+  enum v7_err rcode = V7_OK;
+  struct v7_property *p = NULL;
+
   if (handle == NULL) {
-    p = get_object_struct(obj)->properties;
+    struct v7_object *o = get_object_struct(obj);
+    p = o->properties;
+#if V7_ENABLE__Proxy
+    if (proxy_transp && (o->attributes & V7_OBJ_PROXY)) {
+      /*
+       * The given object is a Proxy, and the caller wants proxies to be
+       * transparent, so, we recursively call `next_prop` for the proxy's
+       * target
+       */
+      V7_TRY(v7_get_throwing(v7, obj, _V7_PROXY_TARGET_NAME, ~0, &obj));
+      rcode = next_prop(v7, handle, obj, proxy_transp, name, value, attrs,
+                        (void **) &p);
+      goto clean;
+    }
+#else
+    (void) v7;
+    (void) proxy_transp;
+#endif
   } else {
     p = ((struct v7_property *) handle)->next;
   }
@@ -18936,7 +18986,11 @@ void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
     if (value != NULL) *value = p->value;
     if (attrs != NULL) *attrs = p->attributes;
   }
-  return p;
+#if V7_ENABLE__Proxy
+clean:
+#endif
+  *res_handle = p;
+  return rcode;
 }
 
 /* }}} Object properties */
@@ -19921,9 +19975,14 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
 
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "{");
-      while ((h = v7_next_prop(h, v, &name, &val, &attrs)) != NULL) {
+      while (1) {
         size_t n;
         const char *s;
+        V7_TRY(next_prop(v7, h, v, 1 /*proxy-transparent*/, &name, &val, &attrs,
+                         &h));
+        if (h == NULL) {
+          break;
+        }
         if (attrs & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
           continue;
         }
@@ -28974,7 +29033,7 @@ static enum v7_err is_rigid(struct v7 *v7, v7_val_t *res, int is_frozen) {
   if (get_object_struct(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
     void *h = NULL;
     v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(h, arg, NULL, NULL, &attrs)) != NULL) {
+    while ((h = v7_next_prop(v7, h, arg, NULL, NULL, &attrs)) != NULL) {
       if (!(attrs & V7_PROPERTY_NON_CONFIGURABLE)) {
         goto clean;
       }
