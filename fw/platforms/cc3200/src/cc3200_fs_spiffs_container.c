@@ -83,7 +83,7 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
   _i32 old_fh = m->fh, new_fh;
   _u8 *buf;
   _u32 offset, len, buf_size;
-  DBG(("switch %s %d -> %d", m->cpfx, m->cidx, new_cidx));
+  LOG(LL_DEBUG, ("%s %d -> %d", m->cpfx, m->cidx, new_cidx));
   if (old_fh < 0) {
     _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
     fs_container_fname(m->cpfx, m->cidx, fname);
@@ -280,13 +280,13 @@ static int fs_mount_idx(const char *cpfx, int cidx, struct mount_info *m) {
   struct fs_container_info fsi;
   memset(m, 0, sizeof(*m));
   m->fh = -1;
-  LOG(LL_DEBUG, ("Mounting %s.%d", cpfx, cidx));
   m->cidx = cidx;
   r = fs_get_info(cpfx, cidx, &fsi);
   if (r != 0) return r;
-  m->cpfx = cpfx;
+  m->cpfx = strdup(cpfx);
   m->seq = fsi.seq;
   m->valid = 1;
+  LOG(LL_INFO, ("Mounting %s.%d 0x%llx", cpfx, cidx, fsi.seq));
   r = fs_mount_spiffs(m, fsi.fs_size, fsi.fs_block_size, fsi.fs_page_size,
                       fsi.fs_erase_size);
   DBG(("mount %d: %d %d", cidx, (int) r, (int) SPIFFS_errno(&m->fs)));
@@ -303,7 +303,7 @@ _i32 fs_mount(const char *cpfx, struct mount_info *m) {
   r0 = fs_get_info(cpfx, 0, &fs0);
   r1 = fs_get_info(cpfx, 1, &fs1);
 
-  DBG(("r0 = %d, r1 = %d", r0, r1));
+  DBG(("r0 = %d %llx, r1 = %d %llx", r0, fs0.seq, r1, fs1.seq));
 
   if (r0 == 0 && r1 == 0) {
     if (fs0.seq < fs1.seq) {
@@ -323,10 +323,12 @@ _i32 fs_mount(const char *cpfx, struct mount_info *m) {
 }
 
 _i32 fs_umount(struct mount_info *m) {
-  LOG(LL_DEBUG, ("Unmounting %s.%d", m->cpfx, m->cidx));
+  LOG(LL_INFO, ("Unmounting %s.%d", m->cpfx, m->cidx));
   SPIFFS_unmount(&m->fs);
+  free(m->cpfx);
   free(m->work);
   free(m->fds);
   fs_close_container(m);
+  memset(m, 0, sizeof(*m));
   return 1;
 }

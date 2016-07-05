@@ -88,7 +88,7 @@ static int load_config_defaults(struct sys_config *cfg) {
   return 1;
 }
 
-int save_cfg(struct sys_config *cfg) {
+int save_cfg(const struct sys_config *cfg) {
   struct sys_config defaults;
   memset(&defaults, 0, sizeof(defaults));
   if (!load_config_defaults(&defaults)) return -1;

@@ -14,7 +14,7 @@
 typedef unsigned long long _u64;
 
 struct mount_info {
-  const char *cpfx; /* Container filename prefix. */
+  char *cpfx; /* Container filename prefix. */
   spiffs fs;
   _i32 fh;        /* FailFS file handle, or -1 if not open yet. */
   _u64 seq;       /* Sequence counter for the mounted container. */
@@ -37,7 +37,6 @@ void fs_container_fname(const char *cpfx, int cidx, _u8 *fname);
 
 _i32 fs_create_container(const char *cpfx, int cidx, _u32 fs_size);
 
-/* NB: cpfx must outlive the mount. */
 _i32 fs_mount(const char *cpfx, struct mount_info *m);
 
 _i32 fs_write_meta(_i32 fh, _u64 seq, _u32 fs_size, _u32 fs_block_size,

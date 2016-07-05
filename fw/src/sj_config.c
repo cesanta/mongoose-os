@@ -271,10 +271,8 @@ bool sj_conf_emit_f(const void *cfg, const void *base,
   }
   sj_conf_emit_cb(cfg, base, schema, pretty, NULL, sj_conf_emit_f_cb, &fp);
   if (fp == NULL) return false;
-  if (fclose(fp) != 0) {
-    LOG(LL_ERROR, ("Error closing file\n"));
-    return false;
-  }
+  if (fclose(fp) != 0) return false;
+  remove(fname);
   if (rename("tmp", fname) != 0) {
     LOG(LL_ERROR, ("Error renaming file to %s\n", fname));
     return false;

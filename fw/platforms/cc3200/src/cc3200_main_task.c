@@ -121,7 +121,7 @@ static int sj_init() {
   struct boot_cfg boot_cfg;
   if (read_boot_cfg(boot_cfg_idx, &boot_cfg) < 0) return 0;
 
-  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s %p", boot_cfg_idx,
+  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", boot_cfg_idx,
                 boot_cfg.seq, boot_cfg.flags, boot_cfg.app_image_file,
                 boot_cfg.app_load_addr, boot_cfg.fs_container_prefix));
 

@@ -266,6 +266,10 @@ int fs_init(uint32_t addr, uint32_t size) {
                   sizeof(spiffs_fds));
 }
 
+void fs_umount() {
+  SPIFFS_unmount(&fs);
+}
+
 /* Wrappers for V7 */
 
 void set_errno(int res) {

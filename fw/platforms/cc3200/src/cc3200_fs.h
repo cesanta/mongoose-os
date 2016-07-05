@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 int init_fs(const char *container_prefix);
+void umount_fs();
 int set_errno(int e);
 
 #ifdef CC3200_FS_DEBUG

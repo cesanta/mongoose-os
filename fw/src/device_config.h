@@ -44,7 +44,7 @@ struct sys_config *get_cfg();
  * Save config. Performs diff against defaults and only saves diffs.
  * Reboot is required to reload the config.
  */
-int save_cfg(struct sys_config *cfg);
+int save_cfg(const struct sys_config *cfg);
 
 void device_get_mac_address(uint8_t mac[6]);
 

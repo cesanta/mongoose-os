@@ -26,6 +26,7 @@
 #include "fw/src/sj_v7_ext.h"
 #include "v7/v7.h"
 
+#include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
 
 #include "common/umm_malloc/umm_malloc.h"
@@ -118,6 +119,7 @@ void sj_wdt_disable() {
 
 void sj_system_restart(int exit_code) {
   (void) exit_code;
+  umount_fs();
   /* Turns out to be not that easy. In particular, using *Reset functions is
    * not a good idea.
    * https://e2e.ti.com/support/wireless_connectivity/f/968/p/424736/1516404

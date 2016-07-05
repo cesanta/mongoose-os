@@ -15,6 +15,8 @@
 #include "common/platforms/esp8266/esp_uart.h"
 #include "common/umm_malloc/umm_malloc.h"
 
+#include "fw/platforms/esp8266/user/esp_fs.h"
+
 #ifndef CS_DISABLE_JS
 #include "v7/v7.h"
 #endif
@@ -66,6 +68,7 @@ void sj_wdt_set_timeout(int secs) {
 
 void sj_system_restart(int exit_code) {
   (void) exit_code;
+  fs_umount();
   system_restart();
 }
 

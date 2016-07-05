@@ -212,3 +212,7 @@ int64_t sj_get_storage_free_space() {
 int init_fs(const char *container_prefix) {
   return fs_mount(container_prefix, &s_fsm);
 }
+
+void umount_fs() {
+  if (s_fsm.valid) fs_umount(&s_fsm);
+}
