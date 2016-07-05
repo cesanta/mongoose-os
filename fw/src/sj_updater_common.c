@@ -261,26 +261,22 @@ static int parse_manifest(struct update_context *ctx) {
   }
   memcpy(ctx->manifest_data, ctx->data, ctx->current_file.fi.size);
 
-  ctx->manifest =
-      parse_json2((char *) ctx->manifest_data, ctx->current_file.fi.size);
-  if (ctx->manifest == NULL) {
+  if (json_scanf(ctx->manifest_data, ctx->current_file.fi.size,
+                 "{name: %T, platform: %T, version: %T, parts: %T}", &ctx->name,
+                 &ctx->platform, &ctx->version, &ctx->parts) <= 0) {
     ctx->status_msg = "Failed to parse manifest";
     return -1;
   }
 
-  ctx->name = find_json_token(ctx->manifest, "name");
-  ctx->platform = find_json_token(ctx->manifest, "platform");
-  ctx->version = find_json_token(ctx->manifest, "version");
-  ctx->parts = find_json_token(ctx->manifest, "parts");
-  if (ctx->platform == NULL || ctx->version == NULL || ctx->parts == NULL) {
+  if (ctx->platform.len == 0 || ctx->version.len == 0 || ctx->parts.len == 0) {
     ctx->status_msg = "Required manifest field missing";
     return -1;
   }
 
   CONSOLE_LOG(LL_INFO,
-              ("FW: %.*s %.*s %s -> %.*s", (int) ctx->name->len, ctx->name->ptr,
-               (int) ctx->platform->len, ctx->platform->ptr, build_version,
-               (int) ctx->version->len, ctx->version->ptr));
+              ("FW: %.*s %.*s %s -> %.*s", (int) ctx->name.len, ctx->name.ptr,
+               (int) ctx->platform.len, ctx->platform.ptr, build_version,
+               (int) ctx->version.len, ctx->version.ptr));
 
   context_remove_data(ctx, ctx->current_file.fi.size);
 
@@ -350,13 +346,13 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
 
         if ((ret = parse_manifest(ctx)) < 0) return ret;
 
-        if (strncasecmp(ctx->platform->ptr, FW_ARCHITECTURE,
+        if (strncasecmp(ctx->platform.ptr, FW_ARCHITECTURE,
                         strlen(FW_ARCHITECTURE)) != 0) {
           ctx->status_msg = "Wrong platform";
           return -1;
         }
 
-        if (strncmp(ctx->version->ptr, build_version, strlen(build_version)) <=
+        if (strncmp(ctx->version.ptr, build_version, strlen(build_version)) <=
             0) {
           /* Running the same of higher version */
           if (get_cfg()->update.update_to_any_version == 0) {
@@ -369,7 +365,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           }
         }
 
-        if ((ret = sj_upd_begin(ctx->dev_ctx, ctx->parts)) < 0) {
+        if ((ret = sj_upd_begin(ctx->dev_ctx, &ctx->parts)) < 0) {
           ctx->status_msg = sj_upd_get_status_msg(ctx->dev_ctx);
           CONSOLE_LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
           return ret;
@@ -502,7 +498,6 @@ void updater_context_free(struct update_context *ctx) {
   }
   sj_upd_ctx_free(s_ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
-  free(ctx->manifest);
   free(ctx->manifest_data);
   free(ctx);
   s_ctx = NULL;

@@ -30,11 +30,10 @@ struct update_context {
   struct mbuf unprocessed;
   struct zip_file_info current_file;
 
-  struct json_token *manifest;
-  struct json_token *name;
-  struct json_token *platform;
-  struct json_token *version;
-  struct json_token *parts;
+  struct json_token name;
+  struct json_token platform;
+  struct json_token version;
+  struct json_token parts;
 
   int need_reboot;
 

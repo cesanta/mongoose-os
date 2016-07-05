@@ -81,26 +81,15 @@ const char *sj_upd_get_status_msg(struct sj_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
+static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
                           const char *part_name, struct part_info *pi) {
-  struct json_token *part_tok = find_json_token(parts_tok, part_name);
+  struct json_token sha = JSON_INVALID_TOKEN;
+  struct json_token src = JSON_INVALID_TOKEN;
 
-  if (part_tok == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Part %s not found", part_name));
-    return -1;
-  }
+  pi->addr = 0;
+  json_scanf(tok->ptr, tok->len, "{addr: %u, cs_sha1: %T, src: %T}", &pi->addr,
+             &sha, &src);
 
-  struct json_token *addr_tok = find_json_token(part_tok, "addr");
-  if (addr_tok == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Addr token not found in manifest"));
-    return -1;
-  }
-
-  /*
-   * we can use strtol for non-null terminated string here, we have
-   * symbols immediately after address which will  stop number parsing
-   */
-  pi->addr = strtol(addr_tok->ptr, NULL, 0);
   if (pi->addr == 0) {
     /* Only rboot can has addr = 0, but we do not update rboot now */
     CONSOLE_LOG(LL_ERROR, ("Invalid address in manifest"));
@@ -115,22 +104,18 @@ static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
   pi->addr += ctx->slot_to_write * FW_SLOT_SIZE;
   LOG(LL_DEBUG, ("Addr to write to use: %X", pi->addr));
 
-  struct json_token *sha1sum_tok = find_json_token(part_tok, "cs_sha1");
-  if (sha1sum_tok == NULL || sha1sum_tok->type != JSON_TYPE_STRING ||
-      sha1sum_tok->len != sizeof(pi->sha1sum)) {
+  if (sha.len == 0) {
     CONSOLE_LOG(LL_ERROR, ("cs_sha1 token not found in manifest"));
     return -1;
   }
-  memcpy(pi->sha1sum, sha1sum_tok->ptr, sizeof(pi->sha1sum));
+  memcpy(pi->sha1sum, sha.ptr, sizeof(pi->sha1sum));
 
-  struct json_token *file_name_tok = find_json_token(part_tok, "src");
-  if (file_name_tok == NULL || file_name_tok->type != JSON_TYPE_STRING ||
-      (size_t) file_name_tok->len > sizeof(pi->file_name) - 1) {
+  if (src.len <= 0 || src.len >= (int) sizeof(pi->file_name)) {
     CONSOLE_LOG(LL_ERROR, ("src token not found in manifest"));
     return -1;
   }
 
-  memcpy(pi->file_name, file_name_tok->ptr, file_name_tok->len);
+  memcpy(pi->file_name, src.ptr, src.len);
 
   LOG(LL_DEBUG,
       ("Part %s : addr: %X sha1: %.*s src: %s", part_name, (int) pi->addr,
@@ -141,6 +126,7 @@ static int fill_part_info(struct sj_upd_ctx *ctx, struct json_token *parts_tok,
 
 int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts) {
   const rboot_config *cfg = get_rboot_config();
+  struct json_token fs, fw;
   if (cfg == NULL) {
     ctx->status_msg = "Failed to get rBoot config";
     return -1;
@@ -148,12 +134,15 @@ int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts) {
   ctx->slot_to_write = (cfg->current_rom == 0 ? 1 : 0);
   LOG(LL_DEBUG, ("Slot to write: %d", ctx->slot_to_write));
 
-  if (fill_part_info(ctx, parts, "fw", &ctx->fw_part) < 0) {
+  fs.len = fw.len = 0;
+  json_scanf(parts->ptr, parts->len, "{fw: %T, fs: %T}", &fw, &fs);
+
+  if (fill_part_info(ctx, &fw, "fw", &ctx->fw_part) < 0) {
     ctx->status_msg = "Failed to parse fw part";
     return -1;
   }
 
-  if (fill_part_info(ctx, parts, "fs", &ctx->fs_part) < 0) {
+  if (fill_part_info(ctx, &fs, "fs", &ctx->fs_part) < 0) {
     ctx->status_msg = "Failed to parse fs part";
     return -1;
   }

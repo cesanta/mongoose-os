@@ -192,92 +192,62 @@ static void clubby_proto_parse_resp(struct json_token *result_tok,
   evt->ev = CLUBBY_RESPONSE;
   evt->response.result = result_tok;
 
-  if (error_tok != NULL) {
+  if (error_tok->len != 0) {
     evt->response.error.error_obj = error_tok;
-    struct json_token *error_code_tok = find_json_token(error_tok, "code");
-    if (error_code_tok == NULL) {
+    if (json_scanf(error_tok->ptr, error_tok->len, "{code: %d, message: %T}",
+                   &evt->response.error.error_code,
+                   &evt->response.error.error_message) < 1) {
       LOG(LL_ERROR, ("No error code in error object"));
       return;
     }
-    evt->response.error.error_code = to64(error_code_tok->ptr);
-    evt->response.error.error_message = find_json_token(error_tok, "message");
   }
 }
 
 static void clubby_proto_parse_req(struct json_token *method,
-                                   struct json_token *frame,
+                                   struct json_token *args,
                                    struct clubby_event *evt) {
   evt->ev = CLUBBY_REQUEST;
   evt->request.method = method;
-  evt->request.args = find_json_token(frame, "args");
+  evt->request.args = args;
 }
 
 static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
   struct clubby_event evt;
-  struct json_token *frame = parse_json2(data, len);
-  struct json_token *id_tok, *method_tok, *result_tok, *error_tok;
-
-  if (frame == NULL) {
-    LOG(LL_DEBUG, ("Error parsing clubby frame"));
-    return;
-  }
-
-  struct json_token *v_tok = find_json_token(frame, "v");
-  if (v_tok == NULL || *v_tok->ptr != '2') {
-    LOG(LL_ERROR, ("Only clubby v2 is supported (received: %.*s)",
-                   v_tok ? 0 : v_tok->len, v_tok->ptr));
-    goto clean;
-  }
+  int version = 2;
+  struct json_token method, result, error, args;
 
   memset(&evt, 0, sizeof(evt));
-  evt.frame = frame;
   evt.context = context;
+  method.len = result.len = error.len = args.len = 0;
 
-  id_tok = find_json_token(frame, "id");
-  if (id_tok == NULL) {
-    LOG(LL_ERROR, ("No id in frame"));
-    goto clean;
-  }
-
-  evt.id = to64(id_tok->ptr);
-  if (evt.id == 0) {
+  if (json_scanf(data, len,
+                 "{id: %llu, v: %d, src: %T, dst: %T, method: %T, "
+                 "result: %T, error: %T, args: %T}",
+                 &evt.id, &version, &evt.src, &evt.dst, &method, &result,
+                 &error, &args) <= 0) {
+    LOG(LL_DEBUG, ("Error parsing clubby frame"));
+  } else if (version != 2) {
+    LOG(LL_ERROR, ("Only clubby v2 is supported (received: %d)", version));
+  } else if (evt.id == 0) {
     LOG(LL_ERROR, ("Wrong id"));
-    goto clean;
-  }
-
-  /* Allow empty dst */
-  evt.dst = find_json_token(frame, "dst");
-
-  evt.src = find_json_token(frame, "src");
-  if (evt.src == NULL) {
+  } else if (evt.src.len == 0) {
+    /* Allow empty dst */
     LOG(LL_ERROR, ("No src in frame"));
-    goto clean;
-  }
-
-  method_tok = find_json_token(frame, "method");
-  result_tok = find_json_token(frame, "result");
-  error_tok = find_json_token(frame, "error");
-
-  /*
-   * if none of required token exist - this is positive response
-   * if `method` and `error` (or `result`) are in the same
-   * frame - this is an error
-   */
-  if (method_tok != NULL && (result_tok != NULL || error_tok != NULL)) {
+  } else if (method.len != 0 && (result.len != 0 || error.len != 0)) {
+    /*
+     * if none of required token exist - this is positive response
+     * if `method` and `error` (or `result`) are in the same
+     * frame - this is an error
+     */
     LOG(LL_ERROR, ("Malformed frame"));
-    goto clean;
-  }
-
-  if (method_tok != NULL) {
-    clubby_proto_parse_req(method_tok, frame, &evt);
   } else {
-    clubby_proto_parse_resp(result_tok, error_tok, &evt);
+    if (method.len != 0) {
+      clubby_proto_parse_req(&method, &args, &evt);
+    } else {
+      clubby_proto_parse_resp(&result, &error, &evt);
+    }
+    s_clubby_cb(&evt);
   }
-
-  s_clubby_cb(&evt);
-
-clean:
-  free(frame);
 }
 
 static void clubby_proto_handler(struct mg_connection *nc, int ev,

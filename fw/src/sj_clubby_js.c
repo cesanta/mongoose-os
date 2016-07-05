@@ -143,11 +143,11 @@ static void clubby_hello_req_callback(struct clubby_event *evt,
 
   LOG(LL_DEBUG, ("Incoming /v1/Hello received, id=%d", (int32_t) evt->id));
   char src[512] = {0};
-  if ((size_t) evt->src->len > sizeof(src)) {
-    LOG(LL_ERROR, ("src too long, len=%d", evt->src->len));
+  if ((size_t) evt->src.len > sizeof(src)) {
+    LOG(LL_ERROR, ("src too long, len=%d", evt->src.len));
     return;
   }
-  memcpy(src, evt->src->ptr, evt->src->len);
+  memcpy(src, evt->src.ptr, evt->src.len);
 
   char status_msg[100];
   snprintf(status_msg, sizeof(status_msg) - 1, "Hello, this is %s",
@@ -330,13 +330,13 @@ static void clubby_req_cb(struct clubby_event *evt, void *user_data) {
   assert(!v7_is_undefined(argcv));
   int argc = v7_get_double(clubby->v7, argcv);
 
-  char *dst = calloc(1, evt->src->len + 1);
+  char *dst = calloc(1, evt->src.len + 1);
   if (dst == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return;
   }
 
-  memcpy(dst, evt->src->ptr, evt->src->len);
+  memcpy(dst, evt->src.ptr, evt->src.len);
 
   if (argc < 2) {
     /*
@@ -747,12 +747,12 @@ void sj_clubby_send_reply(struct clubby_event *evt, int status,
   struct clubby *clubby = (struct clubby *) evt->context;
 
   /* TODO(alashkin): add `len` parameter to ubjserializer */
-  char *dst = calloc(1, evt->dst->len + 1);
+  char *dst = calloc(1, evt->dst.len + 1);
   if (dst == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return;
   }
-  memcpy(dst, evt->dst->ptr, evt->dst->len);
+  memcpy(dst, evt->dst.ptr, evt->dst.len);
 
   clubby_send_response(clubby, dst, evt->id, status, error_msg, result_v);
   free(dst);

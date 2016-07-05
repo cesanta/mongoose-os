@@ -32,7 +32,7 @@ struct sj_upd_ctx {
   uint32_t app_load_addr;
   char fs_container_file[MAX_FS_CONTAINER_FNAME_LEN + 3];
   uint32_t fs_size, fs_block_size, fs_page_size, fs_erase_size;
-  struct json_token *cur_part;
+  struct json_token cur_part;
   const _u8 *cur_fn;
   _i32 cur_fh;
   const char *status_msg;
@@ -58,53 +58,6 @@ int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts) {
   }
   ctx->new_boot_cfg_idx = get_inactive_boot_cfg_idx();
   return 1;
-}
-
-static struct json_token *find_part(struct sj_upd_ctx *ctx, const char *src,
-                                    struct mg_str *name) {
-  struct json_token *t = ctx->parts;
-  while (t != NULL && t->type != JSON_TYPE_EOF) {
-    t++; /* This points at the key now */
-    struct json_token *key = t;
-    t++; /* And now to the value */
-    struct json_token *src_tok = find_json_token(t, "src");
-    if (src_tok != NULL && strncmp(src_tok->ptr, src, src_tok->len) == 0) {
-      DBG(("%.*s -> %.*s", (int) key->len, key->ptr, (int) src_tok->len,
-           src_tok->ptr));
-      name->p = key->ptr;
-      name->len = key->len;
-      return t;
-    }
-    t += t->num_desc;
-  }
-  return NULL;
-}
-
-static struct mg_str get_str_value(struct json_token *part, const char *key) {
-  struct mg_str result = MG_MK_STR("");
-  struct json_token *tok = find_json_token(part, key);
-  if (tok != NULL && tok->type == JSON_TYPE_STRING) {
-    result.p = tok->ptr;
-    result.len = tok->len;
-  }
-  return result;
-}
-
-static long get_num_value(struct json_token *part, const char *key) {
-  long result = 0;
-  struct json_token *tok = find_json_token(part, key);
-  if (tok != NULL && tok->type == JSON_TYPE_NUMBER) {
-    result = strtol(tok->ptr, NULL, 0);
-  }
-  return result;
-}
-
-static struct mg_str get_part_type(struct json_token *part) {
-  return get_str_value(part, "type");
-}
-
-static struct mg_str get_part_checksum(struct json_token *part) {
-  return get_str_value(part, "cs_sha1");
 }
 
 typedef int (*read_file_cb_t)(_u8 *data, int len, void *arg);
@@ -133,10 +86,10 @@ static int sha1_update_cb(_u8 *data, int len, void *arg) {
 
 void bin2hex(const uint8_t *src, int src_len, char *dst);
 
-int verify_checksum(const char *fn, int fs, struct mg_str expected) {
+int verify_checksum(const char *fn, int fs, const struct json_token *expected) {
   int r;
 
-  if (expected.len != 40) return -1;
+  if (expected->len != 40) return -1;
 
   struct cc3200_hash_ctx ctx;
   cc3200_hash_init(&ctx, CC3200_HASH_ALGO_SHA1);
@@ -147,9 +100,9 @@ int verify_checksum(const char *fn, int fs, struct mg_str expected) {
   char digest_str[41];
   bin2hex(digest, 20, digest_str);
 
-  DBG(("%s: have %.*s, want %.*s", fn, 40, digest_str, 40, expected.p));
+  DBG(("%s: have %.*s, want %.*s", fn, 40, digest_str, 40, expected->ptr));
 
-  return (strncasecmp(expected.p, digest_str, 40) == 0 ? 1 : 0);
+  return (strncasecmp(expected->ptr, digest_str, 40) == 0 ? 1 : 0);
 }
 
 /* Create file name by appending ".$idx" to prefix. */
@@ -165,14 +118,15 @@ static int prepare_to_write(struct sj_upd_ctx *ctx,
                             const struct sj_upd_file_info *fi,
                             const char *fname, uint32_t falloc,
                             struct json_token *part) {
-  struct mg_str expected_sha1 = get_part_checksum(part);
-  if (verify_checksum(fname, fi->size, expected_sha1) > 0) {
+  struct json_token expected_sha1 = JSON_INVALID_TOKEN;
+  json_scanf(part->ptr, part->len, "{cs_sha1: %T}", &expected_sha1);
+  if (verify_checksum(fname, fi->size, &expected_sha1) > 0) {
     LOG(LL_INFO, ("Digest matched for %s %u (%.*s)", fname, fi->size,
-                  (int) expected_sha1.len, expected_sha1.p));
+                  (int) expected_sha1.len, expected_sha1.ptr));
     return 0;
   }
   LOG(LL_INFO, ("Storing %s %u -> %s %u (%.*s)", fi->name, fi->size, fname,
-                falloc, (int) expected_sha1.len, expected_sha1.p));
+                falloc, (int) expected_sha1.len, expected_sha1.ptr));
   ctx->cur_fn = (const _u8 *) fname;
   sl_FsDel(ctx->cur_fn, 0);
   _i32 r = sl_FsOpen(ctx->cur_fn, FS_MODE_OPEN_CREATE(falloc, 0), NULL,
@@ -184,23 +138,69 @@ static int prepare_to_write(struct sj_upd_ctx *ctx,
   return 1;
 }
 
+struct find_part_info {
+  const char *src;
+  struct mg_str *key;
+  struct json_token *value;
+  char buf[50];
+};
+
+static void find_part(void *data, const char *path,
+                      const struct json_token *tok) {
+  struct find_part_info *info = (struct find_part_info *) data;
+  size_t path_len = strlen(path), src_len = strlen(info->src);
+
+  /* For matched 'src' attribute, remember parent object path. */
+  if (src_len == tok->len && strncmp(info->src, tok->ptr, tok->len) == 0) {
+    const char *p = path + path_len;
+    while (--p > path + 1) {
+      if (*p == '.') break;
+    }
+
+    info->key->len = snprintf(info->buf, sizeof(info->buf), "%.*s",
+                              (p - path) - 1, path + 1);
+    info->key->p = info->buf;
+  }
+
+  /*
+   * And store parent's object token. These conditionals are triggered
+   * in separate callback invocations.
+   */
+  if (info->value->len == 0 && info->key->len > 0 &&
+      info->key->len + 1 == path_len &&
+      strncmp(path + 1, info->key->p, info->key->len) == 0) {
+    *info->value = *tok;
+  }
+}
+
+static int tcmp(const struct json_token *tok, const char *str) {
+  struct mg_str s = {.p = tok->ptr, .len = tok->len};
+  return mg_vcmp(&s, str);
+}
+
 enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
                                           const struct sj_upd_file_info *fi) {
   struct mg_str part_name = MG_MK_STR("");
   enum sj_upd_file_action ret = SJ_UPDATER_SKIP_FILE;
-  ctx->cur_part = find_part(ctx, fi->name, &part_name);
-  if (ctx->cur_part == NULL) return ret;
+  struct find_part_info find_part_info = {fi->name, &part_name, &ctx->cur_part};
+  ctx->cur_part.len = part_name.len = 0;
+  json_parse(ctx->parts->ptr, ctx->parts->len, find_part, &find_part_info);
+  if (ctx->cur_part.len == 0) return ret;
   /* Drop any indexes from part name, we'll add our own. */
   while (1) {
     char c = part_name.p[part_name.len - 1];
     if (c != '.' && !(c >= '0' && c <= '9')) break;
     part_name.len--;
   }
-  struct mg_str type = get_part_type(ctx->cur_part);
+  struct json_token type = JSON_INVALID_TOKEN;
   const char *fname = NULL;
-  uint32_t falloc = get_num_value(ctx->cur_part, "falloc");
+  uint32_t falloc = 0;
+  json_scanf(ctx->cur_part.ptr, ctx->cur_part.len,
+             "{load_addr:%u, falloc:%u, type: %T}", &ctx->app_load_addr,
+             &falloc, &type);
+
   if (falloc == 0) falloc = fi->size;
-  if (mg_vcmp(&type, "app") == 0) {
+  if (tcmp(&type, "app") == 0) {
 #if CC3200_SAFE_CODE_UPDATE
     /*
      * When safe code update is enabled, we write code to a new file.
@@ -221,18 +221,18 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
               sizeof(ctx->app_image_file));
     }
 #endif
-    ctx->app_load_addr = get_num_value(ctx->cur_part, "load_addr");
     if (ctx->app_load_addr >= 0x20000000) {
       fname = ctx->app_image_file;
     } else {
       ctx->status_msg = "Bad/missing app load_addr";
       ret = SJ_UPDATER_ABORT;
     }
-  } else if (mg_vcmp(&type, "fs") == 0) {
-    ctx->fs_size = get_num_value(ctx->cur_part, "fs_size");
-    ctx->fs_block_size = get_num_value(ctx->cur_part, "fs_block_size");
-    ctx->fs_page_size = get_num_value(ctx->cur_part, "fs_page_size");
-    ctx->fs_erase_size = get_num_value(ctx->cur_part, "fs_erase_size");
+  } else if (tcmp(&type, "fs") == 0) {
+    json_scanf(
+        ctx->cur_part.ptr, ctx->cur_part.len,
+        "{fs_size: %u, fs_block_size: %u, fs_page_size: %u, fs_erase_size: %u}",
+        &ctx->fs_size, &ctx->fs_block_size, &ctx->fs_page_size,
+        &ctx->fs_erase_size);
     if (ctx->fs_size > 0 && ctx->fs_block_size > 0 && ctx->fs_page_size > 0 &&
         ctx->fs_erase_size > 0) {
       char fs_container_prefix[MAX_FS_CONTAINER_PREFIX_LEN];
@@ -257,7 +257,7 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
     }
   }
   if (fname != NULL) {
-    int r = prepare_to_write(ctx, fi, fname, falloc, ctx->cur_part);
+    int r = prepare_to_write(ctx, fi, fname, falloc, &ctx->cur_part);
     if (r < 0) {
       LOG(LL_ERROR, ("err = %d", r));
       ret = SJ_UPDATER_ABORT;
@@ -296,8 +296,9 @@ int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
     ctx->status_msg = "Close failed";
     r = -1;
   } else {
-    r = verify_checksum((const char *) ctx->cur_fn, fi->size,
-                        get_part_checksum(ctx->cur_part));
+    struct json_token sha1 = JSON_INVALID_TOKEN;
+    json_scanf(ctx->cur_part.ptr, ctx->cur_part.len, "{cs_sha1: %T}", &sha1);
+    r = verify_checksum((const char *) ctx->cur_fn, fi->size, &sha1);
     if (r <= 0) {
       ctx->status_msg = "Checksum mismatch";
       r = -1;

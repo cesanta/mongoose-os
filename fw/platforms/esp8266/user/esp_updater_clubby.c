@@ -291,6 +291,10 @@ static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
 }
 
 static void handle_update_req(struct clubby_event *evt, void *user_data) {
+  struct json_token section = JSON_INVALID_TOKEN;
+  struct json_token blob_url = JSON_INVALID_TOKEN;
+  struct json_token *args = evt->request.args;
+
   (void) user_data;
   LOG(LL_DEBUG, ("Update request received: %.*s", evt->request.args->len,
                  evt->request.args->ptr));
@@ -302,20 +306,20 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
     goto bad_request;
   }
 
-  struct json_token *section = find_json_token(evt->request.args, "section");
-  struct json_token *blob_url = find_json_token(evt->request.args, "blob_url");
+  json_scanf(args->ptr, args->len, "{section: %T, blob_url: %T}", &section,
+             &blob_url);
 
   /*
    * TODO(alashkin): enable update for another files, not
    * firmware only
    */
-  if (section == NULL || section->type != JSON_TYPE_STRING ||
-      strncmp(section->ptr, "firmware", section->len) != 0 ||
-      blob_url == NULL || blob_url->type != JSON_TYPE_STRING) {
+  if (section.len == 0 || section.type != JSON_TYPE_STRING ||
+      strncmp(section.ptr, "firmware", section.len) != 0 || blob_url.len == 0 ||
+      blob_url.type != JSON_TYPE_STRING) {
     goto bad_request;
   }
 
-  LOG(LL_DEBUG, ("zip url: %.*s", blob_url->len, blob_url->ptr));
+  LOG(LL_DEBUG, ("zip url: %.*s", blob_url.len, blob_url.ptr));
 
   sj_clubby_free_reply(s_clubby_reply);
   s_clubby_reply = sj_clubby_create_reply(evt);
@@ -325,13 +329,13 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
    * User can start update with Sys.updater.start()
    */
 
-  char *zip_url = calloc(1, blob_url->len + 1);
+  char *zip_url = calloc(1, blob_url.len + 1);
   if (zip_url == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     return;
   }
 
-  memcpy(zip_url, blob_url->ptr, blob_url->len);
+  memcpy(zip_url, blob_url.ptr, blob_url.len);
 
   if (!notify_js(UJS_GOT_REQUEST, zip_url)) {
     struct update_context *ctx = updater_context_create();

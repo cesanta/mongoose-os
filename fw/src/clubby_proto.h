@@ -49,9 +49,8 @@ struct clubby_event {
       struct json_token *args;
     } request;
   };
-  struct json_token *frame;
-  struct json_token *src;
-  struct json_token *dst;
+  struct json_token src;
+  struct json_token dst;
   int64_t id;
   void *context;
 };

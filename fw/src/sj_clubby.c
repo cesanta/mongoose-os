@@ -584,14 +584,13 @@ int sj_clubby_register_global_command(const char *cmd, sj_clubby_callback_t cb,
 
 void sj_clubby_free_reply(struct clubby_event *reply) {
   if (reply) {
-    free((void *) reply->dst->ptr);
-    free((void *) reply->dst);
+    free((void *) reply->dst.ptr);
     free(reply);
   }
 }
 
 char *sj_clubby_repl_to_bytes(struct clubby_event *reply, int *len) {
-  *len = sizeof(reply->id) + reply->dst->len;
+  *len = sizeof(reply->id) + reply->dst.len;
   char *ret = malloc(*len);
   if (ret == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
@@ -599,7 +598,7 @@ char *sj_clubby_repl_to_bytes(struct clubby_event *reply, int *len) {
   }
 
   memcpy(ret, &reply->id, sizeof(reply->id));
-  memcpy(ret + sizeof(reply->id), reply->dst->ptr, reply->dst->len);
+  memcpy(ret + sizeof(reply->id), reply->dst.ptr, reply->dst.len);
 
   return ret;
 }
@@ -615,19 +614,14 @@ static struct clubby_event *clubby_create_reply_impl(char *id, int8_t id_len,
 
   memcpy(&evt_repl->id, id, id_len);
 
-  evt_repl->dst = malloc(sizeof(*evt_repl->dst));
-  if (evt_repl->dst == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
-    goto error;
-  }
-  evt_repl->dst->ptr = calloc(1, dst_len + 1);
-  if (evt_repl->dst->ptr == NULL) {
+  evt_repl->dst.ptr = calloc(1, dst_len + 1);
+  if (evt_repl->dst.ptr == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     goto error;
   }
 
-  evt_repl->dst->len = dst_len;
-  memcpy((char *) evt_repl->dst->ptr, dst, dst_len);
+  evt_repl->dst.len = dst_len;
+  memcpy((char *) evt_repl->dst.ptr, dst, dst_len);
 
   return evt_repl;
 
@@ -645,7 +639,7 @@ struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len) {
 
 struct clubby_event *sj_clubby_create_reply(struct clubby_event *evt) {
   struct clubby_event *repl = clubby_create_reply_impl(
-      (char *) &evt->id, sizeof(evt->id), evt->src->ptr, evt->src->len);
+      (char *) &evt->id, sizeof(evt->id), evt->src.ptr, evt->src.len);
   if (repl == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return NULL;
@@ -675,12 +669,12 @@ void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
   struct ub_ctx *ctx = ub_ctx_new();
 
   /* TODO(alashkin): add `len` parameter to ubjserializer */
-  char *dst = calloc(1, evt->dst->len + 1);
+  char *dst = calloc(1, evt->dst.len + 1);
   if (dst == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return;
   }
-  memcpy(dst, evt->dst->ptr, evt->dst->len);
+  memcpy(dst, evt->dst.ptr, evt->dst.len);
 
   ub_val_t error = CLUBBY_UNDEFINED;
 
