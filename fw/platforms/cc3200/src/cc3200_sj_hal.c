@@ -119,13 +119,15 @@ void sj_wdt_disable() {
 
 void sj_system_restart(int exit_code) {
   (void) exit_code;
-  umount_fs();
+  if (exit_code != 100) {
+    umount_fs();
+    sl_Stop(50 /* ms */);
+  }
   /* Turns out to be not that easy. In particular, using *Reset functions is
    * not a good idea.
    * https://e2e.ti.com/support/wireless_connectivity/f/968/p/424736/1516404
    * Instead, the recommended way is to enter hibernation with immediate wakeup.
    */
-  if (exit_code != 100) sl_Stop(50 /* ms */);
   MAP_PRCMHibernateIntervalSet(328 /* 32KHz ticks, 100 ms */);
   MAP_PRCMHibernateWakeupSourceEnable(PRCM_HIB_SLOW_CLK_CTR);
   MAP_PRCMHibernateEnter();

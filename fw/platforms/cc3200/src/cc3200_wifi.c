@@ -14,6 +14,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
+#include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_wifi.h"
 #include "v7/v7.h"
 
@@ -49,6 +50,7 @@ void invoke_wifi_on_change_cb(void *arg) {
 static int restart_nwp() {
   sl_Stop(0);
   s_current_role = sl_Start(NULL, NULL, NULL);
+  sl_restart_cb(&sj_mgr);
   return (s_current_role >= 0);
 }
 

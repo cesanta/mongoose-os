@@ -159,8 +159,7 @@ SRCS = $(APP_SRCS) mongoose.c frozen.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS) $(A
 
 MGIOT_CFLAGS = -DCC3200_FS_SPIFFS -Dcc3200 -DCC3200_FS_SPIFFS \
                -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
-               -DCS_ENABLE_UBJSON \
-               -DCC3200_LOOP_ON_EXCEPTION
+               -DCS_ENABLE_UBJSON
 
 .DEFAULT_GOAL := all
 
