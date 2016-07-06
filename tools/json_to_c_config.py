@@ -127,7 +127,7 @@ if __name__ == '__main__':
 #ifndef _{name_uc}_H_
 #define _{name_uc}_H_
 
-#include "mongoose/mongoose.h"  /* For mg_str only */
+#include "common/mg_str.h"
 
 struct {name} {{\
 '''.format(name=name, name_uc=name.upper(), origin=origin))

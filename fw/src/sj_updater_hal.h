@@ -11,8 +11,8 @@
 #include <inttypes.h>
 
 #include "common/mbuf.h"
+#include "common/mg_str.h"
 #include "frozen/frozen.h"
-#include "mongoose/mongoose.h" /* TODO(rojer): Pull mg_str out into mg_str.h */
 
 struct sj_upd_file_info {
   char name[50];
