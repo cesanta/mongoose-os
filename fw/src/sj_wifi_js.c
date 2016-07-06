@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "fw/src/sj_common.h"
+#include "fw/src/sj_config.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_wifi.h"
 #include "fw/src/sj_wifi_js.h"
@@ -106,10 +107,12 @@ SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
   LOG(LL_INFO, ("WiFi: connecting to '%s'", ssid));
 
   ret = sj_wifi_setup_sta(&cfg);
+
   if (ret && permanent) {
-    update_sysconf(v7, "wifi.sta.enable", v7_mk_boolean(v7, 1));
-    update_sysconf(v7, "wifi.sta.ssid", ssidv);
-    update_sysconf(v7, "wifi.sta.pass", passv);
+    struct sys_config *cfg = get_cfg();
+    cfg->wifi.sta.enable = 1;
+    sj_conf_set_str(&cfg->wifi.sta.ssid, ssid);
+    sj_conf_set_str(&cfg->wifi.sta.pass, pass);
   }
 
   *res = v7_mk_boolean(v7, ret);

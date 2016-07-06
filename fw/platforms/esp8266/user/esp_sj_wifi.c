@@ -31,9 +31,6 @@
 
 static sj_wifi_scan_cb_t wifi_scan_cb;
 
-/* true if we're waiting for an ip after invoking Wifi.setup() */
-int wifi_setting_up = 0;
-
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   int res;
   struct station_config sta_cfg;
@@ -67,11 +64,7 @@ int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   }
 
   LOG(LL_INFO, ("WiFi STA: Joining %s", sta_cfg.ssid));
-  res = wifi_station_connect();
-  if (res) {
-    wifi_setting_up = 1;
-  }
-  return 1;
+  return wifi_station_connect();
 }
 
 int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
@@ -194,48 +187,6 @@ char *sj_wifi_get_status_str(void) {
 }
 
 void wifi_changed_cb(System_Event_t *evt) {
-#ifndef CS_DISABLE_JS
-  /* TODO(rojer): Share this logic between platforms. */
-  if (wifi_setting_up && evt->event == EVENT_STAMODE_GOT_IP) {
-    struct station_config config;
-    v7_val_t res;
-    v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
-    v7_val_t conf = v7_get(v7, sys, "conf", ~0);
-    v7_val_t known, wifi;
-
-    if (v7_is_undefined(conf)) {
-      LOG(LL_ERROR, ("cannot save conf, no conf object"));
-      return;
-    }
-    wifi = v7_get(v7, conf, "wifi", ~0);
-
-    if (v7_is_undefined(wifi)) {
-      wifi = v7_mk_object(v7);
-      v7_set(v7, conf, "wifi", ~0, wifi);
-    }
-    known = v7_get(v7, conf, "known", ~0);
-    if (v7_is_undefined(known)) {
-      known = v7_mk_object(v7);
-      v7_set(v7, wifi, "known", ~0, known);
-    }
-
-    wifi_station_get_config(&config);
-
-    v7_set(v7, known, (const char *) config.ssid, ~0,
-           v7_mk_string(v7, (const char *) config.password,
-                        strlen((const char *) config.password), 1));
-
-    {
-      enum v7_err rcode = v7_exec(v7, "Sys.conf.save(false)", &res);
-      assert(rcode == V7_OK);
-#if defined(NDEBUG)
-      (void) rcode;
-#endif
-    }
-    wifi_setting_up = 0;
-  }
-#endif
-
   int sj_ev = -1;
   switch (evt->event) {
     case EVENT_STAMODE_DISCONNECTED:

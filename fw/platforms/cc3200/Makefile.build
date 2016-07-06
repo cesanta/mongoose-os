@@ -126,7 +126,7 @@ SJ_SRCS = sj_gpio_js.c \
           sj_timers.c sj_timers_mongoose.c \
           sj_v7_ext.c \
           sj_wifi_js.c \
-          device_config.c sj_config.c $(notdir $(SYS_CONFIG_C)) \
+          device_config.c sj_config.c sj_config_js.c $(notdir $(SYS_CONFIG_C)) \
           miniz.c sj_updater_common.c sj_updater_post.c boot.c \
           v7.c sj_utils.c \
           ubjserializer.c clubby_proto.c \

@@ -18,6 +18,7 @@
 #ifndef CS_DISABLE_JS
 #include "fw/src/sj_clubby_js.h"
 #endif
+#include "fw/src/sj_config_js.h"
 #include "fw/src/sj_gpio.h"
 #include "fw/src/sj_gpio_js.h"
 #include "fw/src/sj_hal.h"

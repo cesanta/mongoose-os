@@ -10,7 +10,8 @@ COMMON_V7_FEATURES = \
     -DV7_ENABLE__Math__min=1 \
     -DV7_ENABLE__Math__random=1 \
     -DV7_ENABLE__Math__round \
-    -DV7_ENABLE__Memory__stats=1
+    -DV7_ENABLE__Memory__stats=1 \
+    -DV7_ENABLE__Proxy=1
 
 MG_FEATURES_TINY = \
                    -DMG_DISABLE_JSON_RPC \

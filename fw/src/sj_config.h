@@ -71,4 +71,9 @@ bool sj_conf_emit_f(const void *cfg, const void *base,
  */
 void sj_conf_free(const struct sj_conf_entry *schema, void *cfg);
 
+const struct sj_conf_entry *sj_conf_find_schema_entry(
+    const char *path, const struct sj_conf_entry *obj);
+
+void sj_conf_set_str(char **vp, const char *v);
+
 #endif /* CS_FW_SRC_SJ_CONFIG_H_ */

@@ -12,6 +12,9 @@
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/device_config.h"
 #include "fw/src/sj_config.h"
+#ifndef CS_DISABLE_JS
+#include "fw/src/sj_config_js.h"
+#endif
 #include "fw/src/sj_gpio.h"
 #include "fw/src/sj_hal.h"
 
@@ -95,7 +98,7 @@ int save_cfg(const struct sys_config *cfg) {
   int result = 0;
   if (sj_conf_emit_f(cfg, &defaults, sys_config_schema(), true /* pretty */,
                      CONF_FILE)) {
-    LOG(LL_INFO, ("Saved config to %s", CONF_FILE));
+    LOG(LL_INFO, ("Saved to %s", CONF_FILE));
   } else {
     result = -2;
   }
@@ -319,6 +322,18 @@ clean:
   return result;
 }
 
+#ifndef CS_DISABLE_JS
+enum v7_err conf_save_handler(struct v7 *v7, v7_val_t *res) {
+  int res_b = 0;
+  if (save_cfg(get_cfg()) == 0) {
+    sj_system_restart(0);
+    res_b = 1;
+  }
+  *res = v7_mk_boolean(v7, res_b);
+  return V7_OK;
+}
+#endif
+
 int init_device(struct v7 *v7) {
   int result = 1;
   uint8_t mac[6] = "";
@@ -381,47 +396,12 @@ int init_device(struct v7 *v7) {
 
 #ifndef CS_DISABLE_JS
   /* NOTE(lsm): must be done last */
+  v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
+  v7_val_t conf =
+      sj_conf_mk_proxy(v7, sys_config_schema(), get_cfg(), conf_save_handler);
+  v7_def(v7, sys, "conf", ~0, V7_DESC_ENUMERABLE(0), conf);
   export_read_only_vars_to_v7(v7);
 #endif
 
   return result;
 }
-
-#ifndef CS_DISABLE_JS
-int update_sysconf(struct v7 *v7, const char *path, v7_val_t val) {
-  v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
-  if (!v7_is_object(sys)) {
-    return 1;
-  }
-
-  v7_val_t conf = v7_get(v7, sys, "conf", ~0);
-  if (!v7_is_object(conf)) {
-    return 1;
-  }
-
-  v7_val_t prev_obj, curr_obj;
-  prev_obj = curr_obj = conf;
-
-  const char *prev_tok, *curr_tok;
-  prev_tok = curr_tok = path;
-
-  for (;;) {
-    while (*curr_tok != 0 && *curr_tok != '.') {
-      curr_tok++;
-    }
-    curr_obj = v7_get(v7, prev_obj, prev_tok, (curr_tok - prev_tok));
-    if (v7_is_undefined(curr_obj)) {
-      return 1;
-    } else if (!v7_is_object(curr_obj)) {
-      v7_set(v7, prev_obj, prev_tok, (curr_tok - prev_tok), val);
-      return 0;
-    }
-    if (*curr_tok == 0) {
-      return 1;
-    }
-    curr_tok++;
-    prev_tok = curr_tok;
-    prev_obj = curr_obj;
-  }
-}
-#endif /* CS_DISABLE_JS */

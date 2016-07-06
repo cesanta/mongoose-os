@@ -32,8 +32,8 @@ struct parse_ctx {
   bool result;
 };
 
-const struct sj_conf_entry *find_entry(const char *path,
-                                       const struct sj_conf_entry *obj) {
+const struct sj_conf_entry *sj_conf_find_schema_entry(
+    const char *path, const struct sj_conf_entry *obj) {
   const char *sep = strchr(path, '.');
   int kl = (sep == 0 ? (int) strlen(path) : (sep - path));
   for (int i = 1; i <= obj->num_desc; i++) {
@@ -41,7 +41,7 @@ const struct sj_conf_entry *find_entry(const char *path,
     if (strncmp(path, e->key, kl) == 0 && ((int) strlen(e->key) == kl)) {
       if (path[kl] == '\0') return e;
       if (e->type != CONF_TYPE_OBJECT) return NULL;
-      return find_entry(path + kl + 1, e);
+      return sj_conf_find_schema_entry(path + kl + 1, e);
     }
   }
   return NULL;
@@ -58,7 +58,7 @@ void sj_conf_parse_cb(void *data, const char *path,
     return;
   }
   path++;
-  const struct sj_conf_entry *e = find_entry(path, ctx->schema);
+  const struct sj_conf_entry *e = sj_conf_find_schema_entry(path, ctx->schema);
   if (e == NULL) {
     LOG(LL_INFO, ("Extra key: [%s]", path));
     return;
@@ -257,7 +257,6 @@ void sj_conf_emit_f_cb(struct mbuf *data, void *param) {
     fclose(*fp);
     *fp = NULL;
   }
-  fwrite(data->buf, 1, data->len, stdout);
   mbuf_remove(data, data->len);
 }
 
@@ -288,5 +287,14 @@ void sj_conf_free(const struct sj_conf_entry *schema, void *cfg) {
       free(*sp);
       *sp = NULL;
     }
+  }
+}
+
+void sj_conf_set_str(char **vp, const char *v) {
+  free(*vp);
+  if (v != NULL && *v != '\0') {
+    *vp = strdup(v);
+  } else {
+    *vp = NULL;
   }
 }
