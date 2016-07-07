@@ -3,8 +3,8 @@
 * All rights reserved
 */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_CLUBBY_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_CLUBBY_H_
+#ifndef CS_FW_SRC_SJ_UPDATER_CLUBBY_H_
+#define CS_FW_SRC_SJ_UPDATER_CLUBBY_H_
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
 
@@ -15,4 +15,4 @@ extern int s_clubby_upd_status;
 extern struct clubby_event *s_clubby_reply;
 struct clubby_event *load_clubby_reply(spiffs *fs);
 
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_CLUBBY_H_ */
+#endif /* CS_FW_SRC_SJ_UPDATER_CLUBBY_H_ */

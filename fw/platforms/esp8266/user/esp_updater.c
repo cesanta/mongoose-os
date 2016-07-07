@@ -15,9 +15,9 @@
 #include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_console.h"
+#include "fw/src/sj_updater_clubby.h"
 #include "fw/src/sj_updater_hal.h"
 #include "fw/src/sj_updater_util.h"
-#include "fw/platforms/esp8266/user/esp_updater_clubby.h"
 
 #define SHA1SUM_LEN 40
 #define FW_SLOT_SIZE 0x100000

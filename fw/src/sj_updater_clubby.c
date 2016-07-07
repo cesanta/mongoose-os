@@ -3,7 +3,7 @@
 * All rights reserved
 */
 
-#include "fw/platforms/esp8266/user/esp_updater_clubby.h"
+#include "fw/src/sj_updater_clubby.h"
 
 #include "common/cs_dbg.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"

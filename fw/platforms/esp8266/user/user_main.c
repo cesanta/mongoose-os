@@ -26,13 +26,13 @@
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_gpio_js.h"
+#include "fw/src/sj_updater_clubby.h"
 #include "fw/src/sj_updater_post.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_sj_uart.h"
 #include "fw/platforms/esp8266/user/esp_sj_uart_js.h"
 #include "fw/platforms/esp8266/user/esp_updater.h"
-#include "fw/platforms/esp8266/user/esp_updater_clubby.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
