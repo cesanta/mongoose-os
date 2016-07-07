@@ -85,14 +85,14 @@ struct fstate {
   struct fstate fstate = {(ptr), (type), (fr)->path_len}; \
   append_to_path((fr), (str), (len));
 
-#define CALL_BACK(fr)                                                       \
-  do {                                                                      \
-    struct json_token __t = {                                               \
-        fstate.ptr, (fr)->cur - (const char *) fstate.ptr, fstate.type};    \
-    truncate_path((fr), fstate.path_len);                                   \
-    if ((fr)->callback &&                                                   \
-        ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.'))     \
-      (fr)->callback((fr)->callback_data, (fr)->path, &__t);                \
+#define CALL_BACK(fr)                                                         \
+  do {                                                                        \
+    struct json_token t = {fstate.ptr, (fr)->cur - (const char *) fstate.ptr, \
+                           fstate.type};                                      \
+    truncate_path((fr), fstate.path_len);                                     \
+    if ((fr)->callback &&                                                     \
+        ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.'))       \
+      (fr)->callback((fr)->callback_data, (fr)->path, &t);                    \
   } while (0)
 
 static int append_to_path(struct frozen *f, const char *str, int size) {
@@ -693,12 +693,14 @@ static void json_scanf_cb_tok(void *callback_data, const char *path,
 static void json_scanf_cb_str(void *callback_data, const char *path,
                               const struct json_token *tok) {
   struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
+  char **dst = (char **) info->target;
   if (strcmp(path, info->path) == 0) {
     info->num_conversions++;
     /* TODO(lsm): un-escape string */
-    *(char **) info->target = (char *) malloc(tok->len + 1);
-    if (*(char **) info->target != NULL) {
-      strncpy(*(char **) info->target, tok->ptr, tok->len);
+    *dst = (char *) malloc(tok->len + 1);
+    if (*dst != NULL) {
+      strncpy(*dst, tok->ptr, tok->len);
+      (*dst)[tok->len] = '\0';
     }
   }
 }
