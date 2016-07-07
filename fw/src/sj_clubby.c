@@ -363,7 +363,8 @@ static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
 }
 
 void sj_clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx,
-                            int64_t id, const char *dst, ub_val_t request) {
+                            int64_t id, const struct mg_str dst,
+                            ub_val_t request) {
   ub_val_t frame = clubby_proto_create_frame_base(
       ctx, request, id, clubby->cfg.device_id, clubby->cfg.device_psk, dst);
   clubby_send_frame(clubby, ctx, id, frame);
@@ -384,7 +385,7 @@ void sj_clubby_send_hello(struct clubby *clubby) {
   if (clubby_proto_is_connected(clubby->nc)) {
     /* We use /v1/Hello to check auth, so it cannot be queued  */
     ub_val_t frame = clubby_proto_create_frame(
-        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, NULL,
+        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, mg_mk_str(""),
         "/v1/Hello", CLUBBY_UNDEFINED, clubby->cfg.request_timeout, 0);
     clubby_proto_send(clubby->nc, ctx, frame);
   } else {
@@ -400,20 +401,20 @@ static void clubby_send_labels(struct clubby *clubby) {
   ub_val_t labels = ub_create_object(ctx);
   struct ro_var *rv;
   for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
-    ub_add_prop(ctx, labels, rv->name, ub_create_string(ctx, *rv->ptr));
+    ub_add_prop(ctx, labels, rv->name, ub_create_cstring(ctx, *rv->ptr));
     LOG(LL_DEBUG, ("%s: %s", rv->name, *rv->ptr));
   }
 
   ub_add_prop(ctx, args, "labels", labels);
 
   ub_val_t ids = ub_create_array(ctx);
-  ub_array_push(ctx, ids, ub_create_string(ctx, clubby->cfg.device_id));
+  ub_array_push(ctx, ids, ub_create_cstring(ctx, clubby->cfg.device_id));
 
   ub_add_prop(ctx, args, "ids", ids);
 
   int64_t id = clubby_proto_get_new_id();
   ub_val_t frame = clubby_proto_create_frame(
-      ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, NULL,
+      ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, mg_mk_str(""),
       "/v1/Label.Set", args, clubby->cfg.request_timeout, 0);
 
   /* We don't intrested in resp, so, using default resp handler */
@@ -433,13 +434,13 @@ int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
 
   if (enqueue) {
     ub_val_t request = ub_create_object(ctx);
-    ub_add_prop(ctx, request, "method", ub_create_string(ctx, method));
+    ub_add_prop(ctx, request, "method", ub_create_cstring(ctx, method));
     ub_add_prop(ctx, request, "args", args);
-    sj_clubby_send_request(clubby, ctx, id, dst, request);
+    sj_clubby_send_request(clubby, ctx, id, mg_mk_str(dst), request);
   } else {
     ub_val_t frame = clubby_proto_create_frame(
-        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, dst, method,
-        args, clubby->cfg.request_timeout, 0);
+        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, mg_mk_str(dst),
+        method, args, clubby->cfg.request_timeout, 0);
     clubby_proto_send(clubby->nc, ctx, frame);
   }
 
@@ -653,7 +654,7 @@ ub_val_t sj_clubby_create_error(struct ub_ctx *ctx, int code, const char *msg) {
   ub_val_t err = ub_create_object(ctx);
   ub_add_prop(ctx, err, "code", ub_create_number(code));
   if (msg != NULL) {
-    ub_add_prop(ctx, err, "message", ub_create_string(ctx, msg));
+    ub_add_prop(ctx, err, "message", ub_create_cstring(ctx, msg));
   }
 
   return err;
@@ -668,24 +669,16 @@ void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
   struct clubby *clubby = (struct clubby *) evt->context;
   struct ub_ctx *ctx = ub_ctx_new();
 
-  /* TODO(alashkin): add `len` parameter to ubjserializer */
-  char *dst = calloc(1, evt->dst.len + 1);
-  if (dst == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
-    return;
-  }
-  memcpy(dst, evt->dst.ptr, evt->dst.len);
-
   ub_val_t error = CLUBBY_UNDEFINED;
 
   if (result_code != 0) {
     error = sj_clubby_create_error(ctx, result_code, error_msg);
   }
+  struct mg_str dst = {.p = evt->dst.ptr, .len = evt->dst.len};
   clubby_proto_send(clubby->nc, ctx,
                     clubby_proto_create_resp(ctx, clubby->cfg.device_id,
                                              clubby->cfg.device_psk, dst,
                                              evt->id, CLUBBY_UNDEFINED, error));
-  free(dst);
 }
 
 void sj_clubby_init() {

@@ -230,10 +230,9 @@ static void *ub_alloc(struct ub_ctx *ctx, size_t size) {
   return res;
 }
 
-struct ub_str *create_ub_str(struct ub_ctx *ctx, const char *str) {
-  size_t len = strlen(str);
-  struct ub_str *res = ub_alloc(ctx, sizeof(*res) + len);
-  memcpy((char *) res->s, str, len + 1);
+struct ub_str *create_ub_str(struct ub_ctx *ctx, const struct mg_str s) {
+  struct ub_str *res = ub_alloc(ctx, sizeof(*res) + s.len);
+  memcpy((char *) res->s, s.p, s.len + 1);
   return res;
 }
 
@@ -277,10 +276,14 @@ ub_val_t ub_create_null() {
   return res;
 }
 
-ub_val_t ub_create_string(struct ub_ctx *ctx, const char *str) {
+ub_val_t ub_create_string(struct ub_ctx *ctx, const struct mg_str str) {
   struct ub_str *s = create_ub_str(ctx, str);
   ub_val_t res = {UBJSON_TYPE_STRING, {.s = s}};
   return res;
+}
+
+ub_val_t ub_create_cstring(struct ub_ctx *ctx, const char *s) {
+  return ub_create_string(ctx, mg_mk_str(s));
 }
 
 ub_val_t ub_create_undefined() {
@@ -312,7 +315,7 @@ void ub_add_prop(struct ub_ctx *ctx, ub_val_t obj, const char *name,
   assert(obj.kind == UBJSON_TYPE_OBJECT);
   struct prop *p = ub_alloc(ctx, sizeof(*p));
   p->next = obj.val.o->props;
-  p->name = create_ub_str(ctx, name);
+  p->name = create_ub_str(ctx, mg_mk_str(name));
   p->val = val;
   obj.val.o->props = p;
 }

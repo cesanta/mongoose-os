@@ -56,8 +56,9 @@ static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
     LOG(LL_VERBOSE_DEBUG, ("type=number val=%d", (int) n))
     return ub_create_number(n);
   } else if (v7_is_string(obj)) {
-    const char *s = v7_get_cstring(v7, &obj);
-    LOG(LL_VERBOSE_DEBUG, ("type=string val=%s", s))
+    struct mg_str s;
+    s.p = v7_get_string(v7, &obj, &s.len);
+    LOG(LL_VERBOSE_DEBUG, ("type=string val=%.*s", (int) s.len, s.p))
     return ub_create_string(ctx, s);
   } else if (v7_is_array(v7, obj)) {
     int i, arr_len = v7_array_length(v7, obj);
@@ -84,7 +85,7 @@ static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
     char buf[100], *p;
     p = v7_stringify(v7, obj, buf, sizeof(buf), V7_STRINGIFY_JSON);
     LOG(LL_ERROR, ("Unknown type, val=%s", p));
-    ub_val_t ret = ub_create_string(ctx, p);
+    ub_val_t ret = ub_create_cstring(ctx, p);
     if (p != buf) {
       free(p);
     }
@@ -131,9 +132,9 @@ static void clubby_send_response(struct clubby *clubby, const char *dst,
   }
 
   clubby_proto_send(clubby->nc, ctx,
-                    clubby_proto_create_resp(ctx, clubby->cfg.device_id,
-                                             clubby->cfg.device_psk, dst, id,
-                                             result_ubj, error_ubj));
+                    clubby_proto_create_resp(
+                        ctx, clubby->cfg.device_id, clubby->cfg.device_psk,
+                        mg_mk_str(dst), id, result_ubj, error_ubj));
 }
 
 static void clubby_hello_req_callback(struct clubby_event *evt,
@@ -528,7 +529,9 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   }
 
   dst_v = v7_get(v7, opts_v, "dst", ~0);
-  sj_clubby_send_request(clubby, ctx, id, v7_get_cstring(v7, &dst_v),
+  struct mg_str dst;
+  dst.p = v7_get_string(v7, &dst_v, &dst.len),
+  sj_clubby_send_request(clubby, ctx, id, dst,
                          obj_to_ubj(v7, ctx, clubby_request_v));
 
   v7_disown(v7, &clubby_request_v);

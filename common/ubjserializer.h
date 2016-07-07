@@ -10,6 +10,8 @@
 
 #ifdef CS_ENABLE_UBJSON
 
+#include "common/mg_str.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -61,7 +63,8 @@ ub_val_t ub_create_boolean(int n);
 ub_val_t ub_create_null();
 ub_val_t ub_create_number(double n);
 ub_val_t ub_create_object(struct ub_ctx *ctx);
-ub_val_t ub_create_string(struct ub_ctx *ctx, const char *s);
+ub_val_t ub_create_string(struct ub_ctx *ctx, const struct mg_str s);
+ub_val_t ub_create_cstring(struct ub_ctx *ctx, const char *s);
 ub_val_t ub_create_undefined();
 
 int ub_is_bin(ub_val_t);

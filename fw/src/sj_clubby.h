@@ -66,7 +66,8 @@ int sj_clubby_can_send(clubby_handle_t handle);
 void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
                                 const char *error_msg);
 void sj_clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx,
-                            int64_t id, const char *dst, ub_val_t request);
+                            int64_t id, const struct mg_str dst,
+                            ub_val_t request);
 
 int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
                    struct ub_ctx *ctx, ub_val_t args, int enqueue,

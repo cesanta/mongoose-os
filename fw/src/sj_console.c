@@ -71,14 +71,10 @@ static void clubby_cb(struct clubby_event *evt, void *user_data) {
   console_process_data((struct v7 *) user_data);
 }
 
-static void console_make_clubby_call(struct v7 *v7, char *logs) {
+static void console_make_clubby_call(struct v7 *v7, const struct mg_str logs) {
   clubby_handle_t clubby_h = console_get_current_clubby(v7);
   struct ub_ctx *ctx = ub_ctx_new();
   ub_val_t log_cmd_args = ub_create_object(ctx);
-  /*
-   * TODO(alashkin): we need ub_create_string_n for non-zero terminated
-   * strings
-   */
   ub_add_prop(ctx, log_cmd_args, "msg", ub_create_string(ctx, logs));
   /* TODO(alashkin): set command timeout */
   s_waiting_for_resp = 1;
@@ -87,18 +83,17 @@ static void console_make_clubby_call(struct v7 *v7, char *logs) {
 }
 
 static void console_make_clubby_call_mbuf(struct v7 *v7, struct mbuf *logs) {
-  mbuf_append(logs, "\0", 1);
-  console_make_clubby_call(v7, logs->buf);
+  struct mg_str s = {.p = logs->buf, .len = logs->size};
+  console_make_clubby_call(v7, s);
   mbuf_free(logs);
 }
 
 static int console_send_file(struct v7 *v7, struct cache *cache) {
   int ret = 0;
-  char *logs = NULL;
-  size_t size = 0;
+  struct mg_str logs = {.p = NULL, .len = 0};
   if (cache->file_names.len != 0) {
-    logs = cs_read_file(cache->file_names.buf, &size);
-    if (logs == NULL) {
+    logs.p = cs_read_file(cache->file_names.buf, &logs.len);
+    if (logs.p == NULL) {
       LOG(LL_ERROR, ("Failed to read from %s", cache->file_names.buf));
       ret = -1;
       goto clean;
@@ -111,8 +106,8 @@ static int console_send_file(struct v7 *v7, struct cache *cache) {
   }
 
 clean:
-  if (logs != NULL) {
-    free(logs);
+  if (logs.p != NULL) {
+    free((void *) logs.p);
   }
 
   return ret;
