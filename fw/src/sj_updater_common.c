@@ -380,7 +380,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           return 0;
         }
         if (memcmp(ctx->data, &c_zip_cdir_magic, 4) == 0) {
-          CONSOLE_LOG(LL_DEBUG, ("Reached end of archive, finalizing update"));
+          LOG(LL_DEBUG, ("Reached end of archive, finalizing update"));
           updater_set_status(ctx, US_FINALIZE);
           break;
         }
@@ -455,7 +455,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
       } /* fall through */
       case US_SKIPPING_DESCRIPTOR: {
         int has_descriptor = ctx->current_file.has_descriptor;
-        CONSOLE_LOG(LL_DEBUG, ("Has descriptor : %d", has_descriptor));
+        LOG(LL_DEBUG, ("Has descriptor : %d", has_descriptor));
         context_clear_current_file(ctx);
         ctx->current_file.has_descriptor = 0;
         if (has_descriptor) {
@@ -553,7 +553,7 @@ static int file_copy(spiffs *old_fs, char *file_name) {
     goto exit;
   }
 
-  CONSOLE_LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
+  LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
 
   f = fopen(file_name, "w");
   if (f == NULL) {
@@ -578,12 +578,12 @@ static int file_copy(spiffs *old_fs, char *file_name) {
     }
 
     total += readen;
-    CONSOLE_LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
+    LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
 
     to_read = MIN(sizeof(buf), (stat.size - total));
   }
 
-  CONSOLE_LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
+  LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
 
   ret = 1;
 
