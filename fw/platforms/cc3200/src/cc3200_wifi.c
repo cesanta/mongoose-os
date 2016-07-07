@@ -48,6 +48,8 @@ void invoke_wifi_on_change_cb(void *arg) {
 }
 
 static int restart_nwp() {
+  /* We don't need TI's web server. */
+  sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
   sl_Stop(0);
   s_current_role = sl_Start(NULL, NULL, NULL);
   sl_restart_cb(&sj_mgr);
@@ -177,9 +179,6 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
     return 0;
   }
 
-  /* We don't need TI's web server. */
-  sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
-
   /* Turning the device off and on for the change to take effect. */
   if (!restart_nwp()) return 0;
 
@@ -209,9 +208,6 @@ int sj_wifi_connect() {
                        IPCONFIG_MODE_ENABLE_IPV4, sizeof(val), &val);
   }
   if (ret != 0) return 0;
-
-  /* We don't need TI's web server. */
-  sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
 
   /* Turning the device off and on for the role change to take effect. */
   if (!restart_nwp()) return 0;
