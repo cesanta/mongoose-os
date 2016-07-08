@@ -19382,10 +19382,6 @@ clean:
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 
-#ifdef V7_TEMP_OFF
-int double_to_str(char *buf, size_t buf_size, double val, int prec);
-#endif
-
 static void save_val(struct v7 *v7, const char *str, size_t str_len,
                      val_t *dst_v, char *dst, size_t dst_size, int wanted_len,
                      size_t *res_wanted_len) {
@@ -19488,17 +19484,8 @@ V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
         goto clean;
       }
       {
-/*
- * ESP8266's sprintf doesn't support double & float.
- * TODO(alashkin): fix this
- */
-#ifndef V7_TEMP_OFF
         const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
         wanted_len = snprintf(tmp_buf, sizeof(tmp_buf), fmt, num);
-#else
-        const int prec = num > 1e10 ? 21 : 10;
-        wanted_len = double_to_str(tmp_buf, sizeof(tmp_buf), num, prec);
-#endif
         save_val(v7, tmp_buf, strlen(tmp_buf), res, buf, buf_size, wanted_len,
                  res_len);
         goto clean;

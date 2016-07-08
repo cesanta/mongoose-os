@@ -154,6 +154,11 @@ void *_malloc_r(struct _reent *r, size_t size) {
   return malloc(size);
 }
 
+void *_calloc_r(struct _reent *r, size_t nmemb, size_t size) {
+  (void) r;
+  return calloc(nmemb, size);
+}
+
 void _free_r(struct _reent *r, void *ptr) {
   (void) r;
   free(ptr);
@@ -164,158 +169,9 @@ void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
   return realloc(ptr, size);
 }
 
-/*
- * TODO(alashkin): remove this code
- * if newlib's snprintf implementation
- * is good
- */
-#if 0
-int snprintf(char *buffer, size_t size, const char *format, ...) {
-  int ret;
-  va_list arglist;
-  va_start(arglist, format);
-  ret = c_vsnprintf(buffer, size, format, arglist);
-  va_end(arglist);
-  return ret;
-}
-#endif
-
 int vsnprintf(char *buffer, size_t size, const char *format, va_list arg) {
   return c_vsnprintf(buffer, size, format, arg);
 }
-
-#ifndef ESP_DISABLE_STRTOD
-double strtod(const char *str, char **endptr) {
-  return cs_strtod(str, endptr);
-}
-
-/*
- * Reinventing pow to avoid usage of native pow
- * becouse pow goes to iram0 segment
- */
-static double flash_pow10int(int n) {
-  if (n == 0) {
-    return 1;
-  } else if (n == 1) {
-    return 10;
-  } else if (n > 0) {
-    return round(exp(n * log(10)));
-  } else {
-    return 1 / round(exp(-n * log(10)));
-  }
-}
-
-#define flash_log10 log10
-/*
- * Attempt to reproduce sprintf's %g
- * Returns _required_ number of symbols
- */
-
-#define APPEND_CHAR(ch)                    \
-  {                                        \
-    if (count < (int) buf_size) *ptr = ch; \
-    count++;                               \
-  }
-
-int double_to_str(char *buf, size_t buf_size, double val, int prec) {
-  if (isnan(val)) {
-    strncpy(buf, "nan", buf_size);
-    return 3;
-  } else if (isinf(val)) {
-    strncpy(buf, "inf", buf_size);
-    return 3;
-  } else if (val == 0) {
-    strncpy(buf, "0", buf_size);
-    return 1;
-  }
-  /*
-   * It is possible to use itol, in case of integer
-   * could be kinda optimization
-   */
-  double precision = flash_pow10int(-prec);
-
-  int mag1 = 0, mag2 = 0, count = 0;
-  char *ptr = buf;
-  int neg = (val < 0);
-
-  if (neg != 0) {
-    /* no fabs() */
-    val = -val;
-  }
-
-  mag1 = flash_log10(val);
-
-  int use_e =
-      (mag1 >= prec || (neg && mag1 >= prec - 3) || mag1 <= -(prec - 3));
-
-  if (neg) {
-    APPEND_CHAR('-');
-    ptr++;
-  }
-
-  if (use_e) {
-    if (mag1 < 0) {
-      mag1 -= 1.0;
-    }
-
-    val = val / flash_pow10int(mag1);
-    mag2 = mag1;
-    mag1 = 0;
-  }
-
-  if (mag1 < 1.0) {
-    mag1 = 0;
-  }
-
-  while (val > precision || mag1 >= 0) {
-    double pos = flash_pow10int(mag1);
-
-    if (pos > 0 && !isinf(pos)) {
-      int num = floor(val / pos);
-      val -= (num * pos);
-      APPEND_CHAR(('0' + num))
-      ptr++;
-    }
-    if (mag1 == 0 && val > 0) {
-      APPEND_CHAR('.')
-      ptr++;
-    }
-    mag1--;
-  }
-  if (use_e != 0) {
-    int i, j;
-    APPEND_CHAR('e');
-    ptr++;
-    if (mag2 > 0) {
-      APPEND_CHAR('+')
-    } else {
-      APPEND_CHAR('-');
-      mag2 = -mag2;
-    }
-    ptr++;
-    mag1 = 0;
-    while (mag2 > 0) {
-      APPEND_CHAR(('0' + mag2 % 10))
-      ptr++;
-      mag2 /= 10;
-      mag1++;
-    }
-    ptr -= mag1;
-    for (i = 0, j = mag1 - 1; i < j; i++, j--) {
-      double tmp = ptr[i];
-      ptr[i] = ptr[j];
-      ptr[j] = tmp;
-    }
-    ptr += mag1;
-  }
-  APPEND_CHAR('\0');
-
-  return count - 1;
-}
-#endif /* ESP_DISABLE_STRTOD */
-
-#undef APPEND_CHAR
-#undef flash_log10
 
 NOINSTR void abort(void) {
   /* cause an unaligned access exception, that will drop you into gdb */
