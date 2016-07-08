@@ -401,5 +401,5 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
     fs_umount(&old_fs);
     cfg->flags &= ~(BOOT_F_MERGE_SPIFFS);
   }
-  return 1;
+  return 0;
 }

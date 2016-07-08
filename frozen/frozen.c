@@ -662,59 +662,46 @@ struct json_scanf_info {
   const char *fmt;
   void *target;
   void *user_data;
+  int type;
 };
 
 static void json_scanf_cb(void *callback_data, const char *path,
                           const struct json_token *tok) {
   struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
-  if (strcmp(path, info->path) == 0) {
-    info->num_conversions += sscanf(tok->ptr, info->fmt, info->target);
-  }
-}
+  if (strcmp(path, info->path) != 0) return;
 
-static void json_scanf_cb_bool(void *callback_data, const char *path,
-                               const struct json_token *tok) {
-  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
-  if (strcmp(path, info->path) == 0) {
-    info->num_conversions++;
-    *(int *) info->target = (tok->type == JSON_TYPE_TRUE ? 1 : 0);
-  }
-}
-
-static void json_scanf_cb_tok(void *callback_data, const char *path,
-                              const struct json_token *tok) {
-  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
-  if (strcmp(path, info->path) == 0) {
-    info->num_conversions++;
-    *(struct json_token *) info->target = *tok;
-  }
-}
-
-static void json_scanf_cb_str(void *callback_data, const char *path,
-                              const struct json_token *tok) {
-  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
-  char **dst = (char **) info->target;
-  if (strcmp(path, info->path) == 0) {
-    info->num_conversions++;
-    /* TODO(lsm): un-escape string */
-    *dst = (char *) malloc(tok->len + 1);
-    if (*dst != NULL) {
-      strncpy(*dst, tok->ptr, tok->len);
-      (*dst)[tok->len] = '\0';
+  switch (info->type) {
+    case 'B':
+      info->num_conversions++;
+      *(int *) info->target = (tok->type == JSON_TYPE_TRUE ? 1 : 0);
+      break;
+    case 'M': {
+      union {
+        void *p;
+        json_scanner_t f;
+      } u = {info->target};
+      info->num_conversions++;
+      u.f(tok->ptr, tok->len, info->user_data);
+      break;
     }
-  }
-}
-
-static void json_scanf_cb_func(void *callback_data, const char *path,
-                               const struct json_token *tok) {
-  struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
-  if (strcmp(path, info->path) == 0) {
-    union {
-      void *p;
-      json_scanner_t f;
-    } u = {info->target};
-    info->num_conversions++;
-    u.f(tok->ptr, tok->len, info->user_data);
+    case 'Q': {
+      char **dst = (char **) info->target;
+      info->num_conversions++;
+      /* TODO(lsm): un-escape string */
+      *dst = (char *) malloc(tok->len + 1);
+      if (*dst != NULL) {
+        strncpy(*dst, tok->ptr, tok->len);
+        (*dst)[tok->len] = '\0';
+      }
+      break;
+    }
+    case 'T':
+      info->num_conversions++;
+      *(struct json_token *) info->target = *tok;
+      break;
+    default:
+      info->num_conversions += sscanf(tok->ptr, info->fmt, info->target);
+      break;
   }
 }
 
@@ -722,7 +709,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
   char path[JSON_MAX_PATH_LEN] = "", fmtbuf[20];
   int i = 0;
   char *p = NULL;
-  struct json_scanf_info info = {0, path, fmtbuf, NULL, NULL};
+  struct json_scanf_info info = {0, path, fmtbuf, NULL, NULL, 0};
 
   while (fmt[i] != '\0') {
     if (fmt[i] == '{') {
@@ -733,34 +720,26 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
       i++;
     } else if (fmt[i] == '%') {
       info.target = va_arg(ap, void *);
+      info.type = fmt[i + 1];
       switch (fmt[i + 1]) {
-        case 'B':
-          json_parse(s, len, json_scanf_cb_bool, &info);
-          i += 2;
-          break;
-        case 'Q':
-          json_parse(s, len, json_scanf_cb_str, &info);
-          i += 2;
-          break;
         case 'M':
           info.user_data = va_arg(ap, void *);
-          json_parse(s, len, json_scanf_cb_func, &info);
-          i += 2;
-          break;
+        /* FALLTHROUGH */
+        case 'B':
+        case 'Q':
         case 'T':
-          json_parse(s, len, json_scanf_cb_tok, &info);
           i += 2;
           break;
         default: {
           const char *delims = ", \t\r\n]}";
           int conv_len = strcspn(fmt + i + 1, delims) + 1;
           snprintf(fmtbuf, sizeof(fmtbuf), "%.*s", conv_len, fmt + i);
-          json_parse(s, len, json_scanf_cb, &info);
           i += conv_len;
           i += strspn(fmt + i, delims);
           break;
         }
       }
+      json_parse(s, len, json_scanf_cb, &info);
     } else if (is_alpha(fmt[i]) || get_utf8_char_len(fmt[i]) > 1) {
       const char *delims = ": \r\n\t";
       int key_len = strcspn(&fmt[i], delims);

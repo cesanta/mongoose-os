@@ -100,7 +100,7 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
     goto out_close_old;
   }
 
-  buf_size = 8192;
+  buf_size = 1024;
   buf = get_buf(&buf_size);
   if (buf == NULL) {
     r = SPIFFS_ERR_INTERNAL;
