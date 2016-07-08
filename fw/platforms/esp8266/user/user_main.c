@@ -65,7 +65,7 @@ void dbg_putc(char c) {
  * Mongoose IoT initialization, called as an SDK timer callback
  * (`os_timer_...()`).
  */
-void sjs_init(void *dummy) {
+int sjs_init(rboot_config *bcfg) {
   mongoose_init();
   /*
    * In order to see debug output (at least errors) during boot we have to
@@ -97,25 +97,24 @@ void sjs_init(void *dummy) {
 #endif
   }
 
+  int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
+                  bcfg->fs_sizes[bcfg->current_rom]);
+  if (r != 0) {
+    LOG(LL_ERROR, ("FS init error: %d", r));
+    return -1;
+  }
+  if (bcfg->fw_updated && apply_update(bcfg) < 0) {
+    return -2;
+  }
+
 #ifndef CS_DISABLE_JS
-  init_v7(&dummy);
+  init_v7(&bcfg);
 
   /* Disable GC during JS API initialization. */
   v7_set_gc_enabled(v7, 0);
-#else
-  (void) dummy;
 #endif
 
   esp_sj_uart_init(v7);
-
-#ifndef V7_NO_FS
-#ifndef DISABLE_OTA
-  fs_init(get_fs_addr(get_current_rom()), get_fs_size(get_current_rom()));
-  finish_update();
-#else
-  fs_init(FS_ADDR, FS_SIZE);
-#endif
-#endif
 
   sj_common_api_setup(v7);
   sj_common_init(v7);
@@ -125,7 +124,7 @@ void sjs_init(void *dummy) {
   /* NOTE(lsm): must be done after mongoose_init(). */
   if (!init_device(v7)) {
     LOG(LL_ERROR, ("init_device failed"));
-    abort();
+    return -3;
   }
 
   esp_print_reset_info();
@@ -138,7 +137,7 @@ void sjs_init(void *dummy) {
 
   if (!sj_app_init(v7)) {
     LOG(LL_ERROR, ("App init failed"));
-    abort();
+    return -4;
   }
   LOG(LL_INFO, ("App init done"));
 
@@ -178,6 +177,22 @@ void sjs_init(void *dummy) {
 #endif
 
   sj_wdt_set_timeout(get_cfg()->sys.wdt_timeout);
+  return 0;
+}
+
+void sjs_init_timer_cb(void *arg) {
+  rboot_config *bcfg = get_rboot_config();
+  if (sjs_init(bcfg) == 0) {
+    if (bcfg->is_first_boot) {
+      /* fw_updated will be reset by the boot loader if it's a rollback. */
+      clubby_updater_finish(bcfg->fw_updated ? 0 : -1);
+      commit_update(bcfg);
+    }
+  } else {
+    if (bcfg->fw_updated) revert_update(bcfg);
+    sj_system_restart(0);
+  }
+  (void) arg;
 }
 
 /*
@@ -193,7 +208,7 @@ void sdk_init_done_cb() {
 
   /* Schedule SJS initialization (`sjs_init()`) */
   os_timer_disarm(&startcmd_timer);
-  os_timer_setfn(&startcmd_timer, sjs_init, NULL);
+  os_timer_setfn(&startcmd_timer, sjs_init_timer_cb, NULL);
   os_timer_arm(&startcmd_timer, 0, 0);
 }
 

@@ -84,15 +84,11 @@ rboot_config *get_rboot_config() {
   return cfg;
 }
 
-uint8_t get_current_rom() {
+static uint8_t get_current_rom() {
   return get_rboot_config()->current_rom;
 }
 
-uint32_t get_fw_addr(uint8_t rom) {
-  return get_rboot_config()->roms[rom];
-}
-
-uint32_t get_fs_addr(uint8_t rom) {
+static uint32_t get_fs_addr(uint8_t rom) {
   return get_rboot_config()->fs_addresses[rom];
 }
 
@@ -589,63 +585,6 @@ int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
   }
 }
 
-static int load_data_from_old_fs(uint32_t old_fs_addr) {
-  uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
-  uint8_t spiffs_fds[32 * 2];
-  spiffs old_fs;
-  int ret = 0;
-  CONSOLE_LOG(LL_INFO, ("Mounting old FS: %d @ 0x%x", FS_SIZE, old_fs_addr));
-  if (fs_mount(&old_fs, old_fs_addr, FS_SIZE, spiffs_work_buf, spiffs_fds,
-               sizeof(spiffs_fds))) {
-    CONSOLE_LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
-    return -1;
-  }
-
-  ret = sj_upd_merge_spiffs(&old_fs);
-
-  s_clubby_reply = load_clubby_reply(&old_fs);
-  /* Do not rollback fw if load_clubby_reply failed */
-
-  SPIFFS_unmount(&old_fs);
-
-  return ret;
-}
-
-int finish_update() {
-  if (!get_rboot_config()->fw_updated) {
-    if (get_rboot_config()->is_first_boot != 0) {
-      CONSOLE_LOG(LL_INFO, ("Firmware was rolled back, committing it"));
-      get_rboot_config()->is_first_boot = 0;
-      rboot_set_config(get_rboot_config());
-      s_clubby_upd_status = 1; /* Once we connect wifi we send status 1 */
-    }
-    return 1;
-  }
-
-  /*
-   * We merge FS _after_ booting to new FW, to give a chance
-   * to change merge behavior in new FW
-   */
-  uint32_t old_fs_addr = get_fs_addr(get_rboot_config()->previous_rom);
-  if (load_data_from_old_fs(old_fs_addr) != 0) {
-    /* Ok, commiting update */
-    get_rboot_config()->is_first_boot = 0;
-    get_rboot_config()->fw_updated = 0;
-    rboot_set_config(get_rboot_config());
-    LOG(LL_DEBUG, ("Firmware commited"));
-
-    return 1;
-  } else {
-    CONSOLE_LOG(LL_ERROR,
-                ("Failed to merge filesystem, rollback to previous firmware"));
-
-    sj_system_restart(0);
-    return 0;
-  }
-
-  return 1;
-}
-
 int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   if (!ctx->fw_part.done) {
     ctx->status_msg = "Missing fw part";
@@ -686,4 +625,42 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
 
 void sj_upd_ctx_free(struct sj_upd_ctx *ctx) {
   free(ctx);
+}
+
+int apply_update(rboot_config *cfg) {
+  uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
+  uint8_t spiffs_fds[32 * 2];
+  spiffs old_fs;
+  int ret = 0;
+  uint32_t old_fs_size = cfg->fs_sizes[cfg->previous_rom];
+  uint32_t old_fs_addr = cfg->fs_addresses[cfg->previous_rom];
+  LOG(LL_INFO, ("Mounting old FS: %d @ 0x%x", old_fs_size, old_fs_addr));
+  if (fs_mount(&old_fs, old_fs_addr, old_fs_size, spiffs_work_buf, spiffs_fds,
+               sizeof(spiffs_fds))) {
+    LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
+    return -1;
+  }
+
+  ret = sj_upd_merge_spiffs(&old_fs);
+
+  SPIFFS_unmount(&old_fs);
+
+  return ret;
+}
+
+void commit_update(rboot_config *cfg) {
+  if (cfg->fw_updated) {
+    LOG(LL_INFO, ("Committing ROM %d", cfg->current_rom));
+  } else {
+    LOG(LL_INFO, ("Reverted to ROM %d", cfg->current_rom));
+  }
+  cfg->fw_updated = cfg->is_first_boot = 0;
+  rboot_set_config(cfg);
+}
+
+void revert_update(rboot_config *cfg) {
+  LOG(LL_INFO, ("Update failed, reverting to ROM %d", cfg->previous_rom));
+  cfg->current_rom = cfg->previous_rom;
+  cfg->fw_updated = 0;
+  rboot_set_config(cfg);
 }

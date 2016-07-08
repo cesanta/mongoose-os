@@ -6,13 +6,8 @@
 #ifndef CS_FW_SRC_SJ_UPDATER_CLUBBY_H_
 #define CS_FW_SRC_SJ_UPDATER_CLUBBY_H_
 
-#include "fw/platforms/esp8266/user/esp_fs.h"
-
 struct v7;
 void init_updater_clubby(struct v7 *v7);
-
-extern int s_clubby_upd_status;
-extern struct clubby_event *s_clubby_reply;
-struct clubby_event *load_clubby_reply(spiffs *fs);
+void clubby_updater_finish(int error_code);
 
 #endif /* CS_FW_SRC_SJ_UPDATER_CLUBBY_H_ */

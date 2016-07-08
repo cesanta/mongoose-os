@@ -5,10 +5,11 @@
 
 #include "fw/src/sj_updater_clubby.h"
 
+#include <stdio.h>
+
 #include "common/cs_dbg.h"
-#include "fw/platforms/esp8266/user/esp_fs.h"
+#include "common/cs_file.h"
 #include "fw/src/sj_clubby.h"
-#include "fw/src/sj_console.h"
 #include "fw/src/sj_clubby_js.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_updater_common.h"
@@ -18,7 +19,13 @@
 #include "v7/v7.h"
 #endif
 
-#define UPDATER_TEMP_FILE_NAME "ota_reply.conf"
+#ifdef SJ_ENABLE_UPDATER_CONSOLE_LOGGING
+#include "fw/src/sj_console.h"
+#else
+#define CONSOLE_LOG LOG
+#endif
+
+#define UPDATER_TEMP_FILE_NAME "ota_reply.dat"
 
 enum js_update_status {
   UJS_GOT_REQUEST,
@@ -109,12 +116,14 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
             FILE *tmp_file = fopen(UPDATER_TEMP_FILE_NAME, "w");
             if (tmp_file == NULL || upd_data == NULL) {
               /* There is nothing we can do */
+              free(upd_data);
+              if (tmp_file) fclose(tmp_file);
               CONSOLE_LOG(LL_ERROR, ("Cannot save update status"));
             } else {
               fwrite(upd_data, 1, len, tmp_file);
               fclose(tmp_file);
+              CONSOLE_LOG(LL_INFO, ("Update completed successfully"));
             }
-            CONSOLE_LOG(LL_INFO, ("Update completed successfully"));
           }
         } else if (res < 0) {
           /* Error */
@@ -199,49 +208,18 @@ static int start_update_download(struct update_context *ctx, const char *url) {
   return 1;
 }
 
-struct clubby_event *load_clubby_reply(spiffs *fs) {
-  struct clubby_event *ret = NULL;
-  spiffs_stat st;
-  char *reply_str = NULL;
-  spiffs_file upd_file = -1;
-
-  upd_file = SPIFFS_open(fs, UPDATER_TEMP_FILE_NAME, SPIFFS_RDONLY, 0);
-  if (upd_file < 0) {
-    CONSOLE_LOG(LL_ERROR, ("Cannot open updater file"));
-    goto cleanup;
+void clubby_updater_finish(int error_code) {
+  size_t len;
+  char *data = cs_read_file(UPDATER_TEMP_FILE_NAME, &len);
+  if (data == NULL) return; /* No file - no problem. */
+  s_clubby_reply = sj_clubby_bytes_to_reply(data, len);
+  if (s_clubby_reply != NULL) {
+    s_clubby_upd_status = error_code;
+  } else {
+    LOG(LL_ERROR, ("Found invalid reply"));
   }
-
-  if (SPIFFS_fstat(fs, upd_file, &st) != SPIFFS_OK) {
-    CONSOLE_LOG(LL_ERROR, ("Cannot get size of updater"));
-    goto cleanup;
-  }
-
-  CONSOLE_LOG(LL_ERROR, ("Updater file size = %d", st.size));
-  reply_str = malloc(st.size);
-  if (reply_str == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Out of memory"));
-    goto cleanup;
-  }
-
-  if ((uint32_t) SPIFFS_read(fs, upd_file, reply_str, st.size) != st.size) {
-    CONSOLE_LOG(LL_ERROR, ("Cannot read data from updater file"));
-    goto cleanup;
-  }
-
-  ret = sj_clubby_bytes_to_reply(reply_str, st.size);
-  if (ret == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Cannot create clubby reply"));
-    goto cleanup;
-  }
-
-cleanup:
-  free(reply_str);
-
-  if (upd_file >= 0) {
-    SPIFFS_close(fs, upd_file);
-  }
-
-  return ret;
+  remove(UPDATER_TEMP_FILE_NAME);
+  free(data);
 }
 
 #ifndef CS_DISABLE_JS
@@ -268,29 +246,19 @@ static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
 
 static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
   (void) user_data;
-  LOG(LL_DEBUG, ("Clubby is ready"));
-
-  if (s_clubby_reply == NULL && s_clubby_upd_status != 0) {
-    /*
-     * If we are here, FW was rolled back and we have to pickup
-     * updater info from current FS
-     */
-    s_clubby_reply = load_clubby_reply(get_fs());
-    remove(UPDATER_TEMP_FILE_NAME);
-  }
-
   if (s_clubby_reply) {
-    LOG(LL_DEBUG, ("Found reply to send"));
+    LOG(LL_INFO, ("Sending update reply: %d", s_clubby_upd_status));
     s_clubby_reply->context = evt->context;
     sj_clubby_send_status_resp(
         s_clubby_reply, s_clubby_upd_status,
-        s_clubby_upd_status == 0 ? "Updated successfully" : "Update failed");
+        s_clubby_upd_status == 0 ? "Updated successfully" : "Update reverted");
     sj_clubby_free_reply(s_clubby_reply);
     s_clubby_reply = NULL;
   };
 }
 
 static void handle_update_req(struct clubby_event *evt, void *user_data) {
+  char *zip_url;
   struct json_token section = JSON_INVALID_TOKEN;
   struct json_token blob_url = JSON_INVALID_TOKEN;
   struct json_token args = evt->request.args;
@@ -328,7 +296,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
    * User can start update with Sys.updater.start()
    */
 
-  char *zip_url = calloc(1, blob_url.len + 1);
+  zip_url = calloc(1, blob_url.len + 1);
   if (zip_url == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     return;

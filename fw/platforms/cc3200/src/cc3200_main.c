@@ -63,7 +63,6 @@ __attribute__((section(".heap_end"))) uint32_t _heap_end;
 void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   (void) blocks_cnt;
   LOG(LL_ERROR, ("Failed to allocate %u", size));
-  abort();
 }
 
 int main() {

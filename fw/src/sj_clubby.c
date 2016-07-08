@@ -545,7 +545,13 @@ static void clubby_cb(struct clubby_event *evt) {
 
       if (!call_cb(clubby, evt->request.method.ptr, evt->request.method.len,
                    evt, 0)) {
-        LOG(LL_WARN, ("Unregistered command"));
+        LOG(LL_WARN, ("No such method: %.*s", (int) evt->request.method.len,
+                      evt->request.method.ptr));
+        struct clubby_event *resp = sj_clubby_create_reply(evt);
+        if (resp) {
+          sj_clubby_send_status_resp(resp, -1, "No such method");
+          sj_clubby_free_reply(resp);
+        }
       }
 
       break;

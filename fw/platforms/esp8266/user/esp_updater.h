@@ -6,16 +6,12 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_
 
-#include <stdint.h>
+#include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 
-struct v7;
+rboot_config *get_rboot_config();
 
-void init_updater(struct v7 *v7);
-int finish_update();
-
-uint8_t get_current_rom();
-uint32_t get_fw_addr(uint8_t rom);
-uint32_t get_fs_addr(uint8_t rom);
-uint32_t get_fs_size(uint8_t rom);
+int apply_update(rboot_config *cfg);
+void commit_update(rboot_config *cfg);
+void revert_update(rboot_config *cfg);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_ */

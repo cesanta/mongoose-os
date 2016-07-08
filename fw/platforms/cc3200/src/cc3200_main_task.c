@@ -27,6 +27,7 @@
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_timers.h"
+#include "fw/src/sj_updater_clubby.h"
 #include "fw/src/sj_updater_post.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_wifi_js.h"
@@ -179,6 +180,9 @@ static int sj_init() {
   init_device(v7);
 
   sj_updater_post_init(v7);
+#ifndef DISABLE_C_CLUBBY
+  init_updater_clubby(v7);
+#endif
 
 #ifndef CS_DISABLE_JS
   /* SJS initialized, enable GC back, and trigger it */
@@ -203,6 +207,13 @@ static int sj_init() {
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
     commit_update(boot_cfg_idx, &boot_cfg);
+    clubby_updater_finish(0);
+  } else {
+    /*
+     * If there is no update reply state, this will just be ignored.
+     * But if there is, then update was rolled back and reply will be sent.
+     */
+    clubby_updater_finish(-1);
   }
 
 #ifndef CS_DISABLE_JS
