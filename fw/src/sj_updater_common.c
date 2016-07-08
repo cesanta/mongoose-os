@@ -621,7 +621,7 @@ int sj_upd_merge_spiffs(spiffs *old_fs) {
     }
   }
 
-  ret = 1;
+  ret = 0;
 
 cleanup:
   if (dir_ptr != NULL) SPIFFS_closedir(dir_ptr);
