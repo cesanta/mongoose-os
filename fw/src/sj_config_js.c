@@ -9,6 +9,11 @@ struct sj_conf_ctx {
   v7_cfunction_t *save_handler;
 };
 
+static void free_user_data(struct v7 *v7, void *ud) {
+  (void) v7;
+  free(ud);
+}
+
 static enum v7_err sj_conf_get(struct v7 *v7, v7_val_t *res) {
   v7_val_t obj = v7_arg(v7, 0);
   v7_val_t name = v7_arg(v7, 1);
@@ -116,7 +121,7 @@ v7_val_t sj_conf_mk_proxy(struct v7 *v7, const struct sj_conf_entry *schema,
   ctx->cfg = cfg;
   ctx->save_handler = save_handler;
   v7_set_user_data(v7, obj, ctx);
-  v7_set_destructor_cb(v7, obj, free);
+  v7_set_destructor_cb(v7, obj, free_user_data);
   proxy = v7_mk_proxy(v7, obj, &handler);
   v7_disown(v7, &obj);
   return proxy;

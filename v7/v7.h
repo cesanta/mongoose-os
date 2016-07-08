@@ -894,7 +894,7 @@ typedef unsigned long v7_prop_attr_desc_t;
 #define _V7_DESC_OFF_HEAP(v) _V7_MK_DESC(v, _V7_PROPERTY_OFF_HEAP)
 
 /* See `v7_set_destructor_cb` */
-typedef void(v7_destructor_cb_t)(void *ud);
+typedef void(v7_destructor_cb_t)(struct v7 *v7, void *ud);
 
 /* Make an empty object */
 v7_val_t v7_mk_object(struct v7 *v7);
@@ -1026,8 +1026,10 @@ void *v7_get_user_data(struct v7 *v7, v7_val_t obj);
  *
  * The callback will be invoked while garbage collection is still in progress
  * and hence the internal state of the JS heap is in an undefined state.
- * The callback thus cannot perform any calls to the V7 API and will receive
- * only the user data associated with the destructed object.
+ *
+ * The only v7 API which is safe to use in this callback is `v7_disown()`,
+ * that's why `v7` pointer is given to it. *Calls to any other v7 functions are
+ * illegal here*.
  *
  * The intended use case is to reclaim resources allocated by C code.
  */
