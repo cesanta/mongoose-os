@@ -6181,7 +6181,7 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
 
 V7_PRIVATE void compute_need_gc(struct v7 *);
 /* perform gc if not inhibited */
-V7_PRIVATE void maybe_gc(struct v7 *);
+V7_PRIVATE int maybe_gc(struct v7 *);
 
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
 V7_PRIVATE uint16_t
@@ -14949,8 +14949,9 @@ restart:
     push_bcode_history(v7, op);
 
     if (v7->need_gc) {
-      maybe_gc(v7);
-      v7->need_gc = 0;
+      if (maybe_gc(v7)) {
+        v7->need_gc = 0;
+      }
     }
 
     r.need_inc_ops = 1;
@@ -20339,7 +20340,10 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #else
   struct gc_cell *r;
   if (a->free == NULL) {
-    maybe_gc(v7);
+    if (!maybe_gc(v7)) {
+      /* GC is inhibited, so, schedule invocation for later */
+      v7->need_gc = 1;
+    }
 
     if (a->free == NULL) {
       struct gc_block *b = gc_new_block(a, a->size_increment);
@@ -20929,10 +20933,12 @@ V7_PRIVATE void compute_need_gc(struct v7 *v7) {
   /* TODO(mkm): check free heap */
 }
 
-V7_PRIVATE void maybe_gc(struct v7 *v7) {
+V7_PRIVATE int maybe_gc(struct v7 *v7) {
   if (!v7->inhibit_gc) {
     v7_gc(v7, 0);
+    return 1;
   }
+  return 0;
 }
 #if defined(V7_GC_VERBOSE)
 static int gc_pass = 0;
@@ -33473,6 +33479,16 @@ V7_PRIVATE enum v7_err Function_apply(struct v7 *v7, v7_val_t *res) {
   rcode = obj_value_of(v7, this_obj, &this_obj);
   if (rcode != V7_OK) {
     goto clean;
+  }
+
+  if (is_js_function(this_obj)) {
+    /*
+     * `Function_apply` is a cfunction, so, GC is inhibited before calling it.
+     * But the given function to call is a JS function, so we should enable GC;
+     * otherwise, it will be inhibited during the whole execution of the given
+     * JS function
+     */
+    v7_set_gc_enabled(v7, 1);
   }
 
   rcode = b_apply(v7, this_obj, this_arg, func_args, 0, res);
