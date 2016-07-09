@@ -3423,6 +3423,9 @@ struct v7_call_frame_base {
 
   /* Belongs to `struct v7_call_frame_bcode` */
   unsigned is_constructor : 1;
+
+  /* Belongs to `struct v7_call_frame_bcode` */
+  unsigned int is_thrown : 1;
 };
 
 /*
@@ -3458,6 +3461,7 @@ struct v7_call_frame_bcode {
   struct v7_call_frame_private base;
   struct {
     val_t this_obj;
+    val_t thrown_error;
   } vals;
   struct bcode *bcode;
   char *bcode_ops;
@@ -14171,6 +14175,10 @@ static void init_call_frame_bcode(struct v7 *v7,
     struct v7_call_frame_bcode *cf = find_call_frame_bcode(v7);
     if (cf != NULL) {
       cf->bcode_ops = prev_bcode_ops;
+
+      /* remember thrown value */
+      cf->vals.thrown_error = v7->vals.thrown_error;
+      cf->base.base.is_thrown = v7->is_thrown;
     }
   }
 
@@ -14292,6 +14300,15 @@ static void apply_frame_bcode(struct v7 *v7,
 
     bcode_restore_registers(v7, call_frame->bcode, r);
     r->ops = call_frame->bcode_ops;
+
+    /*
+     * restore thrown value if only there's no new thrown value
+     * (otherwise, the new one overrides the previous one)
+     */
+    if (!v7->is_thrown) {
+      v7->vals.thrown_error = call_frame->vals.thrown_error;
+      v7->is_thrown = call_frame->base.base.is_thrown;
+    }
   }
 }
 
