@@ -97,6 +97,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
 JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
               $(MGIOT_JS_PATH)/demo.js \
               $(MGIOT_JS_PATH)/I2C.js \
+              $(wildcard $(COMMON_FS_PATH)/*.js) \
               $(JSBIN_EXTRA)
 JS_SRCS    :=
 
@@ -203,10 +204,11 @@ IMAGE_HEADER_SIZE = 0
 SRCS = $(APP_SRCS) $(APP_EXTRA_SRCS) build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 
-FS_FILES = $(wildcard $(COMMON_FS_PATH)/*)
+FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
 ifneq "$(APP_FS_PATH)" ""
 FS_FILES += $(wildcard $(APP_FS_PATH)/*)
 endif
+
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
