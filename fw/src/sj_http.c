@@ -49,8 +49,25 @@ struct user_data {
 #define HTTP_EVENT_CONNECTION "on_connection"
 #define HTTP_EVENT_ERROR "on_error"
 
+static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
 static v7_val_t sj_http_request_proto;
+
+SJ_PRIVATE enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  v7_val_t cb = v7_arg(v7, 0);
+
+  if (!v7_is_callable(v7, cb)) {
+    rcode = v7_throwf(v7, "Error", "Invalid argument");
+    goto clean;
+  }
+  *res = v7_mk_object(v7);
+  v7_set_proto(v7, *res, sj_http_server_proto);
+  v7_set(v7, *res, "_cb", ~0, cb);
+
+clean:
+  return rcode;
+}
 
 static void setup_request_object(struct v7 *v7, v7_val_t request,
                                  struct http_message *hm) {
@@ -158,6 +175,47 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       }
       break;
   }
+}
+
+static enum v7_err start_http_server(struct v7 *v7, const char *addr,
+                                     v7_val_t obj, const char *ca_cert,
+                                     const char *cert) {
+  enum v7_err rcode = V7_OK;
+  struct mg_connection *c;
+  struct user_data *ud;
+  struct mg_bind_opts opts;
+
+  memset(&opts, 0, sizeof(opts));
+
+#ifdef MG_ENABLE_SSL
+  opts.ssl_ca_cert = ca_cert;
+  opts.ssl_cert = cert;
+#else
+  (void) ca_cert;
+  (void) cert;
+#endif
+
+  c = mg_bind_opt(&sj_mgr, addr, http_ev_handler, opts);
+  if (c == NULL) {
+    rcode = v7_throwf(v7, "Error", "Cannot bind");
+    goto clean;
+  }
+  mg_set_protocol_http_websocket(c);
+  c->user_data = ud = (struct user_data *) calloc(1, sizeof(*ud));
+  if (ud == NULL) {
+    rcode = v7_throwf(v7, "Error", "Out of memory");
+    c->flags |= MG_F_CLOSE_IMMEDIATELY;
+    goto clean;
+  }
+
+  ud->v7 = v7;
+  ud->obj = obj;
+  ud->handler = v7_get(v7, obj, "_cb", 3);
+  v7_own(v7, &ud->obj);
+  v7_set(v7, obj, "_c", ~0, v7_mk_foreign(v7, c));
+
+clean:
+  return rcode;
 }
 
 /*
@@ -356,6 +414,142 @@ clean:
   return rcode;
 }
 
+#define MAKE_SERVE_HTTP_OPTS_MAPPING(name) \
+  { #name, offsetof(struct mg_serve_http_opts, name) }
+struct {
+  const char *name;
+  size_t offset;
+} s_map[] = {MAKE_SERVE_HTTP_OPTS_MAPPING(document_root),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(index_files),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(auth_domain),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(global_auth_file),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(enable_directory_listing),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(ip_acl),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(url_rewrites),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(dav_document_root),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(dav_auth_file),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(hidden_file_pattern),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(cgi_file_pattern),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(cgi_interpreter),
+             MAKE_SERVE_HTTP_OPTS_MAPPING(custom_mime_types)};
+
+static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
+                                           struct mg_serve_http_opts *opts) {
+  size_t i;
+  for (i = 0; i < ARRAY_SIZE(s_map); i++) {
+    v7_val_t v = v7_get(v7, obj, s_map[i].name, ~0);
+    if (v7_is_string(v)) {
+      size_t n;
+      const char *str = v7_get_string(v7, &v, &n);
+      *(char **) ((char *) opts + s_map[i].offset) = strdup(str);
+    }
+  }
+}
+
+/*
+ * Serve static files.
+ *
+ * Takes an object containing mongoose http server options.
+ * Commonly used properties:
+ * - `document_root`: Path to the web root directory
+ * - `enable_directory_listing`: Set to "no" to disable directory listing.
+ *   Enabled by default.
+ * - `extra_headers`: Extra HTTP headers to add to each server response.
+ *
+ * For the full option object definition see:
+ * https://docs.cesanta.com/mongoose/dev/index.html#/c-api/http.h/struct_mg_serve_http_opts/
+ */
+SJ_PRIVATE enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
+  struct mg_serve_http_opts opts;
+  struct http_message hm;
+  enum v7_err rcode = V7_OK;
+  size_t i, n;
+  v7_val_t request = v7_get(v7, v7_get_this(v7), "_r", ~0);
+  v7_val_t url_v = v7_get(v7, request, "url", ~0);
+  const char *url = v7_get_string(v7, &url_v, &n);
+  const char *quest = strchr(url, '?');
+
+  LOG(LL_DEBUG, ("Requested url: %s", url));
+
+  DECLARE_CONN();
+
+  memset(&opts, 0, sizeof(opts));
+  memset(&hm, 0, sizeof(hm));
+
+  /* Set up "fake" parsed HTTP message */
+  hm.uri.p = url;
+  hm.uri.len = quest == NULL ? n : n - (quest - url);
+
+  if (v7_argc(v7) > 0) {
+    populate_opts_from_js_argument(v7, v7_arg(v7, 0), &opts);
+  }
+  mg_serve_http(c, &hm, opts);
+  for (i = 0; i < ARRAY_SIZE(s_map); i++) {
+    free(*(char **) ((char *) &opts + s_map[i].offset));
+  }
+
+  *res = v7_get_this(v7);
+
+clean:
+  return rcode;
+}
+
+/* JS signature: listen(addr, [options]) */
+SJ_PRIVATE enum v7_err Http_Server_listen(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  char buf[50], *p = buf;
+  const char *ca_cert = NULL, *cert = NULL;
+  v7_val_t this_obj = v7_get_this(v7);
+  v7_val_t arg0 = v7_arg(v7, 0);
+  v7_val_t opts = v7_arg(v7, 1);
+
+  if (!v7_is_number(arg0) && !v7_is_string(arg0)) {
+    rcode = v7_throwf(v7, "TypeError", "Function expected");
+    goto clean;
+  }
+
+  if (!v7_is_undefined(opts) && !v7_is_object(opts)) {
+    rcode = v7_throwf(v7, "TypeError", "Options must be an object");
+    goto clean;
+  }
+
+  if (!v7_is_undefined(opts)) {
+    v7_val_t ca_cert_v = v7_get(v7, opts, "ssl_ca_cert", ~0);
+    v7_val_t cert_v = v7_get(v7, opts, "ssl_cert", ~0);
+    if (!v7_is_undefined(ca_cert_v) && !v7_is_string(ca_cert_v)) {
+      rcode = v7_throwf(v7, "TypeError", "ca_cert must be a string");
+      goto clean;
+    }
+
+    if (!v7_is_undefined(cert_v) && !v7_is_string(cert_v)) {
+      rcode = v7_throwf(v7, "TypeError", "cert must be a string");
+      goto clean;
+    }
+
+    if (!v7_is_undefined(ca_cert_v)) {
+      ca_cert = v7_get_cstring(v7, &ca_cert_v);
+    }
+
+    if (!v7_is_undefined(cert_v)) {
+      cert = v7_get_cstring(v7, &cert_v);
+    }
+  }
+
+  p = v7_stringify(v7, arg0, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+  rcode = start_http_server(v7, p, this_obj, ca_cert, cert);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  *res = this_obj;
+
+clean:
+  if (p != buf) {
+    free(p);
+  }
+  return rcode;
+}
+
 SJ_PRIVATE enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   DECLARE_CONN();
@@ -363,6 +557,26 @@ SJ_PRIVATE enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
   Http_write_data(v7, c);
   *res = v7_get_this(v7);
 
+clean:
+  return rcode;
+}
+
+SJ_PRIVATE enum v7_err Http_Server_destroy(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  struct mg_connection *i = NULL;
+
+  DECLARE_CONN();
+
+  /* Closing listening connection and all accepted from it */
+  for (i = mg_next(&sj_mgr, NULL); i != NULL; i = mg_next(&sj_mgr, i)) {
+    if (i->listener == c) {
+      i->flags |= MG_F_CLOSE_IMMEDIATELY;
+    }
+  }
+
+  c->flags |= MG_F_CLOSE_IMMEDIATELY;
+
+  *res = v7_mk_boolean(v7, 1);
 clean:
   return rcode;
 }
@@ -601,37 +815,47 @@ void sj_http_api_setup(struct v7 *v7) {
   v7_val_t Http = V7_UNDEFINED;
   v7_val_t URL = V7_UNDEFINED;
 
+  sj_http_server_proto = V7_UNDEFINED;
   sj_http_response_proto = V7_UNDEFINED;
   sj_http_request_proto = V7_UNDEFINED;
 
   /*
-   * All values are owned temporarily: static values
-   * will be owned later forever, in `sj_http_init()`.
+   * All values are owned temporarily: static values like
+   * `sj_http_server_proto` will be owned later forever, in `sj_http_init()`.
    *
    * This is needed to support freezing
    */
   v7_own(v7, &Http);
   v7_own(v7, &URL);
+  v7_own(v7, &sj_http_server_proto);
   v7_own(v7, &sj_http_response_proto);
   v7_own(v7, &sj_http_request_proto);
 
+  sj_http_server_proto = v7_mk_object(v7);
   sj_http_response_proto = v7_mk_object(v7);
   sj_http_request_proto = v7_mk_object(v7);
 
   /* NOTE(lsm): setting Http to globals immediately to avoid gc-ing it */
   Http = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Http", ~0, Http);
+  v7_set(v7, Http, "_serv", ~0, sj_http_server_proto);
   v7_set(v7, Http, "_resp", ~0, sj_http_response_proto);
   v7_set(v7, Http, "_req", ~0, sj_http_request_proto);
 
+  v7_set_method(v7, Http, "createServer", Http_createServer);
   v7_set_method(v7, Http, "get", Http_get);
   v7_set_method(v7, Http, "request", Http_createClient);
+
+  v7_set_method(v7, sj_http_server_proto, "listen", Http_Server_listen);
+  v7_set_method(v7, sj_http_server_proto, "on", Http_on);
+  v7_set_method(v7, sj_http_server_proto, "destroy", Http_Server_destroy);
 
   /* Initialize response prototype */
   v7_set_method(v7, sj_http_response_proto, "writeHead",
                 Http_response_writeHead);
   v7_set_method(v7, sj_http_response_proto, "write", Http_response_write);
   v7_set_method(v7, sj_http_response_proto, "end", Http_response_end);
+  v7_set_method(v7, sj_http_response_proto, "serve", Http_response_serve);
 
   /* Initialize request prototype */
   v7_set_method(v7, sj_http_request_proto, "write", Http_request_write);
@@ -647,6 +871,7 @@ void sj_http_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &sj_http_request_proto);
   v7_disown(v7, &sj_http_response_proto);
+  v7_disown(v7, &sj_http_server_proto);
   v7_disown(v7, &URL);
   v7_disown(v7, &Http);
 }
@@ -654,6 +879,7 @@ void sj_http_api_setup(struct v7 *v7) {
 void sj_http_init(struct v7 *v7) {
   v7_val_t Http = V7_UNDEFINED;
 
+  sj_http_server_proto = V7_UNDEFINED;
   sj_http_response_proto = V7_UNDEFINED;
   sj_http_request_proto = V7_UNDEFINED;
 
@@ -661,11 +887,13 @@ void sj_http_init(struct v7 *v7) {
   v7_own(v7, &Http);
 
   /* other values are owned forever */
+  v7_own(v7, &sj_http_server_proto);
   v7_own(v7, &sj_http_response_proto);
   v7_own(v7, &sj_http_request_proto);
 
   Http = v7_get(v7, v7_get_global(v7), "Http", ~0);
 
+  sj_http_server_proto = v7_get(v7, Http, "_serv", ~0);
   sj_http_response_proto = v7_get(v7, Http, "_resp", ~0);
   sj_http_request_proto = v7_get(v7, Http, "_req", ~0);
 
