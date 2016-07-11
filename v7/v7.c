@@ -2512,20 +2512,55 @@ int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
  */
 int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
 
+#if V7_ENABLE__Proxy
+struct prop_iter_proxy_ctx;
+#endif
+
+/*
+ * Context for property iteration, see `v7_next_prop()`.
+ *
+ * Clients should not interpret contents of this structure, it's here merely to
+ * allow clients to allocate it not from the heap.
+ */
+struct prop_iter_ctx {
+#if V7_ENABLE__Proxy
+  struct prop_iter_proxy_ctx *proxy_ctx;
+#endif
+  struct v7_property *cur_prop;
+
+  unsigned init : 1;
+};
+
+/*
+ * Initialize the property iteration context `ctx`, see `v7_next_prop()` for
+ * usage example.
+ */
+enum v7_err v7_init_prop_iter_ctx(struct v7 *v7, v7_val_t obj,
+                                  struct prop_iter_ctx *ctx);
+
+/*
+ * Destruct the property iteration context `ctx`, see `v7_next_prop()` for
+ * usage example
+ */
+void v7_destruct_prop_iter_ctx(struct v7 *v7, struct prop_iter_ctx *ctx);
+
 /*
  * Iterate over the `obj`'s properties.
  *
- * Usage example:
+ * Usage example (here we assume we have some `v7_val_t obj`):
  *
- *     void *h = NULL;
+ *     struct prop_iter_ctx ctx;
  *     v7_val_t name, val;
  *     v7_prop_attr_t attrs;
- *     while ((h = v7_next_prop(v7, h, obj, &name, &val, &attrs)) != NULL) {
+ *
+ *     v7_init_prop_iter_ctx(v7, obj, &ctx);
+ *     while (v7_next_prop(v7, &ctx, &name, &val, &attrs)) {
  *       ...
  *     }
+ *     v7_destruct_prop_iter_ctx(v7, &ctx);
  */
-void *v7_next_prop(struct v7 *v7, void *handle, v7_val_t obj, v7_val_t *name,
-                   v7_val_t *value, v7_prop_attr_t *attrs);
+int v7_next_prop(struct v7 *v7, struct prop_iter_ctx *ctx, v7_val_t *name,
+                 v7_val_t *value, v7_prop_attr_t *attrs);
 
 /* Returns true if the object is an instance of a given constructor. */
 int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
@@ -3027,6 +3062,16 @@ enum opcode {
    * `( -- [] )`
    */
   OP_CREATE_ARR,
+
+  /*
+   * Allocates the iteration context (for `OP_NEXT_PROP`) from heap and pushes
+   * a foreign pointer to it on stack. The allocated data is stored as "user
+   * data" of the object, and it will be reclaimed automatically when the
+   * object gets garbage-collected.
+   *
+   * `( -- ctx )`
+   */
+  OP_PUSH_PROP_ITER_CTX,
 
   /*
    * Yields the next property name.
@@ -4364,18 +4409,63 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err v7_property_value(struct v7 *v7, val_t obj,
                                          struct v7_property *p, val_t *res);
 
+#if V7_ENABLE__Proxy
 /*
- * Like public function `v7_next_prop()`, but it takes additional argument
- * `proxy_transp`; if it is zero, and the given `obj` is a Proxy, it will
- * iterate the properties of the proxy itself, not the Proxy's target.
- *
- * This function also differs from v7_next_prop in that it returns next handle
- * through the `res_handle` pointer arg.
+ * Additional context for property iteration of a proxied object, see
+ * `v7_next_prop()`.
+ */
+struct prop_iter_proxy_ctx {
+  /* Proxy target object */
+  v7_val_t target_obj;
+  /* Proxy handler object */
+  v7_val_t handler_obj;
+
+  /*
+   * array returned by the `ownKeys` callback, valid if only `has_own_keys` is
+   * set
+   */
+  v7_val_t own_keys;
+  /*
+   * callback to get property descriptor, one of these:
+   *   - a JS or cfunction `getOwnPropertyDescriptor`
+   *     (if `has_get_own_prop_desc_C` is not set);
+   *   - a C callback `v7_get_own_prop_desc_cb_t`.
+   *     (if `has_get_own_prop_desc_C` is set);
+   */
+  v7_val_t get_own_prop_desc;
+
+  /*
+   * if `has_own_keys` is set, `own_key_idx` represents next index in the
+   * `own_keys` array
+   */
+  unsigned own_key_idx : 29;
+
+  /* if set, `own_keys` is valid */
+  unsigned has_own_keys : 1;
+  /* if set, `get_own_prop_desc` is valid */
+  unsigned has_get_own_prop_desc : 1;
+  /*
+   * if set, `get_own_prop_desc` is a C callback `has_get_own_prop_desc_C`, not
+   * a JS callback
+   */
+  unsigned has_get_own_prop_desc_C : 1;
+};
+#endif
+
+/*
+ * Like public function `v7_init_prop_iter_ctx()`, but it takes additional
+ * argument `proxy_transp`; if it is zero, and the given `obj` is a Proxy, it
+ * will iterate the properties of the proxy itself, not the Proxy's target.
  */
 WARN_UNUSED_RESULT
-enum v7_err next_prop(struct v7 *v7, void *handle, v7_val_t obj,
-                      int proxy_transp, v7_val_t *name, v7_val_t *value,
-                      v7_prop_attr_t *attrs, void **res_handle);
+V7_PRIVATE enum v7_err init_prop_iter_ctx(struct v7 *v7, v7_val_t obj,
+                                          int proxy_transp,
+                                          struct prop_iter_ctx *ctx);
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err next_prop(struct v7 *v7, struct prop_iter_ctx *ctx,
+                                 v7_val_t *name, v7_val_t *value,
+                                 v7_prop_attr_t *attrs, int *ok);
 
 /*
  * Set new prototype `proto` for the given object `obj`. Returns `0` at
@@ -5164,10 +5254,29 @@ void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
 
 #if V7_ENABLE__Proxy
 
+struct v7_property;
+
+/*
+ * C callback, analogue of JS callback `getOwnPropertyDescriptor()`.
+ * Callbacks of this type are used for C API only, see `m7_mk_proxy()`.
+ *
+ * `name` is the name of the property, and the function should fill
+ * `res_prop` with the property data; namely, fields `attributes` and `value`.
+ * Other fields are ignored. The structure is zeroed out before the callback
+ * is called.
+ *
+ * It should return non-zero if the property should be considered existing, or
+ * zero otherwise.
+ */
+typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t name,
+                                       struct v7_property *res_prop);
+
 /* Handler for `v7_mk_proxy()`; each item is a cfunction */
 typedef struct {
   v7_cfunction_t *get;
   v7_cfunction_t *set;
+  v7_cfunction_t *own_keys;
+  v7_get_own_prop_desc_cb_t *get_own_prop_desc;
 } v7_proxy_hnd_t;
 
 /*
@@ -11110,7 +11219,7 @@ struct visit {
   v7_val_t obj;
   union {
     size_t next_idx;
-    void *p;
+    struct prop_iter_ctx ctx;
   } v;
 };
 
@@ -11235,6 +11344,7 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
       }
     } else if (v7_is_object(obj)) {
       size_t n;
+      int ok;
       v7_val_t name;
       const char *s;
 
@@ -11258,16 +11368,25 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
         goto clean;
       }
 
-      if (cur->v.p == NULL) {
+      if (!cur->v.ctx.init) {
         cs_ubjson_open_object(buf);
+        rcode = init_prop_iter_ctx(v7, obj, 1, &cur->v.ctx);
+        if (rcode != V7_OK) {
+          goto clean;
+        }
       }
 
-      cur->v.p = v7_next_prop(v7, cur->v.p, obj, &name, NULL, NULL);
+      rcode = next_prop(v7, &cur->v.ctx, &name, NULL, NULL, &ok);
+      if (rcode != V7_OK) {
+        goto clean;
+      }
 
-      if (cur->v.p == NULL) {
+      if (!ok) {
         cs_ubjson_close_object(buf);
+        v7_destruct_prop_iter_ctx(v7, &cur->v.ctx);
       } else {
         v7_val_t tmp = V7_UNDEFINED;
+
         s = v7_get_string(v7, &name, &n);
         cs_ubjson_emit_object_key(buf, s, n);
 
@@ -13001,6 +13120,7 @@ static const char *op_names[] = {
   "JMP_IF_CONTINUE",
   "CREATE_OBJ",
   "CREATE_ARR",
+  "PUSH_PROP_ITER_CTX",
   "NEXT_PROP",
   "FUNC_LIT",
   "CALL",
@@ -14853,6 +14973,12 @@ static void reset_last_name(struct v7 *v7) {
 }
 #endif
 
+static void prop_iter_ctx_dtor(struct v7 *v7, void *ud) {
+  struct prop_iter_ctx *ctx = (struct prop_iter_ctx *) ud;
+  v7_destruct_prop_iter_ctx(v7, ctx);
+  free(ctx);
+}
+
 /*
  * Evaluates given `bcode`. If `reset_line_no` is non-zero, the line number
  * is initially reset to 1; otherwise, it is inherited from the previous call
@@ -15410,37 +15536,76 @@ restart:
       case OP_CREATE_ARR:
         PUSH(v7_mk_array(v7));
         break;
+      case OP_PUSH_PROP_ITER_CTX: {
+        struct prop_iter_ctx *ctx =
+            (struct prop_iter_ctx *) calloc(1, sizeof(*ctx));
+        BTRY(init_prop_iter_ctx(v7, TOS(), 1, ctx));
+        v1 = v7_mk_object(v7);
+        v7_set_user_data(v7, v1, ctx);
+        v7_set_destructor_cb(v7, v1, prop_iter_ctx_dtor);
+        PUSH(v1);
+        break;
+      }
       case OP_NEXT_PROP: {
-        void *h = NULL;
-        v1 = POP(); /* handle */
+        struct prop_iter_ctx *ctx = NULL;
+        int ok = 0;
+        v1 = POP(); /* ctx */
         v2 = POP(); /* object */
 
-        if (!v7_is_null(v1)) {
-          h = v7_get_ptr(v7, v1);
-        }
+        ctx = (struct prop_iter_ctx *) v7_get_user_data(v7, v1);
 
         if (v7_is_object(v2)) {
           v7_prop_attr_t attrs;
+
           do {
             /* iterate properties until we find a non-hidden enumerable one */
             do {
-              V7_TRY(next_prop(v7, h, v2, 1 /*proxy-transparent*/, &res, NULL,
-                               &attrs, &h));
-            } while (h != NULL && (attrs & (_V7_PROPERTY_HIDDEN |
-                                            V7_PROPERTY_NON_ENUMERABLE)));
+              BTRY(next_prop(v7, ctx, &res, NULL, &attrs, &ok));
+            } while (ok && (attrs & (_V7_PROPERTY_HIDDEN |
+                                     V7_PROPERTY_NON_ENUMERABLE)));
 
-            if (h == NULL) {
+            if (!ok) {
               /* no more properties in this object: proceed to the prototype */
               v2 = obj_prototype_v(v7, v2);
+              if (get_generic_object_struct(v2) != NULL) {
+                /*
+                 * the prototype is a generic object, so, init the context for
+                 * props iteration
+                 */
+                v7_destruct_prop_iter_ctx(v7, ctx);
+                BTRY(init_prop_iter_ctx(v7, v2, 1, ctx));
+              } else {
+                /*
+                 * we can't iterate the prototype's props, so, just stop
+                 * iteration.
+                 */
+                ctx = NULL;
+              }
             }
-          } while (h == NULL && get_generic_object_struct(v2) != NULL);
+          } while (!ok && ctx != NULL);
+        } else {
+          /*
+           * Not an object: reset the context.
+           */
+          ctx = NULL;
         }
 
-        if (h == NULL) {
+        if (ctx == NULL) {
           PUSH(v7_mk_boolean(v7, 0));
+
+          /*
+           * We could leave the context unfreed, and let the
+           * `prop_iter_ctx_dtor()` free it when the v1 will be GC-d, but
+           * let's do that earlier.
+           */
+          ctx = (struct prop_iter_ctx *) v7_get_user_data(v7, v1);
+          v7_destruct_prop_iter_ctx(v7, ctx);
+          free(ctx);
+          v7_set_user_data(v7, v1, NULL);
+          v7_set_destructor_cb(v7, v1, NULL);
         } else {
           PUSH(v2);
-          PUSH(v7_mk_foreign(v7, h));
+          PUSH(v1);
           PUSH(res);
           PUSH(v7_mk_boolean(v7, 1));
         }
@@ -17138,6 +17303,13 @@ v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
   if (handler->set != NULL) {
     set_cfunc_prop(v7, handler_v, "set", handler->set);
   }
+  if (handler->own_keys != NULL) {
+    set_cfunc_prop(v7, handler_v, "ownKeys", handler->own_keys);
+  }
+  if (handler->get_own_prop_desc != NULL) {
+    v7_def(v7, handler_v, "_gpdc", ~0, V7_DESC_ENUMERABLE(0),
+           v7_mk_foreign(v7, (void *) handler->get_own_prop_desc));
+  }
 
   /* prepare args */
   args = v7_mk_dense_array(v7);
@@ -18148,6 +18320,7 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/std_proxy.h" */
+/* Amalgamated: #include "v7/src/util.h" */
 
 /*
  * Default property attributes (see `v7_prop_attr_t`)
@@ -18725,9 +18898,10 @@ V7_PRIVATE enum v7_err def_property_v(struct v7 *v7, val_t obj, val_t name,
 
       /* in strict mode, we should throw if trap returned falsy value */
       if (is_strict_mode(v7) && !v7_is_truthy(v7, val)) {
-        V7_THROW(v7_throwf(v7, TYPE_ERROR,
-                           "Trap returned falsy for property '%s'",
-                           v7_get_string(v7, &name, NULL)));
+        V7_THROW2(
+            v7_throwf(v7, TYPE_ERROR, "Trap returned falsy for property '%s'",
+                      v7_get_string(v7, &name, NULL)),
+            clean_proxy);
       }
 
     } else {
@@ -18963,55 +19137,365 @@ clean:
   return rcode;
 }
 
-void *v7_next_prop(struct v7 *v7, void *handle, v7_val_t obj, v7_val_t *name,
-                   v7_val_t *value, v7_prop_attr_t *attrs) {
-  void *ret = NULL;
-  enum v7_err rcode = next_prop(v7, handle, obj, 1, name, value, attrs, &ret);
-  if (rcode != V7_OK) {
-    fprintf(stderr, "next_prop rcode=%d\n", (int) rcode);
-    ret = NULL;
-  }
-  return ret;
+enum v7_err v7_init_prop_iter_ctx(struct v7 *v7, v7_val_t obj,
+                                  struct prop_iter_ctx *ctx) {
+  return init_prop_iter_ctx(v7, obj, 1 /*proxy-transparent*/, ctx);
 }
 
 WARN_UNUSED_RESULT
-enum v7_err next_prop(struct v7 *v7, void *handle, v7_val_t obj,
-                      int proxy_transp, v7_val_t *name, v7_val_t *value,
-                      v7_prop_attr_t *attrs, void **res_handle) {
+V7_PRIVATE enum v7_err init_prop_iter_ctx(struct v7 *v7, v7_val_t obj,
+                                          int proxy_transp,
+                                          struct prop_iter_ctx *ctx) {
   enum v7_err rcode = V7_OK;
-  struct v7_property *p = NULL;
 
-  if (handle == NULL) {
-    struct v7_object *o = get_object_struct(obj);
-    p = o->properties;
+  v7_own(v7, &obj);
+
+  memset(ctx, 0x00, sizeof(*ctx));
+
+  if (v7_is_object(obj)) {
 #if V7_ENABLE__Proxy
-    if (proxy_transp && (o->attributes & V7_OBJ_PROXY)) {
-      /*
-       * The given object is a Proxy, and the caller wants proxies to be
-       * transparent, so, we recursively call `next_prop` for the proxy's
-       * target
-       */
-      V7_TRY(v7_get_throwing(v7, obj, _V7_PROXY_TARGET_NAME, ~0, &obj));
-      rcode = next_prop(v7, handle, obj, proxy_transp, name, value, attrs,
-                        (void **) &p);
-      goto clean;
-    }
+    if (proxy_transp && get_object_struct(obj)->attributes & V7_OBJ_PROXY) {
+      v7_val_t ownKeys_v = V7_UNDEFINED;
+      v7_val_t args_v = V7_UNDEFINED;
+
+      v7_own(v7, &ownKeys_v);
+      v7_own(v7, &args_v);
+
+      ctx->proxy_ctx =
+          (struct prop_iter_proxy_ctx *) calloc(1, sizeof(*ctx->proxy_ctx));
+
+      ctx->proxy_ctx->target_obj = V7_UNDEFINED;
+      ctx->proxy_ctx->handler_obj = V7_UNDEFINED;
+      ctx->proxy_ctx->own_keys = V7_UNDEFINED;
+      ctx->proxy_ctx->get_own_prop_desc = V7_UNDEFINED;
+
+      v7_own(v7, &ctx->proxy_ctx->target_obj);
+      v7_own(v7, &ctx->proxy_ctx->handler_obj);
+      v7_own(v7, &ctx->proxy_ctx->own_keys);
+      v7_own(v7, &ctx->proxy_ctx->get_own_prop_desc);
+
+      V7_TRY2(v7_get_throwing(v7, obj, _V7_PROXY_TARGET_NAME, ~0,
+                              &ctx->proxy_ctx->target_obj),
+              clean_proxy);
+      V7_TRY2(v7_get_throwing(v7, obj, _V7_PROXY_HANDLER_NAME, ~0,
+                              &ctx->proxy_ctx->handler_obj),
+              clean_proxy);
+
+      V7_TRY2(v7_get_throwing(v7, ctx->proxy_ctx->handler_obj, "ownKeys", ~0,
+                              &ownKeys_v),
+              clean_proxy);
+
+      if (v7_is_callable(v7, ownKeys_v)) {
+        /* prepare arguments for the ownKeys callback */
+        args_v = v7_mk_dense_array(v7);
+        v7_array_set(v7, args_v, 0, ctx->proxy_ctx->target_obj);
+
+        /* call `ownKeys` callback, and save the result in context */
+        V7_TRY2(b_apply(v7, ownKeys_v, V7_UNDEFINED, args_v, 0,
+                        &ctx->proxy_ctx->own_keys),
+                clean_proxy);
+
+        ctx->proxy_ctx->has_own_keys = 1;
+        ctx->proxy_ctx->own_key_idx = 0;
+
+      } else {
+        /*
+         * No ownKeys callback, so we'll iterate real properties of the target
+         * object
+         */
+
+        /*
+         * TODO(dfrank): add support for the target object which is a proxy as
+         * well
+         */
+        ctx->cur_prop =
+            get_object_struct(ctx->proxy_ctx->target_obj)->properties;
+      }
+
+      V7_TRY2(v7_get_throwing(v7, ctx->proxy_ctx->handler_obj, "_gpdc", ~0,
+                              &ctx->proxy_ctx->get_own_prop_desc),
+              clean_proxy);
+      if (v7_is_foreign(ctx->proxy_ctx->get_own_prop_desc)) {
+        /*
+         * C callback for getting property descriptor is provided: will use it
+         */
+        ctx->proxy_ctx->has_get_own_prop_desc = 1;
+        ctx->proxy_ctx->has_get_own_prop_desc_C = 1;
+      } else {
+        /*
+         * No C callback for getting property descriptor is provided, let's
+         * check if there is a JS one..
+         */
+        V7_TRY2(v7_get_throwing(v7, ctx->proxy_ctx->handler_obj,
+                                "getOwnPropertyDescriptor", ~0,
+                                &ctx->proxy_ctx->get_own_prop_desc),
+                clean_proxy);
+
+        if (v7_is_callable(v7, ctx->proxy_ctx->get_own_prop_desc)) {
+          /* Yes there is, we'll use it */
+          ctx->proxy_ctx->has_get_own_prop_desc = 1;
+        }
+      }
+
+    clean_proxy:
+      v7_disown(v7, &args_v);
+      v7_disown(v7, &ownKeys_v);
+
+      if (rcode != V7_OK) {
+        /* something went wrong, so, disown values in the context and free it */
+        v7_disown(v7, &ctx->proxy_ctx->get_own_prop_desc);
+        v7_disown(v7, &ctx->proxy_ctx->own_keys);
+        v7_disown(v7, &ctx->proxy_ctx->handler_obj);
+        v7_disown(v7, &ctx->proxy_ctx->target_obj);
+
+        free(ctx->proxy_ctx);
+        ctx->proxy_ctx = NULL;
+
+        goto clean;
+      }
+    } else {
 #else
-    (void) v7;
     (void) proxy_transp;
 #endif
-  } else {
-    p = ((struct v7_property *) handle)->next;
+
+      /* Object is not a proxy: we'll iterate real properties */
+      ctx->cur_prop = get_object_struct(obj)->properties;
+
+#if V7_ENABLE__Proxy
+    }
+#endif
   }
-  if (p != NULL) {
-    if (name != NULL) *name = p->name;
-    if (value != NULL) *value = p->value;
-    if (attrs != NULL) *attrs = p->attributes;
-  }
+
 #if V7_ENABLE__Proxy
 clean:
 #endif
-  *res_handle = p;
+  v7_disown(v7, &obj);
+  if (rcode == V7_OK) {
+    ctx->init = 1;
+  }
+  return rcode;
+}
+
+void v7_destruct_prop_iter_ctx(struct v7 *v7, struct prop_iter_ctx *ctx) {
+  if (ctx->init) {
+#if V7_ENABLE__Proxy
+    if (ctx->proxy_ctx != NULL) {
+      v7_disown(v7, &ctx->proxy_ctx->target_obj);
+      v7_disown(v7, &ctx->proxy_ctx->handler_obj);
+      v7_disown(v7, &ctx->proxy_ctx->own_keys);
+      v7_disown(v7, &ctx->proxy_ctx->get_own_prop_desc);
+    }
+    free(ctx->proxy_ctx);
+    ctx->proxy_ctx = NULL;
+#else
+    (void) v7;
+#endif
+    ctx->init = 0;
+  }
+}
+
+int v7_next_prop(struct v7 *v7, struct prop_iter_ctx *ctx, v7_val_t *name,
+                 v7_val_t *value, v7_prop_attr_t *attrs) {
+  int ok = 0;
+  if (next_prop(v7, ctx, name, value, attrs, &ok) != V7_OK) {
+    fprintf(stderr, "next_prop failed\n");
+    ok = 0;
+  }
+  return ok;
+}
+
+#if V7_ENABLE__Proxy
+WARN_UNUSED_RESULT
+static enum v7_err get_custom_prop_desc(struct v7 *v7, v7_val_t name,
+                                        struct prop_iter_ctx *ctx,
+                                        struct v7_property *res_prop, int *ok) {
+  enum v7_err rcode = V7_OK;
+
+  v7_val_t args_v = V7_UNDEFINED;
+  v7_val_t desc_v = V7_UNDEFINED;
+  v7_val_t tmpflag_v = V7_UNDEFINED;
+
+  v7_own(v7, &name);
+  v7_own(v7, &args_v);
+  v7_own(v7, &desc_v);
+  v7_own(v7, &tmpflag_v);
+
+  *ok = 0;
+
+  if (ctx->proxy_ctx->has_get_own_prop_desc_C) {
+    /*
+     * There is a C callback which should fill the property descriptor
+     * structure, see `v7_get_own_prop_desc_cb_t`
+     */
+    v7_get_own_prop_desc_cb_t *cb = NULL;
+    memset(res_prop, 0, sizeof(*res_prop));
+    cb = (v7_get_own_prop_desc_cb_t *) v7_get_ptr(
+        v7, ctx->proxy_ctx->get_own_prop_desc);
+
+    *ok = !!cb(v7, name, res_prop);
+  } else {
+    /* prepare arguments for the getOwnPropertyDescriptor callback */
+    args_v = v7_mk_dense_array(v7);
+    v7_array_set(v7, args_v, 0, ctx->proxy_ctx->target_obj);
+    v7_array_set(v7, args_v, 1, name);
+
+    /* call getOwnPropertyDescriptor callback */
+    V7_TRY(b_apply(v7, ctx->proxy_ctx->get_own_prop_desc, V7_UNDEFINED, args_v,
+                   0, &desc_v));
+
+    if (v7_is_object(desc_v)) {
+      res_prop->attributes = 0;
+
+      V7_TRY(v7_get_throwing(v7, desc_v, "writable", ~0, &tmpflag_v));
+      if (!v7_is_truthy(v7, tmpflag_v)) {
+        res_prop->attributes |= V7_PROPERTY_NON_WRITABLE;
+      }
+
+      V7_TRY(v7_get_throwing(v7, desc_v, "configurable", ~0, &tmpflag_v));
+      if (!v7_is_truthy(v7, tmpflag_v)) {
+        res_prop->attributes |= V7_PROPERTY_NON_CONFIGURABLE;
+      }
+
+      V7_TRY(v7_get_throwing(v7, desc_v, "enumerable", ~0, &tmpflag_v));
+      if (!v7_is_truthy(v7, tmpflag_v)) {
+        res_prop->attributes |= V7_PROPERTY_NON_ENUMERABLE;
+      }
+
+      V7_TRY(v7_get_throwing(v7, desc_v, "value", ~0, &res_prop->value));
+
+      *ok = 1;
+    }
+  }
+
+  /* We always set the name in the property descriptor to the actual name */
+  res_prop->name = name;
+
+clean:
+  v7_disown(v7, &tmpflag_v);
+  v7_disown(v7, &desc_v);
+  v7_disown(v7, &args_v);
+  v7_disown(v7, &name);
+
+  return rcode;
+}
+#endif
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err next_prop(struct v7 *v7, struct prop_iter_ctx *ctx,
+                                 v7_val_t *name, v7_val_t *value,
+                                 v7_prop_attr_t *attrs, int *ok) {
+  enum v7_err rcode = V7_OK;
+  struct v7_property p;
+
+  (void) v7;
+
+  memset(&p, 0, sizeof(p));
+  p.name = V7_UNDEFINED;
+  p.value = V7_UNDEFINED;
+
+  v7_own(v7, &p.name);
+  v7_own(v7, &p.value);
+
+  assert(ctx->init);
+
+  *ok = 0;
+
+#if V7_ENABLE__Proxy
+  if (ctx->proxy_ctx == NULL || !ctx->proxy_ctx->has_own_keys) {
+    /*
+     * No `ownKeys` callback, so we'll iterate real properties of the object
+     * (either the given object or, if it's a proxy, the proxy's target object)
+     */
+
+    if (ctx->cur_prop != NULL) {
+      if (ctx->proxy_ctx == NULL || !ctx->proxy_ctx->has_get_own_prop_desc) {
+        /*
+         * There is no `getOwnPropertyDescriptor` callback, so, use the current
+         * real property
+         */
+        memcpy(&p, ctx->cur_prop, sizeof(p));
+        *ok = 1;
+      } else {
+        /*
+         * There is a `getOwnPropertyDescriptor` callback, so call it for the
+         * name of the current real property
+         */
+        V7_TRY(get_custom_prop_desc(v7, ctx->cur_prop->name, ctx, &p, ok));
+      }
+
+      ctx->cur_prop = ctx->cur_prop->next;
+    }
+  } else {
+    /* We have custom own keys */
+    v7_val_t cur_key = V7_UNDEFINED;
+    size_t len = v7_array_length(v7, ctx->proxy_ctx->own_keys);
+
+    v7_own(v7, &cur_key);
+
+    /*
+     * Iterate through the custom own keys until we can get the proper property
+     * descriptor for the given key
+     */
+    while (!*ok && (size_t) ctx->proxy_ctx->own_key_idx < len) {
+      cur_key = v7_array_get(v7, ctx->proxy_ctx->own_keys,
+                             ctx->proxy_ctx->own_key_idx);
+      ctx->proxy_ctx->own_key_idx++;
+
+      if (ctx->proxy_ctx->has_get_own_prop_desc) {
+        /*
+         * There is a `getOwnPropertyDescriptor` callback, so, call it for the
+         * current custom key and get all descriptor data from the object
+         * returned. The `ok` variable will be updated appropriately (it will
+         * be 0 if the callback did not return a proper descriptor)
+         */
+        V7_TRY2(get_custom_prop_desc(v7, cur_key, ctx, &p, ok), clean_custom);
+      } else {
+        /*
+         * There is no `getOwnPropertyDescriptor` callback, so, try to get
+         * real property with the name equal to the current key
+         */
+        size_t len = 0;
+        const char *name = v7_get_string(v7, &cur_key, &len);
+
+        struct v7_property *real_prop =
+            v7_get_own_property(v7, ctx->proxy_ctx->target_obj, name, len);
+        if (real_prop != NULL) {
+          /* Property exists, so use data from its descriptor */
+          memcpy(&p, real_prop, sizeof(p));
+          *ok = 1;
+        }
+      }
+    }
+  clean_custom:
+    v7_disown(v7, &cur_key);
+    if (rcode != V7_OK) {
+      goto clean;
+    }
+  }
+
+#else
+  /*
+   * Proxy is disabled: just get the next property
+   */
+  if (ctx->cur_prop != NULL) {
+    memcpy(&p, ctx->cur_prop, sizeof(p));
+    *ok = 1;
+    ctx->cur_prop = ctx->cur_prop->next;
+  }
+#endif
+
+  /* If we have a valid property descriptor, use data from it */
+  if (*ok) {
+    if (name != NULL) *name = p.name;
+    if (value != NULL) *value = p.value;
+    if (attrs != NULL) *attrs = p.attributes;
+  }
+
+#if V7_ENABLE__Proxy
+clean:
+#endif
+  v7_disown(v7, &p.value);
+  v7_disown(v7, &p.name);
   return rcode;
 }
 
@@ -19978,21 +20462,23 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
     case V7_TYPE_ERROR_OBJECT: {
       /* TODO(imax): make it return the desired size of the buffer */
       char *b = buf;
-      void *h = NULL;
       v7_val_t name = V7_UNDEFINED, val = V7_UNDEFINED;
-      v7_prop_attr_t attrs;
+      v7_prop_attr_t attrs = 0;
+      int ok = 0;
+      struct prop_iter_ctx ctx;
+      memset(&ctx, 0, sizeof(ctx));
 
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "{");
+      V7_TRY2(init_prop_iter_ctx(v7, v, 1 /*proxy-transparent*/, &ctx),
+              clean_iter);
       while (1) {
         size_t n;
         const char *s;
-        V7_TRY(next_prop(v7, h, v, 1 /*proxy-transparent*/, &name, &val, &attrs,
-                         &h));
-        if (h == NULL) {
+        V7_TRY2(next_prop(v7, &ctx, &name, &val, &attrs, &ok), clean_iter);
+        if (!ok) {
           break;
-        }
-        if (attrs & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
+        } else if (attrs & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
           continue;
         }
         if (!is_debug && should_skip_for_json(val_type(v7, val))) {
@@ -20005,13 +20491,18 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
         b += c_snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
         {
           size_t tmp = 0;
-          V7_TRY(to_json_or_debug(v7, val, b, BUF_LEFT(size, b - buf), &tmp,
-                                  is_debug));
+          V7_TRY2(to_json_or_debug(v7, val, b, BUF_LEFT(size, b - buf), &tmp,
+                                   is_debug),
+                  clean_iter);
           b += tmp;
         }
       }
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
       v7->json_visited_stack.len -= sizeof(v);
+
+    clean_iter:
+      v7_destruct_prop_iter_ctx(v7, &ctx);
+
       len = b - buf;
       goto clean;
     }
@@ -25541,7 +26032,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
      *   SWAP
      *   STASH
      *   DROP
-     *   PUSH_NULL
+     *   PUSH_PROP_ITER_CTX   # push initial iteration context
      *   TRY_PUSH_LOOP brend
      * loop:
      *   NEXT_PROP
@@ -25563,7 +26054,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
      *              # we're not going to `continue`, so, need to remove an
      *              # extra stuff that was needed for the NEXT_PROP
      *
-     *   SWAP_DROP  # drop handle
+     *   SWAP_DROP  # drop iteration context
      *   SWAP_DROP  # drop <O>
      *   SWAP_DROP  # drop the value preceding the loop
      * try_pop:
@@ -25608,10 +26099,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct bcode_builder *bbuilder,
       bcode_op(bbuilder, OP_DROP);
 
       /*
-       * OP_NEXT_PROP keeps the current position in an opaque handler.
-       * Feeding a null as initial value.
+       * OP_NEXT_PROP needs the iteration context, let's push the initial one.
        */
-      bcode_op(bbuilder, OP_PUSH_NULL);
+      bcode_op(bbuilder, OP_PUSH_PROP_ITER_CTX);
 
       brend_label = bcode_op_target(bbuilder, OP_TRY_PUSH_LOOP);
 
@@ -29035,6 +29525,7 @@ clean:
 #if V7_ENABLE__Object__isFrozen || V7_ENABLE__Object__isSealed
 static enum v7_err is_rigid(struct v7 *v7, v7_val_t *res, int is_frozen) {
   enum v7_err rcode = V7_OK;
+  int ok = 0;
   val_t arg = v7_arg(v7, 0);
 
   if (!v7_is_object(arg)) {
@@ -29045,21 +29536,30 @@ static enum v7_err is_rigid(struct v7 *v7, v7_val_t *res, int is_frozen) {
   *res = v7_mk_boolean(v7, 0);
 
   if (get_object_struct(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
-    void *h = NULL;
-    v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(v7, h, arg, NULL, NULL, &attrs)) != NULL) {
+    v7_prop_attr_t attrs = 0;
+    struct prop_iter_ctx ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    V7_TRY2(init_prop_iter_ctx(v7, arg, 1, &ctx), clean_iter);
+    while (1) {
+      V7_TRY2(next_prop(v7, &ctx, NULL, NULL, &attrs, &ok), clean_iter);
+      if (!ok) {
+        break;
+      }
       if (!(attrs & V7_PROPERTY_NON_CONFIGURABLE)) {
-        goto clean;
+        goto clean_iter;
       }
       if (is_frozen) {
         if (!(attrs & V7_PROPERTY_SETTER) &&
             !(attrs & V7_PROPERTY_NON_WRITABLE)) {
-          goto clean;
+          goto clean_iter;
         }
       }
     }
 
     *res = v7_mk_boolean(v7, 1);
+
+  clean_iter:
+    v7_destruct_prop_iter_ctx(v7, &ctx);
     goto clean;
   }
 

@@ -375,17 +375,29 @@ clean:
 
 static void http_write_headers(struct v7 *v7, v7_val_t headers_obj,
                                struct mg_connection *c) {
+  enum v7_err rcode = V7_OK;
+  struct prop_iter_ctx ctx;
+  memset(&ctx, 0x00, sizeof(ctx));
+
   if (v7_is_object(headers_obj)) {
-    void *h = NULL;
     v7_val_t name, value;
     v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(v7, h, headers_obj, &name, &value, &attrs)) !=
-           NULL) {
+    rcode = v7_init_prop_iter_ctx(v7, headers_obj, &ctx);
+    if (rcode != V7_OK) {
+      goto clean;
+    }
+    while (v7_next_prop(v7, &ctx, &name, &value, &attrs)) {
       size_t n1, n2;
       const char *s1 = v7_get_string(v7, &name, &n1);
       const char *s2 = v7_get_string(v7, &value, &n2);
       mg_printf(c, "%.*s: %.*s\r\n", (int) n1, s1, (int) n2, s2);
     }
+  }
+
+clean:
+  v7_destruct_prop_iter_ctx(v7, &ctx);
+  if (rcode != V7_OK) {
+    fprintf(stderr, "write headers error: %d\n", rcode);
   }
 }
 

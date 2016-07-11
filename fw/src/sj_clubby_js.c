@@ -72,14 +72,19 @@ static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
   } else if (v7_is_object(obj)) {
     LOG(LL_VERBOSE_DEBUG, ("type=object"));
     ub_val_t ub_obj = ub_create_object(ctx);
-    void *h = NULL;
     v7_val_t name, val;
     v7_prop_attr_t attrs;
-    while ((h = v7_next_prop(v7, h, obj, &name, &val, &attrs)) != NULL) {
+    struct prop_iter_ctx ictx;
+    if (v7_init_prop_iter_ctx(v7, obj, &ictx) != V7_OK) {
+      goto clean_iter;
+    }
+    while (v7_next_prop(v7, &ictx, &name, &val, &attrs)) {
       LOG(LL_VERBOSE_DEBUG, ("propname=%s", v7_get_cstring(v7, &name)));
       ub_add_prop(ctx, ub_obj, v7_get_cstring(v7, &name),
                   obj_to_ubj(v7, ctx, val));
     }
+  clean_iter:
+    v7_destruct_prop_iter_ctx(v7, &ictx);
     return ub_obj;
   } else {
     char buf[100], *p;
