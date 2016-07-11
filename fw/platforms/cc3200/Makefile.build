@@ -75,6 +75,10 @@ JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
            $(wildcard $(COMMON_FS_PATH)/*.js) \
            $(JS_EXTRA)
 
+ifneq "$(APP_FS_PATH)" ""
+JSBIN_SRCS += $(wildcard $(APP_FS_PATH)/*.js)
+endif
+
 JS_SRCS :=
 
 JSBIN_EXT := js
@@ -180,7 +184,7 @@ $(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_ST
 
 FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
 ifneq "$(APP_FS_PATH)" ""
-FS_FILES += $(wildcard $(APP_FS_PATH)/*)
+FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
 endif
 ifneq "$(APP_SLFS_PATH)" ""
 SLFS_FILES = $(wildcard $(APP_SLFS_PATH)/*)
