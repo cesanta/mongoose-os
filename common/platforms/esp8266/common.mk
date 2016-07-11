@@ -14,16 +14,17 @@ CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
 LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
+CC_WRAPPER ?=
 
 define link
 $(vecho) "LD    $@"
-$(Q) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -o $@ \
+$(Q) $(CC_WRAPPER) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -o $@ \
 -Wl,--start-group $< $(LIBS) $1 -Wl,--end-group
 endef
 
 define compile_params
 $(vecho) "CC    $1 -> $2"
-$(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $1 -o $2
+$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $1 -o $2
 endef
 
 define compile

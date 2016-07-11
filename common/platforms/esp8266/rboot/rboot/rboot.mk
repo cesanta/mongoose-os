@@ -19,6 +19,7 @@ else
 CC := $(addprefix $(XTENSA_BINDIR)/,xtensa-lx106-elf-gcc)
 LD := $(addprefix $(XTENSA_BINDIR)/,xtensa-lx106-elf-gcc)
 endif
+CC_WRAPPER ?=
 
 CFLAGS    = -Os -O3 -Wpointer-arith -Wundef -Werror -Wl,-EL \
             -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals \
@@ -57,11 +58,11 @@ all: $(RBOOT_BUILD_BASE)/rboot.bin
 
 $(RBOOT_BUILD_BASE)/rboot-stage2a.o: rboot-stage2a.c rboot-private.h rboot.h
 	@echo "CC $<"
-	@$(CC) $(CFLAGS) $(RBOOT_EXTRA_INCDIR) -c $< -o $@
+	@$(CC_WRAPPER) $(CC) $(CFLAGS) $(RBOOT_EXTRA_INCDIR) -c $< -o $@
 
 $(RBOOT_BUILD_BASE)/rboot-stage2a.elf: $(RBOOT_BUILD_BASE)/rboot-stage2a.o
 	@echo "LD $@"
-	@$(LD) -Trboot-stage2a.ld $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
+	@$(CC_WRAPPER) $(LD) -Trboot-stage2a.ld $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
 
 $(RBOOT_BUILD_BASE)/rboot-hex2a.h: $(RBOOT_BUILD_BASE)/rboot-stage2a.elf
 	@echo "E2 $@"

@@ -1,4 +1,5 @@
 APP_LDFLAGS ?=
+CC_WRAPPER ?=
 CC = arm-none-eabi-gcc
 
 IPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
@@ -25,11 +26,10 @@ $(SDK_OBJS): CFLAGS += -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses
 
 $(BUILD_DIR)/%.o: %.c
 	$(vecho) "GCC   $< -> $@"
-	$(Q) $(CC) $(CFLAGS) -c -o $@ $<
+	$(Q) $(CC_WRAPPER) $(CC) $(CFLAGS) -c -o $@ $<
 
 $(APP_ELF):
 	$(vecho) "LD    $@"
-	$(Q) $(LD) ${APP_LDFLAGS} \
-	           --gc-sections -o $@ $(filter %.o %.a, $^) \
-	           $(LIBM) $(LIBC) $(LIBGCC)
-
+	$(Q) $(CC_WRAPPER) $(LD) ${APP_LDFLAGS} \
+	  --gc-sections -o $@ $(filter %.o %.a, $^) \
+	  $(LIBM) $(LIBC) $(LIBGCC)

@@ -18,6 +18,7 @@ VERBOSE ?= 0
 VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH)
 SSL ?= Krypton
 DEBUG ?= 0
+CC_WRAPPER ?=
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
@@ -155,7 +156,7 @@ endif
 
 define compile
 $(vecho) "CC    $< -> $@"
-$(Q) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
+$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
 endef
 
 all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP) fs
@@ -195,7 +196,7 @@ $(V7_PATH)/v7.c:
 
 $(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(V7_PATH)/v7.c $(OBJS)
 	@echo "LD $@"
-	$(Q) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
+	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 
 # After file copy, change default HTTP port to 9080
 fs: $(BIN_DIR) $(FS_FILES)
