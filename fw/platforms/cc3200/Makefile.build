@@ -291,7 +291,7 @@ all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(SYS_CONFIG_C) 
 
 $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
-                $(APP_SLFS_PATH) $(SLFS_FILES)
+                $(APP_SLFS_PATH) $(SLFS_FILES) ${FS_FILES} ${JSBIN_SRCS}
 
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                                 $(wildcard $(BOOT_PATH)/tools/mkcfg.c)

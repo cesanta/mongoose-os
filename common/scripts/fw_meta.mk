@@ -19,7 +19,7 @@ $(FW_ZIP): $(FW_MANIFEST) $(FW_META_CMD)
 	$(Q) cp $@ $(FW_DIR)/$(APP)-$(APP_PLATFORM)-$(shell $(FW_META_CMD) get $(FW_MANIFEST) version).zip
 	$(vecho) "Built version $(shell $(FW_META_CMD) get $(FW_MANIFEST) version)"
 
-$(FW_MANIFEST): $(FW_META_CMD) ${FS_FILES} ${JSBIN_SRCS}
+$(FW_MANIFEST): $(FW_META_CMD)
 	$(vecho) "GEN    $(FW_MANIFEST)"
 	$(Q) $(FW_META_CMD) create_manifest \
 	  --name=$(APP) --platform=$(APP_PLATFORM) \
