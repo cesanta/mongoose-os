@@ -222,22 +222,21 @@ static void mg_write_to_socket(struct mg_connection *nc) {
   int n = 0;
 
   if (nc->flags & MG_F_UDP) {
-    int n = sl_SendTo(nc->sock, io->buf, io->len, 0, &nc->sa.sa,
+    n = sl_SendTo(nc->sock, io->buf, io->len, 0, &nc->sa.sa,
                       sizeof(nc->sa.sin));
     DBG(("%p %d %d %d %s:%hu", nc, nc->sock, n, errno,
          inet_ntoa(nc->sa.sin.sin_addr), ntohs(nc->sa.sin.sin_port)));
-    if (n > 0) mbuf_remove(io, n);
-    mg_if_sent_cb(nc, n);
-    return;
   } else {
     n = (int) sl_Send(nc->sock, io->buf, io->len, 0);
     DBG(("%p %d bytes -> %d", nc, n, nc->sock));
-    if (n < 0 && !mg_is_error(n)) return;
   }
 
   if (n > 0) {
     mbuf_remove(io, n);
     mg_if_sent_cb(nc, n);
+  } else if (n < 0 && mg_is_error(n)) {
+    /* Something went wrong, drop the connection. */
+    nc->flags |= MG_F_CLOSE_IMMEDIATELY;
   }
 }
 
