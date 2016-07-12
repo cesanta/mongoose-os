@@ -15,6 +15,8 @@
 #include "fw/src/sj_updater_common.h"
 #include "fw/src/sj_v7_ext.h"
 
+#ifndef DISABLE_C_CLUBBY
+
 #ifndef CS_DISABLE_JS
 #include "v7/v7.h"
 #endif
@@ -355,7 +357,16 @@ static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
 }
 #endif
 
+#else
+void clubby_updater_finish(int error_code) {
+  (void) error_code;
+}
+#endif /* DISABLE_C_CLUBBY */
+
 void init_updater_clubby(struct v7 *v7) {
+  (void) v7;
+#ifndef DISABLE_C_CLUBBY
+
 #ifndef CS_DISABLE_JS
   s_v7 = v7;
   v7_val_t updater = v7_mk_object(v7);
@@ -382,8 +393,6 @@ void init_updater_clubby(struct v7 *v7) {
   v7_def(s_v7, updater, "FAILED", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_mk_number(v7, UJS_ERROR));
-#else
-  (void) v7;
 #endif
 
   sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_update_req,
@@ -391,4 +400,5 @@ void init_updater_clubby(struct v7 *v7) {
 
   sj_clubby_register_global_command(clubby_cmd_ready, handle_clubby_ready,
                                     NULL);
+#endif
 }

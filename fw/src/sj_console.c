@@ -46,6 +46,8 @@ struct cache {
   struct mbuf file_names;
 };
 
+#ifndef DISABLE_C_CLUBBY
+
 static struct cache s_cache;
 /* TODO(alashkin): init on boot */
 static file_id_t s_last_file_id = 1;
@@ -347,6 +349,8 @@ static void console_send_to_cloud(struct v7 *v7, struct mbuf *msg) {
   }
 }
 
+#endif
+
 SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
 
@@ -381,9 +385,11 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   /* Send msg to local console */
   printf("%.*s", (int) msg.len, msg.buf);
 
+#ifndef DISABLE_C_CLUBBY
   if (get_cfg()->console.send_to_cloud) {
     console_send_to_cloud(v7, &msg);
   }
+#endif
 
   *res = V7_UNDEFINED; /* like JS print */
 
@@ -392,6 +398,7 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
 }
 
 SJ_PRIVATE enum v7_err Console_setClubby(struct v7 *v7, v7_val_t *res) {
+#ifndef DISABLE_C_CLUBBY
   enum v7_err rcode = V7_OK;
 
   v7_val_t clubby_v = v7_arg(v7, 0);
@@ -409,13 +416,19 @@ SJ_PRIVATE enum v7_err Console_setClubby(struct v7 *v7, v7_val_t *res) {
 
 clean:
   return rcode;
+#else
+  *res = v7_mk_boolean(v7, 0);
+  return V7_OK;
+#endif
 }
 
 void sj_console_init(struct v7 *v7) {
+#ifndef DISABLE_C_CLUBBY
   if (console_init_file_cache() == 0) {
     sj_clubby_register_global_command(clubby_cmd_onopen,
                                       console_handle_clubby_ready, v7);
   }
+#endif
   s_v7 = v7; /* TODO(alashkin): remove s_v7 */
 }
 
@@ -430,7 +443,6 @@ void sj_console_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &console_v);
 }
-
 #endif /* CS_DISABLE_JS */
 
 void sj_console_cloud_log(const char *fmt, ...) {
@@ -453,7 +465,8 @@ void sj_console_cloud_log(const char *fmt, ...) {
     len = buf_size;
   }
 
-#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON)
+#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON) && \
+    !defined(DISABLE_C_CLUBBY)
   if (get_cfg()->console.send_to_cloud && s_v7 != NULL) {
     struct mbuf tmp;
     /*
