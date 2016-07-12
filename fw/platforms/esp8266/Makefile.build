@@ -132,6 +132,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_ENABLE__StackTrace=1 \
                -DV7_ENABLE__Object__getPrototypeOf \
                -DV7_ENABLE__Object__isPrototypeOf \
+               -DV7_ENABLE__Object__hasOwnProperty \
                -DV7_ENABLE__Object__keys \
                -DV7_ENABLE__Object__isExtensible \
                -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS \
