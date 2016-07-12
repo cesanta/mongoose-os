@@ -113,9 +113,10 @@ Response:
 Creates a new project.
 
 Arguments:
-- `owner`: ID of the owner for the new project. Set to ID of the caller by default.
-- `cloneFrom`: Unique name of the project to clone from, in a format "owner/project-name".
 - `name`: Unique name. The format is owner/project-name, only alphanumerical characters, dashes and underscores are allowed Will be prefixed with the owner account name. If the owner prefix is present, this method will check whether it matches the one specified via the owner argument.
+- `cloneFrom`: Unique name of the project to clone from, in a format "owner/project-name".
+- `owner`: ID of the owner for the new project. Set to ID of the caller by default.
+- `arch`: Hardware architecture; valid values are: esp8266, cc3200
 - `template`: Optional skeleton template
 - `summary`: Human-readable name for the project.
 
@@ -128,6 +129,7 @@ Request:
   "id": 123,
   "method": "/v1/Project.Create",
   "args": {
+    "arch": "VALUE PLACEHOLDER",
     "cloneFrom": "VALUE PLACEHOLDER",
     "name": "VALUE PLACEHOLDER",
     "owner": "VALUE PLACEHOLDER",
