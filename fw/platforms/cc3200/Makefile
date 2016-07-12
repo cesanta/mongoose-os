@@ -4,7 +4,7 @@ SJS_CC3200_PATH = $(REPO_PATH)/fw/platforms/cc3200
 SDK_VERSION ?= $(shell cat $(SJS_CC3200_PATH)/sdk.version)
 
 REPO_ABS_PATH = $(realpath $(REPO_PATH))
-APP_PATH = $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
+APP_PATH ?= $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
 
 .PHONY: all clean
 
