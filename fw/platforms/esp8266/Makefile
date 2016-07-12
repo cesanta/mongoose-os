@@ -4,7 +4,7 @@ SJS_ESP_PATH = $(REPO_PATH)/fw/platforms/esp8266
 SDK_VERSION ?= $(shell cat $(SJS_ESP_PATH)/sdk.version)
 
 REPO_ABS_PATH = $(realpath $(REPO_PATH))
-APP_PATH = $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
+APP_PATH ?= $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
 PYTHON ?= python
 
 .PHONY: all clean
