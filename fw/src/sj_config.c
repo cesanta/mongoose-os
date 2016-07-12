@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 
+#include "common/json_utils.h"
 #include "common/mbuf.h"
 #include "fw/src/sj_config.h"
 
@@ -132,13 +133,6 @@ struct emit_ctx {
   void *cb_param;
 };
 
-static void sj_conf_emit_str(struct mbuf *b, const char *s) {
-  mbuf_append(b, "\"", 1);
-  /* TODO(rojer): JSON escaping. */
-  if (s != NULL) mbuf_append(b, s, strlen(s));
-  mbuf_append(b, "\"", 1);
-}
-
 static void sj_emit_indent(struct mbuf *m, int n) {
   mbuf_append(m, "\n", 1);
   for (int j = 0; j < n; j++) mbuf_append(m, " ", 1);
@@ -190,7 +184,7 @@ static void sj_conf_emit_obj(struct emit_ctx *ctx,
       first = false;
     }
     if (ctx->pretty) sj_emit_indent(ctx->out, indent);
-    sj_conf_emit_str(ctx->out, e->key);
+    sj_json_emit_str(ctx->out, mg_mk_str(e->key), 1);
     mbuf_append(ctx->out, ": ", (ctx->pretty ? 2 : 1));
     switch (e->type) {
       case CONF_TYPE_INT: {
@@ -216,7 +210,7 @@ static void sj_conf_emit_obj(struct emit_ctx *ctx,
       }
       case CONF_TYPE_STRING: {
         const char *v = *((char **) (((char *) ctx->cfg) + e->offset));
-        sj_conf_emit_str(ctx->out, v);
+        sj_json_emit_str(ctx->out, mg_mk_str(v), 1);
         break;
       }
       case CONF_TYPE_OBJECT: {

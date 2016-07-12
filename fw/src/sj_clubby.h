@@ -7,7 +7,6 @@
 #define CS_FW_SRC_SJ_CLUBBY_H_
 
 #include "common/queue.h"
-#include "common/ubjserializer.h"
 #include "fw/src/clubby_proto.h"
 #include "fw/src/device_config.h"
 
@@ -59,18 +58,17 @@ void sj_clubby_free_reply(struct clubby_event *reply);
 char *sj_clubby_repl_to_bytes(struct clubby_event *reply, int *len);
 struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len);
 
-ub_val_t sj_clubby_create_error(struct ub_ctx *ctx, int code, const char *msg);
+void sj_clubby_fill_error(struct json_out *out, int code, const char *msg);
 
 int sj_clubby_can_send(clubby_handle_t handle);
 
 void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
                                 const char *error_msg);
-void sj_clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx,
-                            int64_t id, const struct mg_str dst,
-                            ub_val_t request);
+void sj_clubby_send_request(struct clubby *clubby, int64_t id,
+                            const struct mg_str dst, const struct mg_str frame);
 
 int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
-                   struct ub_ctx *ctx, ub_val_t args, int enqueue,
+                   const struct mg_str args, int enqueue,
                    sj_clubby_callback_t cb, void *cb_userdata);
 
 int sj_clubby_register_callback(struct clubby *clubby, const char *id,

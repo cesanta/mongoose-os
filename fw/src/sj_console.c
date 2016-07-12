@@ -17,8 +17,9 @@
 static struct v7 *s_v7;
 static int s_waiting_for_resp;
 
-#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON)
+#ifndef CS_DISABLE_JS
 
+#include "common/json_utils.h"
 #include "common/cs_dirent.h"
 #include "common/cs_file.h"
 #include "common/queue.h"
@@ -73,43 +74,49 @@ static void clubby_cb(struct clubby_event *evt, void *user_data) {
   console_process_data((struct v7 *) user_data);
 }
 
-static void console_make_clubby_call(struct v7 *v7, const struct mg_str logs) {
+static void console_make_clubby_call(struct v7 *v7, struct mbuf *logs) {
   clubby_handle_t clubby_h = console_get_current_clubby(v7);
-  struct ub_ctx *ctx = ub_ctx_new();
-  ub_val_t log_cmd_args = ub_create_object(ctx);
-  ub_add_prop(ctx, log_cmd_args, "msg", ub_create_string(ctx, logs));
+  struct mbuf log_mbuf;
+  mbuf_init(&log_mbuf, 200);
+  mbuf_append(logs, 0, 1);
+  struct json_out log_out = JSON_OUT_MBUF(&log_mbuf);
+  json_printf(&log_out, "{msg: %Q}", logs->buf);
+
   /* TODO(alashkin): set command timeout */
   s_waiting_for_resp = 1;
-  sj_clubby_call(clubby_h, NULL, "/v1/Log.Log", ctx, log_cmd_args, 0, clubby_cb,
-                 v7);
+  sj_clubby_call(clubby_h, NULL, "/v1/Log.Log",
+                 mg_mk_str_n(log_mbuf.buf, log_mbuf.len), 0, clubby_cb, v7);
+
+  mbuf_free(&log_mbuf);
 }
 
 static void console_make_clubby_call_mbuf(struct v7 *v7, struct mbuf *logs) {
-  struct mg_str s = {.p = logs->buf, .len = logs->size};
-  console_make_clubby_call(v7, s);
+  console_make_clubby_call(v7, logs);
   mbuf_free(logs);
 }
 
 static int console_send_file(struct v7 *v7, struct cache *cache) {
   int ret = 0;
-  struct mg_str logs = {.p = NULL, .len = 0};
+  struct mbuf logs;
+  mbuf_init(&logs, 0);
   if (cache->file_names.len != 0) {
-    logs.p = cs_read_file(cache->file_names.buf, &logs.len);
-    if (logs.p == NULL) {
+    logs.buf = cs_read_file(cache->file_names.buf, &logs.len);
+    logs.size = logs.len + 1; /* + \0 */
+    if (logs.buf == NULL) {
       LOG(LL_ERROR, ("Failed to read from %s", cache->file_names.buf));
       ret = -1;
       goto clean;
     }
 
-    console_make_clubby_call(v7, logs);
+    console_make_clubby_call(v7, &logs);
 
     remove(cache->file_names.buf);
     mbuf_remove(&cache->file_names, FILENAME_LEN);
   }
 
 clean:
-  if (logs.p != NULL) {
-    free((void *) logs.p);
+  if (logs.buf != NULL) {
+    free((void *) logs.buf);
   }
 
   return ret;

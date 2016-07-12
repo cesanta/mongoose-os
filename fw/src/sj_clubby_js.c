@@ -3,6 +3,7 @@
  * All rights reserved
  */
 
+#include "common/json_utils.h"
 #include "fw/src/sj_clubby_js.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_hal.h"
@@ -48,56 +49,6 @@ clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v) {
     return V7_OK;                                          \
   }
 
-static ub_val_t obj_to_ubj(struct v7 *v7, struct ub_ctx *ctx, v7_val_t obj) {
-  LOG(LL_VERBOSE_DEBUG, ("enter"));
-
-  if (v7_is_number(obj)) {
-    double n = v7_get_double(v7, obj);
-    LOG(LL_VERBOSE_DEBUG, ("type=number val=%d", (int) n))
-    return ub_create_number(n);
-  } else if (v7_is_string(obj)) {
-    struct mg_str s;
-    s.p = v7_get_string(v7, &obj, &s.len);
-    LOG(LL_VERBOSE_DEBUG, ("type=string val=%.*s", (int) s.len, s.p))
-    return ub_create_string(ctx, s);
-  } else if (v7_is_array(v7, obj)) {
-    int i, arr_len = v7_array_length(v7, obj);
-    LOG(LL_VERBOSE_DEBUG, ("type=array len=%d", arr_len));
-    ub_val_t ub_arr = ub_create_array(ctx);
-    for (i = 0; i < arr_len; i++) {
-      v7_val_t item = v7_array_get(v7, obj, i);
-      ub_array_push(ctx, ub_arr, obj_to_ubj(v7, ctx, item));
-    }
-    return ub_arr;
-  } else if (v7_is_object(obj)) {
-    LOG(LL_VERBOSE_DEBUG, ("type=object"));
-    ub_val_t ub_obj = ub_create_object(ctx);
-    v7_val_t name, val;
-    v7_prop_attr_t attrs;
-    struct prop_iter_ctx ictx;
-    if (v7_init_prop_iter_ctx(v7, obj, &ictx) != V7_OK) {
-      goto clean_iter;
-    }
-    while (v7_next_prop(v7, &ictx, &name, &val, &attrs)) {
-      LOG(LL_VERBOSE_DEBUG, ("propname=%s", v7_get_cstring(v7, &name)));
-      ub_add_prop(ctx, ub_obj, v7_get_cstring(v7, &name),
-                  obj_to_ubj(v7, ctx, val));
-    }
-  clean_iter:
-    v7_destruct_prop_iter_ctx(v7, &ictx);
-    return ub_obj;
-  } else {
-    char buf[100], *p;
-    p = v7_stringify(v7, obj, buf, sizeof(buf), V7_STRINGIFY_JSON);
-    LOG(LL_ERROR, ("Unknown type, val=%s", p));
-    ub_val_t ret = ub_create_cstring(ctx, p);
-    if (p != buf) {
-      free(p);
-    }
-    return ret;
-  }
-}
-
 static int register_js_callback(struct clubby *clubby, struct v7 *v7,
                                 const char *id, int8_t id_len,
                                 sj_clubby_callback_t cb, v7_val_t cbv,
@@ -124,22 +75,32 @@ static void clubby_send_response(struct clubby *clubby, const char *dst,
    * Do not queueing responses. Work like clubby.js
    * TODO(alashkin): is it good?
    */
-  ub_val_t result_ubj = CLUBBY_UNDEFINED;
-  ub_val_t error_ubj = CLUBBY_UNDEFINED;
-
-  struct ub_ctx *ctx = ub_ctx_new();
+  char buf[200], *p = NULL;
   if (!v7_is_undefined(result_v)) {
-    result_ubj = obj_to_ubj(clubby->v7, ctx, result_v);
+    p = v7_stringify(clubby->v7, result_v, buf, sizeof(buf), V7_STRINGIFY_JSON);
   }
+
+  struct mbuf error_mbuf;
+  mbuf_init(&error_mbuf, 200);
+  struct json_out error_out = JSON_OUT_MBUF(&error_mbuf);
 
   if (status != 0) {
-    error_ubj = sj_clubby_create_error(ctx, status, error_msg);
+    sj_clubby_fill_error(&error_out, status, error_msg);
   }
 
-  clubby_proto_send(clubby->nc, ctx,
-                    clubby_proto_create_resp(
-                        ctx, clubby->cfg.device_id, clubby->cfg.device_psk,
-                        mg_mk_str(dst), id, result_ubj, error_ubj));
+  struct mbuf resp_mbuf;
+  mbuf_init(&resp_mbuf, 200);
+  clubby_proto_create_resp(&resp_mbuf, id, clubby->cfg.device_id,
+                           clubby->cfg.device_psk, mg_mk_str(dst), mg_mk_str(p),
+                           mg_mk_str_n(error_mbuf.buf, error_mbuf.len));
+
+  clubby_proto_send(clubby->nc, mg_mk_str_n(resp_mbuf.buf, resp_mbuf.len));
+
+  if (p != buf) {
+    free(p);
+  }
+  mbuf_free(&error_mbuf);
+  mbuf_free(&resp_mbuf);
 }
 
 static void clubby_hello_req_callback(struct clubby_event *evt,
@@ -447,12 +408,13 @@ SJ_PRIVATE enum v7_err Clubby_sayHello(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-/* clubby.call(method: string {dst, atgs, etc}: object, callback(resp):
- * function) */
+/*
+ * clubby.call(method: string, {dst, args, etc}: object, callback(resp):
+ * function)
+*/
 SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
-  struct ub_ctx *ctx = NULL;
   v7_val_t method_v = v7_arg(v7, 0);
   v7_val_t args = v7_arg(v7, 1);
   v7_val_t arg_3 = v7_arg(v7, 2);
@@ -462,6 +424,7 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   v7_val_t clubby_request_v = V7_UNDEFINED;
   v7_val_t dst_v;
 
+  char buf[200], *p = NULL;
   if (v7_is_callable(v7, arg_3)) {
     /* if arg #3 is callback, then opts == UNDEFINED */
     cb_v = arg_3;
@@ -526,7 +489,6 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_undefined(args)) {
     v7_set(v7, clubby_request_v, "args", ~0, args);
   }
-  ctx = ub_ctx_new();
 
   if (!register_js_callback(clubby, v7, (char *) &id, sizeof(id),
                             clubby_resp_cb, cb_v, timeout)) {
@@ -535,9 +497,13 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
 
   dst_v = v7_get(v7, opts_v, "dst", ~0);
   struct mg_str dst;
-  dst.p = v7_get_string(v7, &dst_v, &dst.len),
-  sj_clubby_send_request(clubby, ctx, id, dst,
-                         obj_to_ubj(v7, ctx, clubby_request_v));
+  dst.p = v7_get_string(v7, &dst_v, &dst.len);
+
+  p = v7_stringify(v7, clubby_request_v, buf, sizeof(buf), V7_STRINGIFY_JSON);
+  sj_clubby_send_request(clubby, id, dst, mg_mk_str_n(p + 1, strlen(p) - 2));
+  if (p != buf) {
+    free(p);
+  }
 
   v7_disown(v7, &clubby_request_v);
   *res = v7_mk_boolean(v7, 1);
@@ -545,9 +511,6 @@ SJ_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 
 error:
-  if (ctx != NULL) {
-    ub_ctx_free(ctx);
-  }
   v7_disown(v7, &clubby_request_v);
   *res = v7_mk_boolean(v7, 0);
   return V7_OK;

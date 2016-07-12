@@ -11,18 +11,17 @@
 
 #include "frozen/frozen.h"
 #include "common/mg_str.h"
-#include "common/ubjserializer.h"
 #include "mongoose/mongoose.h"
 
-#if !defined(DISABLE_C_CLUBBY) && defined(CS_ENABLE_UBJSON)
+#ifndef DISABLE_C_CLUBBY
+
+#define CLUBBY_FRAME_VERSION 2
 
 /*
  * Here are low-level clubby functions and constants
  * They ARE NOT intended for using anywhere but `sj_clubby.c`
  * Use functions from 'sj_clubby.h` instead
  */
-
-extern const ub_val_t CLUBBY_UNDEFINED;
 
 enum clubby_event_type {
   CLUBBY_NET_CONNECT /* net_connect in `clubby_event` struct */,
@@ -61,26 +60,19 @@ struct clubby_event {
 
 typedef void (*clubby_proto_callback_t)(struct clubby_event *evt);
 
-ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
-                                        ub_val_t frame_proto, int64_t id,
-                                        const char *device_id,
-                                        const char *device_psk,
-                                        const struct mg_str dst);
+void clubby_proto_create_frame(struct mbuf *out, int64_t id,
+                               const char *device_id, const char *device_psk,
+                               const struct mg_str dst, const char *method,
+                               struct mg_str args, uint32_t timeout,
+                               time_t deadline);
 
-ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, int64_t id,
-                                   const char *device_id,
-                                   const char *device_psk,
-                                   const struct mg_str dst, const char *method,
-                                   ub_val_t args, uint32_t timeout,
-                                   time_t deadline);
+void clubby_proto_create_resp(struct mbuf *out, int64_t id,
+                              const char *device_id, const char *device_psk,
+                              const struct mg_str dst,
+                              const struct mg_str result,
+                              const struct mg_str error);
 
-ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
-                                  const char *device_psk,
-                                  const struct mg_str dst, int64_t id,
-                                  ub_val_t result, ub_val_t error);
-
-void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
-                       ub_val_t frame);
+void clubby_proto_send(struct mg_connection *nc, const struct mg_str str);
 
 void clubby_proto_init(clubby_proto_callback_t cb);
 
@@ -93,6 +85,9 @@ void clubby_proto_disconnect(struct mg_connection *nc);
 int clubby_proto_is_connected(struct mg_connection *nc);
 
 int64_t clubby_proto_get_new_id();
+
+void clubby_add_kv_to_frame(struct mbuf *buf, const char *title,
+                            const struct mg_str str, int quote);
 
 #endif /* DISABLE_C_CLUBBY */
 

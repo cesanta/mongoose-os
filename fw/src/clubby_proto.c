@@ -6,17 +6,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "common/json_utils.h"
 #include "fw/src/clubby_proto.h"
 #include "fw/src/device_config.h"
-#include "common/ubjserializer.h"
 
 #ifndef DISABLE_C_CLUBBY
 
 #define WS_PROTOCOL "clubby.cesanta.com"
 #define MG_F_WS_FRAGMENTED MG_F_USER_6
 #define MG_F_CLUBBY_CONNECTED MG_F_USER_5
-
-const ub_val_t CLUBBY_UNDEFINED = {.kind = UBJSON_TYPE_UNDEFINED};
 
 /* Dispatcher callback */
 static clubby_proto_callback_t s_clubby_cb;
@@ -62,10 +60,9 @@ struct mg_connection *clubby_proto_connect(
   (void) ssl_client_cert_file;
 #endif
 
-  struct mg_connection *nc =
-      mg_connect_ws_opt(mgr, clubby_proto_handler, opts, server_address,
-                        WS_PROTOCOL, "Sec-WebSocket-Extensions: " WS_PROTOCOL
-                                     "-encoding; in=json; out=ubjson\r\n");
+  struct mg_connection *nc = mg_connect_ws_opt(
+      mgr, clubby_proto_handler, opts, server_address, WS_PROTOCOL, NULL);
+
   if (nc == NULL) {
     LOG(LL_DEBUG, ("Cannot connect to %s", server_address));
     struct clubby_event evt;
@@ -87,105 +84,75 @@ void clubby_proto_disconnect(struct mg_connection *nc) {
   }
 }
 
-/*
- * Sends and encoded chunk with a websocket fragment.
- * Mongoose WS API for sending fragmenting is quite low level, so we have to do
- * our own
- * bookkeeping. TODO(mkm): consider moving to Mongoose.
- */
-static void clubby_proto_ws_emit(char *d, size_t l, int end, void *user_data) {
-  struct mg_connection *nc = (struct mg_connection *) user_data;
-
-  if (!clubby_proto_is_connected(nc)) {
-    /*
-     * Not trying to reconect here,
-     * It should be done before calling clubby_proto_ws_emit
-     */
-    LOG(LL_ERROR, ("Clubby is not connected"));
-    return;
+void clubby_add_kv_to_frame(struct mbuf *buf, const char *title,
+                            const struct mg_str str, int quote) {
+  mbuf_append(buf, ", ", 2);
+  if (title != NULL) {
+    mbuf_append(buf, "\"", 1);
+    mbuf_append(buf, title, strlen(title));
+    mbuf_append(buf, "\":", 2);
   }
 
-  int flags = end ? 0 : WEBSOCKET_DONT_FIN;
-  int op = nc->flags & MG_F_WS_FRAGMENTED ? WEBSOCKET_OP_CONTINUE
-                                          : WEBSOCKET_OP_BINARY;
-  if (!end) {
-    nc->flags |= MG_F_WS_FRAGMENTED;
-  } else {
-    nc->flags &= ~MG_F_WS_FRAGMENTED;
-  }
-
-  LOG(LL_DEBUG, ("sending websocket frame flags=%x", op | flags));
-
-  mg_send_websocket_frame(nc, op | flags, d, l);
+  sj_json_emit_str(buf, str, quote);
 }
 
-ub_val_t clubby_proto_create_frame_base(struct ub_ctx *ctx,
-                                        ub_val_t frame_proto, int64_t id,
-                                        const char *device_id,
-                                        const char *device_psk,
-                                        const struct mg_str dst) {
-  ub_val_t ret;
-  if (frame_proto.kind == UBJSON_TYPE_UNDEFINED) {
-    ret = ub_create_object(ctx);
-  } else {
-    ret = frame_proto;
-  }
+void clubby_proto_create_resp(struct mbuf *out, int64_t id,
+                              const char *device_id, const char *device_psk,
+                              const struct mg_str dst,
+                              const struct mg_str result,
+                              const struct mg_str error) {
+  struct json_out js_out = JSON_OUT_MBUF(out);
 
-  ub_add_prop(ctx, ret, "v", ub_create_number(2));
-  ub_add_prop(ctx, ret, "src", ub_create_cstring(ctx, device_id));
-  ub_add_prop(ctx, ret, "key", ub_create_cstring(ctx, device_psk));
+  json_printf(&js_out, "{v: %d, id: %lld, src: %Q, key: %Q",
+              CLUBBY_FRAME_VERSION, id, device_id, device_psk);
+
   if (dst.len != 0) {
-    ub_add_prop(ctx, ret, "dst", ub_create_string(ctx, dst));
+    clubby_add_kv_to_frame(out, "dst", dst, 1);
   }
-  ub_add_prop(ctx, ret, "id", ub_create_number(id));
-  return ret;
+
+  if (result.len != 0) {
+    clubby_add_kv_to_frame(out, "result", result, 0);
+  }
+
+  if (error.len != 0) {
+    clubby_add_kv_to_frame(out, "error", error, 0);
+  }
+
+  mbuf_append(out, "}", 1);
 }
 
-ub_val_t clubby_proto_create_resp(struct ub_ctx *ctx, const char *device_id,
-                                  const char *device_psk,
-                                  const struct mg_str dst, int64_t id,
-                                  ub_val_t result, ub_val_t error) {
-  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED, id,
-                                                  device_id, device_psk, dst);
-  if (result.kind != UBJSON_TYPE_UNDEFINED) {
-    ub_add_prop(ctx, frame, "result", result);
+void clubby_proto_create_frame(struct mbuf *out, int64_t id,
+                               const char *device_id, const char *device_psk,
+                               const struct mg_str dst, const char *method,
+                               const struct mg_str args, uint32_t timeout,
+                               time_t deadline) {
+  struct json_out js_out = JSON_OUT_MBUF(out);
+
+  json_printf(&js_out, "{v: %d, id: %lld, src: %Q, key: %Q, method: %Q",
+              CLUBBY_FRAME_VERSION, id, device_id, device_psk, method);
+
+  if (dst.len != 0) {
+    clubby_add_kv_to_frame(out, "dst", dst, 1);
   }
 
-  if (error.kind != UBJSON_TYPE_UNDEFINED) {
-    ub_add_prop(ctx, frame, "error", error);
-  }
-
-  return frame;
-}
-
-ub_val_t clubby_proto_create_frame(struct ub_ctx *ctx, int64_t id,
-                                   const char *device_id,
-                                   const char *device_psk,
-                                   const struct mg_str dst, const char *method,
-                                   ub_val_t args, uint32_t timeout,
-                                   time_t deadline) {
-  ub_val_t frame = clubby_proto_create_frame_base(ctx, CLUBBY_UNDEFINED, id,
-                                                  device_id, device_psk, dst);
-  ub_add_prop(ctx, frame, "method", ub_create_cstring(ctx, method));
-
-  if (args.kind != UBJSON_TYPE_UNDEFINED) {
-    ub_add_prop(ctx, frame, "args", args);
+  if (args.len != 0) {
+    clubby_add_kv_to_frame(out, "args", args, 0);
   }
 
   if (timeout != 0) {
-    ub_add_prop(ctx, frame, "timeout", ub_create_number(timeout));
+    json_printf(&js_out, ", timeout: %d", timeout);
   }
 
   if (deadline != 0) {
-    ub_add_prop(ctx, frame, "deadline", ub_create_number(deadline));
+    json_printf(&js_out, ", deadline: %d", deadline);
   }
 
-  return frame;
+  mbuf_append(out, "}", 1);
 }
 
-void clubby_proto_send(struct mg_connection *nc, struct ub_ctx *ctx,
-                       ub_val_t frame) {
-  ub_render(ctx, frame, clubby_proto_ws_emit, nc);
+void clubby_proto_send(struct mg_connection *nc, const struct mg_str str) {
+  LOG(LL_DEBUG, ("Sending frame: %.*s", (int) str.len, str.p))
+  mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, str.p, str.len);
 }
 
 static void clubby_proto_parse_resp(struct json_token *result_tok,

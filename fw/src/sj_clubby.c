@@ -3,6 +3,7 @@
  * All rights reserved
  */
 
+#include "common/json_utils.h"
 #include "fw/src/clubby_proto.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_common.h"
@@ -32,8 +33,7 @@ struct clubby_cb_info {
 };
 
 struct queued_frame {
-  struct ub_ctx *ctx;
-  ub_val_t cmd;
+  struct mg_str frame;
   int64_t id;
   struct queued_frame *next;
 };
@@ -265,16 +265,17 @@ static struct clubby_cb_info *find_cbinfo(struct clubby *clubby,
   return current;
 }
 
-static void enqueue_frame(struct clubby *clubby, struct ub_ctx *ctx, int64_t id,
-                          ub_val_t cmd) {
+static void enqueue_frame(struct clubby *clubby, int64_t id,
+                          struct mg_str frame) {
   /* TODO(alashkin): limit queue size! */
   struct queued_frame *qc = calloc(1, sizeof(*qc));
   if (qc == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return;
   }
-  qc->cmd = cmd;
-  qc->ctx = ctx;
+  qc->frame.len = frame.len;
+  qc->frame.p = malloc(frame.len);
+  memcpy((void *) qc->frame.p, frame.p, frame.len);
   qc->id = id;
 
   /* We have to put command to the tail */
@@ -351,23 +352,41 @@ static void clubby_hello_resp_callback(struct clubby_event *evt,
  * frame must be the whole clubbu command in ubjson
  * unserialized state
  */
-static void clubby_send_frame(struct clubby *clubby, struct ub_ctx *ctx,
-                              int64_t id, ub_val_t frame) {
+static void clubby_send_frame(struct clubby *clubby, int64_t id,
+                              struct mg_str frame) {
   if (sj_clubby_is_connected(clubby)) {
-    clubby_proto_send(clubby->nc, ctx, frame);
+    clubby_proto_send(clubby->nc, frame);
   } else {
     /* Here we revive clubby.js behavior */
     LOG(LL_DEBUG, ("Enqueueing frame"));
-    enqueue_frame(clubby, ctx, id, frame);
+    enqueue_frame(clubby, id, frame);
   }
 }
 
-void sj_clubby_send_request(struct clubby *clubby, struct ub_ctx *ctx,
-                            int64_t id, const struct mg_str dst,
-                            ub_val_t request) {
-  ub_val_t frame = clubby_proto_create_frame_base(
-      ctx, request, id, clubby->cfg.device_id, clubby->cfg.device_psk, dst);
-  clubby_send_frame(clubby, ctx, id, frame);
+/* frame = "a=2, b=3, v="fffffff" */
+void sj_clubby_send_request(struct clubby *clubby, int64_t id,
+                            const struct mg_str dst,
+                            const struct mg_str frame) {
+  struct mbuf frame_mbuf;
+  mbuf_init(&frame_mbuf, 200);
+  struct json_out frame_out = JSON_OUT_MBUF(&frame_mbuf);
+  json_printf(&frame_out, "{v: %d, id: %lld, src: %Q, key: %Q",
+              CLUBBY_FRAME_VERSION, id, clubby->cfg.device_id,
+              clubby->cfg.device_psk);
+
+  if (dst.len != 0) {
+    clubby_add_kv_to_frame(&frame_mbuf, "dst", dst, 1);
+  }
+
+  if (frame.len != 0) {
+    clubby_add_kv_to_frame(&frame_mbuf, NULL, frame, 0);
+  }
+
+  mbuf_append(&frame_mbuf, "}", 1);
+
+  clubby_send_frame(clubby, id, mg_mk_str_n(frame_mbuf.buf, frame_mbuf.len));
+
+  mbuf_free(&frame_mbuf);
 }
 
 int sj_clubby_can_send(clubby_handle_t handle) {
@@ -376,7 +395,6 @@ int sj_clubby_can_send(clubby_handle_t handle) {
 }
 
 void sj_clubby_send_hello(struct clubby *clubby) {
-  struct ub_ctx *ctx = ub_ctx_new();
   int64_t id = clubby_proto_get_new_id();
   sj_clubby_register_callback(clubby, (char *) &id, sizeof(id),
                               clubby_hello_resp_callback, NULL,
@@ -384,45 +402,47 @@ void sj_clubby_send_hello(struct clubby *clubby) {
 
   if (clubby_proto_is_connected(clubby->nc)) {
     /* We use /v1/Hello to check auth, so it cannot be queued  */
-    ub_val_t frame = clubby_proto_create_frame(
-        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, mg_mk_str(""),
-        "/v1/Hello", CLUBBY_UNDEFINED, clubby->cfg.request_timeout, 0);
-    clubby_proto_send(clubby->nc, ctx, frame);
+    char buf[100];
+    struct json_out hello = JSON_OUT_BUF(buf, sizeof(buf));
+    int len = json_printf(
+        &hello, "{v: %d, id: %lld, method: %Q, src: %Q, key: %Q}", 2, id,
+        "/v1/Hello", clubby->cfg.device_id, clubby->cfg.device_psk);
+    clubby_proto_send(clubby->nc, mg_mk_str_n(buf, len));
   } else {
     LOG(LL_ERROR, ("Clubby is disconnected"))
   }
 }
 
 static void clubby_send_labels(struct clubby *clubby) {
-  LOG(LL_DEBUG, ("Senging labels:"));
-  struct ub_ctx *ctx = ub_ctx_new();
+  LOG(LL_DEBUG, ("Sending labels:"));
 
-  ub_val_t args = ub_create_object(ctx);
-  ub_val_t labels = ub_create_object(ctx);
+  struct mbuf labels_mbuf;
+  mbuf_init(&labels_mbuf, 200);
+  struct json_out labels_out = JSON_OUT_MBUF(&labels_mbuf);
+
+  int64_t id = clubby_proto_get_new_id();
+
+  json_printf(&labels_out,
+              "{v: %d, id: %lld, method: %Q, src: %Q, "
+              "key: %Q, args:{ labels: {",
+              CLUBBY_FRAME_VERSION, id, "/v1/Label.Set", clubby->cfg.device_id,
+              clubby->cfg.device_psk);
+
   struct ro_var *rv;
+
   for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
-    ub_add_prop(ctx, labels, rv->name, ub_create_cstring(ctx, *rv->ptr));
+    json_printf(&labels_out, "%Q: %Q%s", rv->name, *rv->ptr,
+                rv->next != NULL ? "," : "}}}");
     LOG(LL_DEBUG, ("%s: %s", rv->name, *rv->ptr));
   }
 
-  ub_add_prop(ctx, args, "labels", labels);
+  clubby_proto_send(clubby->nc, mg_mk_str_n(labels_mbuf.buf, labels_mbuf.len));
 
-  ub_val_t ids = ub_create_array(ctx);
-  ub_array_push(ctx, ids, ub_create_cstring(ctx, clubby->cfg.device_id));
-
-  ub_add_prop(ctx, args, "ids", ids);
-
-  int64_t id = clubby_proto_get_new_id();
-  ub_val_t frame = clubby_proto_create_frame(
-      ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, mg_mk_str(""),
-      "/v1/Label.Set", args, clubby->cfg.request_timeout, 0);
-
-  /* We don't intrested in resp, so, using default resp handler */
-  clubby_send_frame(clubby, ctx, id, frame);
+  mbuf_free(&labels_mbuf);
 }
 
 int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
-                   struct ub_ctx *ctx, ub_val_t args, int enqueue,
+                   const struct mg_str args, int enqueue,
                    sj_clubby_callback_t cb, void *cb_userdata) {
   struct clubby *clubby = (struct clubby *) handle;
   int64_t id = clubby_proto_get_new_id();
@@ -432,17 +452,22 @@ int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
                                 cb_userdata, 0);
   }
 
+  struct mbuf req_mbuf;
+  mbuf_init(&req_mbuf, 200);
+  struct json_out req_out = JSON_OUT_MBUF(&req_mbuf);
+
   if (enqueue) {
-    ub_val_t request = ub_create_object(ctx);
-    ub_add_prop(ctx, request, "method", ub_create_cstring(ctx, method));
-    ub_add_prop(ctx, request, "args", args);
-    sj_clubby_send_request(clubby, ctx, id, mg_mk_str(dst), request);
+    json_printf(&req_out, "{method: %Q, args: %.*s}", method, args.len, args.p);
+    sj_clubby_send_request(clubby, id, mg_mk_str(dst),
+                           mg_mk_str_n(req_mbuf.buf, req_mbuf.len));
   } else {
-    ub_val_t frame = clubby_proto_create_frame(
-        ctx, id, clubby->cfg.device_id, clubby->cfg.device_psk, mg_mk_str(dst),
-        method, args, clubby->cfg.request_timeout, 0);
-    clubby_proto_send(clubby->nc, ctx, frame);
+    clubby_proto_create_frame(&req_mbuf, id, clubby->cfg.device_id,
+                              clubby->cfg.device_psk, mg_mk_str(dst), method,
+                              args, clubby->cfg.request_timeout, 0);
+    clubby_proto_send(clubby->nc, mg_mk_str_n(req_mbuf.buf, req_mbuf.len));
   }
+
+  mbuf_free(&req_mbuf);
 
   return 0;
 }
@@ -493,6 +518,7 @@ static void clubby_cb(struct clubby_event *evt) {
     case CLUBBY_AUTH_OK: {
       clubby->auth_ok = 1;
       LOG(LL_INFO, ("connected"));
+
       clubby_send_labels(clubby);
 
       /*
@@ -513,7 +539,8 @@ static void clubby_cb(struct clubby_event *evt) {
        */
       struct queued_frame *qc;
       while ((qc = pop_queued_frame(clubby)) != NULL) {
-        clubby_proto_send(clubby->nc, qc->ctx, qc->cmd);
+        clubby_proto_send(clubby->nc, qc->frame);
+        free((void *) qc->frame.p);
         free(qc);
       }
 
@@ -656,14 +683,14 @@ struct clubby_event *sj_clubby_create_reply(struct clubby_event *evt) {
   return repl;
 }
 
-ub_val_t sj_clubby_create_error(struct ub_ctx *ctx, int code, const char *msg) {
-  ub_val_t err = ub_create_object(ctx);
-  ub_add_prop(ctx, err, "code", ub_create_number(code));
+void sj_clubby_fill_error(struct json_out *out, int code, const char *msg) {
+  json_printf(out, "{code: %d", code);
+
   if (msg != NULL) {
-    ub_add_prop(ctx, err, "message", ub_create_cstring(ctx, msg));
+    json_printf(out, ", message: %Q", msg);
   }
 
-  return err;
+  json_printf(out, "%s", "}");
 }
 
 void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
@@ -672,19 +699,28 @@ void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
     LOG(LL_WARN, ("Unable to send clubby reply"));
     return;
   }
-  struct clubby *clubby = (struct clubby *) evt->context;
-  struct ub_ctx *ctx = ub_ctx_new();
 
-  ub_val_t error = CLUBBY_UNDEFINED;
+  struct clubby *clubby = (struct clubby *) evt->context;
+
+  struct mbuf error_mbuf;
+  mbuf_init(&error_mbuf, 200);
+  struct json_out error_out = JSON_OUT_MBUF(&error_mbuf);
 
   if (result_code != 0) {
-    error = sj_clubby_create_error(ctx, result_code, error_msg);
+    sj_clubby_fill_error(&error_out, result_code, error_msg);
   }
-  struct mg_str dst = {.p = evt->dst.ptr, .len = evt->dst.len};
-  clubby_proto_send(clubby->nc, ctx,
-                    clubby_proto_create_resp(ctx, clubby->cfg.device_id,
-                                             clubby->cfg.device_psk, dst,
-                                             evt->id, CLUBBY_UNDEFINED, error));
+
+  struct mbuf resp_mbuf;
+  mbuf_init(&resp_mbuf, 200);
+  clubby_proto_create_resp(
+      &resp_mbuf, evt->id, clubby->cfg.device_id, clubby->cfg.device_psk,
+      mg_mk_str_n(evt->dst.ptr, evt->dst.len), mg_mk_str(""),
+      mg_mk_str_n(error_mbuf.buf, error_mbuf.len));
+
+  clubby_proto_send(clubby->nc, mg_mk_str_n(resp_mbuf.buf, resp_mbuf.len));
+
+  mbuf_free(&error_mbuf);
+  mbuf_free(&resp_mbuf);
 }
 
 void sj_clubby_init() {
