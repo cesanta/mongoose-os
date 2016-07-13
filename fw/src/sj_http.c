@@ -49,10 +49,11 @@ struct user_data {
 #define HTTP_EVENT_CONNECTION "on_connection"
 #define HTTP_EVENT_ERROR "on_error"
 
-static v7_val_t sj_http_server_proto;
 static v7_val_t sj_http_response_proto;
 static v7_val_t sj_http_request_proto;
 
+#ifdef SJ_ENABLE_HTTP_SERVER
+static v7_val_t sj_http_server_proto;
 SJ_PRIVATE enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   v7_val_t cb = v7_arg(v7, 0);
@@ -68,6 +69,7 @@ SJ_PRIVATE enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
 clean:
   return rcode;
 }
+#endif
 
 static void setup_request_object(struct v7 *v7, v7_val_t request,
                                  struct http_message *hm) {
@@ -177,6 +179,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   }
 }
 
+#ifdef SJ_ENABLE_HTTP_SERVER
 static enum v7_err start_http_server(struct v7 *v7, const char *addr,
                                      v7_val_t obj, const char *ca_cert,
                                      const char *cert) {
@@ -217,6 +220,7 @@ static enum v7_err start_http_server(struct v7 *v7, const char *addr,
 clean:
   return rcode;
 }
+#endif /* SJ_ENABLE_HTTP_SERVER */
 
 /*
  * Parse URL; used for:
@@ -445,19 +449,6 @@ struct {
              MAKE_SERVE_HTTP_OPTS_MAPPING(cgi_interpreter),
              MAKE_SERVE_HTTP_OPTS_MAPPING(custom_mime_types)};
 
-static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
-                                           struct mg_serve_http_opts *opts) {
-  size_t i;
-  for (i = 0; i < ARRAY_SIZE(s_map); i++) {
-    v7_val_t v = v7_get(v7, obj, s_map[i].name, ~0);
-    if (v7_is_string(v)) {
-      size_t n;
-      const char *str = v7_get_string(v7, &v, &n);
-      *(char **) ((char *) opts + s_map[i].offset) = strdup(str);
-    }
-  }
-}
-
 /*
  * Serve static files.
  *
@@ -471,6 +462,20 @@ static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
  * For the full option object definition see:
  * https://docs.cesanta.com/mongoose/dev/index.html#/c-api/http.h/struct_mg_serve_http_opts/
  */
+#ifdef SJ_ENABLE_HTTP_SERVER
+static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
+                                           struct mg_serve_http_opts *opts) {
+  size_t i;
+  for (i = 0; i < ARRAY_SIZE(s_map); i++) {
+    v7_val_t v = v7_get(v7, obj, s_map[i].name, ~0);
+    if (v7_is_string(v)) {
+      size_t n;
+      const char *str = v7_get_string(v7, &v, &n);
+      *(char **) ((char *) opts + s_map[i].offset) = strdup(str);
+    }
+  }
+}
+
 SJ_PRIVATE enum v7_err Http_response_serve(struct v7 *v7, v7_val_t *res) {
   struct mg_serve_http_opts opts;
   struct http_message hm;
@@ -562,17 +567,6 @@ clean:
   return rcode;
 }
 
-SJ_PRIVATE enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-  DECLARE_CONN();
-
-  Http_write_data(v7, c);
-  *res = v7_get_this(v7);
-
-clean:
-  return rcode;
-}
-
 SJ_PRIVATE enum v7_err Http_Server_destroy(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
   struct mg_connection *i = NULL;
@@ -589,6 +583,18 @@ SJ_PRIVATE enum v7_err Http_Server_destroy(struct v7 *v7, v7_val_t *res) {
   c->flags |= MG_F_CLOSE_IMMEDIATELY;
 
   *res = v7_mk_boolean(v7, 1);
+clean:
+  return rcode;
+}
+#endif /* SJ_ENABLE_HTTP_SERVER */
+
+SJ_PRIVATE enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+  DECLARE_CONN();
+
+  Http_write_data(v7, c);
+  *res = v7_get_this(v7);
+
 clean:
   return rcode;
 }
@@ -827,7 +833,10 @@ void sj_http_api_setup(struct v7 *v7) {
   v7_val_t Http = V7_UNDEFINED;
   v7_val_t URL = V7_UNDEFINED;
 
+#ifdef SJ_ENABLE_HTTP_SERVER
   sj_http_server_proto = V7_UNDEFINED;
+  v7_own(v7, &sj_http_server_proto);
+#endif
   sj_http_response_proto = V7_UNDEFINED;
   sj_http_request_proto = V7_UNDEFINED;
 
@@ -839,35 +848,38 @@ void sj_http_api_setup(struct v7 *v7) {
    */
   v7_own(v7, &Http);
   v7_own(v7, &URL);
-  v7_own(v7, &sj_http_server_proto);
-  v7_own(v7, &sj_http_response_proto);
   v7_own(v7, &sj_http_request_proto);
+  v7_own(v7, &sj_http_response_proto);
 
-  sj_http_server_proto = v7_mk_object(v7);
   sj_http_response_proto = v7_mk_object(v7);
   sj_http_request_proto = v7_mk_object(v7);
 
   /* NOTE(lsm): setting Http to globals immediately to avoid gc-ing it */
   Http = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Http", ~0, Http);
-  v7_set(v7, Http, "_serv", ~0, sj_http_server_proto);
   v7_set(v7, Http, "_resp", ~0, sj_http_response_proto);
   v7_set(v7, Http, "_req", ~0, sj_http_request_proto);
 
-  v7_set_method(v7, Http, "createServer", Http_createServer);
   v7_set_method(v7, Http, "get", Http_get);
   v7_set_method(v7, Http, "request", Http_createClient);
 
+#ifdef SJ_ENABLE_HTTP_SERVER
+  sj_http_server_proto = v7_mk_object(v7);
   v7_set_method(v7, sj_http_server_proto, "listen", Http_Server_listen);
   v7_set_method(v7, sj_http_server_proto, "on", Http_on);
   v7_set_method(v7, sj_http_server_proto, "destroy", Http_Server_destroy);
+  v7_set_method(v7, Http, "createServer", Http_createServer);
+  v7_set(v7, Http, "_serv", ~0, sj_http_server_proto);
+#endif
 
   /* Initialize response prototype */
   v7_set_method(v7, sj_http_response_proto, "writeHead",
                 Http_response_writeHead);
   v7_set_method(v7, sj_http_response_proto, "write", Http_response_write);
   v7_set_method(v7, sj_http_response_proto, "end", Http_response_end);
+#ifdef SJ_ENABLE_HTTP_SERVER
   v7_set_method(v7, sj_http_response_proto, "serve", Http_response_serve);
+#endif
 
   /* Initialize request prototype */
   v7_set_method(v7, sj_http_request_proto, "write", Http_request_write);
@@ -883,7 +895,9 @@ void sj_http_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &sj_http_request_proto);
   v7_disown(v7, &sj_http_response_proto);
+#ifdef SJ_ENABLE_HTTP_SERVER
   v7_disown(v7, &sj_http_server_proto);
+#endif
   v7_disown(v7, &URL);
   v7_disown(v7, &Http);
 }
@@ -891,21 +905,22 @@ void sj_http_api_setup(struct v7 *v7) {
 void sj_http_init(struct v7 *v7) {
   v7_val_t Http = V7_UNDEFINED;
 
-  sj_http_server_proto = V7_UNDEFINED;
   sj_http_response_proto = V7_UNDEFINED;
   sj_http_request_proto = V7_UNDEFINED;
 
   /* own temporary Http var */
   v7_own(v7, &Http);
 
-  /* other values are owned forever */
+/* other values are owned forever */
+#ifdef SJ_ENABLE_HTTP_SERVER
+  sj_http_server_proto = v7_get(v7, Http, "_serv", ~0);
   v7_own(v7, &sj_http_server_proto);
+#endif
   v7_own(v7, &sj_http_response_proto);
   v7_own(v7, &sj_http_request_proto);
 
   Http = v7_get(v7, v7_get_global(v7), "Http", ~0);
 
-  sj_http_server_proto = v7_get(v7, Http, "_serv", ~0);
   sj_http_response_proto = v7_get(v7, Http, "_resp", ~0);
   sj_http_request_proto = v7_get(v7, Http, "_req", ~0);
 
