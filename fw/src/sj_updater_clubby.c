@@ -126,6 +126,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
               fclose(tmp_file);
               CONSOLE_LOG(LL_INFO, ("Update completed successfully"));
             }
+            updater_finish(ctx);
           }
         } else if (res < 0) {
           /* Error */
@@ -134,7 +135,6 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           notify_js(UJS_ERROR, NULL);
           sj_clubby_send_status_resp(s_clubby_reply, 1, ctx->status_msg);
         }
-        updater_finish(ctx);
         c->flags |= MG_F_CLOSE_IMMEDIATELY;
       }
       break;
@@ -158,8 +158,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           sj_clubby_free_reply(s_clubby_reply);
           s_clubby_reply = NULL;
         }
-
         updater_finish(ctx);
+        updater_context_free(ctx);
         c->user_data = NULL;
       }
 
