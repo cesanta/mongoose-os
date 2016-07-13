@@ -908,21 +908,19 @@ void sj_http_init(struct v7 *v7) {
   sj_http_response_proto = V7_UNDEFINED;
   sj_http_request_proto = V7_UNDEFINED;
 
+  Http = v7_get(v7, v7_get_global(v7), "Http", ~0);
   /* own temporary Http var */
   v7_own(v7, &Http);
 
-/* other values are owned forever */
+  /* other values are owned forever */
+  sj_http_response_proto = v7_get(v7, Http, "_resp", ~0);
+  v7_own(v7, &sj_http_response_proto);
+  sj_http_request_proto = v7_get(v7, Http, "_req", ~0);
+  v7_own(v7, &sj_http_request_proto);
 #ifdef SJ_ENABLE_HTTP_SERVER
   sj_http_server_proto = v7_get(v7, Http, "_serv", ~0);
   v7_own(v7, &sj_http_server_proto);
 #endif
-  v7_own(v7, &sj_http_response_proto);
-  v7_own(v7, &sj_http_request_proto);
-
-  Http = v7_get(v7, v7_get_global(v7), "Http", ~0);
-
-  sj_http_response_proto = v7_get(v7, Http, "_resp", ~0);
-  sj_http_request_proto = v7_get(v7, Http, "_req", ~0);
 
   v7_disown(v7, &Http);
 }
