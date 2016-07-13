@@ -20468,6 +20468,8 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
       char *b = buf;
       v7_val_t name = V7_UNDEFINED, val = V7_UNDEFINED;
       v7_prop_attr_t attrs = 0;
+      const char *pname;
+      size_t nlen;
       int ok = 0;
       struct prop_iter_ctx ctx;
       memset(&ctx, 0, sizeof(ctx));
@@ -20485,6 +20487,8 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
         } else if (attrs & (_V7_PROPERTY_HIDDEN | V7_PROPERTY_NON_ENUMERABLE)) {
           continue;
         }
+        pname = v7_get_string(v7, &name, &nlen);
+        V7_TRY(v7_get_throwing(v7, v, pname, nlen, &val));
         if (!is_debug && should_skip_for_json(val_type(v7, val))) {
           continue;
         }
