@@ -206,7 +206,7 @@ FW_PARTS = /sys/mcuimg.bin:type=boot,src=$(BOOT_BIN) \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
 
 ifneq "$(CC3200_SP_FILE)" ""
-FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),sign=$(CC3200_SP_FILE).sign \
+FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),sign=$(notdir $(CC3200_SP_FILE)).sign \
             $(notdir $(CC3200_SP_FILE)).sign:type=signature,src=$(CC3200_SP_FILE).sign
 endif
 
