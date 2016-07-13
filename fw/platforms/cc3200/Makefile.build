@@ -52,13 +52,8 @@ FS_PAGE_SIZE ?= 256
 FS_ERASE_SIZE ?= 4096
 
 # With safe code update, new code image is written to a different file on update
-# making it possible to safely revert tghe update. Why it defaults to false you
-# may ask? Because CC3200MOD only has 1 MB of SFLASH.
-# Without service pack, it fits, if only just about, but service pack with its
-# 66 blocks of usage (yes, 66) blows it out of the water.
-# It may be possible to enable safe updates by squeezing FS a little more.
-# 1 padded code image uses 60 blocks.
-CC3200_SAFE_CODE_UPDATE ?= 0
+# making it possible to safely revert the update.
+CC3200_SAFE_CODE_UPDATE ?= 1
 
 MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
