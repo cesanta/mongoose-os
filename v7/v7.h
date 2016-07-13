@@ -1613,8 +1613,9 @@ struct v7_property;
  * It should return non-zero if the property should be considered existing, or
  * zero otherwise.
  */
-typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t name,
-                                       v7_prop_attr_t *attrs, v7_val_t *value);
+typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t target,
+                                       v7_val_t name, v7_prop_attr_t *attrs,
+                                       v7_val_t *value);
 
 /* Handler for `v7_mk_proxy()`; each item is a cfunction */
 typedef struct {
