@@ -151,8 +151,8 @@ void clubby_proto_create_frame(struct mbuf *out, int64_t id,
 }
 
 void clubby_proto_send(struct mg_connection *nc, const struct mg_str str) {
-  LOG(LL_DEBUG, ("Sending frame: %.*s", (int) str.len, str.p))
   mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, str.p, str.len);
+  LOG(LL_DEBUG, ("SENT FRAME (%d): %.*s", (int) str.len, (int) str.len, str.p));
 }
 
 static void clubby_proto_parse_resp(struct json_token *result_tok,

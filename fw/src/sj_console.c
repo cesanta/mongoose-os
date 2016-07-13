@@ -63,7 +63,7 @@ clubby_handle_t console_get_current_clubby(struct v7 *v7) {
   }
 
   clubby_handle_t ret = sj_clubby_get_handle(v7, clubby_v);
-  LOG(LL_DEBUG, ("clubby handle: %p", ret));
+  LOG(LL_VERBOSE_DEBUG, ("clubby handle: %p", ret));
 
   return ret;
 }
