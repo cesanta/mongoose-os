@@ -402,12 +402,13 @@ void sj_clubby_send_hello(struct clubby *clubby) {
 
   if (clubby_proto_is_connected(clubby->nc)) {
     /* We use /v1/Hello to check auth, so it cannot be queued  */
-    char buf[100];
-    struct json_out hello = JSON_OUT_BUF(buf, sizeof(buf));
-    int len = json_printf(
-        &hello, "{v: %d, id: %lld, method: %Q, src: %Q, key: %Q}", 2, id,
-        "/v1/Hello", clubby->cfg.device_id, clubby->cfg.device_psk);
-    clubby_proto_send(clubby->nc, mg_mk_str_n(buf, len));
+    struct mbuf hello_mbuf;
+    mbuf_init(&hello_mbuf, 200);
+    struct json_out hello = JSON_OUT_MBUF(&hello_mbuf);
+    json_printf(&hello, "{v: %d, id: %lld, method: %Q, src: %Q, key: %Q}", 2,
+                id, "/v1/Hello", clubby->cfg.device_id, clubby->cfg.device_psk);
+    clubby_proto_send(clubby->nc, mg_mk_str_n(hello_mbuf.buf, hello_mbuf.len));
+    mbuf_free(&hello_mbuf);
   } else {
     LOG(LL_ERROR, ("Clubby is disconnected"))
   }
