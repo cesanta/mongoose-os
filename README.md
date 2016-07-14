@@ -1,12 +1,13 @@
 # Mongoose IoT Platform
 
-- [Mongoose IoT Overview](https://docs.cesanta.com/mongoose-iot/)
+- [Mongoose IoT Online IDE](https://mongoose-iot.com)
+- [Mongoose IoT Documentation](https://docs.cesanta.com/mongoose-iot/)
 - [Mongoose Flashing Tool download](https://github.com/cesanta/mft/releases/latest)
 
 # Support
 - [Support Forum - Ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
 - [Chat - Visit www.cesanta.com for our live chat] (https://www.cesanta.com/)
-- Commercial one-to-one support - Available to all commercial license holders
+- [Commercial one-to-one support](https://cesanta.com/contact) - Available to all commercial license holders
 
 
 # Licensing
