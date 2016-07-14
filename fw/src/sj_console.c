@@ -456,7 +456,7 @@ void sj_console_cloud_log(const char *fmt, ...) {
   static char *buf = NULL;
   static int buf_size = 0;
   if (buf == NULL) {
-#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON)
+#if !defined(CS_DISABLE_JS)
     buf_size = get_cfg()->console.mem_cache_size;
 #else
     buf_size = 256;
@@ -472,8 +472,7 @@ void sj_console_cloud_log(const char *fmt, ...) {
     len = buf_size;
   }
 
-#if !defined(CS_DISABLE_JS) && defined(CS_ENABLE_UBJSON) && \
-    !defined(DISABLE_C_CLUBBY)
+#if !defined(CS_DISABLE_JS) && !defined(DISABLE_C_CLUBBY)
   if (get_cfg()->console.send_to_cloud && s_v7 != NULL) {
     struct mbuf tmp;
     /*

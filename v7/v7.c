@@ -1010,53 +1010,6 @@ struct dirent *readdir(DIR *dir);
 
 #endif /* CS_COMMON_CS_DIRENT_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./common/ubjson.h"
-#endif
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CS_COMMON_UBJSON_H_
-#define CS_COMMON_UBJSON_H_
-
-/* Amalgamated: #include "common/mbuf.h" */
-/* Amalgamated: #include "common/platform.h" */
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-void cs_ubjson_emit_null(struct mbuf *buf);
-void cs_ubjson_emit_boolean(struct mbuf *buf, int v);
-
-void cs_ubjson_emit_int8(struct mbuf *buf, int8_t v);
-void cs_ubjson_emit_uint8(struct mbuf *buf, uint8_t v);
-void cs_ubjson_emit_int16(struct mbuf *buf, int16_t v);
-void cs_ubjson_emit_int32(struct mbuf *buf, int32_t v);
-void cs_ubjson_emit_int64(struct mbuf *buf, int64_t v);
-void cs_ubjson_emit_autoint(struct mbuf *buf, int64_t v);
-void cs_ubjson_emit_float32(struct mbuf *buf, float v);
-void cs_ubjson_emit_float64(struct mbuf *buf, double v);
-void cs_ubjson_emit_autonumber(struct mbuf *buf, double v);
-void cs_ubjson_emit_size(struct mbuf *buf, size_t v);
-void cs_ubjson_emit_string(struct mbuf *buf, const char *s, size_t len);
-void cs_ubjson_emit_bin_header(struct mbuf *buf, size_t len);
-void cs_ubjson_emit_bin(struct mbuf *buf, const char *s, size_t len);
-
-void cs_ubjson_open_object(struct mbuf *buf);
-void cs_ubjson_emit_object_key(struct mbuf *buf, const char *s, size_t len);
-void cs_ubjson_close_object(struct mbuf *buf);
-
-void cs_ubjson_open_array(struct mbuf *buf);
-void cs_ubjson_close_array(struct mbuf *buf);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* CS_COMMON_UBJSON_H_ */
-#ifdef V7_MODULE_LINES
 #line 1 "./common/cs_file.h"
 #endif
 /*
@@ -5059,416 +5012,6 @@ V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
 
 #endif /* CS_V7_SRC_CONVERSION_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/builtin/builtin.h"
-#endif
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-/*
- * === Non-Standard API
- *
- *   V7 has several non-standard extensions for `String.prototype` in
- *   order to give a compact and fast API to access raw data obtained from
- *   File, Socket, and hardware input/output such as I2C.
- *   V7 IO API functions return
- *   string data as a result of read operations, and that string data is a
- *   raw byte array. ECMA6 provides `ArrayBuffer` and `DataView` API for dealing
- *   with raw bytes, because strings in JavaScript are Unicode. That standard
- *   API is too bloated for the embedded use, and does not allow to use handy
- *   String API (e.g. `.match()`) against data.
- *
- *   V7 internally stores strings as byte arrays. All strings created by the
- *   String API are UTF8 encoded. Strings that are the result of
- *   input/output API calls might not be a valid UTF8 strings, but nevertheless
- *   they are represented as strings, and the following API allows to access
- *   underlying byte sequence:
- *
- * ==== String.prototype.at(position) -> number or NaN
- *      Return byte at index
- *     `position`. Byte value is in 0,255 range. If `position` is out of bounds
- *     (either negative or larger then the byte array length), NaN is returned.
- *     Example: `"ы".at(0)` returns 0xd1.
- *
- * ==== String.prototype.blen -> number
- *     Return string length in bytes.
- *     Example: `"ы".blen` returns 2. Note that `"ы".length` is 1, since that
- *     string consists of a single Unicode character (2-byte).
- *
- * === Builtin API
- *
- * Builtin API provides additional JavaScript interfaces available for V7
- * scripts.
- * File API is a wrapper around standard C calls `fopen()`, `fclose()`,
- * `fread()`, `fwrite()`, `rename()`, `remove()`.
- * Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
- * Socket API provides low-level socket API.
- *
- * ==== File.eval(file_name)
- * Parse and run `file_name`.
- * Throws an exception if the file doesn't exist, cannot be parsed or if the
- * script throws any exception.
- *
- * ==== File.read(file_name) -> string or undefined
- * Read file `file_name` and return a string with a file content.
- * On any error, return `undefined` as a result.
- *
- * ==== File.write(file_name, str) -> true or false
- * Write string `str` to a file `file_name`. Return `true` on success,
- * `false` on error.
- *
- * ==== File.open(file_name [, mode]) -> file_object or null
- * Open a file `path`. For
- * list of valid `mode` values, see `fopen()` documentation. If `mode` is
- * not specified, mode `rb` is used, i.e. file is opened in read-only mode.
- * Return an opened file object, or null on error. Example:
- * `var f = File.open('/etc/passwd'); f.close();`
- *
- * ==== file_obj.close() -> undefined
- * Close opened file object.
- * NOTE: it is user's responsibility to close all opened file streams. V7
- * does not do that automatically.
- *
- * ==== file_obj.read() -> string
- * Read portion of data from
- * an opened file stream. Return string with data, or empty string on EOF
- * or error.
- *
- * ==== file_obj.write(str) -> num_bytes_written
- * Write string `str` to the opened file object. Return number of bytes written.
- *
- * ==== File.rename(old_name, new_name) -> errno
- * Rename file `old_name` to
- * `new_name`. Return 0 on success, or `errno` value on error.
- *
- * ==== File.list(dir_name) -> array_of_names
- * Return a list of files in a given directory, or `undefined` on error.
- *
- * ==== File.remove(file_name) -> errno
- * Delete file `file_name`.
- * Return 0 on success, or `errno` value on error.
- *
- * ==== Crypto.base64_encode(str)
- * Base64-encode input string `str` and return encoded string.
- *
- * ==== Crypto.base64_decode(str)
- * Base64-decode input string `str` and return decoded string.
- *
- * ==== Crypto.md5(str), Crypto.md5_hex(str)
- * Generate MD5 hash from input string `str`. Return 16-byte hash (`md5()`),
- * or stringified hexadecimal representation of the hash (`md5_hex`).
- *
- * ==== Crypto.sha1(str), Crypto.sha1_hex(str)
- * Generate SHA1 hash from input string `str`. Return 20-byte hash (`sha1()`),
- * or stringified hexadecimal representation of the hash (`sha1_hex`).
- *
- * ==== Socket.connect(host, port [, is_udp]) -> socket_obj
- * Connect to a given host. `host` can be a string IP address, or a host name.
- * Optional `is_udp` parameter, if true, indicates that socket should be UDP.
- * Return socket object on success, null on error.
- *
- * ==== Socket.listen(port [, ip_address [,is_udp]]) -> socket_obj
- * Create a listening socket on a given port. Optional `ip_address` argument
- * specifies and IP address to bind to. Optional `is_udp` parameter, if true,
- * indicates that socket should be UDP. Return socket object on success,
- * null on error.
- *
- * ==== socket_obj.accept() -> socket_obj
- * Sleep until new incoming connection is arrived. Return accepted socket
- * object on success, or `null` on error.
- *
- * ==== socket_obj.close() -> numeric_errno
- * Close socket object. Return 0 on success, or system errno on error.
- *
- * ==== socket_obj.recv() -> string
- * Read data from socket. Return data string, or empty string if peer has
- * disconnected, or `null` on error.
- *
- * ==== socket_obj.recvAll() -> string
- * Same as `recv()`, but keeps reading data until socket is closed.
- *
- * ==== sock.send(string) -> num_bytes_sent
- * Send string to the socket. Return number of bytes sent, or 0 on error.
- * Simple HTTP client example:
- *
- *    var s = Socket.connect("google.com", 80);
- *    s.send("GET / HTTP/1.0\n\n");
- *    var reply = s.recv();
- */
-
-#ifndef CS_V7_BUILTIN_BUILTIN_H_
-#define CS_V7_BUILTIN_BUILTIN_H_
-
-struct v7;
-
-void init_file(struct v7 *);
-void init_socket(struct v7 *);
-void init_crypto(struct v7 *);
-void init_ubjson(struct v7 *);
-void init_ubjson(struct v7 *v7);
-
-#endif /* CS_V7_BUILTIN_BUILTIN_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/util_public.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-/*
- * === Utility functions
- */
-
-#ifndef CS_V7_SRC_UTIL_PUBLIC_H_
-#define CS_V7_SRC_UTIL_PUBLIC_H_
-
-/* Amalgamated: #include "v7/src/core_public.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/* Output a string representation of the value to stdout.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_print(struct v7 *v7, v7_val_t v);
-
-/* Output a string representation of the value to stdout followed by a newline.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_println(struct v7 *v7, v7_val_t v);
-
-/* Output a string representation of the value to a file.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
-
-/* Output a string representation of the value to a file followed by a newline.
- * V7_STRINGIFY_DEBUG mode is used. */
-void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
-
-/* Output stack trace recorded in the exception `e` to file `f` */
-void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
-
-/* Output error object message and possibly stack trace to f */
-void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
-
-#if V7_ENABLE__Proxy
-
-struct v7_property;
-
-/*
- * C callback, analogue of JS callback `getOwnPropertyDescriptor()`.
- * Callbacks of this type are used for C API only, see `m7_mk_proxy()`.
- *
- * `name` is the name of the property, and the function should fill `attrs` and
- * `value` with the property data. Before this callback is called, `attrs` is
- * set to 0, and `value` is `V7_UNDEFINED`.
- *
- * It should return non-zero if the property should be considered existing, or
- * zero otherwise.
- */
-typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t target,
-                                       v7_val_t name, v7_prop_attr_t *attrs,
-                                       v7_val_t *value);
-
-/* Handler for `v7_mk_proxy()`; each item is a cfunction */
-typedef struct {
-  v7_cfunction_t *get;
-  v7_cfunction_t *set;
-  v7_cfunction_t *own_keys;
-  v7_get_own_prop_desc_cb_t *get_own_prop_desc;
-} v7_proxy_hnd_t;
-
-/*
- * Create a Proxy object, see:
- * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Proxy
- *
- * Only two traps are implemented so far: `get()` and `set()`. Note that
- * `Object.defineProperty()` bypasses the `set()` trap.
- *
- * If `target` is not an object, the empty object will be used, so it's safe
- * to pass `V7_UNDEFINED` as `target`.
- */
-v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
-                     const v7_proxy_hnd_t *handler);
-
-#endif /* V7_ENABLE__Proxy */
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* CS_V7_SRC_UTIL_PUBLIC_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/util.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CS_V7_SRC_UTIL_H_
-#define CS_V7_SRC_UTIL_H_
-
-/* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/util_public.h" */
-
-struct bcode;
-
-V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
-
-#ifndef V7_DISABLE_LINE_NUMBERS
-V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b);
-#endif
-
-/*
- * At the moment, all other utility functions are public, and are declared in
- * `util_public.h`
- */
-
-#endif /* CS_V7_SRC_UTIL_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/function_public.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-/*
- * === Functions
- */
-
-#ifndef CS_V7_SRC_FUNCTION_PUBLIC_H_
-#define CS_V7_SRC_FUNCTION_PUBLIC_H_
-
-/* Amalgamated: #include "v7/src/core_public.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/*
- * Make a JS function object backed by a cfunction.
- *
- * `func` is a C callback.
- *
- * A function object is JS object having the Function prototype that holds a
- * cfunction value in a hidden property.
- *
- * The function object will have a `prototype` property holding an object that
- * will be used as the prototype of objects created when calling the function
- * with the `new` operator.
- */
-v7_val_t v7_mk_function(struct v7 *, v7_cfunction_t *func);
-
-/*
- * Make f a JS function with specified prototype `proto`, so that the resulting
- * function is better suited for the usage as a constructor.
- */
-v7_val_t v7_mk_function_with_proto(struct v7 *v7, v7_cfunction_t *f,
-                                   v7_val_t proto);
-
-/*
- * Make a JS value that holds C/C++ callback pointer.
- *
- * CAUTION: This is a low-level function value. It's not a real object and
- * cannot hold user defined properties. You should use `v7_mk_function` unless
- * you know what you're doing.
- */
-v7_val_t v7_mk_cfunction(v7_cfunction_t *func);
-
-/*
- * Returns true if given value is callable (i.e. it's either a JS function or
- * cfunction)
- */
-int v7_is_callable(struct v7 *v7, v7_val_t v);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* CS_V7_SRC_FUNCTION_PUBLIC_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/function.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CS_V7_SRC_FUNCTION_H_
-#define CS_V7_SRC_FUNCTION_H_
-
-/* Amalgamated: #include "v7/src/function_public.h" */
-
-/* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/core.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE struct v7_js_function *get_js_function_struct(val_t v);
-V7_PRIVATE val_t
-mk_js_function(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
-V7_PRIVATE int is_js_function(val_t v);
-V7_PRIVATE v7_val_t mk_cfunction_lite(v7_cfunction_t *f);
-
-/* Returns true if given value holds a pointer to C callback */
-V7_PRIVATE int is_cfunction_lite(v7_val_t v);
-
-/* Returns true if given value holds an object which represents C callback */
-V7_PRIVATE int is_cfunction_obj(struct v7 *v7, v7_val_t v);
-
-/*
- * Returns `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
- * if given value is neither cfunction pointer nor cfunction object.
- */
-V7_PRIVATE v7_cfunction_t *get_cfunction_ptr(struct v7 *v7, v7_val_t v);
-
-/*
- * Like v7_mk_function but also sets the function's `length` property.
- *
- * The `length` property is useful for introspection and the stdlib defines it
- * for many core functions mostly because the ECMA test suite requires it and we
- * don't want to skip otherwise useful tests just because the `length` property
- * check fails early in the test. User defined functions don't need to specify
- * the length and passing -1 is a safe choice, as it will also reduce the
- * footprint.
- *
- * The subtle difference between set `length` explicitly to 0 rather than
- * just defaulting the `0` value from the prototype is that in the former case
- * the property cannot be change since it's read only. This again, is important
- * only for ecma compliance and your user code might or might not find this
- * relevant.
- *
- * NODO(lsm): please don't combine v7_mk_function_arg and v7_mk_function
- * into one function. Currently `num_args` is useful only internally. External
- * users can just use `v7_def` to set the length.
- */
-V7_PRIVATE
-v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *func, int num_args);
-
-/*
- * Like v7_mk_function_with_proto but also sets the function's `length`
- *property.
- *
- * NODO(lsm): please don't combine mk_cfunction_obj_with_proto and
- * v7_mk_function_with_proto.
- * into one function. Currently `num_args` is useful only internally. External
- * users can just use `v7_def` to set the length.
- */
-V7_PRIVATE
-v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7, v7_cfunction_t *f,
-                                     int num_args, v7_val_t proto);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* CS_V7_SRC_FUNCTION_H_ */
-#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/varint.h"
 #endif
 /*
@@ -6395,6 +5938,265 @@ get_regexp_flags_str(struct v7 *v7, struct v7_regexp *rp, char *buf);
 
 #endif /* CS_V7_SRC_REGEXP_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "./v7/src/function_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Functions
+ */
+
+#ifndef CS_V7_SRC_FUNCTION_PUBLIC_H_
+#define CS_V7_SRC_FUNCTION_PUBLIC_H_
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Make a JS function object backed by a cfunction.
+ *
+ * `func` is a C callback.
+ *
+ * A function object is JS object having the Function prototype that holds a
+ * cfunction value in a hidden property.
+ *
+ * The function object will have a `prototype` property holding an object that
+ * will be used as the prototype of objects created when calling the function
+ * with the `new` operator.
+ */
+v7_val_t v7_mk_function(struct v7 *, v7_cfunction_t *func);
+
+/*
+ * Make f a JS function with specified prototype `proto`, so that the resulting
+ * function is better suited for the usage as a constructor.
+ */
+v7_val_t v7_mk_function_with_proto(struct v7 *v7, v7_cfunction_t *f,
+                                   v7_val_t proto);
+
+/*
+ * Make a JS value that holds C/C++ callback pointer.
+ *
+ * CAUTION: This is a low-level function value. It's not a real object and
+ * cannot hold user defined properties. You should use `v7_mk_function` unless
+ * you know what you're doing.
+ */
+v7_val_t v7_mk_cfunction(v7_cfunction_t *func);
+
+/*
+ * Returns true if given value is callable (i.e. it's either a JS function or
+ * cfunction)
+ */
+int v7_is_callable(struct v7 *v7, v7_val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* CS_V7_SRC_FUNCTION_PUBLIC_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/function.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_V7_SRC_FUNCTION_H_
+#define CS_V7_SRC_FUNCTION_H_
+
+/* Amalgamated: #include "v7/src/function_public.h" */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE struct v7_js_function *get_js_function_struct(val_t v);
+V7_PRIVATE val_t
+mk_js_function(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
+V7_PRIVATE int is_js_function(val_t v);
+V7_PRIVATE v7_val_t mk_cfunction_lite(v7_cfunction_t *f);
+
+/* Returns true if given value holds a pointer to C callback */
+V7_PRIVATE int is_cfunction_lite(v7_val_t v);
+
+/* Returns true if given value holds an object which represents C callback */
+V7_PRIVATE int is_cfunction_obj(struct v7 *v7, v7_val_t v);
+
+/*
+ * Returns `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
+ * if given value is neither cfunction pointer nor cfunction object.
+ */
+V7_PRIVATE v7_cfunction_t *get_cfunction_ptr(struct v7 *v7, v7_val_t v);
+
+/*
+ * Like v7_mk_function but also sets the function's `length` property.
+ *
+ * The `length` property is useful for introspection and the stdlib defines it
+ * for many core functions mostly because the ECMA test suite requires it and we
+ * don't want to skip otherwise useful tests just because the `length` property
+ * check fails early in the test. User defined functions don't need to specify
+ * the length and passing -1 is a safe choice, as it will also reduce the
+ * footprint.
+ *
+ * The subtle difference between set `length` explicitly to 0 rather than
+ * just defaulting the `0` value from the prototype is that in the former case
+ * the property cannot be change since it's read only. This again, is important
+ * only for ecma compliance and your user code might or might not find this
+ * relevant.
+ *
+ * NODO(lsm): please don't combine v7_mk_function_arg and v7_mk_function
+ * into one function. Currently `num_args` is useful only internally. External
+ * users can just use `v7_def` to set the length.
+ */
+V7_PRIVATE
+v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *func, int num_args);
+
+/*
+ * Like v7_mk_function_with_proto but also sets the function's `length`
+ *property.
+ *
+ * NODO(lsm): please don't combine mk_cfunction_obj_with_proto and
+ * v7_mk_function_with_proto.
+ * into one function. Currently `num_args` is useful only internally. External
+ * users can just use `v7_def` to set the length.
+ */
+V7_PRIVATE
+v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7, v7_cfunction_t *f,
+                                     int num_args, v7_val_t proto);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* CS_V7_SRC_FUNCTION_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/util_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Utility functions
+ */
+
+#ifndef CS_V7_SRC_UTIL_PUBLIC_H_
+#define CS_V7_SRC_UTIL_PUBLIC_H_
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/* Output a string representation of the value to stdout.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_print(struct v7 *v7, v7_val_t v);
+
+/* Output a string representation of the value to stdout followed by a newline.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_println(struct v7 *v7, v7_val_t v);
+
+/* Output a string representation of the value to a file.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
+
+/* Output a string representation of the value to a file followed by a newline.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
+
+/* Output stack trace recorded in the exception `e` to file `f` */
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
+
+/* Output error object message and possibly stack trace to f */
+void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
+
+#if V7_ENABLE__Proxy
+
+struct v7_property;
+
+/*
+ * C callback, analogue of JS callback `getOwnPropertyDescriptor()`.
+ * Callbacks of this type are used for C API only, see `m7_mk_proxy()`.
+ *
+ * `name` is the name of the property, and the function should fill `attrs` and
+ * `value` with the property data. Before this callback is called, `attrs` is
+ * set to 0, and `value` is `V7_UNDEFINED`.
+ *
+ * It should return non-zero if the property should be considered existing, or
+ * zero otherwise.
+ */
+typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t target,
+                                       v7_val_t name, v7_prop_attr_t *attrs,
+                                       v7_val_t *value);
+
+/* Handler for `v7_mk_proxy()`; each item is a cfunction */
+typedef struct {
+  v7_cfunction_t *get;
+  v7_cfunction_t *set;
+  v7_cfunction_t *own_keys;
+  v7_get_own_prop_desc_cb_t *get_own_prop_desc;
+} v7_proxy_hnd_t;
+
+/*
+ * Create a Proxy object, see:
+ * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+ *
+ * Only two traps are implemented so far: `get()` and `set()`. Note that
+ * `Object.defineProperty()` bypasses the `set()` trap.
+ *
+ * If `target` is not an object, the empty object will be used, so it's safe
+ * to pass `V7_UNDEFINED` as `target`.
+ */
+v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
+                     const v7_proxy_hnd_t *handler);
+
+#endif /* V7_ENABLE__Proxy */
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* CS_V7_SRC_UTIL_PUBLIC_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/util.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_V7_SRC_UTIL_H_
+#define CS_V7_SRC_UTIL_H_
+
+/* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/util_public.h" */
+
+struct bcode;
+
+V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
+
+#ifndef V7_DISABLE_LINE_NUMBERS
+V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b);
+#endif
+
+/*
+ * At the moment, all other utility functions are public, and are declared in
+ * `util_public.h`
+ */
+
+#endif /* CS_V7_SRC_UTIL_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/shdata.h"
 #endif
 /*
@@ -6589,6 +6391,155 @@ void v7_stack_stat_clean(struct v7 *v7);
 #endif /* V7_ENABLE_STACK_TRACKING */
 
 #endif /* CS_V7_SRC_CYG_PROFILE_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/builtin/builtin.h"
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Non-Standard API
+ *
+ *   V7 has several non-standard extensions for `String.prototype` in
+ *   order to give a compact and fast API to access raw data obtained from
+ *   File, Socket, and hardware input/output such as I2C.
+ *   V7 IO API functions return
+ *   string data as a result of read operations, and that string data is a
+ *   raw byte array. ECMA6 provides `ArrayBuffer` and `DataView` API for dealing
+ *   with raw bytes, because strings in JavaScript are Unicode. That standard
+ *   API is too bloated for the embedded use, and does not allow to use handy
+ *   String API (e.g. `.match()`) against data.
+ *
+ *   V7 internally stores strings as byte arrays. All strings created by the
+ *   String API are UTF8 encoded. Strings that are the result of
+ *   input/output API calls might not be a valid UTF8 strings, but nevertheless
+ *   they are represented as strings, and the following API allows to access
+ *   underlying byte sequence:
+ *
+ * ==== String.prototype.at(position) -> number or NaN
+ *      Return byte at index
+ *     `position`. Byte value is in 0,255 range. If `position` is out of bounds
+ *     (either negative or larger then the byte array length), NaN is returned.
+ *     Example: `"ы".at(0)` returns 0xd1.
+ *
+ * ==== String.prototype.blen -> number
+ *     Return string length in bytes.
+ *     Example: `"ы".blen` returns 2. Note that `"ы".length` is 1, since that
+ *     string consists of a single Unicode character (2-byte).
+ *
+ * === Builtin API
+ *
+ * Builtin API provides additional JavaScript interfaces available for V7
+ * scripts.
+ * File API is a wrapper around standard C calls `fopen()`, `fclose()`,
+ * `fread()`, `fwrite()`, `rename()`, `remove()`.
+ * Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
+ * Socket API provides low-level socket API.
+ *
+ * ==== File.eval(file_name)
+ * Parse and run `file_name`.
+ * Throws an exception if the file doesn't exist, cannot be parsed or if the
+ * script throws any exception.
+ *
+ * ==== File.read(file_name) -> string or undefined
+ * Read file `file_name` and return a string with a file content.
+ * On any error, return `undefined` as a result.
+ *
+ * ==== File.write(file_name, str) -> true or false
+ * Write string `str` to a file `file_name`. Return `true` on success,
+ * `false` on error.
+ *
+ * ==== File.open(file_name [, mode]) -> file_object or null
+ * Open a file `path`. For
+ * list of valid `mode` values, see `fopen()` documentation. If `mode` is
+ * not specified, mode `rb` is used, i.e. file is opened in read-only mode.
+ * Return an opened file object, or null on error. Example:
+ * `var f = File.open('/etc/passwd'); f.close();`
+ *
+ * ==== file_obj.close() -> undefined
+ * Close opened file object.
+ * NOTE: it is user's responsibility to close all opened file streams. V7
+ * does not do that automatically.
+ *
+ * ==== file_obj.read() -> string
+ * Read portion of data from
+ * an opened file stream. Return string with data, or empty string on EOF
+ * or error.
+ *
+ * ==== file_obj.write(str) -> num_bytes_written
+ * Write string `str` to the opened file object. Return number of bytes written.
+ *
+ * ==== File.rename(old_name, new_name) -> errno
+ * Rename file `old_name` to
+ * `new_name`. Return 0 on success, or `errno` value on error.
+ *
+ * ==== File.list(dir_name) -> array_of_names
+ * Return a list of files in a given directory, or `undefined` on error.
+ *
+ * ==== File.remove(file_name) -> errno
+ * Delete file `file_name`.
+ * Return 0 on success, or `errno` value on error.
+ *
+ * ==== Crypto.base64_encode(str)
+ * Base64-encode input string `str` and return encoded string.
+ *
+ * ==== Crypto.base64_decode(str)
+ * Base64-decode input string `str` and return decoded string.
+ *
+ * ==== Crypto.md5(str), Crypto.md5_hex(str)
+ * Generate MD5 hash from input string `str`. Return 16-byte hash (`md5()`),
+ * or stringified hexadecimal representation of the hash (`md5_hex`).
+ *
+ * ==== Crypto.sha1(str), Crypto.sha1_hex(str)
+ * Generate SHA1 hash from input string `str`. Return 20-byte hash (`sha1()`),
+ * or stringified hexadecimal representation of the hash (`sha1_hex`).
+ *
+ * ==== Socket.connect(host, port [, is_udp]) -> socket_obj
+ * Connect to a given host. `host` can be a string IP address, or a host name.
+ * Optional `is_udp` parameter, if true, indicates that socket should be UDP.
+ * Return socket object on success, null on error.
+ *
+ * ==== Socket.listen(port [, ip_address [,is_udp]]) -> socket_obj
+ * Create a listening socket on a given port. Optional `ip_address` argument
+ * specifies and IP address to bind to. Optional `is_udp` parameter, if true,
+ * indicates that socket should be UDP. Return socket object on success,
+ * null on error.
+ *
+ * ==== socket_obj.accept() -> socket_obj
+ * Sleep until new incoming connection is arrived. Return accepted socket
+ * object on success, or `null` on error.
+ *
+ * ==== socket_obj.close() -> numeric_errno
+ * Close socket object. Return 0 on success, or system errno on error.
+ *
+ * ==== socket_obj.recv() -> string
+ * Read data from socket. Return data string, or empty string if peer has
+ * disconnected, or `null` on error.
+ *
+ * ==== socket_obj.recvAll() -> string
+ * Same as `recv()`, but keeps reading data until socket is closed.
+ *
+ * ==== sock.send(string) -> num_bytes_sent
+ * Send string to the socket. Return number of bytes sent, or 0 on error.
+ * Simple HTTP client example:
+ *
+ *    var s = Socket.connect("google.com", 80);
+ *    s.send("GET / HTTP/1.0\n\n");
+ *    var reply = s.recv();
+ */
+
+#ifndef CS_V7_BUILTIN_BUILTIN_H_
+#define CS_V7_BUILTIN_BUILTIN_H_
+
+struct v7;
+
+void init_file(struct v7 *);
+void init_socket(struct v7 *);
+void init_crypto(struct v7 *);
+
+#endif /* CS_V7_BUILTIN_BUILTIN_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/slre.h"
 #endif
@@ -9753,174 +9704,6 @@ int mkdir(const char *path, mode_t mode) {
 /* ISO C requires a translation unit to contain at least one declaration */
 typedef int cs_dirent_dummy;
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/ubjson.c"
-#endif
-/*
- * Copyright (c) 2014-2016 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifdef CS_ENABLE_UBJSON
-
-/* Amalgamated: #include "common/ubjson.h" */
-
-void cs_ubjson_emit_null(struct mbuf *buf) {
-  mbuf_append(buf, "Z", 1);
-}
-
-void cs_ubjson_emit_boolean(struct mbuf *buf, int v) {
-  mbuf_append(buf, v ? "T" : "F", 1);
-}
-
-void cs_ubjson_emit_int8(struct mbuf *buf, int8_t v) {
-  mbuf_append(buf, "i", 1);
-  mbuf_append(buf, &v, 1);
-}
-
-void cs_ubjson_emit_uint8(struct mbuf *buf, uint8_t v) {
-  mbuf_append(buf, "U", 1);
-  mbuf_append(buf, &v, 1);
-}
-
-void cs_ubjson_emit_int16(struct mbuf *buf, int16_t v) {
-  uint8_t b[1 + sizeof(uint16_t)];
-  b[0] = 'I';
-  b[1] = ((uint16_t) v) >> 8;
-  b[2] = ((uint16_t) v) & 0xff;
-  mbuf_append(buf, b, 1 + sizeof(uint16_t));
-}
-
-static void encode_uint32(uint8_t *b, uint32_t v) {
-  b[0] = (v >> 24) & 0xff;
-  b[1] = (v >> 16) & 0xff;
-  b[2] = (v >> 8) & 0xff;
-  b[3] = v & 0xff;
-}
-
-void cs_ubjson_emit_int32(struct mbuf *buf, int32_t v) {
-  uint8_t b[1 + sizeof(uint32_t)];
-  b[0] = 'l';
-  encode_uint32(&b[1], (uint32_t) v);
-  mbuf_append(buf, b, 1 + sizeof(uint32_t));
-}
-
-static void encode_uint64(uint8_t *b, uint64_t v) {
-  b[0] = (v >> 56) & 0xff;
-  b[1] = (v >> 48) & 0xff;
-  b[2] = (v >> 40) & 0xff;
-  b[3] = (v >> 32) & 0xff;
-  b[4] = (v >> 24) & 0xff;
-  b[5] = (v >> 16) & 0xff;
-  b[6] = (v >> 8) & 0xff;
-  b[7] = v & 0xff;
-}
-
-void cs_ubjson_emit_int64(struct mbuf *buf, int64_t v) {
-  uint8_t b[1 + sizeof(uint64_t)];
-  b[0] = 'L';
-  encode_uint64(&b[1], (uint64_t) v);
-  mbuf_append(buf, b, 1 + sizeof(uint64_t));
-}
-
-void cs_ubjson_emit_autoint(struct mbuf *buf, int64_t v) {
-  if (v >= INT8_MIN && v <= INT8_MAX) {
-    cs_ubjson_emit_int8(buf, (int8_t) v);
-  } else if (v >= 0 && v <= 255) {
-    cs_ubjson_emit_uint8(buf, (uint8_t) v);
-  } else if (v >= INT16_MIN && v <= INT16_MAX) {
-    cs_ubjson_emit_int16(buf, (int32_t) v);
-  } else if (v >= INT32_MIN && v <= INT32_MAX) {
-    cs_ubjson_emit_int32(buf, (int32_t) v);
-  } else if (v >= INT64_MIN && v <= INT64_MAX) {
-    cs_ubjson_emit_int64(buf, (int64_t) v);
-  } else {
-    /* TODO(mkm): use "high-precision" stringified type */
-    abort();
-  }
-}
-
-void cs_ubjson_emit_float32(struct mbuf *buf, float v) {
-  uint32_t n;
-  uint8_t b[1 + sizeof(uint32_t)];
-  b[0] = 'd';
-  memcpy(&n, &v, sizeof(v));
-  encode_uint32(&b[1], n);
-  mbuf_append(buf, b, 1 + sizeof(uint32_t));
-}
-
-void cs_ubjson_emit_float64(struct mbuf *buf, double v) {
-  uint64_t n;
-  uint8_t b[1 + sizeof(uint64_t)];
-  b[0] = 'D';
-  memcpy(&n, &v, sizeof(v));
-  encode_uint64(&b[1], n);
-  mbuf_append(buf, b, 1 + sizeof(uint64_t));
-}
-
-void cs_ubjson_emit_autonumber(struct mbuf *buf, double v) {
-  int64_t i = (int64_t) v;
-  if ((double) i == v) {
-    cs_ubjson_emit_autoint(buf, i);
-  } else {
-    cs_ubjson_emit_float64(buf, v);
-  }
-}
-
-void cs_ubjson_emit_size(struct mbuf *buf, size_t v) {
-/* TODO(mkm): use "high-precision" stringified type */
-
-#if defined(INTPTR_MAX) && defined(INT32_MAX) && (INTPTR_MAX != INT32_MAX)
-  /*
-   * This assert expression is always true on 32-bit system,
-   * shutting up compiler
-   */
-  assert((uint64_t) v < INT64_MAX);
-#endif
-
-  cs_ubjson_emit_autoint(buf, (int64_t) v);
-}
-
-void cs_ubjson_emit_string(struct mbuf *buf, const char *s, size_t len) {
-  mbuf_append(buf, "S", 1);
-  cs_ubjson_emit_size(buf, len);
-  mbuf_append(buf, s, len);
-}
-
-void cs_ubjson_emit_bin_header(struct mbuf *buf, size_t len) {
-  mbuf_append(buf, "[$U#", 4);
-  cs_ubjson_emit_size(buf, len);
-}
-
-void cs_ubjson_emit_bin(struct mbuf *buf, const char *s, size_t len) {
-  cs_ubjson_emit_bin_header(buf, len);
-  mbuf_append(buf, s, len);
-}
-
-void cs_ubjson_open_object(struct mbuf *buf) {
-  mbuf_append(buf, "{", 1);
-}
-
-void cs_ubjson_emit_object_key(struct mbuf *buf, const char *s, size_t len) {
-  cs_ubjson_emit_size(buf, len);
-  mbuf_append(buf, s, len);
-}
-
-void cs_ubjson_close_object(struct mbuf *buf) {
-  mbuf_append(buf, "}", 1);
-}
-
-void cs_ubjson_open_array(struct mbuf *buf) {
-  mbuf_append(buf, "[", 1);
-}
-
-void cs_ubjson_close_array(struct mbuf *buf) {
-  mbuf_append(buf, "]", 1);
-}
-
-#else
-void cs_ubjson_dummy();
-#endif
-#ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/cs_file.c"
 #endif
 /*
@@ -11178,334 +10961,6 @@ void init_crypto(struct v7 *v7) {
   (void) v7;
 #endif
 }
-#ifdef V7_MODULE_LINES
-#line 1 "./src/../builtin/ubjson.c"
-#endif
-/*
- * Copyright (c) 2014-2016 Cesanta Software Limited
- * All rights reserved
- */
-
-/* Amalgamated: #include "v7/builtin/builtin.h" */
-
-#ifdef V7_ENABLE_UBJSON
-
-#include <string.h>
-#include <assert.h>
-
-/* Amalgamated: #include "common/ubjson.h" */
-
-/* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/object.h" */
-/* Amalgamated: #include "v7/src/array.h" */
-/* Amalgamated: #include "v7/src/primitive.h" */
-/* Amalgamated: #include "v7/src/string.h" */
-/* Amalgamated: #include "v7/src/util.h" */
-/* Amalgamated: #include "v7/src/exceptions.h" */
-/* Amalgamated: #include "v7/src/exec.h" */
-/* Amalgamated: #include "v7/src/function.h" */
-
-struct ubjson_ctx {
-  struct mbuf out;   /* output buffer */
-  struct mbuf stack; /* visit stack */
-  v7_val_t cb;       /* called to render data  */
-  v7_val_t errb;     /* called to finish; successo or rerror */
-  v7_val_t bin;      /* current Bin object */
-  size_t bytes_left; /* bytes left in current Bin generator */
-};
-
-struct visit {
-  v7_val_t obj;
-  union {
-    size_t next_idx;
-    struct prop_iter_ctx ctx;
-  } v;
-};
-
-static void _ubjson_call_cb(struct v7 *v7, struct ubjson_ctx *ctx) {
-  v7_val_t res, cb, args = v7_mk_array(v7);
-  v7_own(v7, &args);
-
-  if (ctx->out.buf == NULL) {
-    /* signal end of stream */
-    v7_array_push(v7, args, V7_UNDEFINED);
-    cb = ctx->errb;
-  } else if (ctx->out.len > 0) {
-    v7_array_push(v7, args, v7_mk_string(v7, ctx->out.buf, ctx->out.len, 1));
-    ctx->out.len = 0;
-    cb = ctx->cb;
-  } else {
-    /* avoid calling cb with no output */
-    goto cleanup;
-  }
-
-  if (v7_apply(v7, cb, V7_UNDEFINED, args, &res) != V7_OK) {
-    fprintf(stderr, "Got error while calling ubjson cb: ");
-    v7_fprintln(stderr, v7, res);
-  }
-
-cleanup:
-  v7_disown(v7, &args);
-}
-
-struct visit *push_visit(struct mbuf *stack, v7_val_t obj) {
-  struct visit *res;
-  size_t pos = stack->len;
-  mbuf_append(stack, NULL, sizeof(struct visit));
-  res = (struct visit *) (stack->buf + pos);
-  memset(res, 0, sizeof(struct visit));
-  res->obj = obj;
-  return res;
-}
-
-struct visit *cur_visit(struct mbuf *stack) {
-  if (stack->len == 0) return NULL;
-  return (struct visit *) (stack->buf + stack->len - sizeof(struct visit));
-}
-
-void pop_visit(struct mbuf *stack) {
-  stack->len -= sizeof(struct visit);
-}
-
-static struct ubjson_ctx *ubjson_ctx_new(struct v7 *v7, val_t cb, val_t errb) {
-  struct ubjson_ctx *ctx = (struct ubjson_ctx *) malloc(sizeof(*ctx));
-  mbuf_init(&ctx->out, 0);
-  mbuf_init(&ctx->stack, 0);
-  ctx->cb = cb;
-  ctx->errb = errb;
-  ctx->bin = V7_UNDEFINED;
-  v7_own(v7, &ctx->cb);
-  v7_own(v7, &ctx->errb);
-  v7_own(v7, &ctx->bin);
-  return ctx;
-}
-
-static void ubjson_ctx_free(struct v7 *v7, struct ubjson_ctx *ctx) {
-  /*
-   * Clear out reference to this context in case there is some lingering
-   * callback.
-   */
-  if (!v7_is_undefined(ctx->bin)) {
-    v7_set(v7, ctx->bin, "ctx", ~0, V7_UNDEFINED);
-  }
-  v7_disown(v7, &ctx->bin);
-  v7_disown(v7, &ctx->errb);
-  v7_disown(v7, &ctx->cb);
-  mbuf_free(&ctx->out);
-  mbuf_free(&ctx->stack);
-  free(ctx);
-}
-
-/* This will be called many time to advance rendering of an ubjson ctx */
-static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
-  enum v7_err rcode = V7_OK;
-  uint8_t fr = 1;
-  struct mbuf *buf = &ctx->out, *stack = &ctx->stack;
-  struct visit *cur;
-  v7_val_t gen_proto = v7_get(
-      v7, v7_get(v7, v7_get(v7, v7_get_global(v7), "UBJSON", ~0), "Bin", ~0),
-      "prototype", ~0);
-
-  if (ctx->out.len > 0) {
-    _ubjson_call_cb(v7, ctx);
-  }
-
-  for (cur = cur_visit(stack); cur != NULL; cur = cur_visit(stack)) {
-    v7_val_t obj = cur->obj;
-
-    if (v7_is_undefined(obj)) {
-      cs_ubjson_emit_null(buf);
-    } else if (v7_is_null(obj)) {
-      cs_ubjson_emit_null(buf);
-    } else if (v7_is_boolean(obj)) {
-      cs_ubjson_emit_boolean(buf, v7_get_bool(v7, obj));
-    } else if (v7_is_number(obj)) {
-      cs_ubjson_emit_autonumber(buf, v7_get_double(v7, obj));
-    } else if (v7_is_string(obj)) {
-      size_t n;
-      const char *s = v7_get_string(v7, &obj, &n);
-      cs_ubjson_emit_string(buf, s, n);
-    } else if (v7_is_array(v7, obj)) {
-      unsigned long cur_idx = cur->v.next_idx;
-
-      if (cur->v.next_idx == 0) {
-        cs_ubjson_open_array(buf);
-      }
-
-      cur->v.next_idx++;
-
-      if (cur->v.next_idx > v7_array_length(v7, cur->obj)) {
-        cs_ubjson_close_array(buf);
-      } else {
-        cur = push_visit(stack, v7_array_get(v7, obj, cur_idx));
-        /* skip default popping of visitor frame */
-        continue;
-      }
-    } else if (v7_is_object(obj)) {
-      size_t n;
-      int ok;
-      v7_val_t name;
-      const char *s;
-
-      if (obj_prototype_v(v7, obj) == gen_proto) {
-        ctx->bytes_left = v7_get_double(v7, v7_get(v7, obj, "size", ~0));
-        cs_ubjson_emit_bin_header(buf, ctx->bytes_left);
-        ctx->bin = obj;
-        v7_set(v7, obj, "ctx", ~0, v7_mk_foreign(v7, ctx));
-        pop_visit(stack);
-        rcode =
-            v7_apply(v7, v7_get(v7, obj, "user", ~0), obj, V7_UNDEFINED, NULL);
-        if (rcode != V7_OK) {
-          goto clean;
-        }
-
-        /*
-         * The user generator will reenter calling this function again with the
-         * same context.
-         */
-        fr = 0;
-        goto clean;
-      }
-
-      if (!cur->v.ctx.init) {
-        cs_ubjson_open_object(buf);
-        rcode = init_prop_iter_ctx(v7, obj, 1, &cur->v.ctx);
-        if (rcode != V7_OK) {
-          goto clean;
-        }
-      }
-
-      rcode = next_prop(v7, &cur->v.ctx, &name, NULL, NULL, &ok);
-      if (rcode != V7_OK) {
-        goto clean;
-      }
-
-      if (!ok) {
-        cs_ubjson_close_object(buf);
-        v7_destruct_prop_iter_ctx(v7, &cur->v.ctx);
-      } else {
-        v7_val_t tmp = V7_UNDEFINED;
-
-        s = v7_get_string(v7, &name, &n);
-        cs_ubjson_emit_object_key(buf, s, n);
-
-        rcode = v7_get_throwing_v(v7, obj, name, &tmp);
-        if (rcode != V7_OK) {
-          goto clean;
-        }
-
-        cur = push_visit(stack, tmp);
-        /* skip default popping of visitor frame */
-        continue;
-      }
-    } else {
-      fprintf(stderr, "ubsjon: unsupported object: ");
-      v7_fprintln(stderr, v7, obj);
-    }
-
-    pop_visit(stack);
-  }
-
-  if (ctx->out.len > 0) {
-    _ubjson_call_cb(v7, ctx);
-  }
-  _ubjson_call_cb(v7, ctx);
-
-clean:
-  if (fr) {
-    ubjson_ctx_free(v7, ctx);
-  }
-  return rcode;
-}
-
-WARN_UNUSED_RESULT
-static enum v7_err _ubjson_render(struct v7 *v7, struct ubjson_ctx *ctx,
-                                  v7_val_t root) {
-  push_visit(&ctx->stack, root);
-  return _ubjson_render_cont(v7, ctx);
-}
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err UBJSON_render(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-  v7_val_t obj = v7_arg(v7, 0), cb = v7_arg(v7, 1), errb = v7_arg(v7, 2);
-  (void) res;
-
-  struct ubjson_ctx *ctx = ubjson_ctx_new(v7, cb, errb);
-  rcode = _ubjson_render(v7, ctx, obj);
-  if (rcode != V7_OK) {
-    goto clean;
-  }
-
-clean:
-  return rcode;
-}
-
-V7_PRIVATE enum v7_err Bin_send(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-  struct ubjson_ctx *ctx;
-  size_t n;
-  v7_val_t arg;
-  val_t this_obj = v7_get_this(v7);
-  const char *s;
-
-  (void) res;
-
-  arg = v7_arg(v7, 0);
-  ctx = (struct ubjson_ctx *) v7_get_ptr(v7, v7_get(v7, this_obj, "ctx", ~0));
-  if (ctx == NULL) {
-    rcode = v7_throwf(v7, "Error", "UBJSON context closed\n");
-    goto clean;
-  }
-  s = v7_get_string(v7, &arg, &n);
-  if (n > ctx->bytes_left) {
-    n = ctx->bytes_left;
-  } else {
-    ctx->bytes_left -= n;
-  }
-  /*
-   * TODO(mkm):
-   * this is useless buffering, we should call ubjson cb directly
-   */
-  mbuf_append(&ctx->out, s, n);
-  _ubjson_call_cb(v7, ctx);
-
-  if (ctx->bytes_left == 0) {
-    _ubjson_render_cont(v7, ctx);
-  }
-
-clean:
-  return rcode;
-}
-
-V7_PRIVATE enum v7_err UBJSON_Bin(struct v7 *v7, v7_val_t *res) {
-  v7_val_t this_obj = v7_get_this(v7);
-
-  (void) res;
-
-  v7_set(v7, this_obj, "size", ~0, v7_arg(v7, 0));
-  v7_set(v7, this_obj, "user", ~0, v7_arg(v7, 1));
-
-  return V7_OK;
-}
-
-void init_ubjson(struct v7 *v7) {
-  v7_val_t gen_proto, ubjson;
-  ubjson = v7_mk_object(v7);
-  v7_set(v7, v7_get_global(v7), "UBJSON", 6, ubjson);
-  v7_set_method(v7, ubjson, "render", UBJSON_render);
-  gen_proto = v7_mk_object(v7);
-  v7_set(v7, ubjson, "Bin", ~0,
-         v7_mk_function_with_proto(v7, UBJSON_Bin, gen_proto));
-  v7_set_method(v7, gen_proto, "send", Bin_send);
-}
-
-#else
-void init_ubjson(struct v7 *v7) {
-  (void) v7;
-}
-#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/varint.c"
 #endif
@@ -16571,7 +16026,6 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     init_file(v7);
     init_crypto(v7);
     init_socket(v7);
-    init_ubjson(v7);
 #endif
 
     v7->inhibit_gc = 0;
