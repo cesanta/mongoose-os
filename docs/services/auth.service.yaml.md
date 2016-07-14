@@ -42,9 +42,9 @@ Authenticate returns true if `id` is verified to have valid credentials.
 
 Arguments:
 - `credentials`: Credentials presented by the entity. At least one of `psk` or `cert` must be present.
-- `id`: ID of an entity to authenticate.
+- `id`: ID of an entity to authenticate or a username.
 
-Result `boolean`: `true` if credentials are valid, `false` otherwise.
+Result `object`: `true` if credentials are valid, `false` otherwise.
 Request:
 ```json
 {
