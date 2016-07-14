@@ -17,8 +17,8 @@ static sock_t mg_open_listening_socket(union socket_address *sa, int type,
 #ifdef MG_ENABLE_SSL
 const char *mg_set_ssl2(struct mg_connection *nc, const char *cert,
                         const char *key, const char *ca_cert) {
-  DBG(("%p %s,%s,%s", nc, (cert ? cert : ""), (key ? key : ""),
-       (ca_cert ? ca_cert : "")));
+  DBG(("%p %s,%s,%s", nc, (cert ? cert : "-"), (key ? key : "-"),
+       (ca_cert ? ca_cert : "-")));
 
   if (nc->flags & MG_F_UDP) {
     return "SSL for UDP is not supported";
@@ -32,7 +32,9 @@ const char *mg_set_ssl2(struct mg_connection *nc, const char *cert,
       return "both cert and key are required";
     }
   }
-  if (ca_cert != NULL) nc->ssl_ca_cert = strdup(ca_cert);
+  if (ca_cert != NULL && strcmp(ca_cert, "*") != 0) {
+    nc->ssl_ca_cert = strdup(ca_cert);
+  }
 
   nc->flags |= MG_F_SSL;
 
@@ -41,10 +43,10 @@ const char *mg_set_ssl2(struct mg_connection *nc, const char *cert,
 
 int sl_set_ssl_opts(struct mg_connection *nc) {
   int err;
-  DBG(("%p %s,%s,%s,%s", nc, (nc->ssl_cert ? nc->ssl_cert : ""),
-       (nc->ssl_key ? nc->ssl_cert : ""),
-       (nc->ssl_ca_cert ? nc->ssl_ca_cert : ""),
-       (nc->ssl_server_name ? nc->ssl_server_name : "")));
+  DBG(("%p %s,%s,%s,%s", nc, (nc->ssl_cert ? nc->ssl_cert : "-"),
+       (nc->ssl_key ? nc->ssl_cert : "-"),
+       (nc->ssl_ca_cert ? nc->ssl_ca_cert : "-"),
+       (nc->ssl_server_name ? nc->ssl_server_name : "-")));
   if (nc->ssl_cert != NULL && nc->ssl_key != NULL) {
     err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
                         SL_SO_SECURE_FILES_CERTIFICATE_FILE_NAME, nc->ssl_cert,
@@ -106,8 +108,8 @@ void mg_if_connect_tcp(struct mg_connection *nc,
 #endif
   nc->err = sl_Connect(sock, &sa->sa, sizeof(sa->sin));
 out:
-  DBG(("%p to %s:%d sock %d err %d", nc, inet_ntoa(sa->sin.sin_addr),
-       ntohs(sa->sin.sin_port), nc->sock, nc->err));
+  DBG(("%p to %s:%d sock %d %d err %d", nc, inet_ntoa(sa->sin.sin_addr),
+       ntohs(sa->sin.sin_port), nc->sock, proto, nc->err));
 }
 
 void mg_if_connect_udp(struct mg_connection *nc) {
@@ -305,6 +307,7 @@ void mg_mgr_handle_conn(struct mg_connection *nc, int fd_flags, double now) {
        * which will now return the real status. */
       if (fd_flags & _MG_F_FD_CAN_WRITE) {
         nc->err = sl_Connect(nc->sock, &nc->sa.sa, sizeof(nc->sa.sin));
+        DBG(("%p conn res=%d", nc, nc->err));
         if (nc->err == SL_ESECSNOVERIFY ||
             /* TODO(rojer): Provide API to set the date for verification. */
             nc->err == SL_ESECDATEERROR) {

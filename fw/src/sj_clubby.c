@@ -594,8 +594,6 @@ static void clubby_cb(struct clubby_event *evt) {
 
 void sj_clubby_connect(struct clubby *clubby) {
   clubby->session_flags &= ~SF_MANUAL_DISCONNECT;
-  LOG(LL_INFO, ("%s, SSL? %d", clubby->cfg.server_address,
-                (clubby->cfg.ssl_ca_file != NULL)));
   struct mg_connection *nc = clubby_proto_connect(
       &sj_mgr, clubby->cfg.server_address, clubby->cfg.ssl_server_name,
       clubby->cfg.ssl_ca_file, clubby->cfg.ssl_client_cert_file, clubby);

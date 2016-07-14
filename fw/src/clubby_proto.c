@@ -34,7 +34,6 @@ int clubby_proto_is_connected(struct mg_connection *nc) {
 struct mg_connection *clubby_proto_connect(
     struct mg_mgr *mgr, const char *server_address, const char *ssl_server_name,
     const char *ssl_ca_file, const char *ssl_client_cert_file, void *context) {
-  LOG(LL_DEBUG, ("Connecting to %s", server_address));
   struct mg_connect_opts opts;
   memset(&opts, 0, sizeof(opts));
 
@@ -60,6 +59,8 @@ struct mg_connection *clubby_proto_connect(
   (void) ssl_client_cert_file;
 #endif
 
+  LOG(LL_INFO, ("Connecting to %s, SSL? %d", server_address,
+                (opts.ssl_ca_cert != NULL)));
   struct mg_connection *nc = mg_connect_ws_opt(
       mgr, clubby_proto_handler, opts, server_address, WS_PROTOCOL, NULL);
 

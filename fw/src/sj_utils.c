@@ -38,8 +38,22 @@ enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
   if ((force_ssl ||
        (v7_is_boolean(v_use_ssl) && v7_get_bool(v7, v_use_ssl) != 0)) &&
       copts->ssl_ca_cert == NULL) {
+#ifndef cc3200
     /* Defaults to configuration */
     copts->ssl_ca_cert = get_cfg()->tls.ca_file;
+#else
+/*
+ * SimpleLink only accepts one cert in DER format as a CA file so we can't
+ * use a pre-packaged bundle and expect it to work, sadly.
+ */
+#endif
+    if (copts->ssl_ca_cert == NULL) {
+      /*
+       * Schema requires SSL, but no SSL CA cert is present.
+       * Use a faux-SSL with no verification.
+       */
+      copts->ssl_ca_cert = "*";
+    }
   }
 
 clean:
