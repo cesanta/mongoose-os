@@ -105,6 +105,32 @@ static enum v7_err sj_conf_set(struct v7 *v7, v7_val_t *res) {
   return v7_throwf(v7, "TypeError", "Bad value");
 }
 
+static enum v7_err sj_conf_keys(struct v7 *v7, v7_val_t *res) {
+  v7_val_t obj = v7_arg(v7, 0);
+  const struct sj_conf_ctx *ctx =
+      (const struct sj_conf_ctx *) v7_get_user_data(v7, obj);
+  *res = v7_mk_array(v7);
+  int n = 0;
+  for (int i = 1; i <= ctx->schema->num_desc; i++) {
+    const struct sj_conf_entry *e = ctx->schema + i;
+    /* Note: do not copy prop names, these are all constants */
+    v7_array_set(v7, *res, n++, v7_mk_string(v7, e->key, ~0, 0 /* copy */));
+    if (e->type == CONF_TYPE_OBJECT) i += e->num_desc;
+  }
+  return V7_OK;
+}
+
+/* TODO(dfrank): Make this behavior a default. */
+static int sj_conf_desc(struct v7 *v7, v7_val_t target, v7_val_t name,
+                        v7_prop_attr_t *attrs, v7_val_t *value) {
+  (void) v7;
+  (void) target;
+  (void) name;
+  (void) attrs;
+  (void) value;
+  return 1; /* All properties always exist, we'll perform a check in .get(). */
+}
+
 v7_val_t sj_conf_mk_proxy(struct v7 *v7, const struct sj_conf_entry *schema,
                           void *cfg, v7_cfunction_t *save_handler) {
   v7_val_t proxy = V7_UNDEFINED;
@@ -113,6 +139,8 @@ v7_val_t sj_conf_mk_proxy(struct v7 *v7, const struct sj_conf_entry *schema,
 
   handler.get = sj_conf_get;
   handler.set = sj_conf_set;
+  handler.own_keys = sj_conf_keys;
+  handler.get_own_prop_desc = sj_conf_desc;
 
   v7_val_t obj = v7_mk_object(v7);
   v7_own(v7, &obj);

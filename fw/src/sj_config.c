@@ -44,6 +44,7 @@ const struct sj_conf_entry *sj_conf_find_schema_entry(
       if (e->type != CONF_TYPE_OBJECT) return NULL;
       return sj_conf_find_schema_entry(path + kl + 1, e);
     }
+    if (e->type == CONF_TYPE_OBJECT) i += e->num_desc;
   }
   return NULL;
 }
@@ -274,7 +275,7 @@ bool sj_conf_emit_f(const void *cfg, const void *base,
 }
 
 void sj_conf_free(const struct sj_conf_entry *schema, void *cfg) {
-  for (int i = 0; i <= schema->num_desc; i++) {
+  for (int i = 1; i <= schema->num_desc; i++) {
     const struct sj_conf_entry *e = schema + i;
     if (e->type == CONF_TYPE_STRING) {
       char **sp = ((char **) (((char *) cfg) + e->offset));
