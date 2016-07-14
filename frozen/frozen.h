@@ -52,15 +52,15 @@ struct json_token {
 #define JSON_STRING_INCOMPLETE -2
 
 /* Callback-based API */
-typedef void (*json_parse_callback_t)(void *callback_data, const char *path,
-                                      const struct json_token *token);
+typedef void (*json_walk_callback_t)(void *callback_data, const char *path,
+                                     const struct json_token *token);
 
 /*
  * Parse `json_string`, invoking `callback` function for each JSON token.
  * Return number of bytes processed
  */
-int json_parse(const char *json_string, int json_string_length,
-               json_parse_callback_t callback, void *callback_data);
+int json_walk(const char *json_string, int json_string_length,
+              json_walk_callback_t callback, void *callback_data);
 
 /*
  * JSON generation API.

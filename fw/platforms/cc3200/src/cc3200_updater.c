@@ -12,15 +12,15 @@
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
-#include "fw/src/device_config.h"
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_updater_hal.h"
-#include "fw/src/sj_updater_util.h"
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
+#include "fw/src/device_config.h"
+#include "fw/src/sj_hal.h"
+#include "fw/src/sj_updater_hal.h"
+#include "fw/src/sj_updater_util.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -184,7 +184,7 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
   enum sj_upd_file_action ret = SJ_UPDATER_SKIP_FILE;
   struct find_part_info find_part_info = {fi->name, &part_name, &ctx->cur_part};
   ctx->cur_part.len = part_name.len = 0;
-  json_parse(ctx->parts->ptr, ctx->parts->len, find_part, &find_part_info);
+  json_walk(ctx->parts->ptr, ctx->parts->len, find_part, &find_part_info);
   if (ctx->cur_part.len == 0) return ret;
   /* Drop any indexes from part name, we'll add our own. */
   while (1) {

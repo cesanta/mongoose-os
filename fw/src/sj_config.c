@@ -121,7 +121,7 @@ bool sj_conf_parse(const struct mg_str json, const char *acl,
                    const struct sj_conf_entry *schema, void *cfg) {
   struct parse_ctx ctx = {
       .schema = schema, .acl = acl, .cfg = cfg, .result = true};
-  return (json_parse(json.p, json.len, sj_conf_parse_cb, &ctx) >= 0 &&
+  return (json_walk(json.p, json.len, sj_conf_parse_cb, &ctx) >= 0 &&
           ctx.result == true);
 }
 

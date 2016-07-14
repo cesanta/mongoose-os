@@ -9,14 +9,14 @@
 #include <strings.h>
 #include <user_interface.h>
 
-#include "common/queue.h"
-#include "common/spiffs/spiffs.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
+#include "common/queue.h"
+#include "common/spiffs/spiffs.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/src/device_config.h"
-#include "fw/src/sj_hal.h"
 #include "fw/src/sj_console.h"
+#include "fw/src/sj_hal.h"
 #include "fw/src/sj_updater_clubby.h"
 #include "fw/src/sj_updater_hal.h"
 #include "fw/src/sj_updater_util.h"
@@ -214,7 +214,7 @@ static int fill_dir_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
 
   strcpy(pi->files.dir_name, part_name);
 
-  if (json_parse(src_tok.ptr, src_tok.len, fs_dir_parse_cb, pi) <= 0) {
+  if (json_walk(src_tok.ptr, src_tok.len, fs_dir_parse_cb, pi) <= 0) {
     LOG(LL_ERROR, ("Malformed manifest"));
     return -1;
   }

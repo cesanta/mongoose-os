@@ -72,7 +72,7 @@ struct frozen {
   char path[JSON_MAX_PATH_LEN];
   int path_len;
   void *callback_data;
-  json_parse_callback_t callback;
+  json_walk_callback_t callback;
 };
 
 struct fstate {
@@ -599,8 +599,8 @@ int cs_win_snprintf(char *str, size_t size, const char *format, ...) {
 }
 #endif /* _WIN32 */
 
-int json_parse(const char *json_string, int json_string_length,
-               json_parse_callback_t callback, void *callback_data) {
+int json_walk(const char *json_string, int json_string_length,
+              json_walk_callback_t callback, void *callback_data) {
   struct frozen frozen;
 
   memset(&frozen, 0, sizeof(frozen));
@@ -633,7 +633,7 @@ int json_scanf_array_elem(const char *s, int len, const char *path, int idx,
   info.token = token;
   memset(token, 0, sizeof(*token));
   snprintf(info.path, sizeof(info.path), "%s[%d]", path, idx);
-  json_parse(s, len, json_scanf_array_elem_cb, &info);
+  json_walk(s, len, json_scanf_array_elem_cb, &info);
   return token->len;
 }
 
@@ -720,7 +720,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
           break;
         }
       }
-      json_parse(s, len, json_scanf_cb, &info);
+      json_walk(s, len, json_scanf_cb, &info);
     } else if (is_alpha(fmt[i]) || get_utf8_char_len(fmt[i]) > 1) {
       const char *delims = ": \r\n\t";
       int key_len = strcspn(&fmt[i], delims);
