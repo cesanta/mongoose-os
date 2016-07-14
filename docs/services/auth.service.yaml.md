@@ -44,7 +44,7 @@ Arguments:
 - `credentials`: Credentials presented by the entity. At least one of `psk` or `cert` must be present.
 - `id`: ID of an entity to authenticate or a username.
 
-Result `object`: `true` if credentials are valid, `false` otherwise.
+Result `object`: success: `true` if credentials are valid, `false` otherwise. id: effective user id; useful when the authenticating via username
 Request:
 ```json
 {
