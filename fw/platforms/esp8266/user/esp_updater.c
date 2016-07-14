@@ -198,13 +198,17 @@ static int fill_dir_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
                               const char *part_name, struct part_info *pi) {
   (void) ctx;
   pi->type = ptFILES;
-  LOG(LL_DEBUG, ("Parsing fs_dir"));
 
   struct json_token src_tok = JSON_INVALID_TOKEN;
   json_scanf(tok->ptr, tok->len, "{src: %T}", &src_tok);
 
   if (src_tok.type == JSON_TYPE_INVALID) {
-    LOG(LL_ERROR, ("Malformed manifest"));
+    LOG(LL_DEBUG, ("No fs_dir section in this manifest"));
+    /*
+     * Do not log error here, sections are optional, in general,
+     * If this specific section was mandatory it will be reported on
+     * higher level
+     */
     return -1;
   }
 
