@@ -16,6 +16,8 @@ struct v7 *v7;
 #include "v7/v7.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
 #include "fw/src/sj_v7_ext.h"
+#include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
+#include "common/cs_dbg.h"
 
 /*
  * dsleep(time_us[, option])
@@ -67,6 +69,22 @@ static enum v7_err crash(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
+/*
+ * Returns 0 if current rom = previous, 1 otherwise. Debug only function.
+ * (PS: it is hard to store on/remove from flash something during
+ * upgrade test, because upgrader brings it back)
+ * After flashing it will be 0/0, fater upgrade 0/1, 1/0 etc
+ * TODO(alashkin): add a way to detect failed update etc
+ */
+static enum v7_err is_rboot_updated(struct v7 *v7, v7_val_t *res) {
+  rboot_config cfg = rboot_get_config();
+  int current = cfg.current_rom;
+  int prev = cfg.previous_rom;
+  LOG(LL_DEBUG, ("Current ROM: %d, Prev: %d", current, prev));
+  *res = v7_mk_boolean(v7, current != prev);
+  return V7_OK;
+}
+
 void init_v7(void *stack_base) {
   struct v7_create_opts opts;
 
@@ -84,6 +102,7 @@ void init_v7(void *stack_base) {
 
   v7_set_method(v7, v7_get_global(v7), "dsleep", dsleep);
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
+  v7_set_method(v7, v7_get_global(v7), "is_rboot_updated", is_rboot_updated);
 }
 
 #ifndef V7_NO_FS
