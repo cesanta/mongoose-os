@@ -8,7 +8,7 @@ items:
   - { name: send-mqtt.md }
 ---
 
-Firmware boot process executes `sys_init.js` file, which in turn executes
-`app.js` file. The `app.js` file is empty by default, and it is supposed to
-have custom device logic. Use Firmware JS API (below) section to see what
-API is available to the firmware. Few examples are below.
+The firmware boot process executes `sys_init.js` file, which in turn executes the
+`app.js` file. The `app.js` file is empty by default and it is supposed to
+have custom device logic. Use the Firmware JS API (section below) to see what
+API is available to the firmware. A few examples are shown below.

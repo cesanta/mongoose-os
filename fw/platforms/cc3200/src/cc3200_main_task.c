@@ -36,6 +36,7 @@
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/config.h"
+#include "fw/platforms/cc3200/src/cc3200_console.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_sj_hal.h"
@@ -174,6 +175,7 @@ static int sj_init() {
 
 #if !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS)
   sj_clubby_api_setup(v7);
+  sj_console_api_setup(v7);
 #endif
 
   /* Common config infrastructure. Mongoose & v7 must be initialized. */
@@ -233,6 +235,11 @@ void main_task(void *arg) {
   }
 
   while (1) {
+    mongoose_poll(0);
+    cc3200_fs_flush();
+#if SJ_CONSOLE_ENABLE_CLOUD
+    cc3200_console_cloud_push();
+#endif
     struct sj_event e;
     if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (e.type) {
@@ -252,8 +259,6 @@ void main_task(void *arg) {
         break;
       }
     }
-    mongoose_poll(0);
-    cc3200_fs_flush();
   }
 }
 

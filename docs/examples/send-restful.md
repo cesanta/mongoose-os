@@ -2,19 +2,19 @@
 title: Send data to a RESTful server
 ---
 
-This example shows how to send periodic measurements to some external
+This example shows you how to send periodic measurements to an external
 RESTful server. This example uses http://httpbin.org, which is a useful public
-RESTful service that allows to test or debug RESTful interfaces.
+RESTful service that allows you to test or debug RESTful interfaces.
 
-Every 5 seconds we measure free RAM, and send http://httpbin.org/get?n=NUMBER
+Every 5 seconds we measure free RAM and send http://httpbin.org/get?n=NUMBER
 request, where `NUMBER` is a measured number. httpbin.org echoes back a
 JSON object that describes the request. We simply log this received reply.
-The log gets sent to the Mongoose Cloud, and is visible on a device console.
+The log gets sent to the Mongoose Cloud and is visible on the device console.
 
 
-- Login to [Mongoose Cloud](https://mongoose-iot.com)
-- Create a new project, call it `restful`
-- Swith to the IDE tab
+- Login to [Mongoose Cloud](https://mongoose-iot.com).
+- Create a new project, call it `restful`.
+- Swith to the IDE tab.
 - Copy/paste the following code into the `app.js`
 
     ```javascript
@@ -36,5 +36,5 @@ The log gets sent to the Mongoose Cloud, and is visible on a device console.
     report();
     ```
 
-- In the IDC (Interactive Device Console), choose your target device
-- Click Flash button, and wait until messages start to appear
+- In the IDC (Interactive Device Console), choose your target device.
+- Click the Flash button and wait until messages start to appear.

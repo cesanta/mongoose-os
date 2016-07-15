@@ -29,8 +29,6 @@ static int s_waiting_for_resp;
 #include "mongoose/mongoose.h"
 #include "sj_timers.h"
 
-static const char s_clubby_prop[] = "_cons";
-
 #define LOG_FILENAME_BASE "console.log."
 
 #define FILE_ID_LEN 10
@@ -56,16 +54,9 @@ static file_id_t s_last_file_id = 1;
 static void console_process_data(struct v7 *v7);
 
 clubby_handle_t console_get_current_clubby(struct v7 *v7) {
-  v7_val_t clubby_v = v7_get(v7, v7_get_global(v7), s_clubby_prop, ~0);
-  if (!v7_is_object(clubby_v)) {
-    LOG(LL_ERROR, ("Clubby is not set"));
-    return NULL;
-  }
-
-  clubby_handle_t ret = sj_clubby_get_handle(v7, clubby_v);
-  LOG(LL_VERBOSE_DEBUG, ("clubby handle: %p", ret));
-
-  return ret;
+  v7_val_t clubby_v = v7_get(v7, v7_get_global(v7), "clubby", ~0);
+  if (!v7_is_object(clubby_v)) return NULL;
+  return sj_clubby_get_handle(v7, clubby_v);
 }
 
 static void clubby_cb(struct clubby_event *evt, void *user_data) {
@@ -404,31 +395,6 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   return rcode;
 }
 
-SJ_PRIVATE enum v7_err Console_setClubby(struct v7 *v7, v7_val_t *res) {
-#ifndef DISABLE_C_CLUBBY
-  enum v7_err rcode = V7_OK;
-
-  v7_val_t clubby_v = v7_arg(v7, 0);
-  if (!v7_is_object(clubby_v) || (sj_clubby_get_handle(v7, clubby_v)) == NULL) {
-    /*
-     * We can try to look for global clubby object, but seems
-     * it is not really nessesary
-     */
-    rcode = v7_throwf(v7, "Error", "Invalid argument");
-    goto clean;
-  }
-
-  *res = v7_mk_boolean(v7, 1);
-  v7_set(v7, v7_get_global(v7), s_clubby_prop, ~0, clubby_v);
-
-clean:
-  return rcode;
-#else
-  *res = v7_mk_boolean(v7, 0);
-  return V7_OK;
-#endif
-}
-
 void sj_console_init(struct v7 *v7) {
 #ifndef DISABLE_C_CLUBBY
   if (console_init_file_cache() == 0) {
@@ -444,8 +410,6 @@ void sj_console_api_setup(struct v7 *v7) {
   v7_own(v7, &console_v);
 
   v7_set_method(v7, console_v, "log", Console_log);
-  v7_set_method(v7, console_v, "setClubby", Console_setClubby);
-
   v7_set(v7, v7_get_global(v7), "console", ~0, console_v);
 
   v7_disown(v7, &console_v);

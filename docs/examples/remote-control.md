@@ -3,16 +3,16 @@ title: Remote device control
 ---
 
 This example shows how to send commands to a device from the Internet.
-After boot, Mongoose Firmware connects to the
-[Mongoose Cloud](https://mongoose-iot.com) via secure Websocket channel.
-This channel always stays alive, and either device or cloud can send
-commands to each other at any time. Cloud knows the ID of the connected device.
-It routes any command with device's ID as destination to this device.
+After booting, Mongoose Firmware connects to
+[Mongoose Cloud](https://mongoose-iot.com) via a secure WebSocket channel.
+This channel always stays alive, and both device and cloud can send
+commands to each other at any time. The cloud knows the ID of the connected device.
+It routes any command with the device's ID as destination to this device.
 See "Cloud Overview" section for more information.
 
-- Login to [Mongoose Cloud](https://mongoose-iot.com)
-- Create a new project, call it `control`
-- Swith to the IDE tab
+- Login to [Mongoose Cloud](https://mongoose-iot.com).
+- Create a new project, call it `control`.
+- Switch to the IDE tab.
 - Copy/paste the following code into the `app.js`
 
     ```javascript
@@ -24,10 +24,10 @@ See "Cloud Overview" section for more information.
     });
     ```
 
-- In the IDC (Interactive Device Console), choose your target device
-- Click Flash button, and wait until hello message appears in the device log
-- Click on the user image on the top menu, open Profile in a new brower tab
-- Open the terminal and copy/paste a `curl` command. Add arguments and
+- In the IDC (Interactive Device Console), choose your target device.
+- Click the Flash button and wait until the hello message appears in the device log.
+- Click on the user image in the top menu and open the Profile in a new brower tab.
+- Open the terminal and copy/paste a `curl` command. Add arguments and the 
   prepend device ID to the destination:
 
     ```sh

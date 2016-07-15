@@ -12,8 +12,6 @@ if (Sys.conf.clubby.device_id) {
 
 global.clubby = new Clubby({connect:false});
 
-if (typeof console !== "undefined") console.setClubby(clubby);
-
 if (Sys.conf.clubby.device_id && Sys.conf.clubby.connect_on_boot) {
   if (Wifi.status() !== undefined) {
     // Wifi has some well-defined status; therefore, Wifi is usable at the
