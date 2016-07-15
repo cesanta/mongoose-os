@@ -193,16 +193,18 @@ static int sj_init() {
 
   v7_val_t res;
   if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
-    fprintf(stderr, "Error: ");
     v7_fprint(stderr, v7, res);
+    fputc('\n', stderr);
+    LOG(LL_ERROR, ("%s init failed", "Sys"));
+    sj_system_restart(0);
   }
 #endif
 
   LOG(LL_INFO, ("%s init done, RAM: %d free", "Sys", sj_get_free_heap_size()));
 
   if (!sj_app_init(v7)) {
-    LOG(LL_ERROR, ("App init failed"));
-    abort();
+    LOG(LL_ERROR, ("%s init failed", "App"));
+    sj_system_restart(0);
   }
   LOG(LL_INFO, ("%s init done, RAM: %d free", "App", sj_get_free_heap_size()));
 

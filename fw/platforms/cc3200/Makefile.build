@@ -225,7 +225,7 @@ $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 $(BUILD_DIR)/v7.o: $(GENERATED_SOURCES)
 
 # TODO(dfrank): Fix V7 pre-compilation
-$(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(MK_FS_META_BIN) $(BUILD_DIR)/v7
+$(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN) $(BUILD_DIR)/v7
 	$(Q) rm -f $(FS_STAGING_DIR)/*
 	$(Q) $(foreach js,$(FS_FILES), \
 	  echo "  CP    $(js) -> $(FS_STAGING_DIR)"; \

@@ -399,6 +399,7 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
     r = sj_upd_merge_spiffs(&old_fs.fs);
     if (r < 0) return r;
     fs_umount(&old_fs);
+    cc3200_fs_flush();
     cfg->flags &= ~(BOOT_F_MERGE_SPIFFS);
   }
   return 0;

@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "sys_config.h"
+#include "cc3200_fs.h"
 #include "cc3200_main_task.h"
 
 extern struct v7 *s_v7;
@@ -48,6 +49,8 @@ void invoke_wifi_on_change_cb(void *arg) {
 }
 
 static int restart_nwp() {
+  /* Properly close FS container if it's open for writing. */
+  cc3200_fs_flush();
   /* We don't need TI's web server. */
   sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
   sl_Stop(0);

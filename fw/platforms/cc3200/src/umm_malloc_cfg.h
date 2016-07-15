@@ -34,7 +34,7 @@ extern unsigned int _heap_end;
  * Callback that is called whenever a heap corruption is detected
  * (see `UMM_INTEGRITY_CHECK`, `UMM_POISON`)
  */
-#define UMM_HEAP_CORRUPTION_CB() abort()
+#define UMM_HEAP_CORRUPTION_CB()
 
 void umm_oom_cb(size_t size, unsigned short int blocks_cnt);
 #define UMM_OOM_CB(size, blocks_cnt) umm_oom_cb(size, blocks_cnt)
