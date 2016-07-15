@@ -152,9 +152,9 @@ out_close_old:
 }
 
 void fs_close_container(struct mount_info *m) {
-  if (!m->valid) return;
-  DBG(("closing fh %d", (int) m->fh));
-  if (m->fh != -1) sl_FsClose(m->fh, NULL, NULL, 0);
+  if (!m->valid || m->fh == -1) return;
+  LOG(LL_DEBUG, ("fh %d", (int) m->fh));
+  sl_FsClose(m->fh, NULL, NULL, 0);
   m->fh = -1;
   m->rw = 0;
 }

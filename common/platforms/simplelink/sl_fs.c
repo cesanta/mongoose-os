@@ -14,14 +14,6 @@
 #include <file.h>
 #endif
 
-#if CS_PLATFORM == CS_P_CC3200
-#include <inc/hw_types.h>
-#include <inc/hw_memmap.h>
-#include <driverlib/rom.h>
-#include <driverlib/rom_map.h>
-#include <driverlib/uart.h>
-#endif
-
 #include "common/cs_dbg.h"
 #include "common/platform.h"
 
@@ -39,7 +31,12 @@
 
 #ifndef MG_UART_CHAR_PUT
 #if CS_PLATFORM == CS_P_CC3200
-#define MG_UART_CHAR_PUT(fd, c) MAP_UARTCharPut(CONSOLE_UART, c);
+#include <inc/hw_types.h>
+#include <inc/hw_memmap.h>
+#include <driverlib/rom.h>
+#include <driverlib/rom_map.h>
+#include <driverlib/uart.h>
+#define MG_UART_CHAR_PUT(fd, c) MAP_UARTCharPut(UARTA0_BASE, c);
 #else
 #define MG_UART_CHAR_PUT(fd, c)
 #endif /* CS_PLATFORM == CS_P_CC3200 */
