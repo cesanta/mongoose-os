@@ -224,6 +224,7 @@ $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 $(BUILD_DIR)/v7.o: $(GENERATED_SOURCES)
 
+# TODO(dfrank): Fix V7 pre-compilation
 $(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(MK_FS_META_BIN) $(BUILD_DIR)/v7
 	$(Q) rm -f $(FS_STAGING_DIR)/*
 	$(Q) $(foreach js,$(FS_FILES), \
@@ -231,7 +232,7 @@ $(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(MK_FS_META_BIN) $(BUILD_DIR)/v7
 	  cp $(js) $(FS_STAGING_DIR);)
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
 	  echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
-	  $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
+	  cp $(jsbin) $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 	$(vecho) "MKFS  $@"
 	$(Q) /usr/local/bin/mkspiffs $(FS_SIZE) $(FS_STAGING_DIR) > $@
 	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
