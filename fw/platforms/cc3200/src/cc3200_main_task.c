@@ -134,7 +134,7 @@ static int sj_init() {
     write_boot_cfg(&boot_cfg, boot_cfg_idx);
   }
 
-  r = init_fs(boot_cfg.fs_container_prefix);
+  r = cc3200_fs_init(boot_cfg.fs_container_prefix);
   if (r < 0) {
     LOG(LL_ERROR, ("FS init error: %d", r));
     if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
@@ -234,7 +234,6 @@ void main_task(void *arg) {
 
   while (1) {
     struct sj_event e;
-    mongoose_poll(0);
     if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (e.type) {
 #ifndef CS_DISABLE_JS
@@ -253,6 +252,8 @@ void main_task(void *arg) {
         break;
       }
     }
+    mongoose_poll(0);
+    cc3200_fs_flush();
   }
 }
 

@@ -8,8 +8,10 @@
 
 #include <stdio.h>
 
-int init_fs(const char *container_prefix);
-void umount_fs();
+int cc3200_fs_init(const char *container_prefix);
+void cc3200_fs_flush();
+void cc3200_fs_umount();
+
 int set_errno(int e);
 
 #ifdef CC3200_FS_DEBUG

@@ -58,17 +58,8 @@ int fs_spiffs_open(const char *pathname, int flags, mode_t mode) {
 
 int fs_spiffs_close(int fd) {
   struct mount_info *m = &s_fsm;
-  spiffs_fd *sfd;
   if (!m->valid) return set_errno(EBADF);
-  if (spiffs_fd_get(&m->fs, fd, &sfd) == SPIFFS_OK &&
-      (sfd->flags & SPIFFS_WRONLY)) {
-    /* We are closing a file open for writing, close the backing store
-     * to avoid the dreaded SL_FS_FILE_HAS_NOT_BEEN_CLOSE_CORRECTLY. */
-    SPIFFS_close(&m->fs, fd);
-    fs_close_container(m);
-  } else {
-    SPIFFS_close(&m->fs, fd);
-  }
+  SPIFFS_close(&m->fs, fd);
   return 0;
 }
 
@@ -129,7 +120,6 @@ int fs_spiffs_rename(const char *from, const char *to) {
   struct mount_info *m = &s_fsm;
   if (!m->valid) return set_errno(EBADF);
   int res = SPIFFS_rename(&m->fs, (char *) from, (char *) to);
-  if (res == SPIFFS_OK) fs_close_container(m);
   return set_spiffs_errno(m, res);
 }
 
@@ -137,7 +127,6 @@ int fs_spiffs_unlink(const char *filename) {
   struct mount_info *m = &s_fsm;
   if (!m->valid) return set_errno(EBADF);
   int res = SPIFFS_remove(&m->fs, (char *) filename);
-  if (res == SPIFFS_OK) fs_close_container(m);
   return set_spiffs_errno(m, res);
 }
 
@@ -209,10 +198,20 @@ int64_t sj_get_storage_free_space() {
   return total - used;
 }
 
-int init_fs(const char *container_prefix) {
+int cc3200_fs_init(const char *container_prefix) {
   return fs_mount(container_prefix, &s_fsm);
 }
 
-void umount_fs() {
+void cc3200_fs_flush() {
+  struct mount_info *m = &s_fsm;
+  /*
+   * If container is open for writing and we've been idle for a while,
+   * close it to avoid the dreaded SL_FS_FILE_HAS_NOT_BEEN_CLOSE_CORRECTLY.
+   */
+  if (!(m->valid && m->rw)) return;
+  fs_close_container(m);
+}
+
+void cc3200_fs_umount() {
   if (s_fsm.valid) fs_umount(&s_fsm);
 }

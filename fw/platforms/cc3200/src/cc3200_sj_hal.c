@@ -120,7 +120,7 @@ void sj_wdt_disable() {
 void sj_system_restart(int exit_code) {
   (void) exit_code;
   if (exit_code != 100) {
-    umount_fs();
+    cc3200_fs_umount();
     sl_Stop(50 /* ms */);
   }
   /* Turns out to be not that easy. In particular, using *Reset functions is
