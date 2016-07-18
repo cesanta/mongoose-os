@@ -49,6 +49,8 @@ void cc3200_console_cloud_putc(char c) {
   }
   /* Construct valid JSON from the get-go. */
   if (!s_cctx.msg_in_progress) {
+    /* Skip empty lines */
+    if (c == '\n') goto out;
     mbuf_append(&s_cctx.buf, "{\"msg\":\"", 8);
     s_cctx.msg_in_progress = 1;
   }
@@ -60,17 +62,23 @@ void cc3200_console_cloud_putc(char c) {
     mbuf_append(&s_cctx.buf, "\"}\n", 3);
     s_cctx.msg_in_progress = 0;
   }
+out:
   s_cctx.in_console = 0;
 }
 
 void clubby_cb(struct clubby_event *evt, void *user_data);
 
 void cc3200_console_cloud_push() {
-  if (s_cctx.buf.len == 0 || s_cctx.request_in_flight) return;
+  if (s_cctx.buf.len == 0) return;
   int l = cc3200_console_next_msg_len();
   if (l == 0) return;  // Only send full messages.
   clubby_handle_t c = console_get_current_clubby();
-  if (c == NULL || !sj_clubby_can_send(c)) return;
+  if (c == NULL || !sj_clubby_is_connected(c)) {
+    /* If connection drops, do not wait for reply as it may never arrive. */
+    s_cctx.request_in_flight = 0;
+    return;
+  }
+  if (s_cctx.request_in_flight || !sj_clubby_can_send(c)) return;
   s_cctx.request_in_flight = 1;
   s_cctx.in_console = 1;
   sj_clubby_call(c, NULL, "/v1/Log.Log", mg_mk_str_n(s_cctx.buf.buf, l - 1), 0,
