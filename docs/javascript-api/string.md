@@ -2,20 +2,20 @@
 title: String
 ---
 
-Mongoose IoT has several non-standard extensions for `String.prototype` in
+Mongoose IoT Platform has several non-standard extensions for `String.prototype` in
 order to give a compact and fast API to access raw data obtained from
-File, Socket, and hardware input/output such as I2C.
-Mongoose IoT IO API functions return
+File, Socket and hardware input/output such as I2C.
+Mongoose IoT Platform IO API functions return
 string data as a result of read operations, and that string data is a
-raw byte array. ECMA6 provides `ArrayBuffer` and `DataView` API for dealing
-with raw bytes, because strings in JavaScript are Unicode. That standard
-API is too bloated for the embedded use, and does not allow to use handy
+raw byte array. ECMA6 provides the `ArrayBuffer` and `DataView` API for dealing
+with raw bytes because strings in JavaScript are Unicode. This standard
+API is too bloated for embedded use and does not allow you to use the handy
 String API (e.g. `.match()`) against data.
 
-Mongoose IoT internally stores strings as byte arrays. All strings created by the
-String API are UTF8 encoded. Strings that are the result of
-input/output API calls might not be a valid UTF8 strings, but nevertheless
-they are represented as strings, and the following API allows to access
+Mongoose IoT Platform internally stores strings as byte arrays. All strings created by the
+String API are UTF8 encoded. Strings that are the result of the
+input/output API calls might not be a valid UTF8 strings, But, nevertheless
+they are represented as strings, and the following API allows you to access the 
 underlying byte sequence:
 
 - `String.prototype.at(position) -> number or NaN`: Return byte at index

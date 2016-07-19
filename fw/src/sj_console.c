@@ -69,9 +69,8 @@ static void console_make_clubby_call(struct v7 *v7, struct mbuf *logs) {
   clubby_handle_t clubby_h = console_get_current_clubby(v7);
   struct mbuf log_mbuf;
   mbuf_init(&log_mbuf, 200);
-  mbuf_append(logs, 0, 1);
   struct json_out log_out = JSON_OUT_MBUF(&log_mbuf);
-  json_printf(&log_out, "{msg: %Q}", logs->buf);
+  json_printf(&log_out, "{msg: %.*Q}", (int) logs->len, logs->buf);
 
   /* TODO(alashkin): set command timeout */
   s_waiting_for_resp = 1;
