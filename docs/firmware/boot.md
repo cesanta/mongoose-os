@@ -26,7 +26,7 @@ Upon reboot or power on, Mongoose Firmware performs following steps:
   server to implement a remote control.
 
   Note that the web server uses
-  [Mongoose Engine](https://github.com/cesanta/mongoose) as a networking engine.
+  [Mongoose Embedded Web Server](https://github.com/cesanta/mongoose) as a networking engine.
   Mongoose supports many protocols. That means, a developer can use a system
   instance to send or receive requests in plain TCP, UDP, HTPP, WebSocket,
   MQTT or CoAP protocols.

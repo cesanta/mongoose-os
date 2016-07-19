@@ -467,13 +467,25 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         int val = va_arg(ap, int);
         const char *str = val ? "true" : "false";
         len += out->printer(out, str, strlen(str));
-      } else if (fmt[1] == 'Q') {
-        const char *p = va_arg(ap, char *);
+      } else if (fmt[1] == 'Q' ||
+                 (fmt[1] == '.' && fmt[2] == '*' && fmt[3] == 'Q')) {
+        size_t l = 0;
+        const char *p;
+
+        if (fmt[1] == '.') {
+          l = (size_t) va_arg(ap, int);
+          skip += 2;
+        }
+        p = va_arg(ap, char *);
+
         if (p == NULL) {
           len += out->printer(out, null, 4);
         } else {
+          if (fmt[1] == 'Q') {
+            l = strlen(p);
+          }
           len += out->printer(out, quote, 1);
-          len += json_encode_string(out, p, strlen(p));
+          len += json_encode_string(out, p, l);
           len += out->printer(out, quote, 1);
         }
       } else {
