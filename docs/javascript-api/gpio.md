@@ -18,7 +18,7 @@ title: GPIO
   * `GPIO.LOLEVEL` - on low level
   * `GPIO.HILEVEL` - on high level
   * `GPIO.CLICK` - button mode
-  `func` is callback to be called on interrupt, its prototype is `function myisr(pin, level)`.
+  `func` is a callback to be called on interrupt. Its prototype is `function myisr(pin, level)`.
   See [button helper](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/js/gpio.js)
   for `button mode` usage example.
 
