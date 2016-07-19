@@ -25,11 +25,8 @@
 #include "fw/src/device_config.h"
 #include "fw/src/sj_wifi.h"
 
-#ifndef CS_DISABLE_JS
-#include "v7/v7.h"
-#endif
-
-static sj_wifi_scan_cb_t wifi_scan_cb;
+static sj_wifi_scan_cb_t s_wifi_scan_cb;
+static void *s_wifi_scan_cb_arg;
 
 int sj_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   int res;
@@ -200,7 +197,7 @@ void wifi_changed_cb(System_Event_t *evt) {
       break;
   }
 
-  if (sj_ev >= 0) sj_wifi_on_change_cb(v7, sj_ev);
+  if (sj_ev >= 0) sj_wifi_on_change_cb(sj_ev);
 }
 
 char *sj_wifi_get_connected_ssid(void) {
@@ -228,36 +225,37 @@ char *sj_wifi_get_sta_ip(void) {
 }
 
 void wifi_scan_done(void *arg, STATUS status) {
-  if (status == OK) {
-    STAILQ_HEAD(, bss_info) *info = arg;
-    struct bss_info *p;
-    const char **ssids;
-    int n = 0;
-    STAILQ_FOREACH(p, info, next) n++;
-    ssids = calloc(n + 1, sizeof(*ssids));
-    if (ssids == NULL) {
-      LOG(LL_ERROR, ("Out of memory"));
-      return;
-    }
-    n = 0;
-    STAILQ_FOREACH(p, info, next) {
-      int i;
-      /* Remove duplicates */
-      for (i = 0; i < n; i++) {
-        if (strcmp(ssids[i], (const char *) p->ssid) == 0) break;
-      }
-      if (i == n) ssids[n++] = (const char *) p->ssid;
-    }
-    wifi_scan_cb(v7, ssids);
-    free(ssids);
-  } else {
+  if (status != OK) {
     LOG(LL_ERROR, ("wifi scan failed: %d", status));
-    wifi_scan_cb(v7, NULL);
+    s_wifi_scan_cb(NULL, s_wifi_scan_cb_arg);
+    return;
   }
+  STAILQ_HEAD(, bss_info) *info = arg;
+  struct bss_info *p;
+  const char **ssids;
+  int n = 0;
+  STAILQ_FOREACH(p, info, next) n++;
+  ssids = calloc(n + 1, sizeof(*ssids));
+  if (ssids == NULL) {
+    LOG(LL_ERROR, ("Out of memory"));
+    return;
+  }
+  n = 0;
+  STAILQ_FOREACH(p, info, next) {
+    int i;
+    /* Remove duplicates */
+    for (i = 0; i < n; i++) {
+      if (strcmp(ssids[i], (const char *) p->ssid) == 0) break;
+    }
+    if (i == n) ssids[n++] = (const char *) p->ssid;
+  }
+  s_wifi_scan_cb(ssids, s_wifi_scan_cb_arg);
+  free(ssids);
 }
 
-int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
-  wifi_scan_cb = cb;
+int sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
+  s_wifi_scan_cb = cb;
+  s_wifi_scan_cb_arg = arg;
   /* Scanning requires station. If in AP-only mode, switch to AP+STA. */
   if (wifi_get_opmode() == SOFTAP_MODE) {
     wifi_set_opmode_current(STATIONAP_MODE);

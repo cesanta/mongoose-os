@@ -160,6 +160,7 @@ static int sj_init() {
   v7_set_gc_enabled(v7, 0);
   sj_gpio_api_setup(v7);
   sj_i2c_api_setup(v7);
+  sj_wifi_js_init(v7);
   sj_wifi_api_setup(v7);
   sj_timers_api_setup(v7);
 #endif

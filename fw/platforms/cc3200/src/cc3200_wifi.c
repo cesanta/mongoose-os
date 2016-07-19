@@ -16,14 +16,11 @@
 #include "common/platform.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_wifi.h"
-#include "v7/v7.h"
 
 #include "config.h"
 #include "sys_config.h"
 #include "cc3200_fs.h"
 #include "cc3200_main_task.h"
-
-extern struct v7 *s_v7;
 
 struct cc3200_wifi_config {
   enum sj_wifi_status status;
@@ -45,7 +42,7 @@ static void free_wifi_config() {
 }
 
 void invoke_wifi_on_change_cb(void *arg) {
-  sj_wifi_on_change_cb(s_v7, (enum sj_wifi_status)(int) arg);
+  sj_wifi_on_change_cb((enum sj_wifi_status)(int) arg);
 }
 
 static int restart_nwp() {
@@ -274,7 +271,7 @@ char *sj_wifi_get_ap_ip() {
   return NULL;
 }
 
-int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
+int sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
   const char *ssids[21];
   Sl_WlanNetworkEntry_t info[20];
 
@@ -287,10 +284,9 @@ int sj_wifi_scan(sj_wifi_scan_cb_t cb) {
     ssids[i] = (char *) info[i].ssid;
   }
   ssids[i] = NULL;
-  cb(s_v7, ssids);
+  cb(ssids, arg);
   return 1;
 }
 
-void sj_wifi_hal_init(struct v7 *v7) {
-  (void) v7;
+void sj_wifi_hal_init() {
 }

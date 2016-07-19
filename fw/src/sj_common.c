@@ -70,6 +70,7 @@ void sj_common_init(struct v7 *v7) {
   sj_http_init(v7);
   sj_wifi_init(v7);
 #ifndef CS_DISABLE_JS
+  sj_wifi_js_init(v7);
   sj_console_init(v7);
 #endif
 

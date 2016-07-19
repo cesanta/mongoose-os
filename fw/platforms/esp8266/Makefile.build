@@ -82,7 +82,7 @@ MGIOT_ESP_USER_DIR = $(MGIOT_ESP_PATH)/user
 APP_MODULES += $(MGIOT_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
             cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http.c frozen.c \
-            sj_i2c_js.c sj_spi_js.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
+            sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
             sj_timers_mongoose.c \
             sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
             sj_mongoose_ws_client.c sj_mqtt.c clubby_proto.c \

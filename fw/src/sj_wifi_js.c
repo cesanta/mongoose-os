@@ -2,6 +2,7 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
+#ifndef CS_DISABLE_JS
 
 #include <string.h>
 #include <stdlib.h>
@@ -15,66 +16,14 @@
 #include "v7/v7.h"
 #include "fw/src/device_config.h"
 #include "common/cs_dbg.h"
-#include "common/queue.h"
 
-static sj_wifi_changed_t s_fn;
-
-#ifndef CS_DISABLE_JS
-
-static v7_val_t s_wifi_private;
-
-struct wifi_ready_cb {
-  SLIST_ENTRY(wifi_ready_cb) entries;
-
-  v7_val_t cb;
+struct wifi_cb_arg {
+  struct v7 *v7;
+  v7_val_t v;
 };
 
-SLIST_HEAD(wifi_ready_cbs, wifi_ready_cb) s_wifi_ready_cbs;
-
-static int add_wifi_ready_cb(struct v7 *v7, v7_val_t cb) {
-  struct wifi_ready_cb *new_wifi_event = calloc(1, sizeof(*new_wifi_event));
-  if (new_wifi_event == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
-    return 0;
-  }
-  new_wifi_event->cb = cb;
-  v7_own(v7, &new_wifi_event->cb);
-
-  SLIST_INSERT_HEAD(&s_wifi_ready_cbs, new_wifi_event, entries);
-
-  return 1;
-}
-
-static void call_wifi_ready_cbs(struct v7 *v7) {
-  while (!SLIST_EMPTY(&s_wifi_ready_cbs)) {
-    struct wifi_ready_cb *elem = SLIST_FIRST(&s_wifi_ready_cbs);
-    SLIST_REMOVE_HEAD(&s_wifi_ready_cbs, entries);
-    sj_invoke_cb0(v7, elem->cb);
-    v7_disown(v7, &elem->cb);
-    free(elem);
-  }
-}
-
-SJ_PRIVATE enum v7_err Wifi_ready(struct v7 *v7, v7_val_t *res) {
-  int ret = 0;
-  v7_val_t cbv = v7_arg(v7, 0);
-
-  if (!v7_is_callable(v7, cbv)) {
-    LOG(LL_ERROR, ("Invalid arguments"));
-    goto exit;
-  }
-
-  if (sj_wifi_get_status() == SJ_WIFI_IP_ACQUIRED) {
-    sj_invoke_cb0(v7, cbv);
-    ret = 1;
-  } else {
-    ret = add_wifi_ready_cb(v7, cbv);
-  }
-
-exit:
-  *res = v7_mk_boolean(v7, ret);
-  return V7_OK;
-}
+struct wifi_cb_arg s_wifi_changed_cb;
+struct wifi_cb_arg s_wifi_scan_cb;
 
 SJ_PRIVATE enum v7_err sj_Wifi_setup(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -192,8 +141,10 @@ SJ_PRIVATE enum v7_err Wifi_changed(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_boolean(v7, 0);
     goto clean;
   }
-  v7_def(v7, s_wifi_private, "_ccb", ~0,
-         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), cb);
+  v7_disown(s_wifi_changed_cb.v7, &s_wifi_changed_cb.v);
+  s_wifi_changed_cb.v7 = v7;
+  s_wifi_changed_cb.v = cb;
+  v7_own(s_wifi_changed_cb.v7, &s_wifi_changed_cb.v);
   *res = v7_mk_boolean(v7, 1);
   goto clean;
 
@@ -201,11 +152,11 @@ clean:
   return rcode;
 }
 
-void sj_wifi_scan_done(struct v7 *v7, const char **ssids) {
-  v7_val_t cb = v7_get(v7, s_wifi_private, "_scb", ~0);
+void sj_wifi_scan_done(const char **ssids, void *arg) {
+  struct wifi_cb_arg *cba = (struct wifi_cb_arg *) arg;
+  struct v7 *v7 = cba->v7;
   v7_val_t res = V7_UNDEFINED;
   const char **p;
-  if (!v7_is_callable(v7, cb)) return;
 
   v7_own(v7, &res);
   if (ssids != NULL) {
@@ -217,19 +168,20 @@ void sj_wifi_scan_done(struct v7 *v7, const char **ssids) {
     res = V7_UNDEFINED;
   }
 
-  sj_invoke_cb1(v7, cb, res);
+  sj_invoke_cb1(v7, cba->v, res);
+  v7_disown(v7, &cba->v);
+  cba->v7 = NULL;
 
   v7_disown(v7, &res);
-  v7_def(v7, s_wifi_private, "_scb", ~0,
-         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), V7_UNDEFINED);
 }
 
 /* Call the callback with a list of ssids found in the air. */
 SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
+  v7_val_t cb;
   int r;
-  v7_val_t cb = v7_get(v7, s_wifi_private, "_scb", ~0);
-  if (v7_is_callable(v7, cb)) {
+
+  if (s_wifi_scan_cb.v7 != NULL) {
     fprintf(stderr, "scan in progress");
     *res = v7_mk_boolean(v7, 0);
     goto clean;
@@ -241,14 +193,13 @@ SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
     *res = v7_mk_boolean(v7, 0);
     goto clean;
   }
-  v7_def(v7, s_wifi_private, "_scb", ~0,
-         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), cb);
 
-  r = sj_wifi_scan(sj_wifi_scan_done);
+  r = sj_wifi_scan(sj_wifi_scan_done, &s_wifi_scan_cb);
 
-  if (!r) {
-    v7_def(v7, s_wifi_private, "_scb", ~0,
-           (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), V7_UNDEFINED);
+  if (r == 0) {
+    s_wifi_scan_cb.v7 = v7;
+    s_wifi_scan_cb.v = cb;
+    v7_own(v7, &s_wifi_scan_cb.v);
   }
 
   *res = v7_mk_boolean(v7, r);
@@ -256,6 +207,44 @@ SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
 
 clean:
   return rcode;
+}
+
+void sj_wifi_ready_js(enum sj_wifi_status event, void *arg) {
+  if (event != SJ_WIFI_IP_ACQUIRED) return;
+  struct wifi_cb_arg *cba = (struct wifi_cb_arg *) arg;
+  sj_invoke_cb0(cba->v7, cba->v);
+  v7_disown(cba->v7, &cba->v);
+  sj_wifi_remove_on_change_cb(sj_wifi_ready_js, arg);
+  free(arg);
+}
+
+SJ_PRIVATE enum v7_err Wifi_ready(struct v7 *v7, v7_val_t *res) {
+  int ret = 0;
+  v7_val_t cbv = v7_arg(v7, 0);
+
+  if (!v7_is_callable(v7, cbv)) {
+    LOG(LL_ERROR, ("Invalid arguments"));
+    goto exit;
+  }
+
+  if (sj_wifi_get_status() == SJ_WIFI_IP_ACQUIRED) {
+    sj_invoke_cb0(v7, cbv);
+    ret = 1;
+  } else {
+    struct wifi_cb_arg *arg = (struct wifi_cb_arg *) calloc(1, sizeof(*arg));
+    if (arg != NULL) {
+      arg->v7 = v7;
+      arg->v = cbv;
+      v7_own(v7, &arg->v);
+      sj_wifi_add_on_change_cb(sj_wifi_ready_js, arg);
+    } else {
+      ret = 0;
+    }
+  }
+
+exit:
+  *res = v7_mk_boolean(v7, ret);
+  return V7_OK;
 }
 
 void sj_wifi_api_setup(struct v7 *v7) {
@@ -281,51 +270,19 @@ void sj_wifi_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &s_wifi);
 }
-#endif /* CS_DISABLE_JS */
 
-void sj_wifi_on_change_cb(struct v7 *v7, enum sj_wifi_status event) {
-  switch (event) {
-    case SJ_WIFI_DISCONNECTED:
-      LOG(LL_INFO, ("Wifi: disconnected"));
-      break;
-    case SJ_WIFI_CONNECTED:
-      LOG(LL_INFO, ("Wifi: connected"));
-      break;
-    case SJ_WIFI_IP_ACQUIRED: {
-      char *ip = sj_wifi_get_sta_ip();
-      LOG(LL_INFO, ("WiFi: ready, IP %s", ip));
-      free(ip);
-#ifndef CS_DISABLE_JS
-      call_wifi_ready_cbs(v7);
-#endif
-      break;
-    }
-  }
-
-#ifndef CS_DISABLE_JS
-  v7_val_t cb = v7_get(v7, s_wifi_private, "_ccb", ~0);
-  if (v7_is_undefined(cb) || v7_is_null(cb)) return;
-  sj_invoke_cb1(v7, cb, v7_mk_number(v7, event));
-#else
-  (void) v7;
-#endif
-
-  if (s_fn != NULL) {
-    s_fn(event);
+void sj_wifi_on_change_js(enum sj_wifi_status event, void *arg) {
+  struct wifi_cb_arg *cba = (struct wifi_cb_arg *) arg;
+  if (v7_is_callable(cba->v7, cba->v)) {
+    sj_invoke_cb1(cba->v7, cba->v, v7_mk_number(cba->v7, event));
   }
 }
 
-void sj_wifi_set_on_change_cb(sj_wifi_changed_t fn) {
-  s_fn = fn;
+void sj_wifi_js_init(struct v7 *v7) {
+  s_wifi_changed_cb.v7 = v7;
+  s_wifi_changed_cb.v = v7_mk_undefined();
+  v7_own(v7, &s_wifi_changed_cb.v);
+  sj_wifi_add_on_change_cb(sj_wifi_on_change_js, &s_wifi_changed_cb);
 }
 
-void sj_wifi_init(struct v7 *v7) {
-#ifndef CS_DISABLE_JS
-  s_wifi_private = v7_mk_object(v7);
-  v7_def(v7, v7_get_global(v7), "_Wifi", ~0,
-         (V7_DESC_ENUMERABLE(0) | _V7_DESC_HIDDEN(1)), s_wifi_private);
-  v7_own(v7, &s_wifi_private);
 #endif /* CS_DISABLE_JS */
-
-  sj_wifi_hal_init(v7);
-}

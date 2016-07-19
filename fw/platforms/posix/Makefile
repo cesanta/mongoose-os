@@ -41,7 +41,7 @@ APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
             mongoose.c frozen.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
             sj_mongoose_ws_client.c sj_mqtt.c sj_gpio_js.c sj_adc_js.c \
             sj_prompt.c sj_timers.c sj_timers_mongoose.c sj_uart.c sj_http.c \
-            sj_debug_js.c sj_pwm_js.c sj_wifi_js.c clubby_proto.c \
+            sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c clubby_proto.c \
             json_utils.c sj_clubby.c sj_clubby_js.c sj_common.c \
             sj_config.c sj_config_js.c device_config.c sys_config.c sj_udptcp.c \
             sj_utils.c sj_console.c

@@ -6,7 +6,19 @@
 #ifndef CS_FW_SRC_SJ_WIFI_H_
 #define CS_FW_SRC_SJ_WIFI_H_
 
-struct v7;
+enum sj_wifi_status {
+  SJ_WIFI_DISCONNECTED = 0,
+  SJ_WIFI_CONNECTED = 1,
+  SJ_WIFI_IP_ACQUIRED = 2,
+};
+
+typedef void (*sj_wifi_changed_t)(enum sj_wifi_status event, void *arg);
+/* Add a callback to be invoked when WiFi state changes. */
+void sj_wifi_add_on_change_cb(sj_wifi_changed_t fn, void *arg);
+/* Remove a previously added callback, fn and arg have to match exactly. */
+void sj_wifi_remove_on_change_cb(sj_wifi_changed_t fn, void *arg);
+
+/* HAL interface, to be implemented by ports. */
 struct sys_config_wifi_sta;
 struct sys_config_wifi_ap;
 
@@ -24,22 +36,16 @@ char *sj_wifi_get_sta_ip();
 char *sj_wifi_get_ap_ip();
 
 /* Caller owns SSIDS, they are not freed by the callee. */
-typedef void (*sj_wifi_scan_cb_t)(struct v7 *v7, const char **ssids);
-int sj_wifi_scan(sj_wifi_scan_cb_t cb);
+typedef void (*sj_wifi_scan_cb_t)(const char **ssids, void *arg);
+int sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg);
 
 /* Invoke this when Wifi connection state changes. */
-enum sj_wifi_status {
-  SJ_WIFI_DISCONNECTED = 0,
-  SJ_WIFI_CONNECTED = 1,
-  SJ_WIFI_IP_ACQUIRED = 2,
-};
-void sj_wifi_on_change_cb(struct v7 *v7, enum sj_wifi_status event);
+void sj_wifi_on_change_cb(enum sj_wifi_status event);
 
 enum sj_wifi_status sj_wifi_get_status();
 
-void sj_wifi_hal_init(struct v7 *v7);
+void sj_wifi_hal_init();
 
-typedef void (*sj_wifi_changed_t)(enum sj_wifi_status status);
-void sj_wifi_set_on_change_cb(sj_wifi_changed_t fn);
+void sj_wifi_init();
 
 #endif /* CS_FW_SRC_SJ_WIFI_H_ */
