@@ -5,7 +5,6 @@
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
 # SSL: if set to "Krypton" enables SSL with the krypton lib
-# OTA: if "1" enables rboot as a bootloader and generates files required for OTA
 # FREEZE: if "1" (default) freezes the stdlib object graph into a static graph
 #         loadable in ROM
 # HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
@@ -40,7 +39,6 @@ COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
-OTA ?= 1
 FREEZE ?= 1
 HEAP_LOG ?=
 
@@ -295,13 +293,10 @@ all: $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FS_OUT) $(FW_FILES_OUT) ${FS_FILES} ${JSBIN_SRCS}
 
-$(FW_FILES_OUT): $(APP_OUT)
+$(FW_FILES_OUT): $(APP_OUT) $(BUILD_DIR)/rboot.bin
 	$(vecho) "FW    $(APP_OUT) -> $(FW_STAGING_DIR)"
-ifneq "$(OTA)" "1"
-	$(Q) $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
-else
 	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $(APP_OUT) $@ $(FW_SECTS)
-endif
+	$(Q) cp $(BUILD_DIR)/rboot.bin $(FW_STAGING_DIR)/$(RBOOT_FW_NAME)
 
 # -- Linking.
 
@@ -371,11 +366,7 @@ $(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
 # Generate linker script.
 $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(eval _IROM0ADDR=$(shell printf "0x%08x" $$((0x40200000 + $(basename $(notdir $@)) + $(IMAGE_HEADER_SIZE)))))
-ifneq "$(OTA)" "1"
-	$(eval _IROM0SIZE=$(shell printf "0x%05x" $$(($(FS_ADDR) - $(basename $(notdir $@))))))
-else
 	$(eval _IROM0SIZE=$(ROM_SIZE))
-endif
 	$(vecho) "GEN   $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
@@ -438,8 +429,6 @@ build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 # Auxiliary targets.
 #
 
-ifeq "$(OTA)" "1"
-
 rboot: $(BUILD_DIR)/esptool2 $(BUILD_DIR)/rboot.bin $(FW_STAGING_DIR)/$(RBOOT_FW_NAME)
 
 $(ESPTOOL2):
@@ -448,11 +437,6 @@ $(ESPTOOL2):
 $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) \
     ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
-
-$(FW_STAGING_DIR)/$(RBOOT_FW_NAME) : $(BUILD_DIR)/rboot.bin
-	$(Q) cp $< $@
-
-endif
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
