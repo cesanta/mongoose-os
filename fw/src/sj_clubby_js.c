@@ -8,6 +8,7 @@
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_common.h"
+#include "fw/src/sj_config.h"
 
 #if !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS)
 
@@ -607,48 +608,28 @@ error:
   return V7_OK;
 }
 
-#define GET_INT_PARAM(name1, name2)                                     \
-  {                                                                     \
-    v7_val_t tmp = v7_get(v7, arg, #name2, ~0);                         \
-    if (v7_is_undefined(tmp)) {                                         \
-      clubby->cfg.name1 = get_cfg()->clubby.name1;                      \
-    } else if (v7_is_number(tmp)) {                                     \
-      clubby->cfg.name1 = v7_get_double(v7, tmp);                       \
-    } else {                                                            \
-      sj_free_clubby(clubby);                                           \
-      LOG(LL_ERROR, ("Invalid type for %s, expected number", #name2));  \
-      return v7_throwf(v7, "TypeError",                                 \
-                       "Invalid type for %s, expected number", #name2); \
-    }                                                                   \
+#define GET_INT_PARAM(name1, name2)                                          \
+  {                                                                          \
+    v7_val_t tmp = v7_get(v7, arg, #name2, ~0);                              \
+    if (v7_is_number(tmp)) {                                                 \
+      clubby->cfg.name1 = v7_get_double(v7, tmp);                            \
+    } else if (!v7_is_undefined(tmp)) {                                      \
+      rcode = v7_throwf(v7, "TypeError", "Invalid type for %s, expected %s", \
+                        #name2, "number");                                   \
+      goto clean;                                                            \
+    }                                                                        \
   }
 
-#define GET_STR_PARAM(name1, name2)                                     \
-  {                                                                     \
-    v7_val_t tmp = v7_get(v7, arg, #name2, ~0);                         \
-    if (v7_is_undefined(tmp)) {                                         \
-      if (get_cfg()->clubby.name1 != NULL) {                            \
-        clubby->cfg.name1 = strdup(get_cfg()->clubby.name1);            \
-        if (clubby->cfg.name1 == NULL) {                                \
-          LOG(LL_ERROR, ("Out of memory"));                             \
-          rcode = v7_throwf(v7, "Error", "Out of memory");              \
-          goto clean;                                                   \
-        }                                                               \
-      } else {                                                          \
-        clubby->cfg.name1 = "";                                         \
-      }                                                                 \
-    } else if (v7_is_string(tmp)) {                                     \
-      clubby->cfg.name1 = strdup(v7_get_cstring(v7, &tmp));             \
-      if (clubby->cfg.name1 == NULL) {                                  \
-        LOG(LL_ERROR, ("Out of memory"));                               \
-        rcode = v7_throwf(v7, "Error", "Out of memory");                \
-        goto clean;                                                     \
-      }                                                                 \
-    } else {                                                            \
-      sj_free_clubby(clubby);                                           \
-      LOG(LL_ERROR, ("Invalid type for %s, expected string", #name2));  \
-      return v7_throwf(v7, "TypeError",                                 \
-                       "Invalid type for %s, expected string", #name2); \
-    }                                                                   \
+#define GET_STR_PARAM(name1, name2)                                          \
+  {                                                                          \
+    v7_val_t tmp = v7_get(v7, arg, #name2, ~0);                              \
+    if (v7_is_string(tmp)) {                                                 \
+      sj_conf_set_str(&clubby->cfg.name1, v7_get_cstring(v7, &tmp));         \
+    } else if (!v7_is_undefined(tmp)) {                                      \
+      rcode = v7_throwf(v7, "TypeError", "Invalid type for %s, expected %s", \
+                        #name2, "string");                                   \
+      goto clean;                                                            \
+    }                                                                        \
   }
 
 #define GET_CB_PARAM(name1, name2)                                           \
@@ -658,10 +639,9 @@ error:
       register_js_callback(clubby, v7, name2, sizeof(name2), simple_cb, tmp, \
                            0);                                               \
     } else if (!v7_is_undefined(tmp)) {                                      \
-      sj_free_clubby(clubby);                                                \
-      LOG(LL_ERROR, ("Invalid type for %s, expected function", #name1));     \
-      return v7_throwf(v7, "TypeError",                                      \
-                       "Invalid type for %s, expected function", #name1);    \
+      rcode = v7_throwf(v7, "TypeError", "Invalid type for %s, expected %s", \
+                        #name1, "function");                                 \
+      goto clean;                                                            \
     }                                                                        \
   }
 
@@ -677,7 +657,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   }
 
   v7_val_t this_obj = v7_get_this(v7);
-  struct clubby *clubby = sj_create_clubby(v7);
+  struct clubby *clubby = sj_create_clubby(&get_cfg()->clubby);
   if (clubby == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return v7_throwf(v7, "Error", "Out of memory");
@@ -696,6 +676,8 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_STR_PARAM(ssl_server_name, ssl_server_name);
   GET_STR_PARAM(ssl_ca_file, ssl_ca_file);
   GET_STR_PARAM(ssl_client_cert_file, ssl_client_cert_file);
+
+  clubby->v7 = v7;
 
   set_clubby(v7, this_obj, clubby);
   connect = v7_get(v7, arg, "connect", ~0);

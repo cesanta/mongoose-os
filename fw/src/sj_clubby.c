@@ -7,6 +7,7 @@
 #include "fw/src/clubby_proto.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_common.h"
+#include "fw/src/sj_config.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_timers.h"
 
@@ -54,18 +55,28 @@ static void delete_queued_frame(struct clubby *clubby, int64_t id);
 static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
                    struct clubby_event *evt, int remove_after_call);
 
-struct clubby *sj_create_clubby(struct v7 *v7) {
+struct clubby *sj_create_clubby(const struct sys_config_clubby *cfg) {
   struct clubby *ret = calloc(1, sizeof(*ret));
   if (ret == NULL) {
     return NULL;
   }
 
+  if (cfg != NULL) {
+    sj_conf_set_str(&ret->cfg.server_address, cfg->server_address);
+    sj_conf_set_str(&ret->cfg.device_id, cfg->device_id);
+    sj_conf_set_str(&ret->cfg.device_psk, cfg->device_psk);
+    sj_conf_set_str(&ret->cfg.ssl_server_name, cfg->ssl_server_name);
+    sj_conf_set_str(&ret->cfg.ssl_ca_file, cfg->ssl_ca_file);
+    sj_conf_set_str(&ret->cfg.ssl_client_cert_file, cfg->ssl_client_cert_file);
+    ret->cfg.reconnect_timeout_min = cfg->reconnect_timeout_min;
+    ret->cfg.reconnect_timeout_max = cfg->reconnect_timeout_max;
+    ret->cfg.request_timeout = cfg->request_timeout;
+    ret->cfg.max_queue_size = cfg->max_queue_size;
+  }
+
   ret->next = s_clubbies;
   s_clubbies = ret;
 
-#ifndef CS_DISABLE_V7
-  ret->v7 = v7;
-#endif
   return ret;
 }
 

@@ -12,9 +12,23 @@
 
 #ifndef DISABLE_C_CLUBBY
 
+struct clubby_cfg {
+  char *server_address;
+  char *device_id;
+  char *device_psk;
+  char *ssl_server_name;
+  char *ssl_ca_file;
+  char *ssl_client_cert_file;
+  int reconnect_timeout_min;
+  int reconnect_timeout_max;
+  int request_timeout;
+  int max_queue_size;
+};
+
 struct clubby {
   struct clubby *next;
   struct clubby_cb_info *resp_cbs;
+  struct clubby_cfg cfg;
   int reconnect_timeout;
   struct queued_frame *queued_frames_head;
   struct queued_frame *queued_frames_tail;
@@ -22,8 +36,7 @@ struct clubby {
   uint32_t session_flags;
   struct mg_connection *nc;
   int auth_ok;
-  struct sys_config_clubby cfg;
-#ifndef V7_DISABLE_JS
+#ifndef CS_DISABLE_JS
   struct v7 *v7;
 #endif
 };
@@ -42,7 +55,7 @@ typedef void (*sj_clubby_callback_t)(struct clubby_event *evt, void *user_data);
 typedef void *clubby_handle_t;
 
 void sj_clubby_init();
-struct clubby *sj_create_clubby(struct v7 *v7);
+struct clubby *sj_create_clubby(const struct sys_config_clubby *cfg);
 void sj_free_clubby(struct clubby *clubby);
 
 void sj_clubby_connect(struct clubby *clubby);
