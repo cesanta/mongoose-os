@@ -271,21 +271,23 @@ char *sj_wifi_get_ap_ip() {
   return NULL;
 }
 
-int sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
+void sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
   const char *ssids[21];
+  const char **res = NULL;
+  int i, n;
   Sl_WlanNetworkEntry_t info[20];
 
-  if (!ensure_role_sta()) return 0;
+  if (!ensure_role_sta()) goto out;
 
-  int n = sl_WlanGetNetworkList(0, 20, info);
-  if (n < 0) return 0;
-  int i;
+  n = sl_WlanGetNetworkList(0, 20, info);
+  if (n < 0) goto out;
   for (i = 0; i < n; i++) {
     ssids[i] = (char *) info[i].ssid;
   }
   ssids[i] = NULL;
-  cb(ssids, arg);
-  return 1;
+  res = ssids;
+out:
+  cb(res, arg);
 }
 
 void sj_wifi_hal_init() {

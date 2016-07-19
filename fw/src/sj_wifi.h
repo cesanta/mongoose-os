@@ -35,9 +35,13 @@ char *sj_wifi_get_connected_ssid();
 char *sj_wifi_get_sta_ip();
 char *sj_wifi_get_ap_ip();
 
-/* Caller owns SSIDS, they are not freed by the callee. */
+/*
+ * Callback must be invoked, with list of SSIDs or NULL on error.
+ * Caller owns SSIDS, they are not freed by the callee.
+ * Invoking inline is ok.
+ */
 typedef void (*sj_wifi_scan_cb_t)(const char **ssids, void *arg);
-int sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg);
+void sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg);
 
 /* Invoke this when Wifi connection state changes. */
 void sj_wifi_on_change_cb(enum sj_wifi_status event);

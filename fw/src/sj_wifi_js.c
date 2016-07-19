@@ -155,7 +155,7 @@ clean:
 void sj_wifi_scan_done(const char **ssids, void *arg) {
   struct wifi_cb_arg *cba = (struct wifi_cb_arg *) arg;
   struct v7 *v7 = cba->v7;
-  v7_val_t res = V7_UNDEFINED;
+  v7_val_t res = v7_mk_undefined();
   const char **p;
 
   v7_own(v7, &res);
@@ -164,49 +164,37 @@ void sj_wifi_scan_done(const char **ssids, void *arg) {
     for (p = ssids; *p != NULL; p++) {
       v7_array_push(v7, res, v7_mk_string(v7, *p, strlen(*p), 1));
     }
-  } else {
-    res = V7_UNDEFINED;
   }
 
-  sj_invoke_cb1(v7, cba->v, res);
-  v7_disown(v7, &cba->v);
+  /* Free the struct in case callback launches a new scan. */
   cba->v7 = NULL;
+  v7_disown(v7, &cba->v);
 
+  sj_invoke_cb1(v7, cba->v, res);
   v7_disown(v7, &res);
 }
 
 /* Call the callback with a list of ssids found in the air. */
 SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
   v7_val_t cb;
-  int r;
 
   if (s_wifi_scan_cb.v7 != NULL) {
-    fprintf(stderr, "scan in progress");
-    *res = v7_mk_boolean(v7, 0);
-    goto clean;
+    return v7_throwf(v7, "Error", "scan in progress");
   }
 
   cb = v7_arg(v7, 0);
   if (!v7_is_callable(v7, cb)) {
-    fprintf(stderr, "invalid argument");
-    *res = v7_mk_boolean(v7, 0);
-    goto clean;
+    return v7_throwf(v7, "Error", "Invalid argument");
   }
 
-  r = sj_wifi_scan(sj_wifi_scan_done, &s_wifi_scan_cb);
+  s_wifi_scan_cb.v7 = v7;
+  s_wifi_scan_cb.v = cb;
+  v7_own(v7, &s_wifi_scan_cb.v);
 
-  if (r == 0) {
-    s_wifi_scan_cb.v7 = v7;
-    s_wifi_scan_cb.v = cb;
-    v7_own(v7, &s_wifi_scan_cb.v);
-  }
+  sj_wifi_scan(sj_wifi_scan_done, &s_wifi_scan_cb);
 
-  *res = v7_mk_boolean(v7, r);
-  goto clean;
-
-clean:
-  return rcode;
+  (void) res;
+  return V7_OK;
 }
 
 void sj_wifi_ready_js(enum sj_wifi_status event, void *arg) {

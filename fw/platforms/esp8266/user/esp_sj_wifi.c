@@ -225,9 +225,14 @@ char *sj_wifi_get_sta_ip(void) {
 }
 
 void wifi_scan_done(void *arg, STATUS status) {
+  sj_wifi_scan_cb_t cb = s_wifi_scan_cb;
+  void *cb_arg = s_wifi_scan_cb_arg;
+  s_wifi_scan_cb = NULL;
+  s_wifi_scan_cb_arg = NULL;
+  if (cb == NULL) return;
   if (status != OK) {
     LOG(LL_ERROR, ("wifi scan failed: %d", status));
-    s_wifi_scan_cb(NULL, s_wifi_scan_cb_arg);
+    cb(NULL, cb_arg);
     return;
   }
   STAILQ_HEAD(, bss_info) *info = arg;
@@ -238,6 +243,7 @@ void wifi_scan_done(void *arg, STATUS status) {
   ssids = calloc(n + 1, sizeof(*ssids));
   if (ssids == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
+    cb(NULL, cb_arg);
     return;
   }
   n = 0;
@@ -249,18 +255,22 @@ void wifi_scan_done(void *arg, STATUS status) {
     }
     if (i == n) ssids[n++] = (const char *) p->ssid;
   }
-  s_wifi_scan_cb(ssids, s_wifi_scan_cb_arg);
+  cb(ssids, cb_arg);
   free(ssids);
 }
 
-int sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
-  s_wifi_scan_cb = cb;
-  s_wifi_scan_cb_arg = arg;
+void sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
   /* Scanning requires station. If in AP-only mode, switch to AP+STA. */
   if (wifi_get_opmode() == SOFTAP_MODE) {
     wifi_set_opmode_current(STATIONAP_MODE);
   }
-  return wifi_station_scan(NULL, wifi_scan_done);
+  s_wifi_scan_cb = cb;
+  s_wifi_scan_cb_arg = arg;
+  if (!wifi_station_scan(NULL, wifi_scan_done)) {
+    cb(NULL, arg);
+    s_wifi_scan_cb = NULL;
+    s_wifi_scan_cb_arg = NULL;
+  }
 }
 
 void sj_wifi_hal_init(struct v7 *v7) {
