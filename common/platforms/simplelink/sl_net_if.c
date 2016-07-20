@@ -162,11 +162,9 @@ int mg_if_create_conn(struct mg_connection *nc) {
 
 void mg_if_destroy_conn(struct mg_connection *nc) {
   if (nc->sock == INVALID_SOCKET) return;
-  if (!(nc->flags & MG_F_UDP)) {
+  /* For UDP, only close outgoing sockets or listeners. */
+  if (!(nc->flags & MG_F_UDP) || nc->listener == NULL) {
     sl_Close(nc->sock);
-  } else {
-    /* Only close outgoing UDP sockets or listeners. */
-    if (nc->listener == NULL) sl_Close(nc->sock);
   }
   nc->sock = INVALID_SOCKET;
 #ifdef MG_ENABLE_SSL
