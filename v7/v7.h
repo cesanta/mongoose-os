@@ -909,6 +909,9 @@ int v7_is_object(v7_val_t v);
 /* Set object's prototype. Return old prototype or undefined on error. */
 v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
 
+/* Get object's prototype. */
+v7_val_t v7_get_proto(struct v7 *v7, v7_val_t obj);
+
 /*
  * Lookup property `name` in object `obj`. If `obj` holds no such property,
  * an `undefined` value is returned.

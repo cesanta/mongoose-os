@@ -2400,6 +2400,9 @@ int v7_is_object(v7_val_t v);
 /* Set object's prototype. Return old prototype or undefined on error. */
 v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
 
+/* Get object's prototype. */
+v7_val_t v7_get_proto(struct v7 *v7, v7_val_t obj);
+
 /*
  * Lookup property `name` in object `obj`. If `obj` holds no such property,
  * an `undefined` value is returned.
@@ -4435,8 +4438,6 @@ V7_PRIVATE int obj_prototype_set(struct v7 *v7, struct v7_object *obj,
  */
 V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
                                            struct v7_object *obj);
-
-V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj);
 
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
 
@@ -13508,7 +13509,7 @@ static int del_property_deep(struct v7 *v7, val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return -1;
   }
-  for (; obj != V7_NULL; obj = obj_prototype_v(v7, obj)) {
+  for (; obj != V7_NULL; obj = v7_get_proto(v7, obj)) {
     int del_res;
     if ((del_res = v7_del(v7, obj, name, len)) != -1) {
       return del_res;
@@ -15021,7 +15022,7 @@ restart:
 
             if (!ok) {
               /* no more properties in this object: proceed to the prototype */
-              v2 = obj_prototype_v(v7, v2);
+              v2 = v7_get_proto(v7, v2);
               if (get_generic_object_struct(v2) != NULL) {
                 /*
                  * the prototype is a generic object, so, init the context for
@@ -16804,17 +16805,17 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_UNDEFINED >> 48:
       return V7_TYPE_UNDEFINED;
     case V7_TAG_OBJECT >> 48:
-      if (obj_prototype_v(v7, v) == v7->vals.array_prototype) {
+      if (v7_get_proto(v7, v) == v7->vals.array_prototype) {
         return V7_TYPE_ARRAY_OBJECT;
-      } else if (obj_prototype_v(v7, v) == v7->vals.boolean_prototype) {
+      } else if (v7_get_proto(v7, v) == v7->vals.boolean_prototype) {
         return V7_TYPE_BOOLEAN_OBJECT;
-      } else if (obj_prototype_v(v7, v) == v7->vals.string_prototype) {
+      } else if (v7_get_proto(v7, v) == v7->vals.string_prototype) {
         return V7_TYPE_STRING_OBJECT;
-      } else if (obj_prototype_v(v7, v) == v7->vals.number_prototype) {
+      } else if (v7_get_proto(v7, v) == v7->vals.number_prototype) {
         return V7_TYPE_NUMBER_OBJECT;
-      } else if (obj_prototype_v(v7, v) == v7->vals.function_prototype) {
+      } else if (v7_get_proto(v7, v) == v7->vals.function_prototype) {
         return V7_TYPE_CFUNCTION_OBJECT;
-      } else if (obj_prototype_v(v7, v) == v7->vals.date_prototype) {
+      } else if (v7_get_proto(v7, v) == v7->vals.date_prototype) {
         return V7_TYPE_DATE_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
@@ -17942,7 +17943,7 @@ V7_PRIVATE struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  for (; obj != V7_NULL; obj = obj_prototype_v(v7, obj)) {
+  for (; obj != V7_NULL; obj = v7_get_proto(v7, obj)) {
     struct v7_property *prop;
     if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
       return prop;
@@ -18985,31 +18986,14 @@ V7_PRIVATE struct v7_object *obj_prototype(struct v7 *v7,
   }
 }
 
-V7_PRIVATE val_t obj_prototype_v(struct v7 *v7, val_t obj) {
-  /*
-   * NOTE: we don't use v7_is_callable() here, because it involves walking
-   * through the object's properties, which may be expensive. And it's done
-   * anyway for cfunction objects as it would for any other generic objects by
-   * the call to `obj_prototype()`.
-   *
-   * Since this function is called quite often (at least, GC walks the
-   * prototype chain), it's better to just handle cfunction objects as generic
-   * objects.
-   */
-  if (is_js_function(obj) || is_cfunction_lite(obj)) {
-    return v7->vals.function_prototype;
-  }
-  return v7_object_to_value(obj_prototype(v7, get_object_struct(obj)));
-}
-
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
   }
 
   /* walk the prototype chain */
-  for (; !v7_is_null(o); o = obj_prototype_v(v7, o)) {
-    if (obj_prototype_v(v7, o) == p) {
+  for (; !v7_is_null(o); o = v7_get_proto(v7, o)) {
+    if (v7_get_proto(v7, o) == p) {
       return 1;
     }
   }
@@ -19033,6 +19017,23 @@ v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto) {
   } else {
     return V7_UNDEFINED;
   }
+}
+
+val_t v7_get_proto(struct v7 *v7, val_t obj) {
+  /*
+   * NOTE: we don't use v7_is_callable() here, because it involves walking
+   * through the object's properties, which may be expensive. And it's done
+   * anyway for cfunction objects as it would for any other generic objects by
+   * the call to `obj_prototype()`.
+   *
+   * Since this function is called quite often (at least, GC walks the
+   * prototype chain), it's better to just handle cfunction objects as generic
+   * objects.
+   */
+  if (is_js_function(obj) || is_cfunction_lite(obj)) {
+    return v7->vals.function_prototype;
+  }
+  return v7_object_to_value(obj_prototype(v7, get_object_struct(obj)));
 }
 
 V7_PRIVATE struct v7_property *get_user_data_property(v7_val_t obj) {
@@ -19553,7 +19554,7 @@ enum v7_err to_primitive(struct v7 *v7, val_t v, enum to_primitive_hint hint,
   if (v7_is_object(*res)) {
     /* Handle special case for Date object */
     if (hint == V7_TO_PRIMITIVE_HINT_AUTO) {
-      hint = (obj_prototype_v(v7, *res) == v7->vals.date_prototype)
+      hint = (v7_get_proto(v7, *res) == v7->vals.date_prototype)
                  ? V7_TO_PRIMITIVE_HINT_STRING
                  : V7_TO_PRIMITIVE_HINT_NUMBER;
     }
@@ -20539,7 +20540,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   }
 
   /* mark object's prototype */
-  gc_mark(v7, obj_prototype_v(v7, v));
+  gc_mark(v7, v7_get_proto(v7, v));
 
   if (is_js_function(v)) {
     struct v7_js_function *func = get_js_function_struct(v);
@@ -28507,7 +28508,7 @@ V7_PRIVATE enum v7_err Obj_getPrototypeOf(struct v7 *v7, v7_val_t *res) {
         v7_throwf(v7, TYPE_ERROR, "Object.getPrototypeOf called on non-object");
     goto clean;
   }
-  *res = obj_prototype_v(v7, arg);
+  *res = v7_get_proto(v7, arg);
 
 clean:
   return rcode;
@@ -29449,7 +29450,7 @@ V7_PRIVATE enum v7_err Number_valueOf(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_number(this_obj) &&
       (v7_is_object(this_obj) &&
-       obj_prototype_v(v7, this_obj) != v7->vals.number_prototype)) {
+       v7_get_proto(v7, this_obj) != v7->vals.number_prototype)) {
     rcode =
         v7_throwf(v7, TYPE_ERROR, "Number.valueOf called on non-number object");
     goto clean;
@@ -30545,7 +30546,7 @@ V7_PRIVATE enum v7_err Boolean_valueOf(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   if (!v7_is_boolean(this_obj) &&
       (v7_is_object(this_obj) &&
-       obj_prototype_v(v7, this_obj) != v7->vals.boolean_prototype)) {
+       v7_get_proto(v7, this_obj) != v7->vals.boolean_prototype)) {
     rcode = v7_throwf(v7, TYPE_ERROR,
                       "Boolean.valueOf called on non-boolean object");
     goto clean;
@@ -31240,7 +31241,7 @@ V7_PRIVATE enum v7_err Str_valueOf(struct v7 *v7, v7_val_t *res) {
 
   if (!v7_is_string(this_obj) &&
       (v7_is_object(this_obj) &&
-       obj_prototype_v(v7, this_obj) != v7->vals.string_prototype)) {
+       v7_get_proto(v7, this_obj) != v7->vals.string_prototype)) {
     rcode =
         v7_throwf(v7, TYPE_ERROR, "String.valueOf called on non-string object");
     goto clean;
@@ -33012,7 +33013,7 @@ V7_PRIVATE enum v7_err Date_valueOf(struct v7 *v7, v7_val_t *res) {
   val_t this_obj = v7_get_this(v7);
   if (!v7_is_generic_object(this_obj) ||
       (v7_is_generic_object(this_obj) &&
-       obj_prototype_v(v7, this_obj) != v7->vals.date_prototype)) {
+       v7_get_proto(v7, this_obj) != v7->vals.date_prototype)) {
     rcode = v7_throwf(v7, TYPE_ERROR, "Date.valueOf called on non-Date object");
     goto clean;
   }
