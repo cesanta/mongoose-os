@@ -3,10 +3,10 @@ title: Custom messages
 ---
 
 Other than talking to the cloud, we are also likely to want to send some custom
-messages to our devices we want to control.
+messages to the devices we want to control.
 
-As a simple example, assume we want to control GPIO state of pins on the remote
-device. Assume the device is running Mongoose IoT firmware, and it has the
+As a simple example, assume, we want to control the GPIO state of pins on a remote
+device. Assume, the device is running Mongoose Firmware, and it has the
 following code in its `app.js`:
 
 ```javascript
@@ -35,7 +35,7 @@ clubby.oncmd(
 
 ```
 
-So, it responds on two commands: `/v1/GPIO.Read` and `/v1/GPIO.Write`. Now we
+It responds to two commands: `/v1/GPIO.Read` and `/v1/GPIO.Write`. Now, we
 want to control this device remotely.
 
 Let's define the appropriate data structures:
@@ -87,7 +87,7 @@ static class GpioResp {
 ```
 
 And now, we can perform requests. Here we assume that the device we send
-commands to has the id `"//api.cesanta.com/d/mydevice"`. Let's read the
+commands to has the ID `"//api.cesanta.com/d/mydevice"`. Let's read the
 state of the 4th pin:
 
 
@@ -180,7 +180,7 @@ clubby.call(
 ```
 
 This is it! You can easily send any custom commands you need, and it's even
-easier to talk to the cloud thanks to the helper classes. For exact API of
+easier to talk to the cloud thanks to the helper classes. For the exact API of
 these helpers, consult the API documentation of the library in the language of
 interest.
 

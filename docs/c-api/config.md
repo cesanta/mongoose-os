@@ -2,8 +2,8 @@
 title: Configuration
 ---
 
-System configuration object is loaded in RAM at firmware boot time and
-stays there resident. It is accessible via the `get_cfg()` call.
+The system configuration object is loaded in RAM at firmware boot time and
+stays there. It is accessible via the `get_cfg()` call.
 
 To add application-specific config parameters, create a
 `fs/conf_app_defaults.json` file, for example:
