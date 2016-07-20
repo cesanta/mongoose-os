@@ -266,8 +266,8 @@ int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts) {
 
   if (fs_res >= 0 && fs_dir_result >= 0) {
     /* TODO(alashkin): make this sutuation an error later */
-    LOG(LL_WARN, ("Both fs and fs_dir found, using fs_dir"));
-    ctx->fs_part.done = 1;
+    LOG(LL_WARN, ("Both fs and fs_dir found, using fs"));
+    ctx->fs_dir_part.files.dir_name[0] = 0;
   }
   return 1;
 }
@@ -354,7 +354,7 @@ static int compare_digest(spiffs *fs, const char *file_name,
   }
 
   int32_t res;
-  while ((res = SPIFFS_read(fs, file, read_buf, sizeof(read_buf))) > 0) {
+  while ((res = SPIFFS_read(fs, file, read_buf, sizeof(read_buf))) >= 0) {
     cs_sha1_update(&sha1ctx, read_buf, res);
   }
 
@@ -364,7 +364,13 @@ static int compare_digest(spiffs *fs, const char *file_name,
 
   bin2hex(read_buf, 20, written_checksum);
 
-  return (strncasecmp(written_checksum, received_digest, SHA1SUM_LEN) == 0);
+  int ret = (strncasecmp(written_checksum, received_digest, SHA1SUM_LEN) == 0);
+  if (!ret) {
+    LOG(LL_DEBUG, ("%s: on disk %.*s man: %.*s", file_name, SHA1SUM_LEN,
+                   written_checksum, SHA1SUM_LEN, received_digest));
+  }
+
+  return ret;
 }
 
 static int prepare_to_update_fs(struct sj_upd_ctx *ctx,
@@ -411,6 +417,8 @@ static int prepare_to_update_fs(struct sj_upd_ctx *ctx,
       CONSOLE_LOG(LL_INFO, ("%s is unchanged, skipping", fi->file_name));
       SLIST_REMOVE(&part->files.fhead, fi, file_info, entries);
       part->done++;
+    } else {
+      LOG(LL_DEBUG, ("%s should be updated", fi->file_name));
     }
 
     /* 0 means file was changed, do nothing */
@@ -437,31 +445,39 @@ struct file_info *get_file_info_from_manifest(struct part_info *pi,
 
 enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
                                           const struct sj_upd_file_info *fi) {
-  int ret;
+  int ret = 0;
+  ctx->status_msg = "Failed to update file";
   LOG(LL_DEBUG, ("fi->name=%s", fi->name));
   struct file_info *mfi;
   if (strcmp(fi->name, ctx->fw_part.fi.file_name) == 0) {
     ret = prepare_to_write(ctx, fi, &ctx->fw_part);
   } else if (strcmp(fi->name, ctx->fs_part.fi.file_name) == 0) {
     ret = prepare_to_write(ctx, fi, &ctx->fs_part);
-  } else if ((mfi = get_file_info_from_manifest(&ctx->fs_dir_part, fi->name)) !=
-             NULL) {
+  } else if (strncmp(fi->name, ctx->fs_dir_part.files.dir_name,
+                     strlen(ctx->fs_dir_part.files.dir_name)) == 0 &&
+             strlen(fi->name) > strlen(ctx->fs_dir_part.files.dir_name) + 1) {
     if (ctx->fs_dir_part.done == 0) {
       if (prepare_to_update_fs(ctx, &ctx->fs_dir_part) < 0) {
         return SJ_UPDATER_ABORT;
       }
     }
-    ctx->current_part = &ctx->fs_dir_part;
-    mfi->file = SPIFFS_open(&ctx->fs_dir_part.files.fs, mfi->file_name,
-                            SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
-    if (mfi->file < 0) {
-      LOG(LL_ERROR, ("Cannot open file %s (%d)", mfi->file_name,
-                     SPIFFS_errno(&ctx->fs_dir_part.files.fs)));
-      return SJ_UPDATER_ABORT;
-    }
-    ctx->current_part->files.current_file = mfi;
+    if ((mfi = get_file_info_from_manifest(&ctx->fs_dir_part, fi->name)) !=
+        NULL) {
+      ctx->current_part = &ctx->fs_dir_part;
+      mfi->file = SPIFFS_open(&ctx->fs_dir_part.files.fs, mfi->file_name,
+                              SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
+      if (mfi->file < 0) {
+        LOG(LL_ERROR, ("Cannot open file %s (%d)", mfi->file_name,
+                       SPIFFS_errno(&ctx->fs_dir_part.files.fs)));
+        return SJ_UPDATER_ABORT;
+      }
+      ctx->current_part->files.current_file = mfi;
 
-    ret = SJ_UPDATER_PROCESS_FILE;
+      return SJ_UPDATER_PROCESS_FILE;
+    } else {
+      /* File has the same digest, skip it */
+      return SJ_UPDATER_SKIP_FILE;
+    }
   } else {
     /* We need only fw & fs files, the rest just send to /dev/null */
     return SJ_UPDATER_SKIP_FILE;
