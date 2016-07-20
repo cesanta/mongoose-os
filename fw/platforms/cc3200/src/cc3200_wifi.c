@@ -50,7 +50,8 @@ static int restart_nwp() {
   cc3200_fs_flush();
   /* We don't need TI's web server. */
   sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
-  sl_Stop(0);
+  /* Without a delay in sl_Stop subsequent sl_Start gets stuck sometimes. */
+  sl_Stop(10);
   s_current_role = sl_Start(NULL, NULL, NULL);
   sl_restart_cb(&sj_mgr);
   return (s_current_role >= 0);
@@ -82,7 +83,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
   invoke_cb(invoke_wifi_on_change_cb, (void *) s_wifi_sta_config.status);
 }
 
-void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
+void sl_net_app_eh(SlNetAppEvent_t *e) {
   if (e->Event == SL_NETAPP_IPV4_IPACQUIRED_EVENT) {
     SlIpV4AcquiredAsync_t *ed = &e->EventData.ipAcquiredV4;
     asprintf(&s_wifi_sta_config.ip, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ed->ip, 3),
@@ -90,7 +91,19 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = SJ_WIFI_IP_ACQUIRED;
     invoke_cb(invoke_wifi_on_change_cb, (void *) s_wifi_sta_config.status);
+  } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
+    SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
+    LOG(LL_INFO,
+        ("WiFi: leased %lu.%lu.%lu.%lu to %02x:%02x:%02x:%02x:%02x:%02x",
+         SL_IPV4_BYTE(ed->ip_address, 3), SL_IPV4_BYTE(ed->ip_address, 2),
+         SL_IPV4_BYTE(ed->ip_address, 1), SL_IPV4_BYTE(ed->ip_address, 0),
+         ed->mac[0], ed->mac[1], ed->mac[2], ed->mac[3], ed->mac[4],
+         ed->mac[5]));
   }
+}
+
+void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
+  sl_net_app_eh(e);
 }
 
 void SimpleLinkSockEventHandler(SlSockEvent_t *e) {
