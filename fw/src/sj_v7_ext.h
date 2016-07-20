@@ -8,23 +8,15 @@
 
 #include "fw/src/sj_hal_js.h"
 
+#ifndef CS_DISABLE_JS
+
 struct v7;
 
-/* Initialize objects and functions provided by v7_ext */
+/* Initialize objects and functions provided by v7_ext, incl. Sys.* */
 void sj_v7_ext_api_setup(struct v7 *v7);
 
 /* Initialize `Sys.*` */
-void sj_init_sys(struct v7 *v7);
-
-#ifndef CS_DISABLE_JS
-
-#include "v7/v7.h"
-
-/* Initialize simple http client */
-void sj_init_simple_http_client(struct v7 *v7);
-void sj_http_error_callback(struct v7 *v7, v7_val_t cb, int err_no);
-void sj_http_success_callback(struct v7 *v7, v7_val_t cb, const char *data,
-                              size_t data_len);
+void sj_sys_js_init(struct v7 *v7);
 
 /*
  * Invokes a callback and prints a stack trace in case of exception.

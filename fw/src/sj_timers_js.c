@@ -3,12 +3,12 @@
  * All rights reserved
  */
 
-#include "sj_timers.h"
+#include "fw/src/sj_timers_js.h"
 
 #include <stdlib.h>
 
-#include "sj_v7_ext.h"
-#include "sj_common.h"
+#include "fw/src/sj_common.h"
+#include "fw/src/sj_v7_ext.h"
 
 #ifndef CS_DISABLE_JS
 SJ_PRIVATE enum v7_err sj_set_interval_or_timeout(struct v7 *v7, v7_val_t *res,

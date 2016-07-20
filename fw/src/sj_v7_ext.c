@@ -302,7 +302,7 @@ void sj_v7_ext_api_setup(struct v7 *v7) {
   v7_set_method(v7, gc, "gc", GC_gc);
 }
 
-void sj_init_sys(struct v7 *v7) {
+void sj_sys_js_init(struct v7 *v7) {
   v7_val_t sys, fs;
 
   sys = v7_mk_object(v7);
@@ -319,15 +319,4 @@ void sj_init_sys(struct v7 *v7) {
   v7_set(v7, sys, "fs", ~0, fs);
   v7_set_method(v7, fs, "free", Sys_fs_getFreeSpace);
 }
-
-#else /* CS_DISABLE_JS */
-
-void sj_init_sys(struct v7 *v7) {
-  (void) v7;
-}
-
-void sj_v7_ext_api_setup(struct v7 *v7) {
-  (void) v7;
-}
-
 #endif /* CS_DISABLE_JS */

@@ -31,19 +31,19 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
               -DV7_ENABLE_ENTITY_IDS
 
-SJ_FEATURES ?= -DSJ_PROMPT_DISABLE_ECHO
+MGIOT_FEATURES ?= -DSJ_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
 
 INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
-APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c \
+APP_SRCS := $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_init.c sj_init_js.c \
             mongoose.c frozen.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
-            sj_mongoose_ws_client.c sj_mqtt.c sj_gpio_js.c sj_adc_js.c \
-            sj_prompt.c sj_timers.c sj_timers_mongoose.c sj_uart.c sj_http.c \
+            sj_ws_client_js.c sj_mqtt_js.c sj_gpio_js.c sj_adc_js.c \
+            sj_prompt.c sj_timers_js.c sj_timers_mongoose.c sj_uart.c sj_http_js.c \
             sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c clubby_proto.c \
-            json_utils.c sj_clubby.c sj_clubby_js.c sj_common.c \
-            sj_config.c sj_config_js.c device_config.c sys_config.c sj_udptcp.c \
+            json_utils.c sj_clubby.c sj_clubby_js.c \
+            sj_config.c sj_config_js.c device_config.c sys_config.c sj_tcp_udp_js.c \
             sj_utils.c sj_console.c
 
 # inline causes crashes in the compacting GC
@@ -54,7 +54,7 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \
           $(V7_FEATURES) \
-          $(SJ_FEATURES) \
+          $(MGIOT_FEATURES) \
           $(MONGOOSE_FEATURES) \
           -DFW_ARCHITECTURE=\"$(PLATFORM)\" \
           $(CFLAGS_EXTRA)
@@ -88,7 +88,7 @@ endif
 
 # Non Linux
 ifneq ($(PLATFORM), "LINUX")
-  SJ_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI -DSJ_DISABLE_GPIO
+  MGIOT_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI -DSJ_DISABLE_GPIO
 endif
 
 # Non Windows

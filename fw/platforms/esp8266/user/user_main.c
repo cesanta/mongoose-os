@@ -20,14 +20,11 @@
 
 #include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
-#include "fw/src/sj_common.h"
+#include "fw/src/sj_init.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_hal.h"
-#include "fw/src/sj_v7_ext.h"
-#include "fw/src/sj_gpio_js.h"
 #include "fw/src/sj_updater_clubby.h"
-#include "fw/src/sj_updater_post.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_sj_uart.h"
@@ -38,6 +35,7 @@
 
 #ifndef CS_DISABLE_JS
 #include "v7/v7.h"
+#include "fw/src/sj_init_js.h"
 #endif
 
 os_timer_t startcmd_timer;
@@ -74,6 +72,7 @@ int sjs_init(rboot_config *bcfg) {
    */
   {
     struct esp_uart_config *u0cfg = esp_sj_uart_default_config(0);
+    esp_sj_uart_init();
 #if ESP_DEBUG_UART == 0
     u0cfg->baud_rate = ESP_DEBUG_UART_BAUD_RATE;
 #endif
@@ -97,6 +96,8 @@ int sjs_init(rboot_config *bcfg) {
 #endif
   }
 
+  esp_print_reset_info();
+
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
                   bcfg->fs_sizes[bcfg->current_rom]);
   if (r != 0) {
@@ -107,49 +108,28 @@ int sjs_init(rboot_config *bcfg) {
     return -2;
   }
 
-#ifndef CS_DISABLE_JS
-  init_v7(&bcfg);
-
-  /* Disable GC during JS API initialization. */
-  v7_set_gc_enabled(v7, 0);
-#endif
-
-  esp_sj_uart_init(v7);
-
-  sj_common_api_setup(v7);
-  sj_common_init(v7);
-
-  sj_init_sys(v7);
-
-  /* NOTE(lsm): must be done after mongoose_init(). */
-  if (!init_device(v7)) {
-    LOG(LL_ERROR, ("init_device failed"));
+  enum sj_init_result ir = sj_init();
+  if (ir != SJ_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "SJ", ir));
     return -3;
   }
 
-  esp_print_reset_info();
-
-#ifndef DISABLE_OTA
-  sj_updater_post_init(v7);
-  init_updater_clubby(v7);
-#endif
-  LOG(LL_INFO, ("Sys init done, SDK %s", system_get_sdk_version()));
-
-  if (!sj_app_init(v7)) {
-    LOG(LL_ERROR, ("App init failed"));
-    return -4;
-  }
-  LOG(LL_INFO, ("App init done"));
-
 #ifndef CS_DISABLE_JS
-  /* SJS initialized, enable GC back, and trigger it. */
-  v7_set_gc_enabled(v7, 1);
-  v7_gc(v7, 1);
+  init_v7(&bcfg);
+
+  ir = sj_init_js_all(v7);
+  if (ir != SJ_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "SJ JS", ir));
+    return -5;
+  }
+  esp_sj_uart_init_js(v7);
+  /* TODO(rojer): Get rid of I2C.js */
+  if (v7_exec_file(v7, "I2C.js", NULL) != V7_OK) {
+    return -6;
+  }
 #endif
 
-#if !defined(V7_NO_FS) && !defined(CS_DISABLE_JS)
-  run_init_script();
-#endif
+  LOG(LL_INFO, ("Init done, RAM: %d free", sj_get_free_heap_size()));
 
 #ifndef CS_DISABLE_JS
   /* Install prompt if enabled in the config and user's app has not installed

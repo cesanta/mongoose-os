@@ -11,7 +11,7 @@
 #include "sj_i2c.h"
 #include "sj_common.h"
 
-#ifndef SJ_DISABLE_I2C
+#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_I2C_API)
 
 /*
  * JS I2C API.
@@ -331,7 +331,8 @@ enum v7_err i2cjs_test(struct v7 *v7, v7_val_t *res) {
 }
 #endif
 
-void sj_i2c_api_setup(struct v7 *v7) {
+/* Note: Can be frozen once I2C.js is out of the picture. */
+void sj_i2c_js_init(struct v7 *v7) {
   v7_val_t i2c_proto, i2c_ctor;
 
   v7_prop_attr_desc_t const_attrs =
@@ -361,10 +362,4 @@ void sj_i2c_api_setup(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), "I2C", ~0, i2c_ctor);
 }
 
-#else
-
-void sj_i2c_api_setup(struct v7 *v7) {
-  (void) v7;
-}
-
-#endif /* SJ_DISABLE_I2C */
+#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_I2C_API) */

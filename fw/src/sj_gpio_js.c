@@ -10,7 +10,7 @@
 #include "sj_common.h"
 #include "sj_v7_ext.h"
 
-#if !(defined(SJ_DISABLE_GPIO) || defined(CS_DISABLE_JS))
+#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_GPIO_API)
 
 static int s_gpio_intr_installed = 0;
 static v7_val_t s_isr_cb_proxy_v;
@@ -208,4 +208,4 @@ void sj_gpio_api_setup(struct v7 *v7) {
   (void) v7;
 }
 
-#endif /* !(defined(SJ_DISABLE_GPIO) || defined(CS_DISABLE_JS)) */
+#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_GPIO_API) */

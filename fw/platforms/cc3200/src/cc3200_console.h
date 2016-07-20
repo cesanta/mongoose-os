@@ -12,8 +12,6 @@
 void cc3200_console_putc(int fd, char c);
 
 #if SJ_CONSOLE_ENABLE_CLOUD
-struct v7;
-void sj_console_api_setup(struct v7 *v7);
 void cc3200_console_cloud_push();
 #endif
 

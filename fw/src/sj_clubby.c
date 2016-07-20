@@ -126,7 +126,7 @@ static void call_ready_cbs(struct clubby *clubby, struct clubby_event *evt) {
   }
 }
 
-void sj_reset_reconnect_timeout(struct clubby *clubby) {
+void sj_clubby_reset_reconnect_timeout(struct clubby *clubby) {
   clubby->reconnect_timeout =
       clubby->cfg.reconnect_timeout_min / RECONNECT_TIMEOUT_MULTIPLY;
 }
@@ -517,7 +517,7 @@ static void clubby_cb(struct clubby_event *evt) {
           ("CLUBBY_NET_CONNECT success=%d", evt->net_connect.success));
       if (evt->net_connect.success) {
         /* Network is ok, let's use small timeout */
-        sj_reset_reconnect_timeout(clubby);
+        sj_clubby_reset_reconnect_timeout(clubby);
       }
       break;
     }

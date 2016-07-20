@@ -7,6 +7,12 @@
 
 struct v7;
 
-void sj_udp_tcp_api_setup(struct v7 *v7);
+#ifdef SJ_ENABLE_TCP_API
+void sj_tcp_api_setup(struct v7 *v7);
+#endif /* SJ_ENABLE_TCP_API */
+
+#ifdef SJ_ENABLE_UDP_API
+void sj_udp_api_setup(struct v7 *v7);
+#endif /* SJ_ENABLE_TCP_API */
 
 #endif /* CS_FW_SRC_SJ_UDPTCP_H_ */

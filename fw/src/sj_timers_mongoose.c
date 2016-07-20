@@ -1,8 +1,9 @@
-#include <v7/v7.h>
 #include <fw/src/sj_timers.h>
+#include <fw/src/sj_timers_js.h>
 
 #include <fw/src/sj_mongoose.h>
 #include <fw/src/sj_v7_ext.h>
+#include <v7/v7.h>
 
 static sj_timer_id s_next_timer_id = 0;
 

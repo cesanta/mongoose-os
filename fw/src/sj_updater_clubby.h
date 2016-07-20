@@ -6,8 +6,9 @@
 #ifndef CS_FW_SRC_SJ_UPDATER_CLUBBY_H_
 #define CS_FW_SRC_SJ_UPDATER_CLUBBY_H_
 
-struct v7;
-void init_updater_clubby(struct v7 *v7);
+#ifndef DISABLE_C_CLUBBY
+void sj_updater_clubby_init();
 void clubby_updater_finish(int error_code);
+#endif
 
 #endif /* CS_FW_SRC_SJ_UPDATER_CLUBBY_H_ */

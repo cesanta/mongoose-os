@@ -7,7 +7,7 @@
 #include "sj_adc.h"
 #include "sj_common.h"
 
-#ifndef SJ_DISABLE_ADC
+#ifdef SJ_ENABLE_ADC_API
 
 SJ_PRIVATE enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
@@ -46,10 +46,4 @@ void sj_adc_api_setup(struct v7 *v7) {
   v7_set_method(v7, adc, "readVoltage", ADC_readVoltage);
 }
 
-#else
-
-void sj_adc_api_setup(struct v7 *v7) {
-  (void) v7;
-}
-
-#endif /* SJ_DISABLE_ADC */
+#endif /* SJ_ENABLE_ADC_API */

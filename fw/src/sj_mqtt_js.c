@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/sj_mqtt.h"
+#include "fw/src/sj_mqtt_js.h"
 
-#ifndef CS_DISABLE_JS
+#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_MQTT_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -356,10 +356,5 @@ void sj_mqtt_api_setup(struct v7 *v7) {
   v7_disown(v7, &mqtt);
   v7_disown(v7, &mqtt_connect);
 }
-#else /* CS_DISABLE_JS */
 
-void sj_mqtt_api_setup(struct v7 *v7) {
-  (void) v7;
-}
-
-#endif /* CS_DISABLE_JS */
+#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_MQTT_API) */

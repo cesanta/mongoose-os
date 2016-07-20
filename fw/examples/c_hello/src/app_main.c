@@ -14,7 +14,7 @@
 #error Unknown platform
 #endif
 
-int sj_app_init(struct v7 *v7) {
+enum mg_app_init_result sj_app_init() {
   { /* Print a message using a value from config. */
     printf("Hello, %s!\n", get_cfg()->hello.who);
   }
@@ -36,6 +36,5 @@ int sj_app_init(struct v7 *v7) {
     }
   }
 
-  (void) v7;
   return MG_APP_INIT_SUCCESS;
 }

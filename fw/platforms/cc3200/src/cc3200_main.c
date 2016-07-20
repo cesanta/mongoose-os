@@ -106,9 +106,3 @@ void vAssertCalled(const char *pcFile, unsigned long ulLine) {
   while (1) {
   }
 }
-
-int sj_app_init(struct v7 *v7) __attribute__((weak));
-int sj_app_init(struct v7 *v7) {
-  (void) v7;
-  return 1;
-}

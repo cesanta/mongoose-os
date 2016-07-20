@@ -567,7 +567,7 @@ SJ_PRIVATE enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
   DECLARE_CLUBBY();
 
   if (!clubby_proto_is_connected(clubby->nc)) {
-    sj_reset_reconnect_timeout(clubby);
+    sj_clubby_reset_reconnect_timeout(clubby);
     sj_clubby_connect(clubby);
 
     *res = v7_mk_boolean(v7, 1);
@@ -682,7 +682,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   set_clubby(v7, this_obj, clubby);
   connect = v7_get(v7, arg, "connect", ~0);
   if (v7_is_undefined(connect) || v7_is_truthy(v7, connect)) {
-    sj_reset_reconnect_timeout(clubby);
+    sj_clubby_reset_reconnect_timeout(clubby);
     sj_clubby_connect(clubby);
   }
 

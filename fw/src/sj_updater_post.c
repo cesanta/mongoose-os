@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+#ifdef SJ_ENABLE_UPDATER_POST
+
 #include "fw/src/sj_updater_post.h"
 
 #include "fw/src/device_config.h"
@@ -77,7 +83,8 @@ void handle_update_post(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-void sj_updater_post_init(struct v7 *v7) {
+void sj_updater_post_init() {
   device_register_http_endpoint("/update", handle_update_post);
-  (void) v7;
 }
+
+#endif /* SJ_ENABLE_UPDATER_POST */

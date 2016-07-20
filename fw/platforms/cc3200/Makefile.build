@@ -97,9 +97,18 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 V7_HOST_FEATURES ?= $(V7_FEATURES) \
                -DV7_ENABLE__RegExp=1
 
-MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_LOCALS -DMG_ENABLE_SSL \
+MG_FEATURES ?= $(MG_FEATURES_TINY) \
+               -DMG_LOCALS -DMG_ENABLE_SSL \
+               -DMG_DISABLE_MQTT \
                -DMG_DISABLE_FILESYSTEM -DMG_FS_SLFS \
                -DMG_EXT_SHA1 -DDISABLE_SHA1
+
+MGIOT_JS_APIS ?= -DSJ_ENABLE_GPIO_API \
+                 -DSJ_ENABLE_I2C_API \
+                 -DSJ_ENABLE_WIFI_API \
+                 -DSJ_ENABLE_HTTP_CLIENT_API
+MGIOT_FEATURES ?= -DSJ_ENABLE_UPDATER_CLUBBY \
+                  -DSJ_ENABLE_UPDATER_POST
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
                   -DV7_STACK_SIZE=8192-64 \
@@ -127,10 +136,10 @@ MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
 SJ_SRCS = sj_gpio_js.c \
           sj_i2c_js.c \
           sj_prompt.c \
-          sj_http.c \
-          sj_mongoose.c sj_mongoose_ws_client.c \
-          sj_mqtt.c \
-          sj_timers.c sj_timers_mongoose.c \
+          sj_http_js.c \
+          sj_init.c sj_init_js.c \
+          sj_mongoose.c \
+          sj_timers_js.c sj_timers_mongoose.c \
           sj_v7_ext.c \
           sj_wifi.c sj_wifi_js.c \
           device_config.c sj_config.c sj_config_js.c $(notdir $(SYS_CONFIG_C)) \
@@ -284,7 +293,8 @@ CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG \
           $(SDK_FLAGS) $(V7_FEATURES) $(V7_MEMORY_FLAGS) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          $(MG_FEATURES) $(MGIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
+          $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_JS_APIS) \
+          $(MGIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
 
 $(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
     CFLAGS += -DDEFAULT_FS_SIZE=$(FS_SIZE) \

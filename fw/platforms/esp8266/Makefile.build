@@ -81,14 +81,14 @@ include $(REPO_PATH)/fw/common.mk
 MGIOT_ESP_USER_DIR = $(MGIOT_ESP_PATH)/user
 APP_MODULES += $(MGIOT_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http.c frozen.c \
-            sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_wifi_js.c sj_gpio_js.c sj_timers.c \
+            cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http_js.c frozen.c sj_init.c  sj_init_js.c \
+            sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_wifi_js.c sj_gpio_js.c sj_timers_js.c \
             sj_timers_mongoose.c \
             sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
-            sj_mongoose_ws_client.c sj_mqtt.c clubby_proto.c \
-            sj_clubby.c sj_clubby_js.c sj_common.c sys_config.c \
+            sj_ws_client_js.c sj_mqtt_js.c clubby_proto.c \
+            sj_clubby.c sj_clubby_js.c sys_config.c \
             sj_config.c sj_config_js.c device_config.c sys_config.c \
-            miniz.c sj_udptcp.c sj_utils.c sj_console.c \
+            miniz.c sj_tcp_udp_js.c sj_utils.c sj_console.c \
             sj_updater_common.c sj_updater_clubby.c sj_updater_post.c str_util.c \
             rboot-bigflash.c rboot-api.c json_utils.c
 
@@ -135,10 +135,25 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_ENABLE__Object__isExtensible \
                -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS \
 
-SJ_FEATURES = -DSJ_ENABLE_UPDATER_CONSOLE_LOGGING \
-              -DSJ_ENABLE_WEB_CONFIG \
-              -DSJ_ENABLE_FILE_UPLOAD \
-              -DSJ_ENABLE_HTTP_SERVER
+MGIOT_JS_APIS = -DSJ_ENABLE_ADC_API \
+                -DSJ_ENABLE_DEBUG_API \
+                -DSJ_ENABLE_GPIO_API \
+                -DSJ_ENABLE_HTTP_CLIENT_API \
+                -DSJ_ENABLE_HTTP_SERVER_API \
+                -DSJ_ENABLE_I2C_API \
+                -DSJ_ENABLE_MQTT_API \
+                -DSJ_ENABLE_PWM_API \
+                -DSJ_ENABLE_SPI_API \
+                -DSJ_ENABLE_TCP_API \
+                -DSJ_ENABLE_UDP_API \
+                -DSJ_ENABLE_WIFI_API \
+                -DSJ_ENABLE_WS_CLIENT_API
+MGIOT_FEATURES = -DSJ_ENABLE_UPDATER_CONSOLE_LOGGING \
+                 -DSJ_ENABLE_WEB_CONFIG \
+                 -DSJ_ENABLE_FILE_UPLOAD \
+                 -DSJ_ENABLE_UPDATER_CLUBBY \
+                 -DSJ_ENABLE_UPDATER_CLUBBY_API \
+                 -DSJ_ENABLE_UPDATER_POST
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
@@ -146,7 +161,8 @@ MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_EXT_SHA1
 
-FEATURES = $(V7_FEATURES) $(SJ_FEATURES) $(MG_FEATURES) $(FEATURES_EXTRA) \
+FEATURES = $(V7_FEATURES) $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_JS_APIS) \
+           $(FEATURES_EXTRA) \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
            -DMG_NO_BSD_SOCKETS -DDISABLE_MD5 -DBOOT_BIG_FLASH \
            -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook \
@@ -416,7 +432,7 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 $(MGIOT_POSIX_BIN):
 	make -C $(MGIOT_POSIX_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' \
-	  SJ_FEATURES='$(SJ_FEATURES)' \
+	  MGIOT_FEATURES='$(MGIOT_JS_APIS)' \
 	  BIN_DIR=$(MGIOT_POSIX_BIN_DIR) \
 	  BUILD_DIR=$(MGIOT_POSIX_BUILD_DIR) \
 	  CFLAGS_EXTRA='-DV7_FREEZE'

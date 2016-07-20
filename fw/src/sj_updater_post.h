@@ -8,7 +8,8 @@
 #ifndef CS_FW_SRC_SJ_UPDATER_POST_H_
 #define CS_FW_SRC_SJ_UPDATER_POST_H_
 
-struct v7;
-void sj_updater_post_init(struct v7 *v7);
+#ifdef SJ_ENABLE_UPDATER_POST
+void sj_updater_post_init();
+#endif
 
 #endif /* CS_FW_SRC_SJ_UPDATER_POST_H_ */

@@ -135,7 +135,13 @@ void sj_console_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &console_v);
 }
+
+void sj_console_js_init(struct v7 *v7) {
+}
 #endif
+
+void sj_console_init() {
+}
 
 void cc3200_console_putc(int fd, char c) {
   MAP_UARTCharPut(CONSOLE_UART, c);

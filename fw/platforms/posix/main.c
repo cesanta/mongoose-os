@@ -11,10 +11,11 @@
 
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
-#include "fw/src/sj_timers.h"
+#include "fw/src/sj_timers_js.h"
 #include "fw/src/sj_v7_ext.h"
-#include "fw/src/sj_common.h"
-#include "fw/src/sj_http.h"
+#include "fw/src/sj_init.h"
+#include "fw/src/sj_init_js.h"
+#include "fw/src/sj_http_js.h"
 #include "fw/src/sj_uart.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_spi_js.h"
@@ -72,19 +73,14 @@ static void pre_freeze_init(struct v7 *v7) {
   /* Disable GC during JS API initialization. */
   v7_set_gc_enabled(v7, 0);
 
-  sj_common_api_setup(v7);
+  sj_api_setup(v7);
 }
 
 static void pre_init(struct v7 *v7) {
-  sj_common_init(v7);
-  sj_init_sys(v7);
-
   init_fw(v7);
 
   mongoose_init();
-  sj_init_uart(v7);
-
-  init_device(v7);
+  sj_init();
 
   /* SJS initialized, enable GC back, and trigger it. */
   v7_set_gc_enabled(v7, 1);
@@ -115,12 +111,9 @@ void mongoose_schedule_poll() {
   mg_broadcast(&sj_mgr, dummy_handler, NULL, 0);
 }
 
-int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
-  (void) v7;
-
+enum sj_init_result sj_config_init_platform(struct sys_config *cfg) {
   cs_log_set_level(cfg->debug.level);
-
-  return 1;
+  return SJ_INIT_OK;
 }
 
 void device_get_mac_address(uint8_t mac[6]) {

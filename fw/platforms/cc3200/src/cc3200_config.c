@@ -20,16 +20,15 @@ void device_get_mac_address(uint8_t mac[6]) {
   sl_NetCfgGet(SL_MAC_ADDRESS_GET, NULL, &mac_len, mac);
 }
 
-int device_init_platform(struct v7 *v7, struct sys_config *cfg) {
-  (void) v7;
+enum sj_init_result sj_config_init_platform(struct sys_config *cfg) {
   if (cfg->wifi.sta.enable) {
     if (!sj_wifi_setup_sta(&cfg->wifi.sta)) {
-      return 0;
+      return SJ_INIT_CONFIG_WIFI_INIT_FAILED;
     }
   } else {
     if (!sj_wifi_setup_ap(&cfg->wifi.ap)) {
-      return 0;
+      return SJ_INIT_CONFIG_WIFI_INIT_FAILED;
     }
   }
-  return 1; /* success */
+  return SJ_INIT_OK;
 }

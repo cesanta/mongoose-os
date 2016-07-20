@@ -59,7 +59,7 @@ struct clubby *sj_create_clubby(const struct sys_config_clubby *cfg);
 void sj_free_clubby(struct clubby *clubby);
 
 void sj_clubby_connect(struct clubby *clubby);
-void sj_reset_reconnect_timeout(struct clubby *clubby);
+void sj_clubby_reset_reconnect_timeout(struct clubby *clubby);
 
 int sj_clubby_register_global_command(const char *cmd, sj_clubby_callback_t cb,
                                       void *user_data);

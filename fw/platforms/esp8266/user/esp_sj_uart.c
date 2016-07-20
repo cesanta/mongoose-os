@@ -96,6 +96,13 @@ void esp_sj_uart_dispatcher(void *arg) {
   esp_uart_dispatch_bottom(uart_no);
 }
 
+void esp_sj_uart_init() {
+  sj_us[0].uart_no = 0;
+  sj_us[1].uart_no = 1;
+  os_timer_setfn(&sj_us[0].timer, esp_sj_uart_dispatcher, (void *) 0);
+  os_timer_setfn(&sj_us[1].timer, esp_sj_uart_dispatcher, (void *) 1);
+}
+
 #ifndef CS_DISABLE_JS
 static v7_val_t s_uart_proto;
 
@@ -252,10 +259,8 @@ static enum v7_err UART_get(struct v7 *v7, v7_val_t *res) {
   return ret;
 }
 
-void esp_sj_uart_init(struct v7 *v7) {
+void esp_sj_uart_init_js(struct v7 *v7) {
   sj_us[0].v7 = sj_us[1].v7 = v7;
-  os_timer_setfn(&sj_us[0].timer, esp_sj_uart_dispatcher, (void *) 0);
-  os_timer_setfn(&sj_us[1].timer, esp_sj_uart_dispatcher, (void *) 1);
   s_uart_proto = v7_mk_object(v7);
   v7_set_method(v7, s_uart_proto, "configure", UART_configure);
   v7_set_method(v7, s_uart_proto, "onRecv", UART_onRecv);
@@ -266,13 +271,11 @@ void esp_sj_uart_init(struct v7 *v7) {
   v7_set_method(v7, s_uart_proto, "send", UART_send);
   v7_set_method(v7, v7_get_global(v7), "UART", UART_get);
 
-  sj_us[0].uart_no = 0;
   sj_us[0].obj = v7_mk_object(v7);
   v7_set_proto(v7, sj_us[0].obj, s_uart_proto);
   v7_set(v7, sj_us[0].obj, "_u", ~0, v7_mk_number(v7, 0));
   v7_own(v7, &sj_us[0].obj);
 
-  sj_us[1].uart_no = 1;
   sj_us[1].obj = v7_mk_object(v7);
   v7_set_proto(v7, sj_us[1].obj, s_uart_proto);
   v7_set(v7, sj_us[1].obj, "_u", ~0, v7_mk_number(v7, 1));
@@ -282,14 +285,6 @@ void esp_sj_uart_init(struct v7 *v7) {
 v7_val_t esp_sj_uart_get_recv_handler(int uart_no) {
   if (uart_no < 0 || uart_no > 1) return V7_UNDEFINED;
   return v7_get(sj_us[uart_no].v7, sj_us[uart_no].obj, "_rxcb", 5);
-}
-
-#else /* CS_DISABLE_JS */
-
-void esp_sj_uart_init(struct v7 *v7) {
-  (void) v7;
-  os_timer_setfn(&sj_us[0].timer, esp_sj_uart_dispatcher, (void *) 0);
-  os_timer_setfn(&sj_us[1].timer, esp_sj_uart_dispatcher, (void *) 1);
 }
 
 #endif /* CS_DISABLE_JS */

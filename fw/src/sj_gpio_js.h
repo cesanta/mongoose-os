@@ -6,12 +6,9 @@
 #ifndef CS_FW_SRC_SJ_GPIO_JS_H_
 #define CS_FW_SRC_SJ_GPIO_JS_H_
 
-#ifndef CS_DISABLE_JS
-
+#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_GPIO_API)
 struct v7;
-
 void sj_gpio_api_setup(struct v7 *v7);
-
-#endif /* CS_DISABLE_JS */
+#endif
 
 #endif /* CS_FW_SRC_SJ_GPIO_JS_H_ */

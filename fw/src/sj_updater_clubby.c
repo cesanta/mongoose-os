@@ -15,7 +15,7 @@
 #include "fw/src/sj_updater_common.h"
 #include "fw/src/sj_v7_ext.h"
 
-#ifndef DISABLE_C_CLUBBY
+#if defined(SJ_ENABLE_UPDATER_CLUBBY) && !defined(DISABLE_C_CLUBBY)
 
 #ifndef CS_DISABLE_JS
 #include "v7/v7.h"
@@ -217,42 +217,6 @@ static int start_update_download(struct update_context *ctx, const char *url) {
   return 1;
 }
 
-void clubby_updater_finish(int error_code) {
-  size_t len;
-  char *data = cs_read_file(UPDATER_TEMP_FILE_NAME, &len);
-  if (data == NULL) return; /* No file - no problem. */
-  s_clubby_reply = sj_clubby_bytes_to_reply(data, len);
-  if (s_clubby_reply != NULL) {
-    s_clubby_upd_status = error_code;
-  } else {
-    LOG(LL_ERROR, ("Found invalid reply"));
-  }
-  remove(UPDATER_TEMP_FILE_NAME);
-  free(data);
-}
-
-#ifndef CS_DISABLE_JS
-static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-
-  v7_val_t manifest_url_v = v7_arg(v7, 0);
-  if (!v7_is_string(manifest_url_v)) {
-    rcode = v7_throwf(v7, "Error", "URL is not a string");
-  } else {
-    struct update_context *ctx = updater_context_create();
-    if (ctx == NULL) {
-      rcode = v7_throwf(v7, "Error", "Failed to init updater");
-    } else if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v)) <
-               0) {
-      rcode = v7_throwf(v7, "Error", ctx->status_msg);
-    }
-  }
-
-  *res = v7_mk_boolean(v7, rcode == V7_OK);
-  return rcode;
-}
-#endif
-
 static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
   (void) user_data;
   if (s_clubby_reply) {
@@ -348,7 +312,49 @@ bad_request:
  * }
  */
 
+void sj_updater_clubby_init() {
+  sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_update_req,
+                                    NULL);
+
+  sj_clubby_register_global_command(clubby_cmd_ready, handle_clubby_ready,
+                                    NULL);
+}
+
+void clubby_updater_finish(int error_code) {
+  size_t len;
+  char *data = cs_read_file(UPDATER_TEMP_FILE_NAME, &len);
+  if (data == NULL) return; /* No file - no problem. */
+  s_clubby_reply = sj_clubby_bytes_to_reply(data, len);
+  if (s_clubby_reply != NULL) {
+    s_clubby_upd_status = error_code;
+  } else {
+    LOG(LL_ERROR, ("Found invalid reply"));
+  }
+  remove(UPDATER_TEMP_FILE_NAME);
+  free(data);
+}
+
 #ifndef CS_DISABLE_JS
+static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
+
+  v7_val_t manifest_url_v = v7_arg(v7, 0);
+  if (!v7_is_string(manifest_url_v)) {
+    rcode = v7_throwf(v7, "Error", "URL is not a string");
+  } else {
+    struct update_context *ctx = updater_context_create();
+    if (ctx == NULL) {
+      rcode = v7_throwf(v7, "Error", "Failed to init updater");
+    } else if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v)) <
+               0) {
+      rcode = v7_throwf(v7, "Error", ctx->status_msg);
+    }
+  }
+
+  *res = v7_mk_boolean(v7, rcode == V7_OK);
+  return rcode;
+}
+
 static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   v7_val_t cb = v7_arg(v7, 0);
   if (!v7_is_callable(v7, cb)) {
@@ -362,19 +368,8 @@ static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
   *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 }
-#endif
 
-#else
-void clubby_updater_finish(int error_code) {
-  (void) error_code;
-}
-#endif /* DISABLE_C_CLUBBY */
-
-void init_updater_clubby(struct v7 *v7) {
-  (void) v7;
-#ifndef DISABLE_C_CLUBBY
-
-#ifndef CS_DISABLE_JS
+void sj_updater_clubby_js_init(struct v7 *v7) {
   s_v7 = v7;
   v7_val_t updater = v7_mk_object(v7);
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
@@ -400,12 +395,7 @@ void init_updater_clubby(struct v7 *v7) {
   v7_def(s_v7, updater, "FAILED", ~0,
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_mk_number(v7, UJS_ERROR));
-#endif
-
-  sj_clubby_register_global_command("/v1/SWUpdate.Update", handle_update_req,
-                                    NULL);
-
-  sj_clubby_register_global_command(clubby_cmd_ready, handle_clubby_ready,
-                                    NULL);
-#endif
 }
+#endif /* CS_DISABLE_JS */
+
+#endif /* defined(SJ_ENABLE_UPDATER_CLUBBY) && !defined(DISABLE_C_CLUBBY) */

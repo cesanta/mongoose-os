@@ -12,6 +12,7 @@
 
 #include "mongoose/mongoose.h"
 #include "sys_config.h"
+#include "fw/src/sj_init.h"
 
 #define CONF_SYS_DEFAULTS_FILE "conf_sys_defaults.json"
 #define CONF_APP_DEFAULTS_FILE "conf_app_defaults.json"
@@ -50,18 +51,15 @@ void device_get_mac_address(uint8_t mac[6]);
 
 void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);
 
-/* Common init provides this API */
-int init_device(struct v7 *);
+enum sj_init_result sj_config_init();
 
 /* Common init calls this API: must be implemented by each platform */
-int device_init_platform(struct v7 *v7, struct sys_config *);
+enum sj_init_result sj_config_init_platform(struct sys_config *cfg);
+
+enum sj_init_result sj_config_init_http(const struct sys_config_http *cfg);
 
 #ifndef CS_DISABLE_JS
-/*
- * Set property in Sys.conf object pointed by path parameter (dot separated,
- * e.g.: wifi.ap.mode). Return 0 on success, non zero on error
- */
-int update_sysconf(struct v7 *v7, const char *path, v7_val_t val);
-#endif /* CS_DISABLE_JS */
+int sj_config_js_init(struct v7 *v7);
+#endif
 
 #endif /* CS_FW_SRC_DEVICE_CONFIG_H_ */

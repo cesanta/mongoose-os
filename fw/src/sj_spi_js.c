@@ -7,7 +7,7 @@
 
 #include "v7/v7.h"
 
-#ifndef SJ_DISABLE_SPI
+#ifdef SJ_ENABLE_SPI_API
 
 #include "sj_spi_js.h"
 #include "sj_spi.h"
@@ -196,11 +196,4 @@ void sj_spi_api_setup(struct v7 *v7) {
   spi_ctor = v7_mk_function_with_proto(v7, spi_js_ctor, spi_proto);
   v7_set(v7, v7_get_global(v7), "SPI", ~0, spi_ctor);
 }
-
-#else
-
-void sj_spi_api_setup(struct v7 *v7) {
-  (void) v7;
-}
-
-#endif /* SJ_DISABLE_SPI */
+#endif /* SJ_ENABLE_SPI_API */

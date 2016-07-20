@@ -17,6 +17,7 @@
 #endif
 #include "fw/src/sj_gpio.h"
 #include "fw/src/sj_hal.h"
+#include "fw/src/sj_init.h"
 
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
@@ -261,7 +262,7 @@ void device_register_http_endpoint(const char *uri,
   }
 }
 
-static int init_web_server(const struct sys_config *cfg) {
+enum sj_init_result sj_config_init_http(const struct sys_config_http *cfg) {
   /*
    * Usually, we start to connect/listen in
    * EVENT_STAMODE_GOT_IP/EVENT_SOFTAPMODE_STACONNECTED  handlers
@@ -269,18 +270,17 @@ static int init_web_server(const struct sys_config *cfg) {
    * in `mg_bind` function. But it is not clear, for what we have to
    * provide IP address in case of ESP
    */
-  if (cfg->http.hidden_files) {
-    s_http_server_opts.hidden_file_pattern = strdup(cfg->http.hidden_files);
+  if (cfg->hidden_files) {
+    s_http_server_opts.hidden_file_pattern = strdup(cfg->hidden_files);
     if (s_http_server_opts.hidden_file_pattern == NULL) {
-      LOG(LL_ERROR, ("Out of memory"));
-      return 0;
+      return SJ_INIT_OUT_OF_MEMORY;
     }
   }
 
-  listen_conn = mg_bind(&sj_mgr, cfg->http.listen_addr, mongoose_ev_handler);
+  listen_conn = mg_bind(&sj_mgr, cfg->listen_addr, mongoose_ev_handler);
   if (!listen_conn) {
-    LOG(LL_ERROR, ("Error binding to [%s]", cfg->http.listen_addr));
-    return 0;
+    LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));
+    return SJ_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED;
   } else {
 #ifdef SJ_ENABLE_WEB_CONFIG
     mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
@@ -292,9 +292,10 @@ static int init_web_server(const struct sys_config *cfg) {
 #endif
 
     mg_set_protocol_http_websocket(listen_conn);
-    LOG(LL_INFO, ("HTTP server started on [%s]", cfg->http.listen_addr));
+    LOG(LL_INFO, ("HTTP server started on [%s]", cfg->listen_addr));
   }
-  return 1;
+
+  return SJ_INIT_OK;
 }
 
 static int load_config_file(const char *filename, const char *acl,
@@ -322,26 +323,13 @@ clean:
   return result;
 }
 
-#ifndef CS_DISABLE_JS
-enum v7_err conf_save_handler(struct v7 *v7, v7_val_t *res) {
-  int res_b = 0;
-  if (save_cfg(get_cfg()) == 0) {
-    sj_system_restart(0);
-    res_b = 1;
-  }
-  *res = v7_mk_boolean(v7, res_b);
-  return V7_OK;
-}
-#endif
-
-int init_device(struct v7 *v7) {
-  int result = 1;
+enum sj_init_result sj_config_init() {
   uint8_t mac[6] = "";
 
   /* Load system defaults - mandatory */
   if (!load_config_defaults(&s_cfg)) {
     LOG(LL_ERROR, ("Failed to load config defaults"));
-    return 0;
+    return SJ_INIT_CONFIG_LOAD_DEFAULTS_FAILED;
   }
 
 #ifndef SJ_DISABLE_GPIO
@@ -385,23 +373,26 @@ int init_device(struct v7 *v7) {
     expand_mac_address_placeholders((char *) get_cfg()->wifi.ap.ssid);
   }
 
-  result = device_init_platform(v7, get_cfg());
-  if (result != 0) {
-    if (get_cfg()->http.enable) {
-      result = init_web_server(get_cfg());
-    }
-  } else {
-    LOG(LL_ERROR, ("Platform init failed"));
-  }
+  return SJ_INIT_OK;
+}
 
 #ifndef CS_DISABLE_JS
-  /* NOTE(lsm): must be done last */
+enum v7_err conf_save_handler(struct v7 *v7, v7_val_t *res) {
+  int res_b = 0;
+  if (save_cfg(get_cfg()) == 0) {
+    sj_system_restart(0);
+    res_b = 1;
+  }
+  *res = v7_mk_boolean(v7, res_b);
+  return V7_OK;
+}
+
+int sj_config_js_init(struct v7 *v7) {
   v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
   v7_val_t conf =
       sj_conf_mk_proxy(v7, sys_config_schema(), get_cfg(), conf_save_handler);
   v7_def(v7, sys, "conf", ~0, V7_DESC_ENUMERABLE(0), conf);
   export_read_only_vars_to_v7(v7);
-#endif
-
-  return result;
+  return 0;
 }
+#endif

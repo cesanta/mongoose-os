@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/sj_mongoose_ws_client.h"
+#include "fw/src/sj_ws_client_js.h"
 
-#ifndef CS_DISABLE_JS
+#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_WS_CLIENT_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -312,10 +312,4 @@ void sj_ws_client_api_setup(struct v7 *v7) {
   v7_disown(v7, &ws);
 }
 
-#else /* CS_DISABLE_JS */
-
-void sj_ws_client_api_setup(struct v7 *v7) {
-  (void) v7;
-}
-
-#endif /* CS_DISABLE_JS */
+#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_WS_CLIENT_API) */

@@ -3,12 +3,13 @@
  * All rights reserved
  */
 
-#include "fw/src/sj_udptcp.h"
+#include "fw/src/sj_tcp_udp_js.h"
 
 #include <stdio.h>
 #include <math.h>
 
-#ifndef CS_DISABLE_JS
+#if !defined(CS_DISABLE_JS) && \
+    (defined(SJ_ENABLE_TCP_API) || defined(SJ_ENABLE_UDP_API))
 
 #include "common/queue.h"
 #include "fw/src/device_config.h"
@@ -1491,7 +1492,8 @@ clean:
   return rcode;
 }
 
-void sj_udp_tcp_api_setup(struct v7 *v7) {
+#ifdef SJ_ENABLE_UDP_API
+void sj_udp_api_setup(struct v7 *v7) {
   /* UDP */
   v7_val_t dgram = v7_mk_object(v7);
   v7_val_t dgram_socket_proto = v7_mk_object(v7);
@@ -1525,7 +1527,11 @@ void sj_udp_tcp_api_setup(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), s_dgram_global_object, ~0, dgram);
   v7_disown(v7, &dgram_socket_proto);
   v7_disown(v7, &dgram);
+}
+#endif /* SJ_ENABLE_UDP_API */
 
+#ifdef SJ_ENABLE_TCP_API
+void sj_tcp_api_setup(struct v7 *v7) {
   /* TCP */
   v7_val_t tcp = v7_mk_object(v7);
   v7_val_t tcp_socket_proto = v7_mk_object(v7);
@@ -1584,10 +1590,7 @@ void sj_udp_tcp_api_setup(struct v7 *v7) {
   v7_disown(v7, &tcp_socket_proto);
   v7_disown(v7, &tcp);
 }
-#else /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_TCP_API */
 
-void sj_udp_tcp_api_setup(struct v7 *v7) {
-  (void) v7;
-}
-
-#endif /* CS_DISABLE_JS */
+#endif /* !defined(CS_DISABLE_JS) && (defined(SJ_ENABLE_TCP_API) || \
+          defined(SJ_ENABLE_UDP_API)) */

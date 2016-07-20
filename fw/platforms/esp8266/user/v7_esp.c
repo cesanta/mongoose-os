@@ -104,14 +104,4 @@ void init_v7(void *stack_base) {
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
   v7_set_method(v7, v7_get_global(v7), "is_rboot_updated", is_rboot_updated);
 }
-
-#ifndef V7_NO_FS
-void run_init_script() {
-  v7_val_t res;
-
-  if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
-    sj_print_exception(v7, res, "Init error");
-  }
-}
-#endif /* V7_NO_FS */
 #endif /* CS_DISABLE_JS */

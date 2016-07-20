@@ -27,6 +27,7 @@ $(APP_ELF):
 	$(Q) $(CC_WRAPPER) $(CC) \
 	  -mv7M4 --code_state=16 --float_support=vfplib --abi=eabi --little_endian \
 	  --run_linker --map_file=$(BUILD_DIR)/$(APP).map \
+	  --generate_dead_funcs_list=$(BUILD_DIR)/$(APP).garbage.xml \
 	  -i $(TOOLCHAIN)/lib \
 	  --reread_libs --warn_sections --display_error_number \
 	  --ram_model --cinit_compression=off --copy_compression=off \

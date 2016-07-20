@@ -14,24 +14,11 @@
 
 #include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
-#include "fw/src/sj_clubby.h"
-#ifndef CS_DISABLE_JS
-#include "fw/src/sj_clubby_js.h"
-#endif
-#include "fw/src/sj_config_js.h"
-#include "fw/src/sj_gpio.h"
-#include "fw/src/sj_gpio_js.h"
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_http.h"
-#include "fw/src/sj_i2c_js.h"
+#include "fw/src/sj_init.h"
+#include "fw/src/sj_init_js.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
-#include "fw/src/sj_timers.h"
 #include "fw/src/sj_updater_clubby.h"
-#include "fw/src/sj_updater_post.h"
-#include "fw/src/sj_v7_ext.h"
-#include "fw/src/sj_wifi_js.h"
-#include "fw/src/sj_wifi.h"
 #include "v7/v7.h"
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
@@ -104,9 +91,16 @@ void sj_prompt_init_hal(struct v7 *v7) {
 }
 #endif
 
-static int sj_init() {
-  struct v7 *v7 = s_v7;
+enum cc3200_init_result {
+  CC3200_INIT_OK = 0,
+  CC3200_INIT_FAILED_TO_START_NWP = -100,
+  CC3200_INIT_FAILED_TO_READ_BOOT_CFG = -101,
+  CC3200_INIT_FS_INIT_FAILED = -102,
+  CC3200_INIT_SJ_INIT_FAILED = -103,
+  CC3200_INIT_SJ_INIT_JS_FAILED = -105,
+};
 
+static enum cc3200_init_result cc3200_init(void *arg) {
   LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
   LOG(LL_INFO,
       ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
@@ -114,13 +108,14 @@ static int sj_init() {
   int r = start_nwp();
   if (r < 0) {
     LOG(LL_ERROR, ("Failed to start NWP: %d", r));
-    return 0;
+    return CC3200_INIT_FAILED_TO_START_NWP;
   }
 
   int boot_cfg_idx = get_active_boot_cfg_idx();
-  if (boot_cfg_idx < 0) return 0;
   struct boot_cfg boot_cfg;
-  if (read_boot_cfg(boot_cfg_idx, &boot_cfg) < 0) return 0;
+  if (boot_cfg_idx < 0 || read_boot_cfg(boot_cfg_idx, &boot_cfg) < 0) {
+    return CC3200_INIT_FAILED_TO_READ_BOOT_CFG;
+  }
 
   LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", boot_cfg_idx,
                 boot_cfg.seq, boot_cfg.flags, boot_cfg.app_image_file,
@@ -141,7 +136,7 @@ static int sj_init() {
     if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
       revert_update(boot_cfg_idx, &boot_cfg);
     }
-    return 0;
+    return CC3200_INIT_FS_INIT_FAILED;
   }
 
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
@@ -153,61 +148,23 @@ static int sj_init() {
 
   mongoose_init();
 
-#ifndef CS_DISABLE_JS
-  v7 = s_v7 = init_v7(&v7);
-
-  /* Disable GC during JS API initialization. */
-  v7_set_gc_enabled(v7, 0);
-  sj_gpio_api_setup(v7);
-  sj_i2c_api_setup(v7);
-  sj_wifi_js_init(v7);
-  sj_wifi_api_setup(v7);
-  sj_timers_api_setup(v7);
-#endif
-
-  sj_v7_ext_api_setup(v7);
-  sj_init_sys(v7);
-  sj_wifi_init(v7);
-#ifndef DISABLE_C_CLUBBY
-  sj_clubby_init();
-#endif
-
-  sj_http_api_setup(v7);
-
-#if !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS)
-  sj_clubby_api_setup(v7);
-  sj_console_api_setup(v7);
-#endif
-
-  /* Common config infrastructure. Mongoose & v7 must be initialized. */
-  init_device(v7);
-
-  sj_updater_post_init(v7);
-#ifndef DISABLE_C_CLUBBY
-  init_updater_clubby(v7);
-#endif
+  enum sj_init_result ir = sj_init();
+  if (ir != SJ_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "SJ", ir));
+    return CC3200_INIT_SJ_INIT_FAILED;
+  }
 
 #ifndef CS_DISABLE_JS
-  /* SJS initialized, enable GC back, and trigger it */
-  v7_set_gc_enabled(v7, 1);
-  v7_gc(v7, 1);
+  struct v7 *v7 = s_v7 = init_v7(&arg);
 
-  v7_val_t res;
-  if (v7_exec_file(v7, "sys_init.js", &res) != V7_OK) {
-    v7_fprint(stderr, v7, res);
-    fputc('\n', stderr);
-    LOG(LL_ERROR, ("%s init failed", "Sys"));
-    sj_system_restart(0);
+  ir = sj_init_js_all(v7);
+  if (ir != SJ_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "SJ JS", ir));
+    return CC3200_INIT_SJ_INIT_JS_FAILED;
   }
 #endif
 
-  LOG(LL_INFO, ("%s init done, RAM: %d free", "Sys", sj_get_free_heap_size()));
-
-  if (!sj_app_init(v7)) {
-    LOG(LL_ERROR, ("%s init failed", "App"));
-    sj_system_restart(0);
-  }
-  LOG(LL_INFO, ("%s init done, RAM: %d free", "App", sj_get_free_heap_size()));
+  LOG(LL_INFO, ("Init done, RAM: %d free", sj_get_free_heap_size()));
 
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
@@ -222,17 +179,21 @@ static int sj_init() {
   }
 
 #ifndef CS_DISABLE_JS
-  sj_prompt_init(v7);
+  /* Install prompt if enabled in the config. */
+  if (get_cfg()->debug.enable_prompt) {
+    sj_prompt_init(v7);
+  }
 #endif
-  return 1;
+  return CC3200_INIT_OK;
 }
 
 void main_task(void *arg) {
   (void) arg;
   osi_MsgQCreate(&s_main_queue, "main", sizeof(struct sj_event), 32 /* len */);
 
-  if (!sj_init()) {
-    LOG(LL_ERROR, ("Init failed"));
+  enum cc3200_init_result r = cc3200_init(NULL);
+  if (r != CC3200_INIT_OK) {
+    LOG(LL_ERROR, ("Init failed: %d", r));
     sj_system_restart(0);
     return;
   }

@@ -132,8 +132,9 @@ static void console_process_data(struct v7 *v7) {
 static void console_handle_clubby_ready(struct clubby_event *evt,
                                         void *user_data) {
   (void) evt;
+  (void) user_data;
   if (!s_waiting_for_resp) {
-    console_process_data((struct v7 *) user_data);
+    console_process_data(s_v7);
   }
 }
 
@@ -394,14 +395,14 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   return rcode;
 }
 
-void sj_console_init(struct v7 *v7) {
+void sj_console_js_init(struct v7 *v7) {
+  s_v7 = v7; /* TODO(alashkin): remove s_v7 */
 #ifndef DISABLE_C_CLUBBY
   if (console_init_file_cache() == 0) {
     sj_clubby_register_global_command(clubby_cmd_onopen,
-                                      console_handle_clubby_ready, v7);
+                                      console_handle_clubby_ready, NULL);
   }
 #endif
-  s_v7 = v7; /* TODO(alashkin): remove s_v7 */
 }
 
 void sj_console_api_setup(struct v7 *v7) {
@@ -453,6 +454,9 @@ void sj_console_cloud_log(const char *fmt, ...) {
   (void) s_v7;
   (void) len;
 #endif
+}
+
+void sj_console_init() {
 }
 
 int sj_console_is_waiting_for_resp() {
