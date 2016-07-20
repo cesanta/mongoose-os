@@ -18,8 +18,10 @@ PYTHON ?= python
 # - http://www.gnu.org/software/make/manual/html_node/_002dw-Option.html
 MAKEFLAGS += w
 
+T=$(shell [ -t 0 ] && echo true || echo false)
+
 all clean:
-	@docker run --rm -i -v $(REPO_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
+	@docker run --rm -i --tty=$T -v $(REPO_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  //bin/bash -c "\
 	    if [ -d /src/v7 ] ; then make -C /src/v7 v7.c ; fi && \
 	    if [ -d /src/krypton ] ; then make -C /src/krypton krypton.c ; fi && \
