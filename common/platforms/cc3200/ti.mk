@@ -3,6 +3,7 @@ VPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/CCS/ARM_CM3
 
 CC_WRAPPER ?=
 CC = $(TOOLCHAIN)/bin/armcl
+GENFILES_LIST ?=
 
 CFLAGS = --c99 -mv7M4 --little_endian --code_state=16 --float_support=vfplib --abi=eabi \
          -O4 --opt_for_speed=0 --unaligned_access=on --small_enum \
@@ -13,7 +14,7 @@ CFLAGS += -I$(TOOLCHAIN)/include
 OBJS += $(BUILD_DIR)/startup_ccs.o
 OBJS += $(BUILD_DIR)/portasm.o
 
-$(BUILD_DIR)/%.o: %.c
+$(BUILD_DIR)/%.o: %.c $(GENFILES_LIST)
 	$(vecho) "TICC  $< -> $@"
 	$(Q) $(CC_WRAPPER) $(CC) \
 	  -c --output_file=$@ --preproc_with_compile -ppd=$@.d $(CFLAGS) $<

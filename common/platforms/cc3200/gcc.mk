@@ -1,5 +1,6 @@
 APP_LDFLAGS ?=
 CC_WRAPPER ?=
+GENFILES_LIST ?=
 CC = arm-none-eabi-gcc
 
 IPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
@@ -24,7 +25,7 @@ LIBM := ${shell ${CC} ${CFLAGS} -print-file-name=libm.a}
 # between system includes and simplelink.h
 $(SDK_OBJS): CFLAGS += -Wno-missing-braces -Wno-strict-aliasing -Wno-parentheses -Wno-unused-variable -Wno-builtin-macro-redefined
 
-$(BUILD_DIR)/%.o: %.c
+$(BUILD_DIR)/%.o: %.c $(GENFILES_LIST)
 	$(vecho) "GCC   $< -> $@"
 	$(Q) $(CC_WRAPPER) $(CC) $(CFLAGS) -c -o $@ $<
 

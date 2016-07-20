@@ -59,7 +59,6 @@ MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
 FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
-GENERATED_SOURCES = $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
@@ -130,6 +129,7 @@ BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
+GENFILES_LIST = $(SYS_CONFIG_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 
 .PHONY: all clean flash
 
@@ -231,7 +231,6 @@ include $(REPO_PATH)/fw/src/sys_config.mk
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
-$(BUILD_DIR)/v7.o: $(GENERATED_SOURCES)
 
 # TODO(dfrank): Fix V7 pre-compilation
 $(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN) $(BUILD_DIR)/v7
