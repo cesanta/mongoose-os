@@ -53,12 +53,6 @@ static file_id_t s_last_file_id = 1;
 
 static void console_process_data(struct v7 *v7);
 
-clubby_handle_t console_get_current_clubby(struct v7 *v7) {
-  v7_val_t clubby_v = v7_get(v7, v7_get_global(v7), "clubby", ~0);
-  if (!v7_is_object(clubby_v)) return NULL;
-  return sj_clubby_get_handle(v7, clubby_v);
-}
-
 static void clubby_cb(struct clubby_event *evt, void *user_data) {
   (void) evt;
   s_waiting_for_resp = 0;
@@ -66,7 +60,7 @@ static void clubby_cb(struct clubby_event *evt, void *user_data) {
 }
 
 static void console_make_clubby_call(struct v7 *v7, struct mbuf *logs) {
-  clubby_handle_t clubby_h = console_get_current_clubby(v7);
+  struct clubby *clubby = sj_clubby_get_global();
   struct mbuf log_mbuf;
   mbuf_init(&log_mbuf, 200);
   struct json_out log_out = JSON_OUT_MBUF(&log_mbuf);
@@ -74,7 +68,7 @@ static void console_make_clubby_call(struct v7 *v7, struct mbuf *logs) {
 
   /* TODO(alashkin): set command timeout */
   s_waiting_for_resp = 1;
-  sj_clubby_call(clubby_h, NULL, "/v1/Log.Log",
+  sj_clubby_call(clubby, NULL, "/v1/Log.Log",
                  mg_mk_str_n(log_mbuf.buf, log_mbuf.len), 0, clubby_cb, v7);
 
   mbuf_free(&log_mbuf);
@@ -113,12 +107,12 @@ clean:
 }
 
 static void console_process_data(struct v7 *v7) {
-  clubby_handle_t clubby_h;
-  if ((clubby_h = console_get_current_clubby(v7)) == NULL) {
+  struct clubby *clubby = sj_clubby_get_global();
+  if (clubby == NULL) {
     LOG(LL_DEBUG, ("Clubby is not set"));
     return;
   }
-  if (sj_clubby_can_send(clubby_h)) {
+  if (sj_clubby_can_send(clubby)) {
     if (s_cache.file_names.len != 0) {
       /* There are unsent files, send them first */
       console_send_file(v7, &s_cache);
@@ -338,9 +332,9 @@ static void console_send_to_cloud(struct v7 *v7, struct mbuf *msg) {
    * 4. If we have packet in flight - wait for response, otherwise
    *    we'll break an order
    */
-  clubby_handle_t clubby_h = console_get_current_clubby(v7);
-  if (clubby_h == NULL || console_must_cache(&s_cache) ||
-      !sj_clubby_can_send(clubby_h)) {
+  struct clubby *clubby = sj_clubby_get_global();
+  if (clubby == NULL || console_must_cache(&s_cache) ||
+      !sj_clubby_can_send(clubby)) {
     console_add_to_cache(&s_cache, msg);
   } else {
     console_make_clubby_call_mbuf(v7, msg);

@@ -198,7 +198,7 @@ SJ_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-void sj_wifi_ready_js(enum sj_wifi_status event, void *arg) {
+static void sj_wifi_ready_js(enum sj_wifi_status event, void *arg) {
   if (event != SJ_WIFI_IP_ACQUIRED) return;
   struct wifi_cb_arg *cba = (struct wifi_cb_arg *) arg;
   sj_invoke_cb0(cba->v7, cba->v);

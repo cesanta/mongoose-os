@@ -10,6 +10,7 @@
 #include "fw/src/sj_config.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_timers.h"
+#include "fw/src/sj_wifi.h"
 
 #ifndef DISABLE_C_CLUBBY
 
@@ -42,11 +43,7 @@ struct queued_frame {
 #define SF_MANUAL_DISCONNECT (1 << 0)
 
 static struct clubby *s_clubbies;
-
-/*
- * This is not the real clubby, just storage for global handlers
- */
-static struct clubby s_global_clubby;
+static struct clubby *s_global_clubby;
 
 static void clubby_disconnect(struct clubby *clubby);
 static void schedule_reconnect();
@@ -341,8 +338,7 @@ static struct queued_frame *pop_queued_frame(struct clubby *clubby) {
 }
 
 /* Using separated callback for /v1/Hello in demo and debug purposes */
-static void clubby_hello_resp_callback(struct clubby_event *evt,
-                                       void *user_data) {
+static void clubby_hello_resp_cb(struct clubby_event *evt, void *user_data) {
   (void) user_data;
   if (evt->ev == CLUBBY_TIMEOUT) {
     LOG(LL_ERROR, ("Deadline exceeded"));
@@ -400,15 +396,14 @@ void sj_clubby_send_request(struct clubby *clubby, int64_t id,
   mbuf_free(&frame_mbuf);
 }
 
-int sj_clubby_can_send(clubby_handle_t handle) {
-  struct clubby *clubby = (struct clubby *) handle;
+int sj_clubby_can_send(struct clubby *clubby) {
   return sj_clubby_is_connected(clubby) && !sj_clubby_is_overcrowded(clubby);
 }
 
 void sj_clubby_send_hello(struct clubby *clubby) {
   int64_t id = clubby_proto_get_new_id();
   sj_clubby_register_callback(clubby, (char *) &id, sizeof(id),
-                              clubby_hello_resp_callback, NULL,
+                              clubby_hello_resp_cb, NULL,
                               clubby->cfg.request_timeout);
 
   if (clubby_proto_is_connected(clubby->nc)) {
@@ -453,10 +448,9 @@ static void clubby_send_labels(struct clubby *clubby) {
   mbuf_free(&labels_mbuf);
 }
 
-int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
+int sj_clubby_call(struct clubby *clubby, const char *dst, const char *method,
                    const struct mg_str args, int enqueue,
                    sj_clubby_callback_t cb, void *cb_userdata) {
-  struct clubby *clubby = (struct clubby *) handle;
   int64_t id = clubby_proto_get_new_id();
 
   if (cb != NULL) {
@@ -504,7 +498,7 @@ static int call_cb_impl(struct clubby *clubby, const char *id, int8_t id_len,
 static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
                    struct clubby_event *evt, int remove_after_call) {
   int ret = call_cb_impl(clubby, id, id_len, evt, remove_after_call);
-  ret |= call_cb_impl(&s_global_clubby, id, id_len, evt, remove_after_call);
+  ret |= call_cb_impl(s_global_clubby, id, id_len, evt, remove_after_call);
   return ret;
 }
 
@@ -622,7 +616,8 @@ static void clubby_disconnect(struct clubby *clubby) {
 
 int sj_clubby_register_global_command(const char *cmd, sj_clubby_callback_t cb,
                                       void *user_data) {
-  return sj_clubby_register_callback(&s_global_clubby, cmd, strlen(cmd), cb,
+  if (s_global_clubby == NULL) return 0;
+  return sj_clubby_register_callback(s_global_clubby, cmd, strlen(cmd), cb,
                                      user_data, 0);
 }
 
@@ -733,11 +728,50 @@ void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
   mbuf_free(&resp_mbuf);
 }
 
-void sj_clubby_init() {
-  clubby_proto_init(clubby_cb);
+static void clubby_hello_req_callback(struct clubby_event *evt,
+                                      void *user_data) {
+  struct clubby *clubby = (struct clubby *) evt->context;
+  char msg[100], escaped_msg[100];
+  struct json_out escaped_out = JSON_OUT_BUF(escaped_msg, sizeof(escaped_msg));
+  snprintf(msg, sizeof(msg), "Hi %.*s! This is %s.", (int) evt->src.len,
+           evt->src.ptr, clubby->cfg.device_id);
+  json_printf(&escaped_out, "%Q", msg);
+  struct mbuf resp_frame_mbuf;
+  mbuf_init(&resp_frame_mbuf, 200);
+  clubby_proto_create_resp(&resp_frame_mbuf, evt->id, clubby->cfg.device_id,
+                           clubby->cfg.device_psk,
+                           mg_mk_str_n(evt->src.ptr, evt->src.len),
+                           mg_mk_str(escaped_msg), mg_mk_str_n(NULL, 0));
+  clubby_proto_send(clubby->nc,
+                    mg_mk_str_n(resp_frame_mbuf.buf, resp_frame_mbuf.len));
+  mbuf_free(&resp_frame_mbuf);
+  (void) user_data;
+}
 
-  sj_set_c_timer(get_cfg()->clubby.verify_timeouts_period * 1000, 0,
-                 verify_timeouts_cb, NULL);
+struct clubby *sj_clubby_get_global() {
+  return s_global_clubby;
+}
+
+static void sj_clubby_wifi_ready(enum sj_wifi_status event, void *arg) {
+  if (event != SJ_WIFI_IP_ACQUIRED) return;
+  struct clubby *c = (struct clubby *) arg;
+  sj_clubby_connect(c);
+  sj_wifi_remove_on_change_cb(sj_clubby_wifi_ready, arg);
+}
+
+void sj_clubby_init() {
+  const struct sys_config_clubby *ccfg = &get_cfg()->clubby;
+  clubby_proto_init(clubby_cb);
+  if (ccfg->device_id != NULL) {
+    s_global_clubby = sj_create_clubby(ccfg);
+    if (ccfg->connect_on_boot) {
+      sj_wifi_add_on_change_cb(sj_clubby_wifi_ready, s_global_clubby);
+    }
+  }
+  sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
+                                    NULL);
+  sj_set_c_timer(ccfg->verify_timeouts_period * 1000, 0, verify_timeouts_cb,
+                 NULL);
 
   /* TODO(alashkin): remove or expose functions below */
   (void) clubby_disconnect;

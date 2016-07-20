@@ -78,7 +78,7 @@ enum sj_init_result sj_init_js(struct v7 *v7) {
 #endif
 
 #ifndef DISABLE_C_CLUBBY
-  sj_clubby_js_init();
+  sj_clubby_js_init(v7);
 #if defined(SJ_ENABLE_UPDATER_CLUBBY) && defined(SJ_ENABLE_UPDATER_CLUBBY_API)
   sj_updater_clubby_js_init(v7);
 #endif

@@ -24,6 +24,7 @@ static int register_js_callback(struct clubby *clubby, struct v7 *v7,
                                 uint32_t timeout);
 
 static void set_clubby(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
+  clubby->v7 = v7;
   v7_def(v7, obj, s_clubby_prop, sizeof(s_clubby_prop),
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0) | _V7_DESC_HIDDEN(1)),
          v7_mk_foreign(v7, clubby));
@@ -36,10 +37,6 @@ static struct clubby *get_clubby(struct v7 *v7, v7_val_t obj) {
   }
 
   return v7_get_ptr(v7, clubbyv);
-}
-
-clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v) {
-  return get_clubby(v7, clubby_v);
 }
 
 #define DECLARE_CLUBBY()                                   \
@@ -102,26 +99,6 @@ static void clubby_send_response(struct clubby *clubby, const char *dst,
   }
   mbuf_free(&error_mbuf);
   mbuf_free(&resp_mbuf);
-}
-
-static void clubby_hello_req_callback(struct clubby_event *evt,
-                                      void *user_data) {
-  struct clubby *clubby = (struct clubby *) evt->context;
-  (void) user_data;
-
-  LOG(LL_DEBUG, ("Incoming /v1/Hello received, id=%d", (int32_t) evt->id));
-  char src[512] = {0};
-  if ((size_t) evt->src.len > sizeof(src)) {
-    LOG(LL_ERROR, ("src too long, len=%d", evt->src.len));
-    return;
-  }
-  memcpy(src, evt->src.ptr, evt->src.len);
-
-  char status_msg[100];
-  snprintf(status_msg, sizeof(status_msg) - 1, "Hello, this is %s",
-           clubby->cfg.device_id);
-
-  clubby_send_response(clubby, src, evt->id, 0, status_msg, V7_UNDEFINED);
 }
 
 static void simple_cb(struct clubby_event *evt, void *user_data) {
@@ -677,8 +654,6 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_STR_PARAM(ssl_ca_file, ssl_ca_file);
   GET_STR_PARAM(ssl_client_cert_file, ssl_client_cert_file);
 
-  clubby->v7 = v7;
-
   set_clubby(v7, this_obj, clubby);
   connect = v7_get(v7, arg, "connect", ~0);
   if (v7_is_undefined(connect) || v7_is_truthy(v7, connect)) {
@@ -734,9 +709,22 @@ void sj_clubby_api_setup(struct v7 *v7) {
   v7_disown(v7, &clubby_proto_v);
 }
 
-void sj_clubby_js_init() {
-  sj_clubby_register_global_command("/v1/Hello", clubby_hello_req_callback,
-                                    NULL);
+static v7_val_t s_global_clubby_v;
+
+void sj_clubby_js_init(struct v7 *v7) {
+  struct clubby *clubby = sj_clubby_get_global();
+  if (clubby != NULL) {
+    v7_val_t clubby_ctor_v = v7_get(v7, v7_get_global(v7), "Clubby", ~0);
+    v7_val_t clubby_proto_v = v7_get(v7, clubby_ctor_v, "prototype", ~0);
+    s_global_clubby_v = v7_mk_object(v7);
+    v7_set_proto(v7, s_global_clubby_v, clubby_proto_v);
+    /* Own forever. Even though it's ref'd from the global object,
+     * we really don't want it to be destroyed. At some point we may allow
+     * re-assigning global clubby, at which point we'll need to free it. */
+    v7_own(v7, &s_global_clubby_v);
+    set_clubby(v7, s_global_clubby_v, clubby);
+    v7_set(v7, v7_get_global(v7), "clubby", ~0, s_global_clubby_v);
+  }
 }
 #ifdef __cplusplus
 }

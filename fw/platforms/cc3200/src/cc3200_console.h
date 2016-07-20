@@ -6,8 +6,7 @@
 #ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_CONSOLE_H_
 #define CS_FW_PLATFORMS_CC3200_SRC_CC3200_CONSOLE_H_
 
-#define SJ_CONSOLE_ENABLE_CLOUD \
-  (!defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS))
+#define SJ_CONSOLE_ENABLE_CLOUD !defined(DISABLE_C_CLUBBY)
 
 void cc3200_console_putc(int fd, char c);
 

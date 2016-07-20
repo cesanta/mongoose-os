@@ -52,11 +52,11 @@ extern const char clubby_cmd_onclose[];
 extern const char s_oncmd_cmd[];
 
 typedef void (*sj_clubby_callback_t)(struct clubby_event *evt, void *user_data);
-typedef void *clubby_handle_t;
 
 void sj_clubby_init();
 struct clubby *sj_create_clubby(const struct sys_config_clubby *cfg);
 void sj_free_clubby(struct clubby *clubby);
+struct clubby *sj_clubby_get_global();
 
 void sj_clubby_connect(struct clubby *clubby);
 void sj_clubby_reset_reconnect_timeout(struct clubby *clubby);
@@ -73,14 +73,14 @@ struct clubby_event *sj_clubby_bytes_to_reply(char *buf, int len);
 
 void sj_clubby_fill_error(struct json_out *out, int code, const char *msg);
 
-int sj_clubby_can_send(clubby_handle_t handle);
+int sj_clubby_can_send(struct clubby *clubby);
 
 void sj_clubby_send_status_resp(struct clubby_event *evt, int result_code,
                                 const char *error_msg);
 void sj_clubby_send_request(struct clubby *clubby, int64_t id,
                             const struct mg_str dst, const struct mg_str frame);
 
-int sj_clubby_call(clubby_handle_t handle, const char *dst, const char *method,
+int sj_clubby_call(struct clubby *clubby, const char *dst, const char *method,
                    const struct mg_str args, int enqueue,
                    sj_clubby_callback_t cb, void *cb_userdata);
 

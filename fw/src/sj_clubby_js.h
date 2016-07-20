@@ -21,9 +21,7 @@ void sj_clubby_api_setup(struct v7 *v7);
 void sj_clubby_send_reply(struct clubby_event *evt, int status,
                           const char *error_msg, v7_val_t result_v);
 
-clubby_handle_t sj_clubby_get_handle(struct v7 *v7, v7_val_t clubby_v);
-
-void sj_clubby_js_init();
+void sj_clubby_js_init(struct v7 *v7);
 
 #ifdef __cplusplus
 }

@@ -20,13 +20,6 @@ struct console_ctx {
   unsigned int in_console : 1;
 } s_cctx;
 
-extern struct v7 *s_v7;
-clubby_handle_t console_get_current_clubby() {
-  v7_val_t clubby_v = v7_get(s_v7, v7_get_global(s_v7), "clubby", ~0);
-  if (!v7_is_object(clubby_v)) return NULL;
-  return sj_clubby_get_handle(s_v7, clubby_v);
-}
-
 int cc3200_console_next_msg_len() {
   for (int i = 0; i < s_cctx.buf.len; i++) {
     if (s_cctx.buf.buf[i] == '\n') return i + 1;
@@ -66,13 +59,17 @@ out:
   s_cctx.in_console = 0;
 }
 
-void clubby_cb(struct clubby_event *evt, void *user_data);
+void clubby_cb(struct clubby_event *evt, void *user_data) {
+  (void) evt;
+  (void) user_data;
+  s_cctx.request_in_flight = 0;
+}
 
 void cc3200_console_cloud_push() {
   if (s_cctx.buf.len == 0) return;
   int l = cc3200_console_next_msg_len();
   if (l == 0) return;  // Only send full messages.
-  clubby_handle_t c = console_get_current_clubby();
+  struct clubby *c = sj_clubby_get_global();
   if (c == NULL || !sj_clubby_is_connected(c)) {
     /* If connection drops, do not wait for reply as it may never arrive. */
     s_cctx.request_in_flight = 0;
@@ -87,13 +84,9 @@ void cc3200_console_cloud_push() {
   if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
   s_cctx.in_console = 0;
 }
+#endif /* SJ_CONSOLE_ENABLE_CLOUD */
 
-void clubby_cb(struct clubby_event *evt, void *user_data) {
-  (void) evt;
-  (void) user_data;
-  s_cctx.request_in_flight = 0;
-}
-
+#ifndef CS_DISABLE_JS
 static void puts_n(const char *s, int len) {
   while (len-- > 0) {
     putchar(*s);
@@ -138,7 +131,7 @@ void sj_console_api_setup(struct v7 *v7) {
 
 void sj_console_js_init(struct v7 *v7) {
 }
-#endif
+#endif /* CS_DISABLE_JS */
 
 void sj_console_init() {
 }
