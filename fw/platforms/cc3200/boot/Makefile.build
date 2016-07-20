@@ -81,7 +81,8 @@ CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=4 \
           $(SDK_FLAGS) $(CFLAGS_EXTRA)
 
-all: $(BUILD_DIR) $(FW_DIR) $(BUILD_INFO_C) $(MKCFG_BIN)
+dirs: $(BUILD_DIR) $(FW_DIR)
+all: dirs $(BUILD_INFO_C) $(MKCFG_BIN)
 
 ifeq "$(CREATE_ZIP)" "1"
 all: $(FW_ZIP)

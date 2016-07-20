@@ -315,7 +315,7 @@ $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
 	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build APP=mg-boot TOOLCHAIN=gcc \
 	             SDK_PATH=$(SDK_PATH) PYTHON=$(PYTHON) \
 	             BUILD_DIR=$(BOOT_BUILD_DIR) FW_DIR=$(BOOT_FW_DIR) \
-	             CREATE_ZIP=0
+	             CREATE_ZIP=0 dirs $@
 
 $(BOOT_CFG_0): $(MK_BOOT_CFG_BIN)
 	$(vecho) "MKCFG $@"
