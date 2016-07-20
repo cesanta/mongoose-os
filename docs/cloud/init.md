@@ -1,8 +1,8 @@
 ---
-title: Library initialization
+title: Library initialisation
 ---
 
-In order to make development of client applications even easier, we maintain
+In order to make the development of client applications even easier, we maintain
 Clubby and Cloud libraries in a number of languages.
 
 For generated API documentation, please follow:
@@ -11,7 +11,7 @@ For generated API documentation, please follow:
   includes the Clubby implementation, plus the helper stubs for accessing the
   cloud. More on that later.
 
-Now that we have id and psk, we can create and initialize clubby instance:
+Now that we have ID and PSK, we can create and initialise clubby instance:
 
 ```cs_examples_begin
 ```
@@ -52,5 +52,5 @@ clubby.connect();
 ```cs_examples_end
 ```
 
-Having that done, we can use `clubby` instance to talk to the cloud and other
+Having that done, we can use the `clubby` instance to talk to the cloud and other
 devices.

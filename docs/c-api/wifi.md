@@ -3,8 +3,8 @@ title: WiFi
 ---
 
 The most common use case of the WiFi interface is to install an event handler
-to catch a moment when Mongoose Firmware joins the WiFi network, and kick
-off networking logic from that point on:
+to catch the moment when Mongoose Firmware joins the WiFi network and to kick
+off the networking logic from that point on:
 
 ```c
     static void on_wifi_changed(enum sj_wifi_status status) {

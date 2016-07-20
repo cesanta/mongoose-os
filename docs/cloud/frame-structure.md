@@ -2,24 +2,24 @@
 title: Clubby frame format
 ---
 
-Mongoose IoT provides framing format called Clubby that makes
+Mongoose IoT Platform provides a framing format called Clubby that makes
 IoT communication simple and secure. Clubby is very similar to JSON-RPC.
 It defines a format for requests and responses. Requests and responses are
 encoded as human-readable [JSON](http://www.json.org/)
 or size-efficient [Universal Binary JSON](http://ubjson.org/) frames.
 
 Clubby frames can be carried by any transport protocol, like raw TCP, UDP,
-HTTP, Websocket, MQTT, and so on. At this moment, Mongoose Cloud listens
-on HTTPS and secure Websocket (WSS) ports.
+HTTP, WebSocket, MQTT and so on. At this moment, Mongoose Cloud listens
+on HTTPS and secure WebSocket (WSS) ports.
 
-Every Clubby frame has source, destination, and frame ID. Frame ID is used
+Every Clubby frame has a source, destination and frame ID. The frame ID is used
 to match requests with responses, as responses may arrive out-of-order.
-All Clubby requests have `method` field which tells which method is called,
-together with `args` field that specifies method's arguments. All Clubby
-responses have `result` field, and `error` field in case if method call
-failed.
+All Clubby requests have a `method` field which tells it which method is called,
+together with an `args` field that specifies the method's arguments. All Clubby
+responses have a `result` field, and an `error` field in case the method call
+fails.
 
-Here is an example of JSON-ecoded Clubby request:
+Here is an example of a JSON-ecoded Clubby request:
 
 ```json
 {
@@ -44,7 +44,7 @@ A corresponding response:
 
 ```
 
-Each Clubby frame (request or response) has following fields:
+Each Clubby frame (request or response) has the following fields:
 
 - `v`: optional frame format version, must be set to 2.
 - `src`: optional source address, a string (see Clubby addresses below).
@@ -73,5 +73,5 @@ Response-specific fields:
   - `code`: required numeric error code, != 0
   - `message`: required error message
 
-If a response frame has an `error` field, method call
+If a response frame has an `error` field the method call
 has failed. Otherwise, it succeeded.

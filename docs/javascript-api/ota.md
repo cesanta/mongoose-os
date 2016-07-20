@@ -1,31 +1,31 @@
 ---
-title: Over The Air updates (OTA)
+title: Over-The-Air updates (OTA)
 ---
 
-Mongoose IoT OTA is designed to work in either unattended or controllable mode.
+Mongoose IoT Platform's OTA is designed to work in both the unattended and controllable mode.
 
 By default the updater module starts in unattended mode. Which means, it will
-initiate the update process immediately after receiving a command from server.
+initiate the update process immediately after receiving a command from the server.
 After a successful update, the device will be rebooted to use new firmware.
 
 When in controllable mode, the updater invokes a callback on different stages
 of the update process.  The callback can be set with the `Sys.updater.notify()`
 function; its prototype is `function (event, params)`.  When the updater gets
 an incoming request, the callback receives `Sys.updater.GOT_REQUEST` and
-`params` contains URL of the new firmware manifest file. The callback handler
-can either start the update process with `Sys.updater.start(url)` function or
+`params` contains the URL of the new firmware manifest file. The callback handler
+can either start the update process with the `Sys.updater.start(url)` function or
 delay this process, storing the provided URL and calling
 `Sys.updater.start(url)` later.
 
 Once the update process is finished, the callback receives one of the following
 events:
 
-- `Sys.updater.NOTHING_TODO`: the device is already running newest firmware.
-- `Sys.updater.FAILED`: update cannot be completed, callback handler can try to
+- `Sys.updater.NOTHING_TODO`: the device is already running the newest firmware.
+- `Sys.updater.FAILED`: the update cannot be completed, the callback handler can try to
   repeat updating by invoking Sys.updater.start(url) again.
-- `Sys.updater.COMPLETED`: update process completed successfully. The callback
-  handler can reboot the device with `Sys.exit()` to use new firmware
-  immediately or delay reboot until suitable moment.
+- `Sys.updater.COMPLETED`: the update process completed successfully. The callback
+  handler can reboot the device with `Sys.exit()` to use the new firmware
+  immediately or delay reboot until a suitable moment arises.
 
 Example:
 

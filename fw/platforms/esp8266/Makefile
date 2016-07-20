@@ -23,11 +23,11 @@ T=$(shell [ -t 0 ] && echo true || echo false)
 all clean:
 	@docker run --rm -i --tty=$T -v $(REPO_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  //bin/bash -c "\
-	    if [ -d /src/v7 ] ; then make -C /src/v7 v7.c ; fi && \
-	    if [ -d /src/krypton ] ; then make -C /src/krypton krypton.c ; fi && \
-	    if [ -d /src/mongoose ] ; then make -C /src/mongoose mongoose.c mongoose.h ; fi && \
+	    if [ -d /src/v7 ] ; then $(MAKE) -C /src/v7 v7.c ; fi && \
+	    if [ -d /src/krypton ] ; then $(MAKE) -C /src/krypton krypton.c ; fi && \
+	    if [ -d /src/mongoose ] ; then $(MAKE) -C /src/mongoose mongoose.c mongoose.h ; fi && \
 	    cd $(APP_PATH) && \
-	    make -f Makefile.build APP=$(APP) REPO_PATH=/src $@ -$(MAKEFLAGS) \
+	    nice $(MAKE) -j4 -f Makefile.build APP=$(APP) REPO_PATH=/src $@ -$(MAKEFLAGS) \
 	    && $(PYTHON) $(SJS_ESP_PATH)/tools/showbreakdown.py \
 	  "
 

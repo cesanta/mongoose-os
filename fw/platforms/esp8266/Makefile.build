@@ -217,7 +217,7 @@ BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C)
+GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
@@ -430,7 +430,7 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
 $(MGIOT_POSIX_BIN):
-	make -C $(MGIOT_POSIX_PATH) \
+	$(MAKE) -j4 -C $(MGIOT_POSIX_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' \
 	  MGIOT_FEATURES='$(MGIOT_JS_APIS)' \
 	  BIN_DIR=$(MGIOT_POSIX_BIN_DIR) \
