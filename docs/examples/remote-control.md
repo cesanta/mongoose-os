@@ -26,8 +26,10 @@ See "Cloud Overview" section for more information.
 
 - In the IDC (Interactive Device Console), choose your target device.
 - Click the Flash button and wait until the hello message appears in the device log.
-- Click on the user image in the top menu and open the Profile in a new brower tab.
-- Open the terminal and copy/paste a `curl` command. Add arguments and the 
+- Switch to the Auth tab. It lists your authentication tokens. There is one
+  token created for you by default, shown together with the example `curl`
+  command line invocation.
+- Open the terminal and copy/paste a `curl` command. Add arguments and the
   prepend device ID to the destination:
 
     ```sh

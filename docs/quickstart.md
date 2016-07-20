@@ -14,7 +14,7 @@ title: Quick Start Guide
     - Download the
       [Mongoose Flashing Tool](https://github.com/cesanta/mft/releases).
     - Follow the Mongoose Flashing Tool wizard to flash Mongoose Firmware
-      to your device and connect it to 
+      to your device and connect it to
       [Mongoose Cloud](https://mongoose-iot.com).<br>
       <img src="media/quicktart_mft.png" width="100%">
     - Connect an LED to GND and GPIO14 pins.
@@ -22,14 +22,6 @@ title: Quick Start Guide
     [FTDI website](http://www.ftdichip.com/Drivers/VCP.htm).
     - Drivers for NodeMCU v1 board are available on the
       [Silabs CP2102 page](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx).
-- The new device will appear in the device list. Copy its ID to the clipboard.
-- Navigate to the IDE tab.
-- Click on `mobile_app/config.yaml` to edit the mobile configuration. Substitute
-  the `MY_DEVICE_ID` with the device ID from the clipboard.
-- If you're using a real device, click on the Flash button to build and flash the
-  Smart Light firmware to your device.
-- Install the [Mongoose Mobile app](https://play.google.com/store/apps/details?id=com.cesanta.mongoosemobile)
-  from Google Play. This app will demonstrate how to control your remote device
-  via the Mongoose Mobile app.
-- Open the Mongoose Mobile app and login to the cloud. Use the UI to switch the LED
-  on/off.
+- The new device will appear in the device list.
+- Follow the [Remote device control](#/examples/remote-control.md/)
+  tutorial to learn to to send commands to the device to control it remotely.
