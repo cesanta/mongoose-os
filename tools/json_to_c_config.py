@@ -9,6 +9,7 @@ import sys
 
 parser = argparse.ArgumentParser(description='Create C config boilerplate from a JSON config definition')
 parser.add_argument('--c_name', required=True, help="base path of generated files")
+parser.add_argument('--c_const_char', type=bool, default=False, help="Generate const char members for strings")
 parser.add_argument('--dest_dir', default=".", help="base path of generated files")
 parser.add_argument('json', nargs='+', help="JSON config definition files")
 
@@ -46,7 +47,10 @@ def do(obj, first_file, path, hdr, schema, src_parse, src_emit, src_free):
               .format(indent=json_indent)
       );
     else:
-      c_type = ('char *' if isinstance(v, basestring) else 'int ')
+      if isinstance(v, basestring):
+        c_type = 'const char *' if args.c_const_char else 'char *'
+      else:
+        c_type = 'int '
       if isinstance(v, basestring):
         jt = 'CONF_TYPE_STRING'
         getter = 'sj_conf_get_str'

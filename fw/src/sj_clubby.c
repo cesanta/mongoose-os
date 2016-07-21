@@ -9,6 +9,7 @@
 #include "fw/src/sj_common.h"
 #include "fw/src/sj_config.h"
 #include "fw/src/sj_mongoose.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_timers.h"
 #include "fw/src/sj_wifi.h"
 
@@ -421,8 +422,6 @@ void sj_clubby_send_hello(struct clubby *clubby) {
 }
 
 static void clubby_send_labels(struct clubby *clubby) {
-  LOG(LL_DEBUG, ("Sending labels:"));
-
   struct mbuf labels_mbuf;
   mbuf_init(&labels_mbuf, 200);
   struct json_out labels_out = JSON_OUT_MBUF(&labels_mbuf);
@@ -431,18 +430,13 @@ static void clubby_send_labels(struct clubby *clubby) {
 
   json_printf(&labels_out,
               "{v: %d, id: %lld, method: %Q, src: %Q, "
-              "key: %Q, args:{ labels: {",
+              "key: %Q, args:{ labels: ",
               CLUBBY_FRAME_VERSION, id, "/v1/Label.Set", clubby->cfg.device_id,
               clubby->cfg.device_psk);
-
-  struct ro_var *rv;
-
-  for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
-    json_printf(&labels_out, "%Q: %Q%s", rv->name, *rv->ptr,
-                rv->next != NULL ? "," : "}}}");
-    LOG(LL_DEBUG, ("%s: %s", rv->name, *rv->ptr));
-  }
-
+  sj_conf_emit_cb(get_ro_vars(), NULL /* base */, sys_ro_vars_schema(),
+                  false /* pretty */, &labels_mbuf, NULL /* cb */,
+                  NULL /* cb_param */);
+  mbuf_append(&labels_mbuf, "}}", 2);
   clubby_proto_send(clubby->nc, mg_mk_str_n(labels_mbuf.buf, labels_mbuf.len));
 
   mbuf_free(&labels_mbuf);

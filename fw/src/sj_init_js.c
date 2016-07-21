@@ -1,6 +1,5 @@
 #include "fw/src/sj_init_js.h"
 
-#include "fw/src/device_config.h"
 #include "fw/src/sj_adc_js.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_clubby_js.h"
@@ -12,6 +11,7 @@
 #include "fw/src/sj_mqtt_js.h"
 #include "fw/src/sj_pwm_js.h"
 #include "fw/src/sj_spi_js.h"
+#include "fw/src/sj_sys_config_js.h"
 #include "fw/src/sj_tcp_udp_js.h"
 #include "fw/src/sj_timers_js.h"
 #include "fw/src/sj_updater_clubby_js.h"
@@ -71,7 +71,7 @@ enum sj_init_result sj_api_setup(struct v7 *v7) {
 enum sj_init_result sj_init_js(struct v7 *v7) {
   sj_sys_js_init(v7);
   /* Note: config must follow sys. */
-  sj_config_js_init(v7);
+  sj_sys_config_js_init(v7);
 
 #ifdef SJ_ENABLE_I2C_API
   sj_i2c_js_init(v7);

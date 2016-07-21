@@ -23,11 +23,11 @@ static int s_waiting_for_resp;
 #include "common/cs_dirent.h"
 #include "common/cs_file.h"
 #include "common/queue.h"
-#include "fw/src/device_config.h"
 #include "fw/src/sj_clubby_js.h"
 #include "fw/src/sj_common.h"
+#include "fw/src/sj_sys_config.h"
+#include "fw/src/sj_timers.h"
 #include "mongoose/mongoose.h"
-#include "sj_timers.h"
 
 #define LOG_FILENAME_BASE "console.log."
 

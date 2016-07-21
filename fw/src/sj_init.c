@@ -1,15 +1,15 @@
 #include "fw/src/sj_init.h"
 
-#include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_console.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_post.h"
 #include "fw/src/sj_updater_clubby.h"
 #include "fw/src/sj_wifi.h"
 
 enum sj_init_result sj_init() {
-  enum sj_init_result r = sj_config_init();
+  enum sj_init_result r = sj_sys_config_init();
   if (r != SJ_INIT_OK) return r;
   sj_wifi_init();
 
@@ -25,10 +25,10 @@ enum sj_init_result sj_init() {
 #endif
   sj_console_init(); /* After clubby_init */
 
-  r = sj_config_init_platform(get_cfg());
+  r = sj_sys_config_init_platform(get_cfg());
   if (r != SJ_INIT_OK) return r;
 
-  r = sj_config_init_http(&get_cfg()->http);
+  r = sj_sys_config_init_http(&get_cfg()->http);
   if (r != SJ_INIT_OK) return r;
 
   if (sj_app_init() != MG_APP_INIT_SUCCESS) {

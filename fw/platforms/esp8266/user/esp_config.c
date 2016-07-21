@@ -11,7 +11,7 @@
 #include "mongoose/mongoose.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_wifi.h"
-#include "fw/src/device_config.h"
+#include "fw/src/sj_sys_config.h"
 #include "common/cs_file.h"
 #include "common/cs_dbg.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
@@ -57,7 +57,7 @@ void device_get_mac_address(uint8_t mac[6]) {
   wifi_get_macaddr(SOFTAP_IF, mac);
 }
 
-enum sj_init_result sj_config_init_platform(struct sys_config *cfg) {
+enum sj_init_result sj_sys_config_init_platform(struct sys_config *cfg) {
   /* Negative values mean "disable". */
   if (cfg->debug.stdout_uart < 2) {
     fs_set_stdout_uart(cfg->debug.stdout_uart);

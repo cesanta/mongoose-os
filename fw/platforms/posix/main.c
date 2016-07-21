@@ -19,9 +19,9 @@
 #include "fw/src/sj_uart.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_spi_js.h"
+#include "fw/src/sj_sys_config.h"
 #include "common/cs_dbg.h"
 #include "fw.h"
-#include "fw/src/device_config.h"
 #include "fw/src/sj_console.h"
 
 #ifndef JS_FS_ROOT
@@ -111,7 +111,7 @@ void mongoose_schedule_poll() {
   mg_broadcast(&sj_mgr, dummy_handler, NULL, 0);
 }
 
-enum sj_init_result sj_config_init_platform(struct sys_config *cfg) {
+enum sj_init_result sj_sys_config_init_platform(struct sys_config *cfg) {
   cs_log_set_level(cfg->debug.level);
   return SJ_INIT_OK;
 }

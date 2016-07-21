@@ -3,8 +3,7 @@
 #include "common/platform.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_gpio.h"
-#include "fw/src/device_config.h"
-#include "sys_config.h"
+#include "fw/src/sj_sys_config.h"
 
 #if CS_PLATFORM == CS_P_ESP_LWIP
 #define GPIO 12

@@ -2,6 +2,7 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
+#include "fw/src/sj_sys_config.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,11 +11,7 @@
 
 #include "common/cs_file.h"
 #include "fw/src/sj_mongoose.h"
-#include "fw/src/device_config.h"
 #include "fw/src/sj_config.h"
-#ifndef CS_DISABLE_JS
-#include "fw/src/sj_config_js.h"
-#endif
 #include "fw/src/sj_gpio.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_init.h"
@@ -22,52 +19,28 @@
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
 
-#ifndef FW_ARCHITECTURE
-#define FW_ARCHITECTURE "UNKNOWN_ARCH"
-#endif
-
-/*
- * The only sys_config instance
- * If application requires access to its configuration
- * in run-time (not in init-time, it can access it through
- * const struct sys_config *get_cfg()
- */
-struct sys_config s_cfg;
-struct sys_config *get_cfg() {
-  return &s_cfg;
-}
-
-/* Global vars */
-struct ro_var *g_ro_vars = NULL;
-
 /* Must be provided externally, usually auto-generated. */
 extern const char *build_id;
 extern const char *build_timestamp;
 extern const char *build_version;
 
-static const char *s_architecture = FW_ARCHITECTURE;
+struct sys_config s_cfg;
+struct sys_config *get_cfg() {
+  return &s_cfg;
+}
+
+struct sys_ro_vars s_ro_vars;
+const struct sys_ro_vars *get_ro_vars() {
+  return &s_ro_vars;
+}
+
 static struct mg_serve_http_opts s_http_server_opts;
-static char s_mac_address[13];
-static const char *mac_address_ptr = s_mac_address;
 static struct mg_connection *listen_conn;
 
 static int load_config_file(const char *filename, const char *acl,
                             struct sys_config *cfg);
 
-#ifndef CS_DISABLE_JS
-static void export_read_only_vars_to_v7(struct v7 *v7) {
-  struct ro_var *rv;
-  if (v7 == NULL) return;
-  v7_val_t obj = v7_mk_object(v7);
-  for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
-    v7_set(v7, obj, rv->name, ~0, v7_mk_string(v7, *rv->ptr, ~0, 1));
-  }
-  v7_val_t Sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
-  v7_set(v7, Sys, "ro_vars", ~0, obj);
-}
-#endif
-
-void expand_mac_address_placeholders(char *str) {
+void expand_mac_address_placeholders(char *str, const char *mac) {
   int num_placeholders = 0;
   char *sp;
   for (sp = str; sp != NULL && *sp != '\0'; sp++) {
@@ -75,7 +48,7 @@ void expand_mac_address_placeholders(char *str) {
   }
   if (num_placeholders > 0 && num_placeholders < 12 &&
       num_placeholders % 2 == 0 /* Allows use of single '?' w/o subst. */) {
-    char *msp = s_mac_address + 11;
+    const char *msp = mac + 11; /* Start from the end */
     for (; sp >= str; sp--) {
       if (*sp == PLACEHOLDER_CHAR) *sp = *msp--;
     }
@@ -111,14 +84,12 @@ int save_cfg(const struct sys_config *cfg) {
 
 #define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
 
-static void send_cfg(const struct sys_config *cfg, struct http_message *hm,
-                     struct mg_connection *c) {
+static void send_cfg(const void *cfg, const struct sj_conf_entry *schema,
+                     struct http_message *hm, struct mg_connection *c) {
   mg_send_response_line(c, 200, JSON_HEADERS);
   mg_send(c, "\r\n", 2);
   bool pretty = (mg_vcmp(&hm->query_string, "pretty") == 0);
-  sj_conf_emit_cb(cfg, NULL, sys_config_schema(), pretty, &c->send_mbuf, NULL,
-                  NULL);
-  c->send_mbuf.len--; /* Remove NUL */
+  sj_conf_emit_cb(cfg, NULL, schema, pretty, &c->send_mbuf, NULL, NULL);
 }
 
 static void conf_handler(struct mg_connection *c, int ev, void *p) {
@@ -131,12 +102,12 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
   if (mg_vcmp(&hm->uri, "/conf/defaults") == 0) {
     struct sys_config cfg;
     if (load_config_defaults(&cfg)) {
-      send_cfg(&cfg, hm, c);
+      send_cfg(&cfg, sys_config_schema(), hm, c);
       sj_conf_free(sys_config_schema(), &cfg);
       status = 0;
     }
   } else if (mg_vcmp(&hm->uri, "/conf/current") == 0) {
-    send_cfg(&s_cfg, hm, c);
+    send_cfg(&s_cfg, sys_config_schema(), hm, c);
     status = 0;
   } else if (mg_vcmp(&hm->uri, "/conf/save") == 0) {
     struct sys_config tmp;
@@ -190,19 +161,10 @@ static void reboot_handler(struct mg_connection *c, int ev, void *p) {
 }
 
 static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
-  (void) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("RO-vars requested"));
-  /* Reply with JSON object that contains read-only variables */
-  mg_send_head(c, 200, -1, JSON_HEADERS);
-  mg_printf_http_chunk(c, "{");
-  struct ro_var *rv;
-  for (rv = g_ro_vars; rv != NULL; rv = rv->next) {
-    mg_printf_http_chunk(c, "%s\n  \"%s\": \"%s\"", rv == g_ro_vars ? "" : ",",
-                         rv->name, *rv->ptr);
-  }
-  mg_printf_http_chunk(c, "\n}\n");
-  mg_printf_http_chunk(c, ""); /* Zero chunk - end of response */
+  struct http_message *hm = (struct http_message *) p;
+  send_cfg(&s_ro_vars, sys_ro_vars_schema(), hm, c);
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
 #endif /* SJ_ENABLE_WEB_CONFIG */
@@ -224,9 +186,6 @@ static void upload_handler(struct mg_connection *c, int ev, void *p) {
 #endif
 
 static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
-  DBG(("%p ev %d p %p fl %lx l %lu %lu", c, ev, p, c->flags,
-       (unsigned long) c->recv_mbuf.len, (unsigned long) c->send_mbuf.len));
-
   switch (ev) {
     case MG_EV_ACCEPT: {
       char addr[32];
@@ -262,7 +221,7 @@ void device_register_http_endpoint(const char *uri,
   }
 }
 
-enum sj_init_result sj_config_init_http(const struct sys_config_http *cfg) {
+enum sj_init_result sj_sys_config_init_http(const struct sys_config_http *cfg) {
   /*
    * Usually, we start to connect/listen in
    * EVENT_STAMODE_GOT_IP/EVENT_SOFTAPMODE_STACONNECTED  handlers
@@ -323,16 +282,14 @@ clean:
   return result;
 }
 
-enum sj_init_result sj_config_init() {
-  uint8_t mac[6] = "";
-
+enum sj_init_result sj_sys_config_init() {
   /* Load system defaults - mandatory */
   if (!load_config_defaults(&s_cfg)) {
     LOG(LL_ERROR, ("Failed to load config defaults"));
     return SJ_INIT_CONFIG_LOAD_DEFAULTS_FAILED;
   }
 
-#ifndef SJ_DISABLE_GPIO
+#ifdef SJ_ENABLE_GPIO_API
   /*
    * Check factory reset GPIO. We intentionally do it before loading CONF_FILE
    * so that it cannot be overridden by the end user.
@@ -357,42 +314,24 @@ enum sj_init_result sj_config_init() {
     cs_log_set_level((enum cs_log_level) s_cfg.debug.level);
   }
 
-  REGISTER_RO_VAR(fw_id, &build_id);
-  REGISTER_RO_VAR(fw_timestamp, &build_timestamp);
-  REGISTER_RO_VAR(fw_version, &build_version);
-  REGISTER_RO_VAR(arch, &s_architecture);
+  s_ro_vars.arch = FW_ARCHITECTURE;
+  s_ro_vars.fw_id = build_id;
+  s_ro_vars.fw_timestamp = build_timestamp;
+  s_ro_vars.fw_version = build_version;
 
   /* Init mac address readonly var - users may use it as device ID */
+  uint8_t mac[6];
   device_get_mac_address(mac);
-  snprintf(s_mac_address, sizeof(s_mac_address), "%02X%02X%02X%02X%02X%02X",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  REGISTER_RO_VAR(mac_address, &mac_address_ptr);
-  LOG(LL_INFO, ("MAC: %s", s_mac_address));
+  if (asprintf((char **) &s_ro_vars.mac_address, "%02X%02X%02X%02X%02X%02X",
+               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]) < 0) {
+    return SJ_INIT_OUT_OF_MEMORY;
+  }
+  LOG(LL_INFO, ("MAC: %s", s_ro_vars.mac_address));
 
   if (get_cfg()->wifi.ap.ssid != NULL) {
-    expand_mac_address_placeholders((char *) get_cfg()->wifi.ap.ssid);
+    expand_mac_address_placeholders((char *) get_cfg()->wifi.ap.ssid,
+                                    s_ro_vars.mac_address);
   }
 
   return SJ_INIT_OK;
 }
-
-#ifndef CS_DISABLE_JS
-enum v7_err conf_save_handler(struct v7 *v7, v7_val_t *res) {
-  int res_b = 0;
-  if (save_cfg(get_cfg()) == 0) {
-    sj_system_restart(0);
-    res_b = 1;
-  }
-  *res = v7_mk_boolean(v7, res_b);
-  return V7_OK;
-}
-
-int sj_config_js_init(struct v7 *v7) {
-  v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
-  v7_val_t conf =
-      sj_conf_mk_proxy(v7, sys_config_schema(), get_cfg(), conf_save_handler);
-  v7_def(v7, sys, "conf", ~0, V7_DESC_ENUMERABLE(0), conf);
-  export_read_only_vars_to_v7(v7);
-  return 0;
-}
-#endif

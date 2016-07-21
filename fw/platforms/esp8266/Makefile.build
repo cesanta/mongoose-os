@@ -80,17 +80,18 @@ include $(REPO_PATH)/fw/common.mk
 
 MGIOT_ESP_USER_DIR = $(MGIOT_ESP_PATH)/user
 APP_MODULES += $(MGIOT_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-            cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http_js.c frozen.c sj_init.c  sj_init_js.c \
-            sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_wifi_js.c sj_gpio_js.c sj_timers_js.c \
-            sj_timers_mongoose.c \
-            sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
-            sj_ws_client_js.c sj_mqtt_js.c clubby_proto.c \
-            sj_clubby.c sj_clubby_js.c sys_config.c \
-            sj_config.c sj_config_js.c device_config.c sys_config.c \
-            miniz.c sj_tcp_udp_js.c sj_utils.c sj_console.c \
-            sj_updater_common.c sj_updater_clubby.c sj_updater_post.c str_util.c \
-            rboot-bigflash.c rboot-api.c json_utils.c
+APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
+           cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http_js.c frozen.c sj_init.c  sj_init_js.c \
+           sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_wifi_js.c sj_gpio_js.c sj_timers_js.c \
+           sj_timers_mongoose.c \
+           sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
+           sj_ws_client_js.c sj_mqtt_js.c clubby_proto.c \
+           sj_clubby.c sj_clubby_js.c \
+           sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
+           $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+           miniz.c sj_tcp_udp_js.c sj_utils.c sj_console.c \
+           sj_updater_common.c sj_updater_clubby.c sj_updater_post.c str_util.c \
+           rboot-bigflash.c rboot-api.c json_utils.c
 
 JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
               $(MGIOT_JS_PATH)/demo.js \
@@ -212,12 +213,13 @@ LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
+SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0

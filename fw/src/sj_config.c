@@ -65,6 +65,11 @@ void sj_conf_parse_cb(void *data, const char *path,
     LOG(LL_INFO, ("Extra key: [%s]", path));
     return;
   }
+  if (e->type != CONF_TYPE_OBJECT &&
+      !sj_conf_check_access(mg_mk_str(path), ctx->acl)) {
+    LOG(LL_ERROR, ("Not allowed to set [%s]", path));
+    return;
+  }
   char *vp = (((char *) ctx->cfg) + e->offset);
   switch (e->type) {
     case CONF_TYPE_INT: {
@@ -240,7 +245,6 @@ void sj_conf_emit_cb(const void *cfg, const void *base,
                          .cb = cb,
                          .cb_param = cb_param};
   sj_conf_emit_obj(&ctx, schema + 1, schema->num_desc, 2);
-  mbuf_append(out, "", 1); /* NUL */
   if (cb != NULL) cb(out, cb_param);
   if (out == &m) mbuf_free(out);
 }

@@ -12,6 +12,7 @@
 #include "common/mbuf.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_clubby_js.h"
+#include "fw/src/sj_sys_config.h"
 
 struct console_ctx {
   struct mbuf buf;

@@ -123,13 +123,14 @@ MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(BUILD_DIR)/fs.img
 FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
+SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
-GENFILES_LIST = $(SYS_CONFIG_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 
 .PHONY: all clean flash
 
@@ -142,7 +143,8 @@ SJ_SRCS = sj_gpio_js.c \
           sj_timers_js.c sj_timers_mongoose.c \
           sj_v7_ext.c \
           sj_wifi.c sj_wifi_js.c \
-          device_config.c sj_config.c sj_config_js.c $(notdir $(SYS_CONFIG_C)) \
+          sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
+          $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
           miniz.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c boot.c \
           v7.c sj_utils.c \
           clubby_proto.c \

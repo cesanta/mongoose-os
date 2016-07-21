@@ -13,12 +13,6 @@
 #include "mongoose/mongoose.h"
 
 /*
- * NOTE(lsm): sj_conf_get_str() allocates *val on heap. Caller owns it.
- * NOTE(lsm): sj_conf_get_str() calls free() before assigning *val. Therefore,
- *            make sure that *val is set to NULL before the first call.
- */
-
-/*
  * The usage pattern is this:
  * 1. Create an empty config struct at the beginning.
  * 2. Load the defaults.

@@ -1,11 +1,14 @@
 #include "fw/src/sj_config_js.h"
 
-#include "fw/src/device_config.h"
+#ifndef CS_DISABLE_JS
+
+#include "fw/src/sj_sys_config.h"
 #include "v7/v7.h"
 
 struct sj_conf_ctx {
   const struct sj_conf_entry *schema;
   void *cfg;
+  bool read_only;
   v7_cfunction_t *save_handler;
 };
 
@@ -50,7 +53,7 @@ static enum v7_err sj_conf_get(struct v7 *v7, v7_val_t *res) {
       break;
     }
     case CONF_TYPE_OBJECT: {
-      *res = sj_conf_mk_proxy(v7, e, ctx->cfg, NULL);
+      *res = sj_conf_mk_proxy(v7, e, ctx->cfg, ctx->read_only, NULL);
       break;
     }
   }
@@ -71,6 +74,7 @@ static enum v7_err sj_conf_set(struct v7 *v7, v7_val_t *res) {
   if (key == NULL) return v7_throwf(v7, "TypeError", "No such key");
   const struct sj_conf_entry *e = sj_conf_find_schema_entry(key, ctx->schema);
   if (e == NULL) return v7_throwf(v7, "TypeError", "No such key");
+  if (ctx->read_only) return v7_throwf(v7, "TypeError", "Not allowed to set");
   char *vp = (((char *) ctx->cfg) + e->offset);
 
   switch (e->type) {
@@ -132,7 +136,8 @@ static int sj_conf_desc(struct v7 *v7, v7_val_t target, v7_val_t name,
 }
 
 v7_val_t sj_conf_mk_proxy(struct v7 *v7, const struct sj_conf_entry *schema,
-                          void *cfg, v7_cfunction_t *save_handler) {
+                          void *cfg, bool read_only,
+                          v7_cfunction_t *save_handler) {
   v7_val_t proxy = V7_UNDEFINED;
   v7_proxy_hnd_t handler;
   memset(&handler, 0, sizeof(handler));
@@ -147,6 +152,7 @@ v7_val_t sj_conf_mk_proxy(struct v7 *v7, const struct sj_conf_entry *schema,
   struct sj_conf_ctx *ctx = (struct sj_conf_ctx *) calloc(1, sizeof(*ctx));
   ctx->schema = schema;
   ctx->cfg = cfg;
+  ctx->read_only = read_only;
   ctx->save_handler = save_handler;
   v7_set_user_data(v7, obj, ctx);
   v7_set_destructor_cb(v7, obj, free_user_data);
@@ -154,3 +160,4 @@ v7_val_t sj_conf_mk_proxy(struct v7 *v7, const struct sj_conf_entry *schema,
   v7_disown(v7, &obj);
   return proxy;
 }
+#endif /* CS_DISABLE_JS */
