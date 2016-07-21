@@ -169,13 +169,17 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
     commit_update(boot_cfg_idx, &boot_cfg);
+#ifndef DISABLE_C_CLUBBY
     clubby_updater_finish(0);
+#endif
   } else {
+#ifndef DISABLE_C_CLUBBY
     /*
      * If there is no update reply state, this will just be ignored.
      * But if there is, then update was rolled back and reply will be sent.
      */
     clubby_updater_finish(-1);
+#endif
   }
 
 #ifndef CS_DISABLE_JS

@@ -164,8 +164,10 @@ void sjs_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
   if (sjs_init(bcfg) == 0) {
     if (bcfg->is_first_boot) {
+#ifndef DISABLE_C_CLUBBY
       /* fw_updated will be reset by the boot loader if it's a rollback. */
       clubby_updater_finish(bcfg->fw_updated ? 0 : -1);
+#endif
       commit_update(bcfg);
     }
   } else {
