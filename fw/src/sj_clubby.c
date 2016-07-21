@@ -478,8 +478,8 @@ int sj_clubby_call(struct clubby *clubby, const char *dst, const char *method,
   return 0;
 }
 
-static int call_cb_impl(struct clubby *clubby, const char *id, int8_t id_len,
-                        struct clubby_event *evt, int remove_after_call) {
+static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
+                   struct clubby_event *evt, int remove_after_call) {
   int ret = 0;
 
   struct clubby_cb_info *cb_info = NULL;
@@ -492,13 +492,6 @@ static int call_cb_impl(struct clubby *clubby, const char *id, int8_t id_len,
     /* continue loop, we may have several callbacks for the same command */
   }
 
-  return ret;
-}
-
-static int call_cb(struct clubby *clubby, const char *id, int8_t id_len,
-                   struct clubby_event *evt, int remove_after_call) {
-  int ret = call_cb_impl(clubby, id, id_len, evt, remove_after_call);
-  ret |= call_cb_impl(s_global_clubby, id, id_len, evt, remove_after_call);
   return ret;
 }
 
