@@ -1420,6 +1420,8 @@ enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res);
 WARN_UNUSED_RESULT
 enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res);
 
+#if !defined(V7_NO_COMPILER)
+
 /*
  * Compile JavaScript code `js_code` into the byte code and write generated
  * byte code into opened file stream `fp`. If `generate_binary_output` is 0,
@@ -1430,6 +1432,8 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res);
 WARN_UNUSED_RESULT
 enum v7_err v7_compile(const char *js_code, int generate_binary_output,
                        int use_bcode, FILE *fp);
+
+#endif /* V7_NO_COMPILER */
 
 /*
  * Call function `func` with arguments `args`, using `this_obj` as `this`.

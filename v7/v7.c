@@ -2283,6 +2283,8 @@ struct gc_arena {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core_public.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 struct v7;
 struct ast;
 
@@ -2310,6 +2312,8 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
+
+#endif /* V7_NO_COMPILER */
 
 #endif /* CS_V7_SRC_PARSER_H_ */
 #ifdef V7_MODULE_LINES
@@ -3593,7 +3597,8 @@ struct v7 {
 
   struct mbuf json_visited_stack; /* Detecting cycle in to_json */
 
-  /* Parser state */
+/* Parser state */
+#if !defined(V7_NO_COMPILER)
   struct v7_pstate pstate; /* Parsing state */
   enum v7_tok cur_tok;     /* Current token */
   const char *tok;         /* Parsed terminal token (ident, number, string) */
@@ -3610,6 +3615,7 @@ struct v7 {
    * - Compiler: it's the last line_no emitted to bcode
    */
   int line_no;
+#endif /* V7_NO_COMPILER */
 
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
@@ -4525,6 +4531,8 @@ enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res);
 WARN_UNUSED_RESULT
 enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res);
 
+#if !defined(V7_NO_COMPILER)
+
 /*
  * Compile JavaScript code `js_code` into the byte code and write generated
  * byte code into opened file stream `fp`. If `generate_binary_output` is 0,
@@ -4535,6 +4543,8 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res);
 WARN_UNUSED_RESULT
 enum v7_err v7_compile(const char *js_code, int generate_binary_output,
                        int use_bcode, FILE *fp);
+
+#endif /* V7_NO_COMPILER */
 
 /*
  * Call function `func` with arguments `args`, using `this_obj` as `this`.
@@ -4562,6 +4572,8 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 
 /* Amalgamated: #include "v7/src/core.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -4578,6 +4590,8 @@ enum v7_err _v7_compile(const char *js_code, size_t js_code_size,
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
+
+#endif /* V7_NO_COMPILER */
 
 #endif /* CS_V7_SRC_EXEC_H_ */
 #ifdef V7_MODULE_LINES
@@ -5068,6 +5082,8 @@ double cs_strtod(const char *str, char **endptr);
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -5377,6 +5393,8 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a);
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
+
+#endif /* V7_NO_COMPILER */
 
 #endif /* CS_V7_SRC_AST_H_ */
 #ifdef V7_MODULE_LINES
@@ -6319,6 +6337,8 @@ V7_PRIVATE struct v7_call_frame_base *find_call_frame(struct v7 *v7,
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -6332,6 +6352,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
+
+#endif /* V7_NO_COMPILER */
 
 #endif /* CS_V7_SRC_COMPILER_H_ */
 #ifdef V7_MODULE_LINES
@@ -11545,6 +11567,8 @@ int main(void) {
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 #ifdef V7_LARGE_AST
 typedef uint32_t ast_skip_t;
 #else
@@ -12493,6 +12517,8 @@ V7_PRIVATE void release_ast(struct v7 *v7, struct ast *a) {
     free(a);
   }
 }
+
+#endif /* V7_NO_COMPILER */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/bcode.c"
 #endif
@@ -15571,8 +15597,10 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
   fprintf(stderr, "src:'%s'\n", src);
 #endif
 
-  /* TODO(mkm): use GC pool */
+/* TODO(mkm): use GC pool */
+#if !defined(V7_NO_COMPILER)
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
+#endif
   size_t saved_stack_len = v7->stack.len;
   enum v7_err rcode = V7_OK;
   val_t _res = V7_UNDEFINED;
@@ -15617,8 +15645,10 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
   retain_bcode(v7, bcode);
   own_bcode(v7, bcode);
 
+#if !defined(V7_NO_COMPILER)
   ast_init(a, 0);
   a->refcnt = 1;
+#endif
 
   if (src != NULL) {
     /* Caller provided some source code, so, handle it somehow */
@@ -15631,14 +15661,22 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 
       bcode_deserialize(v7, bcode, src + sizeof(BIN_BCODE_SIGNATURE));
 
-      /*
-       * Currently, we only support serialized bcode that is stored in some
-       * mmapped memory. Otherwise, we don't yet have any mechanism to free
-       * this memory at the appropriate time.
-       */
+/*
+ * Currently, we only support serialized bcode that is stored in some
+ * mmapped memory. Otherwise, we don't yet have any mechanism to free
+ * this memory at the appropriate time.
+ */
+
+/*
+ * TODO(dfrank): currently, we remove this assert, and introduce memory
+ * leak. We need to support that properly.
+ */
+#if 0
       assert(fr == 0);
+#endif
     } else {
-      /* Maybe regular JavaScript source or binary AST data */
+/* Maybe regular JavaScript source or binary AST data */
+#if !defined(V7_NO_COMPILER)
 
       if (src_len >= sizeof(BIN_AST_SIGNATURE) &&
           strncmp(BIN_AST_SIGNATURE, src, sizeof(BIN_AST_SIGNATURE)) == 0) {
@@ -15679,6 +15717,13 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
         ast_off_t pos = 0;
         V7_TRY(compile_expr(v7, a, &pos, bcode));
       }
+#else  /* V7_NO_COMPILER */
+      (void) is_json;
+      /* Parsing JavaScript code is disabled */
+      rcode = v7_throwf(v7, SYNTAX_ERROR,
+                        "Parsing JS code is disabled by V7_NO_COMPILER");
+      V7_THROW(V7_SYNTAX_ERROR);
+#endif /* V7_NO_COMPILER */
     }
 
   } else if (is_js_function(func)) {
@@ -15730,8 +15775,9 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
     V7_TRY(v7_throwf(v7, TYPE_ERROR, "value is not a function"));
   }
 
-  /* We now have bcode to evaluate; proceed to it */
+/* We now have bcode to evaluate; proceed to it */
 
+#if !defined(V7_NO_COMPILER)
   /*
    * Before we evaluate bcode, we can safely release AST since it's not needed
    * anymore. Note that there's no leak here: if we `goto clean` from somewhere
@@ -15739,6 +15785,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
    */
   release_ast(v7, a);
   a = NULL;
+#endif /* V7_NO_COMPILER */
 
   /* Evaluate bcode */
   V7_TRY(eval_bcode(v7, bcode, this_object, flags.line_no_reset, &_res));
@@ -15791,6 +15838,7 @@ clean:
   }
   assert(v7->stack.len == saved_stack_len);
 
+#if !defined(V7_NO_COMPILER)
   /*
    * release AST if needed (normally, it's already released above, before
    * bcode evaluation)
@@ -15799,6 +15847,7 @@ clean:
     release_ast(v7, a);
     a = NULL;
   }
+#endif /* V7_NO_COMPILER */
 
   if (is_constructor && !v7_is_object(_res)) {
     /* constructor returned non-object: replace it with `this` */
@@ -16609,6 +16658,7 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 }
 
 #ifndef NO_LIBC
+#if !defined(V7_NO_COMPILER)
 enum v7_err _v7_compile(const char *src, size_t js_code_size, int binary,
                         int use_bcode, FILE *fp) {
   struct ast ast;
@@ -16664,6 +16714,7 @@ enum v7_err _v7_compile(const char *src, size_t js_code_size, int binary,
 enum v7_err v7_compile(const char *src, int binary, int use_bcode, FILE *fp) {
   return _v7_compile(src, strlen(src), binary, use_bcode, fp);
 }
+#endif /* V7_NO_COMPILER */
 #endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/util.c"
@@ -21256,6 +21307,8 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
 /* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 #define ACCEPT(t) (((v7)->cur_tok == (t)) ? next_tok((v7)), 1 : 0)
 
 #define EXPECT(t)                            \
@@ -23888,6 +23941,8 @@ clean:
   v7->line_no = saved_line_no;
   return rcode;
 }
+
+#endif /* V7_NO_COMPILER */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/compiler.c"
 #endif
@@ -23904,6 +23959,8 @@ clean:
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/regexp.h" */
+
+#if !defined(V7_NO_COMPILER)
 
 /*
  * The bytecode compiler takes an AST as input and produces one or more
@@ -25894,6 +25951,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
   v7->line_no = saved_line_no;
   return rcode;
 }
+
+#endif /* V7_NO_COMPILER */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/stdlib.c"
 #endif
@@ -34074,6 +34133,10 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
 
   memset(&opts, 0, sizeof(opts));
 
+  (void) show_ast;
+  (void) binary_ast;
+  (void) dump_bcode;
+
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
@@ -34160,10 +34223,15 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
     exec = v7_exec;
 
     if (show_ast || dump_bcode) {
+#if !defined(V7_NO_COMPILER)
       if (v7_compile(exprs[j], binary_ast, dump_bcode, stdout) != V7_OK) {
         exit_rcode = EXIT_FAILURE;
         fprintf(stderr, "%s\n", "parse error");
       }
+#else  /* V7_NO_COMPILER */
+      exit_rcode = EXIT_FAILURE;
+      fprintf(stderr, "%s\n", "Parsing is disabled by V7_NO_COMPILER");
+#endif /* V7_NO_COMPILER */
     } else if (exec(v7, exprs[j], &res) != V7_OK) {
       v7_print_error(stderr, v7, exprs[j], res);
       exit_rcode = EXIT_FAILURE;
@@ -34174,6 +34242,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
   /* Execute files */
   for (; i < argc; i++) {
     if (show_ast || dump_bcode) {
+#if !defined(V7_NO_COMPILER)
       size_t size;
       char *source_code;
       if ((source_code = cs_read_file(argv[i], &size)) == NULL) {
@@ -34188,6 +34257,10 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
         }
         free(source_code);
       }
+#else  /* V7_NO_COMPILER */
+      exit_rcode = EXIT_FAILURE;
+      fprintf(stderr, "%s\n", "Parsing is disabled by V7_NO_COMPILER");
+#endif /* V7_NO_COMPILER */
     } else if (v7_exec_file(v7, argv[i], &res) != V7_OK) {
       v7_print_error(stderr, v7, argv[i], res);
       res = V7_UNDEFINED;
