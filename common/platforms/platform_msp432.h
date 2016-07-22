@@ -54,8 +54,6 @@ struct SlTimeval_t;
 int gettimeofday(struct timeval *t, void *tz);
 #endif
 
-long int random(void);
-
 /* TI's libc does not have stat & friends, add them. */
 #ifdef __TI_COMPILER_VERSION__
 

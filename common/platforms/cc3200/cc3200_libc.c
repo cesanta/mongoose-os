@@ -80,10 +80,6 @@ int gettimeofday(struct timeval *tp, void *tzp) {
   return 0;
 }
 
-long int random(void) {
-  return 42; /* FIXME */
-}
-
 void fprint_str(FILE *fp, const char *str) {
   while (*str != '\0') {
     if (*str == '\n') MAP_UARTCharPut(CONSOLE_UART, '\r');

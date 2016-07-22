@@ -203,8 +203,3 @@ int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
   (void) r;
   (void) tzp;
 }
-
-unsigned long os_random(void);
-long int random(void) {
-  return os_random();
-}

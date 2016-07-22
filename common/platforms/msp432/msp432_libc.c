@@ -15,8 +15,4 @@ int gettimeofday(struct timeval *tp, void *tzp) {
   return 0;
 }
 
-long int random(void) {
-  return 42; /* FIXME */
-}
-
 #endif /* CS_PLATFORM == CS_P_MSP432 */

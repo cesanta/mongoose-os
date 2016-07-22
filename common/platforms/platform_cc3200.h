@@ -60,8 +60,6 @@ int asprintf(char **strp, const char *fmt, ...);
 
 #endif
 
-long int random(void);
-
 /* TI's libc does not have stat & friends, add them. */
 #ifdef __TI_COMPILER_VERSION__
 
