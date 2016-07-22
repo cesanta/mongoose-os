@@ -101,10 +101,10 @@ static void request_file(struct mg_connection *c, struct update_context *ctx,
   struct mg_str path;
   mg_parse_uri(mg_mk_str(ctx->base_url), NULL, NULL, &host, &port, &path, NULL,
                NULL);
-  LOG(LL_DEBUG,
-      ("Requestifile_sizeng file %s from path %.*s/%s and host %.*s:%d",
-       file_name, path.len, path.p, file_name, host.len, host.p, port));
-  mg_printf(c, "GET %.*s/%s HTTP/1.1\r\n\r\n", path.len, path.p, file_name);
+  LOG(LL_DEBUG, ("Request file %s from path %.*s/%s and host %.*s", file_name,
+                 path.len, path.p, file_name, host.len, host.p));
+  mg_printf(c, "GET %.*s/%s HTTP/1.1\r\nHost:%.*s\r\n\r\n", path.len, path.p,
+            file_name, host.len, host.p);
   ctx->file_procesed = ctx->file_size = 0;
   strcpy(ctx->file_name, file_name);
   /* TODO (alashkin): set timeout to cancel request if no reaction */
