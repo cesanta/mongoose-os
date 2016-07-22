@@ -12,7 +12,7 @@
 void handle_update_post(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
     case MG_EV_HTTP_MULTIPART_REQUEST: {
-      c->user_data = updater_context_create();
+      c->user_data = updater_context_create(utZip);
       if (c->user_data == NULL) {
         mg_printf(c,
                   "HTTP/1.1 400 Bad request\r\n"

@@ -42,6 +42,7 @@ struct part_info {
   enum part_info_type type;
   uint32_t addr;
   int done;
+  int disabled;
 
   union {
     struct file_info fi;
@@ -94,6 +95,10 @@ static uint32_t get_fs_addr(uint8_t rom) {
 
 uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
+}
+
+uint32_t get_fw_size(uint8_t rom) {
+  return get_rboot_config()->roms_sizes[rom];
 }
 
 struct sj_upd_ctx *sj_upd_ctx_create() {
@@ -213,6 +218,7 @@ static int fill_dir_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
   }
 
   strcpy(pi->files.dir_name, part_name);
+  LOG(LL_DEBUG, ("Directory name: %s", pi->files.dir_name));
 
   if (json_walk(src_tok.ptr, src_tok.len, fs_dir_parse_cb, pi) <= 0) {
     LOG(LL_ERROR, ("Malformed manifest"));
@@ -234,108 +240,7 @@ static int fill_dir_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
   return 1;
 }
 
-int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts) {
-  const rboot_config *cfg = get_rboot_config();
-  struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN,
-                    fs_dir = JSON_INVALID_TOKEN;
-  if (cfg == NULL) {
-    ctx->status_msg = "Failed to get rBoot config";
-    return -1;
-  }
-  ctx->slot_to_write = (cfg->current_rom == 0 ? 1 : 0);
-  LOG(LL_DEBUG, ("Slot to write: %d", ctx->slot_to_write));
-
-  json_scanf(parts->ptr, parts->len, "{fw: %T, fs: %T, fs_dir: %T}", &fw, &fs,
-             &fs_dir);
-
-  if (fill_file_part_info(ctx, &fw, "fw", &ctx->fw_part) < 0) {
-    ctx->status_msg = "Failed to parse fw part";
-    return -1;
-  }
-
-  int fs_res, fs_dir_result;
-
-  if ((fs_res = fill_file_part_info(ctx, &fs, "fs", &ctx->fs_part)) < 0) {
-    ctx->status_msg = "Failed to parse fs part";
-  }
-
-  if ((fs_dir_result =
-           fill_dir_part_info(ctx, &fs_dir, "fs_dir", &ctx->fs_dir_part)) < 0) {
-    ctx->status_msg = "Failed to parse fs_dir part";
-  }
-
-  if (fs_res >= 0 && fs_dir_result >= 0) {
-    /* TODO(alashkin): make this sutuation an error later */
-    LOG(LL_WARN, ("Both fs and fs_dir found, using fs"));
-    ctx->fs_dir_part.files.dir_name[0] = 0;
-  }
-  return 1;
-}
-
 void bin2hex(const uint8_t *src, int src_len, char *dst);
-
-int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
-  uint8_t read_buf[4 * 100];
-  char written_checksum[50];
-  int to_read;
-
-  cs_sha1_ctx ctx;
-  cs_sha1_init(&ctx);
-
-  while (len != 0) {
-    if (len > sizeof(read_buf)) {
-      to_read = sizeof(read_buf);
-    } else {
-      to_read = len;
-    }
-
-    if (spi_flash_read(addr, (uint32_t *) read_buf, to_read) != 0) {
-      CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %X", to_read, addr));
-      return -1;
-    }
-
-    cs_sha1_update(&ctx, read_buf, to_read);
-    addr += to_read;
-    len -= to_read;
-
-    sj_wdt_feed();
-  }
-
-  cs_sha1_final(read_buf, &ctx);
-  bin2hex(read_buf, 20, written_checksum);
-  LOG(LL_DEBUG, ("SHA1 %u @ 0x%x = %.*s, want %.*s", len, addr, SHA1SUM_LEN,
-                 written_checksum, SHA1SUM_LEN, provided_checksum));
-
-  if (strncasecmp(written_checksum, provided_checksum, SHA1SUM_LEN) != 0) {
-    return -1;
-  } else {
-    return 1;
-  }
-}
-
-static int prepare_to_write(struct sj_upd_ctx *ctx,
-                            const struct sj_upd_file_info *fi,
-                            struct part_info *part) {
-  if (part->done != 0) {
-    LOG(LL_DEBUG, ("Skipping %s", fi->name));
-    return 0;
-  }
-  ctx->current_part = part;
-  ctx->current_part->fi.size = fi->size;
-  ctx->current_write_address = part->addr;
-  ctx->erased_till = part->addr;
-  /* See if current content is the same. */
-  if (verify_checksum(part->addr, fi->size, part->fi.sha1_sum) == 1) {
-    CONSOLE_LOG(LL_INFO,
-                ("Digest matched, skipping %s %u @ 0x%x (%.*s)", fi->name,
-                 fi->size, part->addr, SHA1SUM_LEN, part->fi.sha1_sum));
-    part->done = 1;
-    return 0;
-  }
-  CONSOLE_LOG(LL_INFO, ("Writing %s %u @ 0x%x (%.*s)", fi->name, fi->size,
-                        part->addr, SHA1SUM_LEN, part->fi.sha1_sum));
-  return 1;
-}
 
 static int compare_digest(spiffs *fs, const char *file_name,
                           const char *received_digest) {
@@ -427,6 +332,122 @@ static int prepare_to_update_fs(struct sj_upd_ctx *ctx,
   return 1;
 }
 
+int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
+                 int files_mode) {
+  const rboot_config *cfg = get_rboot_config();
+  struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN,
+                    fs_dir = JSON_INVALID_TOKEN;
+  if (cfg == NULL) {
+    ctx->status_msg = "Failed to get rBoot config";
+    return -1;
+  }
+
+  json_scanf(parts->ptr, parts->len, "{fw: %T, fs: %T, fs_dir: %T}", &fw, &fs,
+             &fs_dir);
+
+  ctx->slot_to_write = (cfg->current_rom == 0 ? 1 : 0);
+  LOG(LL_DEBUG, ("Slot to write: %d", ctx->slot_to_write));
+
+  if (fill_file_part_info(ctx, &fw, "fw", &ctx->fw_part) < 0) {
+    LOG(LL_INFO, ("No FW part in update"));
+    ctx->slot_to_write = cfg->current_rom;
+    ctx->fw_part.done = 1;
+  }
+
+  int fs_res, fs_dir_result;
+
+  if ((fs_res = fill_file_part_info(ctx, &fs, "fs", &ctx->fs_part)) < 0) {
+    ctx->status_msg = "Failed to parse fs part";
+  }
+
+  if ((fs_dir_result =
+           fill_dir_part_info(ctx, &fs_dir, "fs_dir", &ctx->fs_dir_part)) < 0) {
+    ctx->status_msg = "Failed to parse fs_dir part";
+  }
+
+  if (fs_res >= 0 && fs_dir_result >= 0) {
+    /*
+     * Using fs_dir gives us a changes to update a little about of files,
+     * In real live if should be faster
+     */
+    LOG(LL_WARN, ("Both fs and fs_dir found, using fs_dir"));
+    ctx->fs_part.done = files_mode;
+  }
+
+  if (fs_dir_result >= 0) {
+    if (prepare_to_update_fs(ctx, &ctx->fs_dir_part) < 0) {
+      return -1;
+    }
+  }
+  return 1;
+}
+
+int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
+  uint8_t read_buf[4 * 100];
+  char written_checksum[50];
+  int to_read;
+
+  cs_sha1_ctx ctx;
+  cs_sha1_init(&ctx);
+
+  size_t len_tmp = len;
+  uint32 addr_tmp = addr;
+  while (len != 0) {
+    if (len > sizeof(read_buf)) {
+      to_read = sizeof(read_buf);
+    } else {
+      to_read = len;
+    }
+
+    if (spi_flash_read(addr, (uint32_t *) read_buf, to_read) != 0) {
+      CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %X", to_read, addr));
+      return -1;
+    }
+
+    cs_sha1_update(&ctx, read_buf, to_read);
+    addr += to_read;
+    len -= to_read;
+
+    sj_wdt_feed();
+  }
+
+  cs_sha1_final(read_buf, &ctx);
+  bin2hex(read_buf, 20, written_checksum);
+  LOG(LL_DEBUG,
+      ("SHA1 %u @ 0x%x = %.*s, want %.*s", len_tmp, addr_tmp, SHA1SUM_LEN,
+       written_checksum, SHA1SUM_LEN, provided_checksum));
+
+  if (strncasecmp(written_checksum, provided_checksum, SHA1SUM_LEN) != 0) {
+    return -1;
+  } else {
+    return 1;
+  }
+}
+
+static int prepare_to_write(struct sj_upd_ctx *ctx,
+                            const struct sj_upd_file_info *fi,
+                            struct part_info *part) {
+  if (part->done != 0) {
+    LOG(LL_DEBUG, ("Skipping %s", fi->name));
+    return 0;
+  }
+  ctx->current_part = part;
+  ctx->current_part->fi.size = fi->size;
+  ctx->current_write_address = part->addr;
+  ctx->erased_till = part->addr;
+  /* See if current content is the same. */
+  if (verify_checksum(part->addr, fi->size, part->fi.sha1_sum) == 1) {
+    CONSOLE_LOG(LL_INFO,
+                ("Digest matched, skipping %s %u @ 0x%x (%.*s)", fi->name,
+                 fi->size, part->addr, SHA1SUM_LEN, part->fi.sha1_sum));
+    part->done = 1;
+    return 0;
+  }
+  CONSOLE_LOG(LL_INFO, ("Writing %s %u @ 0x%x (%.*s)", fi->name, fi->size,
+                        part->addr, SHA1SUM_LEN, part->fi.sha1_sum));
+  return 1;
+}
+
 struct file_info *get_file_info_from_manifest(struct part_info *pi,
                                               const char *current_file_name) {
   struct file_info *fi;
@@ -443,9 +464,60 @@ struct file_info *get_file_info_from_manifest(struct part_info *pi,
   return NULL;
 }
 
+int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
+  if (ctx->fw_part.done == 0) {
+    /* if fw_part must be updated, just send it like usual one */
+    LOG(LL_DEBUG, ("ctx->fw_part.done %d", ctx->fw_part.done));
+    if (verify_checksum(ctx->fw_part.addr, get_fw_size(ctx->slot_to_write),
+                        ctx->fw_part.fi.sha1_sum) < 0) {
+      strcpy(buf, ctx->fw_part.fi.file_name);
+      return 1;
+    } else {
+      ctx->fw_part.done = 1;
+    }
+  }
+
+  if (SLIST_EMPTY(&ctx->fs_dir_part.files.fhead)) {
+    return 0; /* All files done */
+  }
+
+  struct file_info *fi = SLIST_FIRST(&ctx->fs_dir_part.files.fhead);
+  if (strlen(fi->file_name) + strlen(ctx->fs_dir_part.files.dir_name) >
+      buf_size) {
+    LOG(LL_ERROR, ("File name is too long"));
+    return -1;
+  }
+
+  int dir_len = strlen(ctx->fs_dir_part.files.dir_name);
+  strcpy(buf, ctx->fs_dir_part.files.dir_name);
+  buf[dir_len] = '/';
+  strcpy(buf + dir_len + 1, fi->file_name);
+
+  LOG(LL_DEBUG, ("File to request: %s", buf));
+
+  return 1;
+}
+
+/* 0 - no files to process, 1 - there are files to proceed */
+int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name) {
+  struct file_info *fi, *fi_temp;
+  SLIST_FOREACH_SAFE(fi, &ctx->fs_dir_part.files.fhead, entries, fi_temp) {
+    LOG(LL_DEBUG, ("Found %s, want %s", fi->file_name, file_name));
+    int dir_len = strlen(ctx->fs_dir_part.files.dir_name);
+    if (strncmp(file_name, ctx->fs_dir_part.files.dir_name, dir_len) == 0 &&
+        strcmp(file_name + dir_len + 1, fi->file_name) == 0) {
+      LOG(LL_DEBUG, ("Removing %s", file_name));
+      SLIST_REMOVE(&ctx->fs_dir_part.files.fhead, fi, file_info, entries);
+      break;
+    }
+  }
+
+  return !SLIST_EMPTY(&ctx->fs_dir_part.files.fhead);
+}
+
 enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
                                           const struct sj_upd_file_info *fi) {
-  int ret = 0;
+  int ret;
   ctx->status_msg = "Failed to update file";
   LOG(LL_DEBUG, ("fi->name=%s", fi->name));
   struct file_info *mfi;
@@ -453,31 +525,19 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
     ret = prepare_to_write(ctx, fi, &ctx->fw_part);
   } else if (strcmp(fi->name, ctx->fs_part.fi.file_name) == 0) {
     ret = prepare_to_write(ctx, fi, &ctx->fs_part);
-  } else if (strncmp(fi->name, ctx->fs_dir_part.files.dir_name,
-                     strlen(ctx->fs_dir_part.files.dir_name)) == 0 &&
-             strlen(fi->name) > strlen(ctx->fs_dir_part.files.dir_name) + 1) {
-    if (ctx->fs_dir_part.done == 0) {
-      if (prepare_to_update_fs(ctx, &ctx->fs_dir_part) < 0) {
-        return SJ_UPDATER_ABORT;
-      }
+  } else if ((mfi = get_file_info_from_manifest(&ctx->fs_dir_part, fi->name)) !=
+             NULL) {
+    ctx->current_part = &ctx->fs_dir_part;
+    mfi->file = SPIFFS_open(&ctx->fs_dir_part.files.fs, mfi->file_name,
+                            SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
+    if (mfi->file < 0) {
+      LOG(LL_ERROR, ("Cannot open file %s (%d)", mfi->file_name,
+                     SPIFFS_errno(&ctx->fs_dir_part.files.fs)));
+      return SJ_UPDATER_ABORT;
     }
-    if ((mfi = get_file_info_from_manifest(&ctx->fs_dir_part, fi->name)) !=
-        NULL) {
-      ctx->current_part = &ctx->fs_dir_part;
-      mfi->file = SPIFFS_open(&ctx->fs_dir_part.files.fs, mfi->file_name,
-                              SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
-      if (mfi->file < 0) {
-        LOG(LL_ERROR, ("Cannot open file %s (%d)", mfi->file_name,
-                       SPIFFS_errno(&ctx->fs_dir_part.files.fs)));
-        return SJ_UPDATER_ABORT;
-      }
-      ctx->current_part->files.current_file = mfi;
+    ctx->current_part->files.current_file = mfi;
 
-      return SJ_UPDATER_PROCESS_FILE;
-    } else {
-      /* File has the same digest, skip it */
-      return SJ_UPDATER_SKIP_FILE;
-    }
+    return SJ_UPDATER_PROCESS_FILE;
   } else {
     /* We need only fw & fs files, the rest just send to /dev/null */
     return SJ_UPDATER_SKIP_FILE;
@@ -582,8 +642,8 @@ int sj_upd_file_data(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi,
 
 int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
   if (ctx->current_part->type == ptFILES) {
-    CONSOLE_LOG(LL_DEBUG, ("File %s updated",
-                           ctx->current_part->files.current_file->file_name));
+    LOG(LL_DEBUG,
+        ("File %s updated", ctx->current_part->files.current_file->file_name));
     SPIFFS_close(&ctx->current_part->files.fs,
                  ctx->current_part->files.current_file->file);
     if (compare_digest(&ctx->current_part->files.fs,
@@ -616,6 +676,11 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   }
 
   rboot_config *cfg = get_rboot_config();
+  if (ctx->slot_to_write == cfg->current_rom) {
+    LOG(LL_INFO, ("Using previous FW"));
+    return 1;
+  }
+
   cfg->previous_rom = cfg->current_rom;
   cfg->current_rom = ctx->slot_to_write;
   if (ctx->fs_dir_part.done != 0) {
@@ -640,6 +705,7 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
        (int) cfg->previous_rom, (int) cfg->current_rom,
        cfg->roms[cfg->current_rom], cfg->roms_sizes[cfg->current_rom],
        cfg->fs_addresses[cfg->current_rom], cfg->fs_sizes[cfg->current_rom]));
+
   return 1;
 }
 

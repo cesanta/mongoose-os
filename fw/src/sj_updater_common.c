@@ -25,37 +25,9 @@ extern const char *build_version;
 
 #define MANIFEST_FILENAME "manifest.json"
 #define SHA1SUM_LEN 40
-/*
- * --- Zip file local header structure ---
- *                                             size  offset
- * local file header signature   (0x04034b50)   4      0
- * version needed to extract                    2      4
- * general purpose bit flag                     2      6
- * compression method                           2      8
- * last mod file time                           2      10
- * last mod file date                           2      12
- * crc-32                                       4      14
- * compressed size                              4      18
- * uncompressed size                            4      22
- * file name length                             2      26
- * extra field length                           2      28
- * file name (variable size)                    v      30
- * extra field (variable size)                  v
- */
 
-#define ZIP_LOCAL_HDR_SIZE 30U
-#define ZIP_GENFLAG_OFFSET 6U
-#define ZIP_COMPRESSION_METHOD_OFFSET 8U
-#define ZIP_CRC32_OFFSET 14U
-#define ZIP_COMPRESSED_SIZE_OFFSET 18U
-#define ZIP_UNCOMPRESSED_SIZE_OFFSET 22U
-#define ZIP_FILENAME_LEN_OFFSET 26U
-#define ZIP_EXTRAS_LEN_OFFSET 28U
-#define ZIP_FILENAME_OFFSET 30U
-#define ZIP_FILE_DESCRIPTOR_SIZE 12U
-
-static const uint32_t c_zip_file_header_magic = 0x04034b50;
-static const uint32_t c_zip_cdir_magic = 0x02014b50;
+const uint32_t c_zip_file_header_magic = 0x04034b50;
+const uint32_t c_zip_cdir_magic = 0x02014b50;
 static int s_reboot_timer_id;
 
 enum update_status {
@@ -75,7 +47,7 @@ uint32_t mz_crc32(uint32_t crc, const char *ptr, size_t buf_len);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-struct update_context *updater_context_create() {
+struct update_context *updater_context_create(enum UPDATE_TYPE ut) {
   if (s_ctx != NULL) {
     CONSOLE_LOG(LL_ERROR, ("Update already in progress"));
     return NULL;
@@ -88,14 +60,14 @@ struct update_context *updater_context_create() {
   }
 
   s_ctx->dev_ctx = sj_upd_ctx_create();
+  s_ctx->update_type = ut;
 
   CONSOLE_LOG(LL_INFO, ("Starting update"));
   return s_ctx;
 }
 
 void updater_set_status(struct update_context *ctx, enum update_status st) {
-  CONSOLE_LOG(LL_DEBUG,
-              ("Update status %d -> %d", (int) ctx->update_status, (int) st));
+  LOG(LL_DEBUG, ("Update status %d -> %d", (int) ctx->update_status, (int) st));
   ctx->update_status = st;
 }
 
@@ -120,7 +92,7 @@ static void context_update(struct update_context *ctx, const char *data,
     ctx->data_len = len;
   }
 
-  CONSOLE_LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
+  LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
 }
 
 static void context_save_unprocessed(struct update_context *ctx) {
@@ -128,7 +100,7 @@ static void context_save_unprocessed(struct update_context *ctx) {
     mbuf_append(&ctx->unprocessed, ctx->data, ctx->data_len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
-    CONSOLE_LOG(LL_DEBUG, ("Added %d bytes to cached data", ctx->data_len));
+    LOG(LL_DEBUG, ("Added %d bytes to cached data", ctx->data_len));
   }
 }
 
@@ -144,7 +116,7 @@ void context_remove_data(struct update_context *ctx, size_t len) {
     ctx->data_len -= len;
   }
 
-  CONSOLE_LOG(LL_DEBUG, ("Consumed %u, %u left", len, ctx->data_len));
+  LOG(LL_DEBUG, ("Consumed %u, %u left", len, ctx->data_len));
 }
 
 static void context_clear_current_file(struct update_context *ctx) {
@@ -161,7 +133,7 @@ int is_reboot_required(struct update_context *ctx) {
 
 static int parse_zip_file_header(struct update_context *ctx) {
   if (ctx->data_len < ZIP_LOCAL_HDR_SIZE) {
-    CONSOLE_LOG(LL_DEBUG, ("Zip header is incomplete"));
+    LOG(LL_DEBUG, ("Zip header is incomplete"));
     /* Need more data*/
     return 0;
   }
@@ -176,8 +148,8 @@ static int parse_zip_file_header(struct update_context *ctx) {
          sizeof(file_name_len));
   memcpy(&extras_len, ctx->data + ZIP_EXTRAS_LEN_OFFSET, sizeof(extras_len));
 
-  CONSOLE_LOG(LL_DEBUG, ("Filename len = %d bytes, extras len = %d bytes",
-                         (int) file_name_len, (int) extras_len));
+  LOG(LL_DEBUG, ("Filename len = %d bytes, extras len = %d bytes",
+                 (int) file_name_len, (int) extras_len));
   if (ctx->data_len < ZIP_LOCAL_HDR_SIZE + file_name_len + extras_len) {
     /* Still need mode data */
     return 0;
@@ -187,7 +159,7 @@ static int parse_zip_file_header(struct update_context *ctx) {
   memcpy(&compression_method, ctx->data + ZIP_COMPRESSION_METHOD_OFFSET,
          sizeof(compression_method));
 
-  CONSOLE_LOG(LL_DEBUG, ("Compression method=%d", (int) compression_method));
+  LOG(LL_DEBUG, ("Compression method=%d", (int) compression_method));
   if (compression_method != 0) {
     /* Do not support compressed archives */
     ctx->status_msg = "File is compressed";
@@ -198,8 +170,8 @@ static int parse_zip_file_header(struct update_context *ctx) {
   int i;
   char *nodir_file_name = (char *) ctx->data + ZIP_FILENAME_OFFSET;
   uint16_t nodir_file_name_len = file_name_len;
-  CONSOLE_LOG(LL_DEBUG,
-              ("File name: %.*s", (int) nodir_file_name_len, nodir_file_name));
+  LOG(LL_DEBUG,
+      ("File name: %.*s", (int) nodir_file_name_len, nodir_file_name));
 
   for (i = 0; i < file_name_len; i++) {
     /* archive may contain folder, but we skip it, using filenames only */
@@ -210,8 +182,8 @@ static int parse_zip_file_header(struct update_context *ctx) {
     }
   }
 
-  CONSOLE_LOG(LL_DEBUG, ("File name to use: %.*s", (int) nodir_file_name_len,
-                         nodir_file_name));
+  LOG(LL_DEBUG,
+      ("File name to use: %.*s", (int) nodir_file_name_len, nodir_file_name));
 
   if (nodir_file_name_len >= sizeof(ctx->current_file.fi.name)) {
     /* We are in charge of file names, right? */
@@ -235,18 +207,18 @@ static int parse_zip_file_header(struct update_context *ctx) {
     return -1;
   }
 
-  CONSOLE_LOG(LL_DEBUG, ("File size: %d", ctx->current_file.fi.size));
+  LOG(LL_DEBUG, ("File size: %d", ctx->current_file.fi.size));
 
   uint16_t gen_flag;
   memcpy(&gen_flag, ctx->data + ZIP_GENFLAG_OFFSET, sizeof(gen_flag));
   ctx->current_file.has_descriptor = gen_flag & (1 << 3);
 
-  CONSOLE_LOG(LL_DEBUG, ("General flag=%d", (int) gen_flag));
+  LOG(LL_DEBUG, ("General flag=%d", (int) gen_flag));
 
   memcpy(&ctx->current_file.crc, ctx->data + ZIP_CRC32_OFFSET,
          sizeof(ctx->current_file.crc));
 
-  CONSOLE_LOG(LL_DEBUG, ("CRC32: 0x%08x", ctx->current_file.crc));
+  LOG(LL_DEBUG, ("CRC32: 0x%08x", ctx->current_file.crc));
 
   context_remove_data(ctx, ZIP_LOCAL_HDR_SIZE + file_name_len + extras_len);
 
@@ -284,7 +256,8 @@ static int parse_manifest(struct update_context *ctx) {
 }
 
 static int finalize_write(struct update_context *ctx) {
-  if (ctx->current_file.crc != ctx->current_file.crc_current) {
+  if (ctx->current_file.crc != 0 &&
+      ctx->current_file.crc != ctx->current_file.crc_current) {
     CONSOLE_LOG(LL_ERROR,
                 ("Invalid CRC, want 0x%x, got 0x%x", ctx->current_file.crc,
                  ctx->current_file.crc_current));
@@ -338,8 +311,9 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           return 0;
         }
 
-        if (mz_crc32(0, ctx->data, ctx->current_file.fi.size) !=
-            ctx->current_file.crc) {
+        if (ctx->current_file.crc != 0 &&
+            mz_crc32(0, ctx->data, ctx->current_file.fi.size) !=
+                ctx->current_file.crc) {
           ctx->status_msg = "Invalid CRC";
           return -1;
         }
@@ -365,7 +339,8 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           }
         }
 
-        if ((ret = sj_upd_begin(ctx->dev_ctx, &ctx->parts)) < 0) {
+        if ((ret = sj_upd_begin(ctx->dev_ctx, &ctx->parts,
+                                ctx->update_status == utManifest)) < 0) {
           ctx->status_msg = sj_upd_get_status_msg(ctx->dev_ctx);
           CONSOLE_LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
           return ret;
@@ -420,9 +395,9 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           context_remove_data(ctx, num_processed);
           ctx->current_file.fi.processed += num_processed;
         }
-        CONSOLE_LOG(LL_DEBUG, ("Processed %d, up to %u, %u left in the buffer",
-                               num_processed, ctx->current_file.fi.processed,
-                               ctx->data_len));
+        LOG(LL_DEBUG,
+            ("Processed %d, up to %u, %u left in the buffer", num_processed,
+             ctx->current_file.fi.processed, ctx->data_len));
 
         if (ctx->current_file.fi.processed < ctx->current_file.fi.size) {
           context_save_unprocessed(ctx);
@@ -441,8 +416,8 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
             MIN(ctx->data_len,
                 ctx->current_file.fi.size - ctx->current_file.fi.processed);
         ctx->current_file.fi.processed += to_skip;
-        CONSOLE_LOG(LL_DEBUG, ("Skipping %u bytes, %u total", to_skip,
-                               ctx->current_file.fi.processed));
+        LOG(LL_DEBUG, ("Skipping %u bytes, %u total", to_skip,
+                       ctx->current_file.fi.processed));
         context_remove_data(ctx, to_skip);
 
         if (ctx->current_file.fi.processed < ctx->current_file.fi.size) {
@@ -488,6 +463,11 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
   }
 }
 
+int updater_finalize(struct update_context *ctx) {
+  updater_set_status(ctx, US_FINALIZE);
+  return updater_process(ctx, NULL, 0);
+}
+
 void updater_finish(struct update_context *ctx) {
   updater_set_status(ctx, US_FINISHED);
 }
@@ -499,6 +479,7 @@ void updater_context_free(struct update_context *ctx) {
   sj_upd_ctx_free(s_ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
   free(ctx->manifest_data);
+  free(ctx->base_url);
   free(ctx);
   s_ctx = NULL;
 }

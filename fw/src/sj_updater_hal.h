@@ -29,7 +29,9 @@ const char *sj_upd_get_status_msg(struct sj_upd_ctx *ctx);
  * and for convenience the "parts" key within it is in ctx->parts.
  * Return >= 0 if ok, < 0 + ctx->status_msg on error.
  */
-int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts);
+int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
+                 /* TODO(alashkin): remove this parameter */
+                 int files_mode);
 
 /*
  * Decide what to do with the next file.
@@ -63,5 +65,9 @@ int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi);
 int sj_upd_finalize(struct sj_upd_ctx *ctx);
 
 void sj_upd_ctx_free(struct sj_upd_ctx *ctx);
+
+int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size);
+
+int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name);
 
 #endif /* CS_FW_SRC_SJ_UPDATER_HAL_H_ */

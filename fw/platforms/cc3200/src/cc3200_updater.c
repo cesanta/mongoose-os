@@ -48,7 +48,9 @@ const char *sj_upd_get_status_msg(struct sj_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts) {
+int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
+                 int files_mode) {
+  (void) files_mode;
   ctx->parts = parts;
   /* We want to make sure device uses boto loader. */
   ctx->cur_boot_cfg_idx = get_active_boot_cfg_idx();
@@ -403,4 +405,21 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
     cfg->flags &= ~(BOOT_F_MERGE_SPIFFS);
   }
   return 0;
+}
+
+int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name) {
+  (void) ctx;
+  (void) file_name;
+
+  /* TODO(alashkin or rojer) implement */
+  return -1;
+}
+
+int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
+  (void) ctx;
+  (void) buf;
+  (void) buf_size;
+
+  /* TODO(alashkin or rojer) implement */
+  return -1;
 }

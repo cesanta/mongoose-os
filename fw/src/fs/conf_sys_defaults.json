@@ -49,7 +49,7 @@
     "reconnect_timeout_max": 60,
     "request_timeout": 300,
     "memory_limit": 15360,
-    "max_queue_size": 10,
+    "max_queue_size": 25,
     "ssl_server_name": "",
     "ssl_ca_file": "",
     "ssl_client_cert_file": "",

@@ -64,6 +64,52 @@ static int notify_js(enum js_update_status us, const char *info) {
   return 0;
 }
 
+static int fill_zip_header(char *buf, size_t buf_size,
+                           const struct mg_str file_name, uint32_t file_size,
+                           int *header_len) {
+  if (ZIP_FILENAME_OFFSET + file_name.len > buf_size) {
+    LOG(LL_ERROR, ("File name %.*s is too long", file_name.len, file_name.p));
+    return -1;
+  }
+  LOG(LL_DEBUG, ("Fake ZIP header: name=%.*s size=%d", (int) file_name.len,
+                 file_name.p, file_size));
+  memset(buf, 0, buf_size);
+
+  /* offset=0: signature */
+  memcpy(buf, &c_zip_file_header_magic, 4);
+  /* offset=18, compressed size */
+  memcpy(buf + ZIP_COMPRESSED_SIZE_OFFSET, &file_size, 4);
+  /* offset=22, uncomprressed size */
+  memcpy(buf + ZIP_UNCOMPRESSED_SIZE_OFFSET, &file_size, 4);
+  /* offset=26, file name length */
+  memcpy(buf + ZIP_FILENAME_LEN_OFFSET, &file_name.len, 2);
+  /* offset=30, file name length */
+  memcpy(buf + ZIP_FILENAME_OFFSET, file_name.p, file_name.len);
+
+  *header_len = ZIP_FILENAME_OFFSET + file_name.len;
+
+  return 0;
+}
+
+static int do_http_connect(struct update_context *ctx, const char *url,
+                           const char *extra_headers);
+
+static void request_file(struct mg_connection *c, struct update_context *ctx,
+                         const char *file_name) {
+  struct mg_str host;
+  unsigned int port;
+  struct mg_str path;
+  mg_parse_uri(mg_mk_str(ctx->base_url), NULL, NULL, &host, &port, &path, NULL,
+               NULL);
+  LOG(LL_DEBUG,
+      ("Requestifile_sizeng file %s from path %.*s/%s and host %.*s:%d",
+       file_name, path.len, path.p, file_name, host.len, host.p, port));
+  mg_printf(c, "GET %.*s/%s HTTP/1.1\r\n\r\n", path.len, path.p, file_name);
+  ctx->file_procesed = ctx->file_size = 0;
+  strcpy(ctx->file_name, file_name);
+  /* TODO (alashkin): set timeout to cancel request if no reaction */
+}
+
 static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
   struct mbuf *io = &c->recv_mbuf;
   struct update_context *ctx = (struct update_context *) c->user_data;
@@ -71,7 +117,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
 
   switch (ev) {
     case MG_EV_RECV: {
-      if (ctx->archive_size == 0) {
+      if (ctx->file_size == 0) {
         LOG(LL_DEBUG, ("Looking for HTTP header"));
         struct http_message hm;
         int parsed = mg_parse_http(io->buf, io->len, &hm, 0);
@@ -88,18 +134,55 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
             c->flags |= MG_F_CLOSE_IMMEDIATELY;
             break;
           } else {
-            ctx->archive_size = hm.body.len;
+            ctx->file_size = hm.body.len;
           }
 
+          if (ctx->update_type == utManifest) {
+            if (ctx->file_procesed == 0) {
+              char buf[100];
+              int header_size = 0;
+              /*
+               * Since mgiot updater waits for ZIP, to keep it untouched
+               * we just emulate ZIP archive by puting
+               * ZIP header before file content
+               */
+              fill_zip_header(buf, sizeof(buf), mg_mk_str(ctx->file_name),
+                              ctx->file_size, &header_size);
+              updater_process(ctx, buf, header_size);
+            }
+          }
           mbuf_remove(io, parsed);
         }
       }
 
       if (io->len != 0) {
         int res = updater_process(ctx, io->buf, io->len);
-        LOG(LL_DEBUG, ("Processed %d bytes, result: %d", (int) io->len, res));
+        ctx->file_procesed += io->len;
+
+        LOG(LL_DEBUG, ("Processed %d (%d) bytes, result: %d", (int) io->len,
+                       ctx->file_procesed, res));
 
         mbuf_remove(io, io->len);
+
+        if (ctx->update_type == utManifest &&
+            ctx->file_size == ctx->file_procesed) {
+          LOG(LL_DEBUG, ("%s fetched succesfully", ctx->file_name));
+          sj_upd_complete_file_update(ctx->dev_ctx, ctx->file_name);
+
+          char buf[100];
+          if (sj_upd_get_next_file(ctx->dev_ctx, buf, sizeof(buf)) == 1) {
+            /* There are more files to go */
+            request_file(c, ctx, buf);
+            return;
+          } else {
+            /*
+             * If we are in Manifest mode and all files are fetched
+             * we have to tell finalize update process explicitly
+             */
+            res = updater_finalize(ctx);
+            LOG(LL_DEBUG, ("Finalized update"))
+          }
+        }
 
         if (res == 0) {
           /* Need more data, everything is OK */
@@ -141,6 +224,17 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
     }
     case MG_EV_CLOSE: {
       if (ctx != NULL) {
+        LOG(LL_DEBUG, ("Connection for %s is closed", ctx->file_name));
+
+        if (ctx->update_type == utManifest &&
+            ctx->file_size == ctx->file_procesed && !is_update_finished(ctx)) {
+          /*
+           * If type=utManifest and file is fully fetched and
+           * update status ! FINISHED it means nothing, but time for next file
+           */
+          return;
+        }
+
         if (!is_update_finished(ctx)) {
           /* Connection was terminated by server */
           notify_js(UJS_ERROR, NULL);
@@ -168,7 +262,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-static int do_http_connect(struct update_context *ctx, const char *url) {
+static int do_http_connect(struct update_context *ctx, const char *url,
+                           const char *extra_headers) {
   LOG(LL_DEBUG, ("Connecting to: %s", url));
 
   struct mg_connect_opts opts;
@@ -194,7 +289,7 @@ static int do_http_connect(struct update_context *ctx, const char *url) {
 #endif
 
   struct mg_connection *c = mg_connect_http_opt(&sj_mgr, fw_download_ev_handler,
-                                                opts, url, NULL, NULL);
+                                                opts, url, extra_headers, NULL);
 
   if (c == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Failed to connect to %s", url));
@@ -206,10 +301,11 @@ static int do_http_connect(struct update_context *ctx, const char *url) {
   return 1;
 }
 
-static int start_update_download(struct update_context *ctx, const char *url) {
+static int start_update_download(struct update_context *ctx, const char *url,
+                                 const char *extra_headers) {
   CONSOLE_LOG(LL_INFO, ("Updating FW"));
 
-  if (do_http_connect(ctx, url) < 0) {
+  if (do_http_connect(ctx, url, extra_headers) < 0) {
     ctx->status_msg = "Failed to connect update server";
     return -1;
   }
@@ -230,10 +326,32 @@ static void handle_clubby_ready(struct clubby_event *evt, void *user_data) {
   };
 }
 
+static char *get_base_url(const struct mg_str full_url) {
+  int i;
+  for (i = full_url.len; i >= 0; i--) {
+    if (full_url.p[i] == '/') {
+      char *ret = calloc(1, i + 1);
+      if (ret == NULL) {
+        LOG(LL_ERROR, ("Out of memory"))
+        return NULL;
+      }
+
+      strncpy(ret, full_url.p, i);
+      LOG(LL_DEBUG, ("Base url=%s", ret));
+
+      return ret;
+    }
+  }
+
+  return NULL;
+}
+
 static void handle_update_req(struct clubby_event *evt, void *user_data) {
-  char *zip_url;
-  struct json_token section = JSON_INVALID_TOKEN;
-  struct json_token blob_url = JSON_INVALID_TOKEN;
+  char *blob_url = NULL;
+  struct json_token section_tok = JSON_INVALID_TOKEN;
+  struct json_token blob_url_tok = JSON_INVALID_TOKEN;
+  struct json_token blob_type_tok = JSON_INVALID_TOKEN;
+
   struct json_token args = evt->request.args;
 
   (void) user_data;
@@ -243,23 +361,24 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
   const char *reply = "Malformed request";
 
   if (evt->request.args.type != JSON_TYPE_OBJECT) {
-    goto bad_request;
+    goto clean;
   }
 
-  json_scanf(args.ptr, args.len, "{section: %T, blob_url: %T}", &section,
-             &blob_url);
+  json_scanf(args.ptr, args.len, "{section: %T, blob_url: %T, blob_type: %T}",
+             &section_tok, &blob_url_tok, &blob_type_tok);
 
   /*
    * TODO(alashkin): enable update for another files, not
    * firmware only
    */
-  if (section.len == 0 || section.type != JSON_TYPE_STRING ||
-      strncmp(section.ptr, "firmware", section.len) != 0 || blob_url.len == 0 ||
-      blob_url.type != JSON_TYPE_STRING) {
-    goto bad_request;
+  if (section_tok.len == 0 || section_tok.type != JSON_TYPE_STRING ||
+      strncmp(section_tok.ptr, "firmware", section_tok.len) != 0 ||
+      blob_url_tok.len == 0 || blob_url_tok.type != JSON_TYPE_STRING) {
+    goto clean;
   }
 
-  LOG(LL_DEBUG, ("zip url: %.*s", blob_url.len, blob_url.ptr));
+  LOG(LL_DEBUG, ("blob url: %.*s blob type: %.*s", blob_url_tok.len,
+                 blob_url_tok.ptr, blob_type_tok.len, blob_type_tok.ptr));
 
   sj_clubby_free_reply(s_clubby_reply);
   s_clubby_reply = sj_clubby_create_reply(evt);
@@ -269,28 +388,48 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
    * User can start update with Sys.updater.start()
    */
 
-  zip_url = calloc(1, blob_url.len + 1);
-  if (zip_url == NULL) {
+  blob_url = calloc(1, blob_url_tok.len + 1);
+  if (blob_url == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     return;
   }
 
-  memcpy(zip_url, blob_url.ptr, blob_url.len);
+  memcpy(blob_url, blob_url_tok.ptr, blob_url_tok.len);
 
-  if (!notify_js(UJS_GOT_REQUEST, zip_url)) {
-    struct update_context *ctx = updater_context_create();
+  if (!notify_js(UJS_GOT_REQUEST, blob_url)) {
+    enum UPDATE_TYPE ut = utZip;
+    if (blob_type_tok.type == JSON_TYPE_STRING &&
+        strncmp(blob_type_tok.ptr, "manifest", 8) == 0) {
+      ut = utManifest;
+    }
+    struct update_context *ctx = updater_context_create(ut);
     if (ctx == NULL) {
       reply = "Failed to init updater";
-    } else if (start_update_download(ctx, zip_url) < 0) {
+      goto clean;
+    }
+    if (ut == utManifest) {
+      /* TODO(alashkin): unhardcode name */
+      strcpy(ctx->file_name, "manifest.json");
+    }
+    ctx->base_url =
+        get_base_url(mg_mk_str_n(blob_url_tok.ptr, blob_url_tok.len));
+    if (start_update_download(
+            ctx, blob_url, ut == utZip ? NULL : "Connection: keep-alive\r\n") <
+        0) {
       reply = ctx->status_msg;
+      goto clean;
     }
   }
 
-  free(zip_url);
+  free(blob_url);
+  blob_url = NULL;
 
   return;
 
-bad_request:
+clean:
+  if (blob_url != NULL) {
+    free(blob_url);
+  }
   CONSOLE_LOG(LL_ERROR, ("Failed to start update: %s", reply));
   sj_clubby_send_status_resp(evt, 1, reply);
 }
@@ -342,11 +481,11 @@ static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
   if (!v7_is_string(manifest_url_v)) {
     rcode = v7_throwf(v7, "Error", "URL is not a string");
   } else {
-    struct update_context *ctx = updater_context_create();
+    struct update_context *ctx = updater_context_create(utZip);
     if (ctx == NULL) {
       rcode = v7_throwf(v7, "Error", "Failed to init updater");
-    } else if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v)) <
-               0) {
+    } else if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v),
+                                     NULL) < 0) {
       rcode = v7_throwf(v7, "Error", ctx->status_msg);
     }
   }
