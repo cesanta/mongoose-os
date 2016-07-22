@@ -194,7 +194,7 @@ static void clubby_proto_handle_frame(char *data, size_t len, void *context) {
   method.len = result.len = error.len = args.len = 0;
 
   if (json_scanf(data, len,
-                 "{id: %llu, v: %d, src: %T, dst: %T, method: %T, "
+                 "{id: %lld, v: %d, src: %T, dst: %T, method: %T, "
                  "result: %T, error: %T, args: %T}",
                  &evt.id, &version, &evt.src, &evt.dst, &method, &result,
                  &error, &args) <= 0) {
