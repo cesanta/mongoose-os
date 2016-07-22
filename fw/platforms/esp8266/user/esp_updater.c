@@ -453,9 +453,15 @@ struct file_info *get_file_info_from_manifest(struct part_info *pi,
   struct file_info *fi;
   int dir_len = strlen(pi->files.dir_name);
   SLIST_FOREACH(fi, &pi->files.fhead, entries) {
+    /* In zip we have dir_name + file_name */
     if (strncmp(current_file_name, pi->files.dir_name, dir_len) == 0 &&
         current_file_name[dir_len] == '/' &&
         strcmp(current_file_name + dir_len + 1, fi->file_name) == 0) {
+      LOG(LL_DEBUG, ("%s should be updated", current_file_name));
+      return fi;
+    }
+    /* in file-by-file update we have filename only */
+    if (strcmp(current_file_name, fi->file_name) == 0) {
       LOG(LL_DEBUG, ("%s should be updated", current_file_name));
       return fi;
     }
