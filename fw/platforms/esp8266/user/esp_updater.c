@@ -252,10 +252,9 @@ static int compare_digest(spiffs *fs, const char *file_name,
 
   spiffs_file file = SPIFFS_open(fs, file_name, SPIFFS_RDONLY, 0);
   if (file < 0) {
-    if (SPIFFS_errno(fs)) {
-      CONSOLE_LOG(LL_ERROR, ("Failed to open %s", file_name));
-      return -1;
-    }
+    CONSOLE_LOG(LL_ERROR,
+                ("Failed to open %s (%d)", file_name, SPIFFS_errno(fs)));
+    return -1;
   }
 
   int32_t res;
