@@ -136,7 +136,7 @@ SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/* $(SRC_PATH)/fs/*)
 
@@ -154,7 +154,7 @@ ifneq ($(CONF_JSON),"")
   FS_FILES += $(CONF_JSON)
 endif
 
-.PHONY: all clean fs $(V7_PATH)/v7.c
+.PHONY: all clean fs
 
 define compile
 $(vecho) "CC    $< -> $@"
