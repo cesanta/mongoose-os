@@ -268,15 +268,8 @@ static void clubby_proto_handler(struct mg_connection *nc, int ev,
 }
 
 int64_t clubby_proto_get_new_id() {
-  /*
-   * TODO(alashkin): these kind of id are unique only within
-   * one session, i.e. after reboot we start to use the sane ids
-   * this might lead to collision
-   * What about storing last id somehow? (or at least we can use
-   * current time in us as id, timer resets on reboot as well
-   * but probability of collision is a way smaller
-   */
   static int64_t id = 0;
+  if (id == 0) id = rand();
   return ++id;
 }
 
