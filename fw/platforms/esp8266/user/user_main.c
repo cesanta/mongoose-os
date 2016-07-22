@@ -18,12 +18,12 @@
 #include "fw/platforms/esp8266/user/util.h"
 #include "fw/platforms/esp8266/user/esp_exc.h"
 
-#include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_init.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_hal.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_clubby.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"

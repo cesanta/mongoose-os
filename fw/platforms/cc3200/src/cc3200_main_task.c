@@ -12,12 +12,12 @@
 
 #include "oslib/osi.h"
 
-#include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_init.h"
 #include "fw/src/sj_init_js.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_clubby.h"
 #include "v7/v7.h"
 

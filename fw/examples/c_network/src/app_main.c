@@ -1,10 +1,10 @@
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/device_config.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_gpio.h"
 #include "fw/src/sj_mongoose.h"
+#include "fw/src/sj_sys_config.h"
 
 #define LISTENER_SPEC "8910"
 

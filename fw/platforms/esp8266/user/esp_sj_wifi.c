@@ -22,7 +22,7 @@
 #include "fw/src/sj_clubby.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
 #include "fw/platforms/esp8266/user/v7_esp_features.h"
-#include "fw/src/device_config.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_wifi.h"
 
 static sj_wifi_scan_cb_t s_wifi_scan_cb;

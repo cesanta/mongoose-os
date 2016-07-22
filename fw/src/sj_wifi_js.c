@@ -15,7 +15,7 @@
 #include "fw/src/sj_wifi_js.h"
 
 #include "v7/v7.h"
-#include "fw/src/device_config.h"
+#include "fw/src/sj_sys_config.h"
 #include "common/cs_dbg.h"
 
 struct wifi_cb_arg {

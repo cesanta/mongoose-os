@@ -12,9 +12,9 @@
     (defined(SJ_ENABLE_TCP_API) || defined(SJ_ENABLE_UDP_API))
 
 #include "common/queue.h"
-#include "fw/src/device_config.h"
 #include "fw/src/sj_common.h"
 #include "fw/src/sj_mongoose.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_timers.h"
 #include "fw/src/sj_v7_ext.h"
 #include "v7/v7.h"

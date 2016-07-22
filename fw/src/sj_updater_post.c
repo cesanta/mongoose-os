@@ -6,7 +6,7 @@
 
 #include "fw/src/sj_updater_post.h"
 
-#include "fw/src/device_config.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_common.h"
 
 void handle_update_post(struct mg_connection *c, int ev, void *p) {

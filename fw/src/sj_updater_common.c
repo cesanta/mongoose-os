@@ -4,8 +4,8 @@
 
 #include "common/spiffs/spiffs.h"
 
-#include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_timers.h"
 
 #ifdef SJ_ENABLE_UPDATER_CONSOLE_LOGGING

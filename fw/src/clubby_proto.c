@@ -8,7 +8,7 @@
 
 #include "common/json_utils.h"
 #include "fw/src/clubby_proto.h"
-#include "fw/src/device_config.h"
+#include "fw/src/sj_sys_config.h"
 
 #ifndef DISABLE_C_CLUBBY
 

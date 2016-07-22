@@ -4,7 +4,7 @@
  */
 
 #include "fw/src/sj_uart.h"
-#include "fw/src/device_config.h"
+#include "fw/src/sj_sys_config.h"
 
 #ifndef CS_DISABLE_JS
 

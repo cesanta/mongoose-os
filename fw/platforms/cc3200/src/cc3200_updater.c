@@ -17,8 +17,8 @@
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
-#include "fw/src/device_config.h"
 #include "fw/src/sj_hal.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_hal.h"
 #include "fw/src/sj_updater_util.h"
 

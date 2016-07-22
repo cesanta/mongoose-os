@@ -9,7 +9,7 @@
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_common.h"
-#include "fw/src/device_config.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_utils.h"
 
 #if !defined(CS_DISABLE_JS) && \
