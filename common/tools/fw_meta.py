@@ -164,6 +164,7 @@ def unquote_string(qs):
 def stage_file_and_calc_digest(args, part, fname, staging_dir):
     with open(fname) as f:
         data = f.read()
+        part['size'] = len(data)
         if staging_dir:
             staging_file = os.path.join(staging_dir,
                                         os.path.basename(fname))
