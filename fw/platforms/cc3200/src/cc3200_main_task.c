@@ -59,6 +59,13 @@ struct v7 *init_v7(void *stack_base) {
   return v7_create_opt(opts);
 }
 
+/* It may not be the best source of entropy, but it's better than nothing. */
+static void cc3200_srand() {
+  uint32_t r = 0, *p;
+  for (p = (uint32_t *) 0x20000000; p < (uint32_t *) 0x20040000; p++) r ^= *p;
+  srand(r);
+}
+
 int start_nwp() {
   int r = sl_Start(NULL, NULL, NULL);
   if (r < 0) return r;
@@ -73,6 +80,7 @@ int start_nwp() {
                 ver.NwpVersion[0], ver.NwpVersion[1], ver.NwpVersion[2],
                 ver.NwpVersion[3], SL_MAJOR_VERSION_NUM, SL_MINOR_VERSION_NUM,
                 SL_VERSION_NUM, SL_SUB_VERSION_NUM));
+  cc3200_srand();
   return 0;
 }
 
