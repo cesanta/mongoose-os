@@ -89,4 +89,30 @@ Arguments:
 - `src`: Override src id. Used to delete logs on behalf of another source, if permitted.
 - `stream`: Log stream name. Defaults to `"console"`.
 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Log.Delete",
+  "args": {
+    "src": "VALUE PLACEHOLDER",
+    "stream": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
+
 

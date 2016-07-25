@@ -177,6 +177,33 @@ Arguments:
 - `name`: Name of the user.
 
 Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.UserExists",
+  "args": {
+    "id": "VALUE PLACEHOLDER",
+    "name": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### ValidateToken
 validates a token and returns the user ID associated with it
 
