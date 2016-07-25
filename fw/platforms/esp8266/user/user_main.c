@@ -170,7 +170,7 @@ void sjs_init_timer_cb(void *arg) {
 #endif
       commit_update(bcfg);
     } else if (bcfg->user_flags == 1) {
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
       clubby_updater_finish(0);
 #endif
     }
