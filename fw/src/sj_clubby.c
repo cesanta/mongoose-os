@@ -13,7 +13,7 @@
 #include "fw/src/sj_timers.h"
 #include "fw/src/sj_wifi.h"
 
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
 
 #define MAX_COMMAND_NAME_LENGTH 30
 #define RECONNECT_TIMEOUT_MULTIPLY 1.3
@@ -764,4 +764,4 @@ void sj_clubby_init() {
   (void) clubby_disconnect;
 }
 
-#endif /* DISABLE_C_CLUBBY */
+#endif /* SJ_ENABLE_CLUBBY */

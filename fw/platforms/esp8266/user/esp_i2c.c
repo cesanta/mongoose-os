@@ -4,7 +4,7 @@
  * I2C low-level API
  */
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -294,7 +294,7 @@ void sj_i2c_close(i2c_connection conn) {
   free(conn);
 }
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 /*
  * Low-level API usage example (write & read "Hello, world!" from EEPROM

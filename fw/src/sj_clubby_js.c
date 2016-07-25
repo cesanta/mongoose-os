@@ -10,7 +10,8 @@
 #include "fw/src/sj_common.h"
 #include "fw/src/sj_config.h"
 
-#if !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS)
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_CLUBBY) && \
+    defined(SJ_ENABLE_CLUBBY_API)
 
 #ifdef __cplusplus
 extern "C" {
@@ -730,4 +731,5 @@ void sj_clubby_js_init(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 
-#endif /* !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS) */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_CLUBBY) && \
+          defined(SJ_ENABLE_CLUBBY_API) */

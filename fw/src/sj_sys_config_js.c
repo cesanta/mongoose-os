@@ -1,6 +1,6 @@
 #include "fw/src/sj_sys_config_js.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include "v7/v7.h"
 
@@ -30,4 +30,4 @@ enum sj_init_result sj_sys_config_js_init(struct v7 *v7) {
   return SJ_INIT_OK;
 }
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */

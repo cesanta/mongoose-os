@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#if !defined(CS_DISABLE_JS) && \
+#if defined(SJ_ENABLE_JS) && \
     (defined(SJ_ENABLE_TCP_API) || defined(SJ_ENABLE_UDP_API))
 
 #include "common/queue.h"
@@ -1592,5 +1592,5 @@ void sj_tcp_api_setup(struct v7 *v7) {
 }
 #endif /* SJ_ENABLE_TCP_API */
 
-#endif /* !defined(CS_DISABLE_JS) && (defined(SJ_ENABLE_TCP_API) || \
+#endif /* defined(SJ_ENABLE_JS) && (defined(SJ_ENABLE_TCP_API) || \
           defined(SJ_ENABLE_UDP_API)) */

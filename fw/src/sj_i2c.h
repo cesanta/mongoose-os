@@ -9,7 +9,6 @@
 #include <stdint.h>
 
 typedef void *i2c_connection;
-struct v7;
 
 /*
  * I2C_ACK - positive answer
@@ -78,9 +77,6 @@ void i2c_read_bytes(i2c_connection conn, size_t n, uint8_t *buf,
  * with ack_type of "none".
  */
 void i2c_send_ack(i2c_connection conn, enum i2c_ack_type ack_type);
-
-/* Create i2c connection */
-enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res);
 
 /* Close i2c connection and free resources */
 void sj_i2c_close(i2c_connection conn);

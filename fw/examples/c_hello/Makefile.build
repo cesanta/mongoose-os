@@ -3,7 +3,7 @@ REPO_PATH = ../../..
 APP_MODULES = src
 APP_FS_PATH = $(CURDIR)/fs
 APP_CONF_DEFAULTS = $(APP_FS_PATH)/conf_app_defaults.json
-APP_CFLAGS = -DCS_DISABLE_JS
-FREEZE = 0
+SJ_ENABLE_JS = 0
+SJ_ENABLE_CLUBBY = 0
 
 include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

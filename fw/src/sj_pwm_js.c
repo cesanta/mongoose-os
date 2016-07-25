@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_PWM_API)
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_PWM_API)
 
 #include "fw/src/sj_common.h"
 #include "fw/src/sj_pwm.h"
@@ -41,4 +41,4 @@ void sj_pwm_api_setup(struct v7 *v7) {
   v7_set_method(v7, pwm, "set", PWM_set);
 }
 
-#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_PWM_API) */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_PWM_API) */

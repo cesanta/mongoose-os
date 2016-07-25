@@ -20,6 +20,9 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
+SJ_ENABLE_JS ?= 1
+SJ_ENABLE_CLUBBY ?= 1
+
 REPO_PATH ?= ../../..
 COMMON_PATH ?= $(REPO_PATH)/common
 MGIOT_PATH ?= $(REPO_PATH)/fw
@@ -80,23 +83,49 @@ include $(REPO_PATH)/fw/common.mk
 
 MGIOT_ESP_USER_DIR = $(MGIOT_ESP_PATH)/user
 APP_MODULES += $(MGIOT_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) \
-           cs_rbuf.c sj_prompt.c v7.c sj_v7_ext.c sj_http_js.c frozen.c sj_init.c  sj_init_js.c \
-           sj_i2c_js.c sj_spi_js.c sj_wifi.c sj_wifi_js.c sj_gpio_js.c sj_timers_js.c \
-           sj_timers_mongoose.c \
-           sj_adc_js.c sj_debug_js.c sj_pwm_js.c mongoose.c sj_mongoose.c \
-           sj_ws_client_js.c sj_mqtt_js.c clubby_proto.c \
-           sj_clubby.c sj_clubby_js.c \
-           sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
-           $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-           miniz.c sj_tcp_udp_js.c sj_utils.c sj_console.c \
-           sj_updater_common.c sj_updater_clubby.c sj_updater_post.c str_util.c \
-           rboot-bigflash.c rboot-api.c json_utils.c
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
+
+SJ_SRCS = cs_rbuf.c \
+          clubby_proto.c \
+          sj_clubby.c \
+          sj_config.c \
+          sj_console.c \
+          sj_init.c \
+          sj_i2c_js.c \
+          sj_spi_js.c \
+          sj_timers_mongoose.c \
+          sj_wifi.c \
+          sj_mongoose.c \
+          sj_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+          miniz.c \
+          sj_utils.c \
+          sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+          rboot-bigflash.c rboot-api.c \
+          json_utils.c
+
+ifeq "$(SJ_ENABLE_JS)" "1"
+SJ_SRCS += v7.c \
+           sj_adc_js.c \
+           sj_clubby_js.c \
+           sj_config_js.c \
+           sj_debug_js.c \
+           sj_gpio_js.c \
+           sj_http_js.c \
+           sj_init_js.c \
+           sj_mqtt_js.c \
+           sj_prompt.c \
+           sj_pwm_js.c \
+           sj_sys_config_js.c \
+           sj_tcp_udp_js.c \
+           sj_timers_js.c \
+           sj_v7_ext.c \
+           sj_wifi_js.c \
+           sj_ws_client_js.c
+endif
 
 JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
               $(MGIOT_JS_PATH)/demo.js \
               $(MGIOT_JS_PATH)/I2C.js \
-              $(wildcard $(COMMON_FS_PATH)/*.js) \
               $(JSBIN_EXTRA)
 
 ifneq "$(APP_FS_PATH)" ""
@@ -110,7 +139,7 @@ JS_SRCS    :=
 # using JS as extension
 JSBIN_EXT := js
 JS_EXT := js
-VPATH = $(APP_MODULES) $(MGIOT_SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) \
+VPATH = $(APP_MODULES) $(MGIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH)
 IPATH = $(APP_MODULES) $(REPO_PATH) $(MGIOT_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
@@ -134,9 +163,11 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_ENABLE__Object__hasOwnProperty \
                -DV7_ENABLE__Object__keys \
                -DV7_ENABLE__Object__isExtensible \
-               -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS \
+               -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS
+V7_GC_DEBUG ?= 1
+V7_STACK_GUARD ?= 1
 
-MGIOT_JS_APIS = -DSJ_ENABLE_ADC_API \
+MGIOT_FEATURES ?= -DSJ_ENABLE_ADC_API \
                 -DSJ_ENABLE_DEBUG_API \
                 -DSJ_ENABLE_GPIO_API \
                 -DSJ_ENABLE_HTTP_CLIENT_API \
@@ -149,12 +180,12 @@ MGIOT_JS_APIS = -DSJ_ENABLE_ADC_API \
                 -DSJ_ENABLE_UDP_API \
                 -DSJ_ENABLE_WIFI_API \
                 -DSJ_ENABLE_WS_CLIENT_API
-MGIOT_FEATURES = -DSJ_ENABLE_UPDATER_CONSOLE_LOGGING \
-                 -DSJ_ENABLE_WEB_CONFIG \
-                 -DSJ_ENABLE_FILE_UPLOAD \
-                 -DSJ_ENABLE_UPDATER_CLUBBY \
-                 -DSJ_ENABLE_UPDATER_CLUBBY_API \
-                 -DSJ_ENABLE_UPDATER_POST
+MGIOT_ESP_FEATURES = -DSJ_ENABLE_UPDATER_CONSOLE_LOGGING \
+                     -DSJ_ENABLE_WEB_CONFIG \
+                     -DSJ_ENABLE_FILE_UPLOAD \
+                     -DSJ_ENABLE_UPDATER_CLUBBY \
+                     -DSJ_ENABLE_UPDATER_CLUBBY_API \
+                     -DSJ_ENABLE_UPDATER_POST
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
@@ -162,7 +193,7 @@ MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_EXT_SHA1
 
-FEATURES = $(V7_FEATURES) $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_JS_APIS) \
+FEATURES = $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_ESP_FEATURES) \
            $(FEATURES_EXTRA) \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
            -DMG_NO_BSD_SOCKETS -DDISABLE_MD5 -DBOOT_BIG_FLASH \
@@ -172,33 +203,14 @@ FEATURES = $(V7_FEATURES) $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_JS_APIS) \
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
                -DV7_STACK_SIZE=8192-64
 
-GC_DEBUG ?= true
-ifneq "$(GC_DEBUG)" "true"
-MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
-endif
-
-STACK_GUARD ?= true
-ifeq "$(STACK_GUARD)" "true"
-MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
-endif
-
-ifeq "$(SSL)" "Krypton"
-IPATH += $(KRYPTON_PATH)
-VPATH += $(KRYPTON_PATH)
-APP_SRCS += krypton.c esp_crypto.c esp_ssl_krypton.c
-FEATURES += -DMG_ENABLE_SSL -DMG_DISABLE_PFS -DSSL_KRYPTON \
-            -DKR_LOCALS -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 \
-            -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
-endif
-
 .PHONY: all clean
 
 APP_LIBS += m lwip_cs
-CFLAGS += -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
-          -DESP_ENABLE_MG_LWIP_IF
+MGIOT_CFLAGS = -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
+               -DESP_ENABLE_MG_LWIP_IF
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
-FW_FS_OUT = $(FW_STAGING_DIR)/$(FS_ADDR).bin
+  FW_FS_OUT = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 endif
 
 LD_SCRIPT_TEMPL = $(MGIOT_ESP_PATH)/ld/fw.ld
@@ -208,28 +220,63 @@ _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
 _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
-APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 LIBS = $(addprefix -l,$(APP_LIBS))
 APP_AR = $(BUILD_DIR)/$(APP).a
 LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
 SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
 
-SRCS = $(APP_SRCS) $(APP_EXTRA_SRCS) build_info.c
-OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
+SRCS = $(APP_SRCS) mongoose.c frozen.c $(SJ_SRCS) $(APP_EXTRA_SRCS)
+
+ifeq "$(SSL)" "Krypton"
+  IPATH += $(KRYPTON_PATH)
+  VPATH += $(KRYPTON_PATH)
+  SRCS += krypton.c esp_crypto.c esp_ssl_krypton.c
+  FEATURES += -DMG_ENABLE_SSL -DMG_DISABLE_PFS -DSSL_KRYPTON \
+              -DKR_LOCALS -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 \
+              -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
+endif
+
+ifeq "$(SJ_ENABLE_JS)" "1"
+  GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+  MGIOT_FEATURES += -DSJ_ENABLE_JS
+  VPATH += $(V7_PATH)
+  $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_FEATURES)
+  $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
+  ifeq "$(FREEZE)" "1"
+    MGIOT_ESP_FEATURES += -DV7_THAW
+    GENFILES_LIST += $(BUILD_DIR)/fr.c
+    SRCS += fr.c
+  endif
+  ifneq "$(V7_GC_DEBUG)" "1"
+    MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
+  endif
+  ifeq "$(V7_STACK_GUARD)" "1"
+    MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
+  endif
+else
+  SJ_SRCS += cs_file.c str_util.c
+endif
+
+ifeq "$(SJ_ENABLE_CLUBBY)" "1"
+  MGIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
+endif
+
+OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
 
 FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
 ifneq "$(APP_FS_PATH)" ""
-FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
+  FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
 endif
 
 FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
@@ -239,19 +286,13 @@ LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
 LD_WRAPPERS =
 HEAP_LOG_FLAGS =
 
-ifeq "${FREEZE}" "1"
-FEATURES += -DV7_THAW
-APP_OBJS += $(BUILD_DIR)/fr.o
-GENFILES_LIST += $(BUILD_DIR)/fr.c
-endif
-
 ifeq "${HEAP_LOG}" "1"
-HEAP_LOG_FLAGS += -DESP_ENABLE_HEAP_LOG
-LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
-               -Wl,--wrap=pvPortMalloc \
-               -Wl,--wrap=pvPortZalloc \
-               -Wl,--wrap=pvPortRealloc \
-               -Wl,--wrap=vPortFree
+  HEAP_LOG_FLAGS += -DESP_ENABLE_HEAP_LOG
+  LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
+                 -Wl,--wrap=pvPortMalloc \
+                 -Wl,--wrap=pvPortZalloc \
+                 -Wl,--wrap=pvPortRealloc \
+                 -Wl,--wrap=vPortFree
 endif
 
 IMAGE_HEADER_SIZE = 0x10
@@ -277,8 +318,8 @@ ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          $(APP_CFLAGS) $(CFLAGS_EXTRA) $(HEAP_LOG_FLAGS) \
-          $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
+          $(MGIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
+          $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
 
 LDFLAGS += -u Cache_Read_Enable_New
 
@@ -298,11 +339,11 @@ FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR)
 
 ifeq "$(CREATE_SPIFFS_FS)" "1"
-FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+  FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
 
 ifeq "$(CREATE_RAW_FS)" "1"
-FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+  FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
 
 include $(REPO_PATH)/common/scripts/fw_meta.mk
@@ -342,7 +383,7 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGIOT_ESP_PATH)/Makefile.build
             "void __cyg_profile_func_exit(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" > $@
 
 # Main app lib.
-$(APP_AR): $(OBJS)
+$(APP_AR): $(OBJS) $(BUILD_INFO_O)
 	$(vecho) "AR    $@"
 	$(Q) $(AR) cru $@ $^
 # Move strings to flash too, we have the handler.
@@ -360,9 +401,6 @@ $(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
 # This one is for generated sources in build directory.
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 	$(compile)
-
-$(BUILD_DIR)/mongoose.o: mongoose.c
-	$(compile) -DEXCLUDE_COMMON
 
 # Common gathering point for all generated files.
 # Except build info, which is special because it depends on objects.
@@ -392,26 +430,28 @@ include $(REPO_PATH)/common/scripts/build_info.mk
 include $(REPO_PATH)/fw/src/sys_config.mk
 
 # Regenerate build info if there are changes in objects.
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 # -- Filesystem.
 
-$(FS_STAGING_DIR): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+$(FS_STAGING_DIR): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
 	# OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
 	$(Q) $(foreach js,$(JS_SRCS), \
     echo "  CP    $(js) -> $(FS_STAGING_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
     cp $(js) $(FS_STAGING_DIR);)
+ifeq "$(SJ_ENABLE_JS)" "1"
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
     echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
     $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
+endif
 	$(vecho) "RSYNC -> $(FS_STAGING_DIR)/"
 	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_STAGING_DIR)/
 
-$(FW_FS_OUT): $(FS_STAGING_DIR) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/v7
+$(FW_FS_OUT): $(FS_STAGING_DIR) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
 	$(vecho) "FS    $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_STAGING_DIR) > $@
 	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
@@ -419,25 +459,25 @@ $(FW_FS_OUT): $(FS_STAGING_DIR) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(J
 $(BUILD_DIR)/mkspiffs:
 	$(MAKE) -C $(REPO_PATH)/common/spiffs/tools $(BUILD_DIR)/mkspiffs BUILD_DIR=$(BUILD_DIR)
 
-$(V7_PATH)/v7.c:
-	make -C $(V7_PATH) v7.c
-
-$(V7_PATH)/v7.h:
-	make -C $(V7_PATH) v7.h
+ifeq "$(SJ_ENABLE_JS)" "1"
+$(V7_PATH)/v7.c $(V7_PATH)/v7.h:
+	make -C $(V7_PATH) $(notdir $@)
 
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC   v7"
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 
+$(FS_STAGING_DIR): $(BUILD_DIR)/v7
+
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
 $(MGIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MGIOT_POSIX_PATH) \
-	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN' \
-	  MGIOT_FEATURES='$(MGIOT_JS_APIS)' \
+	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
+	  MGIOT_FEATURES='$(MGIOT_FEATURES)' \
 	  BIN_DIR=$(MGIOT_POSIX_BIN_DIR) \
-	  BUILD_DIR=$(MGIOT_POSIX_BUILD_DIR) \
-	  CFLAGS_EXTRA='-DV7_FREEZE'
+	  BUILD_DIR=$(MGIOT_POSIX_BUILD_DIR)
+endif
 
 # Target specific warning inhibitions
 

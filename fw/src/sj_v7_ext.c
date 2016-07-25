@@ -5,7 +5,7 @@
 
 #include "fw/src/sj_v7_ext.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include <string.h>
 
@@ -319,4 +319,4 @@ void sj_sys_js_init(struct v7 *v7) {
   v7_set(v7, sys, "fs", ~0, fs);
   v7_set_method(v7, fs, "free", Sys_fs_getFreeSpace);
 }
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */

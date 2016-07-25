@@ -15,9 +15,9 @@
 #include "fw/src/sj_updater_common.h"
 #include "fw/src/sj_v7_ext.h"
 
-#if defined(SJ_ENABLE_UPDATER_CLUBBY) && !defined(DISABLE_C_CLUBBY)
+#if defined(SJ_ENABLE_UPDATER_CLUBBY) && defined(SJ_ENABLE_CLUBBY)
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -36,7 +36,7 @@ enum js_update_status {
   UJS_ERROR
 };
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 static struct v7 *s_v7;
 static v7_val_t s_updater_notify_cb;
 #endif
@@ -45,7 +45,7 @@ struct clubby_event *s_clubby_reply;
 int s_clubby_upd_status;
 
 static int notify_js(enum js_update_status us, const char *info) {
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   if (!v7_is_undefined(s_updater_notify_cb)) {
     if (info == NULL) {
       sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_mk_number(s_v7, us));
@@ -475,7 +475,7 @@ void clubby_updater_finish(int error_code) {
   free(data);
 }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
 
@@ -537,6 +537,6 @@ void sj_updater_clubby_js_init(struct v7 *v7) {
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_mk_number(v7, UJS_ERROR));
 }
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
-#endif /* defined(SJ_ENABLE_UPDATER_CLUBBY) && !defined(DISABLE_C_CLUBBY) */
+#endif /* defined(SJ_ENABLE_UPDATER_CLUBBY) && defined(SJ_ENABLE_CLUBBY) */

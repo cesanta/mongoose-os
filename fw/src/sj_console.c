@@ -17,7 +17,9 @@
 static struct v7 *s_v7;
 static int s_waiting_for_resp;
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
+
+#include "v7/v7.h"
 
 #include "common/json_utils.h"
 #include "common/cs_dirent.h"
@@ -28,6 +30,8 @@ static int s_waiting_for_resp;
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_timers.h"
 #include "mongoose/mongoose.h"
+
+#ifdef SJ_ENABLE_CLUBBY
 
 #define LOG_FILENAME_BASE "console.log."
 
@@ -44,8 +48,6 @@ struct cache {
   struct mbuf logs;
   struct mbuf file_names;
 };
-
-#ifndef DISABLE_C_CLUBBY
 
 static struct cache s_cache;
 /* TODO(alashkin): init on boot */
@@ -377,7 +379,7 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   /* Send msg to local console */
   printf("%.*s", (int) msg.len, msg.buf);
 
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
   if (get_cfg()->console.send_to_cloud) {
     console_send_to_cloud(v7, &msg);
   }
@@ -391,7 +393,7 @@ SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
 
 void sj_console_js_init(struct v7 *v7) {
   s_v7 = v7; /* TODO(alashkin): remove s_v7 */
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
   if (console_init_file_cache() == 0) {
     sj_clubby_register_global_command(clubby_cmd_onopen,
                                       console_handle_clubby_ready, NULL);
@@ -408,13 +410,13 @@ void sj_console_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &console_v);
 }
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 void sj_console_cloud_log(const char *fmt, ...) {
   static char *buf = NULL;
   static int buf_size = 0;
   if (buf == NULL) {
-#if !defined(CS_DISABLE_JS)
+#if defined(SJ_ENABLE_JS)
     buf_size = get_cfg()->console.mem_cache_size;
 #else
     buf_size = 256;
@@ -430,7 +432,7 @@ void sj_console_cloud_log(const char *fmt, ...) {
     len = buf_size;
   }
 
-#if !defined(CS_DISABLE_JS) && !defined(DISABLE_C_CLUBBY)
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_CLUBBY)
   if (get_cfg()->console.send_to_cloud && s_v7 != NULL) {
     struct mbuf tmp;
     /*

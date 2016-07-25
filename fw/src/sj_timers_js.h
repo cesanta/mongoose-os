@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_SJ_TIMERS_JS_H_
 #define CS_FW_SRC_SJ_TIMERS_JS_H_
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include <stdint.h>
 
@@ -17,6 +17,6 @@ struct v7;
 void sj_timers_api_setup(struct v7 *v7);
 sj_timer_id sj_set_js_timer(int msecs, int repeat, struct v7 *v7, v7_val_t cb);
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 #endif /* CS_FW_SRC_SJ_TIMERS_JS_H_ */

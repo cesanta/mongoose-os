@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_SJ_PROMPT_H_
 #define CS_FW_SRC_SJ_PROMPT_H_
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 struct v7;
 
@@ -25,6 +25,6 @@ void sj_prompt_process_char(char ch);
 /* initialize hooks that send chars to prompt handler */
 void sj_prompt_init_hal();
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 #endif /* CS_FW_SRC_SJ_PROMPT_H_ */

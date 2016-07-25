@@ -3,15 +3,16 @@
  * All rights reserved
  */
 
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_SPI_API)
+
+#include "fw/src/sj_spi_js.h"
+
 #include <stdlib.h>
 
 #include "v7/v7.h"
 
-#ifdef SJ_ENABLE_SPI_API
-
-#include "sj_spi_js.h"
-#include "sj_spi.h"
-#include "sj_common.h"
+#include "fw/src/sj_common.h"
+#include "fw/src/sj_spi.h"
 
 static const char s_spi_conn_prop[] = "_conn";
 
@@ -196,4 +197,4 @@ void sj_spi_api_setup(struct v7 *v7) {
   spi_ctor = v7_mk_function_with_proto(v7, spi_js_ctor, spi_proto);
   v7_set(v7, v7_get_global(v7), "SPI", ~0, spi_ctor);
 }
-#endif /* SJ_ENABLE_SPI_API */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_SPI_API) */

@@ -24,14 +24,15 @@
 
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_v7_ext.h"
-#include "v7/v7.h"
 
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
 
 #include "common/umm_malloc/umm_malloc.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
+#include "v7/v7.h"
+
 static void sj_invoke_cb_cb(void *arg);
 
 struct v7_invoke_event_data {
@@ -62,7 +63,7 @@ static void sj_invoke_cb_cb(void *arg) {
   v7_disown(ied->v7, &ied->func);
   free(ied);
 }
-#endif
+#endif /* SJ_ENABLE_JS */
 
 #ifdef __TI_COMPILER_VERSION__
 size_t sj_get_heap_size() {

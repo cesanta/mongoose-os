@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_WIFI_API)
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_WIFI_API)
 
 #include <string.h>
 #include <stdlib.h>
@@ -274,4 +274,4 @@ void sj_wifi_js_init(struct v7 *v7) {
   sj_wifi_add_on_change_cb(sj_wifi_on_change_js, &s_wifi_changed_cb);
 }
 
-#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_WIFI_API) */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_WIFI_API) */

@@ -10,7 +10,7 @@
 #include "fw/src/clubby_proto.h"
 #include "fw/src/sj_sys_config.h"
 
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
 
 #define WS_PROTOCOL "clubby.cesanta.com"
 #define MG_F_WS_FRAGMENTED MG_F_USER_6
@@ -273,4 +273,4 @@ int64_t clubby_proto_get_new_id() {
   return ++id;
 }
 
-#endif /* DISABLE_C_CLUBBY */
+#endif /* SJ_ENABLE_CLUBBY */

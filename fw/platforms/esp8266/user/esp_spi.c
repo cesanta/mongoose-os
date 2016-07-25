@@ -25,7 +25,7 @@
 */
 
 /* depends on v7 because of v7_err only */
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include <stdlib.h>
 
@@ -267,7 +267,7 @@ void sj_spi_close(spi_connection conn) {
   free(conn);
 }
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 #ifdef MPL115A1_EXAMPLE_ENABLED
 

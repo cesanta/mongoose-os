@@ -10,7 +10,7 @@
 #include "fw/src/clubby_proto.h"
 #include "fw/src/sj_sys_config.h"
 
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
 
 struct clubby_cfg {
   char *server_address;
@@ -36,7 +36,7 @@ struct clubby {
   uint32_t session_flags;
   struct mg_connection *nc;
   int auth_ok;
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   struct v7 *v7;
 #endif
 };
@@ -94,6 +94,6 @@ int sj_clubby_is_overcrowded(struct clubby *clubby);
 int sj_clubby_is_connected(struct clubby *clubby);
 
 /* TODO(alashkin): add more sending functions to header */
-#endif /* DISABLE_C_CLUBBY */
+#endif /* SJ_ENABLE_CLUBBY */
 
 #endif /* CS_FW_SRC_SJ_CLUBBY_H_ */

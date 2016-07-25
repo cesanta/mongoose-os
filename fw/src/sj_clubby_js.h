@@ -8,7 +8,7 @@
 
 #include "fw/src/sj_clubby.h"
 
-#if !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS)
+#if defined(SJ_ENABLE_CLUBBY) && defined(SJ_ENABLE_JS)
 
 #include "v7/v7.h"
 
@@ -27,6 +27,6 @@ void sj_clubby_js_init(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* !defined(DISABLE_C_CLUBBY) && !defined(CS_DISABLE_JS) */
+#endif /* defined(SJ_ENABLE_CLUBBY) && defined(SJ_ENABLE_JS) */
 
 #endif /* CS_FW_SRC_SJ_CLUBBY_JS_H_ */

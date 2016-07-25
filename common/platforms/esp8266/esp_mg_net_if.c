@@ -25,7 +25,7 @@
 
 #include "common/cs_dbg.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 #include "v7/v7.h"
 #include "fw/src/sj_v7_ext.h"
 
@@ -35,7 +35,7 @@ struct v7_callback_args {
   v7_val_t this_obj;
   v7_val_t args;
 };
-#endif
+#endif /* SJ_ENABLE_JS */
 
 #define MG_TASK_PRIORITY 1
 #define MG_POLL_INTERVAL_MS 1000
@@ -757,7 +757,7 @@ static void mg_lwip_task(os_event_t *e) {
       cs->num_sent = 0;
       break;
     }
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
     case MG_SIG_V7_CALLBACK: {
       struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
       _sj_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
@@ -792,7 +792,7 @@ static void mg_lwip_task(os_event_t *e) {
   }
 }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                              v7_val_t args) {
   struct v7_callback_args *cba =
@@ -816,7 +816,7 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
     free(cba);
   }
 }
-#endif
+#endif /* SJ_ENABLE_JS */
 
 void mg_suspend() {
   /*

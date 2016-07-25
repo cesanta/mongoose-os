@@ -1,5 +1,9 @@
 #include "fw/platforms/cc3200/src/cc3200_console.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <inc/hw_types.h>
 #include <inc/hw_memmap.h>
 #include <driverlib/rom.h>
@@ -8,7 +12,11 @@
 
 #include "fw/platforms/cc3200/src/config.h"
 
-#if SJ_CONSOLE_ENABLE_CLOUD
+#ifdef SJ_ENABLE_JS
+#include "v7/v7.h"
+#endif
+
+#ifdef SJ_ENABLE_CLUBBY
 #include "common/mbuf.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_clubby_js.h"
@@ -85,9 +93,9 @@ void cc3200_console_cloud_push() {
   if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
   s_cctx.in_console = 0;
 }
-#endif /* SJ_CONSOLE_ENABLE_CLOUD */
+#endif /* SJ_ENABLE_CLUBBY */
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 static void puts_n(const char *s, int len) {
   while (len-- > 0) {
     putchar(*s);
@@ -132,14 +140,14 @@ void sj_console_api_setup(struct v7 *v7) {
 
 void sj_console_js_init(struct v7 *v7) {
 }
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 void sj_console_init() {
 }
 
 void cc3200_console_putc(int fd, char c) {
   MAP_UARTCharPut(CONSOLE_UART, c);
-#if SJ_CONSOLE_ENABLE_CLOUD
+#ifdef SJ_ENABLE_CLUBBY
   if (fd == 1 && get_cfg()->console.send_to_cloud) cc3200_console_cloud_putc(c);
 #endif
   (void) fd;

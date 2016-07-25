@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifndef SJ_DISABLE_I2C
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_I2C_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -166,4 +166,4 @@ void sj_i2c_close(i2c_connection conn) {
   free(conn);
 }
 
-#endif /* SJ_DISABLE_I2C */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_GPIO_API) */

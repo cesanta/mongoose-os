@@ -14,6 +14,9 @@ APP_FS_PATH ?=
 APP_SLFS_PATH ?=
 APP_EXTRA_SRCS ?=
 
+SJ_ENABLE_JS ?= 1
+SJ_ENABLE_CLUBBY ?= 1
+
 TOOLCHAIN ?= /opt/ti-cgt-arm_5.2.7
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
@@ -64,13 +67,12 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
 include $(REPO_PATH)/fw/common.mk
 
 JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
-           $(MGIOT_JS_PATH)/demo.js \
-           $(MGIOT_JS_PATH)/I2C.js \
-           $(wildcard $(COMMON_FS_PATH)/*.js) \
-           $(JS_EXTRA)
+              $(MGIOT_JS_PATH)/demo.js \
+              $(MGIOT_JS_PATH)/I2C.js \
+              $(JS_EXTRA)
 
 ifneq "$(APP_FS_PATH)" ""
-JSBIN_SRCS += $(wildcard $(APP_FS_PATH)/*.js)
+  JSBIN_SRCS += $(wildcard $(APP_FS_PATH)/*.js)
 endif
 
 JS_SRCS :=
@@ -93,8 +95,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_ENABLE_FILE \
                -DDISABLE_MD5
 
-V7_HOST_FEATURES ?= $(V7_FEATURES) \
-               -DV7_ENABLE__RegExp=1
+V7_HOST_FEATURES ?= $(V7_FEATURES) -DV7_ENABLE__RegExp=1
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
@@ -102,12 +103,12 @@ MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_DISABLE_FILESYSTEM -DMG_FS_SLFS \
                -DMG_EXT_SHA1 -DDISABLE_SHA1
 
-MGIOT_JS_APIS ?= -DSJ_ENABLE_GPIO_API \
-                 -DSJ_ENABLE_I2C_API \
-                 -DSJ_ENABLE_WIFI_API \
-                 -DSJ_ENABLE_HTTP_CLIENT_API
 MGIOT_FEATURES ?= -DSJ_ENABLE_UPDATER_CLUBBY \
-                  -DSJ_ENABLE_UPDATER_POST
+                  -DSJ_ENABLE_UPDATER_POST \
+                  -DSJ_ENABLE_GPIO_API \
+                  -DSJ_ENABLE_I2C_API \
+                  -DSJ_ENABLE_WIFI_API \
+                  -DSJ_ENABLE_HTTP_CLIENT_API
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
                   -DV7_STACK_SIZE=8192-64 \
@@ -130,31 +131,41 @@ BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
 .PHONY: all clean flash
 
-SJ_SRCS = sj_gpio_js.c \
-          sj_i2c_js.c \
-          sj_prompt.c \
-          sj_http_js.c \
-          sj_init.c sj_init_js.c \
+SJ_SRCS = sj_init.c \
           sj_mongoose.c \
-          sj_timers_js.c sj_timers_mongoose.c \
+          sj_timers_mongoose.c \
           sj_v7_ext.c \
-          sj_wifi.c sj_wifi_js.c \
-          sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
+          sj_wifi.c \
+          sj_config.c sj_sys_config.c \
           $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-          miniz.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c boot.c \
-          v7.c sj_utils.c \
+          miniz.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+          sj_utils.c \
           clubby_proto.c \
-          sj_clubby.c sj_clubby_js.c \
+          sj_clubby.c \
           json_utils.c
+ifeq "$(SJ_ENABLE_JS)" "1"
+SJ_SRCS += v7.c \
+           sj_clubby_js.c \
+           sj_config_js.c \
+           sj_gpio_js.c \
+           sj_http_js.c \
+           sj_i2c_js.c \
+           sj_init_js.c \
+           sj_prompt.c \
+           sj_sys_config_js.c \
+           sj_timers_js.c \
+           sj_wifi_js.c
+endif
 
-VPATH += $(MGIOT_PATH)/src $(V7_PATH) $(COMMON_PATH)
+VPATH += $(MGIOT_PATH)/src $(COMMON_PATH)
 ifneq "$(TOOLCHAIN)" "gcc"
-SJ_SRCS += umm_malloc.c
-VPATH += $(COMMON_PATH)/umm_malloc
+  SJ_SRCS += umm_malloc.c
+  VPATH += $(COMMON_PATH)/umm_malloc
 endif
 
 SPIFFS_SRCS = $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
@@ -175,10 +186,23 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
-SRCS = $(APP_SRCS) mongoose.c frozen.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS) $(APP_EXTRA_SRCS)
+SRCS = $(APP_SRCS) boot.c mongoose.c frozen.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS) $(APP_EXTRA_SRCS)
 
 MGIOT_CFLAGS = -DCC3200_FS_SPIFFS -Dcc3200 -DCC3200_FS_SPIFFS \
                -DSPIFFS_HAL_CALLBACK_EXTRA=1
+
+ifeq "$(SJ_ENABLE_JS)" "1"
+  GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
+  MGIOT_FEATURES += -DSJ_ENABLE_JS
+  VPATH += $(V7_PATH)
+  $(BUILD_DIR)/v7.o: CFLAGS += $(V7_FEATURES)
+  $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
+else
+  SJ_SRCS += cs_file.c
+endif
+ifeq "$(SJ_ENABLE_CLUBBY)" "1"
+  MGIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
+endif
 
 .DEFAULT_GOAL := all
 
@@ -191,12 +215,12 @@ $(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_ST
 
 FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
 ifneq "$(APP_FS_PATH)" ""
-FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
+  FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
 endif
 ifneq "$(APP_SLFS_PATH)" ""
-SLFS_FILES = $(wildcard $(APP_SLFS_PATH)/*)
+  SLFS_FILES = $(wildcard $(APP_SLFS_PATH)/*)
 else
-SLFS_FILES =
+  SLFS_FILES =
 endif
 
 CREATE_RAW_FS ?= 1
@@ -211,17 +235,17 @@ FW_PARTS = /sys/mcuimg.bin:type=boot,src=$(BOOT_BIN) \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
 
 ifneq "$(CC3200_SP_FILE)" ""
-FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),sign=$(notdir $(CC3200_SP_FILE)).sign \
-            $(notdir $(CC3200_SP_FILE)).sign:type=signature,src=$(CC3200_SP_FILE).sign
+  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),sign=$(notdir $(CC3200_SP_FILE)).sign \
+              $(notdir $(CC3200_SP_FILE)).sign:type=signature,src=$(CC3200_SP_FILE).sign
 endif
 
 ifeq "$(CREATE_RAW_FS)" "1"
-FW_PARTS += fs_dir:type=fs_dir,src=$(FS_STAGING_DIR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+  FW_PARTS += fs_dir:type=fs_dir,src=$(FS_STAGING_DIR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
 
 ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"
-FW_PARTS += $(notdir $(APP_BIN)).1:type=slfile,src=$(APP_BIN)
-MGIOT_CFLAGS += -DCC3200_SAFE_CODE_UPDATE=1
+  FW_PARTS += $(notdir $(APP_BIN)).1:type=slfile,src=$(APP_BIN)
+  MGIOT_CFLAGS += -DCC3200_SAFE_CODE_UPDATE=1
 endif
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
@@ -232,17 +256,18 @@ include $(REPO_PATH)/common/scripts/build_info.mk
 include $(REPO_PATH)/fw/src/sys_config.mk
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
-$(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 
 # TODO(dfrank): Fix V7 pre-compilation
-$(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN) $(BUILD_DIR)/v7
+$(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN)
 	$(Q) rm -f $(FS_STAGING_DIR)/*
-	$(Q) $(foreach js,$(FS_FILES), \
-	  echo "  CP    $(js) -> $(FS_STAGING_DIR)"; \
-	  cp $(js) $(FS_STAGING_DIR);)
+	$(Q) $(foreach f,$(FS_FILES), \
+	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
+	  cp $(f) $(FS_STAGING_DIR);)
+ifeq "$(SJ_ENABLE_JS)" "1"
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
 	  echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
 	  cp $(jsbin) $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
+endif
 	$(vecho) "MKFS  $@"
 	$(Q) /usr/local/bin/mkspiffs $(FS_SIZE) $(FS_STAGING_DIR) > $@
 	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
@@ -253,12 +278,16 @@ $(FS_EMPTY_IMG): $(MK_FS_META_BIN)
 	        count=$(shell echo $$(($(FS_SIZE) / $(FS_BLOCK_SIZE)))) > $@ 2>/dev/null
 	$(Q) $(MK_FS_META_BIN) 0 0 0 0 0 >> $@
 
+ifeq "$(SJ_ENABLE_JS)" "1"
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
-	make -C $(V7_PATH) v7.c v7.h
+	make -C $(V7_PATH) $(notdir $@)
 
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC   v7"
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_HOST_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+
+$(FS_IMG): $(BUILD_DIR)/v7
+endif
 
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 
@@ -292,9 +321,9 @@ endif
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG \
-          $(SDK_FLAGS) $(V7_FEATURES) $(V7_MEMORY_FLAGS) \
+          $(SDK_FLAGS) $(V7_MEMORY_FLAGS) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_JS_APIS) \
+          $(MG_FEATURES) $(MGIOT_FEATURES) \
           $(MGIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
 
 $(BUILD_DIR)/cc3200_fs_spiffs_container.o: \

@@ -5,7 +5,7 @@
 
 #include "sj_prompt.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include "sj_v7_ext.h"
 #include "sj_hal.h"
@@ -223,4 +223,4 @@ void sj_prompt_process_char(char ch) {
   s_sjp.buf[s_sjp.pos] = '\0';
   s_sjp.char_processor(ch);
 }
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */

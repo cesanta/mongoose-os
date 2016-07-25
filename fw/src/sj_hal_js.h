@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_SJ_HAL_JS_H_
 #define CS_FW_SRC_SJ_HAL_JS_H_
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include "v7/v7.h"
 
@@ -22,6 +22,6 @@ int sj_http_call(struct v7 *v7, const char *url, const char *body,
  */
 void sj_invoke_cb(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 #endif /* CS_FW_SRC_SJ_HAL_JS_H_ */

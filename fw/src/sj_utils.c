@@ -6,7 +6,7 @@
 #include "fw/src/sj_uart.h"
 #include "fw/src/sj_sys_config.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #ifdef MG_ENABLE_SSL
 enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
@@ -61,4 +61,4 @@ clean:
 }
 #endif /* MG_ENABLE_SSL */
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifndef SJ_DISABLE_GPIO
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_GPIO_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -316,10 +316,4 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
   return gpio_set_handler(pin, s_proxy_handler, s_proxy_handler_arg);
 }
 
-#else
-
-int gpio_poll() {
-  return 0;
-}
-
-#endif
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_GPIO_API) */

@@ -13,7 +13,7 @@ enum sj_init_result sj_init() {
   if (r != SJ_INIT_OK) return r;
   sj_wifi_init();
 
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
   sj_clubby_init();
 #ifdef SJ_ENABLE_UPDATER_CLUBBY
   sj_updater_clubby_init();

@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_SJ_UART_H_
 #define CS_FW_SRC_SJ_UART_H_
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include "v7/v7.h"
 
@@ -52,5 +52,5 @@ size_t sj_uart_recv_cb(void *ctx, const char *d, size_t len);
 
 void sj_init_uart(struct v7 *);
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 #endif /* CS_FW_SRC_SJ_UART_H_ */

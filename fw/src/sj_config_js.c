@@ -1,6 +1,6 @@
 #include "fw/src/sj_config_js.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 #include "fw/src/sj_sys_config.h"
 #include "v7/v7.h"
@@ -160,4 +160,4 @@ v7_val_t sj_conf_mk_proxy(struct v7 *v7, const struct sj_conf_entry *schema,
   v7_disown(v7, &obj);
   return proxy;
 }
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */

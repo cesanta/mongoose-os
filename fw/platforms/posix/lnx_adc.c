@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifndef SJ_DISABLE_ADC
+#ifdef SJ_ENABLE_ADC_API
 
 #include <stdint.h>
 
@@ -16,4 +16,4 @@ double sj_adc_read_voltage(int pin) {
   return sj_adc_read(pin);
 }
 
-#endif
+#endif /* SJ_ENABLE_ADC_API */

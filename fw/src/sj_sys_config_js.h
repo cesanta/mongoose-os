@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_SJ_SYS_CONFIG_JS_H_
 #define CS_FW_SRC_SJ_SYS_CONFIG_JS_H_
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 struct v7;
 enum sj_init_result sj_sys_config_js_init(struct v7 *v7);
 #endif

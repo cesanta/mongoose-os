@@ -20,8 +20,11 @@
 #include "rom_map.h"
 
 #include "fw/src/sj_i2c.h"
-#include "v7/v7.h"
 #include "config.h"
+
+#ifdef SJ_ENABLE_JS
+#include "v7/v7.h"
+#endif
 
 /* Documentation: TRM (swru367b), Chapter 7 */
 
@@ -38,6 +41,7 @@ struct i2c_state {
   uint8_t first : 1;
 };
 
+#ifdef SJ_ENABLE_JS
 enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res) {
   struct i2c_state *c = calloc(1, sizeof(struct i2c_state));
   c->sda_pin = v7_get_double(v7, v7_arg(v7, 0)) - 1;
@@ -47,6 +51,7 @@ enum v7_err sj_i2c_create(struct v7 *v7, i2c_connection *res) {
   *res = c;
   return V7_OK;
 }
+#endif
 
 int i2c_init(i2c_connection conn) {
   struct i2c_state *c = (struct i2c_state *) conn;

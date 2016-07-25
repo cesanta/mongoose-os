@@ -31,7 +31,9 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
               -DV7_ENABLE_ENTITY_IDS
 
-MGIOT_FEATURES ?= -DSJ_PROMPT_DISABLE_ECHO
+MGIOT_FEATURES = -DSJ_ENABLE_JS \
+                 -DSJ_ENABLE_ADC_API
+MGIOT_POSIX_FEATURES ?= -DSJ_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
@@ -55,7 +57,7 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \
           $(V7_FEATURES) \
-          $(MGIOT_FEATURES) \
+          $(MGIOT_FEATURES) $(MGIOT_POSIX_FEATURES) \
           $(MONGOOSE_FEATURES) \
           -DFW_ARCHITECTURE=\"$(PLATFORM)\" \
           $(CFLAGS_EXTRA)
@@ -87,11 +89,6 @@ ifeq "$(SSL)" "OpenSSL"
   endif
 endif
 
-# Non Linux
-ifneq ($(PLATFORM), "LINUX")
-  MGIOT_FEATURES += -DSJ_DISABLE_I2C -DSJ_DISABLE_SPI -DSJ_DISABLE_GPIO
-endif
-
 # Non Windows
 ifneq ($(PLATFORM), "WIN")
   ADD_LIBS += m pthread
@@ -100,6 +97,9 @@ endif
 # Linux
 ifeq ($(PLATFORM), "LINUX")
   ADD_LIBS += rt
+  MGIOT_FEATURES += -DSJ_ENABLE_GPIO_API \
+                    -DSJ_ENABLE_I2C_API \
+                    -DSJ_ENABLE_SPI_API
 endif
 
 # Windows

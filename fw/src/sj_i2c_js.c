@@ -3,15 +3,16 @@
  * All rights reserved
  */
 
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_I2C_API)
+
+#include "fw/src/sj_i2c_js.h"
+
 #include <stdlib.h>
 
 #include "v7/v7.h"
 
-#include "sj_hal.h"
-#include "sj_i2c.h"
-#include "sj_common.h"
-
-#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_I2C_API)
+#include "fw/src/sj_common.h"
+#include "fw/src/sj_hal.h"
 
 /*
  * JS I2C API.
@@ -362,4 +363,4 @@ void sj_i2c_js_init(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), "I2C", ~0, i2c_ctor);
 }
 
-#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_I2C_API) */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_I2C_API) */

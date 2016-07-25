@@ -5,7 +5,7 @@
 
 #include "fw/src/sj_mqtt_js.h"
 
-#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_MQTT_API)
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_MQTT_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -357,4 +357,4 @@ void sj_mqtt_api_setup(struct v7 *v7) {
   v7_disown(v7, &mqtt_connect);
 }
 
-#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_MQTT_API) */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_MQTT_API) */

@@ -1,5 +1,5 @@
 #include "fw/platforms/esp8266/user/esp_sj_uart.h"
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 #include "fw/platforms/esp8266/user/esp_sj_uart_js.h"
 #include "v7/v7.h"
 #endif
@@ -29,7 +29,7 @@ struct esp_sj_uart_state {
 
   os_timer_t timer;
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   struct v7 *v7;
   v7_val_t obj;
 #endif
@@ -56,11 +56,11 @@ void esp_sj_uart_dispatcher(void *arg) {
   esp_uart_dispatch_rx_top(uart_no);
   uint16_t tx_used_before = txb->used;
 
-  /* ignore unused because of CS_DISABLE_JS below */
+  /* ignore unused because of SJ_ENABLE_JS below */
   (void) tx_used_before;
 
   esp_uart_dispatch_tx_top(uart_no);
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   cs_rbuf_t *rxb = esp_uart_rx_buf(uart_no);
 
   if (us->v7 != NULL) {
@@ -103,7 +103,7 @@ void esp_sj_uart_init() {
   os_timer_setfn(&sj_us[1].timer, esp_sj_uart_dispatcher, (void *) 1);
 }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 static v7_val_t s_uart_proto;
 
 static enum v7_err esp_sj_uart_get_state(struct v7 *v7,
@@ -287,7 +287,7 @@ v7_val_t esp_sj_uart_get_recv_handler(int uart_no) {
   return v7_get(sj_us[uart_no].v7, sj_us[uart_no].obj, "_rxcb", 5);
 }
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 void esp_sj_uart_set_prompt(int uart_no) {
   sj_us[0].prompt = sj_us[1].prompt = 0;

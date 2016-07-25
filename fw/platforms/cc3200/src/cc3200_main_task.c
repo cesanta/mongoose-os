@@ -19,7 +19,10 @@
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_clubby.h"
+
+#ifdef SJ_ENABLE_JS
 #include "v7/v7.h"
+#endif
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/config.h"
@@ -44,9 +47,11 @@ struct sj_event {
   void *data;
 };
 
-struct v7 *s_v7;
 OsiMsgQ_t s_main_queue;
 extern const char *build_id;
+
+#ifdef SJ_ENABLE_JS
+struct v7 *s_v7;
 
 struct v7 *init_v7(void *stack_base) {
   struct v7_create_opts opts;
@@ -58,6 +63,7 @@ struct v7 *init_v7(void *stack_base) {
 
   return v7_create_opt(opts);
 }
+#endif
 
 /* It may not be the best source of entropy, but it's better than nothing. */
 static void cc3200_srand() {
@@ -84,7 +90,7 @@ int start_nwp() {
   return 0;
 }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 static void uart_int() {
   struct sj_event e = {.type = PROMPT_CHAR_EVENT, .data = NULL};
   MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
@@ -162,7 +168,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     return CC3200_INIT_SJ_INIT_FAILED;
   }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   struct v7 *v7 = s_v7 = init_v7(&arg);
 
   ir = sj_init_js_all(v7);
@@ -177,11 +183,11 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
     commit_update(boot_cfg_idx, &boot_cfg);
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
     clubby_updater_finish(0);
 #endif
   } else {
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
     /*
      * If there is no update reply state, this will just be ignored.
      * But if there is, then update was rolled back and reply will be sent.
@@ -190,7 +196,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 #endif
   }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   /* Install prompt if enabled in the config. */
   if (get_cfg()->debug.enable_prompt) {
     sj_prompt_init(v7);
@@ -219,7 +225,7 @@ void main_task(void *arg) {
     struct sj_event e;
     if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (e.type) {
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
       case PROMPT_CHAR_EVENT: {
         long c;
         while ((c = UARTCharGetNonBlocking(CONSOLE_UART)) >= 0) {

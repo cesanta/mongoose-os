@@ -13,7 +13,7 @@
 #include "common/mg_str.h"
 #include "mongoose/mongoose.h"
 
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
 
 #define CLUBBY_FRAME_VERSION 2
 
@@ -89,6 +89,6 @@ int64_t clubby_proto_get_new_id();
 void clubby_add_kv_to_frame(struct mbuf *buf, const char *title,
                             const struct mg_str str, int quote);
 
-#endif /* DISABLE_C_CLUBBY */
+#endif /* SJ_ENABLE_CLUBBY */
 
 #endif /* CS_FW_SRC_CLUBBY_PROTO_H_ */

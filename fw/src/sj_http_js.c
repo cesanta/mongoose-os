@@ -12,7 +12,7 @@
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_utils.h"
 
-#if !defined(CS_DISABLE_JS) && \
+#if defined(SJ_ENABLE_JS) && \
     (defined(SJ_ENABLE_HTTP_CLIENT_API) || defined(SJ_ENABLE_HTTP_SERVER_API))
 
 /* Forwards */
@@ -925,6 +925,6 @@ void sj_http_js_init(struct v7 *v7) {
 
   v7_disown(v7, &Http);
 }
-#endif /* !defined(CS_DISABLE_JS) &&             \
+#endif /* defined(SJ_ENABLE_JS) &&               \
           (defined(SJ_ENABLE_HTTP_CLIENT_API) || \
           defined(SJ_ENABLE_HTTP_SERVER_API)) */

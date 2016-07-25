@@ -33,7 +33,7 @@
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 #include "v7/v7.h"
 #include "fw/src/sj_init_js.h"
 #endif
@@ -114,7 +114,7 @@ int sjs_init(rboot_config *bcfg) {
     return -3;
   }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   init_v7(&bcfg);
 
   ir = sj_init_js_all(v7);
@@ -131,7 +131,7 @@ int sjs_init(rboot_config *bcfg) {
 
   LOG(LL_INFO, ("Init done, RAM: %d free", sj_get_free_heap_size()));
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   /* Install prompt if enabled in the config and user's app has not installed
    * a custom RX handler. */
   if (get_cfg()->debug.enable_prompt &&
@@ -164,7 +164,7 @@ void sjs_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
   if (sjs_init(bcfg) == 0) {
     if (bcfg->is_first_boot) {
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
       /* fw_updated will be reset by the boot loader if it's a rollback. */
       clubby_updater_finish(bcfg->fw_updated ? 0 : -1);
 #endif

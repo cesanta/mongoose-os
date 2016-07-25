@@ -6,9 +6,9 @@
 #ifndef CS_FW_SRC_SJ_V7_EXT_H_
 #define CS_FW_SRC_SJ_V7_EXT_H_
 
-#include "fw/src/sj_hal_js.h"
+#ifdef SJ_ENABLE_JS
 
-#ifndef CS_DISABLE_JS
+#include "fw/src/sj_hal_js.h"
 
 struct v7;
 
@@ -38,6 +38,6 @@ void sj_invoke_cb2_this(struct v7 *v7, v7_val_t, v7_val_t, v7_val_t, v7_val_t);
 /* Prints an exception to stdout or stderr depending on debug mode */
 void sj_print_exception(struct v7 *v7, v7_val_t exc, const char *msg);
 
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */
 
 #endif /* CS_FW_SRC_SJ_V7_EXT_H_ */

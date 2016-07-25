@@ -17,7 +17,7 @@
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -90,7 +90,7 @@ void mongoose_schedule_poll() {
   mg_lwip_mgr_schedule_poll(&sj_mgr);
 }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
   mg_dispatch_v7_callback(v7, func, this_obj, args);

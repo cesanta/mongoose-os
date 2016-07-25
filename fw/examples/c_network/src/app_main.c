@@ -59,7 +59,6 @@ static void handle_index(struct mg_connection *nc, int ev, void *ev_data) {
   (void) ev;
 }
 
-/* This will work w/o V7 too (-DCS_DISABLE_JS) */
 enum mg_app_init_result sj_app_init() {
   if (!init_listener(&sj_mgr)) return MG_APP_INIT_ERROR;
   device_register_http_endpoint("/*" /* Handle all requests */, handle_index);

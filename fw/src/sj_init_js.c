@@ -19,7 +19,7 @@
 #include "fw/src/sj_ws_client_js.h"
 #include "fw/src/sj_v7_ext.h"
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 
 enum sj_init_result sj_api_setup(struct v7 *v7) {
 #ifndef V7_THAW
@@ -59,7 +59,7 @@ enum sj_init_result sj_api_setup(struct v7 *v7) {
 #ifdef SJ_ENABLE_WS_CLIENT_API
   sj_ws_client_api_setup(v7);
 #endif
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
   sj_clubby_api_setup(v7);
 #endif
 #else
@@ -77,7 +77,7 @@ enum sj_init_result sj_init_js(struct v7 *v7) {
   sj_i2c_js_init(v7);
 #endif
 
-#ifndef DISABLE_C_CLUBBY
+#ifdef SJ_ENABLE_CLUBBY
   sj_clubby_js_init(v7);
 #if defined(SJ_ENABLE_UPDATER_CLUBBY) && defined(SJ_ENABLE_UPDATER_CLUBBY_API)
   sj_updater_clubby_js_init(v7);
@@ -125,4 +125,4 @@ enum mg_app_init_result sj_app_init_js(struct v7 *v7) {
   (void) v7;
   return MG_APP_INIT_SUCCESS;
 }
-#endif /* CS_DISABLE_JS */
+#endif /* SJ_ENABLE_JS */

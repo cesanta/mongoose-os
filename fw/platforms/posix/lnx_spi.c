@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifndef SJ_DISABLE_SPI
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_SPI_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -149,4 +149,4 @@ void sj_spi_close(spi_connection c) {
   free(c);
 }
 
-#endif
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_SPI_API) */

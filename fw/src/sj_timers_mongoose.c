@@ -1,9 +1,17 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include <fw/src/sj_timers.h>
 #include <fw/src/sj_timers_js.h>
 
 #include <fw/src/sj_mongoose.h>
-#include <fw/src/sj_v7_ext.h>
+
+#ifdef SJ_ENABLE_JS
 #include <v7/v7.h>
+#include <fw/src/sj_v7_ext.h>
+#endif
 
 static sj_timer_id s_next_timer_id = 0;
 
@@ -12,10 +20,10 @@ struct timer_info {
   int interval_ms;
   timer_callback cb;
   void *arg;
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
   struct v7 *v7;
-#endif
   v7_val_t js_cb;
+#endif
 };
 
 static void sj_timer_handler(struct mg_connection *c, int ev, void *p) {
@@ -25,10 +33,10 @@ static void sj_timer_handler(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
     case MG_EV_TIMER: {
       if (c->flags & MG_F_CLOSE_IMMEDIATELY) break;
-#ifndef CS_DISABLE_JS
+      if (ti->cb != NULL) ti->cb(ti->arg);
+#ifdef SJ_ENABLE_JS
       if (ti->v7 != NULL) sj_invoke_cb0(ti->v7, ti->js_cb);
 #endif
-      if (ti->cb != NULL) ti->cb(ti->arg);
       if (ti->interval_ms > 0) {
         c->ev_timer_time = mg_time() + ti->interval_ms / 1000.0;
       } else {
@@ -37,7 +45,7 @@ static void sj_timer_handler(struct mg_connection *c, int ev, void *p) {
       break;
     }
     case MG_EV_CLOSE: {
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
       if (ti->v7 != NULL) v7_disown(ti->v7, &ti->js_cb);
 #endif
       free(ti);
@@ -77,7 +85,7 @@ sj_timer_id sj_set_timer(struct timer_info *ti, int msecs, int repeat) {
   return 1;
 }
 
-#ifndef CS_DISABLE_JS
+#ifdef SJ_ENABLE_JS
 sj_timer_id sj_set_js_timer(int msecs, int repeat, struct v7 *v7, v7_val_t cb) {
   struct timer_info *ti = (struct timer_info *) calloc(1, sizeof(*ti));
   if (ti == NULL) return SJ_INVALID_TIMER_ID;
@@ -87,7 +95,7 @@ sj_timer_id sj_set_js_timer(int msecs, int repeat, struct v7 *v7, v7_val_t cb) {
   v7_own(v7, &ti->js_cb);
   return ti->id;
 }
-#endif /* CS_DISABLE_JS */
+#endif
 
 sj_timer_id sj_set_c_timer(int msecs, int repeat, timer_callback cb,
                            void *arg) {

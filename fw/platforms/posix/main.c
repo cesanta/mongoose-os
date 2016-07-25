@@ -18,6 +18,7 @@
 #include "fw/src/sj_http_js.h"
 #include "fw/src/sj_uart.h"
 #include "fw/src/sj_clubby.h"
+#include "fw/src/sj_prompt.h"
 #include "fw/src/sj_spi_js.h"
 #include "fw/src/sj_sys_config.h"
 #include "common/cs_dbg.h"

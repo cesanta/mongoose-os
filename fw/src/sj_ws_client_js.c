@@ -5,7 +5,7 @@
 
 #include "fw/src/sj_ws_client_js.h"
 
-#if !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_WS_CLIENT_API)
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_WS_CLIENT_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -312,4 +312,4 @@ void sj_ws_client_api_setup(struct v7 *v7) {
   v7_disown(v7, &ws);
 }
 
-#endif /* !defined(CS_DISABLE_JS) && defined(SJ_ENABLE_WS_CLIENT_API) */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_WS_CLIENT_API) */
