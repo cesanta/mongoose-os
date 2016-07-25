@@ -119,8 +119,7 @@ static int fill_file_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
              &pi->remote_addr, &sha, &src, &pi->remote_size);
 
   if (pi->remote_addr == 0) {
-    /* Only rboot can has addr = 0, but we do not update rboot now */
-    CONSOLE_LOG(LL_ERROR, ("Invalid address in manifest"));
+    /* No part found, it might be ok (will be decided later) */
     return -1;
   }
 
