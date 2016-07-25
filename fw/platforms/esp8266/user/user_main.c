@@ -169,6 +169,10 @@ void sjs_init_timer_cb(void *arg) {
       clubby_updater_finish(bcfg->fw_updated ? 0 : -1);
 #endif
       commit_update(bcfg);
+    } else if (bcfg->user_flags == 1) {
+#ifndef DISABLE_C_CLUBBY
+      clubby_updater_finish(0);
+#endif
     }
   } else {
     if (bcfg->fw_updated) revert_update(bcfg);
