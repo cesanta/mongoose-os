@@ -43,6 +43,8 @@ struct part_info {
   uint32_t addr;
   int done;
   int disabled;
+  int remote_size;
+  uint32 remote_addr;
 
   union {
     struct file_info fi;
@@ -97,10 +99,6 @@ uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
 }
 
-uint32_t get_fw_size(uint8_t rom) {
-  return get_rboot_config()->roms_sizes[rom];
-}
-
 struct sj_upd_ctx *sj_upd_ctx_create() {
   return calloc(1, sizeof(struct sj_upd_ctx));
 }
@@ -116,11 +114,11 @@ static int fill_file_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
   struct json_token sha = JSON_INVALID_TOKEN;
   struct json_token src = JSON_INVALID_TOKEN;
 
-  pi->addr = 0;
-  json_scanf(tok->ptr, tok->len, "{addr: %u, cs_sha1: %T, src: %T}", &pi->addr,
-             &sha, &src);
+  pi->remote_addr = 0;
+  json_scanf(tok->ptr, tok->len, "{addr: %u, cs_sha1: %T, src: %T, size: %d}",
+             &pi->remote_addr, &sha, &src, &pi->remote_size);
 
-  if (pi->addr == 0) {
+  if (pi->remote_addr == 0) {
     /* Only rboot can has addr = 0, but we do not update rboot now */
     CONSOLE_LOG(LL_ERROR, ("Invalid address in manifest"));
     return -1;
@@ -131,7 +129,7 @@ static int fill_file_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
    * manifest always contain relative addresses, we have to
    * convert them to absolute (+0x100000 for slot #1)
    */
-  pi->addr += ctx->slot_to_write * FW_SLOT_SIZE;
+  pi->addr = pi->remote_addr + ctx->slot_to_write * FW_SLOT_SIZE;
   LOG(LL_DEBUG, ("Addr to write to use: %X", pi->addr));
 
   if (sha.len == 0) {
@@ -335,8 +333,12 @@ static int prepare_to_update_fs(struct sj_upd_ctx *ctx,
   return 1;
 }
 
+int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum);
+
 int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
                  int files_mode) {
+  LOG(LL_DEBUG, ("File mode? %d", files_mode));
+
   const rboot_config *cfg = get_rboot_config();
   struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN,
                     fs_dir = JSON_INVALID_TOKEN;
@@ -351,11 +353,55 @@ int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
   ctx->slot_to_write = (cfg->current_rom == 0 ? 1 : 0);
   LOG(LL_DEBUG, ("Slot to write: %d", ctx->slot_to_write));
 
-  if (fill_file_part_info(ctx, &fw, "fw", &ctx->fw_part) < 0) {
-    LOG(LL_INFO, ("No FW part in update"));
+  int fw_part_present =
+      (fill_file_part_info(ctx, &fw, "fw", &ctx->fw_part) >= 0);
+  int current_slot_matches = 0, next_slot_maches = 0;
+
+  if (!fw_part_present && !files_mode) {
+    /*
+     * if we use binary FS mode we need to have FW as well and must use new
+     * slot, merge cfg etc
+     */
+    CONSOLE_LOG(LL_ERROR, ("Firmware part is missing in binary mode"));
+    return -1;
+  }
+
+  if (fw_part_present) {
+    current_slot_matches =
+        (verify_checksum(
+             get_rboot_config()->roms[get_rboot_config()->current_rom],
+             ctx->fw_part.remote_size, ctx->fw_part.fi.sha1_sum) >= 0);
+    next_slot_maches =
+        (verify_checksum(get_rboot_config()->roms[ctx->slot_to_write],
+                         ctx->fw_part.remote_size,
+                         ctx->fw_part.fi.sha1_sum) >= 0);
+  }
+
+  LOG(LL_DEBUG, ("Current matches: %d, Next matches: %d", current_slot_matches,
+                 next_slot_maches));
+
+  if (files_mode && current_slot_matches) {
+    /*
+     * For files (manifest) mode we can use the same slot and
+     * just update files on FS
+     * For zip mode we have to use another slot, jeep old fs and
+     * perform manual fs update
+     */
+    LOG(LL_DEBUG, ("Using slot %d (current)", ctx->slot_to_write));
     ctx->slot_to_write = cfg->current_rom;
+  }
+
+  if ((files_mode && current_slot_matches) || next_slot_maches) {
+    /* In any case, if slot is maches - doesn't fetch it */
+    CONSOLE_LOG(LL_INFO, ("Skipping FW part update"));
     ctx->fw_part.done = 1;
   }
+
+  ctx->fw_part.addr =
+      ctx->fw_part.remote_addr + ctx->slot_to_write * FW_SLOT_SIZE;
+
+  LOG(LL_DEBUG, ("FW details Skip: %d Addr: %X Size: %d", ctx->fw_part.done,
+                 ctx->fw_part.addr, ctx->fw_part.remote_size));
 
   int fs_res, fs_dir_result;
 
@@ -475,16 +521,10 @@ struct file_info *get_file_info_from_manifest(struct part_info *pi,
 
 int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
   if (ctx->fw_part.done == 0) {
-    /* if fw_part must be updated, just send it like usual one */
-    LOG(LL_DEBUG, ("ctx->fw_part.done %d", ctx->fw_part.done));
-    if (verify_checksum(ctx->fw_part.addr, get_fw_size(ctx->slot_to_write),
-                        ctx->fw_part.fi.sha1_sum) < 0) {
-      strcpy(buf, ctx->fw_part.fi.file_name);
-      return 1;
-    } else {
-      ctx->fw_part.done = 1;
-    }
-  }
+    /* if fw_part must be updated, just send its name like usual one */
+    strcpy(buf, ctx->fw_part.fi.file_name);
+    return 1;
+  };
 
   if (SLIST_EMPTY(&ctx->fs_dir_part.files.fhead)) {
     return 0; /* All files done */
@@ -687,6 +727,8 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   rboot_config *cfg = get_rboot_config();
   if (ctx->slot_to_write == cfg->current_rom) {
     LOG(LL_INFO, ("Using previous FW"));
+    cfg->user_flags = 1;
+    rboot_set_config(cfg);
     return 1;
   }
 
@@ -704,6 +746,7 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   cfg->roms_sizes[cfg->current_rom] = ctx->fw_part.fi.size;
   cfg->is_first_boot = 1;
   cfg->fw_updated = 1;
+  cfg->user_flags = 1;
   cfg->boot_attempts = 0;
   rboot_set_config(cfg);
 

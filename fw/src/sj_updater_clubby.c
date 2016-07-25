@@ -401,6 +401,8 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
     if (blob_type_tok.type == JSON_TYPE_STRING &&
         strncmp(blob_type_tok.ptr, "manifest", 8) == 0) {
       ut = utManifest;
+      LOG(LL_DEBUG,
+          ("Update type: %.*s", blob_type_tok.len, blob_type_tok.ptr));
     }
     struct update_context *ctx = updater_context_create(ut);
     if (ctx == NULL) {

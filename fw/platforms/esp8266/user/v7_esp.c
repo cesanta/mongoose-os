@@ -70,18 +70,16 @@ static enum v7_err crash(struct v7 *v7, v7_val_t *res) {
 }
 
 /*
- * Returns 0 if current rom = previous, 1 otherwise. Debug only function.
- * (PS: it is hard to store on/remove from flash something during
- * upgrade test, because upgrader brings it back)
- * After flashing it will be 0/0, fater upgrade 0/1, 1/0 etc
- * TODO(alashkin): add a way to detect failed update etc
+ * TODO(alashkin): previous way to determinate update
+ * was broken by new update technology. New one is more
+ * stupid, but working. Fix it! And remove this function.
  */
 static enum v7_err is_rboot_updated(struct v7 *v7, v7_val_t *res) {
   rboot_config cfg = rboot_get_config();
-  int current = cfg.current_rom;
-  int prev = cfg.previous_rom;
-  LOG(LL_DEBUG, ("Current ROM: %d, Prev: %d", current, prev));
-  *res = v7_mk_boolean(v7, current != prev);
+  LOG(LL_DEBUG, ("Flags=%d", cfg.user_flags));
+  *res = v7_mk_boolean(v7, cfg.user_flags);
+  cfg.user_flags = 0;
+  rboot_set_config(&cfg);
   return V7_OK;
 }
 

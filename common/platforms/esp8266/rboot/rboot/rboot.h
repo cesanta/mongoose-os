@@ -64,6 +64,7 @@ typedef struct {
 	uint32 roms_sizes[MAX_ROMS]; // sizes of the roms
 	uint32 fs_addresses[MAX_ROMS]; // file system addresses
 	uint32 fs_sizes[MAX_ROMS]; // file system sizes
+	uint32 user_flags;
 #ifdef BOOT_CONFIG_CHKSUM
 	uint8 chksum;		   // config chksum
 #endif

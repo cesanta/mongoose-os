@@ -340,7 +340,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
         }
 
         if ((ret = sj_upd_begin(ctx->dev_ctx, &ctx->parts,
-                                ctx->update_status == utManifest)) < 0) {
+                                ctx->update_type == utManifest)) < 0) {
           ctx->status_msg = sj_upd_get_status_msg(ctx->dev_ctx);
           CONSOLE_LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
           return ret;
@@ -596,7 +596,7 @@ int sj_upd_merge_spiffs(spiffs *old_fs) {
     if (stat((const char *) de_ptr->name, &st) != 0) {
       /* File not found on the new fs, copy. */
       if (!file_copy(old_fs, (char *) de_ptr->name)) {
-        CONSOLE_LOG(LL_ERROR, ("Error copying!"));
+        CONSOLE_LOG(LL_ERROR, ("Failed to copy %s", de_ptr->name));
         goto cleanup;
       }
     }
