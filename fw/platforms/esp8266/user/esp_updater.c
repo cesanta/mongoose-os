@@ -36,7 +36,7 @@ struct file_info {
   spiffs_file file;
 };
 
-enum part_info_type { ptBIN, ptFILES };
+enum part_info_type { ptNone, ptBIN, ptFILES };
 
 struct part_info {
   enum part_info_type type;
@@ -109,7 +109,7 @@ const char *sj_upd_get_status_msg(struct sj_upd_ctx *ctx) {
 
 static int fill_file_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
                                const char *part_name, struct part_info *pi) {
-  pi->type = ptBIN;
+  pi->type = ptNone;
 
   struct json_token sha = JSON_INVALID_TOKEN;
   struct json_token src = JSON_INVALID_TOKEN;
@@ -148,6 +148,7 @@ static int fill_file_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
       ("Part %s : addr: %X sha1: %.*s src: %s", part_name, (int) pi->addr,
        sizeof(pi->fi.sha1_sum), pi->fi.sha1_sum, pi->fi.file_name));
 
+  pi->type = ptBIN;
   return 1;
 }
 
@@ -379,15 +380,16 @@ int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
   LOG(LL_DEBUG, ("Current matches: %d, Next matches: %d", current_slot_matches,
                  next_slot_maches));
 
-  if (files_mode && current_slot_matches) {
+  if ((files_mode && current_slot_matches) ||
+      (!current_slot_matches && !next_slot_maches && !fw_part_present)) {
     /*
      * For files (manifest) mode we can use the same slot and
      * just update files on FS
      * For zip mode we have to use another slot, jeep old fs and
      * perform manual fs update
      */
-    LOG(LL_DEBUG, ("Using slot %d (current)", ctx->slot_to_write));
     ctx->slot_to_write = cfg->current_rom;
+    LOG(LL_DEBUG, ("Using slot %d (current)", ctx->slot_to_write));
   }
 
   if ((files_mode && current_slot_matches) || next_slot_maches) {
@@ -520,9 +522,15 @@ struct file_info *get_file_info_from_manifest(struct part_info *pi,
 
 int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
   if (ctx->fw_part.done == 0) {
-    /* if fw_part must be updated, just send its name like usual one */
-    strcpy(buf, ctx->fw_part.fi.file_name);
-    return 1;
+    if (ctx->fw_part.type == ptNone) {
+      CONSOLE_LOG(LL_WARN,
+                  ("Fw section not updated because not mentioned in manifest"));
+      ctx->fw_part.done = 1;
+    } else {
+      /* if fw_part must be updated, just send its name like usual one */
+      strcpy(buf, ctx->fw_part.fi.file_name);
+      return 1;
+    }
   };
 
   if (SLIST_EMPTY(&ctx->fs_dir_part.files.fhead)) {
@@ -550,7 +558,6 @@ int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
 int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name) {
   struct file_info *fi, *fi_temp;
   SLIST_FOREACH_SAFE(fi, &ctx->fs_dir_part.files.fhead, entries, fi_temp) {
-    LOG(LL_DEBUG, ("Found %s, want %s", fi->file_name, file_name));
     int dir_len = strlen(ctx->fs_dir_part.files.dir_name);
     if (strncmp(file_name, ctx->fs_dir_part.files.dir_name, dir_len) == 0 &&
         strcmp(file_name + dir_len + 1, fi->file_name) == 0) {

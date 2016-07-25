@@ -113,6 +113,7 @@ static void request_file(struct mg_connection *c, struct update_context *ctx,
 static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
   struct mbuf *io = &c->recv_mbuf;
   struct update_context *ctx = (struct update_context *) c->user_data;
+  int res = 0;
   (void) p;
 
   switch (ev) {
@@ -156,7 +157,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
       }
 
       if (io->len != 0) {
-        int res = updater_process(ctx, io->buf, io->len);
+        res = updater_process(ctx, io->buf, io->len);
         ctx->file_procesed += io->len;
 
         LOG(LL_DEBUG, ("Processed %d (%d) bytes, result: %d", (int) io->len,
@@ -170,17 +171,21 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           sj_upd_complete_file_update(ctx->dev_ctx, ctx->file_name);
 
           char buf[100];
-          if (sj_upd_get_next_file(ctx->dev_ctx, buf, sizeof(buf)) == 1) {
+          res = sj_upd_get_next_file(ctx->dev_ctx, buf, sizeof(buf));
+          if (res == 1) {
             /* There are more files to go */
             request_file(c, ctx, buf);
             return;
-          } else {
+          } else if (res == 0) {
             /*
              * If we are in Manifest mode and all files are fetched
              * we have to tell finalize update process explicitly
              */
             res = updater_finalize(ctx);
             LOG(LL_DEBUG, ("Finalized update"))
+          } else if (res < 0) {
+            ctx->result = 1;
+            ctx->status_msg = "Part of update is missing";
           }
         }
 
