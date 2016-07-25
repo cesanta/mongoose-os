@@ -147,10 +147,21 @@ struct find_part_info {
   char buf[50];
 };
 
-static void find_part(void *data, const char *path,
-                      const struct json_token *tok) {
+static void find_part(void *data, const char *name, size_t name_len,
+                      const char *path, const struct json_token *tok) {
   struct find_part_info *info = (struct find_part_info *) data;
   size_t path_len = strlen(path), src_len = strlen(info->src);
+
+  (void) name;
+  (void) name_len;
+
+  if (tok->ptr == NULL) {
+    /*
+     * We're not interested here in the events for which we have no value;
+     * namely, JSON_TYPE_OBJECT_START and JSON_TYPE_ARRAY_START
+     */
+    return;
+  }
 
   /* For matched 'src' attribute, remember parent object path. */
   if (src_len == tok->len && strncmp(info->src, tok->ptr, tok->len) == 0) {

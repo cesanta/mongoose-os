@@ -68,6 +68,9 @@ struct frozen {
   const char *end;
   const char *cur;
 
+  const char *cur_name;
+  size_t cur_name_len;
+
   /* For callback API */
   char path[JSON_MAX_PATH_LEN];
   int path_len;
@@ -77,22 +80,30 @@ struct frozen {
 
 struct fstate {
   const char *ptr;
-  enum json_type type;
   int path_len;
 };
 
-#define SET_STATE(fr, ptr, type, str, len)                \
-  struct fstate fstate = {(ptr), (type), (fr)->path_len}; \
+#define SET_STATE(fr, ptr, str, len)                \
+  struct fstate fstate = {(ptr), (fr)->path_len};   \
   append_to_path((fr), (str), (len));
 
-#define CALL_BACK(fr)                                                         \
-  do {                                                                        \
-    struct json_token t = {fstate.ptr, (fr)->cur - (const char *) fstate.ptr, \
-                           fstate.type};                                      \
-    truncate_path((fr), fstate.path_len);                                     \
-    if ((fr)->callback &&                                                     \
-        ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.'))       \
-      (fr)->callback((fr)->callback_data, (fr)->path, &t);                    \
+#define CALL_BACK(fr, tok, value, len)                                    \
+  do {                                                                    \
+    if ((fr)->callback &&                                                 \
+        ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.')){  \
+                                                                          \
+      struct json_token t = {(value), (len), (tok)};                      \
+                                                                          \
+      /* Call the callback with the given value and current name */       \
+      (fr)->callback(                                                     \
+          (fr)->callback_data,                                            \
+          (fr)->cur_name, (fr)->cur_name_len, (fr)->path, &t              \
+          );                                                              \
+                                                                          \
+      /* Reset the name */                                                \
+      (fr)->cur_name = NULL;                                              \
+      (fr)->cur_name_len = 0;                                             \
+    }                                                                     \
   } while (0)
 
 static int append_to_path(struct frozen *f, const char *str, int size) {
@@ -116,11 +127,13 @@ static int parse_value(struct frozen *f);
   do {                              \
     if (!(cond)) return (err_code); \
   } while (0)
+
 #define TRY(expr)          \
   do {                     \
     int _n = expr;         \
     if (_n < 0) return _n; \
   } while (0)
+
 #define END_OF_STRING (-1)
 
 static int left(const struct frozen *f) {
@@ -187,12 +200,13 @@ static int get_escape_len(const char *s, int len) {
 static int parse_identifier(struct frozen *f) {
   EXPECT(is_alpha(cur(f)), JSON_STRING_INVALID);
   {
-    SET_STATE(f, f->cur, JSON_TYPE_STRING, "", 0);
+    SET_STATE(f, f->cur, "", 0);
     while (f->cur < f->end &&
            (*f->cur == '_' || is_alpha(*f->cur) || is_digit(*f->cur))) {
       f->cur++;
     }
-    CALL_BACK(f);
+    truncate_path(f, fstate.path_len);
+    CALL_BACK(f, JSON_TYPE_STRING, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
@@ -214,7 +228,7 @@ static int parse_string(struct frozen *f) {
   int n, ch = 0, len = 0;
   TRY(test_and_skip(f, '"'));
   {
-    SET_STATE(f, f->cur, JSON_TYPE_STRING, "", 0);
+    SET_STATE(f, f->cur, "", 0);
     for (; f->cur < f->end; f->cur += len) {
       ch = *(unsigned char *) f->cur;
       len = get_utf8_char_len((unsigned char) ch);
@@ -224,7 +238,8 @@ static int parse_string(struct frozen *f) {
         EXPECT((n = get_escape_len(f->cur + 1, left(f))) > 0, n);
         len += n;
       } else if (ch == '"') {
-        CALL_BACK(f);
+        truncate_path(f, fstate.path_len);
+        CALL_BACK(f, JSON_TYPE_STRING, fstate.ptr, f->cur - fstate.ptr);
         f->cur++;
         break;
       };
@@ -236,7 +251,7 @@ static int parse_string(struct frozen *f) {
 /* number = [ '-' ] digit+ [ '.' digit+ ] [ ['e'|'E'] ['+'|'-'] digit+ ] */
 static int parse_number(struct frozen *f) {
   int ch = cur(f);
-  SET_STATE(f, f->cur, JSON_TYPE_NUMBER, "", 0);
+  SET_STATE(f, f->cur, "", 0);
   if (ch == '-') f->cur++;
   EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
   EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
@@ -255,7 +270,8 @@ static int parse_number(struct frozen *f) {
     EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
     while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
   }
-  CALL_BACK(f);
+  truncate_path(f, fstate.path_len);
+  CALL_BACK(f, JSON_TYPE_NUMBER, fstate.ptr, f->cur - fstate.ptr);
   return 0;
 }
 
@@ -265,31 +281,36 @@ static int parse_array(struct frozen *f) {
   char buf[20];
   TRY(test_and_skip(f, '['));
   {
-    SET_STATE(f, f->cur - 1, JSON_TYPE_ARRAY, "", 0);
+    CALL_BACK(f, JSON_TYPE_ARRAY_START, NULL, 0);
+    SET_STATE(f, f->cur - 1, "", 0);
     while (cur(f) != ']') {
       snprintf(buf, sizeof(buf), "[%d]", i);
       i++;
       current_path_len = append_to_path(f, buf, strlen(buf));
+      f->cur_name = f->path + strlen(f->path) - strlen(buf) + 1/*opening brace*/;
+      f->cur_name_len = strlen(buf) - 2/*braces*/;
       TRY(parse_value(f));
       truncate_path(f, current_path_len);
       if (cur(f) == ',') f->cur++;
     }
     TRY(test_and_skip(f, ']'));
-    CALL_BACK(f);
+    truncate_path(f, fstate.path_len);
+    CALL_BACK(f, JSON_TYPE_ARRAY_END, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
 
-static int expect(struct frozen *f, const char *s, int len, enum json_type t) {
+static int expect(struct frozen *f, const char *s, int len, enum json_token_type tok_type) {
   int i, n = left(f);
-
-  SET_STATE(f, f->cur, t, "", 0);
+  SET_STATE(f, f->cur, "", 0);
   for (i = 0; i < len; i++) {
     if (i >= n) return JSON_STRING_INCOMPLETE;
     if (f->cur[i] != s[i]) return JSON_STRING_INVALID;
   }
   f->cur += len;
-  CALL_BACK(f);
+  truncate_path(f, fstate.path_len);
+
+  CALL_BACK(f, tok_type, fstate.ptr, f->cur - fstate.ptr);
 
   return 0;
 }
@@ -360,9 +381,11 @@ static int parse_pair(struct frozen *f) {
   skip_whitespaces(f);
   tok = f->cur;
   TRY(parse_key(f));
-  current_path_len =
-      append_to_path(f, *tok == '"' ? tok + 1 : tok,
-                     *tok == '"' ? f->cur - tok - 2 : f->cur - tok);
+  {
+    f->cur_name = *tok == '"' ? tok + 1 : tok;
+    f->cur_name_len = *tok == '"' ? f->cur - tok - 2 : f->cur - tok;
+    current_path_len = append_to_path(f, f->cur_name, f->cur_name_len);
+  }
   TRY(test_and_skip(f, ':'));
   TRY(parse_value(f));
   truncate_path(f, current_path_len);
@@ -373,13 +396,15 @@ static int parse_pair(struct frozen *f) {
 static int parse_object(struct frozen *f) {
   TRY(test_and_skip(f, '{'));
   {
-    SET_STATE(f, f->cur - 1, JSON_TYPE_OBJECT, ".", 1);
+    CALL_BACK(f, JSON_TYPE_OBJECT_START, NULL, 0);
+    SET_STATE(f, f->cur - 1, ".", 1);
     while (cur(f) != '}') {
       TRY(parse_pair(f));
       if (cur(f) == ',') f->cur++;
     }
     TRY(test_and_skip(f, '}'));
-    CALL_BACK(f);
+    truncate_path(f, fstate.path_len);
+    CALL_BACK(f, JSON_TYPE_OBJECT_END, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
@@ -631,9 +656,15 @@ struct scan_array_info {
   struct json_token *token;
 };
 
-static void json_scanf_array_elem_cb(void *callback_data, const char *path,
+static void json_scanf_array_elem_cb(void *callback_data,
+                                     const char *name, size_t name_len,
+                                     const char *path,
                                      const struct json_token *token) {
   struct scan_array_info *info = (struct scan_array_info *) callback_data;
+
+  (void) name;
+  (void) name_len;
+
   if (strcmp(path, info->path) == 0) {
     *info->token = *token;
   }
@@ -658,15 +689,33 @@ struct json_scanf_info {
   int type;
 };
 
-static void json_scanf_cb(void *callback_data, const char *path,
-                          const struct json_token *tok) {
+static void json_scanf_cb(void *callback_data,
+                          const char *name, size_t name_len,
+                          const char *path,
+                          const struct json_token *token)
+{
   struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
-  if (strcmp(path, info->path) != 0) return;
+
+  (void) name;
+  (void) name_len;
+
+  if (strcmp(path, info->path) != 0) {
+    /* It's not the path we're looking for, so, just ignore this callback */
+    return;
+  }
+
+  if (token->ptr == NULL) {
+    /*
+     * We're not interested here in the events for which we have no value;
+     * namely, JSON_TYPE_OBJECT_START and JSON_TYPE_ARRAY_START
+     */
+    return;
+  }
 
   switch (info->type) {
     case 'B':
       info->num_conversions++;
-      *(int *) info->target = (tok->type == JSON_TYPE_TRUE ? 1 : 0);
+      *(int *) info->target = (token->type == JSON_TYPE_TRUE ? 1 : 0);
       break;
     case 'M': {
       union {
@@ -674,26 +723,26 @@ static void json_scanf_cb(void *callback_data, const char *path,
         json_scanner_t f;
       } u = {info->target};
       info->num_conversions++;
-      u.f(tok->ptr, tok->len, info->user_data);
+      u.f(token->ptr, token->len, info->user_data);
       break;
     }
     case 'Q': {
       char **dst = (char **) info->target;
       info->num_conversions++;
       /* TODO(lsm): un-escape string */
-      *dst = (char *) malloc(tok->len + 1);
+      *dst = (char *) malloc(token->len + 1);
       if (*dst != NULL) {
-        strncpy(*dst, tok->ptr, tok->len);
-        (*dst)[tok->len] = '\0';
+        strncpy(*dst, token->ptr, token->len);
+        (*dst)[token->len] = '\0';
       }
       break;
     }
     case 'T':
       info->num_conversions++;
-      *(struct json_token *) info->target = *tok;
+      *(struct json_token *) info->target = *token;
       break;
     default:
-      info->num_conversions += sscanf(tok->ptr, info->fmt, info->target);
+      info->num_conversions += sscanf(token->ptr, info->fmt, info->target);
       break;
   }
 }

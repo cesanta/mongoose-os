@@ -365,7 +365,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
 
   const char *reply = "Malformed request";
 
-  if (evt->request.args.type != JSON_TYPE_OBJECT) {
+  if (evt->request.args.type != JSON_TYPE_OBJECT_END) {
     goto clean;
   }
 

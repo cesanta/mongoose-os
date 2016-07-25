@@ -49,9 +49,13 @@ const struct sj_conf_entry *sj_conf_find_schema_entry(
   return NULL;
 }
 
-void sj_conf_parse_cb(void *data, const char *path,
-                      const struct json_token *tok) {
+void sj_conf_parse_cb(void *data, const char *name, size_t name_len,
+                      const char *path, const struct json_token *tok) {
   struct parse_ctx *ctx = (struct parse_ctx *) data;
+
+  (void) name;
+  (void) name_len;
+
   if (!ctx->result) return;
   if (path[0] != '.') {
     if (path[0] == '\0') return; /* Last entry, the entire object */

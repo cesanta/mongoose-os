@@ -176,7 +176,7 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
             ? evt->response.result
             : evt->response.error.error_obj;
     /* v7_parse_json wants null terminated string */
-    if (cb_param_tok.type == JSON_TYPE_OBJECT) {
+    if (cb_param_tok.type == JSON_TYPE_OBJECT_END) {
       char *obj_str = calloc(1, cb_param_tok.len + 1);
       if (obj_str == NULL) {
         LOG(LL_ERROR, ("Out of memory"));

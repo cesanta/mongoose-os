@@ -152,9 +152,12 @@ static int fill_file_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
   return 1;
 }
 
-void fs_dir_parse_cb(void *callback_data, const char *path,
-                     const struct json_token *token) {
+void fs_dir_parse_cb(void *callback_data, const char *name, size_t name_len,
+                     const char *path, const struct json_token *token) {
   struct part_info *pi = (struct part_info *) callback_data;
+
+  (void) name;
+  (void) name_len;
 
   if (token->type != JSON_TYPE_STRING) {
     /*

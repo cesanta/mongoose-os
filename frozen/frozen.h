@@ -28,21 +28,26 @@ extern "C" {
 #include <stddef.h>
 #include <stdio.h>
 
-enum json_type {
-  JSON_TYPE_INVALID = 0,
-  JSON_TYPE_STRING = 1,
-  JSON_TYPE_NUMBER = 2,
-  JSON_TYPE_OBJECT = 3,
-  JSON_TYPE_TRUE = 4,
-  JSON_TYPE_FALSE = 5,
-  JSON_TYPE_NULL = 6,
-  JSON_TYPE_ARRAY = 7
+enum json_token_type {
+  JSON_TYPE_STRING,
+  JSON_TYPE_NUMBER,
+  JSON_TYPE_TRUE,
+  JSON_TYPE_FALSE,
+  JSON_TYPE_NULL,
+  JSON_TYPE_OBJECT_START,
+  JSON_TYPE_OBJECT_END,
+  JSON_TYPE_ARRAY_START,
+  JSON_TYPE_ARRAY_END,
+
+  JSON_TYPES_CNT,
 };
 
+#define JSON_TYPE_INVALID JSON_TYPES_CNT
+
 struct json_token {
-  const char *ptr;     /* Points to the beginning of the token */
-  int len;             /* Token length */
-  enum json_type type; /* Type of the token, possible values above */
+  const char *ptr;           /* Points to the beginning of the value */
+  int len;                   /* Value length */
+  enum json_token_type type; /* Type of the token, possible values are above */
 };
 
 #define JSON_INVALID_TOKEN {0, 0, JSON_TYPE_INVALID}
@@ -51,13 +56,37 @@ struct json_token {
 #define JSON_STRING_INVALID -1
 #define JSON_STRING_INCOMPLETE -2
 
-/* Callback-based API */
-typedef void (*json_walk_callback_t)(void *callback_data, const char *path,
+/*
+ * Callback-based SAX-like API.
+ *
+ * Property name and length is given only if it's available: i.e. if current
+ * event is an object's property. In other cases, `name` is `NULL`. For
+ * example, name is never given:
+ *   - For the first value in the JSON string;
+ *   - For events JSON_TYPE_OBJECT_END and JSON_TYPE_ARRAY_END
+ *
+ * E.g. for the input `{ "foo": 123, "bar": [ 1, 2, { "baz": true } ] }`,
+ * the sequence of callback invocations will be as follows:
+ *
+ * - type: JSON_TYPE_OBJECT_START, name: NULL, path: "", value: NULL
+ * - type: JSON_TYPE_NUMBER, name: "foo", path: ".foo", value: "123"
+ * - type: JSON_TYPE_ARRAY_START,  name: "bar", path: ".bar", value: NULL
+ * - type: JSON_TYPE_NUMBER, name: "0", path: ".bar[0]", value: "1"
+ * - type: JSON_TYPE_NUMBER, name: "1", path: ".bar[1]", value: "2"
+ * - type: JSON_TYPE_OBJECT_START, name: "2", path: ".bar[2]", value: NULL
+ * - type: JSON_TYPE_TRUE, name: "baz", path: ".bar[2].baz", value: "true"
+ * - type: JSON_TYPE_OBJECT_END, name: NULL, path: ".bar[2]", value: "{ \"baz\": true }"
+ * - type: JSON_TYPE_ARRAY_END, name: NULL, path: ".bar", value: "[ 1, 2, { \"baz\": true } ]"
+ * - type: JSON_TYPE_OBJECT_END, name: NULL, path: "", value: "{ \"foo\": 123, \"bar\": [ 1, 2, { \"baz\": true } ] }"
+ */
+typedef void (*json_walk_callback_t)(void *callback_data,
+                                     const char *name, size_t name_len,
+                                     const char *path,
                                      const struct json_token *token);
 
 /*
- * Parse `json_string`, invoking `callback` function for each JSON token.
- * Return number of bytes processed
+ * Parse `json_string`, invoking `callback` in a way similar to SAX parsers;
+ * see `json_walk_callback_t`.
  */
 int json_walk(const char *json_string, int json_string_length,
               json_walk_callback_t callback, void *callback_data);
