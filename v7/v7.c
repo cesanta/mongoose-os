@@ -27662,16 +27662,12 @@ static void free_threads(struct slre_thread *t) {
   while (t->prev != NULL) t = get_prev_thread(t);
 }
 
-#define RE_NO_MATCH() \
-  if (!(thr = 0)) continue
-
 static unsigned char re_match(struct slre_instruction *pc, const char *current,
                               const char *end, const char *bol,
                               unsigned int flags, struct slre_loot *loot) {
   struct slre_loot sub, tmpsub;
   Rune c, r;
   struct slre_range *p;
-  unsigned char thr;
   size_t i;
   struct slre_thread thread, *curr_thread, *tmp_thr;
 
@@ -27685,7 +27681,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
     pc = curr_thread->pc;
     current = curr_thread->start;
     sub = curr_thread->loot;
-    for (thr = 1; thr;) {
+    for (;;) {
       switch (pc->opcode) {
         case I_END:
           memcpy(loot->caps, sub.caps, sizeof loot->caps);
@@ -27697,12 +27693,12 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
             current += chartorune(&c, current);
             if (c && !(pc->opcode == I_ANY && isnewline(c))) break;
           }
-          RE_NO_MATCH();
+          goto no_match;
 
         case I_BOL:
           if (current == bol) break;
           if ((flags & SLRE_FLAG_M) && isnewline(current[-1])) break;
-          RE_NO_MATCH();
+          goto no_match;
         case I_CH:
           if (current < end) {
             current += chartorune(&c, current);
@@ -27711,14 +27707,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
                                     tolowerrune(c) == tolowerrune(pc->par.c))))
               break;
           }
-          RE_NO_MATCH();
+          goto no_match;
         case I_EOL:
           if (current >= end) break;
           if ((flags & SLRE_FLAG_M) && isnewline(*current)) break;
-          RE_NO_MATCH();
+          goto no_match;
         case I_EOS:
           if (current >= end) break;
-          RE_NO_MATCH();
+          goto no_match;
 
         case I_JUMP:
           pc = pc->par.xy.x;
@@ -27729,14 +27725,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
             pc = pc->par.xy.y.y;
             continue;
           }
-          RE_NO_MATCH();
+          goto no_match;
         case I_LA_N:
           tmpsub = sub;
           if (!re_match(pc->par.xy.x, current, end, bol, flags, &tmpsub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
-          RE_NO_MATCH();
+          goto no_match;
 
         case I_LBRA:
           sub.caps[pc->par.n].start = current;
@@ -27753,9 +27749,9 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
               p += chartorune(&rr, p);
               if (tolowerrune(r) != tolowerrune(rr)) break;
             }
-            if (num) RE_NO_MATCH();
+            if (num) goto no_match;
           } else if (strncmp(current, sub.caps[pc->par.n].start, i)) {
-            RE_NO_MATCH();
+            goto no_match;
           }
           if (i > 0) current += i;
           break;
@@ -27781,9 +27777,9 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
 
         case I_SET:
         case I_SET_N:
-          if (current >= end) RE_NO_MATCH();
+          if (current >= end) goto no_match;
           current += chartorune(&c, current);
-          if (!c) RE_NO_MATCH();
+          if (!c) goto no_match;
 
           i = 1;
           for (p = pc->par.cp->spans; i && p < pc->par.cp->end; p++)
@@ -27798,7 +27794,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
 
           if (pc->opcode == I_SET) i = !i;
           if (i) break;
-          RE_NO_MATCH();
+          goto no_match;
 
         case I_SPLIT:
           tmp_thr = curr_thread;
@@ -27818,13 +27814,15 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
           if (iswordchar(current[0])) i = !i;
           if (pc->opcode == I_WORD_N) i = !i;
           if (i) break;
-        /* RE_NO_MATCH(); */
+        /* goto no_match; */
 
         default:
-          RE_NO_MATCH();
+          goto no_match;
       }
       pc++;
     }
+  no_match:
+    ;
   } while (curr_thread->prev != NULL);
   return 0;
 }
