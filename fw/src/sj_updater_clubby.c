@@ -398,9 +398,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
 
   memcpy(blob_url, blob_url_tok.ptr, blob_url_tok.len);
 
-  LOG(LL_INFO, ("HERE"));
   if (!notify_js(UJS_GOT_REQUEST, blob_url)) {
-    LOG(LL_INFO, ("HERE!"));
     enum UPDATE_TYPE ut = utZip;
     if (blob_type_tok.type == JSON_TYPE_STRING &&
         strncmp(blob_type_tok.ptr, "manifest", 8) == 0) {
