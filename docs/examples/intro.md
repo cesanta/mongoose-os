@@ -3,7 +3,6 @@ title: Tutorials
 items:
   - { name: blink.md }
   - { name: remote-control.md }
-  - { name: send-cloud.md }
   - { name: send-restful.md }
   - { name: send-mqtt.md }
 ---

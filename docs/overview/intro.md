@@ -8,7 +8,6 @@ items:
   - { name: edit-run.md }
   - { name: js-or-c.md }
   - { name: cloud.md }
-  - { name: mobile.md }
   - { name: examples.md }
   - { name: hardware-agnostic.md }
 ---
