@@ -225,7 +225,7 @@ else
   SLFS_FILES =
 endif
 
-CREATE_RAW_FS ?= 1
+CREATE_RAW_FS ?= 0
 
 FW_PARTS = /sys/mcuimg.bin:type=boot,src=$(BOOT_BIN),falloc=14336 \
            $(notdir $(BOOT_CFG_0)):type=boot_cfg,src=$(BOOT_CFG_0) \
