@@ -219,7 +219,7 @@ void main_task(void *arg) {
   while (1) {
     mongoose_poll(0);
     cc3200_fs_flush();
-#if SJ_CONSOLE_ENABLE_CLOUD
+#if SJ_ENABLE_CLUBBY
     cc3200_console_cloud_push();
 #endif
     struct sj_event e;

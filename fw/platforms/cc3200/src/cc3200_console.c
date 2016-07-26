@@ -93,6 +93,26 @@ void cc3200_console_cloud_push() {
   if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
   s_cctx.in_console = 0;
 }
+
+void sj_console_cloud_log(const char *fmt, ...) {
+  char *buf = calloc(1, BUFSIZ);
+  if (buf == NULL) return;
+  va_list ap;
+  va_start(ap, fmt);
+  int len = c_vsnprintf(buf, BUFSIZ, fmt, ap);
+  va_end(ap);
+  /* Truncate the message, don't grow the buffer. */
+  if (len > 0) {
+    if (len >= BUFSIZ) len = BUFSIZ - 1;
+    buf[len] = '\n';
+    for (int i = 0; i <= len; i++) cc3200_console_cloud_putc(buf[i]);
+  }
+  free(buf);
+}
+
+int sj_console_is_waiting_for_resp() {
+  return s_cctx.request_in_flight;
+}
 #endif /* SJ_ENABLE_CLUBBY */
 
 #ifdef SJ_ENABLE_JS

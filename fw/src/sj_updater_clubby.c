@@ -11,6 +11,7 @@
 #include "common/cs_file.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_clubby_js.h"
+#include "fw/src/sj_console.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_updater_common.h"
 #include "fw/src/sj_v7_ext.h"
@@ -19,12 +20,6 @@
 
 #ifdef SJ_ENABLE_JS
 #include "v7/v7.h"
-#endif
-
-#ifdef SJ_ENABLE_UPDATER_CONSOLE_LOGGING
-#include "fw/src/sj_console.h"
-#else
-#define CONSOLE_LOG LOG
 #endif
 
 #define UPDATER_TEMP_FILE_NAME "ota_reply.dat"
