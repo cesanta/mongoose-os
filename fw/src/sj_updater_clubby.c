@@ -29,6 +29,9 @@
 
 #define UPDATER_TEMP_FILE_NAME "ota_reply.dat"
 
+struct clubby_event *s_clubby_reply;
+int s_clubby_upd_status;
+
 enum js_update_status {
   UJS_GOT_REQUEST,
   UJS_COMPLETED,
@@ -36,16 +39,11 @@ enum js_update_status {
   UJS_ERROR
 };
 
-#ifdef SJ_ENABLE_JS
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_UPDATER_CLUBBY_API)
 static struct v7 *s_v7;
 static v7_val_t s_updater_notify_cb;
-#endif
-
-struct clubby_event *s_clubby_reply;
-int s_clubby_upd_status;
 
 static int notify_js(enum js_update_status us, const char *info) {
-#ifdef SJ_ENABLE_JS
   if (!v7_is_undefined(s_updater_notify_cb)) {
     if (info == NULL) {
       sj_invoke_cb1(s_v7, s_updater_notify_cb, v7_mk_number(s_v7, us));
@@ -56,13 +54,15 @@ static int notify_js(enum js_update_status us, const char *info) {
 
     return 1;
   }
-#else
-  (void) us;
-  (void) info;
-#endif
-
   return 0;
 }
+#else
+static int notify_js(enum js_update_status us, const char *info) {
+  (void) us;
+  (void) info;
+  return 0;
+}
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_UPDATER_CLUBBY_API) */
 
 static int fill_zip_header(char *buf, size_t buf_size,
                            const struct mg_str file_name, uint32_t file_size,
@@ -384,7 +384,7 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
     goto clean;
   }
 
-  LOG(LL_DEBUG, ("blob url: %.*s blob type: %.*s", blob_url_tok.len,
+  LOG(LL_DEBUG, ("Blob url: %.*s blob type: %.*s", blob_url_tok.len,
                  blob_url_tok.ptr, blob_type_tok.len, blob_type_tok.ptr));
 
   sj_clubby_free_reply(s_clubby_reply);
@@ -403,13 +403,13 @@ static void handle_update_req(struct clubby_event *evt, void *user_data) {
 
   memcpy(blob_url, blob_url_tok.ptr, blob_url_tok.len);
 
+  LOG(LL_INFO, ("HERE"));
   if (!notify_js(UJS_GOT_REQUEST, blob_url)) {
+    LOG(LL_INFO, ("HERE!"));
     enum UPDATE_TYPE ut = utZip;
     if (blob_type_tok.type == JSON_TYPE_STRING &&
         strncmp(blob_type_tok.ptr, "manifest", 8) == 0) {
       ut = utManifest;
-      LOG(LL_DEBUG,
-          ("Update type: %.*s", blob_type_tok.len, blob_type_tok.ptr));
     }
     struct update_context *ctx = updater_context_create(ut);
     if (ctx == NULL) {
@@ -484,7 +484,7 @@ void clubby_updater_finish(int error_code) {
   free(data);
 }
 
-#ifdef SJ_ENABLE_JS
+#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_UPDATER_CLUBBY_API)
 static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
 
@@ -546,6 +546,6 @@ void sj_updater_clubby_js_init(struct v7 *v7) {
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_mk_number(v7, UJS_ERROR));
 }
-#endif /* SJ_ENABLE_JS */
+#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_UPDATER_CLUBBY_API) */
 
 #endif /* defined(SJ_ENABLE_UPDATER_CLUBBY) && defined(SJ_ENABLE_CLUBBY) */
