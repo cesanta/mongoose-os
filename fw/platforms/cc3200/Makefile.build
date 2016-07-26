@@ -259,7 +259,6 @@ include $(REPO_PATH)/fw/src/sys_config.mk
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 
-# TODO(dfrank): Fix V7 pre-compilation
 $(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN)
 	$(Q) rm -f $(FS_STAGING_DIR)/*
 	$(Q) $(foreach f,$(FS_FILES), \
@@ -268,7 +267,7 @@ $(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN)
 ifeq "$(SJ_ENABLE_JS)" "1"
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
 	  echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
-	  cp $(jsbin) $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
+	  $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 endif
 	$(vecho) "MKFS  $@"
 	$(Q) /usr/local/bin/mkspiffs $(FS_SIZE) $(FS_STAGING_DIR) > $@
@@ -361,7 +360,6 @@ $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
-
 
 $(APP_ELF): $(OBJS) $(BUILD_INFO_O)
 
