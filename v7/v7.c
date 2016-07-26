@@ -29671,6 +29671,11 @@ V7_PRIVATE void init_number(struct v7 *v7) {
 extern "C" {
 #endif /* __cplusplus */
 
+#if defined(V7_ALT_JSON_PARSE)
+extern enum v7_err v7_alt_json_parse(struct v7 *v7, v7_val_t json_string,
+                                     v7_val_t *res);
+#endif
+
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
   val_t arg0 = v7_arg(v7, 0);
@@ -29684,7 +29689,13 @@ V7_PRIVATE enum v7_err Json_stringify(struct v7 *v7, v7_val_t *res) {
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Json_parse(struct v7 *v7, v7_val_t *res) {
   v7_val_t arg = v7_arg(v7, 0);
-  return std_eval(v7, arg, V7_UNDEFINED, 1, res);
+  enum v7_err rcode = V7_OK;
+#if defined(V7_ALT_JSON_PARSE)
+  rcode = v7_alt_json_parse(v7, arg, res);
+#else
+  rcode = std_eval(v7, arg, V7_UNDEFINED, 1, res);
+#endif
+  return rcode;
 }
 
 V7_PRIVATE void init_json(struct v7 *v7) {

@@ -319,4 +319,19 @@ void sj_sys_js_init(struct v7 *v7) {
   v7_set(v7, sys, "fs", ~0, fs);
   v7_set_method(v7, fs, "free", Sys_fs_getFreeSpace);
 }
+
+#if defined(SJ_FROZEN_JSON_PARSE)
+enum v7_err v7_alt_json_parse(struct v7 *v7, v7_val_t json_string,
+                              v7_val_t *res) {
+  /*
+   * TODO(dfrank): actual implementation of JSON.parse() on top of Frozen
+   */
+  (void) json_string;
+  *res = v7_mk_object(v7);
+  v7_set(v7, *res, "foo", ~0, v7_mk_number(v7, 123));
+  v7_set(v7, *res, "bar", ~0, v7_mk_number(v7, 456));
+  return V7_OK;
+}
+#endif
+
 #endif /* SJ_ENABLE_JS */
