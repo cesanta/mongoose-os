@@ -150,8 +150,10 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
   struct clubby *clubby = (struct clubby *) evt->context;
   v7_val_t *cbp = (v7_val_t *) user_data;
   v7_val_t resp_obj = V7_UNDEFINED;
+  v7_val_t cb_param = V7_UNDEFINED;
+  v7_own(clubby->v7, &resp_obj);
+  v7_own(clubby->v7, &cb_param);
   enum v7_err res = V7_OK;
-  v7_val_t cb_param;
 
   if (v7_is_undefined(*cbp)) {
     LOG(LL_DEBUG, ("Callback is not set for id=%d", (int) evt->id));
@@ -201,18 +203,16 @@ static void clubby_resp_cb(struct clubby_event *evt, void *user_data) {
     resp_obj = V7_UNDEFINED;
   }
 
-  v7_own(clubby->v7, &resp_obj);
   cb_param = v7_mk_object(clubby->v7);
-  v7_own(clubby->v7, &cb_param);
   if (!v7_is_undefined(resp_obj)) {
     v7_set(clubby->v7, cb_param,
            evt->response.result.type != JSON_TYPE_INVALID ? "result" : "error",
            ~0, resp_obj);
   }
   sj_invoke_cb1(clubby->v7, *cbp, cb_param);
+clean:
   v7_disown(clubby->v7, &resp_obj);
   v7_disown(clubby->v7, &cb_param);
-clean:
   v7_disown(clubby->v7, cbp);
   free(cbp);
 }
