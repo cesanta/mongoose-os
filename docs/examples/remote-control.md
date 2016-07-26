@@ -18,9 +18,9 @@ See "Cloud Overview" section for more information.
     ```javascript
     console.log('Hello from device control tutorial!');
 
-    clubby.oncmd('Command1', function(data, done) {
+    clubby.oncmd('/Command1', function(data, done) {
       console.log('Received command: ', data.args);
-      done();
+      done("my reply");
     });
     ```
 
