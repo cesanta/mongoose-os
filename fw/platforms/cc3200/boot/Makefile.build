@@ -98,7 +98,7 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary --remove-section=.relocator $< $@.main.bin
 	$(Q) cat $@.reloc.bin $@.main.bin > $@
 	$(Q) rm $@.reloc.bin $@.main.bin
-	@echo "    Code size: $$(ls -l $@ | awk '{print $$5}')"
+	@echo "    Boot code size: $$(ls -l $@ | awk '{print $$5}')"
 
 $(APP_ELF): $(OBJS) $(BUILD_INFO_O)
 

@@ -98,6 +98,8 @@ static void crlflf() {
   MAP_UARTCharPut(CONSOLE_UART, '\n');
 }
 
+extern uint32_t _text_start; /* Our location. */
+
 int main() {
   MAP_IntVTableBaseSet((unsigned long) &int_vectors[0]);
   MAP_IntMasterEnable();
@@ -128,6 +130,14 @@ int main() {
   uart_puts(cfg.app_image_file);
   MAP_UARTCharPut(CONSOLE_UART, '@');
   print_addr(cfg.app_load_addr);
+
+  /*
+   * Zero memory before loading.
+   * This should provide proper initialisation for BSS, wherever it is.
+   */
+  uint32_t *pstart = (uint32_t *) 0x20000000;
+  uint32_t *pend = (&_text_start - 0x100 /* our stack */);
+  for (uint32_t *p = pstart; p < pend; p++) *p = 0;
 
   if (load_image(cfg.app_image_file, (_u8 *) cfg.app_load_addr) != 0) {
     abort();

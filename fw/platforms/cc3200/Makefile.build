@@ -23,7 +23,7 @@ RAM_SIZE = 0x40000
 BOOT_LOADER_SIZE = 0x4000
 # SLFS being what it is, we always produce code image of maximum size
 # to ensure OTA works when code size increases.
-CC3200_PADDED_IMAGE_SIZE ?= $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x2800)))
+CC3200_PADDED_IMAGE_SIZE ?= $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x1000)))
 
 SDK_PATH ?= /cc3200-sdk
 REPO_PATH ?= ../../..
@@ -53,6 +53,8 @@ FS_SIZE ?= 98304
 FS_BLOCK_SIZE ?= 4096
 FS_PAGE_SIZE ?= 256
 FS_ERASE_SIZE ?= 4096
+FS_META_SIZE = 64
+FS_IMAGE_SIZE = $(shell echo $$(($(FS_SIZE) + $(FS_META_SIZE))))
 
 # With safe code update, new code image is written to a different file on update
 # making it possible to safely revert the update.
@@ -225,17 +227,17 @@ endif
 
 CREATE_RAW_FS ?= 1
 
-FW_PARTS = /sys/mcuimg.bin:type=boot,src=$(BOOT_BIN) \
-           $(notdir $(BOOT_CFG_0)):type=boot_cfg,src=$(BOOT_CFG_0),type=boot_cfg \
-           $(notdir $(BOOT_CFG_1)):type=boot_cfg,src=$(BOOT_CFG_1),type=boot_cfg \
-           $(notdir $(APP_BIN)).0:src=$(APP_BIN),type=app,load_addr=$(APP_ORG) \
+FW_PARTS = /sys/mcuimg.bin:type=boot,src=$(BOOT_BIN),falloc=14336 \
+           $(notdir $(BOOT_CFG_0)):type=boot_cfg,src=$(BOOT_CFG_0) \
+           $(notdir $(BOOT_CFG_1)):type=boot_cfg,src=$(BOOT_CFG_1) \
+           $(notdir $(APP_BIN)).0:type=app,src=$(APP_BIN),falloc=$(CC3200_PADDED_IMAGE_SIZE),load_addr=$(APP_ORG) \
            spiffs.img.0.0:type=fs,src=$(FS_IMG),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
-           spiffs.img.0.1:type=slfile,src=$(FS_EMPTY_IMG) \
-           spiffs.img.1.0:type=slfile,src=$(FS_EMPTY_IMG) \
+           spiffs.img.0.1:type=slfile,falloc=$(FS_IMAGE_SIZE) \
+           spiffs.img.1.0:type=slfile,falloc=$(FS_IMAGE_SIZE) \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
 
 ifneq "$(CC3200_SP_FILE)" ""
-  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),sign=$(notdir $(CC3200_SP_FILE)).sign \
+  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),falloc=60416,sign=$(notdir $(CC3200_SP_FILE)).sign \
               $(notdir $(CC3200_SP_FILE)).sign:type=signature,src=$(CC3200_SP_FILE).sign
 endif
 
@@ -244,7 +246,7 @@ ifeq "$(CREATE_RAW_FS)" "1"
 endif
 
 ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"
-  FW_PARTS += $(notdir $(APP_BIN)).1:type=slfile,src=$(APP_BIN)
+  FW_PARTS += $(notdir $(APP_BIN)).1:type=slfile,falloc=$(CC3200_PADDED_IMAGE_SIZE)
   MGIOT_CFLAGS += -DCC3200_SAFE_CODE_UPDATE=1
 endif
 include $(REPO_PATH)/common/scripts/fw_meta.mk
@@ -357,13 +359,9 @@ $(BOOT_CFG_1): $(MK_BOOT_CFG_BIN)
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"
-	$(Q) $(OBJCOPY) -O binary $< $@.tmp
-	$(Q) CODE_SIZE=$$(ls -l $@.tmp | awk '{print $$5}') && \
-	  PADDING_SIZE=$$(($(CC3200_PADDED_IMAGE_SIZE) - $$CODE_SIZE)) && \
-	  echo "     Code size: $$CODE_SIZE, padding size: $$PADDING_SIZE" && \
-	  dd if=/dev/zero bs=1024 count=$$(($$PADDING_SIZE / 1024)) >> $@.tmp 2>/dev/null && \
-	  dd if=/dev/zero bs=1 count=$$(($$PADDING_SIZE % 1024)) >> $@.tmp 2>/dev/null
-	$(Q) mv $@.tmp $@
+	$(Q) $(OBJCOPY) -O binary $< $@
+	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
+
 
 $(APP_ELF): $(OBJS) $(BUILD_INFO_O)
 
