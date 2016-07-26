@@ -112,17 +112,17 @@ SJ_PRIVATE enum v7_err GPIO_setMode(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
   v7_val_t modev = v7_arg(v7, 1);
   v7_val_t pullv = v7_arg(v7, 2);
-  int pin, mode, pull;
+  int pin = v7_get_double(v7, pinv);
+  int mode = v7_get_double(v7, modev);
 
-  if (!v7_is_number(pinv) || !v7_is_number(modev) || !v7_is_number(pullv)) {
-    printf("Invalid arguments\n");
-    *res = V7_UNDEFINED;
-  } else {
-    pin = v7_get_double(v7, pinv);
-    mode = v7_get_double(v7, modev);
-    pull = v7_get_double(v7, pullv);
+  if (v7_is_number(pinv) && v7_is_number(modev) &&
+      (mode == GPIO_MODE_OUTPUT || v7_is_number(pullv))) {
+    int pull = GPIO_PULL_FLOAT;
+    if (mode != GPIO_MODE_OUTPUT) pull = v7_get_double(v7, pullv);
     *res = v7_mk_boolean(v7, sj_gpio_set_mode(pin, (enum gpio_mode) mode,
                                               (enum gpio_pull_type) pull) == 0);
+  } else {
+    return v7_throwf(v7, "Error", "Invalid arguments");
   }
 
   return V7_OK;
