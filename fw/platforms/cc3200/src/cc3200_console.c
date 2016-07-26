@@ -24,6 +24,7 @@
 
 struct console_ctx {
   struct mbuf buf;
+  unsigned int initialized : 1;
   unsigned int msg_in_progress : 1;
   unsigned int request_in_flight : 1;
   unsigned int in_console : 1;
@@ -37,7 +38,7 @@ int cc3200_console_next_msg_len() {
 }
 
 void cc3200_console_cloud_putc(char c) {
-  if (s_cctx.in_console) return;
+  if (s_cctx.in_console || !s_cctx.initialized) return;
   s_cctx.in_console = 1;
   /* If console is overfull, drop old message(s). */
   int max_buf = get_cfg()->console.mem_cache_size;
@@ -75,7 +76,7 @@ void clubby_cb(struct clubby_event *evt, void *user_data) {
 }
 
 void cc3200_console_cloud_push() {
-  if (s_cctx.buf.len == 0) return;
+  if (s_cctx.buf.len == 0 || !s_cctx.initialized) return;
   int l = cc3200_console_next_msg_len();
   if (l == 0) return;  // Only send full messages.
   struct clubby *c = sj_clubby_get_global();
@@ -163,6 +164,9 @@ void sj_console_js_init(struct v7 *v7) {
 #endif /* SJ_ENABLE_JS */
 
 void sj_console_init() {
+#ifdef SJ_ENABLE_CLUBBY
+  s_cctx.initialized = 1;
+#endif
 }
 
 void cc3200_console_putc(int fd, char c) {
