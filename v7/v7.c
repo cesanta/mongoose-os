@@ -15669,6 +15669,10 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
  */
 #if 0
       assert(fr == 0);
+#else
+      if (fr) {
+        fr = 0;
+      }
 #endif
     } else {
 /* Maybe regular JavaScript source or binary AST data */
