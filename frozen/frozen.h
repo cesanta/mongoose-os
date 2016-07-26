@@ -29,6 +29,7 @@ extern "C" {
 #include <stdio.h>
 
 enum json_token_type {
+  JSON_TYPE_INVALID = 0, /* memsetting to 0 should create INVALID value */
   JSON_TYPE_STRING,
   JSON_TYPE_NUMBER,
   JSON_TYPE_TRUE,
@@ -41,8 +42,6 @@ enum json_token_type {
 
   JSON_TYPES_CNT,
 };
-
-#define JSON_TYPE_INVALID JSON_TYPES_CNT
 
 struct json_token {
   const char *ptr;           /* Points to the beginning of the value */
