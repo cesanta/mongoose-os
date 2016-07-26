@@ -6,10 +6,12 @@ COMMON_V7_FEATURES = \
     -DV7_ENABLE__Function__bind=1 \
     -DV7_ENABLE__Function__call=1 \
     -DV7_ENABLE__Math=1 \
+    -DV7_ENABLE__Math__ceil=1 \
+    -DV7_ENABLE__Math__floor=1 \
     -DV7_ENABLE__Math__max=1 \
     -DV7_ENABLE__Math__min=1 \
     -DV7_ENABLE__Math__random=1 \
-    -DV7_ENABLE__Math__round \
+    -DV7_ENABLE__Math__round=1 \
     -DV7_ENABLE__Memory__stats=1 \
     -DV7_ENABLE__Proxy=1
 
