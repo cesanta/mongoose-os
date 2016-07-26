@@ -1,7 +1,13 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "fw/src/sj_updater_common.h"
 
 #include <strings.h>
 
+#include "common/cs_crc32.h"
 #include "common/spiffs/spiffs.h"
 
 #include "fw/src/sj_hal.h"
@@ -41,9 +47,6 @@ enum update_status {
   US_FINALIZE,
   US_FINISHED,
 };
-
-/* From miniz */
-uint32_t mz_crc32(uint32_t crc, const char *ptr, size_t buf_len);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -312,8 +315,8 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
         }
 
         if (ctx->current_file.crc != 0 &&
-            mz_crc32(0, ctx->data, ctx->current_file.fi.size) !=
-                ctx->current_file.crc) {
+            cs_crc32(0, (const uint8_t *) ctx->data,
+                     ctx->current_file.fi.size) != ctx->current_file.crc) {
           ctx->status_msg = "Invalid CRC";
           return -1;
         }
@@ -390,8 +393,9 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           ctx->status_msg = sj_upd_get_status_msg(ctx->dev_ctx);
           return num_processed;
         } else if (num_processed > 0) {
-          ctx->current_file.crc_current = mz_crc32(
-              ctx->current_file.crc_current, to_process.p, num_processed);
+          ctx->current_file.crc_current =
+              cs_crc32(ctx->current_file.crc_current,
+                       (const uint8_t *) to_process.p, num_processed);
           context_remove_data(ctx, num_processed);
           ctx->current_file.fi.processed += num_processed;
         }

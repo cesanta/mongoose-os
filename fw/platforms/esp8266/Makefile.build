@@ -97,9 +97,8 @@ SJ_SRCS = cs_rbuf.c \
           sj_wifi.c \
           sj_mongoose.c \
           sj_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-          miniz.c \
           sj_utils.c \
-          sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+          cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
           rboot-bigflash.c rboot-api.c \
           json_utils.c
 

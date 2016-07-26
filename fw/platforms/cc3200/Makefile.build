@@ -145,7 +145,7 @@ SJ_SRCS = sj_init.c \
           sj_wifi.c \
           sj_config.c sj_sys_config.c \
           $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-          miniz.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+          cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
           sj_utils.c \
           clubby_proto.c \
           sj_clubby.c \

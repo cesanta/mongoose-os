@@ -20,9 +20,6 @@ enum sj_init_result sj_init() {
 #endif
 #endif
 
-#ifdef SJ_ENABLE_UPDATER_POST
-  sj_updater_post_init();
-#endif
   sj_console_init(); /* After clubby_init */
 
   r = sj_sys_config_init_platform(get_cfg());
@@ -30,6 +27,10 @@ enum sj_init_result sj_init() {
 
   r = sj_sys_config_init_http(&get_cfg()->http);
   if (r != SJ_INIT_OK) return r;
+
+#ifdef SJ_ENABLE_UPDATER_POST
+  sj_updater_post_init(); /* After HTTP init */
+#endif
 
   if (sj_app_init() != MG_APP_INIT_SUCCESS) {
     return SJ_INIT_APP_INIT_FAILED;
