@@ -14,6 +14,9 @@
 #include "v7/v7.h"
 #include "fw/src/sj_hal.h"
 #include "sj_common.h"
+#include "frozen/frozen.h"
+#include "common/cs_strtod.h"
+#include "assert.h"
 
 static enum v7_err Sys_prof(struct v7 *v7, v7_val_t *res) {
   *res = v7_mk_object(v7);
@@ -321,16 +324,168 @@ void sj_sys_js_init(struct v7 *v7) {
 }
 
 #if defined(SJ_FROZEN_JSON_PARSE)
+
+/*
+ * JSON parsing frame: a separate frame is allocated for each nested
+ * object/array during parsing
+ */
+struct json_parse_frame {
+  v7_val_t val;
+  struct json_parse_frame *up;
+};
+
+/*
+ * Context for JSON parsing by means of json_walk()
+ */
+struct json_parse_ctx {
+  struct v7 *v7;
+  v7_val_t result;
+  struct json_parse_frame *frame;
+};
+
+/* Allocate JSON parse frame */
+static struct json_parse_frame *alloc_json_frame(struct json_parse_ctx *ctx,
+                                                 v7_val_t v) {
+  struct json_parse_frame *frame =
+      (struct json_parse_frame *) calloc(sizeof(struct json_parse_frame), 1);
+  frame->val = v;
+  v7_own(ctx->v7, &frame->val);
+  return frame;
+}
+
+/* Free JSON parse frame, return the previous one (which may be NULL) */
+static struct json_parse_frame *free_json_frame(
+    struct json_parse_ctx *ctx, struct json_parse_frame *frame) {
+  struct json_parse_frame *up = frame->up;
+  v7_disown(ctx->v7, &frame->val);
+  free(frame);
+  return up;
+}
+
+/* Callback for json_walk() */
+static void frozen_cb(void *data, const char *name, size_t name_len,
+                      const char *path, const struct json_token *token) {
+  struct json_parse_ctx *ctx = (struct json_parse_ctx *) data;
+  v7_val_t v = V7_UNDEFINED;
+
+  (void) path;
+
+  v7_own(ctx->v7, &v);
+
+  switch (token->type) {
+    case JSON_TYPE_STRING:
+      v = v7_mk_string(ctx->v7, token->ptr, token->len, 1 /* copy */);
+      break;
+    case JSON_TYPE_NUMBER:
+      v = v7_mk_number(ctx->v7, cs_strtod(token->ptr, NULL));
+      break;
+    case JSON_TYPE_TRUE:
+      v = v7_mk_boolean(ctx->v7, 1);
+      break;
+    case JSON_TYPE_FALSE:
+      v = v7_mk_boolean(ctx->v7, 0);
+      break;
+    case JSON_TYPE_NULL:
+      v = V7_NULL;
+      break;
+    case JSON_TYPE_OBJECT_START:
+      v = v7_mk_object(ctx->v7);
+      break;
+    case JSON_TYPE_ARRAY_START:
+      v = v7_mk_array(ctx->v7);
+      break;
+
+    case JSON_TYPE_OBJECT_END:
+    case JSON_TYPE_ARRAY_END: {
+      /* Object or array has finished: deallocate its frame */
+      ctx->frame = free_json_frame(ctx, ctx->frame);
+    } break;
+
+    default:
+      LOG(LL_ERROR, ("Wrong token type %d\n", token->type));
+      break;
+  }
+
+  if (!v7_is_undefined(v)) {
+    if (name != NULL && name_len != 0) {
+      /* Need to define a property on the current object/array */
+      if (v7_is_object(ctx->frame->val)) {
+        v7_set(ctx->v7, ctx->frame->val, name, name_len, v);
+      } else if (v7_is_array(ctx->v7, ctx->frame->val)) {
+        /*
+         * TODO(dfrank): consult name_len. Currently it's not a problem due to
+         * the implementation details of frozen, but it might change
+         */
+        int idx = (int) cs_strtod(name, NULL);
+        v7_array_set(ctx->v7, ctx->frame->val, idx, v);
+      } else {
+        LOG(LL_ERROR, ("Current value is neither object nor array\n"));
+      }
+    } else {
+      /* This is a root value */
+      assert(ctx->frame == NULL);
+
+      /*
+       * This value will also be the overall result of JSON parsing
+       * (it's already owned by the `v7_alt_json_parse()`)
+       */
+      ctx->result = v;
+    }
+
+    if (token->type == JSON_TYPE_OBJECT_START ||
+        token->type == JSON_TYPE_ARRAY_START) {
+      /* New object or array has just started, so we need to allocate a frame
+       * for it */
+      struct json_parse_frame *new_frame = alloc_json_frame(ctx, v);
+      new_frame->up = ctx->frame;
+      ctx->frame = new_frame;
+    }
+  }
+
+  v7_disown(ctx->v7, &v);
+}
+
+/*
+ * Alternative implementation of JSON.parse(), needed when v7 parser is
+ * disabled
+ */
 enum v7_err v7_alt_json_parse(struct v7 *v7, v7_val_t json_string,
                               v7_val_t *res) {
-  /*
-   * TODO(dfrank): actual implementation of JSON.parse() on top of Frozen
-   */
-  (void) json_string;
-  *res = v7_mk_object(v7);
-  v7_set(v7, *res, "foo", ~0, v7_mk_number(v7, 123));
-  v7_set(v7, *res, "bar", ~0, v7_mk_number(v7, 456));
-  return V7_OK;
+  struct json_parse_ctx *ctx =
+      (struct json_parse_ctx *) calloc(sizeof(struct json_parse_ctx), 1);
+  size_t len;
+  const char *str = v7_get_string(v7, &json_string, &len);
+  int json_res;
+  enum v7_err rcode = V7_OK;
+
+  ctx->v7 = v7;
+  ctx->result = V7_UNDEFINED;
+  ctx->frame = NULL;
+
+  v7_own(v7, &ctx->result);
+
+  json_res = json_walk(str, len, frozen_cb, ctx);
+
+  if (json_res >= 0) {
+    /* Expression is parsed successfully */
+    *res = ctx->result;
+
+    /* There should be no allocated frames */
+    assert(ctx->frame == NULL);
+  } else {
+    /* There was an error during parsing */
+    rcode = v7_throwf(v7, "SyntaxError", "Invalid JSON string");
+
+    /* There might be some allocated frames in case of malformed JSON */
+    while (ctx->frame != NULL) {
+      ctx->frame = free_json_frame(ctx, ctx->frame);
+    }
+  }
+
+  v7_disown(v7, &ctx->result);
+  free(ctx);
+
+  return rcode;
 }
 #endif
 
