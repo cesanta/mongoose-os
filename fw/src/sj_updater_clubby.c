@@ -165,7 +165,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
 
         mbuf_remove(io, io->len);
 
-        if (ctx->update_type == utManifest &&
+        if (res >= 0 && ctx->update_type == utManifest &&
             ctx->file_size == ctx->file_procesed) {
           LOG(LL_DEBUG, ("%s fetched succesfully", ctx->file_name));
           sj_upd_complete_file_update(ctx->dev_ctx, ctx->file_name);
@@ -232,7 +232,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         LOG(LL_DEBUG, ("Connection for %s is closed", ctx->file_name));
 
         if (ctx->update_type == utManifest &&
-            ctx->file_size == ctx->file_procesed && !is_update_finished(ctx)) {
+            ctx->file_size == ctx->file_procesed && !is_update_finished(ctx) &&
+            ctx->status_msg == NULL) {
           /*
            * If type=utManifest and file is fully fetched and
            * update status ! FINISHED it means nothing, but time for next file
@@ -241,9 +242,10 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         }
 
         if (!is_update_finished(ctx)) {
-          /* Connection was terminated by server */
+          /* Update failed or connection was terminated by server */
           notify_js(UJS_ERROR, NULL);
-          sj_clubby_send_status_resp(s_clubby_reply, 1, "Update failed");
+          if (ctx->status_msg == NULL) ctx->status_msg = "Update fauled";
+          sj_clubby_send_status_resp(s_clubby_reply, 1, ctx->status_msg);
         } else if (is_reboot_required(ctx) && !notify_js(UJS_COMPLETED, NULL)) {
           /*
            * Conection is closed by updater, rebooting if required
@@ -438,7 +440,9 @@ clean:
     free(blob_url);
   }
   CONSOLE_LOG(LL_ERROR, ("Failed to start update: %s", reply));
-  sj_clubby_send_status_resp(evt, 1, reply);
+  struct clubby_event *revt = sj_clubby_create_reply(evt);
+  sj_clubby_send_status_resp(revt, -1, reply);
+  sj_clubby_free_reply(revt);
 }
 
 /*
