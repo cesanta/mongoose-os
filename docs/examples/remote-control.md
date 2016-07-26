@@ -19,8 +19,8 @@ See "Cloud Overview" section for more information.
     console.log('Hello from device control tutorial!');
 
     clubby.oncmd('/Command1', function(data, done) {
-      console.log('Received command: ', data.args);
-      done("my reply");
+      console.log('Received command: ', data.args);  // Print params
+      done({msg: 'hi'});  // Result to be sent to the caller
     });
     ```
 
