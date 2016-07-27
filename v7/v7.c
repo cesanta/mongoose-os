@@ -2582,6 +2582,8 @@ void v7_set_destructor_cb(struct v7 *v7, v7_val_t obj, v7_destructor_cb_t *d);
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 enum v7_tok {
   TOK_END_OF_INPUT,
   TOK_NUMBER,
@@ -2709,6 +2711,8 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
+
+#endif /* V7_NO_COMPILER */
 
 #endif /* CS_V7_SRC_TOKENIZER_H_ */
 #ifdef V7_MODULE_LINES
@@ -5552,7 +5556,6 @@ V7_PRIVATE const char *bcode_get_filename(struct bcode *bcode);
  */
 V7_PRIVATE void bcode_copy_filename_from(struct bcode *dst, struct bcode *src);
 
-#ifndef V7_NO_FS
 /*
  * Serialize a bcode structure.
  *
@@ -5560,11 +5563,15 @@ V7_PRIVATE void bcode_copy_filename_from(struct bcode *dst, struct bcode *src);
  * the serialization logic in `bcode_op_lit()`.
  *
  * The root bcode looks just like a regular function.
+ *
+ * This function is used only internally, but used in a complicated mix of
+ * configurations, hence the commented V7_PRIVATE
  */
-V7_PRIVATE void bcode_serialize(struct v7 *v7, struct bcode *bcode, FILE *f);
+/*V7_PRIVATE*/ void bcode_serialize(struct v7 *v7, struct bcode *bcode,
+                                    FILE *f);
+
 V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
                                   const char *data);
-#endif
 
 #ifdef V7_BCODE_DUMP
 V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *, struct bcode *);
@@ -5651,10 +5658,14 @@ V7_PRIVATE void bcode_push_lit(struct bcode_builder *bbuilder, lit_t lit);
  * `bcode->ops.buf`. If `idx` is provided, it should point to the index at
  * which new name should be inserted; and it is updated by the
  * `bcode_add_name()` to point right after newly added name.
+ *
+ * This function is used only internally, but used in a complicated mix of
+ * configurations, hence the commented V7_PRIVATE
  */
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err bcode_add_name(struct bcode_builder *bbuilder,
-                                      const char *p, size_t len, size_t *idx);
+    /*V7_PRIVATE*/ enum v7_err
+    bcode_add_name(struct bcode_builder *bbuilder, const char *p, size_t len,
+                   size_t *idx);
 
 /*
  * Takes a pointer to the beginning of `ops` buffer and names count, returns
@@ -5662,8 +5673,11 @@ V7_PRIVATE enum v7_err bcode_add_name(struct bcode_builder *bbuilder,
  *
  * It takes two distinct arguments instead of just `struct bcode` pointer,
  * because during bcode building `ops` is stored in builder.
+ *
+ * This function is used only internally, but used in a complicated mix of
+ * configurations, hence the commented V7_PRIVATE
  */
-V7_PRIVATE char *bcode_end_names(char *ops, size_t names_cnt);
+/*V7_PRIVATE*/ char *bcode_end_names(char *ops, size_t names_cnt);
 
 /*
  * Given a pointer to `ops` (which should be `bcode->ops` or a pointer returned
@@ -5683,12 +5697,18 @@ V7_PRIVATE char *bcode_next_name(char *ops, char **pname, size_t *plen);
  */
 V7_PRIVATE char *bcode_next_name_v(struct v7 *v7, struct bcode *bcode,
                                    char *ops, val_t *res);
+
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode_builder *bbuilder);
+
 V7_PRIVATE bcode_off_t bcode_add_target(struct bcode_builder *bbuilder);
-V7_PRIVATE bcode_off_t
-bcode_op_target(struct bcode_builder *bbuilder, uint8_t op);
-V7_PRIVATE void bcode_patch_target(struct bcode_builder *bbuilder,
-                                   bcode_off_t label, bcode_off_t target);
+/*
+ * This function is used only internally, but used in a complicated mix of
+ * configurations, hence the commented V7_PRIVATE
+ */
+/*V7_PRIVATE*/ bcode_off_t bcode_op_target(struct bcode_builder *bbuilder,
+                                           uint8_t op);
+/*V7_PRIVATE*/ void bcode_patch_target(struct bcode_builder *bbuilder,
+                                       bcode_off_t label, bcode_off_t target);
 
 V7_PRIVATE void bcode_add_varint(struct bcode_builder *bbuilder, size_t value);
 /*
@@ -11060,6 +11080,8 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 
+#if !defined(V7_NO_COMPILER)
+
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
  * for function get_tok() for rationale for that.
@@ -11545,6 +11567,8 @@ int main(void) {
   return 0;
 }
 #endif
+
+#endif /* V7_NO_COMPILER */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/ast.c"
 #endif
@@ -13110,8 +13134,9 @@ V7_PRIVATE void bcode_push_lit(struct bcode_builder *bbuilder, lit_t lit) {
 }
 
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err bcode_add_name(struct bcode_builder *bbuilder,
-                                      const char *p, size_t len, size_t *idx) {
+    /*V7_PRIVATE*/ enum v7_err
+    bcode_add_name(struct bcode_builder *bbuilder, const char *p, size_t len,
+                   size_t *idx) {
   enum v7_err rcode = V7_OK;
   int llen;
   size_t ops_index;
@@ -13165,7 +13190,7 @@ V7_PRIVATE enum v7_err bcode_add_name(struct bcode_builder *bbuilder,
   return rcode;
 }
 
-V7_PRIVATE char *bcode_end_names(char *ops, size_t names_cnt) {
+/*V7_PRIVATE*/ char *bcode_end_names(char *ops, size_t names_cnt) {
   while (names_cnt--) {
     ops = bcode_next_name(ops, NULL, NULL);
   }
@@ -13224,19 +13249,31 @@ V7_PRIVATE bcode_off_t bcode_add_target(struct bcode_builder *bbuilder) {
   return pos;
 }
 
-/* Appends an op requiring a branch target. See bcode_add_target. */
-V7_PRIVATE bcode_off_t
-bcode_op_target(struct bcode_builder *bbuilder, uint8_t op) {
+/*
+ * Appends an op requiring a branch target. See bcode_add_target.
+ *
+ * This function is used only internally, but used in a complicated mix of
+ * configurations, hence the commented V7_PRIVATE
+ */
+/*V7_PRIVATE*/ bcode_off_t bcode_op_target(struct bcode_builder *bbuilder,
+                                           uint8_t op) {
   bcode_op(bbuilder, op);
   return bcode_add_target(bbuilder);
 }
 
-V7_PRIVATE void bcode_patch_target(struct bcode_builder *bbuilder,
-                                   bcode_off_t label, bcode_off_t target) {
+/*V7_PRIVATE*/ void bcode_patch_target(struct bcode_builder *bbuilder,
+                                       bcode_off_t label, bcode_off_t target) {
   memcpy(bbuilder->ops.buf + label, &target, sizeof(target));
 }
 
-#ifndef V7_NO_FS
+/*V7_PRIVATE*/ void bcode_serialize(struct v7 *v7, struct bcode *bcode,
+                                    FILE *out) {
+  (void) v7;
+  (void) bcode;
+
+  fwrite(BIN_BCODE_SIGNATURE, sizeof(BIN_BCODE_SIGNATURE), 1, out);
+  bcode_serialize_func(v7, bcode, out);
+}
 
 static void bcode_serialize_varint(int n, FILE *out) {
   unsigned char buf[8];
@@ -13273,14 +13310,6 @@ static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode,
   vec = &bcode->ops;
   bcode_serialize_varint(vec->len, out);
   fwrite(vec->p, vec->len, 1, out);
-}
-
-V7_PRIVATE void bcode_serialize(struct v7 *v7, struct bcode *bcode, FILE *out) {
-  (void) v7;
-  (void) bcode;
-
-  fwrite(BIN_BCODE_SIGNATURE, sizeof(BIN_BCODE_SIGNATURE), 1, out);
-  bcode_serialize_func(v7, bcode, out);
 }
 
 static size_t bcode_deserialize_varint(const char **data) {
@@ -13337,8 +13366,6 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
                                   const char *data) {
   data = bcode_deserialize_func(v7, bcode, data);
 }
-
-#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/eval.c"
 #endif
