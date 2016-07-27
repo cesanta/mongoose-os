@@ -22,7 +22,7 @@ RESTful service that allows to test or debug RESTful interfaces.
     });
 
     c.on('message', function(topic, message) {
-      console.log("MQTT message: ", topic, ' - [', topic, ']');
+      console.log("MQTT message: ", topic, ' - [', message, ']');
     });
 
     c.on('connect', function() {
