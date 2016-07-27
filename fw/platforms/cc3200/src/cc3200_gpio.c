@@ -31,7 +31,7 @@
  * For pin functions, see tables 16-6 and 16-7 of the TRM (p. 482)
  *
  * Pins 20 and 45 have the GPIO function but are not listed as available
- * in table 16-6.
+ * in table 16-6. Nevertheless, pin 45 seems to be working fine.
  * Pin 52 / GPIO32 is an output-only and is only available when not using
  * 32 KHz crystal. It is also the only GPIO in block 5, so we exclude it.
  */
@@ -42,7 +42,7 @@ static signed char s_pin_to_gpio_map[64] = {
   -1, -1, -1, -1, 22, 23, 24, 28, -1, -1,
   25, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1,  0,
+  -1, -1, -1, -1, 31, -1, -1, -1, -1,  0,
   -1, -1, 30, -1,  1, -1,  2,  3,  4,  5,
    6,  7,  8,  9
 };
@@ -50,7 +50,7 @@ static signed char s_gpio_to_pin_map[32] = {
   50, 55, 57, 58, 59, 60, 61, 62, 63, 64,
    1,  2,  3,  4,  5,  6,  7,  8, -1, -1,
   -1, -1, 15, 16, 17, 21, -1, -1, 18, -1,
-  53, -1
+  53, 45
 };
 /* clang-format on */
 
