@@ -405,16 +405,10 @@ $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(BUILD_DIR)/fr.dump: $(MGIOT_POSIX_BIN)
-	$(vecho) "V7_FREEZE"
-	$(Q) $(MGIOT_POSIX_BIN) -freeze $@
-
-$(BUILD_DIR)/fr.sym: $(MGIOT_POSIX_BIN)
-	$(vecho) "$(MGIOT_POSIX_BIN)"
-	$(Q) @nm $(MGIOT_POSIX_BIN) > $@
-
-$(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
-	$(vecho) "GEN   fr.c"
+$(BUILD_DIR)/fr.c: $(MGIOT_POSIX_BIN)
+	$(vecho) "GEN   $@"
+	$(Q) $(MGIOT_POSIX_BIN) -freeze $(BUILD_DIR)/fr.dump
+	$(Q) @nm $(MGIOT_POSIX_BIN) > $(BUILD_DIR)/fr.sym
 	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
 
 # Generate linker script.

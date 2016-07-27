@@ -381,16 +381,10 @@ $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
                 $(APP_SLFS_PATH) $(SLFS_FILES) ${FS_FILES} ${JSBIN_SRCS}
 
-$(BUILD_DIR)/fr.dump: $(MGIOT_POSIX_BIN)
-	$(vecho) "V7_FREEZE"
-	$(Q) $(MGIOT_POSIX_BIN) -freeze $@
-
-$(BUILD_DIR)/fr.sym: $(MGIOT_POSIX_BIN)
-	$(vecho) "$(MGIOT_POSIX_BIN)"
-	$(Q) @nm $(MGIOT_POSIX_BIN) > $@
-
-$(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
-	$(vecho) "GEN   fr.c"
+$(BUILD_DIR)/fr.c: $(MGIOT_POSIX_BIN)
+	$(vecho) "GEN   $@"
+	$(Q) $(MGIOT_POSIX_BIN) -freeze $(BUILD_DIR)/fr.dump
+	$(Q) @nm $(MGIOT_POSIX_BIN) > $(BUILD_DIR)/fr.sym
 	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
 
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
