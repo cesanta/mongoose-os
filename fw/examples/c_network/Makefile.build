@@ -3,5 +3,6 @@ REPO_PATH = ../../..
 APP_MODULES = src
 SJ_ENABLE_JS = 0
 SJ_ENABLE_CLUBBY = 1
+APP_CFLAGS = -DSJ_ENABLE_UPDATER_POST
 
 include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
