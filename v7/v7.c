@@ -6690,7 +6690,7 @@ int slre_get_flags(struct slre_prog *);
 extern "C" {
 #endif /* __cplusplus */
 
-V7_PRIVATE void init_stdlib(struct v7 *v7);
+/*V7_PRIVATE*/ void init_stdlib(struct v7 *v7);
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
@@ -26248,7 +26248,13 @@ V7_PRIVATE enum v7_err Std_exit(struct v7 *v7, v7_val_t *res) {
 }
 #endif
 
-V7_PRIVATE void init_stdlib(struct v7 *v7) {
+/*
+ * Initialize standard library.
+ *
+ * This function is used only internally, but used in a complicated mix of
+ * configurations, hence the commented V7_PRIVATE
+ */
+/*V7_PRIVATE*/ void init_stdlib(struct v7 *v7) {
   v7_prop_attr_desc_t attr_internal =
       (V7_DESC_ENUMERABLE(0) | V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0));
 

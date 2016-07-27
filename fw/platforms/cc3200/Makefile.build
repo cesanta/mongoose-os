@@ -17,6 +17,9 @@ APP_EXTRA_SRCS ?=
 SJ_ENABLE_JS ?= 1
 SJ_ENABLE_CLUBBY ?= 1
 
+V7_FREEZE ?= 0
+V7_NO_COMPILER ?= 0
+
 TOOLCHAIN ?= /opt/ti-cgt-arm_5.2.7
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
@@ -38,6 +41,9 @@ FROZEN_PATH ?= $(REPO_PATH)/frozen
 BOOT_PATH ?= $(MGIOT_CC3200_PATH)/boot
 
 BUILD_DIR ?= $(CURDIR)/.build
+MGIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
+MGIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
+MGIOT_POSIX_BIN = $(MGIOT_POSIX_BIN_DIR)/mongoose-iot
 FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
 FW_DIR = $(CURDIR)/firmware
 BOOT_BUILD_DIR = $(BUILD_DIR)/boot
@@ -60,6 +66,7 @@ FS_IMAGE_SIZE = $(shell echo $$(($(FS_SIZE) + $(FS_META_SIZE))))
 # making it possible to safely revert the update.
 CC3200_SAFE_CODE_UPDATE ?= 1
 
+MGIOT_POSIX_PATH ?= $(MGIOT_PATH)/platforms/posix
 MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
 COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
@@ -95,9 +102,26 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_DISABLE_LINE_NUMBERS \
                -DV7_DISABLE_FILENAMES \
                -DV7_ENABLE_FILE \
-               -DDISABLE_MD5
+               -DV7_ENABLE_ENTITY_IDS
 
-V7_HOST_FEATURES ?= $(V7_FEATURES) -DV7_ENABLE__RegExp=1
+V7_HOST_FEATURES ?= $(V7_FEATURES)
+V7_CC3200_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
+MGIOT_CC3200_FEATURES ?=
+
+ifeq "$(V7_NO_COMPILER)" "1"
+  ifneq "$(V7_FREEZE)" "1"
+    $(error V7_NO_COMPILER can be used only together with V7_FREEZE, since current v7 initialization routine includes execution of some JS code)
+  endif
+  V7_CC3200_FEATURES += -DV7_NO_COMPILER \
+                        -DV7_ALT_JSON_PARSE
+
+  MGIOT_CC3200_FEATURES += -DSJ_FROZEN_JSON_PARSE
+endif
+
+ifeq "$(V7_FREEZE)" "1"
+  V7_CC3200_FEATURES += -DV7_EXPOSE_PRIVATE
+
+endif
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
@@ -195,15 +219,23 @@ ifeq "$(SJ_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
   MGIOT_FEATURES += -DSJ_ENABLE_JS
   VPATH += $(V7_PATH)
-  $(BUILD_DIR)/v7.o: CFLAGS += $(V7_FEATURES)
+  $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_CC3200_FEATURES)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
+  ifeq "$(V7_FREEZE)" "1"
+    MGIOT_CC3200_FEATURES += -DV7_THAW
+    GENFILES_LIST += $(BUILD_DIR)/fr.c
+    SRCS += fr.c
+  endif
 else
   SJ_SRCS += cs_file.c
 endif
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
-  MGIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API -DSJ_ENABLE_UPDATER_CLUBBY
+  MGIOT_FEATURES += -DSJ_ENABLE_CLUBBY \
+                    -DSJ_ENABLE_CLUBBY_API
+
+  MGIOT_CC3200_FEATURES += -DSJ_ENABLE_UPDATER_CLUBBY
 else
-  MGIOT_FEATURES += -DSJ_ENABLE_UPDATER_POST
+  MGIOT_CC3200_FEATURES += -DSJ_ENABLE_UPDATER_POST
 endif
 
 .DEFAULT_GOAL := all
@@ -288,6 +320,15 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_HOST_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 
 $(FS_IMG): $(BUILD_DIR)/v7
+
+# TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
+# appropriate
+$(MGIOT_POSIX_BIN):
+	$(MAKE) -j4 -C $(MGIOT_POSIX_PATH) \
+	  V7_FEATURES='$(V7_HOST_FEATURES) -DV7_MAIN -DV7_FREEZE' \
+	  MGIOT_FEATURES='$(MGIOT_FEATURES)' \
+	  BIN_DIR=$(MGIOT_POSIX_BIN_DIR) \
+	  BUILD_DIR=$(MGIOT_POSIX_BUILD_DIR)
 endif
 
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
@@ -324,7 +365,7 @@ CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG \
           $(SDK_FLAGS) $(V7_MEMORY_FLAGS) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          $(MG_FEATURES) $(MGIOT_FEATURES) \
+          $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_CC3200_FEATURES) \
           $(MGIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
 
 $(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
@@ -339,6 +380,18 @@ all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(SYS_CONFIG_C) 
 $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
                 $(APP_SLFS_PATH) $(SLFS_FILES) ${FS_FILES} ${JSBIN_SRCS}
+
+$(BUILD_DIR)/fr.dump: $(MGIOT_POSIX_BIN)
+	$(vecho) "V7_FREEZE"
+	$(Q) $(MGIOT_POSIX_BIN) -freeze $@
+
+$(BUILD_DIR)/fr.sym: $(MGIOT_POSIX_BIN)
+	$(vecho) "$(MGIOT_POSIX_BIN)"
+	$(Q) @nm $(MGIOT_POSIX_BIN) > $@
+
+$(BUILD_DIR)/fr.c: $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym
+	$(vecho) "GEN   fr.c"
+	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
 
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                                 $(wildcard $(BOOT_PATH)/tools/mkcfg.c)

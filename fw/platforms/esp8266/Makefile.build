@@ -5,7 +5,7 @@
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
 # SSL: if set to "Krypton" enables SSL with the krypton lib
-# FREEZE: if "1" (default) freezes the stdlib object graph into a static graph
+# V7_FREEZE: if "1" (default) freezes the stdlib object graph into a static graph
 #         loadable in ROM
 # HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
 #           logging wrappers for malloc and friends. You can later view heap
@@ -42,7 +42,7 @@ COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
-FREEZE ?= 1
+V7_FREEZE ?= 1
 HEAP_LOG ?=
 
 CREATE_SPIFFS_FS ?= 1
@@ -251,7 +251,7 @@ ifeq "$(SJ_ENABLE_JS)" "1"
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_FEATURES)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
-  ifeq "$(FREEZE)" "1"
+  ifeq "$(V7_FREEZE)" "1"
     MGIOT_ESP_FEATURES += -DV7_THAW
     GENFILES_LIST += $(BUILD_DIR)/fr.c
     SRCS += fr.c
@@ -406,7 +406,7 @@ $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
 $(BUILD_DIR)/fr.dump: $(MGIOT_POSIX_BIN)
-	$(vecho) "FREEZE"
+	$(vecho) "V7_FREEZE"
 	$(Q) $(MGIOT_POSIX_BIN) -freeze $@
 
 $(BUILD_DIR)/fr.sym: $(MGIOT_POSIX_BIN)

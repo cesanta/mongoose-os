@@ -20,6 +20,7 @@
 #include "common/mbuf.h"
 #include "fw/src/sj_clubby.h"
 #include "fw/src/sj_clubby_js.h"
+#include "fw/src/sj_common.h"
 #include "fw/src/sj_sys_config.h"
 
 struct console_ctx {
@@ -124,7 +125,7 @@ static void puts_n(const char *s, int len) {
   }
 }
 
-static enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
+SJ_PRIVATE enum v7_err Console_log(struct v7 *v7, v7_val_t *res) {
   int argc = v7_argc(v7);
   /* Put everything into one message */
   for (int i = 0; i < argc; i++) {
