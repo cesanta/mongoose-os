@@ -181,15 +181,14 @@ static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
 #ifdef CS_MMAP
   if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
     if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
-#ifndef DISABLE_OTA
       /*
        * If FW uses OTA (and flash mapping) addr might be > 0x100000
        * and FLASH_BASE + addr will point somewhere behind flash
        * mapped area (40200000h-40300000h)
        * So, we need map it back.
+       * (i.e. if addr > 0x100000 -> addr -= 0x100000)
        */
       addr &= 0xFFFFF;
-#endif
       cur_mmap_desc->blocks[cur_mmap_desc->pages++] = FLASH_BASE + addr;
     }
     return SPIFFS_OK;
