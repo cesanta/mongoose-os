@@ -82,10 +82,8 @@ include $(COMMON_ESP_PATH)/common.mk
 include $(REPO_PATH)/fw/common.mk
 
 MGIOT_ESP_USER_DIR = $(MGIOT_ESP_PATH)/user
-APP_MODULES += $(MGIOT_ESP_USER_DIR) $(UMM_MALLOC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
 
-SJ_SRCS = cs_rbuf.c \
+MGIOT_SRCS = cs_rbuf.c \
           clubby_proto.c \
           sj_clubby.c \
           sj_config.c \
@@ -100,10 +98,14 @@ SJ_SRCS = cs_rbuf.c \
           sj_utils.c \
           cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
           rboot-bigflash.c rboot-api.c \
-          json_utils.c
+          json_utils.c \
+          umm_malloc.c \
+          mongoose.c frozen.c
+MGIOT_SRCS += $(notdir $(foreach m,$(MGIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 ifeq "$(SJ_ENABLE_JS)" "1"
-SJ_SRCS += v7.c \
+MGIOT_SRCS += v7.c \
            sj_adc_js.c \
            sj_clubby_js.c \
            sj_config_js.c \
@@ -139,7 +141,9 @@ JS_SRCS    :=
 JSBIN_EXT := js
 JS_EXT := js
 VPATH = $(APP_MODULES) $(MGIOT_SRC_PATH) $(MONGOOSE_PATH) \
-        $(FROZEN_PATH) $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH)
+        $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
+        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) \
+        $(MGIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 IPATH = $(APP_MODULES) $(REPO_PATH) $(MGIOT_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
@@ -148,7 +152,8 @@ IPATH = $(APP_MODULES) $(REPO_PATH) $(MGIOT_ESP_PATH)/include $(SPIFFS_PATH) \
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGIOT_ESP_USER_DIR)
 
 # libraries used in this project, mainly provided by the SDK
-APP_LIBS = c crypto gcc hal pp phy net80211 wpa main_ota
+SDK_LIBS = c crypto gcc hal m pp phy net80211 wpa main_ota
+LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
 
@@ -203,7 +208,6 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
 
 .PHONY: all clean
 
-APP_LIBS += m lwip_cs
 MGIOT_CFLAGS = -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
                -DESP_ENABLE_MG_LWIP_IF
 
@@ -218,28 +222,23 @@ _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
 _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
-LIBS = $(addprefix -l,$(APP_LIBS))
-APP_AR = $(BUILD_DIR)/$(APP).a
-LWIP_AR = $(LWIP_BUILD_DIR)/liblwip_cs.a
+LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
+MGIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
-SYMCHECK_OUT = $(BUILD_DIR)/$(APP)_symcheck.out
-SYMCHECK_FLAG = $(BUILD_DIR)/$(APP)_symcheck.ok
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
 
-SRCS = $(APP_SRCS) mongoose.c frozen.c $(SJ_SRCS) $(APP_EXTRA_SRCS)
-
 ifeq "$(SSL)" "Krypton"
   IPATH += $(KRYPTON_PATH)
   VPATH += $(KRYPTON_PATH)
-  SRCS += krypton.c esp_crypto.c esp_ssl_krypton.c
+  MGIOT_SRCS += krypton.c esp_crypto.c esp_ssl_krypton.c
   FEATURES += -DMG_ENABLE_SSL -DMG_DISABLE_PFS -DSSL_KRYPTON \
               -DKR_LOCALS -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 \
               -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
@@ -254,7 +253,7 @@ ifeq "$(SJ_ENABLE_JS)" "1"
   ifeq "$(V7_FREEZE)" "1"
     MGIOT_ESP_FEATURES += -DV7_THAW
     GENFILES_LIST += $(BUILD_DIR)/fr.c
-    SRCS += fr.c
+    MGIOT_SRCS += fr.c
   endif
   ifneq "$(V7_GC_DEBUG)" "1"
     MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
@@ -263,21 +262,20 @@ ifeq "$(SJ_ENABLE_JS)" "1"
     MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
   endif
 else
-  SJ_SRCS += cs_file.c str_util.c
+  MGIOT_SRCS += cs_file.c str_util.c
 endif
 
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
   MGIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
 endif
 
-OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
+MGIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGIOT_SRCS)))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 
 FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
 ifneq "$(APP_FS_PATH)" ""
   FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
 endif
-
-FW_FILES_OUT = $(FW_FILE_1_OUT) $(FW_FILE_2_OUT)
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
 LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
@@ -321,7 +319,7 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
 
 LDFLAGS += -u Cache_Read_Enable_New
 
-all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_FILES_OUT) $(FS_STAGING_DIR) $(FW_FS_OUT)
+all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
 $(RBOOT_EMPTY_CFG):
 	$(vecho) "GEN   $@"
@@ -348,29 +346,21 @@ include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 all: $(FW_ZIP)
 
-$(FW_MANIFEST): $(FW_FS_OUT) $(FW_FILES_OUT) ${FS_FILES} ${JSBIN_SRCS}
+$(FW_MANIFEST): $(FW_FS_OUT) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) ${FS_FILES} ${JSBIN_SRCS}
 
-$(FW_FILES_OUT): $(APP_OUT) $(BUILD_DIR)/rboot.bin
-	$(vecho) "FW    $(APP_OUT) -> $(FW_STAGING_DIR)"
+$(FW_FILE_1_OUT): $(BUILD_DIR)/rboot.bin
+	$(vecho) "CP    $< -> $@"
+	$(Q) cp $< $@
+
+$(FW_FILE_2_OUT): $(APP_OUT)
+	$(vecho) "FW    $(APP_OUT) -> $@"
 	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $(APP_OUT) $@ $(FW_SECTS)
-	$(Q) cp $(BUILD_DIR)/rboot.bin $(FW_STAGING_DIR)/$(RBOOT_FW_NAME)
 
 # -- Linking.
 
-# Link the main ELF output file. Performs symbol clash check beforehand.
-$(APP_OUT): $(APP_AR) $(LWIP_AR) $(LD_SCRIPT) $(SYMCHECK_FLAG)
-	$(call link,$(LD_WRAPPERS))
-
-# Symbol check: make sure app doesn't override SDK lib symbols.
-# A target is created that uses the same libs but no user code and symbols are
-# checked against main app library to make sure there's no overlap.
-$(SYMCHECK_FLAG): $(APP_AR) $(SYMCHECK_OUT)
-	$(vecho) "SYMCK $(SYMCHECK_OUT) vs $(APP_AR)"
-	$(Q) $(PYTHON) $(MGIOT_ESP_PATH)/tools/symcheck.py $(SYMCHECK_OUT) $(APP_AR)
-	$(Q) touch $@
-
-$(SYMCHECK_OUT): $(BUILD_DIR)/dummy_main.o $(LD_SCRIPT)
-	$(call link,)
+# Link the main ELF output file.
+$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MGIOT_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	$(call link,$(APP_OBJS) $(BUILD_INFO_O) $(MGIOT_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGIOT_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
@@ -381,15 +371,14 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGIOT_ESP_PATH)/Makefile.build
             "void __cyg_profile_func_exit(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" > $@
 
 # Main app lib.
-$(APP_AR): $(OBJS) $(BUILD_INFO_O)
+$(MGIOT_LIB): $(MGIOT_OBJS)
 	$(vecho) "AR    $@"
 	$(Q) $(AR) cru $@ $^
-# Move strings to flash too, we have the handler.
-	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $(APP_AR)
-	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $(APP_AR)
+	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
+	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
 
 # LWIP.
-$(LWIP_AR): $(LWIP_PATH)
+$(LWIP_LIB): $(LWIP_PATH)
 	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all APP=liblwip_cs BUILD_DIR=$(LWIP_BUILD_DIR)
 
 # This rule is for normal (pre-existing) sources from VPATH.
@@ -429,24 +418,18 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 
 # -- Filesystem.
 
-$(FS_STAGING_DIR): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
+$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
-	# OSX virtualbox shared folder have issues with some symlinks. JS_SRCS contains their canonical location
-	$(Q) $(foreach js,$(JS_SRCS), \
-    echo "  CP    $(js) -> $(FS_STAGING_DIR)/$(basename $(notdir $(js))).$(JS_EXT)";\
-    cp $(js) $(FS_STAGING_DIR);)
+	$(Q) $(foreach f,$(FS_FILES), \
+	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
+	  cp $(f) $(FS_STAGING_DIR);)
 ifeq "$(SJ_ENABLE_JS)" "1"
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
     echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
     $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 endif
-	$(vecho) "RSYNC -> $(FS_STAGING_DIR)/"
-	$(Q) /usr/bin/rsync -vr --copy-links $(FS_FILES) $(FS_STAGING_DIR)/
-
-$(FW_FS_OUT): $(FS_STAGING_DIR) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
-	$(vecho) "FS    $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
+	$(vecho) "MKFS  $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_STAGING_DIR) > $@
-	$(Q) echo $(_FS_SIZE) > $(BUILD_DIR)/fs.size
 
 $(BUILD_DIR)/mkspiffs:
 	$(MAKE) -C $(REPO_PATH)/common/spiffs/tools $(BUILD_DIR)/mkspiffs BUILD_DIR=$(BUILD_DIR)
@@ -459,7 +442,7 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC   v7"
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 
-$(FS_STAGING_DIR): $(BUILD_DIR)/v7
+$(FW_FS_OUT): $(BUILD_DIR)/v7
 
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
