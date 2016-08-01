@@ -28,6 +28,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdio.h>
 
+/* JSON token type */
 enum json_token_type {
   JSON_TYPE_INVALID = 0, /* memsetting to 0 should create INVALID value */
   JSON_TYPE_STRING,
@@ -43,6 +44,10 @@ enum json_token_type {
   JSON_TYPES_CNT,
 };
 
+/*
+ * Structure containing token type and value. Used in `json_walk()` and
+ * `json_scanf()` with the format specifier `%T`.
+ */
 struct json_token {
   const char *ptr;           /* Points to the beginning of the value */
   int len;                   /* Value length */
