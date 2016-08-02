@@ -12,6 +12,9 @@
 
 #include <stdlib.h>
 
+/* Get system memory size. */
+size_t sj_get_heap_size();
+
 /* Get system free memory. */
 size_t sj_get_free_heap_size();
 

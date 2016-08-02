@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 
+#include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/esp_uart.h"
 
@@ -38,10 +39,11 @@
 #include "fw/src/sj_init_js.h"
 #endif
 
+extern const char *build_id;
 os_timer_t startcmd_timer;
 
 #ifndef ESP_DEBUG_UART
-#define ESP_DEBUG_UART 1
+#define ESP_DEBUG_UART 0
 #endif
 #ifndef ESP_DEBUG_UART_BAUD_RATE
 #define ESP_DEBUG_UART_BAUD_RATE 115200
@@ -88,7 +90,7 @@ int sjs_init(rboot_config *bcfg) {
     fs_set_stderr_uart(ESP_DEBUG_UART);
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
-    cs_log_set_level(LL_DEBUG);
+    cs_log_set_level(LL_INFO);
     os_install_putc1(dbg_putc);
     system_set_os_print(1);
 #ifdef ESP_ENABLE_HEAP_LOG
@@ -96,6 +98,10 @@ int sjs_init(rboot_config *bcfg) {
 #endif
   }
 
+  fputc('\n', stderr);
+  LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
+  LOG(LL_INFO,
+      ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
   esp_print_reset_info();
 
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
@@ -141,7 +147,6 @@ int sjs_init(rboot_config *bcfg) {
   }
 #endif
 
-#ifdef ESP_UMM_ENABLE
   /*
    * We want to use our own heap functions instead of the ones provided by the
    * SDK.
@@ -154,7 +159,6 @@ int sjs_init(rboot_config *bcfg) {
    * So, we have a call to the no-op `esp_umm_init()` here.
    */
   esp_umm_init();
-#endif
 
   sj_wdt_set_timeout(get_cfg()->sys.wdt_timeout);
   return 0;

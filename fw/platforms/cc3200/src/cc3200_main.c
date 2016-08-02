@@ -34,7 +34,6 @@
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_exc.h"
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
-#include "fw/platforms/cc3200/src/cc3200_sj_hal.h"
 
 /* These are FreeRTOS hooks for various life situations. */
 void vApplicationMallocFailedHook() {

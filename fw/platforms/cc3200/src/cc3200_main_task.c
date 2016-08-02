@@ -13,6 +13,7 @@
 #include "oslib/osi.h"
 
 #include "fw/src/sj_app.h"
+#include "fw/src/sj_hal.h"
 #include "fw/src/sj_init.h"
 #include "fw/src/sj_init_js.h"
 #include "fw/src/sj_mongoose.h"
@@ -29,7 +30,6 @@
 #include "fw/platforms/cc3200/src/cc3200_console.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
-#include "fw/platforms/cc3200/src/cc3200_sj_hal.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
 
 #define CB_ADDR_MASK 0xe0000000

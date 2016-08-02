@@ -24,17 +24,16 @@
 #include <osapi.h>
 #include <os_type.h>
 
+size_t sj_get_heap_size() {
+  return UMM_MALLOC_CFG__HEAP_SIZE;
+}
+
 size_t sj_get_free_heap_size() {
-  return system_get_free_heap_size();
+  return umm_free_heap_size();
 }
 
 size_t sj_get_min_free_heap_size() {
-#if defined(ESP_UMM_ENABLE)
   return umm_min_free_heap_size();
-#else
-  /* Not supported */
-  return 0;
-#endif
 }
 
 extern uint32_t soft_wdt_interval;

@@ -3,8 +3,6 @@
  * All rights reserved
  */
 
-#include "cc3200_sj_hal.h"
-
 #ifndef __TI_COMPILER_VERSION__
 #include <malloc.h>
 #endif
