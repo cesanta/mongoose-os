@@ -66,9 +66,10 @@
     "wdt_timeout" : 15
   },
   "console": {
-    "send_to_cloud" : true,
-    "mem_cache_size" : 256,
-    "file_cache_max" : 25
+    "mem_buf_size" : 256,
+    "log_file": "console.log",
+    "log_file_size": 2048,
+    "send_to_cloud" : true
   },
   "conf_acl": "*"
 }

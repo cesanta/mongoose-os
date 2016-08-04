@@ -225,9 +225,6 @@ void main_task(void *arg) {
   while (1) {
     mongoose_poll(0);
     cc3200_fs_flush();
-#if SJ_ENABLE_CLUBBY
-    cc3200_console_cloud_push();
-#endif
     struct sj_event e;
     if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (e.type) {

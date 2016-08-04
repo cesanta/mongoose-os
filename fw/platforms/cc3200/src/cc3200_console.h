@@ -8,8 +8,4 @@
 
 void cc3200_console_putc(int fd, char c);
 
-#if SJ_ENABLE_CLUBBY
-void cc3200_console_cloud_push();
-#endif
-
 #endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_CONSOLE_H_ */

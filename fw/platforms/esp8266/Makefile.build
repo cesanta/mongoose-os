@@ -87,7 +87,7 @@ MGIOT_SRCS = cs_rbuf.c \
           clubby_proto.c \
           sj_clubby.c \
           sj_config.c \
-          sj_console.c \
+          sj_console.c cs_frbuf.c \
           sj_init.c \
           sj_i2c_js.c \
           sj_spi_js.c \
@@ -109,6 +109,7 @@ MGIOT_SRCS += v7.c \
            sj_adc_js.c \
            sj_clubby_js.c \
            sj_config_js.c \
+           sj_console_js.c \
            sj_debug_js.c \
            sj_gpio_js.c \
            sj_http_js.c \
@@ -188,7 +189,8 @@ MGIOT_ESP_FEATURES = -DSJ_ENABLE_WEB_CONFIG \
                      -DSJ_ENABLE_FILE_UPLOAD \
                      -DSJ_ENABLE_UPDATER_CLUBBY \
                      -DSJ_ENABLE_UPDATER_CLUBBY_API \
-                     -DSJ_ENABLE_UPDATER_POST
+                     -DSJ_ENABLE_UPDATER_POST \
+                     -DSJ_ENABLE_CONSOLE_FILE_BUFFER
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \

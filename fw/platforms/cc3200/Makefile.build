@@ -168,14 +168,16 @@ SJ_SRCS = sj_init.c \
           sj_config.c sj_sys_config.c \
           $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
           cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
-          sj_utils.c \
+          cs_frbuf.c sj_utils.c \
           clubby_proto.c \
           sj_clubby.c \
+          sj_console.c \
           json_utils.c
 ifeq "$(SJ_ENABLE_JS)" "1"
 SJ_SRCS += v7.c \
            sj_clubby_js.c \
            sj_config_js.c \
+           sj_console_js.c \
            sj_gpio_js.c \
            sj_http_js.c \
            sj_i2c_js.c \
