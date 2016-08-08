@@ -262,6 +262,7 @@ static enum v7_err UART_get(struct v7 *v7, v7_val_t *res) {
 void esp_sj_uart_init_js(struct v7 *v7) {
   sj_us[0].v7 = sj_us[1].v7 = v7;
   s_uart_proto = v7_mk_object(v7);
+  v7_own(v7, &s_uart_proto);
   v7_set_method(v7, s_uart_proto, "configure", UART_configure);
   v7_set_method(v7, s_uart_proto, "onRecv", UART_onRecv);
   v7_set_method(v7, s_uart_proto, "recv", UART_recv);
@@ -272,14 +273,14 @@ void esp_sj_uart_init_js(struct v7 *v7) {
   v7_set_method(v7, v7_get_global(v7), "UART", UART_get);
 
   sj_us[0].obj = v7_mk_object(v7);
+  v7_own(v7, &sj_us[0].obj);
   v7_set_proto(v7, sj_us[0].obj, s_uart_proto);
   v7_set(v7, sj_us[0].obj, "_u", ~0, v7_mk_number(v7, 0));
-  v7_own(v7, &sj_us[0].obj);
 
   sj_us[1].obj = v7_mk_object(v7);
+  v7_own(v7, &sj_us[1].obj);
   v7_set_proto(v7, sj_us[1].obj, s_uart_proto);
   v7_set(v7, sj_us[1].obj, "_u", ~0, v7_mk_number(v7, 1));
-  v7_own(v7, &sj_us[1].obj);
 }
 
 v7_val_t esp_sj_uart_get_recv_handler(int uart_no) {
