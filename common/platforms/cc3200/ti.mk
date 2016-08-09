@@ -3,6 +3,7 @@ VPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/CCS/ARM_CM3
 
 CC_WRAPPER ?=
 CC = $(TOOLCHAIN)/bin/armcl
+AR = $(TOOLCHAIN)/bin/armar
 GENFILES_LIST ?=
 
 CFLAGS = --c99 -mv7M4 --little_endian --code_state=16 --float_support=vfplib --abi=eabi \
@@ -11,27 +12,35 @@ CFLAGS = --c99 -mv7M4 --little_endian --code_state=16 --float_support=vfplib --a
          --emit_warnings_as_errors -Dccs
 CFLAGS += -I$(TOOLCHAIN)/include
 
-OBJS += $(BUILD_DIR)/startup_ccs.o
-OBJS += $(BUILD_DIR)/portasm.o
+# cc flags,file
+define cc
+	$(vecho) "TICC  $2 -> $@"
+	$(Q) $(CC_WRAPPER) $(CC) -c --preproc_with_compile -ppd=$@.d $1 --output_file=$@ $2
+endef
 
-$(BUILD_DIR)/%.o: %.c $(GENFILES_LIST)
-	$(vecho) "TICC  $< -> $@"
-	$(Q) $(CC_WRAPPER) $(CC) \
-	  -c --output_file=$@ --preproc_with_compile -ppd=$@.d $(CFLAGS) $<
+# asm flags,file
+define asm
+	$(vecho) "TIASM $2 -> $@"
+	$(Q) $(CC_WRAPPER) $(CC) -c $1 --output_file=$@ $2
+endef
 
-$(BUILD_DIR)/%.o: %.asm
-	$(vecho) "TIASM $< -> $@"
-	$(Q) $(CC_WRAPPER) $(CC) $(CFLAGS) -c --output_file=$@ $<
+# ar files
+define ar
+	$(vecho) "TIAR  $@"
+	$(Q) $(AR) qru $@ $1
+endef
 
-$(APP_ELF):
+# link script,flags,objs
+define link
 	$(vecho) "TILD  $@"
 	$(Q) $(CC_WRAPPER) $(CC) \
 	  -mv7M4 --code_state=16 --float_support=vfplib --abi=eabi --little_endian \
-	  --run_linker --map_file=$(BUILD_DIR)/$(APP).map \
-	  --generate_dead_funcs_list=$(BUILD_DIR)/$(APP).garbage.xml \
+	  --run_linker \
+	  --generate_dead_funcs_list=$@.garbage.xml \
 	  -i $(TOOLCHAIN)/lib \
 	  --reread_libs --warn_sections --display_error_number \
 	  --ram_model --cinit_compression=off --copy_compression=off \
 	  --unused_section_elimination=on \
 	  -o $@ --map_file=$@.map --xml_link_info=$@.map.xml \
-	  $(filter %.o %.a, $^) $(APP_LDFLAGS)
+	  $2 $1 $3
+endef

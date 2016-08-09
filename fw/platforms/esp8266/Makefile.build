@@ -81,7 +81,7 @@ include $(COMMON_ESP_PATH)/common.mk
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
 
-MIOT_ESP_USER_DIR = $(MIOT_ESP_PATH)/user
+MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
 
 MIOT_SRCS = cs_rbuf.c \
             clubby_proto.c \
@@ -101,7 +101,7 @@ MIOT_SRCS = cs_rbuf.c \
             json_utils.c \
             umm_malloc.c \
             mongoose.c frozen.c
-MIOT_SRCS += $(notdir $(foreach m,$(MIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
+MIOT_SRCS += $(notdir $(foreach m,$(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 ifeq "$(SJ_ENABLE_JS)" "1"
@@ -144,13 +144,13 @@ JS_EXT := js
 VPATH = $(APP_MODULES) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) \
-        $(MIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
+        $(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 IPATH = $(APP_MODULES) $(REPO_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
         $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
-        $(MIOT_ESP_USER_DIR) .
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MIOT_ESP_USER_DIR)
+        $(MIOT_ESP_SRC_PATH) .
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MIOT_ESP_SRC_PATH)
 
 # libraries used in this project, mainly provided by the SDK
 SDK_LIBS = c crypto gcc hal m pp phy net80211 wpa main_ota
@@ -413,7 +413,7 @@ include $(REPO_PATH)/common/scripts/build_info.mk
 include $(REPO_PATH)/fw/src/sys_config.mk
 
 # Regenerate build info if there are changes in objects.
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

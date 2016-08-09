@@ -34,6 +34,7 @@ V7_PATH ?= $(REPO_PATH)/v7
 COMMON_PATH ?= $(REPO_PATH)/common
 MIOT_PATH ?= $(REPO_PATH)/fw
 MIOT_CC3200_PATH ?= $(REPO_PATH)/fw/platforms/cc3200
+MIOT_CC3200_SRC_PATH ?= $(MIOT_CC3200_PATH)/src
 COMMON_CC3200_PATH ?= $(REPO_PATH)/common/platforms/cc3200
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
@@ -89,11 +90,10 @@ JS_SRCS :=
 JSBIN_EXT := js
 JS_EXT := js
 
-APP_MODULES += $(MIOT_CC3200_PATH)/src
-VPATH = $(APP_MODULES) \
-        $(MIOT_CC3200_PATH)/tools \
-        $(BOOT_PATH)/lib $(BUILD_DIR)
-IPATH = $(APP_MODULES) $(BOOT_PATH)/lib $(BUILD_DIR) $(REPO_PATH)
+VPATH = $(APP_MODULES) $(MIOT_CC3200_SRC_PATH) \
+        $(BOOT_PATH)/lib $(BUILD_DIR) \
+        $(MONGOOSE_PATH) $(FROZEN_PATH)
+IPATH = $(APP_MODULES) $(MIOT_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(BUILD_DIR) $(REPO_PATH)
 
 V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_BUILD_PROFILE=1 \
@@ -106,7 +106,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 
 V7_HOST_FEATURES ?= $(V7_FEATURES)
 V7_CC3200_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
-MIOT_CC3200_FEATURES ?=
+MIOT_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64
 
 ifeq "$(V7_NO_COMPILER)" "1"
   ifneq "$(V7_FREEZE)" "1"
@@ -130,20 +130,18 @@ MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_EXT_SHA1 -DDISABLE_SHA1
 
 MIOT_FEATURES ?= -DSJ_ENABLE_GPIO_API \
-                  -DSJ_ENABLE_I2C_API \
-                  -DSJ_ENABLE_WIFI_API \
-                  -DSJ_ENABLE_HTTP_CLIENT_API
+                 -DSJ_ENABLE_I2C_API \
+                 -DSJ_ENABLE_WIFI_API \
+                 -DSJ_ENABLE_HTTP_CLIENT_API
 
 V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
-                  -DV7_STACK_SIZE=8192-64 \
                   -DV7_DISABLE_INTERPRETER_STACK_CHECK \
                   -DFS_MAX_OPEN_FILES=5
 
-SDK_FLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
-
-APP_ELF = $(BUILD_DIR)/$(APP).axf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
+APP_ELF = $(BUILD_DIR)/$(APP).axf
+MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
 MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(BUILD_DIR)/fs.img
 FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
@@ -160,43 +158,43 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
 .PHONY: all clean flash
 
-SJ_SRCS = sj_init.c \
-          sj_mongoose.c \
-          sj_timers_mongoose.c \
-          sj_v7_ext.c \
-          sj_wifi.c \
-          sj_config.c sj_sys_config.c \
-          $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-          cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
-          cs_frbuf.c sj_utils.c \
-          clubby_proto.c \
-          sj_clubby.c \
-          sj_console.c \
-          json_utils.c
+MIOT_SRCS = sj_init.c \
+            sj_mongoose.c \
+            sj_timers_mongoose.c \
+            sj_v7_ext.c \
+            sj_wifi.c \
+            sj_config.c sj_sys_config.c \
+            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+            cs_frbuf.c sj_utils.c \
+            clubby_proto.c \
+            sj_clubby.c \
+            sj_console.c \
+            boot.c mongoose.c frozen.c json_utils.c
 ifeq "$(SJ_ENABLE_JS)" "1"
-SJ_SRCS += v7.c \
-           sj_clubby_js.c \
-           sj_config_js.c \
-           sj_console_js.c \
-           sj_gpio_js.c \
-           sj_http_js.c \
-           sj_i2c_js.c \
-           sj_init_js.c \
-           sj_prompt.c \
-           sj_sys_config_js.c \
-           sj_timers_js.c \
-           sj_wifi_js.c
+MIOT_SRCS += v7.c \
+             sj_clubby_js.c \
+             sj_config_js.c \
+             sj_console_js.c \
+             sj_gpio_js.c \
+             sj_http_js.c \
+             sj_i2c_js.c \
+             sj_init_js.c \
+             sj_prompt.c \
+             sj_sys_config_js.c \
+             sj_timers_js.c \
+             sj_wifi_js.c
 endif
 
 VPATH += $(MIOT_PATH)/src $(COMMON_PATH)
 ifneq "$(TOOLCHAIN)" "gcc"
-  SJ_SRCS += umm_malloc.c
+  MIOT_SRCS += umm_malloc.c
   VPATH += $(COMMON_PATH)/umm_malloc
 endif
 
-SPIFFS_SRCS = $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 IPATH += $(SPIFFS_PATH)
 VPATH += $(SPIFFS_PATH)
+MIOT_SRCS += $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 
 FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c heap_3.c osi_freertos.c
 DRIVER_SRCS = cpu.c flash.c i2c.c interrupt.c pin.c prcm.c spi.c uart.c udma.c utils.c
@@ -210,26 +208,27 @@ IPATH += $(SDK_PATH) $(SDK_PATH)/inc $(SDK_PATH)/driverlib $(SDK_PATH)/oslib \
 VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
          $(SDK_PATH)/simplelink/source $(SDK_PATH)/third_party/FreeRTOS/source \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
+SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c)))
-SRCS = $(APP_SRCS) boot.c mongoose.c frozen.c $(SJ_SRCS) $(SPIFFS_SRCS) $(SDK_SRCS) $(APP_EXTRA_SRCS)
+MIOT_SRCS += $(notdir $(wildcard $(MIOT_CC3200_SRC_PATH)/*.c))
+APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-MIOT_CFLAGS = -DCC3200_FS_SPIFFS -Dcc3200 -DCC3200_FS_SPIFFS \
-               -DSPIFFS_HAL_CALLBACK_EXTRA=1
+MIOT_CFLAGS = -Dcc3200 -DCC3200_FS_SPIFFS -DSPIFFS_HAL_CALLBACK_EXTRA=1 $(SDK_CFLAGS)
 
 ifeq "$(SJ_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
   MIOT_FEATURES += -DSJ_ENABLE_JS
+  MIOT_CFLAGS += $(V7_MEMORY_FLAGS)
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_CC3200_FEATURES)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
   ifeq "$(V7_FREEZE)" "1"
     MIOT_CC3200_FEATURES += -DV7_THAW
     GENFILES_LIST += $(BUILD_DIR)/fr.c
-    SRCS += fr.c
+    MIOT_SRCS += fr.c
   endif
 else
-  SJ_SRCS += cs_file.c
+  MIOT_SRCS += cs_file.c
 endif
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
   MIOT_FEATURES += -DSJ_ENABLE_CLUBBY \
@@ -285,8 +284,9 @@ ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"
 endif
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
-OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
-VPATH += $(MONGOOSE_PATH) $(FROZEN_PATH)
+SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
+MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 
 include $(REPO_PATH)/common/scripts/build_info.mk
 include $(REPO_PATH)/fw/src/sys_config.mk
@@ -333,39 +333,38 @@ $(MIOT_POSIX_BIN):
 	  BUILD_DIR=$(MIOT_POSIX_BUILD_DIR)
 endif
 
-SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
-
 OBJCOPY = arm-none-eabi-objcopy
 
 ifeq "$(TOOLCHAIN)" "gcc"
 
-APP_LDFLAGS ?= --defsym=ORG=$(APP_ORG) --defsym=RAM_SIZE=$(RAM_SIZE) \
-               -T $(COMMON_CC3200_PATH)/cc3200.ld --entry=ResetISR
 include $(COMMON_CC3200_PATH)/gcc.mk
+APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200.ld
+APP_LD_FLAGS ?= --defsym=ORG=$(APP_ORG) --defsym=RAM_SIZE=$(RAM_SIZE) --entry=ResetISR
+MIOT_OBJS += $(BUILD_DIR)/startup_gcc.o
+VPATH += $(MIOT_CC3200_PATH)/tools
 
 else
 
-APP_LD_SCRIPT ?= $(MIOT_CC3200_PATH)/src/cc3200_mgiot.cmd
-APP_LDFLAGS ?= $(APP_LD_SCRIPT) --heap_size=0 --stack_size=0x100 \
-               --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 include $(COMMON_CC3200_PATH)/ti.mk
-$(APP_ELF): $(APP_LD_SCRIPT)
+APP_LD_SCRIPT ?= $(MIOT_CC3200_PATH)/src/cc3200_mgiot.cmd
+APP_LD_FLAGS ?= --heap_size=0 --stack_size=0x100 \
+                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
+
+MIOT_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
+MIOT_OBJS += $(BUILD_DIR)/exc_handler_top.o \
+             $(BUILD_DIR)/portasm.o \
+             $(BUILD_DIR)/startup_ccs.o
+VPATH += $(MIOT_CC3200_PATH)/src/ti
+
 # Selectively inhibit warnings in external code.
 $(BUILD_DIR)/spiffs_gc.o: CFLAGS += --diag_suppress=1944
 $(BUILD_DIR)/spiffs_hydrogen.o: CFLAGS += --diag_suppress=770,1944
 $(BUILD_DIR)/port.o: CFLAGS += --diag_suppress=193,225
 $(BUILD_DIR)/tasks.o: CFLAGS += --diag_suppress=225
-
-MIOT_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
-
-VPATH += $(MIOT_CC3200_PATH)/src/ti
-OBJS += $(BUILD_DIR)/exc_handler_top.o
-
 endif
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG \
-          $(SDK_FLAGS) $(V7_MEMORY_FLAGS) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
           $(MG_FEATURES) $(MIOT_FEATURES) $(MIOT_CC3200_FEATURES) \
           $(MIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
@@ -410,9 +409,20 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(OBJS) $(BUILD_INFO_O)
+$(APP_ELF): $(APP_OBJS) $(MIOT_LIB) $(BUILD_INFO_O)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MIOT_LIB) $(BUILD_INFO_O))
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
+$(MIOT_LIB): $(MIOT_OBJS) $(SDK_OBJS)
+	$(call ar,$^)
+
+$(BUILD_DIR)/%.o: %.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.o: %.asm $(GENFILES_LIST)
+	$(call asm,$(CFLAGS),$<)
+
+# Regenerate build info if there are changes in objects.
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
 
 $(BUILD_INFO_O): $(BUILD_INFO_C)
 

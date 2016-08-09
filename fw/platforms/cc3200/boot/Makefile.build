@@ -7,7 +7,6 @@ MAKEFLAGS += --warn-undefined-variables
 APP = mg-boot
 APP_PLATFORM = cc3200
 APP_MODULES = src lib
-TOOLCHAIN = gcc
 CREATE_ZIP ?= 1
 
 SDK_PATH ?= /cc3200-sdk
@@ -69,13 +68,7 @@ SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 
 OBJCOPY = arm-none-eabi-objcopy
 
-ifeq "$(TOOLCHAIN)" "gcc"
-APP_LDFLAGS ?= -T src/boot.ld --entry=ResetISR
 include $(COMMON_CC3200_PATH)/gcc.mk
-else
-APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200v1p32.cmd
-include $(COMMON_CC3200_PATH)/ti.mk
-endif
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=4 \
@@ -101,6 +94,13 @@ $(APP_BIN): $(APP_ELF)
 	@echo "    Boot code size: $$(ls -l $@ | awk '{print $$5}')"
 
 $(APP_ELF): $(OBJS) $(BUILD_INFO_O)
+	$(call link,src/boot.ld,--entry=ResetISR,$(OBJS) $(BUILD_INFO_O))
+
+$(BUILD_DIR)/%.o: %.c
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.o: %.asm
+	$(call asm,$(CFLAGS),$<)
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 
