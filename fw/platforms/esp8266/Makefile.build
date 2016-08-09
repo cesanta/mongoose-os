@@ -25,20 +25,20 @@ SJ_ENABLE_CLUBBY ?= 1
 
 REPO_PATH ?= ../../..
 COMMON_PATH ?= $(REPO_PATH)/common
-MGIOT_PATH ?= $(REPO_PATH)/fw
+MIOT_PATH ?= $(REPO_PATH)/fw
 KRYPTON_PATH ?= $(REPO_PATH)/krypton
 MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
 FROZEN_PATH ?= $(REPO_PATH)/frozen
 V7_PATH ?= $(REPO_PATH)/v7
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
-MGIOT_ESP_PATH ?= $(MGIOT_PATH)/platforms/esp8266
-MGIOT_POSIX_PATH ?= $(MGIOT_PATH)/platforms/posix
-MGIOT_SRC_PATH ?= $(MGIOT_PATH)/src
+MIOT_ESP_PATH ?= $(MIOT_PATH)/platforms/esp8266
+MIOT_POSIX_PATH ?= $(MIOT_PATH)/platforms/posix
+MIOT_SRC_PATH ?= $(MIOT_PATH)/src
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
-MGIOT_JS_PATH ?= $(MGIOT_SRC_PATH)/js
-COMMON_FS_PATH ?= $(MGIOT_SRC_PATH)/fs
+MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
+COMMON_FS_PATH ?= $(MIOT_SRC_PATH)/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
@@ -62,9 +62,9 @@ FW2_FILE_2_ADDR=$(shell printf "0x%08x" $$(($(FW_FILE_2_ADDR) + 0x100000)))
 
 BUILD_DIR ?= $(CURDIR)/.build
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
-MGIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
-MGIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
-MGIOT_POSIX_BIN = $(MGIOT_POSIX_BIN_DIR)/mongoose-iot
+MIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
+MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
+MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
 FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
 FW_DIR = $(CURDIR)/firmware
 
@@ -81,53 +81,53 @@ include $(COMMON_ESP_PATH)/common.mk
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
 
-MGIOT_ESP_USER_DIR = $(MGIOT_ESP_PATH)/user
+MIOT_ESP_USER_DIR = $(MIOT_ESP_PATH)/user
 
-MGIOT_SRCS = cs_rbuf.c \
-          clubby_proto.c \
-          sj_clubby.c \
-          sj_config.c \
-          sj_console.c cs_frbuf.c \
-          sj_init.c \
-          sj_i2c_js.c \
-          sj_spi_js.c \
-          sj_timers_mongoose.c \
-          sj_wifi.c \
-          sj_mongoose.c \
-          sj_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-          sj_utils.c \
-          cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
-          rboot-bigflash.c rboot-api.c \
-          json_utils.c \
-          umm_malloc.c \
-          mongoose.c frozen.c
-MGIOT_SRCS += $(notdir $(foreach m,$(MGIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
+MIOT_SRCS = cs_rbuf.c \
+            clubby_proto.c \
+            sj_clubby.c \
+            sj_config.c \
+            sj_console.c cs_frbuf.c \
+            sj_init.c \
+            sj_i2c_js.c \
+            sj_spi_js.c \
+            sj_timers_mongoose.c \
+            sj_wifi.c \
+            sj_mongoose.c \
+            sj_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            sj_utils.c \
+            cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+            rboot-bigflash.c rboot-api.c \
+            json_utils.c \
+            umm_malloc.c \
+            mongoose.c frozen.c
+MIOT_SRCS += $(notdir $(foreach m,$(MIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 ifeq "$(SJ_ENABLE_JS)" "1"
-MGIOT_SRCS += v7.c \
-           sj_adc_js.c \
-           sj_clubby_js.c \
-           sj_config_js.c \
-           sj_console_js.c \
-           sj_debug_js.c \
-           sj_gpio_js.c \
-           sj_http_js.c \
-           sj_init_js.c \
-           sj_mqtt_js.c \
-           sj_prompt.c \
-           sj_pwm_js.c \
-           sj_sys_config_js.c \
-           sj_tcp_udp_js.c \
-           sj_timers_js.c \
-           sj_v7_ext.c \
-           sj_wifi_js.c \
-           sj_ws_client_js.c
+MIOT_SRCS += v7.c \
+             sj_adc_js.c \
+             sj_clubby_js.c \
+             sj_config_js.c \
+             sj_console_js.c \
+             sj_debug_js.c \
+             sj_gpio_js.c \
+             sj_http_js.c \
+             sj_init_js.c \
+             sj_mqtt_js.c \
+             sj_prompt.c \
+             sj_pwm_js.c \
+             sj_sys_config_js.c \
+             sj_tcp_udp_js.c \
+             sj_timers_js.c \
+             sj_v7_ext.c \
+             sj_wifi_js.c \
+             sj_ws_client_js.c
 endif
 
-JSBIN_SRCS := $(MGIOT_JS_PATH)/sys_init.js \
-              $(MGIOT_JS_PATH)/demo.js \
-              $(MGIOT_JS_PATH)/I2C.js \
+JSBIN_SRCS := $(MIOT_JS_PATH)/sys_init.js \
+              $(MIOT_JS_PATH)/demo.js \
+              $(MIOT_JS_PATH)/I2C.js \
               $(JSBIN_EXTRA)
 
 ifneq "$(APP_FS_PATH)" ""
@@ -141,16 +141,16 @@ JS_SRCS    :=
 # using JS as extension
 JSBIN_EXT := js
 JS_EXT := js
-VPATH = $(APP_MODULES) $(MGIOT_SRC_PATH) $(MONGOOSE_PATH) \
+VPATH = $(APP_MODULES) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) \
-        $(MGIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-IPATH = $(APP_MODULES) $(REPO_PATH) $(MGIOT_ESP_PATH)/include $(SPIFFS_PATH) \
+        $(MIOT_ESP_USER_DIR) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
+IPATH = $(APP_MODULES) $(REPO_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
         $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
-        $(MGIOT_ESP_USER_DIR) .
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGIOT_ESP_USER_DIR)
+        $(MIOT_ESP_USER_DIR) .
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MIOT_ESP_USER_DIR)
 
 # libraries used in this project, mainly provided by the SDK
 SDK_LIBS = c crypto gcc hal m pp phy net80211 wpa main_ota
@@ -172,7 +172,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 V7_GC_DEBUG ?= 1
 V7_STACK_GUARD ?= 1
 
-MGIOT_FEATURES ?= -DSJ_ENABLE_ADC_API \
+MIOT_FEATURES ?= -DSJ_ENABLE_ADC_API \
                 -DSJ_ENABLE_DEBUG_API \
                 -DSJ_ENABLE_GPIO_API \
                 -DSJ_ENABLE_HTTP_CLIENT_API \
@@ -185,7 +185,7 @@ MGIOT_FEATURES ?= -DSJ_ENABLE_ADC_API \
                 -DSJ_ENABLE_UDP_API \
                 -DSJ_ENABLE_WIFI_API \
                 -DSJ_ENABLE_WS_CLIENT_API
-MGIOT_ESP_FEATURES = -DSJ_ENABLE_WEB_CONFIG \
+MIOT_ESP_FEATURES = -DSJ_ENABLE_WEB_CONFIG \
                      -DSJ_ENABLE_FILE_UPLOAD \
                      -DSJ_ENABLE_UPDATER_CLUBBY \
                      -DSJ_ENABLE_UPDATER_CLUBBY_API \
@@ -198,7 +198,7 @@ MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_EXT_SHA1
 
-FEATURES = $(MG_FEATURES) $(MGIOT_FEATURES) $(MGIOT_ESP_FEATURES) \
+FEATURES = $(MG_FEATURES) $(MIOT_FEATURES) $(MIOT_ESP_FEATURES) \
            $(FEATURES_EXTRA) \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
            -DMG_NO_BSD_SOCKETS -DDISABLE_MD5 -DBOOT_BIG_FLASH \
@@ -210,14 +210,14 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
 
 .PHONY: all clean
 
-MGIOT_CFLAGS = -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
+MIOT_CFLAGS = -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
                -DESP_ENABLE_MG_LWIP_IF
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
   FW_FS_OUT = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 endif
 
-LD_SCRIPT_TEMPL = $(MGIOT_ESP_PATH)/ld/fw.ld
+LD_SCRIPT_TEMPL = $(MIOT_ESP_PATH)/ld/fw.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
@@ -225,7 +225,7 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
 LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
-MGIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
+MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
@@ -240,7 +240,7 @@ IMAGE_HEADER_SIZE = 0
 ifeq "$(SSL)" "Krypton"
   IPATH += $(KRYPTON_PATH)
   VPATH += $(KRYPTON_PATH)
-  MGIOT_SRCS += krypton.c esp_crypto.c esp_ssl_krypton.c
+  MIOT_SRCS += krypton.c esp_crypto.c esp_ssl_krypton.c
   FEATURES += -DMG_ENABLE_SSL -DMG_DISABLE_PFS -DSSL_KRYPTON \
               -DKR_LOCALS -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 \
               -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
@@ -248,14 +248,14 @@ endif
 
 ifeq "$(SJ_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MGIOT_FEATURES += -DSJ_ENABLE_JS
+  MIOT_FEATURES += -DSJ_ENABLE_JS
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_FEATURES)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
   ifeq "$(V7_FREEZE)" "1"
-    MGIOT_ESP_FEATURES += -DV7_THAW
+    MIOT_ESP_FEATURES += -DV7_THAW
     GENFILES_LIST += $(BUILD_DIR)/fr.c
-    MGIOT_SRCS += fr.c
+    MIOT_SRCS += fr.c
   endif
   ifneq "$(V7_GC_DEBUG)" "1"
     MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
@@ -264,14 +264,14 @@ ifeq "$(SJ_ENABLE_JS)" "1"
     MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
   endif
 else
-  MGIOT_SRCS += cs_file.c str_util.c
+  MIOT_SRCS += cs_file.c str_util.c
 endif
 
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
-  MGIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
+  MIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
 endif
 
-MGIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGIOT_SRCS)))
+MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 
 FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
@@ -316,7 +316,7 @@ ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
           -DFS_SIZE=$(_FS_SIZE) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
-          $(MGIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
+          $(MIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
           $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
 
 LDFLAGS += -u Cache_Read_Enable_New
@@ -361,10 +361,10 @@ $(FW_FILE_2_OUT): $(APP_OUT)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MGIOT_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
-	$(call link,$(APP_OBJS) $(BUILD_INFO_O) $(MGIOT_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
+$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	$(call link,$(APP_OBJS) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
 
-$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGIOT_ESP_PATH)/Makefile.build
+$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MIOT_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
 	$(Q) echo "void user_init(void){}; " \
             "void system_restart_local(){};" \
@@ -373,7 +373,7 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGIOT_ESP_PATH)/Makefile.build
             "void __cyg_profile_func_exit(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" > $@
 
 # Main app lib.
-$(MGIOT_LIB): $(MGIOT_OBJS)
+$(MIOT_LIB): $(MIOT_OBJS)
 	$(vecho) "AR    $@"
 	$(Q) $(AR) cru $@ $^
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
@@ -396,10 +396,10 @@ $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(BUILD_DIR)/fr.c: $(MGIOT_POSIX_BIN)
+$(BUILD_DIR)/fr.c: $(MIOT_POSIX_BIN)
 	$(vecho) "GEN   $@"
-	$(Q) $(MGIOT_POSIX_BIN) -freeze $(BUILD_DIR)/fr.dump
-	$(Q) @nm $(MGIOT_POSIX_BIN) > $(BUILD_DIR)/fr.sym
+	$(Q) $(MIOT_POSIX_BIN) -freeze $(BUILD_DIR)/fr.dump
+	$(Q) @nm $(MIOT_POSIX_BIN) > $(BUILD_DIR)/fr.sym
 	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
 
 # Generate linker script.
@@ -448,12 +448,12 @@ $(FW_FS_OUT): $(BUILD_DIR)/v7
 
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
-$(MGIOT_POSIX_BIN):
-	$(MAKE) -j4 -C $(MGIOT_POSIX_PATH) \
+$(MIOT_POSIX_BIN):
+	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
-	  MGIOT_FEATURES='$(MGIOT_FEATURES)' \
-	  BIN_DIR=$(MGIOT_POSIX_BIN_DIR) \
-	  BUILD_DIR=$(MGIOT_POSIX_BUILD_DIR)
+	  MIOT_FEATURES='$(MIOT_FEATURES)' \
+	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
+	  BUILD_DIR=$(MIOT_POSIX_BUILD_DIR)
 endif
 
 # Target specific warning inhibitions
