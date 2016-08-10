@@ -220,7 +220,7 @@ udp_input(struct pbuf *p, struct netif *inp)
           pcb = inp->dhcp->pcb;
         }
       }
-    /*++ Changed by Espressif ++*/
+    }
     } else if (dest == DHCP_SERVER_PORT) {
       if (src == DHCP_CLIENT_PORT) {
         if ( inp->dhcps_pcb != NULL ) {
@@ -230,8 +230,6 @@ udp_input(struct pbuf *p, struct netif *inp)
           }
         }
       }
-    }
-   /*--                      --*/
   } else
 #endif /* LWIP_DHCP */
   {
