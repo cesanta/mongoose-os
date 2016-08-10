@@ -54,6 +54,7 @@ FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
 
+RF_CAL_DATA_SIZE = 0x1000
 SYS_PARAM_SIZE = 0x4000
 
 FW_FILE_1_ADDR = 0
@@ -294,11 +295,13 @@ ifeq "${HEAP_LOG}" "1"
 endif
 
 IMAGE_HEADER_SIZE = 0x10
-ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
-FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
-FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(SYS_PARAM_SIZE)))")
-RBOOT_EMPTY_CFG=$(FW_STAGING_DIR)/0x01000.bin
-PREREQ = rboot $(RBOOT_EMPTY_CFG)
+ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
+FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$((0x100000 - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE)))")
+FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE)))")
+FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE)))")
+RBOOT_CFG_INIT=$(FW_STAGING_DIR)/0x01000.bin
+RF_CAL_DATA_INIT=$(FW_STAGING_DIR)/$(FW_RF_CAL_DATA_ADDR).bin
+PREREQ = rboot $(RBOOT_CFG_INIT)
 BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
                    -DFW2_ADDR=$(FW2_FILE_2_ADDR) \
                    -DFW1_FS_ADDR=$(FS_ADDR) \
@@ -314,7 +317,7 @@ LIBDIRS = $(addprefix -L,$(LPATH))
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
 
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
-          -DFS_SIZE=$(_FS_SIZE) \
+          -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
           $(MIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
           $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
@@ -323,7 +326,7 @@ LDFLAGS += -u Cache_Read_Enable_New
 
 all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
-$(RBOOT_EMPTY_CFG):
+$(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT):
 	$(vecho) "GEN   $@"
 	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" > $@
 
@@ -333,7 +336,8 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR):
 
 # Main output product: firmware files.
 FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
-           boot_cfg:src=$(RBOOT_EMPTY_CFG),addr=0x1000 \
+           boot_cfg:src=$(RBOOT_CFG_INIT),addr=0x1000 \
+           rf_cal_data:src=$(RF_CAL_DATA_INIT),addr=$(FW_RF_CAL_DATA_ADDR) \
            fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR)
 
 ifeq "$(CREATE_SPIFFS_FS)" "1"
@@ -348,7 +352,8 @@ include $(REPO_PATH)/common/scripts/fw_meta.mk
 
 all: $(FW_ZIP)
 
-$(FW_MANIFEST): $(FW_FS_OUT) $(FW_FILE_1_OUT) $(FW_FILE_2_OUT) ${FS_FILES} ${JSBIN_SRCS}
+$(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
+                $(FW_FILE_2_OUT) $(FW_FS_OUT) $(FS_FILES) $(JSBIN_SRCS)
 
 $(FW_FILE_1_OUT): $(BUILD_DIR)/rboot.bin
 	$(vecho) "CP    $< -> $@"

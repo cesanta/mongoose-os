@@ -57,6 +57,8 @@ os_timer_t startcmd_timer;
 int uart_initialized = 0;
 #endif
 
+uint32_t user_rf_cal_sector_set();
+
 void dbg_putc(char c) {
   fputc(c, stderr);
 }
@@ -65,7 +67,7 @@ void dbg_putc(char c) {
  * Mongoose IoT initialization, called as an SDK timer callback
  * (`os_timer_...()`).
  */
-int sjs_init(rboot_config *bcfg) {
+int esp_sj_init(rboot_config *bcfg) {
   mongoose_init();
   /*
    * In order to see debug output (at least errors) during boot we have to
@@ -88,8 +90,8 @@ int sjs_init(rboot_config *bcfg) {
     esp_uart_init(u1cfg);
     fs_set_stdout_uart(0);
     fs_set_stderr_uart(ESP_DEBUG_UART);
-    setvbuf(stdout, NULL, _IONBF, 0);
-    setvbuf(stderr, NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    setvbuf(stderr, NULL, _IOLBF, 0);
     cs_log_set_level(LL_INFO);
     os_install_putc1(dbg_putc);
     system_set_os_print(1);
@@ -100,8 +102,8 @@ int sjs_init(rboot_config *bcfg) {
 
   fputc('\n', stderr);
   LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
-  LOG(LL_INFO,
-      ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
+  LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
+                sj_get_heap_size(), sj_get_free_heap_size()));
   esp_print_reset_info();
 
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
@@ -164,9 +166,9 @@ int sjs_init(rboot_config *bcfg) {
   return 0;
 }
 
-void sjs_init_timer_cb(void *arg) {
+void esp_sj_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
-  if (sjs_init(bcfg) == 0) {
+  if (esp_sj_init(bcfg) == 0) {
     if (bcfg->is_first_boot) {
 #ifdef SJ_ENABLE_CLUBBY
       /* fw_updated will be reset by the boot loader if it's a rollback. */
@@ -196,9 +198,9 @@ void sdk_init_done_cb() {
 #endif
   system_soft_wdt_stop(); /* give 60 sec for initialization */
 
-  /* Schedule SJS initialization (`sjs_init()`) */
+  /* Schedule SJS initialization (`esp_sj_init()`) */
   os_timer_disarm(&startcmd_timer);
-  os_timer_setfn(&startcmd_timer, sjs_init_timer_cb, NULL);
+  os_timer_setfn(&startcmd_timer, esp_sj_init_timer_cb, NULL);
   os_timer_arm(&startcmd_timer, 0, 0);
 }
 
@@ -212,4 +214,12 @@ void user_init() {
   esp_exception_handler_init();
 
   gpio_init();
+}
+
+#ifndef FW_RF_CAL_DATA_ADDR
+#error FW_RF_CAL_DATA_ADDR is not defined
+#endif
+uint32_t user_rf_cal_sector_set() {
+  /* Defined externally. */
+  return FW_RF_CAL_DATA_ADDR / 4096;
 }
