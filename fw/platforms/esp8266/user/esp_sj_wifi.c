@@ -69,20 +69,23 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   struct ip_info info;
   struct dhcps_lease dhcps;
 
-  size_t pass_len = strlen(cfg->pass);
-  size_t ssid_len = strlen(cfg->ssid);
+  size_t ssid_len = (cfg->ssid != NULL ? strlen(cfg->ssid) : 0);
+  size_t pass_len = (cfg->pass != NULL ? strlen(cfg->pass) : 0);
 
+  if (ssid_len == 0) {
+    LOG(LL_ERROR, ("AP SSID not set"));
+    return 0;
+  }
   if (ssid_len > sizeof(ap_cfg.ssid) || pass_len > sizeof(ap_cfg.password)) {
     LOG(LL_ERROR, ("AP SSID or PASS too long"));
     return 0;
   }
-
   if (pass_len != 0 && pass_len < 8) {
     /*
      * If we don't check pwd len here and it will be less than 8 chars
      * esp will setup _open_ wifi with name ESP_<mac address here>
      */
-    LOG(LL_ERROR, ("AP password too short"));
+    LOG(LL_ERROR, ("AP password must be at least 8 chars"));
     return 0;
   }
 
@@ -93,10 +96,13 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 
   memset(&ap_cfg, 0, sizeof(ap_cfg));
   strncpy((char *) ap_cfg.ssid, cfg->ssid, sizeof(ap_cfg.ssid));
-  strncpy((char *) ap_cfg.password, cfg->pass, sizeof(ap_cfg.password));
   ap_cfg.ssid_len = ssid_len;
   if (pass_len != 0) {
     ap_cfg.authmode = AUTH_WPA2_PSK;
+    strncpy((char *) ap_cfg.password, cfg->pass, sizeof(ap_cfg.password));
+  } else {
+    ap_cfg.authmode = AUTH_OPEN;
+    ap_cfg.password[0] = '\0';
   }
   ap_cfg.channel = cfg->channel;
   ap_cfg.ssid_hidden = (cfg->hidden != 0);

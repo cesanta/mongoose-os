@@ -146,7 +146,8 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
     return 0;
   }
 
-  v = strlen(cfg->pass) > 0 ? SL_SEC_TYPE_WPA : SL_SEC_TYPE_OPEN;
+  v = (cfg->pass != NULL && strlen(cfg->pass) > 0) ? SL_SEC_TYPE_WPA
+                                                   : SL_SEC_TYPE_OPEN;
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SECURITY_TYPE, 1, &v)) !=
       0) {
     return 0;
