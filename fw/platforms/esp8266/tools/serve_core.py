@@ -7,7 +7,7 @@
 # reasonable support of lx106. Example invocation:
 #
 # docker run -v $PWD:/cesanta -ti \
-#    docker.cesanta.com:5000/esp8266-build-oss:latest \
+#    docker.cesanta.com/esp8266-build-oss:latest \
 #    xt-gdb /cesanta/fw/platforms/esp8266/build/fw.out \
 #    -ex "target remote localhost:1234"
 #
