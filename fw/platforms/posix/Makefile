@@ -3,6 +3,7 @@
 # Mongoose IoT for POSIX
 
 MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
 
 REPO_PATH ?= ../../..
 COMMON_PATH = $(REPO_PATH)/common

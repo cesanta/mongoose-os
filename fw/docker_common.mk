@@ -46,3 +46,7 @@ all clean:
 	      REPO_PATH=/src$(MIOT_REPO_SUBDIR) \
 	      $@ -$(MAKEFLAGS) \
 	  "
+
+print-var:
+	$(eval _VAL=$$($(VAR)))
+	@echo $(_VAL)
