@@ -1,5 +1,4 @@
 APP = c_network
-REPO_PATH = ../../..
 APP_MODULES = src
 SJ_ENABLE_JS = 0
 SJ_ENABLE_CLUBBY = 1

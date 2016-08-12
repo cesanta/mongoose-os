@@ -1,5 +1,4 @@
 APP = hello
-REPO_PATH = ../../..
 APP_MODULES = src
 APP_FS_PATH = $(CURDIR)/fs
 APP_CONF_DEFAULTS = $(APP_FS_PATH)/conf_app_defaults.json

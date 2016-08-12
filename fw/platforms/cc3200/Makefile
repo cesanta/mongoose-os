@@ -1,35 +1,11 @@
 APP ?= mongoose-iot
-REPO_PATH ?= ../../..
-SJS_CC3200_PATH = $(REPO_PATH)/fw/platforms/cc3200
-SDK_VERSION ?= $(shell cat $(SJS_CC3200_PATH)/sdk.version)
+APP_PLATFORM = cc3200
+ifeq "$(APP)" "mongoose-iot"
+MIOT_PATH = ../../..
+endif
 
-REPO_ABS_PATH = $(realpath $(REPO_PATH))
-APP_PATH ?= $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
-
-.PHONY: all clean
-
-MAKEFLAGS += w
-
-# this hack is needed to make `-$(MAKEFLAGS)` always work (notice the dash).
-# Otherwise, $(MAKEFLAGS) does not contain the flag `w` when `make` runs
-# directly, but it does contain this flag when it runs as a submake.
-#
-# see:
-# - http://www.gnu.org/software/make/manual/html_node/Options_002fRecursion.html
-# - http://www.gnu.org/software/make/manual/html_node/_002dw-Option.html
-MAKEFLAGS += w
-
-T=$(shell [ -t 0 ] && echo true || echo false)
-
-all clean:
-	@docker run --rm -i --tty=$T -v $(REPO_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
-	  //bin/bash -c "\
-	    if [ -d /src/v7 ] ; then $(MAKE) -C /src/v7 v7.c ; fi && \
-	    if [ -d /src/krypton ] ; then $(MAKE) -C /src/krypton krypton.c ; fi && \
-	    if [ -d /src/mongoose ] ; then $(MAKE) -C /src/mongoose mongoose.c mongoose.h ; fi && \
-	    cd $(APP_PATH) && \
-	    nice $(MAKE) -j4 -f Makefile.build APP=$(APP) REPO_PATH=/src $@ -$(MAKEFLAGS) \
-	  "
+# This defines "all" and "clean" targets.
+include $(MIOT_PATH)/fw/docker_common.mk
 
 debug:
 	docker run --rm -it --privileged -v $(SRC_DIR):/src $(SDK) \
