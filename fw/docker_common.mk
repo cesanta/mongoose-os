@@ -33,19 +33,38 @@ MAKEFLAGS += w
 
 T=$(shell [ -t 0 ] && echo true || echo false)
 
+# `make` command, which will be invoked either directly or inside the newly
+# created docker container. It uses MAKE_REPO_ABS_PATH, which will be set later
+MAKE_CMD=$(MAKE) -j4 \
+      -C $(MAKE_REPO_ABS_PATH)/$(APP_SUBDIR) -f Makefile.build \
+      APP=$(APP) \
+      APP_VERSION=$(APP_VERSION) \
+      APP_BUILD_ID=$(APP_BUILD_ID) \
+      REPO_PATH=$(MAKE_REPO_ABS_PATH)/$(MIOT_REPO_SUBDIR) \
+      $@ -$(MAKEFLAGS)
+
+# define targets "all" and "clean" differently, depending on whether we're
+# inside our docker container
+ifeq ("$(MIOT_SDK_REVISION)","")
+
+# We're outside of the container, so, invoke docker properly
+MAKE_REPO_ABS_PATH=/src
 all clean:
 	@docker run --rm -i --tty=$T \
 	  -v $(REPO_ABS_PATH):/src \
 	  $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  /bin/bash -c "\
-	    nice make -j4 \
-	      -C /src$(APP_SUBDIR) -f Makefile.build \
-	      APP=$(APP) \
-	      APP_VERSION=$(APP_VERSION) \
-	      APP_BUILD_ID=$(APP_BUILD_ID) \
-	      REPO_PATH=/src$(MIOT_REPO_SUBDIR) \
-	      $@ -$(MAKEFLAGS) \
+	    nice $(MAKE_CMD) \
 	  "
+
+else
+
+# We're already inside of container, so, invoke `make` directly
+MAKE_REPO_ABS_PATH=$(REPO_ABS_PATH)
+all clean:
+	@$(MAKE_CMD)
+
+endif
 
 print-var:
 	$(eval _VAL=$$($(VAR)))
