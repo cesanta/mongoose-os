@@ -3,10 +3,11 @@
 
 #include "lwip/dns.h"
 #include "os_type.h"
+#include "lwip/app/espconn_buf.h"
 
 #if 0
 #define espconn_printf(fmt, args...) os_printf(fmt,## args)
-#else
+#else 
 #define espconn_printf(fmt, args...)
 #endif
 
@@ -32,6 +33,8 @@ typedef void (* espconn_reconnect_callback)(void *arg, sint8 err);
 #define ESPCONN_ARG        -12   /* Illegal argument.        */
 #define ESPCONN_IF		   -14	 /* Low_level error			 */
 #define ESPCONN_ISCONN     -15   /* Already connected.       */
+#define ESPCONN_TIME	   -16	 /* Sync Time error			 */
+#define ESPCONN_NODATA	   -17	 /* No data can be read	     */
 
 #define ESPCONN_HANDSHAKE  -28   /* ssl handshake failed	 */
 #define ESPCONN_RESP_TIMEOUT -29 /* ssl handshake no response*/
@@ -127,6 +130,14 @@ enum espconn_level{
 	ESPCONN_KEEPCNT
 };
 
+enum espconn_mode{
+	ESPCONN_NOMODE,
+	ESPCONN_TCPSERVER_MODE,
+	ESPCONN_TCPCLIENT_MODE,
+	ESPCONN_UDP_MODE,
+	ESPCONN_NUM_MODE
+};
+
 struct espconn_packet{
 	uint16 sent_length;		/* sent length successful*/
 	uint16 snd_buf_size;	/* Available buffer size for sending  */
@@ -169,7 +180,8 @@ typedef struct _espconn_msg{
 	struct espconn *pespconn;
 	comon_pkt pcommon;
 	uint8 count_opt;
-	int16_t hs_status;	//the status of the handshake
+	uint8 espconn_mode;
+	sint16_t hs_status;	//the status of the handshake
 	void *preverse;
 	void *pssl;
 	struct _espconn_msg *pnext;
@@ -177,6 +189,8 @@ typedef struct _espconn_msg{
 //***********Code for WIFI_BLOCK from upper**************
 	uint8 recv_hold_flag;
 	uint16 recv_holded_buf_Len;
+//*******************************************************
+	ringbuf *readbuf;
 }espconn_msg;
 
 #ifndef _MDNS_INFO
@@ -429,7 +443,7 @@ extern sint8 espconn_regist_time(struct espconn *espconn, uint32 interval, uint8
  * Description  : Used to specify the function that should be called when data
  * 				  has been successfully delivered to the remote host.
  * Parameters   : struct espconn *espconn -- espconn to set the sent callback
- * 				  espconn_sent_callback sent_cb -- sent callback function to
+ * 				  espconn_sent_callback sent_cb -- sent callback function to 
  * 				  call for this espconn when data is successfully sent
  * Returns      : none
 *******************************************************************************/
@@ -460,10 +474,10 @@ extern sint8 espconn_sent(struct espconn *espconn, uint8 *psent, uint16 length);
 
 /******************************************************************************
  * FunctionName : espconn_regist_connectcb
- * Description  : used to specify the function that should be called when
- * 				  connects to host.
- * Parameters   : espconn -- espconn to set the connect callback
- * 				  connect_cb -- connected callback function to call when connected
+ * Description  : used to specify the function that should be called when 
+ * 				  connects to host. 
+ * Parameters   : espconn -- espconn to set the connect callback 
+ * 				  connect_cb -- connected callback function to call when connected 
  * Returns      : none
 *******************************************************************************/
 
@@ -471,9 +485,9 @@ extern sint8 espconn_regist_connectcb(struct espconn *espconn, espconn_connect_c
 
 /******************************************************************************
  * FunctionName : espconn_regist_recvcb
- * Description  : used to specify the function that should be called when recv
+ * Description  : used to specify the function that should be called when recv 
  * 				  data from host.
- * Parameters   : espconn -- espconn to set the recv callback
+ * Parameters   : espconn -- espconn to set the recv callback 
  * 				  recv_cb -- recv callback function to call when recv data
  * Returns      : none
 *******************************************************************************/
@@ -482,10 +496,10 @@ extern sint8 espconn_regist_recvcb(struct espconn *espconn, espconn_recv_callbac
 
 /******************************************************************************
  * FunctionName : espconn_regist_reconcb
- * Description  : used to specify the function that should be called when connection
+ * Description  : used to specify the function that should be called when connection 
  * 				  because of err disconnect.
- * Parameters   : espconn -- espconn to set the err callback
- * 				  recon_cb -- err callback function to call when err
+ * Parameters   : espconn -- espconn to set the err callback 
+ * 				  recon_cb -- err callback function to call when err 
  * Returns      : none
 *******************************************************************************/
 
@@ -546,7 +560,7 @@ extern sint8 espconn_get_keepalive(struct espconn *espconn, uint8 level, void *o
  * Description  : Resolve a hostname (string) into an IP address.
  * Parameters   : pespconn -- espconn to resolve a hostname
  *                hostname -- the hostname that is to be queried
- *                addr -- pointer to a ip_addr_t where to store the address if
+ *                addr -- pointer to a ip_addr_t where to store the address if 
  *                        it is already cached in the dns_table (only valid if
  *                        ESPCONN_OK is returned!)
  *                found -- a callback function to be called on success, failure
@@ -661,3 +675,4 @@ extern void espconn_mdns_enable(void);
 *******************************************************************************/
 extern void espconn_dns_setserver(u8_t numdns, ip_addr_t *dnsserver);
 #endif
+

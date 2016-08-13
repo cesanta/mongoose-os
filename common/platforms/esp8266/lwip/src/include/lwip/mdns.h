@@ -31,9 +31,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* File added by Espressif */
-#ifndef __LWIP_DNS_H__
-#define __LWIP_DNS_H__
+
+#ifndef __LWIP_MDNS_H__
+#define __LWIP_MDNS_H__
 
 #include "lwip/opt.h"
 

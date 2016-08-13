@@ -1,4 +1,4 @@
 APP = hello
-REPO_PATH = ../../..
+MIOT_PATH = ../../..
 
-include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile
+include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile

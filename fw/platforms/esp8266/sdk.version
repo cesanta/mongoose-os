@@ -1,1 +1,1 @@
-docker.cesanta.com:5000/esp8266-build-oss:2.0.0-r1
+docker.cesanta.com/esp8266-build-oss:2.0.0-r2

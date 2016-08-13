@@ -5,6 +5,7 @@
 # This file is executed inside Docker build container.
 # It can be used without container too if SDK_PATH and V7_PATH are configured.
 MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
 
 APP ?= mongoose-iot
 APP_PLATFORM = cc3200
@@ -76,6 +77,7 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
 
+JS_EXTRA ?=
 JSBIN_SRCS := $(MIOT_JS_PATH)/sys_init.js \
               $(MIOT_JS_PATH)/demo.js \
               $(MIOT_JS_PATH)/I2C.js \
@@ -239,8 +241,6 @@ else
   MIOT_CC3200_FEATURES += -DSJ_ENABLE_UPDATER_POST
 endif
 
-.DEFAULT_GOAL := all
-
 clean:
 	@rm -rf $(BUILD_DIR) $(FW_DIR)
 
@@ -327,6 +327,7 @@ $(FS_IMG): $(BUILD_DIR)/v7
 # appropriate
 $(MIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
+	  REPO_PATH=$(REPO_PATH) \
 	  V7_FEATURES='$(V7_HOST_FEATURES) -DV7_MAIN -DV7_FREEZE' \
 	  MIOT_FEATURES='$(MIOT_FEATURES)' \
 	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
@@ -391,7 +392,9 @@ $(BUILD_DIR)/fr.c: $(MIOT_POSIX_BIN)
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                                 $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
 	$(vecho) "MAKE  $@"
-	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build APP=mg-boot TOOLCHAIN=gcc \
+	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build \
+	             REPO_PATH=$(realpath $(REPO_PATH)) \
+	             APP=mg-boot TOOLCHAIN=gcc \
 	             SDK_PATH=$(SDK_PATH) PYTHON=$(PYTHON) \
 	             BUILD_DIR=$(BOOT_BUILD_DIR) FW_DIR=$(BOOT_FW_DIR) \
 	             CREATE_ZIP=0 dirs $@

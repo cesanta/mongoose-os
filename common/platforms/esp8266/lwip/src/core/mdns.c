@@ -195,8 +195,8 @@ static char host_name[MDNS_NAME_LENGTH];
 static char service_name[MDNS_NAME_LENGTH];
 static char server_name[MDNS_NAME_LENGTH];
 //static char puck_datasheet[PUCK_DATASHEET_SIZE];
-static struct udp_pcb *mdns_pcb;
-
+static struct udp_pcb *mdns_pcb = NULL;
+static struct mdns_info * ms_info = NULL;
 static struct ip_addr multicast_addr;
 static struct ip_addr host_addr;
 static uint8 register_flag = 0;
@@ -889,7 +889,7 @@ mdns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, struct ip_addr *addr,
 	}
 	goto memerr2;
 	memerr2:
-	mem_free(mdns_payload);
+	os_memset(mdns_payload , 0 ,DNS_MSG_SIZE);
 	memerr1:
 	/* free pbuf */
 	pbuf_free(p);
@@ -902,8 +902,27 @@ mdns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, struct ip_addr *addr,
 void ICACHE_FLASH_ATTR
 mdns_close(void)
 {
-	if (mdns_pcb != NULL)
+	uint8 text_index = 0;
+	if (mdns_pcb != NULL && ms_info != NULL) {
 		udp_remove(mdns_pcb);
+		for(text_index = 0;text_index < 10;text_index++) {
+				if(ms_info->txt_data[text_index] != NULL) {
+					os_free(ms_info->txt_data[text_index]);
+					ms_info->txt_data[text_index] = NULL;
+				}
+		}
+		if (ms_info->host_name != NULL) {
+			os_free(ms_info->host_name);
+			ms_info->host_name = NULL;
+		}
+		if (ms_info->server_name != NULL) {
+			os_free(ms_info->server_name);
+			ms_info->server_name = NULL;
+		}
+		os_free(ms_info);
+		mdns_pcb = NULL;
+		ms_info = NULL;
+	}
 }
 
 void ICACHE_FLASH_ATTR
@@ -1032,26 +1051,48 @@ mdns_init(struct mdns_info *info) {
 	multicast_addr.addr = DNS_MULTICAST_ADDRESS;
 	struct ip_addr ap_host_addr;
 	struct ip_info ipconfig;
-	if (info->ipAddr == 0) {
+	uint8 text_index = 0;
+	ms_info = (struct mdns_info *)os_zalloc(sizeof(struct mdns_info));
+	if (ms_info != NULL) {
+		os_memcpy(ms_info,info,sizeof(struct mdns_info));
+		ms_info->host_name = (char *)os_zalloc(os_strlen(info->host_name)+1);
+		os_memcpy(ms_info->host_name,info->host_name,os_strlen(info->host_name));
+		ms_info->server_name = (char *)os_zalloc(os_strlen(info->server_name)+1);
+		os_memcpy(ms_info->server_name,info->server_name,os_strlen(info->server_name));
+		for(text_index = 0;text_index < 10;text_index++) {
+			if(info->txt_data[text_index] != NULL) {
+				ms_info->txt_data[text_index] = (char *)os_zalloc(os_strlen(info->txt_data[text_index])+1);
+				os_memcpy(ms_info->txt_data[text_index],info->txt_data[text_index],os_strlen(info->txt_data[text_index]));
+			} else {
+				break;
+			}
+
+		}
+
+	} else {
+		os_printf("ms_info alloc failed\n");
+		return;
+	}
+	if (ms_info->ipAddr == 0) {
 		os_printf("mdns ip error!\n ");
 		return;
 	}
-	host_addr.addr = info->ipAddr ;
+	host_addr.addr = ms_info->ipAddr ;
 	LWIP_DEBUGF(DNS_DEBUG, ("dns_init: initializing\n"));
 	//get the datasheet from PUCK
-	mdns_set_hostname(info->host_name);
-	mdns_set_servername(info->server_name);
-	mdns_set_name(info->host_name);
+	mdns_set_hostname(ms_info->host_name);
+	mdns_set_servername(ms_info->server_name);
+	mdns_set_name(ms_info->host_name);
 
 	// get the host name as instrumentName_serialNumber for MDNS
 	// set the name of the service, the same as host name
 	os_printf("host_name = %s\n", host_name);
 	os_printf("server_name = %s\n", PUCK_SERVICE);
-	if (info->server_port == 0)
+	if (ms_info->server_port == 0)
 	{
 		PUCK_PORT = 80;
 	} else {
-		PUCK_PORT = info->server_port;
+		PUCK_PORT = ms_info->server_port;
 	}
 
 	/* initialize mDNS */
@@ -1082,14 +1123,14 @@ mdns_init(struct mdns_info *info) {
 
 		/*loopback function for the multicast(224.0.0.251) messages received at port 5353*/
 //		mdns_enable();
-		udp_recv(mdns_pcb, mdns_recv, info);
+		udp_recv(mdns_pcb, mdns_recv, ms_info);
 		mdns_flag = 1;
 		/*
 		 * Register the name of the instrument
 		 */
 
 		os_timer_disarm(&mdns_timer);
-		os_timer_setfn(&mdns_timer, (os_timer_func_t *)mdns_reg,info);
+		os_timer_setfn(&mdns_timer, (os_timer_func_t *)mdns_reg,ms_info);
 		os_timer_arm(&mdns_timer, 1000, 1);
 	}
 }

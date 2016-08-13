@@ -95,47 +95,54 @@ def cmd_gen_build_info(args):
 
     ts = datetime.datetime.utcnow()
     timestamp = None
-    if args.timestamp is None:
-        timestamp = ts.isoformat()
-    elif args.timestamp != '':
+    if args.timestamp:
         timestamp = args.timestamp
+    else:
+        timestamp = ts.isoformat()
     if timestamp is not None:
         bi['build_timestamp'] = timestamp
 
     version = None
-    if args.version is None:
+    if args.version:
+        version = args.version
+    else:
         version = None
         if args.tag_as_version:
-            repo = get_git_repo(os.getcwd())
-            version = get_tag_for_commit(repo, repo.head.commit)
+            try:
+                repo = get_git_repo(os.getcwd())
+                version = get_tag_for_commit(repo, repo.head.commit)
+            except Exception, e:
+                print >>sys.stderr, 'App version not specified and could not be guessed (%s)' % e
         if version is None:
             version = ts.strftime('%Y%m%d%H%M%S')
-    elif args.version != '':
-        version = args.version
     if version is not None:
         bi['build_version'] = version
 
     id = None
-    if args.id is None:
-        repo = get_git_repo(os.getcwd())
-        if repo.head.is_detached:
-            branch_or_tag = get_tag_for_commit(repo, repo.head.commit)
-            if branch_or_tag is None:
-                branch_or_tag = '?'
-        else:
-            branch_or_tag = repo.active_branch
-
-        if args.dirty == "auto":
-            dirty = repo.is_dirty()
-        else:
-            dirty = args.dirty == "true"
-        id = '%s/%s@%s%s' % (
-            ts.strftime('%Y%m%d-%H%M%S'),
-            branch_or_tag,
-            str(repo.head.commit)[:8],
-            '+' if dirty else '')
-    elif args.id != '':
+    if args.id:
         id = args.id
+    else:
+        try:
+            repo = get_git_repo(os.getcwd())
+            if repo.head.is_detached:
+                branch_or_tag = get_tag_for_commit(repo, repo.head.commit)
+                if branch_or_tag is None:
+                    branch_or_tag = '?'
+            else:
+                branch_or_tag = repo.active_branch
+
+            if args.dirty == "auto":
+                dirty = repo.is_dirty()
+            else:
+                dirty = args.dirty == "true"
+            id = '%s/%s@%s%s' % (
+                ts.strftime('%Y%m%d-%H%M%S'),
+                branch_or_tag,
+                str(repo.head.commit)[:8],
+                '+' if dirty else '')
+        except Exception, e:
+            print >>sys.stderr, 'Build ID not specified and could not be guessed (%s)' % e
+            id = '%s/???' % ts.strftime('%Y%m%d-%H%M%S')
     if id is not None:
         bi['build_id'] = id
 
@@ -251,7 +258,7 @@ def add_file_to_arc(args, part, arc_dir, src_file, added, zf):
     if arc_file not in added:
         zf.write(src_file, arc_file)
         added[arc_file] = True
-        print >>sys.stderr, '     Add %s' % src_file
+        print '     Add %s' % src_file
 
 def cmd_create_fw(args):
     manifest = json.load(open(args.manifest))

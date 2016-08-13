@@ -1,47 +1,26 @@
 APP ?= mongoose-iot
-REPO_PATH ?= ../../..
-SJS_ESP_PATH = $(REPO_PATH)/fw/platforms/esp8266
-SDK_VERSION ?= $(shell cat $(SJS_ESP_PATH)/sdk.version)
+APP_PLATFORM = esp8266
+ifeq "$(APP)" "mongoose-iot"
+MIOT_PATH = ../../..
+endif
 
-REPO_ABS_PATH = $(realpath $(REPO_PATH))
-APP_PATH ?= $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
-PYTHON ?= python
-
-.PHONY: all clean
-
-# this hack is needed to make `-$(MAKEFLAGS)` always work (notice the dash).
-# Otherwise, $(MAKEFLAGS) does not contain the flag `w` when `make` runs
-# directly, but it does contain this flag when it runs as a submake.
-#
-# see:
-# - http://www.gnu.org/software/make/manual/html_node/Options_002fRecursion.html
-# - http://www.gnu.org/software/make/manual/html_node/_002dw-Option.html
-MAKEFLAGS += w
-
-T=$(shell [ -t 0 ] && echo true || echo false)
-
-all clean:
-	@docker run --rm -i --tty=$T -v $(REPO_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
-	  //bin/bash -c "\
-	    if [ -d /src/v7 ] ; then make -C /src/v7 v7.c ; fi && \
-	    if [ -d /src/krypton ] ; then make -C /src/krypton krypton.c ; fi && \
-	    if [ -d /src/mongoose ] ; then make -C /src/mongoose mongoose.c mongoose.h ; fi && \
-	    cd $(APP_PATH) && \
-	    nice make -j4 -f Makefile.build APP=$(APP) REPO_PATH=/src $@ -$(MAKEFLAGS) \
-	    && $(PYTHON) $(SJS_ESP_PATH)/tools/showbreakdown.py \
-	  "
+# This defines "all" and "clean" targets.
+include $(MIOT_PATH)/fw/docker_common.mk
 
 debug_coredump:
 ifndef CONSOLE_LOG
 	$(error Please set CONSOLE_LOG)
 endif
-	docker run --rm -it -v $(REPO_ABS_PATH):/src -v $(CONSOLE_LOG):/console.log $(SDK_VERSION) /bin/bash -c \
-	  "cd $(APP_PATH); \
-      $(SJS_ESP_PATH)/tools/serve_core.py \
+	docker run --rm -i --tty=true \
+	  -v $(REPO_ABS_PATH):/src \
+	  -v $(CONSOLE_LOG):/console.log \
+	  $(SDK_VERSION) /bin/bash -c "\
+	    cd /src$(APP_SUBDIR); \
+      /src$(MIOT_PLATFORM_SUBDIR)/tools/serve_core.py \
         --irom .build/fw_temp/0x11000.bin \
-        --rom $(SJS_ESP_PATH)/tools/rom.bin \
+        --rom /src$(MIOT_PLATFORM_SUBDIR)/tools/rom.bin \
         /console.log & \
       xt-gdb .build/$(APP).out \
         -ex 'target remote 127.0.0.1:1234' \
         -ex 'set confirm off' \
-        -ex 'add-symbol-file $(SJS_ESP_PATH)/tools/romsyms 0x40000000'"
+        -ex 'add-symbol-file /src$(MIOT_PLATFORM_SUBDIR)/tools/romsyms 0x40000000'"

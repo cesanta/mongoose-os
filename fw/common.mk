@@ -36,3 +36,7 @@ else
 Q := @
 endif
 vecho := @echo " "
+
+print-var:
+	$(eval _VAL=$$($(VAR)))
+	@echo $(_VAL)

@@ -12,6 +12,7 @@
 #           map by `tools/heaplog_viewer/heaplog_viewer.html`
 #
 MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
 
 APP ?= mongoose-iot
 APP_PLATFORM = esp8266
@@ -126,6 +127,7 @@ MIOT_SRCS += v7.c \
              sj_ws_client_js.c
 endif
 
+JSBIN_EXTRA ?=
 JSBIN_SRCS := $(MIOT_JS_PATH)/sys_init.js \
               $(MIOT_JS_PATH)/demo.js \
               $(MIOT_JS_PATH)/I2C.js \
@@ -199,6 +201,7 @@ MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_LWIP -DMG_EXT_SHA1
 
+FEATURES_EXTRA ?=
 FEATURES = $(MG_FEATURES) $(MIOT_FEATURES) $(MIOT_ESP_FEATURES) \
            $(FEATURES_EXTRA) \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
@@ -324,12 +327,6 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
 
 LDFLAGS += -u Cache_Read_Enable_New
 
-all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
-
-$(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT):
-	$(vecho) "GEN   $@"
-	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" > $@
-
 $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
@@ -350,10 +347,14 @@ endif
 
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
-all: $(FW_ZIP)
+all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
                 $(FW_FILE_2_OUT) $(FW_FS_OUT) $(FS_FILES) $(JSBIN_SRCS)
+
+$(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT): $(FW_STAGING_DIR)
+	$(vecho) "GEN   $@"
+	$(Q) dd if=/dev/zero ibs=1 count=4096 | tr "\000" "\377" > $@
 
 $(FW_FILE_1_OUT): $(BUILD_DIR)/rboot.bin
 	$(vecho) "CP    $< -> $@"
@@ -455,6 +456,7 @@ $(FW_FS_OUT): $(BUILD_DIR)/v7
 # appropriate
 $(MIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
+	  REPO_PATH=$(REPO_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
 	  MIOT_FEATURES='$(MIOT_FEATURES)' \
 	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \

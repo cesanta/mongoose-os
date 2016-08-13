@@ -17,7 +17,7 @@ $(FW_ZIP): $(FW_MANIFEST) $(FW_META_CMD)
 	  --src_dir=$(FW_STAGING_DIR) \
 	  --output=$@
 	$(Q) cp $@ $(FW_DIR)/$(APP)-$(APP_PLATFORM)-$(shell $(FW_META_CMD) get $(FW_MANIFEST) version).zip
-	$(vecho) "Built version $(shell $(FW_META_CMD) get $(FW_MANIFEST) version)"
+	$(vecho) "Built $(APP)-$(APP_PLATFORM) version $(shell $(FW_META_CMD) get $(FW_MANIFEST) version) ($(shell $(FW_META_CMD) get $(FW_MANIFEST) build_id))"
 
 $(FW_MANIFEST): $(FW_META_CMD)
 	$(vecho) "GEN    $(FW_MANIFEST)"
