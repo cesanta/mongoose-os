@@ -135,6 +135,20 @@ SJ_PRIVATE enum v7_err Sys_fs_getFreeSpace(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
+SJ_PRIVATE enum v7_err Sys_fs_jump(struct v7 *v7, v7_val_t *res) {
+  v7_val_t arg = v7_arg(v7, 0);
+  int fs;
+  if (!v7_is_number(arg)) {
+    printf("usecs is not a double\n\r");
+  } else {
+    fs = v7_get_double(v7, arg);
+    *res = v7_mk_number(v7, sj_fs_jump(fs));
+  }
+  return V7_OK;
+}
+
+
+
 /*
  * Returns an object describing the free memory.
  *
@@ -321,6 +335,7 @@ void sj_sys_js_init(struct v7 *v7) {
   fs = v7_mk_object(v7);
   v7_set(v7, sys, "fs", ~0, fs);
   v7_set_method(v7, fs, "free", Sys_fs_getFreeSpace);
+  v7_set_method(v7, fs, "jump", Sys_fs_jump);
 }
 
 #if defined(SJ_FROZEN_JSON_PARSE)

@@ -45,4 +45,7 @@ void sj_usleep(int usecs);
 /* Get storage free space, bytes */
 int64_t sj_get_storage_free_space();
 
+/* Jumps between file systems */
+uint8_t sj_fs_jump(int fs);
+
 #endif /* CS_FW_SRC_SJ_HAL_H_ */
