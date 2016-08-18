@@ -6,6 +6,7 @@
 #include "common/platforms/esp8266/esp_ssl_krypton.h"
 
 #include "common/platforms/esp8266/esp_mg_net_if.h"
+#include "common/cs_dbg.h"
 
 #include <lwip/pbuf.h>
 #include <lwip/tcp.h>

@@ -13,6 +13,7 @@
 
 #include "v7/v7.h"
 #include "mongoose/mongoose.h"
+#include "common/cs_dbg.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_mongoose.h"

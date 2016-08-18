@@ -9,6 +9,7 @@
 #include "sys_config.h"
 #include "sys_ro_vars.h"
 #include "fw/src/sj_init.h"
+#include "common/cs_dbg.h"
 
 #include "mongoose/mongoose.h"
 

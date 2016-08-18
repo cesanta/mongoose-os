@@ -1,5 +1,6 @@
 #include "fw/src/sj_init_js.h"
 
+#include "common/cs_dbg.h"
 #include "fw/src/sj_adc_js.h"
 #include "fw/src/sj_app.h"
 #include "fw/src/sj_clubby_js.h"

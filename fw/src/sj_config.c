@@ -7,6 +7,7 @@
 
 #include "common/json_utils.h"
 #include "common/mbuf.h"
+#include "common/cs_dbg.h"
 #include "fw/src/sj_config.h"
 
 bool sj_conf_check_access(const struct mg_str key, const char *acl) {
