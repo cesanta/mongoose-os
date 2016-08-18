@@ -5,9 +5,10 @@ title: "Dispatcher"
 Commands provided by the dispatcher on the cloud backend.
 
 #### Hello
-A simple echo service.
+A simple ping
 
 
+Result `string`: returns HAI
 Request:
 ```json
 {
@@ -26,7 +27,8 @@ Response:
   "v": 2,
   "src": "//api.mongoose-iot.com",
   "dst": "device_123",
-  "id": 123
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
 }
 
 ```
@@ -64,4 +66,9 @@ Response:
 
 ```
 
+#### Help
+Return basic info about the server
+
+
+Result `object`: 
 
