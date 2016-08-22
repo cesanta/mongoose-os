@@ -5,10 +5,10 @@ title: "Dispatcher"
 Commands provided by the dispatcher on the cloud backend.
 
 #### Hello
-A simple ping
+The dispatcher learns about destinations reachable through a given channel by looking at the frames that come through them. This means that before receiving commands a device has to send at least one command. This method, mapped on /v1/Hello, offers a simple and cheap way to achieve this goal. Devices without a battery backed realtime clock will find the piggybacked server time to be useful.
 
 
-Result `string`: returns HAI
+Result `object`: 
 Request:
 ```json
 {
