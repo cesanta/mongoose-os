@@ -48,6 +48,10 @@ HEAP_LOG ?=
 
 CREATE_SPIFFS_FS ?= 1
 CREATE_RAW_FS ?= 0
+# Include defaults for sys params area. SDK 2.0.0 fails to boot with
+# uninitialized sys params area, so this should eventually be the default,
+# but it is not compatible with MFT 1.0.4 and below.
+INCLUDE_SYS_PARAMS_DEFAULTS ?= 0
 
 FLASH_SIZE ?= 1M
 FS_SIZE ?= 128K
@@ -56,7 +60,7 @@ FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
 
 RF_CAL_DATA_SIZE = 0x1000
-SYS_PARAM_SIZE = 0x4000
+SYS_PARAMS_SIZE = 0x4000
 
 FW_FILE_1_ADDR = 0
 FW_FILE_2_ADDR = 0x11000
@@ -298,10 +302,11 @@ ifeq "${HEAP_LOG}" "1"
 endif
 
 IMAGE_HEADER_SIZE = 0x10
-ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE) - $(IMAGE_HEADER_SIZE)))")
-FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$((0x100000 - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE)))")
-FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE)))")
-FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAM_SIZE)))")
+ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(FW_FILE_2_ADDR) - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE) - $(IMAGE_HEADER_SIZE)))")
+FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$((0x100000 - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
+SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAMS_SIZE)))")
 RBOOT_CFG_INIT=$(FW_STAGING_DIR)/0x01000.bin
 RF_CAL_DATA_INIT=$(FW_STAGING_DIR)/$(FW_RF_CAL_DATA_ADDR).bin
 PREREQ = rboot $(RBOOT_CFG_INIT)
@@ -336,6 +341,10 @@ FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            boot_cfg:src=$(RBOOT_CFG_INIT),addr=0x1000 \
            rf_cal_data:src=$(RF_CAL_DATA_INIT),addr=$(FW_RF_CAL_DATA_ADDR) \
            fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR)
+
+ifeq "$(INCLUDE_SYS_PARAMS_DEFAULTS)" "1"
+  FW_PARTS += sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
+endif
 
 ifeq "$(CREATE_SPIFFS_FS)" "1"
   FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
