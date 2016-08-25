@@ -4,39 +4,14 @@ title: "Account"
 
 Provides methods for managing users. Used by the frontend.
 
-#### CreateToken
-Generate a personal access token that can be passed in GET parameters instead user/psk pair
+#### ListGroups
+List groups.
+
 
 Arguments:
-- `description`: displayed when listing the tokens
+- `labels`: An object with labels to query for. Object keys are label names, corresponding values are label values.
 
-Result `string`: 
-Request:
-```json
-{
-  "v": 2,
-  "src": "device_123",
-  "id": 123,
-  "method": "/v1/Account.CreateToken",
-  "args": {
-    "description": "VALUE PLACEHOLDER"
-  }
-}
-
-```
-
-Response:
-```json
-{
-  "v": 2,
-  "src": "//api.mongoose-iot.com",
-  "dst": "device_123",
-  "id": 123,
-  "result": "VALUE PLACEHOLDER"
-}
-
-```
-
+Result `array`: 
 #### ListTokens
 List tokens
 
@@ -62,43 +37,6 @@ Response:
   "dst": "device_123",
   "id": 123,
   "result": "VALUE PLACEHOLDER"
-}
-
-```
-
-#### CreateUser
-Creates a new user. Can only be called by the frontend.
-
-Arguments:
-- `password`: Password for the user.
-- `email`: User's email address.
-- `name`: Display name for the user.
-- `id`: ID for the new user.
-
-Request:
-```json
-{
-  "v": 2,
-  "src": "device_123",
-  "id": 123,
-  "method": "/v1/Account.CreateUser",
-  "args": {
-    "email": "VALUE PLACEHOLDER",
-    "id": "VALUE PLACEHOLDER",
-    "name": "VALUE PLACEHOLDER",
-    "password": "VALUE PLACEHOLDER"
-  }
-}
-
-```
-
-Response:
-```json
-{
-  "v": 2,
-  "src": "//api.mongoose-iot.com",
-  "dst": "device_123",
-  "id": 123
 }
 
 ```
@@ -200,6 +138,91 @@ Response:
   "dst": "device_123",
   "id": 123,
   "result": "VALUE PLACEHOLDER"
+}
+
+```
+
+#### DeleteGroup
+Deletes a group.
+
+
+Arguments:
+- `id`: ID for the group to be deleted.
+
+#### CreateToken
+Generate a personal access token that can be passed in GET parameters instead user/psk pair
+
+Arguments:
+- `description`: displayed when listing the tokens
+
+Result `string`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.CreateToken",
+  "args": {
+    "description": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
+#### CreateGroup
+Creates a new group.
+
+
+Arguments:
+- `labels`: An object with labels to set. Object keys are label names, corresponding values are label values to set.
+- `id`: ID for the new group.
+
+#### CreateUser
+Creates a new user. Can only be called by the frontend.
+
+Arguments:
+- `password`: Password for the user.
+- `email`: User's email address.
+- `name`: Display name for the user.
+- `id`: ID for the new user.
+
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.CreateUser",
+  "args": {
+    "email": "VALUE PLACEHOLDER",
+    "id": "VALUE PLACEHOLDER",
+    "name": "VALUE PLACEHOLDER",
+    "password": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123
 }
 
 ```
