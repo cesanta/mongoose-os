@@ -39,6 +39,35 @@ Response:
 
 ```
 
+#### ListToken
+Returns the list of apps for which tokens were generated.
+
+
+Result `array`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.ListToken",
+  "args": {}
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### RevokeToken
 Revokes auth token for the given app.
 
@@ -54,6 +83,44 @@ Request:
   "method": "/v1/Auth.RevokeToken",
   "args": {
     "host": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
+
+#### DefineRoleOps
+Defines the role<->operations mappings for a given
+realm. Custom backends and firmwares can extend the Mongoose IoT API
+but all operations defined by user code live in its own realm.
+Devices and services are also associated with realms. This allows the
+authorization backend to namespace custom methods and their associated roles.
+
+
+Arguments:
+- `operations`: 
+- `realm`: Realm name.
+
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.DefineRoleOps",
+  "args": {
+    "operations": "VALUE PLACEHOLDER",
+    "realm": "VALUE PLACEHOLDER"
   }
 }
 
@@ -136,19 +203,23 @@ Response:
 
 ```
 
-#### ListToken
-Returns the list of apps for which tokens were generated.
+#### CreateRealm
+Create a realm
 
 
-Result `array`: 
+Arguments:
+- `realm`: Realm name.
+
 Request:
 ```json
 {
   "v": 2,
   "src": "device_123",
   "id": 123,
-  "method": "/v1/Auth.ListToken",
-  "args": {}
+  "method": "/v1/Auth.CreateRealm",
+  "args": {
+    "realm": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -159,8 +230,7 @@ Response:
   "v": 2,
   "src": "//api.mongoose-iot.com",
   "dst": "device_123",
-  "id": 123,
-  "result": "VALUE PLACEHOLDER"
+  "id": 123
 }
 
 ```
