@@ -250,6 +250,33 @@ Existing policy entries for roles not mentioned here will be removed.
 
 - `subject`: Entity ID of the policy subject.
 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.SetPolicy",
+  "args": {
+    "object": "VALUE PLACEHOLDER",
+    "roles": "VALUE PLACEHOLDER",
+    "subject": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
+
 #### AuthorizeCommand
 AuthorizeCommand returns true if `src` is allowed to send a given command to `dst`.
 
@@ -287,6 +314,45 @@ Response:
 
 ```
 
+#### AuthorizeOperation
+Check whether the subject entity can perform a given operation
+on an object entity.
+
+
+Arguments:
+- `operation`: Operation name.
+- `object`: Entity ID of the object.
+- `subject`: Entity ID of the subject.
+
+Result `boolean`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.AuthorizeOperation",
+  "args": {
+    "object": "VALUE PLACEHOLDER",
+    "operation": "VALUE PLACEHOLDER",
+    "subject": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### GetPolicy
 Returns the policies for a given subject.
 
@@ -296,4 +362,31 @@ Arguments:
 - `subject`: Entity ID of the policy subject.
 
 Result `array`: List of role names
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Auth.GetPolicy",
+  "args": {
+    "object": "VALUE PLACEHOLDER",
+    "subject": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 
