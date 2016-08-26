@@ -514,21 +514,37 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           len += out->printer(out, quote, 1);
         }
       } else {
-        const char *end_of_format_specifier = "sdfFgGlhuI.*-0123456789";
-        size_t n = strspn(fmt + 1, end_of_format_specifier);
-        char fmt2[20];
-        va_list sub_ap;
-        strncpy(fmt2, fmt, n + 1 > sizeof(fmt2) ? sizeof(fmt2) : n + 1);
-        fmt2[n + 1] = '\0';
-
         /*
          * we delegate printing to the system printf.
          * The goal here is to delegate all modifiers parsing to the system
          * printf, as you can see below we still have to parse the format
          * types.
+         *
+         * Currently, %s with strings longer than 20 chars will require
+         * double-buffering (an auxiliary buffer will be allocated from heap).
+         * TODO(dfrank): reimplement %s and %.*s in order to avoid that.
          */
+
+        const char *end_of_format_specifier = "sdfFgGlhuI.*-0123456789";
+        size_t n = strspn(fmt + 1, end_of_format_specifier);
+        char *pbuf = buf;
+        size_t need_len;
+        char fmt2[20];
+        va_list sub_ap;
+        strncpy(fmt2, fmt, n + 1 > sizeof(fmt2) ? sizeof(fmt2) : n + 1);
+        fmt2[n + 1] = '\0';
+
         va_copy(sub_ap, ap);
-        vsnprintf(buf, sizeof(buf), fmt2, sub_ap);
+        need_len = vsnprintf(buf, sizeof(buf), fmt2, sub_ap) + 1 /* null-term */;
+        if (need_len > sizeof(buf)) {
+          /*
+           * resulting string doesn't fit into a stack-allocated buffer `buf`,
+           * so we need to allocate a new buffer from heap and use it
+           */
+          pbuf = (char *)malloc(need_len);
+          va_copy(sub_ap, ap);
+          vsnprintf(pbuf, need_len, fmt2, sub_ap);
+        }
 
         /*
          * however we need to parse the type ourselves in order to advance
@@ -562,8 +578,14 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           }
         }
 
-        len += out->printer(out, buf, strlen(buf));
+        len += out->printer(out, pbuf, strlen(pbuf));
         skip = n + 1;
+
+        /* If buffer was allocated from heap, free it */
+        if (pbuf != buf) {
+          free(pbuf);
+          pbuf = NULL;
+        }
       }
       fmt += skip;
     } else if (is_alpha(*fmt)) {
