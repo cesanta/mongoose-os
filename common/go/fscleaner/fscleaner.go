@@ -1,13 +1,13 @@
 package fscleaner
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
-	"golang.org/x/net/context"
 )
 
 func clean(glob string, minAge time.Duration) error {
