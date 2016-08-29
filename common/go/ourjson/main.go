@@ -20,12 +20,8 @@ type rawMessage interface {
 	String() string
 }
 
-func (m RawMessage) IsInitialized() bool {
-	return len(m) > 0
-}
-
 func (m RawMessage) MarshalJSON() ([]byte, error) {
-	if !m.IsInitialized() {
+	if len(m) == 0 {
 		return nil, errors.New("not initialized")
 	}
 	b, err := m[0].MarshalJSON()
@@ -38,7 +34,7 @@ func (m *RawMessage) UnmarshalJSON(data []byte) error {
 }
 
 func (m RawMessage) MarshalUBJSON() ([]byte, error) {
-	if !m.IsInitialized() {
+	if len(m) == 0 {
 		return nil, errors.New("not initialized")
 	}
 	b, err := m[0].MarshalUBJSON()
@@ -51,14 +47,14 @@ func (m *RawMessage) UnmarshalUBJSON(data []byte) error {
 }
 
 func (m RawMessage) UnmarshalInto(v interface{}) error {
-	if !m.IsInitialized() {
+	if len(m) == 0 {
 		return errors.New("not initialized")
 	}
 	return errors.Trace(m[0].UnmarshalInto(v))
 }
 
 func (m RawMessage) String() string {
-	if !m.IsInitialized() {
+	if len(m) == 0 {
 		return "uninitialized"
 	}
 	return m[0].String()
