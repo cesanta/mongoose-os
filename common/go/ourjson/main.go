@@ -3,6 +3,7 @@ package ourjson
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/cesanta/errors"
 	"github.com/cesanta/ubjson"
@@ -147,7 +148,26 @@ func (m delayMarshaling) MarshalUBJSON() ([]byte, error) {
 }
 
 func (m delayMarshaling) UnmarshalInto(v interface{}) error {
-	return errors.New("cannot unmarshal delayed marshaler")
+	rv := reflect.ValueOf(v)
+	rval := reflect.ValueOf(m.val)
+
+	if rv.Kind() != reflect.Ptr {
+		return errors.Errorf("expecting pointer, got: %#v", v)
+	}
+	if rv.IsNil() {
+		return errors.Errorf("cannot unmarshal into a nil pointer")
+	}
+	el := rv.Elem()
+	if !el.CanSet() {
+		return errors.Errorf("%#v is not writable", v)
+	}
+
+	if !rval.Type().AssignableTo(rv.Elem().Type()) {
+		return errors.Errorf("%#v is not assignable from %#v", v, m.val)
+	}
+
+	el.Set(rval)
+	return nil
 }
 
 func (m delayMarshaling) String() string {
