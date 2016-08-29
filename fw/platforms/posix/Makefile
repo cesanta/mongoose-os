@@ -33,7 +33,9 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_ENTITY_IDS
 
 MIOT_FEATURES = -DSJ_ENABLE_JS \
-                -DSJ_ENABLE_ADC_API
+                -DSJ_ENABLE_ADC_API \
+                -DSJ_ENABLE_CLUBBY \
+                -DSJ_ENABLE_CLUBBY_API
 MIOT_POSIX_FEATURES ?= -DSJ_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
@@ -44,10 +46,11 @@ APP_SRCS = $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_init.c sj_init_js.c \
            mongoose.c frozen.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
            sj_ws_client_js.c sj_mqtt_js.c sj_gpio_js.c sj_adc_js.c \
            sj_prompt.c sj_timers_js.c sj_timers_mongoose.c sj_uart.c sj_http_js.c \
-           sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c clubby_proto.c \
+           sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c \
            sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-           json_utils.c sj_clubby.c sj_clubby_js.c \
+           json_utils.c sj_clubby_js.c \
+           mg_clubby.c mg_clubby_channel_ws.c \
            sj_tcp_udp_js.c sj_utils.c sj_console.c sj_console_js.c
 
 # inline causes crashes in the compacting GC
@@ -125,7 +128,7 @@ ASAN ?=
 ifeq ($(ASAN),1)
   CFLAGS += -fsanitize=address -fcolor-diagnostics -fno-common
   LDFLAGS += -fsanitize=address
-  CC = $(CLANG)
+  CC = clang-3.6
 endif
 
 INCDIRS = $(addprefix -I,$(INCLUDES))

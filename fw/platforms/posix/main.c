@@ -17,7 +17,6 @@
 #include "fw/src/sj_init_js.h"
 #include "fw/src/sj_http_js.h"
 #include "fw/src/sj_uart.h"
-#include "fw/src/sj_clubby.h"
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_spi_js.h"
 #include "fw/src/sj_sys_config.h"
@@ -82,6 +81,7 @@ static void pre_init(struct v7 *v7) {
 
   mongoose_init();
   sj_init();
+  sj_init_js(v7);
 
   /* SJS initialized, enable GC back, and trigger it. */
   v7_set_gc_enabled(v7, 1);

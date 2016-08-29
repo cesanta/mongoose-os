@@ -169,8 +169,7 @@ MIOT_SRCS = sj_init.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
             cs_frbuf.c sj_utils.c \
-            clubby_proto.c \
-            sj_clubby.c \
+            mg_clubby.c mg_clubby_channel_ws.c \
             sj_console.c \
             boot.c mongoose.c frozen.c json_utils.c
 ifeq "$(SJ_ENABLE_JS)" "1"

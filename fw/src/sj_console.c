@@ -9,7 +9,7 @@
 #endif
 
 #include "common/mbuf.h"
-#include "fw/src/sj_clubby.h"
+#include "fw/src/mg_clubby.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_timers.h"
 
@@ -88,41 +88,49 @@ void sj_console_printf(const char *fmt, ...) {
 #if defined(SJ_ENABLE_CLUBBY) || defined(SJ_ENABLE_CONSOLE_FILE_BUFFER)
 
 #ifdef SJ_ENABLE_CLUBBY
-void clubby_cb(struct clubby_event *evt, void *user_data) {
-  (void) evt;
-  (void) user_data;
+void clubby_cb(struct mg_clubby *clubby, void *cb_arg,
+               struct mg_clubby_frame_info *fi, struct mg_str result,
+               int error_code, struct mg_str error_msg) {
   s_cctx.request_in_flight = 0;
+  (void) clubby;
+  (void) cb_arg;
+  (void) fi;
+  (void) result;
+  (void) error_code;
+  (void) error_msg;
 }
 
 static void sj_console_push_to_cloud() {
   if (!s_cctx.initialized || !get_cfg()->console.send_to_cloud) return;
-  struct clubby *c = sj_clubby_get_global();
-  if (c == NULL || !sj_clubby_is_connected(c)) {
+  struct mg_clubby *c = mg_clubby_get_global();
+  if (c == NULL || !mg_clubby_is_connected(c)) {
     /* If connection drops, do not wait for reply as it may never arrive. */
     s_cctx.request_in_flight = 0;
     return;
   }
-  if (s_cctx.request_in_flight || !sj_clubby_can_send(c)) return;
+  if (s_cctx.request_in_flight || !mg_clubby_can_send(c)) return;
 #ifdef SJ_ENABLE_CONSOLE_FILE_BUFFER
   /* Push backlog from the file buffer first. */
   if (s_cctx.fbuf != NULL) {
-    struct mg_str msg;
-    size_t len = cs_frbuf_get(s_cctx.fbuf, (char **) &msg.p);
+    char *msg = NULL;
+    size_t len = cs_frbuf_get(s_cctx.fbuf, &msg);
     if (len > 0) {
-      msg.len = len;
-      s_cctx.request_in_flight = 1;
-      sj_clubby_call(c, NULL, "/v1/Log.Log", msg, 0, clubby_cb, NULL);
+      if (mg_clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL,
+                          "%.*s", (int) len, msg)) {
+        s_cctx.request_in_flight = 1;
+      }
       return;
     }
   }
 #endif
   int l = sj_console_next_msg_len();
   if (l == 0) return; /* Only send full messages. */
-  s_cctx.request_in_flight = 1;
-  sj_clubby_call(c, NULL, "/v1/Log.Log", mg_mk_str_n(s_cctx.buf.buf, l - 1), 0,
-                 clubby_cb, NULL);
-  mbuf_remove(&s_cctx.buf, l);
-  if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
+  if (mg_clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL,
+                      "%.*s", (int) (l - 1), s_cctx.buf.buf)) {
+    s_cctx.request_in_flight = 1;
+    mbuf_remove(&s_cctx.buf, l);
+    if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
+  }
 }
 
 int sj_console_is_waiting_for_resp() {

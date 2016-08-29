@@ -90,8 +90,7 @@ include $(REPO_PATH)/fw/common.mk
 MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
 
 MIOT_SRCS = cs_rbuf.c \
-            clubby_proto.c \
-            sj_clubby.c \
+            mg_clubby.c mg_clubby_channel_ws.c \
             sj_config.c \
             sj_console.c cs_frbuf.c \
             sj_init.c \

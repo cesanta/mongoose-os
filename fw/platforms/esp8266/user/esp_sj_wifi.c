@@ -19,7 +19,6 @@
 
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_v7_ext.h"
-#include "fw/src/sj_clubby.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
 #include "fw/platforms/esp8266/user/v7_esp_features.h"
 #include "fw/src/sj_sys_config.h"
