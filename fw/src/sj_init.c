@@ -1,7 +1,7 @@
 #include "fw/src/sj_init.h"
 
+#include "fw/src/mg_clubby.h"
 #include "fw/src/sj_app.h"
-#include "fw/src/sj_clubby.h"
 #include "fw/src/sj_console.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_post.h"
@@ -14,7 +14,7 @@ enum sj_init_result sj_init() {
   sj_wifi_init();
 
 #ifdef SJ_ENABLE_CLUBBY
-  sj_clubby_init();
+  mg_clubby_init();
 #ifdef SJ_ENABLE_UPDATER_CLUBBY
   sj_updater_clubby_init();
 #endif
