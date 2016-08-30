@@ -45,6 +45,7 @@ List groups.
 
 
 Arguments:
+- `account`: Optional account name or ID. If omitted sender is implied.
 - `labels`: An object with labels to query for. Object keys are label names, corresponding values are label values.
 
 Result `array`: 
@@ -56,6 +57,7 @@ Request:
   "id": 123,
   "method": "/v1/Account.ListGroups",
   "args": {
+    "account": "VALUE PLACEHOLDER",
     "labels": "VALUE PLACEHOLDER"
   }
 }
