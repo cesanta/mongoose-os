@@ -125,30 +125,6 @@ void device_get_mac_address(uint8_t mac[6]) {
   }
 }
 
-bool mg_uart_dev_init(struct mg_uart_state *us) {
-  (void) us;
-  return false;
-}
-
-void mg_uart_dev_deinit(struct mg_uart_state *us) {
-  (void) us;
-}
-
-void mg_uart_dev_dispatch_rx_top(struct mg_uart_state *us) {
-  (void) us;
-}
-void mg_uart_dev_dispatch_tx_top(struct mg_uart_state *us) {
-  (void) us;
-}
-void mg_uart_dev_dispatch_bottom(struct mg_uart_state *us) {
-  (void) us;
-}
-
-void mg_uart_dev_set_rx_enabled(struct mg_uart_state *us, bool enabled) {
-  (void) us;
-  (void) enabled;
-}
-
 int main(int argc, char *argv[]) {
   set_workdir(argv[0]);
   return v7_main(argc, argv, pre_freeze_init, pre_init, post_init);

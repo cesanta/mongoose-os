@@ -19,7 +19,6 @@
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_sys_config.h"
-#include "fw/src/mg_uart.h"
 #include "fw/src/sj_updater_clubby.h"
 
 #ifdef SJ_ENABLE_JS
@@ -28,6 +27,7 @@
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/config.h"
+#include "fw/platforms/cc3200/src/cc3200_console.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
@@ -35,6 +35,7 @@
 #define CB_ADDR_MASK 0xe0000000
 #define CB_ADDR_PREFIX 0x20000000
 
+#define PROMPT_CHAR_EVENT 0
 #define INVOKE_CB_EVENT 1
 struct sj_event {
   /*
@@ -96,8 +97,17 @@ int start_nwp() {
 }
 
 #ifdef SJ_ENABLE_JS
+static void uart_int() {
+  struct sj_event e = {.type = PROMPT_CHAR_EVENT, .data = NULL};
+  MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+  MAP_UARTIntDisable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+  osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT);
+}
+
 void sj_prompt_init_hal(struct v7 *v7) {
   (void) v7;
+  osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
+  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
 }
 #endif
 
@@ -108,19 +118,9 @@ enum cc3200_init_result {
   CC3200_INIT_FS_INIT_FAILED = -102,
   CC3200_INIT_SJ_INIT_FAILED = -103,
   CC3200_INIT_SJ_INIT_JS_FAILED = -105,
-  CC3200_INIT_UART_INIT_FAILED = -106,
 };
 
 static enum cc3200_init_result cc3200_init(void *arg) {
-  mongoose_init();
-  {
-    struct mg_uart_config *u0cfg = mg_uart_default_config();
-    u0cfg->baud_rate = CONSOLE_BAUD_RATE;
-    if (mg_uart_init(0, u0cfg, NULL, NULL) == NULL) {
-      return CC3200_INIT_UART_INIT_FAILED;
-    }
-  }
-
   LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
   LOG(LL_INFO,
       ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
@@ -166,6 +166,8 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     }
   }
 
+  mongoose_init();
+
   enum sj_init_result ir = sj_init();
   if (ir != SJ_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "SJ", ir));
@@ -204,8 +206,6 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   /* Install prompt if enabled in the config. */
   if (get_cfg()->debug.enable_prompt) {
     sj_prompt_init(v7);
-    mg_uart_set_dispatcher(0, sj_prompt_dispatcher, NULL);
-    mg_uart_set_rx_enabled(0, true);
   }
 #endif
   return CC3200_INIT_OK;
@@ -228,6 +228,16 @@ void main_task(void *arg) {
     struct sj_event e;
     if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
     switch (e.type) {
+#ifdef SJ_ENABLE_JS
+      case PROMPT_CHAR_EVENT: {
+        long c;
+        while ((c = UARTCharGetNonBlocking(CONSOLE_UART)) >= 0) {
+          sj_prompt_process_char(c);
+        }
+        MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+        break;
+      }
+#endif
       case INVOKE_CB_EVENT: {
         cb_t cb = (cb_t)(e.cb | CB_ADDR_PREFIX);
         cb(e.data);

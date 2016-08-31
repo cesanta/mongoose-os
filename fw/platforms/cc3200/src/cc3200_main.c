@@ -20,6 +20,7 @@
 #include "prcm.h"
 #include "rom.h"
 #include "rom_map.h"
+#include "uart.h"
 #include "utils.h"
 
 #include "common/platform.h"
@@ -74,6 +75,17 @@ int main() {
 #ifdef __TI_COMPILER_VERSION__
   memset(&_heap_start, 0, (char *) &_heap_end - (char *) &_heap_start);
 #endif
+
+  /* Console UART init. */
+  MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
+  MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
+  MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* PIN_57 -> UART0_RX */
+  MAP_UARTConfigSetExpClk(
+      CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
+      CONSOLE_BAUD_RATE,
+      (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+  MAP_UARTFIFOLevelSet(CONSOLE_UART, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
+  MAP_UARTFIFOEnable(CONSOLE_UART);
 
   setvbuf(stdout, NULL, _IOLBF, 0);
   setvbuf(stderr, NULL, _IOLBF, 0);

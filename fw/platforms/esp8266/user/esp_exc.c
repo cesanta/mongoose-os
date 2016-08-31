@@ -20,6 +20,7 @@
 #include "esp_fs.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
+#include "esp_uart.h"
 #include "v7_esp.h"
 
 #include <osapi.h>

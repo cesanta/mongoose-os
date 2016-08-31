@@ -7,6 +7,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
+#include "common/platforms/esp8266/esp_uart.h"
 
 #include "ets_sys.h"
 #include "osapi.h"
@@ -24,10 +25,11 @@
 #include "fw/src/sj_prompt.h"
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_sys_config.h"
-#include "fw/src/mg_uart.h"
 #include "fw/src/sj_updater_clubby.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
+#include "fw/platforms/esp8266/user/esp_sj_uart.h"
+#include "fw/platforms/esp8266/user/esp_sj_uart_js.h"
 #include "fw/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
@@ -73,22 +75,19 @@ int esp_sj_init(rboot_config *bcfg) {
    * level=LL_ERROR, then configuration is loaded this settings are overridden
    */
   {
-    struct mg_uart_config *u0cfg = mg_uart_default_config();
+    struct esp_uart_config *u0cfg = esp_sj_uart_default_config(0);
+    esp_sj_uart_init();
 #if ESP_DEBUG_UART == 0
     u0cfg->baud_rate = ESP_DEBUG_UART_BAUD_RATE;
 #endif
-    if (mg_uart_init(0, u0cfg, NULL, NULL) == NULL) {
-      return SJ_INIT_UART_FAILED;
-    }
-    struct mg_uart_config *u1cfg = mg_uart_default_config();
+    esp_uart_init(u0cfg);
+    struct esp_uart_config *u1cfg = esp_sj_uart_default_config(1);
     /* UART1 has no RX pin, no point in allocating a buffer. */
     u1cfg->rx_buf_size = 0;
 #if ESP_DEBUG_UART == 1
     u1cfg->baud_rate = ESP_DEBUG_UART_BAUD_RATE;
 #endif
-    if (mg_uart_init(1, u1cfg, NULL, NULL) == NULL) {
-      return SJ_INIT_UART_FAILED;
-    }
+    esp_uart_init(u1cfg);
     fs_set_stdout_uart(0);
     fs_set_stderr_uart(ESP_DEBUG_UART);
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -131,6 +130,7 @@ int esp_sj_init(rboot_config *bcfg) {
     LOG(LL_ERROR, ("%s init error: %d", "SJ JS", ir));
     return -5;
   }
+  esp_sj_uart_init_js(v7);
   /* TODO(rojer): Get rid of I2C.js */
   if (v7_exec_file(v7, "I2C.js", NULL) != V7_OK) {
     return -6;
@@ -141,11 +141,11 @@ int esp_sj_init(rboot_config *bcfg) {
 
 #ifdef SJ_ENABLE_JS
   /* Install prompt if enabled in the config and user's app has not installed
-   * a custom handler. */
-  if (get_cfg()->debug.enable_prompt && mg_uart_get_dispatcher(0) == NULL) {
+   * a custom RX handler. */
+  if (get_cfg()->debug.enable_prompt &&
+      v7_is_undefined(esp_sj_uart_get_recv_handler(0))) {
     sj_prompt_init(v7);
-    mg_uart_set_dispatcher(0, sj_prompt_dispatcher, NULL);
-    mg_uart_set_rx_enabled(0, true);
+    esp_sj_uart_set_prompt(0);
   }
 #endif
 
@@ -208,7 +208,11 @@ void sdk_init_done_cb() {
 void user_init() {
   system_update_cpu_freq(SYS_CPU_160MHZ);
   system_init_done_cb(sdk_init_done_cb);
+
+  uart_div_modify(ESP_DEBUG_UART, UART_CLK_FREQ / 115200);
+
   esp_exception_handler_init();
+
   gpio_init();
 }
 

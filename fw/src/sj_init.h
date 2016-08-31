@@ -18,7 +18,6 @@ enum sj_init_result {
   SJ_INIT_CONFIG_INVALID_STDERR_UART = -13,
   SJ_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED = -14,
   SJ_INIT_CLUBBY_FAILED = -15,
-  SJ_INIT_UART_FAILED = -16,
 };
 
 enum sj_init_result sj_init();

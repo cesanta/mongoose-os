@@ -15,7 +15,6 @@
 #include "fw/src/sj_sys_config_js.h"
 #include "fw/src/sj_tcp_udp_js.h"
 #include "fw/src/sj_timers_js.h"
-#include "fw/src/mg_uart_js.h"
 #include "fw/src/sj_updater_clubby_js.h"
 #include "fw/src/sj_wifi_js.h"
 #include "fw/src/sj_ws_client_js.h"
@@ -51,9 +50,6 @@ enum sj_init_result sj_api_setup(struct v7 *v7) {
   sj_tcp_api_setup(v7);
 #endif
   sj_timers_api_setup(v7);
-#ifdef SJ_ENABLE_UART_API
-  mg_uart_api_setup(v7);
-#endif
 #ifdef SJ_ENABLE_UDP_API
   sj_udp_api_setup(v7);
 #endif
@@ -92,9 +88,6 @@ enum sj_init_result sj_init_js(struct v7 *v7) {
   sj_console_js_init(v7);
 #if defined(SJ_ENABLE_HTTP_CLIENT_API) || defined(SJ_ENABLE_HTTP_SERVER_API)
   sj_http_js_init(v7);
-#endif
-#ifdef SJ_ENABLE_UART_API
-  mg_uart_js_init(v7);
 #endif
 #ifdef SJ_ENABLE_WIFI_API
   sj_wifi_js_init(v7);
