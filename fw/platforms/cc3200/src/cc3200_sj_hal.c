@@ -138,11 +138,15 @@ void sj_usleep(int usecs) {
 
 static void mongoose_poll_cb(void *arg);
 
+int s_mg_poll_scheduled;
+
 void mongoose_schedule_poll() {
+  /* Prevent piling up of poll callbacks. */
+  if (s_mg_poll_scheduled) return;
   invoke_cb(mongoose_poll_cb, NULL);
 }
 
 static void mongoose_poll_cb(void *arg) {
   (void) arg;
-  /* Nothing to do, we poll on every iteration anyway. */
+  s_mg_poll_scheduled = 0;
 }

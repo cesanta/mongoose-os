@@ -12,7 +12,6 @@
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_prompt.h"
 #include "common/platforms/esp8266/esp_mg_net_if.h"
-#include "common/platforms/esp8266/esp_uart.h"
 #include "common/umm_malloc/umm_malloc.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
@@ -85,7 +84,7 @@ void sj_usleep(int usecs) {
   os_delay_us(usecs);
 }
 
-void mongoose_schedule_poll() {
+IRAM void mongoose_schedule_poll() {
   mg_lwip_mgr_schedule_poll(&sj_mgr);
 }
 

@@ -12,7 +12,6 @@
 #include <stdint.h>
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
-#include "common/platforms/esp8266/esp_uart.h"
 
 #include "esp_exc.h"
 #include "esp_gdb.h"

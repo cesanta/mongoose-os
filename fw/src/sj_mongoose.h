@@ -14,7 +14,13 @@ void mongoose_init();
 int mongoose_poll(int ms);
 void mongoose_destroy();
 
-/* Schedule MG poll ASAP. */
+typedef void (*mg_poll_cb_t)(void *cb_arg);
+void mg_add_poll_cb(mg_poll_cb_t cb, void *cb_arg);
+void mg_remove_poll_cb(mg_poll_cb_t cb, void *cb_arg);
+
+/* HAL */
+
+/* Schedule MG poll ASAP. Note: may be called from ISR context. */
 void mongoose_schedule_poll();
 
 #endif /* CS_FW_SRC_SJ_MONGOOSE_H_ */

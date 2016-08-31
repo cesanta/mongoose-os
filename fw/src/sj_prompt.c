@@ -7,9 +7,8 @@
 
 #ifdef SJ_ENABLE_JS
 
-#include "sj_v7_ext.h"
-#include "sj_hal.h"
-#include "sj_v7_ext.h"
+#include "fw/src/sj_hal.h"
+#include "fw/src/sj_v7_ext.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -223,4 +222,14 @@ void sj_prompt_process_char(char ch) {
   s_sjp.buf[s_sjp.pos] = '\0';
   s_sjp.char_processor(ch);
 }
+
+void sj_prompt_dispatcher(struct mg_uart_state *us) {
+  uint8_t *cp;
+  cs_rbuf_t *rxb = &us->rx_buf;
+  while (cs_rbuf_get(rxb, 1, &cp) == 1) {
+    cs_rbuf_consume(rxb, 1);
+    sj_prompt_process_char((char) *cp);
+  }
+}
+
 #endif /* SJ_ENABLE_JS */

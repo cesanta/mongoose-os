@@ -100,6 +100,7 @@ MIOT_SRCS = cs_rbuf.c \
             sj_wifi.c \
             sj_mongoose.c \
             sj_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            mg_uart.c \
             sj_utils.c \
             cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
             rboot-bigflash.c rboot-api.c \
@@ -126,6 +127,7 @@ MIOT_SRCS += v7.c \
              sj_tcp_udp_js.c \
              sj_timers_js.c \
              sj_v7_ext.c \
+             mg_uart_js.c \
              sj_wifi_js.c \
              sj_ws_client_js.c
 endif
@@ -188,6 +190,7 @@ MIOT_FEATURES ?= -DSJ_ENABLE_ADC_API \
                 -DSJ_ENABLE_PWM_API \
                 -DSJ_ENABLE_SPI_API \
                 -DSJ_ENABLE_TCP_API \
+                -DSJ_ENABLE_UART_API \
                 -DSJ_ENABLE_UDP_API \
                 -DSJ_ENABLE_WIFI_API \
                 -DSJ_ENABLE_WS_CLIENT_API
