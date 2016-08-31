@@ -28,7 +28,7 @@
 #include "spiffs_config.h"
 
 #include "esp_fs.h"
-#include "esp_sj_uart.h"
+#include "fw/src/mg_uart.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
@@ -338,9 +338,9 @@ _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   (void) r;
   if (fd < NUM_SYS_FD) {
     if (fd == 1 && s_stdout_uart >= 0) {
-      len = esp_sj_uart_write(s_stdout_uart, buf, len);
+      len = mg_uart_write(s_stdout_uart, buf, len);
     } else if (fd == 2 && s_stderr_uart >= 0) {
-      len = esp_sj_uart_write(s_stderr_uart, buf, len);
+      len = mg_uart_write(s_stderr_uart, buf, len);
     } else if (fd == 0) {
       errno = EBADF;
       len = -1;
@@ -453,7 +453,7 @@ void fs_set_stderr_uart(int uart_no) {
 }
 
 void fs_flush_stderr() {
-  if (s_stderr_uart >= 0) esp_uart_flush(s_stderr_uart);
+  if (s_stderr_uart >= 0) mg_uart_flush(s_stderr_uart);
 }
 
 #ifdef SJ_ENABLE_JS

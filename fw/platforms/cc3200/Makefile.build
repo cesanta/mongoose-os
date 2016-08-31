@@ -171,6 +171,7 @@ MIOT_SRCS = sj_init.c \
             cs_frbuf.c sj_utils.c \
             mg_clubby.c mg_clubby_channel_ws.c \
             sj_console.c \
+            cs_rbuf.c mg_uart.c \
             boot.c mongoose.c frozen.c json_utils.c
 ifeq "$(SJ_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
@@ -184,6 +185,7 @@ MIOT_SRCS += v7.c \
              sj_prompt.c \
              sj_sys_config_js.c \
              sj_timers_js.c \
+             mg_uart_js.c \
              sj_wifi_js.c
 endif
 

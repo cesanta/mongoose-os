@@ -24,6 +24,7 @@
 #include <lwip/udp.h>
 
 #include "common/cs_dbg.h"
+#include "fw/src/sj_mongoose.h"
 
 #ifdef SJ_ENABLE_JS
 #include "v7/v7.h"
@@ -770,7 +771,7 @@ static void mg_lwip_task(os_event_t *e) {
 #endif
   }
   if (mgr != NULL) {
-    mg_mgr_poll(mgr, 0);
+    mongoose_poll(0);
     if (s_suspended) {
       int can_suspend = 1;
       struct mg_connection *nc;
