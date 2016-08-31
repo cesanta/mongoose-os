@@ -77,7 +77,8 @@ Response:
 ```
 
 #### ListTokens
-List tokens
+List tokens.
+
 
 
 Result `array`: 
@@ -106,7 +107,10 @@ Response:
 ```
 
 #### GetInfo
-Retrieves info about an existing user. If id is present, info is fetched by id. Otherwise, if name is present, info is fetched by name. Otherwise, it's an error.
+Retrieves info about an existing user.
+If id is present, info is fetched by id. Otherwise, if name is present, info is fetched by name.
+Otherwise, it's an error.
+
 
 Arguments:
 - `id`: ID of the user.
@@ -141,7 +145,8 @@ Response:
 ```
 
 #### RevokeToken
-Delete the token
+Delete the token.
+
 
 Arguments:
 - `id`: 
@@ -172,7 +177,8 @@ Response:
 ```
 
 #### UserExists
-Returns whether the user exists
+Returns whether the user exists.
+
 
 Arguments:
 - `id`: ID of the user.
@@ -240,6 +246,7 @@ Response:
 
 #### CreateToken
 Generate a personal access token that can be passed in GET parameters instead user/psk pair
+
 
 Arguments:
 - `description`: displayed when listing the tokens
@@ -380,7 +387,8 @@ Response:
 ```
 
 #### ValidateToken
-validates a token and returns the user ID associated with it
+Validates a token and returns the user ID associated with it.
+
 
 Arguments:
 - `token`: 

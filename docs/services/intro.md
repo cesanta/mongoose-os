@@ -11,9 +11,7 @@ items:
   - { type: file, name: frontend.service.yaml.md }
   - { type: file, name: label.service.yaml.md }
   - { type: file, name: logstore.service.yaml.md }
-  - { type: file, name: project.service.yaml.md }
   - { type: file, name: pubsub.service.yaml.md }
-  - { type: file, name: services.service.yaml.md }
   - { type: file, name: timeseries.service.yaml.md }
 ---
 
