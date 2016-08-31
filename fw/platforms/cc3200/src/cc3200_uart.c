@@ -27,7 +27,9 @@
 
 static struct mg_uart_state *s_us[2];
 
-int x = 0;
+uint32_t cc3200_uart_get_base(int uart_no) {
+  return (uart_no == 0 ? UARTA0_BASE : UARTA1_BASE);
+}
 
 static void uart_int(struct mg_uart_state *us) {
   if (us == NULL) return;
@@ -83,7 +85,18 @@ void mg_uart_dev_dispatch_bottom(struct mg_uart_state *us) {
 }
 
 void mg_uart_dev_set_rx_enabled(struct mg_uart_state *us, bool enabled) {
-  /* TODO(rojer): SW CTS control. */
+  uint32_t base = (uint32_t) us->dev_data;
+  uint32_t ctl = HWREG(base + UART_O_CTL);
+  if (enabled) {
+    if (us->cfg->rx_fc_ena) {
+      ctl |= UART_CTL_RTSEN;
+    }
+  } else {
+    /* Put /RTS under software control and set to 1. */
+    ctl &= ~UART_CTL_RTSEN;
+    ctl |= UART_CTL_RTS;
+  }
+  HWREG(base + UART_O_CTL) = ctl;
 }
 
 static void u0_int() {
@@ -95,21 +108,27 @@ static void u1_int() {
 }
 
 bool mg_uart_dev_init(struct mg_uart_state *us) {
-  uint32_t base, periph, int_no;
+  uint32_t base = cc3200_uart_get_base(us->uart_no);
+  uint32_t periph, int_no;
   void (*int_handler)();
 
+  /* TODO(rojer): Configurable pin mappings? */
   if (us->uart_no == 0) {
-    base = UARTA0_BASE;
     periph = PRCM_UARTA0;
     int_no = INT_UARTA0;
     int_handler = u0_int;
-    MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
-    MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* PIN_57 -> UART0_RX */
+    MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* UART0_TX */
+    MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* UART0_RX */
+    if (us->cfg->tx_fc_ena || us->cfg->rx_fc_ena) {
+      /* No FC on UART0, according to the TRM. */
+      return false;
+    }
   } else if (us->uart_no == 1) {
-    base = UARTA1_BASE;
     periph = PRCM_UARTA1;
     int_no = INT_UARTA0;
     int_handler = u1_int;
+    MAP_PinTypeUART(PIN_07, PIN_MODE_5); /* UART1_TX */
+    MAP_PinTypeUART(PIN_08, PIN_MODE_5); /* UART1_RX */
   } else {
     return false;
   }
@@ -118,7 +137,18 @@ bool mg_uart_dev_init(struct mg_uart_state *us) {
   MAP_UARTConfigSetExpClk(
       base, MAP_PRCMPeripheralClockGet(periph), us->cfg->baud_rate,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  /* TODO(rojer): Flow control. */
+  if (us->cfg->tx_fc_ena || us->cfg->rx_fc_ena) {
+    uint32_t ctl = HWREG(base + UART_O_CTL);
+    if (us->cfg->tx_fc_ena) {
+      ctl |= UART_CTL_CTSEN;
+      MAP_PinTypeUART(PIN_61, PIN_MODE_3); /* UART1_CTS */
+    }
+    if (us->cfg->rx_fc_ena) {
+      ctl |= UART_CTL_RTSEN;
+      MAP_PinTypeUART(PIN_62, PIN_MODE_3); /* UART1_RTS */
+    }
+    HWREG(base + UART_O_CTL) = ctl;
+  }
   MAP_UARTFIFOLevelSet(base, UART_FIFO_TX1_8, UART_FIFO_RX7_8);
   MAP_UARTFIFOEnable(base);
   MAP_UARTIntDisable(base, ~0); /* Start with ints disabled. */
@@ -132,4 +162,19 @@ void mg_uart_dev_deinit(struct mg_uart_state *us) {
   MAP_UARTDisable(base);
   MAP_UARTIntDisable(base, ~0);
   s_us[us->uart_no] = NULL;
+}
+
+int cc3200_uart_cts(int uart_no) {
+  uint32_t base = cc3200_uart_get_base(uart_no);
+  return (UARTModemStatusGet(base) != 0);
+}
+
+uint32_t cc3200_uart_raw_ints(int uart_no) {
+  uint32_t base = cc3200_uart_get_base(uart_no);
+  return MAP_UARTIntStatus(base, false /* masked */);
+}
+
+uint32_t cc3200_uart_int_mask(int uart_no) {
+  uint32_t base = cc3200_uart_get_base(uart_no);
+  return HWREG(base + UART_O_IM);
 }

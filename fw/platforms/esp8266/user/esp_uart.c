@@ -261,3 +261,11 @@ IRAM void mg_uart_flush(int uart_no) {
   while (esp_uart_tx_fifo_len(uart_no) > 0) {
   }
 }
+
+uint32_t esp_uart_raw_ints(int uart_no) {
+  return READ_PERI_REG(UART_INT_RAW(uart_no));
+}
+
+uint32_t esp_uart_int_mask(int uart_no) {
+  return READ_PERI_REG(UART_INT_ENA(uart_no));
+}

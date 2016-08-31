@@ -10,6 +10,7 @@
  * Interfaces that need to be implemented for each devices.
  */
 
+#include <inttypes.h>
 #include <stdlib.h>
 
 /* Get system memory size. */
