@@ -80,6 +80,8 @@ Response:
 List tokens.
 
 
+Arguments:
+- `account`: Account ID. If omitted caller is implied.
 
 Result `array`: 
 Request:
@@ -89,7 +91,9 @@ Request:
   "src": "device_123",
   "id": 123,
   "method": "/v1/Account.ListTokens",
-  "args": {}
+  "args": {
+    "account": "VALUE PLACEHOLDER"
+  }
 }
 
 ```
@@ -249,7 +253,8 @@ Generate a personal access token that can be passed in GET parameters instead us
 
 
 Arguments:
-- `description`: displayed when listing the tokens
+- `account`: Optional account ID. If omitted caller is implied.
+- `description`: Displayed when listing the tokens.
 
 Result `string`: 
 Request:
@@ -260,6 +265,7 @@ Request:
   "id": 123,
   "method": "/v1/Account.CreateToken",
   "args": {
+    "account": "VALUE PLACEHOLDER",
     "description": "VALUE PLACEHOLDER"
   }
 }
