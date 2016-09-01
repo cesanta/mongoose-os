@@ -3,15 +3,15 @@ title: "Cloud API"
 symbol_kind: "intro"
 decl_name: "services"
 items:
-  - { type: file, name: account.service.yaml.md }
-  - { type: file, name: auth.service.yaml.md }
-  - { type: file, name: blobstore.service.yaml.md }
-  - { type: file, name: device.service.yaml.md }
-  - { type: file, name: dispatcher.service.yaml.md }
-  - { type: file, name: frontend.service.yaml.md }
-  - { type: file, name: label.service.yaml.md }
-  - { type: file, name: logstore.service.yaml.md }
-  - { type: file, name: pubsub.service.yaml.md }
-  - { type: file, name: timeseries.service.yaml.md }
+  - { name: account.service.yaml.md }
+  - { name: auth.service.yaml.md }
+  - { name: blobstore.service.yaml.md }
+  - { name: device.service.yaml.md }
+  - { name: dispatcher.service.yaml.md }
+  - { name: frontend.service.yaml.md }
+  - { name: label.service.yaml.md }
+  - { name: logstore.service.yaml.md }
+  - { name: pubsub.service.yaml.md }
+  - { name: timeseries.service.yaml.md }
 ---
 
