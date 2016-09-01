@@ -45,7 +45,7 @@ INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
 APP_SRCS = $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_init.c sj_init_js.c \
            mongoose.c frozen.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
            sj_ws_client_js.c sj_mqtt_js.c sj_gpio_js.c sj_adc_js.c \
-           sj_prompt.c sj_timers_js.c sj_timers_mongoose.c sj_uart.c sj_http_js.c \
+           sj_prompt.c sj_timers_js.c sj_timers_mongoose.c sj_http_js.c \
            sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c \
            sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
