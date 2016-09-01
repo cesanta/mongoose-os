@@ -392,6 +392,18 @@ Response:
 
 ```
 
+#### Login
+Log in with username+password.
+
+Returns the credentials (ID + token) required to access the API.
+NOTE: this method can be called from an unauthenticated connection.
+
+
+Arguments:
+- `username`: Username (usually the email address).
+- `password`: Password.
+
+Result `object`: 
 #### ValidateToken
 Validates a token and returns the user ID associated with it.
 
