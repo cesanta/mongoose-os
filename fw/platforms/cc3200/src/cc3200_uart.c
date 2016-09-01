@@ -35,7 +35,6 @@ static void uart_int(struct mg_uart_state *us) {
   if (us == NULL) return;
   uint32_t base = (uint32_t) us->dev_data;
   uint32_t int_st = MAP_UARTIntStatus(base, true /* masked */);
-  if (int_st == 0) return;
   us->stats.ints++;
   if (int_st & UART_INT_OE) us->stats.rx_overflows++;
   if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
@@ -50,13 +49,31 @@ static void uart_int(struct mg_uart_state *us) {
 void mg_uart_dev_dispatch_rx_top(struct mg_uart_state *us) {
   uint32_t base = (uint32_t) us->dev_data;
   cs_rbuf_t *rxb = &us->rx_buf;
+  bool recd;
+recv_more:
+  recd = false;
   while (rxb->avail > 0 && MAP_UARTCharsAvail(base)) {
     uint32_t chf = HWREG(base + UART_O_DR);
     /* Note: There are error flags here, we may be interested in those. */
     cs_rbuf_append_one(rxb, (uint8_t) chf);
     us->stats.rx_bytes++;
+    recd = true;
   }
-  /* TODO(rojer): Lingering. */
+  /* If we received something during this cycle and there is buffer space
+   * available, "linger" for some more, maybe there's more to come. */
+  if (recd && rxb->avail > 0 && us->cfg->rx_linger_micros > 0) {
+    /* Magic constants below are tweaked so that the loop takes at most the
+     * configured number of microseconds. */
+    int ctr = us->cfg->rx_linger_micros * 31 / 12;
+    // HWREG(GPIOA1_BASE + GPIO_O_GPIO_DATA + 8) = 0xFF; /* Pin 64 */
+    while (ctr-- > 0) {
+      if (MAP_UARTCharsAvail(base)) {
+        us->stats.rx_linger_conts++;
+        goto recv_more;
+      }
+    }
+    // HWREG(GPIOA1_BASE + GPIO_O_GPIO_DATA + 8) = 0; /* Pin 64 */
+  }
   MAP_UARTIntClear(base, UART_RX_INTS);
 }
 
@@ -125,7 +142,7 @@ bool mg_uart_dev_init(struct mg_uart_state *us) {
     }
   } else if (us->uart_no == 1) {
     periph = PRCM_UARTA1;
-    int_no = INT_UARTA0;
+    int_no = INT_UARTA1;
     int_handler = u1_int;
     MAP_PinTypeUART(PIN_07, PIN_MODE_5); /* UART1_TX */
     MAP_PinTypeUART(PIN_08, PIN_MODE_5); /* UART1_RX */
@@ -138,6 +155,7 @@ bool mg_uart_dev_init(struct mg_uart_state *us) {
       base, MAP_PRCMPeripheralClockGet(periph), us->cfg->baud_rate,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
   if (us->cfg->tx_fc_ena || us->cfg->rx_fc_ena) {
+    /* Note: only UART1 */
     uint32_t ctl = HWREG(base + UART_O_CTL);
     if (us->cfg->tx_fc_ena) {
       ctl |= UART_CTL_CTSEN;
