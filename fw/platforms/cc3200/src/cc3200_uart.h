@@ -7,6 +7,7 @@
 #define CS_FW_PLATFORMS_CC3200_SRC_CC3200_UART_H_
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 uint32_t cc3200_uart_get_base(int uart_no);
 bool cc3200_uart_cts(int uart_no);

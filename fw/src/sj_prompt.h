@@ -13,7 +13,7 @@
 struct v7;
 
 /* Initialize prompt. */
-void sj_prompt_init(struct v7 *v7);
+void sj_prompt_init(struct v7 *v7, int uart_no);
 
 /* Call this for each arriving char. */
 void sj_prompt_process_char(char ch);

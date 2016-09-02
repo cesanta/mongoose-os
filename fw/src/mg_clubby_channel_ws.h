@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_
 #define CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_
 
-#include "fw/src/mg_clubby.h"
+#include "fw/src/mg_clubby_channel.h"
 
 #include "mongoose/mongoose.h"
 

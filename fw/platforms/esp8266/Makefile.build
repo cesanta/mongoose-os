@@ -90,7 +90,6 @@ include $(REPO_PATH)/fw/common.mk
 MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
 
 MIOT_SRCS = cs_rbuf.c \
-            mg_clubby.c mg_clubby_channel_ws.c \
             sj_config.c \
             sj_console.c cs_frbuf.c \
             sj_init.c \
@@ -102,7 +101,7 @@ MIOT_SRCS = cs_rbuf.c \
             sj_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             mg_uart.c \
             sj_utils.c \
-            cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+            cs_crc32.c sj_updater_common.c sj_updater_post.c \
             rboot-bigflash.c rboot-api.c \
             json_utils.c \
             umm_malloc.c \
@@ -196,8 +195,6 @@ MIOT_FEATURES ?= -DSJ_ENABLE_ADC_API \
                 -DSJ_ENABLE_WS_CLIENT_API
 MIOT_ESP_FEATURES = -DSJ_ENABLE_WEB_CONFIG \
                      -DSJ_ENABLE_FILE_UPLOAD \
-                     -DSJ_ENABLE_UPDATER_CLUBBY \
-                     -DSJ_ENABLE_UPDATER_CLUBBY_API \
                      -DSJ_ENABLE_UPDATER_POST \
                      -DSJ_ENABLE_CONSOLE_FILE_BUFFER
 
@@ -278,7 +275,10 @@ else
 endif
 
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
+  MIOT_SRCS += mg_clubby.c mg_clubby_channel_ws.c mg_clubby_channel_uart.c \
+               sj_updater_clubby.c
   MIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
+  MIOT_ESP_FEATURES += -DSJ_ENABLE_UPDATER_CLUBBY -DSJ_ENABLE_UPDATER_CLUBBY_API
 endif
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))

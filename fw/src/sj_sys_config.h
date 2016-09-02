@@ -18,7 +18,10 @@
 #define CONF_VENDOR_FILE "conf_vendor.json"
 #define CONF_FILE "conf.json"
 
-/* Returns global instance of the config. */
+/*
+ * Returns global instance of the config.
+ * Note: Will return NULL before sj_sys_config_init.
+ */
 struct sys_config *get_cfg();
 
 /*

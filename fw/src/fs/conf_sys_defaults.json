@@ -43,7 +43,7 @@
   "clubby": {
     "connect_on_boot": true,
     "server_address": "api.mongoose-iot.com",
-    "device_id": "",
+    "device_id": "dummy",
     "device_psk": "",
     "reconnect_timeout_min": 10,
     "reconnect_timeout_max": 60,
@@ -53,7 +53,12 @@
     "ssl_server_name": "",
     "ssl_ca_file": "",
     "ssl_client_cert_file": "",
-    "verify_timeouts_period": 30
+    "verify_timeouts_period": 30,
+    "uart": {
+      "uart_no": -1,
+      "baud_rate": 115200,
+      "fc_enable": false
+    }
   },
   "debug": {
     "level": 2,

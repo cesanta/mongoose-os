@@ -90,7 +90,7 @@ static void pre_init(struct v7 *v7) {
 }
 
 static void post_init(struct v7 *v7) {
-  sj_prompt_init(v7);
+  sj_prompt_init(v7, 0);
   do {
     /*
      * Now waiting until mongoose has active connections

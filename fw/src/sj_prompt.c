@@ -11,29 +11,36 @@
 #include "fw/src/sj_v7_ext.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "v7/v7.h"
+#include "common/mbuf.h"
 #include "common/platform.h"
 
-#define RX_BUFSIZE 512
+#include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_clubby.h"
+#include "fw/src/mg_clubby_channel_uart.h"
+#include "fw/src/mg_uart.h"
+
 #define SIGINT_CHAR 0x03
+#define EOF_CHAR 0x04
 
 typedef void (*char_processor_t)(char ch);
 
 struct sj_prompt_state {
   struct v7 *v7;
   char_processor_t char_processor;
-  /* TODO(mkm): mbuf? */
-  char buf[RX_BUFSIZE];
-  int pos;
+  struct mbuf buf;
+  int uart_no;
   int swallow;
+  bool running;
 };
 
 static struct sj_prompt_state s_sjp;
 
-static void process_js(char *cmd);
+static void process_js(const char *cmd);
 static void process_prompt_char(char ch);
 
 static void show_prompt(void) {
@@ -48,28 +55,23 @@ static void show_prompt(void) {
              (int) v7_heap_stat(s_sjp.v7, V7_HEAP_STAT_HEAP_USED));
 
   fflush(stdout);
-  s_sjp.pos = 0;
   s_sjp.char_processor = process_prompt_char;
 }
 
 static void process_here_char(char ch) {
   printf("%c", ch);
+  struct mbuf *m = &s_sjp.buf;
 
-  if ((s_sjp.pos >= 7 &&
-       strncmp(&s_sjp.buf[s_sjp.pos - 7], "\r\nEOF\r\n", 7) == 0) ||
-      (s_sjp.pos >= 5 &&
-       (strncmp(&s_sjp.buf[s_sjp.pos - 5], "\nEOF\n", 5) == 0 ||
-        strncmp(&s_sjp.buf[s_sjp.pos - 5], "\rEOF\r", 5) == 0))) {
-    int end_pos = s_sjp.pos - (s_sjp.buf[s_sjp.pos - 2] == '\r' ? 7 : 5);
-    s_sjp.buf[end_pos] = '\0';
+  if ((m->len >= 7 && strncmp(&m->buf[m->len - 7], "\r\nEOF\r\n", 7) == 0) ||
+      (m->len >= 5 && (strncmp(&m->buf[m->len - 5], "\nEOF\n", 5) == 0 ||
+                       strncmp(&m->buf[m->len - 5], "\rEOF\r", 5) == 0))) {
+    int end_pos = m->len - (m->buf[m->len - 2] == '\r' ? 7 : 5);
+    m->buf[end_pos] = '\0';
     printf("\n");
-    process_js(s_sjp.buf);
+    process_js(m->buf);
+    mbuf_remove(m, m->len);
+    mbuf_trim(m);
     show_prompt();
-  } else {
-    if (s_sjp.pos >= RX_BUFSIZE) {
-      printf("Input too long\n");
-      show_prompt();
-    }
   }
 }
 
@@ -77,26 +79,21 @@ static void process_here(int argc, char *argv[], unsigned int param) {
   (void) argc;
   (void) argv;
   (void) param;
-  s_sjp.pos = 0;
   s_sjp.char_processor = process_here_char;
 }
 
-static void interrupt_char_processor(char ch) {
-  if (ch == SIGINT_CHAR) v7_interrupt(s_sjp.v7);
-}
-
-static void process_js(char *cmd) {
-  s_sjp.char_processor = interrupt_char_processor;
+static void process_js(const char *cmd) {
   v7_val_t res;
   enum v7_err err;
   struct v7 *v7 = s_sjp.v7;
-
+  s_sjp.running = true;
   {
     struct v7_exec_opts opts;
     memset(&opts, 0, sizeof(opts));
     opts.filename = "repl";
     err = v7_exec_opt(s_sjp.v7, cmd, &opts, &res);
   }
+  s_sjp.running = false;
 
   if (err == V7_SYNTAX_ERROR) {
     printf("Syntax error: %s\n", v7_get_parser_error(v7));
@@ -136,8 +133,9 @@ static const struct firmware_command cmds[] = {
     {"help", &process_help, 0}, {"here", &process_here, 0},
 };
 
-static void process_command(char *cmd) {
-  if (*cmd == ':') {
+static void process_command(struct mbuf *m) {
+  const char *cmd = m->buf;
+  if (m->len > 0 && *cmd == ':') {
     size_t i;
     for (i = 0; i < ARRAY_SIZE(cmds); i++) {
       if (strncmp(cmd + 1, cmds[i].command, strlen(cmds[i].command)) == 0) {
@@ -146,20 +144,28 @@ static void process_command(char *cmd) {
       }
     }
     if (i == sizeof(cmds) / sizeof(cmds[0])) {
-      printf("Unknown command, type :help for the list of commands\n");
+      printf("Unknown command '%.*s', type :help for the list of commands\n",
+             (int) m->len, m->buf);
     }
     if (s_sjp.char_processor == process_prompt_char) show_prompt();
   } else {
     /* skip empty commands */
-    if (*cmd) process_js(cmd);
+    if (m->len > 0 && *cmd != '\r' && *cmd != '\n') {
+      mbuf_append(m, "", 1); /* NUL-terminate */
+      process_js(cmd);
+    }
     show_prompt();
   }
+  mbuf_remove(m, m->len);
+  mbuf_trim(m);
 }
 
 static void process_prompt_char(char ch) {
+  struct mbuf *m = &s_sjp.buf;
+
   if (s_sjp.swallow > 0) {
     s_sjp.swallow--;
-    s_sjp.pos--;
+    m->len--;
     return;
   }
 
@@ -174,24 +180,23 @@ static void process_prompt_char(char ch) {
       break;
     case 0x7f:
     case 0x08:
-      s_sjp.pos--; /* Swallow BS itself. */
-      if (s_sjp.pos > 0) {
-        s_sjp.pos--;
+      m->len--; /* Swallow BS itself. */
+      if (m->len > 0) {
+        m->len--;
         /* \b only moves the cursor left, let's also clear the char */
         printf("\b \b");
       }
-      s_sjp.buf[s_sjp.pos] = '\0';
+      m->buf[m->len] = '\0';
       break;
+    case '\r':
     case '\n':
+    case EOF_CHAR:
 #ifndef SJ_PROMPT_DISABLE_ECHO
       printf("\n");
 #endif
-      s_sjp.pos--;
-      s_sjp.buf[s_sjp.pos] = '\0';
-      process_command(s_sjp.buf);
-      s_sjp.pos = 0;
-      break;
-    case '\r':
+      m->len--;
+      m->buf[m->len] = '\0';
+      process_command(&s_sjp.buf);
       break;
     default:
 #ifndef SJ_PROMPT_DISABLE_ECHO
@@ -201,25 +206,50 @@ static void process_prompt_char(char ch) {
   }
 }
 
-void sj_prompt_init(struct v7 *v7) {
+void sj_prompt_init(struct v7 *v7, int uart_no) {
   memset(&s_sjp, 0, sizeof(s_sjp));
 
-  /* TODO(alashkin): load cfg from flash */
+  /* Install prompt if enabled in the config and user's app has not installed
+   * a custom UART handler. */
+  if (uart_no < 0 || !get_cfg()->debug.enable_prompt ||
+      mg_uart_get_dispatcher(uart_no) != NULL) {
+    return;
+  }
+
   s_sjp.v7 = v7;
+  s_sjp.uart_no = uart_no;
 
   printf("\n");
   sj_prompt_init_hal();
   show_prompt();
+  mg_uart_set_dispatcher(uart_no, sj_prompt_dispatcher, NULL);
+  mg_uart_set_rx_enabled(uart_no, true);
 }
 
 void sj_prompt_process_char(char ch) {
-  if (s_sjp.pos >= RX_BUFSIZE - 1) {
-    printf("\nCommand buffer overflow.\n");
-    s_sjp.pos = 0;
-    show_prompt();
+  struct mbuf *m = &s_sjp.buf;
+  if (ch == SIGINT_CHAR) {
+    if (s_sjp.running) {
+      v7_interrupt(s_sjp.v7);
+    } else {
+      show_prompt();
+    }
+  } else if (ch == EOF_CHAR) {
+#ifdef SJ_ENABLE_CLUBBY
+    if (s_sjp.uart_no >= 0 && mg_clubby_get_global() != NULL) {
+      /* Switch into Clubby mode. This will detach our dispatcher. */
+      struct mg_clubby_channel *ch = mg_clubby_channel_uart(s_sjp.uart_no);
+      if (ch != NULL) {
+        mg_clubby_add_channel(mg_clubby_get_global(), mg_mk_str(""), ch,
+                              true /* is_trusted */, false /* send_hello */);
+        ch->connect(ch);
+      }
+      return;
+    }
+#endif
+    /* Else fall through and process as end of command. */
   }
-  s_sjp.buf[s_sjp.pos++] = ch;
-  s_sjp.buf[s_sjp.pos] = '\0';
+  mbuf_append(m, &ch, 1);
   s_sjp.char_processor(ch);
 }
 
@@ -228,8 +258,10 @@ void sj_prompt_dispatcher(struct mg_uart_state *us) {
   cs_rbuf_t *rxb = &us->rx_buf;
   while (cs_rbuf_get(rxb, 1, &cp) == 1) {
     cs_rbuf_consume(rxb, 1);
+    s_sjp.uart_no = us->uart_no;
     sj_prompt_process_char((char) *cp);
   }
+  fflush(stdout);
 }
 
 #endif /* SJ_ENABLE_JS */

@@ -113,10 +113,10 @@ enum cc3200_init_result {
 
 static enum cc3200_init_result cc3200_init(void *arg) {
   mongoose_init();
-  {
-    struct mg_uart_config *u0cfg = mg_uart_default_config();
-    u0cfg->baud_rate = CONSOLE_BAUD_RATE;
-    if (mg_uart_init(0, u0cfg, NULL, NULL) == NULL) {
+  if (MG_DEBUG_UART >= 0) {
+    struct mg_uart_config *ucfg = mg_uart_default_config();
+    ucfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
+    if (mg_uart_init(MG_DEBUG_UART, ucfg, NULL, NULL) == NULL) {
       return CC3200_INIT_UART_INIT_FAILED;
     }
   }
@@ -201,12 +201,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   }
 
 #ifdef SJ_ENABLE_JS
-  /* Install prompt if enabled in the config. */
-  if (get_cfg()->debug.enable_prompt) {
-    sj_prompt_init(v7);
-    mg_uart_set_dispatcher(0, sj_prompt_dispatcher, NULL);
-    mg_uart_set_rx_enabled(0, true);
-  }
+  sj_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
   return CC3200_INIT_OK;
 }

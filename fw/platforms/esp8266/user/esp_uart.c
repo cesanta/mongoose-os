@@ -251,17 +251,6 @@ void mg_uart_dev_set_rx_enabled(struct mg_uart_state *us, bool enabled) {
   }
 }
 
-IRAM void mg_uart_flush(int uart_no) {
-  struct mg_uart_state *us = s_us[uart_no];
-  if (us == NULL) return;
-  cs_rbuf_t *txb = &us->tx_buf;
-  while (txb != NULL && txb->used > 0) {
-    mg_uart_dev_dispatch_tx_top(us);
-  }
-  while (esp_uart_tx_fifo_len(uart_no) > 0) {
-  }
-}
-
 uint32_t esp_uart_raw_ints(int uart_no) {
   return READ_PERI_REG(UART_INT_RAW(uart_no));
 }

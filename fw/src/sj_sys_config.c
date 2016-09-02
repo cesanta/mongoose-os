@@ -24,9 +24,10 @@ extern const char *build_id;
 extern const char *build_timestamp;
 extern const char *build_version;
 
+bool s_initialized = false;
 struct sys_config s_cfg;
 struct sys_config *get_cfg() {
-  return &s_cfg;
+  return (s_initialized ? &s_cfg : NULL);
 }
 
 struct sys_ro_vars s_ro_vars;
@@ -328,10 +329,11 @@ enum sj_init_result sj_sys_config_init() {
   }
   LOG(LL_INFO, ("MAC: %s", s_ro_vars.mac_address));
 
-  if (get_cfg()->wifi.ap.ssid != NULL) {
-    expand_mac_address_placeholders((char *) get_cfg()->wifi.ap.ssid,
-                                    s_ro_vars.mac_address);
+  if (s_cfg.wifi.ap.ssid != NULL) {
+    expand_mac_address_placeholders(s_cfg.wifi.ap.ssid, s_ro_vars.mac_address);
   }
+
+  s_initialized = true;
 
   return SJ_INIT_OK;
 }

@@ -167,9 +167,8 @@ MIOT_SRCS = sj_init.c \
             sj_wifi.c \
             sj_config.c sj_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            cs_crc32.c sj_updater_common.c sj_updater_clubby.c sj_updater_post.c \
+            cs_crc32.c sj_updater_common.c sj_updater_post.c \
             cs_frbuf.c sj_utils.c \
-            mg_clubby.c mg_clubby_channel_ws.c \
             sj_console.c \
             cs_rbuf.c mg_uart.c \
             boot.c mongoose.c frozen.c json_utils.c
@@ -234,8 +233,9 @@ else
   MIOT_SRCS += cs_file.c
 endif
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
-  MIOT_FEATURES += -DSJ_ENABLE_CLUBBY \
-                    -DSJ_ENABLE_CLUBBY_API
+  MIOT_SRCS += mg_clubby.c mg_clubby_channel_uart.c mg_clubby_channel_ws.c \
+               sj_updater_clubby.c
+  MIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
 
   MIOT_CC3200_FEATURES += -DSJ_ENABLE_UPDATER_CLUBBY
 else

@@ -8,9 +8,11 @@
 #include "common/cs_dbg.h"
 #include "common/json_utils.h"
 #include "common/mbuf.h"
+#include "fw/src/mg_clubby_channel_uart.h"
 #include "fw/src/mg_clubby_channel_ws.h"
 #include "fw/src/sj_config.h"
 #include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_uart.h"
 #include "fw/src/sj_wifi.h"
 
 #define MG_CLUBBY_FRAME_VERSION 2
@@ -254,7 +256,7 @@ static void mg_clubby_hello_cb(struct mg_clubby *c, void *cb_arg,
     ci->is_open = true;
     ci->is_busy = false;
     LOG(LL_DEBUG, ("time %ld", timestamp));
-    LOG(LL_INFO, ("%p CHAN OPEN", ci->ch));
+    LOG(LL_DEBUG, ("%p CHAN OPEN", ci->ch));
     mg_clubby_process_queue(c);
     if (ci->dst.len > 0) {
       mg_clubby_call_observers(c, MG_CLUBBY_EV_CHANNEL_OPEN, &ci->dst);
@@ -312,7 +314,7 @@ static void mg_clubby_ev_handler(struct mg_clubby_channel *ch,
       } else {
         ci->is_open = true;
         ci->is_busy = false;
-        LOG(LL_INFO, ("%p CHAN OPEN", ch));
+        LOG(LL_DEBUG, ("%p CHAN OPEN", ch));
         mg_clubby_process_queue(c);
         if (ci->dst.len > 0) {
           mg_clubby_call_observers(c, MG_CLUBBY_EV_CHANNEL_OPEN, &ci->dst);
@@ -327,14 +329,14 @@ static void mg_clubby_ev_handler(struct mg_clubby_channel *ch,
     }
     case MG_CLUBBY_CHANNEL_FRAME_SENT: {
       int success = (intptr_t) ev_data;
-      LOG(LL_INFO, ("%p FRAME SENT (%d)", ch, success));
+      LOG(LL_DEBUG, ("%p FRAME SENT (%d)", ch, success));
       ci->is_busy = false;
       mg_clubby_process_queue(c);
       break;
     }
     case MG_CLUBBY_CHANNEL_CLOSED: {
       bool remove = !ch->is_persistent(ch);
-      LOG(LL_INFO, ("%p CHAN CLOSED, remove? %d", ch, remove));
+      LOG(LL_DEBUG, ("%p CHAN CLOSED, remove? %d", ch, remove));
       ci->is_open = ci->is_busy = false;
       if (ci->dst.len > 0) {
         mg_clubby_call_observers(c, MG_CLUBBY_EV_CHANNEL_CLOSED, &ci->dst);
@@ -625,6 +627,18 @@ enum sj_init_result mg_clubby_init() {
         } else {
           mg_clubby_connect(c);
         }
+      }
+    }
+    if (sccfg->uart.uart_no >= 0) {
+      const struct sys_config_clubby_uart *scucfg = &get_cfg()->clubby.uart;
+      struct mg_uart_config *ucfg = mg_uart_default_config();
+      ucfg->baud_rate = scucfg->baud_rate;
+      ucfg->rx_fc_ena = ucfg->tx_fc_ena = scucfg->fc_enable;
+      if (mg_uart_init(scucfg->uart_no, ucfg, NULL, NULL) != NULL) {
+        struct mg_clubby_channel *uch = mg_clubby_channel_uart(scucfg->uart_no);
+        mg_clubby_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,
+                              false /* send_hello */);
+        if (sccfg->connect_on_boot) uch->connect(uch);
       }
     }
     s_global_clubby = c;

@@ -40,11 +40,11 @@
 extern const char *build_id;
 os_timer_t startcmd_timer;
 
-#ifndef ESP_DEBUG_UART
-#define ESP_DEBUG_UART 0
+#ifndef MG_DEBUG_UART
+#define MG_DEBUG_UART 0
 #endif
-#ifndef ESP_DEBUG_UART_BAUD_RATE
-#define ESP_DEBUG_UART_BAUD_RATE 115200
+#ifndef MG_DEBUG_UART_BAUD_RATE
+#define MG_DEBUG_UART_BAUD_RATE 115200
 #endif
 
 #ifdef ESP_ENABLE_HEAP_LOG
@@ -74,8 +74,8 @@ int esp_sj_init(rboot_config *bcfg) {
    */
   {
     struct mg_uart_config *u0cfg = mg_uart_default_config();
-#if ESP_DEBUG_UART == 0
-    u0cfg->baud_rate = ESP_DEBUG_UART_BAUD_RATE;
+#if MG_DEBUG_UART == 0
+    u0cfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
 #endif
     if (mg_uart_init(0, u0cfg, NULL, NULL) == NULL) {
       return SJ_INIT_UART_FAILED;
@@ -83,14 +83,14 @@ int esp_sj_init(rboot_config *bcfg) {
     struct mg_uart_config *u1cfg = mg_uart_default_config();
     /* UART1 has no RX pin, no point in allocating a buffer. */
     u1cfg->rx_buf_size = 0;
-#if ESP_DEBUG_UART == 1
-    u1cfg->baud_rate = ESP_DEBUG_UART_BAUD_RATE;
+#if MG_DEBUG_UART == 1
+    u1cfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
 #endif
     if (mg_uart_init(1, u1cfg, NULL, NULL) == NULL) {
       return SJ_INIT_UART_FAILED;
     }
     fs_set_stdout_uart(0);
-    fs_set_stderr_uart(ESP_DEBUG_UART);
+    fs_set_stderr_uart(MG_DEBUG_UART);
     setvbuf(stdout, NULL, _IOLBF, 0);
     setvbuf(stderr, NULL, _IOLBF, 0);
     cs_log_set_level(LL_INFO);
@@ -140,13 +140,7 @@ int esp_sj_init(rboot_config *bcfg) {
   LOG(LL_INFO, ("Init done, RAM: %d free", sj_get_free_heap_size()));
 
 #ifdef SJ_ENABLE_JS
-  /* Install prompt if enabled in the config and user's app has not installed
-   * a custom handler. */
-  if (get_cfg()->debug.enable_prompt && mg_uart_get_dispatcher(0) == NULL) {
-    sj_prompt_init(v7);
-    mg_uart_set_dispatcher(0, sj_prompt_dispatcher, NULL);
-    mg_uart_set_rx_enabled(0, true);
-  }
+  sj_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
 
   /*

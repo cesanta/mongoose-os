@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "fw/src/mg_clubby_channel_ws.h"
 
 #ifdef SJ_ENABLE_CLUBBY
@@ -27,7 +32,7 @@ static void mg_clubby_ws_handler(struct mg_connection *nc, int ev,
       (struct mg_clubby_channel_ws_data *) ch->channel_data;
   switch (ev) {
     case MG_EV_WEBSOCKET_HANDSHAKE_DONE: {
-      LOG(LL_DEBUG, ("%p WS HANDSHAKE DONE", ch));
+      LOG(LL_INFO, ("%p WS HANDSHAKE DONE", ch));
       ch->ev_handler(ch, MG_CLUBBY_CHANNEL_OPEN, NULL);
       break;
     }
@@ -50,7 +55,7 @@ static void mg_clubby_ws_handler(struct mg_connection *nc, int ev,
       break;
     }
     case MG_EV_CLOSE: {
-      LOG(LL_DEBUG, ("%p CLOSED", ch));
+      LOG(LL_INFO, ("%p CLOSED", ch));
       if (chd->sending) {
         ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_SENT, (void *) 0);
       }
@@ -166,7 +171,7 @@ static void mg_clubby_channel_ws_out_connect(struct mg_clubby_channel *ch) {
   opts.ssl_ca_cert = cfg->ssl_ca_file;
   opts.ssl_cert = cfg->ssl_client_cert_file;
 #endif
-  LOG(LL_INFO, ("Connecting to %s, SSL? %d", cfg->server_address,
+  LOG(LL_INFO, ("%p Connecting to %s, SSL? %d", ch, cfg->server_address,
                 (opts.ssl_ca_cert != NULL)));
   chd->wsd.nc =
       mg_connect_ws_opt(&sj_mgr, mg_clubby_ws_out_handler, opts,
