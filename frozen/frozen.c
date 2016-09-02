@@ -467,7 +467,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
   va_copy(ap, xap);
 
   while (*fmt != '\0') {
-    if (strchr(":, \r\n\t[]{}", *fmt) != NULL) {
+    if (strchr(":, \r\n\t[]{}\"", *fmt) != NULL) {
       len += out->printer(out, fmt, 1);
       fmt++;
     } else if (fmt[0] == '%') {
