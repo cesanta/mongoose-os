@@ -41,7 +41,7 @@ enum json_token_type {
   JSON_TYPE_ARRAY_START,
   JSON_TYPE_ARRAY_END,
 
-  JSON_TYPES_CNT,
+  JSON_TYPES_CNT
 };
 
 /*
