@@ -53,10 +53,12 @@ void mg_clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
     size_t flen = 0;
     const char *end =
         c_strnstr(chd->recv_mbuf.buf, "\"\"\"", chd->recv_mbuf.len);
-    if (end != NULL) flen = (end - chd->recv_mbuf.buf);
-    if (flen != 0) {
-      struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
-      ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
+    if (end != NULL) {
+      flen = (end - chd->recv_mbuf.buf);
+      if (flen != 0) {
+        struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
+        ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
+      }
       mbuf_remove(&chd->recv_mbuf, flen + 3);
       if (chd->recv_mbuf.len == 0) {
         mbuf_trim(&chd->recv_mbuf);
