@@ -10,8 +10,6 @@
 
 #include "common/platform.h"
 
-#include <simplelink/include/netapp.h>
-
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
   int res;
   struct in_addr *in = (struct in_addr *) src;

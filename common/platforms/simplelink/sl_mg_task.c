@@ -1,4 +1,4 @@
-#if defined(MG_SOCKET_SIMPLELINK)
+#if defined(MG_SOCKET_SIMPLELINK) && !defined(MG_SIMPLELINK_NO_OSI)
 
 #include "mg_task.h"
 

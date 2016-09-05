@@ -29,6 +29,7 @@
 #undef SL_INC_STD_BSD_API_NAMING
 
 #include <simplelink/include/simplelink.h>
+#include <simplelink/include/netapp.h>
 
 /* Now define only the subset of the BSD API that we use.
  * Notably, close(), read() and write() are not defined. */
