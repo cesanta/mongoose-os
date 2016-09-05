@@ -23,6 +23,7 @@ APP_EXTRA_SRCS ?=
 
 SJ_ENABLE_JS ?= 1
 SJ_ENABLE_CLUBBY ?= 1
+SJ_ENABLE_CONFIG_SERVICE ?= 1
 
 REPO_PATH ?= ../../..
 COMMON_PATH ?= $(REPO_PATH)/common
@@ -279,6 +280,12 @@ ifeq "$(SJ_ENABLE_CLUBBY)" "1"
                sj_updater_clubby.c
   MIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
   MIOT_ESP_FEATURES += -DSJ_ENABLE_UPDATER_CLUBBY -DSJ_ENABLE_UPDATER_CLUBBY_API
+
+ifeq "$(SJ_ENABLE_CONFIG_SERVICE)" "1"
+  MIOT_SRCS += sj_service_vars.c sj_service_config.c
+  MIOT_FEATURES += -DSJ_ENABLE_CONFIG_SERVICE
+endif
+
 endif
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))

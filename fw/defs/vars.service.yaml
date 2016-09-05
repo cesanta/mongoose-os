@@ -6,4 +6,8 @@ methods:
     result:
       type: object
       properties:
-        mac: {type: string}
+        arch: {type: string}
+        fw_id: {type: string}
+        fw_timestamp: {type: string}
+        fw_version: {type: string}
+        mac_address: {type: string}

@@ -52,7 +52,8 @@ APP_SRCS = $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_init.c sj_init_js.c \
            json_utils.c sj_clubby_js.c \
            cs_rbuf.c mg_uart.c mg_uart_js.c \
            mg_clubby.c mg_clubby_channel_uart.c mg_clubby_channel_ws.c \
-           sj_tcp_udp_js.c sj_utils.c sj_console.c sj_console_js.c
+           sj_tcp_udp_js.c sj_utils.c sj_console.c sj_console_js.c \
+           sj_service_vars.c sj_service_config.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them

@@ -34,7 +34,11 @@ var _ = trace.New
 const ServiceID = "http://mongoose-iot.com/fw/v1/Vars"
 
 type GetResult struct {
-	Mac *string `json:"mac,omitempty"`
+	Arch         *string `json:"arch,omitempty"`
+	Fw_id        *string `json:"fw_id,omitempty"`
+	Fw_timestamp *string `json:"fw_timestamp,omitempty"`
+	Fw_version   *string `json:"fw_version,omitempty"`
+	Mac_address  *string `json:"mac_address,omitempty"`
 }
 
 type Service interface {
@@ -185,7 +189,19 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "doc": "Get device read-only vars",
       "result": {
         "properties": {
-          "mac": {
+          "arch": {
+            "type": "string"
+          },
+          "fw_id": {
+            "type": "string"
+          },
+          "fw_timestamp": {
+            "type": "string"
+          },
+          "fw_version": {
+            "type": "string"
+          },
+          "mac_address": {
             "type": "string"
           }
         },
