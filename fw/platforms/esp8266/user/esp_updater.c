@@ -73,7 +73,7 @@ struct sj_upd_ctx {
   const char *status_msg;
 };
 
-rboot_config *get_rboot_config() {
+rboot_config *get_rboot_config(void) {
   static rboot_config *cfg = NULL;
   if (cfg == NULL) {
     cfg = malloc(sizeof(*cfg));
@@ -87,7 +87,7 @@ rboot_config *get_rboot_config() {
   return cfg;
 }
 
-static uint8_t get_current_rom() {
+static uint8_t get_current_rom(void) {
   return get_rboot_config()->current_rom;
 }
 
@@ -99,7 +99,7 @@ uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
 }
 
-struct sj_upd_ctx *sj_upd_ctx_create() {
+struct sj_upd_ctx *sj_upd_ctx_create(void) {
   return calloc(1, sizeof(struct sj_upd_ctx));
 }
 

@@ -576,7 +576,7 @@ bool mg_start_task(int priority, int stack_size, mg_init_cb mg_init);
 
 void mg_run_in_task(void (*cb)(struct mg_mgr *mgr, void *arg), void *cb_arg);
 
-int sl_fs_init();
+int sl_fs_init(void);
 
 void sl_restart_cb(struct mg_mgr *mgr);
 
@@ -32408,7 +32408,7 @@ static int ecma_DaylightSavingTA(etime_t t) {
   }
 }
 
-static int ecma_LocalTZA() {
+static int ecma_LocalTZA(void) {
   return (int) -g_gmtoffms;
 }
 
@@ -33079,7 +33079,7 @@ static int d_tptodatestr(const struct timeparts *tp, char *buf, int addtz) {
 
 DEF_TOSTR(DateString, d_localtime, d_tptodatestr, 1)
 
-static const char *d_gettzname() {
+static const char *d_gettzname(void) {
   return g_tzname;
 }
 

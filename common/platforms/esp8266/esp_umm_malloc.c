@@ -88,11 +88,11 @@ void vPortFree(void *ptr, const char *file, int line) {
   umm_free(ptr);
 }
 
-size_t xPortGetFreeHeapSize() {
+size_t xPortGetFreeHeapSize(void) {
   return umm_free_heap_size();
 }
 
-size_t xPortWantedSizeAlign() {
+size_t xPortWantedSizeAlign(void) {
   return 4;
 }
 

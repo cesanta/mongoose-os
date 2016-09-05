@@ -116,11 +116,11 @@ void mg_uart_dev_set_rx_enabled(struct mg_uart_state *us, bool enabled) {
   HWREG(base + UART_O_CTL) = ctl;
 }
 
-static void u0_int() {
+static void u0_int(void) {
   uart_int(s_us[0]);
 }
 
-static void u1_int() {
+static void u1_int(void) {
   uart_int(s_us[1]);
 }
 

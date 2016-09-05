@@ -27,7 +27,7 @@ struct console_ctx {
   unsigned int request_in_flight : 1;
 } s_cctx;
 
-static int sj_console_next_msg_len() {
+static int sj_console_next_msg_len(void) {
   for (size_t i = 0; i < s_cctx.buf.len; i++) {
     if (s_cctx.buf.buf[i] == '\n') return i + 1;
   }
@@ -100,7 +100,7 @@ void clubby_cb(struct mg_clubby *clubby, void *cb_arg,
   (void) error_msg;
 }
 
-static void sj_console_push_to_cloud() {
+static void sj_console_push_to_cloud(void) {
   if (!s_cctx.initialized || !get_cfg()->console.send_to_cloud) return;
   struct mg_clubby *c = mg_clubby_get_global();
   if (c == NULL || !mg_clubby_is_connected(c)) {
@@ -133,13 +133,13 @@ static void sj_console_push_to_cloud() {
   }
 }
 
-int sj_console_is_waiting_for_resp() {
+int sj_console_is_waiting_for_resp(void) {
   return s_cctx.request_in_flight;
 }
 #endif /* SJ_ENABLE_CLUBBY */
 
 #ifdef SJ_ENABLE_CONSOLE_FILE_BUFFER
-static void sj_console_flush_to_file() {
+static void sj_console_flush_to_file(void) {
   if (s_cctx.fbuf == NULL) return;
   int l;
   while ((l = sj_console_next_msg_len()) > 0) {
@@ -161,7 +161,7 @@ static void sj_console_flush(void *arg) {
 #endif /* defined(SJ_ENABLE_CLUBBY) || defined (SJ_ENABLE_CONSOLE_FILE_BUFFER) \
           */
 
-void sj_console_init() {
+void sj_console_init(void) {
 #ifdef SJ_ENABLE_CONSOLE_FILE_BUFFER
   if (get_cfg()->console.log_file != NULL) {
     s_cctx.fbuf = cs_frbuf_init(get_cfg()->console.log_file,

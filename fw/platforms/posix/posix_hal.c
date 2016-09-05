@@ -39,7 +39,7 @@ v7_val_t *bsd_timer_cb = NULL;
 
 extern int sj_please_quit;
 
-size_t sj_get_free_heap_size() {
+size_t sj_get_free_heap_size(void) {
 #if defined(_WIN32)
   MEMORYSTATUSEX s;
   s.dwLength = sizeof(s);
@@ -75,23 +75,23 @@ size_t sj_get_free_heap_size() {
 #endif
 }
 
-size_t sj_get_min_free_heap_size() {
+size_t sj_get_min_free_heap_size(void) {
   /* Not supported */
   return 0;
 }
 
 /* WDT-functinos for compatibility only. */
-void sj_wdt_feed() {
+void sj_wdt_feed(void) {
 }
 
 void sj_wdt_set_timeout(int secs) {
   (void) secs;
 }
 
-void sj_wdt_enable() {
+void sj_wdt_enable(void) {
 }
 
-void sj_wdt_disable() {
+void sj_wdt_disable(void) {
 }
 
 void sj_system_restart(int exit_code) {
@@ -99,7 +99,7 @@ void sj_system_restart(int exit_code) {
   exit(exit_code);
 }
 
-size_t sj_get_fs_memory_usage() {
+size_t sj_get_fs_memory_usage(void) {
   /* TODO(alashkin): What kind of fs memory we want to see? */
   return 0;
 }
@@ -142,7 +142,7 @@ static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   }
 }
 
-void sj_prompt_init_hal() {
+void sj_prompt_init_hal(void) {
   if (isatty(fileno(stdin))) {
     /* stdin is a tty, so, init prompt */
     int fds[2];
@@ -162,7 +162,7 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   _sj_invoke_cb(v7, func, this_obj, args);
 }
 
-int64_t sj_get_storage_free_space() {
+int64_t sj_get_storage_free_space(void) {
   /* TODO(alashkin): think about implementation */
   return -1;
 }

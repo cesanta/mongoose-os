@@ -121,7 +121,7 @@ void mg_uart_set_rx_enabled(int uart_no, bool enabled) {
   mg_uart_dev_set_rx_enabled(us, enabled);
 }
 
-struct mg_uart_config *mg_uart_default_config() {
+struct mg_uart_config *mg_uart_default_config(void) {
   struct mg_uart_config *cfg =
       (struct mg_uart_config *) calloc(1, sizeof(*cfg));
   if (cfg == NULL) {

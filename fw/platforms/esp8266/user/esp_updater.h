@@ -8,7 +8,7 @@
 
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 
-rboot_config *get_rboot_config();
+rboot_config *get_rboot_config(void);
 
 int apply_update(rboot_config *cfg);
 void commit_update(rboot_config *cfg);

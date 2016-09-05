@@ -13,7 +13,7 @@
 #error Unknown platform
 #endif
 
-enum mg_app_init_result sj_app_init() {
+enum mg_app_init_result sj_app_init(void) {
   { /* Print a message using a value from config. */
     printf("Hello, %s!\n", get_cfg()->hello.who);
   }

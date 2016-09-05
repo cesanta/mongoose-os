@@ -32,7 +32,7 @@ s32_t mem_spiffs_erase(u32_t addr, u32_t size) {
   return SPIFFS_OK;
 }
 
-int mem_spiffs_mount() {
+int mem_spiffs_mount(void) {
   spiffs_config cfg;
 
   cfg.phys_size = image_size;

@@ -52,7 +52,7 @@ void handle_exception(struct exc_frame *f, const char *type) {
   uart_puts(buf);
 }
 
-void cc3200_exc_init() {
+void cc3200_exc_init(void) {
   HWREG(SCB_SYSHNDCTRL) |=
       (CTRL_USAGE_FAULT_ENA | CTRL_BUS_FAULT_ENA | CTRL_MEM_FAULT_ENA);
 }

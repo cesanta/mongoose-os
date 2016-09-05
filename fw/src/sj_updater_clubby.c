@@ -434,7 +434,7 @@ clean:
  * }
  */
 
-void sj_updater_clubby_init() {
+void sj_updater_clubby_init(void) {
   struct mg_clubby *clubby = mg_clubby_get_global();
   if (clubby == NULL) return;
   mg_clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Update"),

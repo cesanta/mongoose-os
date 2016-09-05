@@ -83,7 +83,7 @@ void handle_update_post(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-void sj_updater_post_init() {
+void sj_updater_post_init(void) {
   device_register_http_endpoint("/update", handle_update_post);
 }
 

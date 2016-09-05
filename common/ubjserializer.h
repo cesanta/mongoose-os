@@ -52,7 +52,7 @@ struct ub_ctx;
 typedef void (*ub_cb_t)(char *d, size_t l, int end, void *user_data);
 typedef void (*ub_bin_cb_t)(struct ub_ctx *ctx, void *user_data);
 
-struct ub_ctx *ub_ctx_new();
+struct ub_ctx *ub_ctx_new(void);
 void ub_ctx_free(struct ub_ctx *ctx);
 void ub_render(struct ub_ctx *ctx, ub_val_t root, ub_cb_t cb, void *user_data);
 
@@ -60,12 +60,12 @@ ub_val_t ub_create_array(struct ub_ctx *ctx);
 ub_val_t ub_create_bin(struct ub_ctx *ctx, size_t n, ub_bin_cb_t cb,
                        void *user_data);
 ub_val_t ub_create_boolean(int n);
-ub_val_t ub_create_null();
+ub_val_t ub_create_null(void);
 ub_val_t ub_create_number(double n);
 ub_val_t ub_create_object(struct ub_ctx *ctx);
 ub_val_t ub_create_string(struct ub_ctx *ctx, const struct mg_str s);
 ub_val_t ub_create_cstring(struct ub_ctx *ctx, const char *s);
-ub_val_t ub_create_undefined();
+ub_val_t ub_create_undefined(void);
 
 int ub_is_bin(ub_val_t);
 int ub_is_undefined(ub_val_t);

@@ -8,7 +8,7 @@ enum mg_app_init_result {
 
 /* User app init functions, C and JS respectively.
  * A weak stub is provided in sj_app_init.c, which can be overridden. */
-enum mg_app_init_result sj_app_init();
+enum mg_app_init_result sj_app_init(void);
 #ifdef SJ_ENABLE_JS
 struct v7;
 enum mg_app_init_result sj_app_init_js(struct v7 *v7);

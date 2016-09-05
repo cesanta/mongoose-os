@@ -184,7 +184,7 @@ void esp_sj_init_timer_cb(void *arg) {
 /*
  * Called when SDK initialization is finished
  */
-void sdk_init_done_cb() {
+void sdk_init_done_cb(void) {
   srand(system_get_rtc_time());
 
 #if !defined(ESP_ENABLE_HW_WATCHDOG)
@@ -199,7 +199,7 @@ void sdk_init_done_cb() {
 }
 
 /* Init function */
-void user_init() {
+void user_init(void) {
   system_update_cpu_freq(SYS_CPU_160MHZ);
   system_init_done_cb(sdk_init_done_cb);
   esp_exception_handler_init();
@@ -209,7 +209,7 @@ void user_init() {
 #ifndef FW_RF_CAL_DATA_ADDR
 #error FW_RF_CAL_DATA_ADDR is not defined
 #endif
-uint32_t user_rf_cal_sector_set() {
+uint32_t user_rf_cal_sector_set(void) {
   /* Defined externally. */
   return FW_RF_CAL_DATA_ADDR / 4096;
 }

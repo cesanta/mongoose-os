@@ -22,7 +22,7 @@
  * Returns global instance of the config.
  * Note: Will return NULL before sj_sys_config_init.
  */
-struct sys_config *get_cfg();
+struct sys_config *get_cfg(void);
 
 /*
  * Save config. Performs diff against defaults and only saves diffs.
@@ -30,13 +30,13 @@ struct sys_config *get_cfg();
  */
 int save_cfg(const struct sys_config *cfg);
 
-const struct sys_ro_vars *get_ro_vars();
+const struct sys_ro_vars *get_ro_vars(void);
 
 void device_get_mac_address(uint8_t mac[6]);
 
 void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);
 
-enum sj_init_result sj_sys_config_init();
+enum sj_init_result sj_sys_config_init(void);
 enum sj_init_result sj_sys_config_init_http(const struct sys_config_http *cfg);
 enum sj_init_result sj_sys_config_init_platform(struct sys_config *cfg);
 

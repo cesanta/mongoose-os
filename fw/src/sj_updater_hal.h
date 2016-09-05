@@ -20,7 +20,7 @@ struct sj_upd_file_info {
   uint32_t processed;
 };
 
-struct sj_upd_ctx *sj_upd_ctx_create();
+struct sj_upd_ctx *sj_upd_ctx_create(void);
 
 const char *sj_upd_get_status_msg(struct sj_upd_ctx *ctx);
 

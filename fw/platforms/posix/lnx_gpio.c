@@ -207,7 +207,7 @@ int gpio_set_handler(int gpio_no, f_gpio_intr_handler_t callback, void *arg) {
   return 0;
 }
 
-int gpio_poll() {
+int gpio_poll(void) {
   struct pollfd fdset[HANDLER_MAX_COUNT];
   struct gpio_event *events_tmp[HANDLER_MAX_COUNT];
 

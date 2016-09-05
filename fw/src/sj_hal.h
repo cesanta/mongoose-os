@@ -14,28 +14,28 @@
 #include <stdlib.h>
 
 /* Get system memory size. */
-size_t sj_get_heap_size();
+size_t sj_get_heap_size(void);
 
 /* Get system free memory. */
-size_t sj_get_free_heap_size();
+size_t sj_get_free_heap_size(void);
 
 /* Get minimal watermark of the system free memory. */
-size_t sj_get_min_free_heap_size();
+size_t sj_get_min_free_heap_size(void);
 
 /* Get filesystem memory usage */
-size_t sj_get_fs_memory_usage();
+size_t sj_get_fs_memory_usage(void);
 
 /* Feed watchdog */
-void sj_wdt_feed();
+void sj_wdt_feed(void);
 
 /* Set watchdog timeout*/
 void sj_wdt_set_timeout(int secs);
 
 /* Enable watchdog */
-void sj_wdt_enable();
+void sj_wdt_enable(void);
 
 /* Disable watchdog */
-void sj_wdt_disable();
+void sj_wdt_disable(void);
 
 /* Restart system */
 void sj_system_restart(int exit_code);
@@ -44,6 +44,6 @@ void sj_system_restart(int exit_code);
 void sj_usleep(int usecs);
 
 /* Get storage free space, bytes */
-int64_t sj_get_storage_free_space();
+int64_t sj_get_storage_free_space(void);
 
 #endif /* CS_FW_SRC_SJ_HAL_H_ */

@@ -80,7 +80,7 @@ typedef struct {
   unsigned char block_len;
   unsigned char key_len;
   unsigned char iv_len;
-  void *(*new_ctx)();
+  void *(*new_ctx)(void);
   void (*setup_enc)(void *ctx, const unsigned char *key);
   void (*setup_dec)(void *ctx, const unsigned char *key);
   void (*encrypt)(void *ctx, const unsigned char *msg, int len, unsigned char *out);
@@ -662,8 +662,8 @@ NS_INTERNAL void kr_cbc_decrypt(const kr_cipher_info *ci, void *cctx,
                                 const uint8_t *msg, int len, const uint8_t *iv,
                                 uint8_t *out);
 
-const kr_cipher_info *kr_rc4_cs_info();
-const kr_cipher_info *kr_aes128_cs_info();
+const kr_cipher_info *kr_rc4_cs_info(void);
+const kr_cipher_info *kr_aes128_cs_info(void);
 
 #endif /* CS_KRYPTON_SRC_CRYPTO_H_ */
 #ifdef KR_MODULE_LINES
@@ -5134,7 +5134,7 @@ NS_INTERNAL void kr_aes_decrypt(void *ctxv, const uint8_t *in, int len,
   }
 }
 
-NS_INTERNAL void *kr_aes_new_ctx() {
+NS_INTERNAL void *kr_aes_new_ctx(void) {
   return calloc(1, sizeof(kr_aes_ctx));
 }
 
@@ -5142,7 +5142,7 @@ NS_INTERNAL void kr_aes_free_ctx(void *ctxv) {
   free(ctxv);
 }
 
-const kr_cipher_info *kr_aes128_cs_info() {
+const kr_cipher_info *kr_aes128_cs_info(void) {
   static const kr_cipher_info aes128_cs_info = {
       AES_BLOCK_SIZE, AES128_KEY_SIZE, 16, kr_aes_new_ctx, kr_aes_setup_enc,
       kr_aes_setup_dec, kr_aes_encrypt, kr_aes_decrypt, kr_aes_free_ctx};
@@ -5197,7 +5197,7 @@ typedef struct {
   uint8_t m[256];
 } kr_rc4_ctx;
 
-NS_INTERNAL void *kr_rc4_new_ctx() {
+NS_INTERNAL void *kr_rc4_new_ctx(void) {
   return calloc(1, sizeof(kr_rc4_ctx));
 }
 
@@ -5255,7 +5255,7 @@ NS_INTERNAL void kr_rc4_free_ctx(void *ctxv) {
   free(ctxv);
 }
 
-const kr_cipher_info *kr_rc4_cs_info() {
+const kr_cipher_info *kr_rc4_cs_info(void) {
   static const kr_cipher_info rc4_cs_info = {
       1, RC4_KEY_SIZE, 0, kr_rc4_new_ctx, kr_rc4_setup, kr_rc4_setup,
       kr_rc4_crypt, kr_rc4_crypt, kr_rc4_free_ctx};
@@ -5274,7 +5274,7 @@ const kr_cipher_info *kr_rc4_cs_info() {
 
 #if KR_ALLOW_NULL_CIPHERS
 
-NS_INTERNAL void *kr_null_new_ctx() {
+NS_INTERNAL void *kr_null_new_ctx(void) {
   return NULL;
 }
 

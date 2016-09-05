@@ -44,7 +44,7 @@ static os_event_t gpio_task_queue[GPIO_TASK_QUEUE_LEN];
 #define GPIO_INTR_TYPE_ONCLICK 6
 #define GPIO_ONCLICK_SKIP_INTR_COUNT 15
 
-static void gpio16_set_output_mode() {
+static void gpio16_set_output_mode(void) {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -64,7 +64,7 @@ static void gpio16_output_set(uint8_t value) {
                      (uint32_t)(value & 1));
 }
 
-static void gpio16_set_input_mode() {
+static void gpio16_set_input_mode(void) {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -77,7 +77,7 @@ static void gpio16_set_input_mode() {
                  READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32_t) 0xfffffffe);
 }
 
-static uint8_t gpio16_input_get() {
+static uint8_t gpio16_input_get(void) {
   return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 

@@ -62,5 +62,5 @@ void sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
   cb(NULL, arg);
 }
 
-void sj_wifi_hal_init() {
+void sj_wifi_hal_init(void) {
 }

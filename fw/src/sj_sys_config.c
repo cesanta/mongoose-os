@@ -26,12 +26,12 @@ extern const char *build_version;
 
 bool s_initialized = false;
 struct sys_config s_cfg;
-struct sys_config *get_cfg() {
+struct sys_config *get_cfg(void) {
   return (s_initialized ? &s_cfg : NULL);
 }
 
 struct sys_ro_vars s_ro_vars;
-const struct sys_ro_vars *get_ro_vars() {
+const struct sys_ro_vars *get_ro_vars(void) {
   return &s_ro_vars;
 }
 
@@ -283,7 +283,7 @@ clean:
   return result;
 }
 
-enum sj_init_result sj_sys_config_init() {
+enum sj_init_result sj_sys_config_init(void) {
   /* Load system defaults - mandatory */
   if (!load_config_defaults(&s_cfg)) {
     LOG(LL_ERROR, ("Failed to load config defaults"));

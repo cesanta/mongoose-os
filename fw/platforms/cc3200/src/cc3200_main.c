@@ -35,12 +35,12 @@
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
 
 /* These are FreeRTOS hooks for various life situations. */
-void vApplicationMallocFailedHook() {
+void vApplicationMallocFailedHook(void) {
   fprintf(stderr, "malloc failed\n");
   exit(123);
 }
 
-void vApplicationIdleHook() {
+void vApplicationIdleHook(void) {
   /* Ho-hum. Twiddling our thumbs. */
 }
 
@@ -63,7 +63,7 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   LOG(LL_ERROR, ("Failed to allocate %u", size));
 }
 
-int main() {
+int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
   cc3200_exc_init();
 

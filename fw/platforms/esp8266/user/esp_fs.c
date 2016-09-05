@@ -61,15 +61,15 @@ static struct mmap_desc *cur_mmap_desc;
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
-spiffs *get_fs() {
+spiffs *get_fs(void) {
   return &fs;
 }
 
-int spiffs_get_memory_usage() {
+int spiffs_get_memory_usage(void) {
   return sizeof(spiffs_work_buf) + sizeof(spiffs_fds);
 }
 
-static struct mmap_desc *alloc_mmap_desc() {
+static struct mmap_desc *alloc_mmap_desc(void) {
   size_t i;
   for (i = 0; i < sizeof(mmap_descs) / sizeof(mmap_descs[0]); i++) {
     if (mmap_descs[i].blocks == NULL) {
@@ -265,7 +265,7 @@ int fs_init(uint32_t addr, uint32_t size) {
                   sizeof(spiffs_fds));
 }
 
-void fs_umount() {
+void fs_umount(void) {
   SPIFFS_unmount(&fs);
 }
 
@@ -452,7 +452,7 @@ void fs_set_stderr_uart(int uart_no) {
   s_stderr_uart = uart_no;
 }
 
-void fs_flush_stderr() {
+void fs_flush_stderr(void) {
   if (s_stderr_uart >= 0) mg_uart_flush(s_stderr_uart);
 }
 
@@ -472,7 +472,7 @@ int v7_is_file_type(v7_val_t val) {
 }
 #endif
 
-int64_t sj_get_storage_free_space() {
+int64_t sj_get_storage_free_space(void) {
   uint32_t total, used;
   SPIFFS_info(&fs, &total, &used);
   return total - used;

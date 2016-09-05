@@ -132,8 +132,8 @@ void mg_clubby_remove_observer(struct mg_clubby *c, mg_observer_cb_t cb,
 void mg_clubby_free_request_info(struct mg_clubby_request_info *ri);
 void mg_clubby_free(struct mg_clubby *c);
 
-enum sj_init_result mg_clubby_init();
-struct mg_clubby *mg_clubby_get_global();
+enum sj_init_result mg_clubby_init(void);
+struct mg_clubby *mg_clubby_get_global(void);
 struct mg_clubby_cfg *mg_clubby_cfg_from_sys(
     const struct sys_config_clubby *sccfg);
 

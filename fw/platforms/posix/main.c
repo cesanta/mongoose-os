@@ -107,7 +107,7 @@ static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data) {
   (void) ev_data;
 }
 
-void mongoose_schedule_poll() {
+void mongoose_schedule_poll(void) {
   mg_broadcast(&sj_mgr, dummy_handler, NULL, 0);
 }
 

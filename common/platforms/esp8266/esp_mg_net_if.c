@@ -819,7 +819,7 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 }
 #endif /* SJ_ENABLE_JS */
 
-void mg_suspend() {
+void mg_suspend(void) {
   /*
    * We need to complete all pending operation, here we just set flag
    * and lwip task will disable itself once all data is sent
@@ -827,7 +827,7 @@ void mg_suspend() {
   s_suspended = 1;
 }
 
-void mg_resume() {
+void mg_resume(void) {
   if (!s_suspended) {
     return;
   }
@@ -836,7 +836,7 @@ void mg_resume() {
   os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 0 /* no repeat */);
 }
 
-int mg_is_suspended() {
+int mg_is_suspended(void) {
   return s_suspended;
 }
 

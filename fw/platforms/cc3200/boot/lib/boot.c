@@ -37,7 +37,7 @@
 
 #define BOOT_CFG_FNAME_PREFIX "mg-boot.cfg"
 
-int get_active_boot_cfg_idx() {
+int get_active_boot_cfg_idx(void) {
   struct boot_cfg cfg0, cfg1, *c;
   read_boot_cfg(0, &cfg0);
   read_boot_cfg(1, &cfg1);
@@ -53,7 +53,7 @@ int get_active_boot_cfg_idx() {
   return (c == &cfg0 ? 0 : 1);
 }
 
-int get_inactive_boot_cfg_idx() {
+int get_inactive_boot_cfg_idx(void) {
   int active = get_active_boot_cfg_idx();
   if (active < 0) {
     return 0; /* Nothing is configured? Oh well, use 0 then. */

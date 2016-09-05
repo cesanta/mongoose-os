@@ -221,7 +221,7 @@ static char *sj_wifi_get_ip(int if_no) {
   return ip;
 }
 
-char *sj_wifi_get_ap_ip() {
+char *sj_wifi_get_ap_ip(void) {
   return sj_wifi_get_ip(1);
 }
 
@@ -278,9 +278,7 @@ void sj_wifi_scan(sj_wifi_scan_cb_t cb, void *arg) {
   }
 }
 
-void sj_wifi_hal_init(struct v7 *v7) {
-  (void) v7;
-
+void sj_wifi_hal_init(void) {
   /* avoid entering AP mode on boot */
   wifi_set_opmode_current(0x1);
   wifi_set_event_handler_cb(wifi_changed_cb);

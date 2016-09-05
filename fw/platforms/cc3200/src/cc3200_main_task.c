@@ -71,13 +71,13 @@ struct v7 *init_v7(void *stack_base) {
 #endif
 
 /* It may not be the best source of entropy, but it's better than nothing. */
-static void cc3200_srand() {
+static void cc3200_srand(void) {
   uint32_t r = 0, *p;
   for (p = (uint32_t *) 0x20000000; p < (uint32_t *) 0x20040000; p++) r ^= *p;
   srand(r);
 }
 
-int start_nwp() {
+int start_nwp(void) {
   int r = sl_Start(NULL, NULL, NULL);
   if (r < 0) return r;
   SlVersionFull ver;
@@ -96,8 +96,7 @@ int start_nwp() {
 }
 
 #ifdef SJ_ENABLE_JS
-void sj_prompt_init_hal(struct v7 *v7) {
-  (void) v7;
+void sj_prompt_init_hal(void) {
 }
 #endif
 

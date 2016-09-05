@@ -108,7 +108,7 @@ bool mg_start_task(int priority, int stack_size, mg_init_cb mg_init);
 
 void mg_run_in_task(void (*cb)(struct mg_mgr *mgr, void *arg), void *cb_arg);
 
-int sl_fs_init();
+int sl_fs_init(void);
 
 void sl_restart_cb(struct mg_mgr *mgr);
 

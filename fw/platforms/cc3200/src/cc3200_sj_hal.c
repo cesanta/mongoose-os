@@ -64,11 +64,11 @@ static void sj_invoke_cb_cb(void *arg) {
 #endif /* SJ_ENABLE_JS */
 
 #ifdef __TI_COMPILER_VERSION__
-size_t sj_get_heap_size() {
+size_t sj_get_heap_size(void) {
   return UMM_MALLOC_CFG__HEAP_SIZE;
 }
 
-size_t sj_get_free_heap_size() {
+size_t sj_get_free_heap_size(void) {
   return umm_free_heap_size();
 }
 
@@ -78,11 +78,11 @@ size_t sj_get_free_heap_size() {
 extern unsigned long _heap;
 extern unsigned long _eheap;
 
-size_t sj_get_heap_size() {
+size_t sj_get_heap_size(void) {
   return ((char *) &_eheap - (char *) &_heap);
 }
 
-size_t sj_get_free_heap_size() {
+size_t sj_get_free_heap_size(void) {
   size_t avail = sj_get_heap_size();
   struct mallinfo mi = mallinfo();
   avail -= mi.arena;    /* Claimed by allocator. */
@@ -91,16 +91,16 @@ size_t sj_get_free_heap_size() {
 }
 #endif
 
-size_t sj_get_min_free_heap_size() {
+size_t sj_get_min_free_heap_size(void) {
   /* Not supported */
   return 0;
 }
 
-size_t sj_get_fs_memory_usage() {
+size_t sj_get_fs_memory_usage(void) {
   return 0; /* Not even sure if it's possible to tell. */
 }
 
-void sj_wdt_feed() {
+void sj_wdt_feed(void) {
   /* TODO */
 }
 
@@ -108,11 +108,11 @@ void sj_wdt_set_timeout(int secs) {
   /* TODO */
 }
 
-void sj_wdt_enable() {
+void sj_wdt_enable(void) {
   /* TODO */
 }
 
-void sj_wdt_disable() {
+void sj_wdt_disable(void) {
   /* TODO */
 }
 
@@ -140,7 +140,7 @@ static void mongoose_poll_cb(void *arg);
 
 int s_mg_poll_scheduled;
 
-void mongoose_schedule_poll() {
+void mongoose_schedule_poll(void) {
   /* Prevent piling up of poll callbacks. */
   if (s_mg_poll_scheduled) return;
   invoke_cb(mongoose_poll_cb, NULL);

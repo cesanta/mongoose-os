@@ -45,7 +45,7 @@ struct mg_uart_stats {
   uint32_t tx_throttles;
 };
 
-struct mg_uart_config *mg_uart_default_config();
+struct mg_uart_config *mg_uart_default_config(void);
 
 struct mg_uart_state;
 typedef void (*mg_uart_dispatcher_t)(struct mg_uart_state *us);

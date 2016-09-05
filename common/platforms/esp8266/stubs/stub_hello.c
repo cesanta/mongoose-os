@@ -17,7 +17,7 @@ uint32_t params[3] __attribute__((section(".params")));
 
 const char *hello = "Hello";
 
-void stub_main() {
+void stub_main(void) {
   send_packet(hello, 5);
   _ResetVector();
 }

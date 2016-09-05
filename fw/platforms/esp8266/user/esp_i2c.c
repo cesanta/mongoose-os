@@ -315,7 +315,7 @@ void sj_i2c_close(i2c_connection conn) {
     }                        \
   }
 
-void i2c_eeprom_test() {
+void i2c_eeprom_test(void) {
   char str[] = "Hello, world!";
   char read_buf[sizeof(str)] = {0};
 

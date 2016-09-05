@@ -33,7 +33,7 @@ struct cc3200_wifi_config {
 static struct cc3200_wifi_config s_wifi_sta_config;
 static int s_current_role = -1;
 
-static void free_wifi_config() {
+static void free_wifi_config(void) {
   s_wifi_sta_config.status = SJ_WIFI_DISCONNECTED;
   free(s_wifi_sta_config.ssid);
   free(s_wifi_sta_config.pass);
@@ -45,7 +45,7 @@ void invoke_wifi_on_change_cb(void *arg) {
   sj_wifi_on_change_cb((enum sj_wifi_status)(int) arg);
 }
 
-static int restart_nwp() {
+static int restart_nwp(void) {
   /* Properly close FS container if it's open for writing. */
   cc3200_fs_flush();
   /* We don't need TI's web server. */
@@ -57,7 +57,7 @@ static int restart_nwp() {
   return (s_current_role >= 0);
 }
 
-static int ensure_role_sta() {
+static int ensure_role_sta(void) {
   if (s_current_role == ROLE_STA) return 1;
   if (sl_WlanSetMode(ROLE_STA) != 0) return 0;
   if (!restart_nwp()) return 0;
@@ -205,7 +205,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   return 1;
 }
 
-int sj_wifi_connect() {
+int sj_wifi_connect(void) {
   int ret;
   SlSecParams_t sp;
 
@@ -239,15 +239,15 @@ int sj_wifi_connect() {
   return 1;
 }
 
-int sj_wifi_disconnect() {
+int sj_wifi_disconnect(void) {
   return (sl_WlanDisconnect() == 0);
 }
 
-enum sj_wifi_status sj_wifi_get_status() {
+enum sj_wifi_status sj_wifi_get_status(void) {
   return s_wifi_sta_config.status;
 }
 
-char *sj_wifi_get_status_str() {
+char *sj_wifi_get_status_str(void) {
   const char *st = NULL;
   switch (s_wifi_sta_config.status) {
     case SJ_WIFI_DISCONNECTED:
@@ -264,7 +264,7 @@ char *sj_wifi_get_status_str() {
   return NULL;
 }
 
-char *sj_wifi_get_connected_ssid() {
+char *sj_wifi_get_connected_ssid(void) {
   switch (s_wifi_sta_config.status) {
     case SJ_WIFI_DISCONNECTED:
       break;
@@ -275,12 +275,12 @@ char *sj_wifi_get_connected_ssid() {
   return NULL;
 }
 
-char *sj_wifi_get_sta_ip() {
+char *sj_wifi_get_sta_ip(void) {
   if (s_wifi_sta_config.ip == NULL) return NULL;
   return strdup(s_wifi_sta_config.ip);
 }
 
-char *sj_wifi_get_ap_ip() {
+char *sj_wifi_get_ap_ip(void) {
   /* TODO(rojer?) : implement if applicable */
   return NULL;
 }
@@ -304,5 +304,5 @@ out:
   cb(res, arg);
 }
 
-void sj_wifi_hal_init() {
+void sj_wifi_hal_init(void) {
 }

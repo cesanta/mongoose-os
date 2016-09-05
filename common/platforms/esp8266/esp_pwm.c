@@ -111,7 +111,7 @@ static void remove_pwm_info(struct pwm_info *p) {
 #define FRC1_ENABLE_TIMER BIT7
 #define TM_INT_EDGE 0
 
-static void pwm_configure_timer() {
+static void pwm_configure_timer(void) {
   int i, enable = 0;
   for (i = 0; i < s_num_pwms; i++) {
     struct pwm_info *p = s_pwms + i;

@@ -63,7 +63,7 @@ void dbg_puts(const char *s) {
   for (; *s != '\0'; s++) dbg_putc(*s);
 }
 
-void abort() {
+void abort(void) {
   dbg_putc('X');
   while (1) {
   }
@@ -106,7 +106,7 @@ void run(uint32_t base) {
 
 extern uint32_t _text_start; /* Our location. */
 
-int main() {
+int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &int_vectors[0]);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();

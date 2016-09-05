@@ -21,6 +21,6 @@ enum sj_init_result {
   SJ_INIT_UART_FAILED = -16,
 };
 
-enum sj_init_result sj_init();
+enum sj_init_result sj_init(void);
 
 #endif /* CS_FW_SRC_SJ_INIT_H_ */

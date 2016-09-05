@@ -11,7 +11,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Sub-second granularity time(). */
-double cs_time();
+double cs_time(void);
 
 #ifdef __cplusplus
 }

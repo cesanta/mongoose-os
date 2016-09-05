@@ -22,9 +22,9 @@ void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
                                   int interval, int count);
 
 /* TODO(alashkin): Should we move these functions to mongoose interface? */
-void mg_suspend();
-void mg_resume();
-int mg_is_suspended();
+void mg_suspend(void);
+void mg_resume(void);
+int mg_is_suspended(void);
 
 /* Internal stuff below */
 

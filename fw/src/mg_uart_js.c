@@ -97,7 +97,7 @@ static enum v7_err get_js_state(struct v7 *v7, int *uart_no,
 SJ_PRIVATE enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(false);
 
-  struct mg_uart_config *cfg = mg_uart_default_config(uart_no);
+  struct mg_uart_config *cfg = mg_uart_default_config();
   if (cfg == NULL) {
     return v7_throwf(v7, "Error", "Out of memory");
   }

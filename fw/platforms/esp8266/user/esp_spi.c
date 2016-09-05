@@ -286,7 +286,7 @@ static double convert(uint16_t n, uint32_t fcoef, uint16_t neg_pos) {
   return res;
 }
 
-void test_MPL115A1() {
+void test_MPL115A1(void) {
   spi_init(HSPI);
   uint8_t a0_MSB = (uint8_t) spi_txn(HSPI, 0, 0, 0, 0, 8, 0x88, 8, 0);
   uint8_t a0_LSB = (uint8_t) spi_txn(HSPI, 0, 0, 0, 0, 8, 0x8A, 8, 0);

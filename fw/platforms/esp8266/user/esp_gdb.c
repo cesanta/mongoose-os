@@ -28,20 +28,20 @@
 
 static uint8_t gdb_send_checksum;
 
-void gdb_nack() {
+void gdb_nack(void) {
   uart_puts(ESP_GDB_FILENO, "-");
 }
 
-void gdb_ack() {
+void gdb_ack(void) {
   uart_puts(ESP_GDB_FILENO, "+");
 }
 
-void gdb_begin_packet() {
+void gdb_begin_packet(void) {
   uart_puts(ESP_GDB_FILENO, "$");
   gdb_send_checksum = 0;
 }
 
-void gdb_end_packet() {
+void gdb_end_packet(void) {
   uart_putchar(ESP_GDB_FILENO, '#');
   uart_putchar(ESP_GDB_FILENO, hexdigit(gdb_send_checksum >> 4));
   uart_putchar(ESP_GDB_FILENO, hexdigit(gdb_send_checksum & 0xF));

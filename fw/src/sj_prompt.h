@@ -28,7 +28,7 @@ void sj_prompt_dispatcher(struct mg_uart_state *us);
  */
 
 /* initialize hooks that send chars to prompt handler */
-void sj_prompt_init_hal();
+void sj_prompt_init_hal(void);
 
 #endif /* SJ_ENABLE_JS */
 

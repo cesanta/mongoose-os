@@ -9,7 +9,7 @@
 #define CS_FW_SRC_SJ_UPDATER_POST_H_
 
 #ifdef SJ_ENABLE_UPDATER_POST
-void sj_updater_post_init();
+void sj_updater_post_init(void);
 #endif
 
 #endif /* CS_FW_SRC_SJ_UPDATER_POST_H_ */

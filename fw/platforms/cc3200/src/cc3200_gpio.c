@@ -144,19 +144,19 @@ static void gpio_int_cb(void *arg) {
   }
 }
 
-static void gpio_a0_int_handler() {
+static void gpio_a0_int_handler(void) {
   gpio_common_int_handler(GPIOA0_BASE, 0);
 }
 
-static void gpio_a1_int_handler() {
+static void gpio_a1_int_handler(void) {
   gpio_common_int_handler(GPIOA1_BASE, 8);
 }
 
-static void gpio_a2_int_handler() {
+static void gpio_a2_int_handler(void) {
   gpio_common_int_handler(GPIOA2_BASE, 16);
 }
 
-static void gpio_a3_int_handler() {
+static void gpio_a3_int_handler(void) {
   gpio_common_int_handler(GPIOA3_BASE, 24);
 }
 

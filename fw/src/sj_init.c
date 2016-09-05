@@ -8,7 +8,7 @@
 #include "fw/src/sj_updater_clubby.h"
 #include "fw/src/sj_wifi.h"
 
-enum sj_init_result sj_init() {
+enum sj_init_result sj_init(void) {
   enum sj_init_result r = sj_sys_config_init();
   if (r != SJ_INIT_OK) return r;
   sj_wifi_init();
@@ -39,7 +39,7 @@ enum sj_init_result sj_init() {
   return SJ_INIT_OK;
 }
 
-enum mg_app_init_result sj_app_init() __attribute__((weak));
-enum mg_app_init_result sj_app_init() {
+enum mg_app_init_result sj_app_init(void) __attribute__((weak));
+enum mg_app_init_result sj_app_init(void) {
   return MG_APP_INIT_SUCCESS;
 }

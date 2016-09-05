@@ -23,15 +23,15 @@
 #include <osapi.h>
 #include <os_type.h>
 
-size_t sj_get_heap_size() {
+size_t sj_get_heap_size(void) {
   return UMM_MALLOC_CFG__HEAP_SIZE;
 }
 
-size_t sj_get_free_heap_size() {
+size_t sj_get_free_heap_size(void) {
   return umm_free_heap_size();
 }
 
-size_t sj_get_min_free_heap_size() {
+size_t sj_get_min_free_heap_size(void) {
   return umm_min_free_heap_size();
 }
 
@@ -40,7 +40,7 @@ extern uint32_t soft_wdt_interval;
 static uint32_t s_saved_soft_wdt_interval;
 #define WDT_MAGIC_TIME 500000
 
-void sj_wdt_disable() {
+void sj_wdt_disable(void) {
   /*
    * poor's man version: delays wdt for several hours, but
    * technically wdt is not disabled
@@ -50,12 +50,12 @@ void sj_wdt_disable() {
   system_soft_wdt_restart();
 }
 
-void sj_wdt_enable() {
+void sj_wdt_enable(void) {
   soft_wdt_interval = s_saved_soft_wdt_interval;
   system_soft_wdt_restart();
 }
 
-void sj_wdt_feed() {
+void sj_wdt_feed(void) {
   system_soft_wdt_feed();
 }
 
@@ -72,7 +72,7 @@ void sj_system_restart(int exit_code) {
 
 int spiffs_get_memory_usage();
 
-size_t sj_get_fs_memory_usage() {
+size_t sj_get_fs_memory_usage(void) {
 #ifndef V7_NO_FS
   return spiffs_get_memory_usage();
 #else
@@ -84,7 +84,7 @@ void sj_usleep(int usecs) {
   os_delay_us(usecs);
 }
 
-IRAM void mongoose_schedule_poll() {
+IRAM void mongoose_schedule_poll(void) {
   mg_lwip_mgr_schedule_poll(&sj_mgr);
 }
 
@@ -94,7 +94,6 @@ void sj_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   mg_dispatch_v7_callback(v7, func, this_obj, args);
 }
 
-void sj_prompt_init_hal(struct v7 *v7) {
-  (void) v7;
+void sj_prompt_init_hal(void) {
 }
 #endif

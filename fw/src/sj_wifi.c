@@ -58,6 +58,6 @@ void sj_wifi_remove_on_change_cb(sj_wifi_changed_t cb, void *arg) {
   }
 }
 
-void sj_wifi_init() {
+void sj_wifi_init(void) {
   sj_wifi_hal_init();
 }

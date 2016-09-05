@@ -77,7 +77,7 @@ typedef struct {
   unsigned char block_len;
   unsigned char key_len;
   unsigned char iv_len;
-  void *(*new_ctx)();
+  void *(*new_ctx)(void);
   void (*setup_enc)(void *ctx, const unsigned char *key);
   void (*setup_dec)(void *ctx, const unsigned char *key);
   void (*encrypt)(void *ctx, const unsigned char *msg, int len, unsigned char *out);

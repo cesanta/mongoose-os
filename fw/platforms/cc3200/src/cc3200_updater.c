@@ -38,7 +38,7 @@ struct sj_upd_ctx {
   const char *status_msg;
 };
 
-struct sj_upd_ctx *sj_upd_ctx_create() {
+struct sj_upd_ctx *sj_upd_ctx_create(void) {
   struct sj_upd_ctx *ctx = (struct sj_upd_ctx *) calloc(1, sizeof(*ctx));
   ctx->cur_fh = -1;
   return ctx;

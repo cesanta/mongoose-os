@@ -16,11 +16,11 @@ struct cb_info {
 };
 SLIST_HEAD(s_poll_cbs, cb_info) s_poll_cbs = SLIST_HEAD_INITIALIZER(s_poll_cbs);
 
-void mongoose_init() {
+void mongoose_init(void) {
   mg_mgr_init(&sj_mgr, NULL);
 }
 
-void mongoose_destroy() {
+void mongoose_destroy(void) {
   mg_mgr_free(&sj_mgr);
 }
 

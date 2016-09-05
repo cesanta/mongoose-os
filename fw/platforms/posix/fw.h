@@ -9,7 +9,7 @@
 #include "v7/v7.h"
 
 extern struct v7 *v7;
-int gpio_poll();
+int gpio_poll(void);
 void init_fw(struct v7 *_v7);
 
 #endif /* CS_FW_PLATFORMS_POSIX_FW_H_ */

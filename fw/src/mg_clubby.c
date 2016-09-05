@@ -605,7 +605,7 @@ struct mg_clubby_cfg *mg_clubby_cfg_from_sys(
   return ccfg;
 }
 
-enum sj_init_result mg_clubby_init() {
+enum sj_init_result mg_clubby_init(void) {
   const struct sys_config_clubby *sccfg = &get_cfg()->clubby;
   if (sccfg->device_id != NULL) {
     struct mg_clubby_cfg *ccfg = mg_clubby_cfg_from_sys(sccfg);
@@ -646,7 +646,7 @@ enum sj_init_result mg_clubby_init() {
   return SJ_INIT_OK;
 }
 
-struct mg_clubby *mg_clubby_get_global() {
+struct mg_clubby *mg_clubby_get_global(void) {
   return s_global_clubby;
 }
 #endif /* SJ_ENABLE_CLUBBY */
