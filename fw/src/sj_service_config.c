@@ -18,6 +18,11 @@
 static void sj_config_get_handler(struct mg_clubby_request_info *ri,
                                   void *cb_arg, struct mg_clubby_frame_info *fi,
                                   struct mg_str args) {
+  if (!fi->channel_is_trusted) {
+    mg_clubby_send_errorf(ri, 403, "unauthorized");
+    return;
+  }
+
   struct sys_config *cfg = get_cfg();
   struct mbuf send_mbuf;
   mbuf_init(&send_mbuf, 0);
@@ -34,7 +39,6 @@ static void sj_config_get_handler(struct mg_clubby_request_info *ri,
   mbuf_free(&send_mbuf);
 
   (void) cb_arg;
-  (void) fi;
   (void) args;
 }
 
@@ -53,12 +57,16 @@ static void set_handler(const char *str, int len, void *user_data) {
 static void sj_config_set_handler(struct mg_clubby_request_info *ri,
                                   void *cb_arg, struct mg_clubby_frame_info *fi,
                                   struct mg_str args) {
+  if (!fi->channel_is_trusted) {
+    mg_clubby_send_errorf(ri, 403, "unauthorized");
+    return;
+  }
+
   json_scanf(args.p, args.len, "{config: %M}", set_handler, NULL);
 
   mg_clubby_send_responsef(ri, NULL);
 
   (void) cb_arg;
-  (void) fi;
 }
 
 /* Handler for /v1/Config.Save */
@@ -66,6 +74,11 @@ static void sj_config_save_handler(struct mg_clubby_request_info *ri,
                                    void *cb_arg,
                                    struct mg_clubby_frame_info *fi,
                                    struct mg_str args) {
+  if (!fi->channel_is_trusted) {
+    mg_clubby_send_errorf(ri, 403, "unauthorized");
+    return;
+  }
+
   struct sys_config *cfg = get_cfg();
   int result = save_cfg(cfg);
 
@@ -73,7 +86,6 @@ static void sj_config_save_handler(struct mg_clubby_request_info *ri,
                         result == 0 ? NULL : "error during saving config");
 
   (void) cb_arg;
-  (void) fi;
   (void) args;
 }
 

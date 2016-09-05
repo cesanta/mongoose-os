@@ -16,6 +16,11 @@
 static void sj_vars_get_handler(struct mg_clubby_request_info *ri, void *cb_arg,
                                 struct mg_clubby_frame_info *fi,
                                 struct mg_str args) {
+  if (!fi->channel_is_trusted) {
+    mg_clubby_send_errorf(ri, 403, "unauthorized");
+    return;
+  }
+
   const struct sys_ro_vars *ro_vars = get_ro_vars();
   struct mbuf send_mbuf;
   mbuf_init(&send_mbuf, 0);
@@ -32,7 +37,6 @@ static void sj_vars_get_handler(struct mg_clubby_request_info *ri, void *cb_arg,
   mbuf_free(&send_mbuf);
 
   (void) cb_arg;
-  (void) fi;
   (void) args;
 }
 
