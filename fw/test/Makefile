@@ -1,16 +1,33 @@
 PROG = unit_test
-EXTRA_CLEAN_TARGETS = sys_conf.*
-TEST_SOURCES = unit_test.c \
+REPO_ROOT ?= ../..
+PYTHON ?= python
+
+SOURCES = unit_test.c \
                sys_conf.c \
-               ../src/sj_config.c \
-               ../src/mongoose.c \
-               ../../common/cs_file.c \
-               ../../common/test_util.c
-INCS = -I../src -I../../common $(CFLAGS_EXTRA)
+               $(REPO_ROOT)/frozen/frozen.c \
+               $(REPO_ROOT)/fw/src/sj_config.c \
+               $(REPO_ROOT)/mongoose/mongoose.c \
+               $(REPO_ROOT)/common/json_utils.c \
+               $(REPO_ROOT)/common/cs_file.c \
+               $(REPO_ROOT)/common/test_util.c
+
+INCS = -I$(REPO_ROOT)/fw/src \
+       -I$(REPO_ROOT) \
+       -I$(REPO_ROOT)/common \
+       -I. \
+       $(CFLAGS_EXTRA)
+
 CFLAGS = -W -Wall -Werror -g -O0 -Wno-multichar $(INCS)
-PYTHON ?= PYTHON
 
-include ../../mongoose/test/test.mk
+all: $(PROG) sys_conf.c
+	./$(PROG)
 
+$(PROG): $(SOURCES)
+	$(CC) -o $(PROG) $(SOURCES) $(CFLAGS)
+
+#include $(REPO_ROOT)/common/scripts/test.mk
 sys_conf.c: data/defaults.json
-	$(PYTHON) ../../tools/json_to_c_config.py $< sys_conf
+	$(PYTHON) $(REPO_ROOT)/tools/json_to_c_config.py --c_name=sys_conf $<
+
+clean:
+	rm -rf $(PROG) sys_conf.*
