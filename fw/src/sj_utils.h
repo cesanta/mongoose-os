@@ -15,4 +15,7 @@ enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
                                   struct mg_connect_opts *copts);
 
 #endif /* SJ_ENABLE_JS */
+
+void sj_system_restart_after(int delay_ms);
+
 #endif /* CS_FW_SRC_SJ_UTILS_H_ */

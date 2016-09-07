@@ -8,6 +8,7 @@
 
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_common.h"
+#include "fw/src/sj_utils.h"
 
 void handle_update_post(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
@@ -65,7 +66,7 @@ void handle_update_post(struct mg_connection *c, int ev, void *p) {
                          ctx->status_msg ? ctx->status_msg : "Unknown error"));
           if (is_reboot_required(ctx)) {
             LOG(LL_INFO, ("Rebooting device"));
-            updater_schedule_reboot(100);
+            sj_system_restart_after(101);
           }
         } else {
           mg_printf(c,

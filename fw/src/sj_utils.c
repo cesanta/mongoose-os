@@ -3,7 +3,10 @@
  * All rights reserved
  */
 
+#include "fw/src/sj_console.h"
+#include "fw/src/sj_hal.h"
 #include "fw/src/sj_sys_config.h"
+#include "fw/src/sj_timers.h"
 
 #ifdef SJ_ENABLE_JS
 
@@ -63,3 +66,13 @@ clean:
 #endif /* MG_ENABLE_SSL */
 
 #endif /* SJ_ENABLE_JS */
+
+static void reboot_timer_cb(void *param) {
+  sj_system_restart(0);
+  (void) param;
+}
+
+void sj_system_restart_after(int delay_ms) {
+  CONSOLE_LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
+  sj_set_c_timer(delay_ms, 0 /*repeat*/, reboot_timer_cb, NULL);
+}

@@ -11,9 +11,7 @@
 #include "common/spiffs/spiffs.h"
 
 #include "fw/src/sj_console.h"
-#include "fw/src/sj_hal.h"
 #include "fw/src/sj_sys_config.h"
-#include "fw/src/sj_timers.h"
 
 /*
  * Using static variable (not only c->user_data), it allows to check if update
@@ -29,7 +27,6 @@ extern const char *build_version;
 
 const uint32_t c_zip_file_header_magic = 0x04034b50;
 const uint32_t c_zip_cdir_magic = 0x02014b50;
-static int s_reboot_timer_id;
 
 enum update_status {
   US_INITED,
@@ -481,21 +478,6 @@ void updater_context_free(struct update_context *ctx) {
   free(ctx->base_url);
   free(ctx);
   s_ctx = NULL;
-}
-
-static void reboot_timer_cb(void *param) {
-#ifdef SJ_ENABLE_CLUBBY
-  static int cycles = 0;
-  if (sj_console_is_waiting_for_resp() && cycles++ < 100 /* 10 sec */) return;
-#endif
-  sj_clear_timer(s_reboot_timer_id);
-  sj_system_restart(0);
-  (void) param;
-}
-
-void updater_schedule_reboot(int delay_ms) {
-  CONSOLE_LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
-  s_reboot_timer_id = sj_set_c_timer(delay_ms, 1, reboot_timer_cb, NULL);
 }
 
 void bin2hex(const uint8_t *src, int src_len, char *dst) {

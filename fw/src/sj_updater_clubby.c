@@ -14,6 +14,7 @@
 #include "fw/src/sj_console.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_updater_common.h"
+#include "fw/src/sj_utils.h"
 #include "fw/src/sj_v7_ext.h"
 
 #if defined(SJ_ENABLE_UPDATER_CLUBBY) && defined(SJ_ENABLE_CLUBBY)
@@ -251,7 +252,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
            * and allowed (by JS)
            */
           CONSOLE_LOG(LL_INFO, ("Rebooting device"));
-          updater_schedule_reboot(100);
+          sj_system_restart_after(100);
         }
         updater_finish(ctx);
         updater_context_free(ctx);
