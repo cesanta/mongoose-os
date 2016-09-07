@@ -265,6 +265,14 @@ void sj_prompt_dispatcher(struct mg_uart_state *us) {
     cs_rbuf_consume(rxb, 1);
     s_sjp.uart_no = us->uart_no;
     sj_prompt_process_char((char) *cp);
+
+    if (us->dispatcher_cb != sj_prompt_dispatcher) {
+      /*
+       * Processing of the last char caused char dispatcher to be changed,
+       * so we have to exit immediately and not consume the rest of the data
+       */
+      break;
+    }
   }
   fflush(stdout);
 }
