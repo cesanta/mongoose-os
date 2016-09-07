@@ -39,8 +39,6 @@ struct mmap_desc {
 
 extern struct mmap_desc mmap_descs[SJ_MMAP_SLOTS];
 
-void fs_set_stdout_uart(int uart_no);
-void fs_set_stderr_uart(int uart_no);
 void fs_flush_stderr(void);
 int fs_init(uint32_t addr, uint32_t size);
 int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,

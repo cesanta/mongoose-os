@@ -29,6 +29,7 @@
 
 #include "esp_fs.h"
 #include "fw/src/mg_uart.h"
+#include "fw/src/sj_sys_config.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
@@ -52,8 +53,6 @@ spiffs fs;
 
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
-
-static int s_stdout_uart = -1, s_stderr_uart = -1;
 
 struct mmap_desc mmap_descs[SJ_MMAP_SLOTS];
 static struct mmap_desc *cur_mmap_desc;
@@ -337,14 +336,17 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
 _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   (void) r;
   if (fd < NUM_SYS_FD) {
-    if (fd == 1 && s_stdout_uart >= 0) {
-      len = mg_uart_write(s_stdout_uart, buf, len);
-    } else if (fd == 2 && s_stderr_uart >= 0) {
-      len = mg_uart_write(s_stderr_uart, buf, len);
+    int uart_no = -1;
+    struct sys_config *scfg = get_cfg();
+    if (fd == 1) {
+      uart_no = scfg ? scfg->debug.stdout_uart : MG_DEBUG_UART;
+    } else if (fd == 2) {
+      uart_no = scfg ? scfg->debug.stderr_uart : MG_DEBUG_UART;
     } else if (fd == 0) {
       errno = EBADF;
       len = -1;
     }
+    if (uart_no >= 0) len = mg_uart_write(uart_no, buf, len);
     return len;
   }
 
@@ -444,16 +446,10 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
   return ret;
 }
 
-void fs_set_stdout_uart(int uart_no) {
-  s_stdout_uart = uart_no;
-}
-
-void fs_set_stderr_uart(int uart_no) {
-  s_stderr_uart = uart_no;
-}
-
 void fs_flush_stderr(void) {
-  if (s_stderr_uart >= 0) mg_uart_flush(s_stderr_uart);
+  struct sys_config *scfg = get_cfg();
+  int uart_no = scfg ? scfg->debug.stderr_uart : MG_DEBUG_UART;
+  if (uart_no >= 0) mg_uart_flush(uart_no);
 }
 
 #ifdef SJ_ENABLE_JS

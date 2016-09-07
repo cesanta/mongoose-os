@@ -59,14 +59,10 @@ void device_get_mac_address(uint8_t mac[6]) {
 
 enum sj_init_result sj_sys_config_init_platform(struct sys_config *cfg) {
   /* Negative values mean "disable". */
-  if (cfg->debug.stdout_uart < 2) {
-    fs_set_stdout_uart(cfg->debug.stdout_uart);
-  } else {
+  if (cfg->debug.stdout_uart > 2) {
     return SJ_INIT_CONFIG_INVALID_STDOUT_UART;
   }
-  if (cfg->debug.stderr_uart < 2) {
-    fs_set_stderr_uart(cfg->debug.stderr_uart);
-  } else {
+  if (cfg->debug.stderr_uart > 2) {
     return SJ_INIT_CONFIG_INVALID_STDERR_UART;
   }
 

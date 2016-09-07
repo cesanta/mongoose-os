@@ -89,8 +89,6 @@ int esp_sj_init(rboot_config *bcfg) {
     if (mg_uart_init(1, u1cfg, NULL, NULL) == NULL) {
       return SJ_INIT_UART_FAILED;
     }
-    fs_set_stdout_uart(0);
-    fs_set_stderr_uart(MG_DEBUG_UART);
     setvbuf(stdout, NULL, _IOLBF, 0);
     setvbuf(stderr, NULL, _IOLBF, 0);
     cs_log_set_level(LL_INFO);
