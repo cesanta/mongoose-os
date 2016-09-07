@@ -20,7 +20,7 @@ void cc3200_console_putc(int fd, char c) {
   if (fd == 1) {
     uart_no = scfg ? scfg->debug.stdout_uart : MG_DEBUG_UART;
   } else if (fd == 2) {
-    uart_no = scfg ? scfg->debug.stdout_uart : MG_DEBUG_UART;
+    uart_no = scfg ? scfg->debug.stderr_uart : MG_DEBUG_UART;
   }
   if (uart_no < 0) return;
   mg_uart_write(uart_no, &c, 1);
