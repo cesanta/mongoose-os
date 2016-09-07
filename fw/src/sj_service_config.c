@@ -5,10 +5,13 @@
 
 #if defined(SJ_ENABLE_CLUBBY) && defined(SJ_ENABLE_CONFIG_SERVICE)
 
-#include "fw/src/sj_service_config.h"
-#include "fw/src/sj_config.h"
-#include "fw/src/mg_clubby.h"
 #include "common/mg_str.h"
+
+#include "fw/src/mg_clubby.h"
+#include "fw/src/sj_config.h"
+#include "fw/src/sj_hal.h"
+#include "fw/src/sj_service_config.h"
+#include "fw/src/sj_utils.h"
 
 #define SJ_CONFIG_GET_CMD "/v1/Config.Get"
 #define SJ_CONFIG_SET_CMD "/v1/Config.Set"
@@ -82,11 +85,21 @@ static void sj_config_save_handler(struct mg_clubby_request_info *ri,
   struct sys_config *cfg = get_cfg();
   int result = save_cfg(cfg);
 
-  mg_clubby_send_errorf(ri, result,
-                        result == 0 ? NULL : "error during saving config");
+  if (result != 0) {
+    mg_clubby_send_errorf(ri, result, "error during saving config");
+    return;
+  }
+
+  int reboot = 0;
+  json_scanf(args.p, args.len, "{reboot: %B}", &reboot);
+
+  if (reboot) {
+    sj_system_restart_after(500);
+  }
+
+  mg_clubby_send_responsef(ri, NULL);
 
   (void) cb_arg;
-  (void) args;
 }
 
 enum sj_init_result sj_service_config_init(void) {

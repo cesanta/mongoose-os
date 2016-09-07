@@ -33,13 +33,17 @@ var _ = trace.New
 
 const ServiceID = "http://mongoose-iot.com/fw/v1/Config"
 
+type SaveArgs struct {
+	Reboot *bool `json:"reboot,omitempty"`
+}
+
 type SetArgs struct {
 	Config ourjson.RawMessage `json:"config,omitempty"`
 }
 
 type Service interface {
 	Get(ctx context.Context) (ourjson.RawMessage, error)
-	Save(ctx context.Context) error
+	Save(ctx context.Context, args *SaveArgs) error
 	Set(ctx context.Context, args *SetArgs) error
 }
 
@@ -51,6 +55,8 @@ type Instance interface {
 type _validators struct {
 	// This comment prevents gofmt from aligning types in the struct.
 	GetResult *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
+	SaveArgs *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	SetArgs *schema.Validator
 }
@@ -99,6 +105,19 @@ func initValidators() {
 	var s *ucl.Object
 	_ = s // avoid unused var error
 	validators.GetResult, err = schema.NewValidator(service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Get").(*ucl.Object).Find("result"), loader)
+	if err != nil {
+		panic(err)
+	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Save").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Save").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.SaveArgs, err = schema.NewValidator(s, loader)
 	if err != nil {
 		panic(err)
 	}
@@ -164,13 +183,30 @@ func (c *_Client) Get(pctx context.Context) (res ourjson.RawMessage, err error) 
 	return r, nil
 }
 
-func (c *_Client) Save(pctx context.Context) (err error) {
+func (c *_Client) Save(pctx context.Context, args *SaveArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "/v1/Config.Save",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
 	_ = tr
+
+	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.SaveArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for Save: %+v", err)
+				return errors.Annotatef(err, "invalid args for Save")
+			}
+		}
+	}
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return errors.Trace(err)
@@ -250,7 +286,26 @@ func (s *_Server) Get(ctx context.Context, src string, cmd *frame.Command) (inte
 }
 
 func (s *_Server) Save(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	return nil, s.impl.Save(ctx)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.SaveArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for Save: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for Save")
+			}
+		}
+	}
+	var args SaveArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return nil, s.impl.Save(ctx, &args)
 }
 
 func (s *_Server) Set(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -285,6 +340,12 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     },
     "Save": {
+      "args": {
+        "reboot": {
+          "doc": "If set to ` + "`" + `true` + "`" + `, the device will be rebooted after saving config. It\nis often desirable because it's the only way to apply saved config.\n",
+          "type": "boolean"
+        }
+      },
       "doc": "Save device config"
     },
     "Set": {
