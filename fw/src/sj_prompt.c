@@ -238,6 +238,10 @@ void sj_prompt_process_char(char ch) {
 #ifdef SJ_ENABLE_CLUBBY
     const int uart_no = s_sjp.uart_no;
     if (uart_no >= 0 && mg_clubby_get_global() != NULL) {
+      /* If stdout or stderr were going to the same UART, disable them. */
+      struct sys_config_debug *sdcfg = &get_cfg()->debug;
+      if (sdcfg->stdout_uart == uart_no) sdcfg->stdout_uart = -1;
+      if (sdcfg->stderr_uart == uart_no) sdcfg->stderr_uart = -1;
       /* Switch into Clubby mode. This will detach our dispatcher. */
       struct mg_clubby_channel *ch = mg_clubby_channel_uart(uart_no);
       if (ch != NULL) {
@@ -245,10 +249,6 @@ void sj_prompt_process_char(char ch) {
                               true /* is_trusted */, false /* send_hello */);
         ch->connect(ch);
       }
-      /* If stdout or stderr were going to the same UART, disable them. */
-      struct sys_config_debug *sdcfg = &get_cfg()->debug;
-      if (sdcfg->stdout_uart == uart_no) sdcfg->stdout_uart = -1;
-      if (sdcfg->stderr_uart == uart_no) sdcfg->stderr_uart = -1;
       return;
     }
 #endif
