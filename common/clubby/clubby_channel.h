@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MG_CLUBBY_CHANNEL_H_
-#define CS_FW_SRC_MG_CLUBBY_CHANNEL_H_
+#ifndef CS_COMMON_CLUBBY_CLUBBY_CHANNEL_H_
+#define CS_COMMON_CLUBBY_CLUBBY_CHANNEL_H_
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -35,4 +35,4 @@ struct clubby_channel {
 };
 
 #endif /* SJ_ENABLE_CLUBBY */
-#endif /* CS_FW_SRC_MG_CLUBBY_CHANNEL_H_ */
+#endif /* CS_COMMON_CLUBBY_CLUBBY_CHANNEL_H_ */

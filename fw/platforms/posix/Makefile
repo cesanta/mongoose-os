@@ -49,9 +49,9 @@ APP_SRCS = $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_init.c sj_init_js.c \
            sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c \
            sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-           json_utils.c sj_clubby_js.c sj_init_clubby.c \
+           json_utils.c sj_clubby_js.c mg_clubby.c \
            cs_rbuf.c mg_uart.c mg_uart_js.c \
-           clubby.c clubby_channel_uart.c clubby_channel_ws.c \
+           clubby.c mg_clubby_channel_uart.c clubby_channel_ws.c \
            sj_tcp_udp_js.c sj_utils.c sj_console.c sj_console_js.c \
            sj_service_vars.c sj_service_config.c
 

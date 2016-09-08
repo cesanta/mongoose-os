@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MG_CLUBBY_H_
-#define CS_FW_SRC_MG_CLUBBY_H_
+#ifndef CS_COMMON_CLUBBY_CLUBBY_H_
+#define CS_COMMON_CLUBBY_CLUBBY_H_
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -130,4 +130,4 @@ void clubby_free_request_info(struct clubby_request_info *ri);
 void clubby_free(struct clubby *c);
 
 #endif /* SJ_ENABLE_CLUBBY */
-#endif /* CS_FW_SRC_MG_CLUBBY_H_ */
+#endif /* CS_COMMON_CLUBBY_CLUBBY_H_ */

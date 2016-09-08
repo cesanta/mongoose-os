@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/clubby_channel_uart.h"
+#include "fw/src/mg_clubby_channel_uart.h"
 #include "fw/src/mg_uart.h"
 
 #ifdef SJ_ENABLE_CLUBBY

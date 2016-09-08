@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_
-#define CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_
+#ifndef CS_COMMON_CLUBBY_CLUBBY_CHANNEL_WS_H_
+#define CS_COMMON_CLUBBY_CLUBBY_CHANNEL_WS_H_
 
 #include "common/clubby/clubby_channel.h"
 #include "mongoose/mongoose.h"
@@ -28,4 +28,4 @@ struct clubby_channel *clubby_channel_ws_out(
     struct clubby_channel_ws_out_cfg *cfg);
 
 #endif /* SJ_ENABLE_CLUBBY */
-#endif /* CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_ */
+#endif /* CS_COMMON_CLUBBY_CLUBBY_CHANNEL_WS_H_ */

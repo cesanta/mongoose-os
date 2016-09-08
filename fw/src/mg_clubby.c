@@ -7,12 +7,12 @@
 
 #ifdef SJ_ENABLE_CLUBBY
 
-#include "fw/src/clubby_channel_uart.h"
-#include "fw/src/mg_uart.h"
+#include "fw/src/mg_clubby.h"
+#include "fw/src/mg_clubby_channel_uart.h"
 #include "fw/src/sj_config.h"
-#include "fw/src/sj_init_clubby.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_uart.h"
 #include "fw/src/sj_wifi.h"
 
 #undef connect /* CC3200 redefines it to sl_Connect */
@@ -25,7 +25,8 @@ static void clubby_wifi_ready(enum sj_wifi_status event, void *arg) {
   ch->connect(ch);
 }
 
-struct clubby_cfg *clubby_cfg_from_sys(const struct sys_config_clubby *sccfg) {
+struct clubby_cfg *mg_clubby_cfg_from_sys(
+    const struct sys_config_clubby *sccfg) {
   struct clubby_cfg *ccfg = (struct clubby_cfg *) calloc(1, sizeof(*ccfg));
   sj_conf_set_str(&ccfg->id, sccfg->device_id);
   sj_conf_set_str(&ccfg->psk, sccfg->device_psk);
@@ -33,14 +34,14 @@ struct clubby_cfg *clubby_cfg_from_sys(const struct sys_config_clubby *sccfg) {
   return ccfg;
 }
 
-enum sj_init_result clubby_init(void) {
+enum sj_init_result mg_clubby_init(void) {
   const struct sys_config_clubby *sccfg = &get_cfg()->clubby;
   if (sccfg->device_id != NULL) {
-    struct clubby_cfg *ccfg = clubby_cfg_from_sys(sccfg);
+    struct clubby_cfg *ccfg = mg_clubby_cfg_from_sys(sccfg);
     struct clubby *c = clubby_create(ccfg);
     if (sccfg->server_address != NULL) {
       struct clubby_channel_ws_out_cfg *chcfg =
-          clubby_channel_ws_out_cfg_from_sys(sccfg);
+          mg_clubby_channel_ws_out_cfg_from_sys(sccfg);
       struct clubby_channel *ch = clubby_channel_ws_out(&sj_mgr, chcfg);
       if (ch == NULL) {
         return SJ_INIT_CLUBBY_FAILED;
@@ -72,7 +73,7 @@ enum sj_init_result clubby_init(void) {
   return SJ_INIT_OK;
 }
 
-struct clubby_channel_ws_out_cfg *clubby_channel_ws_out_cfg_from_sys(
+struct clubby_channel_ws_out_cfg *mg_clubby_channel_ws_out_cfg_from_sys(
     const struct sys_config_clubby *sccfg) {
   struct clubby_channel_ws_out_cfg *chcfg =
       (struct clubby_channel_ws_out_cfg *) calloc(1, sizeof(*chcfg));
@@ -85,7 +86,7 @@ struct clubby_channel_ws_out_cfg *clubby_channel_ws_out_cfg_from_sys(
   return chcfg;
 }
 
-struct clubby *clubby_get_global(void) {
+struct clubby *mg_clubby_get_global(void) {
   return s_global_clubby;
 }
 #endif /* SJ_ENABLE_CLUBBY */

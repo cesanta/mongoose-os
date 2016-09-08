@@ -9,7 +9,7 @@
 #endif
 
 #include "common/mbuf.h"
-#include "fw/src/sj_init_clubby.h"
+#include "fw/src/mg_clubby.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_timers.h"
 
@@ -102,7 +102,7 @@ void clubby_cb(struct clubby *clubby, void *cb_arg,
 
 static void sj_console_push_to_cloud(void) {
   if (!s_cctx.initialized || !get_cfg()->console.send_to_cloud) return;
-  struct clubby *c = clubby_get_global();
+  struct clubby *c = mg_clubby_get_global();
   if (c == NULL || !clubby_is_connected(c)) {
     /* If connection drops, do not wait for reply as it may never arrive. */
     s_cctx.request_in_flight = 0;

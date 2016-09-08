@@ -2,16 +2,16 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
+#include "fw/src/sj_clubby_js.h"
 
 #include "common/cs_dbg.h"
 #include "common/json_utils.h"
 #include "common/clubby/clubby.h"
 #include "common/clubby/clubby_channel_ws.h"
-#include "fw/src/sj_clubby_js.h"
+#include "fw/src/mg_clubby.h"
 #include "fw/src/sj_common.h"
 #include "fw/src/sj_config.h"
 #include "fw/src/sj_hal.h"
-#include "fw/src/sj_init_clubby.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_v7_ext.h"
 #include "fw/src/sj_sys_config.h"
@@ -464,7 +464,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
 
   const struct sys_config_clubby *sccfg = &get_cfg()->clubby;
 
-  struct clubby_cfg *ccfg = clubby_cfg_from_sys(sccfg);
+  struct clubby_cfg *ccfg = mg_clubby_cfg_from_sys(sccfg);
   GET_STR_PARAM(ccfg, id, device_id);
   GET_STR_PARAM(ccfg, psk, device_psk);
   GET_INT_PARAM(ccfg, max_queue_size, max_queue_size);
@@ -475,7 +475,7 @@ SJ_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
     return v7_throwf(v7, "Error", "Out of memory");
   }
 
-  chcfg = clubby_channel_ws_out_cfg_from_sys(sccfg);
+  chcfg = mg_clubby_channel_ws_out_cfg_from_sys(sccfg);
 
   GET_STR_PARAM(chcfg, server_address, server_address);
   GET_STR_PARAM(chcfg, ssl_ca_file, ssl_ca_file);
@@ -529,7 +529,7 @@ void sj_clubby_api_setup(struct v7 *v7) {
 static v7_val_t s_global_clubby_v = V7_UNDEFINED;
 
 void sj_clubby_js_init(struct v7 *v7) {
-  struct clubby *clubby = clubby_get_global();
+  struct clubby *clubby = mg_clubby_get_global();
   if (clubby != NULL) {
     v7_val_t clubby_ctor_v = v7_get(v7, v7_get_global(v7), "Clubby", ~0);
     v7_val_t clubby_proto_v = v7_get(v7, clubby_ctor_v, "prototype", ~0);

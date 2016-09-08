@@ -7,11 +7,10 @@
 
 #if defined(SJ_ENABLE_CLUBBY) && defined(SJ_ENABLE_CONFIG_SERVICE)
 
-#include "common/clubby/clubby.h"
 #include "common/mg_str.h"
+#include "fw/src/mg_clubby.h"
 #include "fw/src/sj_config.h"
 #include "fw/src/sj_hal.h"
-#include "fw/src/sj_init_clubby.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_utils.h"
 
@@ -104,7 +103,7 @@ static void sj_config_save_handler(struct clubby_request_info *ri, void *cb_arg,
 }
 
 enum sj_init_result sj_service_config_init(void) {
-  struct clubby *c = clubby_get_global();
+  struct clubby *c = mg_clubby_get_global();
   clubby_add_handler(c, mg_mk_str(SJ_CONFIG_GET_CMD), sj_config_get_handler,
                      NULL);
   clubby_add_handler(c, mg_mk_str(SJ_CONFIG_SET_CMD), sj_config_set_handler,

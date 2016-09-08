@@ -11,8 +11,8 @@
 #include "common/cs_dbg.h"
 #include "common/cs_file.h"
 #include "common/mg_str.h"
+#include "fw/src/mg_clubby.h"
 #include "fw/src/sj_console.h"
-#include "fw/src/sj_init_clubby.h"
 #include "fw/src/sj_mongoose.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_common.h"
@@ -437,7 +437,7 @@ clean:
  */
 
 void sj_updater_clubby_init(void) {
-  struct clubby *clubby = clubby_get_global();
+  struct clubby *clubby = mg_clubby_get_global();
   if (clubby == NULL) return;
   clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Update"),
                      handle_update_req, NULL);
@@ -462,7 +462,7 @@ void handle_clubby_event(struct clubby *clubby, void *cb_arg,
 }
 
 void clubby_updater_finish(int error_code) {
-  struct clubby *clubby = clubby_get_global();
+  struct clubby *clubby = mg_clubby_get_global();
   if (clubby == NULL) return;
   struct clubby_request_info *ri = NULL;
   size_t len;

@@ -17,7 +17,11 @@
 
 #define MG_CLUBBY_FRAME_VERSION 2
 #define MG_CLUBBY_HELLO_CMD "/v1/Hello"
-#undef connect /* CC3200 redefines it to sl_Connect */
+
+/* CC3200 #defines connect to sl_Connect */
+#ifdef connect
+#undef connect
+#endif
 
 struct clubby {
   struct clubby_cfg *cfg;

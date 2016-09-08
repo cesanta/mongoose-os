@@ -163,7 +163,6 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 .PHONY: all clean flash
 
 MIOT_SRCS = sj_init.c \
-            sj_init_clubby.c \
             sj_mongoose.c \
             sj_timers_mongoose.c \
             sj_v7_ext.c \
@@ -238,8 +237,8 @@ else
   MIOT_SRCS += cs_file.c
 endif
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
-  MIOT_SRCS += clubby.c clubby_channel_uart.c clubby_channel_ws.c \
-               sj_updater_clubby.c
+  MIOT_SRCS += clubby.c clubby_channel_ws.c \
+               mg_clubby.c mg_clubby_channel_uart.c sj_updater_clubby.c
   MIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
 
   MIOT_CC3200_FEATURES += -DSJ_ENABLE_UPDATER_CLUBBY
