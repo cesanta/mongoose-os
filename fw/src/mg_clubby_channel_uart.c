@@ -32,7 +32,14 @@ void clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
   if (chd->connecting) {
     chd->connecting = false;
     chd->connected = true;
+    /*
+     * Put frame delimiter in the output buffer. If there was junk in UART FIFO,
+     * this will provide a sync point.
+     */
+    mbuf_append(&chd->send_mbuf, "\"\"\"", 3);
     ch->ev_handler(ch, MG_CLUBBY_CHANNEL_OPEN, NULL);
+    /* If open event handler did not send, we have our delimiter to send. */
+    chd->sending = true;
   }
   if (chd->sending && utxb->avail > 0) {
     size_t len = MIN(chd->send_mbuf.len, utxb->avail);
