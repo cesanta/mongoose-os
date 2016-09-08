@@ -15,14 +15,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "v7/v7.h"
 #include "common/mbuf.h"
 #include "common/platform.h"
+#include "v7/v7.h"
 
-#include "fw/src/sj_sys_config.h"
-#include "fw/src/mg_clubby.h"
-#include "fw/src/mg_clubby_channel_uart.h"
+#include "fw/src/clubby_channel_uart.h"
 #include "fw/src/mg_uart.h"
+#include "fw/src/sj_init_clubby.h"
+#include "fw/src/sj_sys_config.h"
 
 #define SIGINT_CHAR 0x03
 #define EOF_CHAR 0x04
@@ -237,16 +237,16 @@ void sj_prompt_process_char(char ch) {
   } else if (ch == EOF_CHAR) {
 #ifdef SJ_ENABLE_CLUBBY
     const int uart_no = s_sjp.uart_no;
-    if (uart_no >= 0 && mg_clubby_get_global() != NULL) {
+    if (uart_no >= 0 && clubby_get_global() != NULL) {
       /* If stdout or stderr were going to the same UART, disable them. */
       struct sys_config_debug *sdcfg = &get_cfg()->debug;
       if (sdcfg->stdout_uart == uart_no) sdcfg->stdout_uart = -1;
       if (sdcfg->stderr_uart == uart_no) sdcfg->stderr_uart = -1;
       /* Switch into Clubby mode. This will detach our dispatcher. */
-      struct mg_clubby_channel *ch = mg_clubby_channel_uart(uart_no);
+      struct clubby_channel *ch = clubby_channel_uart(uart_no);
       if (ch != NULL) {
-        mg_clubby_add_channel(mg_clubby_get_global(), mg_mk_str(""), ch,
-                              true /* is_trusted */, false /* send_hello */);
+        clubby_add_channel(clubby_get_global(), mg_mk_str(""), ch,
+                           true /* is_trusted */, false /* send_hello */);
         ch->connect(ch);
       }
       return;

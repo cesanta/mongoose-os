@@ -3,18 +3,18 @@
  * All rights reserved
  */
 
-#include "fw/src/mg_clubby_channel_uart.h"
-
+#include "fw/src/clubby_channel_uart.h"
 #include "fw/src/mg_uart.h"
 
 #ifdef SJ_ENABLE_CLUBBY
 
+#include "common/cs_dbg.h"
 #include "common/mbuf.h"
 #include "common/str_util.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-struct mg_clubby_channel_uart_data {
+struct clubby_channel_uart_data {
   int uart_no;
   unsigned int connecting : 1;
   unsigned int connected : 1;
@@ -23,11 +23,10 @@ struct mg_clubby_channel_uart_data {
   struct mbuf send_mbuf;
 };
 
-void mg_clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
-  struct mg_clubby_channel *ch =
-      (struct mg_clubby_channel *) us->dispatcher_data;
-  struct mg_clubby_channel_uart_data *chd =
-      (struct mg_clubby_channel_uart_data *) ch->channel_data;
+void clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
+  struct clubby_channel *ch = (struct clubby_channel *) us->dispatcher_data;
+  struct clubby_channel_uart_data *chd =
+      (struct clubby_channel_uart_data *) ch->channel_data;
   cs_rbuf_t *urxb = &us->rx_buf;
   cs_rbuf_t *utxb = &us->tx_buf;
   if (chd->connecting) {
@@ -67,21 +66,21 @@ void mg_clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
   }
 }
 
-static void mg_clubby_channel_uart_connect(struct mg_clubby_channel *ch) {
-  struct mg_clubby_channel_uart_data *chd =
-      (struct mg_clubby_channel_uart_data *) ch->channel_data;
+static void clubby_channel_uart_connect(struct clubby_channel *ch) {
+  struct clubby_channel_uart_data *chd =
+      (struct clubby_channel_uart_data *) ch->channel_data;
   if (!chd->connected) {
     chd->connected = false;
     chd->connecting = true;
-    mg_uart_set_dispatcher(chd->uart_no, mg_clubby_channel_uart_dispatcher, ch);
+    mg_uart_set_dispatcher(chd->uart_no, clubby_channel_uart_dispatcher, ch);
     mg_uart_set_rx_enabled(chd->uart_no, true);
   }
 }
 
-static bool mg_clubby_channel_uart_send_frame(struct mg_clubby_channel *ch,
-                                              const struct mg_str f) {
-  struct mg_clubby_channel_uart_data *chd =
-      (struct mg_clubby_channel_uart_data *) ch->channel_data;
+static bool clubby_channel_uart_send_frame(struct clubby_channel *ch,
+                                           const struct mg_str f) {
+  struct clubby_channel_uart_data *chd =
+      (struct clubby_channel_uart_data *) ch->channel_data;
   if (!chd->connected || chd->sending) return false;
   mbuf_append(&chd->send_mbuf, f.p, f.len);
   mbuf_append(&chd->send_mbuf, "\"\"\"", 3);
@@ -90,34 +89,32 @@ static bool mg_clubby_channel_uart_send_frame(struct mg_clubby_channel *ch,
   return true;
 }
 
-static void mg_clubby_channel_uart_close(struct mg_clubby_channel *ch) {
-  struct mg_clubby_channel_uart_data *chd =
-      (struct mg_clubby_channel_uart_data *) ch->channel_data;
+static void clubby_channel_uart_close(struct clubby_channel *ch) {
+  struct clubby_channel_uart_data *chd =
+      (struct clubby_channel_uart_data *) ch->channel_data;
   chd->connected = chd->connecting = false;
   mg_uart_set_dispatcher(chd->uart_no, NULL, NULL);
 }
 
-static const char *mg_clubby_channel_uart_get_type(
-    struct mg_clubby_channel *ch) {
+static const char *clubby_channel_uart_get_type(struct clubby_channel *ch) {
   (void) ch;
   return "uart";
 }
 
-static bool mg_clubby_channel_uart_is_persistent(struct mg_clubby_channel *ch) {
+static bool clubby_channel_uart_is_persistent(struct clubby_channel *ch) {
   (void) ch;
   return true;
 }
 
-struct mg_clubby_channel *mg_clubby_channel_uart(int uart_no) {
-  struct mg_clubby_channel *ch =
-      (struct mg_clubby_channel *) calloc(1, sizeof(*ch));
-  ch->connect = mg_clubby_channel_uart_connect;
-  ch->send_frame = mg_clubby_channel_uart_send_frame;
-  ch->close = mg_clubby_channel_uart_close;
-  ch->get_type = mg_clubby_channel_uart_get_type;
-  ch->is_persistent = mg_clubby_channel_uart_is_persistent;
-  struct mg_clubby_channel_uart_data *chd =
-      (struct mg_clubby_channel_uart_data *) calloc(1, sizeof(*chd));
+struct clubby_channel *clubby_channel_uart(int uart_no) {
+  struct clubby_channel *ch = (struct clubby_channel *) calloc(1, sizeof(*ch));
+  ch->connect = clubby_channel_uart_connect;
+  ch->send_frame = clubby_channel_uart_send_frame;
+  ch->close = clubby_channel_uart_close;
+  ch->get_type = clubby_channel_uart_get_type;
+  ch->is_persistent = clubby_channel_uart_is_persistent;
+  struct clubby_channel_uart_data *chd =
+      (struct clubby_channel_uart_data *) calloc(1, sizeof(*chd));
   chd->uart_no = uart_no;
   mbuf_init(&chd->recv_mbuf, 0);
   mbuf_init(&chd->send_mbuf, 0);

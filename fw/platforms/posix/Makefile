@@ -16,7 +16,7 @@ KRYPTON_PATH ?= $(REPO_PATH)/krypton
 FROZEN_PATH ?= $(REPO_PATH)/frozen
 OUTAPP ?= mongoose-iot
 VERBOSE ?= 0
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH)
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/clubby
 SSL ?= Krypton
 DEBUG ?= 0
 CC_WRAPPER ?=
@@ -49,9 +49,9 @@ APP_SRCS = $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_init.c sj_init_js.c \
            sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c \
            sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-           json_utils.c sj_clubby_js.c \
+           json_utils.c sj_clubby_js.c sj_init_clubby.c \
            cs_rbuf.c mg_uart.c mg_uart_js.c \
-           mg_clubby.c mg_clubby_channel_uart.c mg_clubby_channel_ws.c \
+           clubby.c clubby_channel_uart.c clubby_channel_ws.c \
            sj_tcp_udp_js.c sj_utils.c sj_console.c sj_console_js.c \
            sj_service_vars.c sj_service_config.c
 

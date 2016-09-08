@@ -6,15 +6,14 @@
 #ifndef CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_
 #define CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_
 
-#include "fw/src/mg_clubby_channel.h"
-
+#include "common/clubby/clubby_channel.h"
 #include "mongoose/mongoose.h"
 
 #ifdef SJ_ENABLE_CLUBBY
 
-struct mg_clubby_channel *mg_clubby_channel_ws(struct mg_connection *nc);
+struct clubby_channel *clubby_channel_ws(struct mg_connection *nc);
 
-struct mg_clubby_channel_ws_out_cfg {
+struct clubby_channel_ws_out_cfg {
   char *server_address;
 #ifdef MG_ENABLE_SSL
   char *ssl_ca_file;
@@ -24,11 +23,9 @@ struct mg_clubby_channel_ws_out_cfg {
   int reconnect_interval_min;
   int reconnect_interval_max;
 };
-struct mg_clubby_channel *mg_clubby_channel_ws_out(
-    struct mg_clubby_channel_ws_out_cfg *cfg);
-
-struct mg_clubby_channel_ws_out_cfg *mg_clubby_channel_ws_out_cfg_from_sys(
-    const struct sys_config_clubby *sccfg);
+struct clubby_channel *clubby_channel_ws_out(
+    struct mg_mgr *mgr,
+    struct clubby_channel_ws_out_cfg *cfg);
 
 #endif /* SJ_ENABLE_CLUBBY */
 #endif /* CS_FW_SRC_MG_CLUBBY_CHANNEL_WS_H_ */

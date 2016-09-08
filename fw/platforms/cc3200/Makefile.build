@@ -163,6 +163,7 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 .PHONY: all clean flash
 
 MIOT_SRCS = sj_init.c \
+            sj_init_clubby.c \
             sj_mongoose.c \
             sj_timers_mongoose.c \
             sj_v7_ext.c \
@@ -190,7 +191,8 @@ MIOT_SRCS += v7.c \
              sj_wifi_js.c
 endif
 
-VPATH += $(MIOT_PATH)/src $(COMMON_PATH)
+VPATH += $(MIOT_PATH)/src $(COMMON_PATH) $(COMMON_PATH)/clubby
+IPATH += $(COMMON_PATH)/clubby
 ifneq "$(TOOLCHAIN)" "gcc"
   MIOT_SRCS += umm_malloc.c
   VPATH += $(COMMON_PATH)/umm_malloc
@@ -236,7 +238,7 @@ else
   MIOT_SRCS += cs_file.c
 endif
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
-  MIOT_SRCS += mg_clubby.c mg_clubby_channel_uart.c mg_clubby_channel_ws.c \
+  MIOT_SRCS += clubby.c clubby_channel_uart.c clubby_channel_ws.c \
                sj_updater_clubby.c
   MIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
 

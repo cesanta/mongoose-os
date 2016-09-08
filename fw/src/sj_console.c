@@ -9,7 +9,7 @@
 #endif
 
 #include "common/mbuf.h"
-#include "fw/src/mg_clubby.h"
+#include "fw/src/sj_init_clubby.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_timers.h"
 
@@ -88,8 +88,8 @@ void sj_console_printf(const char *fmt, ...) {
 #if defined(SJ_ENABLE_CLUBBY) || defined(SJ_ENABLE_CONSOLE_FILE_BUFFER)
 
 #ifdef SJ_ENABLE_CLUBBY
-void clubby_cb(struct mg_clubby *clubby, void *cb_arg,
-               struct mg_clubby_frame_info *fi, struct mg_str result,
+void clubby_cb(struct clubby *clubby, void *cb_arg,
+               struct clubby_frame_info *fi, struct mg_str result,
                int error_code, struct mg_str error_msg) {
   s_cctx.request_in_flight = 0;
   (void) clubby;
@@ -102,21 +102,21 @@ void clubby_cb(struct mg_clubby *clubby, void *cb_arg,
 
 static void sj_console_push_to_cloud(void) {
   if (!s_cctx.initialized || !get_cfg()->console.send_to_cloud) return;
-  struct mg_clubby *c = mg_clubby_get_global();
-  if (c == NULL || !mg_clubby_is_connected(c)) {
+  struct clubby *c = clubby_get_global();
+  if (c == NULL || !clubby_is_connected(c)) {
     /* If connection drops, do not wait for reply as it may never arrive. */
     s_cctx.request_in_flight = 0;
     return;
   }
-  if (s_cctx.request_in_flight || !mg_clubby_can_send(c)) return;
+  if (s_cctx.request_in_flight || !clubby_can_send(c)) return;
 #ifdef SJ_ENABLE_CONSOLE_FILE_BUFFER
   /* Push backlog from the file buffer first. */
   if (s_cctx.fbuf != NULL) {
     char *msg = NULL;
     size_t len = cs_frbuf_get(s_cctx.fbuf, &msg);
     if (len > 0) {
-      if (mg_clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL,
-                          "%.*s", (int) len, msg)) {
+      if (clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL,
+                       "%.*s", (int) len, msg)) {
         s_cctx.request_in_flight = 1;
       }
       return;
@@ -125,8 +125,8 @@ static void sj_console_push_to_cloud(void) {
 #endif
   int l = sj_console_next_msg_len();
   if (l == 0) return; /* Only send full messages. */
-  if (mg_clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL,
-                      "%.*s", (int) (l - 1), s_cctx.buf.buf)) {
+  if (clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL, "%.*s",
+                   (int) (l - 1), s_cctx.buf.buf)) {
     s_cctx.request_in_flight = 1;
     mbuf_remove(&s_cctx.buf, l);
     if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
