@@ -45,6 +45,10 @@ Adds a new device.
 Arguments:
 - `owner`: Optional name of the account to add device to.
 - `psk`: Pre-shared key that device will use for authentication.
+- `force`: If set to `true`, then it won't be an error to call this method for
+an already existing (and owned by the same user) device; instead, 
+it will just update device psk.
+
 - `deviceid`: ID of the device.
 
 Request:
@@ -56,6 +60,7 @@ Request:
   "method": "/v1/Device.Add",
   "args": {
     "deviceid": "VALUE PLACEHOLDER",
+    "force": "VALUE PLACEHOLDER",
     "owner": "VALUE PLACEHOLDER",
     "psk": "VALUE PLACEHOLDER"
   }
