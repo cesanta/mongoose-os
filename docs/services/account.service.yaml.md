@@ -248,6 +248,46 @@ Response:
 
 ```
 
+#### RegisterUser
+Register a new user.
+It returns the same info as Login.
+NOTE: this method can be called from an unauthenticated connection.
+
+
+Arguments:
+- `username`: Username. If omitted, the email will be used as username.
+- `password`: 
+- `email`: email
+
+Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Account.RegisterUser",
+  "args": {
+    "email": "VALUE PLACEHOLDER",
+    "password": "VALUE PLACEHOLDER",
+    "username": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### CreateToken
 Generate a personal access token that can be passed in GET parameters instead user/psk pair
 
