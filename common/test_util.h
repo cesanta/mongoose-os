@@ -130,4 +130,13 @@ void _strfail(const char *a, const char *e, int len);
     }                                                                \
   } while (0)
 
+#ifdef MG_ENABLE_POLL_UNTIL
+#include "mongoose/mongoose.h"
+int c_str_ne(void *a, void *b);
+int c_int_ne(void *a, void *b);
+int c_int_eq(void *a, void *b);
+void poll_until(struct mg_mgr *mgr, double timeout, int (*cond)(void *, void *),
+                void *cond_arg1, void *cond_arg2);
+#endif
+
 #endif /* CS_COMMON_TEST_UTIL_H_ */

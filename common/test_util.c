@@ -60,3 +60,34 @@ int _assert_streq_nz(const char *actual, const char *expected) {
   }
   return 1;
 }
+
+#ifdef MG_ENABLE_POLL_UNTIL
+int c_str_ne(void *a, void *b) {
+  int r = strcmp((const char *) a, (const char *) b);
+  return r;
+}
+
+int c_int_ne(void *a, void *b) {
+  return *((int *) a) != (intptr_t) b;
+}
+
+int c_int_eq(void *a, void *b) {
+  return *((int *) a) == (intptr_t) b;
+}
+
+void poll_until(struct mg_mgr *mgr, double timeout, int (*cond)(void *, void *),
+                void *cond_arg1, void *cond_arg2) {
+  int i;
+  double start = cs_time();
+  while (cs_time() - start < timeout) {
+    mg_mgr_poll(mgr, 2);
+    if (cond != NULL && cond(cond_arg1, cond_arg2)) {
+      /* A few more cycles to test for overshoots. */
+      for (i = 0; i < 5; i++) {
+        mg_mgr_poll(mgr, 2);
+      }
+      return;
+    }
+  }
+}
+#endif
