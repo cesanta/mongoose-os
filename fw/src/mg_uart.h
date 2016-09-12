@@ -55,8 +55,7 @@ struct mg_uart_state {
   struct mg_uart_config *cfg;
   cs_rbuf_t rx_buf;
   cs_rbuf_t tx_buf;
-  unsigned int rx_enabled : 1;
-  unsigned int write_enabled : 1;
+  bool rx_enabled;
   struct mg_uart_stats stats;
   mg_uart_dispatcher_t dispatcher_cb;
   void *dispatcher_data;
@@ -64,7 +63,6 @@ struct mg_uart_state {
 };
 
 size_t mg_uart_write(int uart_no, const void *buf, size_t len);
-void mg_uart_set_write_enabled(int uart_no, bool enabled);
 
 struct mg_uart_state *mg_uart_init(int uart_no, struct mg_uart_config *cfg,
                                    mg_uart_dispatcher_t cb,

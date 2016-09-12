@@ -239,7 +239,9 @@ void sj_prompt_process_char(char ch) {
     const int uart_no = s_sjp.uart_no;
     if (uart_no >= 0 && mg_clubby_get_global() != NULL) {
       /* If stdout or stderr were going to the same UART, disable them. */
-      mg_uart_set_write_enabled(uart_no, false);
+      struct sys_config_debug *sdcfg = &get_cfg()->debug;
+      if (sdcfg->stdout_uart == uart_no) sdcfg->stdout_uart = -1;
+      if (sdcfg->stderr_uart == uart_no) sdcfg->stderr_uart = -1;
       /* Switch into Clubby mode. This will detach our dispatcher. */
       struct clubby_channel *ch = clubby_channel_uart(uart_no);
       if (ch != NULL) {
