@@ -164,6 +164,7 @@
 #endif
 #if defined(_MSC_VER) && _MSC_VER <= 1200
 typedef unsigned long uintptr_t;
+typedef long intptr_t;
 #endif
 typedef int socklen_t;
 #if _MSC_VER >= 1700
@@ -265,6 +266,7 @@ typedef struct _stati64 cs_stat_t;
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <stdint.h>
 #include <limits.h>
 #include <math.h>
 #include <netdb.h>
