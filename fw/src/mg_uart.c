@@ -40,7 +40,7 @@ void mg_uart_dispatcher(void *arg) {
 
 size_t mg_uart_write(int uart_no, const void *buf, size_t len) {
   struct mg_uart_state *us = s_uart_state[uart_no];
-  if (us == NULL) return 0;
+  if (us == NULL || !us->write_enabled) return 0;
   size_t n = 0;
   cs_rbuf_t *txb = &us->tx_buf;
   while (n < len) {
@@ -51,6 +51,12 @@ size_t mg_uart_write(int uart_no, const void *buf, size_t len) {
   }
   mg_uart_schedule_dispatcher(uart_no);
   return len;
+}
+
+void mg_uart_set_write_enabled(int uart_no, bool enabled) {
+  struct mg_uart_state *us = s_uart_state[uart_no];
+  if (us == NULL) return;
+  us->write_enabled = enabled;
 }
 
 void mg_uart_flush(int uart_no) {
@@ -73,6 +79,7 @@ struct mg_uart_state *mg_uart_init(int uart_no, struct mg_uart_config *cfg,
   us = (struct mg_uart_state *) calloc(1, sizeof(*us));
   us->uart_no = uart_no;
   us->cfg = cfg;
+  us->write_enabled = true;
   cs_rbuf_init(&us->rx_buf, cfg->rx_buf_size);
   cs_rbuf_init(&us->tx_buf, cfg->tx_buf_size);
   us->dispatcher_cb = cb;
