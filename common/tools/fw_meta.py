@@ -89,6 +89,22 @@ const char *build_timestamp = "%(build_timestamp)s";
 const char *build_version = "%(build_version)s";\
 """ % bi
 
+    if args.go_output:
+        if args.go_output == '-':
+            out = sys.stdout
+        else:
+            out = open(args.go_output, 'w')
+        print >>out, """\
+/* Auto-generated, do not edit. */
+package main
+
+const (
+	Version = "%(build_version)s"
+	BuildId = "%(build_id)s"
+	BuildTimestamp = "%(build_timestamp)s"
+)\
+""" % bi
+
 
 def cmd_gen_build_info(args):
     bi = {}
@@ -321,6 +337,7 @@ if __name__ == '__main__':
     gbi_cmd.add_argument('--tag_as_version', type=bool, default=False)
     gbi_cmd.add_argument('--json_output')
     gbi_cmd.add_argument('--c_output')
+    gbi_cmd.add_argument('--go_output')
     handlers['gen_build_info'] = cmd_gen_build_info
 
     gtbi_desc = "Extract build info from manifest"
