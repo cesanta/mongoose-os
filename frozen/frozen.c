@@ -588,9 +588,9 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         }
       }
       fmt += skip;
-    } else if (is_alpha(*fmt)) {
+    } else if (*fmt == '_' || is_alpha(*fmt)) {
       len += out->printer(out, quote, 1);
-      while (is_alpha(*fmt)) {
+      while (*fmt == '_' || is_alpha(*fmt) || is_digit(*fmt)) {
         len += out->printer(out, fmt, 1);
         fmt++;
       }
