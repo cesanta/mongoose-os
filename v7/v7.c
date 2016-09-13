@@ -114,6 +114,8 @@
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
 
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+
 #include <assert.h>
 #include <direct.h>
 #include <errno.h>
@@ -7301,7 +7303,7 @@ size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
     }
     a->len += len;
   } else {
-    size_t new_size = (a->len + len) * MBUF_SIZE_MULTIPLIER;
+    size_t new_size = (size_t)((a->len + len) * MBUF_SIZE_MULTIPLIER);
     if ((p = (char *) MBUF_REALLOC(a->buf, new_size)) != NULL) {
       a->buf = p;
       memmove(a->buf + off + len, a->buf + off, a->len - off);
