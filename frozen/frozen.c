@@ -282,20 +282,23 @@ static int parse_array(struct frozen *f) {
   TRY(test_and_skip(f, '['));
   {
     CALL_BACK(f, JSON_TYPE_ARRAY_START, NULL, 0);
-    SET_STATE(f, f->cur - 1, "", 0);
-    while (cur(f) != ']') {
-      snprintf(buf, sizeof(buf), "[%d]", i);
-      i++;
-      current_path_len = append_to_path(f, buf, strlen(buf));
-      f->cur_name = f->path + strlen(f->path) - strlen(buf) + 1/*opening brace*/;
-      f->cur_name_len = strlen(buf) - 2/*braces*/;
-      TRY(parse_value(f));
-      truncate_path(f, current_path_len);
-      if (cur(f) == ',') f->cur++;
+    {
+      SET_STATE(f, f->cur - 1, "", 0);
+      while (cur(f) != ']') {
+        snprintf(buf, sizeof(buf), "[%d]", i);
+        i++;
+        current_path_len = append_to_path(f, buf, strlen(buf));
+        f->cur_name = f->path + strlen(f->path) - strlen(buf) +
+          1 /*opening brace*/;
+        f->cur_name_len = strlen(buf) - 2 /*braces*/;
+        TRY(parse_value(f));
+        truncate_path(f, current_path_len);
+        if (cur(f) == ',') f->cur++;
+      }
+      TRY(test_and_skip(f, ']'));
+      truncate_path(f, fstate.path_len);
+      CALL_BACK(f, JSON_TYPE_ARRAY_END, fstate.ptr, f->cur - fstate.ptr);
     }
-    TRY(test_and_skip(f, ']'));
-    truncate_path(f, fstate.path_len);
-    CALL_BACK(f, JSON_TYPE_ARRAY_END, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
@@ -397,14 +400,16 @@ static int parse_object(struct frozen *f) {
   TRY(test_and_skip(f, '{'));
   {
     CALL_BACK(f, JSON_TYPE_OBJECT_START, NULL, 0);
-    SET_STATE(f, f->cur - 1, ".", 1);
-    while (cur(f) != '}') {
-      TRY(parse_pair(f));
-      if (cur(f) == ',') f->cur++;
+    {
+      SET_STATE(f, f->cur - 1, ".", 1);
+      while (cur(f) != '}') {
+        TRY(parse_pair(f));
+        if (cur(f) == ',') f->cur++;
+      }
+      TRY(test_and_skip(f, '}'));
+      truncate_path(f, fstate.path_len);
+      CALL_BACK(f, JSON_TYPE_OBJECT_END, fstate.ptr, f->cur - fstate.ptr);
     }
-    TRY(test_and_skip(f, '}'));
-    truncate_path(f, fstate.path_len);
-    CALL_BACK(f, JSON_TYPE_OBJECT_END, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
@@ -536,6 +541,10 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
 
         va_copy(sub_ap, ap);
         need_len = vsnprintf(buf, sizeof(buf), fmt2, sub_ap) + 1 /* null-term */;
+        /*
+         * TODO(lsm): Fix windows & eCos code path here. Their vsnprintf
+         * implementation returns -1 on overflow rather needed size.
+         */
         if (need_len > sizeof(buf)) {
           /*
            * resulting string doesn't fit into a stack-allocated buffer `buf`,
