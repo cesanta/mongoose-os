@@ -6,6 +6,7 @@
 #ifndef __TI_COMPILER_VERSION__
 #include <malloc.h>
 #endif
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -136,17 +137,17 @@ void sj_usleep(int usecs) {
   osi_Sleep(usecs / 1000 /* ms */);
 }
 
-static void mongoose_poll_cb(void *arg);
+void mongoose_poll_cb(void *arg);
 
-int s_mg_poll_scheduled;
+bool s_mg_poll_scheduled;
 
 void mongoose_schedule_poll(void) {
   /* Prevent piling up of poll callbacks. */
   if (s_mg_poll_scheduled) return;
-  invoke_cb(mongoose_poll_cb, NULL);
+  s_mg_poll_scheduled = invoke_cb(mongoose_poll_cb, NULL);
 }
 
-static void mongoose_poll_cb(void *arg) {
+void mongoose_poll_cb(void *arg) {
+  s_mg_poll_scheduled = false;
   (void) arg;
-  s_mg_poll_scheduled = 0;
 }

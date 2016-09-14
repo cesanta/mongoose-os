@@ -35,15 +35,9 @@
 #define CB_ADDR_MASK 0xe0000000
 #define CB_ADDR_PREFIX 0x20000000
 
-#define INVOKE_CB_EVENT 1
 struct sj_event {
-  /*
-   * We exploit the fact that all callback addresses have to be in SRAM and
-   * start with CB_ADDR_PREFIX and use the 3 upper bits to store message type.
-   */
-  unsigned type : 3;
-  unsigned cb : 29;
-  void *data;
+  cb_t cb;
+  void *arg;
 };
 
 OsiMsgQ_t s_main_queue;
@@ -205,9 +199,11 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   return CC3200_INIT_OK;
 }
 
+void mongoose_poll_cb(void *arg);
+
 void main_task(void *arg) {
-  (void) arg;
-  osi_MsgQCreate(&s_main_queue, "main", sizeof(struct sj_event), 32 /* len */);
+  struct sj_event e;
+  osi_MsgQCreate(&s_main_queue, "main", sizeof(e), 32 /* len */);
 
   enum cc3200_init_result r = cc3200_init(NULL);
   if (r != CC3200_INIT_OK) {
@@ -219,23 +215,13 @@ void main_task(void *arg) {
   while (1) {
     mongoose_poll(0);
     cc3200_fs_flush();
-    struct sj_event e;
-    if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
-    switch (e.type) {
-      case INVOKE_CB_EVENT: {
-        cb_t cb = (cb_t)(e.cb | CB_ADDR_PREFIX);
-        cb(e.data);
-        break;
-      }
+    if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) == OSI_OK) {
+      e.cb(e.arg);
     }
   }
 }
 
-void invoke_cb(cb_t cb, void *arg) {
-  assert(cb & CB_ADDR_MASK == 0);
-  struct sj_event e;
-  e.type = INVOKE_CB_EVENT;
-  e.cb = (unsigned) cb;
-  e.data = arg;
-  osi_MsgQWrite(&s_main_queue, &e, OSI_WAIT_FOREVER);
+bool invoke_cb(cb_t cb, void *arg) {
+  struct sj_event e = {.cb = cb, .arg = arg};
+  return (osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT) == OSI_OK);
 }
