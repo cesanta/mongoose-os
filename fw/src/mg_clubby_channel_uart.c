@@ -79,6 +79,8 @@ static void clubby_channel_uart_connect(struct clubby_channel *ch) {
   if (!chd->connected) {
     chd->connected = false;
     chd->connecting = true;
+    /* In case stdout or stderr were going to the same UART, disable them. */
+    mg_uart_set_write_enabled(chd->uart_no, false);
     mg_uart_set_dispatcher(chd->uart_no, clubby_channel_uart_dispatcher, ch);
     mg_uart_set_rx_enabled(chd->uart_no, true);
   }

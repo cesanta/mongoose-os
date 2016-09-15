@@ -55,7 +55,7 @@
     "ssl_client_cert_file": "",
     "verify_timeouts_period": 30,
     "uart": {
-      "uart_no": -1,
+      "uart_no": 0,
       "baud_rate": 115200,
       "fc_enable": false
     }

@@ -21,7 +21,7 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
-SJ_ENABLE_JS ?= 1
+SJ_ENABLE_JS ?= 0
 SJ_ENABLE_CLUBBY ?= 1
 SJ_ENABLE_CONFIG_SERVICE ?= 1
 MG_DEBUG_UART ?= 0
@@ -273,7 +273,7 @@ ifeq "$(SJ_ENABLE_JS)" "1"
     MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
   endif
 else
-  MIOT_SRCS += cs_file.c str_util.c
+  MIOT_SRCS += cs_file.c
 endif
 
 ifeq "$(SJ_ENABLE_CLUBBY)" "1"
