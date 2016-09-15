@@ -13,9 +13,11 @@
 #include "fw/src/sj_hal.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_utils.h"
+#include "fw/src/sj_wifi.h"
 
 #define SJ_CONFIG_GET_CMD "/v1/Config.Get"
 #define SJ_CONFIG_SET_CMD "/v1/Config.Set"
+#define SJ_CONFIG_GET_NETWORK_STATUS_CMD "/v1/Config.GetNetworkStatus"
 #define SJ_CONFIG_SAVE_CMD "/v1/Config.Save"
 
 /* Handler for /v1/Config.Get */
@@ -55,6 +57,36 @@ static void set_handler(const char *str, int len, void *user_data) {
   sj_conf_parse(mg_mk_str_n(str, len), cfg->conf_acl, sys_config_schema(), cfg);
 
   (void) user_data;
+}
+
+/* Handler for /v1/Config.GetNetworkStatus */
+static void sj_config_gns_handler(struct clubby_request_info *ri, void *cb_arg,
+                                  struct clubby_frame_info *fi,
+                                  struct mg_str args) {
+  char *ap_ip = NULL, *sta_ip = NULL, *status = NULL, *ssid = NULL;
+
+  if (!fi->channel_is_trusted) {
+    clubby_send_errorf(ri, 403, "unauthorized");
+    return;
+  }
+
+  status = sj_wifi_get_status_str();
+  ssid = sj_wifi_get_connected_ssid();
+  sta_ip = sj_wifi_get_sta_ip();
+  ap_ip = sj_wifi_get_ap_ip();
+
+  clubby_send_responsef(
+      ri, "{wifi: {sta_ip: %Q, ap_ip: %Q, status: %Q, ssid: %Q}}",
+      sta_ip == NULL ? "" : sta_ip, ap_ip == NULL ? "" : ap_ip,
+      status == NULL ? "" : status, ssid == NULL ? "" : ssid);
+
+  free(sta_ip);
+  free(ap_ip);
+  free(ssid);
+  free(status);
+
+  (void) args;
+  (void) cb_arg;
 }
 
 /* Handler for /v1/Config.Set */
@@ -108,6 +140,8 @@ enum sj_init_result sj_service_config_init(void) {
                      NULL);
   clubby_add_handler(c, mg_mk_str(SJ_CONFIG_SET_CMD), sj_config_set_handler,
                      NULL);
+  clubby_add_handler(c, mg_mk_str(SJ_CONFIG_GET_NETWORK_STATUS_CMD),
+                     sj_config_gns_handler, NULL);
   clubby_add_handler(c, mg_mk_str(SJ_CONFIG_SAVE_CMD), sj_config_save_handler,
                      NULL);
   return SJ_INIT_OK;
