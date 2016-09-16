@@ -41,9 +41,11 @@ static struct mg_connection *listen_conn;
 static int load_config_file(const char *filename, const char *acl,
                             struct sys_config *cfg);
 
-void expand_mac_address_placeholders(char *str, const char *mac) {
+void sj_expand_mac_address_placeholders(char *str) {
+  const char *mac = s_ro_vars.mac_address;
   int num_placeholders = 0;
   char *sp;
+  if (mac == NULL) return;
   for (sp = str; sp != NULL && *sp != '\0'; sp++) {
     if (*sp == PLACEHOLDER_CHAR) num_placeholders++;
   }
@@ -328,10 +330,6 @@ enum sj_init_result sj_sys_config_init(void) {
     return SJ_INIT_OUT_OF_MEMORY;
   }
   LOG(LL_INFO, ("MAC: %s", s_ro_vars.mac_address));
-
-  if (s_cfg.wifi.ap.ssid != NULL) {
-    expand_mac_address_placeholders(s_cfg.wifi.ap.ssid, s_ro_vars.mac_address);
-  }
 
   s_initialized = true;
 

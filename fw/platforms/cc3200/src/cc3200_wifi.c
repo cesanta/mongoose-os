@@ -15,6 +15,7 @@
 #include "common/cs_dbg.h"
 #include "common/platform.h"
 #include "fw/src/sj_mongoose.h"
+#include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_wifi.h"
 
 #include "config.h"
@@ -136,13 +137,16 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   uint8_t v;
   SlNetCfgIpV4Args_t ipcfg;
   SlNetAppDhcpServerBasicOpt_t dhcpcfg;
+  char ssid[64];
 
   if ((ret = sl_WlanSetMode(ROLE_AP)) != 0) {
     return 0;
   }
 
-  if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SSID, strlen(cfg->ssid),
-                        (const uint8_t *) cfg->ssid)) != 0) {
+  strncpy(ssid, cfg->ssid, sizeof(ssid));
+  sj_expand_mac_address_placeholders(ssid);
+  if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SSID, strlen(ssid),
+                        (const uint8_t *) ssid)) != 0) {
     return 0;
   }
 
@@ -200,7 +204,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
     LOG(LL_ERROR, ("DHCP server failed to start: %d", ret));
   }
 
-  LOG(LL_INFO, ("AP %s configured", cfg->ssid));
+  LOG(LL_INFO, ("AP %s configured", ssid));
 
   return 1;
 }

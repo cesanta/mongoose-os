@@ -36,6 +36,9 @@ void device_get_mac_address(uint8_t mac[6]);
 
 void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);
 
+/* Expands question marks in "str" with digits from the MAC address. */
+void sj_expand_mac_address_placeholders(char *str);
+
 enum sj_init_result sj_sys_config_init(void);
 enum sj_init_result sj_sys_config_init_http(const struct sys_config_http *cfg);
 enum sj_init_result sj_sys_config_init_platform(struct sys_config *cfg);

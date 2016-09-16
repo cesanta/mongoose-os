@@ -95,6 +95,7 @@ int sj_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 
   memset(&ap_cfg, 0, sizeof(ap_cfg));
   strncpy((char *) ap_cfg.ssid, cfg->ssid, sizeof(ap_cfg.ssid));
+  sj_expand_mac_address_placeholders((char *) ap_cfg.ssid);
   ap_cfg.ssid_len = ssid_len;
   if (pass_len != 0) {
     ap_cfg.authmode = AUTH_WPA2_PSK;
