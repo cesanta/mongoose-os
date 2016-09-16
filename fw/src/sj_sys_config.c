@@ -49,7 +49,7 @@ void sj_expand_mac_address_placeholders(char *str) {
   for (sp = str; sp != NULL && *sp != '\0'; sp++) {
     if (*sp == PLACEHOLDER_CHAR) num_placeholders++;
   }
-  if (num_placeholders > 0 && num_placeholders < 12 &&
+  if (num_placeholders > 0 && num_placeholders <= 12 &&
       num_placeholders % 2 == 0 /* Allows use of single '?' w/o subst. */) {
     const char *msp = mac + 11; /* Start from the end */
     for (; sp >= str; sp--) {
