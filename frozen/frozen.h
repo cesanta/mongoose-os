@@ -54,7 +54,8 @@ struct json_token {
   enum json_token_type type; /* Type of the token, possible values are above */
 };
 
-#define JSON_INVALID_TOKEN {0, 0, JSON_TYPE_INVALID}
+#define JSON_INVALID_TOKEN \
+  { 0, 0, JSON_TYPE_INVALID }
 
 /* Error codes */
 #define JSON_STRING_INVALID -1
@@ -79,13 +80,15 @@ struct json_token {
  * - type: JSON_TYPE_NUMBER, name: "1", path: ".bar[1]", value: "2"
  * - type: JSON_TYPE_OBJECT_START, name: "2", path: ".bar[2]", value: NULL
  * - type: JSON_TYPE_TRUE, name: "baz", path: ".bar[2].baz", value: "true"
- * - type: JSON_TYPE_OBJECT_END, name: NULL, path: ".bar[2]", value: "{ \"baz\": true }"
- * - type: JSON_TYPE_ARRAY_END, name: NULL, path: ".bar", value: "[ 1, 2, { \"baz\": true } ]"
- * - type: JSON_TYPE_OBJECT_END, name: NULL, path: "", value: "{ \"foo\": 123, \"bar\": [ 1, 2, { \"baz\": true } ] }"
+ * - type: JSON_TYPE_OBJECT_END, name: NULL, path: ".bar[2]", value: "{ \"baz\":
+ *true }"
+ * - type: JSON_TYPE_ARRAY_END, name: NULL, path: ".bar", value: "[ 1, 2, {
+ *\"baz\": true } ]"
+ * - type: JSON_TYPE_OBJECT_END, name: NULL, path: "", value: "{ \"foo\": 123,
+ *\"bar\": [ 1, 2, { \"baz\": true } ] }"
  */
-typedef void (*json_walk_callback_t)(void *callback_data,
-                                     const char *name, size_t name_len,
-                                     const char *path,
+typedef void (*json_walk_callback_t)(void *callback_data, const char *name,
+                                     size_t name_len, const char *path,
                                      const struct json_token *token);
 
 /*
@@ -182,6 +185,12 @@ typedef void (*json_scanner_t)(const char *str, int len, void *user_data);
  */
 int json_scanf_array_elem(const char *s, int len, const char *path, int index,
                           struct json_token *token);
+
+/*
+ * Unescape JSON-encoded string src,slen into dst, dlen.
+ * src and dst may overlap.
+ */
+// size_t json_unescape(const char *src, size_t slen, char *dst, size_t dlen);
 
 #ifdef __cplusplus
 }
