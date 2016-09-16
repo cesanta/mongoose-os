@@ -3,8 +3,9 @@
 #include "fw/src/sj_app.h"
 #include "fw/src/mg_clubby.h"
 #include "fw/src/sj_console.h"
-#include "fw/src/sj_service_vars.h"
 #include "fw/src/sj_service_config.h"
+#include "fw/src/sj_service_filesystem.h"
+#include "fw/src/sj_service_vars.h"
 #include "fw/src/sj_sys_config.h"
 #include "fw/src/sj_updater_post.h"
 #include "fw/src/sj_updater_clubby.h"
@@ -22,8 +23,11 @@ enum sj_init_result sj_init(void) {
   sj_updater_clubby_init();
 #endif
 #ifdef SJ_ENABLE_CONFIG_SERVICE
-  sj_service_vars_init();
   sj_service_config_init();
+  sj_service_vars_init();
+#endif
+#ifdef SJ_ENABLE_FILESYSTEM_SERVICE
+  sj_service_filesystem_init();
 #endif
 #endif
 
