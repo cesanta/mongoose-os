@@ -138,6 +138,7 @@ typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
  * This is a superset of printf() function, with extra format specifiers:
  *  - `%B` print json boolean, `true` or `false`. Accepts an `int`.
  *  - `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
+ *  - `%V` print quoted base64-encoded string. Accepts a `const char *`, `int`.
  *  - `%M` invokes a json_printf_callback_t function. That callback function
  *  can consume more parameters.
  *
@@ -165,6 +166,10 @@ int json_printf_array(struct json_out *, va_list *ap);
  *    - %B: consumes `int *`, expects boolean `true` or `false`.
  *    - %Q: consumes `char **`, expects quoted, JSON-encoded string. Scanned
  *       string is malloc-ed, caller must free() the string.
+ *    - %V: consumes `char **`, `int *`. Expects base64-encoded string.
+ *       Result string is base64-decoded, malloced and NUL-terminated.
+ *       The length of result string is stored in `int *` placeholder.
+ *       Caller must free() the result.
  *    - %M: consumes custom scanning function pointer and
  *       `void *user_data` parameter - see json_scanner_t definition.
  *    - %T: consumes `struct json_token *`, fills it out with matched token.
@@ -189,8 +194,11 @@ int json_scanf_array_elem(const char *s, int len, const char *path, int index,
 /*
  * Unescape JSON-encoded string src,slen into dst, dlen.
  * src and dst may overlap.
+ * If destination buffer is too small (or zero-length), result string is not
+ * written but the length is counted nevertheless (similar to snprintf).
+ * Return the length of unescaped string in bytes.
  */
-// size_t json_unescape(const char *src, size_t slen, char *dst, size_t dlen);
+int json_unescape(const char *src, int slen, char *dst, int dlen);
 
 #ifdef __cplusplus
 }

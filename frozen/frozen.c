@@ -463,6 +463,68 @@ int json_printer_file(struct json_out *out, const char *buf, size_t len) {
   return fwrite(buf, 1, len, out->u.fp);
 }
 
+static int b64idx(int c) {
+  if (c < 26) {
+    return c + 'A';
+  } else if (c < 52) {
+    return c - 26 + 'a';
+  } else if (c < 62) {
+    return c - 52 + '0';
+  } else {
+    return c == 62 ? '+' : '/';
+  }
+}
+
+static int b64rev(int c) {
+  if (c >= 'A' && c <= 'Z') {
+    return c - 'A';
+  } else if (c >= 'a' && c <= 'z') {
+    return c + 26 - 'a';
+  } else if (c >= '0' && c <= '9') {
+    return c + 52 - '0';
+  } else if (c == '+') {
+    return 62;
+  } else if (c == '/') {
+    return 63;
+  } else {
+    return 64;
+  }
+}
+
+static int b64enc(struct json_out *out, const unsigned char *p, int n) {
+  char buf[4];
+  int i, len = 0;
+  for (i = 0; i < n; i += 3) {
+    int a = p[i], b = i + 1 < n ? p[i + 1] : 0, c = i + 2 < n ? p[i + 2] : 0;
+    buf[0] = b64idx(a >> 2);
+    buf[1] = b64idx((a & 3) << 4 | (b >> 4));
+    buf[2] = b64idx((b & 15) << 2 | (c >> 6));
+    buf[3] = b64idx(c & 63);
+    if (i + 1 >= n) buf[2] = '=';
+    if (i + 2 >= n) buf[3] = '=';
+    len += out->printer(out, buf, sizeof(buf));
+  }
+  return len;
+}
+
+static int b64dec(const char *src, int n, char *dst) {
+  const char *end = src + n;
+  int len = 0;
+  while (src + 3 < end) {
+    int a = b64rev(src[0]), b = b64rev(src[1]), c = b64rev(src[2]),
+        d = b64rev(src[3]);
+    dst[len++] = (a << 2) | (b >> 4);
+    if (src[2] != '=') {
+      dst[len++] = (b << 4) | (c >> 2);
+      if (src[3] != '=') {
+        dst[len++] = (c << 6) | d;
+      }
+    }
+    src += 4;
+  }
+  return len;
+}
+
 int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
   int len = 0;
   const char *quote = "\"", *null = "null";
@@ -495,6 +557,10 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         int val = va_arg(ap, int);
         const char *str = val ? "true" : "false";
         len += out->printer(out, str, strlen(str));
+      } else if (fmt[1] == 'V') {
+        const unsigned char *p = va_arg(ap, const unsigned char *);
+        int n = va_arg(ap, int);
+        len += b64enc(out, p, n);
       } else if (fmt[1] == 'Q' ||
                  (fmt[1] == '.' && fmt[2] == '*' && fmt[3] == 'Q')) {
         size_t l = 0;
@@ -789,6 +855,17 @@ static void json_scanf_cb(void *callback_data, const char *name,
       }
       break;
     }
+    case 'V': {
+      char **dst = (char **) info->target;
+      int len = token->len * 4 / 3 + 2;
+      if ((*dst = (char *) malloc(len + 1)) != NULL) {
+        int n = b64dec(token->ptr, token->len, *dst);
+        (*dst)[n] = '\0';
+        *(int *) info->user_data = n;
+        info->num_conversions++;
+      }
+      break;
+    }
     case 'T':
       info->num_conversions++;
       *(struct json_token *) info->target = *token;
@@ -817,6 +894,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
       info.type = fmt[i + 1];
       switch (fmt[i + 1]) {
         case 'M':
+        case 'V':
           info.user_data = va_arg(ap, void *);
         /* FALLTHROUGH */
         case 'B':
