@@ -211,7 +211,7 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "result": {
         "properties": {
           "data": {
-            "doc": "Chunk of data read from the file.",
+            "doc": "Base64-encoded chunk of data read from the file.",
             "type": "string"
           },
           "left": {
@@ -239,7 +239,7 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           "type": "boolean"
         },
         "data": {
-          "doc": "Data to write or append.",
+          "doc": "Base-64 encoded data to write or append.",
           "type": "string"
         },
         "filename": {

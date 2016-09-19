@@ -33,7 +33,7 @@ methods:
       properties:
         data:
           type: string
-          doc: Chunk of data read from the file.
+          doc: Base64-encoded chunk of data read from the file.
         left:
           type: integer
           doc: Number of bytes left past the read chunk of data.
@@ -46,7 +46,7 @@ methods:
         doc: Name of the file to write or append to.
       data:
         type: string
-        doc: Data to write or append.
+        doc: Base-64 encoded data to write or append.
       append:
         type: boolean
         doc: |

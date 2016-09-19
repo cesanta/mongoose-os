@@ -560,7 +560,9 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
       } else if (fmt[1] == 'V') {
         const unsigned char *p = va_arg(ap, const unsigned char *);
         int n = va_arg(ap, int);
+        len += out->printer(out, quote, 1);
         len += b64enc(out, p, n);
+        len += out->printer(out, quote, 1);
       } else if (fmt[1] == 'Q' ||
                  (fmt[1] == '.' && fmt[2] == '*' && fmt[3] == 'Q')) {
         size_t l = 0;

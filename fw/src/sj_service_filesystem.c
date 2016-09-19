@@ -22,7 +22,7 @@
 
 struct put_data {
   char *p;
-  size_t len;
+  int len;
 };
 
 /* Handler for /v1/Filesystem.List */
@@ -146,7 +146,7 @@ static void sj_filesystem_get_handler(struct clubby_request_info *ri,
   }
 
   /* send the response */
-  clubby_send_responsef(ri, "{data: %.*Q, left: %d}", len, data,
+  clubby_send_responsef(ri, "{data: %V, left: %d}", data, len,
                         (file_size - offset - len));
 
 clean:
@@ -165,91 +165,6 @@ clean:
   (void) cb_arg;
 }
 
-/*
- * TODO(dfrank): this function needs to be severely improved (and probably
- * rewritten, because implementation smells): currently it only supports
- * special chars like \n, \t, etc; but we need to also support \xNN and \uNNNN.
- *
- * Also, it should be moved to frozen and used internally for `%Q`, as well as
- * exported for clients.
- */
-static size_t string_unescape(char *dst, size_t dst_len, const char *src,
-                              size_t src_len) {
-  size_t len = 0;
-  char cur;
-
-  while (src_len-- > 0) {
-    if (*src == '\\' && src_len > 0) {
-      src_len--;
-      src++;
-      switch (*src) {
-        case 'a':
-          cur = '\a';
-          break;
-        case 'b':
-          cur = '\b';
-          break;
-        case 'f':
-          cur = '\f';
-          break;
-        case 'n':
-          cur = '\n';
-          break;
-        case 'r':
-          cur = '\r';
-          break;
-        case 't':
-          cur = '\t';
-          break;
-        case 'v':
-          cur = '\v';
-          break;
-        case '\\':
-          cur = '\\';
-          break;
-        case '\"':
-          cur = '\"';
-          break;
-        case '\'':
-          cur = '\'';
-          break;
-        default:
-          len++;
-          if (dst_len > 0) {
-            dst_len--;
-            *dst++ = '\\';
-          }
-          cur = *src;
-          break;
-      }
-    } else {
-      cur = *src;
-    }
-
-    len++;
-    if (dst_len > 0) {
-      dst_len--;
-      *dst++ = cur;
-    }
-
-    src++;
-  }
-
-  return len;
-}
-
-/*
- * TODO(dfrank): when frozen supports `%.*Q` (or whatever specifier will be
- * used for string vector), convert `%M` to it and get rid of this function.
- */
-static void data_hnd(const char *str, int len, void *user_data) {
-  struct put_data *data = (struct put_data *) user_data;
-  size_t unescaped_len = string_unescape(NULL, 0, str, (size_t) len);
-  data->p = malloc(unescaped_len);
-  data->len = unescaped_len;
-  string_unescape(data->p, data->len, str, (size_t) len);
-}
-
 static void sj_filesystem_put_handler(struct clubby_request_info *ri,
                                       void *cb_arg,
                                       struct clubby_frame_info *fi,
@@ -264,12 +179,8 @@ static void sj_filesystem_put_handler(struct clubby_request_info *ri,
     goto clean;
   }
 
-  /*
-   * TODO(dfrank): when frozen supports `%.*Q` (or whatever specifier will be
-   * used for string vector), convert `%M` to it.
-   */
-  json_scanf(args.p, args.len, "{filename: %Q, data: %M, append: %B}",
-             &filename, data_hnd, &data, &append);
+  json_scanf(args.p, args.len, "{filename: %Q, data: %V, append: %B}",
+             &filename, &data.p, &data.len, &append);
 
   /* check arguments */
   if (filename == NULL) {
@@ -285,7 +196,7 @@ static void sj_filesystem_put_handler(struct clubby_request_info *ri,
     goto clean;
   }
 
-  if (fwrite(data.p, 1, data.len, fp) != data.len) {
+  if (fwrite(data.p, 1, data.len, fp) != (size_t) data.len) {
     clubby_send_errorf(ri, 500, "failed to write data");
     goto clean;
   }
