@@ -21,10 +21,10 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
-SJ_ENABLE_JS ?= 0
-SJ_ENABLE_CLUBBY ?= 1
-SJ_ENABLE_CONFIG_SERVICE ?= 1
-SJ_ENABLE_FILESYSTEM_SERVICE ?= 1
+MG_ENABLE_JS ?= 0
+MG_ENABLE_CLUBBY ?= 1
+MG_ENABLE_CONFIG_SERVICE ?= 1
+MG_ENABLE_FILESYSTEM_SERVICE ?= 1
 MG_DEBUG_UART ?= 0
 
 REPO_PATH ?= ../../..
@@ -93,18 +93,18 @@ include $(REPO_PATH)/fw/common.mk
 MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
 
 MIOT_SRCS = cs_rbuf.c \
-            sj_config.c \
-            sj_console.c cs_frbuf.c \
-            sj_init.c \
-            sj_i2c_js.c \
-            sj_spi_js.c \
-            sj_timers_mongoose.c \
-            sj_wifi.c \
-            sj_mongoose.c \
-            sj_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            mg_config.c \
+            mg_console.c cs_frbuf.c \
+            mg_init.c \
+            mg_i2c_js.c \
+            mg_spi_js.c \
+            mg_timers_mongoose.c \
+            mg_wifi.c \
+            mg_mongoose.c \
+            mg_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             mg_uart.c \
-            sj_utils.c \
-            cs_crc32.c sj_updater_common.c sj_updater_post.c \
+            mg_utils.c \
+            cs_crc32.c mg_updater_common.c mg_updater_post.c \
             rboot-bigflash.c rboot-api.c \
             json_utils.c \
             umm_malloc.c \
@@ -112,26 +112,26 @@ MIOT_SRCS = cs_rbuf.c \
 MIOT_SRCS += $(notdir $(foreach m,$(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-ifeq "$(SJ_ENABLE_JS)" "1"
+ifeq "$(MG_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
-             sj_adc_js.c \
-             sj_clubby_js.c \
-             sj_config_js.c \
-             sj_console_js.c \
-             sj_debug_js.c \
-             sj_gpio_js.c \
-             sj_http_js.c \
-             sj_init_js.c \
-             sj_mqtt_js.c \
-             sj_prompt.c \
-             sj_pwm_js.c \
-             sj_sys_config_js.c \
-             sj_tcp_udp_js.c \
-             sj_timers_js.c \
-             sj_v7_ext.c \
+             mg_adc_js.c \
+             mg_clubby_js.c \
+             mg_config_js.c \
+             mg_console_js.c \
+             mg_debug_js.c \
+             mg_gpio_js.c \
+             mg_http_js.c \
+             mg_init_js.c \
+             mg_mqtt_js.c \
+             mg_prompt.c \
+             mg_pwm_js.c \
+             mg_sys_config_js.c \
+             mg_tcp_udp_js.c \
+             mg_timers_js.c \
+             mg_v7_ext.c \
              mg_uart_js.c \
-             sj_wifi_js.c \
-             sj_ws_client_js.c
+             mg_wifi_js.c \
+             mg_ws_client_js.c
 endif
 
 JSBIN_EXTRA ?=
@@ -182,24 +182,24 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 V7_GC_DEBUG ?= 1
 V7_STACK_GUARD ?= 1
 
-MIOT_FEATURES ?= -DSJ_ENABLE_ADC_API \
-                -DSJ_ENABLE_DEBUG_API \
-                -DSJ_ENABLE_GPIO_API \
-                -DSJ_ENABLE_HTTP_CLIENT_API \
-                -DSJ_ENABLE_HTTP_SERVER_API \
-                -DSJ_ENABLE_I2C_API \
-                -DSJ_ENABLE_MQTT_API \
-                -DSJ_ENABLE_PWM_API \
-                -DSJ_ENABLE_SPI_API \
-                -DSJ_ENABLE_TCP_API \
-                -DSJ_ENABLE_UART_API \
-                -DSJ_ENABLE_UDP_API \
-                -DSJ_ENABLE_WIFI_API \
-                -DSJ_ENABLE_WS_CLIENT_API
-MIOT_ESP_FEATURES = -DSJ_ENABLE_WEB_CONFIG \
-                     -DSJ_ENABLE_FILE_UPLOAD \
-                     -DSJ_ENABLE_UPDATER_POST \
-                     -DSJ_ENABLE_CONSOLE_FILE_BUFFER
+MIOT_FEATURES ?= -DMG_ENABLE_ADC_API \
+                -DMG_ENABLE_DEBUG_API \
+                -DMG_ENABLE_GPIO_API \
+                -DMG_ENABLE_HTTP_CLIENT_API \
+                -DMG_ENABLE_HTTP_SERVER_API \
+                -DMG_ENABLE_I2C_API \
+                -DMG_ENABLE_MQTT_API \
+                -DMG_ENABLE_PWM_API \
+                -DMG_ENABLE_SPI_API \
+                -DMG_ENABLE_TCP_API \
+                -DMG_ENABLE_UART_API \
+                -DMG_ENABLE_UDP_API \
+                -DMG_ENABLE_WIFI_API \
+                -DMG_ENABLE_WS_CLIENT_API
+MIOT_ESP_FEATURES = -DMG_ENABLE_WEB_CONFIG \
+                     -DMG_ENABLE_FILE_UPLOAD \
+                     -DMG_ENABLE_UPDATER_POST \
+                     -DMG_ENABLE_CONSOLE_FILE_BUFFER
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
@@ -256,9 +256,9 @@ ifeq "$(SSL)" "Krypton"
               -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
 endif
 
-ifeq "$(SJ_ENABLE_JS)" "1"
+ifeq "$(MG_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MIOT_FEATURES += -DSJ_ENABLE_JS
+  MIOT_FEATURES += -DMG_ENABLE_JS
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_FEATURES)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
@@ -277,20 +277,20 @@ else
   MIOT_SRCS += cs_file.c
 endif
 
-ifeq "$(SJ_ENABLE_CLUBBY)" "1"
+ifeq "$(MG_ENABLE_CLUBBY)" "1"
   MIOT_SRCS += clubby.c clubby_channel_ws.c \
-               mg_clubby.c mg_clubby_channel_uart.c sj_updater_clubby.c
-  MIOT_FEATURES += -DSJ_ENABLE_CLUBBY -DSJ_ENABLE_CLUBBY_API
-  MIOT_ESP_FEATURES += -DSJ_ENABLE_UPDATER_CLUBBY -DSJ_ENABLE_UPDATER_CLUBBY_API
+               mg_clubby.c mg_clubby_channel_uart.c mg_updater_clubby.c
+  MIOT_FEATURES += -DMG_ENABLE_CLUBBY -DMG_ENABLE_CLUBBY_API
+  MIOT_ESP_FEATURES += -DMG_ENABLE_UPDATER_CLUBBY -DMG_ENABLE_UPDATER_CLUBBY_API
 
-ifeq "$(SJ_ENABLE_CONFIG_SERVICE)" "1"
-  MIOT_SRCS += sj_service_config.c sj_service_vars.c
-  MIOT_FEATURES += -DSJ_ENABLE_CONFIG_SERVICE
+ifeq "$(MG_ENABLE_CONFIG_SERVICE)" "1"
+  MIOT_SRCS += mg_service_config.c mg_service_vars.c
+  MIOT_FEATURES += -DMG_ENABLE_CONFIG_SERVICE
 endif
 
-ifeq "$(SJ_ENABLE_FILESYSTEM_SERVICE)" "1"
-  MIOT_SRCS += sj_service_filesystem.c
-  MIOT_FEATURES += -DSJ_ENABLE_FILESYSTEM_SERVICE
+ifeq "$(MG_ENABLE_FILESYSTEM_SERVICE)" "1"
+  MIOT_SRCS += mg_service_filesystem.c
+  MIOT_FEATURES += -DMG_ENABLE_FILESYSTEM_SERVICE
 endif
 
 endif
@@ -456,7 +456,7 @@ $(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD
 	$(Q) $(foreach f,$(FS_FILES), \
 	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 	  cp $(f) $(FS_STAGING_DIR);)
-ifeq "$(SJ_ENABLE_JS)" "1"
+ifeq "$(MG_ENABLE_JS)" "1"
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
     echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
     $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
@@ -467,7 +467,7 @@ endif
 $(BUILD_DIR)/mkspiffs:
 	$(MAKE) -C $(REPO_PATH)/common/spiffs/tools $(BUILD_DIR)/mkspiffs BUILD_DIR=$(BUILD_DIR)
 
-ifeq "$(SJ_ENABLE_JS)" "1"
+ifeq "$(MG_ENABLE_JS)" "1"
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) $(notdir $@)
 

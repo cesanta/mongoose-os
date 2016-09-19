@@ -25,7 +25,7 @@
 */
 
 /* depends on v7 because of v7_err only */
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 
 #include <stdlib.h>
 
@@ -249,7 +249,7 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
   return 1;
 }
 
-enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res) {
+enum v7_err mg_spi_create(struct v7 *v7, spi_connection *res) {
   /* Support HSPI only */
   struct esp_spi_connection *conn = malloc(sizeof(*conn));
   if (conn == NULL) {
@@ -263,11 +263,11 @@ enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res) {
   return V7_OK;
 }
 
-void sj_spi_close(spi_connection conn) {
+void mg_spi_close(spi_connection conn) {
   free(conn);
 }
 
-#endif /* SJ_ENABLE_JS */
+#endif /* MG_ENABLE_JS */
 
 #ifdef MPL115A1_EXAMPLE_ENABLED
 

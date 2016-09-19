@@ -125,7 +125,7 @@ width: 17em;
 
           // Look if the element should be disabled.
           var extra_attrs = '';
-          if (ed.read_only || !sj_conf_check_access(ep, CURRENT['conf_acl'])) {
+          if (ed.read_only || !mg_conf_check_access(ep, CURRENT['conf_acl'])) {
             extra_attrs = ' disabled ';
           }
 

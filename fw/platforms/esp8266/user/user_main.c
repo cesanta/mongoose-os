@@ -18,23 +18,23 @@
 #include "fw/platforms/esp8266/user/util.h"
 #include "fw/platforms/esp8266/user/esp_exc.h"
 
-#include "fw/src/sj_app.h"
-#include "fw/src/sj_init.h"
-#include "fw/src/sj_mongoose.h"
-#include "fw/src/sj_prompt.h"
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_app.h"
+#include "fw/src/mg_init.h"
+#include "fw/src/mg_mongoose.h"
+#include "fw/src/mg_prompt.h"
+#include "fw/src/mg_hal.h"
+#include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_uart.h"
-#include "fw/src/sj_updater_clubby.h"
+#include "fw/src/mg_updater_clubby.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 #include "v7/v7.h"
-#include "fw/src/sj_init_js.h"
+#include "fw/src/mg_init_js.h"
 #endif
 
 extern const char *build_id;
@@ -65,7 +65,7 @@ void dbg_putc(char c) {
  * Mongoose IoT initialization, called as an SDK timer callback
  * (`os_timer_...()`).
  */
-int esp_sj_init(rboot_config *bcfg) {
+int esp_mg_init(rboot_config *bcfg) {
   mongoose_init();
   /*
    * In order to see debug output (at least errors) during boot we have to
@@ -78,7 +78,7 @@ int esp_sj_init(rboot_config *bcfg) {
     u0cfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
 #endif
     if (mg_uart_init(0, u0cfg, NULL, NULL) == NULL) {
-      return SJ_INIT_UART_FAILED;
+      return MG_INIT_UART_FAILED;
     }
     struct mg_uart_config *u1cfg = mg_uart_default_config();
     /* UART1 has no RX pin, no point in allocating a buffer. */
@@ -87,7 +87,7 @@ int esp_sj_init(rboot_config *bcfg) {
     u1cfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
 #endif
     if (mg_uart_init(1, u1cfg, NULL, NULL) == NULL) {
-      return SJ_INIT_UART_FAILED;
+      return MG_INIT_UART_FAILED;
     }
     setvbuf(stdout, NULL, _IOLBF, 0);
     setvbuf(stderr, NULL, _IOLBF, 0);
@@ -102,7 +102,7 @@ int esp_sj_init(rboot_config *bcfg) {
   fputc('\n', stderr);
   LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
   LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
-                sj_get_heap_size(), sj_get_free_heap_size()));
+                mg_get_heap_size(), mg_get_free_heap_size()));
   esp_print_reset_info();
 
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
@@ -115,18 +115,18 @@ int esp_sj_init(rboot_config *bcfg) {
     return -2;
   }
 
-  enum sj_init_result ir = sj_init();
-  if (ir != SJ_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "SJ", ir));
+  enum mg_init_result ir = mg_init();
+  if (ir != MG_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
     return -3;
   }
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
   init_v7(&bcfg);
 
-  ir = sj_init_js_all(v7);
-  if (ir != SJ_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "SJ JS", ir));
+  ir = mg_init_js_all(v7);
+  if (ir != MG_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
     return -5;
   }
   /* TODO(rojer): Get rid of I2C.js */
@@ -135,10 +135,10 @@ int esp_sj_init(rboot_config *bcfg) {
   }
 #endif
 
-  LOG(LL_INFO, ("Init done, RAM: %d free", sj_get_free_heap_size()));
+  LOG(LL_INFO, ("Init done, RAM: %d free", mg_get_free_heap_size()));
 
-#ifdef SJ_ENABLE_JS
-  sj_prompt_init(v7, get_cfg()->debug.stdout_uart);
+#ifdef MG_ENABLE_JS
+  mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
 
   /*
@@ -154,27 +154,27 @@ int esp_sj_init(rboot_config *bcfg) {
    */
   esp_umm_init();
 
-  sj_wdt_set_timeout(get_cfg()->sys.wdt_timeout);
+  mg_wdt_set_timeout(get_cfg()->sys.wdt_timeout);
   return 0;
 }
 
-void esp_sj_init_timer_cb(void *arg) {
+void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
-  if (esp_sj_init(bcfg) == 0) {
+  if (esp_mg_init(bcfg) == 0) {
     if (bcfg->is_first_boot) {
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
       /* fw_updated will be reset by the boot loader if it's a rollback. */
       clubby_updater_finish(bcfg->fw_updated ? 0 : -1);
 #endif
       commit_update(bcfg);
     } else if (bcfg->user_flags == 1) {
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
       clubby_updater_finish(0);
 #endif
     }
   } else {
     if (bcfg->fw_updated) revert_update(bcfg);
-    sj_system_restart(0);
+    mg_system_restart(0);
   }
   (void) arg;
 }
@@ -190,9 +190,9 @@ void sdk_init_done_cb(void) {
 #endif
   system_soft_wdt_stop(); /* give 60 sec for initialization */
 
-  /* Schedule SJS initialization (`esp_sj_init()`) */
+  /* Schedule initialization (`esp_mg_init()`) */
   os_timer_disarm(&startcmd_timer);
-  os_timer_setfn(&startcmd_timer, esp_sj_init_timer_cb, NULL);
+  os_timer_setfn(&startcmd_timer, esp_mg_init_timer_cb, NULL);
   os_timer_arm(&startcmd_timer, 0, 0);
 }
 

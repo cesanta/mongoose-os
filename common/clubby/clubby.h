@@ -13,7 +13,7 @@
 #include "common/mg_str.h"
 #include "common/queue.h"
 
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
 
 struct clubby;
 
@@ -129,5 +129,5 @@ void clubby_remove_observer(struct clubby *c, mg_observer_cb_t cb,
 void clubby_free_request_info(struct clubby_request_info *ri);
 void clubby_free(struct clubby *c);
 
-#endif /* SJ_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_CLUBBY */
 #endif /* CS_COMMON_CLUBBY_CLUBBY_H_ */

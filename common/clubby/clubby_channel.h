@@ -11,7 +11,7 @@
 
 #include "common/mg_str.h"
 
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
 
 enum clubby_channel_event {
   MG_CLUBBY_CHANNEL_OPEN,
@@ -34,5 +34,5 @@ struct clubby_channel {
   void *user_data;
 };
 
-#endif /* SJ_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_CLUBBY */
 #endif /* CS_COMMON_CLUBBY_CLUBBY_CHANNEL_H_ */

@@ -6,7 +6,7 @@
 #include "fw/src/mg_clubby_channel_uart.h"
 #include "fw/src/mg_uart.h"
 
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
 
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
@@ -131,4 +131,4 @@ struct clubby_channel *clubby_channel_uart(int uart_no) {
   LOG(LL_INFO, ("%p UART%d", ch, uart_no));
   return ch;
 }
-#endif /* SJ_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_CLUBBY */

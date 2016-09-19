@@ -7,8 +7,8 @@
  * Mongoose IoT-specific configuration for umm_malloc
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_INCLUDE_UMM_MALLOC_CFG_H_
-#define CS_FW_PLATFORMS_ESP8266_INCLUDE_UMM_MALLOC_CFG_H_
+#ifndef CS_FW_PLATFORMS_CC3200_SRC_UMM_MALLOC_CFG_H_
+#define CS_FW_PLATFORMS_CC3200_SRC_UMM_MALLOC_CFG_H_
 
 #include <stdlib.h>
 #include "FreeRTOS.h"
@@ -101,4 +101,4 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt);
 #define UMM_POISON_SIZE_AFTER 2
 #define UMM_POISONED_BLOCK_LEN_TYPE short
 
-#endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_UMM_MALLOC_CFG_H_ */
+#endif /* CS_FW_PLATFORMS_CC3200_SRC_UMM_MALLOC_CFG_H_ */

@@ -2,7 +2,7 @@ APP = hello
 APP_MODULES = src
 APP_FS_PATH = $(CURDIR)/fs
 APP_CONF_DEFAULTS = $(APP_FS_PATH)/conf_app_defaults.json
-SJ_ENABLE_JS = 0
-SJ_ENABLE_CLUBBY = 0
+MG_ENABLE_JS = 0
+MG_ENABLE_CLUBBY = 0
 
 include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

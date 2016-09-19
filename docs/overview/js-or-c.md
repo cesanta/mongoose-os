@@ -14,10 +14,10 @@ Code in C:
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/sj_app.h"
-#include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_app.h"
+#include "fw/src/mg_sys_config.h"
 
-enum mg_app_init_result sj_app_init(void) {
+enum mg_app_init_result mg_app_init(void) {
   printf("Hello, %s!\n", get_cfg()->hello.who);  // Print config value
 
   return MG_APP_INIT_SUCCESS;   // Signal successful initialization

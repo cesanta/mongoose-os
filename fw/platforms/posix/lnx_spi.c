@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_SPI_API)
+#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_SPI_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "fw/src/sj_spi.h"
+#include "fw/src/mg_spi.h"
 #include "v7/v7.h"
 
 struct lnx_spi_connection {
@@ -121,7 +121,7 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
 }
 
 /* HAL functions */
-enum v7_err sj_spi_create(struct v7 *v7, spi_connection *res) {
+enum v7_err mg_spi_create(struct v7 *v7, spi_connection *res) {
   enum v7_err rcode = V7_OK;
   struct lnx_spi_connection *conn = NULL;
   v7_val_t spi_no_val = v7_arg(v7, 0);
@@ -143,10 +143,10 @@ clean:
   return rcode;
 }
 
-void sj_spi_close(spi_connection c) {
+void mg_spi_close(spi_connection c) {
   struct lnx_spi_connection *conn = (struct lnx_spi_connection *) c;
   close(conn->fd);
   free(c);
 }
 
-#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_SPI_API) */
+#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_SPI_API) */

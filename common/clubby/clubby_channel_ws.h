@@ -9,7 +9,7 @@
 #include "common/clubby/clubby_channel.h"
 #include "mongoose/mongoose.h"
 
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
 
 struct clubby_channel *clubby_channel_ws(struct mg_connection *nc);
 
@@ -27,5 +27,5 @@ struct clubby_channel *clubby_channel_ws_out(
     struct mg_mgr *mgr,
     struct clubby_channel_ws_out_cfg *cfg);
 
-#endif /* SJ_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_CLUBBY */
 #endif /* CS_COMMON_CLUBBY_CLUBBY_CHANNEL_WS_H_ */

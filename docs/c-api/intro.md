@@ -1,5 +1,5 @@
 ---
 items:
-  - { name: sj_gpio.h }
+  - { name: mg_gpio.h }
   - { name: clubby.h }
 ---

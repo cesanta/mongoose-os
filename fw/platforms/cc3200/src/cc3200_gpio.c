@@ -6,7 +6,7 @@
  * Documentation: TRM (swru367), Chapter 5.
  */
 
-#include "fw/src/sj_gpio.h"
+#include "fw/src/mg_gpio.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -67,7 +67,7 @@ static uint32_t gpio_no_to_port_base(int gpio_no) {
   return (GPIOA0_BASE + 0x1000 * (gpio_no / 8));
 }
 
-int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
+int mg_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return -1;
   if (mode == GPIO_MODE_INOUT) return -1; /* CC3200 does not support in+out. */
@@ -97,7 +97,7 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   return 0;
 }
 
-enum gpio_level sj_gpio_read(int pin) {
+enum gpio_level mg_gpio_read(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return GPIO_LEVEL_ERR;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -106,7 +106,7 @@ enum gpio_level sj_gpio_read(int pin) {
                                                        : GPIO_LEVEL_LOW;
 }
 
-int sj_gpio_write(int pin, enum gpio_level level) {
+int mg_gpio_write(int pin, enum gpio_level level) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return GPIO_LEVEL_ERR;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -160,12 +160,12 @@ static void gpio_a3_int_handler(void) {
   gpio_common_int_handler(GPIOA3_BASE, 24);
 }
 
-void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
+void mg_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
   s_gpio_js_handler = cb;
   s_gpio_js_handler_arg = arg;
 }
 
-int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
+int mg_gpio_intr_set(int pin, enum gpio_int_mode type) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return -1;
   uint32_t port_no = (gpio_no / 8); /* A0 - A4 */
@@ -216,7 +216,7 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
   return 0;
 }
 
-void sj_reenable_intr(int pin) {
+void mg_reenable_intr(int pin) {
   (void) pin;
   /* TODO(alashkin or rojer): implement */
 }

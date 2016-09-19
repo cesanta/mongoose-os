@@ -7,10 +7,10 @@
 
 #include "common/cs_dbg.h"
 
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_mongoose.h"
-#include "fw/src/sj_prompt.h"
-#include "fw/src/sj_v7_ext.h"
+#include "fw/src/mg_hal.h"
+#include "fw/src/mg_mongoose.h"
+#include "fw/src/mg_prompt.h"
+#include "fw/src/mg_v7_ext.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

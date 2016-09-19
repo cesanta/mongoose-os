@@ -10,7 +10,7 @@
 #include <driverlib/rom_map.h>
 #include <driverlib/uart.h>
 
-#include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_uart.h"
 #include "fw/platforms/cc3200/src/config.h"
 

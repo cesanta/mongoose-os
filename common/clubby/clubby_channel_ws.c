@@ -7,7 +7,7 @@
 #include "common/cs_dbg.h"
 #include "common/clubby/clubby_channel.h"
 
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
 
 #define CLUBBY_WS_PROTOCOL "clubby.cesanta.com"
 #define CLUBBY_WS_URI "/api"
@@ -253,4 +253,4 @@ struct clubby_channel *clubby_channel_ws_out(
   return ch;
 }
 
-#endif /* SJ_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_CLUBBY */

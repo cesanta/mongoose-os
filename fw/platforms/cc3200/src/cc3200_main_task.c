@@ -12,17 +12,17 @@
 
 #include "oslib/osi.h"
 
-#include "fw/src/sj_app.h"
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_init.h"
-#include "fw/src/sj_init_js.h"
-#include "fw/src/sj_mongoose.h"
-#include "fw/src/sj_prompt.h"
-#include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_app.h"
+#include "fw/src/mg_hal.h"
+#include "fw/src/mg_init.h"
+#include "fw/src/mg_init_js.h"
+#include "fw/src/mg_mongoose.h"
+#include "fw/src/mg_prompt.h"
+#include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_uart.h"
-#include "fw/src/sj_updater_clubby.h"
+#include "fw/src/mg_updater_clubby.h"
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -35,7 +35,7 @@
 #define CB_ADDR_MASK 0xe0000000
 #define CB_ADDR_PREFIX 0x20000000
 
-struct sj_event {
+struct mg_event {
   cb_t cb;
   void *arg;
 };
@@ -43,7 +43,7 @@ struct sj_event {
 OsiMsgQ_t s_main_queue;
 extern const char *build_id;
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 struct v7 *s_v7;
 
 struct v7 *init_v7(void *stack_base) {
@@ -89,8 +89,8 @@ int start_nwp(void) {
   return 0;
 }
 
-#ifdef SJ_ENABLE_JS
-void sj_prompt_init_hal(void) {
+#ifdef MG_ENABLE_JS
+void mg_prompt_init_hal(void) {
 }
 #endif
 
@@ -99,8 +99,8 @@ enum cc3200_init_result {
   CC3200_INIT_FAILED_TO_START_NWP = -100,
   CC3200_INIT_FAILED_TO_READ_BOOT_CFG = -101,
   CC3200_INIT_FS_INIT_FAILED = -102,
-  CC3200_INIT_SJ_INIT_FAILED = -103,
-  CC3200_INIT_SJ_INIT_JS_FAILED = -105,
+  CC3200_INIT_MG_INIT_FAILED = -103,
+  CC3200_INIT_MG_INIT_JS_FAILED = -105,
   CC3200_INIT_UART_INIT_FAILED = -106,
 };
 
@@ -116,7 +116,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 
   LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
   LOG(LL_INFO,
-      ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
+      ("RAM: %d total, %d free", mg_get_heap_size(), mg_get_free_heap_size()));
 
   int r = start_nwp();
   if (r < 0) {
@@ -159,32 +159,32 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     }
   }
 
-  enum sj_init_result ir = sj_init();
-  if (ir != SJ_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "SJ", ir));
-    return CC3200_INIT_SJ_INIT_FAILED;
+  enum mg_init_result ir = mg_init();
+  if (ir != MG_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
+    return CC3200_INIT_MG_INIT_FAILED;
   }
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
   struct v7 *v7 = s_v7 = init_v7(&arg);
 
-  ir = sj_init_js_all(v7);
-  if (ir != SJ_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "SJ JS", ir));
-    return CC3200_INIT_SJ_INIT_JS_FAILED;
+  ir = mg_init_js_all(v7);
+  if (ir != MG_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
+    return CC3200_INIT_MG_INIT_JS_FAILED;
   }
 #endif
 
-  LOG(LL_INFO, ("Init done, RAM: %d free", sj_get_free_heap_size()));
+  LOG(LL_INFO, ("Init done, RAM: %d free", mg_get_free_heap_size()));
 
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
     commit_update(boot_cfg_idx, &boot_cfg);
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
     clubby_updater_finish(0);
 #endif
   } else {
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
     /*
      * If there is no update reply state, this will just be ignored.
      * But if there is, then update was rolled back and reply will be sent.
@@ -193,8 +193,8 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 #endif
   }
 
-#ifdef SJ_ENABLE_JS
-  sj_prompt_init(v7, get_cfg()->debug.stdout_uart);
+#ifdef MG_ENABLE_JS
+  mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
   return CC3200_INIT_OK;
 }
@@ -202,13 +202,13 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 void mongoose_poll_cb(void *arg);
 
 void main_task(void *arg) {
-  struct sj_event e;
+  struct mg_event e;
   osi_MsgQCreate(&s_main_queue, "main", sizeof(e), 32 /* len */);
 
   enum cc3200_init_result r = cc3200_init(NULL);
   if (r != CC3200_INIT_OK) {
     LOG(LL_ERROR, ("Init failed: %d", r));
-    sj_system_restart(0);
+    mg_system_restart(0);
     return;
   }
 
@@ -222,6 +222,6 @@ void main_task(void *arg) {
 }
 
 bool invoke_cb(cb_t cb, void *arg) {
-  struct sj_event e = {.cb = cb, .arg = arg};
+  struct mg_event e = {.cb = cb, .arg = arg};
   return (osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT) == OSI_OK);
 }

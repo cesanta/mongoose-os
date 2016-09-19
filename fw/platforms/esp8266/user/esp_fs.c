@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -29,7 +29,7 @@
 
 #include "esp_fs.h"
 #include "fw/src/mg_uart.h"
-#include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_sys_config.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
@@ -54,7 +54,7 @@ spiffs fs;
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
 
-struct mmap_desc mmap_descs[SJ_MMAP_SLOTS];
+struct mmap_desc mmap_descs[MG_MMAP_SLOTS];
 static struct mmap_desc *cur_mmap_desc;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
@@ -452,7 +452,7 @@ void fs_flush_stderr(void) {
   if (uart_no >= 0) mg_uart_flush(uart_no);
 }
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 int v7_val_to_file(struct v7 *v7, v7_val_t val) {
   return (int) v7_get_double(v7, val);
 }
@@ -468,7 +468,7 @@ int v7_is_file_type(v7_val_t val) {
 }
 #endif
 
-int64_t sj_get_storage_free_space(void) {
+int64_t mg_get_storage_free_space(void) {
   uint32_t total, used;
   SPIFFS_info(&fs, &total, &used);
   return total - used;

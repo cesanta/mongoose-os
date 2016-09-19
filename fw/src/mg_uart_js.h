@@ -6,10 +6,10 @@
 #ifndef CS_FW_SRC_MG_UART_JS_H_
 #define CS_FW_SRC_MG_UART_JS_H_
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 struct v7;
 void mg_uart_api_setup(struct v7 *v7);
 void mg_uart_js_init(struct v7 *v7);
 #endif
 
-#endif /* CS_FW_SRC_MG_UART_H_ */
+#endif /* CS_FW_SRC_MG_UART_JS_H_ */

@@ -10,10 +10,10 @@
 #include "common/mg_str.h"
 #include "common/mbuf.h"
 
-int sj_json_printer_mbuf(struct json_out *, const char *, size_t);
+int mg_json_printer_mbuf(struct json_out *, const char *, size_t);
 
 /* Add quoted string into mbuf */
-void sj_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
+void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
 
 /*
  * This macro is intended to use with Frozen
@@ -21,6 +21,6 @@ void sj_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
  * into mbuf
  */
 #define JSON_OUT_MBUF(mbuf_addr) \
-  { .printer = sj_json_printer_mbuf, .u.data = (void *) mbuf_addr }
+  { .printer = mg_json_printer_mbuf, .u.data = (void *) mbuf_addr }
 
 #endif /* CS_COMMON_JSON_UTILS_H_ */

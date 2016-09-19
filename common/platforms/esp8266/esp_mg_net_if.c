@@ -24,11 +24,11 @@
 #include <lwip/udp.h>
 
 #include "common/cs_dbg.h"
-#include "fw/src/sj_mongoose.h"
+#include "fw/src/mg_mongoose.h"
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 #include "v7/v7.h"
-#include "fw/src/sj_v7_ext.h"
+#include "fw/src/mg_v7_ext.h"
 
 struct v7_callback_args {
   struct v7 *v7;
@@ -36,7 +36,7 @@ struct v7_callback_args {
   v7_val_t this_obj;
   v7_val_t args;
 };
-#endif /* SJ_ENABLE_JS */
+#endif /* MG_ENABLE_JS */
 
 #define MG_TASK_PRIORITY 1
 #define MG_POLL_INTERVAL_MS 1000
@@ -290,7 +290,7 @@ void mg_lwip_accept_conn(struct mg_connection *nc, struct tcp_pcb *tpcb) {
   mg_if_accept_tcp_cb(nc, &sa, sizeof(sa.sin));
 }
 
-#ifndef SJ_DISABLE_LISTENER
+#ifndef MG_DISABLE_LISTENER
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   struct mg_connection *lc = (struct mg_connection *) arg;
   (void) err;
@@ -346,7 +346,7 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
 }
 #endif
 
-#ifndef SJ_DISABLE_LISTENER
+#ifndef MG_DISABLE_LISTENER
 int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct udp_pcb *upcb = udp_new();
@@ -758,10 +758,10 @@ static void mg_lwip_task(os_event_t *e) {
       cs->num_sent = 0;
       break;
     }
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
     case MG_SIG_V7_CALLBACK: {
       struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
-      _sj_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
+      _mg_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
       v7_disown(cba->v7, &cba->func);
       v7_disown(cba->v7, &cba->this_obj);
       v7_disown(cba->v7, &cba->args);
@@ -793,7 +793,7 @@ static void mg_lwip_task(os_event_t *e) {
   }
 }
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                              v7_val_t args) {
   struct v7_callback_args *cba =
@@ -817,7 +817,7 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
     free(cba);
   }
 }
-#endif /* SJ_ENABLE_JS */
+#endif /* MG_ENABLE_JS */
 
 void mg_suspend(void) {
   /*

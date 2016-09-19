@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
 
 #include "common/clubby/clubby.h"
 #include "common/cs_dbg.h"
@@ -596,4 +596,4 @@ void clubby_free(struct clubby *c) {
   free(c);
 }
 
-#endif /* SJ_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_CLUBBY */

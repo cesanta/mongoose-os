@@ -4,7 +4,7 @@
  */
 
 #include <ets_sys.h>
-#include "fw/src/sj_gpio.h"
+#include "fw/src/mg_gpio.h"
 
 #include "esp_gpio.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
@@ -81,7 +81,7 @@ static uint8_t gpio16_input_get(void) {
   return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 
-int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
+int mg_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   struct gpio_info *gi;
 
   if (pin == 16) {
@@ -145,7 +145,7 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   return 0;
 }
 
-int sj_gpio_write(int pin, enum gpio_level level) {
+int mg_gpio_write(int pin, enum gpio_level level) {
   level &= 0x1;
 
   if (pin == 16) {
@@ -162,7 +162,7 @@ int sj_gpio_write(int pin, enum gpio_level level) {
   return 0;
 }
 
-enum gpio_level sj_gpio_read(int pin) {
+enum gpio_level mg_gpio_read(int pin) {
   if (pin == 16) {
     return 0x1 & gpio16_input_get();
   }
@@ -219,7 +219,7 @@ IRAM static void v7_gpio_process_on_click(int pin, int level,
                    (uint32_t) GPIO_TASK_SIG << 16 | pin << 8 | level,
                    (os_param_t) callback);
   } else {
-    sj_reenable_intr(pin);
+    mg_reenable_intr(pin);
   }
 }
 
@@ -246,13 +246,13 @@ IRAM static void v7_gpio_intr_dispatcher(void *arg) {
 
       /*
        * NOTE: callback must reenable interruptions by
-       * calling sj_reenable_intr
+       * calling mg_reenable_intr
        */
     }
   }
 }
 
-void sj_reenable_intr(int pin) {
+void mg_reenable_intr(int pin) {
   gpio_pin_intr_state_set(GPIO_ID_PIN(pin), int_map[pin] & 0xF);
 }
 
@@ -265,7 +265,7 @@ void v7_gpio_task(os_event_t *event) {
   params->cb((event->sig & 0xFFFF) >> 8, event->sig & 0xFF, params->cb_arg);
 }
 
-void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
+void mg_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
   static struct intr_disp_params *p = NULL;
 
   if (p == NULL) {
@@ -285,7 +285,7 @@ void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
 }
 
 static void v7_setup_on_click(int pin) {
-  uint8_t current_level = sj_gpio_read(pin);
+  uint8_t current_level = mg_gpio_read(pin);
   /*
    * if current level is high, set interupt on low (4)
    * else set on high (5)
@@ -294,7 +294,7 @@ static void v7_setup_on_click(int pin) {
   int_map[pin] = GPIO_ONCLICK_SKIP_INTR_COUNT << 8 | 0xF0 | type;
 }
 
-int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
+int mg_gpio_intr_set(int pin, enum gpio_int_mode type) {
   if (get_gpio_info(pin) == NULL) {
     return -1;
   }

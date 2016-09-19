@@ -7,12 +7,12 @@
 
 #include <stdlib.h>
 
-#include "fw/src/sj_common.h"
+#include "fw/src/mg_common.h"
 #include "fw/src/mg_uart.h"
-#include "fw/src/sj_v7_ext.h"
+#include "fw/src/mg_v7_ext.h"
 #include "v7/v7.h"
 
-#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_UART_API)
+#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_UART_API)
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -38,19 +38,19 @@ void mg_uart_js_dispatcher(struct mg_uart_state *us) {
     v7_val_t rxcb = v7_get(v7, ujs->obj, "_rxcb", ~0);
     if (v7_is_callable(v7, rxcb) && !ujs->recv_pending) {
       ujs->recv_pending = 1;
-      sj_invoke_cb0_this(v7, rxcb, ujs->obj);
+      mg_invoke_cb0_this(v7, rxcb, ujs->obj);
       /* Note: Callback has not run yet, it has been scheduled. */
     }
   }
   if (txb->used == 0) {
     v7_val_t txcb = v7_get(v7, ujs->obj, "_txcb", 5);
     if (v7_is_callable(v7, txcb) && !ujs->tx_empty_notified) {
-      sj_invoke_cb0_this(v7, txcb, ujs->obj);
+      mg_invoke_cb0_this(v7, txcb, ujs->obj);
     }
   }
 }
 
-SJ_PRIVATE enum v7_err UART_get(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_get(struct v7 *v7, v7_val_t *res) {
   enum v7_err ret = V7_OK;
   v7_val_t arg0 = v7_arg(v7, 0);
   int uart_no = v7_get_double(v7, arg0);
@@ -94,7 +94,7 @@ static enum v7_err get_js_state(struct v7 *v7, int *uart_no,
   if (ret != V7_OK) return ret;
 
 /* Args: cfg_obj */
-SJ_PRIVATE enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(false);
 
   struct mg_uart_config *cfg = mg_uart_default_config();
@@ -141,7 +141,7 @@ SJ_PRIVATE enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
 }
 
 /* Args: callable, disable_rx */
-SJ_PRIVATE enum v7_err UART_onRecv(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_onRecv(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(true);
   v7_set(v7, ujs->obj, "_rxcb", ~0, v7_arg(v7, 0));
   mg_uart_set_rx_enabled(uart_no, !v7_is_truthy(v7, v7_arg(v7, 1)));
@@ -152,7 +152,7 @@ SJ_PRIVATE enum v7_err UART_onRecv(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-SJ_PRIVATE enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(true);
   cs_rbuf_t *rxb = &ujs->us->rx_buf;
   size_t len = MIN((size_t) v7_get_double(v7, v7_arg(v7, 0)), rxb->used);
@@ -167,7 +167,7 @@ SJ_PRIVATE enum v7_err UART_recv(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-SJ_PRIVATE enum v7_err UART_setRXEnabled(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_setRXEnabled(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(true);
   mg_uart_set_rx_enabled(uart_no, v7_is_truthy(v7, v7_arg(v7, 0)));
   mg_uart_schedule_dispatcher(uart_no);
@@ -175,7 +175,7 @@ SJ_PRIVATE enum v7_err UART_setRXEnabled(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-SJ_PRIVATE enum v7_err UART_onTXEmpty(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_onTXEmpty(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(true);
   v7_set(v7, ujs->obj, "_txcb", ~0, v7_arg(v7, 0));
   if (v7_is_callable(v7, v7_arg(v7, 0))) {
@@ -185,13 +185,13 @@ SJ_PRIVATE enum v7_err UART_onTXEmpty(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-SJ_PRIVATE enum v7_err UART_sendAvail(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_sendAvail(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(true);
   *res = v7_mk_number(v7, ujs->us->tx_buf.avail);
   return V7_OK;
 }
 
-SJ_PRIVATE enum v7_err UART_send(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err UART_send(struct v7 *v7, v7_val_t *res) {
   DECLARE_UJS(true);
 
   v7_val_t arg0 = v7_arg(v7, 0);
@@ -227,4 +227,4 @@ void mg_uart_js_init(struct v7 *v7) {
   s_uart_proto = v7_get(v7, v7_get_global(v7), "_up", ~0);
 }
 
-#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_UART_API) */
+#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_UART_API) */

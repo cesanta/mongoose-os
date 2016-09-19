@@ -35,7 +35,7 @@ def do(obj, first_file, path, hdr, schema, src_parse, src_emit, src_free):
         ps = ''
       # Nested structure
       src_emit.append(
-          r'  sj_conf_emit_str(&out, "{comma}\n{indent}\"", "{k}", "\": {{");'
+          r'  mg_conf_emit_str(&out, "{comma}\n{indent}\"", "{k}", "\": {{");'
               .format(comma=comma, indent=json_indent, k=k)
       );
       i = len(schema)
@@ -43,7 +43,7 @@ def do(obj, first_file, path, hdr, schema, src_parse, src_emit, src_free):
       do(v, first_file, path + [k], hdr, schema, src_parse, src_emit, src_free)
       schema[i] = tuple([jt, k, '.num_desc = %d' % (len(schema) - i - 1)])
       src_emit.append(
-          r'  sj_conf_emit_str(&out, "\n{indent}", "}}", "");'
+          r'  mg_conf_emit_str(&out, "\n{indent}", "}}", "");'
               .format(indent=json_indent)
       );
     else:
@@ -53,13 +53,13 @@ def do(obj, first_file, path, hdr, schema, src_parse, src_emit, src_free):
         c_type = 'int '
       if isinstance(v, basestring):
         jt = 'CONF_TYPE_STRING'
-        getter = 'sj_conf_get_str'
+        getter = 'mg_conf_get_str'
       elif isinstance(v, bool):
         jt = 'CONF_TYPE_BOOL'
-        getter = 'sj_conf_get_bool'
+        getter = 'mg_conf_get_bool'
       else:
         jt = 'CONF_TYPE_INT'
-        getter = 'sj_conf_get_int'
+        getter = 'mg_conf_get_int'
 
       if len(path) > 1:
         ps = '%s.' % '.'.join(path[1:])
@@ -80,23 +80,23 @@ def do(obj, first_file, path, hdr, schema, src_parse, src_emit, src_free):
       if isinstance(v, bool):
         src_emit.append(
             r'''
-  sj_conf_emit_str(&out, "{p}\"", "{k}",
+  mg_conf_emit_str(&out, "{p}\"", "{k}",
                    (cfg->{key} ? "\": true" : "\": false"));'''
                 .format(p=prefix, k=k, key=key)
         );
       else:
         src_emit.append(
-            r'  sj_conf_emit_str(&out, "{p}\"", "{k}", "\": ");'
+            r'  mg_conf_emit_str(&out, "{p}\"", "{k}", "\": ");'
                 .format(p=prefix, k=k)
         );
         if isinstance(v, basestring):
           src_emit.append(
-              r'  sj_conf_emit_str(&out, "\"", cfg->{key}, "\"");'
+              r'  mg_conf_emit_str(&out, "\"", cfg->{key}, "\"");'
                   .format(key=key)
           );
         else:
           src_emit.append(
-              r'''  sj_conf_emit_int(&out, cfg->{key});'''.format(key=key)
+              r'''  mg_conf_emit_int(&out, cfg->{key});'''.format(key=key)
           );
       # ... and free functions.
       if isinstance(v, basestring):
@@ -128,8 +128,8 @@ if __name__ == '__main__':
   hdr.insert(0, '''\
 /* generated from {origin} - do not edit */
 
-#ifndef _{name_uc}_H_
-#define _{name_uc}_H_
+#ifndef {name_uc}_H_
+#define {name_uc}_H_
 
 #include "common/mg_str.h"
 
@@ -138,9 +138,9 @@ struct {name} {{\
   hdr.append('''\
 }};
 
-const struct sj_conf_entry *{name}_schema();
+const struct mg_conf_entry *{name}_schema();
 
-#endif /* _{name_uc}_H_ */
+#endif /* {name_uc}_H_ */
 '''.format(name=name, name_uc=name.upper()))
   open(os.path.join(args.dest_dir, name + '.h'), 'w+').write('\n'.join(hdr))
 
@@ -149,14 +149,14 @@ const struct sj_conf_entry *{name}_schema();
 /* generated from {origin} - do not edit */
 
 #include <stddef.h>
-#include "fw/src/sj_config.h"
+#include "fw/src/mg_config.h"
 #include "{name}.h"
 
-const struct sj_conf_entry {name}_schema_[{num_entries}] = {{
+const struct mg_conf_entry {name}_schema_[{num_entries}] = {{
 {schema}
 }};
 
-const struct sj_conf_entry *{name}_schema() {{
+const struct mg_conf_entry *{name}_schema() {{
   return {name}_schema_;
 }}
 

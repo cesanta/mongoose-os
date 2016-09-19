@@ -110,9 +110,9 @@ function buildConfig(schema, defaults, current) {
 
 /*
  * Device will do this as well, this is just to give a hint to the user.
- * It should be kept in sync with sj_conf_check_access in sj_config.c.
+ * It should be kept in sync with mg_conf_check_access in mg_config.c.
  */
-function sj_conf_check_access(key, acl) {
+function mg_conf_check_access(key, acl) {
   if (acl === null || acl === undefined) return true;
   var entries = acl.split(',');
   for (var i = 0; i < entries.length; i++) {

@@ -32,28 +32,28 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
               -DV7_ENABLE_ENTITY_IDS
 
-MIOT_FEATURES = -DSJ_ENABLE_JS \
-                -DSJ_ENABLE_ADC_API \
-                -DSJ_ENABLE_CLUBBY \
-                -DSJ_ENABLE_CLUBBY_API
-MIOT_POSIX_FEATURES ?= -DSJ_PROMPT_DISABLE_ECHO
+MIOT_FEATURES = -DMG_ENABLE_JS \
+                -DMG_ENABLE_ADC_API \
+                -DMG_ENABLE_CLUBBY \
+                -DMG_ENABLE_CLUBBY_API
+MIOT_POSIX_FEATURES ?= -DMG_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
 
 INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
-APP_SRCS = $(notdir $(wildcard *.c)) v7.c sj_v7_ext.c sj_init.c sj_init_js.c \
-           mongoose.c frozen.c sj_i2c_js.c sj_spi_js.c sj_mongoose.c \
-           sj_ws_client_js.c sj_mqtt_js.c sj_gpio_js.c sj_adc_js.c \
-           sj_prompt.c sj_timers_js.c sj_timers_mongoose.c sj_http_js.c \
-           sj_debug_js.c sj_pwm_js.c sj_wifi.c sj_wifi_js.c \
-           sj_config.c sj_config_js.c sj_sys_config.c sj_sys_config_js.c \
+APP_SRCS = $(notdir $(wildcard *.c)) v7.c mg_v7_ext.c mg_init.c mg_init_js.c \
+           mongoose.c frozen.c mg_i2c_js.c mg_spi_js.c mg_mongoose.c \
+           mg_ws_client_js.c mg_mqtt_js.c mg_gpio_js.c mg_adc_js.c \
+           mg_prompt.c mg_timers_js.c mg_timers_mongoose.c mg_http_js.c \
+           mg_debug_js.c mg_pwm_js.c mg_wifi.c mg_wifi_js.c \
+           mg_config.c mg_config_js.c mg_sys_config.c mg_sys_config_js.c \
            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-           json_utils.c sj_clubby_js.c mg_clubby.c \
+           json_utils.c mg_clubby_js.c mg_clubby.c \
            cs_rbuf.c mg_uart.c mg_uart_js.c \
            clubby.c mg_clubby_channel_uart.c clubby_channel_ws.c \
-           sj_tcp_udp_js.c sj_utils.c sj_console.c sj_console_js.c \
-           sj_service_vars.c sj_service_config.c sj_service_filesystem.c
+           mg_tcp_udp_js.c mg_utils.c mg_console.c mg_console_js.c \
+           mg_service_vars.c mg_service_config.c mg_service_filesystem.c
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
@@ -103,9 +103,9 @@ endif
 # Linux
 ifeq ($(PLATFORM), "LINUX")
   ADD_LIBS += rt
-  MIOT_FEATURES += -DSJ_ENABLE_GPIO_API \
-                   -DSJ_ENABLE_I2C_API \
-                   -DSJ_ENABLE_SPI_API
+  MIOT_FEATURES += -DMG_ENABLE_GPIO_API \
+                   -DMG_ENABLE_I2C_API \
+                   -DMG_ENABLE_SPI_API
 endif
 
 # Windows

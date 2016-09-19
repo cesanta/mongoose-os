@@ -5,7 +5,7 @@ PYTHON ?= python
 SOURCES = unit_test.c \
                sys_conf.c \
                $(REPO_ROOT)/frozen/frozen.c \
-               $(REPO_ROOT)/fw/src/sj_config.c \
+               $(REPO_ROOT)/fw/src/mg_config.c \
                $(REPO_ROOT)/mongoose/mongoose.c \
                $(REPO_ROOT)/common/json_utils.c \
                $(REPO_ROOT)/common/cs_file.c \
