@@ -8,7 +8,7 @@ items:
 #  - { name: examples }
   - { name: firmware }
   - { name: api.md }
-#  - { name: javascript-api }
+  - { name: javascript-api }
 #  - { name: c-api }
   - { name: cloud }
   - { name: services }

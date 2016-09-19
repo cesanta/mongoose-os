@@ -5,7 +5,7 @@ items:
   - { name: flash.md }
   - { name: configure.md }
   - { name: register.md }
-  - { name: control.md }
+#  - { name: control.md }
 ---
 
 For the most impatient, this is a 1-minute overview of the following
