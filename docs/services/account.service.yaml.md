@@ -249,7 +249,8 @@ Response:
 ```
 
 #### RegisterUser
-Register a new user. It sends the confirmation code to the email.
+Register a new user.
+It returns the same info as Login.
 NOTE: this method can be called from an unauthenticated connection.
 
 
@@ -270,43 +271,6 @@ Request:
     "email": "VALUE PLACEHOLDER",
     "password": "VALUE PLACEHOLDER",
     "username": "VALUE PLACEHOLDER"
-  }
-}
-
-```
-
-Response:
-```json
-{
-  "v": 2,
-  "src": "//api.mongoose-iot.com",
-  "dst": "device_123",
-  "id": 123,
-  "result": "VALUE PLACEHOLDER"
-}
-
-```
-
-#### ConfirmUserRegistration
-Confirm the identity (e.g. email) given to RegisterUser by providing a
-code sent to the user. This method returns the same info as Login: an
-ID and a token.
-NOTE: this method can be called from an unauthenticated connection.
-
-
-Arguments:
-- `code`: Confirmation code
-
-Result `object`: 
-Request:
-```json
-{
-  "v": 2,
-  "src": "device_123",
-  "id": 123,
-  "method": "/v1/Account.ConfirmUserRegistration",
-  "args": {
-    "code": "VALUE PLACEHOLDER"
   }
 }
 
