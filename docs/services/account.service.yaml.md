@@ -254,8 +254,9 @@ NOTE: this method can be called from an unauthenticated connection.
 
 
 Arguments:
-- `username`: Username. If omitted, the email will be used as username.
+- `username`: Optional username. If omitted, the email will be used as username.
 - `password`: 
+- `labels`: An object with labels to set. Object keys are label names, corresponding values are label values to set. Users are encouraged to set at least 2 labels: "name" (which is a real name like "Jack London") and "company".
 - `email`: email
 
 Result `object`: 
@@ -268,6 +269,7 @@ Request:
   "method": "/v1/Account.RegisterUser",
   "args": {
     "email": "VALUE PLACEHOLDER",
+    "labels": "VALUE PLACEHOLDER",
     "password": "VALUE PLACEHOLDER",
     "username": "VALUE PLACEHOLDER"
   }
@@ -436,6 +438,7 @@ Creates a new user. Can only be called by the frontend.
 
 Arguments:
 - `password`: Password for the user.
+- `labels`: An object with labels to set. Object keys are label names, corresponding values are label values to set.
 - `email`: User's email address.
 - `name`: Display name for the user.
 - `id`: ID for the new user.
@@ -450,6 +453,7 @@ Request:
   "args": {
     "email": "VALUE PLACEHOLDER",
     "id": "VALUE PLACEHOLDER",
+    "labels": "VALUE PLACEHOLDER",
     "name": "VALUE PLACEHOLDER",
     "password": "VALUE PLACEHOLDER"
   }
