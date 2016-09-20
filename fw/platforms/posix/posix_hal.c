@@ -122,6 +122,7 @@ static void *stdin_thread(void *param) {
   return NULL;
 }
 
+#ifdef MG_ENABLE_JS
 static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   size_t i;
   (void) ev_data;
@@ -161,6 +162,7 @@ void mg_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                   v7_val_t args) {
   _mg_invoke_cb(v7, func, this_obj, args);
 }
+#endif
 
 int64_t mg_get_storage_free_space(void) {
   /* TODO(alashkin): think about implementation */

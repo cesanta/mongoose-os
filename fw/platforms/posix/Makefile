@@ -32,28 +32,51 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
               -DV7_ENABLE_ENTITY_IDS
 
-MIOT_FEATURES = -DMG_ENABLE_JS \
-                -DMG_ENABLE_ADC_API \
-                -DMG_ENABLE_CLUBBY \
+MIOT_FEATURES = -DMG_ENABLE_CLUBBY \
                 -DMG_ENABLE_CLUBBY_API
 MIOT_POSIX_FEATURES ?= -DMG_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
 
+
 INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
-APP_SRCS = $(notdir $(wildcard *.c)) v7.c mg_v7_ext.c mg_init.c mg_init_js.c \
-           mongoose.c frozen.c mg_i2c_js.c mg_spi_js.c mg_mongoose.c \
-           mg_ws_client_js.c mg_mqtt_js.c mg_gpio_js.c mg_adc_js.c \
-           mg_prompt.c mg_timers_js.c mg_timers_mongoose.c mg_http_js.c \
-           mg_debug_js.c mg_pwm_js.c mg_wifi.c mg_wifi_js.c \
-           mg_config.c mg_config_js.c mg_sys_config.c mg_sys_config_js.c \
+APP_SRCS = $(notdir $(wildcard *.c)) mg_init.c  \
+           mongoose.c frozen.c mg_mongoose.c \
+           mg_prompt.c mg_timers_mongoose.c mg_wifi.c \
+           mg_config.c mg_sys_config.c \
            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-           json_utils.c mg_clubby_js.c mg_clubby.c \
-           cs_rbuf.c mg_uart.c mg_uart_js.c \
+           json_utils.c  mg_clubby.c cs_rbuf.c mg_uart.c \
            clubby.c mg_clubby_channel_uart.c clubby_channel_ws.c \
-           mg_tcp_udp_js.c mg_utils.c mg_console.c mg_console_js.c \
+           mg_utils.c mg_console.c \
            mg_service_vars.c mg_service_config.c mg_service_filesystem.c
+
+ifeq "$(MG_ENABLE_JS)" "1"
+APP_SRCS += v7.c \
+            mg_adc_js.c \
+            mg_clubby_js.c \
+            mg_config_js.c \
+            mg_console_js.c \
+            mg_debug_js.c \
+            mg_gpio_js.c \
+            mg_http_js.c \
+            mg_init_js.c \
+            mg_mqtt_js.c \
+            mg_prompt.c \
+            mg_pwm_js.c \
+            mg_sys_config_js.c \
+            mg_tcp_udp_js.c \
+            mg_timers_js.c \
+            mg_v7_ext.c \
+            mg_uart_js.c \
+            mg_wifi_js.c \
+            mg_ws_client_js.c
+
+$(BUILD_DIR)/mongoose.o: mongoose.c
+	$(call compile,-DEXCLUDE_COMMON)
+else
+  APP_SRCS += cs_file.c
+endif
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
@@ -182,9 +205,6 @@ $(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
 # This one is for generated sources in build directory.
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 	$(call compile,)
-
-$(BUILD_DIR)/mongoose.o: mongoose.c
-	$(call compile,-DEXCLUDE_COMMON)
 
 $(BUILD_DIR)/build_info.o: $(BUILD_INFO_C)
 	$(call compile,)

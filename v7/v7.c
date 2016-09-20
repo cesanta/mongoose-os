@@ -9830,6 +9830,7 @@ typedef int cs_dirent_dummy;
 #include <sys/stat.h>
 #endif
 
+#ifndef EXCLUDE_COMMON
 char *cs_read_file(const char *path, size_t *size) {
   FILE *fp;
   char *data = NULL;
@@ -9851,6 +9852,7 @@ char *cs_read_file(const char *path, size_t *size) {
   }
   return data;
 }
+#endif /* EXCLUDE_COMMON */
 
 #ifdef CS_MMAP
 char *cs_mmap_file(const char *path, size_t *size) {

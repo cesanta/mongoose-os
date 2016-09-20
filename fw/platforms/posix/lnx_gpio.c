@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_GPIO_API)
+#if defined(MG_ENABLE_GPIO_API)
 
 #include <stdlib.h>
 #include <stdio.h>

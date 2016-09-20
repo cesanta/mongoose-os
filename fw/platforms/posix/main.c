@@ -27,6 +27,7 @@
 #define JS_FS_ROOT "."
 #endif
 
+#ifdef MG_ENABLE_JS
 int mg_please_quit;
 
 static void set_workdir(const char *argv0) {
@@ -54,7 +55,6 @@ static void run_init_script(struct v7 *v7) {
   static const char *init_files[] = {"sys_init.js"};
   size_t i;
   v7_val_t res;
-
 
   /*
    * Run startup scripts from the directory JS_DIR_NAME.
@@ -101,6 +101,25 @@ static void post_init(struct v7 *v7) {
   mongoose_destroy();
 }
 
+int main(int argc, char *argv[]) {
+  set_workdir(argv[0]);
+  return v7_main(argc, argv, pre_freeze_init, pre_init, post_init);
+}
+#else
+
+int main(int argc, char *argv[]) {
+  (void) argc;
+  (void) argv;
+  mongoose_init();
+  for (;;) {
+    mongoose_poll(1000);
+  }
+  mongoose_destroy();
+  return EXIT_SUCCESS;
+}
+
+#endif
+
 static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data) {
   (void) nc;
   (void) ev;
@@ -146,9 +165,4 @@ void mg_uart_dev_dispatch_bottom(struct mg_uart_state *us) {
 void mg_uart_dev_set_rx_enabled(struct mg_uart_state *us, bool enabled) {
   (void) us;
   (void) enabled;
-}
-
-int main(int argc, char *argv[]) {
-  set_workdir(argv[0]);
-  return v7_main(argc, argv, pre_freeze_init, pre_init, post_init);
 }
