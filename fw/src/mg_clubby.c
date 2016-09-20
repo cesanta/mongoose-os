@@ -62,7 +62,8 @@ enum mg_init_result mg_clubby_init(void) {
       ucfg->baud_rate = scucfg->baud_rate;
       ucfg->rx_fc_ena = ucfg->tx_fc_ena = scucfg->fc_enable;
       if (mg_uart_init(scucfg->uart_no, ucfg, NULL, NULL) != NULL) {
-        struct clubby_channel *uch = clubby_channel_uart(scucfg->uart_no);
+        struct clubby_channel *uch =
+            clubby_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);
         clubby_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,
                            false /* send_hello */);
         if (sccfg->connect_on_boot) uch->connect(uch);

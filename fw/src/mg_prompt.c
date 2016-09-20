@@ -239,7 +239,8 @@ void mg_prompt_process_char(char ch) {
     const int uart_no = s_sjp.uart_no;
     if (uart_no >= 0 && mg_clubby_get_global() != NULL) {
       /* Switch into Clubby mode. This will detach our dispatcher. */
-      struct clubby_channel *ch = clubby_channel_uart(uart_no);
+      struct clubby_channel *ch =
+          clubby_channel_uart(uart_no, false /* wait_for_start_frame */);
       if (ch != NULL) {
         clubby_add_channel(mg_clubby_get_global(), mg_mk_str(""), ch,
                            true /* is_trusted */, false /* send_hello */);

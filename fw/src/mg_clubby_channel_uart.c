@@ -16,6 +16,8 @@
 
 struct clubby_channel_uart_data {
   int uart_no;
+  unsigned int wait_for_start_frame : 1;
+  unsigned int waiting_for_start_frame : 1;
   unsigned int connecting : 1;
   unsigned int connected : 1;
   unsigned int sending : 1;
@@ -29,9 +31,32 @@ void clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
       (struct clubby_channel_uart_data *) ch->channel_data;
   cs_rbuf_t *urxb = &us->rx_buf;
   cs_rbuf_t *utxb = &us->tx_buf;
-  if (chd->connecting) {
+  if (urxb->used > 0) {
+    uint8_t *data;
+    size_t len = cs_rbuf_get(urxb, urxb->used, &data);
+    mbuf_append(&chd->recv_mbuf, data, len);
+    cs_rbuf_consume(urxb, len);
+    size_t flen = 0;
+    const char *end =
+        c_strnstr(chd->recv_mbuf.buf, "\"\"\"", chd->recv_mbuf.len);
+    if (end != NULL) {
+      flen = (end - chd->recv_mbuf.buf);
+      if (flen != 0) {
+        struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
+        ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
+      }
+      mbuf_remove(&chd->recv_mbuf, flen + 3);
+      if (chd->recv_mbuf.len == 0) {
+        mbuf_trim(&chd->recv_mbuf);
+      }
+      chd->waiting_for_start_frame = false;
+    }
+  }
+  if (chd->connecting && !chd->waiting_for_start_frame) {
     chd->connecting = false;
     chd->connected = true;
+    /* In case stdout or stderr were going to the same UART, disable them. */
+    mg_uart_set_write_enabled(chd->uart_no, false);
     /*
      * Put frame delimiter in the output buffer. If there was junk in UART FIFO,
      * this will provide a sync point.
@@ -51,26 +76,6 @@ void clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
       ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_SENT, (void *) 1);
     }
   }
-  if (urxb->used > 0) {
-    uint8_t *data;
-    size_t len = cs_rbuf_get(urxb, urxb->used, &data);
-    mbuf_append(&chd->recv_mbuf, data, len);
-    cs_rbuf_consume(urxb, len);
-    size_t flen = 0;
-    const char *end =
-        c_strnstr(chd->recv_mbuf.buf, "\"\"\"", chd->recv_mbuf.len);
-    if (end != NULL) {
-      flen = (end - chd->recv_mbuf.buf);
-      if (flen != 0) {
-        struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
-        ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
-      }
-      mbuf_remove(&chd->recv_mbuf, flen + 3);
-      if (chd->recv_mbuf.len == 0) {
-        mbuf_trim(&chd->recv_mbuf);
-      }
-    }
-  }
 }
 
 static void clubby_channel_uart_connect(struct clubby_channel *ch) {
@@ -79,8 +84,7 @@ static void clubby_channel_uart_connect(struct clubby_channel *ch) {
   if (!chd->connected) {
     chd->connected = false;
     chd->connecting = true;
-    /* In case stdout or stderr were going to the same UART, disable them. */
-    mg_uart_set_write_enabled(chd->uart_no, false);
+    chd->waiting_for_start_frame = chd->wait_for_start_frame;
     mg_uart_set_dispatcher(chd->uart_no, clubby_channel_uart_dispatcher, ch);
     mg_uart_set_rx_enabled(chd->uart_no, true);
   }
@@ -115,7 +119,8 @@ static bool clubby_channel_uart_is_persistent(struct clubby_channel *ch) {
   return true;
 }
 
-struct clubby_channel *clubby_channel_uart(int uart_no) {
+struct clubby_channel *clubby_channel_uart(int uart_no,
+                                           bool wait_for_start_frame) {
   struct clubby_channel *ch = (struct clubby_channel *) calloc(1, sizeof(*ch));
   ch->connect = clubby_channel_uart_connect;
   ch->send_frame = clubby_channel_uart_send_frame;
@@ -125,6 +130,7 @@ struct clubby_channel *clubby_channel_uart(int uart_no) {
   struct clubby_channel_uart_data *chd =
       (struct clubby_channel_uart_data *) calloc(1, sizeof(*chd));
   chd->uart_no = uart_no;
+  chd->wait_for_start_frame = wait_for_start_frame;
   mbuf_init(&chd->recv_mbuf, 0);
   mbuf_init(&chd->send_mbuf, 0);
   ch->channel_data = chd;
