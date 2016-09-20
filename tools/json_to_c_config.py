@@ -46,6 +46,8 @@ def do(obj, first_file, path, hdr, schema, src_parse, src_emit, src_free):
           r'  mg_conf_emit_str(&out, "\n{indent}", "}}", "");'
               .format(indent=json_indent)
       );
+    elif isinstance(v, list):
+      raise ValueError('Arrays are not supported')
     else:
       if isinstance(v, basestring):
         c_type = 'const char *' if args.c_const_char else 'char *'
