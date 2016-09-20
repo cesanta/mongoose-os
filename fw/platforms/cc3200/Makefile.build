@@ -73,7 +73,7 @@ CC3200_SAFE_CODE_UPDATE ?= 1
 
 MIOT_POSIX_PATH ?= $(MIOT_PATH)/platforms/posix
 MIOT_SRC_PATH ?= $(MIOT_PATH)/src
-COMMON_FS_PATH ?= $(MIOT_SRC_PATH)/fs
+COMMON_FS_PATH ?= $(MIOT_PATH)/skeleton/filesystem
 MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
 FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
 
