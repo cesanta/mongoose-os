@@ -301,6 +301,14 @@ APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
 ifneq "$(APP_FS_PATH)" ""
   FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
+  # if conf_app_defaults.json exists in the app's filesystem, use it instead
+  # of the default one
+  #
+  # TODO(dfrank): get rid of this hack once we have all the filesystem
+  # locally
+  ifneq ("$(wildcard $(APP_FS_PATH)/conf_app_defaults.json)","")
+    APP_CONF_DEFAULTS = $(APP_FS_PATH)/conf_app_defaults.json
+  endif
 endif
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
