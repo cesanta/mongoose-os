@@ -292,7 +292,7 @@ Response:
 #### ConfirmUserRegistration
 Confirm the identity (e.g. email) given to RegisterUser by providing a
 code sent to the user. This method returns the same info as Login: an
-ID and a token.
+ID and a token; plus the username which can be used for Login.
 NOTE: this method can be called from an unauthenticated connection.
 
 
