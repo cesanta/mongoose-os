@@ -308,5 +308,15 @@ out:
   cb(res, arg);
 }
 
+static bool cc3200_validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
+  /* Perform platform-specific config validation (in addition to generic). */
+  if (cfg->wifi.sta.enable && cfg->wifi.ap.enable) {
+    *msg = strdup("CC3200 does not support AP+STA mode");
+    return false;
+  }
+  return true;
+}
+
 void mg_wifi_hal_init(void) {
+  mg_register_config_validator(cc3200_validate_wifi_cfg);
 }

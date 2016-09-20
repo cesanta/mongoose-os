@@ -22,14 +22,14 @@ function ajax(url, callback, post_data) {
 
   httpRequest.onreadystatechange = function() {
     if (httpRequest.readyState == 4) {
+      var obj;
       try {
-        if (httpRequest.status != 200) throw(httpRequest.statusText);
         var t = httpRequest.responseText;
-        var obj = t ? JSON.parse(t) : '';
+        obj = t ? JSON.parse(t) : '';
+        if (httpRequest.status != 200) throw(httpRequest.statusText);
         callback(obj);
       } catch(e) {
-        //alert('Error fetching ' + httpRequest.responseURL + ': ' + e);
-        callback(undefined, e);
+        callback(obj, e);
       }
     }
   };
@@ -147,7 +147,17 @@ function confSave(schema, defaults, current) {
 
   var text = JSON.stringify(c, null, 2);
   ajax('/conf/save', function(res, err) {
-    alert(err ? 'Error: ' + err : rebootMsg);
+    if (!err) {
+      alert(rebootMsg);
+    } else {
+      var err_text = '';
+      if (typeof res == "object") {
+        err_text = (res.message ? res.message : res.status);
+      } else {
+        err_text = err;
+      }
+      alert('Error saving settings: ' + err_text);
+    }
   }, text);
 }
 

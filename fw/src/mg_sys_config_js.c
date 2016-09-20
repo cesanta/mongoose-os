@@ -9,13 +9,16 @@
 #include "fw/src/mg_sys_config.h"
 
 enum v7_err Sys_conf_save(struct v7 *v7, v7_val_t *res) {
-  int res_b = 0;
-  if (save_cfg(get_cfg()) == 0) {
+  enum v7_err ret = V7_OK;
+  char *msg = NULL;
+  if (save_cfg(get_cfg(), &msg)) {
     mg_system_restart(0);
-    res_b = 1;
+    *res = v7_mk_boolean(v7, 1);
+  } else {
+    ret = v7_throwf(v7, "Errro saving config: %s", (msg ? msg : ""));
+    free(msg);
   }
-  *res = v7_mk_boolean(v7, res_b);
-  return V7_OK;
+  return ret;
 }
 
 enum mg_init_result mg_sys_config_js_init(struct v7 *v7) {

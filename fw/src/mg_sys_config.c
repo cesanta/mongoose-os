@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "common/cs_file.h"
+#include "common/json_utils.h"
 #include "fw/src/mg_mongoose.h"
 #include "fw/src/mg_config.h"
 #include "fw/src/mg_gpio.h"
@@ -35,6 +36,9 @@ const struct sys_ro_vars *get_ro_vars(void) {
   return &s_ro_vars;
 }
 
+static mg_config_validator_fn *s_validators;
+static int s_num_validators;
+
 static struct mg_serve_http_opts s_http_server_opts;
 static struct mg_connection *listen_conn;
 
@@ -58,27 +62,40 @@ void mg_expand_mac_address_placeholders(char *str) {
   }
 }
 
-static int load_config_defaults(struct sys_config *cfg) {
+static bool load_config_defaults(struct sys_config *cfg) {
   memset(cfg, 0, sizeof(*cfg));
   /* TODO(rojer): Figure out what to do about merging two different defaults. */
-  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, "*", cfg)) return 0;
-  if (!load_config_file(CONF_APP_DEFAULTS_FILE, cfg->conf_acl, cfg)) return 0;
+  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, "*", cfg)) {
+    return false;
+  }
+  if (!load_config_file(CONF_APP_DEFAULTS_FILE, cfg->conf_acl, cfg)) {
+    return false;
+  }
   /* Vendor config is optional. */
   load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, cfg);
-  return 1;
+  return true;
 }
 
-int save_cfg(const struct sys_config *cfg) {
+bool save_cfg(const struct sys_config *cfg, char **msg) {
+  bool result = false;
   struct sys_config defaults;
   memset(&defaults, 0, sizeof(defaults));
-  if (!load_config_defaults(&defaults)) return -1;
-  int result = 0;
+  *msg = NULL;
+  for (int i = 0; i < s_num_validators; i++) {
+    if (!s_validators[i](cfg, msg)) goto clean;
+  }
+  if (!load_config_defaults(&defaults)) {
+    *msg = strdup("failed to load defaults");
+    goto clean;
+  }
   if (mg_conf_emit_f(cfg, &defaults, sys_config_schema(), true /* pretty */,
                      CONF_FILE)) {
     LOG(LL_INFO, ("Saved to %s", CONF_FILE));
+    result = true;
   } else {
-    result = -2;
+    *msg = "failed to write file";
   }
+clean:
   mg_conf_free(sys_config_schema(), &defaults);
   return result;
 }
@@ -99,7 +116,10 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
   struct http_message *hm = (struct http_message *) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("[%.*s] requested", (int) hm->uri.len, hm->uri.p));
-  char *json = NULL;
+  struct mbuf jsmb;
+  struct json_out jsout = JSON_OUT_MBUF(&jsmb);
+  mbuf_init(&jsmb, 0);
+  char *msg = NULL;
   int status = -1;
   int rc = 200;
   if (mg_vcmp(&hm->uri, "/conf/defaults") == 0) {
@@ -118,7 +138,9 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
     if (load_config_defaults(&tmp)) {
       char *acl_copy = (tmp.conf_acl == NULL ? NULL : strdup(tmp.conf_acl));
       if (mg_conf_parse(hm->body, acl_copy, sys_config_schema(), &tmp)) {
-        status = save_cfg(&tmp);
+        if (!save_cfg(&tmp, &msg)) {
+          status = -10;
+        }
       } else {
         status = -11;
       }
@@ -138,21 +160,24 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
     if (status == 0) c->flags |= MG_F_RELOAD_CONFIG;
   }
 
-  if (json == NULL && status != 0) {
-    if (asprintf(&json, "{\"status\": %d}\n", status) < 0) {
-      json = "{\"status\": -1}";
+  if (status != 0) {
+    json_printf(&jsout, "{status: %d", status);
+    if (msg != NULL) {
+      json_printf(&jsout, ", message: %Q}", msg);
     } else {
-      rc = (status == 0 ? 200 : 500);
+      json_printf(&jsout, "}");
     }
+    LOG(LL_ERROR, ("Error: %.*s", (int) jsmb.len, jsmb.buf));
+    rc = 500;
   }
 
-  if (json != NULL) {
-    int len = strlen(json);
-    mg_send_head(c, rc, len, JSON_HEADERS);
-    mg_send(c, json, len);
-    free(json);
+  if (jsmb.len > 0) {
+    mg_send_head(c, rc, jsmb.len, JSON_HEADERS);
+    mg_send(c, jsmb.buf, jsmb.len);
   }
   c->flags |= MG_F_SEND_AND_CLOSE;
+  mbuf_free(&jsmb);
+  free(msg);
 }
 
 static void reboot_handler(struct mg_connection *c, int ev, void *p) {
@@ -334,4 +359,11 @@ enum mg_init_result mg_sys_config_init(void) {
   s_initialized = true;
 
   return MG_INIT_OK;
+}
+
+void mg_register_config_validator(mg_config_validator_fn fn) {
+  s_validators = (mg_config_validator_fn *) realloc(
+      s_validators, (s_num_validators + 1) * sizeof(*s_validators));
+  if (s_validators == NULL) return;
+  s_validators[s_num_validators++] = fn;
 }

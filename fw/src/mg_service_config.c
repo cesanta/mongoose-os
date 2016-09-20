@@ -115,10 +115,10 @@ static void mg_config_save_handler(struct clubby_request_info *ri, void *cb_arg,
   }
 
   struct sys_config *cfg = get_cfg();
-  int result = save_cfg(cfg);
-
-  if (result != 0) {
-    clubby_send_errorf(ri, result, "error during saving config");
+  char *msg = NULL;
+  if (!save_cfg(cfg, &msg)) {
+    clubby_send_errorf(ri, -1, "error saving config: %s", (msg ? msg : ""));
+    free(msg);
     return;
   }
 
