@@ -1,5 +1,5 @@
 ---
-title: Firmware C API
+title: Firmware API reference
 items:
-  - { name: c-api }
+  - { type: flat, name: c-api }
 ---
