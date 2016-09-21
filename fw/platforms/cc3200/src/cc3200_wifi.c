@@ -8,9 +8,9 @@
 
 #include <common/platform.h>
 
-#include "simplelink.h"
-#include "netapp.h"
-#include "wlan.h"
+#include "simplelink/include/simplelink.h"
+#include "simplelink/include/netapp.h"
+#include "simplelink/include/wlan.h"
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
@@ -204,6 +204,8 @@ int mg_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
     LOG(LL_ERROR, ("DHCP server failed to start: %d", ret));
   }
 
+  sl_WlanRxStatStart();
+
   LOG(LL_INFO, ("AP %s configured", ssid));
 
   return 1;
@@ -237,6 +239,8 @@ int mg_wifi_connect(void) {
   ret = sl_WlanConnect((const _i8 *) s_wifi_sta_config.ssid,
                        strlen(s_wifi_sta_config.ssid), 0, &sp, 0);
   if (ret != 0) return 0;
+
+  sl_WlanRxStatStart();
 
   LOG(LL_INFO, ("Connecting to %s", s_wifi_sta_config.ssid));
 
