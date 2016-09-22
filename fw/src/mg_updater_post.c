@@ -6,6 +6,7 @@
 
 #include "fw/src/mg_updater_post.h"
 
+#include "fw/src/mg_mongoose.h"
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_updater_common.h"
 #include "fw/src/mg_utils.h"
@@ -85,7 +86,8 @@ void handle_update_post(struct mg_connection *c, int ev, void *p) {
 }
 
 void mg_updater_post_init(void) {
-  device_register_http_endpoint("/update", handle_update_post);
+  mg_register_http_endpoint(mg_get_http_listening_conn(), "/update",
+                            handle_update_post);
 }
 
 #endif /* MG_ENABLE_UPDATER_POST */

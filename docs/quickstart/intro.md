@@ -14,7 +14,7 @@ quick start guide:
 ```
 $ miot fw init --arch esp8266
 $ miot cloud build
-$ miot dev flash -port /dev/ttyS0 -fw build/fw.zip
+$ miot dev flash -port /dev/ttyUSB0 -fw build/fw.zip
 $ miot dev config set -wifi.ssid WIFI_NETWORK_NAME -wifi.pass WIFI_PASSWORD
 $ miot dev register
 ```

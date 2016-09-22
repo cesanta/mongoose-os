@@ -65,7 +65,7 @@ enum mg_app_init_result sj_app_init(void) {
 Compile and flash:
 
 ```
-$ dev flash -port /dev/ttyS0 -fw build/fw.zip
+$ dev flash -port /dev/ttyUSB0 -fw build/fw.zip
 ```
 
 And now, let's sent the command remotely via curl. First, go to the cloud UI

@@ -242,13 +242,6 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-void device_register_http_endpoint(const char *uri,
-                                   mg_event_handler_t handler) {
-  if (listen_conn != NULL) {
-    mg_register_http_endpoint(listen_conn, uri, handler);
-  }
-}
-
 enum mg_init_result mg_sys_config_init_http(const struct sys_config_http *cfg) {
   /*
    * Usually, we start to connect/listen in
@@ -366,4 +359,8 @@ void mg_register_config_validator(mg_config_validator_fn fn) {
       s_validators, (s_num_validators + 1) * sizeof(*s_validators));
   if (s_validators == NULL) return;
   s_validators[s_num_validators++] = fn;
+}
+
+struct mg_connection *mg_get_http_listening_conn(void) {
+  return listen_conn;
 }

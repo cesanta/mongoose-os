@@ -49,8 +49,6 @@ const struct sys_ro_vars *get_ro_vars(void);
 
 void device_get_mac_address(uint8_t mac[6]);
 
-void device_register_http_endpoint(const char *uri, mg_event_handler_t handler);
-
 /* Expands question marks in "str" with digits from the MAC address. */
 void mg_expand_mac_address_placeholders(char *str);
 

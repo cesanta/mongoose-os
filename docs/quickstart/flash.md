@@ -8,7 +8,7 @@ ESP8266-based NodeMCU. Connect a hardware module to your computer and
 run the following command:
 
 ```shell
-$ dev flash -port /dev/ttyS0 -fw build/fw.zip
+$ dev flash -port /dev/ttyUSB0 -fw build/fw.zip
 ```
 
 Note that the serial port on your system may be different.

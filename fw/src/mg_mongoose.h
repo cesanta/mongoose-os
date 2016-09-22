@@ -8,7 +8,8 @@
 
 #include "mongoose/mongoose.h"
 
-struct mg_mgr *mg_get_mgr();
+struct mg_mgr *mg_get_mgr(void);
+struct mg_connection *mg_get_http_listening_conn(void);
 
 void mongoose_init(void);
 int mongoose_poll(int ms);

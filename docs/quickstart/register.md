@@ -6,7 +6,7 @@ The device is flashed, and configured, it can talk to the outside world.
 Let's register it with the cloud:
 
 ```shell
-$ miot dev register -port /dev/ttyS0
+$ miot dev register -port /dev/ttyUSB0
 ```
 
 This command asks a cloud for the new device ID/password, register that

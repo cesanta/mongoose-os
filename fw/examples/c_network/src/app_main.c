@@ -61,6 +61,7 @@ static void handle_index(struct mg_connection *nc, int ev, void *ev_data) {
 
 enum mg_app_init_result mg_app_init(void) {
   if (!init_listener(mg_get_mgr())) return MG_APP_INIT_ERROR;
-  device_register_http_endpoint("/*" /* Handle all requests */, handle_index);
+  mg_register_http_endpoint(mg_get_http_listening_conn(),
+                            "/*" /* Handle all requests */, handle_index);
   return MG_APP_INIT_SUCCESS;
 }
