@@ -51,10 +51,6 @@ HEAP_LOG ?=
 
 CREATE_SPIFFS_FS ?= 1
 CREATE_RAW_FS ?= 0
-# Include defaults for sys params area. SDK 2.0.0 fails to boot with
-# uninitialized sys params area, so this should eventually be the default,
-# but it is not compatible with MFT 1.0.4 and below.
-INCLUDE_SYS_PARAMS_DEFAULTS ?= 0
 
 FLASH_SIZE ?= 4M
 FS_SIZE ?= 128K
@@ -356,11 +352,8 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR):
 FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            boot_cfg:src=$(RBOOT_CFG_INIT),addr=0x1000 \
            rf_cal_data:src=$(RF_CAL_DATA_INIT),addr=$(FW_RF_CAL_DATA_ADDR) \
-           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR)
-
-ifeq "$(INCLUDE_SYS_PARAMS_DEFAULTS)" "1"
-  FW_PARTS += sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
-endif
+           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR) \
+           sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
 
 ifeq "$(CREATE_SPIFFS_FS)" "1"
   FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
