@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "common/cs_rbuf.h"
+#include "common/platform.h"
 
 #define MG_MAX_NUM_UARTS 2
 
@@ -19,17 +20,21 @@ struct mg_uart_config {
 
   int rx_buf_size;
   int rx_fc_ena;
+  int rx_linger_micros;
+#if CS_PLATFORM == CS_P_ESP_LWIP
   int rx_fifo_full_thresh;
   int rx_fifo_fc_thresh;
   int rx_fifo_alarm;
-  int rx_linger_micros;
+#endif
 
   int tx_buf_size;
   int tx_fc_ena;
+#if CS_PLATFORM == CS_P_ESP_LWIP
   int tx_fifo_empty_thresh;
   int tx_fifo_full_thresh;
 
   int swap_rxcts_txrts;
+#endif
 };
 
 struct mg_uart_stats {
