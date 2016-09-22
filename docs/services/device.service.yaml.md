@@ -116,8 +116,8 @@ Response:
 Returns the list of owned devices
 
 Arguments:
-- `filter`: Filter expression, currently only 'labelname=labelvalue' supported.
 - `account`: name of account
+- `labels`: An object with labels to query for. Object keys are label names, corresponding values are label values.
 
 Result `array`: 
 Request:
@@ -129,7 +129,7 @@ Request:
   "method": "/v1/Device.List",
   "args": {
     "account": "VALUE PLACEHOLDER",
-    "filter": "VALUE PLACEHOLDER"
+    "labels": "VALUE PLACEHOLDER"
   }
 }
 
