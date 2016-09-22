@@ -12,6 +12,7 @@
 #include "common/mbuf.h"
 #include "common/str_util.h"
 
+#define EOF_CHAR "\x04"
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 struct clubby_channel_uart_data {
@@ -43,7 +44,13 @@ void clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
       flen = (end - chd->recv_mbuf.buf);
       if (flen != 0) {
         struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
-        ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
+        /*
+         * EOF_CHAR is used to turn off interactive console. If the frame is
+         * just EOF_CHAR by itself, ignore it, it's not valid anyway.
+         */
+        if (mg_vcmp(&f, EOF_CHAR) != 0) {
+          ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
+        }
       }
       mbuf_remove(&chd->recv_mbuf, flen + 3);
       if (chd->recv_mbuf.len == 0) {
