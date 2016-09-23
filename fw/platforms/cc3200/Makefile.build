@@ -51,6 +51,7 @@ MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
 MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
 FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
 FW_DIR = $(CURDIR)/firmware
+GEN_DIR = $(BUILD_DIR)/gen
 BOOT_BUILD_DIR = $(BUILD_DIR)/boot
 BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
 # When sizing filesystem consider that SFLASH should have enough space for:
@@ -75,7 +76,7 @@ MIOT_POSIX_PATH ?= $(MIOT_PATH)/platforms/posix
 MIOT_SRC_PATH ?= $(MIOT_PATH)/src
 COMMON_FS_PATH ?= $(MIOT_PATH)/skeleton/filesystem
 MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
-FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
+FS_STAGING_DIR = $(BUILD_DIR)/fs
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
@@ -98,7 +99,7 @@ JS_EXT := js
 VPATH = $(APP_MODULES) $(MIOT_CC3200_SRC_PATH) \
         $(BOOT_PATH)/lib $(BUILD_DIR) \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(APP_MODULES) $(MIOT_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(BUILD_DIR) $(REPO_PATH)
+IPATH = $(APP_MODULES) $(MIOT_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR) $(REPO_PATH)
 
 V7_FEATURES ?= $(COMMON_V7_FEATURES) \
                -DV7_BUILD_PROFILE=1 \
@@ -153,11 +154,11 @@ MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
 MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(BUILD_DIR)/fs.img
 FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
-SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
-SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
-BUILD_INFO_C = $(BUILD_DIR)/build_info.c
+SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
-BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
@@ -262,7 +263,7 @@ endif
 clean:
 	@rm -rf $(BUILD_DIR) $(FW_DIR)
 
-$(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_STAGING_DIR):
+$(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	@mkdir -p $@
 
@@ -394,8 +395,8 @@ $(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
               -DDEFAULT_FS_PAGE_SIZE=$(FS_PAGE_SIZE) \
               -DDEFAULT_FS_ERASE_SIZE=$(FS_ERASE_SIZE)
 
-all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(SYS_CONFIG_C) \
-     $(BUILD_INFO_C) $(FW_ZIP)
+all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) \
+     $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
 
 $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
@@ -437,6 +438,9 @@ $(MIOT_LIB): $(MIOT_OBJS) $(SDK_OBJS)
 	$(call ar,$^)
 
 $(BUILD_DIR)/%.o: %.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
 	$(call cc,$(CFLAGS),$<)
 
 $(BUILD_DIR)/%.o: %.asm $(GENFILES_LIST)

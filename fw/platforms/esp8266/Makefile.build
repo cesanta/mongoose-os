@@ -72,8 +72,9 @@ MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
 MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
 FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
 FW_DIR = $(CURDIR)/firmware
+GEN_DIR = $(BUILD_DIR)/gen
 
-FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
+FS_STAGING_DIR = $(BUILD_DIR)/fs
 RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
@@ -232,11 +233,11 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
 
 LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
 MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
-SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
-SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
-BUILD_INFO_C = $(BUILD_DIR)/build_info.c
+SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
-BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
@@ -300,7 +301,7 @@ ifneq "$(APP_FS_PATH)" ""
 endif
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
-LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
+LD_SCRIPT = $(GEN_DIR)/$(FW_FILE_2_ADDR).ld
 LD_WRAPPERS =
 HEAP_LOG_FLAGS =
 
@@ -331,7 +332,7 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
 
 FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
 
-INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
+INCDIRS = $(addprefix -I,$(IPATH)) -I$(GEN_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
@@ -344,7 +345,7 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
 
 LDFLAGS += -u Cache_Read_Enable_New
 
-$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR):
+$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
@@ -365,7 +366,7 @@ endif
 
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
-all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
+all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
                 $(FW_FILE_2_OUT) $(FW_FS_OUT) $(FS_FILES) $(JSBIN_SRCS)
@@ -411,8 +412,8 @@ $(LWIP_LIB): $(LWIP_PATH)
 $(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
 	$(compile)
 
-# This one is for generated sources in build directory.
-$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
+# This one is for generated sources in build/gen directory.
+$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
 	$(compile)
 
 # Common gathering point for all generated files.
@@ -495,7 +496,7 @@ $(ESPTOOL2):
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/esptool2 BUILD_DIR=$(BUILD_DIR)
 
 $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
-	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) \
+	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) RBOOT_GEN_BASE=$(GEN_DIR) \
     ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
 
 clean:
