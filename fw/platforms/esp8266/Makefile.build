@@ -25,7 +25,6 @@ MG_ENABLE_JS ?= 0
 MG_ENABLE_CLUBBY ?= 1
 MG_ENABLE_CONFIG_SERVICE ?= 1
 MG_ENABLE_FILESYSTEM_SERVICE ?= 1
-MG_ENABLE_DNS_SD ?= 1
 MG_DEBUG_UART ?= 0
 
 REPO_PATH ?= ../../..
@@ -47,7 +46,7 @@ COMMON_FS_PATH ?= $(MIOT_PATH)/skeleton/filesystem
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
-V7_FREEZE ?= 0
+V7_FREEZE ?= 1
 HEAP_LOG ?=
 
 CREATE_SPIFFS_FS ?= 1
@@ -73,9 +72,8 @@ MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
 MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
 FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
 FW_DIR = $(CURDIR)/firmware
-GEN_DIR = $(BUILD_DIR)/gen
 
-FS_STAGING_DIR = $(BUILD_DIR)/fs
+FS_STAGING_DIR = $(BUILD_DIR)/fs_temp
 RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
@@ -94,6 +92,8 @@ MIOT_SRCS = cs_rbuf.c \
             mg_config.c \
             mg_console.c cs_frbuf.c \
             mg_init.c \
+            mg_i2c_js.c \
+            mg_spi_js.c \
             mg_timers_mongoose.c \
             mg_wifi.c \
             mg_mongoose.c \
@@ -127,8 +127,6 @@ MIOT_SRCS += v7.c \
              mg_v7_ext.c \
              mg_uart_js.c \
              mg_wifi_js.c \
-             mg_i2c_js.c \
-             mg_spi_js.c \
              mg_ws_client_js.c
 endif
 
@@ -218,7 +216,7 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
 
 .PHONY: all clean
 
-MIOT_CFLAGS = -DMG_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
+MIOT_CFLAGS = -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
               -DESP_ENABLE_MG_LWIP_IF -DMG_DEBUG_UART=$(MG_DEBUG_UART)
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
@@ -234,13 +232,11 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
 
 LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
 MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
-BUILD_INFO_C = $(GEN_DIR)/build_info.c
+SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
+SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
+BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
-BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
-MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
+BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
@@ -293,11 +289,6 @@ ifeq "$(MG_ENABLE_FILESYSTEM_SERVICE)" "1"
   MIOT_FEATURES += -DMG_ENABLE_FILESYSTEM_SERVICE
 endif
 
-ifeq "$(MG_ENABLE_DNS_SD)" "1"
-  MIOT_SRCS += mg_mdns.c mg_dns_sd.c
-  MIOT_FEATURES += -DMG_ENABLE_DNS -DMG_ENABLE_DNS_SERVER -DMG_ENABLE_MDNS -DMG_ENABLE_DNS_SD
-endif
-
 endif
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
@@ -309,7 +300,7 @@ ifneq "$(APP_FS_PATH)" ""
 endif
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
-LD_SCRIPT = $(GEN_DIR)/$(FW_FILE_2_ADDR).ld
+LD_SCRIPT = $(BUILD_DIR)/$(FW_FILE_2_ADDR).ld
 LD_WRAPPERS =
 HEAP_LOG_FLAGS =
 
@@ -340,7 +331,7 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(FW_FILE_2_ADDR) \
 
 FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
 
-INCDIRS = $(addprefix -I,$(IPATH)) -I$(GEN_DIR)
+INCDIRS = $(addprefix -I,$(IPATH)) -I$(BUILD_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
@@ -353,7 +344,7 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
 
 LDFLAGS += -u Cache_Read_Enable_New
 
-$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
+$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
@@ -374,7 +365,7 @@ endif
 
 include $(REPO_PATH)/common/scripts/fw_meta.mk
 
-all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
+all: $(FW_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
                 $(FW_FILE_2_OUT) $(FW_FS_OUT) $(FS_FILES) $(JSBIN_SRCS)
@@ -394,8 +385,8 @@ $(FW_FILE_2_OUT): $(APP_OUT)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
-	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
+$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	$(call link,$(APP_OBJS) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MIOT_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
@@ -420,8 +411,8 @@ $(LWIP_LIB): $(LWIP_PATH)
 $(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
 	$(compile)
 
-# This one is for generated sources in build/gen directory.
-$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
+# This one is for generated sources in build directory.
+$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c $(GENFILES_FLAG)
 	$(compile)
 
 # Common gathering point for all generated files.
@@ -447,10 +438,6 @@ include $(REPO_PATH)/fw/src/sys_config.mk
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
-	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
-
-$(MG_BUILD_INFO_C): $(MIOT_OBJS)
-	$(call gen_build_info,$@,$(MIOT_PATH),,,mg_,$(MG_BUILD_INFO_C),)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
@@ -508,7 +495,7 @@ $(ESPTOOL2):
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/esptool2 BUILD_DIR=$(BUILD_DIR)
 
 $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
-	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) RBOOT_GEN_BASE=$(GEN_DIR) \
+	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk RBOOT_BUILD_BASE=$(BUILD_DIR) \
     ESPTOOL2=$(ESPTOOL2) RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
 
 clean:

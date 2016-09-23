@@ -9,10 +9,8 @@ SPI_SIZE ?=
 RBOOT_INTEGRATION ?=
 RBOOT_EXTRA_INCDIR ?=
 
-# RBOOT_BUILD_BASE and RBOOT_GEN_BASE should be provided via makefile parameters
+# RBOOT_BUILD_BASE should be provided via makefile parameters
 RBOOT_BUILD_BASE ?=
-# RBOOT_GEN_BASE is the directory for generated inputs
-RBOOT_GEN_BASE ?=
 
 ifndef XTENSA_BINDIR
 CC := xtensa-lx106-elf-gcc
@@ -66,13 +64,13 @@ $(RBOOT_BUILD_BASE)/rboot-stage2a.elf: $(RBOOT_BUILD_BASE)/rboot-stage2a.o
 	@echo "LD $@"
 	@$(CC_WRAPPER) $(LD) -Trboot-stage2a.ld $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
 
-$(RBOOT_GEN_BASE)/rboot-hex2a.h: $(RBOOT_BUILD_BASE)/rboot-stage2a.elf
+$(RBOOT_BUILD_BASE)/rboot-hex2a.h: $(RBOOT_BUILD_BASE)/rboot-stage2a.elf
 	@echo "E2 $@"
 	@$(ESPTOOL2) -quiet -header $< $@ .text
 
-$(RBOOT_BUILD_BASE)/rboot.o: rboot.c rboot-private.h rboot.h $(RBOOT_GEN_BASE)/rboot-hex2a.h
+$(RBOOT_BUILD_BASE)/rboot.o: rboot.c rboot-private.h rboot.h $(RBOOT_BUILD_BASE)/rboot-hex2a.h
 	@echo "CC $<"
-	@$(CC) $(CFLAGS) -I$(RBOOT_GEN_BASE) $(RBOOT_EXTRA_INCDIR) -c $< -o $@
+	@$(CC) $(CFLAGS) -I$(RBOOT_BUILD_BASE) $(RBOOT_EXTRA_INCDIR) -c $< -o $@
 
 $(RBOOT_BUILD_BASE)/%.o: %.c %.h
 	@echo "CC $<"

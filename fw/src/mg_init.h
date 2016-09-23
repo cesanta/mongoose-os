@@ -19,7 +19,6 @@ enum mg_init_result {
   MG_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED = -14,
   MG_INIT_CLUBBY_FAILED = -15,
   MG_INIT_UART_FAILED = -16,
-  MG_INIT_MDNS_FAILED = -17,
 };
 
 enum mg_init_result mg_init(void);

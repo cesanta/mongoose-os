@@ -7,6 +7,8 @@ Fully supported architectures are:
 
 - Texas Instruments CC3200 ([buy hardware](http://www.aliexpress.com/af/nodemcu.html?SearchText=launchxl))
 - Espressif ESP8266 ([buy hardware](http://www.aliexpress.com/af/nodemcu.html?SearchText=nodemcu))
+- All POSIX compatible systems including Raspberry PI, BeagleBone,
+  OpenWRT, Linux, Windows, MacOS
 
 Partially supported architectures are:
 - Texas Instruments MSP430  

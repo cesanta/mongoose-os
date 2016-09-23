@@ -116,20 +116,17 @@ MG_PRIVATE enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
 
     NUM_PROP(rx_buf_size);
     BOOL_PROP(rx_fc_ena);
-#if CS_PLATFORM == CS_P_ESP_LWIP
     NUM_PROP(rx_fifo_full_thresh);
     NUM_PROP(rx_fifo_fc_thresh);
     NUM_PROP(rx_fifo_alarm);
-#endif
     NUM_PROP(rx_linger_micros);
 
     NUM_PROP(tx_buf_size);
     BOOL_PROP(tx_fc_ena);
-#if CS_PLATFORM == CS_P_ESP_LWIP
     NUM_PROP(tx_fifo_empty_thresh);
     NUM_PROP(tx_fifo_full_thresh);
+
     BOOL_PROP(swap_rxcts_txrts);
-#endif
   }
 
   ujs->us = mg_uart_init(uart_no, cfg, mg_uart_js_dispatcher, ujs);

@@ -60,10 +60,6 @@
   ["console.log_file", "s", {"title": "Log file name"}],
   ["console.log_file_size", "i", {"title": "Max log file size"}],
   ["console.send_to_cloud", "b", {"title": "Send console output to the cloud"}],
-  ["dns_sd", "o", {"title": "DNS-SD service discovery"}],
-  ["dns_sd.enable", "b", {"title": "Enable service discovery"}],
-  ["dns_sd.service_type", "s", {"title": "DNS-SD service name. '?' chars will be expanded with MAC address hex digits"}],
-  ["dns_sd.service_type", "s", {"title": "DNS-SD service type. If omitted the app name + ._tcp is used"}],
   ["debug", "o", {"title": "Debug Settings"}],
   ["debug.level", "i", {
     "title": "Level",
