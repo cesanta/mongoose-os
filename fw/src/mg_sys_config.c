@@ -138,9 +138,7 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
     if (load_config_defaults(&tmp)) {
       char *acl_copy = (tmp.conf_acl == NULL ? NULL : strdup(tmp.conf_acl));
       if (mg_conf_parse(hm->body, acl_copy, sys_config_schema(), &tmp)) {
-        if (!save_cfg(&tmp, &msg)) {
-          status = -10;
-        }
+        status = (save_cfg(&tmp, &msg) ? 0 : -10);
       } else {
         status = -11;
       }
