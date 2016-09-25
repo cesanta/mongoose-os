@@ -6,7 +6,7 @@ items:
   - { name: configure.md }
   - { name: register.md }
   - { name: label.md }
-#  - { name: control.md }
+  - { name: update.md }
 ---
 
 For the most impatient, this is a 1-minute overview of the following
