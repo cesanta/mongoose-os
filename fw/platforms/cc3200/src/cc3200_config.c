@@ -25,7 +25,7 @@ enum mg_init_result mg_sys_config_init_platform(struct sys_config *cfg) {
     if (!mg_wifi_setup_sta(&cfg->wifi.sta)) {
       return MG_INIT_CONFIG_WIFI_INIT_FAILED;
     }
-  } else {
+  } else if (cfg->wifi.ap.enable) {
     if (!mg_wifi_setup_ap(&cfg->wifi.ap)) {
       return MG_INIT_CONFIG_WIFI_INIT_FAILED;
     }
