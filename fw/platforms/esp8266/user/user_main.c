@@ -37,7 +37,9 @@
 #include "fw/src/mg_init_js.h"
 #endif
 
-extern const char *build_id;
+extern const char *build_version, *build_id;
+extern const char *mg_build_version, *mg_build_id;
+
 os_timer_t startcmd_timer;
 
 #ifndef MG_DEBUG_UART
@@ -100,7 +102,11 @@ int esp_mg_init(rboot_config *bcfg) {
   }
 
   fputc('\n', stderr);
-  LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
+  if (strcmp(MG_APP, "mongoose-iot") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MG_APP, build_version, build_id));
+  }
+  LOG(LL_INFO,
+      ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
                 mg_get_heap_size(), mg_get_free_heap_size()));
   esp_print_reset_info();

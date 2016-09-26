@@ -159,6 +159,8 @@ SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
 BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
@@ -223,7 +225,7 @@ SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 MIOT_SRCS += $(notdir $(wildcard $(MIOT_CC3200_SRC_PATH)/*.c))
 APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-MIOT_CFLAGS = -Dcc3200 -DCC3200_FS_SPIFFS -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
+MIOT_CFLAGS = -DMG_APP=\"$(APP)\" -Dcc3200 -DCC3200_FS_SPIFFS -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
               -DMG_DEBUG_UART=$(MG_DEBUG_UART) $(SDK_CFLAGS)
 
 ifeq "$(MG_ENABLE_JS)" "1"
@@ -395,8 +397,7 @@ $(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
               -DDEFAULT_FS_PAGE_SIZE=$(FS_PAGE_SIZE) \
               -DDEFAULT_FS_ERASE_SIZE=$(FS_ERASE_SIZE)
 
-all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) \
-     $(SYS_CONFIG_C) $(BUILD_INFO_C) $(FW_ZIP)
+all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
 
 $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
@@ -431,8 +432,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MIOT_LIB) $(BUILD_INFO_O)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MIOT_LIB) $(BUILD_INFO_O))
+$(APP_ELF): $(APP_OBJS) $(MIOT_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MIOT_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O))
 
 $(MIOT_LIB): $(MIOT_OBJS) $(SDK_OBJS)
 	$(call ar,$^)
@@ -448,8 +449,10 @@ $(BUILD_DIR)/%.o: %.asm $(GENFILES_LIST)
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(BUILD_INFO_O): $(BUILD_INFO_C)
+$(MG_BUILD_INFO_C): $(MIOT_OBJS)
+	$(call gen_build_info,$@,$(MIOT_PATH),,,mg_,$(MG_BUILD_INFO_C),)
 
 $(MK_FS_META_BIN): $(MIOT_CC3200_PATH)/tools/mkfsmeta.c
 	$(vecho) "GCC   $< -> $@"
