@@ -1,0 +1,5 @@
+[
+  ["mcast", "o", {"title": "Multicast example parameters"}]
+  ["mcast.group", "s", {"title" : "Multicast example group IP"}],
+  ["mcast.port", "i", {"title" : "Multicast example UDP port"}]
+]

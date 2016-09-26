@@ -1,0 +1,12 @@
+APP = c_mcast
+APP_MODULES = src
+APP_FS_PATH = filesystem
+MG_ENABLE_JS = 0
+MG_ENABLE_CLUBBY = 1
+APP_CFLAGS =
+APP_CONF_DEFAULTS = $(APP_FS_PATH)/conf_app_defaults.json
+
+# currently this example supports only esp8266
+PLATFORM = esp8266
+
+include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
