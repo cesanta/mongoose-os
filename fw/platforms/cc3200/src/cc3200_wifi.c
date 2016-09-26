@@ -314,7 +314,8 @@ out:
 
 static bool cc3200_validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
   /* Perform platform-specific config validation (in addition to generic). */
-  if (cfg->wifi.sta.enable && cfg->wifi.ap.enable) {
+  if (cfg->wifi.sta.enable && cfg->wifi.ap.enable &&
+      cfg->wifi.ap.keep_enabled) {
     *msg = strdup("CC3200 does not support AP+STA mode");
     return false;
   }
