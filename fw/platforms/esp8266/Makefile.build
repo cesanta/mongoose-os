@@ -217,7 +217,7 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
 
 .PHONY: all clean
 
-MIOT_CFLAGS = -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
+MIOT_CFLAGS = -DMG_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
               -DESP_ENABLE_MG_LWIP_IF -DMG_DEBUG_UART=$(MG_DEBUG_UART)
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
@@ -238,6 +238,8 @@ SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
@@ -386,8 +388,8 @@ $(FW_FILE_2_OUT): $(APP_OUT)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
-	$(call link,$(APP_OBJS) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
+$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MIOT_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MIOT_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
@@ -439,6 +441,10 @@ include $(REPO_PATH)/fw/src/sys_config.mk
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C): $(MIOT_OBJS)
+	$(call gen_build_info,$@,$(MIOT_PATH),,,mg_,$(MG_BUILD_INFO_C),)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

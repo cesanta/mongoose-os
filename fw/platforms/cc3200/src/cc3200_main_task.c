@@ -35,13 +35,15 @@
 #define CB_ADDR_MASK 0xe0000000
 #define CB_ADDR_PREFIX 0x20000000
 
+extern const char *build_version, *build_id;
+extern const char *mg_build_version, *mg_build_id;
+
 struct mg_event {
   cb_t cb;
   void *arg;
 };
 
 OsiMsgQ_t s_main_queue;
-extern const char *build_id;
 
 #ifdef MG_ENABLE_JS
 struct v7 *s_v7;
@@ -114,7 +116,11 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     }
   }
 
-  LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
+  if (strcmp(MG_APP, "mongoose-iot") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MG_APP, build_version, build_id));
+  }
+  LOG(LL_INFO,
+      ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO,
       ("RAM: %d total, %d free", mg_get_heap_size(), mg_get_free_heap_size()));
 

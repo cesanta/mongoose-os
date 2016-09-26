@@ -3,7 +3,7 @@ title: Build the firmware
 ---
 
 Download `miot` command line tool from https://mongoose-iot.com/downloads.html .
-Create an empty directory, go into it, and execute this in that directory:
+Create an empty directory, go into it, and run:
 
 ```sh
 $ miot fw init --arch esp8266

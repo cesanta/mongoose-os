@@ -217,6 +217,9 @@ $(GENFILES_FLAG): $(GENFILES_LIST)
 # Generate build info. Only regenerates if there are changes in objects.
 include $(REPO_PATH)/common/scripts/build_info.mk
 
+$(BUILD_INFO_C): $(OBJS)
+	$(call gen_build_info,$@,,,,,$(BUILD_INFO_C),)
+
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 $(V7_PATH)/v7.c:
