@@ -1,5 +1,5 @@
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/license.h"
+#line 1 "v7/src/license.h"
 #endif
 /*
  * Copyright (c) 2013-2014 Cesanta Software Limited
@@ -27,7 +27,7 @@
 #define V7_EXTERN static
 #endif /* CS_V7_SRC_LICENSE_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_profiles.h"
+#line 1 "v7/src/features_profiles.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -47,7 +47,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_PROFILES_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_minimal.h"
+#line 1 "v7/src/features_minimal.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -62,7 +62,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_MINIMAL_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_medium.h"
+#line 1 "v7/src/features_medium.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -82,7 +82,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_MEDIUM_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_full.h"
+#line 1 "v7/src/features_full.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -165,7 +165,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_FULL_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/v7_features.h"
+#line 1 "v7/src/v7_features.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -182,7 +182,7 @@
 
 #endif /* CS_V7_SRC_V7_FEATURES_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/core_public.h"
+#line 1 "v7/src/core_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -407,7 +407,7 @@ void v7_stack_stat_clean(struct v7 *v7);
 #endif /* CS_V7_SRC_CORE_PUBLIC_H_ */
 #ifndef V7_EXPORT_INTERNAL_HEADERS
 #ifdef V7_MODULE_LINES
-#line 1 "./src/core_public.h"
+#line 1 "v7/src/core_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -631,7 +631,7 @@ void v7_stack_stat_clean(struct v7 *v7);
 
 #endif /* CS_V7_SRC_CORE_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/primitive_public.h"
+#line 1 "v7/src/primitive_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -747,7 +747,7 @@ int v7_is_foreign(v7_val_t v);
 
 #endif /* CS_V7_SRC_PRIMITIVE_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/string_public.h"
+#line 1 "v7/src/string_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -822,7 +822,7 @@ const char *v7_get_cstring(struct v7 *v7, v7_val_t *v);
 
 #endif /* CS_V7_SRC_STRING_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/object_public.h"
+#line 1 "v7/src/object_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1079,7 +1079,7 @@ void v7_set_destructor_cb(struct v7 *v7, v7_val_t obj, v7_destructor_cb_t *d);
 
 #endif /* CS_V7_SRC_OBJECT_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/array_public.h"
+#line 1 "v7/src/array_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1151,7 +1151,7 @@ void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
 
 #endif /* CS_V7_SRC_ARRAY_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/function_public.h"
+#line 1 "v7/src/function_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1213,7 +1213,7 @@ int v7_is_callable(struct v7 *v7, v7_val_t v);
 
 #endif /* CS_V7_SRC_FUNCTION_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/regexp_public.h"
+#line 1 "v7/src/regexp_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1253,7 +1253,7 @@ int v7_is_regexp(struct v7 *v7, v7_val_t v);
 
 #endif /* CS_V7_SRC_REGEXP_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/conversion_public.h"
+#line 1 "v7/src/conversion_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1341,7 +1341,7 @@ int v7_is_truthy(struct v7 *v7, v7_val_t v);
 
 #endif /* CS_V7_SRC_CONVERSION_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/exec_public.h"
+#line 1 "v7/src/exec_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1447,7 +1447,7 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 
 #endif /* CS_V7_SRC_EXEC_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/exceptions_public.h"
+#line 1 "v7/src/exceptions_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1502,7 +1502,7 @@ void v7_clear_thrown_value(struct v7 *v7);
 
 #endif /* CS_V7_SRC_EXCEPTIONS_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/gc_public.h"
+#line 1 "v7/src/gc_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1563,7 +1563,7 @@ void v7_gc(struct v7 *v7, int full);
 
 #endif /* CS_V7_SRC_GC_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/util_public.h"
+#line 1 "v7/src/util_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1653,7 +1653,7 @@ v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
 
 #endif /* CS_V7_SRC_UTIL_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/main_public.h"
+#line 1 "v7/src/main_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
