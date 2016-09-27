@@ -2,7 +2,10 @@
 title: Full-stack platform
 ---
 
-IoT brings things (devices) and the Internet (cloud) together.
+IoT connects things (devices) and the Internet (cloud) together.
+A software that sits on devices and a cloud to provide that connectivity
+and integration is called an IoT platform. 
+
 Mongoose IoT is a full-stack platform. This means it provides a solution
 for both parts of the equation: device and cloud. On the device side, there is
 Mongoose Firmware. On the cloud part, there is Mongoose Cloud.
