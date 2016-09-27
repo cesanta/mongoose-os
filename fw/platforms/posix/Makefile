@@ -62,7 +62,6 @@ APP_SRCS += v7.c \
             mg_http_js.c \
             mg_init_js.c \
             mg_mqtt_js.c \
-            mg_prompt.c \
             mg_pwm_js.c \
             mg_sys_config_js.c \
             mg_tcp_udp_js.c \
@@ -72,8 +71,8 @@ APP_SRCS += v7.c \
             mg_wifi_js.c \
             mg_ws_client_js.c
 
-$(BUILD_DIR)/mongoose.o: mongoose.c
-	$(call compile,-DEXCLUDE_COMMON)
+$(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
+
 else
   APP_SRCS += cs_file.c
 endif
@@ -167,7 +166,7 @@ OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c
 
-FS_FILES = $(wildcard $(SRC_PATH)/js/* $(REPO_PATH)/skeleton/filesystem/*)
+FS_FILES = $(wildcard $(SRC_PATH)/js/* $(REPO_PATH)/fw/skeleton/filesystem/*)
 
 # Custom conf.json : by default, it is empty, so that the one from `fs` is
 # used. NOTE: if the custom one is provided, the file should anyway be named
