@@ -46,7 +46,7 @@ COMMON_FS_PATH ?= $(MIOT_PATH)/skeleton/filesystem
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
-V7_FREEZE ?= 1
+V7_FREEZE ?= 0
 HEAP_LOG ?=
 
 CREATE_SPIFFS_FS ?= 1
@@ -93,8 +93,6 @@ MIOT_SRCS = cs_rbuf.c \
             mg_config.c \
             mg_console.c cs_frbuf.c \
             mg_init.c \
-            mg_i2c_js.c \
-            mg_spi_js.c \
             mg_timers_mongoose.c \
             mg_wifi.c \
             mg_mongoose.c \
@@ -128,6 +126,8 @@ MIOT_SRCS += v7.c \
              mg_v7_ext.c \
              mg_uart_js.c \
              mg_wifi_js.c \
+             mg_i2c_js.c \
+             mg_spi_js.c \
              mg_ws_client_js.c
 endif
 
