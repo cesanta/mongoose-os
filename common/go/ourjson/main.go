@@ -1,10 +1,13 @@
 package ourjson
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 
+	"cesanta.com/common/go/limitedwriter"
 	"github.com/cesanta/errors"
 	"github.com/cesanta/ubjson"
 )
@@ -175,5 +178,11 @@ func (m delayMarshaling) UnmarshalInto(v interface{}) error {
 }
 
 func (m delayMarshaling) String() string {
-	return fmt.Sprintf("Delayed marshaler: %#v", m.val)
+	buf := bytes.NewBuffer(nil)
+	lim := limitedwriter.New(buf, 1024)
+	if _, err := fmt.Fprintf(lim, "Delayed marshaler: %#v", m.val); err == io.EOF {
+		fmt.Fprint(buf, "...")
+	}
+
+	return buf.String()
 }
