@@ -48,7 +48,7 @@ static void cb(struct clubby_request_info *ri, void *cb_arg,
     clubby_send_responsef(ri, "%d", result);
   } else {
     // Error fetching pin and state - report error back.
-    clubby_send_errorf(ri, 1, "%s", "Expeted: {pin: X, state: X}");
+    clubby_send_errorf(ri, 1, "%s", "Expected: {pin: X, state: X}");
   }
 
   (void) cb_arg;
