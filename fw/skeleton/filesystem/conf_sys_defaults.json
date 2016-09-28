@@ -61,6 +61,11 @@
       "wait_for_start_frame": true
     }
   },
+  "dns_sd": {
+    "enable": true,
+    "service_name": "mongoose-iot-??????",
+    "service_type": ""
+  },
   "debug": {
     "level": 2,
     "stdout_uart": 0,
