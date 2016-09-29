@@ -81,6 +81,6 @@ $ miot dev call --port /dev/ttyUSB0 /v1/Config.GetNetworkStatus
 Now test with `curl`:
 
 ```sh
-$ curl -d 'n1=1&n2=2' IP_ADDRESS
+$ curl -d 'n1=1&n2=2' http://IP_ADDRESS/add
 {"result": 3}
 ```

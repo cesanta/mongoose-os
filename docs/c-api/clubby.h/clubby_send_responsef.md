@@ -4,7 +4,7 @@ decl_name: "clubby_send_responsef"
 symbol_kind: "func"
 signature: |
   bool clubby_send_responsef(struct clubby_request_info *ri,
-                                const char *result_json_fmt, ...);
+                             const char *result_json_fmt, ...);
 ---
 
 Respond to an incoming request.

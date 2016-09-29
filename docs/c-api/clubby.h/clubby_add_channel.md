@@ -4,8 +4,8 @@ decl_name: "clubby_add_channel"
 symbol_kind: "func"
 signature: |
   void clubby_add_channel(struct clubby *c, const struct mg_str dst,
-                             struct clubby_channel *ch, bool is_trusted,
-                             bool send_hello);
+                          struct clubby_channel *ch, bool is_trusted,
+                          bool send_hello);
 ---
 
 Adds a channel to the instance.

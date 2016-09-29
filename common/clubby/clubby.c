@@ -9,10 +9,10 @@
 #ifdef MG_ENABLE_CLUBBY
 
 #include "common/clubby/clubby.h"
+#include "common/clubby/clubby_channel.h"
 #include "common/cs_dbg.h"
 #include "common/json_utils.h"
 #include "common/mbuf.h"
-#include "common/clubby/clubby_channel.h"
 #include "mongoose/mongoose.h"
 
 #define MG_CLUBBY_FRAME_VERSION 2
@@ -75,8 +75,8 @@ static int64_t clubby_get_id(struct clubby *c) {
   return c->next_id;
 }
 
-static void clubby_call_observers(struct clubby *c,
-                                     enum clubby_event ev, void *ev_arg) {
+static void clubby_call_observers(struct clubby *c, enum clubby_event ev,
+                                  void *ev_arg) {
   struct clubby_observer_info *oi, *oit;
   SLIST_FOREACH_SAFE(oi, &c->observers, observers, oit) {
     oi->cb(c, oi->cb_arg, ev, ev_arg);
@@ -84,7 +84,7 @@ static void clubby_call_observers(struct clubby *c,
 }
 
 struct clubby_channel_info *clubby_get_channel(struct clubby *c,
-                                                     const struct mg_str dst) {
+                                               const struct mg_str dst) {
   struct clubby_channel_info *ci;
   struct clubby_channel_info *default_ch = NULL;
   if (c == NULL) return NULL;
@@ -97,10 +97,10 @@ struct clubby_channel_info *clubby_get_channel(struct clubby *c,
 }
 
 static bool clubby_handle_request(struct clubby *c,
-                                     struct clubby_channel_info *ci,
-                                     int64_t id, struct json_token src,
-                                     struct json_token method,
-                                     struct json_token args) {
+                                  struct clubby_channel_info *ci, int64_t id,
+                                  struct json_token src,
+                                  struct json_token method,
+                                  struct json_token args) {
   if (src.len == 0) return false;
   if (id == 0) id = clubby_get_id(c);
 
@@ -117,7 +117,7 @@ static bool clubby_handle_request(struct clubby *c,
   if (hi == NULL) {
     LOG(LL_ERROR, ("No handler for %.*s", (int) method.len, method.ptr));
     clubby_send_errorf(ri, 404, "No handler for %.*s", (int) method.len,
-                          method.ptr);
+                       method.ptr);
     return true;
   }
   struct clubby_frame_info fi;
@@ -129,10 +129,9 @@ static bool clubby_handle_request(struct clubby *c,
 }
 
 static bool clubby_handle_response(struct clubby *c,
-                                      struct clubby_channel_info *ci,
-                                      int64_t id, struct json_token result,
-                                      int error_code,
-                                      struct json_token error_msg) {
+                                   struct clubby_channel_info *ci, int64_t id,
+                                   struct json_token result, int error_code,
+                                   struct json_token error_msg) {
   if (id == 0) return false;
   struct clubby_sent_request_info *ri;
   SLIST_FOREACH(ri, &c->requests, requests) {
@@ -157,8 +156,8 @@ static bool clubby_handle_response(struct clubby *c,
 }
 
 static void clubby_handle_frame(struct clubby *c,
-                                   struct clubby_channel_info *ci,
-                                   const struct mg_str f) {
+                                struct clubby_channel_info *ci,
+                                const struct mg_str f) {
   LOG(LL_DEBUG,
       ("%p GOT FRAME (%d): %.*s", ci->ch, (int) f.len, (int) f.len, f.p));
   int version = 0;
@@ -214,13 +213,12 @@ out_err:
 }
 
 static bool clubby_send_frame(struct clubby_channel_info *ci,
-                                 struct mg_str frame);
-static bool clubby_dispatch_frame(struct clubby *c,
-                                     const struct mg_str dst, int64_t id,
-                                     struct clubby_channel_info *ci,
-                                     bool enqueue,
-                                     struct mg_str payload_prefix_json,
-                                     const char *payload_jsonf, va_list ap);
+                              struct mg_str frame);
+static bool clubby_dispatch_frame(struct clubby *c, const struct mg_str dst,
+                                  int64_t id, struct clubby_channel_info *ci,
+                                  bool enqueue,
+                                  struct mg_str payload_prefix_json,
+                                  const char *payload_jsonf, va_list ap);
 
 static void clubby_process_queue(struct clubby *c) {
   struct clubby_queue_entry *qe, *tqe;
@@ -236,10 +234,9 @@ static void clubby_process_queue(struct clubby *c) {
   }
 }
 
-static void clubby_hello_handler(struct clubby_request_info *ri,
-                                    void *cb_arg,
-                                    struct clubby_frame_info *fi,
-                                    struct mg_str args) {
+static void clubby_hello_handler(struct clubby_request_info *ri, void *cb_arg,
+                                 struct clubby_frame_info *fi,
+                                 struct mg_str args) {
   clubby_send_responsef(ri, "{time:%ld}", (long) mg_time());
   (void) cb_arg;
   (void) fi;
@@ -247,9 +244,8 @@ static void clubby_hello_handler(struct clubby_request_info *ri,
 }
 
 static void clubby_hello_cb(struct clubby *c, void *cb_arg,
-                               struct clubby_frame_info *fi,
-                               struct mg_str result, int error_code,
-                               struct mg_str error_msg) {
+                            struct clubby_frame_info *fi, struct mg_str result,
+                            int error_code, struct mg_str error_msg) {
   struct clubby_channel_info *ci = (struct clubby_channel_info *) cb_arg;
   if (error_code != 0) {
     LOG(LL_ERROR, ("%p Hello error: %d %.*s", ci->ch, error_code,
@@ -272,7 +268,7 @@ static void clubby_hello_cb(struct clubby *c, void *cb_arg,
 }
 
 static bool clubby_send_hello(struct clubby *c,
-                                 struct clubby_channel_info *ci) {
+                              struct clubby_channel_info *ci) {
   struct mbuf fb;
   struct json_out fout = JSON_OUT_MBUF(&fb);
   int64_t id = clubby_get_id(c);
@@ -287,7 +283,7 @@ static bool clubby_send_hello(struct clubby *c,
   memset(&dummy, 0, sizeof(dummy));
   bool result =
       clubby_dispatch_frame(c, mg_mk_str(""), id, ci, false /* enqueue */,
-                               mg_mk_str_n(fb.buf, fb.len), NULL, dummy);
+                            mg_mk_str_n(fb.buf, fb.len), NULL, dummy);
   if (result) {
     SLIST_INSERT_HEAD(&c->requests, ri, requests);
   } else {
@@ -298,8 +294,7 @@ static bool clubby_send_hello(struct clubby *c,
 }
 
 static void clubby_ev_handler(struct clubby_channel *ch,
-                                 enum clubby_channel_event ev,
-                                 void *ev_data) {
+                              enum clubby_channel_event ev, void *ev_data) {
   struct clubby *c = (struct clubby *) ch->clubby_data;
   struct clubby_channel_info *ci = NULL;
   SLIST_FOREACH(ci, &c->channels, channels) {
@@ -355,8 +350,8 @@ static void clubby_ev_handler(struct clubby_channel *ch,
 }
 
 void clubby_add_channel(struct clubby *c, const struct mg_str dst,
-                           struct clubby_channel *ch, bool is_trusted,
-                           bool send_hello) {
+                        struct clubby_channel *ch, bool is_trusted,
+                        bool send_hello) {
   struct clubby_channel_info *ci =
       (struct clubby_channel_info *) calloc(1, sizeof(*ci));
   if (dst.len != 0) ci->dst = mg_strdup(dst);
@@ -387,14 +382,14 @@ struct clubby *clubby_create(struct clubby_cfg *cfg) {
   SLIST_INIT(&c->observers);
   STAILQ_INIT(&c->queue);
 
-  clubby_add_handler(c, mg_mk_str(MG_CLUBBY_HELLO_CMD),
-                        clubby_hello_handler, NULL);
+  clubby_add_handler(c, mg_mk_str(MG_CLUBBY_HELLO_CMD), clubby_hello_handler,
+                     NULL);
 
   return c;
 }
 
 static bool clubby_send_frame(struct clubby_channel_info *ci,
-                                 const struct mg_str f) {
+                              const struct mg_str f) {
   if (ci == NULL || !ci->is_open || ci->is_busy) return false;
   bool result = ci->ch->send_frame(ci->ch, f);
   LOG(LL_DEBUG, ("%p SEND FRAME (%d): %.*s -> %d", ci->ch, (int) f.len,
@@ -404,7 +399,7 @@ static bool clubby_send_frame(struct clubby_channel_info *ci,
 }
 
 static bool clubby_enqueue_frame(struct clubby *c, struct mg_str dst,
-                                    struct mg_str f) {
+                                 struct mg_str f) {
   if (c->queue_len >= c->cfg->max_queue_size) return false;
   struct clubby_queue_entry *qe =
       (struct clubby_queue_entry *) calloc(1, sizeof(*qe));
@@ -416,12 +411,11 @@ static bool clubby_enqueue_frame(struct clubby *c, struct mg_str dst,
   return true;
 }
 
-static bool clubby_dispatch_frame(struct clubby *c,
-                                     const struct mg_str dst, int64_t id,
-                                     struct clubby_channel_info *ci,
-                                     bool enqueue,
-                                     struct mg_str payload_prefix_json,
-                                     const char *payload_jsonf, va_list ap) {
+static bool clubby_dispatch_frame(struct clubby *c, const struct mg_str dst,
+                                  int64_t id, struct clubby_channel_info *ci,
+                                  bool enqueue,
+                                  struct mg_str payload_prefix_json,
+                                  const char *payload_jsonf, va_list ap) {
   struct mbuf fb;
   struct json_out fout = JSON_OUT_MBUF(&fb);
   if (ci == NULL) ci = clubby_get_channel(c, dst);
@@ -458,9 +452,9 @@ static bool clubby_dispatch_frame(struct clubby *c,
 }
 
 bool clubby_callf(struct clubby *c, const struct mg_str method,
-                     mg_result_cb_t cb, void *cb_arg,
-                     const struct clubby_call_opts *opts,
-                     const char *args_jsonf, ...) {
+                  mg_result_cb_t cb, void *cb_arg,
+                  const struct clubby_call_opts *opts, const char *args_jsonf,
+                  ...) {
   struct mbuf prefb;
   struct json_out prefbout = JSON_OUT_MBUF(&prefb);
   int64_t id = clubby_get_id(c);
@@ -478,9 +472,9 @@ bool clubby_callf(struct clubby *c, const struct mg_str method,
   if (args_jsonf != NULL) json_printf(&prefbout, ",args:");
   va_list ap;
   va_start(ap, args_jsonf);
-  bool result = clubby_dispatch_frame(
-      c, dst, id, NULL /* ci */, true /* enqueue */,
-      mg_mk_str_n(prefb.buf, prefb.len), args_jsonf, ap);
+  bool result =
+      clubby_dispatch_frame(c, dst, id, NULL /* ci */, true /* enqueue */,
+                            mg_mk_str_n(prefb.buf, prefb.len), args_jsonf, ap);
   va_end(ap);
   if (result && ri != NULL) {
     SLIST_INSERT_HEAD(&c->requests, ri, requests);
@@ -493,7 +487,7 @@ bool clubby_callf(struct clubby *c, const struct mg_str method,
 }
 
 bool clubby_send_responsef(struct clubby_request_info *ri,
-                              const char *result_json_fmt, ...) {
+                           const char *result_json_fmt, ...) {
   struct mbuf prefb;
   mbuf_init(&prefb, 0);
   if (result_json_fmt != 0) {
@@ -511,7 +505,7 @@ bool clubby_send_responsef(struct clubby_request_info *ri,
 }
 
 bool clubby_send_errorf(struct clubby_request_info *ri, int error_code,
-                           const char *error_msg_fmt, ...) {
+                        const char *error_msg_fmt, ...) {
   struct mbuf prefb;
   struct json_out prefbout = JSON_OUT_MBUF(&prefb);
   mbuf_init(&prefb, 0);
@@ -540,7 +534,7 @@ bool clubby_send_errorf(struct clubby_request_info *ri, int error_code,
 }
 
 void clubby_add_handler(struct clubby *c, const struct mg_str method,
-                           mg_handler_cb_t cb, void *cb_arg) {
+                        mg_handler_cb_t cb, void *cb_arg) {
   if (c == NULL) return;
   struct clubby_handler_info *hi =
       (struct clubby_handler_info *) calloc(1, sizeof(*hi));
@@ -568,8 +562,7 @@ void clubby_free_request_info(struct clubby_request_info *ri) {
   free(ri);
 }
 
-void clubby_add_observer(struct clubby *c, mg_observer_cb_t cb,
-                            void *cb_arg) {
+void clubby_add_observer(struct clubby *c, mg_observer_cb_t cb, void *cb_arg) {
   if (c == NULL) return;
   struct clubby_observer_info *oi =
       (struct clubby_observer_info *) calloc(1, sizeof(*oi));
@@ -579,7 +572,7 @@ void clubby_add_observer(struct clubby *c, mg_observer_cb_t cb,
 }
 
 void clubby_remove_observer(struct clubby *c, mg_observer_cb_t cb,
-                               void *cb_arg) {
+                            void *cb_arg) {
   if (c == NULL) return;
   struct clubby_observer_info *oi, *oit;
   SLIST_FOREACH_SAFE(oi, &c->observers, observers, oit) {

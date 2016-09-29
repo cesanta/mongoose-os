@@ -36,8 +36,8 @@ struct clubby *clubby_create(struct clubby_cfg *cfg);
  * reply is required before it can be used.
  */
 void clubby_add_channel(struct clubby *c, const struct mg_str dst,
-                           struct clubby_channel *ch, bool is_trusted,
-                           bool send_hello);
+                        struct clubby_channel *ch, bool is_trusted,
+                        bool send_hello);
 #define MG_CLUBBY_DST_DEFAULT "*"
 
 /* Invokes connect method on all channels of this instance. */
@@ -64,9 +64,9 @@ struct clubby_call_opts {
   struct mg_str dst; /* Destination ID. If not provided, cloud is implied. */
 };
 bool clubby_callf(struct clubby *c, const struct mg_str method,
-                     mg_result_cb_t cb, void *cb_arg,
-                     const struct clubby_call_opts *opts,
-                     const char *args_jsonf, ...);
+                  mg_result_cb_t cb, void *cb_arg,
+                  const struct clubby_call_opts *opts, const char *args_jsonf,
+                  ...);
 
 /*
  * Incoming request info.
@@ -91,21 +91,21 @@ typedef void (*mg_handler_cb_t)(struct clubby_request_info *ri, void *cb_arg,
 
 /* Add a method handler. */
 void clubby_add_handler(struct clubby *c, const struct mg_str method,
-                           mg_handler_cb_t cb, void *cb_arg);
+                        mg_handler_cb_t cb, void *cb_arg);
 
 /*
  * Respond to an incoming request.
  * result_json_fmt can be NULL, in which case no result is included.
  */
 bool clubby_send_responsef(struct clubby_request_info *ri,
-                              const char *result_json_fmt, ...);
+                           const char *result_json_fmt, ...);
 
 /*
  * Send and error response to an incoming request.
  * error_msg_fmt is optional and can be NULL, in which case only code is sent.
  */
 bool clubby_send_errorf(struct clubby_request_info *ri, int error_code,
-                           const char *error_msg_fmt, ...);
+                        const char *error_msg_fmt, ...);
 
 /* Returns true if the instance has an open default channel. */
 bool clubby_is_connected(struct clubby *c);
@@ -121,10 +121,9 @@ enum clubby_event {
 };
 typedef void (*mg_observer_cb_t)(struct clubby *c, void *cb_arg,
                                  enum clubby_event ev, void *ev_arg);
-void clubby_add_observer(struct clubby *c, mg_observer_cb_t cb,
-                            void *cb_arg);
+void clubby_add_observer(struct clubby *c, mg_observer_cb_t cb, void *cb_arg);
 void clubby_remove_observer(struct clubby *c, mg_observer_cb_t cb,
-                               void *cb_arg);
+                            void *cb_arg);
 
 void clubby_free_request_info(struct clubby_request_info *ri);
 void clubby_free(struct clubby *c);
