@@ -43,6 +43,9 @@ void clubby_add_channel(struct clubby *c, const struct mg_str dst,
 /* Invokes connect method on all channels of this instance. */
 void clubby_connect(struct clubby *c);
 
+/* Invokes close method on all channels of this instance. */
+void clubby_disconnect(struct clubby *c);
+
 /* Auxiliary information about the request or response. */
 struct clubby_frame_info {
   const char *channel_type; /* Type of the channel this message arrived on. */

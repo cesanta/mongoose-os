@@ -13,6 +13,8 @@
 #include "common/str_util.h"
 
 #define EOF_CHAR "\x04"
+#define FRAME_DELIMETER "\"\"\""
+#define FRAME_DELIMETER_LEN 3
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 struct clubby_channel_uart_data {
@@ -39,16 +41,21 @@ void clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
     cs_rbuf_consume(urxb, len);
     size_t flen = 0;
     const char *end =
-        c_strnstr(chd->recv_mbuf.buf, "\"\"\"", chd->recv_mbuf.len);
+        c_strnstr(chd->recv_mbuf.buf, FRAME_DELIMETER, chd->recv_mbuf.len);
     if (end != NULL) {
       flen = (end - chd->recv_mbuf.buf);
       if (flen != 0) {
         struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
         /*
          * EOF_CHAR is used to turn off interactive console. If the frame is
-         * just EOF_CHAR by itself, ignore it, it's not valid anyway.
+         * just EOF_CHAR by itself, we'll immediately send the frame delimeter
+         * in response (since the frame isn't valid anyway); otherwise we'll
+         * handle the frame.
          */
-        if (mg_vcmp(&f, EOF_CHAR) != 0) {
+        if (mg_vcmp(&f, EOF_CHAR) == 0) {
+          mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
+          chd->sending = true;
+        } else {
           ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
         }
       }
@@ -64,14 +71,7 @@ void clubby_channel_uart_dispatcher(struct mg_uart_state *us) {
     chd->connected = true;
     /* In case stdout or stderr were going to the same UART, disable them. */
     mg_uart_set_write_enabled(chd->uart_no, false);
-    /*
-     * Put frame delimiter in the output buffer. If there was junk in UART FIFO,
-     * this will provide a sync point.
-     */
-    mbuf_append(&chd->send_mbuf, "\"\"\"", 3);
     ch->ev_handler(ch, MG_CLUBBY_CHANNEL_OPEN, NULL);
-    /* If open event handler did not send, we have our delimiter to send. */
-    chd->sending = true;
   }
   if (chd->sending && utxb->avail > 0) {
     size_t len = MIN(chd->send_mbuf.len, utxb->avail);
@@ -103,7 +103,7 @@ static bool clubby_channel_uart_send_frame(struct clubby_channel *ch,
       (struct clubby_channel_uart_data *) ch->channel_data;
   if (!chd->connected || chd->sending) return false;
   mbuf_append(&chd->send_mbuf, f.p, f.len);
-  mbuf_append(&chd->send_mbuf, "\"\"\"", 3);
+  mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
   mg_uart_schedule_dispatcher(chd->uart_no);
   chd->sending = true;
   return true;

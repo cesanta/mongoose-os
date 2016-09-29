@@ -109,27 +109,34 @@ static void mg_config_set_handler(struct clubby_request_info *ri, void *cb_arg,
 static void mg_config_save_handler(struct clubby_request_info *ri, void *cb_arg,
                                    struct clubby_frame_info *fi,
                                    struct mg_str args) {
+  /*
+   * We need to stash clubby pointer since we need to use it after calling
+   * clubby_send_responsef(), which invalidates `ri`
+   */
+  struct clubby *c = ri->clubby;
+  struct sys_config *cfg = get_cfg();
+  char *msg = NULL;
+  int reboot = 0;
+
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
     return;
   }
 
-  struct sys_config *cfg = get_cfg();
-  char *msg = NULL;
   if (!save_cfg(cfg, &msg)) {
     clubby_send_errorf(ri, -1, "error saving config: %s", (msg ? msg : ""));
     free(msg);
     return;
   }
 
-  int reboot = 0;
   json_scanf(args.p, args.len, "{reboot: %B}", &reboot);
+
+  clubby_send_responsef(ri, NULL);
 
   if (reboot) {
     mg_system_restart_after(500);
+    clubby_disconnect(c);
   }
-
-  clubby_send_responsef(ri, NULL);
 
   (void) cb_arg;
 }

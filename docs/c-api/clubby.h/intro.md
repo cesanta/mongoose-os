@@ -6,6 +6,7 @@ items:
   - { name: clubby_create.md }
   - { name: clubby_add_channel.md }
   - { name: clubby_connect.md }
+  - { name: clubby_disconnect.md }
   - { name: clubby_add_handler.md }
   - { name: clubby_send_responsef.md }
   - { name: clubby_send_errorf.md }

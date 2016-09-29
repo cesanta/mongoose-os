@@ -372,6 +372,13 @@ void clubby_connect(struct clubby *c) {
   }
 }
 
+void clubby_disconnect(struct clubby *c) {
+  struct clubby_channel_info *ci;
+  SLIST_FOREACH(ci, &c->channels, channels) {
+    ci->ch->close(ci->ch);
+  }
+}
+
 struct clubby *clubby_create(struct clubby_cfg *cfg) {
   struct clubby *c = (struct clubby *) calloc(1, sizeof(*c));
   if (c == NULL) return NULL;
