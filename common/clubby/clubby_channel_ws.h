@@ -24,8 +24,7 @@ struct clubby_channel_ws_out_cfg {
   int reconnect_interval_max;
 };
 struct clubby_channel *clubby_channel_ws_out(
-    struct mg_mgr *mgr,
-    struct clubby_channel_ws_out_cfg *cfg);
+    struct mg_mgr *mgr, struct clubby_channel_ws_out_cfg *cfg);
 
 #endif /* MG_ENABLE_CLUBBY */
 #endif /* CS_COMMON_CLUBBY_CLUBBY_CHANNEL_WS_H_ */

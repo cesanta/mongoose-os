@@ -21,8 +21,7 @@ struct clubby_channel_ws_data {
   unsigned int free_data : 1;
 };
 
-static void clubby_ws_handler(struct mg_connection *nc, int ev,
-                                 void *ev_data) {
+static void clubby_ws_handler(struct mg_connection *nc, int ev, void *ev_data) {
   struct clubby_channel *ch = (struct clubby_channel *) nc->user_data;
   struct clubby_channel_ws_data *chd =
       (struct clubby_channel_ws_data *) ch->channel_data;
@@ -70,7 +69,7 @@ static void clubby_channel_ws_connect(struct clubby_channel *ch) {
 }
 
 static bool clubby_channel_ws_send_frame(struct clubby_channel *ch,
-                                            const struct mg_str f) {
+                                         const struct mg_str f) {
   struct clubby_channel_ws_data *chd =
       (struct clubby_channel_ws_data *) ch->channel_data;
   if (chd->nc == NULL || chd->sending) return false;
@@ -96,8 +95,7 @@ static bool clubby_channel_ws_is_persistent(struct clubby_channel *ch) {
 }
 
 struct clubby_channel *clubby_channel_ws(struct mg_connection *nc) {
-  struct clubby_channel *ch =
-      (struct clubby_channel *) calloc(1, sizeof(*ch));
+  struct clubby_channel *ch = (struct clubby_channel *) calloc(1, sizeof(*ch));
   ch->connect = clubby_channel_ws_connect;
   ch->send_frame = clubby_channel_ws_send_frame;
   ch->close = clubby_channel_ws_close;
@@ -125,7 +123,7 @@ struct clubby_channel_ws_out_data {
 static void clubby_channel_ws_out_reconnect(struct clubby_channel *ch);
 
 static void clubby_ws_out_handler(struct mg_connection *nc, int ev,
-                                     void *ev_data) {
+                                  void *ev_data) {
   struct clubby_channel *ch = (struct clubby_channel *) nc->user_data;
   struct clubby_channel_ws_out_data *chd =
       (struct clubby_channel_ws_out_data *) ch->channel_data;
@@ -180,8 +178,7 @@ static void clubby_channel_ws_out_connect(struct clubby_channel *ch) {
   }
 }
 
-static const char *clubby_channel_ws_out_get_type(
-    struct clubby_channel *ch) {
+static const char *clubby_channel_ws_out_get_type(struct clubby_channel *ch) {
 #ifdef MG_ENABLE_SSL
   struct clubby_channel_ws_out_data *chd =
       (struct clubby_channel_ws_out_data *) ch->channel_data;
@@ -191,8 +188,7 @@ static const char *clubby_channel_ws_out_get_type(
 #endif
 }
 
-static bool clubby_channel_ws_out_is_persistent(
-    struct clubby_channel *ch) {
+static bool clubby_channel_ws_out_is_persistent(struct clubby_channel *ch) {
   struct clubby_channel_ws_out_data *chd =
       (struct clubby_channel_ws_out_data *) ch->channel_data;
   return (chd->cfg->reconnect_interval_max > 0);
@@ -236,8 +232,7 @@ static void clubby_channel_ws_out_reconnect(struct clubby_channel *ch) {
 
 struct clubby_channel *clubby_channel_ws_out(
     struct mg_mgr *mgr, struct clubby_channel_ws_out_cfg *cfg) {
-  struct clubby_channel *ch =
-      (struct clubby_channel *) calloc(1, sizeof(*ch));
+  struct clubby_channel *ch = (struct clubby_channel *) calloc(1, sizeof(*ch));
   ch->connect = clubby_channel_ws_out_connect;
   ch->send_frame = clubby_channel_ws_send_frame;
   ch->close = clubby_channel_ws_close;

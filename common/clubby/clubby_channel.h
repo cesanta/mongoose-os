@@ -21,8 +21,8 @@ enum clubby_channel_event {
 };
 
 struct clubby_channel {
-  void (*ev_handler)(struct clubby_channel *ch,
-                     enum clubby_channel_event ev, void *ev_data);
+  void (*ev_handler)(struct clubby_channel *ch, enum clubby_channel_event ev,
+                     void *ev_data);
   void (*connect)(struct clubby_channel *ch);
   bool (*send_frame)(struct clubby_channel *ch, const struct mg_str f);
   void (*close)(struct clubby_channel *ch);
