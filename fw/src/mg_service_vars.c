@@ -19,6 +19,7 @@ static void mg_vars_get_handler(struct clubby_request_info *ri, void *cb_arg,
                                 struct mg_str args) {
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     return;
   }
 
@@ -34,6 +35,7 @@ static void mg_vars_get_handler(struct clubby_request_info *ri, void *cb_arg,
    */
   mbuf_append(&send_mbuf, "", 1);
   clubby_send_responsef(ri, "%s", send_mbuf.buf);
+  ri = NULL;
 
   mbuf_free(&send_mbuf);
 

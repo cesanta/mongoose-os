@@ -217,14 +217,17 @@ static enum v7_err js_cmd_done_func(struct v7 *v7, v7_val_t *res) {
     char *res_json =
         v7_stringify(v7, cb_res, json_buf, sizeof(json_buf), V7_STRINGIFY_JSON);
     clubby_send_responsef(ri, "%s", res_json);
+    ri = NULL;
     if (res_json != json_buf) free((void *) res_json);
   } else if (v7_is_number(cb_res) && v7_is_string(cb_err_msg)) {
     /* It's an error, code and optional message. */
     int code = v7_get_double(v7, cb_res);
     const char *err_msg = v7_get_cstring(v7, &cb_err_msg);
     clubby_send_errorf(ri, code, "%s", err_msg);
+    ri = NULL;
   } else {
     clubby_send_errorf(ri, 500, "Internal error");
+    ri = NULL;
     return v7_throwf(v7, "Error", "Invalid arguments");
   }
   *res = v7_mk_boolean(v7, 1);
@@ -285,11 +288,14 @@ void js_cmd_handler(struct clubby_request_info *ri, void *cb_arg,
         res_jsonf = "%s";
       }
       clubby_send_responsef(ri, res_jsonf, res_json);
+      ri = NULL;
       if (res_json != NULL && res_json != json_buf) free((void *) res_json);
     } else if (v7_is_string(cb_res)) {
       clubby_send_errorf(ri, -1, "%s", v7_get_cstring(v7, &cb_res));
+      ri = NULL;
     } else {
       clubby_send_errorf(ri, 500, "Internal error");
+      ri = NULL;
     }
   } else {
     /*
@@ -321,8 +327,10 @@ void js_cmd_handler(struct clubby_request_info *ri, void *cb_arg,
     if (v7_apply(v7, cb_ctx->cb, cb_ctx->ctx->obj, cb_args_v, NULL) != V7_OK) {
       if (v7_is_string(cb_res)) {
         clubby_send_errorf(ri, -1, "%s", v7_get_cstring(v7, &cb_res));
+        ri = NULL;
       } else {
         clubby_send_errorf(ri, 500, "Internal error");
+        ri = NULL;
       }
     }
   }

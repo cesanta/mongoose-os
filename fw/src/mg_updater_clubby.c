@@ -205,8 +205,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
               CONSOLE_LOG(LL_INFO, ("Update finished"));
             } else {
               clubby_send_errorf(s_update_req, 1, "Cannot save update status");
-              CONSOLE_LOG(LL_ERROR, ("Cannot save update status"));
               s_update_req = NULL;
+              CONSOLE_LOG(LL_ERROR, ("Cannot save update status"));
             }
             if (tmp_file) fclose(tmp_file);
           }
@@ -415,6 +415,7 @@ clean:
   if (blob_url != NULL) free(blob_url);
   CONSOLE_LOG(LL_ERROR, ("Failed to start update: %s", reply));
   clubby_send_errorf(ri, -1, reply);
+  ri = NULL;
   (void) cb_arg;
   (void) fi;
 }
@@ -458,6 +459,7 @@ void handle_clubby_event(struct clubby *clubby, void *cb_arg,
   LOG(LL_INFO, ("Sending update reply to %.*s: %d", (int) ri->src.len,
                 ri->src.p, status));
   clubby_send_errorf(ri, status, NULL);
+  ri = NULL;
   clubby_remove_observer(clubby, handle_clubby_event, ri);
 }
 

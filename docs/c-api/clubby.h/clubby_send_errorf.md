@@ -8,5 +8,6 @@ signature: |
 ---
 
 Send and error response to an incoming request.
-error_msg_fmt is optional and can be NULL, in which case only code is sent. 
+error_msg_fmt is optional and can be NULL, in which case only code is sent.
+`ri` is freed by the call, so it's illegal to use it afterwards. 
 

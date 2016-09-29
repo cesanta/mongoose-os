@@ -38,6 +38,7 @@ static void mg_filesystem_list_handler(struct clubby_request_info *ri,
 
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     return;
   }
 
@@ -65,6 +66,7 @@ static void mg_filesystem_list_handler(struct clubby_request_info *ri,
   json_printf(&out, "]");
 
   clubby_send_responsef(ri, "%.*s", fb.len, fb.buf);
+  ri = NULL;
 
   mbuf_free(&fb);
 
@@ -84,6 +86,7 @@ static void mg_filesystem_get_handler(struct clubby_request_info *ri,
 
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     goto clean;
   }
 
@@ -93,11 +96,13 @@ static void mg_filesystem_get_handler(struct clubby_request_info *ri,
   /* check arguments */
   if (filename == NULL) {
     clubby_send_errorf(ri, 400, "filename is required");
+    ri = NULL;
     goto clean;
   }
 
   if (offset < 0) {
     clubby_send_errorf(ri, 400, "illegal offset");
+    ri = NULL;
     goto clean;
   }
 
@@ -106,12 +111,14 @@ static void mg_filesystem_get_handler(struct clubby_request_info *ri,
 
   if (fp == NULL) {
     clubby_send_errorf(ri, 400, "failed to open file \"%s\"", filename);
+    ri = NULL;
     goto clean;
   }
 
   /* determine file size */
   if (fseek(fp, 0, SEEK_END) != 0) {
     clubby_send_errorf(ri, 500, "fseek");
+    ri = NULL;
     goto clean;
   }
 
@@ -130,17 +137,20 @@ static void mg_filesystem_get_handler(struct clubby_request_info *ri,
     data = (char *) malloc(len);
     if (data == NULL) {
       clubby_send_errorf(ri, 500, "out of memory");
+      ri = NULL;
       goto clean;
     }
 
     /* seek & read the data */
     if (fseek(fp, offset, SEEK_SET)) {
       clubby_send_errorf(ri, 500, "fseek");
+      ri = NULL;
       goto clean;
     }
 
     if ((long) fread(data, 1, len, fp) != len) {
       clubby_send_errorf(ri, 500, "fread");
+      ri = NULL;
       goto clean;
     }
   }
@@ -148,6 +158,7 @@ static void mg_filesystem_get_handler(struct clubby_request_info *ri,
   /* send the response */
   clubby_send_responsef(ri, "{data: %V, left: %d}", data, len,
                         (file_size - offset - len));
+  ri = NULL;
 
 clean:
   if (filename != NULL) {
@@ -176,6 +187,7 @@ static void mg_filesystem_put_handler(struct clubby_request_info *ri,
 
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     goto clean;
   }
 
@@ -185,6 +197,7 @@ static void mg_filesystem_put_handler(struct clubby_request_info *ri,
   /* check arguments */
   if (filename == NULL) {
     clubby_send_errorf(ri, 400, "filename is required");
+    ri = NULL;
     goto clean;
   }
 
@@ -193,15 +206,18 @@ static void mg_filesystem_put_handler(struct clubby_request_info *ri,
 
   if (fp == NULL) {
     clubby_send_errorf(ri, 400, "failed to open file \"%s\"", filename);
+    ri = NULL;
     goto clean;
   }
 
   if (fwrite(data.p, 1, data.len, fp) != (size_t) data.len) {
     clubby_send_errorf(ri, 500, "failed to write data");
+    ri = NULL;
     goto clean;
   }
 
   clubby_send_responsef(ri, NULL);
+  ri = NULL;
 
 clean:
   if (filename != NULL) {

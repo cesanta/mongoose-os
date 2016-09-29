@@ -8,5 +8,6 @@ signature: |
 ---
 
 Respond to an incoming request.
-result_json_fmt can be NULL, in which case no result is included. 
+result_json_fmt can be NULL, in which case no result is included.
+`ri` is freed by the call, so it's illegal to use it afterwards. 
 

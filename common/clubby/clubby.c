@@ -118,6 +118,7 @@ static bool clubby_handle_request(struct clubby *c,
     LOG(LL_ERROR, ("No handler for %.*s", (int) method.len, method.ptr));
     clubby_send_errorf(ri, 404, "No handler for %.*s", (int) method.len,
                        method.ptr);
+    ri = NULL;
     return true;
   }
   struct clubby_frame_info fi;
@@ -238,6 +239,7 @@ static void clubby_hello_handler(struct clubby_request_info *ri, void *cb_arg,
                                  struct clubby_frame_info *fi,
                                  struct mg_str args) {
   clubby_send_responsef(ri, "{time:%ld}", (long) mg_time());
+  ri = NULL;
   (void) cb_arg;
   (void) fi;
   (void) args;

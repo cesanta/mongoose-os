@@ -26,6 +26,7 @@ static void mg_config_get_handler(struct clubby_request_info *ri, void *cb_arg,
                                   struct mg_str args) {
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     return;
   }
 
@@ -41,6 +42,7 @@ static void mg_config_get_handler(struct clubby_request_info *ri, void *cb_arg,
    */
   mbuf_append(&send_mbuf, "", 1);
   clubby_send_responsef(ri, "%s", send_mbuf.buf);
+  ri = NULL;
 
   mbuf_free(&send_mbuf);
 
@@ -67,6 +69,7 @@ static void mg_config_gns_handler(struct clubby_request_info *ri, void *cb_arg,
 
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     return;
   }
 
@@ -79,6 +82,7 @@ static void mg_config_gns_handler(struct clubby_request_info *ri, void *cb_arg,
       ri, "{wifi: {sta_ip: %Q, ap_ip: %Q, status: %Q, ssid: %Q}}",
       sta_ip == NULL ? "" : sta_ip, ap_ip == NULL ? "" : ap_ip,
       status == NULL ? "" : status, ssid == NULL ? "" : ssid);
+  ri = NULL;
 
   free(sta_ip);
   free(ap_ip);
@@ -95,12 +99,14 @@ static void mg_config_set_handler(struct clubby_request_info *ri, void *cb_arg,
                                   struct mg_str args) {
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     return;
   }
 
   json_scanf(args.p, args.len, "{config: %M}", set_handler, NULL);
 
   clubby_send_responsef(ri, NULL);
+  ri = NULL;
 
   (void) cb_arg;
 }
@@ -120,11 +126,13 @@ static void mg_config_save_handler(struct clubby_request_info *ri, void *cb_arg,
 
   if (!fi->channel_is_trusted) {
     clubby_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
     return;
   }
 
   if (!save_cfg(cfg, &msg)) {
     clubby_send_errorf(ri, -1, "error saving config: %s", (msg ? msg : ""));
+    ri = NULL;
     free(msg);
     return;
   }
@@ -132,6 +140,7 @@ static void mg_config_save_handler(struct clubby_request_info *ri, void *cb_arg,
   json_scanf(args.p, args.len, "{reboot: %B}", &reboot);
 
   clubby_send_responsef(ri, NULL);
+  ri = NULL;
 
   if (reboot) {
     mg_system_restart_after(500);

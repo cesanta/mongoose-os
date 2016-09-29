@@ -99,6 +99,7 @@ void clubby_add_handler(struct clubby *c, const struct mg_str method,
 /*
  * Respond to an incoming request.
  * result_json_fmt can be NULL, in which case no result is included.
+ * `ri` is freed by the call, so it's illegal to use it afterwards.
  */
 bool clubby_send_responsef(struct clubby_request_info *ri,
                            const char *result_json_fmt, ...);
@@ -106,6 +107,7 @@ bool clubby_send_responsef(struct clubby_request_info *ri,
 /*
  * Send and error response to an incoming request.
  * error_msg_fmt is optional and can be NULL, in which case only code is sent.
+ * `ri` is freed by the call, so it's illegal to use it afterwards.
  */
 bool clubby_send_errorf(struct clubby_request_info *ri, int error_code,
                         const char *error_msg_fmt, ...);
