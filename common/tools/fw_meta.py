@@ -49,7 +49,18 @@ FW_MANIFEST_FILE_NAME = 'manifest.json'
 
 
 def get_git_repo(path):
-    return git.Repo(path, search_parent_directories=True)
+    # This is a temporary workaround until we get a version of python-git
+    # that supports search_parent_directories=True (1.0 and up).
+    repo_dir = path
+    repo = None
+    while repo is None:
+        try:
+            return git.Repo(repo_dir)
+        except git.exc.InvalidGitRepositoryError:
+            if repo_dir != '/':
+                repo_dir = os.path.split(repo_dir)[0]
+                continue
+            raise RuntimeError("%s doesn't look like a Git repo" % path)
 
 
 def get_tag_for_commit(repo, commit):
