@@ -118,7 +118,7 @@ def cmd_gen_build_info(args):
     if args.timestamp:
         timestamp = args.timestamp
     else:
-        timestamp = ts.isoformat()
+        timestamp = ts.replace(microsecond=0).isoformat() + 'Z'
     if timestamp is not None:
         bi['build_timestamp'] = timestamp
 
@@ -134,7 +134,7 @@ def cmd_gen_build_info(args):
             except Exception, e:
                 print >>sys.stderr, 'App version not specified and could not be guessed (%s)' % e
         if version is None:
-            version = ts.strftime('%Y%m%d%H%M%S')
+            version = ts.strftime('%Y%m%d%H')
     if version is not None:
         bi['build_version'] = version
 
