@@ -8,6 +8,7 @@ items:
   - { name: blobstore.service.yaml.md }
   - { name: device.service.yaml.md }
   - { name: dispatcher.service.yaml.md }
+  - { name: filesystem.service.yaml.md }
   - { name: frontend.service.yaml.md }
   - { name: label.service.yaml.md }
   - { name: logstore.service.yaml.md }
