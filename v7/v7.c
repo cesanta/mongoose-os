@@ -745,6 +745,7 @@ struct dirent *readdir(DIR *dir);
 
 #include <simplelink.h>
 #include <netapp.h>
+#undef timeval 
 
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
