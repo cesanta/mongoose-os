@@ -13,10 +13,11 @@ token for the optional "after" argument.
 
 Arguments:
 - `src`: ID of an entity that generated log entries that you want to fetch.
-- `after`: Continuation token. Put here an `id` of the last entry returned by the previous call.
-- `limit`: Maximum number of entries to return.
+- `last`: Only return the N last entries.
 - `stream`: Log stream name.
 - `follow`: Whether this call will block until there are some logs to be returned.
+- `limit`: Maximum number of entries to return.
+- `after`: Continuation token. Put here an `id` of the last entry returned by the previous call.
 
 Result `array`: 
 Request:
@@ -29,6 +30,7 @@ Request:
   "args": {
     "after": "VALUE PLACEHOLDER",
     "follow": "VALUE PLACEHOLDER",
+    "last": "VALUE PLACEHOLDER",
     "limit": "VALUE PLACEHOLDER",
     "src": "VALUE PLACEHOLDER",
     "stream": "VALUE PLACEHOLDER"

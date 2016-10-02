@@ -88,8 +88,9 @@ Arguments:
 - `start`: If set, only keys that compare after or equal to this key will be returned.
 - `prefix`: Key prefix (few first components) to list keys under.
 - `end`: If set, only keys that compare before this key will be returned.
-- `limit`: Maximum number of entries to return.
+- `last`: Only return the N last entries.
 - `inclusive`: Set this to `false` to omit key equal to `start` in the result.
+- `limit`: Maximum number of entries to return.
 
 Result `array`: List of matched keys currently present in the blobstore.
 Request:
@@ -102,6 +103,7 @@ Request:
   "args": {
     "end": "VALUE PLACEHOLDER",
     "inclusive": "VALUE PLACEHOLDER",
+    "last": "VALUE PLACEHOLDER",
     "limit": "VALUE PLACEHOLDER",
     "prefix": "VALUE PLACEHOLDER",
     "start": "VALUE PLACEHOLDER"
