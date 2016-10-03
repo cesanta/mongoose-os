@@ -226,7 +226,8 @@ MIOT_SRCS += $(notdir $(wildcard $(MIOT_CC3200_SRC_PATH)/*.c))
 APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 MIOT_CFLAGS = -DMG_APP=\"$(APP)\" -Dcc3200 -DCC3200_FS_SPIFFS -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
-              -DMG_DEBUG_UART=$(MG_DEBUG_UART) $(SDK_CFLAGS)
+              -DMG_DEBUG_UART=$(MG_DEBUG_UART) $(SDK_CFLAGS) \
+              -DC_DISABLE_BUILTIN_SNPRINTF
 
 ifeq "$(MG_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
