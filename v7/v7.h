@@ -862,6 +862,10 @@ typedef unsigned short v7_prop_attr_t;
  */
 #define _V7_DESC_PRESERVE_VALUE (1 << 8)
 
+#define V7_PROP_ATTR_IS_WRITABLE(a) (!(a & V7_PROPERTY_NON_WRITABLE))
+#define V7_PROP_ATTR_IS_ENUMERABLE(a) (!(a & V7_PROPERTY_NON_ENUMERABLE))
+#define V7_PROP_ATTR_IS_CONFIGURABLE(a) (!(a & V7_PROPERTY_NON_CONFIGURABLE))
+
 /*
  * Internal helpers for `V7_DESC_...` macros
  */
@@ -1020,9 +1024,14 @@ void v7_destruct_prop_iter_ctx(struct v7 *v7, struct prop_iter_ctx *ctx);
  *
  *     v7_init_prop_iter_ctx(v7, obj, &ctx);
  *     while (v7_next_prop(v7, &ctx, &name, &val, &attrs)) {
+ *       if (V7_PROP_ATTR_IS_ENUMERABLE(attrs)) continue;
  *       ...
  *     }
  *     v7_destruct_prop_iter_ctx(v7, &ctx);
+ *
+ * As you see, v7_next_prop will iterate through all properties, including
+ * non-enumerable ones, and it's your responsibility to test the attributes
+ * with the provided `V7_PROP_ATTR_*` macros and proceed as you see fit.
  */
 int v7_next_prop(struct v7 *v7, struct prop_iter_ctx *ctx, v7_val_t *name,
                  v7_val_t *value, v7_prop_attr_t *attrs);
@@ -1619,6 +1628,8 @@ struct v7_property;
  *
  * It should return non-zero if the property should be considered existing, or
  * zero otherwise.
+ *
+ * You can inspect the property attributes with the `V7_PROP_ATTR_IS_*` macros.
  */
 typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t target,
                                        v7_val_t name, v7_prop_attr_t *attrs,
