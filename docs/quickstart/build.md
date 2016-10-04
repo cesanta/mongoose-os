@@ -2,7 +2,7 @@
 title: Build the firmware
 ---
 
-Download `miot` command line tool from https://mongoose-iot.com/downloads.html .
+Download `miot` command line tool from https://mongoose-iot.com/software.html .
 Create an empty directory, go into it, and run:
 
 ```sh
