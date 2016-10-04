@@ -7,7 +7,7 @@ It is used to practically all tasks - building and flashing the firmware,
 setting device configuration, managing files on a device,
 performing over-the-air updates, managing devices on a cloud, and so on.
 
-Download `miot` tool from https://mongoose-iot.com/downloads.html
+Download `miot` tool from https://mongoose-iot.com/software.html
 
 `miot` is a powerful instrument to integrate device management into the
 development process. For example, it is easy to build an IDE plugin
