@@ -264,11 +264,11 @@ endif
 endif
 
 clean:
-	@rm -rf $(BUILD_DIR) $(FW_DIR)
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
 $(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
-	@mkdir -p $@
+	$(Q) mkdir -p $@
 
 FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
 ifneq "$(APP_FS_PATH)" ""
@@ -417,8 +417,9 @@ $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
 	             REPO_PATH=$(realpath $(REPO_PATH)) \
 	             APP=mg-boot TOOLCHAIN=gcc \
 	             SDK_PATH=$(SDK_PATH) PYTHON=$(PYTHON) \
-	             BUILD_DIR=$(BOOT_BUILD_DIR) FW_DIR=$(BOOT_FW_DIR) \
-	             CREATE_ZIP=0 dirs $@
+	             BUILD_DIR=$(abspath $(BOOT_BUILD_DIR)) \
+	             FW_DIR=$(abspath $(BOOT_FW_DIR)) \
+	             CREATE_ZIP=0 dirs $(abspath $@)
 
 $(BOOT_CFG_0): $(MK_BOOT_CFG_BIN)
 	$(vecho) "MKCFG $@"
