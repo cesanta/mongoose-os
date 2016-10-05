@@ -46,13 +46,11 @@
     "device_psk": "",
     "reconnect_timeout_min": 10,
     "reconnect_timeout_max": 60,
-    "request_timeout": 300,
     "memory_limit": 15360,
     "max_queue_size": 25,
     "ssl_server_name": "",
     "ssl_ca_file": "",
     "ssl_client_cert_file": "",
-    "verify_timeouts_period": 30,
     "uart": {
       "uart_no": 0,
       "baud_rate": 115200,
@@ -73,13 +71,13 @@
     "factory_reset_gpio": -1
   },
   "sys": {
-    "wdt_timeout" : 15
+    "wdt_timeout": 15
   },
   "console": {
-    "mem_buf_size" : 256,
+    "mem_buf_size": 256,
     "log_file": "console.log",
     "log_file_size": 2048,
-    "send_to_cloud" : true
+    "send_to_cloud": true
   },
   "conf_acl": "*"
 }
