@@ -32,7 +32,6 @@
   },
   "update": {
     "server_timeout": 10,
-    "update_to_any_version" : true,
     "ssl_server_name": "",
     "ssl_ca_file": "",
     "ssl_client_cert_file": ""

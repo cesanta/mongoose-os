@@ -321,19 +321,6 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           return -1;
         }
 
-        if (strncmp(ctx->version.ptr, build_version, strlen(build_version)) <=
-            0) {
-          /* Running the same of higher version */
-          if (get_cfg()->update.update_to_any_version == 0) {
-            ctx->status_msg = "Device has the same or more recent version";
-            CONSOLE_LOG(LL_INFO, (ctx->status_msg));
-            return 1; /* Not an error */
-          } else {
-            CONSOLE_LOG(LL_WARN, ("Same or older version "
-                                  "but update_to_any_version is set."));
-          }
-        }
-
         if ((ret = mg_upd_begin(ctx->dev_ctx, &ctx->parts,
                                 ctx->update_type == utManifest)) < 0) {
           ctx->status_msg = mg_upd_get_status_msg(ctx->dev_ctx);
