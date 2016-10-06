@@ -1,5 +1,52 @@
 #!/usr/bin/env python
 # vim: tabstop=4 expandtab shiftwidth=4 ai cin smarttab
+#
+# This tool parses config schema definitions YAML and produces:
+#  - C header and source file
+#  - JSON file with defaults
+#  - JSON file with schema (for consumption by the UI)
+#
+# Resulting configuration is an object which is represented as a C struct,
+# but definition is a list of entries, where each entry represents a key
+# in the resulting struct. Each item is a [path, type, default, params] array,
+# where path is the full path to the key, type is bool, int or string, default
+# is the default value and params is a dict with various params (currently only
+# used by web UI to assist rendering).
+# Here's a simple example:
+# [
+#   ["foo", "o", {"title": "Foo settings"}],
+#   ["foo.bar", "o", {"title": "The bar section"}],
+#   ["foo.bar.name", "s", "Fred", {"title": "Name of the bar"}],
+#   ["foo.bar.num_quux", "i", 100, {"title": "Number of quux in the bar"}],
+#   ["foo.frombulate", "b", false, {"title": "Enable frombulation"}],
+# ]
+#
+# $ gen_sys_config.py --c_name=foo_config example.yaml
+# $ cat foo_config.h
+# struct foo_config {
+#   struct foo_config_foo {
+#     struct foo_config_foo_bar {
+#       char *name;
+#       int num_quux;
+#     } bar;
+#     int frombulate;
+#   } foo;
+# };
+#
+# If default value is not specified when an entry is defined, a zero-value
+# is assumed: false for bo9oleans, 0 for ints and an empty string for strings.
+# These two definitions are equivalent:
+#
+# ["foo.frombulate", "b", false, {"title": "Enable frombulation"}],
+# ["foo.frombulate", "b", {"title": "Enable frombulation"}],
+#
+# Multiple files can be specified on the command line, they will be merged
+# into one schema. Entries can be overridden by subsequent files.
+#
+# A shorter, 2-element entry can be used to override just the default value:
+# [
+#   ["foo.frombulate", true],  # Enable frombulation by default.
+# ]
 
 import argparse
 import collections
