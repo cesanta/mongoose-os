@@ -1,0 +1,93 @@
+[
+  ["wifi", "o", {hide: true}],
+
+  ["wifi.sta", "o", {title: "WiFi Station"}],
+  ["wifi.sta.enable", "b", {title: "Connect to existing WiFi"}],
+  ["wifi.sta.ssid", "s", {title: "SSID"}],
+  ["wifi.sta.pass", "s", {title: "Password", type: "password"}],
+  ["wifi.sta.ip", "s", {title: "Static IP Address"}],
+  ["wifi.sta.netmask", "s", {title: "Static Netmask"}],
+  ["wifi.sta.gw", "s", {title: "Static Default Gateway"}],
+
+  ["wifi.ap", "o", {title: "WiFi Access Point"}],
+  ["wifi.ap.enable", "b", true, {title: "Enable"}],
+  ["wifi.ap.keep_enabled", "b", true, {title: "Keep AP enabled when station is on"}],
+  ["wifi.ap.trigger_on_gpio", "i", -1, {title: "Trigger AP on low GPIO"}],
+  ["wifi.ap.ssid", "s", "Mongoose_??????", {title: "SSID"}],
+  ["wifi.ap.pass", "s", "Mongoose", {title: "Password", type: "password"}],
+  ["wifi.ap.hidden", "b", false, {title: "Hide SSID"}],
+  ["wifi.ap.channel", "i", 6, {title: "Channel"}],
+  ["wifi.ap.max_connections", "i", 10, {title: "Max connections"}],
+  ["wifi.ap.ip", "s", "192.168.4.1", {title: "IP address"}],
+  ["wifi.ap.netmask", "s", "255.255.255.0", {title: "Network Mask"}],
+  ["wifi.ap.gw", "s", "192.168.4.1", {title: "Default Gateway"}],
+  ["wifi.ap.dhcp_start", "s", "192.168.4.2", {title: "DHCP Start Address"}],
+  ["wifi.ap.dhcp_end", "s", "192.168.4.100", {title: "DHCP End Address"}],
+
+  ["http", "o", {title: "HTTP Server"}],
+  ["http.enable", "b", true, {title: "Enable HTTP Server"}],
+  ["http.listen_addr", "s", "80", {title: "Listening port / address"}],
+  ["http.upload_acl", "s", "*", {title: "Upload file ACL"}],
+  ["http.hidden_files", "s", {title: "Hidden file pattern"}],
+
+  ["update", "o", {title: "Firmware updater"}],
+  ["update.server_timeout", "i", 10, {title : "Server Timeout"}],
+  ["update.ssl_server_name", "s", {title : "TLS Server Name"}],
+  ["update.ssl_ca_file", "s", {title : "TLS CA file"}],
+  ["update.ssl_client_cert_file", "s", {title: "TLS client cert file"}],
+
+  ["tls", "o", {title: "TLS settings"}],
+  ["tls.ca_file", "s", "ca.pem", {title : "Default TLS CA file"}],
+
+  ["clubby", "o", {title: "Cloud settings"}],
+  ["clubby.connect_on_boot", "b", true, {title: "Connect cloud on startup"}],
+  ["clubby.server_address", "s", "api.mongoose-iot.com", {title: "Cloud server address"}],
+  ["clubby.device_id", "s", "dummy", {title: "Device ID"}],
+  ["clubby.device_psk", "s", {title: "Device password"}],
+  ["clubby.reconnect_timeout_min", "i", 10, {title: "Minimal reconnect timeout"}],
+  ["clubby.reconnect_timeout_max", "i", 60, {title: "Maximal reconnect timeout"}],
+  ["clubby.memory_limit", "i", 15360, {title: "Memory Limit"}],
+  ["clubby.max_queue_size", "i", 25, {title: "Max Quueue Size"}],
+  ["clubby.ssl_server_name", "s", {title : "TLS Server Name"}],
+  ["clubby.ssl_ca_file", "s", {title : "TLS CA file"}],
+  ["clubby.ssl_client_cert_file", "s", {title: "TLS client cert file"}],
+  ["clubby.uart", "o", {title: "Clubby-over-UART settings"}],
+  ["clubby.uart.uart_no", "i", {title: "UART number (-1 to disable)"}],
+  ["clubby.uart.baud_rate", "i", 115200, {title: "Baud rate"}],
+  ["clubby.uart.fc_enable", "b", {title: "Enable hardware FC"}],
+  ["clubby.uart.wait_for_start_frame", "b", true, {title: "Wait for an incoming frame before using the channel"}],
+
+  ["dns_sd", "o", {title: "DNS-SD service discovery"}],
+  ["dns_sd.enable", "b", true, {title: "Enable service discovery"}],
+  ["dns_sd.service_name", "s", "mongoose-iot-??????", {title: "DNS-SD service name. '?' chars will be expanded with MAC address hex digits"}],
+  ["dns_sd.service_type", "s", {title: "DNS-SD service type. If omitted the app name + ._tcp is used"}],
+
+  ["debug", "o", {title: "Debug Settings"}],
+  ["debug.level", "i", 2, {
+    title: "Level",
+    type: "select",
+    values: [
+      {value: -1, title: "NONE"},
+      {value: 0, title: "ERROR"},
+      {value: 1, title: "WARN"},
+      {value: 2, title: "INFO"},
+      {value: 3, title: "DEBUG"},
+      {value: 4, title: "VERBOSE_DEBUG"}
+    ]
+  }],
+  ["debug.stdout_uart", "i", {title: "STDOUT UART (-1 to disable)"}],
+  ["debug.stderr_uart", "i", {title: "STDERR UART (-1 to disable)"}],
+  ["debug.enable_prompt", "b", true, {title: "Enable interactive JavaScript prompt on UART0"}],
+  ["debug.factory_reset_gpio", "i", -1, {title: "Factory reset GPIO (low on boot)"}],
+
+  ["sys", "o", {title: "System settings"}],
+  ["sys.wdt_timeout", "i", 15, {title: "Watchdod timeout (seconds)"}],
+
+  ["console", "o", {title: "Console settings"}],
+  ["console.mem_buf_size", "i", 256, {title: "Memory buffer size"}],
+  ["console.log_file", "s", "console.log", {title: "Log file name"}],
+  ["console.log_file_size", "i", 2048, {title: "Max log file size"}],
+  ["console.send_to_cloud", "b", true, {title: "Send console output to the cloud"}],
+
+  ["conf_acl", "s", "*", {title: "Conf ACL"}],
+]

@@ -1,15 +1,17 @@
 PROG = unit_test
 REPO_ROOT ?= ../..
 PYTHON ?= python
+BUILD_DIR = .build
+SYS_CONF_C = $(BUILD_DIR)/sys_conf.c
 
 SOURCES = unit_test.c \
-               sys_conf.c \
-               $(REPO_ROOT)/frozen/frozen.c \
-               $(REPO_ROOT)/fw/src/mg_config.c \
-               $(REPO_ROOT)/mongoose/mongoose.c \
-               $(REPO_ROOT)/common/json_utils.c \
-               $(REPO_ROOT)/common/cs_file.c \
-               $(REPO_ROOT)/common/test_util.c
+          $(SYS_CONF_C) \
+          $(REPO_ROOT)/frozen/frozen.c \
+          $(REPO_ROOT)/fw/src/mg_config.c \
+          $(REPO_ROOT)/mongoose/mongoose.c \
+          $(REPO_ROOT)/common/json_utils.c \
+          $(REPO_ROOT)/common/cs_file.c \
+          $(REPO_ROOT)/common/test_util.c
 
 INCS = -I$(REPO_ROOT)/fw/src \
        -I$(REPO_ROOT) \
@@ -17,17 +19,25 @@ INCS = -I$(REPO_ROOT)/fw/src \
        -I. \
        $(CFLAGS_EXTRA)
 
-CFLAGS = -W -Wall -Werror -g -O0 -Wno-multichar $(INCS)
+CFLAGS = -W -Wall -Werror -g -O0 -Wno-multichar -I$(BUILD_DIR) $(INCS)
 
-all: $(PROG) sys_conf.c
+$(BUILD_DIR):
+	mkdir $@
+
+all: $(BUILD_DIR) $(PROG)
 	./$(PROG)
 
 $(PROG): $(SOURCES)
 	$(CC) -o $(PROG) $(SOURCES) $(CFLAGS)
 
 #include $(REPO_ROOT)/common/scripts/test.mk
-sys_conf.c: data/defaults.json
-	$(PYTHON) $(REPO_ROOT)/tools/json_to_c_config.py --c_name=sys_conf $<
+$(SYS_CONF_C): data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml
+	$(PYTHON) $(REPO_ROOT)/fw/tools/gen_sys_config.py \
+	  --c_name=sys_conf \
+	  --dest_dir=$(BUILD_DIR) \
+	  $^
+	$(foreach f,sys_conf.c sys_conf.h sys_conf_defaults.json sys_conf_schema.json, \
+	  diff -uBb data/golden/$f .build/$f && ) true
 
 clean:
-	rm -rf $(PROG) sys_conf.*
+	rm -rf $(PROG) $(BUILD_DIR)

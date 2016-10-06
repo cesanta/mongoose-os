@@ -64,11 +64,7 @@ void mg_expand_mac_address_placeholders(char *str) {
 
 static bool load_config_defaults(struct sys_config *cfg) {
   memset(cfg, 0, sizeof(*cfg));
-  /* TODO(rojer): Figure out what to do about merging two different defaults. */
-  if (!load_config_file(CONF_SYS_DEFAULTS_FILE, "*", cfg)) {
-    return false;
-  }
-  if (!load_config_file(CONF_APP_DEFAULTS_FILE, cfg->conf_acl, cfg)) {
+  if (!load_config_file(CONF_DEFAULTS_FILE, "*", cfg)) {
     return false;
   }
   /* Vendor config is optional. */

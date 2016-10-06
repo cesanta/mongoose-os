@@ -170,10 +170,11 @@ function confReset() {
 function confLoad(loadedAll) {
   var toLoad = 5;
   var schema = [], defaults = {}, current = {};
+  var vars_schema = [], vars = {};
   function loadedOne() {
     if (--toLoad == 0) {
       console.log('All data loaded');
-      setTimeout(function() { loadedAll(schema, defaults, current); }, 10);
+      setTimeout(function() { loadedAll(schema, defaults, current, vars_schema, vars); }, 10);
     }
   }
   // Load configuration and update the UI
@@ -189,18 +190,17 @@ function confLoad(loadedAll) {
   });
   ajax('/ro_vars', function(obj, error) {
     console.log('Vars loaded', (error ? ', err ' + error : obj));
-    current = merge(current, { ro_vars: obj || {} });
+    vars = merge(vars, obj || {});
     loadedOne();
   });
-  /* For schema, the order matters. */
-  ajax('/conf_sys_schema.json', function(obj, error) {
+  ajax('/sys_config_schema.json', function(obj, error) {
     console.log('Sys schema loaded', (error ? ', err ' + error : obj));
     schema = merge(schema, obj || {});
     loadedOne();
-    ajax('/conf_app_schema.json', function(obj, error) {
-      console.log('App schema loaded', (error ? ', err ' + error : obj));
-      schema = merge(schema, obj || {});
-      loadedOne();
-    });
+  });
+  ajax('/sys_ro_vars_schema.json', function(obj, error) {
+    console.log('Vars schema loaded', (error ? ', err ' + error : obj));
+    vars_schema = merge(vars_schema, obj || {});
+    loadedOne();
   });
 }

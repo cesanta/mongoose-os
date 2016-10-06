@@ -1,0 +1,17 @@
+[
+  ["wifi", "o", {"hide": true}],
+  ["wifi.sta", "o", {"title": "WiFi Station"}],
+  ["wifi.sta.ssid", "s", {"title": "SSID"}],
+  ["wifi.sta.pass", "s", {"title": "Password", "type": "password"}],
+  ["wifi.ap", "o", {"title": "WiFi Access Point"}],
+  ["wifi.ap.ssid", "s", {"title": "SSID"}],
+  ["wifi.ap.pass", "s", {"title": "Password", "type": "password"}],
+  ["wifi.ap.channel", "i", {"title": "Channel"}],
+  ["wifi.ap.dhcp_end", "s", {"title": "DHCP End Address"}],
+  ["http", "o", {"title": "HTTP Server"}],
+  ["http.enable", "b", {"title": "Enable HTTP Server"}],
+  ["http.port", "i", {"title": "Listening port"}],
+  ["debug", "o", {"title": "Debug Settings"}],
+  ["debug.level", "i", {"title": "Level", "type": "select", "values": [{"title": "NONE", "value": -1}, {"title": "ERROR", "value": 0}, {"title": "WARN", "value": 1}, {"title": "INFO", "value": 2}, {"title": "DEBUG", "value": 3}, {"title": "VERBOSE_DEBUG", "value": 4}]}],
+  ["debug.dest", "s", {"title": "Where to send debug"}]
+]

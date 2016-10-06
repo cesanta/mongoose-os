@@ -1,0 +1,22 @@
+{
+  "wifi": {
+    "sta": {
+      "ssid": "", 
+      "pass": ""
+    }, 
+    "ap": {
+      "ssid": "FW_XXXXXX", 
+      "pass": "Elduderino", 
+      "channel": 6, 
+      "dhcp_end": "192.168.4.200"
+    }
+  }, 
+  "http": {
+    "enable": true, 
+    "port": 80
+  }, 
+  "debug": {
+    "level": 2, 
+    "dest": "uart1"
+  }
+}

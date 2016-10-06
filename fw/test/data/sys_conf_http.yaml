@@ -1,0 +1,5 @@
+[
+  ["http", "o", {title: "HTTP Server"}],
+  ["http.enable", "b", true, {title: "Enable HTTP Server"}],
+  ["http.port", "i", 80, {title: "Listening port"}],
+]

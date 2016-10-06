@@ -155,7 +155,10 @@ MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(BUILD_DIR)/fs.img
 FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
+SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
@@ -315,9 +318,9 @@ include $(REPO_PATH)/fw/src/sys_config.mk
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 
-$(FS_IMG): $(APP_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN)
+$(FS_IMG): $(APP_FS_PATH) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN)
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
-	$(Q) $(foreach f,$(FS_FILES), \
+	$(Q) $(foreach f,$(FS_FILES) $(SYS_CONFIG_SCHEMA_JSON) $(SYS_RO_VARS_SCHEMA_JSON), \
 	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 	  cp $(f) $(FS_STAGING_DIR);)
 ifeq "$(MG_ENABLE_JS)" "1"
@@ -325,6 +328,7 @@ ifeq "$(MG_ENABLE_JS)" "1"
 	  echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
 	  $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 endif
+	$(Q) cp $(SYS_CONFIG_DEFAULTS_JSON) $(FS_STAGING_DIR)/conf_defaults.json
 	$(vecho) "MKFS  $(FS_STAGING_DIR) ($(FS_SIZE))-> $@"
 	$(Q) /usr/local/bin/mkspiffs $(FS_SIZE) $(FS_STAGING_DIR) > $@
 	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@

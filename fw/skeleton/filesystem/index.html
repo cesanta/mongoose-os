@@ -104,7 +104,7 @@ width: 17em;
     document.getElementById('btn_reboot').onclick = confReboot;
     document.getElementById('btn_reset').onclick = confReset;
 
-    var renderConfig = function(schema, cfg) {
+    var renderConfig = function(schema, cfg, el) {
       var html = [];
       var currentObject = null;
       for (var i in schema) {
@@ -148,15 +148,17 @@ width: 17em;
           html.push('</div>\n');
         }
       }
-      document.getElementById('config').innerHTML = html.join('');
+      el.innerHTML = html.join('');
     };
 
-    confLoad(function(schema, defaults, current) {
+    confLoad(function(schema, defaults, current, vars_schema, vars) {
       SCHEMA = schema;
       DEFAULTS = defaults;
       CURRENT = current;
       document.getElementById('loading').style.display = 'none';
-      renderConfig(SCHEMA, merge(DEFAULTS, CURRENT));
+      renderConfig(SCHEMA, merge(DEFAULTS, CURRENT),
+                   document.getElementById('config'));
+      renderConfig(vars_schema, vars, document.getElementById('vars'));
     });
   };
 
@@ -175,8 +177,7 @@ width: 17em;
     Mongoose IoT Configuration Console
   </div>
 
-  <div class="row" id="config">
-  </div>
+  <div class="row" id="config"></div>
 
   <div class="row">
     <input id="btn_reboot" type="button" value="Reboot"
@@ -226,6 +227,13 @@ width: 17em;
     <script type="text/javascript">
       connectFileInputs('fw_select_name', 'fw_select_file');
     </script>
+  </div>
+
+  <div class="row">
+    <fieldset>
+      <legend>Vars</legend>
+      <div id="vars"></div>
+    </fieldset>
   </div>
 
 </body>

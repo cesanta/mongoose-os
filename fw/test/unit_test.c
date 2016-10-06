@@ -11,7 +11,7 @@
 
 static const char *test_config(void) {
   size_t size;
-  char *json1 = cs_read_file("data/defaults.json", &size);
+  char *json1 = cs_read_file(".build/sys_conf_defaults.json", &size);
   char *json2 = cs_read_file("data/overrides.json", &size);
   const struct mg_conf_entry *schema = sys_conf_schema();
   struct sys_conf conf;

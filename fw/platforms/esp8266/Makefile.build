@@ -236,7 +236,10 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
 LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
 MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
+SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
@@ -460,7 +463,7 @@ $(MG_BUILD_INFO_C): $(MIOT_OBJS)
 
 $(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
-	$(Q) $(foreach f,$(FS_FILES), \
+	$(Q) $(foreach f,$(FS_FILES) $(SYS_CONFIG_SCHEMA_JSON) $(SYS_RO_VARS_SCHEMA_JSON), \
 	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 	  cp $(f) $(FS_STAGING_DIR);)
 ifeq "$(MG_ENABLE_JS)" "1"
@@ -468,6 +471,7 @@ ifeq "$(MG_ENABLE_JS)" "1"
     echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
     $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 endif
+	$(Q) cp $(SYS_CONFIG_DEFAULTS_JSON) $(FS_STAGING_DIR)/conf_defaults.json
 	$(vecho) "MKFS  $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_STAGING_DIR) > $@
 

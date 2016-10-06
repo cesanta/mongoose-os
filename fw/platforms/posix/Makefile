@@ -60,9 +60,11 @@ APP_SRCS += v7.c \
             mg_debug_js.c \
             mg_gpio_js.c \
             mg_http_js.c \
+            mg_i2c_js.c \
             mg_init_js.c \
             mg_mqtt_js.c \
             mg_pwm_js.c \
+            mg_spi_js.c \
             mg_sys_config_js.c \
             mg_tcp_udp_js.c \
             mg_timers_js.c \
@@ -72,6 +74,8 @@ APP_SRCS += v7.c \
             mg_ws_client_js.c
 
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
+
+MIOT_POSIX_FEATURES += -DMG_ENABLE_JS
 
 else
   APP_SRCS += cs_file.c
@@ -160,6 +164,7 @@ LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
+SYS_CONFIG_DEFAULTS_JSON = $(BUILD_DIR)/sys_config_defaults.json
 SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
@@ -229,10 +234,11 @@ $(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(V7_PATH)/v7.c $(OBJS)
 	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 
 # After file copy, change default HTTP port to 9080
-fs: $(BIN_DIR) $(FS_FILES)
+fs: $(BIN_DIR) $(FS_FILES) $(SYS_CONFIG_C)
 	@echo "MKFS $@"
 	$(Q) cp $(FS_FILES) $(BIN_DIR)
-	$(Q) perl -pi"" -e 's/"80"/"9080"/' $(BIN_DIR)/conf_sys_defaults.json
+	$(Q) cp $(SYS_CONFIG_DEFAULTS_JSON) $(BIN_DIR)/conf_defaults.json
+	$(Q) perl -pi"" -e 's/"80"/"9080"/' $(BIN_DIR)/conf_defaults.json
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
