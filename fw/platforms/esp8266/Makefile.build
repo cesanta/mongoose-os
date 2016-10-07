@@ -461,7 +461,7 @@ $(MG_BUILD_INFO_C): $(MIOT_OBJS)
 
 # -- Filesystem.
 
-$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
+$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_DIR)/mkspiffs
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
 	$(Q) $(foreach f,$(FS_FILES) $(SYS_CONFIG_SCHEMA_JSON) $(SYS_RO_VARS_SCHEMA_JSON), \
 	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
