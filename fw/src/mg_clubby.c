@@ -15,8 +15,6 @@
 #include "fw/src/mg_uart.h"
 #include "fw/src/mg_wifi.h"
 
-#undef connect /* CC3200 redefines it to sl_Connect */
-
 static struct clubby *s_global_clubby;
 
 static void clubby_wifi_ready(enum mg_wifi_status event, void *arg) {
@@ -56,6 +54,7 @@ enum mg_init_result mg_clubby_init(void) {
         }
       }
     }
+#ifdef MG_ENABLE_CLUBBY_UART
     if (sccfg->uart.uart_no >= 0) {
       const struct sys_config_clubby_uart *scucfg = &get_cfg()->clubby.uart;
       struct mg_uart_config *ucfg = mg_uart_default_config();
@@ -69,6 +68,7 @@ enum mg_init_result mg_clubby_init(void) {
         if (sccfg->connect_on_boot) uch->connect(uch);
       }
     }
+#endif
     s_global_clubby = c;
   }
   return MG_INIT_OK;

@@ -23,9 +23,13 @@ APP_EXTRA_SRCS ?=
 
 MG_ENABLE_JS ?= 0
 MG_ENABLE_CLUBBY ?= 1
+MG_ENABLE_CLUBBY_UART ?= 1
 MG_ENABLE_CONFIG_SERVICE ?= 1
 MG_ENABLE_FILESYSTEM_SERVICE ?= 1
+MG_ENABLE_UPDATER_POST ?= 1
+MG_ENABLE_UPDATER_CLUBBY ?= 1
 MG_ENABLE_DNS_SD ?= 1
+
 MG_DEBUG_UART ?= 0
 
 REPO_PATH ?= ../../..
@@ -100,7 +104,7 @@ MIOT_SRCS = cs_rbuf.c \
             mg_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             mg_uart.c \
             mg_utils.c \
-            cs_crc32.c mg_updater_common.c mg_updater_post.c \
+            cs_crc32.c \
             rboot-bigflash.c rboot-api.c \
             json_utils.c \
             umm_malloc.c \
@@ -195,9 +199,8 @@ MIOT_FEATURES ?= -DMG_ENABLE_ADC_API \
                 -DMG_ENABLE_WIFI_API \
                 -DMG_ENABLE_WS_CLIENT_API
 MIOT_ESP_FEATURES = -DMG_ENABLE_WEB_CONFIG \
-                     -DMG_ENABLE_FILE_UPLOAD \
-                     -DMG_ENABLE_UPDATER_POST \
-                     -DMG_ENABLE_CONSOLE_FILE_BUFFER
+                    -DMG_ENABLE_FILE_UPLOAD \
+                    -DMG_ENABLE_CONSOLE_FILE_BUFFER
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
@@ -281,28 +284,7 @@ else
   MIOT_SRCS += cs_file.c
 endif
 
-ifeq "$(MG_ENABLE_CLUBBY)" "1"
-  MIOT_SRCS += clubby.c clubby_channel_ws.c \
-               mg_clubby.c mg_clubby_channel_uart.c mg_updater_clubby.c
-  MIOT_FEATURES += -DMG_ENABLE_CLUBBY -DMG_ENABLE_CLUBBY_API
-  MIOT_ESP_FEATURES += -DMG_ENABLE_UPDATER_CLUBBY -DMG_ENABLE_UPDATER_CLUBBY_API
-
-ifeq "$(MG_ENABLE_CONFIG_SERVICE)" "1"
-  MIOT_SRCS += mg_service_config.c mg_service_vars.c
-  MIOT_FEATURES += -DMG_ENABLE_CONFIG_SERVICE
-endif
-
-ifeq "$(MG_ENABLE_FILESYSTEM_SERVICE)" "1"
-  MIOT_SRCS += mg_service_filesystem.c
-  MIOT_FEATURES += -DMG_ENABLE_FILESYSTEM_SERVICE
-endif
-
-ifeq "$(MG_ENABLE_DNS_SD)" "1"
-  MIOT_SRCS += mg_mdns.c mg_dns_sd.c
-  MIOT_FEATURES += -DMG_ENABLE_DNS -DMG_ENABLE_DNS_SERVER -DMG_ENABLE_MDNS -DMG_ENABLE_DNS_SD
-endif
-
-endif
+include $(MIOT_PATH)/src/features.mk
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
@@ -494,7 +476,6 @@ $(MIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
 	  REPO_PATH=$(REPO_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
-	  MIOT_FEATURES='$(MIOT_FEATURES)' \
 	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
 	  BUILD_DIR=$(MIOT_POSIX_BUILD_DIR)
 endif

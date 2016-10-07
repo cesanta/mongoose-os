@@ -1,0 +1,27 @@
+[
+  ["tls", "o", {title: "TLS settings"}],
+  ["tls.ca_file", "s", "ca.pem", {title : "Default TLS CA file"}],
+
+  ["debug", "o", {title: "Debug Settings"}],
+  ["debug.level", "i", 2, {
+    title: "Level",
+    type: "select",
+    values: [
+      {value: -1, title: "NONE"},
+      {value: 0, title: "ERROR"},
+      {value: 1, title: "WARN"},
+      {value: 2, title: "INFO"},
+      {value: 3, title: "DEBUG"},
+      {value: 4, title: "VERBOSE_DEBUG"}
+    ]
+  }],
+  ["debug.stdout_uart", "i", {title: "STDOUT UART (-1 to disable)"}],
+  ["debug.stderr_uart", "i", {title: "STDERR UART (-1 to disable)"}],
+  ["debug.enable_prompt", "b", true, {title: "Enable interactive JavaScript prompt on UART0"}],
+  ["debug.factory_reset_gpio", "i", -1, {title: "Factory reset GPIO (low on boot)"}],
+
+  ["sys", "o", {title: "System settings"}],
+  ["sys.wdt_timeout", "i", 15, {title: "Watchdod timeout (seconds)"}],
+
+  ["conf_acl", "s", "*", {title: "Conf ACL"}],
+]

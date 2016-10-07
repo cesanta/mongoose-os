@@ -17,8 +17,13 @@ APP_EXTRA_SRCS ?=
 
 MG_ENABLE_JS ?= 0
 MG_ENABLE_CLUBBY ?= 1
+MG_ENABLE_CLUBBY_UART ?= 1
 MG_ENABLE_CONFIG_SERVICE ?= 1
 MG_ENABLE_FILESYSTEM_SERVICE ?= 1
+MG_ENABLE_UPDATER_POST ?= 1
+MG_ENABLE_UPDATER_CLUBBY ?= 1
+MG_ENABLE_DNS_SD ?= 0
+
 MG_DEBUG_UART ?= 0
 
 V7_FREEZE ?= 1
@@ -247,24 +252,8 @@ ifeq "$(MG_ENABLE_JS)" "1"
 else
   MIOT_SRCS += cs_file.c
 endif
-ifeq "$(MG_ENABLE_CLUBBY)" "1"
-  MIOT_SRCS += clubby.c clubby_channel_ws.c \
-               mg_clubby.c mg_clubby_channel_uart.c mg_updater_clubby.c
-  MIOT_FEATURES += -DMG_ENABLE_CLUBBY -DMG_ENABLE_CLUBBY_API
 
-  MIOT_CC3200_FEATURES += -DMG_ENABLE_UPDATER_CLUBBY
-
-ifeq "$(MG_ENABLE_CONFIG_SERVICE)" "1"
-  MIOT_SRCS += mg_service_config.c mg_service_vars.c
-  MIOT_FEATURES += -DMG_ENABLE_CONFIG_SERVICE
-endif
-
-ifeq "$(MG_ENABLE_FILESYSTEM_SERVICE)" "1"
-  MIOT_SRCS += mg_service_filesystem.c
-  MIOT_FEATURES += -DMG_ENABLE_FILESYSTEM_SERVICE
-endif
-
-endif
+include $(MIOT_PATH)/src/features.mk
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
@@ -355,7 +344,6 @@ $(MIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
 	  REPO_PATH=$(REPO_PATH) \
 	  V7_FEATURES='$(V7_HOST_FEATURES) -DV7_MAIN -DV7_FREEZE' \
-	  MIOT_FEATURES='$(MIOT_FEATURES)' \
 	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
 	  BUILD_DIR=$(MIOT_POSIX_BUILD_DIR)
 endif

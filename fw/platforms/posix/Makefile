@@ -6,7 +6,9 @@ MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
 
 REPO_PATH ?= ../../..
-COMMON_PATH = $(REPO_PATH)/common
+COMMON_PATH ?= $(REPO_PATH)/common
+MIOT_PATH ?= $(REPO_PATH)/fw
+MIOT_SRC_PATH ?= $(MIOT_PATH)/src
 SRC_PATH ?= ../../src
 V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
@@ -21,6 +23,10 @@ SSL ?= Krypton
 DEBUG ?= 0
 CC_WRAPPER ?=
 
+# Explicitly disable updater, it's not supported on POSIX build yet.
+MG_ENABLE_UPDATER_POST = 0
+MG_ENABLE_UPDATER_CLUBBY = 0
+
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(REPO_PATH)/fw/common.mk
 
@@ -32,8 +38,6 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
               -DV7_ENABLE_ENTITY_IDS
 
-MIOT_FEATURES = -DMG_ENABLE_CLUBBY \
-                -DMG_ENABLE_CLUBBY_API
 MIOT_POSIX_FEATURES ?= -DMG_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
@@ -41,18 +45,16 @@ MONGOOSE_FEATURES = \
 
 
 INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
-APP_SRCS = $(notdir $(wildcard *.c)) mg_init.c  \
-           mongoose.c frozen.c mg_mongoose.c \
-           mg_prompt.c mg_timers_mongoose.c mg_wifi.c \
-           mg_config.c mg_sys_config.c \
-           $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-           json_utils.c  mg_clubby.c cs_rbuf.c mg_uart.c \
-           clubby.c mg_clubby_channel_uart.c clubby_channel_ws.c \
-           mg_utils.c mg_console.c \
-           mg_service_vars.c mg_service_config.c mg_service_filesystem.c
+MIOT_SRCS = $(notdir $(wildcard *.c)) mg_init.c  \
+            mongoose.c frozen.c mg_mongoose.c \
+            mg_prompt.c mg_timers_mongoose.c mg_wifi.c \
+            mg_config.c mg_sys_config.c \
+            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            json_utils.c cs_rbuf.c mg_uart.c \
+            mg_utils.c mg_console.c
 
 ifeq "$(MG_ENABLE_JS)" "1"
-APP_SRCS += v7.c \
+MIOT_SRCS += v7.c \
             mg_adc_js.c \
             mg_clubby_js.c \
             mg_config_js.c \
@@ -78,8 +80,10 @@ $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 MIOT_POSIX_FEATURES += -DMG_ENABLE_JS
 
 else
-  APP_SRCS += cs_file.c
+  MIOT_SRCS += cs_file.c
 endif
+
+include $(MIOT_PATH)/src/features.mk
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
@@ -143,7 +147,7 @@ endif
 ifeq "$(SSL)" "Krypton"
 INCLUDES += $(KRYPTON_PATH)
 VPATH += $(KRYPTON_PATH)
-APP_SRCS += krypton.c
+MIOT_SRCS += krypton.c
 CFLAGS += -DMG_ENABLE_SSL -DMG_DISABLE_PFS -DSSL_KRYPTON
 endif
 
@@ -162,7 +166,7 @@ endif
 INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))
 
-APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SRCS))
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MIOT_SRCS))
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
 SYS_CONFIG_DEFAULTS_JSON = $(BUILD_DIR)/sys_config_defaults.json
 SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
@@ -231,6 +235,7 @@ $(V7_PATH)/v7.c:
 
 $(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(V7_PATH)/v7.c $(OBJS)
 	@echo "LD $@"
+	@echo -- $(MIOT_FEATURES)
 	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 
 # After file copy, change default HTTP port to 9080

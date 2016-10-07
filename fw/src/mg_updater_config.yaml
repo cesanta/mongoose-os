@@ -1,0 +1,7 @@
+[
+  ["update", "o", {title: "Firmware updater"}],
+  ["update.server_timeout", "i", 10, {title : "Server Timeout"}],
+  ["update.ssl_server_name", "s", {title : "TLS Server Name"}],
+  ["update.ssl_ca_file", "s", {title : "TLS CA file"}],
+  ["update.ssl_client_cert_file", "s", {title: "TLS client cert file"}],
+]

@@ -235,7 +235,7 @@ void mg_prompt_process_char(char ch) {
       show_prompt();
     }
   } else if (ch == EOF_CHAR) {
-#ifdef MG_ENABLE_CLUBBY
+#if defined(MG_ENABLE_CLUBBY) && defined(MG_ENABLE_CLUBBY_UART)
     const int uart_no = s_sjp.uart_no;
     if (uart_no >= 0 && mg_clubby_get_global() != NULL) {
       /* Switch into Clubby mode. This will detach our dispatcher. */

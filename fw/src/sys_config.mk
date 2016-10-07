@@ -1,10 +1,12 @@
 REPO_PATH ?= ../..
 FS_PATH ?= $(REPO_PATH)/fw/skeleton/filesystem
-SYS_CONF_SCHEMA ?= $(REPO_PATH)/fw/src/sys_config_schema.yaml
+SYS_CONF_SCHEMA ?=
 APP_CONF_SCHEMA ?=
 SYS_RO_VARS_SCHEMA ?= $(REPO_PATH)/fw/src/sys_ro_vars_schema.yaml
 GSC_TOOL ?= $(REPO_PATH)/fw/tools/gen_sys_config.py
 PYTHON ?= python
+
+SYS_CONF_SCHEMA += $(REPO_PATH)/fw/src/mg_sys_config.yaml
 
 $(SYS_CONFIG_C): $(SYS_CONF_SCHEMA) $(APP_CONF_SCHEMA) $(GSC_TOOL)
 	$(vecho) "GEN   $@"
