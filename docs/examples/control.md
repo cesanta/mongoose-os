@@ -30,8 +30,8 @@ Here's what we write in `app.c`:
 #include "common/clubby/clubby.h"
 #include "frozen/frozen.h"
 #include "fw/src/mg_clubby.h"
-#include "fw/src/sj_app.h"
-#include "fw/src/sj_gpio.h"
+#include "fw/src/mg_app.h"
+#include "fw/src/mg_gpio.h"
 
 static void cb(struct clubby_request_info *ri, void *cb_arg,
                struct clubby_frame_info *fi, struct mg_str args) {
@@ -41,8 +41,8 @@ static void cb(struct clubby_request_info *ri, void *cb_arg,
   if (json_scanf(args.p, (int) args.len, "{pin: %d, state: %d}", &pin,
                  &state) == 2) {
     // Success. Set the pin into the requested state.
-    sj_gpio_set_mode(pin, GPIO_MODE_INOUT, GPIO_PULL_PULLUP);
-    result = sj_gpio_write(pin, state);
+    mg_gpio_set_mode(pin, GPIO_MODE_INOUT, GPIO_PULL_PULLUP);
+    result = mg_gpio_write(pin, state);
 
     // Report the result
     clubby_send_responsef(ri, "%d", result);
@@ -55,7 +55,7 @@ static void cb(struct clubby_request_info *ri, void *cb_arg,
   (void) fi;
 }
 
-enum mg_app_init_result sj_app_init(void) {
+enum mg_app_init_result mg_app_init(void) {
   // Register a handler for the "/Set" command
   clubby_add_handler(mg_clubby_get_global(), mg_mk_str("/Set"), cb, NULL);
   return MG_APP_INIT_SUCCESS;
@@ -68,7 +68,8 @@ Compile and flash:
 $ dev flash -port /dev/ttyUSB0 -fw build/fw.zip
 ```
 
-And now, let's sent the command remotely via curl. First, go to the cloud UI
+And now, let's send the command remotely via curl. First, go to the
+[cloud UI](https://console.mongoose-iot.com)
 and click on the "Auth" tab. There, copy the auth token. Enter in the console:
 
 ```sh
