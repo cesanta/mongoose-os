@@ -2045,6 +2045,10 @@ extern void *v7_sp_limit;
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For FILE */
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
 /*
  * TODO(dfrank) : improve amalgamation, so that we'll be able to include
  * files here, and include common/platform.h
@@ -2242,6 +2246,10 @@ int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
  */
 void v7_stack_stat_clean(struct v7 *v7);
 #endif
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
 #endif /* CS_V7_SRC_CORE_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
@@ -4547,6 +4555,10 @@ V7_PRIVATE struct v7_property *get_user_data_property(v7_val_t obj);
 
 /* Amalgamated: #include "v7/src/core_public.h" */
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
 /*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
  * the `result` variable.
@@ -4634,6 +4646,10 @@ enum v7_err v7_compile(const char *js_code, int generate_binary_output,
 WARN_UNUSED_RESULT
 enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                      v7_val_t args, v7_val_t *res);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
 #endif /* CS_V7_SRC_EXEC_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
