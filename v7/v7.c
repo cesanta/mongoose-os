@@ -44,6 +44,7 @@
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
 #define CS_P_CC3100 6
+#define CS_P_MBED 7
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -57,6 +58,8 @@
 #define CS_PLATFORM CS_P_UNIX
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
+#elif defined(__MBED__)
+#define CS_PLATFORM CS_P_MBED
 #endif
 
 #ifndef CS_PLATFORM
@@ -70,6 +73,7 @@
 /* Amalgamated: #include "common/platforms/platform_esp_lwip.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3200.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3100.h" */
+/* Amalgamated: #include "common/platforms/platform_mbed.h" */
 
 /* Common stuff */
 
@@ -763,6 +767,22 @@ int inet_pton(int af, const char *src, void *dst);
 
 #endif /* CS_PLATFORM == CS_P_CC3100 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_mbed.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_MBED_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_MBED_H_
+#if CS_PLATFORM == CS_P_MBED
+
+/* Amalgamated: #include "mbed.h" */
+
+#endif /* CS_PLATFORM == CS_P_MBED */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_MBED_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/str_util.h"
 #endif
@@ -10235,6 +10255,19 @@ void cr_context_free(struct cr_ctx *p_ctx) {
   mbuf_free(&p_ctx->stack_data);
   mbuf_free(&p_ctx->stack_ret);
 }
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/mbed/mbed_libc.c"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#if CS_PLATFORM == CS_P_MBED
+
+long timezone;
+
+#endif /* CS_PLATFORM == CS_P_MBED */
 #ifdef V7_MODULE_LINES
 #line 1 "v7/builtin/file.c"
 #endif
