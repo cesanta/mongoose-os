@@ -1853,6 +1853,23 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* CS_V7_SRC_V7_FEATURES_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "v7/src/platform.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_V7_SRC_PLATFORM_H_
+#define CS_V7_SRC_PLATFORM_H_
+
+#ifdef __arm
+#undef V7_ENABLE__Date
+#define V7_ENABLE__Date 0
+#endif
+
+#endif /* CS_V7_SRC_PLATFORM_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "v7/src/internal.h"
 #endif
 /*
@@ -1942,6 +1959,7 @@ typedef unsigned long uintptr_t;
 #endif
 
 /* Amalgamated: #include "v7/src/v7_features.h" */
+/* Amalgamated: #include "v7/src/platform.h" */
 
 /* MSVC6 doesn't have standard C math constants defined */
 #ifndef M_E
@@ -2041,6 +2059,7 @@ extern void *v7_sp_limit;
 
 /* Amalgamated: #include "v7/src/license.h" */
 /* Amalgamated: #include "v7/src/v7_features.h" */
+/* Amalgamated: #include "v7/src/platform.h" */
 
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For FILE */
