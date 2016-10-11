@@ -28,6 +28,7 @@
 #include "fw/src/mg_updater_clubby.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
+#include "fw/platforms/esp8266/user/esp_task.h"
 #include "fw/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
@@ -69,6 +70,7 @@ void dbg_putc(char c) {
  */
 int esp_mg_init(rboot_config *bcfg) {
   mongoose_init();
+  esp_mg_task_init();
   /*
    * In order to see debug output (at least errors) during boot we have to
    * initialize debug in this point. But default we put debug to UART0 with

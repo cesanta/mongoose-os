@@ -11,10 +11,10 @@
 #include "v7_esp.h"
 #include "fw/src/mg_mongoose.h"
 #include "fw/src/mg_prompt.h"
-#include "common/platforms/esp8266/esp_mg_net_if.h"
 #include "common/umm_malloc/umm_malloc.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
+#include "fw/platforms/esp8266/user/esp_task.h"
 
 #ifdef MG_ENABLE_JS
 #include "v7/v7.h"

@@ -235,7 +235,6 @@ $(V7_PATH)/v7.c:
 
 $(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(V7_PATH)/v7.c $(OBJS)
 	@echo "LD $@"
-	@echo -- $(MIOT_FEATURES)
 	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 
 # After file copy, change default HTTP port to 9080
