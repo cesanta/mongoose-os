@@ -137,7 +137,6 @@ bool cs_frbuf_append(struct cs_frbuf *b, const void *data, uint16_t len) {
   b->hdr.used += (REC_HDR_SIZE + len);
   if (write_hdr(b) != FILE_HDR_SIZE) return false;
   fflush(b->fp);
-  LOG(LL_DEBUG, ("%p <- %u", b, len));
   return true;
 }
 
@@ -175,6 +174,5 @@ int cs_frbuf_get(struct cs_frbuf *b, char **data) {
   b->hdr.used -= (REC_HDR_SIZE + rhdr.len);
   if (write_hdr(b) != FILE_HDR_SIZE) return -5;
   fflush(b->fp);
-  LOG(LL_DEBUG, ("%p -> %u", b, rhdr.len));
   return rhdr.len;
 }

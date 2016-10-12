@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_GPIO_API)
+#if defined(MG_ENABLE_GPIO_API)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,7 +15,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <poll.h>
-#include <sj_gpio.h>
+
+#include "fw/src/mg_gpio.h"
 
 int gpio_export(int gpio_no) {
   char buf[50];
@@ -207,7 +208,7 @@ int gpio_set_handler(int gpio_no, f_gpio_intr_handler_t callback, void *arg) {
   return 0;
 }
 
-int gpio_poll() {
+int gpio_poll(void) {
   struct pollfd fdset[HANDLER_MAX_COUNT];
   struct gpio_event *events_tmp[HANDLER_MAX_COUNT];
 
@@ -257,7 +258,7 @@ int gpio_poll() {
 }
 
 /* HAL functions */
-int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
+int mg_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   if (mode == GPIO_MODE_INOUT) {
     fprintf(stderr, "Inout mode is not supported\n");
     return -1;
@@ -282,28 +283,28 @@ int sj_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
   return gpio_set_direction(pin, mode);
 }
 
-int sj_gpio_write(int pin, enum gpio_level level) {
+int mg_gpio_write(int pin, enum gpio_level level) {
   return gpio_set_value(pin, level);
 }
 
-enum gpio_level sj_gpio_read(int pin) {
+enum gpio_level mg_gpio_read(int pin) {
   return gpio_get_value(pin);
 }
 
 static f_gpio_intr_handler_t s_proxy_handler;
 static void *s_proxy_handler_arg;
 
-void sj_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
+void mg_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
   s_proxy_handler = cb;
   s_proxy_handler_arg = arg;
 }
 
-void sj_reenable_intr(int pin) {
+void mg_reenable_intr(int pin) {
   struct gpio_event *ev = get_gpio_event(pin);
   ev->enabled = 1;
 }
 
-int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
+int mg_gpio_intr_set(int pin, enum gpio_int_mode type) {
   if (type == GPIO_INTR_OFF) {
     gpio_remove_handler(pin);
     return 0;
@@ -316,4 +317,4 @@ int sj_gpio_intr_set(int pin, enum gpio_int_mode type) {
   return gpio_set_handler(pin, s_proxy_handler, s_proxy_handler_arg);
 }
 
-#endif /* defined(SJ_ENABLE_JS) && defined(SJ_ENABLE_GPIO_API) */
+#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_GPIO_API) */

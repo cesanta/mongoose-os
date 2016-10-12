@@ -1,0 +1,6 @@
+[
+  ["dns_sd", "o", {title: "DNS-SD service discovery"}],
+  ["dns_sd.enable", "b", true, {title: "Enable service discovery"}],
+  ["dns_sd.service_name", "s", "mongoose-iot-??????", {title: "DNS-SD service name. '?' chars will be expanded with MAC address hex digits"}],
+  ["dns_sd.service_type", "s", {title: "DNS-SD service type. If omitted the app name + ._tcp is used"}],
+]

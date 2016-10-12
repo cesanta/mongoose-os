@@ -69,36 +69,56 @@ def get_tag_for_commit(repo, commit):
             return tag.name
     return None
 
+
+def file_or_stdout(fname):
+    return sys.stdout if fname == '-' else open(fname, 'w')
+
+
 def _write_build_info(bi, args):
     if args.json_output:
-        if args.json_output == '-':
-            out = sys.stdout
+        out = file_or_stdout(args.json_output)
+        if args.var_prefix:
+            bij = dict((args.var_prefix + k, v) for k, v in bi.items())
         else:
-            out = open(args.json_output, 'w')
-        json.dump(bi, out, indent=2, sort_keys=True)
+            bij = bi
+        json.dump(bij, out, indent=2, sort_keys=True)
+
+    bi['var_prefix'] = args.var_prefix
 
     if args.c_output:
-        if args.c_output == '-':
-            out = sys.stdout
-        else:
-            out = open(args.c_output, 'w')
+        out = file_or_stdout(args.c_output)
         print >>out, """\
 /* Auto-generated, do not edit. */
-const char *build_id = "%(build_id)s";
-const char *build_timestamp = "%(build_timestamp)s";
-const char *build_version = "%(build_version)s";\
+const char *%(var_prefix)sbuild_id = "%(build_id)s";
+const char *%(var_prefix)sbuild_timestamp = "%(build_timestamp)s";
+const char *%(var_prefix)sbuild_version = "%(build_version)s";\
+""" % bi
+
+    if args.go_output:
+        out = file_or_stdout(args.go_output)
+        print >>out, """\
+/* Auto-generated, do not edit. */
+package main
+
+const (
+	%(var_prefix)sVersion = "%(build_version)s"
+	%(var_prefix)sBuildId = "%(build_id)s"
+	%(var_prefix)sBuildTimestamp = "%(build_timestamp)s"
+)\
 """ % bi
 
 
 def cmd_gen_build_info(args):
     bi = {}
+    repo = None
+    repo_path = args.repo_path or os.getcwd()
 
     ts = datetime.datetime.utcnow()
     timestamp = None
     if args.timestamp:
         timestamp = args.timestamp
     else:
-        timestamp = ts.isoformat()
+        timestamp = ts.replace(microsecond=0).isoformat() + 'Z'
     if timestamp is not None:
         bi['build_timestamp'] = timestamp
 
@@ -109,12 +129,12 @@ def cmd_gen_build_info(args):
         version = None
         if args.tag_as_version:
             try:
-                repo = get_git_repo(os.getcwd())
+                repo = get_git_repo(repo_path)
                 version = get_tag_for_commit(repo, repo.head.commit)
             except Exception, e:
                 print >>sys.stderr, 'App version not specified and could not be guessed (%s)' % e
         if version is None:
-            version = ts.strftime('%Y%m%d%H%M%S')
+            version = ts.strftime('%Y%m%d%H')
     if version is not None:
         bi['build_version'] = version
 
@@ -123,7 +143,7 @@ def cmd_gen_build_info(args):
         id = args.id
     else:
         try:
-            repo = get_git_repo(os.getcwd())
+            repo = repo or get_git_repo(repo_path)
             if repo.head.is_detached:
                 branch_or_tag = get_tag_for_commit(repo, repo.head.commit)
                 if branch_or_tag is None:
@@ -251,35 +271,37 @@ def cmd_create_manifest(args):
     json.dump(manifest, out, indent=2, sort_keys=True)
 
 
-def add_file_to_arc(args, part, arc_dir, src_file, added, zf):
+def add_file_to_arc(args, part, arc_dir, src_file, added):
     if args.src_dir:
         src_file = os.path.join(args.src_dir, src_file)
     arc_file = os.path.join(arc_dir, os.path.basename(src_file))
     if arc_file not in added:
-        zf.write(src_file, arc_file)
-        added[arc_file] = True
-        print '     Add %s' % src_file
+        added[arc_file] = src_file
 
 def cmd_create_fw(args):
     manifest = json.load(open(args.manifest))
     arc_dir = '%s-%s' % (manifest['name'], manifest['version'])
-    added = {}
+    to_add = {}
     with zipfile.ZipFile(args.output, 'w', zipfile.ZIP_STORED) as zf:
         manifest_arc_name = os.path.join(arc_dir, FW_MANIFEST_FILE_NAME)
         zf.writestr(manifest_arc_name, json.dumps(manifest, indent=2, sort_keys=True))
+        to_add = {}
         for part_name, part in manifest['parts'].items():
             if 'src' not in part:
                 continue
             # TODO(rojer): Support non-local sources.
             src = part['src']
             if isinstance(src, basestring):
-                add_file_to_arc(args, part, arc_dir, src, added, zf)
+                add_file_to_arc(args, part, arc_dir, src, to_add)
             else:
-            # src is object with files as a keys
+                # src is object with files as a keys
                 for fname, _ in src.items():
                     add_file_to_arc(args, part,
                                     os.path.join(arc_dir, part_name),
-                                    os.path.join(part_name, fname), added, zf)
+                                    os.path.join(part_name, fname), to_add)
+        for arc_file, src_file in sorted(to_add.items()):
+            print '     Adding %s' % src_file
+            zf.write(src_file, arc_file)
 
 
 def cmd_get(args):
@@ -310,24 +332,29 @@ def cmd_set(args):
 
 if __name__ == '__main__':
     handlers = {}
-    parser = argparse.ArgumentParser(description='FW metadata tool', prog='fw_manifest')
+    parser = argparse.ArgumentParser(description='FW metadata tool', prog='fw_meta')
     cmd = parser.add_subparsers(dest='cmd')
     gbi_desc = "Generate build info"
     gbi_cmd = cmd.add_parser('gen_build_info', help=gbi_desc, description=gbi_desc)
     gbi_cmd.add_argument('--timestamp', '-t')
     gbi_cmd.add_argument('--version', '-v')
     gbi_cmd.add_argument('--id', '-i')
+    gbi_cmd.add_argument('--repo_path')
     gbi_cmd.add_argument('--dirty', default="auto", choices=["auto", "true", "false"])
     gbi_cmd.add_argument('--tag_as_version', type=bool, default=False)
+    gbi_cmd.add_argument('--var_prefix', default='')
     gbi_cmd.add_argument('--json_output')
     gbi_cmd.add_argument('--c_output')
+    gbi_cmd.add_argument('--go_output')
     handlers['gen_build_info'] = cmd_gen_build_info
 
     gtbi_desc = "Extract build info from manifest"
     gtbi_cmd = cmd.add_parser('get_build_info', help=gtbi_desc, description=gtbi_desc)
     gtbi_cmd.add_argument('--manifest', '-m', required=True)
+    gtbi_cmd.add_argument('--var_prefix', default='')
     gtbi_cmd.add_argument('--json_output')
     gtbi_cmd.add_argument('--c_output')
+    gtbi_cmd.add_argument('--go_output')
     handlers['get_build_info'] = cmd_get_build_info
 
     cm_desc = "Create manifest"

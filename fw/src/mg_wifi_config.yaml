@@ -1,0 +1,26 @@
+[
+  ["wifi", "o", {hide: true}],
+
+  ["wifi.sta", "o", {title: "WiFi Station"}],
+  ["wifi.sta.enable", "b", {title: "Connect to existing WiFi"}],
+  ["wifi.sta.ssid", "s", {title: "SSID"}],
+  ["wifi.sta.pass", "s", {title: "Password", type: "password"}],
+  ["wifi.sta.ip", "s", {title: "Static IP Address"}],
+  ["wifi.sta.netmask", "s", {title: "Static Netmask"}],
+  ["wifi.sta.gw", "s", {title: "Static Default Gateway"}],
+
+  ["wifi.ap", "o", {title: "WiFi Access Point"}],
+  ["wifi.ap.enable", "b", true, {title: "Enable"}],
+  ["wifi.ap.keep_enabled", "b", true, {title: "Keep AP enabled when station is on"}],
+  ["wifi.ap.trigger_on_gpio", "i", -1, {title: "Trigger AP on low GPIO"}],
+  ["wifi.ap.ssid", "s", "Mongoose_??????", {title: "SSID"}],
+  ["wifi.ap.pass", "s", "Mongoose", {title: "Password", type: "password"}],
+  ["wifi.ap.hidden", "b", false, {title: "Hide SSID"}],
+  ["wifi.ap.channel", "i", 6, {title: "Channel"}],
+  ["wifi.ap.max_connections", "i", 10, {title: "Max connections"}],
+  ["wifi.ap.ip", "s", "192.168.4.1", {title: "IP address"}],
+  ["wifi.ap.netmask", "s", "255.255.255.0", {title: "Network Mask"}],
+  ["wifi.ap.gw", "s", "192.168.4.1", {title: "Default Gateway"}],
+  ["wifi.ap.dhcp_start", "s", "192.168.4.2", {title: "DHCP Start Address"}],
+  ["wifi.ap.dhcp_end", "s", "192.168.4.100", {title: "DHCP End Address"}],
+]

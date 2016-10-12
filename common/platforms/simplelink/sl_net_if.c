@@ -89,7 +89,7 @@ void mg_set_non_blocking_mode(sock_t sock) {
 }
 
 static int mg_is_error(int n) {
-  return (n < 0 && n != SL_EALREADY);
+  return (n < 0 && n != SL_EALREADY && n != SL_EAGAIN);
 }
 
 void mg_if_connect_tcp(struct mg_connection *nc,
@@ -205,7 +205,7 @@ static sock_t mg_open_listening_socket(union socket_address *sa, int type,
       (sa->sa.sa_family == AF_INET) ? sizeof(sa->sin) : sizeof(sa->sin6);
   sock_t sock = sl_Socket(sa->sa.sa_family, type, proto);
   if (sock < 0) return sock;
-  if ((r = bind(sock, &sa->sa, sa_len)) < 0) {
+  if ((r = sl_Bind(sock, &sa->sa, sa_len)) < 0) {
     sl_Close(sock);
     return r;
   }
@@ -223,7 +223,7 @@ static void mg_write_to_socket(struct mg_connection *nc) {
 
   if (nc->flags & MG_F_UDP) {
     n = sl_SendTo(nc->sock, io->buf, io->len, 0, &nc->sa.sa,
-                      sizeof(nc->sa.sin));
+                  sizeof(nc->sa.sin));
     DBG(("%p %d %d %d %s:%hu", nc, nc->sock, n, errno,
          inet_ntoa(nc->sa.sin.sin_addr), ntohs(nc->sa.sin.sin_port)));
   } else {
@@ -377,13 +377,13 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   double min_timer;
   struct mg_connection *nc, *tmp;
   struct SlTimeval_t tv;
-  fd_set read_set, write_set, err_set;
+  SlFdSet_t read_set, write_set, err_set;
   sock_t max_fd = INVALID_SOCKET;
   int num_fds, num_ev, num_timers = 0;
 
-  FD_ZERO(&read_set);
-  FD_ZERO(&write_set);
-  FD_ZERO(&err_set);
+  SL_FD_ZERO(&read_set);
+  SL_FD_ZERO(&write_set);
+  SL_FD_ZERO(&err_set);
 
   /*
    * Note: it is ok to have connections with sock == INVALID_SOCKET in the list,
@@ -399,14 +399,14 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
       if (!(nc->flags & MG_F_WANT_WRITE) &&
           nc->recv_mbuf.len < nc->recv_mbuf_limit &&
           (!(nc->flags & MG_F_UDP) || nc->listener == NULL)) {
-        FD_SET(nc->sock, &read_set);
+        SL_FD_SET(nc->sock, &read_set);
         if (max_fd == INVALID_SOCKET || nc->sock > max_fd) max_fd = nc->sock;
       }
 
       if (((nc->flags & MG_F_CONNECTING) && !(nc->flags & MG_F_WANT_READ)) ||
           (nc->send_mbuf.len > 0 && !(nc->flags & MG_F_CONNECTING))) {
-        FD_SET(nc->sock, &write_set);
-        FD_SET(nc->sock, &err_set);
+        SL_FD_SET(nc->sock, &write_set);
+        SL_FD_SET(nc->sock, &err_set);
         if (max_fd == INVALID_SOCKET || nc->sock > max_fd) max_fd = nc->sock;
       }
     }
@@ -443,12 +443,13 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
     int fd_flags = 0;
     if (nc->sock != INVALID_SOCKET) {
       if (num_ev > 0) {
-        fd_flags = (FD_ISSET(nc->sock, &read_set) &&
-                            (!(nc->flags & MG_F_UDP) || nc->listener == NULL)
-                        ? _MG_F_FD_CAN_READ
-                        : 0) |
-                   (FD_ISSET(nc->sock, &write_set) ? _MG_F_FD_CAN_WRITE : 0) |
-                   (FD_ISSET(nc->sock, &err_set) ? _MG_F_FD_ERROR : 0);
+        fd_flags =
+            (SL_FD_ISSET(nc->sock, &read_set) &&
+                     (!(nc->flags & MG_F_UDP) || nc->listener == NULL)
+                 ? _MG_F_FD_CAN_READ
+                 : 0) |
+            (SL_FD_ISSET(nc->sock, &write_set) ? _MG_F_FD_CAN_WRITE : 0) |
+            (SL_FD_ISSET(nc->sock, &err_set) ? _MG_F_FD_ERROR : 0);
       }
       /* SimpleLink does not report UDP sockets as writeable. */
       if (nc->flags & MG_F_UDP && nc->send_mbuf.len > 0) {

@@ -5,6 +5,9 @@ title: "Blob"
 Blob service provides basic key-value store. Keys are arrays of strings. First component of the key must be either your ID or ID of a project you have access to.
 
 #### Get
+Retrieves data at a given key.
+
+
 Arguments:
 - `key`: Key to fetch the value for.
 
@@ -36,7 +39,9 @@ Response:
 ```
 
 #### Set
-Stores data at a given key. If binary flag is set, value must be an array of numbers in 0-255 range.
+Stores data at a given key.
+If binary flag is set, value must be an array of numbers in 0-255 range.
+
 
 Arguments:
 - `binary`: If set to `true`, `value` will be stored in a binary form (not JSON). Only works if the value is an array of numbers in 0-255 range, each number is interpreted as a byte value.
@@ -71,14 +76,21 @@ Response:
 ```
 
 #### List
-Returns a list of all keys with a given prefix. Within that prefix, items can be iterated from a specific start key (inclusive), up to an optional end key (non inclusive). If inclusive is false (true by default), then the start key is non inclusive. The result can be limited to a given number of items with the limit parameter.
+Returns a list of all keys with a given prefix.
+Within that prefix, items can be iterated from a specific
+start key (inclusive), up to an optional end key (non inclusive).
+If inclusive is false (true by default), then the start key is non
+inclusive. The result can be limited to a given number of items with
+the limit parameter.
+
 
 Arguments:
 - `start`: If set, only keys that compare after or equal to this key will be returned.
 - `prefix`: Key prefix (few first components) to list keys under.
 - `end`: If set, only keys that compare before this key will be returned.
-- `limit`: Maximum number of entries to return.
+- `last`: Only return the N last entries.
 - `inclusive`: Set this to `false` to omit key equal to `start` in the result.
+- `limit`: Maximum number of entries to return.
 
 Result `array`: List of matched keys currently present in the blobstore.
 Request:
@@ -91,6 +103,7 @@ Request:
   "args": {
     "end": "VALUE PLACEHOLDER",
     "inclusive": "VALUE PLACEHOLDER",
+    "last": "VALUE PLACEHOLDER",
     "limit": "VALUE PLACEHOLDER",
     "prefix": "VALUE PLACEHOLDER",
     "start": "VALUE PLACEHOLDER"

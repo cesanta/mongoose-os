@@ -1,0 +1,16 @@
+[
+  ["debug", "o", {title: "Debug Settings"}],
+  ["debug.level", "i", 2, {
+    title: "Level",
+    type: "select",
+    values: [
+      {value: -1, title: "NONE"},
+      {value: 0, title: "ERROR"},
+      {value: 1, title: "WARN"},
+      {value: 2, title: "INFO"},
+      {value: 3, title: "DEBUG"},
+      {value: 4, title: "VERBOSE_DEBUG"}
+    ]
+  }],
+  ["debug.dest", "s", "uart1", {title: "Where to send debug"}],
+]

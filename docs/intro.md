@@ -4,12 +4,14 @@ color: '#F05B40'
 repo: https://github.com/cesanta/mongoose-iot
 items:
   - { name: overview }
-  - { name: quickstart.md }
+  - { name: quickstart }
   - { name: examples }
   - { name: firmware }
+  - { name: api.md }
   - { name: javascript-api }
-  - { name: c-api }
+#  - { name: c-api }
   - { name: cloud }
   - { name: services }
-  - { name: faq.md }
+#  - { name: miot.md }
+#  - { name: faq.md }
 ---

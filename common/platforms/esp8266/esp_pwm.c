@@ -111,7 +111,7 @@ static void remove_pwm_info(struct pwm_info *p) {
 #define FRC1_ENABLE_TIMER BIT7
 #define TM_INT_EDGE 0
 
-static void pwm_configure_timer() {
+static void pwm_configure_timer(void) {
   int i, enable = 0;
   for (i = 0; i < s_num_pwms; i++) {
     struct pwm_info *p = s_pwms + i;
@@ -140,7 +140,7 @@ static void pwm_configure_timer() {
   ETS_FRC1_INTR_ENABLE();
 }
 
-int sj_pwm_set(int pin, int period, int duty) {
+int mg_pwm_set(int pin, int period, int duty) {
   struct pwm_info *p;
 
   if (pin != 16 && get_gpio_info(pin) == NULL) {
@@ -166,7 +166,7 @@ int sj_pwm_set(int pin, int period, int duty) {
     if (p != NULL) {
       remove_pwm_info(p);
       pwm_configure_timer();
-      sj_gpio_write(pin, 0);
+      mg_gpio_write(pin, 0);
     }
     return 1;
   }
@@ -175,7 +175,7 @@ int sj_pwm_set(int pin, int period, int duty) {
     return 1;
   }
 
-  sj_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+  mg_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
 
   ETS_FRC1_INTR_DISABLE();
   p->period = period;
@@ -183,12 +183,12 @@ int sj_pwm_set(int pin, int period, int duty) {
   if (p->cnt == 0 || p->cnt > (uint32_t) period) {
     p->val = 1;
     p->cnt = p->duty;
-    sj_gpio_write(pin, p->val);
+    mg_gpio_write(pin, p->val);
   }
   ETS_FRC1_INTR_ENABLE();
 
   if (duty == 0 || period == duty) {
-    sj_gpio_write(pin, (period == duty));
+    mg_gpio_write(pin, (period == duty));
   }
 
   pwm_configure_timer();

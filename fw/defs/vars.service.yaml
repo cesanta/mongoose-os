@@ -1,0 +1,13 @@
+namespace: http://mongoose-iot.com/fw
+name: /v1/Vars
+methods:
+  Get:
+    doc: Get device read-only vars
+    result:
+      type: object
+      properties:
+        arch: {type: string}
+        fw_id: {type: string}
+        fw_timestamp: {type: string}
+        fw_version: {type: string}
+        mac_address: {type: string}

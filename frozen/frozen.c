@@ -83,27 +83,24 @@ struct fstate {
   int path_len;
 };
 
-#define SET_STATE(fr, ptr, str, len)                \
-  struct fstate fstate = {(ptr), (fr)->path_len};   \
+#define SET_STATE(fr, ptr, str, len)              \
+  struct fstate fstate = {(ptr), (fr)->path_len}; \
   append_to_path((fr), (str), (len));
 
-#define CALL_BACK(fr, tok, value, len)                                    \
-  do {                                                                    \
-    if ((fr)->callback &&                                                 \
-        ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.')){  \
-                                                                          \
-      struct json_token t = {(value), (len), (tok)};                      \
-                                                                          \
-      /* Call the callback with the given value and current name */       \
-      (fr)->callback(                                                     \
-          (fr)->callback_data,                                            \
-          (fr)->cur_name, (fr)->cur_name_len, (fr)->path, &t              \
-          );                                                              \
-                                                                          \
-      /* Reset the name */                                                \
-      (fr)->cur_name = NULL;                                              \
-      (fr)->cur_name_len = 0;                                             \
-    }                                                                     \
+#define CALL_BACK(fr, tok, value, len)                                        \
+  do {                                                                        \
+    if ((fr)->callback &&                                                     \
+        ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.')) {     \
+      struct json_token t = {(value), (len), (tok)};                          \
+                                                                              \
+      /* Call the callback with the given value and current name */           \
+      (fr)->callback((fr)->callback_data, (fr)->cur_name, (fr)->cur_name_len, \
+                     (fr)->path, &t);                                         \
+                                                                              \
+      /* Reset the name */                                                    \
+      (fr)->cur_name = NULL;                                                  \
+      (fr)->cur_name_len = 0;                                                 \
+    }                                                                         \
   } while (0)
 
 static int append_to_path(struct frozen *f, const char *str, int size) {
@@ -282,25 +279,29 @@ static int parse_array(struct frozen *f) {
   TRY(test_and_skip(f, '['));
   {
     CALL_BACK(f, JSON_TYPE_ARRAY_START, NULL, 0);
-    SET_STATE(f, f->cur - 1, "", 0);
-    while (cur(f) != ']') {
-      snprintf(buf, sizeof(buf), "[%d]", i);
-      i++;
-      current_path_len = append_to_path(f, buf, strlen(buf));
-      f->cur_name = f->path + strlen(f->path) - strlen(buf) + 1/*opening brace*/;
-      f->cur_name_len = strlen(buf) - 2/*braces*/;
-      TRY(parse_value(f));
-      truncate_path(f, current_path_len);
-      if (cur(f) == ',') f->cur++;
+    {
+      SET_STATE(f, f->cur - 1, "", 0);
+      while (cur(f) != ']') {
+        snprintf(buf, sizeof(buf), "[%d]", i);
+        i++;
+        current_path_len = append_to_path(f, buf, strlen(buf));
+        f->cur_name =
+            f->path + strlen(f->path) - strlen(buf) + 1 /*opening brace*/;
+        f->cur_name_len = strlen(buf) - 2 /*braces*/;
+        TRY(parse_value(f));
+        truncate_path(f, current_path_len);
+        if (cur(f) == ',') f->cur++;
+      }
+      TRY(test_and_skip(f, ']'));
+      truncate_path(f, fstate.path_len);
+      CALL_BACK(f, JSON_TYPE_ARRAY_END, fstate.ptr, f->cur - fstate.ptr);
     }
-    TRY(test_and_skip(f, ']'));
-    truncate_path(f, fstate.path_len);
-    CALL_BACK(f, JSON_TYPE_ARRAY_END, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
 
-static int expect(struct frozen *f, const char *s, int len, enum json_token_type tok_type) {
+static int expect(struct frozen *f, const char *s, int len,
+                  enum json_token_type tok_type) {
   int i, n = left(f);
   SET_STATE(f, f->cur, "", 0);
   for (i = 0; i < len; i++) {
@@ -397,14 +398,16 @@ static int parse_object(struct frozen *f) {
   TRY(test_and_skip(f, '{'));
   {
     CALL_BACK(f, JSON_TYPE_OBJECT_START, NULL, 0);
-    SET_STATE(f, f->cur - 1, ".", 1);
-    while (cur(f) != '}') {
-      TRY(parse_pair(f));
-      if (cur(f) == ',') f->cur++;
+    {
+      SET_STATE(f, f->cur - 1, ".", 1);
+      while (cur(f) != '}') {
+        TRY(parse_pair(f));
+        if (cur(f) == ',') f->cur++;
+      }
+      TRY(test_and_skip(f, '}'));
+      truncate_path(f, fstate.path_len);
+      CALL_BACK(f, JSON_TYPE_OBJECT_END, fstate.ptr, f->cur - fstate.ptr);
     }
-    TRY(test_and_skip(f, '}'));
-    truncate_path(f, fstate.path_len);
-    CALL_BACK(f, JSON_TYPE_OBJECT_END, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
@@ -460,6 +463,68 @@ int json_printer_file(struct json_out *out, const char *buf, size_t len) {
   return fwrite(buf, 1, len, out->u.fp);
 }
 
+static int b64idx(int c) {
+  if (c < 26) {
+    return c + 'A';
+  } else if (c < 52) {
+    return c - 26 + 'a';
+  } else if (c < 62) {
+    return c - 52 + '0';
+  } else {
+    return c == 62 ? '+' : '/';
+  }
+}
+
+static int b64rev(int c) {
+  if (c >= 'A' && c <= 'Z') {
+    return c - 'A';
+  } else if (c >= 'a' && c <= 'z') {
+    return c + 26 - 'a';
+  } else if (c >= '0' && c <= '9') {
+    return c + 52 - '0';
+  } else if (c == '+') {
+    return 62;
+  } else if (c == '/') {
+    return 63;
+  } else {
+    return 64;
+  }
+}
+
+static int b64enc(struct json_out *out, const unsigned char *p, int n) {
+  char buf[4];
+  int i, len = 0;
+  for (i = 0; i < n; i += 3) {
+    int a = p[i], b = i + 1 < n ? p[i + 1] : 0, c = i + 2 < n ? p[i + 2] : 0;
+    buf[0] = b64idx(a >> 2);
+    buf[1] = b64idx((a & 3) << 4 | (b >> 4));
+    buf[2] = b64idx((b & 15) << 2 | (c >> 6));
+    buf[3] = b64idx(c & 63);
+    if (i + 1 >= n) buf[2] = '=';
+    if (i + 2 >= n) buf[3] = '=';
+    len += out->printer(out, buf, sizeof(buf));
+  }
+  return len;
+}
+
+static int b64dec(const char *src, int n, char *dst) {
+  const char *end = src + n;
+  int len = 0;
+  while (src + 3 < end) {
+    int a = b64rev(src[0]), b = b64rev(src[1]), c = b64rev(src[2]),
+        d = b64rev(src[3]);
+    dst[len++] = (a << 2) | (b >> 4);
+    if (src[2] != '=') {
+      dst[len++] = (b << 4) | (c >> 2);
+      if (src[3] != '=') {
+        dst[len++] = (c << 6) | d;
+      }
+    }
+    src += 4;
+  }
+  return len;
+}
+
 int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
   int len = 0;
   const char *quote = "\"", *null = "null";
@@ -467,7 +532,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
   va_copy(ap, xap);
 
   while (*fmt != '\0') {
-    if (strchr(":, \r\n\t[]{}", *fmt) != NULL) {
+    if (strchr(":, \r\n\t[]{}\"", *fmt) != NULL) {
       len += out->printer(out, fmt, 1);
       fmt++;
     } else if (fmt[0] == '%') {
@@ -492,6 +557,12 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         int val = va_arg(ap, int);
         const char *str = val ? "true" : "false";
         len += out->printer(out, str, strlen(str));
+      } else if (fmt[1] == 'V') {
+        const unsigned char *p = va_arg(ap, const unsigned char *);
+        int n = va_arg(ap, int);
+        len += out->printer(out, quote, 1);
+        len += b64enc(out, p, n);
+        len += out->printer(out, quote, 1);
       } else if (fmt[1] == 'Q' ||
                  (fmt[1] == '.' && fmt[2] == '*' && fmt[3] == 'Q')) {
         size_t l = 0;
@@ -514,21 +585,42 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           len += out->printer(out, quote, 1);
         }
       } else {
-        const char *end_of_format_specifier = "sdfFgGlhuI.*-0123456789";
-        size_t n = strspn(fmt + 1, end_of_format_specifier);
-        char fmt2[20];
-        va_list sub_ap;
-        strncpy(fmt2, fmt, n + 1 > sizeof(fmt2) ? sizeof(fmt2) : n + 1);
-        fmt2[n + 1] = '\0';
-
         /*
          * we delegate printing to the system printf.
          * The goal here is to delegate all modifiers parsing to the system
          * printf, as you can see below we still have to parse the format
          * types.
+         *
+         * Currently, %s with strings longer than 20 chars will require
+         * double-buffering (an auxiliary buffer will be allocated from heap).
+         * TODO(dfrank): reimplement %s and %.*s in order to avoid that.
          */
+
+        const char *end_of_format_specifier = "sdfFgGlhuI.*-0123456789";
+        size_t n = strspn(fmt + 1, end_of_format_specifier);
+        char *pbuf = buf;
+        size_t need_len;
+        char fmt2[20];
+        va_list sub_ap;
+        strncpy(fmt2, fmt, n + 1 > sizeof(fmt2) ? sizeof(fmt2) : n + 1);
+        fmt2[n + 1] = '\0';
+
         va_copy(sub_ap, ap);
-        vsnprintf(buf, sizeof(buf), fmt2, sub_ap);
+        need_len =
+            vsnprintf(buf, sizeof(buf), fmt2, sub_ap) + 1 /* null-term */;
+        /*
+         * TODO(lsm): Fix windows & eCos code path here. Their vsnprintf
+         * implementation returns -1 on overflow rather needed size.
+         */
+        if (need_len > sizeof(buf)) {
+          /*
+           * resulting string doesn't fit into a stack-allocated buffer `buf`,
+           * so we need to allocate a new buffer from heap and use it
+           */
+          pbuf = (char *) malloc(need_len);
+          va_copy(sub_ap, ap);
+          vsnprintf(pbuf, need_len, fmt2, sub_ap);
+        }
 
         /*
          * however we need to parse the type ourselves in order to advance
@@ -562,13 +654,19 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           }
         }
 
-        len += out->printer(out, buf, strlen(buf));
+        len += out->printer(out, pbuf, strlen(pbuf));
         skip = n + 1;
+
+        /* If buffer was allocated from heap, free it */
+        if (pbuf != buf) {
+          free(pbuf);
+          pbuf = NULL;
+        }
       }
       fmt += skip;
-    } else if (is_alpha(*fmt)) {
+    } else if (*fmt == '_' || is_alpha(*fmt)) {
       len += out->printer(out, quote, 1);
-      while (is_alpha(*fmt)) {
+      while (*fmt == '_' || is_alpha(*fmt) || is_digit(*fmt)) {
         len += out->printer(out, fmt, 1);
         fmt++;
       }
@@ -656,9 +754,8 @@ struct scan_array_info {
   struct json_token *token;
 };
 
-static void json_scanf_array_elem_cb(void *callback_data,
-                                     const char *name, size_t name_len,
-                                     const char *path,
+static void json_scanf_array_elem_cb(void *callback_data, const char *name,
+                                     size_t name_len, const char *path,
                                      const struct json_token *token) {
   struct scan_array_info *info = (struct scan_array_info *) callback_data;
 
@@ -689,11 +786,34 @@ struct json_scanf_info {
   int type;
 };
 
-static void json_scanf_cb(void *callback_data,
-                          const char *name, size_t name_len,
-                          const char *path,
-                          const struct json_token *token)
-{
+int json_unescape(const char *src, int slen, char *dst, int dlen) {
+  char *send = (char *) src + slen, *dend = dst + dlen, *orig_dst = dst, *p;
+  const char *esc1 = "\"\\/bfnrt", *esc2 = "\"\\/\b\f\n\r\t";
+
+  while (src < send) {
+    if (*src == '\\') {
+      if (++src >= send) return JSON_STRING_INCOMPLETE;
+      if (*src == 'u') {
+        /* TODO(lsm): \uXXXX escapes drag utf8 lib... Do it at some stage */
+        return JSON_STRING_INVALID;
+      } else if ((p = (char *) strchr(esc1, *src)) != NULL) {
+        if (dst < dend) *dst = esc2[p - esc1];
+      } else {
+        return JSON_STRING_INVALID;
+      }
+    } else {
+      if (dst < dend) *dst = *src;
+    }
+    dst++;
+    src++;
+  }
+
+  return dst - orig_dst;
+}
+
+static void json_scanf_cb(void *callback_data, const char *name,
+                          size_t name_len, const char *path,
+                          const struct json_token *token) {
   struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
 
   (void) name;
@@ -728,12 +848,23 @@ static void json_scanf_cb(void *callback_data,
     }
     case 'Q': {
       char **dst = (char **) info->target;
-      info->num_conversions++;
-      /* TODO(lsm): un-escape string */
-      *dst = (char *) malloc(token->len + 1);
-      if (*dst != NULL) {
-        strncpy(*dst, token->ptr, token->len);
-        (*dst)[token->len] = '\0';
+      int unescaped_len = json_unescape(token->ptr, token->len, NULL, 0);
+      if (unescaped_len >= 0 &&
+          (*dst = (char *) malloc(unescaped_len + 1)) != NULL) {
+        info->num_conversions++;
+        json_unescape(token->ptr, token->len, *dst, unescaped_len);
+        (*dst)[unescaped_len] = '\0';
+      }
+      break;
+    }
+    case 'V': {
+      char **dst = (char **) info->target;
+      int len = token->len * 4 / 3 + 2;
+      if ((*dst = (char *) malloc(len + 1)) != NULL) {
+        int n = b64dec(token->ptr, token->len, *dst);
+        (*dst)[n] = '\0';
+        *(int *) info->user_data = n;
+        info->num_conversions++;
       }
       break;
     }
@@ -765,6 +896,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
       info.type = fmt[i + 1];
       switch (fmt[i + 1]) {
         case 'M':
+        case 'V':
           info.user_data = va_arg(ap, void *);
         /* FALLTHROUGH */
         case 'B':

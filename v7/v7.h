@@ -1,5 +1,5 @@
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/license.h"
+#line 1 "v7/src/license.h"
 #endif
 /*
  * Copyright (c) 2013-2014 Cesanta Software Limited
@@ -27,7 +27,7 @@
 #define V7_EXTERN static
 #endif /* CS_V7_SRC_LICENSE_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_profiles.h"
+#line 1 "v7/src/features_profiles.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -47,7 +47,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_PROFILES_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_minimal.h"
+#line 1 "v7/src/features_minimal.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -62,7 +62,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_MINIMAL_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_medium.h"
+#line 1 "v7/src/features_medium.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -82,7 +82,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_MEDIUM_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/features_full.h"
+#line 1 "v7/src/features_full.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -165,7 +165,7 @@
 
 #endif /* CS_V7_SRC_FEATURES_FULL_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/v7_features.h"
+#line 1 "v7/src/v7_features.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -182,7 +182,24 @@
 
 #endif /* CS_V7_SRC_V7_FEATURES_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/core_public.h"
+#line 1 "v7/src/platform.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_V7_SRC_PLATFORM_H_
+#define CS_V7_SRC_PLATFORM_H_
+
+#ifdef __arm
+#undef V7_ENABLE__Date
+#define V7_ENABLE__Date 0
+#endif
+
+#endif /* CS_V7_SRC_PLATFORM_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "v7/src/core_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -202,9 +219,14 @@
 
 /* Amalgamated: #include "v7/src/license.h" */
 /* Amalgamated: #include "v7/src/v7_features.h" */
+/* Amalgamated: #include "v7/src/platform.h" */
 
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For FILE */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 /*
  * TODO(dfrank) : improve amalgamation, so that we'll be able to include
@@ -403,11 +425,15 @@ int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
  */
 void v7_stack_stat_clean(struct v7 *v7);
 #endif
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
 #endif /* CS_V7_SRC_CORE_PUBLIC_H_ */
 #ifndef V7_EXPORT_INTERNAL_HEADERS
 #ifdef V7_MODULE_LINES
-#line 1 "./src/core_public.h"
+#line 1 "v7/src/core_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -427,9 +453,14 @@ void v7_stack_stat_clean(struct v7 *v7);
 
 /* Amalgamated: #include "v7/src/license.h" */
 /* Amalgamated: #include "v7/src/v7_features.h" */
+/* Amalgamated: #include "v7/src/platform.h" */
 
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For FILE */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 /*
  * TODO(dfrank) : improve amalgamation, so that we'll be able to include
@@ -629,9 +660,13 @@ int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
 void v7_stack_stat_clean(struct v7 *v7);
 #endif
 
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
 #endif /* CS_V7_SRC_CORE_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/primitive_public.h"
+#line 1 "v7/src/primitive_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -747,7 +782,7 @@ int v7_is_foreign(v7_val_t v);
 
 #endif /* CS_V7_SRC_PRIMITIVE_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/string_public.h"
+#line 1 "v7/src/string_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -822,7 +857,7 @@ const char *v7_get_cstring(struct v7 *v7, v7_val_t *v);
 
 #endif /* CS_V7_SRC_STRING_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/object_public.h"
+#line 1 "v7/src/object_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -861,6 +896,10 @@ typedef unsigned short v7_prop_attr_t;
  * keep all offsets in one place
  */
 #define _V7_DESC_PRESERVE_VALUE (1 << 8)
+
+#define V7_PROP_ATTR_IS_WRITABLE(a) (!(a & V7_PROPERTY_NON_WRITABLE))
+#define V7_PROP_ATTR_IS_ENUMERABLE(a) (!(a & V7_PROPERTY_NON_ENUMERABLE))
+#define V7_PROP_ATTR_IS_CONFIGURABLE(a) (!(a & V7_PROPERTY_NON_CONFIGURABLE))
 
 /*
  * Internal helpers for `V7_DESC_...` macros
@@ -1020,9 +1059,14 @@ void v7_destruct_prop_iter_ctx(struct v7 *v7, struct prop_iter_ctx *ctx);
  *
  *     v7_init_prop_iter_ctx(v7, obj, &ctx);
  *     while (v7_next_prop(v7, &ctx, &name, &val, &attrs)) {
+ *       if (V7_PROP_ATTR_IS_ENUMERABLE(attrs)) continue;
  *       ...
  *     }
  *     v7_destruct_prop_iter_ctx(v7, &ctx);
+ *
+ * As you see, v7_next_prop will iterate through all properties, including
+ * non-enumerable ones, and it's your responsibility to test the attributes
+ * with the provided `V7_PROP_ATTR_*` macros and proceed as you see fit.
  */
 int v7_next_prop(struct v7 *v7, struct prop_iter_ctx *ctx, v7_val_t *name,
                  v7_val_t *value, v7_prop_attr_t *attrs);
@@ -1079,7 +1123,7 @@ void v7_set_destructor_cb(struct v7 *v7, v7_val_t obj, v7_destructor_cb_t *d);
 
 #endif /* CS_V7_SRC_OBJECT_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/array_public.h"
+#line 1 "v7/src/array_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1151,7 +1195,7 @@ void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
 
 #endif /* CS_V7_SRC_ARRAY_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/function_public.h"
+#line 1 "v7/src/function_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1213,7 +1257,7 @@ int v7_is_callable(struct v7 *v7, v7_val_t v);
 
 #endif /* CS_V7_SRC_FUNCTION_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/regexp_public.h"
+#line 1 "v7/src/regexp_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1253,7 +1297,7 @@ int v7_is_regexp(struct v7 *v7, v7_val_t v);
 
 #endif /* CS_V7_SRC_REGEXP_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/conversion_public.h"
+#line 1 "v7/src/conversion_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1341,7 +1385,7 @@ int v7_is_truthy(struct v7 *v7, v7_val_t v);
 
 #endif /* CS_V7_SRC_CONVERSION_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/exec_public.h"
+#line 1 "v7/src/exec_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1356,6 +1400,10 @@ int v7_is_truthy(struct v7 *v7, v7_val_t v);
 #define CS_V7_SRC_EXEC_PUBLIC_H_
 
 /* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 /*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
@@ -1445,9 +1493,13 @@ WARN_UNUSED_RESULT
 enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                      v7_val_t args, v7_val_t *res);
 
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
 #endif /* CS_V7_SRC_EXEC_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/exceptions_public.h"
+#line 1 "v7/src/exceptions_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1502,7 +1554,7 @@ void v7_clear_thrown_value(struct v7 *v7);
 
 #endif /* CS_V7_SRC_EXCEPTIONS_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/gc_public.h"
+#line 1 "v7/src/gc_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1563,7 +1615,7 @@ void v7_gc(struct v7 *v7, int full);
 
 #endif /* CS_V7_SRC_GC_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/util_public.h"
+#line 1 "v7/src/util_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1619,6 +1671,8 @@ struct v7_property;
  *
  * It should return non-zero if the property should be considered existing, or
  * zero otherwise.
+ *
+ * You can inspect the property attributes with the `V7_PROP_ATTR_IS_*` macros.
  */
 typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t target,
                                        v7_val_t name, v7_prop_attr_t *attrs,
@@ -1653,7 +1707,7 @@ v7_val_t v7_mk_proxy(struct v7 *v7, v7_val_t target,
 
 #endif /* CS_V7_SRC_UTIL_PUBLIC_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/main_public.h"
+#line 1 "v7/src/main_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited

@@ -33,9 +33,11 @@ MAKEFLAGS += w
 
 T=$(shell [ -t 0 ] && echo true || echo false)
 
+INNER_MAKE?=$(MAKE)
+
 # `make` command, which will be invoked either directly or inside the newly
 # created docker container. It uses MAKE_REPO_ABS_PATH, which will be set later
-MAKE_CMD=$(MAKE) -j4 \
+MAKE_CMD=$(INNER_MAKE) -j4 \
       -C $(MAKE_REPO_ABS_PATH)/$(APP_SUBDIR) -f Makefile.build \
       APP=$(APP) \
       APP_VERSION=$(APP_VERSION) \
@@ -47,11 +49,16 @@ MAKE_CMD=$(MAKE) -j4 \
 # inside our docker container
 ifeq ("$(MIOT_SDK_REVISION)","")
 
-# We're outside of the container, so, invoke docker properly
+# We're outside of the container, so, invoke docker properly.
+# Note about mounts: we mount repo to a stable path (/src) as well as the
+# original path outside the container, whatever it may be, so that absolute path
+# references continue to work (e.g. Git submodules are known to use abs. paths).
 MAKE_REPO_ABS_PATH=/src
+INNER_MAKE=make
 all clean:
 	@docker run --rm -i --tty=$T \
 	  -v $(REPO_ABS_PATH):/src \
+	  -v $(REPO_ABS_PATH):$(REPO_ABS_PATH) \
 	  $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  /bin/bash -c "\
 	    nice $(MAKE_CMD) \

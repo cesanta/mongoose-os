@@ -1,0 +1,7 @@
+[
+  ["console", "o", {title: "Console settings"}],
+  ["console.mem_buf_size", "i", 256, {title: "Memory buffer size"}],
+  ["console.log_file", "s", "console.log", {title: "Log file name"}],
+  ["console.log_file_size", "i", 2048, {title: "Max log file size"}],
+  ["console.send_to_cloud", "b", true, {title: "Send console output to the cloud"}],
+]

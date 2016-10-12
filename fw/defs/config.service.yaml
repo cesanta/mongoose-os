@@ -1,0 +1,21 @@
+namespace: http://mongoose-iot.com/fw
+name: /v1/Config
+methods:
+  Get:
+    doc: Get device config
+    result:
+      keep_as_json: true
+
+  Set:
+    doc: Set device config
+    args:
+      config:
+        keep_as_json: true
+  Save:
+    doc: Save device config
+    args:
+      reboot:
+        type: boolean
+        doc: |
+          If set to `true`, the device will be rebooted after saving config. It
+          is often desirable because it's the only way to apply saved config.

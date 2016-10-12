@@ -13,11 +13,11 @@
 #include <os_type.h>
 #include <user_interface.h>
 
-uint32_t sj_adc_read(int pin) {
+uint32_t mg_adc_read(int pin) {
   (void) pin;
   return 0xFFFF & system_adc_read();
 }
 
-double sj_adc_read_voltage(int pin) {
-  return sj_adc_read(pin) / 1024.0; /* ESP8266 has a 10-bit ADC */
+double mg_adc_read_voltage(int pin) {
+  return mg_adc_read(pin) / 1024.0; /* ESP8266 has a 10-bit ADC */
 }

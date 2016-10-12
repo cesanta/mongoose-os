@@ -1,11 +1,15 @@
 package ourjson
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"reflect"
 
-	"github.com/cesanta/ubjson"
+	"cesanta.com/common/go/limitedwriter"
 	"github.com/cesanta/errors"
+	"github.com/cesanta/ubjson"
 )
 
 // RawMessage must be a slice in order for `omitempty` flag to work properly.
@@ -19,8 +23,12 @@ type rawMessage interface {
 	String() string
 }
 
+func (m RawMessage) IsInitialized() bool {
+	return len(m) > 0
+}
+
 func (m RawMessage) MarshalJSON() ([]byte, error) {
-	if len(m) == 0 {
+	if !m.IsInitialized() {
 		return nil, errors.New("not initialized")
 	}
 	b, err := m[0].MarshalJSON()
@@ -33,7 +41,7 @@ func (m *RawMessage) UnmarshalJSON(data []byte) error {
 }
 
 func (m RawMessage) MarshalUBJSON() ([]byte, error) {
-	if len(m) == 0 {
+	if !m.IsInitialized() {
 		return nil, errors.New("not initialized")
 	}
 	b, err := m[0].MarshalUBJSON()
@@ -46,14 +54,14 @@ func (m *RawMessage) UnmarshalUBJSON(data []byte) error {
 }
 
 func (m RawMessage) UnmarshalInto(v interface{}) error {
-	if len(m) == 0 {
+	if !m.IsInitialized() {
 		return errors.New("not initialized")
 	}
 	return errors.Trace(m[0].UnmarshalInto(v))
 }
 
 func (m RawMessage) String() string {
-	if len(m) == 0 {
+	if !m.IsInitialized() {
 		return "uninitialized"
 	}
 	return m[0].String()
@@ -147,9 +155,34 @@ func (m delayMarshaling) MarshalUBJSON() ([]byte, error) {
 }
 
 func (m delayMarshaling) UnmarshalInto(v interface{}) error {
-	return errors.New("cannot unmarshal delayed marshaler")
+	rv := reflect.ValueOf(v)
+	rval := reflect.ValueOf(m.val)
+
+	if rv.Kind() != reflect.Ptr {
+		return errors.Errorf("expecting pointer, got: %#v", v)
+	}
+	if rv.IsNil() {
+		return errors.Errorf("cannot unmarshal into a nil pointer")
+	}
+	el := rv.Elem()
+	if !el.CanSet() {
+		return errors.Errorf("%#v is not writable", v)
+	}
+
+	if !rval.Type().AssignableTo(rv.Elem().Type()) {
+		return errors.Errorf("%#v is not assignable from %#v", v, m.val)
+	}
+
+	el.Set(rval)
+	return nil
 }
 
 func (m delayMarshaling) String() string {
-	return fmt.Sprintf("Delayed marshaler: %#v", m.val)
+	buf := bytes.NewBuffer(nil)
+	lim := limitedwriter.New(buf, 1024)
+	if _, err := fmt.Fprintf(lim, "Delayed marshaler: %#v", m.val); err == io.EOF {
+		fmt.Fprint(buf, "...")
+	}
+
+	return buf.String()
 }

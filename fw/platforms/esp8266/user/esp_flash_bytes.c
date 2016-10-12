@@ -111,7 +111,7 @@ IRAM NOINSTR void flash_emul_exception_handler(UserFrame *frame) {
   frame->pc += 3;
 }
 
-NOINSTR void flash_emul_init() {
+NOINSTR void flash_emul_init(void) {
   _xtos_set_exception_handler(EXCCAUSE_LOAD_STORE_ERROR,
                               flash_emul_exception_handler);
   /* for mmap */

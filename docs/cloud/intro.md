@@ -1,10 +1,11 @@
 ---
-title: "Cloud Overview"
+title: Cloud Overview
 items:
-  - { type: file, name: overview.md }
-  - { type: file, name: frame-structure.md }
-  - { type: file, name: addressing.md }
-  - { type: file, name: init.md }
-  - { type: file, name: req.md }
-  - { type: file, name: custom_msg.md }
+  - { name: overview.md }
+  - { name: frame-structure.md }
+  - { name: addressing.md }
+  - { name: init.md }
+  - { name: req.md }
+  - { name: custom_msg.md }
+#  - { name: ../services }
 ---

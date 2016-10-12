@@ -1,0 +1,7 @@
+[
+  ["http", "o", {title: "HTTP Server"}],
+  ["http.enable", "b", true, {title: "Enable HTTP Server"}],
+  ["http.listen_addr", "s", "80", {title: "Listening port / address"}],
+  ["http.upload_acl", "s", "*", {title: "Upload file ACL"}],
+  ["http.hidden_files", "s", {title: "Hidden file pattern"}],
+]

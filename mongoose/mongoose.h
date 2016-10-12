@@ -1,3 +1,6 @@
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/common.h"
+#endif
 /*
  * Copyright (c) 2004-2013 Sergey Lyubka
  * Copyright (c) 2013-2015 Cesanta Software Limited
@@ -61,8 +64,12 @@
 #endif
 #endif /* MG_NO_BSD_SOCKETS */
 
+/* Amalgamated: #include "common/cs_dbg.h" */
 
 #endif /* CS_MONGOOSE_SRC_COMMON_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platform.h"
+#endif
 #ifndef CS_COMMON_PLATFORM_H_
 #define CS_COMMON_PLATFORM_H_
 
@@ -76,6 +83,8 @@
 #define CS_P_ESP_LWIP 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
+#define CS_P_CC3100 6
+#define CS_P_MBED 7
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -89,6 +98,8 @@
 #define CS_PLATFORM CS_P_UNIX
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
+#elif defined(__MBED__)
+#define CS_PLATFORM CS_P_MBED
 #endif
 
 #ifndef CS_PLATFORM
@@ -97,6 +108,12 @@
 
 #endif /* !defined(CS_PLATFORM) */
 
+/* Amalgamated: #include "common/platforms/platform_unix.h" */
+/* Amalgamated: #include "common/platforms/platform_windows.h" */
+/* Amalgamated: #include "common/platforms/platform_esp_lwip.h" */
+/* Amalgamated: #include "common/platforms/platform_cc3200.h" */
+/* Amalgamated: #include "common/platforms/platform_cc3100.h" */
+/* Amalgamated: #include "common/platforms/platform_mbed.h" */
 
 /* Common stuff */
 
@@ -117,6 +134,9 @@
 #endif
 
 #endif /* CS_COMMON_PLATFORM_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_windows.h"
+#endif
 #ifndef CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_
 #define CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_
 #if CS_PLATFORM == CS_P_WINDOWS
@@ -137,6 +157,9 @@
 #pragma warning(disable : 4127) /* FD_SET() emits warning, disable it */
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
+
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <assert.h>
 #include <direct.h>
@@ -159,6 +182,10 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <process.h>
+
+#if defined(_MSC_VER) && _MSC_VER >= 1800
+#define strdup _strdup
+#endif
 
 #ifndef EINPROGRESS
 #define EINPROGRESS WSAEINPROGRESS
@@ -185,6 +212,10 @@
 #define fseeko(x, y, z) _fseeki64((x), (y), (z))
 #else
 #define fseeko(x, y, z) fseek((x), (y), (z))
+#endif
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+typedef unsigned long uintptr_t;
+typedef long intptr_t;
 #endif
 typedef int socklen_t;
 #if _MSC_VER >= 1700
@@ -248,6 +279,9 @@ typedef struct _stati64 cs_stat_t;
 
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_unix.h"
+#endif
 #ifndef CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_
 #define CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_
 #if CS_PLATFORM == CS_P_UNIX
@@ -283,6 +317,7 @@ typedef struct _stati64 cs_stat_t;
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <stdint.h>
 #include <limits.h>
 #include <math.h>
 #include <netdb.h>
@@ -346,6 +381,9 @@ typedef struct stat cs_stat_t;
 
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_esp_lwip.h"
+#endif
 #ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
 #define CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
 #if CS_PLATFORM == CS_P_ESP_LWIP
@@ -395,8 +433,75 @@ typedef struct stat cs_stat_t;
 unsigned long os_random(void);
 #define random os_random
 
+#ifndef RTOS_SDK
+#define MG_NET_IF_LWIP
+struct mg_mgr;
+struct mg_connection;
+uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
+void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
+                                  int interval, int count);
+#endif
+
 #endif /* CS_PLATFORM == CS_P_ESP_LWIP */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_cc3100.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_
+#if CS_PLATFORM == CS_P_CC3100
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#define MG_SOCKET_SIMPLELINK 1
+#define MG_DISABLE_SOCKETPAIR 1
+#define MG_DISABLE_SYNC_RESOLVER 1
+#define MG_DISABLE_POPEN 1
+#define MG_DISABLE_CGI 1
+#define MG_DISABLE_DAV 1
+#define MG_DISABLE_DIRECTORY_LISTING 1
+#define MG_DISABLE_FILESYSTEM 1
+
+/*
+ * CC3100 SDK and STM32 SDK include headers w/out path, just like
+ * #include "simplelink.h". As result, we have to add all required directories
+ * into Makefile IPATH and do the same thing (include w/out path)
+ */
+
+#include <simplelink.h>
+#include <netapp.h>
+#undef timeval 
+
+typedef int sock_t;
+#define INVALID_SOCKET (-1)
+
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define SIZE_T_FMT "u"
+
+#define SOMAXCONN 8
+
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+char *inet_ntoa(struct in_addr in);
+int inet_pton(int af, const char *src, void *dst);
+
+#endif /* CS_PLATFORM == CS_P_CC3100 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_cc3200.h"
+#endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
@@ -430,6 +535,7 @@ unsigned long os_random(void);
 #define MG_DISABLE_DIRECTORY_LISTING 1
 #endif
 
+/* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
 
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
@@ -523,6 +629,9 @@ struct dirent *readdir(DIR *dir);
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_msp432.h"
+#endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
@@ -553,6 +662,7 @@ struct dirent *readdir(DIR *dir);
 #define MG_DISABLE_DAV 1
 #define MG_DISABLE_DIRECTORY_LISTING 1
 
+/* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
 
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
@@ -623,6 +733,25 @@ int _stat(const char *pathname, struct stat *st);
 
 #endif /* CS_PLATFORM == CS_P_MSP432 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_MSP432_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_mbed.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_MBED_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_MBED_H_
+#if CS_PLATFORM == CS_P_MBED
+
+/* Amalgamated: #include "mbed.h" */
+
+#endif /* CS_PLATFORM == CS_P_MBED */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_MBED_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/simplelink/cs_simplelink.h"
+#endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
@@ -654,6 +783,7 @@ int _stat(const char *pathname, struct stat *st);
 #undef SL_INC_STD_BSD_API_NAMING
 
 #include <simplelink/include/simplelink.h>
+#include <simplelink/include/netapp.h>
 
 /* Now define only the subset of the BSD API that we use.
  * Notably, close(), read() and write() are not defined. */
@@ -667,30 +797,10 @@ int _stat(const char *pathname, struct stat *st);
 #define SOCK_STREAM SL_SOCK_STREAM
 #define SOCK_DGRAM SL_SOCK_DGRAM
 
-#define FD_SET SL_FD_SET
-#define FD_CLR SL_FD_CLR
-#define FD_ISSET SL_FD_ISSET
-#define FD_ZERO SL_FD_ZERO
-#define fd_set SlFdSet_t
-
 #define htonl sl_Htonl
 #define ntohl sl_Ntohl
 #define htons sl_Htons
 #define ntohs sl_Ntohs
-
-#define accept sl_Accept
-#define closesocket sl_Close
-#define bind sl_Bind
-#define connect sl_Connect
-#define listen sl_Listen
-#define recv sl_Recv
-#define recvfrom sl_RecvFrom
-#define send sl_Send
-#define sendto sl_SendTo
-#define socket sl_Socket
-
-#define select(nfds, rfds, wfds, efds, tout) \
-  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *)(tout))
 
 #ifndef EACCES
 #define EACCES SL_EACCES
@@ -732,7 +842,7 @@ bool mg_start_task(int priority, int stack_size, mg_init_cb mg_init);
 
 void mg_run_in_task(void (*cb)(struct mg_mgr *mgr, void *arg), void *cb_arg);
 
-int sl_fs_init();
+int sl_fs_init(void);
 
 void sl_restart_cb(struct mg_mgr *mgr);
 
@@ -745,76 +855,9 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 #endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
 
 #endif /* CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_ */
-/*
- * Copyright (c) 2014-2016 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CS_COMMON_CS_DBG_H_
-#define CS_COMMON_CS_DBG_H_
-
-#ifndef CS_DISABLE_STDIO
-#include <stdio.h>
+#ifdef MG_MODULE_LINES
+#line 1 "common/cs_time.h"
 #endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-enum cs_log_level {
-  LL_NONE = -1,
-  LL_ERROR = 0,
-  LL_WARN = 1,
-  LL_INFO = 2,
-  LL_DEBUG = 3,
-  LL_VERBOSE_DEBUG = 4,
-
-  _LL_MIN = -2,
-  _LL_MAX = 5,
-};
-
-void cs_log_set_level(enum cs_log_level level);
-
-#ifndef CS_DISABLE_STDIO
-
-void cs_log_set_file(FILE *file);
-
-extern enum cs_log_level cs_log_level;
-void cs_log_print_prefix(const char *func);
-void cs_log_printf(const char *fmt, ...);
-
-#define LOG(l, x)                  \
-  if (cs_log_level >= l) {         \
-    cs_log_print_prefix(__func__); \
-    cs_log_printf x;               \
-  }
-
-#ifndef CS_NDEBUG
-
-#define DBG(x)                            \
-  if (cs_log_level >= LL_VERBOSE_DEBUG) { \
-    cs_log_print_prefix(__func__);        \
-    cs_log_printf x;                      \
-  }
-
-#else /* NDEBUG */
-
-#define DBG(x)
-
-#endif
-
-#else /* CS_DISABLE_STDIO */
-
-#define LOG(l, x)
-#define DBG(x)
-
-#endif
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* CS_COMMON_CS_DBG_H_ */
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
@@ -828,13 +871,16 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Sub-second granularity time(). */
-double cs_time();
+double cs_time(void);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #endif /* CS_COMMON_CS_TIME_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/mg_str.h"
+#endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
@@ -878,11 +924,17 @@ int mg_vcmp(const struct mg_str *str2, const char *str1);
  */
 int mg_vcasecmp(const struct mg_str *str2, const char *str1);
 
+struct mg_str mg_strdup(const struct mg_str s);
+int mg_strcmp(const struct mg_str str1, const struct mg_str str2);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #endif /* CS_COMMON_MG_STR_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/mbuf.h"
+#endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
@@ -961,6 +1013,9 @@ void mbuf_trim(struct mbuf *);
 #endif /* __cplusplus */
 
 #endif /* CS_COMMON_MBUF_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/sha1.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -971,6 +1026,7 @@ void mbuf_trim(struct mbuf *);
 
 #ifndef DISABLE_SHA1
 
+/* Amalgamated: #include "common/platform.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -995,6 +1051,9 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #endif /* DISABLE_SHA1 */
 
 #endif /* CS_COMMON_SHA1_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/md5.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -1003,6 +1062,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #ifndef CS_COMMON_MD5_H_
 #define CS_COMMON_MD5_H_
 
+/* Amalgamated: #include "common/platform.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -1040,6 +1100,9 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 #endif /* __cplusplus */
 
 #endif /* CS_COMMON_MD5_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/base64.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -1082,6 +1145,9 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #endif /* DISABLE_BASE64 */
 
 #endif /* CS_COMMON_BASE64_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/str_util.h"
+#endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
@@ -1111,6 +1177,9 @@ const char *c_strnstr(const char *s, const char *find, size_t slen);
 #endif
 
 #endif /* CS_COMMON_STR_UTIL_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/net.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -1129,7 +1198,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen);
  */
 
 /*
- * === Core: TCP/UDP/SSL
+ * === Core API: TCP/UDP/SSL
  *
  * NOTE: Mongoose manager is single threaded. It does not protect
  * its data structures by mutexes, therefore all functions that are dealing
@@ -1146,6 +1215,8 @@ const char *c_strnstr(const char *s, const char *find, size_t slen);
 #include <v7.h>
 #endif
 
+/* Amalgamated: #include "mongoose/src/common.h" */
+/* Amalgamated: #include "common/mbuf.h" */
 
 #ifdef MG_ENABLE_SSL
 #ifdef __APPLE__
@@ -1206,7 +1277,7 @@ struct mg_mgr {
   struct mg_connection *active_connections;
   const char *hexdump_file; /* Debug hexdump file path */
 #ifndef MG_DISABLE_SOCKETPAIR
-  sock_t ctl[2]; /* Socketpair for mg_wakeup() */
+  sock_t ctl[2]; /* Socketpair for mg_broadcast() */
 #endif
   void *user_data; /* User data */
   void *mgr_data;  /* Implementation-specific event manager's data. */
@@ -1274,6 +1345,7 @@ struct mg_connection {
 #define MG_F_CLOSE_IMMEDIATELY (1 << 11)   /* Disconnect */
 #define MG_F_WEBSOCKET_NO_DEFRAG (1 << 12) /* Websocket specific */
 #define MG_F_DELETE_CHUNK (1 << 13)        /* HTTP specific */
+#define MG_F_ENABLE_BROADCAST (1 << 14)    /* Allow broadcast address usage */
 
 #define MG_F_USER_1 (1 << 20) /* Flags left for application */
 #define MG_F_USER_2 (1 << 21)
@@ -1594,6 +1666,13 @@ int mg_resolve(const char *domain_name, char *ip_addr_buf, size_t buf_len);
 int mg_check_ip_acl(const char *acl, uint32_t remote_ip);
 
 /*
+ * Optional parameters for mg_enable_multithreading_opt()
+ */
+struct mg_multithreading_opts {
+  int poll_timeout; /* Polling interval */
+};
+
+/*
  * Enables multi-threaded handling for the given listening connection `nc`.
  * For each accepted connection, Mongoose will create a separate thread
  * and run an event handler in that thread. Thus, if an event handler is doing
@@ -1601,6 +1680,8 @@ int mg_check_ip_acl(const char *acl, uint32_t remote_ip);
  * other connections.
  */
 void mg_enable_multithreading(struct mg_connection *nc);
+void mg_enable_multithreading_opt(struct mg_connection *nc,
+                                  struct mg_multithreading_opts opts);
 
 #ifdef MG_ENABLE_JAVASCRIPT
 /*
@@ -1642,13 +1723,16 @@ double mg_set_timer(struct mg_connection *c, double timestamp);
 /*
  * A sub-second precision version of time().
  */
-double mg_time();
+double mg_time(void);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #endif /* CS_MONGOOSE_SRC_NET_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/net_if.h"
+#endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
@@ -1737,6 +1821,9 @@ void mg_sock_set(struct mg_connection *nc, sock_t sock);
 #endif /* __cplusplus */
 
 #endif /* CS_MONGOOSE_SRC_NET_IF_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/uri.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -1749,6 +1836,7 @@ void mg_sock_set(struct mg_connection *nc, sock_t sock);
 #ifndef CS_MONGOOSE_SRC_URI_H_
 #define CS_MONGOOSE_SRC_URI_H_
 
+/* Amalgamated: #include "mongoose/src/net.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -1788,13 +1876,16 @@ int mg_normalize_uri_path(const struct mg_str *in, struct mg_str *out);
 }
 #endif /* __cplusplus */
 #endif /* CS_MONGOOSE_SRC_URI_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/util.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
 /*
- * === Utilities
+ * === Utility API
  */
 
 #ifndef CS_MONGOOSE_SRC_UTIL_H_
@@ -1802,6 +1893,8 @@ int mg_normalize_uri_path(const struct mg_str *in, struct mg_str *out);
 
 #include <stdio.h>
 
+/* Amalgamated: #include "mongoose/src/common.h" */
+/* Amalgamated: #include "mongoose/src/net_if.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -1946,6 +2039,7 @@ int mg_hexdump(const void *buf, int len, char *dst, int dst_len);
  */
 void mg_hexdump_connection(struct mg_connection *nc, const char *path,
                            const void *buf, int num_bytes, int ev);
+
 /*
  * Prints message to the buffer. If the buffer is large enough to hold the
  * message, it returns buffer. If buffer is to small, it allocates a large
@@ -1953,7 +2047,7 @@ void mg_hexdump_connection(struct mg_connection *nc, const char *path,
  * This is a supposed use case:
  *
  *    char buf[5], *p = buf;
- *    p = mg_avprintf(&p, sizeof(buf), "%s", "hi there");
+ *    mg_avprintf(&p, sizeof(buf), "%s", "hi there");
  *    use_p_somehow(p);
  *    if (p != buf) {
  *      free(p);
@@ -1961,6 +2055,9 @@ void mg_hexdump_connection(struct mg_connection *nc, const char *path,
  *
  * The purpose of this is to avoid malloc-ing if generated strings are small.
  */
+int mg_asprintf(char **buf, size_t size, const char *fmt, ...);
+
+/* Same as mg_asprintf, but takes varargs list. */
 int mg_avprintf(char **buf, size_t size, const char *fmt, va_list ap);
 
 /*
@@ -1998,18 +2095,22 @@ int mg_match_prefix_n(const struct mg_str pattern, const struct mg_str str);
 }
 #endif /* __cplusplus */
 #endif /* CS_MONGOOSE_SRC_UTIL_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/http.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
 /*
- * === HTTP + Websocket
+ * === Common API reference
  */
 
 #ifndef CS_MONGOOSE_SRC_HTTP_H_
 #define CS_MONGOOSE_SRC_HTTP_H_
 
+/* Amalgamated: #include "mongoose/src/net.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -2098,11 +2199,19 @@ struct mg_http_multipart_part {
   void *user_data;
 };
 
+/* SSI call context */
+struct mg_ssi_call_ctx {
+  struct http_message *req; /* The request being processed. */
+  struct mg_str file;       /* Filesystem path of the file being processed. */
+  struct mg_str arg; /* The argument passed to the tag: <!-- call arg -->. */
+};
+
 /* HTTP and websocket events. void *ev_data is described in a comment. */
 #define MG_EV_HTTP_REQUEST 100 /* struct http_message * */
 #define MG_EV_HTTP_REPLY 101   /* struct http_message * */
 #define MG_EV_HTTP_CHUNK 102   /* struct http_message * */
 #define MG_EV_SSI_CALL 105     /* char * */
+#define MG_EV_SSI_CALL_CTX 106 /* struct mg_ssi_call_ctx * */
 
 #ifndef MG_DISABLE_HTTP_WEBSOCKET
 #define MG_EV_WEBSOCKET_HANDSHAKE_REQUEST 111 /* NULL */
@@ -2272,70 +2381,6 @@ void mg_printf_websocket_frame(struct mg_connection *nc, int op_and_flags,
                                const char *fmt, ...);
 #endif /* MG_DISABLE_HTTP_WEBSOCKET */
 
-/*
- * Sends buffer `buf` of size `len` to the client using chunked HTTP encoding.
- * This function sends the buffer size as hex number + newline first, then
- * the buffer itself, then the newline. For example,
- *   `mg_send_http_chunk(nc, "foo", 3)` whill append the `3\r\nfoo\r\n` string
- *to
- * the `nc->send_mbuf` output IO buffer.
- *
- * NOTE: The HTTP header "Transfer-Encoding: chunked" should be sent prior to
- * using this function.
- *
- * NOTE: do not forget to send an empty chunk at the end of the response,
- * to tell the client that everything was sent. Example:
- *
- * ```
- *   mg_printf_http_chunk(nc, "%s", "my response!");
- *   mg_send_http_chunk(nc, "", 0); // Tell the client we're finished
- * ```
- */
-void mg_send_http_chunk(struct mg_connection *nc, const char *buf, size_t len);
-
-/*
- * Sends a printf-formatted HTTP chunk.
- * Functionality is similar to `mg_send_http_chunk()`.
- */
-void mg_printf_http_chunk(struct mg_connection *nc, const char *fmt, ...);
-
-/*
- * Sends a response status line.
- * If `extra_headers` is not NULL, then `extra_headers` are also sent
- * after the reponse line. `extra_headers` must NOT end end with new line.
- * Example:
- *
- *      mg_send_response_line(nc, 200, "Access-Control-Allow-Origin: *");
- *
- * Will result in:
- *
- *      HTTP/1.1 200 OK\r\n
- *      Access-Control-Allow-Origin: *\r\n
- */
-void mg_send_response_line(struct mg_connection *c, int status_code,
-                           const char *extra_headers);
-
-/*
- * Sends a response line and headers.
- * This function sends a response line with the `status_code`, and automatically
- * sends one header: either "Content-Length" or "Transfer-Encoding".
- * If `content_length` is negative, then "Transfer-Encoding: chunked" header
- * is sent, otherwise, "Content-Length" header is sent.
- *
- * NOTE: If `Transfer-Encoding` is `chunked`, then message body must be sent
- * using `mg_send_http_chunk()` or `mg_printf_http_chunk()` functions.
- * Otherwise, `mg_send()` or `mg_printf()` must be used.
- * Extra headers could be set through `extra_headers`. Note `extra_headers`
- * must NOT be terminated by a new line.
- */
-void mg_send_head(struct mg_connection *n, int status_code,
-                  int64_t content_length, const char *extra_headers);
-
-/*
- * Sends a printf-formatted HTTP chunk, escaping HTML tags.
- */
-void mg_printf_html_escape(struct mg_connection *nc, const char *fmt, ...);
-
 /* Websocket opcodes, from http://tools.ietf.org/html/rfc6455 */
 #define WEBSOCKET_OP_CONTINUE 0
 #define WEBSOCKET_OP_TEXT 1
@@ -2357,6 +2402,37 @@ void mg_printf_html_escape(struct mg_connection *nc, const char *fmt, ...);
  * so this flag is used only on outbound messages.
  */
 #define WEBSOCKET_DONT_FIN 0x100
+
+/*
+ * Decodes a URL-encoded string.
+ *
+ * Source string is specified by (`src`, `src_len`), and destination is
+ * (`dst`, `dst_len`). If `is_form_url_encoded` is non-zero, then
+ * `+` character is decoded as a blank space character. This function
+ * guarantees to NUL-terminate the destination. If destination is too small,
+ * then the source string is partially decoded and `-1` is returned. Otherwise,
+ * a length of the decoded string is returned, not counting final NUL.
+ */
+int mg_url_decode(const char *src, int src_len, char *dst, int dst_len,
+                  int is_form_url_encoded);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* CS_MONGOOSE_SRC_HTTP_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/http_server.h"
+#endif
+/*
+ * === Server API reference
+ */
+
+#ifndef CS_MONGOOSE_SRC_HTTP_SERVER_H_
+#define CS_MONGOOSE_SRC_HTTP_SERVER_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /*
  * Parses a HTTP message.
@@ -2446,68 +2522,6 @@ size_t mg_parse_multipart(const char *buf, size_t buf_len, char *var_name,
 int mg_get_http_var(const struct mg_str *buf, const char *name, char *dst,
                     size_t dst_len);
 
-/*
- * Decodes URL-encoded string.
- *
- * Source string is specified by (`src`, `src_len`), and destination is
- * (`dst`, `dst_len`). If `is_form_url_encoded` is non-zero, then
- * `+` character is decoded as a blank space character. This function
- * guarantees to `\0`-terminate the destination. If destination is too small,
- * then the source string is partially decoded and `-1` is returned. Otherwise,
- * a length of decoded string is returned, not counting final `\0`.
- */
-int mg_url_decode(const char *src, int src_len, char *dst, int dst_len,
-                  int is_form_url_encoded);
-
-/* Creates digest authentication header for a client request. */
-int mg_http_create_digest_auth_header(char *buf, size_t buf_len,
-                                      const char *method, const char *uri,
-                                      const char *auth_domain, const char *user,
-                                      const char *passwd);
-
-/*
- * Helper function that creates an outbound HTTP connection.
- *
- * `url` is a URL to fetch. It must be properly URL-encoded, e.g. have
- * no spaces, etc. By default, `mg_connect_http()` sends the Connection and
- * Host headers. `extra_headers` is an extra HTTP header to send, e.g.
- * `"User-Agent: my-app\r\n"`.
- * If `post_data` is NULL, then a GET request is created. Otherwise, a POST
- * request is created with the specified POST data. Note that if the data being
- * posted is a form submission, the `Content-Type` header should be set
- * accordingly (see example below).
- *
- * Examples:
- *
- * ```c
- *   nc1 = mg_connect_http(mgr, ev_handler_1, "http://www.google.com", NULL,
- *                         NULL);
- *   nc2 = mg_connect_http(mgr, ev_handler_1, "https://github.com", NULL, NULL);
- *   nc3 = mg_connect_http(
- *       mgr, ev_handler_1, "my_server:8000/form_submit/",
- *       "Content-Type: application/x-www-form-urlencoded\r\n",
- *       "var_1=value_1&var_2=value_2");
- * ```
- */
-struct mg_connection *mg_connect_http(struct mg_mgr *mgr,
-                                      mg_event_handler_t event_handler,
-                                      const char *url,
-                                      const char *extra_headers,
-                                      const char *post_data);
-
-/*
- * Helper function that creates an outbound HTTP connection.
- *
- * Mostly identical to mg_connect_http, but allows you to provide extra
- *parameters
- * (for example, SSL parameters)
- */
-struct mg_connection *mg_connect_http_opt(struct mg_mgr *mgr,
-                                          mg_event_handler_t ev_handler,
-                                          struct mg_connect_opts opts,
-                                          const char *url,
-                                          const char *extra_headers,
-                                          const char *post_data);
 /*
  * This structure defines how `mg_serve_http()` works.
  * Best practice is to set only required settings, and leave the rest as NULL.
@@ -2789,10 +2803,160 @@ void mg_file_upload_handler(struct mg_connection *nc, int ev, void *ev_data,
 int mg_http_check_digest_auth(struct http_message *hm, const char *auth_domain,
                               FILE *fp);
 
+/*
+ * Sends buffer `buf` of size `len` to the client using chunked HTTP encoding.
+ * This function sends the buffer size as hex number + newline first, then
+ * the buffer itself, then the newline. For example,
+ * `mg_send_http_chunk(nc, "foo", 3)` whill append the `3\r\nfoo\r\n` string
+ * to the `nc->send_mbuf` output IO buffer.
+ *
+ * NOTE: The HTTP header "Transfer-Encoding: chunked" should be sent prior to
+ * using this function.
+ *
+ * NOTE: do not forget to send an empty chunk at the end of the response,
+ * to tell the client that everything was sent. Example:
+ *
+ * ```
+ *   mg_printf_http_chunk(nc, "%s", "my response!");
+ *   mg_send_http_chunk(nc, "", 0); // Tell the client we're finished
+ * ```
+ */
+void mg_send_http_chunk(struct mg_connection *nc, const char *buf, size_t len);
+
+/*
+ * Sends a printf-formatted HTTP chunk.
+ * Functionality is similar to `mg_send_http_chunk()`.
+ */
+void mg_printf_http_chunk(struct mg_connection *nc, const char *fmt, ...);
+
+/*
+ * Sends the response status line.
+ * If `extra_headers` is not NULL, then `extra_headers` are also sent
+ * after the reponse line. `extra_headers` must NOT end end with new line.
+ * Example:
+ *
+ *      mg_send_response_line(nc, 200, "Access-Control-Allow-Origin: *");
+ *
+ * Will result in:
+ *
+ *      HTTP/1.1 200 OK\r\n
+ *      Access-Control-Allow-Origin: *\r\n
+ */
+void mg_send_response_line(struct mg_connection *nc, int status_code,
+                           const char *extra_headers);
+
+/*
+ * Sends a redirect response.
+ * `status_code` should be either 301 or 302 and `location` point to the
+ * new location.
+ * If `extra_headers` is not empty, then `extra_headers` are also sent
+ * after the reponse line. `extra_headers` must NOT end end with new line.
+ *
+ * Example:
+ *
+ *      mg_http_send_redirect(nc, 302, mg_mk_str("/login"), mg_mk_str(NULL));
+ */
+void mg_http_send_redirect(struct mg_connection *nc, int status_code,
+                           const struct mg_str location,
+                           const struct mg_str extra_headers);
+
+/*
+ * Sends the response line and headers.
+ * This function sends the response line with the `status_code`, and
+ * automatically
+ * sends one header: either "Content-Length" or "Transfer-Encoding".
+ * If `content_length` is negative, then "Transfer-Encoding: chunked" header
+ * is sent, otherwise, "Content-Length" header is sent.
+ *
+ * NOTE: If `Transfer-Encoding` is `chunked`, then message body must be sent
+ * using `mg_send_http_chunk()` or `mg_printf_http_chunk()` functions.
+ * Otherwise, `mg_send()` or `mg_printf()` must be used.
+ * Extra headers could be set through `extra_headers`. Note `extra_headers`
+ * must NOT be terminated by a new line.
+ */
+void mg_send_head(struct mg_connection *n, int status_code,
+                  int64_t content_length, const char *extra_headers);
+
+/*
+ * Sends a printf-formatted HTTP chunk, escaping HTML tags.
+ */
+void mg_printf_html_escape(struct mg_connection *nc, const char *fmt, ...);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-#endif /* CS_MONGOOSE_SRC_HTTP_H_ */
+#endif /* CS_MONGOOSE_SRC_HTTP_SERVER_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/http_client.h"
+#endif
+/*
+ * === Client API reference
+ */
+
+#ifndef CS_MONGOOSE_SRC_HTTP_CLIENT_H_
+#define CS_MONGOOSE_SRC_HTTP_CLIENT_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Helper function that creates an outbound HTTP connection.
+ *
+ * `url` is the URL to fetch. It must be properly URL-encoded, e.g. have
+ * no spaces, etc. By default, `mg_connect_http()` sends the Connection and
+ * Host headers. `extra_headers` is an extra HTTP header to send, e.g.
+ * `"User-Agent: my-app\r\n"`.
+ * If `post_data` is NULL, then a GET request is created. Otherwise, a POST
+ * request is created with the specified POST data. Note that if the data being
+ * posted is a form submission, the `Content-Type` header should be set
+ * accordingly (see example below).
+ *
+ * Examples:
+ *
+ * ```c
+ *   nc1 = mg_connect_http(mgr, ev_handler_1, "http://www.google.com", NULL,
+ *                         NULL);
+ *   nc2 = mg_connect_http(mgr, ev_handler_1, "https://github.com", NULL, NULL);
+ *   nc3 = mg_connect_http(
+ *       mgr, ev_handler_1, "my_server:8000/form_submit/",
+ *       "Content-Type: application/x-www-form-urlencoded\r\n",
+ *       "var_1=value_1&var_2=value_2");
+ * ```
+ */
+struct mg_connection *mg_connect_http(struct mg_mgr *mgr,
+                                      mg_event_handler_t event_handler,
+                                      const char *url,
+                                      const char *extra_headers,
+                                      const char *post_data);
+
+/*
+ * Helper function that creates an outbound HTTP connection.
+ *
+ * Mostly identical to mg_connect_http, but allows you to provide extra
+ *parameters
+ * (for example, SSL parameters)
+ */
+struct mg_connection *mg_connect_http_opt(struct mg_mgr *mgr,
+                                          mg_event_handler_t ev_handler,
+                                          struct mg_connect_opts opts,
+                                          const char *url,
+                                          const char *extra_headers,
+                                          const char *post_data);
+
+/* Creates digest authentication header for a client request. */
+int mg_http_create_digest_auth_header(char *buf, size_t buf_len,
+                                      const char *method, const char *uri,
+                                      const char *auth_domain, const char *user,
+                                      const char *passwd);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* CS_MONGOOSE_SRC_HTTP_CLIENT_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/mqtt.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -2811,12 +2975,13 @@ int mg_http_check_digest_auth(struct http_message *hm, const char *auth_domain,
  */
 
 /*
- * === MQTT
+ * === MQTT API reference
  */
 
 #ifndef CS_MONGOOSE_SRC_MQTT_H_
 #define CS_MONGOOSE_SRC_MQTT_H_
 
+/* Amalgamated: #include "mongoose/src/net.h" */
 
 struct mg_mqtt_message {
   int cmd;
@@ -2988,6 +3153,9 @@ int mg_mqtt_next_subscribe_topic(struct mg_mqtt_message *msg,
 #endif /* __cplusplus */
 
 #endif /* CS_MONGOOSE_SRC_MQTT_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/mqtt_server.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -3006,7 +3174,7 @@ int mg_mqtt_next_subscribe_topic(struct mg_mqtt_message *msg,
  */
 
 /*
- * === MQTT Broker
+ * === MQTT Server API reference
  */
 
 #ifndef CS_MONGOOSE_SRC_MQTT_BROKER_H_
@@ -3014,6 +3182,7 @@ int mg_mqtt_next_subscribe_topic(struct mg_mqtt_message *msg,
 
 #ifdef MG_ENABLE_MQTT_BROKER
 
+/* Amalgamated: #include "mongoose/src/mqtt.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -3088,18 +3257,22 @@ struct mg_mqtt_session *mg_mqtt_next(struct mg_mqtt_broker *brk,
 
 #endif /* MG_ENABLE_MQTT_BROKER */
 #endif /* CS_MONGOOSE_SRC_MQTT_BROKER_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/dns.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
 /*
- * === DNS
+ * === DNS API reference
  */
 
 #ifndef CS_MONGOOSE_SRC_DNS_H_
 #define CS_MONGOOSE_SRC_DNS_H_
 
+/* Amalgamated: #include "mongoose/src/net.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -3107,7 +3280,10 @@ extern "C" {
 
 #define MG_DNS_A_RECORD 0x01     /* Lookup IP address */
 #define MG_DNS_CNAME_RECORD 0x05 /* Lookup CNAME */
+#define MG_DNS_PTR_RECORD 0x0c   /* Lookup PTR */
+#define MG_DNS_TXT_RECORD 0x10   /* Lookup TXT */
 #define MG_DNS_AAAA_RECORD 0x1c  /* Lookup IPv6 address */
+#define MG_DNS_SRV_RECORD 0x21   /* Lookup SRV */
 #define MG_DNS_MX_RECORD 0x0f    /* Lookup mail server for domain */
 
 #define MG_MAX_DNS_QUESTIONS 32
@@ -3192,17 +3368,22 @@ int mg_dns_copy_questions(struct mbuf *io, struct mg_dns_message *msg);
  * record type and stored in the IO buffer. The encoded values might contain
  * offsets within the IO buffer. It's thus important that the IO buffer doesn't
  * get trimmed while a sequence of records are encoded while preparing a DNS
- *reply.
+ * reply.
  *
  * This function doesn't update the `name` and `rdata` pointers in the `rr`
- *struct
- * because they might be invalidated as soon as the IO buffer grows again.
+ * struct because they might be invalidated as soon as the IO buffer grows
+ * again.
  *
  * Returns the number of bytes appened or -1 in case of error.
  */
 int mg_dns_encode_record(struct mbuf *io, struct mg_dns_resource_record *rr,
                          const char *name, size_t nlen, const void *rdata,
                          size_t rlen);
+
+/*
+ * Encodes a DNS name.
+ */
+int mg_dns_encode_name(struct mbuf *io, const char *name, size_t len);
 
 /* Low-level: parses a DNS response. */
 int mg_parse_dns(const char *buf, int len, struct mg_dns_message *msg);
@@ -3241,13 +3422,16 @@ void mg_set_protocol_dns(struct mg_connection *nc);
 }
 #endif /* __cplusplus */
 #endif /* CS_MONGOOSE_SRC_DNS_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/dns_server.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
 /*
- * === DNS server
+ * === DNS server API reference
  *
  * Disabled by default; enable with `-DMG_ENABLE_DNS_SERVER`.
  */
@@ -3257,6 +3441,7 @@ void mg_set_protocol_dns(struct mg_connection *nc);
 
 #ifdef MG_ENABLE_DNS_SERVER
 
+/* Amalgamated: #include "mongoose/src/dns.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -3334,18 +3519,22 @@ void mg_dns_send_reply(struct mg_connection *nc, struct mg_dns_reply *r);
 
 #endif /* MG_ENABLE_DNS_SERVER */
 #endif /* CS_MONGOOSE_SRC_DNS_SERVER_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/resolv.h"
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
 /*
- * === Asynchronouns DNS resolver
+ * === API reference
  */
 
 #ifndef CS_MONGOOSE_SRC_RESOLV_H_
 #define CS_MONGOOSE_SRC_RESOLV_H_
 
+/* Amalgamated: #include "mongoose/src/dns.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -3411,6 +3600,9 @@ int mg_resolve_from_hosts_file(const char *host, union socket_address *usa);
 }
 #endif /* __cplusplus */
 #endif /* CS_MONGOOSE_SRC_RESOLV_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/coap.h"
+#endif
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
@@ -3429,7 +3621,7 @@ int mg_resolve_from_hosts_file(const char *host, union socket_address *usa);
  */
 
 /*
- * === CoAP
+ * === CoAP API reference
  *
  * CoAP message format:
  *

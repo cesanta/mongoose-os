@@ -2,14 +2,14 @@
 title: "Label"
 ---
 
-Allows to manage arbitrary string labels for devices.
+Allows to manage arbitrary string labels for entities.
 
 #### Get
-Returns labels set on a particular devices.
+Returns labels set on a particular entities.
 
 Arguments:
 - `labels`: Optional list of labels to fetch. If not set, all labels will be returned.
-- `ids`: List of device IDs to fetch labels for.
+- `ids`: List of entity IDs to fetch labels for.
 
 Result `array`: 
 Request:
@@ -40,11 +40,11 @@ Response:
 ```
 
 #### Set
-Sets labels for devices.
+Sets labels for entities.
 
 Arguments:
 - `labels`: An object with labels to set. Object keys are label names, corresponding values are label values to set.
-- `ids`: List of device IDs to set labels for.
+- `ids`: List of entity IDs to set labels for.
 
 Request:
 ```json
@@ -73,11 +73,11 @@ Response:
 ```
 
 #### Delete
-Deletes labels for devices.
+Deletes labels for entities.
 
 Arguments:
 - `labels`: List of names of labels to delete.
-- `ids`: List of device IDs to delete labels for.
+- `ids`: List of entity IDs to delete labels for.
 
 Request:
 ```json

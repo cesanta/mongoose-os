@@ -1,0 +1,7 @@
+[
+  ["mac_address", "s", {title: "MAC address", read_only: true}],
+  ["arch", "s", {title: "Platform", read_only: true}],
+  ["fw_version", "s", {title: "FW version", read_only: true}],
+  ["fw_timestamp", "s", {title: "Build timestamp", read_only: true}],
+  ["fw_id", "s", {title: "Build ID", read_only: true}]
+]

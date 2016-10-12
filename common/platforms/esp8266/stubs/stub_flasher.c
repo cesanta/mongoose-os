@@ -208,7 +208,7 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
   return 0;
 }
 
-int do_flash_read_chip_id() {
+int do_flash_read_chip_id(void) {
   uint32_t chip_id = 0;
   WRITE_PERI_REG(SPI_CMD(0), SPI_RDID);
   while (READ_PERI_REG(SPI_CMD(0)) & SPI_RDID) {
@@ -218,7 +218,7 @@ int do_flash_read_chip_id() {
   return 0;
 }
 
-uint8_t cmd_loop() {
+uint8_t cmd_loop(void) {
   uint8_t cmd;
   do {
     uint32_t args[4];
@@ -288,7 +288,7 @@ uint8_t cmd_loop() {
   return cmd;
 }
 
-void stub_main() {
+void stub_main(void) {
   uint32_t baud_rate = params[0];
   uint32_t greeting = 0x4941484f; /* OHAI */
   uint8_t last_cmd;

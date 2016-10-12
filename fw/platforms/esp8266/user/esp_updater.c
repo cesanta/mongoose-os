@@ -2,7 +2,7 @@
  * Copyright (c) 2016 Cesanta Software Limited
  * All rights reserved
  *
- * Implements sj_upd interface.defined in sj_updater_hal.h
+ * Implements mg_upd interface.defined in mg_updater_hal.h
  */
 
 #include <inttypes.h>
@@ -14,12 +14,12 @@
 #include "common/queue.h"
 #include "common/spiffs/spiffs.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
-#include "fw/src/sj_console.h"
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_sys_config.h"
-#include "fw/src/sj_updater_clubby.h"
-#include "fw/src/sj_updater_hal.h"
-#include "fw/src/sj_updater_util.h"
+#include "fw/src/mg_console.h"
+#include "fw/src/mg_hal.h"
+#include "fw/src/mg_sys_config.h"
+#include "fw/src/mg_updater_clubby.h"
+#include "fw/src/mg_updater_hal.h"
+#include "fw/src/mg_updater_util.h"
 
 #define SHA1SUM_LEN 40
 #define FW_SLOT_SIZE 0x100000
@@ -61,7 +61,7 @@ struct part_info {
   };
 };
 
-struct sj_upd_ctx {
+struct mg_upd_ctx {
   struct part_info fw_part;
   struct part_info fs_part;
   struct part_info fs_dir_part;
@@ -73,7 +73,7 @@ struct sj_upd_ctx {
   const char *status_msg;
 };
 
-rboot_config *get_rboot_config() {
+rboot_config *get_rboot_config(void) {
   static rboot_config *cfg = NULL;
   if (cfg == NULL) {
     cfg = malloc(sizeof(*cfg));
@@ -87,7 +87,7 @@ rboot_config *get_rboot_config() {
   return cfg;
 }
 
-static uint8_t get_current_rom() {
+static uint8_t get_current_rom(void) {
   return get_rboot_config()->current_rom;
 }
 
@@ -99,15 +99,15 @@ uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
 }
 
-struct sj_upd_ctx *sj_upd_ctx_create() {
-  return calloc(1, sizeof(struct sj_upd_ctx));
+struct mg_upd_ctx *mg_upd_ctx_create(void) {
+  return calloc(1, sizeof(struct mg_upd_ctx));
 }
 
-const char *sj_upd_get_status_msg(struct sj_upd_ctx *ctx) {
+const char *mg_upd_get_status_msg(struct mg_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-static int fill_file_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
+static int fill_file_part_info(struct mg_upd_ctx *ctx, struct json_token *tok,
                                const char *part_name, struct part_info *pi) {
   pi->type = ptNone;
 
@@ -200,7 +200,7 @@ void fs_dir_parse_cb(void *callback_data, const char *name, size_t name_len,
   pi->files.count++;
 }
 
-static int fill_dir_part_info(struct sj_upd_ctx *ctx, struct json_token *tok,
+static int fill_dir_part_info(struct mg_upd_ctx *ctx, struct json_token *tok,
                               const char *part_name, struct part_info *pi) {
   (void) ctx;
   pi->type = ptFILES;
@@ -282,7 +282,7 @@ static int compare_digest(spiffs *fs, const char *file_name,
   return ret;
 }
 
-static int prepare_to_update_fs(struct sj_upd_ctx *ctx,
+static int prepare_to_update_fs(struct mg_upd_ctx *ctx,
                                 struct part_info *part) {
   (void) part;
 
@@ -338,7 +338,7 @@ static int prepare_to_update_fs(struct sj_upd_ctx *ctx,
 
 int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum);
 
-int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
+int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts,
                  int files_mode) {
   LOG(LL_DEBUG, ("File mode? %d", files_mode));
 
@@ -461,7 +461,7 @@ int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
     addr += to_read;
     len -= to_read;
 
-    sj_wdt_feed();
+    mg_wdt_feed();
   }
 
   cs_sha1_final(read_buf, &ctx);
@@ -477,8 +477,8 @@ int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
   }
 }
 
-static int prepare_to_write(struct sj_upd_ctx *ctx,
-                            const struct sj_upd_file_info *fi,
+static int prepare_to_write(struct mg_upd_ctx *ctx,
+                            const struct mg_upd_file_info *fi,
                             struct part_info *part) {
   if (part->done != 0) {
     LOG(LL_DEBUG, ("Skipping %s", fi->name));
@@ -523,7 +523,7 @@ struct file_info *get_file_info_from_manifest(struct part_info *pi,
   return NULL;
 }
 
-int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
+int mg_upd_get_next_file(struct mg_upd_ctx *ctx, char *buf, size_t buf_size) {
   if (ctx->fw_part.done == 0) {
     if (ctx->fw_part.type == ptNone) {
       CONSOLE_LOG(LL_WARN,
@@ -558,7 +558,7 @@ int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
 }
 
 /* 0 - no files to process, 1 - there are files to proceed */
-int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name) {
+int mg_upd_complete_file_update(struct mg_upd_ctx *ctx, const char *file_name) {
   struct file_info *fi, *fi_temp;
   SLIST_FOREACH_SAFE(fi, &ctx->fs_dir_part.files.fhead, entries, fi_temp) {
     int dir_len = strlen(ctx->fs_dir_part.files.dir_name);
@@ -573,8 +573,8 @@ int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name) {
   return !SLIST_EMPTY(&ctx->fs_dir_part.files.fhead);
 }
 
-enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
-                                          const struct sj_upd_file_info *fi) {
+enum mg_upd_file_action mg_upd_file_begin(struct mg_upd_ctx *ctx,
+                                          const struct mg_upd_file_info *fi) {
   int ret;
   ctx->status_msg = "Failed to update file";
   LOG(LL_DEBUG, ("fi->name=%s", fi->name));
@@ -591,20 +591,20 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
     if (mfi->file < 0) {
       LOG(LL_ERROR, ("Cannot open file %s (%d)", mfi->file_name,
                      SPIFFS_errno(&ctx->fs_dir_part.files.fs)));
-      return SJ_UPDATER_ABORT;
+      return MG_UPDATER_ABORT;
     }
     ctx->current_part->files.current_file = mfi;
 
-    return SJ_UPDATER_PROCESS_FILE;
+    return MG_UPDATER_PROCESS_FILE;
   } else {
     /* We need only fw & fs files, the rest just send to /dev/null */
-    return SJ_UPDATER_SKIP_FILE;
+    return MG_UPDATER_SKIP_FILE;
   }
-  if (ret < 0) return SJ_UPDATER_ABORT;
-  return (ret == 0 ? SJ_UPDATER_SKIP_FILE : SJ_UPDATER_PROCESS_FILE);
+  if (ret < 0) return MG_UPDATER_ABORT;
+  return (ret == 0 ? MG_UPDATER_SKIP_FILE : MG_UPDATER_PROCESS_FILE);
 }
 
-static int prepare_flash(struct sj_upd_ctx *ctx, uint32_t bytes_to_write) {
+static int prepare_flash(struct mg_upd_ctx *ctx, uint32_t bytes_to_write) {
   while (ctx->current_write_address + bytes_to_write > ctx->erased_till) {
     uint32_t sec_no = ctx->erased_till / FLASH_SECTOR_SIZE;
 
@@ -631,7 +631,7 @@ static int prepare_flash(struct sj_upd_ctx *ctx, uint32_t bytes_to_write) {
   return 1;
 }
 
-int sj_upd_file_data(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi,
+int mg_upd_file_data(struct mg_upd_ctx *ctx, const struct mg_upd_file_info *fi,
                      struct mg_str data) {
   LOG(LL_DEBUG, ("File size: %u, received: %u to_write: %u", fi->size,
                  fi->processed, data.len));
@@ -698,7 +698,7 @@ int sj_upd_file_data(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi,
   return bytes_processed;
 }
 
-int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
+int mg_upd_file_end(struct mg_upd_ctx *ctx, const struct mg_upd_file_info *fi) {
   if (ctx->current_part->type == ptFILES) {
     LOG(LL_DEBUG,
         ("File %s updated", ctx->current_part->files.current_file->file_name));
@@ -723,7 +723,7 @@ int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
   }
 }
 
-int sj_upd_finalize(struct sj_upd_ctx *ctx) {
+int mg_upd_finalize(struct mg_upd_ctx *ctx) {
   if (!ctx->fw_part.done) {
     ctx->status_msg = "Missing fw part";
     return -1;
@@ -770,7 +770,7 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   return 1;
 }
 
-void sj_upd_ctx_free(struct sj_upd_ctx *ctx) {
+void mg_upd_ctx_free(struct mg_upd_ctx *ctx) {
   free(ctx);
 }
 
@@ -788,7 +788,7 @@ int apply_update(rboot_config *cfg) {
     return -1;
   }
 
-  ret = sj_upd_merge_spiffs(&old_fs);
+  ret = mg_upd_merge_spiffs(&old_fs);
 
   SPIFFS_unmount(&old_fs);
 

@@ -5,7 +5,7 @@
  * RTC+0x18: ??c????? ???????? ???????? ????????
  * RTC+0x34: ???????? ??bbbbbb bbbb???? ??aaaaaa
  */
-int _X_get_rst_cause() {
+int _X_get_rst_cause(void) {
   int ret;
   int a = GET_PERI_REG_BITS(RTC_STATE1, 6, 0);
   if (a == 5) {
@@ -28,7 +28,7 @@ int _X_get_rst_cause() {
  * RTC+0x74: ???????? ???????? ???????? dddddddd
  * RTC+0x80: ???????? ??????a? ???b???? ????????
  */
-void main() {
+void main(void) {
   uint32_t rst_cause = _X_get_rst_cause();
   CLEAR_PERI_REG_MASK(RTC+0x80, BIT(17));     // a
   SET_PERI_REG_MASK(RTC+0x80, BIT(12));       // b
@@ -101,7 +101,7 @@ struct uartdev {
   uint32_t ud52;
 };
 
-void _X_uart_attach() {
+void _X_uart_attach(void) {
   // zero uartdev
   uartdev.baud_rate = 115200;
   _X_xtos_ints_off(1 << ETS_UART_INUM);
@@ -158,6 +158,6 @@ void _X_slc_init_attach(void *fp1, void *fp2, struct _st_0x3fffdc90 *st, uint32_
 #define SLC_TOKEN1 (PERIPHS_SLC_BASEADDR + 0x54)
 #define SLC_BRIDGE_CONF (PERIPHS_SLC_BASEADDR + 0x74)
 
-void _X_slc_set_host_io_max_window() {
+void _X_slc_set_host_io_max_window(void) {
   SET_PERI_REG(SLC_BRIDGE_CONF, (READ_PERI_REG(SLC_BRIDGE_CONF) & 0xfffff0c0) | 0x720);
 }

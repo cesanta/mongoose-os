@@ -14,11 +14,11 @@ During the firmware boot process, C code creates an instance of our
 [V7 JavaScript engine](https://github.com/cesanta/v7/),
 `struct v7 *v7`, initialises the JS API and then executes the `sys_init.js`
 file, effectively passing control to the JavaScript environment. Prior to
-calling `sys_init.js`, C code calls the `int sj_app_init(struct v7 *)` function,
+calling `sys_init.js`, C code calls the `int mg_app_init(struct v7 *)` function,
 which should be defined by the user. In this function, it is possible to export
 custom JavaScript objects and make them available to the JavaScript environment.
 
-`sj_app_init()` function will return `MG_APP_INIT_SUCCESS` on successful
+`mg_app_init()` function will return `MG_APP_INIT_SUCCESS` on successful
 initialisation or `MG_APP_INIT_ERROR` on failure.
 
 

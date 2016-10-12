@@ -29,6 +29,7 @@
 #undef SL_INC_STD_BSD_API_NAMING
 
 #include <simplelink/include/simplelink.h>
+#include <simplelink/include/netapp.h>
 
 /* Now define only the subset of the BSD API that we use.
  * Notably, close(), read() and write() are not defined. */
@@ -42,30 +43,10 @@
 #define SOCK_STREAM SL_SOCK_STREAM
 #define SOCK_DGRAM SL_SOCK_DGRAM
 
-#define FD_SET SL_FD_SET
-#define FD_CLR SL_FD_CLR
-#define FD_ISSET SL_FD_ISSET
-#define FD_ZERO SL_FD_ZERO
-#define fd_set SlFdSet_t
-
 #define htonl sl_Htonl
 #define ntohl sl_Ntohl
 #define htons sl_Htons
 #define ntohs sl_Ntohs
-
-#define accept sl_Accept
-#define closesocket sl_Close
-#define bind sl_Bind
-#define connect sl_Connect
-#define listen sl_Listen
-#define recv sl_Recv
-#define recvfrom sl_RecvFrom
-#define send sl_Send
-#define sendto sl_SendTo
-#define socket sl_Socket
-
-#define select(nfds, rfds, wfds, efds, tout) \
-  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *)(tout))
 
 #ifndef EACCES
 #define EACCES SL_EACCES
@@ -107,7 +88,7 @@ bool mg_start_task(int priority, int stack_size, mg_init_cb mg_init);
 
 void mg_run_in_task(void (*cb)(struct mg_mgr *mgr, void *arg), void *cb_arg);
 
-int sl_fs_init();
+int sl_fs_init(void);
 
 void sl_restart_cb(struct mg_mgr *mgr);
 

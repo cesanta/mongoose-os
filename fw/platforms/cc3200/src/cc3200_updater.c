@@ -2,7 +2,7 @@
  * Copyright (c) 2016 Cesanta Software Limited
  * All rights reserved
  *
- * Implements sj_upd interface.defined in sj_updater_hal.h
+ * Implements mg_upd interface.defined in mg_updater_hal.h
  */
 
 #include <inttypes.h>
@@ -17,14 +17,14 @@
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_sys_config.h"
-#include "fw/src/sj_updater_hal.h"
-#include "fw/src/sj_updater_util.h"
+#include "fw/src/mg_hal.h"
+#include "fw/src/mg_sys_config.h"
+#include "fw/src/mg_updater_hal.h"
+#include "fw/src/mg_updater_util.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-struct sj_upd_ctx {
+struct mg_upd_ctx {
   struct json_token *parts;
   int cur_boot_cfg_idx;
   int new_boot_cfg_idx;
@@ -38,17 +38,17 @@ struct sj_upd_ctx {
   const char *status_msg;
 };
 
-struct sj_upd_ctx *sj_upd_ctx_create() {
-  struct sj_upd_ctx *ctx = (struct sj_upd_ctx *) calloc(1, sizeof(*ctx));
+struct mg_upd_ctx *mg_upd_ctx_create(void) {
+  struct mg_upd_ctx *ctx = (struct mg_upd_ctx *) calloc(1, sizeof(*ctx));
   ctx->cur_fh = -1;
   return ctx;
 }
 
-const char *sj_upd_get_status_msg(struct sj_upd_ctx *ctx) {
+const char *mg_upd_get_status_msg(struct mg_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-int sj_upd_begin(struct sj_upd_ctx *ctx, struct json_token *parts,
+int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts,
                  int files_mode) {
   (void) files_mode;
   ctx->parts = parts;
@@ -116,8 +116,8 @@ static void create_fname(struct mg_str pfx, int idx, char *fn, int len) {
   fn[l] = '\0';
 }
 
-static int prepare_to_write(struct sj_upd_ctx *ctx,
-                            const struct sj_upd_file_info *fi,
+static int prepare_to_write(struct mg_upd_ctx *ctx,
+                            const struct mg_upd_file_info *fi,
                             const char *fname, uint32_t falloc,
                             struct json_token *part) {
   struct json_token expected_sha1 = JSON_INVALID_TOKEN;
@@ -191,10 +191,10 @@ static int tcmp(const struct json_token *tok, const char *str) {
   return mg_vcmp(&s, str);
 }
 
-enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
-                                          const struct sj_upd_file_info *fi) {
+enum mg_upd_file_action mg_upd_file_begin(struct mg_upd_ctx *ctx,
+                                          const struct mg_upd_file_info *fi) {
   struct mg_str part_name = MG_MK_STR("");
-  enum sj_upd_file_action ret = SJ_UPDATER_SKIP_FILE;
+  enum mg_upd_file_action ret = MG_UPDATER_SKIP_FILE;
   struct find_part_info find_part_info = {fi->name, &part_name, &ctx->cur_part};
   ctx->cur_part.len = part_name.len = 0;
   json_walk(ctx->parts->ptr, ctx->parts->len, find_part, &find_part_info);
@@ -228,7 +228,7 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
       int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
       if (r < 0) {
         ctx->status_msg = "Could not read current boot cfg";
-        return SJ_UPDATER_ABORT;
+        return MG_UPDATER_ABORT;
       }
       strncpy(ctx->app_image_file, cur_cfg.app_image_file,
               sizeof(ctx->app_image_file));
@@ -238,7 +238,7 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
       fname = ctx->app_image_file;
     } else {
       ctx->status_msg = "Bad/missing app load_addr";
-      ret = SJ_UPDATER_ABORT;
+      ret = MG_UPDATER_ABORT;
     }
   } else if (tcmp(&type, "fs") == 0) {
     json_scanf(
@@ -266,25 +266,25 @@ enum sj_upd_file_action sj_upd_file_begin(struct sj_upd_ctx *ctx,
       }
     } else {
       ctx->status_msg = "Missing FS parameters";
-      ret = SJ_UPDATER_ABORT;
+      ret = MG_UPDATER_ABORT;
     }
   }
   if (fname != NULL) {
     int r = prepare_to_write(ctx, fi, fname, falloc, &ctx->cur_part);
     if (r < 0) {
       LOG(LL_ERROR, ("err = %d", r));
-      ret = SJ_UPDATER_ABORT;
+      ret = MG_UPDATER_ABORT;
     } else {
-      ret = (r > 0 ? SJ_UPDATER_PROCESS_FILE : SJ_UPDATER_SKIP_FILE);
+      ret = (r > 0 ? MG_UPDATER_PROCESS_FILE : MG_UPDATER_SKIP_FILE);
     }
   }
-  if (ret == SJ_UPDATER_SKIP_FILE) {
+  if (ret == MG_UPDATER_SKIP_FILE) {
     DBG(("Skipping %s %.*s", fi->name, (int) part_name.len, part_name.p));
   }
   return ret;
 }
 
-int sj_upd_file_data(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi,
+int mg_upd_file_data(struct mg_upd_ctx *ctx, const struct mg_upd_file_info *fi,
                      struct mg_str data) {
   _i32 r = sl_FsWrite(ctx->cur_fh, fi->processed, (_u8 *) data.p, data.len);
   if (r != data.len) {
@@ -294,7 +294,7 @@ int sj_upd_file_data(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi,
   return r;
 }
 
-int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
+int mg_upd_file_end(struct mg_upd_ctx *ctx, const struct mg_upd_file_info *fi) {
   int r = 1;
   if (ctx->cur_fn == (_u8 *) ctx->fs_container_file) {
     int ret = fs_write_meta(ctx->cur_fh, FS_INITIAL_SEQ, ctx->fs_size,
@@ -322,7 +322,7 @@ int sj_upd_file_end(struct sj_upd_ctx *ctx, const struct sj_upd_file_info *fi) {
   return r;
 }
 
-int sj_upd_finalize(struct sj_upd_ctx *ctx) {
+int mg_upd_finalize(struct mg_upd_ctx *ctx) {
   struct boot_cfg cur_cfg, new_cfg;
   int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
   if (r < 0) {
@@ -366,7 +366,7 @@ int sj_upd_finalize(struct sj_upd_ctx *ctx) {
   return 1;
 }
 
-void sj_upd_ctx_free(struct sj_upd_ctx *ctx) {
+void mg_upd_ctx_free(struct mg_upd_ctx *ctx) {
   if (ctx == NULL) return;
   if (ctx->cur_fh >= 0) sl_FsClose(ctx->cur_fh, NULL, NULL, 0);
   if (ctx->cur_fn != NULL) sl_FsDel(ctx->cur_fn, 0);
@@ -379,7 +379,7 @@ void revert_update(int boot_cfg_idx, struct boot_cfg *cfg) {
   cfg->seq = BOOT_CFG_TOMBSTONE_SEQ;
   write_boot_cfg(cfg, boot_cfg_idx);
   LOG(LL_ERROR, ("Config %d is bad, reverting", boot_cfg_idx));
-  sj_system_restart(0);
+  mg_system_restart(0);
 }
 
 void commit_update(int boot_cfg_idx, struct boot_cfg *cfg) {
@@ -409,7 +409,7 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
       LOG(LL_DEBUG, ("Deleting %s", fname));
       sl_FsDel((const _u8 *) fname, 0);
     }
-    r = sj_upd_merge_spiffs(&old_fs.fs);
+    r = mg_upd_merge_spiffs(&old_fs.fs);
     if (r < 0) return r;
     fs_umount(&old_fs);
     cc3200_fs_flush();
@@ -418,7 +418,7 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
   return 0;
 }
 
-int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name) {
+int mg_upd_complete_file_update(struct mg_upd_ctx *ctx, const char *file_name) {
   (void) ctx;
   (void) file_name;
 
@@ -426,7 +426,7 @@ int sj_upd_complete_file_update(struct sj_upd_ctx *ctx, const char *file_name) {
   return -1;
 }
 
-int sj_upd_get_next_file(struct sj_upd_ctx *ctx, char *buf, size_t buf_size) {
+int mg_upd_get_next_file(struct mg_upd_ctx *ctx, char *buf, size_t buf_size) {
   (void) ctx;
   (void) buf;
   (void) buf_size;

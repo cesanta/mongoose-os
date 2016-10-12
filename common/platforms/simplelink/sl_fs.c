@@ -374,7 +374,7 @@ int mkdir(const char *path, mode_t mode) {
 }
 #endif
 
-int sl_fs_init() {
+int sl_fs_init(void) {
   int ret = 1;
 #ifdef __TI_COMPILER_VERSION__
 #ifdef MG_FS_SLFS

@@ -1,18 +1,22 @@
 PYTHON ?= python
-BUILD_DIR ?= ./build
+BUILD_DIR ?= ./.build
 BUILD_INFO_C ?= $(BUILD_DIR)/build_info.c
 BUILD_INFO_JSON ?= $(BUILD_DIR)/build_info.json
+MG_BUILD_INFO_C ?= $(BUILD_DIR)/mg_build_info.c
 FW_META_CMD ?= $(REPO_PATH)/common/tools/fw_meta.py
 GEN_BUILD_INFO_EXTRA ?=
 APP_VERSION ?=
 APP_BUILD_ID ?=
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON):
-	$(vecho) "GEN   $@"
+define gen_build_info
+	$(vecho) "GEN   $1"
 	$(Q) $(PYTHON) $(FW_META_CMD) gen_build_info \
-	  --id=$(APP_BUILD_ID) \
-	  --version=$(APP_VERSION) \
+	  --repo_path=$2 \
+	  --id=$3 \
+	  --version=$4 \
 	  --tag_as_version=true \
-	  --c_output=$(BUILD_INFO_C) \
-	  --json_output=$(BUILD_INFO_JSON) \
+	  --var_prefix=$5 \
+	  --c_output=$6 \
+	  --json_output=$7 \
 	  $(GEN_BUILD_INFO_EXTRA)
+endef

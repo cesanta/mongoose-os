@@ -12,22 +12,22 @@
 
 #include "oslib/osi.h"
 
-#include "fw/src/sj_app.h"
-#include "fw/src/sj_hal.h"
-#include "fw/src/sj_init.h"
-#include "fw/src/sj_init_js.h"
-#include "fw/src/sj_mongoose.h"
-#include "fw/src/sj_prompt.h"
-#include "fw/src/sj_sys_config.h"
-#include "fw/src/sj_updater_clubby.h"
+#include "fw/src/mg_app.h"
+#include "fw/src/mg_hal.h"
+#include "fw/src/mg_init.h"
+#include "fw/src/mg_init_js.h"
+#include "fw/src/mg_mongoose.h"
+#include "fw/src/mg_prompt.h"
+#include "fw/src/mg_sys_config.h"
+#include "fw/src/mg_uart.h"
+#include "fw/src/mg_updater_clubby.h"
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/config.h"
-#include "fw/platforms/cc3200/src/cc3200_console.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_updater.h"
@@ -35,22 +35,17 @@
 #define CB_ADDR_MASK 0xe0000000
 #define CB_ADDR_PREFIX 0x20000000
 
-#define PROMPT_CHAR_EVENT 0
-#define INVOKE_CB_EVENT 1
-struct sj_event {
-  /*
-   * We exploit the fact that all callback addresses have to be in SRAM and
-   * start with CB_ADDR_PREFIX and use the 3 upper bits to store message type.
-   */
-  unsigned type : 3;
-  unsigned cb : 29;
-  void *data;
+extern const char *build_version, *build_id;
+extern const char *mg_build_version, *mg_build_id;
+
+struct mg_event {
+  cb_t cb;
+  void *arg;
 };
 
 OsiMsgQ_t s_main_queue;
-extern const char *build_id;
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 struct v7 *s_v7;
 
 struct v7 *init_v7(void *stack_base) {
@@ -72,13 +67,13 @@ struct v7 *init_v7(void *stack_base) {
 #endif
 
 /* It may not be the best source of entropy, but it's better than nothing. */
-static void cc3200_srand() {
+static void cc3200_srand(void) {
   uint32_t r = 0, *p;
   for (p = (uint32_t *) 0x20000000; p < (uint32_t *) 0x20040000; p++) r ^= *p;
   srand(r);
 }
 
-int start_nwp() {
+int start_nwp(void) {
   int r = sl_Start(NULL, NULL, NULL);
   if (r < 0) return r;
   SlVersionFull ver;
@@ -96,18 +91,8 @@ int start_nwp() {
   return 0;
 }
 
-#ifdef SJ_ENABLE_JS
-static void uart_int() {
-  struct sj_event e = {.type = PROMPT_CHAR_EVENT, .data = NULL};
-  MAP_UARTIntClear(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
-  MAP_UARTIntDisable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
-  osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT);
-}
-
-void sj_prompt_init_hal(struct v7 *v7) {
-  (void) v7;
-  osi_InterruptRegister(CONSOLE_UART_INT, uart_int, INT_PRIORITY_LVL_1);
-  MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
+#ifdef MG_ENABLE_JS
+void mg_prompt_init_hal(void) {
 }
 #endif
 
@@ -116,14 +101,28 @@ enum cc3200_init_result {
   CC3200_INIT_FAILED_TO_START_NWP = -100,
   CC3200_INIT_FAILED_TO_READ_BOOT_CFG = -101,
   CC3200_INIT_FS_INIT_FAILED = -102,
-  CC3200_INIT_SJ_INIT_FAILED = -103,
-  CC3200_INIT_SJ_INIT_JS_FAILED = -105,
+  CC3200_INIT_MG_INIT_FAILED = -103,
+  CC3200_INIT_MG_INIT_JS_FAILED = -105,
+  CC3200_INIT_UART_INIT_FAILED = -106,
 };
 
 static enum cc3200_init_result cc3200_init(void *arg) {
-  LOG(LL_INFO, ("Mongoose IoT Firmware %s", build_id));
+  mongoose_init();
+  if (MG_DEBUG_UART >= 0) {
+    struct mg_uart_config *ucfg = mg_uart_default_config();
+    ucfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
+    if (mg_uart_init(MG_DEBUG_UART, ucfg, NULL, NULL) == NULL) {
+      return CC3200_INIT_UART_INIT_FAILED;
+    }
+  }
+
+  if (strcmp(MG_APP, "mongoose-iot") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MG_APP, build_version, build_id));
+  }
   LOG(LL_INFO,
-      ("RAM: %d total, %d free", sj_get_heap_size(), sj_get_free_heap_size()));
+      ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO,
+      ("RAM: %d total, %d free", mg_get_heap_size(), mg_get_free_heap_size()));
 
   int r = start_nwp();
   if (r < 0) {
@@ -166,34 +165,32 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     }
   }
 
-  mongoose_init();
-
-  enum sj_init_result ir = sj_init();
-  if (ir != SJ_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "SJ", ir));
-    return CC3200_INIT_SJ_INIT_FAILED;
+  enum mg_init_result ir = mg_init();
+  if (ir != MG_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
+    return CC3200_INIT_MG_INIT_FAILED;
   }
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
   struct v7 *v7 = s_v7 = init_v7(&arg);
 
-  ir = sj_init_js_all(v7);
-  if (ir != SJ_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "SJ JS", ir));
-    return CC3200_INIT_SJ_INIT_JS_FAILED;
+  ir = mg_init_js_all(v7);
+  if (ir != MG_INIT_OK) {
+    LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
+    return CC3200_INIT_MG_INIT_JS_FAILED;
   }
 #endif
 
-  LOG(LL_INFO, ("Init done, RAM: %d free", sj_get_free_heap_size()));
+  LOG(LL_INFO, ("Init done, RAM: %d free", mg_get_free_heap_size()));
 
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
     commit_update(boot_cfg_idx, &boot_cfg);
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
     clubby_updater_finish(0);
 #endif
   } else {
-#ifdef SJ_ENABLE_CLUBBY
+#ifdef MG_ENABLE_CLUBBY
     /*
      * If there is no update reply state, this will just be ignored.
      * But if there is, then update was rolled back and reply will be sent.
@@ -202,56 +199,35 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 #endif
   }
 
-#ifdef SJ_ENABLE_JS
-  /* Install prompt if enabled in the config. */
-  if (get_cfg()->debug.enable_prompt) {
-    sj_prompt_init(v7);
-  }
+#ifdef MG_ENABLE_JS
+  mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
   return CC3200_INIT_OK;
 }
 
+void mongoose_poll_cb(void *arg);
+
 void main_task(void *arg) {
-  (void) arg;
-  osi_MsgQCreate(&s_main_queue, "main", sizeof(struct sj_event), 32 /* len */);
+  struct mg_event e;
+  osi_MsgQCreate(&s_main_queue, "main", sizeof(e), 32 /* len */);
 
   enum cc3200_init_result r = cc3200_init(NULL);
   if (r != CC3200_INIT_OK) {
     LOG(LL_ERROR, ("Init failed: %d", r));
-    sj_system_restart(0);
+    mg_system_restart(0);
     return;
   }
 
   while (1) {
     mongoose_poll(0);
     cc3200_fs_flush();
-    struct sj_event e;
-    if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) != OSI_OK) continue;
-    switch (e.type) {
-#ifdef SJ_ENABLE_JS
-      case PROMPT_CHAR_EVENT: {
-        long c;
-        while ((c = UARTCharGetNonBlocking(CONSOLE_UART)) >= 0) {
-          sj_prompt_process_char(c);
-        }
-        MAP_UARTIntEnable(CONSOLE_UART, UART_INT_RX | UART_INT_RT);
-        break;
-      }
-#endif
-      case INVOKE_CB_EVENT: {
-        cb_t cb = (cb_t)(e.cb | CB_ADDR_PREFIX);
-        cb(e.data);
-        break;
-      }
+    if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) == OSI_OK) {
+      e.cb(e.arg);
     }
   }
 }
 
-void invoke_cb(cb_t cb, void *arg) {
-  assert(cb & CB_ADDR_MASK == 0);
-  struct sj_event e;
-  e.type = INVOKE_CB_EVENT;
-  e.cb = (unsigned) cb;
-  e.data = arg;
-  osi_MsgQWrite(&s_main_queue, &e, OSI_WAIT_FOREVER);
+bool invoke_cb(cb_t cb, void *arg) {
+  struct mg_event e = {.cb = cb, .arg = arg};
+  return (osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT) == OSI_OK);
 }

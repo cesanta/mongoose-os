@@ -66,7 +66,7 @@ void rijndaelEncrypt(void *ctx, int rounds, const uint8_t *in, uint8_t *out);
 void rijndaelKeySetupDec(void *ctx, const uint8_t *key);
 void rijndaelDecrypt(void *ctx, const uint8_t *in, uint8_t *out);
 
-static void *esp_aes128_new_ctx() {
+static void *esp_aes128_new_ctx(void) {
   return malloc(4 * 4 * 15 + 4);
 }
 
@@ -103,7 +103,7 @@ static void esp_aes128_free_ctx(void *ctxv) {
 }
 
 /* Krypton API function. */
-const kr_cipher_info *kr_aes128_cs_info() {
+const kr_cipher_info *kr_aes128_cs_info(void) {
   static const kr_cipher_info aes128_cs_info = {
       AES_BLOCK_SIZE,     AES128_KEY_SIZE,      AES128_IV_SIZE,
       esp_aes128_new_ctx, esp_aes128_setup_enc, esp_aes128_setup_dec,

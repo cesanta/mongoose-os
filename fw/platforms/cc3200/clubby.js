@@ -15,7 +15,11 @@ ClubbyError.prototype.constructor = ClubbyError;
 // let's just make a shim of the couple of minor features we use;
 // curtesy of fw/src/js/sys_init.js
 if (typeof($) === 'undefined') {
-  global.$ = {};
+  if (typeof(global) != 'undefined') {
+    global.$ = {};
+  } else {
+    $ = {};
+  }
   $.extend = function(deep, a, b) {
     if(typeof(deep) !== 'boolean') {
       b = a;

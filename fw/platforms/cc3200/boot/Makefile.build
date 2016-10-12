@@ -103,6 +103,7 @@ $(BUILD_DIR)/%.o: %.asm
 	$(call asm,$(CFLAGS),$<)
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
+	$(call gen_build_info,$@,,,,,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
 $(BUILD_INFO_O): $(BUILD_INFO_C)
 

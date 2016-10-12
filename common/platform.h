@@ -11,6 +11,8 @@
 #define CS_P_ESP_LWIP 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
+#define CS_P_CC3100 6
+#define CS_P_MBED 7
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -24,6 +26,8 @@
 #define CS_PLATFORM CS_P_UNIX
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
+#elif defined(__MBED__)
+#define CS_PLATFORM CS_P_MBED
 #endif
 
 #ifndef CS_PLATFORM
@@ -36,6 +40,8 @@
 #include "common/platforms/platform_windows.h"
 #include "common/platforms/platform_esp_lwip.h"
 #include "common/platforms/platform_cc3200.h"
+#include "common/platforms/platform_cc3100.h"
+#include "common/platforms/platform_mbed.h"
 
 /* Common stuff */
 

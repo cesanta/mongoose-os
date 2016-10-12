@@ -1,9 +1,9 @@
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/sj_app.h"
-#include "fw/src/sj_gpio.h"
-#include "fw/src/sj_sys_config.h"
+#include "fw/src/mg_app.h"
+#include "fw/src/mg_gpio.h"
+#include "fw/src/mg_sys_config.h"
 
 #if CS_PLATFORM == CS_P_ESP_LWIP
 #define GPIO 12
@@ -13,14 +13,14 @@
 #error Unknown platform
 #endif
 
-enum mg_app_init_result sj_app_init() {
+enum mg_app_init_result mg_app_init(void) {
   { /* Print a message using a value from config. */
     printf("Hello, %s!\n", get_cfg()->hello.who);
   }
 
   { /* Turn on LED. */
-    sj_gpio_set_mode(GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-    sj_gpio_write(GPIO, GPIO_LEVEL_HIGH);
+    mg_gpio_set_mode(GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+    mg_gpio_write(GPIO, GPIO_LEVEL_HIGH);
   }
 
   { /* Read a file. */

@@ -20,7 +20,6 @@
 #include "esp_fs.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
-#include "esp_uart.h"
 #include "v7_esp.h"
 
 #include <osapi.h>
@@ -130,7 +129,7 @@ NOINSTR void esp_exception_handler(UserFrame *frame) {
   system_restart_local_sdk();
 }
 
-NOINSTR void esp_exception_handler_init() {
+NOINSTR void esp_exception_handler_init(void) {
 #if defined(ESP_FLASH_BYTES_EMUL) || defined(ESP_GDB_SERVER) || \
     defined(ESP_COREDUMP)
 
@@ -154,7 +153,7 @@ NOINSTR void esp_exception_handler_init() {
 #endif
 }
 
-void esp_print_reset_info() {
+void esp_print_reset_info(void) {
   struct rst_info *ri = system_get_rst_info();
   const char *reason_str;
   int print_exc_info = 0;
@@ -196,7 +195,7 @@ void esp_print_reset_info() {
   }
 }
 
-NOINSTR void system_restart_local() {
+NOINSTR void system_restart_local(void) {
   struct rst_info ri;
   system_rtc_mem_read(0, &ri, sizeof(ri));
   if (ri.reason == REASON_SOFT_WDT_RST) {

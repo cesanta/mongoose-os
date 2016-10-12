@@ -25,7 +25,7 @@ extern "C" {
 #endif
 
 // get the rboot config
-rboot_config ICACHE_FLASH_ATTR rboot_get_config() {
+rboot_config ICACHE_FLASH_ATTR rboot_get_config(void) {
 	rboot_config conf;
 	spi_flash_read(BOOT_CONFIG_SECTOR * SECTOR_SIZE, (uint32*)&conf, sizeof(rboot_config));
 	return conf;
@@ -66,7 +66,7 @@ bool ICACHE_FLASH_ATTR rboot_set_config(rboot_config *conf) {
 }
 
 // get current boot rom
-uint8 ICACHE_FLASH_ATTR rboot_get_current_rom() {
+uint8 ICACHE_FLASH_ATTR rboot_get_current_rom(void) {
 	rboot_config conf;
 	conf = rboot_get_config();
 	return conf.current_rom;

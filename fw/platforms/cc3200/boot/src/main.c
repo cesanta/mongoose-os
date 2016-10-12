@@ -19,6 +19,8 @@
 #include "uart.h"
 #include "utils.h"
 
+#include "fw/platforms/cc3200/src/config.h"
+
 /*
  * We want to disable SL_INC_STD_BSD_API_NAMING, so we include user.h ourselves
  * and undef it.
@@ -36,46 +38,56 @@
 
 #include "boot.h"
 
-#define SYS_CLK 80000000
-#define CONSOLE_BAUD_RATE 115200
-#define CONSOLE_UART UARTA0_BASE
-#define CONSOLE_UART_INT INT_UARTA0
-#define CONSOLE_UART_PERIPH PRCM_UARTA0
+#if MG_DEBUG_UART == 0
+#define DEBUG_UART_BASE UARTA0_BASE
+#define DEBUG_UART_PERIPH PRCM_UARTA0
+#elif MG_DEBUG_UART == 1
+#define DEBUG_UART_BASE UARTA1_BASE
+#define DEBUG_UART_PERIPH PRCM_UARTA1
+#else
+#define NO_DEBUG
+#endif
 
 /* Int vector table, defined in startup_gcc.c */
 extern void (*const int_vectors[])(void);
 
-void abort() {
-  MAP_UARTCharPut(CONSOLE_UART, 'X');
-  while (1) {
-  }
+void dbg_putc(char c) {
+#ifndef NO_DEBUG
+  MAP_UARTCharPut(DEBUG_UART_BASE, c);
+#else
+  (void) c;
+#endif
 }
 
-void uart_puts(const char *s) {
-  for (; *s != '\0'; s++) {
-    MAP_UARTCharPut(CONSOLE_UART, *s);
+void dbg_puts(const char *s) {
+  for (; *s != '\0'; s++) dbg_putc(*s);
+}
+
+void abort(void) {
+  dbg_putc('X');
+  while (1) {
   }
 }
 
 static void print_addr(uint32_t addr) {
   char buf[10];
   __utoa(addr, buf, 16);
-  uart_puts(buf);
+  dbg_puts(buf);
 }
 
 int load_image(const char *fn, _u8 *dst) {
   _i32 fh;
   SlFsFileInfo_t fi;
   _i32 r = sl_FsGetInfo((const _u8 *) fn, 0, &fi);
-  MAP_UARTCharPut(CONSOLE_UART, (r == 0 ? '+' : '-'));
+  dbg_putc(r == 0 ? '+' : '-');
   if (r != 0) return r;
   {
     char buf[20];
     __utoa(fi.FileLen, buf, 10);
-    uart_puts(buf);
+    dbg_puts(buf);
   }
   r = sl_FsOpen((const _u8 *) fn, FS_MODE_OPEN_READ, NULL, &fh);
-  MAP_UARTCharPut(CONSOLE_UART, (r == 0 ? '+' : '-'));
+  dbg_putc(r == 0 ? '+' : '-');
   if (r != 0) return r;
   r = sl_FsRead(fh, 0, dst, fi.FileLen);
   if (r != fi.FileLen) return r;
@@ -92,43 +104,44 @@ void run(uint32_t base) {
   /* Not reached. */
 }
 
-static void crlflf() {
-  MAP_UARTCharPut(CONSOLE_UART, '\r');
-  MAP_UARTCharPut(CONSOLE_UART, '\n');
-  MAP_UARTCharPut(CONSOLE_UART, '\n');
-}
-
 extern uint32_t _text_start; /* Our location. */
 
-int main() {
+int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &int_vectors[0]);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
 
-  /* Console UART init. */
-  MAP_PRCMPeripheralClkEnable(CONSOLE_UART_PERIPH, PRCM_RUN_MODE_CLK);
-  MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* PIN_55 -> UART0_TX */
-  MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* PIN_57 -> UART0_RX */
+/* Console UART init. */
+#ifndef NO_DEBUG
+  MAP_PRCMPeripheralClkEnable(DEBUG_UART_PERIPH, PRCM_RUN_MODE_CLK);
+#if MG_DEBUG_UART == 0
+  MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* UART0_TX */
+  MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* UART0_RX */
+#else
+  MAP_PinTypeUART(PIN_07, PIN_MODE_5); /* UART1_TX */
+  MAP_PinTypeUART(PIN_08, PIN_MODE_5); /* UART1_RX */
+#endif
   MAP_UARTConfigSetExpClk(
-      CONSOLE_UART, MAP_PRCMPeripheralClockGet(CONSOLE_UART_PERIPH),
-      CONSOLE_BAUD_RATE,
+      DEBUG_UART_BASE, MAP_PRCMPeripheralClockGet(DEBUG_UART_PERIPH),
+      MG_DEBUG_UART_BAUD_RATE,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  MAP_UARTFIFOLevelSet(CONSOLE_UART, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
-  MAP_UARTFIFODisable(CONSOLE_UART);
+  MAP_UARTFIFOLevelSet(DEBUG_UART_BASE, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
+  MAP_UARTFIFODisable(DEBUG_UART_BASE);
+#endif
 
-  crlflf();
+  dbg_puts("\r\n\n");
 
   if (sl_Start(NULL, NULL, NULL) < 0) abort();
-  MAP_UARTCharPut(CONSOLE_UART, 'S');
+  dbg_putc('S');
 
   int cidx = get_active_boot_cfg_idx();
   if (cidx < 0) abort();
-  MAP_UARTCharPut(CONSOLE_UART, '0' + cidx);
+  dbg_putc('0' + cidx);
   struct boot_cfg cfg;
   if (read_boot_cfg(cidx, &cfg) < 0) abort();
 
-  uart_puts(cfg.app_image_file);
-  MAP_UARTCharPut(CONSOLE_UART, '@');
+  dbg_puts(cfg.app_image_file);
+  dbg_putc('@');
   print_addr(cfg.app_load_addr);
 
   /*
@@ -143,11 +156,11 @@ int main() {
     abort();
   }
 
-  MAP_UARTCharPut(CONSOLE_UART, '.');
+  dbg_putc('.');
 
   sl_Stop(0);
   print_addr(*(((uint32_t *) cfg.app_load_addr) + 1));
-  crlflf();
+  dbg_puts("\r\n\n");
 
   MAP_IntMasterDisable();
   MAP_IntVTableBaseSet(cfg.app_load_addr);

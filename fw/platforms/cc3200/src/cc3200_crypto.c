@@ -141,7 +141,7 @@ const char *data =
     "occaecat cupidatat non proident, sunt in culpa qui officia deserunt "
     "mollit anim id est laborum";
 
-void test_crypto() {
+void test_crypto(void) {
   uint8_t digest[32];
   char digest_str[65];
   const char *s1 = "The quick ", *s2 = "brown fox jumps over the lazy dog";

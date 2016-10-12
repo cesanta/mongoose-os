@@ -32,7 +32,7 @@ struct regfile {
 };
 
 void esp_exception_handler(UserFrame *frame);
-void esp_exception_handler_init();
-void esp_print_reset_info();
+void esp_exception_handler_init(void);
+void esp_print_reset_info(void);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_EXC_H_ */

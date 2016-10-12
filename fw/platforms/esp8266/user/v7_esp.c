@@ -7,7 +7,7 @@
 struct v7;
 struct v7 *v7;
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 
 #include <math.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@ struct v7 *v7;
 
 #include "v7/v7.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
-#include "fw/src/sj_v7_ext.h"
+#include "fw/src/mg_v7_ext.h"
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 #include "common/cs_dbg.h"
 
@@ -102,4 +102,4 @@ void init_v7(void *stack_base) {
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
   v7_set_method(v7, v7_get_global(v7), "is_rboot_updated", is_rboot_updated);
 }
-#endif /* SJ_ENABLE_JS */
+#endif /* MG_ENABLE_JS */

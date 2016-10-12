@@ -1,0 +1,56 @@
+namespace: http://mongoose-iot.com/fw
+name: /v1/Filesystem
+methods:
+  List:
+    doc: List files at the device's filesystem.
+    result:
+      type: array
+      items:
+        type: string
+        doc: Filename
+  Get:
+    doc: Read a file or a part of file from the device's filesystem.
+    args:
+      filename:
+        type: string
+        doc: Name of the file to read.
+      offset:
+        type: integer
+        doc: |
+          Offset from the beginning of the file to start reading from.
+          If omitted, 0 is assumed. If the given offset is larger than the file
+          size, no error is returned, and the returned data will be null.
+      len:
+        type: integer
+        doc: |
+          Length of chunk to read. If omitted, all available data until the EOF
+          will be read. If (offset + len) is larger than the file size, no
+          error will be returned, and only available data until the EOF will be
+          read.
+    required_args: [filename]
+    result:
+      type: object
+      properties:
+        data:
+          type: string
+          doc: Base64-encoded chunk of data read from the file.
+        left:
+          type: integer
+          doc: Number of bytes left past the read chunk of data.
+
+  Put:
+    doc: Write or append data to file.
+    args:
+      filename:
+        type: string
+        doc: Name of the file to write or append to.
+      data:
+        type: string
+        doc: Base-64 encoded data to write or append.
+      append:
+        type: boolean
+        doc: |
+          If true, and if the file with the given filename already exists, the
+          data will be appended to it. Otherwise, the file will be overwritten
+          or created.
+    required_args: [filename]

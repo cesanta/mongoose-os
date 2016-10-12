@@ -90,7 +90,7 @@ static void pop_visit(struct mbuf *stack) {
   stack->len -= sizeof(struct visit);
 }
 
-struct ub_ctx *ub_ctx_new() {
+struct ub_ctx *ub_ctx_new(void) {
   struct ub_ctx *ctx = (struct ub_ctx *) calloc(1, sizeof(*ctx));
   mbuf_init(&ctx->out, 0);
   mbuf_init(&ctx->stack, 0);
@@ -270,7 +270,7 @@ ub_val_t ub_create_boolean(int n) {
   return res;
 }
 
-ub_val_t ub_create_null() {
+ub_val_t ub_create_null(void) {
   ub_val_t res;
   res.kind = UBJSON_TYPE_NULL;
   return res;
@@ -286,7 +286,7 @@ ub_val_t ub_create_cstring(struct ub_ctx *ctx, const char *s) {
   return ub_create_string(ctx, mg_mk_str(s));
 }
 
-ub_val_t ub_create_undefined() {
+ub_val_t ub_create_undefined(void) {
   ub_val_t res = {UBJSON_TYPE_UNDEFINED, {}};
   return res;
 }
@@ -365,7 +365,7 @@ static void demo_bin(struct ub_ctx *ctx, void *user_data) {
   ub_bin_send(ctx, "de", 2);
 }
 
-int main() {
+int main(void) {
   struct ub_ctx *ctx = ub_ctx_new();
 
   ub_val_t root = ub_create_object(ctx);

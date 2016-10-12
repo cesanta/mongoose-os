@@ -104,7 +104,7 @@
 #include <osapi.h>
 #include <os_type.h>
 
-#include "fw/src/sj_spi.h"
+#include "fw/src/mg_spi.h"
 
 #include "esp_spi_register.h"
 

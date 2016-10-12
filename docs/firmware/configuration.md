@@ -53,10 +53,10 @@ Numbers are represented by integers, as are booleans. Strings will be allocated 
 
 *Important note*: Empty strings will be represented as `NULL` pointers, be careful.
 
-To get access to the config values, include `fw/src/sj_sys_config.h`.
+To get access to the config values, include `fw/src/mg_sys_config.h`.
 One global instance of `struct sys_config` is created during boot and is returned by `get_cfg()`.
 Setting values is possible, but usually a reboot is required for changes to take effect.
-`sj_conf_set_str()` function should be used to set string values.
+`mg_conf_set_str()` function should be used to set string values.
 
 Configuration can be saved by invoking `save_cfg()`.
 

@@ -1,0 +1,50 @@
+namespace: http://cesanta.com/clubby/service
+name: /v1/SWUpdate
+doc: SWUpdate service provides a way to update device's software.
+visibility: private
+methods:
+  ListSections:
+    doc: >-
+      Returns a list of components of the device's software. Each section is
+      updated individually.
+    result:
+      type: array
+      items:
+        type: object
+        properties:
+          section:
+            type: string
+          version:
+            type: string
+          writable:
+            type: boolean
+  Update:
+    doc: Instructs the device to update a given section.
+    args:
+      section:
+        type: string
+        doc: Name of the section to update.
+      version:
+        type: string
+        doc: Optional version of the new image.
+      blob:
+        type: string
+        doc: Image as a string, if appropriate.
+      blob_url:
+        type: string
+        doc: URL pointing to the image if it's too big to fit in the `blob`.
+      blob_type:
+        type: string
+        doc: >-
+          type of the blob. Valid values: manifest, zip
+      sig:
+        type: object
+        doc: >-
+          Hash or signature for the image that can be used to verify its
+          integrity.
+        properties:
+          alg:
+            type: string
+          v:
+            type: string
+        required: [alg, v]

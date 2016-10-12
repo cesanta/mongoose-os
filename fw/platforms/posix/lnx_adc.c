@@ -3,17 +3,17 @@
  * All rights reserved
  */
 
-#ifdef SJ_ENABLE_ADC_API
+#ifdef MG_ENABLE_ADC_API
 
 #include <stdint.h>
 
-uint32_t sj_adc_read(int pin) {
+uint32_t mg_adc_read(int pin) {
   (void) pin;
   return 0;
 }
 
-double sj_adc_read_voltage(int pin) {
-  return sj_adc_read(pin);
+double mg_adc_read_voltage(int pin) {
+  return mg_adc_read(pin);
 }
 
-#endif /* SJ_ENABLE_ADC_API */
+#endif /* MG_ENABLE_ADC_API */

@@ -84,6 +84,15 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
   _u8 *buf;
   _u32 offset, len, buf_size;
   LOG(LL_DEBUG, ("%s %d -> %d", m->cpfx, m->cidx, new_cidx));
+  if (old_fh > 0 && m->rw) {
+    /*
+     * During the switch the destination container will be unusable.
+     * If switching from a writeable container (likely in response to an erase),
+     * close the old container first to make it safe and reopen for reading.
+     */
+    fs_close_container(m);
+    old_fh = -1;
+  }
   if (old_fh < 0) {
     _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
     fs_container_fname(m->cpfx, m->cidx, fname);

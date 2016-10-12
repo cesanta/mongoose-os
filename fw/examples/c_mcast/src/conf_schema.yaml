@@ -1,0 +1,5 @@
+[
+  ["mcast", "o", {title: "Multicast example parameters"}],
+  ["mcast.group", "s", "224.0.0.251", {title: "Multicast example group IP"}],
+  ["mcast.port", "i", 5353, {title: "Multicast example UDP port"}],
+]

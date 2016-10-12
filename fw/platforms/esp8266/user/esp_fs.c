@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -28,7 +28,8 @@
 #include "spiffs_config.h"
 
 #include "esp_fs.h"
-#include "esp_sj_uart.h"
+#include "fw/src/mg_uart.h"
+#include "fw/src/mg_sys_config.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
@@ -53,30 +54,24 @@ spiffs fs;
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
 
+struct mmap_desc mmap_descs[MG_MMAP_SLOTS];
 #define FS_STD 0
 #define FS_EXT 1
 #define FS_EXT_ADDR ((uint32_t) 0x200000)
 #define FS_EXT_SIZE ((uint32_t) 0x1FC000)
-
-static int s_stdout_uart = -1, s_stderr_uart = -1, s_cur_fs = 0;
-
-struct mmap_desc mmap_descs[SJ_MMAP_SLOTS];
 static struct mmap_desc *cur_mmap_desc;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
-static uint32_t fs_std_addr = 0, fs_std_size = 0; 
-
-spiffs *get_fs() {
-  return &fs;
+static uint32_t fs_std_addr = 0, fs_std_size = 0; spiffs *get_fs(void) {  return &fs;
 }
 
-int spiffs_get_memory_usage() {
+int spiffs_get_memory_usage(void) {
   return sizeof(spiffs_work_buf) + sizeof(spiffs_fds);
 }
 
-static struct mmap_desc *alloc_mmap_desc() {
+static struct mmap_desc *alloc_mmap_desc(void) {
   size_t i;
   for (i = 0; i < sizeof(mmap_descs) / sizeof(mmap_descs[0]); i++) {
     if (mmap_descs[i].blocks == NULL) {
@@ -276,7 +271,7 @@ int fs_init(uint32_t addr, uint32_t size) {
                   sizeof(spiffs_fds));
 }
 
-void fs_umount() {
+void fs_umount(void) {
   SPIFFS_unmount(&fs);
 }
 
@@ -348,14 +343,17 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
 _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   (void) r;
   if (fd < NUM_SYS_FD) {
-    if (fd == 1 && s_stdout_uart >= 0) {
-      len = esp_sj_uart_write(s_stdout_uart, buf, len);
-    } else if (fd == 2 && s_stderr_uart >= 0) {
-      len = esp_sj_uart_write(s_stderr_uart, buf, len);
+    int uart_no = -1;
+    struct sys_config *scfg = get_cfg();
+    if (fd == 1) {
+      uart_no = scfg ? scfg->debug.stdout_uart : MG_DEBUG_UART;
+    } else if (fd == 2) {
+      uart_no = scfg ? scfg->debug.stderr_uart : MG_DEBUG_UART;
     } else if (fd == 0) {
       errno = EBADF;
       len = -1;
     }
+    if (uart_no >= 0) len = mg_uart_write(uart_no, buf, len);
     return len;
   }
 
@@ -455,19 +453,13 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
   return ret;
 }
 
-void fs_set_stdout_uart(int uart_no) {
-  s_stdout_uart = uart_no;
+void fs_flush_stderr(void) {
+  struct sys_config *scfg = get_cfg();
+  int uart_no = scfg ? scfg->debug.stderr_uart : MG_DEBUG_UART;
+  if (uart_no >= 0) mg_uart_flush(uart_no);
 }
 
-void fs_set_stderr_uart(int uart_no) {
-  s_stderr_uart = uart_no;
-}
-
-void fs_flush_stderr() {
-  if (s_stderr_uart >= 0) esp_uart_flush(s_stderr_uart);
-}
-
-#ifdef SJ_ENABLE_JS
+#ifdef MG_ENABLE_JS
 int v7_val_to_file(struct v7 *v7, v7_val_t val) {
   return (int) v7_get_double(v7, val);
 }
@@ -483,7 +475,7 @@ int v7_is_file_type(v7_val_t val) {
 }
 #endif
 
-int64_t sj_get_storage_free_space() {
+int64_t mg_get_storage_free_space(void) {
   uint32_t total, used;
   SPIFFS_info(&fs, &total, &used);
   return total - used;

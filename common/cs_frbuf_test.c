@@ -64,7 +64,7 @@ struct cs_frbuf_file_hdr {
     }                                       \
   } while (0)
 
-static const char *test_frbuf_init_clean() {
+static const char *test_frbuf_init_clean(void) {
   struct cs_frbuf *b = cs_frbuf_init(TEST_FILE, 100);
   ASSERT_FILE_EQ("s:90 u:0 h:0 t:0", "");
   cs_frbuf_deinit(b);
@@ -72,7 +72,7 @@ static const char *test_frbuf_init_clean() {
   return NULL;
 }
 
-static const char *test_frbuf_simple() {
+static const char *test_frbuf_simple(void) {
   {
     struct cs_frbuf *b = cs_frbuf_init(TEST_FILE, 100);
     ASSERT_FILE_EQ("s:90 u:0 h:0 t:0", "");
@@ -103,7 +103,7 @@ static const char *test_frbuf_simple() {
   return NULL;
 }
 
-static const char *test_frbuf_wrap() {
+static const char *test_frbuf_wrap(void) {
   { /* Last record ends exactly at the end of the buffer */
     struct cs_frbuf *b = cs_frbuf_init(TEST_FILE, 22);
     ASSERT(cs_frbuf_append(b, "AAAAA", 5));

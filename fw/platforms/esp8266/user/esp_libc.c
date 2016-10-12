@@ -39,8 +39,6 @@ int cs_heap_shim = 0;
 
 /* #define ESP_ABORT_ON_MALLOC_FAILURE */
 
-int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
-
 /*
  * strerror provided by libc consumes 2kb RAM
  * Moreover, V7 uses strerror mostly for
@@ -112,22 +110,6 @@ void *calloc(size_t num, size_t size) {
   return res;
 }
 
-/*
- * TODO(alashkin): remove this code
- * if newlib's sprintf implementation
- * is good
- */
-#if 0
-int sprintf(char *buffer, const char *format, ...) {
-  int ret;
-  va_list arglist;
-  va_start(arglist, format);
-  ret = c_vsnprintf(buffer, ~0, format, arglist);
-  va_end(arglist);
-  return ret;
-}
-#endif
-
 #ifndef LWIP_OPEN_SRC
 
 uint32_t htonl(uint32_t hostlong) {
@@ -167,10 +149,6 @@ void _free_r(struct _reent *r, void *ptr) {
 void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
   (void) r;
   return realloc(ptr, size);
-}
-
-int vsnprintf(char *buffer, size_t size, const char *format, va_list arg) {
-  return c_vsnprintf(buffer, size, format, arg);
 }
 
 NOINSTR void abort(void) {

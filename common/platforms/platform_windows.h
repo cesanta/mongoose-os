@@ -19,6 +19,9 @@
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
 
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <assert.h>
 #include <direct.h>
 #include <errno.h>
@@ -40,6 +43,10 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <process.h>
+
+#if defined(_MSC_VER) && _MSC_VER >= 1800
+#define strdup _strdup
+#endif
 
 #ifndef EINPROGRESS
 #define EINPROGRESS WSAEINPROGRESS
@@ -66,6 +73,10 @@
 #define fseeko(x, y, z) _fseeki64((x), (y), (z))
 #else
 #define fseeko(x, y, z) fseek((x), (y), (z))
+#endif
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+typedef unsigned long uintptr_t;
+typedef long intptr_t;
 #endif
 typedef int socklen_t;
 #if _MSC_VER >= 1700

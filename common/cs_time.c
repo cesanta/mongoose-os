@@ -15,7 +15,7 @@
 #include <windows.h>
 #endif
 
-double cs_time() {
+double cs_time(void) {
   double now;
 #ifndef _WIN32
   struct timeval tv;

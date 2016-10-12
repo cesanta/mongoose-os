@@ -132,7 +132,7 @@ static uint32 check_image(uint32 readpos) {
 #define RTC_GPIO_IN_DATA						(REG_RTC_BASE + 0x08C)
 #define RTC_GPIO_CONF							(REG_RTC_BASE + 0x090)
 #define PAD_XPD_DCDC_CONF						(REG_RTC_BASE + 0x0A0)
-static uint32 get_gpio16() {
+static uint32 get_gpio16(void) {
 	// set output level to 1
 	WRITE_PERI_REG(RTC_GPIO_OUT, (READ_PERI_REG(RTC_GPIO_OUT) & (uint32)0xfffffffe) | (uint32)(1));
 
@@ -163,7 +163,7 @@ static uint8 calc_chksum(uint8 *start, uint8 *end) {
 // to keep main's stack size as small as possible
 // don't mark as static or it'll be optimised out when
 // using the assembler stub
-uint32 NOINLINE find_image() {
+uint32 NOINLINE find_image(void) {
 
 	uint8 flag;
 	uint32 runAddr;
@@ -372,7 +372,7 @@ uint32 NOINLINE find_image() {
 #ifdef BOOT_NO_ASM
 
 // small stub method to ensure minimum stack space used
-void call_user_start() {
+void call_user_start(void) {
 	uint32 addr;
 	stage2a *loader;
 
@@ -387,7 +387,7 @@ void call_user_start() {
 
 // assembler stub uses no stack space
 // works with gcc
-void call_user_start() {
+void call_user_start(void) {
 	__asm volatile (
 		"mov a15, a0\n"          // store return addr, hope nobody wanted a15!
 		"call0 find_image\n"     // find a good rom to boot

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+<meta charset="UTF-8">
+<title>Configuration Console</title>
+<style>
+body {
+width: 100%;
+color: #777;
+font-family: Arial, sans-serif;
+line-height: 22px;
+font-size: 13px;
+overflow-x: hidden;
+overflow-y: scroll;
+}
+* { outline: none; }
+h1 { font-size: 140%; }
+fieldset { border: 1px solid #3795d0; margin-top: 1em; }
+legend { zfont-size: 120%; color: #3795d0; }
+.row {
+position: relative;
+width: 480px;
+border: 1px solid transparent;
+margin-bottom: 1em;
+margin-left: auto;
+margin-right: auto;
+}
+.param { xdisplay: inline-block; }
+.header {
+text-align: center; border-radius: 0.2em;
+font-weight: bold; font-size: 200%;
+min-height: 3em; vertical-align: middle; line-height: 3em;
+color: #eee; background: #3795d0;
+}
+.button {
+color: #ffffff;
+display: inline-block;
+font-weight: normal;
+text-align: center;
+vertical-align: middle;
+touch-action: manipulation;
+border: 1px solid transparent;
+white-space: nowrap;
+padding: 0.3em 1em;
+font-size: 110%;
+border-radius: 0.4em;
+-webkit-user-select: none;
+cursor: pointer;
+width: 10em;
+}
+.btn-reset {
+background-color: #CC4648;
+}
+.btn-reboot {
+background-color: #cc4648;
+}
+.btn-save {
+background-color: #3f9531;
+float: right;
+}
+#loading {
+position: fixed; top: 0; left: 45%; padding: 0.2em 1em; z-index: 999;
+color: white; background: #fbb117; font-weight: bold; display: none;
+}
+.orange { background: #fbb117; }
+label {
+min-width: 17em;
+display: inline-block;
+text-align: right;
+margin: 0.2em 1em 0 0;
+font-size: 13px;
+padding: 0.2em 0;
+}
+select {
+font-size: 90%;
+line-height: 2em;
+height: 2em;
+background: #fff;
+padding: 1em;
+width: 18em;
+color: #555;
+}
+input[disabled] { background: #e0e0e0; }
+input[type=checkbox] { box-shadow: none !important; }
+input[type=text],input[type=password] {
+font-size: 90%;
+padding: 0.4em;
+color: #555;
+border: 1px solid #cccccc;
+border-radius: 0.4em;
+width: 17em;
+}
+</style>
+<script type="text/javascript" src="conflib.js"></script>
+<script type="text/javascript">
+  var SCHEMA = [];
+  var DEFAULTS = {};  // System defaults config
+  var CURRENT = {};  // Configuration object. Gets set up on window load
+
+  window.onload = function() {
+    document.getElementById('btn_save').onclick = function() {
+      confSave(SCHEMA, DEFAULTS, CURRENT);
+    }
+    document.getElementById('btn_reboot').onclick = confReboot;
+    document.getElementById('btn_reset').onclick = confReset;
+
+    var renderConfig = function(schema, cfg, el) {
+      var html = [];
+      var currentObject = null;
+      for (var i in schema) {
+        var entry = schema[i];
+        var ep = entry[0], et = entry[1], ed = entry[2];
+        var val = confGet(cfg, ep);
+        var k = ep.split('.').pop();
+        if (typeof(val) !== 'object') console.debug(ep, et, typeof(val), val);
+        if (et === 'o' && typeof(val) === 'object') {
+          if (currentObject) html.push('</fieldset>')
+          currentObject = ep;
+          if (!ed.hide) {
+            html.push('<fieldset><legend>', ed.title || ep, '</legend>\n');
+          }
+        } else if (!ed.hide) {
+          html.push('<div class="param">',
+                    '<label for="', ep, '">', ed.title || k, '</label>');
+
+          // Look if the element should be disabled.
+          var extra_attrs = '';
+          if (ed.read_only || !mg_conf_check_access(ep, CURRENT['conf_acl'])) {
+            extra_attrs = ' disabled ';
+          }
+
+          if (et == 'b') {
+            html.push('<input type="checkbox" id="', ep,
+                      '" ', extra_attrs, val ? ' checked' : '', '/>');
+          } else if (ed.type == 'select') {
+            html.push('<select ', extra_attrs, 'id="', ep, '">');
+            for (var i = 0; ed.values && i < ed.values.length; i++) {
+              var o = ed.values[i];
+              html.push('<option value="', o.value, '" ', extra_attrs,
+                        o.value == val ? 'selected' : '', '>',
+                        o.title, '</option>');
+            }
+            html.push('</select>');
+          } else {
+            html.push('<input ', extra_attrs, 'type="text" id="', ep,
+                      '" value="', val, '"/>');
+          }
+          html.push('</div>\n');
+        }
+      }
+      el.innerHTML = html.join('');
+    };
+
+    confLoad(function(schema, defaults, current, vars_schema, vars) {
+      SCHEMA = schema;
+      DEFAULTS = defaults;
+      CURRENT = current;
+      document.getElementById('loading').style.display = 'none';
+      renderConfig(SCHEMA, merge(DEFAULTS, CURRENT),
+                   document.getElementById('config'));
+      renderConfig(vars_schema, vars, document.getElementById('vars'));
+    });
+  };
+
+  function connectFileInputs(fnId, ffId) {
+    var fni = document.getElementById(fnId);
+    var ffi = document.getElementById(ffId);
+    fni.onclick = function() { ffi.click(); };
+    ffi.onchange = function() { fni.placeholder = ffi.value; };
+    if (ffi.value != "") fni.placeholder = ffi.value;
+  }
+</script>
+</head>
+<body>
+  <div id="loading">Loading, please wait...</div>
+  <div class="row header">
+    Mongoose IoT Configuration Console
+  </div>
+
+  <div class="row" id="config"></div>
+
+  <div class="row">
+    <input id="btn_reboot" type="button" value="Reboot"
+    class="button btn-reboot"/>
+    <input id="btn_reset" type="button" value="Factory Reset"
+    class="button btn-reset"/>
+    <span id="fw_version"></span>
+    <input id="btn_save" type="button" value="Save Settings"
+    class="button btn-save"/>
+  </div>
+
+  <div class="row">
+    <fieldset>
+      <legend>Upload a file</legend>
+
+      <form id="file_upload_form" method="POST" action="/upload"
+         enctype="multipart/form-data">
+        <input placeholder="Select a file to upload ..."
+          id="file_select_name" type="text">
+        <input type="file" id="file_select_file" name="file" style="display: none">
+        <button class="button orange" id="file_upload_button" type="submit">
+          Upload
+        </button>
+      </form>
+
+    </fieldset>
+    <script type="text/javascript">
+      connectFileInputs('file_select_name', 'file_select_file');
+    </script>
+  </div>
+
+  <div class="row">
+    <fieldset>
+      <legend>Upload new firmware</legend>
+
+      <form id="fw_upload_form" method="POST" action="/update"
+         enctype="multipart/form-data">
+        <input placeholder="Select .zip firmware archive ..."
+          id="fw_select_name" type="text">
+        <input type="file" id="fw_select_file" name="file" accept=".zip" style="display: none">
+        <button class="button orange" id="fw_upload_button" type="submit">
+          Upload
+        </button>
+      </form>
+
+    </fieldset>
+    <script type="text/javascript">
+      connectFileInputs('fw_select_name', 'fw_select_file');
+    </script>
+  </div>
+
+  <div class="row">
+    <fieldset>
+      <legend>Vars</legend>
+      <div id="vars"></div>
+    </fieldset>
+  </div>
+
+</body>
+</html>

@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/sj_debug.h"
+#include "fw/src/mg_debug.h"
 
-int sj_debug_redirect(enum debug_mode mode) {
+int mg_debug_redirect(enum debug_mode mode) {
   (void) mode;
   return -1;
 }

@@ -12,12 +12,12 @@
  * Returns index of the currently active boot config.
  * Returns negative value if there isn't one or an error occurs.
  */
-int get_active_boot_cfg_idx();
+int get_active_boot_cfg_idx(void);
 
 /*
  * Returns index of an inactive boot config that can be used.
  */
-int get_inactive_boot_cfg_idx();
+int get_inactive_boot_cfg_idx(void);
 
 /*
  * Reads boot config with the given index.
