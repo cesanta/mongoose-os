@@ -135,7 +135,7 @@ MG_PRIVATE enum v7_err Sys_fs_getFreeSpace(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-SJ_PRIVATE enum v7_err Sys_fs_jump(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err Sys_fs_jump(struct v7 *v7, v7_val_t *res) {
   v7_val_t arg = v7_arg(v7, 0);
   int fs;
   if (!v7_is_number(arg)) {
