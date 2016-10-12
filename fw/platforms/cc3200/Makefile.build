@@ -246,7 +246,7 @@ ifeq "$(MG_ENABLE_JS)" "1"
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
   ifeq "$(V7_FREEZE)" "1"
     MIOT_CC3200_FEATURES += -DV7_THAW
-    GENFILES_LIST += $(BUILD_DIR)/fr.c
+    GENFILES_LIST += $(GEN_DIR)/fr.c
     MIOT_SRCS += fr.c
   endif
 else
@@ -396,11 +396,11 @@ $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
                 $(APP_SLFS_PATH) $(SLFS_FILES) ${FS_FILES} ${JSBIN_SRCS}
 
-$(BUILD_DIR)/fr.c: $(MIOT_POSIX_BIN)
+$(GEN_DIR)/fr.c: $(MIOT_POSIX_BIN)
 	$(vecho) "GEN   $@"
-	$(Q) $(MIOT_POSIX_BIN) -freeze $(BUILD_DIR)/fr.dump
-	$(Q) @nm $(MIOT_POSIX_BIN) > $(BUILD_DIR)/fr.sym
-	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
+	$(Q) $(MIOT_POSIX_BIN) -freeze $(GEN_DIR)/fr.dump
+	$(Q) @nm $(MIOT_POSIX_BIN) > $(GEN_DIR)/fr.sym
+	$(Q) $(V7_PATH)/scripts/freeze.py $(GEN_DIR)/fr.dump $(GEN_DIR)/fr.sym >$@
 
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                                 $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
