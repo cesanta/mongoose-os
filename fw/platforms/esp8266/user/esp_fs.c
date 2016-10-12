@@ -53,18 +53,22 @@ spiffs fs;
 
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
-
-struct mmap_desc mmap_descs[MG_MMAP_SLOTS];
 #define FS_STD 0
 #define FS_EXT 1
 #define FS_EXT_ADDR ((uint32_t) 0x200000)
 #define FS_EXT_SIZE ((uint32_t) 0x1FC000)
+
+struct mmap_desc mmap_descs[MG_MMAP_SLOTS];
+
+static int s_cur_fs = 0;
 static struct mmap_desc *cur_mmap_desc;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
-static uint32_t fs_std_addr = 0, fs_std_size = 0; spiffs *get_fs(void) {  return &fs;
+static uint32_t fs_std_addr = 0, fs_std_size = 0;
+spiffs *get_fs(void) {
+	return &fs;
 }
 
 int spiffs_get_memory_usage(void) {
