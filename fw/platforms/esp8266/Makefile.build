@@ -51,7 +51,7 @@ COMMON_FS_PATH ?= $(MIOT_PATH)/skeleton/filesystem
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
-V7_FREEZE ?= 0
+V7_FREEZE ?= 1
 HEAP_LOG ?=
 
 CREATE_SPIFFS_FS ?= 1
@@ -265,13 +265,12 @@ endif
 
 ifeq "$(MG_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MIOT_FEATURES += -DMG_ENABLE_JS
+  MIOT_FEATURES += -DMG_ENABLE_JS $(V7_FEATURES)
   VPATH += $(V7_PATH)
-  $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_FEATURES)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
   ifeq "$(V7_FREEZE)" "1"
     MIOT_ESP_FEATURES += -DV7_THAW
-    GENFILES_LIST += $(BUILD_DIR)/fr.c
+    GENFILES_LIST += $(GEN_DIR)/fr.c
     MIOT_SRCS += fr.c
   endif
   ifneq "$(V7_GC_DEBUG)" "1"
@@ -415,11 +414,11 @@ $(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(BUILD_DIR)/fr.c: $(MIOT_POSIX_BIN)
+$(GEN_DIR)/fr.c: $(MIOT_POSIX_BIN)
 	$(vecho) "GEN   $@"
-	$(Q) $(MIOT_POSIX_BIN) -freeze $(BUILD_DIR)/fr.dump
-	$(Q) @nm $(MIOT_POSIX_BIN) > $(BUILD_DIR)/fr.sym
-	$(Q) $(V7_PATH)/scripts/freeze.py $(BUILD_DIR)/fr.dump $(BUILD_DIR)/fr.sym >$@
+	$(Q) $(MIOT_POSIX_BIN) -freeze $(GEN_DIR)/fr.dump
+	$(Q) @nm $(MIOT_POSIX_BIN) > $(GEN_DIR)/fr.sym
+	$(Q) $(V7_PATH)/scripts/freeze.py $(GEN_DIR)/fr.dump $(GEN_DIR)/fr.sym >$@
 
 # Generate linker script.
 $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
