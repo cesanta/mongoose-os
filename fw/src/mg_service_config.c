@@ -56,7 +56,10 @@ static void mg_config_get_handler(struct clubby_request_info *ri, void *cb_arg,
  */
 static void set_handler(const char *str, int len, void *user_data) {
   struct sys_config *cfg = get_cfg();
-  mg_conf_parse(mg_mk_str_n(str, len), cfg->conf_acl, sys_config_schema(), cfg);
+  /* Make a temporary copy, in case it gets overridden while loading. */
+  char *acl_copy = (cfg->conf_acl != NULL ? strdup(cfg->conf_acl) : NULL);
+  mg_conf_parse(mg_mk_str_n(str, len), acl_copy, sys_config_schema(), cfg);
+  free(acl_copy);
 
   (void) user_data;
 }
