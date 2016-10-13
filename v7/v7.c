@@ -621,7 +621,6 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 #define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
 /* Only SPIFFS supports directories, SLFS does not. */
 #ifndef CC3200_FS_SPIFFS
 #define MG_DISABLE_DAV 1
@@ -746,7 +745,6 @@ struct dirent *readdir(DIR *dir);
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 #define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
 #define MG_DISABLE_DAV 1
 #define MG_DISABLE_DIRECTORY_LISTING 1
 #define MG_DISABLE_FILESYSTEM 1

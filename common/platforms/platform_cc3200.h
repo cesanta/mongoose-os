@@ -24,7 +24,6 @@
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 #define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
 /* Only SPIFFS supports directories, SLFS does not. */
 #ifndef CC3200_FS_SPIFFS
 #define MG_DISABLE_DAV 1
