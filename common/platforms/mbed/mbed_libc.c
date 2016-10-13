@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include "common/platform.h"
+
 #if CS_PLATFORM == CS_P_MBED
 
 long timezone;

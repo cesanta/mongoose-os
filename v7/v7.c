@@ -1086,6 +1086,33 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 
 #endif /* CS_COMMON_MD5_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/cs_endian.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_CS_ENDIAN_H_
+#define CS_COMMON_CS_ENDIAN_H_
+
+/*
+ * clang with std=-c99 uses __LITTLE_ENDIAN, by default
+ * while for ex, RTOS gcc - LITTLE_ENDIAN, by default
+ * it depends on __USE_BSD, but let's have everything
+ */
+#if !defined(BYTE_ORDER) && defined(__BYTE_ORDER)
+#define BYTE_ORDER __BYTE_ORDER
+#ifndef LITTLE_ENDIAN
+#define LITTLE_ENDIAN __LITTLE_ENDIAN
+#endif /* LITTLE_ENDIAN */
+#ifndef BIG_ENDIAN
+#define BIG_ENDIAN __LITTLE_ENDIAN
+#endif /* BIG_ENDIAN */
+#endif /* BYTE_ORDER */
+
+#endif /* CS_COMMON_CS_ENDIAN_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/sha1.h"
 #endif
 /*
@@ -2190,8 +2217,6 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #define V7_ENABLE__String__localeUpperCase 0
 #endif
 
-
-
 #endif /* CS_V7_SRC_FEATURES_ALL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "v7/src/v7_features.h"
@@ -2210,6 +2235,10 @@ void cr_context_free(struct cr_ctx *p_ctx);
 /* Amalgamated: #include "v7/src/features_full.h" */
 /* All the features will be default-defined to 0. */
 /* Amalgamated: #include "v7/src/features_all.h" */
+
+#ifndef V7_DISABLE_AST_TAG_NAMES
+#define V7_DISABLE_AST_TAG_NAMES 0
+#endif
 
 #ifndef V7_DISABLE_GC
 #define V7_DISABLE_GC 0
@@ -2241,6 +2270,14 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #ifndef V7_ENABLE_DENSE_ARRAYS
 #define V7_ENABLE_DENSE_ARRAYS 0
+#endif
+
+#ifndef V7_ENABLE_ENTITY_IDS
+#define V7_ENABLE_ENTITY_IDS 0
+#endif
+
+#ifndef V7_ENABLE_FILE
+#define V7_ENABLE_FILE 0
 #endif
 
 #ifndef V7_ENABLE_FOOTPRINT_REPORT
@@ -9678,6 +9715,8 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
 
 #if !DISABLE_MD5 && !defined(EXCLUDE_COMMON)
 
+/* Amalgamated: #include "common/cs_endian.h" */
+
 static void byteReverse(unsigned char *buf, unsigned longs) {
 /* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
 #if BYTE_ORDER == BIG_ENDIAN
@@ -9905,9 +9944,11 @@ char *cs_md5(char buf[33], ...) {
 /* Copyright(c) By Steve Reid <steve@edmweb.com> */
 /* 100% Public Domain */
 
+/* Amalgamated: #include "common/sha1.h" */
+
 #if !DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
 
-/* Amalgamated: #include "common/sha1.h" */
+/* Amalgamated: #include "common/cs_endian.h" */
 
 #define SHA1HANDSOFF
 #if defined(__sun)
@@ -10730,6 +10771,8 @@ void cr_context_free(struct cr_ctx *p_ctx) {
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
+
+/* Amalgamated: #include "common/platform.h" */
 
 #if CS_PLATFORM == CS_P_MBED
 
@@ -28724,6 +28767,8 @@ int main(int argc, char **argv) {
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+
+/* Amalgamated: #include "v7/src/internal.h" */
 
 #if V7_HEAPUSAGE_ENABLE
 

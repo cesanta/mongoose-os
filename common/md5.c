@@ -19,6 +19,8 @@
 
 #if !DISABLE_MD5 && !defined(EXCLUDE_COMMON)
 
+#include "common/cs_endian.h"
+
 static void byteReverse(unsigned char *buf, unsigned longs) {
 /* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
 #if BYTE_ORDER == BIG_ENDIAN

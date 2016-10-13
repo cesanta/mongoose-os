@@ -1,9 +1,11 @@
 /* Copyright(c) By Steve Reid <steve@edmweb.com> */
 /* 100% Public Domain */
 
+#include "common/sha1.h"
+
 #if !DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
 
-#include "common/sha1.h"
+#include "common/cs_endian.h"
 
 #define SHA1HANDSOFF
 #if defined(__sun)

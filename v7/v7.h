@@ -408,8 +408,6 @@
 #define V7_ENABLE__String__localeUpperCase 0
 #endif
 
-
-
 #endif /* CS_V7_SRC_FEATURES_ALL_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "v7/src/v7_features.h"
@@ -428,6 +426,10 @@
 /* Amalgamated: #include "v7/src/features_full.h" */
 /* All the features will be default-defined to 0. */
 /* Amalgamated: #include "v7/src/features_all.h" */
+
+#ifndef V7_DISABLE_AST_TAG_NAMES
+#define V7_DISABLE_AST_TAG_NAMES 0
+#endif
 
 #ifndef V7_DISABLE_GC
 #define V7_DISABLE_GC 0
@@ -459,6 +461,14 @@
 
 #ifndef V7_ENABLE_DENSE_ARRAYS
 #define V7_ENABLE_DENSE_ARRAYS 0
+#endif
+
+#ifndef V7_ENABLE_ENTITY_IDS
+#define V7_ENABLE_ENTITY_IDS 0
+#endif
+
+#ifndef V7_ENABLE_FILE
+#define V7_ENABLE_FILE 0
 #endif
 
 #ifndef V7_ENABLE_FOOTPRINT_REPORT
