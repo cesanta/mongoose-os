@@ -27,13 +27,14 @@
 #include "fw/src/mg_uart.h"
 #include "fw/src/mg_updater_clubby.h"
 
+#include "fw/platforms/esp8266/user/esp_features.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_task.h"
 #include "fw/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 #include "v7/v7.h"
 #include "fw/src/mg_init_js.h"
 #endif
@@ -50,7 +51,7 @@ os_timer_t startcmd_timer;
 #define MG_DEBUG_UART_BAUD_RATE 115200
 #endif
 
-#ifdef ESP_ENABLE_HEAP_LOG
+#if ESP_ENABLE_HEAP_LOG
 /*
  * global flag that is needed for heap trace: we shouldn't send anything to
  * uart until it is initialized
@@ -98,7 +99,7 @@ int esp_mg_init(rboot_config *bcfg) {
     cs_log_set_level(LL_INFO);
     os_install_putc1(dbg_putc);
     system_set_os_print(1);
-#ifdef ESP_ENABLE_HEAP_LOG
+#if ESP_ENABLE_HEAP_LOG
     uart_initialized = 1;
 #endif
   }
@@ -129,7 +130,7 @@ int esp_mg_init(rboot_config *bcfg) {
     return -3;
   }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
   init_v7(&bcfg);
 
   ir = mg_init_js_all(v7);
@@ -145,7 +146,7 @@ int esp_mg_init(rboot_config *bcfg) {
 
   LOG(LL_INFO, ("Init done, RAM: %d free", mg_get_free_heap_size()));
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
   mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
 
@@ -170,13 +171,13 @@ void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
   if (esp_mg_init(bcfg) == 0) {
     if (bcfg->is_first_boot) {
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
       /* fw_updated will be reset by the boot loader if it's a rollback. */
       clubby_updater_finish(bcfg->fw_updated ? 0 : -1);
 #endif
       commit_update(bcfg);
     } else if (bcfg->user_flags == 1) {
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
       clubby_updater_finish(0);
 #endif
     }
@@ -193,7 +194,7 @@ void esp_mg_init_timer_cb(void *arg) {
 void sdk_init_done_cb(void) {
   srand(system_get_rtc_time());
 
-#if !defined(ESP_ENABLE_HW_WATCHDOG)
+#if !ESP_ENABLE_HW_WATCHDOG
   ets_wdt_disable();
 #endif
   system_soft_wdt_stop(); /* give 60 sec for initialization */

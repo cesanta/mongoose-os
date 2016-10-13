@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MG_SERVICE_VARS_H_
 #define CS_FW_SRC_MG_SERVICE_VARS_H_
 
-#if defined(MG_ENABLE_CLUBBY) && defined(MG_ENABLE_CONFIG_SERVICE)
+#if MG_ENABLE_CLUBBY && MG_ENABLE_CONFIG_SERVICE
 
 #include "fw/src/mg_init.h"
 

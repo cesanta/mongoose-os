@@ -5,7 +5,7 @@
 
 #include "fw/src/mg_service_config.h"
 
-#if defined(MG_ENABLE_CLUBBY) && defined(MG_ENABLE_CONFIG_SERVICE)
+#if MG_ENABLE_CLUBBY && MG_ENABLE_CONFIG_SERVICE
 
 #include "common/mg_str.h"
 #include "fw/src/mg_clubby.h"

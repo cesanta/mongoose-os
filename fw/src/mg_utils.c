@@ -8,11 +8,11 @@
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_timers.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include "v7/v7.h"
 
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
 enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
                                   struct mg_connect_opts *copts) {
   enum v7_err rcode = V7_OK;

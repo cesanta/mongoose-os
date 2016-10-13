@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_I2C_API)
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_JS && MG_ENABLE_I2C_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -166,4 +168,4 @@ void mg_i2c_close(i2c_connection conn) {
   free(conn);
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_GPIO_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_GPIO_API */

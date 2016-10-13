@@ -6,7 +6,9 @@
 #ifndef CS_FW_SRC_MG_V7_EXT_H_
 #define CS_FW_SRC_MG_V7_EXT_H_
 
-#ifdef MG_ENABLE_JS
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_JS
 
 #include "fw/src/mg_hal_js.h"
 

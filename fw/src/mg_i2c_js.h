@@ -4,7 +4,7 @@
 #ifndef CS_FW_SRC_MG_I2C_JS_H_
 #define CS_FW_SRC_MG_I2C_JS_H_
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include <stdlib.h>
 

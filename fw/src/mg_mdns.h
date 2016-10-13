@@ -9,7 +9,7 @@
 #include "fw/src/mg_init.h"
 #include "fw/src/mg_mongoose.h"
 
-#ifdef MG_ENABLE_MDNS
+#if MG_ENABLE_MDNS
 
 enum mg_init_result mg_mdns_init(void);
 

@@ -43,6 +43,7 @@ typedef struct stat cs_stat_t;
 #define INT64_FMT PRId64
 #define INT64_X_FMT PRIx64
 #define __cdecl
+#define _FILE_OFFSET_BITS 32
 
 unsigned long os_random(void);
 #define random os_random

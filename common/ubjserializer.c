@@ -10,7 +10,7 @@
 #include "common/ubjserializer.h"
 #include "common/cs_dbg.h"
 
-#ifdef CS_ENABLE_UBJSON
+#if CS_ENABLE_UBJSON
 
 struct link {
   struct link *next;

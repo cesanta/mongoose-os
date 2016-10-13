@@ -29,7 +29,7 @@
 
 #include "common/umm_malloc/umm_malloc.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 #include "v7/v7.h"
 
 static void mg_invoke_cb_cb(void *arg);

@@ -130,7 +130,7 @@ void _strfail(const char *a, const char *e, int len);
     }                                                                \
   } while (0)
 
-#ifdef MG_ENABLE_POLL_UNTIL
+#if MG_ENABLE_POLL_UNTIL
 #include "mongoose/mongoose.h"
 int c_str_ne(void *a, void *b);
 int c_int_ne(void *a, void *b);

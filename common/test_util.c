@@ -61,7 +61,7 @@ int _assert_streq_nz(const char *actual, const char *expected) {
   return 1;
 }
 
-#ifdef MG_ENABLE_POLL_UNTIL
+#if MG_ENABLE_POLL_UNTIL
 int c_str_ne(void *a, void *b) {
   int r = strcmp((const char *) a, (const char *) b);
   return r;

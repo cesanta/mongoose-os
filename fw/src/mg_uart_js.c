@@ -12,7 +12,7 @@
 #include "fw/src/mg_v7_ext.h"
 #include "v7/v7.h"
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_UART_API)
+#if MG_ENABLE_JS && MG_ENABLE_UART_API
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -230,4 +230,4 @@ void mg_uart_js_init(struct v7 *v7) {
   s_uart_proto = v7_get(v7, v7_get_global(v7), "_up", ~0);
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_UART_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_UART_API */

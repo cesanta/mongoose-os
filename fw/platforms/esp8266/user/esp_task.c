@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifdef ESP_ENABLE_MG_LWIP_IF
+#if ESP_ENABLE_MG_LWIP_IF
 #include "mongoose/mongoose.h"
 
 #include "ets_sys.h"
@@ -23,7 +23,7 @@
 
 #include "fw/platforms/esp8266/user/esp_task.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 #include "v7/v7.h"
 #include "fw/src/mg_v7_ext.h"
 
@@ -78,7 +78,7 @@ static void mg_lwip_task(os_event_t *e) {
       mgr = (struct mg_mgr *) e->par;
       break;
     }
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
     case SIG_V7_CALLBACK: {
       struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
       _mg_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
@@ -114,7 +114,7 @@ static void mg_lwip_task(os_event_t *e) {
   }
 }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                              v7_val_t args) {
   struct v7_callback_args *cba =

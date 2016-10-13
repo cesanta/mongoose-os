@@ -9,13 +9,13 @@
 #include "common/clubby/clubby_channel.h"
 #include "mongoose/mongoose.h"
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 
 struct clubby_channel *clubby_channel_ws(struct mg_connection *nc);
 
 struct clubby_channel_ws_out_cfg {
   char *server_address;
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   char *ssl_ca_file;
   char *ssl_client_cert_file;
   char *ssl_server_name;

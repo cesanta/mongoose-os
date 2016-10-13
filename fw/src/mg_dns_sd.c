@@ -25,7 +25,7 @@
  *    queries that ask to list all supported service types.
  */
 
-#ifdef MG_ENABLE_DNS_SD
+#if MG_ENABLE_DNS_SD
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -378,21 +378,22 @@ enum mg_init_result mg_dns_sd_init(void) {
   snprintf(hostname, sizeof(hostname), "%s.%s", instance,
            SD_REGISTRATION_DOMAIN);
 
-  mg_sd_register_service(
-      mg_mk_str(mg_sd_default_service_type()), mg_mk_str(instance),
-      mg_mk_str(hostname), 80,
-      (struct mg_str[]){
-#ifdef MG_ENABLE_CLUBBY
-          mg_mk_str("id"), mg_mk_str("clubby"),
+  mg_sd_register_service(mg_mk_str(mg_sd_default_service_type()),
+                         mg_mk_str(instance), mg_mk_str(hostname), 80,
+                         (struct mg_str[]) {
+#if MG_ENABLE_CLUBBY
+                           mg_mk_str("id"), mg_mk_str("clubby"),
 #endif
-          mg_mk_str("arch"), mg_mk_str("fw_id"), mg_mk_str(NULL),
-      },
-      (struct mg_str[]){
-#ifdef MG_ENABLE_CLUBBY
-          mg_mk_str(c->clubby.device_id), mg_mk_str("2.0"),
+                               mg_mk_str("arch"), mg_mk_str("fw_id"),
+                               mg_mk_str(NULL),
+                         },
+                         (struct mg_str[]) {
+#if MG_ENABLE_CLUBBY
+                           mg_mk_str(c->clubby.device_id), mg_mk_str("2.0"),
 #endif
-          mg_mk_str(v->arch), mg_mk_str(v->fw_id), mg_mk_str(NULL),
-      });
+                               mg_mk_str(v->arch), mg_mk_str(v->fw_id),
+                               mg_mk_str(NULL),
+                         });
 
   return MG_INIT_OK;
 }

@@ -5,7 +5,7 @@
 
 #include "fw/src/mg_prompt.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include "fw/src/mg_hal.h"
 #include "fw/src/mg_v7_ext.h"
@@ -191,7 +191,7 @@ static void process_prompt_char(char ch) {
     case '\r':
     case '\n':
     case EOF_CHAR:
-#ifndef MG_PROMPT_DISABLE_ECHO
+#if !MG_PROMPT_DISABLE_ECHO
       printf("\n");
 #endif
       m->len--;
@@ -199,7 +199,7 @@ static void process_prompt_char(char ch) {
       process_command(&s_sjp.buf);
       break;
     default:
-#ifndef MG_PROMPT_DISABLE_ECHO
+#if !MG_PROMPT_DISABLE_ECHO
       printf("%c", ch); /* echo */
 #endif
       break;
@@ -235,7 +235,7 @@ void mg_prompt_process_char(char ch) {
       show_prompt();
     }
   } else if (ch == EOF_CHAR) {
-#if defined(MG_ENABLE_CLUBBY) && defined(MG_ENABLE_CLUBBY_UART)
+#if MG_ENABLE_CLUBBY && MG_ENABLE_CLUBBY_UART
     const int uart_no = s_sjp.uart_no;
     if (uart_no >= 0 && mg_clubby_get_global() != NULL) {
       /* Switch into Clubby mode. This will detach our dispatcher. */

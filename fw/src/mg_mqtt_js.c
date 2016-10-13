@@ -5,7 +5,7 @@
 
 #include "fw/src/mg_mqtt_js.h"
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_MQTT_API)
+#if MG_ENABLE_JS && MG_ENABLE_MQTT_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -185,7 +185,7 @@ enum v7_err mg_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   }
 
   if (use_ssl) {
-#if defined(MG_ENABLE_SSL) && !defined(MG_SOCKET_SIMPLELINK)
+#if MG_ENABLE_SSL && !defined(MG_SOCKET_SIMPLELINK)
     mg_set_ssl(nc, NULL, NULL);
 #else
     rcode = v7_throwf(v7, "Error", "SSL not enabled");
@@ -357,4 +357,4 @@ void mg_mqtt_api_setup(struct v7 *v7) {
   v7_disown(v7, &mqtt_connect);
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_MQTT_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_MQTT_API */

@@ -89,7 +89,7 @@ include $(MIOT_PATH)/src/features.mk
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -std=c99 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
+CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
           -Wno-missing-field-initializers \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \

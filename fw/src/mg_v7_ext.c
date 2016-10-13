@@ -5,7 +5,7 @@
 
 #include "fw/src/mg_v7_ext.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include <assert.h>
 #include <string.h>

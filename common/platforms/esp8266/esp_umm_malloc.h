@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifdef ESP_UMM_ENABLE
+#if ESP_UMM_ENABLE
 
 /*
  * This is a no-op dummy function that is merely needed because we have to

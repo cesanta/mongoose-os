@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
-#ifdef MG_ENABLE_UPDATER_POST
+#if MG_ENABLE_UPDATER_POST
 
 #include "fw/src/mg_updater_post.h"
 

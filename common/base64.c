@@ -6,7 +6,10 @@
 #ifndef EXCLUDE_COMMON
 
 #include "common/base64.h"
+
 #include <string.h>
+
+#include "common/cs_dbg.h"
 
 /* ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ */
 
@@ -121,7 +124,7 @@ void cs_base64_encode(const unsigned char *src, int src_len, char *dst) {
 #undef BASE64_OUT
 #undef BASE64_FLUSH
 
-#ifndef CS_DISABLE_STDIO
+#if !CS_DISABLE_STDIO
 #define BASE64_OUT(ch)      \
   do {                      \
     fprintf(f, "%c", (ch)); \

@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_SPI_API)
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_JS && MG_ENABLE_SPI_API
 
 #include "fw/src/mg_spi_js.h"
 
@@ -197,4 +199,4 @@ void mg_spi_api_setup(struct v7 *v7) {
   spi_ctor = v7_mk_function_with_proto(v7, spi_js_ctor, spi_proto);
   v7_set(v7, v7_get_global(v7), "SPI", ~0, spi_ctor);
 }
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_SPI_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_SPI_API */

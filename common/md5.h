@@ -8,6 +8,10 @@
 
 #include "common/platform.h"
 
+#ifndef DISABLE_MD5
+#define DISABLE_MD5 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

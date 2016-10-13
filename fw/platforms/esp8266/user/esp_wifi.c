@@ -20,7 +20,6 @@
 #include "fw/src/mg_hal.h"
 #include "fw/src/mg_v7_ext.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
-#include "fw/platforms/esp8266/user/v7_esp_features.h"
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_wifi.h"
 

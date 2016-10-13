@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifdef CS_ENABLE_UBJSON
+#if CS_ENABLE_UBJSON
 
 #include "common/ubjson.h"
 

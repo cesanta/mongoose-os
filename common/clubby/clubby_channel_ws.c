@@ -7,7 +7,7 @@
 #include "common/cs_dbg.h"
 #include "common/clubby/clubby_channel.h"
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 
 #define CLUBBY_WS_PROTOCOL "clubby.cesanta.com"
 #define CLUBBY_WS_URI "/api"
@@ -161,7 +161,7 @@ static void clubby_channel_ws_out_connect(struct clubby_channel *ch) {
   struct mg_connect_opts opts;
   memset(&opts, 0, sizeof(opts));
   struct clubby_channel_ws_out_cfg *cfg = chd->cfg;
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   opts.ssl_server_name = cfg->ssl_server_name;
   opts.ssl_ca_cert = cfg->ssl_ca_file;
   opts.ssl_cert = cfg->ssl_client_cert_file;
@@ -179,7 +179,7 @@ static void clubby_channel_ws_out_connect(struct clubby_channel *ch) {
 }
 
 static const char *clubby_channel_ws_out_get_type(struct clubby_channel *ch) {
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   struct clubby_channel_ws_out_data *chd =
       (struct clubby_channel_ws_out_data *) ch->channel_data;
   return (chd->cfg->ssl_ca_file ? "wss_out" : "ws_out");

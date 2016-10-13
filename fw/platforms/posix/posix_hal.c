@@ -122,7 +122,7 @@ static void *stdin_thread(void *param) {
   return NULL;
 }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   size_t i;
   (void) ev_data;

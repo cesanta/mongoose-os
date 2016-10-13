@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MG_SPI_JS_H_
 #define CS_FW_SRC_MG_SPI_JS_H_
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_SPI_API)
+#if MG_ENABLE_JS && MG_ENABLE_SPI_API
 struct v7;
 void mg_spi_api_setup(struct v7 *v7);
 #endif

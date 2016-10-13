@@ -7,7 +7,9 @@
 struct v7;
 struct v7 *v7;
 
-#ifdef MG_ENABLE_JS
+#include "fw/platforms/esp8266/user/esp_features.h"
+
+#if MG_ENABLE_JS
 
 #include <math.h>
 #include <stdlib.h>
