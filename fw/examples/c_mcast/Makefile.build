@@ -1,6 +1,5 @@
 APP = c_mcast
 APP_MODULES = src
-APP_FS_PATH = fs
 APP_CONF_SCHEMA = $(CURDIR)/src/conf_schema.yaml
 
 # currently this example supports only esp8266
