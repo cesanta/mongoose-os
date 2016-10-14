@@ -13,6 +13,7 @@
 #define CS_P_MSP432 5
 #define CS_P_CC3100 6
 #define CS_P_MBED 7
+#define CS_P_WINCE 8
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -24,6 +25,8 @@
 #define CS_PLATFORM CS_P_CC3200
 #elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
+#elif defined(WINCE)
+#define CS_PLATFORM CS_P_WINCE
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
 #elif defined(__MBED__)
@@ -42,6 +45,7 @@
 #include "common/platforms/platform_cc3200.h"
 #include "common/platforms/platform_cc3100.h"
 #include "common/platforms/platform_mbed.h"
+#include "common/platforms/platform_wince.h"
 
 /* Common stuff */
 
