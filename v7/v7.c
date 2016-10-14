@@ -237,6 +237,10 @@ typedef struct _stati64 cs_stat_t;
 #define MG_MAX_HTTP_HEADERS 40
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
 #ifdef V7_MODULE_LINES
@@ -339,6 +343,10 @@ typedef struct stat cs_stat_t;
 #define MG_MAX_HTTP_HEADERS 40
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
 #ifdef V7_MODULE_LINES
@@ -401,6 +409,10 @@ struct mg_connection;
 uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
 void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
                                   int interval, int count);
+#endif
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
 #endif
 
 #endif /* CS_PLATFORM == CS_P_ESP_LWIP */
@@ -715,6 +727,10 @@ struct dirent *readdir(DIR *dir);
 #define MG_FS_SLFS
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -788,6 +804,10 @@ int inet_pton(int af, const char *src, void *dst);
 #if CS_PLATFORM == CS_P_MBED
 
 /* Amalgamated: #include "mbed.h" */
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
 
 #endif /* CS_PLATFORM == CS_P_MBED */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_MBED_H_ */
@@ -956,8 +976,10 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #ifndef CS_COMMON_CS_DBG_H_
 #define CS_COMMON_CS_DBG_H_
 
-#ifndef CS_DISABLE_STDIO
-#define CS_DISABLE_STDIO 0
+/* Amalgamated: #include "common/platform.h" */
+
+#if CS_ENABLE_STDIO
+#include <stdio.h>
 #endif
 
 #ifndef CS_ENABLE_DEBUG
@@ -966,10 +988,6 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 
 #ifndef CS_LOG_TS_DIFF
 #define CS_LOG_TS_DIFF 0
-#endif
-
-#if !CS_DISABLE_STDIO
-#include <stdio.h>
 #endif
 
 #ifdef __cplusplus
@@ -990,7 +1008,7 @@ enum cs_log_level {
 
 void cs_log_set_level(enum cs_log_level level);
 
-#if !CS_DISABLE_STDIO
+#if CS_ENABLE_STDIO
 
 void cs_log_set_file(FILE *file);
 
@@ -1018,7 +1036,7 @@ void cs_log_printf(const char *fmt, ...);
 
 #endif
 
-#else /* CS_DISABLE_STDIO */
+#else /* CS_ENABLE_STDIO */
 
 #define LOG(l, x)
 #define DBG(x)
@@ -9612,7 +9630,7 @@ void cs_base64_encode(const unsigned char *src, int src_len, char *dst) {
 #undef BASE64_OUT
 #undef BASE64_FLUSH
 
-#if !CS_DISABLE_STDIO
+#if CS_ENABLE_STDIO
 #define BASE64_OUT(ch)      \
   do {                      \
     fprintf(f, "%c", (ch)); \
@@ -9627,7 +9645,7 @@ void cs_fprint_base64(FILE *f, const unsigned char *src, int src_len) {
 
 #undef BASE64_OUT
 #undef BASE64_FLUSH
-#endif /* !CS_DISABLE_STDIO */
+#endif /* CS_ENABLE_STDIO */
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
 static unsigned char from_b64(unsigned char ch) {

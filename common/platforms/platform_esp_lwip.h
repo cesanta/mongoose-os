@@ -57,5 +57,9 @@ void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
                                   int interval, int count);
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_ESP_LWIP */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */

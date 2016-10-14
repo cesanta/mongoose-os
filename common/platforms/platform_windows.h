@@ -138,5 +138,9 @@ typedef struct _stati64 cs_stat_t;
 #define MG_MAX_HTTP_HEADERS 40
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */

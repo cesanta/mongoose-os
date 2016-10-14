@@ -118,6 +118,10 @@ struct dirent *readdir(DIR *dir);
 #define MG_FS_SLFS
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #ifdef __cplusplus
 }
 #endif

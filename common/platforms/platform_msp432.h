@@ -92,6 +92,10 @@ int _stat(const char *pathname, struct stat *st);
 
 #endif /* __TI_COMPILER_VERSION__ */
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #ifdef __cplusplus
 }
 #endif
