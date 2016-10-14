@@ -25,7 +25,6 @@
 #define MG_DISABLE_SYNC_RESOLVER 1
 #define MG_DISABLE_POPEN 1
 #define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
 
 #include "common/platforms/simplelink/cs_simplelink.h"
 
@@ -94,6 +93,10 @@ int _stat(const char *pathname, struct stat *st);
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1
+#endif
+
+#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && !defined(MG_ENABLE_FILESYSTEM)
+#define MG_ENABLE_FILESYSTEM 1
 #endif
 
 #ifdef __cplusplus

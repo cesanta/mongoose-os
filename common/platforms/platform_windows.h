@@ -142,5 +142,13 @@ typedef struct _stati64 cs_stat_t;
 #define CS_ENABLE_STDIO 1
 #endif
 
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */

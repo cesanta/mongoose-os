@@ -241,6 +241,14 @@ typedef struct _stati64 cs_stat_t;
 #define CS_ENABLE_STDIO 1
 #endif
 
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
 #ifdef V7_MODULE_LINES
@@ -345,6 +353,14 @@ typedef struct stat cs_stat_t;
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1
+#endif
+
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
 #endif
 
 #endif /* CS_PLATFORM == CS_P_UNIX */
@@ -633,10 +649,10 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 #define MG_DISABLE_POPEN 1
+
 /* Only SPIFFS supports directories, SLFS does not. */
-#ifndef CC3200_FS_SPIFFS
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
+#if defined(CC3200_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
+#define MG_ENABLE_DIRECTORY_LISTING 1
 #endif
 
 /* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
@@ -727,6 +743,10 @@ struct dirent *readdir(DIR *dir);
 #define MG_FS_SLFS
 #endif
 
+#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && !defined(MG_ENABLE_FILESYSTEM)
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1
 #endif
@@ -761,9 +781,6 @@ struct dirent *readdir(DIR *dir);
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 #define MG_DISABLE_POPEN 1
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
-#define MG_DISABLE_FILESYSTEM 1
 
 /*
  * CC3100 SDK and STM32 SDK include headers w/out path, just like
