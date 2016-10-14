@@ -991,7 +991,7 @@ const char *strerror();
  * WinCE lacks a lot of used in CGI API functions
  * TODO(alaskin): look for wce_xxxx alternatives
  */
-#define MG_ENABLE_CGI 0
+#define MG_ENABLE_HTTP_CGI 0
 
 #endif /* CS_PLATFORM == CS_P_WINCE */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_ */
