@@ -23,7 +23,6 @@
 #define MG_SOCKET_SIMPLELINK 1
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
 
 /* Only SPIFFS supports directories, SLFS does not. */
 #if defined(CC3200_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
