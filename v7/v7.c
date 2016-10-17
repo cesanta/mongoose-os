@@ -245,12 +245,20 @@ typedef struct _stati64 cs_stat_t;
 #define CS_ENABLE_STDIO 1
 #endif
 
+#ifndef MG_ENABLE_BROADCAST
+#define MG_ENABLE_BROADCAST 1
+#endif
+
 #ifndef MG_ENABLE_DIRECTORY_LISTING
 #define MG_ENABLE_DIRECTORY_LISTING 1
 #endif
 
 #ifndef MG_ENABLE_FILESYSTEM
 #define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_ENABLE_HTTP_CGI
+#define MG_ENABLE_HTTP_CGI 1
 #endif
 
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
@@ -359,12 +367,20 @@ typedef struct stat cs_stat_t;
 #define CS_ENABLE_STDIO 1
 #endif
 
+#ifndef MG_ENABLE_BROADCAST
+#define MG_ENABLE_BROADCAST 1
+#endif
+
 #ifndef MG_ENABLE_DIRECTORY_LISTING
 #define MG_ENABLE_DIRECTORY_LISTING 1
 #endif
 
 #ifndef MG_ENABLE_FILESYSTEM
 #define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_ENABLE_HTTP_CGI
+#define MG_ENABLE_HTTP_CGI 1
 #endif
 
 #endif /* CS_PLATFORM == CS_P_UNIX */
@@ -650,7 +666,6 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 #endif
 
 #define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 
 /* Only SPIFFS supports directories, SLFS does not. */
@@ -781,7 +796,6 @@ struct dirent *readdir(DIR *dir);
 #include <time.h>
 
 #define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 
 /*

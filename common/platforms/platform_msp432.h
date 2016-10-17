@@ -21,7 +21,6 @@
 #endif
 
 #define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
 
 #include "common/platforms/simplelink/cs_simplelink.h"
