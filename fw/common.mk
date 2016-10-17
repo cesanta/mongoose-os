@@ -16,7 +16,6 @@ COMMON_V7_FEATURES = \
     -DV7_ENABLE__Proxy=1
 
 MG_FEATURES_TINY = \
-                   -DMG_DISABLE_SYNC_RESOLVER \
                    -DMG_DISABLE_HTTP_DIGEST_AUTH \
                    -DMG_DISABLE_MD5 \
                    -DMG_DISABLE_HTTP_KEEP_ALIVE \

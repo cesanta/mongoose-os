@@ -21,7 +21,6 @@
 #endif
 
 #define MG_NET_IF MG_NET_IF_SIMPLELINK
-#define MG_DISABLE_SYNC_RESOLVER 1
 
 #include "common/platforms/simplelink/cs_simplelink.h"
 

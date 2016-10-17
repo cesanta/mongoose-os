@@ -685,7 +685,6 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 #endif
 
 #define MG_NET_IF MG_NET_IF_SIMPLELINK
-#define MG_DISABLE_SYNC_RESOLVER 1
 
 /* Only SPIFFS supports directories, SLFS does not. */
 #if defined(CC3200_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
@@ -815,7 +814,6 @@ struct dirent *readdir(DIR *dir);
 #include <time.h>
 
 #define MG_NET_IF MG_NET_IF_SIMPLELINK
-#define MG_DISABLE_SYNC_RESOLVER 1
 
 /*
  * CC3100 SDK and STM32 SDK include headers w/out path, just like
