@@ -185,7 +185,7 @@ enum v7_err mg_mqtt_connect(struct v7 *v7, v7_val_t *res) {
   }
 
   if (use_ssl) {
-#if MG_ENABLE_SSL && !defined(MG_SOCKET_SIMPLELINK)
+#if MG_ENABLE_SSL && MG_NET_IF != MG_NET_IF_SIMPLELINK
     mg_set_ssl(nc, NULL, NULL);
 #else
     rcode = v7_throwf(v7, "Error", "SSL not enabled");

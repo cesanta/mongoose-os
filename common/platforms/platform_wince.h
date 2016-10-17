@@ -148,6 +148,10 @@ typedef unsigned int* uintptr_t;
 #define MG_ENABLE_FILESYSTEM 1
 #endif
 
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 typedef struct _stati64 {
   uint32_t st_mtime;
   uint32_t st_size;

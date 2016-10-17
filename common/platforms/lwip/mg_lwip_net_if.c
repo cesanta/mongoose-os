@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifdef MG_NET_IF_LWIP
+#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
 
 #include <lwip/pbuf.h>
 #include <lwip/tcp.h>
@@ -454,4 +454,4 @@ void mg_sock_set(struct mg_connection *nc, sock_t sock) {
   nc->sock = sock;
 }
 
-#endif /* MG_NET_IF_LWIP */
+#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL */

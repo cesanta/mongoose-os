@@ -39,6 +39,10 @@
 
 #endif /* !defined(CS_PLATFORM) */
 
+#define MG_NET_IF_SOCKET 1
+#define MG_NET_IF_SIMPLELINK 2
+#define MG_NET_IF_LWIP_LOW_LEVEL 3
+
 #include "common/platforms/platform_unix.h"
 #include "common/platforms/platform_windows.h"
 #include "common/platforms/platform_esp_lwip.h"

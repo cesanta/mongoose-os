@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if !MG_DISABLE_SOCKET_IF && defined(MG_SOCKET_SIMPLELINK)
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK
 
 #include "mongoose/src/internal.h"
 #include "mongoose/src/util.h"
@@ -504,4 +504,4 @@ void sl_restart_cb(struct mg_mgr *mgr) {
   }
 }
 
-#endif /* !MG_DISABLE_SOCKET_IF && defined(MG_SOCKET_SIMPLELINK) */
+#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK */

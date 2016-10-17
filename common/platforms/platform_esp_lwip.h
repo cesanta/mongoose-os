@@ -49,12 +49,14 @@ unsigned long os_random(void);
 #define random os_random
 
 #ifndef RTOS_SDK
-#define MG_NET_IF_LWIP
+#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
 struct mg_mgr;
 struct mg_connection;
 uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
 void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
                                   int interval, int count);
+#else
+#define MG_NET_IF MG_NET_IF_SOCKET
 #endif
 
 #ifndef CS_ENABLE_STDIO

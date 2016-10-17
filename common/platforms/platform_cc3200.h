@@ -20,7 +20,7 @@
 #include <sys/time.h>
 #endif
 
-#define MG_SOCKET_SIMPLELINK 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 #define MG_DISABLE_SYNC_RESOLVER 1
 
 /* Only SPIFFS supports directories, SLFS does not. */

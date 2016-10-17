@@ -15,7 +15,7 @@
 #include <string.h>
 #include <time.h>
 
-#define MG_SOCKET_SIMPLELINK 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 #define MG_DISABLE_SYNC_RESOLVER 1
 
 /*

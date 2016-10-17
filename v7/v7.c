@@ -71,6 +71,10 @@
 
 #endif /* !defined(CS_PLATFORM) */
 
+#define MG_NET_IF_SOCKET 1
+#define MG_NET_IF_SIMPLELINK 2
+#define MG_NET_IF_LWIP_LOW_LEVEL 3
+
 /* Amalgamated: #include "common/platforms/platform_unix.h" */
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
 /* Amalgamated: #include "common/platforms/platform_esp_lwip.h" */
@@ -266,6 +270,10 @@ typedef struct _stati64 cs_stat_t;
 #define MG_ENABLE_HTTP_CGI 1
 #endif
 
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
 #ifdef V7_MODULE_LINES
@@ -388,6 +396,10 @@ typedef struct stat cs_stat_t;
 #define MG_ENABLE_HTTP_CGI 1
 #endif
 
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
 #ifdef V7_MODULE_LINES
@@ -444,12 +456,14 @@ unsigned long os_random(void);
 #define random os_random
 
 #ifndef RTOS_SDK
-#define MG_NET_IF_LWIP
+#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
 struct mg_mgr;
 struct mg_connection;
 uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
 void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
                                   int interval, int count);
+#else
+#define MG_NET_IF MG_NET_IF_SOCKET
 #endif
 
 #ifndef CS_ENABLE_STDIO
@@ -551,7 +565,7 @@ void mbuf_trim(struct mbuf *);
 #define CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
 
 /* If simplelink.h is already included, all bets are off. */
-#if defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__)
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__)
 
 #include <stdbool.h>
 
@@ -642,7 +656,7 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 }
 #endif
 
-#endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
+#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__) */
 
 #endif /* CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_ */
 #ifdef V7_MODULE_LINES
@@ -670,7 +684,7 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 #include <sys/time.h>
 #endif
 
-#define MG_SOCKET_SIMPLELINK 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 #define MG_DISABLE_SYNC_RESOLVER 1
 
 /* Only SPIFFS supports directories, SLFS does not. */
@@ -800,7 +814,7 @@ struct dirent *readdir(DIR *dir);
 #include <string.h>
 #include <time.h>
 
-#define MG_SOCKET_SIMPLELINK 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 #define MG_DISABLE_SYNC_RESOLVER 1
 
 /*
@@ -1000,6 +1014,10 @@ typedef unsigned int* uintptr_t;
 
 #ifndef MG_ENABLE_FILESYSTEM
 #define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
 #endif
 
 typedef struct _stati64 {

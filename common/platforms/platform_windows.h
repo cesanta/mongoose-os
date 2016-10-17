@@ -163,5 +163,9 @@ typedef struct _stati64 cs_stat_t;
 #define MG_ENABLE_HTTP_CGI 1
 #endif
 
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
