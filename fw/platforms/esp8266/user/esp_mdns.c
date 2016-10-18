@@ -5,6 +5,7 @@
 #include "common/cs_dbg.h"
 
 #include <lwip/igmp.h>
+#include <lwip/inet.h>
 struct ieee80211_conn; /* it seems that espressif didn't export this */
 #include <netif/wlan_lwip_if.h>
 

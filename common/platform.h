@@ -8,12 +8,13 @@
 #define CS_P_CUSTOM 0
 #define CS_P_UNIX 1
 #define CS_P_WINDOWS 2
-#define CS_P_ESP_LWIP 3
+#define CS_P_ESP8266 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
 #define CS_P_CC3100 6
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
+#define CS_P_NXP_KINETIS 9
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -31,6 +32,8 @@
 #define CS_PLATFORM CS_P_WINDOWS
 #elif defined(__MBED__)
 #define CS_PLATFORM CS_P_MBED
+#elif defined(FRDM_K64F) || defined(FREEDOM)
+#define CS_PLATFORM CS_P_NXP_KINETIS
 #endif
 
 #ifndef CS_PLATFORM
@@ -45,11 +48,12 @@
 
 #include "common/platforms/platform_unix.h"
 #include "common/platforms/platform_windows.h"
-#include "common/platforms/platform_esp_lwip.h"
+#include "common/platforms/platform_esp8266.h"
 #include "common/platforms/platform_cc3200.h"
 #include "common/platforms/platform_cc3100.h"
 #include "common/platforms/platform_mbed.h"
 #include "common/platforms/platform_wince.h"
+#include "common/platforms/platform_nxp_kinetis.h"
 
 /* Common stuff */
 

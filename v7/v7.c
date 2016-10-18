@@ -40,12 +40,13 @@
 #define CS_P_CUSTOM 0
 #define CS_P_UNIX 1
 #define CS_P_WINDOWS 2
-#define CS_P_ESP_LWIP 3
+#define CS_P_ESP8266 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
 #define CS_P_CC3100 6
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
+#define CS_P_NXP_KINETIS 9
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -63,6 +64,8 @@
 #define CS_PLATFORM CS_P_WINDOWS
 #elif defined(__MBED__)
 #define CS_PLATFORM CS_P_MBED
+#elif defined(FRDM_K64F) || defined(FREEDOM)
+#define CS_PLATFORM CS_P_NXP_KINETIS
 #endif
 
 #ifndef CS_PLATFORM
@@ -77,11 +80,12 @@
 
 /* Amalgamated: #include "common/platforms/platform_unix.h" */
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
-/* Amalgamated: #include "common/platforms/platform_esp_lwip.h" */
+/* Amalgamated: #include "common/platforms/platform_esp8266.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3200.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3100.h" */
 /* Amalgamated: #include "common/platforms/platform_mbed.h" */
 /* Amalgamated: #include "common/platforms/platform_wince.h" */
+/* Amalgamated: #include "common/platforms/platform_nxp_kinetis.h" */
 
 /* Common stuff */
 
@@ -403,76 +407,6 @@ typedef struct stat cs_stat_t;
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "common/platforms/platform_esp_lwip.h"
-#endif
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
-#if CS_PLATFORM == CS_P_ESP_LWIP
-
-#include <assert.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-
-#include <lwip/err.h>
-#include <lwip/ip_addr.h>
-#include <lwip/inet.h>
-#include <lwip/netdb.h>
-#include <lwip/dns.h>
-
-#ifndef LWIP_PROVIDE_ERRNO
-#include <errno.h>
-#endif
-
-#define LWIP_TIMEVAL_PRIVATE 0
-
-#if LWIP_SOCKET
-#include <lwip/sockets.h>
-#define SOMAXCONN 10
-#else
-/* We really need the definitions from sockets.h. */
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 1
-#include <lwip/sockets.h>
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 0
-#endif
-
-typedef int sock_t;
-#define INVALID_SOCKET (-1)
-#define SIZE_T_FMT "u"
-typedef struct stat cs_stat_t;
-#define DIRSEP '/'
-#define to64(x) strtoll(x, NULL, 10)
-#define INT64_FMT PRId64
-#define INT64_X_FMT PRIx64
-#define __cdecl
-#define _FILE_OFFSET_BITS 32
-
-unsigned long os_random(void);
-#define random os_random
-
-#ifndef RTOS_SDK
-#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
-struct mg_mgr;
-struct mg_connection;
-uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
-void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
-                                  int interval, int count);
-#else
-#define MG_NET_IF MG_NET_IF_SOCKET
-#endif
-
-#ifndef CS_ENABLE_STDIO
-#define CS_ENABLE_STDIO 1
-#endif
-
-#endif /* CS_PLATFORM == CS_P_ESP_LWIP */
-#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */
-#ifdef V7_MODULE_LINES
 #line 1 "common/mbuf.h"
 #endif
 /*
@@ -553,6 +487,53 @@ void mbuf_trim(struct mbuf *);
 #endif /* __cplusplus */
 
 #endif /* CS_COMMON_MBUF_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_esp8266.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_
+#if CS_PLATFORM == CS_P_ESP8266
+
+#include <assert.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <machine/endian.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
+#define _FILE_OFFSET_BITS 32
+
+#define MG_LWIP 1
+
+#ifdef RTOS_SDK
+#  define MG_NET_IF MG_NET_IF_SOCKET
+#else
+#  define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
+#endif
+
+/* struct timeval is defined in sys/time.h. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#endif /* CS_PLATFORM == CS_P_ESP8266 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/platforms/simplelink/cs_simplelink.h"
 #endif
@@ -1044,6 +1025,40 @@ const char *strerror();
 
 #endif /* CS_PLATFORM == CS_P_WINCE */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_nxp_kinetis.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_
+
+#if CS_PLATFORM == CS_P_NXP_KINETIS
+
+#include <ctype.h>
+#include <inttypes.h>
+#include <string.h>
+#include <sys/time.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT "lld"
+#define INT64_X_FMT "llx"
+#define __cdecl
+
+#define MG_LWIP 1
+
+#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
+
+/* struct timeval is defined in sys/time.h. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#endif /* CS_PLATFORM == CS_P_NXP_KINETIS */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/str_util.h"
 #endif

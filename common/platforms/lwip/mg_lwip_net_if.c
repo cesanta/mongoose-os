@@ -16,6 +16,7 @@ void mg_lwip_ssl_do_hs(struct mg_connection *nc);
 void mg_lwip_ssl_send(struct mg_connection *nc);
 void mg_lwip_ssl_recv(struct mg_connection *nc);
 
+#if LWIP_TCP_KEEPALIVE
 void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
                                   int interval, int count) {
   if (nc->sock == INVALID_SOCKET || nc->flags & MG_F_UDP) {
@@ -32,6 +33,9 @@ void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
     tpcb->so_options &= ~SOF_KEEPALIVE;
   }
 }
+#elif !defined(MG_NO_LWIP_TCP_KEEPALIVE)
+#warning LWIP TCP keepalive is disabled. Please consider enabling it.
+#endif /* LWIP_TCP_KEEPALIVE */
 
 static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
   struct mg_connection *nc = (struct mg_connection *) arg;
@@ -43,7 +47,9 @@ static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
   }
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   cs->err = err;
+#if LWIP_TCP_KEEPALIVE
   if (err == 0) mg_lwip_set_keepalive_params(nc, 60, 10, 6);
+#endif
 #ifdef SSL_KRYPTON
   if (err == 0 && nc->ssl != NULL) {
     SSL_set_fd(nc->ssl, (intptr_t) nc);
@@ -244,7 +250,9 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   tcp_err(newtpcb, mg_lwip_tcp_error_cb);
   tcp_sent(newtpcb, mg_lwip_tcp_sent_cb);
   tcp_recv(newtpcb, mg_lwip_tcp_recv_cb);
+#if LWIP_TCP_KEEPALIVE
   mg_lwip_set_keepalive_params(nc, 60, 10, 6);
+#endif
 #ifdef SSL_KRYPTON
   if (lc->ssl_ctx != NULL) {
     nc->ssl = SSL_new(lc->ssl_ctx);
