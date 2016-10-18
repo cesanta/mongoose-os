@@ -21,7 +21,6 @@ MG_FEATURES_TINY = \
                    -DMG_DISABLE_HTTP_KEEP_ALIVE \
                    -DMG_ENABLE_HTTP_SSI=0 \
                    -DMG_ENABLE_HTTP_STREAMING_MULTIPART \
-                   -DMG_ENABLE_MQTT \
                    -DMG_NO_BSD_SOCKETS
 
 V ?=
