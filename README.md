@@ -12,7 +12,7 @@
 
 Mongoose IoT Platform is released under Commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
 
-Commercial Projects:[Contact us for the commercial license.] (https://www.cesanta.com/contact)
+Commercial Projects: [Contact us for the commercial license.] (https://www.cesanta.com/contact)
 
 # Contributions
 
