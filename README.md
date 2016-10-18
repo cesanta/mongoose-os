@@ -1,24 +1,18 @@
 # Mongoose IoT Platform
 
-- [Mongoose IoT Online IDE](https://mongoose-iot.com)
-- [Mongoose IoT Documentation](https://docs.cesanta.com/mongoose-iot/)
-- [Mongoose Flashing Tool download](https://github.com/cesanta/mft/releases/latest)
+- [Mongoose IoT Firmware and Cloud](https://mongoose-iot.com)
 
 # Support
-- [Support Forum - Ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
-- [Chat - Visit www.cesanta.com for our live chat] (https://www.cesanta.com/)
-- [Commercial one-to-one support](https://cesanta.com/contact) - Available to all commercial license holders
-
+- [Mongoose IoT Documentation](https://docs.cesanta.com/mongoose-iot/)
+- [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
+- [Chat - visit www.cesanta.com for our live chat] (https://www.cesanta.com/)
+- [Commercial licensing and support available](https://cesanta.com/contact)
 
 # Licensing
 
-Mongoose IoT Platform is released under commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
+Mongoose IoT Platform is released under Commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
 
-Commercial Projects:
-Once your project becomes commercialised GPLv2 licensing dictates that you need to either open your source fully or purchase a commercial license. Cesanta offer full, royalty-free commercial licenses without any GPL restrictions. If your needs require a custom license, we’d be happy to work on a solution with you. [Contact us for pricing.] (https://www.cesanta.com/contact)
-
-Prototyping:
-While your project is still in prototyping stage and not for sale, you can use Mongoose IoT Platform open source code without license restrictions.
+Commercial Projects:[Contact us for the commercial license.] (https://www.cesanta.com/contact)
 
 # Contributions
 
