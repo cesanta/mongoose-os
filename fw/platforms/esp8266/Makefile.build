@@ -59,7 +59,7 @@ CREATE_RAW_FS ?= 0
 
 FLASH_SIZE ?= 4M
 FS_SIZE ?= 128K
-FS_EXT_SIZE = 0x1FB000
+FS_EXT_SIZE = 0x1FC000
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
@@ -321,7 +321,7 @@ FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$((0x100000 - $(RF_CAL_DATA_SIZE
 FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAMS_SIZE)))")
-FS_EXT_ADDR  = $(shell printf "0x%05x" "$$((0x400000 - $(_FS_EXT_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS_EXT_ADDR  = $(shell printf "0x%05x" "$$((0x400000 - $(_FS_EXT_SIZE) - $(SYS_PARAMS_SIZE)))")
 
 RBOOT_CFG_INIT=$(FW_STAGING_DIR)/0x01000.bin
 RF_CAL_DATA_INIT=$(FW_STAGING_DIR)/$(FW_RF_CAL_DATA_ADDR).bin
@@ -356,8 +356,7 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            boot_cfg:src=$(RBOOT_CFG_INIT),addr=0x1000 \
            rf_cal_data:src=$(RF_CAL_DATA_INIT),addr=$(FW_RF_CAL_DATA_ADDR) \
-           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR) \
-           sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
+           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR)
 
 ifeq "$(CREATE_SPIFFS_FS)" "1"
   FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
