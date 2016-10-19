@@ -321,7 +321,7 @@ FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$((0x100000 - $(RF_CAL_DATA_SIZE
 FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAMS_SIZE)))")
-FS_EXT_ADDR  = $(shell printf "0x%05x" "$$((0x400000 - $(_FS_EXT_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS_EXT_ADDR  = $(shell printf "0x%05x" "$$((0x400000 - $(_FS_EXT_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 
 RBOOT_CFG_INIT=$(FW_STAGING_DIR)/0x01000.bin
 RF_CAL_DATA_INIT=$(FW_STAGING_DIR)/$(FW_RF_CAL_DATA_ADDR).bin
