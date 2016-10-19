@@ -15,6 +15,7 @@
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
 #define CS_P_NXP_KINETIS 9
+#define CS_P_NRF52 10
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -52,6 +53,7 @@
 #include "common/platforms/platform_cc3200.h"
 #include "common/platforms/platform_cc3100.h"
 #include "common/platforms/platform_mbed.h"
+#include "common/platforms/platform_nrf52.h"
 #include "common/platforms/platform_wince.h"
 #include "common/platforms/platform_nxp_kinetis.h"
 
