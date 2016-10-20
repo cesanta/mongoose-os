@@ -546,6 +546,9 @@ extern void kr_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
 extern void kr_hash_sha256_v(size_t num_msgs, const uint8_t *msgs[],
                              const size_t *msg_lens, uint8_t *digest);
 #endif
+#ifndef KR_ENABLE_FILESYSTEM
+#define KR_ENABLE_FILESYSTEM 1
+#endif
 
 /* Some defaults. */
 
@@ -4458,16 +4461,16 @@ const SSL_METHOD *SSLv23_client_method(void) {
 
 static void der_free(DER *der);
 
-static int check_end_marker(const char *str, int sig_type) {
+static int check_end_marker(const char *str, size_t len, int sig_type) {
   switch (sig_type) {
     case PEM_SIG_CERT:
-      if (!strcmp(str, "-----END CERTIFICATE-----")) return 1;
+      if (!strncmp(str, "-----END CERTIFICATE-----", len)) return 1;
       break;
     case PEM_SIG_KEY:
-      if (!strcmp(str, "-----END PRIVATE KEY-----")) return 1;
+      if (!strncmp(str, "-----END PRIVATE KEY-----", len)) return 1;
       break;
     case PEM_SIG_RSA_KEY:
-      if (!strcmp(str, "-----END RSA PRIVATE KEY-----")) return 1;
+      if (!strncmp(str, "-----END RSA PRIVATE KEY-----", len)) return 1;
       break;
     default:
       assert(0);
@@ -4475,16 +4478,16 @@ static int check_end_marker(const char *str, int sig_type) {
   return 0;
 }
 
-static int check_begin_marker(const char *str, uint8_t *got) {
-  if (!strcmp(str, "-----BEGIN CERTIFICATE-----")) {
+static int check_begin_marker(const char *str, size_t len, uint8_t *got) {
+  if (!strncmp(str, "-----BEGIN CERTIFICATE-----", len)) {
     *got = PEM_SIG_CERT;
     return 1;
   }
-  if (!strcmp(str, "-----BEGIN PRIVATE KEY-----")) {
+  if (!strncmp(str, "-----BEGIN PRIVATE KEY-----", len)) {
     *got = PEM_SIG_KEY;
     return 1;
   }
-  if (!strcmp(str, "-----BEGIN RSA PRIVATE KEY-----")) {
+  if (!strncmp(str, "-----BEGIN RSA PRIVATE KEY-----", len)) {
     *got = PEM_SIG_RSA_KEY;
     return 1;
   }
@@ -4538,13 +4541,39 @@ static int add_object(PEM *p) {
 }
 
 PEM *pem_load(const char *fn, pem_filter_fn flt, void *flt_arg) {
-  /* 2x larger than necesssary */
   unsigned int state, cur, i;
+#if KR_ENABLE_FILESYSTEM
+  /* 2x larger than necesssary */
   char buf[128];
+  FILE *f = NULL;
+#endif
+  const char *pb = NULL;
   size_t der_max_len = 0;
   uint8_t got = 0;
-  PEM *p;
-  FILE *f;
+  const char *lb, *le;
+  size_t ll;
+  PEM *p = NULL;
+
+  /* Allow PEM objects to be passed in the filename. */
+  if ((lb = strstr(fn, "-----BEGIN ")) != NULL &&
+      (le = strstr(lb + 1, "-----")) != NULL &&
+      check_begin_marker(lb, le - lb + 5, &got)) {
+    pb = fn;
+    fn = "(fn)";
+    dprintf(("loading PEM objects from filename\n"));
+  } else {
+#if KR_ENABLE_FILESYSTEM
+    f = fopen(fn, "r");
+    if (NULL == f) {
+      dprintf(("%s: fopen: %s\n", fn, strerror(errno)));
+      goto out_free;
+    }
+    pb = buf;
+#else
+    dprintf(("no objects in filename and no fs support\n"));
+    goto out;
+#endif
+  }
 
 #ifdef DEBUG_PEM_LOAD
   dprintf(("loading PEM objects from %s\n", fn));
@@ -4554,26 +4583,33 @@ PEM *pem_load(const char *fn, pem_filter_fn flt, void *flt_arg) {
     goto out;
   }
 
-  f = fopen(fn, "r");
-  if (NULL == f) {
-    dprintf(("%s: fopen: %s\n", fn, strerror(errno)));
-    goto out_free;
-  }
-
-  for (state = cur = 0; fgets(buf, sizeof(buf), f);) {
-    char *lf;
-
-    /* Trim trailing whitespaces*/
-    lf = strchr(buf, '\n');
-    while (lf > buf && isspace(*(unsigned char *) lf)) {
-      *lf-- = '\0';
+  state = cur = 0;
+  lb = pb;
+  while (1) {
+#if KR_ENABLE_FILESYSTEM
+    if (pb == buf) {
+      if (!fgets(buf, sizeof(buf), f)) break;
+      lb = buf;
     }
-    lf++;
+#endif
+
+    /* Find next line, trim whitespace. */
+    while (*lb != '\0' && isspace((int) *lb)) lb++;
+    if (*lb == '\0') break;
+    le = strchr(lb, '\n');
+    if (le == NULL) break;
+    while (le > lb && isspace((int) *le)) le--;
+    le++;
+    ll = (le - lb);
+#ifdef DEBUG_PEM_LOAD
+    dprintf(("state %d, lb = %p, le = %p, ll = %d, '%.*s'\n", state, lb, le,
+             (int) ll, (int) ll, lb));
+#endif
 
     switch (state) {
       case 0: /* begin marker */
-        if (check_begin_marker(buf, &got)) {
-          if (!add_object(p)) goto out_close;
+        if (check_begin_marker(lb, ll, &got)) {
+          if (!add_object(p)) goto out_free;
           cur = p->num_obj++;
           p->obj[cur].der_type = got;
           p->obj[cur].der_len = 0;
@@ -4583,13 +4619,12 @@ PEM *pem_load(const char *fn, pem_filter_fn flt, void *flt_arg) {
         }
         break;
       case 1: /* content*/
-        if (check_end_marker(buf, p->obj[cur].der_type)) {
+        if (check_end_marker(lb, ll, p->obj[cur].der_type)) {
           enum pem_filter_result keep = flt(&p->obj[cur], got, flt_arg);
           if (keep != PEM_FILTER_NO) {
             p->tot_len += p->obj[cur].der_len;
             if (keep == PEM_FILTER_YES_AND_STOP) {
-              fclose(f);
-              return p;
+              goto out;
             }
           } else { /* Rejected by filter */
             der_free(&p->obj[cur]);
@@ -4603,39 +4638,42 @@ PEM *pem_load(const char *fn, pem_filter_fn flt, void *flt_arg) {
           break;
         }
 
-        if (!add_line(&p->obj[cur], &der_max_len, (uint8_t *) buf, lf - buf)) {
+        if (!add_line(&p->obj[cur], &der_max_len, (const uint8_t *) lb, ll)) {
           dprintf(("%s: Corrupted key or cert\n", fn));
-          goto out_close;
+          goto out_free;
         }
 
         break;
       default:
         break;
     }
+    lb = le;
   }
 
   if (state != 0) {
     dprintf(("%s: no end marker\n", fn));
-    goto out_close;
+    goto out_free;
   }
 
   if (p->num_obj < 1) {
     dprintf(("%s: no objects in file\n", fn));
   }
 
-  fclose(f);
   goto out;
 
-out_close:
-  for (i = 0; i < p->num_obj; i++) {
-    free(p->obj[i].der);
-  }
-  free(p->obj);
-  fclose(f);
 out_free:
-  free(p);
-  p = NULL;
+  if (p != NULL) {
+    for (i = 0; i < p->num_obj; i++) {
+      free(p->obj[i].der);
+    }
+    free(p->obj);
+    free(p);
+    p = NULL;
+  }
 out:
+#if KR_ENABLE_FILESYSTEM
+  if (f != NULL) fclose(f);
+#endif
   return p;
 }
 
