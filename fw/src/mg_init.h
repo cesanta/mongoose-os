@@ -6,6 +6,8 @@
 #ifndef CS_FW_SRC_MG_INIT_H_
 #define CS_FW_SRC_MG_INIT_H_
 
+#include "fw/src/mg_features.h"
+
 enum mg_init_result {
   MG_INIT_OK = 0,
   MG_INIT_OUT_OF_MEMORY = -1,

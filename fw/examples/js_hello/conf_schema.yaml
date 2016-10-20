@@ -1,0 +1,4 @@
+[
+  ["hello", "o", {"title": "Hello app settings"}],
+  ["hello.who", "s", "JS world", {"title": "Who to say hello to"}]
+]

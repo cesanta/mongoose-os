@@ -22,7 +22,7 @@
 #include "fw/src/mg_uart.h"
 #include "fw/src/mg_updater_clubby.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -45,7 +45,7 @@ struct mg_event {
 
 OsiMsgQ_t s_main_queue;
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 struct v7 *s_v7;
 
 struct v7 *init_v7(void *stack_base) {
@@ -91,7 +91,7 @@ int start_nwp(void) {
   return 0;
 }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 void mg_prompt_init_hal(void) {
 }
 #endif
@@ -171,7 +171,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     return CC3200_INIT_MG_INIT_FAILED;
   }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
   struct v7 *v7 = s_v7 = init_v7(&arg);
 
   ir = mg_init_js_all(v7);
@@ -186,11 +186,11 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     boot_cfg.seq = saved_seq;
     commit_update(boot_cfg_idx, &boot_cfg);
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
     clubby_updater_finish(0);
 #endif
   } else {
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
     /*
      * If there is no update reply state, this will just be ignored.
      * But if there is, then update was rolled back and reply will be sent.
@@ -199,7 +199,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 #endif
   }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
   mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
   return CC3200_INIT_OK;

@@ -24,8 +24,10 @@
 * Modified by Cesanta Software, 2015
 */
 
+#include "fw/platforms/esp8266/user/esp_features.h"
+
 /* depends on v7 because of v7_err only */
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include <stdlib.h>
 
@@ -269,7 +271,7 @@ void mg_spi_close(spi_connection conn) {
 
 #endif /* MG_ENABLE_JS */
 
-#ifdef MPL115A1_EXAMPLE_ENABLED
+#ifdef MPL115A1_EXAMPLE
 
 /*
  * Usage sample : measuring pressure with MPL115A1 barometer
@@ -322,4 +324,4 @@ void test_MPL115A1(void) {
   printf("Pressure=%d\n", (int) (pressure * 10));
 }
 
-#endif /* MPL115A1_EXAMPLE_ENABLED */
+#endif /* MPL115A1_EXAMPLE */

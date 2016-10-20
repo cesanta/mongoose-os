@@ -3,9 +3,10 @@
  * All rights reserved
  */
 
+#include "fw/src/mg_features.h"
 #include "fw/src/mg_ws_client_js.h"
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_WS_CLIENT_API)
+#if MG_ENABLE_JS && MG_ENABLE_WS_CLIENT_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -115,7 +116,7 @@ enum v7_err mg_ws_ctor(struct v7 *v7, v7_val_t *res) {
   struct mg_connection *nc;
   struct user_data *ud;
   struct mg_connect_opts copts;
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   int force_ssl;
 #endif
   v7_val_t this_obj = v7_get_this(v7);
@@ -151,7 +152,7 @@ enum v7_err mg_ws_ctor(struct v7 *v7, v7_val_t *res) {
       extra_headers = v7_get_string(v7, &ehv, &n);
     }
 
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
     force_ssl = (strlen(url) > 6) && (strncmp(url, "wss://", 6) == 0);
     if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
       goto clean;
@@ -313,4 +314,4 @@ void mg_ws_client_api_setup(struct v7 *v7) {
   v7_disown(v7, &ws);
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_WS_CLIENT_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_WS_CLIENT_API */

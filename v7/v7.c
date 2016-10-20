@@ -40,11 +40,14 @@
 #define CS_P_CUSTOM 0
 #define CS_P_UNIX 1
 #define CS_P_WINDOWS 2
-#define CS_P_ESP_LWIP 3
+#define CS_P_ESP8266 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
 #define CS_P_CC3100 6
 #define CS_P_MBED 7
+#define CS_P_WINCE 8
+#define CS_P_NXP_KINETIS 9
+#define CS_P_NRF52 10
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -56,10 +59,14 @@
 #define CS_PLATFORM CS_P_CC3200
 #elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
+#elif defined(WINCE)
+#define CS_PLATFORM CS_P_WINCE
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
 #elif defined(__MBED__)
 #define CS_PLATFORM CS_P_MBED
+#elif defined(FRDM_K64F) || defined(FREEDOM)
+#define CS_PLATFORM CS_P_NXP_KINETIS
 #endif
 
 #ifndef CS_PLATFORM
@@ -68,12 +75,19 @@
 
 #endif /* !defined(CS_PLATFORM) */
 
+#define MG_NET_IF_SOCKET 1
+#define MG_NET_IF_SIMPLELINK 2
+#define MG_NET_IF_LWIP_LOW_LEVEL 3
+
 /* Amalgamated: #include "common/platforms/platform_unix.h" */
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
-/* Amalgamated: #include "common/platforms/platform_esp_lwip.h" */
+/* Amalgamated: #include "common/platforms/platform_esp8266.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3200.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3100.h" */
 /* Amalgamated: #include "common/platforms/platform_mbed.h" */
+/* Amalgamated: #include "common/platforms/platform_nrf52.h" */
+/* Amalgamated: #include "common/platforms/platform_wince.h" */
+/* Amalgamated: #include "common/platforms/platform_nxp_kinetis.h" */
 
 /* Common stuff */
 
@@ -118,8 +132,13 @@
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
 
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+#endif
+
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include <assert.h>
 #include <direct.h>
@@ -237,6 +256,30 @@ typedef struct _stati64 cs_stat_t;
 #define MG_MAX_HTTP_HEADERS 40
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#ifndef MG_ENABLE_BROADCAST
+#define MG_ENABLE_BROADCAST 1
+#endif
+
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_ENABLE_HTTP_CGI
+#define MG_ENABLE_HTTP_CGI 1
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
 #ifdef V7_MODULE_LINES
@@ -339,71 +382,32 @@ typedef struct stat cs_stat_t;
 #define MG_MAX_HTTP_HEADERS 40
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#ifndef MG_ENABLE_BROADCAST
+#define MG_ENABLE_BROADCAST 1
+#endif
+
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_ENABLE_HTTP_CGI
+#define MG_ENABLE_HTTP_CGI 1
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "common/platforms/platform_esp_lwip.h"
-#endif
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
-#if CS_PLATFORM == CS_P_ESP_LWIP
-
-#include <assert.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-
-#include <lwip/err.h>
-#include <lwip/ip_addr.h>
-#include <lwip/inet.h>
-#include <lwip/netdb.h>
-#include <lwip/dns.h>
-
-#ifndef LWIP_PROVIDE_ERRNO
-#include <errno.h>
-#endif
-
-#define LWIP_TIMEVAL_PRIVATE 0
-
-#if LWIP_SOCKET
-#include <lwip/sockets.h>
-#define SOMAXCONN 10
-#else
-/* We really need the definitions from sockets.h. */
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 1
-#include <lwip/sockets.h>
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 0
-#endif
-
-typedef int sock_t;
-#define INVALID_SOCKET (-1)
-#define SIZE_T_FMT "u"
-typedef struct stat cs_stat_t;
-#define DIRSEP '/'
-#define to64(x) strtoll(x, NULL, 10)
-#define INT64_FMT PRId64
-#define INT64_X_FMT PRIx64
-#define __cdecl
-
-unsigned long os_random(void);
-#define random os_random
-
-#ifndef RTOS_SDK
-#define MG_NET_IF_LWIP
-struct mg_mgr;
-struct mg_connection;
-uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
-void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
-                                  int interval, int count);
-#endif
-
-#endif /* CS_PLATFORM == CS_P_ESP_LWIP */
-#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/mbuf.h"
 #endif
@@ -486,6 +490,53 @@ void mbuf_trim(struct mbuf *);
 
 #endif /* CS_COMMON_MBUF_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_esp8266.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_
+#if CS_PLATFORM == CS_P_ESP8266
+
+#include <assert.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <machine/endian.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
+#define _FILE_OFFSET_BITS 32
+
+#define MG_LWIP 1
+
+#ifdef RTOS_SDK
+#  define MG_NET_IF MG_NET_IF_SOCKET
+#else
+#  define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
+#endif
+
+/* struct timeval is defined in sys/time.h. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#endif /* CS_PLATFORM == CS_P_ESP8266 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/platforms/simplelink/cs_simplelink.h"
 #endif
 /*
@@ -497,7 +548,7 @@ void mbuf_trim(struct mbuf *);
 #define CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
 
 /* If simplelink.h is already included, all bets are off. */
-#if defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__)
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__)
 
 #include <stdbool.h>
 
@@ -588,7 +639,7 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 }
 #endif
 
-#endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
+#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__) */
 
 #endif /* CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_ */
 #ifdef V7_MODULE_LINES
@@ -616,15 +667,11 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 #include <sys/time.h>
 #endif
 
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
+
 /* Only SPIFFS supports directories, SLFS does not. */
-#ifndef CC3200_FS_SPIFFS
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
+#if defined(CC3200_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
+#define MG_ENABLE_DIRECTORY_LISTING 1
 #endif
 
 /* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
@@ -715,6 +762,14 @@ struct dirent *readdir(DIR *dir);
 #define MG_FS_SLFS
 #endif
 
+#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && !defined(MG_ENABLE_FILESYSTEM)
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -741,14 +796,7 @@ struct dirent *readdir(DIR *dir);
 #include <string.h>
 #include <time.h>
 
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
-#define MG_DISABLE_FILESYSTEM 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 
 /*
  * CC3100 SDK and STM32 SDK include headers w/out path, just like
@@ -790,8 +838,259 @@ int inet_pton(int af, const char *src, void *dst);
 
 /* Amalgamated: #include "mbed.h" */
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_MBED */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_MBED_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_nrf52.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_
+#if CS_PLATFORM == CS_P_NRF52
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#define MG_NET_IF             MG_NET_IF_LWIP_LOW_LEVEL
+#define LWIP_TIMEVAL_PRIVATE  0
+#define LWIP_PROVIDE_ERRNO    1
+#define MG_LWIP               1
+#define MG_ENABLE_IPV6        1
+
+#define INT64_FMT PRId64
+#define SIZE_T_FMT "u"
+
+#endif /* CS_PLATFORM == CS_P_NRF52 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_wince.h"
+#endif
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_
+
+#if CS_PLATFORM == CS_P_WINCE
+
+/*
+ * MSVC++ 14.0 _MSC_VER == 1900 (Visual Studio 2015)
+ * MSVC++ 12.0 _MSC_VER == 1800 (Visual Studio 2013)
+ * MSVC++ 11.0 _MSC_VER == 1700 (Visual Studio 2012)
+ * MSVC++ 10.0 _MSC_VER == 1600 (Visual Studio 2010)
+ * MSVC++ 9.0  _MSC_VER == 1500 (Visual Studio 2008)
+ * MSVC++ 8.0  _MSC_VER == 1400 (Visual Studio 2005)
+ * MSVC++ 7.1  _MSC_VER == 1310 (Visual Studio 2003)
+ * MSVC++ 7.0  _MSC_VER == 1300
+ * MSVC++ 6.0  _MSC_VER == 1200
+ * MSVC++ 5.0  _MSC_VER == 1100
+ */
+#pragma warning(disable : 4127) /* FD_SET() emits warning, disable it */
+#pragma warning(disable : 4204) /* missing c99 support */
+
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+#endif
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#pragma comment(lib, "ws2.lib") /* Linking with WinCE winsock library */
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+#define strdup _strdup
+
+#ifndef EINPROGRESS
+#define EINPROGRESS WSAEINPROGRESS
+#endif
+
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
+
+#ifndef __func__
+#define STRX(x) #x
+#define STR(x) STRX(x)
+#define __func__ __FILE__ ":" STR(__LINE__)
+#endif
+
+#define snprintf _snprintf
+#define fileno _fileno
+#define vsnprintf _vsnprintf
+#define sleep(x) Sleep((x) *1000)
+#define to64(x) _atoi64(x)
+#define rmdir _rmdir
+
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define fseeko(x, y, z) _fseeki64((x), (y), (z))
+#else
+#define fseeko(x, y, z) fseek((x), (y), (z))
+#endif
+
+typedef int socklen_t;
+
+#if _MSC_VER >= 1700
+#include <stdint.h>
+#else
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef int int32_t;
+typedef unsigned int uint32_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+#endif
+
+typedef SOCKET sock_t;
+typedef uint32_t in_addr_t;
+
+#ifndef UINT16_MAX
+#define UINT16_MAX 65535
+#endif
+
+#ifndef UINT32_MAX
+#define UINT32_MAX 4294967295
+#endif
+
+#ifndef pid_t
+#define pid_t HANDLE
+#endif
+
+#define INT64_FMT "I64d"
+#define INT64_X_FMT "I64x"
+/* TODO(alashkin): check if this is correct */
+#define SIZE_T_FMT "u"
+
+#define DIRSEP '\\'
+
+#ifndef va_copy
+#ifdef __va_copy
+#define va_copy __va_copy
+#else
+#define va_copy(x, y) (x) = (y)
+#endif
+#endif
+
+#ifndef MG_MAX_HTTP_REQUEST_SIZE
+#define MG_MAX_HTTP_REQUEST_SIZE 8192
+#endif
+
+#ifndef MG_MAX_HTTP_SEND_MBUF
+#define MG_MAX_HTTP_SEND_MBUF 4096
+#endif
+
+#ifndef MG_MAX_HTTP_HEADERS
+#define MG_MAX_HTTP_HEADERS 40
+#endif
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+typedef unsigned int* uintptr_t;
+#define abort() DebugBreak();
+
+#ifndef BUFSIZ
+#define BUFSIZ 4096
+#define ENOMEM ERROR_NOT_ENOUGH_MEMORY
+#endif
+/*
+ * Explicitly disabling MG_ENABLE_THREADS for WinCE
+ * because they are enabled for _WIN32 by default
+ */
+#ifndef MG_ENABLE_THREADS
+#define MG_ENABLE_THREADS 0
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
+typedef struct _stati64 {
+  uint32_t st_mtime;
+  uint32_t st_size;
+  uint32_t st_mode;
+} cs_stat_t;
+
+#define ENOENT ERROR_PATH_NOT_FOUND
+#define EACCES ERROR_ACCESS_DENIED
+
+#define _S_IFREG 2
+#define _S_IFDIR 4
+
+#ifndef S_ISDIR
+#define S_ISDIR(x) (((x) & _S_IFDIR) != 0)
+#endif
+
+#ifndef S_ISREG
+#define S_ISREG(x) (((x) & _S_IFREG) != 0)
+#endif
+
+int open(const char *filename, int oflag, int pmode);
+int _wstati64(const wchar_t *path, cs_stat_t *st);
+const char *strerror();
+
+#endif /* CS_PLATFORM == CS_P_WINCE */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_nxp_kinetis.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_
+
+#if CS_PLATFORM == CS_P_NXP_KINETIS
+
+#include <ctype.h>
+#include <inttypes.h>
+#include <string.h>
+#include <sys/time.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT "lld"
+#define INT64_X_FMT "llx"
+#define __cdecl
+
+#define MG_LWIP 1
+
+#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
+
+/* struct timeval is defined in sys/time.h. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#endif /* CS_PLATFORM == CS_P_NXP_KINETIS */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/str_util.h"
 #endif
@@ -909,6 +1208,10 @@ char *utfutf(char *s1, char *s2);
 #define CS_COMMON_BASE64_H_
 
 #ifndef DISABLE_BASE64
+#define DISABLE_BASE64 0
+#endif
+
+#if !DISABLE_BASE64
 
 #include <stdio.h>
 
@@ -943,6 +1246,89 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 
 #endif /* CS_COMMON_BASE64_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/cs_dbg.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_CS_DBG_H_
+#define CS_COMMON_CS_DBG_H_
+
+/* Amalgamated: #include "common/platform.h" */
+
+#if CS_ENABLE_STDIO
+#include <stdio.h>
+#endif
+
+#ifndef CS_ENABLE_DEBUG
+#define CS_ENABLE_DEBUG 0
+#endif
+
+#ifndef CS_LOG_TS_DIFF
+#define CS_LOG_TS_DIFF 0
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+enum cs_log_level {
+  LL_NONE = -1,
+  LL_ERROR = 0,
+  LL_WARN = 1,
+  LL_INFO = 2,
+  LL_DEBUG = 3,
+  LL_VERBOSE_DEBUG = 4,
+
+  _LL_MIN = -2,
+  _LL_MAX = 5,
+};
+
+void cs_log_set_level(enum cs_log_level level);
+
+#if CS_ENABLE_STDIO
+
+void cs_log_set_file(FILE *file);
+
+extern enum cs_log_level cs_log_level;
+void cs_log_print_prefix(const char *func);
+void cs_log_printf(const char *fmt, ...);
+
+#define LOG(l, x)                  \
+  if (cs_log_level >= l) {         \
+    cs_log_print_prefix(__func__); \
+    cs_log_printf x;               \
+  }
+
+#ifndef CS_NDEBUG
+
+#define DBG(x)                            \
+  if (cs_log_level >= LL_VERBOSE_DEBUG) { \
+    cs_log_print_prefix(__func__);        \
+    cs_log_printf x;                      \
+  }
+
+#else /* NDEBUG */
+
+#define DBG(x)
+
+#endif
+
+#else /* CS_ENABLE_STDIO */
+
+#define LOG(l, x)
+#define DBG(x)
+
+#endif
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* CS_COMMON_CS_DBG_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/md5.h"
 #endif
 /*
@@ -954,6 +1340,10 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #define CS_COMMON_MD5_H_
 
 /* Amalgamated: #include "common/platform.h" */
+
+#ifndef DISABLE_MD5
+#define DISABLE_MD5 0
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -992,6 +1382,33 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 
 #endif /* CS_COMMON_MD5_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/cs_endian.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_CS_ENDIAN_H_
+#define CS_COMMON_CS_ENDIAN_H_
+
+/*
+ * clang with std=-c99 uses __LITTLE_ENDIAN, by default
+ * while for ex, RTOS gcc - LITTLE_ENDIAN, by default
+ * it depends on __USE_BSD, but let's have everything
+ */
+#if !defined(BYTE_ORDER) && defined(__BYTE_ORDER)
+#define BYTE_ORDER __BYTE_ORDER
+#ifndef LITTLE_ENDIAN
+#define LITTLE_ENDIAN __LITTLE_ENDIAN
+#endif /* LITTLE_ENDIAN */
+#ifndef BIG_ENDIAN
+#define BIG_ENDIAN __LITTLE_ENDIAN
+#endif /* BIG_ENDIAN */
+#endif /* BYTE_ORDER */
+
+#endif /* CS_COMMON_CS_ENDIAN_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/sha1.h"
 #endif
 /*
@@ -1003,6 +1420,10 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 #define CS_COMMON_SHA1_H_
 
 #ifndef DISABLE_SHA1
+#define DISABLE_SHA1 0
+#endif
+
+#if !DISABLE_SHA1
 
 /* Amalgamated: #include "common/platform.h" */
 
@@ -1044,7 +1465,11 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 extern "C" {
 #endif /* __cplusplus */
 
-#ifdef CS_ENABLE_SPIFFS
+#ifndef CS_ENABLE_SPIFFS
+#define CS_ENABLE_SPIFFS 0
+#endif
+
+#if CS_ENABLE_SPIFFS
 
 #include <spiffs.h>
 
@@ -1073,7 +1498,7 @@ typedef struct DIR {
 } DIR;
 #endif
 
-#if defined(_WIN32) || defined(CS_ENABLE_SPIFFS)
+#if defined(_WIN32) || CS_ENABLE_SPIFFS
 DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
@@ -1779,7 +2204,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * DO NOT EDIT.
  * This file is generated by scripts/gen-features-full.pl.
  */
-#ifndef CS_ENABLE_UTF8
+#ifndef CS_ENABLE_UTF8 /* ifdef-ok */
 #define CS_ENABLE_UTF8 1
 #endif
 
@@ -1845,6 +2270,251 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 #endif /* CS_V7_SRC_FEATURES_FULL_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "v7/src/features_all.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_V7_SRC_FEATURES_ALL_H_
+#define CS_V7_SRC_FEATURES_ALL_H_
+
+/*
+ * DO NOT EDIT.
+ * This file is generated by scripts/gen-features-all.pl.
+ */
+
+#ifndef V7_ENABLE__Array__reduce
+#define V7_ENABLE__Array__reduce 0
+#endif
+
+#ifndef V7_ENABLE__Blob
+#define V7_ENABLE__Blob 0
+#endif
+
+#ifndef V7_ENABLE__Date
+#define V7_ENABLE__Date 0
+#endif
+
+#ifndef V7_ENABLE__Date__UTC
+#define V7_ENABLE__Date__UTC 0
+#endif
+
+#ifndef V7_ENABLE__Date__getters
+#define V7_ENABLE__Date__getters 0
+#endif
+
+#ifndef V7_ENABLE__Date__now
+#define V7_ENABLE__Date__now 0
+#endif
+
+#ifndef V7_ENABLE__Date__parse
+#define V7_ENABLE__Date__parse 0
+#endif
+
+#ifndef V7_ENABLE__Date__setters
+#define V7_ENABLE__Date__setters 0
+#endif
+
+#ifndef V7_ENABLE__Date__toJSON
+#define V7_ENABLE__Date__toJSON 0
+#endif
+
+#ifndef V7_ENABLE__Date__toLocaleString
+#define V7_ENABLE__Date__toLocaleString 0
+#endif
+
+#ifndef V7_ENABLE__Date__toString
+#define V7_ENABLE__Date__toString 0
+#endif
+
+#ifndef V7_ENABLE__File__list
+#define V7_ENABLE__File__list 0
+#endif
+
+#ifndef V7_ENABLE__File__require
+#define V7_ENABLE__File__require 0
+#endif
+
+#ifndef V7_ENABLE__Function__bind
+#define V7_ENABLE__Function__bind 0
+#endif
+
+#ifndef V7_ENABLE__Function__call
+#define V7_ENABLE__Function__call 0
+#endif
+
+#ifndef V7_ENABLE__Math
+#define V7_ENABLE__Math 0
+#endif
+
+#ifndef V7_ENABLE__Math__abs
+#define V7_ENABLE__Math__abs 0
+#endif
+
+#ifndef V7_ENABLE__Math__acos
+#define V7_ENABLE__Math__acos 0
+#endif
+
+#ifndef V7_ENABLE__Math__asin
+#define V7_ENABLE__Math__asin 0
+#endif
+
+#ifndef V7_ENABLE__Math__atan
+#define V7_ENABLE__Math__atan 0
+#endif
+
+#ifndef V7_ENABLE__Math__atan2
+#define V7_ENABLE__Math__atan2 0
+#endif
+
+#ifndef V7_ENABLE__Math__ceil
+#define V7_ENABLE__Math__ceil 0
+#endif
+
+#ifndef V7_ENABLE__Math__constants
+#define V7_ENABLE__Math__constants 0
+#endif
+
+#ifndef V7_ENABLE__Math__cos
+#define V7_ENABLE__Math__cos 0
+#endif
+
+#ifndef V7_ENABLE__Math__exp
+#define V7_ENABLE__Math__exp 0
+#endif
+
+#ifndef V7_ENABLE__Math__floor
+#define V7_ENABLE__Math__floor 0
+#endif
+
+#ifndef V7_ENABLE__Math__log
+#define V7_ENABLE__Math__log 0
+#endif
+
+#ifndef V7_ENABLE__Math__max
+#define V7_ENABLE__Math__max 0
+#endif
+
+#ifndef V7_ENABLE__Math__min
+#define V7_ENABLE__Math__min 0
+#endif
+
+#ifndef V7_ENABLE__Math__pow
+#define V7_ENABLE__Math__pow 0
+#endif
+
+#ifndef V7_ENABLE__Math__random
+#define V7_ENABLE__Math__random 0
+#endif
+
+#ifndef V7_ENABLE__Math__round
+#define V7_ENABLE__Math__round 0
+#endif
+
+#ifndef V7_ENABLE__Math__sin
+#define V7_ENABLE__Math__sin 0
+#endif
+
+#ifndef V7_ENABLE__Math__sqrt
+#define V7_ENABLE__Math__sqrt 0
+#endif
+
+#ifndef V7_ENABLE__Math__tan
+#define V7_ENABLE__Math__tan 0
+#endif
+
+#ifndef V7_ENABLE__Memory__stats
+#define V7_ENABLE__Memory__stats 0
+#endif
+
+#ifndef V7_ENABLE__NUMBER__NEGATIVE_INFINITY
+#define V7_ENABLE__NUMBER__NEGATIVE_INFINITY 0
+#endif
+
+#ifndef V7_ENABLE__NUMBER__POSITIVE_INFINITY
+#define V7_ENABLE__NUMBER__POSITIVE_INFINITY 0
+#endif
+
+#ifndef V7_ENABLE__Object__create
+#define V7_ENABLE__Object__create 0
+#endif
+
+#ifndef V7_ENABLE__Object__defineProperties
+#define V7_ENABLE__Object__defineProperties 0
+#endif
+
+#ifndef V7_ENABLE__Object__getOwnPropertyDescriptor
+#define V7_ENABLE__Object__getOwnPropertyDescriptor 0
+#endif
+
+#ifndef V7_ENABLE__Object__getOwnPropertyNames
+#define V7_ENABLE__Object__getOwnPropertyNames 0
+#endif
+
+#ifndef V7_ENABLE__Object__getPrototypeOf
+#define V7_ENABLE__Object__getPrototypeOf 0
+#endif
+
+#ifndef V7_ENABLE__Object__hasOwnProperty
+#define V7_ENABLE__Object__hasOwnProperty 0
+#endif
+
+#ifndef V7_ENABLE__Object__isExtensible
+#define V7_ENABLE__Object__isExtensible 0
+#endif
+
+#ifndef V7_ENABLE__Object__isFrozen
+#define V7_ENABLE__Object__isFrozen 0
+#endif
+
+#ifndef V7_ENABLE__Object__isPrototypeOf
+#define V7_ENABLE__Object__isPrototypeOf 0
+#endif
+
+#ifndef V7_ENABLE__Object__isSealed
+#define V7_ENABLE__Object__isSealed 0
+#endif
+
+#ifndef V7_ENABLE__Object__keys
+#define V7_ENABLE__Object__keys 0
+#endif
+
+#ifndef V7_ENABLE__Object__preventExtensions
+#define V7_ENABLE__Object__preventExtensions 0
+#endif
+
+#ifndef V7_ENABLE__Object__propertyIsEnumerable
+#define V7_ENABLE__Object__propertyIsEnumerable 0
+#endif
+
+#ifndef V7_ENABLE__Proxy
+#define V7_ENABLE__Proxy 0
+#endif
+
+#ifndef V7_ENABLE__RegExp
+#define V7_ENABLE__RegExp 0
+#endif
+
+#ifndef V7_ENABLE__StackTrace
+#define V7_ENABLE__StackTrace 0
+#endif
+
+#ifndef V7_ENABLE__String__localeCompare
+#define V7_ENABLE__String__localeCompare 0
+#endif
+
+#ifndef V7_ENABLE__String__localeLowerCase
+#define V7_ENABLE__String__localeLowerCase 0
+#endif
+
+#ifndef V7_ENABLE__String__localeUpperCase
+#define V7_ENABLE__String__localeUpperCase 0
+#endif
+
+#endif /* CS_V7_SRC_FEATURES_ALL_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "v7/src/v7_features.h"
 #endif
 /*
@@ -1859,6 +2529,84 @@ void cr_context_free(struct cr_ctx *p_ctx);
 /* Amalgamated: #include "v7/src/features_minimal.h" */
 /* Amalgamated: #include "v7/src/features_medium.h" */
 /* Amalgamated: #include "v7/src/features_full.h" */
+/* All the features will be default-defined to 0. */
+/* Amalgamated: #include "v7/src/features_all.h" */
+
+#ifndef V7_DISABLE_AST_TAG_NAMES
+#define V7_DISABLE_AST_TAG_NAMES 0
+#endif
+
+#ifndef V7_DISABLE_GC
+#define V7_DISABLE_GC 0
+#endif
+
+#ifndef V7_DISABLE_CALL_ERROR_CONTEXT
+#define V7_DISABLE_CALL_ERROR_CONTEXT 0
+#endif
+
+#ifndef V7_DISABLE_FILENAMES
+#define V7_DISABLE_FILENAMES 0
+#endif
+
+#ifndef V7_DISABLE_LINE_NUMBERS
+#define V7_DISABLE_LINE_NUMBERS 0
+#endif
+
+#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#define V7_DISABLE_STR_ALLOC_SEQ 0
+#endif
+
+#ifndef V7_ENABLE_CALL_TRACE
+#define V7_ENABLE_CALL_TRACE 0
+#endif
+
+#ifndef V7_ENABLE_CRYPTO
+#define V7_ENABLE_CRYPTO 0
+#endif
+
+#ifndef V7_ENABLE_DENSE_ARRAYS
+#define V7_ENABLE_DENSE_ARRAYS 0
+#endif
+
+#ifndef V7_ENABLE_ENTITY_IDS
+#define V7_ENABLE_ENTITY_IDS 0
+#endif
+
+#ifndef V7_ENABLE_FILE
+#define V7_ENABLE_FILE 0
+#endif
+
+#ifndef V7_ENABLE_FOOTPRINT_REPORT
+#define V7_ENABLE_FOOTPRINT_REPORT 0
+#endif
+
+#ifndef V7_ENABLE_GC_CHECK
+#define V7_ENABLE_GC_CHECK 0
+#endif
+
+#ifndef V7_ENABLE_JS_GETTERS
+#define V7_ENABLE_JS_GETTERS 0
+#endif
+
+#ifndef V7_ENABLE_JS_SETTERS
+#define V7_ENABLE_JS_SETTERS 0
+#endif
+
+#ifndef V7_ENABLE_STACK_TRACKING
+#define V7_ENABLE_STACK_TRACKING 0
+#endif
+
+#ifndef V7_ENABLE_SOCKET
+#define V7_ENABLE_SOCKET 0
+#endif
+
+#ifndef V7_AST_FORCE_LINE_NUMBERS
+#define V7_AST_FORCE_LINE_NUMBERS 0
+#endif
+
+#ifndef V7_HEAPUSAGE_ENABLE
+#define V7_HEAPUSAGE_ENABLE 0
+#endif
 
 #endif /* CS_V7_SRC_V7_FEATURES_H_ */
 #ifdef V7_MODULE_LINES
@@ -2023,8 +2771,8 @@ extern double _v7_infinity;
 #define EXIT_FAILURE 1
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK) || defined(V7_STACK_GUARD_MIN_SIZE) || \
-    defined(V7_ENABLE_STACK_TRACKING) || defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_GC_CHECK || defined(V7_STACK_GUARD_MIN_SIZE) || \
+    V7_ENABLE_STACK_TRACKING || V7_ENABLE_CALL_TRACE
 /* Need to enable GCC/clang instrumentation */
 #define V7_CYG_PROFILE_ON
 #endif
@@ -2244,7 +2992,7 @@ void v7_interrupt(struct v7 *v7);
 /* Returns last parser error message. TODO: rename it to `v7_get_error()` */
 const char *v7_get_parser_error(struct v7 *v7);
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
 /*
  * Available if only `V7_ENABLE_STACK_TRACKING` is defined.
  *
@@ -3374,7 +4122,7 @@ extern "C" {
 
 typedef uint64_t val_t;
 
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
 
 typedef unsigned short entity_id_t;
 typedef unsigned char entity_id_part_t;
@@ -3745,7 +4493,7 @@ struct v7 {
   /* linked list of v7 contexts, needed by cyg_profile hooks */
   struct v7 *next_v7;
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   /* linked list of stack tracking contexts */
   struct stack_track_ctx *stack_track_ctx;
 
@@ -3762,7 +4510,7 @@ struct v7 {
  * TODO(imax): remove V7_DISABLE_STR_ALLOC_SEQ knob after 2015/12/01 if there
  * are no issues.
  */
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
   uint16_t gc_next_asn; /* Next sequence number to use. */
   uint16_t gc_min_asn;  /* Minimal sequence number currently in use. */
 #endif
@@ -3807,7 +4555,7 @@ struct v7_property {
   struct v7_property *
       next; /* Linkage in struct v7_generic_object::properties */
   v7_prop_attr_t attributes;
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   entity_id_t entity_id;
 #endif
   val_t name;  /* Property name (a string) */
@@ -3821,7 +4569,7 @@ struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
   v7_obj_attr_t attributes;
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   entity_id_part_t entity_id_base;
   entity_id_part_t entity_id_spec;
 #endif
@@ -5348,7 +6096,7 @@ typedef unsigned long ast_off_t;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 struct ast_node_def {
-#ifndef V7_DISABLE_AST_TAG_NAMES
+#if !V7_DISABLE_AST_TAG_NAMES
   const char *name; /* tag name, for debugging and serialization */
 #endif
   unsigned char has_varint : 1;   /* has a varint body */
@@ -5404,7 +6152,7 @@ ast_insert_node(struct ast *a, ast_off_t pos, enum ast_tag tag);
 V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
                                enum ast_tag tag);
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 /*
  * Add line_no varint after all skips of the tag at the offset `tag_off`, and
  * marks the tag byte.
@@ -5593,7 +6341,7 @@ struct bcode {
   /* Literal table */
   struct v7_vec lit;
 
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
   /* Name of the file from which this bcode was generated (used for debug) */
   void *filename;
 #endif
@@ -5622,7 +6370,7 @@ struct bcode {
   /* Set when `ops` contains function name as the first `name` */
   unsigned int func_name_present : 1;
 
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
   /* If set, `filename` points to ROM, so we shouldn't free it */
   unsigned int filename_in_rom : 1;
 #endif
@@ -5665,7 +6413,7 @@ V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode);
 V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *bcode);
 V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *bcode);
 
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
 /*
  * Return a pointer to null-terminated filename string
  */
@@ -5747,7 +6495,7 @@ typedef struct {
 
 V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op);
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE void bcode_append_lineno(struct bcode_builder *bbuilder,
                                     int line_no);
 #endif
@@ -5993,7 +6741,7 @@ V7_PRIVATE void compute_need_gc(struct v7 *);
 /* perform gc if not inhibited */
 V7_PRIVATE int maybe_gc(struct v7 *);
 
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
 V7_PRIVATE uint16_t
 gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len);
 V7_PRIVATE int gc_is_valid_allocation_seqn(struct v7 *v7, uint16_t n);
@@ -6346,7 +7094,7 @@ struct bcode;
 
 V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b);
 #endif
 
@@ -6375,7 +7123,7 @@ V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b);
 
 /* Amalgamated: #include "v7/src/internal.h" */
 
-#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
+#if !V7_DISABLE_FILENAMES && !V7_DISABLE_LINE_NUMBERS
 struct shdata {
   /* Reference count */
   uint8_t refcnt;
@@ -6516,7 +7264,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 
 struct v7;
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
 
 /*
  * Stack-tracking functionality:
@@ -6837,7 +7585,7 @@ V7_PRIVATE enum v7_err std_eval(struct v7 *v7, v7_val_t arg, v7_val_t this_obj,
 #ifndef CS_V7_SRC_HEAPUSAGE_H_
 #define CS_V7_SRC_HEAPUSAGE_H_
 
-#if defined(V7_HEAPUSAGE_ENABLE)
+#if V7_HEAPUSAGE_ENABLE
 
 extern volatile int heap_dont_count;
 
@@ -7404,6 +8152,10 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
 /* Amalgamated: #include "common/platform.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
+#ifndef C_DISABLE_BUILTIN_SNPRINTF
+#define C_DISABLE_BUILTIN_SNPRINTF 0
+#endif
+
 size_t c_strnlen(const char *s, size_t maxlen) {
   size_t l = 0;
   for (; l < maxlen && s[l] != '\0'; l++) {
@@ -7419,7 +8171,7 @@ size_t c_strnlen(const char *s, size_t maxlen) {
 
 #define C_SNPRINTF_FLAG_ZERO 1
 
-#ifdef C_DISABLE_BUILTIN_SNPRINTF
+#if C_DISABLE_BUILTIN_SNPRINTF
 int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
   return vsnprintf(buf, buf_size, fmt, ap);
 }
@@ -7685,6 +8437,10 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
 #include <string.h>
 /* Amalgamated: #include "common/platform.h" */
 /* Amalgamated: #include "common/utf.h" */
+
+#ifndef CS_ENABLE_UTF8
+#define CS_ENABLE_UTF8 0
+#endif
 
 #if CS_ENABLE_UTF8
 enum {
@@ -9036,7 +9792,10 @@ const char *utfnshift(const char *s, long m) {
 #ifndef EXCLUDE_COMMON
 
 /* Amalgamated: #include "common/base64.h" */
+
 #include <string.h>
+
+/* Amalgamated: #include "common/cs_dbg.h" */
 
 /* ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ */
 
@@ -9151,7 +9910,7 @@ void cs_base64_encode(const unsigned char *src, int src_len, char *dst) {
 #undef BASE64_OUT
 #undef BASE64_FLUSH
 
-#ifndef CS_DISABLE_STDIO
+#if CS_ENABLE_STDIO
 #define BASE64_OUT(ch)      \
   do {                      \
     fprintf(f, "%c", (ch)); \
@@ -9166,7 +9925,7 @@ void cs_fprint_base64(FILE *f, const unsigned char *src, int src_len) {
 
 #undef BASE64_OUT
 #undef BASE64_FLUSH
-#endif /* !CS_DISABLE_STDIO */
+#endif /* CS_ENABLE_STDIO */
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
 static unsigned char from_b64(unsigned char ch) {
@@ -9248,11 +10007,12 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
  * will fill a supplied 16-byte array with the digest.
  */
 
-#if !defined(DISABLE_MD5) && !defined(EXCLUDE_COMMON)
-
 /* Amalgamated: #include "common/md5.h" */
 
-#ifndef CS_ENABLE_NATIVE_MD5
+#if !DISABLE_MD5 && !defined(EXCLUDE_COMMON)
+
+/* Amalgamated: #include "common/cs_endian.h" */
+
 static void byteReverse(unsigned char *buf, unsigned longs) {
 /* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
 #if BYTE_ORDER == BIG_ENDIAN
@@ -9436,7 +10196,6 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
-#endif /* CS_ENABLE_NATIVE_MD5 */
 
 /*
  * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
@@ -9481,9 +10240,11 @@ char *cs_md5(char buf[33], ...) {
 /* Copyright(c) By Steve Reid <steve@edmweb.com> */
 /* 100% Public Domain */
 
-#if !defined(DISABLE_SHA1) && !defined(EXCLUDE_COMMON)
-
 /* Amalgamated: #include "common/sha1.h" */
+
+#if !DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
+
+/* Amalgamated: #include "common/cs_endian.h" */
 
 #define SHA1HANDSOFF
 #if defined(__sun)
@@ -9821,7 +10582,7 @@ struct dirent *readdir(DIR *dir) {
 }
 #endif
 
-#ifdef CS_ENABLE_SPIFFS
+#if CS_ENABLE_SPIFFS
 
 DIR *opendir(const char *dir_name) {
   DIR *dir = NULL;
@@ -10307,6 +11068,8 @@ void cr_context_free(struct cr_ctx *p_ctx) {
  * All rights reserved
  */
 
+/* Amalgamated: #include "common/platform.h" */
+
 #if CS_PLATFORM == CS_P_MBED
 
 long timezone;
@@ -10333,7 +11096,7 @@ long timezone;
 /* Amalgamated: #include "v7/src/v7_features.h" */
 /* Amalgamated: #include "common/cs_dirent.h" */
 
-#if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
+#if V7_ENABLE_FILE && !defined(V7_NO_FS)
 
 static const char s_fd_prop[] = "__fd";
 
@@ -10719,7 +11482,7 @@ void init_file(struct v7 *v7) {
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "common/platform.h" */
 
-#ifdef V7_ENABLE_SOCKET
+#if V7_ENABLE_SOCKET
 
 #ifdef __WATCOM__
 #define SOMAXCONN 128
@@ -10997,7 +11760,7 @@ void init_socket(struct v7 *v7) {
 /* Amalgamated: #include "common/sha1.h" */
 /* Amalgamated: #include "common/base64.h" */
 
-#ifdef V7_ENABLE_CRYPTO
+#if V7_ENABLE_CRYPTO
 
 typedef void (*b64_func_t)(const unsigned char *, int, char *);
 
@@ -11127,7 +11890,7 @@ clean:
 #endif
 
 void init_crypto(struct v7 *v7) {
-#ifdef V7_ENABLE_CRYPTO
+#if V7_ENABLE_CRYPTO
   v7_val_t obj = v7_mk_object(v7);
   v7_set(v7, v7_get_global(v7), "Crypto", 6, obj);
   v7_set_method(v7, obj, "md5", Crypto_md5);
@@ -11736,7 +12499,7 @@ typedef uint16_t ast_skip_t;
 #define AST_SKIP_MAX UINT16_MAX
 #endif
 
-#ifndef V7_DISABLE_AST_TAG_NAMES
+#if !V7_DISABLE_AST_TAG_NAMES
 #define AST_ENTRY(name, has_varint, has_inlined, num_skips, num_subtrees) \
   { (name), (has_varint), (has_inlined), (num_skips), (num_subtrees) }
 #else
@@ -12366,7 +13129,7 @@ V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
   a->mbuf.buf[tag_off] = tag | (a->mbuf.buf[tag_off] & 0x80);
 }
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE void ast_add_line_no(struct ast *a, ast_off_t tag_off, int line_no) {
   ast_off_t ln_off = tag_off + 1 /* tag byte */;
   int llen = calc_llen(line_no);
@@ -12480,7 +13243,7 @@ V7_PRIVATE int ast_get_line_no(struct ast *a, ast_off_t pos) {
    */
   int ret = 0;
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
   uint8_t lineno_present;
   enum ast_tag tag = uint8_to_tag(*(a->mbuf.buf + pos - 1), &lineno_present);
 
@@ -12599,7 +13362,7 @@ V7_PRIVATE void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *ppos,
     fprintf(fp, "  ");
   }
 
-#ifndef V7_DISABLE_AST_TAG_NAMES
+#if !V7_DISABLE_AST_TAG_NAMES
   fprintf(fp, "%s", def->name);
 #else
   fprintf(fp, "TAG_%d", tag);
@@ -12902,7 +13665,7 @@ V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode,
   bcode->refcnt = 0;
   bcode->args_cnt = 0;
   bcode->strict_mode = strict_mode;
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
   bcode->filename = filename;
   bcode->filename_in_rom = filename_in_rom;
 #else
@@ -12932,7 +13695,7 @@ V7_PRIVATE void bcode_free(struct v7 *v7, struct bcode *bcode) {
   free(bcode->lit.p);
   memset(&bcode->lit, 0x00, sizeof(bcode->lit));
 
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
   if (!bcode->filename_in_rom && bcode->filename != NULL) {
     shdata_release((struct shdata *) bcode->filename);
     bcode->filename = NULL;
@@ -12962,7 +13725,7 @@ V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
   }
 }
 
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
 V7_PRIVATE const char *bcode_get_filename(struct bcode *bcode) {
   const char *ret = NULL;
   if (bcode->filename_in_rom) {
@@ -12975,7 +13738,7 @@ V7_PRIVATE const char *bcode_get_filename(struct bcode *bcode) {
 #endif
 
 V7_PRIVATE void bcode_copy_filename_from(struct bcode *dst, struct bcode *src) {
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
   dst->filename_in_rom = src->filename_in_rom;
   dst->filename = src->filename;
 
@@ -12992,7 +13755,7 @@ V7_PRIVATE void bcode_op(struct bcode_builder *bbuilder, uint8_t op) {
   bcode_ops_append(bbuilder, &op, 1);
 }
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE void bcode_append_lineno(struct bcode_builder *bbuilder,
                                     int line_no) {
   int offset = bbuilder->ops.len;
@@ -14606,7 +15369,7 @@ static void push_bcode_history(struct v7 *v7, enum opcode op) {
   v7->last_ops[0] = op;
 }
 
-#ifndef V7_DISABLE_CALL_ERROR_CONTEXT
+#if !V7_DISABLE_CALL_ERROR_CONTEXT
 static void reset_last_name(struct v7 *v7) {
   v7->vals.last_name[0] = V7_UNDEFINED;
   v7->vals.last_name[1] = V7_UNDEFINED;
@@ -14689,7 +15452,7 @@ restart:
   while (r.ops < r.end && rcode == V7_OK) {
     enum opcode op = (enum opcode) * r.ops;
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
     if ((uint8_t) op >= _OP_LINE_NO) {
       unsigned char buf[sizeof(size_t)];
       int len;
@@ -14804,7 +15567,7 @@ restart:
         break;
       case OP_PUSH_LIT: {
         PUSH(bcode_decode_lit(v7, r.bcode, &r.ops));
-#ifndef V7_DISABLE_CALL_ERROR_CONTEXT
+#if !V7_DISABLE_CALL_ERROR_CONTEXT
         /* name tracking */
         if (!v7_is_string(TOS())) {
           reset_last_name(v7);
@@ -15051,7 +15814,7 @@ restart:
         v1 = POP();
         BTRY(v7_get_throwing_v(v7, v1, v2, &v3));
         PUSH(v3);
-#ifndef V7_DISABLE_CALL_ERROR_CONTEXT
+#if !V7_DISABLE_CALL_ERROR_CONTEXT
         v7->vals.last_name[1] = v7->vals.last_name[0];
         v7->vals.last_name[0] = v2;
 #endif
@@ -15089,7 +15852,7 @@ restart:
           BTRY(v7_property_value(v7, get_scope(v7), p, &v2));
           PUSH(v2);
         }
-#ifndef V7_DISABLE_CALL_ERROR_CONTEXT
+#if !V7_DISABLE_CALL_ERROR_CONTEXT
         v7->vals.last_name[0] = v1;
         v7->vals.last_name[1] = V7_UNDEFINED;
 #endif
@@ -15269,7 +16032,7 @@ restart:
           enum v7_err ignore;
 /* tried to call non-function object: throw a TypeError */
 
-#ifndef V7_DISABLE_CALL_ERROR_CONTEXT
+#if !V7_DISABLE_CALL_ERROR_CONTEXT
           /*
            * try to provide some useful context for the error message
            * using a good-enough heuristics
@@ -15301,7 +16064,7 @@ restart:
             case 0:
               ignore = v7_throwf(v7, TYPE_ERROR, "value is not a function");
               break;
-#ifndef V7_DISABLE_CALL_ERROR_CONTEXT
+#if !V7_DISABLE_CALL_ERROR_CONTEXT
 
             case 1:
               ignore = v7_throwf(v7, TYPE_ERROR, "%s is not a function",
@@ -15769,7 +16532,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
   val_t _res = V7_UNDEFINED;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   struct bcode *bcode = NULL;
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   struct stack_track_ctx stack_track_ctx;
 #endif
   struct {
@@ -15779,7 +16542,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 
   (void) filename;
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   v7_stack_track_start(v7, &stack_track_ctx);
 #endif
 
@@ -15797,7 +16560,7 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 #else
              1,
 #endif
-#ifndef V7_DISABLE_FILENAMES
+#if !V7_DISABLE_FILENAMES
              filename ? shdata_create_from_string(filename) : NULL,
 #else
              NULL,
@@ -16026,7 +16789,7 @@ clean:
     *res = _res;
   }
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   {
     int diff = v7_stack_track_end(v7, &stack_track_ctx);
     if (diff > v7->stack_stat[V7_STACK_STAT_EXEC]) {
@@ -16123,7 +16886,7 @@ static void generic_object_destructor(struct v7 *v7, void *ptr) {
     }
   }
 
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   o->base.entity_id_base = V7_ENTITY_ID_PART_NONE;
   o->base.entity_id_spec = V7_ENTITY_ID_PART_NONE;
 #endif
@@ -16138,13 +16901,13 @@ static void function_destructor(struct v7 *v7, void *ptr) {
     release_bcode(v7, f->bcode);
   }
 
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   f->base.entity_id_base = V7_ENTITY_ID_PART_NONE;
   f->base.entity_id_spec = V7_ENTITY_ID_PART_NONE;
 #endif
 }
 
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
 static void property_destructor(struct v7 *v7, void *ptr) {
   struct v7_property *p = (struct v7_property *) ptr;
   (void) v7;
@@ -16193,7 +16956,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     v7_head = v7;
 #endif
 
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
     v7->gc_next_asn = 0;
     v7->gc_min_asn = 0;
 #endif
@@ -16208,7 +16971,7 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
     v7->function_arena.destructor = function_destructor;
     gc_arena_init(&v7->property_arena, sizeof(struct v7_property),
                   opts.property_arena_size, 10, "property");
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
     v7->property_arena.destructor = property_destructor;
 #endif
 
@@ -16380,7 +17143,7 @@ const char *v7_get_parser_error(struct v7 *v7) {
   return v7->error_msg;
 }
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
 
 int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what) {
   assert(what < V7_STACK_STATS_CNT);
@@ -16565,7 +17328,7 @@ V7_PRIVATE struct v7_js_function *get_js_function_struct(val_t v) {
   struct v7_js_function *ret = NULL;
   assert(is_js_function(v));
   ret = (struct v7_js_function *) get_ptr(v);
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   if (ret->base.entity_id_spec != V7_ENTITY_ID_PART_JS_FUNC) {
     fprintf(stderr, "entity_id: not a function!\n");
     abort();
@@ -16593,7 +17356,7 @@ val_t mk_js_function(struct v7 *v7, struct v7_generic_object *scope,
     goto cleanup;
   }
 
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   f->base.entity_id_base = V7_ENTITY_ID_PART_OBJ;
   f->base.entity_id_spec = V7_ENTITY_ID_PART_JS_FUNC;
 #endif
@@ -17058,7 +17821,7 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
   }
 }
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE uint8_t msb_lsb_swap(uint8_t b) {
   if ((b & 0x01) != (b >> 7)) {
     b ^= 0x81;
@@ -17488,7 +18251,7 @@ v7_val_t v7_mk_string(struct v7 *v7, const char *p, size_t len, int copy) {
     }
     embed_string(m, m->len, p, len, EMBSTR_ZERO_TERM);
     tag = V7_TAG_STRING_O;
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
     /* TODO(imax): panic if offset >= 2^32. */
     offset |= ((val_t) gc_next_allocation_seqn(v7, p, len)) << 32;
 #endif
@@ -17548,7 +18311,7 @@ const char *v7_get_string(struct v7 *v7, val_t *v, size_t *sizep) {
     size_t offset = (size_t) gc_string_val_to_offset(*v);
     char *s = v7->owned_strings.buf + offset;
 
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
     gc_check_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF);
 #endif
 
@@ -17658,7 +18421,7 @@ int v7_is_array(struct v7 *v7, val_t v) {
  */
 V7_PRIVATE val_t v7_mk_dense_array(struct v7 *v7) {
   val_t a = v7_mk_array(v7);
-#ifdef V7_ENABLE_DENSE_ARRAYS
+#if V7_ENABLE_DENSE_ARRAYS
   v7_own(v7, &a);
   v7_def(v7, a, "", 0, _V7_DESC_HIDDEN(1), V7_NULL);
 
@@ -18006,7 +18769,7 @@ V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype) {
     return V7_NULL;
   }
   (void) v7;
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   o->base.entity_id_base = V7_ENTITY_ID_PART_OBJ;
   o->base.entity_id_spec = V7_ENTITY_ID_PART_GEN_OBJ;
 #endif
@@ -18036,7 +18799,7 @@ V7_PRIVATE struct v7_generic_object *get_generic_object_struct(val_t v) {
   } else {
     assert(v7_is_generic_object(v));
     ret = (struct v7_generic_object *) get_ptr(v);
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
     if (ret->base.entity_id_base != V7_ENTITY_ID_PART_OBJ) {
       fprintf(stderr, "not a generic object!\n");
       abort();
@@ -18056,7 +18819,7 @@ V7_PRIVATE struct v7_object *get_object_struct(val_t v) {
   } else {
     assert(v7_is_object(v));
     ret = (struct v7_object *) get_ptr(v);
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
     if (ret->entity_id_base != V7_ENTITY_ID_PART_OBJ) {
       fprintf(stderr, "not an object!\n");
       abort();
@@ -18079,7 +18842,7 @@ V7_PRIVATE int v7_is_generic_object(val_t v) {
 
 V7_PRIVATE struct v7_property *v7_mk_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
   p->entity_id = V7_ENTITY_ID_PROP;
 #endif
   p->next = NULL;
@@ -18121,7 +18884,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
   if (len <= 5) {
     ss = v7_mk_string(v7, name, len, 1);
     for (p = o->properties; p != NULL; p = p->next) {
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
       if (p->entity_id != V7_ENTITY_ID_PROP) {
         fprintf(stderr, "not a prop!=0x%x\n", p->entity_id);
         abort();
@@ -18135,7 +18898,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
     for (p = o->properties; p != NULL; p = p->next) {
       size_t n;
       const char *s = v7_get_string(v7, &p->name, &n);
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
       if (p->entity_id != V7_ENTITY_ID_PROP) {
         fprintf(stderr, "not a prop!=0x%x\n", p->entity_id);
         abort();
@@ -20342,7 +21105,7 @@ int v7_is_truthy(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/shdata.h" */
 
-#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
+#if !V7_DISABLE_FILENAMES && !V7_DISABLE_LINE_NUMBERS
 V7_PRIVATE struct shdata *shdata_create(const void *payload, size_t size) {
   struct shdata *ret =
       (struct shdata *) calloc(1, sizeof(struct shdata) + size);
@@ -20501,7 +21264,7 @@ static struct gc_block *gc_new_block(struct gc_arena *a, size_t size) {
 }
 
 V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
-#if V7_MALLOC_GC
+#ifdef V7_MALLOC_GC
   struct gc_cell *r;
   maybe_gc(v7);
   heapusage_dont_count(1);
@@ -20855,7 +21618,7 @@ V7_PRIVATE void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 
 V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v) {
   return (((uint64_t)(uintptr_t) get_ptr(v)) & ~V7_TAG_MASK)
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
          & 0xFFFFFFFF
 #endif
       ;
@@ -20865,7 +21628,7 @@ V7_PRIVATE val_t gc_string_val_from_offset(uint64_t s) {
   return s | V7_TAG_STRING_O;
 }
 
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
 
 static uint16_t next_asn(struct v7 *v7) {
   if (v7->gc_next_asn == 0xFFFF) {
@@ -20980,7 +21743,7 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   }
 #endif
 
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
   gc_check_valid_allocation_seqn(v7, (*v >> 32) & 0xFFFF);
 #endif
 
@@ -21005,12 +21768,12 @@ void gc_compact_strings(struct v7 *v7) {
   uint64_t h, next, head = 1;
   int len, llen;
 
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
   v7->gc_min_asn = v7->gc_next_asn;
 #endif
   while (p < v7->owned_strings.buf + v7->owned_strings.len) {
     if (p[-1] == '\1') {
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
       /* Not using gc_next_allocation_seqn() as we don't have full string. */
       uint16_t asn = next_asn(v7);
 #endif
@@ -21028,7 +21791,7 @@ void gc_compact_strings(struct v7 *v7) {
         memcpy(&next, (char *) (uintptr_t) h, sizeof(h));
 
         *(val_t *) (uintptr_t) h = gc_string_val_from_offset(head)
-#ifndef V7_DISABLE_STR_ALLOC_SEQ
+#if !V7_DISABLE_STR_ALLOC_SEQ
                                    | ((val_t) asn << 32)
 #endif
             ;
@@ -21053,7 +21816,7 @@ void gc_compact_strings(struct v7 *v7) {
        */
       memmove(v7->owned_strings.buf + head, p, len);
       v7->owned_strings.buf[head - 1] = 0x0;
-#if defined(V7_GC_VERBOSE) && !defined(V7_DISABLE_STR_ALLOC_SEQ)
+#if defined(V7_GC_VERBOSE) && !V7_DISABLE_STR_ALLOC_SEQ
       fprintf(stderr, "GC updated ASN %d: \"%.*s\"\n", asn, len - llen - 1,
               v7->owned_strings.buf + head + llen);
 #endif
@@ -21067,7 +21830,7 @@ void gc_compact_strings(struct v7 *v7) {
     }
   }
 
-#if defined(V7_GC_VERBOSE) && !defined(V7_DISABLE_STR_ALLOC_SEQ)
+#if defined(V7_GC_VERBOSE) && !V7_DISABLE_STR_ALLOC_SEQ
   fprintf(stderr, "GC valid ASN range: [%d,%d)\n", v7->gc_min_asn,
           v7->gc_next_asn);
 #endif
@@ -21206,7 +21969,7 @@ static void gc_mark_call_stack(struct v7 *v7,
 
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7, int full) {
-#ifdef V7_DISABLE_GC
+#if V7_DISABLE_GC
   (void) v7;
   (void) full;
   return;
@@ -21366,14 +22129,14 @@ V7_PRIVATE void freeze_obj(struct v7 *v7, FILE *f, v7_val_t v) {
     fprintf(f,
             "{\"type\":\"func\", \"addr\":\"%p\", \"props\":\"%p\", "
             "\"attrs\":%d, \"scope\":\"%p\", \"bcode\":\"%p\""
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
             ", \"entity_id_base\":%d, \"entity_id_spec\":\"%d\" "
 #endif
             "}\n",
             (void *) obj_base,
             (void *) ((uintptr_t) obj_base->properties & ~0x1),
             obj_base->attributes | attrs, (void *) func->scope, (void *) bcode
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
             ,
             obj_base->entity_id_base, obj_base->entity_id_spec
 #endif
@@ -21409,14 +22172,14 @@ V7_PRIVATE void freeze_obj(struct v7 *v7, FILE *f, v7_val_t v) {
     fprintf(f,
             "{\"type\":\"obj\", \"addr\":\"%p\", \"props\":\"%p\", "
             "\"attrs\":%d, \"proto\":\"%p\""
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
             ", \"entity_id_base\":%d, \"entity_id_spec\":\"%d\" "
 #endif
             "}\n",
             (void *) obj_base,
             (void *) ((uintptr_t) obj_base->properties & ~0x1),
             obj_base->attributes | attrs, (void *) gob->prototype
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
             ,
             obj_base->entity_id_base, obj_base->entity_id_spec
 #endif
@@ -21441,14 +22204,14 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
           " \"value\":\"0x%" INT64_X_FMT
           "\","
           " \"name_str\":\"%s\""
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
           ", \"entity_id\":\"%d\""
 #endif
           "}\n",
           (void *) prop, (void *) prop->next, prop->attributes | attrs,
           prop->name, val_type(v7, prop->value), prop->value,
           v7_get_cstring(v7, &prop->name)
-#if defined(V7_ENABLE_ENTITY_IDS)
+#if V7_ENABLE_ENTITY_IDS
               ,
           prop->entity_id
 #endif
@@ -21635,11 +22398,11 @@ enum my_fid {
 
   /* parse_prop function */
   fid_parse_prop,
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
   fid_p_prop_1_getter,
 #endif
   fid_p_prop_2,
-#ifdef V7_ENABLE_JS_SETTERS
+#if V7_ENABLE_JS_SETTERS
   fid_p_prop_3_setter,
 #endif
   fid_p_prop_4,
@@ -22585,13 +23348,13 @@ static const struct cr_func_desc _fid_descrs[MY_FID_CNT] = {
     /* fid_parse_prop ----------------------------------------- */
     /* fid_parse_prop */
     {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
     /* fid_p_prop_1_getter */
     {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
 #endif
     /* fid_p_prop_2 */
     {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
-#ifdef V7_ENABLE_JS_SETTERS
+#if V7_ENABLE_JS_SETTERS
     /* fid_p_prop_3_setter */
     {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
 #endif
@@ -22718,7 +23481,7 @@ static enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 /*
  * Assumes `offset` points to the byte right after a tag
  */
@@ -22953,11 +23716,11 @@ _cr_iter_begin:
     CR_DEFINE_ENTRY_POINT(fid_p_var_1);
 
     CR_DEFINE_ENTRY_POINT(fid_parse_prop);
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
     CR_DEFINE_ENTRY_POINT(fid_p_prop_1_getter);
 #endif
     CR_DEFINE_ENTRY_POINT(fid_p_prop_2);
-#ifdef V7_ENABLE_JS_SETTERS
+#if V7_ENABLE_JS_SETTERS
     CR_DEFINE_ENTRY_POINT(fid_p_prop_3_setter);
 #endif
     CR_DEFINE_ENTRY_POINT(fid_p_prop_4);
@@ -23700,7 +24463,7 @@ fid_parse_prop :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_prop_locals_t)
 {
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
   if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
     next_tok(v7);
@@ -23711,7 +24474,7 @@ fid_parse_prop :
       if (v7->cur_tok == TOK_IDENTIFIER && lookahead(v7) == TOK_OPEN_PAREN) {
     /* ecmascript 6 feature */
     CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_2);
-#ifdef V7_ENABLE_JS_SETTERS
+#if V7_ENABLE_JS_SETTERS
   } else if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
@@ -23926,12 +24689,12 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   struct cr_ctx cr_ctx;
   union user_arg_ret arg_retval;
   enum cr_status rc;
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   struct stack_track_ctx stack_track_ctx;
 #endif
   int saved_line_no = v7->line_no;
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   v7_stack_track_start(v7, &stack_track_ctx);
 #endif
 
@@ -24046,7 +24809,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   /* free resources occupied by context (at least, "stack" arrays) */
   cr_context_free(&cr_ctx);
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   {
     int diff = v7_stack_track_end(v7, &stack_track_ctx);
     if (diff > v7->stack_stat[V7_STACK_STAT_PARSER]) {
@@ -24350,7 +25113,7 @@ clean:
 }
 #endif
 
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 static void append_lineno_if_changed(struct v7 *v7,
                                      struct bcode_builder *bbuilder,
                                      int line_no) {
@@ -28301,7 +29064,9 @@ int main(int argc, char **argv) {
 #include <stdio.h>
 #include <assert.h>
 
-#if defined(V7_HEAPUSAGE_ENABLE)
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if V7_HEAPUSAGE_ENABLE
 
 /*
  * A flag that is set by GC before allocating its buffers, so we can
@@ -28485,7 +29250,7 @@ size_t heapusage_allocs_cnt(void) {
 
 #if defined(V7_CYG_PROFILE_ON)
 
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
 
 #define CALL_TRACE_SIZE 32
 
@@ -28564,14 +29329,14 @@ IRAM void __cyg_profile_func_enter(void *this_fn, void *call_site) {
   }
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK)
+#if V7_ENABLE_GC_CHECK
   {
     (void) this_fn;
     (void) call_site;
   }
 #endif
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   {
     struct v7 *v7;
     struct stack_track_ctx *ctx;
@@ -28598,7 +29363,7 @@ IRAM void __cyg_profile_func_enter(void *this_fn, void *call_site) {
   }
 #endif
 
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
   if (call_trace.size < CALL_TRACE_SIZE) {
     call_trace.addresses[call_trace.size] = this_fn;
     call_trace.size++;
@@ -28616,7 +29381,7 @@ IRAM void __cyg_profile_func_exit(void *this_fn, void *call_site) {
   }
 #endif
 
-#if defined(V7_ENABLE_GC_CHECK)
+#if V7_ENABLE_GC_CHECK
   {
     struct v7 *v7;
     void *fp = __builtin_frame_address(1);
@@ -28650,14 +29415,14 @@ IRAM void __cyg_profile_func_exit(void *this_fn, void *call_site) {
   }
 #endif
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
   {
     (void) this_fn;
     (void) call_site;
   }
 #endif
 
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
   if (call_trace.missed_cnt > 0) {
     call_trace.missed_cnt--;
   } else if (call_trace.size > 0) {
@@ -28678,7 +29443,7 @@ IRAM void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 #endif
 }
 
-#if defined(V7_ENABLE_STACK_TRACKING)
+#if V7_ENABLE_STACK_TRACKING
 
 void v7_stack_track_start(struct v7 *v7, struct stack_track_ctx *ctx) {
   /* insert new context at the head of the list */
@@ -29371,7 +30136,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
  * TODO(dfrank): make the top of v7->call_frame to represent the current
  * frame, and thus get rid of the `CUR_LINENO()`
  */
-#ifndef V7_DISABLE_LINE_NUMBERS
+#if !V7_DISABLE_LINE_NUMBERS
 #define CALLFRAME_LINENO(call_frame) ((call_frame)->line_no)
 #define CUR_LINENO() (v7->line_no)
 #else
@@ -29382,7 +30147,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res);
 
-#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
+#if !V7_DISABLE_FILENAMES && !V7_DISABLE_LINE_NUMBERS
 static int printf_stack_line(char *p, size_t len, struct bcode *bcode,
                              int line_no, const char *leading) {
   int ret;
@@ -29498,7 +30263,7 @@ V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
   /* TODO(mkm): set non enumerable but provide toString method */
   v7_set(v7, *res, "message", 7, arg0);
 
-#if !defined(V7_DISABLE_FILENAMES) && !defined(V7_DISABLE_LINE_NUMBERS)
+#if !V7_DISABLE_FILENAMES && !V7_DISABLE_LINE_NUMBERS
   /* Save the stack trace */
   {
     size_t len = 0;
@@ -34387,7 +35152,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
   }
 #endif
 
-#if V7_ENABLE__Memory__stats > 0 && !defined(V7_DISABLE_GC)
+#if V7_ENABLE__Memory__stats > 0 && !V7_DISABLE_GC
   if (dump_stats) {
     printf("Memory stats during init:\n");
     dump_mm_stats(v7);

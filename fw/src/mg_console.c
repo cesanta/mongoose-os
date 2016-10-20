@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_CONSOLE_FILE_BUFFER
 #include "common/cs_frbuf.h"
 #endif
 
@@ -19,7 +19,7 @@
 
 struct console_ctx {
   struct mbuf buf;
-#ifdef MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_CONSOLE_FILE_BUFFER
   struct cs_frbuf *fbuf;
 #endif
   unsigned int initialized : 1;
@@ -45,7 +45,7 @@ void mg_console_putc(char c) {
       l = s_cctx.buf.len;
       s_cctx.msg_in_progress = 0;
     }
-#ifdef MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_CONSOLE_FILE_BUFFER
     if (s_cctx.fbuf != NULL) {
       cs_frbuf_append(s_cctx.fbuf, s_cctx.buf.buf, l - 1);
     }
@@ -85,9 +85,9 @@ void mg_console_printf(const char *fmt, ...) {
   free(buf);
 }
 
-#if defined(MG_ENABLE_CLUBBY) || defined(MG_ENABLE_CONSOLE_FILE_BUFFER)
+#if MG_ENABLE_CLUBBY || MG_ENABLE_CONSOLE_FILE_BUFFER
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 void clubby_cb(struct clubby *clubby, void *cb_arg,
                struct clubby_frame_info *fi, struct mg_str result,
                int error_code, struct mg_str error_msg) {
@@ -109,7 +109,7 @@ static void mg_console_push_to_cloud(void) {
     return;
   }
   if (s_cctx.request_in_flight || !clubby_can_send(c)) return;
-#ifdef MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_CONSOLE_FILE_BUFFER
   /* Push backlog from the file buffer first. */
   if (s_cctx.fbuf != NULL) {
     char *msg = NULL;
@@ -138,7 +138,7 @@ int mg_console_is_waiting_for_resp(void) {
 }
 #endif /* MG_ENABLE_CLUBBY */
 
-#ifdef MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_CONSOLE_FILE_BUFFER
 static void mg_console_flush_to_file(void) {
   if (s_cctx.fbuf == NULL) return;
   int l;
@@ -150,19 +150,19 @@ static void mg_console_flush_to_file(void) {
 #endif
 
 static void mg_console_flush(void *arg) {
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
   mg_console_push_to_cloud();
 #endif
-#ifdef MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_CONSOLE_FILE_BUFFER
   mg_console_flush_to_file();
 #endif
   (void) arg;
 }
-#endif /* defined(MG_ENABLE_CLUBBY) || defined (MG_ENABLE_CONSOLE_FILE_BUFFER) \
+#endif /* MG_ENABLE_CLUBBY || MG_ENABLE_CONSOLE_FILE_BUFFER \
           */
 
 void mg_console_init(void) {
-#ifdef MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_CONSOLE_FILE_BUFFER
   if (get_cfg()->console.log_file != NULL) {
     s_cctx.fbuf = cs_frbuf_init(get_cfg()->console.log_file,
                                 get_cfg()->console.log_file_size);
@@ -170,7 +170,7 @@ void mg_console_init(void) {
                   get_cfg()->console.log_file_size));
   }
 #endif
-#if defined(MG_ENABLE_CLUBBY) || defined(MG_ENABLE_CONSOLE_FILE_BUFFER)
+#if MG_ENABLE_CLUBBY || MG_ENABLE_CONSOLE_FILE_BUFFER
   mg_set_c_timer(MG_CONSOLE_FLUSH_INTERVAL_MS, 1 /* repeat */, mg_console_flush,
                  NULL /* arg */);
 #endif

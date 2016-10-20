@@ -10,7 +10,7 @@
 #include "fw/src/mg_v7_ext.h"
 #include "v7/v7.h"
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_GPIO_API)
+#if MG_ENABLE_JS && MG_ENABLE_GPIO_API
 
 static int s_gpio_intr_installed = 0;
 static v7_val_t s_isr_cb_proxy_v;
@@ -202,4 +202,4 @@ void mg_gpio_api_setup(struct v7 *v7) {
   }
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_GPIO_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_GPIO_API */

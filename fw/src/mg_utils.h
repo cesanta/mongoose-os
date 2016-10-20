@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MG_UTILS_H_
 #define CS_FW_SRC_MG_UTILS_H_
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include "v7/v7.h"
 #include "mongoose/mongoose.h"

@@ -10,9 +10,10 @@
 #include "common/mg_str.h"
 #include "common/platform.h"
 #include "common/queue.h"
+#include "fw/src/mg_features.h"
 #include "fw/src/mg_init.h"
 
-#ifdef MG_ENABLE_DNS_SD
+#if MG_ENABLE_DNS_SD
 
 struct mdns_type {
   SLIST_ENTRY(mdns_type) entries;

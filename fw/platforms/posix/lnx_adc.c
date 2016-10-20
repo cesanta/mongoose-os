@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#ifdef MG_ENABLE_ADC_API
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_ADC_API
 
 #include <stdint.h>
 

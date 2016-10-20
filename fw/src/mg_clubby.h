@@ -6,7 +6,9 @@
 #ifndef CS_FW_SRC_MG_CLUBBY_H_
 #define CS_FW_SRC_MG_CLUBBY_H_
 
-#ifdef MG_ENABLE_CLUBBY
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_CLUBBY
 
 #include "common/clubby/clubby.h"
 #include "fw/src/mg_init.h"

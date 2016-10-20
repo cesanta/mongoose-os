@@ -13,7 +13,7 @@
 #include "common/mg_str.h"
 #include "common/queue.h"
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 
 struct clubby;
 

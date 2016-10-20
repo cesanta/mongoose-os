@@ -21,6 +21,10 @@
 #include "common/platform.h"
 #include "common/utf.h"
 
+#ifndef CS_ENABLE_UTF8
+#define CS_ENABLE_UTF8 0
+#endif
+
 #if CS_ENABLE_UTF8
 enum {
   Bit1 = 7,

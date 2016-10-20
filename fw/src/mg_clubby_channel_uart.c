@@ -6,7 +6,7 @@
 #include "fw/src/mg_clubby_channel_uart.h"
 #include "fw/src/mg_uart.h"
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"

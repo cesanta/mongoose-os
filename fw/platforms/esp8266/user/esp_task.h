@@ -8,7 +8,9 @@
 
 #include "mongoose/mongoose.h"
 
-#ifdef MG_ENABLE_JS
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_JS
 
 #include "v7/v7.h"
 

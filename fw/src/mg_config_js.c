@@ -1,6 +1,6 @@
 #include "fw/src/mg_config_js.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include "fw/src/mg_sys_config.h"
 #include "v7/v7.h"

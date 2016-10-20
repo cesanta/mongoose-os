@@ -1,4 +1,4 @@
-#ifdef ESP_ENABLE_ESPCONN
+#if ESP_ENABLE_ESPCONN
 /******************************************************************************
  * Copyright 2013-2014 Espressif Systems (Wuxi)
  *

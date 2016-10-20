@@ -11,7 +11,7 @@
 
 #include "common/mg_str.h"
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 
 enum clubby_channel_event {
   MG_CLUBBY_CHANNEL_OPEN,

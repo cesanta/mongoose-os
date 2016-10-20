@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if defined(MG_SOCKET_SIMPLELINK) && \
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK && \
     (defined(MG_FS_SLFS) || defined(MG_FS_SPIFFS))
 
 #include <errno.h>
@@ -389,5 +389,5 @@ int sl_fs_init(void) {
   return ret;
 }
 
-#endif /* defined(MG_SOCKET_SIMPLELINK) && (defined(MG_FS_SLFS) || \
+#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK && (defined(MG_FS_SLFS) || \
           defined(MG_FS_SPIFFS)) */

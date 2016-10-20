@@ -8,7 +8,7 @@
 #include "common/umm_malloc/umm_malloc.h"
 #include "esp_umm_malloc.h"
 
-#ifdef ESP_UMM_ENABLE
+#if ESP_UMM_ENABLE
 
 /*
  * ESP-specific glue for the `umm_malloc`.

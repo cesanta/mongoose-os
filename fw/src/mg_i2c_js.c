@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_I2C_API)
+#if MG_ENABLE_JS && MG_ENABLE_I2C_API
 
 #include "fw/src/mg_i2c_js.h"
 
@@ -324,7 +324,7 @@ clean:
   return rcode;
 }
 
-#ifdef ENABLE_IC2_EEPROM_TEST
+#ifdef ENABLE_IC2_EEPROM_TEST /* ifdef-ok */
 
 enum v7_err i2cjs_test(struct v7 *v7, v7_val_t *res) {
   i2c_eeprom_test();
@@ -356,11 +356,11 @@ void mg_i2c_js_init(struct v7 *v7) {
   v7_def(v7, i2c_ctor, "READ", 4, const_attrs, v7_mk_number(v7, I2C_READ));
   v7_def(v7, i2c_ctor, "WRITE", 5, const_attrs, v7_mk_number(v7, I2C_WRITE));
 
-#ifdef ENABLE_IC2_EEPROM_TEST
+#ifdef ENABLE_IC2_EEPROM_TEST /* ifdef-ok */
   v7_set_method(v7, i2c_ctor, "test", i2cjs_test);
 #endif
 
   v7_set(v7, v7_get_global(v7), "I2C", ~0, i2c_ctor);
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_I2C_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_I2C_API */

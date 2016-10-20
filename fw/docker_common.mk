@@ -10,6 +10,7 @@ REPO_PATH ?= $(shell git rev-parse --show-toplevel)
 APP_VERSION ?=
 APP_BUILD_ID ?=
 PYTHON ?= python
+PLATFORM ?=
 DOCKER_EXTRA ?=
 
 REPO_ABS_PATH = $(realpath $(REPO_PATH))
@@ -43,6 +44,7 @@ MAKE_CMD=$(INNER_MAKE) -j4 \
       APP_VERSION=$(APP_VERSION) \
       APP_BUILD_ID=$(APP_BUILD_ID) \
       REPO_PATH=$(MAKE_REPO_ABS_PATH)/$(MIOT_REPO_SUBDIR) \
+      PLATFORM=$(PLATFORM) \
       $@ -$(MAKEFLAGS)
 
 # define targets "all" and "clean" differently, depending on whether we're

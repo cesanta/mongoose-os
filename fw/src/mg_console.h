@@ -6,11 +6,13 @@
 #ifndef CS_FW_SRC_MG_CONSOLE_H_
 #define CS_FW_SRC_MG_CONSOLE_H_
 
+#include "fw/src/mg_features.h"
+
 void mg_console_init(void);
 void mg_console_putc(char c);
 void mg_console_printf(const char *fmt, ...);
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 int mg_console_is_waiting_for_resp(void);
 
 #define CONSOLE_LOG(l, x)          \

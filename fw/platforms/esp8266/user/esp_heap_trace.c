@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#if defined(ESP_ENABLE_HEAP_LOG)
+#include "fw/platforms/esp8266/user/esp_features.h"
+
+#if ESP_ENABLE_HEAP_LOG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +30,7 @@ extern void __real_vPortFree(void *pv, const char *file, int line);
 
 extern void mg_wdt_feed(void);
 
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
 extern void call_trace_print(const char *prefix, const char *suffix,
                              size_t skip_cnt, size_t max_cnt);
 #if !defined(CALL_TRACE_MAX_CNT)
@@ -106,7 +108,7 @@ static struct log *plog = NULL;
 
 NOINSTR
 static void echo_log_malloc_req(size_t size, int shim) {
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
   call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
 #endif
   fprintf(stderr, "hl{m,%u,%d,", (unsigned int) size, shim);
@@ -114,7 +116,7 @@ static void echo_log_malloc_req(size_t size, int shim) {
 
 NOINSTR
 static void echo_log_zalloc_req(size_t size, int shim) {
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
   call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
 #endif
   fprintf(stderr, "hl{z,%u,%d,", (unsigned int) size, shim);
@@ -122,7 +124,7 @@ static void echo_log_zalloc_req(size_t size, int shim) {
 
 NOINSTR
 static void echo_log_calloc_req(size_t size, int shim) {
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
   call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
 #endif
   fprintf(stderr, "hl{c,%u,%d,", (unsigned int) size, shim);
@@ -130,7 +132,7 @@ static void echo_log_calloc_req(size_t size, int shim) {
 
 NOINSTR
 static void echo_log_realloc_req(size_t size, int shim, void *old_ptr) {
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
   call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
 #endif
   fprintf(stderr, "hl{r,%u,%d,%x,", (unsigned int) size, shim,
@@ -144,7 +146,7 @@ static void echo_log_alloc_res(void *ptr) {
 
 NOINSTR
 static void echo_log_free(void *ptr, int shim) {
-#if defined(V7_ENABLE_CALL_TRACE)
+#if V7_ENABLE_CALL_TRACE
   call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
 #endif
   fprintf(stderr, "hl{f,%x,%d}\n", (unsigned int) ptr, shim);

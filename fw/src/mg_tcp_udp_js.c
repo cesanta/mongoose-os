@@ -3,13 +3,13 @@
  * All rights reserved
  */
 
+#include "fw/src/mg_features.h"
 #include "fw/src/mg_tcp_udp_js.h"
 
 #include <stdio.h>
 #include <math.h>
 
-#if defined(MG_ENABLE_JS) && \
-    (defined(MG_ENABLE_TCP_API) || defined(MG_ENABLE_UDP_API))
+#if MG_ENABLE_JS && (MG_ENABLE_TCP_API || MG_ENABLE_UDP_API)
 
 #include "common/queue.h"
 #include "fw/src/mg_common.h"
@@ -1492,7 +1492,7 @@ clean:
   return rcode;
 }
 
-#ifdef MG_ENABLE_UDP_API
+#if MG_ENABLE_UDP_API
 void mg_udp_api_setup(struct v7 *v7) {
   /* UDP */
   v7_val_t dgram = v7_mk_object(v7);
@@ -1530,7 +1530,7 @@ void mg_udp_api_setup(struct v7 *v7) {
 }
 #endif /* MG_ENABLE_UDP_API */
 
-#ifdef MG_ENABLE_TCP_API
+#if MG_ENABLE_TCP_API
 void mg_tcp_api_setup(struct v7 *v7) {
   /* TCP */
   v7_val_t tcp = v7_mk_object(v7);
@@ -1592,5 +1592,5 @@ void mg_tcp_api_setup(struct v7 *v7) {
 }
 #endif /* MG_ENABLE_TCP_API */
 
-#endif /* defined(MG_ENABLE_JS) && (defined(MG_ENABLE_TCP_API) || \
-          defined(MG_ENABLE_UDP_API)) */
+#endif /* MG_ENABLE_JS && (MG_ENABLE_TCP_API || \
+          MG_ENABLE_UDP_API) */

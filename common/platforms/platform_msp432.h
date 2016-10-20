@@ -20,13 +20,7 @@
 #include <sys/time.h>
 #endif
 
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 
 #include "common/platforms/simplelink/cs_simplelink.h"
 
@@ -92,6 +86,14 @@ int _stat(const char *pathname, struct stat *st);
 #define va_copy(apc, ap) ((apc) = (ap))
 
 #endif /* __TI_COMPILER_VERSION__ */
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && !defined(MG_ENABLE_FILESYSTEM)
+#define MG_ENABLE_FILESYSTEM 1
+#endif
 
 #ifdef __cplusplus
 }

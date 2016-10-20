@@ -16,8 +16,7 @@
 #include "fw/src/mg_v7_ext.h"
 #include "fw/src/mg_sys_config.h"
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_CLUBBY) && \
-    defined(MG_ENABLE_CLUBBY_API)
+#if MG_ENABLE_JS && MG_ENABLE_CLUBBY && MG_ENABLE_CLUBBY_API
 
 #ifdef __cplusplus
 extern "C" {
@@ -556,5 +555,5 @@ void mg_clubby_js_init(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_CLUBBY) && \
-          defined(MG_ENABLE_CLUBBY_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_CLUBBY && \
+          MG_ENABLE_CLUBBY_API */

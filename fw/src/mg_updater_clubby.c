@@ -19,9 +19,9 @@
 #include "fw/src/mg_utils.h"
 #include "fw/src/mg_v7_ext.h"
 
-#if defined(MG_ENABLE_UPDATER_CLUBBY) && defined(MG_ENABLE_CLUBBY)
+#if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -36,7 +36,7 @@ enum js_update_status {
   UJS_ERROR
 };
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_UPDATER_CLUBBY_API)
+#if MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API
 static struct v7 *s_v7;
 static v7_val_t s_updater_notify_cb;
 
@@ -59,7 +59,7 @@ static int notify_js(enum js_update_status us, const char *info) {
   (void) info;
   return 0;
 }
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_UPDATER_CLUBBY_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API */
 
 static int fill_zip_header(char *buf, size_t buf_size,
                            const struct mg_str file_name, uint32_t file_size,
@@ -272,7 +272,7 @@ static int do_http_connect(struct update_context *ctx, const char *url,
   struct mg_connect_opts opts;
   memset(&opts, 0, sizeof(opts));
 
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   if (strlen(url) > 8 && strncmp(url, "https://", 8) == 0) {
     opts.ssl_server_name = get_cfg()->update.ssl_server_name;
     opts.ssl_ca_cert = get_cfg()->update.ssl_ca_file;
@@ -489,7 +489,7 @@ clean:
   free(data);
 }
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_UPDATER_CLUBBY_API)
+#if MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API
 static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
 
@@ -551,6 +551,6 @@ void mg_updater_clubby_js_init(struct v7 *v7) {
          (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
          v7_mk_number(v7, UJS_ERROR));
 }
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_UPDATER_CLUBBY_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API */
 
-#endif /* defined(MG_ENABLE_UPDATER_CLUBBY) && defined(MG_ENABLE_CLUBBY) */
+#endif /* MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY */

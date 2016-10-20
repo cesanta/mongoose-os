@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 
 #include "common/clubby/clubby.h"
 #include "common/clubby/clubby_channel.h"
