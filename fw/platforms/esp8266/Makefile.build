@@ -57,7 +57,7 @@ CREATE_SPIFFS_FS ?= 1
 CREATE_SPIFFS_FS_EXT ?= 1
 CREATE_RAW_FS ?= 0
 
-FLASH_SIZE ?= 4M
+FLASH_SIZE ?= 1M
 FS_SIZE ?= 128K
 FS_EXT_SIZE = 0x1FC000
 FS_BLOCK_SIZE = 4096
@@ -356,7 +356,8 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            boot_cfg:src=$(RBOOT_CFG_INIT),addr=0x1000 \
            rf_cal_data:src=$(RF_CAL_DATA_INIT),addr=$(FW_RF_CAL_DATA_ADDR) \
-           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR)
+           fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR) \
+           sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
 
 ifeq "$(CREATE_SPIFFS_FS)" "1"
   FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
