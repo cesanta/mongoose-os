@@ -11,13 +11,13 @@
 #include "common/cs_time.h"
 
 enum cs_log_level cs_log_level =
-#ifdef CS_ENABLE_DEBUG
+#if CS_ENABLE_DEBUG
     LL_VERBOSE_DEBUG;
 #else
     LL_ERROR;
 #endif
 
-#ifndef CS_DISABLE_STDIO
+#if CS_ENABLE_STDIO
 
 FILE *cs_log_file = NULL;
 
@@ -50,11 +50,11 @@ void cs_log_set_file(FILE *file) {
   cs_log_file = file;
 }
 
-#endif /* !CS_DISABLE_STDIO */
+#endif /* CS_ENABLE_STDIO */
 
 void cs_log_set_level(enum cs_log_level level) {
   cs_log_level = level;
-#if defined(CS_LOG_TS_DIFF) && !defined(CS_DISABLE_STDIO)
+#if CS_LOG_TS_DIFF && CS_ENABLE_STDIO
   cs_log_ts = cs_time();
 #endif
 }

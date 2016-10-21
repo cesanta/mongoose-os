@@ -87,7 +87,7 @@ struct dirent *readdir(DIR *dir) {
 }
 #endif
 
-#ifdef CS_ENABLE_SPIFFS
+#if CS_ENABLE_SPIFFS
 
 DIR *opendir(const char *dir_name) {
   DIR *dir = NULL;

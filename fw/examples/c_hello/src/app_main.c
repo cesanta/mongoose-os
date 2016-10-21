@@ -5,7 +5,7 @@
 #include "fw/src/mg_gpio.h"
 #include "fw/src/mg_sys_config.h"
 
-#if CS_PLATFORM == CS_P_ESP_LWIP
+#if CS_PLATFORM == CS_P_ESP8266
 #define GPIO 12
 #elif CS_PLATFORM == CS_P_CC3200
 #define GPIO 64 /* The red LED on LAUNCHXL */

@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_SPI_API)
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_JS && MG_ENABLE_SPI_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -149,4 +151,4 @@ void mg_spi_close(spi_connection c) {
   free(c);
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_SPI_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_SPI_API */

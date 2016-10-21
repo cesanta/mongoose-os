@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifdef MG_NET_IF_LWIP
+#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
 
 #include <lwip/pbuf.h>
 #include <lwip/tcp.h>
@@ -12,10 +12,40 @@
 
 #include "common/cs_dbg.h"
 
+/*
+ * Depending on whether Mongoose is compiled with ipv6 support, use right
+ * lwip functions
+ */
+#if MG_ENABLE_IPV6
+# define TCP_NEW tcp_new_ip6
+# define TCP_BIND tcp_bind_ip6
+# define UDP_BIND udp_bind_ip6
+# define IPADDR_NTOA ip6addr_ntoa
+# define SET_ADDR(dst, src)                                \
+    memcpy((dst)->sin6.sin6_addr.s6_addr, (src)->ip6.addr, \
+           sizeof((dst)->sin6.sin6_addr.s6_addr))
+#else
+# define TCP_NEW tcp_new
+# define TCP_BIND tcp_bind
+# define UDP_BIND udp_bind
+# define IPADDR_NTOA ipaddr_ntoa
+# define SET_ADDR(dst, src) (dst)->sin.sin_addr.s_addr = GET_IPV4(src)
+#endif
+
+/*
+ * If lwip is compiled with ipv6 support, then API changes even for ipv4
+ */
+#if !defined(LWIP_IPV6) || !LWIP_IPV6
+# define GET_IPV4(ipX_addr) ((ipX_addr)->addr)
+#else
+# define GET_IPV4(ipX_addr) ((ipX_addr)->ip4.addr)
+#endif
+
 void mg_lwip_ssl_do_hs(struct mg_connection *nc);
 void mg_lwip_ssl_send(struct mg_connection *nc);
 void mg_lwip_ssl_recv(struct mg_connection *nc);
 
+#if LWIP_TCP_KEEPALIVE
 void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
                                   int interval, int count) {
   if (nc->sock == INVALID_SOCKET || nc->flags & MG_F_UDP) {
@@ -32,10 +62,13 @@ void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
     tpcb->so_options &= ~SOF_KEEPALIVE;
   }
 }
+#elif !defined(MG_NO_LWIP_TCP_KEEPALIVE)
+#warning LWIP TCP keepalive is disabled. Please consider enabling it.
+#endif /* LWIP_TCP_KEEPALIVE */
 
 static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
   struct mg_connection *nc = (struct mg_connection *) arg;
-  DBG(("%p connect to %s:%u = %d", nc, ipaddr_ntoa(&tpcb->remote_ip),
+  DBG(("%p connect to %s:%u = %d", nc, IPADDR_NTOA(&tpcb->remote_ip),
        tpcb->remote_port, err));
   if (nc == NULL) {
     tcp_abort(tpcb);
@@ -43,7 +76,9 @@ static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
   }
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   cs->err = err;
+#if LWIP_TCP_KEEPALIVE
   if (err == 0) mg_lwip_set_keepalive_params(nc, 60, 10, 6);
+#endif
 #ifdef SSL_KRYPTON
   if (err == 0 && nc->ssl != NULL) {
     SSL_set_fd(nc->ssl, (intptr_t) nc);
@@ -165,7 +200,7 @@ static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
 void mg_if_connect_tcp(struct mg_connection *nc,
                        const union socket_address *sa) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-  struct tcp_pcb *tpcb = tcp_new();
+  struct tcp_pcb *tpcb = TCP_NEW();
   cs->pcb.tcp = tpcb;
   ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
   u16_t port = ntohs(sa->sin.sin_port);
@@ -173,7 +208,7 @@ void mg_if_connect_tcp(struct mg_connection *nc,
   tcp_err(tpcb, mg_lwip_tcp_error_cb);
   tcp_sent(tpcb, mg_lwip_tcp_sent_cb);
   tcp_recv(tpcb, mg_lwip_tcp_recv_cb);
-  cs->err = tcp_bind(tpcb, IP_ADDR_ANY, 0 /* any port */);
+  cs->err = TCP_BIND(tpcb, IP_ADDR_ANY, 0 /* any port */);
   DBG(("%p tcp_bind = %d", nc, cs->err));
   if (cs->err != ERR_OK) {
     mg_lwip_post_signal(MG_SIG_CONNECT_RESULT, nc);
@@ -194,7 +229,7 @@ static void mg_lwip_udp_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p,
   char *data = (char *) malloc(len);
   union socket_address sa;
   (void) pcb;
-  DBG(("%p %s:%u %u", nc, ipaddr_ntoa(addr), port, p->len));
+  DBG(("%p %s:%u %u", nc, IPADDR_NTOA(addr), port, p->len));
   if (data == NULL) {
     DBG(("OOM"));
     pbuf_free(p);
@@ -210,7 +245,7 @@ static void mg_lwip_udp_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p,
 void mg_if_connect_udp(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct udp_pcb *upcb = udp_new();
-  cs->err = udp_bind(upcb, IP_ADDR_ANY, 0 /* any port */);
+  cs->err = UDP_BIND(upcb, IP_ADDR_ANY, 0 /* any port */);
   DBG(("%p udp_bind %p = %d", nc, upcb, cs->err));
   if (cs->err == ERR_OK) {
     udp_recv(upcb, mg_lwip_udp_recv_cb, nc);
@@ -223,7 +258,7 @@ void mg_if_connect_udp(struct mg_connection *nc) {
 
 void mg_lwip_accept_conn(struct mg_connection *nc, struct tcp_pcb *tpcb) {
   union socket_address sa;
-  sa.sin.sin_addr.s_addr = tpcb->remote_ip.addr;
+  SET_ADDR(&sa, &tpcb->remote_ip);
   sa.sin.sin_port = htons(tpcb->remote_port);
   mg_if_accept_tcp_cb(nc, &sa, sizeof(sa.sin));
 }
@@ -231,7 +266,7 @@ void mg_lwip_accept_conn(struct mg_connection *nc, struct tcp_pcb *tpcb) {
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   struct mg_connection *lc = (struct mg_connection *) arg;
   (void) err;
-  DBG(("%p conn %p from %s:%u", lc, newtpcb, ipaddr_ntoa(&newtpcb->remote_ip),
+  DBG(("%p conn %p from %s:%u", lc, newtpcb, IPADDR_NTOA(&newtpcb->remote_ip),
        newtpcb->remote_port));
   struct mg_connection *nc = mg_if_accept_new_conn(lc);
   if (nc == NULL) {
@@ -244,7 +279,9 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   tcp_err(newtpcb, mg_lwip_tcp_error_cb);
   tcp_sent(newtpcb, mg_lwip_tcp_sent_cb);
   tcp_recv(newtpcb, mg_lwip_tcp_recv_cb);
+#if LWIP_TCP_KEEPALIVE
   mg_lwip_set_keepalive_params(nc, 60, 10, 6);
+#endif
 #ifdef SSL_KRYPTON
   if (lc->ssl_ctx != NULL) {
     nc->ssl = SSL_new(lc->ssl_ctx);
@@ -262,11 +299,11 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
 
 int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-  struct tcp_pcb *tpcb = tcp_new();
+  struct tcp_pcb *tpcb = TCP_NEW();
   ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
   u16_t port = ntohs(sa->sin.sin_port);
-  cs->err = tcp_bind(tpcb, ip, port);
-  DBG(("%p tcp_bind(%s:%u) = %d", nc, ipaddr_ntoa(ip), port, cs->err));
+  cs->err = TCP_BIND(tpcb, ip, port);
+  DBG(("%p tcp_bind(%s:%u) = %d", nc, IPADDR_NTOA(ip), port, cs->err));
   if (cs->err != ERR_OK) {
     tcp_close(tpcb);
     return -1;
@@ -283,8 +320,8 @@ int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   struct udp_pcb *upcb = udp_new();
   ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
   u16_t port = ntohs(sa->sin.sin_port);
-  cs->err = udp_bind(upcb, ip, port);
-  DBG(("%p udb_bind(%s:%u) = %d", nc, ipaddr_ntoa(ip), port, cs->err));
+  cs->err = UDP_BIND(upcb, ip, port);
+  DBG(("%p udb_bind(%s:%u) = %d", nc, IPADDR_NTOA(ip), port, cs->err));
   if (cs->err != ERR_OK) {
     udp_remove(upcb);
     return -1;
@@ -376,9 +413,13 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
   DBG(("%p %p %u", nc, cs->pcb.tcp, len));
   /* Currently SSL acknowledges data immediately.
    * TODO(rojer): Find a way to propagate mg_if_recved. */
+#if MG_ENABLE_SSL
   if (nc->ssl == NULL) {
     tcp_recved(cs->pcb.tcp, len);
   }
+#else
+  tcp_recved(cs->pcb.tcp, len);
+#endif
   mbuf_trim(&nc->recv_mbuf);
 }
 
@@ -432,16 +473,16 @@ void mg_if_get_conn_addr(struct mg_connection *nc, int remote,
       memcpy(sa, &nc->sa, sizeof(*sa));
     } else {
       sa->sin.sin_port = htons(upcb->local_port);
-      sa->sin.sin_addr.s_addr = upcb->local_ip.addr;
+      SET_ADDR(sa, &upcb->local_ip);
     }
   } else {
     struct tcp_pcb *tpcb = cs->pcb.tcp;
     if (remote) {
       sa->sin.sin_port = htons(tpcb->remote_port);
-      sa->sin.sin_addr.s_addr = tpcb->remote_ip.addr;
+      SET_ADDR(sa, &tpcb->remote_ip);
     } else {
       sa->sin.sin_port = htons(tpcb->local_port);
-      sa->sin.sin_addr.s_addr = tpcb->local_ip.addr;
+      SET_ADDR(sa, &tpcb->local_ip);
     }
   }
 }
@@ -450,4 +491,4 @@ void mg_sock_set(struct mg_connection *nc, sock_t sock) {
   nc->sock = sock;
 }
 
-#endif /* MG_NET_IF_LWIP */
+#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL */

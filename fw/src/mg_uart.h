@@ -21,7 +21,7 @@ struct mg_uart_config {
   int rx_buf_size;
   int rx_fc_ena;
   int rx_linger_micros;
-#if CS_PLATFORM == CS_P_ESP_LWIP
+#if CS_PLATFORM == CS_P_ESP8266
   int rx_fifo_full_thresh;
   int rx_fifo_fc_thresh;
   int rx_fifo_alarm;
@@ -29,7 +29,7 @@ struct mg_uart_config {
 
   int tx_buf_size;
   int tx_fc_ena;
-#if CS_PLATFORM == CS_P_ESP_LWIP
+#if CS_PLATFORM == CS_P_ESP8266
   int tx_fifo_empty_thresh;
   int tx_fifo_full_thresh;
 

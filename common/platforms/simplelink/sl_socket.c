@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifdef MG_SOCKET_SIMPLELINK
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK
 
 #include <errno.h>
 #include <stdio.h>
@@ -45,4 +45,4 @@ int inet_pton(int af, const char *src, void *dst) {
   return 1;
 }
 
-#endif /* CS_COMMON_PLATFORMS_SIMPLELINK_SL_SOCKET_C_ */
+#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK */

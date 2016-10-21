@@ -138,7 +138,7 @@ struct mg_uart_config *mg_uart_default_config(void) {
   cfg->baud_rate = 115200;
   cfg->rx_buf_size = cfg->tx_buf_size = 256;
   cfg->rx_linger_micros = 15;
-#if CS_PLATFORM == CS_P_ESP_LWIP
+#if CS_PLATFORM == CS_P_ESP8266
   cfg->rx_fifo_alarm = 10;
   cfg->rx_fifo_full_thresh = 120;
   cfg->tx_fifo_empty_thresh = 10;

@@ -30,42 +30,6 @@
 #include <mg_locals.h>
 #endif
 
-#if defined(MG_ENABLE_DEBUG) && !defined(CS_ENABLE_DEBUG)
-#define CS_ENABLE_DEBUG
-#endif
-#if defined(MG_DISABLE_STDIO) && !defined(CS_DISABLE_STDIO)
-#define CS_DISABLE_STDIO
-#elif defined(CS_DISABLE_STDIO) && !defined(MG_DISABLE_STDIO)
-#define MG_DISABLE_STDIO
-#endif
-
-/* All of the below features depend on filesystem access, disable them. */
-#ifdef MG_DISABLE_FILESYSTEM
-#ifndef MG_DISABLE_DAV
-#define MG_DISABLE_DAV
-#endif
-#ifndef MG_DISABLE_CGI
-#define MG_DISABLE_CGI
-#endif
-#ifndef MG_DISABLE_DIRECTORY_LISTING
-#define MG_DISABLE_DIRECTORY_LISTING
-#endif
-#ifndef MG_DISABLE_DAV
-#define MG_DISABLE_DAV
-#endif
-#endif /* MG_DISABLE_FILESYSTEM */
-
-#ifdef MG_NO_BSD_SOCKETS
-#ifndef MG_DISABLE_SYNC_RESOLVER
-#define MG_DISABLE_SYNC_RESOLVER
-#endif
-#ifndef MG_DISABLE_SOCKETPAIR
-#define MG_DISABLE_SOCKETPAIR
-#endif
-#endif /* MG_NO_BSD_SOCKETS */
-
-/* Amalgamated: #include "common/cs_dbg.h" */
-
 #endif /* CS_MONGOOSE_SRC_COMMON_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "common/platform.h"
@@ -80,11 +44,14 @@
 #define CS_P_CUSTOM 0
 #define CS_P_UNIX 1
 #define CS_P_WINDOWS 2
-#define CS_P_ESP_LWIP 3
+#define CS_P_ESP8266 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
 #define CS_P_CC3100 6
 #define CS_P_MBED 7
+#define CS_P_WINCE 8
+#define CS_P_NXP_KINETIS 9
+#define CS_P_NRF52 10
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -96,10 +63,14 @@
 #define CS_PLATFORM CS_P_CC3200
 #elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
+#elif defined(WINCE)
+#define CS_PLATFORM CS_P_WINCE
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
 #elif defined(__MBED__)
 #define CS_PLATFORM CS_P_MBED
+#elif defined(FRDM_K64F) || defined(FREEDOM)
+#define CS_PLATFORM CS_P_NXP_KINETIS
 #endif
 
 #ifndef CS_PLATFORM
@@ -108,12 +79,19 @@
 
 #endif /* !defined(CS_PLATFORM) */
 
+#define MG_NET_IF_SOCKET 1
+#define MG_NET_IF_SIMPLELINK 2
+#define MG_NET_IF_LWIP_LOW_LEVEL 3
+
 /* Amalgamated: #include "common/platforms/platform_unix.h" */
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
-/* Amalgamated: #include "common/platforms/platform_esp_lwip.h" */
+/* Amalgamated: #include "common/platforms/platform_esp8266.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3200.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3100.h" */
 /* Amalgamated: #include "common/platforms/platform_mbed.h" */
+/* Amalgamated: #include "common/platforms/platform_nrf52.h" */
+/* Amalgamated: #include "common/platforms/platform_wince.h" */
+/* Amalgamated: #include "common/platforms/platform_nxp_kinetis.h" */
 
 /* Common stuff */
 
@@ -158,8 +136,13 @@
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
 
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+#endif
+
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include <assert.h>
 #include <direct.h>
@@ -277,6 +260,30 @@ typedef struct _stati64 cs_stat_t;
 #define MG_MAX_HTTP_HEADERS 40
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#ifndef MG_ENABLE_BROADCAST
+#define MG_ENABLE_BROADCAST 1
+#endif
+
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_ENABLE_HTTP_CGI
+#define MG_ENABLE_HTTP_CGI 1
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 #endif /* CS_PLATFORM == CS_P_WINDOWS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINDOWS_H_ */
 #ifdef MG_MODULE_LINES
@@ -379,49 +386,53 @@ typedef struct stat cs_stat_t;
 #define MG_MAX_HTTP_HEADERS 40
 #endif
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#ifndef MG_ENABLE_BROADCAST
+#define MG_ENABLE_BROADCAST 1
+#endif
+
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_ENABLE_HTTP_CGI
+#define MG_ENABLE_HTTP_CGI 1
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
 #ifdef MG_MODULE_LINES
-#line 1 "common/platforms/platform_esp_lwip.h"
+#line 1 "common/platforms/platform_esp8266.h"
 #endif
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_
-#if CS_PLATFORM == CS_P_ESP_LWIP
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_
+#if CS_PLATFORM == CS_P_ESP8266
 
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <machine/endian.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <lwip/err.h>
-#include <lwip/ip_addr.h>
-#include <lwip/inet.h>
-#include <lwip/netdb.h>
-#include <lwip/dns.h>
-
-#ifndef LWIP_PROVIDE_ERRNO
-#include <errno.h>
-#endif
-
-#define LWIP_TIMEVAL_PRIVATE 0
-
-#if LWIP_SOCKET
-#include <lwip/sockets.h>
-#define SOMAXCONN 10
-#else
-/* We really need the definitions from sockets.h. */
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 1
-#include <lwip/sockets.h>
-#undef LWIP_SOCKET
-#define LWIP_SOCKET 0
-#endif
-
-typedef int sock_t;
-#define INVALID_SOCKET (-1)
 #define SIZE_T_FMT "u"
 typedef struct stat cs_stat_t;
 #define DIRSEP '/'
@@ -429,21 +440,25 @@ typedef struct stat cs_stat_t;
 #define INT64_FMT PRId64
 #define INT64_X_FMT PRIx64
 #define __cdecl
+#define _FILE_OFFSET_BITS 32
 
-unsigned long os_random(void);
-#define random os_random
+#define MG_LWIP 1
 
-#ifndef RTOS_SDK
-#define MG_NET_IF_LWIP
-struct mg_mgr;
-struct mg_connection;
-uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
-void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
-                                  int interval, int count);
+#ifdef RTOS_SDK
+#  define MG_NET_IF MG_NET_IF_SOCKET
+#else
+#  define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
 #endif
 
-#endif /* CS_PLATFORM == CS_P_ESP_LWIP */
-#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */
+/* struct timeval is defined in sys/time.h. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#endif /* CS_PLATFORM == CS_P_ESP8266 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "common/platforms/platform_cc3100.h"
 #endif
@@ -464,14 +479,7 @@ void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
 #include <string.h>
 #include <time.h>
 
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
-#define MG_DISABLE_FILESYSTEM 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 
 /*
  * CC3100 SDK and STM32 SDK include headers w/out path, just like
@@ -524,15 +532,11 @@ int inet_pton(int af, const char *src, void *dst);
 #include <sys/time.h>
 #endif
 
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
+
 /* Only SPIFFS supports directories, SLFS does not. */
-#ifndef CC3200_FS_SPIFFS
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
+#if defined(CC3200_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
+#define MG_ENABLE_DIRECTORY_LISTING 1
 #endif
 
 /* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
@@ -623,6 +627,14 @@ struct dirent *readdir(DIR *dir);
 #define MG_FS_SLFS
 #endif
 
+#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && !defined(MG_ENABLE_FILESYSTEM)
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -654,13 +666,7 @@ struct dirent *readdir(DIR *dir);
 #include <sys/time.h>
 #endif
 
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
 
 /* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
 
@@ -727,6 +733,14 @@ int _stat(const char *pathname, struct stat *st);
 
 #endif /* __TI_COMPILER_VERSION__ */
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && !defined(MG_ENABLE_FILESYSTEM)
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -747,8 +761,42 @@ int _stat(const char *pathname, struct stat *st);
 
 /* Amalgamated: #include "mbed.h" */
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 #endif /* CS_PLATFORM == CS_P_MBED */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_MBED_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_nrf52.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_
+#if CS_PLATFORM == CS_P_NRF52
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#define MG_NET_IF             MG_NET_IF_LWIP_LOW_LEVEL
+#define LWIP_TIMEVAL_PRIVATE  0
+#define LWIP_PROVIDE_ERRNO    1
+#define MG_LWIP               1
+#define MG_ENABLE_IPV6        1
+
+#define INT64_FMT PRId64
+#define SIZE_T_FMT "u"
+
+#endif /* CS_PLATFORM == CS_P_NRF52 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "common/platforms/simplelink/cs_simplelink.h"
 #endif
@@ -761,7 +809,7 @@ int _stat(const char *pathname, struct stat *st);
 #define CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
 
 /* If simplelink.h is already included, all bets are off. */
-#if defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__)
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__)
 
 #include <stdbool.h>
 
@@ -852,9 +900,280 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 }
 #endif
 
-#endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
+#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__) */
 
 #endif /* CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_wince.h"
+#endif
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_
+
+#if CS_PLATFORM == CS_P_WINCE
+
+/*
+ * MSVC++ 14.0 _MSC_VER == 1900 (Visual Studio 2015)
+ * MSVC++ 12.0 _MSC_VER == 1800 (Visual Studio 2013)
+ * MSVC++ 11.0 _MSC_VER == 1700 (Visual Studio 2012)
+ * MSVC++ 10.0 _MSC_VER == 1600 (Visual Studio 2010)
+ * MSVC++ 9.0  _MSC_VER == 1500 (Visual Studio 2008)
+ * MSVC++ 8.0  _MSC_VER == 1400 (Visual Studio 2005)
+ * MSVC++ 7.1  _MSC_VER == 1310 (Visual Studio 2003)
+ * MSVC++ 7.0  _MSC_VER == 1300
+ * MSVC++ 6.0  _MSC_VER == 1200
+ * MSVC++ 5.0  _MSC_VER == 1100
+ */
+#pragma warning(disable : 4127) /* FD_SET() emits warning, disable it */
+#pragma warning(disable : 4204) /* missing c99 support */
+
+#ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _WINSOCK_DEPRECATED_NO_WARNINGS 1
+#endif
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#pragma comment(lib, "ws2.lib") /* Linking with WinCE winsock library */
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+#define strdup _strdup
+
+#ifndef EINPROGRESS
+#define EINPROGRESS WSAEINPROGRESS
+#endif
+
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
+
+#ifndef __func__
+#define STRX(x) #x
+#define STR(x) STRX(x)
+#define __func__ __FILE__ ":" STR(__LINE__)
+#endif
+
+#define snprintf _snprintf
+#define fileno _fileno
+#define vsnprintf _vsnprintf
+#define sleep(x) Sleep((x) *1000)
+#define to64(x) _atoi64(x)
+#define rmdir _rmdir
+
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define fseeko(x, y, z) _fseeki64((x), (y), (z))
+#else
+#define fseeko(x, y, z) fseek((x), (y), (z))
+#endif
+
+typedef int socklen_t;
+
+#if _MSC_VER >= 1700
+#include <stdint.h>
+#else
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef int int32_t;
+typedef unsigned int uint32_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+#endif
+
+typedef SOCKET sock_t;
+typedef uint32_t in_addr_t;
+
+#ifndef UINT16_MAX
+#define UINT16_MAX 65535
+#endif
+
+#ifndef UINT32_MAX
+#define UINT32_MAX 4294967295
+#endif
+
+#ifndef pid_t
+#define pid_t HANDLE
+#endif
+
+#define INT64_FMT "I64d"
+#define INT64_X_FMT "I64x"
+/* TODO(alashkin): check if this is correct */
+#define SIZE_T_FMT "u"
+
+#define DIRSEP '\\'
+
+#ifndef va_copy
+#ifdef __va_copy
+#define va_copy __va_copy
+#else
+#define va_copy(x, y) (x) = (y)
+#endif
+#endif
+
+#ifndef MG_MAX_HTTP_REQUEST_SIZE
+#define MG_MAX_HTTP_REQUEST_SIZE 8192
+#endif
+
+#ifndef MG_MAX_HTTP_SEND_MBUF
+#define MG_MAX_HTTP_SEND_MBUF 4096
+#endif
+
+#ifndef MG_MAX_HTTP_HEADERS
+#define MG_MAX_HTTP_HEADERS 40
+#endif
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+typedef unsigned int* uintptr_t;
+#define abort() DebugBreak();
+
+#ifndef BUFSIZ
+#define BUFSIZ 4096
+#define ENOMEM ERROR_NOT_ENOUGH_MEMORY
+#endif
+/*
+ * Explicitly disabling MG_ENABLE_THREADS for WinCE
+ * because they are enabled for _WIN32 by default
+ */
+#ifndef MG_ENABLE_THREADS
+#define MG_ENABLE_THREADS 0
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 1
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
+typedef struct _stati64 {
+  uint32_t st_mtime;
+  uint32_t st_size;
+  uint32_t st_mode;
+} cs_stat_t;
+
+#define ENOENT ERROR_PATH_NOT_FOUND
+#define EACCES ERROR_ACCESS_DENIED
+
+#define _S_IFREG 2
+#define _S_IFDIR 4
+
+#ifndef S_ISDIR
+#define S_ISDIR(x) (((x) & _S_IFDIR) != 0)
+#endif
+
+#ifndef S_ISREG
+#define S_ISREG(x) (((x) & _S_IFREG) != 0)
+#endif
+
+int open(const char *filename, int oflag, int pmode);
+int _wstati64(const wchar_t *path, cs_stat_t *st);
+const char *strerror();
+
+#endif /* CS_PLATFORM == CS_P_WINCE */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_nxp_kinetis.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_
+
+#if CS_PLATFORM == CS_P_NXP_KINETIS
+
+#include <ctype.h>
+#include <inttypes.h>
+#include <string.h>
+#include <sys/time.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT "lld"
+#define INT64_X_FMT "llx"
+#define __cdecl
+
+#define MG_LWIP 1
+
+#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
+
+/* struct timeval is defined in sys/time.h. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#endif /* CS_PLATFORM == CS_P_NXP_KINETIS */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/lwip/mg_lwip.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_LWIP_MG_LWIP_H_
+#define CS_COMMON_PLATFORMS_LWIP_MG_LWIP_H_
+
+#ifndef MG_LWIP
+#define MG_LWIP 0
+#endif
+
+#if MG_LWIP
+
+#include <lwip/opt.h>
+#include <lwip/err.h>
+#include <lwip/ip_addr.h>
+#include <lwip/inet.h>
+#include <lwip/netdb.h>
+#include <lwip/dns.h>
+
+#ifndef LWIP_PROVIDE_ERRNO
+#include <errno.h>
+#endif
+
+#if LWIP_SOCKET
+#  include <lwip/sockets.h>
+#else
+/* We really need the definitions from sockets.h. */
+#  undef LWIP_SOCKET
+#  define LWIP_SOCKET 1
+#  include <lwip/sockets.h>
+#  undef LWIP_SOCKET
+#  define LWIP_SOCKET 0
+#endif
+
+#define INVALID_SOCKET (-1)
+#define SOMAXCONN 10
+typedef int sock_t;
+
+#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
+struct mg_mgr;
+struct mg_connection;
+uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
+void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
+                                  int interval, int count);
+#endif
+
+#endif /* MG_LWIP */
+
+#endif /* CS_COMMON_PLATFORMS_LWIP_MG_LWIP_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "common/cs_time.h"
 #endif
@@ -1025,6 +1344,10 @@ void mbuf_trim(struct mbuf *);
 #define CS_COMMON_SHA1_H_
 
 #ifndef DISABLE_SHA1
+#define DISABLE_SHA1 0
+#endif
+
+#if !DISABLE_SHA1
 
 /* Amalgamated: #include "common/platform.h" */
 
@@ -1063,6 +1386,10 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #define CS_COMMON_MD5_H_
 
 /* Amalgamated: #include "common/platform.h" */
+
+#ifndef DISABLE_MD5
+#define DISABLE_MD5 0
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -1112,6 +1439,10 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 #define CS_COMMON_BASE64_H_
 
 #ifndef DISABLE_BASE64
+#define DISABLE_BASE64 0
+#endif
+
+#if !DISABLE_BASE64
 
 #include <stdio.h>
 
@@ -1178,6 +1509,156 @@ const char *c_strnstr(const char *s, const char *find, size_t slen);
 
 #endif /* CS_COMMON_STR_UTIL_H_ */
 #ifdef MG_MODULE_LINES
+#line 1 "mongoose/src/features.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_MONGOOSE_SRC_FEATURES_H_
+#define CS_MONGOOSE_SRC_FEATURES_H_
+
+#ifndef MG_DISABLE_HTTP_DIGEST_AUTH
+#define MG_DISABLE_HTTP_DIGEST_AUTH 0
+#endif
+
+#ifndef MG_DISABLE_HTTP_KEEP_ALIVE
+#define MG_DISABLE_HTTP_KEEP_ALIVE 0
+#endif
+
+#ifndef MG_DISABLE_PFS
+#define MG_DISABLE_PFS 0
+#endif
+
+#ifndef MG_DISABLE_WS_RANDOM_MASK
+#define MG_DISABLE_WS_RANDOM_MASK 0
+#endif
+
+#ifndef MG_ENABLE_ASYNC_RESOLVER
+#define MG_ENABLE_ASYNC_RESOLVER 1
+#endif
+
+#ifndef MG_ENABLE_BROADCAST
+#define MG_ENABLE_BROADCAST 0
+#endif
+
+#ifndef MG_ENABLE_COAP
+#define MG_ENABLE_COAP 0
+#endif
+
+#ifndef MG_ENABLE_DEBUG
+#define MG_ENABLE_DEBUG 0
+#endif
+
+#ifndef MG_ENABLE_DIRECTORY_LISTING
+#define MG_ENABLE_DIRECTORY_LISTING 0
+#endif
+
+#ifndef MG_ENABLE_DNS
+#define MG_ENABLE_DNS 1
+#endif
+
+#ifndef MG_ENABLE_DNS_SERVER
+#define MG_ENABLE_DNS_SERVER 0
+#endif
+
+#ifndef MG_ENABLE_FAKE_DAVLOCK
+#define MG_ENABLE_FAKE_DAVLOCK 0
+#endif
+
+#ifndef MG_ENABLE_FILESYSTEM
+#define MG_ENABLE_FILESYSTEM 0
+#endif
+
+#ifndef MG_ENABLE_GETADDRINFO
+#define MG_ENABLE_GETADDRINFO 0
+#endif
+
+#ifndef MG_ENABLE_HEXDUMP
+#define MG_ENABLE_HEXDUMP CS_ENABLE_STDIO
+#endif
+
+#ifndef MG_ENABLE_HTTP
+#define MG_ENABLE_HTTP 1
+#endif
+
+#ifndef MG_ENABLE_HTTP_CGI
+#define MG_ENABLE_HTTP_CGI 0
+#endif
+
+#ifndef MG_ENABLE_HTTP_SSI
+#define MG_ENABLE_HTTP_SSI MG_ENABLE_FILESYSTEM
+#endif
+
+#ifndef MG_ENABLE_HTTP_SSI_EXEC
+#define MG_ENABLE_HTTP_SSI_EXEC 0
+#endif
+
+#ifndef MG_ENABLE_HTTP_STREAMING_MULTIPART
+#define MG_ENABLE_HTTP_STREAMING_MULTIPART 0
+#endif
+
+#ifndef MG_ENABLE_HTTP_WEBDAV
+#define MG_ENABLE_HTTP_WEBDAV 0
+#endif
+
+#ifndef MG_ENABLE_HTTP_WEBSOCKET
+#define MG_ENABLE_HTTP_WEBSOCKET 1
+#endif
+
+#ifndef MG_ENABLE_IPV6
+#define MG_ENABLE_IPV6 0
+#endif
+
+#ifndef MG_ENABLE_JAVASCRIPT
+#define MG_ENABLE_JAVASCRIPT 0
+#endif
+
+#ifndef MG_ENABLE_MQTT
+#define MG_ENABLE_MQTT 1
+#endif
+
+#ifndef MG_ENABLE_MQTT_BROKER
+#define MG_ENABLE_MQTT_BROKER 0
+#endif
+
+#ifndef MG_ENABLE_SSL
+#define MG_ENABLE_SSL 0
+#endif
+
+#ifndef MG_ENABLE_SYNC_RESOLVER
+#define MG_ENABLE_SYNC_RESOLVER 0
+#endif
+
+#ifndef MG_ENABLE_STDIO
+#define MG_ENABLE_STDIO CS_ENABLE_STDIO
+#endif
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
+#ifndef MG_ENABLE_THREADS /* ifdef-ok */
+#ifdef _WIN32
+#define MG_ENABLE_THREADS 1
+#else
+#define MG_ENABLE_THREADS 0
+#endif
+#endif
+
+#if MG_ENABLE_DEBUG && !defined(CS_ENABLE_DEBUG)
+#define CS_ENABLE_DEBUG 1
+#endif
+
+/* MQTT broker requires MQTT */
+#if MG_ENABLE_MQTT_BROKER && !MG_ENABLE_MQTT
+#undef MG_ENABLE_MQTT
+#define MG_ENABLE_MQTT 1
+#endif
+
+#endif /* CS_MONGOOSE_SRC_FEATURES_H_ */
+#ifdef MG_MODULE_LINES
 #line 1 "mongoose/src/net.h"
 #endif
 /*
@@ -1210,7 +1691,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen);
 #ifndef CS_MONGOOSE_SRC_NET_H_
 #define CS_MONGOOSE_SRC_NET_H_
 
-#ifdef MG_ENABLE_JAVASCRIPT
+#if MG_ENABLE_JAVASCRIPT
 #define EXCLUDE_COMMON
 #include <v7.h>
 #endif
@@ -1218,11 +1699,11 @@ const char *c_strnstr(const char *s, const char *find, size_t slen);
 /* Amalgamated: #include "mongoose/src/common.h" */
 /* Amalgamated: #include "common/mbuf.h" */
 
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
 #ifdef __APPLE__
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
-#if !defined(MG_SOCKET_SIMPLELINK)
+#if MG_NET_IF != MG_NET_IF_SIMPLELINK
 #include <openssl/ssl.h>
 #endif
 #endif /* MG_ENABLE_SSL */
@@ -1246,7 +1727,7 @@ extern "C" {
 union socket_address {
   struct sockaddr sa;
   struct sockaddr_in sin;
-#ifdef MG_ENABLE_IPV6
+#if MG_ENABLE_IPV6
   struct sockaddr_in6 sin6;
 #else
   struct sockaddr sin6;
@@ -1275,13 +1756,15 @@ typedef void (*mg_event_handler_t)(struct mg_connection *, int ev, void *);
  */
 struct mg_mgr {
   struct mg_connection *active_connections;
+#if MG_ENABLE_HEXDUMP
   const char *hexdump_file; /* Debug hexdump file path */
-#ifndef MG_DISABLE_SOCKETPAIR
+#endif
+#if MG_ENABLE_BROADCAST
   sock_t ctl[2]; /* Socketpair for mg_broadcast() */
 #endif
   void *user_data; /* User data */
   void *mgr_data;  /* Implementation-specific event manager's data. */
-#ifdef MG_ENABLE_JAVASCRIPT
+#if MG_ENABLE_JAVASCRIPT
   struct v7 *v7;
 #endif
 };
@@ -1300,8 +1783,8 @@ struct mg_connection {
   size_t recv_mbuf_limit;  /* Max size of recv buffer */
   struct mbuf recv_mbuf;   /* Received data */
   struct mbuf send_mbuf;   /* Data scheduled for sending */
-#if defined(MG_ENABLE_SSL)
-#if !defined(MG_SOCKET_SIMPLELINK)
+#if MG_ENABLE_SSL
+#if MG_NET_IF != MG_NET_IF_SIMPLELINK
   SSL *ssl;
   SSL_CTX *ssl_ctx;
 #else
@@ -1382,7 +1865,7 @@ void mg_mgr_free(struct mg_mgr *);
  */
 time_t mg_mgr_poll(struct mg_mgr *, int milli);
 
-#ifndef MG_DISABLE_SOCKETPAIR
+#if MG_ENABLE_BROADCAST
 /*
  * Passes a message of a given length to all connections.
  *
@@ -1453,7 +1936,7 @@ struct mg_bind_opts {
   void *user_data;           /* Initial value for connection's user_data */
   unsigned int flags;        /* Extra connection flags */
   const char **error_string; /* Placeholder for the error string */
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   /* SSL settings. */
   const char *ssl_cert;    /* Server certificate to present to clients */
   const char *ssl_key;     /* Private key corresponding to the certificate.
@@ -1497,7 +1980,7 @@ struct mg_connect_opts {
   void *user_data;           /* Initial value for connection's user_data */
   unsigned int flags;        /* Extra connection flags */
   const char **error_string; /* Placeholder for the error string */
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   /* SSL settings. */
   const char *ssl_cert;    /* Client certificate to present to the server */
   const char *ssl_key;     /* Private key corresponding to the certificate.
@@ -1578,7 +2061,7 @@ struct mg_connection *mg_connect_opt(struct mg_mgr *mgr, const char *address,
                                      mg_event_handler_t handler,
                                      struct mg_connect_opts opts);
 
-#if defined(MG_ENABLE_SSL) && !defined(MG_SOCKET_SIMPLELINK)
+#if MG_ENABLE_SSL && MG_NET_IF != MG_NET_IF_SIMPLELINK
 /*
  * Note: This function is deprecated. Please, use SSL options in
  * mg_connect_opt.
@@ -1629,6 +2112,7 @@ int mg_vprintf(struct mg_connection *, const char *fmt, va_list ap);
  */
 int mg_socketpair(sock_t[2], int sock_type);
 
+#if MG_ENABLE_SYNC_RESOLVER
 /*
  * Convert domain name into IP address.
  *
@@ -1639,7 +2123,6 @@ int mg_socketpair(sock_t[2], int sock_type);
  * CAUTION: this function can block.
  * Return 1 on success, 0 on failure.
  */
-#ifndef MG_DISABLE_SYNC_RESOLVER
 int mg_resolve(const char *domain_name, char *ip_addr_buf, size_t buf_len);
 #endif
 
@@ -1683,7 +2166,7 @@ void mg_enable_multithreading(struct mg_connection *nc);
 void mg_enable_multithreading_opt(struct mg_connection *nc,
                                   struct mg_multithreading_opts opts);
 
-#ifdef MG_ENABLE_JAVASCRIPT
+#if MG_ENABLE_JAVASCRIPT
 /*
  * Enables server-side JavaScript scripting.
  * Requires a `-DMG_ENABLE_JAVASCRIPT` compilation flag and V7 engine sources.
@@ -1945,7 +2428,7 @@ int mg_base64_decode(const unsigned char *s, int len, char *dst);
  */
 void mg_base64_encode(const unsigned char *src, int src_len, char *dst);
 
-#ifndef MG_DISABLE_FILESYSTEM
+#if MG_ENABLE_FILESYSTEM
 /*
  * Performs a 64-bit `stat()` call against a given file.
  *
@@ -1972,13 +2455,9 @@ FILE *mg_fopen(const char *path, const char *mode);
  * Return value is the same as for the `open()` syscall.
  */
 int mg_open(const char *path, int flag, int mode);
-#endif /* MG_DISABLE_FILESYSTEM */
+#endif /* MG_ENABLE_FILESYSTEM */
 
-#if defined(_WIN32) && !defined(MG_ENABLE_THREADS)
-#define MG_ENABLE_THREADS
-#endif
-
-#ifdef MG_ENABLE_THREADS
+#if MG_ENABLE_THREADS
 /*
  * Starts a new detached thread.
  * Arguments and semantics are the same as pthead's `pthread_create()`.
@@ -2008,7 +2487,8 @@ void mg_set_close_on_exec(sock_t);
  */
 void mg_conn_addr_to_str(struct mg_connection *nc, char *buf, size_t len,
                          int flags);
-#ifndef MG_DISABLE_SOCKET_IF /* Legacy interface. */
+#if MG_NET_IF == MG_NET_IF_SOCKET
+/* Legacy interface. */
 void mg_sock_to_str(sock_t sock, char *buf, size_t len, int flags);
 #endif
 
@@ -2020,6 +2500,7 @@ void mg_sock_to_str(sock_t sock, char *buf, size_t len, int flags);
 void mg_sock_addr_to_str(const union socket_address *sa, char *buf, size_t len,
                          int flags);
 
+#if MG_ENABLE_HEXDUMP
 /*
  * Generates a human-readable hexdump of memory chunk.
  *
@@ -2039,6 +2520,7 @@ int mg_hexdump(const void *buf, int len, char *dst, int dst_len);
  */
 void mg_hexdump_connection(struct mg_connection *nc, const char *path,
                            const void *buf, int num_bytes, int ev);
+#endif
 
 /*
  * Prints message to the buffer. If the buffer is large enough to hold the
@@ -2110,6 +2592,8 @@ int mg_match_prefix_n(const struct mg_str pattern, const struct mg_str str);
 #ifndef CS_MONGOOSE_SRC_HTTP_H_
 #define CS_MONGOOSE_SRC_HTTP_H_
 
+#if MG_ENABLE_HTTP
+
 /* Amalgamated: #include "mongoose/src/net.h" */
 
 #ifdef __cplusplus
@@ -2136,20 +2620,8 @@ extern "C" {
 #define MG_MAX_HTTP_SEND_MBUF 1024
 #endif
 
-#ifndef MG_WEBSOCKET_PING_INTERVAL_SECONDS
-#define MG_WEBSOCKET_PING_INTERVAL_SECONDS 5
-#endif
-
 #ifndef MG_CGI_ENVIRONMENT_SIZE
 #define MG_CGI_ENVIRONMENT_SIZE 8192
-#endif
-
-#ifndef MG_MAX_CGI_ENVIR_VARS
-#define MG_MAX_CGI_ENVIR_VARS 64
-#endif
-
-#ifndef MG_ENV_EXPORT_TO_CGI
-#define MG_ENV_EXPORT_TO_CGI "MONGOOSE_CGI"
 #endif
 
 /* HTTP message */
@@ -2183,12 +2655,14 @@ struct http_message {
   struct mg_str body; /* Zero-length for requests with no body */
 };
 
+#if MG_ENABLE_HTTP_WEBSOCKET
 /* WebSocket message */
 struct websocket_message {
   unsigned char *data;
   size_t size;
   unsigned char flags;
 };
+#endif
 
 /* HTTP multipart part */
 struct mg_http_multipart_part {
@@ -2213,14 +2687,14 @@ struct mg_ssi_call_ctx {
 #define MG_EV_SSI_CALL 105     /* char * */
 #define MG_EV_SSI_CALL_CTX 106 /* struct mg_ssi_call_ctx * */
 
-#ifndef MG_DISABLE_HTTP_WEBSOCKET
+#if MG_ENABLE_HTTP_WEBSOCKET
 #define MG_EV_WEBSOCKET_HANDSHAKE_REQUEST 111 /* NULL */
 #define MG_EV_WEBSOCKET_HANDSHAKE_DONE 112    /* NULL */
 #define MG_EV_WEBSOCKET_FRAME 113             /* struct websocket_message * */
 #define MG_EV_WEBSOCKET_CONTROL_FRAME 114     /* struct websocket_message * */
 #endif
 
-#ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
+#if MG_ENABLE_HTTP_STREAMING_MULTIPART
 #define MG_EV_HTTP_MULTIPART_REQUEST 121 /* struct http_message */
 #define MG_EV_HTTP_PART_BEGIN 122        /* struct mg_http_multipart_part */
 #define MG_EV_HTTP_PART_DATA 123         /* struct mg_http_multipart_part */
@@ -2273,7 +2747,7 @@ struct mg_ssi_call_ctx {
  */
 void mg_set_protocol_http_websocket(struct mg_connection *nc);
 
-#ifndef MG_DISABLE_HTTP_WEBSOCKET
+#if MG_ENABLE_HTTP_WEBSOCKET
 /*
  * Send websocket handshake to the server.
  *
@@ -2379,7 +2853,6 @@ void mg_send_websocket_framev(struct mg_connection *nc, int op_and_flags,
  */
 void mg_printf_websocket_frame(struct mg_connection *nc, int op_and_flags,
                                const char *fmt, ...);
-#endif /* MG_DISABLE_HTTP_WEBSOCKET */
 
 /* Websocket opcodes, from http://tools.ietf.org/html/rfc6455 */
 #define WEBSOCKET_OP_CONTINUE 0
@@ -2403,6 +2876,8 @@ void mg_printf_websocket_frame(struct mg_connection *nc, int op_and_flags,
  */
 #define WEBSOCKET_DONT_FIN 0x100
 
+#endif /* MG_ENABLE_HTTP_WEBSOCKET */
+
 /*
  * Decodes a URL-encoded string.
  *
@@ -2419,6 +2894,9 @@ int mg_url_decode(const char *src, int src_len, char *dst, int dst_len,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* MG_ENABLE_HTTP */
+
 #endif /* CS_MONGOOSE_SRC_HTTP_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "mongoose/src/http_server.h"
@@ -2429,6 +2907,8 @@ int mg_url_decode(const char *src, int src_len, char *dst, int dst_len,
 
 #ifndef CS_MONGOOSE_SRC_HTTP_SERVER_H_
 #define CS_MONGOOSE_SRC_HTTP_SERVER_H_
+
+#if MG_ENABLE_HTTP
 
 #ifdef __cplusplus
 extern "C" {
@@ -2522,6 +3002,7 @@ size_t mg_parse_multipart(const char *buf, size_t buf_len, char *var_name,
 int mg_get_http_var(const struct mg_str *buf, const char *name, char *dst,
                     size_t dst_len);
 
+#if MG_ENABLE_FILESYSTEM
 /*
  * This structure defines how `mg_serve_http()` works.
  * Best practice is to set only required settings, and leave the rest as NULL.
@@ -2723,6 +3204,7 @@ void mg_serve_http(struct mg_connection *nc, struct http_message *hm,
 void mg_http_serve_file(struct mg_connection *nc, struct http_message *hm,
                         const char *path, const struct mg_str mime_type,
                         const struct mg_str extra_headers);
+#endif /* MG_ENABLE_FILESYSTEM */
 
 /*
  * Registers a callback for a specified http endpoint
@@ -2754,7 +3236,7 @@ void mg_http_serve_file(struct mg_connection *nc, struct http_message *hm,
 void mg_register_http_endpoint(struct mg_connection *nc, const char *uri_path,
                                mg_event_handler_t handler);
 
-#ifdef MG_ENABLE_HTTP_STREAMING_MULTIPART
+#if MG_ENABLE_HTTP_STREAMING_MULTIPART
 
 /* Callback prototype for `mg_file_upload_handler()`. */
 typedef struct mg_str (*mg_fu_fname_fn)(struct mg_connection *nc,
@@ -2885,6 +3367,9 @@ void mg_printf_html_escape(struct mg_connection *nc, const char *fmt, ...);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* MG_ENABLE_HTTP */
+
 #endif /* CS_MONGOOSE_SRC_HTTP_SERVER_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "mongoose/src/http_client.h"
@@ -3180,7 +3665,7 @@ int mg_mqtt_next_subscribe_topic(struct mg_mqtt_message *msg,
 #ifndef CS_MONGOOSE_SRC_MQTT_BROKER_H_
 #define CS_MONGOOSE_SRC_MQTT_BROKER_H_
 
-#ifdef MG_ENABLE_MQTT_BROKER
+#if MG_ENABLE_MQTT_BROKER
 
 /* Amalgamated: #include "mongoose/src/mqtt.h" */
 
@@ -3439,7 +3924,7 @@ void mg_set_protocol_dns(struct mg_connection *nc);
 #ifndef CS_MONGOOSE_SRC_DNS_SERVER_H_
 #define CS_MONGOOSE_SRC_DNS_SERVER_H_
 
-#ifdef MG_ENABLE_DNS_SERVER
+#if MG_ENABLE_DNS_SERVER
 
 /* Amalgamated: #include "mongoose/src/dns.h" */
 
@@ -3637,7 +4122,7 @@ int mg_resolve_from_hosts_file(const char *host, union socket_address *usa);
 #ifndef CS_MONGOOSE_SRC_COAP_H_
 #define CS_MONGOOSE_SRC_COAP_H_
 
-#ifdef MG_ENABLE_COAP
+#if MG_ENABLE_COAP
 
 #define MG_COAP_MSG_TYPE_FIELD 0x2
 #define MG_COAP_CODE_CLASS_FIELD 0x4

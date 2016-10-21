@@ -10,10 +10,10 @@
 
 #include "common/clubby/clubby_channel.h"
 
-#if defined(MG_ENABLE_CLUBBY) && defined(MG_ENABLE_CLUBBY_UART)
+#if MG_ENABLE_CLUBBY && MG_ENABLE_CLUBBY_UART
 
 struct clubby_channel *clubby_channel_uart(int uart_no,
                                            bool wait_for_start_frame);
 
-#endif /* defined(MG_ENABLE_CLUBBY) && defined(MG_ENABLE_CLUBBY_UART) */
+#endif /* MG_ENABLE_CLUBBY && MG_ENABLE_CLUBBY_UART */
 #endif /* CS_FW_SRC_MG_CLUBBY_CHANNEL_UART_H_ */

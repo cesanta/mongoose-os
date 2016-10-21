@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MG_GPIO_JS_H_
 #define CS_FW_SRC_MG_GPIO_JS_H_
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_GPIO_API)
+#if MG_ENABLE_JS && MG_ENABLE_GPIO_API
 struct v7;
 void mg_gpio_api_setup(struct v7 *v7);
 #endif

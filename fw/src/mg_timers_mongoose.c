@@ -8,7 +8,7 @@
 
 #include <fw/src/mg_mongoose.h>
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 #include <v7/v7.h>
 #include <fw/src/mg_v7_ext.h>
 #endif
@@ -20,7 +20,7 @@ struct timer_info {
   int interval_ms;
   timer_callback cb;
   void *arg;
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
   struct v7 *v7;
   v7_val_t js_cb;
 #endif
@@ -34,7 +34,7 @@ static void mg_timer_handler(struct mg_connection *c, int ev, void *p) {
     case MG_EV_TIMER: {
       if (c->flags & MG_F_CLOSE_IMMEDIATELY) break;
       if (ti->cb != NULL) ti->cb(ti->arg);
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
       if (ti->v7 != NULL) mg_invoke_cb0(ti->v7, ti->js_cb);
 #endif
       if (ti->interval_ms > 0) {
@@ -45,7 +45,7 @@ static void mg_timer_handler(struct mg_connection *c, int ev, void *p) {
       break;
     }
     case MG_EV_CLOSE: {
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
       if (ti->v7 != NULL) v7_disown(ti->v7, &ti->js_cb);
 #endif
       free(ti);
@@ -87,7 +87,7 @@ static mg_timer_id mg_set_timer_common(struct timer_info *ti, int msecs,
   return 1;
 }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 mg_timer_id mg_set_js_timer(int msecs, int repeat, struct v7 *v7, v7_val_t cb) {
   struct timer_info *ti = (struct timer_info *) calloc(1, sizeof(*ti));
   if (ti == NULL) return MG_INVALID_TIMER_ID;

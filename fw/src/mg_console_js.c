@@ -1,6 +1,6 @@
 #include "fw/src/mg_console_js.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 #include <stdlib.h>
 #include <string.h>

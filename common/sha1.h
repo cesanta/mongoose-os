@@ -7,6 +7,10 @@
 #define CS_COMMON_SHA1_H_
 
 #ifndef DISABLE_SHA1
+#define DISABLE_SHA1 0
+#endif
+
+#if !DISABLE_SHA1
 
 #include "common/platform.h"
 

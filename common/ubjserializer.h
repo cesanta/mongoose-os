@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 
-#ifdef CS_ENABLE_UBJSON
+#if CS_ENABLE_UBJSON
 
 #include "common/mg_str.h"
 

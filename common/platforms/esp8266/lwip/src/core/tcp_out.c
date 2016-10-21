@@ -1262,7 +1262,7 @@ tcp_rexmit_rto(struct tcp_pcb *pcb)
   while (seg != NULL) {
     if (seg->p->eb) {
       int do_rexmit = 0;
-#ifdef LWIP_ENABLE_ESF_BUF_REXMIT
+#if LWIP_ENABLE_ESF_BUF_REXMIT
       /*
        * rojer: So we cannot rexmit this as is because it has esf_buf attached.
        * Fine. We'll create a replacement, with no esf_buf, and rexmit that.

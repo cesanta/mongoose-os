@@ -27,7 +27,7 @@
 #define JS_FS_ROOT "."
 #endif
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 int mg_please_quit;
 
 static void set_workdir(const char *argv0) {

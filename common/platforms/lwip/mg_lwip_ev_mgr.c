@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#ifdef MG_NET_IF_LWIP
+#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
 
 #ifndef MG_SIG_QUEUE_LEN
 #define MG_SIG_QUEUE_LEN 16
@@ -171,4 +171,4 @@ uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr) {
   return timeout_ms;
 }
 
-#endif /* MG_NET_IF_LWIP */
+#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL */

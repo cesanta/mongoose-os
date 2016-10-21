@@ -22,7 +22,7 @@
 #include "fw/src/mg_i2c.h"
 #include "config.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -41,7 +41,7 @@ struct i2c_state {
   uint8_t first : 1;
 };
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 enum v7_err mg_i2c_create(struct v7 *v7, i2c_connection *res) {
   struct i2c_state *c = calloc(1, sizeof(struct i2c_state));
   c->sda_pin = v7_get_double(v7, v7_arg(v7, 0)) - 1;

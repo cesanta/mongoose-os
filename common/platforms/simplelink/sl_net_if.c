@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if !defined(MG_DISABLE_SOCKET_IF) && defined(MG_SOCKET_SIMPLELINK)
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK
 
 #include "mongoose/src/internal.h"
 #include "mongoose/src/util.h"
@@ -14,7 +14,7 @@
 static sock_t mg_open_listening_socket(union socket_address *sa, int type,
                                        int proto);
 
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
 const char *mg_set_ssl2(struct mg_connection *nc, const char *cert,
                         const char *key, const char *ca_cert) {
   DBG(("%p %s,%s,%s", nc, (cert ? cert : "-"), (key ? key : "-"),
@@ -102,7 +102,7 @@ void mg_if_connect_tcp(struct mg_connection *nc,
     goto out;
   }
   mg_sock_set(nc, sock);
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   nc->err = sl_set_ssl_opts(nc);
   if (nc->err != 0) goto out;
 #endif
@@ -128,7 +128,7 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
   sock_t sock = mg_open_listening_socket(sa, SOCK_STREAM, proto);
   if (sock < 0) return sock;
   mg_sock_set(nc, sock);
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   return sl_set_ssl_opts(nc);
 #else
   return 0;
@@ -167,7 +167,7 @@ void mg_if_destroy_conn(struct mg_connection *nc) {
     sl_Close(nc->sock);
   }
   nc->sock = INVALID_SOCKET;
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   MG_FREE(nc->ssl_cert);
   MG_FREE(nc->ssl_key);
   MG_FREE(nc->ssl_ca_cert);
@@ -504,4 +504,4 @@ void sl_restart_cb(struct mg_mgr *mgr) {
   }
 }
 
-#endif /* !defined(MG_DISABLE_SOCKET_IF) && defined(MG_SOCKET_SIMPLELINK) */
+#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK */

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if defined(MG_ENABLE_CLUBBY) && defined(MG_ENABLE_FILESYSTEM_SERVICE)
+#if MG_ENABLE_CLUBBY && MG_ENABLE_FILESYSTEM_SERVICE
 
 #include <stdlib.h>
 

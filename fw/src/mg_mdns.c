@@ -13,7 +13,7 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
-#ifdef MG_ENABLE_MDNS
+#if MG_ENABLE_MDNS
 
 #define MDNS_MCAST_GROUP "224.0.0.251"
 #define MDNS_PORT 5353

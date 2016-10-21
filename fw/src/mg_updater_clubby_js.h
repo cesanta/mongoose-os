@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MG_UPDATER_CLUBBY_JS_H_
 #define CS_FW_SRC_MG_UPDATER_CLUBBY_JS_H_
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_CLUBBY)
+#if MG_ENABLE_JS && MG_ENABLE_CLUBBY
 struct v7;
 void mg_updater_clubby_js_init(struct v7 *v7);
 #endif

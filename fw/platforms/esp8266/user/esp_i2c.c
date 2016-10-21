@@ -4,7 +4,9 @@
  * I2C low-level API
  */
 
-#ifdef MG_ENABLE_JS
+#include "fw/platforms/esp8266/user/esp_features.h"
+
+#if MG_ENABLE_JS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -301,7 +303,7 @@ void mg_i2c_close(i2c_connection conn) {
  * Tested on MICROCHIP 24FC1025-I/P.
  */
 
-#ifdef ENABLE_IC2_EEPROM_TEST
+#ifdef IC2_EEPROM_TEST
 
 #define EEPROM_I2C_ADDR 0x50 /* A0 = A1 = 0 */
 #define SDA_GPIO 14
@@ -368,4 +370,4 @@ void i2c_eeprom_test(void) {
   os_printf("Finished\n\n");
 }
 
-#endif /* ENABLE_IC2_EEPROM_TEST */
+#endif /* IC2_EEPROM_TEST */

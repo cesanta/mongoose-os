@@ -50,7 +50,7 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
              -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
              -fno-tree-pre -fno-tree-vrp
 
-CFLAGS := -std=c99 -W -Wall -Werror -Wno-comment -Wno-variadic-macros -Wpointer-arith \
+CFLAGS := -std=c99 -W -Wall -Werror -Wundef -Wno-comment -Wno-variadic-macros -Wpointer-arith \
           -Os $(NO_Os_FLAGS) -g3 \
           -Wl,-EL -fno-inline-functions \
           -D_XOPEN_SOURCE=500 \

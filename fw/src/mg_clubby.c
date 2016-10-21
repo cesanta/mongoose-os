@@ -5,7 +5,7 @@
 
 #include "common/clubby/clubby_channel_ws.h"
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
 
 #include "fw/src/mg_clubby.h"
 #include "fw/src/mg_clubby_channel_uart.h"
@@ -54,7 +54,7 @@ enum mg_init_result mg_clubby_init(void) {
         }
       }
     }
-#ifdef MG_ENABLE_CLUBBY_UART
+#if MG_ENABLE_CLUBBY_UART
     if (sccfg->uart.uart_no >= 0) {
       const struct sys_config_clubby_uart *scucfg = &get_cfg()->clubby.uart;
       struct mg_uart_config *ucfg = mg_uart_default_config();

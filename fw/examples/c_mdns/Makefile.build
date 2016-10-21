@@ -1,6 +1,5 @@
 APP = c_mdns
 APP_MODULES = src
-APP_FS_PATH = fs
 MG_ENABLE_JS = 0
 MG_ENABLE_CLUBBY = 1
 

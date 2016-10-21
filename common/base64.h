@@ -7,6 +7,10 @@
 #define CS_COMMON_BASE64_H_
 
 #ifndef DISABLE_BASE64
+#define DISABLE_BASE64 0
+#endif
+
+#if !DISABLE_BASE64
 
 #include <stdio.h>
 

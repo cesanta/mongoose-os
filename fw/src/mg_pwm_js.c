@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#if defined(MG_ENABLE_JS) && defined(MG_ENABLE_PWM_API)
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_JS && MG_ENABLE_PWM_API
 
 #include "fw/src/mg_common.h"
 #include "fw/src/mg_pwm.h"
@@ -41,4 +43,4 @@ void mg_pwm_api_setup(struct v7 *v7) {
   v7_set_method(v7, pwm, "set", PWM_set);
 }
 
-#endif /* defined(MG_ENABLE_JS) && defined(MG_ENABLE_PWM_API) */
+#endif /* MG_ENABLE_JS && MG_ENABLE_PWM_API */

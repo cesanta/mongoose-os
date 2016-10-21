@@ -187,8 +187,19 @@ typedef long ssize_t;
 #endif
 #endif
 
-/* #define KRYPTON_DEBUG 1 */
-#if defined(KRYPTON_DEBUG)
+#ifndef KRYPTON_DEBUG
+#define KRYPTON_DEBUG 0
+#endif
+
+#ifndef KRYPTON_DEBUG_NONBLOCKING
+#define KRYPTON_DEBUG_NONBLOCKING 0
+#endif
+
+#ifndef KRYPTON_DEBUG_VERIFY
+#define KRYPTON_DEBUG_VERIFY 0
+#endif
+
+#if KRYPTON_DEBUG
 #define dprintf(x) printf x
 #else
 #define dprintf(x)
@@ -1226,30 +1237,6 @@ NS_INTERNAL int b64_decode(const uint8_t *buf, size_t len, uint8_t *out,
 
   return 1;
 }
-
-#if CODE_FU
-#include <ctype.h>
-
-int main(int argc, char **argv) {
-  char buf[300];
-  uint8_t out[400];
-  size_t olen;
-
-  while (fgets(buf, sizeof(buf), stdin)) {
-    char *lf;
-
-    lf = strchr(buf, '\n');
-    *lf = '\0';
-
-    if (!b64_decode((uint8_t *) buf, lf - buf, out, &olen)) {
-      printf("error\n");
-    } else {
-      hex_dump(out, olen, 0);
-    }
-  }
-  return 0;
-}
-#endif
 #ifdef KR_MODULE_LINES
 #line 1 "src/ber.c"
 #endif
@@ -7757,7 +7744,7 @@ static int decode_extension(X509 *cert, const uint8_t *oid, size_t oid_len,
 
   if (critical) {
     dprintf(("unhandled critical extension\n"));
-#ifdef KRYPTON_DEBUG
+#if KRYPTON_DEBUG
     hex_dump(oid, oid_len, 0);
 #endif
     return 0;
@@ -8189,13 +8176,13 @@ again:
       dprintf(("Unsupported hash alg %d\n", nxt->hash_alg));
       return 0;
   }
-#if DEBUG_VERIFY
+#if KRYPTON_DEBUG_VERIFY
   dprintf(("%d byte RSA key, %zu byte sig\n", RSA_block_size(cur->pub_key),
            nxt->sig.len));
 #endif
 
   if (!get_sig_digest(cur->pub_key, &nxt->sig, digest, &digest_len)) return 0;
-#if DEBUG_VERIFY
+#if KRYPTON_DEBUG_VERIFY
   dprintf(("%zu byte digest (%d):\n", digest_len, nxt->hash_alg));
   hex_dump(digest, digest_len, 0);
 #endif
@@ -8204,14 +8191,14 @@ again:
              (int) expected_len));
     return 0;
   }
-#if DEBUG_VERIFY
+#if KRYPTON_DEBUG_VERIFY
   hex_dump(nxt->digest, digest_len, 0);
 #endif
   if (memcmp(nxt->digest, digest, digest_len)) {
     dprintf(("bad signature\n"));
     return 0;
   }
-#if DEBUG_VERIFY
+#if KRYPTON_DEBUG_VERIFY
   dprintf(("Verified OK\n"));
   dprintf(("\n"));
 #endif
@@ -8261,7 +8248,7 @@ static enum pem_filter_result pem_issuer_filter(const DER *obj, int type,
   X509 *new = X509_new(obj->der, obj->der_len);
   if (new != NULL && x509_issued_by(&new->subject, issuer)) {
     res = PEM_FILTER_YES_AND_STOP;
-#if DEBUG_VERIFY
+#if KRYPTON_DEBUG_VERIFY
     dprintf(("found trust anchor\n"));
 #endif
   }
@@ -8294,7 +8281,7 @@ int X509_verify(SSL_CTX *ctx, X509 *chain) {
     return 0;
   }
 
-#if DEBUG_VERIFY
+#if KRYPTON_DEBUG_VERIFY
   dprintf(("Verifying to here:\n"));
   hex_dump(anchor->subject.ptr, anchor->subject.len, 0);
 #endif

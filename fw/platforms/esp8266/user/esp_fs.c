@@ -7,7 +7,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#ifdef MG_ENABLE_JS
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -463,7 +465,7 @@ void fs_flush_stderr(void) {
   if (uart_no >= 0) mg_uart_flush(uart_no);
 }
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 int v7_val_to_file(struct v7 *v7, v7_val_t val) {
   return (int) v7_get_double(v7, val);
 }

@@ -6,9 +6,10 @@
 #ifndef CS_FW_SRC_MG_PROMPT_H_
 #define CS_FW_SRC_MG_PROMPT_H_
 
+#include "fw/src/mg_features.h"
 #include "fw/src/mg_uart.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 struct v7;
 

@@ -89,14 +89,14 @@ include $(MIOT_PATH)/src/features.mk
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
-CFLAGS ?= -std=c99 -fno-inline -W -Wall -Werror -g -Wno-unused-function \
+CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
           -Wno-missing-field-initializers \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \
           $(V7_FEATURES) \
           $(MIOT_FEATURES) $(MIOT_POSIX_FEATURES) \
           $(MONGOOSE_FEATURES) \
-          -DFW_ARCHITECTURE=\"$(PLATFORM)\" \
+          -DFW_ARCHITECTURE=\"$(BUILD_PLATFORM)\" \
           $(CFLAGS_EXTRA)
 
 ifeq "$(DEBUG)" "1"
@@ -108,38 +108,38 @@ endif
 include $(COMMON_PATH)/scripts/platform.mk
 
 ifeq ($(OS),Windows_NT)
-  PLATFORM="WIN"
+  BUILD_PLATFORM="WIN"
 else
   UNAME_S := $(shell uname -s)
   ifeq ($(UNAME_S),Linux)
-    PLATFORM="LINUX"
+    BUILD_PLATFORM="LINUX"
   else
-    PLATFORM="POSIX"
+    BUILD_PLATFORM="POSIX"
   endif
 endif
 
 ifeq "$(SSL)" "OpenSSL"
   MONGOOSE_FEATURES += -DMG_ENABLE_SSL
   ADD_LIBS += ssl crypto
-  ifeq ($(PLATFORM), "WIN")
+  ifeq ($(BUILD_PLATFORM), "WIN")
     ADD_LIBS += gdi32
   endif
 endif
 
 # Non Windows
-ifneq ($(PLATFORM), "WIN")
+ifneq ($(BUILD_PLATFORM), "WIN")
   ADD_LIBS += m pthread
 endif
 
 # Linux
-ifeq ($(PLATFORM), "LINUX")
+ifeq ($(BUILD_PLATFORM), "LINUX")
   ADD_LIBS += rt
   MIOT_FEATURES += -DMG_ENABLE_GPIO_API \
                    -DMG_ENABLE_I2C_API
 endif
 
 # Windows
-ifeq ($(PLATFORM), "WIN")
+ifeq ($(BUILD_PLATFORM), "WIN")
   CFLAGS += -D_WIN32_WINNT=0x0500
   ADD_LIBS += ws2_32
 endif

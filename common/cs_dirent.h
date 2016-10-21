@@ -10,7 +10,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifdef CS_ENABLE_SPIFFS
+#ifndef CS_ENABLE_SPIFFS
+#define CS_ENABLE_SPIFFS 0
+#endif
+
+#if CS_ENABLE_SPIFFS
 
 #include <spiffs.h>
 
@@ -39,7 +43,7 @@ typedef struct DIR {
 } DIR;
 #endif
 
-#if defined(_WIN32) || defined(CS_ENABLE_SPIFFS)
+#if defined(_WIN32) || CS_ENABLE_SPIFFS
 DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);

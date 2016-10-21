@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MG_ADC_JS_H_
 #define CS_FW_SRC_MG_ADC_JS_H_
 
-#ifdef MG_ENABLE_ADC_API
+#if MG_ENABLE_ADC_API
 void mg_adc_api_setup(struct v7 *v7);
 #endif
 

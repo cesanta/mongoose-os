@@ -379,11 +379,11 @@ for b in bcodes:
     lits = lit_vec("flits", a, b["lit"])
     print ("static const struct bcode fbcode_%(addr)s"
            " = {%(ops)s, %(lits)s\n"
-           "#if !defined(V7_DISABLE_FILENAMES)\n"
+           "#if !V7_DISABLE_FILENAMES\n"
            ", NULL\n"
            "#endif\n"
            ", 0xff, %(names_cnt)s, %(args_cnt)s, %(strict_mode)s, 1, 1, 0, %(func_name_present)s\n"
-           "#if !defined(V7_DISABLE_FILENAMES)\n"
+           "#if !V7_DISABLE_FILENAMES\n"
            ", 0\n"
            "#endif\n"
            "};") % dict(

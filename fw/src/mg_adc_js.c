@@ -5,9 +5,10 @@
 
 #include "fw/src/mg_adc.h"
 #include "fw/src/mg_common.h"
+#include "fw/src/mg_features.h"
 #include "v7/v7.h"
 
-#ifdef MG_ENABLE_ADC_API
+#if MG_ENABLE_ADC_API
 
 MG_PRIVATE enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);

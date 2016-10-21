@@ -12,8 +12,7 @@
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_utils.h"
 
-#if defined(MG_ENABLE_JS) && \
-    (defined(MG_ENABLE_HTTP_CLIENT_API) || defined(MG_ENABLE_HTTP_SERVER_API))
+#if MG_ENABLE_JS && (MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API)
 
 /* Forwards */
 MG_PRIVATE enum v7_err Http_on(struct v7 *v7, v7_val_t *res);
@@ -53,7 +52,7 @@ struct user_data {
 static v7_val_t mg_http_response_proto;
 static v7_val_t mg_http_request_proto;
 
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
 static v7_val_t mg_http_server_proto;
 MG_PRIVATE enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -180,7 +179,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   }
 }
 
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
 static enum v7_err start_http_server(struct v7 *v7, const char *addr,
                                      v7_val_t obj, const char *ca_cert,
                                      const char *cert) {
@@ -191,7 +190,7 @@ static enum v7_err start_http_server(struct v7 *v7, const char *addr,
 
   memset(&opts, 0, sizeof(opts));
 
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   opts.ssl_ca_cert = ca_cert;
   opts.ssl_cert = cert;
 #else
@@ -463,7 +462,7 @@ struct {
  * For the full option object definition see:
  * https://docs.cesanta.com/mongoose/dev/index.html#/c-api/http.h/struct_mg_serve_http_opts/
  */
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
 static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
                                            struct mg_serve_http_opts *opts) {
   size_t i;
@@ -735,7 +734,7 @@ static enum v7_err mg_http_request_common(struct v7 *v7, v7_val_t opts,
   v_pr = v7_get(v7, opts, "protocol", ~0);
   protocol = v7_is_string(v_pr) ? v7_get_cstring(v7, &v_pr) : "";
   force_ssl = (strcasecmp(protocol, "https") == 0);
-#ifdef MG_ENABLE_SSL
+#if MG_ENABLE_SSL
   if ((rcode = fill_ssl_connect_opts(v7, opts, force_ssl, &copts)) != V7_OK) {
     goto clean;
   }
@@ -836,7 +835,7 @@ void mg_http_api_setup(struct v7 *v7) {
   v7_val_t Http = V7_UNDEFINED;
   v7_val_t URL = V7_UNDEFINED;
 
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
   mg_http_server_proto = V7_UNDEFINED;
   v7_own(v7, &mg_http_server_proto);
 #endif
@@ -866,7 +865,7 @@ void mg_http_api_setup(struct v7 *v7) {
   v7_set_method(v7, Http, "get", Http_get);
   v7_set_method(v7, Http, "request", Http_createClient);
 
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
   mg_http_server_proto = v7_mk_object(v7);
   v7_set_method(v7, mg_http_server_proto, "listen", Http_Server_listen);
   v7_set_method(v7, mg_http_server_proto, "on", Http_on);
@@ -880,7 +879,7 @@ void mg_http_api_setup(struct v7 *v7) {
                 Http_response_writeHead);
   v7_set_method(v7, mg_http_response_proto, "write", Http_response_write);
   v7_set_method(v7, mg_http_response_proto, "end", Http_response_end);
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
   v7_set_method(v7, mg_http_response_proto, "serve", Http_response_serve);
 #endif
 
@@ -898,7 +897,7 @@ void mg_http_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &mg_http_request_proto);
   v7_disown(v7, &mg_http_response_proto);
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
   v7_disown(v7, &mg_http_server_proto);
 #endif
   v7_disown(v7, &URL);
@@ -920,13 +919,13 @@ void mg_http_js_init(struct v7 *v7) {
   v7_own(v7, &mg_http_response_proto);
   mg_http_request_proto = v7_get(v7, Http, "_req", ~0);
   v7_own(v7, &mg_http_request_proto);
-#ifdef MG_ENABLE_HTTP_SERVER_API
+#if MG_ENABLE_HTTP_SERVER_API
   mg_http_server_proto = v7_get(v7, Http, "_serv", ~0);
   v7_own(v7, &mg_http_server_proto);
 #endif
 
   v7_disown(v7, &Http);
 }
-#endif /* defined(MG_ENABLE_JS) &&               \
-          (defined(MG_ENABLE_HTTP_CLIENT_API) || \
-          defined(MG_ENABLE_HTTP_SERVER_API)) */
+#endif /* MG_ENABLE_JS &&               \
+          (MG_ENABLE_HTTP_CLIENT_API || \
+          MG_ENABLE_HTTP_SERVER_API) */

@@ -16,7 +16,7 @@
  * ESP LWIP is compiled w/o socket support but we need a few declarations
  * for Mongoose core (sockaddr_in and such).
  */
-#if LWIP_SOCKET
+#if defined(LWIP_SOCKET) && LWIP_SOCKET /* ifdef-ok */
 #error "Did not expect LWIP_SOCKET to be enabled."
 #endif
 

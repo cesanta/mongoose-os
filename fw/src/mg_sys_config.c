@@ -96,7 +96,7 @@ clean:
   return result;
 }
 
-#ifdef MG_ENABLE_WEB_CONFIG
+#if MG_ENABLE_WEB_CONFIG
 
 #define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
 
@@ -191,7 +191,7 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
 }
 #endif /* MG_ENABLE_WEB_CONFIG */
 
-#ifdef MG_ENABLE_FILE_UPLOAD
+#if MG_ENABLE_FILE_UPLOAD
 static struct mg_str upload_fname(struct mg_connection *nc,
                                   struct mg_str fname) {
   struct mg_str res = {NULL, 0};
@@ -256,12 +256,12 @@ enum mg_init_result mg_sys_config_init_http(const struct sys_config_http *cfg) {
     LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));
     return MG_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED;
   } else {
-#ifdef MG_ENABLE_WEB_CONFIG
+#if MG_ENABLE_WEB_CONFIG
     mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
     mg_register_http_endpoint(listen_conn, "/reboot", reboot_handler);
     mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
 #endif
-#ifdef MG_ENABLE_FILE_UPLOAD
+#if MG_ENABLE_FILE_UPLOAD
     mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
 #endif
 
@@ -304,7 +304,7 @@ enum mg_init_result mg_sys_config_init(void) {
     return MG_INIT_CONFIG_LOAD_DEFAULTS_FAILED;
   }
 
-#ifdef MG_ENABLE_GPIO_API
+#if MG_ENABLE_GPIO_API
   /*
    * Check factory reset GPIO. We intentionally do it before loading CONF_FILE
    * so that it cannot be overridden by the end user.

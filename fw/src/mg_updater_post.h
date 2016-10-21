@@ -8,7 +8,9 @@
 #ifndef CS_FW_SRC_MG_UPDATER_POST_H_
 #define CS_FW_SRC_MG_UPDATER_POST_H_
 
-#ifdef MG_ENABLE_UPDATER_POST
+#include "fw/src/mg_features.h"
+
+#if MG_ENABLE_UPDATER_POST
 void mg_updater_post_init(void);
 #endif
 

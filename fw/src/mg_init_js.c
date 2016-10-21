@@ -21,50 +21,50 @@
 #include "fw/src/mg_ws_client_js.h"
 #include "fw/src/mg_v7_ext.h"
 
-#ifdef MG_ENABLE_JS
+#if MG_ENABLE_JS
 
 enum mg_init_result mg_api_setup(struct v7 *v7) {
 #ifndef V7_THAW
-#ifdef MG_ENABLE_ADC_API
+#if MG_ENABLE_ADC_API
   mg_adc_api_setup(v7);
 #endif
   mg_console_api_setup(v7);
-#ifdef MG_ENABLE_DEBUG_API
+#if MG_ENABLE_DEBUG_API
   mg_debug_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_GPIO_API
+#if MG_ENABLE_GPIO_API
   mg_gpio_api_setup(v7);
 #endif
-#if defined(MG_ENABLE_HTTP_CLIENT_API) || defined(MG_ENABLE_HTTP_SERVER_API)
+#if MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API
   mg_http_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_MQTT_API
+#if MG_ENABLE_MQTT_API
   mg_mqtt_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_PWM_API
+#if MG_ENABLE_PWM_API
   mg_pwm_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_SPI_API
+#if MG_ENABLE_SPI_API
   mg_spi_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_TCP_API
+#if MG_ENABLE_TCP_API
   mg_tcp_api_setup(v7);
 #endif
   mg_timers_api_setup(v7);
-#ifdef MG_ENABLE_UART_API
+#if MG_ENABLE_UART_API
   mg_uart_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_UDP_API
+#if MG_ENABLE_UDP_API
   mg_udp_api_setup(v7);
 #endif
   mg_v7_ext_api_setup(v7);
-#ifdef MG_ENABLE_WIFI_API
+#if MG_ENABLE_WIFI_API
   mg_wifi_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_WS_CLIENT_API
+#if MG_ENABLE_WS_CLIENT_API
   mg_ws_client_api_setup(v7);
 #endif
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
   mg_clubby_api_setup(v7);
 #endif
 #else
@@ -78,25 +78,25 @@ enum mg_init_result mg_init_js(struct v7 *v7) {
   /* Note: config must follow sys. */
   mg_sys_config_js_init(v7);
 
-#ifdef MG_ENABLE_I2C_API
+#if MG_ENABLE_I2C_API
   mg_i2c_js_init(v7);
 #endif
 
-#ifdef MG_ENABLE_CLUBBY
+#if MG_ENABLE_CLUBBY
   mg_clubby_js_init(v7);
-#if defined(MG_ENABLE_UPDATER_CLUBBY) && defined(MG_ENABLE_UPDATER_CLUBBY_API)
+#if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_UPDATER_CLUBBY_API
   mg_updater_clubby_js_init(v7);
 #endif
 #endif
 
   mg_console_js_init(v7);
-#if defined(MG_ENABLE_HTTP_CLIENT_API) || defined(MG_ENABLE_HTTP_SERVER_API)
+#if MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API
   mg_http_js_init(v7);
 #endif
-#ifdef MG_ENABLE_UART_API
+#if MG_ENABLE_UART_API
   mg_uart_js_init(v7);
 #endif
-#ifdef MG_ENABLE_WIFI_API
+#if MG_ENABLE_WIFI_API
   mg_wifi_js_init(v7);
 #endif
   return MG_INIT_OK;
