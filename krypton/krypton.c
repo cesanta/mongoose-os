@@ -4590,12 +4590,16 @@ PEM *pem_load(const char *fn, pem_filter_fn flt, void *flt_arg) {
     if (pb == buf) {
       if (!fgets(buf, sizeof(buf), f)) break;
       lb = buf;
+    } else {
+      if (*lb == '\0') break;
     }
+#else
+    if (*lb == '\0') break;
 #endif
 
     /* Find next line, trim whitespace. */
     while (*lb != '\0' && isspace((int) *lb)) lb++;
-    if (*lb == '\0') break;
+    if (*lb == '\0') continue;
     le = strchr(lb, '\n');
     if (le == NULL) break;
     while (le > lb && isspace((int) *le)) le--;
