@@ -6,9 +6,9 @@
 #ifndef CS_COMMON_JSON_UTILS_H_
 #define CS_COMMON_JSON_UTILS_H_
 
-#include "frozen/frozen.h"
-#include "common/mg_str.h"
 #include "common/mbuf.h"
+#include "common/mg_str.h"
+#include "frozen/frozen.h"
 
 int mg_json_printer_mbuf(struct json_out *, const char *, size_t);
 
@@ -20,7 +20,11 @@ void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
  * json_printf function to print JSON
  * into mbuf
  */
-#define JSON_OUT_MBUF(mbuf_addr) \
-  { .printer = mg_json_printer_mbuf, .u.data = (void *) mbuf_addr }
+#define JSON_OUT_MBUF(mbuf_addr)   \
+  {                                \
+    mg_json_printer_mbuf, {        \
+      { (void *) mbuf_addr, 0, 0 } \
+    }                              \
+  }
 
 #endif /* CS_COMMON_JSON_UTILS_H_ */
