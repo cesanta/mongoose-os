@@ -4,6 +4,89 @@ title: "Filesystem"
 
 The FileSystem service exposes a filesystem-like interface for cloud storage. All relative paths are interpreted as path in the home directory of the caller.
 
+#### Write
+Writes a file.
+
+
+Arguments:
+- `path`: File path.
+- `enc`: Input encoding. Valid values are:
+  `none`: the data will be parsed as a string, with best effort quoting
+  of binary data as permitted by the JSON standard.
+  `base64`: the data will be parsed as (padded) base64, as defined in RFC 4648.
+
+  If omitted `none` is assumed.
+
+- `data`: File contents.
+- `append`: If true, and if the file with the given filename already exists, the
+data will be appended to it. Otherwise, the file will be overwritten
+or created.
+
+- `create_intermediate_dirs`: Create intermediate directories as required. Default false.
+
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Filesystem.Write",
+  "args": {
+    "append": "VALUE PLACEHOLDER",
+    "create_intermediate_dirs": "VALUE PLACEHOLDER",
+    "data": "VALUE PLACEHOLDER",
+    "enc": "VALUE PLACEHOLDER",
+    "path": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123
+}
+
+```
+
+#### Stat
+Returns file metadata.
+
+
+Arguments:
+- `path`: File/dir path.
+
+Result `object`: 
+Request:
+```json
+{
+  "v": 2,
+  "src": "device_123",
+  "id": 123,
+  "method": "/v1/Filesystem.Stat",
+  "args": {
+    "path": "VALUE PLACEHOLDER"
+  }
+}
+
+```
+
+Response:
+```json
+{
+  "v": 2,
+  "src": "//api.mongoose-iot.com",
+  "dst": "device_123",
+  "id": 123,
+  "result": "VALUE PLACEHOLDER"
+}
+
+```
+
 #### Read
 Reads a file.
 
@@ -53,55 +136,6 @@ Response:
   "dst": "device_123",
   "id": 123,
   "result": "VALUE PLACEHOLDER"
-}
-
-```
-
-#### Write
-Writes a file.
-
-
-Arguments:
-- `path`: File path.
-- `enc`: Input encoding. Valid values are:
-  `none`: the data will be parsed as a string, with best effort quoting
-  of binary data as permitted by the JSON standard.
-  `base64`: the data will be parsed as (padded) base64, as defined in RFC 4648.
-
-  If omitted `none` is assumed.
-
-- `data`: File contents.
-- `append`: If true, and if the file with the given filename already exists, the
-data will be appended to it. Otherwise, the file will be overwritten
-or created.
-
-- `create_intermediate_dirs`: Create intermediate directories as required. Default false.
-
-Request:
-```json
-{
-  "v": 2,
-  "src": "device_123",
-  "id": 123,
-  "method": "/v1/Filesystem.Write",
-  "args": {
-    "append": "VALUE PLACEHOLDER",
-    "create_intermediate_dirs": "VALUE PLACEHOLDER",
-    "data": "VALUE PLACEHOLDER",
-    "enc": "VALUE PLACEHOLDER",
-    "path": "VALUE PLACEHOLDER"
-  }
-}
-
-```
-
-Response:
-```json
-{
-  "v": 2,
-  "src": "//api.mongoose-iot.com",
-  "dst": "device_123",
-  "id": 123
 }
 
 ```
