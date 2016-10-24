@@ -509,6 +509,7 @@ typedef enum {
   TLS_RSA_WITH_RC4_128_SHA = 0x0005,
   TLS_RSA_WITH_AES_128_CBC_SHA = 0x002f,
   TLS_RSA_WITH_AES_128_CBC_SHA256 = 0x003c,
+  _MAX_CIPHERS = 0xffff, /* Ensures that a type of at least 16 bits is used. */
 } kr_cs_id;
 
 #define TLS_EMPTY_RENEGOTIATION_INFO_SCSV 0x00ff
@@ -4347,6 +4348,8 @@ NS_INTERNAL int kr_hmac_len(kr_cs_id cs) {
       return SHA1_SIZE;
     case TLS_RSA_WITH_AES_128_CBC_SHA256:
       return SHA256_SIZE;
+    case _MAX_CIPHERS:
+      break;
   }
   return -1;
 }
@@ -4410,6 +4413,8 @@ NS_INTERNAL void kr_ssl_hmac(SSL *ssl, int cs, size_t num_msgs,
     case TLS_RSA_WITH_AES_128_CBC_SHA256:
       hf = kr_hash_sha256_v;
       break;
+    case _MAX_CIPHERS:
+      return;
   }
   kr_hmac_v(hf, key, mac_len, num_msgs, msgs, msg_lens, digest, mac_len);
 }
@@ -5339,6 +5344,8 @@ NS_INTERNAL const kr_cipher_info *kr_cipher_get_info(kr_cs_id cs) {
     case TLS_RSA_WITH_AES_128_CBC_SHA:
     case TLS_RSA_WITH_AES_128_CBC_SHA256:
       return kr_aes128_cs_info();
+    case _MAX_CIPHERS:
+      break;
   }
   return NULL;
 }
