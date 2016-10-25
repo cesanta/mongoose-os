@@ -5401,6 +5401,7 @@ extern "C" {
 /*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
  * the `result` variable.
+ * The code can be either a JavaScript source or a precompiled bytecode.
  *
  * Return:
  *
@@ -5440,6 +5441,16 @@ struct v7_exec_opts {
  */
 enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
                         const struct v7_exec_opts *opts, v7_val_t *res);
+
+/*
+ * Like v7_exec but it expects an explicit length instead of treating the code
+ * as a null terminated string.
+ *
+ * The code can be either a JS source or a precompiled bytecode.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_exec_buf(struct v7 *v7, const char *js_code, size_t len,
+                        v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but loads source code from `path` file.
@@ -17595,6 +17606,12 @@ enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
                 V7_UNDEFINED,
                 (opts->this_obj == 0 ? V7_UNDEFINED : opts->this_obj),
                 opts->is_json, 0, 0, res);
+}
+
+enum v7_err v7_exec_buf(struct v7 *v7, const char *js_code, size_t len,
+                        v7_val_t *res) {
+  return b_exec(v7, js_code, len, NULL, V7_UNDEFINED, V7_UNDEFINED,
+                V7_UNDEFINED, 0, 0, 0, res);
 }
 
 enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res) {
