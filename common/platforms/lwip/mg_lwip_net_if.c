@@ -20,7 +20,7 @@
 # define TCP_NEW tcp_new_ip6
 # define TCP_BIND tcp_bind_ip6
 # define UDP_BIND udp_bind_ip6
-# define IPADDR_NTOA ip6addr_ntoa
+# define IPADDR_NTOA(x) ip6addr_ntoa((const ip6_addr_t *)(x))
 # define SET_ADDR(dst, src)                                \
     memcpy((dst)->sin6.sin6_addr.s6_addr, (src)->ip6.addr, \
            sizeof((dst)->sin6.sin6_addr.s6_addr))

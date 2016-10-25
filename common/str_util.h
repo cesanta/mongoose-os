@@ -22,6 +22,13 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
  */
 const char *c_strnstr(const char *s, const char *find, size_t slen);
 
+/*
+ * ARM C Compiler doesn't have strdup, so we provide it
+ */
+#if defined(__ARMCC_VERSION)
+char *strdup(const char *src);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

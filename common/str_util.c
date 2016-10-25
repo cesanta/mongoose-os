@@ -267,4 +267,18 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
   return NULL;
 }
 
+/*
+ * ARM C Compiler doesn't have strdup, so we provide it
+ */
+#if defined(__ARMCC_VERSION)
+char *strdup(const char *src) {
+  size_t len = strlen(src) + 1;
+  char *ret = malloc(len);
+  if (ret != NULL) {
+    strcpy(ret, src);
+  }
+  return ret;
+}
+#endif
+
 #endif /* EXCLUDE_COMMON */
