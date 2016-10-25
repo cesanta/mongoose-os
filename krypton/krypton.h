@@ -64,6 +64,8 @@ int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
 
 /* Krypton-specific. */
 int SSL_CTX_kr_set_verify_name(SSL_CTX *ctx, const char *name);
+/* Value that kr_{send,recv} shoudl return if I/O would block. */
+#define KR_IO_WOULDBLOCK -11
 
 /* for the server */
 #define SSL_FILETYPE_PEM 1

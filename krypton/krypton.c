@@ -67,6 +67,8 @@ int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
 
 /* Krypton-specific. */
 int SSL_CTX_kr_set_verify_name(SSL_CTX *ctx, const char *name);
+/* Value that kr_{send,recv} shoudl return if I/O would block. */
+#define KR_IO_WOULDBLOCK -11
 
 /* for the server */
 #define SSL_FILETYPE_PEM 1
@@ -528,9 +530,13 @@ typedef enum {
 #ifndef CS_KRYPTON_SRC_KEXTERNS_H_
 #define CS_KRYPTON_SRC_KEXTERNS_H_
 
-#ifdef KR_EXT_IO
-extern ssize_t kr_send(int fd, const void *buf, size_t len, int flags);
-extern ssize_t kr_recv(int fd, void *buf, size_t len, int flags);
+#if !defined(KR_EXT_IO) && (defined(_POSIX_VERSION) || defined(WIN32))
+#define KR_EXT_IO 0
+#endif
+
+#if KR_EXT_IO
+extern ssize_t kr_send(int fd, const void *buf, size_t len);
+extern ssize_t kr_recv(int fd, void *buf, size_t len);
 #endif
 #ifdef KR_EXT_RANDOM
 extern int kr_get_random(uint8_t *out, size_t len);
@@ -552,14 +558,6 @@ extern void kr_hash_sha256_v(size_t num_msgs, const uint8_t *msgs[],
 #endif
 
 /* Some defaults. */
-
-#if !defined(KR_EXT_IO) && (defined(_POSIX_VERSION) || defined(WIN32))
-#define kr_send send
-#define kr_recv recv
-#if defined(_POSIX_VERSION)
-#include <sys/socket.h>
-#endif
-#endif
 
 #if !defined(KR_EXT_RANDOM)
 #if defined(__unix__)
@@ -3117,7 +3115,7 @@ void hex_dumpf(FILE *f, const void *buf, size_t len, size_t llen) {
       }
     }
 
-    for (; i < llen; i++) fprintf(f, " ");
+    for (; i < llen + 1; i++) fprintf(f, " ");
 
     for (i = 0; i < line; i++) fprintf(f, "%02x", tmp[i]);
 
@@ -5673,9 +5671,32 @@ int RSA_encrypt(const RSA_CTX *ctx, const uint8_t *in_data, uint16_t in_len,
 
 /* Amalgamated: #include "ktypes.h" */
 
+#if !KR_EXT_IO
+
+#ifdef _POSIX_VERSION
+#include <sys/socket.h>
+#endif
+
 #ifndef MSG_NOSIGNAL
 #define MSG_NOSIGNAL 0
 #endif
+
+ssize_t kr_send(int fd, const void *buf, size_t len) {
+  ssize_t ret = send(fd, buf, len, MSG_NOSIGNAL);
+  if (ret < 0 && (SOCKET_ERRNO == EWOULDBLOCK || SOCKET_ERRNO == EAGAIN)) {
+    return KR_IO_WOULDBLOCK;
+  }
+  return ret;
+}
+
+ssize_t kr_recv(int fd, void *buf, size_t len) {
+  ssize_t ret = recv(fd, buf, len, MSG_NOSIGNAL);
+  if (ret < 0 && (SOCKET_ERRNO == EWOULDBLOCK || SOCKET_ERRNO == EAGAIN)) {
+    return KR_IO_WOULDBLOCK;
+  }
+  return ret;
+}
+#endif /* !KR_EXT_IO */
 
 int SSL_library_init(void) {
   return 1;
@@ -5740,11 +5761,11 @@ again:
 #else
   send_len = len;
 #endif
-  ret = kr_send(ssl->fd, buf, send_len, MSG_NOSIGNAL);
+  ret = kr_send(ssl->fd, buf, send_len);
   dprintf(
       ("kr_send(%d, %p, %d) = %d\n", ssl->fd, buf, (int) send_len, (int) ret));
   if (ret < 0) {
-    if (SOCKET_ERRNO == EWOULDBLOCK) {
+    if (ret == KR_IO_WOULDBLOCK) {
       goto shuffle;
     }
     ssl_err(ssl, SSL_ERROR_SYSCALL);
@@ -5827,15 +5848,14 @@ static int do_recv(SSL *ssl, uint8_t *out, size_t out_len) {
   len = ssl->rx_max_len - ssl->rx_len;
 #endif
 
-  ret = kr_recv(ssl->fd, ptr, len, MSG_NOSIGNAL);
-  dprintf(("kr_recv(%d, %p, %d): %d %d\n", ssl->fd, ptr, (int) len, (int) ret,
-           errno));
+  ret = kr_recv(ssl->fd, ptr, len);
+  dprintf(("kr_recv(%d, %p, %d): %d\n", ssl->fd, ptr, (int) len, (int) ret));
   if (ret < 0) {
-    if (SOCKET_ERRNO == EWOULDBLOCK) {
+    if (ret == KR_IO_WOULDBLOCK) {
       ssl_err(ssl, SSL_ERROR_WANT_READ);
       return 0;
     }
-    dprintf(("recv: %s\n", strerror(errno)));
+    dprintf(("recv: %d %s\n", SOCKET_ERRNO, strerror(errno)));
     ssl_err(ssl, SSL_ERROR_SYSCALL);
     return 0;
   }
@@ -5867,6 +5887,8 @@ static int do_recv(SSL *ssl, uint8_t *out, size_t out_len) {
 }
 
 int SSL_accept(SSL *ssl) {
+  dprintf(("SSL_accept(%p)\n", ssl));
+
   if (ssl->fatal) {
     ssl_err(ssl, SSL_ERROR_SSL);
     return -1;
@@ -5937,6 +5959,8 @@ int SSL_accept(SSL *ssl) {
 
 int SSL_connect(SSL *ssl) {
   tls_sec_t sec;
+
+  dprintf(("SSL_connect(%p)\n", ssl));
 
   if (ssl->fatal) {
     ssl_err(ssl, SSL_ERROR_SSL);

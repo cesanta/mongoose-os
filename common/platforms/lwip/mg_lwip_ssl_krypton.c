@@ -115,8 +115,11 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
         cs->err = 0;
         return;
       } else {
-        LOG(LL_ERROR, ("SSL read error: %d", err));
+        if (err != SSL_ERROR_ZERO_RETURN) {
+          LOG(LL_ERROR, ("SSL read error: %d", err));
+        }
         mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
+        return;
       }
     } else {
       mg_if_recv_tcp_cb(nc, buf, ret); /* callee takes over data */
@@ -129,27 +132,21 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
   }
 }
 
-ssize_t kr_send(int fd, const void *buf, size_t len, int flags) {
+ssize_t kr_send(int fd, const void *buf, size_t len) {
   struct mg_connection *nc = (struct mg_connection *) fd;
   int ret = mg_lwip_tcp_write(nc, buf, len);
-  (void) flags;
   DBG(("mg_lwip_tcp_write %u = %d", len, ret));
-  if (ret <= 0) {
-    errno = (ret == 0 ? EWOULDBLOCK : EIO);
-    ret = -1;
-  }
+  if (ret == 0) ret = KR_IO_WOULDBLOCK;
   return ret;
 }
 
-ssize_t kr_recv(int fd, void *buf, size_t len, int flags) {
+ssize_t kr_recv(int fd, void *buf, size_t len) {
   struct mg_connection *nc = (struct mg_connection *) fd;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct pbuf *seg = cs->rx_chain;
-  (void) flags;
   if (seg == NULL) {
     DBG(("%u - nothing to read", len));
-    errno = EWOULDBLOCK;
-    return -1;
+    return KR_IO_WOULDBLOCK;
   }
   size_t seg_len = (seg->len - cs->rx_offset);
   DBG(("%u %u %u %u", len, cs->rx_chain->len, seg_len, cs->rx_chain->tot_len));

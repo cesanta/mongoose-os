@@ -79,15 +79,7 @@ static err_t mg_lwip_tcp_conn_cb(void *arg, struct tcp_pcb *tpcb, err_t err) {
 #if LWIP_TCP_KEEPALIVE
   if (err == 0) mg_lwip_set_keepalive_params(nc, 60, 10, 6);
 #endif
-#ifdef SSL_KRYPTON
-  if (err == 0 && nc->ssl != NULL) {
-    SSL_set_fd(nc->ssl, (intptr_t) nc);
-    mg_lwip_ssl_do_hs(nc);
-  } else
-#endif
-  {
-    mg_lwip_post_signal(MG_SIG_CONNECT_RESULT, nc);
-  }
+  mg_lwip_post_signal(MG_SIG_CONNECT_RESULT, nc);
   return ERR_OK;
 }
 
@@ -146,6 +138,12 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
     }
     pbuf_chain(cs->rx_chain, p);
   }
+  mg_lwip_post_signal(MG_SIG_RECV, nc);
+  return ERR_OK;
+}
+
+static void mg_lwip_handle_recv(struct mg_connection *nc) {
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
 
 #ifdef SSL_KRYPTON
   if (nc->ssl != NULL) {
@@ -154,7 +152,7 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
     } else {
       mg_lwip_ssl_do_hs(nc);
     }
-    return ERR_OK;
+    return;
   }
 #endif
 
@@ -164,7 +162,7 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
     char *data = (char *) malloc(len);
     if (data == NULL) {
       DBG(("OOM"));
-      return ERR_MEM;
+      return;
     }
     pbuf_copy_partial(seg, data, len, cs->rx_offset);
     mg_if_recv_tcp_cb(nc, data, len); /* callee takes over data */
@@ -179,7 +177,6 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
   if (nc->send_mbuf.len > 0) {
     mg_lwip_mgr_schedule_poll(nc->mgr);
   }
-  return ERR_OK;
 }
 
 static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,

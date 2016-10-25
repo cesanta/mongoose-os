@@ -37,12 +37,24 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
     switch (md->sig_queue[md->start_index].sig) {
       case MG_SIG_CONNECT_RESULT: {
-        mg_if_connect_cb(nc, cs->err);
+#ifdef SSL_KRYPTON
+        if (cs->err == 0 && nc->flags & MG_F_SSL && !(nc->flags & MG_F_SSL_HANDSHAKE_DONE)) {
+          SSL_set_fd(nc->ssl, (intptr_t) nc);
+          mg_lwip_ssl_do_hs(nc);
+        } else
+#endif
+        {
+          mg_if_connect_cb(nc, cs->err);
+        }
         break;
       }
       case MG_SIG_CLOSE_CONN: {
         nc->flags |= MG_F_CLOSE_IMMEDIATELY;
         mg_close_conn(nc);
+        break;
+      }
+      case MG_SIG_RECV: {
+        mg_lwip_handle_recv(nc);
         break;
       }
       case MG_SIG_SENT_CB: {
@@ -90,7 +102,9 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   struct mg_connection *nc, *tmp;
   double min_timer = 0;
   int num_timers = 0;
+#if 0
   DBG(("begin poll @%u", (unsigned int) (now * 1000)));
+#endif
   mg_ev_mgr_lwip_process_signals(mgr);
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
@@ -141,9 +155,12 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
       num_timers++;
     }
   }
+#if 0
   DBG(("end poll @%u, %d conns, %d timers (min %u), next in %d ms",
        (unsigned int) (now * 1000), n, num_timers,
        (unsigned int) (min_timer * 1000), timeout_ms));
+#endif
+  (void) timeout_ms;
   return now;
 }
 
