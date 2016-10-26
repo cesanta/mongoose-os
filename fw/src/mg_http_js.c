@@ -441,7 +441,9 @@ struct {
              MAKE_SERVE_HTTP_OPTS_MAPPING(global_auth_file),
              MAKE_SERVE_HTTP_OPTS_MAPPING(enable_directory_listing),
              MAKE_SERVE_HTTP_OPTS_MAPPING(ip_acl),
+#if MG_ENABLE_HTTP_URL_REWRITES
              MAKE_SERVE_HTTP_OPTS_MAPPING(url_rewrites),
+#endif
              MAKE_SERVE_HTTP_OPTS_MAPPING(dav_document_root),
              MAKE_SERVE_HTTP_OPTS_MAPPING(dav_auth_file),
              MAKE_SERVE_HTTP_OPTS_MAPPING(hidden_file_pattern),

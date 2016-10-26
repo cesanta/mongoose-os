@@ -62,3 +62,16 @@ int mg_strcmp(const struct mg_str str1, const struct mg_str str2) {
   if (i < str2.len) return -1;
   return 0;
 }
+
+int mg_strncmp(const struct mg_str str1, const struct mg_str str2, size_t n) {
+  struct mg_str s1 = str1;
+  struct mg_str s2 = str2;
+
+  if (s1.len > n) {
+    s1.len = n;
+  }
+  if (s2.len > n) {
+    s2.len = n;
+  }
+  return mg_strcmp(s1, s2);
+}

@@ -43,6 +43,7 @@ int mg_vcasecmp(const struct mg_str *str2, const char *str1);
 
 struct mg_str mg_strdup(const struct mg_str s);
 int mg_strcmp(const struct mg_str str1, const struct mg_str str2);
+int mg_strncmp(const struct mg_str str1, const struct mg_str str2, size_t n);
 
 #ifdef __cplusplus
 }
