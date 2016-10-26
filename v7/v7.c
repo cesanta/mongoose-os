@@ -48,6 +48,7 @@
 #define CS_P_WINCE 8
 #define CS_P_NXP_KINETIS 9
 #define CS_P_NRF52 10
+#define CS_P_PIC32_HARMONY 11
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -67,6 +68,8 @@
 #define CS_PLATFORM CS_P_MBED
 #elif defined(FRDM_K64F) || defined(FREEDOM)
 #define CS_PLATFORM CS_P_NXP_KINETIS
+#elif defined(PIC32)
+#define CS_PLATFORM CS_P_PIC32_HARMONY
 #endif
 
 #ifndef CS_PLATFORM
@@ -78,6 +81,7 @@
 #define MG_NET_IF_SOCKET 1
 #define MG_NET_IF_SIMPLELINK 2
 #define MG_NET_IF_LWIP_LOW_LEVEL 3
+#define MG_NET_IF_PIC32_HARMONY 4
 
 /* Amalgamated: #include "common/platforms/platform_unix.h" */
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
@@ -88,6 +92,7 @@
 /* Amalgamated: #include "common/platforms/platform_nrf52.h" */
 /* Amalgamated: #include "common/platforms/platform_wince.h" */
 /* Amalgamated: #include "common/platforms/platform_nxp_kinetis.h" */
+/* Amalgamated: #include "common/platforms/platform_pic32_harmony.h" */
 
 /* Common stuff */
 
@@ -1161,6 +1166,40 @@ typedef struct stat cs_stat_t;
 
 #endif /* CS_PLATFORM == CS_P_NXP_KINETIS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_pic32_harmony.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_
+
+#if CS_PLATFORM == CS_P_PIC32_HARMONY
+
+#define MG_NET_IF MG_NET_IF_PIC32_HARMONY
+
+#include <stdint.h>
+#include <time.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+#include <system_config.h>
+#include <system_definitions.h>
+
+typedef TCP_SOCKET sock_t;
+#define to64(x) strtoll(x, NULL, 10)
+
+#define SIZE_T_FMT "lu"
+#define INT64_FMT "lld"
+
+char* inet_ntoa(struct in_addr in);
+
+#endif /* CS_PLATFORM == CS_P_PIC32_HARMONY */
+
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/str_util.h"
 #endif

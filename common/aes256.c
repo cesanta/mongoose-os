@@ -1,3 +1,4 @@
+/* clang-format off */
 /*
 *   Byte-oriented AES-256 implementation.
 *   All lookup tables replaced with 'on the fly' calculations.
