@@ -55,15 +55,22 @@ spiffs fs;
 
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
+#define FS_STD 0
+#define FS_EXT 1
+#define FS_EXT_ADDR ((uint32_t) 0x200000)
+#define FS_EXT_SIZE ((uint32_t) 0x1FC000)
 
 struct mmap_desc mmap_descs[MG_MMAP_SLOTS];
+
+static int s_cur_fs = 0;
 static struct mmap_desc *cur_mmap_desc;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
+static uint32_t fs_std_addr = 0, fs_std_size = 0;
 spiffs *get_fs(void) {
-  return &fs;
+	return &fs;
 }
 
 int spiffs_get_memory_usage(void) {
@@ -262,6 +269,10 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
 }
 
 int fs_init(uint32_t addr, uint32_t size) {
+	if (s_cur_fs == 0){
+		fs_std_addr = addr;
+		fs_std_size = size;
+	}
   return fs_mount(&fs, addr, size, spiffs_work_buf, spiffs_fds,
                   sizeof(spiffs_fds));
 }
@@ -474,6 +485,20 @@ int64_t mg_get_storage_free_space(void) {
   uint32_t total, used;
   SPIFFS_info(&fs, &total, &used);
   return total - used;
+}
+
+uint8_t sj_fs_jump(int fs) {
+  uint8_t res = 1;
+  if (s_cur_fs != fs){
+	  s_cur_fs = fs;
+	  fs_umount();
+	  if(fs == FS_EXT){
+		  res = fs_init(FS_EXT_ADDR,FS_EXT_SIZE);
+	  }else{
+		  res = fs_init(fs_std_addr,fs_std_size);
+	  }
+  }
+  return res;
 }
 
 #endif

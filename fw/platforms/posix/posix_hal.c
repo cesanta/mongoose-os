@@ -168,3 +168,7 @@ int64_t mg_get_storage_free_space(void) {
   /* TODO(alashkin): think about implementation */
   return -1;
 }
+uint8_t sj_fs_jump(int fs) {
+    /* TODO(alashkin): think about implementation */
+  return fs;
+}

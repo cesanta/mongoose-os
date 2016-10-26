@@ -47,3 +47,5 @@ void mg_usleep(int usecs);
 int64_t mg_get_storage_free_space(void);
 
 #endif /* CS_FW_SRC_MG_HAL_H_ */
+/* Jumps between file systems */
+uint8_t sj_fs_jump(int fs);

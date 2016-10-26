@@ -116,10 +116,12 @@ int esp_mg_init(rboot_config *bcfg) {
 
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
                   bcfg->fs_sizes[bcfg->current_rom]);
+				  
   if (r != 0) {
     LOG(LL_ERROR, ("FS init error: %d", r));
     return -1;
   }
+  
   if (bcfg->fw_updated && apply_update(bcfg) < 0) {
     return -2;
   }

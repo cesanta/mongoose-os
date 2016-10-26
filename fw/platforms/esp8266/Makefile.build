@@ -20,14 +20,13 @@ APP_MODULES ?=
 APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
-
-MG_ENABLE_JS ?= 0
-MG_ENABLE_CLUBBY ?= 1
-MG_ENABLE_CLUBBY_UART ?= 1
-MG_ENABLE_CONFIG_SERVICE ?= 1
+MG_ENABLE_JS ?= 1
+MG_ENABLE_CLUBBY ?= 0
+MG_ENABLE_CLUBBY_UART ?= 0
+MG_ENABLE_CONFIG_SERVICE ?= 0
 MG_ENABLE_FILESYSTEM_SERVICE ?= 1
 MG_ENABLE_UPDATER_POST ?= 1
-MG_ENABLE_UPDATER_CLUBBY ?= 1
+MG_ENABLE_UPDATER_CLUBBY ?= 0
 MG_ENABLE_DNS_SD ?= 1
 
 MG_DEBUG_UART ?= 0
@@ -55,10 +54,12 @@ V7_FREEZE ?= 1
 HEAP_LOG ?=
 
 CREATE_SPIFFS_FS ?= 1
+CREATE_SPIFFS_FS_EXT ?= 1
 CREATE_RAW_FS ?= 0
 
-FLASH_SIZE ?= 4M
+FLASH_SIZE ?= 1M
 FS_SIZE ?= 128K
+FS_EXT_SIZE = 0x1FC000
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
@@ -80,6 +81,7 @@ FW_DIR = $(CURDIR)/firmware
 GEN_DIR = $(BUILD_DIR)/gen
 
 FS_STAGING_DIR = $(BUILD_DIR)/fs
+FS_EXT_STAGING_DIR = $(BUILD_DIR)/fs_ext_temp
 RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
@@ -230,11 +232,17 @@ ifeq "${CREATE_SPIFFS_FS}" "1"
   FW_FS_OUT = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 endif
 
+ifeq "${CREATE_SPIFFS_FS_EXT}" "1"
+  FW_FS_EXT_OUT = $(FW_STAGING_DIR)/$(FS_EXT_ADDR).bin
+endif
+
 LD_SCRIPT_TEMPL = $(MIOT_ESP_PATH)/ld/fw.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
+   sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
+_FS_EXT_SIZE = $(shell echo $$((`echo $(FS_EXT_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
 LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
@@ -314,6 +322,8 @@ FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$((0x100000 - $(RF_CAL_DATA_SIZE
 FS_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 FS2_ADDR = $(shell printf "0x%05x" "$$((0x200000 - $(_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(_FLASH_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS_EXT_ADDR  = $(shell printf "0x%05x" "$$((0x400000 - $(_FS_EXT_SIZE) - $(SYS_PARAMS_SIZE)))")
+
 RBOOT_CFG_INIT=$(FW_STAGING_DIR)/0x01000.bin
 RF_CAL_DATA_INIT=$(FW_STAGING_DIR)/$(FW_RF_CAL_DATA_ADDR).bin
 PREREQ = rboot $(RBOOT_CFG_INIT)
@@ -354,6 +364,10 @@ ifeq "$(CREATE_SPIFFS_FS)" "1"
   FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
 
+ifeq "$(CREATE_SPIFFS_FS_EXT)" "1"
+  FW_PARTS += fs_ext:src=$(FW_FS_EXT_OUT),type=fs,addr=$(FS_EXT_ADDR),fs_size=$(_FS_EXT_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+endif
+
 ifeq "$(CREATE_RAW_FS)" "1"
   FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
@@ -363,7 +377,7 @@ include $(REPO_PATH)/common/scripts/fw_meta.mk
 all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
-                $(FW_FILE_2_OUT) $(FW_FS_OUT) $(FS_FILES) $(JSBIN_SRCS)
+                $(FW_FILE_2_OUT) $(FW_FS_OUT) $(FW_FS_EXT_OUT) $(FS_FILES) $(JSBIN_SRCS)
 
 $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT): $(FW_STAGING_DIR)
 	$(vecho) "GEN   $@"
@@ -456,6 +470,14 @@ endif
 	$(Q) cp $(SYS_CONFIG_DEFAULTS_JSON) $(FS_STAGING_DIR)/conf_defaults.json
 	$(vecho) "MKFS  $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
 	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_STAGING_DIR) > $@
+
+$(FW_FS_EXT_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(BUILD_DIR)/mkspiffs
+	rm -rf $(FS_EXT_STAGING_DIR) && mkdir -p $(FS_EXT_STAGING_DIR)
+	$(Q) $(foreach f,$(FS_FILES), \
+	  echo "  CP    $(f) -> $(FS_EXT_STAGING_DIR)"; \
+	  cp $(f) $(FS_EXT_STAGING_DIR);)
+	$(vecho) "MKFS  $(FS_EXT_STAGING_DIR) ($(_FS_EXT_SIZE) @ $(FS_EXT_ADDR))-> $@"
+	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_EXT_SIZE) $(FS_EXT_STAGING_DIR) > $@
 
 $(BUILD_DIR)/mkspiffs:
 	$(MAKE) -C $(REPO_PATH)/common/spiffs/tools $(abspath $(BUILD_DIR))/mkspiffs BUILD_DIR=$(abspath $(BUILD_DIR))
