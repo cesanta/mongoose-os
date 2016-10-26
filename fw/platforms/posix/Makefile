@@ -225,7 +225,7 @@ $(GENFILES_FLAG): $(GENFILES_LIST)
 # Generate build info. Only regenerates if there are changes in objects.
 include $(REPO_PATH)/common/scripts/build_info.mk
 
-$(BUILD_INFO_C): $(OBJS)
+$(BUILD_INFO_C): $(APP_OBJS)
 	$(call gen_build_info,$@,,,,,$(BUILD_INFO_C),)
 
 -include $(wildcard $(BUILD_DIR)/*.d)
