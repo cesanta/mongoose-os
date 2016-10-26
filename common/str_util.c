@@ -281,4 +281,34 @@ char *strdup(const char *src) {
 }
 #endif
 
+void cs_to_hex(char *to, const unsigned char *p, size_t len) {
+  static const char *hex = "0123456789abcdef";
+
+  for (; len--; p++) {
+    *to++ = hex[p[0] >> 4];
+    *to++ = hex[p[0] & 0x0f];
+  }
+  *to = '\0';
+}
+
+static int fourbit(int ch) {
+  if (ch >= '0' && ch <= '9') {
+    return ch - '0';
+  } else if (ch >= 'a' && ch <= 'f') {
+    return ch - 'a' + 10;
+  } else if (ch >= 'A' && ch <= 'F') {
+    return ch - 'A' + 10;
+  }
+  return 0;
+}
+
+void cs_from_hex(char *to, const char *p, size_t len) {
+  size_t i;
+
+  for (i = 0; i < len; i += 2) {
+    *to++ = (fourbit(p[i]) << 4) + fourbit(p[i + 1]);
+  }
+  *to = '\0';
+}
+
 #endif /* EXCLUDE_COMMON */

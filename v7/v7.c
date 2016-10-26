@@ -1189,6 +1189,19 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
 const char *c_strnstr(const char *s, const char *find, size_t slen);
 
 /*
+ * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
+ * because each byte of input takes 2 bytes in string representation
+ * plus 1 byte for the terminating \0 character.
+ */
+void cs_to_hex(char *to, const unsigned char *p, size_t len);
+
+/*
+ * Convert stringified binary data back to binary.
+ * Does the reverse of `cs_to_hex()`.
+ */
+void cs_from_hex(char *to, const char *p, size_t len);
+
+/*
  * ARM C Compiler doesn't have strdup, so we provide it
  */
 #if defined(__ARMCC_VERSION)
@@ -1445,13 +1458,6 @@ void MD5_Final(unsigned char *md, MD5_CTX *c);
  *    cs_md5(buf, "foo", (size_t) 3, "bar", (size_t) 3, NULL);
  */
 char *cs_md5(char buf[33], ...);
-
-/*
- * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
- * because each byte of input takes 2 bytes in string representation
- * plus 1 byte for the terminating \0 character.
- */
-void cs_to_hex(char *to, const unsigned char *p, size_t len);
 
 #ifdef __cplusplus
 }
@@ -8513,6 +8519,36 @@ char *strdup(const char *src) {
 }
 #endif
 
+void cs_to_hex(char *to, const unsigned char *p, size_t len) {
+  static const char *hex = "0123456789abcdef";
+
+  for (; len--; p++) {
+    *to++ = hex[p[0] >> 4];
+    *to++ = hex[p[0] & 0x0f];
+  }
+  *to = '\0';
+}
+
+static int fourbit(int ch) {
+  if (ch >= '0' && ch <= '9') {
+    return ch - '0';
+  } else if (ch >= 'a' && ch <= 'f') {
+    return ch - 'a' + 10;
+  } else if (ch >= 'A' && ch <= 'F') {
+    return ch - 'A' + 10;
+  }
+  return 0;
+}
+
+void cs_from_hex(char *to, const char *p, size_t len) {
+  size_t i;
+
+  for (i = 0; i < len; i += 2) {
+    *to++ = (fourbit(p[i]) << 4) + fourbit(p[i + 1]);
+  }
+  *to = '\0';
+}
+
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
 #line 1 "common/utf.c"
@@ -10111,7 +10147,8 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
 
 /* Amalgamated: #include "common/md5.h" */
 
-#if !DISABLE_MD5 && !defined(EXCLUDE_COMMON)
+#if !defined(EXCLUDE_COMMON)
+#if !DISABLE_MD5
 
 /* Amalgamated: #include "common/cs_endian.h" */
 
@@ -10298,21 +10335,7 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
-
-/*
- * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
- * because each byte of input takes 2 bytes in string representation
- * plus 1 byte for the terminating \0 character.
- */
-void cs_to_hex(char *to, const unsigned char *p, size_t len) {
-  static const char *hex = "0123456789abcdef";
-
-  for (; len--; p++) {
-    *to++ = hex[p[0] >> 4];
-    *to++ = hex[p[0] & 0x0f];
-  }
-  *to = '\0';
-}
+#endif /* DISABLE_MD5 */
 
 char *cs_md5(char buf[33], ...) {
   unsigned char hash[16];
