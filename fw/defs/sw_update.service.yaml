@@ -35,7 +35,8 @@ methods:
         doc: URL pointing to the image if it's too big to fit in the `blob`.
       blob_type:
         type: string
-        doc: Type of the blob. Valid values: manifest, zip.
+        doc: >-
+          Type of the blob. Valid values: manifest, zip.
       commit_timeout:
         type: integer
         doc: >-

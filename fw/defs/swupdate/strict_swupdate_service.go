@@ -38,22 +38,19 @@ type ListSectionsResult struct {
 	Writable *bool   `json:"writable,omitempty"`
 }
 
-type UpdateArgsSig struct {
-	Alg *string `json:"alg,omitempty"`
-	V   *string `json:"v,omitempty"`
-}
-
 type UpdateArgs struct {
-	Blob      *string        `json:"blob,omitempty"`
-	Blob_type *string        `json:"blob_type,omitempty"`
-	Blob_url  *string        `json:"blob_url,omitempty"`
-	Section   *string        `json:"section,omitempty"`
-	Sig       *UpdateArgsSig `json:"sig,omitempty"`
-	Version   *string        `json:"version,omitempty"`
+	Blob           *string `json:"blob,omitempty"`
+	Blob_type      *string `json:"blob_type,omitempty"`
+	Blob_url       *string `json:"blob_url,omitempty"`
+	Commit_timeout *int64  `json:"commit_timeout,omitempty"`
+	Section        *string `json:"section,omitempty"`
+	Version        *string `json:"version,omitempty"`
 }
 
 type Service interface {
+	Commit(ctx context.Context) error
 	ListSections(ctx context.Context) ([]ListSectionsResult, error)
+	Revert(ctx context.Context) error
 	Update(ctx context.Context, args *UpdateArgs) error
 }
 
@@ -141,6 +138,23 @@ type _Client struct {
 	addr string
 }
 
+func (c *_Client) Commit(pctx context.Context) (err error) {
+	cmd := &frame.Command{
+		Cmd: "/v1/SWUpdate.Commit",
+	}
+	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	defer finish(&err)
+	_ = tr
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
 func (c *_Client) ListSections(pctx context.Context) (res []ListSectionsResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "/v1/SWUpdate.ListSections",
@@ -176,6 +190,23 @@ func (c *_Client) ListSections(pctx context.Context) (res []ListSectionsResult, 
 		return nil, errors.Annotatef(err, "unmarshaling response")
 	}
 	return r, nil
+}
+
+func (c *_Client) Revert(pctx context.Context) (err error) {
+	cmd := &frame.Command{
+		Cmd: "/v1/SWUpdate.Revert",
+	}
+	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	defer finish(&err)
+	_ = tr
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
 }
 
 func (c *_Client) Update(pctx context.Context, args *UpdateArgs) (err error) {
@@ -215,7 +246,9 @@ func (c *_Client) Update(pctx context.Context, args *UpdateArgs) (err error) {
 func RegisterService(i *clubby.Instance, impl Service) error {
 	validatorsOnce.Do(initValidators)
 	s := &_Server{impl}
+	i.RegisterCommandHandler("/v1/SWUpdate.Commit", s.Commit)
 	i.RegisterCommandHandler("/v1/SWUpdate.ListSections", s.ListSections)
+	i.RegisterCommandHandler("/v1/SWUpdate.Revert", s.Revert)
 	i.RegisterCommandHandler("/v1/SWUpdate.Update", s.Update)
 	i.RegisterService(ServiceID, _ServiceDefinition)
 	return nil
@@ -223,6 +256,10 @@ func RegisterService(i *clubby.Instance, impl Service) error {
 
 type _Server struct {
 	impl Service
+}
+
+func (s *_Server) Commit(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	return nil, s.impl.Commit(ctx)
 }
 
 func (s *_Server) ListSections(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -243,6 +280,10 @@ func (s *_Server) ListSections(ctx context.Context, src string, cmd *frame.Comma
 		}
 	}
 	return r, nil
+}
+
+func (s *_Server) Revert(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	return nil, s.impl.Revert(ctx)
 }
 
 func (s *_Server) Update(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -271,6 +312,9 @@ func (s *_Server) Update(ctx context.Context, src string, cmd *frame.Command) (i
 var _ServiceDefinition = json.RawMessage([]byte(`{
   "doc": "SWUpdate service provides a way to update device's software.",
   "methods": {
+    "Commit": {
+      "doc": "Commit a previously initiated update."
+    },
     "ListSections": {
       "doc": "Returns a list of components of the device's software. Each section is updated individually.",
       "result": {
@@ -291,6 +335,9 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         "type": "array"
       }
     },
+    "Revert": {
+      "doc": "Revert a previously initiated update."
+    },
     "Update": {
       "args": {
         "blob": {
@@ -298,32 +345,20 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           "type": "string"
         },
         "blob_type": {
-          "doc": "type of the blob. Valid values: manifest, zip",
+          "doc": "Type of the blob. Valid values: manifest, zip.",
           "type": "string"
         },
         "blob_url": {
           "doc": "URL pointing to the image if it's too big to fit in the ` + "`" + `blob` + "`" + `.",
           "type": "string"
         },
+        "commit_timeout": {
+          "doc": "Normally update is committed if firmware init succeeds, If timeout is set and non-zero, the update will require an explicit commit. If the specified time expires without a commit, update is rolled back.",
+          "type": "integer"
+        },
         "section": {
           "doc": "Name of the section to update.",
           "type": "string"
-        },
-        "sig": {
-          "doc": "Hash or signature for the image that can be used to verify its integrity.",
-          "properties": {
-            "alg": {
-              "type": "string"
-            },
-            "v": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "alg",
-            "v"
-          ],
-          "type": "object"
         },
         "version": {
           "doc": "Optional version of the new image.",
