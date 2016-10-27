@@ -35,16 +35,14 @@ methods:
         doc: URL pointing to the image if it's too big to fit in the `blob`.
       blob_type:
         type: string
+        doc: Type of the blob. Valid values: manifest, zip.
+      commit_timeout:
+        type: integer
         doc: >-
-          type of the blob. Valid values: manifest, zip
-      sig:
-        type: object
-        doc: >-
-          Hash or signature for the image that can be used to verify its
-          integrity.
-        properties:
-          alg:
-            type: string
-          v:
-            type: string
-        required: [alg, v]
+          Normally update is committed if firmware init succeeds,
+          If timeout is set and non-zero, the update will require an explicit commit.
+          If the specified time expires without a commit, update is rolled back.
+  Commit:
+    doc: Commit a previously initiated update.
+  Revert:
+    doc: Revert a previously initiated update.

@@ -10,8 +10,4 @@
 
 rboot_config *get_rboot_config(void);
 
-int apply_update(rboot_config *cfg);
-void commit_update(rboot_config *cfg);
-void revert_update(rboot_config *cfg);
-
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_UPDATER_H_ */

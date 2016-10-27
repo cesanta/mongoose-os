@@ -37,6 +37,10 @@ void fs_container_fname(const char *cpfx, int cidx, _u8 *fname);
 
 _i32 fs_create_container(const char *cpfx, int cidx, _u32 fs_size);
 
+_i32 fs_delete_container(const char *cpfx, int cidx);
+
+_i32 fs_delete_inactive_container(const char *cpfx);
+
 _i32 fs_mount(const char *cpfx, struct mount_info *m);
 
 _i32 fs_write_meta(_i32 fh, _u64 seq, _u32 fs_size, _u32 fs_block_size,

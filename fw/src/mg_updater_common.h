@@ -10,6 +10,7 @@
 #define CS_FW_SRC_MG_UPDATER_COMMON_H_
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "fw/src/mg_updater_hal.h"
 
@@ -80,6 +81,16 @@ struct update_context {
   char file_name[50];
   char *base_url;
   struct mg_upd_ctx *dev_ctx;
+
+  /*
+   * At the end of update this struct is written to a file
+   * and then restored after reboot.
+   */
+  struct update_file_context {
+    int64_t id;
+    int commit_timeout;
+    char clubby_src[100];
+  } fctx __attribute__((packed));
 };
 
 struct update_context *updater_context_create(enum UPDATE_TYPE ut);
@@ -89,5 +100,9 @@ void updater_context_free(struct update_context *ctx);
 int updater_finalize(struct update_context *ctx);
 int is_update_finished(struct update_context *ctx);
 int is_reboot_required(struct update_context *ctx);
+
+void mg_upd_boot_finish(bool is_successful, bool is_first);
+bool mg_upd_commit();
+bool mg_upd_revert(bool reboot);
 
 #endif /* CS_FW_SRC_MG_UPDATER_COMMON_H_ */

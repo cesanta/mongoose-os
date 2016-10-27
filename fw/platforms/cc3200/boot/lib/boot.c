@@ -75,6 +75,11 @@ static int read_cfg(const _u8 *fn, struct boot_cfg *cfg) {
     r = -1;
   }
   sl_FsClose(fh, NULL, NULL, 0);
+  /*
+   * The INVALID flag will not be set intentionally,
+   * but will be set if it's just all 1s (e.g. empty sector).
+   */
+  if (cfg->flags & BOOT_F_INVALID) r = -10;
   return r;
 }
 

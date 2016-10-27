@@ -212,6 +212,6 @@ void cc3200_fs_flush(void) {
   fs_close_container(m);
 }
 
-void cc3200_fs_umount(void) {
+void cc3200_fs_umount() {
   if (s_fsm.valid) fs_umount(&s_fsm);
 }

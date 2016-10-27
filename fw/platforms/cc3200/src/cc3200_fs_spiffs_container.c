@@ -36,9 +36,23 @@ _i32 fs_create_container(const char *cpfx, int cidx, _u32 fs_size) {
   int r = sl_FsDel(fname, 0);
   DBG(("del %s -> %d", fname, r));
   r = sl_FsOpen(fname, FS_MODE_OPEN_CREATE(fsize, 0), NULL, &fh);
-  DBG(("open %s %d -> %d %d", fname, (int) fsize, (int) r, (int) fh));
+  LOG((r == 0 ? LL_DEBUG : LL_ERROR),
+      ("open %s %d -> %d %d", fname, (int) fsize, (int) r, (int) fh));
   if (r != 0) return r;
   return fh;
+}
+
+_i32 fs_delete_container(const char *cpfx, int cidx) {
+  _i32 ret = -1;
+  SlFsFileInfo_t fi;
+  _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
+  fs_container_fname(cpfx, cidx, fname);
+  ret = sl_FsGetInfo(fname, 0, &fi);
+  if (ret == 0) {
+    LOG(LL_INFO, ("Deleting %s", fname));
+    ret = sl_FsDel(fname, 0);
+  }
+  return ret;
 }
 
 _i32 fs_write_meta(_i32 fh, _u64 seq, _u32 fs_size, _u32 fs_block_size,
@@ -156,7 +170,7 @@ out_close_new:
   if (new_fh > 0) sl_FsClose(new_fh, NULL, NULL, 0);
 out_close_old:
   sl_FsClose(old_fh, NULL, NULL, 0);
-  DBG(("switch: %d", r));
+  LOG((r == 0 ? LL_DEBUG : LL_ERROR), ("%d", r));
   return r;
 }
 
@@ -305,12 +319,10 @@ static int fs_mount_idx(const char *cpfx, int cidx, struct mount_info *m) {
   return r;
 }
 
-_i32 fs_mount(const char *cpfx, struct mount_info *m) {
+static int fs_get_active_idx(const char *cpfx) {
   struct fs_container_info fs0, fs1;
-  int r, r0, r1;
-
-  r0 = fs_get_info(cpfx, 0, &fs0);
-  r1 = fs_get_info(cpfx, 1, &fs1);
+  int r0 = fs_get_info(cpfx, 0, &fs0);
+  int r1 = fs_get_info(cpfx, 1, &fs1);
 
   DBG(("r0 = %d %llx, r1 = %d %llx", r0, fs0.seq, r1, fs1.seq));
 
@@ -321,14 +333,15 @@ _i32 fs_mount(const char *cpfx, struct mount_info *m) {
       r0 = -1;
     }
   }
-  if (r0 == 0) {
-    r = fs_mount_idx(cpfx, 0, m);
-  } else if (r1 == 0) {
-    r = fs_mount_idx(cpfx, 1, m);
-  } else {
-    r = -1000;
-  }
-  return r;
+  if (r0 == 0) return 0;
+  if (r1 == 0) return 1;
+  return -1;
+}
+
+_i32 fs_mount(const char *cpfx, struct mount_info *m) {
+  int active_idx = fs_get_active_idx(cpfx);
+  if (active_idx < 0) return -1000;
+  return fs_mount_idx(cpfx, active_idx, m);
 }
 
 _i32 fs_umount(struct mount_info *m) {
@@ -340,4 +353,11 @@ _i32 fs_umount(struct mount_info *m) {
   fs_close_container(m);
   memset(m, 0, sizeof(*m));
   return 1;
+}
+
+_i32 fs_delete_inactive_container(const char *cpfx) {
+  int active_idx = fs_get_active_idx(cpfx);
+  if (active_idx < 0) return -1000;
+  int inactive_idx = (active_idx == 0 ? 1 : 0);
+  return fs_delete_container(cpfx, inactive_idx);
 }

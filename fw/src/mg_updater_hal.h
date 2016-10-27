@@ -70,4 +70,8 @@ int mg_upd_get_next_file(struct mg_upd_ctx *ctx, char *buf, size_t buf_size);
 
 int mg_upd_complete_file_update(struct mg_upd_ctx *ctx, const char *file_name);
 
+int mg_upd_apply_update();
+void mg_upd_boot_commit();
+void mg_upd_boot_revert();
+
 #endif /* CS_FW_SRC_MG_UPDATER_HAL_H_ */

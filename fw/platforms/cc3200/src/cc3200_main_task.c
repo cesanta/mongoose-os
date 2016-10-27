@@ -20,7 +20,7 @@
 #include "fw/src/mg_prompt.h"
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_uart.h"
-#include "fw/src/mg_updater_clubby.h"
+#include "fw/src/mg_updater_common.h"
 
 #if MG_ENABLE_JS
 #include "v7/v7.h"
@@ -30,13 +30,16 @@
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
-#include "fw/platforms/cc3200/src/cc3200_updater.h"
+#include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 
 #define CB_ADDR_MASK 0xe0000000
 #define CB_ADDR_PREFIX 0x20000000
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
+
+int g_boot_cfg_idx;
+struct boot_cfg g_boot_cfg;
 
 struct mg_event {
   cb_t cb;
@@ -104,6 +107,7 @@ enum cc3200_init_result {
   CC3200_INIT_MG_INIT_FAILED = -103,
   CC3200_INIT_MG_INIT_JS_FAILED = -105,
   CC3200_INIT_UART_INIT_FAILED = -106,
+  CC3200_INIT_UPDATE_FAILED = -107,
 };
 
 static enum cc3200_init_result cc3200_init(void *arg) {
@@ -130,38 +134,46 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     return CC3200_INIT_FAILED_TO_START_NWP;
   }
 
-  int boot_cfg_idx = get_active_boot_cfg_idx();
-  struct boot_cfg boot_cfg;
-  if (boot_cfg_idx < 0 || read_boot_cfg(boot_cfg_idx, &boot_cfg) < 0) {
+  g_boot_cfg_idx = get_active_boot_cfg_idx();
+  if (g_boot_cfg_idx < 0 || read_boot_cfg(g_boot_cfg_idx, &g_boot_cfg) < 0) {
     return CC3200_INIT_FAILED_TO_READ_BOOT_CFG;
   }
 
-  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", boot_cfg_idx,
-                boot_cfg.seq, boot_cfg.flags, boot_cfg.app_image_file,
-                boot_cfg.app_load_addr, boot_cfg.fs_container_prefix));
+  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", g_boot_cfg_idx,
+                g_boot_cfg.seq, g_boot_cfg.flags, g_boot_cfg.app_image_file,
+                g_boot_cfg.app_load_addr, g_boot_cfg.fs_container_prefix));
 
-  uint64_t saved_seq = 0;
-  if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
+  if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     /* Tombstone the current config. If anything goes wrong between now and
      * commit, next boot will use the old one. */
-    saved_seq = boot_cfg.seq;
-    boot_cfg.seq = BOOT_CFG_TOMBSTONE_SEQ;
-    write_boot_cfg(&boot_cfg, boot_cfg_idx);
+    uint64_t saved_seq = g_boot_cfg.seq;
+    g_boot_cfg.seq = BOOT_CFG_TOMBSTONE_SEQ;
+    write_boot_cfg(&g_boot_cfg, g_boot_cfg_idx);
+    g_boot_cfg.seq = saved_seq;
   }
 
-  r = cc3200_fs_init(boot_cfg.fs_container_prefix);
+  r = cc3200_fs_init(g_boot_cfg.fs_container_prefix);
   if (r < 0) {
     LOG(LL_ERROR, ("FS init error: %d", r));
-    if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
-      revert_update(boot_cfg_idx, &boot_cfg);
-    }
     return CC3200_INIT_FS_INIT_FAILED;
+  } else {
+    /*
+     * We aim to maintain at most 3 FS containers at all times.
+     * Delete inactive FS container in the inactive boot configuration.
+     */
+    struct boot_cfg cfg;
+    int inactive_idx = (g_boot_cfg_idx == 0 ? 1 : 0);
+    if (read_boot_cfg(inactive_idx, &cfg) >= 0) {
+      fs_delete_inactive_container(cfg.fs_container_prefix);
+    }
   }
 
-  if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
+  if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     LOG(LL_INFO, ("Applying update"));
-    if (apply_update(boot_cfg_idx, &boot_cfg) < 0) {
-      revert_update(boot_cfg_idx, &boot_cfg);
+    r = mg_upd_apply_update();
+    if (r < 0) {
+      LOG(LL_ERROR, ("Failed to apply update: %d", r));
+      return CC3200_INIT_UPDATE_FAILED;
     }
   }
 
@@ -183,22 +195,6 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 
   LOG(LL_INFO, ("Init done, RAM: %d free", mg_get_free_heap_size()));
 
-  if (boot_cfg.flags & BOOT_F_FIRST_BOOT) {
-    boot_cfg.seq = saved_seq;
-    commit_update(boot_cfg_idx, &boot_cfg);
-#if MG_ENABLE_CLUBBY
-    clubby_updater_finish(0);
-#endif
-  } else {
-#if MG_ENABLE_CLUBBY
-    /*
-     * If there is no update reply state, this will just be ignored.
-     * But if there is, then update was rolled back and reply will be sent.
-     */
-    clubby_updater_finish(-1);
-#endif
-  }
-
 #if MG_ENABLE_JS
   mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
@@ -214,9 +210,10 @@ void main_task(void *arg) {
   enum cc3200_init_result r = cc3200_init(NULL);
   if (r != CC3200_INIT_OK) {
     LOG(LL_ERROR, ("Init failed: %d", r));
-    mg_system_restart(0);
-    return;
   }
+
+  mg_upd_boot_finish((r == CC3200_INIT_OK),
+                     (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
 
   while (1) {
     mongoose_poll(0);

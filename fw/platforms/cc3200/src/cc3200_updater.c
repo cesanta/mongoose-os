@@ -16,7 +16,7 @@
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
-#include "fw/platforms/cc3200/src/cc3200_updater.h"
+#include "fw/platforms/cc3200/src/cc3200_main_task.h"
 #include "fw/src/mg_hal.h"
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_updater_hal.h"
@@ -251,10 +251,8 @@ enum mg_upd_file_action mg_upd_file_begin(struct mg_upd_ctx *ctx,
       char fs_container_prefix[MAX_FS_CONTAINER_PREFIX_LEN];
       create_fname(part_name, ctx->new_boot_cfg_idx, fs_container_prefix,
                    sizeof(fs_container_prefix));
-      /* Delete container 1 so that 0 is the only one. */
-      fs_container_fname(fs_container_prefix, 1,
-                         (_u8 *) ctx->fs_container_file);
-      sl_FsDel((_u8 *) ctx->fs_container_file, 0);
+      /* Delete container 1 (if any) so that 0 is the only one. */
+      fs_delete_container(fs_container_prefix, 1);
       fs_container_fname(fs_container_prefix, 0,
                          (_u8 *) ctx->fs_container_file);
       fname = ctx->fs_container_file;
@@ -374,22 +372,30 @@ void mg_upd_ctx_free(struct mg_upd_ctx *ctx) {
   free(ctx);
 }
 
-void revert_update(int boot_cfg_idx, struct boot_cfg *cfg) {
+void mg_upd_boot_revert() {
+  int boot_cfg_idx = g_boot_cfg_idx;
+  struct boot_cfg *cfg = &g_boot_cfg;
+  if (!cfg->flags & BOOT_F_FIRST_BOOT) return;
+  LOG(LL_ERROR, ("Config %d is bad, reverting", boot_cfg_idx));
   /* Tombstone the current config. */
   cfg->seq = BOOT_CFG_TOMBSTONE_SEQ;
   write_boot_cfg(cfg, boot_cfg_idx);
-  LOG(LL_ERROR, ("Config %d is bad, reverting", boot_cfg_idx));
   mg_system_restart(0);
 }
 
-void commit_update(int boot_cfg_idx, struct boot_cfg *cfg) {
+void mg_upd_boot_commit() {
+  int boot_cfg_idx = g_boot_cfg_idx;
+  struct boot_cfg *cfg = &g_boot_cfg;
+  if (!cfg->flags & BOOT_F_FIRST_BOOT) return;
   cfg->flags &= ~(BOOT_F_FIRST_BOOT);
   int r = write_boot_cfg(cfg, boot_cfg_idx);
-  if (r < 0) revert_update(boot_cfg_idx, cfg);
-  LOG(LL_INFO, ("Committed"));
+  if (r < 0) mg_upd_boot_revert();
+  LOG(LL_INFO, ("Committed cfg %d, seq 0x%llx", boot_cfg_idx, cfg->seq));
 }
 
-int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
+int mg_upd_apply_update() {
+  int boot_cfg_idx = g_boot_cfg_idx;
+  struct boot_cfg *cfg = &g_boot_cfg;
   if (cfg->flags & BOOT_F_MERGE_SPIFFS) {
     int old_boot_cfg_idx = (boot_cfg_idx == 0 ? 1 : 0);
     struct boot_cfg old_boot_cfg;
@@ -398,17 +404,6 @@ int apply_update(int boot_cfg_idx, struct boot_cfg *cfg) {
     struct mount_info old_fs;
     r = fs_mount(old_boot_cfg.fs_container_prefix, &old_fs);
     if (r < 0) return r;
-    /*
-     * Delete the inactive old fs container image to free up space
-     * for container switch that is likely to happen during merge.
-     */
-    {
-      char fname[MAX_FS_CONTAINER_FNAME_LEN];
-      int inactive_idx = (old_fs.cidx == 0 ? 1 : 0);
-      fs_container_fname(old_fs.cpfx, inactive_idx, (_u8 *) fname);
-      LOG(LL_DEBUG, ("Deleting %s", fname));
-      sl_FsDel((const _u8 *) fname, 0);
-    }
     r = mg_upd_merge_spiffs(&old_fs.fs);
     if (r < 0) return r;
     fs_umount(&old_fs);

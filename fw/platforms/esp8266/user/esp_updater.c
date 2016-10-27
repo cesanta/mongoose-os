@@ -774,7 +774,8 @@ void mg_upd_ctx_free(struct mg_upd_ctx *ctx) {
   free(ctx);
 }
 
-int apply_update(rboot_config *cfg) {
+int mg_upd_apply_update() {
+  rboot_config *cfg = get_rboot_config();
   uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
   uint8_t spiffs_fds[32 * 2];
   spiffs old_fs;
@@ -795,19 +796,19 @@ int apply_update(rboot_config *cfg) {
   return ret;
 }
 
-void commit_update(rboot_config *cfg) {
-  if (cfg->fw_updated) {
-    LOG(LL_INFO, ("Committing ROM %d", cfg->current_rom));
-  } else {
-    LOG(LL_INFO, ("Reverted to ROM %d", cfg->current_rom));
-  }
+void mg_upd_boot_commit() {
+  rboot_config *cfg = get_rboot_config();
+  if (!cfg->fw_updated) return;
+  LOG(LL_INFO, ("Committing ROM %d", cfg->current_rom));
   cfg->fw_updated = cfg->is_first_boot = 0;
   rboot_set_config(cfg);
 }
 
-void revert_update(rboot_config *cfg) {
+void mg_upd_boot_revert() {
+  rboot_config *cfg = get_rboot_config();
+  if (!cfg->fw_updated) return;
   LOG(LL_INFO, ("Update failed, reverting to ROM %d", cfg->previous_rom));
   cfg->current_rom = cfg->previous_rom;
-  cfg->fw_updated = 0;
+  cfg->fw_updated = cfg->is_first_boot = 0;
   rboot_set_config(cfg);
 }

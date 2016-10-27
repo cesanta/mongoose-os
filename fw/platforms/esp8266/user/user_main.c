@@ -25,7 +25,7 @@
 #include "fw/src/mg_hal.h"
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_uart.h"
-#include "fw/src/mg_updater_clubby.h"
+#include "fw/src/mg_updater_common.h"
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
@@ -120,7 +120,7 @@ int esp_mg_init(rboot_config *bcfg) {
     LOG(LL_ERROR, ("FS init error: %d", r));
     return -1;
   }
-  if (bcfg->fw_updated && apply_update(bcfg) < 0) {
+  if (bcfg->fw_updated && mg_upd_apply_update() < 0) {
     return -2;
   }
 
@@ -169,22 +169,8 @@ int esp_mg_init(rboot_config *bcfg) {
 
 void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
-  if (esp_mg_init(bcfg) == 0) {
-    if (bcfg->is_first_boot) {
-#if MG_ENABLE_CLUBBY
-      /* fw_updated will be reset by the boot loader if it's a rollback. */
-      clubby_updater_finish(bcfg->fw_updated ? 0 : -1);
-#endif
-      commit_update(bcfg);
-    } else if (bcfg->user_flags == 1) {
-#if MG_ENABLE_CLUBBY
-      clubby_updater_finish(0);
-#endif
-    }
-  } else {
-    if (bcfg->fw_updated) revert_update(bcfg);
-    mg_system_restart(0);
-  }
+  bool success = (esp_mg_init(bcfg) == 0);
+  mg_upd_boot_finish(success, bcfg->is_first_boot);
   (void) arg;
 }
 

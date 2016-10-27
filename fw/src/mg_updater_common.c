@@ -5,13 +5,19 @@
 
 #include "fw/src/mg_updater_common.h"
 
+#include <stdio.h>
 #include <strings.h>
 
 #include "common/cs_crc32.h"
+#include "common/cs_file.h"
 #include "common/spiffs/spiffs.h"
 
 #include "fw/src/mg_console.h"
+#include "fw/src/mg_hal.h"
 #include "fw/src/mg_sys_config.h"
+#include "fw/src/mg_timers.h"
+#include "fw/src/mg_updater_clubby.h"
+#include "fw/src/mg_updater_hal.h"
 
 /*
  * Using static variable (not only c->user_data), it allows to check if update
@@ -19,9 +25,13 @@
  */
 struct update_context *s_ctx = NULL;
 
+/* Context for delayed commit after an update. */
+struct update_file_context *s_fctx = NULL;
+
 /* Must be provided externally, usually auto-generated. */
 extern const char *build_version;
 
+#define UPDATER_CTX_FILE_NAME "updater.dat"
 #define MANIFEST_FILENAME "manifest.json"
 #define SHA1SUM_LEN 40
 
@@ -428,13 +438,25 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
         break;
       }
       case US_FINALIZE: {
+        ret = 1;
+        ctx->status_msg = "Update applied, finalizing";
+        if (ctx->fctx.id > 0 || ctx->fctx.commit_timeout > 0) {
+          /* Write file state */
+          LOG(LL_DEBUG, ("Writing update state to %s", UPDATER_CTX_FILE_NAME));
+          FILE *tmp_file = fopen(UPDATER_CTX_FILE_NAME, "w");
+          if (tmp_file == NULL ||
+              fwrite(&ctx->fctx, sizeof(ctx->fctx), 1, tmp_file) != 1) {
+            ctx->status_msg = "Cannot save update status";
+            ret = -1;
+          }
+          if (tmp_file) fclose(tmp_file);
+          if (ret < 0) return ret;
+        }
         if ((ret = mg_upd_finalize(ctx->dev_ctx)) < 0) {
           ctx->status_msg = mg_upd_get_status_msg(ctx->dev_ctx);
           return ret;
         }
-        ret = 1;
         ctx->need_reboot = 1;
-        ctx->status_msg = "Update applied, finalizing";
         updater_set_status(ctx, US_FINISHED);
       } /* fall through */
       case US_FINISHED: {
@@ -576,4 +598,78 @@ cleanup:
   if (dir_ptr != NULL) SPIFFS_closedir(dir_ptr);
 
   return ret;
+}
+
+bool mg_upd_commit() {
+  if (s_fctx == NULL) return false;
+  CONSOLE_LOG(LL_INFO, ("Committing update"));
+  mg_upd_boot_commit();
+#if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY
+  mg_updater_clubby_finish(0, s_fctx->id, mg_mk_str(s_fctx->clubby_src));
+#endif
+  free(s_fctx);
+  s_fctx = NULL;
+  return true;
+}
+
+bool mg_upd_revert(bool reboot) {
+  if (s_fctx == NULL) return false;
+  CONSOLE_LOG(LL_INFO, ("Reverting update"));
+  mg_upd_boot_revert();
+  free(s_fctx);
+  s_fctx = NULL;
+  if (reboot) mg_system_restart(0);
+  return true;
+}
+
+void mg_upd_watchdog_cb(void *arg) {
+  if (s_fctx != NULL) {
+    /* Timer fired and updtae has not been committed. Revert! */
+    CONSOLE_LOG(LL_ERROR, ("Update commit timeout expired"));
+    mg_upd_revert(true /* reboot */);
+  }
+  (void) arg;
+}
+
+void mg_upd_boot_finish(bool is_successful, bool is_first) {
+  /*
+   * If boot is not successful, there's only one thing to do:
+   * revert update (if any) and reboot.
+   * If this was the first boot after an update, this will revert it.
+   */
+  LOG(LL_DEBUG, ("%d %d", is_successful, is_first));
+  if (!is_successful) {
+    mg_upd_boot_revert(true /* reboot */);
+    /* Not reached */
+    return;
+  }
+  /* We booted. Now see if we have any special instructions. */
+  size_t len;
+  char *data = cs_read_file(UPDATER_CTX_FILE_NAME, &len);
+  if (data != NULL) {
+    struct update_file_context *fctx = (struct update_file_context *) data;
+    LOG(LL_INFO, ("Update state: %lld %d %s", fctx->id, fctx->commit_timeout,
+                  fctx->clubby_src));
+    if (is_first) {
+      s_fctx = fctx;
+      data = NULL;
+      if (fctx->commit_timeout > 0) {
+        CONSOLE_LOG(LL_INFO, ("Arming commit watchdog for %d seconds",
+                              fctx->commit_timeout));
+        mg_set_c_timer(fctx->commit_timeout * 1000, 0 /* repeat */,
+                       mg_upd_watchdog_cb, NULL);
+      } else {
+        mg_upd_commit();
+      }
+    } else {
+/* This is a successful boot after a reverted update. */
+#if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY
+      mg_updater_clubby_finish(-1, fctx->id, mg_mk_str(fctx->clubby_src));
+#endif
+    }
+    remove(UPDATER_CTX_FILE_NAME);
+    if (data != NULL) free(data);
+  } else if (is_first) {
+    mg_upd_boot_commit();
+  }
 }

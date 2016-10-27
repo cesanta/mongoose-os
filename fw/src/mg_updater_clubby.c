@@ -5,11 +5,8 @@
 
 #include "fw/src/mg_updater_clubby.h"
 
-#include <stdio.h>
-
 #include "common/clubby/clubby.h"
 #include "common/cs_dbg.h"
-#include "common/cs_file.h"
 #include "common/mg_str.h"
 #include "fw/src/mg_clubby.h"
 #include "fw/src/mg_console.h"
@@ -24,8 +21,6 @@
 #if MG_ENABLE_JS
 #include "v7/v7.h"
 #endif
-
-#define UPDATER_TEMP_FILE_NAME "ota_reply.dat"
 
 static struct clubby_request_info *s_update_req;
 
@@ -179,7 +174,7 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
              * we have to tell finalize update process explicitly
              */
             res = updater_finalize(ctx);
-            LOG(LL_DEBUG, ("Finalized update"))
+            CONSOLE_LOG(LL_INFO, ("Update finished"));
           } else if (res < 0) {
             ctx->result = 1;
             ctx->status_msg = "Part of update is missing";
@@ -195,20 +190,6 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
           if (!is_update_finished(ctx)) {
             /* Update terminated, but not because of error */
             notify_js(UJS_NOTHING_TODO, NULL);
-          } else if (s_update_req) {
-            /* update ok */
-            FILE *tmp_file = fopen(UPDATER_TEMP_FILE_NAME, "w");
-            if (tmp_file != NULL) {
-              fprintf(tmp_file, "%lld %.*s", s_update_req->id,
-                      (int) s_update_req->src.len, s_update_req->src.p);
-              fclose(tmp_file);
-              CONSOLE_LOG(LL_INFO, ("Update finished"));
-            } else {
-              clubby_send_errorf(s_update_req, 1, "Cannot save update status");
-              s_update_req = NULL;
-              CONSOLE_LOG(LL_ERROR, ("Cannot save update status"));
-            }
-            if (tmp_file) fclose(tmp_file);
           }
           updater_finish(ctx);
         } else if (res < 0) {
@@ -343,6 +324,7 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
   struct json_token section_tok = JSON_INVALID_TOKEN;
   struct json_token blob_url_tok = JSON_INVALID_TOKEN;
   struct json_token blob_type_tok = JSON_INVALID_TOKEN;
+  int commit_timeout = 0;
 
   LOG(LL_DEBUG, ("Update request received: %.*s", (int) args.len, args.p));
 
@@ -352,8 +334,9 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  json_scanf(args.p, args.len, "{section: %T, blob_url: %T, blob_type: %T}",
-             &section_tok, &blob_url_tok, &blob_type_tok);
+  json_scanf(args.p, args.len,
+             "{section: %T, blob_url: %T, blob_type: %T, commit_timeout: %d}",
+             &section_tok, &blob_url_tok, &blob_type_tok, &commit_timeout);
 
   /*
    * TODO(alashkin): enable update for another files, not
@@ -365,8 +348,9 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  LOG(LL_DEBUG, ("Blob url: %.*s blob type: %.*s", blob_url_tok.len,
-                 blob_url_tok.ptr, blob_type_tok.len, blob_type_tok.ptr));
+  LOG(LL_DEBUG,
+      ("Blob url: %.*s blob type: %.*s commit_timeout: %d", blob_url_tok.len,
+       blob_url_tok.ptr, blob_type_tok.len, blob_type_tok.ptr, commit_timeout));
 
   /*
    * If user setup callback for updater, just call it.
@@ -392,6 +376,10 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
       reply = "Failed to init updater";
       goto clean;
     }
+    ctx->fctx.id = ri->id;
+    ctx->fctx.commit_timeout = commit_timeout;
+    strncpy(ctx->fctx.clubby_src, ri->src.p,
+            MIN(ri->src.len, sizeof(ctx->fctx.clubby_src)));
     if (ut == utManifest) {
       /* TODO(alashkin): unhardcode name */
       strcpy(ctx->file_name, "manifest.json");
@@ -420,6 +408,28 @@ clean:
   (void) fi;
 }
 
+static void handle_commit_req(struct clubby_request_info *ri, void *cb_arg,
+                              struct clubby_frame_info *fi,
+                              struct mg_str args) {
+  clubby_send_errorf(ri, mg_upd_commit() ? 0 : -1, NULL);
+  ri = NULL;
+  (void) cb_arg;
+  (void) fi;
+  (void) args;
+}
+
+static void handle_revert_req(struct clubby_request_info *ri, void *cb_arg,
+                              struct clubby_frame_info *fi,
+                              struct mg_str args) {
+  bool ok = mg_upd_revert(false /* reboot */);
+  clubby_send_errorf(ri, ok ? 0 : -1, NULL);
+  ri = NULL;
+  if (ok) mg_system_restart_after(100);
+  (void) cb_arg;
+  (void) fi;
+  (void) args;
+}
+
 /*
  * Example of notification function:
  * function upd(ev, url) {
@@ -442,10 +452,22 @@ void mg_updater_clubby_init(void) {
   if (clubby == NULL) return;
   clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Update"),
                      handle_update_req, NULL);
+  clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Commit"),
+                     handle_commit_req, NULL);
+  clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Revert"),
+                     handle_revert_req, NULL);
 }
 
-void handle_clubby_event(struct clubby *clubby, void *cb_arg,
-                         enum clubby_event ev, void *ev_arg) {
+static void send_update_reply(struct clubby_request_info *ri) {
+  int status = (intptr_t) ri->user_data;
+  LOG(LL_INFO, ("Sending update reply to %.*s: %d", (int) ri->src.len,
+                ri->src.p, status));
+  clubby_send_errorf(ri, status, NULL);
+  ri = NULL;
+}
+
+static void handle_clubby_event(struct clubby *clubby, void *cb_arg,
+                                enum clubby_event ev, void *ev_arg) {
   if (ev != MG_CLUBBY_EV_CHANNEL_OPEN) return;
   /*
    * We're only interested in default route.
@@ -455,38 +477,30 @@ void handle_clubby_event(struct clubby *clubby, void *cb_arg,
   const struct mg_str *dst = (const struct mg_str *) ev_arg;
   if (mg_vcmp(dst, MG_CLUBBY_DST_DEFAULT) != 0) return;
   struct clubby_request_info *ri = (struct clubby_request_info *) cb_arg;
-  int status = (intptr_t) ri->user_data;
-  LOG(LL_INFO, ("Sending update reply to %.*s: %d", (int) ri->src.len,
-                ri->src.p, status));
-  clubby_send_errorf(ri, status, NULL);
-  ri = NULL;
+  send_update_reply(ri);
   clubby_remove_observer(clubby, handle_clubby_event, ri);
 }
 
-void clubby_updater_finish(int error_code) {
+void mg_updater_clubby_finish(int error_code, int64_t id,
+                              const struct mg_str src) {
   struct clubby *clubby = mg_clubby_get_global();
-  if (clubby == NULL) return;
+  if (clubby == NULL || id <= 0 || src.len == 0) return;
   struct clubby_request_info *ri = NULL;
-  size_t len;
-  char *data = cs_read_file(UPDATER_TEMP_FILE_NAME, &len);
-  if (data == NULL) return; /* No file - no problem. */
   ri = (struct clubby_request_info *) calloc(1, sizeof(*ri));
   if (ri == NULL) goto clean;
   ri->clubby = clubby;
-  ri->src.p = (char *) calloc(1, 100);
+  ri->id = id;
+  ri->src = mg_strdup(src);
   if (ri->src.p == NULL) goto clean;
-  if (sscanf(data, "%lld %s", &ri->id, (char *) ri->src.p) != 2) goto clean;
-  ri->src.len = strlen(ri->src.p);
   ri->user_data = (void *) error_code;
-  clubby_add_observer(clubby, handle_clubby_event, ri);
+  if (clubby_is_connected(clubby)) {
+    send_update_reply(ri);
+  } else {
+    clubby_add_observer(clubby, handle_clubby_event, ri);
+  }
   ri = NULL;
 clean:
-  if (ri != NULL) {
-    LOG(LL_ERROR, ("Found invalid reply"));
-    clubby_free_request_info(ri);
-  }
-  remove(UPDATER_TEMP_FILE_NAME);
-  free(data);
+  if (ri != NULL) clubby_free_request_info(ri);
 }
 
 #if MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API

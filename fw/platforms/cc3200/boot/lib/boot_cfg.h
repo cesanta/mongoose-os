@@ -26,7 +26,8 @@ struct boot_cfg {
 #define BOOT_CFG_TOMBSTONE_SEQ (~(0ULL))
 #define BOOT_CFG_INITIAL_SEQ (~(0ULL) - 1ULL)
 
-#define BOOT_F_FIRST_BOOT 1
-#define BOOT_F_MERGE_SPIFFS 2
+#define BOOT_F_FIRST_BOOT (1UL << 0)
+#define BOOT_F_MERGE_SPIFFS (1UL << 1)
+#define BOOT_F_INVALID (1UL << 31)
 
 #endif /* CS_FW_PLATFORMS_CC3200_BOOT_LIB_BOOT_CFG_H_ */

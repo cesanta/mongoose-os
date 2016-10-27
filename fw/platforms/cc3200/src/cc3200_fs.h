@@ -6,11 +6,12 @@
 #ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_H_
 #define CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_H_
 
+#include <stdbool.h>
 #include <stdio.h>
 
 int cc3200_fs_init(const char *container_prefix);
 void cc3200_fs_flush(void);
-void cc3200_fs_umount(void);
+void cc3200_fs_umount();
 
 int set_errno(int e);
 

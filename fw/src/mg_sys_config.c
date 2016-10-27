@@ -11,11 +11,13 @@
 
 #include "common/cs_file.h"
 #include "common/json_utils.h"
-#include "fw/src/mg_mongoose.h"
 #include "fw/src/mg_config.h"
 #include "fw/src/mg_gpio.h"
 #include "fw/src/mg_hal.h"
 #include "fw/src/mg_init.h"
+#include "fw/src/mg_mongoose.h"
+#include "fw/src/mg_updater_common.h"
+#include "fw/src/mg_utils.h"
 
 #define MG_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
@@ -207,6 +209,21 @@ static void upload_handler(struct mg_connection *c, int ev, void *p) {
 }
 #endif
 
+#if MG_ENABLE_UPDATER_POST || MG_ENABLE_UPDATER_CLUBBY
+static void update_action_handler(struct mg_connection *c, int ev, void *p) {
+  if (ev != MG_EV_HTTP_REQUEST) return;
+  struct http_message *hm = (struct http_message *) p;
+  bool is_commit = (mg_vcmp(&hm->uri, "/update/commit") == 0);
+  bool ok = (is_commit ? mg_upd_commit() : mg_upd_revert(false /* reboot */));
+  mg_send_response_line(c, (ok ? 200 : 400),
+                        "Content-Type: text/html\r\n"
+                        "Connection: close");
+  mg_printf(c, "\r\n%s\r\n", (ok ? "Ok" : "Error"));
+  c->flags |= MG_F_SEND_AND_CLOSE;
+  if (!is_commit) mg_system_restart_after(100);
+}
+#endif
+
 static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   switch (ev) {
     case MG_EV_ACCEPT: {
@@ -263,6 +280,12 @@ enum mg_init_result mg_sys_config_init_http(const struct sys_config_http *cfg) {
 #endif
 #if MG_ENABLE_FILE_UPLOAD
     mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
+#endif
+#if MG_ENABLE_UPDATER_POST || MG_ENABLE_UPDATER_CLUBBY
+    mg_register_http_endpoint(listen_conn, "/update/commit",
+                              update_action_handler);
+    mg_register_http_endpoint(listen_conn, "/update/revert",
+                              update_action_handler);
 #endif
 
     mg_set_protocol_http_websocket(listen_conn);
