@@ -98,6 +98,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len);
 void updater_finish(struct update_context *ctx);
 void updater_context_free(struct update_context *ctx);
 int updater_finalize(struct update_context *ctx);
+int is_write_finished(struct update_context *ctx);
 int is_update_finished(struct update_context *ctx);
 int is_reboot_required(struct update_context *ctx);
 

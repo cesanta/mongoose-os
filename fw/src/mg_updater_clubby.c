@@ -182,8 +182,11 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         }
 
         if (res == 0) {
-          /* Need more data, everything is OK */
-          break;
+          if (is_write_finished(ctx)) res = updater_finalize(ctx);
+          if (res == 0) {
+            /* Need more data, everything is OK */
+            break;
+          }
         }
 
         if (res > 0) {
@@ -219,6 +222,8 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
            */
           return;
         }
+
+        if (is_write_finished(ctx)) updater_finalize(ctx);
 
         if (!is_update_finished(ctx)) {
           /* Update failed or connection was terminated by server */

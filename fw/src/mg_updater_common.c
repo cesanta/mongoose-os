@@ -46,6 +46,7 @@ enum update_status {
   US_WAITING_FILE,
   US_SKIPPING_DATA,
   US_SKIPPING_DESCRIPTOR,
+  US_WRITE_FINISHED,
   US_FINALIZE,
   US_FINISHED,
 };
@@ -126,6 +127,10 @@ void context_remove_data(struct update_context *ctx, size_t len) {
 
 static void context_clear_current_file(struct update_context *ctx) {
   memset(&ctx->current_file, 0, sizeof(ctx->current_file));
+}
+
+int is_write_finished(struct update_context *ctx) {
+  return ctx->update_status == US_WRITE_FINISHED;
 }
 
 int is_update_finished(struct update_context *ctx) {
@@ -347,8 +352,8 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           return 0;
         }
         if (memcmp(ctx->data, &c_zip_cdir_magic, 4) == 0) {
-          LOG(LL_DEBUG, ("Reached end of archive, finalizing update"));
-          updater_set_status(ctx, US_FINALIZE);
+          LOG(LL_DEBUG, ("Reached the end of archive"));
+          updater_set_status(ctx, US_WRITE_FINISHED);
           break;
         }
         if ((ret = parse_zip_file_header(ctx)) <= 0) {
@@ -437,11 +442,19 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
         context_save_unprocessed(ctx);
         break;
       }
+      case US_WRITE_FINISHED: {
+        /* We will stay in this state until explicitly finalized. */
+        return 0;
+      }
       case US_FINALIZE: {
         ret = 1;
         ctx->status_msg = "Update applied, finalizing";
         if (ctx->fctx.id > 0 || ctx->fctx.commit_timeout > 0) {
           /* Write file state */
+          if (ctx->fctx.commit_timeout > 0) {
+            CONSOLE_LOG(LL_INFO, ("Update requires commit, timeout: %d",
+                                  ctx->fctx.commit_timeout));
+          }
           LOG(LL_DEBUG, ("Writing update state to %s", UPDATER_CTX_FILE_NAME));
           FILE *tmp_file = fopen(UPDATER_CTX_FILE_NAME, "w");
           if (tmp_file == NULL ||
