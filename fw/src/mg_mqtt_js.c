@@ -2,7 +2,6 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
-
 #include "fw/src/mg_mqtt_js.h"
 
 #if MG_ENABLE_JS && MG_ENABLE_MQTT_API
@@ -69,7 +68,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       cb = v7_get(v7, ud->client, MG_MQTT_MESSAGE_CB, ~0);
 
       if (!v7_is_undefined(cb)) {
-        v7_val_t topic = v7_mk_string(v7, msg->topic, strlen(msg->topic), 1);
+        v7_val_t topic = v7_mk_string(v7, msg->topic.p, msg->topic.len, 1);
         v7_val_t payload =
             v7_mk_string(v7, msg->payload.p, msg->payload.len, 1);
         mg_invoke_cb2(v7, cb, topic, payload);
