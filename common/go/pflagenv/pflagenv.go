@@ -46,6 +46,7 @@ func setFromEnv(nonset map[string]*pflag.Flag, envPrefix string) {
 		envVar := os.Getenv(getEnvName(name, envPrefix))
 		if envVar != "" {
 			f.Value.Set(envVar)
+			f.Changed = true
 		}
 	}
 }
