@@ -32,6 +32,10 @@ int gettimeofday(struct timeval *tp, void *tzp);
 #define INT64_FMT PRId64
 #define SIZE_T_FMT "u"
 
+/*
+ * ARM C Compiler doesn't have strdup, so we provide it
+ */
+#define CS_ENABLE_STRDUP defined(__ARMCC_VERSION)
 
 #endif /* CS_PLATFORM == CS_P_NRF51 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_NRF51_H_ */

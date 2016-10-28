@@ -14,16 +14,16 @@
 #define CS_P_CC3100 6
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
+#define CS_P_NXP_LPC 13
 #define CS_P_NXP_KINETIS 9
+#define CS_P_NRF51 12
 #define CS_P_NRF52 10
 #define CS_P_PIC32_HARMONY 11
-#define CS_P_NRF51 12
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
 
 #if defined(TARGET_IS_MSP432P4XX) || defined(__MSP432P401R__)
-
 #define CS_PLATFORM CS_P_MSP432
 #elif defined(cc3200)
 #define CS_PLATFORM CS_P_CC3200
@@ -35,6 +35,8 @@
 #define CS_PLATFORM CS_P_WINDOWS
 #elif defined(__MBED__)
 #define CS_PLATFORM CS_P_MBED
+#elif defined(__USE_LPCOPEN)
+#define CS_PLATFORM CS_P_NXP_LPC
 #elif defined(FRDM_K64F) || defined(FREEDOM)
 #define CS_PLATFORM CS_P_NXP_KINETIS
 #elif defined(PIC32)
@@ -60,6 +62,7 @@
 #include "common/platforms/platform_mbed.h"
 #include "common/platforms/platform_nrf52.h"
 #include "common/platforms/platform_wince.h"
+#include "common/platforms/platform_nxp_lpc.h"
 #include "common/platforms/platform_nxp_kinetis.h"
 #include "common/platforms/platform_pic32_harmony.h"
 

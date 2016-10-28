@@ -9,6 +9,14 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#ifndef CS_ENABLE_STRDUP
+#define CS_ENABLE_STRDUP 0
+#endif
+
+#ifndef CS_ENABLE_TO64
+#define CS_ENABLE_TO64 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -35,11 +43,16 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
  */
 void cs_from_hex(char *to, const char *p, size_t len);
 
-/*
- * ARM C Compiler doesn't have strdup, so we provide it
- */
-#if defined(__ARMCC_VERSION)
+#if CS_ENABLE_STRDUP
 char *strdup(const char *src);
+#endif
+
+#if CS_ENABLE_TO64
+#include <stdint.h>
+/*
+ * Simple string -> int64 conversion routine.
+ */
+int64_t cs_to64(const char *s);
 #endif
 
 #ifdef __cplusplus

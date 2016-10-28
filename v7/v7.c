@@ -46,16 +46,16 @@
 #define CS_P_CC3100 6
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
+#define CS_P_NXP_LPC 13
 #define CS_P_NXP_KINETIS 9
+#define CS_P_NRF51 12
 #define CS_P_NRF52 10
 #define CS_P_PIC32_HARMONY 11
-#define CS_P_NRF51 12
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
 
 #if defined(TARGET_IS_MSP432P4XX) || defined(__MSP432P401R__)
-
 #define CS_PLATFORM CS_P_MSP432
 #elif defined(cc3200)
 #define CS_PLATFORM CS_P_CC3200
@@ -67,6 +67,8 @@
 #define CS_PLATFORM CS_P_WINDOWS
 #elif defined(__MBED__)
 #define CS_PLATFORM CS_P_MBED
+#elif defined(__USE_LPCOPEN)
+#define CS_PLATFORM CS_P_NXP_LPC
 #elif defined(FRDM_K64F) || defined(FREEDOM)
 #define CS_PLATFORM CS_P_NXP_KINETIS
 #elif defined(PIC32)
@@ -92,6 +94,7 @@
 /* Amalgamated: #include "common/platforms/platform_mbed.h" */
 /* Amalgamated: #include "common/platforms/platform_nrf52.h" */
 /* Amalgamated: #include "common/platforms/platform_wince.h" */
+/* Amalgamated: #include "common/platforms/platform_nxp_lpc.h" */
 /* Amalgamated: #include "common/platforms/platform_nxp_kinetis.h" */
 /* Amalgamated: #include "common/platforms/platform_pic32_harmony.h" */
 
@@ -948,6 +951,11 @@ int inet_pton(int af, const char *src, void *dst);
 #define INT64_FMT PRId64
 #define SIZE_T_FMT "u"
 
+/*
+ * ARM C Compiler doesn't have strdup, so we provide it
+ */
+#define CS_ENABLE_STRDUP defined(__ARMCC_VERSION)
+
 #endif /* CS_PLATFORM == CS_P_NRF52 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_ */
 #ifdef V7_MODULE_LINES
@@ -1134,6 +1142,61 @@ const char *strerror();
 #endif /* CS_PLATFORM == CS_P_WINCE */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_WINCE_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_nxp_lpc.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_NXP_LPC_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_NXP_LPC_H_
+
+#if CS_PLATFORM == CS_P_NXP_LPC
+
+#include <ctype.h>
+#include <stdint.h>
+#include <string.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define INT64_FMT "lld"
+#define INT64_X_FMT "llx"
+#define __cdecl
+
+#define MG_LWIP 1
+
+#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
+
+/*
+ * LPCXpress comes with 3 C library implementations: Newlib, NewlibNano and Redlib.
+ * See https://community.nxp.com/message/630860 for more details.
+ *
+ * Redlib is the default and lacks certain things, so we provide them.
+ */
+#ifdef __REDLIB_INTERFACE_VERSION__
+
+/* Let LWIP define timeval for us. */
+#define LWIP_TIMEVAL_PRIVATE 1
+
+#define va_copy(d, s) __builtin_va_copy(d, s)
+
+#define CS_ENABLE_TO64 1
+#define to64(x) cs_to64(x)
+
+#define CS_ENABLE_STRDUP 1
+
+#else
+
+#include <sys/time.h>
+#define LWIP_TIMEVAL_PRIVATE 0
+#define to64(x) strtoll(x, NULL, 10)
+
+#endif
+
+#endif /* CS_PLATFORM == CS_P_NXP_LPC */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_NXP_LPC_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/platforms/platform_nxp_kinetis.h"
 #endif
 /*
@@ -1215,6 +1278,14 @@ char* inet_ntoa(struct in_addr in);
 #include <stdarg.h>
 #include <stdlib.h>
 
+#ifndef CS_ENABLE_STRDUP
+#define CS_ENABLE_STRDUP 0
+#endif
+
+#ifndef CS_ENABLE_TO64
+#define CS_ENABLE_TO64 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1241,11 +1312,16 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
  */
 void cs_from_hex(char *to, const char *p, size_t len);
 
-/*
- * ARM C Compiler doesn't have strdup, so we provide it
- */
-#if defined(__ARMCC_VERSION)
+#if CS_ENABLE_STRDUP
 char *strdup(const char *src);
+#endif
+
+#if CS_ENABLE_TO64
+#include <stdint.h>
+/*
+ * Simple string -> int64 conversion routine.
+ */
+int64_t cs_to64(const char *s);
 #endif
 
 #ifdef __cplusplus
@@ -8545,10 +8621,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
   return NULL;
 }
 
-/*
- * ARM C Compiler doesn't have strdup, so we provide it
- */
-#if defined(__ARMCC_VERSION)
+#if CS_ENABLE_STRDUP
 char *strdup(const char *src) {
   size_t len = strlen(src) + 1;
   char *ret = malloc(len);
@@ -8588,6 +8661,24 @@ void cs_from_hex(char *to, const char *p, size_t len) {
   }
   *to = '\0';
 }
+
+#if CS_ENABLE_TO64
+int64_t cs_to64(const char *s) {
+  int64_t result = 0;
+  int64_t neg = 1;
+  while (*s && isspace((unsigned char) *s)) s++;
+  if (*s == '-') {
+    neg = -1;
+    s++;
+  }
+  while (isdigit((unsigned char) *s)) {
+    result *= 10;
+    result += (*s - '0');
+    s++;
+  }
+  return result * neg;
+}
+#endif
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES

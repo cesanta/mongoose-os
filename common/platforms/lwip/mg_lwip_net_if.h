@@ -8,7 +8,7 @@
 
 #if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
 
-#include <inttypes.h>
+#include <stdint.h>
 
 struct mg_lwip_conn_state {
   union {

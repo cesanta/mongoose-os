@@ -32,5 +32,10 @@
 #define INT64_FMT PRId64
 #define SIZE_T_FMT "u"
 
+/*
+ * ARM C Compiler doesn't have strdup, so we provide it
+ */
+#define CS_ENABLE_STRDUP defined(__ARMCC_VERSION)
+
 #endif /* CS_PLATFORM == CS_P_NRF52 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_NRF52_H_ */

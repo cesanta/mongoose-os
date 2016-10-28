@@ -267,10 +267,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
   return NULL;
 }
 
-/*
- * ARM C Compiler doesn't have strdup, so we provide it
- */
-#if defined(__ARMCC_VERSION)
+#if CS_ENABLE_STRDUP
 char *strdup(const char *src) {
   size_t len = strlen(src) + 1;
   char *ret = malloc(len);
@@ -310,5 +307,23 @@ void cs_from_hex(char *to, const char *p, size_t len) {
   }
   *to = '\0';
 }
+
+#if CS_ENABLE_TO64
+int64_t cs_to64(const char *s) {
+  int64_t result = 0;
+  int64_t neg = 1;
+  while (*s && isspace((unsigned char) *s)) s++;
+  if (*s == '-') {
+    neg = -1;
+    s++;
+  }
+  while (isdigit((unsigned char) *s)) {
+    result *= 10;
+    result += (*s - '0');
+    s++;
+  }
+  return result * neg;
+}
+#endif
 
 #endif /* EXCLUDE_COMMON */
