@@ -1,0 +1,5 @@
+APP = c_mqtt
+APP_MODULES = src
+APP_CONF_SCHEMA = $(CURDIR)/src/conf_schema.yaml
+
+include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
