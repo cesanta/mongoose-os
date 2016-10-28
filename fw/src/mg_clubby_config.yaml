@@ -2,8 +2,6 @@
   ["clubby", "o", {title: "Cloud settings"}],
   ["clubby.connect_on_boot", "b", true, {title: "Connect cloud on startup"}],
   ["clubby.server_address", "s", "api.mongoose-iot.com", {title: "Cloud server address"}],
-  ["clubby.device_id", "s", "dummy", {title: "Device ID"}],
-  ["clubby.device_psk", "s", {title: "Device password"}],
   ["clubby.reconnect_timeout_min", "i", 10, {title: "Minimal reconnect timeout"}],
   ["clubby.reconnect_timeout_max", "i", 60, {title: "Maximal reconnect timeout"}],
   ["clubby.memory_limit", "i", 15360, {title: "Memory Limit"}],

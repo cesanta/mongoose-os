@@ -34,11 +34,11 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
       LOG(LL_INFO, ("Connected to broker, sending MQTT handshake"));
       memset(&opts, 0, sizeof(opts));
-      opts.user_name = get_cfg()->clubby.device_id;
-      opts.password = get_cfg()->clubby.device_psk;
+      opts.user_name = get_cfg()->device.id;
+      opts.password = get_cfg()->device.password;
 
       mg_set_protocol_mqtt(nc);
-      mg_send_mqtt_handshake_opt(nc, get_cfg()->clubby.device_id, opts);
+      mg_send_mqtt_handshake_opt(nc, get_cfg()->device.id, opts);
 
       break;
     }
@@ -131,7 +131,7 @@ static void on_wifi_change(enum mg_wifi_status event, void *ud) {
 enum mg_app_init_result mg_app_init(void) {
   LOG(LL_INFO, ("MQTT client started"));
 
-  mg_asprintf(&s_topic, 0, "/control/%s", get_cfg()->clubby.device_id);
+  mg_asprintf(&s_topic, 0, "/control/%s", get_cfg()->device.id);
   mg_wifi_add_on_change_cb(on_wifi_change, NULL);
 
   return MG_APP_INIT_SUCCESS;

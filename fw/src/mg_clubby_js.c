@@ -469,9 +469,7 @@ MG_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
 
   v7_val_t this_obj = v7_get_this(v7);
 
-  const struct sys_config_clubby *sccfg = &get_cfg()->clubby;
-
-  struct clubby_cfg *ccfg = mg_clubby_cfg_from_sys(sccfg);
+  struct clubby_cfg *ccfg = mg_clubby_cfg_from_sys(get_cfg());
   GET_STR_PARAM(ccfg, id, device_id);
   GET_STR_PARAM(ccfg, psk, device_psk);
   GET_INT_PARAM(ccfg, max_queue_size, max_queue_size);
@@ -482,7 +480,7 @@ MG_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
     return v7_throwf(v7, "Error", "Out of memory");
   }
 
-  chcfg = mg_clubby_channel_ws_out_cfg_from_sys(sccfg);
+  chcfg = mg_clubby_channel_ws_out_cfg_from_sys(get_cfg());
 
   GET_STR_PARAM(chcfg, server_address, server_address);
   GET_STR_PARAM(chcfg, ssl_ca_file, ssl_ca_file);

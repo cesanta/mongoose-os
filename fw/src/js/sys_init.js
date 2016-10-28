@@ -3,10 +3,10 @@
 print('\nMongoose IoT Firmware - see documentation at',
       'https://docs.cesanta.com/mongoose-iot/\n');
 
-if (Sys.conf.clubby.device_id) {
+if (Sys.conf.device.id) {
     print('Device credentials: ', {
-      device_psk: Sys.conf.clubby.device_psk,
-      device_id: Sys.conf.clubby.device_id,
+      device_psk: Sys.conf.device.password,
+      device_id: Sys.conf.device.id,
     }, '\n');
 }
 

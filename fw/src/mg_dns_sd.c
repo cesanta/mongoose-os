@@ -389,7 +389,7 @@ enum mg_init_result mg_dns_sd_init(void) {
                          },
                          (struct mg_str[]) {
 #if MG_ENABLE_CLUBBY
-                           mg_mk_str(c->clubby.device_id), mg_mk_str("2.0"),
+                           mg_mk_str(c->device.id), mg_mk_str("2.0"),
 #endif
                                mg_mk_str(v->arch), mg_mk_str(v->fw_id),
                                mg_mk_str(NULL),

@@ -1,4 +1,8 @@
 [
+  ["device", "o", {title: "Device settings"}],
+  ["device.id", "s", "dummy", {title: "Device ID"}],
+  ["device.password", "s", {title: "Device password"}],
+
   ["tls", "o", {title: "TLS settings"}],
   ["tls.ca_file", "s", "ca.pem", {title : "Default TLS CA file"}],
 
