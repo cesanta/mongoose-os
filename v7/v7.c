@@ -49,6 +49,7 @@
 #define CS_P_NXP_KINETIS 9
 #define CS_P_NRF52 10
 #define CS_P_PIC32_HARMONY 11
+#define CS_P_NRF51 12
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
