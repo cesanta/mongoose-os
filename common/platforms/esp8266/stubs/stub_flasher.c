@@ -305,7 +305,7 @@ void stub_main(void) {
   }
 
   /* Give host time to get ready too. */
-  ets_delay_us(10000);
+  ets_delay_us(50000);
 
   SLIP_send(&greeting, 4);
 
