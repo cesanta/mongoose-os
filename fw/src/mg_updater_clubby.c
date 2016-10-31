@@ -308,7 +308,7 @@ static char *get_base_url(const struct mg_str full_url) {
     if (full_url.p[i] == '/') {
       char *ret = calloc(1, i + 1);
       if (ret == NULL) {
-        LOG(LL_ERROR, ("Out of memory"))
+        LOG(LL_ERROR, ("Out of memory"));
         return NULL;
       }
 
