@@ -1,5 +1,5 @@
 ---
-title: Firmware Overview
+title: Mongoose Firmware
 items:
   - { name: filesystem.md }
   - { name: boot.md }

@@ -1,5 +1,5 @@
 ---
-title: Device as a RESTful server
+title: Implement RESTful server
 ---
 
 This example shows how to implement a RESTful server on a device.

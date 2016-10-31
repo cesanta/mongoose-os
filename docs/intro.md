@@ -5,13 +5,13 @@ repo: https://github.com/cesanta/mongoose-iot
 items:
   - { name: overview }
   - { name: quickstart }
-  - { name: examples }
+#  - { name: examples }
   - { name: firmware }
   - { name: api.md }
-  - { name: javascript-api }
+#  - { name: javascript-api }
 #  - { name: c-api }
   - { name: cloud }
-  - { name: services }
+#  - { name: services }
 #  - { name: miot.md }
 #  - { name: faq.md }
 ---

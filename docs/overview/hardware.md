@@ -9,14 +9,17 @@ Fully supported architectures are:
 - Espressif ESP8266 ([buy hardware](http://www.aliexpress.com/af/nodemcu.html?SearchText=nodemcu))
 
 Partially supported architectures are:
-- Texas Instruments MSP430  
+- Texas Instruments MSP432
+- Texas Instruments Tiva TM4C
 - ST Microelectronics STM32
-- Microchip PIC32
+- Microchip PIC32 (MX AND MZ series)
+- Nordic Semiconductors nRF 52
+- NXP K6x series
+- NXP LPC435x
 
 Currently in development:
-- Nordic Semicondictors nRF 52
-- NXP Kinetis
-- NXP LPC
+- Nordic Semiconductors nRF 51
+- Espressif ESP32
 
 And, of course, you can always
-[suggest your plaftorm](http://cesanta.com/contact) !
+[suggest your plaftorm](http://cesanta.com/contact.html) !

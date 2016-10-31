@@ -10,10 +10,6 @@ architectures.
 Below, there is a description of the files and their meaning.  System
 files (not supposed to be edited):
 
-- `sys_init.js`: This file is called by the C code
-  on firmware startup.
-  In turn, this file calls the `app.js` file which
-  contains user-defined code.
 - `conf_sys_defaults.json`: These are system configuration parameters. Can be
   overridden in `conf.json`.
 - `conf_sys_schema.json`: This contains a description of the system configuration,
@@ -23,12 +19,9 @@ files (not supposed to be edited):
   saves configuration. `conf.json` contains only overrides to the system
   and the app config files.
 - `index.html`: Configuration Web UI file.
-- `sys_*.js`: Various drivers.
 
 Files that are meant to be edited by developers:
 
-- `app.js`: Application-specific initialisation file.
-  This file is called by `sys_init.js`. User code must go here.
 - `conf_app_defaults.json`: Application-specific configuration file. Initially
   empty.  If the application wants to show it's own config parameters on the
   configuration Web UI, those parameters should go in this file.

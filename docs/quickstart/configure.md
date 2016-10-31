@@ -5,8 +5,8 @@ title: Configure WiFi
 The device is flashed, but not configured yet.
 Let's set up WiFi networking on it:
 
-```sh
-$ miot dev config set -port /dev/ttyUSB0 \
+```bash
+miot config-set -port /dev/ttyUSB0 \
   wifi.ap.enable=false \
   wifi.sta.enable=true \
   wifi.sta.ssid=WIFI_NETWORK_NAME \

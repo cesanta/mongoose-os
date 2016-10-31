@@ -1,21 +1,25 @@
 ---
-title: Cloud services
+title: Mongoose Cloud
 ---
 
-[Mongoose Cloud](https://mongoose-iot.com) provides a set
-of services that provide basic infrastructure functionality for creating
-connected products: The list include:
+[Mongoose Cloud](https://mongoose-iot.com/cloud.html) provides basic
+functionality for creating connected products:
 
-- Auth: authentication and fine-grained access control service
-- Registry: Keep track of registered users, devices
-  and their metadata.
-- Timeseries: Store telemetry data reported by devices - for example values
+- Authentication and fine-grained access control. For example, you can
+  tell grant or restrict access to a particular device or its data
+- Registry of devices and their metadata: any device can be annotated
+  with arbitrary key/value labels. For example, you can assign
+  `city=Dublin` and `city=London` labels  to your devices, and roll different
+  firmware depending on a device label
+- Timeseries database for storing values
   reported by various sensors, performance statistics data, and so on.
-  This service also provides a rich set of analytics functions.
-- Publish/Subscribe: Used to push real-time data to a large number of
-  subscribers.
-- Log: Send and store logs from devices.
-- KV: Key/value store for arbitrary files, configuration data, etc.
+- Configurable dashboards with graphs that show reported values.
+- Event logging service
+- Rules engine that can set thresholds on a reported values and generate
+  events with specified severity
+- Email notifications can send you emails when events with certain severity
+  happen
+- Over-the-air (OTA) firmware updates or configuration updates
 
 Mongoose Cloud is designed to be easily extendable. You can create your
 own backend in any language or framework you want, register it with

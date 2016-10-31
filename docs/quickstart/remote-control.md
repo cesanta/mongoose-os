@@ -2,6 +2,10 @@
 title: Remote device control
 ---
 
+Coming soon...
+
+<!--
+
 This example shows how to send commands to a device from the Internet.
 After booting, Mongoose Firmware connects to
 [Mongoose Cloud](https://mongoose-iot.com) via a secure WebSocket channel.
@@ -39,3 +43,4 @@ See "Cloud Overview" section for more information.
 - Switch back to the IDE browser tab, notice the log message from the device:
 
 <img src="media/tut_control.png" width="100%">
+-->

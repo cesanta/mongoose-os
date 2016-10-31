@@ -1,5 +1,5 @@
 ---
-title: Send data to a RESTful server
+title: Call RESTful server
 ---
 
 This example shows you how to send periodic measurements to an external
