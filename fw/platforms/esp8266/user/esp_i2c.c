@@ -6,14 +6,11 @@
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if MG_ENABLE_JS
-
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <ets_sys.h>
 
-#include "v7/v7.h"
 #include "fw/src/mg_i2c.h"
 
 #include "common/cs_dbg.h"
@@ -24,6 +21,10 @@
 
 #include <osapi.h>
 #include <gpio.h>
+
+#if MG_ENABLE_JS
+#include "v7/v7.h"
+#endif
 
 /* #define ESP_I2C_DEBUG */
 /* #define ENABLE_IC2_EEPROM_TEST */
@@ -261,6 +262,7 @@ int i2c_init(i2c_connection c) {
 }
 
 /* HAL functions */
+#if MG_ENABLE_JS
 enum v7_err mg_i2c_create(struct v7 *v7, i2c_connection *res) {
   enum v7_err rcode = V7_OK;
   struct esp_i2c_connection *conn = NULL;
@@ -290,13 +292,12 @@ enum v7_err mg_i2c_create(struct v7 *v7, i2c_connection *res) {
 clean:
   return rcode;
 }
+#endif
 
 void mg_i2c_close(i2c_connection conn) {
   i2c_stop(conn);
   free(conn);
 }
-
-#endif /* MG_ENABLE_JS */
 
 /*
  * Low-level API usage example (write & read "Hello, world!" from EEPROM

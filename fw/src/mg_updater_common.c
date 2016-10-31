@@ -469,6 +469,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           ctx->status_msg = mg_upd_get_status_msg(ctx->dev_ctx);
           return ret;
         }
+        ctx->result = 1;
         ctx->need_reboot = 1;
         updater_set_status(ctx, US_FINISHED);
       } /* fall through */
