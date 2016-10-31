@@ -27,14 +27,17 @@ typedef struct stat cs_stat_t;
 
 #define MG_LWIP 1
 
-#ifdef RTOS_SDK
+/* struct timeval is defined in sys/time.h. */
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#ifndef MG_NET_IF
+#include <lwip/opt.h>
+#if LWIP_SOCKET /* RTOS SDK has LWIP sockets */
 #  define MG_NET_IF MG_NET_IF_SOCKET
 #else
 #  define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
 #endif
-
-/* struct timeval is defined in sys/time.h. */
-#define LWIP_TIMEVAL_PRIVATE 0
+#endif
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1

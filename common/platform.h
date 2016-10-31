@@ -41,6 +41,8 @@
 #define CS_PLATFORM CS_P_NXP_KINETIS
 #elif defined(PIC32)
 #define CS_PLATFORM CS_P_PIC32_HARMONY
+#elif defined(ICACHE_FLASH)
+#define CS_PLATFORM CS_P_ESP8266
 #endif
 
 #ifndef CS_PLATFORM
