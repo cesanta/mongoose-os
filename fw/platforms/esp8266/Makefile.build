@@ -136,23 +136,6 @@ MIOT_SRCS += v7.c \
              mg_ws_client_js.c
 endif
 
-JSBIN_EXTRA ?=
-JSBIN_SRCS := $(MIOT_JS_PATH)/sys_init.js \
-              $(MIOT_JS_PATH)/demo.js \
-              $(MIOT_JS_PATH)/I2C.js \
-              $(JSBIN_EXTRA)
-
-ifneq "$(APP_FS_PATH)" ""
-JSBIN_SRCS += $(wildcard $(APP_FS_PATH)/*.js)
-endif
-
-JS_SRCS    :=
-
-# In order to keep compatibility
-# with shared JS-files, which can call "File.eval(....)"
-# using JS as extension
-JSBIN_EXT := js
-JS_EXT := js
 VPATH = $(APP_MODULES) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/clubby \
@@ -285,14 +268,10 @@ else
 endif
 
 include $(MIOT_PATH)/src/features.mk
+include $(MIOT_PATH)/src/spiffs.mk
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
-
-FS_FILES = $(filter-out $(JSBIN_SRCS),$(wildcard $(COMMON_FS_PATH)/*))
-ifneq "$(APP_FS_PATH)" ""
-  FS_FILES += $(filter-out $(JSBIN_SRCS),$(wildcard $(APP_FS_PATH)/*))
-endif
 
 APP_OUT = $(BUILD_DIR)/$(APP).out
 LD_SCRIPT = $(GEN_DIR)/$(FW_FILE_2_ADDR).ld
@@ -443,22 +422,8 @@ $(MG_BUILD_INFO_C): $(MIOT_OBJS)
 
 # -- Filesystem.
 
-$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_DIR)/mkspiffs
-	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR)
-	$(Q) $(foreach f,$(FS_FILES) $(SYS_CONFIG_SCHEMA_JSON) $(SYS_RO_VARS_SCHEMA_JSON), \
-	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
-	  cp $(f) $(FS_STAGING_DIR);)
-ifeq "$(MG_ENABLE_JS)" "1"
-	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
-    echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
-    $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
-endif
-	$(Q) cp $(SYS_CONFIG_DEFAULTS_JSON) $(FS_STAGING_DIR)/conf_defaults.json
-	$(vecho) "MKFS  $(FS_STAGING_DIR) ($(_FS_SIZE) @ $(FS_ADDR))-> $@"
-	$(Q) $(BUILD_DIR)/mkspiffs $(_FS_SIZE) $(FS_STAGING_DIR) > $@
-
-$(BUILD_DIR)/mkspiffs:
-	$(MAKE) -C $(REPO_PATH)/common/spiffs/tools $(abspath $(BUILD_DIR))/mkspiffs BUILD_DIR=$(abspath $(BUILD_DIR))
+$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+	$(call mkspiffs,$(_FS_SIZE))
 
 ifeq "$(MG_ENABLE_JS)" "1"
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
