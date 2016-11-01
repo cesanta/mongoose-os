@@ -1,5 +1,5 @@
 REPO_PATH ?= ../..
-FS_PATH ?= $(REPO_PATH)/fw/skeleton/filesystem
+FS_PATH ?= $(REPO_PATH)/fw/skeleton/fs
 SYS_CONF_SCHEMA ?=
 APP_CONF_SCHEMA ?=
 SYS_RO_VARS_SCHEMA ?= $(REPO_PATH)/fw/src/sys_ro_vars_schema.yaml
