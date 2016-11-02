@@ -1,0 +1,6 @@
+type: firmware
+# this example currently works only with esp8266
+arch: esp8266
+skeleton_version: 2016-09-20
+build_vars:
+  APP_CONF_SCHEMA: src/conf_schema.yaml
