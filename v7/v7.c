@@ -44,6 +44,7 @@
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
 #define CS_P_CC3100 6
+#define CS_P_TM4C129 14
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
 #define CS_P_NXP_LPC 13
@@ -51,6 +52,7 @@
 #define CS_P_NRF51 12
 #define CS_P_NRF52 10
 #define CS_P_PIC32_HARMONY 11
+/* Next id: 15 */
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -75,6 +77,9 @@
 #define CS_PLATFORM CS_P_PIC32_HARMONY
 #elif defined(ICACHE_FLASH)
 #define CS_PLATFORM CS_P_ESP8266
+#elif defined(TARGET_IS_TM4C129_RA0) || defined(TARGET_IS_TM4C129_RA1) || \
+    defined(TARGET_IS_TM4C129_RA2)
+#define CS_PLATFORM CS_P_TM4C129
 #endif
 
 #ifndef CS_PLATFORM
