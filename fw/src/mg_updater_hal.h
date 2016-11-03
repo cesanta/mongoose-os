@@ -29,9 +29,7 @@ const char *mg_upd_get_status_msg(struct mg_upd_ctx *ctx);
  * and for convenience the "parts" key within it is in ctx->parts.
  * Return >= 0 if ok, < 0 + ctx->status_msg on error.
  */
-int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts,
-                 /* TODO(alashkin): remove this parameter */
-                 int files_mode);
+int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts);
 
 /*
  * Decide what to do with the next file.

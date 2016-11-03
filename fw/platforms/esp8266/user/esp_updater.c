@@ -87,14 +87,6 @@ rboot_config *get_rboot_config(void) {
   return cfg;
 }
 
-static uint8_t get_current_rom(void) {
-  return get_rboot_config()->current_rom;
-}
-
-static uint32_t get_fs_addr(uint8_t rom) {
-  return get_rboot_config()->fs_addresses[rom];
-}
-
 uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
 }
@@ -200,47 +192,6 @@ void fs_dir_parse_cb(void *callback_data, const char *name, size_t name_len,
   pi->files.count++;
 }
 
-static int fill_dir_part_info(struct mg_upd_ctx *ctx, struct json_token *tok,
-                              const char *part_name, struct part_info *pi) {
-  (void) ctx;
-  pi->type = ptFILES;
-
-  struct json_token src_tok = JSON_INVALID_TOKEN;
-  json_scanf(tok->ptr, tok->len, "{src: %T}", &src_tok);
-
-  if (src_tok.type == JSON_TYPE_INVALID) {
-    LOG(LL_DEBUG, ("No fs_dir section in this manifest"));
-    /*
-     * Do not log error here, sections are optional, in general,
-     * If this specific section was mandatory it will be reported on
-     * higher level
-     */
-    return -1;
-  }
-
-  strcpy(pi->files.dir_name, part_name);
-  LOG(LL_DEBUG, ("Directory name: %s", pi->files.dir_name));
-
-  if (json_walk(src_tok.ptr, src_tok.len, fs_dir_parse_cb, pi) <= 0) {
-    LOG(LL_ERROR, ("Malformed manifest"));
-    return -1;
-  }
-
-  LOG(LL_DEBUG, ("Total files to write to [%s]: %d", pi->files.dir_name,
-                 pi->files.count));
-
-  pi->addr = get_fs_addr(ctx->slot_to_write);
-  pi->files.size = get_fs_size(ctx->slot_to_write);
-  if (pi->files.size == 0) {
-    pi->files.size = get_fs_size(get_current_rom());
-  }
-
-  LOG(LL_DEBUG,
-      ("Addr to write to use: %X size: %d", pi->addr, pi->files.size));
-
-  return 1;
-}
-
 void bin2hex(const uint8_t *src, int src_len, char *dst);
 
 static int compare_digest(spiffs *fs, const char *file_name,
@@ -282,66 +233,9 @@ static int compare_digest(spiffs *fs, const char *file_name,
   return ret;
 }
 
-static int prepare_to_update_fs(struct mg_upd_ctx *ctx,
-                                struct part_info *part) {
-  (void) part;
-
-  LOG(LL_DEBUG,
-      ("Trying FS: #%d %d@%X", ctx->slot_to_write,
-       get_fs_size(ctx->slot_to_write), get_fs_addr(ctx->slot_to_write)));
-  int mount_res =
-      fs_mount(&part->files.fs, get_fs_addr(ctx->slot_to_write),
-               get_fs_size(ctx->slot_to_write), part->files.spiffs_work_buf,
-               part->files.spiffs_fds, sizeof(part->files.spiffs_fds));
-  LOG(LL_DEBUG, ("Mount res: %d (%d)", mount_res, SPIFFS_errno));
-
-  if (mount_res != 0 && SPIFFS_errno(&part->files.fs) == SPIFFS_ERR_NOT_A_FS) {
-    int32_t res = SPIFFS_format(&part->files.fs);
-    if (res != 0) {
-      CONSOLE_LOG(LL_ERROR, ("Unable to format filesystem, error: %d (%d)", res,
-                             SPIFFS_errno(&part->files.fs)));
-      return -1;
-    }
-    if ((res = fs_mount(&part->files.fs, get_fs_addr(ctx->slot_to_write),
-                        get_fs_size(ctx->slot_to_write),
-                        part->files.spiffs_work_buf, part->files.spiffs_fds,
-                        sizeof(part->files.spiffs_fds))) != 0) {
-      CONSOLE_LOG(LL_ERROR, ("Failed to mount filesystem %d(%d)", res,
-                             SPIFFS_errno(&part->files.fs)));
-      return -1;
-    }
-  }
-
-  struct file_info *fi, *fi_temp;
-
-  SLIST_FOREACH_SAFE(fi, &part->files.fhead, entries, fi_temp) {
-    int dig_res = compare_digest(&part->files.fs, fi->file_name, fi->sha1_sum);
-
-    if (dig_res < 0) {
-      CONSOLE_LOG(LL_ERROR, ("FS error"));
-      return -1;
-    }
-
-    if (dig_res == 1) {
-      CONSOLE_LOG(LL_INFO, ("%s is unchanged, skipping", fi->file_name));
-      SLIST_REMOVE(&part->files.fhead, fi, file_info, entries);
-      part->done++;
-    } else {
-      LOG(LL_DEBUG, ("%s should be updated", fi->file_name));
-    }
-
-    /* 0 means file was changed, do nothing */
-  }
-
-  return 1;
-}
-
 int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum);
 
-int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts,
-                 int files_mode) {
-  LOG(LL_DEBUG, ("File mode? %d", files_mode));
-
+int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts) {
   const rboot_config *cfg = get_rboot_config();
   struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN,
                     fs_dir = JSON_INVALID_TOKEN;
@@ -358,80 +252,23 @@ int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts,
 
   int fw_part_present =
       (fill_file_part_info(ctx, &fw, "fw", &ctx->fw_part) >= 0);
-  int current_slot_matches = 0, next_slot_maches = 0;
 
-  if (!fw_part_present && !files_mode) {
-    /*
-     * if we use binary FS mode we need to have FW as well and must use new
-     * slot, merge cfg etc
-     */
-    CONSOLE_LOG(LL_ERROR, ("Firmware part is missing in binary mode"));
+  if (!fw_part_present) {
+    ctx->status_msg = "Firmware part is missing";
     return -1;
-  }
-
-  if (fw_part_present) {
-    current_slot_matches =
-        (verify_checksum(
-             get_rboot_config()->roms[get_rboot_config()->current_rom],
-             ctx->fw_part.remote_size, ctx->fw_part.fi.sha1_sum) >= 0);
-    next_slot_maches =
-        (verify_checksum(get_rboot_config()->roms[ctx->slot_to_write],
-                         ctx->fw_part.remote_size,
-                         ctx->fw_part.fi.sha1_sum) >= 0);
-  }
-
-  LOG(LL_DEBUG, ("Current matches: %d, Next matches: %d", current_slot_matches,
-                 next_slot_maches));
-
-  if ((files_mode && current_slot_matches) ||
-      (!current_slot_matches && !next_slot_maches && !fw_part_present)) {
-    /*
-     * For files (manifest) mode we can use the same slot and
-     * just update files on FS
-     * For zip mode we have to use another slot, jeep old fs and
-     * perform manual fs update
-     */
-    ctx->slot_to_write = cfg->current_rom;
-    LOG(LL_DEBUG, ("Using slot %d (current)", ctx->slot_to_write));
-  }
-
-  if ((files_mode && current_slot_matches) || next_slot_maches) {
-    /* In any case, if slot is maches - doesn't fetch it */
-    CONSOLE_LOG(LL_INFO, ("Skipping FW part update"));
-    ctx->fw_part.done = 1;
   }
 
   ctx->fw_part.addr =
       ctx->fw_part.remote_addr + ctx->slot_to_write * FW_SLOT_SIZE;
 
-  LOG(LL_DEBUG, ("FW details Skip: %d Addr: %X Size: %d", ctx->fw_part.done,
-                 ctx->fw_part.addr, ctx->fw_part.remote_size));
+  LOG(LL_DEBUG,
+      ("FW addr: 0x%x size: %d", ctx->fw_part.addr, ctx->fw_part.remote_size));
 
-  int fs_res, fs_dir_result;
-
-  if ((fs_res = fill_file_part_info(ctx, &fs, "fs", &ctx->fs_part)) < 0) {
-    ctx->status_msg = "Failed to parse fs part";
+  if (fill_file_part_info(ctx, &fs, "fs", &ctx->fs_part) < 0) {
+    ctx->status_msg = "FS part is missing";
+    return -1;
   }
 
-  if ((fs_dir_result =
-           fill_dir_part_info(ctx, &fs_dir, "fs_dir", &ctx->fs_dir_part)) < 0) {
-    ctx->status_msg = "Failed to parse fs_dir part";
-  }
-
-  if (fs_res >= 0 && fs_dir_result >= 0) {
-    /*
-     * Using fs_dir gives us a changes to update a little about of files,
-     * In real live if should be faster
-     */
-    LOG(LL_WARN, ("Both fs and fs_dir found, using fs_dir"));
-    ctx->fs_part.done = files_mode;
-  }
-
-  if (fs_dir_result >= 0) {
-    if (prepare_to_update_fs(ctx, &ctx->fs_dir_part) < 0) {
-      return -1;
-    }
-  }
   return 1;
 }
 

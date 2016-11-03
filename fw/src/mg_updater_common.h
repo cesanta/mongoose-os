@@ -53,8 +53,6 @@ struct zip_file_info {
   int has_descriptor;
 };
 
-enum UPDATE_TYPE { utZip, utManifest };
-
 struct mg_upd_ctx; /* This struct is defined by HAL and is opaque to us. */
 struct update_context {
   int update_status;
@@ -75,11 +73,8 @@ struct update_context {
   int result;
 
   char *manifest_data;
-  enum UPDATE_TYPE update_type;
-  int file_procesed;
   int file_size;
   char file_name[50];
-  char *base_url;
   struct mg_upd_ctx *dev_ctx;
 
   /*
@@ -93,7 +88,7 @@ struct update_context {
   } fctx __attribute__((packed));
 };
 
-struct update_context *updater_context_create(enum UPDATE_TYPE ut);
+struct update_context *updater_context_create();
 int updater_process(struct update_context *ctx, const char *data, size_t len);
 void updater_finish(struct update_context *ctx);
 void updater_context_free(struct update_context *ctx);

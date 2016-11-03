@@ -53,7 +53,7 @@ enum update_status {
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-struct update_context *updater_context_create(enum UPDATE_TYPE ut) {
+struct update_context *updater_context_create() {
   if (s_ctx != NULL) {
     CONSOLE_LOG(LL_ERROR, ("Update already in progress"));
     return NULL;
@@ -66,7 +66,6 @@ struct update_context *updater_context_create(enum UPDATE_TYPE ut) {
   }
 
   s_ctx->dev_ctx = mg_upd_ctx_create();
-  s_ctx->update_type = ut;
 
   CONSOLE_LOG(LL_INFO, ("Starting update"));
   return s_ctx;
@@ -336,8 +335,7 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
           return -1;
         }
 
-        if ((ret = mg_upd_begin(ctx->dev_ctx, &ctx->parts,
-                                ctx->update_type == utManifest)) < 0) {
+        if ((ret = mg_upd_begin(ctx->dev_ctx, &ctx->parts)) < 0) {
           ctx->status_msg = mg_upd_get_status_msg(ctx->dev_ctx);
           CONSOLE_LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
           return ret;
@@ -498,7 +496,6 @@ void updater_context_free(struct update_context *ctx) {
   mg_upd_ctx_free(s_ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
   free(ctx->manifest_data);
-  free(ctx->base_url);
   free(ctx);
   s_ctx = NULL;
 }

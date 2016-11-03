@@ -84,9 +84,6 @@ enum mg_init_result mg_init_js(struct v7 *v7) {
 
 #if MG_ENABLE_CLUBBY
   mg_clubby_js_init(v7);
-#if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_UPDATER_CLUBBY_API
-  mg_updater_clubby_js_init(v7);
-#endif
 #endif
 
   mg_console_js_init(v7);

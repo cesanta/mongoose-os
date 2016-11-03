@@ -18,89 +18,10 @@
 
 #if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY
 
-#if MG_ENABLE_JS
-#include "v7/v7.h"
-#endif
-
 static struct clubby_request_info *s_update_req;
-
-enum js_update_status {
-  UJS_GOT_REQUEST,
-  UJS_COMPLETED,
-  UJS_NOTHING_TODO,
-  UJS_ERROR
-};
-
-#if MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API
-static struct v7 *s_v7;
-static v7_val_t s_updater_notify_cb;
-
-static int notify_js(enum js_update_status us, const char *info) {
-  if (!v7_is_undefined(s_updater_notify_cb)) {
-    if (info == NULL) {
-      mg_invoke_cb1(s_v7, s_updater_notify_cb, v7_mk_number(s_v7, us));
-    } else {
-      mg_invoke_cb2(s_v7, s_updater_notify_cb, v7_mk_number(s_v7, us),
-                    v7_mk_string(s_v7, info, ~0, 1));
-    };
-
-    return 1;
-  }
-  return 0;
-}
-#else
-static int notify_js(enum js_update_status us, const char *info) {
-  (void) us;
-  (void) info;
-  return 0;
-}
-#endif /* MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API */
-
-static int fill_zip_header(char *buf, size_t buf_size,
-                           const struct mg_str file_name, uint32_t file_size,
-                           int *header_len) {
-  if (ZIP_FILENAME_OFFSET + file_name.len > buf_size) {
-    LOG(LL_ERROR, ("File name %.*s is too long", file_name.len, file_name.p));
-    return -1;
-  }
-  LOG(LL_DEBUG, ("Fake ZIP header: name=%.*s size=%d", (int) file_name.len,
-                 file_name.p, file_size));
-  memset(buf, 0, buf_size);
-
-  /* offset=0: signature */
-  memcpy(buf, &c_zip_file_header_magic, 4);
-  /* offset=18, compressed size */
-  memcpy(buf + ZIP_COMPRESSED_SIZE_OFFSET, &file_size, 4);
-  /* offset=22, uncomprressed size */
-  memcpy(buf + ZIP_UNCOMPRESSED_SIZE_OFFSET, &file_size, 4);
-  /* offset=26, file name length */
-  memcpy(buf + ZIP_FILENAME_LEN_OFFSET, &file_name.len, 2);
-  /* offset=30, file name length */
-  memcpy(buf + ZIP_FILENAME_OFFSET, file_name.p, file_name.len);
-
-  *header_len = ZIP_FILENAME_OFFSET + file_name.len;
-
-  return 0;
-}
 
 static int do_http_connect(struct update_context *ctx, const char *url,
                            const char *extra_headers);
-
-static void request_file(struct mg_connection *c, struct update_context *ctx,
-                         const char *file_name) {
-  struct mg_str host;
-  unsigned int port;
-  struct mg_str path;
-  mg_parse_uri(mg_mk_str(ctx->base_url), NULL, NULL, &host, &port, &path, NULL,
-               NULL);
-  LOG(LL_DEBUG, ("Request file %s from path %.*s/%s and host %.*s", file_name,
-                 path.len, path.p, file_name, host.len, host.p));
-  mg_printf(c, "GET %.*s/%s HTTP/1.1\r\nHost:%.*s\r\n\r\n", path.len, path.p,
-            file_name, host.len, host.p);
-  ctx->file_procesed = ctx->file_size = 0;
-  strcpy(ctx->file_name, file_name);
-  /* TODO (alashkin): set timeout to cancel request if no reaction */
-}
 
 static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
   struct mbuf *io = &c->recv_mbuf;
@@ -130,56 +51,13 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
             ctx->file_size = hm.body.len;
           }
 
-          if (ctx->update_type == utManifest) {
-            if (ctx->file_procesed == 0) {
-              char buf[100];
-              int header_size = 0;
-              /*
-               * Since mgiot updater waits for ZIP, to keep it untouched
-               * we just emulate ZIP archive by puting
-               * ZIP header before file content
-               */
-              fill_zip_header(buf, sizeof(buf), mg_mk_str(ctx->file_name),
-                              ctx->file_size, &header_size);
-              updater_process(ctx, buf, header_size);
-            }
-          }
           mbuf_remove(io, parsed);
         }
       }
 
       if (io->len != 0) {
         res = updater_process(ctx, io->buf, io->len);
-        ctx->file_procesed += io->len;
-
-        LOG(LL_DEBUG, ("Processed %d (%d) bytes, result: %d", (int) io->len,
-                       ctx->file_procesed, res));
-
         mbuf_remove(io, io->len);
-
-        if (res >= 0 && ctx->update_type == utManifest &&
-            ctx->file_size == ctx->file_procesed) {
-          LOG(LL_DEBUG, ("%s fetched succesfully", ctx->file_name));
-          mg_upd_complete_file_update(ctx->dev_ctx, ctx->file_name);
-
-          char buf[100];
-          res = mg_upd_get_next_file(ctx->dev_ctx, buf, sizeof(buf));
-          if (res == 1) {
-            /* There are more files to go */
-            request_file(c, ctx, buf);
-            return;
-          } else if (res == 0) {
-            /*
-             * If we are in Manifest mode and all files are fetched
-             * we have to tell finalize update process explicitly
-             */
-            res = updater_finalize(ctx);
-            CONSOLE_LOG(LL_INFO, ("Update finished"));
-          } else if (res < 0) {
-            ctx->result = 1;
-            ctx->status_msg = "Part of update is missing";
-          }
-        }
 
         if (res == 0) {
           if (is_write_finished(ctx)) res = updater_finalize(ctx);
@@ -190,16 +68,11 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
         }
 
         if (res > 0) {
-          if (!is_update_finished(ctx)) {
-            /* Update terminated, but not because of error */
-            notify_js(UJS_NOTHING_TODO, NULL);
-          }
           updater_finish(ctx);
         } else if (res < 0) {
           /* Error */
           CONSOLE_LOG(LL_ERROR,
                       ("Update error: %d %s", ctx->result, ctx->status_msg));
-          notify_js(UJS_ERROR, NULL);
           if (s_update_req) {
             clubby_send_errorf(s_update_req, 1, ctx->status_msg);
             s_update_req = NULL;
@@ -213,30 +86,18 @@ static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
       if (ctx != NULL) {
         LOG(LL_DEBUG, ("Connection for %s is closed", ctx->file_name));
 
-        if (ctx->update_type == utManifest &&
-            ctx->file_size == ctx->file_procesed && !is_update_finished(ctx) &&
-            ctx->status_msg == NULL) {
-          /*
-           * If type=utManifest and file is fully fetched and
-           * update status ! FINISHED it means nothing, but time for next file
-           */
-          return;
-        }
-
         if (is_write_finished(ctx)) updater_finalize(ctx);
 
         if (!is_update_finished(ctx)) {
           /* Update failed or connection was terminated by server */
-          notify_js(UJS_ERROR, NULL);
           if (ctx->status_msg == NULL) ctx->status_msg = "Update failed";
           if (s_update_req) {
             clubby_send_errorf(s_update_req, 1, ctx->status_msg);
             s_update_req = NULL;
           }
-        } else if (is_reboot_required(ctx) && !notify_js(UJS_COMPLETED, NULL)) {
+        } else if (is_reboot_required(ctx)) {
           /*
-           * Conection is closed by updater, rebooting if required
-           * and allowed (by JS)
+           * Conection is closed by updater, rebooting if required.
            */
           CONSOLE_LOG(LL_INFO, ("Rebooting device"));
           mg_system_restart_after(100);
@@ -302,26 +163,6 @@ static int start_update_download(struct update_context *ctx, const char *url,
   return 1;
 }
 
-static char *get_base_url(const struct mg_str full_url) {
-  int i;
-  for (i = full_url.len; i >= 0; i--) {
-    if (full_url.p[i] == '/') {
-      char *ret = calloc(1, i + 1);
-      if (ret == NULL) {
-        LOG(LL_ERROR, ("Out of memory"));
-        return NULL;
-      }
-
-      strncpy(ret, full_url.p, i);
-      LOG(LL_DEBUG, ("Base url=%s", ret));
-
-      return ret;
-    }
-  }
-
-  return NULL;
-}
-
 static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
                               struct clubby_frame_info *fi,
                               struct mg_str args) {
@@ -330,6 +171,7 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
   struct json_token blob_url_tok = JSON_INVALID_TOKEN;
   struct json_token blob_type_tok = JSON_INVALID_TOKEN;
   int commit_timeout = 0;
+  struct update_context *ctx = NULL;
 
   LOG(LL_DEBUG, ("Update request received: %.*s", (int) args.len, args.p));
 
@@ -370,33 +212,18 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
 
   memcpy(blob_url, blob_url_tok.ptr, blob_url_tok.len);
 
-  if (!notify_js(UJS_GOT_REQUEST, blob_url)) {
-    enum UPDATE_TYPE ut = utZip;
-    if (blob_type_tok.type == JSON_TYPE_STRING &&
-        strncmp(blob_type_tok.ptr, "manifest", 8) == 0) {
-      ut = utManifest;
-    }
-    struct update_context *ctx = updater_context_create(ut);
-    if (ctx == NULL) {
-      reply = "Failed to init updater";
-      goto clean;
-    }
-    ctx->fctx.id = ri->id;
-    ctx->fctx.commit_timeout = commit_timeout;
-    strncpy(ctx->fctx.clubby_src, ri->src.p,
-            MIN(ri->src.len, sizeof(ctx->fctx.clubby_src)));
-    if (ut == utManifest) {
-      /* TODO(alashkin): unhardcode name */
-      strcpy(ctx->file_name, "manifest.json");
-    }
-    ctx->base_url =
-        get_base_url(mg_mk_str_n(blob_url_tok.ptr, blob_url_tok.len));
-    if (start_update_download(
-            ctx, blob_url, ut == utZip ? NULL : "Connection: keep-alive\r\n") <
-        0) {
-      reply = ctx->status_msg;
-      goto clean;
-    }
+  ctx = updater_context_create();
+  if (ctx == NULL) {
+    reply = "Failed to init updater";
+    goto clean;
+  }
+  ctx->fctx.id = ri->id;
+  ctx->fctx.commit_timeout = commit_timeout;
+  strncpy(ctx->fctx.clubby_src, ri->src.p,
+          MIN(ri->src.len, sizeof(ctx->fctx.clubby_src)));
+  if (start_update_download(ctx, blob_url, NULL) < 0) {
+    reply = ctx->status_msg;
+    goto clean;
   }
 
   s_update_req = ri;
@@ -507,69 +334,5 @@ void mg_updater_clubby_finish(int error_code, int64_t id,
 clean:
   if (ri != NULL) clubby_free_request_info(ri);
 }
-
-#if MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API
-static enum v7_err Updater_startupdate(struct v7 *v7, v7_val_t *res) {
-  enum v7_err rcode = V7_OK;
-
-  v7_val_t manifest_url_v = v7_arg(v7, 0);
-  if (!v7_is_string(manifest_url_v)) {
-    rcode = v7_throwf(v7, "Error", "URL is not a string");
-  } else {
-    struct update_context *ctx = updater_context_create(utZip);
-    if (ctx == NULL) {
-      rcode = v7_throwf(v7, "Error", "Failed to init updater");
-    } else if (start_update_download(ctx, v7_get_cstring(v7, &manifest_url_v),
-                                     NULL) < 0) {
-      rcode = v7_throwf(v7, "Error", ctx->status_msg);
-    }
-  }
-
-  *res = v7_mk_boolean(v7, rcode == V7_OK);
-  return rcode;
-}
-
-static enum v7_err Updater_notify(struct v7 *v7, v7_val_t *res) {
-  v7_val_t cb = v7_arg(v7, 0);
-  if (!v7_is_callable(v7, cb)) {
-    printf("Invalid arguments\n");
-    *res = v7_mk_boolean(v7, 0);
-    return V7_OK;
-  }
-
-  s_updater_notify_cb = cb;
-
-  *res = v7_mk_boolean(v7, 1);
-  return V7_OK;
-}
-
-void mg_updater_clubby_js_init(struct v7 *v7) {
-  s_v7 = v7;
-  v7_val_t updater = v7_mk_object(v7);
-  v7_val_t sys = v7_get(v7, v7_get_global(v7), "Sys", ~0);
-  s_updater_notify_cb = V7_UNDEFINED;
-  v7_own(v7, &s_updater_notify_cb);
-
-  v7_def(v7, sys, "updater", ~0, V7_DESC_ENUMERABLE(0), updater);
-  v7_set_method(v7, updater, "notify", Updater_notify);
-  v7_set_method(v7, updater, "start", Updater_startupdate);
-
-  v7_def(s_v7, updater, "GOT_REQUEST", ~0,
-         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(v7, UJS_GOT_REQUEST));
-
-  v7_def(s_v7, updater, "COMPLETED", ~0,
-         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(v7, UJS_COMPLETED));
-
-  v7_def(s_v7, updater, "NOTHING_TODO", ~0,
-         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(v7, UJS_NOTHING_TODO));
-
-  v7_def(s_v7, updater, "FAILED", ~0,
-         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
-         v7_mk_number(v7, UJS_ERROR));
-}
-#endif /* MG_ENABLE_JS && MG_ENABLE_UPDATER_CLUBBY_API */
 
 #endif /* MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY */

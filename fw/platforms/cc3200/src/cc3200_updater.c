@@ -48,9 +48,7 @@ const char *mg_upd_get_status_msg(struct mg_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts,
-                 int files_mode) {
-  (void) files_mode;
+int mg_upd_begin(struct mg_upd_ctx *ctx, struct json_token *parts) {
   ctx->parts = parts;
   /* We want to make sure device uses boto loader. */
   ctx->cur_boot_cfg_idx = get_active_boot_cfg_idx();
