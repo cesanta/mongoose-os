@@ -22,6 +22,7 @@ enum mg_init_result {
   MG_INIT_CLUBBY_FAILED = -15,
   MG_INIT_UART_FAILED = -16,
   MG_INIT_MDNS_FAILED = -17,
+  MG_INIT_MQTT_FAILED = -18,
 };
 
 enum mg_init_result mg_init(void);

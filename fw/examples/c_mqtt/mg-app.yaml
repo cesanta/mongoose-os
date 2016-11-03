@@ -2,4 +2,4 @@ type: firmware
 arch: PLATFORM
 skeleton_version: 2016-09-20
 build_vars:
-  APP_CONF_SCHEMA: src/conf_schema.yaml
+  MG_ENABLE_MQTT: 1

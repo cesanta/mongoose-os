@@ -1,4 +1,0 @@
-[
-  ["mqtt", "o", {title: "Simple MQTT client example parameters"}],
-  ["mqtt.broker", "s", "test.mosquitto.org:1883", {title: "MQTT Broker address"}],
-]

@@ -1,5 +1,5 @@
 APP = c_mqtt
 APP_MODULES = src
-APP_CONF_SCHEMA = $(CURDIR)/src/conf_schema.yaml
+MG_ENABLE_MQTT = 1
 
 include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

@@ -29,6 +29,14 @@ ifeq "$(MG_ENABLE_DNS_SD)" "1"
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/mg_dns_sd_config.yaml
 endif
 
+ifeq "$(MG_ENABLE_MQTT)" "1"
+  MIOT_SRCS += mg_mqtt.c
+  MIOT_FEATURES += -DMG_ENABLE_MQTT
+  SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/mg_mqtt_config.yaml
+else
+  MIOT_FEATURES += -DMG_ENABLE_MQTT=0
+endif
+
 ifneq "$(MG_ENABLE_UPDATER_POST)$(MG_ENABLE_UPDATER_CLUBBY)" "00"
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/mg_updater_config.yaml
   MIOT_SRCS += mg_updater_common.c
@@ -51,5 +59,6 @@ export MG_ENABLE_CONFIG_SERVICE
 export MG_ENABLE_DNS_SD
 export MG_ENABLE_FILESYSTEM_SERVICE
 export MG_ENABLE_JS
+export MG_ENABLE_MQTT
 export MG_ENABLE_UPDATER_POST
 export MG_ENABLE_UPDATER_CLUBBY

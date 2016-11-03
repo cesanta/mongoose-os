@@ -5,6 +5,7 @@
 #include "fw/src/mg_console.h"
 #include "fw/src/mg_dns_sd.h"
 #include "fw/src/mg_mdns.h"
+#include "fw/src/mg_mqtt.h"
 #include "fw/src/mg_service_config.h"
 #include "fw/src/mg_service_filesystem.h"
 #include "fw/src/mg_service_vars.h"
@@ -52,6 +53,11 @@ enum mg_init_result mg_init(void) {
 
 #if MG_ENABLE_UPDATER_POST
   mg_updater_post_init(); /* After HTTP init */
+#endif
+
+#if MG_ENABLE_MQTT
+  r = mg_mqtt_global_init();
+  if (r != MG_INIT_OK) return r;
 #endif
 
   if (mg_app_init() != MG_APP_INIT_SUCCESS) {

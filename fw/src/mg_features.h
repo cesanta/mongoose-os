@@ -46,6 +46,10 @@
 #define MG_ENABLE_MDNS 0
 #endif
 
+#ifndef MG_ENABLE_MQTT
+#define MG_ENABLE_MQTT 0
+#endif
+
 #ifndef MG_ENABLE_MQTT_API
 #define MG_ENABLE_MQTT_API 0
 #endif
