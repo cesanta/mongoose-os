@@ -67,6 +67,7 @@
 #include "common/platforms/platform_cc3200.h"
 #include "common/platforms/platform_cc3100.h"
 #include "common/platforms/platform_mbed.h"
+#include "common/platforms/platform_nrf51.h"
 #include "common/platforms/platform_nrf52.h"
 #include "common/platforms/platform_wince.h"
 #include "common/platforms/platform_nxp_lpc.h"
