@@ -1,7 +1,13 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "fw/src/mg_updater_http.h"
 
 #include "common/cs_dbg.h"
 #include "fw/src/mg_console.h"
+#include "fw/src/mg_hal.h"
 #include "fw/src/mg_mongoose.h"
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_timers.h"
@@ -22,6 +28,22 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p) {
         struct http_message hm;
         int parsed = mg_parse_http(io->buf, io->len, &hm, 0);
         if (parsed <= 0) {
+          return;
+        }
+        if (hm.resp_code != 200) {
+          if (hm.resp_code == 304) {
+            ctx->result = 1;
+            ctx->need_reboot = false;
+            ctx->status_msg = "Not Modified";
+            updater_finish(ctx);
+          } else {
+            ctx->result = -hm.resp_code;
+            ctx->need_reboot = false;
+            ctx->status_msg = "Invalid HTTP response code";
+            updater_finish(ctx);
+          }
+          /* TODO(rojer): Follow redirects (301 and 302). */
+          c->flags |= MG_F_CLOSE_IMMEDIATELY;
           return;
         }
         if (hm.body.len != 0) {
@@ -84,7 +106,8 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p) {
 }
 
 void mg_updater_http_start(struct update_context *ctx, const char *url) {
-  CONSOLE_LOG(LL_INFO, ("Updating from: %s", url));
+  CONSOLE_LOG(LL_INFO, ("Update URL: %s, ct: %d, isv? %d", url,
+                        ctx->fctx.commit_timeout, ctx->ignore_same_version));
 
   struct mg_connect_opts opts;
   memset(&opts, 0, sizeof(opts));
@@ -108,10 +131,19 @@ void mg_updater_http_start(struct update_context *ctx, const char *url) {
   }
 #endif
 
-  char *extra_headers = NULL;
+  char ehb[150];
+  char *extra_headers = ehb;
+  const struct sys_ro_vars *rv = get_ro_vars();
+  mg_asprintf(&extra_headers, sizeof(ehb),
+              "X-MIOT-Device-ID: %s %s\r\n"
+              "X-MIOT-FW-Version: %s %s %s\r\n",
+              (get_cfg()->device.id ? get_cfg()->device.id : "-"),
+              rv->mac_address, rv->arch, rv->fw_version, rv->fw_id);
 
   struct mg_connection *c = mg_connect_http_opt(
       mg_get_mgr(), fw_download_handler, opts, url, extra_headers, NULL);
+
+  if (extra_headers != ehb) free(extra_headers);
 
   if (c == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Failed to connect to %s", url));
@@ -200,15 +232,12 @@ static void handle_update_post(struct mg_connection *c, int ev, void *p) {
       if (mp->status < 0) {
         /* mp->status < 0 means connection is dead, do not send reply */
       } else {
-        mg_printf(c,
-                  "HTTP/1.1 %s\r\n"
-                  "Content-Type: text/plain\r\n"
-                  "Connection: close\r\n\r\n"
-                  "%s\r\n",
-                  ctx->result > 0 ? "200 OK" : "400 Bad request",
+        int code = (ctx->result > 0 ? 200 : 400);
+        mg_send_response_line(c, code,
+                              "Content-Type: text/plain\r\n"
+                              "Connection: close\r\n");
+        mg_printf(c, "%s\r\n",
                   ctx->status_msg ? ctx->status_msg : "Unknown error");
-        LOG(LL_ERROR, ("Update result: %d %s", ctx->result,
-                       ctx->status_msg ? ctx->status_msg : "Unknown error"));
         if (is_reboot_required(ctx)) {
           LOG(LL_INFO, ("Rebooting device"));
           mg_system_restart_after(101);
@@ -232,21 +261,30 @@ static void mg_update_result_cb(struct update_context *ctx) {
     mg_send_response_line(s_update_request_conn, code,
                           "Content-Type: text/plain\r\n"
                           "Connection: close\r\n");
-    mg_printf(s_update_request_conn, "%s\r\n", ctx->status_msg);
+    mg_printf(s_update_request_conn, "(%d) %s\r\n", ctx->result,
+              ctx->status_msg);
     s_update_request_conn->flags |= MG_F_SEND_AND_CLOSE;
     s_update_request_conn = NULL;
   }
   s_ctx = NULL;
 }
 
-static void mg_update_timer_cb(void *arg) {
-  const char *url = (const char *) arg;
-  if (s_ctx != NULL) return;
+static void mg_update_start(const char *url, int commit_timeout,
+                            bool ignore_same_version) {
+  if (s_ctx != NULL || url == NULL) return;
   s_ctx = updater_context_create();
   if (s_ctx == NULL) return;
-  s_ctx->ignore_same_version = true;
+  s_ctx->ignore_same_version = ignore_same_version;
+  s_ctx->fctx.commit_timeout = commit_timeout;
   s_ctx->result_cb = mg_update_result_cb;
   mg_updater_http_start(s_ctx, url);
+}
+
+static void mg_update_timer_cb(void *arg) {
+  struct sys_config_update *scu = &get_cfg()->update;
+  mg_update_start(scu->url, scu->commit_timeout,
+                  true /* ignore_same_version */);
+  (void) arg;
 }
 
 static void update_handler(struct mg_connection *c, int ev, void *ev_data) {
@@ -271,6 +309,7 @@ static void update_handler(struct mg_connection *c, int ev, void *ev_data) {
       return;
     }
     case MG_EV_HTTP_REQUEST: {
+      struct http_message *hm = (struct http_message *) ev_data;
       if (s_ctx != NULL) {
         mg_send_response_line(c, 409,
                               "Content-Type: text/plain\r\n"
@@ -279,21 +318,39 @@ static void update_handler(struct mg_connection *c, int ev, void *ev_data) {
         c->flags |= MG_F_SEND_AND_CLOSE;
         return;
       }
-      const char *url = NULL;
-      /* TODO(rojer): Take from request. */
-      if (url == NULL) {
-        url = get_cfg()->update.url;
+      struct sys_config_update *scu = &get_cfg()->update;
+      char *url = scu->url;
+      int commit_timeout = scu->commit_timeout;
+      bool ignore_same_version = true;
+      struct mg_str params =
+          (mg_vcmp(&hm->method, "POST") == 0 ? hm->body : hm->query_string);
+      size_t buf_len = params.len;
+      char *buf = calloc(params.len, 1), *p = buf;
+      int len = mg_get_http_var(&params, "url", p, buf_len);
+      if (len > 0) {
+        url = p;
+        p += len + 1;
+        buf_len -= len + 1;
       }
-      if (url == NULL) {
+      len = mg_get_http_var(&params, "commit_timeout", p, buf_len);
+      if (len > 0) {
+        commit_timeout = atoi(p);
+      }
+      len = mg_get_http_var(&params, "ignore_same_version", p, buf_len);
+      if (len > 0) {
+        ignore_same_version = (atoi(p) > 0);
+      }
+      if (url != NULL) {
+        s_update_request_conn = c;
+        mg_update_start(url, commit_timeout, ignore_same_version);
+      } else {
         mg_send_response_line(c, 400,
                               "Content-Type: text/plain\r\n"
                               "Connection: close\r\n");
         mg_printf(c, "Update URL not specified and none is configured.\r\n");
         c->flags |= MG_F_SEND_AND_CLOSE;
-        return;
       }
-      s_update_request_conn = c;
-      mg_update_timer_cb((void *) url);
+      free(buf);
       break;
     }
     case MG_EV_CLOSE: {
@@ -304,7 +361,6 @@ static void update_handler(struct mg_connection *c, int ev, void *ev_data) {
       break;
     }
   }
-  (void) ev_data;
 }
 
 static void update_action_handler(struct mg_connection *c, int ev, void *p) {
