@@ -12,6 +12,20 @@
 
 #if MG_LWIP
 
+
+/*
+ * When compiling for nRF5x chips with arm-none-eabi-gcc, it has BYTE_ORDER
+ * already defined, so in order to avoid warnings in lwip, we have to undefine
+ * it.
+ *
+ * TODO: Check if in the future versions of nRF5 SDK that changes.
+ *       Current version of nRF51 SDK: 0.8.0
+ *                          nRF5 SDK:  0.9.0
+ */
+#if CS_PLATFORM == CS_P_NRF51 || CS_PLATFORM == CS_P_NRF52
+# undef BYTE_ORDER
+#endif
+
 #include <lwip/opt.h>
 #include <lwip/err.h>
 #include <lwip/ip_addr.h>

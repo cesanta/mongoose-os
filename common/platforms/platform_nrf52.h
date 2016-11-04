@@ -17,9 +17,12 @@
 #define to64(x) strtoll(x, NULL, 10)
 
 #define MG_NET_IF             MG_NET_IF_LWIP_LOW_LEVEL
-#define LWIP_PROVIDE_ERRNO    1
 #define MG_LWIP               1
 #define MG_ENABLE_IPV6        1
+
+#if !defined(ENOSPC)
+# define ENOSPC 28  /* No space left on device */
+#endif
 
 /*
  * For ARM C Compiler, make lwip to export `struct timeval`; for other
