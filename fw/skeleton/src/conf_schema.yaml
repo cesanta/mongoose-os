@@ -1,0 +1,21 @@
+[
+  # Below is a custom firmware configuration example.
+  # Uncomment and modify according to your needs.
+  # These settings get compiled into the C structure, and can be accessed
+  # from the C code this way:
+  #
+  # printf("Hello, %s!\n", get_cfg()->my_firmware.message);
+  #
+  # Settings are cool: can be modified remotely without full firmware upgrade!
+  #
+  # To see all available compiled settings, buid the firmware and open
+  # build/sys_config.c or build/sys_config.h file.
+
+  # ["my_firmware", "o", {"title": "My firmware settings"}],
+  # ["my_firmware.limit1", "i", 123, {title: "Integer setting example"}],
+  # ["my_firmware.allow", "b", true, {title: "Boolean setting example"}],
+  # ["my_firmware.message", "s", "boo!", {"title": "String setting example"}],
+
+  # Also, you can override an existing "system" value:
+  # ["uart.baud_rate", 9600],
+]
