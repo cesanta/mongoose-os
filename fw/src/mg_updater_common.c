@@ -283,7 +283,8 @@ static int finalize_write(struct update_context *ctx) {
   return 1;
 }
 
-int updater_process(struct update_context *ctx, const char *data, size_t len) {
+static int updater_process_int(struct update_context *ctx, const char *data,
+                               size_t len) {
   int ret;
   if (len != 0) {
     context_update(ctx, data, len);
@@ -333,6 +334,12 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
                         strlen(FW_ARCHITECTURE)) != 0) {
           ctx->status_msg = "Wrong platform";
           return -1;
+        }
+
+        if (ctx->ignore_same_version &&
+            strncmp(ctx->version.ptr, build_version, ctx->version.len) == 0) {
+          ctx->status_msg = "Version is the same as current";
+          return 1;
         }
 
         if ((ret = mg_upd_begin(ctx->dev_ctx, &ctx->parts)) < 0) {
@@ -474,10 +481,22 @@ int updater_process(struct update_context *ctx, const char *data, size_t len) {
       case US_FINISHED: {
         /* After receiving manifest, fw & fs just skipping all data */
         context_remove_data(ctx, ctx->data_len);
-        return 1;
+        if (ctx->result_cb != NULL) {
+          ctx->result_cb(ctx);
+          ctx->result_cb = NULL;
+        }
+        return ctx->result;
       }
     }
   }
+}
+
+int updater_process(struct update_context *ctx, const char *data, size_t len) {
+  ctx->result = updater_process_int(ctx, data, len);
+  if (ctx->result != 0) {
+    updater_finish(ctx);
+  }
+  return ctx->result;
 }
 
 int updater_finalize(struct update_context *ctx) {
@@ -486,7 +505,11 @@ int updater_finalize(struct update_context *ctx) {
 }
 
 void updater_finish(struct update_context *ctx) {
+  if (ctx->update_status == US_FINISHED) return;
   updater_set_status(ctx, US_FINISHED);
+  CONSOLE_LOG(LL_INFO, ("Update finished: %d %s, mem free %u", ctx->result,
+                        ctx->status_msg, mg_get_free_heap_size()));
+  updater_process_int(ctx, NULL, 0);
 }
 
 void updater_context_free(struct update_context *ctx) {

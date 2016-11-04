@@ -24,6 +24,7 @@ DEBUG ?= 0
 CC_WRAPPER ?=
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
+MG_ENABLE_UPDATER = 0
 MG_ENABLE_UPDATER_POST = 0
 MG_ENABLE_UPDATER_CLUBBY = 0
 MG_ENABLE_DNS_SD = 0  # Not supported on POSIX

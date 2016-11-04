@@ -20,6 +20,7 @@ MG_ENABLE_CLUBBY ?= 1
 MG_ENABLE_CLUBBY_UART ?= 1
 MG_ENABLE_CONFIG_SERVICE ?= 1
 MG_ENABLE_FILESYSTEM_SERVICE ?= 1
+MG_ENABLE_UPDATER ?= 1
 MG_ENABLE_UPDATER_POST ?= 1
 MG_ENABLE_UPDATER_CLUBBY ?= 1
 MG_ENABLE_DNS_SD ?= 0
@@ -105,8 +106,7 @@ V7_HOST_FEATURES ?= $(V7_FEATURES)
 V7_CC3200_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
 MIOT_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64 \
                         -DMG_ENABLE_WEB_CONFIG \
-                        -DMG_ENABLE_FILE_UPLOAD \
-                        -DMG_ENABLE_UPDATER_POST
+                        -DMG_ENABLE_FILE_UPLOAD
 
 ifeq "$(V7_NO_COMPILER)" "1"
   ifneq "$(V7_FREEZE)" "1"
@@ -170,7 +170,7 @@ MIOT_SRCS = mg_init.c \
             mg_wifi.c \
             mg_config.c mg_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            cs_crc32.c mg_updater_common.c mg_updater_post.c \
+            cs_crc32.c \
             cs_frbuf.c mg_utils.c \
             mg_console.c \
             cs_rbuf.c mg_uart.c \

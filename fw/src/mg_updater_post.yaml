@@ -1,0 +1,3 @@
+[
+  ["update.enable_post", "b", true, {title : "Enable POST updates"}],
+]

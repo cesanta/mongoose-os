@@ -9,8 +9,8 @@
 #ifndef CS_FW_SRC_MG_UPDATER_COMMON_H_
 #define CS_FW_SRC_MG_UPDATER_COMMON_H_
 
-#include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "fw/src/mg_updater_hal.h"
 
@@ -53,6 +53,9 @@ struct zip_file_info {
   int has_descriptor;
 };
 
+struct update_context;
+typedef void (*mg_updater_result_cb)(struct update_context *ctx);
+
 struct mg_upd_ctx; /* This struct is defined by HAL and is opaque to us. */
 struct update_context {
   int update_status;
@@ -68,13 +71,16 @@ struct update_context {
   struct json_token version;
   struct json_token parts;
 
-  int need_reboot;
+  bool ignore_same_version;
+  bool need_reboot;
 
   int result;
+  mg_updater_result_cb result_cb;
 
   char *manifest_data;
   int file_size;
   char file_name[50];
+
   struct mg_upd_ctx *dev_ctx;
 
   /*

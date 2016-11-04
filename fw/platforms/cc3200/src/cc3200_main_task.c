@@ -168,6 +168,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     }
   }
 
+#if MG_ENABLE_UPDATER
   if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     LOG(LL_INFO, ("Applying update"));
     r = mg_upd_apply_update();
@@ -176,6 +177,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
       return CC3200_INIT_UPDATE_FAILED;
     }
   }
+#endif
 
   enum mg_init_result ir = mg_init();
   if (ir != MG_INIT_OK) {
@@ -212,8 +214,10 @@ void main_task(void *arg) {
     LOG(LL_ERROR, ("Init failed: %d", r));
   }
 
+#if MG_ENABLE_UPDATER
   mg_upd_boot_finish((r == CC3200_INIT_OK),
                      (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
+#endif
 
   while (1) {
     mongoose_poll(0);

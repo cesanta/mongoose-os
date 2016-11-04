@@ -11,7 +11,7 @@
 #include "fw/src/mg_service_vars.h"
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_updater_clubby.h"
-#include "fw/src/mg_updater_post.h"
+#include "fw/src/mg_updater_http.h"
 #include "fw/src/mg_wifi.h"
 
 enum mg_init_result mg_init(void) {
@@ -51,8 +51,8 @@ enum mg_init_result mg_init(void) {
   r = mg_sys_config_init_http(&get_cfg()->http);
   if (r != MG_INIT_OK) return r;
 
-#if MG_ENABLE_UPDATER_POST
-  mg_updater_post_init(); /* After HTTP init */
+#if MG_ENABLE_UPDATER
+  mg_updater_http_init(); /* After HTTP init */
 #endif
 
 #if MG_ENABLE_MQTT

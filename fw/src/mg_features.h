@@ -74,6 +74,10 @@
 #define MG_ENABLE_UDP_API 0
 #endif
 
+#ifndef MG_ENABLE_UPDATER
+#define MG_ENABLE_UPDATER 0
+#endif
+
 #ifndef MG_ENABLE_UPDATER_CLUBBY
 #define MG_ENABLE_UPDATER_CLUBBY 0
 #endif

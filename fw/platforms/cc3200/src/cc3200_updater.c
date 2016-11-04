@@ -21,8 +21,9 @@
 #include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_updater_hal.h"
 #include "fw/src/mg_updater_util.h"
+#include "fw/src/mg_utils.h"
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#if MG_ENABLE_UPDATER
 
 struct mg_upd_ctx {
   struct json_token *parts;
@@ -411,19 +412,4 @@ int mg_upd_apply_update() {
   return 0;
 }
 
-int mg_upd_complete_file_update(struct mg_upd_ctx *ctx, const char *file_name) {
-  (void) ctx;
-  (void) file_name;
-
-  /* TODO(alashkin or rojer) implement */
-  return -1;
-}
-
-int mg_upd_get_next_file(struct mg_upd_ctx *ctx, char *buf, size_t buf_size) {
-  (void) ctx;
-  (void) buf;
-  (void) buf_size;
-
-  /* TODO(alashkin or rojer) implement */
-  return -1;
-}
+#endif /* MG_ENABLE_UPDATER */

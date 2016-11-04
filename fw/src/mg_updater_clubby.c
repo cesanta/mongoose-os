@@ -1,7 +1,7 @@
 /*
-* Copyright (c) 2016 Cesanta Software Limited
-* All rights reserved
-*/
+ * Copyright (c) 2016 Cesanta Software Limited
+ * All rights reserved
+ */
 
 #include "fw/src/mg_updater_clubby.h"
 
@@ -11,156 +11,22 @@
 #include "fw/src/mg_clubby.h"
 #include "fw/src/mg_console.h"
 #include "fw/src/mg_mongoose.h"
-#include "fw/src/mg_sys_config.h"
 #include "fw/src/mg_updater_common.h"
+#include "fw/src/mg_updater_http.h"
 #include "fw/src/mg_utils.h"
-#include "fw/src/mg_v7_ext.h"
 
 #if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY
 
 static struct clubby_request_info *s_update_req;
 
-static int do_http_connect(struct update_context *ctx, const char *url,
-                           const char *extra_headers);
-
-static void fw_download_ev_handler(struct mg_connection *c, int ev, void *p) {
-  struct mbuf *io = &c->recv_mbuf;
-  struct update_context *ctx = (struct update_context *) c->user_data;
-  int res = 0;
-  (void) p;
-
-  switch (ev) {
-    case MG_EV_RECV: {
-      if (ctx->file_size == 0) {
-        LOG(LL_DEBUG, ("Looking for HTTP header"));
-        struct http_message hm;
-        int parsed = mg_parse_http(io->buf, io->len, &hm, 0);
-        if (parsed <= 0) {
-          return;
-        }
-        if (hm.body.len != 0) {
-          LOG(LL_DEBUG, ("HTTP header: file size: %d", (int) hm.body.len));
-          if (hm.body.len == (size_t) ~0) {
-            CONSOLE_LOG(LL_ERROR,
-                        ("Invalid content-length, perhaps chunked-encoding"));
-            ctx->status_msg =
-                "Invalid content-length, perhaps chunked-encoding";
-            c->flags |= MG_F_CLOSE_IMMEDIATELY;
-            break;
-          } else {
-            ctx->file_size = hm.body.len;
-          }
-
-          mbuf_remove(io, parsed);
-        }
-      }
-
-      if (io->len != 0) {
-        res = updater_process(ctx, io->buf, io->len);
-        mbuf_remove(io, io->len);
-
-        if (res == 0) {
-          if (is_write_finished(ctx)) res = updater_finalize(ctx);
-          if (res == 0) {
-            /* Need more data, everything is OK */
-            break;
-          }
-        }
-
-        if (res > 0) {
-          updater_finish(ctx);
-        } else if (res < 0) {
-          /* Error */
-          CONSOLE_LOG(LL_ERROR,
-                      ("Update error: %d %s", ctx->result, ctx->status_msg));
-          if (s_update_req) {
-            clubby_send_errorf(s_update_req, 1, ctx->status_msg);
-            s_update_req = NULL;
-          }
-        }
-        c->flags |= MG_F_CLOSE_IMMEDIATELY;
-      }
-      break;
-    }
-    case MG_EV_CLOSE: {
-      if (ctx != NULL) {
-        LOG(LL_DEBUG, ("Connection for %s is closed", ctx->file_name));
-
-        if (is_write_finished(ctx)) updater_finalize(ctx);
-
-        if (!is_update_finished(ctx)) {
-          /* Update failed or connection was terminated by server */
-          if (ctx->status_msg == NULL) ctx->status_msg = "Update failed";
-          if (s_update_req) {
-            clubby_send_errorf(s_update_req, 1, ctx->status_msg);
-            s_update_req = NULL;
-          }
-        } else if (is_reboot_required(ctx)) {
-          /*
-           * Conection is closed by updater, rebooting if required.
-           */
-          CONSOLE_LOG(LL_INFO, ("Rebooting device"));
-          mg_system_restart_after(100);
-        }
-        updater_finish(ctx);
-        updater_context_free(ctx);
-        c->user_data = NULL;
-      }
-
-      break;
-    }
+static void clubby_updater_result(struct update_context *ctx) {
+  if (s_update_req == NULL) return;
+  if (ctx->need_reboot) {
+    /* We're about to reboot, don't reply yet. */
+    return;
   }
-}
-
-static int do_http_connect(struct update_context *ctx, const char *url,
-                           const char *extra_headers) {
-  LOG(LL_DEBUG, ("Connecting to: %s", url));
-
-  struct mg_connect_opts opts;
-  memset(&opts, 0, sizeof(opts));
-
-#if MG_ENABLE_SSL
-  if (strlen(url) > 8 && strncmp(url, "https://", 8) == 0) {
-    opts.ssl_server_name = get_cfg()->update.ssl_server_name;
-    opts.ssl_ca_cert = get_cfg()->update.ssl_ca_file;
-#ifndef cc3200
-    if (opts.ssl_ca_cert == NULL) {
-      /* Use global CA file if updater specific one is not set */
-      opts.ssl_ca_cert = get_cfg()->tls.ca_file;
-    }
-#else
-/*
- * SimpleLink only accepts one cert in DER format as a CA file so we can't
- * use a pre-packaged bundle and expect it to work, sadly.
- */
-#endif
-    opts.ssl_cert = get_cfg()->update.ssl_client_cert_file;
-  }
-#endif
-
-  struct mg_connection *c = mg_connect_http_opt(
-      mg_get_mgr(), fw_download_ev_handler, opts, url, extra_headers, NULL);
-
-  if (c == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Failed to connect to %s", url));
-    return -1;
-  }
-
-  c->user_data = ctx;
-
-  return 1;
-}
-
-static int start_update_download(struct update_context *ctx, const char *url,
-                                 const char *extra_headers) {
-  CONSOLE_LOG(LL_INFO, ("Updating FW"));
-
-  if (do_http_connect(ctx, url, extra_headers) < 0) {
-    ctx->status_msg = "Failed to connect update server";
-    return -1;
-  }
-
-  return 1;
+  clubby_send_errorf(s_update_req, (ctx->result > 0 ? 0 : -1), ctx->status_msg);
+  s_update_req = NULL;
 }
 
 static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
@@ -221,13 +87,10 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
   ctx->fctx.commit_timeout = commit_timeout;
   strncpy(ctx->fctx.clubby_src, ri->src.p,
           MIN(ri->src.len, sizeof(ctx->fctx.clubby_src)));
-  if (start_update_download(ctx, blob_url, NULL) < 0) {
-    reply = ctx->status_msg;
-    goto clean;
-  }
-
+  ctx->result_cb = clubby_updater_result;
   s_update_req = ri;
 
+  mg_updater_http_start(ctx, blob_url);
   free(blob_url);
   return;
 

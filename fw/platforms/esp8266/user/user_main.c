@@ -120,9 +120,12 @@ int esp_mg_init(rboot_config *bcfg) {
     LOG(LL_ERROR, ("FS init error: %d", r));
     return -1;
   }
+
+#if MG_ENABLE_UPDATER
   if (bcfg->fw_updated && mg_upd_apply_update() < 0) {
     return -2;
   }
+#endif
 
   enum mg_init_result ir = mg_init();
   if (ir != MG_INIT_OK) {
@@ -170,7 +173,11 @@ int esp_mg_init(rboot_config *bcfg) {
 void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
   bool success = (esp_mg_init(bcfg) == 0);
+#if MG_ENABLE_UPDATER
   mg_upd_boot_finish(success, bcfg->is_first_boot);
+#else
+  (void) success;
+#endif
   (void) arg;
 }
 
