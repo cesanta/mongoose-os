@@ -20,7 +20,7 @@ to our disposal) to implement the functionality we want.
 
 Create an empty directory, execute `miot fw init --arch cc3200` in it.
 If you have NodeMCU, use `esp8266` instead of `cc3200`.
-Copy-paste this into the `src/app.c`:
+Copy-paste this into the `src/main.c`:
 
 ```c
 #include "common/cs_dbg.h"

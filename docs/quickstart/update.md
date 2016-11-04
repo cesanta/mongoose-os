@@ -4,7 +4,7 @@ title: Over-the-air (OTA) update
 
 It's time to show how the OTA update works.
 
-Make some changes to the `src/app.c` and build the firmware. Push new
+Make some changes to the `src/main.c` and build the firmware. Push new
 firmware to the device using simple `curl` command:
 
 ```

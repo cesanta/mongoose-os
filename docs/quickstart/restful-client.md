@@ -13,7 +13,7 @@ We simply log this received reply.
 
 Create an empty directory, execute `miot fw init --arch cc3200` in it.
 If you have NodeMCU, use `esp8266` instead of `cc3200`.
-Copy-paste this into the `src/app.c`:
+Copy-paste this into the `src/main.c`:
 
 ```c
 #include "fw/src/mg_app.h"

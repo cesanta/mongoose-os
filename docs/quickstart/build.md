@@ -9,12 +9,12 @@ Create an empty directory, go into it, and run:
 miot init --arch ARCHITECTURE # cc3200 or esp8266
 ```
 
-That command creates a `mg-app.yaml` configuration file with various
+That command creates a `miot.yml` configuration file with various
 build settings, which you can alter later if needed. Also, a following
 files and directories are created:
 
   - `src/`  - a directory for C source files.
-  - `src/app.c` - a skeleton C source file with initialization function. You
+  - `src/main.c` - a skeleton C source file with initialization function. You
     can add other files into this directory.
   - `fs/` - this directory will be copied verbatim to the device's
     filesystem. You can add files to this directory but make sure to stay
