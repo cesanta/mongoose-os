@@ -1,6 +1,6 @@
 arch: PLATFORM
 skeleton_version: 2016-11-04
-build_flags:
+build_vars:
   APP_CONF_SCHEMA: src/conf_schema.yaml
   MG_DEBUG_UART: 0
   MG_ENABLE_CLUBBY: 1
