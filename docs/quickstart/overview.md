@@ -30,4 +30,17 @@ miot register -port /dev/ttyUSB0 \
     --device-pass DEVICE_PASWORD
 ```
 
+If you get tired specifying command line flags like `--user ...`, you can
+export environment variables:
+
+```bash
+export MIOT_USER=YOUR_USERNAME
+export MIOT_PASS=YOUR_PASS
+export MIOT_PORT=YOUR_SERIAL_DEVICE
+...
+
+# After that, there is no need to specify the flags:
+miot build
+```
+
 For those who would like to have more explanations, read along.
