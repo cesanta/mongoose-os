@@ -12,6 +12,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "mongoose/mongoose.h"
+#include "fw/src/mg_timers.h"
 #include "fw/src/mg_updater_hal.h"
 
 /*
@@ -82,6 +84,10 @@ struct update_context {
   char file_name[50];
 
   struct mg_upd_ctx *dev_ctx;
+  mg_timer_id wdt;
+  /* Network connection associated with this update, if any.
+   * It is only used in case update times out - it is closed. */
+  struct mg_connection *nc;
 
   /*
    * At the end of update this struct is written to a file

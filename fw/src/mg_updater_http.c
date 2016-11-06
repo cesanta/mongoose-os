@@ -19,6 +19,7 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p) {
   struct mbuf *io = &c->recv_mbuf;
   struct update_context *ctx = (struct update_context *) c->user_data;
   int res = 0;
+  struct mg_str *loc;
   (void) p;
 
   switch (ev) {
@@ -36,13 +37,21 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p) {
             ctx->need_reboot = false;
             ctx->status_msg = "Not Modified";
             updater_finish(ctx);
+          } else if ((hm.resp_code == 301 || hm.resp_code == 302) &&
+                     (loc = mg_get_http_header(&hm, "Location")) != NULL) {
+            /* NUL-terminate the URL. Every header must be followed by \r\n,
+             * so there is deifnitely space there. */
+            ((char *) loc->p)[loc->len] = '\0';
+            /* We were told to look elsewhere. Detach update context from this
+             * connection so that it doesn't get finalized when it's closed. */
+            mg_updater_http_start(ctx, loc->p);
+            c->user_data = NULL;
           } else {
             ctx->result = -hm.resp_code;
             ctx->need_reboot = false;
             ctx->status_msg = "Invalid HTTP response code";
             updater_finish(ctx);
           }
-          /* TODO(rojer): Follow redirects (301 and 302). */
           c->flags |= MG_F_CLOSE_IMMEDIATELY;
           return;
         }
@@ -147,10 +156,15 @@ void mg_updater_http_start(struct update_context *ctx, const char *url) {
 
   if (c == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Failed to connect to %s", url));
+    ctx->result = -10;
+    ctx->need_reboot = false;
+    ctx->status_msg = "Failed to connect";
+    updater_finish(ctx);
     return;
   }
 
   c->user_data = ctx;
+  ctx->nc = c;
 }
 
 #if MG_ENABLE_UPDATER_POST
@@ -160,14 +174,12 @@ static void handle_update_post(struct mg_connection *c, int ev, void *p) {
   if (ctx == NULL && ev != MG_EV_HTTP_MULTIPART_REQUEST) return;
   switch (ev) {
     case MG_EV_HTTP_MULTIPART_REQUEST: {
-      c->user_data = updater_context_create();
-      if (c->user_data == NULL) {
-        mg_printf(c,
-                  "HTTP/1.1 400 Bad request\r\n"
-                  "Content-Type: text/plain\r\n"
-                  "Connection: close\r\n\r\n"
-                  "Failed\r\n");
-        c->flags |= MG_F_SEND_AND_CLOSE;
+      ctx = updater_context_create();
+      if (ctx != NULL) {
+        ctx->nc = c;
+        c->user_data = ctx;
+      } else {
+        c->flags |= MG_F_CLOSE_IMMEDIATELY;
       }
       break;
     }

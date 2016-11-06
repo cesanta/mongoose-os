@@ -53,6 +53,17 @@ enum update_status {
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+static void updater_abort(void *arg) {
+  struct update_context *ctx = (struct update_context *) arg;
+  if (s_ctx != ctx) return;
+  CONSOLE_LOG(LL_ERROR, ("Update timed out"));
+  /* Note that we do not free the context here, because whatever process
+   * is stuck may still be referring to it. We close the network connection,
+   * if there is one, to hopefully get things to wind down cleanly. */
+  if (ctx->nc) ctx->nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+  s_ctx = NULL;
+}
+
 struct update_context *updater_context_create() {
   if (s_ctx != NULL) {
     CONSOLE_LOG(LL_ERROR, ("Update already in progress"));
@@ -67,7 +78,10 @@ struct update_context *updater_context_create() {
 
   s_ctx->dev_ctx = mg_upd_ctx_create();
 
-  CONSOLE_LOG(LL_INFO, ("Starting update"));
+  CONSOLE_LOG(LL_INFO,
+              ("Starting update (timeout %d)", get_cfg()->update.timeout));
+  s_ctx->wdt = mg_set_c_timer(get_cfg()->update.timeout * 1000,
+                              false /* repeat */, updater_abort, s_ctx);
   return s_ctx;
 }
 
@@ -516,11 +530,12 @@ void updater_context_free(struct update_context *ctx) {
   if (!is_update_finished(ctx)) {
     CONSOLE_LOG(LL_ERROR, ("Update terminated unexpectedly"));
   }
-  mg_upd_ctx_free(s_ctx->dev_ctx);
+  mg_clear_timer(ctx->wdt);
+  mg_upd_ctx_free(ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
   free(ctx->manifest_data);
   free(ctx);
-  s_ctx = NULL;
+  if (ctx == s_ctx) s_ctx = NULL;
 }
 
 void bin2hex(const uint8_t *src, int src_len, char *dst) {

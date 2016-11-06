@@ -47,7 +47,7 @@ mosquitto_pub -h cloud.mongoose-iot.com -u YOUR_USER -P YOUR_PASSWORD \
 The device sets the GPIO pin:
 
 ```
-ev_handler           248753866 Done: [{pin:4, state:1}]
+ev_handler           248753866 Done: [{pin:14, state:1}]
 ```
 
 If an LED is attached to that pin, it'll turn on.
