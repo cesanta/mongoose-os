@@ -1,46 +1,56 @@
 ---
-title: Remote device control
+title: Remote control - MQTT
 ---
 
-Coming soon...
+This example shows how to control a device remotely using MQTT protocol.
+We're going to use Mongoose Cloud, which provides authenticated
+MQTT service - but any other public or private MQTT server would also work.
 
-<!--
+Assuming you have downloaded the
+[`miot` utility](https://mongoose-iot.com/software.html) and have registered
+an account at [Mongoose Cloud](http://cloud.mongoose-iot.com),
+please follow these steps:
 
-This example shows how to send commands to a device from the Internet.
-After booting, Mongoose Firmware connects to
-[Mongoose Cloud](https://mongoose-iot.com) via a secure WebSocket channel.
-This channel always stays alive, and both device and cloud can send
-commands to each other at any time. The cloud knows the ID of the connected device.
-It routes any command with the device's ID as destination to this device.
-See "Cloud Overview" section for more information.
+```bash
+git clone https://github.com/cesanta/mongoose-iot
+cd mongoose-iot/fw/examples/c_mqtt
+miot build --arch ARCHITECTURE # cc3200 or esp8266
+miot flash --port SERIAL_PORT
+miot register --user YOUR_USER --pass YOUR_PASSWORD --port SERIAL_PORT
+miot miot config-set --port SERIAL_PORT \
+  wifi.ap.enable=false \
+  wifi.sta.enable=true \
+  wifi.sta.ssid=YOUR_WIFI_NETWORK \
+  wifi.sta.pass=YOUR_WIFI_PASSWORD
+miot console --port SERIAL_PORT
 
-- Login to [Mongoose Cloud](https://mongoose-iot.com).
-- Create a new project, call it `control`.
-- Switch to the IDE tab.
-- Copy/paste the following code into the `app.js`
 
-    ```javascript
-    console.log('Hello from device control tutorial!');
+ev_handler           3355550 MQTT Connect (1)
+ev_handler             53003 CONNACK: 0
+sub                     1376 Subscribed to /DEVICE_ID/gpio
+```
 
-    clubby.oncmd('/Command1', function(data) {
-      console.log('Received command: ', data.args);  // Print params
-      return {msg: 'hi'};  // Result to be sent to the caller
-    });
-    ```
+The last command attaches to the device's UART and prints log messages.
+Device connects to the cloud, subscribes to the MQTT topic `/device_id/gpio`
+and expects messages like `{"pin": NUMBER, "state": 0_or_1}` to be sent to
+that topic. Device sets the specified GPIO pin to 0 or 1, demonstrating
+remote control capability.
 
-- In the IDC (Interactive Device Console), choose your target device.
-- Click the Flash button and wait until the hello message appears in the device log.
-- Switch to the Auth tab. It lists your authentication tokens. There is one
-  token created for you by default, shown together with the example `curl`
-  command line invocation.
-- Open the terminal and copy/paste a `curl` command. Add arguments and the
-  prepend device ID to the destination:
+In a separate terminal, send such control message using mosquitto command
+line tool:
 
-    ```sh
-    curl -u xxx -d '{"foo":123}' https://DEVICE_ID.api.mongoose-iot.com/Command1
-    ```
+```bash
+mosquitto_pub -h cloud.mongoose-iot.com -u YOUR_USER -P YOUR_PASSWORD \
+  -t /DEVICE_ID/gpio -m '{pin:14, state:1}'
+```
 
-- Switch back to the IDE browser tab, notice the log message from the device:
+The device sets the GPIO pin:
 
-<img src="media/tut_control.png" width="100%">
--->
+```
+ev_handler           248753866 Done: [{pin:4, state:1}]
+```
+
+If an LED is attached to that pin, it'll turn on.
+
+Note that the whole transaction is authenticated: only the owner of the
+device (you) can operate it.
