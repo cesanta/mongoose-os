@@ -9,10 +9,10 @@ endif
 vecho := @echo " "
 
 BUILD_DIR ?= ../build/lwip
-LWIP_PATH = .
-APP = liblwip_cs
+override LWIP_PATH = .
+override APP = liblwip_cs
 
-APP_MODULES := $(LWIP_PATH)/src/netif $(LWIP_PATH)/src/core \
+override APP_MODULES := $(LWIP_PATH)/src/netif $(LWIP_PATH)/src/core \
                $(LWIP_PATH)/src/core/ipv4 $(LWIP_PATH)/src/api \
                $(LWIP_PATH)/espressif/app
 

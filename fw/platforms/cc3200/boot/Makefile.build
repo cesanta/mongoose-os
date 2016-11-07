@@ -4,9 +4,9 @@
 #
 MAKEFLAGS += --warn-undefined-variables
 
-APP = mg-boot
-APP_PLATFORM = cc3200
-APP_MODULES = src lib
+override APP = mg-boot
+override APP_PLATFORM = cc3200
+override APP_MODULES = src lib
 CREATE_ZIP ?= 1
 
 SDK_PATH ?= /cc3200-sdk
