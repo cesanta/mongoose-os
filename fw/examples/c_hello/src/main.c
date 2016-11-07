@@ -4,23 +4,39 @@
 #include "fw/src/mg_app.h"
 #include "fw/src/mg_gpio.h"
 #include "fw/src/mg_sys_config.h"
+#include "fw/src/mg_timers.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
-#define GPIO 12
+/* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
+#define GPIO 2
 #elif CS_PLATFORM == CS_P_CC3200
+/* On CC3200 LAUNCHXL pin 64 is the red LED. */
 #define GPIO 64 /* The red LED on LAUNCHXL */
 #else
 #error Unknown platform
 #endif
+
+static void blink_timer_cb(void *arg) {
+  static enum gpio_level l = GPIO_LEVEL_LOW;
+  if (l == GPIO_LEVEL_LOW) {
+    LOG(LL_INFO, ("Tick"));
+    l = GPIO_LEVEL_HIGH;
+  } else {
+    LOG(LL_INFO, ("Tock"));
+    l = GPIO_LEVEL_LOW;
+  }
+  mg_gpio_write(GPIO, l);
+  (void) arg;
+}
 
 enum mg_app_init_result mg_app_init(void) {
   { /* Print a message using a value from config. */
     printf("Hello, %s!\n", get_cfg()->hello.who);
   }
 
-  { /* Turn on LED. */
+  { /* Set up the blinky timer. */
     mg_gpio_set_mode(GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-    mg_gpio_write(GPIO, GPIO_LEVEL_HIGH);
+    mg_set_c_timer(1000 /* ms */, true /* repeat */, blink_timer_cb, NULL);
   }
 
   { /* Read a file. */
