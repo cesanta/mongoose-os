@@ -1,5 +1,6 @@
 APP = c_mcast
 MIOT_PATH = ../../..
+MAKEFILE_BUILD = Makefile.build
 
 # currently this example supports only esp8266
 PLATFORM = esp8266

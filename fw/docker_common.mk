@@ -8,6 +8,7 @@ APP_BUILD_ID ?=
 PYTHON ?= python
 PLATFORM ?=
 DOCKER_EXTRA ?=
+MAKEFILE_BUILD ?= $(MAKE_MIOT_PATH)/fw/platforms/$(APP_PLATFORM)/Makefile.build
 
 DOCKER_APP_PATH = /app
 DOCKER_MIOT_PATH = /mongoose-iot
@@ -37,7 +38,7 @@ INNER_MAKE?=$(MAKE)
 # NOTE that $(MAKEFILES) should be given _before_ our own variable definitions,
 # because MAKEFLAGS contains MIOT_PATH which we want to override.
 MAKE_CMD=$(INNER_MAKE) -j4 \
-      -C $(MAKE_APP_PATH) -f Makefile.build \
+      -C $(MAKE_APP_PATH) -f $(MAKEFILE_BUILD) \
       -$(MAKEFLAGS) \
       APP=$(APP) \
       APP_VERSION=$(APP_VERSION) \
