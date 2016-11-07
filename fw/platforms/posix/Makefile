@@ -5,17 +5,16 @@
 MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
 
-REPO_PATH ?= ../../..
-COMMON_PATH ?= $(REPO_PATH)/common
-MIOT_PATH ?= $(REPO_PATH)/fw
-MIOT_SRC_PATH ?= $(MIOT_PATH)/src
+MIOT_PATH ?= ../../..
+COMMON_PATH ?= $(MIOT_PATH)/common
+MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
 SRC_PATH ?= ../../src
 V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
-KRYPTON_PATH ?= $(REPO_PATH)/krypton
-FROZEN_PATH ?= $(REPO_PATH)/frozen
+KRYPTON_PATH ?= $(MIOT_PATH)/krypton
+FROZEN_PATH ?= $(MIOT_PATH)/frozen
 OUTAPP ?= mongoose-iot
 VERBOSE ?= 0
 VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/clubby
@@ -30,7 +29,7 @@ MG_ENABLE_UPDATER_CLUBBY = 0
 MG_ENABLE_DNS_SD = 0  # Not supported on POSIX
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
-include $(REPO_PATH)/fw/common.mk
+include $(MIOT_PATH)/fw/common.mk
 
 LDFLAGS ?=
 
@@ -46,7 +45,7 @@ MONGOOSE_FEATURES = \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
 
 
-INCLUDES = $(REPO_PATH) $(SRC_PATH) $(BUILD_DIR)
+INCLUDES = $(MIOT_PATH) $(SRC_PATH) $(BUILD_DIR)
 MIOT_SRCS = $(notdir $(wildcard *.c)) mg_init.c  \
             mongoose.c frozen.c mg_mongoose.c \
             mg_prompt.c mg_timers_mongoose.c mg_wifi.c \
@@ -85,7 +84,7 @@ else
   MIOT_SRCS += cs_file.c
 endif
 
-include $(MIOT_PATH)/src/features.mk
+include $(MIOT_PATH)/fw/src/features.mk
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them
@@ -176,7 +175,7 @@ OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c
 
-FS_FILES = $(wildcard $(SRC_PATH)/js/* $(REPO_PATH)/fw/skeleton/fs/*)
+FS_FILES = $(wildcard $(SRC_PATH)/js/* $(MIOT_PATH)/fw/skeleton/fs/*)
 
 # Custom conf.json : by default, it is empty, so that the one from `fs` is
 # used. NOTE: if the custom one is provided, the file should anyway be named
@@ -201,7 +200,7 @@ endef
 
 all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP) fs
 
-include $(REPO_PATH)/fw/src/sys_config.mk
+include $(MIOT_PATH)/fw/src/sys_config.mk
 
 $(BIN_DIR) $(BUILD_DIR):
 	$(vecho) MKDIR $@
@@ -224,7 +223,7 @@ $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
 # Generate build info. Only regenerates if there are changes in objects.
-include $(REPO_PATH)/common/scripts/build_info.mk
+include $(MIOT_PATH)/common/scripts/build_info.mk
 
 $(BUILD_INFO_C): $(APP_OBJS)
 	$(call gen_build_info,$@,,,,,$(BUILD_INFO_C),)

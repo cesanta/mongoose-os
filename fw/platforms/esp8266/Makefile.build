@@ -34,22 +34,21 @@ MG_ENABLE_MQTT ?= 1
 
 MG_DEBUG_UART ?= 0
 
-REPO_PATH ?= ../../..
-COMMON_PATH ?= $(REPO_PATH)/common
-MIOT_PATH ?= $(REPO_PATH)/fw
-KRYPTON_PATH ?= $(REPO_PATH)/krypton
-MONGOOSE_PATH ?= $(REPO_PATH)/mongoose
-FROZEN_PATH ?= $(REPO_PATH)/frozen
-V7_PATH ?= $(REPO_PATH)/v7
+MIOT_PATH ?= ../../..
+COMMON_PATH ?= $(MIOT_PATH)/common
+KRYPTON_PATH ?= $(MIOT_PATH)/krypton
+MONGOOSE_PATH ?= $(MIOT_PATH)/mongoose
+FROZEN_PATH ?= $(MIOT_PATH)/frozen
+V7_PATH ?= $(MIOT_PATH)/v7
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
-MIOT_ESP_PATH ?= $(MIOT_PATH)/platforms/esp8266
-MIOT_POSIX_PATH ?= $(MIOT_PATH)/platforms/posix
-MIOT_SRC_PATH ?= $(MIOT_PATH)/src
+MIOT_ESP_PATH ?= $(MIOT_PATH)/fw/platforms/esp8266
+MIOT_POSIX_PATH ?= $(MIOT_PATH)/fw/platforms/posix
+MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
 MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
-COMMON_FS_PATH ?= $(MIOT_PATH)/skeleton/fs
+COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
@@ -92,7 +91,7 @@ SSL ?= Krypton
 include $(COMMON_ESP_PATH)/common.mk
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
-include $(REPO_PATH)/fw/common.mk
+include $(MIOT_PATH)/fw/common.mk
 
 MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
 
@@ -142,7 +141,7 @@ VPATH = $(APP_MODULES) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/clubby \
         $(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-IPATH = $(APP_MODULES) $(REPO_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) \
+IPATH = $(APP_MODULES) $(MIOT_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
         $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
@@ -269,8 +268,8 @@ else
   MIOT_SRCS += cs_file.c
 endif
 
-include $(MIOT_PATH)/src/features.mk
-include $(MIOT_PATH)/src/spiffs.mk
+include $(MIOT_PATH)/fw/src/features.mk
+include $(MIOT_PATH)/fw/src/spiffs.mk
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
@@ -339,7 +338,7 @@ ifeq "$(CREATE_RAW_FS)" "1"
   FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
 
-include $(REPO_PATH)/common/scripts/fw_meta.mk
+include $(MIOT_PATH)/common/scripts/fw_meta.mk
 
 all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
@@ -409,15 +408,15 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(vecho) "GEN   $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
-include $(REPO_PATH)/common/scripts/build_info.mk
-include $(REPO_PATH)/fw/src/sys_config.mk
+include $(MIOT_PATH)/common/scripts/build_info.mk
+include $(MIOT_PATH)/fw/src/sys_config.mk
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
 $(MG_BUILD_INFO_C): $(MIOT_OBJS)
-	$(call gen_build_info,$@,$(MIOT_PATH),,,mg_,$(MG_BUILD_INFO_C),)
+	$(call gen_build_info,$@,$(MIOT_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
@@ -441,7 +440,7 @@ $(FW_FS_OUT): $(BUILD_DIR)/v7
 # appropriate
 $(MIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
-	  REPO_PATH=$(REPO_PATH) \
+	  MIOT_PATH=$(MIOT_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
 	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
 	  BUILD_DIR=$(MIOT_POSIX_BUILD_DIR) \
