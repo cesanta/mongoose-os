@@ -8,7 +8,7 @@
 
 FW_MANIFEST ?= $(FW_STAGING_DIR)/manifest.json
 FW_ZIP ?= $(FW_DIR)/$(APP)-$(APP_PLATFORM)-last.zip
-FW_META_CMD ?= $(REPO_PATH)/common/tools/fw_meta.py
+FW_META_CMD ?= $(MIOT_PATH)/common/tools/fw_meta.py
 
 $(FW_ZIP): $(FW_MANIFEST) $(FW_META_CMD)
 	$(vecho) "ZIP    $@"

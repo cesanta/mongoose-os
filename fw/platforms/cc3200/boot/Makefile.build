@@ -10,15 +10,15 @@ APP_MODULES = src lib
 CREATE_ZIP ?= 1
 
 SDK_PATH ?= /cc3200-sdk
-REPO_PATH ?= ../../../..
+MIOT_PATH ?= ../../../..
 BUILD_DIR ?= $(CURDIR)/.build
 FW_DIR ?= $(CURDIR)/firmware
-COMMON_CC3200_PATH ?= $(REPO_PATH)/common/platforms/cc3200
+COMMON_CC3200_PATH ?= $(MIOT_PATH)/common/platforms/cc3200
 
-include $(REPO_PATH)/fw/common.mk
+include $(MIOT_PATH)/fw/common.mk
 
 VPATH = $(APP_MODULES) $(BUILD_DIR)
-IPATH = $(APP_MODULES) $(BUILD_DIR) $(REPO_PATH)
+IPATH = $(APP_MODULES) $(BUILD_DIR) $(MIOT_PATH)
 
 SDK_FLAGS = -DTARGET_IS_CC3200
 
@@ -57,12 +57,12 @@ $(BUILD_DIR) $(FW_DIR):
 
 ifeq "$(CREATE_ZIP)" "1"
 FW_PARTS = /sys/mcuimg.bin:src=$(notdir $(APP_BIN))
-include $(REPO_PATH)/common/scripts/fw_meta.mk
+include $(MIOT_PATH)/common/scripts/fw_meta.mk
 endif
 
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
 
-include $(REPO_PATH)/common/scripts/build_info.mk
+include $(MIOT_PATH)/common/scripts/build_info.mk
 
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 

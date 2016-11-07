@@ -5,6 +5,7 @@
 
 #include "fw/src/mg_clubby_channel_uart.h"
 #include "fw/src/mg_uart.h"
+#include "fw/src/mg_utils.h"
 
 #if MG_ENABLE_CLUBBY
 
@@ -15,7 +16,6 @@
 #define EOF_CHAR "\x04"
 #define FRAME_DELIMETER "\"\"\""
 #define FRAME_DELIMETER_LEN 3
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 struct clubby_channel_uart_data {
   int uart_no;

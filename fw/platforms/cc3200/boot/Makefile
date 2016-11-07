@@ -1,10 +1,10 @@
 APP ?= mg-boot
-REPO_PATH ?= ../../../..
-MIOT_CC3200_PATH = $(REPO_PATH)/fw/platforms/cc3200
+MIOT_PATH ?= ../../../..
+MIOT_CC3200_PATH = $(MIOT_PATH)/fw/platforms/cc3200
 SDK_VERSION ?= $(shell cat $(MIOT_CC3200_PATH)/sdk.version)
 
-REPO_ABS_PATH = $(realpath $(REPO_PATH))
-APP_PATH = $(subst $(REPO_ABS_PATH),/src,$(CURDIR))
+MIOT_ABS_PATH = $(realpath $(MIOT_PATH))
+APP_PATH = $(subst $(MIOT_ABS_PATH),/src,$(CURDIR))
 
 .PHONY: all clean
 
@@ -20,13 +20,13 @@ MAKEFLAGS += w
 MAKEFLAGS += w
 
 all clean:
-	@docker run --rm -i -v $(REPO_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
+	@docker run --rm -i -v $(MIOT_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  //bin/bash -c "\
 	    if [ -d /src/v7 ] ; then make -C /src/v7 v7.c ; fi && \
 	    if [ -d /src/krypton ] ; then make -C /src/krypton krypton.c ; fi && \
 	    if [ -d /src/mongoose ] ; then make -C /src/mongoose mongoose.c mongoose.h ; fi && \
 	    cd $(APP_PATH) && \
-	    make -f Makefile.build APP=$(APP) REPO_PATH=/src $@ -$(MAKEFLAGS) \
+	    make -f Makefile.build APP=$(APP) MIOT_PATH=/src $@ -$(MAKEFLAGS) \
 	  "
 
 debug:

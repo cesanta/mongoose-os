@@ -6,4 +6,4 @@ MG_ENABLE_CLUBBY = 1
 # currently this example supports only esp8266
 PLATFORM = esp8266
 
-include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
+include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

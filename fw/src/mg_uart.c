@@ -10,9 +10,8 @@
 #include "fw/src/mg_hal.h"
 #include "fw/src/mg_mongoose.h"
 #include "fw/src/mg_prompt.h"
+#include "fw/src/mg_utils.h"
 #include "fw/src/mg_v7_ext.h"
-
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #ifndef IRAM
 #define IRAM

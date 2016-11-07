@@ -5,4 +5,4 @@ APP_CONF_SCHEMA = $(CURDIR)/src/conf_schema.yaml
 MG_ENABLE_JS = 0
 MG_ENABLE_CLUBBY = 0
 
-include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
+include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

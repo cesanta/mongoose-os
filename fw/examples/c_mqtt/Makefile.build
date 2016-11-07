@@ -2,4 +2,4 @@ APP = c_mqtt
 APP_MODULES = src
 MG_ENABLE_MQTT = 1
 
-include $(REPO_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
+include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
