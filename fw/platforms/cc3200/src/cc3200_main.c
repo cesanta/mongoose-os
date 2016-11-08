@@ -11,16 +11,17 @@
 #endif
 
 /* Driverlib includes */
-#include "hw_types.h"
+#include "inc/hw_types.h"
 
-#include "hw_ints.h"
-#include "hw_memmap.h"
-#include "interrupt.h"
-#include "pin.h"
-#include "prcm.h"
-#include "rom.h"
-#include "rom_map.h"
-#include "utils.h"
+#include "inc/hw_ints.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/pin.h"
+#include "driverlib/prcm.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/utils.h"
+#include "driverlib/wdt.h"
 
 #include "common/platform.h"
 #include "common/cs_dbg.h"
@@ -29,6 +30,8 @@
 #include "device.h"
 
 #include "oslib/osi.h"
+
+#include "fw/src/mg_hal.h"
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_exc.h"
@@ -70,6 +73,10 @@ int main(void) {
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
+  MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
+
+  mg_wdt_set_timeout(5 /* seconds */);
+  mg_wdt_enable();
 
 #ifdef __TI_COMPILER_VERSION__
   memset(&_heap_start, 0, (char *) &_heap_end - (char *) &_heap_start);

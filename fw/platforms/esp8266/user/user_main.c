@@ -165,8 +165,6 @@ int esp_mg_init(rboot_config *bcfg) {
    * So, we have a call to the no-op `esp_umm_init()` here.
    */
   esp_umm_init();
-
-  mg_wdt_set_timeout(get_cfg()->sys.wdt_timeout);
   return 0;
 }
 

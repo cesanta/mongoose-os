@@ -345,6 +345,10 @@ enum mg_init_result mg_sys_config_init(void) {
   }
   LOG(LL_INFO, ("MAC: %s", s_ro_vars.mac_address));
 
+  LOG(LL_INFO, ("WDT: %d seconds", s_cfg.sys.wdt_timeout));
+  mg_wdt_set_timeout(s_cfg.sys.wdt_timeout);
+  mg_wdt_set_feed_on_poll(true);
+
   s_initialized = true;
 
   return MG_INIT_OK;

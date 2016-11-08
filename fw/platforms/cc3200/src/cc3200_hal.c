@@ -10,12 +10,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hw_types.h"
-#include "prcm.h"
-#include "rom.h"
-#include "rom_map.h"
+#include "inc/hw_types.h"
+#include "inc/hw_memmap.h"
 
-#include <common/platform.h>
+#include "driverlib/prcm.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/wdt.h"
+
+#include "common/platform.h"
+#include "common/cs_dbg.h"
 
 #include "simplelink.h"
 #include "device.h"
@@ -24,6 +28,7 @@
 #include "fw/src/mg_hal.h"
 #include "fw/src/mg_v7_ext.h"
 
+#include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
 
@@ -102,19 +107,24 @@ size_t mg_get_fs_memory_usage(void) {
 }
 
 void mg_wdt_feed(void) {
-  /* TODO */
+  MAP_WatchdogIntClear(WDT_BASE);
 }
 
 void mg_wdt_set_timeout(int secs) {
-  /* TODO */
+  MAP_WatchdogUnlock(WDT_BASE);
+  /* Reset is triggered after the timer reaches zero for the second time. */
+  MAP_WatchdogReloadSet(WDT_BASE, secs * SYS_CLK / 2);
+  MAP_WatchdogLock(WDT_BASE);
 }
 
 void mg_wdt_enable(void) {
-  /* TODO */
+  MAP_WatchdogUnlock(WDT_BASE);
+  MAP_WatchdogEnable(WDT_BASE);
+  MAP_WatchdogLock(WDT_BASE);
 }
 
 void mg_wdt_disable(void) {
-  /* TODO */
+  LOG(LL_ERROR, ("WDT cannot be disabled!"));
 }
 
 void mg_system_restart(int exit_code) {

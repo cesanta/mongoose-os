@@ -7,11 +7,14 @@
 
 #include "common/queue.h"
 
+#include "fw/src/mg_hal.h"
+
 #ifndef IRAM
 #define IRAM
 #endif
 
 struct mg_mgr s_mgr;
+static bool s_feed_wdt;
 
 struct cb_info {
   mg_poll_cb_t cb;
@@ -39,6 +42,9 @@ int mongoose_poll(int ms) {
       ci->cb(ci->cb_arg);
     }
   }
+
+  if (s_feed_wdt) mg_wdt_feed();
+
   if (mg_next(&s_mgr, NULL) != NULL) {
     mg_mgr_poll(&s_mgr, ms);
     return 1;
@@ -62,4 +68,8 @@ void mg_remove_poll_cb(mg_poll_cb_t cb, void *cb_arg) {
       free(ci);
     }
   }
+}
+
+void mg_wdt_set_feed_on_poll(bool enable) {
+  s_feed_wdt = (enable != false);
 }

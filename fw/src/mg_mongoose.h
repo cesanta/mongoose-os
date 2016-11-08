@@ -6,6 +6,8 @@
 #ifndef CS_FW_SRC_MG_MONGOOSE_H_
 #define CS_FW_SRC_MG_MONGOOSE_H_
 
+#include <stdbool.h>
+
 #include "mongoose/mongoose.h"
 
 struct mg_mgr *mg_get_mgr(void);
@@ -18,6 +20,8 @@ void mongoose_destroy(void);
 typedef void (*mg_poll_cb_t)(void *cb_arg);
 void mg_add_poll_cb(mg_poll_cb_t cb, void *cb_arg);
 void mg_remove_poll_cb(mg_poll_cb_t cb, void *cb_arg);
+
+void mg_wdt_set_feed_on_poll(bool enable);
 
 /* HAL */
 
