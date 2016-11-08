@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
+#if MG_ENABLE_NET_IF_LWIP_LOW_LEVEL
 
 #include <lwip/pbuf.h>
 #include <lwip/tcp.h>
@@ -17,33 +17,39 @@
  * lwip functions
  */
 #if MG_ENABLE_IPV6
-# define TCP_NEW tcp_new_ip6
-# define TCP_BIND tcp_bind_ip6
-# define UDP_BIND udp_bind_ip6
-# define IPADDR_NTOA(x) ip6addr_ntoa((const ip6_addr_t *)(x))
-# define SET_ADDR(dst, src)                                \
-    memcpy((dst)->sin6.sin6_addr.s6_addr, (src)->ip6.addr, \
-           sizeof((dst)->sin6.sin6_addr.s6_addr))
+#define TCP_NEW tcp_new_ip6
+#define TCP_BIND tcp_bind_ip6
+#define UDP_BIND udp_bind_ip6
+#define IPADDR_NTOA(x) ip6addr_ntoa((const ip6_addr_t *)(x))
+#define SET_ADDR(dst, src)                               \
+  memcpy((dst)->sin6.sin6_addr.s6_addr, (src)->ip6.addr, \
+         sizeof((dst)->sin6.sin6_addr.s6_addr))
 #else
-# define TCP_NEW tcp_new
-# define TCP_BIND tcp_bind
-# define UDP_BIND udp_bind
-# define IPADDR_NTOA ipaddr_ntoa
-# define SET_ADDR(dst, src) (dst)->sin.sin_addr.s_addr = GET_IPV4(src)
+#define TCP_NEW tcp_new
+#define TCP_BIND tcp_bind
+#define UDP_BIND udp_bind
+#define IPADDR_NTOA ipaddr_ntoa
+#define SET_ADDR(dst, src) (dst)->sin.sin_addr.s_addr = GET_IPV4(src)
 #endif
 
 /*
  * If lwip is compiled with ipv6 support, then API changes even for ipv4
  */
 #if !defined(LWIP_IPV6) || !LWIP_IPV6
-# define GET_IPV4(ipX_addr) ((ipX_addr)->addr)
+#define GET_IPV4(ipX_addr) ((ipX_addr)->addr)
 #else
-# define GET_IPV4(ipX_addr) ((ipX_addr)->ip4.addr)
+#define GET_IPV4(ipX_addr) ((ipX_addr)->ip4.addr)
 #endif
 
 void mg_lwip_ssl_do_hs(struct mg_connection *nc);
 void mg_lwip_ssl_send(struct mg_connection *nc);
 void mg_lwip_ssl_recv(struct mg_connection *nc);
+
+void mg_lwip_if_init(struct mg_iface *iface);
+void mg_lwip_if_free(struct mg_iface *iface);
+void mg_lwip_if_add_conn(struct mg_connection *nc);
+void mg_lwip_if_remove_conn(struct mg_connection *nc);
+time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms);
 
 #if LWIP_TCP_KEEPALIVE
 void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,
@@ -194,8 +200,8 @@ static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
   return ERR_OK;
 }
 
-void mg_if_connect_tcp(struct mg_connection *nc,
-                       const union socket_address *sa) {
+void mg_lwip_if_connect_tcp(struct mg_connection *nc,
+                            const union socket_address *sa) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct tcp_pcb *tpcb = TCP_NEW();
   cs->pcb.tcp = tpcb;
@@ -249,7 +255,7 @@ static void mg_lwip_udp_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p,
   mg_if_recv_udp_cb(nc, data, len, &sa, sizeof(sa.sin));
 }
 
-void mg_if_connect_udp(struct mg_connection *nc) {
+void mg_lwip_if_connect_udp(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct udp_pcb *upcb = udp_new();
   cs->err = UDP_BIND(upcb, IP_ADDR_ANY, 0 /* any port */);
@@ -304,7 +310,7 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   return ERR_OK;
 }
 
-int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
+int mg_lwip_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct tcp_pcb *tpcb = TCP_NEW();
   ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
@@ -322,7 +328,7 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
   return 0;
 }
 
-int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
+int mg_lwip_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct udp_pcb *upcb = udp_new();
   ip_addr_t *ip = (ip_addr_t *) &sa->sin.sin_addr.s_addr;
@@ -378,12 +384,14 @@ static void mg_lwip_send_more(struct mg_connection *nc) {
   mbuf_trim(&nc->send_mbuf);
 }
 
-void mg_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
+void mg_lwip_if_tcp_send(struct mg_connection *nc, const void *buf,
+                         size_t len) {
   mbuf_append(&nc->send_mbuf, buf, len);
   mg_lwip_mgr_schedule_poll(nc->mgr);
 }
 
-void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
+void mg_lwip_if_udp_send(struct mg_connection *nc, const void *buf,
+                         size_t len) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   if (nc->sock == INVALID_SOCKET || cs->pcb.udp == NULL) {
     /*
@@ -410,7 +418,7 @@ void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
   }
 }
 
-void mg_if_recved(struct mg_connection *nc, size_t len) {
+void mg_lwip_if_recved(struct mg_connection *nc, size_t len) {
   if (nc->flags & MG_F_UDP) return;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   if (nc->sock == INVALID_SOCKET || cs->pcb.tcp == NULL) {
@@ -418,8 +426,8 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
     return;
   }
   DBG(("%p %p %u", nc, cs->pcb.tcp, len));
-  /* Currently SSL acknowledges data immediately.
-   * TODO(rojer): Find a way to propagate mg_if_recved. */
+/* Currently SSL acknowledges data immediately.
+ * TODO(rojer): Find a way to propagate mg_lwip_if_recved. */
 #if MG_ENABLE_SSL
   if (nc->ssl == NULL) {
     tcp_recved(cs->pcb.tcp, len);
@@ -430,7 +438,7 @@ void mg_if_recved(struct mg_connection *nc, size_t len) {
   mbuf_trim(&nc->recv_mbuf);
 }
 
-int mg_if_create_conn(struct mg_connection *nc) {
+int mg_lwip_if_create_conn(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs =
       (struct mg_lwip_conn_state *) calloc(1, sizeof(*cs));
   if (cs == NULL) return 0;
@@ -438,7 +446,7 @@ int mg_if_create_conn(struct mg_connection *nc) {
   return 1;
 }
 
-void mg_if_destroy_conn(struct mg_connection *nc) {
+void mg_lwip_if_destroy_conn(struct mg_connection *nc) {
   if (nc->sock == INVALID_SOCKET) return;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   if (!(nc->flags & MG_F_UDP)) {
@@ -469,8 +477,8 @@ void mg_if_destroy_conn(struct mg_connection *nc) {
   nc->sock = INVALID_SOCKET;
 }
 
-void mg_if_get_conn_addr(struct mg_connection *nc, int remote,
-                         union socket_address *sa) {
+void mg_lwip_if_get_conn_addr(struct mg_connection *nc, int remote,
+                              union socket_address *sa) {
   memset(sa, 0, sizeof(*sa));
   if (nc->sock == INVALID_SOCKET) return;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
@@ -494,8 +502,35 @@ void mg_if_get_conn_addr(struct mg_connection *nc, int remote,
   }
 }
 
-void mg_sock_set(struct mg_connection *nc, sock_t sock) {
+void mg_lwip_if_sock_set(struct mg_connection *nc, sock_t sock) {
   nc->sock = sock;
 }
 
-#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL */
+/* clang-format off */
+#define MG_LWIP_IFACE_VTABLE                                          \
+  {                                                                   \
+    mg_lwip_if_init,                                                  \
+    mg_lwip_if_free,                                                  \
+    mg_lwip_if_add_conn,                                              \
+    mg_lwip_if_remove_conn,                                           \
+    mg_lwip_if_poll,                                                  \
+    mg_lwip_if_listen_tcp,                                            \
+    mg_lwip_if_listen_udp,                                            \
+    mg_lwip_if_connect_tcp,                                           \
+    mg_lwip_if_connect_udp,                                           \
+    mg_lwip_if_tcp_send,                                              \
+    mg_lwip_if_udp_send,                                              \
+    mg_lwip_if_recved,                                                \
+    mg_lwip_if_create_conn,                                           \
+    mg_lwip_if_destroy_conn,                                          \
+    mg_lwip_if_sock_set,                                              \
+    mg_lwip_if_get_conn_addr,                                         \
+  }
+/* clang-format on */
+
+struct mg_iface_vtable mg_lwip_iface_vtable = MG_LWIP_IFACE_VTABLE;
+#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
+struct mg_iface_vtable mg_default_iface_vtable = MG_LWIP_IFACE_VTABLE;
+#endif
+
+#endif /* MG_ENABLE_NET_IF_LWIP_LOW_LEVEL */

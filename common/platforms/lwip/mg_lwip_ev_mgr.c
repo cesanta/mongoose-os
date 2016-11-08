@@ -22,7 +22,7 @@ struct mg_ev_mgr_lwip_data {
 
 void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc) {
   struct mg_ev_mgr_lwip_data *md =
-      (struct mg_ev_mgr_lwip_data *) nc->mgr->mgr_data;
+      (struct mg_ev_mgr_lwip_data *) nc->iface->data;
   if (md->sig_queue_len >= MG_SIG_QUEUE_LEN) return;
   int end_index = (md->start_index + md->sig_queue_len) % MG_SIG_QUEUE_LEN;
   md->sig_queue[end_index].sig = sig;
@@ -31,14 +31,16 @@ void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc) {
 }
 
 void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
-  struct mg_ev_mgr_lwip_data *md = (struct mg_ev_mgr_lwip_data *) mgr->mgr_data;
+  struct mg_ev_mgr_lwip_data *md =
+      (struct mg_ev_mgr_lwip_data *) mgr->ifaces[MG_MAIN_IFACE]->data;
   while (md->sig_queue_len > 0) {
     struct mg_connection *nc = md->sig_queue[md->start_index].nc;
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
     switch (md->sig_queue[md->start_index].sig) {
       case MG_SIG_CONNECT_RESULT: {
 #ifdef SSL_KRYPTON
-        if (cs->err == 0 && nc->flags & MG_F_SSL && !(nc->flags & MG_F_SSL_HANDSHAKE_DONE)) {
+        if (cs->err == 0 && nc->flags & MG_F_SSL &&
+            !(nc->flags & MG_F_SSL_HANDSHAKE_DONE)) {
           SSL_set_fd(nc->ssl, (intptr_t) nc);
           mg_lwip_ssl_do_hs(nc);
         } else
@@ -71,23 +73,23 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
   }
 }
 
-void mg_ev_mgr_init(struct mg_mgr *mgr) {
+void mg_lwip_if_init(struct mg_iface *iface) {
   LOG(LL_INFO, ("%p Mongoose init"));
-  mgr->mgr_data = MG_CALLOC(1, sizeof(struct mg_ev_mgr_lwip_data));
+  iface->data = MG_CALLOC(1, sizeof(struct mg_ev_mgr_lwip_data));
 }
 
-void mg_ev_mgr_free(struct mg_mgr *mgr) {
-  MG_FREE(mgr->mgr_data);
-  mgr->mgr_data = NULL;
+void mg_lwip_if_free(struct mg_iface *iface) {
+  MG_FREE(iface->data);
+  iface->data = NULL;
 }
 
-void mg_ev_mgr_add_conn(struct mg_connection *nc) {
+void mg_lwip_if_add_conn(struct mg_connection *nc) {
   (void) nc;
 }
 
-void mg_ev_mgr_remove_conn(struct mg_connection *nc) {
+void mg_lwip_if_remove_conn(struct mg_connection *nc) {
   struct mg_ev_mgr_lwip_data *md =
-      (struct mg_ev_mgr_lwip_data *) nc->mgr->mgr_data;
+      (struct mg_ev_mgr_lwip_data *) nc->iface->data;
   /* Walk the queue and null-out further signals for this conn. */
   for (int i = 0; i < MG_SIG_QUEUE_LEN; i++) {
     if (md->sig_queue[i].nc == nc) {
@@ -96,7 +98,8 @@ void mg_ev_mgr_remove_conn(struct mg_connection *nc) {
   }
 }
 
-time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
+time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
+  struct mg_mgr *mgr = iface->mgr;
   int n = 0;
   double now = mg_time();
   struct mg_connection *nc, *tmp;

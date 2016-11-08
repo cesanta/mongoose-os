@@ -6,9 +6,15 @@
 #ifndef CS_COMMON_PLATFORMS_LWIP_MG_NET_IF_LWIP_H_
 #define CS_COMMON_PLATFORMS_LWIP_MG_NET_IF_LWIP_H_
 
-#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
+#ifndef MG_ENABLE_NET_IF_LWIP_LOW_LEVEL
+#define MG_ENABLE_NET_IF_LWIP_LOW_LEVEL MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
+#endif
+
+#if MG_ENABLE_NET_IF_LWIP_LOW_LEVEL
 
 #include <stdint.h>
+
+extern struct mg_iface_vtable mg_lwip_iface_vtable;
 
 struct mg_lwip_conn_state {
   union {
@@ -36,6 +42,6 @@ void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc);
 /* To be implemented by the platform. */
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr);
 
-#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL */
+#endif /* MG_ENABLE_NET_IF_LWIP_LOW_LEVEL */
 
 #endif /* CS_COMMON_PLATFORMS_LWIP_MG_NET_IF_LWIP_H_ */

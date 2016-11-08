@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#if MG_NET_IF == MG_NET_IF_SIMPLELINK
+#include "common/platforms/simplelink/sl_net_if.h"
+
+#if MG_ENABLE_NET_IF_SIMPLELINK
 
 #include "mongoose/src/internal.h"
 #include "mongoose/src/util.h"
@@ -92,8 +94,8 @@ static int mg_is_error(int n) {
   return (n < 0 && n != SL_EALREADY && n != SL_EAGAIN);
 }
 
-void mg_if_connect_tcp(struct mg_connection *nc,
-                       const union socket_address *sa) {
+void mg_sl_if_connect_tcp(struct mg_connection *nc,
+                          const union socket_address *sa) {
   int proto = 0;
   if (nc->flags & MG_F_SSL) proto = SL_SEC_SOCKET;
   sock_t sock = sl_Socket(AF_INET, SOCK_STREAM, proto);
@@ -112,7 +114,7 @@ out:
        ntohs(sa->sin.sin_port), nc->sock, proto, nc->err));
 }
 
-void mg_if_connect_udp(struct mg_connection *nc) {
+void mg_sl_if_connect_udp(struct mg_connection *nc) {
   sock_t sock = sl_Socket(AF_INET, SOCK_DGRAM, 0);
   if (sock < 0) {
     nc->err = sock;
@@ -122,7 +124,7 @@ void mg_if_connect_udp(struct mg_connection *nc) {
   nc->err = 0;
 }
 
-int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
+int mg_sl_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
   int proto = 0;
   if (nc->flags & MG_F_SSL) proto = SL_SEC_SOCKET;
   sock_t sock = mg_open_listening_socket(sa, SOCK_STREAM, proto);
@@ -135,32 +137,32 @@ int mg_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
 #endif
 }
 
-int mg_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
+int mg_sl_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   sock_t sock = mg_open_listening_socket(sa, SOCK_DGRAM, 0);
   if (sock == INVALID_SOCKET) return (errno ? errno : 1);
   mg_sock_set(nc, sock);
   return 0;
 }
 
-void mg_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
+void mg_sl_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
   mbuf_append(&nc->send_mbuf, buf, len);
 }
 
-void mg_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
+void mg_sl_if_udp_send(struct mg_connection *nc, const void *buf, size_t len) {
   mbuf_append(&nc->send_mbuf, buf, len);
 }
 
-void mg_if_recved(struct mg_connection *nc, size_t len) {
+void mg_sl_if_recved(struct mg_connection *nc, size_t len) {
   (void) nc;
   (void) len;
 }
 
-int mg_if_create_conn(struct mg_connection *nc) {
+int mg_sl_if_create_conn(struct mg_connection *nc) {
   (void) nc;
   return 1;
 }
 
-void mg_if_destroy_conn(struct mg_connection *nc) {
+void mg_sl_if_destroy_conn(struct mg_connection *nc) {
   if (nc->sock == INVALID_SOCKET) return;
   /* For UDP, only close outgoing sockets or listeners. */
   if (!(nc->flags & MG_F_UDP) || nc->listener == NULL) {
@@ -349,30 +351,31 @@ void mg_mgr_handle_conn(struct mg_connection *nc, int fd_flags, double now) {
 }
 
 /* Associate a socket to a connection. */
-void mg_sock_set(struct mg_connection *nc, sock_t sock) {
+void mg_sl_if_sock_set(struct mg_connection *nc, sock_t sock) {
   mg_set_non_blocking_mode(sock);
   nc->sock = sock;
   DBG(("%p %d", nc, sock));
 }
 
-void mg_ev_mgr_init(struct mg_mgr *mgr) {
-  (void) mgr;
-  DBG(("%p using sl_Select()", mgr));
+void mg_sl_if_init(struct mg_iface *iface) {
+  (void) iface;
+  DBG(("%p using sl_Select()", iface->mgr));
 }
 
-void mg_ev_mgr_free(struct mg_mgr *mgr) {
-  (void) mgr;
+void mg_sl_if_free(struct mg_iface *iface) {
+  (void) iface;
 }
 
-void mg_ev_mgr_add_conn(struct mg_connection *nc) {
+void mg_sl_if_add_conn(struct mg_connection *nc) {
   (void) nc;
 }
 
-void mg_ev_mgr_remove_conn(struct mg_connection *nc) {
+void mg_sl_if_remove_conn(struct mg_connection *nc) {
   (void) nc;
 }
 
-time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
+time_t mg_sl_if_poll(struct mg_iface *iface, int timeout_ms) {
+  struct mg_mgr *mgr = iface->mgr;
   double now = mg_time();
   double min_timer;
   struct mg_connection *nc, *tmp;
@@ -471,8 +474,8 @@ time_t mg_mgr_poll(struct mg_mgr *mgr, int timeout_ms) {
   return now;
 }
 
-void mg_if_get_conn_addr(struct mg_connection *nc, int remote,
-                         union socket_address *sa) {
+void mg_sl_if_get_conn_addr(struct mg_connection *nc, int remote,
+                            union socket_address *sa) {
   /* SimpleLink does not provide a way to get socket's peer address after
    * accept or connect. Address hould have been preserved in the connection,
    * so we do our best here by using it. */
@@ -491,8 +494,8 @@ void sl_restart_cb(struct mg_mgr *mgr) {
     if (nc->flags & MG_F_LISTENING) {
       DBG(("restarting %p %s:%d", nc, inet_ntoa(nc->sa.sin.sin_addr),
            ntohs(nc->sa.sin.sin_port)));
-      int res = (nc->flags & MG_F_UDP ? mg_if_listen_udp(nc, &nc->sa)
-                                      : mg_if_listen_tcp(nc, &nc->sa));
+      int res = (nc->flags & MG_F_UDP ? mg_sl_if_listen_udp(nc, &nc->sa)
+                                      : mg_sl_if_listen_tcp(nc, &nc->sa));
       if (res == 0) continue;
       /* Well, we tried and failed. Fall through to closing. */
     }
@@ -504,4 +507,31 @@ void sl_restart_cb(struct mg_mgr *mgr) {
   }
 }
 
-#endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK */
+/* clang-format off */
+#define MG_SL_IFACE_VTABLE                                              \
+  {                                                                     \
+    mg_sl_if_init,                                                      \
+    mg_sl_if_free,                                                      \
+    mg_sl_if_add_conn,                                                  \
+    mg_sl_if_remove_conn,                                               \
+    mg_sl_if_poll,                                                      \
+    mg_sl_if_listen_tcp,                                                \
+    mg_sl_if_listen_udp,                                                \
+    mg_sl_if_connect_tcp,                                               \
+    mg_sl_if_connect_udp,                                               \
+    mg_sl_if_tcp_send,                                                  \
+    mg_sl_if_udp_send,                                                  \
+    mg_sl_if_recved,                                                    \
+    mg_sl_if_create_conn,                                               \
+    mg_sl_if_destroy_conn,                                              \
+    mg_sl_if_sock_set,                                                  \
+    mg_sl_if_get_conn_addr,                                             \
+  }
+/* clang-format on */
+
+struct mg_iface_vtable mg_simplelink_iface_vtable = MG_SL_IFACE_VTABLE;
+#if MG_NET_IF == MG_NET_IF_SIMPLELINK
+struct mg_iface_vtable mg_default_iface_vtable = MG_SL_IFACE_VTABLE;
+#endif
+
+#endif /* MG_ENABLE_NET_IF_SIMPLELINK */
