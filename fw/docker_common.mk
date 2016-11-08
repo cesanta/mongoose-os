@@ -51,6 +51,18 @@ MAKE_CMD=$(INNER_MAKE) -j4 \
 # inside our docker container
 ifeq ("$(MIOT_SDK_REVISION)","")
 
+# On Windows and Mac, run container as root since volume sharing on those OSes
+# doesn't play nice with unprivileged user.
+#
+# On other OSes, run it as the current user.
+DOCKER_USER_ARG =
+ifneq ($(OS),Windows_NT)
+UNAME_S := $(shell uname -s)
+ifneq ($(UNAME_S),Darwin)
+DOCKER_USER_ARG = --user $$(id -u):$$(id -u)
+endif
+endif
+
 # We're outside of the container, so, invoke docker properly.
 # Note about mounts: we mount repo to a stable path (/app) as well as the
 # original path outside the container, whatever it may be, so that absolute path
@@ -63,6 +75,7 @@ all clean:
 	  -v $(APP_PATH):$(DOCKER_APP_PATH) \
 	  -v $(MIOT_PATH_ABS):$(DOCKER_MIOT_PATH) \
 	  -v $(MIOT_PATH_ABS):$(MIOT_PATH_ABS) \
+	  $(DOCKER_USER_ARG) \
 	  $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  /bin/bash -c "\
 	    nice $(MAKE_CMD) \
