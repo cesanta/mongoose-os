@@ -1,10 +1,9 @@
 [
   ["clubby", "o", {title: "Cloud settings"}],
   ["clubby.connect_on_boot", "b", true, {title: "Connect cloud on startup"}],
-  ["clubby.server_address", "s", "api.mongoose-iot.com", {title: "Cloud server address"}],
+  ["clubby.server_address", "s", "", {title: "Cloud server address"}],
   ["clubby.reconnect_timeout_min", "i", 10, {title: "Minimal reconnect timeout"}],
   ["clubby.reconnect_timeout_max", "i", 60, {title: "Maximal reconnect timeout"}],
-  ["clubby.memory_limit", "i", 15360, {title: "Memory Limit"}],
   ["clubby.max_queue_size", "i", 25, {title: "Max Quueue Size"}],
   ["clubby.ssl_server_name", "s", {title : "TLS Server Name"}],
   ["clubby.ssl_ca_file", "s", {title : "TLS CA file"}],
