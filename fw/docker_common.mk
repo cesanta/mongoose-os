@@ -17,6 +17,17 @@ APP_PATH = $(CURDIR)
 MIOT_PATH_ABS=$(abspath $(MIOT_PATH))
 
 SDK_VERSION ?= $(shell cat $(MIOT_PATH)/fw/platforms/$(APP_PLATFORM)/sdk.version)
+REPO_PATH ?= $(shell git rev-parse --show-toplevel 2> /dev/null)
+ifeq ($(REPO_PATH),)
+  # We're outside of any git repository: will just mount the application path
+  APP_MOUNT_PATH = $(APP_PATH)
+  APP_SUBDIR =
+else
+  # We're inside some git repo: will mount the root of this repo, and remember
+  # the app's subdir inside it.
+  APP_MOUNT_PATH = $(REPO_PATH)
+  APP_SUBDIR = $(subst $(REPO_PATH),,$(APP_PATH))
+endif
 
 # this hack is needed to make `-$(MAKEFLAGS)` always work (notice the dash).
 # Otherwise, $(MAKEFLAGS) does not contain the flag `w` when `make` runs
@@ -67,12 +78,12 @@ endif
 # Note about mounts: we mount repo to a stable path (/app) as well as the
 # original path outside the container, whatever it may be, so that absolute path
 # references continue to work (e.g. Git submodules are known to use abs. paths).
-MAKE_APP_PATH=$(DOCKER_APP_PATH)
+MAKE_APP_PATH=$(DOCKER_APP_PATH)$(APP_SUBDIR)
 MAKE_MIOT_PATH=$(DOCKER_MIOT_PATH)
 INNER_MAKE=make
 all clean:
 	@docker run --rm -i --tty=$T \
-	  -v $(APP_PATH):$(DOCKER_APP_PATH) \
+	  -v $(APP_MOUNT_PATH):$(DOCKER_APP_PATH) \
 	  -v $(MIOT_PATH_ABS):$(DOCKER_MIOT_PATH) \
 	  -v $(MIOT_PATH_ABS):$(MIOT_PATH_ABS) \
 	  $(DOCKER_USER_ARG) \
