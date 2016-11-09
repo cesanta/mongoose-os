@@ -1,9 +1,0 @@
-APP = c_mcast
-APP_MODULES = src
-APP_CONF_SCHEMA = $(CURDIR)/src/conf_schema.yaml
-MG_ENABLE_CLUBBY = 0
-
-# currently this example supports only esp8266
-PLATFORM = esp8266
-
-include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

@@ -1,6 +1,0 @@
-APP = js_hello
-APP_FS_PATH = $(CURDIR)/fs
-APP_CONF_SCHEMA = $(CURDIR)/conf_schema.yaml
-MG_ENABLE_JS = 1
-
-include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

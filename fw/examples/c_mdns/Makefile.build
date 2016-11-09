@@ -1,8 +1,0 @@
-APP = c_mdns
-APP_MODULES = src
-MG_ENABLE_CLUBBY = 0
-
-# currently this example supports only esp8266
-PLATFORM = esp8266
-
-include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile.build

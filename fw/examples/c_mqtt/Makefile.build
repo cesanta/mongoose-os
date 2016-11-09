@@ -1,7 +1,0 @@
-APP = c_mqtt
-APP_MODULES = src
-MG_ENABLE_MQTT = 1
-APP_FS_PATH = $(CURDIR)/fs
-MG_ENABLE_SSL = 1
-
-include $(MIOT_PATH)/fw/platforms/$(PLATFORM)/Makefile.build
