@@ -72,13 +72,20 @@ FW_FILE_2_ADDR = 0x11000
 FW2_FILE_2_ADDR=$(shell printf "0x%08x" $$(($(FW_FILE_2_ADDR) + 0x100000)))
 
 BUILD_DIR ?= $(CURDIR)/.build
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+# Absolutize all paths which can be given by the caller
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override FW_DIR := $(abspath $(FW_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
 MIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
 MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
 MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
-FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
-FW_DIR = $(CURDIR)/firmware
-GEN_DIR = $(BUILD_DIR)/gen
 
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 RBOOT_FW_NAME = 0x00000.bin

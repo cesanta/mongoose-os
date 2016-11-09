@@ -52,12 +52,19 @@ FROZEN_PATH ?= $(MIOT_PATH)/frozen
 BOOT_PATH ?= $(MIOT_CC3200_PATH)/boot
 
 BUILD_DIR ?= $(CURDIR)/.build
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+# Absolutize all paths which can be given by the caller
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override FW_DIR := $(abspath $(FW_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+
 MIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
 MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
 MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
-FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
-FW_DIR = $(CURDIR)/firmware
-GEN_DIR = $(BUILD_DIR)/gen
 BOOT_BUILD_DIR = $(BUILD_DIR)/boot
 BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
 # When sizing filesystem consider that SFLASH should have enough space for:
