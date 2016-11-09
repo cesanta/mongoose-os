@@ -71,6 +71,7 @@ struct update_context {
   struct json_token name;
   struct json_token platform;
   struct json_token version;
+  struct json_token build_id;
   struct json_token parts;
 
   bool ignore_same_version;

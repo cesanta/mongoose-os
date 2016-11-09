@@ -29,6 +29,7 @@ struct update_context *s_ctx = NULL;
 struct update_file_context *s_fctx = NULL;
 
 /* Must be provided externally, usually auto-generated. */
+extern const char *build_id;
 extern const char *build_version;
 
 #define UPDATER_CTX_FILE_NAME "updater.dat"
@@ -256,22 +257,26 @@ static int parse_manifest(struct update_context *ctx) {
   }
   memcpy(ctx->manifest_data, ctx->data, ctx->current_file.fi.size);
 
-  if (json_scanf(ctx->manifest_data, ctx->current_file.fi.size,
-                 "{name: %T, platform: %T, version: %T, parts: %T}", &ctx->name,
-                 &ctx->platform, &ctx->version, &ctx->parts) <= 0) {
+  if (json_scanf(
+          ctx->manifest_data, ctx->current_file.fi.size,
+          "{name: %T, platform: %T, version: %T, build_id: %T, parts: %T}",
+          &ctx->name, &ctx->platform, &ctx->version, &ctx->build_id,
+          &ctx->parts) <= 0) {
     ctx->status_msg = "Failed to parse manifest";
     return -1;
   }
 
-  if (ctx->platform.len == 0 || ctx->version.len == 0 || ctx->parts.len == 0) {
+  if (ctx->platform.len == 0 || ctx->version.len == 0 ||
+      ctx->build_id.len == 0 || ctx->parts.len == 0) {
     ctx->status_msg = "Required manifest field missing";
     return -1;
   }
 
   CONSOLE_LOG(LL_INFO,
-              ("FW: %.*s %.*s %s -> %.*s", (int) ctx->name.len, ctx->name.ptr,
-               (int) ctx->platform.len, ctx->platform.ptr, build_version,
-               (int) ctx->version.len, ctx->version.ptr));
+              ("FW: %.*s %.*s %s %s -> %.*s %.*s", (int) ctx->name.len,
+               ctx->name.ptr, (int) ctx->platform.len, ctx->platform.ptr,
+               build_version, build_id, (int) ctx->version.len,
+               ctx->version.ptr, (int) ctx->build_id.len, ctx->build_id.ptr));
 
   context_remove_data(ctx, ctx->current_file.fi.size);
 
@@ -351,7 +356,8 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         }
 
         if (ctx->ignore_same_version &&
-            strncmp(ctx->version.ptr, build_version, ctx->version.len) == 0) {
+            strncmp(ctx->version.ptr, build_version, ctx->version.len) == 0 &&
+            strncmp(ctx->build_id.ptr, build_id, ctx->build_id.len) == 0) {
           ctx->status_msg = "Version is the same as current";
           return 1;
         }
