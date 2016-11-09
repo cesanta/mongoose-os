@@ -262,7 +262,7 @@ static void mg_handle_tcp_read(struct mg_connection *conn) {
                     recv_avail_size(conn, MG_TCP_RECV_BUFFER_SIZE), 0);
   DBG(("%p %d bytes <- %d", conn, n, conn->sock));
   if (n > 0) {
-    mg_if_recv_tcp_cb(conn, buf, n);
+    mg_if_recv_tcp_cb(conn, buf, n, 1 /* own */);
   } else {
     MG_FREE(buf);
   }

@@ -198,7 +198,7 @@ static void mg_handle_recv(struct mg_connection *nc) {
   }
 
   if (bytes_read != 0) {
-    mg_if_recv_tcp_cb(nc, buf, bytes_read);
+    mg_if_recv_tcp_cb(nc, buf, bytes_read, 1 /* own */);
   }
 }
 

@@ -122,7 +122,7 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
         return;
       }
     } else {
-      mg_if_recv_tcp_cb(nc, buf, ret); /* callee takes over data */
+      mg_if_recv_tcp_cb(nc, buf, ret, 1 /* own */);
     }
   }
   if (nc->recv_mbuf.len >= MG_LWIP_SSL_RECV_MBUF_LIMIT) {

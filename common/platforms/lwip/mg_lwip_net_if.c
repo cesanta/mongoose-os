@@ -171,7 +171,7 @@ static void mg_lwip_handle_recv(struct mg_connection *nc) {
       return;
     }
     pbuf_copy_partial(seg, data, len, cs->rx_offset);
-    mg_if_recv_tcp_cb(nc, data, len); /* callee takes over data */
+    mg_if_recv_tcp_cb(nc, data, len, 1 /* own */);
     cs->rx_offset += len;
     if (cs->rx_offset == cs->rx_chain->len) {
       cs->rx_chain = pbuf_dechain(cs->rx_chain);
