@@ -4,5 +4,7 @@ skeleton_version: 2016-09-20
 sources:
   - src
 filesystem:
+  - fs
 build_vars:
   MG_ENABLE_MQTT: 1
+  MG_ENABLE_SSL: 1
