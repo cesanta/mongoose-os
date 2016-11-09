@@ -2,5 +2,8 @@ type: firmware
 # this example currently works only with esp8266
 arch: esp8266
 skeleton_version: 2016-09-20
+sources:
+  - src
+filesystem:
 build_vars:
   MG_ENABLE_CLUBBY: 0
