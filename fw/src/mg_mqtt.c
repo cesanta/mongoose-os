@@ -122,7 +122,7 @@ static bool mqtt_global_connect(void) {
   struct mg_connect_opts opts;
   memset(&opts, 0, sizeof(opts));
 
-  if (scfg->mqtt.server != NULL) {
+  if (scfg->mqtt.server != NULL && scfg->device.id != NULL) {
     LOG(LL_INFO, ("MQTT connecting to %s", scfg->mqtt.server));
 
 #if MG_ENABLE_SSL
@@ -149,8 +149,6 @@ static bool mqtt_global_connect(void) {
       mg_set_protocol_mqtt(nc);
       mg_send_mqtt_handshake_opt(nc, scfg->device.id, opts);
     }
-  } else {
-    LOG(LL_INFO, ("MQTT server address is empty => MQTT is disabled."));
   }
 
   return ret;

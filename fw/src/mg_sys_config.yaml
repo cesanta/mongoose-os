@@ -1,6 +1,6 @@
 [
   ["device", "o", {title: "Device settings"}],
-  ["device.id", "s", "dummy", {title: "Device ID"}],
+  ["device.id", "s", {title: "Device ID"}],
   ["device.password", "s", {title: "Device password"}],
 
   ["tls", "o", {title: "TLS settings"}],

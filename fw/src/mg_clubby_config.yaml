@@ -1,5 +1,6 @@
 [
   ["clubby", "o", {title: "Cloud settings"}],
+  ["clubby.enable", "b", true, {title: "Enable Clubby"}],
   ["clubby.connect_on_boot", "b", true, {title: "Connect cloud on startup"}],
   ["clubby.server_address", "s", "", {title: "Cloud server address"}],
   ["clubby.reconnect_timeout_min", "i", 10, {title: "Minimal reconnect timeout"}],
