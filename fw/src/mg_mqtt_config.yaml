@@ -3,4 +3,9 @@
   ["mqtt.server", "s", "cloud.mongoose-iot.com:1883", {title: "MQTT server"}],
   ["mqtt.reconnect_timeout_min", "i", 10, {title: "Starting reconnect timeout"}],
   ["mqtt.reconnect_timeout_max", "i", 60, {title: "Maximum reconnect timeout"}],
+  ["mqtt.ssl_cert", "s", "", {title: "Client certificate to present to the server"}],
+  ["mqtt.ssl_key", "s", "", {title: "Private key corresponding to the certificate"}],
+  ["mqtt.ssl_ca_cert", "s", "", {title: "Verify server certificate using this CA bundle"}],
+  ["mqtt.clean_session", "b", true, {title: "Clean Session"}],
+  ["mqtt.keep_alive", "i", 60, {title: "Keep alive interval"}],
 ]

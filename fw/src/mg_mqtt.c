@@ -70,8 +70,23 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       s_reconnect_timeout = s_reconnect_timeout * 2;
       break;
     }
-
-    /* Delegate all MQTT events to the user's handler */
+    case MG_EV_POLL: {
+      struct mg_mqtt_proto_data *pd =
+          (struct mg_mqtt_proto_data *) nc->proto_data;
+      double now = mg_time();
+      if ((now - nc->last_io_time) > pd->keep_alive / 2) {
+        LOG(LL_DEBUG, ("Send PINGREQ"));
+        mg_mqtt_ping(nc);
+        nc->last_io_time = (time_t) mg_time();
+      }
+      break;
+    }
+    case MG_EV_MQTT_PINGRESP: {
+      /* Do nothing here */
+      LOG(LL_DEBUG, ("Got PINGRESP"));
+      break;
+    }
+    /* Delegate almost all MQTT events to the user's handler */
     case MG_EV_MQTT_CONNECT:
     case MG_EV_MQTT_CONNACK:
     case MG_EV_MQTT_PUBLISH:
@@ -84,7 +99,6 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_MQTT_UNSUBSCRIBE:
     case MG_EV_MQTT_UNSUBACK:
     case MG_EV_MQTT_PINGREQ:
-    case MG_EV_MQTT_PINGRESP:
     case MG_EV_MQTT_DISCONNECT:
       call_user_handler(nc, ev, ev_data);
       break;
@@ -105,11 +119,20 @@ static bool mqtt_global_connect(void) {
   bool ret = true;
   struct mg_mgr *mgr = mg_get_mgr();
   const struct sys_config *scfg = get_cfg();
+  struct mg_connect_opts opts;
+  memset(&opts, 0, sizeof(opts));
 
   if (scfg->mqtt.server != NULL) {
     LOG(LL_INFO, ("MQTT connecting to %s", scfg->mqtt.server));
 
-    struct mg_connection *nc = mg_connect(mgr, scfg->mqtt.server, ev_handler);
+#if MG_ENABLE_SSL
+    opts.ssl_cert = scfg->mqtt.ssl_cert;
+    opts.ssl_key = scfg->mqtt.ssl_key;
+    opts.ssl_ca_cert = scfg->mqtt.ssl_ca_cert;
+#endif
+
+    struct mg_connection *nc =
+        mg_connect_opt(mgr, scfg->mqtt.server, ev_handler, opts);
     if (nc == NULL) {
       ret = false;
     } else {
@@ -118,9 +141,13 @@ static bool mqtt_global_connect(void) {
 
       opts.user_name = scfg->device.id;
       opts.password = scfg->device.password;
+      if (scfg->mqtt.clean_session) {
+        opts.flags |= MG_MQTT_CLEAN_SESSION;
+      }
+      opts.keep_alive = scfg->mqtt.keep_alive;
 
       mg_set_protocol_mqtt(nc);
-      mg_send_mqtt_handshake_opt(nc, "dummy", opts);
+      mg_send_mqtt_handshake_opt(nc, scfg->device.id, opts);
     }
   } else {
     LOG(LL_INFO, ("MQTT server address is empty => MQTT is disabled."));

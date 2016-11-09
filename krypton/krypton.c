@@ -8130,7 +8130,7 @@ NS_INTERNAL int X509_verify_name(X509 *cert, const char *name) {
           cn.ptr = p2;
           cn.len = t2.ber_len;
           dprintf(("CN: %.*s\n", (int) cn.len, cn.ptr));
-          if (kr_match_domain_name(n, cn)) {
+          if (kr_match_domain_name(cn, n)) {
             dprintf(("name %s matched CN %.*s\n", name, (int) cn.len, cn.ptr));
             return 1;
           }
@@ -8150,7 +8150,7 @@ NS_INTERNAL int X509_verify_name(X509 *cert, const char *name) {
         an.ptr = ptr;
         an.len = tag.ber_len;
         dprintf(("alt name: %.*s\n", (int) an.len, an.ptr));
-        if (kr_match_domain_name(n, an)) {
+        if (kr_match_domain_name(an, n)) {
           dprintf(("name %s matched %.*s\n", name, (int) an.len, an.ptr));
           return 1;
         }
