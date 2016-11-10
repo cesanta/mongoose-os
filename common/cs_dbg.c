@@ -21,14 +21,14 @@ enum cs_log_level cs_log_level =
 
 FILE *cs_log_file = NULL;
 
-#ifdef CS_LOG_TS_DIFF
+#if CS_LOG_ENABLE_TS_DIFF
 double cs_log_ts;
 #endif
 
 void cs_log_print_prefix(const char *func) {
   if (cs_log_file == NULL) cs_log_file = stderr;
   fprintf(cs_log_file, "%-20s ", func);
-#ifdef CS_LOG_TS_DIFF
+#if CS_LOG_ENABLE_TS_DIFF
   {
     double now = cs_time();
     fprintf(cs_log_file, "%7u ", (unsigned int) ((now - cs_log_ts) * 1000000));
@@ -54,7 +54,7 @@ void cs_log_set_file(FILE *file) {
 
 void cs_log_set_level(enum cs_log_level level) {
   cs_log_level = level;
-#if CS_LOG_TS_DIFF && CS_ENABLE_STDIO
+#if CS_LOG_ENABLE_TS_DIFF && CS_ENABLE_STDIO
   cs_log_ts = cs_time();
 #endif
 }

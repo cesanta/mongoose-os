@@ -1548,8 +1548,8 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #define CS_ENABLE_DEBUG 0
 #endif
 
-#ifndef CS_LOG_TS_DIFF
-#define CS_LOG_TS_DIFF 0
+#ifndef CS_LOG_ENABLE_TS_DIFF
+#define CS_LOG_ENABLE_TS_DIFF 0
 #endif
 
 #ifdef __cplusplus
