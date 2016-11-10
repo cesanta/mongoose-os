@@ -1,19 +1,8 @@
-arch: PLATFORM
-skeleton_version: 2016-11-08
+# arch: PLATFORM   # possible values for PLATFORM: esp8266 cc3200
+version: 1.0
+skeleton_version: 2016-11-10
 sources:
   - src
 filesystem:
   - fs
 build_vars:
-  APP_CONF_SCHEMA: src/conf_schema.yaml
-  MG_DEBUG_UART: 0
-  MG_ENABLE_CLUBBY: 1
-  MG_ENABLE_CLUBBY_UART: 1
-  MG_ENABLE_CONFIG_SERVICE: 1
-  MG_ENABLE_DNS_SD: 1
-  MG_ENABLE_FILESYSTEM_SERVICE: 1
-  MG_ENABLE_JS: 0
-  MG_ENABLE_MQTT: 1
-  MG_ENABLE_UPDATER: 1
-  MG_ENABLE_UPDATER_CLUBBY: 1
-  MG_ENABLE_UPDATER_POST: 1

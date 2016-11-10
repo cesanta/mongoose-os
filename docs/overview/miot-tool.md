@@ -37,18 +37,17 @@ Commands:
   register-device  Set id/psk to the device and register it at the cloud
   config-get       Get config value from the locally attached device
   config-set       Set config value at the locally attached device
+```
 
-Flags:
-      --arch string          Hardware architecture. Possible values: esp8266, cc3200
-      --baud-rate uint       Serial port speed (default 115200)
-      --device-id string     Device ID
-      --device-pass string   Device pass/key
-      --firmware string      Firmware .zip file location (file of HTTP URL) (default "build/fw.zip")
-      --helpfull             Show full help, including advanced flags
-      --pass string          Cloud password or token
-      --port string          Serial port where the device is connected
-      --server string        Cloud server (default "http://cloud.mongoose-iot.com")
-      --timeout duration     Timeout for the device connection (default 10s)
-      --user string          Cloud username
-      --version              Print miot tool version and exit
+Hints:
+
+- Run `miot help <command>` to see which flags are understood by the command
+- If you want to avoid specifying certain command flags all the time,
+  consider setting environment variables `MIOT_FLAGNAME`. Then `miot`
+  will fetch default flag value from the environment variable:
+
+```bash
+export MIOT_PORT=/dev/ttyUSB0
+export MIOT_USER=joe
+export MIOT_PASS=mypass
 ```
