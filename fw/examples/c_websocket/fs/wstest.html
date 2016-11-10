@@ -1,0 +1,43 @@
+<html>
+GPIO pin: <input type="text" value="2" size="3" id="pin">
+<button id="button_on">On</button>
+<button id="button_off">Off</button>
+<script>
+  var ws;
+  var reconnect = function() {
+   var url = 'wss://' + location.host + '/wscmd';
+   ws = new WebSocket(url);
+   ws.onopen = function(ev) {
+     console.log(ev);
+   };
+   ws.onclose = function(ev) {
+     console.log(ev);
+     setTimeout(reconnect, 1000);
+   };
+   ws.onmessage = function(ev) {
+     console.log('message', ev);
+   };
+   ws.onerror = function(ev) {
+     console.log('error', ev);
+     ws.close();
+   };
+  };
+  reconnect();
+
+  var sendCommand = function(pinState) {
+    ws.send(JSON.stringify({
+      pin: document.getElementById('pin').value,
+      state: pinState
+    }));
+  };
+
+  document.getElementById('button_on').onclick = function() {
+    sendCommand(1);
+  };
+
+  document.getElementById('button_off').onclick = function() {
+    sendCommand(0);
+  };
+
+</script>
+</html>

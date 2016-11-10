@@ -1,0 +1,9 @@
+name: c_websocket
+arch: esp8266
+version: 1.0
+skeleton_version: 2016-11-04
+sources:
+  - src
+filesystem:
+  - fs
+build_vars:
