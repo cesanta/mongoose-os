@@ -39,7 +39,7 @@ other build artifacts are also stored in the `build/` directory:
 
 It is possible to set build flags to customize the build. Flags can be set
 in `miot.yml` file, `build_vars` section. Here is the list of possible
-flags and their meaning:
+flags, their meaning and their default values:
 
 ```yml
 build_vars:
@@ -52,6 +52,6 @@ build_vars:
   MG_ENABLE_JS: 0                   # Enable JavaScript support
   MG_ENABLE_MQTT: 1                 # Enable MQTT support
   MG_ENABLE_UPDATER: 1              # Enable OTA updates
-  MG_ENABLE_UPDATER_CLUBBY: 1       # Enable OTA via clubby framing protocol
+  MG_ENABLE_UPDATER_CLUBBY: 0       # Enable OTA via clubby framing protocol
   MG_ENABLE_UPDATER_POST: 1         # Enable OTA via HTTP POST
 ```
