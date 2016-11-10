@@ -10,6 +10,8 @@
 #include <kr_locals.h>
 #endif
 
+#define KR_VERSION 0x010000
+
 typedef struct x509_store_ctx_st X509_STORE_CTX;
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;

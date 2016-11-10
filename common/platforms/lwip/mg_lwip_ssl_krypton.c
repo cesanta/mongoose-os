@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && defined(SSL_KRYPTON)
+#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL && defined(KR_VERSION)
 
 #include "common/cs_dbg.h"
 
@@ -162,4 +162,4 @@ ssize_t kr_recv(int fd, void *buf, size_t len) {
   return len;
 }
 
-#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && defined(SSL_KRYPTON) */
+#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL && defined(KR_VERSION) */
