@@ -21,5 +21,5 @@ clean:
 	rm -f *.o unit_test
 
 format:
-	@$(CLANG_FORMAT) -i *.[ch] platforms/esp8266/*.[ch] clubby/*.[ch] platforms/pic32_harmony/*.[ch]
+	@$(CLANG_FORMAT) -i *.[ch] platforms/*/*.[ch] clubby/*.[ch]
 

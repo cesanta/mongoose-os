@@ -21,8 +21,8 @@ int open(const char *filename, int oflag, int pmode) {
    * but exists in documentation as utility function
    * Shall we delete it at all or implement for WinCE as well?
    */
-   DebugBreak();
-   return 0; /* for compiler */
+  DebugBreak();
+  return 0; /* for compiler */
 }
 
 int _wstati64(const wchar_t *path, cs_stat_t *st) {
@@ -36,14 +36,16 @@ int _wstati64(const wchar_t *path, cs_stat_t *st) {
     FILETIME ftime;
     st->st_mode |= _S_IFREG;
     h = CreateFileW(path, GENERIC_READ, 0, NULL, OPEN_EXISTING,
-    FILE_ATTRIBUTE_NORMAL, NULL);
+                    FILE_ATTRIBUTE_NORMAL, NULL);
     if (h == INVALID_HANDLE_VALUE) {
       return -1;
     }
     st->st_size = GetFileSize(h, NULL);
     GetFileTime(h, NULL, NULL, &ftime);
-    st->st_mtime = (uint32_t)((((uint64_t)ftime.dwLowDateTime +
-        ((uint64_t)ftime.dwHighDateTime << 32)) / 10000000.0) - 11644473600);
+    st->st_mtime = (uint32_t)((((uint64_t) ftime.dwLowDateTime +
+                                ((uint64_t) ftime.dwHighDateTime << 32)) /
+                               10000000.0) -
+                              11644473600);
     CloseHandle(h);
   } else {
     st->st_mode |= _S_IFDIR;
@@ -64,9 +66,9 @@ static void mg_gmt_time_string(char *buf, size_t buf_len, time_t *t) {
     GetSystemTime(&systime);
   }
   /* There is no PRIu16 in WinCE SDK */
-  snprintf(buf, buf_len, "%d.%d.%d %d:%d:%d GMT", (int)systime.wYear,
-           (int)systime.wMonth, (int)systime.wDay, (int)systime.wHour,
-           (int)systime.wMinute, (int)systime.wSecond);
+  snprintf(buf, buf_len, "%d.%d.%d %d:%d:%d GMT", (int) systime.wYear,
+           (int) systime.wMonth, (int) systime.wDay, (int) systime.wHour,
+           (int) systime.wMinute, (int) systime.wSecond);
 }
 
 #endif
