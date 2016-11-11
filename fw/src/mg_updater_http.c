@@ -23,6 +23,11 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p) {
   (void) p;
 
   switch (ev) {
+    case MG_EV_CONNECT: {
+      int result = *((int *) p);
+      if (result != 0) LOG(LL_ERROR, ("connect error: %d", result));
+      break;
+    }
     case MG_EV_RECV: {
       if (ctx->file_size == 0) {
         LOG(LL_DEBUG, ("Looking for HTTP header"));

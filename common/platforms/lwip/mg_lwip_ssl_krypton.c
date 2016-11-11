@@ -3,8 +3,7 @@
  * All rights reserved
  */
 
-#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL && \
-    defined(KR_VERSION)
+#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL
 
 #include "common/cs_dbg.h"
 
@@ -28,19 +27,17 @@
 void mg_lwip_ssl_do_hs(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   int server_side = (nc->listener != NULL);
-  int ret = server_side ? SSL_accept(nc->ssl) : SSL_connect(nc->ssl);
-  int err = SSL_get_error(nc->ssl, ret);
-  DBG(("%s %d %d", (server_side ? "SSL_accept" : "SSL_connect"), ret, err));
-  if (ret <= 0) {
-    if (err == SSL_ERROR_WANT_WRITE) {
+  enum mg_ssl_if_result res = mg_ssl_if_handshake(nc);
+  DBG(("%d %d %d", server_side, res));
+  if (res != MG_SSL_OK) {
+    if (res == MG_SSL_WANT_WRITE) {
       nc->flags |= MG_F_WANT_WRITE;
       cs->err = 0;
-    } else if (err == SSL_ERROR_WANT_READ) {
+    } else if (res == MG_SSL_WANT_READ) {
       /* Nothing, we are callback-driven. */
       cs->err = 0;
     } else {
-      cs->err = err;
-      LOG(LL_ERROR, ("SSL handshake error: %d", cs->err));
+      cs->err = res;
       if (server_side) {
         mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
       } else {
@@ -74,9 +71,8 @@ void mg_lwip_ssl_send(struct mg_connection *nc) {
   if (len == 0) {
     len = MIN(MG_LWIP_SSL_IO_SIZE, nc->send_mbuf.len);
   }
-  int ret = SSL_write(nc->ssl, nc->send_mbuf.buf, len);
-  int err = SSL_get_error(nc->ssl, ret);
-  DBG(("%p SSL_write %u = %d, %d", nc, len, ret, err));
+  int ret = mg_ssl_if_write(nc, nc->send_mbuf.buf, len);
+  DBG(("%p SSL_write %u = %d, %d", nc, len, ret));
   if (ret > 0) {
     mbuf_remove(&nc->send_mbuf, ret);
     mbuf_trim(&nc->send_mbuf);
@@ -86,12 +82,11 @@ void mg_lwip_ssl_send(struct mg_connection *nc) {
      * exactly the same send next time. */
     cs->last_ssl_write_size = len;
   }
-  if (err == SSL_ERROR_NONE) {
+  if (ret == len) {
     nc->flags &= ~MG_F_WANT_WRITE;
-  } else if (err == SSL_ERROR_WANT_WRITE) {
+  } else if (ret == MG_SSL_WANT_WRITE) {
     nc->flags |= MG_F_WANT_WRITE;
   } else {
-    LOG(LL_ERROR, ("SSL write error: %d", err));
     mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
   }
 }
@@ -103,22 +98,22 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
   while (nc->recv_mbuf.len < MG_LWIP_SSL_RECV_MBUF_LIMIT) {
     char *buf = (char *) malloc(MG_LWIP_SSL_IO_SIZE);
     if (buf == NULL) return;
-    int ret = SSL_read(nc->ssl, buf, MG_LWIP_SSL_IO_SIZE);
-    int err = SSL_get_error(nc->ssl, ret);
-    DBG(("%p SSL_read %u = %d, %d", nc, MG_LWIP_SSL_IO_SIZE, ret, err));
+    int ret = mg_ssl_if_read(nc, buf, MG_LWIP_SSL_IO_SIZE);
+    DBG(("%p %p SSL_read %u = %d", nc, cs->rx_chain, MG_LWIP_SSL_IO_SIZE, ret));
     if (ret <= 0) {
       free(buf);
-      if (err == SSL_ERROR_WANT_WRITE) {
+      if (ret == MG_SSL_WANT_WRITE) {
         nc->flags |= MG_F_WANT_WRITE;
         return;
-      } else if (err == SSL_ERROR_WANT_READ) {
-        /* Nothing, we are callback-driven. */
+      } else if (ret == MG_SSL_WANT_READ) {
+        /*
+         * Nothing to do in particular, we are callback-driven.
+         * What we definitely do not need anymore is SSL reading (nothing left).
+         */
+        nc->flags &= ~MG_F_WANT_READ;
         cs->err = 0;
         return;
       } else {
-        if (err != SSL_ERROR_ZERO_RETURN) {
-          LOG(LL_ERROR, ("SSL read error: %d", err));
-        }
         mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
         return;
       }
@@ -126,24 +121,20 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
       mg_if_recv_tcp_cb(nc, buf, ret, 1 /* own */);
     }
   }
-  if (nc->recv_mbuf.len >= MG_LWIP_SSL_RECV_MBUF_LIMIT) {
-    nc->flags |= MG_F_WANT_READ;
-  } else {
-    nc->flags &= ~MG_F_WANT_READ;
-  }
 }
 
+#ifdef KR_VERSION
+
 ssize_t kr_send(int fd, const void *buf, size_t len) {
-  struct mg_connection *nc = (struct mg_connection *) fd;
-  int ret = mg_lwip_tcp_write(nc, buf, len);
-  DBG(("mg_lwip_tcp_write %u = %d", len, ret));
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) fd;
+  int ret = mg_lwip_tcp_write(cs->nc, buf, len);
+  DBG(("%p mg_lwip_tcp_write %u = %d", cs->nc, len, ret));
   if (ret == 0) ret = KR_IO_WOULDBLOCK;
   return ret;
 }
 
 ssize_t kr_recv(int fd, void *buf, size_t len) {
-  struct mg_connection *nc = (struct mg_connection *) fd;
-  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) fd;
   struct pbuf *seg = cs->rx_chain;
   if (seg == NULL) {
     DBG(("%u - nothing to read", len));
@@ -163,5 +154,6 @@ ssize_t kr_recv(int fd, void *buf, size_t len) {
   return len;
 }
 
-#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL && \
-          defined(KR_VERSION) */
+#endif
+
+#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL */

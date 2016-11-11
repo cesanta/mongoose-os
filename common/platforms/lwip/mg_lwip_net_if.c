@@ -151,8 +151,8 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
 static void mg_lwip_handle_recv(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
 
-#ifdef KR_VERSION
-  if (nc->ssl != NULL) {
+#if MG_ENABLE_SSL
+  if (nc->flags & MG_F_SSL) {
     if (nc->flags & MG_F_SSL_HANDSHAKE_DONE) {
       mg_lwip_ssl_recv(nc);
     } else {
@@ -295,10 +295,9 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
 #if LWIP_TCP_KEEPALIVE
   mg_lwip_set_keepalive_params(nc, 60, 10, 6);
 #endif
-#ifdef KR_VERSION
-  if (lc->ssl_ctx != NULL) {
-    nc->ssl = SSL_new(lc->ssl_ctx);
-    if (nc->ssl == NULL || SSL_set_fd(nc->ssl, (intptr_t) nc) != 1) {
+#if MG_ENABLE_SSL
+  if (lc->flags & MG_F_SSL) {
+    if (mg_ssl_if_conn_accept(nc, lc) != MG_SSL_OK) {
       LOG(LL_ERROR, ("SSL error"));
       tcp_close(newtpcb);
     }
@@ -429,7 +428,7 @@ void mg_lwip_if_recved(struct mg_connection *nc, size_t len) {
 /* Currently SSL acknowledges data immediately.
  * TODO(rojer): Find a way to propagate mg_lwip_if_recved. */
 #if MG_ENABLE_SSL
-  if (nc->ssl == NULL) {
+  if (!(nc->flags & MG_F_SSL)) {
     tcp_recved(cs->pcb.tcp, len);
   }
 #else
@@ -442,6 +441,7 @@ int mg_lwip_if_create_conn(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs =
       (struct mg_lwip_conn_state *) calloc(1, sizeof(*cs));
   if (cs == NULL) return 0;
+  cs->nc = nc;
   nc->sock = (intptr_t) cs;
   return 1;
 }

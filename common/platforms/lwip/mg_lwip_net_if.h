@@ -17,6 +17,7 @@
 extern struct mg_iface_vtable mg_lwip_iface_vtable;
 
 struct mg_lwip_conn_state {
+  struct mg_connection *nc;
   union {
     struct tcp_pcb *tcp;
     struct udp_pcb *udp;

@@ -253,7 +253,13 @@ enum mg_init_result mg_sys_config_init_http(const struct sys_config_http *cfg) {
     }
   }
 
-  listen_conn = mg_bind(mg_get_mgr(), cfg->listen_addr, mongoose_ev_handler);
+  struct mg_bind_opts opts;
+  memset(&opts, 0, sizeof(opts));
+  opts.ssl_cert = cfg->ssl_cert;
+  opts.ssl_key = cfg->ssl_key;
+  opts.ssl_ca_cert = cfg->ssl_ca_cert;
+  listen_conn =
+      mg_bind_opt(mg_get_mgr(), cfg->listen_addr, mongoose_ev_handler, opts);
   if (!listen_conn) {
     LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));
     return MG_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED;
@@ -268,7 +274,8 @@ enum mg_init_result mg_sys_config_init_http(const struct sys_config_http *cfg) {
 #endif
 
     mg_set_protocol_http_websocket(listen_conn);
-    LOG(LL_INFO, ("HTTP server started on [%s]", cfg->listen_addr));
+    LOG(LL_INFO, ("HTTP server started on [%s]%s", cfg->listen_addr,
+                  (opts.ssl_cert ? " (SSL)" : "")));
   }
 
   return MG_INIT_OK;

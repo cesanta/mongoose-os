@@ -2,6 +2,9 @@
   ["http", "o", {title: "HTTP Server"}],
   ["http.enable", "b", true, {title: "Enable HTTP Server"}],
   ["http.listen_addr", "s", "80", {title: "Listening port / address"}],
+  ["http.ssl_cert", "s", {title: "Turn on SSL on the listener, use this cert"}],
+  ["http.ssl_key", "s", {title: "SSL key to use"}],
+  ["http.ssl_ca_cert", "s", {title: "Verify clients this CA bundle"}],
   ["http.upload_acl", "s", "*", {title: "Upload file ACL"}],
   ["http.hidden_files", "s", {title: "Hidden file pattern"}],
 ]

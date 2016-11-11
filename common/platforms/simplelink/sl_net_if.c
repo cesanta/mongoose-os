@@ -16,73 +16,7 @@
 static sock_t mg_open_listening_socket(union socket_address *sa, int type,
                                        int proto);
 
-#if MG_ENABLE_SSL
-const char *mg_set_ssl2(struct mg_connection *nc, const char *cert,
-                        const char *key, const char *ca_cert) {
-  DBG(("%p %s,%s,%s", nc, (cert ? cert : "-"), (key ? key : "-"),
-       (ca_cert ? ca_cert : "-")));
-
-  if (nc->flags & MG_F_UDP) {
-    return "SSL for UDP is not supported";
-  }
-
-  if (cert != NULL || key != NULL) {
-    if (cert != NULL && key != NULL) {
-      nc->ssl_cert = strdup(cert);
-      nc->ssl_key = strdup(key);
-    } else {
-      return "both cert and key are required";
-    }
-  }
-  if (ca_cert != NULL && strcmp(ca_cert, "*") != 0) {
-    nc->ssl_ca_cert = strdup(ca_cert);
-  }
-
-  nc->flags |= MG_F_SSL;
-
-  return NULL;
-}
-
-int sl_set_ssl_opts(struct mg_connection *nc) {
-  int err;
-  DBG(("%p %s,%s,%s,%s", nc, (nc->ssl_cert ? nc->ssl_cert : "-"),
-       (nc->ssl_key ? nc->ssl_cert : "-"),
-       (nc->ssl_ca_cert ? nc->ssl_ca_cert : "-"),
-       (nc->ssl_server_name ? nc->ssl_server_name : "-")));
-  if (nc->ssl_cert != NULL && nc->ssl_key != NULL) {
-    err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
-                        SL_SO_SECURE_FILES_CERTIFICATE_FILE_NAME, nc->ssl_cert,
-                        strlen(nc->ssl_cert));
-    DBG(("CERTIFICATE_FILE_NAME %s -> %d", nc->ssl_cert, err));
-    if (err != 0) return err;
-    err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
-                        SL_SO_SECURE_FILES_PRIVATE_KEY_FILE_NAME, nc->ssl_key,
-                        strlen(nc->ssl_key));
-    DBG(("PRIVATE_KEY_FILE_NAME %s -> %d", nc->ssl_key, nc->err));
-    if (err != 0) return err;
-  }
-  if (nc->ssl_ca_cert != NULL) {
-    if (nc->ssl_ca_cert[0] != '\0') {
-      err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
-                          SL_SO_SECURE_FILES_CA_FILE_NAME, nc->ssl_ca_cert,
-                          strlen(nc->ssl_ca_cert));
-      DBG(("CA_FILE_NAME %s -> %d", nc->ssl_ca_cert, err));
-      if (err != 0) return err;
-    }
-  }
-  if (nc->ssl_server_name != NULL) {
-    err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
-                        SO_SECURE_DOMAIN_NAME_VERIFICATION, nc->ssl_server_name,
-                        strlen(nc->ssl_server_name));
-    DBG(("DOMAIN_NAME_VERIFICATION %s -> %d", nc->ssl_server_name, err));
-    /* Domain name verificationw as added in a NWP service pack, older versions
-     * return SL_ENOPROTOOPT. There isn't much we can do about it, so we ignore
-     * the error. */
-    if (err != 0 && err != SL_ENOPROTOOPT) return err;
-  }
-  return 0;
-}
-#endif
+int sl_set_ssl_opts(struct mg_connection *nc);
 
 void mg_set_non_blocking_mode(sock_t sock) {
   SlSockNonblocking_t opt;
@@ -169,12 +103,6 @@ void mg_sl_if_destroy_conn(struct mg_connection *nc) {
     sl_Close(nc->sock);
   }
   nc->sock = INVALID_SOCKET;
-#if MG_ENABLE_SSL
-  MG_FREE(nc->ssl_cert);
-  MG_FREE(nc->ssl_key);
-  MG_FREE(nc->ssl_ca_cert);
-  MG_FREE(nc->ssl_server_name);
-#endif
 }
 
 static int mg_accept_conn(struct mg_connection *lc) {

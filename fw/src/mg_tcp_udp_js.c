@@ -798,7 +798,7 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   LOG(LL_VERBOSE_DEBUG, ("Trying to connect to %s", addr));
 
   c = mg_connect_opt(mg_get_mgr(), addr, mg_ev_handler, conn_opts);
-  if (use_ssl && c->ssl_ctx == NULL) {
+  if (use_ssl && !(c->flags & MG_F_SSL)) {
     /*
      * Something wrong with parameters, unsecured session established
      */

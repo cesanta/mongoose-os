@@ -38,10 +38,9 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
     switch (md->sig_queue[md->start_index].sig) {
       case MG_SIG_CONNECT_RESULT: {
-#ifdef KR_VERSION
-        if (cs->err == 0 && nc->flags & MG_F_SSL &&
+#if MG_ENABLE_SSL
+        if (cs->err == 0 && (nc->flags & MG_F_SSL) &&
             !(nc->flags & MG_F_SSL_HANDSHAKE_DONE)) {
-          SSL_set_fd(nc->ssl, (intptr_t) nc);
           mg_lwip_ssl_do_hs(nc);
         } else
 #endif
@@ -125,8 +124,8 @@ time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
       mg_close_conn(nc);
       continue;
     }
-#ifdef KR_VERSION
-    if (nc->ssl != NULL && cs != NULL && cs->pcb.tcp != NULL &&
+#if MG_ENABLE_SSL
+    if ((nc->flags & MG_F_SSL) && cs != NULL && cs->pcb.tcp != NULL &&
         cs->pcb.tcp->state == ESTABLISHED) {
       if (((nc->flags & MG_F_WANT_WRITE) || nc->send_mbuf.len > 0) &&
           cs->pcb.tcp->snd_buf > 0) {
