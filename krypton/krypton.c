@@ -4595,6 +4595,9 @@ PEM *pem_load(const char *fn, pem_filter_fn flt, void *flt_arg) {
     if (pb == buf) {
       if (!fgets(buf, sizeof(buf), f)) break;
       lb = buf;
+      le = strchr(buf, '\n');
+      /* Ignore extra-long lines, they can't contain PEM data anyway. */
+      if (le == NULL) continue;
     } else {
       if (*lb == '\0') break;
     }
