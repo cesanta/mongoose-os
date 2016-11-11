@@ -1,8 +1,12 @@
 # arch: PLATFORM   # possible values for PLATFORM: esp8266 cc3200
 version: 1.0
-skeleton_version: 2016-11-10
+skeleton_version: 2016-11-11
 sources:
   - src
 filesystem:
   - fs
+# If you need some files outside of the dirs indicated in "sources" and
+# "filesystem" to be uploaded during the remote build, indicate them
+# in extra_files.
+extra_files:
 build_vars:
