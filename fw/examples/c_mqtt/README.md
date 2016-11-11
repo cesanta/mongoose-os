@@ -13,7 +13,7 @@ miot config-set -port /dev/ttyUSB0 mqtt.broker=HOST:PORT
 - In Amazon IoT Console create a thing, attach certificate and policy to it,
 - Download the thing certificate, a private key and CA certificate,
 - Find thing MQTT endpoint (in Amazon IoT console),
-- Build the example.
+- Build the example
 ```
 $ miot build --local --repo <path to cloned repo> --arch <esp8266 or cc3200>
 ```
