@@ -320,3 +320,20 @@ int mg_gpio_intr_set(int pin, enum gpio_int_mode type) {
 
   return 0;
 }
+
+/* From gpio_register.h */
+#define PERIPHS_GPIO_BASEADDR 0x60000300
+#define GPIO_IN_ADDRESS 0x18
+#define GPIO_STRAPPING 0x0000ffff
+#define GPIO_STRAPPING_S 16
+
+/* You'd think pins would map the same way as input, but no. GPIO0 is bit 1. */
+#define GPIO_STRAPPING_PIN_0 0x2
+
+bool esp_strapping_to_bootloader() {
+  uint32_t strapping_v =
+      (READ_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_IN_ADDRESS) >>
+       GPIO_STRAPPING_S) &
+      GPIO_STRAPPING;
+  return (strapping_v & GPIO_STRAPPING_PIN_0) == 0; /* GPIO0 is strapped to 0 */
+}

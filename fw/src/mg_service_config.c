@@ -15,6 +15,10 @@
 #include "fw/src/mg_utils.h"
 #include "fw/src/mg_wifi.h"
 
+#if CS_PLATFORM == CS_P_ESP8266
+#include "fw/platforms/esp8266/user/esp_gpio.h"
+#endif
+
 #define MG_CONFIG_GET_CMD "/v1/Config.Get"
 #define MG_CONFIG_SET_CMD "/v1/Config.Set"
 #define MG_CONFIG_GET_NETWORK_STATUS_CMD "/v1/Config.GetNetworkStatus"
@@ -141,8 +145,21 @@ static void mg_config_save_handler(struct clubby_request_info *ri, void *cb_arg,
   }
 
   json_scanf(args.p, args.len, "{reboot: %B}", &reboot);
-
-  clubby_send_responsef(ri, NULL);
+#if CS_PLATFORM == CS_P_ESP8266
+  if (reboot && esp_strapping_to_bootloader()) {
+    /*
+     * This is the first boot after flashing. If we reboot now, we're going to
+     * the boot loader and it will appear as if the fw is not booting.
+     * This is very confusing, so we ask the user to reboot.
+     */
+    clubby_send_errorf(ri, 418,
+                       "configuration has been saved but manual device reset "
+                       "is required. For details, see https://TODO/TODO");
+  } else
+#endif
+  {
+    clubby_send_responsef(ri, NULL);
+  }
   ri = NULL;
 
   if (reboot) {

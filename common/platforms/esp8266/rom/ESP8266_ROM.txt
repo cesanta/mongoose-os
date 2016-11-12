@@ -1449,6 +1449,8 @@ Disassembly of section .text:
 40000fcc <_s_ets_banner>:
 40000fcc:	ffd674        	excw
 40000fcf:	3f          	.byte 0x3f
+
+40000fd0 <_s_format_s_s>:
 40000fd0:	d6b8      	l32i.n	a11, a6, 52
 40000fd2:	ff          	.byte 0xff
 40000fd3:	3f          	.byte 0x3f
@@ -1488,29 +1490,31 @@ Disassembly of section .text:
 40001004:	0020c0        	memw
 40001007:	462c02        	l32i	a0, a12, 0x118
 4000100a:	250000        	extui	a0, a0, 16, 3
-4000100d:	336026        	beqi	a0, 6, 40001044 <main+0x58>
+4000100d:	336026        	beqi	a0, 6, 40001044 <_l_boot_mode_6>
 40001010:	0020c0        	memw
 40001013:	462c32        	l32i	a3, a12, 0x118
 40001016:	253030        	extui	a3, a3, 16, 3
 40001019:	f9c332        	addi	a3, a3, -7
-4000101c:	128316        	beqz	a3, 40001148 <_l_rr_1_or_2+0x27>
+4000101c:	128316        	beqz	a3, 40001148 <_l_boot_mode_7>
 4000101f:	0020c0        	memw
 40001022:	462c42        	l32i	a4, a12, 0x118
 40001025:	254040        	extui	a4, a4, 16, 3
 40001028:	fcc442        	addi	a4, a4, -4
-4000102b:	121416        	beqz	a4, 40001150 <_l_rr_1_or_2+0x2f>
+4000102b:	121416        	beqz	a4, 40001150 <_l_boot_mode_4>
 4000102e:	0020c0        	memw
 40001031:	462c52        	l32i	a5, a12, 0x118
 40001034:	255050        	extui	a5, a5, 16, 3
-40001037:	0f5566        	bnei	a5, 5, 4000104a <_l_boot_mode_not_5>
+40001037:	0f5566        	bnei	a5, 5, 4000104a <_l_boot_mode_0_1_2_3>
 4000103a:	03a022        	movi	a2, 3
 4000103d:	0463c5        	call0	4000567c <sip_init_attach>
-40001040:	000186        	j	4000104a <_l_boot_mode_not_5>
-40001043:	a02200        	addx4	a2, a2, a0
-40001046:	634500        	excw
-40001049:	594504        	excw
+40001040:	000186        	j	4000104a <_l_boot_mode_0_1_2_3>
+	...
 
-4000104a <_l_boot_mode_not_5>:
+40001044 <_l_boot_mode_6>:
+40001044:	00a022        	movi	a2, 0
+40001047:	046345        	call0	4000567c <sip_init_attach>
+
+4000104a <_l_boot_mode_0_1_2_3>:
 4000104a:	015945        	call0	400025e0 <rtc_get_reset_reason>
 4000104d:	024d      	mov.n	a4, a2
 4000104f:	02dd      	mov.n	a13, a2
@@ -1524,15 +1528,21 @@ Disassembly of section .text:
 40001066:	256d60        	extui	a6, a6, 29, 3
 40001069:	014605        	call0	400024cc <ets_printf>
 4000106c:	ffd301        	l32r	a0, 40000fb8 <_p_user_start>
-4000106f:	023df6        	bgeui	a13, 3, 40001075 <_l_boot_mode_not_5+0x2b>
-40001072:	0abd56        	bnez	a13, 40001121 <_l_rr_1_or_2>
-40001075:	113d26        	beqi	a13, 3, 4000108a <_l_boot_mode_not_5+0x40>
+4000106f:	023df6        	bgeui	a13, 3, 40001075 <_l_rst_cause_ge_3>
+40001072:	0abd56        	bnez	a13, 40001121 <_l_rst_cause_1_2>
+
+40001075 <_l_rst_cause_ge_3>:
+40001075:	113d26        	beqi	a13, 3, 4000108a <_l_rst_cause_3_soft_wdt>
 40001078:	fccd62        	addi	a6, a13, -4
 4000107b:	099616        	beqz	a6, 40001118 <_l_wdt_reset>
-4000107e:	027db6        	bltui	a13, 7, 40001084 <_l_boot_mode_not_5+0x3a>
-40001081:	002ac6        	j	40001130 <_l_rr_1_or_2+0xf>
-40001084:	025df6        	bgeui	a13, 5, 4000108a <_l_boot_mode_not_5+0x40>
-40001087:	002946        	j	40001130 <_l_rr_1_or_2+0xf>
+4000107e:	027db6        	bltui	a13, 7, 40001084 <_l_rst_cause_ge_3_lt_7>
+40001081:	002ac6        	j	40001130 <_l_rst_cause_unknown>
+
+40001084 <_l_rst_cause_ge_3_lt_7>:
+40001084:	025df6        	bgeui	a13, 5, 4000108a <_l_rst_cause_3_soft_wdt>
+40001087:	002946        	j	40001130 <_l_rst_cause_unknown>
+
+4000108a <_l_rst_cause_3_soft_wdt>:
 4000108a:	0020c0        	memw
 4000108d:	462c72        	l32i	a7, a12, 0x118
 40001090:	257070        	extui	a7, a7, 16, 3
@@ -1547,7 +1557,7 @@ Disassembly of section .text:
 400010a8 <_l_load_from_flash>:
 400010a8:	0025c5        	call0	40001308 <_x_load_from_flash>
 400010ab:	00f216        	beqz	a2, 400010be <_l_run_user_code>
-400010ae:	ffc821        	l32r	a2, 40000fd0 <_s_ets_banner+0x4>
+400010ae:	ffc821        	l32r	a2, 40000fd0 <_s_format_s_s>
 400010b1:	ffc831        	l32r	a3, 40000fd4 <_s_ets_main_c>
 400010b4:	b5a042        	movi	a4, 181
 400010b7:	014145        	call0	400024cc <ets_printf>
@@ -1596,26 +1606,32 @@ Disassembly of section .text:
 4000111b:	201110        	or	a1, a1, a1
 4000111e:	013ac5        	call0	400024cc <ets_printf>
 
-40001121 <_l_rr_1_or_2>:
+40001121 <_l_rst_cause_1_2>:
 40001121:	ffa521        	l32r	a2, 40000fb8 <_p_user_start>
-40001124:	000845        	call0	400011ac <_x_unk11ac>
+40001124:	000845        	call0	400011ac <_x_boot2>
 40001127:	ffa401        	l32r	a0, 40000fb8 <_p_user_start>
-4000112a:	ffd706        	j	4000108a <_l_boot_mode_not_5+0x40>
+4000112a:	ffd706        	j	4000108a <_l_rst_cause_3_soft_wdt>
 4000112d:	000000        	ill
+
+40001130 <_l_rst_cause_unknown>:
 40001130:	ffae21        	l32r	a2, 40000fe8 <_s_unk_reset>
 40001133:	013985        	call0	400024cc <ets_printf>
-40001136:	ffa621        	l32r	a2, 40000fd0 <_s_ets_banner+0x4>
+40001136:	ffa621        	l32r	a2, 40000fd0 <_s_format_s_s>
 40001139:	ffa631        	l32r	a3, 40000fd4 <_s_ets_main_c>
 4000113c:	bba042        	movi	a4, 187
 4000113f:	0138c5        	call0	400024cc <ets_printf>
-40001142:	ffff06        	j	40001142 <_l_rr_1_or_2+0x21>
+40001142:	ffff06        	j	40001142 <_l_rst_cause_unknown+0x12>
 40001145:	000000        	ill
+
+40001148 <_l_boot_mode_7>:
 40001148:	120c      	movi.n	a2, 1
 4000114a:	045305        	call0	4000567c <sip_init_attach>
-4000114d:	ffbe46        	j	4000104a <_l_boot_mode_not_5>
+4000114d:	ffbe46        	j	4000104a <_l_boot_mode_0_1_2_3>
+
+40001150 <_l_boot_mode_4>:
 40001150:	220c      	movi.n	a2, 2
 40001152:	045285        	call0	4000567c <sip_init_attach>
-40001155:	ffbc46        	j	4000104a <_l_boot_mode_not_5>
+40001155:	ffbc46        	j	4000104a <_l_boot_mode_0_1_2_3>
 40001158:	000000        	ill
 	...
 
@@ -1647,16 +1663,23 @@ Disassembly of section .text:
 40001199:	000000        	ill
 
 4000119c <_s_waiting_for_host>:
-4000119c:	d6ec      	bnez.n	a6, 400011cd <_x_unk11ac+0x21>
+4000119c:	d6ec      	bnez.n	a6, 400011cd <_x_boot2+0x21>
 4000119e:	ff          	.byte 0xff
 4000119f:	3f          	.byte 0x3f
+
+400011a0 <_c_0x3fffa000_uart_buf>:
 400011a0:	ffa000        	excw
 400011a3:	3f          	.byte 0x3f
-400011a4:	002000        	isync
-400011a7:	000000        	ill
-400011aa:	124010        	excw
 
-400011ac <_x_unk11ac>:
+400011a4 <_c_0x2000>:
+400011a4:	002000        	isync
+	...
+
+400011a8 <_c_0x40100000>:
+400011a8:	100000        	and	a0, a0, a0
+400011ab:	c11240        	mul16u	a1, a2, a4
+
+400011ac <_x_boot2>:
 400011ac:	e0c112        	addi	a1, a1, -32
 400011af:	3109      	s32i.n	a0, a1, 12
 400011b1:	41c9      	s32i.n	a12, a1, 16
@@ -1664,52 +1687,54 @@ Disassembly of section .text:
 400011b6:	0020c0        	memw
 400011b9:	462c02        	l32i	a0, a12, 0x118
 400011bc:	1129      	s32i.n	a2, a1, 4
-400011be:	107027        	bbci	a0, 18, 400011d2 <_x_unk11ac+0x26>
+400011be:	107027        	bbci	a0, 18, 400011d2 <_l_strapping_2_eq_0>
 400011c1:	0020c0        	memw
 400011c4:	462c22        	l32i	a2, a12, 0x118
 400011c7:	100c      	movi.n	a0, 1
 400011c9:	252d20        	extui	a2, a2, 29, 3
 400011cc:	fec222        	addi	a2, a2, -2
-400011cf:	092216        	beqz	a2, 40001265 <_l_124d+0x18>
+400011cf:	092216        	beqz	a2, 40001265 <_l_boot_mode2_eq_2>
+
+400011d2 <_l_strapping_2_eq_0>:
 400011d2:	000c      	movi.n	a0, 0
 400011d4:	0020c0        	memw
 400011d7:	462c32        	l32i	a3, a12, 0x118
 400011da:	253030        	extui	a3, a3, 16, 3
 400011dd:	fdc332        	addi	a3, a3, -3
-400011e0:	0cc316        	beqz	a3, 400012b0 <_l_setup_uart+0x36>
+400011e0:	0cc316        	beqz	a3, 400012b0 <_l_boot_mode_eq_3>
 400011e3:	0020c0        	memw
 400011e6:	462c42        	l32i	a4, a12, 0x118
 400011e9:	746000        	extui	a6, a0, 0, 8
 400011ec:	254040        	extui	a4, a4, 16, 3
-400011ef:	752426        	beqi	a4, 2, 40001268 <_l_124d+0x1b>
+400011ef:	752426        	beqi	a4, 2, 40001268 <_l_boot_mode_eq_2>
 400011f2:	2169      	s32i.n	a6, a1, 8
 400011f4:	0020c0        	memw
 400011f7:	462c52        	l32i	a5, a12, 0x118
 400011fa:	000c      	movi.n	a0, 0
 400011fc:	255050        	extui	a5, a5, 16, 3
-400011ff:	771526        	beqi	a5, 1, 4000127a <_l_setup_uart>
+400011ff:	771526        	beqi	a5, 1, 4000127a <_l_boot_mode_eq_1>
 40001202:	0020c0        	memw
 40001205:	462c72        	l32i	a7, a12, 0x118
-40001208:	177727        	bbci	a7, 18, 40001223 <_x_unk11ac+0x77>
+40001208:	177727        	bbci	a7, 18, 40001223 <_l_strapping_2_eq_0+0x51>
 4000120b:	0020c0        	memw
 4000120e:	462c82        	l32i	a8, a12, 0x118
 40001211:	0020f0        	nop
 40001214:	258d80        	extui	a8, a8, 29, 3
-40001217:	082826        	beqi	a8, 2, 40001223 <_x_unk11ac+0x77>
+40001217:	082826        	beqi	a8, 2, 40001223 <_l_strapping_2_eq_0+0x51>
 4000121a:	ffe021        	l32r	a2, 4000119c <_s_waiting_for_host>
 4000121d:	012ac5        	call0	400024cc <ets_printf>
 40001220:	01a002        	movi	a0, 1
 40001223:	0020c0        	memw
 40001226:	462c92        	l32i	a9, a12, 0x118
-40001229:	0e7927        	bbci	a9, 18, 4000123b <_x_unk11ac+0x8f>
+40001229:	0e7927        	bbci	a9, 18, 4000123b <_l_strapping_2_eq_0+0x69>
 4000122c:	0020c0        	memw
 4000122f:	462ca2        	l32i	a10, a12, 0x118
 40001232:	006102        	s32i	a0, a1, 0
 40001235:	25ada0        	extui	a10, a10, 29, 3
-40001238:	552a26        	beqi	a10, 2, 40001291 <_l_setup_uart+0x17>
+40001238:	552a26        	beqi	a10, 2, 40001291 <_l_setup_uart>
 4000123b:	0e2066        	bnei	a0, 2, 4000124d <_l_124d>
-4000123e:	ffd821        	l32r	a2, 400011a0 <_s_waiting_for_host+0x4>
-40001241:	ffd831        	l32r	a3, 400011a4 <_s_waiting_for_host+0x8>
+4000123e:	ffd821        	l32r	a2, 400011a0 <_c_0x3fffa000_uart_buf>
+40001241:	ffd831        	l32r	a3, 400011a4 <_c_0x2000>
 40001244:	1148      	l32i.n	a4, a1, 4
 40001246:	021205        	call0	40003368 <UartDwnLdProc>
 40001249:	0000c6        	j	40001250 <_l_124d+0x3>
@@ -1725,9 +1750,13 @@ Disassembly of section .text:
 4000125e:	3108      	l32i.n	a0, a1, 12
 40001260:	20c112        	addi	a1, a1, 32
 40001263:	f00d      	ret.n
-40001265:	ffdac6        	j	400011d4 <_x_unk11ac+0x28>
+
+40001265 <_l_boot_mode2_eq_2>:
+40001265:	ffdac6        	j	400011d4 <_l_strapping_2_eq_0+0x2>
+
+40001268 <_l_boot_mode_eq_2>:
 40001268:	1108      	l32i.n	a0, a1, 4
-4000126a:	ffcfc1        	l32r	a12, 400011a8 <_s_waiting_for_host+0xc>
+4000126a:	ffcfc1        	l32r	a12, 400011a8 <_c_0x40100000>
 4000126d:	00c9      	s32i.n	a12, a0, 0
 4000126f:	41c8      	l32i.n	a12, a1, 16
 40001271:	3108      	l32i.n	a0, a1, 12
@@ -1735,7 +1764,7 @@ Disassembly of section .text:
 40001276:	f00d      	ret.n
 	...
 
-4000127a <_l_setup_uart>:
+4000127a <_l_boot_mode_eq_1>:
 4000127a:	022122        	l32i	a2, a1, 8
 4000127d:	00a032        	movi	a3, 0
 40001280:	026a05        	call0	40003924 <uart_baudrate_detect>
@@ -1743,7 +1772,9 @@ Disassembly of section .text:
 40001286:	022122        	l32i	a2, a1, 8
 40001289:	0274c5        	call0	400039d8 <uart_div_modify>
 4000128c:	200c      	movi.n	a0, 2
-4000128e:	ffdc06        	j	40001202 <_x_unk11ac+0x56>
+4000128e:	ffdc06        	j	40001202 <_l_strapping_2_eq_0+0x30>
+
+40001291 <_l_setup_uart>:
 40001291:	022122        	l32i	a2, a1, 8
 40001294:	0277c5        	call0	40003a14 <Uart_Init>
 40001297:	2128      	l32i.n	a2, a1, 8
@@ -1751,31 +1782,34 @@ Disassembly of section .text:
 4000129c:	022c      	movi.n	a2, 32
 4000129e:	ffd085        	call0	40000fa8 <ets_isr_unmask>
 400012a1:	0138      	l32i.n	a3, a1, 0
-400012a3:	e39c      	beqz.n	a3, 400012c5 <_l_setup_uart+0x4b>
+400012a3:	e39c      	beqz.n	a3, 400012c5 <_l_boot_mode_eq_3+0x15>
 400012a5:	022c      	movi.n	a2, 32
 400012a7:	ffcf05        	call0	40000f98 <ets_isr_mask>
 400012aa:	0108      	l32i.n	a0, a1, 0
-400012ac:	ffe2c6        	j	4000123b <_x_unk11ac+0x8f>
-400012af:	390500        	excw
-400012b2:	210203        	excw
-400012b5:	215203        	excw
-400012b8:	a04201        	l32r	a0, 3ffe93c0 <flashchip-0x13354>
-400012bb:	41c800        	srli	a12, a0, 8
+400012ac:	ffe2c6        	j	4000123b <_l_strapping_2_eq_0+0x69>
+	...
+
+400012b0 <_l_boot_mode_eq_3>:
+400012b0:	033905        	call0	40004644 <spi_flash_attach>
+400012b3:	032102        	l32i	a0, a1, 12
+400012b6:	012152        	l32i	a5, a1, 4
+400012b9:	00a042        	movi	a4, 0
+400012bc:	41c8      	l32i.n	a12, a1, 16
 400012be:	0549      	s32i.n	a4, a5, 0
 400012c0:	20c112        	addi	a1, a1, 32
 400012c3:	f00d      	ret.n
 400012c5:	01f685        	call0	40003230 <UartConnCheck>
 400012c8:	746020        	extui	a6, a2, 0, 8
 400012cb:	006162        	s32i	a6, a1, 0
-400012ce:	fd3656        	bnez	a6, 400012a5 <_l_setup_uart+0x2b>
+400012ce:	fd3656        	bnez	a6, 400012a5 <_l_setup_uart+0x14>
 400012d1:	043945        	call0	40005668 <sip_get_state>
 400012d4:	fec292        	addi	a9, a2, -2
 400012d7:	01a082        	movi	a8, 1
 400012da:	070c      	movi.n	a7, 0
 400012dc:	837890        	moveqz	a7, a8, a9
 400012df:	0179      	s32i.n	a7, a1, 0
-400012e1:	fe0716        	beqz	a7, 400012c5 <_l_setup_uart+0x4b>
-400012e4:	ffef46        	j	400012a5 <_l_setup_uart+0x2b>
+400012e1:	fe0716        	beqz	a7, 400012c5 <_l_boot_mode_eq_3+0x15>
+400012e4:	ffef46        	j	400012a5 <_l_setup_uart+0x14>
 400012e7:	d70000        	excw
 400012ea:	ff          	.byte 0xff
 400012eb:	3f          	.byte 0x3f
@@ -1862,7 +1896,7 @@ Disassembly of section .text:
 400013b5:	c179      	s32i.n	a7, a1, 48
 400013b7:	1521e2        	l32i	a14, a1, 84
 400013ba:	20f330        	or	a15, a3, a3
-400013bd:	ffca21        	l32r	a2, 400012e8 <_l_setup_uart+0x6e>
+400013bd:	ffca21        	l32r	a2, 400012e8 <_l_boot_mode_eq_3+0x38>
 400013c0:	0c2162        	l32i	a6, a1, 48
 400013c3:	10a052        	movi	a5, 16
 400013c6:	0e4d      	mov.n	a4, a14
@@ -1969,7 +2003,7 @@ Disassembly of section .text:
 400014d0:	10c772        	addi	a7, a7, 16
 400014d3:	136172        	s32i	a7, a1, 76
 400014d6:	9138      	l32i.n	a3, a1, 36
-400014d8:	ff8521        	l32r	a2, 400012ec <_l_setup_uart+0x72>
+400014d8:	ff8521        	l32r	a2, 400012ec <_l_boot_mode_eq_3+0x3c>
 400014db:	743030        	extui	a3, a3, 0, 8
 400014de:	7139      	s32i.n	a3, a1, 28
 400014e0:	00fe85        	call0	400024cc <ets_printf>
@@ -2007,7 +2041,7 @@ Disassembly of section .text:
 40001533:	30cc30        	xor	a12, a12, a3
 40001536:	74c0c0        	extui	a12, a12, 0, 8
 40001539:	d99e07        	bne	a14, a0, 40001516 <_x_load_from_flash+0x20e>
-4000153c:	ff6d21        	l32r	a2, 400012f0 <_l_setup_uart+0x76>
+4000153c:	ff6d21        	l32r	a2, 400012f0 <_l_boot_mode_eq_3+0x40>
 4000153f:	0c3d      	mov.n	a3, a12
 40001541:	00f885        	call0	400024cc <ets_printf>
 40001544:	8148      	l32i.n	a4, a1, 32
@@ -2119,7 +2153,7 @@ Disassembly of section .text:
 40001660:	ff7706        	j	40001440 <_x_load_from_flash+0x138>
 40001663:	242100        	extui	a2, a0, 1, 3
 40001666:	ff          	.byte 0xff
-40001667:	ff2431        	l32r	a3, 400012f8 <_l_setup_uart+0x7e>
+40001667:	ff2431        	l32r	a3, 400012f8 <_l_boot_mode_eq_3+0x48>
 4000166a:	00e605        	call0	400024cc <ets_printf>
 4000166d:	01a022        	movi	a2, 1
 40001670:	0f21c2        	l32i	a12, a1, 60
@@ -2188,7 +2222,7 @@ Disassembly of section .text:
 40001719:	c169      	s32i.n	a6, a1, 48
 4000171b:	ff6586        	j	400014b5 <_x_load_from_flash+0x1ad>
 4000171e:	000000        	ill
-40001721:	fef621        	l32r	a2, 400012fc <_l_setup_uart+0x82>
+40001721:	fef621        	l32r	a2, 400012fc <_l_boot_mode_eq_3+0x4c>
 40001724:	c138      	l32i.n	a3, a1, 48
 40001726:	0f5d      	mov.n	a5, a15
 40001728:	004d      	mov.n	a4, a0
@@ -2218,13 +2252,13 @@ Disassembly of section .text:
 40001768:	ff8e06        	j	400015a4 <_x_load_from_flash+0x29c>
 4000176b:	91e900        	excw
 4000176e:	ff38c6        	j	40001455 <_x_load_from_flash+0x14d>
-40001771:	fee321        	l32r	a2, 40001300 <_l_setup_uart+0x86>
+40001771:	fee321        	l32r	a2, 40001300 <_l_boot_mode_eq_3+0x50>
 40001774:	203cc0        	or	a3, a12, a12
 40001777:	00d545        	call0	400024cc <ets_printf>
 4000177a:	0f0162        	l8ui	a6, a1, 15
 4000177d:	c066c0        	sub	a6, a6, a12
 40001780:	e35616        	beqz	a6, 400015b9 <_x_load_from_flash+0x2b1>
-40001783:	fee021        	l32r	a2, 40001304 <_l_setup_uart+0x8a>
+40001783:	fee021        	l32r	a2, 40001304 <_l_boot_mode_eq_3+0x54>
 40001786:	00d445        	call0	400024cc <ets_printf>
 40001789:	01a022        	movi	a2, 1
 4000178c:	f1c8      	l32i.n	a12, a1, 60
@@ -5032,8 +5066,8 @@ Disassembly of section .text:
 40003239:	026102        	s32i	a0, a1, 8
 4000323c:	026316        	beqz	a3, 40003266 <UartConnCheck+0x36>
 4000323f:	231326        	beqi	a3, 1, 40003266 <UartConnCheck+0x36>
-40003242:	f7d721        	l32r	a2, 400011a0 <_s_waiting_for_host+0x4>
-40003245:	f7d731        	l32r	a3, 400011a4 <_s_waiting_for_host+0x8>
+40003242:	f7d721        	l32r	a2, 400011a0 <_c_0x3fffa000_uart_buf>
+40003245:	f7d731        	l32r	a3, 400011a4 <_c_0x2000>
 40003248:	140c      	movi.n	a4, 1
 4000324a:	00c605        	call0	40003eac <RcvMsg>
 4000324d:	c2cc      	bnez.n	a2, 4000325d <UartConnCheck+0x2d>
@@ -7046,7 +7080,7 @@ Disassembly of section .text:
 40004588:	fdc292        	addi	a9, a2, -3
 4000458b:	0ad916        	beqz	a9, 4000463c <SPIFlashModeConfig+0xd4>
 4000458e:	fcc2b2        	addi	a11, a2, -4
-40004591:	f304a1        	l32r	a10, 400011a4 <_s_waiting_for_host+0x8>
+40004591:	f304a1        	l32r	a10, 400011a4 <_c_0x2000>
 40004594:	060c      	movi.n	a6, 0
 40004596:	836ab0        	moveqz	a6, a10, a11
 40004599:	f2f071        	l32r	a7, 4000115c <_c_0x60000600>
@@ -7392,7 +7426,7 @@ Disassembly of section .text:
 4000490c:	612226        	beqi	a2, 2, 40004971 <SPIReadModeCnfig+0x85>
 4000490f:	663226        	beqi	a2, 3, 40004979 <SPIReadModeCnfig+0x8d>
 40004912:	fcc282        	addi	a8, a2, -4
-40004915:	f22371        	l32r	a7, 400011a4 <_s_waiting_for_host+0x8>
+40004915:	f22371        	l32r	a7, 400011a4 <_c_0x2000>
 40004918:	060c      	movi.n	a6, 0
 4000491a:	836780        	moveqz	a6, a7, a8
 4000491d:	0169      	s32i.n	a6, a1, 0

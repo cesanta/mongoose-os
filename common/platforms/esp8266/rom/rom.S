@@ -13,25 +13,41 @@ PROVIDE(SPI_chip_erase, 0x40004080)
 PROVIDE(SPIFlashModeConfig, 0x40004568)
 
 PROVIDE(_c_0x80000000, 0x400003a4)
-PROVIDE(_p_user_start, 0x40000fb8)
+PROVIDE(_p_user_start, 0x40000fb8)  // 0x3fffdcd0
 PROVIDE(_c_0x60000200, 0x40000fc4)
 PROVIDE(_s_ets_build, 0x40000fc8)   // Jan  8 2013
 PROVIDE(_s_ets_banner, 0x40000fcc)  // ets %s,rst cause:%d, boot mode:(%d,%d)
+PROVIDE(_s_format_s_s, 0x40000fd0)  // %s %s
 PROVIDE(_s_ets_main_c, 0x40000fd4)  // ets_main.c
 PROVIDE(_s_user_code_done, 0x40000fe0)   // user code done
 PROVIDE(_s_wdt_reset, 0x40000fe4)   // wdt reset
 PROVIDE(_s_unk_reset, 0x40000fe8)   // unknown reset
-PROVIDE(_l_boot_mode_not_5, 0x4000104a)
+PROVIDE(_l_boot_mode_6, 0x40001044)
+PROVIDE(_l_boot_mode_0_1_2_3, 0x4000104a)
+PROVIDE(_l_rst_cause_ge_3, 0x40001075)
+PROVIDE(_l_rst_cause_ge_3_lt_7, 0x40001084)
+PROVIDE(_l_rst_cause_3_soft_wdt, 0x4000108a)
 PROVIDE(_l_load_from_flash, 0x400010a8)
 PROVIDE(_l_run_user_code, 0x400010be)
 PROVIDE(_l_wdt_reset, 0x40001118)
-PROVIDE(_l_rr_1_or_2, 0x40001121)
+PROVIDE(_l_rst_cause_1_2, 0x40001121)
+PROVIDE(_l_rst_cause_unknown, 0x40001130)
+PROVIDE(_l_boot_mode_7, 0x40001148)
+PROVIDE(_l_boot_mode_4, 0x40001150)
 PROVIDE(_c_0x60000600, 0x4000115c)
 PROVIDE(_s_waiting_for_host, 0x4000119c)  // waiting for host
 PROVIDE(_x_unk1160, 0x40001160)
-PROVIDE(_x_unk11ac, 0x400011ac)
+PROVIDE(_c_0x3fffa000_uart_buf, 0x400011a0)
+PROVIDE(_c_0x2000, 0x400011a4)
+PROVIDE(_c_0x40100000, 0x400011a8)  // default user_start
+PROVIDE(_x_boot2, 0x400011ac)  // arg: 0x3fffdcd0 (&user_start)
+PROVIDE(_l_strapping_2_eq_0, 0x400011d2)
 PROVIDE(_l_124d, 0x4000124d)
-PROVIDE(_l_setup_uart, 0x4000127a)
+PROVIDE(_l_boot_mode2_eq_2, 0x40001265)
+PROVIDE(_l_boot_mode_eq_2, 0x40001268)
+PROVIDE(_l_boot_mode_eq_1, 0x4000127a)
+PROVIDE(_l_setup_uart, 0x40001291)
+PROVIDE(_l_boot_mode_eq_3, 0x400012b0)
 PROVIDE(_x_load_from_flash, 0x40001308)
 PROVIDE(_c_0x00001000, 0x40001994)
 PROVIDE(_c_0xffdfffff, 0x400025dc)
