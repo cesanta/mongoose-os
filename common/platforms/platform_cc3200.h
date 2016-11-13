@@ -21,6 +21,7 @@
 #endif
 
 #define MG_NET_IF MG_NET_IF_SIMPLELINK
+#define MG_SSL_IF MG_SSL_IF_SIMPLELINK
 
 /* Only SPIFFS supports directories, SLFS does not. */
 #if defined(CC3200_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)

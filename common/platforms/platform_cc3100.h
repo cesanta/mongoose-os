@@ -16,6 +16,7 @@
 #include <time.h>
 
 #define MG_NET_IF MG_NET_IF_SIMPLELINK
+#define MG_SSL_IF MG_SSL_IF_SIMPLELINK
 
 /*
  * CC3100 SDK and STM32 SDK include headers w/out path, just like

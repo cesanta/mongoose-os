@@ -61,6 +61,10 @@
 #define MG_NET_IF_LWIP_LOW_LEVEL 3
 #define MG_NET_IF_PIC32_HARMONY 4
 
+#define MG_SSL_IF_OPENSSL 1
+#define MG_SSL_IF_MBEDTLS 2
+#define MG_SSL_IF_SIMPLELINK 3
+
 #include "common/platforms/platform_unix.h"
 #include "common/platforms/platform_windows.h"
 #include "common/platforms/platform_esp8266.h"

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MG_ENABLE_SSL && MG_NET_IF == MG_NET_IF_SIMPLELINK
+#if MG_ENABLE_SSL && MG_SSL_IF == MG_SSL_IF_SIMPLELINK
 
 struct mg_ssl_if_ctx {
   char *ssl_cert;
@@ -97,4 +97,4 @@ int sl_set_ssl_opts(struct mg_connection *nc) {
   return 0;
 }
 
-#endif /* MG_ENABLE_SSL && MG_NET_IF == MG_NET_IF_SIMPLELINK */
+#endif /* MG_ENABLE_SSL && MG_SSL_IF == MG_SSL_IF_SIMPLELINK */
