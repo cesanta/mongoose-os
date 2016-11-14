@@ -11,7 +11,7 @@
 
 int cc3200_fs_init(const char *container_prefix);
 void cc3200_fs_flush(void);
-void cc3200_fs_umount();
+void cc3200_fs_umount(void);
 
 int set_errno(int e);
 

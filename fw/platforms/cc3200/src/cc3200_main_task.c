@@ -221,7 +221,6 @@ void main_task(void *arg) {
 
   while (1) {
     mongoose_poll(0);
-    cc3200_fs_flush();
     if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) == OSI_OK) {
       e.cb(e.arg);
     }

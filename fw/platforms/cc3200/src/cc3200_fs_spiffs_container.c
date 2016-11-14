@@ -11,10 +11,14 @@
 #include "fs.h"
 
 #include "common/cs_dbg.h"
+#include "fw/src/mg_hal.h"
+
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 
 #include "config.h"
 #include "spiffs_nucleus.h"
+
+#include "mongoose/mongoose.h"
 
 #define MAX_FS_CONTAINER_FNAME_LEN (MAX_FS_CONTAINER_PREFIX_LEN + 3)
 void fs_container_fname(const char *cpfx, int cidx, _u8 *fname) {
@@ -117,6 +121,7 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
       goto out_close_old;
     }
   }
+  mg_wdt_feed();
   new_fh = fs_create_container(m->cpfx, new_cidx, m->fs.cfg.phys_size);
   if (new_fh < 0) {
     r = new_fh;
@@ -163,6 +168,8 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
   m->rw = 1;
 
   r = fs_write_mount_meta(m);
+
+  m->last_write = mg_time();
 
 out_free:
   free(buf);
@@ -221,6 +228,7 @@ static s32_t failfs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   }
   r = sl_FsWrite(m->fh, addr, src, size);
   DBG(("write %d", (int) r));
+  m->last_write = mg_time();
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_WRITABLE;
 }
 

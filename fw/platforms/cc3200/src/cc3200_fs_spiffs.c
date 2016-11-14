@@ -13,6 +13,8 @@
 
 #include <common/spiffs/spiffs_nucleus.h>
 
+#include "fw/src/mg_mongoose.h"
+
 struct mount_info s_fsm;
 
 static int spiffs_err_to_errno(int r) {
@@ -198,10 +200,6 @@ int64_t mg_get_storage_free_space(void) {
   return total - used;
 }
 
-int cc3200_fs_init(const char *container_prefix) {
-  return fs_mount(container_prefix, &s_fsm);
-}
-
 void cc3200_fs_flush(void) {
   struct mount_info *m = &s_fsm;
   /*
@@ -210,6 +208,20 @@ void cc3200_fs_flush(void) {
    */
   if (!(m->valid && m->rw)) return;
   fs_close_container(m);
+}
+
+static void cc3200_fs_flush_if_inactive(void *arg) {
+  struct mount_info *m = &s_fsm;
+  if (!(m->valid && m->rw)) return;
+  double now = mg_time();
+  if (now - m->last_write > 0.5) {
+    cc3200_fs_flush();
+  }
+}
+
+int cc3200_fs_init(const char *container_prefix) {
+  mg_add_poll_cb(cc3200_fs_flush_if_inactive, NULL);
+  return fs_mount(container_prefix, &s_fsm);
 }
 
 void cc3200_fs_umount() {
