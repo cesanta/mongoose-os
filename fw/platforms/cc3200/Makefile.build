@@ -26,7 +26,7 @@ MG_ENABLE_UPDATER_CLUBBY ?= 0
 MG_ENABLE_DNS_SD ?= 0
 MG_ENABLE_MQTT ?= 1
 
-MG_DEBUG_UART ?= 0
+MIOT_DEBUG_UART ?= 0
 
 V7_FREEZE ?= 1
 V7_NO_COMPILER ?= 0
@@ -169,32 +169,32 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
 .PHONY: all clean flash
 
-MIOT_SRCS = mg_init.c \
-            mg_mongoose.c \
-            mg_timers_mongoose.c \
-            mg_v7_ext.c \
-            mg_wifi.c \
-            mg_config.c mg_sys_config.c \
+MIOT_SRCS = miot_init.c \
+            miot_mongoose.c \
+            miot_timers_mongoose.c \
+            miot_v7_ext.c \
+            miot_wifi.c \
+            miot_config.c miot_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             cs_crc32.c \
-            cs_frbuf.c mg_utils.c \
-            mg_console.c \
-            cs_rbuf.c mg_uart.c \
+            cs_frbuf.c miot_utils.c \
+            miot_console.c \
+            cs_rbuf.c miot_uart.c \
             boot.c mongoose.c frozen.c json_utils.c
 ifeq "$(MG_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
-             mg_clubby_js.c \
-             mg_config_js.c \
-             mg_console_js.c \
-             mg_gpio_js.c \
-             mg_http_js.c \
-             mg_i2c_js.c \
-             mg_init_js.c \
-             mg_prompt.c \
-             mg_sys_config_js.c \
-             mg_timers_js.c \
-             mg_uart_js.c \
-             mg_wifi_js.c
+             miot_clubby_js.c \
+             miot_config_js.c \
+             miot_console_js.c \
+             miot_gpio_js.c \
+             miot_http_js.c \
+             miot_i2c_js.c \
+             miot_init_js.c \
+             miot_prompt.c \
+             miot_sys_config_js.c \
+             miot_timers_js.c \
+             miot_uart_js.c \
+             miot_wifi_js.c
 endif
 
 VPATH += $(MIOT_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/clubby
@@ -225,8 +225,8 @@ SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 MIOT_SRCS += $(notdir $(wildcard $(MIOT_CC3200_SRC_PATH)/*.c))
 APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-MIOT_CFLAGS = -DMG_APP=\"$(APP)\" -Dcc3200 -DCC3200_FS_SPIFFS -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
-              -DMG_DEBUG_UART=$(MG_DEBUG_UART) $(SDK_CFLAGS) \
+MIOT_CFLAGS = -DMIOT_APP=\"$(APP)\" -Dcc3200 -DCC3200_FS_SPIFFS -DSPIFFS_HAL_CALLBACK_EXTRA=1 \
+              -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 ifeq "$(MG_ENABLE_JS)" "1"

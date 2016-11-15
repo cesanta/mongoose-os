@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "fw/src/mg_uart.h"
+#include "fw/src/miot_uart.h"
 
 #include "osapi.h"
 #include "os_type.h"
@@ -30,7 +30,7 @@
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
 
-static struct mg_uart_state *s_us[2];
+static struct miot_uart_state *s_us[2];
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
 IRAM int esp_uart_cts(int uart_no) {
@@ -53,7 +53,7 @@ IRAM static void tx_byte(int uart_no, uint8_t byte) {
   WRITE_PERI_REG(UART_FIFO(uart_no), byte);
 }
 
-IRAM NOINSTR static void esp_handle_uart_int(struct mg_uart_state *us) {
+IRAM NOINSTR static void esp_handle_uart_int(struct miot_uart_state *us) {
   const int uart_no = us->uart_no;
   /* Since both UARTs use the same int, we need to apply the mask manually. */
   const unsigned int int_st = READ_PERI_REG(UART_INT_ST(uart_no)) &
@@ -71,7 +71,7 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mg_uart_state *us) {
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
     /* Wake up the processor and disable TX and RX ints until it runs. */
     WRITE_PERI_REG(UART_INT_ENA(uart_no), UART_INFO_INTS);
-    mg_uart_schedule_dispatcher(uart_no);
+    miot_uart_schedule_dispatcher(uart_no);
   }
   WRITE_PERI_REG(UART_INT_CLR(uart_no), int_st);
 }
@@ -84,7 +84,7 @@ IRAM NOINSTR static void esp_uart_isr(void *arg) {
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-IRAM void mg_uart_dev_dispatch_rx_top(struct mg_uart_state *us) {
+IRAM void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
   int uart_no = us->uart_no;
   cs_rbuf_t *rxb = &us->rx_buf;
   uint32_t rxn = 0;
@@ -128,7 +128,7 @@ IRAM void mg_uart_dev_dispatch_rx_top(struct mg_uart_state *us) {
   }
 }
 
-IRAM void mg_uart_dev_dispatch_tx_top(struct mg_uart_state *us) {
+IRAM void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
   int uart_no = us->uart_no;
   cs_rbuf_t *txb = &us->tx_buf;
   uint32_t txn = 0;
@@ -151,7 +151,7 @@ IRAM void mg_uart_dev_dispatch_tx_top(struct mg_uart_state *us) {
   }
 }
 
-IRAM void mg_uart_dev_dispatch_bottom(struct mg_uart_state *us) {
+IRAM void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
   cs_rbuf_t *rxb = &us->rx_buf;
   cs_rbuf_t *txb = &us->tx_buf;
   uint32_t int_ena = UART_INFO_INTS;
@@ -161,7 +161,7 @@ IRAM void mg_uart_dev_dispatch_bottom(struct mg_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA(us->uart_no), int_ena);
 }
 
-bool esp_uart_validate_config(struct mg_uart_config *c) {
+bool esp_uart_validate_config(struct miot_uart_config *c) {
   if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
       c->rx_fifo_full_thresh < 1 || c->rx_fifo_full_thresh > 127 ||
       (c->rx_fc_ena && (c->rx_fifo_fc_thresh < c->rx_fifo_full_thresh)) ||
@@ -172,8 +172,8 @@ bool esp_uart_validate_config(struct mg_uart_config *c) {
   return true;
 }
 
-bool mg_uart_dev_init(struct mg_uart_state *us) {
-  struct mg_uart_config *cfg = us->cfg;
+bool miot_uart_dev_init(struct miot_uart_state *us) {
+  struct miot_uart_config *cfg = us->cfg;
   if (!esp_uart_validate_config(cfg)) return false;
 
   ETS_INTR_DISABLE(ETS_UART_INUM);
@@ -230,12 +230,12 @@ bool mg_uart_dev_init(struct mg_uart_state *us) {
   return true;
 }
 
-void mg_uart_dev_deinit(struct mg_uart_state *us) {
+void miot_uart_dev_deinit(struct miot_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA(us->uart_no), 0);
   s_us[us->uart_no] = NULL;
 }
 
-void mg_uart_dev_set_rx_enabled(struct mg_uart_state *us, bool enabled) {
+void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
   int uart_no = us->uart_no;
   if (enabled) {
     if (us->cfg->rx_fc_ena) {

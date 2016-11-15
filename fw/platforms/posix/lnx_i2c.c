@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mg_features.h"
+#include "fw/src/miot_features.h"
 
 #if MG_ENABLE_JS && MG_ENABLE_I2C_API
 
@@ -18,8 +18,8 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "fw/src/mg_hal.h"
-#include "fw/src/mg_i2c.h"
+#include "fw/src/miot_hal.h"
+#include "fw/src/miot_i2c.h"
 #include "v7/v7.h"
 
 struct lnx_i2c_connection {
@@ -143,7 +143,7 @@ void i2c_close(i2c_connection c) {
 }
 
 /* HAL functions */
-enum v7_err mg_i2c_create(struct v7 *v7, i2c_connection *res) {
+enum v7_err miot_i2c_create(struct v7 *v7, i2c_connection *res) {
   enum v7_err rcode = V7_OK;
   struct lnx_i2c_connection *conn = NULL;
   v7_val_t bus_no_val = v7_arg(v7, 0);
@@ -163,7 +163,7 @@ clean:
   return rcode;
 }
 
-void mg_i2c_close(i2c_connection conn) {
+void miot_i2c_close(i2c_connection conn) {
   i2c_close(conn);
   free(conn);
 }

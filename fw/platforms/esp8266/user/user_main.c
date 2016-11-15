@@ -18,14 +18,14 @@
 #include "fw/platforms/esp8266/user/util.h"
 #include "fw/platforms/esp8266/user/esp_exc.h"
 
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_init.h"
-#include "fw/src/mg_mongoose.h"
-#include "fw/src/mg_prompt.h"
-#include "fw/src/mg_hal.h"
-#include "fw/src/mg_sys_config.h"
-#include "fw/src/mg_uart.h"
-#include "fw/src/mg_updater_common.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_init.h"
+#include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_prompt.h"
+#include "fw/src/miot_hal.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_uart.h"
+#include "fw/src/miot_updater_common.h"
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
@@ -36,7 +36,7 @@
 
 #if MG_ENABLE_JS
 #include "v7/v7.h"
-#include "fw/src/mg_init_js.h"
+#include "fw/src/miot_init_js.h"
 #endif
 
 extern const char *build_version, *build_id;
@@ -44,11 +44,11 @@ extern const char *mg_build_version, *mg_build_id;
 
 os_timer_t startcmd_timer;
 
-#ifndef MG_DEBUG_UART
-#define MG_DEBUG_UART 0
+#ifndef MIOT_DEBUG_UART
+#define MIOT_DEBUG_UART 0
 #endif
-#ifndef MG_DEBUG_UART_BAUD_RATE
-#define MG_DEBUG_UART_BAUD_RATE 115200
+#ifndef MIOT_DEBUG_UART_BAUD_RATE
+#define MIOT_DEBUG_UART_BAUD_RATE 115200
 #endif
 
 #if ESP_ENABLE_HEAP_LOG
@@ -78,21 +78,21 @@ int esp_mg_init(rboot_config *bcfg) {
    * level=LL_ERROR, then configuration is loaded this settings are overridden
    */
   {
-    struct mg_uart_config *u0cfg = mg_uart_default_config();
-#if MG_DEBUG_UART == 0
-    u0cfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
+    struct miot_uart_config *u0cfg = miot_uart_default_config();
+#if MIOT_DEBUG_UART == 0
+    u0cfg->baud_rate = MIOT_DEBUG_UART_BAUD_RATE;
 #endif
-    if (mg_uart_init(0, u0cfg, NULL, NULL) == NULL) {
-      return MG_INIT_UART_FAILED;
+    if (miot_uart_init(0, u0cfg, NULL, NULL) == NULL) {
+      return MIOT_INIT_UART_FAILED;
     }
-    struct mg_uart_config *u1cfg = mg_uart_default_config();
+    struct miot_uart_config *u1cfg = miot_uart_default_config();
     /* UART1 has no RX pin, no point in allocating a buffer. */
     u1cfg->rx_buf_size = 0;
-#if MG_DEBUG_UART == 1
-    u1cfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
+#if MIOT_DEBUG_UART == 1
+    u1cfg->baud_rate = MIOT_DEBUG_UART_BAUD_RATE;
 #endif
-    if (mg_uart_init(1, u1cfg, NULL, NULL) == NULL) {
-      return MG_INIT_UART_FAILED;
+    if (miot_uart_init(1, u1cfg, NULL, NULL) == NULL) {
+      return MIOT_INIT_UART_FAILED;
     }
 #if ESP_ENABLE_HEAP_LOG
     uart_initialized = 1;
@@ -105,13 +105,13 @@ int esp_mg_init(rboot_config *bcfg) {
   }
 
   fputc('\n', stderr);
-  if (strcmp(MG_APP, "mongoose-iot") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MG_APP, build_version, build_id));
+  if (strcmp(MIOT_APP, "mongoose-iot") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MIOT_APP, build_version, build_id));
   }
   LOG(LL_INFO,
       ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
-                mg_get_heap_size(), mg_get_free_heap_size()));
+                miot_get_heap_size(), miot_get_free_heap_size()));
   esp_print_reset_info();
 
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
@@ -122,13 +122,13 @@ int esp_mg_init(rboot_config *bcfg) {
   }
 
 #if MG_ENABLE_UPDATER
-  if (bcfg->fw_updated && mg_upd_apply_update() < 0) {
+  if (bcfg->fw_updated && miot_upd_apply_update() < 0) {
     return -2;
   }
 #endif
 
-  enum mg_init_result ir = mg_init();
-  if (ir != MG_INIT_OK) {
+  enum miot_init_result ir = mg_init();
+  if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
     return -3;
   }
@@ -136,8 +136,8 @@ int esp_mg_init(rboot_config *bcfg) {
 #if MG_ENABLE_JS
   init_v7(&bcfg);
 
-  ir = mg_init_js_all(v7);
-  if (ir != MG_INIT_OK) {
+  ir = miot_init_js_all(v7);
+  if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
     return -5;
   }
@@ -147,10 +147,10 @@ int esp_mg_init(rboot_config *bcfg) {
   }
 #endif
 
-  LOG(LL_INFO, ("Init done, RAM: %d free", mg_get_free_heap_size()));
+  LOG(LL_INFO, ("Init done, RAM: %d free", miot_get_free_heap_size()));
 
 #if MG_ENABLE_JS
-  mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
+  miot_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
 
   /*
@@ -172,7 +172,7 @@ void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
   bool success = (esp_mg_init(bcfg) == 0);
 #if MG_ENABLE_UPDATER
-  mg_upd_boot_finish(success, bcfg->is_first_boot);
+  miot_upd_boot_finish(success, bcfg->is_first_boot);
 #else
   (void) success;
 #endif

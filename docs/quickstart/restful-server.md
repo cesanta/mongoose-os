@@ -12,7 +12,7 @@ and server. In this example, we'll use HTTP server functionality.
 We'll implement a RESTful server that accepts two numbers on `/add` URI,
 and replies with the sum of these two numbers.
 
-We get the "system" mongoose instance via `mg_get_mgr()` call, then use
+We get the "system" mongoose instance via `miot_get_mgr()` call, then use
 [Mongoose API](https://docs.cesanta.com/mongoose/master/) (and there is a
 large set of
 [examples](https://github.com/cesanta/mongoose/tree/master/examples)
@@ -25,8 +25,8 @@ Copy-paste this into the `src/main.c`:
 ```c
 #include "common/cs_dbg.h"
 #include "frozen/frozen.h"
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_mongoose.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_mongoose.h"
 
 static void add_handler(struct mg_connection *c, int ev, void *ev_data) {
   if (ev == MG_EV_HTTP_REQUEST) {
@@ -50,9 +50,9 @@ static void add_handler(struct mg_connection *c, int ev, void *ev_data) {
   }
 }
 
-enum mg_app_init_result mg_app_init(void) {
-  mg_register_http_endpoint(mg_get_http_listening_conn(), "/add", add_handler);
-  return MG_APP_INIT_SUCCESS;
+enum miot_app_init_result miot_app_init(void) {
+  mg_register_http_endpoint(miot_get_http_listening_conn(), "/add", add_handler);
+  return MIOT_APP_INIT_SUCCESS;
 }
 ```
 

@@ -2,14 +2,14 @@
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_console.h"
-#include "fw/src/mg_gpio.h"
-#include "fw/src/mg_hal.h"
-#include "fw/src/mg_i2c.h"
-#include "fw/src/mg_mongoose.h"
-#include "fw/src/mg_sys_config.h"
-#include "fw/src/mg_timers.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_console.h"
+#include "fw/src/miot_gpio.h"
+#include "fw/src/miot_hal.h"
+#include "fw/src/miot_i2c.h"
+#include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_timers.h"
 
 #define LED_GPIO 10
 #define RELAY_GPIO 13
@@ -50,8 +50,8 @@ static double mc6808_read_temp(i2c_connection i2c) {
 
 static void set_heater(bool on) {
   CONSOLE_LOG(LL_INFO, ("Heater %s", (on ? "on" : "off")));
-  mg_gpio_write(LED_GPIO, (on ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW));
-  mg_gpio_write(RELAY_GPIO, (on ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW));
+  miot_gpio_write(LED_GPIO, (on ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW));
+  miot_gpio_write(RELAY_GPIO, (on ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW));
   s_heater = on;
 }
 
@@ -96,7 +96,7 @@ static void handle_debug(struct mg_connection *nc, int ev, void *ev_data) {
                         "Content-Type: text/plain\r\n"
                         "Connection: close\r\n");
   mg_printf(nc, "Time is %.2lf. Free RAM %u.\r\n", mg_time(),
-            mg_get_free_heap_size());
+            miot_get_free_heap_size());
   nc->flags |= MG_F_SEND_AND_CLOSE;
   (void) hm;
 }
@@ -128,23 +128,23 @@ static void sensor_timer_cb(void *arg) {
     mg_asprintf(&eh, 0, "Authorization: %s\r\n", get_cfg()->hsw.auth);
   }
   s_sensor_conn =
-      mg_connect_http(mg_get_mgr(), handle_sensor_conn,
+      mg_connect_http(miot_get_mgr(), handle_sensor_conn,
                       get_cfg()->hsw.sensor_data_url, eh, post_data);
   free(eh);
   free(post_data);
   (void) arg;
 }
 
-enum mg_app_init_result mg_app_init(void) {
-  mg_gpio_set_mode(LED_GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-  mg_gpio_set_mode(RELAY_GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-  mg_gpio_write(LED_GPIO, GPIO_LEVEL_LOW);
-  mg_gpio_write(RELAY_GPIO, GPIO_LEVEL_LOW);
-  mg_register_http_endpoint(mg_get_http_listening_conn(), "/heater/",
+enum miot_app_init_result miot_app_init(void) {
+  miot_gpio_set_mode(LED_GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+  miot_gpio_set_mode(RELAY_GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+  miot_gpio_write(LED_GPIO, GPIO_LEVEL_LOW);
+  miot_gpio_write(RELAY_GPIO, GPIO_LEVEL_LOW);
+  mg_register_http_endpoint(miot_get_http_listening_conn(), "/heater/",
                             handle_heater_action);
-  mg_register_http_endpoint(mg_get_http_listening_conn(), "/heater",
+  mg_register_http_endpoint(miot_get_http_listening_conn(), "/heater",
                             handle_heater);
-  mg_register_http_endpoint(mg_get_http_listening_conn(), "/debug",
+  mg_register_http_endpoint(miot_get_http_listening_conn(), "/debug",
                             handle_debug);
   s_i2c.sda_gpio = I2C_SDA_GPIO;
   s_i2c.scl_gpio = I2C_SCL_GPIO;
@@ -152,9 +152,9 @@ enum mg_app_init_result mg_app_init(void) {
 
   struct sys_config_hsw *hcfg = &get_cfg()->hsw;
   if (hcfg->sensor_report_interval_ms > 0 && hcfg->sensor_data_url != NULL) {
-    mg_set_c_timer(hcfg->sensor_report_interval_ms, true /* repeat */,
-                   sensor_timer_cb, NULL);
+    miot_set_c_timer(hcfg->sensor_report_interval_ms, true /* repeat */,
+                     sensor_timer_cb, NULL);
   }
 
-  return MG_APP_INIT_SUCCESS;
+  return MIOT_APP_INIT_SUCCESS;
 }

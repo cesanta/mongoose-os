@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/mg_debug.h"
+#include "fw/src/miot_debug.h"
 
-int mg_debug_redirect(enum debug_mode mode) {
+int miot_debug_redirect(enum debug_mode mode) {
   (void) mode;
   return -1;
 }

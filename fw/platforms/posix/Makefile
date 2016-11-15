@@ -39,42 +39,42 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
               -DV7_ENABLE_ENTITY_IDS
 
-MIOT_POSIX_FEATURES ?= -DMG_PROMPT_DISABLE_ECHO
+MIOT_POSIX_FEATURES ?= -DMIOT_PROMPT_DISABLE_ECHO
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
 
 
 INCLUDES = $(MIOT_PATH) $(SRC_PATH) $(BUILD_DIR)
-MIOT_SRCS = $(notdir $(wildcard *.c)) mg_init.c  \
-            mongoose.c frozen.c mg_mongoose.c \
-            mg_prompt.c mg_timers_mongoose.c mg_wifi.c \
-            mg_config.c mg_sys_config.c \
+MIOT_SRCS = $(notdir $(wildcard *.c)) miot_init.c  \
+            mongoose.c frozen.c miot_mongoose.c \
+            miot_prompt.c miot_timers_mongoose.c miot_wifi.c \
+            miot_config.c miot_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            json_utils.c cs_rbuf.c mg_uart.c \
-            mg_utils.c mg_console.c
+            json_utils.c cs_rbuf.c miot_uart.c \
+            miot_utils.c miot_console.c
 
 ifeq "$(MG_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
-            mg_adc_js.c \
-            mg_clubby_js.c \
-            mg_config_js.c \
-            mg_console_js.c \
-            mg_debug_js.c \
-            mg_gpio_js.c \
-            mg_http_js.c \
-            mg_i2c_js.c \
-            mg_init_js.c \
-            mg_mqtt_js.c \
-            mg_pwm_js.c \
-            mg_spi_js.c \
-            mg_sys_config_js.c \
-            mg_tcp_udp_js.c \
-            mg_timers_js.c \
-            mg_v7_ext.c \
-            mg_uart_js.c \
-            mg_wifi_js.c \
-            mg_ws_client_js.c
+            miot_adc_js.c \
+            miot_clubby_js.c \
+            miot_config_js.c \
+            miot_console_js.c \
+            miot_debug_js.c \
+            miot_gpio_js.c \
+            miot_http_js.c \
+            miot_i2c_js.c \
+            miot_init_js.c \
+            miot_mqtt_js.c \
+            miot_pwm_js.c \
+            miot_spi_js.c \
+            miot_sys_config_js.c \
+            miot_tcp_udp_js.c \
+            miot_timers_js.c \
+            miot_v7_ext.c \
+            miot_uart_js.c \
+            miot_wifi_js.c \
+            miot_ws_client_js.c
 
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 

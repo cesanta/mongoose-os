@@ -1,11 +1,11 @@
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_gpio.h"
-#include "fw/src/mg_mqtt.h"
-#include "fw/src/mg_sys_config.h"
-#include "fw/src/mg_wifi.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_gpio.h"
+#include "fw/src/miot_mqtt.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_wifi.h"
 
 static void sub(struct mg_connection *c, const char *fmt, ...) {
   char buf[100];
@@ -30,8 +30,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
     struct mg_str *s = &msg->payload;
     int pin, state;
     if (json_scanf(s->p, s->len, "{pin: %d, state: %d}", &pin, &state) == 2) {
-      mg_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-      mg_gpio_write(pin, state > 0 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
+      miot_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+      miot_gpio_write(pin, state > 0 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
       LOG(LL_INFO, ("Done: [%.*s]", (int) s->len, s->p));
     } else {
       LOG(LL_ERROR, ("Unknown command: [%.*s]", (int) s->len, s->p));
@@ -39,14 +39,14 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-static void on_wifi_event(enum mg_wifi_status ev, void *data) {
-  if (ev == MG_WIFI_IP_ACQUIRED) {
-    mg_mqtt_set_global_handler(ev_handler, NULL);
+static void on_wifi_event(enum miot_wifi_status ev, void *data) {
+  if (ev == MIOT_WIFI_IP_ACQUIRED) {
+    miot_mqtt_set_global_handler(ev_handler, NULL);
   }
   (void) data;
 }
 
-enum mg_app_init_result mg_app_init(void) {
-  mg_wifi_add_on_change_cb(on_wifi_event, 0);
-  return MG_APP_INIT_SUCCESS;
+enum miot_app_init_result miot_app_init(void) {
+  miot_wifi_add_on_change_cb(on_wifi_event, 0);
+  return MIOT_APP_INIT_SUCCESS;
 }

@@ -14,9 +14,9 @@
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
-#include "fw/src/mg_mongoose.h"
-#include "fw/src/mg_sys_config.h"
-#include "fw/src/mg_wifi.h"
+#include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_wifi.h"
 
 #include "config.h"
 #include "sys_config.h"
@@ -24,7 +24,7 @@
 #include "cc3200_main_task.h"
 
 struct cc3200_wifi_config {
-  enum mg_wifi_status status;
+  enum miot_wifi_status status;
   char *ssid;
   char *pass;
   SlNetCfgIpV4Args_t static_ip;
@@ -35,7 +35,7 @@ static struct cc3200_wifi_config s_wifi_sta_config;
 static int s_current_role = -1;
 
 static void free_wifi_config(void) {
-  s_wifi_sta_config.status = MG_WIFI_DISCONNECTED;
+  s_wifi_sta_config.status = MIOT_WIFI_DISCONNECTED;
   free(s_wifi_sta_config.ssid);
   free(s_wifi_sta_config.pass);
   free(s_wifi_sta_config.ip);
@@ -43,7 +43,7 @@ static void free_wifi_config(void) {
 }
 
 void invoke_wifi_on_change_cb(void *arg) {
-  mg_wifi_on_change_cb((enum mg_wifi_status)(int) arg);
+  miot_wifi_on_change_cb((enum miot_wifi_status)(int) arg);
 }
 
 static int restart_nwp(void) {
@@ -54,7 +54,7 @@ static int restart_nwp(void) {
   /* Without a delay in sl_Stop subsequent sl_Start gets stuck sometimes. */
   sl_Stop(10);
   s_current_role = sl_Start(NULL, NULL, NULL);
-  sl_restart_cb(mg_get_mgr());
+  sl_restart_cb(miot_get_mgr());
   return (s_current_role >= 0);
 }
 
@@ -71,7 +71,7 @@ static int ensure_role_sta(void) {
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
   switch (e->Event) {
     case SL_WLAN_CONNECT_EVENT: {
-      s_wifi_sta_config.status = MG_WIFI_CONNECTED;
+      s_wifi_sta_config.status = MIOT_WIFI_CONNECTED;
       break;
     }
     case SL_WLAN_DISCONNECT_EVENT: {
@@ -90,7 +90,7 @@ void sl_net_app_eh(SlNetAppEvent_t *e) {
     asprintf(&s_wifi_sta_config.ip, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ed->ip, 3),
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
-    s_wifi_sta_config.status = MG_WIFI_IP_ACQUIRED;
+    s_wifi_sta_config.status = MIOT_WIFI_IP_ACQUIRED;
     invoke_cb(invoke_wifi_on_change_cb, (void *) s_wifi_sta_config.status);
   } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
     SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
@@ -114,7 +114,7 @@ void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
                                   SlHttpServerResponse_t *resp) {
 }
 
-int mg_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   free_wifi_config();
   s_wifi_sta_config.ssid = strdup(cfg->ssid);
   s_wifi_sta_config.pass = strdup(cfg->pass);
@@ -129,10 +129,10 @@ int mg_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     }
   }
 
-  return mg_wifi_connect();
+  return miot_wifi_connect();
 }
 
-int mg_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   int ret;
   uint8_t v;
   SlNetCfgIpV4Args_t ipcfg;
@@ -144,7 +144,7 @@ int mg_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   }
 
   strncpy(ssid, cfg->ssid, sizeof(ssid));
-  mg_expand_mac_address_placeholders(ssid);
+  miot_expand_mac_address_placeholders(ssid);
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SSID, strlen(ssid),
                         (const uint8_t *) ssid)) != 0) {
     return 0;
@@ -211,7 +211,7 @@ int mg_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   return 1;
 }
 
-int mg_wifi_connect(void) {
+int miot_wifi_connect(void) {
   int ret;
   SlSecParams_t sp;
 
@@ -247,24 +247,24 @@ int mg_wifi_connect(void) {
   return 1;
 }
 
-int mg_wifi_disconnect(void) {
+int miot_wifi_disconnect(void) {
   return (sl_WlanDisconnect() == 0);
 }
 
-enum mg_wifi_status mg_wifi_get_status(void) {
+enum miot_wifi_status miot_wifi_get_status(void) {
   return s_wifi_sta_config.status;
 }
 
-char *mg_wifi_get_status_str(void) {
+char *miot_wifi_get_status_str(void) {
   const char *st = NULL;
   switch (s_wifi_sta_config.status) {
-    case MG_WIFI_DISCONNECTED:
+    case MIOT_WIFI_DISCONNECTED:
       st = "disconnected";
       break;
-    case MG_WIFI_CONNECTED:
+    case MIOT_WIFI_CONNECTED:
       st = "connected";
       break;
-    case MG_WIFI_IP_ACQUIRED:
+    case MIOT_WIFI_IP_ACQUIRED:
       st = "got ip";
       break;
   }
@@ -272,28 +272,28 @@ char *mg_wifi_get_status_str(void) {
   return NULL;
 }
 
-char *mg_wifi_get_connected_ssid(void) {
+char *miot_wifi_get_connected_ssid(void) {
   switch (s_wifi_sta_config.status) {
-    case MG_WIFI_DISCONNECTED:
+    case MIOT_WIFI_DISCONNECTED:
       break;
-    case MG_WIFI_CONNECTED:
-    case MG_WIFI_IP_ACQUIRED:
+    case MIOT_WIFI_CONNECTED:
+    case MIOT_WIFI_IP_ACQUIRED:
       return strdup(s_wifi_sta_config.ssid);
   }
   return NULL;
 }
 
-char *mg_wifi_get_sta_ip(void) {
+char *miot_wifi_get_sta_ip(void) {
   if (s_wifi_sta_config.ip == NULL) return NULL;
   return strdup(s_wifi_sta_config.ip);
 }
 
-char *mg_wifi_get_ap_ip(void) {
+char *miot_wifi_get_ap_ip(void) {
   /* TODO(rojer?) : implement if applicable */
   return NULL;
 }
 
-void mg_wifi_scan(mg_wifi_scan_cb_t cb, void *arg) {
+void miot_wifi_scan(miot_wifi_scan_cb_t cb, void *arg) {
   const char *ssids[21];
   const char **res = NULL;
   int i, n;
@@ -322,6 +322,6 @@ static bool cc3200_validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
   return true;
 }
 
-void mg_wifi_hal_init(void) {
-  mg_register_config_validator(cc3200_validate_wifi_cfg);
+void miot_wifi_hal_init(void) {
+  miot_register_config_validator(cc3200_validate_wifi_cfg);
 }

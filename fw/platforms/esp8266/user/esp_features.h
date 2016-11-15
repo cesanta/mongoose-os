@@ -6,7 +6,7 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_FEATURES_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_FEATURES_H_
 
-#include "fw/src/mg_features.h"
+#include "fw/src/miot_features.h"
 
 #ifndef ESP_ENABLE_HEAP_LOG
 #define ESP_ENABLE_HEAP_LOG 0

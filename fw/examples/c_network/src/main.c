@@ -1,10 +1,10 @@
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_gpio.h"
-#include "fw/src/mg_mongoose.h"
-#include "fw/src/mg_sys_config.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_gpio.h"
+#include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_sys_config.h"
 
 #define LISTENER_SPEC "8910"
 
@@ -59,9 +59,9 @@ static void handle_index(struct mg_connection *nc, int ev, void *ev_data) {
   (void) ev;
 }
 
-enum mg_app_init_result mg_app_init(void) {
-  if (!init_listener(mg_get_mgr())) return MG_APP_INIT_ERROR;
-  mg_register_http_endpoint(mg_get_http_listening_conn(),
+enum miot_app_init_result miot_app_init(void) {
+  if (!init_listener(miot_get_mgr())) return MIOT_APP_INIT_ERROR;
+  mg_register_http_endpoint(miot_get_http_listening_conn(),
                             "/*" /* Handle all requests */, handle_index);
-  return MG_APP_INIT_SUCCESS;
+  return MIOT_APP_INIT_SUCCESS;
 }

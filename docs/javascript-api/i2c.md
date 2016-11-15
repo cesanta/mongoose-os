@@ -57,7 +57,7 @@ High-level API:
     * `ackType` for the last byte written doesn't match what was expected.
 
 There is a detailed description of this API in
-[mg_i2c_js.c](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/mg_i2c_js.c).
+[miot_i2c_js.c](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/miot_i2c_js.c).
 See [temperature sensor
 driver](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/js/MCP9808.js)
 and [EEPROM

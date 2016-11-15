@@ -4,7 +4,7 @@
  */
 
 #include "test_util.h"
-#include "mg_config.h"
+#include "miot_config.h"
 #include "cs_dbg.h"
 #include "cs_file.h"
 #include "sys_conf.h"
@@ -13,7 +13,7 @@ static const char *test_config(void) {
   size_t size;
   char *json1 = cs_read_file(".build/sys_conf_defaults.json", &size);
   char *json2 = cs_read_file("data/overrides.json", &size);
-  const struct mg_conf_entry *schema = sys_conf_schema();
+  const struct miot_conf_entry *schema = sys_conf_schema();
   struct sys_conf conf;
 
   memset(&conf, 0, sizeof(conf));
@@ -22,7 +22,7 @@ static const char *test_config(void) {
   cs_log_set_level(LL_NONE);
 
   /* Load defaults */
-  ASSERT_EQ(mg_conf_parse(mg_mk_str(json1), "*", schema, &conf), true);
+  ASSERT_EQ(miot_conf_parse(mg_mk_str(json1), "*", schema, &conf), true);
   ASSERT_EQ(conf.wifi.ap.channel, 6);
   ASSERT_STREQ(conf.wifi.ap.pass, "Elduderino");
   ASSERT(conf.wifi.sta.ssid == NULL);
@@ -33,7 +33,7 @@ static const char *test_config(void) {
   ASSERT_STREQ(conf.wifi.ap.dhcp_end, "192.168.4.200");
 
   /* Apply overrides */
-  ASSERT_EQ(mg_conf_parse(mg_mk_str(json2), "*", schema, &conf), true);
+  ASSERT_EQ(miot_conf_parse(mg_mk_str(json2), "*", schema, &conf), true);
   ASSERT_STREQ(conf.wifi.sta.ssid, "cookadoodadoo");   /* Set string */
   ASSERT_STREQ(conf.wifi.sta.pass, "try less cork");
   ASSERT_EQ(conf.debug.level, 1);    /* Override integer */

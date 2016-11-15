@@ -43,7 +43,7 @@ flags, their meaning and their default values:
 
 ```yml
 build_vars:
-  MG_DEBUG_UART: 0                  # Enable UART debugging
+  MIOT_DEBUG_UART: 0                  # Enable UART debugging
   MG_ENABLE_CLUBBY: 1               # Framing protocol for communication.
   MG_ENABLE_CLUBBY_UART: 1          # Needed for make miot tool to work.
   MG_ENABLE_CONFIG_SERVICE: 1       # Needed for miot config-* commands to work

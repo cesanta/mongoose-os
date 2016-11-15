@@ -16,10 +16,10 @@ If you have NodeMCU, use `esp8266` instead of `cc3200`.
 Copy-paste this into the `src/main.c`:
 
 ```c
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_mongoose.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_mongoose.h"
 #include "common/cs_dbg.h"
-#include "fw/src/mg_timers.h"
+#include "fw/src/miot_timers.h"
 
 #define INTERVAL_MILLISECONDS 2000
 
@@ -36,14 +36,14 @@ static void report_data(void *param) {
   static int counter;
   char url[100];
   snprintf(url, sizeof(url), "http://httpbin.org/get?n=%d", counter++);
-  mg_connect_http(mg_get_mgr(), on_http_reply, url, NULL, NULL);
+  mg_connect_http(miot_get_mgr(), on_http_reply, url, NULL, NULL);
   LOG(LL_INFO, ("Sending %s", url));
   (void) param;
 }
 
-enum mg_app_init_result mg_app_init(void) {
-  mg_set_c_timer(INTERVAL_MILLISECONDS, true /* repeat */, report_data, NULL);
-  return MG_APP_INIT_SUCCESS;
+enum miot_app_init_result miot_app_init(void) {
+  miot_set_c_timer(INTERVAL_MILLISECONDS, true /* repeat */, report_data, NULL);
+  return MIOT_APP_INIT_SUCCESS;
 }
 ```
 

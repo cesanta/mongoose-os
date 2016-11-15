@@ -4,10 +4,10 @@
 #include <lwip/igmp.h>
 
 #include "common/platform.h"
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_mongoose.h"
-#include "fw/src/mg_wifi.h"
-#include "fw/src/mg_sys_config.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_wifi.h"
+#include "fw/src/miot_sys_config.h"
 
 static void handler(struct mg_connection *nc, int ev, void *p) {
   struct mbuf *io = &nc->recv_mbuf;
@@ -23,16 +23,16 @@ static void handler(struct mg_connection *nc, int ev, void *p) {
   }
 }
 
-static void on_wifi_change(enum mg_wifi_status event, void *ud) {
+static void on_wifi_change(enum miot_wifi_status event, void *ud) {
   (void) ud;
 
   switch (event) {
-    case MG_WIFI_IP_ACQUIRED: {
+    case MIOT_WIFI_IP_ACQUIRED: {
       const char *group = get_cfg()->mcast.group;
       struct ip_addr host_addr;
       struct ip_addr group_addr;
 
-      char *ip = mg_wifi_get_sta_ip();
+      char *ip = miot_wifi_get_sta_ip();
       host_addr.addr = inet_addr(ip);
       group_addr.addr = inet_addr(group);
 
@@ -68,9 +68,9 @@ static int init_listener(struct mg_mgr *mgr) {
   return 1;
 }
 
-enum mg_app_init_result mg_app_init(void) {
-  mg_wifi_add_on_change_cb(on_wifi_change, NULL);
-  if (!init_listener(mg_get_mgr())) return MG_APP_INIT_ERROR;
+enum miot_app_init_result miot_app_init(void) {
+  miot_wifi_add_on_change_cb(on_wifi_change, NULL);
+  if (!init_listener(miot_get_mgr())) return MIOT_APP_INIT_ERROR;
 
-  return MG_APP_INIT_SUCCESS;
+  return MIOT_APP_INIT_SUCCESS;
 }

@@ -6,8 +6,8 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_
 
-#ifndef MG_MMAP_SLOTS
-#define MG_MMAP_SLOTS 16
+#ifndef MIOT_MMAP_SLOTS
+#define MIOT_MMAP_SLOTS 16
 #endif
 
 #include "common/spiffs/spiffs.h"
@@ -37,7 +37,7 @@ struct mmap_desc {
   uint32_t *blocks; /* pages long */
 };
 
-extern struct mmap_desc mmap_descs[MG_MMAP_SLOTS];
+extern struct mmap_desc mmap_descs[MIOT_MMAP_SLOTS];
 
 void fs_flush_stderr(void);
 int fs_init(uint32_t addr, uint32_t size);

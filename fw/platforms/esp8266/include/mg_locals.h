@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_INCLUDE_MG_LOCALS_H_
-#define CS_FW_PLATFORMS_ESP8266_INCLUDE_MG_LOCALS_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_INCLUDE_MIOT_LOCALS_H_
+#define CS_FW_PLATFORMS_ESP8266_INCLUDE_MIOT_LOCALS_H_
 
 /*
  * This file is included by mongoose.h and provides the definitions
@@ -28,4 +28,4 @@
 #undef __LWIP_SOCKETS_H__
 #endif
 
-#endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_MG_LOCALS_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_MIOT_LOCALS_H_ */

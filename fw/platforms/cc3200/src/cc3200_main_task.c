@@ -12,15 +12,15 @@
 
 #include "oslib/osi.h"
 
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_hal.h"
-#include "fw/src/mg_init.h"
-#include "fw/src/mg_init_js.h"
-#include "fw/src/mg_mongoose.h"
-#include "fw/src/mg_prompt.h"
-#include "fw/src/mg_sys_config.h"
-#include "fw/src/mg_uart.h"
-#include "fw/src/mg_updater_common.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_hal.h"
+#include "fw/src/miot_init.h"
+#include "fw/src/miot_init_js.h"
+#include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_prompt.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_uart.h"
+#include "fw/src/miot_updater_common.h"
 
 #if MG_ENABLE_JS
 #include "v7/v7.h"
@@ -41,7 +41,7 @@ extern const char *mg_build_version, *mg_build_id;
 int g_boot_cfg_idx;
 struct boot_cfg g_boot_cfg;
 
-struct mg_event {
+struct miot_event {
   cb_t cb;
   void *arg;
 };
@@ -95,7 +95,7 @@ int start_nwp(void) {
 }
 
 #if MG_ENABLE_JS
-void mg_prompt_init_hal(void) {
+void miot_prompt_init_hal(void) {
 }
 #endif
 
@@ -112,21 +112,21 @@ enum cc3200_init_result {
 
 static enum cc3200_init_result cc3200_init(void *arg) {
   mongoose_init();
-  if (MG_DEBUG_UART >= 0) {
-    struct mg_uart_config *ucfg = mg_uart_default_config();
-    ucfg->baud_rate = MG_DEBUG_UART_BAUD_RATE;
-    if (mg_uart_init(MG_DEBUG_UART, ucfg, NULL, NULL) == NULL) {
+  if (MIOT_DEBUG_UART >= 0) {
+    struct miot_uart_config *ucfg = miot_uart_default_config();
+    ucfg->baud_rate = MIOT_DEBUG_UART_BAUD_RATE;
+    if (miot_uart_init(MIOT_DEBUG_UART, ucfg, NULL, NULL) == NULL) {
       return CC3200_INIT_UART_INIT_FAILED;
     }
   }
 
-  if (strcmp(MG_APP, "mongoose-iot") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MG_APP, build_version, build_id));
+  if (strcmp(MIOT_APP, "mongoose-iot") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MIOT_APP, build_version, build_id));
   }
   LOG(LL_INFO,
       ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO,
-      ("RAM: %d total, %d free", mg_get_heap_size(), mg_get_free_heap_size()));
+  LOG(LL_INFO, ("RAM: %d total, %d free", miot_get_heap_size(),
+                miot_get_free_heap_size()));
 
   int r = start_nwp();
   if (r < 0) {
@@ -171,7 +171,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 #if MG_ENABLE_UPDATER
   if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     LOG(LL_INFO, ("Applying update"));
-    r = mg_upd_apply_update();
+    r = miot_upd_apply_update();
     if (r < 0) {
       LOG(LL_ERROR, ("Failed to apply update: %d", r));
       return CC3200_INIT_UPDATE_FAILED;
@@ -179,8 +179,8 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   }
 #endif
 
-  enum mg_init_result ir = mg_init();
-  if (ir != MG_INIT_OK) {
+  enum miot_init_result ir = mg_init();
+  if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
     return CC3200_INIT_MG_INIT_FAILED;
   }
@@ -188,17 +188,17 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 #if MG_ENABLE_JS
   struct v7 *v7 = s_v7 = init_v7(&arg);
 
-  ir = mg_init_js_all(v7);
-  if (ir != MG_INIT_OK) {
+  ir = miot_init_js_all(v7);
+  if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
     return CC3200_INIT_MG_INIT_JS_FAILED;
   }
 #endif
 
-  LOG(LL_INFO, ("Init done, RAM: %d free", mg_get_free_heap_size()));
+  LOG(LL_INFO, ("Init done, RAM: %d free", miot_get_free_heap_size()));
 
 #if MG_ENABLE_JS
-  mg_prompt_init(v7, get_cfg()->debug.stdout_uart);
+  miot_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
   return CC3200_INIT_OK;
 }
@@ -206,7 +206,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 void mongoose_poll_cb(void *arg);
 
 void main_task(void *arg) {
-  struct mg_event e;
+  struct miot_event e;
   osi_MsgQCreate(&s_main_queue, "main", sizeof(e), 32 /* len */);
 
   enum cc3200_init_result r = cc3200_init(NULL);
@@ -215,8 +215,8 @@ void main_task(void *arg) {
   }
 
 #if MG_ENABLE_UPDATER
-  mg_upd_boot_finish((r == CC3200_INIT_OK),
-                     (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
+  miot_upd_boot_finish((r == CC3200_INIT_OK),
+                       (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
 #endif
 
   while (1) {
@@ -228,6 +228,6 @@ void main_task(void *arg) {
 }
 
 bool invoke_cb(cb_t cb, void *arg) {
-  struct mg_event e = {.cb = cb, .arg = arg};
+  struct miot_event e = {.cb = cb, .arg = arg};
   return (osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT) == OSI_OK);
 }

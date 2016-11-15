@@ -17,7 +17,7 @@ struct v7 *v7;
 
 #include "v7/v7.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
-#include "fw/src/mg_v7_ext.h"
+#include "fw/src/miot_v7_ext.h"
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 #include "common/cs_dbg.h"
 

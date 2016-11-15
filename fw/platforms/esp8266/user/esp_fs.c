@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include "fw/src/mg_features.h"
+#include "fw/src/miot_features.h"
 
 #if MG_ENABLE_JS
 #include "v7/v7.h"
@@ -30,8 +30,8 @@
 #include "spiffs_config.h"
 
 #include "esp_fs.h"
-#include "fw/src/mg_uart.h"
-#include "fw/src/mg_sys_config.h"
+#include "fw/src/miot_uart.h"
+#include "fw/src/miot_sys_config.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
@@ -56,7 +56,7 @@ spiffs fs;
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
 
-struct mmap_desc mmap_descs[MG_MMAP_SLOTS];
+struct mmap_desc mmap_descs[MIOT_MMAP_SLOTS];
 static struct mmap_desc *cur_mmap_desc;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
@@ -341,14 +341,14 @@ _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
     int uart_no = -1;
     struct sys_config *scfg = get_cfg();
     if (fd == 1) {
-      uart_no = scfg ? scfg->debug.stdout_uart : MG_DEBUG_UART;
+      uart_no = scfg ? scfg->debug.stdout_uart : MIOT_DEBUG_UART;
     } else if (fd == 2) {
-      uart_no = scfg ? scfg->debug.stderr_uart : MG_DEBUG_UART;
+      uart_no = scfg ? scfg->debug.stderr_uart : MIOT_DEBUG_UART;
     } else if (fd == 0) {
       errno = EBADF;
       len = -1;
     }
-    if (uart_no >= 0) len = mg_uart_write(uart_no, buf, len);
+    if (uart_no >= 0) len = miot_uart_write(uart_no, buf, len);
     return len;
   }
 
@@ -450,8 +450,8 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
 
 void fs_flush_stderr(void) {
   struct sys_config *scfg = get_cfg();
-  int uart_no = scfg ? scfg->debug.stderr_uart : MG_DEBUG_UART;
-  if (uart_no >= 0) mg_uart_flush(uart_no);
+  int uart_no = scfg ? scfg->debug.stderr_uart : MIOT_DEBUG_UART;
+  if (uart_no >= 0) miot_uart_flush(uart_no);
 }
 
 #if MG_ENABLE_JS
@@ -470,7 +470,7 @@ int v7_is_file_type(v7_val_t val) {
 }
 #endif
 
-int64_t mg_get_storage_free_space(void) {
+int64_t miot_get_storage_free_space(void) {
   uint32_t total, used;
   SPIFFS_info(&fs, &total, &used);
   return total - used;

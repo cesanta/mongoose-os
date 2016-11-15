@@ -19,13 +19,13 @@
 #include <lwip/udp.h>
 
 #include "common/cs_dbg.h"
-#include "fw/src/mg_mongoose.h"
+#include "fw/src/miot_mongoose.h"
 
 #include "fw/platforms/esp8266/user/esp_task.h"
 
 #if MG_ENABLE_JS
 #include "v7/v7.h"
-#include "fw/src/mg_v7_ext.h"
+#include "fw/src/miot_v7_ext.h"
 
 struct v7_callback_args {
   struct v7 *v7;
@@ -35,34 +35,34 @@ struct v7_callback_args {
 };
 #endif /* MG_ENABLE_JS */
 
-#ifndef MG_TASK_PRIORITY
-#define MG_TASK_PRIORITY 1
+#ifndef MIOT_TASK_PRIORITY
+#define MIOT_TASK_PRIORITY 1
 #endif
 
-#ifndef MG_TASK_QUEUE_LEN
-#define MG_TASK_QUEUE_LEN 16
+#ifndef MIOT_TASK_QUEUE_LEN
+#define MIOT_TASK_QUEUE_LEN 16
 #endif
 
-#ifndef MG_POLL_INTERVAL_MS
-#define MG_POLL_INTERVAL_MS 1000
+#ifndef MIOT_POLL_INTERVAL_MS
+#define MIOT_POLL_INTERVAL_MS 1000
 #endif
 
 #define SIG_MG_POLL 1
 #define SIG_V7_CALLBACK 2
 
 static os_timer_t s_poll_tmr;
-static os_event_t s_mg_task_queue[MG_TASK_QUEUE_LEN];
+static os_event_t s_mg_task_queue[MIOT_TASK_QUEUE_LEN];
 static int poll_scheduled = 0;
 static int s_suspended = 0;
 
 void IRAM mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   if (poll_scheduled) return;
-  if (system_os_post(MG_TASK_PRIORITY, SIG_MG_POLL, (uint32_t) mgr)) {
+  if (system_os_post(MIOT_TASK_PRIORITY, SIG_MG_POLL, (uint32_t) mgr)) {
     poll_scheduled = 1;
   }
 }
 
-void mg_poll_timer_cb(void *arg) {
+void miot_poll_timer_cb(void *arg) {
   struct mg_mgr *mgr = (struct mg_mgr *) arg;
   DBG(("poll tmr %p %p", s_mg_task_queue, mgr));
   mg_lwip_mgr_schedule_poll(mgr);
@@ -70,7 +70,7 @@ void mg_poll_timer_cb(void *arg) {
 
 extern struct v7 *v7;
 
-static void mg_lwip_task(os_event_t *e) {
+static void miot_lwip_task(os_event_t *e) {
   struct mg_mgr *mgr = NULL;
   poll_scheduled = 0;
   switch (e->sig) {
@@ -108,15 +108,15 @@ static void mg_lwip_task(os_event_t *e) {
       }
     }
     uint32_t timeout_ms = mg_lwip_get_poll_delay_ms(mgr);
-    if (timeout_ms > MG_POLL_INTERVAL_MS) timeout_ms = MG_POLL_INTERVAL_MS;
+    if (timeout_ms > MIOT_POLL_INTERVAL_MS) timeout_ms = MIOT_POLL_INTERVAL_MS;
     os_timer_disarm(&s_poll_tmr);
     os_timer_arm(&s_poll_tmr, timeout_ms, 0 /* no repeat */);
   }
 }
 
 #if MG_ENABLE_JS
-void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                             v7_val_t args) {
+void miot_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                               v7_val_t args) {
   struct v7_callback_args *cba =
       (struct v7_callback_args *) calloc(1, sizeof(*cba));
   if (cba == NULL) {
@@ -130,7 +130,7 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   v7_own(v7, &cba->func);
   v7_own(v7, &cba->this_obj);
   v7_own(v7, &cba->args);
-  if (!system_os_post(MG_TASK_PRIORITY, SIG_V7_CALLBACK, (uint32_t) cba)) {
+  if (!system_os_post(MIOT_TASK_PRIORITY, SIG_V7_CALLBACK, (uint32_t) cba)) {
     LOG(LL_ERROR, ("MG queue overflow"));
     v7_disown(v7, &cba->func);
     v7_disown(v7, &cba->this_obj);
@@ -140,7 +140,7 @@ void mg_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
 }
 #endif /* MG_ENABLE_JS */
 
-void mg_suspend(void) {
+void miot_suspend(void) {
   /*
    * We need to complete all pending operation, here we just set flag
    * and lwip task will disable itself once all data is sent
@@ -148,23 +148,23 @@ void mg_suspend(void) {
   s_suspended = 1;
 }
 
-void mg_resume(void) {
+void miot_resume(void) {
   if (!s_suspended) {
     return;
   }
 
   s_suspended = 0;
-  os_timer_arm(&s_poll_tmr, MG_POLL_INTERVAL_MS, 0 /* no repeat */);
+  os_timer_arm(&s_poll_tmr, MIOT_POLL_INTERVAL_MS, 0 /* no repeat */);
 }
 
-int mg_is_suspended(void) {
+int miot_is_suspended(void) {
   return s_suspended;
 }
 
 void esp_mg_task_init() {
-  system_os_task(mg_lwip_task, MG_TASK_PRIORITY, s_mg_task_queue,
-                 MG_TASK_QUEUE_LEN);
-  os_timer_setfn(&s_poll_tmr, mg_poll_timer_cb, mg_get_mgr());
+  system_os_task(miot_lwip_task, MIOT_TASK_PRIORITY, s_mg_task_queue,
+                 MIOT_TASK_QUEUE_LEN);
+  os_timer_setfn(&s_poll_tmr, miot_poll_timer_cb, miot_get_mgr());
 }
 
 #endif /* ESP_ENABLE_MG_LWIP_IF */

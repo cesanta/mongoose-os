@@ -246,13 +246,13 @@ class HWriter(object):
 #ifndef {name_uc}_H_
 #define {name_uc}_H_
 
-#include "fw/src/mg_config.h"
+#include "fw/src/miot_config.h"
 
 struct {name} {{
 {lines}
 }};
 
-const struct mg_conf_entry *{name}_schema();
+const struct miot_conf_entry *{name}_schema();
 
 #endif /* {name_uc}_H_ */
 """.format(name=self._struct_name,
@@ -296,12 +296,12 @@ class CWriter(object):
 #include <stddef.h>
 #include "{name}.h"
 
-const struct mg_conf_entry {name}_schema_[{num_entries}] = {{
+const struct miot_conf_entry {name}_schema_[{num_entries}] = {{
   {{.type = CONF_TYPE_OBJECT, .key = "", .num_desc = {num_desc}}},
 {lines}
 }};
 
-const struct mg_conf_entry *{name}_schema() {{
+const struct miot_conf_entry *{name}_schema() {{
   return {name}_schema_;
 }}
 """.format(name=self._struct_name,

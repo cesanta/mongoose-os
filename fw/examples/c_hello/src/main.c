@@ -1,10 +1,10 @@
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_gpio.h"
-#include "fw/src/mg_sys_config.h"
-#include "fw/src/mg_timers.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_gpio.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_timers.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
 /* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
@@ -25,18 +25,18 @@ static void blink_timer_cb(void *arg) {
     LOG(LL_INFO, ("Tock"));
     l = GPIO_LEVEL_LOW;
   }
-  mg_gpio_write(GPIO, l);
+  miot_gpio_write(GPIO, l);
   (void) arg;
 }
 
-enum mg_app_init_result mg_app_init(void) {
+enum miot_app_init_result miot_app_init(void) {
   { /* Print a message using a value from config. */
     printf("Hello, %s!\n", get_cfg()->hello.who);
   }
 
   { /* Set up the blinky timer. */
-    mg_gpio_set_mode(GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-    mg_set_c_timer(1000 /* ms */, true /* repeat */, blink_timer_cb, NULL);
+    miot_gpio_set_mode(GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+    miot_set_c_timer(1000 /* ms */, true /* repeat */, blink_timer_cb, NULL);
   }
 
   { /* Read a file. */
@@ -51,5 +51,5 @@ enum mg_app_init_result mg_app_init(void) {
     }
   }
 
-  return MG_APP_INIT_SUCCESS;
+  return MIOT_APP_INIT_SUCCESS;
 }

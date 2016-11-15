@@ -17,16 +17,16 @@
 
 #include "common/cs_dbg.h"
 
-#include "fw/src/mg_hal.h"
-#include "fw/src/mg_v7_ext.h"
+#include "fw/src/miot_hal.h"
+#include "fw/src/miot_v7_ext.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
-#include "fw/src/mg_sys_config.h"
-#include "fw/src/mg_wifi.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_wifi.h"
 
-static mg_wifi_scan_cb_t s_wifi_scan_cb;
+static miot_wifi_scan_cb_t s_wifi_scan_cb;
 static void *s_wifi_scan_cb_arg;
 
-int mg_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   int res;
   struct station_config sta_cfg;
   /* If in AP-only mode, switch to station. If in STA or AP+STA, keep it. */
@@ -62,7 +62,7 @@ int mg_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   return wifi_station_connect();
 }
 
-int mg_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   struct softap_config ap_cfg;
   struct ip_info info;
   struct dhcps_lease dhcps;
@@ -94,7 +94,7 @@ int mg_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 
   memset(&ap_cfg, 0, sizeof(ap_cfg));
   strncpy((char *) ap_cfg.ssid, cfg->ssid, sizeof(ap_cfg.ssid));
-  mg_expand_mac_address_placeholders((char *) ap_cfg.ssid);
+  miot_expand_mac_address_placeholders((char *) ap_cfg.ssid);
   ap_cfg.ssid_len = ssid_len;
   if (pass_len != 0) {
     ap_cfg.authmode = AUTH_WPA2_PSK;
@@ -142,25 +142,25 @@ int mg_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   return 1;
 }
 
-int mg_wifi_connect(void) {
+int miot_wifi_connect(void) {
   return wifi_station_connect();
 }
 
-int mg_wifi_disconnect(void) {
+int miot_wifi_disconnect(void) {
   /* disable any AP mode */
   wifi_set_opmode_current(STATION_MODE);
   return wifi_station_disconnect();
 }
 
-enum mg_wifi_status mg_wifi_get_status(void) {
+enum miot_wifi_status miot_wifi_get_status(void) {
   if (wifi_station_get_connect_status() == STATION_GOT_IP) {
-    return MG_WIFI_IP_ACQUIRED;
+    return MIOT_WIFI_IP_ACQUIRED;
   } else {
-    return MG_WIFI_DISCONNECTED;
+    return MIOT_WIFI_DISCONNECTED;
   }
 }
 
-char *mg_wifi_get_status_str(void) {
+char *miot_wifi_get_status_str(void) {
   uint8 st = wifi_station_get_connect_status();
   const char *msg = NULL;
 
@@ -192,26 +192,26 @@ void wifi_changed_cb(System_Event_t *evt) {
   int mg_ev = -1;
   switch (evt->event) {
     case EVENT_STAMODE_DISCONNECTED:
-      mg_ev = MG_WIFI_DISCONNECTED;
+      mg_ev = MIOT_WIFI_DISCONNECTED;
       break;
     case EVENT_STAMODE_CONNECTED:
-      mg_ev = MG_WIFI_CONNECTED;
+      mg_ev = MIOT_WIFI_CONNECTED;
       break;
     case EVENT_STAMODE_GOT_IP:
-      mg_ev = MG_WIFI_IP_ACQUIRED;
+      mg_ev = MIOT_WIFI_IP_ACQUIRED;
       break;
   }
 
-  if (mg_ev >= 0) mg_wifi_on_change_cb(mg_ev);
+  if (mg_ev >= 0) miot_wifi_on_change_cb(mg_ev);
 }
 
-char *mg_wifi_get_connected_ssid(void) {
+char *miot_wifi_get_connected_ssid(void) {
   struct station_config conf;
   if (!wifi_station_get_config(&conf)) return NULL;
   return strdup((const char *) conf.ssid);
 }
 
-static char *mg_wifi_get_ip(int if_no) {
+static char *miot_wifi_get_ip(int if_no) {
   struct ip_info info;
   char *ip;
   if (!wifi_get_ip_info(if_no, &info) || info.ip.addr == 0) return NULL;
@@ -221,16 +221,16 @@ static char *mg_wifi_get_ip(int if_no) {
   return ip;
 }
 
-char *mg_wifi_get_ap_ip(void) {
-  return mg_wifi_get_ip(1);
+char *miot_wifi_get_ap_ip(void) {
+  return miot_wifi_get_ip(1);
 }
 
-char *mg_wifi_get_sta_ip(void) {
-  return mg_wifi_get_ip(0);
+char *miot_wifi_get_sta_ip(void) {
+  return miot_wifi_get_ip(0);
 }
 
 void wifi_scan_done(void *arg, STATUS status) {
-  mg_wifi_scan_cb_t cb = s_wifi_scan_cb;
+  miot_wifi_scan_cb_t cb = s_wifi_scan_cb;
   void *cb_arg = s_wifi_scan_cb_arg;
   s_wifi_scan_cb = NULL;
   s_wifi_scan_cb_arg = NULL;
@@ -264,7 +264,7 @@ void wifi_scan_done(void *arg, STATUS status) {
   free(ssids);
 }
 
-void mg_wifi_scan(mg_wifi_scan_cb_t cb, void *arg) {
+void miot_wifi_scan(miot_wifi_scan_cb_t cb, void *arg) {
   /* Scanning requires station. If in AP-only mode, switch to AP+STA. */
   if (wifi_get_opmode() == SOFTAP_MODE) {
     wifi_set_opmode_current(STATIONAP_MODE);
@@ -278,7 +278,7 @@ void mg_wifi_scan(mg_wifi_scan_cb_t cb, void *arg) {
   }
 }
 
-void mg_wifi_hal_init(void) {
+void miot_wifi_hal_init(void) {
   /* avoid entering AP mode on boot */
   wifi_set_opmode_current(0x1);
   wifi_set_event_handler_cb(wifi_changed_cb);

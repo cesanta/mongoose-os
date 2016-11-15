@@ -6,7 +6,7 @@ SYS_RO_VARS_SCHEMA ?= $(MIOT_PATH)/fw/src/sys_ro_vars_schema.yaml
 GSC_TOOL ?= $(MIOT_PATH)/fw/tools/gen_sys_config.py
 PYTHON ?= python
 
-SYS_CONF_SCHEMA += $(MIOT_PATH)/fw/src/mg_sys_config.yaml
+SYS_CONF_SCHEMA += $(MIOT_PATH)/fw/src/miot_sys_config.yaml
 
 $(SYS_CONFIG_C): $(SYS_CONF_SCHEMA) $(APP_CONF_SCHEMA) $(GSC_TOOL)
 	$(vecho) "GEN   $@"

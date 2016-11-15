@@ -10,7 +10,7 @@
 
 #include "fw/platforms/cc3200/src/cc3200_uart.h"
 #include "fw/platforms/cc3200/src/config.h"
-#include "fw/src/mg_sys_config.h"
+#include "fw/src/miot_sys_config.h"
 
 #define ARM_PERIPH_BASE 0xE000E000
 
@@ -24,7 +24,7 @@
 #define SCB_FAULTADDR (ARM_PERIPH_BASE + 0xD38)
 
 void uart_puts(const char *s) {
-  int uart_no = (get_cfg() ? get_cfg()->debug.stderr_uart : MG_DEBUG_UART);
+  int uart_no = (get_cfg() ? get_cfg()->debug.stderr_uart : MIOT_DEBUG_UART);
   if (uart_no < 0) return;
   uint32_t base = cc3200_uart_get_base(uart_no);
   for (; *s != '\0'; s++) {

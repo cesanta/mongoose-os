@@ -3,19 +3,19 @@
  * All rights reserved
  */
 
-#include "fw/src/mg_features.h"
+#include "fw/src/miot_features.h"
 
 #if MG_ENABLE_ADC_API
 
 #include <stdint.h>
 
-uint32_t mg_adc_read(int pin) {
+uint32_t miot_adc_read(int pin) {
   (void) pin;
   return 0;
 }
 
-double mg_adc_read_voltage(int pin) {
-  return mg_adc_read(pin);
+double miot_adc_read_voltage(int pin) {
+  return miot_adc_read(pin);
 }
 
 #endif /* MG_ENABLE_ADC_API */

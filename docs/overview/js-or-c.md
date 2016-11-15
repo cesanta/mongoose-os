@@ -14,13 +14,13 @@ Code in C:
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/mg_app.h"
-#include "fw/src/mg_sys_config.h"
+#include "fw/src/miot_app.h"
+#include "fw/src/miot_sys_config.h"
 
-enum mg_app_init_result mg_app_init(void) {
+enum miot_app_init_result miot_app_init(void) {
   printf("Hello, %s!\n", get_cfg()->hello.who);  // Print config value
 
-  return MG_APP_INIT_SUCCESS;   // Signal successful initialization
+  return MIOT_APP_INIT_SUCCESS;   // Signal successful initialization
 }
 ```
 

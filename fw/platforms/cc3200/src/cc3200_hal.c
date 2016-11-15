@@ -25,8 +25,8 @@
 #include "device.h"
 #include "oslib/osi.h"
 
-#include "fw/src/mg_hal.h"
-#include "fw/src/mg_v7_ext.h"
+#include "fw/src/miot_hal.h"
+#include "fw/src/miot_v7_ext.h"
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
@@ -37,7 +37,7 @@
 #if MG_ENABLE_JS
 #include "v7/v7.h"
 
-static void mg_invoke_cb_cb(void *arg);
+static void miot_invoke_cb_cb(void *arg);
 
 struct v7_invoke_event_data {
   struct v7 *v7;
@@ -46,8 +46,8 @@ struct v7_invoke_event_data {
   v7_val_t args;
 };
 
-void mg_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                  v7_val_t args) {
+void miot_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                    v7_val_t args) {
   struct v7_invoke_event_data *ied = calloc(1, sizeof(*ied));
   ied->v7 = v7;
   ied->func = func;
@@ -56,10 +56,10 @@ void mg_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
   v7_own(v7, &ied->func);
   v7_own(v7, &ied->this_obj);
   v7_own(v7, &ied->args);
-  invoke_cb(mg_invoke_cb_cb, ied);
+  invoke_cb(miot_invoke_cb_cb, ied);
 }
 
-static void mg_invoke_cb_cb(void *arg) {
+static void miot_invoke_cb_cb(void *arg) {
   struct v7_invoke_event_data *ied = (struct v7_invoke_event_data *) arg;
   _mg_invoke_cb(ied->v7, ied->func, ied->this_obj, ied->args);
   v7_disown(ied->v7, &ied->args);
@@ -70,11 +70,11 @@ static void mg_invoke_cb_cb(void *arg) {
 #endif /* MG_ENABLE_JS */
 
 #ifdef __TI_COMPILER_VERSION__
-size_t mg_get_heap_size(void) {
+size_t miot_get_heap_size(void) {
   return UMM_MALLOC_CFG__HEAP_SIZE;
 }
 
-size_t mg_get_free_heap_size(void) {
+size_t miot_get_free_heap_size(void) {
   return umm_free_heap_size();
 }
 
@@ -84,12 +84,12 @@ size_t mg_get_free_heap_size(void) {
 extern unsigned long _heap;
 extern unsigned long _eheap;
 
-size_t mg_get_heap_size(void) {
+size_t miot_get_heap_size(void) {
   return ((char *) &_eheap - (char *) &_heap);
 }
 
-size_t mg_get_free_heap_size(void) {
-  size_t avail = mg_get_heap_size();
+size_t miot_get_free_heap_size(void) {
+  size_t avail = miot_get_heap_size();
   struct mallinfo mi = mallinfo();
   avail -= mi.arena;    /* Claimed by allocator. */
   avail += mi.fordblks; /* Free in the area claimed by allocator. */
@@ -97,37 +97,37 @@ size_t mg_get_free_heap_size(void) {
 }
 #endif
 
-size_t mg_get_min_free_heap_size(void) {
+size_t miot_get_min_free_heap_size(void) {
   /* Not supported */
   return 0;
 }
 
-size_t mg_get_fs_memory_usage(void) {
+size_t miot_get_fs_memory_usage(void) {
   return 0; /* Not even sure if it's possible to tell. */
 }
 
-void mg_wdt_feed(void) {
+void miot_wdt_feed(void) {
   MAP_WatchdogIntClear(WDT_BASE);
 }
 
-void mg_wdt_set_timeout(int secs) {
+void miot_wdt_set_timeout(int secs) {
   MAP_WatchdogUnlock(WDT_BASE);
   /* Reset is triggered after the timer reaches zero for the second time. */
   MAP_WatchdogReloadSet(WDT_BASE, secs * SYS_CLK / 2);
   MAP_WatchdogLock(WDT_BASE);
 }
 
-void mg_wdt_enable(void) {
+void miot_wdt_enable(void) {
   MAP_WatchdogUnlock(WDT_BASE);
   MAP_WatchdogEnable(WDT_BASE);
   MAP_WatchdogLock(WDT_BASE);
 }
 
-void mg_wdt_disable(void) {
+void miot_wdt_disable(void) {
   LOG(LL_ERROR, ("WDT cannot be disabled!"));
 }
 
-void mg_system_restart(int exit_code) {
+void miot_system_restart(int exit_code) {
   (void) exit_code;
   if (exit_code != 100) {
     cc3200_fs_umount();
@@ -143,7 +143,7 @@ void mg_system_restart(int exit_code) {
   MAP_PRCMHibernateEnter();
 }
 
-void mg_usleep(int usecs) {
+void miot_usleep(int usecs) {
   osi_Sleep(usecs / 1000 /* ms */);
 }
 

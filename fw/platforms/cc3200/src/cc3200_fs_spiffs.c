@@ -13,7 +13,7 @@
 
 #include <common/spiffs/spiffs_nucleus.h>
 
-#include "fw/src/mg_mongoose.h"
+#include "fw/src/miot_mongoose.h"
 
 struct mount_info s_fsm;
 
@@ -191,7 +191,7 @@ int fs_spiffs_mkdir(const char *path, mode_t mode) {
   return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
 }
 
-int64_t mg_get_storage_free_space(void) {
+int64_t miot_get_storage_free_space(void) {
   struct mount_info *m = &s_fsm;
   uint32_t total, used;
   if (!m->valid) return set_errno(EBADF);
@@ -220,7 +220,7 @@ static void cc3200_fs_flush_if_inactive(void *arg) {
 }
 
 int cc3200_fs_init(const char *container_prefix) {
-  mg_add_poll_cb(cc3200_fs_flush_if_inactive, NULL);
+  miot_add_poll_cb(cc3200_fs_flush_if_inactive, NULL);
   return fs_mount(container_prefix, &s_fsm);
 }
 

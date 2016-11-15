@@ -28,7 +28,7 @@ extern void *__real_pvPortCalloc(size_t num, size_t xWantedSize,
 extern void *__real_pvPortZalloc(size_t size, const char *file, int line);
 extern void __real_vPortFree(void *pv, const char *file, int line);
 
-extern void mg_wdt_feed(void);
+extern void miot_wdt_feed(void);
 
 #if V7_ENABLE_CALL_TRACE
 extern void call_trace_print(const char *prefix, const char *suffix,
@@ -259,7 +259,7 @@ static void flush_log_items(void) {
     __real_vPortFree(plog, NULL, 0);
     plog = NULL;
     fprintf(stderr, "--- uart initialized ---\n");
-    mg_wdt_feed();
+    miot_wdt_feed();
   }
 }
 
@@ -275,7 +275,7 @@ void *__wrap_pvPortRealloc(void *pv, size_t size, const char *file, int line) {
   }
   ret = __real_pvPortRealloc(pv, size, file, line);
   if (uart_initialized) {
-    mg_wdt_feed();
+    miot_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     /*
@@ -297,7 +297,7 @@ void *__wrap_pvPortMalloc(size_t xWantedSize, const char *file, int line) {
   }
   ret = __real_pvPortMalloc(xWantedSize, file, line);
   if (uart_initialized) {
-    mg_wdt_feed();
+    miot_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_MALLOC, ret, xWantedSize, cs_heap_shim);
@@ -315,7 +315,7 @@ void *__wrap_pvPortZalloc(size_t xWantedSize, const char *file, int line) {
   }
   ret = __real_pvPortZalloc(xWantedSize, file, line);
   if (uart_initialized) {
-    mg_wdt_feed();
+    miot_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_ZALLOC, ret, xWantedSize, cs_heap_shim);
@@ -334,7 +334,7 @@ void *__wrap_pvPortCalloc(size_t num, size_t xWantedSize, const char *file,
   ret = __real_pvPortCalloc(num, xWantedSize, file, line);
 
   if (uart_initialized) {
-    mg_wdt_feed();
+    miot_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_CALLOC, ret, xWantedSize, cs_heap_shim);
@@ -347,7 +347,7 @@ void *__wrap_pvPortCalloc(size_t num, size_t xWantedSize, const char *file,
 void __wrap_vPortFree(void *pv, const char *file, int line) {
   if (uart_initialized) {
     flush_log_items();
-    mg_wdt_feed();
+    miot_wdt_feed();
     echo_log_free(pv, cs_heap_shim);
   } else {
     add_log_item(ITEM_TYPE_FREE, pv, 0, cs_heap_shim);

@@ -11,7 +11,7 @@
 
 #include <ets_sys.h>
 
-#include "fw/src/mg_i2c.h"
+#include "fw/src/miot_i2c.h"
 
 #include "common/cs_dbg.h"
 
@@ -247,11 +247,13 @@ int i2c_init(i2c_connection c) {
 
   ENTER_CRITICAL(ETS_GPIO_INUM);
   i2c_set_sda_scl(conn, I2C_INPUT, I2C_INPUT);
-  if (mg_gpio_set_mode(conn->sda_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) < 0) {
+  if (miot_gpio_set_mode(conn->sda_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) <
+      0) {
     EXIT_CRITICAL(ETS_GPIO_INUM);
     return -1;
   }
-  if (mg_gpio_set_mode(conn->scl_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) < 0) {
+  if (miot_gpio_set_mode(conn->scl_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) <
+      0) {
     EXIT_CRITICAL(ETS_GPIO_INUM);
     return -1;
   }
@@ -263,7 +265,7 @@ int i2c_init(i2c_connection c) {
 
 /* HAL functions */
 #if MG_ENABLE_JS
-enum v7_err mg_i2c_create(struct v7 *v7, i2c_connection *res) {
+enum v7_err miot_i2c_create(struct v7 *v7, i2c_connection *res) {
   enum v7_err rcode = V7_OK;
   struct esp_i2c_connection *conn = NULL;
   v7_val_t sda_val = v7_arg(v7, 0);
@@ -294,7 +296,7 @@ clean:
 }
 #endif
 
-void mg_i2c_close(i2c_connection conn) {
+void miot_i2c_close(i2c_connection conn) {
   i2c_stop(conn);
   free(conn);
 }
