@@ -8,7 +8,7 @@ MQTT service - but any other public or private MQTT server would also work.
 
 Assuming you have downloaded the
 [`miot` utility](https://mongoose-iot.com/software.html) and have registered
-an account at [Mongoose Cloud](http://cloud.mongoose-iot.com),
+an account at [Mongoose Cloud](http://mongoose.cloud),
 please follow these steps:
 
 ```bash
@@ -40,7 +40,7 @@ In a separate terminal, send such control message using mosquitto command
 line tool:
 
 ```bash
-mosquitto_pub -h cloud.mongoose-iot.com -u YOUR_USER -P YOUR_PASSWORD \
+mosquitto_pub -h mongoose.cloud -u YOUR_USER -P YOUR_PASSWORD \
   -t /DEVICE_ID/gpio -m '{pin:14, state:1}'
 ```
 

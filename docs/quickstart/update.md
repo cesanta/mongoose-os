@@ -20,7 +20,7 @@ http://SERVER/path/to/fw.zip , then the device can
 be instructed to update from that location:
 
 ```
-curl http://cloud.mongoose-iot.com/api/YOUR_USERNAME.DEVICE_ID/commands/update \
+curl http://mongoose.cloud/api/YOUR_USERNAME.DEVICE_ID/commands/update \
   -u YOUR_USERNAME:YOUR_PASSWORD \
   -d '{"url":"https://SERVER/path/to/fw.zip"}'
 ```

@@ -1,6 +1,6 @@
 [
   ["mqtt", "o", {title: "MQTT settings"}],
-  ["mqtt.server", "s", "cloud.mongoose-iot.com:1883", {title: "MQTT server"}],
+  ["mqtt.server", "s", "mongoose.cloud:1883", {title: "MQTT server"}],
   ["mqtt.reconnect_timeout_min", "i", 10, {title: "Starting reconnect timeout"}],
   ["mqtt.reconnect_timeout_max", "i", 60, {title: "Maximum reconnect timeout"}],
   ["mqtt.ssl_cert", "s", "", {title: "Client certificate to present to the server"}],
