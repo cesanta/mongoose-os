@@ -43,7 +43,7 @@ extern void call_trace_print(const char *prefix, const char *suffix,
  * initialized. At the moment of writing this, there are 44 calls. Let it be
  * 50. (if actual amount exceeds, we'll abort)
  */
-#define LOG_ITEMS_CNT 50
+#define LOG_ITEMS_CNT 120
 
 /*
  * Special value to be saved into `struct log_item::ptr`, meaning NULL pointer
@@ -97,7 +97,7 @@ struct log {
 
   unsigned ptr_doesnt_fit : 1;
   unsigned item_size_small : 1;
-  unsigned log_items_cnt_small : 1;
+  unsigned log_items_cnt_overflow : 30;
 };
 
 static struct log *plog = NULL;
@@ -181,7 +181,7 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
 
   if (plog->items_cnt >= LOG_ITEMS_CNT) {
     /* NOTE: we can't printf here, since UART is not yet initialized */
-    plog->log_items_cnt_small = 1;
+    plog->log_items_cnt_overflow++;
   }
 
   plog->items[plog->items_cnt] = item;
@@ -234,8 +234,9 @@ static void flush_log_items(void) {
     if (plog->item_size_small) {
       fprintf(stderr, "struct log_item::size width is too small\n");
       abort();
-    } else if (plog->log_items_cnt_small) {
-      fprintf(stderr, "LOG_ITEMS_CNT is too low\n");
+    } else if (plog->log_items_cnt_overflow > 0) {
+      fprintf(stderr, "LOG_ITEMS_CNT is too low (need at least %u)\n",
+              LOG_ITEMS_CNT + plog->log_items_cnt_overflow);
       abort();
     } else if (plog->ptr_doesnt_fit) {
       fprintf(stderr, "ptr is not suitable for PTR_INFLATE\n");
