@@ -150,6 +150,10 @@
       setNextItemFromList(statTotal.minChunkSize.items);
     })
 
+    var chartLabels = [];
+    var chartValues = [];
+    var chartItems = [];  // To find item by index when clicked.
+
     // populate log window
     $("#log_sel option").remove();
     var select = jQuery("#log_sel")[0];
@@ -160,6 +164,10 @@
       opt.innerHTML = item.toString();
       if (item.type == ItemType.NONE){
         opt.className = "log_item_type_none";
+      } else {
+        chartLabels.push(item.idx);
+        chartValues.push(item.stat.heapUsage);
+        chartItems.push(item);
       }
       select.appendChild(opt);
     }
@@ -224,6 +232,55 @@
     }
 
     guiLoggerStateApply();
+
+    // Draw usage chart.
+    {
+      var data = {
+        labels: chartLabels,
+        datasets: [{
+          label: "Heap Usage",
+          fill: false,
+          lineTension: 0.1,
+          backgroundColor: "rgba(75,192,192,0.4)",
+          borderColor: "rgba(75,192,192,1)",
+          borderCapStyle: "butt",
+          borderDash: [],
+          borderDashOffset: 0.0,
+          borderJoinStyle: 'miter',
+          borderWidth: 2,
+          pointBorderColor: "rgba(75,192,192,1)",
+          pointBackgroundColor: "#fff",
+          pointBorderWidth: 1,
+          pointHoverRadius: 3,
+          pointHoverBackgroundColor: "rgba(75,192,192,1)",
+          pointHoverBorderColor: "rgba(220,220,220,1)",
+          pointHoverBorderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 5,
+          data: chartValues,
+          spanGaps: false,
+        }]
+      };
+      var chart = new Chart($("#chart"), {
+        type: 'line',
+        data: data,
+        options: {
+          scales: {
+            xAxes: [{ display: false }],
+            yAxes: [{ ticks: { min: 0, max: logger.getHeapSize() } }],
+          },
+          legend: { display: false },
+          hover: { animationDuration: 0 },
+          tooltips: { callbacks: { title: function(i, d) { return ""; } } }
+        }
+      });
+      $("#chart").on("click", function(ev) {
+        var activePoints = chart.getElementsAtEvent(ev);
+        if (!activePoints || activePoints.length == 0) return;
+        var i = activePoints[0]._index;
+        setLogItemIdx(chartItems[i].idx);
+      });
+    }
   }
 
   function guiLoggerStateApply() {

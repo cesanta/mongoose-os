@@ -77,38 +77,15 @@
     .const_input {
       width: 70px;
     }
+
+    #chart {
+      border: 1px solid black;
+    }
   </style>
 
   <body>
     <p>
-    <input type="button" id="connect-btn" value="Connect to">&nbsp;<input type="text" id="server-addr" value="localhost:8910"> | <input type="file" id="file-input" />
-    </p>
-    <p>
-      heap start (hex): <input type="text" id="heap_start" class="const_input" disabled>
-      heap end (hex): <input type="text" id="heap_end" class="const_input" disabled>
-      heap size: <input type="text" id="heap_size" class="const_input" disabled>
-      bytes per row: <input type="text" id="bytes_per_row" class="const_input" disabled>
-      bytes per cell: <input type="text" id="bytes_per_cell" class="const_input" disabled>
-    </p>
-    <p>
-      malloc through our shim: <span class="log_area_shim fullborder">&nbsp;&nbsp;</span>
-      malloc without shim: <span class="log_area_used fullborder">&nbsp;&nbsp;</span>
-    </p>
-    <p>
-      <table id="map_tbl"></table>
-    </p>
-
-    <p>
-      <textarea id="hint_input" class="hint" disabled></textarea>
-      <input id="hint_addr_input" class="hint_addr" disabled />
-    </p>
-
-    <p>
-      <b>Current stat:</b>
-      heap usage, bytes: <input type="text" id="cur_heap_usage" class="const_input" disabled>
-      heap usage with overhead, bytes: <input type="text" id="cur_heap_usage_with_overhead" class="const_input" disabled>
-      alloc count: <input type="text" id="cur_alloc_cnt" class="const_input" disabled>
-      max free block size, bytes: <input type="text" id="cur_max_free_block_size" class="const_input" disabled>
+      <input type="button" id="connect-btn" value="Connect to">&nbsp;<input type="text" id="server-addr" value="localhost:8910"> | <input type="file" id="file-input" />
     </p>
 
     <p>
@@ -124,6 +101,8 @@
       |
       min free block size:
       <button id="min_contiguous_block_size">&nbsp;</button>
+
+      <div style="width: 1280px; height: 200px"><canvas id="chart" style="height: 100%; width: 100%"></canvas></div>
     </p>
 
     <p>
@@ -131,9 +110,39 @@
       </select>
     </p>
 
+    <p>
+      <b>Current stat:</b>
+      heap usage, bytes: <input type="text" id="cur_heap_usage" class="const_input" disabled>
+      heap usage with overhead, bytes: <input type="text" id="cur_heap_usage_with_overhead" class="const_input" disabled>
+      alloc count: <input type="text" id="cur_alloc_cnt" class="const_input" disabled>
+      max free block size, bytes: <input type="text" id="cur_max_free_block_size" class="const_input" disabled>
+    </p>
+
+    <p>
+      <table id="map_tbl"></table>
+    </p>
+
+    <p>
+      <textarea id="hint_input" class="hint" disabled></textarea>
+      <input id="hint_addr_input" class="hint_addr" disabled />
+    </p>
+
+    <p>
+      heap start (hex): <input type="text" id="heap_start" class="const_input" disabled>
+      heap end (hex): <input type="text" id="heap_end" class="const_input" disabled>
+      heap size: <input type="text" id="heap_size" class="const_input" disabled>
+      bytes per row: <input type="text" id="bytes_per_row" class="const_input" disabled>
+      bytes per cell: <input type="text" id="bytes_per_cell" class="const_input" disabled>
+    </p>
+    <p>
+      malloc through our shim: <span class="log_area_shim fullborder">&nbsp;&nbsp;</span>
+      malloc without shim: <span class="log_area_used fullborder">&nbsp;&nbsp;</span>
+    </p>
+
   </body>
 
   <script src="jquery-1.12.0.min.js"></script>
+  <script src="Chart-2.4.0.min.js"></script>
   <script src="heaplog_viewer.js"></script>
 </html>
 
