@@ -6,6 +6,8 @@
 
   var guiDeltaItems = [];
 
+  var symTable = {};  /* Addr -> function translation table for stack traces */
+
   var cellData;
 
   /* Enables additional checks that affect performance */
@@ -14,6 +16,8 @@
   var BYTES_PER_ROW = 1024;
   var CELLS_PER_ROW = 128;
   var BYTES_PER_CELL = (BYTES_PER_ROW / CELLS_PER_ROW);
+
+  var CALL_TRACE_SIZE = 32;  // Must match the value in C file.
 
   var OVERHEAD_BYTES_PER_ALLOC = 8;
 
@@ -36,6 +40,10 @@
   tbl.cellPadding = 0;
   tbl.cellSpacing = 0;
   tbl.style.tableLayout = 'fixed';
+
+  document.getElementById('connect-btn').addEventListener(
+    'click', connectToServer, false
+  );
 
   document.getElementById('file-input').addEventListener(
     'change', readLogFile, false
@@ -284,6 +292,7 @@
     cell.classList.remove("log_area_used_adj_top");
     cell.classList.remove("log_area_used_adj_bottom");
     cell.classList.remove("log_area_highlighted");
+    cell.style.width = '8px';
   }
 
   function getCellXYByAddr(addr) {
@@ -300,7 +309,7 @@
   function drawAllocation(alloc, highlight) {
     var cellxy = getCellXYByAddr(alloc.addr);
     var addr;
-    var cell;
+    var cell, beginCell;
 
     for (addr = alloc.addr; addr < alloc.addr + alloc.size; addr += BYTES_PER_CELL) {
       // get cell at current coords
@@ -310,6 +319,10 @@
       cell.classList.add("log_area_used");
       if (addr == alloc.addr) {
         cell.classList.add("log_area_used_begin");
+        cell.style.width = '9px';
+        beginCell = cell;
+      } else {
+        cell.style.width = '10px';
       }
 
       if (alloc.shim) {
@@ -342,6 +355,7 @@
 
     if (cell){
       cell.classList.add("log_area_used_end");
+      cell.style.width = (cell == beginCell ? '8px' : '9px');
     }
   }
 
@@ -488,12 +502,13 @@
     var heapStart = 0;
     var heapEnd = 0;
     var curStat = new StatLocal();
+    var prevTrace = [];
+    for (var i = 0; i < CALL_TRACE_SIZE; i++) prevTrace.push(0);
 
     var i;
-    var hlog_regexp = new RegExp('hl\{(m|c|z|r|f)\,([a-zA-Z0-9_,]+)\}');
-    var hlog_param_regexp = new RegExp('hlog_param\:(\{[^}]+\})');
-    var hlog_calls_regexp = new RegExp('hcs\{([a-zA-Z0-9_ ]*)\}');
-    var curCallsArray = emptyArray;
+    var hlog_regexp = new RegExp('hl{(m|c|z|r|f),([a-zA-Z0-9_,]+)} ?' +
+                                 '(?:([0-9]+) ([0-9]+) ?([0-9a-f ]+)?)?');
+    var hlog_param_regexp = new RegExp('hlog_param:({[^}]+})');
 
     /*
      * Return call stack for an item, prepended by a comma (to be used in
@@ -501,7 +516,12 @@
      */
     var callStack = function(item) {
       if (item.calls.length > 0) {
-        return ", calls: " + item.calls.join(" ← ");
+        var resolved = [];
+        for (var i = 0; i < item.calls.length; i++) {
+          var sym = symTable[item.calls[i]];
+          resolved.push(sym ? sym : item.calls[i]);
+        }
+        return ", calls: " + resolved.join(" ← ");
       } else {
         return "";
       }
@@ -613,9 +633,10 @@
       var item = new LogItemNone();
 
       var match = line.match(hlog_regexp);
-      var callsMatch = line.match(hlog_calls_regexp);
+      var callsMatch = null; //line.match(hlog_calls_regexp);
       if (match) {
         /* heap log item */
+        //console.log(match);
 
         var verb = match[1];
         var dataArr = match[2].split(',');
@@ -671,6 +692,35 @@
           throw Error("wrong heaplog verb: " + verb);
         }
 
+        // Do we have trace data?
+        if (match[3] != "") {
+          var len = parseInt(match[3]);
+          var start = parseInt(match[4]);
+          var trace = [];
+          var prevAddr = "00000000";
+          var i = 0;
+          for (; i < start; i++) {
+            trace.push(prevTrace[i]);
+            prevAddr = prevTrace[i];
+          }
+          if (match[5]) {
+            var addrs = match[5].split(" ");
+            for (var j = 0; i < CALL_TRACE_SIZE && j < addrs.length; i++, j++) {
+              var a = addrs[j];
+              if (a.length < 8) {
+                a = prevAddr.substr(0, 8 - a.length) + a;
+              }
+              trace.push(a);
+              prevAddr = a;
+              prevTrace[i] = a;
+            }
+          }
+          //console.log('Reconstructed trace:', trace);
+          item.calls = trace;
+        } else {
+          item.calls = emptyArray;
+        }
+
         curStat = delta.stat;
 
         /* If user text is not empty on this line, add separate item for it */
@@ -687,8 +737,8 @@
         /* Heap params */
         match = line.match(hlog_param_regexp)
 
-        /* TODO: JSON.parse */
-        var inputData = eval("(" + match[1] + ")");
+        console.log(match[1]);
+        var inputData = JSON.parse(match[1]);
 
         heapStart = inputData.heap_start;
         heapEnd = inputData.heap_end;
@@ -696,25 +746,55 @@
         allocMap.setHeapStartEnd(heapStart, heapEnd);
 
         item.comment = line;
-      } else if (callsMatch){
-        /* remember call stack, it will be set to the next heaplog item */
-        curCallsArray = callsMatch[1].split(' ');
-        curCallsArray = curCallsArray.filter(function(n){ return n != ''; });
-
-        /* prevent adding current item to the array */
-        item = undefined;
       } else {
         item.comment = line;
       }
 
       if (item) {
         item.stat = JSON.parse(JSON.stringify(curStat));
-        item.calls = curCallsArray;
-        curCallsArray = emptyArray;
-
         logItems.push(item);
       }
     }
+  }
+
+  var ws = null;
+
+  function connectToServer(e) {
+    var url = 'ws://' + $("#server-addr").val() + '/log';
+    var lines = [];
+    if (ws) {
+      ws.close();
+      ws = null;
+      $("#connect-btn").val("Connect to");
+      return;
+    }
+    console.log("connecting to", url);
+    ws = new WebSocket(url);
+    var first = true;
+    ws.onopen = function(ev) {
+      console.log("connected");
+      $("#connect-btn").val("Disconnect");
+    };
+    ws.onclose = function(ev) {
+      console.log("disconnected");
+      $("#connect-btn").val("Connect to");
+      logger = parseLogLines(lines);
+      logger.setItemIdx( logger.getItemsCnt() - 1 );
+      guiRebuild();
+    };
+    ws.onmessage = function(ev) {
+      if (first) {
+        symTable = JSON.parse(ev.data);
+        first = false;
+      } else {
+        lines.push(ev.data);
+      }
+    };
+    ws.onerror = function(ev) {
+      alert("connection error", ev);
+      alert("connection error" + ev);
+      ws.close();
+    };
   }
 
   function readLogFile(e) {
@@ -729,7 +809,6 @@
 
       logger = parseLogLines(lines);
       logger.setItemIdx( logger.getItemsCnt() - 1 );
-
       guiRebuild();
     };
     reader.readAsText(file);
@@ -804,7 +883,11 @@
 
         // make sure the memory area determined by `addr` and `size` is free
         if (param.checkAddresses) {
-          checkFree(addr, size);
+          try {
+            checkFree(addr, size);
+          } catch (e) {
+            console.error(e);
+          }
         }
 
         // remember new allocated buffer
@@ -982,7 +1065,7 @@
     }
 
     function checkFree(addr, size) {
-      var key;
+      var key, i = 0;
 
       // check if new allocation intersects any existing one
       for (key in curAllocs) {
@@ -990,11 +1073,12 @@
             && curAllocs[key].addr < (addr + size)
             && (curAllocs[key].addr + curAllocs[key].size) >= addr) {
               throw Error(
-                "new allocation {" + addr + ", " + size + "} "
+                i + ": new allocation {" + addr.toString(16) + ", " + size + "} "
                 + "intersects with the existing one "
-                + "{" + curAllocs[key].addr + ", " + curAllocs[key].size + "}"
+                + "{" + curAllocs[key].addr.toString(16) + ", " + curAllocs[key].size + "}"
               );
             }
+        i++;
       }
 
       //-- check if new allocation is out of the heap boundaries

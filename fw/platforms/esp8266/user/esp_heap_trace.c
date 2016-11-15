@@ -5,15 +5,29 @@
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if ESP_ENABLE_HEAP_LOG
+#ifndef MIOT_ENABLE_HEAP_LOG
+#define MIOT_ENABLE_HEAP_LOG 0
+#endif
 
+#if MIOT_ENABLE_HEAP_LOG
+
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#if MG_ENABLE_JS
 #include "v7/v7.h"
+#endif
+
 #include "esp_mem_layout.h"
 
-extern int uart_initialized;
+/*
+ * global flag that is needed for heap trace: we shouldn't send anything to
+ * uart until it is initialized
+ */
+int uart_initialized = 0;
+
 extern int cs_heap_shim;
 
 /* Defined in linker script. */
@@ -30,13 +44,7 @@ extern void __real_vPortFree(void *pv, const char *file, int line);
 
 extern void miot_wdt_feed(void);
 
-#if V7_ENABLE_CALL_TRACE
-extern void call_trace_print(const char *prefix, const char *suffix,
-                             size_t skip_cnt, size_t max_cnt);
-#if !defined(CALL_TRACE_MAX_CNT)
-#define CALL_TRACE_MAX_CNT 0 /*10*/
-#endif
-#endif
+void print_call_trace();
 
 /*
  * Maximum amount of calls to malloc/free and other friends before UART is
@@ -108,48 +116,51 @@ static struct log *plog = NULL;
 
 NOINSTR
 static void echo_log_malloc_req(size_t size, int shim) {
-#if V7_ENABLE_CALL_TRACE
-  call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
-#endif
   fprintf(stderr, "hl{m,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
 static void echo_log_zalloc_req(size_t size, int shim) {
-#if V7_ENABLE_CALL_TRACE
-  call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
-#endif
   fprintf(stderr, "hl{z,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
 static void echo_log_calloc_req(size_t size, int shim) {
-#if V7_ENABLE_CALL_TRACE
-  call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
-#endif
   fprintf(stderr, "hl{c,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
 static void echo_log_realloc_req(size_t size, int shim, void *old_ptr) {
-#if V7_ENABLE_CALL_TRACE
-  call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
-#endif
   fprintf(stderr, "hl{r,%u,%d,%x,", (unsigned int) size, shim,
           (unsigned int) old_ptr);
 }
 
 NOINSTR
 static void echo_log_alloc_res(void *ptr) {
+#if MIOT_ENABLE_CALL_TRACE
+  fprintf(stderr, "%x} ", (unsigned int) ptr);
+  if (plog == NULL) {
+    print_call_trace();
+  } else {
+    fprintf(stderr, "\n");
+  }
+#else
   fprintf(stderr, "%x}\n", (unsigned int) ptr);
+#endif
 }
 
 NOINSTR
 static void echo_log_free(void *ptr, int shim) {
-#if V7_ENABLE_CALL_TRACE
-  call_trace_print("hcs{", "}", 0, CALL_TRACE_MAX_CNT);
-#endif
+#if MIOT_ENABLE_CALL_TRACE
+  fprintf(stderr, "hl{f,%x,%d} ", (unsigned int) ptr, shim);
+  if (plog == NULL) {
+    print_call_trace();
+  } else {
+    fprintf(stderr, "\n");
+  }
+#else
   fprintf(stderr, "hl{f,%x,%d}\n", (unsigned int) ptr, shim);
+#endif
 }
 
 /*
@@ -243,7 +254,7 @@ static void flush_log_items(void) {
       abort();
     }
 
-    fprintf(stderr, "\nhlog_param:{\"heap_start\":0x%x, \"heap_end\":0x%x}\n",
+    fprintf(stderr, "\nhlog_param:{\"heap_start\":%u, \"heap_end\":%u}\n",
             (unsigned int) (&_heap_start), (unsigned int) ESP_DRAM0_END);
 
     /* fprintf above may have use malloc and already flushed the log.

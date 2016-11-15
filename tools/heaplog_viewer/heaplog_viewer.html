@@ -7,11 +7,13 @@
     .log_sel {
       width: 100%;
       font-family: monospace;
+      font-size: 8pt;
     }
 
     .hint {
       width: 100%;
       font-family: monospace;
+      font-size: 8pt;
     }
 
     .hint_addr {
@@ -79,7 +81,7 @@
 
   <body>
     <p>
-      <input type="file" id="file-input" />
+    <input type="button" id="connect-btn" value="Connect to">&nbsp;<input type="text" id="server-addr" value="localhost:8910"> | <input type="file" id="file-input" />
     </p>
     <p>
       heap start (hex): <input type="text" id="heap_start" class="const_input" disabled>

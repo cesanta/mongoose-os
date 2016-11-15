@@ -51,12 +51,8 @@ os_timer_t startcmd_timer;
 #define MIOT_DEBUG_UART_BAUD_RATE 115200
 #endif
 
-#if ESP_ENABLE_HEAP_LOG
-/*
- * global flag that is needed for heap trace: we shouldn't send anything to
- * uart until it is initialized
- */
-int uart_initialized = 0;
+#if MIOT_ENABLE_HEAP_LOG
+extern int uart_initialized;
 #endif
 
 uint32_t user_rf_cal_sector_set();
@@ -94,11 +90,11 @@ int esp_mg_init(rboot_config *bcfg) {
     if (miot_uart_init(1, u1cfg, NULL, NULL) == NULL) {
       return MIOT_INIT_UART_FAILED;
     }
-#if ESP_ENABLE_HEAP_LOG
+#if MIOT_ENABLE_HEAP_LOG
     uart_initialized = 1;
 #endif
-    setvbuf(stdout, NULL, _IOLBF, 0);
-    setvbuf(stderr, NULL, _IOLBF, 0);
+    setvbuf(stdout, NULL, _IOLBF, 256);
+    setvbuf(stderr, NULL, _IOLBF, 256);
     cs_log_set_level(LL_INFO);
     os_install_putc1(dbg_putc);
     system_set_os_print(1);

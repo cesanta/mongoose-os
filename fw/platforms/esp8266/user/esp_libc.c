@@ -29,7 +29,7 @@
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if ESP_ENABLE_HEAP_LOG
+#if MIOT_ENABLE_HEAP_LOG
 int cs_heap_shim = 0;
 #define CS_HEAP_SHIM_FLAG_SET() \
   do {                          \
@@ -60,9 +60,6 @@ void *malloc(size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
   res = (void *) os_malloc(size);
-#if ESP_ENABLE_MALLOC_TRACES
-  os_printf("ma %p %u\n", res, size);
-#endif
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
@@ -71,9 +68,6 @@ void *malloc(size_t size) {
 
 void free(void *ptr) {
   CS_HEAP_SHIM_FLAG_SET();
-#if ESP_ENABLE_MALLOC_TRACES
-  os_printf("fr %p\n", ptr);
-#endif
   os_free(ptr);
 }
 
@@ -86,9 +80,6 @@ void *realloc(void *ptr, size_t size) {
     return NULL;
   }
   res = (void *) os_realloc(ptr, size);
-#if ESP_ENABLE_MALLOC_TRACES
-  os_printf("re %p %p %u\n", ptr, res, size);
-#endif
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) {
     printf("failed to alloc %u bytes, %d avail\n", size,
@@ -103,9 +94,6 @@ void *calloc(size_t num, size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
   res = (void *) os_zalloc(num * size);
-#if ESP_ENABLE_MALLOC_TRACES
-  os_printf("ca %p %u\n", res, num * size);
-#endif
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
