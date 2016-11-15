@@ -1,16 +1,13 @@
 This is a JS-enabled Mongoose IoT application.
 
-Compile with `PLATFORM` set:
+To build, flash and test it, you need a `miot` tool (see a
+[quick start guide](https://mongoose-iot.com/docs/#/quickstart/overview.md/)):
 
 ```
-make PLATFORM=esp8266
+$ miot build --arch esp8266
+$ miot flash
+$ miot console
+...
+Hello, JS world!
+Hey, a file!
 ```
-or
-
-```
-make PLATFORM=cc3200
-```
-
-JavaScript code is under `fs/app.js`
-
-Firmware files will be stored in the `firmware` directory.
