@@ -94,14 +94,14 @@ int esp_mg_init(rboot_config *bcfg) {
     if (mg_uart_init(1, u1cfg, NULL, NULL) == NULL) {
       return MG_INIT_UART_FAILED;
     }
+#if ESP_ENABLE_HEAP_LOG
+    uart_initialized = 1;
+#endif
     setvbuf(stdout, NULL, _IOLBF, 0);
     setvbuf(stderr, NULL, _IOLBF, 0);
     cs_log_set_level(LL_INFO);
     os_install_putc1(dbg_putc);
     system_set_os_print(1);
-#if ESP_ENABLE_HEAP_LOG
-    uart_initialized = 1;
-#endif
   }
 
   fputc('\n', stderr);

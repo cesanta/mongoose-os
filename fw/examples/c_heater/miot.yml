@@ -1,0 +1,10 @@
+name: heater
+arch: esp8266
+version: 1.0
+skeleton_version: 2016-09-20
+sources:
+  - src
+filesystem:
+  - fs
+build_vars:
+  APP_CONF_SCHEMA: src/config.yaml

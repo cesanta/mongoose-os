@@ -1,0 +1,8 @@
+{
+  "clubby": { "connect_on_boot": false },
+  "hsw": {
+    "sensor_data_url": "http://mongoose.cloud/api/DEVICE-USER/data/add",
+    "sensor_report_interval_ms": 10000,
+    "auth": "Bearer USER:PASSWORD"
+  }
+}
