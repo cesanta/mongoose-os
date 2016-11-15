@@ -413,6 +413,7 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(eval _IROM0ADDR=$(shell printf "0x%08x" $$((0x40200000 + $(basename $(notdir $@)) + $(IMAGE_HEADER_SIZE)))))
 	$(eval _IROM0SIZE=$(ROM_SIZE))
 	$(vecho) "GEN   $^ ($(_IROM0SIZE) @ $(_IROM0ADDR)) -> $@"
+	$(Q) mkdir -p $(GEN_DIR)
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
 include $(MIOT_PATH)/common/scripts/build_info.mk
