@@ -3,15 +3,18 @@
  * All rights reserved
  */
 
+#include "fw/src/miot_mdns.h"
+
 #include <stdlib.h>
 
 #include "common/platform.h"
-#include "fw/src/miot_mdns.h"
-#include "fw/src/miot_wifi.h"
-#include "fw/src/miot_mongoose.h"
-#include "fw/src/miot_dns_sd.h"
 #include "common/cs_dbg.h"
 #include "common/queue.h"
+
+#include "fw/src/miot_dns_sd.h"
+#include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_wifi.h"
 
 #if MG_ENABLE_MDNS
 
@@ -78,13 +81,16 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data) {
 }
 
 enum miot_init_result miot_mdns_init(void) {
-  struct mg_mgr *mgr = miot_get_mgr();
-
   char listener_spec[128];
+  struct mg_mgr *mgr = miot_get_mgr();
+  struct mg_connection *lc;
+
+  if (!get_cfg()->dns_sd.enable) return MIOT_INIT_OK;
+
   snprintf(listener_spec, sizeof(listener_spec), "udp://:%d", MDNS_PORT);
   LOG(LL_INFO, ("Listening on %s", listener_spec));
 
-  struct mg_connection *lc = mg_bind(mgr, listener_spec, handler);
+  lc = mg_bind(mgr, listener_spec, handler);
   if (lc == NULL) {
     LOG(LL_ERROR, ("Failed to create listener"));
     return MIOT_INIT_MDNS_FAILED;
