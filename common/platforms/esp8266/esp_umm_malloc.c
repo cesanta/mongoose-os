@@ -70,7 +70,7 @@ void *pvPortZalloc(size_t size, const char *file, int line) {
   (void) line;
 
   ret = umm_malloc(size);
-  memset(ret, 0x00, size);
+  if (ret != NULL) memset(ret, 0, size);
   return ret;
 }
 
