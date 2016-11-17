@@ -55,6 +55,16 @@ char *strdup(const char *src);
 int64_t cs_to64(const char *s);
 #endif
 
+/*
+ * Cross-platform version of `strncasecmp()`.
+ */
+int mg_ncasecmp(const char *s1, const char *s2, size_t len);
+
+/*
+ * Cross-platform version of `strcasecmp()`.
+ */
+int mg_casecmp(const char *s1, const char *s2);
+
 #ifdef __cplusplus
 }
 #endif

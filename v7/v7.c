@@ -1406,6 +1406,16 @@ char *strdup(const char *src);
 int64_t cs_to64(const char *s);
 #endif
 
+/*
+ * Cross-platform version of `strncasecmp()`.
+ */
+int mg_ncasecmp(const char *s1, const char *s2, size_t len);
+
+/*
+ * Cross-platform version of `strcasecmp()`.
+ */
+int mg_casecmp(const char *s1, const char *s2);
+
 #ifdef __cplusplus
 }
 #endif
@@ -8765,6 +8775,24 @@ int64_t cs_to64(const char *s) {
   return result * neg;
 }
 #endif
+
+static int str_util_lowercase(const char *s) {
+  return tolower(*(const unsigned char *) s);
+}
+
+int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
+  int diff = 0;
+
+  if (len > 0) do {
+      diff = str_util_lowercase(s1++) - str_util_lowercase(s2++);
+    } while (diff == 0 && s1[-1] != '\0' && --len > 0);
+
+  return diff;
+}
+
+int mg_casecmp(const char *s1, const char *s2) {
+  return mg_ncasecmp(s1, s2, (size_t) ~0);
+}
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
