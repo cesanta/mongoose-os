@@ -210,14 +210,19 @@ void main_task(void *arg) {
   osi_MsgQCreate(&s_main_queue, "main", sizeof(e), 32 /* len */);
 
   enum cc3200_init_result r = cc3200_init(NULL);
-  if (r != CC3200_INIT_OK) {
-    LOG(LL_ERROR, ("Init failed: %d", r));
-  }
+  bool success = (r == CC3200_INIT_OK);
+  if (!success) LOG(LL_ERROR, ("Init failed: %d", r));
 
 #if MG_ENABLE_UPDATER
   miot_upd_boot_finish((r == CC3200_INIT_OK),
                        (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
 #endif
+
+  if (!success) {
+    /* Arbitrary delay to make potential reboot loop less tight. */
+    miot_usleep(500000);
+    miot_system_restart(0);
+  }
 
   while (1) {
     mongoose_poll(0);

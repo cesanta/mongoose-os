@@ -169,9 +169,12 @@ void esp_mg_init_timer_cb(void *arg) {
   bool success = (esp_mg_init(bcfg) == 0);
 #if MG_ENABLE_UPDATER
   miot_upd_boot_finish(success, bcfg->is_first_boot);
-#else
-  (void) success;
 #endif
+  if (!success) {
+    /* Arbitrary delay to make potential reboot loop less tight. */
+    miot_usleep(500000);
+    miot_system_restart(0);
+  }
   (void) arg;
 }
 
