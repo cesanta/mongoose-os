@@ -4,6 +4,8 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "common",
     srcs = [
+        "cs_dbg.c",
+        "cs_file.c",
         "cs_strtod.c",
         "cs_time.c",
         "mbuf.c",
@@ -12,6 +14,8 @@ cc_library(
         "utf.c",
     ],
     hdrs = [
+        "cs_dbg.h",
+        "cs_file.h",
         "cs_strtod.h",
         "cs_time.h",
         "mbuf.h",
@@ -28,4 +32,5 @@ cc_library(
     srcs = ["test_util.c"],
     hdrs = ["test_util.h"],
     deps = [":common"],
+    testonly = 1,
 )
