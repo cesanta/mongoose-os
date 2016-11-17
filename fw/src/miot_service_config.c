@@ -154,7 +154,7 @@ static void miot_config_save_handler(struct clubby_request_info *ri,
      */
     clubby_send_errorf(ri, 418,
                        "configuration has been saved but manual device reset "
-                       "is required. For details, see https://TODO/TODO");
+                       "is required. For details, see https://goo.gl/Ja5gUv");
   } else
 #endif
   {
