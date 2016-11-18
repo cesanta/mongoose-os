@@ -9,7 +9,7 @@
 #endif
 
 #include "common/mbuf.h"
-#include "fw/src/miot_clubby.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_timers.h"
 
@@ -85,14 +85,14 @@ void miot_console_printf(const char *fmt, ...) {
   free(buf);
 }
 
-#if MG_ENABLE_CLUBBY || MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
 
-#if MG_ENABLE_CLUBBY
-void clubby_cb(struct clubby *clubby, void *cb_arg,
-               struct clubby_frame_info *fi, struct mg_str result,
+#if MG_ENABLE_RPC
+void mg_rpc_cb(struct mg_rpc *mg_rpc, void *cb_arg,
+               struct mg_rpc_frame_info *fi, struct mg_str result,
                int error_code, struct mg_str error_msg) {
   s_cctx.request_in_flight = 0;
-  (void) clubby;
+  (void) mg_rpc;
   (void) cb_arg;
   (void) fi;
   (void) result;
@@ -102,20 +102,20 @@ void clubby_cb(struct clubby *clubby, void *cb_arg,
 
 static void miot_console_push_to_cloud(void) {
   if (!s_cctx.initialized || !get_cfg()->console.send_to_cloud) return;
-  struct clubby *c = miot_clubby_get_global();
-  if (c == NULL || !clubby_is_connected(c)) {
+  struct mg_rpc *c = miot_rpc_get_global();
+  if (c == NULL || !mg_rpc_is_connected(c)) {
     /* If connection drops, do not wait for reply as it may never arrive. */
     s_cctx.request_in_flight = 0;
     return;
   }
-  if (s_cctx.request_in_flight || !clubby_can_send(c)) return;
+  if (s_cctx.request_in_flight || !mg_rpc_can_send(c)) return;
 #if MG_ENABLE_CONSOLE_FILE_BUFFER
   /* Push backlog from the file buffer first. */
   if (s_cctx.fbuf != NULL) {
     char *msg = NULL;
     size_t len = cs_frbuf_get(s_cctx.fbuf, &msg);
     if (len > 0) {
-      if (clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL,
+      if (mg_rpc_callf(c, mg_mk_str("/v1/Log.Log"), mg_rpc_cb, NULL, NULL,
                        "%.*s", (int) len, msg)) {
         s_cctx.request_in_flight = 1;
       }
@@ -125,7 +125,7 @@ static void miot_console_push_to_cloud(void) {
 #endif
   int l = miot_console_next_msg_len();
   if (l == 0) return; /* Only send full messages. */
-  if (clubby_callf(c, mg_mk_str("/v1/Log.Log"), clubby_cb, NULL, NULL, "%.*s",
+  if (mg_rpc_callf(c, mg_mk_str("/v1/Log.Log"), mg_rpc_cb, NULL, NULL, "%.*s",
                    (int) (l - 1), s_cctx.buf.buf)) {
     s_cctx.request_in_flight = 1;
     mbuf_remove(&s_cctx.buf, l);
@@ -136,7 +136,7 @@ static void miot_console_push_to_cloud(void) {
 int miot_console_is_waiting_for_resp(void) {
   return s_cctx.request_in_flight;
 }
-#endif /* MG_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_RPC */
 
 #if MG_ENABLE_CONSOLE_FILE_BUFFER
 static void miot_console_flush_to_file(void) {
@@ -150,7 +150,7 @@ static void miot_console_flush_to_file(void) {
 #endif
 
 static void miot_console_flush(void *arg) {
-#if MG_ENABLE_CLUBBY
+#if MG_ENABLE_RPC
   miot_console_push_to_cloud();
 #endif
 #if MG_ENABLE_CONSOLE_FILE_BUFFER
@@ -158,7 +158,7 @@ static void miot_console_flush(void *arg) {
 #endif
   (void) arg;
 }
-#endif /* MG_ENABLE_CLUBBY || MG_ENABLE_CONSOLE_FILE_BUFFER \
+#endif /* MG_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER \
           */
 
 void miot_console_init(void) {
@@ -170,7 +170,7 @@ void miot_console_init(void) {
                   get_cfg()->console.log_file_size));
   }
 #endif
-#if MG_ENABLE_CLUBBY || MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MG_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
   miot_set_c_timer(MIOT_CONSOLE_FLUSH_INTERVAL_MS, 1 /* repeat */,
                    miot_console_flush, NULL /* arg */);
 #endif

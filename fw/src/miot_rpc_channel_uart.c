@@ -3,11 +3,11 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_clubby_channel_uart.h"
+#include "fw/src/miot_rpc_channel_uart.h"
 #include "fw/src/miot_uart.h"
 #include "fw/src/miot_utils.h"
 
-#if MG_ENABLE_CLUBBY
+#if MG_ENABLE_RPC
 
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
@@ -17,7 +17,7 @@
 #define FRAME_DELIMETER "\"\"\""
 #define FRAME_DELIMETER_LEN 3
 
-struct clubby_channel_uart_data {
+struct mg_rpc_channel_uart_data {
   int uart_no;
   unsigned int wait_for_start_frame : 1;
   unsigned int waiting_for_start_frame : 1;
@@ -28,10 +28,10 @@ struct clubby_channel_uart_data {
   struct mbuf send_mbuf;
 };
 
-void clubby_channel_uart_dispatcher(struct miot_uart_state *us) {
-  struct clubby_channel *ch = (struct clubby_channel *) us->dispatcher_data;
-  struct clubby_channel_uart_data *chd =
-      (struct clubby_channel_uart_data *) ch->channel_data;
+void mg_rpc_channel_uart_dispatcher(struct miot_uart_state *us) {
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) us->dispatcher_data;
+  struct mg_rpc_channel_uart_data *chd =
+      (struct mg_rpc_channel_uart_data *) ch->channel_data;
   cs_rbuf_t *urxb = &us->rx_buf;
   cs_rbuf_t *utxb = &us->tx_buf;
   if (urxb->used > 0) {
@@ -56,7 +56,7 @@ void clubby_channel_uart_dispatcher(struct miot_uart_state *us) {
           mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
           chd->sending = true;
         } else {
-          ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_RECD, &f);
+          ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD, &f);
         }
       }
       mbuf_remove(&chd->recv_mbuf, flen + 3);
@@ -71,7 +71,7 @@ void clubby_channel_uart_dispatcher(struct miot_uart_state *us) {
     chd->connected = true;
     /* In case stdout or stderr were going to the same UART, disable them. */
     miot_uart_set_write_enabled(chd->uart_no, false);
-    ch->ev_handler(ch, MG_CLUBBY_CHANNEL_OPEN, NULL);
+    ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
   }
   if (chd->sending && utxb->avail > 0) {
     size_t len = MIN(chd->send_mbuf.len, utxb->avail);
@@ -80,27 +80,27 @@ void clubby_channel_uart_dispatcher(struct miot_uart_state *us) {
     if (chd->send_mbuf.len == 0) {
       chd->sending = false;
       mbuf_trim(&chd->send_mbuf);
-      ch->ev_handler(ch, MG_CLUBBY_CHANNEL_FRAME_SENT, (void *) 1);
+      ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_SENT, (void *) 1);
     }
   }
 }
 
-static void clubby_channel_uart_connect(struct clubby_channel *ch) {
-  struct clubby_channel_uart_data *chd =
-      (struct clubby_channel_uart_data *) ch->channel_data;
+static void mg_rpc_channel_uart_connect(struct mg_rpc_channel *ch) {
+  struct mg_rpc_channel_uart_data *chd =
+      (struct mg_rpc_channel_uart_data *) ch->channel_data;
   if (!chd->connected) {
     chd->connected = false;
     chd->connecting = true;
     chd->waiting_for_start_frame = chd->wait_for_start_frame;
-    miot_uart_set_dispatcher(chd->uart_no, clubby_channel_uart_dispatcher, ch);
+    miot_uart_set_dispatcher(chd->uart_no, mg_rpc_channel_uart_dispatcher, ch);
     miot_uart_set_rx_enabled(chd->uart_no, true);
   }
 }
 
-static bool clubby_channel_uart_send_frame(struct clubby_channel *ch,
+static bool mg_rpc_channel_uart_send_frame(struct mg_rpc_channel *ch,
                                            const struct mg_str f) {
-  struct clubby_channel_uart_data *chd =
-      (struct clubby_channel_uart_data *) ch->channel_data;
+  struct mg_rpc_channel_uart_data *chd =
+      (struct mg_rpc_channel_uart_data *) ch->channel_data;
   if (!chd->connected || chd->sending) return false;
   mbuf_append(&chd->send_mbuf, f.p, f.len);
   mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
@@ -109,33 +109,33 @@ static bool clubby_channel_uart_send_frame(struct clubby_channel *ch,
   return true;
 }
 
-static void clubby_channel_uart_close(struct clubby_channel *ch) {
-  struct clubby_channel_uart_data *chd =
-      (struct clubby_channel_uart_data *) ch->channel_data;
+static void mg_rpc_channel_uart_close(struct mg_rpc_channel *ch) {
+  struct mg_rpc_channel_uart_data *chd =
+      (struct mg_rpc_channel_uart_data *) ch->channel_data;
   chd->connected = chd->connecting = false;
   miot_uart_set_dispatcher(chd->uart_no, NULL, NULL);
 }
 
-static const char *clubby_channel_uart_get_type(struct clubby_channel *ch) {
+static const char *mg_rpc_channel_uart_get_type(struct mg_rpc_channel *ch) {
   (void) ch;
   return "uart";
 }
 
-static bool clubby_channel_uart_is_persistent(struct clubby_channel *ch) {
+static bool mg_rpc_channel_uart_is_persistent(struct mg_rpc_channel *ch) {
   (void) ch;
   return true;
 }
 
-struct clubby_channel *clubby_channel_uart(int uart_no,
+struct mg_rpc_channel *mg_rpc_channel_uart(int uart_no,
                                            bool wait_for_start_frame) {
-  struct clubby_channel *ch = (struct clubby_channel *) calloc(1, sizeof(*ch));
-  ch->connect = clubby_channel_uart_connect;
-  ch->send_frame = clubby_channel_uart_send_frame;
-  ch->close = clubby_channel_uart_close;
-  ch->get_type = clubby_channel_uart_get_type;
-  ch->is_persistent = clubby_channel_uart_is_persistent;
-  struct clubby_channel_uart_data *chd =
-      (struct clubby_channel_uart_data *) calloc(1, sizeof(*chd));
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) calloc(1, sizeof(*ch));
+  ch->connect = mg_rpc_channel_uart_connect;
+  ch->send_frame = mg_rpc_channel_uart_send_frame;
+  ch->close = mg_rpc_channel_uart_close;
+  ch->get_type = mg_rpc_channel_uart_get_type;
+  ch->is_persistent = mg_rpc_channel_uart_is_persistent;
+  struct mg_rpc_channel_uart_data *chd =
+      (struct mg_rpc_channel_uart_data *) calloc(1, sizeof(*chd));
   chd->uart_no = uart_no;
   chd->wait_for_start_frame = wait_for_start_frame;
   mbuf_init(&chd->recv_mbuf, 0);
@@ -144,4 +144,4 @@ struct clubby_channel *clubby_channel_uart(int uart_no,
   LOG(LL_INFO, ("%p UART%d", ch, uart_no));
   return ch;
 }
-#endif /* MG_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_RPC */

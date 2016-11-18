@@ -1,5 +1,5 @@
-var FileService = function(clubby) {
-  clubby.oncmd("/v1/File.ReadAll", function(cmd) {
+var FileService = function(mgRPC) {
+  mgRPC.oncmd("/v1/File.ReadAll", function(cmd) {
     if (cmd.args === undefined) {
       throw "Need argument";
     }

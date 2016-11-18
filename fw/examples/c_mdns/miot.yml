@@ -7,4 +7,4 @@ sources:
   - src
 filesystem:
 build_vars:
-  MG_ENABLE_CLUBBY: 0
+  MG_ENABLE_RPC: 0

@@ -19,8 +19,8 @@
 #include "common/platform.h"
 #include "v7/v7.h"
 
-#include "fw/src/miot_clubby_channel_uart.h"
-#include "fw/src/miot_clubby.h"
+#include "fw/src/miot_rpc_channel_uart.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_uart.h"
 #include "fw/src/miot_sys_config.h"
 
@@ -235,14 +235,14 @@ void miot_prompt_process_char(char ch) {
       show_prompt();
     }
   } else if (ch == EOF_CHAR) {
-#if MG_ENABLE_CLUBBY && MG_ENABLE_CLUBBY_UART
+#if MG_ENABLE_RPC && MG_ENABLE_RPC_UART
     const int uart_no = s_sjp.uart_no;
-    if (uart_no >= 0 && miot_clubby_get_global() != NULL) {
-      /* Switch into Clubby mode. This will detach our dispatcher. */
-      struct clubby_channel *ch =
-          clubby_channel_uart(uart_no, false /* wait_for_start_frame */);
+    if (uart_no >= 0 && miot_rpc_get_global() != NULL) {
+      /* Switch into RPC mode. This will detach our dispatcher. */
+      struct mg_rpc_channel *ch =
+          mg_rpc_channel_uart(uart_no, false /* wait_for_start_frame */);
       if (ch != NULL) {
-        clubby_add_channel(miot_clubby_get_global(), mg_mk_str(""), ch,
+        mg_rpc_add_channel(miot_rpc_get_global(), mg_mk_str(""), ch,
                            true /* is_trusted */, false /* send_hello */);
         ch->connect(ch);
       }

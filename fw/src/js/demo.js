@@ -5,7 +5,7 @@ print('sendRandomData() will send some random data to the cloud.');
 function sendRandomData() {
   function send() {
     var value  = 20 + Math.random() * 20;  // Simulate sensor data
-    clubby.call('//api.cesanta.com',
+    mgRPC.call('//api.cesanta.com',
                 {cmd: '/v1/Timeseries.ReportMany',
                     args: {vars: [[{__name__: 'value'}, value]]}},
                 function(res) {
@@ -15,7 +15,7 @@ function sendRandomData() {
   }
 
   function send_on_ready() {
-    clubby.ready(send);
+    mgRPC.ready(send);
   }
 
   send_on_ready();

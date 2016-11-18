@@ -1,7 +1,7 @@
 #include "fw/src/miot_init.h"
 
 #include "fw/src/miot_app.h"
-#include "fw/src/miot_clubby.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_dns_sd.h"
 #include "fw/src/miot_mdns.h"
@@ -10,7 +10,7 @@
 #include "fw/src/miot_service_filesystem.h"
 #include "fw/src/miot_service_vars.h"
 #include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_updater_clubby.h"
+#include "fw/src/miot_updater_rpc.h"
 #include "fw/src/miot_updater_http.h"
 #include "fw/src/miot_wifi.h"
 
@@ -24,15 +24,15 @@ enum miot_init_result mg_init(void) {
   if (r != MIOT_INIT_OK) return r;
 #endif
 #if MG_ENABLE_DNS_SD
-  r = miot_dns_sd_init(); /* Before clubby init */
+  r = miot_dns_sd_init(); /* Before mg_rpc init */
   if (r != MIOT_INIT_OK) return r;
 #endif
 
-#if MG_ENABLE_CLUBBY
-  r = miot_clubby_init();
+#if MG_ENABLE_RPC
+  r = miot_rpc_init();
   if (r != MIOT_INIT_OK) return r;
-#if MG_ENABLE_UPDATER_CLUBBY
-  miot_updater_clubby_init();
+#if MG_ENABLE_UPDATER_RPC
+  miot_updater_rpc_init();
 #endif
 #if MG_ENABLE_CONFIG_SERVICE
   miot_service_config_init();
@@ -43,7 +43,7 @@ enum miot_init_result mg_init(void) {
 #endif
 #endif
 
-  miot_console_init(); /* After clubby_init */
+  miot_console_init(); /* After mg_rpc_init */
 
   r = miot_sys_config_init_platform(get_cfg());
   if (r != MIOT_INIT_OK) return r;

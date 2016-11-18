@@ -1,4 +1,4 @@
-namespace: http://cesanta.com/clubby/service
+namespace: http://cesanta.com/mg_rpc/service
 name: /v1/SWUpdate
 doc: SWUpdate service provides a way to update device's software.
 visibility: private

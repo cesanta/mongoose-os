@@ -22,13 +22,13 @@ APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
 MG_ENABLE_JS ?= 0
-MG_ENABLE_CLUBBY ?= 1
-MG_ENABLE_CLUBBY_UART ?= 1
+MG_ENABLE_RPC ?= 1
+MG_ENABLE_RPC_UART ?= 1
 MG_ENABLE_CONFIG_SERVICE ?= 1
 MG_ENABLE_FILESYSTEM_SERVICE ?= 1
 MG_ENABLE_UPDATER ?= 1
 MG_ENABLE_UPDATER_POST ?= 1
-MG_ENABLE_UPDATER_CLUBBY ?= 0
+MG_ENABLE_UPDATER_RPC ?= 0
 MG_ENABLE_DNS_SD ?= 1
 MG_ENABLE_MQTT ?= 1
 
@@ -127,7 +127,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXT
 ifeq "$(MG_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
              miot_adc_js.c \
-             miot_clubby_js.c \
+             miot_rpc_js.c \
              miot_config_js.c \
              miot_console_js.c \
              miot_debug_js.c \
@@ -150,13 +150,13 @@ endif
 
 VPATH = $(APP_MODULES) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
-        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/clubby \
+        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
         $(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 IPATH = $(APP_MODULES) $(MIOT_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
         $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
-        $(MIOT_ESP_SRC_PATH) $(COMMON_PATH)/clubby .
+        $(MIOT_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MIOT_ESP_SRC_PATH)
 
 # libraries used in this project, mainly provided by the SDK

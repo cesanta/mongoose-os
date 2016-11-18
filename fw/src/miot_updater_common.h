@@ -3,7 +3,7 @@
  * All rights reserved
  *
  * Common bits of code handling update process.
- * Driven externaly by data source - Clubby or POST file upload.
+ * Driven externaly by data source - mg_rpc or POST file upload.
  */
 
 #ifndef CS_FW_SRC_MIOT_UPDATER_COMMON_H_
@@ -97,7 +97,7 @@ struct update_context {
   struct update_file_context {
     int64_t id;
     int commit_timeout;
-    char clubby_src[100];
+    char mg_rpc_src[100];
   } fctx __attribute__((packed));
 };
 

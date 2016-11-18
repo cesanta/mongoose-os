@@ -30,7 +30,7 @@ var emptyMessage = ourjson.RawMessage{}
 var _ = ourtrace.New
 var _ = trace.New
 
-const ServiceID = "http://cesanta.com/clubby/service/v1/SWUpdate"
+const ServiceID = "http://cesanta.com/mg_rpc/service/v1/SWUpdate"
 
 type ListSectionsResult struct {
 	Section  *string `json:"section,omitempty"`
@@ -369,6 +369,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
     }
   },
   "name": "/v1/SWUpdate",
-  "namespace": "http://cesanta.com/clubby/service",
+  "namespace": "http://cesanta.com/mg_rpc/service",
   "visibility": "private"
 }`))

@@ -21,5 +21,5 @@ clean:
 	rm -f *.o unit_test
 
 format:
-	@$(CLANG_FORMAT) -i *.[ch] platforms/*/*.[ch] clubby/*.[ch]
+	@$(CLANG_FORMAT) -i *.[ch] platforms/*/*.[ch] mg_rpc/*.[ch]
 

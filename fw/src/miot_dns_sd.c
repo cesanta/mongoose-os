@@ -350,7 +350,7 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data) {
 
 /*
  * Returns the default top level service type.
- * Used by clubby to export sub services under the same top level service
+ * Used by mg_rpc to export sub services under the same top level service
  */
 const char *miot_sd_default_service_type() {
   char *service_type = get_cfg()->dns_sd.service_type;
@@ -382,14 +382,14 @@ enum miot_init_result miot_dns_sd_init(void) {
   miot_sd_register_service(mg_mk_str(miot_sd_default_service_type()),
                            mg_mk_str(instance), mg_mk_str(hostname), 80,
                            (struct mg_str[]) {
-#if MG_ENABLE_CLUBBY
-                             mg_mk_str("id"), mg_mk_str("clubby"),
+#if MG_ENABLE_RPC
+                             mg_mk_str("id"), mg_mk_str("mg_rpc"),
 #endif
                                  mg_mk_str("arch"), mg_mk_str("fw_id"),
                                  mg_mk_str(NULL),
                            },
                            (struct mg_str[]) {
-#if MG_ENABLE_CLUBBY
+#if MG_ENABLE_RPC
                              mg_mk_str(c->device.id), mg_mk_str("2.0"),
 #endif
                                  mg_mk_str(v->arch), mg_mk_str(v->fw_id),

@@ -1,0 +1,12 @@
+[
+  ["rpc", "o", {title: "Cloud settings"}],
+  ["rpc.enable", "b", true, {title: "Enable RPC"}],
+  ["rpc.connect_on_boot", "b", true, {title: "Connect cloud on startup"}],
+  ["rpc.server_address", "s", "", {title: "Cloud server address"}],
+  ["rpc.reconnect_timeout_min", "i", 10, {title: "Minimal reconnect timeout"}],
+  ["rpc.reconnect_timeout_max", "i", 60, {title: "Maximal reconnect timeout"}],
+  ["rpc.max_queue_size", "i", 25, {title: "Max Quueue Size"}],
+  ["rpc.ssl_server_name", "s", {title : "TLS Server Name"}],
+  ["rpc.ssl_ca_file", "s", {title : "TLS CA file"}],
+  ["rpc.ssl_client_cert_file", "s", {title: "TLS client cert file"}],
+]

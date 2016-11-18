@@ -2,13 +2,13 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
-#include "fw/src/miot_clubby_js.h"
+#include "fw/src/miot_rpc_js.h"
 
 #include "common/cs_dbg.h"
 #include "common/json_utils.h"
-#include "common/clubby/clubby.h"
-#include "common/clubby/clubby_channel_ws.h"
-#include "fw/src/miot_clubby.h"
+#include "common/mg_rpc/mg_rpc.h"
+#include "common/mg_rpc/mg_rpc_channel_ws.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_common.h"
 #include "fw/src/miot_config.h"
 #include "fw/src/miot_hal.h"
@@ -16,33 +16,33 @@
 #include "fw/src/miot_v7_ext.h"
 #include "fw/src/miot_sys_config.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_CLUBBY && MG_ENABLE_CLUBBY_API
+#if MG_ENABLE_JS && MG_ENABLE_RPC && MG_ENABLE_RPC_API
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-struct js_clubby_ctx {
+struct js_mg_rpc_ctx {
   struct v7 *v7;
-  struct clubby *clubby;
-  v7_val_t obj; /* The Clubby object, not owned */
+  struct mg_rpc *mg_rpc;
+  v7_val_t obj; /* The RPC object, not owned */
   v7_val_t onopen_cb;
   v7_val_t onclose_cb;
   v7_val_t ready_cb;
 };
 
-struct js_clubby_cb_ctx {
-  struct js_clubby_ctx *ctx;
+struct js_mg_rpc_cb_ctx {
+  struct js_mg_rpc_ctx *ctx;
   v7_val_t cb;
 };
 
-static void clubby_observer_cb(struct clubby *clubby, void *cb_arg,
-                               enum clubby_event ev, void *ev_arg);
+static void mg_rpc_observer_cb(struct mg_rpc *mg_rpc, void *cb_arg,
+                               enum mg_rpc_event ev, void *ev_arg);
 
-static void init_js_ctx(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
-  struct js_clubby_ctx *ctx = (struct js_clubby_ctx *) calloc(1, sizeof(*ctx));
+static void init_js_ctx(struct v7 *v7, v7_val_t obj, struct mg_rpc *mg_rpc) {
+  struct js_mg_rpc_ctx *ctx = (struct js_mg_rpc_ctx *) calloc(1, sizeof(*ctx));
   ctx->v7 = v7;
-  ctx->clubby = clubby;
+  ctx->mg_rpc = mg_rpc;
   ctx->obj = obj;
   ctx->onopen_cb = V7_UNDEFINED;
   v7_own(v7, &ctx->onopen_cb);
@@ -52,26 +52,26 @@ static void init_js_ctx(struct v7 *v7, v7_val_t obj, struct clubby *clubby) {
   v7_own(v7, &ctx->ready_cb);
   v7_set_user_data(v7, obj, ctx);
   /* TODO(rojer): Clean up on destruction. */
-  clubby_add_observer(clubby, clubby_observer_cb, ctx);
+  mg_rpc_add_observer(mg_rpc, mg_rpc_observer_cb, ctx);
 }
 
 #define DECLARE_CTX                                                   \
-  struct js_clubby_ctx *ctx =                                         \
-      (struct js_clubby_ctx *) v7_get_user_data(v7, v7_get_this(v7)); \
+  struct js_mg_rpc_ctx *ctx =                                         \
+      (struct js_mg_rpc_ctx *) v7_get_user_data(v7, v7_get_this(v7)); \
   if (ctx == NULL) {                                                  \
     return v7_throwf(v7, "Error", "Internal error");                  \
   }
 
-static void clubby_observer_cb(struct clubby *clubby, void *cb_arg,
-                               enum clubby_event ev, void *ev_arg) {
-  struct js_clubby_ctx *ctx = (struct js_clubby_ctx *) cb_arg;
+static void mg_rpc_observer_cb(struct mg_rpc *mg_rpc, void *cb_arg,
+                               enum mg_rpc_event ev, void *ev_arg) {
+  struct js_mg_rpc_ctx *ctx = (struct js_mg_rpc_ctx *) cb_arg;
   struct v7 *v7 = ctx->v7;
   switch (ev) {
-    case MG_CLUBBY_EV_CHANNEL_OPEN:
-    case MG_CLUBBY_EV_CHANNEL_CLOSED: {
+    case MG_RPC_EV_CHANNEL_OPEN:
+    case MG_RPC_EV_CHANNEL_CLOSED: {
       const struct mg_str *dst = (const struct mg_str *) ev_arg;
-      if (mg_vcmp(dst, MG_CLUBBY_DST_DEFAULT) != 0) return;
-      if (ev == MG_CLUBBY_EV_CHANNEL_OPEN) {
+      if (mg_vcmp(dst, MG_RPC_DST_DEFAULT) != 0) return;
+      if (ev == MG_RPC_EV_CHANNEL_OPEN) {
         if (v7_is_callable(v7, ctx->onopen_cb)) {
           miot_invoke_cb0(v7, ctx->onopen_cb);
         }
@@ -80,21 +80,21 @@ static void clubby_observer_cb(struct clubby *clubby, void *cb_arg,
           ctx->ready_cb = V7_UNDEFINED;
         }
       }
-      if (ev == MG_CLUBBY_EV_CHANNEL_CLOSED &&
+      if (ev == MG_RPC_EV_CHANNEL_CLOSED &&
           v7_is_callable(v7, ctx->onclose_cb)) {
         miot_invoke_cb0(v7, ctx->onclose_cb);
       }
     }
   }
-  (void) clubby;
+  (void) mg_rpc;
 }
 
-static void js_call_cb(struct clubby *clubby, void *cb_arg,
-                       struct clubby_frame_info *fi, struct mg_str result,
+static void js_call_cb(struct mg_rpc *mg_rpc, void *cb_arg,
+                       struct mg_rpc_frame_info *fi, struct mg_str result,
                        int error_code, struct mg_str error_msg) {
-  (void) clubby;
+  (void) mg_rpc;
   (void) fi;
-  struct js_clubby_cb_ctx *cb_ctx = (struct js_clubby_cb_ctx *) cb_arg;
+  struct js_mg_rpc_cb_ctx *cb_ctx = (struct js_mg_rpc_cb_ctx *) cb_arg;
   struct v7 *v7 = cb_ctx->ctx->v7;
 
   v7_val_t js_cb_arg = v7_mk_object(v7);
@@ -134,10 +134,10 @@ static void js_call_cb(struct clubby *clubby, void *cb_arg,
 }
 
 /*
- * clubby.call(method: string, {dst, args, etc}: object, callback(resp):
+ * mg_rpc.call(method: string, {dst, args, etc}: object, callback(resp):
  * function)
 */
-MG_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err RPC_call(struct v7 *v7, v7_val_t *res) {
   DECLARE_CTX;
 
   v7_val_t method_v = v7_arg(v7, 0);
@@ -169,7 +169,7 @@ MG_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
     return v7_throwf(v7, "TypeError", "Method should be a string");
   }
 
-  struct clubby_call_opts opts;
+  struct mg_rpc_call_opts opts;
   memset(&opts, 0, sizeof(opts));
 
   v7_val_t dst_v = v7_get(v7, opts_v, "dst", ~0);
@@ -183,15 +183,15 @@ MG_PRIVATE enum v7_err Clubby_call(struct v7 *v7, v7_val_t *res) {
       v7_stringify(v7, args_v, json_buf, sizeof(json_buf), V7_STRINGIFY_JSON);
   const char *args_jsonf = (strlen(args_json) > 0 ? "%s" : NULL);
 
-  struct js_clubby_cb_ctx *cb_ctx = NULL;
+  struct js_mg_rpc_cb_ctx *cb_ctx = NULL;
   if (!v7_is_undefined(cb_v)) {
-    cb_ctx = (struct js_clubby_cb_ctx *) calloc(1, sizeof(*cb_ctx));
+    cb_ctx = (struct js_mg_rpc_cb_ctx *) calloc(1, sizeof(*cb_ctx));
     cb_ctx->ctx = ctx;
     cb_ctx->cb = cb_v;
     v7_own(v7, &cb_ctx->cb);
   }
 
-  clubby_callf(ctx->clubby, method, (cb_ctx ? js_call_cb : NULL), cb_ctx, &opts,
+  mg_rpc_callf(ctx->mg_rpc, method, (cb_ctx ? js_call_cb : NULL), cb_ctx, &opts,
                args_jsonf, args_json);
 
   if (args_json != json_buf) free(args_json);
@@ -204,8 +204,8 @@ static enum v7_err js_cmd_done_func(struct v7 *v7, v7_val_t *res) {
   /* This is a request_info wrapped in a foreign value and bound to this
    * function. */
   v7_val_t this = v7_get_this(v7);
-  struct clubby_request_info *ri =
-      (struct clubby_request_info *) v7_get_ptr(v7, this);
+  struct mg_rpc_request_info *ri =
+      (struct mg_rpc_request_info *) v7_get_ptr(v7, this);
 
   v7_val_t cb_res = v7_arg(v7, 0);
   v7_val_t cb_err_msg = v7_arg(v7, 1);
@@ -215,17 +215,17 @@ static enum v7_err js_cmd_done_func(struct v7 *v7, v7_val_t *res) {
     char json_buf[100];
     char *res_json =
         v7_stringify(v7, cb_res, json_buf, sizeof(json_buf), V7_STRINGIFY_JSON);
-    clubby_send_responsef(ri, "%s", res_json);
+    mg_rpc_send_responsef(ri, "%s", res_json);
     ri = NULL;
     if (res_json != json_buf) free((void *) res_json);
   } else if (v7_is_number(cb_res) && v7_is_string(cb_err_msg)) {
     /* It's an error, code and optional message. */
     int code = v7_get_double(v7, cb_res);
     const char *err_msg = v7_get_cstring(v7, &cb_err_msg);
-    clubby_send_errorf(ri, code, "%s", err_msg);
+    mg_rpc_send_errorf(ri, code, "%s", err_msg);
     ri = NULL;
   } else {
-    clubby_send_errorf(ri, 500, "Internal error");
+    mg_rpc_send_errorf(ri, 500, "Internal error");
     ri = NULL;
     return v7_throwf(v7, "Error", "Invalid arguments");
   }
@@ -234,9 +234,9 @@ static enum v7_err js_cmd_done_func(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-void js_cmd_handler(struct clubby_request_info *ri, void *cb_arg,
-                    struct clubby_frame_info *fi, struct mg_str args) {
-  struct js_clubby_cb_ctx *cb_ctx = (struct js_clubby_cb_ctx *) cb_arg;
+void js_cmd_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                    struct mg_rpc_frame_info *fi, struct mg_str args) {
+  struct js_mg_rpc_cb_ctx *cb_ctx = (struct js_mg_rpc_cb_ctx *) cb_arg;
   struct v7 *v7 = cb_ctx->ctx->v7;
 
   v7_val_t cb_arg_v = v7_mk_object(v7);
@@ -268,7 +268,7 @@ void js_cmd_handler(struct clubby_request_info *ri, void *cb_arg,
   if (cb_argc < 2) {
     /*
      * Sync handler:
-     * clubby.oncmd('/Foo', function(args) {
+     * mg_rpc.oncmd('/Foo', function(args) {
      *   if (arg == 1) {
      *     return {'ok': true};   // Sent as "result":{"ok":true}
      *   } else {
@@ -286,20 +286,20 @@ void js_cmd_handler(struct clubby_request_info *ri, void *cb_arg,
                                 V7_STRINGIFY_JSON);
         res_jsonf = "%s";
       }
-      clubby_send_responsef(ri, res_jsonf, res_json);
+      mg_rpc_send_responsef(ri, res_jsonf, res_json);
       ri = NULL;
       if (res_json != NULL && res_json != json_buf) free((void *) res_json);
     } else if (v7_is_string(cb_res)) {
-      clubby_send_errorf(ri, -1, "%s", v7_get_cstring(v7, &cb_res));
+      mg_rpc_send_errorf(ri, -1, "%s", v7_get_cstring(v7, &cb_res));
       ri = NULL;
     } else {
-      clubby_send_errorf(ri, 500, "Internal error");
+      mg_rpc_send_errorf(ri, 500, "Internal error");
       ri = NULL;
     }
   } else {
     /*
      * Async handler:
-     * clubby.oncmd('/Foo', function(args, done) {
+     * mg_rpc.oncmd('/Foo', function(args, done) {
      *   // ... schedule some activity, save 'done'
      * });
      * // later:
@@ -325,10 +325,10 @@ void js_cmd_handler(struct clubby_request_info *ri, void *cb_arg,
     v7_val_t cb_res = V7_UNDEFINED;
     if (v7_apply(v7, cb_ctx->cb, cb_ctx->ctx->obj, cb_args_v, NULL) != V7_OK) {
       if (v7_is_string(cb_res)) {
-        clubby_send_errorf(ri, -1, "%s", v7_get_cstring(v7, &cb_res));
+        mg_rpc_send_errorf(ri, -1, "%s", v7_get_cstring(v7, &cb_res));
         ri = NULL;
       } else {
-        clubby_send_errorf(ri, 500, "Internal error");
+        mg_rpc_send_errorf(ri, 500, "Internal error");
         ri = NULL;
       }
     }
@@ -336,7 +336,7 @@ void js_cmd_handler(struct clubby_request_info *ri, void *cb_arg,
   (void) fi;
 }
 
-MG_PRIVATE enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err RPC_oncmd(struct v7 *v7, v7_val_t *res) {
   DECLARE_CTX;
 
   v7_val_t arg1 = v7_arg(v7, 0);
@@ -349,19 +349,19 @@ MG_PRIVATE enum v7_err Clubby_oncmd(struct v7 *v7, v7_val_t *res) {
   struct mg_str method;
   method.p = v7_get_string(v7, &arg1, &method.len);
 
-  struct js_clubby_cb_ctx *cb_ctx =
-      (struct js_clubby_cb_ctx *) calloc(1, sizeof(*cb_ctx));
+  struct js_mg_rpc_cb_ctx *cb_ctx =
+      (struct js_mg_rpc_cb_ctx *) calloc(1, sizeof(*cb_ctx));
   cb_ctx->ctx = ctx;
   cb_ctx->cb = arg2;
   v7_own(v7, &cb_ctx->cb);
 
-  clubby_add_handler(ctx->clubby, method, js_cmd_handler, cb_ctx);
+  mg_rpc_add_handler(ctx->mg_rpc, method, js_cmd_handler, cb_ctx);
 
   *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 }
 
-MG_PRIVATE enum v7_err Clubby_onopen(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err RPC_onopen(struct v7 *v7, v7_val_t *res) {
   DECLARE_CTX;
 
   v7_val_t cbv = v7_arg(v7, 0);
@@ -376,7 +376,7 @@ MG_PRIVATE enum v7_err Clubby_onopen(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-MG_PRIVATE enum v7_err Clubby_onclose(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err RPC_onclose(struct v7 *v7, v7_val_t *res) {
   DECLARE_CTX;
 
   v7_val_t cbv = v7_arg(v7, 0);
@@ -391,14 +391,14 @@ MG_PRIVATE enum v7_err Clubby_onclose(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-MG_PRIVATE enum v7_err Clubby_connect(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err RPC_connect(struct v7 *v7, v7_val_t *res) {
   DECLARE_CTX;
-  clubby_connect(ctx->clubby);
+  mg_rpc_connect(ctx->mg_rpc);
   *res = v7_mk_boolean(v7, 1);
   return V7_OK;
 }
 
-MG_PRIVATE enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err RPC_ready(struct v7 *v7, v7_val_t *res) {
   DECLARE_CTX;
 
   v7_val_t cbv = v7_arg(v7, 0);
@@ -407,7 +407,7 @@ MG_PRIVATE enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     return v7_throwf(v7, "TypeError", "Invalid argument");
   }
 
-  if (clubby_is_connected(ctx->clubby)) {
+  if (mg_rpc_is_connected(ctx->mg_rpc)) {
     miot_invoke_cb0(v7, cbv);
   } else {
     ctx->ready_cb = cbv;
@@ -445,7 +445,7 @@ MG_PRIVATE enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
   {                                                                          \
     v7_val_t tmp = v7_get(v7, arg, #name1, ~0);                              \
     if (v7_is_callable(v7, tmp)) {                                           \
-      register_js_callback(clubby, v7, name2, sizeof(name2), simple_cb, tmp, \
+      register_js_callback(mg_rpc, v7, name2, sizeof(name2), simple_cb, tmp, \
                            0);                                               \
     } else if (!v7_is_undefined(tmp)) {                                      \
       rcode = v7_throwf(v7, "TypeError", "Invalid type for %s, expected %s", \
@@ -454,12 +454,12 @@ MG_PRIVATE enum v7_err Clubby_ready(struct v7 *v7, v7_val_t *res) {
     }                                                                        \
   }
 
-MG_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
+MG_PRIVATE enum v7_err RPC_ctor(struct v7 *v7, v7_val_t *res) {
   (void) res;
   enum v7_err rcode = V7_OK;
-  struct clubby *clubby = NULL;
-  struct clubby_channel_ws_out_cfg *chcfg = NULL;
-  struct clubby_channel *ch = NULL;
+  struct mg_rpc *mg_rpc = NULL;
+  struct mg_rpc_channel_ws_out_cfg *chcfg = NULL;
+  struct mg_rpc_channel *ch = NULL;
   v7_val_t arg = v7_arg(v7, 0);
 
   if (!v7_is_undefined(arg) && !v7_is_object(arg)) {
@@ -469,18 +469,18 @@ MG_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
 
   v7_val_t this_obj = v7_get_this(v7);
 
-  struct clubby_cfg *ccfg = miot_clubby_cfg_from_sys(get_cfg());
+  struct mg_rpc_cfg *ccfg = miot_rpc_cfg_from_sys(get_cfg());
   GET_STR_PARAM(ccfg, id, device_id);
   GET_STR_PARAM(ccfg, psk, device_psk);
   GET_INT_PARAM(ccfg, max_queue_size, max_queue_size);
   // GET_INT_PARAM(request_timeout, timeout);
-  clubby = clubby_create(ccfg);
-  if (clubby == NULL) {
+  mg_rpc = mg_rpc_create(ccfg);
+  if (mg_rpc == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return v7_throwf(v7, "Error", "Out of memory");
   }
 
-  chcfg = miot_clubby_channel_ws_out_cfg_from_sys(get_cfg());
+  chcfg = miot_rpc_channel_ws_out_cfg_from_sys(get_cfg());
 
   GET_STR_PARAM(chcfg, server_address, server_address);
   GET_STR_PARAM(chcfg, ssl_ca_file, ssl_ca_file);
@@ -489,69 +489,69 @@ MG_PRIVATE enum v7_err Clubby_ctor(struct v7 *v7, v7_val_t *res) {
   GET_INT_PARAM(chcfg, reconnect_interval_min, reconnect_timeout_min);
   GET_INT_PARAM(chcfg, reconnect_interval_max, reconnect_timeout_max);
 
-  ch = clubby_channel_ws_out(miot_get_mgr(), chcfg);
+  ch = mg_rpc_channel_ws_out(miot_get_mgr(), chcfg);
   if (ch == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
     return v7_throwf(v7, "Error", "Out of memory");
   }
 
-  init_js_ctx(v7, this_obj, clubby);
+  init_js_ctx(v7, this_obj, mg_rpc);
 
-  clubby_add_channel(clubby, mg_mk_str(MG_CLUBBY_DST_DEFAULT), ch,
+  mg_rpc_add_channel(mg_rpc, mg_mk_str(MG_RPC_DST_DEFAULT), ch,
                      false /* is_trusted */, true /* send_hello */);
 
   if (v7_is_truthy(v7, v7_get(v7, arg, "connect", ~0))) {
-    clubby_connect(clubby);
+    mg_rpc_connect(mg_rpc);
   }
 
   return rcode;
 
 clean:
-  if (clubby != NULL) clubby_free(clubby);
+  if (mg_rpc != NULL) mg_rpc_free(mg_rpc);
   return rcode;
 }
 
-void miot_clubby_api_setup(struct v7 *v7) {
-  v7_val_t clubby_proto_v, clubby_ctor_v;
+void miot_rpc_api_setup(struct v7 *v7) {
+  v7_val_t mg_rpc_proto_v, mg_rpc_ctor_v;
 
-  clubby_proto_v = v7_mk_object(v7);
-  v7_own(v7, &clubby_proto_v);
+  mg_rpc_proto_v = v7_mk_object(v7);
+  v7_own(v7, &mg_rpc_proto_v);
 
-  v7_set_method(v7, clubby_proto_v, "call", Clubby_call);
-  v7_set_method(v7, clubby_proto_v, "oncmd", Clubby_oncmd);
-  v7_set_method(v7, clubby_proto_v, "ready", Clubby_ready);
-  v7_set_method(v7, clubby_proto_v, "onopen", Clubby_onopen);
-  v7_set_method(v7, clubby_proto_v, "onclose", Clubby_onclose);
-  v7_set_method(v7, clubby_proto_v, "connect", Clubby_connect);
+  v7_set_method(v7, mg_rpc_proto_v, "call", RPC_call);
+  v7_set_method(v7, mg_rpc_proto_v, "oncmd", RPC_oncmd);
+  v7_set_method(v7, mg_rpc_proto_v, "ready", RPC_ready);
+  v7_set_method(v7, mg_rpc_proto_v, "onopen", RPC_onopen);
+  v7_set_method(v7, mg_rpc_proto_v, "onclose", RPC_onclose);
+  v7_set_method(v7, mg_rpc_proto_v, "connect", RPC_connect);
 
-  clubby_ctor_v = v7_mk_function_with_proto(v7, Clubby_ctor, clubby_proto_v);
+  mg_rpc_ctor_v = v7_mk_function_with_proto(v7, RPC_ctor, mg_rpc_proto_v);
 
-  v7_set(v7, v7_get_global(v7), "Clubby", ~0, clubby_ctor_v);
+  v7_set(v7, v7_get_global(v7), "RPC", ~0, mg_rpc_ctor_v);
 
-  v7_disown(v7, &clubby_proto_v);
+  v7_disown(v7, &mg_rpc_proto_v);
 }
 
-static v7_val_t s_global_clubby_v = V7_UNDEFINED;
+static v7_val_t s_global_mg_rpc_v = V7_UNDEFINED;
 
-void miot_clubby_js_init(struct v7 *v7) {
-  struct clubby *clubby = miot_clubby_get_global();
-  if (clubby != NULL) {
-    v7_val_t clubby_ctor_v = v7_get(v7, v7_get_global(v7), "Clubby", ~0);
-    v7_val_t clubby_proto_v = v7_get(v7, clubby_ctor_v, "prototype", ~0);
-    s_global_clubby_v = v7_mk_object(v7);
-    v7_own(v7, &s_global_clubby_v);
-    v7_set_proto(v7, s_global_clubby_v, clubby_proto_v);
-    init_js_ctx(v7, s_global_clubby_v, clubby);
-    v7_set(v7, v7_get_global(v7), "clubby", ~0, s_global_clubby_v);
+void miot_rpc_js_init(struct v7 *v7) {
+  struct mg_rpc *mg_rpc = miot_rpc_get_global();
+  if (mg_rpc != NULL) {
+    v7_val_t mg_rpc_ctor_v = v7_get(v7, v7_get_global(v7), "RPC", ~0);
+    v7_val_t mg_rpc_proto_v = v7_get(v7, mg_rpc_ctor_v, "prototype", ~0);
+    s_global_mg_rpc_v = v7_mk_object(v7);
+    v7_own(v7, &s_global_mg_rpc_v);
+    v7_set_proto(v7, s_global_mg_rpc_v, mg_rpc_proto_v);
+    init_js_ctx(v7, s_global_mg_rpc_v, mg_rpc);
+    v7_set(v7, v7_get_global(v7), "mg_rpc", ~0, s_global_mg_rpc_v);
     /* Own forever. Even though it's ref'd from the global object,
      * we really don't want it to be destroyed. At some point we may allow
-     * re-assigning global clubby, at which point we'll need to free it. */
-    v7_own(v7, &s_global_clubby_v);
+     * re-assigning global mg_rpc, at which point we'll need to free it. */
+    v7_own(v7, &s_global_mg_rpc_v);
   }
 }
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* MG_ENABLE_JS && MG_ENABLE_CLUBBY && \
-          MG_ENABLE_CLUBBY_API */
+#endif /* MG_ENABLE_JS && MG_ENABLE_RPC && \
+          MG_ENABLE_RPC_API */

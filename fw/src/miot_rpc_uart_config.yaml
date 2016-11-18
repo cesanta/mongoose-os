@@ -1,0 +1,7 @@
+[
+  ["rpc.uart", "o", {title: "RPC-over-UART settings"}],
+  ["rpc.uart.uart_no", "i", {title: "UART number (-1 to disable)"}],
+  ["rpc.uart.baud_rate", "i", 115200, {title: "Baud rate"}],
+  ["rpc.uart.fc_enable", "b", {title: "Enable hardware FC"}],
+  ["rpc.uart.wait_for_start_frame", "b", true, {title: "Wait for an incoming frame before using the channel"}],
+]

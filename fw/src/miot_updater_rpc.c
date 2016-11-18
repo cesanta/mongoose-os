@@ -3,34 +3,34 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_updater_clubby.h"
+#include "fw/src/miot_updater_rpc.h"
 
-#include "common/clubby/clubby.h"
+#include "common/mg_rpc/mg_rpc.h"
 #include "common/cs_dbg.h"
 #include "common/mg_str.h"
-#include "fw/src/miot_clubby.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_updater_common.h"
 #include "fw/src/miot_updater_http.h"
 #include "fw/src/miot_utils.h"
 
-#if MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY
+#if MG_ENABLE_UPDATER_RPC && MG_ENABLE_RPC
 
-static struct clubby_request_info *s_update_req;
+static struct mg_rpc_request_info *s_update_req;
 
-static void clubby_updater_result(struct update_context *ctx) {
+static void mg_rpc_updater_result(struct update_context *ctx) {
   if (s_update_req == NULL) return;
   if (ctx->need_reboot) {
     /* We're about to reboot, don't reply yet. */
     return;
   }
-  clubby_send_errorf(s_update_req, (ctx->result > 0 ? 0 : -1), ctx->status_msg);
+  mg_rpc_send_errorf(s_update_req, (ctx->result > 0 ? 0 : -1), ctx->status_msg);
   s_update_req = NULL;
 }
 
-static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
-                              struct clubby_frame_info *fi,
+static void handle_update_req(struct mg_rpc_request_info *ri, void *cb_arg,
+                              struct mg_rpc_frame_info *fi,
                               struct mg_str args) {
   char *blob_url = NULL;
   struct json_token section_tok = JSON_INVALID_TOKEN;
@@ -85,9 +85,9 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
   }
   ctx->fctx.id = ri->id;
   ctx->fctx.commit_timeout = commit_timeout;
-  strncpy(ctx->fctx.clubby_src, ri->src.p,
-          MIN(ri->src.len, sizeof(ctx->fctx.clubby_src)));
-  ctx->result_cb = clubby_updater_result;
+  strncpy(ctx->fctx.mg_rpc_src, ri->src.p,
+          MIN(ri->src.len, sizeof(ctx->fctx.mg_rpc_src)));
+  ctx->result_cb = mg_rpc_updater_result;
   s_update_req = ri;
 
   miot_updater_http_start(ctx, blob_url);
@@ -97,27 +97,27 @@ static void handle_update_req(struct clubby_request_info *ri, void *cb_arg,
 clean:
   if (blob_url != NULL) free(blob_url);
   CONSOLE_LOG(LL_ERROR, ("Failed to start update: %s", reply));
-  clubby_send_errorf(ri, -1, reply);
+  mg_rpc_send_errorf(ri, -1, reply);
   ri = NULL;
   (void) cb_arg;
   (void) fi;
 }
 
-static void handle_commit_req(struct clubby_request_info *ri, void *cb_arg,
-                              struct clubby_frame_info *fi,
+static void handle_commit_req(struct mg_rpc_request_info *ri, void *cb_arg,
+                              struct mg_rpc_frame_info *fi,
                               struct mg_str args) {
-  clubby_send_errorf(ri, miot_upd_commit() ? 0 : -1, NULL);
+  mg_rpc_send_errorf(ri, miot_upd_commit() ? 0 : -1, NULL);
   ri = NULL;
   (void) cb_arg;
   (void) fi;
   (void) args;
 }
 
-static void handle_revert_req(struct clubby_request_info *ri, void *cb_arg,
-                              struct clubby_frame_info *fi,
+static void handle_revert_req(struct mg_rpc_request_info *ri, void *cb_arg,
+                              struct mg_rpc_frame_info *fi,
                               struct mg_str args) {
   bool ok = miot_upd_revert(false /* reboot */);
-  clubby_send_errorf(ri, ok ? 0 : -1, NULL);
+  mg_rpc_send_errorf(ri, ok ? 0 : -1, NULL);
   ri = NULL;
   if (ok) miot_system_restart_after(100);
   (void) cb_arg;
@@ -142,60 +142,60 @@ static void handle_revert_req(struct clubby_request_info *ri, void *cb_arg,
  * }
  */
 
-void miot_updater_clubby_init(void) {
-  struct clubby *clubby = miot_clubby_get_global();
-  if (clubby == NULL) return;
-  clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Update"),
+void miot_updater_rpc_init(void) {
+  struct mg_rpc *mg_rpc = miot_rpc_get_global();
+  if (mg_rpc == NULL) return;
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("/v1/SWUpdate.Update"),
                      handle_update_req, NULL);
-  clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Commit"),
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("/v1/SWUpdate.Commit"),
                      handle_commit_req, NULL);
-  clubby_add_handler(clubby, mg_mk_str("/v1/SWUpdate.Revert"),
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("/v1/SWUpdate.Revert"),
                      handle_revert_req, NULL);
 }
 
-static void send_update_reply(struct clubby_request_info *ri) {
+static void send_update_reply(struct mg_rpc_request_info *ri) {
   int status = (intptr_t) ri->user_data;
   LOG(LL_INFO, ("Sending update reply to %.*s: %d", (int) ri->src.len,
                 ri->src.p, status));
-  clubby_send_errorf(ri, status, NULL);
+  mg_rpc_send_errorf(ri, status, NULL);
   ri = NULL;
 }
 
-static void handle_clubby_event(struct clubby *clubby, void *cb_arg,
-                                enum clubby_event ev, void *ev_arg) {
-  if (ev != MG_CLUBBY_EV_CHANNEL_OPEN) return;
+static void handle_mg_rpc_event(struct mg_rpc *mg_rpc, void *cb_arg,
+                                enum mg_rpc_event ev, void *ev_arg) {
+  if (ev != MG_RPC_EV_CHANNEL_OPEN) return;
   /*
    * We're only interested in default route.
    * TODO(rojer): We should be watching for the route to the destination of our
    * response.
    */
   const struct mg_str *dst = (const struct mg_str *) ev_arg;
-  if (mg_vcmp(dst, MG_CLUBBY_DST_DEFAULT) != 0) return;
-  struct clubby_request_info *ri = (struct clubby_request_info *) cb_arg;
+  if (mg_vcmp(dst, MG_RPC_DST_DEFAULT) != 0) return;
+  struct mg_rpc_request_info *ri = (struct mg_rpc_request_info *) cb_arg;
   send_update_reply(ri);
-  clubby_remove_observer(clubby, handle_clubby_event, ri);
+  mg_rpc_remove_observer(mg_rpc, handle_mg_rpc_event, ri);
 }
 
-void miot_updater_clubby_finish(int error_code, int64_t id,
-                                const struct mg_str src) {
-  struct clubby *clubby = miot_clubby_get_global();
-  if (clubby == NULL || id <= 0 || src.len == 0) return;
-  struct clubby_request_info *ri = NULL;
-  ri = (struct clubby_request_info *) calloc(1, sizeof(*ri));
+void miot_updater_rpc_finish(int error_code, int64_t id,
+                             const struct mg_str src) {
+  struct mg_rpc *mg_rpc = miot_rpc_get_global();
+  if (mg_rpc == NULL || id <= 0 || src.len == 0) return;
+  struct mg_rpc_request_info *ri = NULL;
+  ri = (struct mg_rpc_request_info *) calloc(1, sizeof(*ri));
   if (ri == NULL) goto clean;
-  ri->clubby = clubby;
+  ri->rpc = mg_rpc;
   ri->id = id;
   ri->src = mg_strdup(src);
   if (ri->src.p == NULL) goto clean;
   ri->user_data = (void *) error_code;
-  if (clubby_is_connected(clubby)) {
+  if (mg_rpc_is_connected(mg_rpc)) {
     send_update_reply(ri);
   } else {
-    clubby_add_observer(clubby, handle_clubby_event, ri);
+    mg_rpc_add_observer(mg_rpc, handle_mg_rpc_event, ri);
   }
   ri = NULL;
 clean:
-  if (ri != NULL) clubby_free_request_info(ri);
+  if (ri != NULL) mg_rpc_free_request_info(ri);
 }
 
-#endif /* MG_ENABLE_UPDATER_CLUBBY && MG_ENABLE_CLUBBY */
+#endif /* MG_ENABLE_UPDATER_RPC && MG_ENABLE_RPC */

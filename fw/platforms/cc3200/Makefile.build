@@ -16,13 +16,13 @@ APP_SLFS_PATH ?=
 APP_EXTRA_SRCS ?=
 
 MG_ENABLE_JS ?= 0
-MG_ENABLE_CLUBBY ?= 1
-MG_ENABLE_CLUBBY_UART ?= 1
+MG_ENABLE_RPC ?= 1
+MG_ENABLE_RPC_UART ?= 1
 MG_ENABLE_CONFIG_SERVICE ?= 1
 MG_ENABLE_FILESYSTEM_SERVICE ?= 1
 MG_ENABLE_UPDATER ?= 1
 MG_ENABLE_UPDATER_POST ?= 1
-MG_ENABLE_UPDATER_CLUBBY ?= 0
+MG_ENABLE_UPDATER_RPC ?= 0
 MG_ENABLE_DNS_SD ?= 0
 MG_ENABLE_MQTT ?= 1
 
@@ -183,7 +183,7 @@ MIOT_SRCS = miot_init.c \
             boot.c mongoose.c frozen.c json_utils.c
 ifeq "$(MG_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
-             miot_clubby_js.c \
+             miot_rpc_js.c \
              miot_config_js.c \
              miot_console_js.c \
              miot_gpio_js.c \
@@ -197,8 +197,8 @@ MIOT_SRCS += v7.c \
              miot_wifi_js.c
 endif
 
-VPATH += $(MIOT_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/clubby
-IPATH += $(COMMON_PATH)/clubby
+VPATH += $(MIOT_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
+IPATH += $(COMMON_PATH)/mg_rpc
 ifneq "$(TOOLCHAIN)" "gcc"
   MIOT_SRCS += umm_malloc.c
   VPATH += $(COMMON_PATH)/umm_malloc

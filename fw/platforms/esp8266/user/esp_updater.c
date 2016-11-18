@@ -17,7 +17,7 @@
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_updater_clubby.h"
+#include "fw/src/miot_updater_rpc.h"
 #include "fw/src/miot_updater_hal.h"
 #include "fw/src/miot_updater_util.h"
 

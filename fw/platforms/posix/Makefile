@@ -17,7 +17,7 @@ KRYPTON_PATH ?= $(MIOT_PATH)/krypton
 FROZEN_PATH ?= $(MIOT_PATH)/frozen
 OUTAPP ?= mongoose-iot
 VERBOSE ?= 0
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/clubby
+VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 SSL ?= Krypton
 DEBUG ?= 0
 CC_WRAPPER ?=
@@ -25,7 +25,7 @@ CC_WRAPPER ?=
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MG_ENABLE_UPDATER = 0
 MG_ENABLE_UPDATER_POST = 0
-MG_ENABLE_UPDATER_CLUBBY = 0
+MG_ENABLE_UPDATER_RPC = 0
 MG_ENABLE_DNS_SD = 0  # Not supported on POSIX
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
@@ -57,7 +57,7 @@ MIOT_SRCS = $(notdir $(wildcard *.c)) miot_init.c  \
 ifeq "$(MG_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
             miot_adc_js.c \
-            miot_clubby_js.c \
+            miot_rpc_js.c \
             miot_config_js.c \
             miot_console_js.c \
             miot_debug_js.c \

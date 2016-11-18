@@ -1,7 +1,0 @@
-[
-  ["clubby.uart", "o", {title: "Clubby-over-UART settings"}],
-  ["clubby.uart.uart_no", "i", {title: "UART number (-1 to disable)"}],
-  ["clubby.uart.baud_rate", "i", 115200, {title: "Baud rate"}],
-  ["clubby.uart.fc_enable", "b", {title: "Enable hardware FC"}],
-  ["clubby.uart.wait_for_start_frame", "b", true, {title: "Wait for an incoming frame before using the channel"}],
-]

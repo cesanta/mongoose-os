@@ -1,5 +1,5 @@
-var SWUpdate = function(clubby) {
-  clubby.oncmd("/v1/SWUpdate.ListSections", function() {
+var SWUpdate = function(mgRPC) {
+  mgRPC.oncmd("/v1/SWUpdate.ListSections", function() {
     var files = File.list('.');
     var r = [];
     for (var i in files) {
@@ -8,7 +8,7 @@ var SWUpdate = function(clubby) {
     return r;
   });
   // TODO(lsm): Move to the File service
-  clubby.oncmd("/v1/SWUpdate.Delete", function(cmd, done) {
+  mgRPC.oncmd("/v1/SWUpdate.Delete", function(cmd, done) {
     if (typeof(cmd.args.section) !== 'string') {
       done("Need 'section' argument", 1);
     } else if (cmd.args.section.indexOf("file/") !== 0) {
@@ -18,7 +18,7 @@ var SWUpdate = function(clubby) {
       done('result', File.remove(name));
     }
   });
-  clubby.oncmd("/v1/SWUpdate.Update", function(cmd, done) {
+  mgRPC.oncmd("/v1/SWUpdate.Update", function(cmd, done) {
     if (cmd.args === undefined) {
       done("Need argument", 1);
       return;

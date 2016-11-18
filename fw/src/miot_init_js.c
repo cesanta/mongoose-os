@@ -3,7 +3,7 @@
 #include "common/cs_dbg.h"
 #include "fw/src/miot_adc_js.h"
 #include "fw/src/miot_app.h"
-#include "fw/src/miot_clubby_js.h"
+#include "fw/src/miot_rpc_js.h"
 #include "fw/src/miot_console_js.h"
 #include "fw/src/miot_debug_js.h"
 #include "fw/src/miot_gpio_js.h"
@@ -16,7 +16,7 @@
 #include "fw/src/miot_tcp_udp_js.h"
 #include "fw/src/miot_timers_js.h"
 #include "fw/src/miot_uart_js.h"
-#include "fw/src/miot_updater_clubby_js.h"
+#include "fw/src/miot_updater_rpc_js.h"
 #include "fw/src/miot_wifi_js.h"
 #include "fw/src/miot_ws_client_js.h"
 #include "fw/src/miot_v7_ext.h"
@@ -64,8 +64,8 @@ enum miot_init_result miot_api_setup(struct v7 *v7) {
 #if MG_ENABLE_WS_CLIENT_API
   miot_ws_client_api_setup(v7);
 #endif
-#if MG_ENABLE_CLUBBY
-  miot_clubby_api_setup(v7);
+#if MG_ENABLE_RPC
+  miot_rpc_api_setup(v7);
 #endif
 #else
   (void) v7;
@@ -82,8 +82,8 @@ enum miot_init_result miot_init_js(struct v7 *v7) {
   miot_i2c_js_init(v7);
 #endif
 
-#if MG_ENABLE_CLUBBY
-  miot_clubby_js_init(v7);
+#if MG_ENABLE_RPC
+  miot_rpc_js_init(v7);
 #endif
 
   miot_console_js_init(v7);

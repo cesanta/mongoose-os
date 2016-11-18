@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MG_ENABLE_CLUBBY && MG_ENABLE_FILESYSTEM_SERVICE
+#if MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE
 
 #include <stdlib.h>
 
@@ -11,7 +11,7 @@
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/mg_str.h"
-#include "fw/src/miot_clubby.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_config.h"
 #include "fw/src/miot_service_filesystem.h"
 #include "fw/src/miot_sys_config.h"
@@ -26,9 +26,9 @@ struct put_data {
 };
 
 /* Handler for /v1/Filesystem.List */
-static void miot_filesystem_list_handler(struct clubby_request_info *ri,
+static void miot_filesystem_list_handler(struct mg_rpc_request_info *ri,
                                          void *cb_arg,
-                                         struct clubby_frame_info *fi,
+                                         struct mg_rpc_frame_info *fi,
                                          struct mg_str args) {
   struct mbuf fb;
   struct json_out out = JSON_OUT_MBUF(&fb);
@@ -37,7 +37,7 @@ static void miot_filesystem_list_handler(struct clubby_request_info *ri,
   mbuf_init(&fb, 50);
 
   if (!fi->channel_is_trusted) {
-    clubby_send_errorf(ri, 403, "unauthorized");
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     return;
   }
@@ -65,7 +65,7 @@ static void miot_filesystem_list_handler(struct clubby_request_info *ri,
 
   json_printf(&out, "]");
 
-  clubby_send_responsef(ri, "%.*s", fb.len, fb.buf);
+  mg_rpc_send_responsef(ri, "%.*s", fb.len, fb.buf);
   ri = NULL;
 
   mbuf_free(&fb);
@@ -74,9 +74,9 @@ static void miot_filesystem_list_handler(struct clubby_request_info *ri,
   (void) args;
 }
 
-static void miot_filesystem_get_handler(struct clubby_request_info *ri,
+static void miot_filesystem_get_handler(struct mg_rpc_request_info *ri,
                                         void *cb_arg,
-                                        struct clubby_frame_info *fi,
+                                        struct mg_rpc_frame_info *fi,
                                         struct mg_str args) {
   char *filename = NULL;
   long offset = 0, len = -1;
@@ -85,7 +85,7 @@ static void miot_filesystem_get_handler(struct clubby_request_info *ri,
   char *data = NULL;
 
   if (!fi->channel_is_trusted) {
-    clubby_send_errorf(ri, 403, "unauthorized");
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     goto clean;
   }
@@ -95,13 +95,13 @@ static void miot_filesystem_get_handler(struct clubby_request_info *ri,
 
   /* check arguments */
   if (filename == NULL) {
-    clubby_send_errorf(ri, 400, "filename is required");
+    mg_rpc_send_errorf(ri, 400, "filename is required");
     ri = NULL;
     goto clean;
   }
 
   if (offset < 0) {
-    clubby_send_errorf(ri, 400, "illegal offset");
+    mg_rpc_send_errorf(ri, 400, "illegal offset");
     ri = NULL;
     goto clean;
   }
@@ -110,14 +110,14 @@ static void miot_filesystem_get_handler(struct clubby_request_info *ri,
   fp = fopen(filename, "rb");
 
   if (fp == NULL) {
-    clubby_send_errorf(ri, 400, "failed to open file \"%s\"", filename);
+    mg_rpc_send_errorf(ri, 400, "failed to open file \"%s\"", filename);
     ri = NULL;
     goto clean;
   }
 
   /* determine file size */
   if (fseek(fp, 0, SEEK_END) != 0) {
-    clubby_send_errorf(ri, 500, "fseek");
+    mg_rpc_send_errorf(ri, 500, "fseek");
     ri = NULL;
     goto clean;
   }
@@ -136,27 +136,27 @@ static void miot_filesystem_get_handler(struct clubby_request_info *ri,
     /* try to allocate the chunk of needed size */
     data = (char *) malloc(len);
     if (data == NULL) {
-      clubby_send_errorf(ri, 500, "out of memory");
+      mg_rpc_send_errorf(ri, 500, "out of memory");
       ri = NULL;
       goto clean;
     }
 
     /* seek & read the data */
     if (fseek(fp, offset, SEEK_SET)) {
-      clubby_send_errorf(ri, 500, "fseek");
+      mg_rpc_send_errorf(ri, 500, "fseek");
       ri = NULL;
       goto clean;
     }
 
     if ((long) fread(data, 1, len, fp) != len) {
-      clubby_send_errorf(ri, 500, "fread");
+      mg_rpc_send_errorf(ri, 500, "fread");
       ri = NULL;
       goto clean;
     }
   }
 
   /* send the response */
-  clubby_send_responsef(ri, "{data: %V, left: %d}", data, len,
+  mg_rpc_send_responsef(ri, "{data: %V, left: %d}", data, len,
                         (file_size - offset - len));
   ri = NULL;
 
@@ -176,9 +176,9 @@ clean:
   (void) cb_arg;
 }
 
-static void miot_filesystem_put_handler(struct clubby_request_info *ri,
+static void miot_filesystem_put_handler(struct mg_rpc_request_info *ri,
                                         void *cb_arg,
-                                        struct clubby_frame_info *fi,
+                                        struct mg_rpc_frame_info *fi,
                                         struct mg_str args) {
   char *filename = NULL;
   int append = 0;
@@ -186,7 +186,7 @@ static void miot_filesystem_put_handler(struct clubby_request_info *ri,
   struct put_data data = {NULL, 0};
 
   if (!fi->channel_is_trusted) {
-    clubby_send_errorf(ri, 403, "unauthorized");
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     goto clean;
   }
@@ -196,7 +196,7 @@ static void miot_filesystem_put_handler(struct clubby_request_info *ri,
 
   /* check arguments */
   if (filename == NULL) {
-    clubby_send_errorf(ri, 400, "filename is required");
+    mg_rpc_send_errorf(ri, 400, "filename is required");
     ri = NULL;
     goto clean;
   }
@@ -205,18 +205,18 @@ static void miot_filesystem_put_handler(struct clubby_request_info *ri,
   fp = fopen(filename, append ? "ab" : "wb");
 
   if (fp == NULL) {
-    clubby_send_errorf(ri, 400, "failed to open file \"%s\"", filename);
+    mg_rpc_send_errorf(ri, 400, "failed to open file \"%s\"", filename);
     ri = NULL;
     goto clean;
   }
 
   if (fwrite(data.p, 1, data.len, fp) != (size_t) data.len) {
-    clubby_send_errorf(ri, 500, "failed to write data");
+    mg_rpc_send_errorf(ri, 500, "failed to write data");
     ri = NULL;
     goto clean;
   }
 
-  clubby_send_responsef(ri, NULL);
+  mg_rpc_send_responsef(ri, NULL);
   ri = NULL;
 
 clean:
@@ -236,14 +236,14 @@ clean:
 }
 
 enum miot_init_result miot_service_filesystem_init(void) {
-  struct clubby *c = miot_clubby_get_global();
-  clubby_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_LIST_CMD),
+  struct mg_rpc *c = miot_rpc_get_global();
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_LIST_CMD),
                      miot_filesystem_list_handler, NULL);
-  clubby_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_GET_CMD),
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_GET_CMD),
                      miot_filesystem_get_handler, NULL);
-  clubby_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_PUT_CMD),
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_PUT_CMD),
                      miot_filesystem_put_handler, NULL);
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_CLUBBY && MG_ENABLE_FILESYSTEM_SERVICE */
+#endif /* MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE */

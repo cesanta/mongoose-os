@@ -1,6 +1,6 @@
 VALIDATE?=validate-json # go get github.com/cesanta/validate-json
 YAML2JSON?=yaml-to-json # go get go.pedge.io/pkg/cmd/yaml-to-json
-DEFS?=../../clubby/defs
+DEFS?=../../mg_rpc/defs
 
 YAML=$(wildcard *.service.yaml)
 OUTS=$(foreach s,$(YAML),$(s:.yaml=))

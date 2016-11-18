@@ -45,7 +45,7 @@ Upon reboot or power on, Mongoose Firmware performs following steps:
     loading `conf_sys_defaults.json`, then applying `conf_app_defaults.json`
     on top of it and then applying `conf.json` on top of it again.
    - Initialises connection to the cloud if required
-    (`Sys.conf.clubby.connect_on_boot` option). That allows talking
+    (`Sys.conf.mg_rpc.connect_on_boot` option). That allows talking
       to devices from anywhere, as the cloud relays messages to any connected
       devices.
    - Calls user-specific `app.js` file, which contains custom logic.

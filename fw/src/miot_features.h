@@ -10,8 +10,8 @@
 #define MG_ENABLE_ADC_API 0
 #endif
 
-#ifndef MG_ENABLE_CLUBBY
-#define MG_ENABLE_CLUBBY 0
+#ifndef MG_ENABLE_RPC
+#define MG_ENABLE_RPC 0
 #endif
 
 #ifndef MG_ENABLE_CONSOLE_FILE_BUFFER
@@ -78,8 +78,8 @@
 #define MG_ENABLE_UPDATER 0
 #endif
 
-#ifndef MG_ENABLE_UPDATER_CLUBBY
-#define MG_ENABLE_UPDATER_CLUBBY 0
+#ifndef MG_ENABLE_UPDATER_RPC
+#define MG_ENABLE_UPDATER_RPC 0
 #endif
 
 #ifndef MG_ENABLE_UPDATER_POST

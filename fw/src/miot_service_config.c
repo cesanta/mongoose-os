@@ -5,10 +5,10 @@
 
 #include "fw/src/miot_service_config.h"
 
-#if MG_ENABLE_CLUBBY && MG_ENABLE_CONFIG_SERVICE
+#if MG_ENABLE_RPC && MG_ENABLE_CONFIG_SERVICE
 
 #include "common/mg_str.h"
-#include "fw/src/miot_clubby.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_config.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_sys_config.h"
@@ -25,11 +25,11 @@
 #define MIOT_CONFIG_SAVE_CMD "/v1/Config.Save"
 
 /* Handler for /v1/Config.Get */
-static void miot_config_get_handler(struct clubby_request_info *ri,
-                                    void *cb_arg, struct clubby_frame_info *fi,
+static void miot_config_get_handler(struct mg_rpc_request_info *ri,
+                                    void *cb_arg, struct mg_rpc_frame_info *fi,
                                     struct mg_str args) {
   if (!fi->channel_is_trusted) {
-    clubby_send_errorf(ri, 403, "unauthorized");
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     return;
   }
@@ -45,7 +45,7 @@ static void miot_config_get_handler(struct clubby_request_info *ri,
    * fix it, and remove this hack with adding NULL byte
    */
   mbuf_append(&send_mbuf, "", 1);
-  clubby_send_responsef(ri, "%s", send_mbuf.buf);
+  mg_rpc_send_responsef(ri, "%s", send_mbuf.buf);
   ri = NULL;
 
   mbuf_free(&send_mbuf);
@@ -69,13 +69,13 @@ static void set_handler(const char *str, int len, void *user_data) {
 }
 
 /* Handler for /v1/Config.GetNetworkStatus */
-static void miot_config_gns_handler(struct clubby_request_info *ri,
-                                    void *cb_arg, struct clubby_frame_info *fi,
+static void miot_config_gns_handler(struct mg_rpc_request_info *ri,
+                                    void *cb_arg, struct mg_rpc_frame_info *fi,
                                     struct mg_str args) {
   char *ap_ip = NULL, *sta_ip = NULL, *status = NULL, *ssid = NULL;
 
   if (!fi->channel_is_trusted) {
-    clubby_send_errorf(ri, 403, "unauthorized");
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     return;
   }
@@ -85,7 +85,7 @@ static void miot_config_gns_handler(struct clubby_request_info *ri,
   sta_ip = miot_wifi_get_sta_ip();
   ap_ip = miot_wifi_get_ap_ip();
 
-  clubby_send_responsef(
+  mg_rpc_send_responsef(
       ri, "{wifi: {sta_ip: %Q, ap_ip: %Q, status: %Q, ssid: %Q}}",
       sta_ip == NULL ? "" : sta_ip, ap_ip == NULL ? "" : ap_ip,
       status == NULL ? "" : status, ssid == NULL ? "" : ssid);
@@ -101,44 +101,44 @@ static void miot_config_gns_handler(struct clubby_request_info *ri,
 }
 
 /* Handler for /v1/Config.Set */
-static void miot_config_set_handler(struct clubby_request_info *ri,
-                                    void *cb_arg, struct clubby_frame_info *fi,
+static void miot_config_set_handler(struct mg_rpc_request_info *ri,
+                                    void *cb_arg, struct mg_rpc_frame_info *fi,
                                     struct mg_str args) {
   if (!fi->channel_is_trusted) {
-    clubby_send_errorf(ri, 403, "unauthorized");
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     return;
   }
 
   json_scanf(args.p, args.len, "{config: %M}", set_handler, NULL);
 
-  clubby_send_responsef(ri, NULL);
+  mg_rpc_send_responsef(ri, NULL);
   ri = NULL;
 
   (void) cb_arg;
 }
 
 /* Handler for /v1/Config.Save */
-static void miot_config_save_handler(struct clubby_request_info *ri,
-                                     void *cb_arg, struct clubby_frame_info *fi,
+static void miot_config_save_handler(struct mg_rpc_request_info *ri,
+                                     void *cb_arg, struct mg_rpc_frame_info *fi,
                                      struct mg_str args) {
   /*
-   * We need to stash clubby pointer since we need to use it after calling
-   * clubby_send_responsef(), which invalidates `ri`
+   * We need to stash mg_rpc pointer since we need to use it after calling
+   * mg_rpc_send_responsef(), which invalidates `ri`
    */
-  struct clubby *c = ri->clubby;
+  struct mg_rpc *c = ri->rpc;
   struct sys_config *cfg = get_cfg();
   char *msg = NULL;
   int reboot = 0;
 
   if (!fi->channel_is_trusted) {
-    clubby_send_errorf(ri, 403, "unauthorized");
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     return;
   }
 
   if (!save_cfg(cfg, &msg)) {
-    clubby_send_errorf(ri, -1, "error saving config: %s", (msg ? msg : ""));
+    mg_rpc_send_errorf(ri, -1, "error saving config: %s", (msg ? msg : ""));
     ri = NULL;
     free(msg);
     return;
@@ -152,35 +152,35 @@ static void miot_config_save_handler(struct clubby_request_info *ri,
      * the boot loader and it will appear as if the fw is not booting.
      * This is very confusing, so we ask the user to reboot.
      */
-    clubby_send_errorf(ri, 418,
+    mg_rpc_send_errorf(ri, 418,
                        "configuration has been saved but manual device reset "
                        "is required. For details, see https://goo.gl/Ja5gUv");
   } else
 #endif
   {
-    clubby_send_responsef(ri, NULL);
+    mg_rpc_send_responsef(ri, NULL);
   }
   ri = NULL;
 
   if (reboot) {
     miot_system_restart_after(500);
-    clubby_disconnect(c);
+    mg_rpc_disconnect(c);
   }
 
   (void) cb_arg;
 }
 
 enum miot_init_result miot_service_config_init(void) {
-  struct clubby *c = miot_clubby_get_global();
-  clubby_add_handler(c, mg_mk_str(MIOT_CONFIG_GET_CMD), miot_config_get_handler,
+  struct mg_rpc *c = miot_rpc_get_global();
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_CONFIG_GET_CMD), miot_config_get_handler,
                      NULL);
-  clubby_add_handler(c, mg_mk_str(MIOT_CONFIG_SET_CMD), miot_config_set_handler,
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_CONFIG_SET_CMD), miot_config_set_handler,
                      NULL);
-  clubby_add_handler(c, mg_mk_str(MIOT_CONFIG_GET_NETWORK_STATUS_CMD),
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_CONFIG_GET_NETWORK_STATUS_CMD),
                      miot_config_gns_handler, NULL);
-  clubby_add_handler(c, mg_mk_str(MIOT_CONFIG_SAVE_CMD),
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_CONFIG_SAVE_CMD),
                      miot_config_save_handler, NULL);
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_CLUBBY && MG_ENABLE_CONFIG_SERVICE */
+#endif /* MG_ENABLE_RPC && MG_ENABLE_CONFIG_SERVICE */

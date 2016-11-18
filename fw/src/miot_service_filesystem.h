@@ -6,14 +6,14 @@
 #ifndef CS_FW_SRC_MIOT_SERVICE_FILESYSTEM_H_
 #define CS_FW_SRC_MIOT_SERVICE_FILESYSTEM_H_
 
-#if MG_ENABLE_CLUBBY && MG_ENABLE_FILESYSTEM_SERVICE
+#if MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE
 
 #include "fw/src/miot_init.h"
 
 /*
- * Initialises clubby handlers for /v1/Filesystem commands
+ * Initialises mg_rpc handlers for /v1/Filesystem commands
  */
 enum miot_init_result miot_service_filesystem_init(void);
 
-#endif /* MG_ENABLE_CLUBBY && MG_ENABLE_FILESYSTEM_SERVICE */
+#endif /* MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE */
 #endif /* CS_FW_SRC_MIOT_SERVICE_FILESYSTEM_H_ */
