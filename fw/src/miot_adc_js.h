@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MIOT_ADC_JS_H_
 #define CS_FW_SRC_MIOT_ADC_JS_H_
 
-#if MG_ENABLE_ADC_API
+#if MIOT_ENABLE_ADC_API
 void miot_adc_api_setup(struct v7 *v7);
 #endif
 

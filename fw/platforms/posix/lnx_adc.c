@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_ADC_API
+#if MIOT_ENABLE_ADC_API
 
 #include <stdint.h>
 
@@ -18,4 +18,4 @@ double miot_adc_read_voltage(int pin) {
   return miot_adc_read(pin);
 }
 
-#endif /* MG_ENABLE_ADC_API */
+#endif /* MIOT_ENABLE_ADC_API */

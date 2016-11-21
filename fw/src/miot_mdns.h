@@ -9,7 +9,7 @@
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_mongoose.h"
 
-#if MG_ENABLE_MDNS
+#if MIOT_ENABLE_MDNS
 
 enum miot_init_result miot_mdns_init(void);
 
@@ -23,6 +23,6 @@ void miot_mdns_remove_handler(mg_event_handler_t handler, void *ud);
 
 void miot_mdns_hal_join_group(const char *iface_ip, const char *mcast_ip);
 
-#endif /* MG_ENABLE_MDNS */
+#endif /* MIOT_ENABLE_MDNS */
 
 #endif /* CS_FW_SRC_MIOT_MDNS_H_ */

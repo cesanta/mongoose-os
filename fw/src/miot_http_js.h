@@ -8,7 +8,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_CLIENT_API || MIOT_ENABLE_HTTP_SERVER_API
 struct v7;
 void miot_http_api_setup(struct v7 *v7);
 void miot_http_js_init(struct v7 *v7);

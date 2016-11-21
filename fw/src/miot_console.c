@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_CONSOLE_FILE_BUFFER
 #include "common/cs_frbuf.h"
 #endif
 
@@ -19,7 +19,7 @@
 
 struct console_ctx {
   struct mbuf buf;
-#if MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_CONSOLE_FILE_BUFFER
   struct cs_frbuf *fbuf;
 #endif
   unsigned int initialized : 1;
@@ -45,7 +45,7 @@ void miot_console_putc(char c) {
       l = s_cctx.buf.len;
       s_cctx.msg_in_progress = 0;
     }
-#if MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_CONSOLE_FILE_BUFFER
     if (s_cctx.fbuf != NULL) {
       cs_frbuf_append(s_cctx.fbuf, s_cctx.buf.buf, l - 1);
     }
@@ -85,7 +85,7 @@ void miot_console_printf(const char *fmt, ...) {
   free(buf);
 }
 
-#if MIOT_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_RPC || MIOT_ENABLE_CONSOLE_FILE_BUFFER
 
 #if MIOT_ENABLE_RPC
 void mg_rpc_cb(struct mg_rpc *mg_rpc, void *cb_arg,
@@ -109,7 +109,7 @@ static void miot_console_push_to_cloud(void) {
     return;
   }
   if (s_cctx.request_in_flight || !mg_rpc_can_send(c)) return;
-#if MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_CONSOLE_FILE_BUFFER
   /* Push backlog from the file buffer first. */
   if (s_cctx.fbuf != NULL) {
     char *msg = NULL;
@@ -138,7 +138,7 @@ int miot_console_is_waiting_for_resp(void) {
 }
 #endif /* MIOT_ENABLE_RPC */
 
-#if MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_CONSOLE_FILE_BUFFER
 static void miot_console_flush_to_file(void) {
   if (s_cctx.fbuf == NULL) return;
   int l;
@@ -153,16 +153,16 @@ static void miot_console_flush(void *arg) {
 #if MIOT_ENABLE_RPC
   miot_console_push_to_cloud();
 #endif
-#if MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_CONSOLE_FILE_BUFFER
   miot_console_flush_to_file();
 #endif
   (void) arg;
 }
-#endif /* MIOT_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER \
+#endif /* MIOT_ENABLE_RPC || MIOT_ENABLE_CONSOLE_FILE_BUFFER \
           */
 
 void miot_console_init(void) {
-#if MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_CONSOLE_FILE_BUFFER
   if (get_cfg()->console.log_file != NULL) {
     s_cctx.fbuf = cs_frbuf_init(get_cfg()->console.log_file,
                                 get_cfg()->console.log_file_size);
@@ -170,7 +170,7 @@ void miot_console_init(void) {
                   get_cfg()->console.log_file_size));
   }
 #endif
-#if MIOT_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_RPC || MIOT_ENABLE_CONSOLE_FILE_BUFFER
   miot_set_c_timer(MIOT_CONSOLE_FLUSH_INTERVAL_MS, 1 /* repeat */,
                    miot_console_flush, NULL /* arg */);
 #endif

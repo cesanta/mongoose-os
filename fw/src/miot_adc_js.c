@@ -8,7 +8,7 @@
 #include "fw/src/miot_features.h"
 #include "v7/v7.h"
 
-#if MG_ENABLE_ADC_API
+#if MIOT_ENABLE_ADC_API
 
 MG_PRIVATE enum v7_err ADC_read(struct v7 *v7, v7_val_t *res) {
   v7_val_t pinv = v7_arg(v7, 0);
@@ -47,4 +47,4 @@ void miot_adc_api_setup(struct v7 *v7) {
   v7_set_method(v7, adc, "readVoltage", ADC_readVoltage);
 }
 
-#endif /* MG_ENABLE_ADC_API */
+#endif /* MIOT_ENABLE_ADC_API */

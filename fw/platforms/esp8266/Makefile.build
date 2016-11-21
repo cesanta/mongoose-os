@@ -183,23 +183,23 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 V7_GC_DEBUG ?= 1
 V7_STACK_GUARD ?= 1
 
-MIOT_FEATURES ?= -DMG_ENABLE_ADC_API \
-                -DMG_ENABLE_DEBUG_API \
-                -DMG_ENABLE_GPIO_API \
-                -DMG_ENABLE_HTTP_CLIENT_API \
-                -DMG_ENABLE_HTTP_SERVER_API \
-                -DMG_ENABLE_I2C_API \
-                -DMG_ENABLE_MQTT_API \
-                -DMG_ENABLE_PWM_API \
-                -DMG_ENABLE_SPI_API \
-                -DMG_ENABLE_TCP_API \
-                -DMG_ENABLE_UART_API \
-                -DMG_ENABLE_UDP_API \
-                -DMG_ENABLE_WIFI_API \
-                -DMG_ENABLE_WS_CLIENT_API
-MIOT_ESP_FEATURES = -DMG_ENABLE_WEB_CONFIG \
-                    -DMG_ENABLE_FILE_UPLOAD \
-                    -DMG_ENABLE_CONSOLE_FILE_BUFFER
+MIOT_FEATURES ?= -DMIOT_ENABLE_ADC_API \
+                -DMIOT_ENABLE_DEBUG_API \
+                -DMIOT_ENABLE_GPIO_API \
+                -DMIOT_ENABLE_HTTP_CLIENT_API \
+                -DMIOT_ENABLE_HTTP_SERVER_API \
+                -DMIOT_ENABLE_I2C_API \
+                -DMIOT_ENABLE_MQTT_API \
+                -DMIOT_ENABLE_PWM_API \
+                -DMIOT_ENABLE_SPI_API \
+                -DMIOT_ENABLE_TCP_API \
+                -DMIOT_ENABLE_UART_API \
+                -DMIOT_ENABLE_UDP_API \
+                -DMIOT_ENABLE_WIFI_API \
+                -DMIOT_ENABLE_WS_CLIENT_API
+MIOT_ESP_FEATURES = -DMIOT_ENABLE_WEB_CONFIG \
+                    -DMIOT_ENABLE_FILE_UPLOAD \
+                    -DMIOT_ENABLE_CONSOLE_FILE_BUFFER
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \

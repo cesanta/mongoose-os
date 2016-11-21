@@ -138,8 +138,8 @@ endif
 # Linux
 ifeq ($(BUILD_PLATFORM), "LINUX")
   ADD_LIBS += rt
-  MIOT_FEATURES += -DMG_ENABLE_GPIO_API \
-                   -DMG_ENABLE_I2C_API
+  MIOT_FEATURES += -DMIOT_ENABLE_GPIO_API \
+                   -DMIOT_ENABLE_I2C_API
 endif
 
 # Windows

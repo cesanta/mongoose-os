@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MG_ENABLE_GPIO_API
+#if MIOT_ENABLE_GPIO_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -317,4 +317,4 @@ int miot_gpio_intr_set(int pin, enum gpio_int_mode type) {
   return gpio_set_handler(pin, s_proxy_handler, s_proxy_handler_arg);
 }
 
-#endif /* MIOT_ENABLE_JS && MG_ENABLE_GPIO_API */
+#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_GPIO_API */

@@ -25,43 +25,43 @@
 
 enum miot_init_result miot_api_setup(struct v7 *v7) {
 #ifndef V7_THAW
-#if MG_ENABLE_ADC_API
+#if MIOT_ENABLE_ADC_API
   miot_adc_api_setup(v7);
 #endif
   miot_console_api_setup(v7);
-#if MG_ENABLE_DEBUG_API
+#if MIOT_ENABLE_DEBUG_API
   miot_debug_api_setup(v7);
 #endif
-#if MG_ENABLE_GPIO_API
+#if MIOT_ENABLE_GPIO_API
   miot_gpio_api_setup(v7);
 #endif
-#if MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_CLIENT_API || MIOT_ENABLE_HTTP_SERVER_API
   miot_http_api_setup(v7);
 #endif
-#if MG_ENABLE_MQTT_API
+#if MIOT_ENABLE_MQTT_API
   miot_mqtt_api_setup(v7);
 #endif
-#if MG_ENABLE_PWM_API
+#if MIOT_ENABLE_PWM_API
   miot_pwm_api_setup(v7);
 #endif
-#if MG_ENABLE_SPI_API
+#if MIOT_ENABLE_SPI_API
   miot_spi_api_setup(v7);
 #endif
-#if MG_ENABLE_TCP_API
+#if MIOT_ENABLE_TCP_API
   miot_tcp_api_setup(v7);
 #endif
   miot_timers_api_setup(v7);
-#if MG_ENABLE_UART_API
+#if MIOT_ENABLE_UART_API
   miot_uart_api_setup(v7);
 #endif
-#if MG_ENABLE_UDP_API
+#if MIOT_ENABLE_UDP_API
   miot_udp_api_setup(v7);
 #endif
   miot_v7_ext_api_setup(v7);
-#if MG_ENABLE_WIFI_API
+#if MIOT_ENABLE_WIFI_API
   miot_wifi_api_setup(v7);
 #endif
-#if MG_ENABLE_WS_CLIENT_API
+#if MIOT_ENABLE_WS_CLIENT_API
   miot_ws_client_api_setup(v7);
 #endif
 #if MIOT_ENABLE_RPC
@@ -78,7 +78,7 @@ enum miot_init_result miot_init_js(struct v7 *v7) {
   /* Note: config must follow sys. */
   miot_sys_config_js_init(v7);
 
-#if MG_ENABLE_I2C_API
+#if MIOT_ENABLE_I2C_API
   miot_i2c_js_init(v7);
 #endif
 
@@ -87,13 +87,13 @@ enum miot_init_result miot_init_js(struct v7 *v7) {
 #endif
 
   miot_console_js_init(v7);
-#if MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_CLIENT_API || MIOT_ENABLE_HTTP_SERVER_API
   miot_http_js_init(v7);
 #endif
-#if MG_ENABLE_UART_API
+#if MIOT_ENABLE_UART_API
   miot_uart_js_init(v7);
 #endif
-#if MG_ENABLE_WIFI_API
+#if MIOT_ENABLE_WIFI_API
   miot_wifi_js_init(v7);
 #endif
   return MIOT_INIT_OK;

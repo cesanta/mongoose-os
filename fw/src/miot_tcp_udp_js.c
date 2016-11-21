@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#if MIOT_ENABLE_JS && (MG_ENABLE_TCP_API || MG_ENABLE_UDP_API)
+#if MIOT_ENABLE_JS && (MIOT_ENABLE_TCP_API || MIOT_ENABLE_UDP_API)
 
 #include "common/queue.h"
 #include "fw/src/miot_common.h"
@@ -1492,7 +1492,7 @@ clean:
   return rcode;
 }
 
-#if MG_ENABLE_UDP_API
+#if MIOT_ENABLE_UDP_API
 void miot_udp_api_setup(struct v7 *v7) {
   /* UDP */
   v7_val_t dgram = v7_mk_object(v7);
@@ -1528,9 +1528,9 @@ void miot_udp_api_setup(struct v7 *v7) {
   v7_disown(v7, &dgram_socket_proto);
   v7_disown(v7, &dgram);
 }
-#endif /* MG_ENABLE_UDP_API */
+#endif /* MIOT_ENABLE_UDP_API */
 
-#if MG_ENABLE_TCP_API
+#if MIOT_ENABLE_TCP_API
 void miot_tcp_api_setup(struct v7 *v7) {
   /* TCP */
   v7_val_t tcp = v7_mk_object(v7);
@@ -1590,7 +1590,7 @@ void miot_tcp_api_setup(struct v7 *v7) {
   v7_disown(v7, &tcp_socket_proto);
   v7_disown(v7, &tcp);
 }
-#endif /* MG_ENABLE_TCP_API */
+#endif /* MIOT_ENABLE_TCP_API */
 
-#endif /* MIOT_ENABLE_JS && (MG_ENABLE_TCP_API || \
-          MG_ENABLE_UDP_API) */
+#endif /* MIOT_ENABLE_JS && (MIOT_ENABLE_TCP_API || \
+          MIOT_ENABLE_UDP_API) */

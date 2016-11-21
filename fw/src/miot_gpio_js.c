@@ -10,7 +10,7 @@
 #include "fw/src/miot_v7_ext.h"
 #include "v7/v7.h"
 
-#if MIOT_ENABLE_JS && MG_ENABLE_GPIO_API
+#if MIOT_ENABLE_JS && MIOT_ENABLE_GPIO_API
 
 static int s_gpio_intr_installed = 0;
 static v7_val_t s_isr_cb_proxy_v;
@@ -203,4 +203,4 @@ void miot_gpio_api_setup(struct v7 *v7) {
   }
 }
 
-#endif /* MIOT_ENABLE_JS && MG_ENABLE_GPIO_API */
+#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_GPIO_API */

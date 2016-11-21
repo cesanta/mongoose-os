@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MIOT_ENABLE_JS && MG_ENABLE_SPI_API
+#if MIOT_ENABLE_JS && MIOT_ENABLE_SPI_API
 
 #include "fw/src/miot_spi_js.h"
 
@@ -199,4 +199,4 @@ void miot_spi_api_setup(struct v7 *v7) {
   spi_ctor = v7_mk_function_with_proto(v7, spi_js_ctor, spi_proto);
   v7_set(v7, v7_get_global(v7), "SPI", ~0, spi_ctor);
 }
-#endif /* MIOT_ENABLE_JS && MG_ENABLE_SPI_API */
+#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_SPI_API */

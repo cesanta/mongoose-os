@@ -7,12 +7,12 @@
 
 struct v7;
 
-#if MG_ENABLE_TCP_API
+#if MIOT_ENABLE_TCP_API
 void miot_tcp_api_setup(struct v7 *v7);
-#endif /* MG_ENABLE_TCP_API */
+#endif /* MIOT_ENABLE_TCP_API */
 
-#if MG_ENABLE_UDP_API
+#if MIOT_ENABLE_UDP_API
 void miot_udp_api_setup(struct v7 *v7);
-#endif /* MG_ENABLE_TCP_API */
+#endif /* MIOT_ENABLE_TCP_API */
 
 #endif /* CS_FW_SRC_MIOT_TCP_UDP_JS_H_ */

@@ -16,7 +16,7 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_wifi.h"
 
-#if MG_ENABLE_MDNS
+#if MIOT_ENABLE_MDNS
 
 #define MDNS_MCAST_GROUP "224.0.0.251"
 #define MDNS_PORT 5353
@@ -115,4 +115,4 @@ enum miot_init_result miot_mdns_init(void) {
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_MDNS */
+#endif /* MIOT_ENABLE_MDNS */

@@ -98,7 +98,7 @@ clean:
   return result;
 }
 
-#if MG_ENABLE_WEB_CONFIG
+#if MIOT_ENABLE_WEB_CONFIG
 
 #define JSON_HEADERS "Connection: close\r\nContent-Type: application/json"
 
@@ -191,9 +191,9 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
   send_cfg(&s_ro_vars, sys_ro_vars_schema(), hm, c);
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
-#endif /* MG_ENABLE_WEB_CONFIG */
+#endif /* MIOT_ENABLE_WEB_CONFIG */
 
-#if MG_ENABLE_FILE_UPLOAD
+#if MIOT_ENABLE_FILE_UPLOAD
 static struct mg_str upload_fname(struct mg_connection *nc,
                                   struct mg_str fname) {
   struct mg_str res = {NULL, 0};
@@ -265,12 +265,12 @@ enum miot_init_result miot_sys_config_init_http(
     LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));
     return MIOT_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED;
   } else {
-#if MG_ENABLE_WEB_CONFIG
+#if MIOT_ENABLE_WEB_CONFIG
     mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
     mg_register_http_endpoint(listen_conn, "/reboot", reboot_handler);
     mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
 #endif
-#if MG_ENABLE_FILE_UPLOAD
+#if MIOT_ENABLE_FILE_UPLOAD
     mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
 #endif
 
@@ -314,7 +314,7 @@ enum miot_init_result miot_sys_config_init(void) {
     return MIOT_INIT_CONFIG_LOAD_DEFAULTS_FAILED;
   }
 
-#if MG_ENABLE_GPIO_API
+#if MIOT_ENABLE_GPIO_API
   /*
    * Check factory reset GPIO. We intentionally do it before loading CONF_FILE
    * so that it cannot be overridden by the end user.

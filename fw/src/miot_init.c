@@ -20,7 +20,7 @@ enum miot_init_result mg_init(void) {
   if (r != MIOT_INIT_OK) return r;
   miot_wifi_init();
 
-#if MG_ENABLE_MDNS
+#if MIOT_ENABLE_MDNS
   r = miot_mdns_init(); /* Before dns_sd init */
   if (r != MIOT_INIT_OK) return r;
 #endif

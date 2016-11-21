@@ -12,7 +12,8 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_utils.h"
 
-#if MIOT_ENABLE_JS && (MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API)
+#if MIOT_ENABLE_JS && \
+    (MIOT_ENABLE_HTTP_CLIENT_API || MIOT_ENABLE_HTTP_SERVER_API)
 
 /* Forwards */
 MG_PRIVATE enum v7_err Http_on(struct v7 *v7, v7_val_t *res);
@@ -52,7 +53,7 @@ struct user_data {
 static v7_val_t miot_http_response_proto;
 static v7_val_t miot_http_request_proto;
 
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
 static v7_val_t miot_http_server_proto;
 MG_PRIVATE enum v7_err Http_createServer(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -179,7 +180,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   }
 }
 
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
 static enum v7_err start_http_server(struct v7 *v7, const char *addr,
                                      v7_val_t obj, const char *ca_cert,
                                      const char *cert) {
@@ -220,7 +221,7 @@ static enum v7_err start_http_server(struct v7 *v7, const char *addr,
 clean:
   return rcode;
 }
-#endif /* MG_ENABLE_HTTP_SERVER_API */
+#endif /* MIOT_ENABLE_HTTP_SERVER_API */
 
 /*
  * Parse URL; used for:
@@ -465,7 +466,7 @@ struct {
  * For the full option object definition see:
  * https://docs.cesanta.com/mongoose/dev/index.html#/c-api/http.h/struct_mg_serve_http_opts/
  */
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
 static void populate_opts_from_js_argument(struct v7 *v7, v7_val_t obj,
                                            struct mg_serve_http_opts *opts) {
   size_t i;
@@ -590,7 +591,7 @@ MG_PRIVATE enum v7_err Http_Server_destroy(struct v7 *v7, v7_val_t *res) {
 clean:
   return rcode;
 }
-#endif /* MG_ENABLE_HTTP_SERVER_API */
+#endif /* MIOT_ENABLE_HTTP_SERVER_API */
 
 MG_PRIVATE enum v7_err Http_request_write(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -838,7 +839,7 @@ void miot_http_api_setup(struct v7 *v7) {
   v7_val_t Http = V7_UNDEFINED;
   v7_val_t URL = V7_UNDEFINED;
 
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
   miot_http_server_proto = V7_UNDEFINED;
   v7_own(v7, &miot_http_server_proto);
 #endif
@@ -868,7 +869,7 @@ void miot_http_api_setup(struct v7 *v7) {
   v7_set_method(v7, Http, "get", Http_get);
   v7_set_method(v7, Http, "request", Http_createClient);
 
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
   miot_http_server_proto = v7_mk_object(v7);
   v7_set_method(v7, miot_http_server_proto, "listen", Http_Server_listen);
   v7_set_method(v7, miot_http_server_proto, "on", Http_on);
@@ -882,7 +883,7 @@ void miot_http_api_setup(struct v7 *v7) {
                 Http_response_writeHead);
   v7_set_method(v7, miot_http_response_proto, "write", Http_response_write);
   v7_set_method(v7, miot_http_response_proto, "end", Http_response_end);
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
   v7_set_method(v7, miot_http_response_proto, "serve", Http_response_serve);
 #endif
 
@@ -900,7 +901,7 @@ void miot_http_api_setup(struct v7 *v7) {
 
   v7_disown(v7, &miot_http_request_proto);
   v7_disown(v7, &miot_http_response_proto);
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
   v7_disown(v7, &miot_http_server_proto);
 #endif
   v7_disown(v7, &URL);
@@ -922,13 +923,13 @@ void miot_http_js_init(struct v7 *v7) {
   v7_own(v7, &miot_http_response_proto);
   miot_http_request_proto = v7_get(v7, Http, "_req", ~0);
   v7_own(v7, &miot_http_request_proto);
-#if MG_ENABLE_HTTP_SERVER_API
+#if MIOT_ENABLE_HTTP_SERVER_API
   miot_http_server_proto = v7_get(v7, Http, "_serv", ~0);
   v7_own(v7, &miot_http_server_proto);
 #endif
 
   v7_disown(v7, &Http);
 }
-#endif /* MIOT_ENABLE_JS &&             \
-          (MG_ENABLE_HTTP_CLIENT_API || \
-          MG_ENABLE_HTTP_SERVER_API) */
+#endif /* MIOT_ENABLE_JS &&               \
+          (MIOT_ENABLE_HTTP_CLIENT_API || \
+          MIOT_ENABLE_HTTP_SERVER_API) */

@@ -4,7 +4,7 @@
  */
 #include "fw/src/miot_mqtt_js.h"
 
-#if MIOT_ENABLE_JS && MG_ENABLE_MQTT_API
+#if MIOT_ENABLE_JS && MIOT_ENABLE_MQTT_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -356,4 +356,4 @@ void miot_mqtt_api_setup(struct v7 *v7) {
   v7_disown(v7, &mqtt_connect);
 }
 
-#endif /* MIOT_ENABLE_JS && MG_ENABLE_MQTT_API */
+#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_MQTT_API */

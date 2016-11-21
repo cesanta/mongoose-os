@@ -323,7 +323,7 @@ void miot_sys_js_init(struct v7 *v7) {
   v7_set_method(v7, fs, "free", Sys_fs_getFreeSpace);
 }
 
-#if defined(MG_FROZEN_JSON_PARSE)
+#if defined(MIOT_FROZEN_JSON_PARSE)
 
 /*
  * JSON parsing frame: a separate frame is allocated for each nested

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MIOT_ENABLE_JS && MG_ENABLE_I2C_API
+#if MIOT_ENABLE_JS && MIOT_ENABLE_I2C_API
 
 #include "fw/src/miot_i2c_js.h"
 
@@ -358,4 +358,4 @@ void miot_i2c_js_init(struct v7 *v7) {
   v7_set(v7, v7_get_global(v7), "I2C", ~0, i2c_ctor);
 }
 
-#endif /* MIOT_ENABLE_JS && MG_ENABLE_I2C_API */
+#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_I2C_API */

@@ -6,7 +6,7 @@
 
 #include "fw/src/miot_i2c.h"
 
-#if MIOT_ENABLE_JS && MG_ENABLE_I2C_API
+#if MIOT_ENABLE_JS && MIOT_ENABLE_I2C_API
 
 struct v7;
 void miot_i2c_js_init(struct v7 *v7);
