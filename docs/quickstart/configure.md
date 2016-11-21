@@ -6,11 +6,8 @@ The device is flashed, but not configured yet.
 Let's set up WiFi networking on it:
 
 ```bash
-miot config-set -port /dev/ttyUSB0 \
-  wifi.ap.enable=false \
-  wifi.sta.enable=true \
-  wifi.sta.ssid=WIFI_NETWORK_NAME \
-  wifi.sta.pass=WIFI_PASSWORD
+miot config-set wifi.ap.enable=false wifi.sta.enable=true \
+  wifi.sta.ssid=WIFI_NETWORK_NAME wifi.sta.pass=WIFI_PASSWORD
 ```
 
 This command alters a user configuration file on the device's filesystem

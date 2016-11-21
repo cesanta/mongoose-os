@@ -50,9 +50,9 @@ enum miot_app_init_result miot_app_init(void) {
 Attach a device to your computer. Compile, flash and configure the firmware:
 
 ```
-$ miot cloud build
-$ miot dev flash --fw build/fw.zip --port /dev/ttyUSB0  # Your TTY device could be different
-$ miot dev config set --port /dev/ttyUSB0 wifi.sta.enable=true wifi.sta.ssid=WIFI_NETWORK wifi.sta.pass=WIFI_PASSWORD
+$ miot build
+$ miot flash
+$ miot config-set wifi.sta.enable=true wifi.sta.ssid=WIFI_NETWORK wifi.sta.pass=WIFI_PASSWORD
 ```
 
 Attach a terminal to the device and see messages printed:

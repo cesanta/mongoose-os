@@ -18,7 +18,7 @@ large set of
 [examples](https://github.com/cesanta/mongoose/tree/master/examples)
 to our disposal) to implement the functionality we want.
 
-Create an empty directory, execute `miot fw init --arch cc3200` in it.
+Create an empty directory, execute `miot init --arch cc3200` in it.
 If you have NodeMCU, use `esp8266` instead of `cc3200`.
 Copy-paste this into the `src/main.c`:
 
@@ -59,15 +59,15 @@ enum miot_app_init_result miot_app_init(void) {
 Attach a device to your computer. Compile, flash and configure the firmware:
 
 ```
-$ miot cloud build
-$ miot dev flash --fw build/fw.zip --port /dev/ttyUSB0  # Your TTY device could be different
-$ miot dev config set --port /dev/ttyUSB0 wifi.sta.enable=true wifi.sta.ssid=WIFI_NETWORK wifi.sta.pass=WIFI_PASSWORD
+$ miot build
+$ miot flash
+$ miot config-set wifi.sta.enable=true wifi.sta.ssid=WIFI_NETWORK wifi.sta.pass=WIFI_PASSWORD
 ```
 
 Find out the device's IP address:
 
 ```sh
-$ miot dev call --port /dev/ttyUSB0 /v1/Config.GetNetworkStatus
+$ miot call /v1/Config.GetNetworkStatus
 {
   "wifi": {
     "sta_ip": "IP_ADDRESS",

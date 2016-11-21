@@ -6,7 +6,7 @@ The device is flashed, and configured, it can talk to the outside world.
 Let's register it with the Mongoose Cloud:
 
 ```
-miot register -port /dev/ttyUSB0 --user YOUR_USERNAME --pass YOUR_PASSWORD
+miot register
 ```
 
 This command generates ID and password for the device, register that

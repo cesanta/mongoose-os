@@ -15,34 +15,10 @@ essential IoT-specific functionalities for the firmware developers:
 - Secure and reliable over-the-air (OTA) updates: update only parts that
   changed, and rollback on failures
 
-# Supported Hardware architectures
+# How to build & flash the firmware
 
-- TI CC3200
-- ESP8266
-- In progress:
-   - STM32
-   - nRF52
-
-# How to build
-
-```
-$ make PLATFORM=cc3200     # Build for CC3200 platform
-$ make PLATFORM=esp8266    # Build for ESP8266 platform
-```
-
-Firmware files will be stored in the firmware directory.
-
-# How to flash
-
-Download [Mongoose Flashing Tool](https://github.com/cesanta/mft/releases).
-Then run the following commands on a console:
-
-```
-$ MFT --platform=cc3200  --port=/dev/ttyUSB1 --flash firmware/*-last.zip --console
-$ MFT --platform=esp8266 --port=/dev/ttyUSB0 --flash firmware/*-last.zip --console
-```
-The commands are shown for CC3200 and ESP8266 respectively.
-
+See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/overview.md/)
+on how to build and flash the firmware
 
 # How to test Over-the-air (OTA) update
 

@@ -31,4 +31,5 @@ miot config-set hsw.sensor_data_url=http://mongoose.cloud/api/DEVICE-USER/data/a
 miot config-set hsw.auth="Bearer USER:PASSWORD"
 miot config-set wifi.ap.enable=false wifi.sta.enable=true \
   wifi.sta.ssid=WIFI_NETWORK_NAME wifi.sta.pass=WIFI_PASSWORD
+miot console      # Attach a serial console and see device logs
 ```

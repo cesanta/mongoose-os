@@ -1,42 +1,51 @@
-# This is a C-only Mongoose IoT application.
+# Simple device control using MQTT
 
-Building requires [Docker](https://docs.docker.com/engine/installation/) and
- [miot tool](https://mongoose-iot.com/software.html).
+See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/overview.md/)
+on how to build and flash the firmware, and follow to the
 
-Compile with `PLATFORM` set:
+This example shows how to control a device remotely using MQTT protocol.
+We're going to use [Mongoose Cloud](http://mongoose.cloud),
+which provides authenticated MQTT service. Any other public or private MQTT
+server would also work.
 
-```
-make PLATFORM=esp8266
-```
-or
+```bash
+git clone https://github.com/cesanta/mongoose-iot
+cd mongoose-iot/fw/examples/c_mqtt
+miot build --arch ARCHITECTURE # cc3200 or esp8266
+miot flash
+miot register
+miot miot config-set wifi.ap.enable=false wifi.sta.enable=true \
+  wifi.sta.ssid=YOUR_WIFI_NETWORK wifi.sta.pass=YOUR_WIFI_PASSWORD
+miot console
 
-```
-make PLATFORM=cc3200
-```
 
-Firmware files will be stored in the `firmware` directory.
-
-To flash the firmware you can use [Mongoose Flashing Tool](https://github.com/cesanta/mft):
-
-```
-  MFT --platform=esp8266 --port=/dev/ttyUSB0 --flash-baud-rate=1500000 --flash firmware/*-last.zip --console
-```
-or
-```
-  MFT --platform=cc3200 --port=/dev/ttyUSB1 --flash firmware/*-last.zip --console
+ev_handler           3355550 MQTT Connect (1)
+ev_handler             53003 CONNACK: 0
+sub                     1376 Subscribed to /DEVICE_ID/gpio
 ```
 
-To configure network use
+The `miot console` command attaches to the device's UART and prints log
+messages. Device connects to the cloud, subscribes to the MQTT topic
+`/device_id/gpio` and expects messages like
+`{"pin": NUMBER, "state": 0_or_1}` to be sent to that topic.
+Device sets the specified GPIO pin to 0 or 1, demonstrating remote control
+capability.
+
+In a separate terminal, send such control message using mosquitto command line
+tool:
 
 ```
-miot dev config set -port /dev/ttyPORT wifi.ap.enable=false wifi.sta.enable=true wifi.sta.ssid=MYNET wifi.sta.pass=MYPASS
+mosquitto_pub -h mongoose.cloud -u YOUR_USER -P YOUR_PASSWORD \
+  -t /DEVICE_ID/gpio -m '{pin:14, state:1}'
+```
+The device sets the GPIO pin:
+
+```
+ev_handler           248753866 Done: [{pin:14, state:1}]
 ```
 
-To set MQTT broker use
-
-```
-miot dev config set -port /dev/ttyPORT mqtt.broker=ADDRESS:IP
-```
+If an LED is attached to that pin, it'll turn on. Note that the whole
+transaction is authenticated: only the owner of the device (you) can operate it.
 
 ## To connect Amazon IoT and test the example with its MQTT Broker do:
 - In Amazon IoT Console create thing, attach certificate and policy to it.

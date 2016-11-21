@@ -1,7 +1,7 @@
-This is a JS-enabled Mongoose IoT application.
+# This is a JS-enabled Mongoose IoT application.
 
-To build, flash and test it, you need a `miot` tool (see a
-[quick start guide](https://mongoose-iot.com/docs/#/quickstart/overview.md/)):
+See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/overview.md/)
+on how to build and flash the firmware. Below is an example session:
 
 ```
 $ miot build --arch esp8266
