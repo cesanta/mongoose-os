@@ -8,4 +8,3 @@ filesystem:
   - fs
 build_vars:
   MIOT_ENABLE_MQTT: 1
-  MG_ENABLE_SSL: 1
