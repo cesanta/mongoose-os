@@ -15,7 +15,7 @@ export MIOT_USER=YOUR_USER_NAME
 export MIOT_PASS=YOUR_PASSWORD
 miot build --arch ARCHITECTURE # cc3200 or esp8266
 miot flash
-miot miot config-set wifi.ap.enable=false wifi.sta.enable=true \
+miot config-set wifi.ap.enable=false wifi.sta.enable=true \
 	wifi.sta.ssid=YOUR_WIFI_NETWORK wifi.sta.pass=YOUR_WIFI_PASSWORD
 miot console
 ```
