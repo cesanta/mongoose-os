@@ -22,6 +22,8 @@ SSL ?= Krypton
 DEBUG ?= 0
 CC_WRAPPER ?=
 
+MIOT_ENABLE_ATCA ?= 0
+
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MIOT_ENABLE_UPDATER = 0
 MIOT_ENABLE_UPDATER_POST = 0

@@ -1,0 +1,3 @@
+[
+  ["sys.atca_enable", "b", false, {title: "Enable ATCA crypto accelerator"}],
+]

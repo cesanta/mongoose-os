@@ -2,6 +2,27 @@ SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_wifi_config.yaml \
                    $(MIOT_SRC_PATH)/miot_http_config.yaml \
                    $(MIOT_SRC_PATH)/miot_console_config.yaml
 
+ifeq "$(MIOT_ENABLE_ATCA)" "1"
+  ATCA_PATH ?= $(MIOT_PATH)/third_party/cryptoauthlib
+  ATCA_LIB = $(BUILD_DIR)/libatca.a
+
+  MIOT_SRCS += miot_atca.c
+  MIOT_FEATURES += -DMIOT_ENABLE_ATCA -I$(ATCA_PATH)/lib
+  SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_atca_config.yaml
+
+$(ATCA_LIB):
+	$(vecho) "BUILD $@"
+	$(Q) make -C $(ATCA_PATH)/lib \
+		CC=$(CC) AR=$(AR) \
+	  CFLAGS="$(CFLAGS)"
+	$(Q) cp $(ATCA_PATH)/lib/libatca.a $@
+	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
+	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
+else
+  ATCA_LIB =
+  MIOT_FEATURES += -DMIOT_ENABLE_ATCA=0
+endif
+
 ifeq "$(MIOT_ENABLE_RPC)" "1"
   MIOT_SRCS += mg_rpc.c mg_rpc_channel_ws.c miot_rpc.c
   MIOT_FEATURES += -DMIOT_ENABLE_RPC -DMIOT_ENABLE_RPC_API
@@ -62,14 +83,15 @@ endif
 # Export all the feature switches.
 # This is required for needed make invocations, such as when building POSIX MIOT
 # for JS freeze operation.
-export MIOT_ENABLE_RPC
-export MIOT_ENABLE_RPC_UART
+export MIOT_ENABLE_ATCA
 export MIOT_ENABLE_CONFIG_SERVICE
 export MIOT_ENABLE_DNS_SD
 export MIOT_ENABLE_FILESYSTEM_SERVICE
 export MIOT_ENABLE_I2C
 export MIOT_ENABLE_JS
 export MIOT_ENABLE_MQTT
+export MIOT_ENABLE_RPC
+export MIOT_ENABLE_RPC_UART
 export MIOT_ENABLE_UPDATER
 export MIOT_ENABLE_UPDATER_POST
 export MIOT_ENABLE_UPDATER_RPC

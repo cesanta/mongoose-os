@@ -24,6 +24,7 @@ enum miot_init_result {
   MIOT_INIT_MDNS_FAILED = -17,
   MIOT_INIT_MQTT_FAILED = -18,
   MIOT_INIT_I2C_FAILED = -19,
+  MIOT_INIT_ATCA_FAILED = -20,
 };
 
 enum miot_init_result mg_init(void);

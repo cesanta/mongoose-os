@@ -1,6 +1,7 @@
 #include "fw/src/miot_init.h"
 
 #include "fw/src/miot_app.h"
+#include "fw/src/miot_atca.h"
 #include "fw/src/miot_rpc.h"
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_dns_sd.h"
@@ -49,16 +50,21 @@ enum miot_init_result mg_init(void) {
   r = miot_sys_config_init_platform(get_cfg());
   if (r != MIOT_INIT_OK) return r;
 
+#if MIOT_ENABLE_I2C
+  r = miot_i2c_init();
+  if (r != MIOT_INIT_OK) return r;
+#endif
+
+#if MIOT_ENABLE_ATCA
+  r = miot_atca_init(); /* Requires I2C */
+  if (r != MIOT_INIT_OK) return r;
+#endif
+
   r = miot_sys_config_init_http(&get_cfg()->http);
   if (r != MIOT_INIT_OK) return r;
 
 #if MIOT_ENABLE_UPDATER
   miot_updater_http_init(); /* After HTTP init */
-#endif
-
-#if MIOT_ENABLE_I2C
-  r = miot_i2c_init();
-  if (r != MIOT_INIT_OK) return r;
 #endif
 
 #if MIOT_ENABLE_MQTT
