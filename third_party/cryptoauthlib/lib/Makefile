@@ -13,7 +13,7 @@ LOCAL_CFLAGS = -MD \
 
 .PHONY: all clean
 
-all: $(BUILD_DIR) libatca.a
+all: $(BUILD_DIR) $(BUILD_DIR)/libatca.a
 
 SRCS = $(notdir $(wildcard *.c basic/*.c))
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
@@ -21,8 +21,8 @@ OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
 VPATH = basic
 IPATH = $(addprefix -I,$(VPATH))
 
-libatca.a: $(OBJS)
-	echo $(SRCS)
+$(BUILD_DIR)/libatca.a: $(OBJS)
+	@echo "  AR    $@"
 	$(AR) -rc $@ $^
 
 $(BUILD_DIR)/%.o: %.c

@@ -10,12 +10,13 @@ ifeq "$(MIOT_ENABLE_ATCA)" "1"
   MIOT_FEATURES += -DMIOT_ENABLE_ATCA -I$(ATCA_PATH)/lib
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_atca_config.yaml
 
-$(ATCA_LIB):
-	$(vecho) "BUILD $@"
+$(BUILD_DIR)/atca/libatca.a:
 	$(Q) make -C $(ATCA_PATH)/lib \
-		CC=$(CC) AR=$(AR) \
+		CC=$(CC) AR=$(AR) BUILD_DIR=$(BUILD_DIR)/atca \
 	  CFLAGS="$(CFLAGS)"
-	$(Q) cp $(ATCA_PATH)/lib/libatca.a $@
+
+$(ATCA_LIB): $(BUILD_DIR)/atca/libatca.a
+	$(Q) cp $< $@
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
 	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
 else
