@@ -23,14 +23,16 @@ cc_library(
         "str_util.h",
         "utf.h",
         "platform.h",
-    ] + glob(["platforms/platform_*.h"]),
+    ] + glob(["platforms/platform_*.h"]) + [
+        "platforms/simplelink/cs_simplelink.h",
+    ],
     defines = ["c_strnlen=strnlen"],
 )
 
 cc_library(
     name = "test_util",
+    testonly = 1,
     srcs = ["test_util.c"],
     hdrs = ["test_util.h"],
     deps = [":common"],
-    testonly = 1,
 )
