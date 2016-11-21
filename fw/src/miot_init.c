@@ -24,22 +24,22 @@ enum miot_init_result mg_init(void) {
   r = miot_mdns_init(); /* Before dns_sd init */
   if (r != MIOT_INIT_OK) return r;
 #endif
-#if MG_ENABLE_DNS_SD
+#if MIOT_ENABLE_DNS_SD
   r = miot_dns_sd_init(); /* Before mg_rpc init */
   if (r != MIOT_INIT_OK) return r;
 #endif
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
   r = miot_rpc_init();
   if (r != MIOT_INIT_OK) return r;
-#if MG_ENABLE_UPDATER_RPC
+#if MIOT_ENABLE_UPDATER_RPC
   miot_updater_rpc_init();
 #endif
-#if MG_ENABLE_CONFIG_SERVICE
+#if MIOT_ENABLE_CONFIG_SERVICE
   miot_service_config_init();
   miot_service_vars_init();
 #endif
-#if MG_ENABLE_FILESYSTEM_SERVICE
+#if MIOT_ENABLE_FILESYSTEM_SERVICE
   miot_service_filesystem_init();
 #endif
 #endif
@@ -52,16 +52,16 @@ enum miot_init_result mg_init(void) {
   r = miot_sys_config_init_http(&get_cfg()->http);
   if (r != MIOT_INIT_OK) return r;
 
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
   miot_updater_http_init(); /* After HTTP init */
 #endif
 
-#if MG_ENABLE_I2C
+#if MIOT_ENABLE_I2C
   r = miot_i2c_init();
   if (r != MIOT_INIT_OK) return r;
 #endif
 
-#if MG_ENABLE_MQTT
+#if MIOT_ENABLE_MQTT
   r = miot_mqtt_global_init();
   if (r != MIOT_INIT_OK) return r;
 #endif

@@ -6,7 +6,7 @@
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if MG_ENABLE_I2C
+#if MIOT_ENABLE_I2C
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -25,7 +25,7 @@
 #include <osapi.h>
 #include <gpio.h>
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -248,7 +248,7 @@ void miot_i2c_close(struct miot_i2c *c) {
   free(c);
 }
 
-#if MG_ENABLE_JS && MG_ENABLE_I2C_API
+#if MIOT_ENABLE_JS && MG_ENABLE_I2C_API
 enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
   enum v7_err rcode = V7_OK;
   struct sys_config_i2c cfg;
@@ -264,6 +264,6 @@ enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
 
   return rcode;
 }
-#endif /* MG_ENABLE_JS && MG_ENABLE_I2C_API */
+#endif /* MIOT_ENABLE_JS && MG_ENABLE_I2C_API */
 
-#endif /* MG_ENABLE_I2C */
+#endif /* MIOT_ENABLE_I2C */

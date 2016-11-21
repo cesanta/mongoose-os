@@ -15,7 +15,7 @@
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_updater_common.h"
 
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
 enum miot_init_result miot_updater_http_init(void);
 
 void miot_updater_http_start(struct update_context *ctx, const char *url);

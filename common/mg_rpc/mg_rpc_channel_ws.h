@@ -9,7 +9,7 @@
 #include "common/mg_rpc/mg_rpc_channel.h"
 #include "mongoose/mongoose.h"
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
 
 struct mg_rpc_channel *mg_rpc_channel_ws(struct mg_connection *nc);
 
@@ -26,5 +26,5 @@ struct mg_rpc_channel_ws_out_cfg {
 struct mg_rpc_channel *mg_rpc_channel_ws_out(
     struct mg_mgr *mgr, struct mg_rpc_channel_ws_out_cfg *cfg);
 
-#endif /* MG_ENABLE_RPC */
+#endif /* MIOT_ENABLE_RPC */
 #endif /* CS_COMMON_MG_RPC_MG_RPC_CHANNEL_WS_H_ */

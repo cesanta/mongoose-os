@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_PWM_API
+#if MIOT_ENABLE_JS && MG_ENABLE_PWM_API
 
 #include "fw/src/miot_common.h"
 #include "fw/src/miot_pwm.h"
@@ -43,4 +43,4 @@ void miot_pwm_api_setup(struct v7 *v7) {
   v7_set_method(v7, pwm, "set", PWM_set);
 }
 
-#endif /* MG_ENABLE_JS && MG_ENABLE_PWM_API */
+#endif /* MIOT_ENABLE_JS && MG_ENABLE_PWM_API */

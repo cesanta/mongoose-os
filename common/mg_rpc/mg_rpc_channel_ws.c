@@ -7,7 +7,7 @@
 #include "common/cs_dbg.h"
 #include "common/mg_rpc/mg_rpc_channel.h"
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
 
 #define MG_RPC_WS_PROTOCOL "clubby.cesanta.com"
 #define MG_RPC_WS_URI "/api"
@@ -248,4 +248,4 @@ struct mg_rpc_channel *mg_rpc_channel_ws_out(
   return ch;
 }
 
-#endif /* MG_ENABLE_RPC */
+#endif /* MIOT_ENABLE_RPC */

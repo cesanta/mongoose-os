@@ -8,4 +8,4 @@ sources:
 filesystem:
 build_vars:
   APP_CONF_SCHEMA: src/conf_schema.yaml
-  MG_ENABLE_RPC: 0
+  MIOT_ENABLE_RPC: 0

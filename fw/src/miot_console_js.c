@@ -1,6 +1,6 @@
 #include "fw/src/miot_console_js.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include <stdlib.h>
 #include <string.h>
@@ -55,4 +55,4 @@ void miot_console_api_setup(struct v7 *v7) {
 void miot_console_js_init(struct v7 *v7) {
   (void) v7;
 }
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

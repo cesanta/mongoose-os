@@ -9,7 +9,7 @@
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_mongoose.h"
 
-#if MG_ENABLE_MQTT
+#if MIOT_ENABLE_MQTT
 
 /* Initialises global MQTT connection */
 enum miot_init_result miot_mqtt_global_init(void);
@@ -23,6 +23,6 @@ void miot_mqtt_set_global_handler(mg_event_handler_t handler, void *ud);
  */
 struct mg_connection *miot_mqtt_get_global_conn(void);
 
-#endif /* MG_ENABLE_MQTT */
+#endif /* MIOT_ENABLE_MQTT */
 
 #endif /* CS_FW_SRC_MIOT_MQTT_GLOBAL_H_ */

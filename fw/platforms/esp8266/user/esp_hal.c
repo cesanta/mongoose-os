@@ -16,7 +16,7 @@
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_task.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -88,7 +88,7 @@ IRAM void mongoose_schedule_poll(void) {
   mg_lwip_mgr_schedule_poll(miot_get_mgr());
 }
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 void miot_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                     v7_val_t args) {
   miot_dispatch_v7_callback(v7, func, this_obj, args);

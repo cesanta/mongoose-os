@@ -9,7 +9,7 @@
 #include "fw/src/miot_features.h"
 #include "fw/src/miot_uart.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 struct v7;
 
@@ -31,6 +31,6 @@ void miot_prompt_dispatcher(struct miot_uart_state *us);
 /* initialize hooks that send chars to prompt handler */
 void miot_prompt_init_hal(void);
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 #endif /* CS_FW_SRC_MIOT_PROMPT_H_ */

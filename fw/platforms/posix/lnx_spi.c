@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_SPI_API
+#if MIOT_ENABLE_JS && MG_ENABLE_SPI_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -151,4 +151,4 @@ void miot_spi_close(spi_connection c) {
   free(c);
 }
 
-#endif /* MG_ENABLE_JS && MG_ENABLE_SPI_API */
+#endif /* MIOT_ENABLE_JS && MG_ENABLE_SPI_API */

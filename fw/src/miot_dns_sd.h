@@ -13,7 +13,7 @@
 #include "fw/src/miot_features.h"
 #include "fw/src/miot_init.h"
 
-#if MG_ENABLE_DNS_SD
+#if MIOT_ENABLE_DNS_SD
 
 struct mdns_type {
   SLIST_ENTRY(mdns_type) entries;
@@ -69,6 +69,6 @@ void miot_sd_unregister_service(struct mg_str service_type,
  */
 const char *miot_sd_default_service_type();
 
-#endif /* MG_ENABLE_DNS_SD */
+#endif /* MIOT_ENABLE_DNS_SD */
 
 #endif /* CS_FW_SRC_MIOT_DNS_SD_H_ */

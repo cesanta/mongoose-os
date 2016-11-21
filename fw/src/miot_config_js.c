@@ -1,6 +1,6 @@
 #include "fw/src/miot_config_js.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include "fw/src/miot_sys_config.h"
 #include "v7/v7.h"
@@ -162,4 +162,4 @@ v7_val_t miot_conf_mk_proxy(struct v7 *v7, const struct miot_conf_entry *schema,
   v7_disown(v7, &obj);
   return proxy;
 }
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

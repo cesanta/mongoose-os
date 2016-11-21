@@ -21,7 +21,7 @@
 #include "fw/src/miot_ws_client_js.h"
 #include "fw/src/miot_v7_ext.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 enum miot_init_result miot_api_setup(struct v7 *v7) {
 #ifndef V7_THAW
@@ -64,7 +64,7 @@ enum miot_init_result miot_api_setup(struct v7 *v7) {
 #if MG_ENABLE_WS_CLIENT_API
   miot_ws_client_api_setup(v7);
 #endif
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
   miot_rpc_api_setup(v7);
 #endif
 #else
@@ -82,7 +82,7 @@ enum miot_init_result miot_init_js(struct v7 *v7) {
   miot_i2c_js_init(v7);
 #endif
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
   miot_rpc_js_init(v7);
 #endif
 
@@ -130,4 +130,4 @@ enum miot_app_init_result miot_app_init_js(struct v7 *v7) {
   (void) v7;
   return MIOT_APP_INIT_SUCCESS;
 }
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

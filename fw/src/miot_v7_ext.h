@@ -8,7 +8,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include "fw/src/miot_hal_js.h"
 
@@ -41,6 +41,6 @@ void miot_invoke_cb2_this(struct v7 *v7, v7_val_t, v7_val_t, v7_val_t,
 /* Prints an exception to stdout or stderr depending on debug mode */
 void miot_print_exception(struct v7 *v7, v7_val_t exc, const char *msg);
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 #endif /* CS_FW_SRC_MIOT_V7_EXT_H_ */

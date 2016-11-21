@@ -10,8 +10,8 @@
 #define MG_ENABLE_ADC_API 0
 #endif
 
-#ifndef MG_ENABLE_RPC
-#define MG_ENABLE_RPC 0
+#ifndef MIOT_ENABLE_RPC
+#define MIOT_ENABLE_RPC 0
 #endif
 
 #ifndef MG_ENABLE_CONSOLE_FILE_BUFFER
@@ -22,8 +22,8 @@
 #define MG_ENABLE_DEBUG_API 0
 #endif
 
-#ifndef MG_ENABLE_DNS_SD
-#define MG_ENABLE_DNS_SD 0
+#ifndef MIOT_ENABLE_DNS_SD
+#define MIOT_ENABLE_DNS_SD 0
 #endif
 
 #ifndef MG_ENABLE_FILE_UPLOAD
@@ -38,16 +38,16 @@
 #define MG_ENABLE_HTTP_SERVER_API 0
 #endif
 
-#ifndef MG_ENABLE_JS
-#define MG_ENABLE_JS 0
+#ifndef MIOT_ENABLE_JS
+#define MIOT_ENABLE_JS 0
 #endif
 
 #ifndef MG_ENABLE_MDNS
 #define MG_ENABLE_MDNS 0
 #endif
 
-#ifndef MG_ENABLE_MQTT
-#define MG_ENABLE_MQTT 0
+#ifndef MIOT_ENABLE_MQTT
+#define MIOT_ENABLE_MQTT 0
 #endif
 
 #ifndef MG_ENABLE_MQTT_API
@@ -74,16 +74,16 @@
 #define MG_ENABLE_UDP_API 0
 #endif
 
-#ifndef MG_ENABLE_UPDATER
-#define MG_ENABLE_UPDATER 0
+#ifndef MIOT_ENABLE_UPDATER
+#define MIOT_ENABLE_UPDATER 0
 #endif
 
-#ifndef MG_ENABLE_UPDATER_RPC
-#define MG_ENABLE_UPDATER_RPC 0
+#ifndef MIOT_ENABLE_UPDATER_RPC
+#define MIOT_ENABLE_UPDATER_RPC 0
 #endif
 
-#ifndef MG_ENABLE_UPDATER_POST
-#define MG_ENABLE_UPDATER_POST 0
+#ifndef MIOT_ENABLE_UPDATER_POST
+#define MIOT_ENABLE_UPDATER_POST 0
 #endif
 
 #ifndef MG_ENABLE_WEB_CONFIG

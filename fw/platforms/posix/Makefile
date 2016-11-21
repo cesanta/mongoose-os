@@ -23,11 +23,11 @@ DEBUG ?= 0
 CC_WRAPPER ?=
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
-MG_ENABLE_UPDATER = 0
-MG_ENABLE_UPDATER_POST = 0
-MG_ENABLE_UPDATER_RPC = 0
-MG_ENABLE_DNS_SD = 0  # Not supported on POSIX
-MG_ENABLE_I2C ?= 1
+MIOT_ENABLE_UPDATER = 0
+MIOT_ENABLE_UPDATER_POST = 0
+MIOT_ENABLE_UPDATER_RPC = 0
+MIOT_ENABLE_DNS_SD = 0  # Not supported on POSIX
+MIOT_ENABLE_I2C ?= 1
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(MIOT_PATH)/fw/common.mk
@@ -55,7 +55,7 @@ MIOT_SRCS = $(notdir $(wildcard *.c)) miot_init.c  \
             json_utils.c cs_rbuf.c miot_uart.c \
             miot_utils.c miot_console.c
 
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
             miot_adc_js.c \
             miot_rpc_js.c \
@@ -79,7 +79,7 @@ MIOT_SRCS += v7.c \
 
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 
-MIOT_POSIX_FEATURES += -DMG_ENABLE_JS
+MIOT_POSIX_FEATURES += -DMIOT_ENABLE_JS
 
 else
   MIOT_SRCS += cs_file.c
@@ -114,7 +114,7 @@ else
   UNAME_S := $(shell uname -s)
   ifeq ($(UNAME_S),Linux)
     BUILD_PLATFORM="LINUX"
-    ifeq "$(MG_ENABLE_I2C)" "1"
+    ifeq "$(MIOT_ENABLE_I2C)" "1"
       SYS_CONF_SCHEMA += lnx_i2c_config.yaml
     endif
   else

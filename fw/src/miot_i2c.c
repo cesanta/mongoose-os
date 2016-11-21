@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_i2c.h"
 
-#if MG_ENABLE_I2C
+#if MIOT_ENABLE_I2C
 
 static struct miot_i2c *s_global_i2c;
 
@@ -48,4 +48,4 @@ struct miot_i2c *miot_i2c_get_global(void) {
   return s_global_i2c;
 }
 
-#endif /* MG_ENABLE_I2C */
+#endif /* MIOT_ENABLE_I2C */

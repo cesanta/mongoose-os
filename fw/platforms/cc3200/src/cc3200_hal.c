@@ -34,7 +34,7 @@
 
 #include "common/umm_malloc/umm_malloc.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 #include "v7/v7.h"
 
 static void miot_invoke_cb_cb(void *arg);
@@ -67,7 +67,7 @@ static void miot_invoke_cb_cb(void *arg) {
   v7_disown(ied->v7, &ied->func);
   free(ied);
 }
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 #ifdef __TI_COMPILER_VERSION__
 size_t miot_get_heap_size(void) {

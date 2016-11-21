@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MIOT_SERVICE_FILESYSTEM_H_
 #define CS_FW_SRC_MIOT_SERVICE_FILESYSTEM_H_
 
-#if MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_FILESYSTEM_SERVICE
 
 #include "fw/src/miot_init.h"
 
@@ -15,5 +15,5 @@
  */
 enum miot_init_result miot_service_filesystem_init(void);
 
-#endif /* MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE */
+#endif /* MIOT_ENABLE_RPC && MIOT_ENABLE_FILESYSTEM_SERVICE */
 #endif /* CS_FW_SRC_MIOT_SERVICE_FILESYSTEM_H_ */

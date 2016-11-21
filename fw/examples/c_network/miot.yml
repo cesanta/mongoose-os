@@ -6,4 +6,4 @@ sources:
   - src
 filesystem:
 build_vars:
-  APP_CFLAGS: "-DMG_ENABLE_UPDATER_POST"
+  APP_CFLAGS: "-DMIOT_ENABLE_UPDATER_POST"

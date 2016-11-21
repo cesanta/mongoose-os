@@ -16,7 +16,7 @@
 #include "fw/src/miot_v7_ext.h"
 #include "fw/src/miot_sys_config.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_RPC && MG_ENABLE_RPC_API
+#if MIOT_ENABLE_JS && MIOT_ENABLE_RPC && MG_ENABLE_RPC_API
 
 #ifdef __cplusplus
 extern "C" {
@@ -553,5 +553,5 @@ void miot_rpc_js_init(struct v7 *v7) {
 }
 #endif /* __cplusplus */
 
-#endif /* MG_ENABLE_JS && MG_ENABLE_RPC && \
+#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_RPC && \
           MG_ENABLE_RPC_API */

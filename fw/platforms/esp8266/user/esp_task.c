@@ -23,7 +23,7 @@
 
 #include "fw/platforms/esp8266/user/esp_task.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 #include "v7/v7.h"
 #include "fw/src/miot_v7_ext.h"
 
@@ -33,7 +33,7 @@ struct v7_callback_args {
   v7_val_t this_obj;
   v7_val_t args;
 };
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 #ifndef MIOT_TASK_PRIORITY
 #define MIOT_TASK_PRIORITY 1
@@ -78,7 +78,7 @@ static void miot_lwip_task(os_event_t *e) {
       mgr = (struct mg_mgr *) e->par;
       break;
     }
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
     case SIG_V7_CALLBACK: {
       struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
       _mg_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
@@ -114,7 +114,7 @@ static void miot_lwip_task(os_event_t *e) {
   }
 }
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 void miot_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                                v7_val_t args) {
   struct v7_callback_args *cba =
@@ -138,7 +138,7 @@ void miot_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
     free(cba);
   }
 }
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 void miot_suspend(void) {
   /*

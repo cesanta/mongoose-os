@@ -8,7 +8,7 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_timers.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include "v7/v7.h"
 
@@ -65,7 +65,7 @@ clean:
 }
 #endif /* MG_ENABLE_SSL */
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 static void reboot_timer_cb(void *param) {
   miot_system_restart(0);

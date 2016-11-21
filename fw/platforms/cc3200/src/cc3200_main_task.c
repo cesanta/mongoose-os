@@ -22,7 +22,7 @@
 #include "fw/src/miot_uart.h"
 #include "fw/src/miot_updater_common.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -48,7 +48,7 @@ struct miot_event {
 
 OsiMsgQ_t s_main_queue;
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 struct v7 *s_v7;
 
 struct v7 *init_v7(void *stack_base) {
@@ -94,7 +94,7 @@ int start_nwp(void) {
   return 0;
 }
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 void miot_prompt_init_hal(void) {
 }
 #endif
@@ -168,7 +168,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     }
   }
 
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
   if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     LOG(LL_INFO, ("Applying update"));
     r = miot_upd_apply_update();
@@ -185,7 +185,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     return CC3200_INIT_MG_INIT_FAILED;
   }
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
   struct v7 *v7 = s_v7 = init_v7(&arg);
 
   ir = miot_init_js_all(v7);
@@ -197,7 +197,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 
   LOG(LL_INFO, ("Init done, RAM: %d free", miot_get_free_heap_size()));
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
   miot_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
   return CC3200_INIT_OK;
@@ -213,7 +213,7 @@ void main_task(void *arg) {
   bool success = (r == CC3200_INIT_OK);
   if (!success) LOG(LL_ERROR, ("Init failed: %d", r));
 
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
   miot_upd_boot_finish((r == CC3200_INIT_OK),
                        (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
 #endif

@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_i2c.h"
 
-#if MG_ENABLE_I2C
+#if MIOT_ENABLE_I2C
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -121,7 +121,7 @@ void miot_i2c_close(struct miot_i2c *c) {
   free(c);
 }
 
-#if MG_ENABLE_JS && MG_ENABLE_I2C_API
+#if MIOT_ENABLE_JS && MG_ENABLE_I2C_API
 enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
   enum v7_err rcode = V7_OK;
   struct sys_config_i2c cfg;
@@ -136,6 +136,6 @@ enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
 
   return rcode;
 }
-#endif /* MG_ENABLE_JS && MG_ENABLE_I2C_API */
+#endif /* MIOT_ENABLE_JS && MG_ENABLE_I2C_API */
 
-#endif /* MG_ENABLE_I2C */
+#endif /* MIOT_ENABLE_I2C */

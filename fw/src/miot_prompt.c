@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_prompt.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_v7_ext.h"
@@ -235,7 +235,7 @@ void miot_prompt_process_char(char ch) {
       show_prompt();
     }
   } else if (ch == EOF_CHAR) {
-#if MG_ENABLE_RPC && MG_ENABLE_RPC_UART
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_RPC_UART
     const int uart_no = s_sjp.uart_no;
     if (uart_no >= 0 && miot_rpc_get_global() != NULL) {
       /* Switch into RPC mode. This will detach our dispatcher. */
@@ -274,4 +274,4 @@ void miot_prompt_dispatcher(struct miot_uart_state *us) {
   fflush(stdout);
 }
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

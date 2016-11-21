@@ -8,7 +8,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_I2C
+#if MIOT_ENABLE_I2C
 
 #include <stdint.h>
 
@@ -93,6 +93,6 @@ enum miot_init_result miot_i2c_init(void);
 
 struct miot_i2c *miot_i2c_get_global(void);
 
-#endif /* MG_ENABLE_I2C */
+#endif /* MIOT_ENABLE_I2C */
 
 #endif /* CS_FW_SRC_MIOT_I2C_H_ */

@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_WIFI_API
+#if MIOT_ENABLE_JS && MG_ENABLE_WIFI_API
 
 #include <string.h>
 #include <stdlib.h>
@@ -276,4 +276,4 @@ void miot_wifi_js_init(struct v7 *v7) {
   miot_wifi_add_on_change_cb(miot_wifi_on_change_js, &s_wifi_changed_cb);
 }
 
-#endif /* MG_ENABLE_JS && MG_ENABLE_WIFI_API */
+#endif /* MIOT_ENABLE_JS && MG_ENABLE_WIFI_API */

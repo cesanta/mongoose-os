@@ -8,7 +8,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_MQTT_API
+#if MIOT_ENABLE_JS && MG_ENABLE_MQTT_API
 
 struct v7;
 

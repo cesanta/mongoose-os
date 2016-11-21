@@ -15,17 +15,17 @@ APP_FS_PATH ?=
 APP_SLFS_PATH ?=
 APP_EXTRA_SRCS ?=
 
-MG_ENABLE_JS ?= 0
-MG_ENABLE_CONFIG_SERVICE ?= 1
-MG_ENABLE_DNS_SD ?= 0
-MG_ENABLE_FILESYSTEM_SERVICE ?= 1
-MG_ENABLE_I2C ?= 1
-MG_ENABLE_MQTT ?= 1
-MG_ENABLE_RPC ?= 1
-MG_ENABLE_RPC_UART ?= 1
-MG_ENABLE_UPDATER ?= 1
-MG_ENABLE_UPDATER_POST ?= 1
-MG_ENABLE_UPDATER_RPC ?= 0
+MIOT_ENABLE_JS ?= 0
+MIOT_ENABLE_CONFIG_SERVICE ?= 1
+MIOT_ENABLE_DNS_SD ?= 0
+MIOT_ENABLE_FILESYSTEM_SERVICE ?= 1
+MIOT_ENABLE_I2C ?= 1
+MIOT_ENABLE_MQTT ?= 1
+MIOT_ENABLE_RPC ?= 1
+MIOT_ENABLE_RPC_UART ?= 1
+MIOT_ENABLE_UPDATER ?= 1
+MIOT_ENABLE_UPDATER_POST ?= 1
+MIOT_ENABLE_UPDATER_RPC ?= 0
 
 MIOT_DEBUG_UART ?= 0
 
@@ -182,7 +182,7 @@ MIOT_SRCS = miot_init.c \
             miot_console.c \
             cs_rbuf.c miot_uart.c \
             boot.c mongoose.c frozen.c json_utils.c
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
              miot_rpc_js.c \
              miot_config_js.c \
@@ -230,9 +230,9 @@ MIOT_CFLAGS = -DMIOT_APP=\"$(APP)\" -Dcc3200 -DCC3200_FS_SPIFFS -DSPIFFS_HAL_CAL
               -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MIOT_FEATURES += -DMG_ENABLE_JS
+  MIOT_FEATURES += -DMIOT_ENABLE_JS
   MIOT_CFLAGS += $(V7_MEMORY_FLAGS)
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_CC3200_FEATURES)
@@ -249,7 +249,7 @@ endif
 include $(MIOT_PATH)/fw/src/features.mk
 include $(MIOT_PATH)/fw/src/spiffs.mk
 
-ifeq "$(MG_ENABLE_I2C)" "1"
+ifeq "$(MIOT_ENABLE_I2C)" "1"
   SYS_CONF_SCHEMA += $(MIOT_CC3200_SRC_PATH)/cc3200_i2c_config.yaml
 endif
 
@@ -311,7 +311,7 @@ $(FS_EMPTY_IMG): $(MK_FS_META_BIN)
 	        count=$(shell echo $$(($(FS_SIZE) / $(FS_BLOCK_SIZE)))) > $@ 2>/dev/null
 	$(Q) $(MK_FS_META_BIN) 0 0 0 0 0 >> $@
 
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) $(notdir $@)
 

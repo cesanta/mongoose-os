@@ -8,5 +8,5 @@ filesystem:
 extra_files:
   - conf_schema.yaml
 build_vars:
-  MG_ENABLE_JS: 1
+  MIOT_ENABLE_JS: 1
   APP_CONF_SCHEMA: conf_schema.yaml

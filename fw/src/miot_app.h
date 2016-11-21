@@ -16,7 +16,7 @@ enum miot_app_init_result {
 /* User app init functions, C and JS respectively.
  * A weak stub is provided in miot_app_init.c, which can be overridden. */
 enum miot_app_init_result miot_app_init(void);
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 struct v7;
 enum miot_app_init_result miot_app_init_js(struct v7 *v7);
 #endif

@@ -34,7 +34,7 @@
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 #include "v7/v7.h"
 #include "fw/src/miot_init_js.h"
 #endif
@@ -117,7 +117,7 @@ int esp_mg_init(rboot_config *bcfg) {
     return -1;
   }
 
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
   if (bcfg->fw_updated && miot_upd_apply_update() < 0) {
     return -2;
   }
@@ -129,7 +129,7 @@ int esp_mg_init(rboot_config *bcfg) {
     return -3;
   }
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
   init_v7(&bcfg);
 
   ir = miot_init_js_all(v7);
@@ -145,7 +145,7 @@ int esp_mg_init(rboot_config *bcfg) {
 
   LOG(LL_INFO, ("Init done, RAM: %d free", miot_get_free_heap_size()));
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
   miot_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
 
@@ -168,7 +168,7 @@ void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
   enum miot_init_result result = esp_mg_init(bcfg);
   bool success = (result == MIOT_INIT_OK);
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
   miot_upd_boot_finish(success, bcfg->is_first_boot);
 #endif
   if (!success) {

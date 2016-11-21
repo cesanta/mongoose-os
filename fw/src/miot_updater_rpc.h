@@ -10,7 +10,7 @@
 #include "common/mg_str.h"
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_UPDATER_RPC && MG_ENABLE_RPC
+#if MIOT_ENABLE_UPDATER_RPC && MIOT_ENABLE_RPC
 void miot_updater_rpc_init(void);
 void miot_updater_rpc_finish(int error_code, int64_t id,
                              const struct mg_str src);

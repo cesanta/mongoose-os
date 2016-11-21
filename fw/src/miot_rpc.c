@@ -5,7 +5,7 @@
 
 #include "common/mg_rpc/mg_rpc_channel_ws.h"
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
 
 #include "fw/src/miot_rpc.h"
 #include "fw/src/miot_rpc_channel_uart.h"
@@ -53,7 +53,7 @@ enum miot_init_result miot_rpc_init(void) {
       }
     }
   }
-#if MG_ENABLE_RPC_UART
+#if MIOT_ENABLE_RPC_UART
   if (sccfg->uart.uart_no >= 0) {
     const struct sys_config_rpc_uart *scucfg = &get_cfg()->rpc.uart;
     struct miot_uart_config *ucfg = miot_uart_default_config();
@@ -89,4 +89,4 @@ struct mg_rpc_channel_ws_out_cfg *miot_rpc_channel_ws_out_cfg_from_sys(
 struct mg_rpc *miot_rpc_get_global(void) {
   return s_global_mg_rpc;
 }
-#endif /* MG_ENABLE_RPC */
+#endif /* MIOT_ENABLE_RPC */

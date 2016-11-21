@@ -25,7 +25,7 @@
  *    queries that ask to list all supported service types.
  */
 
-#if MG_ENABLE_DNS_SD
+#if MIOT_ENABLE_DNS_SD
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -382,14 +382,14 @@ enum miot_init_result miot_dns_sd_init(void) {
   miot_sd_register_service(mg_mk_str(miot_sd_default_service_type()),
                            mg_mk_str(instance), mg_mk_str(hostname), 80,
                            (struct mg_str[]) {
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
                              mg_mk_str("id"), mg_mk_str("mg_rpc"),
 #endif
                                  mg_mk_str("arch"), mg_mk_str("fw_id"),
                                  mg_mk_str(NULL),
                            },
                            (struct mg_str[]) {
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
                              mg_mk_str(c->device.id), mg_mk_str("2.0"),
 #endif
                                  mg_mk_str(v->arch), mg_mk_str(v->fw_id),
@@ -399,4 +399,4 @@ enum miot_init_result miot_dns_sd_init(void) {
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_DNS_SD */
+#endif /* MIOT_ENABLE_DNS_SD */

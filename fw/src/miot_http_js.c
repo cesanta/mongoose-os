@@ -12,7 +12,7 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_utils.h"
 
-#if MG_ENABLE_JS && (MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API)
+#if MIOT_ENABLE_JS && (MG_ENABLE_HTTP_CLIENT_API || MG_ENABLE_HTTP_SERVER_API)
 
 /* Forwards */
 MG_PRIVATE enum v7_err Http_on(struct v7 *v7, v7_val_t *res);
@@ -929,6 +929,6 @@ void miot_http_js_init(struct v7 *v7) {
 
   v7_disown(v7, &Http);
 }
-#endif /* MG_ENABLE_JS &&               \
+#endif /* MIOT_ENABLE_JS &&             \
           (MG_ENABLE_HTTP_CLIENT_API || \
           MG_ENABLE_HTTP_SERVER_API) */

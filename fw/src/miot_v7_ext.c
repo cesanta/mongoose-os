@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_v7_ext.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include <assert.h>
 #include <string.h>
@@ -489,4 +489,4 @@ enum v7_err v7_alt_json_parse(struct v7 *v7, v7_val_t json_string,
 }
 #endif
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

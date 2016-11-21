@@ -1,6 +1,6 @@
 #include "fw/src/miot_sys_config_js.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include "v7/v7.h"
 
@@ -33,4 +33,4 @@ enum miot_init_result miot_sys_config_js_init(struct v7 *v7) {
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

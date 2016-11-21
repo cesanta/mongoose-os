@@ -9,7 +9,7 @@ struct v7 *v7;
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include <math.h>
 #include <stdlib.h>
@@ -104,4 +104,4 @@ void init_v7(void *stack_base) {
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
   v7_set_method(v7, v7_get_global(v7), "is_rboot_updated", is_rboot_updated);
 }
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

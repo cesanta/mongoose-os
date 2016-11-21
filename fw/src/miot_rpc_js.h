@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MIOT_MG_RPC_JS_H_
 #define CS_FW_SRC_MIOT_MG_RPC_JS_H_
 
-#if MG_ENABLE_RPC && MG_ENABLE_JS
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_JS
 
 #include "v7/v7.h"
 
@@ -22,6 +22,6 @@ void miot_rpc_js_init(struct v7 *v7);
 }
 #endif /* __cplusplus */
 
-#endif /* MG_ENABLE_RPC && MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_RPC && MIOT_ENABLE_JS */
 
 #endif /* CS_FW_SRC_MIOT_MG_RPC_JS_H_ */

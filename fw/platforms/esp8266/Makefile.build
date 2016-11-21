@@ -21,17 +21,17 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
-MG_ENABLE_JS ?= 0
-MG_ENABLE_CONFIG_SERVICE ?= 1
-MG_ENABLE_DNS_SD ?= 1
-MG_ENABLE_FILESYSTEM_SERVICE ?= 1
-MG_ENABLE_I2C ?= 1
-MG_ENABLE_MQTT ?= 1
-MG_ENABLE_RPC ?= 1
-MG_ENABLE_RPC_UART ?= 1
-MG_ENABLE_UPDATER ?= 1
-MG_ENABLE_UPDATER_POST ?= 1
-MG_ENABLE_UPDATER_RPC ?= 0
+MIOT_ENABLE_JS ?= 0
+MIOT_ENABLE_CONFIG_SERVICE ?= 1
+MIOT_ENABLE_DNS_SD ?= 1
+MIOT_ENABLE_FILESYSTEM_SERVICE ?= 1
+MIOT_ENABLE_I2C ?= 1
+MIOT_ENABLE_MQTT ?= 1
+MIOT_ENABLE_RPC ?= 1
+MIOT_ENABLE_RPC_UART ?= 1
+MIOT_ENABLE_UPDATER ?= 1
+MIOT_ENABLE_UPDATER_POST ?= 1
+MIOT_ENABLE_UPDATER_RPC ?= 0
 
 MIOT_DEBUG_UART ?= 0
 
@@ -125,7 +125,7 @@ MIOT_SRCS = cs_rbuf.c \
 MIOT_SRCS += $(notdir $(foreach m,$(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
              miot_adc_js.c \
              miot_rpc_js.c \
@@ -148,7 +148,7 @@ MIOT_SRCS += v7.c \
              miot_spi_js.c \
              miot_ws_client_js.c
 endif
-ifeq "$(MG_ENABLE_I2C)" "1"
+ifeq "$(MIOT_ENABLE_I2C)" "1"
   SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_i2c_config.yaml
 endif
 
@@ -263,9 +263,9 @@ ifeq "$(SSL)" "Krypton"
               -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
 endif
 
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MIOT_FEATURES += -DMG_ENABLE_JS $(V7_FEATURES)
+  MIOT_FEATURES += -DMIOT_ENABLE_JS $(V7_FEATURES)
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
   ifeq "$(V7_FREEZE)" "1"
@@ -304,7 +304,7 @@ ifneq "${MIOT_ENABLE_HEAP_LOG}${MIOT_ENABLE_CALL_TRACE}" "00"
 endif
 ifeq "${MIOT_ENABLE_CALL_TRACE}" "1"
   HEAP_LOG_FLAGS += -finstrument-functions -DCALL_TRACE_SIZE=32
-  ifeq "$(MG_ENABLE_JS)" "1"
+  ifeq "$(MIOT_ENABLE_JS)" "1"
     HEAP_LOG_FLAGS += -DV7_ENABLE_CALL_TRACE -DMIOT_ENABLE_CALL_TRACE
   else
     MIOT_SRCS += cs_heap_trace.c
@@ -451,7 +451,7 @@ $(MG_BUILD_INFO_C): $(MIOT_OBJS)
 $(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(_FS_SIZE))
 
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) $(notdir $@)
 

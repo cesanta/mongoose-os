@@ -85,9 +85,9 @@ void miot_console_printf(const char *fmt, ...) {
   free(buf);
 }
 
-#if MG_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
 void mg_rpc_cb(struct mg_rpc *mg_rpc, void *cb_arg,
                struct mg_rpc_frame_info *fi, struct mg_str result,
                int error_code, struct mg_str error_msg) {
@@ -136,7 +136,7 @@ static void miot_console_push_to_cloud(void) {
 int miot_console_is_waiting_for_resp(void) {
   return s_cctx.request_in_flight;
 }
-#endif /* MG_ENABLE_RPC */
+#endif /* MIOT_ENABLE_RPC */
 
 #if MG_ENABLE_CONSOLE_FILE_BUFFER
 static void miot_console_flush_to_file(void) {
@@ -150,7 +150,7 @@ static void miot_console_flush_to_file(void) {
 #endif
 
 static void miot_console_flush(void *arg) {
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
   miot_console_push_to_cloud();
 #endif
 #if MG_ENABLE_CONSOLE_FILE_BUFFER
@@ -158,7 +158,7 @@ static void miot_console_flush(void *arg) {
 #endif
   (void) arg;
 }
-#endif /* MG_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER \
+#endif /* MIOT_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER \
           */
 
 void miot_console_init(void) {
@@ -170,7 +170,7 @@ void miot_console_init(void) {
                   get_cfg()->console.log_file_size));
   }
 #endif
-#if MG_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
+#if MIOT_ENABLE_RPC || MG_ENABLE_CONSOLE_FILE_BUFFER
   miot_set_c_timer(MIOT_CONSOLE_FLUSH_INTERVAL_MS, 1 /* repeat */,
                    miot_console_flush, NULL /* arg */);
 #endif

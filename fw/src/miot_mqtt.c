@@ -15,7 +15,7 @@
 #include "fw/src/miot_timers.h"
 #include "fw/src/miot_wifi.h"
 
-#if MG_ENABLE_MQTT
+#if MIOT_ENABLE_MQTT
 
 static mg_event_handler_t s_user_handler = NULL;
 static void *s_user_data = NULL;
@@ -163,4 +163,4 @@ struct mg_connection *miot_mqtt_get_global_conn(void) {
   return s_conn;
 }
 
-#endif /* MG_ENABLE_MQTT */
+#endif /* MIOT_ENABLE_MQTT */

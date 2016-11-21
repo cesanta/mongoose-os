@@ -5,7 +5,7 @@
 
 #include "fw/src/miot_service_config.h"
 
-#if MG_ENABLE_RPC && MG_ENABLE_CONFIG_SERVICE
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_CONFIG_SERVICE
 
 #include "common/mg_str.h"
 #include "fw/src/miot_rpc.h"
@@ -183,4 +183,4 @@ enum miot_init_result miot_service_config_init(void) {
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_RPC && MG_ENABLE_CONFIG_SERVICE */
+#endif /* MIOT_ENABLE_RPC && MIOT_ENABLE_CONFIG_SERVICE */

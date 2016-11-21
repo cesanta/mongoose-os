@@ -7,5 +7,5 @@ sources:
 filesystem:
   - fs
 build_vars:
-  MG_ENABLE_MQTT: 1
+  MIOT_ENABLE_MQTT: 1
   MG_ENABLE_SSL: 1

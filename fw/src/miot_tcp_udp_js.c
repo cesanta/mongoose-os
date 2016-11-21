@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#if MG_ENABLE_JS && (MG_ENABLE_TCP_API || MG_ENABLE_UDP_API)
+#if MIOT_ENABLE_JS && (MG_ENABLE_TCP_API || MG_ENABLE_UDP_API)
 
 #include "common/queue.h"
 #include "fw/src/miot_common.h"
@@ -1592,5 +1592,5 @@ void miot_tcp_api_setup(struct v7 *v7) {
 }
 #endif /* MG_ENABLE_TCP_API */
 
-#endif /* MG_ENABLE_JS && (MG_ENABLE_TCP_API || \
+#endif /* MIOT_ENABLE_JS && (MG_ENABLE_TCP_API || \
           MG_ENABLE_UDP_API) */

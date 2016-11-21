@@ -8,7 +8,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include <stdint.h>
 
@@ -20,6 +20,6 @@ void miot_timers_api_setup(struct v7 *v7);
 miot_timer_id miot_set_js_timer(int msecs, int repeat, struct v7 *v7,
                                 v7_val_t cb);
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 #endif /* CS_FW_SRC_MIOT_TIMERS_JS_H_ */

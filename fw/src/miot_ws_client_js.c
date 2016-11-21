@@ -6,7 +6,7 @@
 #include "fw/src/miot_features.h"
 #include "fw/src/miot_ws_client_js.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_WS_CLIENT_API
+#if MIOT_ENABLE_JS && MG_ENABLE_WS_CLIENT_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -314,4 +314,4 @@ void miot_ws_client_api_setup(struct v7 *v7) {
   v7_disown(v7, &ws);
 }
 
-#endif /* MG_ENABLE_JS && MG_ENABLE_WS_CLIENT_API */
+#endif /* MIOT_ENABLE_JS && MG_ENABLE_WS_CLIENT_API */

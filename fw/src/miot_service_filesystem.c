@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_FILESYSTEM_SERVICE
 
 #include <stdlib.h>
 
@@ -246,4 +246,4 @@ enum miot_init_result miot_service_filesystem_init(void) {
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_RPC && MG_ENABLE_FILESYSTEM_SERVICE */
+#endif /* MIOT_ENABLE_RPC && MIOT_ENABLE_FILESYSTEM_SERVICE */

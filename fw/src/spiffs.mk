@@ -1,4 +1,4 @@
-ifeq "$(MG_ENABLE_JS)" "1"
+ifeq "$(MIOT_ENABLE_JS)" "1"
   JS_EXTRA ?=
   JSBIN_SRCS := $(MIOT_JS_PATH)/sys_init.js \
                 $(MIOT_JS_PATH)/demo.js \

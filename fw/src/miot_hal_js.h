@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MIOT_HAL_JS_H_
 #define CS_FW_SRC_MIOT_HAL_JS_H_
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 
 #include "v7/v7.h"
 
@@ -23,6 +23,6 @@ int miot_http_call(struct v7 *v7, const char *url, const char *body,
 void miot_invoke_cb(struct v7 *, v7_val_t func, v7_val_t this_obj,
                     v7_val_t args);
 
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */
 
 #endif /* CS_FW_SRC_MIOT_HAL_JS_H_ */

@@ -13,7 +13,7 @@
 #include "fw/src/miot_timers.h"
 #include "fw/src/miot_utils.h"
 
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
 
 static void fw_download_handler(struct mg_connection *c, int ev, void *p) {
   struct mbuf *io = &c->recv_mbuf;
@@ -172,7 +172,7 @@ void miot_updater_http_start(struct update_context *ctx, const char *url) {
   ctx->nc = c;
 }
 
-#if MG_ENABLE_UPDATER_POST
+#if MIOT_ENABLE_UPDATER_POST
 static void handle_update_post(struct mg_connection *c, int ev, void *p) {
   struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
   struct update_context *ctx = (struct update_context *) c->user_data;
@@ -266,7 +266,7 @@ static void handle_update_post(struct mg_connection *c, int ev, void *p) {
     }
   }
 }
-#endif /* MG_ENABLE_UPDATER_POST */
+#endif /* MIOT_ENABLE_UPDATER_POST */
 
 static struct update_context *s_ctx;
 struct mg_connection *s_update_request_conn;
@@ -311,7 +311,7 @@ static void update_handler(struct mg_connection *c, int ev, void *ev_data) {
     case MG_EV_HTTP_PART_DATA:
     case MG_EV_HTTP_PART_END:
     case MG_EV_HTTP_MULTIPART_REQUEST_END: {
-#if MG_ENABLE_UPDATER_POST
+#if MIOT_ENABLE_UPDATER_POST
       if (get_cfg()->update.enable_post) {
         handle_update_post(c, ev, ev_data);
       } else
@@ -409,4 +409,4 @@ enum miot_init_result miot_updater_http_init(void) {
   return MIOT_INIT_OK;
 }
 
-#endif /* MG_ENABLE_UPDATER */
+#endif /* MIOT_ENABLE_UPDATER */

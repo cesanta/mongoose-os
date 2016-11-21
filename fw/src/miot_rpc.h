@@ -8,7 +8,7 @@
 
 #include "fw/src/miot_features.h"
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
 
 #include "common/mg_rpc/mg_rpc.h"
 #include "fw/src/miot_init.h"
@@ -20,5 +20,5 @@ struct mg_rpc_cfg *miot_rpc_cfg_from_sys(const struct sys_config *scfg);
 struct mg_rpc_channel_ws_out_cfg *miot_rpc_channel_ws_out_cfg_from_sys(
     const struct sys_config *scfg);
 
-#endif /* MG_ENABLE_RPC */
+#endif /* MIOT_ENABLE_RPC */
 #endif /* CS_FW_SRC_MIOT_MG_RPC_H_ */

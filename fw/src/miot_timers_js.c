@@ -10,7 +10,7 @@
 #include "fw/src/miot_common.h"
 #include "fw/src/miot_v7_ext.h"
 
-#if MG_ENABLE_JS
+#if MIOT_ENABLE_JS
 MG_PRIVATE enum v7_err miot_set_interval_or_timeout(struct v7 *v7,
                                                     v7_val_t *res, int repeat) {
   v7_val_t msecsv = v7_arg(v7, 1);
@@ -55,4 +55,4 @@ void miot_timers_api_setup(struct v7 *v7) {
   v7_set_method(v7, v7_get_global(v7), "clearInterval",
                 global_clearTimeoutOrInterval);
 }
-#endif /* MG_ENABLE_JS */
+#endif /* MIOT_ENABLE_JS */

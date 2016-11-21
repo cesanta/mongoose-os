@@ -659,7 +659,7 @@ bool miot_upd_commit() {
   if (s_fctx == NULL) return false;
   CONSOLE_LOG(LL_INFO, ("Committing update"));
   miot_upd_boot_commit();
-#if MG_ENABLE_UPDATER_RPC && MG_ENABLE_RPC
+#if MIOT_ENABLE_UPDATER_RPC && MIOT_ENABLE_RPC
   miot_updater_rpc_finish(0, s_fctx->id, mg_mk_str(s_fctx->mg_rpc_src));
 #endif
   free(s_fctx);
@@ -718,7 +718,7 @@ void miot_upd_boot_finish(bool is_successful, bool is_first) {
       }
     } else {
 /* This is a successful boot after a reverted update. */
-#if MG_ENABLE_UPDATER_RPC && MG_ENABLE_RPC
+#if MIOT_ENABLE_UPDATER_RPC && MIOT_ENABLE_RPC
       miot_updater_rpc_finish(-1, fctx->id, mg_mk_str(fctx->mg_rpc_src));
 #endif
     }

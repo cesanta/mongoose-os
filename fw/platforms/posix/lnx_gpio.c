@@ -317,4 +317,4 @@ int miot_gpio_intr_set(int pin, enum gpio_int_mode type) {
   return gpio_set_handler(pin, s_proxy_handler, s_proxy_handler_arg);
 }
 
-#endif /* MG_ENABLE_JS && MG_ENABLE_GPIO_API */
+#endif /* MIOT_ENABLE_JS && MG_ENABLE_GPIO_API */

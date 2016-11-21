@@ -15,7 +15,7 @@
 #include "fw/src/miot_updater_http.h"
 #include "fw/src/miot_utils.h"
 
-#if MG_ENABLE_UPDATER_RPC && MG_ENABLE_RPC
+#if MIOT_ENABLE_UPDATER_RPC && MIOT_ENABLE_RPC
 
 static struct mg_rpc_request_info *s_update_req;
 
@@ -198,4 +198,4 @@ clean:
   if (ri != NULL) mg_rpc_free_request_info(ri);
 }
 
-#endif /* MG_ENABLE_UPDATER_RPC && MG_ENABLE_RPC */
+#endif /* MIOT_ENABLE_UPDATER_RPC && MIOT_ENABLE_RPC */

@@ -7,7 +7,7 @@
 #include "fw/src/miot_uart.h"
 #include "fw/src/miot_utils.h"
 
-#if MG_ENABLE_RPC
+#if MIOT_ENABLE_RPC
 
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
@@ -144,4 +144,4 @@ struct mg_rpc_channel *mg_rpc_channel_uart(int uart_no,
   LOG(LL_INFO, ("%p UART%d", ch, uart_no));
   return ch;
 }
-#endif /* MG_ENABLE_RPC */
+#endif /* MIOT_ENABLE_RPC */

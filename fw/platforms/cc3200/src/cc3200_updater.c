@@ -23,7 +23,7 @@
 #include "fw/src/miot_updater_util.h"
 #include "fw/src/miot_utils.h"
 
-#if MG_ENABLE_UPDATER
+#if MIOT_ENABLE_UPDATER
 
 struct miot_upd_ctx {
   struct json_token *parts;
@@ -414,4 +414,4 @@ int miot_upd_apply_update() {
   return 0;
 }
 
-#endif /* MG_ENABLE_UPDATER */
+#endif /* MIOT_ENABLE_UPDATER */
