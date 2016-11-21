@@ -27,6 +27,7 @@ MG_ENABLE_UPDATER = 0
 MG_ENABLE_UPDATER_POST = 0
 MG_ENABLE_UPDATER_RPC = 0
 MG_ENABLE_DNS_SD = 0  # Not supported on POSIX
+MG_ENABLE_I2C ?= 1
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(MIOT_PATH)/fw/common.mk
@@ -113,6 +114,9 @@ else
   UNAME_S := $(shell uname -s)
   ifeq ($(UNAME_S),Linux)
     BUILD_PLATFORM="LINUX"
+    ifeq "$(MG_ENABLE_I2C)" "1"
+      SYS_CONF_SCHEMA += lnx_i2c_config.yaml
+    endif
   else
     BUILD_PLATFORM="POSIX"
   endif

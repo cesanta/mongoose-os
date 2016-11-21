@@ -1,0 +1,5 @@
+[
+  ["i2c.sda_pin", "i", 2, {title: "Pin to use for SDA"}],
+  ["i2c.scl_pin", "i", 1, {title: "Pin to use for SCL"}],
+  ["i2c.fast", "b", false, {title: "400 KHz mode"}],
+]

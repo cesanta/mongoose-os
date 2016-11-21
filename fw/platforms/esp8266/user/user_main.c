@@ -166,11 +166,13 @@ int esp_mg_init(rboot_config *bcfg) {
 
 void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
-  bool success = (esp_mg_init(bcfg) == 0);
+  enum miot_init_result result = esp_mg_init(bcfg);
+  bool success = (result == MIOT_INIT_OK);
 #if MG_ENABLE_UPDATER
   miot_upd_boot_finish(success, bcfg->is_first_boot);
 #endif
   if (!success) {
+    LOG(LL_ERROR, ("Init failed: %d", result));
     /* Arbitrary delay to make potential reboot loop less tight. */
     miot_usleep(500000);
     miot_system_restart(0);

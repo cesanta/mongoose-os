@@ -29,6 +29,14 @@ ifeq "$(MG_ENABLE_DNS_SD)" "1"
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_dns_sd_config.yaml
 endif
 
+ifeq "$(MG_ENABLE_I2C)" "1"
+  MIOT_SRCS += miot_i2c.c
+  MIOT_FEATURES += -DMG_ENABLE_I2C
+  SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_i2c_config.yaml
+else
+  MIOT_FEATURES += -DMG_ENABLE_I2C=0
+endif
+
 ifeq "$(MG_ENABLE_MQTT)" "1"
   MIOT_SRCS += miot_mqtt.c
   MIOT_FEATURES += -DMG_ENABLE_MQTT
@@ -59,6 +67,7 @@ export MG_ENABLE_RPC_UART
 export MG_ENABLE_CONFIG_SERVICE
 export MG_ENABLE_DNS_SD
 export MG_ENABLE_FILESYSTEM_SERVICE
+export MG_ENABLE_I2C
 export MG_ENABLE_JS
 export MG_ENABLE_MQTT
 export MG_ENABLE_UPDATER

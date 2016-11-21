@@ -1,0 +1,4 @@
+[
+  ["i2c", "o", {title: "I2C settings"}],
+  ["i2c.enable", "b", false, {title: "Enable I2C"}],
+]

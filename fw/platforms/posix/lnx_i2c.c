@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_features.h"
+#include "fw/src/miot_i2c.h"
 
-#if MG_ENABLE_JS && MG_ENABLE_I2C_API
+#if MG_ENABLE_I2C
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,9 +22,7 @@
 #include "fw/src/miot_i2c.h"
 #include "v7/v7.h"
 
-struct lnx_i2c_connection {
-  uint8_t bus_no;
-
+struct miot_i2c {
   int fd;
 };
 
@@ -54,33 +52,36 @@ int lnx_i2c_write_shim(int fd, uint8_t *buf, size_t buf_size) {
   return ret;
 }
 
-int i2c_init(i2c_connection c) {
-  struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
+struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {
   char bus_name[50];
+  struct miot_i2c *c = NULL;
 
-  snprintf(bus_name, sizeof(bus_name), "/dev/i2c-%d", conn->bus_no);
+  c = calloc(1, sizeof(*c));
+  if (c == NULL) return NULL;
 
-  conn->fd = open(bus_name, O_RDWR);
+  snprintf(bus_name, sizeof(bus_name), "/dev/i2c-%d", cfg->bus_no);
 
-  if (conn->fd < 0) {
+  c->fd = open(bus_name, O_RDWR);
+
+  if (c->fd < 0) {
     fprintf(stderr, "Cannot access i2c bus (%s): %d (%s)\n", bus_name, errno,
             strerror(errno));
-    return errno;
+    free(c);
+    c = NULL;
   }
 
-  return 0;
+  return c;
 }
 
-enum i2c_ack_type i2c_start(i2c_connection c, uint16_t addr, enum i2c_rw mode) {
+enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr, enum i2c_rw mode) {
   (void) mode;
-  struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
   /*
    * In Linux we should't set RW here
    * only address have to be set
    * TODO(alashkin): find the way to determine
    * if real error occured
    */
-  if (ioctl(conn->fd, I2C_SLAVE, addr) < 0) {
+  if (ioctl(c->fd, I2C_SLAVE, addr) < 0) {
     fprintf(stderr, "Cannot access i2c device: %d (%s)\n", errno,
             strerror(errno));
     return I2C_ERR;
@@ -89,83 +90,52 @@ enum i2c_ack_type i2c_start(i2c_connection c, uint16_t addr, enum i2c_rw mode) {
   return I2C_ACK;
 }
 
-void i2c_stop(i2c_connection c) {
+void miot_i2c_stop(struct miot_i2c *c) {
   /* for compatibility only */
   (void) c;
 }
 
-enum i2c_ack_type i2c_send_byte(i2c_connection c, uint8_t data) {
-  struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
-  return lnx_i2c_write_shim(conn->fd, &data, sizeof(data)) == 1 ? I2C_ACK
-                                                                : I2C_ERR;
+enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t b) {
+  return lnx_i2c_write_shim(c->fd, &b, sizeof(b)) == 1 ? I2C_ACK : I2C_ERR;
 }
 
-enum i2c_ack_type i2c_send_bytes(i2c_connection c, uint8_t *buf,
-                                 size_t buf_size) {
-  struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
-  return lnx_i2c_write_shim(conn->fd, buf, buf_size) == 0 ? I2C_ACK : I2C_ERR;
-}
-
-uint8_t i2c_read_byte(i2c_connection c, enum i2c_ack_type ack_type) {
-  struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
+uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
   (void) ack_type;
 
   uint8_t ret;
-  if (lnx_i2c_read_shim(conn->fd, &ret, sizeof(ret)) != 1) {
+  if (lnx_i2c_read_shim(c->fd, &ret, sizeof(ret)) != 1) {
     return 0x00; /* Error handling? */
   }
 
   return ret;
 }
 
-void i2c_read_bytes(i2c_connection c, size_t n, uint8_t *buf,
-                    enum i2c_ack_type last_ack_type) {
-  (void) last_ack_type;
-  struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
-  lnx_i2c_read_shim(conn->fd, buf, n);
-
-  /*
-   * ESP's version doesn't provide return value
-   * So, for compatibility reasons we do the same here
-   * TODO(alashkin): fix esp?
-   */
-}
-
-void i2c_send_ack(i2c_connection c, enum i2c_ack_type ack_type) {
+void miot_i2c_send_ack(struct miot_i2c *c, enum i2c_ack_type ack_type) {
   /* For compatibility only */
   (void) c;
   (void) ack_type;
 }
 
-void i2c_close(i2c_connection c) {
-  struct lnx_i2c_connection *conn = (struct lnx_i2c_connection *) c;
-  close(conn->fd);
+void miot_i2c_close(struct miot_i2c *c) {
+  if (c->fd >= 0) close(c->fd);
+  free(c);
 }
 
-/* HAL functions */
-enum v7_err miot_i2c_create(struct v7 *v7, i2c_connection *res) {
+#if MG_ENABLE_JS && MG_ENABLE_I2C_API
+enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
   enum v7_err rcode = V7_OK;
-  struct lnx_i2c_connection *conn = NULL;
-  v7_val_t bus_no_val = v7_arg(v7, 0);
-  double bus_no = v7_get_double(v7, bus_no_val);
+  struct sys_config_i2c cfg;
+  cfg.bus_no = v7_get_double(v7, v7_arg(v7, 0));
+  struct miot_i2c *conn = miot_i2c_create(&cfg);
 
-  if (!v7_is_number(bus_no) || bus_no < 0) {
-    rcode = v7_throwf(v7, "Error", "Missing bus number argument.");
-    goto clean;
+  if (conn != NULL) {
+    *res = conn;
   } else {
-    conn = malloc(sizeof(*conn));
-    conn->bus_no = bus_no;
+    rcode = v7_throwf(v7, "Error", "Failed to creat I2C connection");
   }
 
-  *res = conn;
-
-clean:
   return rcode;
 }
+#endif /* MG_ENABLE_JS && MG_ENABLE_I2C_API */
 
-void miot_i2c_close(i2c_connection conn) {
-  i2c_close(conn);
-  free(conn);
-}
-
-#endif /* MG_ENABLE_JS && MG_ENABLE_GPIO_API */
+#endif /* MG_ENABLE_I2C */

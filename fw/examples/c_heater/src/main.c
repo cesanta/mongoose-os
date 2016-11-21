@@ -13,31 +13,23 @@
 
 #define LED_GPIO 10
 #define RELAY_GPIO 13
-#define I2C_SDA_GPIO 12
-#define I2C_SCL_GPIO 14
 #define MCP9808_ADDR 0x1F
 
-struct esp_i2c_connection {
-  uint8_t sda_gpio;
-  uint8_t scl_gpio;
-  uint8_t started;
-};
-
-static struct esp_i2c_connection s_i2c;
 static bool s_heater = false;
 
-static double mc6808_read_temp(i2c_connection i2c) {
+static double mc6808_read_temp() {
   double ret = -1000;
-  if (i2c_start(i2c, MCP9808_ADDR, I2C_WRITE) != I2C_ACK) {
+  struct miot_i2c *i2c = miot_i2c_get_global();
+  if (miot_i2c_start(i2c, MCP9808_ADDR, I2C_WRITE) != I2C_ACK) {
     return -1000;
   }
-  i2c_send_byte(i2c, 0x05);
-  if (i2c_start(i2c, MCP9808_ADDR, I2C_READ) != I2C_ACK) {
+  miot_i2c_send_byte(i2c, 0x05);
+  if (miot_i2c_start(i2c, MCP9808_ADDR, I2C_READ) != I2C_ACK) {
     return -1000;
   }
-  uint8_t upper_byte = i2c_read_byte(i2c, I2C_ACK);
-  uint8_t lower_byte = i2c_read_byte(i2c, I2C_NAK);
-  i2c_stop(i2c);
+  uint8_t upper_byte = miot_i2c_read_byte(i2c, I2C_ACK);
+  uint8_t lower_byte = miot_i2c_read_byte(i2c, I2C_NAK);
+  miot_i2c_stop(i2c);
   upper_byte &= 0x1f;
   if (upper_byte & 0x10) {
     upper_byte &= 0xf;
@@ -60,7 +52,7 @@ static void handle_heater(struct mg_connection *nc, int ev, void *ev_data) {
   mg_send_response_line(nc, 200,
                         "Content-Type: text/html\r\n"
                         "Connection: close\r\n");
-  double temp = mc6808_read_temp(&s_i2c);
+  double temp = mc6808_read_temp();
   mg_printf(nc,
             "<h1>Welcome to Cesanta Office IoT!</h1>\r\n"
             "<p>Temperature is %.2lf&deg;C.</p>\r\n"
@@ -120,7 +112,7 @@ static void handle_sensor_conn(struct mg_connection *nc, int ev,
 
 static void sensor_timer_cb(void *arg) {
   if (s_sensor_conn != NULL) return; /* In progress. */
-  double temp = mc6808_read_temp(&s_i2c);
+  double temp = mc6808_read_temp();
   if (temp <= -1000) return; /* Error */
   char *eh = NULL, *post_data = NULL;
   mg_asprintf(&post_data, 0, "{\"office_temperature\": %.2lf}", temp);
@@ -146,9 +138,6 @@ enum miot_app_init_result miot_app_init(void) {
                             handle_heater);
   mg_register_http_endpoint(miot_get_http_listening_conn(), "/debug",
                             handle_debug);
-  s_i2c.sda_gpio = I2C_SDA_GPIO;
-  s_i2c.scl_gpio = I2C_SCL_GPIO;
-  i2c_init(&s_i2c);
 
   struct sys_config_hsw *hcfg = &get_cfg()->hsw;
   if (hcfg->sensor_report_interval_ms > 0 && hcfg->sensor_data_url != NULL) {

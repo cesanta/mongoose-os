@@ -1,4 +1,7 @@
 [
+  # Enable I2C by default.
+  ["i2c.enable", true],
+
   ["hsw", "o", {title: "Heater switch configuration"}],
   ["hsw.sensor_data_url", "s", {title: "Report sensor data here"}],
   ["hsw.sensor_report_interval_ms", "i", {title: "Sensor data report interval"}],

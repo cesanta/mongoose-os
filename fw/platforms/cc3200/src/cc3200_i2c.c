@@ -3,6 +3,10 @@
  * All rights reserved
  */
 
+#include "fw/platforms/esp8266/user/esp_features.h"
+
+#if MG_ENABLE_I2C
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,66 +38,63 @@
 #define dprintf(x)
 #endif
 
-struct i2c_state {
+struct miot_i2c {
   unsigned long base;
-  unsigned long sda_pin;
-  unsigned long scl_pin;
   uint8_t first : 1;
 };
 
-#if MG_ENABLE_JS
-enum v7_err miot_i2c_create(struct v7 *v7, i2c_connection *res) {
-  struct i2c_state *c = calloc(1, sizeof(struct i2c_state));
-  c->sda_pin = v7_get_double(v7, v7_arg(v7, 0)) - 1;
-  if (c->sda_pin <= 0) c->sda_pin = PIN_02;
-  c->scl_pin = v7_get_double(v7, v7_arg(v7, 1)) - 1;
-  if (c->scl_pin <= 0) c->scl_pin = PIN_01;
-  *res = c;
-  return V7_OK;
-}
-#endif
+struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {
+  struct miot_i2c *c = (struct miot_i2c *) calloc(1, sizeof(*c));
+  if (c == NULL) return NULL;
 
-int i2c_init(i2c_connection conn) {
-  struct i2c_state *c = (struct i2c_state *) conn;
   c->base = I2CA0_BASE;
+  int sda_pin = cfg->sda_pin - 1;
+  int scl_pin = cfg->scl_pin - 1;
 
   int mode;
-  if (c->scl_pin == PIN_01) {
+  if (scl_pin == PIN_01) {
     mode = PIN_MODE_1;
-  } else if (c->scl_pin == PIN_03 || c->sda_pin == PIN_05) {
+  } else if (scl_pin == PIN_03 || sda_pin == PIN_05) {
     mode = PIN_MODE_5;
-  } else if (c->sda_pin == PIN_16) {
+  } else if (sda_pin == PIN_16) {
     mode = PIN_MODE_9;
   } else {
-    return -1;
+    goto out_err;
   }
-  MAP_PinTypeI2C(c->scl_pin, mode);
+  MAP_PinTypeI2C(scl_pin, mode);
 
-  if (c->sda_pin == PIN_02) {
+  if (sda_pin == PIN_02) {
     mode = PIN_MODE_1;
-  } else if (c->sda_pin == PIN_04 || c->sda_pin == PIN_06) {
+  } else if (sda_pin == PIN_04 || sda_pin == PIN_06) {
     mode = PIN_MODE_5;
-  } else if (c->sda_pin == PIN_17) {
+  } else if (sda_pin == PIN_17) {
     mode = PIN_MODE_9;
   } else {
-    return -1;
+    goto out_err;
   }
-  MAP_PinTypeI2C(c->sda_pin, mode);
+  MAP_PinTypeI2C(sda_pin, mode);
 
   MAP_PRCMPeripheralClkEnable(PRCM_I2CA0, PRCM_RUN_MODE_CLK);
   MAP_PRCMPeripheralReset(PRCM_I2CA0);
-  MAP_I2CMasterInitExpClk(c->base, SYS_CLK, 0 /* 100 KHz */);
-  return 0;
+  MAP_I2CMasterInitExpClk(c->base, SYS_CLK, cfg->fast);
+
+  LOG(LL_INFO, ("I2C initialized (SDA: %d, SCL: %d, fast? %d)", cfg->sda_pin,
+                cfg->scl_pin, cfg->fast));
+  return c;
+
+out_err:
+  free(c);
+  LOG(LL_ERROR, ("Invalid I2C pin settings"));
+  return NULL;
 }
 
-void miot_i2c_close(i2c_connection conn) {
-  struct i2c_state *c = (struct i2c_state *) conn;
+void miot_i2c_close(struct miot_i2c *c) {
   MAP_PRCMPeripheralClkDisable(PRCM_I2CA0, PRCM_RUN_MODE_CLK);
   free(c);
 }
 
 /* Sends command to the I2C module and waits for it to be processed. */
-static enum i2c_ack_type i2c_command(struct i2c_state *c, uint32_t cmd) {
+static enum i2c_ack_type cc3200_i2c_command(struct miot_i2c *c, uint32_t cmd) {
   I2CMasterIntClear(c->base);
   I2CMasterTimeoutSet(c->base, 0x20); /* 5 ms @ 100 KHz */
   I2CMasterControl(c->base, cmd);
@@ -117,9 +118,8 @@ static enum i2c_ack_type i2c_command(struct i2c_state *c, uint32_t cmd) {
   }
 }
 
-enum i2c_ack_type i2c_start(i2c_connection conn, uint16_t addr,
-                            enum i2c_rw mode) {
-  struct i2c_state *c = (struct i2c_state *) conn;
+enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr,
+                                 enum i2c_rw mode) {
   /* CC3200 does not support 10 bit addresses. */
   if (addr > 0x7F) return I2C_ERR;
   MAP_I2CMasterSlaveAddrSet(c->base, addr, (mode == I2C_READ));
@@ -129,58 +129,58 @@ enum i2c_ack_type i2c_start(i2c_connection conn, uint16_t addr,
     return I2C_ACK;
   } else {
     c->first = 1;
-    return i2c_command(c, I2C_MASTER_CMD_BURST_RECEIVE_START);
+    return cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_RECEIVE_START);
   }
 }
 
-enum i2c_ack_type i2c_send_byte(i2c_connection conn, uint8_t data) {
-  struct i2c_state *c = (struct i2c_state *) conn;
+enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t data) {
   I2CMasterDataPut(c->base, data);
   if (c->first) {
     c->first = 0;
-    return i2c_command(c, I2C_MASTER_CMD_BURST_SEND_START);
+    return cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_SEND_START);
   } else {
-    return i2c_command(c, I2C_MASTER_CMD_BURST_SEND_CONT);
+    return cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_SEND_CONT);
   }
 }
 
-enum i2c_ack_type i2c_send_bytes(i2c_connection conn, uint8_t *buf,
-                                 size_t buf_size) {
-  for (size_t i = 0; i < buf_size; i++) {
-    if (i2c_send_byte(conn, buf[i]) == I2C_NAK) return I2C_NAK;
-  }
-  return I2C_ACK;
-}
-
-uint8_t i2c_read_byte(i2c_connection conn, enum i2c_ack_type ack_type) {
-  struct i2c_state *c = (struct i2c_state *) conn;
+uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
   if (c->first) {
     /* First byte is buffered since the time of start. */
     c->first = 0;
   } else {
-    i2c_command(c, ack_type == I2C_ACK ? I2C_MASTER_CMD_BURST_RECEIVE_CONT
-                                       : I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    cc3200_i2c_command(c, ack_type == I2C_ACK
+                              ? I2C_MASTER_CMD_BURST_RECEIVE_CONT
+                              : I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
   }
   return (uint8_t) I2CMasterDataGet(c->base);
 }
 
-void i2c_read_bytes(i2c_connection conn, size_t n, uint8_t *buf,
-                    enum i2c_ack_type last_ack_type) {
-  uint8_t *p = buf;
-  while (n > 1) {
-    *p++ = i2c_read_byte(conn, I2C_ACK);
-    n--;
-  }
-  if (n == 1) *p = i2c_read_byte(conn, last_ack_type);
-}
-
-void i2c_stop(i2c_connection conn) {
-  struct i2c_state *c = (struct i2c_state *) conn;
+void miot_i2c_stop(struct miot_i2c *c) {
   dprintf(("stop mcs %lx\n", HWREG(c->base + I2C_O_MCS)));
   if (I2CMasterBusBusy(c->base)) {
-    i2c_command(c, I2C_MASTER_CMD_BURST_SEND_FINISH);
+    cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_SEND_FINISH);
   }
 }
 
-void i2c_send_ack(i2c_connection conn, enum i2c_ack_type ack_type) {
+void miot_i2c_send_ack(struct miot_i2c *c, enum i2c_ack_type ack_type) {
 }
+
+#if MG_ENABLE_JS && MG_ENABLE_I2C_API
+enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
+  enum v7_err rcode = V7_OK;
+  struct sys_config_i2c cfg;
+  cfg.sda_pin = v7_get_double(v7, v7_arg(v7, 0)) - 1;
+  cfg.scl_pin = v7_get_double(v7, v7_arg(v7, 1)) - 1;
+  struct miot_i2c *conn = miot_i2c_create(&cfg);
+
+  if (conn != NULL) {
+    *res = conn;
+  } else {
+    rcode = v7_throwf(v7, "Error", "Failed to creat I2C connection");
+  }
+
+  return rcode;
+}
+#endif /* MG_ENABLE_JS && MG_ENABLE_I2C_API */
+
+#endif /* MG_ENABLE_I2C */

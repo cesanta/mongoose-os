@@ -23,6 +23,7 @@ enum miot_init_result {
   MIOT_INIT_UART_FAILED = -16,
   MIOT_INIT_MDNS_FAILED = -17,
   MIOT_INIT_MQTT_FAILED = -18,
+  MIOT_INIT_I2C_FAILED = -19,
 };
 
 enum miot_init_result mg_init(void);

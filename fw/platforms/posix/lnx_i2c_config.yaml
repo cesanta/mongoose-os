@@ -1,0 +1,4 @@
+[
+  ["i2c.bus_no", "i", 0, {title: "I2C system bus number"}],
+]
+

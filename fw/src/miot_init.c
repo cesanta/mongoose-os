@@ -4,6 +4,7 @@
 #include "fw/src/miot_rpc.h"
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_dns_sd.h"
+#include "fw/src/miot_i2c.h"
 #include "fw/src/miot_mdns.h"
 #include "fw/src/miot_mqtt.h"
 #include "fw/src/miot_service_config.h"
@@ -53,6 +54,11 @@ enum miot_init_result mg_init(void) {
 
 #if MG_ENABLE_UPDATER
   miot_updater_http_init(); /* After HTTP init */
+#endif
+
+#if MG_ENABLE_I2C
+  r = miot_i2c_init();
+  if (r != MIOT_INIT_OK) return r;
 #endif
 
 #if MG_ENABLE_MQTT
