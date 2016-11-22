@@ -3,68 +3,46 @@
  * All rights reserved
  */
 
+#include <stdint.h>
 #include <stdlib.h>
+
+#include "osapi.h"
+
+#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "mongoose/mongoose.h"
+
+/* For WebSocket handshake. */
+void mg_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
+                    const size_t *msg_lens, uint8_t *digest) {
+  (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
+}
+
+#if MG_ENABLE_SSL
+
+/* For Krypton */
+#if MG_SSL_IF != MG_SSL_IF_MBEDTLS
 
 #include "krypton/krypton.h"
 
-/*
- * Krypton API shims to crypto functions in ROM/SDK.
- *
- * SDK uses hostapd/wpa_supplicant code and thus brings its crypto with it.
- * We exploit this fact to reduce our footprint / speed up crypto (some of it is
- * in ROM, which is faster than flash).
- *
- * You can find hostapd/wpa_supplicant code here: https://w1.fi/cgit/
- */
-
-/* MD5 */
 #ifdef KR_EXT_MD5
-extern int md5_vector(size_t num_msgs, const u8 *msgs[], const size_t *msg_lens,
-                      uint8_t *digest);
 void kr_hash_md5_v(size_t num_msgs, const uint8_t *msgs[],
                    const size_t *msg_lens, uint8_t *digest) {
   (void) md5_vector(num_msgs, msgs, msg_lens, digest);
 }
 #endif
 
-/* SHA1 */
 #ifdef KR_EXT_SHA1
-extern int sha1_vector(size_t num_msgs, const u8 *msgs[],
-                       const size_t *msg_lens, uint8_t *digest);
 void kr_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
-                    const size_t *msg_lens, uint8_t *digest) {
-  (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
-}
-void mg_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
                     const size_t *msg_lens, uint8_t *digest) {
   (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
 }
 #endif
 
 #ifdef KR_EXT_AES
-/*
- * AES128
- *
- * For some reason, decryption is in ROM and encryption is supplied by SDK.
- * Moreover, the variant in ROM only supports 128 bits while the variant in SDK
- * supports 192 and 256 bit encryption.
- * In other words, code in ROM is from before commit
- * d140db6adf7b3b439f71e1ac2c72e637157bfc4a and SDK code is after.
- * I'm pretty sure it means AES 192 and 256 support won't actually work,
- * but hey, who am I to judge. :)
- */
 
 #define AES_BLOCK_SIZE 16
 #define AES128_KEY_SIZE 16
 #define AES128_IV_SIZE 16
-
-/* These are new, supplied by the SDK. */
-int rijndaelKeySetupEnc(void *ctx, const uint8_t *key, int bits);
-void rijndaelEncrypt(void *ctx, int rounds, const uint8_t *in, uint8_t *out);
-
-/* These are old, in ROM - notice no "rounds" and "bits" params. */
-void rijndaelKeySetupDec(void *ctx, const uint8_t *key);
-void rijndaelDecrypt(void *ctx, const uint8_t *in, uint8_t *out);
 
 static void *esp_aes128_new_ctx(void) {
   return malloc(4 * 4 * 15 + 4);
@@ -102,7 +80,6 @@ static void esp_aes128_free_ctx(void *ctxv) {
   free(ctxv);
 }
 
-/* Krypton API function. */
 const kr_cipher_info *kr_aes128_cs_info(void) {
   static const kr_cipher_info aes128_cs_info = {
       AES_BLOCK_SIZE,     AES128_KEY_SIZE,      AES128_IV_SIZE,
@@ -117,3 +94,45 @@ int kr_get_random(uint8_t *out, size_t len) {
   return os_get_random(out, len) == 0;
 }
 #endif
+
+/* For mbedTLS */
+#else
+
+#include "mbedtls/aes.h"
+
+int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
+                           unsigned int keybits) {
+  if (keybits != 128) return MBEDTLS_ERR_AES_INVALID_KEY_LENGTH;
+  rijndaelKeySetupEnc(ctx, key, 128);
+  return 0;
+}
+
+int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
+                           unsigned int keybits) {
+  if (keybits != 128) return MBEDTLS_ERR_AES_INVALID_KEY_LENGTH;
+  rijndaelKeySetupDec(ctx, key);
+  return 0;
+}
+
+void mbedtls_aes_encrypt(mbedtls_aes_context *ctx,
+                         const unsigned char input[16],
+                         unsigned char output[16]) {
+  rijndaelEncrypt(ctx, 10, input, output);
+}
+
+void mbedtls_aes_decrypt(mbedtls_aes_context *ctx,
+                         const unsigned char input[16],
+                         unsigned char output[16]) {
+  rijndaelDecrypt(ctx, input, output);
+}
+
+/* os_get_random uses hardware RNG, so it's cool. */
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  os_get_random(buf, len);
+  (void) ctx;
+  return 0;
+}
+
+#endif /* MG_SSL_IF == MG_SSL_IF_MBEDTLS */
+
+#endif /* MG_ENABLE_SSL */
