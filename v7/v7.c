@@ -10465,6 +10465,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
  */
 
 /* Amalgamated: #include "common/md5.h" */
+/* Amalgamated: #include "common/str_util.h" */
 
 #if !defined(EXCLUDE_COMMON)
 #if !DISABLE_MD5
@@ -12299,6 +12300,7 @@ void init_socket(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "common/md5.h" */
 /* Amalgamated: #include "common/sha1.h" */
+/* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "common/base64.h" */
 
 #if V7_ENABLE_CRYPTO
