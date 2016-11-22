@@ -10,6 +10,13 @@ ifeq "$(MIOT_ENABLE_ATCA)" "1"
   MIOT_FEATURES += -DMIOT_ENABLE_ATCA -I$(ATCA_PATH)/lib
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_atca_config.yaml
 
+  ifeq "$(MIOT_ENABLE_RPC)$(MIOT_ENABLE_ATCA_SERVICE)" "11"
+    MIOT_SRCS += miot_atca_service.c
+    MIOT_FEATURES += -DMIOT_ENABLE_ATCA_SERVICE
+  else
+    MIOT_FEATURES += -DMIOT_ENABLE_ATCA_SERVICE=0
+  endif
+
 $(BUILD_DIR)/atca/libatca.a:
 	$(Q) make -C $(ATCA_PATH)/lib \
 		CC=$(CC) AR=$(AR) BUILD_DIR=$(BUILD_DIR)/atca \
@@ -85,6 +92,7 @@ endif
 # This is required for needed make invocations, such as when building POSIX MIOT
 # for JS freeze operation.
 export MIOT_ENABLE_ATCA
+export MIOT_ENABLE_ATCA_SERVICE
 export MIOT_ENABLE_CONFIG_SERVICE
 export MIOT_ENABLE_DNS_SD
 export MIOT_ENABLE_FILESYSTEM_SERVICE

@@ -58,6 +58,10 @@ enum miot_init_result mg_init(void) {
 #if MIOT_ENABLE_ATCA
   r = miot_atca_init(); /* Requires I2C */
   if (r != MIOT_INIT_OK) return r;
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_ATCA_SERVICE
+  r = miot_atca_service_init(); /* Requires RPC */
+  if (r != MIOT_INIT_OK) return r;
+#endif
 #endif
 
   r = miot_sys_config_init_http(&get_cfg()->http);

@@ -11,12 +11,14 @@
 #include <string.h>
 
 #include "common/cs_dbg.h"
+
 #include "fw/src/miot_i2c.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_sys_config.h"
 
 #include "cryptoauthlib.h"
 #include "hal/atca_hal.h"
+#include "host/atca_host.h"
 
 /*
  * This is a HAL implementation for the Atmel/Microchip CryptoAuthLib.
@@ -164,6 +166,22 @@ ATCA_STATUS hal_iface_release(ATCAIfaceType ifacetype, void *hal_data) {
   /* I2C connection is global, do not free. */
   (void) hal_data;
   return ATCA_SUCCESS;
+}
+
+/* We don't use encrypted writes, stub out host crypto methods to save space. */
+ATCA_STATUS atcah_privwrite_auth_mac(struct atca_write_mac_in_out *param) {
+  (void) param;
+  return ATCA_UNIMPLEMENTED;
+}
+
+ATCA_STATUS atcah_gen_dig(struct atca_gen_dig_in_out *param) {
+  (void) param;
+  return ATCA_UNIMPLEMENTED;
+}
+
+ATCA_STATUS atcah_nonce(struct atca_nonce_in_out *param) {
+  (void) param;
+  return ATCA_UNIMPLEMENTED;
 }
 
 enum miot_init_result miot_atca_init(void) {
