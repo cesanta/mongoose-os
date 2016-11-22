@@ -89,8 +89,8 @@ enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr,
   uint8_t address_byte = (uint8_t)(addr << 1) | mode;
 #ifdef ESP_I2C_DEBUG
   LOG(LL_DEBUG,
-      ("%d %d, addr %d, mode %d, ab %d", (int) c->sda_gpio, (int) c->scl_gpio,
-       (int) addr, (int) mode, (int) address_byte));
+      ("%d %d, addr 0x%02x, mode %c => ab 0x%02x", c->sda_gpio, c->scl_gpio,
+       addr, (mode == I2C_READ ? 'R' : 'W'), address_byte));
 #endif
   if (addr > 0x7F || (mode != I2C_READ && mode != I2C_WRITE)) {
     return I2C_ERR;
@@ -140,9 +140,6 @@ enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t data) {
     esp_i2c_half_delay(c);
     esp_i2c_set_sda_scl(c, bit, I2C_LOW);
     esp_i2c_half_delay(c);
-#ifdef ESP_I2C_DEBUG
-    LOG(LL_DEBUG, ("sent %d", (int) bit));
-#endif
   }
 
   /* release the bus for slave to write ack */
@@ -152,7 +149,8 @@ enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t data) {
   esp_i2c_half_delay(c);
   ret_val = esp_i2c_read_sda(c);
 #ifdef ESP_I2C_DEBUG
-  LOG(LL_DEBUG, ("read ack = %d", ret_val));
+  LOG(LL_DEBUG,
+      ("sent 0x%02x, got %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
 #endif
   esp_i2c_half_delay(c);
   esp_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
@@ -170,7 +168,7 @@ void miot_i2c_send_ack(struct miot_i2c *c, enum i2c_ack_type ack_type) {
   esp_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   esp_i2c_half_delay(c);
 #ifdef ESP_I2C_DEBUG
-  LOG(LL_DEBUG, ("sent ack = %d", ack_type));
+  LOG(LL_DEBUG, ("sent %s", (ack_type == I2C_ACK ? "ACK" : "NAK")));
 #endif
 }
 
@@ -186,19 +184,19 @@ uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
     esp_i2c_half_delay(c);
     bit = esp_i2c_read_sda(c);
     ret_val |= (bit << (7 - i));
-#ifdef ESP_I2C_DEBUG
-    LOG(LL_DEBUG, ("read %d", (int) bit));
-#endif
     esp_i2c_half_delay(c);
     esp_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
     esp_i2c_half_delay(c);
   }
+#ifdef ESP_I2C_DEBUG
+  LOG(LL_DEBUG, ("read 0x%02x", ret_val));
+#endif
 
   if (ack_type != I2C_NONE) {
     miot_i2c_send_ack(c, ack_type);
   } else {
 #ifdef ESP_I2C_DEBUG
-    LOG(LL_DEBUG, ("not sending ack"));
+    LOG(LL_DEBUG, ("not sending any ack"));
 #endif
   }
 
