@@ -75,7 +75,6 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
 
   _u32 am = 0;
   fi->size = (size_t) -1;
-  if (pathname[0] == '/') pathname++;
   int rw = (flags & 3);
   if (rw == O_RDONLY) {
     SlFsFileInfo_t sl_fi;
@@ -197,10 +196,6 @@ off_t fs_slfs_lseek(int fd, off_t offset, int whence) {
 
 int fs_slfs_unlink(const char *filename) {
   return set_errno(sl_fs_to_errno(sl_FsDel((const _u8 *) filename, 0)));
-}
-
-int fs_slfs_rename(const char *from, const char *to) {
-  return set_errno(ENOTSUP);
 }
 
 void fs_slfs_set_new_file_size(const char *name, size_t size) {
