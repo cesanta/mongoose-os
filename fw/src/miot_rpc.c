@@ -4,6 +4,7 @@
  */
 
 #include "common/mg_rpc/mg_rpc_channel_ws.h"
+#include "common/mg_rpc/mg_rpc_channel_http.h"
 
 #if MIOT_ENABLE_RPC
 
@@ -14,6 +15,8 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_uart.h"
 #include "fw/src/miot_wifi.h"
+
+#define HTTP_URI_PREFIX "/rpc/"
 
 static struct mg_rpc *s_global_mg_rpc;
 
@@ -31,11 +34,31 @@ struct mg_rpc_cfg *miot_rpc_cfg_from_sys(const struct sys_config *scfg) {
   return ccfg;
 }
 
+#if MIOT_ENABLE_RPC_CHANNEL_HTTP
+static void miot_rpc_http_handler(struct mg_connection *nc, int ev,
+                                  void *ev_data) {
+  if (ev == MG_EV_HTTP_REQUEST) {
+    /* Create and add the channel to mg_rpc */
+    struct mg_rpc_channel *ch = mg_rpc_channel_http(nc);
+    mg_rpc_add_channel(miot_rpc_get_global(), mg_mk_str(""), ch,
+                       false /* is_trusted */, false /* send_hello */);
+
+    /* Handle the request */
+    struct http_message *hm = (struct http_message *) ev_data;
+    size_t prefix_len = strlen(HTTP_URI_PREFIX);
+    struct mg_str method = {hm->uri.p + prefix_len, hm->uri.len - prefix_len};
+    struct mg_str data = {hm->body.p, hm->body.len};
+    mg_rpc_channel_http_recd_frame(nc, ch, method, data);
+  }
+}
+#endif
+
 enum miot_init_result miot_rpc_init(void) {
   const struct sys_config_rpc *sccfg = &get_cfg()->rpc;
   if (!sccfg->enable) return MIOT_INIT_OK;
   struct mg_rpc_cfg *ccfg = miot_rpc_cfg_from_sys(get_cfg());
   struct mg_rpc *c = mg_rpc_create(ccfg);
+
   if (sccfg->server_address != NULL) {
     struct mg_rpc_channel_ws_out_cfg *chcfg =
         miot_rpc_channel_ws_out_cfg_from_sys(get_cfg());
@@ -53,6 +76,12 @@ enum miot_init_result miot_rpc_init(void) {
       }
     }
   }
+
+#if MIOT_ENABLE_RPC_CHANNEL_HTTP
+  mg_register_http_endpoint(miot_get_http_listening_conn(), HTTP_URI_PREFIX,
+                            miot_rpc_http_handler);
+#endif
+
 #if MIOT_ENABLE_RPC_UART
   if (sccfg->uart.uart_no >= 0) {
     const struct sys_config_rpc_uart *scucfg = &get_cfg()->rpc.uart;
