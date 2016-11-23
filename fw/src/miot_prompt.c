@@ -235,7 +235,7 @@ void miot_prompt_process_char(char ch) {
       show_prompt();
     }
   } else if (ch == EOF_CHAR) {
-#if MIOT_ENABLE_RPC && MIOT_ENABLE_RPC_UART
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_RPC_CHANNEL_UART
     const int uart_no = s_sjp.uart_no;
     if (uart_no >= 0 && miot_rpc_get_global() != NULL) {
       /* Switch into RPC mode. This will detach our dispatcher. */

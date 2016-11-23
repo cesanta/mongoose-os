@@ -82,7 +82,7 @@ enum miot_init_result miot_rpc_init(void) {
                             miot_rpc_http_handler);
 #endif
 
-#if MIOT_ENABLE_RPC_UART
+#if MIOT_ENABLE_RPC_CHANNEL_UART
   if (sccfg->uart.uart_no >= 0) {
     const struct sys_config_rpc_uart *scucfg = &get_cfg()->rpc.uart;
     struct miot_uart_config *ucfg = miot_uart_default_config();
