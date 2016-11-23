@@ -74,5 +74,5 @@ static void reboot_timer_cb(void *param) {
 
 void miot_system_restart_after(int delay_ms) {
   CONSOLE_LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
-  miot_set_c_timer(delay_ms, 0 /*repeat*/, reboot_timer_cb, NULL);
+  miot_set_timer(delay_ms, 0 /*repeat*/, reboot_timer_cb, NULL);
 }

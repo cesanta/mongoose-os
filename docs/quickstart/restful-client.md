@@ -42,7 +42,7 @@ static void report_data(void *param) {
 }
 
 enum miot_app_init_result miot_app_init(void) {
-  miot_set_c_timer(INTERVAL_MILLISECONDS, true /* repeat */, report_data, NULL);
+  miot_set_timer(INTERVAL_MILLISECONDS, true /* repeat */, report_data, NULL);
   return MIOT_APP_INIT_SUCCESS;
 }
 ```

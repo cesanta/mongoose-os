@@ -97,7 +97,7 @@ static bool mg_rpc_channel_http_send_frame(struct mg_rpc_channel *ch,
    * those to be emitted asynchronously, therefore we can't emit them right
    * here.
    */
-  miot_set_c_timer(0, false, mg_rpc_channel_http_frame_sent, ch);
+  miot_set_timer(0, false, mg_rpc_channel_http_frame_sent, ch);
 
   return true;
 }

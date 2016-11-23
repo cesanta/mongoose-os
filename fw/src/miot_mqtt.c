@@ -60,8 +60,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       }
       LOG(LL_DEBUG,
           ("MQTT reconnecting after %d seconds", s_reconnect_timeout));
-      miot_set_c_timer(s_reconnect_timeout * 1000 /* ms */, 0,
-                       reconnect_timer_cb, NULL);
+      miot_set_timer(s_reconnect_timeout * 1000 /* ms */, 0, reconnect_timer_cb,
+                     NULL);
 
       /*
        * If that connection fails, next reconnect timeout will be larger

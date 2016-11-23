@@ -119,8 +119,8 @@ enum miot_app_init_result miot_app_init(void) {
 
   struct sys_config_hsw *hcfg = &get_cfg()->hsw;
   if (hcfg->sensor_report_interval_ms > 0 && hcfg->sensor_data_url != NULL) {
-    miot_set_c_timer(hcfg->sensor_report_interval_ms, true /* repeat */,
-                     sensor_timer_cb, NULL);
+    miot_set_timer(hcfg->sensor_report_interval_ms, true /* repeat */,
+                   sensor_timer_cb, NULL);
   }
 
   return MIOT_APP_INIT_SUCCESS;
