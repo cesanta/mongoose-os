@@ -6,6 +6,7 @@
 #include "common/mg_rpc/mg_rpc_channel_http.h"
 #include "common/cs_dbg.h"
 #include "common/mg_rpc/mg_rpc_channel.h"
+#include "common/mg_rpc/mg_rpc.h"
 #include "frozen/frozen.h"
 #include "fw/src/miot_timers.h"
 
@@ -118,7 +119,7 @@ struct mg_rpc_channel *mg_rpc_channel_http(struct mg_connection *nc) {
 
 void mg_rpc_channel_http_recd_frame(struct mg_connection *nc,
                                     struct mg_rpc_channel *ch,
-                                    struct mg_str method, struct mg_str data) {
+                                    struct mg_str method, struct mg_str args) {
   struct mg_rpc_channel_http_data *chd =
       (struct mg_rpc_channel_http_data *) ch->channel_data;
 
@@ -129,26 +130,16 @@ void mg_rpc_channel_http_recd_frame(struct mg_connection *nc,
   mg_sock_addr_to_str(&nc->sa, addr, sizeof(addr),
                       MG_SOCK_STRINGIFY_IP | MG_SOCK_STRINGIFY_PORT);
 
-  /*
-   * If arguments data is empty, we won't print "args" property.
-   * Otherwise, we prepend arguments data with '"args": '.
-   */
-  const char *args_prop = "";
-  if (data.len > 0) {
-    args_prop = ", \"args\": ";
-  }
-
-  /* Generate request frame suitable for mg_rpc */
-  char *buf;
-  int len =
-      asprintf(&buf, "{\"src\":\"%s\", \"method\": \"/%.*s\"%s%.*s}", addr,
-               (int) method.len, method.p, args_prop, (int) data.len, data.p);
-  struct mg_str f = mg_mk_str_n(buf, len);
+  /* Prepare "parsed" frame */
+  struct mg_rpc_frame frame;
+  memset(&frame, 0, sizeof(frame));
+  frame.src = mg_mk_str(addr);
+  frame.method = method;
+  frame.args = args;
 
   /* "Open" the channel and send the frame */
   ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
-  ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD, &f);
-  free(buf);
+  ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD_PARSED, &frame);
 }
 
 #endif /* MIOT_ENABLE_RPC && MIOT_ENABLE_RPC_CHANNEL_HTTP */

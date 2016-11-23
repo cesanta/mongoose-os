@@ -16,7 +16,7 @@
 #include "fw/src/miot_uart.h"
 #include "fw/src/miot_wifi.h"
 
-#define HTTP_URI_PREFIX "/rpc/"
+#define HTTP_URI_PREFIX "/rpc"
 
 static struct mg_rpc *s_global_mg_rpc;
 

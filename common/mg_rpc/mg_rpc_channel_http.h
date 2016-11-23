@@ -23,7 +23,7 @@ struct mg_rpc_channel *mg_rpc_channel_http(struct mg_connection *nc);
  */
 void mg_rpc_channel_http_recd_frame(struct mg_connection *nc,
                                     struct mg_rpc_channel *ch,
-                                    struct mg_str method, struct mg_str data);
+                                    struct mg_str method, struct mg_str args);
 
 #endif /* MIOT_ENABLE_RPC && MIOT_ENABLE_RPC_CHANNEL_HTTP */
 #endif /* CS_COMMON_MG_RPC_MG_RPC_CHANNEL_HTTP_H_ */
