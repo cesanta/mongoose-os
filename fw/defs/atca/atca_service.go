@@ -60,9 +60,23 @@ type SetConfigArgs struct {
 }
 
 type SetKeyArgs struct {
-	Crc32 *int64  `json:"crc32,omitempty"`
-	Key   *string `json:"key,omitempty"`
-	Slot  *int64  `json:"slot,omitempty"`
+	Crc32  *int64  `json:"crc32,omitempty"`
+	Ecc    *bool   `json:"ecc,omitempty"`
+	Key    *string `json:"key,omitempty"`
+	Slot   *int64  `json:"slot,omitempty"`
+	Wkey   *string `json:"wkey,omitempty"`
+	Wkslot *int64  `json:"wkslot,omitempty"`
+}
+
+type SignArgs struct {
+	Crc32  *int64  `json:"crc32,omitempty"`
+	Digest *string `json:"digest,omitempty"`
+	Slot   *int64  `json:"slot,omitempty"`
+}
+
+type SignResult struct {
+	Crc32     *int64  `json:"crc32,omitempty"`
+	Signature *string `json:"signature,omitempty"`
 }
 
 type Service interface {
@@ -72,6 +86,7 @@ type Service interface {
 	LockZone(ctx context.Context, args *LockZoneArgs) error
 	SetConfig(ctx context.Context, args *SetConfigArgs) error
 	SetKey(ctx context.Context, args *SetKeyArgs) error
+	Sign(ctx context.Context, args *SignArgs) (*SignResult, error)
 }
 
 type Instance interface {
@@ -229,6 +244,34 @@ func (c *_Client) SetKey(pctx context.Context, args *SetKeyArgs) (err error) {
 	return nil
 }
 
+func (c *_Client) Sign(pctx context.Context, args *SignArgs) (res *SignResult, err error) {
+	cmd := &frame.Command{
+		Cmd: "/ATCA.Sign",
+	}
+	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	defer finish(&err)
+	_ = tr
+
+	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	cmd.Args = ourjson.DelayMarshaling(args)
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+
+	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+
+	var r *SignResult
+	err = resp.Response.UnmarshalInto(&r)
+	if err != nil {
+		return nil, errors.Annotatef(err, "unmarshaling response")
+	}
+	return r, nil
+}
+
 func RegisterService(i *clubby.Instance, impl Service) error {
 	s := &_Server{impl}
 	i.RegisterCommandHandler("/ATCA.GenKey", s.GenKey)
@@ -237,6 +280,7 @@ func RegisterService(i *clubby.Instance, impl Service) error {
 	i.RegisterCommandHandler("/ATCA.LockZone", s.LockZone)
 	i.RegisterCommandHandler("/ATCA.SetConfig", s.SetConfig)
 	i.RegisterCommandHandler("/ATCA.SetKey", s.SetKey)
+	i.RegisterCommandHandler("/ATCA.Sign", s.Sign)
 	i.RegisterService(ServiceID, _ServiceDefinition)
 	return nil
 }
@@ -297,6 +341,16 @@ func (s *_Server) SetKey(ctx context.Context, src string, cmd *frame.Command) (i
 		}
 	}
 	return nil, s.impl.SetKey(ctx, &args)
+}
+
+func (s *_Server) Sign(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	var args SignArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return s.impl.Sign(ctx, &args)
 }
 
 var _ServiceDefinition = json.RawMessage([]byte(`{
@@ -389,6 +443,10 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           "doc": "CRC32 of the key",
           "type": "integer"
         },
+        "ecc": {
+          "doc": "Whether key is a ECC private key or not",
+          "type": "boolean"
+        },
         "key": {
           "doc": "Base64 encoded key",
           "type": "string"
@@ -396,9 +454,47 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         "slot": {
           "doc": "Slot number, 0 to 15",
           "type": "integer"
+        },
+        "wkey": {
+          "doc": "Base64 encoded write key",
+          "type": "string"
+        },
+        "wkslot": {
+          "doc": "CRC32 of the key",
+          "type": "integer"
         }
       },
-      "doc": "Set a private ECC key in the specified slot"
+      "doc": "Set key in the specified slot, ECC or symmetric"
+    },
+    "Sign": {
+      "args": {
+        "crc32": {
+          "doc": "CRC32 of the digest",
+          "type": "integer"
+        },
+        "digest": {
+          "doc": "Base64 encoded digest to sign. Must be 32 bytes.",
+          "type": "string"
+        },
+        "slot": {
+          "doc": "Slot number, 0 to 7",
+          "type": "integer"
+        }
+      },
+      "doc": "Sign a 32-byte digest with a private ECC key",
+      "result": {
+        "properties": {
+          "crc32": {
+            "doc": "CRC32 of the signature",
+            "type": "integer"
+          },
+          "signature": {
+            "doc": "Base64 encoded signature",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
     }
   },
   "name": "/ATCA",

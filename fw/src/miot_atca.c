@@ -168,22 +168,6 @@ ATCA_STATUS hal_iface_release(ATCAIfaceType ifacetype, void *hal_data) {
   return ATCA_SUCCESS;
 }
 
-/* We don't use encrypted writes, stub out host crypto methods to save space. */
-ATCA_STATUS atcah_privwrite_auth_mac(struct atca_write_mac_in_out *param) {
-  (void) param;
-  return ATCA_UNIMPLEMENTED;
-}
-
-ATCA_STATUS atcah_gen_dig(struct atca_gen_dig_in_out *param) {
-  (void) param;
-  return ATCA_UNIMPLEMENTED;
-}
-
-ATCA_STATUS atcah_nonce(struct atca_nonce_in_out *param) {
-  (void) param;
-  return ATCA_UNIMPLEMENTED;
-}
-
 enum miot_init_result miot_atca_init(void) {
   uint32_t revision;
   uint32_t

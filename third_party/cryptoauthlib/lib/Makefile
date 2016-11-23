@@ -15,10 +15,10 @@ LOCAL_CFLAGS = -MD \
 
 all: $(BUILD_DIR) $(BUILD_DIR)/libatca.a
 
-SRCS = $(notdir $(wildcard *.c basic/*.c))
+SRCS = $(notdir $(wildcard *.c basic/*.c crypto/*.c crypto/hashes/*.c host/*.c))
 OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SRCS)))
 
-VPATH = basic
+VPATH = basic crypto crypto/hashes host
 IPATH = $(addprefix -I,$(VPATH))
 
 $(BUILD_DIR)/libatca.a: $(OBJS)
