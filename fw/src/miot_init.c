@@ -89,3 +89,7 @@ enum miot_app_init_result miot_app_init(void) __attribute__((weak));
 enum miot_app_init_result miot_app_init(void) {
   return MIOT_APP_INIT_SUCCESS;
 }
+
+void miot_app_preinit(void) __attribute__((weak));
+void miot_app_preinit(void) {
+}
