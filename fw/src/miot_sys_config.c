@@ -43,6 +43,7 @@ static int s_num_validators;
 
 static struct mg_serve_http_opts s_http_server_opts;
 static struct mg_connection *listen_conn;
+static struct mg_connection *listen_conn_tun;
 
 static int load_config_file(const char *filename, const char *acl,
                             struct sys_config *cfg);
@@ -239,7 +240,8 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
 }
 
 enum miot_init_result miot_sys_config_init_http(
-    const struct sys_config_http *cfg) {
+    const struct sys_config_http *cfg,
+    const struct sys_config_device *device_cfg) {
   /*
    * Usually, we start to connect/listen in
    * EVENT_STAMODE_GOT_IP/EVENT_SOFTAPMODE_STACONNECTED  handlers
@@ -261,23 +263,57 @@ enum miot_init_result miot_sys_config_init_http(
   opts.ssl_ca_cert = cfg->ssl_ca_cert;
   listen_conn =
       mg_bind_opt(miot_get_mgr(), cfg->listen_addr, mongoose_ev_handler, opts);
+
   if (!listen_conn) {
     LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));
     return MIOT_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED;
-  } else {
-#if MIOT_ENABLE_WEB_CONFIG
-    mg_register_http_endpoint(listen_conn, "/conf/", conf_handler);
-    mg_register_http_endpoint(listen_conn, "/reboot", reboot_handler);
-    mg_register_http_endpoint(listen_conn, "/ro_vars", ro_vars_handler);
-#endif
-#if MIOT_ENABLE_FILE_UPLOAD
-    mg_register_http_endpoint(listen_conn, "/upload", upload_handler);
-#endif
+  }
 
-    mg_set_protocol_http_websocket(listen_conn);
-    LOG(LL_INFO, ("HTTP server started on [%s]%s", cfg->listen_addr,
+  mg_set_protocol_http_websocket(listen_conn);
+  LOG(LL_INFO, ("HTTP server started on [%s]%s", cfg->listen_addr,
+                (opts.ssl_cert ? " (SSL)" : "")));
+
+  if (cfg->tunnel.enable && device_cfg->id != NULL &&
+      device_cfg->password != NULL) {
+    char *tun_addr = NULL;
+    /*
+     * TODO(dfrank): address should be device_id.mongoose.link, because
+     * device_id should already be of the form "id-username".
+     *
+     * At the moment `be` doesn't support auth for things, so this is a
+     * temporary workaround.
+     */
+
+    /*
+     * NOTE: we won't free `tun_addr`, because when reconnect happens, this
+     * address string will be accessed again.
+     */
+    if (asprintf(&tun_addr, "ws://%s:%s@%s-%s.%s", device_cfg->id,
+                 device_cfg->password, device_cfg->id, device_cfg->id,
+                 cfg->tunnel.addr) < 0) {
+      return MIOT_INIT_OUT_OF_MEMORY;
+    }
+    listen_conn_tun =
+        mg_bind_opt(miot_get_mgr(), tun_addr, mongoose_ev_handler, opts);
+
+    if (!listen_conn_tun) {
+      LOG(LL_ERROR, ("Error binding to [%s]", tun_addr));
+      return MIOT_INIT_CONFIG_WEB_SERVER_LISTEN_FAILED;
+    }
+
+    mg_set_protocol_http_websocket(listen_conn_tun);
+    LOG(LL_INFO, ("Tunneled HTTP server started on [%s]%s", tun_addr,
                   (opts.ssl_cert ? " (SSL)" : "")));
   }
+
+#if MIOT_ENABLE_WEB_CONFIG
+  miot_register_http_endpoint("/conf/", conf_handler);
+  miot_register_http_endpoint("/reboot", reboot_handler);
+  miot_register_http_endpoint("/ro_vars", ro_vars_handler);
+#endif
+#if MIOT_ENABLE_FILE_UPLOAD
+  miot_register_http_endpoint("/upload", upload_handler);
+#endif
 
   return MIOT_INIT_OK;
 }
@@ -369,6 +405,13 @@ void miot_register_config_validator(miot_config_validator_fn fn) {
   s_validators[s_num_validators++] = fn;
 }
 
-struct mg_connection *miot_get_http_listening_conn(void) {
-  return listen_conn;
+void miot_register_http_endpoint(const char *uri_path,
+                                 mg_event_handler_t handler) {
+  if (listen_conn != NULL) {
+    mg_register_http_endpoint(listen_conn, uri_path, handler);
+  }
+
+  if (listen_conn_tun != NULL) {
+    mg_register_http_endpoint(listen_conn_tun, uri_path, handler);
+  }
 }

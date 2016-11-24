@@ -110,12 +110,9 @@ enum miot_app_init_result miot_app_init(void) {
   miot_gpio_set_mode(RELAY_GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
   miot_gpio_write(LED_GPIO, GPIO_LEVEL_LOW);
   miot_gpio_write(RELAY_GPIO, GPIO_LEVEL_LOW);
-  mg_register_http_endpoint(miot_get_http_listening_conn(), "/heater/",
-                            handle_heater_action);
-  mg_register_http_endpoint(miot_get_http_listening_conn(), "/heater",
-                            handle_heater);
-  mg_register_http_endpoint(miot_get_http_listening_conn(), "/debug",
-                            handle_debug);
+  miot_register_http_endpoint("/heater/", handle_heater_action);
+  miot_register_http_endpoint("/heater", handle_heater);
+  miot_register_http_endpoint("/debug", handle_debug);
 
   struct sys_config_hsw *hcfg = &get_cfg()->hsw;
   if (hcfg->sensor_report_interval_ms > 0 && hcfg->sensor_data_url != NULL) {

@@ -53,7 +53,8 @@ void miot_expand_mac_address_placeholders(char *str);
 
 enum miot_init_result miot_sys_config_init(void);
 enum miot_init_result miot_sys_config_init_http(
-    const struct sys_config_http *cfg);
+    const struct sys_config_http *cfg,
+    const struct sys_config_device *device_cfg);
 enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg);
 
 #endif /* CS_FW_SRC_MIOT_SYS_CONFIG_H_ */

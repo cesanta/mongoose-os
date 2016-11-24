@@ -78,8 +78,7 @@ enum miot_init_result miot_rpc_init(void) {
   }
 
 #if MIOT_ENABLE_RPC_CHANNEL_HTTP
-  mg_register_http_endpoint(miot_get_http_listening_conn(), HTTP_URI_PREFIX,
-                            miot_rpc_http_handler);
+  miot_register_http_endpoint(HTTP_URI_PREFIX, miot_rpc_http_handler);
 #endif
 
 #if MIOT_ENABLE_RPC_CHANNEL_UART
@@ -97,6 +96,7 @@ enum miot_init_result miot_rpc_init(void) {
     }
   }
 #endif
+
   s_global_mg_rpc = c;
   return MIOT_INIT_OK;
 }

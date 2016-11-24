@@ -395,10 +395,9 @@ static void update_action_handler(struct mg_connection *c, int ev, void *p) {
 }
 
 enum miot_init_result miot_updater_http_init(void) {
-  struct mg_connection *lc = miot_get_http_listening_conn();
-  mg_register_http_endpoint(lc, "/update/commit", update_action_handler);
-  mg_register_http_endpoint(lc, "/update/revert", update_action_handler);
-  mg_register_http_endpoint(lc, "/update", update_handler);
+  miot_register_http_endpoint("/update/commit", update_action_handler);
+  miot_register_http_endpoint("/update/revert", update_action_handler);
+  miot_register_http_endpoint("/update", update_handler);
   struct sys_config_update *scu = &get_cfg()->update;
   if (scu->url != NULL && scu->interval > 0) {
     LOG(LL_INFO,

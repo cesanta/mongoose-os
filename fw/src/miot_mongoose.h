@@ -11,7 +11,8 @@
 #include "mongoose/mongoose.h"
 
 struct mg_mgr *miot_get_mgr(void);
-struct mg_connection *miot_get_http_listening_conn(void);
+void miot_register_http_endpoint(const char *uri_path,
+                                 mg_event_handler_t handler);
 
 void mongoose_init(void);
 int mongoose_poll(int ms);

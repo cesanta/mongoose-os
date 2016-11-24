@@ -7,4 +7,7 @@
   ["http.ssl_ca_cert", "s", {title: "Verify clients this CA bundle"}],
   ["http.upload_acl", "s", "*", {title: "Upload file ACL"}],
   ["http.hidden_files", "s", {title: "Hidden file pattern"}],
+  ["http.tunnel", "o", {title: "Tunnel"}],
+  ["http.tunnel.enable", "b", true, {title: "Enable HTTP Tunnel"}],
+  ["http.tunnel.addr", "s", "mongoose.link", {title: "Tunnel will be established at the name-user subdomain of the given address"}],
 ]

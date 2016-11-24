@@ -25,7 +25,6 @@ static void ctl_handler(struct mg_connection *c, int ev, void *p) {
 }
 
 enum miot_app_init_result miot_app_init(void) {
-  mg_register_http_endpoint(miot_get_http_listening_conn(), "/ctl",
-                            ctl_handler);
+  miot_register_http_endpoint("/ctl", ctl_handler);
   return MIOT_APP_INIT_SUCCESS;
 }
