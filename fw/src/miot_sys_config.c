@@ -277,20 +277,11 @@ enum miot_init_result miot_sys_config_init_http(
       device_cfg->password != NULL) {
     char *tun_addr = NULL;
     /*
-     * TODO(dfrank): address should be device_id.mongoose.link, because
-     * device_id should already be of the form "id-username".
-     *
-     * At the moment `be` doesn't support auth for things, so this is a
-     * temporary workaround.
-     */
-
-    /*
      * NOTE: we won't free `tun_addr`, because when reconnect happens, this
      * address string will be accessed again.
      */
-    if (asprintf(&tun_addr, "ws://%s:%s@%s-%s.%s", device_cfg->id,
-                 device_cfg->password, device_cfg->id, device_cfg->id,
-                 cfg->tunnel.addr) < 0) {
+    if (asprintf(&tun_addr, "ws://%s:%s@%s.%s", device_cfg->id,
+                 device_cfg->password, device_cfg->id, cfg->tunnel.addr) < 0) {
       return MIOT_INIT_OUT_OF_MEMORY;
     }
     listen_conn_tun =
