@@ -49,8 +49,10 @@ int set_errno(int e) {
 }
 
 static const char *drop_dir(const char *fname, bool *is_slfs) {
-  *is_slfs = (strncmp(fname, "SL:", 3) == 0);
-  if (*is_slfs) fname += 3;
+  if (is_slfs != NULL) {
+    *is_slfs = (strncmp(fname, "SL:", 3) == 0);
+    if (*is_slfs) fname += 3;
+  }
   /* Drop "./", if any */
   if (fname[0] == '.' && fname[1] == '/') {
     fname += 2;
