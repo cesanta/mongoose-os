@@ -61,6 +61,11 @@ void dbg_putc(char c) {
   fputc(c, stderr);
 }
 
+void user_rf_pre_init() {
+  /* Early init app hook. */
+  miot_app_preinit();
+}
+
 /*
  * Mongoose IoT initialization, called as an SDK timer callback
  * (`os_timer_...()`).

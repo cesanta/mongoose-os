@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL
+#if MG_ENABLE_SSL && MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
 
 #include "common/cs_dbg.h"
 
@@ -22,19 +22,27 @@
 #define MG_LWIP_SSL_RECV_MBUF_LIMIT 3072
 #endif
 
+#ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 void mg_lwip_ssl_do_hs(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   int server_side = (nc->listener != NULL);
-  enum mg_ssl_if_result res = mg_ssl_if_handshake(nc);
-  DBG(("%d %d %d", server_side, res));
+  enum mg_ssl_if_result res;
+  if (nc->flags & MG_F_CLOSE_IMMEDIATELY) return;
+  res = mg_ssl_if_handshake(nc);
+  DBG(("%p %d %d %d", nc, nc->flags, server_side, res));
   if (res != MG_SSL_OK) {
     if (res == MG_SSL_WANT_WRITE) {
       nc->flags |= MG_F_WANT_WRITE;
       cs->err = 0;
     } else if (res == MG_SSL_WANT_READ) {
-      /* Nothing, we are callback-driven. */
+      /*
+       * Nothing to do in particular, we are callback-driven.
+       * What we definitely do not need anymore is SSL reading (nothing left).
+       */
+      nc->flags &= ~MG_F_WANT_READ;
       cs->err = 0;
     } else {
       cs->err = res;
@@ -154,6 +162,41 @@ ssize_t kr_recv(int fd, void *buf, size_t len) {
   return len;
 }
 
+#elif MG_SSL_IF == MG_SSL_IF_MBEDTLS
+
+int ssl_socket_send(void *ctx, const unsigned char *buf, size_t len) {
+  struct mg_connection *nc = (struct mg_connection *) ctx;
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  int ret = mg_lwip_tcp_write(cs->nc, buf, len);
+  DBG(("%p mg_lwip_tcp_write %u = %d", cs->nc, len, ret));
+  if (ret == 0) ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+  return ret;
+}
+
+int ssl_socket_recv(void *ctx, unsigned char *buf, size_t len) {
+  struct mg_connection *nc = (struct mg_connection *) ctx;
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  struct pbuf *seg = cs->rx_chain;
+  if (seg == NULL) {
+    DBG(("%u - nothing to read", len));
+    return MBEDTLS_ERR_SSL_WANT_READ;
+  }
+  size_t seg_len = (seg->len - cs->rx_offset);
+  DBG(("%u %u %u %u", len, cs->rx_chain->len, seg_len, cs->rx_chain->tot_len));
+  len = MIN(len, seg_len);
+  pbuf_copy_partial(seg, buf, len, cs->rx_offset);
+  cs->rx_offset += len;
+  /* TCP PCB may be NULL if connection has already been closed
+   * but we still have data to deliver to SSL. */
+  if (cs->pcb.tcp != NULL) tcp_recved(cs->pcb.tcp, len);
+  if (cs->rx_offset == cs->rx_chain->len) {
+    cs->rx_chain = pbuf_dechain(cs->rx_chain);
+    pbuf_free(seg);
+    cs->rx_offset = 0;
+  }
+  return len;
+}
+
 #endif
 
-#endif /* MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL && MG_ENABLE_SSL */
+#endif /* MG_ENABLE_SSL && MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL */

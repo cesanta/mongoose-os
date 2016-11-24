@@ -11,12 +11,14 @@
 #include <string.h>
 
 #include "common/cs_dbg.h"
+
 #include "fw/src/miot_i2c.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_sys_config.h"
 
 #include "cryptoauthlib.h"
 #include "hal/atca_hal.h"
+#include "host/atca_host.h"
 
 /*
  * This is a HAL implementation for the Atmel/Microchip CryptoAuthLib.

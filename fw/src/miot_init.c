@@ -26,12 +26,20 @@ enum miot_init_result mg_init(void) {
   if (r != MIOT_INIT_OK) return r;
 #endif
 #if MIOT_ENABLE_DNS_SD
-  r = miot_dns_sd_init(); /* Before mg_rpc init */
+  r = miot_dns_sd_init(); /* Before miot_rpc_init */
   if (r != MIOT_INIT_OK) return r;
 #endif
 
+  /* Before miot_sys_config_init_http */
+  r = miot_sys_config_init_platform(get_cfg());
+  if (r != MIOT_INIT_OK) return r;
+
+  /* Before miot_rpc_init */
+  r = miot_sys_config_init_http(&get_cfg()->http);
+  if (r != MIOT_INIT_OK) return r;
+
 #if MIOT_ENABLE_RPC
-  r = miot_rpc_init();
+  r = miot_rpc_init(); /* After miot_sys_config_init_http */
   if (r != MIOT_INIT_OK) return r;
 #if MIOT_ENABLE_UPDATER_RPC
   miot_updater_rpc_init();
@@ -45,10 +53,7 @@ enum miot_init_result mg_init(void) {
 #endif
 #endif
 
-  miot_console_init(); /* After mg_rpc_init */
-
-  r = miot_sys_config_init_platform(get_cfg());
-  if (r != MIOT_INIT_OK) return r;
+  miot_console_init(); /* After miot_rpc_init */
 
 #if MIOT_ENABLE_I2C
   r = miot_i2c_init();
@@ -58,10 +63,11 @@ enum miot_init_result mg_init(void) {
 #if MIOT_ENABLE_ATCA
   r = miot_atca_init(); /* Requires I2C */
   if (r != MIOT_INIT_OK) return r;
-#endif
-
-  r = miot_sys_config_init_http(&get_cfg()->http);
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_ATCA_SERVICE
+  r = miot_atca_service_init(); /* Requires RPC */
   if (r != MIOT_INIT_OK) return r;
+#endif
+#endif
 
 #if MIOT_ENABLE_UPDATER
   miot_updater_http_init(); /* After HTTP init */
@@ -82,4 +88,8 @@ enum miot_init_result mg_init(void) {
 enum miot_app_init_result miot_app_init(void) __attribute__((weak));
 enum miot_app_init_result miot_app_init(void) {
   return MIOT_APP_INIT_SUCCESS;
+}
+
+void miot_app_preinit(void) __attribute__((weak));
+void miot_app_preinit(void) {
 }

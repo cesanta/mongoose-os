@@ -36,7 +36,7 @@ enum miot_app_init_result miot_app_init(void) {
 
   { /* Set up the blinky timer. */
     miot_gpio_set_mode(GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-    miot_set_c_timer(1000 /* ms */, true /* repeat */, blink_timer_cb, NULL);
+    miot_set_timer(1000 /* ms */, true /* repeat */, blink_timer_cb, NULL);
   }
 
   { /* Read a file. */

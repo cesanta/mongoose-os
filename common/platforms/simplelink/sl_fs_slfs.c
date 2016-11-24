@@ -75,7 +75,6 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
 
   _u32 am = 0;
   fi->size = (size_t) -1;
-  if (pathname[0] == '/') pathname++;
   int rw = (flags & 3);
   if (rw == O_RDONLY) {
     SlFsFileInfo_t sl_fi;

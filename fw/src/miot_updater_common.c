@@ -81,8 +81,8 @@ struct update_context *updater_context_create() {
 
   CONSOLE_LOG(LL_INFO,
               ("Starting update (timeout %d)", get_cfg()->update.timeout));
-  s_ctx->wdt = miot_set_c_timer(get_cfg()->update.timeout * 1000,
-                                false /* repeat */, updater_abort, s_ctx);
+  s_ctx->wdt = miot_set_timer(get_cfg()->update.timeout * 1000,
+                              false /* repeat */, updater_abort, s_ctx);
   return s_ctx;
 }
 
@@ -711,8 +711,8 @@ void miot_upd_boot_finish(bool is_successful, bool is_first) {
       if (fctx->commit_timeout > 0) {
         CONSOLE_LOG(LL_INFO, ("Arming commit watchdog for %d seconds",
                               fctx->commit_timeout));
-        miot_set_c_timer(fctx->commit_timeout * 1000, 0 /* repeat */,
-                         miot_upd_watchdog_cb, NULL);
+        miot_set_timer(fctx->commit_timeout * 1000, 0 /* repeat */,
+                       miot_upd_watchdog_cb, NULL);
       } else {
         miot_upd_commit();
       }

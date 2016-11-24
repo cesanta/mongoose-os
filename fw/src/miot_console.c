@@ -171,8 +171,8 @@ void miot_console_init(void) {
   }
 #endif
 #if MIOT_ENABLE_RPC || MIOT_ENABLE_CONSOLE_FILE_BUFFER
-  miot_set_c_timer(MIOT_CONSOLE_FLUSH_INTERVAL_MS, 1 /* repeat */,
-                   miot_console_flush, NULL /* arg */);
+  miot_set_timer(MIOT_CONSOLE_FLUSH_INTERVAL_MS, 1 /* repeat */,
+                 miot_console_flush, NULL /* arg */);
 #endif
   s_cctx.initialized = 1;
 }

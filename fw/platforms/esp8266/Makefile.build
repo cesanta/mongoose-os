@@ -22,6 +22,7 @@ APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
 MIOT_ENABLE_ATCA ?= 1
+MIOT_ENABLE_ATCA_SERVICE ?= 0
 MIOT_ENABLE_CONFIG_SERVICE ?= 1
 MIOT_ENABLE_DNS_SD ?= 1
 MIOT_ENABLE_FILESYSTEM_SERVICE ?= 1
@@ -29,7 +30,8 @@ MIOT_ENABLE_I2C ?= 1
 MIOT_ENABLE_JS ?= 0
 MIOT_ENABLE_MQTT ?= 1
 MIOT_ENABLE_RPC ?= 1
-MIOT_ENABLE_RPC_UART ?= 1
+MIOT_ENABLE_RPC_CHANNEL_HTTP ?= 1
+MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
 MIOT_ENABLE_UPDATER ?= 1
 MIOT_ENABLE_UPDATER_POST ?= 1
 MIOT_ENABLE_UPDATER_RPC ?= 0
@@ -47,6 +49,7 @@ COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MIOT_ESP_PATH ?= $(MIOT_PATH)/fw/platforms/esp8266
 MIOT_POSIX_PATH ?= $(MIOT_PATH)/fw/platforms/posix
 MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
+MBEDTLS_PATH ?= $(MIOT_PATH)/third_party/mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
 MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
@@ -98,7 +101,7 @@ RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
 
-# SSL can be None or Krypton
+# SSL can be None, Krypton or mbedTLS
 SSL ?= Krypton
 
 include $(COMMON_ESP_PATH)/common.mk
@@ -263,6 +266,25 @@ ifeq "$(SSL)" "Krypton"
               -DKR_LOCALS -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 \
               -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
 endif
+ifeq "$(SSL)" "mbedTLS"
+  IPATH += $(MBEDTLS_PATH)/include
+  MIOT_SRCS += esp_crypto.c
+  MIOT_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS
+  SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
+  MBEDTLS_CFLAGS = $(CFLAGS) -Wno-unused-variable -Wno-unused-function
+  ifeq "$(MIOT_ENABLE_ATCA)" "1"
+    MBEDTLS_CFLAGS += -DMBEDTLS_ECP_ATCA -I$(ATCA_PATH)/lib
+  endif
+
+$(SSL_LIBS):
+	$(Q) make -j4 -C $(MBEDTLS_PATH)/library $(notdir $@) \
+	  CC=$(CC) AR=$(AR) \
+	  CFLAGS="$(MBEDTLS_CFLAGS)"
+	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
+	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
+else
+  SSL_LIBS =
+endif
 
 ifeq "$(MIOT_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
@@ -385,8 +407,8 @@ $(FW_FILE_2_OUT): $(APP_OUT)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
-	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(LIBS) $(LD_WRAPPERS))
+$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MIOT_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
@@ -466,6 +488,7 @@ $(FW_FS_OUT): $(BUILD_DIR)/v7
 # appropriate
 $(MIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
+	  SSL=Krypton \
 	  MIOT_PATH=$(MIOT_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
 	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
@@ -495,3 +518,6 @@ $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
+ifeq "$(SSL)" "mbedTLS"
+	$(Q) make -C $(MBEDTLS_PATH)/library clean
+endif

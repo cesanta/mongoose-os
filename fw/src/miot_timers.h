@@ -20,8 +20,8 @@
 typedef void (*timer_callback)(void *param);
 typedef uint32_t miot_timer_id;
 
-miot_timer_id miot_set_c_timer(int msecs, int repeat, timer_callback cb,
-                               void *arg);
+miot_timer_id miot_set_timer(int msecs, int repeat, timer_callback cb,
+                             void *arg);
 void miot_clear_timer(miot_timer_id id);
 
 #endif /* CS_FW_SRC_MIOT_TIMERS_H_ */

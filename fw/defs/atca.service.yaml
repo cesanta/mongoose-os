@@ -1,0 +1,107 @@
+namespace: http://mongoose-iot.com/fw
+name: /ATCA
+methods:
+  GetConfig:
+    doc: Get device config
+    result:
+      type: object
+      properties:
+        config:
+          type: string
+          doc: Base64 encoded contents of the config zone
+        crc32:
+          type: integer
+          doc: CRC32 of the config data
+
+  SetConfig:
+    doc: Set device config
+    args:
+      config:
+        type: string
+        doc: Base64 encoded contents of the config zone
+      crc32:
+        type: integer
+        doc: CRC32 of the config data
+
+  LockZone:
+    doc: Lock the specified zone
+    args:
+      zone:
+        type: integer
+        doc: Idenitifier of the zone to lock. 0 - config, 1 - data
+
+  SetKey:
+    doc: Set key in the specified slot, ECC or symmetric
+    args:
+      slot:
+        type: integer
+        doc: Slot number, 0 to 15
+      ecc:
+        type: boolean
+        doc: Whether key is a ECC private key or not
+      key:
+        type: string
+        doc: Base64 encoded key
+      crc32:
+        type: integer
+        doc: CRC32 of the key
+      wkslot:
+        type: integer
+        doc: CRC32 of the key
+      wkey:
+        type: string
+        doc: Base64 encoded write key
+
+  GenKey:
+    doc: Generate a new private ECC key in the specified slot
+    args:
+      slot:
+        type: integer
+        doc: Slot number, 0 to 15
+    result:
+      type: object
+      properties:
+        pubkey:
+          type: string
+          doc: Base64 encoded public key corresponding to the newly generated private key
+        crc32:
+          type: integer
+          doc: CRC32 of the public key
+
+  GetPubKey:
+    doc: Retrieve the public key corresponding to a private key
+    args:
+      slot:
+        type: integer
+        doc: Slot number, 0 to 15
+    result:
+      type: object
+      properties:
+        pubkey:
+          type: string
+          doc: Base64 encoded public key corresponding to the private key stored in the given slot
+        crc32:
+          type: integer
+          doc: CRC32 of the public key
+
+  Sign:
+    doc: Sign a 32-byte digest with a private ECC key
+    args:
+      slot:
+        type: integer
+        doc: Slot number, 0 to 7
+      digest:
+        type: string
+        doc: Base64 encoded digest to sign. Must be 32 bytes.
+      crc32:
+        type: integer
+        doc: CRC32 of the digest
+    result:
+      type: object
+      properties:
+        signature:
+          type: string
+          doc: Base64 encoded signature
+        crc32:
+          type: integer
+          doc: CRC32 of the signature

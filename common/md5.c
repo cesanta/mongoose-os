@@ -16,6 +16,7 @@
  */
 
 #include "common/md5.h"
+#include "common/str_util.h"
 
 #if !defined(EXCLUDE_COMMON)
 #if !DISABLE_MD5

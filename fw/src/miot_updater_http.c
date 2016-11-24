@@ -403,8 +403,8 @@ enum miot_init_result miot_updater_http_init(void) {
   if (scu->url != NULL && scu->interval > 0) {
     LOG(LL_INFO,
         ("Updates from %s, every %d seconds", scu->url, scu->interval));
-    miot_set_c_timer(scu->interval * 1000, true /* repeat */,
-                     miot_update_timer_cb, scu->url);
+    miot_set_timer(scu->interval * 1000, true /* repeat */,
+                   miot_update_timer_cb, scu->url);
   }
   return MIOT_INIT_OK;
 }

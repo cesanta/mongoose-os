@@ -100,8 +100,8 @@ miot_timer_id miot_set_js_timer(int msecs, int repeat, struct v7 *v7,
 }
 #endif
 
-miot_timer_id miot_set_c_timer(int msecs, int repeat, timer_callback cb,
-                               void *arg) {
+miot_timer_id miot_set_timer(int msecs, int repeat, timer_callback cb,
+                             void *arg) {
   struct timer_info *ti = (struct timer_info *) calloc(1, sizeof(*ti));
   if (ti == NULL) return MIOT_INVALID_TIMER_ID;
   ti->cb = cb;

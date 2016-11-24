@@ -31,6 +31,7 @@
 
 #include "oslib/osi.h"
 
+#include "fw/src/miot_app.h"
 #include "fw/src/miot_hal.h"
 
 #include "fw/platforms/cc3200/src/config.h"
@@ -69,6 +70,9 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
 int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
   cc3200_exc_init();
+
+  /* Early init app hook. */
+  miot_app_preinit();
 
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();

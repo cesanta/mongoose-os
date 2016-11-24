@@ -20,9 +20,10 @@ cc_library(
         "cs_time.h",
         "mbuf.h",
         "mg_str.h",
+        "platform.h",
+        "queue.h",
         "str_util.h",
         "utf.h",
-        "platform.h",
     ] + glob(["platforms/platform_*.h"]) + [
         "platforms/simplelink/cs_simplelink.h",
     ],

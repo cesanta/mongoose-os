@@ -98,26 +98,25 @@ struct mg_rpc_channel_info *mg_rpc_get_channel(struct mg_rpc *c,
 
 static bool mg_rpc_handle_request(struct mg_rpc *c,
                                   struct mg_rpc_channel_info *ci, int64_t id,
-                                  struct json_token src,
-                                  struct json_token method,
-                                  struct json_token args) {
+                                  struct mg_str src, struct mg_str method,
+                                  struct mg_str args) {
   if (src.len == 0) return false;
   if (id == 0) id = mg_rpc_get_id(c);
 
   struct mg_rpc_request_info *ri =
       (struct mg_rpc_request_info *) calloc(1, sizeof(*ri));
   ri->rpc = c;
-  ri->src = mg_strdup(mg_mk_str_n(src.ptr, src.len));
+  ri->src = mg_strdup(mg_mk_str_n(src.p, src.len));
   ri->id = id;
 
   struct mg_rpc_handler_info *hi;
   SLIST_FOREACH(hi, &c->handlers, handlers) {
-    if (mg_strcmp(hi->method, mg_mk_str_n(method.ptr, method.len)) == 0) break;
+    if (mg_strcmp(hi->method, mg_mk_str_n(method.p, method.len)) == 0) break;
   }
   if (hi == NULL) {
-    LOG(LL_ERROR, ("No handler for %.*s", (int) method.len, method.ptr));
+    LOG(LL_ERROR, ("No handler for %.*s", (int) method.len, method.p));
     mg_rpc_send_errorf(ri, 404, "No handler for %.*s", (int) method.len,
-                       method.ptr);
+                       method.p);
     ri = NULL;
     return true;
   }
@@ -125,14 +124,14 @@ static bool mg_rpc_handle_request(struct mg_rpc *c,
   memset(&fi, 0, sizeof(fi));
   fi.channel_type = ci->ch->get_type(ci->ch);
   fi.channel_is_trusted = ci->is_trusted;
-  hi->cb(ri, hi->cb_arg, &fi, mg_mk_str_n(args.ptr, args.len));
+  hi->cb(ri, hi->cb_arg, &fi, mg_mk_str_n(args.p, args.len));
   return true;
 }
 
 static bool mg_rpc_handle_response(struct mg_rpc *c,
                                    struct mg_rpc_channel_info *ci, int64_t id,
-                                   struct json_token result, int error_code,
-                                   struct json_token error_msg) {
+                                   struct mg_str result, int error_code,
+                                   struct mg_str error_msg) {
   if (id == 0) return false;
   struct mg_rpc_sent_request_info *ri;
   SLIST_FOREACH(ri, &c->requests, requests) {
@@ -150,20 +149,20 @@ static bool mg_rpc_handle_response(struct mg_rpc *c,
   memset(&fi, 0, sizeof(fi));
   fi.channel_type = ci->ch->get_type(ci->ch);
   fi.channel_is_trusted = ci->is_trusted;
-  ri->cb(c, ri->cb_arg, &fi, mg_mk_str_n(result.ptr, result.len), error_code,
-         mg_mk_str_n(error_msg.ptr, error_msg.len));
+  ri->cb(c, ri->cb_arg, &fi, mg_mk_str_n(result.p, result.len), error_code,
+         mg_mk_str_n(error_msg.p, error_msg.len));
   free(ri);
   return true;
 }
 
-static void mg_rpc_handle_frame(struct mg_rpc *c,
-                                struct mg_rpc_channel_info *ci,
-                                const struct mg_str f) {
-  LOG(LL_DEBUG,
-      ("%p GOT FRAME (%d): %.*s", ci->ch, (int) f.len, (int) f.len, f.p));
-  int version = 0;
-  int64_t id = 0;
-  int error_code = 0;
+/*
+ * Parses frame `f` and stores result into `frame`. Returns true in case of
+ * success, false otherwise.
+ */
+static bool mg_rpc_parse_frame(const struct mg_str f,
+                               struct mg_rpc_frame *frame) {
+  memset(frame, 0, sizeof(*frame));
+
   struct json_token src, key, dst;
   struct json_token method, args;
   struct json_token result, error_msg;
@@ -174,43 +173,58 @@ static void mg_rpc_handle_frame(struct mg_rpc *c,
   memset(&args, 0, sizeof(args));
   memset(&result, 0, sizeof(result));
   memset(&error_msg, 0, sizeof(error_msg));
+
   if (json_scanf(f.p, f.len,
                  "{v:%d id:%lld src:%T key:%T dst:%T "
                  "method:%T args:%T "
                  "result:%T error:{code:%d message:%T}}",
-                 &version, &id, &src, &key, &dst, &method, &args, &result,
-                 &error_code, &error_msg) < 1) {
-    goto out_err;
+                 &frame->version, &frame->id, &src, &key, &dst, &method, &args,
+                 &result, &frame->error_code, &error_msg) < 1) {
+    return false;
   }
+
+  frame->src = mg_mk_str_n(src.ptr, src.len);
+  frame->key = mg_mk_str_n(key.ptr, key.len);
+  frame->dst = mg_mk_str_n(dst.ptr, dst.len);
+  frame->method = mg_mk_str_n(method.ptr, method.len);
+  frame->args = mg_mk_str_n(args.ptr, args.len);
+  frame->result = mg_mk_str_n(result.ptr, result.len);
+  frame->error_msg = mg_mk_str_n(error_msg.ptr, error_msg.len);
+
+  return true;
+}
+
+static bool mg_rpc_handle_frame(struct mg_rpc *c,
+                                struct mg_rpc_channel_info *ci,
+                                const struct mg_rpc_frame *frame) {
   /* Check destination */
-  if (dst.len != 0) {
-    if (mg_strcmp(mg_mk_str_n(dst.ptr, dst.len), mg_mk_str(c->cfg->id)) != 0) {
-      goto out_err;
+  if (frame->dst.len != 0) {
+    if (mg_strcmp(frame->dst, mg_mk_str(c->cfg->id)) != 0) {
+      return false;
     }
   } else {
     /*
      * For requests, implied destination means "whoever is on the other end",
      * but for responses destination must match.
      */
-    if (method.len == 0) goto out_err;
+    if (frame->method.len == 0) return false;
   }
   /* If this channel did not have an associated address, record it now. */
   if (ci->dst.len == 0) {
-    ci->dst = mg_strdup(mg_mk_str_n(src.ptr, src.len));
+    ci->dst = mg_strdup(frame->src);
   }
-  if (method.len > 0) {
-    if (!mg_rpc_handle_request(c, ci, id, src, method, args)) {
-      goto out_err;
+  if (frame->method.len > 0) {
+    if (!mg_rpc_handle_request(c, ci, frame->id, frame->src, frame->method,
+                               frame->args)) {
+      return false;
     }
   } else {
-    if (!mg_rpc_handle_response(c, ci, id, result, error_code, error_msg)) {
-      goto out_err;
+    if (!mg_rpc_handle_response(c, ci, frame->id, frame->result,
+                                frame->error_code, frame->error_msg)) {
+      return false;
     }
   }
-  return;
-out_err:
-  LOG(LL_ERROR,
-      ("%p INVALID FRAME (%d): %.*s", ci->ch, (int) f.len, (int) f.len, f.p));
+  return true;
 }
 
 static bool mg_rpc_send_frame(struct mg_rpc_channel_info *ci,
@@ -326,7 +340,31 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
     }
     case MG_RPC_CHANNEL_FRAME_RECD: {
       const struct mg_str *f = (const struct mg_str *) ev_data;
-      mg_rpc_handle_frame(c, ci, *f);
+      struct mg_rpc_frame frame;
+      LOG(LL_DEBUG, ("%p GOT FRAME (%d): %.*s", ci->ch, (int) f->len,
+                     (int) f->len, f->p));
+      if (!mg_rpc_parse_frame(*f, &frame)) {
+        goto invalid_frame;
+      }
+      if (!mg_rpc_handle_frame(c, ci, &frame)) {
+        goto invalid_frame;
+      }
+      break;
+    invalid_frame:
+      LOG(LL_ERROR, ("%p INVALID FRAME (%d): %.*s", ci->ch, (int) f->len,
+                     (int) f->len, f->p));
+      break;
+    }
+    case MG_RPC_CHANNEL_FRAME_RECD_PARSED: {
+      const struct mg_rpc_frame *frame = (const struct mg_rpc_frame *) ev_data;
+      LOG(LL_DEBUG, ("%p GOT PARSED FRAME from %.*s: %.*s %.*s", ci->ch,
+                     frame->src.len, frame->src.p, frame->method.len,
+                     frame->method.p, frame->args.len, frame->args.p));
+      if (!mg_rpc_handle_frame(c, ci, frame)) {
+        LOG(LL_ERROR, ("%p INVALID FRAME from %.*s: %.*s %.*s", ci->ch,
+                       frame->src.len, frame->src.p, frame->method.len,
+                       frame->method.p, frame->args.len, frame->args.p));
+      }
       break;
     }
     case MG_RPC_CHANNEL_FRAME_SENT: {

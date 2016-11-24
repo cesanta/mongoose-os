@@ -23,6 +23,15 @@ struct mg_rpc_cfg {
   int max_queue_size;
 };
 
+struct mg_rpc_frame {
+  int version;
+  int64_t id;
+  int error_code;
+  struct mg_str src, key, dst;
+  struct mg_str method, args;
+  struct mg_str result, error_msg;
+};
+
 /* Create mg_rpc instance. Takes over cfg, which must be heap-allocated. */
 struct mg_rpc *mg_rpc_create(struct mg_rpc_cfg *cfg);
 

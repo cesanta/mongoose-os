@@ -10,6 +10,13 @@ ifeq "$(MIOT_ENABLE_ATCA)" "1"
   MIOT_FEATURES += -DMIOT_ENABLE_ATCA -I$(ATCA_PATH)/lib
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_atca_config.yaml
 
+  ifeq "$(MIOT_ENABLE_RPC)$(MIOT_ENABLE_ATCA_SERVICE)" "11"
+    MIOT_SRCS += miot_atca_service.c
+    MIOT_FEATURES += -DMIOT_ENABLE_ATCA_SERVICE
+  else
+    MIOT_FEATURES += -DMIOT_ENABLE_ATCA_SERVICE=0
+  endif
+
 $(BUILD_DIR)/atca/libatca.a:
 	$(Q) make -C $(ATCA_PATH)/lib \
 		CC=$(CC) AR=$(AR) BUILD_DIR=$(BUILD_DIR)/atca \
@@ -37,9 +44,13 @@ ifeq "$(MIOT_ENABLE_FILESYSTEM_SERVICE)" "1"
   MIOT_SRCS += miot_service_filesystem.c
   MIOT_FEATURES += -DMIOT_ENABLE_FILESYSTEM_SERVICE
 endif
-ifeq "$(MIOT_ENABLE_RPC_UART)" "1"
+ifeq "$(MIOT_ENABLE_RPC_CHANNEL_HTTP)" "1"
+  MIOT_SRCS += mg_rpc_channel_http.c
+  MIOT_FEATURES += -DMIOT_ENABLE_RPC_CHANNEL_HTTP
+endif
+ifeq "$(MIOT_ENABLE_RPC_CHANNEL_UART)" "1"
   MIOT_SRCS += miot_rpc_channel_uart.c
-  MIOT_FEATURES += -DMIOT_ENABLE_RPC_UART
+  MIOT_FEATURES += -DMIOT_ENABLE_RPC_CHANNEL_UART
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_rpc_uart_config.yaml
 endif
 
@@ -85,6 +96,7 @@ endif
 # This is required for needed make invocations, such as when building POSIX MIOT
 # for JS freeze operation.
 export MIOT_ENABLE_ATCA
+export MIOT_ENABLE_ATCA_SERVICE
 export MIOT_ENABLE_CONFIG_SERVICE
 export MIOT_ENABLE_DNS_SD
 export MIOT_ENABLE_FILESYSTEM_SERVICE
@@ -92,7 +104,8 @@ export MIOT_ENABLE_I2C
 export MIOT_ENABLE_JS
 export MIOT_ENABLE_MQTT
 export MIOT_ENABLE_RPC
-export MIOT_ENABLE_RPC_UART
+export MIOT_ENABLE_RPC_CHANNEL_HTTP
+export MIOT_ENABLE_RPC_CHANNEL_UART
 export MIOT_ENABLE_UPDATER
 export MIOT_ENABLE_UPDATER_POST
 export MIOT_ENABLE_UPDATER_RPC

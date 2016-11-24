@@ -337,7 +337,7 @@ static void async_trigger_event(struct v7 *v7, v7_val_t obj,
   v7_own(v7, &params->arg2);
   params->ev_name = strdup(ev_name);
 
-  miot_set_c_timer(0, 0, async_trigger_event_cb, params);
+  miot_set_timer(0, 0, async_trigger_event_cb, params);
 }
 
 static v7_val_t create_error(struct v7 *v7, const char *message) {
