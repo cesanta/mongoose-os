@@ -20,7 +20,8 @@
 static mg_event_handler_t s_user_handler = NULL;
 static void *s_user_data = NULL;
 static int s_reconnect_timeout = 0;
-struct mg_connection *s_conn = NULL;
+static miot_timer_id reconnect_timer_id = MIOT_INVALID_TIMER_ID;
+static struct mg_connection *s_conn = NULL;
 
 static bool mqtt_global_connect(void);
 
@@ -32,6 +33,7 @@ static void call_user_handler(struct mg_connection *nc, int ev, void *ev_data) {
 }
 
 static void reconnect_timer_cb(void *user_data) {
+  reconnect_timer_id = MIOT_INVALID_TIMER_ID;
   mqtt_global_connect();
 
   (void) user_data;
@@ -60,8 +62,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       }
       LOG(LL_DEBUG,
           ("MQTT reconnecting after %d seconds", s_reconnect_timeout));
-      miot_set_timer(s_reconnect_timeout * 1000 /* ms */, 0, reconnect_timer_cb,
-                     NULL);
+      reconnect_timer_id = miot_set_timer(s_reconnect_timeout * 1000 /* ms */,
+                                          0, reconnect_timer_cb, NULL);
 
       /*
        * If that connection fails, next reconnect timeout will be larger
@@ -105,13 +107,18 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   }
 }
 
+static void mg_mqtt_wifi_ready(enum miot_wifi_status event, void *arg) {
+  if (event != MIOT_WIFI_IP_ACQUIRED) return;
+
+  mqtt_global_connect();
+  (void) arg;
+}
+
 enum miot_init_result miot_mqtt_global_init(void) {
   enum miot_init_result ret = MIOT_INIT_OK;
   const struct sys_config_mqtt *smcfg = &get_cfg()->mqtt;
   s_reconnect_timeout = smcfg->reconnect_timeout_min;
-  if (!mqtt_global_connect()) {
-    ret = MIOT_INIT_MQTT_FAILED;
-  }
+  miot_wifi_add_on_change_cb(mg_mqtt_wifi_ready, NULL);
   return ret;
 }
 
@@ -120,6 +127,15 @@ static bool mqtt_global_connect(void) {
   struct mg_mgr *mgr = miot_get_mgr();
   const struct sys_config *scfg = get_cfg();
   struct mg_connect_opts opts;
+
+  /* If we're already connected, do nothing */
+  if (s_conn != NULL) return ret;
+
+  if (reconnect_timer_id != MIOT_INVALID_TIMER_ID) {
+    miot_clear_timer(reconnect_timer_id);
+    reconnect_timer_id = MIOT_INVALID_TIMER_ID;
+  }
+
   memset(&opts, 0, sizeof(opts));
 
   if (scfg->mqtt.server != NULL && scfg->device.id != NULL) {
