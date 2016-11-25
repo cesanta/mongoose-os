@@ -25,7 +25,7 @@
   ["debug.factory_reset_gpio", "i", -1, {title: "Factory reset GPIO (low on boot)"}],
 
   ["sys", "o", {title: "System settings"}],
-  ["sys.wdt_timeout", "i", 15, {title: "Watchdod timeout (seconds)"}],
+  ["sys.wdt_timeout", "i", 30, {title: "Watchdog timeout (seconds)"}],
 
   ["conf_acl", "s", "*", {title: "Conf ACL"}],
 ]
