@@ -277,9 +277,11 @@ enum miot_init_result miot_sys_config_init_http(
 
   struct mg_bind_opts opts;
   memset(&opts, 0, sizeof(opts));
+#if MG_ENABLE_SSL
   opts.ssl_cert = cfg->ssl_cert;
   opts.ssl_key = cfg->ssl_key;
   opts.ssl_ca_cert = cfg->ssl_ca_cert;
+#endif
   listen_conn =
       mg_bind_opt(miot_get_mgr(), cfg->listen_addr, mongoose_ev_handler, opts);
 
@@ -290,7 +292,12 @@ enum miot_init_result miot_sys_config_init_http(
 
   mg_set_protocol_http_websocket(listen_conn);
   LOG(LL_INFO, ("HTTP server started on [%s]%s", cfg->listen_addr,
-                (opts.ssl_cert ? " (SSL)" : "")));
+#if MG_ENABLE_SSL
+                (opts.ssl_cert ? " (SSL)" : "")
+#else
+                ""
+#endif
+                    ));
 
   if (cfg->tunnel.enable && device_cfg->id != NULL &&
       device_cfg->password != NULL) {
@@ -319,7 +326,12 @@ enum miot_init_result miot_sys_config_init_http(
 
     mg_set_protocol_http_websocket(listen_conn_tun);
     LOG(LL_INFO, ("Tunneled HTTP server started on [%s]%s", tun_addr,
-                  (opts.ssl_cert ? " (SSL)" : "")));
+#if MG_ENABLE_SSL
+                  (opts.ssl_cert ? " (SSL)" : "")
+#else
+                  ""
+#endif
+                      ));
 
     miot_wifi_add_on_change_cb(on_wifi_ready, NULL);
   }
@@ -361,6 +373,8 @@ clean:
   return result;
 }
 
+void mbedtls_debug_set_threshold(int threshold);
+
 enum miot_init_result miot_sys_config_init(void) {
   /* Load system defaults - mandatory */
   if (!load_config_defaults(&s_cfg)) {
@@ -392,6 +406,9 @@ enum miot_init_result miot_sys_config_init(void) {
   if (s_cfg.debug.level > _LL_MIN && s_cfg.debug.level < _LL_MAX) {
     cs_log_set_level((enum cs_log_level) s_cfg.debug.level);
   }
+#if MG_SSL_IF == MG_SSL_IF_MBEDTLS
+  mbedtls_debug_set_threshold(s_cfg.debug.mbedtls_level);
+#endif
 
   s_ro_vars.arch = FW_ARCHITECTURE;
   s_ro_vars.fw_id = build_id;

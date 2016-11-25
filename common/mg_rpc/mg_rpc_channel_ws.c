@@ -167,7 +167,12 @@ static void mg_rpc_channel_ws_out_connect(struct mg_rpc_channel *ch) {
   opts.ssl_cert = cfg->ssl_client_cert_file;
 #endif
   LOG(LL_INFO, ("%p Connecting to %s, SSL? %d", ch, cfg->server_address,
-                (opts.ssl_ca_cert != NULL)));
+#if MG_ENABLE_SSL
+                (opts.ssl_ca_cert != NULL)
+#else
+                0
+#endif
+                    ));
   chd->wsd.nc =
       mg_connect_ws_opt(chd->mgr, mg_rpc_ws_out_handler, opts,
                         cfg->server_address, MG_RPC_WS_PROTOCOL, NULL);
@@ -184,6 +189,7 @@ static const char *mg_rpc_channel_ws_out_get_type(struct mg_rpc_channel *ch) {
       (struct mg_rpc_channel_ws_out_data *) ch->channel_data;
   return (chd->cfg->ssl_ca_file ? "wss_out" : "ws_out");
 #else
+  (void) ch;
   return "ws_out";
 #endif
 }

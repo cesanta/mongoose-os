@@ -106,10 +106,12 @@ struct mg_rpc_channel_ws_out_cfg *miot_rpc_channel_ws_out_cfg_from_sys(
   struct mg_rpc_channel_ws_out_cfg *chcfg =
       (struct mg_rpc_channel_ws_out_cfg *) calloc(1, sizeof(*chcfg));
   miot_conf_set_str(&chcfg->server_address, sccfg->rpc.server_address);
+#if MG_ENABLE_SSL
   miot_conf_set_str(&chcfg->ssl_ca_file, sccfg->rpc.ssl_ca_file);
   miot_conf_set_str(&chcfg->ssl_client_cert_file,
                     sccfg->rpc.ssl_client_cert_file);
   miot_conf_set_str(&chcfg->ssl_server_name, sccfg->rpc.ssl_server_name);
+#endif
   chcfg->reconnect_interval_min = sccfg->rpc.reconnect_timeout_min;
   chcfg->reconnect_interval_max = sccfg->rpc.reconnect_timeout_max;
   return chcfg;
