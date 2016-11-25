@@ -26,10 +26,9 @@ struct put_data {
 };
 
 /* Handler for /v1/Filesystem.List */
-static void miot_filesystem_list_handler(struct mg_rpc_request_info *ri,
-                                         void *cb_arg,
-                                         struct mg_rpc_frame_info *fi,
-                                         struct mg_str args) {
+static void miot_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                                 struct mg_rpc_frame_info *fi,
+                                 struct mg_str args) {
   struct mbuf fb;
   struct json_out out = JSON_OUT_MBUF(&fb);
   DIR *dirp;
@@ -74,10 +73,9 @@ static void miot_filesystem_list_handler(struct mg_rpc_request_info *ri,
   (void) args;
 }
 
-static void miot_filesystem_get_handler(struct mg_rpc_request_info *ri,
-                                        void *cb_arg,
-                                        struct mg_rpc_frame_info *fi,
-                                        struct mg_str args) {
+static void miot_fs_get_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                                struct mg_rpc_frame_info *fi,
+                                struct mg_str args) {
   char *filename = NULL;
   long offset = 0, len = -1;
   long file_size = 0;
@@ -141,6 +139,10 @@ static void miot_filesystem_get_handler(struct mg_rpc_request_info *ri,
       goto clean;
     }
 
+    if (offset == 0) {
+      LOG(LL_INFO, ("Sending %s", filename));
+    }
+
     /* seek & read the data */
     if (fseek(fp, offset, SEEK_SET)) {
       mg_rpc_send_errorf(ri, 500, "fseek");
@@ -176,10 +178,9 @@ clean:
   (void) cb_arg;
 }
 
-static void miot_filesystem_put_handler(struct mg_rpc_request_info *ri,
-                                        void *cb_arg,
-                                        struct mg_rpc_frame_info *fi,
-                                        struct mg_str args) {
+static void miot_fs_put_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                                struct mg_rpc_frame_info *fi,
+                                struct mg_str args) {
   char *filename = NULL;
   int append = 0;
   FILE *fp = NULL;
@@ -210,6 +211,10 @@ static void miot_filesystem_put_handler(struct mg_rpc_request_info *ri,
     goto clean;
   }
 
+  if (!append) {
+    LOG(LL_INFO, ("Receiving %s", filename));
+  }
+
   if (fwrite(data.p, 1, data.len, fp) != (size_t) data.len) {
     mg_rpc_send_errorf(ri, 500, "failed to write data");
     ri = NULL;
@@ -238,11 +243,11 @@ clean:
 enum miot_init_result miot_service_filesystem_init(void) {
   struct mg_rpc *c = miot_rpc_get_global();
   mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_LIST_CMD),
-                     miot_filesystem_list_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_GET_CMD),
-                     miot_filesystem_get_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_PUT_CMD),
-                     miot_filesystem_put_handler, NULL);
+                     miot_fs_list_handler, NULL);
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_GET_CMD), miot_fs_get_handler,
+                     NULL);
+  mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_PUT_CMD), miot_fs_put_handler,
+                     NULL);
   return MIOT_INIT_OK;
 }
 
