@@ -18,6 +18,7 @@
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_updater_common.h"
 #include "fw/src/miot_utils.h"
+#include "fw/src/miot_wifi.h"
 
 #define MIOT_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
@@ -239,6 +240,24 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
+static void on_wifi_ready(enum miot_wifi_status event, void *arg) {
+  if (listen_conn_tun != NULL) {
+    /* Depending on the WiFi status, allow or disallow tunnel reconnection */
+    switch (event) {
+      case MIOT_WIFI_DISCONNECTED:
+        listen_conn_tun->flags |= MG_F_TUN_DO_NOT_RECONNECT;
+        break;
+      case MIOT_WIFI_IP_ACQUIRED:
+        listen_conn_tun->flags &= ~MG_F_TUN_DO_NOT_RECONNECT;
+        break;
+      default:
+        break;
+    }
+  }
+
+  (void) arg;
+}
+
 enum miot_init_result miot_sys_config_init_http(
     const struct sys_config_http *cfg,
     const struct sys_config_device *device_cfg) {
@@ -286,6 +305,12 @@ enum miot_init_result miot_sys_config_init_http(
     }
     listen_conn_tun =
         mg_bind_opt(miot_get_mgr(), tun_addr, mongoose_ev_handler, opts);
+    /*
+     * Wifi is not yet ready, so we need to set a flag which prevents the
+     * tunnel from reconnecting. The flag will be cleared when wifi connection
+     * is ready.
+     */
+    listen_conn_tun->flags |= MG_F_TUN_DO_NOT_RECONNECT;
 
     if (!listen_conn_tun) {
       LOG(LL_ERROR, ("Error binding to [%s]", tun_addr));
@@ -295,6 +320,8 @@ enum miot_init_result miot_sys_config_init_http(
     mg_set_protocol_http_websocket(listen_conn_tun);
     LOG(LL_INFO, ("Tunneled HTTP server started on [%s]%s", tun_addr,
                   (opts.ssl_cert ? " (SSL)" : "")));
+
+    miot_wifi_add_on_change_cb(on_wifi_ready, NULL);
   }
 
 #if MIOT_ENABLE_WEB_CONFIG
