@@ -112,12 +112,11 @@ enum cc3200_init_result {
 
 static enum cc3200_init_result cc3200_init(void *arg) {
   mongoose_init();
-  if (MIOT_DEBUG_UART >= 0) {
-    struct miot_uart_config *ucfg = miot_uart_default_config();
-    ucfg->baud_rate = MIOT_DEBUG_UART_BAUD_RATE;
-    if (miot_uart_init(MIOT_DEBUG_UART, ucfg, NULL, NULL) == NULL) {
-      return CC3200_INIT_UART_INIT_FAILED;
-    }
+  if (miot_uart_init(0, miot_uart_default_config(), NULL, NULL) == NULL) {
+    return CC3200_INIT_UART_INIT_FAILED;
+  }
+  if (miot_uart_init(1, miot_uart_default_config(), NULL, NULL) == NULL) {
+    return CC3200_INIT_UART_INIT_FAILED;
   }
 
   if (strcmp(MIOT_APP, "mongoose-iot") != 0) {

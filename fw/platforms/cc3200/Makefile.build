@@ -114,9 +114,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 
 V7_HOST_FEATURES ?= $(V7_FEATURES)
 V7_CC3200_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
-MIOT_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64 \
-                        -DMIOT_ENABLE_WEB_CONFIG \
-                        -DMIOT_ENABLE_FILE_UPLOAD
+MIOT_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64 -DMIOT_ENABLE_FILE_UPLOAD
 
 ifeq "$(V7_NO_COMPILER)" "1"
   ifneq "$(V7_FREEZE)" "1"
@@ -281,7 +279,7 @@ FW_PARTS = /sys/mcuimg.bin:type=boot,src=$(BOOT_BIN),falloc=14336 \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
 
 ifneq "$(CC3200_SP_FILE)" ""
-  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),falloc=60416,sign=$(notdir $(CC3200_SP_FILE)).sign \
+  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),falloc=49152,sign=$(notdir $(CC3200_SP_FILE)).sign \
               $(notdir $(CC3200_SP_FILE)).sign:type=signature,src=$(CC3200_SP_FILE).sign
 endif
 

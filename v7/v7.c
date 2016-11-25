@@ -1558,7 +1558,7 @@ void cs_base64_finish(struct cs_base64_ctx *ctx);
 
 void cs_base64_encode(const unsigned char *src, int src_len, char *dst);
 void cs_fprint_base64(FILE *f, const unsigned char *src, int src_len);
-int cs_base64_decode(const unsigned char *s, int len, char *dst);
+int cs_base64_decode(const unsigned char *s, int len, char *dst, int *dec_len);
 
 #ifdef __cplusplus
 }
@@ -10427,9 +10427,10 @@ static unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-int cs_base64_decode(const unsigned char *s, int len, char *dst) {
+int cs_base64_decode(const unsigned char *s, int len, char *dst, int *dec_len) {
   unsigned char a, b, c, d;
   int orig_len = len;
+  char *orig_dst = dst;
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
          (b = from_b64(s[1])) != 255 && (c = from_b64(s[2])) != 255 &&
          (d = from_b64(s[3])) != 255) {
@@ -10443,6 +10444,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst) {
     *dst++ = c << 6 | d;
   }
   *dst = 0;
+  if (dec_len != NULL) *dec_len = (dst - orig_dst);
   return orig_len - len;
 }
 
