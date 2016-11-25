@@ -1,0 +1,8 @@
+name: c_i2c
+# arch: PLATFORM # esp8266 or cc3200
+version: 1.0
+skeleton_version: 2016-11-11
+sources:
+  - src
+build_vars:
+  APP_CONF_SCHEMA: src/conf_schema.yaml
