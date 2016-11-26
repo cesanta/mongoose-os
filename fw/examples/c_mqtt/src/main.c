@@ -7,6 +7,14 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_wifi.h"
 
+#if CS_PLATFORM == CS_P_ESP8266
+#define BUTTON_PIN 0 /* GPIO0, "Flash" button on NodeMCU */
+#elif CS_PLATFORM == CS_P_CC3200
+#define BUTTON_PIN 15 /* SW2 on LAUNCHXL */
+#else
+#error Unknown platform
+#endif
+
 static void sub(struct mg_connection *c, const char *fmt, ...) {
   char buf[100];
   struct mg_mqtt_topic_expression topic = {buf, 0};
@@ -46,7 +54,31 @@ static void on_wifi_event(enum miot_wifi_status ev, void *data) {
   (void) data;
 }
 
+void gpio_int_handler(int pin, enum gpio_level level, void *arg) {
+  static double last = 0;
+  double now = mg_time();
+  if (now - last > 0.2) {
+    struct mg_connection *nc = miot_mqtt_get_global_conn();
+    last = now;
+    if (nc != NULL) {
+      char message[50], topic[50];
+      struct json_out jmo = JSON_OUT_BUF(message, sizeof(message));
+      int n = json_printf(&jmo, "{pin: %d}", pin);
+      snprintf(topic, sizeof(topic), "/%s/button", get_cfg()->device.id);
+      mg_mqtt_publish(nc, topic, 123, MG_MQTT_QOS(0), message, n);
+      LOG(LL_INFO, ("Click! Published %s to %s.", message, topic));
+    } else {
+      LOG(LL_INFO, ("Click!"));
+    }
+  }
+  miot_gpio_intr_set(BUTTON_PIN, GPIO_INTR_POSEDGE);
+  (void) level;
+  (void) arg;
+}
+
 enum miot_app_init_result miot_app_init(void) {
   miot_wifi_add_on_change_cb(on_wifi_event, 0);
+  miot_gpio_intr_init(gpio_int_handler, NULL);
+  miot_gpio_intr_set(BUTTON_PIN, GPIO_INTR_POSEDGE);
   return MIOT_APP_INIT_SUCCESS;
 }
