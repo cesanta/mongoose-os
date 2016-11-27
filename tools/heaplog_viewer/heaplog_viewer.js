@@ -21,6 +21,8 @@
 
   var OVERHEAD_BYTES_PER_ALLOC = 8;
 
+  var usageChart;
+
   var ItemType = {
     NONE: 0,
     MALLOC: 1,
@@ -231,8 +233,6 @@
       }
     }
 
-    guiLoggerStateApply();
-
     // Draw usage chart.
     {
       var data = {
@@ -261,7 +261,10 @@
           spanGaps: false,
         }]
       };
-      var chart = new Chart($("#chart"), {
+
+      if (usageChart) usageChart.destroy();
+
+      usageChart = new Chart($("#chart"), {
         type: 'line',
         data: data,
         options: {
@@ -271,16 +274,21 @@
           },
           legend: { display: false },
           hover: { animationDuration: 0 },
-          tooltips: { callbacks: { title: function(i, d) { return ""; } } }
         }
       });
       $("#chart").on("click", function(ev) {
-        var activePoints = chart.getElementsAtEvent(ev);
+        var activePoints = usageChart.getElementsAtEvent(ev);
         if (!activePoints || activePoints.length == 0) return;
         var i = activePoints[0]._index;
         setLogItemIdx(chartItems[i].idx);
       });
+      var usageChartEls = usageChart.data.datasets[0]._meta[0].data;
+      for (var i = 0; i < usageChartEls.length; i++) {
+        chartItems[i].usageChartEl = usageChartEls[i];
+      }
     }
+
+    guiLoggerStateApply();
   }
 
   function guiLoggerStateApply() {
@@ -339,6 +347,17 @@
     // select log item
     $("#log_sel").val( logger.getItemIdx() );
     $("#log_sel").focus();
+
+    var uce = item.usageChartEl;
+    if (uce) {
+      console.log(uce);
+      usageChart.tooltip._active = [uce];
+      usageChart.tooltip.update(true);
+      usageChart.tooltip.pivot();
+      usageChart.update();
+    }
+
+    setHint(item.toString());
   }
 
   function resetCell(cell) {

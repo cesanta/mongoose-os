@@ -354,8 +354,21 @@ int mg_lwip_tcp_write(struct mg_connection *nc, const void *data,
     tcp_output(tpcb);
     return 0;
   }
+/*
+ * On ESP8266 we only allow one TCP segment in flight at any given time.
+ * This may increase latency and reduce efficiency of tcp windowing,
+ * but memory is scarce and precious on that platform so we do this to
+ * reduce footprint.
+ */
+#if CS_PLATFORM == CS_P_ESP8266
+  if (tpcb->unacked != NULL) {
+    return 0;
+  }
+  if (tpcb->unsent != NULL) {
+    len = MIN(len, (TCP_MSS - tpcb->unsent->len));
+  }
+#endif
   err_t err = tcp_write(tpcb, data, len, TCP_WRITE_FLAG_COPY);
-  tcp_output(tpcb);
   DBG(("%p tcp_write %u = %d", tpcb, len, err));
   if (err != ERR_OK) {
     /*

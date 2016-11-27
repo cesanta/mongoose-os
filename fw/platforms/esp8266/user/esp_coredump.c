@@ -30,7 +30,7 @@ static NOINSTR void core_dump_emit_char(char c, void *user_data) {
   do {
     now = system_get_time();
   } while (now > last_char_ts /* handle overflow */ &&
-           now - last_char_ts < 100 /* Char time @ 115200 is 70 us */);
+           now - last_char_ts < 70 /* Char time @ 115200 is 70 us */);
   (*col_counter)++;
   fputc(c, stderr);
   if (*col_counter >= 160) {

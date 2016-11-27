@@ -110,7 +110,6 @@ time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
   mg_ev_mgr_lwip_process_signals(mgr);
   for (nc = mgr->active_connections; nc != NULL; nc = tmp) {
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-    (void) cs;
     tmp = nc->next;
     n++;
     if (nc->flags & MG_F_CLOSE_IMMEDIATELY) {
@@ -145,11 +144,16 @@ time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
         }
       }
     } else
-#endif /* KR_VERSION */
+#endif /* MG_ENABLE_SSL */
     {
       if (!(nc->flags & (MG_F_CONNECTING | MG_F_UDP))) {
         if (nc->send_mbuf.len > 0) mg_lwip_send_more(nc);
       }
+    }
+    if (nc->sock != INVALID_SOCKET &&
+        !(nc->flags & (MG_F_UDP | MG_F_LISTENING)) && cs->pcb.tcp != NULL &&
+        cs->pcb.tcp->unsent != NULL) {
+      tcp_output(cs->pcb.tcp);
     }
     if (nc->ev_timer_time > 0) {
       if (num_timers == 0 || nc->ev_timer_time < min_timer) {

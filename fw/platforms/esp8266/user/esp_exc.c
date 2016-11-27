@@ -15,6 +15,8 @@
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
+#include "fw/src/miot_hal.h"
+
 #include "esp_coredump.h"
 #include "esp_flash_bytes.h"
 #include "esp_fs.h"
@@ -236,7 +238,15 @@ NOINSTR void system_restart_local(void) {
     }
 #endif
   }
+#ifdef MIOT_STOP_ON_EXCEPTION
+  fprintf(stderr, "NOT rebooting.\n");
+  fs_flush_stderr();
+  while (1) {
+    miot_wdt_feed();
+  }
+#else
   fprintf(stderr, "rebooting\n");
   fs_flush_stderr();
   system_restart_local_sdk();
+#endif
 }
