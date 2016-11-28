@@ -269,7 +269,7 @@ endif
 ifeq "$(SSL)" "mbedTLS"
   IPATH += $(MBEDTLS_PATH)/include
   MIOT_SRCS += esp_crypto.c
-  MIOT_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS -DMG_SSL_IF_MBEDTLS_FREE_PEER_CERT
+  MIOT_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS -DMG_SSL_IF_MBEDTLS_FREE_CERTS
   SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
   MBEDTLS_CFLAGS = $(CFLAGS) -Wno-unused-variable -Wno-unused-function
   SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_mbedtls_config.yaml
