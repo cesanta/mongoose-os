@@ -194,8 +194,6 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   }
 #endif
 
-  LOG(LL_INFO, ("Init done, RAM: %d free", miot_get_free_heap_size()));
-
 #if MIOT_ENABLE_JS
   miot_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif

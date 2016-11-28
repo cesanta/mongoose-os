@@ -6,7 +6,9 @@
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_dns_sd.h"
 #include "fw/src/miot_i2c.h"
+#include "fw/src/miot_hal.h"
 #include "fw/src/miot_mdns.h"
+#include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_mqtt.h"
 #include "fw/src/miot_service_config.h"
 #include "fw/src/miot_service_filesystem.h"
@@ -81,6 +83,11 @@ enum miot_init_result mg_init(void) {
   if (miot_app_init() != MIOT_APP_INIT_SUCCESS) {
     return MIOT_INIT_APP_INIT_FAILED;
   }
+
+  LOG(LL_INFO,
+      ("Init done, RAM: %d free, %d min free", (int) miot_get_free_heap_size(),
+       (int) miot_get_min_free_heap_size()));
+  miot_set_enable_min_heap_free_reporting(true);
 
   return MIOT_INIT_OK;
 }

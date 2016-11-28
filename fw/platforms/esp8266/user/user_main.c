@@ -148,8 +148,6 @@ int esp_mg_init(rboot_config *bcfg) {
   }
 #endif
 
-  LOG(LL_INFO, ("Init done, RAM: %d free", miot_get_free_heap_size()));
-
 #if MIOT_ENABLE_JS
   miot_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif

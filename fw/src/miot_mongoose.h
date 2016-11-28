@@ -24,6 +24,8 @@ void miot_remove_poll_cb(miot_poll_cb_t cb, void *cb_arg);
 
 void miot_wdt_set_feed_on_poll(bool enable);
 
+void miot_set_enable_min_heap_free_reporting(bool enable);
+
 /* HAL */
 
 /* Schedule MG poll ASAP. Note: may be called from ISR context. */

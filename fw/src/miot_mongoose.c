@@ -5,6 +5,7 @@
 
 #include "fw/src/miot_mongoose.h"
 
+#include "common/cs_dbg.h"
 #include "common/queue.h"
 
 #include "fw/src/miot_hal.h"
@@ -15,6 +16,7 @@
 
 struct mg_mgr s_mgr;
 static bool s_feed_wdt;
+static size_t s_min_free_heap_size;
 
 struct cb_info {
   miot_poll_cb_t cb;
@@ -36,6 +38,7 @@ void mongoose_destroy(void) {
 }
 
 int mongoose_poll(int ms) {
+  int ret;
   {
     struct cb_info *ci, *cit;
     SLIST_FOREACH_SAFE(ci, &s_poll_cbs, poll_cbs, cit) {
@@ -47,10 +50,18 @@ int mongoose_poll(int ms) {
 
   if (mg_next(&s_mgr, NULL) != NULL) {
     mg_mgr_poll(&s_mgr, ms);
-    return 1;
+    ret = 1;
   } else {
-    return 0;
+    ret = 0;
   }
+
+  if (s_min_free_heap_size > 0 &&
+      miot_get_min_free_heap_size() < s_min_free_heap_size) {
+    s_min_free_heap_size = miot_get_min_free_heap_size();
+    LOG(LL_INFO, ("New heap free LWM: %d", (int) s_min_free_heap_size));
+  }
+
+  return ret;
 }
 
 void miot_add_poll_cb(miot_poll_cb_t cb, void *cb_arg) {
@@ -72,4 +83,10 @@ void miot_remove_poll_cb(miot_poll_cb_t cb, void *cb_arg) {
 
 void miot_wdt_set_feed_on_poll(bool enable) {
   s_feed_wdt = (enable != false);
+}
+
+void miot_set_enable_min_heap_free_reporting(bool enable) {
+  if (!enable && s_min_free_heap_size == 0) return;
+  if (enable && s_min_free_heap_size > 0) return;
+  s_min_free_heap_size = (enable ? miot_get_min_free_heap_size() : 0);
 }
