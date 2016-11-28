@@ -7,6 +7,7 @@
 
 #if MIOT_ENABLE_ATCA
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -168,8 +169,14 @@ ATCA_STATUS hal_iface_release(ATCAIfaceType ifacetype, void *hal_data) {
   return ATCA_SUCCESS;
 }
 
+bool s_atca_is_available = false;
+
 /* Invoked from mbedTLS during ECDH phase of the handshake. */
-uint8_t atca_get_ecdh_slots_mask() {
+int mbedtls_atca_is_available() {
+  return s_atca_is_available;
+}
+
+uint8_t mbedtls_atca_get_ecdh_slots_mask() {
   return get_cfg()->sys.atca_ecdh_slots_mask;
 }
 
@@ -208,11 +215,14 @@ enum miot_init_result miot_atca_init(void) {
     return MIOT_INIT_ATCA_FAILED;
   }
 
-  LOG(LL_INFO, ("ATECC508 rev 0x%04x S/N 0x%04x%04x%02x, zone "
-                "lock status: %s, %s; ECDH slots: 0x%02x",
-                htonl(revision), htonl(serial[0]), htonl(serial[1]),
-                *((uint8_t *) &serial[2]), (config_is_locked ? "yes" : "no"),
-                (data_is_locked ? "yes" : "no"), atca_get_ecdh_slots_mask()));
+  LOG(LL_INFO,
+      ("ATECC508 rev 0x%04x S/N 0x%04x%04x%02x, zone "
+       "lock status: %s, %s; ECDH slots: 0x%02x",
+       htonl(revision), htonl(serial[0]), htonl(serial[1]),
+       *((uint8_t *) &serial[2]), (config_is_locked ? "yes" : "no"),
+       (data_is_locked ? "yes" : "no"), mbedtls_atca_get_ecdh_slots_mask()));
+
+  s_atca_is_available = true;
 
   return MIOT_INIT_OK;
 }
