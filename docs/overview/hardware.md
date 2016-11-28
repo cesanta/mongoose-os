@@ -5,15 +5,16 @@ title: Supported hardware
 Mongoose Firmware runs on multiple hardware architectures.
 Fully supported architectures are:
 
-- Texas Instruments CC3200 ([buy hardware](http://www.aliexpress.com/af/nodemcu.html?SearchText=launchxl))
-- Espressif ESP8266 ([buy hardware](http://www.aliexpress.com/af/nodemcu.html?SearchText=nodemcu))
+- Texas Instruments CC3200
+- Espressif ESP8266
+- Espressif ESP32
 
 Partially supported architectures are:
 - Texas Instruments MSP432
 - Texas Instruments Tiva TM4C
 - ST Microelectronics STM32
 - Microchip PIC32 (MX AND MZ series)
-- Nordic Semiconductors nRF 52
+- Nordic Semiconductors nRF51 and nRF52
 - NXP K6x series
 - NXP LPC435x
 

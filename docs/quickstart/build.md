@@ -2,7 +2,6 @@
 title: Build the firmware
 ---
 
-Download `miot` command line tool from https://mongoose-iot.com/software.html .
 Create an empty directory, go into it, and run:
 
 ```bash
@@ -23,7 +22,7 @@ files and directories are created:
 Now, as all required files are created, we can build a firmware:
 
 ```sh
-$ miot build --user YOUR_USERNAME --pass YOUR_PASSWORD
+$ miot build
 ```
 
 This command packs source and filesystem files and sends them to the

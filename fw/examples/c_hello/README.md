@@ -1,4 +1,4 @@
-See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/overview.md/)
+See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/)
 on how to build and flash the firmware. Below is an example session:
 
 ```bash

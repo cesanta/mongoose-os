@@ -1,24 +1,9 @@
 Mongoose Firmware networking skeleton
 =====================================
 
-# Overview
 
-Mongoose Firmware is a firmware skeleton that provides a set of
-essential IoT-specific functionalities for the firmware developers:
-
-- Rich networking capabilities provided by
-  [Mongoose Embedded Networking Library](https://github.com/cesanta/mongoose),
-  trusted by organisations like NASA, Qualcomm, Intel, Samsung, etc
-- Filesystem with POSIX API (SPIFFS)
-- Flexible [configuration management](https://docs.cesanta.com/mongoose-iot/master/#/firmware/configuration.md/) with 3 layers: firmware
-  defaults, factory defaults, and end-customer overrides
-- Secure and reliable over-the-air (OTA) updates: update only parts that
-  changed, and rollback on failures
-
-# How to build & flash the firmware
-
-See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/overview.md/)
-on how to build and flash the firmware
+See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/)
+on how to build and flash the firmware.
 
 # How to test Over-the-air (OTA) update
 
