@@ -1,3 +1,5 @@
 [
   ["sys.atca_enable", "b", false, {title: "Enable ATCA crypto accelerator"}],
+  # By default designate slots 2 and 3 for ECDH.
+  ["sys.atca_ecdh_slots_mask", "i", 0x0c, {title: "Which slots can be used for ECDH (bitmask)"}],
 ]

@@ -168,6 +168,11 @@ ATCA_STATUS hal_iface_release(ATCAIfaceType ifacetype, void *hal_data) {
   return ATCA_SUCCESS;
 }
 
+/* Invoked from mbedTLS during ECDH phase of the handshake. */
+uint8_t atca_get_ecdh_slots_mask() {
+  return get_cfg()->sys.atca_ecdh_slots_mask;
+}
+
 enum miot_init_result miot_atca_init(void) {
   uint32_t revision;
   uint32_t
@@ -204,10 +209,11 @@ enum miot_init_result miot_atca_init(void) {
   }
 
   LOG(LL_INFO, ("ATECC508 rev 0x%04x S/N 0x%04x%04x%02x, zone "
-                "lock status: %s, %s",
+                "lock status: %s, %s; ECDH slots: 0x%02x",
                 htonl(revision), htonl(serial[0]), htonl(serial[1]),
                 *((uint8_t *) &serial[2]), (config_is_locked ? "yes" : "no"),
-                (data_is_locked ? "yes" : "no")));
+                (data_is_locked ? "yes" : "no"), atca_get_ecdh_slots_mask()));
+
   return MIOT_INIT_OK;
 }
 
