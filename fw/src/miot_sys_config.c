@@ -226,7 +226,10 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
                     (int) hm->uri.len, hm->uri.p));
 
       mg_serve_http(c, p, s_http_server_opts);
-      c->flags |= MG_F_SEND_AND_CLOSE;
+      /*
+       * NOTE: `mg_serve_http()` manages closing connection when appropriate,
+       * so, we should not set `MG_F_SEND_AND_CLOSE` here
+       */
       break;
     }
     case MG_EV_CLOSE: {
