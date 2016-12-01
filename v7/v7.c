@@ -112,6 +112,12 @@
 
 /* Common stuff */
 
+#if (defined(__GNUC__) || defined(__TI_COMPILER_VERSION__)) && !defined(_WIN32)
+#define WEAK __attribute__((weak))
+#else
+#define WEAK
+#endif
+
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
 #define NOINLINE __attribute__((noinline))
@@ -439,87 +445,6 @@ typedef struct stat cs_stat_t;
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "common/mbuf.h"
-#endif
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-/*
- * === Memory Buffers
- *
- * Mbufs are mutable/growing memory buffers, like C++ strings.
- * Mbuf can append data to the end of a buffer or insert data into arbitrary
- * position in the middle of a buffer. The buffer grows automatically when
- * needed.
- */
-
-#ifndef CS_COMMON_MBUF_H_
-#define CS_COMMON_MBUF_H_
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-#include <stdlib.h>
-
-#ifndef MBUF_SIZE_MULTIPLIER
-#define MBUF_SIZE_MULTIPLIER 1.5
-#endif
-
-/* Memory buffer descriptor */
-struct mbuf {
-  char *buf;   /* Buffer pointer */
-  size_t len;  /* Data length. Data is located between offset 0 and len. */
-  size_t size; /* Buffer size allocated by realloc(1). Must be >= len */
-};
-
-/*
- * Initialises an Mbuf.
- * `initial_capacity` specifies the initial capacity of the mbuf.
- */
-void mbuf_init(struct mbuf *, size_t initial_capacity);
-
-/* Frees the space allocated for the mbuffer and resets the mbuf structure. */
-void mbuf_free(struct mbuf *);
-
-/*
- * Appends data to the Mbuf.
- *
- * Returns the number of bytes appended or 0 if out of memory.
- */
-size_t mbuf_append(struct mbuf *, const void *data, size_t data_size);
-
-/*
- * Inserts data at a specified offset in the Mbuf.
- *
- * Existing data will be shifted forwards and the buffer will
- * be grown if necessary.
- * Returns the number of bytes inserted.
- */
-size_t mbuf_insert(struct mbuf *, size_t, const void *, size_t);
-
-/* Removes `data_size` bytes from the beginning of the buffer. */
-void mbuf_remove(struct mbuf *, size_t data_size);
-
-/*
- * Resizes an Mbuf.
- *
- * If `new_size` is smaller than buffer's `len`, the
- * resize is not performed.
- */
-void mbuf_resize(struct mbuf *, size_t new_size);
-
-/* Shrinks an Mbuf by resizing its `size` to `len`. */
-void mbuf_trim(struct mbuf *);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* CS_COMMON_MBUF_H_ */
-#ifdef V7_MODULE_LINES
 #line 1 "common/platforms/platform_esp8266.h"
 #endif
 /*
@@ -800,7 +725,8 @@ struct dirent *readdir(DIR *dir);
 #define MG_FS_SLFS
 #endif
 
-#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && !defined(MG_ENABLE_FILESYSTEM)
+#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && \
+    !defined(MG_ENABLE_FILESYSTEM)
 #define MG_ENABLE_FILESYSTEM 1
 #endif
 
@@ -1347,6 +1273,89 @@ char* inet_ntoa(struct in_addr in);
 
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/mbuf.h"
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Memory Buffers
+ *
+ * Mbufs are mutable/growing memory buffers, like C++ strings.
+ * Mbuf can append data to the end of a buffer or insert data into arbitrary
+ * position in the middle of a buffer. The buffer grows automatically when
+ * needed.
+ */
+
+#ifndef CS_COMMON_MBUF_H_
+#define CS_COMMON_MBUF_H_
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+#include <stdlib.h>
+
+/* Amalgamated: #include "common/platform.h" */
+
+#ifndef MBUF_SIZE_MULTIPLIER
+#define MBUF_SIZE_MULTIPLIER 1.5
+#endif
+
+/* Memory buffer descriptor */
+struct mbuf {
+  char *buf;   /* Buffer pointer */
+  size_t len;  /* Data length. Data is located between offset 0 and len. */
+  size_t size; /* Buffer size allocated by realloc(1). Must be >= len */
+};
+
+/*
+ * Initialises an Mbuf.
+ * `initial_capacity` specifies the initial capacity of the mbuf.
+ */
+void mbuf_init(struct mbuf *, size_t initial_capacity);
+
+/* Frees the space allocated for the mbuffer and resets the mbuf structure. */
+void mbuf_free(struct mbuf *);
+
+/*
+ * Appends data to the Mbuf.
+ *
+ * Returns the number of bytes appended or 0 if out of memory.
+ */
+size_t mbuf_append(struct mbuf *, const void *data, size_t data_size);
+
+/*
+ * Inserts data at a specified offset in the Mbuf.
+ *
+ * Existing data will be shifted forwards and the buffer will
+ * be grown if necessary.
+ * Returns the number of bytes inserted.
+ */
+size_t mbuf_insert(struct mbuf *, size_t, const void *, size_t);
+
+/* Removes `data_size` bytes from the beginning of the buffer. */
+void mbuf_remove(struct mbuf *, size_t data_size);
+
+/*
+ * Resizes an Mbuf.
+ *
+ * If `new_size` is smaller than buffer's `len`, the
+ * resize is not performed.
+ */
+void mbuf_resize(struct mbuf *, size_t new_size);
+
+/* Shrinks an Mbuf by resizing its `size` to `len`. */
+void mbuf_trim(struct mbuf *);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* CS_COMMON_MBUF_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/str_util.h"
 #endif
 /*
@@ -1359,6 +1368,8 @@ char* inet_ntoa(struct in_addr in);
 
 #include <stdarg.h>
 #include <stdlib.h>
+
+/* Amalgamated: #include "common/platform.h" */
 
 #ifndef CS_ENABLE_STRDUP
 #define CS_ENABLE_STRDUP 0
@@ -1609,7 +1620,6 @@ void cs_log_set_level(enum cs_log_level level);
 #if CS_ENABLE_STDIO
 
 void cs_log_set_file(FILE *file);
-
 extern enum cs_log_level cs_log_level;
 void cs_log_print_prefix(const char *func);
 void cs_log_printf(const char *fmt, ...);
@@ -8390,12 +8400,14 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
 #define MBUF_FREE free
 #endif
 
+void mbuf_init(struct mbuf *mbuf, size_t initial_size) WEAK;
 void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
   mbuf->len = mbuf->size = 0;
   mbuf->buf = NULL;
   mbuf_resize(mbuf, initial_size);
 }
 
+void mbuf_free(struct mbuf *mbuf) WEAK;
 void mbuf_free(struct mbuf *mbuf) {
   if (mbuf->buf != NULL) {
     MBUF_FREE(mbuf->buf);
@@ -8403,6 +8415,7 @@ void mbuf_free(struct mbuf *mbuf) {
   }
 }
 
+void mbuf_resize(struct mbuf *a, size_t new_size) WEAK;
 void mbuf_resize(struct mbuf *a, size_t new_size) {
   if (new_size > a->size || (new_size < a->size && new_size >= a->len)) {
     char *buf = (char *) MBUF_REALLOC(a->buf, new_size);
@@ -8417,10 +8430,12 @@ void mbuf_resize(struct mbuf *a, size_t new_size) {
   }
 }
 
+void mbuf_trim(struct mbuf *mbuf) WEAK;
 void mbuf_trim(struct mbuf *mbuf) {
   mbuf_resize(mbuf, mbuf->len);
 }
 
+size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t) WEAK;
 size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   char *p = NULL;
 
@@ -8453,10 +8468,12 @@ size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   return len;
 }
 
+size_t mbuf_append(struct mbuf *a, const void *buf, size_t len) WEAK;
 size_t mbuf_append(struct mbuf *a, const void *buf, size_t len) {
   return mbuf_insert(a, a->len, buf, len);
 }
 
+void mbuf_remove(struct mbuf *mb, size_t n) WEAK;
 void mbuf_remove(struct mbuf *mb, size_t n) {
   if (n > 0 && n <= mb->len) {
     memmove(mb->buf, mb->buf + n, mb->len - n);
@@ -8490,6 +8507,7 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
 #define MG_FREE free
 #endif
 
+size_t c_strnlen(const char *s, size_t maxlen) WEAK;
 size_t c_strnlen(const char *s, size_t maxlen) {
   size_t l = 0;
   for (; l < maxlen && s[l] != '\0'; l++) {
@@ -8506,6 +8524,7 @@ size_t c_strnlen(const char *s, size_t maxlen) {
 #define C_SNPRINTF_FLAG_ZERO 1
 
 #if C_DISABLE_BUILTIN_SNPRINTF
+int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) WEAK;
 int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
   return vsnprintf(buf, buf_size, fmt, ap);
 }
@@ -8551,6 +8570,7 @@ static int c_itoa(char *buf, size_t buf_size, int64_t num, int base, int flags,
   return i;
 }
 
+int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) WEAK;
 int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
   int ch, i = 0, len_mod, flags, precision, field_width;
 
@@ -8688,6 +8708,7 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
 }
 #endif
 
+int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) WEAK;
 int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
   int result;
   va_list ap;
@@ -8728,6 +8749,7 @@ int to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 #endif /* _WIN32 */
 
 /* The simplest O(mn) algorithm. Better implementation are GPLed */
+const char *c_strnstr(const char *s, const char *find, size_t slen) WEAK;
 const char *c_strnstr(const char *s, const char *find, size_t slen) {
   size_t find_length = strlen(find);
   size_t i;
@@ -8746,6 +8768,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
 }
 
 #if CS_ENABLE_STRDUP
+char *strdup(const char *src) WEAK;
 char *strdup(const char *src) {
   size_t len = strlen(src) + 1;
   char *ret = malloc(len);
@@ -8756,6 +8779,7 @@ char *strdup(const char *src) {
 }
 #endif
 
+void cs_to_hex(char *to, const unsigned char *p, size_t len) WEAK;
 void cs_to_hex(char *to, const unsigned char *p, size_t len) {
   static const char *hex = "0123456789abcdef";
 
@@ -8777,6 +8801,7 @@ static int fourbit(int ch) {
   return 0;
 }
 
+void cs_from_hex(char *to, const char *p, size_t len) WEAK;
 void cs_from_hex(char *to, const char *p, size_t len) {
   size_t i;
 
@@ -8787,6 +8812,7 @@ void cs_from_hex(char *to, const char *p, size_t len) {
 }
 
 #if CS_ENABLE_TO64
+int64_t cs_to64(const char *s) WEAK;
 int64_t cs_to64(const char *s) {
   int64_t result = 0;
   int64_t neg = 1;
@@ -8808,6 +8834,7 @@ static int str_util_lowercase(const char *s) {
   return tolower(*(const unsigned char *) s);
 }
 
+int mg_ncasecmp(const char *s1, const char *s2, size_t len) WEAK;
 int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
   int diff = 0;
 
@@ -8818,10 +8845,12 @@ int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
   return diff;
 }
 
+int mg_casecmp(const char *s1, const char *s2) WEAK;
 int mg_casecmp(const char *s1, const char *s2) {
   return mg_ncasecmp(s1, s2, (size_t) ~0);
 }
 
+int mg_asprintf(char **buf, size_t size, const char *fmt, ...) WEAK;
 int mg_asprintf(char **buf, size_t size, const char *fmt, ...) {
   int ret;
   va_list ap;
@@ -8831,6 +8860,7 @@ int mg_asprintf(char **buf, size_t size, const char *fmt, ...) {
   return ret;
 }
 
+int mg_avprintf(char **buf, size_t size, const char *fmt, va_list ap) WEAK;
 int mg_avprintf(char **buf, size_t size, const char *fmt, va_list ap) {
   va_list ap_copy;
   int len;
@@ -11094,6 +11124,7 @@ typedef int cs_dirent_dummy;
 #endif
 
 #ifndef EXCLUDE_COMMON
+char *cs_read_file(const char *path, size_t *size) WEAK;
 char *cs_read_file(const char *path, size_t *size) {
   FILE *fp;
   char *data = NULL;
@@ -11118,6 +11149,7 @@ char *cs_read_file(const char *path, size_t *size) {
 #endif /* EXCLUDE_COMMON */
 
 #ifdef CS_MMAP
+char *cs_mmap_file(const char *path, size_t *size) WEAK;
 char *cs_mmap_file(const char *path, size_t *size) {
   char *r;
   int fd = open(path, O_RDONLY);

@@ -15,6 +15,7 @@
 #endif
 
 #ifndef EXCLUDE_COMMON
+char *cs_read_file(const char *path, size_t *size) WEAK;
 char *cs_read_file(const char *path, size_t *size) {
   FILE *fp;
   char *data = NULL;
@@ -39,6 +40,7 @@ char *cs_read_file(const char *path, size_t *size) {
 #endif /* EXCLUDE_COMMON */
 
 #ifdef CS_MMAP
+char *cs_mmap_file(const char *path, size_t *size) WEAK;
 char *cs_mmap_file(const char *path, size_t *size) {
   char *r;
   int fd = open(path, O_RDONLY);

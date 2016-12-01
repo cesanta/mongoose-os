@@ -19,6 +19,7 @@
 #include <windows.h>
 #endif
 
+double cs_time(void) WEAK;
 double cs_time(void) {
   double now;
 #ifndef _WIN32

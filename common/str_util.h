@@ -9,6 +9,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "common/platform.h"
+
 #ifndef CS_ENABLE_STRDUP
 #define CS_ENABLE_STRDUP 0
 #endif

@@ -8,6 +8,7 @@
 
 #include "common/mbuf.h"
 #include "common/mg_str.h"
+#include "common/platform.h"
 #include "frozen/frozen.h"
 
 int mg_json_printer_mbuf(struct json_out *, const char *, size_t);

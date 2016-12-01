@@ -21,6 +21,8 @@ extern "C" {
 
 #include <stdlib.h>
 
+#include "common/platform.h"
+
 #ifndef MBUF_SIZE_MULTIPLIER
 #define MBUF_SIZE_MULTIPLIER 1.5
 #endif

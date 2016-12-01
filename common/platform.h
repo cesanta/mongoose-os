@@ -80,6 +80,12 @@
 
 /* Common stuff */
 
+#if (defined(__GNUC__) || defined(__TI_COMPILER_VERSION__)) && !defined(_WIN32)
+#define WEAK __attribute__((weak))
+#else
+#define WEAK
+#endif
+
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
 #define NOINLINE __attribute__((noinline))

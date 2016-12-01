@@ -6,6 +6,8 @@
 #ifndef CS_COMMON_CS_TIME_H_
 #define CS_COMMON_CS_TIME_H_
 
+#include "common/platform.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

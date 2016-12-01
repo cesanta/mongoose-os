@@ -20,6 +20,7 @@
 #define MG_FREE free
 #endif
 
+size_t c_strnlen(const char *s, size_t maxlen) WEAK;
 size_t c_strnlen(const char *s, size_t maxlen) {
   size_t l = 0;
   for (; l < maxlen && s[l] != '\0'; l++) {
@@ -36,6 +37,7 @@ size_t c_strnlen(const char *s, size_t maxlen) {
 #define C_SNPRINTF_FLAG_ZERO 1
 
 #if C_DISABLE_BUILTIN_SNPRINTF
+int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) WEAK;
 int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
   return vsnprintf(buf, buf_size, fmt, ap);
 }
@@ -81,6 +83,7 @@ static int c_itoa(char *buf, size_t buf_size, int64_t num, int base, int flags,
   return i;
 }
 
+int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) WEAK;
 int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
   int ch, i = 0, len_mod, flags, precision, field_width;
 
@@ -218,6 +221,7 @@ int c_vsnprintf(char *buf, size_t buf_size, const char *fmt, va_list ap) {
 }
 #endif
 
+int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) WEAK;
 int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
   int result;
   va_list ap;
@@ -258,6 +262,7 @@ int to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 #endif /* _WIN32 */
 
 /* The simplest O(mn) algorithm. Better implementation are GPLed */
+const char *c_strnstr(const char *s, const char *find, size_t slen) WEAK;
 const char *c_strnstr(const char *s, const char *find, size_t slen) {
   size_t find_length = strlen(find);
   size_t i;
@@ -276,6 +281,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
 }
 
 #if CS_ENABLE_STRDUP
+char *strdup(const char *src) WEAK;
 char *strdup(const char *src) {
   size_t len = strlen(src) + 1;
   char *ret = malloc(len);
@@ -286,6 +292,7 @@ char *strdup(const char *src) {
 }
 #endif
 
+void cs_to_hex(char *to, const unsigned char *p, size_t len) WEAK;
 void cs_to_hex(char *to, const unsigned char *p, size_t len) {
   static const char *hex = "0123456789abcdef";
 
@@ -307,6 +314,7 @@ static int fourbit(int ch) {
   return 0;
 }
 
+void cs_from_hex(char *to, const char *p, size_t len) WEAK;
 void cs_from_hex(char *to, const char *p, size_t len) {
   size_t i;
 
@@ -317,6 +325,7 @@ void cs_from_hex(char *to, const char *p, size_t len) {
 }
 
 #if CS_ENABLE_TO64
+int64_t cs_to64(const char *s) WEAK;
 int64_t cs_to64(const char *s) {
   int64_t result = 0;
   int64_t neg = 1;
@@ -338,6 +347,7 @@ static int str_util_lowercase(const char *s) {
   return tolower(*(const unsigned char *) s);
 }
 
+int mg_ncasecmp(const char *s1, const char *s2, size_t len) WEAK;
 int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
   int diff = 0;
 
@@ -348,10 +358,12 @@ int mg_ncasecmp(const char *s1, const char *s2, size_t len) {
   return diff;
 }
 
+int mg_casecmp(const char *s1, const char *s2) WEAK;
 int mg_casecmp(const char *s1, const char *s2) {
   return mg_ncasecmp(s1, s2, (size_t) ~0);
 }
 
+int mg_asprintf(char **buf, size_t size, const char *fmt, ...) WEAK;
 int mg_asprintf(char **buf, size_t size, const char *fmt, ...) {
   int ret;
   va_list ap;
@@ -361,6 +373,7 @@ int mg_asprintf(char **buf, size_t size, const char *fmt, ...) {
   return ret;
 }
 
+int mg_avprintf(char **buf, size_t size, const char *fmt, va_list ap) WEAK;
 int mg_avprintf(char **buf, size_t size, const char *fmt, va_list ap) {
   va_list ap_copy;
   int len;
