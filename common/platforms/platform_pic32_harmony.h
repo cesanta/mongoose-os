@@ -18,6 +18,8 @@
 #include <system_config.h>
 #include <system_definitions.h>
 
+#include <sys/types.h>
+
 typedef TCP_SOCKET sock_t;
 #define to64(x) strtoll(x, NULL, 10)
 
