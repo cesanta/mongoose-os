@@ -70,12 +70,17 @@ static void miot_invoke_cb_cb(void *arg) {
 #endif /* MIOT_ENABLE_JS */
 
 #ifdef __TI_COMPILER_VERSION__
+
 size_t miot_get_heap_size(void) {
   return UMM_MALLOC_CFG__HEAP_SIZE;
 }
 
 size_t miot_get_free_heap_size(void) {
   return umm_free_heap_size();
+}
+
+size_t miot_get_min_free_heap_size(void) {
+  return umm_min_free_heap_size();
 }
 
 #else
@@ -95,12 +100,13 @@ size_t miot_get_free_heap_size(void) {
   avail += mi.fordblks; /* Free in the area claimed by allocator. */
   return avail;
 }
-#endif
 
 size_t miot_get_min_free_heap_size(void) {
   /* Not supported */
   return 0;
 }
+
+#endif
 
 size_t miot_get_fs_memory_usage(void) {
   return 0; /* Not even sure if it's possible to tell. */
