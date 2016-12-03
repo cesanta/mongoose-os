@@ -1,0 +1,15 @@
+PROJECT_NAME ?= mongoose-iot
+BUILD_DIR_BASE = .build
+
+SRCDIRS = src
+
+ESPFLASHMODE = qio
+ESPFLASHSIZE = 4MB
+ESPBAUD = 1500000
+
+# VERBOSE = 1
+
+include $(IDF_PATH)/make/project.mk
+
+clean:
+	rm -rf .build
