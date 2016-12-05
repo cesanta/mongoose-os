@@ -1,6 +1,6 @@
 #include "rom_functions.h"
 
-void SLIP_send(const void *pkt, uint32_t size) {
+void SLIP_send(uint8_t *pkt, uint32_t size) {
   send_packet(pkt, size);
 }
 

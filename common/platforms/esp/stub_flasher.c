@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cesanta Software Limited
+ * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  *
  * Spiffy flasher. Implements strong checksums (MD5) and can use higher
@@ -19,34 +19,43 @@
 
 #include "stub_flasher.h"
 
+#include <stdint.h>
+#include <string.h>
+
 #include "rom_functions.h"
 
+#if defined(ESP8266)
 #include "eagle_soc.h"
 #include "ets_sys.h"
-#include "examples/driver_lib/include/driver/uart_register.h"
+#elif defined(ESP32)
+#include "soc/uart_reg.h"
+#endif
 
 #include "slip.h"
+#include "uart.h"
 
 /* Param: baud rate. */
 uint32_t params[1] __attribute__((section(".params")));
 
-/* TODO(rojer): read sector and block sizes from device ROM. */
-#define FLASH_SECTOR_SIZE 4096
 #define FLASH_BLOCK_SIZE 65536
-#define UART_CLKDIV_26MHZ(B) (52000000 + B / 2) / B
+#define FLASH_SECTOR_SIZE 4096
+#define FLASH_PAGE_SIZE 256
 
 #define UART_BUF_SIZE 6144
 #define SPI_WRITE_SIZE 1024
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 
-/* From spi_register.h */
+extern uint32_t _bss_start, _bss_end;
+
+#ifdef ESP8266
 #define REG_SPI_BASE(i) (0x60000200 - i * 0x100)
 
-#define SPI_CMD(i) (REG_SPI_BASE(i) + 0x0)
-#define SPI_RDID (BIT(28))
+#define SPI_CMD_REG(i) (REG_SPI_BASE(i) + 0x0)
+#define SPI_FLASH_RDID (BIT(28))
 
-#define SPI_W0(i) (REG_SPI_BASE(i) + 0x40)
+#define SPI_W0_REG(i) (REG_SPI_BASE(i) + 0x40)
+#endif
 
 int do_flash_erase(uint32_t addr, uint32_t len) {
   if (addr % FLASH_SECTOR_SIZE != 0) return 0x32;
@@ -81,19 +90,19 @@ struct uart_buf {
 };
 
 void uart_isr(void *arg) {
-  uint32_t int_st = READ_PERI_REG(UART_INT_ST(0));
+  uint32_t int_st = READ_PERI_REG(UART_INT_ST_REG(0));
   struct uart_buf *ub = (struct uart_buf *) arg;
   while (1) {
-    uint32_t fifo_len = READ_PERI_REG(UART_STATUS(0)) & 0xff;
+    uint32_t fifo_len = READ_PERI_REG(UART_STATUS_REG(0)) & 0xff;
     if (fifo_len == 0) break;
     while (fifo_len-- > 0) {
-      uint8_t byte = READ_PERI_REG(UART_FIFO(0)) & 0xff;
+      uint8_t byte = READ_PERI_REG(UART_FIFO_REG(0)) & 0xff;
       *ub->pw++ = byte;
       ub->nr++;
       if (ub->pw >= ub->data + UART_BUF_SIZE) ub->pw = ub->data;
     }
   }
-  WRITE_PERI_REG(UART_INT_CLR(0), int_st);
+  WRITE_PERI_REG(UART_INT_CLR_REG(0), int_st);
 }
 
 int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
@@ -109,9 +118,9 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
 
   ub.nr = 0;
   ub.pr = ub.pw = ub.data;
-  ets_isr_attach(ETS_UART_INUM, uart_isr, &ub);
-  SET_PERI_REG_MASK(UART_INT_ENA(0), UART_RX_INTS);
-  ets_isr_unmask(1 << ETS_UART_INUM);
+  ets_isr_attach(ETS_UART0_INUM, uart_isr, &ub);
+  SET_PERI_REG_MASK(UART_INT_ENA_REG(0), UART_RX_INTS);
+  ets_isr_unmask(1 << ETS_UART0_INUM);
 
   SLIP_send(&num_written, 4);
 
@@ -133,7 +142,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     while (*nr < SPI_WRITE_SIZE) {
     }
     MD5Update(&ctx, ub.pr, SPI_WRITE_SIZE);
-    if (SPIWrite(addr, ub.pr, SPI_WRITE_SIZE) != 0) return 0x37;
+    if (SPIWrite(addr, (uint32_t *) ub.pr, SPI_WRITE_SIZE) != 0) return 0x37;
     ets_intr_lock();
     *nr -= SPI_WRITE_SIZE;
     ets_intr_unlock();
@@ -144,7 +153,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     SLIP_send(&num_written, 4);
   }
 
-  ets_isr_mask(1 << ETS_UART_INUM);
+  ets_isr_mask(1 << ETS_UART0_INUM);
 
   MD5Final(digest, &ctx);
   SLIP_send(digest, 16);
@@ -164,7 +173,7 @@ int do_flash_read(uint32_t addr, uint32_t len, uint32_t block_size,
     while (num_sent < len && num_sent - num_acked < max_in_flight) {
       uint32_t n = len - num_sent;
       if (n > block_size) n = block_size;
-      if (SPIRead(addr, buf, n) != 0) return 0x53;
+      if (SPIRead(addr, (uint32_t *) buf, n) != 0) return 0x53;
       send_packet(buf, n);
       MD5Update(&ctx, buf, n);
       addr += n;
@@ -193,7 +202,7 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
     struct MD5Context block_ctx;
     MD5Init(&block_ctx);
     if (n > read_block_size) n = read_block_size;
-    if (SPIRead(addr, buf, n) != 0) return 0x63;
+    if (SPIRead(addr, (uint32_t *) buf, n) != 0) return 0x63;
     MD5Update(&ctx, buf, n);
     if (digest_block_size > 0) {
       MD5Update(&block_ctx, buf, n);
@@ -210,11 +219,11 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
 
 int do_flash_read_chip_id(void) {
   uint32_t chip_id = 0;
-  WRITE_PERI_REG(SPI_CMD(0), SPI_RDID);
-  while (READ_PERI_REG(SPI_CMD(0)) & SPI_RDID) {
+  WRITE_PERI_REG(SPI_CMD_REG(0), SPI_FLASH_RDID);
+  while (READ_PERI_REG(SPI_CMD_REG(0)) & SPI_FLASH_RDID) {
   }
-  chip_id = READ_PERI_REG(SPI_W0(0)) & 0xFFFFFF;
-  send_packet(&chip_id, sizeof(chip_id));
+  chip_id = READ_PERI_REG(SPI_W0_REG(0)) & 0xFFFFFF;
+  send_packet((uint8_t *) &chip_id, sizeof(chip_id));
   return 0;
 }
 
@@ -294,14 +303,23 @@ void stub_main(void) {
   uint8_t last_cmd;
 
   /* This points at us right now, reset for next boot. */
-  ets_set_user_start(NULL);
+  ets_set_user_start(0);
 
-  /* Selects SPI functions for flash pins. */
+  memset(&_bss_start, 0, (&_bss_end - &_bss_start));
+
+/* Selects SPI functions for flash pins. */
+#if defined(ESP8266)
   SelectSpiFunction();
+#elif defined(ESP32)
+  spi_flash_attach(0, 0);
+#endif
+
+  SPIParamCfg(0, 16 * 1024 * 1024, FLASH_BLOCK_SIZE, FLASH_SECTOR_SIZE,
+              FLASH_PAGE_SIZE, 0xffff);
 
   if (baud_rate > 0) {
-    ets_delay_us(1000);
-    uart_div_modify(0, UART_CLKDIV_26MHZ(baud_rate));
+    ets_delay_us(10000);
+    set_baud_rate(0, baud_rate);
   }
 
   /* Give host time to get ready too. */
@@ -314,6 +332,7 @@ void stub_main(void) {
   ets_delay_us(10000);
 
   if (last_cmd == CMD_BOOT_FW) {
+#if defined(ESP8266)
     /*
      * Find the return address in our own stack and change it.
      * "flash_finish" it gets to the same point, except it doesn't need to
@@ -331,8 +350,11 @@ void stub_main(void) {
      */
     __asm volatile("nop.n");
     return; /* To 0x400010a8 */
+#elif defined(ESP32)
+/* TODO(rojer) */
+#endif
   } else {
-    _ResetVector();
+    software_reset();
   }
   /* Not reached */
 }

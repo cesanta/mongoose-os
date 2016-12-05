@@ -1,5 +1,35 @@
-PROJECT_NAME ?= mongoose-iot
-BUILD_DIR_BASE = .build
+MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
+
+APP ?= mongoose-iot
+APP_PLATFORM = esp32
+APP_MODULES ?=
+APP_CFLAGS ?=
+APP_FS_PATH ?=
+APP_EXTRA_SRCS ?=
+APP_VERSION ?=
+APP_BUILD_ID ?=
+
+MIOT_PATH ?= ../../..
+
+BUILD_DIR ?= $(CURDIR)/.build
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+# Absolutize all paths which can be given by the caller
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override FW_DIR := $(abspath $(FW_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.o
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+
+# Settings for the ESP-IDF build system
+PROJECT_NAME = $(APP)
+BUILD_DIR_BASE = $(BUILD_DIR)
 
 SRCDIRS = src
 
@@ -11,5 +41,28 @@ ESPBAUD = 1500000
 
 include $(IDF_PATH)/make/project.mk
 
+
+include $(MIOT_PATH)/fw/common.mk
+
+FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN) \
+           pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN) \
+           app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN)
+
+include $(MIOT_PATH)/common/scripts/build_info.mk
+include $(MIOT_PATH)/common/scripts/fw_meta.mk
+
+all_binaries: $(FW_ZIP)
+
+all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR)
+
+$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
+	$(vecho) "MKDIR $@"
+	$(Q) mkdir -p $@
+
+$(BUILD_INFO_C) $(BUILD_INFO_JSON):
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(FW_MANIFEST): $(BUILD_INFO_JSON) $(APP_BIN)
+
 clean:
-	rm -rf .build
+	rm -rf $(BUILD_DIR) $(FW_DIR)

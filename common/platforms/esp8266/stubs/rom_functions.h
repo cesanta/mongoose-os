@@ -9,7 +9,7 @@ int uart_tx_one_char(char ch);
 void uart_div_modify(uint32_t uart_no, uint32_t baud_div);
 
 int SendMsg(uint8_t *msg, uint8_t size);
-int send_packet(const void *packet, uint32_t size);
+int send_packet(uint8_t *packet, uint32_t size);
 // recv_packet depends on global UartDev, better to avoid it.
 // uint32_t recv_packet(void *packet, uint32_t len, uint8_t no_sync);
 
@@ -20,7 +20,7 @@ void ets_delay_us(uint32_t us);
 uint32_t SPILock();
 uint32_t SPIUnlock();
 uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
-uint32_t SPIWrite(uint32_t addr, const uint8_t *src, uint32_t size);
+uint32_t SPIWrite(uint32_t addr, const uint32_t *src, uint32_t size);
 uint32_t SPIEraseChip();
 uint32_t SPIEraseBlock(uint32_t block_num);
 uint32_t SPIEraseSector(uint32_t sector_num);
@@ -31,10 +31,11 @@ void spi_flash_attach();
 void SelectSpiFunction();
 void SPIFlashModeConfig(uint32_t a, uint32_t b);
 void SPIReadModeCnfig(uint32_t a);
+uint32_t SPIParamCfg(uint32_t deviceId, uint32_t chip_size, uint32_t block_size,
+                     uint32_t sector_size, uint32_t page_size,
+                     uint32_t status_mask);
 
 void Cache_Read_Disable();
-
-void memset(void *addr, uint8_t c, uint32_t len);
 
 void ets_delay_us(uint32_t delay_micros);
 
