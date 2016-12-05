@@ -71,7 +71,15 @@ def get_tag_for_commit(repo, commit):
 
 
 def file_or_stdout(fname):
-    return sys.stdout if fname == '-' else open(fname, 'w')
+    if fname == '-':
+        return sys.stdout
+    dirname = os.path.dirname(fname)
+    if dirname:
+        try:
+            os.makedirs(dirname, mode=0755)
+        except Exception:
+            pass
+    return open(fname, 'w')
 
 
 def _write_build_info(bi, args):
