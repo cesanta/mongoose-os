@@ -14,23 +14,16 @@ chmod 755 ~/bin/miot
 string. Run `miot help <command>` to see a help string for that particular
 command.
 
-Register on http://mongoose.cloud .
-
-
 Export environment variables - on Mac/Linux, put these into your `~/.profile`:
 
 ```bash
 export MIOT_PORT=YOUR_SERIAL_PORT  # E.g. /dev/ttyUSB0 on Linux
-export MIOT_USER=YOUR_USERNAME
-export MIOT_PASS=YOUR_PASSWORD
 ```
 
 On Windows, start `cmd.exe` command line prompt and do:
 
 ```
 set MIOT_PORT=YOUR_SERIAL_PORT  # E.g. COM6 on Windows
-set MIOT_USER=YOUR_USERNAME
-set MIOT_PASS=YOUR_PASSWORD
 ```
 
 You can set a default value for any `miot` flag through the environment

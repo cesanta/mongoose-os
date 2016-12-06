@@ -4,15 +4,13 @@
 This example shows how to control a device remotely using HTTP protocol.
 
 Assuming you have downloaded the
-[miot utility](https://mongoose-iot.com/software.html) and have registered an
-account at http://mongoose.cloud. Please follow these steps:
+[miot utility](https://mongoose-iot.com/software.html).
+Please follow these steps:
 
 ```Bash
 git clone https://github.com/cesanta/mongoose-iot
 cd mongoose-iot/fw/examples/c_http
 export MIOT_PORT=/dev/ttyUSB0  # or, whatever is correct on your system
-export MIOT_USER=YOUR_USER_NAME
-export MIOT_PASS=YOUR_PASSWORD
 miot build --arch ARCHITECTURE # cc3200 or esp8266
 miot flash
 miot config-set wifi.ap.enable=false wifi.sta.enable=true \
