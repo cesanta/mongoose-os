@@ -161,6 +161,8 @@ static bool mqtt_global_connect(void) {
         opts.flags |= MG_MQTT_CLEAN_SESSION;
       }
       opts.keep_alive = scfg->mqtt.keep_alive;
+      opts.will_topic = scfg->mqtt.will_topic;
+      opts.will_message = scfg->mqtt.will_message;
 
       mg_set_protocol_mqtt(nc);
       mg_send_mqtt_handshake_opt(nc, scfg->device.id, opts);

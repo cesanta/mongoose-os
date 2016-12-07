@@ -8,4 +8,6 @@
   ["mqtt.ssl_ca_cert", "s", "", {title: "Verify server certificate using this CA bundle"}],
   ["mqtt.clean_session", "b", true, {title: "Clean Session"}],
   ["mqtt.keep_alive", "i", 60, {title: "Keep alive interval"}],
+  ["mqtt.will_topic", "s", "", {title: "Will topic"}],
+  ["mqtt.will_message", "s", "", {title: "Will message"}],
 ]
