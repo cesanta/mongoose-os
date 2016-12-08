@@ -8,3 +8,4 @@ filesystem:
   - fs
 build_vars:
   MIOT_ENABLE_MQTT: 1
+  APP_CONF_SCHEMA: src/conf_schema.yaml

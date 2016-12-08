@@ -1,0 +1,5 @@
+[
+  ["mqtt.pub", "s", "", {title: "Publish topic"}],
+  ["mqtt.sub", "s", "", {title: "Subscribe topic"}],
+  ["i2c.enable", true],
+]
