@@ -43,7 +43,9 @@ const struct sys_ro_vars *get_ro_vars(void) {
 static miot_config_validator_fn *s_validators;
 static int s_num_validators;
 
+#if MG_ENABLE_FILESYSTEM
 static struct mg_serve_http_opts s_http_server_opts;
+#endif
 static struct mg_connection *listen_conn;
 static struct mg_connection *listen_conn_tun;
 
@@ -222,15 +224,19 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
       break;
     }
     case MG_EV_HTTP_REQUEST: {
+#if MG_ENABLE_FILESYSTEM
       struct http_message *hm = (struct http_message *) p;
       LOG(LL_INFO, ("%p %.*s %.*s", c, (int) hm->method.len, hm->method.p,
                     (int) hm->uri.len, hm->uri.p));
 
       mg_serve_http(c, p, s_http_server_opts);
-      /*
-       * NOTE: `mg_serve_http()` manages closing connection when appropriate,
-       * so, we should not set `MG_F_SEND_AND_CLOSE` here
-       */
+/*
+ * NOTE: `mg_serve_http()` manages closing connection when appropriate,
+ * so, we should not set `MG_F_SEND_AND_CLOSE` here
+ */
+#else
+      mg_http_send_error(c, 404, NULL);
+#endif
       break;
     }
     case MG_EV_CLOSE: {
@@ -265,6 +271,7 @@ static void on_wifi_ready(enum miot_wifi_status event, void *arg) {
 enum miot_init_result miot_sys_config_init_http(
     const struct sys_config_http *cfg,
     const struct sys_config_device *device_cfg) {
+#if MG_ENABLE_FILESYSTEM
   /*
    * Usually, we start to connect/listen in
    * EVENT_STAMODE_GOT_IP/EVENT_SOFTAPMODE_STACONNECTED  handlers
@@ -278,6 +285,7 @@ enum miot_init_result miot_sys_config_init_http(
       return MIOT_INIT_OUT_OF_MEMORY;
     }
   }
+#endif
 
   struct mg_bind_opts opts;
   memset(&opts, 0, sizeof(opts));
