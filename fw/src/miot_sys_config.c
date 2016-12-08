@@ -11,6 +11,7 @@
 
 #include "common/cs_file.h"
 #include "common/json_utils.h"
+#include "common/str_util.h"
 #include "fw/src/miot_config.h"
 #include "fw/src/miot_gpio.h"
 #include "fw/src/miot_hal.h"
@@ -413,7 +414,7 @@ enum miot_init_result miot_sys_config_init(void) {
   mbedtls_debug_set_threshold(s_cfg.debug.mbedtls_level);
 #endif
 
-  s_ro_vars.arch = FW_ARCHITECTURE;
+  s_ro_vars.arch = CS_STRINGIFY_MACRO(FW_ARCHITECTURE);
   s_ro_vars.fw_id = build_id;
   s_ro_vars.fw_timestamp = build_timestamp;
   s_ro_vars.fw_version = build_version;

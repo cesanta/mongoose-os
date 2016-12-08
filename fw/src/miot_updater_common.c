@@ -10,6 +10,7 @@
 
 #include "common/cs_crc32.h"
 #include "common/cs_file.h"
+#include "common/str_util.h"
 #include "common/spiffs/spiffs.h"
 
 #include "fw/src/miot_console.h"
@@ -349,8 +350,8 @@ static int updater_process_int(struct update_context *ctx, const char *data,
 
         if ((ret = parse_manifest(ctx)) < 0) return ret;
 
-        if (strncasecmp(ctx->platform.ptr, FW_ARCHITECTURE,
-                        strlen(FW_ARCHITECTURE)) != 0) {
+        if (strncasecmp(ctx->platform.ptr, CS_STRINGIFY_MACRO(FW_ARCHITECTURE),
+                        strlen(CS_STRINGIFY_MACRO(FW_ARCHITECTURE))) != 0) {
           ctx->status_msg = "Wrong platform";
           return -1;
         }

@@ -100,7 +100,7 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
           $(V7_FEATURES) \
           $(MIOT_FEATURES) $(MIOT_POSIX_FEATURES) \
           $(MONGOOSE_FEATURES) \
-          -DFW_ARCHITECTURE=\"$(BUILD_PLATFORM)\" \
+          -DFW_ARCHITECTURE=$(BUILD_PLATFORM) \
           $(CFLAGS_EXTRA)
 
 ifeq "$(DEBUG)" "1"

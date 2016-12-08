@@ -365,7 +365,7 @@ endif
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG \
-          -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
+          -DFW_ARCHITECTURE=$(APP_PLATFORM) \
           $(MG_FEATURES) $(MIOT_FEATURES) $(MIOT_CC3200_FEATURES) \
           $(MIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
 
