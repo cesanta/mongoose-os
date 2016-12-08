@@ -7,7 +7,13 @@
 #define CS_COMMON_PLATFORMS_PLATFORM_MBED_H_
 #if CS_PLATFORM == CS_P_MBED
 
+/*
+ * mbed.h contains C++ code (e.g. templates), thus, it should be processed
+ * only if included directly to startup file (ex: main.cpp)
+ */
+#ifdef __cplusplus
 #include "mbed.h"
+#endif
 
 #include <assert.h>
 #include <ctype.h>
