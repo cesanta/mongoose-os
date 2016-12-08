@@ -81,7 +81,7 @@ endif
 MAKE_APP_PATH=$(DOCKER_APP_PATH)$(APP_SUBDIR)
 MAKE_MIOT_PATH=$(DOCKER_MIOT_PATH)
 INNER_MAKE=make
-all clean:
+all clean menuconfig:
 	@docker run --rm -i --tty=$T \
 	  -v $(APP_MOUNT_PATH):$(DOCKER_APP_PATH) \
 	  -v $(MIOT_PATH_ABS):$(DOCKER_MIOT_PATH) \

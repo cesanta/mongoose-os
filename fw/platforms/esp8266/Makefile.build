@@ -313,7 +313,8 @@ include $(MIOT_PATH)/fw/src/spiffs.mk
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 
-APP_OUT = $(BUILD_DIR)/$(APP).out
+APP_BIN = $(BUILD_DIR)/$(APP).bin
+APP_ELF = $(BUILD_DIR)/$(APP).elf
 LD_SCRIPT = $(GEN_DIR)/$(FW_FILE_2_ADDR).ld
 LD_WRAPPERS =
 HEAP_LOG_FLAGS =
@@ -357,8 +358,6 @@ FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(GEN_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
-ESP_TOOL_CMD = $(ESPTOOL) elf2image -o $(FW_STAGING_DIR)/ $(APP_OUT)
-
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
           -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
           -DFW_ARCHITECTURE=\"$(APP_PLATFORM)\" \
@@ -401,14 +400,18 @@ $(FW_FILE_1_OUT): $(BUILD_DIR)/rboot.bin
 	$(vecho) "CP    $< -> $@"
 	$(Q) cp $< $@
 
-$(FW_FILE_2_OUT): $(APP_OUT)
-	$(vecho) "FW    $(APP_OUT) -> $@"
-	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $(APP_OUT) $@ $(FW_SECTS)
+$(FW_FILE_2_OUT): $(APP_BIN)
+	$(vecho) "CP    $< -> $@"
+	$(Q) cp $< $@
+
+$(APP_BIN): $(APP_ELF)
+	$(vecho) "FW    $< -> $@"
+	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $< $@ $(FW_SECTS)
 
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_OUT): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+$(APP_ELF): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
 	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MIOT_ESP_PATH)/Makefile.build

@@ -67,9 +67,7 @@ NOINSTR void esp_dump_core(int cause, struct regfile *regs) {
           cause);
   emit_core_dump_section("REGS", (uintptr_t) regs, sizeof(*regs));
   emit_core_dump_section("DRAM", 0x3FFE8000, 0x18000);
-  /* rtos relocates vectors here */
-  emit_core_dump_section("VEC", 0x40100000, 0x1000);
-  emit_core_dump_section("ROM", 0x40000000, 0x10000);
+  emit_core_dump_section("IRAM", 0x40100000, 0x8000);
   /*
    * IRAM and IROM can be obtained from the firmware/ dir.
    * We need the ELF binary anyway to do symbolic debugging anyway
