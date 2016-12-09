@@ -22,6 +22,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <stdio.h>
+
+typedef struct stat cs_stat_t;
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1

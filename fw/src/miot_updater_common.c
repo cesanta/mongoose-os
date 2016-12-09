@@ -638,7 +638,7 @@ int miot_upd_merge_spiffs(spiffs *old_fs) {
 
   struct spiffs_dirent de, *de_ptr;
   while ((de_ptr = SPIFFS_readdir(dir_ptr, &de)) != NULL) {
-    struct stat st;
+    cs_stat_t st;
     if (stat((const char *) de_ptr->name, &st) != 0) {
       /* File not found on the new fs, copy. */
       if (!file_copy(old_fs, (char *) de_ptr->name)) {

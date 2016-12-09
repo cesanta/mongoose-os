@@ -318,8 +318,9 @@ enum miot_init_result miot_sys_config_init_http(
      * NOTE: we won't free `tun_addr`, because when reconnect happens, this
      * address string will be accessed again.
      */
-    if (asprintf(&tun_addr, "ws://%s:%s@%s.%s", device_cfg->id,
-                 device_cfg->password, device_cfg->id, cfg->tunnel.addr) < 0) {
+    if (mg_asprintf(&tun_addr, 0, "ws://%s:%s@%s.%s", device_cfg->id,
+                    device_cfg->password, device_cfg->id,
+                    cfg->tunnel.addr) < 0) {
       return MIOT_INIT_OUT_OF_MEMORY;
     }
     listen_conn_tun =
@@ -430,8 +431,9 @@ enum miot_init_result miot_sys_config_init(void) {
   /* Init mac address readonly var - users may use it as device ID */
   uint8_t mac[6];
   device_get_mac_address(mac);
-  if (asprintf((char **) &s_ro_vars.mac_address, "%02X%02X%02X%02X%02X%02X",
-               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]) < 0) {
+  if (mg_asprintf((char **) &s_ro_vars.mac_address, 0,
+                  "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3],
+                  mac[4], mac[5]) < 0) {
     return MIOT_INIT_OUT_OF_MEMORY;
   }
   LOG(LL_INFO, ("MAC: %s", s_ro_vars.mac_address));

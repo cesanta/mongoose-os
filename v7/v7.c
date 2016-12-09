@@ -125,11 +125,13 @@
 #define NOINLINE __attribute__((noinline))
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #define NOINSTR __attribute__((no_instrument_function))
+#define DO_NOT_WARN_UNUSED __attribute__((unused))
 #else
 #define NORETURN
 #define NOINLINE
 #define WARN_UNUSED_RESULT
 #define NOINSTR
+#define DO_NOT_WARN_UNUSED
 #endif /* __GNUC__ */
 
 #ifndef ARRAY_SIZE
@@ -818,6 +820,10 @@ int inet_pton(int af, const char *src, void *dst);
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <stdio.h>
+
+typedef struct stat cs_stat_t;
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1

@@ -93,11 +93,13 @@
 #define NOINLINE __attribute__((noinline))
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #define NOINSTR __attribute__((no_instrument_function))
+#define DO_NOT_WARN_UNUSED __attribute__((unused))
 #else
 #define NORETURN
 #define NOINLINE
 #define WARN_UNUSED_RESULT
 #define NOINSTR
+#define DO_NOT_WARN_UNUSED
 #endif /* __GNUC__ */
 
 #ifndef ARRAY_SIZE
