@@ -8,6 +8,8 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_wifi.h"
 
+enum { ERROR_UNKNOWN_COMMAND = -1, ERROR_I2C_NOT_CONFIGURED = -2 };
+
 static void sub(struct mg_connection *c, const char *fmt, ...) {
   char buf[100];
   struct mg_mqtt_topic_expression topic = {buf, 0};
@@ -20,7 +22,7 @@ static void sub(struct mg_connection *c, const char *fmt, ...) {
 }
 
 static void pub(struct mg_connection *c, const char *fmt, ...) {
-  char msg[50];
+  char msg[200];
   struct json_out jmo = JSON_OUT_BUF(msg, sizeof(msg));
   va_list ap;
   int n;
@@ -59,8 +61,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
 
   if (ev == MG_EV_MQTT_CONNACK) {
     LOG(LL_INFO, ("CONNACK: %d", msg->connack_ret_code));
-    if (get_cfg()->mqtt.sub == NULL) {
-      LOG(LL_INFO, ("No topic is set! Run 'miot config-set mqtt.sub=...'"));
+    if (get_cfg()->mqtt.sub == NULL || get_cfg()->mqtt.pub == NULL) {
+      LOG(LL_ERROR, ("Run 'miot config-set mqtt.sub=... mqtt.pub=...'"));
     } else {
       sub(c, "%s", get_cfg()->mqtt.sub);
     }
@@ -69,6 +71,7 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
     int pin, state;
     char *data = NULL;
 
+    LOG(LL_INFO, ("got command: [%.*s]", (int) s->len, s->p));
     if (json_scanf(s->p, s->len, "{gpio: {pin: %d, state: %d}}", &pin,
                    &state) == 2) {
       /* Set GPIO pin to a given state */
@@ -85,7 +88,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
       /* Write byte sequence to I2C. First byte is an address */
       struct miot_i2c *i2c = miot_i2c_get_global();
       if (i2c == NULL) {
-        LOG(LL_ERROR, ("I2C is not enabled!"));
+        pub(c, "{error: {code: %d, message: %Q}}", ERROR_I2C_NOT_CONFIGURED,
+            "I2C is not enabled");
       } else {
         enum i2c_ack_type ret = miot_i2c_start(i2c, from_hex(data), I2C_WRITE);
         for (size_t i = 2; i < strlen(data) && ret == I2C_ACK; i += 2) {
@@ -96,7 +100,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
         pub(c, "{type: %Q, result: %d}", "i2c", ret);
       }
     } else {
-      LOG(LL_ERROR, ("Unknown command: [%.*s]", (int) s->len, s->p));
+      pub(c, "{error: {code: %d, message: %Q}}", ERROR_UNKNOWN_COMMAND,
+          "unknown command");
     }
     free(data);
   }
