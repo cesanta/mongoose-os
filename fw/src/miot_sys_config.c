@@ -84,7 +84,8 @@ bool save_cfg(const struct sys_config *cfg, char **msg) {
   struct sys_config defaults;
   memset(&defaults, 0, sizeof(defaults));
   *msg = NULL;
-  for (int i = 0; i < s_num_validators; i++) {
+  int i;
+  for (i = 0; i < s_num_validators; i++) {
     if (!s_validators[i](cfg, msg)) goto clean;
   }
   if (!load_config_defaults(&defaults)) {

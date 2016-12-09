@@ -28,7 +28,8 @@ struct console_ctx {
 } s_cctx;
 
 static int miot_console_next_msg_len(void) {
-  for (size_t i = 0; i < s_cctx.buf.len; i++) {
+  size_t i;
+  for (i = 0; i < s_cctx.buf.len; i++) {
     if (s_cctx.buf.buf[i] == '\n') return i + 1;
   }
   return 0;
@@ -80,7 +81,8 @@ void miot_console_printf(const char *fmt, ...) {
   if (len > 0) {
     if (len >= BUFSIZ) len = BUFSIZ - 1;
     buf[len] = '\n';
-    for (int i = 0; i <= len; i++) miot_console_putc(buf[i]);
+    int i;
+    for (i = 0; i <= len; i++) miot_console_putc(buf[i]);
   }
   free(buf);
 }

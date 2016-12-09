@@ -38,7 +38,8 @@ const struct miot_conf_entry *miot_conf_find_schema_entry(
     const char *path, const struct miot_conf_entry *obj) {
   const char *sep = strchr(path, '.');
   int kl = (sep == 0 ? (int) strlen(path) : (sep - path));
-  for (int i = 1; i <= obj->num_desc; i++) {
+  int i;
+  for (i = 1; i <= obj->num_desc; i++) {
     const struct miot_conf_entry *e = obj + i;
     if (strncmp(path, e->key, kl) == 0 && ((int) strlen(e->key) == kl)) {
       if (path[kl] == '\0') return e;
@@ -147,7 +148,8 @@ struct emit_ctx {
 
 static void miot_emit_indent(struct mbuf *m, int n) {
   mbuf_append(m, "\n", 1);
-  for (int j = 0; j < n; j++) mbuf_append(m, " ", 1);
+  int j;
+  for (j = 0; j < n; j++) mbuf_append(m, " ", 1);
 }
 
 static bool miot_conf_value_eq(const void *cfg, const void *base,
@@ -167,7 +169,8 @@ static bool miot_conf_value_eq(const void *cfg, const void *base,
       return (strcmp(s1, s2) == 0);
     }
     case CONF_TYPE_OBJECT: {
-      for (int i = e->num_desc; i > 0; i--) {
+      int i;
+      for (i = e->num_desc; i > 0; i--) {
         e++;
         if (e->type != CONF_TYPE_OBJECT && !miot_conf_value_eq(cfg, base, e)) {
           return false;
@@ -184,7 +187,8 @@ static void miot_conf_emit_obj(struct emit_ctx *ctx,
                                int num_entries, int indent) {
   mbuf_append(ctx->out, "{", 1);
   bool first = true;
-  for (int i = 0; i < num_entries;) {
+  int i;
+  for (i = 0; i < num_entries;) {
     const struct miot_conf_entry *e = schema + i;
     if (miot_conf_value_eq(ctx->cfg, ctx->base, e)) {
       i += (e->type == CONF_TYPE_OBJECT ? e->num_desc : 1);
@@ -286,7 +290,8 @@ bool miot_conf_emit_f(const void *cfg, const void *base,
 }
 
 void miot_conf_free(const struct miot_conf_entry *schema, void *cfg) {
-  for (int i = 1; i <= schema->num_desc; i++) {
+  int i;
+  for (i = 1; i <= schema->num_desc; i++) {
     const struct miot_conf_entry *e = schema + i;
     if (e->type == CONF_TYPE_STRING) {
       char **sp = ((char **) (((char *) cfg) + e->offset));
