@@ -178,7 +178,7 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
   return SPIFFS_OK;
 }
 
-static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
+static s32_t esp_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
 #ifdef CS_MMAP
   if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
     if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
@@ -207,9 +207,10 @@ static s32_t esp_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
   } else {
     return esp_spiffs_readwrite(addr, size, dst, 0);
   }
+  (void) fs;
 }
 
-static s32_t esp_spiffs_write(u32_t addr, u32_t size, u8_t *src) {
+static s32_t esp_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   if (0 && addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
     /*
      * For unknown reason spi_flash_read/write
@@ -221,9 +222,10 @@ static s32_t esp_spiffs_write(u32_t addr, u32_t size, u8_t *src) {
   } else {
     return esp_spiffs_readwrite(addr, size, src, 1);
   }
+  (void) fs;
 }
 
-static s32_t esp_spiffs_erase(u32_t addr, u32_t size) {
+static s32_t esp_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   /*
    * With proper configurarion spiffs always
    * provides here sector address & sector size
@@ -233,7 +235,7 @@ static s32_t esp_spiffs_erase(u32_t addr, u32_t size) {
                    (int) addr, (int) size));
     return SPIFFS_ERR_NOT_CONFIGURED;
   }
-
+  (void) fs;
   return spi_flash_erase_sector(addr / FLASH_BLOCK_SIZE);
 }
 

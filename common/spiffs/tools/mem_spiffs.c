@@ -17,17 +17,17 @@ u8_t spiffs_fds[32 * 4];
 char *image; /* in memory flash image */
 size_t image_size;
 
-s32_t mem_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
+s32_t mem_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   memcpy(dst, image + addr, size);
   return SPIFFS_OK;
 }
 
-s32_t mem_spiffs_write(u32_t addr, u32_t size, u8_t *src) {
+s32_t mem_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   memcpy(image + addr, src, size);
   return SPIFFS_OK;
 }
 
-s32_t mem_spiffs_erase(u32_t addr, u32_t size) {
+s32_t mem_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   memset(image + addr, 0xff, size);
   return SPIFFS_OK;
 }

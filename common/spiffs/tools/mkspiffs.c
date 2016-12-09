@@ -78,15 +78,16 @@ int main(int argc, char **argv) {
   DIR *dir;
 
   if (argc < 3) {
-    fprintf(stderr, "usage: %s <size> <root_dir>\n", argv[0]);
+    fprintf(stderr, "usage: %s <size> <root_dir> [image_file]\n", argv[0]);
     return 1;
   }
 
-  image_size = atoi(argv[1]);
+  image_size = (size_t) strtol(argv[1], NULL, 0);
   if (image_size == 0) {
     fprintf(stderr, "invalid size '%s'\n", argv[1]);
     return 1;
   }
+
   root_dir = argv[2];
 
   image = malloc(image_size);
@@ -95,7 +96,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  mem_spiffs_erase(0, image_size);
+  mem_spiffs_erase(NULL, 0, image_size);
   mem_spiffs_mount();  // Will fail but is required.
   SPIFFS_format(&fs);
   if (mem_spiffs_mount() != SPIFFS_OK) {
@@ -111,12 +112,23 @@ int main(int argc, char **argv) {
     read_dir(dir, root_dir);
   }
 
-  fwrite(image, image_size, 1, stdout);
-
   u32_t total, used;
   SPIFFS_info(&fs, &total, &used);
   fprintf(stderr, "Image stats: size=%u, space: total=%u, used=%u, free=%u\n",
           (unsigned int) image_size, total, used, total - used);
+
+  FILE *out = stdout;
+  if (argc == 4) {
+    out = fopen(argv[3], "w");
+    if (out == NULL) {
+      fprintf(stderr, "failed to open %s for writing\n", argv[3]);
+      return 1;
+    }
+  }
+
+  fwrite(image, image_size, 1, out);
+
+  if (out != stdout) fclose(out);
 
   return 0;
 }
