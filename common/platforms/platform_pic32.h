@@ -3,12 +3,12 @@
  * All rights reserved
  */
 
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_PIC32_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_PIC32_H_
 
-#if CS_PLATFORM == CS_P_PIC32_HARMONY
+#if CS_PLATFORM == CS_P_PIC32
 
-#define MG_NET_IF MG_NET_IF_PIC32_HARMONY
+#define MG_NET_IF MG_NET_IF_PIC32
 
 #include <stdint.h>
 #include <time.h>
@@ -28,6 +28,6 @@ typedef TCP_SOCKET sock_t;
 
 char* inet_ntoa(struct in_addr in);
 
-#endif /* CS_PLATFORM == CS_P_PIC32_HARMONY */
+#endif /* CS_PLATFORM == CS_P_PIC32 */
 
-#endif /* CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_PIC32_H_ */

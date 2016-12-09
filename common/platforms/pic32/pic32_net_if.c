@@ -3,36 +3,36 @@
  * All rights reserved
  */
 
-#if MG_ENABLE_NET_IF_PIC32_HARMONY
+#if MG_ENABLE_NET_IF_PIC32
 
-int mg_pic32_harmony_if_create_conn(struct mg_connection *nc) {
+int mg_pic32_if_create_conn(struct mg_connection *nc) {
   (void) nc;
   return 1;
 }
 
-void mg_pic32_harmony_if_recved(struct mg_connection *nc, size_t len) {
+void mg_pic32_if_recved(struct mg_connection *nc, size_t len) {
   (void) nc;
   (void) len;
 }
 
-void mg_pic32_harmony_if_add_conn(struct mg_connection *nc) {
+void mg_pic32_if_add_conn(struct mg_connection *nc) {
   (void) nc;
 }
 
-void mg_pic32_harmony_if_init(struct mg_iface *iface) {
+void mg_pic32_if_init(struct mg_iface *iface) {
   (void) iface;
   (void) mg_get_errno(); /* Shutup compiler */
 }
 
-void mg_pic32_harmony_if_free(struct mg_iface *iface) {
+void mg_pic32_if_free(struct mg_iface *iface) {
   (void) iface;
 }
 
-void mg_pic32_harmony_if_remove_conn(struct mg_connection *nc) {
+void mg_pic32_if_remove_conn(struct mg_connection *nc) {
   (void) nc;
 }
 
-void mg_pic32_harmony_if_destroy_conn(struct mg_connection *nc) {
+void mg_pic32_if_destroy_conn(struct mg_connection *nc) {
   if (nc->sock == INVALID_SOCKET) return;
   /* For UDP, only close outgoing sockets or listeners. */
   if (!(nc->flags & MG_F_UDP)) {
@@ -46,8 +46,7 @@ void mg_pic32_harmony_if_destroy_conn(struct mg_connection *nc) {
   nc->sock = INVALID_SOCKET;
 }
 
-int mg_pic32_harmony_if_listen_udp(struct mg_connection *nc,
-                                   union socket_address *sa) {
+int mg_pic32_if_listen_udp(struct mg_connection *nc, union socket_address *sa) {
   nc->sock = TCPIP_UDP_ServerOpen(
       sa->sin.sin_family == AF_INET ? IP_ADDRESS_TYPE_IPV4
                                     : IP_ADDRESS_TYPE_IPV6,
@@ -59,18 +58,17 @@ int mg_pic32_harmony_if_listen_udp(struct mg_connection *nc,
   return 0;
 }
 
-void mg_pic32_harmony_if_udp_send(struct mg_connection *nc, const void *buf,
-                                  size_t len) {
+void mg_pic32_if_udp_send(struct mg_connection *nc, const void *buf,
+                          size_t len) {
   mbuf_append(&nc->send_mbuf, buf, len);
 }
 
-void mg_pic32_harmony_if_tcp_send(struct mg_connection *nc, const void *buf,
-                                  size_t len) {
+void mg_pic32_if_tcp_send(struct mg_connection *nc, const void *buf,
+                          size_t len) {
   mbuf_append(&nc->send_mbuf, buf, len);
 }
 
-int mg_pic32_harmony_if_listen_tcp(struct mg_connection *nc,
-                                   union socket_address *sa) {
+int mg_pic32_if_listen_tcp(struct mg_connection *nc, union socket_address *sa) {
   nc->sock = TCPIP_TCP_ServerOpen(
       sa->sin.sin_family == AF_INET ? IP_ADDRESS_TYPE_IPV4
                                     : IP_ADDRESS_TYPE_IPV6,
@@ -112,7 +110,7 @@ static int mg_accept_conn(struct mg_connection *lc) {
 
   mg_if_accept_tcp_cb(nc, (union socket_address *) &sa, sizeof(sa));
 
-  return mg_pic32_harmony_if_listen_tcp(lc, &lc->sa) >= 0;
+  return mg_pic32_if_listen_tcp(lc, &lc->sa) >= 0;
 }
 
 char *inet_ntoa(struct in_addr in) {
@@ -202,7 +200,7 @@ static void mg_handle_recv(struct mg_connection *nc) {
   }
 }
 
-time_t mg_pic32_harmony_if_poll(struct mg_iface *iface, int timeout_ms) {
+time_t mg_pic32_if_poll(struct mg_iface *iface, int timeout_ms) {
   struct mg_mgr *mgr = iface->mgr;
   double now = mg_time();
   struct mg_connection *nc, *tmp;
@@ -244,17 +242,17 @@ time_t mg_pic32_harmony_if_poll(struct mg_iface *iface, int timeout_ms) {
   return now;
 }
 
-void mg_pic32_harmony_if_sock_set(struct mg_connection *nc, sock_t sock) {
+void mg_pic32_if_sock_set(struct mg_connection *nc, sock_t sock) {
   nc->sock = sock;
 }
 
-void mg_pic32_harmony_if_get_conn_addr(struct mg_connection *nc, int remote,
-                                       union socket_address *sa) {
+void mg_pic32_if_get_conn_addr(struct mg_connection *nc, int remote,
+                               union socket_address *sa) {
   /* TODO(alaskin): not implemented yet */
 }
 
-void mg_pic32_harmony_if_connect_tcp(struct mg_connection *nc,
-                                     const union socket_address *sa) {
+void mg_pic32_if_connect_tcp(struct mg_connection *nc,
+                             const union socket_address *sa) {
   nc->sock = TCPIP_TCP_ClientOpen(
       sa->sin.sin_family == AF_INET ? IP_ADDRESS_TYPE_IPV4
                                     : IP_ADDRESS_TYPE_IPV6,
@@ -262,37 +260,36 @@ void mg_pic32_harmony_if_connect_tcp(struct mg_connection *nc,
   nc->err = (nc->sock == INVALID_SOCKET) ? -1 : 0;
 }
 
-void mg_pic32_harmony_if_connect_udp(struct mg_connection *nc) {
+void mg_pic32_if_connect_udp(struct mg_connection *nc) {
   nc->sock = TCPIP_UDP_ClientOpen(IP_ADDRESS_TYPE_ANY, 0, NULL);
   nc->err = (nc->sock == INVALID_SOCKET) ? -1 : 0;
 }
 
 /* clang-format off */
-#define MG_PIC32_HARMONY_IFACE_VTABLE                                   \
-  {                                                                     \
-    mg_pic32_harmony_if_init,                                           \
-    mg_pic32_harmony_if_free,                                           \
-    mg_pic32_harmony_if_add_conn,                                       \
-    mg_pic32_harmony_if_remove_conn,                                    \
-    mg_pic32_harmony_if_poll,                                           \
-    mg_pic32_harmony_if_listen_tcp,                                     \
-    mg_pic32_harmony_if_listen_udp,                                     \
-    mg_pic32_harmony_if_connect_tcp,                                    \
-    mg_pic32_harmony_if_connect_udp,                                    \
-    mg_pic32_harmony_if_tcp_send,                                       \
-    mg_pic32_harmony_if_udp_send,                                       \
-    mg_pic32_harmony_if_recved,                                         \
-    mg_pic32_harmony_if_create_conn,                                    \
-    mg_pic32_harmony_if_destroy_conn,                                   \
-    mg_pic32_harmony_if_sock_set,                                       \
-    mg_pic32_harmony_if_get_conn_addr,                                  \
+#define MG_PIC32_IFACE_VTABLE                                   \
+  {                                                             \
+    mg_pic32_if_init,                                           \
+    mg_pic32_if_free,                                           \
+    mg_pic32_if_add_conn,                                       \
+    mg_pic32_if_remove_conn,                                    \
+    mg_pic32_if_poll,                                           \
+    mg_pic32_if_listen_tcp,                                     \
+    mg_pic32_if_listen_udp,                                     \
+    mg_pic32_if_connect_tcp,                                    \
+    mg_pic32_if_connect_udp,                                    \
+    mg_pic32_if_tcp_send,                                       \
+    mg_pic32_if_udp_send,                                       \
+    mg_pic32_if_recved,                                         \
+    mg_pic32_if_create_conn,                                    \
+    mg_pic32_if_destroy_conn,                                   \
+    mg_pic32_if_sock_set,                                       \
+    mg_pic32_if_get_conn_addr,                                  \
   }
 /* clang-format on */
 
-struct mg_iface_vtable mg_pic32_harmony_iface_vtable =
-    MG_PIC32_HARMONY_IFACE_VTABLE;
-#if MG_NET_IF == MG_NET_IF_PIC32_HARMONY
-struct mg_iface_vtable mg_default_iface_vtable = MG_PIC32_HARMONY_IFACE_VTABLE;
+struct mg_iface_vtable mg_pic32_iface_vtable = MG_PIC32_IFACE_VTABLE;
+#if MG_NET_IF == MG_NET_IF_PIC32
+struct mg_iface_vtable mg_default_iface_vtable = MG_PIC32_IFACE_VTABLE;
 #endif
 
-#endif /* MG_ENABLE_NET_IF_PIC32_HARMONY */
+#endif /* MG_ENABLE_NET_IF_PIC32 */
