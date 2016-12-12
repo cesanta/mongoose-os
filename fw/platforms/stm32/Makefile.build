@@ -1,0 +1,5 @@
+TARGET=DISCO_F469NI
+
+all:
+	@mbed deploy
+	@mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library
