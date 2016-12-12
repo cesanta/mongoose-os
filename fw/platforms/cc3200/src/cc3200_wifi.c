@@ -24,26 +24,31 @@
 #include "cc3200_main_task.h"
 
 struct cc3200_wifi_config {
-  enum miot_wifi_status status;
   char *ssid;
   char *pass;
-  SlNetCfgIpV4Args_t static_ip;
   char *ip;
+  SlNetCfgIpV4Args_t static_ip;
+  unsigned int status : 4;
+  unsigned int reconnect : 1;
 };
 
 static struct cc3200_wifi_config s_wifi_sta_config;
 static int s_current_role = -1;
 
 static void free_wifi_config(void) {
-  s_wifi_sta_config.status = MIOT_WIFI_DISCONNECTED;
   free(s_wifi_sta_config.ssid);
   free(s_wifi_sta_config.pass);
   free(s_wifi_sta_config.ip);
-  s_wifi_sta_config.ssid = s_wifi_sta_config.pass = s_wifi_sta_config.ip = NULL;
+  memset(&s_wifi_sta_config, 0, sizeof(s_wifi_sta_config));
 }
 
 void invoke_wifi_on_change_cb(void *arg) {
   miot_wifi_on_change_cb((enum miot_wifi_status)(int) arg);
+  if (s_current_role == ROLE_STA &&
+      s_wifi_sta_config.status == MIOT_WIFI_DISCONNECTED &&
+      s_wifi_sta_config.reconnect) {
+    miot_wifi_connect();
+  }
 }
 
 static int restart_nwp(void) {
@@ -75,13 +80,13 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
       break;
     }
     case SL_WLAN_DISCONNECT_EVENT: {
-      free_wifi_config();
+      s_wifi_sta_config.status = MIOT_WIFI_DISCONNECTED;
       break;
     }
     default:
       return;
   }
-  invoke_cb(invoke_wifi_on_change_cb, (void *) s_wifi_sta_config.status);
+  invoke_cb(invoke_wifi_on_change_cb, (void *) (int) s_wifi_sta_config.status);
 }
 
 void sl_net_app_eh(SlNetAppEvent_t *e) {
@@ -91,7 +96,8 @@ void sl_net_app_eh(SlNetAppEvent_t *e) {
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = MIOT_WIFI_IP_ACQUIRED;
-    invoke_cb(invoke_wifi_on_change_cb, (void *) s_wifi_sta_config.status);
+    invoke_cb(invoke_wifi_on_change_cb,
+              (void *) (int) s_wifi_sta_config.status);
   } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
     SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
     LOG(LL_INFO,
@@ -244,15 +250,18 @@ int miot_wifi_connect(void) {
 
   LOG(LL_INFO, ("Connecting to %s", s_wifi_sta_config.ssid));
 
+  s_wifi_sta_config.reconnect = 1;
+
   return 1;
 }
 
 int miot_wifi_disconnect(void) {
+  free_wifi_config();
   return (sl_WlanDisconnect() == 0);
 }
 
 enum miot_wifi_status miot_wifi_get_status(void) {
-  return s_wifi_sta_config.status;
+  return (enum miot_wifi_status) s_wifi_sta_config.status;
 }
 
 char *miot_wifi_get_status_str(void) {
