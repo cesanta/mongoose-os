@@ -294,10 +294,10 @@ static _i32 fs_mount_spiffs(struct mount_info *m, _u32 fs_size, _u32 block_size,
   cfg.log_block_size = block_size;
   cfg.log_page_size = page_size;
   m->work = calloc(2, page_size);
-  m->fds_size = MAX_OPEN_SPIFFS_FILES * sizeof(spiffs_fd);
-  m->fds = calloc(1, m->fds_size);
+  m->fds = calloc(1, MAX_OPEN_SPIFFS_FILES * sizeof(spiffs_fd));
   m->fs.user_data = m;
-  r = SPIFFS_mount(&m->fs, &cfg, m->work, m->fds, m->fds_size, NULL, 0, NULL);
+  r = SPIFFS_mount(&m->fs, &cfg, m->work, m->fds,
+                   MAX_OPEN_SPIFFS_FILES * sizeof(spiffs_fd), NULL, 0, NULL);
   if (r != SPIFFS_OK) {
     free(m->work);
     free(m->fds);

@@ -230,7 +230,7 @@ MIOT_CFLAGS = -DMIOT_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOC
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
-  FW_FS_OUT = $(FW_STAGING_DIR)/$(FS_ADDR).bin
+  FS_IMG = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 endif
 
 LD_SCRIPT_TEMPL = $(MIOT_ESP_PATH)/ld/fw.ld
@@ -378,7 +378,7 @@ FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
 
 ifeq "$(CREATE_SPIFFS_FS)" "1"
-  FW_PARTS += fs:src=$(FW_FS_OUT),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+  FW_PARTS += fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
 
 ifeq "$(CREATE_RAW_FS)" "1"
@@ -390,7 +390,7 @@ include $(MIOT_PATH)/common/scripts/fw_meta.mk
 all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
-                $(FW_FILE_2_OUT) $(FW_FS_OUT) $(FS_FILES) $(JSBIN_SRCS)
+                $(FW_FILE_2_OUT) $(FS_IMG) $(FS_FILES) $(JSBIN_SRCS)
 
 $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT): $(FW_STAGING_DIR)
 	$(vecho) "GEN   $@"
@@ -477,7 +477,7 @@ $(MG_BUILD_INFO_C): $(MIOT_OBJS)
 
 # -- Filesystem.
 
-$(FW_FS_OUT): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(_FS_SIZE))
 
 ifeq "$(MIOT_ENABLE_JS)" "1"
@@ -488,7 +488,7 @@ $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC   v7"
 	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 
-$(FW_FS_OUT): $(BUILD_DIR)/v7
+$(FS_IMG): $(BUILD_DIR)/v7
 
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate

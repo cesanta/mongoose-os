@@ -1,0 +1,15 @@
+# Partition table for MIOT.
+# See doc here: https://github.com/espressif/esp-idf/blob/master/docs/partition-tables.rst
+#
+# Note: if you change the phy_init or app partition offset,
+# be sure to change the offset in Kconfig.projbuild
+#
+# Note: NVS is required for WiFi.
+#
+# Name,   Type, SubType, Offset,   Size
+nvs,      data, nvs,     0x9000,   0x6000
+#otadata, data, ota,     0xd000,   0x2000
+app0,     app,  0,       0x10000,  1M
+fs0,      data, spiffs,  0x110000, 128K
+#app1,    app,  0,       ,         1M
+#fs1,     data, spiffs,  ,         128K

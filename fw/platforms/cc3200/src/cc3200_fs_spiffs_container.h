@@ -24,10 +24,9 @@ struct mount_info {
   _u32 cidx : 1;     /* Which of the two containers is currently mounted. */
   _u32 rw : 1;       /* 1 if the underlying fh is r/w. */
   double last_write; /* Last time container was written (systick) */
-  /* SPIFFS work area and file descriptor space. */
+  /* SPIFFS work area and file descriptor space (malloced). */
   _u8 *work;
   _u8 *fds;
-  _u32 fds_size;
 };
 
 /* TI recommends rounding to nearest multiple of 4K - 512 bytes.
