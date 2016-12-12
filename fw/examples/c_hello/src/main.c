@@ -12,6 +12,8 @@
 #elif CS_PLATFORM == CS_P_CC3200
 /* On CC3200 LAUNCHXL pin 64 is the red LED. */
 #define GPIO 64 /* The red LED on LAUNCHXL */
+#elif CS_PLATFORM == CS_P_MBED
+#define GPIO 64
 #else
 #error Unknown platform
 #endif

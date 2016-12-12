@@ -1,5 +1,73 @@
 TARGET=DISCO_F469NI
 
-all:
+include rules.mk
+
+APP_MODULES ?=
+
+MIOT_ENABLE_ATCA ?= 1
+MIOT_ENABLE_ATCA_SERVICE ?= 0
+MIOT_ENABLE_CONFIG_SERVICE ?= 1
+MIOT_ENABLE_DNS_SD ?= 1
+MIOT_ENABLE_FILESYSTEM_SERVICE ?= 1
+MIOT_ENABLE_I2C ?= 1
+MIOT_ENABLE_JS ?= 0
+MIOT_ENABLE_MQTT ?= 1
+MIOT_ENABLE_RPC ?= 1
+MIOT_ENABLE_RPC_CHANNEL_HTTP ?= 1
+MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
+MIOT_ENABLE_UPDATER ?= 1
+MIOT_ENABLE_UPDATER_POST ?= 1
+MIOT_ENABLE_UPDATER_RPC ?= 0
+
+MIOT_PATH ?= ../../..
+COMMON_PATH ?= $(MIOT_PATH)/common
+MONGOOSE_PATH ?= $(MIOT_PATH)/mongoose
+FROZEN_PATH ?= $(MIOT_PATH)/frozen
+V7_PATH ?= $(MIOT_PATH)/v7
+MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
+SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+PLATFORM_SRC_PATH = $(MIOT_PATH)/fw/platforms/stm32
+SIMPLE_LINK_PATH = $(PLATFORM_SRC_PATH)/simplelink
+STM32LIB = libstm32.a
+
+MIOT_SRCS = cs_rbuf.c \
+            miot_config.c \
+            miot_console.c cs_frbuf.c \
+            miot_init.c \
+            miot_timers_mongoose.c \
+            miot_wifi.c \
+            miot_mongoose.c \
+            miot_sys_config.c \
+			miot_uart.c \
+            miot_utils.c \
+            cs_crc32.c \
+            json_utils.c \
+            mongoose.c frozen.c
+
+VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH)
+
+INCLUDE_PATHS += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
+				 -I$(SIMPLE_LINK_PATH)
+
+C_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK
+
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+
+MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
+
+all: $(BUILD_DIR) $(BUILD_DIR)/$(STM32LIB) $(MIOT_OBJS) $(APP_OBJS)
+
+$(BUILD_DIR)/$(STM32LIB):
 	@mbed deploy
 	@mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library
+
+$(BUILD_DIR):
+	echo $(APP_OBJS)
+	@echo "MKDIR $@"
+	@mkdir -p $@
+
+$(BUILD_DIR)/%.o: %.c
+	@echo CC $(notdir $<)
+	@$(CC) $(C_FLAGS) $(INCLUDE_PATHS) -o $@ $<

@@ -63,22 +63,22 @@ void miot_wifi_remove_on_change_cb(miot_wifi_changed_t cb, void *arg) {
 static bool validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
   if (cfg->wifi.sta.enable) {
     if (cfg->wifi.sta.ssid == NULL || strlen(cfg->wifi.sta.ssid) > 31) {
-      if (!asprintf(msg, "%s %s must be between %d and %d chars", "STA", "SSID",
-                    1, 31)) {
+      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "STA",
+                       "SSID", 1, 31)) {
       }
       return false;
     }
     if (cfg->wifi.sta.pass != NULL &&
         (strlen(cfg->wifi.sta.pass) < 8 || strlen(cfg->wifi.sta.pass) > 63)) {
-      if (!asprintf(msg, "%s %s must be between %d and %d chars", "STA",
-                    "password", 8, 63)) {
+      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "STA",
+                       "password", 8, 63)) {
       }
       return false;
     }
     if (cfg->wifi.sta.ip != NULL) {
       if (cfg->wifi.sta.netmask == NULL) {
-        if (!asprintf(msg,
-                      "Station static IP is set but no netmask provided")) {
+        if (!mg_asprintf(msg, 0,
+                         "Station static IP is set but no netmask provided")) {
         }
         return false;
       }
@@ -87,15 +87,15 @@ static bool validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
   }
   if (cfg->wifi.ap.enable) {
     if (cfg->wifi.ap.ssid == NULL || strlen(cfg->wifi.ap.ssid) > 31) {
-      if (!asprintf(msg, "%s %s must be between %d and %d chars", "AP", "SSID",
-                    1, 31)) {
+      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "AP",
+                       "SSID", 1, 31)) {
       }
       return false;
     }
     if (cfg->wifi.ap.pass != NULL &&
         (strlen(cfg->wifi.ap.pass) < 8 || strlen(cfg->wifi.ap.pass) > 63)) {
-      if (!asprintf(msg, "%s %s must be between %d and %d chars", "AP",
-                    "password", 8, 63)) {
+      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "AP",
+                       "password", 8, 63)) {
       }
       return false;
     }
