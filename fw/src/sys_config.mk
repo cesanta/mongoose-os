@@ -8,6 +8,9 @@ PYTHON ?= python
 
 SYS_CONF_SCHEMA += $(MIOT_PATH)/fw/src/miot_sys_config.yaml
 
+SYS_CONFIG_SCHEMA_JSON ?=
+SYS_RO_VARS_SCHEMA_JSON ?=
+
 $(SYS_CONFIG_C) $(SYS_CONFIG_SCHEMA_JSON): $(SYS_CONF_SCHEMA) $(APP_CONF_SCHEMA) $(GSC_TOOL)
 	$(vecho) "GEN   $@"
 	$(Q) $(PYTHON) $(GSC_TOOL) \

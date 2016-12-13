@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "fw/src/miot_console.h"
+
+#if MIOT_ENABLE_CONSOLE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -178,3 +185,5 @@ void miot_console_init(void) {
 #endif
   s_cctx.initialized = 1;
 }
+
+#endif /* MIOT_ENABLE_CONSOLE */

@@ -6,6 +6,12 @@
 #ifndef CS_FW_SRC_MIOT_WIFI_H_
 #define CS_FW_SRC_MIOT_WIFI_H_
 
+#include "fw/src/miot_features.h"
+
+#if MIOT_ENABLE_WIFI
+
+#include "fw/src/miot_init.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -54,10 +60,12 @@ enum miot_wifi_status miot_wifi_get_status(void);
 
 void miot_wifi_hal_init(void);
 
-void miot_wifi_init(void);
+enum miot_init_result miot_wifi_init(void);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* MIOT_ENABLE_WIFI */
 
 #endif /* CS_FW_SRC_MIOT_WIFI_H_ */

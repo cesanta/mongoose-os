@@ -107,18 +107,24 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   }
 }
 
+#if MIOT_ENABLE_WIFI
 static void mg_mqtt_wifi_ready(enum miot_wifi_status event, void *arg) {
   if (event != MIOT_WIFI_IP_ACQUIRED) return;
 
   mqtt_global_connect();
   (void) arg;
 }
+#endif
 
 enum miot_init_result miot_mqtt_global_init(void) {
   enum miot_init_result ret = MIOT_INIT_OK;
   const struct sys_config_mqtt *smcfg = &get_cfg()->mqtt;
   s_reconnect_timeout = smcfg->reconnect_timeout_min;
+#if MIOT_ENABLE_WIFI
   miot_wifi_add_on_change_cb(mg_mqtt_wifi_ready, NULL);
+#else
+  mqtt_global_connect();
+#endif
   return ret;
 }
 

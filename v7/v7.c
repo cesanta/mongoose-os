@@ -469,6 +469,7 @@ typedef struct stat cs_stat_t;
 #include <fcntl.h>
 #include <inttypes.h>
 #include <machine/endian.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/time.h>

@@ -32,6 +32,6 @@ define mkspiffs
 	$(Q) $(foreach jsbin,$(JSBIN_SRCS), \
 	  echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
 	  $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
-	$(vecho) "MKFS  $(FS_STAGING_DIR) ($(FS_SIZE)) -> $@"
+	$(vecho) "  MKFS  $(FS_STAGING_DIR) ($(FS_SIZE)) -> $@"
 	$(Q) /usr/local/bin/mkspiffs $1 $(FS_STAGING_DIR) > $@
 endef

@@ -1,6 +1,13 @@
-SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_wifi_config.yaml \
-                   $(MIOT_SRC_PATH)/miot_http_config.yaml \
-                   $(MIOT_SRC_PATH)/miot_console_config.yaml
+SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_http_config.yaml
+
+
+ifeq "$(MIOT_ENABLE_CONSOLE)" "1"
+  SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_console_config.yaml
+  MIOT_SRCS += miot_console.c cs_frbuf.c
+  MIOT_FEATURES += -DMIOT_ENABLE_CONSOLE=1
+else
+  MIOT_FEATURES += -DMIOT_ENABLE_CONSOLE=0
+endif
 
 ifeq "$(MIOT_ENABLE_ATCA)" "1"
   ATCA_PATH ?= $(MIOT_PATH)/third_party/cryptoauthlib
@@ -94,12 +101,21 @@ ifeq "$(MIOT_ENABLE_UPDATER_RPC)" "1"
 endif
 endif
 
+ifeq "$(MIOT_ENABLE_WIFI)" "1"
+  SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_wifi_config.yaml
+  MIOT_SRCS += miot_wifi.c
+  MIOT_FEATURES += -DMIOT_ENABLE_WIFI=1
+else
+  MIOT_FEATURES += -DMIOT_ENABLE_WIFI=0
+endif
+
 # Export all the feature switches.
 # This is required for needed make invocations, such as when building POSIX MIOT
 # for JS freeze operation.
 export MIOT_ENABLE_ATCA
 export MIOT_ENABLE_ATCA_SERVICE
 export MIOT_ENABLE_CONFIG_SERVICE
+export MIOT_ENABLE_CONSOLE
 export MIOT_ENABLE_DNS_SD
 export MIOT_ENABLE_FILESYSTEM_SERVICE
 export MIOT_ENABLE_I2C
@@ -111,3 +127,4 @@ export MIOT_ENABLE_RPC_CHANNEL_UART
 export MIOT_ENABLE_UPDATER
 export MIOT_ENABLE_UPDATER_POST
 export MIOT_ENABLE_UPDATER_RPC
+export MIOT_ENABLE_WIFI

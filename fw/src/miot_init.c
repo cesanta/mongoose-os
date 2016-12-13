@@ -21,7 +21,11 @@
 enum miot_init_result mg_init(void) {
   enum miot_init_result r = miot_sys_config_init();
   if (r != MIOT_INIT_OK) return r;
-  miot_wifi_init();
+
+#if MIOT_ENABLE_WIFI
+  r = miot_wifi_init();
+  if (r != MIOT_INIT_OK) return r;
+#endif
 
 #if MIOT_ENABLE_MDNS
   r = miot_mdns_init(); /* Before dns_sd init */
@@ -55,7 +59,9 @@ enum miot_init_result mg_init(void) {
 #endif
 #endif
 
+#if MIOT_ENABLE_CONSOLE
   miot_console_init(); /* After miot_rpc_init */
+#endif
 
 #if MIOT_ENABLE_I2C
   r = miot_i2c_init();

@@ -72,18 +72,17 @@ static void set_handler(const char *str, int len, void *user_data) {
 static void miot_config_gns_handler(struct mg_rpc_request_info *ri,
                                     void *cb_arg, struct mg_rpc_frame_info *fi,
                                     struct mg_str args) {
-  char *ap_ip = NULL, *sta_ip = NULL, *status = NULL, *ssid = NULL;
-
   if (!fi->channel_is_trusted) {
     mg_rpc_send_errorf(ri, 403, "unauthorized");
     ri = NULL;
     return;
   }
 
-  status = miot_wifi_get_status_str();
-  ssid = miot_wifi_get_connected_ssid();
-  sta_ip = miot_wifi_get_sta_ip();
-  ap_ip = miot_wifi_get_ap_ip();
+#if MIOT_ENABLE_WIFI
+  char *status = miot_wifi_get_status_str();
+  char *ssid = miot_wifi_get_connected_ssid();
+  char *sta_ip = miot_wifi_get_sta_ip();
+  char *ap_ip = miot_wifi_get_ap_ip();
 
   mg_rpc_send_responsef(
       ri, "{wifi: {sta_ip: %Q, ap_ip: %Q, status: %Q, ssid: %Q}}",
@@ -95,6 +94,10 @@ static void miot_config_gns_handler(struct mg_rpc_request_info *ri,
   free(ap_ip);
   free(ssid);
   free(status);
+#else
+  mg_rpc_send_responsef(ri, "{}");
+  ri = NULL;
+#endif
 
   (void) args;
   (void) cb_arg;

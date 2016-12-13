@@ -24,6 +24,7 @@ APP_EXTRA_SRCS ?=
 MIOT_ENABLE_ATCA ?= 1
 MIOT_ENABLE_ATCA_SERVICE ?= 0
 MIOT_ENABLE_CONFIG_SERVICE ?= 1
+MIOT_ENABLE_CONSOLE ?= 1
 MIOT_ENABLE_DNS_SD ?= 1
 MIOT_ENABLE_FILESYSTEM_SERVICE ?= 1
 MIOT_ENABLE_I2C ?= 1
@@ -35,6 +36,7 @@ MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
 MIOT_ENABLE_UPDATER ?= 1
 MIOT_ENABLE_UPDATER_POST ?= 1
 MIOT_ENABLE_UPDATER_RPC ?= 0
+MIOT_ENABLE_WIFI ?= 1
 
 MIOT_DEBUG_UART ?= 0
 
@@ -113,7 +115,6 @@ MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
 
 MIOT_SRCS = cs_rbuf.c \
             miot_config.c \
-            miot_console.c cs_frbuf.c \
             miot_init.c \
             miot_timers_mongoose.c \
             miot_wifi.c \

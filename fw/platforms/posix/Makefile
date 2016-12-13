@@ -13,6 +13,7 @@ V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
+GEN_DIR ?= ./.build/gen
 KRYPTON_PATH ?= $(MIOT_PATH)/krypton
 FROZEN_PATH ?= $(MIOT_PATH)/frozen
 OUTAPP ?= mongoose-iot
@@ -31,6 +32,7 @@ MIOT_ENABLE_UPDATER_POST = 0
 MIOT_ENABLE_UPDATER_RPC = 0
 MIOT_ENABLE_DNS_SD = 0  # Not supported on POSIX
 MIOT_ENABLE_I2C ?= 1
+MIOT_ENABLE_WIFI = 0
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
 include $(MIOT_PATH)/fw/common.mk
@@ -52,11 +54,11 @@ MONGOOSE_FEATURES = \
 INCLUDES = $(MIOT_PATH) $(SRC_PATH) $(BUILD_DIR)
 MIOT_SRCS = $(notdir $(wildcard *.c)) miot_init.c  \
             mongoose.c frozen.c miot_mongoose.c \
-            miot_prompt.c miot_timers_mongoose.c miot_wifi.c \
+            miot_prompt.c miot_timers_mongoose.c \
             miot_config.c miot_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             json_utils.c cs_rbuf.c miot_uart.c \
-            miot_utils.c miot_console.c
+            miot_utils.c
 
 ifeq "$(MIOT_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
@@ -77,7 +79,6 @@ MIOT_SRCS += v7.c \
             miot_timers_js.c \
             miot_v7_ext.c \
             miot_uart_js.c \
-            miot_wifi_js.c \
             miot_ws_client_js.c
 
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON

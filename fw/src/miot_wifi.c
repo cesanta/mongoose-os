@@ -109,7 +109,8 @@ static bool validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
   return true;
 }
 
-void miot_wifi_init(void) {
+enum miot_init_result miot_wifi_init(void) {
   miot_register_config_validator(validate_wifi_cfg);
   miot_wifi_hal_init();
+  return MIOT_INIT_OK;
 }

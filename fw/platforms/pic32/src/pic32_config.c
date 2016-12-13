@@ -1,6 +1,5 @@
 #include "common/platform.h"
 #include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_wifi.h"
 
 enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
   return MIOT_INIT_OK;

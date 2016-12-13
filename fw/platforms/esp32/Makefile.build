@@ -46,7 +46,7 @@ MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(GEN_DIR)/mg_build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
-CFLAGS += -DMIOT_APP=\"$(APP)\" -DCS_SPIFFS_ENABLE_VFS -I$(MIOT_PATH)
+CFLAGS += -DMIOT_APP=\"$(APP)\" -DCS_SPIFFS_ENABLE_VFS -I$(MIOT_PATH) -DMG_MODULE_LINES
 
 # Generated files
 
@@ -103,6 +103,11 @@ all_binaries: $(FW_ZIP)
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR)
 
 foo: $(GEN_DIR)/gen_done
+
+# Put defaults on the filesystem under the old name, for compatibility.
+FS_FILES += $(GEN_DIR)/conf_defaults.json
+
+$(GEN_DIR)/conf_defaults.json: src-build
 
 $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@ $(BUILD_INFO_C)"

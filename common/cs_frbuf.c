@@ -16,7 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 #define MAGIC 0x3142 /* B1 */
 #define FILE_HDR_SIZE sizeof(struct cs_frbuf_file_hdr)
@@ -37,13 +39,14 @@ struct cs_frbuf {
   struct cs_frbuf_file_hdr hdr;
 };
 
-static size_t pread(struct cs_frbuf *b, size_t offset, size_t size, void *buf) {
+static size_t cs_pread(struct cs_frbuf *b, size_t offset, size_t size,
+                       void *buf) {
   fseek(b->fp, offset, SEEK_SET);
   return fread(buf, 1, size, b->fp);
 }
 
-static size_t pwrite(struct cs_frbuf *b, size_t offset, size_t size,
-                     const void *buf) {
+static size_t cs_pwrite(struct cs_frbuf *b, size_t offset, size_t size,
+                        const void *buf) {
   fseek(b->fp, offset, SEEK_SET);
   return fwrite(buf, 1, size, b->fp);
 }
@@ -52,7 +55,7 @@ static size_t write_hdr(struct cs_frbuf *b) {
   if (b->hdr.used == 0) {
     b->hdr.head = b->hdr.tail = 0;
   }
-  return pwrite(b, 0, FILE_HDR_SIZE, &b->hdr);
+  return cs_pwrite(b, 0, FILE_HDR_SIZE, &b->hdr);
 }
 
 struct cs_frbuf *cs_frbuf_init(const char *fname, uint16_t size) {
@@ -108,7 +111,7 @@ static size_t dpwrite(struct cs_frbuf *b, size_t offset, size_t size,
     int len = cs_frbuf_get(b, NULL);
     if (len <= 0) return 0;
   }
-  return pwrite(b, offset + FILE_HDR_SIZE, size, buf);
+  return cs_pwrite(b, offset + FILE_HDR_SIZE, size, buf);
 }
 
 bool cs_frbuf_append(struct cs_frbuf *b, const void *data, uint16_t len) {
@@ -142,7 +145,7 @@ bool cs_frbuf_append(struct cs_frbuf *b, const void *data, uint16_t len) {
 
 static size_t dpread(struct cs_frbuf *b, size_t offset, size_t size,
                      void *buf) {
-  return pread(b, offset + FILE_HDR_SIZE, size, buf);
+  return cs_pread(b, offset + FILE_HDR_SIZE, size, buf);
 }
 
 int cs_frbuf_get(struct cs_frbuf *b, char **data) {

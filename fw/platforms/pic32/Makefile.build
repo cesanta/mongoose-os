@@ -23,6 +23,7 @@ MIOT_ENABLE_RPC_CHANNEL_UART ?= 0
 MIOT_ENABLE_UPDATER ?= 0
 MIOT_ENABLE_UPDATER_POST ?= 0
 MIOT_ENABLE_UPDATER_RPC ?= 0
+MIOT_ENABLE_WIFI ?= 0
 
 MIOT_DEBUG_UART ?= 0
 
@@ -129,7 +130,6 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 MIOT_SRCS = miot_init.c \
             miot_mongoose.c \
             miot_timers_mongoose.c \
-            miot_wifi.c \
             miot_config.c miot_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             cs_crc32.c \
@@ -152,7 +152,6 @@ MIOT_SRCS = miot_init.c \
 #             miot_sys_config_js.c \
 #             miot_timers_js.c \
 #             miot_uart_js.c \
-#             miot_wifi_js.c
 #             miot_v7_ext.c \
 #endif
 
