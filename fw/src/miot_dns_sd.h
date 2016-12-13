@@ -13,6 +13,10 @@
 #include "fw/src/miot_features.h"
 #include "fw/src/miot_init.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #if MIOT_ENABLE_DNS_SD
 
 struct mdns_type {
@@ -70,5 +74,9 @@ void miot_sd_unregister_service(struct mg_str service_type,
 const char *miot_sd_default_service_type();
 
 #endif /* MIOT_ENABLE_DNS_SD */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_DNS_SD_H_ */

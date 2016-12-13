@@ -15,10 +15,18 @@
 #include "fw/src/miot_timers.h"
 #include "v7/v7.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 struct v7;
 void miot_timers_api_setup(struct v7 *v7);
 miot_timer_id miot_set_js_timer(int msecs, int repeat, struct v7 *v7,
                                 v7_val_t cb);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* MIOT_ENABLE_JS */
 

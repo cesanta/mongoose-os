@@ -13,7 +13,7 @@
  */
 #ifdef __cplusplus
 #include "mbed.h"
-#endif
+#endif /* __cplusplus */
 
 #include <assert.h>
 #include <ctype.h>

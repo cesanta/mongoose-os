@@ -8,6 +8,10 @@
 
 #include "fw/src/miot_features.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 void miot_console_init(void);
 void miot_console_putc(char c);
 void miot_console_printf(const char *fmt, ...);
@@ -24,5 +28,9 @@ int miot_console_is_waiting_for_resp(void);
 #else
 #define CONSOLE_LOG(l, x) LOG(l, x)
 #endif /* MIOT_ENABLE_RPC */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_CONSOLE_H_ */

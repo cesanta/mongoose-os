@@ -13,6 +13,10 @@
 #include "common/cs_rbuf.h"
 #include "common/platform.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #define MIOT_MAX_NUM_UARTS 2
 
 struct miot_uart_config {
@@ -106,5 +110,9 @@ void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled);
 void miot_uart_schedule_dispatcher(int uart_no);
 
 void miot_uart_flush(int uart_no);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_UART_H_ */

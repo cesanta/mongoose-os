@@ -9,4 +9,3 @@ int main() {
   mg_init();
   return 0;
 }
-

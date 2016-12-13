@@ -42,36 +42,42 @@ BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 ELF_FILE=$(BUILD_DIR)/$(APP).elf
 
 include $(MIOT_PATH)/fw/common.mk
 
 MIOT_SRCS = cs_rbuf.c \
+            cs_file.c \
             miot_config.c \
             miot_console.c cs_frbuf.c \
             miot_init.c \
             miot_timers_mongoose.c \
             miot_wifi.c \
             miot_mongoose.c \
-            miot_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            miot_sys_config.c \
+            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C)) \
             miot_uart.c \
             miot_utils.c \
             cs_crc32.c \
             json_utils.c \
             mongoose.c frozen.c
 
-MBED_DEPS_SRCS = startup.c
+MBED_DEPS_SRCS = startup.cpp stm32_hal.cpp
 
 VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(GEN_DIR) $(COMMON_PATH)/mg_rpc \
         $(PLATFORM_SRC_PATH)/mbed_deps
 
-INCLUDE_PATHS += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
-				 -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc
+IPATH = $(subst .././mbed-os/, ./mbed-os/,$(INCLUDE_PATHS))
+IPATH += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
+         -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc -I./mbed-os/
+
 LIBRARY_PATHS += -L$(BUILD_DIR)
 
 C_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK
+CXX_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK
 
 include $(MIOT_PATH)/fw/src/features.mk
 
@@ -79,11 +85,12 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXT
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
-MBED_DEPS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MBED_DEPS_SRCS)))
+MBED_DEPS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(MBED_DEPS_SRCS)))
 
-all: $(BUILD_DIR) $(GEN_DIR) $(BUILD_DIR)/$(STM32LIB) $(GENFILES_LIST) $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(ELF_FILE)
 
-$(BUILD_DIR)/$(STM32LIB):
+all: $(BUILD_DIR) $(GEN_DIR) $(BUILD_INFO_C) $(ELF_FILE)
+
+$(BUILD_DIR)/$(STM32LIB): $(BUILD_DIR)
 	@mbed deploy
 	@mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library
 
@@ -91,28 +98,32 @@ $(BUILD_DIR) $(GEN_DIR):
 	@echo "MKDIR $@"
 	$(Q) mkdir -p $@
 
-include $(MIOT_PATH)/common/scripts/build_info.mk
-include $(MIOT_PATH)/fw/src/sys_config.mk
+$(BUILD_DIR)/%.o: %.c $(BUILD_DIR) $(GENFILES_FLAG)
+	$(vecho) CC $(notdir $<)
+	$(Q) $(CC) $(C_FLAGS) $(IPATH) -o $@ $<
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(GEN_DIR) $(APP_OBJS) $(MIOT_OBJS)
-	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+$(BUILD_DIR)/%.o: %.cpp $(BUILD_DIR) $(GENFILES_FLAG)
+	$(vecho) CPP $(notdir $<)
+	$(Q) $(CPP) $(CXX_FLAGS) $(IPATH) -o $@ $<
 
-$(MG_BUILD_INFO_C): $(GEN_DIR) $(MIOT_OBJS)
-	$(call gen_build_info,$@,$(MIOT_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
-
--include $(wildcard $(BUILD_DIR)/*.d)
+$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(BUILD_DIR) $(GEN_DIR) $(GENFILES_FLAG)
+	$(vecho) CC $(notdir $<)
+	$(Q) $(CC) $(C_FLAGS) $(IPATH) -o $@ $<
 
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
-	$(vecho) CC $(notdir $<)
-	$(Q) $(CC) $(C_FLAGS) $(INCLUDE_PATHS) -o $@ $<
+include $(MIOT_PATH)/common/scripts/build_info.mk
+include $(MIOT_PATH)/fw/src/sys_config.mk
 
-$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
-	$(vecho) CC $(notdir $<)
-	$(Q) $(CC) $(C_FLAGS) $(INCLUDE_PATHS) -o $@ $<
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(GEN_DIR)
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(ELF_FILE): $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(BUILD_DIR)/$(STM32LIB)
+$(MG_BUILD_INFO_C): $(GEN_DIR)
+	$(call gen_build_info,$@,$(MIOT_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+-include $(wildcard $(BUILD_DIR)/*.d)
+
+$(ELF_FILE): $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS)
 	$(vecho) "LD $(APP).elf"
-	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lstm32 $(LD_SYS_LIBS) -Wl,--end-group -T $(LINKER_SCRIPT) $(INCLUDE_PATHS) $(LIBRARY_PATHS) --output $@
+	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lstm32 $(LD_SYS_LIBS) -Wl,--end-group -T $(LINKER_SCRIPT) $(IPATH) $(LIBRARY_PATHS) --output $@

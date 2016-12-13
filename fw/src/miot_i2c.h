@@ -15,6 +15,10 @@
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_sys_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Each platform defines its own I2C connection parameters. */
 struct miot_i2c;
 
@@ -92,6 +96,10 @@ void miot_i2c_close(struct miot_i2c *conn);
 enum miot_init_result miot_i2c_init(void);
 
 struct miot_i2c *miot_i2c_get_global(void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* MIOT_ENABLE_I2C */
 

@@ -9,6 +9,10 @@
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_mongoose.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #if MIOT_ENABLE_MDNS
 
 enum miot_init_result miot_mdns_init(void);
@@ -24,5 +28,9 @@ void miot_mdns_remove_handler(mg_event_handler_t handler, void *ud);
 void miot_mdns_hal_join_group(const char *iface_ip, const char *mcast_ip);
 
 #endif /* MIOT_ENABLE_MDNS */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_MDNS_H_ */

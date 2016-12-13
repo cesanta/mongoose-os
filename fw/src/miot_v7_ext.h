@@ -12,6 +12,10 @@
 
 #include "fw/src/miot_hal_js.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 struct v7;
 
 /* Initialize objects and functions provided by v7_ext, incl. Sys.* */
@@ -40,6 +44,10 @@ void miot_invoke_cb2_this(struct v7 *v7, v7_val_t, v7_val_t, v7_val_t,
 
 /* Prints an exception to stdout or stderr depending on debug mode */
 void miot_print_exception(struct v7 *v7, v7_val_t exc, const char *msg);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* MIOT_ENABLE_JS */
 

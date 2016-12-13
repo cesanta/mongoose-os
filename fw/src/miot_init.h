@@ -8,6 +8,10 @@
 
 #include "fw/src/miot_features.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 enum miot_init_result {
   MIOT_INIT_OK = 0,
   MIOT_INIT_OUT_OF_MEMORY = -1,
@@ -29,5 +33,9 @@ enum miot_init_result {
 };
 
 enum miot_init_result mg_init(void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_INIT_H_ */

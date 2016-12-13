@@ -6,6 +6,10 @@
 #ifndef CS_FW_SRC_MIOT_WIFI_H_
 #define CS_FW_SRC_MIOT_WIFI_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 enum miot_wifi_status {
   MIOT_WIFI_DISCONNECTED = 0,
   MIOT_WIFI_CONNECTED = 1,
@@ -51,5 +55,9 @@ enum miot_wifi_status miot_wifi_get_status(void);
 void miot_wifi_hal_init(void);
 
 void miot_wifi_init(void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_WIFI_H_ */

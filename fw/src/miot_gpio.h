@@ -10,6 +10,10 @@
 #ifndef CS_FW_SRC_MIOT_GPIO_H_
 #define CS_FW_SRC_MIOT_GPIO_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* GPIO mode */
 enum gpio_mode {
   GPIO_MODE_INOUT = 0,
@@ -62,5 +66,9 @@ void miot_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg);
 
 /* Re-enable GPIO interrupts */
 void miot_reenable_intr(int pin);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_GPIO_H_ */

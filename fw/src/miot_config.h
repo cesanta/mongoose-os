@@ -12,6 +12,10 @@
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*
  * The usage pattern is this:
  * 1. Create an empty config struct at the beginning.
@@ -70,5 +74,9 @@ const struct miot_conf_entry *miot_conf_find_schema_entry(
     const char *path, const struct miot_conf_entry *obj);
 
 void miot_conf_set_str(char **vp, const char *v);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_CONFIG_H_ */

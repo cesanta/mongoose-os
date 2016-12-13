@@ -8,6 +8,10 @@
 
 #include "fw/src/miot_features.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 enum miot_app_init_result {
   MIOT_APP_INIT_SUCCESS = 0,
   MIOT_APP_INIT_ERROR = -2,
@@ -30,5 +34,9 @@ enum miot_app_init_result miot_app_init_js(struct v7 *v7);
  * down the processor and go (back) to sleep.
  */
 void miot_app_preinit(void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_APP_H_ */

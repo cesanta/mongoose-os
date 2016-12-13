@@ -16,6 +16,10 @@
 #include "fw/src/miot_timers.h"
 #include "fw/src/miot_updater_hal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*
  * --- Zip file local header structure ---
  *                                             size  offset
@@ -113,5 +117,9 @@ int is_reboot_required(struct update_context *ctx);
 void miot_upd_boot_finish(bool is_successful, bool is_first);
 bool miot_upd_commit();
 bool miot_upd_revert(bool reboot);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_UPDATER_COMMON_H_ */

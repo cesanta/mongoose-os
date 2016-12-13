@@ -9,6 +9,10 @@
 #include "fw/src/miot_features.h"
 #include "fw/src/miot_uart.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #if MIOT_ENABLE_JS
 
 struct v7;
@@ -32,5 +36,9 @@ void miot_prompt_dispatcher(struct miot_uart_state *us);
 void miot_prompt_init_hal(void);
 
 #endif /* MIOT_ENABLE_JS */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_PROMPT_H_ */

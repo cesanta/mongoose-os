@@ -10,6 +10,10 @@
 
 #include "v7/v7.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Make HTTP call, 0/1 - error/success */
 int miot_http_call(struct v7 *v7, const char *url, const char *body,
                    size_t body_len, const char *method, v7_val_t cb);
@@ -22,6 +26,10 @@ int miot_http_call(struct v7 *v7, const char *url, const char *body,
  */
 void miot_invoke_cb(struct v7 *, v7_val_t func, v7_val_t this_obj,
                     v7_val_t args);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* MIOT_ENABLE_JS */
 

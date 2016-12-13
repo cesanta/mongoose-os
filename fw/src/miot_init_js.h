@@ -8,6 +8,10 @@
 
 #include "fw/src/miot_init.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #if defined(V7_THAW)
 #define MG_PRIVATE /* nothing */
 #else
@@ -28,5 +32,9 @@ enum miot_init_result miot_api_setup(struct v7 *v7);
 enum miot_init_result miot_init_js(struct v7 *v7);
 
 enum miot_init_result miot_init_js_all(struct v7 *v7);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_INIT_JS_H_ */

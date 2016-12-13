@@ -10,6 +10,10 @@
 
 #include "mongoose/mongoose.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 struct mg_mgr *miot_get_mgr(void);
 void miot_register_http_endpoint(const char *uri_path,
                                  mg_event_handler_t handler);
@@ -30,5 +34,9 @@ void miot_set_enable_min_heap_free_reporting(bool enable);
 
 /* Schedule MG poll ASAP. Note: may be called from ISR context. */
 void mongoose_schedule_poll(void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_MONGOOSE_H_ */

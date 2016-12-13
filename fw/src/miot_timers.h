@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* HAL */
 
 /*
@@ -23,5 +27,9 @@ typedef uint32_t miot_timer_id;
 miot_timer_id miot_set_timer(int msecs, int repeat, timer_callback cb,
                              void *arg);
 void miot_clear_timer(miot_timer_id id);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_TIMERS_H_ */

@@ -15,13 +15,12 @@
 #ifndef CS_COMMON_MBUF_H_
 #define CS_COMMON_MBUF_H_
 
+#include <stdlib.h>
+#include "common/platform.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-#include <stdlib.h>
-
-#include "common/platform.h"
 
 #ifndef MBUF_SIZE_MULTIPLIER
 #define MBUF_SIZE_MULTIPLIER 1.5

@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 typedef void *spi_connection;
 struct v7;
 enum v7_err;
@@ -43,5 +47,9 @@ enum v7_err miot_spi_create(struct v7 *v7, spi_connection *res);
 
 /* Close SPI connection and free resources */
 void miot_spi_close(spi_connection conn);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_SPI_H_ */

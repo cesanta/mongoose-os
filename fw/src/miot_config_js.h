@@ -13,9 +13,17 @@
 #include "fw/src/miot_config.h"
 #include "v7/v7.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 v7_val_t miot_conf_mk_proxy(struct v7 *v7, const struct miot_conf_entry *schema,
                             void *cfg, bool read_only,
                             v7_cfunction_t *save_handler);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* MIOT_ENABLE_JS */
 

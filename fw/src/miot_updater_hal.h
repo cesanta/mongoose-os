@@ -14,6 +14,10 @@
 #include "common/mg_str.h"
 #include "frozen/frozen.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 struct miot_upd_file_info {
   char name[50];
   uint32_t size;
@@ -74,5 +78,9 @@ int miot_upd_complete_file_update(struct miot_upd_ctx *ctx,
 int miot_upd_apply_update();
 void miot_upd_boot_commit();
 void miot_upd_boot_revert();
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_UPDATER_HAL_H_ */

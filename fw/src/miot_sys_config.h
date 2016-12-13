@@ -15,6 +15,10 @@
 
 #include "mongoose/mongoose.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #define CONF_DEFAULTS_FILE "conf_defaults.json"
 #define CONF_VENDOR_FILE "conf_vendor.json"
 #define CONF_FILE "conf.json"
@@ -56,5 +60,9 @@ enum miot_init_result miot_sys_config_init_http(
     const struct sys_config_http *cfg,
     const struct sys_config_device *device_cfg);
 enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_SYS_CONFIG_H_ */

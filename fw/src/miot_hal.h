@@ -13,6 +13,10 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* Get system memory size. */
 size_t miot_get_heap_size(void);
 
@@ -45,5 +49,9 @@ void miot_usleep(int usecs);
 
 /* Get storage free space, bytes */
 int64_t miot_get_storage_free_space(void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_HAL_H_ */

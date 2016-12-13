@@ -7,6 +7,10 @@
 #ifndef CS_FW_SRC_MIOT_DEBUG_H_
 #define CS_FW_SRC_MIOT_DEBUG_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*
  * Debug modes.
  *
@@ -20,5 +24,9 @@ enum debug_mode {
 };
 
 int miot_debug_redirect(enum debug_mode mode);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_FW_SRC_MIOT_DEBUG_H_ */
