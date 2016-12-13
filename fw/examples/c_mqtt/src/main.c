@@ -68,8 +68,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
     }
   } else if (ev == MG_EV_MQTT_PUBLISH) {
     struct mg_str *s = &msg->payload;
+    struct json_token t = JSON_INVALID_TOKEN;
     int pin, state;
-    char *data = NULL;
 
     LOG(LL_INFO, ("got command: [%.*s]", (int) s->len, s->p));
     if (json_scanf(s->p, s->len, "{gpio: {pin: %d, state: %d}}", &pin,
@@ -83,18 +83,17 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
       miot_gpio_intr_init(gpio_int_handler, NULL);
       miot_gpio_intr_set(pin, GPIO_INTR_POSEDGE);
       pub(c, "{type: %Q, pin: %d}", "button", pin);
-    } else if (json_scanf(s->p, s->len, "{i2c_write: {data: %Q}}", &data) ==
-               1) {
+    } else if (json_scanf(s->p, s->len, "{i2c_write: {data: %T}}", &t) == 1) {
       /* Write byte sequence to I2C. First byte is an address */
       struct miot_i2c *i2c = miot_i2c_get_global();
       if (i2c == NULL) {
         pub(c, "{error: {code: %d, message: %Q}}", ERROR_I2C_NOT_CONFIGURED,
             "I2C is not enabled");
       } else {
-        enum i2c_ack_type ret = miot_i2c_start(i2c, from_hex(data), I2C_WRITE);
-        for (size_t i = 2; i < strlen(data) && ret == I2C_ACK; i += 2) {
-          ret = miot_i2c_send_byte(i2c, from_hex(data + i));
-          LOG(LL_DEBUG, ("i2c -> %02x", from_hex(data + i)));
+        enum i2c_ack_type ret = miot_i2c_start(i2c, from_hex(t.ptr), I2C_WRITE);
+        for (int i = 2; i < t.len && ret == I2C_ACK; i += 2) {
+          ret = miot_i2c_send_byte(i2c, from_hex(t.ptr + i));
+          LOG(LL_DEBUG, ("i2c -> %02x", from_hex(t.ptr + i)));
         }
         miot_i2c_stop(i2c);
         pub(c, "{type: %Q, result: %d}", "i2c", ret);
@@ -103,7 +102,6 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
       pub(c, "{error: {code: %d, message: %Q}}", ERROR_UNKNOWN_COMMAND,
           "unknown command");
     }
-    free(data);
   }
 }
 
