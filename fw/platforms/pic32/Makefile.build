@@ -1,0 +1,332 @@
+
+MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
+
+APP ?= mongoose-iot
+APP_PLATFORM = pic32
+APP_MODULES ?=
+APP_CFLAGS ?=
+APP_FS_PATH ?=
+APP_EXTRA_SRCS ?=
+
+MIOT_ENABLE_ATCA ?= 0
+MIOT_ENABLE_ATCA_SERVICE ?= 0
+MIOT_ENABLE_CONFIG_SERVICE ?= 0
+MIOT_ENABLE_DNS_SD ?= 0
+MIOT_ENABLE_FILESYSTEM_SERVICE ?= 0
+MIOT_ENABLE_I2C ?= 0
+MIOT_ENABLE_JS ?= 0
+MIOT_ENABLE_MQTT ?= 0
+MIOT_ENABLE_RPC ?= 0
+MIOT_ENABLE_RPC_CHANNEL_HTTP ?= 0
+MIOT_ENABLE_RPC_CHANNEL_UART ?= 0
+MIOT_ENABLE_UPDATER ?= 0
+MIOT_ENABLE_UPDATER_POST ?= 0
+MIOT_ENABLE_UPDATER_RPC ?= 0
+
+MIOT_DEBUG_UART ?= 0
+
+MIOT_PATH ?= ../../..
+COMMON_PATH ?= $(MIOT_PATH)/common
+MIOT_PIC32_PATH ?= $(MIOT_PATH)/fw/platforms/pic32
+MIOT_PIC32_SRC_PATH ?= $(MIOT_PIC32_PATH)/src
+COMMON_PIC32_PATH ?= $(MIOT_PATH)/common/platforms/pic32
+SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
+MONGOOSE_PATH ?= $(MIOT_PATH)/mongoose
+FROZEN_PATH ?= $(MIOT_PATH)/frozen
+###BOOT_PATH ?= $(MIOT_PIC32_PATH)/boot
+
+BUILD_DIR ?= $(CURDIR)/.build
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+# Absolutize all paths which can be given by the caller
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override FW_DIR := $(abspath $(FW_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+
+MIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
+MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
+MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
+BOOT_BUILD_DIR = $(BUILD_DIR)/boot
+BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
+
+MIOT_POSIX_PATH ?= $(MIOT_PATH)/fw/platforms/posix
+MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
+COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
+MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
+FS_STAGING_DIR = $(BUILD_DIR)/fs
+
+# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
+include $(MIOT_PATH)/fw/common.mk
+
+VPATH = $(APP_MODULES) $(MIOT_PIC32_SRC_PATH) \
+        $(BUILD_DIR) \
+        $(MONGOOSE_PATH) $(FROZEN_PATH)
+###VPATH += $(BOOT_PATH)/lib
+
+IPATH = $(APP_MODULES) $(MIOT_PIC32_SRC_PATH) $(GEN_DIR) $(MIOT_PATH)
+###IPATH += $(BOOT_PATH)/lib
+
+V7_FEATURES ?= $(COMMON_V7_FEATURES) \
+               -DV7_BUILD_PROFILE=1 \
+               -DV7_DISABLE_AST_TAG_NAMES \
+               -DV7_ENABLE_COMPACTING_GC \
+               -DV7_DISABLE_LINE_NUMBERS \
+               -DV7_DISABLE_FILENAMES \
+               -DV7_ENABLE_FILE \
+               -DV7_ENABLE_ENTITY_IDS
+
+V7_HOST_FEATURES ?= $(V7_FEATURES)
+V7_PIC32_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
+MIOT_PIC32_FEATURES ?= ### -DV7_STACK_SIZE=8192-64 -DMIOT_ENABLE_FILE_UPLOAD
+
+MG_FEATURES ?= $(MG_FEATURES_TINY) \
+               -DMG_LOCALS \
+               -DMG_DISABLE_MQTT
+
+# TODO(dfrank): add these macros
+# -DMG_ENABLE_SSL
+# -DMG_FS_SLFS
+
+MIOT_FEATURES ?=
+
+# TODO(dfrank): use these features
+#MIOT_FEATURES ?= -DMIOT_ENABLE_GPIO_API \
+                  -DMIOT_ENABLE_I2C_API \
+                  -DMIOT_ENABLE_WIFI_API \
+                  -DMIOT_ENABLE_HTTP_CLIENT_API
+
+V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
+                  -DV7_DISABLE_INTERPRETER_STACK_CHECK \
+                  -DFS_MAX_OPEN_FILES=5
+
+APP_HEX = $(BUILD_DIR)/$(APP).hex
+###BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
+APP_ELF = $(BUILD_DIR)/$(APP).elf
+MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
+###MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
+FS_IMG = $(BUILD_DIR)/fs.img
+FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
+SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
+SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
+SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.o
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
+###MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
+
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+
+.PHONY: all clean flash
+
+MIOT_SRCS = miot_init.c \
+            miot_mongoose.c \
+            miot_timers_mongoose.c \
+            miot_wifi.c \
+            miot_config.c miot_sys_config.c \
+            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            cs_crc32.c \
+            cs_frbuf.c miot_utils.c \
+            miot_console.c \
+            cs_rbuf.c miot_uart.c \
+            mongoose.c frozen.c json_utils.c
+
+# TODO(dfrank): uncomment
+#ifeq "$(MIOT_ENABLE_JS)" "1"
+#MIOT_SRCS += v7.c \
+#             miot_rpc_js.c \
+#             miot_config_js.c \
+#             miot_console_js.c \
+#             miot_gpio_js.c \
+#             miot_http_js.c \
+#             miot_i2c_js.c \
+#             miot_init_js.c \
+#             miot_prompt.c \
+#             miot_sys_config_js.c \
+#             miot_timers_js.c \
+#             miot_uart_js.c \
+#             miot_wifi_js.c
+#             miot_v7_ext.c \
+#endif
+
+VPATH += $(MIOT_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
+IPATH += $(COMMON_PATH)/mg_rpc
+
+# TODO(dfrank): use umm_malloc
+#MIOT_SRCS += umm_malloc.c
+#VPATH += $(COMMON_PATH)/umm_malloc
+
+IPATH += $(SPIFFS_PATH)
+VPATH += $(SPIFFS_PATH)
+
+# TODO: uncomment
+#MIOT_SRCS += $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
+
+FW_PARTS = $(notdir $(APP_HEX)).0:type=app,src=$(APP_HEX)
+
+# Harmony sources {{{
+
+HARMONY_LIBS = $(HARMONY_PATH)/bin/framework/peripheral/PIC32MZ2048EFM064_peripherals.a
+
+HARMONY_SRCS = \
+  drv_ethmac.c \
+  drv_ethmac_lib.c \
+  drv_ethphy.c \
+  drv_extphy_smsc8740.c \
+  drv_tmr.c \
+  drv_usart.c \
+  drv_usart_buffer_queue.c \
+  drv_usart_read_write.c \
+  sys_devcon.c \
+  sys_devcon_pic32mz.c \
+  sys_int_pic32.c \
+  sys_random.c \
+  sys_tmr.c \
+  helpers.c \
+  ipv4.c \
+  tcp.c \
+  udp.c \
+  tcpip_heap_alloc.c \
+  tcpip_heap_internal.c \
+  arp.c \
+  dhcp.c \
+  dns.c \
+  nbns.c \
+  tcpip_announce.c \
+  hash_fnv.c \
+  oahash.c \
+  tcpip_helpers.c \
+  tcpip_helper_c32.c \
+  tcpip_manager.c \
+  tcpip_notify.c \
+  tcpip_packet.c
+
+HARMONY_SRCS_ASM = \
+  sys_devcon_cache_pic32mz.S \
+  tcpip_helper_c32.S
+
+VPATH += \
+  $(HARMONY_PATH)/framework/driver/ethmac/src/dynamic \
+  $(HARMONY_PATH)/framework/driver/ethphy/src/dynamic \
+  $(HARMONY_PATH)/framework/driver/tmr/src/dynamic \
+  $(HARMONY_PATH)/framework/driver/usart/src/dynamic \
+  $(HARMONY_PATH)/framework/system/devcon/src \
+  $(HARMONY_PATH)/framework/system/int/src \
+  $(HARMONY_PATH)/framework/system/random/src \
+  $(HARMONY_PATH)/framework/system/tmr/src \
+  $(HARMONY_PATH)/framework/tcpip/src/common \
+  $(HARMONY_PATH)/framework/tcpip/src
+
+IPATH += \
+  $(HARMONY_PATH)/framework
+
+# }}}
+
+# Application-dependent Harmony configuration sources {{{
+
+SYS_CONFIG_SRC = \
+  sys_clk_static.c \
+  sys_ports_static.c \
+  system_init.c \
+  system_interrupt.c \
+  system_exceptions.c \
+  system_tasks.c
+
+VPATH += \
+  $(MIOT_PIC32_SRC_PATH)/system_config/default/framework/system/clk/src \
+  $(MIOT_PIC32_SRC_PATH)/system_config/default/framework/system/ports/src \
+  $(MIOT_PIC32_SRC_PATH)/system_config/default/framework/default \
+  $(MIOT_PIC32_SRC_PATH)/system_config/default
+
+IPATH += \
+  $(MIOT_PIC32_SRC_PATH)/default \
+  $(MIOT_PIC32_SRC_PATH)/system_config/default \
+  $(MIOT_PIC32_SRC_PATH)/system_config/default/framework \
+  $(MIOT_PIC32_SRC_PATH) \
+
+# }}}
+
+MIOT_SRCS += \
+  $(SYS_CONFIG_SRC) \
+  $(notdir $(wildcard $(MIOT_PIC32_SRC_PATH)/*.c))
+
+include $(MIOT_PATH)/common/scripts/fw_meta.mk
+
+include $(MIOT_PATH)/common/platforms/pic32/xc32.mk
+CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
+
+###APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+
+all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
+
+$(FW_MANIFEST): $(APP_HEX) \
+                ###$(FS_IMG) $(FS_EMPTY_IMG) ${FS_FILES} ${JSBIN_SRCS}
+
+include $(MIOT_PATH)/fw/src/features.mk
+###include $(MIOT_PATH)/fw/src/spiffs.mk
+
+clean:
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
+
+$(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
+	$(vecho) "MKDIR $@"
+	$(Q) mkdir -p $@
+
+HARMONY_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(HARMONY_SRCS)))
+HARMONY_OBJS += $(addprefix $(BUILD_DIR)/,$(patsubst %.S,%.o,$(HARMONY_SRCS_ASM)))
+MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
+# TODO(dfrank): uncomment
+#APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
+APP_OBJS =
+
+include $(MIOT_PATH)/common/scripts/build_info.mk
+include $(MIOT_PATH)/fw/src/sys_config.mk
+
+MIOT_CFLAGS = -DMIOT_APP=\"$(APP)\" \
+              -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) \
+
+# TODO: uncomment when we have a real filesystem
+#MIOT_SRCS += cs_file.c
+
+CFLAGS += -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+          $(MG_FEATURES) $(MIOT_FEATURES) $(MIOT_PIC32_FEATURES) \
+          $(MIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
+
+$(APP_HEX): $(APP_ELF)
+	$(call bin2hex,$<)
+
+$(APP_ELF): $(APP_OBJS) $(MIOT_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O)
+	$(call link,dummy_linker_script,$(LDFLAGS),$(APP_OBJS) $(MIOT_LIB) $(HARMONY_LIBS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O)) ### MOVE IN BRACES <--- 
+
+$(MIOT_LIB): $(MIOT_OBJS) $(HARMONY_OBJS)
+	$(call ar,$^)
+
+$(BUILD_DIR)/%.o: %.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.o: %.S $(GENFILES_LIST)
+	$(call asm,$(CFLAGS),$<)
+
+# Regenerate build info if there are changes in objects.
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C): $(MIOT_OBJS)
+	$(call gen_build_info,$@,$(MIOT_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+###$(MK_FS_META_BIN): $(MIOT_PIC32_PATH)/tools/mkfsmeta.c
+###	$(vecho) "GCC   $< -> $@"
+###	$(Q) gcc -Wall -Werror -I$(MIOT_CC3200_PATH) -o $@ $^
+
+# Pull in auto-generated .c dependencies (if any).
+-include $(wildcard $(BUILD_DIR)/*.d)

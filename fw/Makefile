@@ -9,8 +9,8 @@ all: format
 	$(MAKE) -C platforms/posix
 
 format:
-	@(for i in src examples platforms/cc3200 platforms/esp8266/user platforms/esp8266/tools; do \
-       /usr/bin/find $$i -type f -name "*.[ch]" | grep -v /\.build/; \
+	@(for i in src examples platforms/cc3200 platforms/esp8266/user platforms/esp8266/tools platforms/pic32/src; do \
+       /usr/bin/find $$i -type f -name "*.[ch]" | grep -v /\.build/ | grep -v /system_config/; \
     done) | xargs $(CLANG_FORMAT) -i
 
 # allows CI tests and precommit hooks to ensure
