@@ -54,6 +54,8 @@ ifeq "$(MIOT_ENABLE_RPC_CHANNEL_UART)" "1"
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_rpc_uart_config.yaml
 endif
 
+else
+  MIOT_FEATURES += -DMIOT_ENABLE_RPC=0
 endif # MIOT_ENABLE_RPC
 
 ifeq "$(MIOT_ENABLE_DNS_SD)" "1"

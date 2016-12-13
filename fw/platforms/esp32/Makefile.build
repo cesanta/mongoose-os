@@ -46,7 +46,7 @@ MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(GEN_DIR)/mg_build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
-CFLAGS += -DMIOT_APP=\"$(APP)\"
+CFLAGS += -DMIOT_APP=\"$(APP)\" -DCS_SPIFFS_ENABLE_VFS -I$(MIOT_PATH)
 
 # Generated files
 
@@ -96,7 +96,6 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN) \
 
 include $(MIOT_PATH)/common/scripts/build_info.mk
 include $(MIOT_PATH)/common/scripts/fw_meta.mk
-include $(MIOT_PATH)/fw/src/features.mk
 include $(MIOT_PATH)/fw/src/spiffs.mk
 
 all_binaries: $(FW_ZIP)

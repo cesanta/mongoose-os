@@ -40,6 +40,7 @@
 #define CS_P_CUSTOM 0
 #define CS_P_UNIX 1
 #define CS_P_WINDOWS 2
+#define CS_P_ESP32 15
 #define CS_P_ESP8266 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
@@ -52,7 +53,7 @@
 #define CS_P_NRF51 12
 #define CS_P_NRF52 10
 #define CS_P_PIC32 11
-/* Next id: 15 */
+/* Next id: 16 */
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -75,6 +76,8 @@
 #define CS_PLATFORM CS_P_NXP_KINETIS
 #elif defined(PIC32)
 #define CS_PLATFORM CS_P_PIC32
+#elif defined(ESP_PLATFORM)
+#define CS_PLATFORM CS_P_ESP32
 #elif defined(ICACHE_FLASH)
 #define CS_PLATFORM CS_P_ESP8266
 #elif defined(TARGET_IS_TM4C129_RA0) || defined(TARGET_IS_TM4C129_RA1) || \
@@ -99,6 +102,7 @@
 
 /* Amalgamated: #include "common/platforms/platform_unix.h" */
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
+/* Amalgamated: #include "common/platforms/platform_esp32.h" */
 /* Amalgamated: #include "common/platforms/platform_esp8266.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3200.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3100.h" */
@@ -448,6 +452,48 @@ typedef struct stat cs_stat_t;
 
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_esp32.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP32_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_ESP32_H_
+#if CS_PLATFORM == CS_P_ESP32
+
+#include <assert.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <machine/endian.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
+#define _FILE_OFFSET_BITS 32
+
+#define MG_LWIP 1
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#endif /* CS_PLATFORM == CS_P_ESP32 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP32_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/platforms/platform_esp8266.h"
 #endif

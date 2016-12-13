@@ -12,4 +12,4 @@ build_vars:
   APP_CONF_SCHEMA: conf_schema.yaml
 
   # Otherwise, it OOMs on cc3200
-  MIOT_ENABLE_MQTT: 0
+  MIOT_ENABLE_RPC: 0
