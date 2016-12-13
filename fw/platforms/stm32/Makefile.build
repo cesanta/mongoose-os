@@ -1,7 +1,10 @@
 TARGET=DISCO_F469NI
 
+.DEFAULT_GOAL := all
+
 include rules.mk
 
+APP ?= mongoose-iot
 APP_MODULES ?=
 
 MIOT_ENABLE_ATCA ?= 1
@@ -25,11 +28,24 @@ MONGOOSE_PATH ?= $(MIOT_PATH)/mongoose
 FROZEN_PATH ?= $(MIOT_PATH)/frozen
 V7_PATH ?= $(MIOT_PATH)/v7
 MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.o
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
 PLATFORM_SRC_PATH = $(MIOT_PATH)/fw/platforms/stm32
 SIMPLE_LINK_PATH = $(PLATFORM_SRC_PATH)/simplelink
 STM32LIB = libstm32.a
+SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
+SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
+SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+ELF_FILE=$(BUILD_DIR)/$(APP).elf
+
+include $(MIOT_PATH)/fw/common.mk
 
 MIOT_SRCS = cs_rbuf.c \
             miot_config.c \
@@ -38,36 +54,65 @@ MIOT_SRCS = cs_rbuf.c \
             miot_timers_mongoose.c \
             miot_wifi.c \
             miot_mongoose.c \
-            miot_sys_config.c \
-			miot_uart.c \
+            miot_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            miot_uart.c \
             miot_utils.c \
             cs_crc32.c \
             json_utils.c \
             mongoose.c frozen.c
 
-VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH)
+MBED_DEPS_SRCS = startup.c
+
+VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
+        $(FROZEN_PATH) $(GEN_DIR) $(COMMON_PATH)/mg_rpc \
+        $(PLATFORM_SRC_PATH)/mbed_deps
 
 INCLUDE_PATHS += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
-				 -I$(SIMPLE_LINK_PATH)
+				 -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc
+LIBRARY_PATHS += -L$(BUILD_DIR)
 
 C_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK
+
+include $(MIOT_PATH)/fw/src/features.mk
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
+MBED_DEPS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MBED_DEPS_SRCS)))
 
-all: $(BUILD_DIR) $(BUILD_DIR)/$(STM32LIB) $(MIOT_OBJS) $(APP_OBJS)
+all: $(BUILD_DIR) $(GEN_DIR) $(BUILD_DIR)/$(STM32LIB) $(GENFILES_LIST) $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(ELF_FILE)
 
 $(BUILD_DIR)/$(STM32LIB):
 	@mbed deploy
 	@mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library
 
-$(BUILD_DIR):
-	echo $(APP_OBJS)
+$(BUILD_DIR) $(GEN_DIR):
 	@echo "MKDIR $@"
-	@mkdir -p $@
+	$(Q) mkdir -p $@
 
-$(BUILD_DIR)/%.o: %.c
-	@echo CC $(notdir $<)
-	@$(CC) $(C_FLAGS) $(INCLUDE_PATHS) -o $@ $<
+include $(MIOT_PATH)/common/scripts/build_info.mk
+include $(MIOT_PATH)/fw/src/sys_config.mk
+
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(GEN_DIR) $(APP_OBJS) $(MIOT_OBJS)
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C): $(GEN_DIR) $(MIOT_OBJS)
+	$(call gen_build_info,$@,$(MIOT_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+-include $(wildcard $(BUILD_DIR)/*.d)
+
+$(GENFILES_FLAG): $(GENFILES_LIST)
+	$(Q) touch $@
+
+$(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
+	$(vecho) CC $(notdir $<)
+	$(Q) $(CC) $(C_FLAGS) $(INCLUDE_PATHS) -o $@ $<
+
+$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
+	$(vecho) CC $(notdir $<)
+	$(Q) $(CC) $(C_FLAGS) $(INCLUDE_PATHS) -o $@ $<
+
+$(ELF_FILE): $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(BUILD_DIR)/$(STM32LIB)
+	$(vecho) "LD $(APP).elf"
+	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lstm32 $(LD_SYS_LIBS) -Wl,--end-group -T $(LINKER_SCRIPT) $(INCLUDE_PATHS) $(LIBRARY_PATHS) --output $@
