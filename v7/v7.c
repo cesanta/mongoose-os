@@ -561,7 +561,8 @@ typedef struct stat cs_stat_t;
 #define CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
 
 /* If simplelink.h is already included, all bets are off. */
-#if MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__)
+#if defined(MG_NET_IF) && MG_NET_IF == MG_NET_IF_SIMPLELINK && \
+    !defined(__SIMPLELINK_H__)
 
 #include <stdbool.h>
 
