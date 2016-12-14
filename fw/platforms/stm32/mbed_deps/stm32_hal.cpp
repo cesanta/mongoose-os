@@ -10,12 +10,14 @@
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_wifi.h"
 #include "fw/src/miot_gpio.h"
+#include <map>
 
-SimpleLinkInterface *wifi;
+/* This function is documented, but not declared */
+extern "C" void mbed_reset();
 
-void miot_wdt_feed() {
-  /* TODO(alex): implement */
-}
+WiFiInterface *wifi;
+typedef std::map<PinName, gpio_t> gpios_map_t;
+static gpios_map_t gpios_map;
 
 void mongoose_schedule_poll() {
   /*
@@ -47,29 +49,50 @@ void miot_wifi_hal_init() {
 }
 
 void miot_system_restart(int exit_code) {
-  /* TODO(alex): implement */
   (void) exit_code;
+  mbed_reset();
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
   mbed_mac_address((char*)mac);
 }
 
-void miot_wdt_set_timeout(int secs) {
-  /* TODO(alex): implement */
-}
-
 int miot_gpio_write(int pin, enum gpio_level level) {
-  DigitalOut gpio((PinName)pin);
-  gpio.write(level);
+  gpios_map_t::iterator gpio_it = gpios_map.find((PinName)pin);
+  if (gpio_it == gpios_map.end()) {
+    return -1;
+  }
+
+  gpio_write(&gpio_it->second, level);
 
   return 0;
 }
 
 int miot_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
-  /* TODO(alex): implement */
-  (void) pin;
-  (void) mode;
-  (void) pull;
+  gpio_t gpio;
+
+  switch(mode) {
+    case GPIO_MODE_INOUT:
+      gpio_init_inout(&gpio, (PinName)pin, PIN_INPUT, (PinMode)pull, 0);
+      break;
+    case GPIO_MODE_INPUT:
+      gpio_init_in_ex(&gpio, (PinName)pin, (PinMode)pull);
+      break;
+    case GPIO_MODE_OUTPUT:
+      gpio_init_out(&gpio, (PinName)pin);
+      break;
+  }
+
+  /* we have to store initialized gpio objects */
+  gpios_map.insert(std::make_pair((PinName)pin, gpio));
+
   return 0;
+}
+
+void miot_wdt_feed() {
+  /* TODO(alex): implement */
+}
+
+void miot_wdt_set_timeout(int secs) {
+  /* TODO(alex): implement */
 }
