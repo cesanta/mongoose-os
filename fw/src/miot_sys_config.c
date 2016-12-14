@@ -274,6 +274,11 @@ static void on_wifi_ready(enum miot_wifi_status event, void *arg) {
 enum miot_init_result miot_sys_config_init_http(
     const struct sys_config_http *cfg,
     const struct sys_config_device *device_cfg) {
+  if (cfg->listen_addr == NULL) {
+    LOG(LL_WARN, ("HTTP Server disabled, listening address is empty"));
+    return MIOT_INIT_OK; /* At this moment it is just warning */
+  }
+
 #if MG_ENABLE_FILESYSTEM
   /*
    * Usually, we start to connect/listen in

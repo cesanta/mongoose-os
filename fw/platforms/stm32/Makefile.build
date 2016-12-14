@@ -1,4 +1,4 @@
-TARGET=DISCO_F469NI
+TARGET=DISCO_F429ZI
 
 .DEFAULT_GOAL := all
 
@@ -21,6 +21,9 @@ MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
 MIOT_ENABLE_UPDATER ?= 1
 MIOT_ENABLE_UPDATER_POST ?= 1
 MIOT_ENABLE_UPDATER_RPC ?= 0
+MIOT_ENABLE_HTTP_SERVER ?= 0
+
+CREATE_SPIFFS_FS ?= 1
 
 MIOT_PATH ?= ../../..
 COMMON_PATH ?= $(MIOT_PATH)/common
@@ -41,13 +44,18 @@ SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 ELF_FILE = $(BUILD_DIR)/$(APP).elf
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
 FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
 FW_PARTS = boot:src=$(FW_FILE),addr=0
 FW_FILE = $(FW_STAGING_DIR)/$(APP).bin
+SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
+COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
+FS_IMG = ?
+FS_SIZE = 131072
+FS_HEADER=$(GEN_DIR)/fs_data.h
+GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
 
 include $(MIOT_PATH)/fw/common.mk
 
@@ -57,7 +65,6 @@ MIOT_SRCS = cs_rbuf.c \
             miot_console.c cs_frbuf.c \
             miot_init.c \
             miot_timers_mongoose.c \
-            miot_wifi.c \
             miot_mongoose.c \
             miot_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
@@ -66,24 +73,39 @@ MIOT_SRCS = cs_rbuf.c \
             miot_utils.c \
             cs_crc32.c \
             json_utils.c \
-            mongoose.c frozen.c
+            mongoose.c frozen.c \
+            mbed_libc.c
 
-MBED_DEPS_SRCS = startup.cpp stm32_hal.cpp
+MIOT_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
+
+MBED_DEPS_SRCS = startup.cpp stm32_hal.cpp stm32_spiffs.cpp
+
+ifeq "${CREATE_SPIFFS_FS}" "1"
+  FS_IMG = $(FW_STAGING_DIR)/fs.bin
+endif
 
 VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(GEN_DIR) $(COMMON_PATH)/mg_rpc \
-        $(PLATFORM_SRC_PATH)/mbed_deps
+        $(PLATFORM_SRC_PATH)/mbed_deps \
+        $(SPIFFS_PATH) $(COMMON_PATH)/platforms/mbed
 
 IPATH = $(subst .././mbed-os/, ./mbed-os/,$(INCLUDE_PATHS))
 IPATH += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
-         -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc -I./mbed-os/
+         -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc \
+         -I$(SPIFFS_PATH) -I./. -I./mbed-os
 
 LIBRARY_PATHS += -L$(BUILD_DIR)
 
 C_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK
-CXX_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK
+CXX_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DFS_SIZE=${FS_SIZE}
+
+ifeq "$(MIOT_ENABLE_HTTP_SERVER)" "0"
+C_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DMIOT_ENABLE_HTTP_SERVER=0
+CXX_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DFS_SIZE=${FS_SIZE} -DMIOT_ENABLE_HTTP_SERVER=0
+endif
 
 include $(MIOT_PATH)/fw/src/features.mk
+include $(MIOT_PATH)/fw/src/spiffs.mk
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
@@ -130,6 +152,9 @@ $(MG_BUILD_INFO_C): $(GEN_DIR)
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 
+$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+	$(call mkspiffs,$(FS_SIZE))
+
 $(ELF_FILE): $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(BUILD_DIR)/$(STM32LIB)
 	$(vecho) "LD $(APP).elf"
 	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lstm32 $(LD_SYS_LIBS) -Wl,--end-group -T $(LINKER_SCRIPT) $(IPATH) $(LIBRARY_PATHS) --output $@
@@ -138,4 +163,8 @@ $(FW_FILE): $(ELF_FILE) $(FW_STAGING_DIR)
 	$(vecho) "ELF2BIN $(notdir $(FW_FILE))"
 	$(Q) $(ELF2BIN) -O binary $< $(FW_FILE)
 
-$(FW_MANIFEST): $(FW_FILE)
+$(FS_HEADER) : $(FS_IMG)
+	$(vecho) Preparing FS
+	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER))
+
+$(FW_MANIFEST): $(FW_FILE) $(FS_HEADER)

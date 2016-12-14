@@ -15,4 +15,5 @@ all:
 					MIOT_ENABLE_UPDATER_RPC=0 \
 					FW_DIR=$(PWD)/${FW_DIR} \
 					APP_PLATFORM=${PLATFORM} \
+					APP_FS_PATH=$(PWD)/${APP_FS_PATH} \
 					)

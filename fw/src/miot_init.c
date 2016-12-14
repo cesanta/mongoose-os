@@ -40,9 +40,11 @@ enum miot_init_result mg_init(void) {
   r = miot_sys_config_init_platform(get_cfg());
   if (r != MIOT_INIT_OK) return r;
 
+#if MIOT_ENABLE_HTTP_SERVER
   /* Before miot_rpc_init */
   r = miot_sys_config_init_http(&get_cfg()->http, &get_cfg()->device);
   if (r != MIOT_INIT_OK) return r;
+#endif
 
 #if MIOT_ENABLE_RPC
   r = miot_rpc_init(); /* After miot_sys_config_init_http */

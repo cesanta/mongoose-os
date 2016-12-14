@@ -106,4 +106,8 @@
 #define MIOT_PROMPT_DISABLE_ECHO 0
 #endif
 
+#ifndef MIOT_ENABLE_HTTP_SERVER
+#define MIOT_ENABLE_HTTP_SERVER 1
+#endif
+
 #endif /* CS_FW_SRC_MIOT_FEATURES_H_ */

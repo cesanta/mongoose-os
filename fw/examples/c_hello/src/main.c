@@ -13,7 +13,7 @@
 /* On CC3200 LAUNCHXL pin 64 is the red LED. */
 #define GPIO 64 /* The red LED on LAUNCHXL */
 #elif CS_PLATFORM == CS_P_MBED
-#define GPIO 64
+#define GPIO 0x6D
 #else
 #error Unknown platform
 #endif
@@ -44,10 +44,10 @@ enum miot_app_init_result miot_app_init(void) {
   { /* Read a file. */
     FILE *fp = fopen("README.txt", "r");
     if (fp != NULL) {
-      char buf[100];
+      char buf[100] = {0};
       int n = fread(buf, 1, sizeof(buf), fp);
       if (n > 0) {
-        fwrite(buf, 1, n, stdout);
+        printf("%s\n", buf);
       }
       fclose(fp);
     }
