@@ -94,6 +94,10 @@
 #define MIOT_ENABLE_WEB_CONFIG 0
 #endif
 
+#ifndef MIOT_ENABLE_WIFI
+#define MIOT_ENABLE_WIFI 0
+#endif
+
 #ifndef MIOT_ENABLE_WIFI_API
 #define MIOT_ENABLE_WIFI_API 0
 #endif

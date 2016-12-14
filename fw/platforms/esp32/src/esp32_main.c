@@ -23,8 +23,21 @@
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
+esp_err_t wifi_event_handler(system_event_t *event);
+
 esp_err_t event_handler(void *ctx, system_event_t *event) {
-  LOG(LL_INFO, ("event: %d", event->event_id));
+  switch (event->event_id) {
+    case SYSTEM_EVENT_STA_GOT_IP:
+      /* https://github.com/espressif/esp-idf/issues/161 */
+      return wifi_event_handler(event);
+    case SYSTEM_EVENT_STA_CONNECTED:
+    case SYSTEM_EVENT_STA_DISCONNECTED:
+    case SYSTEM_EVENT_AP_STACONNECTED:
+    case SYSTEM_EVENT_AP_STADISCONNECTED:
+      break;
+    default:
+      LOG(LL_INFO, ("event: %d", event->event_id));
+  }
   return ESP_OK;
 }
 

@@ -53,8 +53,3 @@ void miot_wdt_set_timeout(int secs) {
   TIMERG0.wdt_feed = 1;
   TIMERG0.wdt_wprotect = 0;
 }
-
-enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
-  /* TODO */
-  return MIOT_INIT_OK;
-}

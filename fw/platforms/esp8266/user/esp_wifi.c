@@ -55,7 +55,7 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     wifi_station_dhcpc_stop();
     wifi_set_ip_info(STATION_IF, &info);
     LOG(LL_INFO, ("WiFi STA IP config: %s %s %s", cfg->ip, cfg->netmask,
-                  (cfg->gw ? cfg->ip : "")));
+                  (cfg->gw ? cfg->gw : "")));
   }
 
   LOG(LL_INFO, ("WiFi STA: Joining %s", sta_cfg.ssid));
@@ -108,7 +108,6 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   ap_cfg.max_connection = cfg->max_connections;
   ap_cfg.beacon_interval = 100; /* ms */
 
-  LOG(LL_DEBUG, ("Setting up %s on channel %d", ap_cfg.ssid, ap_cfg.channel));
   wifi_softap_set_config_current(&ap_cfg);
 
   LOG(LL_DEBUG, ("Restarting DHCP server"));
