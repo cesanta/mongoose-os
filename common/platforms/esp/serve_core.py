@@ -193,15 +193,19 @@ class GDBHandler(SocketServer.BaseRequestHandler):
                     # The first word on the stack of a task determines how
                     # task's execution ended: by yield (0) or int/exc (non-0).
                     exit, pc, ps = struct.unpack('<III', core.read(sp, 12))
+                    pc = 0x40000000 | (pc & 0x3fffffff)
                     if exit == 0:
                         sp += XT_SOL_FRMSZ
+                        a0a4 = core.read(sp - 0x10, 16)
+                        regs = (struct.pack('<I', pc) + a0a4 + regs[20:100] +
+                                struct.pack('<I', ps) + regs[104:])
                     else:
                         # This is the exception frame, so all regs are already
                         # as they were reported in core dump's REGS section.
                         sp += XT_STK_FRMSZ
-                    pc = 0x40000000 | (pc & 0x3fffffff)
-                    regs = (struct.pack('<I', pc) + regs[4:100] +
-                            struct.pack('<I', ps) + regs[104:])
+                        regs = (struct.pack('<I', pc) + regs[4:100] +
+                                struct.pack('<I', ps) + regs[104:])
+                    #print >>sys.stderr, "task %x pc %x sp %x" % (self._curtask.handle, pc, sp)
                 self.send_str(self.encode_bytes(regs))
             elif pkt[0] == "G": # set registers
                 core.regs = self.decode_bytes(pkt[1:])

@@ -56,7 +56,7 @@ INCLUDE_PATHS += -I.././simplelink/source
 
 LIBRARY_PATHS :=
 LIBRARIES :=
-LINKER_SCRIPT := ./mbed-os/targets/TARGET_STM/TARGET_STM32F4/TARGET_DISCO_F469NI/device/TOOLCHAIN_GCC_ARM/STM32F469XI.ld
+LINKER_SCRIPT := ./mbed-os/targets/TARGET_STM/TARGET_STM32F4/TARGET_DISCO_F429ZI/device/TOOLCHAIN_GCC_ARM/STM32F429ZI.ld
 
 # Objects and Paths
 ###############################################################################
