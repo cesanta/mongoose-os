@@ -14,6 +14,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
+#include "fw/src/miot_hal.h"
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_wifi.h"
@@ -86,7 +87,8 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
     default:
       return;
   }
-  invoke_cb(invoke_wifi_on_change_cb, (void *) (int) s_wifi_sta_config.status);
+  miot_invoke_cb(invoke_wifi_on_change_cb,
+                 (void *) (intptr_t) s_wifi_sta_config.status);
 }
 
 void sl_net_app_eh(SlNetAppEvent_t *e) {
@@ -96,8 +98,8 @@ void sl_net_app_eh(SlNetAppEvent_t *e) {
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = MIOT_WIFI_IP_ACQUIRED;
-    invoke_cb(invoke_wifi_on_change_cb,
-              (void *) (int) s_wifi_sta_config.status);
+    miot_invoke_cb(invoke_wifi_on_change_cb,
+                   (void *) (int) s_wifi_sta_config.status);
   } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
     SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
     LOG(LL_INFO,

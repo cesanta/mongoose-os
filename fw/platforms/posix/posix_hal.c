@@ -30,6 +30,7 @@ typedef unsigned short u_short;
 #endif
 
 #include "mongoose/mongoose.h"
+#include "fw/src/miot_hal.h"
 #include "fw/src/miot_prompt.h"
 #include "fw/src/miot_mongoose.h"
 
@@ -157,12 +158,13 @@ void miot_prompt_init_hal(void) {
     /* in case of a non-tty stdin, don't init prompt */
   }
 }
-
-void miot_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                  v7_val_t args) {
-  _mg_invoke_cb(v7, func, this_obj, args);
-}
 #endif
+
+bool miot_invoke_cb(miot_cb_t cb, void *arg) {
+  /* FIXME: This is NOT correct. */
+  cb(arg);
+  return true;
+}
 
 int64_t miot_get_storage_free_space(void) {
   /* TODO(alashkin): think about implementation */

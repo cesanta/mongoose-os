@@ -73,16 +73,16 @@ static void mg_rpc_observer_cb(struct mg_rpc *mg_rpc, void *cb_arg,
       if (mg_vcmp(dst, MG_RPC_DST_DEFAULT) != 0) return;
       if (ev == MG_RPC_EV_CHANNEL_OPEN) {
         if (v7_is_callable(v7, ctx->onopen_cb)) {
-          miot_invoke_cb0(v7, ctx->onopen_cb);
+          miot_invoke_js_cb0(v7, ctx->onopen_cb);
         }
         if (v7_is_callable(v7, ctx->ready_cb)) {
-          miot_invoke_cb0(v7, ctx->ready_cb);
+          miot_invoke_js_cb0(v7, ctx->ready_cb);
           ctx->ready_cb = V7_UNDEFINED;
         }
       }
       if (ev == MG_RPC_EV_CHANNEL_CLOSED &&
           v7_is_callable(v7, ctx->onclose_cb)) {
-        miot_invoke_cb0(v7, ctx->onclose_cb);
+        miot_invoke_js_cb0(v7, ctx->onclose_cb);
       }
     }
   }
@@ -126,7 +126,7 @@ static void js_call_cb(struct mg_rpc *mg_rpc, void *cb_arg,
     v7_disown(v7, &eo);
   }
 
-  miot_invoke_cb1(v7, cb_ctx->cb, js_cb_arg);
+  miot_invoke_js_cb1(v7, cb_ctx->cb, js_cb_arg);
 
   v7_disown(v7, &js_cb_arg);
   v7_disown(v7, &cb_ctx->cb);
@@ -408,7 +408,7 @@ MG_PRIVATE enum v7_err RPC_ready(struct v7 *v7, v7_val_t *res) {
   }
 
   if (mg_rpc_is_connected(ctx->mg_rpc)) {
-    miot_invoke_cb0(v7, cbv);
+    miot_invoke_js_cb0(v7, cbv);
   } else {
     ctx->ready_cb = cbv;
   }

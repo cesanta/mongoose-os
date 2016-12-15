@@ -49,7 +49,7 @@ static void gpio_intr_handler_proxy(int pin, enum gpio_level level, void *arg) {
   v7_val_t args = v7_mk_array(v7);
   v7_array_push(v7, args, v7_mk_number(v7, pin));
   v7_array_push(v7, args, v7_mk_number(v7, level));
-  miot_invoke_cb2(v7, s_isr_cb_proxy_v, cb, args);
+  miot_invoke_js_cb2(v7, s_isr_cb_proxy_v, cb, args);
 }
 
 MG_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {

@@ -173,7 +173,7 @@ void miot_wifi_scan_done(const char **ssids, void *arg) {
   cba->v7 = NULL;
   v7_disown(v7, &cba->v);
 
-  miot_invoke_cb1(v7, cba->v, res);
+  miot_invoke_js_cb1(v7, cba->v, res);
   v7_disown(v7, &res);
 }
 
@@ -203,7 +203,7 @@ MG_PRIVATE enum v7_err Wifi_scan(struct v7 *v7, v7_val_t *res) {
 static void miot_wifi_ready_js(enum miot_wifi_status event, void *arg) {
   if (event != MIOT_WIFI_IP_ACQUIRED) return;
   struct wifi_cb_arg *cba = (struct wifi_cb_arg *) arg;
-  miot_invoke_cb0(cba->v7, cba->v);
+  miot_invoke_js_cb0(cba->v7, cba->v);
   v7_disown(cba->v7, &cba->v);
   miot_wifi_remove_on_change_cb(miot_wifi_ready_js, arg);
   free(arg);
@@ -219,7 +219,7 @@ MG_PRIVATE enum v7_err Wifi_ready(struct v7 *v7, v7_val_t *res) {
   }
 
   if (miot_wifi_get_status() == MIOT_WIFI_IP_ACQUIRED) {
-    miot_invoke_cb0(v7, cbv);
+    miot_invoke_js_cb0(v7, cbv);
     ret = 1;
   } else {
     struct wifi_cb_arg *arg = (struct wifi_cb_arg *) calloc(1, sizeof(*arg));
@@ -265,7 +265,7 @@ void miot_wifi_api_setup(struct v7 *v7) {
 void miot_wifi_on_change_js(enum miot_wifi_status event, void *arg) {
   struct wifi_cb_arg *cba = (struct wifi_cb_arg *) arg;
   if (v7_is_callable(cba->v7, cba->v)) {
-    miot_invoke_cb1(cba->v7, cba->v, v7_mk_number(cba->v7, event));
+    miot_invoke_js_cb1(cba->v7, cba->v, v7_mk_number(cba->v7, event));
   }
 }
 

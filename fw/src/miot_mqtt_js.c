@@ -44,7 +44,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       } else {
         cb = v7_get(v7, ud->client, MIOT_MQTT_ERROR_CB, ~0);
         if (!v7_is_undefined(cb)) {
-          miot_invoke_cb0(v7, cb);
+          miot_invoke_js_cb0(v7, cb);
         }
       }
       break;
@@ -60,7 +60,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       }
       cb = v7_get(v7, ud->client, key, ~0);
       if (!v7_is_undefined(cb)) {
-        miot_invoke_cb0(v7, cb);
+        miot_invoke_js_cb0(v7, cb);
       }
       break;
     }
@@ -71,7 +71,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         v7_val_t topic = v7_mk_string(v7, msg->topic.p, msg->topic.len, 1);
         v7_val_t payload =
             v7_mk_string(v7, msg->payload.p, msg->payload.len, 1);
-        miot_invoke_cb2(v7, cb, topic, payload);
+        miot_invoke_js_cb2(v7, cb, topic, payload);
       }
       break;
     case MG_EV_CLOSE:
@@ -80,7 +80,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
        */
       cb = v7_get(v7, ud->client, MIOT_MQTT_CLOSE_CB, ~0);
       if (!v7_is_undefined(cb)) {
-        miot_invoke_cb0(v7, cb);
+        miot_invoke_js_cb0(v7, cb);
       }
 
       v7_def(v7, ud->client, "_nc", ~0, _V7_DESC_HIDDEN(1), V7_UNDEFINED);

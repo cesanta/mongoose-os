@@ -106,7 +106,7 @@ static void trigger_event(struct v7 *v7, v7_val_t obj, const char *ev_name,
                           struct mg_connection *c) {
   v7_val_t cb = v7_get(v7, obj, ev_name, ~0);
   if (v7_is_callable(v7, cb)) {
-    miot_invoke_cb1_this(v7, cb, obj, v7_mk_number(v7, (size_t) c));
+    miot_invoke_js_cb1_this(v7, cb, obj, v7_mk_number(v7, (size_t) c));
   }
 }
 
@@ -134,7 +134,8 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         v7_own(ud->v7, &response);
         setup_request_object(ud->v7, request, ev_data);
         setup_response_object(ud->v7, response, c, request);
-        miot_invoke_cb2_this(ud->v7, ud->handler, ud->obj, request, response);
+        miot_invoke_js_cb2_this(ud->v7, ud->handler, ud->obj, request,
+                                response);
         v7_disown(ud->v7, &request);
         v7_disown(ud->v7, &response);
       } else {
@@ -153,7 +154,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
         v7_val_t response = v7_mk_object(ud->v7);
         v7_own(ud->v7, &response);
         setup_request_object(ud->v7, response, ev_data);
-        miot_invoke_cb1_this(ud->v7, ud->handler, ud->obj, response);
+        miot_invoke_js_cb1_this(ud->v7, ud->handler, ud->obj, response);
         v7_disown(ud->v7, &response);
       }
 
@@ -162,7 +163,7 @@ static void http_ev_handler(struct mg_connection *c, int ev, void *ev_data) {
       }
       break;
     case MG_EV_TIMER:
-      miot_invoke_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
+      miot_invoke_js_cb0_this(ud->v7, ud->timeout_callback, ud->obj);
       break;
     case MG_EV_CLOSE:
       if (ud != NULL) {

@@ -189,6 +189,7 @@ MIOT_SRCS += v7.c \
              miot_config_js.c \
              miot_console_js.c \
              miot_gpio_js.c \
+             miot_hal_js.c \
              miot_http_js.c \
              miot_i2c_js.c \
              miot_init_js.c \

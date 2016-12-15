@@ -23,7 +23,7 @@
 
 #include "oslib/osi.h"
 
-#include "cc3200_main_task.h"
+#include "fw/src/miot_hal.h"
 
 /*
  * pin is a literal pin number, as that seems to be the custom in TI land.
@@ -131,7 +131,7 @@ static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
     if (!(ints & 1)) continue;
     int pin = s_gpio_to_pin_map[gpio_no];
     if (pin < 0) continue;
-    invoke_cb(gpio_int_cb, (void *) ((pin << 1) | (vals & 1)));
+    miot_invoke_cb(gpio_int_cb, (void *) ((pin << 1) | (vals & 1)));
   }
 }
 

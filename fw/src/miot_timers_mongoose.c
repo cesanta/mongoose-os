@@ -35,7 +35,7 @@ static void miot_timer_handler(struct mg_connection *c, int ev, void *p) {
       if (c->flags & MG_F_CLOSE_IMMEDIATELY) break;
       if (ti->cb != NULL) ti->cb(ti->arg);
 #if MIOT_ENABLE_JS
-      if (ti->v7 != NULL) miot_invoke_cb0(ti->v7, ti->js_cb);
+      if (ti->v7 != NULL) miot_invoke_js_cb0(ti->v7, ti->js_cb);
 #endif
       if (ti->interval_ms > 0) {
         c->ev_timer_time = mg_time() + ti->interval_ms / 1000.0;

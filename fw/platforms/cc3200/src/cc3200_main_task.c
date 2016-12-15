@@ -42,7 +42,7 @@ int g_boot_cfg_idx;
 struct boot_cfg g_boot_cfg;
 
 struct miot_event {
-  cb_t cb;
+  miot_cb_t cb;
   void *arg;
 };
 
@@ -229,7 +229,7 @@ void main_task(void *arg) {
   }
 }
 
-bool invoke_cb(cb_t cb, void *arg) {
+bool miot_invoke_cb(miot_cb_t cb, void *arg) {
   struct miot_event e = {.cb = cb, .arg = arg};
   return (osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT) == OSI_OK);
 }

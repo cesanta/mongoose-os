@@ -232,68 +232,6 @@ void miot_print_exception(struct v7 *v7, v7_val_t exc, const char *msg) {
   v7_disown(v7, &exc);
 }
 
-void _mg_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                   v7_val_t args) {
-  v7_val_t res;
-  if (v7_apply(v7, func, this_obj, args, &res) == V7_EXEC_EXCEPTION) {
-    miot_print_exception(v7, res, "cb threw exception");
-  }
-}
-
-void miot_invoke_cb2_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj,
-                          v7_val_t arg1, v7_val_t arg2) {
-  v7_val_t args;
-  v7_own(v7, &cb);
-  v7_own(v7, &arg1);
-  v7_own(v7, &arg2);
-
-  args = v7_mk_array(v7);
-  v7_own(v7, &args);
-  v7_array_push(v7, args, arg1);
-  v7_array_push(v7, args, arg2);
-  miot_invoke_cb(v7, cb, this_obj, args);
-  v7_disown(v7, &args);
-  v7_disown(v7, &arg2);
-  v7_disown(v7, &arg1);
-  v7_disown(v7, &cb);
-}
-
-void miot_invoke_cb1_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj,
-                          v7_val_t arg) {
-  v7_val_t args;
-  v7_own(v7, &cb);
-  v7_own(v7, &arg);
-  args = v7_mk_array(v7);
-  v7_own(v7, &args);
-  v7_array_push(v7, args, arg);
-  miot_invoke_cb(v7, cb, this_obj, args);
-  v7_disown(v7, &args);
-  v7_disown(v7, &arg);
-  v7_disown(v7, &cb);
-}
-
-void miot_invoke_cb0_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj) {
-  v7_val_t args;
-  v7_own(v7, &cb);
-  args = v7_mk_array(v7);
-  v7_own(v7, &args);
-  miot_invoke_cb(v7, cb, this_obj, args);
-  v7_disown(v7, &args);
-  v7_disown(v7, &cb);
-}
-
-void miot_invoke_cb0(struct v7 *v7, v7_val_t cb) {
-  miot_invoke_cb0_this(v7, cb, v7_get_global(v7));
-}
-
-void miot_invoke_cb1(struct v7 *v7, v7_val_t cb, v7_val_t arg) {
-  miot_invoke_cb1_this(v7, cb, v7_get_global(v7), arg);
-}
-
-void miot_invoke_cb2(struct v7 *v7, v7_val_t cb, v7_val_t arg1, v7_val_t arg2) {
-  miot_invoke_cb2_this(v7, cb, v7_get_global(v7), arg1, arg2);
-}
-
 void miot_v7_ext_api_setup(struct v7 *v7) {
   v7_val_t gc;
 

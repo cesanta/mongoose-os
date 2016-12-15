@@ -249,7 +249,7 @@ static int trigger_event(struct v7 *v7, struct cb_info_holder *list,
   SLIST_FOREACH_SAFE(cb, &list->head, entries, cb_temp) {
     if (strcmp(cb->name, name) == 0) {
       LOG(LL_VERBOSE_DEBUG, ("Triggered `%s`", name));
-      miot_invoke_cb2(v7, cb->cbv, arg1, arg2);
+      miot_invoke_js_cb2(v7, cb->cbv, arg1, arg2);
       ret = 1;
       if (cb->trigger_once) {
         LOG(LL_VERBOSE_DEBUG, ("Removing event `%s`", name));

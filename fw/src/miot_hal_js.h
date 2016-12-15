@@ -24,8 +24,18 @@ int miot_http_call(struct v7 *v7, const char *url, const char *body,
  * Port specific implementation have to make sure it's executed in the
  * main v7 thread.
  */
-void miot_invoke_cb(struct v7 *, v7_val_t func, v7_val_t this_obj,
-                    v7_val_t args);
+void miot_invoke_js_cb(struct v7 *, v7_val_t func, v7_val_t this_obj,
+                       v7_val_t args);
+
+void miot_invoke_js_cb0(struct v7 *v7, v7_val_t cb);
+void miot_invoke_js_cb1(struct v7 *v7, v7_val_t cb, v7_val_t arg);
+void miot_invoke_js_cb2(struct v7 *v7, v7_val_t cb, v7_val_t arg1,
+                        v7_val_t arg2);
+
+void miot_invoke_js_cb0_this(struct v7 *v7, v7_val_t cb, v7_val_t this_obj);
+void miot_invoke_js_cb1_this(struct v7 *v7, v7_val_t, v7_val_t, v7_val_t);
+void miot_invoke_js_cb2_this(struct v7 *v7, v7_val_t, v7_val_t, v7_val_t,
+                             v7_val_t);
 
 #ifdef __cplusplus
 }

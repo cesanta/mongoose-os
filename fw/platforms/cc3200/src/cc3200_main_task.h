@@ -12,9 +12,6 @@
 
 void main_task(void *arg);
 
-typedef void (*cb_t)(void *arg);
-bool invoke_cb(cb_t cb, void *arg);
-
 extern int g_boot_cfg_idx;
 extern struct boot_cfg g_boot_cfg;
 

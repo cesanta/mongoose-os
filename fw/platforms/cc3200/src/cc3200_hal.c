@@ -30,44 +30,8 @@
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
-#include "fw/platforms/cc3200/src/cc3200_main_task.h"
 
 #include "common/umm_malloc/umm_malloc.h"
-
-#if MIOT_ENABLE_JS
-#include "v7/v7.h"
-
-static void miot_invoke_cb_cb(void *arg);
-
-struct v7_invoke_event_data {
-  struct v7 *v7;
-  v7_val_t func;
-  v7_val_t this_obj;
-  v7_val_t args;
-};
-
-void miot_invoke_cb(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                    v7_val_t args) {
-  struct v7_invoke_event_data *ied = calloc(1, sizeof(*ied));
-  ied->v7 = v7;
-  ied->func = func;
-  ied->this_obj = this_obj;
-  ied->args = args;
-  v7_own(v7, &ied->func);
-  v7_own(v7, &ied->this_obj);
-  v7_own(v7, &ied->args);
-  invoke_cb(miot_invoke_cb_cb, ied);
-}
-
-static void miot_invoke_cb_cb(void *arg) {
-  struct v7_invoke_event_data *ied = (struct v7_invoke_event_data *) arg;
-  _mg_invoke_cb(ied->v7, ied->func, ied->this_obj, ied->args);
-  v7_disown(ied->v7, &ied->args);
-  v7_disown(ied->v7, &ied->this_obj);
-  v7_disown(ied->v7, &ied->func);
-  free(ied);
-}
-#endif /* MIOT_ENABLE_JS */
 
 #ifdef __TI_COMPILER_VERSION__
 
@@ -155,12 +119,12 @@ void miot_usleep(int usecs) {
 
 void mongoose_poll_cb(void *arg);
 
-bool s_mg_poll_scheduled;
+static bool s_mg_poll_scheduled;
 
 void mongoose_schedule_poll(void) {
   /* Prevent piling up of poll callbacks. */
   if (s_mg_poll_scheduled) return;
-  s_mg_poll_scheduled = invoke_cb(mongoose_poll_cb, NULL);
+  s_mg_poll_scheduled = miot_invoke_cb(mongoose_poll_cb, NULL);
 }
 
 void mongoose_poll_cb(void *arg) {

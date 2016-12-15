@@ -19,21 +19,10 @@
 #include <lwip/udp.h>
 
 #include "common/cs_dbg.h"
+#include "fw/src/miot_hal.h"
 #include "fw/src/miot_mongoose.h"
 
 #include "fw/platforms/esp8266/user/esp_task.h"
-
-#if MIOT_ENABLE_JS
-#include "v7/v7.h"
-#include "fw/src/miot_v7_ext.h"
-
-struct v7_callback_args {
-  struct v7 *v7;
-  v7_val_t func;
-  v7_val_t this_obj;
-  v7_val_t args;
-};
-#endif /* MIOT_ENABLE_JS */
 
 #ifndef MIOT_TASK_PRIORITY
 #define MIOT_TASK_PRIORITY 1
@@ -48,7 +37,11 @@ struct v7_callback_args {
 #endif
 
 #define SIG_MG_POLL 1
-#define SIG_V7_CALLBACK 2
+#define SIG_INVOKE_CB 2
+struct invoke_cb_args {
+  miot_cb_t cb;
+  void *arg;
+};
 
 static os_timer_t s_poll_tmr;
 static os_event_t s_mg_task_queue[MIOT_TASK_QUEUE_LEN];
@@ -78,17 +71,12 @@ static void miot_lwip_task(os_event_t *e) {
       mgr = (struct mg_mgr *) e->par;
       break;
     }
-#if MIOT_ENABLE_JS
-    case SIG_V7_CALLBACK: {
-      struct v7_callback_args *cba = (struct v7_callback_args *) e->par;
-      _mg_invoke_cb(cba->v7, cba->func, cba->this_obj, cba->args);
-      v7_disown(cba->v7, &cba->func);
-      v7_disown(cba->v7, &cba->this_obj);
-      v7_disown(cba->v7, &cba->args);
+    case SIG_INVOKE_CB: {
+      struct invoke_cb_args *cba = (struct invoke_cb_args *) e->par;
+      cba->cb(cba->arg);
       free(cba);
       break;
     }
-#endif
   }
   if (mgr != NULL) {
     mongoose_poll(0);
@@ -114,31 +102,18 @@ static void miot_lwip_task(os_event_t *e) {
   }
 }
 
-#if MIOT_ENABLE_JS
-void miot_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                               v7_val_t args) {
-  struct v7_callback_args *cba =
-      (struct v7_callback_args *) calloc(1, sizeof(*cba));
-  if (cba == NULL) {
-    DBG(("OOM"));
-    return;
-  }
-  cba->v7 = v7;
-  cba->func = func;
-  cba->this_obj = this_obj;
-  cba->args = args;
-  v7_own(v7, &cba->func);
-  v7_own(v7, &cba->this_obj);
-  v7_own(v7, &cba->args);
-  if (!system_os_post(MIOT_TASK_PRIORITY, SIG_V7_CALLBACK, (uint32_t) cba)) {
-    LOG(LL_ERROR, ("MG queue overflow"));
-    v7_disown(v7, &cba->func);
-    v7_disown(v7, &cba->this_obj);
-    v7_disown(v7, &cba->args);
+bool miot_invoke_cb(miot_cb_t cb, void *arg) {
+  struct invoke_cb_args *cba =
+      (struct invoke_cb_args *) calloc(1, sizeof(*cba));
+  if (cba == NULL) return false;
+  cba->cb = cb;
+  cba->arg = arg;
+  if (!system_os_post(MIOT_TASK_PRIORITY, SIG_INVOKE_CB, (uint32_t) cba)) {
     free(cba);
+    return false;
   }
+  return true;
 }
-#endif /* MIOT_ENABLE_JS */
 
 void miot_suspend(void) {
   /*

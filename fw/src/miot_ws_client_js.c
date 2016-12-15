@@ -34,7 +34,7 @@ static void invoke_cb(struct user_data *ud, const char *name, v7_val_t ev) {
   DBG(("%s", name));
   v7_val_t met = v7_get(v7, ud->ws, name, ~0);
   if (!v7_is_undefined(met)) {
-    miot_invoke_cb1(v7, met, ev);
+    miot_invoke_js_cb1(v7, met, ev);
   }
 }
 

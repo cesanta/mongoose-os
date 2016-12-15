@@ -38,14 +38,14 @@ void miot_uart_js_dispatcher(struct miot_uart_state *us) {
     v7_val_t rxcb = v7_get(v7, ujs->obj, "_rxcb", ~0);
     if (v7_is_callable(v7, rxcb) && !ujs->recv_pending) {
       ujs->recv_pending = 1;
-      miot_invoke_cb0_this(v7, rxcb, ujs->obj);
+      miot_invoke_js_cb0_this(v7, rxcb, ujs->obj);
       /* Note: Callback has not run yet, it has been scheduled. */
     }
   }
   if (txb->used == 0) {
     v7_val_t txcb = v7_get(v7, ujs->obj, "_txcb", 5);
     if (v7_is_callable(v7, txcb) && !ujs->tx_empty_notified) {
-      miot_invoke_cb0_this(v7, txcb, ujs->obj);
+      miot_invoke_js_cb0_this(v7, txcb, ujs->obj);
     }
   }
 }

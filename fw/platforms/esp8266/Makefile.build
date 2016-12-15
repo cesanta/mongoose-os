@@ -137,6 +137,7 @@ MIOT_SRCS += v7.c \
              miot_console_js.c \
              miot_debug_js.c \
              miot_gpio_js.c \
+             miot_hal_js.c \
              miot_http_js.c \
              miot_init_js.c \
              miot_mqtt_js.c \
@@ -489,7 +490,7 @@ $(FS_IMG): $(BUILD_DIR)/v7
 # appropriate
 $(MIOT_POSIX_BIN):
 	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
-	  SSL=Krypton \
+	  SSL=None \
 	  MIOT_PATH=$(MIOT_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
 	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \

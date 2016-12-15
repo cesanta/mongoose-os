@@ -10,7 +10,8 @@
  * Interfaces that need to be implemented for each devices.
  */
 
-#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -49,6 +50,13 @@ void miot_usleep(int usecs);
 
 /* Get storage free space, bytes */
 int64_t miot_get_storage_free_space(void);
+
+/*
+ * Invoke a callback in the main MIOT event loop.
+ * Returns true if the callback has been scheduled for execution.
+ */
+typedef void (*miot_cb_t)(void *arg);
+bool miot_invoke_cb(miot_cb_t cb, void *arg);
 
 #ifdef __cplusplus
 }
