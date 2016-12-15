@@ -23,7 +23,6 @@ all clean:
 	@docker run --rm -i -v $(MIOT_ABS_PATH):/src $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  //bin/bash -c "\
 	    if [ -d /src/v7 ] ; then make -C /src/v7 v7.c ; fi && \
-	    if [ -d /src/krypton ] ; then make -C /src/krypton krypton.c ; fi && \
 	    if [ -d /src/mongoose ] ; then make -C /src/mongoose mongoose.c mongoose.h ; fi && \
 	    cd $(APP_PATH) && \
 	    make -f Makefile.build APP=$(APP) MIOT_PATH=/src $@ -$(MAKEFLAGS) \

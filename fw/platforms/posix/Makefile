@@ -14,12 +14,11 @@ MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
 GEN_DIR ?= ./.build/gen
-KRYPTON_PATH ?= $(MIOT_PATH)/krypton
 FROZEN_PATH ?= $(MIOT_PATH)/frozen
 OUTAPP ?= mongoose-iot
 VERBOSE ?= 0
 VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
-SSL ?= Krypton
+SSL ?= None
 DEBUG ?= 0
 CC_WRAPPER ?=
 
@@ -152,11 +151,9 @@ ifeq ($(BUILD_PLATFORM), "WIN")
   ADD_LIBS += ws2_32
 endif
 
-ifeq "$(SSL)" "Krypton"
-INCLUDES += $(KRYPTON_PATH)
-VPATH += $(KRYPTON_PATH)
-MIOT_SRCS += krypton.c
-CFLAGS += -DMG_ENABLE_SSL -DMG_DISABLE_PFS
+ifeq "$(SSL)" "OpenSSL"
+CFLAGS += -DMG_ENABLE_SSL
+LDFLAGS += -lssl -lcrypto
 endif
 
 GC_CHECK ?=

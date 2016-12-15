@@ -4,7 +4,7 @@
 #
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
-# SSL: if set to "Krypton" enables SSL with the krypton lib
+# SSL: chooses SSL library to use. Currently onle "mbedTLS" is supported
 # V7_FREEZE: if "1" (default) freezes the stdlib object graph into a static graph
 #         loadable in ROM
 # HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
@@ -22,7 +22,7 @@ APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
 MIOT_ENABLE_ATCA ?= 1
-MIOT_ENABLE_ATCA_SERVICE ?= 0
+MIOT_ENABLE_ATCA_SERVICE ?= 1
 MIOT_ENABLE_CONFIG_SERVICE ?= 1
 MIOT_ENABLE_CONSOLE ?= 1
 MIOT_ENABLE_DNS_SD ?= 1
@@ -42,7 +42,6 @@ MIOT_DEBUG_UART ?= 0
 
 MIOT_PATH ?= ../../..
 COMMON_PATH ?= $(MIOT_PATH)/common
-KRYPTON_PATH ?= $(MIOT_PATH)/krypton
 MONGOOSE_PATH ?= $(MIOT_PATH)/mongoose
 FROZEN_PATH ?= $(MIOT_PATH)/frozen
 V7_PATH ?= $(MIOT_PATH)/v7
@@ -103,8 +102,8 @@ RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS  = -quiet -bin -boot2
 
-# SSL can be None, Krypton or mbedTLS
-SSL ?= Krypton
+# SSL can be None or mbedTLS
+SSL ?= mbedTLS
 
 include $(COMMON_ESP_PATH)/common.mk
 
@@ -262,14 +261,6 @@ FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
 
-ifeq "$(SSL)" "Krypton"
-  IPATH += $(KRYPTON_PATH)
-  VPATH += $(KRYPTON_PATH)
-  MIOT_SRCS += krypton.c esp_crypto.c
-  FEATURES += -DMG_ENABLE_SSL -DMG_DISABLE_PFS \
-              -DKR_LOCALS -DKR_EXT_IO -DKR_EXT_RANDOM -DKR_EXT_MD5 -DKR_EXT_SHA1 \
-              -DKR_EXT_AES -DKR_NO_LOAD_CA_STORE
-endif
 ifeq "$(SSL)" "mbedTLS"
   IPATH += $(MBEDTLS_PATH)/include
   MIOT_SRCS += esp_crypto.c

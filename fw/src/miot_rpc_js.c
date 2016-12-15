@@ -483,9 +483,11 @@ MG_PRIVATE enum v7_err RPC_ctor(struct v7 *v7, v7_val_t *res) {
   chcfg = miot_rpc_channel_ws_out_cfg_from_sys(get_cfg());
 
   GET_STR_PARAM(chcfg, server_address, server_address);
+#if MG_ENABLE_SSL
   GET_STR_PARAM(chcfg, ssl_ca_file, ssl_ca_file);
   GET_STR_PARAM(chcfg, ssl_client_cert_file, ssl_client_cert_file);
   GET_STR_PARAM(chcfg, ssl_server_name, ssl_server_name);
+#endif
   GET_INT_PARAM(chcfg, reconnect_interval_min, reconnect_timeout_min);
   GET_INT_PARAM(chcfg, reconnect_interval_max, reconnect_timeout_max);
 
