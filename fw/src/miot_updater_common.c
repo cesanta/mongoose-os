@@ -352,6 +352,9 @@ static int updater_process_int(struct update_context *ctx, const char *data,
 
         if (strncasecmp(ctx->platform.ptr, CS_STRINGIFY_MACRO(FW_ARCHITECTURE),
                         strlen(CS_STRINGIFY_MACRO(FW_ARCHITECTURE))) != 0) {
+          CONSOLE_LOG(LL_ERROR,
+                      ("Wrong platform: want \"%s\", got \"%s\"",
+                       CS_STRINGIFY_MACRO(FW_ARCHITECTURE), ctx->platform.ptr));
           ctx->status_msg = "Wrong platform";
           return -1;
         }

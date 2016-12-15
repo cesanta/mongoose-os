@@ -130,7 +130,7 @@ void miot_updater_http_start(struct update_context *ctx, const char *url) {
   if (strlen(url) > 8 && strncmp(url, "https://", 8) == 0) {
     opts.ssl_server_name = get_cfg()->update.ssl_server_name;
     opts.ssl_ca_cert = get_cfg()->update.ssl_ca_file;
-#ifndef cc3200
+#if CS_PLATFORM != CS_P_CC3200
     if (opts.ssl_ca_cert == NULL) {
       /* Use global CA file if updater specific one is not set */
       opts.ssl_ca_cert = get_cfg()->tls.ca_file;
