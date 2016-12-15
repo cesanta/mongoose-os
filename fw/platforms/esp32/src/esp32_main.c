@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
+#include "esp_attr.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_task_wdt.h"
@@ -20,6 +21,7 @@
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 #define MIOT_TASK_STACK_SIZE 8192
+#define MIOT_TASK_QUEUE_LENGTH 32
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
@@ -50,6 +52,13 @@ enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
                                           : MIOT_INIT_CONFIG_WIFI_INIT_FAILED;
 }
 
+struct miot_event {
+  miot_cb_t cb;
+  void *arg;
+};
+
+QueueHandle_t s_main_queue;
+
 void miot_task(void *arg) {
   /* Enable WDT for this task. It will be fed by Mongoose polling loop. */
   esp_task_wdt_feed();
@@ -75,11 +84,27 @@ void miot_task(void *arg) {
     abort();
   }
 
+  struct miot_event e;
+  s_main_queue = xQueueCreate(MIOT_TASK_QUEUE_LENGTH, sizeof(e));
+
   while (true) {
-    mongoose_poll(100);
+    mongoose_poll(0);
+    while (xQueueReceive(s_main_queue, &e, 1 /* tick */)) {
+      e.cb(e.arg);
+    }
   }
 
   (void) arg;
+}
+
+bool IRAM_ATTR miot_invoke_cb(miot_cb_t cb, void *arg) {
+  struct miot_event e = {.cb = cb, .arg = arg};
+  int should_yield = false;
+  if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
+    return false;
+  }
+  if (should_yield) vPortYield();
+  return true;
 }
 
 void app_main(void) {

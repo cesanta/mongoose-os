@@ -223,7 +223,7 @@ void main_task(void *arg) {
 
   while (1) {
     mongoose_poll(0);
-    if (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) == OSI_OK) {
+    while (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) == OSI_OK) {
       e.cb(e.arg);
     }
   }

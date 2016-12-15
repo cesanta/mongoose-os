@@ -10,8 +10,13 @@
 #include "tcpip_adapter.h"
 #include "apps/dhcpserver.h"
 
+#include "fw/src/miot_hal.h"
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_wifi.h"
+
+static void invoke_wifi_on_change_cb(void *arg) {
+  miot_wifi_on_change_cb((enum miot_wifi_status)(int) arg);
+}
 
 esp_err_t wifi_event_handler(system_event_t *event) {
   int mg_ev = -1;
@@ -49,8 +54,9 @@ esp_err_t wifi_event_handler(system_event_t *event) {
       LOG(LL_INFO, ("WiFi event: %d", event->event_id));
   }
 
-  /* TODO(rojer): Post via miot task */
-  if (mg_ev >= 0) miot_wifi_on_change_cb(mg_ev);
+  if (mg_ev >= 0) {
+    miot_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev);
+  }
 
   return (pass_to_system ? esp_event_send(event) : ESP_OK);
 }

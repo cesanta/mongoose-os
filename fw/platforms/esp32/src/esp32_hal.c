@@ -5,6 +5,7 @@
 
 #include "freertos/FreeRTOS.h"
 
+#include "esp_attr.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
 
@@ -52,4 +53,31 @@ void miot_wdt_set_timeout(int secs) {
   TIMERG0.wdt_config0.en = 1;
   TIMERG0.wdt_feed = 1;
   TIMERG0.wdt_wprotect = 0;
+}
+
+static bool s_mg_poll_scheduled;
+portMUX_TYPE s_miot_mux = portMUX_INITIALIZER_UNLOCKED;
+
+inline void miot_lock() {
+  portENTER_CRITICAL(&s_miot_mux);
+}
+
+inline void miot_unlock() {
+  portEXIT_CRITICAL(&s_miot_mux);
+}
+
+static void IRAM_ATTR mongoose_poll_cb(void *arg) {
+  miot_lock();
+  s_mg_poll_scheduled = false;
+  miot_unlock();
+  (void) arg;
+}
+
+void IRAM_ATTR mongoose_schedule_poll(void) {
+  miot_lock();
+  /* Prevent piling up of poll callbacks. */
+  if (!s_mg_poll_scheduled) {
+    s_mg_poll_scheduled = miot_invoke_cb(mongoose_poll_cb, NULL);
+  }
+  miot_unlock();
 }
