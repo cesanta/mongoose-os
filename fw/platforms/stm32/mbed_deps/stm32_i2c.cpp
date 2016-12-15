@@ -3,12 +3,12 @@
 
 struct miot_i2c {
 
-};
+} s_miot_i2c;
 
 struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {
   /* TODO(alex): implement */
   (void) cfg;
-  return NULL;
+  return &s_miot_i2c;
 }
 
 enum i2c_ack_type miot_i2c_start(struct miot_i2c *conn, uint16_t addr,
@@ -34,4 +34,13 @@ enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *conn, uint8_t data) {
   (void) data;
 
   return I2C_ERR;
+}
+
+uint8_t miot_i2c_read_byte(struct miot_i2c *conn, enum i2c_ack_type ack_type) {
+  /* TODO(alex): implement */
+
+  (void) conn;
+  (void) ack_type;
+
+  return 0;
 }

@@ -7,6 +7,8 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_wifi.h"
+
 
 void mongoose_schedule_poll() {
   /*
@@ -17,7 +19,6 @@ void mongoose_schedule_poll() {
 }
 
 enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
-  /* Do nothing here */
   return MIOT_INIT_OK;
 }
 
