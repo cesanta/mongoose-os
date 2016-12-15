@@ -1,0 +1,3 @@
+[
+  ["wifi.ap.keep_enabled", "b", true, {title: "Keep AP enabled when station is on"}],
+]

@@ -56,13 +56,34 @@ esp_err_t wifi_event_handler(system_event_t *event) {
 }
 
 static esp_err_t miot_wifi_set_mode(wifi_mode_t mode) {
-  LOG(LL_INFO,
-      ("WiFi mode: %s",
-       (mode == WIFI_MODE_AP ? "AP" : mode == WIFI_MODE_STA
-                                          ? "STA"
-                                          : mode == WIFI_MODE_APSTA ? "AP+STA"
-                                                                    : "???")));
-  esp_err_t r = esp_wifi_set_mode(mode);
+  esp_err_t r;
+
+  const char *mode_str = NULL;
+  switch (mode) {
+    case WIFI_MODE_NULL:
+      mode_str = "disabled";
+      break;
+    case WIFI_MODE_AP:
+      mode_str = "AP";
+      break;
+    case WIFI_MODE_STA:
+      mode_str = "STA";
+      break;
+    case WIFI_MODE_APSTA:
+      mode_str = "AP+STA";
+      break;
+    default:
+      mode_str = "???";
+  }
+  LOG(LL_INFO, ("WiFi mode: %s", mode_str));
+
+  if (mode == WIFI_MODE_NULL) {
+    r = esp_wifi_stop();
+    if (r == ESP_ERR_WIFI_NOT_INIT) r = ESP_OK; /* Nothing to stop. */
+    return r;
+  }
+
+  r = esp_wifi_set_mode(mode);
   if (r == ESP_ERR_WIFI_NOT_INIT) {
     wifi_init_config_t icfg = {.event_handler = wifi_event_handler};
     r = esp_wifi_init(&icfg);
@@ -119,12 +140,14 @@ static esp_err_t miot_wifi_remove_mode(wifi_mode_t mode) {
   if (mode == WIFI_MODE_APSTA ||
       (mode == WIFI_MODE_STA && cur_mode == WIFI_MODE_STA) ||
       (mode == WIFI_MODE_AP && cur_mode == WIFI_MODE_AP)) {
-    LOG(LL_INFO, ("WiFi disabled"));
-    return esp_wifi_stop();
+    mode = WIFI_MODE_NULL;
+  } else if (mode == WIFI_MODE_STA) {
+    mode = WIFI_MODE_AP;
+  } else {
+    mode = WIFI_MODE_STA;
   }
   /* As a result we will always remain in STA-only or AP-only mode. */
-  return miot_wifi_set_mode(mode == WIFI_MODE_STA ? WIFI_MODE_AP
-                                                  : WIFI_MODE_STA);
+  return miot_wifi_set_mode(mode);
 }
 
 int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
@@ -132,6 +155,13 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   wifi_config_t wcfg;
   memset(&wcfg, 0, sizeof(wcfg));
   wifi_sta_config_t *stacfg = &wcfg.sta;
+
+  char *err_msg = NULL;
+  if (!miot_wifi_validate_sta_cfg(cfg, &err_msg)) {
+    LOG(LL_ERROR, ("WiFi STA: %s", err_msg));
+    free(err_msg);
+    return false;
+  }
 
   if (!cfg->enable) {
     return (miot_wifi_remove_mode(WIFI_MODE_STA) == ESP_OK);
@@ -157,7 +187,7 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
       LOG(LL_ERROR, ("Failed to set WiFi STA IP config: %d", r));
       return false;
     }
-    LOG(LL_INFO, ("WiFi STA IP config: %s %s %s", cfg->ip, cfg->netmask,
+    LOG(LL_INFO, ("WiFi STA IP: %s/%s gw %s", cfg->ip, cfg->netmask,
                   (cfg->gw ? cfg->gw : "")));
   } else {
     tcpip_adapter_dhcpc_start(TCPIP_ADAPTER_IF_STA);
@@ -179,13 +209,14 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     r = esp_wifi_connect();
   }
 
-  if (r == ESP_OK) {
-    LOG(LL_INFO, ("WiFi STA: Joining %s", cfg->ssid));
-  } else {
-    LOG(LL_INFO, ("WiFi STA connect failed: %d", r));
+  if (r != ESP_OK) {
+    LOG(LL_ERROR, ("WiFi STA: Connect failed: %d", r));
+    return false;
   }
 
-  return (r == ESP_OK);
+  LOG(LL_INFO, ("WiFi STA: Connecting to %s", stacfg->ssid));
+
+  return true;
 }
 
 int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
@@ -193,6 +224,13 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   wifi_config_t wcfg;
   memset(&wcfg, 0, sizeof(wcfg));
   wifi_ap_config_t *apcfg = &wcfg.ap;
+
+  char *err_msg = NULL;
+  if (!miot_wifi_validate_ap_cfg(cfg, &err_msg)) {
+    LOG(LL_ERROR, ("WiFi AP: %s", err_msg));
+    free(err_msg);
+    return false;
+  }
 
   if (!cfg->enable) {
     return (miot_wifi_remove_mode(WIFI_MODE_AP) == ESP_OK);
@@ -216,7 +254,7 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 
   r = esp_wifi_set_config(WIFI_IF_AP, &wcfg);
   if (r != ESP_OK) {
-    LOG(LL_ERROR, ("Failed to set AP config: %d", r));
+    LOG(LL_ERROR, ("WiFi AP: Failed to set config: %d", r));
     return false;
   }
 
@@ -229,7 +267,7 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
     if (cfg->gw != NULL) info.gw.addr = ipaddr_addr(cfg->gw);
     r = tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &info);
     if (r != ESP_OK) {
-      LOG(LL_ERROR, ("Failed to set WiFi AP IP config: %d", r));
+      LOG(LL_ERROR, ("WiFi AP: Failed to set IP config: %d", r));
       return false;
     }
   }
@@ -242,14 +280,19 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
     r = tcpip_adapter_dhcps_option(TCPIP_ADAPTER_OP_SET, REQUESTED_IP_ADDRESS,
                                    &opt, sizeof(opt));
     if (r != ESP_OK) {
-      LOG(LL_ERROR, ("Failed to set WiFi AP DHCP config: %d", r));
+      LOG(LL_ERROR, ("WiFi AP: Failed to set DHCP config: %d", r));
       return false;
     }
   }
-  LOG(LL_INFO, ("WiFi AP IP config: %s/%s gw %s, DHCP range %s - %s", cfg->ip,
-                cfg->netmask, (cfg->gw ? cfg->gw : "(none)"), cfg->dhcp_start,
-                cfg->dhcp_end));
-  tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP);
+  r = tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP);
+  if (r != ESP_OK) {
+    LOG(LL_ERROR, ("WiFi AP: Failed to start DHCP server: %d", r));
+    return false;
+  }
+  LOG(LL_INFO,
+      ("WiFi AP IP: %s/%s gw %s, DHCP range %s - %s", cfg->ip, cfg->netmask,
+       (cfg->gw ? cfg->gw : "(none)"), cfg->dhcp_start, cfg->dhcp_end));
+
   /* There is no way to tell if AP is running already. */
   esp_wifi_start();
 
@@ -279,7 +322,7 @@ char *miot_wifi_get_sta_ip(void) {
   return miot_wifi_get_ip(TCPIP_ADAPTER_IF_STA);
 }
 
-static enum miot_init_result do_wifi(const struct sys_config_wifi *cfg) {
+bool miot_wifi_set_config(const struct sys_config_wifi *cfg) {
   bool result = false;
   if (cfg->ap.enable && !cfg->sta.enable) {
     result = miot_wifi_setup_ap(&cfg->ap);
@@ -289,15 +332,9 @@ static enum miot_init_result do_wifi(const struct sys_config_wifi *cfg) {
   } else if (cfg->sta.enable) {
     result = miot_wifi_setup_sta(&cfg->sta);
   } else {
-    LOG(LL_INFO, ("WiFi is disabled"));
-    result = true;
+    result = (miot_wifi_set_mode(WIFI_MODE_NULL) == ESP_OK);
   }
-  return (result ? MIOT_INIT_OK : MIOT_INIT_CONFIG_WIFI_INIT_FAILED);
-}
-enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
-  /* TODO: UART settings */
-
-  return do_wifi(&cfg->wifi);
+  return result;
 }
 
 void miot_wifi_hal_init(void) {

@@ -10,7 +10,9 @@
 
 #if MIOT_ENABLE_WIFI
 
+#include <stdbool.h>
 #include "fw/src/miot_init.h"
+#include "sys_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,10 +30,12 @@ void miot_wifi_add_on_change_cb(miot_wifi_changed_t fn, void *arg);
 /* Remove a previously added callback, fn and arg have to match exactly. */
 void miot_wifi_remove_on_change_cb(miot_wifi_changed_t fn, void *arg);
 
-/* HAL interface, to be implemented by ports. */
-struct sys_config_wifi_sta;
-struct sys_config_wifi_ap;
+bool miot_wifi_validate_ap_cfg(const struct sys_config_wifi_ap *cfg,
+                               char **msg);
+bool miot_wifi_validate_sta_cfg(const struct sys_config_wifi_sta *cfg,
+                                char **msg);
 
+/* HAL interface, to be implemented by ports. */
 int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
 
 int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg);

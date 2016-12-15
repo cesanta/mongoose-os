@@ -16,6 +16,7 @@
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_mongoose.h"
+#include "fw/src/miot_sys_config.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 #define MIOT_TASK_STACK_SIZE 8192
@@ -23,7 +24,9 @@
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
+/* From esp32_wifi.c */
 esp_err_t wifi_event_handler(system_event_t *event);
+bool miot_wifi_set_config(const struct sys_config_wifi *cfg);
 
 esp_err_t event_handler(void *ctx, system_event_t *event) {
   switch (event->event_id) {
@@ -39,6 +42,12 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
       LOG(LL_INFO, ("event: %d", event->event_id));
   }
   return ESP_OK;
+}
+
+enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
+  /* TODO: UART settings */
+  return miot_wifi_set_config(&cfg->wifi) ? MIOT_INIT_OK
+                                          : MIOT_INIT_CONFIG_WIFI_INIT_FAILED;
 }
 
 void miot_task(void *arg) {

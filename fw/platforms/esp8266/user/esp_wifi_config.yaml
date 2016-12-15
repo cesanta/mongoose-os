@@ -1,0 +1,4 @@
+[
+  ["wifi.ap.keep_enabled", "b", true, {title: "Keep AP enabled when station is on"}],
+  ["wifi.ap.trigger_on_gpio", "i", -1, {title: "Trigger AP on low GPIO"}],
+]

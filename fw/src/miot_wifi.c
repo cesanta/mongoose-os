@@ -60,53 +60,60 @@ void miot_wifi_remove_on_change_cb(miot_wifi_changed_t cb, void *arg) {
   }
 }
 
-static bool validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
-  if (cfg->wifi.sta.enable) {
-    if (cfg->wifi.sta.ssid == NULL || strlen(cfg->wifi.sta.ssid) > 31) {
-      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "STA",
-                       "SSID", 1, 31)) {
-      }
-      return false;
+bool miot_wifi_validate_sta_cfg(const struct sys_config_wifi_sta *cfg,
+                                char **msg) {
+  if (!cfg->enable) return true;
+  if (cfg->ssid == NULL || strlen(cfg->ssid) > 31) {
+    if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "STA",
+                     "SSID", 1, 31)) {
     }
-    if (cfg->wifi.sta.pass != NULL &&
-        (strlen(cfg->wifi.sta.pass) < 8 || strlen(cfg->wifi.sta.pass) > 63)) {
-      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "STA",
-                       "password", 8, 63)) {
-      }
-      return false;
-    }
-    if (cfg->wifi.sta.ip != NULL) {
-      if (cfg->wifi.sta.netmask == NULL) {
-        if (!mg_asprintf(msg, 0,
-                         "Station static IP is set but no netmask provided")) {
-        }
-        return false;
-      }
-      /* TODO(rojer): More validation here: IP & gw within the same net. */
-    }
+    return false;
   }
-  if (cfg->wifi.ap.enable) {
-    if (cfg->wifi.ap.ssid == NULL || strlen(cfg->wifi.ap.ssid) > 31) {
-      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "AP",
-                       "SSID", 1, 31)) {
+  if (cfg->pass != NULL && (strlen(cfg->pass) < 8 || strlen(cfg->pass) > 63)) {
+    if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "STA",
+                     "password", 8, 63)) {
+    }
+    return false;
+  }
+  if (cfg->ip != NULL) {
+    if (cfg->netmask == NULL) {
+      if (!mg_asprintf(msg, 0,
+                       "Station static IP is set but no netmask provided")) {
       }
       return false;
     }
-    if (cfg->wifi.ap.pass != NULL &&
-        (strlen(cfg->wifi.ap.pass) < 8 || strlen(cfg->wifi.ap.pass) > 63)) {
-      if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "AP",
-                       "password", 8, 63)) {
-      }
-      return false;
-    }
-    if (cfg->wifi.ap.ip == NULL || cfg->wifi.ap.netmask == NULL ||
-        cfg->wifi.ap.dhcp_start == NULL || cfg->wifi.ap.dhcp_end == NULL) {
-      *msg = strdup("AP IP, netmask, DHCP start and end addresses must be set");
-      return false;
-    }
-    /* TODO(rojer): More validation here. DHCP range, netmask, GW (if set). */
+    /* TODO(rojer): More validation here: IP & gw within the same net. */
   }
   return true;
+}
+
+bool miot_wifi_validate_ap_cfg(const struct sys_config_wifi_ap *cfg,
+                               char **msg) {
+  if (!cfg->enable) return true;
+  if (cfg->ssid == NULL || strlen(cfg->ssid) > 31) {
+    if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "AP",
+                     "SSID", 1, 31)) {
+    }
+    return false;
+  }
+  if (cfg->pass != NULL && (strlen(cfg->pass) < 8 || strlen(cfg->pass) > 63)) {
+    if (!mg_asprintf(msg, 0, "%s %s must be between %d and %d chars", "AP",
+                     "password", 8, 63)) {
+    }
+    return false;
+  }
+  if (cfg->ip == NULL || cfg->netmask == NULL || cfg->dhcp_start == NULL ||
+      cfg->dhcp_end == NULL) {
+    *msg = strdup("AP IP, netmask, DHCP start and end addresses must be set");
+    return false;
+  }
+  /* TODO(rojer): More validation here. DHCP range, netmask, GW (if set). */
+  return true;
+}
+
+static bool validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
+  return (miot_wifi_validate_ap_cfg(&cfg->wifi.ap, msg) &&
+          miot_wifi_validate_sta_cfg(&cfg->wifi.sta, msg));
 }
 
 enum miot_init_result miot_wifi_init(void) {

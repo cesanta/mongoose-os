@@ -156,6 +156,9 @@ endif
 ifeq "$(MIOT_ENABLE_I2C)" "1"
   SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_i2c_config.yaml
 endif
+ifeq "$(MIOT_ENABLE_WIFI)" "1"
+  SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_wifi_config.yaml
+endif
 
 VPATH = $(APP_MODULES) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
