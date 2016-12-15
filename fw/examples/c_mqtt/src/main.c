@@ -8,7 +8,11 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_wifi.h"
 
-enum { ERROR_UNKNOWN_COMMAND = -1, ERROR_I2C_NOT_CONFIGURED = -2 };
+enum {
+  ERROR_UNKNOWN_COMMAND = -1,
+  ERROR_I2C_NOT_CONFIGURED = -2,
+  ERROR_I2C_READ_LIMIT_EXCEEDED = -3
+};
 
 static void sub(struct mg_connection *c, const char *fmt, ...) {
   char buf[100];
@@ -69,7 +73,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
   } else if (ev == MG_EV_MQTT_PUBLISH) {
     struct mg_str *s = &msg->payload;
     struct json_token t = JSON_INVALID_TOKEN;
-    int pin, state;
+    char buf[100], asciibuf[sizeof(buf) * 2 + 1];
+    int i, pin, state, addr, len;
 
     LOG(LL_INFO, ("got command: [%.*s]", (int) s->len, s->p));
     if (json_scanf(s->p, s->len, "{gpio: {pin: %d, state: %d}}", &pin,
@@ -83,6 +88,32 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
       miot_gpio_intr_init(gpio_int_handler, NULL);
       miot_gpio_intr_set(pin, GPIO_INTR_POSEDGE);
       pub(c, "{type: %Q, pin: %d}", "button", pin);
+    } else if (json_scanf(s->p, s->len, "{i2c_read: {addr: %d, len: %d}}",
+                          &addr, &len) == 2) {
+      /* Read from I2C */
+      struct miot_i2c *i2c = miot_i2c_get_global();
+      if (len <= 0 || len > (int) sizeof(buf)) {
+        pub(c, "{error: {code: %d, message: %Q}}",
+            ERROR_I2C_READ_LIMIT_EXCEEDED, "Too long read");
+      } else if (i2c == NULL) {
+        pub(c, "{error: {code: %d, message: %Q}}", ERROR_I2C_NOT_CONFIGURED,
+            "I2C is not enabled");
+      } else {
+        enum i2c_ack_type ret;
+        asciibuf[0] = '\0';
+        if ((ret = miot_i2c_start(i2c, addr, I2C_READ)) == I2C_ACK) {
+          memset(buf, 0, sizeof(buf));
+          miot_i2c_read_bytes(i2c, len, (uint8_t *) buf, I2C_ACK);
+          for (i = 0; i < len; i++) {
+            const char *hex = "0123456789abcdef";
+            asciibuf[i * 2] = hex[(((uint8_t *) buf)[i] >> 4) & 0xf];
+            asciibuf[i * 2 + 1] = hex[((uint8_t *) buf)[i] & 0xf];
+          }
+          asciibuf[i * 2] = '\0';
+        }
+        miot_i2c_stop(i2c);
+        pub(c, "{type: %Q, status: %d, data: %Q}", "i2c_read", ret, asciibuf);
+      }
     } else if (json_scanf(s->p, s->len, "{i2c_write: {data: %T}}", &t) == 1) {
       /* Write byte sequence to I2C. First byte is an address */
       struct miot_i2c *i2c = miot_i2c_get_global();
@@ -96,7 +127,7 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
           LOG(LL_DEBUG, ("i2c -> %02x", from_hex(t.ptr + i)));
         }
         miot_i2c_stop(i2c);
-        pub(c, "{type: %Q, result: %d}", "i2c", ret);
+        pub(c, "{type: %Q, status: %d}", "i2c_write", ret);
       }
     } else {
       pub(c, "{error: {code: %d, message: %Q}}", ERROR_UNKNOWN_COMMAND,
