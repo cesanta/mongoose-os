@@ -3,9 +3,6 @@
   ["device.id", "s", {title: "Device ID"}],
   ["device.password", "s", {title: "Device password"}],
 
-  ["tls", "o", {title: "TLS settings"}],
-  ["tls.ca_file", "s", "ca.pem", {title : "Default TLS CA file"}],
-
   ["debug", "o", {title: "Debug Settings"}],
   ["debug.level", "i", 2, {
     title: "Level",

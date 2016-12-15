@@ -765,7 +765,7 @@ static enum v7_err tcp_connect(struct v7 *v7, v7_val_t this_obj,
   if (use_ssl) {
     /* ssl_ca_cert defaults to CA stored in configuration */
     conn_opts.ssl_ca_cert = v7_is_undefined(args[CA_CERT])
-                                ? get_cfg()->tls.ca_file
+                                ? NULL
                                 : v7_get_cstring(v7, &args[CA_CERT]);
     /* ssl_cert defaults to NULL */
     if (!v7_is_undefined(args[CLNT_CERT])) {
