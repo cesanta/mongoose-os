@@ -489,7 +489,7 @@ $(FS_IMG): $(BUILD_DIR)/v7
 # TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
 # appropriate
 $(MIOT_POSIX_BIN):
-	$(MAKE) -j4 -C $(MIOT_POSIX_PATH) \
+	$(MAKE) -j1 -C $(MIOT_POSIX_PATH) \
 	  SSL=None \
 	  MIOT_PATH=$(MIOT_PATH) \
 	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
