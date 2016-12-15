@@ -142,7 +142,7 @@ static void miot_atca_set_key(struct mg_rpc_request_info *ri, void *cb_arg,
 
   int slot = -1;
   uint8_t *key = NULL, *write_key = NULL;
-  uint32_t key_len = 0, write_key_len = NULL;
+  uint32_t key_len = 0, write_key_len = 0;
   uint32_t crc32 = 0, wk_slot = 0;
   bool is_ecc = false;
   json_scanf(args.p, args.len,

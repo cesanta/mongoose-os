@@ -869,9 +869,12 @@ int inet_pton(int af, const char *src, void *dst);
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <stdio.h>
 
 typedef struct stat cs_stat_t;
+#define DIRSEP '/'
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1
@@ -915,6 +918,8 @@ typedef int sock_t;
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 char *inet_ntoa(struct in_addr in);
 int inet_pton(int af, const char *src, void *dst);
+int inet_aton(const char *cp, struct in_addr *inp);
+in_addr_t inet_addr(const char *cp);
 
 #endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK */
 
@@ -1869,6 +1874,8 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 
 #ifndef CS_COMMON_CS_DIRENT_H_
 #define CS_COMMON_CS_DIRENT_H_
+
+/* Amalgamated: #include "common/platform.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -11731,6 +11738,20 @@ int _gettimeofday(struct timeval *tv, void *tzvp) {
   tv->tv_sec = time(NULL);
   tv->tv_usec = 0;
   return 0;
+}
+
+int inet_aton(const char *cp, struct in_addr *inp) {
+  /* We don't have aton, but have pton in mbed */
+  return inet_pton(AF_INET, cp, inp);
+}
+
+in_addr_t inet_addr(const char *cp) {
+  in_addr_t ret;
+  if (inet_pton(AF_INET, cp, &ret) != 1) {
+    return 0;
+  }
+
+  return ret;
 }
 
 #endif /* CS_PLATFORM == CS_P_MBED */

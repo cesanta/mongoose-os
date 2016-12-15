@@ -20,7 +20,7 @@
 
 #define NUM_SYS_FD 3
 
-static spiffs s_fs;
+spiffs fs;
 
 static s32_t stm32_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   (void) fs;
@@ -62,10 +62,10 @@ int miot_stm32_init_spiffs_init() {
   cfg.hal_write_f = stm32_spiffs_write;
   cfg.hal_erase_f = stm32_spiffs_erase;
 
-  if (SPIFFS_mount(&s_fs, &cfg, spiffs_work_buf, spiffs_fds,
+  if (SPIFFS_mount(&fs, &cfg, spiffs_work_buf, spiffs_fds,
                     sizeof(spiffs_fds), 0, 0, 0) != SPIFFS_OK) {
-    LOG(LL_ERROR, ("SPIFFS_mount failed: %d", (int)SPIFFS_errno(&s_fs)));
-    return SPIFFS_errno(&s_fs);
+    LOG(LL_ERROR, ("SPIFFS_mount failed: %d", (int)SPIFFS_errno(&fs)));
+    return SPIFFS_errno(&fs);
   }
 
   LOG(LL_DEBUG, ("FS Mounted successfully"));
@@ -74,7 +74,7 @@ int miot_stm32_init_spiffs_init() {
 
 static void set_errno(int res) {
   if (res < 0) {
-    errno = SPIFFS_errno(&s_fs);
+    errno = SPIFFS_errno(&fs);
     LOG(LL_DEBUG, ("spiffs error: %d\n", errno));
   }
 }
@@ -108,7 +108,7 @@ extern "C" int _open_r(struct _reent *r, const char *filename, int flags, int mo
   /* if (flags && O_EXCL) sm |= SPIFFS_EXCL; */
   /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
 
-  res = SPIFFS_open(&s_fs, get_fixed_filename(filename), sm, 0);
+  res = SPIFFS_open(&fs, get_fixed_filename(filename), sm, 0);
   if (res >= 0) {
     res += NUM_SYS_FD;
   }
@@ -122,7 +122,7 @@ extern "C" _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
   if (fd < NUM_SYS_FD) {
     res = -1;
   } else {
-    res = SPIFFS_read(&s_fs, fd - NUM_SYS_FD, buf, len);
+    res = SPIFFS_read(&fs, fd - NUM_SYS_FD, buf, len);
   }
   set_errno(res);
   return res;
@@ -141,7 +141,7 @@ extern "C" _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
     p.puts("Hello, world!\n");
   }
 
-  int res = SPIFFS_write(&s_fs, fd - NUM_SYS_FD, (char *) buf, len);
+  int res = SPIFFS_write(&fs, fd - NUM_SYS_FD, (char *) buf, len);
   set_errno(res);
   return res;
 }
@@ -153,7 +153,7 @@ extern "C" _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
   if (fd < NUM_SYS_FD) {
     res = -1;
   } else {
-    res = SPIFFS_lseek(&s_fs, fd - NUM_SYS_FD, where, whence);
+    res = SPIFFS_lseek(&fs, fd - NUM_SYS_FD, where, whence);
   }
   set_errno(res);
   return res;
@@ -164,7 +164,7 @@ int _close_r(struct _reent *r, int fd) {
   if (fd < NUM_SYS_FD) {
     return -1;
   }
-  SPIFFS_close(&s_fs, fd - NUM_SYS_FD);
+  SPIFFS_close(&fs, fd - NUM_SYS_FD);
   return 0;
 }
 
@@ -176,19 +176,19 @@ extern "C" int _rename_r(struct _reent *r, const char *from, const char *to) {
   int res;
   {
     spiffs_stat ss;
-    res = SPIFFS_stat(&s_fs, (char *) to, &ss);
+    res = SPIFFS_stat(&fs, (char *) to, &ss);
     if (res == 0) {
-      SPIFFS_remove(&s_fs, (char *) to);
+      SPIFFS_remove(&fs, (char *) to);
     }
   }
-  res = SPIFFS_rename(&s_fs, get_fixed_filename(from), get_fixed_filename(to));
+  res = SPIFFS_rename(&fs, get_fixed_filename(from), get_fixed_filename(to));
   (void) r;
   set_errno(res);
   return res;
 }
 
 extern "C" int _unlink_r(struct _reent *r, const char *filename) {
-  int res = SPIFFS_remove(&s_fs, get_fixed_filename(filename));
+  int res = SPIFFS_remove(&fs, get_fixed_filename(filename));
   (void) r;
   set_errno(res);
 
@@ -206,7 +206,7 @@ extern "C" int _fstat_r(struct _reent *r, int fd, struct stat *s) {
     s->st_mode = S_IFCHR | 0666;
     return 0;
   }
-  res = SPIFFS_fstat(&s_fs, fd - NUM_SYS_FD, &ss);
+  res = SPIFFS_fstat(&fs, fd - NUM_SYS_FD, &ss);
   set_errno(res);
   if (res < 0) return res;
   s->st_ino = ss.obj_id;

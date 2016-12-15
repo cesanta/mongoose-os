@@ -25,4 +25,18 @@ int _gettimeofday(struct timeval *tv, void *tzvp) {
   return 0;
 }
 
+int inet_aton(const char *cp, struct in_addr *inp) {
+  /* We don't have aton, but have pton in mbed */
+  return inet_pton(AF_INET, cp, inp);
+}
+
+in_addr_t inet_addr(const char *cp) {
+  in_addr_t ret;
+  if (inet_pton(AF_INET, cp, &ret) != 1) {
+    return 0;
+  }
+
+  return ret;
+}
+
 #endif /* CS_PLATFORM == CS_P_MBED */

@@ -7,10 +7,8 @@ include rules.mk
 APP ?= mongoose-iot
 APP_MODULES ?=
 
-MIOT_ENABLE_ATCA ?= 1
 MIOT_ENABLE_ATCA_SERVICE ?= 0
 MIOT_ENABLE_CONFIG_SERVICE ?= 1
-MIOT_ENABLE_DNS_SD ?= 1
 MIOT_ENABLE_FILESYSTEM_SERVICE ?= 1
 MIOT_ENABLE_I2C ?= 1
 MIOT_ENABLE_JS ?= 0
@@ -21,7 +19,14 @@ MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
 MIOT_ENABLE_UPDATER ?= 1
 MIOT_ENABLE_UPDATER_POST ?= 1
 MIOT_ENABLE_UPDATER_RPC ?= 0
+MIOT_ENABLE_WIFI ?= 1
+
+# TODO(alex): turn these on
 MIOT_ENABLE_HTTP_SERVER ?= 0
+MIOT_ENABLE_ATCA ?= 0
+MIOT_ENABLE_MDNS ?= 0
+MIOT_ENABLE_DNS_SD ?= 0
+####
 
 CREATE_SPIFFS_FS ?= 1
 
@@ -78,7 +83,8 @@ MIOT_SRCS = cs_rbuf.c \
 
 MIOT_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
-MBED_DEPS_SRCS = startup.cpp stm32_hal.cpp stm32_spiffs.cpp
+MBED_DEPS_SRCS = startup.cpp stm32_hal.cpp stm32_spiffs.cpp stm32_i2c.cpp \
+                 stm32_gpio.cpp stm32_uart.cpp stm32_wifi.cpp
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
   FS_IMG = $(FW_STAGING_DIR)/fs.bin
@@ -96,22 +102,25 @@ IPATH += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
 
 LIBRARY_PATHS += -L$(BUILD_DIR)
 
-C_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK
-CXX_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DFS_SIZE=${FS_SIZE}
-
-ifeq "$(MIOT_ENABLE_HTTP_SERVER)" "0"
-C_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DMIOT_ENABLE_HTTP_SERVER=0
-CXX_FLAGS += -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DFS_SIZE=${FS_SIZE} -DMIOT_ENABLE_HTTP_SERVER=0
-endif
+MIOT_FEATURES += -DMIOT_ENABLE_I2C_API -DCS_ENABLE_SPIFFS
+MG_FEATURES = -DMG_ENABLE_FILESYSTEM
 
 include $(MIOT_PATH)/fw/src/features.mk
 include $(MIOT_PATH)/fw/src/spiffs.mk
+
+C_CXX_FLAGS = ${MIOT_FEATURES} ${MG_FEATURES} -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DFS_SIZE=${FS_SIZE}
+
+C_FLAGS += ${C_CXX_FLAGS}
+CXX_FLAGS += ${C_CXX_FLAGS}
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 MBED_DEPS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(MBED_DEPS_SRCS)))
+
+MBED_FS_FUNCS = opendir readdir closedir mkdir
+MBED_WEAK_FUNCS = $(addprefix -W , $(MBED_FS_FUNCS))
 
 include $(MIOT_PATH)/common/scripts/fw_meta.mk
 
@@ -121,6 +130,9 @@ $(BUILD_DIR)/$(STM32LIB): $(BUILD_DIR)
 	$(vecho) Updating mbed libraries
 	$(Q) mbed deploy
 	$(Q) mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library
+# We have FS functions (opendir etc) implementation in mongoose
+# so, just make weak mbed ones
+	$(Q) $(OBJCOPY) $(BUILD_DIR)/$(STM32LIB) $(MBED_WEAK_FUNCS)
 
 $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR):
 	@echo "MKDIR $@"

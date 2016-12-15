@@ -109,6 +109,12 @@ else
   MIOT_FEATURES += -DMIOT_ENABLE_WIFI=0
 endif
 
+ifeq "$(MIOT_ENABLE_HTTP_SERVER)" "0"
+  MIOT_FEATURES += -DMIOT_ENABLE_HTTP_SERVER=0
+else
+  MIOT_FEATURES += -DMIOT_ENABLE_HTTP_SERVER=1
+endif
+
 # Export all the feature switches.
 # This is required for needed make invocations, such as when building POSIX MIOT
 # for JS freeze operation.
