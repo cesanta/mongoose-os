@@ -15,6 +15,7 @@
 #include <ets_sys.h>
 
 #include "fw/src/miot_i2c.h"
+#include "fw/src/miot_sys_config.h"
 
 #include "common/cs_dbg.h"
 
@@ -28,9 +29,6 @@
 #if MIOT_ENABLE_JS
 #include "v7/v7.h"
 #endif
-
-/* #define ESP_I2C_DEBUG */
-/* #define ENABLE_IC2_EEPROM_TEST */
 
 struct miot_i2c {
   /* GPIO used as SDA */
@@ -87,11 +85,11 @@ enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr,
                                  enum i2c_rw mode) {
   enum i2c_ack_type result;
   uint8_t address_byte = (uint8_t)(addr << 1) | mode;
-#ifdef ESP_I2C_DEBUG
-  LOG(LL_DEBUG,
-      ("%d %d, addr 0x%02x, mode %c => ab 0x%02x", c->sda_gpio, c->scl_gpio,
-       addr, (mode == I2C_READ ? 'R' : 'W'), address_byte));
-#endif
+  if (get_cfg()->i2c.debug) {
+    LOG(LL_DEBUG,
+        ("%d %d, addr 0x%02x, mode %c => ab 0x%02x", c->sda_gpio, c->scl_gpio,
+         addr, (mode == I2C_READ ? 'R' : 'W'), address_byte));
+  }
   if (addr > 0x7F || (mode != I2C_READ && mode != I2C_WRITE)) {
     return I2C_ERR;
   }
@@ -117,9 +115,9 @@ void miot_i2c_stop(struct miot_i2c *c) {
   esp_i2c_set_sda_scl(c, I2C_INPUT, I2C_INPUT);
   esp_i2c_half_delay(c);
   c->started = false;
-#ifdef ESP_I2C_DEBUG
-  LOG(LL_DEBUG, ("stopped"));
-#endif
+  if (get_cfg()->i2c.debug) {
+    LOG(LL_DEBUG, ("stopped"));
+  }
 }
 
 static uint8_t esp_i2c_read_sda(struct miot_i2c *c) {
@@ -148,10 +146,10 @@ enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t data) {
   esp_i2c_set_sda_scl(c, I2C_INPUT, I2C_HIGH);
   esp_i2c_half_delay(c);
   ret_val = esp_i2c_read_sda(c);
-#ifdef ESP_I2C_DEBUG
-  LOG(LL_DEBUG,
-      ("sent 0x%02x, got %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
-#endif
+  if (get_cfg()->i2c.debug) {
+    LOG(LL_DEBUG,
+        ("sent 0x%02x, got %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
+  }
   esp_i2c_half_delay(c);
   esp_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
   esp_i2c_half_delay(c);
@@ -167,9 +165,9 @@ void miot_i2c_send_ack(struct miot_i2c *c, enum i2c_ack_type ack_type) {
   esp_i2c_half_delay(c);
   esp_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   esp_i2c_half_delay(c);
-#ifdef ESP_I2C_DEBUG
-  LOG(LL_DEBUG, ("sent %s", (ack_type == I2C_ACK ? "ACK" : "NAK")));
-#endif
+  if (get_cfg()->i2c.debug) {
+    LOG(LL_DEBUG, ("sent %s", (ack_type == I2C_ACK ? "ACK" : "NAK")));
+  }
 }
 
 uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
@@ -188,16 +186,14 @@ uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
     esp_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
     esp_i2c_half_delay(c);
   }
-#ifdef ESP_I2C_DEBUG
-  LOG(LL_DEBUG, ("read 0x%02x", ret_val));
-#endif
+  if (get_cfg()->i2c.debug) {
+    LOG(LL_DEBUG, ("read 0x%02x", ret_val));
+  }
 
   if (ack_type != I2C_NONE) {
     miot_i2c_send_ack(c, ack_type);
-  } else {
-#ifdef ESP_I2C_DEBUG
+  } else if (get_cfg()->i2c.debug) {
     LOG(LL_DEBUG, ("not sending any ack"));
-#endif
   }
 
   return ret_val;

@@ -177,7 +177,7 @@ int mbedtls_atca_is_available() {
 }
 
 uint8_t mbedtls_atca_get_ecdh_slots_mask() {
-  return get_cfg()->sys.atca_ecdh_slots_mask;
+  return get_cfg()->sys.atca.ecdh_slots_mask;
 }
 
 enum miot_init_result miot_atca_init(void) {
@@ -186,45 +186,67 @@ enum miot_init_result miot_atca_init(void) {
       serial[(ATCA_SERIAL_NUM_SIZE + sizeof(uint32_t) - 1) / sizeof(uint32_t)];
   bool config_is_locked, data_is_locked;
   ATCA_STATUS status;
+  struct sys_config_sys_atca *acfg = &get_cfg()->sys.atca;
+  ATCAIfaceCfg *atca_cfg;
 
-  if (!get_cfg()->sys.atca_enable) return MIOT_INIT_OK;
+  if (!(acfg->enable || get_cfg()->sys.atca_enable)) {
+    return MIOT_INIT_OK;
+  }
 
-  status = atcab_init(&cfg_ateccx08a_i2c_default);
+  uint8_t addr = acfg->i2c_addr;
+  /*
+   * It's a bit unfortunate that Atmel requires address already shifted by 1.
+   * If user specifies address > 0x80, it must be already shifted since I2C bus
+   * addresses > 0x7f are invalid.
+   */
+  if (addr < 0x7f) addr <<= 1;
+  atca_cfg = &cfg_ateccx08a_i2c_default;
+  if (atca_cfg->atcai2c.slave_address != addr) {
+    atca_cfg = (ATCAIfaceCfg *) calloc(1, sizeof(*atca_cfg));
+    memcpy(atca_cfg, &cfg_ateccx08a_i2c_default, sizeof(*atca_cfg));
+    atca_cfg->atcai2c.slave_address = addr;
+  }
 
+  status = atcab_init(atca_cfg);
   if (status != ATCA_SUCCESS) {
     LOG(LL_ERROR, ("ATECC508 init failed"));
-    return MIOT_INIT_ATCA_FAILED;
+    goto out;
   }
 
   status = atcab_info((uint8_t *) &revision);
   if (status != ATCA_SUCCESS) {
     LOG(LL_ERROR, ("Failed to get info"));
-    return MIOT_INIT_ATCA_FAILED;
+    goto out;
   }
 
   status = atcab_read_serial_number((uint8_t *) serial);
   if (status != ATCA_SUCCESS) {
     LOG(LL_ERROR, ("Failed to get serial number"));
-    return MIOT_INIT_ATCA_FAILED;
+    goto out;
   }
 
   status = atcab_is_locked(LOCK_ZONE_CONFIG, &config_is_locked);
   status = atcab_is_locked(LOCK_ZONE_DATA, &data_is_locked);
   if (status != ATCA_SUCCESS) {
     LOG(LL_ERROR, ("Failed to get data lock status"));
-    return MIOT_INIT_ATCA_FAILED;
+    goto out;
   }
 
   LOG(LL_INFO,
-      ("ATECC508 rev 0x%04x S/N 0x%04x%04x%02x, zone "
+      ("ATECC508 @ 0x%02x: rev 0x%04x S/N 0x%04x%04x%02x, zone "
        "lock status: %s, %s; ECDH slots: 0x%02x",
-       htonl(revision), htonl(serial[0]), htonl(serial[1]),
+       addr >> 1, htonl(revision), htonl(serial[0]), htonl(serial[1]),
        *((uint8_t *) &serial[2]), (config_is_locked ? "yes" : "no"),
        (data_is_locked ? "yes" : "no"), mbedtls_atca_get_ecdh_slots_mask()));
 
   s_atca_is_available = true;
 
-  return MIOT_INIT_OK;
+out:
+  /*
+   * We do not free atca_cfg in case of an error even if it was allocated
+   * because it is referenced by ATCA basic object.
+   */
+  return (status == ATCA_SUCCESS ? MIOT_INIT_OK : MIOT_INIT_ATCA_FAILED);
 }
 
 void atca_delay_ms(uint32_t delay) {
