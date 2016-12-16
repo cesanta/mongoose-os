@@ -17,11 +17,11 @@ struct mg_rpc_channel_http_data {
   unsigned int sent : 1;
 };
 
-static void mg_rpc_channel_http_connect(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_http_ch_connect(struct mg_rpc_channel *ch) {
   (void) ch;
 }
 
-static void mg_rpc_channel_http_close(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_http_ch_close(struct mg_rpc_channel *ch) {
   struct mg_rpc_channel_http_data *chd =
       (struct mg_rpc_channel_http_data *) ch->channel_data;
   if (chd->nc != NULL) {
@@ -104,9 +104,9 @@ static bool mg_rpc_channel_http_send_frame(struct mg_rpc_channel *ch,
 
 struct mg_rpc_channel *mg_rpc_channel_http(struct mg_connection *nc) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) calloc(1, sizeof(*ch));
-  ch->connect = mg_rpc_channel_http_connect;
+  ch->ch_connect = mg_rpc_channel_http_ch_connect;
   ch->send_frame = mg_rpc_channel_http_send_frame;
-  ch->close = mg_rpc_channel_http_close;
+  ch->ch_close = mg_rpc_channel_http_ch_close;
   ch->get_type = mg_rpc_channel_http_get_type;
   ch->is_persistent = mg_rpc_channel_http_is_persistent;
 

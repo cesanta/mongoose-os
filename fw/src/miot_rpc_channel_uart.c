@@ -85,7 +85,7 @@ void mg_rpc_channel_uart_dispatcher(struct miot_uart_state *us) {
   }
 }
 
-static void mg_rpc_channel_uart_connect(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_uart_ch_connect(struct mg_rpc_channel *ch) {
   struct mg_rpc_channel_uart_data *chd =
       (struct mg_rpc_channel_uart_data *) ch->channel_data;
   if (!chd->connected) {
@@ -109,7 +109,7 @@ static bool mg_rpc_channel_uart_send_frame(struct mg_rpc_channel *ch,
   return true;
 }
 
-static void mg_rpc_channel_uart_close(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_uart_ch_close(struct mg_rpc_channel *ch) {
   struct mg_rpc_channel_uart_data *chd =
       (struct mg_rpc_channel_uart_data *) ch->channel_data;
   chd->connected = chd->connecting = false;
@@ -129,9 +129,9 @@ static bool mg_rpc_channel_uart_is_persistent(struct mg_rpc_channel *ch) {
 struct mg_rpc_channel *mg_rpc_channel_uart(int uart_no,
                                            bool wait_for_start_frame) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) calloc(1, sizeof(*ch));
-  ch->connect = mg_rpc_channel_uart_connect;
+  ch->ch_connect = mg_rpc_channel_uart_ch_connect;
   ch->send_frame = mg_rpc_channel_uart_send_frame;
-  ch->close = mg_rpc_channel_uart_close;
+  ch->ch_close = mg_rpc_channel_uart_ch_close;
   ch->get_type = mg_rpc_channel_uart_get_type;
   ch->is_persistent = mg_rpc_channel_uart_is_persistent;
   struct mg_rpc_channel_uart_data *chd =

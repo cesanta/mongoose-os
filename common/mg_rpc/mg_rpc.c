@@ -18,11 +18,6 @@
 #define MG_RPC_FRAME_VERSION 2
 #define MG_RPC_HELLO_CMD "/v1/Hello"
 
-/* CC3200 #defines connect to sl_Connect */
-#ifdef connect
-#undef connect
-#endif
-
 struct mg_rpc {
   struct mg_rpc_cfg *cfg;
   int64_t next_id;
@@ -266,7 +261,7 @@ static void mg_rpc_hello_cb(struct mg_rpc *c, void *cb_arg,
   if (error_code != 0) {
     LOG(LL_ERROR, ("%p Hello error: %d %.*s", ci->ch, error_code,
                    (int) error_msg.len, error_msg.p));
-    ci->ch->close(ci->ch);
+    ci->ch->ch_close(ci->ch);
   } else {
     long timestamp = 0;
     json_scanf(result.p, result.len, "{time:%ld", &timestamp);
@@ -324,7 +319,7 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
         ci->is_open = true; /* Pretend, to allow sending... */
         if (!mg_rpc_send_hello(c, ci)) {
           /* Something went wrong, drop the channel. */
-          ci->ch->close(ci->ch);
+          ci->ch->ch_close(ci->ch);
         }
         ci->is_open = false; /* ...but no, not yet. */
       } else {
@@ -408,14 +403,14 @@ void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
 void mg_rpc_connect(struct mg_rpc *c) {
   struct mg_rpc_channel_info *ci;
   SLIST_FOREACH(ci, &c->channels, channels) {
-    ci->ch->connect(ci->ch);
+    ci->ch->ch_connect(ci->ch);
   }
 }
 
 void mg_rpc_disconnect(struct mg_rpc *c) {
   struct mg_rpc_channel_info *ci;
   SLIST_FOREACH(ci, &c->channels, channels) {
-    ci->ch->close(ci->ch);
+    ci->ch->ch_close(ci->ch);
   }
 }
 

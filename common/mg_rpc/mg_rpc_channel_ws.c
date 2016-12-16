@@ -11,7 +11,6 @@
 
 #define MG_RPC_WS_PROTOCOL "clubby.cesanta.com"
 #define MG_RPC_WS_URI "/api"
-#undef connect /* CC3200 redefines it to sl_Connect */
 
 /* Inbound WebSocket channel. */
 
@@ -64,7 +63,7 @@ static void mg_rpc_ws_handler(struct mg_connection *nc, int ev, void *ev_data) {
   }
 }
 
-static void mg_rpc_channel_ws_connect(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_ws_ch_connect(struct mg_rpc_channel *ch) {
   (void) ch;
 }
 
@@ -78,7 +77,7 @@ static bool mg_rpc_channel_ws_send_frame(struct mg_rpc_channel *ch,
   return true;
 }
 
-static void mg_rpc_channel_ws_close(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_ws_ch_close(struct mg_rpc_channel *ch) {
   struct mg_rpc_channel_ws_data *chd =
       (struct mg_rpc_channel_ws_data *) ch->channel_data;
   if (chd->nc != NULL) chd->nc->flags |= MG_F_CLOSE_IMMEDIATELY;
@@ -96,9 +95,9 @@ static bool mg_rpc_channel_ws_is_persistent(struct mg_rpc_channel *ch) {
 
 struct mg_rpc_channel *mg_rpc_channel_ws(struct mg_connection *nc) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) calloc(1, sizeof(*ch));
-  ch->connect = mg_rpc_channel_ws_connect;
+  ch->ch_connect = mg_rpc_channel_ws_ch_connect;
   ch->send_frame = mg_rpc_channel_ws_send_frame;
-  ch->close = mg_rpc_channel_ws_close;
+  ch->ch_close = mg_rpc_channel_ws_ch_close;
   ch->get_type = mg_rpc_channel_ws_get_type;
   ch->is_persistent = mg_rpc_channel_ws_is_persistent;
   struct mg_rpc_channel_ws_data *chd =
@@ -154,7 +153,7 @@ static void mg_rpc_ws_out_handler(struct mg_connection *nc, int ev,
   }
 }
 
-static void mg_rpc_channel_ws_out_connect(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_ws_out_ch_connect(struct mg_rpc_channel *ch) {
   struct mg_rpc_channel_ws_out_data *chd =
       (struct mg_rpc_channel_ws_out_data *) ch->channel_data;
   if (chd->wsd.nc != NULL) return;
@@ -207,7 +206,7 @@ static void reconnect_ev_handler(struct mg_connection *c, int ev, void *p) {
       (struct mg_rpc_channel_ws_out_data *) ch->channel_data;
   if (c->flags & MG_F_CLOSE_IMMEDIATELY) return;
   chd->fake_timer_connection = NULL;
-  mg_rpc_channel_ws_out_connect(ch);
+  mg_rpc_channel_ws_out_ch_connect(ch);
   c->flags |= MG_F_CLOSE_IMMEDIATELY;
   (void) p;
 }
@@ -239,9 +238,9 @@ static void mg_rpc_channel_ws_out_reconnect(struct mg_rpc_channel *ch) {
 struct mg_rpc_channel *mg_rpc_channel_ws_out(
     struct mg_mgr *mgr, struct mg_rpc_channel_ws_out_cfg *cfg) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) calloc(1, sizeof(*ch));
-  ch->connect = mg_rpc_channel_ws_out_connect;
+  ch->ch_connect = mg_rpc_channel_ws_out_ch_connect;
   ch->send_frame = mg_rpc_channel_ws_send_frame;
-  ch->close = mg_rpc_channel_ws_close;
+  ch->ch_close = mg_rpc_channel_ws_ch_close;
   ch->get_type = mg_rpc_channel_ws_out_get_type;
   ch->is_persistent = mg_rpc_channel_ws_out_is_persistent;
   struct mg_rpc_channel_ws_out_data *chd =

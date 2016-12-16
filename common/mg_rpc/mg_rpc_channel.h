@@ -24,9 +24,9 @@ enum mg_rpc_channel_event {
 struct mg_rpc_channel {
   void (*ev_handler)(struct mg_rpc_channel *ch, enum mg_rpc_channel_event ev,
                      void *ev_data);
-  void (*connect)(struct mg_rpc_channel *ch);
+  void (*ch_connect)(struct mg_rpc_channel *ch);
   bool (*send_frame)(struct mg_rpc_channel *ch, const struct mg_str f);
-  void (*close)(struct mg_rpc_channel *ch);
+  void (*ch_close)(struct mg_rpc_channel *ch);
   const char *(*get_type)(struct mg_rpc_channel *ch);
   bool (*is_persistent)(struct mg_rpc_channel *ch);
 

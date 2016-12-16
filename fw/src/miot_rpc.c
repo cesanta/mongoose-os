@@ -24,7 +24,7 @@ static struct mg_rpc *s_global_mg_rpc;
 static void mg_rpc_wifi_ready(enum miot_wifi_status event, void *arg) {
   if (event != MIOT_WIFI_IP_ACQUIRED) return;
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) arg;
-  ch->connect(ch);
+  ch->ch_connect(ch);
 }
 #endif
 
@@ -97,7 +97,7 @@ enum miot_init_result miot_rpc_init(void) {
           mg_rpc_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);
       mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,
                          false /* send_hello */);
-      if (sccfg->connect_on_boot) uch->connect(uch);
+      if (sccfg->connect_on_boot) uch->ch_connect(uch);
     }
   }
 #endif
