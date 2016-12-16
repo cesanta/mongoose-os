@@ -138,11 +138,11 @@ $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR):
 	@echo "MKDIR $@"
 	$(Q) mkdir -p $@
 
-$(BUILD_DIR)/%.o: %.c $(BUILD_DIR) $(GENFILES_FLAG)
+$(BUILD_DIR)/%.o: %.c $(BUILD_DIR) $(GENFILES_FLAG) $(BUILD_DIR)/$(STM32LIB)
 	$(vecho) CC $(notdir $<)
 	$(Q) $(CC) $(C_FLAGS) $(IPATH) -o $@ $<
 
-$(BUILD_DIR)/%.o: %.cpp $(BUILD_DIR) $(GENFILES_FLAG)
+$(BUILD_DIR)/%.o: %.cpp $(BUILD_DIR) $(GENFILES_FLAG) $(BUILD_DIR)/$(STM32LIB)
 	$(vecho) CPP $(notdir $<)
 	$(Q) $(CPP) $(CXX_FLAGS) $(IPATH) -o $@ $<
 

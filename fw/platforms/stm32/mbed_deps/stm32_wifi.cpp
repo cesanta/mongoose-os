@@ -10,16 +10,31 @@
 #define SCLK_PIN PA_5
 #define CS_PIN PD_14
 
-static SimpleLinkInterface* s_wifi;
+static WiFiInterface* s_wifi;
 
-static void init_wifi() {
+static int init_wifi() {
   s_wifi = new SimpleLinkInterface(nHIB_PIN, IRQ_PIN, MOSI_PIN,
                                    MISO_PIN, SCLK_PIN, CS_PIN);
+/*
+ * Unfortunatelly, WiFiInterface doesn't have methods like
+ * get_status(), so, to check whether initialization was
+ * successfull trying to get mac address
+ * It works at least for CC3100
+ */
+  if (s_wifi->get_mac_address() == NULL) {
+    LOG(LL_ERROR, ("Failed to initialize WiFi\n"));
+    delete s_wifi;
+    s_wifi = NULL;
+    return -1;
+  }
+
+  return 0;
 }
 
 void miot_wifi_hal_init() {
-  init_wifi();
-  sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
+  if(init_wifi() >= 0) {
+    sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
+  }
 }
 
 int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
@@ -29,6 +44,11 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
    */
   const sys_config::sys_config_wifi::sys_config_wifi_sta *_cfg =
       (const sys_config::sys_config_wifi::sys_config_wifi_sta *)cfg;
+
+  if (s_wifi == NULL) {
+    LOG(LL_ERROR, ("WiFi is not initialized\n"));
+    return 0;
+  }
 
   if(s_wifi->connect(_cfg->ssid, _cfg->pass, NSAPI_SECURITY_WPA_WPA2) != 0) {
     LOG(LL_ERROR, ("Failed to connect to %s", _cfg->ssid));
@@ -59,8 +79,11 @@ char *miot_wifi_get_connected_ssid() {
 }
 
 char *miot_wifi_get_sta_ip() {
+  if (s_wifi == NULL) {
+    return NULL;
+  }
+
   return strdup(s_wifi->get_ip_address());
-  return NULL;
 }
 
 char *miot_wifi_get_ap_ip() {
