@@ -13,7 +13,7 @@
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_wifi.h"
 
-#include "config.h"
+#include "fw/platforms/cc3200/src/cc3200_console.h"
 
 void device_get_mac_address(uint8_t mac[6]) {
   uint8_t mac_len = 6;

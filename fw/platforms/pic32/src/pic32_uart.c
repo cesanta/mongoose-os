@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include "fw/src/miot_uart.h"
+
 #include <xc.h>
 
 #include "pic32_uart.h"
@@ -26,6 +28,18 @@
 #define DEF_UART_INT_SUBPRI INT_SUBPRIORITY_LEVEL0
 
 static DRV_HANDLE def_uart;
+
+enum miot_init_result miot_set_stdout_uart(int uart_no) {
+  if (uart_no <= 0) return MIOT_INIT_OK;
+  /* TODO */
+  return MIOT_INIT_UART_FAILED;
+}
+
+enum miot_init_result miot_set_stderr_uart(int uart_no) {
+  if (uart_no <= 0) return MIOT_INIT_OK;
+  /* TODO */
+  return MIOT_INIT_UART_FAILED;
+}
 
 void pic32_uart_init(void) {
   __XC_UART = 1;

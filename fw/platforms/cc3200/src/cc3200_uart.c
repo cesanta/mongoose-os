@@ -124,6 +124,10 @@ static void u1_int(void) {
   uart_int(s_us[1]);
 }
 
+void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
+  (void) cfg;
+}
+
 bool miot_uart_dev_init(struct miot_uart_state *us) {
   uint32_t base = cc3200_uart_get_base(us->uart_no);
   uint32_t periph, int_no;

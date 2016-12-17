@@ -17,6 +17,14 @@
 #define IRAM
 #endif
 
+#ifndef MIOT_MAX_NUM_UARTS
+#error Please define MIOT_MAX_NUM_UARTS
+#endif
+
+#ifndef MIOT_DEBUG_UART_BAUD_RATE
+#define MIOT_DEBUG_UART_BAUD_RATE 115200
+#endif
+
 static struct miot_uart_state *s_uart_state[MIOT_MAX_NUM_UARTS];
 
 IRAM void miot_uart_schedule_dispatcher(int uart_no) {
@@ -71,7 +79,7 @@ struct miot_uart_state *miot_uart_init(int uart_no,
                                        struct miot_uart_config *cfg,
                                        miot_uart_dispatcher_t cb,
                                        void *dispatcher_data) {
-  if (uart_no < 0 || uart_no >= MIOT_MAX_NUM_UARTS) return false;
+  if (uart_no < 0 || uart_no >= MIOT_MAX_NUM_UARTS) return NULL;
   struct miot_uart_state *us = s_uart_state[uart_no];
   if (us != NULL) {
     miot_uart_deinit(uart_no);
@@ -94,6 +102,11 @@ struct miot_uart_state *miot_uart_init(int uart_no,
   }
   miot_add_poll_cb(miot_uart_dispatcher, (void *) (intptr_t) uart_no);
   return us;
+}
+
+bool miot_uart_is_inited(int uart_no) {
+  struct miot_uart_state *us = s_uart_state[uart_no];
+  return (us != NULL);
 }
 
 void miot_uart_deinit(int uart_no) {
@@ -138,11 +151,18 @@ struct miot_uart_config *miot_uart_default_config(void) {
   cfg->baud_rate = 115200;
   cfg->rx_buf_size = cfg->tx_buf_size = 256;
   cfg->rx_linger_micros = 15;
-#if CS_PLATFORM == CS_P_ESP8266
-  cfg->rx_fifo_alarm = 10;
-  cfg->rx_fifo_full_thresh = 120;
-  cfg->tx_fifo_empty_thresh = 10;
-  cfg->tx_fifo_full_thresh = 125;
-#endif
+  miot_uart_dev_set_defaults(cfg);
   return cfg;
+}
+
+enum miot_init_result miot_init_debug_uart(int uart_no) {
+  if (uart_no < 0) return MIOT_INIT_OK;
+  /* If already initialized, don't touch. */
+  if (miot_uart_is_inited(uart_no)) return MIOT_INIT_OK;
+  struct miot_uart_config *ucfg = miot_uart_default_config();
+  ucfg->baud_rate = MIOT_DEBUG_UART_BAUD_RATE;
+  if (miot_uart_init(uart_no, ucfg, NULL, NULL) == NULL) {
+    return MIOT_INIT_UART_FAILED;
+  }
+  return MIOT_INIT_OK;
 }

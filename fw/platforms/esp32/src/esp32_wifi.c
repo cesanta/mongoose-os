@@ -17,15 +17,28 @@
 static void invoke_wifi_on_change_cb(void *arg) {
   miot_wifi_on_change_cb((enum miot_wifi_status)(int) arg);
 }
+static const char *s_sta_state = NULL;
 
 esp_err_t wifi_event_handler(system_event_t *event) {
   int mg_ev = -1;
   bool pass_to_system = true;
+  system_event_info_t *info = &event->event_info;
   switch (event->event_id) {
+    case SYSTEM_EVENT_STA_START:
+      /* We only start the station if we are connecting. */
+      s_sta_state = "connecting";
+    case SYSTEM_EVENT_STA_STOP:
+      s_sta_state = NULL;
+      break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
+      LOG(LL_INFO,
+          ("WiFi STA: disconnected, reason %d", info->disconnected.reason));
       mg_ev = MIOT_WIFI_DISCONNECTED;
+      /* We assume connection is being retried. */
+      s_sta_state = "connecting";
       break;
     case SYSTEM_EVENT_STA_CONNECTED:
+      s_sta_state = "associated";
       mg_ev = MIOT_WIFI_CONNECTED;
       break;
     case SYSTEM_EVENT_STA_GOT_IP:
@@ -34,20 +47,21 @@ esp_err_t wifi_event_handler(system_event_t *event) {
        * https://github.com/espressif/esp-idf/issues/161
        */
       mg_ev = MIOT_WIFI_IP_ACQUIRED;
+      s_sta_state = "got ip";
       pass_to_system = false;
       break;
     case SYSTEM_EVENT_AP_STACONNECTED: {
       const uint8_t *mac = event->event_info.sta_connected.mac;
       LOG(LL_INFO, ("WiFi AP: station %02X%02X%02X%02X%02X%02X (aid %d) %s",
                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
-                    event->event_info.sta_connected.aid, "connected"));
+                    info->sta_connected.aid, "connected"));
       break;
     }
     case SYSTEM_EVENT_AP_STADISCONNECTED: {
       const uint8_t *mac = event->event_info.sta_disconnected.mac;
       LOG(LL_INFO, ("WiFi AP: station %02X%02X%02X%02X%02X%02X (aid %d) %s",
                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
-                    event->event_info.sta_disconnected.aid, "disconnected"));
+                    info->sta_disconnected.aid, "disconnected"));
       break;
     }
     default:
@@ -318,6 +332,18 @@ static char *miot_wifi_get_ip(tcpip_adapter_if_t if_no) {
     return NULL;
   }
   return ip;
+}
+
+char *miot_wifi_get_status_str(void) {
+  return (s_sta_state != NULL ? strdup(s_sta_state) : NULL);
+}
+
+char *miot_wifi_get_connected_ssid(void) {
+  wifi_ap_record_t ap_info;
+  if (esp_wifi_sta_get_ap_info(&ap_info) != ESP_OK) {
+    return NULL;
+  }
+  return strdup((char *) ap_info.ssid);
 }
 
 char *miot_wifi_get_ap_ip(void) {

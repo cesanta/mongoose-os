@@ -18,6 +18,7 @@
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_updater_common.h"
+#include "fw/src/miot_uart.h"
 #include "fw/src/miot_utils.h"
 #include "fw/src/miot_wifi.h"
 
@@ -426,6 +427,25 @@ enum miot_init_result miot_sys_config_init(void) {
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_FILE, s_cfg.conf_acl, &s_cfg);
 
+  s_initialized = true;
+
+  if (miot_set_stdout_uart(s_cfg.debug.stdout_uart) != MIOT_INIT_OK) {
+    return MIOT_INIT_CONFIG_INVALID_STDOUT_UART;
+  }
+#ifdef MIOT_DEBUG_UART
+  /*
+   * This is likely to be the last message on the old console. Inform the user
+   * about what's about to happen, otherwise the user may be confused why the
+   * output suddenly stopped. Happened to me (rojer). More than once, in fact.
+   */
+  if (s_cfg.debug.stderr_uart != MIOT_DEBUG_UART) {
+    LOG(LL_INFO, ("Switching debug to UART%d", s_cfg.debug.stderr_uart));
+  }
+#endif
+  if (miot_set_stderr_uart(s_cfg.debug.stderr_uart) != MIOT_INIT_OK) {
+    return MIOT_INIT_CONFIG_INVALID_STDERR_UART;
+  }
+
   if (s_cfg.debug.level > _LL_MIN && s_cfg.debug.level < _LL_MAX) {
     cs_log_set_level((enum cs_log_level) s_cfg.debug.level);
   }
@@ -451,8 +471,6 @@ enum miot_init_result miot_sys_config_init(void) {
   LOG(LL_INFO, ("WDT: %d seconds", s_cfg.sys.wdt_timeout));
   miot_wdt_set_timeout(s_cfg.sys.wdt_timeout);
   miot_wdt_set_feed_on_poll(true);
-
-  s_initialized = true;
 
   return MIOT_INIT_OK;
 }

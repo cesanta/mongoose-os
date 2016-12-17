@@ -289,7 +289,8 @@ include $(MIOT_PATH)/common/scripts/build_info.mk
 include $(MIOT_PATH)/fw/src/sys_config.mk
 
 MIOT_CFLAGS = -DMIOT_APP=\"$(APP)\" \
-              -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) \
+              -DMIOT_MAX_NUM_UARTS=6 \
+              -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART)
 
 # TODO: uncomment when we have a real filesystem
 #MIOT_SRCS += cs_file.c

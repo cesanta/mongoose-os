@@ -127,7 +127,6 @@ MG_PRIVATE enum v7_err UART_configure(struct v7 *v7, v7_val_t *res) {
     BOOL_PROP(tx_fc_ena);
 #if CS_PLATFORM == CS_P_ESP8266
     NUM_PROP(tx_fifo_empty_thresh);
-    NUM_PROP(tx_fifo_full_thresh);
     BOOL_PROP(swap_rxcts_txrts);
 #endif
   }

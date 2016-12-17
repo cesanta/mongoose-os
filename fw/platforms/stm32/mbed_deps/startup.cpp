@@ -14,7 +14,7 @@
 int main() {
   miot_stm32_init_spiffs_init();
   mongoose_init();
-  mg_init();
+  miot_init();
 
   if (get_cfg()->wifi.sta.enable) {
     miot_wifi_setup_sta((const sys_config_wifi_sta*)&get_cfg()->wifi.sta);

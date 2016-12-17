@@ -44,13 +44,6 @@ extern const char *mg_build_version, *mg_build_id;
 
 os_timer_t startcmd_timer;
 
-#ifndef MIOT_DEBUG_UART
-#define MIOT_DEBUG_UART 0
-#endif
-#ifndef MIOT_DEBUG_UART_BAUD_RATE
-#define MIOT_DEBUG_UART_BAUD_RATE 115200
-#endif
-
 #if MIOT_ENABLE_HEAP_LOG
 extern int uart_initialized;
 #endif
@@ -70,42 +63,21 @@ void user_rf_pre_init() {
  * Mongoose IoT initialization, called as an SDK timer callback
  * (`os_timer_...()`).
  */
-int esp_mg_init(rboot_config *bcfg) {
+enum miot_init_result esp_miot_init(rboot_config *bcfg) {
   mongoose_init();
   esp_mg_task_init();
-  /*
-   * In order to see debug output (at least errors) during boot we have to
-   * initialize debug in this point. But default we put debug to UART0 with
-   * level=LL_ERROR, then configuration is loaded this settings are overridden
-   */
-  {
-    struct miot_uart_config *u0cfg = miot_uart_default_config();
-#if MIOT_DEBUG_UART == 0
-    u0cfg->baud_rate = MIOT_DEBUG_UART_BAUD_RATE;
-#endif
-    if (miot_uart_init(0, u0cfg, NULL, NULL) == NULL) {
-      return MIOT_INIT_UART_FAILED;
-    }
-    struct miot_uart_config *u1cfg = miot_uart_default_config();
-    /* UART1 has no RX pin, no point in allocating a buffer. */
-    u1cfg->rx_buf_size = 0;
-#if MIOT_DEBUG_UART == 1
-    u1cfg->baud_rate = MIOT_DEBUG_UART_BAUD_RATE;
-#endif
-    if (miot_uart_init(1, u1cfg, NULL, NULL) == NULL) {
-      return MIOT_INIT_UART_FAILED;
-    }
+  enum miot_init_result ir = esp_console_init();
+  if (ir != MIOT_INIT_OK) return ir;
 #if MIOT_ENABLE_HEAP_LOG
-    uart_initialized = 1;
+  uart_initialized = 1;
 #endif
-    setvbuf(stdout, NULL, _IOLBF, 256);
-    setvbuf(stderr, NULL, _IOLBF, 256);
-    cs_log_set_level(LL_INFO);
-    os_install_putc1(dbg_putc);
-    system_set_os_print(1);
-  }
-
+  setvbuf(stdout, NULL, _IOLBF, 256);
+  setvbuf(stderr, NULL, _IOLBF, 256);
+  cs_log_set_level(LL_INFO);
+  os_install_putc1(dbg_putc);
+  system_set_os_print(1);
   fputc('\n', stderr);
+
   if (strcmp(MIOT_APP, "mongoose-iot") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MIOT_APP, build_version, build_id));
   }
@@ -119,19 +91,19 @@ int esp_mg_init(rboot_config *bcfg) {
                   bcfg->fs_sizes[bcfg->current_rom]);
   if (r != 0) {
     LOG(LL_ERROR, ("FS init error: %d", r));
-    return -1;
+    return MIOT_INIT_FS_INIT_FAILED;
   }
 
 #if MIOT_ENABLE_UPDATER
   if (bcfg->fw_updated && miot_upd_apply_update() < 0) {
-    return -2;
+    return MIOT_INIT_APPLY_UPDATE_FAILED;
   }
 #endif
 
-  enum miot_init_result ir = mg_init();
+  ir = miot_init();
   if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
-    return -3;
+    return ir;
   }
 
 #if MIOT_ENABLE_JS
@@ -140,11 +112,11 @@ int esp_mg_init(rboot_config *bcfg) {
   ir = miot_init_js_all(v7);
   if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
-    return -5;
+    return ir;
   }
   /* TODO(rojer): Get rid of I2C.js */
   if (v7_exec_file(v7, "I2C.js", NULL) != V7_OK) {
-    return -6;
+    return MIOT_INIT_APP_JS_INIT_FAILED;
   }
 #endif
 
@@ -164,12 +136,13 @@ int esp_mg_init(rboot_config *bcfg) {
    * So, we have a call to the no-op `esp_umm_init()` here.
    */
   esp_umm_init();
-  return 0;
+
+  return MIOT_INIT_OK;
 }
 
 void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
-  enum miot_init_result result = esp_mg_init(bcfg);
+  enum miot_init_result result = esp_miot_init(bcfg);
   bool success = (result == MIOT_INIT_OK);
 #if MIOT_ENABLE_UPDATER
   miot_upd_boot_finish(success, bcfg->is_first_boot);

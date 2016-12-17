@@ -12,6 +12,8 @@
 
 #include "common/spiffs/spiffs.h"
 
+#include "fw/src/miot_init.h"
+
 /* LOG_PAGE_SIZE have to be more than SPIFFS_OBJ_NAME_LEN */
 #define LOG_PAGE_SIZE 256
 #define SPIFFS_PAGE_HEADER_SIZE 5
@@ -45,5 +47,9 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
              uint8_t *fds, size_t fds_size);
 spiffs *get_fs(void);
 void fs_umount(void);
+
+enum miot_init_result esp_console_init();
+enum miot_init_result esp_set_stdout_uart(int uart_no);
+enum miot_init_result esp_set_stderr_uart(int uart_no);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_ */

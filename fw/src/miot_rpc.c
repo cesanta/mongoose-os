@@ -98,6 +98,9 @@ enum miot_init_result miot_rpc_init(void) {
       mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,
                          false /* send_hello */);
       if (sccfg->connect_on_boot) uch->ch_connect(uch);
+    } else {
+      LOG(LL_ERROR, ("UART%d init failed", scucfg->uart_no));
+      return MIOT_INIT_UART_FAILED;
     }
   }
 #endif

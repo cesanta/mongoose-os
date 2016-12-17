@@ -112,10 +112,7 @@ enum cc3200_init_result {
 
 static enum cc3200_init_result cc3200_init(void *arg) {
   mongoose_init();
-  if (miot_uart_init(0, miot_uart_default_config(), NULL, NULL) == NULL) {
-    return CC3200_INIT_UART_INIT_FAILED;
-  }
-  if (miot_uart_init(1, miot_uart_default_config(), NULL, NULL) == NULL) {
+  if (cc3200_console_init() != MIOT_INIT_OK) {
     return CC3200_INIT_UART_INIT_FAILED;
   }
 
@@ -178,7 +175,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   }
 #endif
 
-  enum miot_init_result ir = mg_init();
+  enum miot_init_result ir = miot_init();
   if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
     return CC3200_INIT_MG_INIT_FAILED;

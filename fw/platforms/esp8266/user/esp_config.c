@@ -14,8 +14,6 @@
 #include "fw/src/miot_sys_config.h"
 #include "common/cs_file.h"
 #include "common/cs_dbg.h"
-#include "fw/platforms/esp8266/user/esp_fs.h"
-#include "fw/platforms/esp8266/user/esp_gpio.h"
 
 bool miot_wifi_set_config(const struct sys_config_wifi *cfg);
 
@@ -24,14 +22,6 @@ void device_get_mac_address(uint8_t mac[6]) {
 }
 
 enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
-  /* Negative values mean "disable". */
-  if (cfg->debug.stdout_uart > 2) {
-    return MIOT_INIT_CONFIG_INVALID_STDOUT_UART;
-  }
-  if (cfg->debug.stderr_uart > 2) {
-    return MIOT_INIT_CONFIG_INVALID_STDERR_UART;
-  }
-
   return (miot_wifi_set_config(&cfg->wifi) ? MIOT_INIT_OK
                                            : MIOT_INIT_CONFIG_WIFI_INIT_FAILED);
 }

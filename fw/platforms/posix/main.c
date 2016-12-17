@@ -79,7 +79,7 @@ static void pre_init(struct v7 *v7) {
   init_fw(v7);
 
   mongoose_init();
-  mg_init();
+  miot_init();
   miot_init_js(v7);
 
   /* MIOT initialized, enable GC back, and trigger it. */
@@ -143,6 +143,10 @@ void device_get_mac_address(uint8_t mac[6]) {
   }
 }
 
+void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
+  (void) cfg;
+}
+
 bool miot_uart_dev_init(struct miot_uart_state *us) {
   (void) us;
   return false;
@@ -166,3 +170,16 @@ void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
   (void) us;
   (void) enabled;
 }
+
+enum miot_init_result miot_set_stdout_uart(int uart_no) {
+  if (uart_no <= 0) return MIOT_INIT_OK;
+  /* TODO */
+  return MIOT_INIT_UART_FAILED;
+}
+
+enum miot_init_result miot_set_stderr_uart(int uart_no) {
+  if (uart_no <= 0) return MIOT_INIT_OK;
+  /* TODO */
+  return MIOT_INIT_UART_FAILED;
+}
+

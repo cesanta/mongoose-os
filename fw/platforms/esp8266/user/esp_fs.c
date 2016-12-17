@@ -31,7 +31,7 @@
 
 #include "esp_fs.h"
 #include "fw/src/miot_uart.h"
-#include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_uart.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
@@ -61,6 +61,9 @@ static struct mmap_desc *cur_mmap_desc;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
+
+static int8_t s_stdout_uart = MIOT_DEBUG_UART;
+static int8_t s_stderr_uart = MIOT_DEBUG_UART;
 
 spiffs *get_fs(void) {
   return &fs;
@@ -341,11 +344,10 @@ _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   (void) r;
   if (fd < NUM_SYS_FD) {
     int uart_no = -1;
-    struct sys_config *scfg = get_cfg();
     if (fd == 1) {
-      uart_no = scfg ? scfg->debug.stdout_uart : MIOT_DEBUG_UART;
+      uart_no = s_stdout_uart;
     } else if (fd == 2) {
-      uart_no = scfg ? scfg->debug.stderr_uart : MIOT_DEBUG_UART;
+      uart_no = s_stderr_uart;
     } else if (fd == 0) {
       errno = EBADF;
       len = -1;
@@ -451,9 +453,7 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
 }
 
 void fs_flush_stderr(void) {
-  struct sys_config *scfg = get_cfg();
-  int uart_no = scfg ? scfg->debug.stderr_uart : MIOT_DEBUG_UART;
-  if (uart_no >= 0) miot_uart_flush(uart_no);
+  if (s_stderr_uart >= 0) miot_uart_flush(s_stderr_uart);
 }
 
 #if MIOT_ENABLE_JS
@@ -479,3 +479,23 @@ int64_t miot_get_storage_free_space(void) {
 }
 
 #endif
+
+enum miot_init_result miot_set_stdout_uart(int uart_no) {
+  enum miot_init_result r = miot_init_debug_uart(uart_no);
+  if (r == MIOT_INIT_OK) {
+    s_stdout_uart = uart_no;
+  }
+  return r;
+}
+
+enum miot_init_result miot_set_stderr_uart(int uart_no) {
+  enum miot_init_result r = miot_init_debug_uart(uart_no);
+  if (r == MIOT_INIT_OK) {
+    s_stderr_uart = uart_no;
+  }
+  return r;
+}
+
+enum miot_init_result esp_console_init() {
+  return miot_init_debug_uart(MIOT_DEBUG_UART);
+}

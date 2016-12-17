@@ -244,7 +244,7 @@ void miot_prompt_process_char(char ch) {
       if (ch != NULL) {
         mg_rpc_add_channel(miot_rpc_get_global(), mg_mk_str(""), ch,
                            true /* is_trusted */, false /* send_hello */);
-        ch->connect(ch);
+        ch->ch_connect(ch);
       }
       return;
     }

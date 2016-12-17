@@ -4,20 +4,22 @@
 
 MIOT_ENABLE_ATCA ?= 0
 MIOT_ENABLE_ATCA_SERVICE ?= 0
-MIOT_ENABLE_CONFIG_SERVICE ?= 0
+MIOT_ENABLE_CONFIG_SERVICE ?= 1
 MIOT_ENABLE_CONSOLE ?= 0
 MIOT_ENABLE_DNS_SD ?= 0
 MIOT_ENABLE_FILESYSTEM_SERVICE ?= 0
 MIOT_ENABLE_I2C ?= 0
 MIOT_ENABLE_JS ?= 0
 MIOT_ENABLE_MQTT ?= 0
-MIOT_ENABLE_RPC ?= 0
-MIOT_ENABLE_RPC_CHANNEL_HTTP ?= 0
-MIOT_ENABLE_RPC_CHANNEL_UART ?= 0
+MIOT_ENABLE_RPC ?= 1
+MIOT_ENABLE_RPC_CHANNEL_HTTP ?= 1
+MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
 MIOT_ENABLE_UPDATER ?= 0
 MIOT_ENABLE_UPDATER_POST ?= 0
 MIOT_ENABLE_UPDATER_RPC ?= 0
 MIOT_ENABLE_WIFI ?= 1
+
+MIOT_DEBUG_UART ?= 0
 
 MIOT_SRC_PATH = $(MIOT_PATH)/fw/src
 
@@ -32,7 +34,8 @@ COMPONENT_EXTRA_INCLUDES = $(MIOT_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) 
 
 MIOT_SRCS = miot_config.c miot_init.c miot_mongoose.c \
             miot_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            esp32_fs.c esp32_hal.c esp32_main.c
+            miot_timers_mongoose.c miot_uart.c miot_utils.c \
+            esp32_console.c esp32_fs.c esp32_hal.c esp32_main.c esp32_uart.c
 
 include $(MIOT_PATH)/fw/common.mk
 include $(MIOT_PATH)/fw/src/features.mk
@@ -45,7 +48,10 @@ endif
 include $(MIOT_PATH)/fw/src/sys_config.mk
 
 VPATH += $(MIOT_PATH)/common
-MIOT_SRCS += cs_dbg.c cs_file.c
+MIOT_SRCS += cs_dbg.c cs_file.c cs_rbuf.c json_utils.c
+ifeq "$(MIOT_ENABLE_RPC)" "1"
+  VPATH += $(MIOT_PATH)/common/mg_rpc
+endif
 
 VPATH += $(MIOT_PATH)/fw/src
 
@@ -58,7 +64,8 @@ MIOT_SRCS += mongoose.c
 VPATH += $(GEN_DIR)
 
 COMPONENT_OBJS = $(addsuffix .o,$(basename $(MIOT_SRCS)))
-CFLAGS += $(MIOT_FEATURES)
+CFLAGS += $(MIOT_FEATURES) -DMIOT_MAX_NUM_UARTS=3 \
+          -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART)
 
 libsrc.a: $(GEN_DIR)/conf_defaults.json
 

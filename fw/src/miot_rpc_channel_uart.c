@@ -64,6 +64,8 @@ void mg_rpc_channel_uart_dispatcher(struct miot_uart_state *us) {
         mbuf_trim(&chd->recv_mbuf);
       }
       chd->waiting_for_start_frame = false;
+    } else if (chd->waiting_for_start_frame) {
+      mbuf_remove(&chd->recv_mbuf, chd->recv_mbuf.len - FRAME_DELIMETER_LEN);
     }
   }
   if (chd->connecting && !chd->waiting_for_start_frame) {

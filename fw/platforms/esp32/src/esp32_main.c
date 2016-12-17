@@ -18,6 +18,8 @@
 #include "fw/src/miot_init.h"
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_sys_config.h"
+
+#include "fw/platforms/esp32/src/esp32_console.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 #define MIOT_TASK_STACK_SIZE 8192
@@ -47,7 +49,6 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
 }
 
 enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
-  /* TODO: UART settings */
   return miot_wifi_set_config(&cfg->wifi) ? MIOT_INIT_OK
                                           : MIOT_INIT_CONFIG_WIFI_INIT_FAILED;
 }
@@ -57,13 +58,16 @@ struct miot_event {
   void *arg;
 };
 
-QueueHandle_t s_main_queue;
+static enum miot_init_result esp32_miot_init() {
+  enum miot_init_result r;
 
-void miot_task(void *arg) {
   /* Enable WDT for this task. It will be fed by Mongoose polling loop. */
   esp_task_wdt_feed();
   cs_log_set_level(LL_INFO);
   mongoose_init();
+
+  r = esp32_console_init();
+  if (r != MIOT_INIT_OK) return r;
 
   if (strcmp(MIOT_APP, "mongoose-iot") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MIOT_APP, build_version, build_id));
@@ -75,17 +79,25 @@ void miot_task(void *arg) {
 
   if (esp32_fs_init() != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("Failed to mount FS"));
-    abort();
+    return MIOT_INIT_FS_INIT_FAILED;
   }
 
-  enum miot_init_result r = mg_init();
+  if ((r = miot_init()) != MIOT_INIT_OK) return r;
+
+  return MIOT_INIT_OK;
+}
+
+static QueueHandle_t s_main_queue;
+
+void miot_task(void *arg) {
+  struct miot_event e;
+  s_main_queue = xQueueCreate(MIOT_TASK_QUEUE_LENGTH, sizeof(e));
+
+  enum miot_init_result r = esp32_miot_init();
   if (r != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("MIOT init failed: %d", r));
     abort();
   }
-
-  struct miot_event e;
-  s_main_queue = xQueueCreate(MIOT_TASK_QUEUE_LENGTH, sizeof(e));
 
   while (true) {
     mongoose_poll(0);
@@ -103,7 +115,12 @@ bool IRAM_ATTR miot_invoke_cb(miot_cb_t cb, void *arg) {
   if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
     return false;
   }
-  if (should_yield) vPortYield();
+  if (should_yield) {
+    /*
+     * TODO(rojer): Find a way to determine if we're in an interrupt and
+     * invoke portYIELD or portYIELD_FROM_ISR.
+     */
+  }
   return true;
 }
 

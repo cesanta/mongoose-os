@@ -19,7 +19,7 @@ void APP_Initialize(void) {
   pic32_uart_init();
   mongoose_init();
 
-  enum miot_init_result ir = mg_init();
+  enum miot_init_result ir = miot_init();
   if (ir != MIOT_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
   }
