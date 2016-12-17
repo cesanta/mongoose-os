@@ -2,10 +2,10 @@ TARGET=DISCO_F429ZI
 
 .DEFAULT_GOAL := all
 
-include rules.mk
-
 APP ?= mongoose-iot
 APP_MODULES ?=
+APP_PLATFORM = stm32
+APP_EXTRA_SRCS ?=
 
 MIOT_ENABLE_ATCA_SERVICE ?= 0
 MIOT_ENABLE_CONFIG_SERVICE ?= 1
@@ -20,7 +20,7 @@ MIOT_ENABLE_UPDATER ?= 0
 MIOT_ENABLE_UPDATER_POST ?= 0
 MIOT_ENABLE_UPDATER_RPC ?= 0
 MIOT_ENABLE_WIFI ?= 1
-
+MIOT_ENABLE_CONSOLE ?= 0
 # TODO(alex): turn these on
 MIOT_ENABLE_HTTP_SERVER ?= 0
 MIOT_ENABLE_ATCA ?= 0
@@ -63,6 +63,12 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
 
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override FW_DIR := $(abspath $(FW_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+
+include $(MIOT_PATH)/fw/platforms/stm32/rules.mk
 include $(MIOT_PATH)/fw/common.mk
 
 MIOT_SRCS = cs_rbuf.c \
@@ -96,10 +102,11 @@ VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(PLATFORM_SRC_PATH)/mbed_deps \
         $(SPIFFS_PATH) $(COMMON_PATH)/platforms/mbed
 
-IPATH = $(subst .././mbed-os/, ./mbed-os/,$(INCLUDE_PATHS))
+IPATH = $(subst .././mbed-os/, $(MIOT_PATH)/fw/platforms/stm32/mbed-os/,$(INCLUDE_PATHS))
 IPATH += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
          -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc \
-         -I$(SPIFFS_PATH) -I./. -I./mbed-os
+         -I$(SPIFFS_PATH) -I$(MIOT_PATH)/fw/platforms/stm32/ \
+         -I$(MIOT_PATH)/fw/platforms/stm32/mbed-os
 
 LIBRARY_PATHS += -L$(BUILD_DIR)
 
@@ -125,18 +132,18 @@ MBED_WEAK_FUNCS = $(addprefix -W , $(MBED_FS_FUNCS))
 
 include $(MIOT_PATH)/common/scripts/fw_meta.mk
 
-all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(BUILD_INFO_C) $(ELF_FILE) $(FW_FILE) $(FW_MANIFEST) $(FW_ZIP)
+all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(BUILD_DIR)/$(STM32LIB) $(BUILD_INFO_C) $(ELF_FILE) $(FW_FILE) $(FW_MANIFEST) $(FW_ZIP)
 
 $(BUILD_DIR)/$(STM32LIB): $(BUILD_DIR)
 	$(vecho) Updating mbed libraries
-	$(Q) mbed deploy
-	$(Q) mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library
+	$(Q) (cd $(MIOT_PATH)/fw/platforms/stm32/ && mbed deploy && \
+    mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library)
 # We have FS functions (opendir etc) implementation in mongoose
 # so, just make weak mbed ones
 	$(Q) $(OBJCOPY) $(BUILD_DIR)/$(STM32LIB) $(MBED_WEAK_FUNCS)
 
 $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR):
-	@echo "MKDIR $@"
+	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
 $(BUILD_DIR)/%.o: %.c $(BUILD_DIR) $(GENFILES_FLAG) $(BUILD_DIR)/$(STM32LIB)
