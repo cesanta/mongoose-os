@@ -21,24 +21,9 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
-MIOT_ENABLE_ATCA ?= 1
-MIOT_ENABLE_ATCA_SERVICE ?= 1
-MIOT_ENABLE_CONFIG_SERVICE ?= 1
-MIOT_ENABLE_CONSOLE ?= 1
-MIOT_ENABLE_DNS_SD ?= 1
-MIOT_ENABLE_FILESYSTEM_SERVICE ?= 1
-MIOT_ENABLE_I2C ?= 1
-MIOT_ENABLE_JS ?= 0
-MIOT_ENABLE_MQTT ?= 1
-MIOT_ENABLE_RPC ?= 1
-MIOT_ENABLE_RPC_CHANNEL_HTTP ?= 1
-MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
-MIOT_ENABLE_UPDATER ?= 1
-MIOT_ENABLE_UPDATER_POST ?= 1
-MIOT_ENABLE_UPDATER_RPC ?= 0
-MIOT_ENABLE_WIFI ?= 1
-
-MIOT_DEBUG_UART ?= 0
+MIOT_ENABLE_JS = 0
+MIOT_ENABLE_UPDATER_RPC = 0
+MIOT_DEBUG_UART = 0
 
 MIOT_PATH ?= ../../..
 COMMON_PATH ?= $(MIOT_PATH)/common
@@ -153,6 +138,24 @@ MIOT_SRCS += v7.c \
              miot_spi_js.c \
              miot_ws_client_js.c
 endif
+
+MIOT_FEATURES ?= -DMIOT_ENABLE_ADC_API \
+                -DMIOT_ENABLE_DEBUG_API \
+                -DMIOT_ENABLE_GPIO_API \
+                -DMIOT_ENABLE_HTTP_CLIENT_API \
+                -DMIOT_ENABLE_HTTP_SERVER_API \
+                -DMIOT_ENABLE_I2C_API \
+                -DMIOT_ENABLE_MQTT_API \
+                -DMIOT_ENABLE_PWM_API \
+                -DMIOT_ENABLE_SPI_API \
+                -DMIOT_ENABLE_TCP_API \
+                -DMIOT_ENABLE_UART_API \
+                -DMIOT_ENABLE_UDP_API \
+                -DMIOT_ENABLE_WIFI_API \
+                -DMIOT_ENABLE_WS_CLIENT_API
+
+include $(MIOT_PATH)/fw/src/features.mk
+
 ifeq "$(MIOT_ENABLE_I2C)" "1"
   SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_i2c_config.yaml
 endif
@@ -191,20 +194,6 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 V7_GC_DEBUG ?= 1
 V7_STACK_GUARD ?= 1
 
-MIOT_FEATURES ?= -DMIOT_ENABLE_ADC_API \
-                -DMIOT_ENABLE_DEBUG_API \
-                -DMIOT_ENABLE_GPIO_API \
-                -DMIOT_ENABLE_HTTP_CLIENT_API \
-                -DMIOT_ENABLE_HTTP_SERVER_API \
-                -DMIOT_ENABLE_I2C_API \
-                -DMIOT_ENABLE_MQTT_API \
-                -DMIOT_ENABLE_PWM_API \
-                -DMIOT_ENABLE_SPI_API \
-                -DMIOT_ENABLE_TCP_API \
-                -DMIOT_ENABLE_UART_API \
-                -DMIOT_ENABLE_UDP_API \
-                -DMIOT_ENABLE_WIFI_API \
-                -DMIOT_ENABLE_WS_CLIENT_API
 MIOT_ESP_FEATURES = -DMIOT_ENABLE_WEB_CONFIG \
                     -DMIOT_ENABLE_FILE_UPLOAD \
                     -DMIOT_ENABLE_CONSOLE_FILE_BUFFER
@@ -305,7 +294,6 @@ else
   MIOT_SRCS += cs_file.c
 endif
 
-include $(MIOT_PATH)/fw/src/features.mk
 include $(MIOT_PATH)/fw/src/spiffs.mk
 
 MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
