@@ -20,6 +20,7 @@ MIOT_ENABLE_CONSOLE = 0
 
 CREATE_SPIFFS_FS ?= 1
 
+MBED_PATH ?= /opt/mbed-lib
 MIOT_PATH ?= ../../..
 COMMON_PATH ?= $(MIOT_PATH)/common
 MONGOOSE_PATH ?= $(MIOT_PATH)/mongoose
@@ -30,7 +31,7 @@ BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
 PLATFORM_SRC_PATH = $(MIOT_PATH)/fw/platforms/stm32
 SIMPLE_LINK_PATH = $(PLATFORM_SRC_PATH)/simplelink
-STM32LIB = libstm32.a
+STM32LIB = libmbed-lib.a
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
 SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
 SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
@@ -92,11 +93,11 @@ VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(PLATFORM_SRC_PATH)/mbed_deps \
         $(SPIFFS_PATH) $(COMMON_PATH)/platforms/mbed
 
-IPATH = $(subst .././mbed-os/, $(MIOT_PATH)/fw/platforms/stm32/mbed-os/,$(INCLUDE_PATHS))
+IPATH = $(subst .././, $(MBED_PATH)/,$(INCLUDE_PATHS))
 IPATH += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
          -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc \
          -I$(SPIFFS_PATH) -I$(MIOT_PATH)/fw/platforms/stm32/ \
-         -I$(MIOT_PATH)/fw/platforms/stm32/mbed-os
+         -I$(MBED_PATH)/mbed-os
 
 LIBRARY_PATHS += -L$(BUILD_DIR)
 
@@ -126,9 +127,8 @@ include $(MIOT_PATH)/common/scripts/fw_meta.mk
 all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(BUILD_DIR)/$(STM32LIB) $(BUILD_INFO_C) $(ELF_FILE) $(FW_FILE) $(FW_MANIFEST) $(FW_ZIP)
 
 $(BUILD_DIR)/$(STM32LIB): $(BUILD_DIR)
-	$(vecho) Updating mbed libraries
-	$(Q) (cd $(MIOT_PATH)/fw/platforms/stm32/ && mbed deploy && \
-    mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library)
+	$(vecho) Building mbed lib
+	(cd $(MBED_PATH) && mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library)
 # We have FS functions (opendir etc) implementation in mongoose
 # so, just make weak mbed ones
 	$(Q) $(OBJCOPY) $(BUILD_DIR)/$(STM32LIB) $(MBED_WEAK_FUNCS)
@@ -168,7 +168,7 @@ $(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONF
 
 $(ELF_FILE): $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(BUILD_DIR)/$(STM32LIB)
 	$(vecho) "LD $(APP).elf"
-	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lstm32 $(LD_SYS_LIBS) -Wl,--end-group -T $(LINKER_SCRIPT) $(IPATH) $(LIBRARY_PATHS) --output $@
+	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lmbed-lib $(LD_SYS_LIBS) -Wl,--end-group -T $(LINKER_SCRIPT) $(IPATH) $(LIBRARY_PATHS) --output $@
 
 $(FW_FILE): $(ELF_FILE) $(FW_STAGING_DIR)
 	$(vecho) "ELF2BIN $(notdir $(FW_FILE))"
