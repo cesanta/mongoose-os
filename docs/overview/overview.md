@@ -2,7 +2,7 @@
 title: Overview
 ---
 
-Mongoose Firmware is a robust and secure framework for embedded devices.
+Mongoose OS is a robust and secure framework for embedded devices.
 It is a ideal for making internet-connected products, as it has all
 essential infrastructure components developed:
 
