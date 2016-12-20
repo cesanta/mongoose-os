@@ -50,6 +50,7 @@
 
 import argparse
 import collections
+import contextlib
 import json
 import yaml
 import os
@@ -310,6 +311,23 @@ const struct miot_conf_entry *{name}_schema() {{
            lines="\n".join(self._lines))
 
 
+@contextlib. contextmanager
+def open_with_temp(name):
+    """Perform a write-and-rename maneuver to write a file safely."""
+    tmpname = "%s.%d.tmp" % (name, os.getpid())
+    f = open(tmpname, "w")
+    try:
+        yield f
+        f.close()
+        if sys.platform == "win32":
+            # This is no longer atomic, but Win does not support atomic renames.
+            os.remove(name)
+        os.rename(tmpname, name)
+    except Exception, e:
+        os.remove(tmpname)
+        raise
+
+
 if __name__ == "__main__":
     args = parser.parse_args()
     schema = Schema()
@@ -325,23 +343,23 @@ if __name__ == "__main__":
     dw = DefaultsJSONWriter()
     schema.Walk(dw)
     dfn = os.path.join(args.dest_dir, "%s_defaults.json" % args.c_name)
-    with open(dfn, "w") as df:
+    with open_with_temp(dfn) as df:
         df.write(str(dw))
 
     jsw = JSONSchemaWriter()
     schema.Walk(jsw)
     jsfn = os.path.join(args.dest_dir, "%s_schema.json" % args.c_name)
-    with open(jsfn, "w") as jsf:
+    with open_with_temp(jsfn) as jsf:
         jsf.write(str(jsw))
 
     hw = HWriter(args.c_name, args.c_const_char)
     schema.Walk(hw)
     hfn = os.path.join(args.dest_dir, "%s.h" % args.c_name)
-    with open(hfn, "w") as hf:
+    with open_with_temp(hfn) as hf:
         hf.write(str(hw))
 
     cw = CWriter(args.c_name)
     schema.Walk(cw)
     cfn = os.path.join(args.dest_dir, "%s.c" % args.c_name)
-    with open(cfn, "w") as cf:
+    with open_with_temp(cfn) as cf:
         cf.write(str(cw))
