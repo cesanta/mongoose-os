@@ -44,7 +44,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
               -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
               -DV7_ENABLE_ENTITY_IDS
 
-MIOT_POSIX_FEATURES ?= -DMIOT_PROMPT_DISABLE_ECHO -DMIOT_MAX_NUM_UARTS=2
+MIOT_POSIX_FEATURES ?= -DMIOT_PROMPT_DISABLE_ECHO -DMIOT_MAX_NUM_UARTS=2 -DMIOT_NUM_GPIO=16
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
@@ -52,7 +52,7 @@ MONGOOSE_FEATURES = \
 
 INCLUDES = $(MIOT_PATH) $(SRC_PATH) $(BUILD_DIR)
 MIOT_SRCS = $(notdir $(wildcard *.c)) miot_init.c  \
-            mongoose.c frozen.c miot_mongoose.c \
+            mongoose.c frozen.c miot_mongoose.c miot_gpio.c \
             miot_prompt.c miot_timers_mongoose.c \
             miot_config.c miot_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \

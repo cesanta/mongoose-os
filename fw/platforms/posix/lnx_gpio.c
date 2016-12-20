@@ -17,6 +17,7 @@
 #include <poll.h>
 
 #include "fw/src/miot_gpio.h"
+#include "fw/src/miot_gpio_hal.h"
 
 int gpio_export(int gpio_no) {
   char buf[50];
@@ -49,7 +50,7 @@ int gpio_export(int gpio_no) {
   return 0;
 }
 
-int gpio_helper(int gpio_no, const char *file_name_templ, const char *val) {
+bool gpio_helper(int gpio_no, const char *file_name_templ, const char *val) {
   int fd, res;
   char buf[50];
   snprintf(buf, sizeof(buf), file_name_templ, gpio_no);
@@ -57,7 +58,7 @@ int gpio_helper(int gpio_no, const char *file_name_templ, const char *val) {
   fd = open(buf, O_WRONLY);
   if (fd < 0) {
     fprintf(stderr, "Cannot open %s: %d (%s)\n", buf, errno, strerror(errno));
-    return -1;
+    return false;
   };
 
   res = write(fd, val, strlen(val));
@@ -66,26 +67,26 @@ int gpio_helper(int gpio_no, const char *file_name_templ, const char *val) {
     fprintf(stderr, "Cannot write to %s value %s: %d (%s)\n", buf, val, errno,
             strerror(errno));
     close(fd);
-    return -1;
+    return false;
   }
 
   close(fd);
 
-  return 0;
+  return true;
 }
 
 /* 0 = IN, 1 = OUT */
-int gpio_set_direction(int gpio_no, enum gpio_mode d) {
+bool gpio_set_direction(int gpio_no, enum miot_gpio_mode d) {
   return gpio_helper(gpio_no, "/sys/class/gpio/gpio%d/direction",
-                     d == GPIO_MODE_INPUT ? "in" : "out");
+                     d == MIOT_GPIO_MODE_INPUT ? "in" : "out");
 }
 
-int gpio_set_value(int gpio_no, enum gpio_level val) {
+bool gpio_set_value(int gpio_no, bool value) {
   return gpio_helper(gpio_no, "/sys/class/gpio/gpio%d/value",
-                     val == GPIO_LEVEL_LOW ? "0" : "1");
+                     value == 0 ? "0" : "1");
 }
 
-int gpio_get_value(int gpio_no) {
+bool gpio_get_value(int gpio_no) {
   char val, buf[50];
   int fd, res;
 
@@ -93,7 +94,7 @@ int gpio_get_value(int gpio_no) {
   fd = open(buf, O_RDONLY);
   if (fd < 0) {
     fprintf(stderr, "Cannot open %s: %d (%s)\n", buf, errno, strerror(errno));
-    return -1;
+    return false;
   };
 
   res = read(fd, &val, sizeof(val));
@@ -101,20 +102,20 @@ int gpio_get_value(int gpio_no) {
     fprintf(stderr, "Cannot read from %s: %d (%s)\n", buf, errno,
             strerror(errno));
     close(fd);
-    return -1;
+    return false;
   }
 
   close(fd);
 
-  return val == '0' ? 0 : 1;
+  return (val == '1');
 }
 
-int gpio_set_edge(int gpio_no, enum gpio_int_mode edge) {
+bool gpio_set_edge(int gpio_no, enum miot_gpio_int_mode edge) {
   static const char *edge_names[] = {"none", "rising", "falling", "both"};
   /* signedness of enum is implementation defined */
   if (((unsigned int) edge) >= (sizeof(edge_names) / sizeof(edge_names[0]))) {
     fprintf(stderr, "Invalid egde value\n");
-    return -1;
+    return false;
   }
 
   return gpio_helper(gpio_no, "/sys/class/gpio/gpio%d/edge", edge_names[edge]);
@@ -125,9 +126,7 @@ int gpio_set_edge(int gpio_no, enum gpio_int_mode edge) {
 
 struct gpio_event {
   int gpio_no;
-  f_gpio_intr_handler_t callback;
   int fd;
-  void *arg;
   struct gpio_event *next;
   int enabled;
 };
@@ -145,6 +144,10 @@ struct gpio_event *get_gpio_event(int gpio_no) {
   }
 
   return NULL;
+}
+
+void miot_gpio_dev_int_done(int pin) {
+  (void) pin;
 }
 
 void gpio_remove_handler(int gpio_no) {
@@ -167,22 +170,31 @@ void gpio_remove_handler(int gpio_no) {
   }
 }
 
-int gpio_set_handler(int gpio_no, f_gpio_intr_handler_t callback, void *arg) {
+bool miot_gpio_dev_set_int_mode(int gpio_no, enum miot_gpio_int_mode mode) {
   int fd, res;
   char tmp, buf[50];
   struct gpio_event *new_ev;
 
+  if (mode == MIOT_GPIO_INT_NONE) {
+    gpio_remove_handler(gpio_no);
+    return true;
+  }
+
   if (get_gpio_event(gpio_no) != NULL) {
     /* doesn't support several handlers for the same gpio */
     fprintf(stderr, "ISR for GPIO%d already installed\n", gpio_no);
-    return -1;
+    return false;
+  }
+
+  if (!gpio_set_edge(gpio_no, mode)) {
+    return false;
   }
 
   snprintf(buf, sizeof(buf), "/sys/class/gpio/gpio%d/value", gpio_no);
   fd = open(buf, O_RDONLY);
   if (fd < 0) {
     fprintf(stderr, "Cannot open %s: %d (%s)\n", buf, errno, strerror(errno));
-    return -1;
+    return false;
   };
 
   /*
@@ -193,19 +205,29 @@ int gpio_set_handler(int gpio_no, f_gpio_intr_handler_t callback, void *arg) {
   if (res < 0) {
     fprintf(stderr, "Cannot read from %s: %d (%s)\n", buf, errno,
             strerror(errno));
-    return -1;
+    return false;
   };
 
   new_ev = calloc(1, sizeof(*new_ev));
   new_ev->gpio_no = gpio_no;
-  new_ev->callback = callback;
   new_ev->next = s_events;
   new_ev->fd = fd;
-  new_ev->arg = arg;
   new_ev->enabled = 1;
   s_events = new_ev;
 
-  return 0;
+  return true;
+}
+
+bool miot_gpio_enable_int(int pin) {
+  /* FIXME */
+  (void) pin;
+  return false;
+}
+
+bool miot_gpio_disable_int(int pin) {
+  /* FIXME */
+  (void) pin;
+  return false;
 }
 
 int gpio_poll(void) {
@@ -249,8 +271,7 @@ int gpio_poll(void) {
       lseek(fdset[i].fd, 0, SEEK_SET);
       res = read(fdset[i].fd, &val, sizeof(val));
       events_tmp[i]->enabled = 0;
-      events_tmp[i]->callback(events_tmp[i]->gpio_no, val == '0' ? 0 : 1,
-                              events_tmp[i]->arg);
+      miot_gpio_dev_int_cb(events_tmp[i]->gpio_no);
     }
   }
 
@@ -258,63 +279,38 @@ int gpio_poll(void) {
 }
 
 /* HAL functions */
-int miot_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull) {
-  if (mode == GPIO_MODE_INOUT) {
-    fprintf(stderr, "Inout mode is not supported\n");
-    return -1;
-  }
-
-  if (pull != GPIO_PULL_FLOAT) {
-    /*
-     * Documented API for using internal pullup/pulldown
-     * resistors requires kernel built with special flags
-     * Basically, it works in Raspberian only
-     * (and causes crash in another Linux)
-     * Do not support internal pulling for now
-     */
-    fprintf(stderr, "Pullup/pulldown aren't supported\n");
-    return -1;
-  }
-
+bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
   if (gpio_export(pin) < 0) {
-    return -1;
+    return false;
   }
-
   return gpio_set_direction(pin, mode);
 }
 
-int miot_gpio_write(int pin, enum gpio_level level) {
-  return gpio_set_value(pin, level);
+bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull) {
+  if (pull == MIOT_GPIO_PULL_NONE) return true;
+  /*
+   * Documented API for using internal pullup/pulldown
+   * resistors requires kernel built with special flags
+   * Basically, it works in Raspberian only
+   * (and causes crash in another Linux)
+   * Do not support internal pulling for now
+   */
+  fprintf(stderr, "Pullup/pulldown aren't supported\n");
+  (void) pin;
+  return false;
 }
 
-enum gpio_level miot_gpio_read(int pin) {
+void miot_gpio_write(int pin, bool level) {
+  gpio_set_value(pin, level);
+}
+
+bool miot_gpio_read(int pin) {
   return gpio_get_value(pin);
 }
 
-static f_gpio_intr_handler_t s_proxy_handler;
-static void *s_proxy_handler_arg;
 
-void miot_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg) {
-  s_proxy_handler = cb;
-  s_proxy_handler_arg = arg;
-}
-
-void miot_reenable_intr(int pin) {
-  struct gpio_event *ev = get_gpio_event(pin);
-  ev->enabled = 1;
-}
-
-int miot_gpio_intr_set(int pin, enum gpio_int_mode type) {
-  if (type == GPIO_INTR_OFF) {
-    gpio_remove_handler(pin);
-    return 0;
-  }
-
-  if (gpio_set_edge(pin, type) < 0) {
-    return -1;
-  }
-
-  return gpio_set_handler(pin, s_proxy_handler, s_proxy_handler_arg);
+enum miot_init_result miot_gpio_dev_init(void) {
+  return MIOT_INIT_OK;
 }
 
 #endif /* MIOT_ENABLE_JS && MIOT_ENABLE_GPIO_API */

@@ -44,7 +44,7 @@ static uint8_t from_hex(const char *s) {
   return (HEXTOI(a) << 4) | HEXTOI(b);
 }
 
-void gpio_int_handler(int pin, enum gpio_level level, void *arg) {
+static void gpio_int_handler(int pin, void *arg) {
   static double last = 0;
   double now = mg_time();
   if (now - last > 0.2) {
@@ -55,8 +55,6 @@ void gpio_int_handler(int pin, enum gpio_level level, void *arg) {
     }
     LOG(LL_INFO, ("Click!"));
   }
-  miot_gpio_intr_set(pin, GPIO_INTR_POSEDGE);
-  (void) level;
   (void) arg;
 }
 
@@ -80,13 +78,14 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
     if (json_scanf(s->p, s->len, "{gpio: {pin: %d, state: %d}}", &pin,
                    &state) == 2) {
       /* Set GPIO pin to a given state */
-      miot_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-      miot_gpio_write(pin, state > 0 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
+      miot_gpio_set_mode(pin, MIOT_GPIO_MODE_OUTPUT);
+      miot_gpio_write(pin, (state > 0 ? 1 : 0));
       pub(c, "{type: %Q, pin: %d, state: %d}", "gpio", pin, state);
     } else if (json_scanf(s->p, s->len, "{button: {pin: %d}}", &pin) == 1) {
       /* Report button press on GPIO pin to a publish topic */
-      miot_gpio_intr_init(gpio_int_handler, NULL);
-      miot_gpio_intr_set(pin, GPIO_INTR_POSEDGE);
+      miot_gpio_set_button_handler(pin, MIOT_GPIO_PULL_UP,
+                                   MIOT_GPIO_INT_EDGE_POS, 50, gpio_int_handler,
+                                   NULL);
       pub(c, "{type: %Q, pin: %d}", "button", pin);
     } else if (json_scanf(s->p, s->len, "{i2c_read: {addr: %d, len: %d}}",
                           &addr, &len) == 2) {

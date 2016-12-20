@@ -14,7 +14,7 @@
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-/* TODO(mkm): either move this back to non common, or move deps to common */
+#include "fw/src/miot_gpio.h"
 #include "fw/platforms/esp8266/user/esp_gpio.h"
 #include "fw/platforms/esp8266/user/esp_periph.h"
 
@@ -175,7 +175,7 @@ int miot_pwm_set(int pin, int period, int duty) {
     return 1;
   }
 
-  miot_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+  miot_gpio_set_mode(pin, MIOT_GPIO_MODE_OUTPUT);
 
   ETS_FRC1_INTR_DISABLE();
   p->period = period;

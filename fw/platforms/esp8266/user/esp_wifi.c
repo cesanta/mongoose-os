@@ -365,8 +365,9 @@ bool miot_wifi_set_config(const struct sys_config_wifi *cfg) {
   int trigger_ap = 0;
 
   if (gpio >= 0) {
-    miot_gpio_set_mode(gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP);
-    trigger_ap = (miot_gpio_read(gpio) == GPIO_LEVEL_LOW);
+    miot_gpio_set_mode(gpio, MIOT_GPIO_MODE_INPUT);
+    miot_gpio_set_pull(gpio, MIOT_GPIO_PULL_UP);
+    trigger_ap = (miot_gpio_read(gpio) == 0);
   }
 
   if (trigger_ap || (cfg->ap.enable && !cfg->sta.enable)) {

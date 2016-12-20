@@ -14,12 +14,12 @@
 
 #include <ets_sys.h>
 
+#include "fw/src/miot_gpio.h"
 #include "fw/src/miot_i2c.h"
 #include "fw/src/miot_sys_config.h"
 
 #include "common/cs_dbg.h"
 
-#include "fw/platforms/esp8266/user/esp_gpio.h"
 #include "fw/platforms/esp8266/user/esp_periph.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
@@ -213,17 +213,15 @@ struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {
   c->scl_gpio = cfg->scl_gpio;
   c->started = false;
 
-  ENTER_CRITICAL(ETS_GPIO_INUM);
   esp_i2c_set_sda_scl(c, I2C_INPUT, I2C_INPUT);
-  if (miot_gpio_set_mode(c->sda_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) < 0) {
-    EXIT_CRITICAL(ETS_GPIO_INUM);
+  if (!(miot_gpio_set_mode(c->sda_gpio, MIOT_GPIO_MODE_INPUT) &&
+        miot_gpio_set_pull(c->sda_gpio, MIOT_GPIO_PULL_UP)) < 0) {
     goto out_err;
   }
-  if (miot_gpio_set_mode(c->scl_gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP) < 0) {
-    EXIT_CRITICAL(ETS_GPIO_INUM);
+  if (!(miot_gpio_set_mode(c->scl_gpio, MIOT_GPIO_MODE_INPUT) &&
+        miot_gpio_set_pull(c->scl_gpio, MIOT_GPIO_PULL_UP)) < 0) {
     goto out_err;
   }
-  EXIT_CRITICAL(ETS_GPIO_INUM);
   esp_i2c_half_delay(c);
 
   LOG(LL_INFO,

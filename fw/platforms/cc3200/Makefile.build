@@ -104,7 +104,8 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 
 V7_HOST_FEATURES ?= $(V7_FEATURES)
 V7_CC3200_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
-MIOT_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64 -DMIOT_ENABLE_FILE_UPLOAD
+MIOT_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64 -DMIOT_ENABLE_FILE_UPLOAD \
+                        -DMIOT_NUM_GPIO=32
 
 ifeq "$(V7_NO_COMPILER)" "1"
   ifneq "$(V7_FREEZE)" "1"
@@ -161,7 +162,8 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
 .PHONY: all clean flash
 
-MIOT_SRCS = miot_init.c \
+MIOT_SRCS = miot_gpio.c \
+            miot_init.c \
             miot_mongoose.c \
             miot_timers_mongoose.c \
             miot_v7_ext.c \

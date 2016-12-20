@@ -20,8 +20,8 @@ static bool s_heater = false;
 
 static void set_heater(bool on) {
   CONSOLE_LOG(LL_INFO, ("Heater %s", (on ? "on" : "off")));
-  miot_gpio_write(LED_GPIO, (on ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW));
-  miot_gpio_write(RELAY_GPIO, (on ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW));
+  miot_gpio_write(LED_GPIO, on);
+  miot_gpio_write(RELAY_GPIO, on);
   s_heater = on;
 }
 
@@ -106,10 +106,10 @@ static void sensor_timer_cb(void *arg) {
 }
 
 enum miot_app_init_result miot_app_init(void) {
-  miot_gpio_set_mode(LED_GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-  miot_gpio_set_mode(RELAY_GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-  miot_gpio_write(LED_GPIO, GPIO_LEVEL_LOW);
-  miot_gpio_write(RELAY_GPIO, GPIO_LEVEL_LOW);
+  miot_gpio_set_mode(LED_GPIO, MIOT_GPIO_MODE_OUTPUT);
+  miot_gpio_set_mode(RELAY_GPIO, MIOT_GPIO_MODE_OUTPUT);
+  miot_gpio_write(LED_GPIO, 0);
+  miot_gpio_write(RELAY_GPIO, 0);
   miot_register_http_endpoint("/heater/", handle_heater_action);
   miot_register_http_endpoint("/heater", handle_heater);
   miot_register_http_endpoint("/debug", handle_debug);

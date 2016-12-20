@@ -12,30 +12,17 @@
 
 #if MIOT_ENABLE_JS && MIOT_ENABLE_GPIO_API
 
-static int s_gpio_intr_installed = 0;
+extern struct v7 *v7;
+
+#if 0
 static v7_val_t s_isr_cb_proxy_v;
 
-static enum v7_err isr_cb_proxy(struct v7 *v7, v7_val_t *res) {
-  v7_val_t cb = v7_arg(v7, 0);
-  v7_val_t args = v7_arg(v7, 1);
+// XXX  - broken
 
-  v7_own(v7, &cb);
-  v7_own(v7, &args);
-
-  enum v7_err ret = v7_apply(v7, cb, v7_get_global(v7), args, res);
-
-  miot_reenable_intr(v7_get_double(v7, v7_array_get(v7, args, 0)));
-
-  v7_disown(v7, &args);
-  v7_disown(v7, &cb);
-
-  return ret;
-}
-
-static void gpio_intr_handler_proxy(int pin, enum gpio_level level, void *arg) {
-  struct v7 *v7 = (struct v7 *) arg;
+static void gpio_intr_handler_proxy(void *arg) {
   char prop_name[15];
   int len;
+  int pin = (intptr_t) arg;
 
   len = snprintf(prop_name, sizeof(prop_name), "_ih_%d", (int) pin);
 
@@ -48,9 +35,9 @@ static void gpio_intr_handler_proxy(int pin, enum gpio_level level, void *arg) {
   /* Forwarding call to common cbs queue */
   v7_val_t args = v7_mk_array(v7);
   v7_array_push(v7, args, v7_mk_number(v7, pin));
-  v7_array_push(v7, args, v7_mk_number(v7, level));
   miot_invoke_js_cb2(v7, s_isr_cb_proxy_v, cb, args);
 }
+#endif
 
 MG_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
   enum v7_err rcode = V7_OK;
@@ -94,7 +81,9 @@ MG_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
     v7_set(v7, v7_get_global(v7), prop_name, len, cb);
   }
 
-  if (type != 0 && !s_gpio_intr_installed) {
+#if 0
+  // XXX
+  if (type != 0) {
     miot_gpio_intr_init(gpio_intr_handler_proxy, v7);
     s_isr_cb_proxy_v = v7_mk_cfunction(isr_cb_proxy);
     v7_own(v7, &s_isr_cb_proxy_v);
@@ -102,6 +91,7 @@ MG_PRIVATE enum v7_err GPIO_setISR(struct v7 *v7, v7_val_t *res) {
   }
   *res = v7_mk_boolean(v7,
                        miot_gpio_intr_set(pin, (enum gpio_int_mode) type) == 0);
+#endif
   goto clean;
 
 clean:
@@ -116,12 +106,12 @@ MG_PRIVATE enum v7_err GPIO_setMode(struct v7 *v7, v7_val_t *res) {
   int mode = v7_get_double(v7, modev);
 
   if (v7_is_number(pinv) && v7_is_number(modev) &&
-      (mode == GPIO_MODE_OUTPUT || v7_is_number(pullv))) {
-    int pull = GPIO_PULL_FLOAT;
-    if (mode != GPIO_MODE_OUTPUT) pull = v7_get_double(v7, pullv);
-    *res =
-        v7_mk_boolean(v7, miot_gpio_set_mode(pin, (enum gpio_mode) mode,
-                                             (enum gpio_pull_type) pull) == 0);
+      (mode == MIOT_GPIO_MODE_OUTPUT || v7_is_number(pullv))) {
+    int pull = MIOT_GPIO_PULL_NONE;
+    if (mode != MIOT_GPIO_MODE_OUTPUT) pull = v7_get_double(v7, pullv);
+    *res = v7_mk_boolean(
+        v7, (miot_gpio_set_mode(pin, (enum miot_gpio_mode) mode) == 0 &&
+             miot_gpio_set_pull(pin, (enum miot_gpio_pull_type) pull)) == 0);
   } else {
     return v7_throwf(v7, "Error", "Invalid arguments");
   }
@@ -146,8 +136,9 @@ MG_PRIVATE enum v7_err GPIO_write(struct v7 *v7, v7_val_t *res) {
      */
     val = !!v7_is_truthy(v7, valv);
 
-    *res = v7_mk_boolean(
-        v7, miot_gpio_write(pin, val ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW) == 0);
+    miot_gpio_write(pin, val);
+
+    *res = v7_mk_boolean(v7, true);
   }
 
   return V7_OK;
@@ -176,27 +167,18 @@ void miot_gpio_api_setup(struct v7 *v7) {
   v7_set_method(v7, gpio, "write", GPIO_write);
   v7_set_method(v7, gpio, "setISR", GPIO_setISR);
 
-  v7_set(v7, gpio, "INOUT", ~0, v7_mk_number(v7, GPIO_MODE_INOUT));
-  v7_set(v7, gpio, "IN", ~0, v7_mk_number(v7, GPIO_MODE_INPUT));
-  v7_set(v7, gpio, "OUT", ~0, v7_mk_number(v7, GPIO_MODE_OUTPUT));
+  v7_set(v7, gpio, "IN", ~0, v7_mk_number(v7, MIOT_GPIO_MODE_INPUT));
+  v7_set(v7, gpio, "OUT", ~0, v7_mk_number(v7, MIOT_GPIO_MODE_OUTPUT));
 
-  v7_set(v7, gpio, "FLOAT", ~0, v7_mk_number(v7, GPIO_PULL_FLOAT));
-  v7_set(v7, gpio, "PULLUP", ~0, v7_mk_number(v7, GPIO_PULL_PULLUP));
-  v7_set(v7, gpio, "PULLDOWN", ~0, v7_mk_number(v7, GPIO_PULL_PULLDOWN));
+  v7_set(v7, gpio, "NONE", ~0, v7_mk_number(v7, MIOT_GPIO_PULL_NONE));
+  v7_set(v7, gpio, "PULLUP", ~0, v7_mk_number(v7, MIOT_GPIO_PULL_UP));
+  v7_set(v7, gpio, "PULLDOWN", ~0, v7_mk_number(v7, MIOT_GPIO_PULL_DOWN));
 
-  v7_set(v7, gpio, "OFF", ~0, v7_mk_number(v7, GPIO_INTR_OFF));
-  v7_set(v7, gpio, "POSEDGE", ~0, v7_mk_number(v7, GPIO_INTR_POSEDGE));
-  v7_set(v7, gpio, "NEGEDGE", ~0, v7_mk_number(v7, GPIO_INTR_NEGEDGE));
-  v7_set(v7, gpio, "ANYEDGE", ~0, v7_mk_number(v7, GPIO_INTR_ANYEDGE));
-  v7_set(v7, gpio, "LOLEVEL", ~0, v7_mk_number(v7, GPIO_INTR_LOLEVEL));
-  v7_set(v7, gpio, "HILEVEL", ~0, v7_mk_number(v7, GPIO_INTR_HILEVEL));
-  /*
-   * TODO(mkm): figure out what to do with this "esp specific" mode.
-   * It's not really ESP specific, but the soft debouncer is currently
-   * implemented in esp8266 platform code.
-   */
-  v7_set(v7, gpio, "CLICK", ~0,
-         v7_mk_number(v7, 6 /* GPIO_INTR_TYPE_ONCLICK */));
+  v7_set(v7, gpio, "POSEDGE", ~0, v7_mk_number(v7, MIOT_GPIO_INT_EDGE_POS));
+  v7_set(v7, gpio, "NEGEDGE", ~0, v7_mk_number(v7, MIOT_GPIO_INT_EDGE_NEG));
+  v7_set(v7, gpio, "ANYEDGE", ~0, v7_mk_number(v7, MIOT_GPIO_INT_EDGE_ANY));
+  v7_set(v7, gpio, "LOLEVEL", ~0, v7_mk_number(v7, MIOT_GPIO_INT_LEVEL_LO));
+  v7_set(v7, gpio, "HILEVEL", ~0, v7_mk_number(v7, MIOT_GPIO_INT_LEVEL_HI));
 
   if (v7_exec_file(v7, "gpio.js", NULL) != V7_OK) {
     /* TODO(mkm): make setup functions return an error code */

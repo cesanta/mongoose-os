@@ -99,6 +99,7 @@ MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
 
 MIOT_SRCS = cs_rbuf.c \
             miot_config.c \
+            miot_gpio.c \
             miot_init.c \
             miot_timers_mongoose.c \
             miot_wifi.c \
@@ -221,6 +222,7 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
 MIOT_CFLAGS = -DMIOT_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
               -DESP_ENABLE_MG_LWIP_IF \
               -DMIOT_MAX_NUM_UARTS=2 \
+              -DMIOT_NUM_GPIO=16 \
               -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 

@@ -36,12 +36,9 @@
 #define MIOT_POLL_INTERVAL_MS 1000
 #endif
 
-#define SIG_MG_POLL 1
-#define SIG_INVOKE_CB 2
-struct invoke_cb_args {
-  miot_cb_t cb;
-  void *arg;
-};
+#define SIG_MASK 0x80000000
+#define SIG_MG_POLL 0
+#define SIG_INVOKE_CB 0x80000000
 
 static os_timer_t s_poll_tmr;
 static os_event_t s_mg_task_queue[MIOT_TASK_QUEUE_LEN];
@@ -61,20 +58,31 @@ void miot_poll_timer_cb(void *arg) {
   mg_lwip_mgr_schedule_poll(mgr);
 }
 
-extern struct v7 *v7;
+IRAM bool miot_invoke_cb(miot_cb_t cb, void *arg) {
+  /*
+   * Note: since this can be invoked from ISR, we must not allocate memory here.
+   * We use signal number and set the upper bit, which is always zero anyway
+   * (there are no code areas above 0x80000000).
+   */
+  uint32_t sig = (uint32_t) cb;
+  sig |= SIG_INVOKE_CB;
+  if (!system_os_post(MIOT_TASK_PRIORITY, sig, (uint32_t) arg)) {
+    return false;
+  }
+  return true;
+}
 
 static void miot_lwip_task(os_event_t *e) {
   struct mg_mgr *mgr = NULL;
   poll_scheduled = 0;
-  switch (e->sig) {
+  switch (e->sig & SIG_MASK) {
     case SIG_MG_POLL: {
       mgr = (struct mg_mgr *) e->par;
       break;
     }
     case SIG_INVOKE_CB: {
-      struct invoke_cb_args *cba = (struct invoke_cb_args *) e->par;
-      cba->cb(cba->arg);
-      free(cba);
+      miot_cb_t cb = (miot_cb_t)(e->sig & ~SIG_MASK);
+      cb((void *) e->par);
       break;
     }
   }
@@ -100,19 +108,6 @@ static void miot_lwip_task(os_event_t *e) {
     os_timer_disarm(&s_poll_tmr);
     os_timer_arm(&s_poll_tmr, timeout_ms, 0 /* no repeat */);
   }
-}
-
-bool miot_invoke_cb(miot_cb_t cb, void *arg) {
-  struct invoke_cb_args *cba =
-      (struct invoke_cb_args *) calloc(1, sizeof(*cba));
-  if (cba == NULL) return false;
-  cba->cb = cb;
-  cba->arg = arg;
-  if (!system_os_post(MIOT_TASK_PRIORITY, SIG_INVOKE_CB, (uint32_t) cba)) {
-    free(cba);
-    return false;
-  }
-  return true;
 }
 
 void miot_suspend(void) {

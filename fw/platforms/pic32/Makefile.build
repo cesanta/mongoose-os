@@ -82,7 +82,7 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 
 V7_HOST_FEATURES ?= $(V7_FEATURES)
 V7_PIC32_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
-MIOT_PIC32_FEATURES ?= ### -DV7_STACK_SIZE=8192-64 -DMIOT_ENABLE_FILE_UPLOAD
+MIOT_PIC32_FEATURES ?= -DMIOT_NUM_GPIO=16
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS \
@@ -127,7 +127,7 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
 .PHONY: all clean flash
 
-MIOT_SRCS = miot_init.c \
+MIOT_SRCS = miot_gpio.c miot_init.c \
             miot_mongoose.c \
             miot_timers_mongoose.c \
             miot_config.c miot_sys_config.c \

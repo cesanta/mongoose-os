@@ -3,8 +3,8 @@ title: "miot_gpio_write()"
 decl_name: "miot_gpio_write"
 symbol_kind: "func"
 signature: |
-  int miot_gpio_write(int pin, enum gpio_level level);
+  void miot_gpio_write(int pin, bool level);
 ---
 
-Set GPIO voltage level 
+Set pin's output level. 
 

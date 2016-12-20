@@ -22,8 +22,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
   LOG(LL_INFO, ("[%.*s]", (int) wm->size, wm->data));
   if (json_scanf((char *) wm->data, wm->size, "{pin: %d, state: %d}", &pin,
                  &state) == 2) {
-    miot_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-    miot_gpio_write(pin, state > 0 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
+    miot_gpio_set_mode(pin, MIOT_GPIO_MODE_OUTPUT);
+    miot_gpio_write(pin, state > 0 ? 1 : 0);
   } else {
     status = 1; /* Error */
   }

@@ -14,9 +14,6 @@
 #define ENTER_CRITICAL(type) ETS_INTR_DISABLE(type)
 #define EXIT_CRITICAL(type) ETS_INTR_ENABLE(type)
 
-int miot_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull);
-int miot_gpio_write(int pin, enum gpio_level level);
-
 /* Returns true if next reboot will boot into the boot loader. */
 bool esp_strapping_to_bootloader();
 

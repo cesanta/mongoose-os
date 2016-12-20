@@ -32,6 +32,7 @@ enum miot_init_result {
   MIOT_INIT_ATCA_FAILED = -20,
   MIOT_INIT_APPLY_UPDATE_FAILED = -21,
   MIOT_INIT_CONSOLE_INIT_FAILED = -22,
+  MIOT_INIT_GPIO_INIT_FAILED = -23,
 };
 
 enum miot_init_result miot_init(void);

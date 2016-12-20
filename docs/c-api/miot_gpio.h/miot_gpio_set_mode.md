@@ -3,8 +3,8 @@ title: "miot_gpio_set_mode()"
 decl_name: "miot_gpio_set_mode"
 symbol_kind: "func"
 signature: |
-  int miot_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull);
+  bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode);
 ---
 
-Set GPIO mode 
+Set mode - input or output 
 

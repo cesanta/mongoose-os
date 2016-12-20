@@ -8,26 +8,34 @@
 
 #if CS_PLATFORM == CS_P_ESP8266
 /* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
-#define GPIO 2
+#define LED_GPIO 2
+#define BUTTON_GPIO 0 /* Usually a "Flash" button. */
+#define BUTTON_PULL MIOT_GPIO_PULL_UP
+#define BUTTON_EDGE MIOT_GPIO_INT_EDGE_POS
 #elif CS_PLATFORM == CS_P_CC3200
 /* On CC3200 LAUNCHXL pin 64 is the red LED. */
-#define GPIO 64 /* The red LED on LAUNCHXL */
+#define LED_GPIO 64                     /* The red LED on LAUNCHXL */
+#define BUTTON_GPIO 15                  /* SW2 on LAUNCHXL */
+#define BUTTON_PULL MIOT_GPIO_PULL_NONE /* External pull-downs */
+#define BUTTON_EDGE MIOT_GPIO_INT_EDGE_NEG
 #elif CS_PLATFORM == CS_P_MBED
-#define GPIO 0x6D
+#define LED_GPIO 0x6D
+#define BUTTON_GPIO 0
+#define BUTTON_PULL MIOT_GPIO_PULL_NONE
+#define BUTTON_EDGE MIOT_GPIO_INT_EDGE_POS
 #else
 #error Unknown platform
 #endif
 
 static void blink_timer_cb(void *arg) {
-  static enum gpio_level l = GPIO_LEVEL_LOW;
-  if (l == GPIO_LEVEL_LOW) {
-    LOG(LL_INFO, ("Tick"));
-    l = GPIO_LEVEL_HIGH;
-  } else {
-    LOG(LL_INFO, ("Tock"));
-    l = GPIO_LEVEL_LOW;
-  }
-  miot_gpio_write(GPIO, l);
+  bool current_level = miot_gpio_toggle(LED_GPIO);
+  LOG(LL_INFO, ("%s", (current_level ? "Tick" : "Tock")));
+  (void) arg;
+}
+
+static void button_cb(int pin, void *arg) {
+  LOG(LL_INFO, ("Click!"));
+  (void) pin;
   (void) arg;
 }
 
@@ -37,8 +45,13 @@ enum miot_app_init_result miot_app_init(void) {
   }
 
   { /* Set up the blinky timer. */
-    miot_gpio_set_mode(GPIO, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
+    miot_gpio_set_mode(LED_GPIO, MIOT_GPIO_MODE_OUTPUT);
     miot_set_timer(1000 /* ms */, true /* repeat */, blink_timer_cb, NULL);
+  }
+
+  { /* Set up a button handler */
+    miot_gpio_set_button_handler(BUTTON_GPIO, BUTTON_PULL, BUTTON_EDGE,
+                                 50 /* debounce_ms */, button_cb, NULL);
   }
 
   { /* Read a file. */

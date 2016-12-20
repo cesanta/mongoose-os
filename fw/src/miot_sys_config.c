@@ -413,8 +413,9 @@ enum miot_init_result miot_sys_config_init(void) {
    */
   if (s_cfg.debug.factory_reset_gpio >= 0) {
     int gpio = s_cfg.debug.factory_reset_gpio;
-    miot_gpio_set_mode(gpio, GPIO_MODE_INPUT, GPIO_PULL_PULLUP);
-    if (miot_gpio_read(gpio) == GPIO_LEVEL_LOW) {
+    miot_gpio_set_mode(gpio, MIOT_GPIO_MODE_INPUT);
+    miot_gpio_set_pull(gpio, MIOT_GPIO_PULL_UP);
+    if (miot_gpio_read(gpio) == 0) {
       LOG(LL_WARN, ("Factory reset requested via GPIO%d", gpio));
       if (remove(CONF_FILE) == 0) {
         LOG(LL_WARN, ("Removed %s", CONF_FILE));

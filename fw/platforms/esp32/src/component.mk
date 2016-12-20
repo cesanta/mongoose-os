@@ -32,10 +32,10 @@ SYS_CONF_SCHEMA =
 
 COMPONENT_EXTRA_INCLUDES = $(MIOT_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) $(GEN_DIR)
 
-MIOT_SRCS = miot_config.c miot_init.c miot_mongoose.c \
+MIOT_SRCS = test.c miot_config.c miot_gpio.c miot_init.c miot_mongoose.c \
             miot_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             miot_timers_mongoose.c miot_uart.c miot_utils.c \
-            esp32_console.c esp32_fs.c esp32_hal.c esp32_main.c esp32_uart.c
+            esp32_console.c esp32_fs.c esp32_gpio.c esp32_hal.c esp32_main.c esp32_uart.c
 
 include $(MIOT_PATH)/fw/common.mk
 include $(MIOT_PATH)/fw/src/features.mk
@@ -65,7 +65,8 @@ VPATH += $(GEN_DIR)
 
 COMPONENT_OBJS = $(addsuffix .o,$(basename $(MIOT_SRCS)))
 CFLAGS += $(MIOT_FEATURES) -DMIOT_MAX_NUM_UARTS=3 \
-          -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART)
+          -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) \
+          -DMIOT_NUM_GPIO=40
 
 libsrc.a: $(GEN_DIR)/conf_defaults.json
 

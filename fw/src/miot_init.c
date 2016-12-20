@@ -2,14 +2,15 @@
 
 #include "fw/src/miot_app.h"
 #include "fw/src/miot_atca.h"
-#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_dns_sd.h"
-#include "fw/src/miot_i2c.h"
+#include "fw/src/miot_gpio.h"
 #include "fw/src/miot_hal.h"
+#include "fw/src/miot_i2c.h"
 #include "fw/src/miot_mdns.h"
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_mqtt.h"
+#include "fw/src/miot_rpc.h"
 #include "fw/src/miot_service_config.h"
 #include "fw/src/miot_service_filesystem.h"
 #include "fw/src/miot_service_vars.h"
@@ -19,7 +20,12 @@
 #include "fw/src/miot_wifi.h"
 
 enum miot_init_result miot_init(void) {
-  enum miot_init_result r = miot_sys_config_init();
+  enum miot_init_result r;
+
+  r = miot_gpio_init();
+  if (r != MIOT_INIT_OK) return r;
+
+  r = miot_sys_config_init();
   if (r != MIOT_INIT_OK) return r;
 
 #if MIOT_ENABLE_WIFI

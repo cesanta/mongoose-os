@@ -10,62 +10,85 @@
 #ifndef CS_FW_SRC_MIOT_GPIO_H_
 #define CS_FW_SRC_MIOT_GPIO_H_
 
+#include <stdbool.h>
+
+#include "fw/src/miot_init.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* GPIO mode */
-enum gpio_mode {
-  GPIO_MODE_INOUT = 0,
-  GPIO_MODE_INPUT = 1,
-  GPIO_MODE_OUTPUT = 2
+enum miot_gpio_mode { MIOT_GPIO_MODE_INPUT = 0, MIOT_GPIO_MODE_OUTPUT = 1 };
+
+enum miot_gpio_pull_type {
+  MIOT_GPIO_PULL_NONE = 0,
+  MIOT_GPIO_PULL_UP = 1,
+  MIOT_GPIO_PULL_DOWN = 2
 };
 
-/* GPIO pull type */
-enum gpio_pull_type {
-  GPIO_PULL_FLOAT = 0,
-  GPIO_PULL_PULLUP = 1,
-  GPIO_PULL_PULLDOWN = 2
+enum miot_gpio_int_mode {
+  MIOT_GPIO_INT_NONE = 0,
+  MIOT_GPIO_INT_EDGE_POS = 1,
+  MIOT_GPIO_INT_EDGE_NEG = 2,
+  MIOT_GPIO_INT_EDGE_ANY = 3,
+  MIOT_GPIO_INT_LEVEL_HI = 4,
+  MIOT_GPIO_INT_LEVEL_LO = 5
 };
 
-/* GPIO interrupt mode */
-enum gpio_int_mode {
-  GPIO_INTR_OFF = 0,
-  GPIO_INTR_POSEDGE = 1,
-  GPIO_INTR_NEGEDGE = 2,
-  GPIO_INTR_ANYEDGE = 3,
-  GPIO_INTR_LOLEVEL = 4,
-  GPIO_INTR_HILEVEL = 5
-};
+typedef void (*miot_gpio_int_handler_f)(int pin, void *param);
 
-/* GPIO voltage level */
-enum gpio_level {
-  GPIO_LEVEL_ERR = -1,
-  GPIO_LEVEL_LOW = 0,
-  GPIO_LEVEL_HIGH = 1
-};
+/* Set mode - input or output */
+bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode);
 
-/* GPIO interrupt handler */
-typedef void (*f_gpio_intr_handler_t)(int pin, enum gpio_level level,
-                                      void *param);
+/* Set pull-up or pull-down type. */
+bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull);
 
-/* Set GPIO interrup mode */
-int miot_gpio_intr_set(int pin, enum gpio_int_mode type);
+/* Read pin input level. */
+bool miot_gpio_read(int pin);
 
-/* Set GPIO mode */
-int miot_gpio_set_mode(int pin, enum gpio_mode mode, enum gpio_pull_type pull);
+/* Set pin's output level. */
+void miot_gpio_write(int pin, bool level);
 
-/* Set GPIO voltage level */
-int miot_gpio_write(int pin, enum gpio_level level);
+/* Flip output pin value. Returns value that was written. */
+bool miot_gpio_toggle(int pin);
 
-/* Get GPIO voltage level */
-enum gpio_level miot_gpio_read(int pin);
+/*
+ * Install a GPIO interrupt handler.
+ *
+ * Calling with cb = NULL will remove a previously installed handler.
+ * Note that this will not enable the interrupt, this must be done explicitly
+ * with miot_gpio_enable_int.
+ */
+bool miot_gpio_set_int_handler(int pin, enum miot_gpio_int_mode mode,
+                               miot_gpio_int_handler_f cb, void *arg);
 
-/* Set GPIO interrupt handler */
-void miot_gpio_intr_init(f_gpio_intr_handler_t cb, void *arg);
+/* Enable interrupt on the specified pin. */
+bool miot_gpio_enable_int(int pin);
 
-/* Re-enable GPIO interrupts */
-void miot_reenable_intr(int pin);
+/* Disables interrupt (without removing the handler). */
+bool miot_gpio_disable_int(int pin);
+
+/*
+ * Handle a button on the specified pin.
+ * Configures the pin for input with specified pull-up and performs debouncing:
+ * upon first triggering user's callback is invoked immediately but further
+ * interrupts are inhibited for the following debounce_ms millseconds.
+ * Typically 50 ms of debouncing time is sufficient.
+ * int_mode is one of the MIOT_GPIO_INT_EDGE_* values and will specify whether
+ * the handler triggers when button is pressed, released or both.
+ * Which is which depends on how the button is wired: if the normal state is
+ * pull-up (typical), then MIOT_GPIO_INT_EDGE_NEG is press and _POS is release.
+ *
+ * Calling with cb = NULL will remove a previously installed handler.
+ *
+ * Note: implicitly enables the interrupt.
+ */
+bool miot_gpio_set_button_handler(int pin, enum miot_gpio_pull_type pull_type,
+                                  enum miot_gpio_int_mode int_mode,
+                                  int debounce_ms, miot_gpio_int_handler_f cb,
+                                  void *arg);
+
+enum miot_init_result miot_gpio_init();
 
 #ifdef __cplusplus
 }
