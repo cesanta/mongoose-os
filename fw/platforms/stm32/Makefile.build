@@ -6,6 +6,7 @@ APP ?= mongoose-iot
 APP_MODULES ?=
 APP_PLATFORM = stm32
 APP_EXTRA_SRCS ?=
+APP_FS_PATH ?=
 
 MIOT_ENABLE_ATCA_SERVICE = 0
 MIOT_ENABLE_JS = 0
@@ -20,6 +21,9 @@ MIOT_ENABLE_CONSOLE = 0
 
 CREATE_SPIFFS_FS ?= 1
 
+BUILD_DIR ?= $(CURDIR)/.build
+FW_DIR ?= $(CURDIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
 MBED_PATH ?= /opt/mbed-lib
 MIOT_PATH ?= ../../..
 COMMON_PATH ?= $(MIOT_PATH)/common
