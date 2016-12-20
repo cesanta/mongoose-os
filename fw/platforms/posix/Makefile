@@ -62,25 +62,7 @@ MIOT_SRCS = $(notdir $(wildcard *.c)) miot_init.c  \
 
 ifeq "$(MIOT_ENABLE_JS)" "1"
 MIOT_SRCS += v7.c \
-            miot_adc_js.c \
-            miot_rpc_js.c \
-            miot_config_js.c \
-            miot_console_js.c \
-            miot_debug_js.c \
-            miot_gpio_js.c \
-            miot_hal_js.c \
-            miot_http_js.c \
-            miot_i2c_js.c \
-            miot_init_js.c \
-            miot_mqtt_js.c \
-            miot_pwm_js.c \
-            miot_spi_js.c \
-            miot_sys_config_js.c \
-            miot_tcp_udp_js.c \
-            miot_timers_js.c \
-            miot_v7_ext.c \
-            miot_uart_js.c \
-            miot_ws_client_js.c
+             miot_v7_ext.c
 
 $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
 

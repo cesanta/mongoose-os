@@ -23,6 +23,7 @@
 #include "fw/src/miot_rpc.h"
 #include "fw/src/miot_uart.h"
 #include "fw/src/miot_sys_config.h"
+#include "fw/src/miot_v7_ext.h"
 
 #define SIGINT_CHAR 0x03
 #define EOF_CHAR 0x04

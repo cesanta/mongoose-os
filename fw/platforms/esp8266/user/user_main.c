@@ -36,7 +36,6 @@
 
 #if MIOT_ENABLE_JS
 #include "v7/v7.h"
-#include "fw/src/miot_init_js.h"
 #endif
 
 extern const char *build_version, *build_id;
@@ -109,11 +108,6 @@ enum miot_init_result esp_miot_init(rboot_config *bcfg) {
 #if MIOT_ENABLE_JS
   init_v7(&bcfg);
 
-  ir = miot_init_js_all(v7);
-  if (ir != MIOT_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
-    return ir;
-  }
   /* TODO(rojer): Get rid of I2C.js */
   if (v7_exec_file(v7, "I2C.js", NULL) != V7_OK) {
     return MIOT_INIT_APP_JS_INIT_FAILED;

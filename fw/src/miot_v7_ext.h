@@ -10,7 +10,7 @@
 
 #if MIOT_ENABLE_JS
 
-#include "fw/src/miot_hal_js.h"
+#include "v7/v7.h"
 
 #ifdef __cplusplus
 extern "C" {

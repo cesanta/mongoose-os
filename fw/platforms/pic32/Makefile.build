@@ -140,19 +140,7 @@ MIOT_SRCS = miot_gpio.c miot_init.c \
 
 # TODO(dfrank): uncomment
 #ifeq "$(MIOT_ENABLE_JS)" "1"
-#MIOT_SRCS += v7.c \
-#             miot_rpc_js.c \
-#             miot_config_js.c \
-#             miot_console_js.c \
-#             miot_gpio_js.c \
-#             miot_http_js.c \
-#             miot_i2c_js.c \
-#             miot_init_js.c \
-#             miot_prompt.c \
-#             miot_sys_config_js.c \
-#             miot_timers_js.c \
-#             miot_uart_js.c \
-#             miot_v7_ext.c \
+#MIOT_SRCS += v7.c
 #endif
 
 VPATH += $(MIOT_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/mg_rpc

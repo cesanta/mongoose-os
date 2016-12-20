@@ -11,13 +11,9 @@
 
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_prompt.h"
-#include "fw/src/miot_timers_js.h"
 #include "fw/src/miot_v7_ext.h"
 #include "fw/src/miot_init.h"
-#include "fw/src/miot_init_js.h"
-#include "fw/src/miot_http_js.h"
 #include "fw/src/miot_prompt.h"
-#include "fw/src/miot_spi_js.h"
 #include "fw/src/miot_sys_config.h"
 #include "common/cs_dbg.h"
 #include "fw.h"
@@ -71,8 +67,6 @@ static void run_init_script(struct v7 *v7) {
 static void pre_freeze_init(struct v7 *v7) {
   /* Disable GC during JS API initialization. */
   v7_set_gc_enabled(v7, 0);
-
-  miot_api_setup(v7);
 }
 
 static void pre_init(struct v7 *v7) {
@@ -80,7 +74,6 @@ static void pre_init(struct v7 *v7) {
 
   mongoose_init();
   miot_init();
-  miot_init_js(v7);
 
   /* MIOT initialized, enable GC back, and trigger it. */
   v7_set_gc_enabled(v7, 1);

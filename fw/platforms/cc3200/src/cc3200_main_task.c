@@ -15,7 +15,6 @@
 #include "fw/src/miot_app.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_init.h"
-#include "fw/src/miot_init_js.h"
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_prompt.h"
 #include "fw/src/miot_sys_config.h"
@@ -183,12 +182,6 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 
 #if MIOT_ENABLE_JS
   struct v7 *v7 = s_v7 = init_v7(&arg);
-
-  ir = miot_init_js_all(v7);
-  if (ir != MIOT_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "JS", ir));
-    return CC3200_INIT_MG_INIT_JS_FAILED;
-  }
 #endif
 
 #if MIOT_ENABLE_JS
