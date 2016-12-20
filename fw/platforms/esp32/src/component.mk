@@ -8,7 +8,9 @@ MIOT_ENABLE_CONFIG_SERVICE ?= 1
 MIOT_ENABLE_CONSOLE ?= 0
 MIOT_ENABLE_DNS_SD ?= 0
 MIOT_ENABLE_FILESYSTEM_SERVICE ?= 0
-MIOT_ENABLE_I2C ?= 0
+MIOT_ENABLE_I2C ?= 1
+# Use bitbang I2C for now.
+MIOT_ENABLE_I2C_GPIO ?= 1
 MIOT_ENABLE_JS ?= 0
 MIOT_ENABLE_MQTT ?= 0
 MIOT_ENABLE_RPC ?= 1
@@ -40,6 +42,9 @@ MIOT_SRCS = test.c miot_config.c miot_gpio.c miot_init.c miot_mongoose.c \
 include $(MIOT_PATH)/fw/common.mk
 include $(MIOT_PATH)/fw/src/features.mk
 
+ifeq "$(MIOT_ENABLE_I2C)" "1"
+  SYS_CONF_SCHEMA += $(MIOT_ESP_PATH)/src/esp32_i2c_config.yaml
+endif
 ifeq "$(MIOT_ENABLE_WIFI)" "1"
   MIOT_SRCS += esp32_wifi.c
   SYS_CONF_SCHEMA += $(MIOT_ESP_PATH)/src/esp32_wifi_config.yaml

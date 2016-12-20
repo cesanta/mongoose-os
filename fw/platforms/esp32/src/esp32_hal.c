@@ -32,6 +32,18 @@ void device_get_mac_address(uint8_t mac[6]) {
   esp_efuse_read_mac(mac);
 }
 
+/* In components/newlib/time.c. Returns a monotonic microsecond counter. */
+uint64_t get_time_since_boot();
+
+void miot_usleep(int usecs) {
+  int ticks = usecs / configTICK_RATE_HZ;
+  int remainder = usecs % configTICK_RATE_HZ;
+  if (ticks > 0) vTaskDelay(ticks);
+  uint64_t threshold = get_time_since_boot() + remainder;
+  while (get_time_since_boot() < threshold) {
+  }
+}
+
 void miot_wdt_feed(void) {
   esp_task_wdt_feed();
 }

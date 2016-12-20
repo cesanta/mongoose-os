@@ -1,0 +1,4 @@
+[
+  ["i2c.sda_gpio", 22],
+  ["i2c.scl_gpio", 23],
+]

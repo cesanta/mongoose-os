@@ -155,6 +155,8 @@ MIOT_FEATURES ?= -DMIOT_ENABLE_ADC_API \
                 -DMIOT_ENABLE_WIFI_API \
                 -DMIOT_ENABLE_WS_CLIENT_API
 
+MIOT_ENABLE_I2C_GPIO = 1
+
 include $(MIOT_PATH)/fw/src/features.mk
 
 ifeq "$(MIOT_ENABLE_I2C)" "1"

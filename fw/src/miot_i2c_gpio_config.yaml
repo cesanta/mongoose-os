@@ -1,0 +1,5 @@
+[
+  ["i2c.sda_gpio", "i", 0, {title: "GPIO to use for SDA"}],
+  ["i2c.scl_gpio", "i", 0, {title: "GPIO to use for SCL"}],
+  ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}],
+]
