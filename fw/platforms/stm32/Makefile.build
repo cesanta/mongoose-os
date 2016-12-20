@@ -1,6 +1,7 @@
-TARGET=DISCO_F429ZI
+TARGET ?= DISCO_F429ZI
 
 .DEFAULT_GOAL := all
+.PHONE: PLATFORM_FLAGS
 
 APP ?= mongoose-iot
 APP_MODULES ?=
@@ -57,13 +58,14 @@ FS_HEADER=$(GEN_DIR)/fs_data.h
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
+PLATFORM_MAKE_FILE = $(GEN_DIR)/rules.mk
+OBJCOPY ?= '/usr/bin/arm-none-eabi-objcopy'
 
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 
-include $(MIOT_PATH)/fw/platforms/stm32/rules.mk
 include $(MIOT_PATH)/fw/common.mk
 
 MIOT_SRCS = cs_rbuf.c \
@@ -98,7 +100,6 @@ VPATH = $(APP_MODULES) $(COMMON_PATH) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
         $(PLATFORM_SRC_PATH)/mbed_deps \
         $(SPIFFS_PATH) $(COMMON_PATH)/platforms/mbed
 
-IPATH = $(subst .././, $(MBED_PATH)/,$(INCLUDE_PATHS))
 IPATH += -I$(MIOT_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include \
          -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc \
          -I$(SPIFFS_PATH) -I$(MIOT_PATH)/fw/platforms/stm32/ \
@@ -120,6 +121,13 @@ C_CXX_FLAGS += -DMIOT_NUM_GPIO=16
 
 C_FLAGS += ${C_CXX_FLAGS}
 CXX_FLAGS += ${C_CXX_FLAGS}
+LD_SCRIPT ?=
+LD_FLAGS ?=
+LD_SYS_LIBS ?=
+CC ?=
+CPP ?=
+LD ?=
+ELF2BIN ?=
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
@@ -132,11 +140,37 @@ MBED_WEAK_FUNCS = $(addprefix -W , $(MBED_FS_FUNCS))
 
 include $(MIOT_PATH)/common/scripts/fw_meta.mk
 
-all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(BUILD_DIR)/$(STM32LIB) $(BUILD_INFO_C) $(ELF_FILE) $(FW_FILE) $(FW_MANIFEST) $(FW_ZIP)
+all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(BUILD_DIR)/$(STM32LIB) PLATFORM_FLAGS $(BUILD_INFO_C) $(ELF_FILE) $(FW_FILE) $(FW_MANIFEST) $(FW_ZIP)
+
+PLATFORM_FLAGS: $(PLATFORM_MAKE_FILE)
+# mbed uses "blacklist" model, i.e. it is not possible to say
+# `compile this file`, it understands only `compile this directory and all its subdirectories
+# but do not compile that, that and that file
+# so, to use it, we have to create big-big-big .mnedignore file and list almost all files from mongoose-out
+# folder in it
+# it works. But with such big mbedignore compilation is extremely (EXTREMELY) slow
+# Current solution: generate fake makefile for current target and parse it, to get flags, inc dirs, ld script etc
+# Fortunatelly generated makefile has very simple structure
+# Anyway, it is kind of temp solution
+# TODO(alashkin): find something better
+	$(eval IPATH += $(subst .././, $(MBED_PATH)/, $(shell cat $(PLATFORM_MAKE_FILE) | grep ^INCLUDE_PATH | awk '{print $$3}')))
+	$(eval C_FLAGS += $(shell cat $(PLATFORM_MAKE_FILE) | grep ^C_FLAGS | awk '{print $$3}'))
+	$(eval CXX_FLAGS += $(shell cat $(PLATFORM_MAKE_FILE) | grep ^CXX_FLAGS | awk '{print $$3}'))
+	$(eval LD_SCRIPT += $(subst .././, $(MBED_PATH)/, $(shell cat $(PLATFORM_MAKE_FILE) | grep ^LINKER_SCRIPT | awk '{print $$3}')))
+	$(eval $(shell cat $(PLATFORM_MAKE_FILE) | grep ^LD_FLAGS))
+	$(eval LD_SYS_LIBS += $(shell cat $(PLATFORM_MAKE_FILE) | grep ^LD_SYS_LIBS | awk '{print $$3}'))
+	$(eval CC=$(shell cat $(PLATFORM_MAKE_FILE) | grep ^'CC      =' | cut -c 11-))
+	$(eval CPP=$(shell cat $(PLATFORM_MAKE_FILE) | grep ^'CPP     =' | cut -c 11-))
+	$(eval LD=$(shell cat $(PLATFORM_MAKE_FILE) | grep ^'LD      =' | cut -c 11-))
+	$(eval ELF2BIN += $(shell cat $(PLATFORM_MAKE_FILE) | grep ^ELF2BIN | awk '{print $$3}'))
+
+$(PLATFORM_MAKE_FILE) : $(GEN_DIR) $(BUILD_DIR)/$(STM32LIB)
+	$(Q) (cd $(MBED_PATH) && rm -f Makefile && mbed export -i GCC_ARM && \
+        cp Makefile $(PLATFORM_MAKE_FILE))
 
 $(BUILD_DIR)/$(STM32LIB): $(BUILD_DIR)
 	$(vecho) Building mbed lib
-	(cd $(MBED_PATH) && mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library)
+	$(Q) (cd $(MBED_PATH) && mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library)
 # We have FS functions (opendir etc) implementation in mongoose
 # so, just make weak mbed ones
 	$(Q) $(OBJCOPY) $(BUILD_DIR)/$(STM32LIB) $(MBED_WEAK_FUNCS)
@@ -145,15 +179,15 @@ $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
-$(BUILD_DIR)/%.o: %.c $(BUILD_DIR) $(GENFILES_FLAG) $(BUILD_DIR)/$(STM32LIB)
+$(BUILD_DIR)/%.o: %.c $(BUILD_DIR) $(GENFILES_FLAG) PLATFORM_FLAGS
 	$(vecho) CC $(notdir $<)
 	$(Q) $(CC) $(C_FLAGS) $(IPATH) -o $@ $<
 
-$(BUILD_DIR)/%.o: %.cpp $(BUILD_DIR) $(GENFILES_FLAG) $(BUILD_DIR)/$(STM32LIB)
+$(BUILD_DIR)/%.o: %.cpp $(BUILD_DIR) $(GENFILES_FLAG) PLATFORM_FLAGS
 	$(vecho) CPP $(notdir $<)
 	$(Q) $(CPP) $(CXX_FLAGS) $(IPATH) -o $@ $<
 
-$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(BUILD_DIR) $(GEN_DIR) $(GENFILES_FLAG)
+$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(BUILD_DIR) $(GEN_DIR) PLATFORM_FLAGS
 	$(vecho) CC $(notdir $<)
 	$(Q) $(CC) $(C_FLAGS) $(IPATH) -o $@ $<
 
@@ -174,9 +208,9 @@ $(MG_BUILD_INFO_C): $(GEN_DIR)
 $(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE))
 
-$(ELF_FILE): $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(BUILD_DIR)/$(STM32LIB)
+$(ELF_FILE): $(MIOT_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(BUILD_DIR)/$(STM32LIB) $(PLATFORM_MAKE_FILE)
 	$(vecho) "LD $(APP).elf"
-	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lmbed-lib $(LD_SYS_LIBS) -Wl,--end-group -T $(LINKER_SCRIPT) $(IPATH) $(LIBRARY_PATHS) --output $@
+	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MIOT_OBJS) $(APP_OBJS) -lmbed-lib $(LD_SYS_LIBS) -Wl,--end-group -T $(LD_SCRIPT) $(IPATH) $(LIBRARY_PATHS) --output $@
 
 $(FW_FILE): $(ELF_FILE) $(FW_STAGING_DIR)
 	$(vecho) "ELF2BIN $(notdir $(FW_FILE))"
