@@ -25,6 +25,7 @@ struct put_data {
   int len;
 };
 
+#if MG_ENABLE_DIRECTORY_LISTING
 /* Handler for /v1/Filesystem.List */
 static void miot_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                  struct mg_rpc_frame_info *fi,
@@ -72,6 +73,7 @@ static void miot_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   (void) cb_arg;
   (void) args;
 }
+#endif /* MG_ENABLE_DIRECTORY_LISTING */
 
 static void miot_fs_get_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                 struct mg_rpc_frame_info *fi,
@@ -243,8 +245,10 @@ clean:
 
 enum miot_init_result miot_service_filesystem_init(void) {
   struct mg_rpc *c = miot_rpc_get_global();
+#if MG_ENABLE_DIRECTORY_LISTING
   mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_LIST_CMD),
                      miot_fs_list_handler, NULL);
+#endif
   mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_GET_CMD), miot_fs_get_handler,
                      NULL);
   mg_rpc_add_handler(c, mg_mk_str(MIOT_FILESYSTEM_PUT_CMD), miot_fs_put_handler,
