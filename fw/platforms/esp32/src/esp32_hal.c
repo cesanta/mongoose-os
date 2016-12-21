@@ -36,8 +36,8 @@ void device_get_mac_address(uint8_t mac[6]) {
 uint64_t get_time_since_boot();
 
 void miot_usleep(int usecs) {
-  int ticks = usecs / configTICK_RATE_HZ;
-  int remainder = usecs % configTICK_RATE_HZ;
+  int ticks = usecs / (1000000 / configTICK_RATE_HZ);
+  int remainder = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
   uint64_t threshold = get_time_since_boot() + remainder;
   while (get_time_since_boot() < threshold) {
@@ -92,4 +92,16 @@ void IRAM_ATTR mongoose_schedule_poll(void) {
     s_mg_poll_scheduled = miot_invoke_cb(mongoose_poll_cb, NULL);
   }
   miot_unlock();
+}
+
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  while (len > 0) {
+    uint32_t r = esp_random(); /* Uses hardware RNG. */
+    for (int i = 0; i < 4 && len > 0; i++, len--) {
+      *buf++ = (uint8_t) r;
+      r >>= 8;
+    }
+  }
+  (void) ctx;
+  return 0;
 }

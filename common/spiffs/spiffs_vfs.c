@@ -53,7 +53,7 @@ int spiffs_vfs_open(spiffs *fs, const char *path, int flags, int mode) {
   if (flags & O_EXCL) sm |= SPIFFS_EXCL;
 #endif
 
-  return set_spiffs_errno(fs, "open", SPIFFS_open(fs, path, sm, 0));
+  return set_spiffs_errno(fs, path, SPIFFS_open(fs, path, sm, 0));
 }
 
 int spiffs_vfs_close(spiffs *fs, int fd) {

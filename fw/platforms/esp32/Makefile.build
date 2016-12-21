@@ -75,7 +75,17 @@ PROJECT_NAME = $(APP)
 BUILD_DIR_BASE = $(BUILD_DIR)
 
 SRCDIRS = src
-EXTRA_COMPONENT_DIRS = $(COMMON_PATH)
+# Explicitly specify SDK components to build. Notably, we do not build BT.
+COMPONENT_DIRS = $(COMMON_PATH) $(MIOT_PATH)/third_party /opt $(MIOT_ESP_PATH) $(IDF_PATH)/components
+SDK_COMPONENTS = bootloader bootloader_support driver esp32 esptool_py \
+                 ethernet expat freertos log lwip micro-ecc newlib \
+                 nvs_flash partition_table spi_flash tcpip_adapter vfs \
+                 wpa_supplicant xtensa-debug-module
+COMPONENTS = $(SDK_COMPONENTS) cryptoauthlib cs_mbedtls spiffs
+
+# CONFIG_BT_RESERVE_DRAM is used when generating linker script and is not
+# defined when bt is not built.
+CPPFLAGS += -DCONFIG_BT_RESERVE_DRAM=0
 
 ESPFLASHMODE = qio
 ESPFLASHSIZE = 4MB

@@ -38,7 +38,7 @@ static s32_t esp32_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   }
   esp_err_t r = spi_flash_read(m->part->address + addr, dst, size);
   if (r == ESP_OK) {
-    LOG(LL_DEBUG, ("Read %u @ %d = %d", size, addr, r));
+    LOG(LL_VERBOSE_DEBUG, ("Read %u @ %d = %d", size, addr, r));
     return SPIFFS_OK;
   } else {
     LOG(LL_ERROR, ("Read %u @ %d = %d", size, addr, r));
@@ -55,7 +55,7 @@ static s32_t esp32_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   }
   esp_err_t r = spi_flash_write(m->part->address + addr, src, size);
   if (r == ESP_OK) {
-    LOG(LL_DEBUG, ("Write %u @ %d = %d", size, addr, r));
+    LOG(LL_VERBOSE_DEBUG, ("Write %u @ %d = %d", size, addr, r));
     return SPIFFS_OK;
   } else {
     LOG(LL_ERROR, ("Write %u @ %d = %d", size, addr, r));
@@ -74,7 +74,7 @@ static s32_t esp32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   }
   esp_err_t r = spi_flash_erase_range(m->part->address + addr, size);
   if (r == ESP_OK) {
-    LOG(LL_ERROR, ("Erase %u @ %d = %d", size, addr, r));
+    LOG(LL_VERBOSE_DEBUG, ("Erase %u @ %d = %d", size, addr, r));
     return SPIFFS_OK;
   } else {
     LOG(LL_ERROR, ("Erase %u @ %d = %d", size, addr, r));

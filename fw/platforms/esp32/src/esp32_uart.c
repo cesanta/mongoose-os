@@ -45,7 +45,9 @@ IRAM int esp_uart_tx_fifo_len(int uart_no) {
 }
 
 IRAM static void tx_byte(int uart_no, uint8_t byte) {
-  WRITE_PERI_REG(UART_FIFO_REG(uart_no), byte);
+  /* Use AHB FIFO register because writing to the data bus register
+   * can overwhelm UART and cause bytes to be lost. */
+  WRITE_PERI_REG(UART_FIFO_AHB_REG(uart_no), byte);
 }
 
 IRAM NOINSTR static void esp_handle_uart_int(struct miot_uart_state *us) {
