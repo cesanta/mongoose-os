@@ -343,6 +343,7 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data) {
         LOG(LL_DEBUG, ("not sending reply, closing"));
       }
       mbuf_free(&reply_buf);
+      mbuf_free(&rdata);
       break;
     }
   }
