@@ -22,7 +22,6 @@ MIOT_ENABLE_JS = 0
 MIOT_ENABLE_UPDATER_RPC = 0
 MIOT_DEBUG_UART = 0
 
-V7_FREEZE ?= 1
 V7_NO_COMPILER ?= 0
 
 TOOLCHAIN ?= /opt/arm_5.2.8
@@ -56,9 +55,6 @@ override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 
-MIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
-MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
-MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
 BOOT_BUILD_DIR = $(BUILD_DIR)/boot
 BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
 # When sizing filesystem consider that SFLASH should have enough space for:
@@ -79,7 +75,6 @@ FS_IMAGE_SIZE = $(shell echo $$(($(FS_SIZE) + $(FS_META_SIZE))))
 # making it possible to safely revert the update.
 CC3200_SAFE_CODE_UPDATE ?= 1
 
-MIOT_POSIX_PATH ?= $(MIOT_PATH)/fw/platforms/posix
 MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
 COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
 MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
@@ -108,18 +103,10 @@ MIOT_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64 -DMIOT_ENABLE_FILE_UPLOAD \
                         -DMIOT_NUM_GPIO=32
 
 ifeq "$(V7_NO_COMPILER)" "1"
-  ifneq "$(V7_FREEZE)" "1"
-    $(error V7_NO_COMPILER can be used only together with V7_FREEZE, since current v7 initialization routine includes execution of some JS code)
-  endif
   V7_CC3200_FEATURES += -DV7_NO_COMPILER \
                         -DV7_ALT_JSON_PARSE
 
   MIOT_CC3200_FEATURES += -DMIOT_FROZEN_JSON_PARSE
-endif
-
-ifeq "$(V7_FREEZE)" "1"
-  V7_CC3200_FEATURES += -DV7_EXPOSE_PRIVATE
-
 endif
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
@@ -217,13 +204,8 @@ ifeq "$(MIOT_ENABLE_JS)" "1"
   MIOT_FEATURES += -DMIOT_ENABLE_JS
   MIOT_CFLAGS += $(V7_MEMORY_FLAGS)
   VPATH += $(V7_PATH)
-  $(BUILD_DIR)/v7.o $(BUILD_DIR)/fr.o: CFLAGS += $(V7_CC3200_FEATURES)
+  $(BUILD_DIR)/v7.o: CFLAGS += $(V7_CC3200_FEATURES)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
-  ifeq "$(V7_FREEZE)" "1"
-    MIOT_CC3200_FEATURES += -DV7_THAW
-    GENFILES_LIST += $(GEN_DIR)/fr.c
-    MIOT_SRCS += fr.c
-  endif
 else
   MIOT_SRCS += cs_file.c
 endif
@@ -299,19 +281,9 @@ $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC   v7"
-	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_HOST_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+	$(Q) gcc -DV7_EXE $(V7_HOST_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 
 $(FS_IMG): $(BUILD_DIR)/v7
-
-# TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
-# appropriate
-$(MIOT_POSIX_BIN):
-	$(MAKE) -j1 -C $(MIOT_POSIX_PATH) \
-	  MIOT_PATH=$(MIOT_PATH) \
-	  V7_FEATURES='$(V7_HOST_FEATURES) -DV7_MAIN -DV7_FREEZE' \
-	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
-	  BUILD_DIR=$(MIOT_POSIX_BUILD_DIR) \
-	  APP_CONF_SCHEMA=$(abspath $(APP_CONF_SCHEMA))
 endif
 
 OBJCOPY = arm-none-eabi-objcopy
@@ -361,12 +333,6 @@ all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_
 $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
                 $(APP_SLFS_PATH) $(SLFS_FILES) ${FS_FILES} ${JSBIN_SRCS}
-
-$(GEN_DIR)/fr.c: $(MIOT_POSIX_BIN)
-	$(vecho) "GEN   $@"
-	$(Q) $(MIOT_POSIX_BIN) -freeze $(GEN_DIR)/fr.dump
-	$(Q) @nm $(MIOT_POSIX_BIN) > $(GEN_DIR)/fr.sym
-	$(Q) $(V7_PATH)/scripts/freeze.py $(GEN_DIR)/fr.dump $(GEN_DIR)/fr.sym >$@
 
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                                 $(wildcard $(BOOT_PATH)/tools/mkcfg.c)

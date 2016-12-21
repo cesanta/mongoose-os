@@ -48,13 +48,9 @@ override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 
-MIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
-MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
-MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
 BOOT_BUILD_DIR = $(BUILD_DIR)/boot
 BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
 
-MIOT_POSIX_PATH ?= $(MIOT_PATH)/fw/platforms/posix
 MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
 COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
 MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js

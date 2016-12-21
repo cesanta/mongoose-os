@@ -5,8 +5,6 @@
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
 # SSL: chooses SSL library to use. Currently onle "mbedTLS" is supported
-# V7_FREEZE: if "1" (default) freezes the stdlib object graph into a static graph
-#         loadable in ROM
 # HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
 #           logging wrappers for malloc and friends. You can later view heap
 #           map by `tools/heaplog_viewer/heaplog_viewer.html`
@@ -33,7 +31,6 @@ V7_PATH ?= $(MIOT_PATH)/v7
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MIOT_ESP_PATH ?= $(MIOT_PATH)/fw/platforms/esp8266
-MIOT_POSIX_PATH ?= $(MIOT_PATH)/fw/platforms/posix
 MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
 MBEDTLS_PATH ?= /opt/mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
@@ -43,7 +40,6 @@ COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
-V7_FREEZE ?= 1
 # Enable heap allocation logging - every malloc/free is logged.
 MIOT_ENABLE_HEAP_LOG ?= 0
 # In addition to logging allocations, print call traces for them.
@@ -78,9 +74,6 @@ override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 
 LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
-MIOT_POSIX_BIN_DIR = $(BUILD_DIR)/posix_sjs_bin
-MIOT_POSIX_BUILD_DIR = $(BUILD_DIR)/posix_sjs_build
-MIOT_POSIX_BIN = $(MIOT_POSIX_BIN_DIR)/mongoose-iot
 
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 RBOOT_FW_NAME = 0x00000.bin
@@ -264,11 +257,6 @@ ifeq "$(MIOT_ENABLE_JS)" "1"
   MIOT_FEATURES += -DMIOT_ENABLE_JS $(V7_FEATURES)
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
-  ifeq "$(V7_FREEZE)" "1"
-    MIOT_ESP_FEATURES += -DV7_THAW
-    GENFILES_LIST += $(GEN_DIR)/fr.c
-    MIOT_SRCS += fr.c
-  endif
   ifneq "$(V7_GC_DEBUG)" "1"
     MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
   endif
@@ -419,12 +407,6 @@ $(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(GEN_DIR)/fr.c: $(MIOT_POSIX_BIN)
-	$(vecho) "GEN   $@"
-	$(Q) $(MIOT_POSIX_BIN) -freeze $(GEN_DIR)/fr.dump
-	$(Q) @nm $(MIOT_POSIX_BIN) > $(GEN_DIR)/fr.sym
-	$(Q) $(V7_PATH)/scripts/freeze.py $(GEN_DIR)/fr.dump $(GEN_DIR)/fr.sym >$@
-
 # Generate linker script.
 $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(eval _IROM0ADDR=$(shell printf "0x%08x" $$((0x40200000 + $(basename $(notdir $@)) + $(IMAGE_HEADER_SIZE)))))
@@ -457,20 +439,10 @@ $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 
 $(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
 	$(vecho) "GCC   v7"
-	$(Q) gcc -DV7_EXE -DV7_FREEZE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
+	$(Q) gcc -DV7_EXE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
 
 $(FS_IMG): $(BUILD_DIR)/v7
 
-# TODO(dfrank): add appropriate dependencies, so that it gets rebuilt when
-# appropriate
-$(MIOT_POSIX_BIN):
-	$(MAKE) -j1 -C $(MIOT_POSIX_PATH) \
-	  SSL=None \
-	  MIOT_PATH=$(MIOT_PATH) \
-	  V7_FEATURES='$(V7_FEATURES) -DV7_MAIN -DV7_FREEZE' \
-	  BIN_DIR=$(MIOT_POSIX_BIN_DIR) \
-	  BUILD_DIR=$(MIOT_POSIX_BUILD_DIR) \
-	  APP_CONF_SCHEMA=$(abspath $(APP_CONF_SCHEMA))
 endif
 
 # Target specific warning inhibitions
