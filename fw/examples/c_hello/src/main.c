@@ -12,6 +12,12 @@
 #define BUTTON_GPIO 0 /* Usually a "Flash" button. */
 #define BUTTON_PULL MIOT_GPIO_PULL_UP
 #define BUTTON_EDGE MIOT_GPIO_INT_EDGE_POS
+#elif CS_PLATFORM == CS_P_ESP32
+/* Unfortunately, there is no LED on DevKitC, so this is random GPIO. */
+#define LED_GPIO 17
+#define BUTTON_GPIO 0 /* Usually a "Flash" button. */
+#define BUTTON_PULL MIOT_GPIO_PULL_UP
+#define BUTTON_EDGE MIOT_GPIO_INT_EDGE_POS
 #elif CS_PLATFORM == CS_P_CC3200
 /* On CC3200 LAUNCHXL pin 64 is the red LED. */
 #define LED_GPIO 64                     /* The red LED on LAUNCHXL */

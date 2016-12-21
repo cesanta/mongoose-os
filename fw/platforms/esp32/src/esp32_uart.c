@@ -26,11 +26,11 @@
 static struct miot_uart_state *s_us[MIOT_MAX_NUM_UARTS];
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
-IRAM int esp_uart_cts(int uart_no) {
+IRAM int esp32_uart_cts(int uart_no) {
   return (READ_PERI_REG(UART_STATUS_REG(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
-IRAM int esp_uart_rx_fifo_len(int uart_no) {
+IRAM int esp32_uart_rx_fifo_len(int uart_no) {
   return READ_PERI_REG(UART_STATUS_REG(uart_no)) & 0xff;
 }
 
@@ -39,7 +39,7 @@ IRAM static int rx_byte(int uart_no) {
          UART_RXFIFO_RD_BYTE_V;
 }
 
-IRAM int esp_uart_tx_fifo_len(int uart_no) {
+IRAM int esp32_uart_tx_fifo_len(int uart_no) {
   return (READ_PERI_REG(UART_STATUS_REG(uart_no)) >> UART_TXFIFO_CNT_S) &
          UART_TXFIFO_CNT_V;
 }
@@ -62,7 +62,7 @@ IRAM NOINSTR static void esp_handle_uart_int(struct miot_uart_state *us) {
   us->stats.ints++;
   if (int_st & UART_RXFIFO_OVF_INT_ST) us->stats.rx_overflows++;
   if (int_st & UART_CTS_CHG_INT_ST) {
-    if (esp_uart_cts(uart_no) != 0 && esp_uart_tx_fifo_len(uart_no) > 0) {
+    if (esp32_uart_cts(uart_no) != 0 && esp32_uart_tx_fifo_len(uart_no) > 0) {
       us->stats.tx_throttles++;
     }
   }
@@ -85,7 +85,7 @@ IRAM void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
   cs_rbuf_t *rxb = &us->rx_buf;
   uint32_t rxn = 0;
   /* RX */
-  if (rxb->avail > 0 && esp_uart_rx_fifo_len(uart_no) > 0) {
+  if (rxb->avail > 0 && esp32_uart_rx_fifo_len(uart_no) > 0) {
     int linger_counter = 0;
     /* 32 here is a constant measured (using system_get_time) to provide
      * linger time of rx_linger_micros. It basically means that one iteration
@@ -99,7 +99,7 @@ IRAM void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
     uint32_t st = system_get_time();
 #endif
     while (rxb->avail > 0 && linger_counter <= max_linger) {
-      int rx_len = esp_uart_rx_fifo_len(uart_no);
+      int rx_len = esp32_uart_rx_fifo_len(uart_no);
       if (rx_len > 0) {
         while (rx_len-- > 0 && rxb->avail > 0) {
           cs_rbuf_append_one(rxb, rx_byte(uart_no));
@@ -118,7 +118,7 @@ IRAM void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
 #endif
     us->stats.rx_bytes += rxn;
   }
-  int rfl = esp_uart_rx_fifo_len(uart_no);
+  int rfl = esp32_uart_rx_fifo_len(uart_no);
   if (rfl < us->cfg->rx_fifo_full_thresh) {
     CLEAR_PERI_REG_MASK(UART_INT_CLR_REG(uart_no), UART_RX_INTS);
   }
@@ -134,7 +134,7 @@ IRAM void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
       int i;
       uint8_t *data;
       uint16_t len;
-      int tx_av = 127 - esp_uart_tx_fifo_len(uart_no);
+      int tx_av = 127 - esp32_uart_tx_fifo_len(uart_no);
       if (tx_av <= 0) break;
       len = cs_rbuf_get(txb, tx_av, &data);
       for (i = 0; i < len; i++, data++) {
@@ -157,7 +157,7 @@ IRAM void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), int_ena);
 }
 
-bool esp_uart_validate_config(struct miot_uart_config *c) {
+bool esp32_uart_validate_config(struct miot_uart_config *c) {
   if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
       c->rx_fifo_full_thresh < 1 || c->rx_fifo_full_thresh > 127 ||
       (c->rx_fc_ena && (c->rx_fifo_fc_thresh < c->rx_fifo_full_thresh)) ||
@@ -177,7 +177,7 @@ void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
 
 bool miot_uart_dev_init(struct miot_uart_state *us) {
   struct miot_uart_config *cfg = us->cfg;
-  if (us->uart_no < 0 || us->uart_no > 2 || !esp_uart_validate_config(cfg)) {
+  if (us->uart_no < 0 || us->uart_no > 2 || !esp32_uart_validate_config(cfg)) {
     return false;
   }
 
@@ -266,4 +266,12 @@ void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
     }
     CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_RX_INTS);
   }
+}
+
+uint32_t esp32_uart_raw_ints(int uart_no) {
+  return READ_PERI_REG(UART_INT_RAW_REG(uart_no));
+}
+
+uint32_t esp32_uart_int_mask(int uart_no) {
+  return READ_PERI_REG(UART_INT_ENA_REG(uart_no));
 }

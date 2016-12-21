@@ -2,6 +2,15 @@
 # Component makefile.
 #
 
+override APP_MODULES = $(_APP_MODULES)
+override APP_CONF_SCHEMA = $(_APP_CONF_SCHEMA)
+override APP_EXTRA_SRCS = $(_APP_EXTRA_SRCS)
+override APP_FS_PATH = $(_APP_FS_PATH)
+override BUILD_DIR = $(_BUILD_DIR)
+override FW_DIR := $(_FW_DIR)
+override GEN_DIR := $(_GEN_DIR)
+override MIOT_PATH = $(_MIOT_PATH)
+
 MIOT_ENABLE_ATCA ?= 1
 MIOT_ENABLE_ATCA_SERVICE ?= 1
 MIOT_ENABLE_CONFIG_SERVICE ?= 1
@@ -34,7 +43,7 @@ SYS_CONF_SCHEMA =
 
 COMPONENT_EXTRA_INCLUDES = $(MIOT_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) $(GEN_DIR)
 
-MIOT_SRCS = test.c miot_config.c miot_gpio.c miot_init.c miot_mongoose.c \
+MIOT_SRCS = miot_config.c miot_gpio.c miot_init.c miot_mongoose.c \
             miot_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             miot_timers_mongoose.c miot_uart.c miot_utils.c \
             esp32_console.c esp32_crypto.c esp32_fs.c esp32_gpio.c esp32_hal.c \
@@ -55,7 +64,7 @@ endif
 
 include $(MIOT_PATH)/fw/src/sys_config.mk
 
-VPATH += $(MIOT_PATH)/common
+VPATH += $(MIOT_ESP_PATH)/src $(MIOT_PATH)/common
 MIOT_SRCS += cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c json_utils.c
 ifeq "$(MIOT_ENABLE_RPC)" "1"
   VPATH += $(MIOT_PATH)/common/mg_rpc
@@ -71,17 +80,23 @@ MIOT_SRCS += mongoose.c
 
 VPATH += $(GEN_DIR)
 
-COMPONENT_OBJS = $(addsuffix .o,$(basename $(MIOT_SRCS)))
+VPATH += $(APP_MODULES)
+
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+
+COMPONENT_OBJS = $(addsuffix .o,$(basename $(APP_SRCS) $(MIOT_SRCS)))
 CFLAGS += $(MIOT_FEATURES) -DMIOT_MAX_NUM_UARTS=3 \
           -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) \
           -DMIOT_NUM_GPIO=40 \
           -DMG_ENABLE_FILESYSTEM \
-          -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS
+          -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+          -DMG_ENABLE_STREAMING_MULTIPART
+COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
 
-libsrc.a: $(GEN_DIR)/conf_defaults.json
+libsrc.a: $(GEN_DIR)/sys_config.o
 
-%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(summary) CC $@
+./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+	$(summary) CCX $@
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \

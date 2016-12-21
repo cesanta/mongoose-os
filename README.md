@@ -1,16 +1,22 @@
-# Mongoose IoT Platform
+# Mongoose OS
 
-- [Mongoose IoT Firmware and Cloud](https://mongoose-iot.com)
+- [Mongoose OS](https://mongoose-iot.com) - open source embedded operating system for low-power connected microcontrollers. 
+
+Designed for Internet of Things: 
+- secure connectivity; 
+- best runtime performance; 
+- complete environment for prototyping, development and managing;
+- available for ESP8266, ESP 32, TI CC3200, STM32, NRF52 and other hardware platforms.
 
 # Support
-- [Mongoose IoT Documentation](https://docs.cesanta.com/mongoose-iot/)
+- [Mongoose OS Documentation](https://docs.cesanta.com/mongoose-iot/)
 - [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
 - [Chat - visit www.cesanta.com for our live chat] (https://www.cesanta.com/)
 - [Commercial licensing and support available](https://cesanta.com/contact)
 
 # Licensing
 
-Mongoose IoT Platform is released under Commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
+Mongoose OS is released under Commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
 
 Commercial Projects: [Contact us for the commercial license.] (https://www.cesanta.com/contact)
 

@@ -5,6 +5,7 @@ APP ?= mongoose-iot
 APP_PLATFORM = esp32
 APP_MODULES ?=
 APP_CFLAGS ?=
+APP_CONF_SCHEMA ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 APP_VERSION ?=
@@ -15,8 +16,6 @@ COMMON_PATH ?= $(MIOT_PATH)/common
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MIOT_ESP_PATH ?= $(MIOT_PATH)/fw/platforms/esp32
 COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
-export MIOT_ESP_PATH
-export SPIFFS_PATH
 
 BUILD_DIR ?= $(CURDIR)/.build
 FS_STAGING_DIR = $(BUILD_DIR)/fs
@@ -33,12 +32,29 @@ FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
 
 # Absolutize all paths which can be given by the caller
+override APP_MODULES := $(abspath $(APP_MODULES))
+override APP_CONF_SCHEMA := $(abspath $(APP_CONF_SCHEMA))
+override APP_EXTRA_SRCS := $(abspath $(APP_EXTRA_SRCS))
+override APP_FS_PATH := $(abspath $(APP_FS_PATH))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
-export BUILD_DIR
-export GEN_DIR
+override MIOT_PATH := $(abspath $(MIOT_PATH))
+override _MIOT_PATH = $(MIOT_PATH)
+# It seems to be impossible to override vars passed to submake from the
+# command line, so we pass them via a separate set of varoables, which
+# submake then uses to override the values it received.
+export _APP_MODULES = $(APP_MODULES)
+export _APP_CONF_SCHEMA = $(APP_CONF_SCHEMA)
+export _APP_EXTRA_SRCS = $(APP_EXTRA_SRCS)
+export _APP_FS_PATH = $(APP_FS_PATH)
+export _BUILD_DIR = $(BUILD_DIR)
+export _FW_DIR := $(FW_DIR)
+export _GEN_DIR := $(GEN_DIR)
+export _MIOT_PATH
+export MIOT_ESP_PATH
+export SPIFFS_PATH
 
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(GEN_DIR)/build_info.o
@@ -47,7 +63,8 @@ MG_BUILD_INFO_O = $(GEN_DIR)/mg_build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
 CFLAGS += -DMIOT_APP=\"$(APP)\" -DCS_SPIFFS_ENABLE_VFS -I$(MIOT_PATH) \
-          -DIRAM='__attribute__((section(".iram1")))'
+          -DIRAM='__attribute__((section(".iram1")))' \
+          $(APP_CFLAGS)
 
 # Generated files
 
@@ -74,7 +91,7 @@ $(MG_BUILD_INFO_C):
 PROJECT_NAME = $(APP)
 BUILD_DIR_BASE = $(BUILD_DIR)
 
-SRCDIRS = src
+SRCDIRS = $(MIOT_ESP_PATH)/src
 # Explicitly specify SDK components to build. Notably, we do not build BT.
 COMPONENT_DIRS = $(COMMON_PATH) $(MIOT_PATH)/third_party /opt $(MIOT_ESP_PATH) $(IDF_PATH)/components
 SDK_COMPONENTS = bootloader bootloader_support driver esp32 esptool_py \
@@ -91,12 +108,14 @@ ESPFLASHMODE = qio
 ESPFLASHSIZE = 4MB
 ESPBAUD = 1500000
 
+SDKCONFIG = $(MIOT_ESP_PATH)/sdkconfig
+PARTITION_TABLE_CSV_PATH = $(MIOT_ESP_PATH)/src/partitions_miot.csv
+
 # VERBOSE = 1
 
 include $(IDF_PATH)/make/project.mk
 
-LDFLAGS += $(BUILD_INFO_O) $(MG_BUILD_INFO_O)
-
+LDFLAGS += $(BUILD_INFO_O) $(MG_BUILD_INFO_O) -L$(BUILD_DIR)/src
 
 include $(MIOT_PATH)/fw/common.mk
 
@@ -113,12 +132,8 @@ all_binaries: $(FW_ZIP)
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR)
 
-foo: $(GEN_DIR)/gen_done
-
 # Put defaults on the filesystem under the old name, for compatibility.
 FS_FILES += $(GEN_DIR)/conf_defaults.json
-
-$(GEN_DIR)/conf_defaults.json: src-build
 
 $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@ $(BUILD_INFO_C)"
@@ -126,7 +141,9 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 
 $(FW_MANIFEST): $(BUILD_INFO_JSON) $(APP_BIN) $(FS_IMG)
 
-#$(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(GEN_DIR)/conf_defaults.json: src-build
+	$(Q) cp $(GEN_DIR)/sys_config_defaults.json $@
+
 $(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS)
 	$(call mkspiffs,$(FS_SIZE))
 
