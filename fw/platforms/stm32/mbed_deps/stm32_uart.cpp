@@ -47,6 +47,7 @@ void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
   serial_t *serial = get_serial_by_uart_no(us->uart_no);
   if (serial == NULL) {
     LOG(LL_ERROR, ("UART %d is not initialized", us->uart_no));
+    return;
   }
 
   while(serial_readable(serial) != 0) {
@@ -58,6 +59,7 @@ void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
   serial_t *serial = get_serial_by_uart_no(us->uart_no);
   if (serial == NULL) {
     LOG(LL_ERROR, ("UART %d is not initialized", us->uart_no));
+    return;
   }
 
   while(us->tx_buf.used != 0 && serial_writable(serial) != 0) {
@@ -73,6 +75,7 @@ void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
   serial_t *serial = get_serial_by_uart_no(us->uart_no);
   if (serial == NULL) {
     LOG(LL_ERROR, ("UART %d is not initialized", us->uart_no));
+    return;
   }
 
   if (us->rx_enabled && us->rx_buf.avail > 0) {
@@ -169,11 +172,18 @@ void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
 }
 
 enum miot_init_result miot_set_stdout_uart(int uart_no) {
-  s_stdout_uart_no = uart_no;
+  enum miot_init_result r = miot_init_debug_uart(uart_no);
+  if (r == MIOT_INIT_OK) {
+    s_stdout_uart_no = uart_no;
+  }
+
   return MIOT_INIT_OK;
 }
 
 enum miot_init_result miot_set_stderr_uart(int uart_no) {
-  s_stderr_uart_no = uart_no;
+  enum miot_init_result r = miot_init_debug_uart(uart_no);
+  if (r == MIOT_INIT_OK) {
+    s_stderr_uart_no = uart_no;
+  }
   return MIOT_INIT_OK;
 }

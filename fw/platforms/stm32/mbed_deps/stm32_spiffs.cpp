@@ -9,6 +9,7 @@
 
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
+#define NUM_SYS_FD 3
 
 #ifndef FS_LOG_PAGE_SIZE
 #define FS_LOG_PAGE_SIZE 256
@@ -21,8 +22,6 @@
 #ifndef FS_MAX_OPEN_FILES
 #define FS_MAX_OPEN_FILES 10
 #endif
-
-#define NUM_SYS_FD 3
 
 spiffs fs;
 
@@ -147,7 +146,7 @@ extern "C" _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   }
 
   /* TODO(alex): add flash operations */
-  return 0;
+  return len;
 }
 
 extern "C" _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
