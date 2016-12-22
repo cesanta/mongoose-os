@@ -5,16 +5,12 @@
 /* TODO(alex): put pin names to configuration? */;
 #define nHIB_PIN PC_13
 #define IRQ_PIN PC_15
-#define MOSI_PIN PB_5
-#define MISO_PIN PB_4
-#define SCLK_PIN PA_5
-#define CS_PIN PD_14
 
 static WiFiInterface* s_wifi;
 
 static int init_wifi() {
-  s_wifi = new SimpleLinkInterface(nHIB_PIN, IRQ_PIN, MOSI_PIN,
-                                   MISO_PIN, SCLK_PIN, CS_PIN);
+  s_wifi = new SimpleLinkInterface(nHIB_PIN, IRQ_PIN, SPI_MOSI,
+                                   SPI_MISO, SPI_SCK, SPI_CS);
 /*
  * Unfortunatelly, WiFiInterface doesn't have methods like
  * get_status(), so, to check whether initialization was
@@ -32,9 +28,10 @@ static int init_wifi() {
 }
 
 void miot_wifi_hal_init() {
-  if(init_wifi() >= 0) {
-    sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
-  }
+  /*
+   * Do nothing here, initializing WiFi only
+   * if config requres that (otherwise we can mess up SPI)
+   */
 }
 
 int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
@@ -44,6 +41,10 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
    */
   const sys_config::sys_config_wifi::sys_config_wifi_sta *_cfg =
       (const sys_config::sys_config_wifi::sys_config_wifi_sta *)cfg;
+
+  if(init_wifi() >= 0) {
+    sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
+  }
 
   if (s_wifi == NULL) {
     LOG(LL_ERROR, ("WiFi is not initialized\n"));
