@@ -1,10 +1,14 @@
 #include "mbed.h"
 #include "fs_data.h"
 #include "stm32_spiffs.h"
+#include "stm32_uart.h"
 #include "common/spiffs/spiffs.h"
 #include "common/cs_dbg.h"
-
+#include "fw/src/miot_uart.h"
 #include <errno.h>
+
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
 
 #ifndef FS_LOG_PAGE_SIZE
 #define FS_LOG_PAGE_SIZE 256
@@ -128,24 +132,23 @@ extern "C" _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
   return res;
 }
 
-/*
- * TODO(alashkin): enabling of this block breaks default
- * implementation of printf & Co, fix this and enable
- */
-
-#if 0
 extern "C" _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
-  (void) r;
-  if (fd < NUM_SYS_FD) {
-    Serial p(SERIAL_TX, SERIAL_RX);
-    p.puts("Hello, world!\n");
+  int uart_no = -1;
+
+  if (fd == STDOUT_FILENO) {
+    uart_no = miot_stm32_get_stdout_uart();
+  } else if (fd == STDERR_FILENO) {
+    uart_no = miot_stm32_get_stderr_uart();
   }
 
-  int res = SPIFFS_write(&fs, fd - NUM_SYS_FD, (char *) buf, len);
-  set_errno(res);
-  return res;
+  if (uart_no >= 0) {
+    miot_uart_write(uart_no, buf, len);
+    return len;
+  }
+
+  /* TODO(alex): add flash operations */
+  return 0;
 }
-#endif
 
 extern "C" _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
   ssize_t res;
