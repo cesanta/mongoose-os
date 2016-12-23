@@ -12,6 +12,7 @@
 #include "esp_vfs.h"
 
 #include "common/cs_dbg.h"
+#include "common/cs_dirent.h"
 #include "common/spiffs/spiffs.h"
 #include "common/spiffs/spiffs_nucleus.h"
 #include "common/spiffs/spiffs_vfs.h"
@@ -29,6 +30,8 @@ struct mount_info {
   u8_t fds[MIOT_SPIFFS_MAX_OPEN_FILES * sizeof(spiffs_fd)];
   const esp_partition_t *part;
 };
+
+static struct mount_info *s_mount = NULL;
 
 static s32_t esp32_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   struct mount_info *m = (struct mount_info *) fs->user_data;
@@ -147,6 +150,11 @@ static int spiffs_unlink_p(void *ctx, const char *path) {
   return spiffs_vfs_unlink(&((struct mount_info *) ctx)->fs, path);
 }
 
+/* For cs_dirent.c functions */
+spiffs *cs_spiffs_get_fs(void) {
+  return (s_mount != NULL ? &s_mount->fs : NULL);
+}
+
 enum miot_init_result esp32_fs_init() {
   const esp_partition_t *fs_part = esp_partition_find_first(
       ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, NULL);
@@ -171,8 +179,19 @@ enum miot_init_result esp32_fs_init() {
         .unlink_p = &spiffs_unlink_p,
         .link_p = NULL,
     };
-    if (esp_vfs_register(ESP_VFS_DEFAULT, &vfs, m) != ESP_OK)
+    if (esp_vfs_register(ESP_VFS_DEFAULT, &vfs, m) != ESP_OK) {
       r = MIOT_INIT_FS_INIT_FAILED;
+    }
+  }
+  if (r == MIOT_INIT_OK) {
+    s_mount = m;
   }
   return r;
+}
+
+void esp32_fs_deinit(void) {
+  if (s_mount == NULL) return;
+  LOG(LL_INFO, ("Unmounting FS"));
+  SPIFFS_unmount(&s_mount->fs);
+  /* There is currently no way to deregister VFS, so we don't free s_mount. */
 }

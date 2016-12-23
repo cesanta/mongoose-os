@@ -21,9 +21,8 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#ifndef V7_NO_FS
-
 #include "common/cs_dbg.h"
+#include "common/cs_dirent.h"
 
 #include "common/spiffs/spiffs.h"
 #include "common/spiffs/spiffs_nucleus.h"
@@ -44,7 +43,7 @@
  */
 #define NUM_SYS_FD 3
 
-spiffs fs;
+static spiffs fs;
 
 #define FLASH_BLOCK_SIZE (4 * 1024)
 #define FLASH_UNIT_SIZE 4
@@ -65,7 +64,8 @@ static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 static int8_t s_stdout_uart = MIOT_DEBUG_UART;
 static int8_t s_stderr_uart = MIOT_DEBUG_UART;
 
-spiffs *get_fs(void) {
+/* For cs_dirent.c functions */
+spiffs *cs_spiffs_get_fs(void) {
   return &fs;
 }
 
@@ -477,8 +477,6 @@ int64_t miot_get_storage_free_space(void) {
   SPIFFS_info(&fs, &total, &used);
   return total - used;
 }
-
-#endif
 
 enum miot_init_result miot_set_stdout_uart(int uart_no) {
   enum miot_init_result r = miot_init_debug_uart(uart_no);

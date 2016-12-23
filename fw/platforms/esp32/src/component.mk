@@ -90,13 +90,14 @@ CFLAGS += $(MIOT_FEATURES) -DMIOT_MAX_NUM_UARTS=3 \
           -DMIOT_NUM_GPIO=40 \
           -DMG_ENABLE_FILESYSTEM \
           -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-          -DMG_ENABLE_STREAMING_MULTIPART
+          -DMG_ENABLE_STREAMING_MULTIPART \
+          -DCS_ENABLE_SPIFFS -DMG_ENABLE_DIRECTORY_LISTING
 COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
 
 libsrc.a: $(GEN_DIR)/sys_config.o
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(summary) CCX $@
+	$(summary) CC $@
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \

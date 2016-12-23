@@ -45,6 +45,10 @@ typedef struct DIR {
 } DIR;
 #endif
 
+#if CS_ENABLE_SPIFFS
+extern spiffs *cs_spiffs_get_fs(void);
+#endif
+
 #if defined(_WIN32) || CS_ENABLE_SPIFFS
 DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
