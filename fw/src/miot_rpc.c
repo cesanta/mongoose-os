@@ -105,6 +105,7 @@ enum miot_init_result miot_rpc_init(void) {
   }
 #endif
 
+  mg_rpc_add_list_handler(c);
   s_global_mg_rpc = c;
   return MIOT_INIT_OK;
 }

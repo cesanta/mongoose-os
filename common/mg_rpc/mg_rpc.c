@@ -631,4 +631,37 @@ void mg_rpc_free(struct mg_rpc *c) {
   free(c);
 }
 
+/* Return list of all registered RPC endpoints */
+static void mg_rpc_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                                struct mg_rpc_frame_info *fi,
+                                struct mg_str args) {
+  struct mg_rpc_handler_info *hi;
+  struct mbuf mbuf;
+  struct json_out out = JSON_OUT_MBUF(&mbuf);
+
+  if (!fi->channel_is_trusted) {
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
+    return;
+  }
+
+  mbuf_init(&mbuf, 200);
+  json_printf(&out, "[");
+  SLIST_FOREACH(hi, &ri->rpc->handlers, handlers) {
+    if (mbuf.len > 1) json_printf(&out, ",");
+    json_printf(&out, "%.*Q", hi->method.len, hi->method.p);
+  }
+  json_printf(&out, "]");
+
+  mg_rpc_send_responsef(ri, "%.*s", mbuf.len, mbuf.buf);
+  mbuf_free(&mbuf);
+
+  (void) cb_arg;
+  (void) args;
+}
+
+void mg_rpc_add_list_handler(struct mg_rpc *c) {
+  mg_rpc_add_handler(c, mg_mk_str("RPC.List"), mg_rpc_list_handler, NULL);
+}
+
 #endif /* MIOT_ENABLE_RPC */

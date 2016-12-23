@@ -142,5 +142,8 @@ void mg_rpc_remove_observer(struct mg_rpc *c, mg_observer_cb_t cb,
 void mg_rpc_free_request_info(struct mg_rpc_request_info *ri);
 void mg_rpc_free(struct mg_rpc *c);
 
+/* Enable RPC.List handler that returns a list of all registered endpoints */
+void mg_rpc_add_list_handler(struct mg_rpc *c);
+
 #endif /* MIOT_ENABLE_RPC */
 #endif /* CS_COMMON_MG_RPC_MG_RPC_H_ */
