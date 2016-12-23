@@ -52,9 +52,12 @@ FW_FILE = $(FW_STAGING_DIR)/$(APP).bin
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
 FS_IMG = ?
-FS_SIZE = 131072
+# 256K is minimum size, because sector size is 128K and we need at least two
+FS_SIZE = 262144
 FS_HEADER=$(GEN_DIR)/fs_data.h
 FS_STAGING_DIR = $(BUILD_DIR)/fs
+# Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
+FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08040000"))) __attribute__ ((aligned (131072)))'
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
 PLATFORM_MAKE_FILE = $(GEN_DIR)/rules.mk
@@ -217,6 +220,8 @@ $(FW_FILE): $(ELF_FILE) $(FW_STAGING_DIR)
 
 $(FS_HEADER) : $(FS_IMG)
 	$(vecho) Preparing FS
-	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER))
+	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER).tmp && \
+	      echo $(FS_ATTRIBUTES) > $(FS_HEADER) && \
+		  cat  $(FS_HEADER).tmp >> $(FS_HEADER))
 
 $(FW_MANIFEST): $(FW_FILE) $(FS_HEADER)

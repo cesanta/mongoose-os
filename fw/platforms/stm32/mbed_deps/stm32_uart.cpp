@@ -50,8 +50,8 @@ void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
     return;
   }
 
-  while(serial_readable(serial) != 0) {
-    cs_rbuf_append_one(&us->rx_buf, (uint8_t)serial_getc(serial));
+  while(us->rx_buf.avail > 0 && serial_readable(serial) != 0) {
+    cs_rbuf_append_one(&us->rx_buf, serial_getc(serial));
   }
 }
 
@@ -177,7 +177,7 @@ enum miot_init_result miot_set_stdout_uart(int uart_no) {
     s_stdout_uart_no = uart_no;
   }
 
-  return MIOT_INIT_OK;
+  return r;
 }
 
 enum miot_init_result miot_set_stderr_uart(int uart_no) {
@@ -185,5 +185,5 @@ enum miot_init_result miot_set_stderr_uart(int uart_no) {
   if (r == MIOT_INIT_OK) {
     s_stderr_uart_no = uart_no;
   }
-  return MIOT_INIT_OK;
+  return r;
 }

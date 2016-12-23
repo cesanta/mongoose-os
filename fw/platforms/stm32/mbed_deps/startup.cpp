@@ -23,7 +23,7 @@ int main() {
   }
 
   while(1) {
-    mongoose_poll(10);
+    mongoose_poll(0);
   }
 
   return 0;

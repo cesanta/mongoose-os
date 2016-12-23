@@ -19,6 +19,11 @@
 #define FLASH_BLOCK_SIZE (4 * 1024)
 #endif
 
+#ifndef FLASH_ERASE_BLOCK_SIZE
+/* STM32 have different sector sizes, 128 seems the max */
+#define FLASH_ERASE_BLOCK_SIZE (128 * 1024)
+#endif
+
 #ifndef FS_MAX_OPEN_FILES
 #define FS_MAX_OPEN_FILES 10
 #endif
@@ -34,11 +39,19 @@ static s32_t stm32_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
 
 static s32_t stm32_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   (void) fs;
-  (void) addr;
-  (void) src;
 
-  printf("TODO(alex): implement stm32_spiffs_write\n");
-  return SPIFFS_ERR_NOT_WRITABLE;
+  HAL_FLASH_Unlock();
+
+  for(uint32_t i = 0; i < size; i++) {
+    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, addr + i, *(src + i)) != HAL_OK) {
+      printf("Failed to write byte @%X\n", (int)(addr+i));
+      break;
+    }
+  }
+
+  HAL_FLASH_Lock();
+
+  return SPIFFS_OK;
 }
 
 static s32_t stm32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
@@ -46,8 +59,33 @@ static s32_t stm32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   (void) addr;
   (void) size;
 
-  printf("TODO(alex): implement stm32_spiffs_erase\n");
-  return SPIFFS_ERR_NOT_WRITABLE;
+  int sec_no;;
+
+  /*
+   * It is unclear, how to resolve address -> sector number
+   * Hardcode for now, but we do have to find another solution
+   * because this hardcode won't work with OTA!
+   */
+  switch(addr) {
+    case 0x8020000:
+      sec_no = FLASH_SECTOR_5;
+      break;
+    case 0x8040000:
+      sec_no = FLASH_SECTOR_6;
+      break;
+    case 0x8060000:
+      sec_no = FLASH_SECTOR_7;
+      break;
+    default:
+      LOG(LL_ERROR, ("Invalid address to erase: %X\n", (int)addr));
+      return SPIFFS_ERR_ERASE_FAIL;
+  }
+
+  HAL_FLASH_Unlock();
+  FLASH_Erase_Sector(sec_no, VOLTAGE_RANGE_3);
+  HAL_FLASH_Lock();
+
+  return SPIFFS_OK;
 }
 
 int miot_stm32_init_spiffs_init() {
@@ -60,6 +98,7 @@ int miot_stm32_init_spiffs_init() {
   cfg.phys_size = FS_SIZE;
   cfg.log_page_size = FS_LOG_PAGE_SIZE;
   cfg.log_block_size = FLASH_BLOCK_SIZE;
+  cfg.phys_erase_block = FLASH_ERASE_BLOCK_SIZE;
 
   cfg.hal_read_f = stm32_spiffs_read;
   cfg.hal_write_f = stm32_spiffs_write;
@@ -145,8 +184,9 @@ extern "C" _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
     return len;
   }
 
-  /* TODO(alex): add flash operations */
-  return len;
+  int res = SPIFFS_write(&fs, fd - NUM_SYS_FD, (char *) buf, len);
+  set_errno(res);
+  return res;
 }
 
 extern "C" _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
