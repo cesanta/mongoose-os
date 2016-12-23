@@ -56,29 +56,24 @@ static s32_t stm32_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
 
 static s32_t stm32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   (void) fs;
-  (void) addr;
-  (void) size;
-
-  int sec_no;;
+  int sec_no;
 
   /*
-   * It is unclear, how to resolve address -> sector number
-   * Hardcode for now, but we do have to find another solution
-   * because this hardcode won't work with OTA!
+   * Accouring to all STM32 manuals I've read sectors 0-4 might have different
+   * sizes and addresses, but sector 5 is always @0x08020000 and
+   * sectors 5...max are 128kb sized. Our FS located somewhere after sector 5
    */
-  switch(addr) {
-    case 0x8020000:
-      sec_no = FLASH_SECTOR_5;
-      break;
-    case 0x8040000:
-      sec_no = FLASH_SECTOR_6;
-      break;
-    case 0x8060000:
-      sec_no = FLASH_SECTOR_7;
-      break;
-    default:
-      LOG(LL_ERROR, ("Invalid address to erase: %X\n", (int)addr));
-      return SPIFFS_ERR_ERASE_FAIL;
+
+  /* all we know is a start address of FLASH_SECTOR_5 */
+  sec_no = addr - 0x08020000;
+  /* so, get count of required sector from FLASH_SECTOR_5 */
+  sec_no /= (128 * 1024);
+  /* ... and calculate actual sector number */
+  sec_no += FLASH_SECTOR_5;
+
+  if (!IS_FLASH_SECTOR(sec_no)) {
+    LOG(LL_ERROR, ("Wrong erase address: %X", (int)addr));
+    return SPIFFS_ERR_ERASE_FAIL;
   }
 
   HAL_FLASH_Unlock();
