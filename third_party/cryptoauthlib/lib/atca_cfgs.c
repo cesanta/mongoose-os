@@ -58,7 +58,7 @@ ATCAIfaceCfg cfg_ateccx08a_i2c_default = {
 	.atcai2c.bus			= 2,
 	.atcai2c.baud			= 400000,
 	//.atcai2c.baud = 100000,
-	.wake_delay				= 800,
+	.wake_delay				= 1500,
 	.rx_retries				= 20
 };
 
@@ -67,7 +67,7 @@ ATCAIfaceCfg cfg_ateccx08a_swi_default = {
 	.iface_type		= ATCA_SWI_IFACE,
 	.devtype		= ATECC508A,
 	.atcaswi.bus	= 4,
-	.wake_delay		= 800,
+	.wake_delay		= 1500,
 	.rx_retries		= 10
 };
 

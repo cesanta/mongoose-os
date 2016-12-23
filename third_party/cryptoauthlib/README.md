@@ -4,8 +4,11 @@ CryptoAuthLib - Atmel CryptoAuthentication Library       {#mainpage}
 Cesanta Note
 ------------
 
-This is CryptoAuthLib 20160108, retrieved from [here](http://www.atmel.com/tools/CryptoAuthLib.aspx) on 2016/11/21.
-`lib/Makefile` has been added by us.
+This is CryptoAuthLib 20161123 sent by Ben Udell from Microchip.
+It contains a number of minor fixes compared to the version 20160108 which is available [here](http://www.atmel.com/tools/CryptoAuthLib.aspx).
+Note: Ben confirmed that publishing this newer version in our public repo is ok.
+
+`lib/Makefile` and `component.mk` were been added by us.
 
 Introduction
 ------------------------

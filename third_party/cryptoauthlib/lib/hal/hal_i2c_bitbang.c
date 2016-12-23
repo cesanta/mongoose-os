@@ -259,6 +259,7 @@ ATCA_STATUS hal_i2c_wake(ATCAIface iface)
 	int bus     = cfg->atcai2c.bus;
 	uint8_t response[4] = { 0x00, 0x00, 0x00, 0x00 };
 	uint8_t expected_response[4] = { 0x04, 0x11, 0x33, 0x43 };
+    uint16_t response_size = sizeof(response);
 
 	//! Set I2C pins
 	i2c_set_pin(i2c_hal_data[bus]->pin_sda, i2c_hal_data[bus]->pin_scl);
@@ -270,7 +271,7 @@ ATCA_STATUS hal_i2c_wake(ATCAIface iface)
 	atca_delay_us(cfg->wake_delay);
 
 	//! Receive Wake Response
-	status = hal_i2c_receive(iface, response, sizeof(response));
+	status = hal_i2c_receive(iface, response, &response_size);
 	if (status == ATCA_SUCCESS) {
 		//! Compare response with expected_response
 		if (memcmp(response, expected_response, 4) != 0)

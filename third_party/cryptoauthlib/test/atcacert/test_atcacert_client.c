@@ -305,9 +305,6 @@ TEST(atcacert_client, atcacert_client__atcacert_read_cert_bad_params)
 	ret = atcacert_read_cert(NULL, g_signer_public_key, cert, &cert_size);
 	TEST_ASSERT_EQUAL(ATCACERT_E_BAD_PARAMS, ret);
 
-	ret = atcacert_read_cert(&g_test_cert_def_0_device, NULL, cert, &cert_size);
-	TEST_ASSERT_EQUAL(ATCACERT_E_BAD_PARAMS, ret);
-
 	ret = atcacert_read_cert(NULL, NULL, cert, &cert_size);
 	TEST_ASSERT_EQUAL(ATCACERT_E_BAD_PARAMS, ret);
 

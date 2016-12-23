@@ -135,15 +135,11 @@ ATCA_STATUS atDeriveKey(ATCACommand cacmd, ATCAPacket *packet, bool hasMAC )
 
 	// hasMAC must be given since the packet does not have any implicit information to
 	// know if it has a mac or not unless the size is preset
-	switch ( hasMAC ) {
-	case true:
-		packet->txsize = DERIVE_KEY_COUNT_LARGE;
-		break;
-	case false:
-		packet->txsize = DERIVE_KEY_COUNT_SMALL;
-		break;
-	}
-
+    if (hasMAC)
+        packet->txsize = DERIVE_KEY_COUNT_LARGE;
+    else
+        packet->txsize = DERIVE_KEY_COUNT_SMALL;
+	
 	packet->rxsize = DERIVE_KEY_RSP_SIZE;
 	atCalcCrc( packet );
 	return ATCA_SUCCESS;
@@ -178,10 +174,10 @@ ATCA_STATUS atGenDig(ATCACommand cacmd, ATCAPacket *packet, bool hasMACKey )
 	// Set the opcode & parameters
 	packet->opcode = ATCA_GENDIG;
 
-	if ( packet->param1 == 0x03 ) // shared nonce mode
+	if (packet->param1 == GENDIG_ZONE_SHARED_NONCE) // shared nonce mode
 		packet->txsize = GENDIG_COUNT + 32;
 	else if ( hasMACKey == true )
-		packet->txsize = GENDIG_COUNT_DATA;
+		packet->txsize = GENDIG_COUNT + 4;
 	else
 		packet->txsize = GENDIG_COUNT;
 
@@ -194,26 +190,24 @@ ATCA_STATUS atGenDig(ATCACommand cacmd, ATCAPacket *packet, bool hasMACKey )
 /** \brief ATCACommand Generate Key method
  * \param[in] cacmd     instance
  * \param[in] packet    pointer to the packet containing the command being built
- * \param[in] isPubKey  indicates whether "other data" is present in packet
  * \return ATCA_STATUS
  */
-ATCA_STATUS atGenKey(ATCACommand cacmd, ATCAPacket *packet, bool isPubKey )
+ATCA_STATUS atGenKey(ATCACommand cacmd, ATCAPacket *packet)
 {
-
 	// Set the opcode & parameters
 	packet->opcode = ATCA_GENKEY;
 
-	switch ( isPubKey ) {
-	case true:
-		packet->txsize = GENKEY_COUNT_DATA;
-		break;
-	case false:
-		packet->txsize = GENKEY_COUNT;
-		break;
-	}
-
-	packet->rxsize = GENKEY_RSP_SIZE_LONG;
-
+    if (packet->param1 & GENKEY_MODE_PUBKEY_DIGEST)
+    {
+        packet->txsize = GENKEY_COUNT_DATA;
+        packet->rxsize = GENKEY_RSP_SIZE_SHORT;
+    }        
+    else
+    {
+        packet->txsize = GENKEY_COUNT;
+        packet->rxsize = GENKEY_RSP_SIZE_LONG;
+    }        
+    
 	atCalcCrc( packet );
 	return ATCA_SUCCESS;
 }
@@ -280,7 +274,7 @@ ATCA_STATUS atMAC( ATCACommand cacmd, ATCAPacket *packet )
 	// Set the opcode & parameters
 	// variable packet size
 	packet->opcode = ATCA_MAC;
-	if ( packet->param1 == 0 )
+	if (!(packet->param1 & MAC_MODE_BLOCK2_TEMPKEY))
 		packet->txsize = MAC_COUNT_LONG;
 	else
 		packet->txsize = MAC_COUNT_SHORT;
@@ -300,8 +294,8 @@ ATCA_STATUS atNonce( ATCACommand cacmd, ATCAPacket *packet )
 {
 	// Set the opcode & parameters
 	// variable packet size
-	packet->opcode = ATCA_NONCE;
 	int mode = packet->param1 & 0x03;
+	packet->opcode = ATCA_NONCE;
 
 	if ( (mode == 0 || mode == 1) ) {       // mode[0:1] == 0 | 1 then NumIn is 20 bytes
 		packet->txsize = NONCE_COUNT_SHORT; // 20 byte challenge
@@ -397,25 +391,24 @@ ATCA_STATUS atSHA( ATCACommand cacmd, ATCAPacket *packet )
 	if ( packet->param2 > SHA_BLOCK_SIZE )
 		return ATCA_BAD_PARAM;
 
-	if ( packet->param1 == 0x01 && packet->param2 != SHA_BLOCK_SIZE )
-		return ATCA_BAD_PARAM;                                              // updates should always have 64 bytes of data
-
-	if ( packet->param1 == 0x02 && packet->param2 > SHA_BLOCK_SIZE - 1 )    // END should be 0-63 bytes
-		return ATCA_BAD_PARAM;
-
 	// Set the opcode & parameters
 	packet->opcode = ATCA_SHA;
 
 	switch ( packet->param1 ) {
-	case 0x00: // START
+	case SHA_MODE_SHA256_START: // START
+	case SHA_MODE_HMAC_START:
+	case SHA_MODE_SHA256_PUBLIC:
 		packet->rxsize = SHA_RSP_SIZE_SHORT;
 		packet->txsize = SHA_COUNT_LONG;
 		break;
-	case 0x01: // UPDATE
+	case SHA_MODE_SHA256_UPDATE: // UPDATE
 		packet->rxsize = SHA_RSP_SIZE_SHORT;
-		packet->txsize = SHA_COUNT_LONG + SHA_BLOCK_SIZE;
+		if (cacmd->dt == ATSHA204A)
+			packet->rxsize += ATCA_SHA_DIGEST_SIZE; // ATSHA devices return the digest with this command
+		packet->txsize = SHA_COUNT_LONG + packet->param2;
 		break;
-	case 0x02: // END
+	case SHA_MODE_SHA256_END: // END
+	case SHA_MODE_HMAC_END:
 		packet->rxsize = SHA_RSP_SIZE_LONG;
 		// check the given packet for a size variable in param2.  If it is > 0, it should
 		// be 0-63, incorporate that size into the packet
@@ -503,45 +496,24 @@ ATCA_STATUS atVerify( ATCACommand cacmd, ATCAPacket *packet )
  * \param[in] packet  pointer to the packet containing the command being built
  * \return ATCA_STATUS
  */
-ATCA_STATUS atWrite( ATCACommand cacmd, ATCAPacket *packet )
+ATCA_STATUS atWrite( ATCACommand cacmd, ATCAPacket *packet, bool hasMAC )
 {
-	int macsize;
-	int writesize;
-
 	// Set the opcode & parameters
 	packet->opcode = ATCA_WRITE;
-
-	macsize = ( packet->param1 & 0x40 ? 32 : 0 );  // if encrypted, use MAC
-	writesize = ( packet->param1 & 0x80 ? 32 : 4 );
-
-	if ( macsize == 32 && writesize == 32 )
-		packet->txsize = WRITE_COUNT_LONG_MAC;
-	else if ( macsize == 32 && writesize == 4 )
-		packet->txsize = WRITE_COUNT_SHORT_MAC;
-	else if ( macsize == 0 && writesize == 32 )
-		packet->txsize = WRITE_COUNT_LONG;
-	else if ( macsize == 0 && writesize == 4 )
-		packet->txsize = WRITE_COUNT_SHORT;
-
+    
+    packet->txsize = 7;
+    if (packet->param1 & ATCA_ZONE_READWRITE_32)
+        packet->txsize += ATCA_BLOCK_SIZE;
+    else
+        packet->txsize += ATCA_WORD_SIZE;
+    if (hasMAC)
+        packet->txsize += WRITE_MAC_SIZE;
+    
 	packet->rxsize = WRITE_RSP_SIZE;
 	atCalcCrc( packet );
 	return ATCA_SUCCESS;
 }
 
-/** \brief ATCACommand Write encrypted method
- * \param[in] cacmd   instance
- * \param[in] packet  pointer to the packet containing the command being built
- * \return ATCA_STATUS
- */
-ATCA_STATUS atWriteEnc(ATCACommand cacmd, ATCAPacket *packet)
-{
-	// Set the opcode & parameters
-	packet->opcode = ATCA_WRITE;
-	packet->txsize = WRITE_COUNT_LONG_MAC;
-	packet->rxsize = WRITE_RSP_SIZE;
-	atCalcCrc( packet );
-	return ATCA_SUCCESS;
-}
 
 /** \brief ATCACommand destructor
  * \param[in] cacmd instance of a command object
@@ -647,16 +619,17 @@ uint16_t atGetExecTime( ATCACommand cacmd, ATCA_CmdMap cmd )
 }
 
 
-/** \brief This function calculates CRC given raw data, puts the CRC to given pointer
+/** \brief Calculates CRC over the given raw data and returns the CRC in
+ *         little-endian byte order.
  *
- * \param[in] length size of data not including the CRC byte positions
- * \param[in] data pointer to the data over which to compute the CRC
- * \param[out] crc pointer to the place where the two-bytes of CRC will be placed
+ * \param[in]  length  Size of data not including the CRC byte positions
+ * \param[in]  data    Pointer to the data over which to compute the CRC
+ * \param[out] crc     Pointer to the place where the two-bytes of CRC will be
+ *                     returned in little-endian byte order.
  */
-
-void atCRC( uint8_t length, uint8_t *data, uint8_t *crc)
+void atCRC( size_t length, const uint8_t *data, uint8_t *crc_le )
 {
-	uint8_t counter;
+	size_t counter;
 	uint16_t crc_register = 0;
 	uint16_t polynom = 0x8005;
 	uint8_t shift_register;
@@ -671,8 +644,8 @@ void atCRC( uint8_t length, uint8_t *data, uint8_t *crc)
 				crc_register ^= polynom;
 		}
 	}
-	crc[0] = (uint8_t)(crc_register & 0x00FF);
-	crc[1] = (uint8_t)(crc_register >> 8);
+	crc_le[0] = (uint8_t)(crc_register & 0x00FF);
+	crc_le[1] = (uint8_t)(crc_register >> 8);
 }
 
 
@@ -698,10 +671,13 @@ void atCalcCrc( ATCAPacket *packet )
  * \return status of the consistency check
  */
 
-uint8_t atCheckCrc(uint8_t *response)
+uint8_t atCheckCrc(const uint8_t *response)
 {
 	uint8_t crc[ATCA_CRC_SIZE];
 	uint8_t count = response[ATCA_COUNT_IDX];
+
+	if (count < ATCA_CRC_SIZE)
+		return ATCA_BAD_PARAM;
 
 	count -= ATCA_CRC_SIZE;
 	atCRC(count, response, crc);

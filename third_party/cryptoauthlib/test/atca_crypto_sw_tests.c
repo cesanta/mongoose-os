@@ -54,6 +54,8 @@ static const uint8_t nist_hash_msg3[] = "a";
 
 void atca_crypto_sw_tests(void)
 {
+    UnityBegin("atca_crypto_sw_tests.c");
+    
 	RUN_TEST(test_atcac_sw_sha1_nist1);
 	RUN_TEST(test_atcac_sw_sha1_nist2);
 	RUN_TEST(test_atcac_sw_sha1_nist3);
@@ -68,6 +70,8 @@ void atca_crypto_sw_tests(void)
 	RUN_TEST(test_atcac_sw_sha2_256_nist_short);
 	RUN_TEST(test_atcac_sw_sha2_256_nist_long);
 	RUN_TEST(test_atcac_sw_sha2_256_nist_monte);
+    
+    UnityEnd();
 }
 
 void test_atcac_sw_sha1_nist1(void)
@@ -274,7 +278,7 @@ void test_atcac_sw_sha1_nist_monte(void)
 	uint8_t md_ref[sizeof(seed)];
 
 	rsp_file = fopen("cryptoauthlib/test/sha-byte-test-vectors/SHA1Monte.rsp", "r");
-	TEST_ASSERT_NOT_EQUAL_MESSAGE(NULL, rsp_file, "Failed to  open sha-byte-test-vectors/SHA1Monte.rsp");
+	TEST_ASSERT_NOT_EQUAL_MESSAGE(NULL, rsp_file, "Failed to open sha-byte-test-vectors/SHA1Monte.rsp");
 
 	// Find the seed value
 	ret = read_rsp_hex_value(rsp_file, "Seed = ", seed, sizeof(seed));

@@ -67,6 +67,7 @@ void test_write_invalid_block_len(void);
 void test_write_bytes_slot(void);
 void test_write_bytes_zone_config(void);
 void test_write_bytes_zone_slot8(void);
+void test_basic_write_enc(void);
 void test_basic_write_ecc_config_zone(void);
 void test_basic_read_config_zone(void);
 void test_basic_write_config_zone(void);
@@ -75,6 +76,7 @@ void test_basic_write_sha_config_zone(void);
 void test_basic_read_sha_config_zone(void);
 void test_basic_write_otp_zone(void);
 void test_basic_read_otp_zone(void);
+void test_basic_write_slot4_key(void);
 void test_basic_write_data_zone(void);
 void test_basic_read_data_zone(void);
 void test_basic_lock_config_zone(void);
@@ -82,17 +84,33 @@ void test_basic_lock_data_zone(void);
 void test_basic_lock_data_slot(void);
 void test_basic_genkey(void);
 void test_basic_sign(void);
+void test_basic_sign_internal(void);
 void test_read_sig(void);
 void test_basic_priv_write_unencrypted(void);
 void test_basic_priv_write_encrypted(void);
-void test_basic_verify_external(void);
+void test_basic_verify_extern(void);
+void test_basic_verify_stored(void);
+void test_basic_verify_validate(void);
+void test_basic_verify_invalidate(void);
 void test_basic_ecdh(void);
 void test_basic_gendig(void);
 void test_basic_mac(void);
 void test_basic_checkmac(void);
+void test_basic_hmac(void);
+void test_basic_derivekey(void);
+void test_basic_derivekey_mac(void);
 void test_basic_sha(void);
 void test_basic_sha_long(void);
 void test_basic_sha_short(void);
+void test_basic_hw_sha2_256_nist1(void);
+void test_basic_hw_sha2_256_nist2(void);
+void test_basic_hw_sha2_256_nist_short(void);
+void test_basic_hw_sha2_256_nist_long(void);
+void test_basic_hw_sha2_256_nist_monte(void);
+
+// Helper tests
+void atca_helper_tests(void);
+void test_base64encode_decode(void);
 
 // test the extra function used with provisioning FW
 // use the default customer configuration same as the provisioning config for the configuration zone

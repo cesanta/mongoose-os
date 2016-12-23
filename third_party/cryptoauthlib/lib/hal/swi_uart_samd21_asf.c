@@ -89,6 +89,13 @@ ATCA_STATUS swi_uart_init(ATCASWIMaster_t *instance)
 	config_usart.pinmux_pad2 = EXT3_UART_SERCOM_PINMUX_PAD2;
 	config_usart.pinmux_pad3 = EXT3_UART_SERCOM_PINMUX_PAD3;
 #endif
+#ifdef __SAMR21G18A__
+	config_usart.mux_setting = EXT1_UART_SERCOM_MUX_SETTING;
+	config_usart.pinmux_pad0 = EXT1_UART_SERCOM_PINMUX_PAD0;
+	config_usart.pinmux_pad1 = EXT1_UART_SERCOM_PINMUX_PAD1;
+	config_usart.pinmux_pad2 = EXT1_UART_SERCOM_PINMUX_PAD2;
+	config_usart.pinmux_pad3 = EXT1_UART_SERCOM_PINMUX_PAD3;
+#endif
 	switch (instance->bus_index) {
 	case 0: status = usart_init( &(instance->usart_instance), SERCOM0, &config_usart); break;
 	case 1: status = usart_init( &(instance->usart_instance), SERCOM1, &config_usart); break;

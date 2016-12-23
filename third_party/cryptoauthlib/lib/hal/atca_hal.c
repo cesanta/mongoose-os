@@ -131,6 +131,21 @@ ATCA_STATUS hal_iface_init( ATCAIfaceCfg *cfg, ATCAHAL_t *hal )
 		status = ATCA_SUCCESS;
 		#endif
 		break;
+	case ATCA_SIM_IFACE:
+		#ifdef ATCA_HAL_SIM
+		hal->halinit = &hal_sim_init;
+		hal->halpostinit = &hal_sim_post_init;
+		hal->halreceive = &hal_sim_receive;
+		hal->halsend = &hal_sim_send;
+		hal->halsleep = &hal_sim_sleep;
+		hal->halwake = &hal_sim_wake;
+		hal->halidle = &hal_sim_idle;
+		hal->halrelease = &hal_sim_release;
+		hal->hal_data = NULL;
+
+		status = ATCA_SUCCESS;
+		#endif
+		break;
 	}
 	return status;
 }
@@ -146,32 +161,37 @@ ATCA_STATUS hal_iface_release( ATCAIfaceType ifacetype, void *hal_data )
 
 	switch (ifacetype) {
 	case ATCA_I2C_IFACE:
-			#ifdef ATCA_HAL_I2C
+#ifdef ATCA_HAL_I2C
 		status = hal_i2c_release(hal_data);
-			#endif
+#endif
 		break;
 	case ATCA_SWI_IFACE:
-			#ifdef ATCA_HAL_SWI
+#ifdef ATCA_HAL_SWI
 		status = hal_swi_release(hal_data);
-			#endif
+#endif
 		break;
 	case ATCA_UART_IFACE:
-			#ifdef ATCA_HAL_UART
+#ifdef ATCA_HAL_UART
 		// TODO - release HAL UART
-			#endif
-			#ifdef ATCA_HAL_KIT_CDC
+#endif
+#ifdef ATCA_HAL_KIT_CDC
 		status = hal_kit_cdc_release(hal_data);
-			#endif
+#endif
 		break;
 	case ATCA_SPI_IFACE:
-			#ifdef ATCA_HAL_SPI
+#ifdef ATCA_HAL_SPI
 		// TODO - release HAL SPI
-			#endif
+#endif
 		break;
 	case ATCA_HID_IFACE:
-			#ifdef ATCA_HAL_KIT_HID
+#ifdef ATCA_HAL_KIT_HID
 		status = hal_kit_hid_release(hal_data);
-			#endif
+#endif
+		break;
+	case ATCA_SIM_IFACE:
+#ifdef ATCA_HAL_SIM
+		status = hal_sim_release(hal_data);
+#endif
 		break;
 	}
 

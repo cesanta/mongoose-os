@@ -79,6 +79,7 @@ typedef enum atcacert_cert_type_e {
  */
 typedef enum atcacert_cert_sn_src_e {
 	SNSRC_STORED             = 0x0, //!< Cert serial is stored on the device.
+    SNSRC_STORED_DYNAMIC     = 0x7, //!< Cert serial is stored on the device with the first byte being the DER size (X509 certs only).
 	SNSRC_DEVICE_SN          = 0x8, //!< Cert serial number is 0x40(MSB) + 9-byte device serial number. Only applies to device certificates.
 	SNSRC_SIGNER_ID          = 0x9, //!< Cert serial number is 0x40(MSB) + 2-byte signer ID. Only applies to signer certificates.
 	SNSRC_PUB_KEY_HASH       = 0xA, //!< Cert serial number is the SHA256(Subject public key + Encoded dates), with uppermost 2 bits set to 01.
@@ -157,7 +158,7 @@ typedef struct atcacert_def_s {
 	uint8_t chain_id;                                               //!< ID for the certificate chain this definition is a part of (4-bit value).
 	uint8_t private_key_slot;                                       //!< If this is a device certificate template, this is the device slot for the device private key.
 	atcacert_cert_sn_src_t sn_source;                               //!< Where the certificate serial number comes from (4-bit value).
-	atcacert_device_loc_t cert_sn_dev_loc;                          //!< Only applies when sn_source is SNSRC_STORED. Describes where to get the certificate serial number on the device.
+	atcacert_device_loc_t cert_sn_dev_loc;                          //!< Only applies when sn_source is SNSRC_STORED or SNSRC_STORED_DYNAMIC. Describes where to get the certificate serial number on the device.
 	atcacert_date_format_t issue_date_format;                       //!< Format of the issue date in the certificate.
 	atcacert_date_format_t expire_date_format;                      //!< format of the expire date in the certificate.
 	atcacert_cert_loc_t tbs_cert_loc;                               //!< Location in the certificate for the TBS (to be signed) portion.
@@ -226,7 +227,9 @@ int atcacert_get_device_locs( const atcacert_def_t*  cert_def,
  *                            adjusted to the current/final size of the certificate through the
  *                            building process.
  * \param[in]  ca_public_key  ECC P256 public key of the certificate authority (issuer) for the
- *                            certificate being built.
+ *                            certificate being built. Set to NULL if the authority key id is
+ *                            not needed, set properly in the cert_def template, or stored on the
+ *                            device as specifed in the cert_def cert_elements.
  *
  * \return 0 on success
  */
@@ -468,7 +471,8 @@ int atcacert_get_signer_id( const atcacert_def_t * cert_def,
  *
  * \param[in]    cert_def      Certificate definition for the certificate.
  * \param[inout] cert          Certificate to update.
- * \param[in]    cert_size     Size of the certificate (cert) in bytes.
+ * \param[inout] cert_size     Size of the certificate (cert) in bytes.
+ * \param[in]    max_cert_size  Maximum size of the cert buffer.
  * \param[in]    cert_sn       Certificate serial number.
  * \param[in]    cert_sn_size  Size of the certificate serial number in bytes.
  *
@@ -476,7 +480,8 @@ int atcacert_get_signer_id( const atcacert_def_t * cert_def,
  */
 int atcacert_set_cert_sn( const atcacert_def_t* cert_def,
                           uint8_t*              cert,
-                          size_t cert_size,
+                          size_t*               cert_size,
+                          size_t                max_cert_size,
                           const uint8_t*        cert_sn,
                           size_t cert_sn_size);
 
@@ -486,8 +491,8 @@ int atcacert_set_cert_sn( const atcacert_def_t* cert_def,
  *
  * This method requires certain elements in the certificate be set properly as they're used for
  * generating the serial number. See atcacert_cert_sn_src_t for what elements should be set in the
- * certificate beforehand. If the sn_source is set to SNSRC_STORED, the function will return
- * ATCACERT_E_SUCCESS without making any changes to the certificate.
+ * certificate beforehand. If the sn_source is set to SNSRC_STORED or SNSRC_STORED_DYNAMIC, the
+ * function will return ATCACERT_E_SUCCESS without making any changes to the certificate.
  *
  * \param[in]    cert_def      Certificate definition for the certificate.
  * \param[inout] cert          Certificate to update.
@@ -536,6 +541,21 @@ int atcacert_set_auth_key_id( const atcacert_def_t* cert_def,
                               uint8_t*              cert,
                               size_t cert_size,
                               const uint8_t auth_public_key[64]);
+                              
+/**
+ * \brief Sets the authority key ID in a certificate.
+ *
+ * \param[in]    cert_def         Certificate definition for the certificate.
+ * \param[inout] cert             Certificate to update.
+ * \param[in]    cert_size        Size of the certificate (cert) in bytes.
+ * \param[in]    auth_key_id      Authority key ID. Same size as defined in the cert_def.
+ *
+ * \return 0 on success
+ */
+int atcacert_set_auth_key_id_raw( const atcacert_def_t* cert_def,
+                                  uint8_t*              cert,
+                                  size_t                cert_size,
+                                  const uint8_t*        auth_key_id);
 
 /**
  * \brief Gets the authority key ID from a certificate.
@@ -623,6 +643,7 @@ int atcacert_get_tbs_digest( const atcacert_def_t * cert_def,
 /**
  * \brief Sets an element in a certificate. The data_size must match the size in cert_loc.
  *
+ * \param[in]    cert_def       Certificate definition for the certificate.
  * \param[in]    cert_loc       Certificate location for this element.
  * \param[inout] cert           Certificate to update.
  * \param[in]    cert_size      Size of the certificate (cert) in bytes.
@@ -632,7 +653,8 @@ int atcacert_get_tbs_digest( const atcacert_def_t * cert_def,
  *
  * \return 0 on success
  */
-int atcacert_set_cert_element( const atcacert_cert_loc_t* cert_loc,
+int atcacert_set_cert_element( const atcacert_def_t*      cert_def,
+                               const atcacert_cert_loc_t* cert_loc,
                                uint8_t*                   cert,
                                size_t cert_size,
                                const uint8_t*             data,
@@ -641,6 +663,7 @@ int atcacert_set_cert_element( const atcacert_cert_loc_t* cert_loc,
 /**
  * \brief Gets an element from a certificate.
  *
+ * \param[in]    cert_def       Certificate definition for the certificate.
  * \param[in]    cert_loc   Certificate location for this element.
  * \param[in]    cert       Certificate to get element from.
  * \param[in]    cert_size  Size of the certificate (cert) in bytes.
@@ -650,7 +673,8 @@ int atcacert_set_cert_element( const atcacert_cert_loc_t* cert_loc,
  *
  * \return 0 on success
  */
-int atcacert_get_cert_element( const atcacert_cert_loc_t* cert_loc,
+int atcacert_get_cert_element( const atcacert_def_t*      cert_def,
+                               const atcacert_cert_loc_t* cert_loc,
                                const uint8_t*             cert,
                                size_t cert_size,
                                uint8_t*                   data,

@@ -76,7 +76,7 @@ static void miot_atca_set_config(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  ATCA_STATUS status = atcab_write_config_zone(ATECC508A, config);
+  ATCA_STATUS status = atcab_write_config_zone(config);
   if (status != ATCA_SUCCESS) {
     mg_rpc_send_errorf(ri, 500, "Failed to set config: 0x%02x", status);
     ri = NULL;
@@ -180,7 +180,7 @@ static void miot_atca_set_key(struct mg_rpc_request_info *ri, void *cb_arg,
     status = atcab_priv_write(slot, key_arg, wk_slot,
                               (write_key_len == 32 ? write_key : NULL));
   } else {
-    status = atcab_write_bytes_slot(slot, 0, key, key_len);
+    status = atcab_write_zone(ATCA_ZONE_DATA, slot, 0, 0, key, key_len);
   }
   if (status != ATCA_SUCCESS) {
     mg_rpc_send_errorf(ri, 500, "Failed to set key: 0x%02x", status);

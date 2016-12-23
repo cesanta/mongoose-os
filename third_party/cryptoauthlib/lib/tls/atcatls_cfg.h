@@ -44,6 +44,8 @@
 #define ATCATLS_CFG_H
 
 #include "cryptoauthlib.h"
+#include "atcacert/atcacert_def.h"
+
 /** \defgroup atcatls TLS integration with ATECC (atcatls_)
    @{ */
 
@@ -65,6 +67,9 @@
 #define TLS_SLOT_FEATURE_CERT   ((uint8_t)0xD)  //!< Compressed certificate information for the featurePrivSlot
 #define TLS_SLOT_PKICA_PUBKEY   ((uint8_t)0xE)  //!< Public key for the PKI certificate authority
 #define TLS_SLOT_MFRCA_PUBKEY   ((uint8_t)0xF)  //!< Public key for the MFR certificate authority
+// Development Only Definitions
+#define TLS_SLOT_DEV_SIGNER_PRIV    ((uint8_t)0x2)  //!< Signer private key - For Development ONLY
+#define TLS_SLOT_DEV_CA_PRIV        ((uint8_t)0x7)  //!< Root CA private key - For Development ONLY
 
 typedef struct {
 	uint8_t authPrivSlot;       //!< Primary authentication private key
@@ -85,6 +90,22 @@ typedef struct {
 	uint8_t pkiCaPubkeySlot;    //!< Public key for the PKI certificate authority
 	uint8_t mfrCaPubkeySlot;    //!< Public key for the MFR certificate authority
 } TlsSlotDef;
+
+//////////////////////////////////////////////////////////////////////////
+// Function Definitions
+ATCA_STATUS device_init_default(void);
+ATCA_STATUS device_init(const atcacert_def_t* cert_def_signer, const atcacert_def_t* cert_def_device);
+
+
+//////////////////////////////////////////////////////////////////////////
+// I2C address for device communication 
+#define FACTORY_INIT_I2C	(uint8_t)(0xC0)		// Initial I2C address is set to 0xC0 in the factory
+//#define DEVICE_I2C		FACTORY_INIT_I2C	// Device I2C Address.  Initial communication. Before provisioning, use FACTORY_INIT_I2C.
+#define DEVICE_I2C			(uint8_t)(0xB0)		// Device I2C Address.  Initial communication. After provisioning, use actual device address.
+#define D_I2C				DEVICE_I2C			// Device I2C Address.  Program the device to this address when provisioning
+
+extern const atcacert_def_t g_cert_def_0_signer;
+extern const atcacert_def_t g_cert_def_0_device;
 
 /** @} */
 

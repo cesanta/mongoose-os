@@ -163,6 +163,19 @@ ATCA_STATUS hal_kit_hid_discover_buses(int i2c_buses[], int max_buses);
 ATCA_STATUS hal_kit_hid_discover_devices(int busNum, ATCAIfaceCfg *cfg, int *found);
 #endif
 
+#ifdef ATCA_HAL_SIM
+ATCA_STATUS hal_sim_init(void *hal, ATCAIfaceCfg *cfg);
+ATCA_STATUS hal_sim_post_init(ATCAIface iface);
+ATCA_STATUS hal_sim_send(ATCAIface iface, uint8_t *txdata, int txlength);
+ATCA_STATUS hal_sim_receive(ATCAIface iface, uint8_t *rxdata, uint16_t *rxlength);
+ATCA_STATUS hal_sim_wake(ATCAIface iface);
+ATCA_STATUS hal_sim_idle(ATCAIface iface);
+ATCA_STATUS hal_sim_sleep(ATCAIface iface);
+ATCA_STATUS hal_sim_release(void *hal_data);
+ATCA_STATUS hal_sim_discover_buses(int i2c_buses[], int max_buses);
+ATCA_STATUS hal_sim_discover_devices(int busNum, ATCAIfaceCfg *cfg, int *found);
+#endif
+
 /** \brief Timer API implemented at the HAL level */
 void atca_delay_us(uint32_t delay);
 void atca_delay_10us(uint32_t delay);

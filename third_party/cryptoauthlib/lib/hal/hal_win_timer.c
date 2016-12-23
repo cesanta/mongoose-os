@@ -54,7 +54,7 @@ void atca_delay_us(uint32_t delay)
 {
 	// divide by 1000 to convert us to ms
 	// todo: use a timer with us accuracy
-	long ms = (long)round(delay / 1.0e3);    // Miliseconds
+	long ms = (long)(delay / 1.0e3 + 0.5);    // Miliseconds
 
 	// use Windows supplied delay
 	Sleep(delay);
@@ -68,7 +68,7 @@ void atca_delay_10us(uint32_t delay)
 {
 	// divide by 100 to convert 10's of us to ms
 	// todo: use a timer with us accuracy
-	long ms = (long)round(delay / 1.0e2);    // Miliseconds
+	long ms = (long)(delay / 1.0e2 + 0.5);    // Miliseconds
 
 	// use Windows supplied delay
 	Sleep(delay);

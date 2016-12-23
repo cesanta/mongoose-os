@@ -55,22 +55,30 @@
 extern "C" {
 #endif
 
-#ifdef ATCAPRINTF
+ATCA_STATUS atcab_printbin(uint8_t* binary, int binLen, bool addspace);
 ATCA_STATUS atcab_bin2hex(const uint8_t* binary, int binLen, char* asciiHex, int* asciiHexLen);
 ATCA_STATUS atcab_bin2hex_(const uint8_t* binary, int binLen, char* asciiHex, int* asciiHexLen, bool addSpace);
 ATCA_STATUS atcab_hex2bin(const char* asciiHex, int asciiHexLen, uint8_t* binary, int* binLen);
-#else
+ATCA_STATUS atcab_printbin_sp(uint8_t* binary, int binLen);
+ATCA_STATUS atcab_printbin_label(const uint8_t* label, uint8_t* binary, int binLen);
 
-#define atcab_bin2hex
-
-#endif
 
 ATCA_STATUS packHex(const char* asciiHex, int asciiHexLen, char* packedHex, int* packedLen);
 bool isDigit(char c);
 bool isWhiteSpace(char c);
+bool isAlpha(char c);
 bool isHexAlpha(char c);
 bool isHex(char c);
 bool isHexDigit(char c);
+
+ATCA_STATUS packBase64(const char* asciiBase64, int asciiBase64Len, char* packedBase64, int* packedLen);
+bool isBase64(char c);
+bool isBase64Digit(char c);
+char base64Index(char c);
+char base64Char(char id);
+ATCA_STATUS atcab_base64decode(const char* encoded, size_t encodedLen, uint8_t* byteArray, size_t* arrayLen);
+ATCA_STATUS atcab_base64encode(const uint8_t* byteArray, size_t arrayLen, char* encoded, size_t* encodedLen);
+ATCA_STATUS atcab_base64encode_(const uint8_t* byteArray, size_t arrayLen, char* encoded, size_t* encodedLen, bool addNewLine);
 
 #ifdef __cplusplus
 }

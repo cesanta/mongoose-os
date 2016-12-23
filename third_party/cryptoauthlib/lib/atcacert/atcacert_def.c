@@ -212,6 +212,20 @@ static const uint8_t* atcacert_is_device_loc_match( const atcacert_device_loc_t*
 	return src_data + (device_loc_dest->offset - device_loc_src->offset);
 }
 
+static int get_effective_offset(const atcacert_def_t* cert_def, const uint8_t* cert, size_t ref_offset)
+{
+    size_t sn_offset = 0;
+
+    if (cert_def->type != CERTTYPE_X509 || cert_def->sn_source != SNSRC_STORED_DYNAMIC)
+        return 0;
+
+    sn_offset = cert_def->std_cert_elements[STDCERT_CERT_SN].offset;
+    if (ref_offset <= sn_offset)
+        return 0;
+
+    return (int)cert[sn_offset] - (int)cert_def->cert_template[sn_offset];
+}
+
 int atcacert_cert_build_start( atcacert_build_state_t* build_state,
                                const atcacert_def_t*   cert_def,
                                uint8_t*                cert,
@@ -220,7 +234,7 @@ int atcacert_cert_build_start( atcacert_build_state_t* build_state,
 {
 	int ret = 0;
 
-	if (build_state == NULL || cert_def == NULL || cert == NULL || cert_size == NULL || ca_public_key == NULL)
+	if (build_state == NULL || cert_def == NULL || cert == NULL || cert_size == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
 	memset(build_state, 0, sizeof(*build_state));
@@ -255,14 +269,17 @@ int atcacert_cert_build_start( atcacert_build_state_t* build_state,
 			return ret;
 	}
 
-	// Set the authority key ID
-	ret = atcacert_set_auth_key_id(
-	    build_state->cert_def,
-	    build_state->cert,
-	    *build_state->cert_size,
-	    ca_public_key);
-	if (ret != ATCACERT_E_SUCCESS)
-		return ret;
+    if (ca_public_key != NULL)
+    {
+        // Set the authority key ID
+        ret = atcacert_set_auth_key_id(
+            build_state->cert_def,
+            build_state->cert,
+            *build_state->cert_size,
+            ca_public_key);
+        if (ret != ATCACERT_E_SUCCESS)
+            return ret;
+    }
 
 	return ATCACERT_E_SUCCESS;
 }
@@ -288,12 +305,13 @@ int atcacert_cert_build_process( atcacert_build_state_t*      build_state,
 
 	data = atcacert_is_device_loc_match(&build_state->cert_def->cert_sn_dev_loc, device_loc, device_data);
 	if (data != NULL) {
-		ret = atcacert_set_cert_sn(
+        ret = atcacert_set_cert_sn(
 		    build_state->cert_def,
 		    build_state->cert,
-		    *build_state->cert_size,
+		    build_state->cert_size,
+            build_state->max_cert_size,
 		    data,
-		    build_state->cert_def->cert_sn_dev_loc.count);
+            build_state->cert_def->cert_sn_dev_loc.count);
 		if (ret != ATCACERT_E_SUCCESS)
 			return ret;
 	}
@@ -343,7 +361,8 @@ int atcacert_cert_build_process( atcacert_build_state_t*      build_state,
 		if (data != NULL) {
 			if (build_state->cert_def->cert_elements[i].device_loc.count != build_state->cert_def->cert_elements[i].cert_loc.count)
 				return ATCACERT_E_BAD_CERT;
-			ret = atcacert_set_cert_element(
+            ret = atcacert_set_cert_element(
+                build_state->cert_def,
 			    &build_state->cert_def->cert_elements[i].cert_loc,
 			    build_state->cert,
 			    *build_state->cert_size,
@@ -462,6 +481,7 @@ int atcacert_get_device_data( const atcacert_def_t*        cert_def,
 			if (sizeof(temp_buf) < cert_def->cert_elements[i].device_loc.count)
 				return ATCACERT_E_BUFFER_TOO_SMALL;
 			ret = atcacert_get_cert_element(
+                cert_def,
 			    &cert_def->cert_elements[i].cert_loc,
 			    cert,
 			    cert_size,
@@ -487,7 +507,7 @@ int atcacert_set_subj_public_key( const atcacert_def_t* cert_def,
 	if (cert_def == NULL || cert == NULL || subj_public_key == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	ret = atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_PUBLIC_KEY], cert, cert_size, subj_public_key, 64);
+    ret = atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_PUBLIC_KEY], cert, cert_size, subj_public_key, 64);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -495,7 +515,7 @@ int atcacert_set_subj_public_key( const atcacert_def_t* cert_def,
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
-	ret = atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_SUBJ_KEY_ID], cert, cert_size, key_id, 20);
+    ret = atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_SUBJ_KEY_ID], cert, cert_size, key_id, 20);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -510,7 +530,7 @@ int atcacert_get_subj_public_key( const atcacert_def_t* cert_def,
 	if (cert_def == NULL || cert == NULL || subj_public_key == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	return atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_PUBLIC_KEY], cert, cert_size, subj_public_key, 64);
+    return atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_PUBLIC_KEY], cert, cert_size, subj_public_key, 64);
 }
 
 int atcacert_get_subj_key_id( const atcacert_def_t* cert_def,
@@ -521,7 +541,7 @@ int atcacert_get_subj_key_id( const atcacert_def_t* cert_def,
 	if (cert_def == NULL || cert == NULL || subj_key_id == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	return atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_SUBJ_KEY_ID], cert, cert_size, subj_key_id, 20);
+    return atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_SUBJ_KEY_ID], cert, cert_size, subj_key_id, 20);
 }
 
 int atcacert_set_signature( const atcacert_def_t* cert_def,
@@ -535,18 +555,17 @@ int atcacert_set_signature( const atcacert_def_t* cert_def,
 	size_t cur_der_sig_size;
 	size_t new_der_sig_size;
 	size_t old_cert_der_length_size;
-	size_t new_cert_der_length_size;
-	size_t new_cert_length;
-	uint8_t new_cert_der_length[5];
+	uint32_t new_cert_length;
 
 	if (cert_def == NULL || cert == NULL || cert_size == NULL || signature == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	sig_offset = cert_def->std_cert_elements[STDCERT_SIGNATURE].offset;
+    sig_offset = cert_def->std_cert_elements[STDCERT_SIGNATURE].offset;
+    sig_offset += get_effective_offset(cert_def, cert, sig_offset);
 
 	// Non X.509 signatures are treated like normal certificate elements
 	if (cert_def->type != CERTTYPE_X509)
-		return atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_SIGNATURE], cert, *cert_size, signature, 64);
+		return atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_SIGNATURE], cert, *cert_size, signature, 64);
 
 	if (sig_offset >= *cert_size)
 		return ATCACERT_E_ELEM_OUT_OF_BOUNDS; // Signature element is shown as past the end of the certificate
@@ -566,25 +585,19 @@ int atcacert_set_signature( const atcacert_def_t* cert_def,
 	}
 
 	*cert_size += (int)new_der_sig_size - (int)cur_der_sig_size;
-
-	old_cert_der_length_size = *cert_size - 1;
-	ret = atcacert_der_dec_length(&cert[1], &old_cert_der_length_size, NULL);
+    
+    old_cert_der_length_size = *cert_size - 1;
+    ret = atcacert_der_adjust_length(
+        &cert[1],
+        &old_cert_der_length_size,
+        (int)new_der_sig_size - (int)cur_der_sig_size,
+        &new_cert_length);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
-
-	if ((1 + old_cert_der_length_size) > *cert_size)
+    
+    // Tag, length, value
+    if (1 + old_cert_der_length_size + new_cert_length != *cert_size)
 		return ATCACERT_E_BAD_CERT;
-	new_cert_length = *cert_size - (1 + old_cert_der_length_size);
-
-	new_cert_der_length_size = sizeof(new_cert_der_length);
-	ret = atcacert_der_enc_length(new_cert_length, new_cert_der_length, &new_cert_der_length_size);
-	if (ret != ATCACERT_E_SUCCESS)
-		return ret;
-
-	if (old_cert_der_length_size != new_cert_der_length_size)
-		return ATCACERT_E_BAD_CERT;
-
-	memcpy(&cert[1], new_cert_der_length, new_cert_der_length_size);
 
 	return ATCACERT_E_SUCCESS;
 }
@@ -601,10 +614,11 @@ int atcacert_get_signature( const atcacert_def_t* cert_def,
 		return ATCACERT_E_BAD_PARAMS;
 
 	sig_offset = cert_def->std_cert_elements[STDCERT_SIGNATURE].offset;
+    sig_offset += get_effective_offset(cert_def, cert, sig_offset);
 
 	// Non X.509 signatures are treated like normal certificate elements
 	if (cert_def->type != CERTTYPE_X509)
-		return atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_SIGNATURE], cert, cert_size, signature, 64);
+		return atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_SIGNATURE], cert, cert_size, signature, 64);
 
 	if (sig_offset >= cert_size)
 		return ATCACERT_E_ELEM_OUT_OF_BOUNDS; // Signature element is shown as past the end of the certificate
@@ -632,7 +646,7 @@ int atcacert_set_issue_date( const atcacert_def_t*     cert_def,
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
-	ret = atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_ISSUE_DATE], cert, cert_size, formatted_date, formatted_date_size);
+    ret = atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_ISSUE_DATE], cert, cert_size, formatted_date, formatted_date_size);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -658,7 +672,7 @@ int atcacert_get_issue_date( const atcacert_def_t*  cert_def,
 	if (formatted_date_size > sizeof(formatted_date))
 		return ATCACERT_E_ERROR; // DATEFMT_MAX_SIZE is wrong
 
-	ret = atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_ISSUE_DATE], cert, cert_size, formatted_date, formatted_date_size);
+    ret = atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_ISSUE_DATE], cert, cert_size, formatted_date, formatted_date_size);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -688,7 +702,7 @@ int atcacert_set_expire_date( const atcacert_def_t*     cert_def,
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
-	ret = atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_EXPIRE_DATE], cert, cert_size, formatted_date, formatted_date_size);
+    ret = atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_EXPIRE_DATE], cert, cert_size, formatted_date, formatted_date_size);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -714,7 +728,7 @@ int atcacert_get_expire_date( const atcacert_def_t*  cert_def,
 	if (formatted_date_size > sizeof(formatted_date))
 		return ATCACERT_E_ERROR; // DATEFMT_MAX_SIZE is wrong
 
-	ret = atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_EXPIRE_DATE], cert, cert_size, formatted_date, formatted_date_size);
+    ret = atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_EXPIRE_DATE], cert, cert_size, formatted_date, formatted_date_size);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -753,7 +767,7 @@ int atcacert_set_signer_id( const atcacert_def_t* cert_def,
 	uint8_to_hex(signer_id[0], &hex_str[0]);
 	uint8_to_hex(signer_id[1], &hex_str[2]);
 
-	return atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_SIGNER_ID], cert, cert_size, hex_str, 4);
+    return atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_SIGNER_ID], cert, cert_size, hex_str, 4);
 }
 
 static int hex_to_uint8(const uint8_t hex_str[2], uint8_t* num)
@@ -792,7 +806,7 @@ int atcacert_get_signer_id( const atcacert_def_t* cert_def,
 	if (cert_def == NULL || cert == NULL || signer_id == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	ret = atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_SIGNER_ID], cert, cert_size, hex_str, 4);
+	ret = atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_SIGNER_ID], cert, cert_size, hex_str, 4);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -809,14 +823,70 @@ int atcacert_get_signer_id( const atcacert_def_t* cert_def,
 
 int atcacert_set_cert_sn( const atcacert_def_t* cert_def,
                           uint8_t*              cert,
-                          size_t cert_size,
+                          size_t*               cert_size,
+                          size_t                max_cert_size,
                           const uint8_t*        cert_sn,
-                          size_t cert_sn_size)
+                          size_t                cert_sn_size)
 {
-	if (cert_def == NULL || cert == NULL || cert_sn == NULL)
+	if (cert_def == NULL || cert == NULL || cert_size == NULL || cert_sn == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	return atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_CERT_SN], cert, cert_size, cert_sn, cert_sn_size);
+    if (cert_def->type == CERTTYPE_X509 && cert_def->sn_source == SNSRC_STORED_DYNAMIC)
+    {
+        // The SN includes the header length, indicating this is a variable length SN
+        const atcacert_cert_loc_t* sn_cert_loc = &cert_def->std_cert_elements[STDCERT_CERT_SN];
+        int sn_offset = (int)cert[sn_cert_loc->offset] - (int)cert_def->cert_template[sn_cert_loc->offset];
+
+        if (sn_offset != 0)
+        {
+            int ret = 0;
+            size_t der_len_offset = 0;
+            size_t cert_der_len = 0;
+            uint32_t cert_len = 0;
+            size_t tbs_der_len = 0;
+            
+            // The SN field has changed size
+            if (*cert_size + sn_offset > max_cert_size)
+                return ATCACERT_E_BUFFER_TOO_SMALL; // Cert buffer is too small for resizing
+            // Shift everything after the serial number to accommodate its new size
+            memmove(
+                &cert[sn_cert_loc->offset + sn_cert_loc->count],
+                &cert[sn_cert_loc->offset + sn_cert_loc->count + sn_offset],
+                *cert_size - (sn_cert_loc->offset + sn_cert_loc->count));
+            *cert_size += sn_offset;
+            
+            // Adjust cert header length
+            der_len_offset = 1; // Right after first sequence tag
+            cert_der_len = *cert_size - der_len_offset; // Indicate how much buffer it has to work with
+            ret = atcacert_der_adjust_length(
+                &cert[der_len_offset],
+                &cert_der_len,
+                sn_offset,
+                &cert_len);
+            if (ret != 0)
+                return ret;
+            if (1 + cert_der_len + cert_len != *cert_size)
+                return ATCACERT_E_BAD_CERT; // Cert was malformed
+            
+            der_len_offset = 1 + cert_der_len + 1; // cert Tag (1), cert len, TBS tag (1)
+            tbs_der_len = *cert_size - der_len_offset;  // Indicate how much buffer it has to work with: 
+            ret = atcacert_der_adjust_length(
+                &cert[der_len_offset],
+                &tbs_der_len,
+                sn_offset,
+                NULL);
+            if (ret != 0)
+                return ret;
+        }
+
+        if ((size_t)(cert[sn_cert_loc->offset] + 1) > cert_sn_size)
+            return ATCACERT_E_BAD_PARAMS;
+        cert_sn_size = cert[sn_cert_loc->offset] + 1;
+        
+        // Update Cert
+    }
+
+    return atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_CERT_SN], cert, *cert_size, cert_sn, cert_sn_size);
 }
 
 int atcacert_gen_cert_sn( const atcacert_def_t* cert_def,
@@ -833,7 +903,7 @@ int atcacert_gen_cert_sn( const atcacert_def_t* cert_def,
 	if (cert_def == NULL || cert == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	if (cert_def->sn_source == SNSRC_STORED || cert_def->std_cert_elements[STDCERT_CERT_SN].count == 0)
+	if (cert_def->sn_source == SNSRC_STORED || cert_def->sn_source == SNSRC_STORED_DYNAMIC || cert_def->std_cert_elements[STDCERT_CERT_SN].count == 0)
 		return ATCACERT_E_SUCCESS; // Certificate serial number is not generated or not in the certificate
 
 	switch (cert_def->sn_source) {
@@ -915,7 +985,7 @@ int atcacert_gen_cert_sn( const atcacert_def_t* cert_def,
 		return ATCACERT_E_BAD_PARAMS;
 	}
 
-	return atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_CERT_SN], cert, cert_size, sn, sn_size);
+    return atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_CERT_SN], cert, cert_size, sn, sn_size);
 }
 
 int atcacert_get_cert_sn( const atcacert_def_t* cert_def,
@@ -934,7 +1004,7 @@ int atcacert_get_cert_sn( const atcacert_def_t* cert_def,
 
 	*cert_sn_size = cert_def->std_cert_elements[STDCERT_CERT_SN].count;
 
-	return atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_CERT_SN], cert, cert_size, cert_sn, *cert_sn_size);
+    return atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_CERT_SN], cert, cert_size, cert_sn, *cert_sn_size);
 }
 
 int atcacert_set_auth_key_id( const atcacert_def_t* cert_def,
@@ -952,7 +1022,24 @@ int atcacert_set_auth_key_id( const atcacert_def_t* cert_def,
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
-	ret = atcacert_set_cert_element(&cert_def->std_cert_elements[STDCERT_AUTH_KEY_ID], cert, cert_size, key_id, 20);
+    ret = atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_AUTH_KEY_ID], cert, cert_size, key_id, 20);
+	if (ret != ATCACERT_E_SUCCESS)
+		return ret;
+
+	return ATCACERT_E_SUCCESS;
+}
+
+int atcacert_set_auth_key_id_raw( const atcacert_def_t* cert_def,
+                                  uint8_t*              cert,
+                                  size_t                cert_size,
+                                  const uint8_t*        auth_key_id)
+{
+    int ret = 0;
+
+    if (cert_def == NULL || cert == NULL || auth_key_id == NULL)
+		return ATCACERT_E_BAD_PARAMS;
+    
+    ret = atcacert_set_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_AUTH_KEY_ID], cert, cert_size, auth_key_id, cert_def->std_cert_elements[STDCERT_AUTH_KEY_ID].count);
 	if (ret != ATCACERT_E_SUCCESS)
 		return ret;
 
@@ -967,7 +1054,7 @@ int atcacert_get_auth_key_id( const atcacert_def_t* cert_def,
 	if (cert_def == NULL || cert == NULL || auth_key_id == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	return atcacert_get_cert_element(&cert_def->std_cert_elements[STDCERT_AUTH_KEY_ID], cert, cert_size, auth_key_id, 20);
+	return atcacert_get_cert_element(cert_def, &cert_def->std_cert_elements[STDCERT_AUTH_KEY_ID], cert, cert_size, auth_key_id, 20);
 }
 
 int atcacert_set_comp_cert( const atcacert_def_t* cert_def,
@@ -1069,14 +1156,18 @@ int atcacert_get_tbs( const atcacert_def_t* cert_def,
                       const uint8_t**       tbs,
                       size_t*               tbs_size)
 {
+    int eff_offset = 0;
+
 	if (cert_def == NULL || cert == NULL || tbs == NULL || tbs_size == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	if ((size_t)cert_def->tbs_cert_loc.offset + (size_t)cert_def->tbs_cert_loc.count > cert_size)
+    eff_offset = get_effective_offset(cert_def, cert, cert_def->tbs_cert_loc.offset + cert_def->tbs_cert_loc.count);
+
+	if ((size_t)(cert_def->tbs_cert_loc.offset + cert_def->tbs_cert_loc.count + eff_offset) > cert_size)
 		return ATCACERT_E_BAD_CERT;
 
 	*tbs      = &cert[cert_def->tbs_cert_loc.offset];
-	*tbs_size = cert_def->tbs_cert_loc.count;
+    *tbs_size = cert_def->tbs_cert_loc.count + eff_offset;
 
 	return ATCACERT_E_SUCCESS;
 }
@@ -1104,13 +1195,16 @@ int atcacert_get_tbs_digest( const atcacert_def_t* cert_def,
 	return ret;
 }
 
-int atcacert_set_cert_element( const atcacert_cert_loc_t* cert_loc,
+int atcacert_set_cert_element( const atcacert_def_t*      cert_def,
+                               const atcacert_cert_loc_t* cert_loc,
                                uint8_t*                   cert,
                                size_t cert_size,
                                const uint8_t*             data,
                                size_t data_size)
 {
-	if (cert_loc == NULL || cert == NULL)
+    int eff_offset = 0;
+
+	if (cert_def == NULL || cert_loc == NULL || cert == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
 	if (cert_loc->count == 0)
@@ -1119,24 +1213,35 @@ int atcacert_set_cert_element( const atcacert_cert_loc_t* cert_loc,
 	if (data == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
-	if (data_size != cert_loc->count)
+    // Don't validate for dynamic cert SN
+	if (!(cert_def->type == CERTTYPE_X509 &&
+          cert_def->sn_source == SNSRC_STORED_DYNAMIC &&
+          cert_loc->offset == cert_def->std_cert_elements[STDCERT_CERT_SN].offset) &&
+        data_size != cert_loc->count)
+    {
 		return ATCACERT_E_UNEXPECTED_ELEM_SIZE;
+    }
 
-	if ((size_t)cert_loc->offset + cert_loc->count > cert_size)
+    eff_offset = get_effective_offset(cert_def, cert, cert_loc->offset);
+
+    if ((size_t)(cert_loc->offset + data_size + eff_offset) > cert_size)
 		return ATCACERT_E_ELEM_OUT_OF_BOUNDS;
 
-	memcpy(&cert[cert_loc->offset], data, data_size);
+    memcpy(&cert[cert_loc->offset + eff_offset], data, data_size);
 
 	return ATCACERT_E_SUCCESS;
 }
 
-int atcacert_get_cert_element( const atcacert_cert_loc_t* cert_loc,
+int atcacert_get_cert_element( const atcacert_def_t*      cert_def,
+                               const atcacert_cert_loc_t* cert_loc,
                                const uint8_t*             cert,
                                size_t cert_size,
                                uint8_t*                   data,
                                size_t data_size)
 {
-	if (cert_loc == NULL || cert == NULL || data == NULL)
+    int eff_offset = 0;
+
+    if (cert_def == NULL || cert_loc == NULL || cert == NULL || data == NULL)
 		return ATCACERT_E_BAD_PARAMS;
 
 	if (cert_loc->count == 0)
@@ -1145,10 +1250,12 @@ int atcacert_get_cert_element( const atcacert_cert_loc_t* cert_loc,
 	if (cert_loc->count != data_size)
 		return ATCACERT_E_UNEXPECTED_ELEM_SIZE;
 
-	if ((size_t)cert_loc->offset + cert_loc->count > cert_size)
+    eff_offset = get_effective_offset(cert_def, cert, cert_loc->offset);
+
+    if ((size_t)(cert_loc->offset + cert_loc->count + eff_offset) > cert_size)
 		return ATCACERT_E_ELEM_OUT_OF_BOUNDS;
 
-	memcpy(data, &cert[cert_loc->offset], data_size);
+    memcpy(data, &cert[cert_loc->offset + eff_offset], data_size);
 
 	return ATCACERT_E_SUCCESS;
 }

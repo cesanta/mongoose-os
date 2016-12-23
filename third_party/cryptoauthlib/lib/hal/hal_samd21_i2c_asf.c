@@ -142,7 +142,7 @@ ATCA_STATUS hal_i2c_discover_devices(int busNum, ATCAIfaceCfg cfg[], int *found 
 			(*found)++;
 			memcpy( (uint8_t*)head, (uint8_t*)&discoverCfg, sizeof(ATCAIfaceCfg));
 
-			memset( packet.data, 0x00, sizeof(packet.data));
+			memset( packet.info, 0x00, sizeof(packet.info));
 
 			// get devrev info and set device type accordingly
 			atInfo( command, &packet );
@@ -158,31 +158,31 @@ ATCA_STATUS hal_i2c_discover_devices(int busNum, ATCAIfaceCfg cfg[], int *found 
 			atca_delay_ms(execution_time);
 
 			// receive the response
-			if ( (status = atreceive( discoverIface, &(packet.data[0]), &(packet.rxsize) )) != ATCA_SUCCESS )
+			if ( (status = atreceive( discoverIface, &(packet.info[0]), &(packet.rxsize) )) != ATCA_SUCCESS )
 				continue;
 
-			if ( (status = isATCAError(packet.data)) != ATCA_SUCCESS ) {
+			if ( (status = isATCAError(packet.info)) != ATCA_SUCCESS ) {
 				printf("command response error\r\n");
 				continue;
 			}
 
 			// determine device type from common info and dev rev response byte strings
 			for ( i = 0; i < (int)sizeof(revs508) / 4; i++ ) {
-				if ( memcmp( &packet.data[1], &revs508[i], 4) == 0 ) {
+				if ( memcmp( &packet.info[1], &revs508[i], 4) == 0 ) {
 					discoverCfg.devtype = ATECC508A;
 					break;
 				}
 			}
 
 			for ( i = 0; i < (int)sizeof(revs204) / 4; i++ ) {
-				if ( memcmp( &packet.data[1], &revs204[i], 4) == 0 ) {
+				if ( memcmp( &packet.info[1], &revs204[i], 4) == 0 ) {
 					discoverCfg.devtype = ATSHA204A;
 					break;
 				}
 			}
 
 			for ( i = 0; i < (int)sizeof(revs108) / 4; i++ ) {
-				if ( memcmp( &packet.data[1], &revs108[i], 4) == 0 ) {
+				if ( memcmp( &packet.info[1], &revs108[i], 4) == 0 ) {
 					discoverCfg.devtype = ATECC108A;
 					break;
 				}
@@ -235,8 +235,19 @@ ATCA_STATUS hal_i2c_init(void *hal, ATCAIfaceCfg *cfg)
 			i2c_hal_data[bus]->ref_ct = 1;  // buses are shared, this is the first instance
 			i2c_master_get_config_defaults(&config_i2c_master);
 #ifdef __SAMR21G18A__
-			config_i2c_master.pinmux_pad0 = PINMUX_PA16C_SERCOM1_PAD0;
-			config_i2c_master.pinmux_pad1 = PINMUX_PA17C_SERCOM1_PAD1;
+            if (bus == 1)
+            {
+			    config_i2c_master.pinmux_pad0 = PINMUX_PA16C_SERCOM1_PAD0;
+			    config_i2c_master.pinmux_pad1 = PINMUX_PA17C_SERCOM1_PAD1;
+            }
+#endif
+#ifdef __SAMD21G18A__
+            if (bus == 0)
+            {
+                // This is to support SAMW25 configs, where the WINC1500 is on SERCOM2
+                config_i2c_master.pinmux_pad0 = PINMUX_PA08C_SERCOM0_PAD0;
+                config_i2c_master.pinmux_pad1 = PINMUX_PA09C_SERCOM0_PAD1;
+            }
 #endif
 
 			// config_i2c_master.buffer_timeout = 10000;
@@ -342,6 +353,9 @@ ATCA_STATUS hal_i2c_receive( ATCAIface iface, uint8_t *rxdata, uint16_t *rxlengt
 		status = i2c_master_read_packet_wait( &(i2c_hal_data[bus]->i2c_master_instance), &packet);
 
 	if ( status != STATUS_OK )
+		return ATCA_COMM_FAIL;
+
+	if ( atCheckCrc(packet.data) != ATCA_SUCCESS)
 		return ATCA_COMM_FAIL;
 
 	return ATCA_SUCCESS;

@@ -150,7 +150,7 @@ ATCA_STATUS hal_i2c_discover_devices(int busNum, ATCAIfaceCfg cfg[], int *found 
 			(*found)++;
 			memcpy( (uint8_t*)head, (uint8_t*)&discoverCfg, sizeof(ATCAIfaceCfg));
 
-			memset( packet.data, 0x00, sizeof(packet.data));
+			memset( packet.info, 0x00, sizeof(packet.info));
 
 			// get devrev info and set device type accordingly
 			atInfo( command, &packet );
@@ -166,29 +166,29 @@ ATCA_STATUS hal_i2c_discover_devices(int busNum, ATCAIfaceCfg cfg[], int *found 
 			atca_delay_ms(execution_time);
 
 			// receive the response
-			if ( (status = atreceive( discoverIface, &(packet.data[0]), &(packet.rxsize) )) != ATCA_SUCCESS )
+			if ( (status = atreceive( discoverIface, &(packet.info[0]), &(packet.rxsize) )) != ATCA_SUCCESS )
 				continue;
 
-			if ( (status = isATCAError(packet.data)) != ATCA_SUCCESS )
+			if ( (status = isATCAError(packet.info)) != ATCA_SUCCESS )
 				continue;
 
 			// determine device type from common info and dev rev response byte strings
 			for ( i = 0; i < (int)sizeof(revs508) / 4; i++ ) {
-				if ( memcmp( &packet.data[1], &revs508[i], 4) == 0 ) {
+				if ( memcmp( &packet.info[1], &revs508[i], 4) == 0 ) {
 					discoverCfg.devtype = ATECC508A;
 					break;
 				}
 			}
 
 			for ( i = 0; i < (int)sizeof(revs204) / 4; i++ ) {
-				if ( memcmp( &packet.data[1], &revs204[i], 4) == 0 ) {
+				if ( memcmp( &packet.info[1], &revs204[i], 4) == 0 ) {
 					discoverCfg.devtype = ATSHA204A;
 					break;
 				}
 			}
 
 			for ( i = 0; i < (int)sizeof(revs108) / 4; i++ ) {
-				if ( memcmp( &packet.data[1], &revs108[i], 4) == 0 ) {
+				if ( memcmp( &packet.info[1], &revs108[i], 4) == 0 ) {
 					discoverCfg.devtype = ATECC108A;
 					break;
 				}

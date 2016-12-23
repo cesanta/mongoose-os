@@ -49,6 +49,11 @@
 // the command console to switch device types at runtime.
 ATCAIfaceCfg *gCfg = NULL;
 
+const uint8_t g_slot4_key[32] = {
+    0x37, 0x80, 0xe6, 0x3d, 0x49, 0x68, 0xad, 0xe5, 0xd8, 0x22, 0xc0, 0x13, 0xfc, 0xc3, 0x23, 0x84,
+    0x5d, 0x1b, 0x56, 0x9f, 0xe7, 0x05, 0xb6, 0x00, 0x06, 0xfe, 0xec, 0x14, 0x5a, 0x0d, 0xb1, 0xe3
+};
+
 // test runner
 int atca_unit_tests(ATCADeviceType deviceType)
 {
@@ -82,6 +87,10 @@ int atca_unit_tests(ATCADeviceType deviceType)
 		gCfg = &cfg_ateccx08a_i2c_default;
 		#elif defined(ATCA_HAL_SWI)
 		gCfg = &cfg_ateccx08a_swi_default;
+		#elif defined(ATCA_HAL_KIT_CDC)
+		gCfg = &cfg_ecc508_kitcdc_default;
+		#elif defined(ATCA_HAL_KIT_HID)
+		gCfg = &cfg_ecc508_kithid_default;
 		#endif
 		gCfg->devtype = ATECC508A;
 		atca_ecc508a_unit_tests(deviceType);
@@ -116,6 +125,35 @@ int atcau_get_addr(uint8_t zone, uint8_t slot, uint8_t block, uint8_t offset, ui
 	}else
 		status = ATCA_BAD_PARAM;
 	return status;
+}
+
+static ATCA_STATUS test_command(ATCACommand commandObj, ATCAIface iface, ATCA_CmdMap cmd, ATCAPacket* packet)
+{
+    ATCA_STATUS status = ATCA_SUCCESS;
+    uint16_t execution_time = atGetExecTime(commandObj, cmd);
+    
+    // Wakeup
+    status = atwake(iface);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    
+    // Send command
+    status = atsend(iface, (uint8_t*)packet, packet->txsize);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    
+    // Delay the appropriate amount of time for command to execute
+    atca_delay_ms(execution_time);
+    
+    // Receive the response
+    status = atreceive(iface, packet->info, &(packet->rxsize));
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    
+    // Check for command errors
+    status = isATCAError(packet->info);
+    
+    // Go back to idle
+    atidle(iface);
+    
+    return status;
 }
 
 int atcau_is_locked(uint8_t zone, uint8_t *lock_state)
@@ -156,10 +194,10 @@ int atcau_is_locked(uint8_t zone, uint8_t *lock_state)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize));
+	status = atreceive( iface, packet.info, &(packet.rxsize));
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
-	memcpy( word_data, &packet.data[1], sizeof(word_data));
+	memcpy( word_data, &packet.info[1], sizeof(word_data));
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -267,6 +305,9 @@ void test_crcerror(void)
 	ATCA_STATUS status;
 	ATCAPacket packet;
 
+	if (gCfg->iface_type == ATCA_HID_IFACE)
+		TEST_IGNORE_MESSAGE("Kit protocol corrects CRC errors.");
+
 	uint16_t execution_time = 0;
 
 	device = newATCADevice(gCfg);
@@ -287,8 +328,8 @@ void test_crcerror(void)
 	execution_time = atGetExecTime( commandObj, CMD_INFO);
 
 	// hack up the packet so CRC is broken
-	packet.data[0] = 0xff;
-	packet.data[1] = 0xff;
+	packet.info[0] = 0xff;
+	packet.info[1] = 0xff;
 
 	// send the command
 	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
@@ -298,12 +339,12 @@ void test_crcerror(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// test to make sure CRC error is in the packet
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x04, packet.data[0], "Failed error response length test");
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0xff, packet.data[1], "Failed bad CRC test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x04, packet.info[0], "Failed error response length test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0xff, packet.info[1], "Failed bad CRC test");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -356,7 +397,7 @@ void test_checkmac(void)
 	// build a mac command
 	packet.param1 = MAC_MODE_CHALLENGE;
 	packet.param2 = keyID;
-	memset( packet.data, 0x55, 32 );  // a 32-byte challenge
+	memset( packet.info, 0x55, 32 );  // a 32-byte challenge
 
 	status = atMAC( commandObj, &packet );
 	execution_time = atGetExecTime( commandObj, CMD_MAC);
@@ -370,9 +411,9 @@ void test_checkmac(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	memcpy(response_mac, packet.data, sizeof(response_mac));
+	memcpy(response_mac, packet.info, sizeof(response_mac));
 
 	// sleep or idle
 	status = atidle(iface);
@@ -381,12 +422,12 @@ void test_checkmac(void)
 	// build a checkmac command
 	packet.param1 = MAC_MODE_CHALLENGE;
 	packet.param2 = keyID;
-	memset( packet.data, 0x55, 32 );  // a 32-byte challenge
-	memcpy(&packet.data[32], &response_mac[1], 32);
+	memset( packet.info, 0x55, 32 );  // a 32-byte challenge
+	memcpy(&packet.info[32], &response_mac[1], 32);
 	memset(other_data, 0, sizeof(other_data));
 	other_data[0] = ATCA_MAC;
 	other_data[2] = (uint8_t)keyID;
-	memcpy(&packet.data[64], other_data, sizeof(other_data));
+	memcpy(&packet.info[64], other_data, sizeof(other_data));
 
 	status = atCheckMAC( commandObj, &packet );
 	execution_time = atGetExecTime( commandObj, CMD_CHECKMAC);
@@ -404,9 +445,9 @@ void test_checkmac(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize));
+	status = atreceive( iface, packet.info, &(packet.rxsize));
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed CheckMac test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.info[ATCA_RSP_DATA_IDX], "Failed CheckMac test");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -456,9 +497,9 @@ void test_counter(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize));
+	status = atreceive( iface, packet.info, &(packet.rxsize));
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	memcpy(increased_bin_val, &packet.data[ATCA_RSP_DATA_IDX], sizeof(increased_bin_val));
+	memcpy(increased_bin_val, &packet.info[ATCA_RSP_DATA_IDX], sizeof(increased_bin_val));
 
 	// build a counter command
 	packet.param1 = COUNTER_MODE_READ;
@@ -476,9 +517,9 @@ void test_counter(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize));
+	status = atreceive( iface, packet.info, &(packet.rxsize));
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_ARRAY_MESSAGE(increased_bin_val, &packet.data[ATCA_RSP_DATA_IDX], 4, "Failed increment the counter");
+	TEST_ASSERT_EQUAL_INT8_ARRAY_MESSAGE(increased_bin_val, &packet.info[ATCA_RSP_DATA_IDX], 4, "Failed increment the counter");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -525,7 +566,7 @@ void test_derivekey(void)
 	//build a nonce command
 	packet.param1 = NONCE_MODE_SEED_UPDATE;
 	packet.param2 = 0x0000;
-	memset( packet.data, 0x00, 32 );
+	memset( packet.info, 0x00, 32 );
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_SHORT, packet.txsize );
@@ -545,9 +586,9 @@ void test_derivekey(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError( packet.data );
+	status = isATCAError( packet.info );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// build a deriveKey command (Roll Key operation)
@@ -567,13 +608,13 @@ void test_derivekey(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError( packet.data );
+	status = isATCAError( packet.info );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// check for derive key response if it's success or not
-	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.data[1] );
+	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.info[1] );
 
 	// sleep or idle
 	status = atidle(iface);
@@ -587,327 +628,167 @@ void test_derivekey(void)
 
 void test_ecdh(void)
 {
-	ATCADevice device;
-	ATCACommand commandObj;
-	ATCAIface iface;
-	ATCA_STATUS status;
-	ATCAPacket packet;
-	struct atca_nonce_in_out nonce_param;
-	struct atca_gen_dig_in_out gendig_param;
-	struct atca_temp_key tempkey;
-	uint16_t read_key_id = 0x04;
-	uint16_t execution_time = 0;
-	uint8_t isLocked = false;
-	uint8_t pub_alice[ATCA_PUB_KEY_SIZE], pub_bob[ATCA_PUB_KEY_SIZE];
-	uint8_t pms_alice[ECDH_KEY_SIZE], pms_bob[ECDH_KEY_SIZE];
-	uint8_t rand_out[ATCA_KEY_SIZE], cipher_text[ATCA_KEY_SIZE], read_key[ATCA_KEY_SIZE];
-	uint16_t key_id_alice = 0, key_id_bob = 2;
-	uint8_t frag[4] = { 0x44, 0x44, 0x44, 0x44 };
-	// char displaystr[256]; int displen = sizeof(displaystr);
-	uint8_t non_clear_response[3] = { 0x00, 0x03, 0x40 };
-	static uint8_t NUM_IN[20] = {
-		0x50, 0xDF, 0xD7, 0x82, 0x5B, 0x10, 0x0F, 0x2D, 0x8C, 0xD2, 0x0A, 0x91, 0x15, 0xAC, 0xED,  0xCF,
-		0x5A, 0xEE, 0x76, 0x94
-	};
-	uint8_t i;
-
-	status = atcau_is_locked( ATCA_ZONE_DATA, &isLocked );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	if ( !isLocked )
-		TEST_IGNORE_MESSAGE("Data zone must be locked for this test to succeed.");
-
-	device = newATCADevice(gCfg);
-
-	TEST_ASSERT_NOT_NULL( device );
-	commandObj = atGetCommands( device );
-	iface = atGetIFace(device);
-
-	atsleep(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	memset(pub_alice, 0x44, ATCA_PUB_KEY_SIZE);
-	memset(pub_bob, 0x44, ATCA_PUB_KEY_SIZE);
-
-	// build a genkey command
-	packet.param1 = 0x04;   // a random private key is generated and stored in slot keyID
-	packet.param2 = key_id_alice;
-	status = atGenKey( commandObj, &packet, false );
-	TEST_ASSERT_EQUAL( GENKEY_RSP_SIZE_LONG, packet.rxsize );
-
-	execution_time = atGetExecTime( commandObj, CMD_GENKEY);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// send the command
-	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError(packet.data);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	memcpy(pub_alice, &packet.data[ATCA_RSP_DATA_IDX], sizeof(pub_alice));
-	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, memcmp(pub_alice, frag, sizeof(frag)), "Alice pub key not initialized");
-
-	// sleep or idle
-	status = atidle(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// build a genkey command
-	packet.param1 = 0x04;   // a random private key is generated and stored in slot keyID
-	packet.param2 = key_id_bob;
-	status = atGenKey( commandObj, &packet, false );
-	TEST_ASSERT_EQUAL( GENKEY_RSP_SIZE_LONG, packet.rxsize );
-
-	execution_time = atGetExecTime( commandObj, CMD_GENKEY);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// send the command
-	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	memcpy(pub_bob, &packet.data[ATCA_RSP_DATA_IDX], sizeof(pub_bob));
-	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, memcmp(pub_bob, frag, sizeof(frag)), "Bob pub key not initialized");
-	status = isATCAError(packet.data);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// sleep or idle
-	status = atidle(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// build a ecdh command
-	packet.param1 = ECDH_PREFIX_MODE;
-	packet.param2 = key_id_alice;
-	memcpy( packet.data, pub_bob, sizeof(pub_bob) );  // a 64-byte Bob's public key
-
-	status = atECDH( commandObj, &packet );
-	TEST_ASSERT_EQUAL( ECDH_RSP_SIZE, packet.rxsize );
-
-	execution_time = atGetExecTime( commandObj, CMD_ECDH);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// send the command
-	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	// slot 0 in the W25 configuration is set to Write Slot+1, so response will not be returned in the clear
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	memcpy(pms_alice, &packet.data[ATCA_RSP_DATA_IDX], sizeof(pms_alice));
-	TEST_ASSERT_EQUAL_INT8_ARRAY_MESSAGE( non_clear_response, pms_alice, 3, "non clear response expected");
-
-	// sleep or idle
-	status = atidle(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// build a ecdh command
-	packet.param1 = ECDH_PREFIX_MODE;                       // a random private key is generated and stored in slot keyID
-	packet.param2 = key_id_bob;
-	memcpy( packet.data, pub_alice, sizeof(pub_alice) );    // a 64-byte Alice's public key
-
-	status = atECDH( commandObj, &packet );
-	TEST_ASSERT_EQUAL( ECDH_RSP_SIZE, packet.rxsize );
-
-	execution_time = atGetExecTime( commandObj, CMD_ECDH);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// send the command
-	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	memcpy(pms_bob, &packet.data[ATCA_RSP_DATA_IDX], sizeof(pms_bob));
-
-	// sleep or idle
-	status = atidle(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// TODO - for Slot+1 writes of PMS, need to do encrypted read of Slot+1
-	// and compare the two PMS values to simulate the test for the two parties.
-	// TEST_ASSERT_EQUAL( 0, memcmp( pms_alice, pms_bob, ECDH_KEY_SIZE) );
-	memset( read_key, 0xFF, sizeof(read_key) );
-	packet.param1 = 0x82;
-	packet.param2 = 0x0020;
-	memcpy( packet.data, read_key, sizeof(read_key) );
-
-	status = atWrite( commandObj, &packet );
-	execution_time = atGetExecTime( commandObj, CMD_WRITEMEM);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// send the command
-	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize));
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed Write test");
-
-	// sleep or idle
-	status = atidle(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	//build a nonce command (pass through mode)
-	packet.param1 = NONCE_MODE_SEED_UPDATE;
-	packet.param2 = 0x0000;
-	memcpy( packet.data, NUM_IN, sizeof(NUM_IN) );  // a 20-byte num-in
-
-	status = atNonce( commandObj, &packet );
-	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_SHORT, packet.txsize );
-	TEST_ASSERT_EQUAL_INT( NONCE_RSP_SIZE_LONG, packet.rxsize );
-
-	execution_time = atGetExecTime( commandObj, CMD_NONCE);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// send the command
-	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError( packet.data );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	memcpy( rand_out, &packet.data[1], sizeof(rand_out) );
-
-	// sleep or idle
-	status = atidle(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	//status = atcab_challenge_seed_update(NUM_IN, rand_out);
-	//TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	nonce_param.mode = NONCE_MODE_SEED_UPDATE;
-	nonce_param.num_in = NUM_IN;
-	nonce_param.rand_out = rand_out;
-	nonce_param.temp_key = &tempkey;
-
-	status = atcah_nonce(&nonce_param);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	//status = atcab_gendig_host( GENDIG_ZONE_DATA, read_key_id, cipher_text, sizeof(cipher_text) );
-	//TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	//build a gendig command
-	packet.param1 = GENDIG_ZONE_DATA;
-	packet.param2 = read_key_id;
-
-	status = atGenDig( commandObj, &packet, false );
-	TEST_ASSERT_EQUAL_INT( GENDIG_COUNT, packet.txsize );
-	TEST_ASSERT_EQUAL_INT( NONCE_RSP_SIZE_SHORT, packet.rxsize );
-
-	execution_time = atGetExecTime( commandObj, CMD_GENDIG);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// send the command
-	status = atsend( iface, (uint8_t*)&packet, packet.txsize );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed GenDig test");
-
-	// sleep or idle
-	status = atidle(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	//status = atcab_read_zone(ATCA_ZONE_DATA, key_id_alice + 1, 0, 0, cipher_text, sizeof(cipher_text));
-	//TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	// build an read command
-	packet.param1 = 0x82;
-	packet.param2 = 0x0008; //
-	status = atRead( commandObj, &packet );
-
-	execution_time = atGetExecTime( commandObj, CMD_READMEM);
-
-	// wakeup
-	status = atwake(iface);
-	TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
-
-	// send the command
-	status = atsend(iface, (uint8_t*)&packet, packet.txsize);
-	TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
-
-	// delay the appropriate amount of time for command to execute
-	atca_delay_ms(execution_time);
-
-	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize));
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	memcpy( cipher_text, &packet.data[1], sizeof(cipher_text));
-
-	gendig_param.zone = GENDIG_ZONE_DATA;
-	gendig_param.key_id = read_key_id;
-	gendig_param.stored_value = read_key;
-	gendig_param.temp_key = &tempkey;
-
-	status = atcah_gen_dig(&gendig_param);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	for (i = 0; i < ATCA_KEY_SIZE; i++)
-		pms_alice[i] = cipher_text[i] ^ tempkey.value[i];
-
-	TEST_ASSERT_EQUAL_MEMORY(pms_alice, pms_bob, sizeof(pms_alice));
-
-	// sleep or idle
-	status = atsleep(iface);
-	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-
-	deleteATCADevice(&device);  // destructor will reinitialize given ptr to a NULL,
-	// so it can be tested, ATCA objects are already pointers, so this
-	// is passing a double indirect
-	TEST_ASSERT_NULL( device );
-
+    ATCADevice device;
+    ATCACommand commandObj;
+    ATCAIface iface;
+    ATCA_STATUS status;
+    ATCAPacket packet;
+    uint8_t is_locked = false;
+    uint8_t sn[9];
+    uint16_t private_key_id_bob = 0;
+    uint8_t public_key_bob[ATCA_PUB_KEY_SIZE];
+    uint8_t pms_bob[ATCA_KEY_SIZE];
+    uint16_t pms_read_key_id_bob = 4;
+    uint16_t private_key_id_alice = 2;
+    uint8_t public_key_alice[ATCA_PUB_KEY_SIZE];
+    uint8_t pms_alice[ATCA_KEY_SIZE];
+    uint8_t num_in[NONCE_NUMIN_SIZE];
+    uint8_t rand_out[RANDOM_NUM_SIZE];
+    atca_temp_key_t temp_key;
+    atca_nonce_in_out_t nonce_params;
+    atca_gen_dig_in_out_t gen_dig_params;
+    int i;
+    
+    status = atcau_is_locked( ATCA_ZONE_DATA, &is_locked );
+    TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
+    if ( !is_locked )
+        TEST_IGNORE_MESSAGE("Data zone must be locked for this test to succeed.");
+    
+    device = newATCADevice(gCfg);
+
+    TEST_ASSERT_NOT_NULL( device );
+    commandObj = atGetCommands( device );
+    iface = atGetIFace(device);
+    
+    // Put device into known state in case it's still awake
+    atsleep(iface);
+    
+    // Read SN
+    packet.param1 = ATCA_ZONE_CONFIG | ATCA_ZONE_READWRITE_32;
+    packet.param2 = 0;
+    status = atRead(commandObj, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_WRITEMEM, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    TEST_ASSERT_EQUAL(32+3, packet.info[ATCA_COUNT_IDX]);
+    memcpy(&sn[0], &packet.info[ATCA_RSP_DATA_IDX], 4);
+    memcpy(&sn[4], &packet.info[ATCA_RSP_DATA_IDX+8], 5);
+    
+    // Generate key pair for bob
+    packet.param1 = GENKEY_MODE_PRIVATE;
+    packet.param2 = private_key_id_bob;
+    status = atGenKey(commandObj, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_GENKEY, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    TEST_ASSERT_EQUAL(ATCA_PUB_KEY_SIZE+3, packet.info[ATCA_COUNT_IDX]);
+    memcpy(public_key_bob, &packet.info[ATCA_RSP_DATA_IDX], ATCA_PUB_KEY_SIZE);
+    
+    // Generate key pair for alice
+    packet.param1 = GENKEY_MODE_PRIVATE;
+    packet.param2 = private_key_id_alice;
+    status = atGenKey(commandObj, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_GENKEY, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    TEST_ASSERT_EQUAL(ATCA_PUB_KEY_SIZE+3, packet.info[ATCA_COUNT_IDX]);
+    memcpy(public_key_alice, &packet.info[ATCA_RSP_DATA_IDX], ATCA_PUB_KEY_SIZE);
+    
+    // Perform ECDH operation on bob's side
+    packet.param1 = ECDH_PREFIX_MODE;
+    packet.param2 = private_key_id_bob;
+    memcpy(packet.info, public_key_alice, sizeof(public_key_alice));
+    status = atECDH(commandObj, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_ECDH, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    TEST_ASSERT_EQUAL(4, packet.info[ATCA_COUNT_IDX]);
+    
+    // Bob's PMS is written to the next slot, read that value
+    
+    //packet.param1 = ATCA_ZONE_DATA | ATCA_ZONE_READWRITE_32;
+    //packet.param2 = 4 << 3;
+    //memcpy(packet.info, g_slot4_key, 32);
+    //status = atWrite(commandObj, &packet);
+    //TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    //status = test_command(commandObj, iface, CMD_WRITEMEM, &packet);
+    //TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    
+    // Random nonce
+    memset(&temp_key, 0, sizeof(temp_key));
+    memset(num_in, 0, sizeof(num_in));
+    nonce_params.mode = NONCE_MODE_SEED_UPDATE;
+    nonce_params.num_in = num_in;
+    nonce_params.rand_out = rand_out;
+    nonce_params.temp_key = &temp_key;
+    packet.param1 = nonce_params.mode;
+    packet.param2 = 0;
+    memcpy(packet.info, nonce_params.num_in, NONCE_NUMIN_SIZE);
+    status = atNonce(commandObj, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_NONCE, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    TEST_ASSERT_EQUAL(RANDOM_NUM_SIZE+3, packet.info[ATCA_COUNT_IDX]);
+    memcpy(nonce_params.rand_out, &packet.info[ATCA_RSP_DATA_IDX], RANDOM_NUM_SIZE);
+    
+    // Perform host-side nonce calculation
+    status = atcah_nonce(&nonce_params);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    
+    // GenDig with Bob's PMS Read Key
+    gen_dig_params.zone = ATCA_ZONE_DATA;
+    gen_dig_params.key_id = pms_read_key_id_bob;
+    gen_dig_params.sn = sn;
+    gen_dig_params.stored_value = g_slot4_key;
+    gen_dig_params.temp_key = &temp_key;
+    packet.param1 = gen_dig_params.zone;
+    packet.param2 = gen_dig_params.key_id;
+    status = atGenDig(commandObj, &packet, false);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_GENDIG, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    
+    // Perform host-side nonce calculation
+    status = atcah_gen_dig(&gen_dig_params);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    
+    // Encrypted read
+    packet.param1 = ATCA_ZONE_DATA | ATCA_ZONE_READWRITE_32;
+    packet.param2 = (private_key_id_bob + 1) << 3;
+    status = atRead(commandObj, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_READMEM, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    TEST_ASSERT_EQUAL(ATCA_KEY_SIZE+3, packet.info[ATCA_COUNT_IDX]);
+    
+    // Decrypt bob's PMS
+    for (i = 0; i < ATCA_KEY_SIZE; i++)
+        pms_bob[i] = packet.info[ATCA_RSP_DATA_IDX+i] ^ temp_key.value[i];
+        
+    // Perform ECDH operation on alice's side
+    packet.param1 = ECDH_PREFIX_MODE;
+    packet.param2 = private_key_id_alice;
+    memcpy(packet.info, public_key_bob, sizeof(public_key_bob));
+    status = atECDH(commandObj, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    status = test_command(commandObj, iface, CMD_ECDH, &packet);
+    TEST_ASSERT_EQUAL(ATCA_SUCCESS, status);
+    TEST_ASSERT(packet.rxsize >= packet.info[ATCA_COUNT_IDX]);
+    TEST_ASSERT_EQUAL(ATCA_KEY_SIZE+3, packet.info[ATCA_COUNT_IDX]);
+    
+    // Alice's PMS is returned in the clear
+    memcpy(pms_alice, &packet.info[ATCA_RSP_DATA_IDX], ATCA_KEY_SIZE);
+    
+    TEST_ASSERT_EQUAL_MEMORY(pms_bob, pms_alice, ATCA_KEY_SIZE);
+    
+    deleteATCADevice(&device);
 }
 
 void test_gendig(void)
@@ -939,7 +820,7 @@ void test_gendig(void)
 	//build a nonce command (pass through mode)
 	packet.param1 = NONCE_MODE_PASSTHROUGH;
 	packet.param2 = 0x0000;
-	memset( packet.data, 0x55, 32 );  // a 32-byte nonce
+	memset( packet.info, 0x55, 32 );  // a 32-byte nonce
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_LONG, packet.txsize );
@@ -956,13 +837,13 @@ void test_gendig(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError( packet.data );
+	status = isATCAError( packet.info );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// check for nonce response for pass through mode
-	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.data[1] );
+	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.info[1] );
 
 	// idle so tempkey will remain valid
 	status = atidle(iface);
@@ -990,9 +871,9 @@ void test_gendig(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed GenDig test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.info[ATCA_RSP_DATA_IDX], "Failed GenDig test");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -1038,7 +919,7 @@ void test_genkey(void)
 	// build a genkey command
 	packet.param1 = 0x04;   // a random private key is generated and stored in slot keyID
 	packet.param2 = keyID;
-	status = atGenKey( commandObj, &packet, false );
+	status = atGenKey( commandObj, &packet );
 	TEST_ASSERT_EQUAL( GENKEY_RSP_SIZE_LONG, packet.rxsize );
 
 	execution_time = atGetExecTime( commandObj, CMD_GENKEY);
@@ -1051,9 +932,9 @@ void test_genkey(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_MESSAGE( 67, packet.data[0], "Configuration zone must be locked for this test to succeed");
+	TEST_ASSERT_EQUAL_MESSAGE( 67, packet.info[0], "Configuration zone must be locked for this test to succeed");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -1097,7 +978,7 @@ void test_hmac(void)
 	//-- Start Optionally run GenDig command
 	packet.param1 = NONCE_MODE_PASSTHROUGH;
 	packet.param2 = 0x0000;
-	memset( packet.data, 0x55, 32 );
+	memset( packet.info, 0x55, 32 );
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_LONG, packet.txsize );
@@ -1111,12 +992,12 @@ void test_hmac(void)
 
 	atca_delay_ms(execution_time);
 
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError( packet.data );
+	status = isATCAError( packet.info );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
-	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.data[1] );
+	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.info[1] );
 
 	status = atidle(iface);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
@@ -1138,7 +1019,7 @@ void test_hmac(void)
 
 	atca_delay_ms(execution_time);
 
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	status = atidle(iface);
@@ -1165,7 +1046,7 @@ void test_hmac(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	status = atidle(iface);
@@ -1174,7 +1055,7 @@ void test_hmac(void)
 	//build a nonce command
 	packet.param1 = NONCE_MODE_SEED_UPDATE;
 	packet.param2 = 0x0000;
-	memset( packet.data, 0x55, 32 );  // a 32-byte nonce
+	memset( packet.info, 0x55, 32 );  // a 32-byte nonce
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
@@ -1191,7 +1072,7 @@ void test_hmac(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	status = atidle(iface);
@@ -1216,7 +1097,7 @@ void test_hmac(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// check if the response has the 32 bytes HMAC digest
@@ -1274,11 +1155,11 @@ void test_info(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// this was specified to be an ATECC508A device, so check for rev number
-	TEST_ASSERT_EQUAL_INT8_ARRAY( revbytes, &packet.data[1], 4 );
+	TEST_ASSERT_EQUAL_INT8_ARRAY( revbytes, &packet.info[1], 4 );
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -1321,9 +1202,9 @@ void test_mac(void)
 	// build a mac command
 	packet.param1 = MAC_MODE_CHALLENGE;
 	packet.param2 = keyID;
-	memset( packet.data, 0x55, 32 );  // a 32-byte challenge
+	memset( packet.info, 0x55, 32 );  // a 32-byte challenge
 
-	//memcpy(packet.data, challenge, sizeof(challenge));
+	//memcpy(packet.info, challenge, sizeof(challenge));
 	status = atMAC( commandObj, &packet );
 	execution_time = atGetExecTime( commandObj, CMD_MAC);
 	TEST_ASSERT_EQUAL( ATCA_RSP_SIZE_32, packet.rxsize );
@@ -1336,7 +1217,7 @@ void test_mac(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	atca_delay_ms(1);
@@ -1374,7 +1255,7 @@ void test_nonce_passthrough(void)
 	//build a nonce command (pass through mode)
 	packet.param1 = NONCE_MODE_PASSTHROUGH;
 	packet.param2 = 0x0000;
-	memset( packet.data, 0x55, 32 );  // a 32-byte nonce
+	memset( packet.info, 0x55, 32 );  // a 32-byte nonce
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_LONG, packet.txsize );
@@ -1391,13 +1272,13 @@ void test_nonce_passthrough(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError( packet.data );
+	status = isATCAError( packet.info );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// check for nonce response for pass through mode
-	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.data[1] );
+	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.info[1] );
 
 	// sleep or idle
 	status = atidle(iface);
@@ -1449,9 +1330,9 @@ void test_pause(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed Pause test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.info[ATCA_RSP_DATA_IDX], "Failed Pause test");
 
 	atca_delay_ms(1);
 	// sleep or idle
@@ -1495,7 +1376,7 @@ void test_privwrite(void)
 	// build an PrivWrite command
 	packet.param1 = 0x00;
 	packet.param2 = 0x0000;
-	memset(&packet.data[4], 0x55, 32);
+	memset(&packet.info[4], 0x55, 32);
 
 	status = atPrivWrite( commandObj, &packet );
 	TEST_ASSERT_EQUAL( PRIVWRITE_RSP_SIZE, packet.rxsize );
@@ -1510,9 +1391,9 @@ void test_privwrite(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed PrivWrite test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.info[ATCA_RSP_DATA_IDX], "Failed PrivWrite test");
 
 	atca_delay_ms(1);
 	// sleep or idle
@@ -1561,7 +1442,7 @@ void test_random(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	atca_delay_ms(1);
@@ -1611,9 +1492,9 @@ void test_read(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_NOT_EQUAL( 0x0f, packet.data[1] );
+	TEST_ASSERT_NOT_EQUAL( 0x0f, packet.info[1] );
 	// sleep or idle
 	status = atsleep(iface);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
@@ -1664,11 +1545,11 @@ void test_sha(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// check the response, if error then TempKey not initialized
-	TEST_ASSERT_EQUAL_INT8( sha_success,  packet.data[1]);
+	TEST_ASSERT_EQUAL_INT8( sha_success,  packet.info[1]);
 
 	// Compute the SHA 256 digest if TempKey is loaded correctly
 	packet.param1 = SHA_MODE_SHA256_END;
@@ -1686,11 +1567,11 @@ void test_sha(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// Copy the response into digest_out
-	memcpy(&sha_digest_out[0], &packet.data[1], ATCA_SHA_DIGEST_SIZE);
+	memcpy(&sha_digest_out[0], &packet.info[1], ATCA_SHA_DIGEST_SIZE);
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -1729,7 +1610,7 @@ void test_sign(void)
 	//build a nonce command (pass through mode)
 	packet.param1 = NONCE_MODE_PASSTHROUGH;
 	packet.param2 = 0x0000;
-	memset( packet.data, 0x55, 32 );  // a 32-byte nonce
+	memset( packet.info, 0x55, 32 );  // a 32-byte nonce
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_LONG, packet.txsize );
@@ -1750,13 +1631,13 @@ void test_sign(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	status = isATCAError( packet.data );
+	status = isATCAError( packet.info );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// check for nonce response for pass through mode
-	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.data[1] );
+	TEST_ASSERT_EQUAL_INT8( ATCA_SUCCESS, packet.info[1] );
 
 	// idle so tempkey will remain valid
 	status = atidle(iface);
@@ -1785,10 +1666,10 @@ void test_sign(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
-	status = isATCAError( packet.data );
+	status = isATCAError( packet.info );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// sleep or idle
@@ -1827,7 +1708,7 @@ void test_updateExtra(void)
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// build a UpdateExtra command
-	packet.param1 = UPDATE_CONFIG_BYTE_85;
+	packet.param1 = UPDATE_MODE_SELECTOR;
 	packet.param2 = 0x0000;
 
 	status = atUpdateExtra( commandObj, &packet );
@@ -1842,9 +1723,9 @@ void test_updateExtra(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[1], "Failed to update the value");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.info[1], "Failed to update the value");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -1888,7 +1769,7 @@ void test_verify(void)
 	// build a genkey command
 	packet.param1 = 0x04;   // a random private key is generated and stored in slot keyID
 	packet.param2 = keyID;
-	status = atGenKey( commandObj, &packet, false );
+	status = atGenKey( commandObj, &packet );
 	TEST_ASSERT_EQUAL( GENKEY_RSP_SIZE_LONG, packet.rxsize );
 
 	execution_time = atGetExecTime( commandObj, CMD_GENKEY);
@@ -1901,13 +1782,13 @@ void test_verify(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	atidle(iface);
 
 	// copy the data response into the public key
-	memcpy(&public_key[0], &packet.data[ATCA_RSP_DATA_IDX], ATCA_PUB_KEY_SIZE);
+	memcpy(&public_key[0], &packet.info[ATCA_RSP_DATA_IDX], ATCA_PUB_KEY_SIZE);
 
 	// build a random command
 	packet.param1 = RANDOM_SEED_UPDATE;
@@ -1927,7 +1808,7 @@ void test_verify(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	atidle(iface);
@@ -1936,7 +1817,7 @@ void test_verify(void)
 	packet.param1 = NONCE_MODE_PASSTHROUGH;
 	packet.param2 = 0x0000;
 
-	memset( packet.data, 0x55, 32 );  // a 32-byte nonce
+	memset( packet.info, 0x55, 32 );  // a 32-byte nonce
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_LONG, packet.txsize );
@@ -1956,7 +1837,7 @@ void test_verify(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// idle so tempkey will remain valid
@@ -1988,11 +1869,11 @@ void test_verify(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// copy the data response into the signature
-	memcpy(&signature[0], &packet.data[ATCA_RSP_DATA_IDX], ATCA_SIG_SIZE);
+	memcpy(&signature[0], &packet.info[ATCA_RSP_DATA_IDX], ATCA_SIG_SIZE);
 
 	// build an random command
 	packet.param1 = RANDOM_SEED_UPDATE;
@@ -2009,7 +1890,7 @@ void test_verify(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &packet.rxsize);
+	status = atreceive( iface, packet.info, &packet.rxsize);
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	status = atidle(iface);
@@ -2018,7 +1899,7 @@ void test_verify(void)
 	// build a nonce command (pass through mode)
 	packet.param1 = NONCE_MODE_PASSTHROUGH;
 	packet.param2 = 0x0000;
-	memset( packet.data, 0x55, 32 );  // a 32-byte nonce
+	memset( packet.info, 0x55, 32 );  // a 32-byte nonce
 
 	status = atNonce( commandObj, &packet );
 	TEST_ASSERT_EQUAL_INT( NONCE_COUNT_LONG, packet.txsize );
@@ -2038,7 +1919,7 @@ void test_verify(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	status = atidle(iface);
@@ -2047,8 +1928,8 @@ void test_verify(void)
 	// build a verify command
 	packet.param1 = VERIFY_MODE_EXTERNAL; //verify the signature
 	packet.param2 = VERIFY_KEY_P256;
-	memcpy( &packet.data[0], signature, sizeof(signature));
-	memcpy( &packet.data[64], public_key, sizeof(public_key));
+	memcpy( &packet.info[0], signature, sizeof(signature));
+	memcpy( &packet.info[64], public_key, sizeof(public_key));
 
 	status = atVerify( commandObj, &packet );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
@@ -2066,9 +1947,9 @@ void test_verify(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed Verify test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.info[ATCA_RSP_DATA_IDX], "Failed Verify test");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -2091,9 +1972,6 @@ void test_write(void)
 	uint8_t cfgZoneLocked = false, dataZoneLocked = false;
 	uint8_t zone;
 	uint16_t addr = 0x00;
-	//uint8_t len = ATCA_WORD_SIZE; //case1. 4bytes write | case2. 32bytes write
-	uint8_t data[32];
-	unsigned int i;
 
 	device = newATCADevice(gCfg);
 
@@ -2119,11 +1997,10 @@ void test_write(void)
 	// build a write command to the data zone
 	packet.param1 = zone;
 	packet.param2 = addr;
-	memset( packet.data, 0x00, sizeof(packet.data) );
-	for (i = 0; i < sizeof(data); i++ )
-		packet.data[i] = (uint8_t)i;
+	memset( packet.info, 0x00, sizeof(packet.info) );
+    memcpy( packet.info, g_slot4_key, 32 );
 
-	status = atWrite( commandObj, &packet );
+	status = atWrite( commandObj, &packet, false );
 	execution_time = atGetExecTime( commandObj, CMD_WRITEMEM);
 
 	// wakeup
@@ -2138,9 +2015,9 @@ void test_write(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize));
+	status = atreceive( iface, packet.info, &(packet.rxsize));
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
-	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.data[ATCA_RSP_DATA_IDX], "Failed Write test");
+	TEST_ASSERT_EQUAL_INT8_MESSAGE( 0x00, packet.info[ATCA_RSP_DATA_IDX], "Failed Write test");
 
 	// sleep or idle
 	status = atsleep(iface);
@@ -2190,11 +2067,11 @@ void test_devRev(void)
 	atca_delay_ms(execution_time);
 
 	// receive the response
-	status = atreceive( iface, packet.data, &(packet.rxsize) );
+	status = atreceive( iface, packet.info, &(packet.rxsize) );
 	TEST_ASSERT_EQUAL( ATCA_SUCCESS, status );
 
 	// this was specified to be an ATSAH204A device, so check for rev number
-	TEST_ASSERT_EQUAL_INT8_ARRAY( revbytes, &packet.data[1], 4 );
+	TEST_ASSERT_EQUAL_INT8_ARRAY( revbytes, &packet.info[1], 4 );
 
 	// sleep or idle
 	status = atsleep(iface);

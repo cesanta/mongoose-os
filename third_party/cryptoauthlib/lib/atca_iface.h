@@ -60,7 +60,8 @@ typedef enum {
 	ATCA_SWI_IFACE,
 	ATCA_UART_IFACE,
 	ATCA_SPI_IFACE,
-	ATCA_HID_IFACE
+	ATCA_HID_IFACE,
+    ATCA_SIM_IFACE
 	// additional physical interface types here
 } ATCAIfaceType;
 
@@ -102,6 +103,11 @@ typedef struct {
 			uint32_t packetsize;    // Size of the USB packet
 			uint8_t guid[16];       // The GUID for this HID device
 		} atcahid;
+
+		struct ATCASIM {
+			int     device_id;  // Unsupported, must be 0. Change to reference different simulation instances.
+			uint8_t dev_rev[4]; // DevRev to request
+		} atcasim;
 
 	};
 

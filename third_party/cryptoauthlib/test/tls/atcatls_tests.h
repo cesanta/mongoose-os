@@ -67,6 +67,7 @@ void test_atcatls_verify_cert_chain(void);
 void test_atcatls_verify_default_certs(void);
 void test_atcatls_ca_pubkey_write_read(void);
 void test_atcatls_get_ca_cert(void);
+void test_atcatls_create_csr(void);
 
 // Encrypted Read/Write
 void test_atcatls_init_enc_key(void);

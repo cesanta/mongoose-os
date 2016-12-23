@@ -296,6 +296,9 @@ TEST_GROUP_RUNNER(atcacert_cert_build)
 	RUN_TEST_CASE(atcacert_cert_build, process_signer_comp_cert);
 	RUN_TEST_CASE(atcacert_cert_build, finish_signer);
 
+    RUN_TEST_CASE(atcacert_cert_build, start_signer_no_ca_key);
+    RUN_TEST_CASE(atcacert_cert_build, process_signer_auth_key_id);
+
 	RUN_TEST_CASE(atcacert_cert_build, start_device);
 	RUN_TEST_CASE(atcacert_cert_build, process_device_public_key);
 	RUN_TEST_CASE(atcacert_cert_build, process_device_comp_cert);

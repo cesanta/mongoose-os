@@ -44,7 +44,7 @@
 #define _ATCA_STATUS_H
 
 #include <stdint.h>
-#include <stdbool.h>
+#include "atca_bool.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -88,6 +88,8 @@ int atcacert_der_enc_length(uint32_t length, uint8_t* der_length, size_t* der_le
  */
 int atcacert_der_dec_length(const uint8_t* der_length, size_t* der_length_size, uint32_t* length);
 
+int atcacert_der_adjust_length(uint8_t* der_length, size_t* der_length_size, int delta_length, uint32_t* new_length);
+
 /**
  * \brief Encode an ASN.1 integer in DER format, including tag and length fields.
  *

@@ -120,6 +120,38 @@ int atcacert_der_dec_length(const uint8_t* der_length, size_t* der_length_size, 
 	return ATCACERT_E_SUCCESS;
 }
 
+int atcacert_der_adjust_length(uint8_t* der_length, size_t* der_length_size, int delta_length, uint32_t* new_length)
+{
+    int ret = 0;
+    size_t new_der_len_size = 0;
+    uint32_t old_len = 0;
+    uint32_t new_len = 0;
+    uint8_t new_der_length[5];
+    
+	ret = atcacert_der_dec_length(der_length, der_length_size, &old_len);
+	if (ret != ATCACERT_E_SUCCESS)
+		return ret;
+    
+    if (delta_length < 0 && (size_t)(-delta_length) > old_len)
+        return ATCACERT_E_ERROR;
+    new_len = old_len + delta_length;
+    
+    if (new_length != NULL)
+        *new_length = new_len;
+    
+	new_der_len_size = sizeof(new_der_length);
+	ret = atcacert_der_enc_length(new_len, new_der_length, &new_der_len_size);
+	if (ret != ATCACERT_E_SUCCESS)
+		return ret;
+
+	if (*der_length_size != new_der_len_size)
+		return ATCACERT_E_BAD_CERT;
+
+	memcpy(der_length, new_der_length, new_der_len_size);
+    
+    return 0;
+}
+
 int atcacert_der_enc_integer( const uint8_t* int_data,
                               size_t int_data_size,
                               uint8_t is_unsigned,

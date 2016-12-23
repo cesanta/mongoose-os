@@ -111,7 +111,7 @@ ATCA_STATUS hal_swi_discover_devices(int busNum, ATCAIfaceCfg cfg[], int *found 
 	uint8_t revs108[1][4] = { { 0x80, 0x00, 0x10, 0x01 } };
 	uint8_t revs204[2][4] = { { 0x00, 0x02, 0x00, 0x08 },
 							  { 0x00, 0x04, 0x05, 0x00 } };
-	unsigned int i; i;
+	unsigned int i;
 
 	/** \brief default configuration, to be reused during discovery process */
 	ATCAIfaceCfg discoverCfg = {
@@ -138,7 +138,7 @@ ATCA_STATUS hal_swi_discover_devices(int busNum, ATCAIfaceCfg cfg[], int *found 
 		(*found)++;
 		memcpy( (uint8_t*)head, (uint8_t*)&discoverCfg, sizeof(ATCAIfaceCfg));
 
-		memset( packet.data, 0x00, sizeof(packet.data));
+		memset( packet.info, 0x00, sizeof(packet.info));
 
 		// get devrev info and set device type accordingly
 		atInfo( command, &packet );
@@ -152,31 +152,31 @@ ATCA_STATUS hal_swi_discover_devices(int busNum, ATCAIfaceCfg cfg[], int *found 
 		atca_delay_ms(execution_time);
 
 		// receive the response
-		if ( (status = atreceive( discoverIface, &(packet.data[0]), &(packet.rxsize) )) != ATCA_SUCCESS ) {
+		if ( (status = atreceive( discoverIface, &(packet.info[0]), &(packet.rxsize) )) != ATCA_SUCCESS ) {
 		}
 
-		if ( (status = isATCAError(packet.data)) != ATCA_SUCCESS ) {
+		if ( (status = isATCAError(packet.info)) != ATCA_SUCCESS ) {
 			printf("command response error\r\n");
-			printf("0x%.2X %.2X %.2X %.2X\r\n", packet.data[0], packet.data[1], packet.data[2], packet.data[3]);
+			printf("0x%.2X %.2X %.2X %.2X\r\n", packet.info[0], packet.info[1], packet.info[2], packet.info[3]);
 		}
 
 		// determine device type from common info and dev rev response byte strings
 		for ( i = 0; i < sizeof(revs508) / 4; i++ ) {
-			if ( memcmp( &packet.data[1], &revs508[i], 4) == 0 ) {
+			if ( memcmp( &packet.info[1], &revs508[i], 4) == 0 ) {
 				discoverCfg.devtype = ATECC508A;
 				break;
 			}
 		}
 
 		for ( i = 0; i < sizeof(revs204) / 4; i++ ) {
-			if ( memcmp( &packet.data[1], &revs204[i], 4) == 0 ) {
+			if ( memcmp( &packet.info[1], &revs204[i], 4) == 0 ) {
 				discoverCfg.devtype = ATSHA204A;
 				break;
 			}
 		}
 
 		for ( i = 0; i < sizeof(revs108) / 4; i++ ) {
-			if ( memcmp( &packet.data[1], &revs108[i], 4) == 0 ) {
+			if ( memcmp( &packet.info[1], &revs108[i], 4) == 0 ) {
 				discoverCfg.devtype = ATECC108A;
 				break;
 			}
