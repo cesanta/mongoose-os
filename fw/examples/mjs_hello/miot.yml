@@ -1,0 +1,10 @@
+name: mjs_hello
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2016-09-20
+sources:
+  - src
+filesystem:
+  - fs
+modules:
+  - src: https://github.com/cesanta/mjs
