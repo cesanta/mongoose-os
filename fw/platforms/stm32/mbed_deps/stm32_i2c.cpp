@@ -2,7 +2,6 @@
 #include "fw/src/miot_i2c.h"
 
 struct miot_i2c {
-
 } s_miot_i2c;
 
 struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {

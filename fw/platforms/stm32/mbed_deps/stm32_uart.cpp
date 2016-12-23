@@ -50,7 +50,7 @@ void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
     return;
   }
 
-  while(us->rx_buf.avail > 0 && serial_readable(serial) != 0) {
+  while (us->rx_buf.avail > 0 && serial_readable(serial) != 0) {
     cs_rbuf_append_one(&us->rx_buf, serial_getc(serial));
   }
 }
@@ -62,7 +62,7 @@ void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
     return;
   }
 
-  while(us->tx_buf.used != 0 && serial_writable(serial) != 0) {
+  while (us->tx_buf.used != 0 && serial_writable(serial) != 0) {
     uint8_t *cp;
     if (cs_rbuf_get(&us->tx_buf, 1, &cp) == 1) {
       serial_putc(serial, *cp);
@@ -87,7 +87,8 @@ void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
   }
 }
 
-static void init_uart(PinName pin_tx, PinName pin_rx, struct miot_uart_state *us) {
+static void init_uart(PinName pin_tx, PinName pin_rx,
+                      struct miot_uart_state *us) {
   serial_t serial;
 
   serial_init(&serial, pin_tx, pin_rx);
@@ -96,11 +97,10 @@ static void init_uart(PinName pin_tx, PinName pin_rx, struct miot_uart_state *us
   s_serials_map.insert(std::make_pair(us->uart_no, serial));
 }
 
-static PinName get_uart_pin(UARTName uart_name, const PinMap* map) {
+static PinName get_uart_pin(UARTName uart_name, const PinMap *map) {
   while (map->pin != NC) {
-      if (map->peripheral == uart_name)
-          return map->pin;
-      map++;
+    if (map->peripheral == uart_name) return map->pin;
+    map++;
   }
   return NC;
 }
@@ -131,13 +131,12 @@ bool miot_uart_dev_init(struct miot_uart_state *us) {
      * For uart 0 we use default UART pins. On DISCOVERY boards
      * they are usually also mirrorred to USB ST-link connection
      */
-     pin_tx = SERIAL_TX;
-     pin_rx = SERIAL_RX;
+    pin_tx = SERIAL_TX;
+    pin_rx = SERIAL_RX;
   } else {
-     if (!get_uart_pins(us->uart_no == 1? UART_2 : UART_3,
-        &pin_tx, &pin_rx)) {
-       return false;
-     }
+    if (!get_uart_pins(us->uart_no == 1 ? UART_2 : UART_3, &pin_tx, &pin_rx)) {
+      return false;
+    }
   }
 
   init_uart(pin_tx, pin_rx, us);

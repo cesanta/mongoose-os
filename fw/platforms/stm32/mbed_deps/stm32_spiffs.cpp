@@ -33,7 +33,7 @@ spiffs fs;
 static s32_t stm32_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   (void) fs;
   /* STM32 allows to read flash like memory */
-  memcpy(dst, (void*)addr, size);
+  memcpy(dst, (void *) addr, size);
   return SPIFFS_OK;
 }
 
@@ -42,9 +42,10 @@ static s32_t stm32_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
 
   HAL_FLASH_Unlock();
 
-  for(uint32_t i = 0; i < size; i++) {
-    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, addr + i, *(src + i)) != HAL_OK) {
-      printf("Failed to write byte @%X\n", (int)(addr+i));
+  for (uint32_t i = 0; i < size; i++) {
+    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, addr + i, *(src + i)) !=
+        HAL_OK) {
+      printf("Failed to write byte @%X\n", (int) (addr + i));
       break;
     }
   }
@@ -72,7 +73,7 @@ static s32_t stm32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   sec_no += FLASH_SECTOR_5;
 
   if (!IS_FLASH_SECTOR(sec_no)) {
-    LOG(LL_ERROR, ("Wrong erase address: %X", (int)addr));
+    LOG(LL_ERROR, ("Wrong erase address: %X", (int) addr));
     return SPIFFS_ERR_ERASE_FAIL;
   }
 
@@ -89,7 +90,7 @@ int miot_stm32_init_spiffs_init() {
 
   spiffs_config cfg;
   memset(&cfg, 0, sizeof(cfg));
-  cfg.phys_addr = (uint32_t)fs_bin;
+  cfg.phys_addr = (uint32_t) fs_bin;
   cfg.phys_size = FS_SIZE;
   cfg.log_page_size = FS_LOG_PAGE_SIZE;
   cfg.log_block_size = FLASH_BLOCK_SIZE;
@@ -99,9 +100,9 @@ int miot_stm32_init_spiffs_init() {
   cfg.hal_write_f = stm32_spiffs_write;
   cfg.hal_erase_f = stm32_spiffs_erase;
 
-  if (SPIFFS_mount(&fs, &cfg, spiffs_work_buf, spiffs_fds,
-                    sizeof(spiffs_fds), 0, 0, 0) != SPIFFS_OK) {
-    LOG(LL_ERROR, ("SPIFFS_mount failed: %d", (int)SPIFFS_errno(&fs)));
+  if (SPIFFS_mount(&fs, &cfg, spiffs_work_buf, spiffs_fds, sizeof(spiffs_fds),
+                   0, 0, 0) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("SPIFFS_mount failed: %d", (int) SPIFFS_errno(&fs)));
     return SPIFFS_errno(&fs);
   }
 
@@ -129,7 +130,8 @@ static char *get_fixed_filename(const char *filename) {
   return (char *) filename;
 }
 
-extern "C" int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
+extern "C" int _open_r(struct _reent *r, const char *filename, int flags,
+                       int mode) {
   spiffs_mode sm = 0;
   int res;
   int rw = (flags & 3);

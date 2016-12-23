@@ -9,11 +9,11 @@
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_wifi.h"
 
-
 void mongoose_schedule_poll() {
   /*
    * Mongoose is pulled in main(), so no need to do something special here
-   * TODO(alashkin): it it possible to optimize here - change wait() period in main loop
+   * TODO(alashkin): it it possible to optimize here - change wait() period in
+   * main loop
    * and make mongoose pool a bit faster
    */
 }
@@ -39,7 +39,7 @@ void miot_system_restart(int exit_code) {
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
-  mbed_mac_address((char*)mac);
+  mbed_mac_address((char *) mac);
 }
 
 void miot_wdt_feed() {
