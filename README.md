@@ -9,9 +9,8 @@ Designed for Internet of Things:
 - available for ESP8266, ESP 32, TI CC3200, STM32, NRF52 and other hardware platforms.
 
 # Support
-- [Mongoose OS Documentation](https://docs.cesanta.com/mongoose-iot/)
+- [Mongoose OS Documentation](https://mongoose-iot.com/docs/#/overview/)
 - [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
-- [Chat - visit www.cesanta.com for our live chat] (https://www.cesanta.com/)
 - [Commercial licensing and support available](https://cesanta.com/contact)
 
 # Licensing
