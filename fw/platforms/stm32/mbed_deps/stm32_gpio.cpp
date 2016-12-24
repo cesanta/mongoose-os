@@ -20,9 +20,20 @@ void miot_gpio_write(int pin, bool level) {
   gpio_write(&gpio_it->second, level);
 }
 
+bool miot_gpio_read(int pin) {
+  gpios_map_t::iterator gpio_it = gpios_map.find((PinName) pin);
+  if (gpio_it == gpios_map.end()) {
+    return false;
+  }
+
+  return (gpio_read(&gpio_it->second) == 1);
+}
+
 bool miot_gpio_toggle(int pin) {
-  /* TODO(alashkin) */
-  return false;
+  bool new_value = !miot_gpio_read(pin);
+  miot_gpio_write(pin, new_value);
+
+  return new_value;
 }
 
 bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
