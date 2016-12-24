@@ -41,8 +41,8 @@ uint32_t params[1] __attribute__((section(".params")));
 #define FLASH_SECTOR_SIZE 4096
 #define FLASH_PAGE_SIZE 256
 
-#define UART_BUF_SIZE 6144
-#define SPI_WRITE_SIZE 1024
+#define UART_BUF_SIZE (8 * FLASH_SECTOR_SIZE)
+#define FLASH_WRITE_SIZE 512
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 
@@ -89,24 +89,25 @@ struct uart_buf {
   uint8_t *pr, *pw;
 };
 
+static struct uart_buf ub;
+
 void uart_isr(void *arg) {
   uint32_t int_st = READ_PERI_REG(UART_INT_ST_REG(0));
-  struct uart_buf *ub = (struct uart_buf *) arg;
   while (1) {
     uint32_t fifo_len = READ_PERI_REG(UART_STATUS_REG(0)) & 0xff;
     if (fifo_len == 0) break;
     while (fifo_len-- > 0) {
       uint8_t byte = READ_PERI_REG(UART_FIFO_REG(0)) & 0xff;
-      *ub->pw++ = byte;
-      ub->nr++;
-      if (ub->pw >= ub->data + UART_BUF_SIZE) ub->pw = ub->data;
+      *ub.pw++ = byte;
+      ub.nr++;
+      if (ub.pw >= ub.data + UART_BUF_SIZE) ub.pw = ub.data;
     }
   }
   WRITE_PERI_REG(UART_INT_CLR_REG(0), int_st);
+  (void) arg;
 }
 
 int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
-  struct uart_buf ub;
   uint8_t digest[16];
   uint32_t num_written = 0, num_erased = 0;
   struct MD5Context ctx;
@@ -127,7 +128,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
   while (num_written < len) {
     volatile uint32_t *nr = &ub.nr;
     /* Prepare the space ahead. */
-    while (erase && num_erased < num_written + SPI_WRITE_SIZE) {
+    while (erase && num_erased < num_written + FLASH_WRITE_SIZE) {
       const uint32_t num_left = (len - num_erased);
       if (num_left > FLASH_BLOCK_SIZE && addr % FLASH_BLOCK_SIZE == 0) {
         if (SPIEraseBlock(addr / FLASH_BLOCK_SIZE) != 0) return 0x35;
@@ -139,16 +140,16 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
       }
     }
     /* Wait for data to arrive. */
-    while (*nr < SPI_WRITE_SIZE) {
+    while (*nr < FLASH_WRITE_SIZE) {
     }
-    MD5Update(&ctx, ub.pr, SPI_WRITE_SIZE);
-    if (SPIWrite(addr, (uint32_t *) ub.pr, SPI_WRITE_SIZE) != 0) return 0x37;
+    MD5Update(&ctx, ub.pr, FLASH_WRITE_SIZE);
+    if (SPIWrite(addr, (uint32_t *) ub.pr, FLASH_WRITE_SIZE) != 0) return 0x37;
     ets_intr_lock();
-    *nr -= SPI_WRITE_SIZE;
+    *nr -= FLASH_WRITE_SIZE;
     ets_intr_unlock();
-    num_written += SPI_WRITE_SIZE;
-    addr += SPI_WRITE_SIZE;
-    ub.pr += SPI_WRITE_SIZE;
+    num_written += FLASH_WRITE_SIZE;
+    addr += FLASH_WRITE_SIZE;
+    ub.pr += FLASH_WRITE_SIZE;
     if (ub.pr >= ub.data + UART_BUF_SIZE) ub.pr = ub.data;
     SLIP_send(&num_written, 4);
   }

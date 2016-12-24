@@ -11,7 +11,7 @@ PORT = /dev/ttyUSB0
 BUILD_DIR = .build
 COMMON_STUB_DIR = ../../esp
 STUB_ELF = $(BUILD_DIR)/$(patsubst %.c,%.elf,$(notdir $(STUB)))
-STUB_JSON = $(BUILD_DIR)/$(patsubst %.c,%.json,$(notdir $(STUB)))
+STUB_JSON ?= $(BUILD_DIR)/$(patsubst %.c,%.json,$(notdir $(STUB)))
 SDK = docker.cesanta.com/esp8266-build-oss:2.0.0-r7
 XT_CC = xtensa-lx106-elf-gcc
 
@@ -37,7 +37,7 @@ $(STUB_JSON): $(STUB_ELF) $(COMMON_STUB_DIR)/esptool.py
 	@echo "  WRAP $< -> $@"
 	@docker run --rm -i -v $(CURDIR)/../../../..:/src $(SDK) //bin/bash -c \
     "cd /src/common/platforms/esp8266/stubs && \
-     $(COMMON_STUB_DIR)/esptool.py wrap_stub $< > $@"
+     $(COMMON_STUB_DIR)/esptool.py wrap_stub $<" > $@
 
 run: $(STUB_JSON)
 	@echo "  RUN  $< $(PARAMS) -> $(PORT)"

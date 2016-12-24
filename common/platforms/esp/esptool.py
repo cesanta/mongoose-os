@@ -1730,6 +1730,12 @@ def wrap_stub(args):
     except ValueError:
         pass
         # No data section, that's fine
+    bss_size, bss_start = 0, 0
+    try:
+        bss_start = e.get_symbol_addr('_bss_start')
+        bss_size = e.get_symbol_addr('_bss_end') - bss_start
+    except ValueError:
+        pass
     params_len = e.get_symbol_addr('_params_end') - stub['params_start']
     if params_len % 4 != 0:
         raise FatalError('Params must be dwords')
@@ -1740,9 +1746,10 @@ def wrap_stub(args):
         stub['code'] += (4 - (len(stub['code']) % 4)) * '\0'
 
     print >>sys.stderr, (
-        'Stub params: %d @ 0x%08x, code: %d @ 0x%08x, data: %d @ 0x%08x, entry: %s @ 0x%x' % (
+            'Stub params: %d @ 0x%08x, code: %d @ 0x%08x, bss: %d @ 0x%08x, data: %d @ 0x%08x, entry: %s @ 0x%x' % (
             params_len, stub['params_start'],
             len(stub['code']), stub['code_start'],
+            bss_size, bss_start,
             len(stub.get('data', '')), stub.get('data_start', 0),
             args.entry, stub['entry']))
 
@@ -1932,8 +1939,6 @@ def main():
         assert operation in globals(), "%s should be a module function" % operation
 
     args = parser.parse_args()
-
-    print >>sys.stderr, 'esptool.py v%s' % __version__
 
     # operation function can take 1 arg (args), 2 args (esp, arg)
     # or be a member function of the ESPLoader class.
