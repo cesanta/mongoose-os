@@ -1,6 +1,6 @@
 namespace: http://cesanta.com/mg_rpc/service
-name: /v1/SWUpdate
-doc: SWUpdate service provides a way to update device's software.
+name: OTA
+doc: OTA service provides a way to update device's software.
 visibility: private
 methods:
   ListSections:

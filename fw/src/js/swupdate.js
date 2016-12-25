@@ -1,5 +1,5 @@
-var SWUpdate = function(mgRPC) {
-  mgRPC.oncmd("/v1/SWUpdate.ListSections", function() {
+var OTA = function(mgRPC) {
+  mgRPC.oncmd("OTA.ListSections", function() {
     var files = File.list('.');
     var r = [];
     for (var i in files) {
@@ -8,7 +8,7 @@ var SWUpdate = function(mgRPC) {
     return r;
   });
   // TODO(lsm): Move to the File service
-  mgRPC.oncmd("/v1/SWUpdate.Delete", function(cmd, done) {
+  mgRPC.oncmd("OTA.Delete", function(cmd, done) {
     if (typeof(cmd.args.section) !== 'string') {
       done("Need 'section' argument", 1);
     } else if (cmd.args.section.indexOf("file/") !== 0) {
@@ -18,7 +18,7 @@ var SWUpdate = function(mgRPC) {
       done('result', File.remove(name));
     }
   });
-  mgRPC.oncmd("/v1/SWUpdate.Update", function(cmd, done) {
+  mgRPC.oncmd("OTA.Update", function(cmd, done) {
     if (cmd.args === undefined) {
       done("Need argument", 1);
       return;

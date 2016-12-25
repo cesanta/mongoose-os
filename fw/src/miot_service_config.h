@@ -15,7 +15,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /*
- * Initialises mg_rpc handlers for /v1/Config commands
+ * Initialises mg_rpc handlers for Config commands
  */
 enum miot_init_result miot_service_config_init(void);
 

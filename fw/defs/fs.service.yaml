@@ -1,5 +1,5 @@
 namespace: http://mongoose-iot.com/fw
-name: /v1/Filesystem
+name: FS
 methods:
   List:
     doc: List files at the device's filesystem.

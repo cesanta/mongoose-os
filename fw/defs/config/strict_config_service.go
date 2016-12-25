@@ -30,7 +30,7 @@ var emptyMessage = ourjson.RawMessage{}
 var _ = ourtrace.New
 var _ = trace.New
 
-const ServiceID = "http://mongoose-iot.com/fw/v1/Config"
+const ServiceID = "http://mongoose-iot.com/fwConfig"
 
 type SaveArgs struct {
 	Reboot *bool `json:"reboot,omitempty"`
@@ -147,7 +147,7 @@ type _Client struct {
 
 func (c *_Client) Get(pctx context.Context) (res ourjson.RawMessage, err error) {
 	cmd := &frame.Command{
-		Cmd: "/v1/Config.Get",
+		Cmd: "Config.Get",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -184,7 +184,7 @@ func (c *_Client) Get(pctx context.Context) (res ourjson.RawMessage, err error) 
 
 func (c *_Client) Save(pctx context.Context, args *SaveArgs) (err error) {
 	cmd := &frame.Command{
-		Cmd: "/v1/Config.Save",
+		Cmd: "Config.Save",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -218,7 +218,7 @@ func (c *_Client) Save(pctx context.Context, args *SaveArgs) (err error) {
 
 func (c *_Client) Set(pctx context.Context, args *SetArgs) (err error) {
 	cmd := &frame.Command{
-		Cmd: "/v1/Config.Set",
+		Cmd: "Config.Set",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -253,9 +253,9 @@ func (c *_Client) Set(pctx context.Context, args *SetArgs) (err error) {
 func RegisterService(i *clubby.Instance, impl Service) error {
 	validatorsOnce.Do(initValidators)
 	s := &_Server{impl}
-	i.RegisterCommandHandler("/v1/Config.Get", s.Get)
-	i.RegisterCommandHandler("/v1/Config.Save", s.Save)
-	i.RegisterCommandHandler("/v1/Config.Set", s.Set)
+	i.RegisterCommandHandler("Config.Get", s.Get)
+	i.RegisterCommandHandler("Config.Save", s.Save)
+	i.RegisterCommandHandler("Config.Set", s.Set)
 	i.RegisterService(ServiceID, _ServiceDefinition)
 	return nil
 }
@@ -356,6 +356,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "doc": "Set device config"
     }
   },
-  "name": "/v1/Config",
+  "name": "Config",
   "namespace": "http://mongoose-iot.com/fw"
 }`))

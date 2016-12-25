@@ -16,9 +16,9 @@
 #include "fw/src/miot_service_filesystem.h"
 #include "fw/src/miot_sys_config.h"
 
-#define MIOT_FILESYSTEM_LIST_CMD "/v1/Filesystem.List"
-#define MIOT_FILESYSTEM_GET_CMD "/v1/Filesystem.Get"
-#define MIOT_FILESYSTEM_PUT_CMD "/v1/Filesystem.Put"
+#define MIOT_FILESYSTEM_LIST_CMD "FS.List"
+#define MIOT_FILESYSTEM_GET_CMD "FS.Get"
+#define MIOT_FILESYSTEM_PUT_CMD "FS.Put"
 
 struct put_data {
   char *p;
@@ -26,7 +26,7 @@ struct put_data {
 };
 
 #if MG_ENABLE_DIRECTORY_LISTING
-/* Handler for /v1/Filesystem.List */
+/* Handler for FS.List */
 static void miot_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                  struct mg_rpc_frame_info *fi,
                                  struct mg_str args) {

@@ -16,7 +16,7 @@
 #include "mongoose/mongoose.h"
 
 #define MG_RPC_FRAME_VERSION 2
-#define MG_RPC_HELLO_CMD "/v1/Hello"
+#define MG_RPC_HELLO_CMD "Hello"
 
 struct mg_rpc {
   struct mg_rpc_cfg *cfg;

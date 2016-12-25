@@ -19,12 +19,12 @@
 #include "fw/platforms/esp8266/user/esp_gpio.h"
 #endif
 
-#define MIOT_CONFIG_GET_CMD "/v1/Config.Get"
-#define MIOT_CONFIG_SET_CMD "/v1/Config.Set"
-#define MIOT_CONFIG_GET_NETWORK_STATUS_CMD "/v1/Config.GetNetworkStatus"
-#define MIOT_CONFIG_SAVE_CMD "/v1/Config.Save"
+#define MIOT_CONFIG_GET_CMD "Config.Get"
+#define MIOT_CONFIG_SET_CMD "Config.Set"
+#define MIOT_CONFIG_GET_NETWORK_STATUS_CMD "Config.GetNetworkStatus"
+#define MIOT_CONFIG_SAVE_CMD "Config.Save"
 
-/* Handler for /v1/Config.Get */
+/* Handler for Config.Get */
 static void miot_config_get_handler(struct mg_rpc_request_info *ri,
                                     void *cb_arg, struct mg_rpc_frame_info *fi,
                                     struct mg_str args) {
@@ -68,7 +68,7 @@ static void set_handler(const char *str, int len, void *user_data) {
   (void) user_data;
 }
 
-/* Handler for /v1/Config.GetNetworkStatus */
+/* Handler for Config.GetNetworkStatus */
 static void miot_config_gns_handler(struct mg_rpc_request_info *ri,
                                     void *cb_arg, struct mg_rpc_frame_info *fi,
                                     struct mg_str args) {
@@ -103,7 +103,7 @@ static void miot_config_gns_handler(struct mg_rpc_request_info *ri,
   (void) cb_arg;
 }
 
-/* Handler for /v1/Config.Set */
+/* Handler for Config.Set */
 static void miot_config_set_handler(struct mg_rpc_request_info *ri,
                                     void *cb_arg, struct mg_rpc_frame_info *fi,
                                     struct mg_str args) {
@@ -121,7 +121,7 @@ static void miot_config_set_handler(struct mg_rpc_request_info *ri,
   (void) cb_arg;
 }
 
-/* Handler for /v1/Config.Save */
+/* Handler for Config.Save */
 static void miot_config_save_handler(struct mg_rpc_request_info *ri,
                                      void *cb_arg, struct mg_rpc_frame_info *fi,
                                      struct mg_str args) {

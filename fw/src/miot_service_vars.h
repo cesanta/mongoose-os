@@ -15,7 +15,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /*
- * Initialises mg_rpc handlers for /v1/Vars commands
+ * Initialises mg_rpc handlers for Vars commands
  */
 enum miot_init_result miot_service_vars_init(void);
 

@@ -2,7 +2,7 @@
 // GENERATED FILE DO NOT EDIT
 // +build !clubby_strict
 
-package filesystem
+package fs
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ var emptyMessage = ourjson.RawMessage{}
 var _ = ourtrace.New
 var _ = trace.New
 
-const ServiceID = "http://mongoose-iot.com/fw/v1/Filesystem"
+const ServiceID = "http://mongoose-iot.com/fwFS"
 
 type GetArgs struct {
 	Filename *string `json:"filename,omitempty"`
@@ -66,7 +66,7 @@ type _Client struct {
 
 func (c *_Client) Get(pctx context.Context, args *GetArgs) (res *GetResult, err error) {
 	cmd := &frame.Command{
-		Cmd: "/v1/Filesystem.Get",
+		Cmd: "FS.Get",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -97,7 +97,7 @@ func (c *_Client) Get(pctx context.Context, args *GetArgs) (res *GetResult, err 
 
 func (c *_Client) List(pctx context.Context) (res []string, err error) {
 	cmd := &frame.Command{
-		Cmd: "/v1/Filesystem.List",
+		Cmd: "FS.List",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -122,7 +122,7 @@ func (c *_Client) List(pctx context.Context) (res []string, err error) {
 
 func (c *_Client) Put(pctx context.Context, args *PutArgs) (err error) {
 	cmd := &frame.Command{
-		Cmd: "/v1/Filesystem.Put",
+		Cmd: "FS.Put",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -145,9 +145,9 @@ func (c *_Client) Put(pctx context.Context, args *PutArgs) (err error) {
 
 func RegisterService(i *clubby.Instance, impl Service) error {
 	s := &_Server{impl}
-	i.RegisterCommandHandler("/v1/Filesystem.Get", s.Get)
-	i.RegisterCommandHandler("/v1/Filesystem.List", s.List)
-	i.RegisterCommandHandler("/v1/Filesystem.Put", s.Put)
+	i.RegisterCommandHandler("FS.Get", s.Get)
+	i.RegisterCommandHandler("FS.List", s.List)
+	i.RegisterCommandHandler("FS.Put", s.Put)
 	i.RegisterService(ServiceID, _ServiceDefinition)
 	return nil
 }
@@ -252,6 +252,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       ]
     }
   },
-  "name": "/v1/Filesystem",
+  "name": "FS",
   "namespace": "http://mongoose-iot.com/fw"
 }`))

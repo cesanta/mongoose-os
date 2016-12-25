@@ -1,5 +1,5 @@
 namespace: http://mongoose-iot.com/fw
-name: /ATCA
+name: ATCA
 methods:
   GetConfig:
     doc: Get device config

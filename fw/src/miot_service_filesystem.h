@@ -15,7 +15,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /*
- * Initialises mg_rpc handlers for /v1/Filesystem commands
+ * Initialises mg_rpc handlers for FS commands
  */
 enum miot_init_result miot_service_filesystem_init(void);
 

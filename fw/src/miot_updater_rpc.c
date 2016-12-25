@@ -145,12 +145,9 @@ static void handle_revert_req(struct mg_rpc_request_info *ri, void *cb_arg,
 void miot_updater_rpc_init(void) {
   struct mg_rpc *mg_rpc = miot_rpc_get_global();
   if (mg_rpc == NULL) return;
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("/v1/SWUpdate.Update"),
-                     handle_update_req, NULL);
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("/v1/SWUpdate.Commit"),
-                     handle_commit_req, NULL);
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("/v1/SWUpdate.Revert"),
-                     handle_revert_req, NULL);
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Update"), handle_update_req, NULL);
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Commit"), handle_commit_req, NULL);
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Revert"), handle_revert_req, NULL);
 }
 
 static void send_update_reply(struct mg_rpc_request_info *ri) {

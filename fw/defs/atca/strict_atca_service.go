@@ -30,7 +30,7 @@ var emptyMessage = ourjson.RawMessage{}
 var _ = ourtrace.New
 var _ = trace.New
 
-const ServiceID = "http://mongoose-iot.com/fw/ATCA"
+const ServiceID = "http://mongoose-iot.com/fwATCA"
 
 type GenKeyArgs struct {
 	Slot *int64 `json:"slot,omitempty"`
@@ -273,7 +273,7 @@ type _Client struct {
 
 func (c *_Client) GenKey(pctx context.Context, args *GenKeyArgs) (res *GenKeyResult, err error) {
 	cmd := &frame.Command{
-		Cmd: "/ATCA.GenKey",
+		Cmd: "ATCA.GenKey",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -327,7 +327,7 @@ func (c *_Client) GenKey(pctx context.Context, args *GenKeyArgs) (res *GenKeyRes
 
 func (c *_Client) GetConfig(pctx context.Context) (res *GetConfigResult, err error) {
 	cmd := &frame.Command{
-		Cmd: "/ATCA.GetConfig",
+		Cmd: "ATCA.GetConfig",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -364,7 +364,7 @@ func (c *_Client) GetConfig(pctx context.Context) (res *GetConfigResult, err err
 
 func (c *_Client) GetPubKey(pctx context.Context, args *GetPubKeyArgs) (res *GetPubKeyResult, err error) {
 	cmd := &frame.Command{
-		Cmd: "/ATCA.GetPubKey",
+		Cmd: "ATCA.GetPubKey",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -418,7 +418,7 @@ func (c *_Client) GetPubKey(pctx context.Context, args *GetPubKeyArgs) (res *Get
 
 func (c *_Client) LockZone(pctx context.Context, args *LockZoneArgs) (err error) {
 	cmd := &frame.Command{
-		Cmd: "/ATCA.LockZone",
+		Cmd: "ATCA.LockZone",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -452,7 +452,7 @@ func (c *_Client) LockZone(pctx context.Context, args *LockZoneArgs) (err error)
 
 func (c *_Client) SetConfig(pctx context.Context, args *SetConfigArgs) (err error) {
 	cmd := &frame.Command{
-		Cmd: "/ATCA.SetConfig",
+		Cmd: "ATCA.SetConfig",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -486,7 +486,7 @@ func (c *_Client) SetConfig(pctx context.Context, args *SetConfigArgs) (err erro
 
 func (c *_Client) SetKey(pctx context.Context, args *SetKeyArgs) (err error) {
 	cmd := &frame.Command{
-		Cmd: "/ATCA.SetKey",
+		Cmd: "ATCA.SetKey",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -520,7 +520,7 @@ func (c *_Client) SetKey(pctx context.Context, args *SetKeyArgs) (err error) {
 
 func (c *_Client) Sign(pctx context.Context, args *SignArgs) (res *SignResult, err error) {
 	cmd := &frame.Command{
-		Cmd: "/ATCA.Sign",
+		Cmd: "ATCA.Sign",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -575,13 +575,13 @@ func (c *_Client) Sign(pctx context.Context, args *SignArgs) (res *SignResult, e
 func RegisterService(i *clubby.Instance, impl Service) error {
 	validatorsOnce.Do(initValidators)
 	s := &_Server{impl}
-	i.RegisterCommandHandler("/ATCA.GenKey", s.GenKey)
-	i.RegisterCommandHandler("/ATCA.GetConfig", s.GetConfig)
-	i.RegisterCommandHandler("/ATCA.GetPubKey", s.GetPubKey)
-	i.RegisterCommandHandler("/ATCA.LockZone", s.LockZone)
-	i.RegisterCommandHandler("/ATCA.SetConfig", s.SetConfig)
-	i.RegisterCommandHandler("/ATCA.SetKey", s.SetKey)
-	i.RegisterCommandHandler("/ATCA.Sign", s.Sign)
+	i.RegisterCommandHandler("ATCA.GenKey", s.GenKey)
+	i.RegisterCommandHandler("ATCA.GetConfig", s.GetConfig)
+	i.RegisterCommandHandler("ATCA.GetPubKey", s.GetPubKey)
+	i.RegisterCommandHandler("ATCA.LockZone", s.LockZone)
+	i.RegisterCommandHandler("ATCA.SetConfig", s.SetConfig)
+	i.RegisterCommandHandler("ATCA.SetKey", s.SetKey)
+	i.RegisterCommandHandler("ATCA.Sign", s.Sign)
 	i.RegisterService(ServiceID, _ServiceDefinition)
 	return nil
 }
@@ -940,6 +940,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     }
   },
-  "name": "/ATCA",
+  "name": "ATCA",
   "namespace": "http://mongoose-iot.com/fw"
 }`))

@@ -11,9 +11,9 @@
 #include "fw/src/miot_service_vars.h"
 #include "fw/src/miot_sys_config.h"
 
-#define MIOT_VARS_GET_CMD "/v1/Vars.Get"
+#define MIOT_VARS_GET_CMD "Vars.Get"
 
-/* Handler for /v1/Vars.Get */
+/* Handler for Vars.Get */
 static void miot_vars_get_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                   struct mg_rpc_frame_info *fi,
                                   struct mg_str args) {

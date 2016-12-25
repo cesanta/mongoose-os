@@ -1,5 +1,5 @@
 namespace: http://mongoose-iot.com/fw
-name: /v1/Vars
+name: Vars
 methods:
   Get:
     doc: Get device read-only vars

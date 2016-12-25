@@ -216,7 +216,7 @@ static void miot_atca_get_or_gen_key(struct mg_rpc_request_info *ri,
     goto clean;
   }
 
-  if (strcmp((const char *) cb_arg, "/ATCA.GenKey") == 0) {
+  if (strcmp((const char *) cb_arg, "ATCA.GenKey") == 0) {
     ATCA_STATUS status = atcab_genkey(slot, pubkey);
     if (status != ATCA_SUCCESS) {
       mg_rpc_send_errorf(ri, 500, "Failed generate key on slot %d: 0x%02x",
@@ -300,17 +300,17 @@ clean:
 
 enum miot_init_result miot_atca_service_init(void) {
   struct mg_rpc *c = miot_rpc_get_global();
-  mg_rpc_add_handler(c, mg_mk_str("/ATCA.GetConfig"), miot_atca_get_config,
+  mg_rpc_add_handler(c, mg_mk_str("ATCA.GetConfig"), miot_atca_get_config,
                      NULL);
-  mg_rpc_add_handler(c, mg_mk_str("/ATCA.SetConfig"), miot_atca_set_config,
+  mg_rpc_add_handler(c, mg_mk_str("ATCA.SetConfig"), miot_atca_set_config,
                      NULL);
-  mg_rpc_add_handler(c, mg_mk_str("/ATCA.LockZone"), miot_atca_lock_zone, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("/ATCA.SetKey"), miot_atca_set_key, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("/ATCA.GenKey"), miot_atca_get_or_gen_key,
-                     "/ATCA.GenKey");
-  mg_rpc_add_handler(c, mg_mk_str("/ATCA.GetPubKey"), miot_atca_get_or_gen_key,
-                     "/ATCA.GetPubKey");
-  mg_rpc_add_handler(c, mg_mk_str("/ATCA.Sign"), miot_atca_sign, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("ATCA.LockZone"), miot_atca_lock_zone, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("ATCA.SetKey"), miot_atca_set_key, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("ATCA.GenKey"), miot_atca_get_or_gen_key,
+                     "ATCA.GenKey");
+  mg_rpc_add_handler(c, mg_mk_str("ATCA.GetPubKey"), miot_atca_get_or_gen_key,
+                     "ATCA.GetPubKey");
+  mg_rpc_add_handler(c, mg_mk_str("ATCA.Sign"), miot_atca_sign, NULL);
   return MIOT_INIT_OK;
 }
 

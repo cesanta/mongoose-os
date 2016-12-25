@@ -25,7 +25,7 @@ var emptyMessage = ourjson.RawMessage{}
 var _ = ourtrace.New
 var _ = trace.New
 
-const ServiceID = "http://mongoose-iot.com/fw/v1/Vars"
+const ServiceID = "http://mongoose-iot.com/fwVars"
 
 type GetResult struct {
 	Arch         *string `json:"arch,omitempty"`
@@ -55,7 +55,7 @@ type _Client struct {
 
 func (c *_Client) Get(pctx context.Context) (res *GetResult, err error) {
 	cmd := &frame.Command{
-		Cmd: "/v1/Vars.Get",
+		Cmd: "Vars.Get",
 	}
 	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
 	defer finish(&err)
@@ -80,7 +80,7 @@ func (c *_Client) Get(pctx context.Context) (res *GetResult, err error) {
 
 func RegisterService(i *clubby.Instance, impl Service) error {
 	s := &_Server{impl}
-	i.RegisterCommandHandler("/v1/Vars.Get", s.Get)
+	i.RegisterCommandHandler("Vars.Get", s.Get)
 	i.RegisterService(ServiceID, _ServiceDefinition)
 	return nil
 }
@@ -119,6 +119,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     }
   },
-  "name": "/v1/Vars",
+  "name": "Vars",
   "namespace": "http://mongoose-iot.com/fw"
 }`))
