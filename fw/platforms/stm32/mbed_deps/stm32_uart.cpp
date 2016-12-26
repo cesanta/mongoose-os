@@ -6,19 +6,55 @@
 #include "fw/src/miot_uart.h"
 #include <map>
 
-typedef std::map<int, serial_t> serials_map_t;
-static serials_map_t s_serials_map;
 int s_stdout_uart_no;
 int s_stderr_uart_no;
 
-static serial_t *get_serial_by_uart_no(int uart_no) {
-  serials_map_t::iterator i = s_serials_map.find(uart_no);
-  if (i == s_serials_map.end()) {
-    return NULL;
+class MIOTSerial : public RawSerial {
+ public:
+  MIOTSerial(int uart_no, PinName pin_tx, PinName pin_rx, int baud_rate)
+      : RawSerial(pin_tx, pin_rx, baud_rate), uart_no_(uart_no) {
+    cs_rbuf_init(&rx_buf_int_, 1024);
+  };
+
+  void rx_irq_handler() {
+    /*
+     * 1. We should not disable interrupts, it is done by caller of this
+     * function (i.e. mbed)
+     * 2. If interruptions is turned ON, serial is always empty
+     * outside this handler. Looks like mbed do this (there are a tons of code)
+     * in "real" interrupt handler
+     * TODO(alashkin): check this out
+     */
+    while (readable() && rx_buf_int_.avail > 0) {
+      cs_rbuf_append_one(&rx_buf_int_, getc());
+    }
+    miot_uart_schedule_dispatcher(uart_no_);
   }
 
-  return &i->second;
-}
+  void enable_rx_irq() {
+    attach(Callback<void()>(this, &MIOTSerial::rx_irq_handler),
+           SerialBase::RxIrq);
+  }
+
+  void disable_rx_irq() {
+    attach(0, SerialBase::RxIrq);
+  }
+
+  void get_rx_data(cs_rbuf_t *buf) {
+    if (buf->avail == 0 || rx_buf_int_.used == 0) {
+      return;
+    }
+    uint8_t *cp;
+    int len = buf->avail > rx_buf_int_.used ? rx_buf_int_.used : buf->avail;
+    cs_rbuf_get(&rx_buf_int_, len, &cp);
+    cs_rbuf_append(buf, cp, len);
+    cs_rbuf_consume(&rx_buf_int_, len);
+  }
+
+ private:
+  cs_rbuf_t rx_buf_int_;
+  int uart_no_;
+};
 
 int miot_stm32_get_stdout_uart() {
   return s_stdout_uart_no;
@@ -28,73 +64,48 @@ int miot_stm32_get_stderr_uart() {
   return s_stderr_uart_no;
 }
 
-static void irq_handler(uint32_t id, SerialIrq event) {
-  serial_t *serial = get_serial_by_uart_no(id);
-  if (serial == NULL) {
-    /* Cannot print error from intr handler */
-    return;
-  }
-  serial_irq_set(serial, event, false);
-  miot_uart_schedule_dispatcher(id);
-}
-
 void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
   /* Do nothing here */
   (void) cfg;
 }
 
 void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
-  serial_t *serial = get_serial_by_uart_no(us->uart_no);
+  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
   if (serial == NULL) {
-    LOG(LL_ERROR, ("UART %d is not initialized", us->uart_no));
     return;
   }
 
-  while (us->rx_buf.avail > 0 && serial_readable(serial) != 0) {
-    cs_rbuf_append_one(&us->rx_buf, serial_getc(serial));
-  }
+  serial->get_rx_data(&us->rx_buf);
 }
 
 void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
-  serial_t *serial = get_serial_by_uart_no(us->uart_no);
+  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
+
   if (serial == NULL) {
-    LOG(LL_ERROR, ("UART %d is not initialized", us->uart_no));
     return;
   }
 
-  while (us->tx_buf.used != 0 && serial_writable(serial) != 0) {
+  while (us->tx_buf.used != 0 && serial->writeable() != 0) {
     uint8_t *cp;
     if (cs_rbuf_get(&us->tx_buf, 1, &cp) == 1) {
-      serial_putc(serial, *cp);
+      serial->putc(*cp);
       cs_rbuf_consume(&us->tx_buf, 1);
     }
   }
 }
 
 void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
-  serial_t *serial = get_serial_by_uart_no(us->uart_no);
-  if (serial == NULL) {
-    LOG(LL_ERROR, ("UART %d is not initialized", us->uart_no));
-    return;
-  }
-
-  if (us->rx_enabled && us->rx_buf.avail > 0) {
-    serial_irq_set(serial, RxIrq, true);
-  }
-
-  if (us->tx_buf.used > 0) {
-    serial_irq_set(serial, TxIrq, true);
-  }
+  /*
+   * Do nothing here, coz enabling/disabling interruptions
+   * conflicts with mbed logic
+   * TODO(alashkin): have mbed
+   */
 }
 
 static void init_uart(PinName pin_tx, PinName pin_rx,
                       struct miot_uart_state *us) {
-  serial_t serial;
-
-  serial_init(&serial, pin_tx, pin_rx);
-  serial_baud(&serial, us->cfg->baud_rate);
-
-  s_serials_map.insert(std::make_pair(us->uart_no, serial));
+  us->dev_data =
+      new MIOTSerial(us->uart_no, pin_tx, pin_rx, us->cfg->baud_rate);
 }
 
 static PinName get_uart_pin(UARTName uart_name, const PinMap *map) {
@@ -119,6 +130,10 @@ bool miot_uart_dev_init(struct miot_uart_state *us) {
     * to put platform specific number uarts parameters to configuration
     * TODO(alex): find a beautiful way
     */
+  if (us->dev_data != 0) {
+    /* already initialized, should be deinited before this call */
+    return true;
+  }
   if (us->uart_no > 2) {
     LOG(LL_ERROR, ("Invalid uart no: %d", us->uart_no));
     return false;
@@ -145,29 +160,26 @@ bool miot_uart_dev_init(struct miot_uart_state *us) {
 }
 
 void miot_uart_dev_deinit(struct miot_uart_state *us) {
-  serials_map_t::iterator i = s_serials_map.find(us->uart_no);
-
-  if (i == s_serials_map.end()) {
-    LOG(LL_WARN, ("UART %d is not initialized", us->uart_no));
+  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
+  if (serial == NULL) {
     return;
   }
 
-  serial_free(&i->second);
-  s_serials_map.erase(i);
+  delete serial;
+  us->dev_data = NULL;
 }
 
 void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
-  serial_t *serial = get_serial_by_uart_no(us->uart_no);
+  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
   if (serial == NULL) {
-    LOG(LL_ERROR, ("UART %d is not initialized", us->uart_no));
     return;
   }
 
   if (enabled) {
-    serial_irq_handler(serial, irq_handler, us->uart_no);
+    serial->enable_rx_irq();
+  } else {
+    serial->disable_rx_irq();
   }
-
-  serial_irq_set(serial, RxIrq, enabled);
 }
 
 enum miot_init_result miot_set_stdout_uart(int uart_no) {

@@ -137,7 +137,7 @@ MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 MBED_DEPS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(MBED_DEPS_SRCS)))
 
-MBED_FS_FUNCS = opendir readdir closedir mkdir
+MBED_FS_FUNCS = opendir readdir closedir mkdir rename remove
 MBED_WEAK_FUNCS = $(addprefix -W , $(MBED_FS_FUNCS))
 
 include $(MIOT_PATH)/common/scripts/fw_meta.mk

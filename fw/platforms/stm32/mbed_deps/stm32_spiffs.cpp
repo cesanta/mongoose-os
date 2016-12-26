@@ -198,7 +198,7 @@ extern "C" _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
   return res;
 }
 
-int _close_r(struct _reent *r, int fd) {
+extern "C" int _close_r(struct _reent *r, int fd) {
   (void) r;
   if (fd < NUM_SYS_FD) {
     return -1;
@@ -207,7 +207,12 @@ int _close_r(struct _reent *r, int fd) {
   return 0;
 }
 
-extern "C" int _rename_r(struct _reent *r, const char *from, const char *to) {
+/*
+ * In mbed we have libc which doesn't call _rename_r (?)
+ * So, overriding `rename` instead
+ * TODO(alashkin): try to figure this out, anyway
+ */
+extern "C" int rename(const char *from, const char *to) {
   /*
    * POSIX rename requires that in case "to" exists, it be atomically replaced
    * with "from". The atomic part we can't do, but at least we can do replace.
@@ -221,7 +226,6 @@ extern "C" int _rename_r(struct _reent *r, const char *from, const char *to) {
     }
   }
   res = SPIFFS_rename(&fs, get_fixed_filename(from), get_fixed_filename(to));
-  (void) r;
   set_errno(res);
   return res;
 }
