@@ -12,6 +12,7 @@ MIOT_ENABLE_MQTT ?= 1
 MIOT_ENABLE_RPC ?= 1
 MIOT_ENABLE_RPC_CHANNEL_HTTP ?= 1
 MIOT_ENABLE_RPC_CHANNEL_UART ?= 1
+MIOT_ENABLE_RPC_CHANNEL_WS ?= 0
 MIOT_DEBUG_UART ?= 1
 MIOT_ENABLE_UPDATER ?= 1
 MIOT_ENABLE_UPDATER_POST ?= 1
@@ -58,7 +59,7 @@ else
 endif
 
 ifeq "$(MIOT_ENABLE_RPC)" "1"
-  MIOT_SRCS += mg_rpc.c mg_rpc_channel_ws.c miot_rpc.c
+  MIOT_SRCS += mg_rpc.c miot_rpc.c
   MIOT_FEATURES += -DMIOT_ENABLE_RPC -DMIOT_ENABLE_RPC_API
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_rpc_config.yaml
 
@@ -78,6 +79,13 @@ ifeq "$(MIOT_ENABLE_RPC_CHANNEL_UART)" "1"
   MIOT_SRCS += miot_rpc_channel_uart.c
   MIOT_FEATURES += -DMIOT_ENABLE_RPC_CHANNEL_UART
   SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_rpc_uart_config.yaml
+endif
+ifeq "$(MIOT_ENABLE_RPC_CHANNEL_WS)" "1"
+  MIOT_SRCS += mg_rpc_channel_ws.c
+  MIOT_FEATURES += -DMIOT_ENABLE_RPC_CHANNEL_WS
+  SYS_CONF_SCHEMA += $(MIOT_SRC_PATH)/miot_rpc_channel_ws_config.yaml
+else
+  MIOT_FEATURES += -DMIOT_ENABLE_RPC_CHANNEL_WS=0
 endif
 
 else

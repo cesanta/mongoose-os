@@ -21,7 +21,7 @@
 static struct mg_rpc *s_global_mg_rpc;
 
 #if MIOT_ENABLE_WIFI
-static void mg_rpc_wifi_ready(enum miot_wifi_status event, void *arg) {
+void mg_rpc_wifi_ready(enum miot_wifi_status event, void *arg) {
   if (event != MIOT_WIFI_IP_ACQUIRED) return;
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) arg;
   ch->ch_connect(ch);
@@ -61,7 +61,8 @@ enum miot_init_result miot_rpc_init(void) {
   struct mg_rpc_cfg *ccfg = miot_rpc_cfg_from_sys(get_cfg());
   struct mg_rpc *c = mg_rpc_create(ccfg);
 
-  if (sccfg->server_address != NULL) {
+#if MIOT_ENABLE_RPC_CHANNEL_WS
+  if (sccfg->ws.server_address != NULL && sccfg->ws.enable) {
     struct mg_rpc_channel_ws_out_cfg *chcfg =
         miot_rpc_channel_ws_out_cfg_from_sys(get_cfg());
     struct mg_rpc_channel *ch = mg_rpc_channel_ws_out(miot_get_mgr(), chcfg);
@@ -70,17 +71,16 @@ enum miot_init_result miot_rpc_init(void) {
     }
     mg_rpc_add_channel(c, mg_mk_str(MG_RPC_DST_DEFAULT), ch,
                        false /* is_trusted */, true /* send_hello */);
-    if (sccfg->connect_on_boot) {
 #if MIOT_ENABLE_WIFI
-      if (get_cfg()->wifi.sta.enable) {
-        miot_wifi_add_on_change_cb(mg_rpc_wifi_ready, ch);
-      } else
+    if (get_cfg()->wifi.sta.enable) {
+      miot_wifi_add_on_change_cb(mg_rpc_wifi_ready, ch);
+    } else
 #endif
-      {
-        mg_rpc_connect(c);
-      }
+    {
+      mg_rpc_connect(c);
     }
   }
+#endif /* MIOT_ENABLE_RPC_CHANNEL_WS */
 
 #if MIOT_ENABLE_RPC_CHANNEL_HTTP
   miot_register_http_endpoint(HTTP_URI_PREFIX, miot_rpc_http_handler);
@@ -97,7 +97,7 @@ enum miot_init_result miot_rpc_init(void) {
           mg_rpc_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);
       mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,
                          false /* send_hello */);
-      if (sccfg->connect_on_boot) uch->ch_connect(uch);
+      uch->ch_connect(uch);
     } else {
       LOG(LL_ERROR, ("UART%d init failed", scucfg->uart_no));
       return MIOT_INIT_UART_FAILED;
@@ -110,21 +110,23 @@ enum miot_init_result miot_rpc_init(void) {
   return MIOT_INIT_OK;
 }
 
+#if MIOT_ENABLE_RPC_CHANNEL_WS
 struct mg_rpc_channel_ws_out_cfg *miot_rpc_channel_ws_out_cfg_from_sys(
-    const struct sys_config *sccfg) {
+    const struct sys_config *cfg) {
   struct mg_rpc_channel_ws_out_cfg *chcfg =
       (struct mg_rpc_channel_ws_out_cfg *) calloc(1, sizeof(*chcfg));
-  miot_conf_set_str(&chcfg->server_address, sccfg->rpc.server_address);
+  const struct sys_config_rpc_ws *wscfg = &cfg->rpc.ws;
+  miot_conf_set_str(&chcfg->server_address, wscfg->server_address);
 #if MG_ENABLE_SSL
-  miot_conf_set_str(&chcfg->ssl_ca_file, sccfg->rpc.ssl_ca_file);
-  miot_conf_set_str(&chcfg->ssl_client_cert_file,
-                    sccfg->rpc.ssl_client_cert_file);
-  miot_conf_set_str(&chcfg->ssl_server_name, sccfg->rpc.ssl_server_name);
+  miot_conf_set_str(&chcfg->ssl_ca_file, wscfg->ssl_ca_file);
+  miot_conf_set_str(&chcfg->ssl_client_cert_file, wscfg->ssl_client_cert_file);
+  miot_conf_set_str(&chcfg->ssl_server_name, wscfg->ssl_server_name);
 #endif
-  chcfg->reconnect_interval_min = sccfg->rpc.reconnect_timeout_min;
-  chcfg->reconnect_interval_max = sccfg->rpc.reconnect_timeout_max;
+  chcfg->reconnect_interval_min = wscfg->reconnect_timeout_min;
+  chcfg->reconnect_interval_max = wscfg->reconnect_timeout_max;
   return chcfg;
 }
+#endif /* MIOT_ENABLE_RPC_CHANNEL_WS */
 
 struct mg_rpc *miot_rpc_get_global(void) {
   return s_global_mg_rpc;
