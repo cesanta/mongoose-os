@@ -5,7 +5,7 @@
 
 MEMORY {
   iram : org = 0x40100000, len = 0x8000
-  dram : org = 0x3FFE8000, len = 0x14000
+  dram : org = 0x3FFE8000, len = 0x18000
 }
 
 ENTRY(stub_main)
