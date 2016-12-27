@@ -18,6 +18,7 @@ static void invoke_wifi_on_change_cb(void *arg) {
   miot_wifi_on_change_cb((enum miot_wifi_status)(int) arg);
 }
 static const char *s_sta_state = NULL;
+static bool s_sta_should_connect = false;
 
 esp_err_t wifi_event_handler(system_event_t *event) {
   int mg_ev = -1;
@@ -34,8 +35,12 @@ esp_err_t wifi_event_handler(system_event_t *event) {
       LOG(LL_INFO,
           ("WiFi STA: disconnected, reason %d", info->disconnected.reason));
       mg_ev = MIOT_WIFI_DISCONNECTED;
-      /* We assume connection is being retried. */
-      s_sta_state = "connecting";
+      if (s_sta_should_connect) {
+        s_sta_state = "connecting";
+        esp_wifi_connect();
+      } else {
+        s_sta_state = "idle";
+      }
       break;
     case SYSTEM_EVENT_STA_CONNECTED:
       s_sta_state = "associated";
@@ -219,6 +224,8 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     return false;
   }
 
+  s_sta_should_connect = true;
+
   r = esp_wifi_connect();
   if (r == ESP_ERR_WIFI_NOT_START) {
     r = esp_wifi_start();
@@ -318,6 +325,12 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 
   LOG(LL_INFO, ("WiFi AP: SSID %s, channel %d", apcfg->ssid, apcfg->channel));
 
+  return true;
+}
+
+int miot_wifi_disconnect(void) {
+  s_sta_should_connect = false;
+  esp_wifi_disconnect();
   return true;
 }
 
