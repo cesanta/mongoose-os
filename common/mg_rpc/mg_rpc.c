@@ -396,8 +396,8 @@ void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
   ch->mg_rpc_data = c;
   ch->ev_handler = mg_rpc_ev_handler;
   SLIST_INSERT_HEAD(&c->channels, ci, channels);
-  LOG(LL_DEBUG, ("'%.*s' %p %s %d", (int) dst.len, dst.p, ch, ch->get_type(ch),
-                 is_trusted));
+  LOG(LL_DEBUG, ("'%.*s' %p %s%s", (int) dst.len, dst.p, ch, ch->get_type(ch),
+                 (is_trusted ? ", trusted" : "")));
 }
 
 void mg_rpc_connect(struct mg_rpc *c) {

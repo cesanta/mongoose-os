@@ -9,6 +9,7 @@
 #if MIOT_ENABLE_RPC
 
 #include "fw/src/miot_rpc.h"
+#include "fw/src/miot_rpc_channel_mqtt.h"
 #include "fw/src/miot_rpc_channel_uart.h"
 #include "fw/src/miot_config.h"
 #include "fw/src/miot_mongoose.h"
@@ -84,6 +85,16 @@ enum miot_init_result miot_rpc_init(void) {
 
 #if MIOT_ENABLE_RPC_CHANNEL_HTTP
   miot_register_http_endpoint(HTTP_URI_PREFIX, miot_rpc_http_handler);
+#endif
+
+#if MIOT_ENABLE_RPC_CHANNEL_MQTT
+  if (sccfg->mqtt.enable) {
+    struct mg_rpc_channel *mch =
+        mg_rpc_channel_mqtt(mg_mk_str(get_cfg()->device.id));
+    if (mch == NULL) return MIOT_INIT_MG_RPC_FAILED;
+    mg_rpc_add_channel(c, mg_mk_str(""), mch, sccfg->mqtt.is_trusted,
+                       false /* send_hello */);
+  }
 #endif
 
 #if MIOT_ENABLE_RPC_CHANNEL_UART
