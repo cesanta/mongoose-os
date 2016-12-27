@@ -1,0 +1,9 @@
+namespace: http://mongoose-iot.com/fw
+name: Sys
+methods:
+  Reboot:
+    doc: Reboot the device
+    args:
+      delay_ms:
+        type: integer
+        doc: Optional delay, in milliseconds. Default is 100.

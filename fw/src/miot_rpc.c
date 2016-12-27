@@ -8,13 +8,14 @@
 
 #if MIOT_ENABLE_RPC
 
+#include "fw/src/miot_config.h"
+#include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_rpc.h"
 #include "fw/src/miot_rpc_channel_mqtt.h"
 #include "fw/src/miot_rpc_channel_uart.h"
-#include "fw/src/miot_config.h"
-#include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_sys_config.h"
 #include "fw/src/miot_uart.h"
+#include "fw/src/miot_utils.h"
 #include "fw/src/miot_wifi.h"
 
 #define HTTP_URI_PREFIX "/rpc"
@@ -53,6 +54,29 @@ static void miot_rpc_http_handler(struct mg_connection *nc, int ev,
     struct mg_str data = {hm->body.p, hm->body.len};
     mg_rpc_channel_http_recd_frame(nc, ch, method, data);
   }
+}
+#endif
+
+#if MIOT_ENABLE_SYS_SERVICE
+static void miot_sys_reboot_handler(struct mg_rpc_request_info *ri,
+                                    void *cb_arg, struct mg_rpc_frame_info *fi,
+                                    struct mg_str args) {
+  if (!fi->channel_is_trusted) {
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
+    return;
+  }
+  int delay_ms = 100;
+  json_scanf(args.p, args.len, "{delay_ms: %d}", &delay_ms);
+  if (delay_ms < 0) {
+    mg_rpc_send_errorf(ri, 400, "invalid delay value");
+    ri = NULL;
+    return;
+  }
+  miot_system_restart_after(delay_ms);
+  mg_rpc_send_responsef(ri, NULL);
+  ri = NULL;
+  (void) cb_arg;
 }
 #endif
 
@@ -118,6 +142,11 @@ enum miot_init_result miot_rpc_init(void) {
 
   mg_rpc_add_list_handler(c);
   s_global_mg_rpc = c;
+
+#if MIOT_ENABLE_SYS_SERVICE
+  mg_rpc_add_handler(c, mg_mk_str("Sys.Reboot"), miot_sys_reboot_handler, NULL);
+#endif
+
   return MIOT_INIT_OK;
 }
 
