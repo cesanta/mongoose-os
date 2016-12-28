@@ -42,6 +42,7 @@ enum miot_app_init_result miot_app_init(void) {
   mjs_err_t err = mjs_exec_file(mjs, "my.js", NULL);
 
   if (err != MJS_OK) {
+    printf("MJS exec error: %s\n", mjs_strerror(mjs, err));
     return MIOT_APP_INIT_ERROR;
   }
 

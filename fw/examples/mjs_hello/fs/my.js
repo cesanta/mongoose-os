@@ -1,8 +1,8 @@
-get_gpio = ffi("int get_gpio()");
-miot_gpio_write = ffi("void miot_gpio_write(int, int)");
-miot_set_timer = ffi("int miot_set_timer(int, int, void*, void*)");
+let get_gpio = ffi("int get_gpio()");
+let miot_gpio_write = ffi("void miot_gpio_write(int, int)");
+let miot_set_timer = ffi("int miot_set_timer(int, int, void*, void*)");
 
-level = 0;
+let level = 0;
 
 miot_set_timer(
   1000, // msecs
