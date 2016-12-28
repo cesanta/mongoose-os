@@ -15,7 +15,6 @@
 #include "common/mbuf.h"
 #include "mongoose/mongoose.h"
 
-#define MG_RPC_FRAME_VERSION 2
 #define MG_RPC_HELLO_CMD "RPC.Hello"
 
 struct mg_rpc {
@@ -92,26 +91,29 @@ struct mg_rpc_channel_info *mg_rpc_get_channel(struct mg_rpc *c,
 }
 
 static bool mg_rpc_handle_request(struct mg_rpc *c,
-                                  struct mg_rpc_channel_info *ci, int64_t id,
-                                  struct mg_str src, struct mg_str method,
-                                  struct mg_str args) {
-  if (src.len == 0) return false;
-  if (id == 0) id = mg_rpc_get_id(c);
+                                  struct mg_rpc_channel_info *ci,
+                                  const struct mg_rpc_frame *frame) {
+  if (frame->src.len == 0) return false;
 
   struct mg_rpc_request_info *ri =
       (struct mg_rpc_request_info *) calloc(1, sizeof(*ri));
   ri->rpc = c;
-  ri->src = mg_strdup(mg_mk_str_n(src.p, src.len));
-  ri->id = id;
+  ri->id = frame->id;
+  ri->src = mg_strdup(frame->src);
+  ri->tag = mg_strdup(frame->tag);
 
   struct mg_rpc_handler_info *hi;
   SLIST_FOREACH(hi, &c->handlers, handlers) {
-    if (mg_strcmp(hi->method, mg_mk_str_n(method.p, method.len)) == 0) break;
+    if (mg_strcmp(hi->method,
+                  mg_mk_str_n(frame->method.p, frame->method.len)) == 0) {
+      break;
+    }
   }
   if (hi == NULL) {
-    LOG(LL_ERROR, ("No handler for %.*s", (int) method.len, method.p));
-    mg_rpc_send_errorf(ri, 404, "No handler for %.*s", (int) method.len,
-                       method.p);
+    LOG(LL_ERROR,
+        ("No handler for %.*s", (int) frame->method.len, frame->method.p));
+    mg_rpc_send_errorf(ri, 404, "No handler for %.*s", (int) frame->method.len,
+                       frame->method.p);
     ri = NULL;
     return true;
   }
@@ -119,7 +121,7 @@ static bool mg_rpc_handle_request(struct mg_rpc *c,
   memset(&fi, 0, sizeof(fi));
   fi.channel_type = ci->ch->get_type(ci->ch);
   fi.channel_is_trusted = ci->is_trusted;
-  hi->cb(ri, hi->cb_arg, &fi, mg_mk_str_n(args.p, args.len));
+  hi->cb(ri, hi->cb_arg, &fi, mg_mk_str_n(frame->args.p, frame->args.len));
   return true;
 }
 
@@ -158,29 +160,29 @@ static bool mg_rpc_parse_frame(const struct mg_str f,
                                struct mg_rpc_frame *frame) {
   memset(frame, 0, sizeof(*frame));
 
-  struct json_token src, key, dst;
+  struct json_token src, dst, tag;
   struct json_token method, args;
   struct json_token result, error_msg;
   memset(&src, 0, sizeof(src));
-  memset(&key, 0, sizeof(key));
   memset(&dst, 0, sizeof(dst));
+  memset(&tag, 0, sizeof(tag));
   memset(&method, 0, sizeof(method));
   memset(&args, 0, sizeof(args));
   memset(&result, 0, sizeof(result));
   memset(&error_msg, 0, sizeof(error_msg));
 
   if (json_scanf(f.p, f.len,
-                 "{v:%d id:%lld src:%T key:%T dst:%T "
+                 "{v:%d id:%lld src:%T dst:%T tag:%T"
                  "method:%T args:%T "
                  "result:%T error:{code:%d message:%T}}",
-                 &frame->version, &frame->id, &src, &key, &dst, &method, &args,
+                 &frame->version, &frame->id, &src, &dst, &tag, &method, &args,
                  &result, &frame->error_code, &error_msg) < 1) {
     return false;
   }
 
   frame->src = mg_mk_str_n(src.ptr, src.len);
-  frame->key = mg_mk_str_n(key.ptr, key.len);
   frame->dst = mg_mk_str_n(dst.ptr, dst.len);
+  frame->tag = mg_mk_str_n(tag.ptr, tag.len);
   frame->method = mg_mk_str_n(method.ptr, method.len);
   frame->args = mg_mk_str_n(args.ptr, args.len);
   frame->result = mg_mk_str_n(result.ptr, result.len);
@@ -209,8 +211,7 @@ static bool mg_rpc_handle_frame(struct mg_rpc *c,
     ci->dst = mg_strdup(frame->src);
   }
   if (frame->method.len > 0) {
-    if (!mg_rpc_handle_request(c, ci, frame->id, frame->src, frame->method,
-                               frame->args)) {
+    if (!mg_rpc_handle_request(c, ci, frame)) {
       return false;
     }
   } else {
@@ -225,8 +226,8 @@ static bool mg_rpc_handle_frame(struct mg_rpc *c,
 static bool mg_rpc_send_frame(struct mg_rpc_channel_info *ci,
                               struct mg_str frame);
 static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
-                                  int64_t id, struct mg_rpc_channel_info *ci,
-                                  bool enqueue,
+                                  int64_t id, const struct mg_str tag,
+                                  struct mg_rpc_channel_info *ci, bool enqueue,
                                   struct mg_str payload_prefix_json,
                                   const char *payload_jsonf, va_list ap);
 
@@ -292,9 +293,9 @@ static bool mg_rpc_send_hello(struct mg_rpc *c,
   json_printf(&fout, "method:%Q", MG_RPC_HELLO_CMD);
   va_list dummy;
   memset(&dummy, 0, sizeof(dummy));
-  bool result =
-      mg_rpc_dispatch_frame(c, mg_mk_str(""), id, ci, false /* enqueue */,
-                            mg_mk_str_n(fb.buf, fb.len), NULL, dummy);
+  bool result = mg_rpc_dispatch_frame(c, mg_mk_str(""), id, mg_mk_str(""), ci,
+                                      false /* enqueue */,
+                                      mg_mk_str_n(fb.buf, fb.len), NULL, dummy);
   if (result) {
     SLIST_INSERT_HEAD(&c->requests, ri, requests);
   } else {
@@ -454,8 +455,8 @@ static bool mg_rpc_enqueue_frame(struct mg_rpc *c, struct mg_str dst,
 }
 
 static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
-                                  int64_t id, struct mg_rpc_channel_info *ci,
-                                  bool enqueue,
+                                  int64_t id, const struct mg_str tag,
+                                  struct mg_rpc_channel_info *ci, bool enqueue,
                                   struct mg_str payload_prefix_json,
                                   const char *payload_jsonf, va_list ap) {
   struct mbuf fb;
@@ -463,10 +464,16 @@ static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
   if (ci == NULL) ci = mg_rpc_get_channel(c, dst);
   bool result = false;
   mbuf_init(&fb, 100);
-  json_printf(&fout, "{v:%d,src:%Q,key:%Q,id:%lld", MG_RPC_FRAME_VERSION,
-              c->cfg->id, c->cfg->psk, id);
+  json_printf(&fout, "{");
+  if (id != 0) {
+    json_printf(&fout, "id:%lld,", id);
+  }
+  json_printf(&fout, "src:%Q", c->cfg->id);
   if (dst.len > 0) {
     json_printf(&fout, ",dst:%.*Q", (int) dst.len, dst.p);
+  }
+  if (tag.len > 0) {
+    json_printf(&fout, ",tag:%.*Q", (int) tag.len, tag.p);
   }
   if (payload_prefix_json.len > 0) {
     mbuf_append(&fb, ",", 1);
@@ -514,9 +521,9 @@ bool mg_rpc_callf(struct mg_rpc *c, const struct mg_str method,
   if (args_jsonf != NULL) json_printf(&prefbout, ",args:");
   va_list ap;
   va_start(ap, args_jsonf);
-  bool result =
-      mg_rpc_dispatch_frame(c, dst, id, NULL /* ci */, true /* enqueue */,
-                            mg_mk_str_n(prefb.buf, prefb.len), args_jsonf, ap);
+  bool result = mg_rpc_dispatch_frame(
+      c, dst, id, mg_mk_str(""), NULL /* ci */, true /* enqueue */,
+      mg_mk_str_n(prefb.buf, prefb.len), args_jsonf, ap);
   va_end(ap);
   if (result && ri != NULL) {
     SLIST_INSERT_HEAD(&c->requests, ri, requests);
@@ -539,7 +546,7 @@ bool mg_rpc_send_responsef(struct mg_rpc_request_info *ri,
   va_list ap;
   va_start(ap, result_json_fmt);
   bool result = mg_rpc_dispatch_frame(
-      ri->rpc, ri->src, ri->id, NULL /* ci */, true /* enqueue */,
+      ri->rpc, ri->src, ri->id, ri->tag, NULL /* ci */, true /* enqueue */,
       mg_mk_str_n(prefb.buf, prefb.len), result_json_fmt, ap);
   va_end(ap);
   mg_rpc_free_request_info(ri);
@@ -569,7 +576,7 @@ bool mg_rpc_send_errorf(struct mg_rpc_request_info *ri, int error_code,
   va_list dummy;
   memset(&dummy, 0, sizeof(dummy));
   bool result = mg_rpc_dispatch_frame(
-      ri->rpc, ri->src, ri->id, NULL /* ci */, true /* enqueue */,
+      ri->rpc, ri->src, ri->id, ri->tag, NULL /* ci */, true /* enqueue */,
       mg_mk_str_n(prefb.buf, prefb.len), NULL, dummy);
   mg_rpc_free_request_info(ri);
   return result;

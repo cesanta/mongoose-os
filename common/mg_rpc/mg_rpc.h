@@ -27,7 +27,7 @@ struct mg_rpc_frame {
   int version;
   int64_t id;
   int error_code;
-  struct mg_str src, key, dst;
+  struct mg_str src, dst, tag;
   struct mg_str method, args;
   struct mg_str result, error_msg;
 };
@@ -87,14 +87,15 @@ bool mg_rpc_callf(struct mg_rpc *c, const struct mg_str method,
  */
 struct mg_rpc_request_info {
   struct mg_rpc *rpc;
-  struct mg_str src; /* Source of the request. */
   int64_t id;        /* Request id. */
+  struct mg_str src; /* Source of the request. */
+  struct mg_str tag; /* Request tag. Opaque, should be passed back as is. */
   void *user_data;   /* Place to store user pointer. Not used by mg_rpc. */
 };
 
 /*
  * Signature of an incoming request handler.
- * Note that only reuqest_info remains valid after return from this function,
+ * Note that only request_info remains valid after return from this function,
  * frame_info and args will be invalidated.
  */
 typedef void (*mg_handler_cb_t)(struct mg_rpc_request_info *ri, void *cb_arg,
