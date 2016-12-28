@@ -2,12 +2,12 @@
 title: Overview
 ---
 
-Mongoose OS is a robust and secure framework for embedded devices.
-It is a ideal for making internet-connected products, as it has all
-essential infrastructure components developed:
+Mongoose OS is an open source, cross platform OS for low-power
+connected microcontrollers designed for Internet of Things. It includes:
 
 - Trusted and robust networking HTTP/Websocket/MQTT/CoAP and other,
-- Out-of-the-box support AWS IoT, Micsoroft Azure, IBM Watson, Google GCP cloud,
+- Out-of-the-box cloud connectivity including
+  AWS IoT, Micsoroft Azure, IBM Watson, Google GCP cloud,
 - SSL/TLS (mbedTLS) with optional hardware crypto elements support,
 - Reliable Over-The-Air (OTA) updates with rollbacks and delayed commits,
 - Flexible configuration infrastructure for vendor and end-user configuration,

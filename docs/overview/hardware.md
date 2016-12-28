@@ -2,7 +2,7 @@
 title: Supported hardware
 ---
 
-Mongoose Firmware runs on multiple hardware architectures.
+Mongoose OS runs on multiple hardware architectures.
 Fully supported architectures are:
 
 - Texas Instruments CC3200
