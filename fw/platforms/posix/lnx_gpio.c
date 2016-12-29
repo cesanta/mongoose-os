@@ -308,6 +308,11 @@ bool miot_gpio_read(int pin) {
   return gpio_get_value(pin);
 }
 
+bool miot_gpio_toggle(int pin) {
+  /* TODO */
+  (void) pin;
+  return false;
+}
 
 enum miot_init_result miot_gpio_dev_init(void) {
   return MIOT_INIT_OK;

@@ -5,6 +5,7 @@
 #include "fw/src/miot_console.h"
 #include "fw/src/miot_dns_sd.h"
 #include "fw/src/miot_gpio.h"
+#include "fw/src/miot_gpio_service.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_i2c.h"
 #include "fw/src/miot_mdns.h"
@@ -65,6 +66,10 @@ enum miot_init_result miot_init(void) {
 #if MIOT_ENABLE_FILESYSTEM_SERVICE
   miot_service_filesystem_init();
 #endif
+#endif
+#if MIOT_ENABLE_GPIO_SERVICE
+  r = miot_gpio_service_init();
+  if (r != MIOT_INIT_OK) return r;
 #endif
 
 #if MIOT_ENABLE_CONSOLE

@@ -35,7 +35,7 @@ enum miot_gpio_int_mode {
   MIOT_GPIO_INT_LEVEL_LO = 5
 };
 
-typedef void (*miot_gpio_int_handler_f)(int pin, void *param);
+typedef void (*miot_gpio_int_handler_f)(int pin, void *arg);
 
 /* Set mode - input or output */
 bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode);
@@ -55,7 +55,6 @@ bool miot_gpio_toggle(int pin);
 /*
  * Install a GPIO interrupt handler.
  *
- * Calling with cb = NULL will remove a previously installed handler.
  * Note that this will not enable the interrupt, this must be done explicitly
  * with miot_gpio_enable_int.
  */
@@ -67,6 +66,13 @@ bool miot_gpio_enable_int(int pin);
 
 /* Disables interrupt (without removing the handler). */
 bool miot_gpio_disable_int(int pin);
+
+/*
+ * Removes a previosuly set interrupt handler.
+ * If cb and arg are not NULL, they will contain previous handler and arg.
+ */
+void miot_gpio_remove_int_handler(int pin, miot_gpio_int_handler_f *old_cb,
+                                  void **old_arg);
 
 /*
  * Handle a button on the specified pin.

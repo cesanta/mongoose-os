@@ -9,7 +9,6 @@ signature: |
 
 Install a GPIO interrupt handler.
 
-Calling with cb = NULL will remove a previously installed handler.
 Note that this will not enable the interrupt, this must be done explicitly
 with miot_gpio_enable_int. 
 

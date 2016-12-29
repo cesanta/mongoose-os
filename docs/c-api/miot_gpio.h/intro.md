@@ -6,6 +6,7 @@ items:
   - { name: miot_gpio_disable_int.md }
   - { name: miot_gpio_enable_int.md }
   - { name: miot_gpio_read.md }
+  - { name: miot_gpio_remove_int_handler.md }
   - { name: miot_gpio_set_button_handler.md }
   - { name: miot_gpio_set_int_handler.md }
   - { name: miot_gpio_set_mode.md }

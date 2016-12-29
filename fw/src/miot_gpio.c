@@ -78,6 +78,22 @@ bool miot_gpio_set_int_handler(int pin, enum miot_gpio_int_mode mode,
   return true;
 }
 
+void miot_gpio_remove_int_handler(int pin, miot_gpio_int_handler_f *old_cb,
+                                  void **old_arg) {
+  miot_gpio_int_handler_f cb = NULL;
+  void *cb_arg = NULL;
+  if (pin >= 0 && pin < MIOT_NUM_GPIO) {
+    struct miot_gpio_state *s = (struct miot_gpio_state *) &s_state[pin];
+    miot_gpio_disable_int(pin);
+    cb = s->cb;
+    cb_arg = s->cb_arg;
+    s->cb = NULL;
+    s->cb_arg = NULL;
+  }
+  if (old_cb != NULL) *old_cb = cb;
+  if (old_arg != NULL) *old_arg = cb_arg;
+}
+
 bool miot_gpio_set_button_handler(int pin, enum miot_gpio_pull_type pull_type,
                                   enum miot_gpio_int_mode int_mode,
                                   int debounce_ms, miot_gpio_int_handler_f cb,

@@ -10,6 +10,10 @@
 #define MIOT_ENABLE_ADC_API 0
 #endif
 
+#ifndef MIOT_ENABLE_GPIO_SERVICE
+#define MIOT_ENABLE_GPIO_SERVICE 0
+#endif
+
 #ifndef MIOT_ENABLE_RPC
 #define MIOT_ENABLE_RPC 0
 #endif
