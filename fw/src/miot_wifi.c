@@ -30,8 +30,10 @@ void miot_wifi_on_change_cb(enum miot_wifi_status event) {
       break;
     case MIOT_WIFI_IP_ACQUIRED: {
       char *ip = miot_wifi_get_sta_ip();
-      LOG(LL_INFO, ("WiFi: ready, IP %s", ip));
-      free(ip);
+      if (ip != NULL) {
+        LOG(LL_INFO, ("WiFi: ready, IP %s", ip));
+        free(ip);
+      }
       break;
     }
   }
