@@ -13,6 +13,7 @@
 #include "soc/timer_group_reg.h"
 
 #include "fw/src/miot_hal.h"
+#include "fw/src/miot_wifi.h"
 #include "fw/src/miot_sys_config.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
@@ -27,6 +28,10 @@ size_t miot_get_min_free_heap_size(void) {
 void miot_system_restart(int exit_code) {
   (void) exit_code;
   esp32_fs_deinit();
+#if MIOT_ENABLE_WIFI
+  miot_wifi_disconnect();
+#endif
+  LOG(LL_INFO, ("Restarting"));
   esp_restart();
 }
 
