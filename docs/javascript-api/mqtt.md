@@ -2,7 +2,7 @@
 title: MQTT
 ---
 
-Mongoose IoT Platform provides a simple MQTT client. The API is modeled after the popular JS
+Mongoose OS Platform provides a simple MQTT client. The API is modeled after the popular JS
 MQTT client https://www.npmjs.com/package/mqtt.
 
 Usage example:

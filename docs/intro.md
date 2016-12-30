@@ -1,7 +1,7 @@
 ---
-title: Mongoose IoT Platform
+title: Mongoose OS Platform
 color: '#F05B40'
-repo: https://github.com/cesanta/mongoose-iot
+repo: https://github.com/cesanta/mongoose-os
 items:
   - { name: overview }
   - { name: quickstart }

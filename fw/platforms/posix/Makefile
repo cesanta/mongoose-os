@@ -1,6 +1,6 @@
 # -*- mode: makefile -*-
 #
-# Mongoose IoT for POSIX
+# Mongoose OS for POSIX
 
 MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
@@ -15,7 +15,7 @@ BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
 GEN_DIR ?= ./.build/gen
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
-OUTAPP ?= mongoose-iot
+OUTAPP ?= mongoose-os
 VERBOSE ?= 0
 VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 SSL ?= None

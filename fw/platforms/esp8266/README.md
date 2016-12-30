@@ -1,23 +1,23 @@
 # Overview
 
-This document describes Mongoose IoT firmware for ESP8266 chip.
+This document describes Mongoose OS firmware for ESP8266 chip.
 
-Mongoose IoT firmware allows to manipulate hardware over GPIO/I2C/SPI interfaces,
+Mongoose OS firmware allows to manipulate hardware over GPIO/I2C/SPI interfaces,
 set up WiFi, and communicate over the network - all using simple JavaScript
 commands described below.
 
 ESP8266 board can be accessed through a serial port, or directly via browser if WiFi is configured.
 
-Mongoose IoT firmware can be easily extended by adding custom commands - refer to
+Mongoose OS firmware can be easily extended by adding custom commands - refer to
 https://docs.cesanta.com/v7/ to learn how to export custom functions, and look
 at the examples at `user/v7_cmd.c`.
 
 # Build the firmware
 
-Mongoose IoT release provides pre-built firmare, so you might just download
+Mongoose OS release provides pre-built firmare, so you might just download
 it from the
-[Mongoose IoT release page](https://github.com/cesanta/mongoose-iot/releases) or
-[developer builds](https://backend.cesanta.com/devel/mongoose-iot-esp8266-last.zip) and
+[Mongoose OS release page](https://github.com/cesanta/mongoose-os/releases) or
+[developer builds](https://backend.cesanta.com/devel/mongoose-os-esp8266-last.zip) and
 skip to the next step. For those who want to build/customize the firmware,
 make sure you have docker installed and running. Then,
 
@@ -72,7 +72,7 @@ This build also includes an optional GDB server, enabled with the -DESP_GDB_SERV
 When enabled, each illegal instruction or memory access will trap into the GDB server.
 
 This can be very useful both to debug your custom C code, and to provide us with stack traces
-for debugging issues in the JS VM and other parts of the Mongoose IoT SDK.
+for debugging issues in the JS VM and other parts of the Mongoose OS SDK.
 
 The user can attach with a gdb build supporting the lx106 framework. We offer such a binary
 in our cesanta/esp8266-build-oss docker image. Please make sure you use at least version 1.3.0

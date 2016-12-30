@@ -2,7 +2,7 @@
 title: Over-The-Air updates (OTA)
 ---
 
-Mongoose IoT Platform's OTA is designed to work in both the unattended and controllable mode.
+Mongoose OS Platform's OTA is designed to work in both the unattended and controllable mode.
 
 By default the updater module starts in unattended mode. Which means, it will
 initiate the update process immediately after receiving a command from the server.

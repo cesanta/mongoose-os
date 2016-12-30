@@ -59,7 +59,7 @@ void user_rf_pre_init() {
 }
 
 /*
- * Mongoose IoT initialization, called as an SDK timer callback
+ * Mongoose OS initialization, called as an SDK timer callback
  * (`os_timer_...()`).
  */
 enum mgos_init_result esp_mgos_init(rboot_config *bcfg) {
@@ -77,11 +77,10 @@ enum mgos_init_result esp_mgos_init(rboot_config *bcfg) {
   system_set_os_print(1);
   fputc('\n', stderr);
 
-  if (strcmp(MGOS_APP, "mongoose-iot") != 0) {
+  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO,
-      ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
                 mgos_get_heap_size(), mgos_get_free_heap_size()));
   esp_print_reset_info();

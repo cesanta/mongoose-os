@@ -1,7 +1,7 @@
 MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
 
-APP ?= mongoose-iot
+APP ?= mongoose-os
 APP_PLATFORM = esp32
 APP_MODULES ?=
 APP_CFLAGS ?=

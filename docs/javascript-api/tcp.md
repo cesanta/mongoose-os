@@ -2,7 +2,7 @@
 title: TCP
 ---
 
-Mongoose IoT Platform implements a subset of Node.js Net API (but uses `tcp` name, instead of `net`). This snippet demonstrates
+Mongoose OS Platform implements a subset of Node.js Net API (but uses `tcp` name, instead of `net`). This snippet demonstrates
 what is supported for client and server:
 
 ```javascript

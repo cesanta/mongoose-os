@@ -1,6 +1,6 @@
 # -*- mode: makefile -*-
 #
-# Mongoose IoT Firmware boot loader for CC3200
+# Mongoose OS Firmware boot loader for CC3200
 #
 MAKEFLAGS += --warn-undefined-variables
 

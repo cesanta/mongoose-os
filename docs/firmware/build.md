@@ -3,7 +3,7 @@ title: Custom C/C++ logic
 ---
 
 Please see
-[examples](https://github.com/cesanta/mongoose-iot/tree/master/fw/examples)
+[examples](https://github.com/cesanta/mongoose-os/tree/master/fw/examples)
 on how to customise Mongoose Firmware in C/C++.
 
 `mgos_app_init()` function will return `MGOS_APP_INIT_SUCCESS` on successful
@@ -13,7 +13,7 @@ Also, see
 - [V7 reference on exporting C/C++ functions to
   JS](https://docs.cesanta.com/v7/#_call_c_c_function_from_javascript)
 - `init_v7()` function at
-  [v7_esp.c](https://github.com/cesanta/mongoose-iot/blob/master/fw/platforms/esp8266/user/v7_esp.c)
+  [v7_esp.c](https://github.com/cesanta/mongoose-os/blob/master/fw/platforms/esp8266/user/v7_esp.c)
   for an example of how the specific C/C++ API is exported to ESP8266 firmware. To
   extend it, just edit the `init_v7()` function and rebuild the firmare by running
   `make` in `fw/platforms/esp8266` directory.

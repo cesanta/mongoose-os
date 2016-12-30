@@ -1,6 +1,6 @@
-APP ?= mongoose-iot
+APP ?= mongoose-os
 APP_PLATFORM = esp8266
-ifeq "$(APP)" "mongoose-iot"
+ifeq "$(APP)" "mongoose-os"
 MGOS_PATH = ../../..
 endif
 

@@ -1,6 +1,6 @@
 "use strict";
 
-print('\nMongoose IoT Firmware - see documentation at',
+print('\nMongoose OS Firmware - see documentation at',
       'https://mongoose-iot.com/docs/\n');
 
 if (Sys.conf.device.id) {

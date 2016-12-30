@@ -1,4 +1,4 @@
-# This is a C-only Mongoose IoT application.
+# This is a C-only Mongoose OS application.
 
 
 This example shows how to control a device remotely using HTTP protocol.
@@ -8,8 +8,8 @@ Assuming you have downloaded the
 Please follow these steps:
 
 ```Bash
-git clone https://github.com/cesanta/mongoose-iot
-cd mongoose-iot/fw/examples/c_http
+git clone https://github.com/cesanta/mongoose-os
+cd mongoose-os/fw/examples/c_http
 export MGOS_PORT=/dev/ttyUSB0  # or, whatever is correct on your system
 mgos build --arch ARCHITECTURE # cc3200 or esp8266
 mgos flash

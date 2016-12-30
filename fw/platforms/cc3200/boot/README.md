@@ -1,4 +1,4 @@
-# Mongoose IoT Firmware boot loader for CC3200
+# Mongoose OS Firmware boot loader for CC3200
 
 `mg-boot.bin` should be loaded at `0x20004000` (this is where ROM loads `/sys/mcuimg.bin`).
 It consists of a small relocator followed by the loader body.

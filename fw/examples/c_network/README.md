@@ -19,17 +19,17 @@ on how to build and flash the firmware.
 - Build a new firmware
 - Update to a new firmware over-the-air:
 ```
-$ curl -v -F file=@firmware/mongoose-iot-cc3200-last.zip http://192.168.4.1/update
+$ curl -v -F file=@firmware/mongoose-os-cc3200-last.zip http://192.168.4.1/update
 ```
 
 On a serial console, you might see log messages like this:
 
 ```
-main_task            Mongoose IoT Firmware 20160620-154812/cc3200@87511eed+
+main_task            Mongoose OS Firmware 20160620-154812/cc3200@87511eed+
 main_task            RAM: 48620 total, 34456 free
 mg_wifi_on_change_callback WiFi: ready, IP 192.168.4.1
 start_nwp            NWP v2.6.0.5 started, host driver v1.0.1.6
-main_task            Boot cfg 1: 0xfffffffffffffffd, 0x3, mongoose-iot.bin.0 @ 0x20000000, spiffs.img.1
+main_task            Boot cfg 1: 0xfffffffffffffffd, 0x3, mongoose-os.bin.0 @ 0x20000000, spiffs.img.1
 main_task            Applying update
 file_copy            Copying test.txt
 init_device          MAC: F4B85E49A7B3

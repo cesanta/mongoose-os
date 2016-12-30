@@ -2,7 +2,7 @@
 title: HTTP
 ---
 
-Mongoose IoT Platform implements a subset of Node.js HTTP API. This snippet demonstrates
+Mongoose OS Platform implements a subset of Node.js HTTP API. This snippet demonstrates
 what is supported for client and server:
 
 ```javascript
@@ -64,8 +64,8 @@ In order to use HTTPS, specify `https` as a protocol, e.g.
 Http.request('https://google.com', function() { print(arguments); });
 ```
 
-Note that Mongoose IoT Platform uses a
-[ca.pem](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/fs/ca.pem)
+Note that Mongoose OS Platform uses a
+[ca.pem](https://github.com/cesanta/mongoose-os/blob/master/fw/src/fs/ca.pem)
 file which holds root CA certificates
 for verifying server certificates. The most popular certificate providers are
 already added to that file. If there are problems with making HTTPS requests,

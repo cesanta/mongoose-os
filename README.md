@@ -10,7 +10,7 @@ Designed for Internet of Things:
 
 # Support
 - [Mongoose OS Documentation](https://mongoose-iot.com/docs/#/overview/)
-- [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
+- [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-os)
 - [Commercial licensing and support available](https://cesanta.com/contact)
 
 # Licensing
@@ -25,4 +25,4 @@ To submit contributions, sign
 [Cesanta CLA](https://docs.cesanta.com/contributors_la.shtml)
 and send GitHub pull request. You retain the copyright on your contributions.
 
-[![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/mongoose-iot)
+[![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/mongoose-os)

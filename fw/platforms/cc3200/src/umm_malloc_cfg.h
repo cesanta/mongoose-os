@@ -4,7 +4,7 @@
  */
 
 /*
- * Mongoose IoT-specific configuration for umm_malloc
+ * Mongoose OS-specific configuration for umm_malloc
  */
 
 #ifndef CS_FW_PLATFORMS_CC3200_SRC_UMM_MALLOC_CFG_H_

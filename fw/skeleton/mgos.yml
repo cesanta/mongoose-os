@@ -1,11 +1,11 @@
 # arch: PLATFORM   # possible values for PLATFORM: esp8266 cc3200
 version: 1.0
-# mongoose_iot_version determines the revision of the
-# https://github.com/cesanta/mongoose-iot repository
+# mongoose_os_version determines the revision of the
+# https://github.com/cesanta/mongoose-os repository
 # against which the app should be built. It can be either a branch name (e.g.
-# master), or, if you want to freeze the mongoose-iot version, you can use a
+# master), or, if you want to freeze the mongoose-os version, you can use a
 # SHA hash of the desired revision, or a tag.
-mongoose_iot_version: master
+mongoose_os_version: master
 skeleton_version: 2016-11-24
 sources:
   - src

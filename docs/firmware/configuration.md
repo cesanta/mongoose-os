@@ -18,7 +18,7 @@ A web interface is provided to manage the configuration using a browser.
 
 # Definition and representation
 
-Configuration is defined by the JSON configuration contained in the [defaults file](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/fs/conf_sys_defaults.json).
+Configuration is defined by the JSON configuration contained in the [defaults file](https://github.com/cesanta/mongoose-os/blob/master/fw/src/fs/conf_sys_defaults.json).
 
 ## C
 
@@ -86,7 +86,7 @@ Defaults must be loaded and it is an error if the file does not exist at the tim
 # Web interface
 
 Mongoose Firmware ships with a web server that lets the user change the configuration values.
-Annotations for the web interface come from the [schema file](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/fs/conf_sys_schema.json).
+Annotations for the web interface come from the [schema file](https://github.com/cesanta/mongoose-os/blob/master/fw/src/fs/conf_sys_schema.json).
 
 # Resetting to factory defaults
 
@@ -126,8 +126,8 @@ Negative entries allow for default-allow behaviour: `"conf_acl": "-debug.*,*"` a
 
 Applications using Mongoose Firmware can add their own fields to `struct sys_config` and the corresponding `Sys.conf` JavaScript object.
 
-During build, field definitions from [conf_sys_defaults.json](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/fs/conf_sys_defaults.json) are augmented with
+During build, field definitions from [conf_sys_defaults.json](https://github.com/cesanta/mongoose-os/blob/master/fw/src/fs/conf_sys_defaults.json) are augmented with
 definitions from `conf_app_defaults.json`. While empty by default, a different file can be supplied by the app developer by defining the `APP_CONF_DEFAULTS` variable,
-as shown in the `c_hello` example [here](https://github.com/cesanta/mongoose-iot/blob/master/fw/examples/c_hello/Makefile.build#L5).
-The [file](https://github.com/cesanta/mongoose-iot/blob/master/fw/examples/c_hello/fs/conf_app_defaults.json) defines a new string field, `hello.who`,
-which is then [used](https://github.com/cesanta/mongoose-iot/blob/master/fw/examples/c_hello/src/app_main.c#L18) to produce the greeting.
+as shown in the `c_hello` example [here](https://github.com/cesanta/mongoose-os/blob/master/fw/examples/c_hello/Makefile.build#L5).
+The [file](https://github.com/cesanta/mongoose-os/blob/master/fw/examples/c_hello/fs/conf_app_defaults.json) defines a new string field, `hello.who`,
+which is then [used](https://github.com/cesanta/mongoose-os/blob/master/fw/examples/c_hello/src/app_main.c#L18) to produce the greeting.

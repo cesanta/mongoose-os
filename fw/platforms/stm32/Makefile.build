@@ -3,7 +3,7 @@ TARGET ?= DISCO_F429ZI
 .DEFAULT_GOAL := all
 .PHONE: PLATFORM_FLAGS
 
-APP ?= mongoose-iot
+APP ?= mongoose-os
 APP_MODULES ?=
 APP_PLATFORM = stm32
 APP_EXTRA_SRCS ?=

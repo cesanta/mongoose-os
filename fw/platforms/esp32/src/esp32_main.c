@@ -69,11 +69,10 @@ static enum mgos_init_result esp32_mgos_init() {
   r = esp32_console_init();
   if (r != MGOS_INIT_OK) return r;
 
-  if (strcmp(MGOS_APP, "mongoose-iot") != 0) {
+  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO,
-      ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("Task ID: %p, RAM: %u free", xTaskGetCurrentTaskHandle(),
                 mgos_get_free_heap_size()));
 

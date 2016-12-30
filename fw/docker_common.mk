@@ -11,7 +11,7 @@ DOCKER_EXTRA ?=
 MAKEFILE_BUILD ?= $(MAKE_MGOS_PATH)/fw/platforms/$(APP_PLATFORM)/Makefile.build
 
 DOCKER_APP_PATH = /app
-DOCKER_MGOS_PATH = /mongoose-iot
+DOCKER_MGOS_PATH = /mongoose-os
 
 APP_PATH = $(CURDIR)
 MGOS_PATH_ABS=$(abspath $(MGOS_PATH))

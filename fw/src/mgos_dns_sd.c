@@ -359,7 +359,7 @@ const char *mgos_sd_default_service_type() {
     return service_type;
   }
   /* TODO(mkm): figure out how to extract app name from ro conf */
-  return "_mongoose-iot._tcp";
+  return "_mongoose-os._tcp";
 }
 
 /* Initialize the DNS-SD subsystem */
