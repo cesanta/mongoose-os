@@ -491,6 +491,13 @@ static int b64rev(int c) {
   }
 }
 
+static uint8_t hexdec(const char *s) {
+#define HEXTOI(x) (x >= '0' && x <= '9' ? x - '0' : x - 'W')
+  int a = tolower(*(const unsigned char *) s);
+  int b = tolower(*(const unsigned char *) (s + 1));
+  return (HEXTOI(a) << 4) | HEXTOI(b);
+}
+
 static int b64enc(struct json_out *out, const unsigned char *p, int n) {
   char buf[4];
   int i, len = 0;
@@ -557,6 +564,16 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         int val = va_arg(ap, int);
         const char *str = val ? "true" : "false";
         len += out->printer(out, str, strlen(str));
+      } else if (fmt[1] == 'H') {
+        const char *hex = "0123456789abcdef";
+        int i, n = va_arg(ap, int);
+        const unsigned char *p = va_arg(ap, const unsigned char *);
+        len += out->printer(out, quote, 1);
+        for (i = 0; i < n; i++) {
+          len += out->printer(out, &hex[(p[i] >> 4) & 0xf], 1);
+          len += out->printer(out, &hex[p[i] & 0xf], 1);
+        }
+        len += out->printer(out, quote, 1);
       } else if (fmt[1] == 'V') {
         const unsigned char *p = va_arg(ap, const unsigned char *);
         int n = va_arg(ap, int);
@@ -857,6 +874,19 @@ static void json_scanf_cb(void *callback_data, const char *name,
       }
       break;
     }
+    case 'H': {
+      char **dst = (char **) info->user_data;
+      int i, len = token->len / 2;
+      *(int *) info->target = len;
+      if ((*dst = (char *) malloc(len + 1)) != NULL) {
+        for (i = 0; i < len; i++) {
+          (*dst)[i] = hexdec(token->ptr + 2 * i);
+        }
+        (*dst)[len] = '\0';
+        info->num_conversions++;
+      }
+      break;
+    }
     case 'V': {
       char **dst = (char **) info->target;
       int len = token->len * 4 / 3 + 2;
@@ -897,6 +927,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
       switch (fmt[i + 1]) {
         case 'M':
         case 'V':
+        case 'H':
           info.user_data = va_arg(ap, void *);
         /* FALLTHROUGH */
         case 'B':

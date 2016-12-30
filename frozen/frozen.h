@@ -140,6 +140,7 @@ typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
  *  - `%Q` print quoted escaped string or `null`. Accepts a `const char *`.
  *  - `%.*Q` same as `%Q`, but with length. Accepts `int`, `const char *`
  *  - `%V` print quoted base64-encoded string. Accepts a `const char *`, `int`.
+ *  - `%H` print quoted hex-encoded string. Accepts a `int`, `const char *`.
  *  - `%M` invokes a json_printf_callback_t function. That callback function
  *  can consume more parameters.
  *
@@ -170,6 +171,11 @@ int json_printf_array(struct json_out *, va_list *ap);
  *    - %V: consumes `char **`, `int *`. Expects base64-encoded string.
  *       Result string is base64-decoded, malloced and NUL-terminated.
  *       The length of result string is stored in `int *` placeholder.
+ *       Caller must free() the result.
+ *    - %H: consumes `int *`, `char **`.
+ *       Expects a hex-encoded string, e.g. "fa014f".
+ *       Result string is hex-decoded, malloced and NUL-terminated.
+ *       The length of the result string is stored in `int *` placeholder.
  *       Caller must free() the result.
  *    - %M: consumes custom scanning function pointer and
  *       `void *user_data` parameter - see json_scanner_t definition.
