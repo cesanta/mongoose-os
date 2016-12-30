@@ -278,6 +278,7 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   apcfg->ssid_hidden = (cfg->hidden != 0);
   apcfg->max_connection = cfg->max_connections;
   apcfg->beacon_interval = 100; /* ms */
+  LOG(LL_ERROR, ("WiFi AP: SSID %s, channel %d", apcfg->ssid, apcfg->channel));
 
   r = esp_wifi_set_config(WIFI_IF_AP, &wcfg);
   if (r != ESP_OK) {

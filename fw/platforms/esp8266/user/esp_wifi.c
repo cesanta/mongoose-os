@@ -190,6 +190,7 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   ap_cfg.ssid_hidden = (cfg->hidden != 0);
   ap_cfg.max_connection = cfg->max_connections;
   ap_cfg.beacon_interval = 100; /* ms */
+  LOG(LL_ERROR, ("WiFi AP: SSID %s, channel %d", ap_cfg.ssid, ap_cfg.channel));
 
   if (!wifi_softap_set_config_current(&ap_cfg)) {
     LOG(LL_ERROR, ("WiFi AP: Failed to set config"));
