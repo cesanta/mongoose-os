@@ -124,9 +124,18 @@ void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
 }
 
 int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+  char *err_msg = NULL;
+  if (!miot_wifi_validate_sta_cfg(cfg, &err_msg)) {
+    LOG(LL_ERROR, ("WiFi STA: %s", err_msg));
+    free(err_msg);
+    return false;
+  }
+
   free_wifi_config();
   s_wifi_sta_config.ssid = strdup(cfg->ssid);
-  s_wifi_sta_config.pass = strdup(cfg->pass);
+  if (cfg->pass != NULL) {
+    s_wifi_sta_config.pass = strdup(cfg->pass);
+  }
   memset(&s_wifi_sta_config.static_ip, 0, sizeof(s_wifi_sta_config.static_ip));
   if (cfg->ip != NULL && cfg->netmask != NULL) {
     SlNetCfgIpV4Args_t *ipcfg = &s_wifi_sta_config.static_ip;
@@ -147,6 +156,13 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   SlNetCfgIpV4Args_t ipcfg;
   SlNetAppDhcpServerBasicOpt_t dhcpcfg;
   char ssid[64];
+
+  char *err_msg = NULL;
+  if (!miot_wifi_validate_ap_cfg(cfg, &err_msg)) {
+    LOG(LL_ERROR, ("WiFi AP: %s", err_msg));
+    free(err_msg);
+    return false;
+  }
 
   if ((ret = sl_WlanSetMode(ROLE_AP)) != 0) {
     return 0;

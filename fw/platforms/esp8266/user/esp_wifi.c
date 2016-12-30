@@ -129,7 +129,10 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
 
   sta_cfg.bssid_set = 0;
   strncpy((char *) sta_cfg.ssid, cfg->ssid, sizeof(sta_cfg.ssid));
-  strncpy((char *) sta_cfg.password, cfg->pass, sizeof(sta_cfg.password));
+
+  if (cfg->pass != NULL) {
+    strncpy((char *) sta_cfg.password, cfg->pass, sizeof(sta_cfg.password));
+  }
 
   if (cfg->ip != NULL && cfg->netmask != NULL) {
     struct ip_info info;
