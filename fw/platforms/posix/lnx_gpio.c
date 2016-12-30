@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#if MIOT_ENABLE_GPIO_API
+#if MGOS_ENABLE_GPIO_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,8 +16,8 @@
 #include <unistd.h>
 #include <poll.h>
 
-#include "fw/src/miot_gpio.h"
-#include "fw/src/miot_gpio_hal.h"
+#include "fw/src/mgos_gpio.h"
+#include "fw/src/mgos_gpio_hal.h"
 
 int gpio_export(int gpio_no) {
   char buf[50];
@@ -76,9 +76,9 @@ bool gpio_helper(int gpio_no, const char *file_name_templ, const char *val) {
 }
 
 /* 0 = IN, 1 = OUT */
-bool gpio_set_direction(int gpio_no, enum miot_gpio_mode d) {
+bool gpio_set_direction(int gpio_no, enum mgos_gpio_mode d) {
   return gpio_helper(gpio_no, "/sys/class/gpio/gpio%d/direction",
-                     d == MIOT_GPIO_MODE_INPUT ? "in" : "out");
+                     d == MGOS_GPIO_MODE_INPUT ? "in" : "out");
 }
 
 bool gpio_set_value(int gpio_no, bool value) {
@@ -110,7 +110,7 @@ bool gpio_get_value(int gpio_no) {
   return (val == '1');
 }
 
-bool gpio_set_edge(int gpio_no, enum miot_gpio_int_mode edge) {
+bool gpio_set_edge(int gpio_no, enum mgos_gpio_int_mode edge) {
   static const char *edge_names[] = {"none", "rising", "falling", "both"};
   /* signedness of enum is implementation defined */
   if (((unsigned int) edge) >= (sizeof(edge_names) / sizeof(edge_names[0]))) {
@@ -146,7 +146,7 @@ struct gpio_event *get_gpio_event(int gpio_no) {
   return NULL;
 }
 
-void miot_gpio_dev_int_done(int pin) {
+void mgos_gpio_dev_int_done(int pin) {
   (void) pin;
 }
 
@@ -170,12 +170,12 @@ void gpio_remove_handler(int gpio_no) {
   }
 }
 
-bool miot_gpio_dev_set_int_mode(int gpio_no, enum miot_gpio_int_mode mode) {
+bool mgos_gpio_dev_set_int_mode(int gpio_no, enum mgos_gpio_int_mode mode) {
   int fd, res;
   char tmp, buf[50];
   struct gpio_event *new_ev;
 
-  if (mode == MIOT_GPIO_INT_NONE) {
+  if (mode == MGOS_GPIO_INT_NONE) {
     gpio_remove_handler(gpio_no);
     return true;
   }
@@ -218,13 +218,13 @@ bool miot_gpio_dev_set_int_mode(int gpio_no, enum miot_gpio_int_mode mode) {
   return true;
 }
 
-bool miot_gpio_enable_int(int pin) {
+bool mgos_gpio_enable_int(int pin) {
   /* FIXME */
   (void) pin;
   return false;
 }
 
-bool miot_gpio_disable_int(int pin) {
+bool mgos_gpio_disable_int(int pin) {
   /* FIXME */
   (void) pin;
   return false;
@@ -271,7 +271,7 @@ int gpio_poll(void) {
       lseek(fdset[i].fd, 0, SEEK_SET);
       res = read(fdset[i].fd, &val, sizeof(val));
       events_tmp[i]->enabled = 0;
-      miot_gpio_dev_int_cb(events_tmp[i]->gpio_no);
+      mgos_gpio_dev_int_cb(events_tmp[i]->gpio_no);
     }
   }
 
@@ -279,15 +279,15 @@ int gpio_poll(void) {
 }
 
 /* HAL functions */
-bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
+bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   if (gpio_export(pin) < 0) {
     return false;
   }
   return gpio_set_direction(pin, mode);
 }
 
-bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull) {
-  if (pull == MIOT_GPIO_PULL_NONE) return true;
+bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
+  if (pull == MGOS_GPIO_PULL_NONE) return true;
   /*
    * Documented API for using internal pullup/pulldown
    * resistors requires kernel built with special flags
@@ -300,22 +300,22 @@ bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull) {
   return false;
 }
 
-void miot_gpio_write(int pin, bool level) {
+void mgos_gpio_write(int pin, bool level) {
   gpio_set_value(pin, level);
 }
 
-bool miot_gpio_read(int pin) {
+bool mgos_gpio_read(int pin) {
   return gpio_get_value(pin);
 }
 
-bool miot_gpio_toggle(int pin) {
+bool mgos_gpio_toggle(int pin) {
   /* TODO */
   (void) pin;
   return false;
 }
 
-enum miot_init_result miot_gpio_dev_init(void) {
-  return MIOT_INIT_OK;
+enum mgos_init_result mgos_gpio_dev_init(void) {
+  return MGOS_INIT_OK;
 }
 
-#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_GPIO_API */
+#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_GPIO_API */

@@ -3,15 +3,15 @@
 #include "PeripheralPins.h"
 #include "stm32_uart.h"
 #include "common/cs_dbg.h"
-#include "fw/src/miot_uart.h"
+#include "fw/src/mgos_uart.h"
 #include <map>
 
 int s_stdout_uart_no;
 int s_stderr_uart_no;
 
-class MIOTSerial : public RawSerial {
+class MGOSSerial : public RawSerial {
  public:
-  MIOTSerial(int uart_no, PinName pin_tx, PinName pin_rx, int baud_rate)
+  MGOSSerial(int uart_no, PinName pin_tx, PinName pin_rx, int baud_rate)
       : RawSerial(pin_tx, pin_rx, baud_rate), uart_no_(uart_no) {
     cs_rbuf_init(&rx_buf_int_, 1024);
   };
@@ -28,11 +28,11 @@ class MIOTSerial : public RawSerial {
     while (readable() && rx_buf_int_.avail > 0) {
       cs_rbuf_append_one(&rx_buf_int_, getc());
     }
-    miot_uart_schedule_dispatcher(uart_no_);
+    mgos_uart_schedule_dispatcher(uart_no_);
   }
 
   void enable_rx_irq() {
-    attach(Callback<void()>(this, &MIOTSerial::rx_irq_handler),
+    attach(Callback<void()>(this, &MGOSSerial::rx_irq_handler),
            SerialBase::RxIrq);
   }
 
@@ -56,21 +56,21 @@ class MIOTSerial : public RawSerial {
   int uart_no_;
 };
 
-int miot_stm32_get_stdout_uart() {
+int mgos_stm32_get_stdout_uart() {
   return s_stdout_uart_no;
 }
 
-int miot_stm32_get_stderr_uart() {
+int mgos_stm32_get_stderr_uart() {
   return s_stderr_uart_no;
 }
 
-void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
+void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
   /* Do nothing here */
   (void) cfg;
 }
 
-void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
-  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
+void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
+  MGOSSerial *serial = (MGOSSerial *) us->dev_data;
   if (serial == NULL) {
     return;
   }
@@ -78,8 +78,8 @@ void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
   serial->get_rx_data(&us->rx_buf);
 }
 
-void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
-  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
+void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
+  MGOSSerial *serial = (MGOSSerial *) us->dev_data;
 
   if (serial == NULL) {
     return;
@@ -94,7 +94,7 @@ void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
   }
 }
 
-void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
+void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   /*
    * Do nothing here, coz enabling/disabling interruptions
    * conflicts with mbed logic
@@ -103,9 +103,9 @@ void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
 }
 
 static void init_uart(PinName pin_tx, PinName pin_rx,
-                      struct miot_uart_state *us) {
+                      struct mgos_uart_state *us) {
   us->dev_data =
-      new MIOTSerial(us->uart_no, pin_tx, pin_rx, us->cfg->baud_rate);
+      new MGOSSerial(us->uart_no, pin_tx, pin_rx, us->cfg->baud_rate);
 }
 
 static PinName get_uart_pin(UARTName uart_name, const PinMap *map) {
@@ -123,7 +123,7 @@ static int get_uart_pins(UARTName uart_name, PinName *pin_tx, PinName *pin_rx) {
   return (*pin_tx != NC && *pin_rx != NC);
 }
 
-bool miot_uart_dev_init(struct miot_uart_state *us) {
+bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   /*
     * DISCOVERY boards have a different number of UARTS, at this moment
     * we support 3 (like stdout, strerr + user), because it is unclear how
@@ -159,8 +159,8 @@ bool miot_uart_dev_init(struct miot_uart_state *us) {
   return true;
 }
 
-void miot_uart_dev_deinit(struct miot_uart_state *us) {
-  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
+void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
+  MGOSSerial *serial = (MGOSSerial *) us->dev_data;
   if (serial == NULL) {
     return;
   }
@@ -169,8 +169,8 @@ void miot_uart_dev_deinit(struct miot_uart_state *us) {
   us->dev_data = NULL;
 }
 
-void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
-  MIOTSerial *serial = (MIOTSerial *) us->dev_data;
+void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
+  MGOSSerial *serial = (MGOSSerial *) us->dev_data;
   if (serial == NULL) {
     return;
   }
@@ -182,18 +182,18 @@ void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
   }
 }
 
-enum miot_init_result miot_set_stdout_uart(int uart_no) {
-  enum miot_init_result r = miot_init_debug_uart(uart_no);
-  if (r == MIOT_INIT_OK) {
+enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
+  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
+  if (r == MGOS_INIT_OK) {
     s_stdout_uart_no = uart_no;
   }
 
   return r;
 }
 
-enum miot_init_result miot_set_stderr_uart(int uart_no) {
-  enum miot_init_result r = miot_init_debug_uart(uart_no);
-  if (r == MIOT_INIT_OK) {
+enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
+  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
+  if (r == MGOS_INIT_OK) {
     s_stderr_uart_no = uart_no;
   }
   return r;

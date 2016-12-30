@@ -6,15 +6,15 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#ifndef MIOT_ENABLE_CALL_TRACE
-#define MIOT_ENABLE_CALL_TRACE 0
+#ifndef MGOS_ENABLE_CALL_TRACE
+#define MGOS_ENABLE_CALL_TRACE 0
 #endif
 
 #ifndef V7_ENABLE_CALL_TRACE
 #define V7_ENABLE_CALL_TRACE 0
 #endif
 
-#if MIOT_ENABLE_CALL_TRACE || V7_ENABLE_CALL_TRACE
+#if MGOS_ENABLE_CALL_TRACE || V7_ENABLE_CALL_TRACE
 /*
  * If we don't have V7's profiling functions, roll our own.
  * This is copy-pasta from v7/src/cyg_profile.c
@@ -58,7 +58,7 @@ NOINSTR void print_call_trace() {
   fprintf(stderr, "\n");
 }
 
-#if MIOT_ENABLE_CALL_TRACE && !V7_ENABLE_CALL_TRACE
+#if MGOS_ENABLE_CALL_TRACE && !V7_ENABLE_CALL_TRACE
 IRAM NOINSTR void __cyg_profile_func_enter(void *this_fn, void *call_site) {
   if (call_trace.size < CALL_TRACE_SIZE) {
     call_trace.addresses[call_trace.size] = this_fn;
@@ -75,4 +75,4 @@ IRAM NOINSTR void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 }
 #endif
 
-#endif /* MIOT_ENABLE_CALL_TRACE || V7_ENABLE_CALL_TRACE */
+#endif /* MGOS_ENABLE_CALL_TRACE || V7_ENABLE_CALL_TRACE */

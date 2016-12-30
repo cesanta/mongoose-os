@@ -6,8 +6,8 @@
  * Documentation: TRM (swru367), Chapter 5.
  */
 
-#include "fw/src/miot_gpio.h"
-#include "fw/src/miot_gpio_hal.h"
+#include "fw/src/mgos_gpio.h"
+#include "fw/src/mgos_gpio_hal.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -25,7 +25,7 @@
 #include "oslib/osi.h"
 
 #include "common/cs_dbg.h"
-#include "fw/src/miot_hal.h"
+#include "fw/src/mgos_hal.h"
 
 /*
  * pin is a literal pin number, as that seems to be the custom in TI land.
@@ -67,7 +67,7 @@ static uint32_t gpio_no_to_port_base(int gpio_no) {
   return (GPIOA0_BASE + 0x1000 * (gpio_no / 8));
 }
 
-bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
+bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
 
@@ -80,10 +80,10 @@ bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
 
   uint32_t pad_config = PIN_MODE_0 /* GPIO is always mode 0 */;
   switch (mode) {
-    case MIOT_GPIO_MODE_INPUT:
+    case MGOS_GPIO_MODE_INPUT:
       HWREG(port_base + GPIO_O_GPIO_DIR) &= ~port_bit_mask;
       break;
-    case MIOT_GPIO_MODE_OUTPUT: {
+    case MGOS_GPIO_MODE_OUTPUT: {
       HWREG(port_base + GPIO_O_GPIO_DIR) |= port_bit_mask;
       pad_config |= 0xA0; /* drive strength 10mA. */
       break;
@@ -97,19 +97,19 @@ bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
   return true;
 }
 
-bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull) {
+bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t pad_reg =
       (OCP_SHARED_BASE + OCP_SHARED_O_GPIO_PAD_CONFIG_0 + (gpio_no * 4));
   uint32_t pad_config = HWREG(pad_reg) & ~(PIN_TYPE_STD_PU | PIN_TYPE_STD_PD);
   switch (pull) {
-    case MIOT_GPIO_PULL_NONE:
+    case MGOS_GPIO_PULL_NONE:
       break;
-    case MIOT_GPIO_PULL_UP:
+    case MGOS_GPIO_PULL_UP:
       pad_config |= PIN_TYPE_STD_PU;
       break;
-    case MIOT_GPIO_PULL_DOWN:
+    case MGOS_GPIO_PULL_DOWN:
       pad_config |= PIN_TYPE_STD_PD;
       break;
     default:
@@ -119,7 +119,7 @@ bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull) {
   return true;
 }
 
-bool miot_gpio_read(int pin) {
+bool mgos_gpio_read(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -127,7 +127,7 @@ bool miot_gpio_read(int pin) {
   return (HWREG(port_base + GPIO_O_GPIO_DATA + amask)) ? 1 : 0;
 }
 
-void miot_gpio_write(int pin, bool level) {
+void mgos_gpio_write(int pin, bool level) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -139,7 +139,7 @@ void miot_gpio_write(int pin, bool level) {
   }
 }
 
-bool miot_gpio_toggle(int pin) {
+bool mgos_gpio_toggle(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -164,12 +164,12 @@ static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
     int pin = s_gpio_to_pin_map[gpio_no];
     if (pin < 0) continue;
     HWREG(port_base + GPIO_O_GPIO_IM) &= ~port_bit_mask;
-    miot_gpio_dev_int_cb(pin);
+    mgos_gpio_dev_int_cb(pin);
   }
   HWREG(port_base + GPIO_O_GPIO_ICR) = ints; /* Clear all ints. */
 }
 
-void miot_gpio_dev_int_done(int pin) {
+void mgos_gpio_dev_int_done(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (!(s_enabled_ints & (1U << gpio_no))) return;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -194,7 +194,7 @@ static void gpio_a3_int_handler(void) {
   gpio_common_int_handler(GPIOA3_BASE, 24);
 }
 
-bool miot_gpio_dev_set_int_mode(int pin, enum miot_gpio_int_mode mode) {
+bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t port_no = (gpio_no / 8); /* A0 - A4 */
@@ -206,33 +206,33 @@ bool miot_gpio_dev_set_int_mode(int pin, enum miot_gpio_int_mode mode) {
 
   HWREG(port_base + GPIO_O_GPIO_IM) &= ~port_bit_mask;
   switch (mode) {
-    case MIOT_GPIO_INT_NONE:
+    case MGOS_GPIO_INT_NONE:
       break;
-    case MIOT_GPIO_INT_EDGE_POS:
-    case MIOT_GPIO_INT_EDGE_NEG:
+    case MGOS_GPIO_INT_EDGE_POS:
+    case MGOS_GPIO_INT_EDGE_NEG:
       HWREG(port_base + GPIO_O_GPIO_IS) &= ~port_bit_mask;  /* Edge */
       HWREG(port_base + GPIO_O_GPIO_IBE) &= ~port_bit_mask; /* Single */
-      if (mode == MIOT_GPIO_INT_EDGE_POS) {
+      if (mode == MGOS_GPIO_INT_EDGE_POS) {
         HWREG(port_base + GPIO_O_GPIO_IEV) |= port_bit_mask; /* Rising */
       } else {
         HWREG(port_base + GPIO_O_GPIO_IEV) &= ~port_bit_mask; /* Falling */
       }
       break;
-    case MIOT_GPIO_INT_EDGE_ANY:
+    case MGOS_GPIO_INT_EDGE_ANY:
       HWREG(port_base + GPIO_O_GPIO_IS) &= ~port_bit_mask; /* Edge */
       HWREG(port_base + GPIO_O_GPIO_IBE) |= port_bit_mask; /* Any */
       break;
-    case MIOT_GPIO_INT_LEVEL_LO:
-    case MIOT_GPIO_INT_LEVEL_HI:
+    case MGOS_GPIO_INT_LEVEL_LO:
+    case MGOS_GPIO_INT_LEVEL_HI:
       HWREG(port_base + GPIO_O_GPIO_IS) |= port_bit_mask; /* Level */
-      if (mode == MIOT_GPIO_INT_LEVEL_LO) {
+      if (mode == MGOS_GPIO_INT_LEVEL_LO) {
         HWREG(port_base + GPIO_O_GPIO_IEV) &= ~port_bit_mask; /* Low */
       } else {
         HWREG(port_base + GPIO_O_GPIO_IEV) |= port_bit_mask; /* High */
       }
       break;
   }
-  if (mode != MIOT_GPIO_INT_NONE) {
+  if (mode != MGOS_GPIO_INT_NONE) {
     P_OSI_INTR_ENTRY handlers[4] = {gpio_a0_int_handler, gpio_a1_int_handler,
                                     gpio_a2_int_handler, gpio_a3_int_handler};
     int int_no = (INT_GPIOA0 + port_no);
@@ -246,7 +246,7 @@ bool miot_gpio_dev_set_int_mode(int pin, enum miot_gpio_int_mode mode) {
   return true;
 }
 
-bool miot_gpio_enable_int(int pin) {
+bool mgos_gpio_enable_int(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -256,7 +256,7 @@ bool miot_gpio_enable_int(int pin) {
   return true;
 }
 
-bool miot_gpio_disable_int(int pin) {
+bool mgos_gpio_disable_int(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -266,6 +266,6 @@ bool miot_gpio_disable_int(int pin) {
   return true;
 }
 
-enum miot_init_result miot_gpio_dev_init(void) {
-  return MIOT_INIT_OK;
+enum mgos_init_result mgos_gpio_dev_init(void) {
+  return MGOS_INIT_OK;
 }

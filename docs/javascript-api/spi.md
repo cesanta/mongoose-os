@@ -15,7 +15,7 @@ title: SPI
   example, 9bit data, 7bit address, 3bit command etc.
 
 There is a detailed description in
-[`miot_spi_js.c`](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/miot_spi_js.c).
+[`mgos_spi_js.c`](https://github.com/cesanta/mongoose-iot/blob/master/fw/src/mgos_spi_js.c).
 
 See [barometer
 driver](https://github.com/cesanta/mongoose-iot/blob/master/fw/platforms/esp8266/fs/MPL115A1.js)

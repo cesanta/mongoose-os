@@ -4,7 +4,7 @@
 #include "stm32_uart.h"
 #include "common/spiffs/spiffs.h"
 #include "common/cs_dbg.h"
-#include "fw/src/miot_uart.h"
+#include "fw/src/mgos_uart.h"
 #include <errno.h>
 
 #define STDOUT_FILENO 1
@@ -84,7 +84,7 @@ static s32_t stm32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   return SPIFFS_OK;
 }
 
-int miot_stm32_init_spiffs_init() {
+int mgos_stm32_init_spiffs_init() {
   static uint8_t spiffs_work_buf[FS_LOG_PAGE_SIZE * 2];
   static uint8_t spiffs_fds[SPIFFS_OBJ_NAME_LEN * FS_MAX_OPEN_FILES];
 
@@ -171,13 +171,13 @@ extern "C" _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   int uart_no = -1;
 
   if (fd == STDOUT_FILENO) {
-    uart_no = miot_stm32_get_stdout_uart();
+    uart_no = mgos_stm32_get_stdout_uart();
   } else if (fd == STDERR_FILENO) {
-    uart_no = miot_stm32_get_stderr_uart();
+    uart_no = mgos_stm32_get_stderr_uart();
   }
 
   if (uart_no >= 0) {
-    miot_uart_write(uart_no, buf, len);
+    mgos_uart_write(uart_no, buf, len);
     return len;
   }
 

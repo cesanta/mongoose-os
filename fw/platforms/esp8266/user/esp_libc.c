@@ -29,7 +29,7 @@
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if MIOT_ENABLE_HEAP_LOG
+#if MGOS_ENABLE_HEAP_LOG
 int cs_heap_shim = 0;
 #define CS_HEAP_SHIM_FLAG_SET() \
   do {                          \

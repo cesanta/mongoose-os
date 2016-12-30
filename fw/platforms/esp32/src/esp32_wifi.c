@@ -10,12 +10,12 @@
 #include "tcpip_adapter.h"
 #include "apps/dhcpserver.h"
 
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_wifi.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_wifi.h"
 
 static void invoke_wifi_on_change_cb(void *arg) {
-  miot_wifi_on_change_cb((enum miot_wifi_status)(int) arg);
+  mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
 }
 static const char *s_sta_state = NULL;
 static bool s_sta_should_connect = false;
@@ -34,7 +34,7 @@ esp_err_t wifi_event_handler(system_event_t *event) {
     case SYSTEM_EVENT_STA_DISCONNECTED:
       LOG(LL_INFO,
           ("WiFi STA: disconnected, reason %d", info->disconnected.reason));
-      mg_ev = MIOT_WIFI_DISCONNECTED;
+      mg_ev = MGOS_WIFI_DISCONNECTED;
       if (s_sta_should_connect) {
         s_sta_state = "connecting";
         esp_wifi_connect();
@@ -44,14 +44,14 @@ esp_err_t wifi_event_handler(system_event_t *event) {
       break;
     case SYSTEM_EVENT_STA_CONNECTED:
       s_sta_state = "associated";
-      mg_ev = MIOT_WIFI_CONNECTED;
+      mg_ev = MGOS_WIFI_CONNECTED;
       break;
     case SYSTEM_EVENT_STA_GOT_IP:
       /*
        * This event is forwarded to us from system handler, don't pass it on.
        * https://github.com/espressif/esp-idf/issues/161
        */
-      mg_ev = MIOT_WIFI_IP_ACQUIRED;
+      mg_ev = MGOS_WIFI_IP_ACQUIRED;
       s_sta_state = "got ip";
       pass_to_system = false;
       break;
@@ -74,13 +74,13 @@ esp_err_t wifi_event_handler(system_event_t *event) {
   }
 
   if (mg_ev >= 0) {
-    miot_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev);
+    mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev);
   }
 
   return (pass_to_system ? esp_event_send(event) : ESP_OK);
 }
 
-static esp_err_t miot_wifi_set_mode(wifi_mode_t mode) {
+static esp_err_t mgos_wifi_set_mode(wifi_mode_t mode) {
   esp_err_t r;
 
   const char *mode_str = NULL;
@@ -128,7 +128,7 @@ static esp_err_t miot_wifi_set_mode(wifi_mode_t mode) {
   return ESP_OK;
 }
 
-static esp_err_t miot_wifi_add_mode(wifi_mode_t mode) {
+static esp_err_t mgos_wifi_add_mode(wifi_mode_t mode) {
   esp_err_t r;
   wifi_mode_t cur_mode = WIFI_MODE_NULL;
   r = esp_wifi_get_mode(&cur_mode);
@@ -146,10 +146,10 @@ static esp_err_t miot_wifi_add_mode(wifi_mode_t mode) {
     mode = WIFI_MODE_APSTA;
   }
 
-  return miot_wifi_set_mode(mode);
+  return mgos_wifi_set_mode(mode);
 }
 
-static esp_err_t miot_wifi_remove_mode(wifi_mode_t mode) {
+static esp_err_t mgos_wifi_remove_mode(wifi_mode_t mode) {
   esp_err_t r;
   wifi_mode_t cur_mode;
   r = esp_wifi_get_mode(&cur_mode);
@@ -172,27 +172,27 @@ static esp_err_t miot_wifi_remove_mode(wifi_mode_t mode) {
     mode = WIFI_MODE_STA;
   }
   /* As a result we will always remain in STA-only or AP-only mode. */
-  return miot_wifi_set_mode(mode);
+  return mgos_wifi_set_mode(mode);
 }
 
-int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   esp_err_t r;
   wifi_config_t wcfg;
   memset(&wcfg, 0, sizeof(wcfg));
   wifi_sta_config_t *stacfg = &wcfg.sta;
 
   char *err_msg = NULL;
-  if (!miot_wifi_validate_sta_cfg(cfg, &err_msg)) {
+  if (!mgos_wifi_validate_sta_cfg(cfg, &err_msg)) {
     LOG(LL_ERROR, ("WiFi STA: %s", err_msg));
     free(err_msg);
     return false;
   }
 
   if (!cfg->enable) {
-    return (miot_wifi_remove_mode(WIFI_MODE_STA) == ESP_OK);
+    return (mgos_wifi_remove_mode(WIFI_MODE_STA) == ESP_OK);
   }
 
-  r = miot_wifi_add_mode(WIFI_MODE_STA);
+  r = mgos_wifi_add_mode(WIFI_MODE_STA);
   if (r != ESP_OK) return false;
 
   strncpy(stacfg->ssid, cfg->ssid, sizeof(stacfg->ssid));
@@ -246,28 +246,28 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   return true;
 }
 
-int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   esp_err_t r;
   wifi_config_t wcfg;
   memset(&wcfg, 0, sizeof(wcfg));
   wifi_ap_config_t *apcfg = &wcfg.ap;
 
   char *err_msg = NULL;
-  if (!miot_wifi_validate_ap_cfg(cfg, &err_msg)) {
+  if (!mgos_wifi_validate_ap_cfg(cfg, &err_msg)) {
     LOG(LL_ERROR, ("WiFi AP: %s", err_msg));
     free(err_msg);
     return false;
   }
 
   if (!cfg->enable) {
-    return (miot_wifi_remove_mode(WIFI_MODE_AP) == ESP_OK);
+    return (mgos_wifi_remove_mode(WIFI_MODE_AP) == ESP_OK);
   }
 
-  r = miot_wifi_add_mode(WIFI_MODE_AP);
+  r = mgos_wifi_add_mode(WIFI_MODE_AP);
   if (r != ESP_OK) return false;
 
   strncpy(apcfg->ssid, cfg->ssid, sizeof(apcfg->ssid));
-  miot_expand_mac_address_placeholders(apcfg->ssid);
+  mgos_expand_mac_address_placeholders(apcfg->ssid);
   if (cfg->pass != NULL) {
     strncpy(apcfg->password, cfg->pass, sizeof(apcfg->password));
     apcfg->authmode = WIFI_AUTH_WPA2_PSK;
@@ -329,13 +329,13 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   return true;
 }
 
-int miot_wifi_disconnect(void) {
+int mgos_wifi_disconnect(void) {
   s_sta_should_connect = false;
   esp_wifi_disconnect();
   return true;
 }
 
-static char *miot_wifi_get_ip(tcpip_adapter_if_t if_no) {
+static char *mgos_wifi_get_ip(tcpip_adapter_if_t if_no) {
   tcpip_adapter_ip_info_t info;
   char *ip;
   if ((tcpip_adapter_get_ip_info(if_no, &info) != ESP_OK) ||
@@ -348,11 +348,11 @@ static char *miot_wifi_get_ip(tcpip_adapter_if_t if_no) {
   return ip;
 }
 
-char *miot_wifi_get_status_str(void) {
+char *mgos_wifi_get_status_str(void) {
   return (s_sta_state != NULL ? strdup(s_sta_state) : NULL);
 }
 
-char *miot_wifi_get_connected_ssid(void) {
+char *mgos_wifi_get_connected_ssid(void) {
   wifi_ap_record_t ap_info;
   if (esp_wifi_sta_get_ap_info(&ap_info) != ESP_OK) {
     return NULL;
@@ -360,28 +360,28 @@ char *miot_wifi_get_connected_ssid(void) {
   return strdup((char *) ap_info.ssid);
 }
 
-char *miot_wifi_get_ap_ip(void) {
-  return miot_wifi_get_ip(TCPIP_ADAPTER_IF_AP);
+char *mgos_wifi_get_ap_ip(void) {
+  return mgos_wifi_get_ip(TCPIP_ADAPTER_IF_AP);
 }
 
-char *miot_wifi_get_sta_ip(void) {
-  return miot_wifi_get_ip(TCPIP_ADAPTER_IF_STA);
+char *mgos_wifi_get_sta_ip(void) {
+  return mgos_wifi_get_ip(TCPIP_ADAPTER_IF_STA);
 }
 
-bool miot_wifi_set_config(const struct sys_config_wifi *cfg) {
+bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
   bool result = false;
   if (cfg->ap.enable && !cfg->sta.enable) {
-    result = miot_wifi_setup_ap(&cfg->ap);
+    result = mgos_wifi_setup_ap(&cfg->ap);
   } else if (cfg->ap.enable && cfg->sta.enable && cfg->ap.keep_enabled) {
-    result = (miot_wifi_set_mode(WIFI_MODE_APSTA) == ESP_OK &&
-              miot_wifi_setup_ap(&cfg->ap) && miot_wifi_setup_sta(&cfg->sta));
+    result = (mgos_wifi_set_mode(WIFI_MODE_APSTA) == ESP_OK &&
+              mgos_wifi_setup_ap(&cfg->ap) && mgos_wifi_setup_sta(&cfg->sta));
   } else if (cfg->sta.enable) {
-    result = miot_wifi_setup_sta(&cfg->sta);
+    result = mgos_wifi_setup_sta(&cfg->sta);
   } else {
-    result = (miot_wifi_set_mode(WIFI_MODE_NULL) == ESP_OK);
+    result = (mgos_wifi_set_mode(WIFI_MODE_NULL) == ESP_OK);
   }
   return result;
 }
 
-void miot_wifi_hal_init(void) {
+void mgos_wifi_hal_init(void) {
 }

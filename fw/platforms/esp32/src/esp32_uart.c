@@ -17,13 +17,13 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
-#include "fw/src/miot_uart.h"
+#include "fw/src/mgos_uart.h"
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
 
-static struct miot_uart_state *s_us[MIOT_MAX_NUM_UARTS];
+static struct mgos_uart_state *s_us[MGOS_MAX_NUM_UARTS];
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
 IRAM int esp32_uart_cts(int uart_no) {
@@ -50,7 +50,7 @@ IRAM static void tx_byte(int uart_no, uint8_t byte) {
   WRITE_PERI_REG(UART_FIFO_AHB_REG(uart_no), byte);
 }
 
-IRAM NOINSTR static void esp_handle_uart_int(struct miot_uart_state *us) {
+IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
   const int uart_no = us->uart_no;
   /*
    * Since both UARTs use the same int, we need to apply the mask manually.
@@ -71,16 +71,16 @@ IRAM NOINSTR static void esp_handle_uart_int(struct miot_uart_state *us) {
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
     /* Wake up the processor and disable TX and RX ints until it runs. */
     WRITE_PERI_REG(UART_INT_ENA_REG(uart_no), UART_INFO_INTS);
-    miot_uart_schedule_dispatcher(uart_no);
+    mgos_uart_schedule_dispatcher(uart_no);
   }
   WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), int_st);
 }
 
 IRAM NOINSTR static void esp32_handle_uart_int(void *arg) {
-  esp_handle_uart_int((struct miot_uart_state *) arg);
+  esp_handle_uart_int((struct mgos_uart_state *) arg);
 }
 
-IRAM void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
+IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   cs_rbuf_t *rxb = &us->rx_buf;
   uint32_t rxn = 0;
@@ -124,7 +124,7 @@ IRAM void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
   }
 }
 
-IRAM void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
+IRAM void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   cs_rbuf_t *txb = &us->tx_buf;
   uint32_t txn = 0;
@@ -147,7 +147,7 @@ IRAM void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
   }
 }
 
-IRAM void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
+IRAM void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   cs_rbuf_t *rxb = &us->rx_buf;
   cs_rbuf_t *txb = &us->tx_buf;
   uint32_t int_ena = UART_INFO_INTS;
@@ -157,7 +157,7 @@ IRAM void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), int_ena);
 }
 
-bool esp32_uart_validate_config(struct miot_uart_config *c) {
+bool esp32_uart_validate_config(struct mgos_uart_config *c) {
   if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
       c->rx_fifo_full_thresh < 1 || c->rx_fifo_full_thresh > 127 ||
       (c->rx_fc_ena && (c->rx_fifo_fc_thresh < c->rx_fifo_full_thresh)) ||
@@ -168,15 +168,15 @@ bool esp32_uart_validate_config(struct miot_uart_config *c) {
   return true;
 }
 
-void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
+void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
   cfg->rx_fifo_alarm = 10;
   cfg->rx_fifo_full_thresh = 120;
   cfg->rx_fifo_fc_thresh = 125;
   cfg->tx_fifo_empty_thresh = 10;
 }
 
-bool miot_uart_dev_init(struct miot_uart_state *us) {
-  struct miot_uart_config *cfg = us->cfg;
+bool mgos_uart_dev_init(struct mgos_uart_state *us) {
+  struct mgos_uart_config *cfg = us->cfg;
   if (us->uart_no < 0 || us->uart_no > 2 || !esp32_uart_validate_config(cfg)) {
     return false;
   }
@@ -246,13 +246,13 @@ bool miot_uart_dev_init(struct miot_uart_state *us) {
   return true;
 }
 
-void miot_uart_dev_deinit(struct miot_uart_state *us) {
+void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), 0);
   esp_intr_free((intr_handle_t) us->dev_data);
   s_us[us->uart_no] = NULL;
 }
 
-void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
+void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   int uart_no = us->uart_no;
   if (enabled) {
     if (us->cfg->rx_fc_ena) {

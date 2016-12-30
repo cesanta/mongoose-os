@@ -12,24 +12,24 @@
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
 
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_wifi.h"
-#include "fw/src/miot_sys_config.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_wifi.h"
+#include "fw/src/mgos_sys_config.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
-size_t miot_get_free_heap_size(void) {
+size_t mgos_get_free_heap_size(void) {
   return xPortGetFreeHeapSize();
 }
 
-size_t miot_get_min_free_heap_size(void) {
+size_t mgos_get_min_free_heap_size(void) {
   return xPortGetMinimumEverFreeHeapSize();
 }
 
-void miot_system_restart(int exit_code) {
+void mgos_system_restart(int exit_code) {
   (void) exit_code;
   esp32_fs_deinit();
-#if MIOT_ENABLE_WIFI
-  miot_wifi_disconnect();
+#if MGOS_ENABLE_WIFI
+  mgos_wifi_disconnect();
 #endif
   LOG(LL_INFO, ("Restarting"));
   esp_restart();
@@ -42,7 +42,7 @@ void device_get_mac_address(uint8_t mac[6]) {
 /* In components/newlib/time.c. Returns a monotonic microsecond counter. */
 uint64_t get_time_since_boot();
 
-void miot_usleep(int usecs) {
+void mgos_usleep(int usecs) {
   int ticks = usecs / (1000000 / configTICK_RATE_HZ);
   int remainder = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
@@ -51,20 +51,20 @@ void miot_usleep(int usecs) {
   }
 }
 
-void miot_wdt_feed(void) {
+void mgos_wdt_feed(void) {
   esp_task_wdt_feed();
 }
 
-void miot_wdt_disable(void) {
+void mgos_wdt_disable(void) {
   esp_task_wdt_delete();
 }
 
-void miot_wdt_enable(void) {
+void mgos_wdt_enable(void) {
   /* Feeding the dog re-adds it back to the list if needed. */
   esp_task_wdt_feed();
 }
 
-void miot_wdt_set_timeout(int secs) {
+void mgos_wdt_set_timeout(int secs) {
   /* WDT0 is configured in esp_task_wdt_init, we only modify the timeout. */
   TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
   TIMERG0.wdt_config2 = secs * 2000; /* Units: 0.5 ms ticks */
@@ -75,30 +75,30 @@ void miot_wdt_set_timeout(int secs) {
 }
 
 static bool s_mg_poll_scheduled;
-portMUX_TYPE s_miot_mux = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE s_mgos_mux = portMUX_INITIALIZER_UNLOCKED;
 
-inline void miot_lock() {
-  portENTER_CRITICAL(&s_miot_mux);
+inline void mgos_lock() {
+  portENTER_CRITICAL(&s_mgos_mux);
 }
 
-inline void miot_unlock() {
-  portEXIT_CRITICAL(&s_miot_mux);
+inline void mgos_unlock() {
+  portEXIT_CRITICAL(&s_mgos_mux);
 }
 
 static void IRAM_ATTR mongoose_poll_cb(void *arg) {
-  miot_lock();
+  mgos_lock();
   s_mg_poll_scheduled = false;
-  miot_unlock();
+  mgos_unlock();
   (void) arg;
 }
 
 void IRAM_ATTR mongoose_schedule_poll(void) {
-  miot_lock();
+  mgos_lock();
   /* Prevent piling up of poll callbacks. */
   if (!s_mg_poll_scheduled) {
-    s_mg_poll_scheduled = miot_invoke_cb(mongoose_poll_cb, NULL);
+    s_mg_poll_scheduled = mgos_invoke_cb(mongoose_poll_cb, NULL);
   }
-  miot_unlock();
+  mgos_unlock();
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {

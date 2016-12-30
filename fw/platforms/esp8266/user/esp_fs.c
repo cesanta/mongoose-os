@@ -7,9 +7,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include "fw/src/miot_features.h"
+#include "fw/src/mgos_features.h"
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -29,8 +29,8 @@
 #include "spiffs_config.h"
 
 #include "esp_fs.h"
-#include "fw/src/miot_uart.h"
-#include "fw/src/miot_uart.h"
+#include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_uart.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>
@@ -55,14 +55,14 @@ static spiffs fs;
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
 
-struct mmap_desc mmap_descs[MIOT_MMAP_SLOTS];
+struct mmap_desc mmap_descs[MGOS_MMAP_SLOTS];
 static struct mmap_desc *cur_mmap_desc;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
-static int8_t s_stdout_uart = MIOT_DEBUG_UART;
-static int8_t s_stderr_uart = MIOT_DEBUG_UART;
+static int8_t s_stdout_uart = MGOS_DEBUG_UART;
+static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 
 /* For cs_dirent.c functions */
 spiffs *cs_spiffs_get_fs(void) {
@@ -352,7 +352,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
       errno = EBADF;
       len = -1;
     }
-    if (uart_no >= 0) len = miot_uart_write(uart_no, buf, len);
+    if (uart_no >= 0) len = mgos_uart_write(uart_no, buf, len);
     return len;
   }
 
@@ -453,10 +453,10 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
 }
 
 void fs_flush_stderr(void) {
-  if (s_stderr_uart >= 0) miot_uart_flush(s_stderr_uart);
+  if (s_stderr_uart >= 0) mgos_uart_flush(s_stderr_uart);
 }
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
 int v7_val_to_file(struct v7 *v7, v7_val_t val) {
   return (int) v7_get_double(v7, val);
 }
@@ -472,28 +472,28 @@ int v7_is_file_type(v7_val_t val) {
 }
 #endif
 
-int64_t miot_get_storage_free_space(void) {
+int64_t mgos_get_storage_free_space(void) {
   uint32_t total, used;
   SPIFFS_info(&fs, &total, &used);
   return total - used;
 }
 
-enum miot_init_result miot_set_stdout_uart(int uart_no) {
-  enum miot_init_result r = miot_init_debug_uart(uart_no);
-  if (r == MIOT_INIT_OK) {
+enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
+  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
+  if (r == MGOS_INIT_OK) {
     s_stdout_uart = uart_no;
   }
   return r;
 }
 
-enum miot_init_result miot_set_stderr_uart(int uart_no) {
-  enum miot_init_result r = miot_init_debug_uart(uart_no);
-  if (r == MIOT_INIT_OK) {
+enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
+  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
+  if (r == MGOS_INIT_OK) {
     s_stderr_uart = uart_no;
   }
   return r;
 }
 
-enum miot_init_result esp_console_init() {
-  return miot_init_debug_uart(MIOT_DEBUG_UART);
+enum mgos_init_result esp_console_init() {
+  return mgos_init_debug_uart(MGOS_DEBUG_UART);
 }

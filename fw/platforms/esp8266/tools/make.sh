@@ -4,9 +4,9 @@
 #
 
 SRC_DIR="$(cd "$(dirname $(readlink -f $0))/../../../../" && pwd)"
-ESP_MIOT_DIR="$(cd "$(dirname $(readlink -f $0))/../" && pwd)"
-DIR="/cesanta"${ESP_MIOT_DIR##$SRC_DIR}
-SDK_CAT=$(cat ${ESP_MIOT_DIR}/sdk.version)
+ESP_MGOS_DIR="$(cd "$(dirname $(readlink -f $0))/../" && pwd)"
+DIR="/cesanta"${ESP_MGOS_DIR##$SRC_DIR}
+SDK_CAT=$(cat ${ESP_MGOS_DIR}/sdk.version)
 
 docker run --rm -i -v /${SRC_DIR}:/cesanta ${SDK_CAT} \
 		//bin/bash -c "\

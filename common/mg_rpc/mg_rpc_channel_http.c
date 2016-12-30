@@ -8,9 +8,9 @@
 #include "common/mg_rpc/mg_rpc_channel.h"
 #include "common/mg_rpc/mg_rpc.h"
 #include "frozen/frozen.h"
-#include "fw/src/miot_timers.h"
+#include "fw/src/mgos_timers.h"
 
-#if MIOT_ENABLE_RPC && MIOT_ENABLE_RPC_CHANNEL_HTTP
+#if MGOS_ENABLE_RPC && MGOS_ENABLE_RPC_CHANNEL_HTTP
 
 struct mg_rpc_channel_http_data {
   struct mg_connection *nc;
@@ -97,7 +97,7 @@ static bool mg_rpc_channel_http_send_frame(struct mg_rpc_channel *ch,
    * those to be emitted asynchronously, therefore we can't emit them right
    * here.
    */
-  miot_set_timer(0, false, mg_rpc_channel_http_frame_sent, ch);
+  mgos_set_timer(0, false, mg_rpc_channel_http_frame_sent, ch);
 
   return true;
 }
@@ -142,4 +142,4 @@ void mg_rpc_channel_http_recd_frame(struct mg_connection *nc,
   ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD_PARSED, &frame);
 }
 
-#endif /* MIOT_ENABLE_RPC && MIOT_ENABLE_RPC_CHANNEL_HTTP */
+#endif /* MGOS_ENABLE_RPC && MGOS_ENABLE_RPC_CHANNEL_HTTP */

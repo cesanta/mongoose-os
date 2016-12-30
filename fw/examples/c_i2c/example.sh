@@ -1,9 +1,9 @@
 #!/bin/sh
 # sh example.sh "Hi there!"
 
-MIOT_PORT=/dev/cu.SLAB_USBtoUART    # Module serial device
+MGOS_PORT=/dev/cu.SLAB_USBtoUART    # Module serial device
 IP=192.168.1.22                     # Module IP address
-#IP=$(miot call /v1/Config.GetNetworkStatus | perl -lne 'print $1 if /sta_ip": "(.+)"/')
+#IP=$(mgos call /v1/Config.GetNetworkStatus | perl -lne 'print $1 if /sta_ip": "(.+)"/')
 
 MESSAGE=${1:-Hello World}
 HEX_MESSAGE=$(echo -n $MESSAGE | xxd -g0 -p -c 9999)

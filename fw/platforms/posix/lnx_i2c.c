@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_i2c.h"
+#include "fw/src/mgos_i2c.h"
 
-#if MIOT_ENABLE_I2C
+#if MGOS_ENABLE_I2C
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,11 +18,11 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_i2c.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_i2c.h"
 #include "v7/v7.h"
 
-struct miot_i2c {
+struct mgos_i2c {
   int fd;
 };
 
@@ -52,9 +52,9 @@ int lnx_i2c_write_shim(int fd, uint8_t *buf, size_t buf_size) {
   return ret;
 }
 
-struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {
+struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   char bus_name[50];
-  struct miot_i2c *c = NULL;
+  struct mgos_i2c *c = NULL;
 
   c = calloc(1, sizeof(*c));
   if (c == NULL) return NULL;
@@ -73,7 +73,7 @@ struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {
   return c;
 }
 
-enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr, enum i2c_rw mode) {
+enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *c, uint16_t addr, enum i2c_rw mode) {
   (void) mode;
   /*
    * In Linux we should't set RW here
@@ -90,16 +90,16 @@ enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr, enum i2c_rw 
   return I2C_ACK;
 }
 
-void miot_i2c_stop(struct miot_i2c *c) {
+void mgos_i2c_stop(struct mgos_i2c *c) {
   /* for compatibility only */
   (void) c;
 }
 
-enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t b) {
+enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t b) {
   return lnx_i2c_write_shim(c->fd, &b, sizeof(b)) == 1 ? I2C_ACK : I2C_ERR;
 }
 
-uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
+uint8_t mgos_i2c_read_byte(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   (void) ack_type;
 
   uint8_t ret;
@@ -110,23 +110,23 @@ uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
   return ret;
 }
 
-void miot_i2c_send_ack(struct miot_i2c *c, enum i2c_ack_type ack_type) {
+void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   /* For compatibility only */
   (void) c;
   (void) ack_type;
 }
 
-void miot_i2c_close(struct miot_i2c *c) {
+void mgos_i2c_close(struct mgos_i2c *c) {
   if (c->fd >= 0) close(c->fd);
   free(c);
 }
 
-#if MIOT_ENABLE_JS && MIOT_ENABLE_I2C_API
-enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
+#if MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API
+enum v7_err mgos_i2c_create_js(struct v7 *v7, struct mgos_i2c **res) {
   enum v7_err rcode = V7_OK;
   struct sys_config_i2c cfg;
   cfg.bus_no = v7_get_double(v7, v7_arg(v7, 0));
-  struct miot_i2c *conn = miot_i2c_create(&cfg);
+  struct mgos_i2c *conn = mgos_i2c_create(&cfg);
 
   if (conn != NULL) {
     *res = conn;
@@ -136,6 +136,6 @@ enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
 
   return rcode;
 }
-#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_I2C_API */
+#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API */
 
-#endif /* MIOT_ENABLE_I2C */
+#endif /* MGOS_ENABLE_I2C */

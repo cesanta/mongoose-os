@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
-#include "fw/src/miot_v7_ext.h"
+#include "fw/src/mgos_v7_ext.h"
 #ifdef __APPLE__
 #include <sys/time.h>
 #include <sys/types.h>
@@ -30,17 +30,17 @@ typedef unsigned short u_short;
 #endif
 
 #include "mongoose/mongoose.h"
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_prompt.h"
-#include "fw/src/miot_mongoose.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_prompt.h"
+#include "fw/src/mgos_mongoose.h"
 
 #ifdef __APPLE__
 v7_val_t *bsd_timer_cb = NULL;
 #endif
 
-extern int miot_please_quit;
+extern int mgos_please_quit;
 
-size_t miot_get_free_heap_size(void) {
+size_t mgos_get_free_heap_size(void) {
 #if defined(_WIN32)
   MEMORYSTATUSEX s;
   s.dwLength = sizeof(s);
@@ -76,36 +76,36 @@ size_t miot_get_free_heap_size(void) {
 #endif
 }
 
-size_t miot_get_min_free_heap_size(void) {
+size_t mgos_get_min_free_heap_size(void) {
   /* Not supported */
   return 0;
 }
 
 /* WDT-functinos for compatibility only. */
-void miot_wdt_feed(void) {
+void mgos_wdt_feed(void) {
 }
 
-void miot_wdt_set_timeout(int secs) {
+void mgos_wdt_set_timeout(int secs) {
   (void) secs;
 }
 
-void miot_wdt_enable(void) {
+void mgos_wdt_enable(void) {
 }
 
-void miot_wdt_disable(void) {
+void mgos_wdt_disable(void) {
 }
 
-void miot_system_restart(int exit_code) {
+void mgos_system_restart(int exit_code) {
   /* An external supervisor can restart us */
   exit(exit_code);
 }
 
-size_t miot_get_fs_memory_usage(void) {
+size_t mgos_get_fs_memory_usage(void) {
   /* TODO(alashkin): What kind of fs memory we want to see? */
   return 0;
 }
 
-void miot_usleep(int usecs) {
+void mgos_usleep(int usecs) {
 #ifndef _WIN32
   usleep(usecs);
 #else
@@ -123,7 +123,7 @@ static void *stdin_thread(void *param) {
   return NULL;
 }
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
 static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   size_t i;
   (void) ev_data;
@@ -131,20 +131,20 @@ static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
   switch (ev) {
     case MG_EV_RECV:
       for (i = 0; i < io->len; i++) {
-        miot_prompt_process_char(io->buf[i]);
+        mgos_prompt_process_char(io->buf[i]);
         if (io->buf[i] == '\n') {
-          miot_prompt_process_char('\r');
+          mgos_prompt_process_char('\r');
         }
       }
       mbuf_remove(io, io->len);
       break;
     case MG_EV_CLOSE:
-      miot_please_quit = 1;
+      mgos_please_quit = 1;
       break;
   }
 }
 
-void miot_prompt_init_hal(void) {
+void mgos_prompt_init_hal(void) {
   if (isatty(fileno(stdin))) {
     /* stdin is a tty, so, init prompt */
     int fds[2];
@@ -153,20 +153,20 @@ void miot_prompt_init_hal(void) {
       exit(1);
     }
     mg_start_thread(stdin_thread, (void *) (uintptr_t) fds[1]);
-    mg_add_sock(miot_get_mgr(), fds[0], prompt_handler);
+    mg_add_sock(mgos_get_mgr(), fds[0], prompt_handler);
   } else {
     /* in case of a non-tty stdin, don't init prompt */
   }
 }
 #endif
 
-bool miot_invoke_cb(miot_cb_t cb, void *arg) {
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
   /* FIXME: This is NOT correct. */
   cb(arg);
   return true;
 }
 
-int64_t miot_get_storage_free_space(void) {
+int64_t mgos_get_storage_free_space(void) {
   /* TODO(alashkin): think about implementation */
   return -1;
 }

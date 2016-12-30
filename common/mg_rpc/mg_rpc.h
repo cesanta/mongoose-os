@@ -13,7 +13,7 @@
 #include "common/mg_str.h"
 #include "common/queue.h"
 
-#if MIOT_ENABLE_RPC
+#if MGOS_ENABLE_RPC
 
 struct mg_rpc;
 
@@ -146,5 +146,5 @@ void mg_rpc_free(struct mg_rpc *c);
 /* Enable RPC.List handler that returns a list of all registered endpoints */
 void mg_rpc_add_list_handler(struct mg_rpc *c);
 
-#endif /* MIOT_ENABLE_RPC */
+#endif /* MGOS_ENABLE_RPC */
 #endif /* CS_COMMON_MG_RPC_MG_RPC_H_ */

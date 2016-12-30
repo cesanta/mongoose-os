@@ -1,12 +1,12 @@
-MIOT_PATH ?= ../..
-FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
+MGOS_PATH ?= ../..
+FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 SYS_CONF_SCHEMA ?=
 APP_CONF_SCHEMA ?=
-SYS_RO_VARS_SCHEMA ?= $(MIOT_PATH)/fw/src/sys_ro_vars_schema.yaml
-GSC_TOOL ?= $(MIOT_PATH)/fw/tools/gen_sys_config.py
+SYS_RO_VARS_SCHEMA ?= $(MGOS_PATH)/fw/src/sys_ro_vars_schema.yaml
+GSC_TOOL ?= $(MGOS_PATH)/fw/tools/gen_sys_config.py
 PYTHON ?= python
 
-SYS_CONF_SCHEMA += $(MIOT_PATH)/fw/src/miot_sys_config.yaml
+SYS_CONF_SCHEMA += $(MGOS_PATH)/fw/src/mgos_sys_config.yaml
 
 SYS_CONFIG_SCHEMA_JSON ?=
 SYS_RO_VARS_SCHEMA_JSON ?=

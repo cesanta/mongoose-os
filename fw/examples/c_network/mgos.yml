@@ -1,0 +1,9 @@
+name: c_network
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2016-09-20
+sources:
+  - src
+filesystem:
+build_vars:
+  MGOS_ENABLE_UPDATER_POST: 1

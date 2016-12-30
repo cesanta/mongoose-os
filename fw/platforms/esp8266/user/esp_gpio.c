@@ -6,8 +6,8 @@
 #include "fw/platforms/esp8266/user/esp_gpio.h"
 
 #include <ets_sys.h>
-#include "fw/src/miot_gpio.h"
-#include "fw/src/miot_gpio_hal.h"
+#include "fw/src/mgos_gpio.h"
+#include "fw/src/mgos_gpio_hal.h"
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/cs_dbg.h"
@@ -19,8 +19,8 @@
 #include <user_interface.h>
 #include <stdlib.h>
 
-#if MIOT_NUM_GPIO != GPIO_PIN_COUNT
-#error MIOT_NUM_GPIO must match GPIO_PIN_COUNT
+#if MGOS_NUM_GPIO != GPIO_PIN_COUNT
+#error MGOS_NUM_GPIO must match GPIO_PIN_COUNT
 #endif
 
 /* These declarations are missing in SDK headers since ~1.0 */
@@ -73,9 +73,9 @@ static uint8_t gpio16_input_get(void) {
   return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 
-bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
+bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   if (pin == 16) {
-    if (mode == MIOT_GPIO_MODE_INPUT) {
+    if (mode == MGOS_GPIO_MODE_INPUT) {
       gpio16_set_input_mode();
     } else {
       gpio16_set_output_mode();
@@ -87,11 +87,11 @@ bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
   if (gi == NULL) return false;
 
   switch (mode) {
-    case MIOT_GPIO_MODE_INPUT:
+    case MGOS_GPIO_MODE_INPUT:
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, BIT(pin));
       break;
-    case MIOT_GPIO_MODE_OUTPUT:
+    case MGOS_GPIO_MODE_OUTPUT:
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, BIT(pin));
       gpio_pin_intr_state_set(GPIO_ID_PIN(pin), GPIO_PIN_INTR_DISABLE);
@@ -107,20 +107,20 @@ bool miot_gpio_set_mode(int pin, enum miot_gpio_mode mode) {
   return true;
 }
 
-bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull) {
+bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   struct gpio_info *gi = get_gpio_info(pin);
   if (gi == NULL) return false;
 
   switch (pull) {
-    case MIOT_GPIO_PULL_NONE:
+    case MGOS_GPIO_PULL_NONE:
       PIN_PULLUP_DIS(gi->periph);
       PIN_PULLDWN_DIS(gi->periph);
       break;
-    case MIOT_GPIO_PULL_UP:
+    case MGOS_GPIO_PULL_UP:
       PIN_PULLDWN_DIS(gi->periph);
       PIN_PULLUP_EN(gi->periph);
       break;
-    case MIOT_GPIO_PULL_DOWN:
+    case MGOS_GPIO_PULL_DOWN:
       PIN_PULLUP_DIS(gi->periph);
       PIN_PULLDWN_EN(gi->periph);
       break;
@@ -131,7 +131,7 @@ bool miot_gpio_set_pull(int pin, enum miot_gpio_pull_type pull) {
   return true;
 }
 
-void miot_gpio_write(int pin, bool level) {
+void mgos_gpio_write(int pin, bool level) {
   if (pin < 0 || pin > 16) {
     return;
   } else if (pin == 16) {
@@ -147,7 +147,7 @@ void miot_gpio_write(int pin, bool level) {
   GPIO_OUTPUT_SET(GPIO_ID_PIN(pin), !!level);
 }
 
-bool miot_gpio_read(int pin) {
+bool mgos_gpio_read(int pin) {
   if (pin == 16) {
     return 0x1 & gpio16_input_get();
   }
@@ -160,7 +160,7 @@ bool miot_gpio_read(int pin) {
   return 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(pin));
 }
 
-bool miot_gpio_toggle(int pin) {
+bool mgos_gpio_toggle(int pin) {
   if (pin < 0 || pin > 16) {
     return false;
   } else if (pin == 16) {
@@ -184,44 +184,44 @@ IRAM static void esp8266_gpio_isr(void *arg) {
   for (uint32_t i = 0, mask = 1; i < 16; i++, mask <<= 1) {
     if (!(s_int_config[i] & INT_ENA) || !(int_st & mask)) continue;
     gpio_pin_intr_state_set(i, GPIO_PIN_INTR_DISABLE);
-    miot_gpio_dev_int_cb(i);
+    mgos_gpio_dev_int_cb(i);
   }
   GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, int_st);
   (void) arg;
 }
 
-IRAM void miot_gpio_dev_int_done(int pin) {
+IRAM void mgos_gpio_dev_int_done(int pin) {
   if (s_int_config[pin] & INT_ENA) {
     gpio_pin_intr_state_set(pin, (s_int_config[pin] & INT_TYPE_MASK));
   }
 }
 
-enum miot_init_result miot_gpio_dev_init(void) {
+enum mgos_init_result mgos_gpio_dev_init(void) {
   ETS_GPIO_INTR_ATTACH(esp8266_gpio_isr, NULL);
   ETS_INTR_ENABLE(ETS_GPIO_INUM);
-  return MIOT_INIT_OK;
+  return MGOS_INIT_OK;
 }
 
-bool miot_gpio_dev_set_int_mode(int pin, enum miot_gpio_int_mode mode) {
+bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   if (get_gpio_info(pin) == NULL) return false;
   GPIO_INT_TYPE it;
   switch (mode) {
-    case MIOT_GPIO_INT_NONE:
+    case MGOS_GPIO_INT_NONE:
       it = GPIO_PIN_INTR_DISABLE;
       break;
-    case MIOT_GPIO_INT_EDGE_POS:
+    case MGOS_GPIO_INT_EDGE_POS:
       it = GPIO_PIN_INTR_POSEDGE;
       break;
-    case MIOT_GPIO_INT_EDGE_NEG:
+    case MGOS_GPIO_INT_EDGE_NEG:
       it = GPIO_PIN_INTR_NEGEDGE;
       break;
-    case MIOT_GPIO_INT_EDGE_ANY:
+    case MGOS_GPIO_INT_EDGE_ANY:
       it = GPIO_PIN_INTR_ANYEDGE;
       break;
-    case MIOT_GPIO_INT_LEVEL_HI:
+    case MGOS_GPIO_INT_LEVEL_HI:
       it = GPIO_PIN_INTR_LOLEVEL;
       break;
-    case MIOT_GPIO_INT_LEVEL_LO:
+    case MGOS_GPIO_INT_LEVEL_LO:
       it = GPIO_PIN_INTR_HILEVEL;
       break;
     default:
@@ -232,14 +232,14 @@ bool miot_gpio_dev_set_int_mode(int pin, enum miot_gpio_int_mode mode) {
   return true;
 }
 
-bool miot_gpio_enable_int(int pin) {
+bool mgos_gpio_enable_int(int pin) {
   if (get_gpio_info(pin) == NULL) return false;
   s_int_config[pin] |= INT_ENA;
   gpio_pin_intr_state_set(GPIO_ID_PIN(pin), s_int_config[pin] & INT_TYPE_MASK);
   return true;
 }
 
-bool miot_gpio_disable_int(int pin) {
+bool mgos_gpio_disable_int(int pin) {
   if (get_gpio_info(pin) == NULL) return false;
   s_int_config[pin] &= INT_TYPE_MASK;
   gpio_pin_intr_state_set(GPIO_ID_PIN(pin), GPIO_PIN_INTR_DISABLE);

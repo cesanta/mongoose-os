@@ -1,0 +1,13 @@
+name: c_mqtt
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2016-09-20
+sources:
+  - src
+filesystem:
+  - fs
+build_vars:
+  MGOS_ENABLE_MQTT: 1
+  MGOS_ENABLE_ATCA_SERVICE: 1
+  SSL: mbedTLS
+  APP_CONF_SCHEMA: src/conf_schema.yaml

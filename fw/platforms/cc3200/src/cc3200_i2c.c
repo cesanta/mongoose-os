@@ -5,7 +5,7 @@
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if MIOT_ENABLE_I2C
+#if MGOS_ENABLE_I2C
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -23,10 +23,10 @@
 #include "rom.h"
 #include "rom_map.h"
 
-#include "fw/src/miot_i2c.h"
+#include "fw/src/mgos_i2c.h"
 #include "config.h"
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -38,13 +38,13 @@
 #define dprintf(x)
 #endif
 
-struct miot_i2c {
+struct mgos_i2c {
   unsigned long base;
   uint8_t first : 1;
 };
 
-struct miot_i2c *miot_i2c_create(const struct sys_config_i2c *cfg) {
-  struct miot_i2c *c = (struct miot_i2c *) calloc(1, sizeof(*c));
+struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
+  struct mgos_i2c *c = (struct mgos_i2c *) calloc(1, sizeof(*c));
   if (c == NULL) return NULL;
 
   c->base = I2CA0_BASE;
@@ -88,13 +88,13 @@ out_err:
   return NULL;
 }
 
-void miot_i2c_close(struct miot_i2c *c) {
+void mgos_i2c_close(struct mgos_i2c *c) {
   MAP_PRCMPeripheralClkDisable(PRCM_I2CA0, PRCM_RUN_MODE_CLK);
   free(c);
 }
 
 /* Sends command to the I2C module and waits for it to be processed. */
-static enum i2c_ack_type cc3200_i2c_command(struct miot_i2c *c, uint32_t cmd) {
+static enum i2c_ack_type cc3200_i2c_command(struct mgos_i2c *c, uint32_t cmd) {
   I2CMasterIntClear(c->base);
   I2CMasterTimeoutSet(c->base, 0x20); /* 5 ms @ 100 KHz */
   I2CMasterControl(c->base, cmd);
@@ -118,7 +118,7 @@ static enum i2c_ack_type cc3200_i2c_command(struct miot_i2c *c, uint32_t cmd) {
   }
 }
 
-enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr,
+enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *c, uint16_t addr,
                                  enum i2c_rw mode) {
   /* CC3200 does not support 10 bit addresses. */
   if (addr > 0x7F) return I2C_ERR;
@@ -133,7 +133,7 @@ enum i2c_ack_type miot_i2c_start(struct miot_i2c *c, uint16_t addr,
   }
 }
 
-enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t data) {
+enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   I2CMasterDataPut(c->base, data);
   if (c->first) {
     c->first = 0;
@@ -143,7 +143,7 @@ enum i2c_ack_type miot_i2c_send_byte(struct miot_i2c *c, uint8_t data) {
   }
 }
 
-uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
+uint8_t mgos_i2c_read_byte(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   if (c->first) {
     /* First byte is buffered since the time of start. */
     c->first = 0;
@@ -155,23 +155,23 @@ uint8_t miot_i2c_read_byte(struct miot_i2c *c, enum i2c_ack_type ack_type) {
   return (uint8_t) I2CMasterDataGet(c->base);
 }
 
-void miot_i2c_stop(struct miot_i2c *c) {
+void mgos_i2c_stop(struct mgos_i2c *c) {
   dprintf(("stop mcs %lx\n", HWREG(c->base + I2C_O_MCS)));
   if (I2CMasterBusBusy(c->base)) {
     cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_SEND_FINISH);
   }
 }
 
-void miot_i2c_send_ack(struct miot_i2c *c, enum i2c_ack_type ack_type) {
+void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
 }
 
-#if MIOT_ENABLE_JS && MIOT_ENABLE_I2C_API
-enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
+#if MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API
+enum v7_err mgos_i2c_create_js(struct v7 *v7, struct mgos_i2c **res) {
   enum v7_err rcode = V7_OK;
   struct sys_config_i2c cfg;
   cfg.sda_pin = v7_get_double(v7, v7_arg(v7, 0)) - 1;
   cfg.scl_pin = v7_get_double(v7, v7_arg(v7, 1)) - 1;
-  struct miot_i2c *conn = miot_i2c_create(&cfg);
+  struct mgos_i2c *conn = mgos_i2c_create(&cfg);
 
   if (conn != NULL) {
     *res = conn;
@@ -181,6 +181,6 @@ enum v7_err miot_i2c_create_js(struct v7 *v7, struct miot_i2c **res) {
 
   return rcode;
 }
-#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_I2C_API */
+#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API */
 
-#endif /* MIOT_ENABLE_I2C */
+#endif /* MGOS_ENABLE_I2C */

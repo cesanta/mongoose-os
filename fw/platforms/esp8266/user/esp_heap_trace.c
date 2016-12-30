@@ -5,18 +5,18 @@
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#ifndef MIOT_ENABLE_HEAP_LOG
-#define MIOT_ENABLE_HEAP_LOG 0
+#ifndef MGOS_ENABLE_HEAP_LOG
+#define MGOS_ENABLE_HEAP_LOG 0
 #endif
 
-#if MIOT_ENABLE_HEAP_LOG
+#if MGOS_ENABLE_HEAP_LOG
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -42,7 +42,7 @@ extern void *__real_pvPortCalloc(size_t num, size_t xWantedSize,
 extern void *__real_pvPortZalloc(size_t size, const char *file, int line);
 extern void __real_vPortFree(void *pv, const char *file, int line);
 
-extern void miot_wdt_feed(void);
+extern void mgos_wdt_feed(void);
 
 void print_call_trace();
 
@@ -137,7 +137,7 @@ static void echo_log_realloc_req(size_t size, int shim, void *old_ptr) {
 
 NOINSTR
 static void echo_log_alloc_res(void *ptr) {
-#if MIOT_ENABLE_CALL_TRACE
+#if MGOS_ENABLE_CALL_TRACE
   fprintf(stderr, "%x} ", (unsigned int) ptr);
   if (plog == NULL) {
     print_call_trace();
@@ -151,7 +151,7 @@ static void echo_log_alloc_res(void *ptr) {
 
 NOINSTR
 static void echo_log_free(void *ptr, int shim) {
-#if MIOT_ENABLE_CALL_TRACE
+#if MGOS_ENABLE_CALL_TRACE
   fprintf(stderr, "hl{f,%x,%d} ", (unsigned int) ptr, shim);
   if (plog == NULL) {
     print_call_trace();
@@ -270,7 +270,7 @@ static void flush_log_items(void) {
     __real_vPortFree(plog, NULL, 0);
     plog = NULL;
     fprintf(stderr, "--- uart initialized ---\n");
-    miot_wdt_feed();
+    mgos_wdt_feed();
   }
 }
 
@@ -286,7 +286,7 @@ void *__wrap_pvPortRealloc(void *pv, size_t size, const char *file, int line) {
   }
   ret = __real_pvPortRealloc(pv, size, file, line);
   if (uart_initialized) {
-    miot_wdt_feed();
+    mgos_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     /*
@@ -308,7 +308,7 @@ void *__wrap_pvPortMalloc(size_t xWantedSize, const char *file, int line) {
   }
   ret = __real_pvPortMalloc(xWantedSize, file, line);
   if (uart_initialized) {
-    miot_wdt_feed();
+    mgos_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_MALLOC, ret, xWantedSize, cs_heap_shim);
@@ -326,7 +326,7 @@ void *__wrap_pvPortZalloc(size_t xWantedSize, const char *file, int line) {
   }
   ret = __real_pvPortZalloc(xWantedSize, file, line);
   if (uart_initialized) {
-    miot_wdt_feed();
+    mgos_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_ZALLOC, ret, xWantedSize, cs_heap_shim);
@@ -345,7 +345,7 @@ void *__wrap_pvPortCalloc(size_t num, size_t xWantedSize, const char *file,
   ret = __real_pvPortCalloc(num, xWantedSize, file, line);
 
   if (uart_initialized) {
-    miot_wdt_feed();
+    mgos_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
     add_log_item(ITEM_TYPE_CALLOC, ret, xWantedSize, cs_heap_shim);
@@ -358,7 +358,7 @@ void *__wrap_pvPortCalloc(size_t num, size_t xWantedSize, const char *file,
 void __wrap_vPortFree(void *pv, const char *file, int line) {
   if (uart_initialized) {
     flush_log_items();
-    miot_wdt_feed();
+    mgos_wdt_feed();
     echo_log_free(pv, cs_heap_shim);
   } else {
     add_log_item(ITEM_TYPE_FREE, pv, 0, cs_heap_shim);

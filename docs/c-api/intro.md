@@ -1,8 +1,8 @@
 ---
 items:
-  - { name: miot_gpio.h }
-  - { name: miot_config.h }
-  - { name: miot_timers.h }
-  - { name: miot_uart.h }
-  - { name: miot_wifi.h }
+  - { name: mgos_gpio.h }
+  - { name: mgos_config.h }
+  - { name: mgos_timers.h }
+  - { name: mgos_uart.h }
+  - { name: mgos_wifi.h }
 ---

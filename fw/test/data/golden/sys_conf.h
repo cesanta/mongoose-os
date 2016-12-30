@@ -3,7 +3,7 @@
 #ifndef SYS_CONF_H_
 #define SYS_CONF_H_
 
-#include "fw/src/miot_config.h"
+#include "fw/src/mgos_config.h"
 
 struct sys_conf {
   struct sys_conf_wifi {
@@ -28,6 +28,6 @@ struct sys_conf {
   } debug;
 };
 
-const struct miot_conf_entry *sys_conf_schema();
+const struct mgos_conf_entry *sys_conf_schema();
 
 #endif /* SYS_CONF_H_ */

@@ -9,14 +9,14 @@ AWS IoT uses MQTT for communication, so navigate to the
 example, build and flash it:
 
 ```bash
-miot build --arch TARGET # esp8266 or cc3200
-miot flash
+mgos build --arch TARGET # esp8266 or cc3200
+mgos flash
 ```
 
-Use `miot aws-iot-setup` command to register your device with the AWS IoT:
+Use `mgos aws-iot-setup` command to register your device with the AWS IoT:
 
 ```bash
-miot aws-iot-setup
+mgos aws-iot-setup
 ```
 
 That single command performs the certificate management for you, and

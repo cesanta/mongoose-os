@@ -1,6 +1,6 @@
 # Common rules for "outer" Makefiles, i.e. the ones that invoke Docker.
 #
-# App must define its name (APP) and path to MIOT repo (MIOT_PATH).
+# App must define its name (APP) and path to MGOS repo (MGOS_PATH).
 
 MAKEFLAGS += --warn-undefined-variables
 APP_VERSION ?=
@@ -8,15 +8,15 @@ APP_BUILD_ID ?=
 PYTHON ?= python
 PLATFORM ?=
 DOCKER_EXTRA ?=
-MAKEFILE_BUILD ?= $(MAKE_MIOT_PATH)/fw/platforms/$(APP_PLATFORM)/Makefile.build
+MAKEFILE_BUILD ?= $(MAKE_MGOS_PATH)/fw/platforms/$(APP_PLATFORM)/Makefile.build
 
 DOCKER_APP_PATH = /app
-DOCKER_MIOT_PATH = /mongoose-iot
+DOCKER_MGOS_PATH = /mongoose-iot
 
 APP_PATH = $(CURDIR)
-MIOT_PATH_ABS=$(abspath $(MIOT_PATH))
+MGOS_PATH_ABS=$(abspath $(MGOS_PATH))
 
-SDK_VERSION ?= $(shell cat $(MIOT_PATH)/fw/platforms/$(APP_PLATFORM)/sdk.version)
+SDK_VERSION ?= $(shell cat $(MGOS_PATH)/fw/platforms/$(APP_PLATFORM)/sdk.version)
 REPO_PATH ?= $(shell git rev-parse --show-toplevel 2> /dev/null)
 ifeq ($(REPO_PATH),)
   # We're outside of any git repository: will just mount the application path
@@ -43,18 +43,18 @@ T=$(shell [ -t 0 ] && echo true || echo false)
 INNER_MAKE?=$(MAKE)
 
 # `make` command, which will be invoked either directly or inside the newly
-# created docker container. It uses MAKE_APP_PATH and MAKE_MIOT_PATH which
+# created docker container. It uses MAKE_APP_PATH and MAKE_MGOS_PATH which
 # will be set later.
 #
 # NOTE that $(MAKEFILES) should be given _before_ our own variable definitions,
-# because MAKEFLAGS contains MIOT_PATH which we want to override.
+# because MAKEFLAGS contains MGOS_PATH which we want to override.
 MAKE_CMD=$(INNER_MAKE) -j4 \
       -C $(MAKE_APP_PATH) -f $(MAKEFILE_BUILD) \
       -$(MAKEFLAGS) \
       APP=$(APP) \
       APP_VERSION=$(APP_VERSION) \
       APP_BUILD_ID=$(APP_BUILD_ID) \
-      MIOT_PATH=$(MAKE_MIOT_PATH) \
+      MGOS_PATH=$(MAKE_MGOS_PATH) \
       PLATFORM=$(PLATFORM) \
       $@
 
@@ -79,13 +79,13 @@ endif
 # original path outside the container, whatever it may be, so that absolute path
 # references continue to work (e.g. Git submodules are known to use abs. paths).
 MAKE_APP_PATH=$(DOCKER_APP_PATH)$(APP_SUBDIR)
-MAKE_MIOT_PATH=$(DOCKER_MIOT_PATH)
+MAKE_MGOS_PATH=$(DOCKER_MGOS_PATH)
 INNER_MAKE=make
 all clean menuconfig:
 	@docker run --rm -i --tty=$T \
 	  -v $(APP_MOUNT_PATH):$(DOCKER_APP_PATH) \
-	  -v $(MIOT_PATH_ABS):$(DOCKER_MIOT_PATH) \
-	  -v $(MIOT_PATH_ABS):$(MIOT_PATH_ABS) \
+	  -v $(MGOS_PATH_ABS):$(DOCKER_MGOS_PATH) \
+	  -v $(MGOS_PATH_ABS):$(MGOS_PATH_ABS) \
 	  $(DOCKER_USER_ARG) \
 	  $(DOCKER_EXTRA) $(SDK_VERSION) \
 	  /bin/bash -c "\
@@ -96,7 +96,7 @@ else
 
 # We're already inside of container, so, invoke `make` directly
 MAKE_APP_PATH=$(APP_PATH)
-MAKE_MIOT_PATH=$(MIOT_PATH_ABS)
+MAKE_MGOS_PATH=$(MGOS_PATH_ABS)
 all clean:
 	@$(MAKE_CMD)
 

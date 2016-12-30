@@ -8,6 +8,6 @@ Clone https://github.com/cesanta/mongoose-iot.git repo, go to
 `fw/examples` directory, choose the one you like, go into it, and
 
 ```
-miot build --arch XXX
-miot flash && miot console
+mgos build --arch XXX
+mgos flash && mgos console
 ```

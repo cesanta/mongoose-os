@@ -6,10 +6,10 @@ protocol. Build & flash a firmware and configure WiFi
 and configure MQTT server:
 
 ```
-miot build --arch esp8266
-miot flash
-miot config-set wifi............
-miot console
+mgos build --arch esp8266
+mgos flash
+mgos config-set wifi............
+mgos console
 ```
 
 Then use an MQTT client to send messages, for example web-based client at
@@ -36,7 +36,7 @@ and rebuilding/reflashing the firmware. Alternatively, you can change
 any setting on the fly, for example to choose a different MQTT server:
 
 ```
-miot config-set mqtt.server=my_server:my_port
+mgos config-set mqtt.server=my_server:my_port
 ```
 
 ## How to use Amazon IoT with this example
@@ -45,8 +45,8 @@ Then you're ready to onboard
 
 ```
 ... build, flash, configure wifi
-miot aws-iot-setup --aws-iot-policy YOUR_POLICY
-miot console
+mgos aws-iot-setup --aws-iot-policy YOUR_POLICY
+mgos console
 ```
 
 Login to AWS IoT console, use web-based MQTT client to send messages.

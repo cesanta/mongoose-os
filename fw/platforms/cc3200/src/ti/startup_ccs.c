@@ -1,7 +1,7 @@
 #include <inttypes.h>
 
 #include "fw/platforms/cc3200/src/cc3200_exc.h"
-#include "fw/src/miot_hal.h"
+#include "fw/src/mgos_hal.h"
 
 /* From exc_handler_top.asm */
 extern void hard_fault_handler_top(void);
@@ -14,7 +14,7 @@ extern void usage_fault_handler_top(void);
   while (1) {      \
   }
 #else
-#define EXC_ACTION miot_system_restart(100);
+#define EXC_ACTION mgos_system_restart(100);
 #endif
 
 extern void vPortSVCHandler(void);

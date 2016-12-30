@@ -14,10 +14,10 @@
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_mongoose.h"
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_wifi.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_wifi.h"
 
 #include "config.h"
 #include "sys_config.h"
@@ -44,11 +44,11 @@ static void free_wifi_config(void) {
 }
 
 void invoke_wifi_on_change_cb(void *arg) {
-  miot_wifi_on_change_cb((enum miot_wifi_status)(int) arg);
+  mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
   if (s_current_role == ROLE_STA &&
-      s_wifi_sta_config.status == MIOT_WIFI_DISCONNECTED &&
+      s_wifi_sta_config.status == MGOS_WIFI_DISCONNECTED &&
       s_wifi_sta_config.reconnect) {
-    miot_wifi_connect();
+    mgos_wifi_connect();
   }
 }
 
@@ -60,7 +60,7 @@ static int restart_nwp(void) {
   /* Without a delay in sl_Stop subsequent sl_Start gets stuck sometimes. */
   sl_Stop(10);
   s_current_role = sl_Start(NULL, NULL, NULL);
-  sl_restart_cb(miot_get_mgr());
+  sl_restart_cb(mgos_get_mgr());
   return (s_current_role >= 0);
 }
 
@@ -77,17 +77,17 @@ static int ensure_role_sta(void) {
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
   switch (e->Event) {
     case SL_WLAN_CONNECT_EVENT: {
-      s_wifi_sta_config.status = MIOT_WIFI_CONNECTED;
+      s_wifi_sta_config.status = MGOS_WIFI_CONNECTED;
       break;
     }
     case SL_WLAN_DISCONNECT_EVENT: {
-      s_wifi_sta_config.status = MIOT_WIFI_DISCONNECTED;
+      s_wifi_sta_config.status = MGOS_WIFI_DISCONNECTED;
       break;
     }
     default:
       return;
   }
-  miot_invoke_cb(invoke_wifi_on_change_cb,
+  mgos_invoke_cb(invoke_wifi_on_change_cb,
                  (void *) (intptr_t) s_wifi_sta_config.status);
 }
 
@@ -98,8 +98,8 @@ void sl_net_app_eh(SlNetAppEvent_t *e) {
     asprintf(&s_wifi_sta_config.ip, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ed->ip, 3),
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
-    s_wifi_sta_config.status = MIOT_WIFI_IP_ACQUIRED;
-    miot_invoke_cb(invoke_wifi_on_change_cb,
+    s_wifi_sta_config.status = MGOS_WIFI_IP_ACQUIRED;
+    mgos_invoke_cb(invoke_wifi_on_change_cb,
                    (void *) (int) s_wifi_sta_config.status);
   } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
     SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
@@ -123,9 +123,9 @@ void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
                                   SlHttpServerResponse_t *resp) {
 }
 
-int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   char *err_msg = NULL;
-  if (!miot_wifi_validate_sta_cfg(cfg, &err_msg)) {
+  if (!mgos_wifi_validate_sta_cfg(cfg, &err_msg)) {
     LOG(LL_ERROR, ("WiFi STA: %s", err_msg));
     free(err_msg);
     return false;
@@ -147,10 +147,10 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     }
   }
 
-  return miot_wifi_connect();
+  return mgos_wifi_connect();
 }
 
-int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   int ret;
   uint8_t v;
   SlNetCfgIpV4Args_t ipcfg;
@@ -158,7 +158,7 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   char ssid[64];
 
   char *err_msg = NULL;
-  if (!miot_wifi_validate_ap_cfg(cfg, &err_msg)) {
+  if (!mgos_wifi_validate_ap_cfg(cfg, &err_msg)) {
     LOG(LL_ERROR, ("WiFi AP: %s", err_msg));
     free(err_msg);
     return false;
@@ -169,7 +169,7 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   }
 
   strncpy(ssid, cfg->ssid, sizeof(ssid));
-  miot_expand_mac_address_placeholders(ssid);
+  mgos_expand_mac_address_placeholders(ssid);
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SSID, strlen(ssid),
                         (const uint8_t *) ssid)) != 0) {
     return 0;
@@ -236,7 +236,7 @@ int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   return 1;
 }
 
-int miot_wifi_connect(void) {
+int mgos_wifi_connect(void) {
   int ret;
   SlSecParams_t sp;
 
@@ -274,25 +274,25 @@ int miot_wifi_connect(void) {
   return 1;
 }
 
-int miot_wifi_disconnect(void) {
+int mgos_wifi_disconnect(void) {
   free_wifi_config();
   return (sl_WlanDisconnect() == 0);
 }
 
-enum miot_wifi_status miot_wifi_get_status(void) {
-  return (enum miot_wifi_status) s_wifi_sta_config.status;
+enum mgos_wifi_status mgos_wifi_get_status(void) {
+  return (enum mgos_wifi_status) s_wifi_sta_config.status;
 }
 
-char *miot_wifi_get_status_str(void) {
+char *mgos_wifi_get_status_str(void) {
   const char *st = NULL;
   switch (s_wifi_sta_config.status) {
-    case MIOT_WIFI_DISCONNECTED:
+    case MGOS_WIFI_DISCONNECTED:
       st = "disconnected";
       break;
-    case MIOT_WIFI_CONNECTED:
+    case MGOS_WIFI_CONNECTED:
       st = "connected";
       break;
-    case MIOT_WIFI_IP_ACQUIRED:
+    case MGOS_WIFI_IP_ACQUIRED:
       st = "got ip";
       break;
   }
@@ -300,28 +300,28 @@ char *miot_wifi_get_status_str(void) {
   return NULL;
 }
 
-char *miot_wifi_get_connected_ssid(void) {
+char *mgos_wifi_get_connected_ssid(void) {
   switch (s_wifi_sta_config.status) {
-    case MIOT_WIFI_DISCONNECTED:
+    case MGOS_WIFI_DISCONNECTED:
       break;
-    case MIOT_WIFI_CONNECTED:
-    case MIOT_WIFI_IP_ACQUIRED:
+    case MGOS_WIFI_CONNECTED:
+    case MGOS_WIFI_IP_ACQUIRED:
       return strdup(s_wifi_sta_config.ssid);
   }
   return NULL;
 }
 
-char *miot_wifi_get_sta_ip(void) {
+char *mgos_wifi_get_sta_ip(void) {
   if (s_wifi_sta_config.ip == NULL) return NULL;
   return strdup(s_wifi_sta_config.ip);
 }
 
-char *miot_wifi_get_ap_ip(void) {
+char *mgos_wifi_get_ap_ip(void) {
   /* TODO(rojer?) : implement if applicable */
   return NULL;
 }
 
-void miot_wifi_scan(miot_wifi_scan_cb_t cb, void *arg) {
+void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
   const char *ssids[21];
   const char **res = NULL;
   int i, n;
@@ -340,5 +340,5 @@ out:
   cb(res, arg);
 }
 
-void miot_wifi_hal_init(void) {
+void mgos_wifi_hal_init(void) {
 }

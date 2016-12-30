@@ -6,8 +6,8 @@ Please see
 [examples](https://github.com/cesanta/mongoose-iot/tree/master/fw/examples)
 on how to customise Mongoose Firmware in C/C++.
 
-`miot_app_init()` function will return `MIOT_APP_INIT_SUCCESS` on successful
-initialisation or `MIOT_APP_INIT_ERROR` on failure.
+`mgos_app_init()` function will return `MGOS_APP_INIT_SUCCESS` on successful
+initialisation or `MGOS_APP_INIT_ERROR` on failure.
 
 Also, see
 - [V7 reference on exporting C/C++ functions to

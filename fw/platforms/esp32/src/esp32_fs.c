@@ -19,15 +19,15 @@
 
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
-#define MIOT_SPIFFS_MAX_OPEN_FILES 8
-#define MIOT_SPIFFS_BLOCK_SIZE SPI_FLASH_SEC_SIZE
-#define MIOT_SPIFFS_ERASE_SIZE SPI_FLASH_SEC_SIZE
-#define MIOT_SPIFFS_PAGE_SIZE (SPI_FLASH_SEC_SIZE / 16)
+#define MGOS_SPIFFS_MAX_OPEN_FILES 8
+#define MGOS_SPIFFS_BLOCK_SIZE SPI_FLASH_SEC_SIZE
+#define MGOS_SPIFFS_ERASE_SIZE SPI_FLASH_SEC_SIZE
+#define MGOS_SPIFFS_PAGE_SIZE (SPI_FLASH_SEC_SIZE / 16)
 
 struct mount_info {
   spiffs fs;
-  u8_t work[2 * MIOT_SPIFFS_PAGE_SIZE];
-  u8_t fds[MIOT_SPIFFS_MAX_OPEN_FILES * sizeof(spiffs_fd)];
+  u8_t work[2 * MGOS_SPIFFS_PAGE_SIZE];
+  u8_t fds[MGOS_SPIFFS_MAX_OPEN_FILES * sizeof(spiffs_fd)];
   const esp_partition_t *part;
 };
 
@@ -85,22 +85,22 @@ static s32_t esp32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   }
 }
 
-enum miot_init_result esp32_fs_mount(const esp_partition_t *part,
+enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
                                      struct mount_info **res) {
   s32_t r;
   spiffs_config cfg;
   *res = NULL;
   struct mount_info *m = (struct mount_info *) calloc(1, sizeof(*m));
-  if (m == NULL) return MIOT_INIT_OUT_OF_MEMORY;
+  if (m == NULL) return MGOS_INIT_OUT_OF_MEMORY;
   LOG(LL_INFO, ("Mounting SPIFFS %u @ 0x%x", part->size, part->address));
   cfg.hal_read_f = esp32_spiffs_read;
   cfg.hal_write_f = esp32_spiffs_write;
   cfg.hal_erase_f = esp32_spiffs_erase;
   cfg.phys_size = part->size;
   cfg.phys_addr = 0;
-  cfg.phys_erase_block = MIOT_SPIFFS_ERASE_SIZE;
-  cfg.log_block_size = MIOT_SPIFFS_BLOCK_SIZE;
-  cfg.log_page_size = MIOT_SPIFFS_PAGE_SIZE;
+  cfg.phys_erase_block = MGOS_SPIFFS_ERASE_SIZE;
+  cfg.log_block_size = MGOS_SPIFFS_BLOCK_SIZE;
+  cfg.log_page_size = MGOS_SPIFFS_PAGE_SIZE;
   m->part = part;
   m->fs.user_data = m;
   r = SPIFFS_mount(&m->fs, &cfg, m->work, m->fds, sizeof(m->fds), NULL, 0,
@@ -108,10 +108,10 @@ enum miot_init_result esp32_fs_mount(const esp_partition_t *part,
   if (r != SPIFFS_OK) {
     LOG(LL_ERROR, ("SPIFFS init failed: %d", (int) SPIFFS_errno(&m->fs)));
     free(m);
-    return MIOT_INIT_FS_INIT_FAILED;
+    return MGOS_INIT_FS_INIT_FAILED;
   }
   *res = m;
-  return MIOT_INIT_OK;
+  return MGOS_INIT_OK;
 }
 
 static int spiffs_open_p(void *ctx, const char *path, int flags, int mode) {
@@ -155,16 +155,16 @@ spiffs *cs_spiffs_get_fs(void) {
   return (s_mount != NULL ? &s_mount->fs : NULL);
 }
 
-enum miot_init_result esp32_fs_init() {
+enum mgos_init_result esp32_fs_init() {
   const esp_partition_t *fs_part = esp_partition_find_first(
       ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, NULL);
   if (fs_part == NULL) {
     LOG(LL_ERROR, ("No FS partition."));
-    return MIOT_INIT_FS_INIT_FAILED;
+    return MGOS_INIT_FS_INIT_FAILED;
   }
   struct mount_info *m;
-  enum miot_init_result r = esp32_fs_mount(fs_part, &m);
-  if (r == MIOT_INIT_OK) {
+  enum mgos_init_result r = esp32_fs_mount(fs_part, &m);
+  if (r == MGOS_INIT_OK) {
     esp_vfs_t vfs = {
         .fd_offset = 0,
         .flags = ESP_VFS_FLAG_CONTEXT_PTR,
@@ -180,10 +180,10 @@ enum miot_init_result esp32_fs_init() {
         .link_p = NULL,
     };
     if (esp_vfs_register(ESP_VFS_DEFAULT, &vfs, m) != ESP_OK) {
-      r = MIOT_INIT_FS_INIT_FAILED;
+      r = MGOS_INIT_FS_INIT_FAILED;
     }
   }
-  if (r == MIOT_INIT_OK) {
+  if (r == MGOS_INIT_OK) {
     s_mount = m;
   }
   return r;

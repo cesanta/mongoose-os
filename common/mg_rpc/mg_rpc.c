@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if MIOT_ENABLE_RPC
+#if MGOS_ENABLE_RPC
 
 #include "common/mg_rpc/mg_rpc.h"
 #include "common/mg_rpc/mg_rpc_channel.h"
@@ -671,4 +671,4 @@ void mg_rpc_add_list_handler(struct mg_rpc *c) {
   mg_rpc_add_handler(c, mg_mk_str("RPC.List"), mg_rpc_list_handler, NULL);
 }
 
-#endif /* MIOT_ENABLE_RPC */
+#endif /* MGOS_ENABLE_RPC */

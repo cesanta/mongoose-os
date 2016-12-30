@@ -1,8 +1,8 @@
 #include "common/platform.h"
-#include "fw/src/miot_sys_config.h"
+#include "fw/src/mgos_sys_config.h"
 
-enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
-  return MIOT_INIT_OK;
+enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
+  return MGOS_INIT_OK;
 }
 
 void device_get_mac_address(uint8_t mac[6]) {

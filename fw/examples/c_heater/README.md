@@ -24,12 +24,12 @@ on how to build and flash the firmware. Below is an example session that
 builds and sets up a heater:
 
 ```bash
-miot build        # Build the firmware
-miot flash        # Flash the firmware
-miot register     # Register device at Mongoose Cloud
-miot config-set hsw.sensor_data_url=http://mongoose.cloud/api/DEVICE-USER/data/add
-miot config-set hsw.auth="Bearer USER:PASSWORD"
-miot config-set wifi.ap.enable=false wifi.sta.enable=true \
+mgos build        # Build the firmware
+mgos flash        # Flash the firmware
+mgos register     # Register device at Mongoose Cloud
+mgos config-set hsw.sensor_data_url=http://mongoose.cloud/api/DEVICE-USER/data/add
+mgos config-set hsw.auth="Bearer USER:PASSWORD"
+mgos config-set wifi.ap.enable=false wifi.sta.enable=true \
   wifi.sta.ssid=WIFI_NETWORK_NAME wifi.sta.pass=WIFI_PASSWORD
-miot console      # Attach a serial console and see device logs
+mgos console      # Attach a serial console and see device logs
 ```

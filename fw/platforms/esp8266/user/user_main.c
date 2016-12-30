@@ -18,14 +18,14 @@
 #include "fw/platforms/esp8266/user/util.h"
 #include "fw/platforms/esp8266/user/esp_exc.h"
 
-#include "fw/src/miot_app.h"
-#include "fw/src/miot_init.h"
-#include "fw/src/miot_mongoose.h"
-#include "fw/src/miot_prompt.h"
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_uart.h"
-#include "fw/src/miot_updater_common.h"
+#include "fw/src/mgos_app.h"
+#include "fw/src/mgos_init.h"
+#include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_prompt.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_updater_common.h"
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
@@ -34,7 +34,7 @@
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
 #include "v7/v7.h"
 #endif
 
@@ -43,7 +43,7 @@ extern const char *mg_build_version, *mg_build_id;
 
 os_timer_t startcmd_timer;
 
-#if MIOT_ENABLE_HEAP_LOG
+#if MGOS_ENABLE_HEAP_LOG
 extern int uart_initialized;
 #endif
 
@@ -55,19 +55,19 @@ void dbg_putc(char c) {
 
 void user_rf_pre_init() {
   /* Early init app hook. */
-  miot_app_preinit();
+  mgos_app_preinit();
 }
 
 /*
  * Mongoose IoT initialization, called as an SDK timer callback
  * (`os_timer_...()`).
  */
-enum miot_init_result esp_miot_init(rboot_config *bcfg) {
+enum mgos_init_result esp_mgos_init(rboot_config *bcfg) {
   mongoose_init();
   esp_mg_task_init();
-  enum miot_init_result ir = esp_console_init();
-  if (ir != MIOT_INIT_OK) return ir;
-#if MIOT_ENABLE_HEAP_LOG
+  enum mgos_init_result ir = esp_console_init();
+  if (ir != MGOS_INIT_OK) return ir;
+#if MGOS_ENABLE_HEAP_LOG
   uart_initialized = 1;
 #endif
   setvbuf(stdout, NULL, _IOLBF, 256);
@@ -77,45 +77,45 @@ enum miot_init_result esp_miot_init(rboot_config *bcfg) {
   system_set_os_print(1);
   fputc('\n', stderr);
 
-  if (strcmp(MIOT_APP, "mongoose-iot") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MIOT_APP, build_version, build_id));
+  if (strcmp(MGOS_APP, "mongoose-iot") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
   LOG(LL_INFO,
       ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
-                miot_get_heap_size(), miot_get_free_heap_size()));
+                mgos_get_heap_size(), mgos_get_free_heap_size()));
   esp_print_reset_info();
 
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
                   bcfg->fs_sizes[bcfg->current_rom]);
   if (r != 0) {
     LOG(LL_ERROR, ("FS init error: %d", r));
-    return MIOT_INIT_FS_INIT_FAILED;
+    return MGOS_INIT_FS_INIT_FAILED;
   }
 
-#if MIOT_ENABLE_UPDATER
-  if (bcfg->fw_updated && miot_upd_apply_update() < 0) {
-    return MIOT_INIT_APPLY_UPDATE_FAILED;
+#if MGOS_ENABLE_UPDATER
+  if (bcfg->fw_updated && mgos_upd_apply_update() < 0) {
+    return MGOS_INIT_APPLY_UPDATE_FAILED;
   }
 #endif
 
-  ir = miot_init();
-  if (ir != MIOT_INIT_OK) {
+  ir = mgos_init();
+  if (ir != MGOS_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
     return ir;
   }
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
   init_v7(&bcfg);
 
   /* TODO(rojer): Get rid of I2C.js */
   if (v7_exec_file(v7, "I2C.js", NULL) != V7_OK) {
-    return MIOT_INIT_APP_JS_INIT_FAILED;
+    return MGOS_INIT_APP_JS_INIT_FAILED;
   }
 #endif
 
-#if MIOT_ENABLE_JS
-  miot_prompt_init(v7, get_cfg()->debug.stdout_uart);
+#if MGOS_ENABLE_JS
+  mgos_prompt_init(v7, get_cfg()->debug.stdout_uart);
 #endif
 
   /*
@@ -131,21 +131,21 @@ enum miot_init_result esp_miot_init(rboot_config *bcfg) {
    */
   esp_umm_init();
 
-  return MIOT_INIT_OK;
+  return MGOS_INIT_OK;
 }
 
 void esp_mg_init_timer_cb(void *arg) {
   rboot_config *bcfg = get_rboot_config();
-  enum miot_init_result result = esp_miot_init(bcfg);
-  bool success = (result == MIOT_INIT_OK);
-#if MIOT_ENABLE_UPDATER
-  miot_upd_boot_finish(success, bcfg->is_first_boot);
+  enum mgos_init_result result = esp_mgos_init(bcfg);
+  bool success = (result == MGOS_INIT_OK);
+#if MGOS_ENABLE_UPDATER
+  mgos_upd_boot_finish(success, bcfg->is_first_boot);
 #endif
   if (!success) {
     LOG(LL_ERROR, ("Init failed: %d", result));
     /* Arbitrary delay to make potential reboot loop less tight. */
-    miot_usleep(500000);
-    miot_system_restart(0);
+    mgos_usleep(500000);
+    mgos_system_restart(0);
   }
   (void) arg;
 }

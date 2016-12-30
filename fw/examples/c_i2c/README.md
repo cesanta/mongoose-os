@@ -26,10 +26,10 @@ LCD screens could be easily adopted by that generic I2C write handler.
 1. Build and flash
 
 ```
-miot build --arch esp8266
-miot flash
-miot config-set wifi.sta.enable=true wifi.ap.enable=false wifi.sta.ssid=XX wifi.sta.pass=YY
-miot console
+mgos build --arch esp8266
+mgos flash
+mgos config-set wifi.sta.enable=true wifi.ap.enable=false wifi.sta.ssid=XX wifi.sta.pass=YY
+mgos console
 ```
 
 2. In another terminal,

@@ -11,7 +11,7 @@ on how to build and flash the firmware.
 - Device will start an access point `Mongoose_XXXXXX`. Connect to it,
   use `Mongoose` as a password.
 - Make some modifications to the firmware, for example add this code to
-`miot_app_init()`:
+`mgos_app_init()`:
 
 ```c
     LOG(LL_INFO, ("Hey!"));
@@ -34,10 +34,10 @@ main_task            Applying update
 file_copy            Copying test.txt
 init_device          MAC: F4B85E49A7B3
 mg_wifi_on_change_callback WiFi: ready, IP 192.168.4.1
-miot_wifi_setup_ap   AP Mongoose_49A7B3 configured
+mgos_wifi_setup_ap   AP Mongoose_49A7B3 configured
 init_web_server      HTTP server started on [80]
 main_task            Sys init done, RAM: 14944 free
-miot_app_init        Hey!
+mgos_app_init        Hey!
 main_task            App init done
 commit_update        Committed
 ```

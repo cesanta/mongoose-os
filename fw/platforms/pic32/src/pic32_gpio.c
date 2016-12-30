@@ -3,10 +3,10 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_gpio_hal.h"
+#include "fw/src/mgos_gpio_hal.h"
 
 /* TODO(dfrank) */
 
-enum miot_init_result miot_gpio_dev_init(void) {
-  return MIOT_INIT_OK;
+enum mgos_init_result mgos_gpio_dev_init(void) {
+  return MGOS_INIT_OK;
 }

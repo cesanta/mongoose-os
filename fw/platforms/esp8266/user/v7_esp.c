@@ -9,7 +9,7 @@ struct v7 *v7;
 
 #include "fw/platforms/esp8266/user/esp_features.h"
 
-#if MIOT_ENABLE_JS
+#if MGOS_ENABLE_JS
 
 #include <math.h>
 #include <stdlib.h>
@@ -17,7 +17,7 @@ struct v7 *v7;
 
 #include "v7/v7.h"
 #include "fw/platforms/esp8266/user/v7_esp.h"
-#include "fw/src/miot_v7_ext.h"
+#include "fw/src/mgos_v7_ext.h"
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 #include "common/cs_dbg.h"
 
@@ -104,4 +104,4 @@ void init_v7(void *stack_base) {
   v7_set_method(v7, v7_get_global(v7), "crash", crash);
   v7_set_method(v7, v7_get_global(v7), "is_rboot_updated", is_rboot_updated);
 }
-#endif /* MIOT_ENABLE_JS */
+#endif /* MGOS_ENABLE_JS */

@@ -19,32 +19,32 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
-MIOT_ENABLE_JS = 0
-MIOT_ENABLE_UPDATER_RPC = 0
-MIOT_DEBUG_UART = 0
+MGOS_ENABLE_JS = 0
+MGOS_ENABLE_UPDATER_RPC = 0
+MGOS_DEBUG_UART = 0
 
-MIOT_PATH ?= ../../..
-COMMON_PATH ?= $(MIOT_PATH)/common
-MONGOOSE_PATH ?= $(MIOT_PATH)/mongoose
-FROZEN_PATH ?= $(MIOT_PATH)/frozen
-V7_PATH ?= $(MIOT_PATH)/v7
+MGOS_PATH ?= ../../..
+COMMON_PATH ?= $(MGOS_PATH)/common
+MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
+FROZEN_PATH ?= $(MGOS_PATH)/frozen
+V7_PATH ?= $(MGOS_PATH)/v7
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
-MIOT_ESP_PATH ?= $(MIOT_PATH)/fw/platforms/esp8266
-MIOT_SRC_PATH ?= $(MIOT_PATH)/fw/src
+MGOS_ESP_PATH ?= $(MGOS_PATH)/fw/platforms/esp8266
+MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MBEDTLS_PATH ?= /opt/mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
-MIOT_JS_PATH ?= $(MIOT_SRC_PATH)/js
-COMMON_FS_PATH ?= $(MIOT_PATH)/fw/skeleton/fs
+MGOS_JS_PATH ?= $(MGOS_SRC_PATH)/js
+COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 # Enable heap allocation logging - every malloc/free is logged.
-MIOT_ENABLE_HEAP_LOG ?= 0
+MGOS_ENABLE_HEAP_LOG ?= 0
 # In addition to logging allocations, print call traces for them.
 # This instruments every function and increases code size significantly.
-MIOT_ENABLE_CALL_TRACE ?= 0
+MGOS_ENABLE_CALL_TRACE ?= 0
 
 CREATE_SPIFFS_FS ?= 1
 CREATE_RAW_FS ?= 0
@@ -86,70 +86,70 @@ SSL ?= mbedTLS
 include $(COMMON_ESP_PATH)/common.mk
 
 # For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
-include $(MIOT_PATH)/fw/common.mk
+include $(MGOS_PATH)/fw/common.mk
 
-MIOT_ESP_SRC_PATH = $(MIOT_ESP_PATH)/user
+MGOS_ESP_SRC_PATH = $(MGOS_ESP_PATH)/user
 
-MIOT_SRCS = cs_rbuf.c \
-            miot_config.c \
-            miot_gpio.c \
-            miot_init.c \
-            miot_timers_mongoose.c \
-            miot_wifi.c \
-            miot_mongoose.c \
-            miot_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            miot_uart.c \
-            miot_utils.c \
+MGOS_SRCS = cs_rbuf.c \
+            mgos_config.c \
+            mgos_gpio.c \
+            mgos_init.c \
+            mgos_timers_mongoose.c \
+            mgos_wifi.c \
+            mgos_mongoose.c \
+            mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            mgos_uart.c \
+            mgos_utils.c \
             cs_crc32.c \
             rboot-bigflash.c rboot-api.c \
             json_utils.c \
             umm_malloc.c \
             mongoose.c frozen.c
-MIOT_SRCS += $(notdir $(foreach m,$(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
+MGOS_SRCS += $(notdir $(foreach m,$(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-ifeq "$(MIOT_ENABLE_JS)" "1"
-MIOT_SRCS += v7.c \
-             miot_v7_ext.c \
-             miot_prompt.c
+ifeq "$(MGOS_ENABLE_JS)" "1"
+MGOS_SRCS += v7.c \
+             mgos_v7_ext.c \
+             mgos_prompt.c
 endif
 
-MIOT_FEATURES ?= -DMIOT_ENABLE_ADC_API \
-                -DMIOT_ENABLE_DEBUG_API \
-                -DMIOT_ENABLE_GPIO_API \
-                -DMIOT_ENABLE_HTTP_CLIENT_API \
-                -DMIOT_ENABLE_HTTP_SERVER_API \
-                -DMIOT_ENABLE_I2C_API \
-                -DMIOT_ENABLE_MQTT_API \
-                -DMIOT_ENABLE_PWM_API \
-                -DMIOT_ENABLE_SPI_API \
-                -DMIOT_ENABLE_TCP_API \
-                -DMIOT_ENABLE_UART_API \
-                -DMIOT_ENABLE_UDP_API \
-                -DMIOT_ENABLE_WIFI_API \
-                -DMIOT_ENABLE_WS_CLIENT_API
+MGOS_FEATURES ?= -DMGOS_ENABLE_ADC_API \
+                -DMGOS_ENABLE_DEBUG_API \
+                -DMGOS_ENABLE_GPIO_API \
+                -DMGOS_ENABLE_HTTP_CLIENT_API \
+                -DMGOS_ENABLE_HTTP_SERVER_API \
+                -DMGOS_ENABLE_I2C_API \
+                -DMGOS_ENABLE_MQTT_API \
+                -DMGOS_ENABLE_PWM_API \
+                -DMGOS_ENABLE_SPI_API \
+                -DMGOS_ENABLE_TCP_API \
+                -DMGOS_ENABLE_UART_API \
+                -DMGOS_ENABLE_UDP_API \
+                -DMGOS_ENABLE_WIFI_API \
+                -DMGOS_ENABLE_WS_CLIENT_API
 
-MIOT_ENABLE_I2C_GPIO = 1
+MGOS_ENABLE_I2C_GPIO = 1
 
-include $(MIOT_PATH)/fw/src/features.mk
+include $(MGOS_PATH)/fw/src/features.mk
 
-ifeq "$(MIOT_ENABLE_I2C)" "1"
-  SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_i2c_config.yaml
+ifeq "$(MGOS_ENABLE_I2C)" "1"
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_i2c_config.yaml
 endif
-ifeq "$(MIOT_ENABLE_WIFI)" "1"
-  SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_wifi_config.yaml
+ifeq "$(MGOS_ENABLE_WIFI)" "1"
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_wifi_config.yaml
 endif
 
-VPATH = $(APP_MODULES) $(MIOT_SRC_PATH) $(MONGOOSE_PATH) \
+VPATH = $(APP_MODULES) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
-        $(MIOT_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-IPATH = $(APP_MODULES) $(MIOT_PATH) $(MIOT_ESP_PATH)/include $(SPIFFS_PATH) \
+        $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
+IPATH = $(APP_MODULES) $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
         $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
         $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
-        $(MIOT_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc .
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MIOT_ESP_SRC_PATH)
+        $(MGOS_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc .
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 
 # libraries used in this project, mainly provided by the SDK
 SDK_LIBS = c crypto gcc hal m pp phy net80211 wpa main_ota
@@ -171,9 +171,9 @@ V7_FEATURES ?= $(COMMON_V7_FEATURES) \
 V7_GC_DEBUG ?= 1
 V7_STACK_GUARD ?= 1
 
-MIOT_ESP_FEATURES = -DMIOT_ENABLE_WEB_CONFIG \
-                    -DMIOT_ENABLE_FILE_UPLOAD \
-                    -DMIOT_ENABLE_CONSOLE_FILE_BUFFER
+MGOS_ESP_FEATURES = -DMGOS_ENABLE_WEB_CONFIG \
+                    -DMGOS_ENABLE_FILE_UPLOAD \
+                    -DMGOS_ENABLE_CONSOLE_FILE_BUFFER
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ZLIB_APIS \
@@ -183,7 +183,7 @@ MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_EXT_SHA1 \
                -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING
 
 FEATURES_EXTRA ?=
-FEATURES = $(MG_FEATURES) $(MIOT_FEATURES) $(MIOT_ESP_FEATURES) \
+FEATURES = $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_ESP_FEATURES) \
            $(FEATURES_EXTRA) \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
            -DBOOT_BIG_FLASH \
@@ -195,18 +195,18 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
 
 .PHONY: all clean
 
-MIOT_CFLAGS = -DMIOT_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
+MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
               -DESP_ENABLE_MG_LWIP_IF \
-              -DMIOT_MAX_NUM_UARTS=2 \
-              -DMIOT_NUM_GPIO=16 \
-              -DMIOT_DEBUG_UART=$(MIOT_DEBUG_UART) \
+              -DMGOS_MAX_NUM_UARTS=2 \
+              -DMGOS_NUM_GPIO=16 \
+              -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
   FS_IMG = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 endif
 
-LD_SCRIPT_TEMPL = $(MIOT_ESP_PATH)/ld/fw.ld
+LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/fw.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
@@ -214,7 +214,7 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
 LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
-MIOT_LIB = $(BUILD_DIR)/mongoose-iot.a
+MGOS_LIB = $(BUILD_DIR)/mongoose-iot.a
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
 SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
 SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
@@ -233,12 +233,12 @@ IMAGE_HEADER_SIZE = 0
 
 ifeq "$(SSL)" "mbedTLS"
   IPATH += $(MBEDTLS_PATH)/include
-  MIOT_SRCS += esp_crypto.c
-  MIOT_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS -DMG_SSL_IF_MBEDTLS_FREE_CERTS
+  MGOS_SRCS += esp_crypto.c
+  MGOS_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS -DMG_SSL_IF_MBEDTLS_FREE_CERTS
   SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
   MBEDTLS_CFLAGS = $(CFLAGS) -Wno-unused-variable -Wno-unused-function
-  SYS_CONF_SCHEMA += $(MIOT_ESP_SRC_PATH)/esp_mbedtls_config.yaml
-  ifeq "$(MIOT_ENABLE_ATCA)" "1"
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_mbedtls_config.yaml
+  ifeq "$(MGOS_ENABLE_ATCA)" "1"
     MBEDTLS_CFLAGS += -DMBEDTLS_ECP_ATCA -I$(ATCA_PATH)/lib
   endif
 
@@ -252,9 +252,9 @@ else
   SSL_LIBS =
 endif
 
-ifeq "$(MIOT_ENABLE_JS)" "1"
+ifeq "$(MGOS_ENABLE_JS)" "1"
   GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MIOT_FEATURES += -DMIOT_ENABLE_JS $(V7_FEATURES)
+  MGOS_FEATURES += -DMGOS_ENABLE_JS $(V7_FEATURES)
   VPATH += $(V7_PATH)
   $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
   ifneq "$(V7_GC_DEBUG)" "1"
@@ -264,12 +264,12 @@ ifeq "$(MIOT_ENABLE_JS)" "1"
     MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
   endif
 else
-  MIOT_SRCS += cs_file.c
+  MGOS_SRCS += cs_file.c
 endif
 
-include $(MIOT_PATH)/fw/src/spiffs.mk
+include $(MGOS_PATH)/fw/src/spiffs.mk
 
-MIOT_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MIOT_SRCS)))
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGOS_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
@@ -278,21 +278,21 @@ LD_SCRIPT = $(GEN_DIR)/$(FW_FILE_2_ADDR).ld
 LD_WRAPPERS =
 HEAP_LOG_FLAGS =
 
-ifneq "${MIOT_ENABLE_HEAP_LOG}${MIOT_ENABLE_CALL_TRACE}" "00"
-  HEAP_LOG_FLAGS += -DMIOT_ENABLE_HEAP_LOG
+ifneq "${MGOS_ENABLE_HEAP_LOG}${MGOS_ENABLE_CALL_TRACE}" "00"
+  HEAP_LOG_FLAGS += -DMGOS_ENABLE_HEAP_LOG
   LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
                  -Wl,--wrap=pvPortMalloc \
                  -Wl,--wrap=pvPortZalloc \
                  -Wl,--wrap=pvPortRealloc \
                  -Wl,--wrap=vPortFree
 endif
-ifeq "${MIOT_ENABLE_CALL_TRACE}" "1"
+ifeq "${MGOS_ENABLE_CALL_TRACE}" "1"
   HEAP_LOG_FLAGS += -finstrument-functions -DCALL_TRACE_SIZE=32
-  ifeq "$(MIOT_ENABLE_JS)" "1"
-    HEAP_LOG_FLAGS += -DV7_ENABLE_CALL_TRACE -DMIOT_ENABLE_CALL_TRACE
+  ifeq "$(MGOS_ENABLE_JS)" "1"
+    HEAP_LOG_FLAGS += -DV7_ENABLE_CALL_TRACE -DMGOS_ENABLE_CALL_TRACE
   else
-    MIOT_SRCS += cs_heap_trace.c
-    HEAP_LOG_FLAGS += -DMIOT_ENABLE_CALL_TRACE
+    MGOS_SRCS += cs_heap_trace.c
+    HEAP_LOG_FLAGS += -DMGOS_ENABLE_CALL_TRACE
   endif
 endif
 
@@ -320,7 +320,7 @@ LIBDIRS = $(addprefix -L,$(LPATH))
 CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
           -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
           -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-          $(MIOT_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
+          $(MGOS_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
           $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
 
 LDFLAGS += -u Cache_Read_Enable_New
@@ -344,7 +344,7 @@ ifeq "$(CREATE_RAW_FS)" "1"
   FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 endif
 
-include $(MIOT_PATH)/common/scripts/fw_meta.mk
+include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
@@ -370,10 +370,10 @@ $(APP_BIN): $(APP_ELF)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_ELF): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
-	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MIOT_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
+$(APP_ELF): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
 
-$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MIOT_ESP_PATH)/Makefile.build
+$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
 	$(Q) echo "void user_init(void){}; " \
             "void system_restart_local(){};" \
@@ -382,7 +382,7 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MIOT_ESP_PATH)/Makefile.build
             "void __cyg_profile_func_exit(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" > $@
 
 # Main app lib.
-$(MIOT_LIB): $(MIOT_OBJS)
+$(MGOS_LIB): $(MGOS_OBJS)
 	$(vecho) "AR    $@"
 	$(Q) $(AR) cru $@ $^
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
@@ -415,15 +415,15 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(Q) mkdir -p $(GEN_DIR)
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
-include $(MIOT_PATH)/common/scripts/build_info.mk
-include $(MIOT_PATH)/fw/src/sys_config.mk
+include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/fw/src/sys_config.mk
 
 # Regenerate build info if there are changes in objects.
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MIOT_OBJS)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(MG_BUILD_INFO_C): $(MIOT_OBJS)
-	$(call gen_build_info,$@,$(MIOT_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+$(MG_BUILD_INFO_C): $(MGOS_OBJS)
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
@@ -433,7 +433,7 @@ $(MG_BUILD_INFO_C): $(MIOT_OBJS)
 $(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(_FS_SIZE))
 
-ifeq "$(MIOT_ENABLE_JS)" "1"
+ifeq "$(MGOS_ENABLE_JS)" "1"
 $(V7_PATH)/v7.c $(V7_PATH)/v7.h:
 	make -C $(V7_PATH) $(notdir $@)
 

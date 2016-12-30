@@ -1,8 +1,8 @@
-ifeq "$(MIOT_ENABLE_JS)" "1"
+ifeq "$(MGOS_ENABLE_JS)" "1"
   JS_EXTRA ?=
-  JSBIN_SRCS := $(MIOT_JS_PATH)/sys_init.js \
-                $(MIOT_JS_PATH)/demo.js \
-                $(MIOT_JS_PATH)/I2C.js \
+  JSBIN_SRCS := $(MGOS_JS_PATH)/sys_init.js \
+                $(MGOS_JS_PATH)/demo.js \
+                $(MGOS_JS_PATH)/I2C.js \
                 $(JS_EXTRA)
 ifneq "$(APP_FS_PATH)" ""
   JSBIN_SRCS += $(wildcard $(APP_FS_PATH)/*.js)

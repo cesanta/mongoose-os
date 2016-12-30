@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	deviceIDHeader  = "X-MIOT-Device-ID"
-	fwVersionheader = "X-MIOT-FW-Version"
+	deviceIDHeader  = "X-MGOS-Device-ID"
+	fwVersionheader = "X-MGOS-FW-Version"
 )
 
 var (

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "common/platform.h"
-#include "fw/src/miot_wifi.h"
+#include "fw/src/mgos_wifi.h"
 #include "common/cs_dbg.h"
 
 #include <lwip/igmp.h>
@@ -9,7 +9,7 @@
 struct ieee80211_conn; /* it seems that espressif didn't export this */
 #include <netif/wlan_lwip_if.h>
 
-void miot_mdns_hal_join_group(const char *iface_ip, const char *group) {
+void mgos_mdns_hal_join_group(const char *iface_ip, const char *group) {
   struct ip_addr host_addr;
   struct ip_addr group_addr;
 

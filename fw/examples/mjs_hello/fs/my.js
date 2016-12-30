@@ -1,10 +1,10 @@
 let get_gpio = ffi("int get_gpio()");
-let miot_gpio_write = ffi("void miot_gpio_write(int, int)");
-let miot_set_timer = ffi("int miot_set_timer(int, int, void(*)(userdata), userdata)");
+let mgos_gpio_write = ffi("void mgos_gpio_write(int, int)");
+let mgos_set_timer = ffi("int mgos_set_timer(int, int, void(*)(userdata), userdata)");
 
 let level = 0;
 
-miot_set_timer(
+mgos_set_timer(
   1000, // msecs
   1,    // repeat
   function(pin) {
@@ -15,7 +15,7 @@ miot_set_timer(
       print("MJS Tock");
       level = 1;
     }
-    miot_gpio_write(pin, level);
+    mgos_gpio_write(pin, level);
   },
   get_gpio()
 );

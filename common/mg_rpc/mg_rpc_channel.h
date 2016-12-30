@@ -11,7 +11,7 @@
 
 #include "common/mg_str.h"
 
-#if MIOT_ENABLE_RPC
+#if MGOS_ENABLE_RPC
 
 enum mg_rpc_channel_event {
   MG_RPC_CHANNEL_OPEN,
@@ -35,5 +35,5 @@ struct mg_rpc_channel {
   void *user_data;
 };
 
-#endif /* MIOT_ENABLE_RPC */
+#endif /* MGOS_ENABLE_RPC */
 #endif /* CS_COMMON_MG_RPC_MG_RPC_CHANNEL_H_ */

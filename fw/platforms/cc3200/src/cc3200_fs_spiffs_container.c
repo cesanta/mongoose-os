@@ -11,7 +11,7 @@
 #include "fs.h"
 
 #include "common/cs_dbg.h"
-#include "fw/src/miot_hal.h"
+#include "fw/src/mgos_hal.h"
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 
@@ -121,7 +121,7 @@ static _i32 fs_switch_container(struct mount_info *m, _u32 mask_begin,
       goto out_close_old;
     }
   }
-  miot_wdt_feed();
+  mgos_wdt_feed();
   new_fh = fs_create_container(m->cpfx, new_cidx, m->fs.cfg.phys_size);
   if (new_fh < 0) {
     r = new_fh;

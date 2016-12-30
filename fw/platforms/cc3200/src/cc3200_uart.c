@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_uart.h"
+#include "fw/src/mgos_uart.h"
 
 /* Driverlib includes */
 #include "hw_types.h"
@@ -25,13 +25,13 @@
 #define UART_TX_INTS (UART_INT_TX)
 #define UART_INFO_INTS (UART_INT_OE)
 
-static struct miot_uart_state *s_us[2];
+static struct mgos_uart_state *s_us[2];
 
 uint32_t cc3200_uart_get_base(int uart_no) {
   return (uart_no == 0 ? UARTA0_BASE : UARTA1_BASE);
 }
 
-static void uart_int(struct miot_uart_state *us) {
+static void uart_int(struct mgos_uart_state *us) {
   if (us == NULL) return;
   uint32_t base = (uint32_t) us->dev_data;
   uint32_t int_st = MAP_UARTIntStatus(base, true /* masked */);
@@ -40,13 +40,13 @@ static void uart_int(struct miot_uart_state *us) {
   if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
     if (int_st & UART_RX_INTS) us->stats.rx_ints++;
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
-    miot_uart_schedule_dispatcher(us->uart_no);
+    mgos_uart_schedule_dispatcher(us->uart_no);
   }
   MAP_UARTIntDisable(base, (UART_RX_INTS | UART_TX_INTS));
   MAP_UARTIntClear(base, int_st);
 }
 
-void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
+void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   uint32_t base = (uint32_t) us->dev_data;
   cs_rbuf_t *rxb = &us->rx_buf;
   bool recd;
@@ -77,7 +77,7 @@ recv_more:
   MAP_UARTIntClear(base, UART_RX_INTS);
 }
 
-void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
+void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   uint32_t base = (uint32_t) us->dev_data;
   cs_rbuf_t *txb = &us->tx_buf;
   while (txb->used > 0 && MAP_UARTSpaceAvail(base)) {
@@ -91,7 +91,7 @@ void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
   MAP_UARTIntClear(base, UART_TX_INTS);
 }
 
-void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
+void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   cs_rbuf_t *rxb = &us->rx_buf;
   cs_rbuf_t *txb = &us->tx_buf;
   uint32_t base = (uint32_t) us->dev_data;
@@ -101,7 +101,7 @@ void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
   MAP_UARTIntEnable(base, int_ena);
 }
 
-void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
+void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   uint32_t base = (uint32_t) us->dev_data;
   uint32_t ctl = HWREG(base + UART_O_CTL);
   if (enabled) {
@@ -124,11 +124,11 @@ static void u1_int(void) {
   uart_int(s_us[1]);
 }
 
-void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
+void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
   (void) cfg;
 }
 
-bool miot_uart_dev_init(struct miot_uart_state *us) {
+bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   uint32_t base = cc3200_uart_get_base(us->uart_no);
   uint32_t periph, int_no;
   void (*int_handler)();
@@ -179,7 +179,7 @@ bool miot_uart_dev_init(struct miot_uart_state *us) {
   return true;
 }
 
-void miot_uart_dev_deinit(struct miot_uart_state *us) {
+void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
   uint32_t base = (uint32_t) us->dev_data;
   MAP_UARTDisable(base);
   MAP_UARTIntDisable(base, ~0);

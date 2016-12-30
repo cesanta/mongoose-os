@@ -10,8 +10,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int miot_stm32_get_stdout_uart();
-int miot_stm32_get_stderr_uart();
+int mgos_stm32_get_stdout_uart();
+int mgos_stm32_get_stderr_uart();
 
 #ifdef __cplusplus
 }

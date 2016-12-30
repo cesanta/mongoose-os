@@ -5,10 +5,10 @@ title: Build the firmware
 Create an empty directory, go into it, and run:
 
 ```bash
-miot init --arch ARCHITECTURE # cc3200 or esp8266
+mgos init --arch ARCHITECTURE # cc3200 or esp8266
 ```
 
-That command creates a `miot.yml` configuration file with various
+That command creates a `mgos.yml` configuration file with various
 build settings, which you can alter later if needed. Also, a following
 files and directories are created:
 
@@ -22,7 +22,7 @@ files and directories are created:
 Now, as all required files are created, we can build a firmware:
 
 ```sh
-$ miot build
+$ mgos build
 ```
 
 This command packs source and filesystem files and sends them to the
@@ -37,20 +37,20 @@ other build artifacts are also stored in the `build/` directory:
 - `build/gen` - generated header and source files
 
 It is possible to set build flags to customize the build. Flags can be set
-in `miot.yml` file, `build_vars` section. Here is the list of possible
+in `mgos.yml` file, `build_vars` section. Here is the list of possible
 flags, their meaning and their default values:
 
 ```yml
 build_vars:
-  MIOT_DEBUG_UART: 0                  # Enable UART debugging
-  MIOT_ENABLE_RPC: 1                  # Framing protocol for communication.
-  MIOT_ENABLE_RPC_CHANNEL_UART: 1     # Needed for make miot tool to work.
-  MIOT_ENABLE_CONFIG_SERVICE: 1       # Needed for miot config-* commands to work
-  MIOT_ENABLE_DNS_SD: 1               # Enable network discovery
-  MIOT_ENABLE_FILESYSTEM_SERVICE: 1   # Needed for miot ls,put,get to work
-  MIOT_ENABLE_JS: 0                   # Enable JavaScript support
-  MIOT_ENABLE_MQTT: 1                 # Enable MQTT support
-  MIOT_ENABLE_UPDATER: 1              # Enable OTA updates
-  MIOT_ENABLE_UPDATER_RPC: 0          # Enable OTA via mg_rpc framing protocol
-  MIOT_ENABLE_UPDATER_POST: 1         # Enable OTA via HTTP POST
+  MGOS_DEBUG_UART: 0                  # Enable UART debugging
+  MGOS_ENABLE_RPC: 1                  # Framing protocol for communication.
+  MGOS_ENABLE_RPC_CHANNEL_UART: 1     # Needed for make mgos tool to work.
+  MGOS_ENABLE_CONFIG_SERVICE: 1       # Needed for mgos config-* commands to work
+  MGOS_ENABLE_DNS_SD: 1               # Enable network discovery
+  MGOS_ENABLE_FILESYSTEM_SERVICE: 1   # Needed for mgos ls,put,get to work
+  MGOS_ENABLE_JS: 0                   # Enable JavaScript support
+  MGOS_ENABLE_MQTT: 1                 # Enable MQTT support
+  MGOS_ENABLE_UPDATER: 1              # Enable OTA updates
+  MGOS_ENABLE_UPDATER_RPC: 0          # Enable OTA via mg_rpc framing protocol
+  MGOS_ENABLE_UPDATER_POST: 1         # Enable OTA via HTTP POST
 ```

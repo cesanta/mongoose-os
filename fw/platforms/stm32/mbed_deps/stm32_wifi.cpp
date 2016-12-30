@@ -1,6 +1,6 @@
 #include "mbed.h"
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_wifi.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_wifi.h"
 
 static WiFiInterface *s_wifi;
 
@@ -64,14 +64,14 @@ static int init_wifi() {
   return 0;
 }
 
-void miot_wifi_hal_init() {
+void mgos_wifi_hal_init() {
   /*
    * Do nothing here, initializing WiFi only
    * if config requres that (otherwise we can mess up SPI)
    */
 }
 
-int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   /*
    * TODO(alex): C and C++ are different in nested struct/classes terms
    * This conversion works, but ugly. Need something better
@@ -104,28 +104,28 @@ int miot_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   LOG(LL_DEBUG,
       ("Connected to %s, ip=%s", _cfg->ssid, s_wifi->get_ip_address()));
 
-  miot_wifi_on_change_cb(MIOT_WIFI_CONNECTED);
-  miot_wifi_on_change_cb(MIOT_WIFI_IP_ACQUIRED);
+  mgos_wifi_on_change_cb(MGOS_WIFI_CONNECTED);
+  mgos_wifi_on_change_cb(MGOS_WIFI_IP_ACQUIRED);
 
   return 1;
 }
 
-int miot_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   /* TODO(alex): implement */
   return 0;
 }
 
-char *miot_wifi_get_status_str() {
+char *mgos_wifi_get_status_str() {
   /* TODO(alex): implement */
   return NULL;
 }
 
-char *miot_wifi_get_connected_ssid() {
+char *mgos_wifi_get_connected_ssid() {
   /* TODO(alex): implement */
   return NULL;
 }
 
-char *miot_wifi_get_sta_ip() {
+char *mgos_wifi_get_sta_ip() {
   if (s_wifi == NULL) {
     return NULL;
   }
@@ -133,7 +133,7 @@ char *miot_wifi_get_sta_ip() {
   return strdup(s_wifi->get_ip_address());
 }
 
-char *miot_wifi_get_ap_ip() {
+char *mgos_wifi_get_ap_ip() {
   /* TODO(alex): implement */
   return NULL;
 }

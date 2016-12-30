@@ -2,7 +2,7 @@
  * Copyright (c) 2016 Cesanta Software Limited
  * All rights reserved
  *
- * Implements mg_upd interface.defined in miot_updater_hal.h
+ * Implements mg_upd interface.defined in mgos_updater_hal.h
  */
 
 #include <inttypes.h>
@@ -17,15 +17,15 @@
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_updater_hal.h"
-#include "fw/src/miot_updater_util.h"
-#include "fw/src/miot_utils.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_updater_hal.h"
+#include "fw/src/mgos_updater_util.h"
+#include "fw/src/mgos_utils.h"
 
-#if MIOT_ENABLE_UPDATER
+#if MGOS_ENABLE_UPDATER
 
-struct miot_upd_ctx {
+struct mgos_upd_ctx {
   struct json_token *parts;
   int cur_boot_cfg_idx;
   int new_boot_cfg_idx;
@@ -39,17 +39,17 @@ struct miot_upd_ctx {
   const char *status_msg;
 };
 
-struct miot_upd_ctx *miot_upd_ctx_create(void) {
-  struct miot_upd_ctx *ctx = (struct miot_upd_ctx *) calloc(1, sizeof(*ctx));
+struct mgos_upd_ctx *mgos_upd_ctx_create(void) {
+  struct mgos_upd_ctx *ctx = (struct mgos_upd_ctx *) calloc(1, sizeof(*ctx));
   ctx->cur_fh = -1;
   return ctx;
 }
 
-const char *miot_upd_get_status_msg(struct miot_upd_ctx *ctx) {
+const char *mgos_upd_get_status_msg(struct mgos_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-int miot_upd_begin(struct miot_upd_ctx *ctx, struct json_token *parts) {
+int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
   ctx->parts = parts;
   /* We want to make sure device uses boto loader. */
   ctx->cur_boot_cfg_idx = get_active_boot_cfg_idx();
@@ -115,8 +115,8 @@ static void create_fname(struct mg_str pfx, int idx, char *fn, int len) {
   fn[l] = '\0';
 }
 
-static int prepare_to_write(struct miot_upd_ctx *ctx,
-                            const struct miot_upd_file_info *fi,
+static int prepare_to_write(struct mgos_upd_ctx *ctx,
+                            const struct mgos_upd_file_info *fi,
                             const char *fname, uint32_t falloc,
                             struct json_token *part) {
   struct json_token expected_sha1 = JSON_INVALID_TOKEN;
@@ -190,10 +190,10 @@ static int tcmp(const struct json_token *tok, const char *str) {
   return mg_vcmp(&s, str);
 }
 
-enum miot_upd_file_action miot_upd_file_begin(
-    struct miot_upd_ctx *ctx, const struct miot_upd_file_info *fi) {
+enum mgos_upd_file_action mgos_upd_file_begin(
+    struct mgos_upd_ctx *ctx, const struct mgos_upd_file_info *fi) {
   struct mg_str part_name = MG_MK_STR("");
-  enum miot_upd_file_action ret = MIOT_UPDATER_SKIP_FILE;
+  enum mgos_upd_file_action ret = MGOS_UPDATER_SKIP_FILE;
   struct find_part_info find_part_info = {fi->name, &part_name, &ctx->cur_part};
   ctx->cur_part.len = part_name.len = 0;
   json_walk(ctx->parts->ptr, ctx->parts->len, find_part, &find_part_info);
@@ -227,7 +227,7 @@ enum miot_upd_file_action miot_upd_file_begin(
       int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
       if (r < 0) {
         ctx->status_msg = "Could not read current boot cfg";
-        return MIOT_UPDATER_ABORT;
+        return MGOS_UPDATER_ABORT;
       }
       strncpy(ctx->app_image_file, cur_cfg.app_image_file,
               sizeof(ctx->app_image_file));
@@ -237,7 +237,7 @@ enum miot_upd_file_action miot_upd_file_begin(
       fname = ctx->app_image_file;
     } else {
       ctx->status_msg = "Bad/missing app load_addr";
-      ret = MIOT_UPDATER_ABORT;
+      ret = MGOS_UPDATER_ABORT;
     }
   } else if (tcmp(&type, "fs") == 0) {
     json_scanf(
@@ -263,26 +263,26 @@ enum miot_upd_file_action miot_upd_file_begin(
       }
     } else {
       ctx->status_msg = "Missing FS parameters";
-      ret = MIOT_UPDATER_ABORT;
+      ret = MGOS_UPDATER_ABORT;
     }
   }
   if (fname != NULL) {
     int r = prepare_to_write(ctx, fi, fname, falloc, &ctx->cur_part);
     if (r < 0) {
       LOG(LL_ERROR, ("err = %d", r));
-      ret = MIOT_UPDATER_ABORT;
+      ret = MGOS_UPDATER_ABORT;
     } else {
-      ret = (r > 0 ? MIOT_UPDATER_PROCESS_FILE : MIOT_UPDATER_SKIP_FILE);
+      ret = (r > 0 ? MGOS_UPDATER_PROCESS_FILE : MGOS_UPDATER_SKIP_FILE);
     }
   }
-  if (ret == MIOT_UPDATER_SKIP_FILE) {
+  if (ret == MGOS_UPDATER_SKIP_FILE) {
     DBG(("Skipping %s %.*s", fi->name, (int) part_name.len, part_name.p));
   }
   return ret;
 }
 
-int miot_upd_file_data(struct miot_upd_ctx *ctx,
-                       const struct miot_upd_file_info *fi,
+int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
+                       const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
   _i32 r = sl_FsWrite(ctx->cur_fh, fi->processed, (_u8 *) data.p, data.len);
   if (r != data.len) {
@@ -292,8 +292,8 @@ int miot_upd_file_data(struct miot_upd_ctx *ctx,
   return r;
 }
 
-int miot_upd_file_end(struct miot_upd_ctx *ctx,
-                      const struct miot_upd_file_info *fi) {
+int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
+                      const struct mgos_upd_file_info *fi) {
   int r = 1;
   if (ctx->cur_fn == (_u8 *) ctx->fs_container_file) {
     int ret = fs_write_meta(ctx->cur_fh, FS_INITIAL_SEQ, ctx->fs_size,
@@ -321,7 +321,7 @@ int miot_upd_file_end(struct miot_upd_ctx *ctx,
   return r;
 }
 
-int miot_upd_finalize(struct miot_upd_ctx *ctx) {
+int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
   struct boot_cfg cur_cfg, new_cfg;
   int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
   if (r < 0) {
@@ -365,7 +365,7 @@ int miot_upd_finalize(struct miot_upd_ctx *ctx) {
   return 1;
 }
 
-void miot_upd_ctx_free(struct miot_upd_ctx *ctx) {
+void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
   if (ctx == NULL) return;
   if (ctx->cur_fh >= 0) sl_FsClose(ctx->cur_fh, NULL, NULL, 0);
   if (ctx->cur_fn != NULL) sl_FsDel(ctx->cur_fn, 0);
@@ -373,7 +373,7 @@ void miot_upd_ctx_free(struct miot_upd_ctx *ctx) {
   free(ctx);
 }
 
-void miot_upd_boot_revert() {
+void mgos_upd_boot_revert() {
   int boot_cfg_idx = g_boot_cfg_idx;
   struct boot_cfg *cfg = &g_boot_cfg;
   if (!cfg->flags & BOOT_F_FIRST_BOOT) return;
@@ -381,20 +381,20 @@ void miot_upd_boot_revert() {
   /* Tombstone the current config. */
   cfg->seq = BOOT_CFG_TOMBSTONE_SEQ;
   write_boot_cfg(cfg, boot_cfg_idx);
-  miot_system_restart(0);
+  mgos_system_restart(0);
 }
 
-void miot_upd_boot_commit() {
+void mgos_upd_boot_commit() {
   int boot_cfg_idx = g_boot_cfg_idx;
   struct boot_cfg *cfg = &g_boot_cfg;
   if (!cfg->flags & BOOT_F_FIRST_BOOT) return;
   cfg->flags &= ~(BOOT_F_FIRST_BOOT);
   int r = write_boot_cfg(cfg, boot_cfg_idx);
-  if (r < 0) miot_upd_boot_revert();
+  if (r < 0) mgos_upd_boot_revert();
   LOG(LL_INFO, ("Committed cfg %d, seq 0x%llx", boot_cfg_idx, cfg->seq));
 }
 
-int miot_upd_apply_update() {
+int mgos_upd_apply_update() {
   int boot_cfg_idx = g_boot_cfg_idx;
   struct boot_cfg *cfg = &g_boot_cfg;
   if (cfg->flags & BOOT_F_MERGE_SPIFFS) {
@@ -405,7 +405,7 @@ int miot_upd_apply_update() {
     struct mount_info old_fs;
     r = fs_mount(old_boot_cfg.fs_container_prefix, &old_fs);
     if (r < 0) return r;
-    r = miot_upd_merge_spiffs(&old_fs.fs);
+    r = mgos_upd_merge_spiffs(&old_fs.fs);
     if (r < 0) return r;
     fs_umount(&old_fs);
     cc3200_fs_flush();
@@ -414,4 +414,4 @@ int miot_upd_apply_update() {
   return 0;
 }
 
-#endif /* MIOT_ENABLE_UPDATER */
+#endif /* MGOS_ENABLE_UPDATER */

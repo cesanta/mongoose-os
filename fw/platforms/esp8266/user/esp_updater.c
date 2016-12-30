@@ -2,7 +2,7 @@
  * Copyright (c) 2016 Cesanta Software Limited
  * All rights reserved
  *
- * Implements mg_upd interface.defined in miot_updater_hal.h
+ * Implements mg_upd interface.defined in mgos_updater_hal.h
  */
 
 #include <inttypes.h>
@@ -14,12 +14,12 @@
 #include "common/queue.h"
 #include "common/spiffs/spiffs.h"
 #include "fw/platforms/esp8266/user/esp_fs.h"
-#include "fw/src/miot_console.h"
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_updater_rpc.h"
-#include "fw/src/miot_updater_hal.h"
-#include "fw/src/miot_updater_util.h"
+#include "fw/src/mgos_console.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_updater_rpc.h"
+#include "fw/src/mgos_updater_hal.h"
+#include "fw/src/mgos_updater_util.h"
 
 #define SHA1SUM_LEN 40
 #define FW_SLOT_SIZE 0x100000
@@ -61,7 +61,7 @@ struct part_info {
   };
 };
 
-struct miot_upd_ctx {
+struct mgos_upd_ctx {
   struct part_info fw_part;
   struct part_info fs_part;
   struct part_info fs_dir_part;
@@ -91,15 +91,15 @@ uint32_t get_fs_size(uint8_t rom) {
   return get_rboot_config()->fs_sizes[rom];
 }
 
-struct miot_upd_ctx *miot_upd_ctx_create(void) {
-  return calloc(1, sizeof(struct miot_upd_ctx));
+struct mgos_upd_ctx *mgos_upd_ctx_create(void) {
+  return calloc(1, sizeof(struct mgos_upd_ctx));
 }
 
-const char *miot_upd_get_status_msg(struct miot_upd_ctx *ctx) {
+const char *mgos_upd_get_status_msg(struct mgos_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-static int fill_file_part_info(struct miot_upd_ctx *ctx, struct json_token *tok,
+static int fill_file_part_info(struct mgos_upd_ctx *ctx, struct json_token *tok,
                                const char *part_name, struct part_info *pi) {
   pi->type = ptNone;
 
@@ -235,7 +235,7 @@ static int compare_digest(spiffs *fs, const char *file_name,
 
 int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum);
 
-int miot_upd_begin(struct miot_upd_ctx *ctx, struct json_token *parts) {
+int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
   const rboot_config *cfg = get_rboot_config();
   struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN,
                     fs_dir = JSON_INVALID_TOKEN;
@@ -298,7 +298,7 @@ int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
     addr += to_read;
     len -= to_read;
 
-    miot_wdt_feed();
+    mgos_wdt_feed();
   }
 
   cs_sha1_final(read_buf, &ctx);
@@ -314,8 +314,8 @@ int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
   }
 }
 
-static int prepare_to_write(struct miot_upd_ctx *ctx,
-                            const struct miot_upd_file_info *fi,
+static int prepare_to_write(struct mgos_upd_ctx *ctx,
+                            const struct mgos_upd_file_info *fi,
                             struct part_info *part) {
   if (part->done != 0) {
     LOG(LL_DEBUG, ("Skipping %s", fi->name));
@@ -360,7 +360,7 @@ struct file_info *get_file_info_from_manifest(struct part_info *pi,
   return NULL;
 }
 
-int miot_upd_get_next_file(struct miot_upd_ctx *ctx, char *buf,
+int mgos_upd_get_next_file(struct mgos_upd_ctx *ctx, char *buf,
                            size_t buf_size) {
   if (ctx->fw_part.done == 0) {
     if (ctx->fw_part.type == ptNone) {
@@ -396,7 +396,7 @@ int miot_upd_get_next_file(struct miot_upd_ctx *ctx, char *buf,
 }
 
 /* 0 - no files to process, 1 - there are files to proceed */
-int miot_upd_complete_file_update(struct miot_upd_ctx *ctx,
+int mgos_upd_complete_file_update(struct mgos_upd_ctx *ctx,
                                   const char *file_name) {
   struct file_info *fi, *fi_temp;
   SLIST_FOREACH_SAFE(fi, &ctx->fs_dir_part.files.fhead, entries, fi_temp) {
@@ -412,8 +412,8 @@ int miot_upd_complete_file_update(struct miot_upd_ctx *ctx,
   return !SLIST_EMPTY(&ctx->fs_dir_part.files.fhead);
 }
 
-enum miot_upd_file_action miot_upd_file_begin(
-    struct miot_upd_ctx *ctx, const struct miot_upd_file_info *fi) {
+enum mgos_upd_file_action mgos_upd_file_begin(
+    struct mgos_upd_ctx *ctx, const struct mgos_upd_file_info *fi) {
   int ret;
   ctx->status_msg = "Failed to update file";
   LOG(LL_DEBUG, ("fi->name=%s", fi->name));
@@ -430,20 +430,20 @@ enum miot_upd_file_action miot_upd_file_begin(
     if (mfi->file < 0) {
       LOG(LL_ERROR, ("Cannot open file %s (%d)", mfi->file_name,
                      SPIFFS_errno(&ctx->fs_dir_part.files.fs)));
-      return MIOT_UPDATER_ABORT;
+      return MGOS_UPDATER_ABORT;
     }
     ctx->current_part->files.current_file = mfi;
 
-    return MIOT_UPDATER_PROCESS_FILE;
+    return MGOS_UPDATER_PROCESS_FILE;
   } else {
     /* We need only fw & fs files, the rest just send to /dev/null */
-    return MIOT_UPDATER_SKIP_FILE;
+    return MGOS_UPDATER_SKIP_FILE;
   }
-  if (ret < 0) return MIOT_UPDATER_ABORT;
-  return (ret == 0 ? MIOT_UPDATER_SKIP_FILE : MIOT_UPDATER_PROCESS_FILE);
+  if (ret < 0) return MGOS_UPDATER_ABORT;
+  return (ret == 0 ? MGOS_UPDATER_SKIP_FILE : MGOS_UPDATER_PROCESS_FILE);
 }
 
-static int prepare_flash(struct miot_upd_ctx *ctx, uint32_t bytes_to_write) {
+static int prepare_flash(struct mgos_upd_ctx *ctx, uint32_t bytes_to_write) {
   while (ctx->current_write_address + bytes_to_write > ctx->erased_till) {
     uint32_t sec_no = ctx->erased_till / FLASH_SECTOR_SIZE;
 
@@ -470,8 +470,8 @@ static int prepare_flash(struct miot_upd_ctx *ctx, uint32_t bytes_to_write) {
   return 1;
 }
 
-int miot_upd_file_data(struct miot_upd_ctx *ctx,
-                       const struct miot_upd_file_info *fi,
+int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
+                       const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
   LOG(LL_DEBUG, ("File size: %u, received: %u to_write: %u", fi->size,
                  fi->processed, data.len));
@@ -538,8 +538,8 @@ int miot_upd_file_data(struct miot_upd_ctx *ctx,
   return bytes_processed;
 }
 
-int miot_upd_file_end(struct miot_upd_ctx *ctx,
-                      const struct miot_upd_file_info *fi) {
+int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
+                      const struct mgos_upd_file_info *fi) {
   if (ctx->current_part->type == ptFILES) {
     LOG(LL_DEBUG,
         ("File %s updated", ctx->current_part->files.current_file->file_name));
@@ -564,7 +564,7 @@ int miot_upd_file_end(struct miot_upd_ctx *ctx,
   }
 }
 
-int miot_upd_finalize(struct miot_upd_ctx *ctx) {
+int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
   if (!ctx->fw_part.done) {
     ctx->status_msg = "Missing fw part";
     return -1;
@@ -611,11 +611,11 @@ int miot_upd_finalize(struct miot_upd_ctx *ctx) {
   return 1;
 }
 
-void miot_upd_ctx_free(struct miot_upd_ctx *ctx) {
+void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
   free(ctx);
 }
 
-int miot_upd_apply_update() {
+int mgos_upd_apply_update() {
   rboot_config *cfg = get_rboot_config();
   uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
   uint8_t spiffs_fds[32 * 2];
@@ -630,14 +630,14 @@ int miot_upd_apply_update() {
     return -1;
   }
 
-  ret = miot_upd_merge_spiffs(&old_fs);
+  ret = mgos_upd_merge_spiffs(&old_fs);
 
   SPIFFS_unmount(&old_fs);
 
   return ret;
 }
 
-void miot_upd_boot_commit() {
+void mgos_upd_boot_commit() {
   rboot_config *cfg = get_rboot_config();
   if (!cfg->fw_updated) return;
   LOG(LL_INFO, ("Committing ROM %d", cfg->current_rom));
@@ -645,7 +645,7 @@ void miot_upd_boot_commit() {
   rboot_set_config(cfg);
 }
 
-void miot_upd_boot_revert() {
+void mgos_upd_boot_revert() {
   rboot_config *cfg = get_rboot_config();
   if (!cfg->fw_updated) return;
   LOG(LL_INFO, ("Update failed, reverting to ROM %d", cfg->previous_rom));

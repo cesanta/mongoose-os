@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-int miot_pwm_set(int pin, int period, int duty) {
+int mgos_pwm_set(int pin, int period, int duty) {
   (void) pin;
   (void) period;
   (void) duty;

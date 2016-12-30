@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_features.h"
+#include "fw/src/mgos_features.h"
 
-#if MIOT_ENABLE_JS && MIOT_ENABLE_SPI_API
+#if MGOS_ENABLE_JS && MGOS_ENABLE_SPI_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,7 +18,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "fw/src/miot_spi.h"
+#include "fw/src/mgos_spi.h"
 #include "v7/v7.h"
 
 struct lnx_spi_connection {
@@ -123,7 +123,7 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
 }
 
 /* HAL functions */
-enum v7_err miot_spi_create(struct v7 *v7, spi_connection *res) {
+enum v7_err mgos_spi_create(struct v7 *v7, spi_connection *res) {
   enum v7_err rcode = V7_OK;
   struct lnx_spi_connection *conn = NULL;
   v7_val_t spi_no_val = v7_arg(v7, 0);
@@ -145,10 +145,10 @@ clean:
   return rcode;
 }
 
-void miot_spi_close(spi_connection c) {
+void mgos_spi_close(spi_connection c) {
   struct lnx_spi_connection *conn = (struct lnx_spi_connection *) c;
   close(conn->fd);
   free(c);
 }
 
-#endif /* MIOT_ENABLE_JS && MIOT_ENABLE_SPI_API */
+#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_SPI_API */

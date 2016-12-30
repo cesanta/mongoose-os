@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/miot_uart.h"
+#include "fw/src/mgos_uart.h"
 
 #include <xc.h>
 
@@ -29,16 +29,16 @@
 
 static DRV_HANDLE def_uart;
 
-enum miot_init_result miot_set_stdout_uart(int uart_no) {
-  if (uart_no <= 0) return MIOT_INIT_OK;
+enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
+  if (uart_no <= 0) return MGOS_INIT_OK;
   /* TODO */
-  return MIOT_INIT_UART_FAILED;
+  return MGOS_INIT_UART_FAILED;
 }
 
-enum miot_init_result miot_set_stderr_uart(int uart_no) {
-  if (uart_no <= 0) return MIOT_INIT_OK;
+enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
+  if (uart_no <= 0) return MGOS_INIT_OK;
   /* TODO */
-  return MIOT_INIT_UART_FAILED;
+  return MGOS_INIT_UART_FAILED;
 }
 
 void pic32_uart_init(void) {

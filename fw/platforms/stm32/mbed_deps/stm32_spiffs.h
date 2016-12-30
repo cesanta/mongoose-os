@@ -10,7 +10,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int miot_stm32_init_spiffs_init();
+int mgos_stm32_init_spiffs_init();
 
 #ifdef __cplusplus
 }

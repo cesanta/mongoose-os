@@ -14,23 +14,23 @@
 #include "nvs_flash.h"
 
 #include "common/cs_dbg.h"
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_init.h"
-#include "fw/src/miot_mongoose.h"
-#include "fw/src/miot_sys_config.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_init.h"
+#include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_sys_config.h"
 
 #include "fw/platforms/esp32/src/esp32_console.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
-#define MIOT_TASK_STACK_SIZE 8192
-#define MIOT_TASK_QUEUE_LENGTH 32
+#define MGOS_TASK_STACK_SIZE 8192
+#define MGOS_TASK_QUEUE_LENGTH 32
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
 /* From esp32_wifi.c */
 esp_err_t wifi_event_handler(system_event_t *event);
-bool miot_wifi_set_config(const struct sys_config_wifi *cfg);
+bool mgos_wifi_set_config(const struct sys_config_wifi *cfg);
 
 esp_err_t event_handler(void *ctx, system_event_t *event) {
   switch (event->event_id) {
@@ -48,18 +48,18 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
   return ESP_OK;
 }
 
-enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
-  return miot_wifi_set_config(&cfg->wifi) ? MIOT_INIT_OK
-                                          : MIOT_INIT_CONFIG_WIFI_INIT_FAILED;
+enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
+  return mgos_wifi_set_config(&cfg->wifi) ? MGOS_INIT_OK
+                                          : MGOS_INIT_CONFIG_WIFI_INIT_FAILED;
 }
 
-struct miot_event {
-  miot_cb_t cb;
+struct mgos_event {
+  mgos_cb_t cb;
   void *arg;
 };
 
-static enum miot_init_result esp32_miot_init() {
-  enum miot_init_result r;
+static enum mgos_init_result esp32_mgos_init() {
+  enum mgos_init_result r;
 
   /* Enable WDT for this task. It will be fed by Mongoose polling loop. */
   esp_task_wdt_feed();
@@ -67,35 +67,35 @@ static enum miot_init_result esp32_miot_init() {
   mongoose_init();
 
   r = esp32_console_init();
-  if (r != MIOT_INIT_OK) return r;
+  if (r != MGOS_INIT_OK) return r;
 
-  if (strcmp(MIOT_APP, "mongoose-iot") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MIOT_APP, build_version, build_id));
+  if (strcmp(MGOS_APP, "mongoose-iot") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
   LOG(LL_INFO,
       ("Mongoose IoT Firmware %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("Task ID: %p, RAM: %u free", xTaskGetCurrentTaskHandle(),
-                miot_get_free_heap_size()));
+                mgos_get_free_heap_size()));
 
-  if (esp32_fs_init() != MIOT_INIT_OK) {
+  if (esp32_fs_init() != MGOS_INIT_OK) {
     LOG(LL_ERROR, ("Failed to mount FS"));
-    return MIOT_INIT_FS_INIT_FAILED;
+    return MGOS_INIT_FS_INIT_FAILED;
   }
 
-  if ((r = miot_init()) != MIOT_INIT_OK) return r;
+  if ((r = mgos_init()) != MGOS_INIT_OK) return r;
 
-  return MIOT_INIT_OK;
+  return MGOS_INIT_OK;
 }
 
 static QueueHandle_t s_main_queue;
 
-void miot_task(void *arg) {
-  struct miot_event e;
-  s_main_queue = xQueueCreate(MIOT_TASK_QUEUE_LENGTH, sizeof(e));
+void mgos_task(void *arg) {
+  struct mgos_event e;
+  s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(e));
 
-  enum miot_init_result r = esp32_miot_init();
-  if (r != MIOT_INIT_OK) {
-    LOG(LL_ERROR, ("MIOT init failed: %d", r));
+  enum mgos_init_result r = esp32_mgos_init();
+  if (r != MGOS_INIT_OK) {
+    LOG(LL_ERROR, ("MGOS init failed: %d", r));
     abort();
   }
 
@@ -109,8 +109,8 @@ void miot_task(void *arg) {
   (void) arg;
 }
 
-bool IRAM_ATTR miot_invoke_cb(miot_cb_t cb, void *arg) {
-  struct miot_event e = {.cb = cb, .arg = arg};
+bool IRAM_ATTR mgos_invoke_cb(mgos_cb_t cb, void *arg) {
+  struct mgos_event e = {.cb = cb, .arg = arg};
   int should_yield = false;
   if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
     return false;
@@ -129,5 +129,5 @@ void app_main(void) {
   tcpip_adapter_init();
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
   TaskHandle_t th;
-  xTaskCreate(miot_task, "miot", MIOT_TASK_STACK_SIZE, NULL, 5, &th);
+  xTaskCreate(mgos_task, "mgos", MGOS_TASK_STACK_SIZE, NULL, 5, &th);
 }

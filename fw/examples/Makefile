@@ -8,7 +8,7 @@ EXAMPLES_esp8266 = c_heater c_hello c_mcast c_mdns c_mqtt c_network c_websocket
 EXAMPLES_pic32 =
 EXAMPLES_stm32 = c_hello c_mqtt
 
-MIOT ?= miot
+MGOS ?= mgos
 
 $(eval EXAMPLES=$(EXAMPLES_$(PLATFORM)))
 
@@ -20,10 +20,10 @@ all: $(EXAMPLES)
 
 $(EXAMPLES):
 	@echo "=== Building $@ / $(PLATFORM)"
-	@cd $@; $(MIOT) build --local --repo ${REPO_ROOT} --arch ${PLATFORM} --clean
+	@cd $@; $(MGOS) build --local --repo ${REPO_ROOT} --arch ${PLATFORM} --clean
 
 clean:
-	echo "TODO: add miot clean"
+	echo "TODO: add mgos clean"
 	@for d in $(EXAMPLES) ; do \
 	  rm -rf $$d/build; \
 	done

@@ -31,8 +31,8 @@
 
 #include "oslib/osi.h"
 
-#include "fw/src/miot_app.h"
-#include "fw/src/miot_hal.h"
+#include "fw/src/mgos_app.h"
+#include "fw/src/mgos_hal.h"
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_exc.h"
@@ -72,15 +72,15 @@ int main(void) {
   cc3200_exc_init();
 
   /* Early init app hook. */
-  miot_app_preinit();
+  mgos_app_preinit();
 
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
   MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
 
-  miot_wdt_set_timeout(5 /* seconds */);
-  miot_wdt_enable();
+  mgos_wdt_set_timeout(5 /* seconds */);
+  mgos_wdt_enable();
 
 #ifdef __TI_COMPILER_VERSION__
   memset(&_heap_start, 0, (char *) &_heap_end - (char *) &_heap_start);

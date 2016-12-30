@@ -9,22 +9,22 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "fw/src/miot_mongoose.h"
-#include "fw/src/miot_prompt.h"
-#include "fw/src/miot_v7_ext.h"
-#include "fw/src/miot_init.h"
-#include "fw/src/miot_prompt.h"
-#include "fw/src/miot_sys_config.h"
+#include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_prompt.h"
+#include "fw/src/mgos_v7_ext.h"
+#include "fw/src/mgos_init.h"
+#include "fw/src/mgos_prompt.h"
+#include "fw/src/mgos_sys_config.h"
 #include "common/cs_dbg.h"
 #include "fw.h"
-#include "fw/src/miot_console.h"
+#include "fw/src/mgos_console.h"
 
 #ifndef JS_FS_ROOT
 #define JS_FS_ROOT "."
 #endif
 
-#if MIOT_ENABLE_JS
-int miot_please_quit;
+#if MGOS_ENABLE_JS
+int mgos_please_quit;
 
 static void set_workdir(const char *argv0) {
   const char *dir = argv0 + strlen(argv0) - 1;
@@ -73,9 +73,9 @@ static void pre_init(struct v7 *v7) {
   init_fw(v7);
 
   mongoose_init();
-  miot_init();
+  mgos_init();
 
-  /* MIOT initialized, enable GC back, and trigger it. */
+  /* MGOS initialized, enable GC back, and trigger it. */
   v7_set_gc_enabled(v7, 1);
   v7_gc(v7, 1);
 
@@ -83,14 +83,14 @@ static void pre_init(struct v7 *v7) {
 }
 
 static void post_init(struct v7 *v7) {
-  miot_prompt_init(v7, 0);
+  mgos_prompt_init(v7, 0);
   do {
     /*
      * Now waiting until mongoose has active connections
      * and there are active gpio ISR and then exiting
      * TODO(alashkin): change this to something smart
      */
-  } while ((mongoose_poll(100) || gpio_poll()) && !miot_please_quit);
+  } while ((mongoose_poll(100) || gpio_poll()) && !mgos_please_quit);
   mongoose_destroy();
 }
 
@@ -120,12 +120,12 @@ static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data) {
 }
 
 void mongoose_schedule_poll(void) {
-  mg_broadcast(miot_get_mgr(), dummy_handler, NULL, 0);
+  mg_broadcast(mgos_get_mgr(), dummy_handler, NULL, 0);
 }
 
-enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
+enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
   cs_log_set_level(cfg->debug.level);
-  return MIOT_INIT_OK;
+  return MGOS_INIT_OK;
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
@@ -136,43 +136,43 @@ void device_get_mac_address(uint8_t mac[6]) {
   }
 }
 
-void miot_uart_dev_set_defaults(struct miot_uart_config *cfg) {
+void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
   (void) cfg;
 }
 
-bool miot_uart_dev_init(struct miot_uart_state *us) {
+bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   (void) us;
   return false;
 }
 
-void miot_uart_dev_deinit(struct miot_uart_state *us) {
+void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
   (void) us;
 }
 
-void miot_uart_dev_dispatch_rx_top(struct miot_uart_state *us) {
+void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   (void) us;
 }
-void miot_uart_dev_dispatch_tx_top(struct miot_uart_state *us) {
+void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   (void) us;
 }
-void miot_uart_dev_dispatch_bottom(struct miot_uart_state *us) {
+void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   (void) us;
 }
 
-void miot_uart_dev_set_rx_enabled(struct miot_uart_state *us, bool enabled) {
+void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   (void) us;
   (void) enabled;
 }
 
-enum miot_init_result miot_set_stdout_uart(int uart_no) {
-  if (uart_no <= 0) return MIOT_INIT_OK;
+enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
+  if (uart_no <= 0) return MGOS_INIT_OK;
   /* TODO */
-  return MIOT_INIT_UART_FAILED;
+  return MGOS_INIT_UART_FAILED;
 }
 
-enum miot_init_result miot_set_stderr_uart(int uart_no) {
-  if (uart_no <= 0) return MIOT_INIT_OK;
+enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
+  if (uart_no <= 0) return MGOS_INIT_OK;
   /* TODO */
-  return MIOT_INIT_UART_FAILED;
+  return MGOS_INIT_UART_FAILED;
 }
 

@@ -1,12 +1,12 @@
 #include <stdio.h>
 
 #include "common/platform.h"
-#include "fw/src/miot_app.h"
-#include "fw/src/miot_gpio.h"
-#include "fw/src/miot_i2c.h"
-#include "fw/src/miot_mqtt.h"
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_wifi.h"
+#include "fw/src/mgos_app.h"
+#include "fw/src/mgos_gpio.h"
+#include "fw/src/mgos_i2c.h"
+#include "fw/src/mgos_mqtt.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_wifi.h"
 
 enum {
   ERROR_UNKNOWN_COMMAND = -1,
@@ -48,7 +48,7 @@ static void gpio_int_handler(int pin, void *arg) {
   static double last = 0;
   double now = mg_time();
   if (now - last > 0.2) {
-    struct mg_connection *c = miot_mqtt_get_global_conn();
+    struct mg_connection *c = mgos_mqtt_get_global_conn();
     last = now;
     if (c != NULL) {
       pub(c, "{type: %Q, pin: %d}", "click", pin);
@@ -64,7 +64,7 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
   if (ev == MG_EV_MQTT_CONNACK) {
     LOG(LL_INFO, ("CONNACK: %d", msg->connack_ret_code));
     if (get_cfg()->mqtt.sub == NULL || get_cfg()->mqtt.pub == NULL) {
-      LOG(LL_ERROR, ("Run 'miot config-set mqtt.sub=... mqtt.pub=...'"));
+      LOG(LL_ERROR, ("Run 'mgos config-set mqtt.sub=... mqtt.pub=...'"));
     } else {
       sub(c, "%s", get_cfg()->mqtt.sub);
     }
@@ -78,19 +78,19 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
     if (json_scanf(s->p, s->len, "{gpio: {pin: %d, state: %d}}", &pin,
                    &state) == 2) {
       /* Set GPIO pin to a given state */
-      miot_gpio_set_mode(pin, MIOT_GPIO_MODE_OUTPUT);
-      miot_gpio_write(pin, (state > 0 ? 1 : 0));
+      mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
+      mgos_gpio_write(pin, (state > 0 ? 1 : 0));
       pub(c, "{type: %Q, pin: %d, state: %d}", "gpio", pin, state);
     } else if (json_scanf(s->p, s->len, "{button: {pin: %d}}", &pin) == 1) {
       /* Report button press on GPIO pin to a publish topic */
-      miot_gpio_set_button_handler(pin, MIOT_GPIO_PULL_UP,
-                                   MIOT_GPIO_INT_EDGE_POS, 50, gpio_int_handler,
+      mgos_gpio_set_button_handler(pin, MGOS_GPIO_PULL_UP,
+                                   MGOS_GPIO_INT_EDGE_POS, 50, gpio_int_handler,
                                    NULL);
       pub(c, "{type: %Q, pin: %d}", "button", pin);
     } else if (json_scanf(s->p, s->len, "{i2c_read: {addr: %d, len: %d}}",
                           &addr, &len) == 2) {
       /* Read from I2C */
-      struct miot_i2c *i2c = miot_i2c_get_global();
+      struct mgos_i2c *i2c = mgos_i2c_get_global();
       if (len <= 0 || len > (int) sizeof(buf)) {
         pub(c, "{error: {code: %d, message: %Q}}",
             ERROR_I2C_READ_LIMIT_EXCEEDED, "Too long read");
@@ -100,9 +100,9 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
       } else {
         enum i2c_ack_type ret;
         asciibuf[0] = '\0';
-        if ((ret = miot_i2c_start(i2c, addr, I2C_READ)) == I2C_ACK) {
+        if ((ret = mgos_i2c_start(i2c, addr, I2C_READ)) == I2C_ACK) {
           memset(buf, 0, sizeof(buf));
-          miot_i2c_read_bytes(i2c, len, (uint8_t *) buf, I2C_ACK);
+          mgos_i2c_read_bytes(i2c, len, (uint8_t *) buf, I2C_ACK);
           for (i = 0; i < len; i++) {
             const char *hex = "0123456789abcdef";
             asciibuf[i * 2] = hex[(((uint8_t *) buf)[i] >> 4) & 0xf];
@@ -110,22 +110,22 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
           }
           asciibuf[i * 2] = '\0';
         }
-        miot_i2c_stop(i2c);
+        mgos_i2c_stop(i2c);
         pub(c, "{type: %Q, status: %d, data: %Q}", "i2c_read", ret, asciibuf);
       }
     } else if (json_scanf(s->p, s->len, "{i2c_write: {data: %T}}", &t) == 1) {
       /* Write byte sequence to I2C. First byte is an address */
-      struct miot_i2c *i2c = miot_i2c_get_global();
+      struct mgos_i2c *i2c = mgos_i2c_get_global();
       if (i2c == NULL) {
         pub(c, "{error: {code: %d, message: %Q}}", ERROR_I2C_NOT_CONFIGURED,
             "I2C is not enabled");
       } else {
-        enum i2c_ack_type ret = miot_i2c_start(i2c, from_hex(t.ptr), I2C_WRITE);
+        enum i2c_ack_type ret = mgos_i2c_start(i2c, from_hex(t.ptr), I2C_WRITE);
         for (int i = 2; i < t.len && ret == I2C_ACK; i += 2) {
-          ret = miot_i2c_send_byte(i2c, from_hex(t.ptr + i));
+          ret = mgos_i2c_send_byte(i2c, from_hex(t.ptr + i));
           LOG(LL_DEBUG, ("i2c -> %02x", from_hex(t.ptr + i)));
         }
-        miot_i2c_stop(i2c);
+        mgos_i2c_stop(i2c);
         pub(c, "{type: %Q, status: %d}", "i2c_write", ret);
       }
     } else {
@@ -135,14 +135,14 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-static void on_wifi_event(enum miot_wifi_status ev, void *data) {
-  if (ev == MIOT_WIFI_IP_ACQUIRED) {
-    miot_mqtt_set_global_handler(ev_handler, NULL);
+static void on_wifi_event(enum mgos_wifi_status ev, void *data) {
+  if (ev == MGOS_WIFI_IP_ACQUIRED) {
+    mgos_mqtt_set_global_handler(ev_handler, NULL);
   }
   (void) data;
 }
 
-enum miot_app_init_result miot_app_init(void) {
-  miot_wifi_add_on_change_cb(on_wifi_event, 0);
-  return MIOT_APP_INIT_SUCCESS;
+enum mgos_app_init_result mgos_app_init(void) {
+  mgos_wifi_add_on_change_cb(on_wifi_event, 0);
+  return MGOS_APP_INIT_SUCCESS;
 }

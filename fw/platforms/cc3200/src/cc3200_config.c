@@ -10,8 +10,8 @@
 #include "simplelink.h"
 #include "netcfg.h"
 
-#include "fw/src/miot_sys_config.h"
-#include "fw/src/miot_wifi.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_wifi.h"
 
 #include "fw/platforms/cc3200/src/cc3200_console.h"
 
@@ -20,15 +20,15 @@ void device_get_mac_address(uint8_t mac[6]) {
   sl_NetCfgGet(SL_MAC_ADDRESS_GET, NULL, &mac_len, mac);
 }
 
-enum miot_init_result miot_sys_config_init_platform(struct sys_config *cfg) {
+enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
   if (cfg->wifi.sta.enable) {
-    if (!miot_wifi_setup_sta(&cfg->wifi.sta)) {
-      return MIOT_INIT_CONFIG_WIFI_INIT_FAILED;
+    if (!mgos_wifi_setup_sta(&cfg->wifi.sta)) {
+      return MGOS_INIT_CONFIG_WIFI_INIT_FAILED;
     }
   } else if (cfg->wifi.ap.enable) {
-    if (!miot_wifi_setup_ap(&cfg->wifi.ap)) {
-      return MIOT_INIT_CONFIG_WIFI_INIT_FAILED;
+    if (!mgos_wifi_setup_ap(&cfg->wifi.ap)) {
+      return MGOS_INIT_CONFIG_WIFI_INIT_FAILED;
     }
   }
-  return MIOT_INIT_OK;
+  return MGOS_INIT_OK;
 }

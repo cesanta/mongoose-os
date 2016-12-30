@@ -6,13 +6,13 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_
 
-#ifndef MIOT_MMAP_SLOTS
-#define MIOT_MMAP_SLOTS 16
+#ifndef MGOS_MMAP_SLOTS
+#define MGOS_MMAP_SLOTS 16
 #endif
 
 #include "common/spiffs/spiffs.h"
 
-#include "fw/src/miot_init.h"
+#include "fw/src/mgos_init.h"
 
 /* LOG_PAGE_SIZE have to be more than SPIFFS_OBJ_NAME_LEN */
 #define LOG_PAGE_SIZE 256
@@ -39,7 +39,7 @@ struct mmap_desc {
   uint32_t *blocks; /* pages long */
 };
 
-extern struct mmap_desc mmap_descs[MIOT_MMAP_SLOTS];
+extern struct mmap_desc mmap_descs[MGOS_MMAP_SLOTS];
 
 void fs_flush_stderr(void);
 int fs_init(uint32_t addr, uint32_t size);
@@ -48,8 +48,8 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
 spiffs *get_fs(void);
 void fs_umount(void);
 
-enum miot_init_result esp_console_init();
-enum miot_init_result esp_set_stdout_uart(int uart_no);
-enum miot_init_result esp_set_stderr_uart(int uart_no);
+enum mgos_init_result esp_console_init();
+enum mgos_init_result esp_set_stdout_uart(int uart_no);
+enum mgos_init_result esp_set_stderr_uart(int uart_no);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_ */

@@ -10,17 +10,17 @@
 #include "pic32_uart.h"
 #include "pic32_ethernet.h"
 #include "common/cs_dbg.h"
-#include "fw/src/miot_init.h"
-#include "fw/src/miot_mongoose.h"
-#include "fw/src/miot_sys_config.h"
+#include "fw/src/mgos_init.h"
+#include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_sys_config.h"
 
 void APP_Initialize(void) {
   pic32_ethernet_init();
   pic32_uart_init();
   mongoose_init();
 
-  enum miot_init_result ir = miot_init();
-  if (ir != MIOT_INIT_OK) {
+  enum mgos_init_result ir = mgos_init();
+  if (ir != MGOS_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
   }
 }

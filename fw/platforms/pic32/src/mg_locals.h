@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_PIC32_SRC_MIOT_LOCALS_H_
-#define CS_FW_PLATFORMS_PIC32_SRC_MIOT_LOCALS_H_
+#ifndef CS_FW_PLATFORMS_PIC32_SRC_MGOS_LOCALS_H_
+#define CS_FW_PLATFORMS_PIC32_SRC_MGOS_LOCALS_H_
 
 /* TODO */
 #if 0
@@ -14,4 +14,4 @@
 #define MG_UART_CHAR_PUT(fd, c) pic32_console_putc(fd, c)
 #endif
 
-#endif /* CS_FW_PLATFORMS_PIC32_SRC_MIOT_LOCALS_H_ */
+#endif /* CS_FW_PLATFORMS_PIC32_SRC_MGOS_LOCALS_H_ */

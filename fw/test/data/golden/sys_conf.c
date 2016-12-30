@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include "sys_conf.h"
 
-const struct miot_conf_entry sys_conf_schema_[16] = {
+const struct mgos_conf_entry sys_conf_schema_[16] = {
   {.type = CONF_TYPE_OBJECT, .key = "", .num_desc = 15},
   {.type = CONF_TYPE_OBJECT, .key = "wifi", .num_desc = 8},
   {.type = CONF_TYPE_OBJECT, .key = "sta", .num_desc = 2},
@@ -22,6 +22,6 @@ const struct miot_conf_entry sys_conf_schema_[16] = {
   {.type = CONF_TYPE_STRING, .key = "dest", .offset = offsetof(struct sys_conf, debug.dest)},
 };
 
-const struct miot_conf_entry *sys_conf_schema() {
+const struct mgos_conf_entry *sys_conf_schema() {
   return sys_conf_schema_;
 }

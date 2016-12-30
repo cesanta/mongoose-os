@@ -14,7 +14,7 @@
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#include "fw/src/miot_gpio.h"
+#include "fw/src/mgos_gpio.h"
 #include "fw/platforms/esp8266/user/esp_gpio.h"
 #include "fw/platforms/esp8266/user/esp_periph.h"
 
@@ -140,7 +140,7 @@ static void pwm_configure_timer(void) {
   ETS_FRC1_INTR_ENABLE();
 }
 
-int miot_pwm_set(int pin, int period, int duty) {
+int mgos_pwm_set(int pin, int period, int duty) {
   struct pwm_info *p;
 
   if (pin != 16 && get_gpio_info(pin) == NULL) {
@@ -166,7 +166,7 @@ int miot_pwm_set(int pin, int period, int duty) {
     if (p != NULL) {
       remove_pwm_info(p);
       pwm_configure_timer();
-      miot_gpio_write(pin, 0);
+      mgos_gpio_write(pin, 0);
     }
     return 1;
   }
@@ -175,7 +175,7 @@ int miot_pwm_set(int pin, int period, int duty) {
     return 1;
   }
 
-  miot_gpio_set_mode(pin, MIOT_GPIO_MODE_OUTPUT);
+  mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
 
   ETS_FRC1_INTR_DISABLE();
   p->period = period;
@@ -183,12 +183,12 @@ int miot_pwm_set(int pin, int period, int duty) {
   if (p->cnt == 0 || p->cnt > (uint32_t) period) {
     p->val = 1;
     p->cnt = p->duty;
-    miot_gpio_write(pin, p->val);
+    mgos_gpio_write(pin, p->val);
   }
   ETS_FRC1_INTR_ENABLE();
 
   if (duty == 0 || period == duty) {
-    miot_gpio_write(pin, (period == duty));
+    mgos_gpio_write(pin, (period == duty));
   }
 
   pwm_configure_timer();

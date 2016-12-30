@@ -19,21 +19,21 @@
 #include <lwip/udp.h>
 
 #include "common/cs_dbg.h"
-#include "fw/src/miot_hal.h"
-#include "fw/src/miot_mongoose.h"
+#include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_mongoose.h"
 
 #include "fw/platforms/esp8266/user/esp_task.h"
 
-#ifndef MIOT_TASK_PRIORITY
-#define MIOT_TASK_PRIORITY 1
+#ifndef MGOS_TASK_PRIORITY
+#define MGOS_TASK_PRIORITY 1
 #endif
 
-#ifndef MIOT_TASK_QUEUE_LEN
-#define MIOT_TASK_QUEUE_LEN 16
+#ifndef MGOS_TASK_QUEUE_LEN
+#define MGOS_TASK_QUEUE_LEN 16
 #endif
 
-#ifndef MIOT_POLL_INTERVAL_MS
-#define MIOT_POLL_INTERVAL_MS 1000
+#ifndef MGOS_POLL_INTERVAL_MS
+#define MGOS_POLL_INTERVAL_MS 1000
 #endif
 
 #define SIG_MASK 0x80000000
@@ -41,24 +41,24 @@
 #define SIG_INVOKE_CB 0x80000000
 
 static os_timer_t s_poll_tmr;
-static os_event_t s_mg_task_queue[MIOT_TASK_QUEUE_LEN];
+static os_event_t s_mg_task_queue[MGOS_TASK_QUEUE_LEN];
 static int poll_scheduled = 0;
 static int s_suspended = 0;
 
 void IRAM mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   if (poll_scheduled) return;
-  if (system_os_post(MIOT_TASK_PRIORITY, SIG_MG_POLL, (uint32_t) mgr)) {
+  if (system_os_post(MGOS_TASK_PRIORITY, SIG_MG_POLL, (uint32_t) mgr)) {
     poll_scheduled = 1;
   }
 }
 
-void miot_poll_timer_cb(void *arg) {
+void mgos_poll_timer_cb(void *arg) {
   struct mg_mgr *mgr = (struct mg_mgr *) arg;
   DBG(("poll tmr %p %p", s_mg_task_queue, mgr));
   mg_lwip_mgr_schedule_poll(mgr);
 }
 
-IRAM bool miot_invoke_cb(miot_cb_t cb, void *arg) {
+IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
   /*
    * Note: since this can be invoked from ISR, we must not allocate memory here.
    * We use signal number and set the upper bit, which is always zero anyway
@@ -66,13 +66,13 @@ IRAM bool miot_invoke_cb(miot_cb_t cb, void *arg) {
    */
   uint32_t sig = (uint32_t) cb;
   sig |= SIG_INVOKE_CB;
-  if (!system_os_post(MIOT_TASK_PRIORITY, sig, (uint32_t) arg)) {
+  if (!system_os_post(MGOS_TASK_PRIORITY, sig, (uint32_t) arg)) {
     return false;
   }
   return true;
 }
 
-static void miot_lwip_task(os_event_t *e) {
+static void mgos_lwip_task(os_event_t *e) {
   struct mg_mgr *mgr = NULL;
   poll_scheduled = 0;
   switch (e->sig & SIG_MASK) {
@@ -81,7 +81,7 @@ static void miot_lwip_task(os_event_t *e) {
       break;
     }
     case SIG_INVOKE_CB: {
-      miot_cb_t cb = (miot_cb_t)(e->sig & ~SIG_MASK);
+      mgos_cb_t cb = (mgos_cb_t)(e->sig & ~SIG_MASK);
       cb((void *) e->par);
       break;
     }
@@ -104,13 +104,13 @@ static void miot_lwip_task(os_event_t *e) {
       }
     }
     uint32_t timeout_ms = mg_lwip_get_poll_delay_ms(mgr);
-    if (timeout_ms > MIOT_POLL_INTERVAL_MS) timeout_ms = MIOT_POLL_INTERVAL_MS;
+    if (timeout_ms > MGOS_POLL_INTERVAL_MS) timeout_ms = MGOS_POLL_INTERVAL_MS;
     os_timer_disarm(&s_poll_tmr);
     os_timer_arm(&s_poll_tmr, timeout_ms, 0 /* no repeat */);
   }
 }
 
-void miot_suspend(void) {
+void mgos_suspend(void) {
   /*
    * We need to complete all pending operation, here we just set flag
    * and lwip task will disable itself once all data is sent
@@ -118,23 +118,23 @@ void miot_suspend(void) {
   s_suspended = 1;
 }
 
-void miot_resume(void) {
+void mgos_resume(void) {
   if (!s_suspended) {
     return;
   }
 
   s_suspended = 0;
-  os_timer_arm(&s_poll_tmr, MIOT_POLL_INTERVAL_MS, 0 /* no repeat */);
+  os_timer_arm(&s_poll_tmr, MGOS_POLL_INTERVAL_MS, 0 /* no repeat */);
 }
 
-int miot_is_suspended(void) {
+int mgos_is_suspended(void) {
   return s_suspended;
 }
 
 void esp_mg_task_init() {
-  system_os_task(miot_lwip_task, MIOT_TASK_PRIORITY, s_mg_task_queue,
-                 MIOT_TASK_QUEUE_LEN);
-  os_timer_setfn(&s_poll_tmr, miot_poll_timer_cb, miot_get_mgr());
+  system_os_task(mgos_lwip_task, MGOS_TASK_PRIORITY, s_mg_task_queue,
+                 MGOS_TASK_QUEUE_LEN);
+  os_timer_setfn(&s_poll_tmr, mgos_poll_timer_cb, mgos_get_mgr());
 }
 
 #endif /* ESP_ENABLE_MG_LWIP_IF */
