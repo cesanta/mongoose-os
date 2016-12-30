@@ -14,6 +14,10 @@
 #define MIOT_ENABLE_GPIO_SERVICE 0
 #endif
 
+#ifndef MIOT_ENABLE_I2C_SERVICE
+#define MIOT_ENABLE_I2C_SERVICE 0
+#endif
+
 #ifndef MIOT_ENABLE_RPC
 #define MIOT_ENABLE_RPC 0
 #endif

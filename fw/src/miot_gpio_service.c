@@ -5,9 +5,6 @@
 
 #include <stdlib.h>
 
-#include "common/cs_dirent.h"
-#include "common/cs_file.h"
-#include "common/json_utils.h"
 #include "common/mg_str.h"
 #include "fw/src/miot_gpio.h"
 #include "fw/src/miot_rpc.h"

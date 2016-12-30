@@ -19,7 +19,7 @@ void miot_i2c_read_bytes(struct miot_i2c *c, size_t n, uint8_t *buf,
   }
 }
 
-enum i2c_ack_type miot_i2c_send_bytes(struct miot_i2c *c, uint8_t *buf,
+enum i2c_ack_type miot_i2c_send_bytes(struct miot_i2c *c, const uint8_t *buf,
                                       size_t buf_size) {
   enum i2c_ack_type ack_type = I2C_NAK;
 
@@ -35,6 +35,66 @@ enum i2c_ack_type miot_i2c_send_bytes(struct miot_i2c *c, uint8_t *buf,
   }
 
   return ack_type;
+}
+
+static bool miot_i2c_write_reg_addr(struct miot_i2c *conn, uint16_t addr,
+                                    uint8_t reg) {
+  bool res = false;
+  bool started = false;
+  if (miot_i2c_start(conn, addr, I2C_WRITE) != I2C_ACK) goto out;
+  started = true;
+  res = (miot_i2c_send_byte(conn, reg) == I2C_ACK);
+out:
+  if (started && !res) miot_i2c_stop(conn);
+  return res;
+}
+
+static bool miot_i2c_read_reg_n(struct miot_i2c *conn, uint16_t addr,
+                                uint8_t reg, size_t len, uint8_t *buf) {
+  if (!miot_i2c_write_reg_addr(conn, addr, reg) ||
+      (miot_i2c_start(conn, addr, I2C_READ) != I2C_ACK)) {
+    return false;
+  }
+  miot_i2c_read_bytes(conn, len, buf, I2C_ACK);
+  miot_i2c_stop(conn);
+  return true;
+}
+
+bool miot_i2c_read_reg_b(struct miot_i2c *conn, uint16_t addr, uint8_t reg,
+                         uint8_t *value) {
+  return miot_i2c_read_reg_n(conn, addr, reg, 1, value);
+}
+
+bool miot_i2c_read_reg_w(struct miot_i2c *conn, uint16_t addr, uint8_t reg,
+                         uint16_t *value) {
+  uint8_t tmp[2];
+  bool res = miot_i2c_read_reg_n(conn, addr, reg, 2, tmp);
+  if (res) {
+    *value = (((uint16_t) tmp[0]) << 8) | tmp[1];
+  } else {
+    *value = 0;
+  }
+  return res;
+}
+
+static bool miot_i2c_write_reg_n(struct miot_i2c *conn, uint16_t addr,
+                                 uint8_t reg, size_t len, const uint8_t *buf) {
+  bool res = false;
+  if (!miot_i2c_write_reg_addr(conn, addr, reg)) return false;
+  res = (miot_i2c_send_bytes(conn, buf, len) == I2C_ACK);
+  miot_i2c_stop(conn);
+  return res;
+}
+
+bool miot_i2c_write_reg_b(struct miot_i2c *conn, uint16_t addr, uint8_t reg,
+                          uint8_t value) {
+  return miot_i2c_write_reg_n(conn, addr, reg, 1, &value);
+}
+
+bool miot_i2c_write_reg_w(struct miot_i2c *conn, uint16_t addr, uint8_t reg,
+                          uint16_t value) {
+  uint8_t tmp[2] = {(uint8_t)(value >> 8), (uint8_t) value};
+  return miot_i2c_write_reg_n(conn, addr, reg, 2, tmp);
 }
 
 enum miot_init_result miot_i2c_init(void) {

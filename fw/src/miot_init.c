@@ -8,6 +8,7 @@
 #include "fw/src/miot_gpio_service.h"
 #include "fw/src/miot_hal.h"
 #include "fw/src/miot_i2c.h"
+#include "fw/src/miot_i2c_service.h"
 #include "fw/src/miot_mdns.h"
 #include "fw/src/miot_mongoose.h"
 #include "fw/src/miot_mqtt.h"
@@ -79,6 +80,10 @@ enum miot_init_result miot_init(void) {
 #if MIOT_ENABLE_I2C
   r = miot_i2c_init();
   if (r != MIOT_INIT_OK) return r;
+#if MIOT_ENABLE_RPC && MIOT_ENABLE_I2C_SERVICE
+  r = miot_i2c_service_init();
+  if (r != MIOT_INIT_OK) return r;
+#endif
 #endif
 
 #if MIOT_ENABLE_ATCA
