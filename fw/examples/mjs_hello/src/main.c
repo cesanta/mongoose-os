@@ -10,40 +10,46 @@
 #include "mjs.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
-/* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
-#define GPIO 2
+#define LED_GPIO 2 /* On ESP-12E there is a blue LED connected to GPIO2  */
+#elif CS_PLATFORM == CS_P_ESP32
+#define LED_GPIO 17 /* No LED on DevKitC, use random GPIO. */
 #elif CS_PLATFORM == CS_P_CC3200
-/* On CC3200 LAUNCHXL pin 64 is the red LED. */
-#define GPIO 64 /* The red LED on LAUNCHXL */
+#define LED_GPIO 64 /* The red LED on LAUNCHXL */
 #elif CS_PLATFORM == CS_P_MBED
-#define GPIO 64
+#define LED_GPIO 0x6D
 #else
 #error Unknown platform
 #endif
 
-static int get_gpio(void) {
-  return GPIO;
+int get_led_gpio_pin(void) {
+  return LED_GPIO;
 }
 
-void *stub_dlsym(void *handle, const char *name) {
+/* Manual symbol resolver */
+void *my_dlsym(void *handle, const char *name) {
   (void) handle;
-  if (strcmp(name, "mgos_gpio_write") == 0) return mgos_gpio_write;
-  if (strcmp(name, "mgos_set_timer") == 0) return mgos_set_timer;
-  if (strcmp(name, "get_gpio") == 0) return get_gpio;
+
+#define EXPORT(s)                        \
+  do {                                   \
+    if (strcmp(name, #s) == 0) return s; \
+  } while (0)
+
+  EXPORT(get_led_gpio_pin);
+  EXPORT(mgos_gpio_set_mode);
+  EXPORT(mgos_gpio_toggle);
+  EXPORT(mgos_gpio_read);
+  EXPORT(mgos_gpio_write);
+  EXPORT(mgos_set_timer);
   return NULL;
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
+  /* Initialize JavaScript engine */
   struct mjs *mjs = mjs_create();
-  mjs_set_ffi_resolver(mjs, stub_dlsym);
-
-  mgos_gpio_set_mode(GPIO, MGOS_GPIO_MODE_OUTPUT);
-
-  mjs_err_t err = mjs_exec_file(mjs, "my.js", NULL);
-
+  mjs_set_ffi_resolver(mjs, my_dlsym);
+  mjs_err_t err = mjs_exec_file(mjs, "init.js", NULL);
   if (err != MJS_OK) {
-    printf("MJS exec error: %s\n", mjs_strerror(mjs, err));
-    return MGOS_APP_INIT_ERROR;
+    LOG(LL_ERROR, ("MJS exec error: %s\n", mjs_strerror(mjs, err)));
   }
 
   return MGOS_APP_INIT_SUCCESS;
