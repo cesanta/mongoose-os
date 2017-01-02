@@ -14,6 +14,7 @@ CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
 LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
+NM := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-nm
 CC_WRAPPER ?=
 
 define link

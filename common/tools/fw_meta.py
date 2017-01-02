@@ -40,6 +40,7 @@ import os
 import re
 import sys
 import zipfile
+import fnmatch
 
 # Debian/Ubuntu: apt-get install python-git
 # PIP: pip install GitPython
@@ -176,6 +177,54 @@ def cmd_gen_build_info(args):
 
     _write_build_info(bi, args)
 
+def cmd_gen_ffi_exports(args):
+    patterns = args.patterns.split()
+    symbols = []
+    with open(args.input) as f:
+        for line in f:
+            m = re.match(r"(\S+)\s+(?P<type>\w)\s+(?P<symbol_name>\w+)", line)
+            if m and m.group('type') == 'T':
+                symbol_name = m.group('symbol_name')
+
+                for p in patterns:
+                    if fnmatch.fnmatch(symbol_name, p):
+                        # A hack: since ffi exports generator doesn't know
+                        # signatures, it just declares all functions as
+                        # `void foo(void)`, but `mgos_dlsym()` is
+                        # declared in `mgos_dlsym.h`, which is included by the
+                        # generated file, so we have to never include it in
+                        # the output, in order to avoid conflicts.
+                        if symbol_name != "mgos_dlsym":
+                            symbols.append(symbol_name)
+                            break
+
+    symbols.sort()
+
+    out = file_or_stdout(args.c_output)
+    print >>out, "/* Auto-generated, do not edit. */\n"
+    print >>out, "/*"
+    print >>out, " * Symbols filtered by the following globs:"
+    for p in patterns:
+        print >>out, " *  ", p
+    print >>out, " */\n"
+    print >>out, "#include \"fw/src/mgos_dlsym.h\"\n"
+
+    # Emit forward declarations of all symbols to be exported
+    print >>out, "/* NOTE: signatures are fake */"
+    for symbol in symbols:
+        print >>out, "void %s(void);" % symbol
+        #print >>out, "extern const void * const %s;" % symbol
+
+    print >>out, """\
+
+struct mgos_ffi_export ffi_exports[] = {"""
+
+    # Emit all symbols
+    for symbol in symbols:
+        print >>out, "  {\"%s\", %s}," % (symbol, symbol)
+
+    print >>out, "};"
+    print >>out, "int ffi_exports_cnt = %d;" % len(symbols)
 
 def cmd_get_build_info(args):
     manifest = json.load(open(args.manifest))
@@ -355,6 +404,13 @@ if __name__ == '__main__':
     gbi_cmd.add_argument('--c_output')
     gbi_cmd.add_argument('--go_output')
     handlers['gen_build_info'] = cmd_gen_build_info
+
+    gfe_desc = "Generate FFI exports file"
+    gfe_cmd = cmd.add_parser('gen_ffi_exports', help=gfe_desc, description=gfe_desc)
+    gfe_cmd.add_argument('--input')
+    gfe_cmd.add_argument('--c_output')
+    gfe_cmd.add_argument('--patterns')
+    handlers['gen_ffi_exports'] = cmd_gen_ffi_exports
 
     gtbi_desc = "Extract build info from manifest"
     gtbi_cmd = cmd.add_parser('get_build_info', help=gtbi_desc, description=gtbi_desc)

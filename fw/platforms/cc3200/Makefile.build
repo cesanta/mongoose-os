@@ -14,6 +14,7 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_SLFS_PATH ?=
 APP_EXTRA_SRCS ?=
+FFI_SYMBOLS ?=
 
 MGOS_ENABLE_ATCA = 0
 MGOS_ENABLE_ATCA_SERVICE = 0
@@ -141,6 +142,9 @@ BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
+SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
@@ -155,6 +159,7 @@ MGOS_SRCS = mgos_gpio.c \
             mgos_timers_mongoose.c \
             mgos_v7_ext.c \
             mgos_config.c mgos_sys_config.c \
+            mgos_dlsym.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             cs_crc32.c \
             cs_frbuf.c mgos_utils.c \
@@ -261,6 +266,7 @@ MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGOS_SRCS)))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
@@ -358,8 +364,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O))
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)
@@ -372,6 +378,13 @@ $(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
 
 $(BUILD_DIR)/%.o: %.asm $(GENFILES_LIST)
 	$(call asm,$(CFLAGS),$<)
+
+$(SYMBOLS_DUMP): $(APP_OBJS) $(MGOS_OBJS)
+	$(vecho) "GEN   $@"
+	$(Q) $(NM) --defined-only --print-file-name -g $^ > $@
+
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
+	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)

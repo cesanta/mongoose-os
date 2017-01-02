@@ -41,16 +41,23 @@ SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 SYS_CONF_SCHEMA =
 
+SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
+
+NM = nm
+
 COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) $(GEN_DIR)
 
 MGOS_SRCS = mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            mgos_timers_mongoose.c mgos_uart.c mgos_utils.c \
+            mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
             esp32_console.c esp32_crypto.c esp32_fs.c esp32_gpio.c esp32_hal.c \
             esp32_main.c esp32_uart.c
 
 include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/fw/src/features.mk
+include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
 SYS_CONF_SCHEMA += $(MGOS_ESP_PATH)/src/esp32_config.yaml
 
@@ -84,7 +91,9 @@ VPATH += $(APP_MODULES)
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-COMPONENT_OBJS = $(addsuffix .o,$(basename $(APP_SRCS) $(MGOS_SRCS)))
+MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS)))
+APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
+COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O)
 CFLAGS += $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
           -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
           -DMGOS_NUM_GPIO=40 \
@@ -95,6 +104,17 @@ CFLAGS += $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
 COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
 
 libsrc.a: $(GEN_DIR)/sys_config.o
+
+$(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
+	$(vecho) "GEN   $@"
+	$(NM) --defined-only --print-file-name -g $^ > $@
+
+$(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
+	$(summary) CC $@ '$(FFI_EXPORTS_C)'
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
+	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(summary) CC $@

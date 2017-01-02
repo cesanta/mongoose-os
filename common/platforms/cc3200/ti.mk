@@ -4,6 +4,7 @@ VPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/CCS/ARM_CM3
 CC_WRAPPER ?=
 CC = $(TOOLCHAIN)/bin/armcl
 AR = $(TOOLCHAIN)/bin/armar
+NM = nm
 GENFILES_LIST ?=
 
 CFLAGS = --c99 -mv7M4 --little_endian --code_state=16 --float_support=vfplib --abi=eabi \

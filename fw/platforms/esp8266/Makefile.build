@@ -18,6 +18,7 @@ APP_MODULES ?=
 APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
+FFI_SYMBOLS ?=
 
 MGOS_ENABLE_JS = 0
 MGOS_ENABLE_UPDATER_RPC = 0
@@ -100,6 +101,7 @@ MGOS_SRCS = cs_rbuf.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             mgos_uart.c \
             mgos_utils.c \
+            mgos_dlsym.c \
             cs_crc32.c \
             rboot-bigflash.c rboot-api.c \
             json_utils.c \
@@ -225,6 +227,9 @@ BUILD_INFO_O = $(BUILD_DIR)/build_info.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
+SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
@@ -370,8 +375,8 @@ $(APP_BIN): $(APP_ELF)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_ELF): $(APP_OBJS) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
-	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
+$(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
@@ -416,7 +421,15 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
+
+$(SYMBOLS_DUMP): $(APP_OBJS) $(MGOS_OBJS)
+	$(vecho) "GEN   $@"
+	$(Q) $(NM) --defined-only --print-file-name -g $^ > $@
+
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
+	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)

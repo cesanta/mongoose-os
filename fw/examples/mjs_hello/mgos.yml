@@ -6,5 +6,9 @@ sources:
   - src
 filesystem:
   - fs
+ffi_symbols:
+  - mgos_gpio_*
+  - mgos_set_timer
+  - get_led_gpio_pin
 modules:
   - src: https://github.com/cesanta/mjs

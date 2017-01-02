@@ -7,6 +7,7 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_dlsym.h"
 #include "mjs.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
@@ -25,28 +26,10 @@ int get_led_gpio_pin(void) {
   return LED_GPIO;
 }
 
-/* Manual symbol resolver */
-void *my_dlsym(void *handle, const char *name) {
-  (void) handle;
-
-#define EXPORT(s)                        \
-  do {                                   \
-    if (strcmp(name, #s) == 0) return s; \
-  } while (0)
-
-  EXPORT(get_led_gpio_pin);
-  EXPORT(mgos_gpio_set_mode);
-  EXPORT(mgos_gpio_toggle);
-  EXPORT(mgos_gpio_read);
-  EXPORT(mgos_gpio_write);
-  EXPORT(mgos_set_timer);
-  return NULL;
-}
-
 enum mgos_app_init_result mgos_app_init(void) {
   /* Initialize JavaScript engine */
   struct mjs *mjs = mjs_create();
-  mjs_set_ffi_resolver(mjs, my_dlsym);
+  mjs_set_ffi_resolver(mjs, mgos_dlsym);
   mjs_err_t err = mjs_exec_file(mjs, "init.js", NULL);
   if (err != MJS_OK) {
     LOG(LL_ERROR, ("MJS exec error: %s\n", mjs_strerror(mjs, err)));

@@ -3,6 +3,7 @@ CC_WRAPPER ?=
 GENFILES_LIST ?=
 CC = arm-none-eabi-gcc
 AR = arm-none-eabi-ar
+NM = arm-none-eabi-nm
 
 IPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
 VPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
