@@ -14,8 +14,8 @@ static void ctl_handler(struct mg_connection *c, int ev, void *p) {
 
     int pin, state, status = -1;
     if (json_scanf(s->p, s->len, "{pin: %d, state: %d}", &pin, &state) == 2) {
-      mgos_gpio_set_mode(pin, GPIO_MODE_OUTPUT, GPIO_PULL_FLOAT);
-      mgos_gpio_write(pin, state > 0 ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
+      mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
+      mgos_gpio_write(pin, state);
       status = 0;
     }
     mg_printf(c, "HTTP/1.0 200 OK\n\n{\"status\": %d}\n", status);
