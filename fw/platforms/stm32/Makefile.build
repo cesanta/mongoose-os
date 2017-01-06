@@ -1,237 +1,131 @@
-TARGET ?= DISCO_F429ZI
-
+.PHONY: all clean
 .DEFAULT_GOAL := all
-.PHONE: PLATFORM_FLAGS
+
+MGOS_ENABLE_ATCA ?= 0
+MGOS_ENABLE_ATCA_SERVICE ?= 0
+MGOS_ENABLE_CONSOLE ?= 0
+MGOS_ENABLE_CONFIG_SERVICE ?= 0
+MGOS_ENABLE_DNS_SD ?= 0
+MGOS_ENABLE_FILESYSTEM_SERVICE ?= 0
+MGOS_ENABLE_GPIO_SERVICE ?= 0
+MGOS_ENABLE_HTTP_SERVER ?= 0
+MGOS_ENABLE_I2C ?= 0
+MGOS_ENABLE_I2C_GPIO ?= 0
+MGOS_ENABLE_I2C_SERVICE ?= 0
+MGOS_ENABLE_JS ?= 0
+MGOS_ENABLE_MQTT ?= 0
+MGOS_ENABLE_RPC ?= 0
+MGOS_ENABLE_RPC_CHANNEL_HTTP ?= 0
+MGOS_ENABLE_RPC_CHANNEL_MQTT ?= 0
+MGOS_ENABLE_RPC_CHANNEL_UART ?= o
+MGOS_ENABLE_RPC_CHANNEL_WS ?= 0
+MGOS_ENABLE_SYS_SERVICE ?= 0
+MGOS_DEBUG_UART ?= 0
+MGOS_ENABLE_UPDATER ?= 0
+MGOS_ENABLE_UPDATER_POST ?= 0
+MGOS_ENABLE_UPDATER_RPC ?= 0
+MGOS_ENABLE_WIFI ?= 0
+
+TARGET ?= F429ZI
 
 APP ?= mongoose-os
-APP_MODULES ?=
 APP_PLATFORM = stm32
-APP_EXTRA_SRCS ?=
+APP_MODULES ?=
+APP_CFLAGS ?=
 APP_FS_PATH ?=
+APP_EXTRA_SRCS ?=
 
-MGOS_ENABLE_ATCA_SERVICE = 0
-MGOS_ENABLE_JS = 0
-MGOS_ENABLE_RPC_CHANNEL_MQTT = 0
-MGOS_ENABLE_UPDATER = 0
-MGOS_ENABLE_UPDATER_POST = 0
-MGOS_ENABLE_UPDATER_RPC = 0
-MGOS_ENABLE_ATCA = 0
-MGOS_ENABLE_MDNS = 0
-MGOS_ENABLE_DNS_SD = 0
-MGOS_ENABLE_CONSOLE = 0
+PLATFORM_SDK_ROOT = /opt/stm32-sdks/
+PLATFORM_SDK_PATH = ${PLATFORM_SDK_ROOT}/${TARGET}
+PLATFORM_CFLAGS = $(shell cat $(PLATFORM_SDK_PATH)/cflags)
 
-MGOS_STM32_SIMPLELINK ?= 1
-
-CREATE_SPIFFS_FS ?= 1
-
-BUILD_DIR ?= $(CURDIR)/.build
-FW_DIR ?= $(CURDIR)/firmware
-GEN_DIR ?= $(BUILD_DIR)/gen
-MBED_PATH ?= /opt/mbed-lib
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 V7_PATH ?= $(MGOS_PATH)/v7
-MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
-BUILD_INFO_O = $(BUILD_DIR)/build_info.o
-MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
-PLATFORM_SRC_PATH = $(MGOS_PATH)/fw/platforms/stm32
-SIMPLE_LINK_PATH = $(PLATFORM_SRC_PATH)/simplelink
-STM32LIB = libstm32.a
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
-SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
-SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
-BUILD_INFO_C = $(GEN_DIR)/build_info.c
-BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
-MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-ELF_FILE = $(BUILD_DIR)/$(APP).elf
-FW_STAGING_DIR = $(BUILD_DIR)/fw_temp
-FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
-FW_PARTS = boot:src=$(FW_FILE),addr=0
-FW_FILE = $(FW_STAGING_DIR)/$(APP).bin
-SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
-COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
-FS_IMG = ?
-# 256K is minimum size, because sector size is 128K and we need at least two
-FS_SIZE = 262144
-FS_HEADER=$(GEN_DIR)/fs_data.h
-FS_STAGING_DIR = $(BUILD_DIR)/fs
-# Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
-FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08040000"))) __attribute__ ((aligned (131072)))'
-GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
-PLATFORM_MAKE_FILE = $(GEN_DIR)/rules.mk
-OBJCOPY ?= '/usr/bin/arm-none-eabi-objcopy'
 
+CC = arm-none-eabi-gcc
+OBJCOPY = arm-none-eabi-objcopy
+
+BUILD_DIR ?= $(CURDIR)/.build
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/fw
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+# Absolutize all paths which can be given by the caller
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
+override BUILD_DIR := $(abspath $(BUILD_DIR))
 
 include $(MGOS_PATH)/fw/common.mk
 
-MGOS_SRCS = cs_rbuf.c \
-            cs_file.c \
-            mgos_config.c \
-            mgos_console.c cs_frbuf.c \
-            mgos_gpio.c \
-            mgos_init.c \
-            mgos_timers_mongoose.c \
-            mgos_mongoose.c \
-            mgos_sys_config.c \
-            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C)) \
-            mgos_uart.c \
-            mgos_utils.c \
-            cs_crc32.c \
-            json_utils.c \
-            mongoose.c frozen.c \
-            mbed_libc.c
-
-MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
-
-MBED_DEPS_SRCS = startup.cpp stm32_hal.cpp stm32_i2c.cpp stm32_gpio.cpp\
-                 stm32_uart.cpp stm32_wifi.cpp stm32_spiffs.cpp
-
-ifeq "${CREATE_SPIFFS_FS}" "1"
-  FS_IMG = $(FW_STAGING_DIR)/fs.bin
-endif
-
-VPATH = $(APP_MODULES) $(COMMON_PATH) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
-        $(FROZEN_PATH) $(GEN_DIR) $(COMMON_PATH)/mg_rpc \
-        $(PLATFORM_SRC_PATH)/mbed_deps \
-        $(SPIFFS_PATH) $(COMMON_PATH)/platforms/mbed
-
-LIBRARY_PATHS += -L$(BUILD_DIR)
-
-MGOS_FEATURES += -DMGOS_ENABLE_I2C_API -DCS_ENABLE_SPIFFS
-MG_FEATURES = -DMG_ENABLE_FILESYSTEM
-
 include $(MGOS_PATH)/fw/src/features.mk
-include $(MGOS_PATH)/fw/src/spiffs.mk
 
-ifeq "$(MGOS_STM32_SIMPLELINK)" "1"
-  SYS_CONF_SCHEMA += $(PLATFORM_SRC_PATH)/simplelink.yaml
-endif
+SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH) -name '*.[cs]')
+SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH) -type d)
+LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH) -name '*.ld')
 
-C_CXX_FLAGS = ${MGOS_FEATURES} ${MG_FEATURES} -DMG_NET_IF=MG_NET_IF_SIMPLELINK -DFS_SIZE=${FS_SIZE} \
-              -DMGOS_MAX_NUM_UARTS=2
+ADD_SRCS = mgos_main.c
+VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR)
 
-# TODO(alashkin): Verify this
-C_CXX_FLAGS += -DMGOS_NUM_GPIO=16
+APP_ELF = $(BUILD_DIR)/$(APP).elf
+APP_BIN = $(BUILD_DIR)/$(APP).bin
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 
-IPATH_EXTRA += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(SIMPLE_LINK_PATH)/include -I$(SIMPLE_LINK_PATH) -I$(COMMON_PATH)/mg_rpc \
-               -I$(SPIFFS_PATH) -I$(MGOS_PATH)/fw/platforms/stm32/ -I$(MGOS_PATH)/fw/platforms/stm32/mbed-os
-
-LIBRARY_PATHS += -L$(BUILD_DIR)
-
-C_FLAGS += ${C_CXX_FLAGS}
-CXX_FLAGS += ${C_CXX_FLAGS}
-LD_SCRIPT ?=
-LD_FLAGS ?=
-LD_SYS_LIBS ?=
-CC ?=
-CPP ?=
-LD ?=
-ELF2BIN ?=
-
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
-
-MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGOS_SRCS)))
-APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
-MBED_DEPS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(MBED_DEPS_SRCS)))
-
-MBED_FS_FUNCS = opendir readdir closedir mkdir rename remove
-MBED_WEAK_FUNCS = $(addprefix -W , $(MBED_FS_FUNCS))
+SRCS = $(SDK_SRCS) $(ADD_SRCS)
+FW_PARTS = boot:src=$(APP_BIN),addr=0
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
-all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(BUILD_DIR)/$(STM32LIB) PLATFORM_FLAGS $(BUILD_INFO_C) $(ELF_FILE) $(FW_FILE) $(FW_MANIFEST) $(FW_ZIP)
+OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
+CFLAGS ?= -Os -fno-common -ffunction-sections -fdata-sections \
+          $(PLATFORM_CFLAGS)
 
-PLATFORM_FLAGS: $(PLATFORM_MAKE_FILE)
-# mbed uses "blacklist" model, i.e. it is not possible to say
-# `compile this file`, it understands only `compile this directory and all its subdirectories
-# but do not compile that, that and that file
-# so, to use it, we have to create big-big-big .mnedignore file and list almost all files from mongoose-out
-# folder in it
-# it works. But with such big mbedignore compilation is extremely (EXTREMELY) slow
-# Current solution: generate fake makefile for current target and parse it, to get flags, inc dirs, ld script etc
-# Fortunatelly generated makefile has very simple structure
-# Anyway, it is kind of temp solution
-# TODO(alashkin): find something better
-	$(eval IPATH += $(subst .././mbed-os/, $(MGOS_PATH)/fw/platforms/stm32/mbed-os/, $(shell cat $(PLATFORM_MAKE_FILE) | grep ^INCLUDE_PATHS | awk '{print $$3}')))
-	$(eval IPATH += ${IPATH_EXTRA})
-	$(eval C_FLAGS += $(shell cat $(PLATFORM_MAKE_FILE) | grep ^C_FLAGS | awk '{print $$3}'))
-	$(eval CXX_FLAGS += $(shell cat $(PLATFORM_MAKE_FILE) | grep ^CXX_FLAGS | awk '{print $$3}'))
-	$(eval LD_SCRIPT += $(subst .././, $(MBED_PATH)/, $(shell cat $(PLATFORM_MAKE_FILE) | grep ^LINKER_SCRIPT | awk '{print $$3}')))
-	$(eval $(shell cat $(PLATFORM_MAKE_FILE) | grep ^LD_FLAGS))
-	$(eval LD_SYS_LIBS += $(shell cat $(PLATFORM_MAKE_FILE) | grep ^LD_SYS_LIBS | awk '{print $$3}'))
-	$(eval CC=$(shell cat $(PLATFORM_MAKE_FILE) | grep ^'CC      =' | cut -c 11-))
-	$(eval CPP=$(shell cat $(PLATFORM_MAKE_FILE) | grep ^'CPP     =' | cut -c 11-))
-	$(eval LD=$(shell cat $(PLATFORM_MAKE_FILE) | grep ^'LD      =' | cut -c 11-))
-	$(eval ELF2BIN = $(shell cat $(PLATFORM_MAKE_FILE) | grep ^ELF2BIN | awk '{print $$3}'))
+LDFLAGS = -lc -lgcc -lnosys
 
-$(PLATFORM_MAKE_FILE) : $(GEN_DIR) $(BUILD_DIR)/$(STM32LIB)
-	$(Q) (cd $(MGOS_PATH)/fw/platforms/stm32/ && mv Makefile Makefile.orig && mbed export -i GCC_ARM && \
-	cp Makefile $(PLATFORM_MAKE_FILE) && mv Makefile.orig Makefile)
+IPATH += $(addprefix -I, $(SDK_INCLUDES))
 
-$(BUILD_DIR)/$(STM32LIB): $(BUILD_DIR)
-	$(vecho) Updating and building mbed libraries
-	$(Q) (cd $(MGOS_PATH)/fw/platforms/stm32/ && mbed deploy && \
-		  mbed compile -m $(TARGET) -t GCC_ARM --build $(BUILD_DIR) --library)
-# We have FS functions (opendir etc) implementation in mongoose
-# so, just make weak mbed ones
-	$(Q) $(OBJCOPY) $(BUILD_DIR)/$(STM32LIB) $(MBED_WEAK_FUNCS)
+all: $(APP_BIN) $(FW_ZIP)
 
+$(FW_MANIFEST): $(APP_BIN) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C) $(FW_DIR)
 
-$(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR):
-	$(vecho) "MKDIR $@"
+$(BUILD_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR):
+	$(vecho) MKDIR $@
 	$(Q) mkdir -p $@
 
-$(BUILD_DIR)/%.o: %.c $(BUILD_DIR) $(GENFILES_FLAG) PLATFORM_FLAGS
+$(BUILD_DIR)/%.c.o: %.c $(BUILD_DIR)
 	$(vecho) CC $(notdir $<)
-	$(Q) $(CC) $(C_FLAGS) $(IPATH) -o $@ $<
+	$(Q) mkdir -p $(basename $@)
+	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
 
-$(BUILD_DIR)/%.o: %.cpp $(BUILD_DIR) $(GENFILES_FLAG) PLATFORM_FLAGS
-	$(vecho) CPP $(notdir $<)
-	$(Q) $(CPP) $(CXX_FLAGS) $(IPATH) -o $@ $<
-
-$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(BUILD_DIR) $(GEN_DIR) PLATFORM_FLAGS
+$(BUILD_DIR)/%.s.o: %.s $(BUILD_DIR)
 	$(vecho) CC $(notdir $<)
-	$(Q) $(CC) $(C_FLAGS) $(IPATH) -o $@ $<
+	$(Q) mkdir -p $(basename $@)
+	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
 
-$(GENFILES_FLAG): $(GENFILES_LIST)
-	$(Q) touch $@
+$(APP_ELF): $(OBJECTS)
+	$(vecho) LD $(notdir $@)
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -T$(LDSCRIPT) -o $@
+
+$(APP_BIN): $(APP_ELF)
+	$(vecho) OBJCOPY $(notdir $@)
+	$(Q) $(OBJCOPY) -Obinary $^ $@
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
-include $(MGOS_PATH)/fw/src/sys_config.mk
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(GEN_DIR)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(FW_STAGING_DIR) $(OBJECTS)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(MG_BUILD_INFO_C): $(GEN_DIR)
+$(MG_BUILD_INFO_C): $(FW_STAGING_DIR) $(OBJECTS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
+# Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(call mkspiffs,$(FS_SIZE))
-
-$(ELF_FILE): $(MGOS_OBJS) $(APP_OBJS) $(MBED_DEPS_OBJS) $(BUILD_DIR)/$(STM32LIB) $(PLATFORM_MAKE_FILE)
-	$(vecho) "LD $(APP).elf"
-	$(Q) $(LD) $(LD_FLAGS) -Wl,--start-group $(MBED_DEPS_OBJS) $(MGOS_OBJS) $(APP_OBJS) -lstm32 $(LD_SYS_LIBS) -Wl,--end-group -T $(LD_SCRIPT) $(IPATH) $(LIBRARY_PATHS) --output $@
-
-$(FW_FILE): $(ELF_FILE) $(FW_STAGING_DIR)
-	$(vecho) "ELF2BIN $(notdir $(FW_FILE))"
-	$(Q) $(ELF2BIN) -O binary $< $(FW_FILE)
-
-$(FS_HEADER) : $(FS_IMG)
-	$(vecho) Preparing FS
-	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER).tmp && \
-	      echo $(FS_ATTRIBUTES) > $(FS_HEADER) && \
-		  cat  $(FS_HEADER).tmp >> $(FS_HEADER))
-
-$(FW_MANIFEST): $(FW_FILE) $(FS_HEADER)
+clean:
+	@rm -rf $(BUILD_DIR)

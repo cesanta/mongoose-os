@@ -1,0 +1,3 @@
+void mgos_main() {
+
+}

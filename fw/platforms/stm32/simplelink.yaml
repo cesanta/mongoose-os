@@ -1,9 +1,0 @@
-[
-  ["wifi.simplelink", "o", {title: "TI CC3100 Settings"}],
-  ["wifi.simplelink.nhib_pin", "i", {title: "nHIB pin"}],
-  ["wifi.simplelink.irq_pin", "i", {title: "nHIB pin"}],
-  ["wifi.simplelink.spi_mosi_pin", "i", {title: "SPI MOSI pin"}],
-  ["wifi.simplelink.spi_miso_pin", "i", {title: "SPI MISO pin"}],
-  ["wifi.simplelink.spi_sclk_pin", "i", {title: "SPI SCLK pin"}],
-  ["wifi.simplelink.spi_cs_pin", "i", {title: "SPI CS pin"}]
-]
