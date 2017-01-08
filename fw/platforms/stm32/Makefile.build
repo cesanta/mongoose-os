@@ -24,7 +24,9 @@ MGOS_DEBUG_UART ?= 0
 MGOS_ENABLE_UPDATER ?= 0
 MGOS_ENABLE_UPDATER_POST ?= 0
 MGOS_ENABLE_UPDATER_RPC ?= 0
-MGOS_ENABLE_WIFI ?= 0
+MGOS_ENABLE_WIFI ?= 1
+
+include $(MGOS_PATH)/fw/src/features.mk
 
 TARGET ?= F429ZI
 
@@ -44,6 +46,8 @@ COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 V7_PATH ?= $(MGOS_PATH)/v7
+MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+MGOS_FEATURES ?=
 
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
@@ -62,66 +66,94 @@ override BUILD_DIR := $(abspath $(BUILD_DIR))
 
 include $(MGOS_PATH)/fw/common.mk
 
-include $(MGOS_PATH)/fw/src/features.mk
-
 SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH) -name '*.[cs]')
 SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH) -type d)
 LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH) -name '*.ld')
 
-ADD_SRCS = mgos_main.c
-VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR)
+ADD_SRCS = stm32_mgos_main.c stm32_gpio.c stm32_hal.c stm32_uart.c \
+           stm32_libc.c stm32_wifi.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
+SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
+SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+SRCS = $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS)
 
-SRCS = $(SDK_SRCS) $(ADD_SRCS)
+MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+			 $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
+             mgos_gpio.c mgos_sys_config.c mgos_config.c mongoose.c \
+             mgos_timers_mongoose.c cs_file.c mgos_mongoose.c \
+             json_utils.c frozen.c
+
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+
+VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_MODULES) \
+		 $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH)
+
 FW_PARTS = boot:src=$(APP_BIN),addr=0
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -Os -fno-common -ffunction-sections -fdata-sections \
-          $(PLATFORM_CFLAGS)
+          $(PLATFORM_CFLAGS) -DMGOS_NUM_GPIO=16 -DMG_NET_IF=0 \
+		  $(MGOS_FEATURES)
 
-LDFLAGS = -lc -lgcc -lnosys
+LDFLAGS ?=
+LDLIBS = -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 
 IPATH += $(addprefix -I, $(SDK_INCLUDES))
+IPATH += -I$(MGOS_PATH) -I$(GEN_DIR)
 
-all: $(APP_BIN) $(FW_ZIP)
+all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP_BIN) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C) $(FW_DIR)
+$(FW_MANIFEST): $(APP_BIN) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C) $(FW_DIR)
 
-$(BUILD_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR):
+$(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 	$(vecho) MKDIR $@
 	$(Q) mkdir -p $@
 
-$(BUILD_DIR)/%.c.o: %.c $(BUILD_DIR)
+$(BUILD_DIR)/%.c.o: %.c $(BUILD_DIR) $(GENFILES_FLAG)
 	$(vecho) CC $(notdir $<)
 	$(Q) mkdir -p $(basename $@)
 	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
 
-$(BUILD_DIR)/%.s.o: %.s $(BUILD_DIR)
+$(BUILD_DIR)/%.s.o: %.s $(BUILD_DIR) $(GENFILES_FLAG)
 	$(vecho) CC $(notdir $<)
 	$(Q) mkdir -p $(basename $@)
 	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
+
+$(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
+	$(vecho) CC $(notdir $<)
+	$(Q) mkdir -p $(basename $@)
+	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
+
+$(GENFILES_FLAG): $(GENFILES_LIST)
+	$(Q) touch $@
 
 $(APP_ELF): $(OBJECTS)
 	$(vecho) LD $(notdir $@)
-	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -T$(LDSCRIPT) -o $@
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) $(LDLIBS) -T$(LDSCRIPT) -o $@
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) OBJCOPY $(notdir $@)
 	$(Q) $(OBJCOPY) -Obinary $^ $@
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/fw/src/sys_config.mk
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(FW_STAGING_DIR) $(OBJECTS)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(FW_STAGING_DIR)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(MG_BUILD_INFO_C): $(FW_STAGING_DIR) $(OBJECTS)
+$(MG_BUILD_INFO_C): $(FW_STAGING_DIR)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 # Pull in auto-generated .c dependencies (if any).

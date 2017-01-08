@@ -24,7 +24,7 @@
 #define BUTTON_GPIO 15                  /* SW2 on LAUNCHXL */
 #define BUTTON_PULL MGOS_GPIO_PULL_NONE /* External pull-downs */
 #define BUTTON_EDGE MGOS_GPIO_INT_EDGE_NEG
-#elif CS_PLATFORM == CS_P_MBED
+#elif CS_PLATFORM == CS_P_STM32
 #define LED_GPIO 0x6D
 #define BUTTON_GPIO 0
 #define BUTTON_PULL MGOS_GPIO_PULL_NONE

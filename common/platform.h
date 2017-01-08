@@ -21,7 +21,8 @@
 #define CS_P_NRF51 12
 #define CS_P_NRF52 10
 #define CS_P_PIC32 11
-/* Next id: 16 */
+#define CS_P_STM32 16
+/* Next id: 17 */
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -51,6 +52,8 @@
 #elif defined(TARGET_IS_TM4C129_RA0) || defined(TARGET_IS_TM4C129_RA1) || \
     defined(TARGET_IS_TM4C129_RA2)
 #define CS_PLATFORM CS_P_TM4C129
+#elif defined(STM32)
+#define CS_PLATFORM CS_P_STM32
 #endif
 
 #ifndef CS_PLATFORM
@@ -81,6 +84,7 @@
 #include "common/platforms/platform_nxp_lpc.h"
 #include "common/platforms/platform_nxp_kinetis.h"
 #include "common/platforms/platform_pic32.h"
+#include "common/platforms/platform_stm32.h"
 
 /* Common stuff */
 

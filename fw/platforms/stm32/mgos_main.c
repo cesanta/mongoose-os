@@ -1,3 +1,0 @@
-void mgos_main() {
-
-}

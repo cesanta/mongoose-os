@@ -4,7 +4,7 @@
  */
 
 #include <stdio.h>
-
+#include <string.h>
 #include "common/json_utils.h"
 #include "common/mbuf.h"
 #include "common/cs_dbg.h"
