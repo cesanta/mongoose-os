@@ -26,6 +26,7 @@
 
 #include "common/spiffs/spiffs.h"
 #include "common/spiffs/spiffs_nucleus.h"
+#include "common/spiffs/spiffs_vfs.h"
 #include "spiffs_config.h"
 
 #include "esp_fs.h"
@@ -275,56 +276,12 @@ void fs_umount(void) {
   SPIFFS_unmount(&fs);
 }
 
-/* Wrappers for V7 */
-
-void set_errno(int res) {
-  if (res < 0) {
-    errno = SPIFFS_errno(&fs);
-    /* NOTE(lsm): use DEBUG level, as "not found" error -10002 is too noisy */
-    LOG(LL_DEBUG, ("spiffs error: %d", errno));
-  }
-}
-
-void add_plus(char *ptr, int *open_mode) {
-  if (*(ptr + 1) == '+') {
-    *open_mode |= SPIFFS_RDWR;
-  }
-}
-
-static char *get_fixed_filename(const char *filename) {
-  /* spiffs doesn't support directories, not even the trivial ./something */
-  while (*filename != '\0' && (*filename == '/' || *filename == '.')) {
-    filename++;
-  }
-
-  /*
-   * all SPIFFs functions doesn't work with const char *, so
-   * removing const here
-   */
-  return (char *) filename;
-}
-
 int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
-  spiffs_mode sm = 0;
-  int res;
-  int rw = (flags & 3);
-  (void) r;
-  (void) mode;
-  if (rw == O_RDONLY || rw == O_RDWR) sm |= SPIFFS_RDONLY;
-  if (rw == O_WRONLY || rw == O_RDWR) sm |= SPIFFS_WRONLY | SPIFFS_CREAT;
-  if (flags & O_CREAT) sm |= SPIFFS_CREAT;
-  if (flags & O_TRUNC) sm |= SPIFFS_TRUNC;
-  if (flags & O_APPEND) sm |= SPIFFS_APPEND | SPIFFS_CREAT;
-
-  /* Supported in newer versions of SPIFFS. */
-  /* if (flags && O_EXCL) sm |= SPIFFS_EXCL; */
-  /* if (flags && O_DIRECT) sm |= SPIFFS_DIRECT; */
-
-  res = SPIFFS_open(&fs, get_fixed_filename(filename), sm, 0);
+  int res = spiffs_vfs_open(&fs, filename, flags, mode);
   if (res >= 0) {
     res += NUM_SYS_FD;
   }
-  set_errno(res);
+  (void) r;
   return res;
 }
 
@@ -333,10 +290,11 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
   (void) r;
   if (fd < NUM_SYS_FD) {
     res = -1;
+    errno = EBADF;
   } else {
-    res = SPIFFS_read(&fs, fd - NUM_SYS_FD, buf, len);
+    res = spiffs_vfs_read(&fs, fd - NUM_SYS_FD, buf, len);
   }
-  set_errno(res);
+  (void) r;
   return res;
 }
 
@@ -356,9 +314,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
     return len;
   }
 
-  int res = SPIFFS_write(&fs, fd - NUM_SYS_FD, (char *) buf, len);
-  set_errno(res);
-  return res;
+  return spiffs_vfs_write(&fs, fd - NUM_SYS_FD, buf, len);
 }
 
 _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
@@ -366,52 +322,36 @@ _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
   (void) r;
   if (fd < NUM_SYS_FD) {
     res = -1;
+    errno = EBADF;
   } else {
-    res = SPIFFS_lseek(&fs, fd - NUM_SYS_FD, where, whence);
+    res = spiffs_vfs_lseek(&fs, fd - NUM_SYS_FD, where, whence);
   }
-  set_errno(res);
   return res;
 }
 
 int _close_r(struct _reent *r, int fd) {
+  ssize_t res;
   (void) r;
   if (fd < NUM_SYS_FD) {
-    return -1;
+    res = -1;
+    errno = EBADF;
+  } else {
+    res = spiffs_vfs_close(&fs, fd - NUM_SYS_FD);
   }
-  SPIFFS_close(&fs, fd - NUM_SYS_FD);
-  return 0;
+  return res;
 }
 
 int _rename_r(struct _reent *r, const char *from, const char *to) {
-  /*
-   * POSIX rename requires that in case "to" exists, it be atomically replaced
-   * with "from". The atomic part we can't do, but at least we can do replace.
-   */
-  int res;
-  {
-    spiffs_stat ss;
-    res = SPIFFS_stat(&fs, (char *) to, &ss);
-    if (res == 0) {
-      SPIFFS_remove(&fs, (char *) to);
-    }
-  }
-  res = SPIFFS_rename(&fs, get_fixed_filename(from), get_fixed_filename(to));
   (void) r;
-  set_errno(res);
-  return res;
+  return spiffs_vfs_rename(&fs, from, to);
 }
 
 int _unlink_r(struct _reent *r, const char *filename) {
-  int res = SPIFFS_remove(&fs, get_fixed_filename(filename));
   (void) r;
-  set_errno(res);
-
-  return res;
+  return spiffs_vfs_unlink(&fs, filename);
 }
 
 int _fstat_r(struct _reent *r, int fd, struct stat *s) {
-  int res;
-  spiffs_stat ss;
   (void) r;
   memset(s, 0, sizeof(*s));
   if (fd < NUM_SYS_FD) {
@@ -420,36 +360,12 @@ int _fstat_r(struct _reent *r, int fd, struct stat *s) {
     s->st_mode = S_IFCHR | 0666;
     return 0;
   }
-  res = SPIFFS_fstat(&fs, fd - NUM_SYS_FD, &ss);
-  set_errno(res);
-  if (res < 0) return res;
-  s->st_ino = ss.obj_id;
-  s->st_mode = S_IFREG | 0666;
-  s->st_nlink = 1;
-  s->st_size = ss.size;
-  return 0;
+  return spiffs_vfs_fstat(&fs, fd - NUM_SYS_FD, s);
 }
 
 int _stat_r(struct _reent *r, const char *path, struct stat *s) {
-  int ret, fd;
   (void) r;
-
-  /*
-   * spiffs has no directories, simulating statting root directory;
-   * required for mg_send_http_file.
-   */
-  if ((strcmp(path, ".") == 0) || (strcmp(path, "/") == 0) ||
-      (strcmp(path, "./") == 0)) {
-    memset(s, 0, sizeof(*s));
-    s->st_mode = S_IFDIR;
-    return 0;
-  }
-
-  fd = _open_r(NULL, path, O_RDONLY, 0);
-  if (fd == -1) return -1;
-  ret = _fstat_r(NULL, fd, s);
-  _close_r(NULL, fd);
-  return ret;
+  return spiffs_vfs_stat(&fs, path, s);
 }
 
 void fs_flush_stderr(void) {

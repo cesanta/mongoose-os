@@ -14,6 +14,25 @@
 
 #include <common/cs_dbg.h>
 
+static const char *drop_dir(const char *fname) {
+  const char *old_fname = fname;
+  /* Drop "./", if any */
+  if (fname[0] == '.' && fname[1] == '/') {
+    fname += 2;
+  }
+  /*
+   * Drop / if it is the only one in the path.
+   * This allows use of /pretend/directories but serves /file.txt as normal.
+   */
+  if (fname[0] == '/' && strchr(fname + 1, '/') == NULL) {
+    fname++;
+  }
+  if (fname != old_fname) {
+    LOG(LL_DEBUG, ("'%s' -> '%s'", old_fname, fname));
+  }
+  return fname;
+}
+
 static int set_errno(int e) {
   errno = e;
   return (e == 0 ? 0 : -1);
@@ -53,7 +72,8 @@ int spiffs_vfs_open(spiffs *fs, const char *path, int flags, int mode) {
   if (flags & O_EXCL) sm |= SPIFFS_EXCL;
 #endif
 
-  return set_spiffs_errno(fs, path, SPIFFS_open(fs, path, sm, 0));
+  (void) mode;
+  return set_spiffs_errno(fs, path, SPIFFS_open(fs, drop_dir(path), sm, 0));
 }
 
 int spiffs_vfs_close(spiffs *fs, int fd) {
@@ -78,14 +98,23 @@ int spiffs_vfs_stat(spiffs *fs, const char *path, struct stat *st) {
   int res;
   spiffs_stat ss;
   memset(st, 0, sizeof(*st));
-  res = SPIFFS_stat(fs, path, &ss);
+  const char *fname = drop_dir(path);
+  /* Simulate statting the root directory. */
+  if (fname[0] == '\0' || strcmp(fname, ".") == 0) {
+    st->st_ino = 0;
+    st->st_mode = S_IFDIR | 0777;
+    st->st_nlink = 1;
+    st->st_size = 0;
+    return set_spiffs_errno(fs, path, SPIFFS_OK);
+  }
+  res = SPIFFS_stat(fs, fname, &ss);
   if (res == SPIFFS_OK) {
     st->st_ino = ss.obj_id;
     st->st_mode = S_IFREG | 0666;
     st->st_nlink = 1;
     st->st_size = ss.size;
   }
-  return set_spiffs_errno(fs, "stat", res);
+  return set_spiffs_errno(fs, path, res);
 }
 
 int spiffs_vfs_fstat(spiffs *fs, int fd, struct stat *st) {
@@ -107,11 +136,27 @@ off_t spiffs_vfs_lseek(spiffs *fs, int fd, off_t offset, int whence) {
 }
 
 int spiffs_vfs_rename(spiffs *fs, const char *src, const char *dst) {
+  int res;
+  /* Renaming file to itself should be a no-op. */
+  src = drop_dir(src);
+  dst = drop_dir(dst);
+  if (strcmp(src, dst) == 0) return 0;
+  {
+    /*
+     * POSIX rename requires that in case "to" exists, it be atomically replaced
+     * with "from". The atomic part we can't do, but at least we can do replace.
+     */
+    spiffs_stat ss;
+    res = SPIFFS_stat(fs, dst, &ss);
+    if (res == 0) {
+      SPIFFS_remove(fs, dst);
+    }
+  }
   return set_spiffs_errno(fs, "rename", SPIFFS_rename(fs, src, dst));
 }
 
 int spiffs_vfs_unlink(spiffs *fs, const char *path) {
-  return set_spiffs_errno(fs, "unlink", SPIFFS_remove(fs, path));
+  return set_spiffs_errno(fs, "unlink", SPIFFS_remove(fs, drop_dir(path)));
 }
 
 #endif /* CS_SPIFFS_ENABLE_VFS */
