@@ -12,5 +12,6 @@ connected microcontrollers designed for Internet of Things. It includes:
 - Reliable Over-The-Air (OTA) updates with rollbacks and delayed commits,
 - Flexible configuration infrastructure for vendor and end-user configuration,
 - Filesystem on flash with standard POSIX API,
+- Remote Procedure Call (RPC) mechanism over HTTP, WebSocket, UART, MQTT,
 - Tons of bugfixes for broken native SDKs,
 - And other features

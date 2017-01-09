@@ -2,7 +2,7 @@
 title: Filesystem
 ---
 
-Mongoose OS Platform uses a SPIFFS filesystem on some of the boards (e.g. ESP8266, CC3200).
+Mongoose OS uses a SPIFFS filesystem on some of the boards (e.g. ESP8266, CC3200).
 SPIFFS is a flat filesystem, i.e. it has no directories. To provide the same
 look at feel on all platforms, Mongoose OS Platform uses a flat filesystem on all
 architectures.

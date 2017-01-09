@@ -1,5 +1,5 @@
 ---
-title: Mongoose Firmware
+title: Mongoose OS
 items:
   - { name: filesystem.md }
   - { name: boot.md }
