@@ -1,5 +1,5 @@
 // Load Mongoose OS API
-exec_file('sys.js');
+load('sys.js');
 
 // Blink built-in LED every second
 let PIN = ffi('int get_led_gpio_pin()')();  // Helper C function that returns a built-in LED GPIO
