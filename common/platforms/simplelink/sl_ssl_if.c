@@ -38,6 +38,7 @@ enum mg_ssl_if_result mg_ssl_if_conn_init(
   if (params->ca_cert != NULL && strcmp(params->ca_cert, "*") != 0) {
     ctx->ssl_ca_cert = strdup(params->ca_cert);
   }
+  /* TODO(rojer): cipher_suites. */
   if (params->server_name != NULL) {
     ctx->ssl_server_name = strdup(params->server_name);
   }
