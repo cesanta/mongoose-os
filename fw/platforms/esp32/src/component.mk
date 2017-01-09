@@ -47,7 +47,7 @@ FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
 NM = nm
 
-COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) $(GEN_DIR)
+COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) $(GEN_DIR) $(APP_MODULES)
 
 MGOS_SRCS = mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
