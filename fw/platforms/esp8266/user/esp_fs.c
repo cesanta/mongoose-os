@@ -31,7 +31,6 @@
 
 #include "esp_fs.h"
 #include "fw/src/mgos_uart.h"
-#include "fw/src/mgos_uart.h"
 #include "mongoose/mongoose.h"
 
 #include <sys/mman.h>

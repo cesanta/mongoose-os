@@ -2,8 +2,6 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_mongoose.h"
 
-struct mg_iface_vtable mg_default_iface_vtable;
-
 bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
   /* TODO(alashkin): implement */
   (void) cb;
@@ -36,4 +34,8 @@ void mongoose_schedule_poll(void) {
 size_t mgos_get_min_free_heap_size(void) {
   /* TODO(alashkin): implement */
   return 0;
+}
+
+enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
+  return MGOS_INIT_OK;
 }

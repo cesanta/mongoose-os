@@ -20,11 +20,11 @@ MGOS_ENABLE_RPC_CHANNEL_MQTT ?= 0
 MGOS_ENABLE_RPC_CHANNEL_UART ?= o
 MGOS_ENABLE_RPC_CHANNEL_WS ?= 0
 MGOS_ENABLE_SYS_SERVICE ?= 0
-MGOS_DEBUG_UART ?= 0
 MGOS_ENABLE_UPDATER ?= 0
 MGOS_ENABLE_UPDATER_POST ?= 0
 MGOS_ENABLE_UPDATER_RPC ?= 0
-MGOS_ENABLE_WIFI ?= 1
+
+CREATE_SPIFFS_FS ?= 1
 
 include $(MGOS_PATH)/fw/src/features.mk
 
@@ -37,17 +37,18 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 
-PLATFORM_SDK_ROOT = /opt/stm32-sdks/
-PLATFORM_SDK_PATH = ${PLATFORM_SDK_ROOT}/${TARGET}
-PLATFORM_CFLAGS = $(shell cat $(PLATFORM_SDK_PATH)/cflags)
-
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 V7_PATH ?= $(MGOS_PATH)/v7
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 MGOS_FEATURES ?=
+
+PLATFORM_SDK_ROOT = /opt/stm32-sdks/
+PLATFORM_SDK_PATH = ${PLATFORM_SDK_ROOT}/${TARGET}
+PLATFORM_CFLAGS = $(shell cat $(PLATFORM_SDK_PATH)/cflags)
 
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
@@ -71,10 +72,26 @@ SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH) -type d)
 LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH) -name '*.ld')
 
 ADD_SRCS = stm32_mgos_main.c stm32_gpio.c stm32_hal.c stm32_uart.c \
-           stm32_libc.c stm32_wifi.c
+           stm32_libc.c stm32_wifi.c stm32_fs.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
+SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
+COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
+FS_IMG = ?
+# 256K is minimum size, because sector size is 128K and we need at least two
+FS_SIZE = 262144
+FS_HEADER=$(GEN_DIR)/fs_data.h
+FS_STAGING_DIR = $(BUILD_DIR)/fs
+# Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
+FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08040000"))) __attribute__ ((aligned (131072)))'
+
+ifeq "${CREATE_SPIFFS_FS}" "1"
+  FS_IMG = $(FW_STAGING_DIR)/fs.bin
+endif
+
+include $(MGOS_PATH)/fw/src/spiffs.mk
+
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
@@ -84,19 +101,22 @@ SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
 SRCS = $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS)
 
 MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
 			 $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
              mgos_gpio.c mgos_sys_config.c mgos_config.c mongoose.c \
              mgos_timers_mongoose.c cs_file.c mgos_mongoose.c \
-             json_utils.c frozen.c
+             json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c
+
+MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_MODULES) \
-		 $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH)
+		 $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
+         $(SPIFFS_PATH)
 
 FW_PARTS = boot:src=$(APP_BIN),addr=0
 
@@ -104,14 +124,16 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -Os -fno-common -ffunction-sections -fdata-sections \
-          $(PLATFORM_CFLAGS) -DMGOS_NUM_GPIO=16 -DMG_NET_IF=0 \
-		  $(MGOS_FEATURES)
+          $(PLATFORM_CFLAGS) -DMGOS_NUM_GPIO=16 -DMG_NET_IF=1 \
+		  $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=2 \
+		  -DFS_SIZE=${FS_SIZE}
 
 LDFLAGS ?=
 LDLIBS = -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 
 IPATH += $(addprefix -I, $(SDK_INCLUDES))
-IPATH += -I$(MGOS_PATH) -I$(GEN_DIR)
+IPATH += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
+		 -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH)
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
@@ -159,5 +181,13 @@ $(MG_BUILD_INFO_C): $(FW_STAGING_DIR)
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
+$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+	$(call mkspiffs,$(FS_SIZE))
+
+$(FS_HEADER) : $(FS_IMG)
+	$(vecho) Preparing FS
+	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER).tmp && \
+	      echo $(FS_ATTRIBUTES) > $(FS_HEADER) && \
+		  cat  $(FS_HEADER).tmp >> $(FS_HEADER))
 clean:
 	@rm -rf $(BUILD_DIR)

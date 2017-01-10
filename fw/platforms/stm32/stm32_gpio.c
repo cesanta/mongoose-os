@@ -2,7 +2,7 @@
 
 enum mgos_init_result mgos_gpio_dev_init(void) {
   /* TODO(alashkin): implement */
-  return MGOS_INIT_APP_INIT_FAILED;
+  return MGOS_INIT_OK;
 }
 
 bool mgos_gpio_toggle(int pin) {
