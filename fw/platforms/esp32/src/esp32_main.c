@@ -14,6 +14,7 @@
 #include "nvs_flash.h"
 
 #include "common/cs_dbg.h"
+#include "fw/src/mgos_app.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
@@ -91,6 +92,8 @@ static QueueHandle_t s_main_queue;
 void mgos_task(void *arg) {
   struct mgos_event e;
   s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(e));
+
+  mgos_app_preinit();
 
   enum mgos_init_result r = esp32_mgos_init();
   if (r != MGOS_INIT_OK) {
