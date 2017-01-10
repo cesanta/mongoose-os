@@ -48,6 +48,16 @@ enum mgos_init_result mgos_init(void) {
   r = mgos_sys_config_init_platform(get_cfg());
   if (r != MGOS_INIT_OK) return r;
 
+#if MGOS_ENABLE_I2C
+  r = mgos_i2c_init();
+  if (r != MGOS_INIT_OK) return r;
+#endif
+
+#if MGOS_ENABLE_ATCA
+  r = mgos_atca_init(); /* Requires I2C */
+  if (r != MGOS_INIT_OK) return r;
+#endif
+
 #if MGOS_ENABLE_HTTP_SERVER
   /* Before mgos_rpc_init */
   r = mgos_sys_config_init_http(&get_cfg()->http, &get_cfg()->device);
@@ -77,22 +87,14 @@ enum mgos_init_result mgos_init(void) {
   mgos_console_init(); /* After mgos_rpc_init */
 #endif
 
-#if MGOS_ENABLE_I2C
-  r = mgos_i2c_init();
-  if (r != MGOS_INIT_OK) return r;
-#if MGOS_ENABLE_RPC && MGOS_ENABLE_I2C_SERVICE
-  r = mgos_i2c_service_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif
-#endif
-
-#if MGOS_ENABLE_ATCA
-  r = mgos_atca_init(); /* Requires I2C */
-  if (r != MGOS_INIT_OK) return r;
-#if MGOS_ENABLE_RPC && MGOS_ENABLE_ATCA_SERVICE
+#if MGOS_ENABLE_ATCA && MGOS_ENABLE_RPC && MGOS_ENABLE_ATCA_SERVICE
   r = mgos_atca_service_init(); /* Requires RPC */
   if (r != MGOS_INIT_OK) return r;
 #endif
+
+#if MGOS_ENABLE_I2C && MGOS_ENABLE_RPC && MGOS_ENABLE_I2C_SERVICE
+  r = mgos_i2c_service_init();
+  if (r != MGOS_INIT_OK) return r;
 #endif
 
 #if MGOS_ENABLE_UPDATER

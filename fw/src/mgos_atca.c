@@ -172,7 +172,7 @@ ATCA_STATUS hal_iface_release(ATCAIfaceType ifacetype, void *hal_data) {
 bool s_atca_is_available = false;
 
 /* Invoked from mbedTLS during ECDH phase of the handshake. */
-int mbedtls_atca_is_available() {
+bool mbedtls_atca_is_available() {
   return s_atca_is_available;
 }
 

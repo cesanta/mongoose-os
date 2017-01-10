@@ -12,6 +12,7 @@
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/str_util.h"
+#include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_config.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
@@ -306,7 +307,33 @@ enum mgos_init_result mgos_sys_config_init_http(
   opts.ssl_cert = cfg->ssl_cert;
   opts.ssl_key = cfg->ssl_key;
   opts.ssl_ca_cert = cfg->ssl_ca_cert;
-#endif
+#if CS_PLATFORM == CS_P_ESP8266
+/*
+ * ESP8266 cannot handle DH of any kind, unless there's hardware acceleration,
+ * it's too slow.
+ */
+#if MGOS_ENABLE_ATCA
+  if (mbedtls_atca_is_available()) {
+    opts.ssl_cipher_suites =
+        "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:"
+        "TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:"
+        "TLS-ECDH-ECDSA-WITH-AES-128-GCM-SHA256:"
+        "TLS-ECDH-ECDSA-WITH-AES-128-CBC-SHA256:"
+        "TLS-ECDH-ECDSA-WITH-AES-128-CBC-SHA:"
+        "TLS-ECDH-RSA-WITH-AES-128-GCM-SHA256:"
+        "TLS-ECDH-RSA-WITH-AES-128-CBC-SHA256:"
+        "TLS-ECDH-RSA-WITH-AES-128-CBC-SHA:"
+        "TLS-RSA-WITH-AES-128-GCM-SHA256:"
+        "TLS-RSA-WITH-AES-128-CBC-SHA256:"
+        "TLS-RSA-WITH-AES-128-CBC-SHA";
+  } else
+#endif /* MGOS_ENABLE_ATCA */
+    opts.ssl_cipher_suites =
+        "TLS-RSA-WITH-AES-128-GCM-SHA256:"
+        "TLS-RSA-WITH-AES-128-CBC-SHA256:"
+        "TLS-RSA-WITH-AES-128-CBC-SHA";
+#endif /* CS_PLATFORM == CS_P_ESP8266 */
+#endif /* MG_ENABLE_SSL */
   listen_conn =
       mg_bind_opt(mgos_get_mgr(), cfg->listen_addr, mongoose_ev_handler, opts);
 
