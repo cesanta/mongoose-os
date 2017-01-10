@@ -1,3 +1,6 @@
+// GPIO API. Source C API is defined at:
+// https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h
+
 let GPIO = {
   toggle: ffi('void mgos_gpio_toggle(int)'),
   write: ffi('void mgos_gpio_write(int,int)'),
@@ -22,8 +25,4 @@ let GPIO = {
   INT_EDGE_ANY: 3,
   INT_LEVEL_HI: 4,
   INT_LEVEL_LO: 5
-};
-
-let Timer = {
-  set: ffi('int mgos_set_timer(int,int,void(*)(userdata),userdata)')
 };
