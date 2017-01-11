@@ -20,10 +20,6 @@ void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   /* TODO(alashkin): implement */
 }
 
-void print_str(char *str) {
-  HAL_USART_Transmit(&USB_UART, str, strlen(str), UART_TRANSMIT_TIMEOUT);
-}
-
 void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   USART_HandleTypeDef *usart = (USART_HandleTypeDef *) us->dev_data;
   cs_rbuf_t *txb = &us->tx_buf;

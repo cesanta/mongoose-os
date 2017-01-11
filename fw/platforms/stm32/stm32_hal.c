@@ -36,6 +36,11 @@ size_t mgos_get_min_free_heap_size(void) {
   return 0;
 }
 
+size_t mgos_get_free_heap_size(void) {
+  /* TODO(alashkin): implement */
+  return 0;
+}
+
 enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
   return MGOS_INIT_OK;
 }

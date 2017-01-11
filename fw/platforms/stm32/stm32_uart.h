@@ -9,6 +9,4 @@
 int stm32_get_stdout_uart_no();
 int stm32_get_stderr_uart_no();
 
-void print_str(char *str);
-
 #endif

@@ -3,10 +3,13 @@
 #include "fw/src/mgos_mongoose.h"
 #include "stm32_spiffs.h"
 #include "stm32_uart.h"
+#include "common/cs_dbg.h"
 
 static int s_initialized = 0;
 
 void mgos_main() {
+  cs_log_set_level(LL_INFO);
+
   if (stm32_spiffs_init() != 0) {
     return;
   }
@@ -15,6 +18,7 @@ void mgos_main() {
     return;
   }
   s_initialized = 1;
+  LOG(LL_INFO, ("Initialization done"));
 }
 
 void mgos_loop() {
