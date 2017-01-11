@@ -25,10 +25,11 @@ MGOS_ENABLE_UPDATER_POST ?= 0
 MGOS_ENABLE_UPDATER_RPC ?= 0
 
 CREATE_SPIFFS_FS ?= 1
+USE_LWIP ?= 1
 
 include $(MGOS_PATH)/fw/src/features.mk
 
-TARGET ?= F429ZI
+TARGET ?= F746ZG
 
 APP ?= mongoose-os
 APP_PLATFORM = stm32
@@ -46,7 +47,11 @@ MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 MGOS_FEATURES ?=
 
-PLATFORM_SDK_ROOT = /opt/stm32-sdks/
+# Normal (docker) version
+PLATFORM_SDK_ROOT ?= /opt/stm32-sdks/
+# Debug (local) version
+# PLATFORM_SDK_ROOT ?= $(MGOS_PATH)/docker/stm32/stm32-sdks/
+
 PLATFORM_SDK_PATH = ${PLATFORM_SDK_ROOT}/${TARGET}
 PLATFORM_CFLAGS = $(shell cat $(PLATFORM_SDK_PATH)/cflags)
 
@@ -84,6 +89,7 @@ FS_SIZE = 262144
 FS_HEADER=$(GEN_DIR)/fs_data.h
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 # Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
+# TODO(alashkin): uncomment line below to allow spiffs writing
 FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08040000"))) __attribute__ ((aligned (131072)))'
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
@@ -108,7 +114,8 @@ MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
 			 $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
              mgos_gpio.c mgos_sys_config.c mgos_config.c mongoose.c \
              mgos_timers_mongoose.c cs_file.c mgos_mongoose.c \
-             json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c
+             json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
+             cs_dbg.c
 
 MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
@@ -124,9 +131,13 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -Os -fno-common -ffunction-sections -fdata-sections \
-          $(PLATFORM_CFLAGS) -DMGOS_NUM_GPIO=16 -DMG_NET_IF=1 \
-		  $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=2 \
-		  -DFS_SIZE=${FS_SIZE}
+          $(PLATFORM_CFLAGS) -DMGOS_NUM_GPIO=16 $(MGOS_FEATURES) \
+          -DMGOS_MAX_NUM_UARTS=2 -DFS_SIZE=${FS_SIZE}
+
+ifeq "${USE_LWIP}" "1"
+CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
+          -DLWIP_TCP_KEEPALIVE=1
+endif
 
 LDFLAGS ?=
 LDLIBS = -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group

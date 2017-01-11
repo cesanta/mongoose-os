@@ -4,12 +4,22 @@
 #include "stm32_spiffs.h"
 #include "stm32_uart.h"
 
+static int s_initialized = 0;
+
 void mgos_main() {
-  stm32_spiffs_init();
+  if (stm32_spiffs_init() != 0) {
+    return;
+  }
   mongoose_init();
-  mgos_init();
+  if (mgos_init() != MGOS_INIT_OK) {
+    return;
+  }
+  s_initialized = 1;
 }
 
 void mgos_loop() {
+  if (!s_initialized) {
+    return;
+  }
   mongoose_poll(10);
 }

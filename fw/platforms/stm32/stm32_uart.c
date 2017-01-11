@@ -5,11 +5,7 @@
 static int s_stdout_uart_no;
 static int s_stderr_uart_no;
 
-/* Comes from SDK */
-extern USART_HandleTypeDef husart1;
-extern USART_HandleTypeDef husart2;
-
-static USART_HandleTypeDef *uarts[2] = {&husart1, &husart2};
+static USART_HandleTypeDef *uarts[2] = {&USB_UART, &UART2};
 #define UART_TRANSMIT_TIMEOUT 100
 
 int stm32_get_stdout_uart_no() {
@@ -25,11 +21,10 @@ void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
 }
 
 void print_str(char *str) {
-  HAL_USART_Transmit(&husart1, str, strlen(str), UART_TRANSMIT_TIMEOUT);
+  HAL_USART_Transmit(&USB_UART, str, strlen(str), UART_TRANSMIT_TIMEOUT);
 }
 
 void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
-  print_str("mgos_uart_dev_dispatch_tx_top\n");
   USART_HandleTypeDef *usart = (USART_HandleTypeDef *) us->dev_data;
   cs_rbuf_t *txb = &us->tx_buf;
   HAL_StatusTypeDef status = HAL_OK;
@@ -41,6 +36,7 @@ void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
         cs_rbuf_consume(txb, 1);
         us->stats.tx_bytes++;
       }
+      /* TODO(alashkin): make some kind of error handling */
     }
   }
 }
@@ -50,10 +46,9 @@ void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
 }
 
 bool mgos_uart_dev_init(struct mgos_uart_state *us) {
-  if (us->uart_no == 1 || us->uart_no == 2) {
+  if (us->uart_no == 0 || us->uart_no == 1) {
     /* TODO(alashkin): reinit UART if cfg was changed */
-    print_str("mgos_uart_dev_init\n");
-    us->dev_data == (void*) uarts[us->uart_no -1];
+    us->dev_data = (void*) uarts[us->uart_no];
     return true;
   }
   return false;

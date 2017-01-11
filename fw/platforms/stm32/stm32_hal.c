@@ -15,7 +15,7 @@ void mgos_system_restart(int exit_code) {
 
 void device_get_mac_address(uint8_t mac[6]) {
   /* TODO(alashkin): implement */
-  (void) mac;
+  memset(mac, 0, 6);
 }
 
 void mgos_wdt_feed(void) {
@@ -38,4 +38,7 @@ size_t mgos_get_min_free_heap_size(void) {
 
 enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
   return MGOS_INIT_OK;
+}
+
+void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
