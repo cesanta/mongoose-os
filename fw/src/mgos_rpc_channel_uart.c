@@ -23,7 +23,7 @@ struct mg_rpc_channel_uart_data {
   unsigned int waiting_for_start_frame : 1;
   unsigned int connected : 1;
   unsigned int sending : 1;
-  unsigned int response_sent : 1;
+  unsigned int sending_user_frame : 1;
   struct mbuf recv_mbuf;
   struct mbuf send_mbuf;
 };
@@ -33,17 +33,17 @@ struct mg_rpc_channel_uart_data {
  *
  *        MGOS              DEVICE
  *        -->  EOF_CHAR"""        (mgos sends continuosly, expecting """)
- *        <--  """                 (device replies with """ saying it's ready)
- *                                  at this point we disable UART logs
- *        -->  {request_frame}"""  (mgos sends a frame, finishing with """)
- *        -->  {response_frame}""" (device responds, finishing with """)
- *                                  at this point we enable UART logs
+ *        <--  EOF_CHAR"""        (device replies with """ saying it's ready)
+ *        -->  """{request_frame}"""  (mgos sends a frame)
+ *                                    at this point we disable UART logs
+ *        <--  """{response_frame}""" (device responds)
+ *                                    at this point we re-enable UART logs
  *
  * Our side (a device side) must keep UART disabled after we have received
  * EOF_CHAR""" marker, and until we have sent a response.
  *
  * Note that when we have sent a """ ready marker, some time may pass but we
- * have to keep the UART disabled. That's why `chd->response_sent` flag
+ * have to keep the UART disabled. That's why `chd->sending_user_frame` flag
  * is introduced: it is set only when a frame has been sent by the user code.
  * Note that the user handler may call LOG, so it's important to keep
  * UART disabled during RPC callback execution.
@@ -60,27 +60,26 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
     mbuf_append(&chd->recv_mbuf, data, len);
     cs_rbuf_consume(urxb, len);
     size_t flen = 0;
-    const char *end =
-        c_strnstr(chd->recv_mbuf.buf, FRAME_DELIMETER, chd->recv_mbuf.len);
-    if (end != NULL) {
+    const char *end;
+    while ((end = c_strnstr(chd->recv_mbuf.buf, FRAME_DELIMETER,
+                            chd->recv_mbuf.len)) != NULL) {
       flen = (end - chd->recv_mbuf.buf);
       if (flen != 0) {
         struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
         /*
          * EOF_CHAR is used to turn off interactive console. If the frame is
-         * just EOF_CHAR by itself, we'll immediately send the frame delimeter
-         * in response (since the frame isn't valid anyway); otherwise we'll
-         * handle the frame.
+         * just EOF_CHAR by itself, we'll immediately send a frame containing
+         * eof_char in response (since the frame isn't valid anyway);
+         * otherwise we'll handle the frame.
          */
         if (mg_vcmp(&f, EOF_CHAR) == 0) {
           chd->waiting_for_start_frame = false;
           if (!chd->connected) {
-            /* Disable UART console until the response is sent */
             chd->connected = true;
-            mgos_uart_set_write_enabled(chd->uart_no, false);
             ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
           }
-          mbuf_append(&chd->send_mbuf, EOF_CHAR, sizeof(EOF_CHAR));
+          mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
+          mbuf_append(&chd->send_mbuf, EOF_CHAR, 1);
           mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
           chd->sending = true;
         } else {
@@ -91,8 +90,9 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
       if (chd->recv_mbuf.len == 0) {
         mbuf_trim(&chd->recv_mbuf);
       }
-    } else if (chd->waiting_for_start_frame &&
-               chd->recv_mbuf.len > FRAME_DELIMETER_LEN) {
+    }
+    if (chd->waiting_for_start_frame &&
+        chd->recv_mbuf.len > FRAME_DELIMETER_LEN) {
       mbuf_remove(&chd->recv_mbuf, chd->recv_mbuf.len - FRAME_DELIMETER_LEN);
     }
   }
@@ -102,14 +102,12 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
     mbuf_remove(&chd->send_mbuf, len);
     if (chd->send_mbuf.len == 0) {
       chd->sending = false;
-      if (chd->response_sent) {
-        mgos_uart_set_write_enabled(chd->uart_no, true);
-        ch->ch_close(ch);
-        ch->ch_connect(ch);
-        chd->response_sent = false;
+      mgos_uart_set_write_enabled(chd->uart_no, true);
+      if (chd->sending_user_frame) {
+        chd->sending_user_frame = false;
+        ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_SENT, (void *) 1);
       }
       mbuf_trim(&chd->send_mbuf);
-      ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_SENT, (void *) 1);
     }
   }
 }
@@ -129,18 +127,21 @@ static bool mg_rpc_channel_uart_send_frame(struct mg_rpc_channel *ch,
   struct mg_rpc_channel_uart_data *chd =
       (struct mg_rpc_channel_uart_data *) ch->channel_data;
   if (!chd->connected || chd->sending) return false;
+  mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
   mbuf_append(&chd->send_mbuf, f.p, f.len);
   mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
+  chd->sending = chd->sending_user_frame = true;
+  /* Disable UART console while sending. */
+  mgos_uart_set_write_enabled(chd->uart_no, false);
   mgos_uart_schedule_dispatcher(chd->uart_no);
-  chd->sending = true;
-  chd->response_sent = true;
   return true;
 }
 
 static void mg_rpc_channel_uart_ch_close(struct mg_rpc_channel *ch) {
   struct mg_rpc_channel_uart_data *chd =
       (struct mg_rpc_channel_uart_data *) ch->channel_data;
-  chd->connected = chd->response_sent = false;
+  chd->connected = chd->sending = chd->sending_user_frame = false;
+  mbuf_free(&chd->send_mbuf);
   mgos_uart_set_dispatcher(chd->uart_no, NULL, NULL);
 }
 

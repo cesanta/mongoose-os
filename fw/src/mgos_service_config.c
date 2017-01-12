@@ -129,7 +129,6 @@ static void mgos_config_save_handler(struct mg_rpc_request_info *ri,
    * We need to stash mg_rpc pointer since we need to use it after calling
    * mg_rpc_send_responsef(), which invalidates `ri`
    */
-  struct mg_rpc *c = ri->rpc;
   struct sys_config *cfg = get_cfg();
   char *msg = NULL;
   int reboot = 0;
@@ -166,8 +165,7 @@ static void mgos_config_save_handler(struct mg_rpc_request_info *ri,
   ri = NULL;
 
   if (reboot) {
-    mgos_system_restart_after(500);
-    mg_rpc_disconnect(c);
+    mgos_system_restart_after(100);
   }
 
   (void) cb_arg;
