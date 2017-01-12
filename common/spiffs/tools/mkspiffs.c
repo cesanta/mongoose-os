@@ -1,65 +1,77 @@
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/stat.h>
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "mem_spiffs.h"
 
-void copy(char *path, char *fname) {
+bool copy(char *src, char *dst) {
+  bool result = false;
   int size;
-  u8_t *buf;
+  u8_t *buf = NULL;
   struct stat st;
   spiffs_file sfd;
-  int ifd;
+  int ifd = -1;
 
-  ifd = open(path, O_RDONLY);
-  if (ifd == -1) {
-    fprintf(stderr, "cannot open %s\n", path);
+  fprintf(stderr, "a %s: ", dst);
+
+  ifd = open(src, O_RDONLY);
+  if (ifd < 0) {
+    fprintf(stderr, "cannot open %s\n", src);
     perror("cannot open");
-    return;
+    goto cleanup;
   }
 
-  if (fstat(ifd, &st) == -1) {
-    fprintf(stderr, "cannot stat %s\n", path);
-    return;
+  if (fstat(ifd, &st) < 0) {
+    fprintf(stderr, "cannot stat %s\n", src);
+    goto cleanup;
   }
   size = st.st_size;
 
-  if (size == -1) {
-    fprintf(stderr, "skipping %s\n", path);
-    return;
+  if (size < 0) {
+    fprintf(stderr, "skipping %s\n", src);
+    goto cleanup;
   }
 
   buf = malloc(size);
 
   if (read(ifd, buf, size) != size) {
-    fprintf(stderr, "unable to read file %s\n", fname);
-    return;
+    fprintf(stderr, "faild to read source file\n");
+    goto cleanup;
   }
 
-  if ((sfd = SPIFFS_open(&fs, fname, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR,
+  if ((sfd = SPIFFS_open(&fs, dst, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR,
                          0)) == -1) {
-    fprintf(stderr, "SPIFFS_open %s failed: %d\n", fname, SPIFFS_errno(&fs));
+    fprintf(stderr, "SPIFFS_open failed: %d\n", SPIFFS_errno(&fs));
     goto cleanup;
   }
 
   if (SPIFFS_write(&fs, sfd, (uint8_t *) buf, size) == -1) {
-    fprintf(stderr, "SPIFFS_write %s failed: %d\n", fname, SPIFFS_errno(&fs));
-    goto spifs_cleanup;
+    fprintf(stderr, "SPIFFS_write failed: %d\n", SPIFFS_errno(&fs));
+    goto spiffs_cleanup;
   }
 
-  fprintf(stderr, "a %s\n", fname);
+  fprintf(stderr, "%d\n", (int) size);
+  result = true;
 
-spifs_cleanup:
+spiffs_cleanup:
   SPIFFS_close(&fs, sfd);
 cleanup:
   free(buf);
-  close(ifd);
+  if (ifd >= 0) close(ifd);
+  return result;
 }
 
-void read_dir(DIR *dir, const char *dir_path) {
+bool read_dir(DIR *dir, const char *dir_path) {
+  bool result = false;
   char path[512];
   struct dirent *ent;
 
@@ -68,9 +80,14 @@ void read_dir(DIR *dir, const char *dir_path) {
       continue;
     }
     sprintf(path, "%s/%s", dir_path, ent->d_name);
-    copy(path, ent->d_name);
+    if (!copy(path, ent->d_name)) {
+      goto cleanup;
+    }
   }
+  result = true;
+cleanup:
   closedir(dir);
+  return result;
 }
 
 int main(int argc, char **argv) {
@@ -109,7 +126,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "unable to open directory %s\n", root_dir);
     return 1;
   } else {
-    read_dir(dir, root_dir);
+    if (!read_dir(dir, root_dir)) {
+      return 1;
+    }
   }
 
   u32_t total, used;
