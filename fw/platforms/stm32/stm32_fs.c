@@ -1,15 +1,15 @@
-#include "stm32_hal.h"
+#include <stm32_hal.h>
+#include <errno.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "fs_data.h"
 #include "stm32_spiffs.h"
 #include "stm32_uart.h"
 #include "common/spiffs/spiffs.h"
 #include "common/cs_dbg.h"
 #include "fw/src/mgos_uart.h"
-#include <errno.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2

@@ -1,7 +1,8 @@
-#include "fw/src/mgos_gpio_hal.h"
-#include "stm32_hal.h"
-#include "common/queue.h"
+#include <stm32_hal.h>
 #include <stdlib.h>
+#include "fw/src/mgos_gpio_hal.h"
+#include "common/queue.h"
+
 
 struct gpio_info {
   int pin;
@@ -28,7 +29,6 @@ static struct gpio_info* get_gpio_info(int pin) {
   }
 
   if (gi == NULL || gi->pin != pin) {
-    printf("creating gi for pin %X\n", pin);
     gi = (struct gpio_info *) calloc(1, sizeof(*gi));
     SLIST_INSERT_HEAD(&s_gpio_infos, gi, gpio_infos);
     get_stm_pin(pin, &gi->gpiox, &gi->gpio_pin);

@@ -6,7 +6,7 @@ EXAMPLES_cc3200 = c_hello c_network c_mqtt
 EXAMPLES_esp32 = c_hello c_mqtt c_rpc c_websocket
 EXAMPLES_esp8266 = c_heater c_hello c_mcast c_mdns c_mqtt c_network c_websocket
 EXAMPLES_pic32 =
-EXAMPLES_stm32 = c_hello
+EXAMPLES_stm32 = c_hello mjs_hello
 
 MGOS ?= mgos
 

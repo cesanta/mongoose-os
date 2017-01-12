@@ -1,3 +1,4 @@
+#include <stm32_hal.h>
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_mongoose.h"
@@ -9,8 +10,8 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
 }
 
 void mgos_system_restart(int exit_code) {
-  /* TODO(alashkin): implement */
   (void) exit_code;
+  HAL_NVIC_SystemReset();
 }
 
 void device_get_mac_address(uint8_t mac[6]) {

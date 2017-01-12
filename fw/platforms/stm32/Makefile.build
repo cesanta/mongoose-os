@@ -14,10 +14,8 @@ MGOS_ENABLE_I2C_GPIO ?= 0
 MGOS_ENABLE_I2C_SERVICE ?= 0
 MGOS_ENABLE_JS ?= 0
 MGOS_ENABLE_MQTT ?= 0
-MGOS_ENABLE_RPC ?= 0
 MGOS_ENABLE_RPC_CHANNEL_HTTP ?= 0
 MGOS_ENABLE_RPC_CHANNEL_MQTT ?= 0
-MGOS_ENABLE_RPC_CHANNEL_UART ?= o
 MGOS_ENABLE_RPC_CHANNEL_WS ?= 0
 MGOS_ENABLE_SYS_SERVICE ?= 0
 MGOS_ENABLE_UPDATER ?= 0
@@ -37,6 +35,7 @@ APP_MODULES ?=
 APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
+FFI_SYMBOLS ?=
 
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
@@ -57,6 +56,7 @@ PLATFORM_CFLAGS = $(shell cat $(PLATFORM_SDK_PATH)/cflags)
 
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
+NM = arm-none-eabi-nm
 
 BUILD_DIR ?= $(CURDIR)/.build
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
@@ -91,6 +91,7 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 # Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
 # TODO(alashkin): uncomment line below to allow spiffs writing
 FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08040000"))) __attribute__ ((aligned (131072)))'
+MGOS_JS_PATH ?= $(MGOS_SRC_PATH)/js
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
   FS_IMG = $(FW_STAGING_DIR)/fs.bin
@@ -108,6 +109,9 @@ SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
+SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 SRCS = $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS)
 
 MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
@@ -115,7 +119,7 @@ MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
              mgos_gpio.c mgos_sys_config.c mgos_config.c mongoose.c \
              mgos_timers_mongoose.c cs_file.c mgos_mongoose.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
-             cs_dbg.c
+             cs_dbg.c mgos_dlsym.c
 
 MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
@@ -123,7 +127,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXT
 
 VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_MODULES) \
 		 $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
-         $(SPIFFS_PATH)
+         $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc
 
 FW_PARTS = boot:src=$(APP_BIN),addr=0
 
@@ -142,7 +146,7 @@ endif
 LDFLAGS ?=
 LDLIBS = -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
 
-IPATH += $(addprefix -I, $(SDK_INCLUDES))
+IPATH += $(addprefix -I, $(SDK_INCLUDES) $(APP_MODULES))
 IPATH += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
 		 -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH)
 
@@ -172,15 +176,16 @@ $(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(APP_ELF): $(OBJECTS)
+$(APP_ELF): $(OBJECTS) $(FFI_EXPORTS_O)
 	$(vecho) LD $(notdir $@)
-	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) $(LDLIBS) -T$(LDSCRIPT) -o $@
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) $(FFI_EXPORTS_O) $(LDLIBS) -T$(LDSCRIPT) -o $@
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) OBJCOPY $(notdir $@)
 	$(Q) $(OBJCOPY) -Obinary $^ $@
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(FW_STAGING_DIR)
@@ -200,5 +205,13 @@ $(FS_HEADER) : $(FS_IMG)
 	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER).tmp && \
 	      echo $(FS_ATTRIBUTES) > $(FS_HEADER) && \
 		  cat  $(FS_HEADER).tmp >> $(FS_HEADER))
+
+$(SYMBOLS_DUMP): $(OBJECTS)
+	$(vecho) "GEN   $@"
+	$(Q) $(NM) --defined-only --print-file-name -g $^ > $@
+
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
+	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
+
 clean:
 	@rm -rf $(BUILD_DIR)

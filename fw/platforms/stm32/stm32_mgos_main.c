@@ -1,4 +1,4 @@
-#include "stm32_hal.h"
+#include <stm32_hal.h>
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 #include "stm32_spiffs.h"
@@ -18,7 +18,7 @@ void mgos_main() {
     return;
   }
   s_initialized = 1;
-  LOG(LL_INFO, ("Initialization done"));
+  LOG(LL_DEBUG, ("Initialization done"));
 }
 
 void mgos_loop() {

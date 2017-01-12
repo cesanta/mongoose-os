@@ -1,5 +1,6 @@
-#include "stm32_hal.h"
-
+#include <stm32_hal.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include "fw/src/mgos_uart.h"
 
 static int s_stdout_uart_no;
@@ -7,6 +8,19 @@ static int s_stderr_uart_no;
 
 static USART_HandleTypeDef *uarts[2] = {&USB_UART, &UART2};
 #define UART_TRANSMIT_TIMEOUT 100
+
+/*
+ * Debug helper, prints to UART2 even if mgos_uart_write is disabled
+ * Ex: RPC-UART activated
+ */
+void uart_dprintf(char *fmt, ...) {
+  va_list ap;
+  char buf[512];
+  va_start(ap, fmt);
+  int result = vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  HAL_USART_Transmit(&UART2, buf, result, UART_TRANSMIT_TIMEOUT);
+}
 
 int stm32_get_stdout_uart_no() {
   return s_stdout_uart_no;
@@ -17,7 +31,17 @@ int stm32_get_stderr_uart_no() {
 }
 
 void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
-  /* TODO(alashkin): implement */
+  USART_HandleTypeDef *usart = (USART_HandleTypeDef *) us->dev_data;
+  cs_rbuf_t *rxb = &us->rx_buf;
+  HAL_StatusTypeDef status = HAL_OK;
+  while(rxb->avail > 0 && __HAL_USART_GET_FLAG(usart, USART_FLAG_RXNE)) {
+    uint8_t cp;
+    status = HAL_USART_Receive(usart, &cp, 1, 10);
+    if (status == HAL_OK) {
+      cs_rbuf_append_one(rxb, cp);
+      us->stats.rx_bytes++;
+    }
+  }
 }
 
 void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
