@@ -110,7 +110,8 @@ static esp_err_t mgos_wifi_set_mode(wifi_mode_t mode) {
 
   r = esp_wifi_set_mode(mode);
   if (r == ESP_ERR_WIFI_NOT_INIT) {
-    wifi_init_config_t icfg = {.event_handler = wifi_event_handler};
+    wifi_init_config_t icfg = WIFI_INIT_CONFIG_DEFAULT();
+    icfg.event_handler = wifi_event_handler;
     r = esp_wifi_init(&icfg);
     if (r != ESP_OK) {
       LOG(LL_ERROR, ("Failed to init WiFi: %d", r));
@@ -195,9 +196,9 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   r = mgos_wifi_add_mode(WIFI_MODE_STA);
   if (r != ESP_OK) return false;
 
-  strncpy(stacfg->ssid, cfg->ssid, sizeof(stacfg->ssid));
+  strncpy((char *) stacfg->ssid, cfg->ssid, sizeof(stacfg->ssid));
   if (cfg->pass != NULL) {
-    strncpy(stacfg->password, cfg->pass, sizeof(stacfg->password));
+    strncpy((char *) stacfg->password, cfg->pass, sizeof(stacfg->password));
   }
 
   if (cfg->ip != NULL && cfg->netmask != NULL) {
@@ -266,10 +267,10 @@ int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   r = mgos_wifi_add_mode(WIFI_MODE_AP);
   if (r != ESP_OK) return false;
 
-  strncpy(apcfg->ssid, cfg->ssid, sizeof(apcfg->ssid));
-  mgos_expand_mac_address_placeholders(apcfg->ssid);
+  strncpy((char *) apcfg->ssid, cfg->ssid, sizeof(apcfg->ssid));
+  mgos_expand_mac_address_placeholders((char *) apcfg->ssid);
   if (cfg->pass != NULL) {
-    strncpy(apcfg->password, cfg->pass, sizeof(apcfg->password));
+    strncpy((char *) apcfg->password, cfg->pass, sizeof(apcfg->password));
     apcfg->authmode = WIFI_AUTH_WPA2_PSK;
   } else {
     apcfg->authmode = WIFI_AUTH_OPEN;

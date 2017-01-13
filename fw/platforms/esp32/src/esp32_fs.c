@@ -150,6 +150,58 @@ static int spiffs_unlink_p(void *ctx, const char *path) {
   return spiffs_vfs_unlink(&((struct mount_info *) ctx)->fs, path);
 }
 
+struct spiffs_dir {
+  DIR dir;
+  spiffs_DIR sdh;
+  struct spiffs_dirent sde;
+  struct dirent de;
+};
+
+static DIR *spiffs_opendir_p(void *ctx, const char *name) {
+  struct spiffs_dir *sd = NULL;
+  spiffs *fs = &((struct mount_info *) ctx)->fs;
+
+  if (name == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
+
+  if ((sd = (struct spiffs_dir *) calloc(1, sizeof(*sd))) == NULL) {
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  if (SPIFFS_opendir(fs, name, &sd->sdh) == NULL) {
+    free(sd);
+    sd = NULL;
+    errno = EINVAL;
+  }
+
+  return (DIR *) sd;
+}
+
+static struct dirent *spiffs_readdir_p(void *ctx, DIR *dir) {
+  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
+  if (SPIFFS_readdir(&sd->sdh, &sd->sde) == SPIFFS_OK) {
+    errno = EBADF;
+    return NULL;
+  }
+  sd->de.d_ino = sd->sde.obj_id;
+  memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
+  (void) ctx;
+  return &sd->de;
+}
+
+static int spiffs_closedir_p(void *ctx, DIR *dir) {
+  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
+  if (dir != NULL) {
+    SPIFFS_closedir(&sd->sdh);
+    free(dir);
+  }
+  (void) ctx;
+  return 0;
+}
+
 /* For cs_dirent.c functions */
 spiffs *cs_spiffs_get_fs(void) {
   return (s_mount != NULL ? &s_mount->fs : NULL);
@@ -168,16 +220,19 @@ enum mgos_init_result esp32_fs_init() {
     esp_vfs_t vfs = {
         .fd_offset = 0,
         .flags = ESP_VFS_FLAG_CONTEXT_PTR,
-        .open_p = &spiffs_open_p,
-        .close_p = &spiffs_close_p,
-        .read_p = &spiffs_read_p,
-        .write_p = &spiffs_write_p,
-        .stat_p = &spiffs_stat_p,
-        .fstat_p = &spiffs_fstat_p,
-        .lseek_p = &spiffs_lseek_p,
-        .rename_p = &spiffs_rename_p,
-        .unlink_p = &spiffs_unlink_p,
+        .open_p = spiffs_open_p,
+        .close_p = spiffs_close_p,
+        .read_p = spiffs_read_p,
+        .write_p = spiffs_write_p,
+        .stat_p = spiffs_stat_p,
+        .fstat_p = spiffs_fstat_p,
+        .lseek_p = spiffs_lseek_p,
+        .rename_p = spiffs_rename_p,
+        .unlink_p = spiffs_unlink_p,
         .link_p = NULL,
+        .opendir_p = spiffs_opendir_p,
+        .readdir_p = spiffs_readdir_p,
+        .closedir_p = spiffs_closedir_p,
     };
     if (esp_vfs_register(ESP_VFS_DEFAULT, &vfs, m) != ESP_OK) {
       r = MGOS_INIT_FS_INIT_FAILED;
