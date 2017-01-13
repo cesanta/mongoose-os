@@ -13,7 +13,7 @@
 #if CS_PLATFORM == CS_P_ESP8266
 #define LED_GPIO 2 /* On ESP-12E there is a blue LED connected to GPIO2  */
 #elif CS_PLATFORM == CS_P_ESP32
-#define LED_GPIO 17 /* No LED on DevKitC, use random GPIO. */
+#define LED_GPIO 21 /* No LED on DevKitC, use random GPIO close to GND pin */
 #elif CS_PLATFORM == CS_P_CC3200
 #define LED_GPIO 64 /* The red LED on LAUNCHXL */
 #elif CS_PLATFORM == CS_P_STM32 && defined(STM32F746xx)
