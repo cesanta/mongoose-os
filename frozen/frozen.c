@@ -26,6 +26,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if !defined(WEAK)
+#if (defined(__GNUC__) || defined(__TI_COMPILER_VERSION__)) && !defined(_WIN32)
+#define WEAK __attribute__((weak))
+#else
+#define WEAK
+#endif
+#endif
+
 #ifdef _WIN32
 #define snprintf cs_win_snprintf
 #define vsnprintf cs_win_vsnprintf
@@ -446,6 +454,7 @@ static int json_encode_string(struct json_out *out, const char *p, size_t len) {
   return n;
 }
 
+int json_printer_buf(struct json_out *out, const char *buf, size_t len) WEAK;
 int json_printer_buf(struct json_out *out, const char *buf, size_t len) {
   size_t avail = out->u.buf.size - out->u.buf.len;
   size_t n = len < avail ? len : avail;
@@ -459,6 +468,7 @@ int json_printer_buf(struct json_out *out, const char *buf, size_t len) {
   return len;
 }
 
+int json_printer_file(struct json_out *out, const char *buf, size_t len) WEAK;
 int json_printer_file(struct json_out *out, const char *buf, size_t len) {
   return fwrite(buf, 1, len, out->u.fp);
 }
@@ -532,6 +542,7 @@ static int b64dec(const char *src, int n, char *dst) {
   return len;
 }
 
+int json_vprintf(struct json_out *out, const char *fmt, va_list xap) WEAK;
 int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
   int len = 0;
   const char *quote = "\"", *null = "null";
@@ -697,6 +708,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
   return len;
 }
 
+int json_printf(struct json_out *out, const char *fmt, ...) WEAK;
 int json_printf(struct json_out *out, const char *fmt, ...) {
   int n;
   va_list ap;
@@ -706,6 +718,7 @@ int json_printf(struct json_out *out, const char *fmt, ...) {
   return n;
 }
 
+int json_printf_array(struct json_out *out, va_list *ap) WEAK;
 int json_printf_array(struct json_out *out, va_list *ap) {
   int len = 0;
   char *arr = va_arg(*ap, char *);
@@ -732,6 +745,7 @@ int json_printf_array(struct json_out *out, va_list *ap) {
 }
 
 #ifdef _WIN32
+int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) WEAK;
 int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
   int res = _vsnprintf(str, size, format, ap);
   va_end(ap);
@@ -741,6 +755,7 @@ int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
   return res;
 }
 
+int cs_win_snprintf(char *str, size_t size, const char *format, ...) WEAK;
 int cs_win_snprintf(char *str, size_t size, const char *format, ...) {
   int res;
   va_list ap;
@@ -751,6 +766,8 @@ int cs_win_snprintf(char *str, size_t size, const char *format, ...) {
 }
 #endif /* _WIN32 */
 
+int json_walk(const char *json_string, int json_string_length,
+              json_walk_callback_t callback, void *callback_data) WEAK;
 int json_walk(const char *json_string, int json_string_length,
               json_walk_callback_t callback, void *callback_data) {
   struct frozen frozen;
@@ -785,6 +802,8 @@ static void json_scanf_array_elem_cb(void *callback_data, const char *name,
 }
 
 int json_scanf_array_elem(const char *s, int len, const char *path, int idx,
+                          struct json_token *token) WEAK;
+int json_scanf_array_elem(const char *s, int len, const char *path, int idx,
                           struct json_token *token) {
   struct scan_array_info info;
   info.token = token;
@@ -803,6 +822,7 @@ struct json_scanf_info {
   int type;
 };
 
+int json_unescape(const char *src, int slen, char *dst, int dlen) WEAK;
 int json_unescape(const char *src, int slen, char *dst, int dlen) {
   char *send = (char *) src + slen, *dend = dst + dlen, *orig_dst = dst, *p;
   const char *esc1 = "\"\\/bfnrt", *esc2 = "\"\\/\b\f\n\r\t";
@@ -908,6 +928,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
   }
 }
 
+int json_vscanf(const char *s, int len, const char *fmt, va_list ap) WEAK;
 int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
   char path[JSON_MAX_PATH_LEN] = "", fmtbuf[20];
   int i = 0;
@@ -958,6 +979,7 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
   return info.num_conversions;
 }
 
+int json_scanf(const char *str, int len, const char *fmt, ...) WEAK;
 int json_scanf(const char *str, int len, const char *fmt, ...) {
   int result;
   va_list ap;
