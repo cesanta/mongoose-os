@@ -47,10 +47,12 @@ typedef unsigned _int64 uint64_t;
 #endif
 #define PRId64 "I64d"
 #define PRIu64 "I64u"
+#if !defined(SIZE_T_FMT)
 #if _MSC_VER >= 1310
 #define SIZE_T_FMT "Iu"
 #else
 #define SIZE_T_FMT "u"
+#endif
 #endif
 #else /* _WIN32 */
 /* <inttypes.h> wants this for C++ */
@@ -58,7 +60,9 @@ typedef unsigned _int64 uint64_t;
 #define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
+#if !defined(SIZE_T_FMT)
 #define SIZE_T_FMT "zu"
+#endif
 #endif /* _WIN32 */
 
 #define INT64_FMT PRId64
