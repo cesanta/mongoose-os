@@ -240,4 +240,13 @@ struct mg_connection *mgos_mqtt_get_global_conn(void) {
   return s_conn;
 }
 
+bool mgos_mqtt_pub(const char *topic, const void *message, size_t len) {
+  static uint16_t message_id;
+  struct mg_connection *c = mgos_mqtt_get_global_conn();
+  if (c == NULL) return false;
+  LOG(LL_INFO, ("Publishing: %d bytes [%.*s]", (int) len, (int) len, message));
+  mg_mqtt_publish(c, topic, message_id++, MG_MQTT_QOS(0), message, len);
+  return true;
+}
+
 #endif /* MGOS_ENABLE_MQTT */

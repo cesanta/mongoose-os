@@ -1,14 +1,19 @@
 name: mjs_hello
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2016-09-20
+skeleton_version: 2016-01-13
 sources:
   - src
 filesystem:
   - fs
 ffi_symbols:
+  - mgos_mqtt_pub
   - mgos_gpio_*
   - mgos_set_timer
   - get_led_gpio_pin
 modules:
   - src: https://github.com/cesanta/mjs
+build_vars:
+  MGOS_ENABLE_MQTT: 1
+  SSL: mbedTLS
+  APP_CONF_SCHEMA: src/conf_schema.yaml

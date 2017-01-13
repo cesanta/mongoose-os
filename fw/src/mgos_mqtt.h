@@ -6,6 +6,7 @@
 #ifndef CS_FW_SRC_MGOS_MQTT_GLOBAL_H_
 #define CS_FW_SRC_MGOS_MQTT_GLOBAL_H_
 
+#include <stdbool.h>
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 
@@ -35,6 +36,11 @@ void mgos_mqtt_set_global_handler(mg_event_handler_t handler, void *ud);
  * `NULL`
  */
 struct mg_connection *mgos_mqtt_get_global_conn(void);
+
+/*
+ * Publish message on configured MQTT server, on a given MQTT topic.
+ */
+bool mgos_mqtt_pub(const char *topic, const void *message, size_t len);
 
 #endif /* MGOS_ENABLE_MQTT */
 
