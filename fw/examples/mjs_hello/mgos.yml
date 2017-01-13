@@ -8,6 +8,11 @@ filesystem:
   - fs
 ffi_symbols:
   - mgos_mqtt_pub
+  - mgos_get_heap_size
+  - mgos_get_free_heap_size
+  - mgos_get_storage_free_space
+  - mgos_system_restart
+  - mgos_usleep
   - mgos_gpio_*
   - mgos_set_timer
   - get_led_gpio_pin
