@@ -54,9 +54,9 @@
 ATCAIfaceCfg cfg_ateccx08a_i2c_default = {
 	.iface_type				= ATCA_I2C_IFACE,
 	.devtype				= ATECC508A,
+	.atcai2c.baud			= 400000,
 	.atcai2c.slave_address	= 0xC0,
 	.atcai2c.bus			= 2,
-	.atcai2c.baud			= 400000,
 	//.atcai2c.baud = 100000,
 	.wake_delay				= 1500,
 	.rx_retries				= 20
@@ -75,9 +75,9 @@ ATCAIfaceCfg cfg_ateccx08a_swi_default = {
 ATCAIfaceCfg cfg_sha204a_i2c_default = {
 	.iface_type				= ATCA_I2C_IFACE,
 	.devtype				= ATSHA204A,
+	.atcai2c.baud			= 400000,
 	.atcai2c.slave_address	= 0xC8,
 	.atcai2c.bus			= 2,
-	.atcai2c.baud			= 400000,
 	.wake_delay				= 2560,
 	.rx_retries				= 20
 };
@@ -95,11 +95,11 @@ ATCAIfaceCfg cfg_sha204a_swi_default = {
 ATCAIfaceCfg cfg_ecc508_kitcdc_default = {
 	.iface_type			= ATCA_UART_IFACE,
 	.devtype			= ATECC508A,
+	.atcauart.stopbits	= 1,
+	.atcauart.parity	= 2,
+	.atcauart.wordsize	= 8,
 	.atcauart.port		= 0,
 	.atcauart.baud		= 115200,
-	.atcauart.wordsize	= 8,
-	.atcauart.parity	= 2,
-	.atcauart.stopbits	= 1,
 	.rx_retries			= 1,
 };
 
@@ -107,22 +107,22 @@ ATCAIfaceCfg cfg_ecc508_kitcdc_default = {
 ATCAIfaceCfg cfg_ecc508_kithid_default = {
 	.iface_type			= ATCA_HID_IFACE,
 	.devtype			= ATECC508A,
-	.atcahid.idx		= 0,
-	.atcahid.vid		= 0x03EB,
-	.atcahid.pid		= 0x2312,
-	.atcahid.packetsize = 64,
 	.atcahid.guid		= { 0x4d,		 0x1e, 0x55, 0xb2, 0xf1, 0x6f, 0x11, 0xcf, 0x88, 0xcb, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30 },
+	.atcahid.packetsize = 64,
+	.atcahid.idx		= 0,
+	.atcahid.pid		= 0x2312,
+	.atcahid.vid		= 0x03EB,
 };
 
 /** \brief default configuration for Kit protocol over the device's async interface */
 ATCAIfaceCfg cfg_sha204_kithid_default = {
 	.iface_type			= ATCA_HID_IFACE,
 	.devtype			= ATSHA204A,
-	.atcahid.idx		= 0,
-	.atcahid.vid		= 0x03EB,
+	.atcahid.guid		= { 0x4d,		 0x1e, 0x55, 0xb2, 0xf1, 0x6f, 0x11, 0xcf, 0x88, 0xcb, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30 },
 	.atcahid.pid		= 0x2312,
 	.atcahid.packetsize = 64,
-	.atcahid.guid		= { 0x4d,		 0x1e, 0x55, 0xb2, 0xf1, 0x6f, 0x11, 0xcf, 0x88, 0xcb, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30 },
+	.atcahid.idx		= 0,
+	.atcahid.vid		= 0x03EB,
 };
 
 /** @} */

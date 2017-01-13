@@ -193,9 +193,6 @@ ATCA_STATUS atcab_sleep(void)
 
 ATCA_STATUS atcab_cfg_discover( ATCAIfaceCfg cfgArray[], int maxIfaces)
 {
-	int ifaceNum = 0, i;
-	int found = 0;
-
 	// this cumulatively gathers all the interfaces enabled by #defines
 
 #ifdef ATCA_HAL_I2C
