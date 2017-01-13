@@ -246,7 +246,7 @@ ifeq "$(SSL)" "mbedTLS"
   endif
 
 $(SSL_LIBS):
-	$(Q) make -j4 -C $(MBEDTLS_PATH)/library $(notdir $@) \
+	$(Q) $(MAKE) -j4 -C $(MBEDTLS_PATH)/library $(notdir $@) \
 	  CC=$(CC) AR=$(AR) \
 	  CFLAGS="$(MBEDTLS_CFLAGS)"
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
@@ -479,5 +479,5 @@ $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 ifeq "$(SSL)" "mbedTLS"
-	$(Q) make -C $(MBEDTLS_PATH)/library clean
+	$(Q) $(MAKE) -C $(MBEDTLS_PATH)/library clean
 endif
