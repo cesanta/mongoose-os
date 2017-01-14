@@ -13,6 +13,7 @@ ffi_symbols:
   - mgos_get_storage_free_space
   - mgos_system_restart
   - mgos_usleep
+  - mgos_i2c_*
   - mgos_gpio_*
   - mgos_set_timer
   - get_led_gpio_pin
