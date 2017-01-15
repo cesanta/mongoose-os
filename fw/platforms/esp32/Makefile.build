@@ -31,6 +31,10 @@ FS_SIZE = 131072
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
+NVS_ADDR = 0x9000
+NVS_SIZE = 0x4000
+OTA_DATA_ADDR = 0xd000
+OTA_DATA_SIZE = 0x2000
 
 # Absolutize all paths which can be given by the caller
 override APP_MODULES := $(abspath $(APP_MODULES))
@@ -95,7 +99,7 @@ BUILD_DIR_BASE = $(BUILD_DIR)
 SRCDIRS = $(MGOS_ESP_PATH)/src
 # Explicitly specify SDK components to build. Notably, we do not build BT.
 COMPONENT_DIRS = $(COMMON_PATH) $(MGOS_PATH)/third_party /opt $(MGOS_ESP_PATH) $(IDF_PATH)/components
-SDK_COMPONENTS = bootloader bootloader_support driver esp32 esptool_py \
+SDK_COMPONENTS = app_update bootloader bootloader_support driver esp32 esptool_py \
                  ethernet expat freertos log lwip micro-ecc newlib \
                  nvs_flash partition_table spi_flash tcpip_adapter vfs \
                  wpa_supplicant xtensa-debug-module
@@ -122,6 +126,8 @@ include $(MGOS_PATH)/fw/common.mk
 
 FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN) \
+           nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff \
+           otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),fill=0xff \
            app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 

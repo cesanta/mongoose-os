@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "esp_spi_flash.h"
 #include "esp_vfs.h"
@@ -88,11 +89,13 @@ static s32_t esp32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
 enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
                                      struct mount_info **res) {
   s32_t r;
+  u32_t total, used;
   spiffs_config cfg;
   *res = NULL;
   struct mount_info *m = (struct mount_info *) calloc(1, sizeof(*m));
   if (m == NULL) return MGOS_INIT_OUT_OF_MEMORY;
-  LOG(LL_INFO, ("Mounting SPIFFS %u @ 0x%x", part->size, part->address));
+  LOG(LL_INFO, ("Mounting SPIFFS from %s (%u @ 0x%x)", part->label, part->size,
+                part->address));
   cfg.hal_read_f = esp32_spiffs_read;
   cfg.hal_write_f = esp32_spiffs_write;
   cfg.hal_erase_f = esp32_spiffs_erase;
@@ -109,6 +112,8 @@ enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
     LOG(LL_ERROR, ("SPIFFS init failed: %d", (int) SPIFFS_errno(&m->fs)));
     free(m);
     return MGOS_INIT_FS_INIT_FAILED;
+  } else if (SPIFFS_info(&m->fs, &total, &used) == SPIFFS_OK) {
+    LOG(LL_INFO, ("Total: %u, used: %u, free: %u", total, used, total - used));
   }
   *res = m;
   return MGOS_INIT_OK;
@@ -208,10 +213,23 @@ spiffs *cs_spiffs_get_fs(void) {
 }
 
 enum mgos_init_result esp32_fs_init() {
-  const esp_partition_t *fs_part = esp_partition_find_first(
-      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, NULL);
+  char ota_fs_part_name[5] = {'f', 's', '_', 0, 0};
+  const esp_partition_t *fs_part = NULL;
+  const esp_partition_t *boot_part = esp_ota_get_boot_partition();
+  const char *fs_part_name = NULL;
+
+  if (boot_part != NULL) {
+    /* If OTA layout is used, use the corresponding FS partition. */
+    char idx = boot_part->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_MIN;
+    ota_fs_part_name[3] = idx + (idx < 10 ? '0' : 'a');
+    fs_part_name = ota_fs_part_name;
+  }
+
+  fs_part = esp_partition_find_first(
+      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, fs_part_name);
   if (fs_part == NULL) {
-    LOG(LL_ERROR, ("No FS partition."));
+    LOG(LL_ERROR,
+        ("No FS partition (%s).", (fs_part_name ? fs_part_name : "")));
     return MGOS_INIT_FS_INIT_FAILED;
   }
   struct mount_info *m;
