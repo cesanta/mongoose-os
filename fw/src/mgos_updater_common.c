@@ -121,7 +121,9 @@ static void context_save_unprocessed(struct update_context *ctx) {
     mbuf_append(&ctx->unprocessed, ctx->data, ctx->data_len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
-    LOG(LL_DEBUG, ("Added %d bytes to cached data", ctx->data_len));
+    if (ctx->data_len > 0) {
+      LOG(LL_DEBUG, ("Added %d bytes to cached data", ctx->data_len));
+    }
   }
 }
 

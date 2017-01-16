@@ -137,6 +137,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
                 g_boot_cfg.seq, g_boot_cfg.flags, g_boot_cfg.app_image_file,
                 g_boot_cfg.app_load_addr, g_boot_cfg.fs_container_prefix));
 
+#if MGOS_ENABLE_UPDATER
   if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     /* Tombstone the current config. If anything goes wrong between now and
      * commit, next boot will use the old one. */
@@ -145,6 +146,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     write_boot_cfg(&g_boot_cfg, g_boot_cfg_idx);
     g_boot_cfg.seq = saved_seq;
   }
+#endif
 
   r = cc3200_fs_init(g_boot_cfg.fs_container_prefix);
   if (r < 0) {

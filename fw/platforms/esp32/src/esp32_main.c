@@ -19,9 +19,11 @@
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_updater_common.h"
 
 #include "fw/platforms/esp32/src/esp32_console.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
+#include "fw/platforms/esp32/src/esp32_updater.h"
 
 #define MGOS_TASK_STACK_SIZE 8192
 #define MGOS_TASK_QUEUE_LENGTH 32
@@ -64,6 +66,9 @@ static enum mgos_init_result esp32_mgos_init() {
 
   /* Enable WDT for this task. It will be fed by Mongoose polling loop. */
   esp_task_wdt_feed();
+
+  esp32_updater_early_init();
+
   cs_log_set_level(LL_INFO);
   mongoose_init();
 
@@ -73,7 +78,8 @@ static enum mgos_init_result esp32_mgos_init() {
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)%s", mg_build_version, mg_build_id,
+                (esp32_is_first_boot() ? ", first boot" : "")));
   LOG(LL_INFO, ("Task ID: %p, RAM: %u free", xTaskGetCurrentTaskHandle(),
                 mgos_get_free_heap_size()));
 
@@ -81,6 +87,12 @@ static enum mgos_init_result esp32_mgos_init() {
     LOG(LL_ERROR, ("Failed to mount FS"));
     return MGOS_INIT_FS_INIT_FAILED;
   }
+
+#if MGOS_ENABLE_UPDATER
+  if (esp32_is_first_boot() && mgos_upd_apply_update() < 0) {
+    return MGOS_INIT_APPLY_UPDATE_FAILED;
+  }
+#endif
 
   if ((r = mgos_init()) != MGOS_INIT_OK) return r;
 
@@ -96,9 +108,17 @@ void mgos_task(void *arg) {
   mgos_app_preinit();
 
   enum mgos_init_result r = esp32_mgos_init();
-  if (r != MGOS_INIT_OK) {
-    LOG(LL_ERROR, ("MGOS init failed: %d", r));
-    abort();
+  bool success = (r == MGOS_INIT_OK);
+  if (!success) LOG(LL_ERROR, ("MGOS init failed: %d", r));
+
+#if MGOS_ENABLE_UPDATER
+  mgos_upd_boot_finish(success, esp32_is_first_boot());
+#endif
+
+  if (!success) {
+    /* Arbitrary delay to make potential reboot loop less tight. */
+    mgos_usleep(500000);
+    mgos_system_restart(0);
   }
 
   while (true) {

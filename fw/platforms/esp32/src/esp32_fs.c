@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include "fw/platforms/esp32/src/esp32_fs.h"
+
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -14,23 +16,9 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_dirent.h"
-#include "common/spiffs/spiffs.h"
-#include "common/spiffs/spiffs_nucleus.h"
 #include "common/spiffs/spiffs_vfs.h"
 
-#include "fw/platforms/esp32/src/esp32_fs.h"
-
-#define MGOS_SPIFFS_MAX_OPEN_FILES 8
-#define MGOS_SPIFFS_BLOCK_SIZE SPI_FLASH_SEC_SIZE
-#define MGOS_SPIFFS_ERASE_SIZE SPI_FLASH_SEC_SIZE
-#define MGOS_SPIFFS_PAGE_SIZE (SPI_FLASH_SEC_SIZE / 16)
-
-struct mount_info {
-  spiffs fs;
-  u8_t work[2 * MGOS_SPIFFS_PAGE_SIZE];
-  u8_t fds[MGOS_SPIFFS_MAX_OPEN_FILES * sizeof(spiffs_fd)];
-  const esp_partition_t *part;
-};
+#include "fw/platforms/esp32/src/esp32_updater.h"
 
 static struct mount_info *s_mount = NULL;
 
@@ -212,24 +200,26 @@ spiffs *cs_spiffs_get_fs(void) {
   return (s_mount != NULL ? &s_mount->fs : NULL);
 }
 
-enum mgos_init_result esp32_fs_init() {
+const esp_partition_t *esp32_find_fs_for_app_slot(int slot) {
   char ota_fs_part_name[5] = {'f', 's', '_', 0, 0};
-  const esp_partition_t *fs_part = NULL;
-  const esp_partition_t *boot_part = esp_ota_get_boot_partition();
   const char *fs_part_name = NULL;
-
-  if (boot_part != NULL) {
-    /* If OTA layout is used, use the corresponding FS partition. */
-    char idx = boot_part->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_MIN;
-    ota_fs_part_name[3] = idx + (idx < 10 ? '0' : 'a');
+  /*
+   * If OTA layout is used, use the corresponding FS partition, otherwise use
+   * the first data:spiffs partition.
+   */
+  if (slot >= 0) {
+    ota_fs_part_name[3] = slot + (slot < 10 ? '0' : 'a');
     fs_part_name = ota_fs_part_name;
   }
-
-  fs_part = esp_partition_find_first(
+  return esp_partition_find_first(
       ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, fs_part_name);
+}
+
+enum mgos_init_result esp32_fs_init() {
+  const esp_partition_t *fs_part =
+      esp32_find_fs_for_app_slot(esp32_get_boot_slot());
   if (fs_part == NULL) {
-    LOG(LL_ERROR,
-        ("No FS partition (%s).", (fs_part_name ? fs_part_name : "")));
+    LOG(LL_ERROR, ("No FS partition"));
     return MGOS_INIT_FS_INIT_FAILED;
   }
   struct mount_info *m;
@@ -260,6 +250,13 @@ enum mgos_init_result esp32_fs_init() {
     s_mount = m;
   }
   return r;
+}
+
+void esp32_fs_umount(struct mount_info *m) {
+  LOG(LL_INFO, ("Unmounting %s", m->part->label));
+  SPIFFS_unmount(&m->fs);
+  memset(m, 0, sizeof(*m));
+  free(m);
 }
 
 void esp32_fs_deinit(void) {
