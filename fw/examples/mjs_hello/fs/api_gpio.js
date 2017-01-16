@@ -19,6 +19,7 @@ let GPIO = {
   disable_int: ffi('int mgos_gpio_disable_int(int)'),
   set_int_handler: ffi(
       'int mgos_gpio_set_int_handler(int,int,void(*)(int,userdata),userdata)'),
+  set_button_handler: ffi('int mgos_gpio_set_button_handler(int,int,int,int,void(*)(int, userdata), userdata)'),
   INT_NONE: 0,
   INT_EDGE_POS: 1,
   INT_EDGE_NEG: 2,

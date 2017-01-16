@@ -4,17 +4,7 @@
 // Load Mongoose OS API
 load('api_gpio.js');
 
-// Button is attached to GPIO 0, a flash button
-let pin = 0;
-
-// Configure button GPIO
-GPIO.set_mode(pin, GPIO.MODE_INPUT);
-GPIO.set_pull(pin, GPIO.PULL_UP);
-
-// Set interrupt handler
-GPIO.set_int_handler(pin, GPIO.INT_EDGE_NEG, function(x) {
+let pin = 0;   // GPIO 0 is typically a 'Flash' button
+GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 50, function(x) {
   print('Button press, pin: ', x);
 }, true);
-
-// Enable interrupts. Must be called last, after GPIO.set_int_handler().
-GPIO.enable_int(pin);
