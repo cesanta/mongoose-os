@@ -128,7 +128,7 @@ include $(MGOS_PATH)/fw/common.mk
 FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN) \
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff \
-           otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),fill=0xff \
+           otadata:type=otadata,addr=$(OTA_DATA_ADDR),src=$(MGOS_ESP_PATH)/otadata.bin \
            app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 
