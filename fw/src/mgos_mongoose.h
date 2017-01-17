@@ -35,6 +35,12 @@ void mgos_set_enable_min_heap_free_reporting(bool enable);
 /* Schedule MG poll ASAP. Note: may be called from ISR context. */
 void mongoose_schedule_poll(void);
 
+/* API that passes user data to the callback. Could be FFI-ed. */
+typedef void (*mg_eh_t)(struct mg_connection *, int, void *, void *);
+struct mg_connection *mgos_bind(const char *addr, mg_eh_t func, void *ud);
+struct mg_connection *mgos_connect(const char *addr, mg_eh_t func, void *ud);
+void mgos_disconnect(struct mg_connection *c);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

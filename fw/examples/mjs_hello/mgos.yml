@@ -16,6 +16,10 @@ ffi_symbols:
   - mgos_i2c_*
   - mgos_gpio_*
   - mgos_set_timer
+  - mgos_bind
+  - mgos_connect
+  - mgos_disconnect
+  - mg_send
   - get_led_gpio_pin
 modules:
   - src: https://github.com/cesanta/mjs

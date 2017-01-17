@@ -1,5 +1,6 @@
 [
   "button_message.js",
   "button_blink.js",
-  "button_mqtt.js"
+  "button_mqtt.js",
+  "tcp_server.js"
 ]

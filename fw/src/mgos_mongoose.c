@@ -90,3 +90,32 @@ void mgos_set_enable_min_heap_free_reporting(bool enable) {
   if (enable && s_min_free_heap_size > 0) return;
   s_min_free_heap_size = (enable ? mgos_get_min_free_heap_size() : 0);
 }
+
+static void oplya(struct mg_connection *c, int ev, void *ev_data) {
+  mg_eh_t f = (mg_eh_t) c->priv_1.f;
+  if (c->flags & MG_F_LISTENING) return;
+  if (c->listener != NULL) f = (mg_eh_t) c->listener->priv_1.f;
+  if (f != NULL) f(c, ev, ev_data, c->user_data);
+}
+
+struct mg_connection *mgos_bind(const char *addr, mg_eh_t f, void *ud) {
+  struct mg_connection *c = mg_bind(mgos_get_mgr(), addr, oplya);
+  if (c != NULL) {
+    c->priv_1.f = (mg_event_handler_t) f;
+    c->user_data = ud;
+  }
+  return c;
+}
+
+struct mg_connection *mgos_connect(const char *addr, mg_eh_t f, void *ud) {
+  struct mg_connection *c = mg_connect(mgos_get_mgr(), addr, oplya);
+  if (c != NULL) {
+    c->priv_1.f = (mg_event_handler_t) f;
+    c->user_data = ud;
+  }
+  return c;
+}
+
+void mgos_disconnect(struct mg_connection *c) {
+  c->flags |= MG_F_SEND_AND_CLOSE;
+}
