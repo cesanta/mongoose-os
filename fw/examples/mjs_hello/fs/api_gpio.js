@@ -2,7 +2,7 @@
 // https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h
 
 let GPIO = {
-  toggle: ffi('void mgos_gpio_toggle(int)'),
+  toggle: ffi('int mgos_gpio_toggle(int)'),
   write: ffi('void mgos_gpio_write(int,int)'),
   read: ffi('int mgos_gpio_read(int)'),
 
