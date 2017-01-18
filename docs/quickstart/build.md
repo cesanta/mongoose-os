@@ -5,10 +5,10 @@ title: Build the firmware
 Create an empty directory, go into it, and run:
 
 ```bash
-mgos init --arch ARCHITECTURE # cc3200 or esp8266
+mos init --arch ARCHITECTURE # cc3200 or esp8266
 ```
 
-That command creates a `mgos.yml` configuration file with various
+That command creates a `mos.yml` configuration file with various
 build settings, which you can alter later if needed. Also, a following
 files and directories are created:
 
@@ -22,7 +22,7 @@ files and directories are created:
 Now, as all required files are created, we can build a firmware:
 
 ```sh
-$ mgos build
+$ mos build
 ```
 
 This command packs source and filesystem files and sends them to the
@@ -37,17 +37,17 @@ other build artifacts are also stored in the `build/` directory:
 - `build/gen` - generated header and source files
 
 It is possible to set build flags to customize the build. Flags can be set
-in `mgos.yml` file, `build_vars` section. Here is the list of possible
+in `mos.yml` file, `build_vars` section. Here is the list of possible
 flags, their meaning and their default values:
 
 ```yml
 build_vars:
   MGOS_DEBUG_UART: 0                  # Enable UART debugging
   MGOS_ENABLE_RPC: 1                  # Framing protocol for communication.
-  MGOS_ENABLE_RPC_CHANNEL_UART: 1     # Needed for make mgos tool to work.
-  MGOS_ENABLE_CONFIG_SERVICE: 1       # Needed for mgos config-* commands to work
+  MGOS_ENABLE_RPC_CHANNEL_UART: 1     # Needed for make mos tool to work.
+  MGOS_ENABLE_CONFIG_SERVICE: 1       # Needed for mos config-* commands to work
   MGOS_ENABLE_DNS_SD: 1               # Enable network discovery
-  MGOS_ENABLE_FILESYSTEM_SERVICE: 1   # Needed for mgos ls,put,get to work
+  MGOS_ENABLE_FILESYSTEM_SERVICE: 1   # Needed for mos ls,put,get to work
   MGOS_ENABLE_JS: 0                   # Enable JavaScript support
   MGOS_ENABLE_MQTT: 1                 # Enable MQTT support
   MGOS_ENABLE_UPDATER: 1              # Enable OTA updates

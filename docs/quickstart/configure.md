@@ -6,7 +6,7 @@ The device is flashed, but not configured yet.
 Let's set up WiFi networking on it:
 
 ```bash
-mgos config-set wifi.ap.enable=false wifi.sta.enable=true \
+mos config-set wifi.ap.enable=false wifi.sta.enable=true \
   wifi.sta.ssid=WIFI_NETWORK_NAME wifi.sta.pass=WIFI_PASSWORD
 ```
 

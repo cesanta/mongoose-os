@@ -20,4 +20,3 @@ There is a detailed description in
 See [barometer
 driver](https://github.com/cesanta/mongoose-os/blob/master/fw/platforms/esp8266/fs/MPL115A1.js)
 for the usage example.
-

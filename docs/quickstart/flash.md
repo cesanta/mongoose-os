@@ -9,5 +9,5 @@ for example TI CC3200 or ESP8266-based NodeMCU.
 Connect a hardware module to your computer and run the following command:
 
 ```bash
-mgos flash
+mos flash
 ```

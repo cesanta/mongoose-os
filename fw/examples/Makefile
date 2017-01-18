@@ -8,7 +8,7 @@ EXAMPLES_esp8266 = c_heater c_hello c_mcast c_mdns c_mqtt c_network c_websocket
 EXAMPLES_pic32 =
 EXAMPLES_stm32 = c_hello mjs_hello
 
-MGOS ?= mgos
+MOS ?= mos
 
 $(eval EXAMPLES=$(EXAMPLES_$(PLATFORM)))
 
@@ -20,7 +20,7 @@ all: $(EXAMPLES)
 
 $(EXAMPLES):
 	@echo "=== Building $@ / $(PLATFORM)"
-	@cd $@; $(MGOS) build --local --repo ${REPO_ROOT} --arch ${PLATFORM} --clean
+	@cd $@; $(MOS) build --local --repo ${REPO_ROOT} --arch ${PLATFORM} --clean
 
 clean:
 	echo "TODO: add mgos clean"

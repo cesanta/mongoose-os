@@ -8,6 +8,6 @@ Clone https://github.com/cesanta/mongoose-os.git repo, go to
 `fw/examples` directory, choose the one you like, go into it, and
 
 ```
-mgos build --arch XXX
-mgos flash && mgos console
+mos build --arch XXX
+mos flash && mos console
 ```
