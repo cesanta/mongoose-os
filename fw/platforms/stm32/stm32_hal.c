@@ -1,7 +1,15 @@
-#include <stm32_hal.h>
+#include <stm32_sdk_hal.h>
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_mongoose.h"
+
+static int s_mongoose_poll_scheduled;
+
+int mongoose_poll_scheduled() {
+  int ret = s_mongoose_poll_scheduled;
+  s_mongoose_poll_scheduled = 0;
+  return ret;
+}
 
 bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
   /* TODO(alashkin): implement */
@@ -29,7 +37,7 @@ void mgos_wdt_set_timeout(int secs) {
 }
 
 void mongoose_schedule_poll(void) {
-  /* TODO(alashkin): implement */
+  s_mongoose_poll_scheduled = 0;
 }
 
 size_t mgos_get_min_free_heap_size(void) {

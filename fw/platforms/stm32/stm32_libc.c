@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stm32_hal.h>
+#include <stm32_sdk_hal.h>
 
 int _gettimeofday(struct timeval *tv, void *tzvp) {
   uint32_t tick_ms = HAL_GetTick();

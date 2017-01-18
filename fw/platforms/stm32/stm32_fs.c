@@ -1,4 +1,4 @@
-#include <stm32_hal.h>
+#include <stm32_sdk_hal.h>
 #include <errno.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -189,7 +189,7 @@ _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   return res;
 }
 
- _off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
+_off_t _lseek_r(struct _reent *r, int fd, _off_t where, int whence) {
   ssize_t res;
   (void) r;
   if (fd < NUM_SYS_FD) {

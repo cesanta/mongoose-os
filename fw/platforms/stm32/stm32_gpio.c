@@ -1,26 +1,26 @@
-#include <stm32_hal.h>
+#include <stm32_sdk_hal.h>
 #include <stdlib.h>
 #include "fw/src/mgos_gpio_hal.h"
 #include "common/queue.h"
 
-
 struct gpio_info {
   int pin;
   uint16_t gpio_pin;
-  GPIO_TypeDef* gpiox;
+  GPIO_TypeDef *gpiox;
   GPIO_InitTypeDef init_info;
   SLIST_ENTRY(gpio_info) gpio_infos;
 };
-SLIST_HEAD(s_gpio_infos, gpio_info) s_gpio_infos = SLIST_HEAD_INITIALIZER(s_gpio_infos);
+SLIST_HEAD(s_gpio_infos,
+           gpio_info) s_gpio_infos = SLIST_HEAD_INITIALIZER(s_gpio_infos);
 
-static void get_stm_pin(int pin, GPIO_TypeDef** gpiox, uint16_t *gpio_pin) {
+static void get_stm_pin(int pin, GPIO_TypeDef **gpiox, uint16_t *gpio_pin) {
   /* STM GPIO is a combination of port and pin inside this port */
   uint16_t pin_offset = (pin & 0xFFFF0000) >> 16;
   *gpiox = (GPIO_TypeDef *) (AHB1PERIPH_BASE + pin_offset);
   *gpio_pin = (pin & 0x0000FFFF);
 }
 
-static struct gpio_info* get_gpio_info(int pin) {
+static struct gpio_info *get_gpio_info(int pin) {
   struct gpio_info *gi = NULL, *gi_tmp;
   SLIST_FOREACH_SAFE(gi, &s_gpio_infos, gpio_infos, gi_tmp) {
     if (gi->pin == pin) {
