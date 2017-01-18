@@ -11,6 +11,7 @@ APP_EXTRA_SRCS ?=
 APP_VERSION ?=
 APP_BUILD_ID ?=
 FFI_SYMBOLS ?=
+MGOS_ESP32_ENABLE_FLASH_ENCRYPTION ?= 0
 
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
@@ -121,15 +122,23 @@ PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
 
 include $(IDF_PATH)/make/project.mk
 
+ifeq "$(MGOS_ESP32_ENABLE_FLASH_ENCRYPTION)" "1"
+override CONFIG_FLASH_ENCRYPTION_ENABLED = y
+ENCRYPT = true
+else
+ENCRYPT = false
+endif
+
+
 LDFLAGS += $(BUILD_INFO_O) $(MG_BUILD_INFO_O) -L$(BUILD_DIR)/src
 
 include $(MGOS_PATH)/fw/common.mk
 
-FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN) \
-           pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN) \
+FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=$(ENCRYPT) \
+           pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=$(ENCRYPT) \
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff \
-           otadata:type=otadata,addr=$(OTA_DATA_ADDR),src=$(MGOS_ESP_PATH)/otadata.bin \
-           app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN) \
+           otadata:type=otadata,addr=$(OTA_DATA_ADDR),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=$(ENCRYPT) \
+           app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN),encrypt=$(ENCRYPT) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
