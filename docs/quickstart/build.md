@@ -5,7 +5,7 @@ title: Build the firmware
 Create an empty directory, go into it, and run:
 
 ```bash
-mos init --arch ARCHITECTURE # cc3200 or esp8266
+mos init --arch ARCHITECTURE # cc3200, esp8266, esp32
 ```
 
 That command creates a `mos.yml` configuration file with various
