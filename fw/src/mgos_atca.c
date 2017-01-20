@@ -193,6 +193,11 @@ enum mgos_init_result mgos_atca_init(void) {
     return MGOS_INIT_OK;
   }
 
+  if (mgos_i2c_get_global() == NULL) {
+    LOG(LL_ERROR, ("ATCA requires I2C to be enabled (i2c.enable=true)"));
+    return MGOS_INIT_ATCA_FAILED;
+  }
+
   uint8_t addr = acfg->i2c_addr;
   /*
    * It's a bit unfortunate that Atmel requires address already shifted by 1.
