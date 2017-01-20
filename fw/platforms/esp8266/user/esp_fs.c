@@ -52,12 +52,6 @@ static spiffs fs;
 #define FS_MAX_OPEN_FILES 10
 #endif
 
-#define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
-#define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
-
-struct mmap_desc mmap_descs[MGOS_MMAP_SLOTS];
-static struct mmap_desc *cur_mmap_desc;
-
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
 
@@ -67,78 +61,6 @@ static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 /* For cs_dirent.c functions */
 spiffs *cs_spiffs_get_fs(void) {
   return &fs;
-}
-
-int spiffs_get_memory_usage(void) {
-  return sizeof(spiffs_work_buf) + sizeof(spiffs_fds);
-}
-
-static struct mmap_desc *alloc_mmap_desc(void) {
-  size_t i;
-  for (i = 0; i < sizeof(mmap_descs) / sizeof(mmap_descs[0]); i++) {
-    if (mmap_descs[i].blocks == NULL) {
-      return &mmap_descs[i];
-    }
-  }
-  return NULL;
-}
-
-void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
-  int pages = (len + SPIFFS_PAGE_DATA_SIZE - 1) / SPIFFS_PAGE_DATA_SIZE;
-  struct mmap_desc *desc = alloc_mmap_desc();
-  (void) addr;
-  (void) prot;
-  (void) flags;
-  (void) offset;
-
-  if (len == 0) {
-    return NULL;
-  }
-
-  if (desc == NULL) {
-    LOG(LL_ERROR, ("cannot allocate mmap desc"));
-    return MAP_FAILED;
-  }
-
-  cur_mmap_desc = desc;
-  desc->pages = 0;
-  desc->blocks = (uint32_t *) calloc(sizeof(uint32_t), pages);
-  if (desc->blocks == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
-    return MAP_FAILED;
-  }
-  desc->base = MMAP_ADDR_FROM_DESC(desc);
-  SPIFFS_read(&fs, fd - NUM_SYS_FD, DUMMY_MMAP_BUFFER_START, len);
-  /*
-   * this breaks the posix-like mmap abstraction but file descriptors are a
-   * scarse resource here.
-   */
-  SPIFFS_close(&fs, fd - NUM_SYS_FD);
-
-  return desc->base;
-}
-
-/*
- * Relocate mmapped pages.
- */
-void esp_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
-                                  spiffs_page_ix src_pix,
-                                  spiffs_page_ix dst_pix) {
-  size_t i, j;
-  (void) fh;
-  /* for (i = 0; i < (sizeof(mmap_descs) / sizeof(mmap_descs[0])); i++) { */
-  for (i = 0; i < ARRAY_SIZE(mmap_descs); i++) {
-    if (mmap_descs[i].blocks) {
-      for (j = 0; j < mmap_descs[i].pages; j++) {
-        uint32_t addr = mmap_descs[i].blocks[j];
-        uint32_t page = SPIFFS_PADDR_TO_PAGE(fs, addr - FLASH_BASE);
-        if (page == src_pix) {
-          int delta = (int) dst_pix - (int) src_pix;
-          mmap_descs[i].blocks[j] += delta * LOG_PAGE_SIZE;
-        }
-      }
-    }
-  }
 }
 
 static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
@@ -182,49 +104,12 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 }
 
 static s32_t esp_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
-#ifdef CS_MMAP
-  if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
-    if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
-      /*
-       * If FW uses OTA (and flash mapping) addr might be > 0x100000
-       * and FLASH_BASE + addr will point somewhere behind flash
-       * mapped area (40200000h-40300000h)
-       * So, we need map it back.
-       * (i.e. if addr > 0x100000 -> addr -= 0x100000)
-       */
-      addr &= 0xFFFFF;
-      cur_mmap_desc->blocks[cur_mmap_desc->pages++] = FLASH_BASE + addr;
-    }
-    return SPIFFS_OK;
-  }
-#endif
-
-  if (0 && addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
-    /*
-     * For unknown reason spi_flash_read/write
-     * hangs from time to time if size is small (< 8)
-     * and address is not aligned to 0xFF
-     * TODO(alashkin): understand why and remove `0 &&` from `if`
-     */
-    return spi_flash_read(addr, (u32_t *) dst, size);
-  } else {
-    return esp_spiffs_readwrite(addr, size, dst, 0);
-  }
+  return esp_spiffs_readwrite(addr, size, dst, 0);
   (void) fs;
 }
 
 static s32_t esp_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
-  if (0 && addr % FLASH_UNIT_SIZE == 0 && size % FLASH_UNIT_SIZE == 0) {
-    /*
-     * For unknown reason spi_flash_read/write
-     * hangs from time to time if size is small (< 8)
-     * and address is not aligned to 0xFF
-     * TODO(alashkin): understand why and remove `0 &&` from `if`
-     */
-    return spi_flash_write(addr, (u32_t *) src, size);
-  } else {
-    return esp_spiffs_readwrite(addr, size, src, 1);
-  }
+  return esp_spiffs_readwrite(addr, size, src, 1);
   (void) fs;
 }
 
