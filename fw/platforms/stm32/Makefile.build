@@ -5,14 +5,8 @@ MGOS_ENABLE_ATCA ?= 0
 MGOS_ENABLE_ATCA_SERVICE ?= 0
 MGOS_ENABLE_CONSOLE ?= 0
 MGOS_ENABLE_DNS_SD ?= 0
-MGOS_ENABLE_I2C ?= 0
 MGOS_ENABLE_I2C_GPIO ?= 0
-MGOS_ENABLE_I2C_SERVICE ?= 0
 MGOS_ENABLE_JS ?= 0
-MGOS_ENABLE_MQTT ?= 0
-MGOS_ENABLE_RPC_CHANNEL_HTTP ?= 0
-MGOS_ENABLE_RPC_CHANNEL_MQTT ?= 0
-MGOS_ENABLE_RPC_CHANNEL_WS ?= 0
 MGOS_ENABLE_UPDATER ?= 0
 MGOS_ENABLE_UPDATER_POST ?= 0
 MGOS_ENABLE_UPDATER_RPC ?= 0
@@ -72,7 +66,7 @@ SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH) -type d)
 LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH) -name '*.ld')
 
 ADD_SRCS = stm32_mgos_main.c stm32_gpio.c stm32_hal.c stm32_uart.c \
-           stm32_libc.c stm32_wifi.c stm32_fs.c
+           stm32_libc.c stm32_wifi.c stm32_fs.c stm32_i2c.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
