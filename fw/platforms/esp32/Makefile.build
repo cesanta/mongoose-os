@@ -1,4 +1,4 @@
-MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --warn-undefined-variables --quiet
 .DEFAULT_GOAL := all
 
 APP ?= mongoose-os
@@ -123,13 +123,15 @@ include $(IDF_PATH)/make/project.mk
 ifeq "$(MGOS_ESP32_ENABLE_FLASH_ENCRYPTION)" "1"
 override CONFIG_FLASH_ENCRYPTION_ENABLED = y
 ENCRYPT = true
-CFLAGS += -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=1
-MKSPIFFS = /usr/local/bin/mkspiffs8
+MKSPIFFS_CFLAGS = -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=1
+MKSPIFFS = $(BUILD_DIR)/mkspiffs8
 else
 ENCRYPT = false
-CFLAGS += -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=0
+MKSPIFFS_CFLAGS = -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=0
+MKSPIFFS = $(BUILD_DIR)/mkspiffs
 endif
 
+CFLAGS += $(MKSPIFFS_CFLAGS)
 
 LDFLAGS += $(BUILD_INFO_O) $(MG_BUILD_INFO_O) -L$(BUILD_DIR)/src
 
@@ -162,8 +164,13 @@ $(FW_MANIFEST): $(BUILD_INFO_JSON) $(APP_BIN) $(FS_IMG)
 $(GEN_DIR)/conf_defaults.json: src-build
 	$(Q) cp $(GEN_DIR)/sys_config_defaults.json $@
 
-$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS)
+$(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS)
 	$(call mkspiffs,$(FS_SIZE))
+
+SPIFFS_SRCS = $(SPIFFS_PATH)/*.c $(SPIFFS_PATH)/tools/mem_spiffs.c $(SPIFFS_PATH)/tools/mkspiffs.c
+$(MKSPIFFS): $(SPIFFS_SRCS) $(SPIFFS_PATH)/*.h
+	$(vecho) "GCC   $@"
+	$(Q) gcc -Wall -Werror -I$(MGOS_ESP_PATH)/include -I$(SPIFFS_PATH) $(MKSPIFFS_CFLAGS) -o $@ $(SPIFFS_SRCS)
 
 clean:
 	rm -rf $(BUILD_DIR) $(FW_DIR)

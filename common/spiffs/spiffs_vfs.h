@@ -37,8 +37,18 @@ int spiffs_vfs_unlink(spiffs *fs, const char *path);
 int set_spiffs_errno(spiffs *fs, const char *op, int res);
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-bool spiffs_vfs_encrypt_fs(spiffs *fs);
-/* FUnctions that must be provided by the platform */
+bool spiffs_vfs_enc_fs(spiffs *fs);
+
+/*
+ * Name encrypotion/decryption routines.
+ * Source and destination can be the same, both must be at least
+ * SPIFFS_OBJ_NAME_LEN bytes long. Outputs are guaranteed to be
+ * NUL-terminated.
+ */
+bool spiffs_vfs_enc_name(const char *name, char *enc_name, size_t enc_name_size);
+bool spiffs_vfs_dec_name(const char *enc_name, char *name, size_t name_size);
+
+/* Functions that must be provided by the platform */
 bool spiffs_vfs_encrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data, uint32_t len);
 bool spiffs_vfs_decrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data, uint32_t len);
 #endif

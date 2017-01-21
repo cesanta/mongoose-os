@@ -105,7 +105,7 @@ enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
     return MGOS_INIT_FS_INIT_FAILED;
   } else {
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-    if (!spiffs_vfs_encrypt_fs(&m->fs)) {
+    if (!spiffs_vfs_enc_fs(&m->fs)) {
       return MGOS_INIT_FS_INIT_FAILED;
     }
 #endif
@@ -191,7 +191,16 @@ static struct dirent *spiffs_readdir_p(void *ctx, DIR *dir) {
     return NULL;
   }
   sd->de.d_ino = sd->sde.obj_id;
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  if (!spiffs_vfs_dec_name((const char *) sd->sde.name, sd->de.d_name,
+                           sizeof(sd->de.d_name))) {
+    LOG(LL_ERROR, ("Name decryption failed (%s)", sd->sde.name));
+    errno = ENXIO;
+    return NULL;
+  }
+#else
   memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
+#endif
   (void) ctx;
   return &sd->de;
 }

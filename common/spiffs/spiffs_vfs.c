@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include <common/base64.h>
 #include <common/cs_dbg.h>
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
@@ -26,9 +27,21 @@ struct file_meta {
 };
 #define DEFAULT_PLAIN_SIZE 0xffffff
 
+/*
+ * Names are Base64 encoded and must be NUL terminated.
+ * They are also encrypted in blocks, so must come in block-sized chunks.
+ */
+#define MAX_PLAIN_NAME_LEN \
+    ((((SPIFFS_OBJ_NAME_LEN - 1) * 6 / 8) / \
+      CS_SPIFFS_ENCRYPTION_BLOCK_SIZE) * \
+     CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)
+
 /* file_meta size must match SPIFFS_OBJ_META_LEN. */
 typedef char sizeof_file_meta_is_wrong
     [(SPIFFS_OBJ_META_LEN == sizeof(struct file_meta)) ? 1 : -1];
+
+static bool s_names_encrypted = false;
+
 #endif
 
 static const char *drop_dir(const char *fname) {
@@ -90,7 +103,17 @@ int spiffs_vfs_open(spiffs *fs, const char *path, int flags, int mode) {
 #endif
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-  sm |= SPIFFS_RDONLY;
+  sm |= SPIFFS_RDONLY;  /* Encryption always needs to be able to read. */
+
+  char enc_path[SPIFFS_OBJ_NAME_LEN];
+  if (s_names_encrypted) {
+    if (!spiffs_vfs_enc_name(path, enc_path, sizeof(enc_path))) {
+      errno = ENXIO;
+      return -1;
+    }
+    path = enc_path;
+  }
+
   int fd = SPIFFS_open(fs, drop_dir(path), sm, 0);
   if (fd >= 0 && (rw & O_WRONLY)) {
     spiffs_stat s;
@@ -313,6 +336,19 @@ out_enc_err:
   }
 }
 
+static void spiffs_vfs_xlate_stat(spiffs_stat *ss, struct stat *st) {
+  st->st_ino = ss->obj_id;
+  st->st_mode = S_IFREG | 0666;
+  st->st_nlink = 1;
+  st->st_size = ss->size;
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  const struct file_meta *fm = (const struct file_meta *) ss->meta;
+  if (fm->plain_size != DEFAULT_PLAIN_SIZE) {
+    st->st_size = fm->plain_size;
+  }
+#endif
+}
+
 int spiffs_vfs_stat(spiffs *fs, const char *path, struct stat *st) {
   int res;
   spiffs_stat ss;
@@ -326,18 +362,19 @@ int spiffs_vfs_stat(spiffs *fs, const char *path, struct stat *st) {
     st->st_size = 0;
     return set_spiffs_errno(fs, path, SPIFFS_OK);
   }
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  char enc_fname[SPIFFS_OBJ_NAME_LEN];
+  if (s_names_encrypted) {
+    if (!spiffs_vfs_enc_name(fname, enc_fname, sizeof(enc_fname))) {
+      errno = ENXIO;
+      return -1;
+    }
+  }
+  fname = enc_fname;
+#endif
   res = SPIFFS_stat(fs, fname, &ss);
   if (res == SPIFFS_OK) {
-    st->st_ino = ss.obj_id;
-    st->st_mode = S_IFREG | 0666;
-    st->st_nlink = 1;
-    st->st_size = ss.size;
-#if CS_SPIFFS_ENABLE_ENCRYPTION
-    const struct file_meta *fm = (const struct file_meta *) ss.meta;
-    if (fm->plain_size != DEFAULT_PLAIN_SIZE) {
-      st->st_size = fm->plain_size;
-    }
-#endif
+    spiffs_vfs_xlate_stat(&ss, st);
   }
   return set_spiffs_errno(fs, path, res);
 }
@@ -348,16 +385,7 @@ int spiffs_vfs_fstat(spiffs *fs, int fd, struct stat *st) {
   memset(st, 0, sizeof(*st));
   res = SPIFFS_fstat(fs, fd, &ss);
   if (res == SPIFFS_OK) {
-    st->st_ino = ss.obj_id;
-    st->st_mode = S_IFREG | 0666;
-    st->st_nlink = 1;
-    st->st_size = ss.size;
-#if CS_SPIFFS_ENABLE_ENCRYPTION
-    const struct file_meta *fm = (const struct file_meta *) ss.meta;
-    if (fm->plain_size != DEFAULT_PLAIN_SIZE) {
-      st->st_size = fm->plain_size;
-    }
-#endif
+    spiffs_vfs_xlate_stat(&ss, st);
   }
   return set_spiffs_errno(fs, "fstat", res);
 }
@@ -394,6 +422,18 @@ off_t spiffs_vfs_lseek(spiffs *fs, int fd, off_t offset, int whence) {
 
 int spiffs_vfs_rename(spiffs *fs, const char *src, const char *dst) {
   int res;
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  char enc_src[SPIFFS_OBJ_NAME_LEN], enc_dst[SPIFFS_OBJ_NAME_LEN];
+  if (s_names_encrypted) {
+    if (!spiffs_vfs_enc_name(src, enc_src, sizeof(enc_src)) ||
+        !spiffs_vfs_enc_name(dst, enc_dst, sizeof(enc_dst))) {
+      errno = ENXIO;
+      return -1;
+    }
+    src = enc_src;
+    dst = enc_dst;
+  }
+#endif
   /* Renaming file to itself should be a no-op. */
   src = drop_dir(src);
   dst = drop_dir(dst);
@@ -417,7 +457,53 @@ int spiffs_vfs_unlink(spiffs *fs, const char *path) {
 }
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-bool spiffs_vfs_encrypt_fs(spiffs *fs) {
+bool spiffs_vfs_enc_name(const char *name, char *enc_name, size_t enc_name_size) {
+  uint8_t tmp[SPIFFS_OBJ_NAME_LEN];
+  char tmp2[SPIFFS_OBJ_NAME_LEN];
+  int name_len = strlen(name);
+  int enc_name_len = 0;
+  if (name_len > MAX_PLAIN_NAME_LEN || enc_name_size < SPIFFS_OBJ_NAME_LEN) {
+    LOG(LL_ERROR, ("%s: name too long", name));
+    return false;
+  }
+  memcpy(tmp, name, name_len);
+  memset(tmp + name_len, 0, sizeof(tmp) - name_len);
+  while (enc_name_len < name_len) {
+    if (!spiffs_vfs_encrypt_block(0, enc_name_len, tmp + enc_name_len, CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)) {
+      return false;
+    }
+    enc_name_len += CS_SPIFFS_ENCRYPTION_BLOCK_SIZE;
+  }
+  cs_base64_encode(tmp, enc_name_len, tmp2);  /* NUL-terminates output. */
+  LOG(LL_DEBUG, ("%s -> %s", name, tmp2));
+  strncpy(enc_name, tmp2, enc_name_size);
+  return true;
+}
+
+bool spiffs_vfs_dec_name(const char *enc_name, char *name, size_t name_size) {
+  int i;
+  char tmp[SPIFFS_OBJ_NAME_LEN];
+  int enc_name_len = 0;
+  cs_base64_decode((const unsigned char *) enc_name, strlen(enc_name), tmp, &enc_name_len);
+  if (enc_name_len == 0 || (enc_name_len % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
+    return false;
+  }
+  for (i = 0; i < enc_name_len; i += CS_SPIFFS_ENCRYPTION_BLOCK_SIZE) {
+    if (!spiffs_vfs_decrypt_block(0, i, tmp + i, CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)) {
+      LOG(LL_ERROR, ("Decryption failed"));
+      return false;
+    }
+    if (name_size - i < CS_SPIFFS_ENCRYPTION_BLOCK_SIZE) return false;
+    memcpy(name + i, tmp + i, CS_SPIFFS_ENCRYPTION_BLOCK_SIZE);
+  }
+  while (i < name_size) {
+    name[i++] = '\0';
+  }
+  LOG(LL_DEBUG, ("%s -> %s", enc_name, name));
+  return true;
+}
+
+bool spiffs_vfs_enc_fs(spiffs *fs) {
   bool res = false;
   spiffs_DIR d;
   struct spiffs_dirent e;
@@ -426,6 +512,7 @@ bool spiffs_vfs_encrypt_fs(spiffs *fs) {
     return false;
   }
   while (SPIFFS_readdir(&d, &e) != NULL) {
+    char enc_name[SPIFFS_OBJ_NAME_LEN];
     struct file_meta *fm = (struct file_meta *) e.meta;
     LOG(LL_DEBUG, ("%s (%u) es %u ps %u", e.name, e.obj_id, e.size, fm->plain_size));
     if (fm->plain_size != DEFAULT_PLAIN_SIZE) continue;  /* Already encrypted */
@@ -433,7 +520,11 @@ bool spiffs_vfs_encrypt_fs(spiffs *fs) {
       LOG(LL_ERROR, ("%s is half-encrypted; FS is corrupted."));
       continue;
     }
-    LOG(LL_INFO, ("Encrypting %s (%d bytes)", e.name, (int) e.size));
+    if (!spiffs_vfs_enc_name((const char *) e.name, enc_name, sizeof(enc_name))) {
+      LOG(LL_ERROR, ("%s: name encryption failed", e.name));
+      goto out;
+    }
+    LOG(LL_INFO, ("Encrypting %s (id %u, size %d) -> %s", e.name, e.obj_id, (int) e.size, enc_name));
     fd = SPIFFS_open_by_dirent(fs, &e, SPIFFS_RDWR, 0);
     if (fd < 0) {
       LOG(LL_ERROR, ("%s: open failed: %d", e.name, SPIFFS_errno(fs)));
@@ -482,7 +573,12 @@ bool spiffs_vfs_encrypt_fs(spiffs *fs) {
     }
     SPIFFS_close(fs, fd);
     fd = -1;
+    if (SPIFFS_rename(fs, (const char *) e.name, enc_name) != SPIFFS_OK) {
+      LOG(LL_ERROR, ("%s: rename failed: %d", e.name, SPIFFS_errno(fs)));
+      goto out;
+    }
   }
+  s_names_encrypted = true;
   res = true;
 out:
   if (fd >= 0) SPIFFS_close(fs, fd);
