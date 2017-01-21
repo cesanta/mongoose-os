@@ -6,6 +6,7 @@
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -16,8 +17,10 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_dirent.h"
+#include "common/cs_file.h"
 #include "common/spiffs/spiffs_vfs.h"
 
+#include "fw/src/mgos_hal.h"
 #include "fw/platforms/esp32/src/esp32_updater.h"
 
 static struct mount_info *s_mount = NULL;
@@ -100,8 +103,16 @@ enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
     LOG(LL_ERROR, ("SPIFFS init failed: %d", (int) SPIFFS_errno(&m->fs)));
     free(m);
     return MGOS_INIT_FS_INIT_FAILED;
-  } else if (SPIFFS_info(&m->fs, &total, &used) == SPIFFS_OK) {
-    LOG(LL_INFO, ("Total: %u, used: %u, free: %u", total, used, total - used));
+  } else {
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+    if (!spiffs_vfs_encrypt_fs(&m->fs)) {
+      return MGOS_INIT_FS_INIT_FAILED;
+    }
+#endif
+    if (SPIFFS_info(&m->fs, &total, &used) == SPIFFS_OK) {
+      LOG(LL_INFO,
+          ("Total: %u, used: %u, free: %u", total, used, total - used));
+    }
   }
   *res = m;
   return MGOS_INIT_OK;
@@ -264,4 +275,93 @@ void esp32_fs_deinit(void) {
   LOG(LL_INFO, ("Unmounting FS"));
   SPIFFS_unmount(&s_mount->fs);
   /* There is currently no way to deregister VFS, so we don't free s_mount. */
+}
+
+/*
+ * Test code, used to test encryption. TODO(rojer): Create a HW test with it.
+ * Note: Tjis code is compiled to avoid rot but is eliminated by linker.
+ */
+const char *golden =
+    "0123456789Lorem ipsum dolor sit amet, consectetur adipiscing elit01234";
+
+void read_range(const char *name, int from, int len) {
+  char data[100] = {0};
+  FILE *fp = fopen(name, "r");
+  setvbuf(fp, NULL, _IOFBF, 30);
+  fseek(fp, from, SEEK_SET);
+  int n = fread(data, 1, len, fp);
+  fclose(fp);
+  LOG(LL_INFO, ("%d @ %d => %d '%s'", len, from, n, data));
+}
+
+void f_test_read(void) {
+  char data[100] = {0};
+  int fd = esp_vfs_open(_GLOBAL_REENT, "test.txt", O_RDONLY, 0);
+  if (fd < 0) abort();
+  for (int pos = 0; pos < 70; pos++) {
+    for (int len = 0; len <= 70; len++) {
+      memset(data, 0, sizeof(data));
+      esp_vfs_lseek(_GLOBAL_REENT, fd, pos, SEEK_SET);
+      int exp_n = 70 - pos;
+      if (exp_n > len) exp_n = len;
+      int exp_new_pos = pos + exp_n;
+      int n = esp_vfs_read(_GLOBAL_REENT, fd, data, len);
+      int new_pos = esp_vfs_lseek(_GLOBAL_REENT, fd, 0, SEEK_CUR);
+      LOG(LL_INFO,
+          ("%d %d %d %d %d %d", pos, len, n, exp_n, new_pos, exp_new_pos));
+      if (n != exp_n) abort();
+      if (memcmp(golden + pos, data, exp_n) != 0) {
+        LOG(LL_ERROR, ("data error, got: '%.*s'", (int) n, data));
+        abort();
+      }
+    }
+    mgos_wdt_feed();
+  }
+  esp_vfs_close(_GLOBAL_REENT, fd);
+  LOG(LL_INFO, ("read test ok"));
+}
+
+void verify_file_contents(const char *file, const char *exp_contents,
+                          int exp_n) {
+  size_t n = 0;
+  char *data = cs_read_file("test2.txt", &n);
+  if (exp_n < 0) exp_n = strlen(exp_contents);
+  if (data == NULL || n != exp_n) {
+    LOG(LL_ERROR, ("Expected %d bytes, got %d", (int) exp_n, (int) n));
+    abort();
+  }
+  if (memcmp(data, golden, exp_n) != 0) {
+    LOG(LL_ERROR, ("data error, got: '%.*s'", (int) n, data));
+    abort();
+  }
+  free(data);
+}
+
+void f_test_write(void) {
+  {
+    int fd = esp_vfs_open(_GLOBAL_REENT, "test2.txt",
+                          O_WRONLY | O_TRUNC | O_CREAT, 0);
+    if (fd < 0) abort();
+    int n = esp_vfs_write(_GLOBAL_REENT, fd, golden, 68);
+    if (n != 68) abort();
+    esp_vfs_close(_GLOBAL_REENT, fd);
+  }
+  verify_file_contents("test2.txt", golden, 68);
+  {
+    int fd = esp_vfs_open(_GLOBAL_REENT, "test2.txt", O_WRONLY | O_APPEND, 0);
+    if (fd < 0) abort();
+    int n = esp_vfs_write(_GLOBAL_REENT, fd, golden + 68, 2);
+    if (n != 2) abort();
+    esp_vfs_close(_GLOBAL_REENT, fd);
+  }
+  verify_file_contents("test2.txt", golden, 70);
+  {
+    int fd = esp_vfs_open(_GLOBAL_REENT, "test2.txt", O_WRONLY | O_TRUNC, 0);
+    if (fd < 0) abort();
+    int n = esp_vfs_write(_GLOBAL_REENT, fd, golden, 18);
+    if (n != 18) abort();
+    esp_vfs_close(_GLOBAL_REENT, fd);
+  }
+  verify_file_contents("test2.txt", golden, 18);
+  LOG(LL_INFO, ("write test ok"));
 }

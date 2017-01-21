@@ -201,7 +201,7 @@ APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTR
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
               -DCC3200_FS_SPIFFS -DCS_SPIFFS_ENABLE_VFS \
               -DMGOS_MAX_NUM_UARTS=2 \
-              -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) $(SDK_CFLAGS) \
+              $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 ifeq "$(MGOS_ENABLE_JS)" "1"

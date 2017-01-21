@@ -1036,6 +1036,7 @@ struct spiffs_dirent *SPIFFS_readdir(spiffs_DIR *d, struct spiffs_dirent *e) {
   if (res == SPIFFS_OK) {
     d->block = bix;
     d->entry = entry + 1;
+    e->obj_id &= ~SPIFFS_OBJ_ID_IX_FLAG;
     ret = e;
   } else {
     d->fs->err_code = res;

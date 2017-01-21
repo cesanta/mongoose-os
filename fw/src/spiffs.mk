@@ -1,3 +1,5 @@
+MKSPIFFS ?= /usr/local/bin/mkspiffs
+
 ifeq "$(MGOS_ENABLE_JS)" "1"
   JS_EXTRA ?=
   JSBIN_SRCS := $(MGOS_JS_PATH)/sys_init.js \
@@ -33,5 +35,5 @@ define mkspiffs
 	  echo "  V7C   $(jsbin) -> $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT)" && \
 	  $(BUILD_DIR)/v7 -c $(jsbin) > $(FS_STAGING_DIR)/$(basename $(notdir $(jsbin))).$(JSBIN_EXT) && ) true
 	$(vecho) "  MKFS  $(FS_STAGING_DIR) ($(FS_SIZE)) -> $@"
-	$(Q) /usr/local/bin/mkspiffs $1 $(FS_STAGING_DIR) > $@
+	$(Q) $(MKSPIFFS) $1 $(FS_STAGING_DIR) > $@
 endef

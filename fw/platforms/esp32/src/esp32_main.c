@@ -5,9 +5,11 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "freertos/FreeRTOS.h"
 #include "esp_attr.h"
+#include "esp_vfs.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_task_wdt.h"
@@ -69,7 +71,7 @@ static enum mgos_init_result esp32_mgos_init() {
 
   esp32_updater_early_init();
 
-  cs_log_set_level(LL_INFO);
+  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   mongoose_init();
 
   r = esp32_console_init();

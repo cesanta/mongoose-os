@@ -417,7 +417,8 @@ static int load_config_file(const char *filename, const char *acl,
   }
   /* Make a temporary copy, in case it gets overridden while loading. */
   acl_copy = (acl != NULL ? strdup(acl) : NULL);
-  if (!mgos_conf_parse(mg_mk_str(data), acl_copy, sys_config_schema(), cfg)) {
+  if (!mgos_conf_parse(mg_mk_str_n(data, size), acl_copy, sys_config_schema(),
+                       cfg)) {
     LOG(LL_ERROR, ("Failed to parse %s", filename));
     result = 0;
     goto clean;

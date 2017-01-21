@@ -88,7 +88,7 @@ int main(void) {
 
   setvbuf(stdout, NULL, _IOLBF, 0);
   setvbuf(stderr, NULL, _IOLBF, 0);
-  cs_log_set_level(LL_INFO);
+  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
 
   VStartSimpleLinkSpawnTask(8);
   osi_TaskCreate(main_task, (const signed char *) "main", V7_STACK_SIZE + 256,

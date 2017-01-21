@@ -72,7 +72,7 @@ enum mgos_init_result esp_mgos_init(rboot_config *bcfg) {
 #endif
   setvbuf(stdout, NULL, _IOLBF, 256);
   setvbuf(stderr, NULL, _IOLBF, 256);
-  cs_log_set_level(LL_INFO);
+  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   os_install_putc1(dbg_putc);
   system_set_os_print(1);
   fputc('\n', stderr);
