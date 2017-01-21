@@ -228,7 +228,7 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   s_sta_should_connect = true;
 
   r = esp_wifi_connect();
-  if (r == ESP_ERR_WIFI_NOT_START) {
+  if (r == ESP_ERR_WIFI_NOT_STARTED) {
     r = esp_wifi_start();
     if (r != ESP_OK) {
       LOG(LL_ERROR, ("Failed to start WiFi: %d", r));

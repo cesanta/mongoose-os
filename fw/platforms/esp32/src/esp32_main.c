@@ -12,6 +12,7 @@
 #include "esp_vfs.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
+#include "esp_system.h"
 #include "esp_task_wdt.h"
 #include "nvs_flash.h"
 
@@ -82,6 +83,7 @@ static enum mgos_init_result esp32_mgos_init() {
   }
   LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)%s", mg_build_version, mg_build_id,
                 (esp32_is_first_boot() ? ", first boot" : "")));
+  LOG(LL_INFO, ("ESP-IDF %s", esp_get_idf_version()));
   LOG(LL_INFO, ("Task ID: %p, RAM: %u free", xTaskGetCurrentTaskHandle(),
                 mgos_get_free_heap_size()));
 
