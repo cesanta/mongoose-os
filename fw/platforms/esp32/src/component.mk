@@ -2,10 +2,10 @@
 # Component makefile.
 #
 
-override APP_MODULES = $(_APP_MODULES)
 override APP_CONF_SCHEMA = $(_APP_CONF_SCHEMA)
 override APP_EXTRA_SRCS = $(_APP_EXTRA_SRCS)
 override APP_FS_PATH = $(_APP_FS_PATH)
+override APP_MODULES = $(_APP_MODULES)
 override BUILD_DIR = $(_BUILD_DIR)
 override FW_DIR := $(_FW_DIR)
 override GEN_DIR := $(_GEN_DIR)
@@ -21,6 +21,8 @@ MGOS_DEBUG_UART ?= 0
 
 MGOS_SRC_PATH = $(MGOS_PATH)/fw/src
 
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
 SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
 SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
@@ -32,7 +34,7 @@ SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
-NM = nm
+NM = xtensa-esp32-elf-nm
 
 COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) $(GEN_DIR) $(APP_MODULES)
 
@@ -60,6 +62,8 @@ ifeq "$(MGOS_ENABLE_WIFI)" "1"
   SYS_CONF_SCHEMA += $(MGOS_ESP_PATH)/src/esp32_wifi_config.yaml
 endif
 
+include $(MGOS_PATH)/common/scripts/build_info.mk
+
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
 VPATH += $(MGOS_ESP_PATH)/src $(MGOS_PATH)/common
@@ -84,7 +88,9 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXT
 
 MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS)))
 APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
-COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O)
+BUILD_INFO_OBJS = $(addsuffix .o,$(basename $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C))))
+COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_OBJS)
+
 CFLAGS += $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
           -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
           -DMGOS_NUM_GPIO=40 \
@@ -92,7 +98,14 @@ CFLAGS += $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
           -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
           -DMG_ENABLE_HTTP_STREAMING_MULTIPART \
           -DMG_ENABLE_DIRECTORY_LISTING
+
 COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
+
+$(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C): $(MGOS_OBJS)
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 libsrc.a: $(GEN_DIR)/sys_config.o
 

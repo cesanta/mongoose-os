@@ -238,8 +238,11 @@ static uint32_t get_update_status() {
   nvs_handle h;
   esp_err_t err = nvs_open(MGOS_UPDATE_NVS_NAMESPACE, NVS_READONLY, &h);
   if (err != ESP_OK) {
-    LOG(LL_ERROR, ("Failed to open NVS: %d", err));
-    return false;
+    /* This is normal, meaning no update has taken place yet. */
+    if (err != ESP_ERR_NVS_NOT_FOUND) {
+      LOG(LL_ERROR, ("Failed to open NVS: %d", err));
+    }
+    return val;
   }
   err = nvs_get_u32(h, MGOS_UPDATE_NVS_KEY, &val);
   if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {

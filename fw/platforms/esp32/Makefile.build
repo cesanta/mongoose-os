@@ -1,4 +1,4 @@
-MAKEFLAGS += --warn-undefined-variables --quiet
+MAKEFLAGS += --warn-undefined-variables --silent
 .DEFAULT_GOAL := all
 
 APP ?= mongoose-os
@@ -51,45 +51,26 @@ override _MGOS_PATH = $(MGOS_PATH)
 # It seems to be impossible to override vars passed to submake from the
 # command line, so we pass them via a separate set of varoables, which
 # submake then uses to override the values it received.
-export _APP_MODULES = $(APP_MODULES)
+export APP_BUILD_ID
 export _APP_CONF_SCHEMA = $(APP_CONF_SCHEMA)
 export _APP_EXTRA_SRCS = $(APP_EXTRA_SRCS)
 export _APP_FS_PATH = $(APP_FS_PATH)
+export _APP_MODULES = $(APP_MODULES)
+export APP_VERSION
 export _BUILD_DIR = $(BUILD_DIR)
+export FFI_SYMBOLS
 export _FW_DIR := $(FW_DIR)
 export _GEN_DIR := $(GEN_DIR)
 export _MGOS_PATH
 export MGOS_ESP_PATH
 export SPIFFS_PATH
 
-BUILD_INFO_C = $(GEN_DIR)/build_info.c
-BUILD_INFO_O = $(GEN_DIR)/build_info.o
-MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-MG_BUILD_INFO_O = $(GEN_DIR)/mg_build_info.o
-BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
 CFLAGS += -DMGOS_APP=\"$(APP)\" -DCS_SPIFFS_ENABLE_VFS -I$(MGOS_PATH) \
           -DFW_ARCHITECTURE=$(APP_PLATFORM) \
           -DIRAM='__attribute__((section(".iram1")))' \
           $(APP_CFLAGS)
-
-# Generated files
-
-src-build: $(BUILD_INFO_O) $(MG_BUILD_INFO_O)
-
-$(BUILD_INFO_O): $(BUILD_INFO_C)
-	$(summary) CC $@ '$(BUILD_INFO_C)'
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
-
-$(MG_BUILD_INFO_O): $(MG_BUILD_INFO_C)
-	$(summary) CC $@ '$(BUILD_INFO_C)'
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
-
-$(BUILD_INFO_C) $(BUILD_INFO_JSON):
-	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
-
-$(MG_BUILD_INFO_C):
-	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 # Settings for the ESP-IDF build system
 # See docs here:
@@ -133,7 +114,7 @@ endif
 
 CFLAGS += $(MKSPIFFS_CFLAGS)
 
-LDFLAGS += $(BUILD_INFO_O) $(MG_BUILD_INFO_O) -L$(BUILD_DIR)/src
+LDFLAGS += -L$(BUILD_DIR)/src
 
 include $(MGOS_PATH)/fw/common.mk
 
@@ -144,25 +125,25 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=$(ENCRYPT) \
            app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN),encrypt=$(ENCRYPT) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 
-include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
-all_binaries: $(FW_ZIP)
-
-all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR)
+all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
 
 # Put defaults on the filesystem under the old name, for compatibility.
 FS_FILES += $(GEN_DIR)/conf_defaults.json
 
-$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
+$(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@ $(BUILD_INFO_C)"
 	$(Q) mkdir -p $@
 
-$(FW_MANIFEST): $(BUILD_INFO_JSON) $(APP_BIN) $(FS_IMG)
+$(FW_MANIFEST): $(APP_BIN) $(FS_IMG)
 
-$(GEN_DIR)/conf_defaults.json: src-build
-	$(Q) cp $(GEN_DIR)/sys_config_defaults.json $@
+$(GEN_DIR)/conf_defaults.json: $(GEN_DIR)/sys_config_defaults.json
+	$(Q) cp $< $@
+
+# sys_config is generated during binary build
+$(GEN_DIR)/sys_config_defaults.json: all_binaries
 
 $(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS)
 	$(call mkspiffs,$(FS_SIZE))

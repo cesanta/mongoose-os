@@ -21,7 +21,7 @@ bool copy(char *src, char *dst) {
   spiffs_file sfd;
   int ifd = -1;
 
-  fprintf(stderr, "a %s: ", dst);
+  fprintf(stderr, "     Adding %s: ", dst);
 
   ifd = open(src, O_RDONLY);
   if (ifd < 0) {
@@ -44,7 +44,7 @@ bool copy(char *src, char *dst) {
   buf = malloc(size);
 
   if (read(ifd, buf, size) != size) {
-    fprintf(stderr, "faild to read source file\n");
+    fprintf(stderr, "failed to read source file\n");
     goto cleanup;
   }
 
@@ -121,7 +121,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  fprintf(stderr, "adding files in directory %s\n", root_dir);
   if ((dir = opendir(root_dir)) == NULL) {
     fprintf(stderr, "unable to open directory %s\n", root_dir);
     return 1;
@@ -133,7 +132,7 @@ int main(int argc, char **argv) {
 
   u32_t total, used;
   SPIFFS_info(&fs, &total, &used);
-  fprintf(stderr, "Image stats: size=%u, space: total=%u, used=%u, free=%u\n",
+  fprintf(stderr, "     Image stats: size=%u, space: total=%u, used=%u, free=%u\n",
           (unsigned int) image_size, total, used, total - used);
 
   FILE *out = stdout;

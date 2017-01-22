@@ -315,6 +315,12 @@ const struct mgos_conf_entry *{name}_schema() {{
 def open_with_temp(name):
     """Perform a write-and-rename maneuver to write a file safely."""
     tmpname = "%s.%d.tmp" % (name, os.getpid())
+    dirname = os.path.dirname(name)
+    if dirname:
+        try:
+            os.makedirs(dirname, mode=0755)
+        except Exception:
+            pass
     f = open(tmpname, "w")
     try:
         yield f
