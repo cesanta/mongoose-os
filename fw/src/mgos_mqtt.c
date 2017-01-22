@@ -12,6 +12,7 @@
 #include "common/queue.h"
 #include "fw/src/mgos_mdns.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_wifi.h"
@@ -244,9 +245,46 @@ bool mgos_mqtt_pub(const char *topic, const void *message, size_t len) {
   static uint16_t message_id;
   struct mg_connection *c = mgos_mqtt_get_global_conn();
   if (c == NULL) return false;
-  LOG(LL_INFO, ("Publishing: %d bytes [%.*s]", (int) len, (int) len, message));
+  LOG(LL_DEBUG, ("Publishing: %d bytes [%.*s]", (int) len, (int) len, message));
   mg_mqtt_publish(c, topic, message_id++, MG_MQTT_QOS(0), message, len);
   return true;
+}
+
+struct sub_data {
+  sub_handler_t handler;
+  void *user_data;
+};
+
+static void mqttsubtrampoline(struct mg_connection *c, int ev, void *ev_data) {
+  if (ev != MG_EV_MQTT_PUBLISH) return;
+  struct sub_data *sd = (struct sub_data *) c->user_data;
+  struct mg_mqtt_message *mm = (struct mg_mqtt_message *) ev_data;
+  const struct mg_str *s = &mm->payload;
+  struct mbuf *m = &c->recv_mbuf;
+  /*
+   * MQTT message is not NUL terminated. In order to preserve memory,
+   * we're not making a copy of a message just to NUL terminate it.
+   * NUL terminate it directly in the recv mbuf, expanding it if needed.
+   */
+  uint8_t term = 0;
+  bool must_expand = m->buf + m->size <= s->p + s->len;
+  if (must_expand) {
+    mbuf_append(m, &term, 1);
+    m->len--;
+  } else {
+    term = s->p[s->len];             // Remember existing byte value
+    ((char *) s->p)[s->len] = '\0';  // Change it to 0
+  }
+  sd->handler(c, s->p, sd->user_data);
+  if (!must_expand) ((char *) s->p)[s->len] = term;  // Restore that byte
+}
+
+void mgos_mqtt_sub(const char *topic, sub_handler_t handler, void *user_data) {
+  struct sub_data *sd = (struct sub_data *) malloc(sizeof(*sd));
+  sd->handler = handler;
+  sd->user_data = user_data;
+  mgos_mqtt_global_subscribe(mg_mk_str(topic), mqttsubtrampoline, sd);
+  if (s_conn != NULL) s_conn->flags |= MG_F_CLOSE_IMMEDIATELY;  // Reconnect
 }
 
 #endif /* MGOS_ENABLE_MQTT */

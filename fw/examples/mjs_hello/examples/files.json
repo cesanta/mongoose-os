@@ -2,5 +2,6 @@
   "button_message.js",
   "button_blink.js",
   "button_mqtt.js",
+  "mqtt_subscribe.js",
   "tcp_server.js"
 ]

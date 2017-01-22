@@ -8,6 +8,7 @@ filesystem:
   - fs
 ffi_symbols:
   - mgos_mqtt_pub
+  - mgos_mqtt_sub
   - mgos_get_heap_size
   - mgos_get_free_heap_size
   - mgos_get_storage_free_space
