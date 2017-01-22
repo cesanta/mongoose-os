@@ -34,6 +34,10 @@ void esp32_fs_umount(struct mount_info *m);
 enum mgos_init_result esp32_fs_crypt_init(void);
 
 enum mgos_init_result esp32_fs_init(void);
+
+#define SUBTYPE_TO_SLOT(st) ((st) -ESP_PARTITION_SUBTYPE_OTA(0))
+int esp32_get_boot_slot();
+
 void esp32_fs_deinit(void);
 
 #endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_FS_H_ */

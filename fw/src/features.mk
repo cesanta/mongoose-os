@@ -149,7 +149,7 @@ else
   MGOS_FEATURES += -DMGOS_ENABLE_MQTT=0 -DMG_ENABLE_MQTT=0
 endif
 
-ifneq "$(MGOS_ENABLE_UPDATER)$(MGOS_ENABLE_UPDATER_POST)$(MGOS_ENABLE_UPDATER_RPC)" "000"
+ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_updater_config.yaml
   MGOS_SRCS += mgos_updater_common.c mgos_updater_http.c
   MGOS_FEATURES += -DMGOS_ENABLE_UPDATER=1

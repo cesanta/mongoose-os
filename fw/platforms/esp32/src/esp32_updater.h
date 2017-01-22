@@ -10,7 +10,6 @@
 
 #if MGOS_ENABLE_UPDATER
 
-int esp32_get_boot_slot();
 void esp32_updater_early_init();
 bool esp32_is_first_boot();
 

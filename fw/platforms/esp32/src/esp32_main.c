@@ -70,7 +70,9 @@ static enum mgos_init_result esp32_mgos_init() {
   /* Enable WDT for this task. It will be fed by Mongoose polling loop. */
   esp_task_wdt_feed();
 
+#if MGOS_ENABLE_UPDATER
   esp32_updater_early_init();
+#endif
 
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   mongoose_init();
@@ -82,7 +84,12 @@ static enum mgos_init_result esp32_mgos_init() {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
   LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)%s", mg_build_version, mg_build_id,
-                (esp32_is_first_boot() ? ", first boot" : "")));
+#if MGOS_ENABLE_UPDATER
+                (esp32_is_first_boot() ? ", first boot" : "")
+#else
+                ""
+#endif
+                    ));
   LOG(LL_INFO, ("ESP-IDF %s", esp_get_idf_version()));
   LOG(LL_INFO, ("Task ID: %p, RAM: %u free", xTaskGetCurrentTaskHandle(),
                 mgos_get_free_heap_size()));

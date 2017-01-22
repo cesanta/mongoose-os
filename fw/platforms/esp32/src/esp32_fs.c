@@ -235,6 +235,12 @@ const esp_partition_t *esp32_find_fs_for_app_slot(int slot) {
       ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, fs_part_name);
 }
 
+int esp32_get_boot_slot() {
+  const esp_partition_t *p = esp_ota_get_boot_partition();
+  if (p == NULL) return -1;
+  return SUBTYPE_TO_SLOT(p->subtype);
+}
+
 enum mgos_init_result esp32_fs_init() {
   const esp_partition_t *fs_part =
       esp32_find_fs_for_app_slot(esp32_get_boot_slot());

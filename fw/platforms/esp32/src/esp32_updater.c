@@ -38,8 +38,6 @@
 #define MGOS_UPDATE_NEW_SLOT(v) (((v) >> 4) & 0x0f)
 #define MGOS_UPDATE_FIRST_BOOT 0x100
 
-#define SUBTYPE_TO_SLOT(st) ((st) -ESP_PARTITION_SUBTYPE_OTA(0))
-
 uint32_t g_boot_status = 0;
 
 struct mgos_upd_ctx {
@@ -253,12 +251,6 @@ static uint32_t get_update_status() {
 cleanup:
   nvs_close(h);
   return val;
-}
-
-int esp32_get_boot_slot() {
-  const esp_partition_t *p = esp_ota_get_boot_partition();
-  if (p == NULL) return -1;
-  return SUBTYPE_TO_SLOT(p->subtype);
 }
 
 static bool esp32_set_boot_slot(int slot) {
