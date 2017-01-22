@@ -1,0 +1,2 @@
+Files in fs/ directory are copied to the device filesystem.
+Device filesystem is flat, so no directories please.
