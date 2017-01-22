@@ -92,6 +92,8 @@ static enum mgos_init_result esp32_mgos_init() {
     return MGOS_INIT_FS_INIT_FAILED;
   }
 
+  mgos_wdt_feed();
+
 #if MGOS_ENABLE_UPDATER
   if (esp32_is_first_boot() && mgos_upd_apply_update() < 0) {
     return MGOS_INIT_APPLY_UPDATE_FAILED;

@@ -31,7 +31,9 @@ enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
                                      struct mount_info **res);
 void esp32_fs_umount(struct mount_info *m);
 
-enum mgos_init_result esp32_fs_init();
+enum mgos_init_result esp32_fs_crypt_init(void);
+
+enum mgos_init_result esp32_fs_init(void);
 void esp32_fs_deinit(void);
 
 #endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_FS_H_ */

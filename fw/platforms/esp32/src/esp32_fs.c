@@ -242,6 +242,12 @@ enum mgos_init_result esp32_fs_init() {
     LOG(LL_ERROR, ("No FS partition"));
     return MGOS_INIT_FS_INIT_FAILED;
   }
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  if (esp32_fs_crypt_init() != MGOS_INIT_OK) {
+    LOG(LL_ERROR, ("Failed to initialize FS encryption key"));
+    return MGOS_INIT_FS_INIT_FAILED;
+  }
+#endif
   struct mount_info *m;
   enum mgos_init_result r = esp32_fs_mount(fs_part, &m);
   if (r == MGOS_INIT_OK) {
