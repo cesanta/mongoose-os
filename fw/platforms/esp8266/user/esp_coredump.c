@@ -5,18 +5,19 @@
 
 #ifdef ESP_COREDUMP
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <ets_sys.h>
+#include <user_interface.h>
 #include <xtensa/corebits.h>
-#include <stdint.h>
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
 #include "esp_exc.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
-#include "v7_esp.h"
 
 #include "common/base64.h"
 

@@ -15,7 +15,6 @@ MGOS_ENABLE_CONFIG_SERVICE = 0
 MGOS_ENABLE_DNS_SD = 0
 MGOS_ENABLE_FILESYSTEM_SERVICE = 0
 MGOS_ENABLE_I2C = 0
-MGOS_ENABLE_JS = 0
 MGOS_ENABLE_MQTT = 0
 MGOS_ENABLE_RPC = 0
 MGOS_ENABLE_RPC_CHANNEL_HTTP = 0
@@ -53,10 +52,9 @@ BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
 
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
-MGOS_JS_PATH ?= $(MGOS_SRC_PATH)/js
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 
-# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
+# For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
 VPATH = $(APP_MODULES) $(MGOS_PIC32_SRC_PATH) \
@@ -67,22 +65,12 @@ VPATH = $(APP_MODULES) $(MGOS_PIC32_SRC_PATH) \
 IPATH = $(APP_MODULES) $(MGOS_PIC32_SRC_PATH) $(GEN_DIR) $(MGOS_PATH)
 ###IPATH += $(BOOT_PATH)/lib
 
-V7_FEATURES ?= $(COMMON_V7_FEATURES) \
-               -DV7_BUILD_PROFILE=1 \
-               -DV7_DISABLE_AST_TAG_NAMES \
-               -DV7_ENABLE_COMPACTING_GC \
-               -DV7_DISABLE_LINE_NUMBERS \
-               -DV7_DISABLE_FILENAMES \
-               -DV7_ENABLE_FILE \
-               -DV7_ENABLE_ENTITY_IDS
-
-V7_HOST_FEATURES ?= $(V7_FEATURES)
-V7_PIC32_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
 MGOS_PIC32_FEATURES ?= -DMGOS_NUM_GPIO=16
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS \
-               -DMG_DISABLE_MQTT
+               -DMG_DISABLE_MQTT \
+               -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 
 # TODO(dfrank): add these macros
 # -DMG_ENABLE_SSL
@@ -95,10 +83,6 @@ MGOS_FEATURES ?=
                   -DMGOS_ENABLE_I2C_API \
                   -DMGOS_ENABLE_WIFI_API \
                   -DMGOS_ENABLE_HTTP_CLIENT_API
-
-V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
-                  -DV7_DISABLE_INTERPRETER_STACK_CHECK \
-                  -DFS_MAX_OPEN_FILES=5
 
 APP_HEX = $(BUILD_DIR)/$(APP).hex
 ###BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
@@ -133,11 +117,6 @@ MGOS_SRCS = mgos_gpio.c mgos_init.c \
             mgos_console.c \
             cs_rbuf.c mgos_uart.c \
             mongoose.c frozen.c json_utils.c
-
-# TODO(dfrank): uncomment
-#ifeq "$(MGOS_ENABLE_JS)" "1"
-#MGOS_SRCS += v7.c
-#endif
 
 VPATH += $(MGOS_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 IPATH += $(COMMON_PATH)/mg_rpc
@@ -250,7 +229,7 @@ CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
 
 $(FW_MANIFEST): $(APP_HEX) \
-                ###$(FS_IMG) $(FS_EMPTY_IMG) ${FS_FILES} ${JSBIN_SRCS}
+                ###$(FS_IMG) $(FS_EMPTY_IMG) ${FS_FILES}
 
 include $(MGOS_PATH)/fw/src/features.mk
 ###include $(MGOS_PATH)/fw/src/spiffs.mk

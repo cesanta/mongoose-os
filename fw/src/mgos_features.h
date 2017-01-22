@@ -54,10 +54,6 @@
 #define MGOS_ENABLE_HTTP_SERVER_API 0
 #endif
 
-#ifndef MGOS_ENABLE_JS
-#define MGOS_ENABLE_JS 0
-#endif
-
 #ifndef MGOS_ENABLE_MDNS
 #define MGOS_ENABLE_MDNS 0
 #endif

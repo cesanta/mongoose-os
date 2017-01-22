@@ -14,14 +14,12 @@
 #include "os_type.h"
 #include "user_interface.h"
 #include "mem.h"
-#include "fw/platforms/esp8266/user/v7_esp.h"
 #include "fw/platforms/esp8266/user/util.h"
 #include "fw/platforms/esp8266/user/esp_exc.h"
 
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_prompt.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
@@ -33,10 +31,6 @@
 #include "fw/platforms/esp8266/user/esp_updater.h"
 #include "mongoose/mongoose.h" /* For cs_log_set_level() */
 #include "common/platforms/esp8266/esp_umm_malloc.h"
-
-#if MGOS_ENABLE_JS
-#include "v7/v7.h"
-#endif
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
@@ -103,19 +97,6 @@ enum mgos_init_result esp_mgos_init(rboot_config *bcfg) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
     return ir;
   }
-
-#if MGOS_ENABLE_JS
-  init_v7(&bcfg);
-
-  /* TODO(rojer): Get rid of I2C.js */
-  if (v7_exec_file(v7, "I2C.js", NULL) != V7_OK) {
-    return MGOS_INIT_APP_JS_INIT_FAILED;
-  }
-#endif
-
-#if MGOS_ENABLE_JS
-  mgos_prompt_init(v7, get_cfg()->debug.stdout_uart);
-#endif
 
   /*
    * We want to use our own heap functions instead of the ones provided by the

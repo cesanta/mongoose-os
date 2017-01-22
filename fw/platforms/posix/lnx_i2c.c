@@ -20,7 +20,6 @@
 
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_i2c.h"
-#include "v7/v7.h"
 
 struct mgos_i2c {
   int fd;
@@ -120,22 +119,5 @@ void mgos_i2c_close(struct mgos_i2c *c) {
   if (c->fd >= 0) close(c->fd);
   free(c);
 }
-
-#if MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API
-enum v7_err mgos_i2c_create_js(struct v7 *v7, struct mgos_i2c **res) {
-  enum v7_err rcode = V7_OK;
-  struct sys_config_i2c cfg;
-  cfg.bus_no = v7_get_double(v7, v7_arg(v7, 0));
-  struct mgos_i2c *conn = mgos_i2c_create(&cfg);
-
-  if (conn != NULL) {
-    *res = conn;
-  } else {
-    rcode = v7_throwf(v7, "Error", "Failed to creat I2C connection");
-  }
-
-  return rcode;
-}
-#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API */
 
 #endif /* MGOS_ENABLE_I2C */

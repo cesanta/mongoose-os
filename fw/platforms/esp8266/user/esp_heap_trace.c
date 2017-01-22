@@ -16,10 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if MGOS_ENABLE_JS
-#include "v7/v7.h"
-#endif
-
 #include "esp_mem_layout.h"
 
 /*

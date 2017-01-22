@@ -26,7 +26,6 @@
 #include "oslib/osi.h"
 
 #include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_v7_ext.h"
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"

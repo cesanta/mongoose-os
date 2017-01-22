@@ -20,7 +20,6 @@ APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
 
-MGOS_ENABLE_JS = 0
 MGOS_ENABLE_UPDATER_RPC = 0
 MGOS_DEBUG_UART = 0
 
@@ -28,7 +27,6 @@ MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
-V7_PATH ?= $(MGOS_PATH)/v7
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MGOS_ESP_PATH ?= $(MGOS_PATH)/fw/platforms/esp8266
@@ -36,7 +34,6 @@ MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MBEDTLS_PATH ?= /opt/mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
-MGOS_JS_PATH ?= $(MGOS_SRC_PATH)/js
 COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
@@ -86,12 +83,12 @@ SSL ?= mbedTLS
 
 include $(COMMON_ESP_PATH)/common.mk
 
-# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
+# For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
 MGOS_ESP_SRC_PATH = $(MGOS_ESP_PATH)/user
 
-MGOS_SRCS = cs_rbuf.c \
+MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_config.c \
             mgos_gpio.c \
             mgos_init.c \
@@ -109,12 +106,6 @@ MGOS_SRCS = cs_rbuf.c \
             mongoose.c frozen.c
 MGOS_SRCS += $(notdir $(foreach m,$(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
-
-ifeq "$(MGOS_ENABLE_JS)" "1"
-MGOS_SRCS += v7.c \
-             mgos_v7_ext.c \
-             mgos_prompt.c
-endif
 
 MGOS_FEATURES ?= -DMGOS_ENABLE_ADC_API \
                 -DMGOS_ENABLE_DEBUG_API \
@@ -159,20 +150,6 @@ LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
 
-V7_FEATURES ?= $(COMMON_V7_FEATURES) \
-               -DV7_BUILD_PROFILE=1 -DV7_ENABLE_FILE \
-               -DV7_DISABLE_AST_TAG_NAMES \
-               -DV7_ENABLE__RegExp=1 \
-               -DV7_ENABLE__StackTrace=1 \
-               -DV7_ENABLE__Object__getPrototypeOf \
-               -DV7_ENABLE__Object__isPrototypeOf \
-               -DV7_ENABLE__Object__hasOwnProperty \
-               -DV7_ENABLE__Object__keys \
-               -DV7_ENABLE__Object__isExtensible \
-               -DV7_EXPOSE_PRIVATE -DV7_ENABLE_ENTITY_IDS
-V7_GC_DEBUG ?= 1
-V7_STACK_GUARD ?= 1
-
 MGOS_ESP_FEATURES =
 
 MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
@@ -188,8 +165,7 @@ FEATURES = $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_ESP_FEATURES) \
            -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
            -DBOOT_BIG_FLASH -DCS_SPIFFS_ENABLE_VFS -DESP_UMM_ENABLE
 
-MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5 \
-               -DV7_STACK_SIZE=8192-64
+MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 
 .PHONY: all clean
 
@@ -252,21 +228,6 @@ else
   SSL_LIBS =
 endif
 
-ifeq "$(MGOS_ENABLE_JS)" "1"
-  GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MGOS_FEATURES += -DMGOS_ENABLE_JS $(V7_FEATURES)
-  VPATH += $(V7_PATH)
-  $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
-  ifneq "$(V7_GC_DEBUG)" "1"
-    MEMORY_FLAGS += -DV7_DISABLE_STR_ALLOC_SEQ
-  endif
-  ifeq "$(V7_STACK_GUARD)" "1"
-    MEMORY_FLAGS += -DV7_STACK_GUARD_MIN_SIZE=256 -finstrument-functions
-  endif
-else
-  MGOS_SRCS += cs_file.c
-endif
-
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGOS_SRCS)))
@@ -287,13 +248,8 @@ ifneq "${MGOS_ENABLE_HEAP_LOG}${MGOS_ENABLE_CALL_TRACE}" "00"
                  -Wl,--wrap=vPortFree
 endif
 ifeq "${MGOS_ENABLE_CALL_TRACE}" "1"
-  HEAP_LOG_FLAGS += -finstrument-functions -DCALL_TRACE_SIZE=32
-  ifeq "$(MGOS_ENABLE_JS)" "1"
-    HEAP_LOG_FLAGS += -DV7_ENABLE_CALL_TRACE -DMGOS_ENABLE_CALL_TRACE
-  else
-    MGOS_SRCS += cs_heap_trace.c
-    HEAP_LOG_FLAGS += -DMGOS_ENABLE_CALL_TRACE
-  endif
+  MGOS_SRCS += cs_heap_trace.c
+  HEAP_LOG_FLAGS += -finstrument-functions -DCALL_TRACE_SIZE=33 -DMGOS_ENABLE_CALL_TRACE
 endif
 
 IMAGE_HEADER_SIZE = 0x10
@@ -349,7 +305,7 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
 
 $(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
-                $(FW_FILE_2_OUT) $(FS_IMG) $(FS_FILES) $(JSBIN_SRCS)
+                $(FW_FILE_2_OUT) $(FS_IMG) $(FS_FILES)
 
 $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT): $(FW_STAGING_DIR)
 	$(vecho) "GEN   $@"
@@ -438,24 +394,8 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 # -- Filesystem.
 
-$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(_FS_SIZE))
-
-ifeq "$(MGOS_ENABLE_JS)" "1"
-$(V7_PATH)/v7.c $(V7_PATH)/v7.h:
-	make -C $(V7_PATH) $(notdir $@)
-
-$(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-	$(vecho) "GCC   v7"
-	$(Q) gcc -DV7_EXE $(V7_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
-
-$(FS_IMG): $(BUILD_DIR)/v7
-
-endif
-
-# Target specific warning inhibitions
-
-build/spiffs_hydrogen.o: CFLAGS += -Wno-unused-function
 
 #
 # Auxiliary targets.

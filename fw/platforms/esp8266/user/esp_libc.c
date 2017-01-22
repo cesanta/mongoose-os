@@ -41,21 +41,6 @@ int cs_heap_shim = 0;
 
 /* #define ESP_ABORT_ON_MALLOC_FAILURE */
 
-/*
- * strerror provided by libc consumes 2kb RAM
- * Moreover, V7 uses strerror mostly for
- * file operation, so returns of strerror
- * are undefined, because spiffs uses its own
- * error codes and doesn't provide
- * error descriptions
- */
-char *strerror(int errnum) {
-  static char buf[15];
-  snprintf(buf, sizeof(buf), "err: %d", errnum);
-  buf[sizeof(buf) - 1] = 0;
-  return buf;
-}
-
 void *malloc(size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();

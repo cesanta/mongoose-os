@@ -91,8 +91,8 @@ int main(void) {
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
 
   VStartSimpleLinkSpawnTask(8);
-  osi_TaskCreate(main_task, (const signed char *) "main", V7_STACK_SIZE + 256,
-                 NULL, 3, NULL);
+  osi_TaskCreate(main_task, (const signed char *) "main",
+                 CC3200_MAIN_TASK_STACK_SIZE, NULL, 3, NULL);
   osi_start();
 
   return 0;

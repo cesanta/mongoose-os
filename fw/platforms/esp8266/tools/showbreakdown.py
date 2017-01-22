@@ -16,7 +16,7 @@ if not app_bin_path:
 app_bin_path = app_bin_path[0]
 app_name = os.path.basename(app_bin_path).split('.')[0]
 app_lib_path = os.path.join(path_to_bin, 'build', '%s.a' % app_name)
-modules = ['v7.o', 'mongoose.o']
+modules = ['mongoose.o']
 
 flash_size = 512 * 1024
 code_seg_size = flash_size  # Not true, but we need something.

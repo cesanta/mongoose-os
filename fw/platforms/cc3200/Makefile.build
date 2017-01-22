@@ -3,7 +3,7 @@
 # Mongoose OS for CC3200
 #
 # This file is executed inside Docker build container.
-# It can be used without container too if SDK_PATH and V7_PATH are configured.
+# It can be used without container too if SDK_PATH are configured.
 MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
 
@@ -19,11 +19,8 @@ FFI_SYMBOLS ?=
 MGOS_ENABLE_ATCA = 0
 MGOS_ENABLE_ATCA_SERVICE = 0
 MGOS_ENABLE_DNS_SD = 0
-MGOS_ENABLE_JS = 0
 MGOS_ENABLE_UPDATER_RPC = 0
 MGOS_DEBUG_UART = 0
-
-V7_NO_COMPILER ?= 0
 
 TOOLCHAIN ?= /opt/arm_5.2.8
 APP_ORG = 0x20000000
@@ -35,7 +32,6 @@ CC3200_PADDED_IMAGE_SIZE ?= $(shell echo $$(($(RAM_SIZE) - $(BOOT_LOADER_SIZE) -
 
 SDK_PATH ?= /cc3200-sdk
 MGOS_PATH ?= ../../..
-V7_PATH ?= $(MGOS_PATH)/v7
 COMMON_PATH ?= $(MGOS_PATH)/common
 MGOS_CC3200_PATH ?= $(MGOS_PATH)/fw/platforms/cc3200
 MGOS_CC3200_SRC_PATH ?= $(MGOS_CC3200_PATH)/src
@@ -78,10 +74,9 @@ CC3200_SAFE_CODE_UPDATE ?= 1
 
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
-MGOS_JS_PATH ?= $(MGOS_SRC_PATH)/js
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 
-# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
+# For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
 VPATH = $(APP_MODULES) $(MGOS_CC3200_SRC_PATH) \
@@ -89,41 +84,19 @@ VPATH = $(APP_MODULES) $(MGOS_CC3200_SRC_PATH) \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
 IPATH = $(APP_MODULES) $(MGOS_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR) $(MGOS_PATH)
 
-V7_FEATURES ?= $(COMMON_V7_FEATURES) \
-               -DV7_BUILD_PROFILE=1 \
-               -DV7_DISABLE_AST_TAG_NAMES \
-               -DV7_ENABLE_COMPACTING_GC \
-               -DV7_DISABLE_LINE_NUMBERS \
-               -DV7_DISABLE_FILENAMES \
-               -DV7_ENABLE_FILE \
-               -DV7_ENABLE_ENTITY_IDS
-
-V7_HOST_FEATURES ?= $(V7_FEATURES)
-V7_CC3200_FEATURES ?= $(V7_FEATURES) -DDISABLE_MD5
-MGOS_CC3200_FEATURES ?= -DV7_STACK_SIZE=8192-64 -DMGOS_ENABLE_FILE_UPLOAD \
-                        -DMGOS_NUM_GPIO=32
-
-ifeq "$(V7_NO_COMPILER)" "1"
-  V7_CC3200_FEATURES += -DV7_NO_COMPILER \
-                        -DV7_ALT_JSON_PARSE
-
-  MGOS_CC3200_FEATURES += -DMGOS_FROZEN_JSON_PARSE
-endif
+MGOS_CC3200_FEATURES ?= -DMGOS_ENABLE_FILE_UPLOAD -DMGOS_NUM_GPIO=32
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
                -DMG_DISABLE_MQTT \
                -DMG_FS_SLFS \
-               -DMG_EXT_SHA1 -DDISABLE_SHA1
+               -DMG_EXT_SHA1 -DDISABLE_SHA1 \
+               -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 
 MGOS_FEATURES ?= -DMGOS_ENABLE_GPIO_API \
                  -DMGOS_ENABLE_I2C_API \
                  -DMGOS_ENABLE_WIFI_API \
                  -DMGOS_ENABLE_HTTP_CLIENT_API
-
-V7_MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 \
-                  -DV7_DISABLE_INTERPRETER_STACK_CHECK \
-                  -DFS_MAX_OPEN_FILES=5
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
@@ -157,18 +130,13 @@ MGOS_SRCS = mgos_gpio.c \
             mgos_init.c \
             mgos_mongoose.c \
             mgos_timers_mongoose.c \
-            mgos_v7_ext.c \
             mgos_config.c mgos_sys_config.c \
             mgos_dlsym.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            cs_crc32.c \
+            cs_crc32.c cs_file.c \
             cs_frbuf.c mgos_utils.c \
             cs_rbuf.c mgos_uart.c \
             boot.c mongoose.c frozen.c json_utils.c
-ifeq "$(MGOS_ENABLE_JS)" "1"
-MGOS_SRCS += v7.c \
-             mgos_prompt.c
-endif
 
 VPATH += $(MGOS_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 IPATH += $(COMMON_PATH)/mg_rpc
@@ -203,17 +171,6 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
               -DMGOS_MAX_NUM_UARTS=2 \
               $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
-
-ifeq "$(MGOS_ENABLE_JS)" "1"
-  GENFILES_LIST += $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-  MGOS_FEATURES += -DMGOS_ENABLE_JS
-  MGOS_CFLAGS += $(V7_MEMORY_FLAGS)
-  VPATH += $(V7_PATH)
-  $(BUILD_DIR)/v7.o: CFLAGS += $(V7_CC3200_FEATURES)
-  $(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
-else
-  MGOS_SRCS += cs_file.c
-endif
 
 include $(MGOS_PATH)/fw/src/features.mk
 include $(MGOS_PATH)/fw/src/spiffs.mk
@@ -271,7 +228,7 @@ include $(MGOS_PATH)/fw/src/sys_config.mk
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 
-$(FS_IMG): $(APP_FS_PATH) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(JSBIN_SRCS) $(MK_FS_META_BIN)
+$(FS_IMG): $(APP_FS_PATH) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
 	$(call mkspiffs,$(FS_SIZE))
 	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
 
@@ -280,17 +237,6 @@ $(FS_EMPTY_IMG): $(MK_FS_META_BIN)
 	$(Q) dd if=/dev/zero of=$@ bs=$(FS_BLOCK_SIZE) \
 	        count=$(shell echo $$(($(FS_SIZE) / $(FS_BLOCK_SIZE)))) > $@ 2>/dev/null
 	$(Q) $(MK_FS_META_BIN) 0 0 0 0 0 >> $@
-
-ifeq "$(MGOS_ENABLE_JS)" "1"
-$(V7_PATH)/v7.c $(V7_PATH)/v7.h:
-	make -C $(V7_PATH) $(notdir $@)
-
-$(BUILD_DIR)/v7: $(V7_PATH)/v7.c $(V7_PATH)/v7.h
-	$(vecho) "GCC   v7"
-	$(Q) gcc -DV7_EXE $(V7_HOST_FEATURES) $(V7_PATH)/v7.c -lm -o $(BUILD_DIR)/v7
-
-$(FS_IMG): $(BUILD_DIR)/v7
-endif
 
 OBJCOPY = arm-none-eabi-objcopy
 
@@ -338,7 +284,7 @@ all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_
 
 $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
                 $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
-                $(APP_SLFS_PATH) $(SLFS_FILES) ${FS_FILES} ${JSBIN_SRCS}
+                $(APP_SLFS_PATH) $(SLFS_FILES) $(FS_FILES)
 
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                                 $(wildcard $(BOOT_PATH)/tools/mkcfg.c)

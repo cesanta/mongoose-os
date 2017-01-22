@@ -9,10 +9,6 @@
 
 #include "fw/src/mgos_features.h"
 
-#if MGOS_ENABLE_JS
-#include "v7/v7.h"
-#endif
-
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
@@ -255,22 +251,6 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
 void fs_flush_stderr(void) {
   if (s_stderr_uart >= 0) mgos_uart_flush(s_stderr_uart);
 }
-
-#if MGOS_ENABLE_JS
-int v7_val_to_file(struct v7 *v7, v7_val_t val) {
-  return (int) v7_get_double(v7, val);
-}
-
-v7_val_t v7_file_to_val(struct v7 *v7, int fd) {
-  (void) v7;
-  return v7_mk_number(v7, fd);
-}
-
-int v7_is_file_type(v7_val_t val) {
-  int res = v7_is_number(val);
-  return res;
-}
-#endif
 
 int64_t mgos_get_storage_free_space(void) {
   uint32_t total, used;

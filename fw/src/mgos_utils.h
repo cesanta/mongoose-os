@@ -12,24 +12,6 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-#if MGOS_ENABLE_JS
-
-#include "v7/v7.h"
-#include "mongoose/mongoose.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-enum v7_err fill_ssl_connect_opts(struct v7 *v7, v7_val_t opts, int force_ssl,
-                                  struct mg_connect_opts *copts);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* MGOS_ENABLE_JS */
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

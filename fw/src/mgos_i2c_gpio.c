@@ -18,10 +18,6 @@
 
 #include "common/cs_dbg.h"
 
-#if MGOS_ENABLE_JS
-#include "v7/v7.h"
-#endif
-
 struct mgos_i2c {
   int sda_gpio;
   int scl_gpio;
@@ -215,23 +211,5 @@ void mgos_i2c_close(struct mgos_i2c *c) {
   if (c->started) mgos_i2c_stop(c);
   free(c);
 }
-
-#if MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API
-enum v7_err mgos_i2c_create_js(struct v7 *v7, struct mgos_i2c **res) {
-  enum v7_err rcode = V7_OK;
-  struct sys_config_i2c cfg;
-  cfg.sda_gpio = v7_get_double(v7, v7_arg(v7, 0));
-  cfg.scl_gpio = v7_get_double(v7, v7_arg(v7, 1));
-  struct mgos_i2c *conn = mgos_i2c_create(&cfg);
-
-  if (conn != NULL) {
-    *res = conn;
-  } else {
-    rcode = v7_throwf(v7, "Error", "Failed to creat I2C connection");
-  }
-
-  return rcode;
-}
-#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API */
 
 #endif /* MGOS_ENABLE_I2C && MGOS_ENABLE_I2C_GPIO */

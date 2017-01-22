@@ -20,10 +20,6 @@ enum mgos_app_init_result {
 /* User app init functions, C and JS respectively.
  * A weak stub is provided in mgos_app_init.c, which can be overridden. */
 enum mgos_app_init_result mgos_app_init(void);
-#if MGOS_ENABLE_JS
-struct v7;
-enum mgos_app_init_result mgos_app_init_js(struct v7 *v7);
-#endif
 
 /*
  * An early init hook, for apps that want to take control early

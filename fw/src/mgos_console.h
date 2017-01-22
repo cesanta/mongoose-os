@@ -8,6 +8,8 @@
 
 #include "fw/src/mgos_features.h"
 
+#include "common/cs_dbg.h"
+
 #if MGOS_ENABLE_CONSOLE
 
 #ifdef __cplusplus

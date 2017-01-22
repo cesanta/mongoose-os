@@ -8,10 +8,6 @@ commands described below.
 
 ESP8266 board can be accessed through a serial port, or directly via browser if WiFi is configured.
 
-Mongoose OS firmware can be easily extended by adding custom commands - refer to
-https://docs.cesanta.com/v7/ to learn how to export custom functions, and look
-at the examples at `user/v7_cmd.c`.
-
 # Build the firmware
 
 Mongoose OS release provides pre-built firmare, so you might just download

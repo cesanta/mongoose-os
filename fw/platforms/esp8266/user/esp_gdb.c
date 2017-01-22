@@ -16,7 +16,6 @@
 #include "esp_hw.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "esp_uart.h"
-#include "v7_esp.h"
 
 #define ESP_GDB_UART_NO 0
 #define ESP_GDB_FILENO (ESP_GDB_UART_NO + 1)
@@ -201,7 +200,7 @@ void gdb_server(struct regfile *regs) {
    * polling since we cannot wait for interrupts inside
    * an interrupt handler of unknown level.
    *
-   * Interrupts disabled so that the user (or v7 prompt)
+   * Interrupts disabled so that the user
    * uart interrupt handler doesn't interfere.
    */
 

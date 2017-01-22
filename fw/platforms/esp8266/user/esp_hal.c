@@ -5,23 +5,17 @@
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_v7_ext.h"
 #include "fw/src/mgos_hal.h"
 
-#include "v7_esp.h"
 #include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_prompt.h"
 #include "common/umm_malloc/umm_malloc.h"
 
 #include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/platforms/esp8266/user/esp_task.h"
 
-#if MGOS_ENABLE_JS
-#include "v7/v7.h"
-#endif
-
 #include <osapi.h>
 #include <os_type.h>
+#include <user_interface.h>
 
 size_t mgos_get_heap_size(void) {
   return UMM_MALLOC_CFG__HEAP_SIZE;
@@ -72,14 +66,6 @@ void mgos_system_restart(int exit_code) {
 
 int spiffs_get_memory_usage();
 
-size_t mgos_get_fs_memory_usage(void) {
-#ifndef V7_NO_FS
-  return spiffs_get_memory_usage();
-#else
-  return 0;
-#endif
-}
-
 void mgos_usleep(int usecs) {
   os_delay_us(usecs);
 }
@@ -87,8 +73,3 @@ void mgos_usleep(int usecs) {
 IRAM void mongoose_schedule_poll(void) {
   mg_lwip_mgr_schedule_poll(mgos_get_mgr());
 }
-
-#if MGOS_ENABLE_JS
-void mgos_prompt_init_hal(void) {
-}
-#endif

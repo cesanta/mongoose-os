@@ -145,7 +145,7 @@ $(GEN_DIR)/conf_defaults.json: $(GEN_DIR)/sys_config_defaults.json
 # sys_config is generated during binary build
 $(GEN_DIR)/sys_config_defaults.json: all_binaries
 
-$(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS)
+$(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE))
 
 SPIFFS_SRCS = $(SPIFFS_PATH)/*.c $(SPIFFS_PATH)/tools/mem_spiffs.c $(SPIFFS_PATH)/tools/mkspiffs.c

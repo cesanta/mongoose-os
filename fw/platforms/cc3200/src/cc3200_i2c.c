@@ -26,10 +26,6 @@
 #include "fw/src/mgos_i2c.h"
 #include "config.h"
 
-#if MGOS_ENABLE_JS
-#include "v7/v7.h"
-#endif
-
 /* Documentation: TRM (swru367b), Chapter 7 */
 
 #ifdef CC3200_I2C_DEBUG
@@ -164,23 +160,5 @@ void mgos_i2c_stop(struct mgos_i2c *c) {
 
 void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
 }
-
-#if MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API
-enum v7_err mgos_i2c_create_js(struct v7 *v7, struct mgos_i2c **res) {
-  enum v7_err rcode = V7_OK;
-  struct sys_config_i2c cfg;
-  cfg.sda_pin = v7_get_double(v7, v7_arg(v7, 0)) - 1;
-  cfg.scl_pin = v7_get_double(v7, v7_arg(v7, 1)) - 1;
-  struct mgos_i2c *conn = mgos_i2c_create(&cfg);
-
-  if (conn != NULL) {
-    *res = conn;
-  } else {
-    rcode = v7_throwf(v7, "Error", "Failed to creat I2C connection");
-  }
-
-  return rcode;
-}
-#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_I2C_API */
 
 #endif /* MGOS_ENABLE_I2C */

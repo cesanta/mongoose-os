@@ -9,9 +9,7 @@
 
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_prompt.h"
 #include "fw/src/mgos_utils.h"
-#include "fw/src/mgos_v7_ext.h"
 
 #ifndef IRAM
 #define IRAM

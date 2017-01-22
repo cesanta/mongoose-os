@@ -6,7 +6,6 @@ MGOS_ENABLE_ATCA_SERVICE ?= 0
 MGOS_ENABLE_CONSOLE ?= 0
 MGOS_ENABLE_DNS_SD ?= 0
 MGOS_ENABLE_I2C_GPIO ?= 0
-MGOS_ENABLE_JS ?= 0
 MGOS_ENABLE_UPDATER ?= 0
 MGOS_ENABLE_UPDATER_POST ?= 0
 MGOS_ENABLE_UPDATER_RPC ?= 0
@@ -30,7 +29,6 @@ MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
-V7_PATH ?= $(MGOS_PATH)/v7
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 MGOS_FEATURES ?=
@@ -80,7 +78,6 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 # Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
 # TODO(alashkin): uncomment line below to allow spiffs writing
 FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08040000"))) __attribute__ ((aligned (131072)))'
-MGOS_JS_PATH ?= $(MGOS_SRC_PATH)/js
 
 ifeq "${CREATE_SPIFFS_FS}" "1"
   FS_IMG = $(FW_STAGING_DIR)/fs.bin
@@ -186,7 +183,7 @@ $(MG_BUILD_INFO_C): $(FW_STAGING_DIR)
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(JSBIN_SRCS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE))
 
 $(FS_HEADER) : $(FS_IMG)

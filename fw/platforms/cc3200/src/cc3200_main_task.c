@@ -16,14 +16,9 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_prompt.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_updater_common.h"
-
-#if MGOS_ENABLE_JS
-#include "v7/v7.h"
-#endif
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/config.h"
@@ -46,27 +41,6 @@ struct mgos_event {
 };
 
 OsiMsgQ_t s_main_queue;
-
-#if MGOS_ENABLE_JS
-struct v7 *s_v7;
-
-struct v7 *init_v7(void *stack_base) {
-  struct v7_create_opts opts;
-
-#ifdef V7_THAW
-  opts.object_arena_size = 85;
-  opts.function_arena_size = 16;
-  opts.property_arena_size = 100;
-#else
-  opts.object_arena_size = 164;
-  opts.function_arena_size = 26;
-  opts.property_arena_size = 400;
-#endif
-  opts.c_stack_base = stack_base;
-
-  return v7_create_opt(opts);
-}
-#endif
 
 /* It may not be the best source of entropy, but it's better than nothing. */
 static void cc3200_srand(void) {
@@ -93,18 +67,12 @@ int start_nwp(void) {
   return 0;
 }
 
-#if MGOS_ENABLE_JS
-void mgos_prompt_init_hal(void) {
-}
-#endif
-
 enum cc3200_init_result {
   CC3200_INIT_OK = 0,
   CC3200_INIT_FAILED_TO_START_NWP = -100,
   CC3200_INIT_FAILED_TO_READ_BOOT_CFG = -101,
   CC3200_INIT_FS_INIT_FAILED = -102,
   CC3200_INIT_MG_INIT_FAILED = -103,
-  CC3200_INIT_MG_INIT_JS_FAILED = -105,
   CC3200_INIT_UART_INIT_FAILED = -106,
   CC3200_INIT_UPDATE_FAILED = -107,
 };
@@ -181,13 +149,6 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     return CC3200_INIT_MG_INIT_FAILED;
   }
 
-#if MGOS_ENABLE_JS
-  struct v7 *v7 = s_v7 = init_v7(&arg);
-#endif
-
-#if MGOS_ENABLE_JS
-  mgos_prompt_init(v7, get_cfg()->debug.stdout_uart);
-#endif
   return CC3200_INIT_OK;
 }
 
@@ -214,7 +175,7 @@ void main_task(void *arg) {
 
   while (1) {
     mongoose_poll(0);
-    while (osi_MsgQRead(&s_main_queue, &e, V7_POLL_LENGTH_MS) == OSI_OK) {
+    while (osi_MsgQRead(&s_main_queue, &e, CC3200_POLL_LENGTH_MS) == OSI_OK) {
       e.cb(e.arg);
     }
   }

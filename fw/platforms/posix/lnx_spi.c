@@ -5,7 +5,7 @@
 
 #include "fw/src/mgos_features.h"
 
-#if MGOS_ENABLE_JS && MGOS_ENABLE_SPI_API
+#if MGOS_ENABLE_SPI_API
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,7 +19,6 @@
 #include <string.h>
 
 #include "fw/src/mgos_spi.h"
-#include "v7/v7.h"
 
 struct lnx_spi_connection {
   int spi_no;
@@ -122,33 +121,10 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
   return ret;
 }
 
-/* HAL functions */
-enum v7_err mgos_spi_create(struct v7 *v7, spi_connection *res) {
-  enum v7_err rcode = V7_OK;
-  struct lnx_spi_connection *conn = NULL;
-  v7_val_t spi_no_val = v7_arg(v7, 0);
-  double spi_no = v7_get_double(v7, spi_no_val);
-  ;
-
-  if (!v7_is_number(spi_no_val) || spi_no < 0) {
-    rcode = v7_throwf(v7, "Error",
-                      "Missing arguments for SPI number or wrong type.");
-    goto clean;
-  } else {
-    conn = malloc(sizeof(*conn));
-    conn->spi_no = v7_get_double(v7, spi_no);
-  }
-
-  *res = conn;
-
-clean:
-  return rcode;
-}
-
 void mgos_spi_close(spi_connection c) {
   struct lnx_spi_connection *conn = (struct lnx_spi_connection *) c;
   close(conn->fd);
   free(c);
 }
 
-#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_SPI_API */
+#endif /* MGOS_ENABLE_SPI_API */

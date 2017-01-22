@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
-#include "fw/src/mgos_v7_ext.h"
 #ifdef __APPLE__
 #include <sys/time.h>
 #include <sys/types.h>
@@ -31,12 +30,7 @@ typedef unsigned short u_short;
 
 #include "mongoose/mongoose.h"
 #include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_prompt.h"
 #include "fw/src/mgos_mongoose.h"
-
-#ifdef __APPLE__
-v7_val_t *bsd_timer_cb = NULL;
-#endif
 
 extern int mgos_please_quit;
 
@@ -122,43 +116,6 @@ static void *stdin_thread(void *param) {
   close(sock);
   return NULL;
 }
-
-#if MGOS_ENABLE_JS
-static void prompt_handler(struct mg_connection *nc, int ev, void *ev_data) {
-  size_t i;
-  (void) ev_data;
-  struct mbuf *io = &nc->recv_mbuf;
-  switch (ev) {
-    case MG_EV_RECV:
-      for (i = 0; i < io->len; i++) {
-        mgos_prompt_process_char(io->buf[i]);
-        if (io->buf[i] == '\n') {
-          mgos_prompt_process_char('\r');
-        }
-      }
-      mbuf_remove(io, io->len);
-      break;
-    case MG_EV_CLOSE:
-      mgos_please_quit = 1;
-      break;
-  }
-}
-
-void mgos_prompt_init_hal(void) {
-  if (isatty(fileno(stdin))) {
-    /* stdin is a tty, so, init prompt */
-    int fds[2];
-    if (!mg_socketpair((sock_t *) fds, SOCK_STREAM)) {
-      printf("cannot create a socketpair\n");
-      exit(1);
-    }
-    mg_start_thread(stdin_thread, (void *) (uintptr_t) fds[1]);
-    mg_add_sock(mgos_get_mgr(), fds[0], prompt_handler);
-  } else {
-    /* in case of a non-tty stdin, don't init prompt */
-  }
-}
-#endif
 
 bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
   /* FIXME: This is NOT correct. */

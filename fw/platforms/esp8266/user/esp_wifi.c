@@ -20,10 +20,7 @@
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_v7_ext.h"
 #include "fw/src/mgos_wifi.h"
-
-#include "fw/platforms/esp8266/user/v7_esp.h"
 
 static mgos_wifi_scan_cb_t s_wifi_scan_cb;
 static void *s_wifi_scan_cb_arg;

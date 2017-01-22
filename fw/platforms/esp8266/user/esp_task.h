@@ -10,14 +10,6 @@
 
 #include "fw/src/mgos_features.h"
 
-#if MGOS_ENABLE_JS
-
-#include "v7/v7.h"
-
-void mgos_dispatch_v7_callback(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
-                               v7_val_t args);
-#endif
-
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr);
 
 void mg_lwip_set_keepalive_params(struct mg_connection *nc, int idle,

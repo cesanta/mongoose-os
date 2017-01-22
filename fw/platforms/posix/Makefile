@@ -9,7 +9,6 @@ MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 SRC_PATH ?= ../../src
-V7_PATH ?= ../../../v7
 MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
@@ -17,7 +16,7 @@ GEN_DIR ?= ./.build/gen
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 OUTAPP ?= mongoose-os
 VERBOSE ?= 0
-VPATH = $(SRC_PATH) $(V7_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
+VPATH = $(SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 SSL ?= None
 DEBUG ?= 0
 CC_WRAPPER ?=
@@ -34,16 +33,10 @@ MGOS_ENABLE_I2C ?= 1
 MGOS_ENABLE_I2C_GPIO = 0
 MGOS_ENABLE_WIFI = 0
 
-# For FW_VERSION, COMMON_V7_FEATURES, MG_FEATURES_TINY
+# For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
 LDFLAGS ?=
-
-V7_FEATURES ?= $(COMMON_V7_FEATURES) \
-              -DV7_BUILD_PROFILE=3 -DV7_ENABLE__Memory__stats \
-              -DV7_ENABLE_COMPACTING_GC \
-              -DV7_ENABLE_FILE -DV7_MAIN -DV7_ALLOW_ARGLESS_MAIN \
-              -DV7_ENABLE_ENTITY_IDS
 
 MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 -DMGOS_NUM_GPIO=16
 MONGOOSE_FEATURES = \
@@ -54,23 +47,11 @@ MONGOOSE_FEATURES = \
 INCLUDES = $(MGOS_PATH) $(SRC_PATH) $(BUILD_DIR)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mongoose.c frozen.c mgos_mongoose.c mgos_gpio.c \
-            mgos_prompt.c mgos_timers_mongoose.c \
+            mgos_timers_mongoose.c \
             mgos_config.c mgos_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             json_utils.c cs_rbuf.c mgos_uart.c \
-            mgos_utils.c
-
-ifeq "$(MGOS_ENABLE_JS)" "1"
-MGOS_SRCS += v7.c \
-             mgos_v7_ext.c
-
-$(BUILD_DIR)/mongoose.o: CFLAGS += -DEXCLUDE_COMMON
-
-MGOS_POSIX_FEATURES += -DMGOS_ENABLE_JS
-
-else
-  MGOS_SRCS += cs_file.c
-endif
+            mgos_utils.c cs_file.c
 
 include $(MGOS_PATH)/fw/src/features.mk
 
@@ -81,7 +62,6 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
           -Wno-missing-field-initializers \
           -D_DEFAULT_SOURCE \
           -D_GNU_SOURCE \
-          $(V7_FEATURES) \
           $(MGOS_FEATURES) $(MGOS_POSIX_FEATURES) \
           $(MONGOOSE_FEATURES) \
           -DFW_ARCHITECTURE=$(BUILD_PLATFORM) \
@@ -142,7 +122,7 @@ endif
 
 GC_CHECK ?=
 ifeq ($(GC_CHECK),1)
-CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions -DV7_ENABLE_GC_CHECK
+CFLAGS += -fno-optimize-sibling-calls -fno-omit-frame-pointer -fno-inline -finstrument-functions
 endif
 
 ASAN ?=
@@ -162,7 +142,7 @@ SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(V7_PATH)/v7.c
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/* $(MGOS_PATH)/fw/skeleton/fs/*)
 
@@ -219,10 +199,7 @@ $(BUILD_INFO_C): $(APP_OBJS)
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(V7_PATH)/v7.c:
-	@make -C $(V7_PATH) v7.c
-
-$(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(V7_PATH)/v7.c $(OBJS)
+$(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(OBJS)
 	@echo "LD $@"
 	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 

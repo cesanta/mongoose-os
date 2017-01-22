@@ -318,4 +318,4 @@ enum mgos_init_result mgos_gpio_dev_init(void) {
   return MGOS_INIT_OK;
 }
 
-#endif /* MGOS_ENABLE_JS && MGOS_ENABLE_GPIO_API */
+#endif /* MGOS_ENABLE_GPIO_API */

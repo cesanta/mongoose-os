@@ -31,23 +31,4 @@ Upon reboot or power on, Mongoose Firmware performs following steps:
   instance to send or receive requests in plain TCP, UDP, HTPP, WebSocket,
   MQTT or CoAP protocols.
 
-3. (optional, if JavaScript support is enabled).
-  Initialisation of the global JavaScript instance, `struct v7 *s_v7`.
-
-  This instance is passed to the user-specific initialization function,
-  in order to provide a way to initialize any custom objects in the
-  JavaScript environment.
-
-5. (optional, if JavaScript support is enabled).
-  C code transfers control to the JavaScript by calling the `sys_init.js` file.
-  This file:
-   - Loads config files into the `Sys.conf` variable. This is done by
-    loading `conf_sys_defaults.json`, then applying `conf_app_defaults.json`
-    on top of it and then applying `conf.json` on top of it again.
-   - Initialises connection to the cloud if required
-    (`Sys.conf.mg_rpc.connect_on_boot` option). That allows talking
-      to devices from anywhere, as the cloud relays messages to any connected
-      devices.
-   - Calls user-specific `app.js` file, which contains custom logic.
-
-6. Systems executes infinite event loop.
+5. Systems executes infinite event loop.
