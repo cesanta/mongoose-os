@@ -7,7 +7,7 @@
 #include "common/cs_dbg.h"
 
 static int s_initialized = 0;
-#define LOOP_DELAY_TICK 100
+#define LOOP_DELAY_TICK 10
 
 void mgos_main() {
   cs_log_set_level(LL_INFO);
