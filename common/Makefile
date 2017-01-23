@@ -14,6 +14,7 @@ all: unit_test
 
 unit_test:
 	make -C $(UMM_MALLOC_TEST_PATH)
+	make -C segstack
 	cc $(SOURCES) -o $@ $(CFLAGS)
 	./$@
 
@@ -21,5 +22,5 @@ clean:
 	rm -f *.o unit_test
 
 format:
-	@$(CLANG_FORMAT) -i *.[ch] platforms/*/*.[ch] mg_rpc/*.[ch]
+	@$(CLANG_FORMAT) -i *.[ch] platforms/*/*.[ch] mg_rpc/*.[ch] segstack/*.[ch]
 
