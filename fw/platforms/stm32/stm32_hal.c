@@ -2,6 +2,7 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_wifi.h"
 
 static int s_mongoose_poll_scheduled;
 

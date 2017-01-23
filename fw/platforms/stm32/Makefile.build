@@ -64,7 +64,8 @@ SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH) -type d)
 LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH) -name '*.ld')
 
 ADD_SRCS = stm32_mgos_main.c stm32_gpio.c stm32_hal.c stm32_uart.c \
-           stm32_libc.c stm32_wifi.c stm32_fs.c stm32_i2c.c
+           stm32_libc.c stm32_wifi.c stm32_fs.c stm32_i2c.c \
+           stm32_lwip.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
