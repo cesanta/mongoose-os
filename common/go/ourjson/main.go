@@ -139,15 +139,26 @@ type delayMarshaling struct {
 	val interface{}
 }
 
+func MarshalJSONNoHTMLEscape(v interface{}) ([]byte, error) {
+	w := bytes.NewBuffer(nil)
+	e := json.NewEncoder(w)
+	e.SetEscapeHTML(false) // Avoid escaping &
+	err := e.Encode(v)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return w.Bytes(), nil
+}
+
 func (m delayMarshaling) MarshalJSON() ([]byte, error) {
 	if b, ok := m.val.([]byte); ok {
 		v := make([]uint16, len(b))
 		for i, n := range b {
 			v[i] = uint16(n)
 		}
-		return json.Marshal(v)
+		return MarshalJSONNoHTMLEscape(v)
 	}
-	return json.Marshal(m.val)
+	return MarshalJSONNoHTMLEscape(m.val)
 }
 
 func (m delayMarshaling) MarshalUBJSON() ([]byte, error) {
