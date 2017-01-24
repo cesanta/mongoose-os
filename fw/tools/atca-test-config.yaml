@@ -1,0 +1,377 @@
+# This is an example ATECC508A configuration file that can be used for testing.
+#
+# Slots 0-3 are ECC slots with ECDH enabled. They can be generated on the device
+# or rewritten using key in slot 4, which itself can be reset at any time.
+#
+# NB: This setup is NOT secure and is only meant for development.
+#
+# To apply this config use the following command:
+#   mos -X atca-set-config --port /dev/ttyUSB0 atca-test-config.yaml --dry-run=false
+
+reserved13: 192
+i2cenable: true
+reserved15: 0
+i2caddress: 192
+reserved17: 0
+otpmode: 85
+chipmode:
+  selectorwriteonce: false
+  ttlenable: false
+  watchdogduration: 1s
+slotinfo:
+- num: 0
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: true
+      intsignenable: true
+      ecdhenable: true
+      ecdhtonextslot: false
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 4
+    writeconfig: 6
+  keyconfig:
+    private: true
+    pubinfo: true
+    keytype: ECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 1
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: true
+      intsignenable: true
+      ecdhenable: true
+      ecdhtonextslot: false
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 4
+    writeconfig: 6
+  keyconfig:
+    private: true
+    pubinfo: true
+    keytype: ECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 2
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: true
+      intsignenable: true
+      ecdhenable: true
+      ecdhtonextslot: false
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 4
+    writeconfig: 6
+  keyconfig:
+    private: true
+    pubinfo: true
+    keytype: ECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 3
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: true
+      intsignenable: true
+      ecdhenable: true
+      ecdhtonextslot: false
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 4
+    writeconfig: 6
+  keyconfig:
+    private: true
+    pubinfo: true
+    keytype: ECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 4
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: false
+      intsignenable: false
+      ecdhenable: false
+      ecdhtonextslot: false
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 15
+    writeconfig: 0
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 5
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: true
+      intsignenable: true
+      ecdhenable: true
+      ecdhtonextslot: true
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 15
+    writeconfig: 8
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: false
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 6
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: true
+      intsignenable: true
+      ecdhenable: true
+      ecdhtonextslot: true
+    nomac: true
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 15
+    writeconfig: 8
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: false
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 7
+  slotconfig:
+    privatekeyslotconfig:
+      extsignenable: false
+      intsignenable: true
+      ecdhenable: false
+      ecdhtonextslot: false
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: true
+    writekey: 0
+    writeconfig: 2
+  keyconfig:
+    private: true
+    pubinfo: true
+    keytype: ECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 8
+  slotconfig:
+    readkey: 4
+    nomac: false
+    limiteduse: false
+    encryptread: true
+    issecret: true
+    writekey: 4
+    writeconfig: 4
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: false
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 9
+  slotconfig:
+    readkey: 4
+    nomac: false
+    limiteduse: false
+    encryptread: true
+    issecret: true
+    writekey: 4
+    writeconfig: 4
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: false
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 10
+  slotconfig:
+    readkey: 15
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: false
+    writekey: 15
+    writeconfig: 0
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 11
+  slotconfig:
+    readkey: 15
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: false
+    writekey: 15
+    writeconfig: 0
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 12
+  slotconfig:
+    readkey: 15
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: false
+    writekey: 15
+    writeconfig: 0
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 13
+  slotconfig:
+    readkey: 15
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: false
+    writekey: 15
+    writeconfig: 0
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 14
+  slotconfig:
+    readkey: 15
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: false
+    writekey: 15
+    writeconfig: 0
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: false
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+- num: 15
+  slotconfig:
+    readkey: 15
+    nomac: false
+    limiteduse: false
+    encryptread: false
+    issecret: false
+    writekey: 15
+    writeconfig: 0
+  keyconfig:
+    private: false
+    pubinfo: false
+    keytype: NonECC
+    lockable: true
+    reqrandom: false
+    reqauth: false
+    authkey: 0
+    intrusiondisable: false
+    x509id: 0
+counter0: 18446744069414584320
+counter1: 18446744069414584320
+lastkeyuse0: 18446744073709551615
+lastkeyuse1: 18446744073709551615
+userextra: 0
+selector: 0
+lockvalue: Locked
+lockconfig: Locked
+slotlocked: 65535
+reserved90: 0
+reserved91: 0
+x509format:
+- publicposition: 0
+  templatelength: 0
+- publicposition: 0
+  templatelength: 0
+- publicposition: 0
+  templatelength: 0
+- publicposition: 0
+  templatelength: 0
