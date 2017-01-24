@@ -18,6 +18,9 @@
  * to cell data.
  */
 
+#ifndef CS_COMMON_SEGSTACK_SEGSTACK_H_
+#define CS_COMMON_SEGSTACK_SEGSTACK_H_
+
 #include <stdint.h>
 
 /* SegStack options */
@@ -78,8 +81,14 @@ void segstack_free(struct segstack *ss);
 int segstack_size(struct segstack *ss);
 
 /*
+ * Sets new stack size. NOTE that size can only be made smaller; an attempt
+ * to make it larger will result in a crash.
+ */
+void segstack_set_size(struct segstack *ss, int size);
+
+/*
  * Returns a pointer to the TOS cell data. If the stack size is 0, returns
- * NULL.
+ * NULL. Equivalent of `segstack_at(ss, -1)`.
  *
  * NOTE that calling `segstack_pop()` might invalidate the pointer returned
  * by this function.
@@ -89,6 +98,9 @@ void *segstack_tos(struct segstack *ss);
 /*
  * Returns a pointer to the data of the cell by the given index. If index is
  * out of bounds, returns NULL.
+ *
+ * Negative index is interpreted as size + idx; thus, TOS can be accessed with
+ * the index -1.
  *
  * NOTE that calling `segstack_pop()` might invalidate the pointer returned
  * by this function.
@@ -105,10 +117,11 @@ void segstack_push(struct segstack *ss, const void *cellp);
  * popped cell there.
  *
  * This function can't just return a pointer (as `segstack_tos()` does),
- * because that in case of zero `stash_segs`, this pointer will already be
- * invalid.
+ * because in case of zero `stash_segs`, this pointer will already be invalid.
  *
  * NOTE that calling this function also invalidates pointers previously
  * returned by `segstack_tos()` and `segstack_at()`.
  */
 void segstack_pop(struct segstack *ss, void *cellp);
+
+#endif /* CS_COMMON_SEGSTACK_SEGSTACK_H_ */

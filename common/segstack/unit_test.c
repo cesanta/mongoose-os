@@ -120,6 +120,7 @@ static const char *test_general(void) {
       };
       const int maxsize = 500;
       const int maxback = 50;
+      const int dropsize = 123;
       int max_segs_num = 0;
       segstack_init(&ss, &opt);
 
@@ -161,8 +162,11 @@ static const char *test_general(void) {
         }
       }
 
+      /* Drop stack size by dropsize */
+      segstack_set_size(&ss, maxsize - dropsize + 1);
+
       /* Pop all elements from the stack */
-      for (i = maxsize; i >= 0; i--) {
+      for (i = maxsize - dropsize; i >= 0; i--) {
         const char *t = test_pop(&ss, i, seg_size, max_segs_num, stash_size);
         if (t != NULL) {
           return t;

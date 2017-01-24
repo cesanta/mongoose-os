@@ -48,6 +48,13 @@ int segstack_size(struct segstack *ss) {
   return ss->size;
 }
 
+void segstack_set_size(struct segstack *ss, int size) {
+  assert(segstack_size(ss) >= size);
+  while (segstack_size(ss) > size) {
+    segstack_pop(ss, NULL);
+  }
+}
+
 void *segstack_tos(struct segstack *ss) {
   return segstack_at(ss, -1);
 }
