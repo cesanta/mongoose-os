@@ -57,3 +57,13 @@ enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
 
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
+
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  /* TODO(alashkin): find random in STM32! */
+  int i;
+  for (i = 0; i < len; i++) {
+    buf[i] = (uint8_t) HAL_GetTick();
+  }
+  (void) ctx;
+  return 0;
+}

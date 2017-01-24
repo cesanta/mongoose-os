@@ -59,9 +59,11 @@ override BUILD_DIR := $(abspath $(BUILD_DIR))
 
 include $(MGOS_PATH)/fw/common.mk
 
-SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH) -name '*.[cs]')
-SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH) -type d)
-LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH) -name '*.ld')
+SYS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_config.yaml
+
+SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.[cs]')
+SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH)/STM -type d)
+LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.ld')
 
 ADD_SRCS = stm32_mgos_main.c stm32_gpio.c stm32_hal.c stm32_uart.c \
            stm32_libc.c stm32_wifi.c stm32_fs.c stm32_i2c.c \
@@ -113,7 +115,7 @@ MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
 VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_MODULES) \
-		 $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
+         $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
          $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc
 
 FW_PARTS = boot:src=$(APP_BIN),addr=0
@@ -125,17 +127,24 @@ CFLAGS ?= -Os -fno-common -ffunction-sections -fdata-sections \
           $(PLATFORM_CFLAGS) -DMGOS_NUM_GPIO=16 $(MGOS_FEATURES) \
           -DMGOS_MAX_NUM_UARTS=2 -DFS_SIZE=${FS_SIZE}
 
+LDFLAGS ?=
+
+LDLIBS = -Wl,--start-group
+
 ifeq "${USE_LWIP}" "1"
 CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
-          -DLWIP_TCP_KEEPALIVE=1
+          -DLWIP_TCP_KEEPALIVE=1 -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+          -DMG_ENABLE_SSL
+LDFLAGS += -L$(PLATFORM_SDK_PATH)/CS/mbedtls/library
+LDLIBS += -lmbedcrypto -lmbedtls -lmbedx509
 endif
 
-LDFLAGS ?=
-LDLIBS = -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
+LDLIBS += -lc -lgcc -lnosys -Wl,--end-group
 
 IPATH += $(addprefix -I, $(SDK_INCLUDES) $(APP_MODULES))
 IPATH += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
-		 -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH)
+		 -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH) \
+		 -I$(PLATFORM_SDK_PATH)/CS/mbedtls/include
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
