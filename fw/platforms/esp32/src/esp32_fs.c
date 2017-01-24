@@ -16,7 +16,6 @@
 #include "esp_vfs.h"
 
 #include "common/cs_dbg.h"
-#include "common/cs_dirent.h"
 #include "common/cs_file.h"
 #include "common/spiffs/spiffs_vfs.h"
 
@@ -154,65 +153,16 @@ static int spiffs_unlink_p(void *ctx, const char *path) {
   return spiffs_vfs_unlink(&((struct mount_info *) ctx)->fs, path);
 }
 
-struct spiffs_dir {
-  DIR dir;
-  spiffs_DIR sdh;
-  struct spiffs_dirent sde;
-  struct dirent de;
-};
-
 static DIR *spiffs_opendir_p(void *ctx, const char *name) {
-  struct spiffs_dir *sd = NULL;
-  spiffs *fs = &((struct mount_info *) ctx)->fs;
-
-  if (name == NULL) {
-    errno = EINVAL;
-    return NULL;
-  }
-
-  if ((sd = (struct spiffs_dir *) calloc(1, sizeof(*sd))) == NULL) {
-    errno = ENOMEM;
-    return NULL;
-  }
-
-  if (SPIFFS_opendir(fs, name, &sd->sdh) == NULL) {
-    free(sd);
-    sd = NULL;
-    errno = EINVAL;
-  }
-
-  return (DIR *) sd;
+  return spiffs_vfs_opendir(&((struct mount_info *) ctx)->fs, name);
 }
 
 static struct dirent *spiffs_readdir_p(void *ctx, DIR *dir) {
-  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
-  if (SPIFFS_readdir(&sd->sdh, &sd->sde) == SPIFFS_OK) {
-    errno = EBADF;
-    return NULL;
-  }
-  sd->de.d_ino = sd->sde.obj_id;
-#if CS_SPIFFS_ENABLE_ENCRYPTION
-  if (!spiffs_vfs_dec_name((const char *) sd->sde.name, sd->de.d_name,
-                           sizeof(sd->de.d_name))) {
-    LOG(LL_ERROR, ("Name decryption failed (%s)", sd->sde.name));
-    errno = ENXIO;
-    return NULL;
-  }
-#else
-  memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
-#endif
-  (void) ctx;
-  return &sd->de;
+  return spiffs_vfs_readdir(&((struct mount_info *) ctx)->fs, dir);
 }
 
 static int spiffs_closedir_p(void *ctx, DIR *dir) {
-  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
-  if (dir != NULL) {
-    SPIFFS_closedir(&sd->sdh);
-    free(dir);
-  }
-  (void) ctx;
-  return 0;
+  return spiffs_vfs_closedir(&((struct mount_info *) ctx)->fs, dir);
 }
 
 /* For cs_dirent.c functions */

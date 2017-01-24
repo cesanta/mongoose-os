@@ -293,8 +293,9 @@ int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
 }
 
 int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
-                      const struct mgos_upd_file_info *fi) {
-  int r = 1;
+                      const struct mgos_upd_file_info *fi, struct mg_str tail) {
+  int r = tail.len;
+  assert(tail.len == 0);
   if (ctx->cur_fn == (_u8 *) ctx->fs_container_file) {
     int ret = fs_write_meta(ctx->cur_fh, FS_INITIAL_SEQ, ctx->fs_size,
                             ctx->fs_block_size, ctx->fs_page_size,

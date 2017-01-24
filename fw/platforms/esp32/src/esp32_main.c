@@ -12,6 +12,8 @@
 #include "esp_vfs.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
+#include "esp_ota_ops.h"
+#include "esp_spi_flash.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
 #include "nvs_flash.h"
@@ -91,8 +93,9 @@ static enum mgos_init_result esp32_mgos_init() {
 #endif
                     ));
   LOG(LL_INFO, ("ESP-IDF %s", esp_get_idf_version()));
-  LOG(LL_INFO, ("Task ID: %p, RAM: %u free", xTaskGetCurrentTaskHandle(),
-                mgos_get_free_heap_size()));
+  LOG(LL_INFO, ("Boot partition: %s, Task ID: %p, RAM: %u free",
+                esp_ota_get_boot_partition()->label,
+                xTaskGetCurrentTaskHandle(), mgos_get_free_heap_size()));
 
   if (esp32_fs_init() != MGOS_INIT_OK) {
     LOG(LL_ERROR, ("Failed to mount FS"));

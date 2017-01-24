@@ -36,7 +36,12 @@ endif
 # see:
 # - http://www.gnu.org/software/make/manual/html_node/Options_002fRecursion.html
 # - http://www.gnu.org/software/make/manual/html_node/_002dw-Option.html
+V ?=
+ifeq "$V" "1"
+MAKEFLAGS += -w
+else
 MAKEFLAGS += -s
+endif
 
 T=$(shell [ -t 0 ] && echo true || echo false)
 

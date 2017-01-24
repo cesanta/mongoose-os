@@ -73,49 +73,27 @@ int fs_spiffs_unlink(const char *filename) {
 }
 
 DIR *fs_spiffs_opendir(const char *dir_name) {
-  DIR *dir = NULL;
   struct mount_info *m = &s_fsm;
   if (!m->valid) {
-    set_errno(EBADF);
+    set_errno(ENXIO);
     return NULL;
   }
-
-  if (dir_name == NULL) {
-    set_errno(ENOTDIR);
-    return NULL;
-  }
-
-  dir = (DIR *) calloc(1, sizeof(*dir));
-  if (dir == NULL) {
-    set_errno(ENOMEM);
-    return NULL;
-  }
-
-  if (SPIFFS_opendir(&m->fs, (char *) dir_name, &dir->dh) == NULL) {
-    free(dir);
-    dir = NULL;
-  }
-
-  return dir;
+  return spiffs_vfs_opendir(&m->fs, dir_name);
 }
 
 struct dirent *fs_spiffs_readdir(DIR *dir) {
   struct mount_info *m = &s_fsm;
-  if (!m->valid || dir->dh.fs != &m->fs) {
-    set_errno(EBADF);
+  if (!m->valid) {
+    set_errno(ENXIO);
     return NULL;
   }
-  struct dirent *res = SPIFFS_readdir(&dir->dh, &dir->de);
-  if (res == NULL) set_spiffs_errno(&m->fs, "readdir", -1);
-  return res;
+  return spiffs_vfs_readdir(&m->fs, dir);
 }
 
 int fs_spiffs_closedir(DIR *dir) {
-  if (dir != NULL) {
-    SPIFFS_closedir(&dir->dh);
-    free(dir);
-  }
-  return 0;
+  struct mount_info *m = &s_fsm;
+  if (!m->valid) return set_errno(ENXIO);
+  return spiffs_vfs_closedir(&m->fs, dir);
 }
 
 /* SPIFFs doesn't support directory operations */

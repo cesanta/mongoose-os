@@ -11,7 +11,7 @@
 #include "common/cs_crc32.h"
 #include "common/cs_file.h"
 #include "common/str_util.h"
-#include "common/spiffs/spiffs.h"
+#include "common/spiffs/spiffs_vfs.h"
 
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_hal.h"
@@ -286,7 +286,13 @@ static int parse_manifest(struct update_context *ctx) {
   return 1;
 }
 
-static int finalize_write(struct update_context *ctx) {
+static int finalize_write(struct update_context *ctx, struct mg_str tail) {
+  /* We have to add the tail to CRC now to be able to verify it. */
+  if (tail.len > 0) {
+    ctx->current_file.crc_current = cs_crc32(
+        ctx->current_file.crc_current, (const uint8_t *) tail.p, tail.len);
+  }
+
   if (ctx->current_file.crc != 0 &&
       ctx->current_file.crc != ctx->current_file.crc_current) {
     CONSOLE_LOG(LL_ERROR,
@@ -296,11 +302,18 @@ static int finalize_write(struct update_context *ctx) {
     return -1;
   }
 
-  int ret = mgos_upd_file_end(ctx->dev_ctx, &ctx->current_file.fi);
-  if (ret < 0) {
-    ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
+  int ret = mgos_upd_file_end(ctx->dev_ctx, &ctx->current_file.fi, tail);
+  if (ret != (int) tail.len) {
+    if (ret < 0) {
+      ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
+    } else {
+      ctx->status_msg = "Not all data was processed";
+      ret = -1;
+    }
     return ret;
   }
+
+  context_remove_data(ctx, tail.len);
 
   return 1;
 }
@@ -428,12 +441,17 @@ static int updater_process_int(struct update_context *ctx, const char *data,
             ("Processed %d, up to %u, %u left in the buffer", num_processed,
              ctx->current_file.fi.processed, ctx->data_len));
 
-        if (ctx->current_file.fi.processed < ctx->current_file.fi.size) {
+        uint32_t bytes_left =
+            ctx->current_file.fi.size - ctx->current_file.fi.processed;
+        if (bytes_left > ctx->data_len) {
           context_save_unprocessed(ctx);
           return 0;
         }
 
-        if (finalize_write(ctx) < 0) {
+        to_process.p = ctx->data;
+        to_process.len = bytes_left;
+
+        if (finalize_write(ctx, to_process) < 0) {
           return -1;
         }
         context_clear_current_file(ctx);
@@ -533,8 +551,8 @@ int updater_finalize(struct update_context *ctx) {
 void updater_finish(struct update_context *ctx) {
   if (ctx->update_status == US_FINISHED) return;
   updater_set_status(ctx, US_FINISHED);
-  CONSOLE_LOG(LL_INFO, ("Update finished: %d %s, mem free %u", ctx->result,
-                        ctx->status_msg, mgos_get_free_heap_size()));
+  const char *msg = (ctx->status_msg ? ctx->status_msg : "???");
+  CONSOLE_LOG(LL_INFO, ("Finished: %d %s", ctx->result, msg));
   updater_process_int(ctx, NULL, 0);
 }
 
@@ -559,33 +577,26 @@ void bin2hex(const uint8_t *src, int src_len, char *dst) {
   }
 }
 
-static int file_copy(spiffs *old_fs, char *file_name) {
+static int file_copy(spiffs *old_fs, const char *file_name) {
   int ret = 0;
   FILE *f = NULL;
-  spiffs_stat stat;
+  struct stat st;
   int32_t readen, to_read = 0, total = 0;
 
   CONSOLE_LOG(LL_INFO, ("Copying %s", file_name));
 
-  spiffs_file fd = SPIFFS_open(old_fs, file_name, SPIFFS_RDONLY, 0);
+  int fd = spiffs_vfs_open(old_fs, file_name, O_RDONLY, 0);
   if (fd < 0) {
-    int err = SPIFFS_errno(old_fs);
-    if (err == SPIFFS_ERR_NOT_FOUND) {
-      CONSOLE_LOG(LL_WARN, ("File %s not found, skipping", file_name));
-      return 1;
-    } else {
-      CONSOLE_LOG(LL_ERROR, ("Failed to open %s, error %d", file_name, err));
-      return 0;
-    }
+    CONSOLE_LOG(LL_ERROR, ("Failed to open %s, error %d", file_name,
+                           SPIFFS_errno(old_fs)));
+    return 0;
   }
 
-  if (SPIFFS_fstat(old_fs, fd, &stat) != SPIFFS_OK) {
+  if (spiffs_vfs_fstat(old_fs, fd, &st) != 0) {
     CONSOLE_LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)",
                            file_name, SPIFFS_errno(old_fs)));
     goto exit;
   }
-
-  LOG(LL_DEBUG, ("Previous %s size is %d", file_name, stat.size));
 
   f = fopen(file_name, "w");
   if (f == NULL) {
@@ -593,11 +604,11 @@ static int file_copy(spiffs *old_fs, char *file_name) {
     goto exit;
   }
 
-  char buf[512];
-  to_read = MIN(sizeof(buf), stat.size);
+  char buf[128];
+  to_read = MIN(sizeof(buf), (size_t) st.st_size);
 
   while (to_read != 0) {
-    if ((readen = SPIFFS_read(old_fs, fd, buf, to_read)) < 0) {
+    if ((readen = spiffs_vfs_read(old_fs, fd, buf, to_read)) < 0) {
       CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d",
                              to_read, file_name, SPIFFS_errno(old_fs)));
       goto exit;
@@ -610,9 +621,7 @@ static int file_copy(spiffs *old_fs, char *file_name) {
     }
 
     total += readen;
-    LOG(LL_DEBUG, ("Read: %d, remains: %d", readen, stat.size - total));
-
-    to_read = MIN(sizeof(buf), (stat.size - total));
+    to_read = MIN(sizeof(buf), (size_t)(st.st_size - total));
   }
 
   LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
@@ -620,7 +629,7 @@ static int file_copy(spiffs *old_fs, char *file_name) {
   ret = 1;
 
 exit:
-  if (fd >= 0) SPIFFS_close(old_fs, fd);
+  if (fd >= 0) spiffs_vfs_close(old_fs, fd);
   if (f != NULL) fclose(f);
 
   return ret;
@@ -634,20 +643,19 @@ int mgos_upd_merge_spiffs(spiffs *old_fs) {
    * old one
    */
 
-  spiffs_DIR dir;
-  spiffs_DIR *dir_ptr = SPIFFS_opendir(old_fs, ".", &dir);
-  if (dir_ptr == NULL) {
+  DIR *dir = spiffs_vfs_opendir(old_fs, ".");
+  if (dir == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Failed to open root directory"));
     goto cleanup;
   }
 
-  struct spiffs_dirent de, *de_ptr;
-  while ((de_ptr = SPIFFS_readdir(dir_ptr, &de)) != NULL) {
-    cs_stat_t st;
-    if (stat((const char *) de_ptr->name, &st) != 0) {
+  struct dirent *de;
+  while ((de = spiffs_vfs_readdir(old_fs, dir)) != NULL) {
+    struct stat st;
+    if (stat(de->d_name, &st) != 0) {
       /* File not found on the new fs, copy. */
-      if (!file_copy(old_fs, (char *) de_ptr->name)) {
-        CONSOLE_LOG(LL_ERROR, ("Failed to copy %s", de_ptr->name));
+      if (!file_copy(old_fs, de->d_name)) {
+        CONSOLE_LOG(LL_ERROR, ("Failed to copy %s", de->d_name));
         goto cleanup;
       }
     }
@@ -656,7 +664,7 @@ int mgos_upd_merge_spiffs(spiffs *old_fs) {
   ret = 0;
 
 cleanup:
-  if (dir_ptr != NULL) SPIFFS_closedir(dir_ptr);
+  if (dir != NULL) spiffs_vfs_closedir(old_fs, dir);
 
   return ret;
 }

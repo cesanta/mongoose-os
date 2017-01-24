@@ -10,6 +10,10 @@
 #define CS_SPIFFS_ENABLE_VFS 0
 #endif
 
+#ifndef CS_HAVE_DIRENT_H
+#define CS_HAVE_DIRENT_H 0
+#endif
+
 #if CS_SPIFFS_ENABLE_VFS
 
 #include <stdbool.h>
@@ -33,6 +37,13 @@ int spiffs_vfs_fstat(spiffs *fs, int fd, struct stat *st);
 off_t spiffs_vfs_lseek(spiffs *fs, int fd, off_t offset, int whence);
 int spiffs_vfs_rename(spiffs *fs, const char *src, const char *dst);
 int spiffs_vfs_unlink(spiffs *fs, const char *path);
+
+#if MG_ENABLE_DIRECTORY_LISTING
+#include <dirent.h>
+DIR *spiffs_vfs_opendir(spiffs *fs, const char *name);
+struct dirent *spiffs_vfs_readdir(spiffs *fs, DIR *dir);
+int spiffs_vfs_closedir(spiffs *fs, DIR *dir);
+#endif
 
 int set_spiffs_errno(spiffs *fs, const char *op, int res);
 

@@ -55,11 +55,13 @@ int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
                        const struct mgos_upd_file_info *fi, struct mg_str data);
 
 /*
- * Finalize a file.
- * Return >= 0 if ok, < 0 + ctx->status_msg on error.
+ * Finalize a file. Remainder of the data (if any) is passed,
+ * number of bytes of that data processed should be returned.
+ * Value equal to data.len is an indication of success,
+ * < 0 + ctx->status_msg on error.
  */
 int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
-                      const struct mgos_upd_file_info *fi);
+                      const struct mgos_upd_file_info *fi, struct mg_str data);
 
 /*
  * Finalize the update.

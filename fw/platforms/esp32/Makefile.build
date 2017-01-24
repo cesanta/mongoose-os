@@ -97,20 +97,21 @@ ESPFLASHSIZE = 4MB
 ESPBAUD = 1500000
 
 SDKCONFIG = $(MGOS_ESP_PATH)/sdkconfig
-PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
-
-include $(IDF_PATH)/make/project.mk
 
 ifeq "$(MGOS_ESP32_ENABLE_FLASH_ENCRYPTION)" "1"
 override CONFIG_FLASH_ENCRYPTION_ENABLED = y
 ENCRYPT = true
 MKSPIFFS_CFLAGS = -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=1
 MKSPIFFS = $(BUILD_DIR)/mkspiffs8
+PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos_encrypted.csv
 else
 ENCRYPT = false
 MKSPIFFS_CFLAGS = -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=0
 MKSPIFFS = $(BUILD_DIR)/mkspiffs
+PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
 endif
+
+include $(IDF_PATH)/make/project.mk
 
 CFLAGS += $(MKSPIFFS_CFLAGS)
 
@@ -121,7 +122,7 @@ include $(MGOS_PATH)/fw/common.mk
 FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=$(ENCRYPT) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=$(ENCRYPT) \
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff \
-           otadata:type=otadata,addr=$(OTA_DATA_ADDR),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=$(ENCRYPT) \
+           otadata:type=otadata,addr=$(OTA_DATA_ADDR),fill=0xff,size=0x2000,encrypt=$(ENCRYPT) \
            app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN),encrypt=$(ENCRYPT) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 
@@ -130,6 +131,8 @@ include $(MGOS_PATH)/fw/src/spiffs.mk
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
 
+FS_FILES += $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json
+
 # Put defaults on the filesystem under the old name, for compatibility.
 FS_FILES += $(GEN_DIR)/conf_defaults.json
 
@@ -137,13 +140,13 @@ $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@ $(BUILD_INFO_C)"
 	$(Q) mkdir -p $@
 
-$(FW_MANIFEST): $(APP_BIN) $(FS_IMG)
+$(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG)
 
 $(GEN_DIR)/conf_defaults.json: $(GEN_DIR)/sys_config_defaults.json
 	$(Q) cp $< $@
 
 # sys_config is generated during binary build
-$(GEN_DIR)/sys_config_defaults.json: all_binaries
+$(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json: all_binaries
 
 $(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE))

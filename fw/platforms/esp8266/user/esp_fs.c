@@ -3,22 +3,19 @@
  * All rights reserved
  */
 
-#include <ets_sys.h>
-#include <errno.h>
+#include <dirent.h>
 #include <fcntl.h>
 
 #include "fw/src/mgos_features.h"
 
+#include "ets_sys.h"
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
 #include "user_interface.h"
 #include "mem.h"
-#include <errno.h>
-#include <fcntl.h>
 
 #include "common/cs_dbg.h"
-#include "common/cs_dirent.h"
 
 #include "common/spiffs/spiffs.h"
 #include "common/spiffs/spiffs_nucleus.h"
@@ -246,6 +243,18 @@ int _fstat_r(struct _reent *r, int fd, struct stat *s) {
 int _stat_r(struct _reent *r, const char *path, struct stat *s) {
   (void) r;
   return spiffs_vfs_stat(&fs, path, s);
+}
+
+DIR *opendir(const char *path) {
+  return spiffs_vfs_opendir(&fs, path);
+}
+
+struct dirent *readdir(DIR *dir) {
+  return spiffs_vfs_readdir(&fs, dir);
+}
+
+int closedir(DIR *dir) {
+  return spiffs_vfs_closedir(&fs, dir);
 }
 
 void fs_flush_stderr(void) {

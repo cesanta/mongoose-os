@@ -456,6 +456,66 @@ int spiffs_vfs_unlink(spiffs *fs, const char *path) {
   return set_spiffs_errno(fs, "unlink", SPIFFS_remove(fs, drop_dir(path)));
 }
 
+struct spiffs_dir {
+  DIR dir;
+  spiffs_DIR sdh;
+  struct spiffs_dirent sde;
+  struct dirent de;
+};
+
+DIR *spiffs_vfs_opendir(spiffs *fs, const char *name) {
+  struct spiffs_dir *sd = NULL;
+
+  if (name == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
+
+  if ((sd = (struct spiffs_dir *) calloc(1, sizeof(*sd))) == NULL) {
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  if (SPIFFS_opendir(fs, name, &sd->sdh) == NULL) {
+    free(sd);
+    sd = NULL;
+    errno = EINVAL;
+  }
+
+  return (DIR *) sd;
+}
+
+struct dirent *spiffs_vfs_readdir(spiffs *fs, DIR *dir) {
+  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
+  if (SPIFFS_readdir(&sd->sdh, &sd->sde) == SPIFFS_OK) {
+    errno = EBADF;
+    return NULL;
+  }
+  sd->de.d_ino = sd->sde.obj_id;
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  if (!spiffs_vfs_dec_name((const char *) sd->sde.name, sd->de.d_name,
+                           sizeof(sd->de.d_name))) {
+    LOG(LL_ERROR, ("Name decryption failed (%s)", sd->sde.name));
+    errno = ENXIO;
+    return NULL;
+  }
+#else
+  memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
+#endif
+  (void) fs;
+  return &sd->de;
+}
+
+int spiffs_vfs_closedir(spiffs *fs, DIR *dir) {
+  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
+  if (dir != NULL) {
+    SPIFFS_closedir(&sd->sdh);
+    free(dir);
+  }
+  (void) fs;
+  return 0;
+}
+
 #if CS_SPIFFS_ENABLE_ENCRYPTION
 bool spiffs_vfs_enc_name(const char *name, char *enc_name, size_t enc_name_size) {
   uint8_t tmp[SPIFFS_OBJ_NAME_LEN];

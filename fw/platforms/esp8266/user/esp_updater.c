@@ -539,7 +539,8 @@ int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
 }
 
 int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
-                      const struct mgos_upd_file_info *fi) {
+                      const struct mgos_upd_file_info *fi, struct mg_str tail) {
+  assert(tail.len == 0);
   if (ctx->current_part->type == ptFILES) {
     LOG(LL_DEBUG,
         ("File %s updated", ctx->current_part->files.current_file->file_name));
@@ -552,7 +553,7 @@ int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
       return -1;
     }
     ctx->current_part->done++;
-    return 1;
+    return tail.len;
   } else {
     if (verify_checksum(ctx->current_part->addr, fi->size,
                         ctx->current_part->fi.sha1_sum) < 0) {
@@ -560,7 +561,7 @@ int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
       return -1;
     }
     ctx->current_part->done = 1;
-    return 1;
+    return tail.len;
   }
 }
 

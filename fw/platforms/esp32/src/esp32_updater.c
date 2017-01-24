@@ -14,7 +14,9 @@
 
 #include "mbedtls/sha1.h"
 
+#include "common/mg_str.h"
 #include "common/platform.h"
+
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
@@ -37,6 +39,8 @@
 #define MGOS_UPDATE_OLD_SLOT(v) ((v) &0x0f)
 #define MGOS_UPDATE_NEW_SLOT(v) (((v) >> 4) & 0x0f)
 #define MGOS_UPDATE_FIRST_BOOT 0x100
+
+#define WRITE_CHUNK_SIZE 32
 
 uint32_t g_boot_status = 0;
 
@@ -73,7 +77,7 @@ int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
   /* Find next OTA slot */
   int slot = SUBTYPE_TO_SLOT(ctx->cur_app_partition->subtype);
   do {
-    slot++;
+    slot = (slot + 1) & ESP_PARTITION_SUBTYPE_APP_OTA_MAX;
     esp_partition_subtype_t subtype = ESP_PARTITION_SUBTYPE_OTA(slot);
     if (subtype == ctx->cur_app_partition->subtype) break;
     ctx->app_partition =
@@ -110,7 +114,7 @@ enum mgos_upd_file_action mgos_upd_file_begin(
   esp_err_t err;
   ctx->write_offset = 0;
   if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) == 0) {
-    LOG(LL_INFO, ("Writing app image"));
+    LOG(LL_INFO, ("Writing app image @ 0x%x", ctx->app_partition->address));
     if (esp_ota_begin(ctx->app_partition, 0, &ctx->app_ota_handle) != ESP_OK) {
       ctx->status_msg = "Failed to start app write";
       return MGOS_UPDATER_ABORT;
@@ -118,7 +122,7 @@ enum mgos_upd_file_action mgos_upd_file_begin(
     return MGOS_UPDATER_PROCESS_FILE;
   } else if (strncmp(fi->name, ctx->fs_file_name.ptr, ctx->fs_file_name.len) ==
              0) {
-    LOG(LL_INFO, ("Writing FS image"));
+    LOG(LL_INFO, ("Writing FS image @ 0x%x", ctx->fs_partition->address));
     err = esp_partition_erase_range(ctx->fs_partition, 0,
                                     ctx->fs_partition->size);
     if (err != ESP_OK) {
@@ -135,24 +139,26 @@ enum mgos_upd_file_action mgos_upd_file_begin(
 int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
                        const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
-  esp_err_t err;
-  if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) == 0) {
-    if (esp_ota_write(ctx->app_ota_handle, data.p, data.len) != ESP_OK) {
-      ctx->status_msg = "Failed to write app data";
-      return -1;
+  esp_err_t err = ESP_FAIL;
+  int to_process = (data.len / WRITE_CHUNK_SIZE) * WRITE_CHUNK_SIZE;
+  if (to_process > 0) {
+    if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) ==
+        0) {
+      err = esp_ota_write(ctx->app_ota_handle, data.p, to_process);
+    } else if (strncmp(fi->name, ctx->fs_file_name.ptr,
+                       ctx->fs_file_name.len) == 0) {
+      err = esp_partition_write(ctx->fs_partition, ctx->write_offset, data.p,
+                                to_process);
     }
-  } else if (strncmp(fi->name, ctx->fs_file_name.ptr, ctx->fs_file_name.len) ==
-             0) {
-    err = esp_partition_write(ctx->fs_partition, ctx->write_offset, data.p,
-                              data.len);
     if (err != ESP_OK) {
-      ctx->status_msg = "Failed to write FS data";
-      LOG(LL_ERROR, ("%s: %d", ctx->status_msg, err));
+      LOG(LL_ERROR,
+          ("Write %d @ %d failed: %d", (int) data.len, ctx->write_offset, err));
+      ctx->status_msg = "Failed to write data";
       return -1;
     }
+    ctx->write_offset += to_process;
   }
-  ctx->write_offset += data.len;
-  return data.len;
+  return to_process;
 }
 
 void bin2hex(const uint8_t *src, int src_len, char *dst);
@@ -167,7 +173,7 @@ static bool verify_sha1(const esp_partition_t *p, size_t len,
   mbedtls_sha1_init(&sha1_ctx);
   mbedtls_sha1_starts(&sha1_ctx);
   while (offset < len) {
-    uint8_t tmp[128];
+    uint8_t tmp[WRITE_CHUNK_SIZE];
     size_t block_len = len - offset;
     if (block_len > sizeof(tmp)) block_len = sizeof(tmp);
     esp_err_t err = esp_partition_read(p, offset, tmp, block_len);
@@ -182,20 +188,36 @@ static bool verify_sha1(const esp_partition_t *p, size_t len,
   mbedtls_sha1_finish(&sha1_ctx, digest);
   bin2hex(digest, 20, digest_hex);
   digest_hex[40] = '\0';
-  LOG(LL_DEBUG, ("%s: %u bytes, cs_sha1 %s, expected %.*s", p->label, len,
-                 digest_hex, (int) exp_sha1->len, exp_sha1->ptr));
   ret = (exp_sha1->len == 40 && strncmp(digest_hex, exp_sha1->ptr, 40) == 0);
+  LOG((ret ? LL_DEBUG : LL_ERROR),
+      ("%s: %u @ 0x%x, cs_sha1 %s, expected %.*s", p->label, len, p->address,
+       digest_hex, (int) exp_sha1->len, exp_sha1->ptr));
 cleanup:
   mbedtls_sha1_free(&sha1_ctx);
   return ret;
 }
 
 int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
-                      const struct mgos_upd_file_info *fi) {
+                      const struct mgos_upd_file_info *fi, struct mg_str tail) {
   const esp_partition_t *p = NULL;
   struct json_token *cs_sha1 = NULL;
+  assert(tail.len < WRITE_CHUNK_SIZE);
+  int ret = -1;
+  if (tail.len > 0) {
+    char tmp[WRITE_CHUNK_SIZE];
+    memset(tmp, 0xff, sizeof(tmp));
+    memcpy(tmp, tail.p, tail.len);
+    ret = mgos_upd_file_data(ctx, fi, mg_mk_str_n(tmp, sizeof(tmp)));
+    if (ret != sizeof(tmp)) {
+      ctx->status_msg = "Failed to write tail";
+      return -1;
+    }
+  }
   if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) == 0) {
-    if (esp_ota_end(ctx->app_ota_handle) != ESP_OK) {
+    esp_ota_handle_t oh = ctx->app_ota_handle;
+    ctx->app_ota_handle = 0;
+    if (esp_ota_end(oh) != ESP_OK) {
+      ctx->app_ota_handle = 0;
       ctx->status_msg = "Failed to finalize app write";
       return -1;
     }
@@ -208,7 +230,11 @@ int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
   } else {
     return -123;
   }
-  return (verify_sha1(p, ctx->write_offset, cs_sha1) ? 1 : -10);
+  if (!verify_sha1(p, fi->size, cs_sha1)) {
+    ctx->status_msg = "Digest mismatch";
+    return -10;
+  }
+  return tail.len;
 }
 
 static bool set_update_status(int old_slot, int new_slot, bool first_boot) {
@@ -260,6 +286,7 @@ static bool esp32_set_boot_slot(int slot) {
   const esp_partition_t *p = esp_partition_find_first(
       ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_OTA(slot), NULL);
   if (p == NULL) return false;
+  LOG(LL_INFO, ("Setting boot partition to %s", p->label));
   return (esp_ota_set_boot_partition(p) == ESP_OK);
 }
 
@@ -279,6 +306,9 @@ int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
 
 void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
   if (ctx == NULL) return;
+  if (ctx->app_ota_handle != 0) {
+    esp_ota_end(ctx->app_ota_handle);
+  }
   memset(ctx, 0, sizeof(*ctx));
   free(ctx);
 }

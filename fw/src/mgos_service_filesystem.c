@@ -7,7 +7,6 @@
 
 #include <stdlib.h>
 
-#include "common/cs_dirent.h"
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/mg_str.h"
@@ -16,16 +15,10 @@
 #include "fw/src/mgos_service_filesystem.h"
 #include "fw/src/mgos_sys_config.h"
 
-#define MGOS_FILESYSTEM_LIST_CMD "FS.List"
-#define MGOS_FILESYSTEM_GET_CMD "FS.Get"
-#define MGOS_FILESYSTEM_PUT_CMD "FS.Put"
-
-struct put_data {
-  char *p;
-  int len;
-};
-
 #if MG_ENABLE_DIRECTORY_LISTING
+
+#include <dirent.h>
+
 /* Handler for FS.List */
 static void mgos_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                  struct mg_rpc_frame_info *fi,
@@ -181,6 +174,11 @@ clean:
   (void) cb_arg;
 }
 
+struct put_data {
+  char *p;
+  int len;
+};
+
 static void mgos_fs_put_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                 struct mg_rpc_frame_info *fi,
                                 struct mg_str args) {
@@ -246,13 +244,10 @@ clean:
 enum mgos_init_result mgos_service_filesystem_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
 #if MG_ENABLE_DIRECTORY_LISTING
-  mg_rpc_add_handler(c, mg_mk_str(MGOS_FILESYSTEM_LIST_CMD),
-                     mgos_fs_list_handler, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("FS.List"), mgos_fs_list_handler, NULL);
 #endif
-  mg_rpc_add_handler(c, mg_mk_str(MGOS_FILESYSTEM_GET_CMD), mgos_fs_get_handler,
-                     NULL);
-  mg_rpc_add_handler(c, mg_mk_str(MGOS_FILESYSTEM_PUT_CMD), mgos_fs_put_handler,
-                     NULL);
+  mg_rpc_add_handler(c, mg_mk_str("FS.Get"), mgos_fs_get_handler, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("FS.Put"), mgos_fs_put_handler, NULL);
   return MGOS_INIT_OK;
 }
 
