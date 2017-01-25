@@ -65,9 +65,13 @@ SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.[cs]')
 SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH)/STM -type d)
 LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.ld')
 
+# Platform support files
 ADD_SRCS = stm32_mgos_main.c stm32_gpio.c stm32_hal.c stm32_uart.c \
            stm32_libc.c stm32_wifi.c stm32_fs.c stm32_i2c.c \
            stm32_lwip.c
+
+# Additional files from SDK
+ADD_SRCS += stm32_gpio_defs.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
@@ -116,7 +120,7 @@ APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXT
 
 VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_MODULES) \
          $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
-         $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc
+         $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc $(PLATFORM_SDK_PATH)/CS/extras
 
 FW_PARTS = boot:src=$(APP_BIN),addr=0
 
@@ -144,7 +148,8 @@ LDLIBS += -lc -lgcc -lnosys -Wl,--end-group
 IPATH += $(addprefix -I, $(SDK_INCLUDES) $(APP_MODULES))
 IPATH += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
 		 -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH) \
-		 -I$(PLATFORM_SDK_PATH)/CS/mbedtls/include
+		 -I$(PLATFORM_SDK_PATH)/CS/mbedtls/include \
+		 -I$(PLATFORM_SDK_PATH)/CS/extras
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 

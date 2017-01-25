@@ -1360,6 +1360,7 @@ char* inet_ntoa(struct in_addr in);
 #include <errno.h>
 #include <memory.h>
 #include <fcntl.h>
+#include <stm32_sdk_hal.h>
 
 #define to64(x) strtoll(x, NULL, 10)
 #define INT64_FMT PRId64
