@@ -9,6 +9,7 @@ filesystem:
 ffi_symbols:
   - get_led_gpio_pin
   - mg_send
+  - mgos_add_http_endpoint
   - mgos_bind
   - mgos_bind_http
   - mgos_connect
@@ -18,6 +19,7 @@ ffi_symbols:
   - mgos_get_heap_size
   - mgos_get_http_message_param
   - mgos_get_storage_free_space
+  - mgos_get_sys_http_server
   - mgos_gpio_*
   - mgos_i2c_*
   - mgos_mqtt_pub

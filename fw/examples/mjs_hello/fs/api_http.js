@@ -1,14 +1,16 @@
 let HTTP = {
-  rbind: ffi('void *mgos_bind_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
-  lcb: function(conn, ev, ev_data, data) {
-    if (ev === 100) data.cb(conn, ev_data);
+  get_system_server: ffi('void *mgos_get_sys_http_server()'),
+  bind: ffi('void *mgos_bind_http(char *)'),
+  _ae: ffi('int mgos_add_http_endpoint(void *, char *, void (*)(void *, int, void *, userdata), userdata)'),
+  _lcb: function(conn, ev, ev_data, data) {
+    data.cb(conn, ev_data);
   },
-  listen: function(addr, cb) {
+  serve: function(conn, uri, cb) {
     let data = { cb: cb };
-    HTTP.rbind(addr, HTTP.lcb, data);
+    HTTP._ae(conn, uri, HTTP._lcb, data);
   },
 
-  rconnect: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
+  connect: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
 
   // HTTP Events
   EV_REQUEST: 100,

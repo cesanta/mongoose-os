@@ -42,7 +42,9 @@ struct mg_connection *mgos_connect(const char *addr, mg_eh_t func, void *ud);
 void mgos_disconnect(struct mg_connection *c);
 
 /* Create HTTP server */
-struct mg_connection *mgos_bind_http(const char *addr, mg_eh_t, void *ud);
+struct mg_connection *mgos_bind_http(const char *addr);
+bool mgos_add_http_endpoint(struct mg_connection *c, const char *uri,
+                            mg_eh_t handler, void *user_data);
 struct mg_connection *mgos_connect_http(const char *addr, mg_eh_t, void *ud);
 
 enum http_message_param {

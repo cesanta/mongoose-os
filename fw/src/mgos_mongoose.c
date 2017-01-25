@@ -120,10 +120,77 @@ void mgos_disconnect(struct mg_connection *c) {
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
 
-struct mg_connection *mgos_bind_http(const char *addr, mg_eh_t f, void *ud) {
-  struct mg_connection *c = mgos_bind(addr, f, ud);
+static void def_http_handler(struct mg_connection *c, int ev, void *p) {
+  switch (ev) {
+    case MG_EV_ACCEPT: {
+      char addr[32];
+      mg_sock_addr_to_str(&c->sa, addr, sizeof(addr),
+                          MG_SOCK_STRINGIFY_IP | MG_SOCK_STRINGIFY_PORT);
+      LOG(LL_INFO, ("%p HTTP connection from %s", c, addr));
+      break;
+    }
+    case MG_EV_HTTP_REQUEST: {
+#if MG_ENABLE_FILESYSTEM
+      static struct mg_serve_http_opts opts;
+      struct http_message *hm = (struct http_message *) p;
+      LOG(LL_INFO, ("%p %.*s %.*s", c, (int) hm->method.len, hm->method.p,
+                    (int) hm->uri.len, hm->uri.p));
+      memset(&opts, 0, sizeof(opts));
+      mg_serve_http(c, p, opts);
+#else
+      mg_http_send_error(c, 404, NULL);
+#endif
+      break;
+    }
+  }
+}
+
+struct mg_connection *mgos_bind_http(const char *addr) {
+  struct mg_mgr *mgr = mgos_get_mgr();
+  struct mg_connection *c = mg_bind(mgr, addr, def_http_handler);
   if (c != NULL) mg_set_protocol_http_websocket(c);
   return c;
+}
+
+struct uri_handler {
+  struct uri_handler *next;
+  char *uri;
+  mg_eh_t handler;
+  void *user_data;
+};
+
+static void uri_handler_trampl(struct mg_connection *c, int ev, void *ev_data) {
+  struct http_message *hm = (struct http_message *) ev_data;
+  struct uri_handler *found = NULL, *uh = (struct uri_handler *) c->user_data;
+  int matched, matched_max = 0;
+  if (ev != MG_EV_HTTP_REQUEST) return;
+  while (uh != NULL) {
+    const struct mg_str name_s = mg_mk_str(uh->uri);
+    if ((matched = mg_match_prefix_n(name_s, hm->uri)) != -1) {
+      if (matched > matched_max) {
+        /* Looking for the longest suitable handler */
+        found = uh;
+        matched_max = matched;
+      }
+    }
+    uh = uh->next;
+  }
+  if (found != NULL) found->handler(c, ev, ev_data, found->user_data);
+}
+
+bool mgos_add_http_endpoint(struct mg_connection *c, const char *uri,
+                            mg_eh_t handler, void *user_data) {
+  struct uri_handler *uh;
+  if (c == NULL || uri == NULL || handler == NULL) return false;
+  /* NOTE(lsm): this is not deallocated anywhere */
+  if ((uh = malloc(sizeof(*uh))) == NULL) return false;
+  uh->uri = strdup(uri);
+  uh->handler = handler;
+  uh->user_data = user_data;
+  uh->next = c->user_data;
+  c->user_data = uh;
+  mg_register_http_endpoint(c, uri, uri_handler_trampl);
+  return true;
 }
 
 struct mg_connection *mgos_connect_http(const char *addr, mg_eh_t f, void *ud) {

@@ -10,8 +10,9 @@ load('api_net.js');
 load('api_http.js');
 
 let port = '8000';
-
-HTTP.bind(port, function(conn, msg) {
+let listener = HTTP.bind(port);
+// let listener = HTTP.get_system_server();
+HTTP.serve(listener, '/foo', function(conn, msg) {
   Net.send(conn, 'HTTP/1.0 200 OK\r\n\r\n');
   Net.send(conn, HTTP.param(msg, HTTP.MESSAGE));  // Echo the request back
   Net.disconnect(conn);
