@@ -300,6 +300,12 @@ clean:
 
 enum mgos_init_result mgos_atca_service_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
+  if (c == NULL) return MGOS_INIT_OK; /* RPC is disabled. */
+  if (!get_cfg()->sys.atca.enable) return MGOS_INIT_OK;
+  if (!mbedtls_atca_is_available()) {
+    LOG(LL_ERROR, ("ATCA is not available"));
+    return MGOS_INIT_ATCA_FAILED;
+  }
   mg_rpc_add_handler(c, mg_mk_str("ATCA.GetConfig"), mgos_atca_get_config,
                      NULL);
   mg_rpc_add_handler(c, mg_mk_str("ATCA.SetConfig"), mgos_atca_set_config,

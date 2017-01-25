@@ -189,7 +189,7 @@ enum mgos_init_result mgos_atca_init(void) {
   struct sys_config_sys_atca *acfg = &get_cfg()->sys.atca;
   ATCAIfaceCfg *atca_cfg;
 
-  if (!(acfg->enable || get_cfg()->sys.atca_enable)) {
+  if (!acfg->enable) {
     return MGOS_INIT_OK;
   }
 
