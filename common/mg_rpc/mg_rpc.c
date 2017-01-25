@@ -93,8 +93,6 @@ struct mg_rpc_channel_info *mg_rpc_get_channel(struct mg_rpc *c,
 static bool mg_rpc_handle_request(struct mg_rpc *c,
                                   struct mg_rpc_channel_info *ci,
                                   const struct mg_rpc_frame *frame) {
-  if (frame->src.len == 0) return false;
-
   struct mg_rpc_request_info *ri =
       (struct mg_rpc_request_info *) calloc(1, sizeof(*ri));
   ri->rpc = c;
@@ -129,7 +127,11 @@ static bool mg_rpc_handle_response(struct mg_rpc *c,
                                    struct mg_rpc_channel_info *ci, int64_t id,
                                    struct mg_str result, int error_code,
                                    struct mg_str error_msg) {
-  if (id == 0) return false;
+  if (id == 0) {
+    LOG(LL_ERROR, ("Response without an ID"));
+    return false;
+  }
+
   struct mg_rpc_sent_request_info *ri;
   SLIST_FOREACH(ri, &c->requests, requests) {
     if (ri->id == id) break;
@@ -188,23 +190,31 @@ static bool mg_rpc_parse_frame(const struct mg_str f,
   frame->result = mg_mk_str_n(result.ptr, result.len);
   frame->error_msg = mg_mk_str_n(error_msg.ptr, error_msg.len);
 
+  LOG(LL_DEBUG, ("%lld '%.*s' '%.*s' '%.*s'", frame->id, (int) src.len,
+                 (src.len > 0 ? src.ptr : ""), (int) dst.len,
+                 (dst.len > 0 ? dst.ptr : ""), (int) method.len,
+                 (method.len > 0 ? method.ptr : "")));
+
   return true;
 }
 
 static bool mg_rpc_handle_frame(struct mg_rpc *c,
                                 struct mg_rpc_channel_info *ci,
                                 const struct mg_rpc_frame *frame) {
-  /* Check destination */
+  if (frame->src.len == 0) {
+    LOG(LL_ERROR, ("src is required"));
+    return false;
+  }
+
   if (frame->dst.len != 0) {
     if (mg_strcmp(frame->dst, mg_mk_str(c->cfg->id)) != 0) {
+      LOG(LL_ERROR, ("Wrong dst: '%.*s'", (int) frame->dst.len, frame->dst.p));
       return false;
     }
   } else {
     /*
-     * For requests, implied destination means "whoever is on the other end",
-     * but for responses destination must match.
+     * Implied destination is "whoever is on the other end", meaning us.
      */
-    if (frame->method.len == 0) return false;
   }
   /* If this channel did not have an associated address, record it now. */
   if (ci->dst.len == 0) {
@@ -337,29 +347,26 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
     case MG_RPC_CHANNEL_FRAME_RECD: {
       const struct mg_str *f = (const struct mg_str *) ev_data;
       struct mg_rpc_frame frame;
-      LOG(LL_DEBUG, ("%p GOT FRAME (%d): %.*s", ci->ch, (int) f->len,
-                     (int) f->len, f->p));
-      if (!mg_rpc_parse_frame(*f, &frame)) {
-        goto invalid_frame;
+      LOG(LL_DEBUG,
+          ("%p GOT FRAME (%d): %.*s", ch, (int) f->len, (int) f->len, f->p));
+      if (!mg_rpc_parse_frame(*f, &frame) ||
+          !mg_rpc_handle_frame(c, ci, &frame)) {
+        LOG(LL_ERROR, ("%p INVALID FRAME (%d): '%.*s'", ch, (int) f->len,
+                       (int) f->len, f->p));
+        if (!ch->is_persistent(ch)) ch->ch_close(ch);
       }
-      if (!mg_rpc_handle_frame(c, ci, &frame)) {
-        goto invalid_frame;
-      }
-      break;
-    invalid_frame:
-      LOG(LL_ERROR, ("%p INVALID FRAME (%d): %.*s", ci->ch, (int) f->len,
-                     (int) f->len, f->p));
       break;
     }
     case MG_RPC_CHANNEL_FRAME_RECD_PARSED: {
       const struct mg_rpc_frame *frame = (const struct mg_rpc_frame *) ev_data;
-      LOG(LL_DEBUG, ("%p GOT PARSED FRAME from %.*s: %.*s %.*s", ci->ch,
+      LOG(LL_DEBUG, ("%p GOT PARSED FRAME from %.*s: %.*s %.*s", ch,
                      frame->src.len, frame->src.p, frame->method.len,
                      frame->method.p, frame->args.len, frame->args.p));
       if (!mg_rpc_handle_frame(c, ci, frame)) {
-        LOG(LL_ERROR, ("%p INVALID FRAME from %.*s: %.*s %.*s", ci->ch,
+        LOG(LL_ERROR, ("%p INVALID PARSED FRAME from %.*s: %.*s %.*s", ch,
                        frame->src.len, frame->src.p, frame->method.len,
                        frame->method.p, frame->args.len, frame->args.p));
+        if (!ch->is_persistent(ch)) ch->ch_close(ch);
       }
       break;
     }
@@ -397,7 +404,7 @@ void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
   ch->mg_rpc_data = c;
   ch->ev_handler = mg_rpc_ev_handler;
   SLIST_INSERT_HEAD(&c->channels, ci, channels);
-  LOG(LL_DEBUG, ("'%.*s' %p %s%s", (int) dst.len, dst.p, ch, ch->get_type(ch),
+  LOG(LL_DEBUG, ("%p '%.*s' %s", ch, (int) dst.len, dst.p, ch->get_type(ch),
                  (is_trusted ? ", trusted" : "")));
 }
 

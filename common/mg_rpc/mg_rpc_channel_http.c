@@ -25,7 +25,10 @@ static void mg_rpc_channel_http_ch_close(struct mg_rpc_channel *ch) {
   struct mg_rpc_channel_http_data *chd =
       (struct mg_rpc_channel_http_data *) ch->channel_data;
   if (chd->nc != NULL) {
-    chd->nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+    if (!chd->sent) {
+      mg_http_send_error(chd->nc, 400, "Invalid request");
+    }
+    chd->nc->flags |= MG_F_SEND_AND_CLOSE;
   }
 }
 
@@ -43,7 +46,7 @@ static bool mg_rpc_channel_http_is_persistent(struct mg_rpc_channel *ch) {
 
 static const char *mg_rpc_channel_http_get_type(struct mg_rpc_channel *ch) {
   (void) ch;
-  return "http";
+  return "HTTP";
 }
 
 /*
@@ -119,10 +122,20 @@ struct mg_rpc_channel *mg_rpc_channel_http(struct mg_connection *nc) {
 
 void mg_rpc_channel_http_recd_frame(struct mg_connection *nc,
                                     struct mg_rpc_channel *ch,
-                                    struct mg_str method, struct mg_str args) {
+                                    const struct mg_str frame) {
   struct mg_rpc_channel_http_data *chd =
       (struct mg_rpc_channel_http_data *) ch->channel_data;
+  chd->nc = nc;
+  ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
+  ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD, (void *) &frame);
+}
 
+void mg_rpc_channel_http_recd_parsed_frame(struct mg_connection *nc,
+                                           struct mg_rpc_channel *ch,
+                                           const struct mg_str method,
+                                           const struct mg_str args) {
+  struct mg_rpc_channel_http_data *chd =
+      (struct mg_rpc_channel_http_data *) ch->channel_data;
   chd->nc = nc;
 
   /* Use "IP_ADDRESS:PORT" as the source address */

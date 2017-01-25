@@ -32,6 +32,6 @@ static void inc_handler(struct mg_rpc_request_info *ri, void *cb_arg,
 
 enum mgos_app_init_result mgos_app_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
-  mg_rpc_add_handler(c, mg_mk_str("/inc"), inc_handler, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("Example.Increment"), inc_handler, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }

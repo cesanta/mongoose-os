@@ -44,15 +44,23 @@ static void mgos_rpc_http_handler(struct mg_connection *nc, int ev,
   if (ev == MG_EV_HTTP_REQUEST) {
     /* Create and add the channel to mg_rpc */
     struct mg_rpc_channel *ch = mg_rpc_channel_http(nc);
-    mg_rpc_add_channel(mgos_rpc_get_global(), mg_mk_str(""), ch,
-                       false /* is_trusted */, false /* send_hello */);
-
-    /* Handle the request */
     struct http_message *hm = (struct http_message *) ev_data;
-    size_t prefix_len = strlen(HTTP_URI_PREFIX);
-    struct mg_str method = {hm->uri.p + prefix_len, hm->uri.len - prefix_len};
-    struct mg_str data = {hm->body.p, hm->body.len};
-    mg_rpc_channel_http_recd_frame(nc, ch, method, data);
+    size_t prefix_len = sizeof(HTTP_URI_PREFIX) - 1;
+    mg_rpc_add_channel(mgos_rpc_get_global(), mg_mk_str(""), ch,
+                       true /* is_trusted */, false /* send_hello */);
+
+    /*
+     * Handle the request. If there is method name after /rpc,
+     * then body is only args.
+     * If there isn't, then body is entire frame.
+     */
+    if (hm->uri.len - prefix_len > 1) {
+      struct mg_str method = mg_mk_str_n(hm->uri.p + prefix_len + 1 /* / */,
+                                         hm->uri.len - prefix_len - 1);
+      mg_rpc_channel_http_recd_parsed_frame(nc, ch, method, hm->body);
+    } else {
+      mg_rpc_channel_http_recd_frame(nc, ch, hm->body);
+    }
   }
 }
 #endif
