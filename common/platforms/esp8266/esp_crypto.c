@@ -99,6 +99,7 @@ int kr_get_random(uint8_t *out, size_t len) {
 #else
 
 #include "mbedtls/aes.h"
+#include "mbedtls/sha256.h"
 
 int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
                            unsigned int keybits) {
@@ -130,6 +131,13 @@ void mbedtls_aes_decrypt(mbedtls_aes_context *ctx,
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   os_get_random(buf, len);
   (void) ctx;
+  return 0;
+}
+
+/* For CryptoAuthLib host crypto. */
+int atcac_sw_sha2_256(const uint8_t *data, size_t data_size,
+                      uint8_t digest[32]) {
+  mbedtls_sha256(data, data_size, digest, false /* is_224 */);
   return 0;
 }
 
