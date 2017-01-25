@@ -14,6 +14,18 @@ static void stm32_preinit_pin(struct stm32_gpio_def *def) {
   def->inited = 1;
 }
 
+static int lookup_pin(IRQn_Type exti, uint16_t gpio) {
+  int i;
+  for (i = 0; i < STM32_GPIO_NUM; i++) {
+    struct stm32_gpio_def *def = &stm32_gpio_defs[i];
+    if (def->exti == exti && def->gpio == gpio && def->intr_enabled) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
 static struct stm32_gpio_def *get_pin_def(int pin) {
   if (pin < 0 || pin > STM32_GPIO_NUM) {
     return NULL;
@@ -71,22 +83,70 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
 }
 
 void mgos_gpio_dev_int_done(int pin) {
-  /* TODO(alashkin): implement */
-  (void) pin;
+  struct stm32_gpio_def *def = get_pin_def(pin);
+  if (def == NULL) {
+    return;
+  }
+  if (def->intr_enabled) {
+    HAL_NVIC_EnableIRQ(def->exti);
+  }
 }
 
 bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
-  /* TODO(alashkin): implement */
-  (void) pin;
-  (void) mode;
+  struct stm32_gpio_def *def = get_pin_def(pin);
+  if (def == NULL) {
+    return false;
+  }
+
+  switch (mode) {
+    case MGOS_GPIO_INT_EDGE_POS:
+      def->init_info.Mode = GPIO_MODE_IT_RISING;
+      break;
+    case MGOS_GPIO_INT_EDGE_NEG:
+      def->init_info.Mode = GPIO_MODE_IT_FALLING;
+      break;
+    case MGOS_GPIO_INT_EDGE_ANY:
+      def->init_info.Mode = GPIO_MODE_IT_RISING_FALLING;
+      break;
+    defaut:
+      /* STM32 doesn't support level interruptions */
+      return false;
+  }
+
+  HAL_GPIO_Init(def->port, &def->init_info);
 }
 
 bool mgos_gpio_enable_int(int pin) {
-  /* TODO(alashkin): implement */
-  (void) pin;
+  struct stm32_gpio_def *def = get_pin_def(pin);
+  if (def == NULL) {
+    return false;
+  }
+  HAL_NVIC_SetPriority(def->exti, 0, 0);
+  HAL_NVIC_EnableIRQ(def->exti);
+  def->intr_enabled = 1;
 }
 
 bool mgos_gpio_disable_int(int pin) {
-  /* TODO(alashkin): implement */
-  (void) pin;
+  struct stm32_gpio_def *def = get_pin_def(pin);
+  if (def == NULL) {
+    return false;
+  }
+  HAL_NVIC_DisableIRQ(def->exti);
+  def->intr_enabled = 0;
+}
+
+void mgos_gpio_irq_handler(IRQn_Type irq) {
+  int i;
+  HAL_NVIC_DisableIRQ(irq);
+  /* We can have several active interrupts, have to check them all */
+  for (i = 0; i < STM32_PIN_NUM; i++) {
+    if (__HAL_GPIO_EXTI_GET_IT(stm32_pins[i]) != 0) {
+      /* Got interrupt on this pin */
+      __HAL_GPIO_EXTI_CLEAR_IT(stm32_pins[i]);
+      int mgos_pin = lookup_pin(irq, stm32_pins[i]);
+      if (mgos_pin != -1) {
+        mgos_gpio_dev_int_cb(mgos_pin);
+      }
+    }
+  }
 }

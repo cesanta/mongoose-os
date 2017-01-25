@@ -52,9 +52,11 @@ if __name__ == '__main__':
 # Writing struct definition (we put it here to avoid complicated and unnecessary dependencies)
     out.write("struct stm32_gpio_def {\n  int index;\n  GPIO_TypeDef *port;\
               \n  uint16_t gpio;\n  const char *name;\
-              \n  int inited;\n  GPIO_InitTypeDef init_info; \n};\n\n")
+              \n  int inited;\n  GPIO_InitTypeDef init_info;\
+              \n  IRQn_Type exti;\n  int intr_enabled;\n};\n\n")
 # Writing total GPIOs number
     out.write("#define STM32_GPIO_NUM " + str(gpio_num)+"\n\n")
+    out.write("#define STM32_PIN_NUM " + str(len(gpios))+"\n\n")
 # Writint names
     const_suffix = "STM32_PIN_P"
     number = 0
@@ -67,8 +69,9 @@ if __name__ == '__main__':
             out.write("#define " + const_suffix + port_index \
                        + gpio_index + " " + str(number) + "\n")
             number += 1
-# Writing array declaration
+# Writing arrays declaration
     out.write("\nextern struct stm32_gpio_def stm32_gpio_defs[STM32_GPIO_NUM];\n")
+    out.write("\nextern uint16_t stm32_pins[STM32_PIN_NUM];\n")
 # Writing file footer
     out.write("\n#endif /* STM32_GPIO_DEFS_H_ */\n")
     out.write("\n")
@@ -89,9 +92,22 @@ if __name__ == '__main__':
         for gpio in gpios:
 # STM32 uses format GPIO_PIN_n for gpios
             gpio_index = gpio[9:]
+            exti_index = int(gpio_index)
+            exti_name = "EXTI" + gpio_index + "_IRQn";
+            if exti_index >=5 and exti_index <=9:
+                exti_name = "EXTI9_5_IRQn"
+            elif exti_index >= 10 and exti_index <= 15:
+                exti_name = "EXTI15_10_IRQn"
             out.write("  {" + const_suffix + port_index + gpio_index \
                        + ", " + port + ", " + gpio + ", " \
-                       "\"P" + port_index + gpio_index + "\", 0, {}},\n")
+                       "\"P" + port_index + gpio_index + "\", 0, {}, " \
+                       + exti_name + ", 0},\n")
             number += 1
     out.write("};\n\n")
+
+    out.write("uint16_t  stm32_pins[STM32_PIN_NUM] = {\n")
+    for gpio in gpios:
+        out.write("  " + gpio + ", \n")
+    out.write("};\n\n")
+
     out.close()
