@@ -3,6 +3,7 @@
  * All rights reserved
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "mbedtls/sha256.h"
@@ -10,11 +11,6 @@
 /* For CryptoAuthLib host crypto. We use mbedTLS functions. */
 int atcac_sw_sha2_256(const uint8_t *data, size_t data_size,
                       uint8_t digest[32]) {
-  mbedtls_sha256_context ctx;
-
-  mbedtls_sha256_init(&ctx);
-  mbedtls_sha256_update(&ctx, data, data_size);
-  mbedtls_sha256_finish(&ctx, digest);
-  mbedtls_sha256_free(&ctx);
+  mbedtls_sha256(data, data_size, digest, false /* is_224 */);
   return 0;
 }
