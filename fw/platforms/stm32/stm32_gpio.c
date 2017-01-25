@@ -108,7 +108,7 @@ bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
     case MGOS_GPIO_INT_EDGE_ANY:
       def->init_info.Mode = GPIO_MODE_IT_RISING_FALLING;
       break;
-    defaut:
+    default:
       /* STM32 doesn't support level interruptions */
       return false;
   }

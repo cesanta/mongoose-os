@@ -43,15 +43,6 @@ void device_get_mac_address(uint8_t mac[6]) {
   memset(mac, 0, 6);
 }
 
-void mgos_wdt_feed(void) {
-  /* TODO(alashkin): implement */
-}
-
-void mgos_wdt_set_timeout(int secs) {
-  /* TODO(alashkin): implement */
-  (void) secs;
-}
-
 void mongoose_schedule_poll(void) {
   s_mongoose_poll_scheduled = 0;
 }
@@ -74,11 +65,39 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
-  /* TODO(alashkin): find random in STM32! */
-  int i;
-  for (i = 0; i < len; i++) {
-    buf[i] = (uint8_t) HAL_GetTick();
-  }
+  int i = 0;
   (void) ctx;
+  do {
+    uint32_t rnd;
+    if (HAL_RNG_GenerateRandomNumber(&RNG_1, &rnd) != HAL_OK) {
+      /* Possible if HAL is locked, fallback to timer */
+      rnd = HAL_GetTick();
+    }
+    int copy_len = len - i;
+    if (copy_len > 4) {
+      copy_len = 4;
+    }
+    memcpy(buf + i, &rnd, copy_len);
+    i += 4;
+  } while (i < len);
+
   return 0;
+}
+
+/*
+ * STM32 WDT is too hard to use in mOS;
+ * 1. Once enabled it cannot be disabled
+ * 2. Its max timeout is 22ms, too small
+ * 3. WDT_Refresh() cannot be called at any time,
+ *    (if program calls refresh() too often it leads
+ *    to exception and reboot)
+ * Resume: this WDT is good only for real time programs
+ * not for FW with (possibly) arbitrary user code and JS
+ * thus, keep it disabled
+ */
+void mgos_wdt_feed(void) {
+}
+
+void mgos_wdt_set_timeout(int secs) {
+  (void) secs;
 }
