@@ -7,24 +7,24 @@ sources:
 filesystem:
   - fs
 ffi_symbols:
+  - get_led_gpio_pin
+  - mg_send
+  - mgos_bind
+  - mgos_bind_http
+  - mgos_connect
+  - mgos_connect_http
+  - mgos_disconnect
+  - mgos_get_free_heap_size
+  - mgos_get_heap_size
+  - mgos_get_http_message_param
+  - mgos_get_storage_free_space
+  - mgos_gpio_*
+  - mgos_i2c_*
   - mgos_mqtt_pub
   - mgos_mqtt_sub
-  - mgos_get_heap_size
-  - mgos_get_free_heap_size
-  - mgos_get_storage_free_space
+  - mgos_set_timer
   - mgos_system_restart
   - mgos_usleep
-  - mgos_i2c_*
-  - mgos_gpio_*
-  - mgos_set_timer
-  - mgos_bind
-  - mgos_connect
-  - mgos_disconnect
-  - mgos_bind_http
-  - mgos_connect_http
-  - mgos_get_http_message_param
-  - mg_send
-  - get_led_gpio_pin
 modules:
   - src: https://github.com/cesanta/mjs
 build_vars:
