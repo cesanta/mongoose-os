@@ -2,6 +2,5 @@
   ["mqtt.server", "broker.mqttdashboard.com:1883"],
   ["device.id", "test"],
   ["device.password", "test"],
-  ["http.enable", false],
   # ["i2c.enable", true],
 ]

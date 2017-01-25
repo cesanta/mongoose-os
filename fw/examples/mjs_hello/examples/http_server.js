@@ -9,7 +9,7 @@
 load('api_net.js');
 load('api_http.js');
 
-let port = '80';
+let port = '8000';
 
 HTTP.bind(port, function(conn, msg) {
   Net.send(conn, 'HTTP/1.0 200 OK\r\n\r\n');
