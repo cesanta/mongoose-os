@@ -41,6 +41,23 @@ struct mg_connection *mgos_bind(const char *addr, mg_eh_t func, void *ud);
 struct mg_connection *mgos_connect(const char *addr, mg_eh_t func, void *ud);
 void mgos_disconnect(struct mg_connection *c);
 
+/* Create HTTP server */
+struct mg_connection *mgos_bind_http(const char *addr, mg_eh_t, void *ud);
+struct mg_connection *mgos_connect_http(const char *addr, mg_eh_t, void *ud);
+
+enum http_message_param {
+  HTTP_MESSAGE_PARAM_METHOD = 0,
+  HTTP_MESSAGE_PARAM_URI = 1,
+  HTTP_MESSAGE_PARAM_PROTOCOL = 2,
+  HTTP_MESSAGE_PARAM_BODY = 3,
+  HTTP_MESSAGE_PARAM_MESSAGE = 4,
+  HTTP_MESSAGE_PARAM_QUERY_STRING = 5,
+};
+
+/* Retrieve HTTP message param */
+const char *mgos_get_http_message_param(const struct http_message *,
+                                        enum http_message_param);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

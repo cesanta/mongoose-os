@@ -7,12 +7,14 @@
 
 // Load Mongoose OS API
 load('api_net.js');
+load('api_http.js');
 
-let port = '1234';
-Net.bind(port, function(conn, ev, ev_data) {
-  if (ev != Net.EV_ACCEPT) return;
-  Net.send(conn, JSON.stringify({a: 1, b: 'опля'}));
+let port = '80';
+
+HTTP.bind(port, function(conn, msg) {
+  Net.send(conn, 'HTTP/1.0 200 OK\r\n\r\n');
+  Net.send(conn, HTTP.param(msg, HTTP.MESSAGE));  // Echo the request back
   Net.disconnect(conn);
-}, true);
+});
 
-print('TCP server is listening on port ', port);
+print('HTTP server is listening on port ', port);

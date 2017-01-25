@@ -20,6 +20,9 @@ ffi_symbols:
   - mgos_bind
   - mgos_connect
   - mgos_disconnect
+  - mgos_bind_http
+  - mgos_connect_http
+  - mgos_get_http_message_param
   - mg_send
   - get_led_gpio_pin
 modules:

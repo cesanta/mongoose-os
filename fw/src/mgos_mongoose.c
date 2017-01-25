@@ -119,3 +119,45 @@ struct mg_connection *mgos_connect(const char *addr, mg_eh_t f, void *ud) {
 void mgos_disconnect(struct mg_connection *c) {
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
+
+struct mg_connection *mgos_bind_http(const char *addr, mg_eh_t f, void *ud) {
+  struct mg_connection *c = mgos_bind(addr, f, ud);
+  if (c != NULL) mg_set_protocol_http_websocket(c);
+  return c;
+}
+
+struct mg_connection *mgos_connect_http(const char *addr, mg_eh_t f, void *ud) {
+  struct mg_connection *c = mgos_connect(addr, f, ud);
+  if (c != NULL) mg_set_protocol_http_websocket(c);
+  return c;
+}
+
+const char *mgos_get_http_message_param(const struct http_message *m,
+                                        enum http_message_param p) {
+  const struct mg_str *s = NULL;
+  switch (p) {
+    case HTTP_MESSAGE_PARAM_METHOD:
+      s = &m->method;
+      break;
+    case HTTP_MESSAGE_PARAM_URI:
+      s = &m->uri;
+      break;
+    case HTTP_MESSAGE_PARAM_PROTOCOL:
+      s = &m->proto;
+      break;
+    case HTTP_MESSAGE_PARAM_BODY:
+      s = &m->body;
+      break;
+    case HTTP_MESSAGE_PARAM_MESSAGE:
+      s = &m->message;
+      break;
+    case HTTP_MESSAGE_PARAM_QUERY_STRING:
+      s = &m->query_string;
+      break;
+  }
+  if (s == NULL || s->p == NULL) return "";
+
+  /* WARNING: this modifies parsed HTTP message! Need to return C string. */
+  ((char *) s->p)[s->len] = '\0';
+  return s->p;
+}
