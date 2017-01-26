@@ -14,8 +14,6 @@
 #include "os_type.h"
 #include "user_interface.h"
 #include "mem.h"
-#include "fw/platforms/esp8266/user/util.h"
-#include "fw/platforms/esp8266/user/esp_exc.h"
 
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_init.h"
@@ -25,12 +23,13 @@
 #include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_updater_common.h"
 
-#include "fw/platforms/esp8266/user/esp_features.h"
-#include "fw/platforms/esp8266/user/esp_fs.h"
-#include "fw/platforms/esp8266/user/esp_task.h"
-#include "fw/platforms/esp8266/user/esp_updater.h"
-#include "mongoose/mongoose.h" /* For cs_log_set_level() */
+#include "fw/platforms/esp8266/src/esp_exc.h"
+#include "fw/platforms/esp8266/src/esp_features.h"
+#include "fw/platforms/esp8266/src/esp_fs.h"
+#include "fw/platforms/esp8266/src/esp_task.h"
 #include "common/platforms/esp8266/esp_umm_malloc.h"
+#include "fw/platforms/esp8266/src/esp_updater.h"
+#include "mongoose/mongoose.h" /* For cs_log_set_level() */
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;

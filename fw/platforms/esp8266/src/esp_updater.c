@@ -13,13 +13,13 @@
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 #include "common/queue.h"
 #include "common/spiffs/spiffs.h"
-#include "fw/platforms/esp8266/user/esp_fs.h"
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_updater_rpc.h"
 #include "fw/src/mgos_updater_hal.h"
 #include "fw/src/mgos_updater_util.h"
+#include "fw/platforms/esp8266/src/esp_fs.h"
 
 #define SHA1SUM_LEN 40
 #define FW_SLOT_SIZE 0x100000

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/platforms/esp8266/user/esp_features.h"
+#include "fw/platforms/esp8266/src/esp_features.h"
 
 #ifndef MGOS_ENABLE_HEAP_LOG
 #define MGOS_ENABLE_HEAP_LOG 0

@@ -22,7 +22,7 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
 
-#include "fw/platforms/esp8266/user/esp_task.h"
+#include "fw/platforms/esp8266/src/esp_task.h"
 
 #ifndef MGOS_TASK_PRIORITY
 #define MGOS_TASK_PRIORITY 1

@@ -16,7 +16,7 @@
 #include "fw/src/mgos_wifi.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
-#include "fw/platforms/esp8266/user/esp_gpio.h"
+#include "fw/platforms/esp8266/src/esp_gpio.h"
 #endif
 
 #define MGOS_CONFIG_GET_CMD "Config.Get"

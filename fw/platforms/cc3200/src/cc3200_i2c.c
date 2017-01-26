@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/platforms/esp8266/user/esp_features.h"
+#include "fw/src/mgos_features.h"
 
 #if MGOS_ENABLE_I2C
 

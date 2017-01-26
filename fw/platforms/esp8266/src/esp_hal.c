@@ -10,8 +10,8 @@
 #include "fw/src/mgos_mongoose.h"
 #include "common/umm_malloc/umm_malloc.h"
 
-#include "fw/platforms/esp8266/user/esp_fs.h"
-#include "fw/platforms/esp8266/user/esp_task.h"
+#include "fw/platforms/esp8266/src/esp_fs.h"
+#include "fw/platforms/esp8266/src/esp_task.h"
 
 #include <osapi.h>
 #include <os_type.h>

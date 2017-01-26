@@ -87,7 +87,7 @@ struct mg_rpc_channel *mg_rpc_channel_mqtt(const struct mg_str device_id) {
   ch->get_type = mg_rpc_channel_mqtt_get_type;
   ch->is_persistent = mg_rpc_channel_mqtt_is_persistent;
   mgos_mqtt_global_subscribe(mg_mk_str(topic), mg_rpc_mqtt_handler, ch);
-  free(topic);
   LOG(LL_INFO, ("%p %s", ch, topic));
+  free(topic);
   return ch;
 }

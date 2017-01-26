@@ -15,8 +15,8 @@
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
 #include "fw/src/mgos_gpio.h"
-#include "fw/platforms/esp8266/user/esp_gpio.h"
-#include "fw/platforms/esp8266/user/esp_periph.h"
+#include "fw/platforms/esp8266/src/esp_gpio.h"
+#include "fw/platforms/esp8266/src/esp_periph.h"
 
 /*
  * Semi-hardware PWM - uses hardware timer 1 to generate base clock.

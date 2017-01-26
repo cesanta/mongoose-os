@@ -27,7 +27,7 @@
 #include <user_interface.h>
 #include <errno.h>
 
-#include "fw/platforms/esp8266/user/esp_features.h"
+#include "fw/platforms/esp8266/src/esp_features.h"
 
 #if MGOS_ENABLE_HEAP_LOG
 int cs_heap_shim = 0;

@@ -147,7 +147,7 @@ static void mg_rpc_channel_uart_ch_close(struct mg_rpc_channel *ch) {
 
 static const char *mg_rpc_channel_uart_get_type(struct mg_rpc_channel *ch) {
   (void) ch;
-  return "uart";
+  return "UART";
 }
 
 static bool mg_rpc_channel_uart_is_persistent(struct mg_rpc_channel *ch) {

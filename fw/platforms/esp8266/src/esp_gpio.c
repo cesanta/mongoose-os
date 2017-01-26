@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/platforms/esp8266/user/esp_gpio.h"
+#include "fw/platforms/esp8266/src/esp_gpio.h"
 
 #include <ets_sys.h>
 #include "fw/src/mgos_gpio.h"

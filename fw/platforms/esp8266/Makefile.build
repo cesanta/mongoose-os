@@ -86,7 +86,7 @@ include $(COMMON_ESP_PATH)/common.mk
 # For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
-MGOS_ESP_SRC_PATH = $(MGOS_ESP_PATH)/user
+MGOS_ESP_SRC_PATH = $(MGOS_ESP_PATH)/src
 
 MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_config.c \
