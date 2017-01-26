@@ -78,7 +78,7 @@ static bool mg_rpc_channel_http_send_frame(struct mg_rpc_channel *ch,
   if (result_tok.type != JSON_TYPE_INVALID) {
     /* Got some result */
     mg_send_response_line(chd->nc, 200, "Content-Type: application/json\r\n");
-    mg_printf(chd->nc, "%.*s", result_tok.len, result_tok.ptr);
+    mg_printf(chd->nc, "%.*s\n", result_tok.len, result_tok.ptr);
   } else if (error_code > 0) {
     /* Got some error */
     mg_http_send_error(chd->nc, error_code, error_msg);
