@@ -168,7 +168,7 @@ int ssl_socket_send(void *ctx, const unsigned char *buf, size_t len) {
   struct mg_connection *nc = (struct mg_connection *) ctx;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   int ret = mg_lwip_tcp_write(cs->nc, buf, len);
-  DBG(("%p mg_lwip_tcp_write %u = %d", cs->nc, len, ret));
+  LOG(LL_DEBUG, ("%p %d -> %d", nc, len, ret));
   if (ret == 0) ret = MBEDTLS_ERR_SSL_WANT_WRITE;
   return ret;
 }
@@ -194,6 +194,7 @@ int ssl_socket_recv(void *ctx, unsigned char *buf, size_t len) {
     pbuf_free(seg);
     cs->rx_offset = 0;
   }
+  LOG(LL_DEBUG, ("%p <- %d", nc, (int) len));
   return len;
 }
 
