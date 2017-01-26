@@ -11,7 +11,7 @@
 
 #if MGOS_ENABLE_RPC
 
-struct mg_rpc_channel *mg_rpc_channel_ws(struct mg_connection *nc);
+struct mg_rpc_channel *mg_rpc_channel_ws_in(struct mg_connection *nc);
 
 struct mg_rpc_channel_ws_out_cfg {
   char *server_address;

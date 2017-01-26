@@ -14,6 +14,7 @@
 
 struct mg_rpc_channel_http_data {
   struct mg_connection *nc;
+  unsigned int is_rest : 1;
   unsigned int sent : 1;
 };
 
@@ -68,28 +69,36 @@ static bool mg_rpc_channel_http_send_frame(struct mg_rpc_channel *ch,
     return false;
   }
 
-  struct json_token result_tok = JSON_INVALID_TOKEN;
-  int error_code = -1;
-  char *error_msg = NULL;
+  if (chd->is_rest) {
+    struct json_token result_tok = JSON_INVALID_TOKEN;
+    int error_code = 0;
+    char *error_msg = NULL;
+    json_scanf(f.p, f.len, "{result: %T, error: {code: %d, message: %Q}}",
+               &result_tok, &error_code, &error_msg);
 
-  json_scanf(f.p, f.len, "{result: %T, error: {code: %d, message: %Q}}",
-             &result_tok, &error_code, &error_msg);
-
-  if (result_tok.type != JSON_TYPE_INVALID) {
-    /* Got some result */
-    mg_send_response_line(chd->nc, 200, "Content-Type: application/json\r\n");
-    mg_printf(chd->nc, "%.*s\n", result_tok.len, result_tok.ptr);
-  } else if (error_code > 0) {
-    /* Got some error */
-    mg_http_send_error(chd->nc, error_code, error_msg);
+    if (result_tok.type != JSON_TYPE_INVALID) {
+      /* Got some result */
+      mg_send_response_line(
+          chd->nc, 200,
+          "Content-Type: application/json\r\nConnection: close\r\n");
+      mg_printf(chd->nc, "%.*s\r\n", (int) result_tok.len, result_tok.ptr);
+    } else if (error_code != 0) {
+      /* Got some error */
+      mg_http_send_error(chd->nc, error_code, error_msg);
+    } else {
+      /* Empty result - that is legal. */
+      mg_send_response_line(
+          chd->nc, 200,
+          "Content-Type: application/json\r\nConnection: close\r\n");
+    }
+    if (error_msg != NULL) {
+      free(error_msg);
+    }
   } else {
-    /* Neither result nor error parsed: should never be here */
-    mg_http_send_error(chd->nc, 500, NULL);
-    LOG(LL_ERROR, ("Invalid response to http rpc request: '%.*s'", f.len, f.p));
-  }
-
-  if (error_msg != NULL) {
-    free(error_msg);
+    mg_send_response_line(
+        chd->nc, 200,
+        "Content-Type: application/json\r\nConnection: close\r\n");
+    mg_printf(chd->nc, "%.*s\r\n", (int) f.len, f.p);
   }
 
   chd->nc->flags |= MG_F_SEND_AND_CLOSE;
@@ -137,6 +146,7 @@ void mg_rpc_channel_http_recd_parsed_frame(struct mg_connection *nc,
   struct mg_rpc_channel_http_data *chd =
       (struct mg_rpc_channel_http_data *) ch->channel_data;
   chd->nc = nc;
+  chd->is_rest = true;
 
   /* Use "IP_ADDRESS:PORT" as the source address */
   char addr[32];

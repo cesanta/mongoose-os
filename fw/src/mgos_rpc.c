@@ -61,6 +61,21 @@ static void mgos_rpc_http_handler(struct mg_connection *nc, int ev,
     } else {
       mg_rpc_channel_http_recd_frame(nc, ch, hm->body);
     }
+  } else if (ev == MG_EV_WEBSOCKET_HANDSHAKE_REQUEST) {
+/* Allow handshake to proceed */
+#if MGOS_ENABLE_RPC_CHANNEL_WS
+    if (!get_cfg()->rpc.ws.enable)
+#endif
+    {
+      mg_http_send_error(nc, 503, "WS is disabled");
+    }
+#if MGOS_ENABLE_RPC_CHANNEL_WS
+  } else if (ev == MG_EV_WEBSOCKET_HANDSHAKE_DONE) {
+    struct mg_rpc_channel *ch = mg_rpc_channel_ws_in(nc);
+    mg_rpc_add_channel(mgos_rpc_get_global(), mg_mk_str(""), ch,
+                       true /* is_trusted */, false /* send_hello */);
+    ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
+#endif
   }
 }
 #endif

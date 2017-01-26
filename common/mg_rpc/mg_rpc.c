@@ -201,6 +201,12 @@ static bool mg_rpc_parse_frame(const struct mg_str f,
 static bool mg_rpc_handle_frame(struct mg_rpc *c,
                                 struct mg_rpc_channel_info *ci,
                                 const struct mg_rpc_frame *frame) {
+  if (!ci->is_open) {
+    LOG(LL_ERROR, ("%p Ignored frame from close channel (%s)", ci->ch,
+                   ci->ch->get_type(ci->ch)));
+    return false;
+  }
+
   if (frame->src.len == 0) {
     LOG(LL_ERROR, ("src is required"));
     return false;
@@ -546,7 +552,7 @@ bool mg_rpc_send_responsef(struct mg_rpc_request_info *ri,
                            const char *result_json_fmt, ...) {
   struct mbuf prefb;
   mbuf_init(&prefb, 0);
-  if (result_json_fmt != 0) {
+  if (result_json_fmt != NULL && result_json_fmt[0] != '\0') {
     mbuf_init(&prefb, 7);
     mbuf_append(&prefb, "\"result\":", 9);
   }
@@ -564,7 +570,6 @@ bool mg_rpc_send_errorf(struct mg_rpc_request_info *ri, int error_code,
                         const char *error_msg_fmt, ...) {
   struct mbuf prefb;
   struct json_out prefbout = JSON_OUT_MBUF(&prefb);
-  mbuf_init(&prefb, 0);
   if (error_code != 0) {
     mbuf_init(&prefb, 100);
     json_printf(&prefbout, "error:{code:%d", error_code);

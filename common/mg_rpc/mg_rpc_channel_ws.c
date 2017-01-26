@@ -63,7 +63,7 @@ static void mg_rpc_ws_handler(struct mg_connection *nc, int ev, void *ev_data) {
   }
 }
 
-static void mg_rpc_channel_ws_ch_connect(struct mg_rpc_channel *ch) {
+static void mg_rpc_channel_ws_in_ch_connect(struct mg_rpc_channel *ch) {
   (void) ch;
 }
 
@@ -83,27 +83,28 @@ static void mg_rpc_channel_ws_ch_close(struct mg_rpc_channel *ch) {
   if (chd->nc != NULL) chd->nc->flags |= MG_F_CLOSE_IMMEDIATELY;
 }
 
-static const char *mg_rpc_channel_ws_get_type(struct mg_rpc_channel *ch) {
+static const char *mg_rpc_channel_ws_in_get_type(struct mg_rpc_channel *ch) {
   (void) ch;
-  return "ws";
+  return "WS_in";
 }
 
-static bool mg_rpc_channel_ws_is_persistent(struct mg_rpc_channel *ch) {
+static bool mg_rpc_channel_ws_in_is_persistent(struct mg_rpc_channel *ch) {
   (void) ch;
   return false;
 }
 
-struct mg_rpc_channel *mg_rpc_channel_ws(struct mg_connection *nc) {
+struct mg_rpc_channel *mg_rpc_channel_ws_in(struct mg_connection *nc) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) calloc(1, sizeof(*ch));
-  ch->ch_connect = mg_rpc_channel_ws_ch_connect;
+  ch->ch_connect = mg_rpc_channel_ws_in_ch_connect;
   ch->send_frame = mg_rpc_channel_ws_send_frame;
   ch->ch_close = mg_rpc_channel_ws_ch_close;
-  ch->get_type = mg_rpc_channel_ws_get_type;
-  ch->is_persistent = mg_rpc_channel_ws_is_persistent;
+  ch->get_type = mg_rpc_channel_ws_in_get_type;
+  ch->is_persistent = mg_rpc_channel_ws_in_is_persistent;
   struct mg_rpc_channel_ws_data *chd =
       (struct mg_rpc_channel_ws_data *) calloc(1, sizeof(*chd));
   chd->free_data = true;
   nc->handler = mg_rpc_ws_handler;
+  chd->nc = nc;
   ch->channel_data = chd;
   nc->user_data = ch;
   return ch;
@@ -186,10 +187,10 @@ static const char *mg_rpc_channel_ws_out_get_type(struct mg_rpc_channel *ch) {
 #if MG_ENABLE_SSL
   struct mg_rpc_channel_ws_out_data *chd =
       (struct mg_rpc_channel_ws_out_data *) ch->channel_data;
-  return (chd->cfg->ssl_ca_file ? "wss_out" : "ws_out");
+  return (chd->cfg->ssl_ca_file ? "WSS_out" : "WS_out");
 #else
   (void) ch;
-  return "ws_out";
+  return "WS_out";
 #endif
 }
 
