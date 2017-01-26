@@ -11,9 +11,8 @@ import (
 	"fmt"
 	"sync"
 
-	"cesanta.com/clubby"
-	"cesanta.com/clubby/endpoint"
-	"cesanta.com/clubby/frame"
+	"cesanta.com/common/go/mgrpc"
+	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/common/go/ourtrace"
 	"github.com/cesanta/errors"
@@ -81,7 +80,7 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
+	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -241,15 +240,15 @@ type _Client struct {
 	addr string
 }
 
-func (c *_Client) Read(pctx context.Context, args *ReadArgs) (res *ReadResult, err error) {
+func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "I2C.Read",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -270,10 +269,10 @@ func (c *_Client) Read(pctx context.Context, args *ReadArgs) (res *ReadResult, e
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -295,15 +294,15 @@ func (c *_Client) Read(pctx context.Context, args *ReadArgs) (res *ReadResult, e
 	return r, nil
 }
 
-func (c *_Client) ReadRegB(pctx context.Context, args *ReadRegBArgs) (res *ReadRegBResult, err error) {
+func (c *_Client) ReadRegB(ctx context.Context, args *ReadRegBArgs) (res *ReadRegBResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "I2C.ReadRegB",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -324,10 +323,10 @@ func (c *_Client) ReadRegB(pctx context.Context, args *ReadRegBArgs) (res *ReadR
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -349,15 +348,15 @@ func (c *_Client) ReadRegB(pctx context.Context, args *ReadRegBArgs) (res *ReadR
 	return r, nil
 }
 
-func (c *_Client) ReadRegW(pctx context.Context, args *ReadRegWArgs) (res *ReadRegWResult, err error) {
+func (c *_Client) ReadRegW(ctx context.Context, args *ReadRegWArgs) (res *ReadRegWResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "I2C.ReadRegW",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -378,10 +377,10 @@ func (c *_Client) ReadRegW(pctx context.Context, args *ReadRegWArgs) (res *ReadR
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -403,22 +402,22 @@ func (c *_Client) ReadRegW(pctx context.Context, args *ReadRegWArgs) (res *ReadR
 	return r, nil
 }
 
-func (c *_Client) Scan(pctx context.Context) (res []int64, err error) {
+func (c *_Client) Scan(ctx context.Context) (res []int64, err error) {
 	cmd := &frame.Command{
 		Cmd: "I2C.Scan",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -440,15 +439,15 @@ func (c *_Client) Scan(pctx context.Context) (res []int64, err error) {
 	return r, nil
 }
 
-func (c *_Client) Write(pctx context.Context, args *WriteArgs) (err error) {
+func (c *_Client) Write(ctx context.Context, args *WriteArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "I2C.Write",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -469,20 +468,20 @@ func (c *_Client) Write(pctx context.Context, args *WriteArgs) (err error) {
 		return errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 	return nil
 }
 
-func (c *_Client) WriteRegB(pctx context.Context, args *WriteRegBArgs) (err error) {
+func (c *_Client) WriteRegB(ctx context.Context, args *WriteRegBArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "I2C.WriteRegB",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -503,23 +502,23 @@ func (c *_Client) WriteRegB(pctx context.Context, args *WriteRegBArgs) (err erro
 		return errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 	return nil
 }
 
-func RegisterService(i *clubby.Instance, impl Service) error {
-	validatorsOnce.Do(initValidators)
-	s := &_Server{impl}
-	i.RegisterCommandHandler("I2C.Read", s.Read)
-	i.RegisterCommandHandler("I2C.ReadRegB", s.ReadRegB)
-	i.RegisterCommandHandler("I2C.ReadRegW", s.ReadRegW)
-	i.RegisterCommandHandler("I2C.Scan", s.Scan)
-	i.RegisterCommandHandler("I2C.Write", s.Write)
-	i.RegisterCommandHandler("I2C.WriteRegB", s.WriteRegB)
-	i.RegisterService(ServiceID, _ServiceDefinition)
-	return nil
-}
+//func RegisterService(i *clubby.Instance, impl Service) error {
+//validatorsOnce.Do(initValidators)
+//s := &_Server{impl}
+//i.RegisterCommandHandler("I2C.Read", s.Read)
+//i.RegisterCommandHandler("I2C.ReadRegB", s.ReadRegB)
+//i.RegisterCommandHandler("I2C.ReadRegW", s.ReadRegW)
+//i.RegisterCommandHandler("I2C.Scan", s.Scan)
+//i.RegisterCommandHandler("I2C.Write", s.Write)
+//i.RegisterCommandHandler("I2C.WriteRegB", s.WriteRegB)
+//i.RegisterService(ServiceID, _ServiceDefinition)
+//return nil
+//}
 
 type _Server struct {
 	impl Service

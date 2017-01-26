@@ -10,9 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cesanta.com/clubby"
-	"cesanta.com/clubby/endpoint"
-	"cesanta.com/clubby/frame"
+	"cesanta.com/common/go/mgrpc"
+	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/common/go/ourtrace"
 	"github.com/cesanta/errors"
@@ -91,7 +90,7 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
+	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 func NewClient(i Instance, addr string) Service {
@@ -103,25 +102,25 @@ type _Client struct {
 	addr string
 }
 
-func (c *_Client) GenKey(pctx context.Context, args *GenKeyArgs) (res *GenKeyResult, err error) {
+func (c *_Client) GenKey(ctx context.Context, args *GenKeyArgs) (res *GenKeyResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.GenKey",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *GenKeyResult
 	err = resp.Response.UnmarshalInto(&r)
@@ -131,22 +130,22 @@ func (c *_Client) GenKey(pctx context.Context, args *GenKeyArgs) (res *GenKeyRes
 	return r, nil
 }
 
-func (c *_Client) GetConfig(pctx context.Context) (res *GetConfigResult, err error) {
+func (c *_Client) GetConfig(ctx context.Context) (res *GetConfigResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.GetConfig",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *GetConfigResult
 	err = resp.Response.UnmarshalInto(&r)
@@ -156,25 +155,25 @@ func (c *_Client) GetConfig(pctx context.Context) (res *GetConfigResult, err err
 	return r, nil
 }
 
-func (c *_Client) GetPubKey(pctx context.Context, args *GetPubKeyArgs) (res *GetPubKeyResult, err error) {
+func (c *_Client) GetPubKey(ctx context.Context, args *GetPubKeyArgs) (res *GetPubKeyResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.GetPubKey",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *GetPubKeyResult
 	err = resp.Response.UnmarshalInto(&r)
@@ -184,85 +183,85 @@ func (c *_Client) GetPubKey(pctx context.Context, args *GetPubKeyArgs) (res *Get
 	return r, nil
 }
 
-func (c *_Client) LockZone(pctx context.Context, args *LockZoneArgs) (err error) {
+func (c *_Client) LockZone(ctx context.Context, args *LockZoneArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.LockZone",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 	return nil
 }
 
-func (c *_Client) SetConfig(pctx context.Context, args *SetConfigArgs) (err error) {
+func (c *_Client) SetConfig(ctx context.Context, args *SetConfigArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.SetConfig",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 	return nil
 }
 
-func (c *_Client) SetKey(pctx context.Context, args *SetKeyArgs) (err error) {
+func (c *_Client) SetKey(ctx context.Context, args *SetKeyArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.SetKey",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 	return nil
 }
 
-func (c *_Client) Sign(pctx context.Context, args *SignArgs) (res *SignResult, err error) {
+func (c *_Client) Sign(ctx context.Context, args *SignArgs) (res *SignResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.Sign",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *SignResult
 	err = resp.Response.UnmarshalInto(&r)
@@ -272,18 +271,18 @@ func (c *_Client) Sign(pctx context.Context, args *SignArgs) (res *SignResult, e
 	return r, nil
 }
 
-func RegisterService(i *clubby.Instance, impl Service) error {
-	s := &_Server{impl}
-	i.RegisterCommandHandler("ATCA.GenKey", s.GenKey)
-	i.RegisterCommandHandler("ATCA.GetConfig", s.GetConfig)
-	i.RegisterCommandHandler("ATCA.GetPubKey", s.GetPubKey)
-	i.RegisterCommandHandler("ATCA.LockZone", s.LockZone)
-	i.RegisterCommandHandler("ATCA.SetConfig", s.SetConfig)
-	i.RegisterCommandHandler("ATCA.SetKey", s.SetKey)
-	i.RegisterCommandHandler("ATCA.Sign", s.Sign)
-	i.RegisterService(ServiceID, _ServiceDefinition)
-	return nil
-}
+//func RegisterService(i *clubby.Instance, impl Service) error {
+//s := &_Server{impl}
+//i.RegisterCommandHandler("ATCA.GenKey", s.GenKey)
+//i.RegisterCommandHandler("ATCA.GetConfig", s.GetConfig)
+//i.RegisterCommandHandler("ATCA.GetPubKey", s.GetPubKey)
+//i.RegisterCommandHandler("ATCA.LockZone", s.LockZone)
+//i.RegisterCommandHandler("ATCA.SetConfig", s.SetConfig)
+//i.RegisterCommandHandler("ATCA.SetKey", s.SetKey)
+//i.RegisterCommandHandler("ATCA.Sign", s.Sign)
+//i.RegisterService(ServiceID, _ServiceDefinition)
+//return nil
+//}
 
 type _Server struct {
 	impl Service

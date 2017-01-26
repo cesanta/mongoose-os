@@ -10,9 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cesanta.com/clubby"
-	"cesanta.com/clubby/endpoint"
-	"cesanta.com/clubby/frame"
+	"cesanta.com/common/go/mgrpc"
+	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/common/go/ourtrace"
 	"github.com/cesanta/errors"
@@ -37,7 +36,7 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
+	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 func NewClient(i Instance, addr string) Service {
@@ -49,32 +48,32 @@ type _Client struct {
 	addr string
 }
 
-func (c *_Client) Reboot(pctx context.Context, args *RebootArgs) (err error) {
+func (c *_Client) Reboot(ctx context.Context, args *RebootArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "Sys.Reboot",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 
-	tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
+	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 	return nil
 }
 
-func RegisterService(i *clubby.Instance, impl Service) error {
-	s := &_Server{impl}
-	i.RegisterCommandHandler("Sys.Reboot", s.Reboot)
-	i.RegisterService(ServiceID, _ServiceDefinition)
-	return nil
-}
+//func RegisterService(i *clubby.Instance, impl Service) error {
+//s := &_Server{impl}
+//i.RegisterCommandHandler("Sys.Reboot", s.Reboot)
+//i.RegisterService(ServiceID, _ServiceDefinition)
+//return nil
+//}
 
 type _Server struct {
 	impl Service

@@ -11,9 +11,8 @@ import (
 	"fmt"
 	"sync"
 
-	"cesanta.com/clubby"
-	"cesanta.com/clubby/endpoint"
-	"cesanta.com/clubby/frame"
+	"cesanta.com/common/go/mgrpc"
+	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/common/go/ourtrace"
 	"github.com/cesanta/errors"
@@ -46,7 +45,7 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
+	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -113,22 +112,22 @@ type _Client struct {
 	addr string
 }
 
-func (c *_Client) Get(pctx context.Context) (res *GetResult, err error) {
+func (c *_Client) Get(ctx context.Context) (res *GetResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "Vars.Get",
 	}
-	ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	defer finish(&err)
-	_ = tr
+	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
+	//defer finish(&err)
+	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	if resp.Status != 0 {
-		return nil, errors.Trace(&endpoint.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
+	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -150,13 +149,13 @@ func (c *_Client) Get(pctx context.Context) (res *GetResult, err error) {
 	return r, nil
 }
 
-func RegisterService(i *clubby.Instance, impl Service) error {
-	validatorsOnce.Do(initValidators)
-	s := &_Server{impl}
-	i.RegisterCommandHandler("Vars.Get", s.Get)
-	i.RegisterService(ServiceID, _ServiceDefinition)
-	return nil
-}
+//func RegisterService(i *clubby.Instance, impl Service) error {
+//validatorsOnce.Do(initValidators)
+//s := &_Server{impl}
+//i.RegisterCommandHandler("Vars.Get", s.Get)
+//i.RegisterService(ServiceID, _ServiceDefinition)
+//return nil
+//}
 
 type _Server struct {
 	impl Service
