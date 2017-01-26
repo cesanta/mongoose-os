@@ -71,6 +71,10 @@ static void reconnect_timer_cb(void *user_data) {
 static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   const struct sys_config_mqtt *smcfg = &get_cfg()->mqtt;
 
+  if (ev > MG_MQTT_EVENT_BASE) {
+    LOG(LL_DEBUG, ("MQTT event: %d", ev));
+  }
+
   switch (ev) {
     case MG_EV_CONNECT: {
       int success = (*(int *) ev_data == 0);
