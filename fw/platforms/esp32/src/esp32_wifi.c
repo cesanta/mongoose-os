@@ -33,7 +33,8 @@ esp_err_t wifi_event_handler(system_event_t *event) {
       break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
       LOG(LL_INFO,
-          ("WiFi STA: disconnected, reason %d", info->disconnected.reason));
+          ("WiFi STA: disconnected, reason %d%s", info->disconnected.reason,
+           (s_sta_should_connect ? "; reconnecting" : "")));
       mg_ev = MGOS_WIFI_DISCONNECTED;
       if (s_sta_should_connect) {
         s_sta_state = "connecting";
@@ -190,6 +191,7 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   }
 
   if (!cfg->enable) {
+    s_sta_should_connect = false;
     return (mgos_wifi_remove_mode(WIFI_MODE_STA) == ESP_OK);
   }
 
