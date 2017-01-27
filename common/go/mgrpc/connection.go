@@ -13,13 +13,13 @@ import (
 type connectOptions struct {
 	proto           transport
 	connectAddress  string
+	localID         string
 	serverHost      string
 	defaultRoute    bool
 	useTLS          bool
 	cert            *tls.Certificate
 	caPool          *x509.CertPool
 	psk             string
-	sendHello       bool
 	enableUBJSON    bool
 	enableTracing   bool
 	enableReconnect bool
@@ -46,10 +46,21 @@ func UseHTTPPost() ConnectOption {
 	}
 }
 
-// ConnectTo specifies the address used by HTTP_POST and WebSocket transports.
+// LocalID specifies mgrpc id of the local node
+func LocalID(localID string) ConnectOption {
+	return func(c *connectOptions) error {
+		c.localID = localID
+		return nil
+	}
+}
+
+// connectTo specifies the address used by HTTP_POST and WebSocket transports.
 // Use it if the address automatically inferred from destination address is not
 // suitable (e.g. you're connecting to another network interface of the device).
-func ConnectTo(connectURL string) ConnectOption {
+//
+// This function is unexported, because mgrpc.New() takes connectAddr as a
+// separate argument.
+func connectTo(connectURL string) ConnectOption {
 	url, err := url.Parse(connectURL)
 	if err != nil {
 		return badConnectOption(errors.Errorf("invalid ConnectTo format: %s", err))
@@ -147,15 +158,6 @@ func VerifyServerWithCAsFromFile(file string) ConnectOption {
 func SendPSK(psk string) ConnectOption {
 	return func(c *connectOptions) error {
 		c.psk = psk
-		return nil
-	}
-}
-
-// SendHello causes the client to send a Hello command
-// after the connection is established.
-func SendHello(sendHello bool) ConnectOption {
-	return func(c *connectOptions) error {
-		c.sendHello = sendHello
 		return nil
 	}
 }

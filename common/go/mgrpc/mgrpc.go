@@ -25,12 +25,13 @@ type MgRPC interface {
 }
 
 type mgRPCImpl struct {
-	localAddr string
-	codec     codec.Codec
+	codec codec.Codec
 
 	// Map of outgoing requests, and its lock
 	reqs     map[int64]req
 	reqsLock sync.Mutex
+
+	opts *connectOptions
 }
 
 type req struct {
@@ -53,25 +54,16 @@ func (e ErrorResponse) Error() string {
 	return fmt.Sprintf("(%d) %s", e.Status, e.Msg)
 }
 
-func New(
-	ctx context.Context, localAddr, connectAddr string, junkHandler func(junk []byte), reconnect bool,
-) (MgRPC, error) {
-	if junkHandler == nil {
-		junkHandler = func(junk []byte) {}
-	}
+func New(ctx context.Context, connectAddr string, opts ...ConnectOption) (MgRPC, error) {
 
-	opts := []ConnectOption{
-		SendHello(false),
-		ConnectTo(connectAddr),
-		JunkHandler(junkHandler),
-		Reconnect(reconnect),
-	}
+	opts = append(opts, connectTo(connectAddr))
 
 	rpc := mgRPCImpl{
-		localAddr: localAddr,
-		reqs:      make(map[int64]req),
+		reqs: make(map[int64]req),
 	}
-	rpc.connect(ctx, "" /*TODO: mgrpcAddr*/, opts...)
+	if err := rpc.connect(ctx, opts...); err != nil {
+		return nil, errors.Trace(err)
+	}
 
 	go rpc.recvLoop(ctx, rpc.codec)
 
@@ -120,7 +112,7 @@ func wsDialConfig(config *websocket.Config) (*websocket.Conn, error) {
 	return conn, errors.Trace(err)
 }
 
-func (r *mgRPCImpl) wsConnect(address, url string, opts *connectOptions) (codec.Codec, error) {
+func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, error) {
 	// TODO(imax): figure out what we should use as origin and what to check on the server side.
 	const origin = "https://api.cesanta.com/"
 	config, err := websocket.NewConfig(url, origin)
@@ -146,13 +138,10 @@ func (r *mgRPCImpl) wsConnect(address, url string, opts *connectOptions) (codec.
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	if opts.sendHello {
-		go r.SendHello(address)
-	}
 	return codec.WebSocket(conn), nil
 }
 
-func (r *mgRPCImpl) tcpConnect(address, tcpAddress string, opts *connectOptions) (codec.Codec, error) {
+func (r *mgRPCImpl) tcpConnect(tcpAddress string, opts *connectOptions) (codec.Codec, error) {
 	// TODO(imax): add TLS support.
 	conn, err := net.Dial("tcp", tcpAddress)
 	if err != nil {
@@ -160,79 +149,56 @@ func (r *mgRPCImpl) tcpConnect(address, tcpAddress string, opts *connectOptions)
 	}
 	conn.(*net.TCPConn).SetKeepAlive(true)
 	conn.(*net.TCPConn).SetKeepAlivePeriod(tcpKeepAliveInterval)
-	if opts.sendHello {
-		go r.SendHello(address)
-	}
 	return codec.TCP(conn), nil
 }
 func (r *mgRPCImpl) serialConnect(
-	ctx context.Context, address, portName string, opts *connectOptions,
+	ctx context.Context, portName string, opts *connectOptions,
 ) (codec.Codec, error) {
 	sc, err := codec.Serial(ctx, portName, opts.junkHandler)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	if opts.sendHello {
-		go r.SendHello(address)
-	}
 	return sc, nil
 }
 
-func (r *mgRPCImpl) connect(ctx context.Context, mgrpcAddress string, opts ...ConnectOption) error {
-	o := &connectOptions{sendHello: true, enableUBJSON: true}
+func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
+	r.opts = &connectOptions{enableUBJSON: true}
 
 	for _, opt := range opts {
-		if err := opt(o); err != nil {
+		if err := opt(r.opts); err != nil {
 			return err
 		}
 	}
 
-	// If ConnectTo has not been specified, guess based on proto and Clubby address.
-	if o.connectAddress == "" {
-		var ca string
-		switch o.proto {
-		case tHTTP_POST:
-			ca = "https:" + mgrpcAddress
-		case tWebSocket:
-			ca = "wss:" + mgrpcAddress
-		default:
-			return errors.New("no protocol or connect address specified")
-		}
-		err := ConnectTo(ca)(o)
-		if err != nil {
-			return errors.Annotatef(err, "invalid default connect address")
-		}
-	}
+	glog.V(1).Infof("Connecting to %s over %s", r.opts.connectAddress, r.opts.proto)
 
-	glog.V(1).Infof("Connecting to %s over %s", o.connectAddress, o.proto)
-
-	switch o.proto {
+	switch r.opts.proto {
 
 	case tHTTP_POST:
-		r.codec = codec.OutboundHTTP(o.connectAddress, o.serverHost, o.cert, o.caPool)
+		r.codec = codec.OutboundHTTP(r.opts.connectAddress, r.opts.serverHost, r.opts.cert, r.opts.caPool)
 	case tWebSocket:
 		r.codec = codec.NewReconnectWrapperCodec(
-			o.connectAddress,
+			r.opts.connectAddress,
 			func(wsURL string) (codec.Codec, error) {
-				c, err := r.wsConnect(mgrpcAddress, wsURL, o)
+				c, err := r.wsConnect(wsURL, r.opts)
 				return c, errors.Trace(err)
 			})
 	case tPlainTCP:
 		r.codec = codec.NewReconnectWrapperCodec(
-			o.connectAddress,
+			r.opts.connectAddress,
 			func(tcpAddress string) (codec.Codec, error) {
-				c, err := r.tcpConnect(mgrpcAddress, tcpAddress, o)
+				c, err := r.tcpConnect(tcpAddress, r.opts)
 				return c, errors.Trace(err)
 			})
 	case tSerial:
-		serialCodec, err := r.serialConnect(ctx, mgrpcAddress, o.connectAddress, o)
+		serialCodec, err := r.serialConnect(ctx, r.opts.connectAddress, r.opts)
 		if err != nil {
 			return errors.Trace(err)
 		}
 		r.codec = serialCodec
 
 	default:
-		return fmt.Errorf("unknown transport %q", o.proto)
+		return fmt.Errorf("unknown transport %q", r.opts.proto)
 	}
 
 	return nil
@@ -301,7 +267,7 @@ func (r *mgRPCImpl) Call(
 	}
 	r.reqsLock.Unlock()
 
-	f := frame.NewRequestFrame(r.localAddr, dst, "", cmd)
+	f := frame.NewRequestFrame(r.opts.localID, dst, "", cmd)
 	f12 := frame.NewFrameV1V2(f, 2)
 	r.codec.Send(ctx, f12)
 
