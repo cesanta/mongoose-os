@@ -205,7 +205,7 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 }
 
 func (r *mgRPCImpl) Disconnect(ctx context.Context) error {
-	//TODO
+	r.codec.Close()
 	return nil
 }
 
