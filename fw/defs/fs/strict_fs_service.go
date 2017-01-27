@@ -56,7 +56,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -163,11 +162,7 @@ func (c *_Client) Get(ctx context.Context, args *GetArgs) (res *GetResult, err e
 	cmd := &frame.Command{
 		Cmd: "FS.Get",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	if args.Filename == nil {
 		return nil, errors.Errorf("Filename is required")
@@ -194,8 +189,6 @@ func (c *_Client) Get(ctx context.Context, args *GetArgs) (res *GetResult, err e
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
-
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
 		glog.Errorf("Failed to marshal result as JSON: %+v", err)
@@ -220,9 +213,6 @@ func (c *_Client) List(ctx context.Context) (res []string, err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.List",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -230,8 +220,6 @@ func (c *_Client) List(ctx context.Context) (res []string, err error) {
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -257,11 +245,7 @@ func (c *_Client) Put(ctx context.Context, args *PutArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.Put",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	if args.Filename == nil {
 		return errors.Errorf("Filename is required")

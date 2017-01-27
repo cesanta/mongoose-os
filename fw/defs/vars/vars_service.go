@@ -40,7 +40,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 func NewClient(i Instance, addr string) Service {
@@ -56,9 +55,6 @@ func (c *_Client) Get(ctx context.Context) (res *GetResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "Vars.Get",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -66,8 +62,6 @@ func (c *_Client) Get(ctx context.Context) (res *GetResult, err error) {
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *GetResult
 	err = resp.Response.UnmarshalInto(&r)

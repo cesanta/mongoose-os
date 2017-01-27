@@ -79,7 +79,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -237,11 +236,7 @@ func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, er
 	cmd := &frame.Command{
 		Cmd: "GPIO.Read",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -264,8 +259,6 @@ func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, er
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -291,11 +284,7 @@ func (c *_Client) RemoveIntHandler(ctx context.Context, args *RemoveIntHandlerAr
 	cmd := &frame.Command{
 		Cmd: "GPIO.RemoveIntHandler",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -325,11 +314,7 @@ func (c *_Client) SetIntHandler(ctx context.Context, args *SetIntHandlerArgs) (r
 	cmd := &frame.Command{
 		Cmd: "GPIO.SetIntHandler",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -352,8 +337,6 @@ func (c *_Client) SetIntHandler(ctx context.Context, args *SetIntHandlerArgs) (r
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -379,11 +362,7 @@ func (c *_Client) Toggle(ctx context.Context, args *ToggleArgs) (res *ToggleResu
 	cmd := &frame.Command{
 		Cmd: "GPIO.Toggle",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -406,8 +385,6 @@ func (c *_Client) Toggle(ctx context.Context, args *ToggleArgs) (res *ToggleResu
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -433,11 +410,7 @@ func (c *_Client) Write(ctx context.Context, args *WriteArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "GPIO.Write",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {

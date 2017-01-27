@@ -298,12 +298,6 @@ func (r *MgRPC) Call(
 	}
 }
 
-//func (r *MgRPC) TraceCall(
-//ctx context.Context, addr string, cmd *frame.Command,
-//) (context.Context, trace.Trace, func(*error)) {
-//return ctx
-//}
-
 func (r *MgRPC) SendHello(dst string) {
 	hello := &frame.Command{
 		Cmd: "/v1/Hello",

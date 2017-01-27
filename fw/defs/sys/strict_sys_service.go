@@ -41,7 +41,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -121,11 +120,7 @@ func (c *_Client) Reboot(ctx context.Context, args *RebootArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "Sys.Reboot",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {

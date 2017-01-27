@@ -74,7 +74,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 func NewClient(i Instance, addr string) Service {
@@ -90,11 +89,7 @@ func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, er
 	cmd := &frame.Command{
 		Cmd: "GPIO.Read",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
@@ -103,8 +98,6 @@ func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, er
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *ReadResult
 	err = resp.Response.UnmarshalInto(&r)
@@ -118,11 +111,7 @@ func (c *_Client) RemoveIntHandler(ctx context.Context, args *RemoveIntHandlerAr
 	cmd := &frame.Command{
 		Cmd: "GPIO.RemoveIntHandler",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
@@ -138,11 +127,7 @@ func (c *_Client) SetIntHandler(ctx context.Context, args *SetIntHandlerArgs) (r
 	cmd := &frame.Command{
 		Cmd: "GPIO.SetIntHandler",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
@@ -151,8 +136,6 @@ func (c *_Client) SetIntHandler(ctx context.Context, args *SetIntHandlerArgs) (r
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *SetIntHandlerResult
 	err = resp.Response.UnmarshalInto(&r)
@@ -166,11 +149,7 @@ func (c *_Client) Toggle(ctx context.Context, args *ToggleArgs) (res *ToggleResu
 	cmd := &frame.Command{
 		Cmd: "GPIO.Toggle",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
@@ -179,8 +158,6 @@ func (c *_Client) Toggle(ctx context.Context, args *ToggleArgs) (res *ToggleResu
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	var r *ToggleResult
 	err = resp.Response.UnmarshalInto(&r)
@@ -194,11 +171,7 @@ func (c *_Client) Write(ctx context.Context, args *WriteArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "GPIO.Write",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {

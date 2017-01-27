@@ -47,7 +47,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -148,9 +147,6 @@ func (c *_Client) Get(ctx context.Context) (res ourjson.RawMessage, err error) {
 	cmd := &frame.Command{
 		Cmd: "Config.Get",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return ourjson.RawMessage{}, errors.Trace(err)
@@ -158,8 +154,6 @@ func (c *_Client) Get(ctx context.Context) (res ourjson.RawMessage, err error) {
 	if resp.Status != 0 {
 		return ourjson.RawMessage{}, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -185,11 +179,7 @@ func (c *_Client) Save(ctx context.Context, args *SaveArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "Config.Save",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -219,11 +209,7 @@ func (c *_Client) Set(ctx context.Context, args *SetArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "Config.Set",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {

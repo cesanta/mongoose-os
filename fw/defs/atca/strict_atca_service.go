@@ -95,7 +95,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -274,11 +273,7 @@ func (c *_Client) GenKey(ctx context.Context, args *GenKeyArgs) (res *GenKeyResu
 	cmd := &frame.Command{
 		Cmd: "ATCA.GenKey",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -301,8 +296,6 @@ func (c *_Client) GenKey(ctx context.Context, args *GenKeyArgs) (res *GenKeyResu
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -328,9 +321,6 @@ func (c *_Client) GetConfig(ctx context.Context) (res *GetConfigResult, err erro
 	cmd := &frame.Command{
 		Cmd: "ATCA.GetConfig",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -338,8 +328,6 @@ func (c *_Client) GetConfig(ctx context.Context) (res *GetConfigResult, err erro
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -365,11 +353,7 @@ func (c *_Client) GetPubKey(ctx context.Context, args *GetPubKeyArgs) (res *GetP
 	cmd := &frame.Command{
 		Cmd: "ATCA.GetPubKey",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -392,8 +376,6 @@ func (c *_Client) GetPubKey(ctx context.Context, args *GetPubKeyArgs) (res *GetP
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -419,11 +401,7 @@ func (c *_Client) LockZone(ctx context.Context, args *LockZoneArgs) (err error) 
 	cmd := &frame.Command{
 		Cmd: "ATCA.LockZone",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -453,11 +431,7 @@ func (c *_Client) SetConfig(ctx context.Context, args *SetConfigArgs) (err error
 	cmd := &frame.Command{
 		Cmd: "ATCA.SetConfig",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -487,11 +461,7 @@ func (c *_Client) SetKey(ctx context.Context, args *SetKeyArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "ATCA.SetKey",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -521,11 +491,7 @@ func (c *_Client) Sign(ctx context.Context, args *SignArgs) (res *SignResult, er
 	cmd := &frame.Command{
 		Cmd: "ATCA.Sign",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -548,8 +514,6 @@ func (c *_Client) Sign(ctx context.Context, args *SignArgs) (res *SignResult, er
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {

@@ -55,7 +55,6 @@ type Service interface {
 
 type Instance interface {
 	Call(context.Context, string, *frame.Command) (*frame.Response, error)
-	//TraceCall(context.Context, string, *frame.Command) (context.Context, trace.Trace, func(*error))
 }
 
 type _validators struct {
@@ -141,9 +140,6 @@ func (c *_Client) Commit(ctx context.Context) (err error) {
 	cmd := &frame.Command{
 		Cmd: "OTA.Commit",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return errors.Trace(err)
@@ -158,9 +154,6 @@ func (c *_Client) ListSections(ctx context.Context) (res []ListSectionsResult, e
 	cmd := &frame.Command{
 		Cmd: "OTA.ListSections",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -168,8 +161,6 @@ func (c *_Client) ListSections(ctx context.Context) (res []ListSectionsResult, e
 	if resp.Status != 0 {
 		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
-
-	//tr.LazyPrintf("res: %s", ourjson.LazyJSON(&resp))
 
 	bb, err := resp.Response.MarshalJSON()
 	if err != nil {
@@ -195,9 +186,6 @@ func (c *_Client) Revert(ctx context.Context) (err error) {
 	cmd := &frame.Command{
 		Cmd: "OTA.Revert",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return errors.Trace(err)
@@ -212,11 +200,7 @@ func (c *_Client) Update(ctx context.Context, args *UpdateArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "OTA.Update",
 	}
-	//ctx, tr, finish := c.i.TraceCall(pctx, c.addr, cmd)
-	//defer finish(&err)
-	//_ = tr
 
-	//tr.LazyPrintf("args: %s", ourjson.LazyJSON(&args))
 	cmd.Args = ourjson.DelayMarshaling(args)
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
