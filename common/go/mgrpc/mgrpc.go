@@ -17,7 +17,14 @@ import (
 	"github.com/golang/glog"
 )
 
-type MgRPC struct {
+type MgRPC interface {
+	Call(
+		ctx context.Context, dst string, cmd *frame.Command,
+	) (*frame.Response, error)
+	Disconnect(ctx context.Context) error
+}
+
+type mgRPCImpl struct {
 	localAddr string
 	codec     codec.Codec
 
@@ -48,7 +55,7 @@ func (e ErrorResponse) Error() string {
 
 func New(
 	ctx context.Context, localAddr, connectAddr string, junkHandler func(junk []byte), reconnect bool,
-) (*MgRPC, error) {
+) (MgRPC, error) {
 	if junkHandler == nil {
 		junkHandler = func(junk []byte) {}
 	}
@@ -60,7 +67,7 @@ func New(
 		Reconnect(reconnect),
 	}
 
-	rpc := MgRPC{
+	rpc := mgRPCImpl{
 		localAddr: localAddr,
 		reqs:      make(map[int64]req),
 	}
@@ -113,7 +120,7 @@ func wsDialConfig(config *websocket.Config) (*websocket.Conn, error) {
 	return conn, errors.Trace(err)
 }
 
-func (r *MgRPC) wsConnect(address, url string, opts *connectOptions) (codec.Codec, error) {
+func (r *mgRPCImpl) wsConnect(address, url string, opts *connectOptions) (codec.Codec, error) {
 	// TODO(imax): figure out what we should use as origin and what to check on the server side.
 	const origin = "https://api.cesanta.com/"
 	config, err := websocket.NewConfig(url, origin)
@@ -145,7 +152,7 @@ func (r *MgRPC) wsConnect(address, url string, opts *connectOptions) (codec.Code
 	return codec.WebSocket(conn), nil
 }
 
-func (r *MgRPC) tcpConnect(address, tcpAddress string, opts *connectOptions) (codec.Codec, error) {
+func (r *mgRPCImpl) tcpConnect(address, tcpAddress string, opts *connectOptions) (codec.Codec, error) {
 	// TODO(imax): add TLS support.
 	conn, err := net.Dial("tcp", tcpAddress)
 	if err != nil {
@@ -158,7 +165,7 @@ func (r *MgRPC) tcpConnect(address, tcpAddress string, opts *connectOptions) (co
 	}
 	return codec.TCP(conn), nil
 }
-func (r *MgRPC) serialConnect(
+func (r *mgRPCImpl) serialConnect(
 	ctx context.Context, address, portName string, opts *connectOptions,
 ) (codec.Codec, error) {
 	sc, err := codec.Serial(ctx, portName, opts.junkHandler)
@@ -171,7 +178,7 @@ func (r *MgRPC) serialConnect(
 	return sc, nil
 }
 
-func (r *MgRPC) connect(ctx context.Context, mgrpcAddress string, opts ...ConnectOption) error {
+func (r *mgRPCImpl) connect(ctx context.Context, mgrpcAddress string, opts ...ConnectOption) error {
 	o := &connectOptions{sendHello: true, enableUBJSON: true}
 
 	for _, opt := range opts {
@@ -231,12 +238,12 @@ func (r *MgRPC) connect(ctx context.Context, mgrpcAddress string, opts ...Connec
 	return nil
 }
 
-func (r *MgRPC) Disconnect(ctx context.Context) error {
+func (r *mgRPCImpl) Disconnect(ctx context.Context) error {
 	//TODO
 	return nil
 }
 
-func (r *MgRPC) recvLoop(ctx context.Context, c codec.Codec) {
+func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 	for {
 		f12, err := c.Recv(ctx)
 		if err != nil {
@@ -277,7 +284,7 @@ func (r *MgRPC) recvLoop(ctx context.Context, c codec.Codec) {
 	}
 }
 
-func (r *MgRPC) Call(
+func (r *mgRPCImpl) Call(
 	ctx context.Context, dst string, cmd *frame.Command,
 ) (*frame.Response, error) {
 	if cmd.ID == 0 {
@@ -311,7 +318,7 @@ func (r *MgRPC) Call(
 	}
 }
 
-func (r *MgRPC) SendHello(dst string) {
+func (r *mgRPCImpl) SendHello(dst string) {
 	hello := &frame.Command{
 		Cmd: "/v1/Hello",
 	}
