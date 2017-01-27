@@ -2,7 +2,7 @@
  * Copyright (c) 2016 Cesanta Software Limited
  * All rights reserved
  *
- * Implements mg_upd interface.defined in mgos_updater_hal.h
+ * Implements mg_upd interface defined in mgos_updater_hal.h
  */
 
 #include <inttypes.h>
@@ -25,40 +25,19 @@
 #define FW_SLOT_SIZE 0x100000
 #define UPDATER_MIN_BLOCK_SIZE 2048
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 struct file_info {
-  SLIST_ENTRY(file_info) entries;
-
   char sha1_sum[40];
   char file_name[50];
   uint32_t size;
   spiffs_file file;
 };
 
-enum part_info_type { ptNone, ptBIN, ptFILES };
-
 struct part_info {
-  enum part_info_type type;
   uint32_t addr;
+  int size;
   int done;
-  int disabled;
-  int remote_size;
-  uint32 remote_addr;
 
-  union {
-    struct file_info fi;
-    struct {
-      char dir_name[50];
-      SLIST_HEAD(files, file_info) fhead;
-      struct file_info *current_file;
-      int count;
-      uint32_t size;
-      spiffs fs;
-      uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
-      uint8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
-    } files;
-  };
+  struct file_info fi;
 };
 
 struct mgos_upd_ctx {
@@ -101,27 +80,17 @@ const char *mgos_upd_get_status_msg(struct mgos_upd_ctx *ctx) {
 
 static int fill_file_part_info(struct mgos_upd_ctx *ctx, struct json_token *tok,
                                const char *part_name, struct part_info *pi) {
-  pi->type = ptNone;
-
+  uint32_t addr;
   struct json_token sha = JSON_INVALID_TOKEN;
   struct json_token src = JSON_INVALID_TOKEN;
+  json_scanf(tok->ptr, tok->len, "{addr: %u, cs_sha1: %T, src: %T, size: %d}", &addr, &sha, &src, &pi->size);
 
-  pi->remote_addr = 0;
-  json_scanf(tok->ptr, tok->len, "{addr: %u, cs_sha1: %T, src: %T, size: %d}",
-             &pi->remote_addr, &sha, &src, &pi->remote_size);
-
-  if (pi->remote_addr == 0) {
-    /* No part found, it might be ok (will be decided later) */
-    return -1;
-  }
-
-  LOG(LL_DEBUG, ("Addr to write from manifest: %X", pi->addr));
   /*
    * manifest always contain relative addresses, we have to
    * convert them to absolute (+0x100000 for slot #1)
    */
-  pi->addr = pi->remote_addr + ctx->slot_to_write * FW_SLOT_SIZE;
-  LOG(LL_DEBUG, ("Addr to write to use: %X", pi->addr));
+  pi->addr = addr + ctx->slot_to_write * FW_SLOT_SIZE;
+  LOG(LL_DEBUG, ("Writeing 0x%x -> 0x%x", addr, pi->addr));
 
   if (sha.len == 0) {
     CONSOLE_LOG(LL_ERROR, ("cs_sha1 token not found in manifest"));
@@ -140,98 +109,10 @@ static int fill_file_part_info(struct mgos_upd_ctx *ctx, struct json_token *tok,
       ("Part %s : addr: %X sha1: %.*s src: %s", part_name, (int) pi->addr,
        sizeof(pi->fi.sha1_sum), pi->fi.sha1_sum, pi->fi.file_name));
 
-  pi->type = ptBIN;
   return 1;
 }
 
-void fs_dir_parse_cb(void *callback_data, const char *name, size_t name_len,
-                     const char *path, const struct json_token *token) {
-  struct part_info *pi = (struct part_info *) callback_data;
-
-  (void) name;
-  (void) name_len;
-
-  if (token->type != JSON_TYPE_STRING) {
-    /*
-     * At this moment we are looking for `cs_sha1`, and
-     * token will have type JSON_TYPE_STRING
-     */
-
-    return;
-  }
-
-  const char sha1_name[] = "cs_sha1";
-  int path_len = strlen(path);
-
-  if (path_len < (int) sizeof(sha1_name) - 1) {
-    /* Probably, something is wrong with manifest */
-    LOG(LL_ERROR, ("Unexpected path: %s", path));
-    return;
-  }
-
-  if (token->len != SHA1SUM_LEN) {
-    LOG(LL_ERROR, ("Malformed sha1"));
-    return;
-  }
-  struct file_info *fi = calloc(1, sizeof(*pi));
-
-  if (fi == NULL) {
-    LOG(LL_ERROR, ("Out of memory"));
-    return;
-  }
-
-  strncpy(fi->file_name, path + 1 /* skip . */,
-          strlen(path) - sizeof(sha1_name) - 1);
-  strncpy(fi->sha1_sum, token->ptr, SHA1SUM_LEN);
-
-  LOG(LL_DEBUG, ("Adding file to write: %s (%.*s)", fi->file_name, SHA1SUM_LEN,
-                 fi->sha1_sum));
-
-  SLIST_INSERT_HEAD(&pi->files.fhead, fi, entries);
-
-  pi->files.count++;
-}
-
 void bin2hex(const uint8_t *src, int src_len, char *dst);
-
-static int compare_digest(spiffs *fs, const char *file_name,
-                          const char *received_digest) {
-  uint8_t read_buf[4 * 100];
-  char written_checksum[50];
-
-  cs_sha1_ctx sha1ctx;
-  cs_sha1_init(&sha1ctx);
-
-  spiffs_file file = SPIFFS_open(fs, file_name, SPIFFS_RDONLY, 0);
-  if (file < 0) {
-    int32_t err_no = SPIFFS_errno(fs);
-    if (err_no == SPIFFS_ERR_NOT_FOUND) {
-      /* If file is absent on FS, treat this as "should be updated" */
-      return 0;
-    }
-    CONSOLE_LOG(LL_ERROR, ("Failed to open %s (%d)", file_name, err_no));
-    return -1;
-  }
-
-  int32_t res;
-  while ((res = SPIFFS_read(fs, file, read_buf, sizeof(read_buf))) >= 0) {
-    cs_sha1_update(&sha1ctx, read_buf, res);
-  }
-
-  cs_sha1_final(read_buf, &sha1ctx);
-
-  SPIFFS_close(fs, file);
-
-  bin2hex(read_buf, 20, written_checksum);
-
-  int ret = (strncasecmp(written_checksum, received_digest, SHA1SUM_LEN) == 0);
-  if (!ret) {
-    LOG(LL_DEBUG, ("%s: on disk %.*s man: %.*s", file_name, SHA1SUM_LEN,
-                   written_checksum, SHA1SUM_LEN, received_digest));
-  }
-
-  return ret;
-}
 
 int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum);
 
@@ -257,12 +138,6 @@ int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
     ctx->status_msg = "Firmware part is missing";
     return -1;
   }
-
-  ctx->fw_part.addr =
-      ctx->fw_part.remote_addr + ctx->slot_to_write * FW_SLOT_SIZE;
-
-  LOG(LL_DEBUG,
-      ("FW addr: 0x%x size: %d", ctx->fw_part.addr, ctx->fw_part.remote_size));
 
   if (fill_file_part_info(ctx, &fs, "fs", &ctx->fs_part) < 0) {
     ctx->status_msg = "FS part is missing";
@@ -338,103 +213,15 @@ static int prepare_to_write(struct mgos_upd_ctx *ctx,
   return 1;
 }
 
-struct file_info *get_file_info_from_manifest(struct part_info *pi,
-                                              const char *current_file_name) {
-  struct file_info *fi;
-  int dir_len = strlen(pi->files.dir_name);
-  SLIST_FOREACH(fi, &pi->files.fhead, entries) {
-    /* In zip we have dir_name + file_name */
-    if (strncmp(current_file_name, pi->files.dir_name, dir_len) == 0 &&
-        current_file_name[dir_len] == '/' &&
-        strcmp(current_file_name + dir_len + 1, fi->file_name) == 0) {
-      LOG(LL_DEBUG, ("%s should be updated", current_file_name));
-      return fi;
-    }
-    /* in file-by-file update we have filename only */
-    if (strcmp(current_file_name, fi->file_name) == 0) {
-      LOG(LL_DEBUG, ("%s should be updated", current_file_name));
-      return fi;
-    }
-  }
-
-  return NULL;
-}
-
-int mgos_upd_get_next_file(struct mgos_upd_ctx *ctx, char *buf,
-                           size_t buf_size) {
-  if (ctx->fw_part.done == 0) {
-    if (ctx->fw_part.type == ptNone) {
-      CONSOLE_LOG(LL_WARN,
-                  ("Fw section not updated because not mentioned in manifest"));
-      ctx->fw_part.done = 1;
-    } else {
-      /* if fw_part must be updated, just send its name like usual one */
-      strcpy(buf, ctx->fw_part.fi.file_name);
-      return 1;
-    }
-  };
-
-  if (SLIST_EMPTY(&ctx->fs_dir_part.files.fhead)) {
-    return 0; /* All files done */
-  }
-
-  struct file_info *fi = SLIST_FIRST(&ctx->fs_dir_part.files.fhead);
-  if (strlen(fi->file_name) + strlen(ctx->fs_dir_part.files.dir_name) >
-      buf_size) {
-    LOG(LL_ERROR, ("File name is too long"));
-    return -1;
-  }
-
-  int dir_len = strlen(ctx->fs_dir_part.files.dir_name);
-  strcpy(buf, ctx->fs_dir_part.files.dir_name);
-  buf[dir_len] = '/';
-  strcpy(buf + dir_len + 1, fi->file_name);
-
-  LOG(LL_DEBUG, ("File to request: %s", buf));
-
-  return 1;
-}
-
-/* 0 - no files to process, 1 - there are files to proceed */
-int mgos_upd_complete_file_update(struct mgos_upd_ctx *ctx,
-                                  const char *file_name) {
-  struct file_info *fi, *fi_temp;
-  SLIST_FOREACH_SAFE(fi, &ctx->fs_dir_part.files.fhead, entries, fi_temp) {
-    int dir_len = strlen(ctx->fs_dir_part.files.dir_name);
-    if (strncmp(file_name, ctx->fs_dir_part.files.dir_name, dir_len) == 0 &&
-        strcmp(file_name + dir_len + 1, fi->file_name) == 0) {
-      LOG(LL_DEBUG, ("Removing %s", file_name));
-      SLIST_REMOVE(&ctx->fs_dir_part.files.fhead, fi, file_info, entries);
-      break;
-    }
-  }
-
-  return !SLIST_EMPTY(&ctx->fs_dir_part.files.fhead);
-}
-
 enum mgos_upd_file_action mgos_upd_file_begin(
     struct mgos_upd_ctx *ctx, const struct mgos_upd_file_info *fi) {
   int ret;
   ctx->status_msg = "Failed to update file";
   LOG(LL_DEBUG, ("fi->name=%s", fi->name));
-  struct file_info *mfi;
   if (strcmp(fi->name, ctx->fw_part.fi.file_name) == 0) {
     ret = prepare_to_write(ctx, fi, &ctx->fw_part);
   } else if (strcmp(fi->name, ctx->fs_part.fi.file_name) == 0) {
     ret = prepare_to_write(ctx, fi, &ctx->fs_part);
-  } else if ((mfi = get_file_info_from_manifest(&ctx->fs_dir_part, fi->name)) !=
-             NULL) {
-    ctx->current_part = &ctx->fs_dir_part;
-    mfi->file = SPIFFS_open(&ctx->fs_dir_part.files.fs, mfi->file_name,
-                            SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
-    if (mfi->file < 0) {
-      LOG(LL_ERROR, ("Cannot open file %s (%d)", mfi->file_name,
-                     SPIFFS_errno(&ctx->fs_dir_part.files.fs)));
-      return MGOS_UPDATER_ABORT;
-    }
-    ctx->current_part->files.current_file = mfi;
-
-    return MGOS_UPDATER_PROCESS_FILE;
   } else {
     /* We need only fw & fs files, the rest just send to /dev/null */
     return MGOS_UPDATER_SKIP_FILE;
@@ -476,21 +263,6 @@ int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
   LOG(LL_DEBUG, ("File size: %u, received: %u to_write: %u", fi->size,
                  fi->processed, data.len));
 
-  if (ctx->current_part->files.current_file != NULL) {
-    LOG(LL_DEBUG, ("Processing separated file %s",
-                   ctx->current_part->files.current_file->file_name));
-    int32_t res = SPIFFS_write(&ctx->fs_dir_part.files.fs,
-                               ctx->current_part->files.current_file->file,
-                               (void *) data.p, data.len);
-    if (res < 0) {
-      CONSOLE_LOG(LL_ERROR, ("Failed to write %s",
-                             ctx->current_part->files.current_file->file_name));
-    } else {
-      LOG(LL_DEBUG, ("Writen %d bytes", res));
-    }
-
-    return res;
-  }
   if (data.len < UPDATER_MIN_BLOCK_SIZE &&
       fi->size - fi->processed > UPDATER_MIN_BLOCK_SIZE) {
     return 0;
@@ -520,7 +292,6 @@ int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
   }
 
   const uint32_t rest = fi->size - fi->processed - bytes_to_write_aligned;
-  LOG(LL_DEBUG, ("Rest=%u", rest));
   if (rest > 0 && rest < 4 && data.len >= 4) {
     /* File size is not aligned to 4, using align buf to write the tail */
     uint8_t align_buf[4] = {0xFF, 0xFF, 0xFF, 0xFF};
@@ -541,28 +312,13 @@ int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
 int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
   assert(tail.len == 0);
-  if (ctx->current_part->type == ptFILES) {
-    LOG(LL_DEBUG,
-        ("File %s updated", ctx->current_part->files.current_file->file_name));
-    SPIFFS_close(&ctx->current_part->files.fs,
-                 ctx->current_part->files.current_file->file);
-    if (compare_digest(&ctx->current_part->files.fs,
-                       ctx->current_part->files.current_file->file_name,
-                       ctx->current_part->files.current_file->sha1_sum) != 1) {
-      ctx->status_msg = "Invalid checksum";
-      return -1;
-    }
-    ctx->current_part->done++;
-    return tail.len;
-  } else {
-    if (verify_checksum(ctx->current_part->addr, fi->size,
-                        ctx->current_part->fi.sha1_sum) < 0) {
-      ctx->status_msg = "Invalid checksum";
-      return -1;
-    }
-    ctx->current_part->done = 1;
-    return tail.len;
+  if (verify_checksum(ctx->current_part->addr, fi->size,
+                      ctx->current_part->fi.sha1_sum) < 0) {
+    ctx->status_msg = "Invalid checksum";
+    return -1;
   }
+  ctx->current_part->done = 1;
+  return tail.len;
 }
 
 int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
@@ -585,14 +341,8 @@ int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
 
   cfg->previous_rom = cfg->current_rom;
   cfg->current_rom = ctx->slot_to_write;
-  if (ctx->fs_dir_part.done != 0) {
-    /* FS updated by file */
-    cfg->fs_addresses[cfg->current_rom] = ctx->fs_dir_part.addr;
-    cfg->fs_sizes[cfg->current_rom] = ctx->fs_dir_part.files.size;
-  } else {
-    cfg->fs_addresses[cfg->current_rom] = ctx->fs_part.addr;
-    cfg->fs_sizes[cfg->current_rom] = ctx->fs_part.fi.size;
-  }
+  cfg->fs_addresses[cfg->current_rom] = ctx->fs_part.addr;
+  cfg->fs_sizes[cfg->current_rom] = ctx->fs_part.fi.size;
   cfg->roms[cfg->current_rom] = ctx->fw_part.addr;
   cfg->roms_sizes[cfg->current_rom] = ctx->fw_part.fi.size;
   cfg->is_first_boot = 1;

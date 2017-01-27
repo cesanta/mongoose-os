@@ -44,9 +44,6 @@ MGOS_ENABLE_HEAP_LOG ?= 0
 # This instruments every function and increases code size significantly.
 MGOS_ENABLE_CALL_TRACE ?= 0
 
-CREATE_SPIFFS_FS ?= 1
-CREATE_RAW_FS ?= 0
-
 FLASH_SIZE ?= 4M
 FS_SIZE ?= 128K
 FS_BLOCK_SIZE = 4096
@@ -175,10 +172,7 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOC
               -DMGOS_NUM_GPIO=16 \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
-ifeq "${CREATE_SPIFFS_FS}" "1"
-  FS_IMG = $(FW_STAGING_DIR)/$(FS_ADDR).bin
-endif
-
+FS_IMG = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/fw.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
@@ -290,15 +284,8 @@ FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
            boot_cfg:src=$(RBOOT_CFG_INIT),addr=0x1000 \
            rf_cal_data:src=$(RF_CAL_DATA_INIT),addr=$(FW_RF_CAL_DATA_ADDR) \
            fw:src=$(FW_FILE_2_OUT),addr=$(FW_FILE_2_ADDR) \
-           sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
-
-ifeq "$(CREATE_SPIFFS_FS)" "1"
-  FW_PARTS += fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
-endif
-
-ifeq "$(CREATE_RAW_FS)" "1"
-  FW_PARTS += fs_dir:src=$(FS_STAGING_DIR),type=fs_dir,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
-endif
+           sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR) \
+           fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(_FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
