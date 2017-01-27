@@ -11,7 +11,6 @@
  * necessary for Mongoose core to work w/o BSD socket headers.
  */
 
-
 /*
  * ESP LWIP is compiled w/o socket support but we need a few declarations
  * for Mongoose core (sockaddr_in and such).

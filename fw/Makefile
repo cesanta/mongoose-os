@@ -9,7 +9,7 @@ all: format
 	$(MAKE) -C platforms/posix
 
 format:
-	@(for i in src examples platforms/cc3200 platforms/esp32 platforms/esp8266/user platforms/esp8266/tools platforms/pic32/src platforms/stm32; do \
+	@(for i in src examples platforms/cc3200 platforms/esp32 platforms/esp8266 platforms/esp8266/tools platforms/pic32/src platforms/stm32; do \
        /usr/bin/find $$i -type f -name "*.[ch]" -o -name "*.cpp" | grep -v /\.build/ | grep -v /system_config/; \
     done) | xargs $(CLANG_FORMAT) -i
 

@@ -1,3 +1,4 @@
+/* clang-format off */
 /*  xtruntime-frames.h  -  exception stack frames for single-threaded run-time  */
 /* $Id: //depot/rel/Boreal/Xtensa/OS/include/xtensa/xtruntime-frames.h#2 $ */
 

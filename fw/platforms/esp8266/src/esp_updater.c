@@ -19,37 +19,29 @@
 #include "fw/src/mgos_updater_rpc.h"
 #include "fw/src/mgos_updater_hal.h"
 #include "fw/src/mgos_updater_util.h"
+#include "fw/platforms/esp8266/src/esp_flash_writer.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
 
-#define SHA1SUM_LEN 40
+#define SHA1SUM_LEN 20
 #define FW_SLOT_SIZE 0x100000
-#define UPDATER_MIN_BLOCK_SIZE 2048
 
-struct file_info {
-  char sha1_sum[40];
-  char file_name[50];
-  uint32_t size;
-  spiffs_file file;
-};
-
-struct part_info {
-  uint32_t addr;
-  int size;
-  int done;
-
-  struct file_info fi;
+struct slot_info {
+  int id;
+  uint32_t fw_addr;
+  uint32_t fw_size;
+  uint32_t fs_addr;
+  uint32_t fs_size;
 };
 
 struct mgos_upd_ctx {
-  struct part_info fw_part;
-  struct part_info fs_part;
-  struct part_info fs_dir_part;
-
-  int slot_to_write;
-  struct part_info *current_part;
-  uint32_t current_write_address;
-  uint32_t erased_till;
   const char *status_msg;
+  struct slot_info write_slot;
+  struct json_token fw_file_name, fw_cs_sha1;
+  struct json_token fs_file_name, fs_cs_sha1;
+  uint32_t fw_size, fs_size;
+
+  struct esp_flash_write_ctx wctx;
+  const struct json_token *wcs;
 };
 
 rboot_config *get_rboot_config(void) {
@@ -66,8 +58,29 @@ rboot_config *get_rboot_config(void) {
   return cfg;
 }
 
-uint32_t get_fs_size(uint8_t rom) {
-  return get_rboot_config()->fs_sizes[rom];
+static void get_slot_info(int id, struct slot_info *si) {
+  memset(si, 0, sizeof(*si));
+  si->id = id;
+  if (id == 0) {
+    si->fw_addr = FW1_ADDR;
+    si->fs_addr = FW1_FS_ADDR;
+  } else {
+    si->fw_addr = FW2_ADDR;
+    si->fs_addr = FW2_FS_ADDR;
+  }
+  si->fw_size = FW_SIZE;
+  si->fs_size = FS_SIZE;
+}
+
+/*
+static void get_active_slot(struct slot_info *si) {
+  get_slot_info(get_rboot_config()->current_rom, si);
+}
+*/
+
+static void get_inactive_slot(struct slot_info *si) {
+  int inactive_slot = (get_rboot_config()->current_rom == 0 ? 1 : 0);
+  get_slot_info(inactive_slot, si);
 }
 
 struct mgos_upd_ctx *mgos_upd_ctx_create(void) {
@@ -78,78 +91,42 @@ const char *mgos_upd_get_status_msg(struct mgos_upd_ctx *ctx) {
   return ctx->status_msg;
 }
 
-static int fill_file_part_info(struct mgos_upd_ctx *ctx, struct json_token *tok,
-                               const char *part_name, struct part_info *pi) {
-  uint32_t addr;
-  struct json_token sha = JSON_INVALID_TOKEN;
-  struct json_token src = JSON_INVALID_TOKEN;
-  json_scanf(tok->ptr, tok->len, "{addr: %u, cs_sha1: %T, src: %T, size: %d}", &addr, &sha, &src, &pi->size);
-
-  /*
-   * manifest always contain relative addresses, we have to
-   * convert them to absolute (+0x100000 for slot #1)
-   */
-  pi->addr = addr + ctx->slot_to_write * FW_SLOT_SIZE;
-  LOG(LL_DEBUG, ("Writeing 0x%x -> 0x%x", addr, pi->addr));
-
-  if (sha.len == 0) {
-    CONSOLE_LOG(LL_ERROR, ("cs_sha1 token not found in manifest"));
-    return -1;
-  }
-  memcpy(pi->fi.sha1_sum, sha.ptr, sizeof(pi->fi.sha1_sum));
-
-  if (src.len <= 0 || src.len >= (int) sizeof(pi->fi.file_name)) {
-    CONSOLE_LOG(LL_ERROR, ("src token not found in manifest"));
+int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
+  struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN;
+  if (json_scanf(parts->ptr, parts->len, "{fw: %T, fs: %T}", &fw, &fs) != 2) {
+    ctx->status_msg = "Invalid manifest";
     return -1;
   }
 
-  memcpy(pi->fi.file_name, src.ptr, src.len);
+  if (json_scanf(parts->ptr, parts->len,
+                 "{fw: {src: %T, cs_sha1: %T}, fs: {src: %T, cs_sha1: %T}}",
+                 &ctx->fw_file_name, &ctx->fw_cs_sha1, &ctx->fs_file_name,
+                 &ctx->fs_cs_sha1) != 4) {
+    ctx->status_msg = "Incomplete update package";
+    return -3;
+  }
 
-  LOG(LL_DEBUG,
-      ("Part %s : addr: %X sha1: %.*s src: %s", part_name, (int) pi->addr,
-       sizeof(pi->fi.sha1_sum), pi->fi.sha1_sum, pi->fi.file_name));
+  if (ctx->fw_cs_sha1.len != SHA1SUM_LEN * 2 ||
+      ctx->fs_cs_sha1.len != SHA1SUM_LEN * 2) {
+    ctx->status_msg = "Invalid checksum format";
+    return -4;
+  }
+
+  get_inactive_slot(&ctx->write_slot);
+
+  LOG(LL_INFO, ("FW: %.*s -> 0x%x, FS %.*s -> 0x%x",
+                (int) ctx->fw_file_name.len, ctx->fw_file_name.ptr,
+                ctx->write_slot.fw_addr, (int) ctx->fs_file_name.len,
+                ctx->fs_file_name.ptr, ctx->write_slot.fs_addr));
 
   return 1;
 }
 
 void bin2hex(const uint8_t *src, int src_len, char *dst);
 
-int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum);
-
-int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
-  const rboot_config *cfg = get_rboot_config();
-  struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN,
-                    fs_dir = JSON_INVALID_TOKEN;
-  if (cfg == NULL) {
-    ctx->status_msg = "Failed to get rBoot config";
-    return -1;
-  }
-
-  json_scanf(parts->ptr, parts->len, "{fw: %T, fs: %T, fs_dir: %T}", &fw, &fs,
-             &fs_dir);
-
-  ctx->slot_to_write = (cfg->current_rom == 0 ? 1 : 0);
-  LOG(LL_DEBUG, ("Slot to write: %d", ctx->slot_to_write));
-
-  int fw_part_present =
-      (fill_file_part_info(ctx, &fw, "fw", &ctx->fw_part) >= 0);
-
-  if (!fw_part_present) {
-    ctx->status_msg = "Firmware part is missing";
-    return -1;
-  }
-
-  if (fill_file_part_info(ctx, &fs, "fs", &ctx->fs_part) < 0) {
-    ctx->status_msg = "FS part is missing";
-    return -1;
-  }
-
-  return 1;
-}
-
-int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
-  uint8_t read_buf[4 * 100];
-  char written_checksum[50];
+static bool verify_checksum(uint32_t addr, size_t len, const char *exp_cs,
+                            bool critical) {
+  uint32_t read_buf[16];
   int to_read;
 
   cs_sha1_ctx ctx;
@@ -164,197 +141,120 @@ int verify_checksum(uint32_t addr, size_t len, const char *provided_checksum) {
       to_read = len;
     }
 
-    if (spi_flash_read(addr, (uint32_t *) read_buf, to_read) != 0) {
-      CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %X", to_read, addr));
-      return -1;
+    if (spi_flash_read(addr, read_buf, to_read) != 0) {
+      LOG(LL_ERROR, ("Failed to read %d bytes from %X", to_read, addr));
+      return false;
     }
 
-    cs_sha1_update(&ctx, read_buf, to_read);
+    cs_sha1_update(&ctx, (uint8_t *) read_buf, to_read);
     addr += to_read;
     len -= to_read;
 
     mgos_wdt_feed();
   }
 
-  cs_sha1_final(read_buf, &ctx);
-  bin2hex(read_buf, 20, written_checksum);
-  LOG(LL_DEBUG,
-      ("SHA1 %u @ 0x%x = %.*s, want %.*s", len_tmp, addr_tmp, SHA1SUM_LEN,
-       written_checksum, SHA1SUM_LEN, provided_checksum));
-
-  if (strncasecmp(written_checksum, provided_checksum, SHA1SUM_LEN) != 0) {
-    return -1;
-  } else {
-    return 1;
-  }
-}
-
-static int prepare_to_write(struct mgos_upd_ctx *ctx,
-                            const struct mgos_upd_file_info *fi,
-                            struct part_info *part) {
-  if (part->done != 0) {
-    LOG(LL_DEBUG, ("Skipping %s", fi->name));
-    return 0;
-  }
-  ctx->current_part = part;
-  ctx->current_part->fi.size = fi->size;
-  ctx->current_write_address = part->addr;
-  ctx->erased_till = part->addr;
-  /* See if current content is the same. */
-  if (verify_checksum(part->addr, fi->size, part->fi.sha1_sum) == 1) {
-    CONSOLE_LOG(LL_INFO,
-                ("Digest matched, skipping %s %u @ 0x%x (%.*s)", fi->name,
-                 fi->size, part->addr, SHA1SUM_LEN, part->fi.sha1_sum));
-    part->done = 1;
-    return 0;
-  }
-  CONSOLE_LOG(LL_INFO, ("Writing %s %u @ 0x%x (%.*s)", fi->name, fi->size,
-                        part->addr, SHA1SUM_LEN, part->fi.sha1_sum));
-  return 1;
+  cs_sha1_final((uint8_t *) read_buf, &ctx);
+  char written_checksum[SHA1SUM_LEN * 2 + 1];
+  bin2hex((uint8_t *) read_buf, SHA1SUM_LEN, written_checksum);
+  bool ret = (strncasecmp(written_checksum, exp_cs, SHA1SUM_LEN * 2) == 0);
+  LOG((ret || !critical ? LL_DEBUG : LL_ERROR),
+      ("SHA1 %u @ 0x%x = %.*s, want %.*s", len_tmp, addr_tmp, SHA1SUM_LEN * 2,
+       written_checksum, SHA1SUM_LEN * 2, exp_cs));
+  return ret;
 }
 
 enum mgos_upd_file_action mgos_upd_file_begin(
     struct mgos_upd_ctx *ctx, const struct mgos_upd_file_info *fi) {
-  int ret;
-  ctx->status_msg = "Failed to update file";
-  LOG(LL_DEBUG, ("fi->name=%s", fi->name));
-  if (strcmp(fi->name, ctx->fw_part.fi.file_name) == 0) {
-    ret = prepare_to_write(ctx, fi, &ctx->fw_part);
-  } else if (strcmp(fi->name, ctx->fs_part.fi.file_name) == 0) {
-    ret = prepare_to_write(ctx, fi, &ctx->fs_part);
+  bool res = false;
+  struct esp_flash_write_ctx *wctx = &ctx->wctx;
+  if (strncmp(fi->name, ctx->fw_file_name.ptr, ctx->fw_file_name.len) == 0) {
+    res = esp_init_flash_write_ctx(wctx, ctx->write_slot.fw_addr,
+                                   ctx->write_slot.fw_size);
+    ctx->wcs = &ctx->fw_cs_sha1;
+    ctx->fw_size = fi->size;
+  } else if (strncmp(fi->name, ctx->fs_file_name.ptr, ctx->fs_file_name.len) ==
+             0) {
+    res = esp_init_flash_write_ctx(wctx, ctx->write_slot.fs_addr,
+                                   ctx->write_slot.fs_size);
+    ctx->wcs = &ctx->fs_cs_sha1;
+    ctx->fs_size = fi->size;
   } else {
-    /* We need only fw & fs files, the rest just send to /dev/null */
+    LOG(LL_DEBUG, ("Not interesting: %s", fi->name));
     return MGOS_UPDATER_SKIP_FILE;
   }
-  if (ret < 0) return MGOS_UPDATER_ABORT;
-  return (ret == 0 ? MGOS_UPDATER_SKIP_FILE : MGOS_UPDATER_PROCESS_FILE);
-}
-
-static int prepare_flash(struct mgos_upd_ctx *ctx, uint32_t bytes_to_write) {
-  while (ctx->current_write_address + bytes_to_write > ctx->erased_till) {
-    uint32_t sec_no = ctx->erased_till / FLASH_SECTOR_SIZE;
-
-    if ((ctx->erased_till % FLASH_ERASE_BLOCK_SIZE) == 0 &&
-        ctx->current_part->addr + ctx->current_part->fi.size >=
-            ctx->erased_till + FLASH_ERASE_BLOCK_SIZE) {
-      LOG(LL_DEBUG, ("Erasing block @sector %X", sec_no));
-      uint32_t block_no = ctx->erased_till / FLASH_ERASE_BLOCK_SIZE;
-      if (SPIEraseBlock(block_no) != 0) {
-        CONSOLE_LOG(LL_ERROR, ("Failed to erase flash block %X", block_no));
-        return -1;
-      }
-      ctx->erased_till = (block_no + 1) * FLASH_ERASE_BLOCK_SIZE;
-    } else {
-      LOG(LL_DEBUG, ("Erasing sector %X", sec_no));
-      if (spi_flash_erase_sector(sec_no) != 0) {
-        CONSOLE_LOG(LL_ERROR, ("Failed to erase flash sector %X", sec_no));
-        return -1;
-      }
-      ctx->erased_till = (sec_no + 1) * FLASH_SECTOR_SIZE;
-    }
+  if (!res) {
+    ctx->status_msg = "Failed to start write";
+    return MGOS_UPDATER_ABORT;
   }
-
-  return 1;
+  if (fi->size > wctx->max_size) {
+    LOG(LL_ERROR, ("Cannot write %s (%u) @ 0x%x: max size %u", fi->name,
+                   fi->size, wctx->addr, wctx->max_size));
+    ctx->status_msg = "Image too big";
+    return MGOS_UPDATER_ABORT;
+  }
+  wctx->max_size = fi->size;
+  if (verify_checksum(wctx->addr, fi->size, ctx->wcs->ptr, false)) {
+    LOG(LL_INFO, ("Skip writing %s (%u) @ 0x%x (digest matches)", fi->name,
+                  fi->size, wctx->addr));
+    return MGOS_UPDATER_SKIP_FILE;
+  }
+  LOG(LL_INFO,
+      ("Start writing %s (%u) @ 0x%x", fi->name, fi->size, wctx->addr));
+  return MGOS_UPDATER_PROCESS_FILE;
 }
 
 int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
                        const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
-  LOG(LL_DEBUG, ("File size: %u, received: %u to_write: %u", fi->size,
-                 fi->processed, data.len));
-
-  if (data.len < UPDATER_MIN_BLOCK_SIZE &&
-      fi->size - fi->processed > UPDATER_MIN_BLOCK_SIZE) {
-    return 0;
+  int num_written = esp_flash_write(&ctx->wctx, data);
+  if (num_written < 0) {
+    ctx->status_msg = "Write failed";
   }
-
-  if (prepare_flash(ctx, data.len) < 0) {
-    ctx->status_msg = "Failed to erase flash";
-    return -1;
-  }
-
-  /* Write buffer size must be aligned to 4 */
-  int bytes_processed = 0;
-  uint32_t bytes_to_write_aligned = data.len & -4;
-  if (bytes_to_write_aligned > 0) {
-    LOG(LL_DEBUG, ("Writing %u bytes @%X", bytes_to_write_aligned,
-                   ctx->current_write_address));
-
-    if (spi_flash_write(ctx->current_write_address, (uint32_t *) data.p,
-                        bytes_to_write_aligned) != 0) {
-      ctx->status_msg = "Failed to write to flash";
-      return -1;
-    }
-    data.p += bytes_to_write_aligned;
-    data.len -= bytes_to_write_aligned;
-    ctx->current_write_address += bytes_to_write_aligned;
-    bytes_processed += bytes_to_write_aligned;
-  }
-
-  const uint32_t rest = fi->size - fi->processed - bytes_to_write_aligned;
-  if (rest > 0 && rest < 4 && data.len >= 4) {
-    /* File size is not aligned to 4, using align buf to write the tail */
-    uint8_t align_buf[4] = {0xFF, 0xFF, 0xFF, 0xFF};
-    memcpy(align_buf, data.p, rest);
-    LOG(LL_DEBUG,
-        ("Writing padded %u bytes @%X", rest, ctx->current_write_address));
-    if (spi_flash_write(ctx->current_write_address, (uint32_t *) align_buf,
-                        4) != 0) {
-      ctx->status_msg = "Failed to write to flash";
-      return -1;
-    }
-    bytes_processed += rest;
-  }
-
-  return bytes_processed;
+  (void) fi;
+  return num_written;
 }
 
 int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
-  assert(tail.len == 0);
-  if (verify_checksum(ctx->current_part->addr, fi->size,
-                      ctx->current_part->fi.sha1_sum) < 0) {
+  assert(tail.len < 4);
+  if (tail.len > 0 && esp_flash_write(&ctx->wctx, tail) != (int) tail.len) {
+    ctx->status_msg = "Tail write failed";
+    return -1;
+  }
+  if (!verify_checksum(ctx->wctx.addr, fi->size, ctx->wcs->ptr, true)) {
     ctx->status_msg = "Invalid checksum";
     return -1;
   }
-  ctx->current_part->done = 1;
+  memset(&ctx->wctx, 0, sizeof(ctx->wctx));
   return tail.len;
 }
 
 int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
-  if (!ctx->fw_part.done) {
+  if (ctx->fw_size == 0) {
     ctx->status_msg = "Missing fw part";
     return -1;
   }
-  if (!ctx->fs_part.done && ctx->fs_dir_part.done == 0) {
+  if (ctx->fs_size == 0) {
     ctx->status_msg = "Missing fs part";
     return -2;
   }
 
   rboot_config *cfg = get_rboot_config();
-  if (ctx->slot_to_write == cfg->current_rom) {
-    LOG(LL_INFO, ("Using previous FW"));
-    cfg->user_flags = 1;
-    rboot_set_config(cfg);
-    return 1;
-  }
-
   cfg->previous_rom = cfg->current_rom;
-  cfg->current_rom = ctx->slot_to_write;
-  cfg->fs_addresses[cfg->current_rom] = ctx->fs_part.addr;
-  cfg->fs_sizes[cfg->current_rom] = ctx->fs_part.fi.size;
-  cfg->roms[cfg->current_rom] = ctx->fw_part.addr;
-  cfg->roms_sizes[cfg->current_rom] = ctx->fw_part.fi.size;
-  cfg->is_first_boot = 1;
-  cfg->fw_updated = 1;
+  cfg->current_rom = ctx->write_slot.id;
+  cfg->fs_addresses[cfg->current_rom] = ctx->write_slot.fs_addr;
+  cfg->fs_sizes[cfg->current_rom] = ctx->fs_size;
+  cfg->roms[cfg->current_rom] = ctx->write_slot.fw_addr;
+  cfg->roms_sizes[cfg->current_rom] = ctx->fw_size;
+  cfg->is_first_boot = cfg->fw_updated = true;
   cfg->user_flags = 1;
   cfg->boot_attempts = 0;
   rboot_set_config(cfg);
 
-  LOG(LL_DEBUG,
+  LOG(LL_INFO,
       ("New rboot config: "
-       "prev_rom: %d, current_rom: %d current_rom addr: %X, "
-       "current_rom size: %d, current_fs addr: %X, current_fs size: %d",
+       "prev_rom: %d, current_rom: %d current_rom addr: 0x%x, "
+       "current_rom size: %d, current_fs addr: 0x%0x, current_fs size: %d",
        (int) cfg->previous_rom, (int) cfg->current_rom,
        cfg->roms[cfg->current_rom], cfg->roms_sizes[cfg->current_rom],
        cfg->fs_addresses[cfg->current_rom], cfg->fs_sizes[cfg->current_rom]));
@@ -363,6 +263,7 @@ int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
 }
 
 void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
+  memset(ctx, 0, sizeof(*ctx));
   free(ctx);
 }
 

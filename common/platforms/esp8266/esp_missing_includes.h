@@ -31,6 +31,9 @@ int SPIEraseBlock(uint32_t block);
 void _xtos_set_exception_handler();
 void xthal_set_intenable(unsigned);
 
+void Cache_Read_Disable_2();
+void Cache_Read_Enable_2();
+
 /* These are present in mem.h but are commented out. */
 void *pvPortMalloc(size_t xWantedSize, const char *file, int line);
 void vPortFree(void *pv, const char *file, int line);
