@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/websocket"
@@ -19,7 +20,10 @@ import (
 type MgRPC struct {
 	localAddr string
 	codec     codec.Codec
-	reqs      map[int64]req
+
+	// Map of outgoing requests, and its lock
+	reqs     map[int64]req
+	reqsLock sync.Mutex
 }
 
 type req struct {
@@ -237,10 +241,12 @@ func (r *MgRPC) recvLoop(ctx context.Context, c codec.Codec) {
 		f12, err := c.Recv(ctx)
 		if err != nil {
 			glog.Infof("error returned from codec Recv: %s, breaking out of the recvLoop", err)
+			r.reqsLock.Lock()
 			for k, v := range r.reqs {
 				v.errChan <- err
 				delete(r.reqs, k)
 			}
+			r.reqsLock.Unlock()
 			return
 		}
 
@@ -259,12 +265,14 @@ func (r *MgRPC) recvLoop(ctx context.Context, c codec.Codec) {
 
 		for _, f := range frames {
 			resp := frame.NewResponseFromFrame(f)
+			r.reqsLock.Lock()
 			if req, ok := r.reqs[resp.ID]; ok {
 				req.respChan <- resp
 				delete(r.reqs, resp.ID)
 			} else {
-				glog.Infof("unsolicited response: %v", resp)
+				glog.Infof("ignoring unsolicited response: %v", resp)
 			}
+			r.reqsLock.Unlock()
 		}
 	}
 }
@@ -279,10 +287,12 @@ func (r *MgRPC) Call(
 	respChan := make(chan *frame.Response)
 	errChan := make(chan error)
 
+	r.reqsLock.Lock()
 	r.reqs[cmd.ID] = req{
 		respChan: respChan,
 		errChan:  errChan,
 	}
+	r.reqsLock.Unlock()
 
 	f := frame.NewRequestFrame(r.localAddr, dst, "", cmd)
 	f12 := frame.NewFrameV1V2(f, 2)
@@ -294,6 +304,9 @@ func (r *MgRPC) Call(
 	case err := <-errChan:
 		return nil, errors.Trace(err)
 	case <-ctx.Done():
+		r.reqsLock.Lock()
+		delete(r.reqs, cmd.ID)
+		r.reqsLock.Unlock()
 		return nil, errors.Trace(ctx.Err())
 	}
 }
