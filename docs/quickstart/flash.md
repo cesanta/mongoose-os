@@ -1,5 +1,5 @@
 ---
-title: Flash the firmware
+title: Flash firmware
 ---
 
 Now it's time to flash a built firmware.

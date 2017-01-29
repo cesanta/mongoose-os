@@ -1,5 +1,5 @@
 ---
-title: Build the firmware
+title: Build firmware
 ---
 
 Create an empty directory, go into it, and run:
@@ -26,8 +26,15 @@ $ mos build
 ```
 
 This command packs source and filesystem files and sends them to the
-Mongoose Cloud. There, a firmware builder backend builds
-a firmware for the specified architecture and sends the result back.
+Mongoose OS cloud build backend. There is no need to setup and configure a
+toolchain on a local machine! However, it is possible to do a local build.
+In this case, your machine needs to have [Docker](https://www.docker.com/)
+installed. To build locally, do
+
+```sh
+$ mos build --local --repo PATH_TO_CLONED_MONGOOSE_OS_REPO --verbose
+```
+
 A built firmware is stored in
 the `build/fw.zip` file. Together with the built firmware, a couple of
 other build artifacts are also stored in the `build/` directory:
@@ -40,7 +47,7 @@ It is possible to set build flags to customize the build. Flags can be set
 in `mos.yml` file, `build_vars` section. Here is the list of possible
 flags, their meaning and their default values:
 
-```yml
+```yaml
 build_vars:
   MGOS_DEBUG_UART: 0                  # Enable UART debugging
   MGOS_ENABLE_RPC: 1                  # Framing protocol for communication.
@@ -53,3 +60,27 @@ build_vars:
   MGOS_ENABLE_UPDATER_RPC: 0          # Enable OTA via mg_rpc framing protocol
   MGOS_ENABLE_UPDATER_POST: 1         # Enable OTA via HTTP POST
 ```
+
+3rd party C libraries could be included in the build in two different ways.
+First, you can just copy library sources into some directory along with
+`src/` directory, and add that directory to the list of source directories:
+
+```yaml
+sources:
+  - src
+  - my_library_directory
+```
+
+Second way is suitable for Git-managed libraries:
+
+```yaml
+sources:
+  - src
+modules:
+  - src: https://github.com/cesanta/mjs
+```
+
+The example above includes an external library from Github, an embedded
+scripting engine. This is how a default Mongoose OS firmware is build, which
+included mJS scripting engine, see
+https://github.com/cesanta/mongoose-os/tree/master/fw/examples/mjs_hello 
