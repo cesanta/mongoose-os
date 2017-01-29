@@ -22,15 +22,19 @@
 #include "fw/platforms/esp8266/src/esp_flash_writer.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
 
-#define SHA1SUM_LEN 20
+#define CS_LEN 20 /* SHA1 */
+#define CS_HEX_LEN (CS_LEN * 2)
+#define CS_HEX_BUF_SIZE (CS_HEX_LEN + 1)
 #define FW_SLOT_SIZE 0x100000
 
 struct slot_info {
   int id;
   uint32_t fw_addr;
   uint32_t fw_size;
+  uint32_t fw_slot_size;
   uint32_t fs_addr;
   uint32_t fs_size;
+  uint32_t fs_slot_size;
 };
 
 struct mgos_upd_ctx {
@@ -68,15 +72,16 @@ static void get_slot_info(int id, struct slot_info *si) {
     si->fw_addr = FW2_ADDR;
     si->fs_addr = FW2_FS_ADDR;
   }
-  si->fw_size = FW_SIZE;
-  si->fs_size = FS_SIZE;
+  rboot_config *cfg = get_rboot_config();
+  si->fw_size = cfg->roms_sizes[id];
+  si->fw_slot_size = FW_SIZE;
+  si->fs_size = cfg->fs_sizes[id];
+  si->fs_slot_size = FS_SIZE;
 }
 
-/*
 static void get_active_slot(struct slot_info *si) {
   get_slot_info(get_rboot_config()->current_rom, si);
 }
-*/
 
 static void get_inactive_slot(struct slot_info *si) {
   int inactive_slot = (get_rboot_config()->current_rom == 0 ? 1 : 0);
@@ -106,60 +111,54 @@ int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
     return -3;
   }
 
-  if (ctx->fw_cs_sha1.len != SHA1SUM_LEN * 2 ||
-      ctx->fs_cs_sha1.len != SHA1SUM_LEN * 2) {
+  if (ctx->fw_cs_sha1.len != CS_HEX_LEN || ctx->fs_cs_sha1.len != CS_HEX_LEN) {
     ctx->status_msg = "Invalid checksum format";
     return -4;
   }
 
   get_inactive_slot(&ctx->write_slot);
 
-  LOG(LL_INFO, ("FW: %.*s -> 0x%x, FS %.*s -> 0x%x",
-                (int) ctx->fw_file_name.len, ctx->fw_file_name.ptr,
-                ctx->write_slot.fw_addr, (int) ctx->fs_file_name.len,
-                ctx->fs_file_name.ptr, ctx->write_slot.fs_addr));
+  LOG(LL_INFO,
+      ("Slot %d, FW: %.*s -> 0x%x, FS %.*s -> 0x%x", ctx->write_slot.id,
+       (int) ctx->fw_file_name.len, ctx->fw_file_name.ptr,
+       ctx->write_slot.fw_addr, (int) ctx->fs_file_name.len,
+       ctx->fs_file_name.ptr, ctx->write_slot.fs_addr));
 
   return 1;
 }
 
 void bin2hex(const uint8_t *src, int src_len, char *dst);
 
-static bool verify_checksum(uint32_t addr, size_t len, const char *exp_cs,
-                            bool critical) {
-  uint32_t read_buf[16];
-  int to_read;
-
+static bool compute_checksum(uint32_t addr, size_t len, char *cs_hex) {
   cs_sha1_ctx ctx;
   cs_sha1_init(&ctx);
-
-  size_t len_tmp = len;
-  uint32 addr_tmp = addr;
   while (len != 0) {
-    if (len > sizeof(read_buf)) {
-      to_read = sizeof(read_buf);
-    } else {
-      to_read = len;
-    }
-
+    uint32_t read_buf[16];
+    uint32_t to_read = sizeof(read_buf);
+    if (to_read > len) to_read = len;
     if (spi_flash_read(addr, read_buf, to_read) != 0) {
       LOG(LL_ERROR, ("Failed to read %d bytes from %X", to_read, addr));
       return false;
     }
-
     cs_sha1_update(&ctx, (uint8_t *) read_buf, to_read);
+    mgos_wdt_feed();
     addr += to_read;
     len -= to_read;
-
-    mgos_wdt_feed();
   }
+  uint8_t cs_buf[CS_LEN];
+  cs_sha1_final(cs_buf, &ctx);
+  bin2hex(cs_buf, CS_LEN, cs_hex);
+  return true;
+}
 
-  cs_sha1_final((uint8_t *) read_buf, &ctx);
-  char written_checksum[SHA1SUM_LEN * 2 + 1];
-  bin2hex((uint8_t *) read_buf, SHA1SUM_LEN, written_checksum);
-  bool ret = (strncasecmp(written_checksum, exp_cs, SHA1SUM_LEN * 2) == 0);
+static bool verify_checksum(uint32_t addr, size_t len, const char *exp_cs_hex,
+                            bool critical) {
+  char cs_hex[CS_HEX_LEN + 1];
+  if (!compute_checksum(addr, len, cs_hex)) return false;
+  bool ret = (strncasecmp(cs_hex, exp_cs_hex, CS_HEX_LEN) == 0);
   LOG((ret || !critical ? LL_DEBUG : LL_ERROR),
-      ("SHA1 %u @ 0x%x = %.*s, want %.*s", len_tmp, addr_tmp, SHA1SUM_LEN * 2,
-       written_checksum, SHA1SUM_LEN * 2, exp_cs));
+      ("SHA1 %u @ 0x%x = %.*s, want %.*s", len, addr, CS_HEX_LEN, cs_hex,
+       CS_HEX_LEN, exp_cs_hex));
   return ret;
 }
 
@@ -169,13 +168,13 @@ enum mgos_upd_file_action mgos_upd_file_begin(
   struct esp_flash_write_ctx *wctx = &ctx->wctx;
   if (strncmp(fi->name, ctx->fw_file_name.ptr, ctx->fw_file_name.len) == 0) {
     res = esp_init_flash_write_ctx(wctx, ctx->write_slot.fw_addr,
-                                   ctx->write_slot.fw_size);
+                                   ctx->write_slot.fw_slot_size);
     ctx->wcs = &ctx->fw_cs_sha1;
     ctx->fw_size = fi->size;
   } else if (strncmp(fi->name, ctx->fs_file_name.ptr, ctx->fs_file_name.len) ==
              0) {
     res = esp_init_flash_write_ctx(wctx, ctx->write_slot.fs_addr,
-                                   ctx->write_slot.fs_size);
+                                   ctx->write_slot.fs_slot_size);
     ctx->wcs = &ctx->fs_cs_sha1;
     ctx->fs_size = fi->size;
   } else {
@@ -239,17 +238,20 @@ int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
     return -2;
   }
 
+  int slot = ctx->write_slot.id;
   rboot_config *cfg = get_rboot_config();
-  cfg->previous_rom = cfg->current_rom;
-  cfg->current_rom = ctx->write_slot.id;
-  cfg->fs_addresses[cfg->current_rom] = ctx->write_slot.fs_addr;
-  cfg->fs_sizes[cfg->current_rom] = ctx->fs_size;
-  cfg->roms[cfg->current_rom] = ctx->write_slot.fw_addr;
-  cfg->roms_sizes[cfg->current_rom] = ctx->fw_size;
+  cfg->current_rom = slot;
+  cfg->previous_rom = (slot == 0 ? 1 : 0);
+  cfg->roms[slot] = ctx->write_slot.fw_addr;
+  cfg->roms_sizes[slot] = ctx->fw_size;
+  cfg->fs_addresses[slot] = ctx->write_slot.fs_addr;
+  cfg->fs_sizes[slot] = ctx->fs_size;
   cfg->is_first_boot = cfg->fw_updated = true;
-  cfg->user_flags = 1;
   cfg->boot_attempts = 0;
-  rboot_set_config(cfg);
+  if (!rboot_set_config(cfg)) {
+    ctx->status_msg = "Failed to set boot config";
+    return -3;
+  }
 
   LOG(LL_INFO,
       ("New rboot config: "
@@ -287,6 +289,70 @@ int mgos_upd_apply_update() {
   SPIFFS_unmount(&old_fs);
 
   return ret;
+}
+
+static bool copy_region(uint32_t src_addr, uint32_t dst_addr, size_t len) {
+  char cs_hex[CS_HEX_LEN + 1];
+  if (!compute_checksum(src_addr, len, cs_hex)) return false;
+  if (verify_checksum(dst_addr, len, cs_hex, false)) {
+    LOG(LL_DEBUG, ("Skip copying %u @ 0x%x -> 0x%x (digest matches)", len,
+                   src_addr, dst_addr));
+    return true;
+  }
+  LOG(LL_DEBUG,
+      ("Copy %u @ 0x%x -> 0x%x (%s)", len, src_addr, dst_addr, cs_hex));
+  struct esp_flash_write_ctx wctx;
+  if (!esp_init_flash_write_ctx(&wctx, dst_addr, len)) {
+    return false;
+  }
+  uint32_t offset = 0;
+  while (offset < len) {
+    uint32_t read_buf[128];
+    int to_read = sizeof(read_buf);
+    if (offset + to_read > len) to_read = len - offset;
+    if (spi_flash_read(src_addr + offset, read_buf, to_read) != 0) {
+      LOG(LL_ERROR, ("Failed to read %d @ 0x%x", to_read, src_addr + offset));
+      return false;
+    }
+    int num_written =
+        esp_flash_write(&wctx, mg_mk_str_n((const char *) read_buf, to_read));
+    if (num_written < 0) return false;
+    if (num_written != to_read) {
+      /* Flush last chunk */
+      int to_write = to_read - num_written;
+      num_written = esp_flash_write(
+          &wctx,
+          mg_mk_str_n(((const char *) read_buf) + num_written, to_write));
+      if (num_written != to_write) return false;
+    }
+    offset += to_read;
+    mgos_wdt_feed();
+  }
+  if (!verify_checksum(dst_addr, len, cs_hex, true)) {
+    return false;
+  }
+  return true;
+}
+
+int mgos_upd_create_snapshot() {
+  struct slot_info rsi, wsi;
+  get_active_slot(&rsi);
+  get_inactive_slot(&wsi);
+  LOG(LL_INFO, ("Snapshot: %d -> %d, "
+                "FW: 0x%x (%u) -> 0x%x, FS: 0x%x (%u) -> 0x%x",
+                rsi.id, wsi.id, rsi.fw_addr, rsi.fw_size, wsi.fw_addr,
+                rsi.fs_addr, rsi.fs_size, wsi.fs_addr));
+  if (!copy_region(rsi.fw_addr, wsi.fw_addr, rsi.fw_size)) return -2;
+  if (!copy_region(rsi.fs_addr, wsi.fs_addr, rsi.fs_size)) return -3;
+  int slot = wsi.id;
+  rboot_config *cfg = get_rboot_config();
+  cfg->roms[slot] = wsi.fw_addr;
+  cfg->roms_sizes[slot] = rsi.fw_size;
+  cfg->fs_addresses[slot] = wsi.fs_addr;
+  cfg->fs_sizes[slot] = rsi.fs_size;
+  if (!rboot_set_config(cfg)) return -4;
+  LOG(LL_INFO, ("Snapshot created"));
+  return slot;
 }
 
 void mgos_upd_boot_commit() {

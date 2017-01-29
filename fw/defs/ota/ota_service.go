@@ -26,6 +26,10 @@ var _ = trace.New
 
 const ServiceID = "http://cesanta.com/mg_rpc/serviceOTA"
 
+type CreateSnapshotResult struct {
+	Slot *int64 `json:"slot,omitempty"`
+}
+
 type ListSectionsResult struct {
 	Section  *string `json:"section,omitempty"`
 	Version  *string `json:"version,omitempty"`
@@ -43,6 +47,7 @@ type UpdateArgs struct {
 
 type Service interface {
 	Commit(ctx context.Context) error
+	CreateSnapshot(ctx context.Context) (*CreateSnapshotResult, error)
 	ListSections(ctx context.Context) ([]ListSectionsResult, error)
 	Revert(ctx context.Context) error
 	Update(ctx context.Context, args *UpdateArgs) error
@@ -73,6 +78,26 @@ func (c *_Client) Commit(ctx context.Context) (err error) {
 		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
 	}
 	return nil
+}
+
+func (c *_Client) CreateSnapshot(ctx context.Context) (res *CreateSnapshotResult, err error) {
+	cmd := &frame.Command{
+		Cmd: "OTA.CreateSnapshot",
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+
+	var r *CreateSnapshotResult
+	err = resp.Response.UnmarshalInto(&r)
+	if err != nil {
+		return nil, errors.Annotatef(err, "unmarshaling response")
+	}
+	return r, nil
 }
 
 func (c *_Client) ListSections(ctx context.Context) (res []ListSectionsResult, err error) {
@@ -128,6 +153,7 @@ func (c *_Client) Update(ctx context.Context, args *UpdateArgs) (err error) {
 //func RegisterService(i *clubby.Instance, impl Service) error {
 //s := &_Server{impl}
 //i.RegisterCommandHandler("OTA.Commit", s.Commit)
+//i.RegisterCommandHandler("OTA.CreateSnapshot", s.CreateSnapshot)
 //i.RegisterCommandHandler("OTA.ListSections", s.ListSections)
 //i.RegisterCommandHandler("OTA.Revert", s.Revert)
 //i.RegisterCommandHandler("OTA.Update", s.Update)
@@ -141,6 +167,10 @@ type _Server struct {
 
 func (s *_Server) Commit(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
 	return nil, s.impl.Commit(ctx)
+}
+
+func (s *_Server) CreateSnapshot(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	return s.impl.CreateSnapshot(ctx)
 }
 
 func (s *_Server) ListSections(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -166,6 +196,18 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
   "methods": {
     "Commit": {
       "doc": "Commit a previously initiated update."
+    },
+    "CreateSnapshot": {
+      "doc": "Creates a snapshot of the current state of the firmware, including filesystem. Currently inactive OTA slot is used for the snapshot.",
+      "result": {
+        "properties": {
+          "slot": {
+            "doc": "Which slot was used to write the snapshot.",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
     },
     "ListSections": {
       "doc": "Returns a list of components of the device's software. Each section is updated individually.",

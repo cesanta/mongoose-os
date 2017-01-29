@@ -71,13 +71,17 @@ int mgos_upd_finalize(struct mgos_upd_ctx *ctx);
 
 void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx);
 
-int mgos_upd_get_next_file(struct mgos_upd_ctx *ctx, char *buf,
-                           size_t buf_size);
-
-int mgos_upd_complete_file_update(struct mgos_upd_ctx *ctx,
-                                  const char *file_name);
-
+/* Apply update on first boot, usually involves merging filesystem. */
 int mgos_upd_apply_update();
+
+/*
+ * Create a snapshot of currently running firmware (including FS) in
+ * a currently inactive slot. There must be no uncommitted update
+ * in progress.
+ * Returns slot id used for snapshot or < 0 in case of error.
+ */
+int mgos_upd_create_snapshot();
+
 void mgos_upd_boot_commit();
 void mgos_upd_boot_revert();
 

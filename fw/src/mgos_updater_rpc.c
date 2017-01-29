@@ -125,22 +125,20 @@ static void handle_revert_req(struct mg_rpc_request_info *ri, void *cb_arg,
   (void) args;
 }
 
-/*
- * Example of notification function:
- * function upd(ev, url) {
- *      if (ev == Sys.updater.GOT_REQUEST) {
- *         print("Starting update from", url);
- *         Sys.updater.start(url);
- *       }  else if(ev == Sys.updater.NOTHING_TODO) {
- *         print("No need to update");
- *       } else if(ev == Sys.updater.FAILED) {
- *         print("Update failed");
- *       } else if(ev == Sys.updater.COMPLETED) {
- *         print("Update completed");
- *         Sys.reboot();
- *       }
- * }
- */
+static void handle_create_snapshot_req(struct mg_rpc_request_info *ri,
+                                       void *cb_arg,
+                                       struct mg_rpc_frame_info *fi,
+                                       struct mg_str args) {
+  int ret = mgos_upd_create_snapshot();
+  if (ret < 0) {
+    mg_rpc_send_errorf(ri, ret, NULL);
+  } else {
+    mg_rpc_send_responsef(ri, "{slot: %d}", ret);
+  }
+  (void) cb_arg;
+  (void) fi;
+  (void) args;
+}
 
 void mgos_updater_rpc_init(void) {
   struct mg_rpc *mg_rpc = mgos_rpc_get_global();
@@ -148,6 +146,8 @@ void mgos_updater_rpc_init(void) {
   mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Update"), handle_update_req, NULL);
   mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Commit"), handle_commit_req, NULL);
   mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Revert"), handle_revert_req, NULL);
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.CreateSnapshot"),
+                     handle_create_snapshot_req, NULL);
 }
 
 static void send_update_reply(struct mg_rpc_request_info *ri) {

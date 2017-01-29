@@ -10,6 +10,8 @@
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
+#include "fw/src/mgos_hal.h"
+
 #define FLASH_SECTOR_SIZE 0x1000
 #define FLASH_BLOCK_SIZE 0x10000
 
@@ -41,6 +43,7 @@ int esp_flash_write(struct esp_flash_write_ctx *wctx,
     LOG(LL_ERROR, ("Exceeded max size"));
     return -10;
   }
+  mgos_wdt_feed();
   while (wctx->num_erased < wctx->num_written + data.len) {
     uint32_t erase_addr = wctx->addr + wctx->num_erased;
     /* If possible, erase entire block. If not, erase a page. */
@@ -75,6 +78,7 @@ int esp_flash_write(struct esp_flash_write_ctx *wctx,
       ret = spi_flash_write(write_addr + num_written, tmp, write_size);
       if (ret != 0) break;
       num_written += write_size;
+      mgos_wdt_feed();
     }
   } else {
     /* This is the last chunk, pad it to 4 bytes. */
@@ -89,7 +93,8 @@ int esp_flash_write(struct esp_flash_write_ctx *wctx,
   } else {
     ret = -13;
   }
-  LOG((ret > 0 ? LL_DEBUG : LL_ERROR),
+  LOG((ret > 0 ? (ret != (int) data.len ? LL_DEBUG : LL_VERBOSE_DEBUG)
+               : LL_ERROR),
       ("Write %u @ 0x%x -> %d", data.len, write_addr, ret));
   return ret;
 }

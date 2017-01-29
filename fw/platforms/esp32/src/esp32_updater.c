@@ -313,6 +313,11 @@ void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
   free(ctx);
 }
 
+int mgos_upd_create_snapshot() {
+  /* TODO(rojer): Implement. */
+  return -1;
+}
+
 void mgos_upd_boot_revert() {
   int slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
   LOG(LL_ERROR, ("Reverting to slot %d", slot));

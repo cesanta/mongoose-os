@@ -47,3 +47,13 @@ methods:
     doc: Commit a previously initiated update.
   Revert:
     doc: Revert a previously initiated update.
+  CreateSnapshot:
+    doc: >-
+      Creates a snapshot of the current state of the firmware, including filesystem.
+      Currently inactive OTA slot is used for the snapshot.
+    result:
+      type: object
+      properties:
+        slot:
+          type: integer
+          doc: Which slot was used to write the snapshot.

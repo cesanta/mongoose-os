@@ -374,6 +374,11 @@ void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
   free(ctx);
 }
 
+int mgos_upd_create_snapshot() {
+  /* TODO(rojer): Implement. */
+  return -1;
+}
+
 void mgos_upd_boot_revert() {
   int boot_cfg_idx = g_boot_cfg_idx;
   struct boot_cfg *cfg = &g_boot_cfg;
