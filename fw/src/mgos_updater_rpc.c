@@ -122,15 +122,49 @@ static void handle_create_snapshot_req(struct mg_rpc_request_info *ri,
                                        void *cb_arg,
                                        struct mg_rpc_frame_info *fi,
                                        struct mg_str args) {
-  int ret = mgos_upd_create_snapshot();
-  if (ret < 0) {
-    mg_rpc_send_errorf(ri, ret, NULL);
+  const char *err_msg = NULL;
+  int ret = -1;
+  if (mgos_upd_is_committed()) {
+    ret = mgos_upd_create_snapshot();
+    if (ret >= 0) {
+      bool set_as_revert = false;
+      int commit_timeout = -1;
+      json_scanf(args.p, args.len, "{set_as_revert: %B, commit_timeout: %d}",
+                 &set_as_revert, &commit_timeout);
+      if (set_as_revert) {
+        struct mgos_upd_boot_state bs;
+        if (mgos_upd_boot_get_state(&bs)) {
+          bs.is_committed = false;
+          bs.revert_slot = ret;
+          if (mgos_upd_boot_set_state(&bs)) {
+            if (commit_timeout >= 0 &&
+                !mgos_upd_set_commit_timeout(commit_timeout)) {
+              ret = -4;
+              err_msg = "Failed to set commit timeout";
+            }
+          } else {
+            ret = -3;
+            err_msg = "Failed to set boot state";
+          }
+        } else {
+          ret = -2;
+          err_msg = "Failed to get boot state";
+        }
+      }
+    } else {
+      err_msg = "Failed to create snapshot";
+    }
   } else {
+    ret = -1;
+    err_msg = "Cannot create snapshots in uncommitted state";
+  }
+  if (ret >= 0) {
     mg_rpc_send_responsef(ri, "{slot: %d}", ret);
+  } else {
+    mg_rpc_send_errorf(ri, ret, err_msg);
   }
   (void) cb_arg;
   (void) fi;
-  (void) args;
 }
 
 static void handle_get_boot_state_req(struct mg_rpc_request_info *ri,

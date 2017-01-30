@@ -26,14 +26,13 @@ var _ = trace.New
 
 const ServiceID = "http://cesanta.com/mg_rpc/serviceOTA"
 
-type CreateSnapshotResult struct {
-	Slot *int64 `json:"slot,omitempty"`
+type CreateSnapshotArgs struct {
+	Commit_timeout *int64 `json:"commit_timeout,omitempty"`
+	Set_as_revert  *bool  `json:"set_as_revert,omitempty"`
 }
 
-type ListSectionsResult struct {
-	Section  *string `json:"section,omitempty"`
-	Version  *string `json:"version,omitempty"`
-	Writable *bool   `json:"writable,omitempty"`
+type CreateSnapshotResult struct {
+	Slot *int64 `json:"slot,omitempty"`
 }
 
 type UpdateArgs struct {
@@ -47,8 +46,7 @@ type UpdateArgs struct {
 
 type Service interface {
 	Commit(ctx context.Context) error
-	CreateSnapshot(ctx context.Context) (*CreateSnapshotResult, error)
-	ListSections(ctx context.Context) ([]ListSectionsResult, error)
+	CreateSnapshot(ctx context.Context, args *CreateSnapshotArgs) (*CreateSnapshotResult, error)
 	Revert(ctx context.Context) error
 	Update(ctx context.Context, args *UpdateArgs) error
 }
@@ -80,10 +78,12 @@ func (c *_Client) Commit(ctx context.Context) (err error) {
 	return nil
 }
 
-func (c *_Client) CreateSnapshot(ctx context.Context) (res *CreateSnapshotResult, err error) {
+func (c *_Client) CreateSnapshot(ctx context.Context, args *CreateSnapshotArgs) (res *CreateSnapshotResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "OTA.CreateSnapshot",
 	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -93,26 +93,6 @@ func (c *_Client) CreateSnapshot(ctx context.Context) (res *CreateSnapshotResult
 	}
 
 	var r *CreateSnapshotResult
-	err = resp.Response.UnmarshalInto(&r)
-	if err != nil {
-		return nil, errors.Annotatef(err, "unmarshaling response")
-	}
-	return r, nil
-}
-
-func (c *_Client) ListSections(ctx context.Context) (res []ListSectionsResult, err error) {
-	cmd := &frame.Command{
-		Cmd: "OTA.ListSections",
-	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	if resp.Status != 0 {
-		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
-	}
-
-	var r []ListSectionsResult
 	err = resp.Response.UnmarshalInto(&r)
 	if err != nil {
 		return nil, errors.Annotatef(err, "unmarshaling response")
@@ -154,7 +134,6 @@ func (c *_Client) Update(ctx context.Context, args *UpdateArgs) (err error) {
 //s := &_Server{impl}
 //i.RegisterCommandHandler("OTA.Commit", s.Commit)
 //i.RegisterCommandHandler("OTA.CreateSnapshot", s.CreateSnapshot)
-//i.RegisterCommandHandler("OTA.ListSections", s.ListSections)
 //i.RegisterCommandHandler("OTA.Revert", s.Revert)
 //i.RegisterCommandHandler("OTA.Update", s.Update)
 //i.RegisterService(ServiceID, _ServiceDefinition)
@@ -170,11 +149,13 @@ func (s *_Server) Commit(ctx context.Context, src string, cmd *frame.Command) (i
 }
 
 func (s *_Server) CreateSnapshot(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	return s.impl.CreateSnapshot(ctx)
-}
-
-func (s *_Server) ListSections(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	return s.impl.ListSections(ctx)
+	var args CreateSnapshotArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return s.impl.CreateSnapshot(ctx, &args)
 }
 
 func (s *_Server) Revert(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -198,6 +179,16 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "doc": "Commit a previously initiated update."
     },
     "CreateSnapshot": {
+      "args": {
+        "commit_timeout": {
+          "doc": "If set_as_revert is set, also assign commit timeout.",
+          "type": "integer"
+        },
+        "set_as_revert": {
+          "doc": "Uncommit current image and make the newly created snapshot a revert slot.",
+          "type": "boolean"
+        }
+      },
       "doc": "Creates a snapshot of the current state of the firmware, including filesystem. Currently inactive OTA slot is used for the snapshot.",
       "result": {
         "properties": {
@@ -207,26 +198,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           }
         },
         "type": "object"
-      }
-    },
-    "ListSections": {
-      "doc": "Returns a list of components of the device's software. Each section is updated individually.",
-      "result": {
-        "items": {
-          "properties": {
-            "section": {
-              "type": "string"
-            },
-            "version": {
-              "type": "string"
-            },
-            "writable": {
-              "type": "boolean"
-            }
-          },
-          "type": "object"
-        },
-        "type": "array"
       }
     },
     "Revert": {
@@ -259,7 +230,7 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           "type": "string"
         }
       },
-      "doc": "Instructs the device to update a given section."
+      "doc": "Instructs the device to perform firmware update."
     }
   },
   "name": "OTA",

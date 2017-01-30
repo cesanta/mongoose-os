@@ -3,23 +3,8 @@ name: OTA
 doc: OTA service provides a way to update device's software.
 visibility: private
 methods:
-  ListSections:
-    doc: >-
-      Returns a list of components of the device's software. Each section is
-      updated individually.
-    result:
-      type: array
-      items:
-        type: object
-        properties:
-          section:
-            type: string
-          version:
-            type: string
-          writable:
-            type: boolean
   Update:
-    doc: Instructs the device to update a given section.
+    doc: Instructs the device to perform firmware update.
     args:
       section:
         type: string
@@ -45,12 +30,21 @@ methods:
           If the specified time expires without a commit, update is rolled back.
   Commit:
     doc: Commit a previously initiated update.
+
   Revert:
     doc: Revert a previously initiated update.
+
   CreateSnapshot:
     doc: >-
       Creates a snapshot of the current state of the firmware, including filesystem.
       Currently inactive OTA slot is used for the snapshot.
+    args:
+      set_as_revert:
+        type: boolean
+        doc: Uncommit current image and make the newly created snapshot a revert slot.
+      commit_timeout:
+        type: integer
+        doc: If set_as_revert is set, also assign commit timeout.
     result:
       type: object
       properties:
