@@ -61,6 +61,8 @@ enum mgos_init_result mgos_sys_config_init_http(
     const struct sys_config_device *device_cfg);
 enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg);
 
+struct mg_connection *mgos_get_sys_http_server(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

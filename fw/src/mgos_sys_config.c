@@ -525,3 +525,7 @@ void mgos_register_http_endpoint(const char *uri_path,
     mg_register_http_endpoint(listen_conn_tun, uri_path, handler);
   }
 }
+
+struct mg_connection *mgos_get_sys_http_server(void) {
+  return listen_conn;
+}
