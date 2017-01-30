@@ -12,6 +12,10 @@
 
     <li>For more details, check out
     <a href="https://mongoose-iot.com/docs/#/overview/">documentation</a>.</li>
+
+    <li>Use <code>curl</code> to push new firmware: <code>curl -v -F file=@build/fw.zip -F commit_timeout=60 http://IP_ADDR/update</code></li>
+
+    <li>Use <code>curl</code> to pull new firmware: <code>curl -v 'http://IP_ADDR/update?url=NEW_URL/fw-esp8266.zip&commit_timeout=120&ignore_same_version=0'</code> </li>
   </p>
 
 </body>
