@@ -28,10 +28,11 @@ const (
 )
 
 type serialCodec struct {
-	portName    string
-	conn        serial.Serial
-	handsShaken bool
-	writeLock   sync.Mutex
+	portName        string
+	conn            serial.Serial
+	handsShaken     bool
+	handsShakenLock sync.Mutex
+	writeLock       sync.Mutex
 }
 
 func Serial(ctx context.Context, portName string, junkHandler func(junk []byte)) (Codec, error) {
@@ -72,8 +73,8 @@ func (c *serialCodec) Write(b []byte) (written int, err error) {
 	tch := time.After(handshakeTimeout)
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
-	c.handsShaken = false
-	for c.handsShaken == false {
+	c.setHandsShaken(false)
+	for !c.areHandsShaken() {
 		c.conn.Write([]byte(streamFrameDelimiter))
 		c.conn.Write([]byte{eofChar})
 		c.conn.Write([]byte(streamFrameDelimiter))
@@ -110,10 +111,7 @@ func (c *serialCodec) RemoteAddr() string {
 }
 
 func (c *serialCodec) PreprocessFrame(frameData []byte) (bool, error) {
-	if !c.handsShaken {
-		glog.Infof("handshake complete")
-		c.handsShaken = true
-	}
+	c.setHandsShaken(true)
 	if len(frameData) == 1 && frameData[0] == eofChar {
 		// The single-byte frame consisting of just EOF char: we need to send
 		// a delimeter back
@@ -121,6 +119,21 @@ func (c *serialCodec) PreprocessFrame(frameData []byte) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (c *serialCodec) areHandsShaken() bool {
+	c.handsShakenLock.Lock()
+	defer c.handsShakenLock.Unlock()
+	return c.handsShaken
+}
+
+func (c *serialCodec) setHandsShaken(shaken bool) {
+	c.handsShakenLock.Lock()
+	defer c.handsShakenLock.Unlock()
+	if !c.handsShaken && shaken {
+		glog.Infof("handshake complete")
+	}
+	c.handsShaken = shaken
 }
 
 func min(a, b int) int {
