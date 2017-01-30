@@ -3069,11 +3069,6 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 /* Amalgamated: #include "v7/src/license.h" */
 
-/* Check whether we're compiling in an environment with no filesystem */
-#if defined(ARDUINO) && (ARDUINO == 106)
-#define V7_NO_FS
-#endif
-
 #ifndef FAST
 #define FAST
 #endif
