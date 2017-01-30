@@ -36,6 +36,12 @@ type serialCodec struct {
 	handsShaken     bool
 	handsShakenLock sync.Mutex
 	writeLock       sync.Mutex
+
+	// Underlying serial port implementation allows concurrent Read/Write, but
+	// calling Close concurrently results in a race. A read-write lock fits
+	// perfectly for this case: for either Read or Write we lock it for reading
+	// (RLock/RUnlock), but for Close we lock it for writing (Lock/Unlock).
+	closeLock sync.RWMutex
 }
 
 func Serial(ctx context.Context, portName string, junkHandler func(junk []byte)) (Codec, error) {
@@ -64,8 +70,33 @@ func Serial(ctx context.Context, portName string, junkHandler func(junk []byte))
 	}, junkHandler), nil
 }
 
+func (c *serialCodec) connRead(buf []byte) (read int, err error) {
+	// Lock closeLock for reading
+	c.closeLock.RLock()
+	defer c.closeLock.RUnlock()
+	return c.conn.Read(buf)
+}
+
+func (c *serialCodec) connWrite(buf []byte) (written int, err error) {
+	// Lock closeLock for reading.
+	// NOTE: don't be confused by the fact that we're going to Write to the port,
+	// but we lock closeLock for reading. See comments for closeLock above for
+	// details.
+	c.closeLock.RLock()
+	defer c.closeLock.RUnlock()
+	return c.conn.Write(buf)
+}
+
+func (c *serialCodec) connClose() error {
+	// Close can't be called concurrently with Read/Write, so, lock closeLock
+	// for writing.
+	c.closeLock.Lock()
+	defer c.closeLock.Unlock()
+	return c.conn.Close()
+}
+
 func (c *serialCodec) Read(buf []byte) (read int, err error) {
-	res, err := c.conn.Read(buf)
+	res, err := c.connRead(buf)
 
 	// We keep getting io.EOF after interCharacterTimeout (200 ms), and in order
 	// to detect the actual EOF, we check the time of the previous pseudo-EOF.
@@ -88,9 +119,15 @@ func (c *serialCodec) Write(b []byte) (written int, err error) {
 	defer c.writeLock.Unlock()
 	c.setHandsShaken(false)
 	for !c.areHandsShaken() {
-		c.conn.Write([]byte(streamFrameDelimiter))
-		c.conn.Write([]byte{eofChar})
-		c.conn.Write([]byte(streamFrameDelimiter))
+		if _, err := c.connWrite([]byte(streamFrameDelimiter)); err != nil {
+			return 0, errors.Trace(err)
+		}
+		if _, err := c.connWrite([]byte{eofChar}); err != nil {
+			return 0, errors.Trace(err)
+		}
+		if _, err := c.connWrite([]byte(streamFrameDelimiter)); err != nil {
+			return 0, errors.Trace(err)
+		}
 		glog.V(1).Infof(" ...sent frame delimiter.")
 		time.Sleep(handshakeInterval)
 
@@ -102,7 +139,7 @@ func (c *serialCodec) Write(b []byte) (written int, err error) {
 	}
 	// Device is ready, send data.
 	for i := 0; i < len(b); i += chunkSize {
-		n, err := c.conn.Write(b[i:min(i+chunkSize, len(b))])
+		n, err := c.connWrite(b[i:min(i+chunkSize, len(b))])
 		glog.V(4).Infof("written to serial: [%s]", string(b[i:i+n]))
 		written += n
 		if err != nil {
@@ -116,7 +153,7 @@ func (c *serialCodec) Write(b []byte) (written int, err error) {
 
 func (c *serialCodec) Close() error {
 	glog.Infof("closing serial %s", c.portName)
-	return c.conn.Close()
+	return c.connClose()
 }
 
 func (c *serialCodec) RemoteAddr() string {
@@ -128,7 +165,9 @@ func (c *serialCodec) PreprocessFrame(frameData []byte) (bool, error) {
 	if len(frameData) == 1 && frameData[0] == eofChar {
 		// The single-byte frame consisting of just EOF char: we need to send
 		// a delimeter back
-		c.conn.Write([]byte(streamFrameDelimiter))
+		if _, err := c.connWrite([]byte(streamFrameDelimiter)); err != nil {
+			return true, errors.Trace(err)
+		}
 		return true, nil
 	}
 	return false, nil
