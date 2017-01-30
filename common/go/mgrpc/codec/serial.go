@@ -25,11 +25,14 @@ const (
 
 	// Maximum time to wait for a device to handshake with us
 	handshakeTimeout time.Duration = 7400 * time.Millisecond
+
+	interCharacterTimeout time.Duration = 200 * time.Millisecond
 )
 
 type serialCodec struct {
 	portName        string
 	conn            serial.Serial
+	lastEOFTime     time.Time
 	handsShaken     bool
 	handsShakenLock sync.Mutex
 	writeLock       sync.Mutex
@@ -43,7 +46,7 @@ func Serial(ctx context.Context, portName string, junkHandler func(junk []byte))
 		DataBits:              8,
 		ParityMode:            serial.PARITY_NONE,
 		StopBits:              1,
-		InterCharacterTimeout: 200,
+		InterCharacterTimeout: uint(interCharacterTimeout / time.Millisecond),
 		MinimumReadSize:       0,
 	})
 	glog.Infof("%s opened: %v, err: %v", portName, conn, err)
@@ -63,10 +66,20 @@ func Serial(ctx context.Context, portName string, junkHandler func(junk []byte))
 
 func (c *serialCodec) Read(buf []byte) (read int, err error) {
 	res, err := c.conn.Read(buf)
-	if errors.Cause(err) != io.EOF {
-		return res, err
+
+	// We keep getting io.EOF after interCharacterTimeout (200 ms), and in order
+	// to detect the actual EOF, we check the time of the previous pseudo-EOF.
+	// If it's shorter than the half of the interCharacterTimeout, we assume
+	// it's a real EOF.
+	if errors.Cause(err) == io.EOF {
+		now := time.Now()
+		if !c.lastEOFTime.Add(interCharacterTimeout / 2).After(now) {
+			// It's pseudo-EOF, clear the error
+			err = nil
+		}
+		c.lastEOFTime = now
 	}
-	return res, nil
+	return res, errors.Trace(err)
 }
 
 func (c *serialCodec) Write(b []byte) (written int, err error) {
