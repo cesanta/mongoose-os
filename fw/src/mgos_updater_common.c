@@ -721,6 +721,7 @@ int mgos_upd_merge_spiffs(spiffs *old_fs) {
         goto cleanup;
       }
     }
+    mgos_wdt_feed();
   }
 
   ret = 0;

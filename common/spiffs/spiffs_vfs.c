@@ -506,11 +506,13 @@ struct dirent *spiffs_vfs_readdir(spiffs *fs, DIR *dir) {
   }
   sd->de.d_ino = sd->sde.obj_id;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-  if (!spiffs_vfs_dec_name((const char *) sd->sde.name, sd->de.d_name,
-                           sizeof(sd->de.d_name))) {
-    LOG(LL_ERROR, ("Name decryption failed (%s)", sd->sde.name));
-    errno = ENXIO;
-    return NULL;
+  if (s_names_encrypted) {
+    if (!spiffs_vfs_dec_name((const char *) sd->sde.name, sd->de.d_name,
+                             sizeof(sd->de.d_name))) {
+      LOG(LL_ERROR, ("Name decryption failed (%s)", sd->sde.name));
+      errno = ENXIO;
+      return NULL;
+    }
   }
 #else
   memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
@@ -649,6 +651,14 @@ bool spiffs_vfs_enc_fs(spiffs *fs) {
     if (SPIFFS_rename(fs, (const char *) e.name, enc_name) != SPIFFS_OK) {
       LOG(LL_ERROR, ("%s: rename failed: %d", e.name, SPIFFS_errno(fs)));
       goto out;
+    }
+    /*
+     * We have to start over, readdir can get confused if FS is mutated
+     * while iterating.
+     */
+    SPIFFS_closedir(&d);
+    if (SPIFFS_opendir(fs, "/", &d) == NULL) {
+      return false;
     }
   }
   s_names_encrypted = true;

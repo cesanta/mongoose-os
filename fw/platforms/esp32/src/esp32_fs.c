@@ -47,6 +47,7 @@ static s32_t esp32_spiffs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
     LOG(LL_ERROR, ("Invalid read args: %u @ %u", size, addr));
     return SPIFFS_ERR_NOT_WRITABLE;
   }
+  mgos_wdt_feed();
   esp_err_t r = spi_flash_write(m->part->address + addr, src, size);
   if (r == ESP_OK) {
     LOG(LL_VERBOSE_DEBUG, ("Write %u @ %d = %d", size, addr, r));
@@ -66,6 +67,7 @@ static s32_t esp32_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
     LOG(LL_ERROR, ("Invalid erase args: %u @ %u", size, addr));
     return SPIFFS_ERR_ERASE_FAIL;
   }
+  mgos_wdt_feed();
   esp_err_t r = spi_flash_erase_range(m->part->address + addr, size);
   if (r == ESP_OK) {
     LOG(LL_VERBOSE_DEBUG, ("Erase %u @ %d = %d", size, addr, r));

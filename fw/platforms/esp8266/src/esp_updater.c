@@ -25,7 +25,6 @@
 #define CS_LEN 20 /* SHA1 */
 #define CS_HEX_LEN (CS_LEN * 2)
 #define CS_HEX_BUF_SIZE (CS_HEX_LEN + 1)
-#define FW_SLOT_SIZE 0x100000
 
 #define BOOT_F_MERGE_FS (1U << 0)
 

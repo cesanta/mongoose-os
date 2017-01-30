@@ -45,6 +45,10 @@
 
 #define WRITE_CHUNK_SIZE 32
 
+#define CS_LEN 20 /* SHA1 */
+#define CS_HEX_LEN (CS_LEN * 2)
+#define CS_HEX_BUF_SIZE (CS_HEX_LEN + 1)
+
 uint32_t g_boot_status = 0;
 
 struct mgos_upd_dev_ctx {
@@ -72,29 +76,45 @@ const char *mgos_upd_get_status_msg(struct mgos_upd_dev_ctx *ctx) {
   return ctx->status_msg;
 }
 
-int mgos_upd_begin(struct mgos_upd_dev_ctx *ctx, struct json_token *parts) {
-  ctx->cur_app_partition = esp_ota_get_boot_partition();
-  if (ctx->cur_app_partition == NULL) {
-    ctx->status_msg = "Not in OTA boot mode";
+static int find_inactive_slot(const esp_partition_t **cur_app_partition,
+                              const esp_partition_t **cur_fs_partition,
+                              const esp_partition_t **new_app_partition,
+                              const esp_partition_t **new_fs_partition,
+                              const char **status_msg) {
+  *cur_app_partition = esp_ota_get_boot_partition();
+  if (*cur_app_partition == NULL) {
+    *status_msg = "Not in OTA boot mode";
     return -1;
   }
+  int slot = SUBTYPE_TO_SLOT((*cur_app_partition)->subtype);
+  *cur_fs_partition = esp32_find_fs_for_app_slot(slot);
   /* Find next OTA slot */
-  int slot = SUBTYPE_TO_SLOT(ctx->cur_app_partition->subtype);
   do {
     slot = (slot + 1) & ESP_PARTITION_SUBTYPE_APP_OTA_MAX;
     esp_partition_subtype_t subtype = ESP_PARTITION_SUBTYPE_OTA(slot);
-    if (subtype == ctx->cur_app_partition->subtype) break;
-    ctx->app_partition =
+    if (subtype == (*cur_app_partition)->subtype) break;
+    *new_app_partition =
         esp_partition_find_first(ESP_PARTITION_TYPE_APP, subtype, NULL);
-  } while (ctx->app_partition == NULL);
-  if (ctx->app_partition == NULL) {
-    ctx->status_msg = "No app slots";
-    return -1;
-  }
-  ctx->fs_partition = esp32_find_fs_for_app_slot(slot);
-  if (ctx->fs_partition == NULL) {
-    ctx->status_msg = "No fs slots";
+  } while (*new_app_partition == NULL);
+  if (*new_app_partition == NULL) {
+    *status_msg = "No app slots";
     return -2;
+  }
+  *new_fs_partition = esp32_find_fs_for_app_slot(slot);
+  if (*new_fs_partition == NULL) {
+    *status_msg = "No fs slots";
+    return -3;
+  }
+  return slot;
+}
+
+int mgos_upd_begin(struct mgos_upd_dev_ctx *ctx, struct json_token *parts) {
+  const esp_partition_t *cur_fs_partition;
+  int slot = find_inactive_slot(&ctx->cur_app_partition, &cur_fs_partition,
+                                &ctx->app_partition, &ctx->fs_partition,
+                                &ctx->status_msg);
+  if (slot < 0) {
+    return slot;
   }
 
   if (json_scanf(parts->ptr, parts->len,
@@ -113,11 +133,60 @@ int mgos_upd_begin(struct mgos_upd_dev_ctx *ctx, struct json_token *parts) {
   return 1;
 }
 
+void bin2hex(const uint8_t *src, int src_len, char *dst);
+
+static bool compute_checksum(const esp_partition_t *p, size_t len,
+                             char *cs_hex) {
+  bool ret = false;
+  size_t offset = 0;
+  mbedtls_sha1_context sha1_ctx;
+  unsigned char digest[CS_LEN];
+  mbedtls_sha1_init(&sha1_ctx);
+  mbedtls_sha1_starts(&sha1_ctx);
+  while (offset < len) {
+    uint8_t tmp[WRITE_CHUNK_SIZE];
+    size_t block_len = len - offset;
+    if (block_len > sizeof(tmp)) block_len = sizeof(tmp);
+    esp_err_t err = esp_partition_read(p, offset, tmp, block_len);
+    if (err != ESP_OK) {
+      LOG(LL_ERROR,
+          ("Error reading %s at offset %u: %d", p->label, offset, err));
+      goto cleanup;
+    }
+    mbedtls_sha1_update(&sha1_ctx, tmp, block_len);
+    offset += block_len;
+  }
+  mbedtls_sha1_finish(&sha1_ctx, digest);
+  bin2hex(digest, CS_LEN, cs_hex);
+  cs_hex[CS_HEX_LEN] = '\0';
+  ret = true;
+
+cleanup:
+  mbedtls_sha1_free(&sha1_ctx);
+  return ret;
+}
+
+static bool verify_checksum(const esp_partition_t *p, size_t len,
+                            const char *exp_sha1, bool critical) {
+  char cs_hex[CS_HEX_BUF_SIZE];
+  bool ret = compute_checksum(p, len, cs_hex) &&
+             (strncmp(cs_hex, exp_sha1, CS_HEX_LEN) == 0);
+  LOG((ret || !critical ? LL_DEBUG : LL_ERROR),
+      ("%s: %u @ 0x%x, cs_sha1 %s, expected %.*s", p->label, len, p->address,
+       cs_hex, CS_HEX_LEN, exp_sha1));
+  return ret;
+}
+
 enum mgos_upd_file_action mgos_upd_file_begin(
     struct mgos_upd_dev_ctx *ctx, const struct mgos_upd_file_info *fi) {
   esp_err_t err;
   ctx->write_offset = 0;
   if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) == 0) {
+    if (verify_checksum(ctx->app_partition, fi->size, ctx->app_cs_sha1.ptr,
+                        false /* critical */)) {
+      LOG(LL_INFO, ("Skip writing app (digest matches)"));
+      return MGOS_UPDATER_SKIP_FILE;
+    }
     LOG(LL_INFO, ("Writing app image @ 0x%x", ctx->app_partition->address));
     if (esp_ota_begin(ctx->app_partition, 0, &ctx->app_ota_handle) != ESP_OK) {
       ctx->status_msg = "Failed to start app write";
@@ -126,6 +195,11 @@ enum mgos_upd_file_action mgos_upd_file_begin(
     return MGOS_UPDATER_PROCESS_FILE;
   } else if (strncmp(fi->name, ctx->fs_file_name.ptr, ctx->fs_file_name.len) ==
              0) {
+    if (verify_checksum(ctx->fs_partition, fi->size, ctx->app_cs_sha1.ptr,
+                        false /* critical */)) {
+      LOG(LL_INFO, ("Skip writing FS (digest matches)"));
+      return MGOS_UPDATER_SKIP_FILE;
+    }
     LOG(LL_INFO, ("Writing FS image @ 0x%x", ctx->fs_partition->address));
     err = esp_partition_erase_range(ctx->fs_partition, 0,
                                     ctx->fs_partition->size);
@@ -165,42 +239,6 @@ int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
   return to_process;
 }
 
-void bin2hex(const uint8_t *src, int src_len, char *dst);
-
-static bool verify_sha1(const esp_partition_t *p, size_t len,
-                        struct json_token *exp_sha1) {
-  bool ret = false;
-  size_t offset = 0;
-  mbedtls_sha1_context sha1_ctx;
-  unsigned char digest[20];
-  char digest_hex[41];
-  mbedtls_sha1_init(&sha1_ctx);
-  mbedtls_sha1_starts(&sha1_ctx);
-  while (offset < len) {
-    uint8_t tmp[WRITE_CHUNK_SIZE];
-    size_t block_len = len - offset;
-    if (block_len > sizeof(tmp)) block_len = sizeof(tmp);
-    esp_err_t err = esp_partition_read(p, offset, tmp, block_len);
-    if (err != ESP_OK) {
-      LOG(LL_ERROR,
-          ("Error reading %s at offset %u: %d", p->label, offset, err));
-      goto cleanup;
-    }
-    mbedtls_sha1_update(&sha1_ctx, tmp, block_len);
-    offset += block_len;
-  }
-  mbedtls_sha1_finish(&sha1_ctx, digest);
-  bin2hex(digest, 20, digest_hex);
-  digest_hex[40] = '\0';
-  ret = (exp_sha1->len == 40 && strncmp(digest_hex, exp_sha1->ptr, 40) == 0);
-  LOG((ret ? LL_DEBUG : LL_ERROR),
-      ("%s: %u @ 0x%x, cs_sha1 %s, expected %.*s", p->label, len, p->address,
-       digest_hex, (int) exp_sha1->len, exp_sha1->ptr));
-cleanup:
-  mbedtls_sha1_free(&sha1_ctx);
-  return ret;
-}
-
 int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
   const esp_partition_t *p = NULL;
@@ -234,7 +272,7 @@ int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
   } else {
     return -123;
   }
-  if (!verify_sha1(p, fi->size, cs_sha1)) {
+  if (!verify_checksum(p, fi->size, cs_sha1->ptr, true /* critical */)) {
     ctx->status_msg = "Digest mismatch";
     return -10;
   }
@@ -320,21 +358,76 @@ void mgos_upd_dev_ctx_free(struct mgos_upd_dev_ctx *ctx) {
   free(ctx);
 }
 
+static bool copy_partition(const esp_partition_t *src,
+                           const esp_partition_t *dst) {
+  esp_err_t err;
+  if (src->size > dst->size) return false;
+  char cs_hex[CS_HEX_BUF_SIZE];
+  if (!compute_checksum(src, src->size, cs_hex)) {
+    return false;
+  }
+  if (verify_checksum(dst, src->size, cs_hex, false /* critical */)) {
+    LOG(LL_INFO,
+        ("%s -> %s: digest matched (%s)", src->label, dst->label, cs_hex));
+    return true;
+  }
+  if ((err = esp_partition_erase_range(dst, 0, src->size)) != ESP_OK) {
+    LOG(LL_ERROR, ("%s: erase %u failed: %d", dst->label, src->size, err));
+    return false;
+  }
+  uint32_t offset = 0;
+  while (offset < src->size) {
+    uint32_t buf[128];
+    uint32_t n = sizeof(buf);
+    if (n > src->size - offset) n = src->size - offset;
+    if ((err = esp_partition_read(src, offset, buf, n)) != ESP_OK) {
+      LOG(LL_ERROR, ("%s: read @ %u failed: %d", src->label, offset, err));
+      return false;
+    }
+    if ((err = esp_partition_write(dst, offset, buf, n)) != ESP_OK) {
+      LOG(LL_ERROR, ("%s: write @ %u failed: %d", dst->label, offset, err));
+      return false;
+    }
+    offset += n;
+  }
+  if (!verify_checksum(dst, src->size, cs_hex, true /* critical */)) {
+    return false;
+  }
+  LOG(LL_INFO, ("%s -> %s: copied %u bytes, SHA1 %s", src->label, dst->label,
+                offset, cs_hex));
+  return true;
+}
+
 int mgos_upd_create_snapshot() {
-  /* TODO(rojer): Implement. */
-  return -1;
+  const esp_partition_t *cur_app_partition, *cur_fs_partition;
+  const esp_partition_t *new_app_partition, *new_fs_partition;
+  const char *status_msg = NULL;
+  int slot =
+      find_inactive_slot(&cur_app_partition, &cur_fs_partition,
+                         &new_app_partition, &new_fs_partition, &status_msg);
+  if (slot < 0) {
+    LOG(LL_ERROR, ("%s", status_msg));
+    return slot;
+  }
+  LOG(LL_INFO, ("Snapshot: %s -> %s, %s -> %s", cur_app_partition->label,
+                new_app_partition->label, cur_fs_partition->label,
+                new_fs_partition->label));
+  if (!copy_partition(cur_app_partition, new_app_partition)) return -2;
+  if (!copy_partition(cur_fs_partition, new_fs_partition)) return -3;
+  LOG(LL_INFO, ("Snapshot created"));
+  return slot;
 }
 
 bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs) {
   memset(bs, 0, sizeof(*bs));
   bs->active_slot = MGOS_UPDATE_NEW_SLOT(g_boot_status);
   bs->revert_slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
-  bs->is_committed = (g_boot_status & MGOS_UPDATE_FIRST_BOOT) != 0;
+  bs->is_committed = (g_boot_status & MGOS_UPDATE_FIRST_BOOT) == 0;
   return true;
 }
 
 bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
-  return (set_update_status(bs->active_slot, bs->revert_slot,
+  return (set_update_status(bs->revert_slot, bs->active_slot,
                             !bs->is_committed /* first_boot */,
                             false /* merge_fs */) &&
           esp32_set_boot_slot(bs->active_slot));
@@ -350,12 +443,12 @@ void mgos_upd_boot_revert() {
 
 void mgos_upd_boot_commit() {
   int slot = MGOS_UPDATE_NEW_SLOT(g_boot_status);
-  if (set_update_status(slot, slot, false /* first_boot */,
-                        false /* merger_fs */) &&
+  if (set_update_status(MGOS_UPDATE_OLD_SLOT(g_boot_status), slot,
+                        false /* first_boot */, false /* merger_fs */) &&
       esp32_set_boot_slot(slot)) {
     LOG(LL_INFO, ("Committed slot %d", slot));
   } else {
-    LOG(LL_INFO, ("Failed to commit update"));
+    LOG(LL_ERROR, ("Failed to commit update"));
   }
 }
 
@@ -389,9 +482,11 @@ void esp32_updater_early_init() {
    * Tombstone the current config. If anything goes wrong between now and
    * commit, next boot will use the old slot.
    */
+  uint32_t bs = g_boot_status;
   set_update_status(MGOS_UPDATE_OLD_SLOT(g_boot_status),
                     MGOS_UPDATE_OLD_SLOT(g_boot_status), false /* first_boot */,
                     false /* merge_fs */);
+  g_boot_status = bs;
   esp32_set_boot_slot(MGOS_UPDATE_OLD_SLOT(g_boot_status));
 }
 

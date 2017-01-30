@@ -175,7 +175,6 @@ static void handle_get_boot_state_req(struct mg_rpc_request_info *ri,
   if (!mgos_upd_boot_get_state(&bs)) {
     mg_rpc_send_errorf(ri, -1, NULL);
   } else {
-    LOG(LL_INFO, ("is_committed", bs.is_committed));
     mg_rpc_send_responsef(ri,
                           "{active_slot: %d, is_committed: %B, revert_slot: "
                           "%d, commit_timeout: %d}",
