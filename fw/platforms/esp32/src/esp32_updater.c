@@ -34,11 +34,14 @@
  */
 #define MGOS_UPDATE_NVS_NAMESPACE "mgos"
 #define MGOS_UPDATE_NVS_KEY "update"
-#define MGOS_UPDATE_NVS_VAL(old_slot, new_slot, first_boot) \
-  (((first_boot) ? 0x100 : 0) | (((new_slot) &0xf) << 4) | ((old_slot) &0xf))
+#define MGOS_UPDATE_MERGE_FS 0x200
+#define MGOS_UPDATE_FIRST_BOOT 0x100
+#define MGOS_UPDATE_NVS_VAL(old_slot, new_slot, first_boot, merge_fs)       \
+  (((merge_fs) ? MGOS_UPDATE_MERGE_FS : 0) |                                \
+   ((first_boot) ? MGOS_UPDATE_FIRST_BOOT : 0) | (((new_slot) &0xf) << 4) | \
+   ((old_slot) &0xf))
 #define MGOS_UPDATE_OLD_SLOT(v) ((v) &0x0f)
 #define MGOS_UPDATE_NEW_SLOT(v) (((v) >> 4) & 0x0f)
-#define MGOS_UPDATE_FIRST_BOOT 0x100
 
 #define WRITE_CHUNK_SIZE 32
 
@@ -238,7 +241,8 @@ int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
   return tail.len;
 }
 
-static bool set_update_status(int old_slot, int new_slot, bool first_boot) {
+static bool set_update_status(int old_slot, int new_slot, bool first_boot,
+                              bool merge_fs) {
   bool ret = false;
   nvs_handle h;
   esp_err_t err = nvs_open(MGOS_UPDATE_NVS_NAMESPACE, NVS_READWRITE, &h);
@@ -246,7 +250,8 @@ static bool set_update_status(int old_slot, int new_slot, bool first_boot) {
     LOG(LL_ERROR, ("Failed to open NVS: %d", err));
     return false;
   }
-  const uint32_t val = MGOS_UPDATE_NVS_VAL(old_slot, new_slot, first_boot);
+  const uint32_t val =
+      MGOS_UPDATE_NVS_VAL(old_slot, new_slot, first_boot, merge_fs);
   err = nvs_set_u32(h, MGOS_UPDATE_NVS_KEY, val);
   if (err != ESP_OK) {
     LOG(LL_ERROR, ("Failed to set: %d", err));
@@ -295,7 +300,7 @@ static bool esp32_set_boot_slot(int slot) {
 int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx) {
   if (!set_update_status(SUBTYPE_TO_SLOT(ctx->cur_app_partition->subtype),
                          SUBTYPE_TO_SLOT(ctx->app_partition->subtype),
-                         true /* first_boot */)) {
+                         true /* first_boot */, true /* merge_fs */)) {
     ctx->status_msg = "Failed to set update status";
     return -1;
   }
@@ -330,7 +335,8 @@ bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs) {
 
 bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
   return (set_update_status(bs->active_slot, bs->revert_slot,
-                            !bs->is_committed /* first_boot */) &&
+                            !bs->is_committed /* first_boot */,
+                            false /* merge_fs */) &&
           esp32_set_boot_slot(bs->active_slot));
 }
 
@@ -338,13 +344,14 @@ void mgos_upd_boot_revert() {
   int slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
   if (slot == MGOS_UPDATE_NEW_SLOT(g_boot_status)) return;
   LOG(LL_ERROR, ("Reverting to slot %d", slot));
-  set_update_status(slot, slot, false /* first_boot */);
+  set_update_status(slot, slot, false /* first_boot */, false /* merger_fs */);
   esp32_set_boot_slot(slot);
 }
 
 void mgos_upd_boot_commit() {
   int slot = MGOS_UPDATE_NEW_SLOT(g_boot_status);
-  if (set_update_status(slot, slot, false /* first_boot */) &&
+  if (set_update_status(slot, slot, false /* first_boot */,
+                        false /* merger_fs */) &&
       esp32_set_boot_slot(slot)) {
     LOG(LL_INFO, ("Committed slot %d", slot));
   } else {
@@ -355,7 +362,8 @@ void mgos_upd_boot_commit() {
 int mgos_upd_apply_update() {
   int ret = -1;
   int old_slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
-  if (MGOS_UPDATE_NEW_SLOT(g_boot_status) == old_slot) {
+  if (MGOS_UPDATE_NEW_SLOT(g_boot_status) == old_slot ||
+      !(g_boot_status & MGOS_UPDATE_MERGE_FS)) {
     return 0;
   }
   const esp_partition_t *old_fs_part = esp32_find_fs_for_app_slot(old_slot);
@@ -370,6 +378,7 @@ int mgos_upd_apply_update() {
   }
   ret = mgos_upd_merge_spiffs(&m->fs);
   esp32_fs_umount(m);
+
   return ret;
 }
 
@@ -381,8 +390,8 @@ void esp32_updater_early_init() {
    * commit, next boot will use the old slot.
    */
   set_update_status(MGOS_UPDATE_OLD_SLOT(g_boot_status),
-                    MGOS_UPDATE_OLD_SLOT(g_boot_status),
-                    false /* first_boot */);
+                    MGOS_UPDATE_OLD_SLOT(g_boot_status), false /* first_boot */,
+                    false /* merge_fs */);
   esp32_set_boot_slot(MGOS_UPDATE_OLD_SLOT(g_boot_status));
 }
 

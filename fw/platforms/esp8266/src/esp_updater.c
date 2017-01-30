@@ -27,6 +27,8 @@
 #define CS_HEX_BUF_SIZE (CS_HEX_LEN + 1)
 #define FW_SLOT_SIZE 0x100000
 
+#define BOOT_F_MERGE_FS (1U << 0)
+
 struct slot_info {
   int id;
   uint32_t fw_addr;
@@ -242,6 +244,7 @@ int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx) {
   cfg->fs_sizes[slot] = ctx->fs_size;
   cfg->is_first_boot = cfg->fw_updated = true;
   cfg->boot_attempts = 0;
+  cfg->user_flags |= BOOT_F_MERGE_FS;
   if (!rboot_set_config(cfg)) {
     ctx->status_msg = "Failed to set boot config";
     return -3;
@@ -265,6 +268,8 @@ void mgos_upd_dev_ctx_free(struct mgos_upd_dev_ctx *ctx) {
 
 int mgos_upd_apply_update() {
   rboot_config *cfg = get_rboot_config();
+  if (!cfg->user_flags & BOOT_F_MERGE_FS) return 0;
+
   uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
   uint8_t spiffs_fds[32 * 2];
   spiffs old_fs;
@@ -281,6 +286,11 @@ int mgos_upd_apply_update() {
   ret = mgos_upd_merge_spiffs(&old_fs);
 
   SPIFFS_unmount(&old_fs);
+
+  if (ret == 0) {
+    cfg->user_flags &= ~BOOT_F_MERGE_FS;
+    rboot_set_config(cfg);
+  }
 
   return ret;
 }
@@ -375,6 +385,7 @@ bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
   cfg->previous_rom = bs->revert_slot;
   cfg->fw_updated = cfg->is_first_boot = (!bs->is_committed);
   cfg->boot_attempts = 0;
+  cfg->user_flags = 0;
   LOG(LL_INFO, ("cur %d prev %d fwu %d", cfg->current_rom, cfg->previous_rom,
                 cfg->fw_updated));
   return rboot_set_config(cfg);
