@@ -241,6 +241,45 @@ clean:
   (void) cb_arg;
 }
 
+static void mgos_fs_remove_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                                   struct mg_rpc_frame_info *fi,
+                                   struct mg_str args) {
+  char *filename = NULL;
+
+  if (!fi->channel_is_trusted) {
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
+    goto clean;
+  }
+
+  json_scanf(args.p, args.len, "{filename: %Q}", &filename);
+
+  /* check arguments */
+  if (filename == NULL) {
+    mg_rpc_send_errorf(ri, 400, "filename is required");
+    ri = NULL;
+    goto clean;
+  }
+
+  int ret = remove(filename);
+  LOG(LL_INFO, ("Remove %s -> %d", filename, ret));
+  if (ret != 0) {
+    mg_rpc_send_errorf(ri, 500, "remove failed");
+    ri = NULL;
+    goto clean;
+  }
+
+  mg_rpc_send_responsef(ri, NULL);
+  ri = NULL;
+
+clean:
+  if (filename != NULL) {
+    free(filename);
+  }
+
+  (void) cb_arg;
+}
+
 enum mgos_init_result mgos_service_filesystem_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
 #if MG_ENABLE_DIRECTORY_LISTING
@@ -248,6 +287,7 @@ enum mgos_init_result mgos_service_filesystem_init(void) {
 #endif
   mg_rpc_add_handler(c, mg_mk_str("FS.Get"), mgos_fs_get_handler, NULL);
   mg_rpc_add_handler(c, mg_mk_str("FS.Put"), mgos_fs_put_handler, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("FS.Remove"), mgos_fs_remove_handler, NULL);
   return MGOS_INIT_OK;
 }
 

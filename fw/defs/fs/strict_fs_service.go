@@ -48,10 +48,15 @@ type PutArgs struct {
 	Filename *string `json:"filename,omitempty"`
 }
 
+type RemoveArgs struct {
+	Filename *string `json:"filename,omitempty"`
+}
+
 type Service interface {
 	Get(ctx context.Context, args *GetArgs) (*GetResult, error)
 	List(ctx context.Context) ([]string, error)
 	Put(ctx context.Context, args *PutArgs) error
+	Remove(ctx context.Context, args *RemoveArgs) error
 }
 
 type Instance interface {
@@ -67,6 +72,8 @@ type _validators struct {
 	ListResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	PutArgs *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
+	RemoveArgs *schema.Validator
 }
 
 var (
@@ -143,6 +150,19 @@ func initValidators() {
 		s.Value[ucl.Key{Value: "required"}] = req
 	}
 	validators.PutArgs, err = schema.NewValidator(s, loader)
+	if err != nil {
+		panic(err)
+	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Remove").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Remove").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.RemoveArgs, err = schema.NewValidator(s, loader)
 	if err != nil {
 		panic(err)
 	}
@@ -274,12 +294,46 @@ func (c *_Client) Put(ctx context.Context, args *PutArgs) (err error) {
 	return nil
 }
 
+func (c *_Client) Remove(ctx context.Context, args *RemoveArgs) (err error) {
+	cmd := &frame.Command{
+		Cmd: "FS.Remove",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	if args.Filename == nil {
+		return errors.Errorf("Filename is required")
+	}
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.RemoveArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for Remove: %+v", err)
+				return errors.Annotatef(err, "invalid args for Remove")
+			}
+		}
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
 //func RegisterService(i *clubby.Instance, impl Service) error {
 //validatorsOnce.Do(initValidators)
 //s := &_Server{impl}
 //i.RegisterCommandHandler("FS.Get", s.Get)
 //i.RegisterCommandHandler("FS.List", s.List)
 //i.RegisterCommandHandler("FS.Put", s.Put)
+//i.RegisterCommandHandler("FS.Remove", s.Remove)
 //i.RegisterService(ServiceID, _ServiceDefinition)
 //return nil
 //}
@@ -376,6 +430,32 @@ func (s *_Server) Put(ctx context.Context, src string, cmd *frame.Command) (inte
 	return nil, s.impl.Put(ctx, &args)
 }
 
+func (s *_Server) Remove(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.RemoveArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for Remove: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for Remove")
+			}
+		}
+	}
+	var args RemoveArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	if args.Filename == nil {
+		return nil, errors.Errorf("Filename is required")
+	}
+	return nil, s.impl.Remove(ctx, &args)
+}
+
 var _ServiceDefinition = json.RawMessage([]byte(`{
   "methods": {
     "Get": {
@@ -437,6 +517,18 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         }
       },
       "doc": "Write or append data to file.",
+      "required_args": [
+        "filename"
+      ]
+    },
+    "Remove": {
+      "args": {
+        "filename": {
+          "doc": "Name of the file to delete.",
+          "type": "string"
+        }
+      },
+      "doc": "Delete a file.",
       "required_args": [
         "filename"
       ]

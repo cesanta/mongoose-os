@@ -54,3 +54,11 @@ methods:
           data will be appended to it. Otherwise, the file will be overwritten
           or created.
     required_args: [filename]
+
+  Remove:
+    doc: Delete a file.
+    args:
+      filename:
+        type: string
+        doc: Name of the file to delete.
+    required_args: [filename]

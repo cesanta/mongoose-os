@@ -102,6 +102,8 @@ int spiffs_vfs_open(spiffs *fs, const char *path, int flags, int mode) {
   if (flags & O_EXCL) sm |= SPIFFS_EXCL;
 #endif
 
+  path = drop_dir(path);
+
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   sm |= SPIFFS_RDONLY;  /* Encryption always needs to be able to read. */
 
@@ -114,7 +116,7 @@ int spiffs_vfs_open(spiffs *fs, const char *path, int flags, int mode) {
     path = enc_path;
   }
 
-  int fd = SPIFFS_open(fs, drop_dir(path), sm, 0);
+  int fd = SPIFFS_open(fs, path, sm, 0);
   if (fd >= 0 && (rw & O_WRONLY)) {
     spiffs_stat s;
     s32_t r = SPIFFS_fstat(fs, fd, &s);
@@ -422,6 +424,8 @@ off_t spiffs_vfs_lseek(spiffs *fs, int fd, off_t offset, int whence) {
 
 int spiffs_vfs_rename(spiffs *fs, const char *src, const char *dst) {
   int res;
+  src = drop_dir(src);
+  dst = drop_dir(dst);
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   char enc_src[SPIFFS_OBJ_NAME_LEN], enc_dst[SPIFFS_OBJ_NAME_LEN];
   if (s_names_encrypted) {
@@ -435,8 +439,6 @@ int spiffs_vfs_rename(spiffs *fs, const char *src, const char *dst) {
   }
 #endif
   /* Renaming file to itself should be a no-op. */
-  src = drop_dir(src);
-  dst = drop_dir(dst);
   if (strcmp(src, dst) == 0) return 0;
   {
     /*
@@ -453,7 +455,18 @@ int spiffs_vfs_rename(spiffs *fs, const char *src, const char *dst) {
 }
 
 int spiffs_vfs_unlink(spiffs *fs, const char *path) {
-  return set_spiffs_errno(fs, "unlink", SPIFFS_remove(fs, drop_dir(path)));
+  path = drop_dir(path);
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  char enc_path[SPIFFS_OBJ_NAME_LEN];
+  if (s_names_encrypted) {
+    if (!spiffs_vfs_enc_name(path, enc_path, sizeof(enc_path))) {
+      errno = ENXIO;
+      return -1;
+    }
+    path = enc_path;
+  }
+#endif
+  return set_spiffs_errno(fs, "unlink", SPIFFS_remove(fs, path));
 }
 
 struct spiffs_dir {

@@ -43,10 +43,15 @@ type PutArgs struct {
 	Filename *string `json:"filename,omitempty"`
 }
 
+type RemoveArgs struct {
+	Filename *string `json:"filename,omitempty"`
+}
+
 type Service interface {
 	Get(ctx context.Context, args *GetArgs) (*GetResult, error)
 	List(ctx context.Context) ([]string, error)
 	Put(ctx context.Context, args *PutArgs) error
+	Remove(ctx context.Context, args *RemoveArgs) error
 }
 
 type Instance interface {
@@ -126,11 +131,31 @@ func (c *_Client) Put(ctx context.Context, args *PutArgs) (err error) {
 	return nil
 }
 
+func (c *_Client) Remove(ctx context.Context, args *RemoveArgs) (err error) {
+	cmd := &frame.Command{
+		Cmd: "FS.Remove",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	if args.Filename == nil {
+		return errors.Errorf("Filename is required")
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
 //func RegisterService(i *clubby.Instance, impl Service) error {
 //s := &_Server{impl}
 //i.RegisterCommandHandler("FS.Get", s.Get)
 //i.RegisterCommandHandler("FS.List", s.List)
 //i.RegisterCommandHandler("FS.Put", s.Put)
+//i.RegisterCommandHandler("FS.Remove", s.Remove)
 //i.RegisterService(ServiceID, _ServiceDefinition)
 //return nil
 //}
@@ -167,6 +192,19 @@ func (s *_Server) Put(ctx context.Context, src string, cmd *frame.Command) (inte
 		return nil, errors.Errorf("Filename is required")
 	}
 	return nil, s.impl.Put(ctx, &args)
+}
+
+func (s *_Server) Remove(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	var args RemoveArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	if args.Filename == nil {
+		return nil, errors.Errorf("Filename is required")
+	}
+	return nil, s.impl.Remove(ctx, &args)
 }
 
 var _ServiceDefinition = json.RawMessage([]byte(`{
@@ -230,6 +268,18 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         }
       },
       "doc": "Write or append data to file.",
+      "required_args": [
+        "filename"
+      ]
+    },
+    "Remove": {
+      "args": {
+        "filename": {
+          "doc": "Name of the file to delete.",
+          "type": "string"
+        }
+      },
+      "doc": "Delete a file.",
       "required_args": [
         "filename"
       ]
