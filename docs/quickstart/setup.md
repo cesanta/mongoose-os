@@ -21,6 +21,11 @@ e.g. `--port COM3` on Windows or `--port /dev/ttyUSB0` on Linux. By default,
 `--port auto` is used, which makes `mos` enumerate all serial devices
 on your system and pick the first suitable.
 
+You might need to install a USB-to-Serial driver on your OS:
+
+- [FTDI drivers](http://www.ftdichip.com/Drivers/VCP.htm) for CC3200
+- [Silabds drivers](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx) for Espressif boards
+
 It is possible to set `--port` value to be a network endpoint instead of
 serial port. Device listens for commands on serial, Websocket, and MQTT
 transports (unless they are disabled). Therefore, `--port ws://IP_ADDR/rpc`
